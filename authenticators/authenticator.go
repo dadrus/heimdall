@@ -1,6 +1,8 @@
 package authenticators
 
+import "context"
+
 type Authenticator interface {
 	Id() string
-	Authenticate() error
+	Authenticate(context.Context, AuthDataSource, *SubjectContext) error
 }

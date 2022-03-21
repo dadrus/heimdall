@@ -1,80 +1,117 @@
 package authenticators
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
-	"net/url"
-	"time"
+	"fmt"
+	"io/ioutil"
+	"net/http"
+	"strings"
 
+	"github.com/dadrus/heimdall/authenticators/config"
 	"github.com/dadrus/heimdall/authenticators/extractors"
+	"github.com/dadrus/heimdall/authenticators/request_authentication_strategy"
 )
 
 var _ Authenticator = new(authenticationDataAuthenticator)
 
 func newAuthenticationDataAuthenticator(id string, rawConfig json.RawMessage) (*authenticationDataAuthenticator, error) {
-	type config struct {
-		Endpoint struct {
-			Url    *url.URL `json:"url"`
-			Method string   `json:"method"`
-			Retry  struct {
-				GiveUpAfter time.Duration `json:"give_up_after"`
-				MaxDelay    time.Duration `json:"max_delay"`
-			} `json:"retry"`
-			Auth struct {
-				Type   string          `json:"type"`
-				Config json.RawMessage `json:"config"`
-			} `json:"auth"`
-		} `json:"identity_info_endpoint"`
-		AuthInfoSource struct {
-			Header         string `json:"header"`
-			QueryParameter string `json:"query_parameter"`
-			Cookie         string `json:"cookie"`
-			StripPrefix    string `json:"strip_prefix"`
-		} `json:"authentication_data_source"`
-		Session struct {
-			SubjectFrom string `json:"subject_from"`
-			ExtraFrom   string `json:"extra_from"`
-		} `json:"session"`
+	type _config struct {
+		Endpoint       config.Endpoint                 `json:"identity_info_endpoint"`
+		AuthDataSource config.AuthenticationDataSource `json:"authentication_data_source"`
+		Session        config.Session                  `json:"session"`
 	}
 
-	var c config
+	var c _config
 	if err := json.Unmarshal(rawConfig, &c); err != nil {
 		return nil, err
 	}
 
-	var authDataExtractor extractors.AuthDataExtractor
-	if len(c.AuthInfoSource.Cookie) != 0 {
-		authDataExtractor = extractors.CookieExtractor(c.AuthInfoSource.Cookie)
-	} else if len(c.AuthInfoSource.Header) != 0 {
-		authDataExtractor = &extractors.HeaderExtractor{
-			HeaderName: c.AuthInfoSource.Header, ValuePrefix: c.AuthInfoSource.StripPrefix,
-		}
-	} else if len(c.AuthInfoSource.QueryParameter) != 0 {
-		authDataExtractor = extractors.QueryExtractor(c.AuthInfoSource.QueryParameter)
-	} else {
-		return nil, errors.New("missing auth data extractor")
+	extractor, err := c.AuthDataSource.Extractor()
+	if err != nil {
+		return nil, err
+	}
+
+	client, err := c.Endpoint.Client()
+	if err != nil {
+		return nil, err
+	}
+
+	as, err := c.Endpoint.AuthenticationStrategy()
+	if err != nil {
+		return nil, err
 	}
 
 	return &authenticationDataAuthenticator{
-		id:        id,
-		extractor: authDataExtractor,
+		id:                   id,
+		authDataExtractor:    extractor,
+		client:               client,
+		authStrategy:         as,
+		subjectDataExtractor: c.Session,
 	}, nil
-}
-
-func createAuthDataExtractor() (extractors.AuthDataExtractor, error) {
-	return nil, nil
 }
 
 type authenticationDataAuthenticator struct {
 	id string
 
-	extractor extractors.AuthDataExtractor
+	address              string
+	method               string
+	subjectDataExtractor config.Session
+	authDataExtractor    extractors.AuthDataExtractor
+	authStrategy         request_authentication_strategy.AuthenticationStrategy
+	client               *http.Client
 }
 
 func (a *authenticationDataAuthenticator) Id() string {
 	return a.id
 }
 
-func (a *authenticationDataAuthenticator) Authenticate() error {
+func (a *authenticationDataAuthenticator) Authenticate(ctx context.Context, as AuthDataSource, sc *SubjectContext) error {
+	authDataRef, err := a.authDataExtractor.Extract(as)
+	if err != nil {
+		return fmt.Errorf("failed to extract authentication data: %w", err)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, a.method, a.address, strings.NewReader(authDataRef))
+	if err != nil {
+		return fmt.Errorf("failed to create request: %w", err)
+	}
+
+	err = a.authStrategy.Apply(ctx, req)
+	if err != nil {
+		return fmt.Errorf("failed to authenticate request: %w", err)
+	}
+
+	resp, err := a.client.Do(req)
+	if err != nil {
+		return fmt.Errorf("failed to send request: %w", err)
+	}
+
+	rawBody, err := a.readResponse(resp)
+	if err != nil {
+		return err
+	}
+
+	if sc.Subject.Id, err = a.subjectDataExtractor.SubjectId(rawBody); err != nil {
+		return err
+	}
+
+	if sc.Subject.Attributes, err = a.subjectDataExtractor.SubjectAttributes(rawBody); err != nil {
+		return err
+	}
+
 	return nil
+}
+
+func (*authenticationDataAuthenticator) readResponse(resp *http.Response) ([]byte, error) {
+	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
+		rawData, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read response: %w", err)
+		}
+		return rawData, nil
+	} else {
+		return nil, errors.New(fmt.Sprintf("unexpected response. code: %v", resp.StatusCode))
+	}
 }

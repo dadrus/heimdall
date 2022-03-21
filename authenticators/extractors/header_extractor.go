@@ -1,8 +1,9 @@
 package extractors
 
 import (
-	"errors"
 	"strings"
+
+	"github.com/dadrus/heimdall/authenticators"
 )
 
 type HeaderExtractor struct {
@@ -10,15 +11,15 @@ type HeaderExtractor struct {
 	ValuePrefix string
 }
 
-func (e HeaderExtractor) Extract(s AuthDataSource) (string, error) {
+func (e HeaderExtractor) Extract(s authenticators.AuthDataSource) (string, error) {
 	val := s.Header(e.HeaderName)
 	if len(val) == 0 {
-		return "", errors.New("no auth data present")
+		return "", ErrNoAuthDataPresent
 	}
 	if len(e.ValuePrefix) == 0 {
 		return val, nil
 	} else if strings.Index(strings.ToLower(val), e.ValuePrefix) == -1 {
-		return "", errors.New("no auth data present")
+		return "", ErrNoAuthDataPresent
 	}
 
 	return val[len(e.ValuePrefix)+1:], nil

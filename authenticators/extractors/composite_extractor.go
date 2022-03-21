@@ -1,23 +1,23 @@
 package extractors
 
 import (
-	"errors"
+	"github.com/dadrus/heimdall/authenticators"
 )
 
 type TokenExtractor interface {
-	Extract(s AuthDataSource) (string, error)
+	Extract(s authenticators.AuthDataSource) (string, error)
 }
 
 type CompositeExtractor []TokenExtractor
 
-func (ce CompositeExtractor) Extract(s AuthDataSource) (string, error) {
+func (ce CompositeExtractor) Extract(s authenticators.AuthDataSource) (string, error) {
 	for _, e := range ce {
 		if t, err := e.Extract(s); err == nil {
 			return t, nil
 		}
 	}
 
-	return "", errors.New("no auth data present")
+	return "", ErrNoAuthDataPresent
 }
 
 func NewCompositeExtractor(extractor ...TokenExtractor) TokenExtractor {

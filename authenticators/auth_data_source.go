@@ -1,4 +1,4 @@
-package extractors
+package authenticators
 
 type AuthDataSource interface {
 	Header(key string) string

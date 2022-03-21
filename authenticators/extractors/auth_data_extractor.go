@@ -1,5 +1,7 @@
 package extractors
 
+import "github.com/dadrus/heimdall/authenticators"
+
 type AuthDataExtractor interface {
-	Extract(s AuthDataSource) (string, error)
+	Extract(s authenticators.AuthDataSource) (string, error)
 }

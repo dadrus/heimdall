@@ -1,6 +1,9 @@
 package authenticators
 
-import "encoding/json"
+import (
+	"context"
+	"encoding/json"
+)
 
 var _ Authenticator = new(anonymousAuthenticator)
 
@@ -33,6 +36,6 @@ func (a *anonymousAuthenticator) Id() string {
 	return a.id
 }
 
-func (a *anonymousAuthenticator) Authenticate() error {
+func (a *anonymousAuthenticator) Authenticate(ctx context.Context, as AuthDataSource, sc *SubjectContext) error {
 	return nil
 }

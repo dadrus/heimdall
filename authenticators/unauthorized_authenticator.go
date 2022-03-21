@@ -1,5 +1,7 @@
 package authenticators
 
+import "context"
+
 var _ Authenticator = new(unauthorizedAuthenticator)
 
 func newUnauthorizedAuthenticator(id string) (*unauthorizedAuthenticator, error) {
@@ -16,6 +18,6 @@ func (a *unauthorizedAuthenticator) Id() string {
 	return a.id
 }
 
-func (a *unauthorizedAuthenticator) Authenticate() error {
+func (a *unauthorizedAuthenticator) Authenticate(ctx context.Context, as AuthDataSource, sc *SubjectContext) error {
 	return nil
 }

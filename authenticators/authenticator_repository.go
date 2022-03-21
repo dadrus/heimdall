@@ -13,7 +13,7 @@ type AuthenticatorRepository interface {
 func NewAuthenticatorRepository(conf config.Configuration) (AuthenticatorRepository, error) {
 	var authenticators map[string]Authenticator
 	for _, auth := range conf.Authenticators {
-		if a, err := createAuthenticator(auth); err != nil {
+		if a, err := newAuthenticator(auth); err != nil {
 			authenticators[auth.Id] = a
 		} else {
 			return nil, err
@@ -22,7 +22,7 @@ func NewAuthenticatorRepository(conf config.Configuration) (AuthenticatorReposit
 	return &authenticatorRepository{r: authenticators}, nil
 }
 
-func createAuthenticator(auth config.PipelineObject) (Authenticator, error) {
+func newAuthenticator(auth config.PipelineObject) (Authenticator, error) {
 	switch auth.Type {
 	case config.Noop:
 		return newNoopAuthenticator(auth.Id)

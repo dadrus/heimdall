@@ -508,14 +508,14 @@
             "none"
           ]
         },
-        "required_scope": {
+        "required_scopes": {
           "description": "An array of OAuth 2.0 scopes that are required when accessing an endpoint protected by this handler.\n If the token used in the Authorization header did not request that specific scope, the request is denied.",
           "type": "array",
           "items": {
             "type": "string"
           }
         },
-        "target_audience": {
+        "target_audiences": {
           "description": "An array of audiences that are required when accessing an endpoint protected by this handler.",
           "type": "array",
           "items": {
