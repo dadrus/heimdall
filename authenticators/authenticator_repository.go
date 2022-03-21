@@ -33,7 +33,7 @@ func newAuthenticator(auth config.PipelineObject) (Authenticator, error) {
 	case config.AuthenticationData:
 		return newAuthenticationDataAuthenticator(auth.Id, auth.Config)
 	case config.OAuth2Introspection:
-		return nil, nil
+		return newOAuth2IntrospectionAuthenticator(auth.Id, auth.Config)
 	case config.Jwt:
 		return nil, nil
 	default:

@@ -19,13 +19,3 @@ func (ce CompositeExtractor) Extract(s authenticators.AuthDataSource) (string, e
 
 	return "", ErrNoAuthDataPresent
 }
-
-func NewCompositeExtractor(extractor ...TokenExtractor) TokenExtractor {
-	var chain CompositeExtractor
-
-	for _, e := range extractor {
-		chain = append(chain, e)
-	}
-
-	return chain
-}

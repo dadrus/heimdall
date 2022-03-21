@@ -1,7 +1,12 @@
 package config
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 	"time"
@@ -12,10 +17,11 @@ import (
 )
 
 type Endpoint struct {
-	Url    *url.URL `json:"url"`
-	Method string   `json:"method"`
-	Retry  Retry    `json:"retry"`
-	Auth   Auth     `json:"auth"`
+	Url     *url.URL          `json:"url"`
+	Method  string            `json:"method"`
+	Retry   Retry             `json:"retry"`
+	Auth    Auth              `json:"auth"`
+	Headers map[string]string `json:"headers"`
 }
 
 type Retry struct {
@@ -28,15 +34,48 @@ type Auth struct {
 	Config json.RawMessage `json:"config"`
 }
 
-func (e Endpoint) Client() (*http.Client, error) {
+func (e Endpoint) SendRequest(ctx context.Context, body io.Reader) ([]byte, error) {
 	client := httpretry.NewCustomClient(
 		&http.Client{
 			Transport: &httpx.TracingRoundTripper{Next: http.DefaultTransport},
 		},
 		httpretry.WithBackoffPolicy(httpretry.ExponentialBackoff(e.Retry.MaxDelay, e.Retry.GiveUpAfter, 0)))
-	return client, nil
+
+	req, err := http.NewRequestWithContext(ctx, e.Method, e.Url.String(), body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+
+	a, err := request_authentication_strategy.NewAuthenticationStrategy(e.Auth.Type, e.Auth.Config)
+	if err != nil {
+		return nil, fmt.Errorf("failed to authenticate request: %w", err)
+	}
+
+	err = a.Apply(ctx, req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to authenticate request: %w", err)
+	}
+
+	for k, v := range e.Headers {
+		req.Header.Set(k, v)
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to send request: %w", err)
+	}
+
+	return e.readResponse(resp)
 }
 
-func (e Endpoint) AuthenticationStrategy() (as request_authentication_strategy.AuthenticationStrategy, err error) {
-	return request_authentication_strategy.NewAuthenticationStrategy(e.Auth.Type, e.Auth.Config)
+func (e Endpoint) readResponse(resp *http.Response) ([]byte, error) {
+	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
+		rawData, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read response: %w", err)
+		}
+		return rawData, nil
+	} else {
+		return nil, errors.New(fmt.Sprintf("unexpected response. code: %v", resp.StatusCode))
+	}
 }

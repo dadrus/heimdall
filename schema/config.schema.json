@@ -298,6 +298,16 @@
             "POST"
           ]
         },
+        "headers": {
+          "description": "HTTP headers to be send to the end point",
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "minLength": 0,
+          "uniqueItems": true,
+          "default": []
+        },
         "retry": {
           "type": "object",
           "title": "Retry",

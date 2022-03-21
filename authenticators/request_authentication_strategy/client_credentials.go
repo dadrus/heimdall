@@ -8,21 +8,15 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/dadrus/heimdall/authenticators/oauth2"
 	"github.com/ybbus/httpretry"
 
 	"github.com/dadrus/heimdall/x/httpx"
 )
-
-type tokenResponse struct {
-	AccessToken string `json:"access_token"`
-	TokenType   string `json:"token_type"`
-	ExpiresIn   int64  `json:"expires_in"`
-}
 
 func NewClientCredentialsStrategy(raw json.RawMessage) (*clientCredentialsStrategy, error) {
 	type config struct {
@@ -52,12 +46,12 @@ type clientCredentialsStrategy struct {
 	scopes       []string
 	tokenUrl     string
 
-	lastResponse *tokenResponse
+	lastResponse *oauth2.TokenEndpointResponse
 	mutex        *sync.RWMutex
 }
 
 func (c *clientCredentialsStrategy) Apply(ctx context.Context, req *http.Request) error {
-	var tokenInfo *tokenResponse
+	var tokenInfo *oauth2.TokenEndpointResponse
 	var err error
 
 	// ensure the token has still 15 seconds lifetime
@@ -84,7 +78,7 @@ func (c *clientCredentialsStrategy) Apply(ctx context.Context, req *http.Request
 	return nil
 }
 
-func (c *clientCredentialsStrategy) getAccessToken(ctx context.Context) (*tokenResponse, error) {
+func (c *clientCredentialsStrategy) getAccessToken(ctx context.Context) (*oauth2.TokenEndpointResponse, error) {
 	client := httpretry.NewCustomClient(
 		&http.Client{
 			Transport: &httpx.TracingRoundTripper{Next: http.DefaultTransport},
@@ -106,7 +100,6 @@ func (c *clientCredentialsStrategy) getAccessToken(ctx context.Context) (*tokenR
 	}
 	req.SetBasicAuth(url.QueryEscape(c.clientId), url.QueryEscape(c.clientSecret))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	req.Header.Set("Content-Length", strconv.Itoa(len(content)))
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -116,8 +109,8 @@ func (c *clientCredentialsStrategy) getAccessToken(ctx context.Context) (*tokenR
 	return c.readResponse(resp)
 }
 
-func (*clientCredentialsStrategy) readResponse(resp *http.Response) (*tokenResponse, error) {
-	var r tokenResponse
+func (*clientCredentialsStrategy) readResponse(resp *http.Response) (*oauth2.TokenEndpointResponse, error) {
+	var r oauth2.TokenEndpointResponse
 	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
 		rawData, err := ioutil.ReadAll(resp.Body)
 		if err != nil {

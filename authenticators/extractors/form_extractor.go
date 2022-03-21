@@ -6,9 +6,9 @@ import (
 	"github.com/dadrus/heimdall/authenticators"
 )
 
-type PostFormExtractor string
+type FormExtractor string
 
-func (e PostFormExtractor) Extract(s authenticators.AuthDataSource) (string, error) {
+func (e FormExtractor) Extract(s authenticators.AuthDataSource) (string, error) {
 	if val := s.Form(strings.TrimSpace(string(e))); len(val) != 0 {
 		return val, nil
 	} else {
