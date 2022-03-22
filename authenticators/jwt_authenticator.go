@@ -36,18 +36,13 @@ func newJwtAuthenticator(id string, rawConfig json.RawMessage) (*jwtAuthenticato
 		c.Endpoint.Method = "GET"
 	}
 
-	ade, err := c.AuthDataSource.Extractor()
-	if err != nil {
-		return nil, err
-	}
-
 	return &jwtAuthenticator{
 		id: id,
 
 		e:  c.Endpoint,
 		a:  c.Assertions,
 		se: c.Session,
-		ae: ade,
+		ae: c.AuthDataSource.Strategy(),
 	}, nil
 }
 
@@ -57,7 +52,7 @@ type jwtAuthenticator struct {
 	e  config.Endpoint
 	a  config.Assertions
 	se config.Session
-	ae extractors.AuthDataExtractor
+	ae extractors.AuthDataExtractStrategy
 }
 
 func (a *jwtAuthenticator) Id() string {
@@ -75,7 +70,7 @@ func (a *jwtAuthenticator) Authenticate(ctx context.Context, as AuthDataSource, 
 		return err
 	}
 
-	jwtRaw, err := a.ae.Extract(as)
+	jwtRaw, err := a.ae.GetAuthData(as)
 	if err != nil {
 		return fmt.Errorf("failed to extract jwt: %w", err)
 	}

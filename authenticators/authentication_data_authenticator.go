@@ -24,15 +24,10 @@ func newAuthenticationDataAuthenticator(id string, rawConfig json.RawMessage) (*
 		return nil, err
 	}
 
-	ade, err := c.AuthDataSource.Extractor()
-	if err != nil {
-		return nil, err
-	}
-
 	return &authenticationDataAuthenticator{
 		id: id,
 		e:  c.Endpoint,
-		ae: ade,
+		ae: c.AuthDataSource.Strategy(),
 		se: c.Session,
 	}, nil
 }
@@ -42,7 +37,7 @@ type authenticationDataAuthenticator struct {
 
 	e  config.Endpoint
 	se config.Session
-	ae extractors.AuthDataExtractor
+	ae extractors.AuthDataExtractStrategy
 }
 
 func (a *authenticationDataAuthenticator) Id() string {
@@ -50,7 +45,7 @@ func (a *authenticationDataAuthenticator) Id() string {
 }
 
 func (a *authenticationDataAuthenticator) Authenticate(ctx context.Context, as AuthDataSource, sc *SubjectContext) error {
-	authDataRef, err := a.ae.Extract(as)
+	authDataRef, err := a.ae.GetAuthData(as)
 	if err != nil {
 		return fmt.Errorf("failed to extract authentication data: %w", err)
 	}

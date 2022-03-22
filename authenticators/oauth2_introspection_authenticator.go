@@ -29,13 +29,10 @@ func newOAuth2IntrospectionAuthenticator(id string, rawConfig json.RawMessage) (
 	c.Endpoint.Headers["Content-Type"] = "application/x-www-form-urlencoded"
 	c.Endpoint.Headers["Accept-Type"] = "application/json"
 
-	extractor := extractors.CompositeExtractor{
-		extractors.HeaderExtractor{
-			HeaderName:  "Authorization",
-			ValuePrefix: "Bearer ",
-		},
-		extractors.FormExtractor("access_token"),
-		extractors.QueryExtractor("access_token"),
+	extractor := extractors.CompositeExtractStrategy{
+		extractors.HeaderValueExtractStrategy{Name: "Authorization", Prefix: "Bearer"},
+		extractors.FormParameterExtractStrategy{Name: "access_token"},
+		extractors.QueryParameterExtractStrategy{Name: "access_token"},
 	}
 
 	return &oauth2IntrospectionAuthenticator{
@@ -50,7 +47,7 @@ func newOAuth2IntrospectionAuthenticator(id string, rawConfig json.RawMessage) (
 type oauth2IntrospectionAuthenticator struct {
 	id string
 
-	ae extractors.AuthDataExtractor
+	ae extractors.AuthDataExtractStrategy
 	e  config.Endpoint
 	a  config.Assertions
 	se config.Session
@@ -61,7 +58,7 @@ func (a *oauth2IntrospectionAuthenticator) Id() string {
 }
 
 func (a *oauth2IntrospectionAuthenticator) Authenticate(ctx context.Context, as AuthDataSource, sc *SubjectContext) error {
-	accessToken, err := a.ae.Extract(as)
+	accessToken, err := a.ae.GetAuthData(as)
 	if err != nil {
 		return fmt.Errorf("failed to extract authentication data: %w", err)
 	}

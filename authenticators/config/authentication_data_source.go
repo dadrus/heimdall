@@ -1,30 +1,59 @@
 package config
 
 import (
+	"encoding/json"
 	"errors"
 
 	"github.com/dadrus/heimdall/authenticators/extractors"
 )
 
 type AuthenticationDataSource struct {
-	Header         string `json:"header"`
-	QueryParameter string `json:"query_parameter"`
-	Cookie         string `json:"cookie"`
-	StripPrefix    string `json:"strip_prefix"`
+	es extractors.AuthDataExtractStrategy
 }
 
-func (s AuthenticationDataSource) Extractor() (extractors.AuthDataExtractor, error) {
-	var e extractors.CompositeExtractor
-	if len(s.Cookie) != 0 {
-		e = append(e, extractors.CookieExtractor(s.Cookie))
-	} else if len(s.Header) != 0 {
-		e = append(e, &extractors.HeaderExtractor{
-			HeaderName: s.Header, ValuePrefix: s.StripPrefix,
-		})
-	} else if len(s.QueryParameter) != 0 {
-		e = append(e, extractors.QueryExtractor(s.QueryParameter))
-	} else {
-		return nil, errors.New("missing auth data extractor")
+func (a AuthenticationDataSource) Strategy() extractors.AuthDataExtractStrategy {
+	return a.es
+}
+
+func (a *AuthenticationDataSource) UnmarshalJSON(data []byte) (err error) {
+	a.es, err = authenticationDataFromJson(data)
+	return err
+}
+
+func authenticationDataFromJson(raw []byte) (extractors.AuthDataExtractStrategy, error) {
+	var strategies extractors.CompositeExtractStrategy
+	var sources []map[string]string
+
+	if err := json.Unmarshal(raw, &sources); err != nil {
+		return nil, err
 	}
-	return e, nil
+
+	for _, s := range sources {
+		prefix, _ := s["strip_prefix"]
+		if v, ok := s["header"]; ok {
+			strategies = append(strategies, &extractors.HeaderValueExtractStrategy{
+				Name:   v,
+				Prefix: prefix,
+			})
+		} else if v, ok := s["cookie"]; ok {
+			strategies = append(strategies, &extractors.CookieValueExtractStrategy{
+				Name:   v,
+				Prefix: prefix,
+			})
+		} else if v, ok := s["query_parameter"]; ok {
+			strategies = append(strategies, &extractors.QueryParameterExtractStrategy{
+				Name:   v,
+				Prefix: prefix,
+			})
+		} else if v, ok := s["form_parameter"]; ok {
+			strategies = append(strategies, &extractors.FormParameterExtractStrategy{
+				Name:   v,
+				Prefix: prefix,
+			})
+		} else {
+			return nil, errors.New("unsupported authentication source")
+		}
+	}
+
+	return strategies, nil
 }
