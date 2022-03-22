@@ -18,46 +18,26 @@ import (
 	"github.com/dadrus/heimdall/x/httpx"
 )
 
-func NewClientCredentialsStrategy(raw json.RawMessage) (*clientCredentialsStrategy, error) {
-	type config struct {
-		ClientId     string   `json:"client_id"`
-		ClientSecret string   `json:"client_secret"`
-		Scopes       []string `json:"scopes"`
-		TokenUrl     string   `json:"token_url"`
-	}
+type ClientCredentialsStrategy struct {
+	ClientId     string   `json:"client_id"`
+	ClientSecret string   `json:"client_secret"`
+	Scopes       []string `json:"scopes"`
+	TokenUrl     string   `json:"token_url"`
 
-	var c config
-	if err := json.Unmarshal(raw, &c); err != nil {
-		return nil, err
-	}
-
-	return &clientCredentialsStrategy{
-		clientId:     c.ClientId,
-		clientSecret: c.ClientSecret,
-		scopes:       c.Scopes,
-		tokenUrl:     c.TokenUrl,
-		mutex:        &sync.RWMutex{},
-	}, nil
+	lastResponse oauth2.TokenEndpointResponse
+	mutex        sync.RWMutex
 }
 
-type clientCredentialsStrategy struct {
-	clientId     string
-	clientSecret string
-	scopes       []string
-	tokenUrl     string
+func (c *ClientCredentialsStrategy) Apply(ctx context.Context, req *http.Request) error {
+	emptyResponse := oauth2.TokenEndpointResponse{}
 
-	lastResponse *oauth2.TokenEndpointResponse
-	mutex        *sync.RWMutex
-}
-
-func (c *clientCredentialsStrategy) Apply(ctx context.Context, req *http.Request) error {
 	var tokenInfo *oauth2.TokenEndpointResponse
 	var err error
 
 	// ensure the token has still 15 seconds lifetime
 	c.mutex.RLock()
-	if c.lastResponse != nil && c.lastResponse.ExpiresIn+15 < time.Now().Unix() {
-		tokenInfo = c.lastResponse
+	if c.lastResponse != emptyResponse && c.lastResponse.ExpiresIn+15 < time.Now().Unix() {
+		tokenInfo = &c.lastResponse
 		c.mutex.RUnlock()
 	} else {
 		c.mutex.RUnlock()
@@ -70,7 +50,7 @@ func (c *clientCredentialsStrategy) Apply(ctx context.Context, req *http.Request
 		tokenInfo.ExpiresIn += time.Now().Unix()
 
 		c.mutex.Lock()
-		c.lastResponse = tokenInfo
+		c.lastResponse = *tokenInfo
 		c.mutex.Unlock()
 	}
 
@@ -78,7 +58,7 @@ func (c *clientCredentialsStrategy) Apply(ctx context.Context, req *http.Request
 	return nil
 }
 
-func (c *clientCredentialsStrategy) getAccessToken(ctx context.Context) (*oauth2.TokenEndpointResponse, error) {
+func (c *ClientCredentialsStrategy) getAccessToken(ctx context.Context) (*oauth2.TokenEndpointResponse, error) {
 	client := httpretry.NewCustomClient(
 		&http.Client{
 			Transport: &httpx.TracingRoundTripper{Next: http.DefaultTransport},
@@ -89,27 +69,28 @@ func (c *clientCredentialsStrategy) getAccessToken(ctx context.Context) (*oauth2
 	data := url.Values{
 		"grant_type": []string{"client_credentials"},
 	}
-	if len(c.scopes) != 0 {
-		data.Add("scope", strings.Join(c.scopes, " "))
+	if len(c.Scopes) != 0 {
+		data.Add("scope", strings.Join(c.Scopes, " "))
 	}
 	content := data.Encode()
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.tokenUrl, strings.NewReader(content))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.TokenUrl, strings.NewReader(content))
 	if err != nil {
 		return nil, err
 	}
-	req.SetBasicAuth(url.QueryEscape(c.clientId), url.QueryEscape(c.clientSecret))
+	req.SetBasicAuth(url.QueryEscape(c.ClientId), url.QueryEscape(c.ClientSecret))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("Accept-Type", "application/json")
 
 	resp, err := client.Do(req)
 	if err != nil {
 		return nil, err
 	}
 
-	return c.readResponse(resp)
+	return readResponse(resp)
 }
 
-func (*clientCredentialsStrategy) readResponse(resp *http.Response) (*oauth2.TokenEndpointResponse, error) {
+func readResponse(resp *http.Response) (*oauth2.TokenEndpointResponse, error) {
 	var r oauth2.TokenEndpointResponse
 	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
 		rawData, err := ioutil.ReadAll(resp.Body)

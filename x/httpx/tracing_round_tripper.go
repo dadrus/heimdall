@@ -14,12 +14,11 @@ type TracingRoundTripper struct {
 }
 
 func (d *TracingRoundTripper) RoundTrip(r *http.Request) (*http.Response, error) {
-	tracer := opentracing.GlobalTracer()
-	if tracer == nil {
+	if !opentracing.IsGlobalTracerRegistered() {
 		return d.Next.RoundTrip(r)
 	}
 
-	req, ht := nethttp.TraceRequest(tracer, r,
+	req, ht := nethttp.TraceRequest(opentracing.GlobalTracer(), r,
 		nethttp.OperationName(d.operationName(r)),
 		nethttp.ClientSpanObserver(func(span opentracing.Span, r *http.Request) {
 			ext.SpanKindRPCClient.Set(span)

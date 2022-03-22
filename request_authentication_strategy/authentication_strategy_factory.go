@@ -5,16 +5,22 @@ import (
 	"fmt"
 )
 
-func NewAuthenticationStrategy(name string, c json.RawMessage) (as AuthenticationStrategy, err error) {
+func NewAuthenticationStrategy(name string, c json.RawMessage) (AuthenticationStrategy, error) {
 	switch name {
 	case "":
-		return NewNoopStrategy()
+		return &NoopAuthStrategy{}, nil
 	case "basic":
-		return NewBasicAuthStrategy(c)
+		var s BasicAuthStrategy
+		err := json.Unmarshal(c, &s)
+		return &s, err
 	case "api_key":
-		return NewApiKeyStrategy(c)
+		var s ApiKeyStrategy
+		err := json.Unmarshal(c, &s)
+		return &s, err
 	case "client_credentials":
-		return NewClientCredentialsStrategy(c)
+		var s ClientCredentialsStrategy
+		err := json.Unmarshal(c, &s)
+		return &s, err
 	default:
 		return nil, fmt.Errorf("unsupported authentication type: %s", name)
 	}

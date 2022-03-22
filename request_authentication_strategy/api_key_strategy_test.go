@@ -12,7 +12,7 @@ func TestApplyApiKeyStrategyOnHeader(t *testing.T) {
 	name := "Foo"
 	value := "Bar"
 	req := &http.Request{Header: http.Header{}}
-	s := apiKeyStrategy{name: name, value: value, in: "header"}
+	s := ApiKeyStrategy{Name: name, Value: value, In: "header"}
 
 	// WHEN
 	err := s.Apply(nil, req)
@@ -27,7 +27,7 @@ func TestApplyApiKeyStrategyOnCookie(t *testing.T) {
 	name := "Foo"
 	value := "Bar"
 	req := &http.Request{Header: http.Header{}}
-	s := apiKeyStrategy{name: name, value: value, in: "cookie"}
+	s := ApiKeyStrategy{Name: name, Value: value, In: "cookie"}
 
 	// WHEN
 	err := s.Apply(nil, req)
@@ -38,8 +38,4 @@ func TestApplyApiKeyStrategyOnCookie(t *testing.T) {
 	cookie, err := req.Cookie(name)
 	assert.NoError(t, err)
 	assert.Equal(t, value, cookie.Value)
-}
-
-func TestUnmarshalApiKeyStrategy(t *testing.T) {
-
 }

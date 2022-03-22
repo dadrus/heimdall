@@ -5,12 +5,8 @@ import (
 	"net/http"
 )
 
-func NewNoopStrategy() (*noopAuthStrategy, error) {
-	return &noopAuthStrategy{}, nil
-}
+type NoopAuthStrategy struct{}
 
-type noopAuthStrategy struct{}
-
-func (c *noopAuthStrategy) Apply(_ context.Context, _ *http.Request) error {
+func (c *NoopAuthStrategy) Apply(_ context.Context, _ *http.Request) error {
 	return nil
 }
