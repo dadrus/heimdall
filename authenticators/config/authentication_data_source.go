@@ -14,15 +14,17 @@ type AuthenticationDataSource struct {
 }
 
 func (s AuthenticationDataSource) Extractor() (extractors.AuthDataExtractor, error) {
+	var e extractors.CompositeExtractor
 	if len(s.Cookie) != 0 {
-		return extractors.CookieExtractor(s.Cookie), nil
+		e = append(e, extractors.CookieExtractor(s.Cookie))
 	} else if len(s.Header) != 0 {
-		return &extractors.HeaderExtractor{
+		e = append(e, &extractors.HeaderExtractor{
 			HeaderName: s.Header, ValuePrefix: s.StripPrefix,
-		}, nil
+		})
 	} else if len(s.QueryParameter) != 0 {
-		return extractors.QueryExtractor(s.QueryParameter), nil
+		e = append(e, extractors.QueryExtractor(s.QueryParameter))
 	} else {
 		return nil, errors.New("missing auth data extractor")
 	}
+	return e, nil
 }
