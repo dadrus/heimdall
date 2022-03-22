@@ -16,9 +16,9 @@ var _ Authenticator = new(oauth2IntrospectionAuthenticator)
 
 func newOAuth2IntrospectionAuthenticator(id string, rawConfig json.RawMessage) (*oauth2IntrospectionAuthenticator, error) {
 	type _config struct {
-		Endpoint config.Endpoint   `json:"introspection_endpoint"`
-		Asserter config.Assertions `json:"introspection_response_assertions"`
-		Session  config.Session    `json:"session"`
+		Endpoint   config.Endpoint   `json:"introspection_endpoint"`
+		Assertions config.Assertions `json:"introspection_response_assertions"`
+		Session    config.Session    `json:"session"`
 	}
 
 	var c _config
@@ -42,7 +42,7 @@ func newOAuth2IntrospectionAuthenticator(id string, rawConfig json.RawMessage) (
 		id: id,
 		ae: extractor,
 		e:  c.Endpoint,
-		a:  c.Asserter,
+		a:  c.Assertions,
 		se: c.Session,
 	}, nil
 }
