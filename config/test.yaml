@@ -1,0 +1,171 @@
+log:
+  level: info
+  format: json
+
+serve:
+  api:
+    port: 4468
+  proxy:
+    port: 4469
+
+rule_defaults:
+  authenticators:
+    - deny_all_authorizer
+  authorizer: unauthorized_authenticator
+  error_handlers:
+    - authenticate_on_unauthorized_or_forbidden
+    - default_error
+
+error_handlers:
+  - id: default_error
+    type: json
+    config:
+      verbose: false
+  - id: authenticate_on_unauthorized_or_forbidden
+    type: redirect
+    config:
+      to: http://127.0.0.1:4433/self-service/login/browser
+      return_to_query_param: return_to
+      when:
+        - error:
+            - unauthorized
+            - forbidden
+          request:
+            header:
+              accept:
+                - text/html
+
+authenticators:
+  - id: "noop_authenticator"
+    type: noop
+  - id: "anonymous_authenticator"
+    type: anonymous
+  - id: "unauthorized_authenticator"
+    type: unauthorized
+  - id: "kratos_session_authenticator"
+    type: authentication_data
+    config:
+      identity_info_endpoint:
+        url: http://kratos:4433/sessions/whoami
+        retry:
+          max_delay: 300ms
+          give_up_after: 2s
+        auth:
+          type: client_credentials
+          config:
+            client_id: foo
+            client_secret: bar
+            token_url: foo.bar
+      authentication_data_source:
+        - cookie: ory_kratos_session
+      session:
+        cache:
+          enabled: true
+          ttl: 60s
+        extra_from: "@this"
+        subject_from: "identity.id"
+  - id: "hydra_authenticator"
+    type: oauth2_introspection
+    config:
+      introspection_endpoint:
+        url: http://hydra:4445/oauth2/introspect
+        retry:
+          max_delay: 300ms
+          give_up_after: 2s
+        auth:
+          type: client_credentials
+          config:
+            client_id: foo
+            client_secret: bar
+            token_url: foo.bar
+      introspection_response_assertions:
+        trusted_issuers:
+          - http://127.0.0.1:4444/
+        scope_strategy: exact
+        required_scope:
+          - foo
+          - bar
+        target_audience:
+          - bla
+      session:
+        extra_from: "@this"
+        subject_from: "identity.id"
+        cache:
+          enabled: true
+          ttl: 60s
+  - id: "jwt_authenticator"
+    type: jwt
+    config:
+      jwks_endpoint:
+        url: foo/token
+        method: GET
+      jwt_token_from:
+        - header: Authorization
+          strip_prefix: Bearer
+      jwt_assertions:
+        target_audience:
+          - bla
+        required_scope:
+          - foo
+        allowed_algorithms:
+          - RSA
+        scope_strategy: exact
+        trusted_issuers:
+          - bla
+      session:
+        cache:
+          enabled: true
+          ttl: 60s
+        extra_from: "@this"
+        subject_from: "identity.id"
+authorizers:
+  - id: "allow_all_authorizer"
+    type: allow
+  - id: "deny_all_authorizer"
+    type: deny
+  - id: "keto_authorizer"
+    type: remote
+    config:
+      endpoint:
+        url: keto
+        method: POST
+      payload: "https://bla.bar"
+      headers:
+        foo-bar: "{{ .Subject }}"
+      forward_response_headers:
+        - bla-bar
+hydrators:
+  - id: "subscription_hydrator"
+    type: default
+    config:
+      endpoint:
+        url: foo.bar
+        method: GET
+      payload: http://foo
+      headers:
+        bla: bla
+  - id: "profile_data_hydrator"
+    type: default
+    config:
+      endpoint:
+        url: http://profile
+      headers:
+        foo: bar
+mutators:
+  - id: "foobar"
+    type: noop
+  - id: "jwt"
+    type: jwt
+    config:
+      jwks_url: foo.bar
+      jwt_body:
+        issuer: foo.bar
+        ttl: 5m
+  - id: "bla"
+    type: header
+    config:
+      headers:
+        foo-bar: bla
+
+
+
