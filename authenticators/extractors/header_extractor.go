@@ -17,10 +17,10 @@ func (e HeaderExtractor) Extract(s authenticators.AuthDataSource) (string, error
 		return "", ErrNoAuthDataPresent
 	}
 	if len(e.ValuePrefix) == 0 {
-		return val, nil
+		return strings.TrimSpace(val), nil
 	} else if strings.Index(strings.ToLower(val), e.ValuePrefix) == -1 {
 		return "", ErrNoAuthDataPresent
 	}
 
-	return val[len(e.ValuePrefix)+1:], nil
+	return strings.TrimSpace(val[len(e.ValuePrefix)+1:]), nil
 }
