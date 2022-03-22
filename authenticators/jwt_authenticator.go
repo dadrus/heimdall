@@ -20,7 +20,7 @@ func newJwtAuthenticator(id string, rawConfig json.RawMessage) (*jwtAuthenticato
 	type _config struct {
 		Endpoint       config.Endpoint                 `json:"jwks_endpoint"`
 		AuthDataSource config.AuthenticationDataSource `json:"jwt_token_from"`
-		Asserter       config.Assertions               `json:"jwt_assertions"`
+		Assertions     config.Assertions               `json:"jwt_assertions"`
 		Session        config.Session                  `json:"session"`
 	}
 
@@ -45,7 +45,7 @@ func newJwtAuthenticator(id string, rawConfig json.RawMessage) (*jwtAuthenticato
 		id: id,
 
 		e:  c.Endpoint,
-		a:  c.Asserter,
+		a:  c.Assertions,
 		se: c.Session,
 		ae: ade,
 	}, nil
@@ -80,12 +80,12 @@ func (a *jwtAuthenticator) Authenticate(ctx context.Context, as AuthDataSource, 
 		return fmt.Errorf("failed to extract jwt: %w", err)
 	}
 
-	tokenClaims, err := a.verifyTokenAndGetClaims(jwtRaw, jwks)
+	rawClaims, err := a.verifyTokenAndGetClaims(jwtRaw, jwks)
 	if err != nil {
 		return err
 	}
 
-	if sc.Subject, err = a.se.GetSubject(tokenClaims); err != nil {
+	if sc.Subject, err = a.se.GetSubject(rawClaims); err != nil {
 		return err
 	}
 
