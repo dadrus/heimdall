@@ -16,9 +16,9 @@ var _ Authenticator = new(oauth2IntrospectionAuthenticator)
 
 func newOAuth2IntrospectionAuthenticator(id string, rawConfig json.RawMessage) (*oauth2IntrospectionAuthenticator, error) {
 	type _config struct {
-		Endpoint config.Endpoint `json:"introspection_endpoint"`
-		Asserter config.Asserter `json:"introspection_response_assertions"`
-		Session  config.Session  `json:"session"`
+		Endpoint config.Endpoint   `json:"introspection_endpoint"`
+		Asserter config.Assertions `json:"introspection_response_assertions"`
+		Session  config.Session    `json:"session"`
 	}
 
 	var c _config
@@ -52,7 +52,7 @@ type oauth2IntrospectionAuthenticator struct {
 
 	ae extractors.AuthDataExtractor
 	e  config.Endpoint
-	a  config.Asserter
+	a  config.Assertions
 	se config.Session
 }
 
@@ -81,7 +81,7 @@ func (a *oauth2IntrospectionAuthenticator) Authenticate(ctx context.Context, as 
 		return fmt.Errorf("failed to unmarshal introspection response: %w", err)
 	}
 
-	if err := a.a.Assert(&resp); err != nil {
+	if err := resp.Verify(a.a); err != nil {
 		return fmt.Errorf("validation of the introspection response failed: %w", err)
 	}
 
