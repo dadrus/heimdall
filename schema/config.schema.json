@@ -462,45 +462,67 @@
     },
     "authenticationDataSource": {
       "description": "Where does the request contain authentication information, like header cookie, ets",
-      "type": "object",
-      "additionalProperties": false,
-      "oneOf": [
-        {
-          "required": [
-            "header"
-          ]
-        },
-        {
-          "required": [
-            "query_parameter"
-          ]
-        },
-        {
-          "required": [
-            "cookie"
-          ]
-        }
-      ],
-      "properties": {
-        "header": {
-          "title": "Header",
-          "type": "string",
-          "description": "The header (case insensitive) that contains the authentication information."
-        },
-        "query_parameter": {
-          "title": "Query Parameter",
-          "type": "string",
-          "description": "The query parameter (case sensitive) that contains the authentication information."
-        },
-        "cookie": {
-          "title": "Cookie",
-          "type": "string",
-          "description": "The cookie (case sensitive) that contains the authentication information."
-        },
-        "strip_prefix": {
-          "description": "Prefix which should be stripped from the auth info object value",
-          "type": "string"
-        }
+      "type": "array",
+      "additionalItems": false,
+      "items": {
+        "anyOf": [
+          {
+            "type": "object",
+            "description": "The header (case insensitive) that contains the authentication information.",
+            "additionalProperties": false,
+            "required": ["header"],
+            "properties": {
+              "header": {
+                "type": "string"
+              },
+              "strip_prefix": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "The cookie (case sensitive) that contains the authentication information.",
+            "additionalProperties": false,
+            "required": ["cookie"],
+            "properties": {
+              "cookie": {
+                "type": "string"
+              },
+              "strip_prefix": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "The query parameter (case sensitive) that contains the authentication information.",
+            "additionalProperties": false,
+            "required": ["query_parameter"],
+            "properties": {
+              "query_parameter": {
+                "type": "string"
+              },
+              "strip_prefix": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "The form parameter (case sensitive) that contains the authentication information.",
+            "additionalProperties": false,
+            "required": ["form_parameter"],
+            "properties": {
+              "form_parameter": {
+                "type": "string"
+              },
+              "strip_prefix": {
+                "type": "string"
+              }
+            }
+          }
+        ]
       }
     },
     "assertionRequirements": {
