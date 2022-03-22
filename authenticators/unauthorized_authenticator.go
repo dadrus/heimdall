@@ -1,6 +1,10 @@
 package authenticators
 
-import "context"
+import (
+	"context"
+
+	"github.com/dadrus/heimdall/pipeline"
+)
 
 var _ Authenticator = new(unauthorizedAuthenticator)
 
@@ -18,6 +22,6 @@ func (a *unauthorizedAuthenticator) Id() string {
 	return a.id
 }
 
-func (a *unauthorizedAuthenticator) Authenticate(ctx context.Context, as AuthDataSource, sc *SubjectContext) error {
+func (a *unauthorizedAuthenticator) Authenticate(ctx context.Context, as pipeline.AuthDataSource, sc *pipeline.SubjectContext) error {
 	return nil
 }

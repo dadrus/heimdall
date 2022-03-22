@@ -7,7 +7,8 @@ import (
 	"strings"
 
 	"github.com/dadrus/heimdall/authenticators/config"
-	"github.com/dadrus/heimdall/authenticators/extractors"
+	"github.com/dadrus/heimdall/extractors"
+	"github.com/dadrus/heimdall/pipeline"
 )
 
 var _ Authenticator = new(authenticationDataAuthenticator)
@@ -44,7 +45,7 @@ func (a *authenticationDataAuthenticator) Id() string {
 	return a.id
 }
 
-func (a *authenticationDataAuthenticator) Authenticate(ctx context.Context, as AuthDataSource, sc *SubjectContext) error {
+func (a *authenticationDataAuthenticator) Authenticate(ctx context.Context, as pipeline.AuthDataSource, sc *pipeline.SubjectContext) error {
 	authDataRef, err := a.ae.GetAuthData(as)
 	if err != nil {
 		return fmt.Errorf("failed to extract authentication data: %w", err)

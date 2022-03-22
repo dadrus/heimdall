@@ -3,7 +3,7 @@ package extractors
 import (
 	"strings"
 
-	"github.com/dadrus/heimdall/authenticators"
+	"github.com/dadrus/heimdall/pipeline"
 )
 
 type FormParameterExtractStrategy struct {
@@ -11,7 +11,7 @@ type FormParameterExtractStrategy struct {
 	Prefix string
 }
 
-func (es FormParameterExtractStrategy) GetAuthData(s authenticators.AuthDataSource) (string, error) {
+func (es FormParameterExtractStrategy) GetAuthData(s pipeline.AuthDataSource) (string, error) {
 	if val := s.Form(es.Name); len(val) != 0 {
 		return strings.TrimSpace(strings.TrimPrefix(val, es.Prefix)), nil
 	} else {

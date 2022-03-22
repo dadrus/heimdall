@@ -3,6 +3,8 @@ package authenticators
 import (
 	"context"
 	"encoding/json"
+
+	"github.com/dadrus/heimdall/pipeline"
 )
 
 var _ Authenticator = new(anonymousAuthenticator)
@@ -36,6 +38,6 @@ func (a *anonymousAuthenticator) Id() string {
 	return a.id
 }
 
-func (a *anonymousAuthenticator) Authenticate(ctx context.Context, as AuthDataSource, sc *SubjectContext) error {
+func (a *anonymousAuthenticator) Authenticate(ctx context.Context, as pipeline.AuthDataSource, sc *pipeline.SubjectContext) error {
 	return nil
 }

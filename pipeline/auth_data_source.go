@@ -1,4 +1,4 @@
-package authenticators
+package pipeline
 
 type AuthDataSource interface {
 	Header(key string) string

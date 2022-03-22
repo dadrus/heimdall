@@ -1,8 +1,12 @@
 package authenticators
 
-import "context"
+import (
+	"context"
+
+	"github.com/dadrus/heimdall/pipeline"
+)
 
 type Authenticator interface {
 	Id() string
-	Authenticate(context.Context, AuthDataSource, *SubjectContext) error
+	Authenticate(context.Context, pipeline.AuthDataSource, *pipeline.SubjectContext) error
 }

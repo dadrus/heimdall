@@ -1,12 +1,12 @@
 package extractors
 
 import (
-	"github.com/dadrus/heimdall/authenticators"
+	"github.com/dadrus/heimdall/pipeline"
 )
 
 type CompositeExtractStrategy []AuthDataExtractStrategy
 
-func (ce CompositeExtractStrategy) GetAuthData(s authenticators.AuthDataSource) (string, error) {
+func (ce CompositeExtractStrategy) GetAuthData(s pipeline.AuthDataSource) (string, error) {
 	for _, e := range ce {
 		if t, err := e.GetAuthData(s); err == nil {
 			return t, nil

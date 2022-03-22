@@ -8,8 +8,9 @@ import (
 	"strings"
 
 	"github.com/dadrus/heimdall/authenticators/config"
-	"github.com/dadrus/heimdall/authenticators/extractors"
-	"github.com/dadrus/heimdall/authenticators/oauth2"
+	"github.com/dadrus/heimdall/extractors"
+	"github.com/dadrus/heimdall/oauth2"
+	"github.com/dadrus/heimdall/pipeline"
 )
 
 var _ Authenticator = new(oauth2IntrospectionAuthenticator)
@@ -57,7 +58,7 @@ func (a *oauth2IntrospectionAuthenticator) Id() string {
 	return a.id
 }
 
-func (a *oauth2IntrospectionAuthenticator) Authenticate(ctx context.Context, as AuthDataSource, sc *SubjectContext) error {
+func (a *oauth2IntrospectionAuthenticator) Authenticate(ctx context.Context, as pipeline.AuthDataSource, sc *pipeline.SubjectContext) error {
 	accessToken, err := a.ae.GetAuthData(as)
 	if err != nil {
 		return fmt.Errorf("failed to extract authentication data: %w", err)

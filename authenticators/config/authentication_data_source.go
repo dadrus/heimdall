@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 
-	"github.com/dadrus/heimdall/authenticators/extractors"
+	"github.com/dadrus/heimdall/extractors"
 )
 
 type AuthenticationDataSource struct {

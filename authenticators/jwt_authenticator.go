@@ -8,8 +8,9 @@ import (
 	"strings"
 
 	"github.com/dadrus/heimdall/authenticators/config"
-	"github.com/dadrus/heimdall/authenticators/extractors"
-	"github.com/dadrus/heimdall/authenticators/oauth2"
+	"github.com/dadrus/heimdall/extractors"
+	"github.com/dadrus/heimdall/oauth2"
+	"github.com/dadrus/heimdall/pipeline"
 	"gopkg.in/square/go-jose.v2"
 	"gopkg.in/square/go-jose.v2/jwt"
 )
@@ -59,7 +60,7 @@ func (a *jwtAuthenticator) Id() string {
 	return a.id
 }
 
-func (a *jwtAuthenticator) Authenticate(ctx context.Context, as AuthDataSource, sc *SubjectContext) error {
+func (a *jwtAuthenticator) Authenticate(ctx context.Context, as pipeline.AuthDataSource, sc *pipeline.SubjectContext) error {
 	rawBody, err := a.e.SendRequest(ctx, nil)
 	if err != nil {
 		return err

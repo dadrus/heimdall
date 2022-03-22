@@ -1,4 +1,4 @@
-package authenticators
+package pipeline
 
 import "net/http"
 

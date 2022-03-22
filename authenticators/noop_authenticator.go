@@ -1,6 +1,10 @@
 package authenticators
 
-import "context"
+import (
+	"context"
+
+	"github.com/dadrus/heimdall/pipeline"
+)
 
 var _ Authenticator = new(noopAuthenticator)
 
@@ -18,6 +22,6 @@ func (a *noopAuthenticator) Id() string {
 	return a.id
 }
 
-func (*noopAuthenticator) Authenticate(ctx context.Context, as AuthDataSource, sc *SubjectContext) error {
+func (*noopAuthenticator) Authenticate(ctx context.Context, as pipeline.AuthDataSource, sc *pipeline.SubjectContext) error {
 	return nil
 }

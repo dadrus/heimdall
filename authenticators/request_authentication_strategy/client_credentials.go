@@ -12,7 +12,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/dadrus/heimdall/authenticators/oauth2"
+	"github.com/dadrus/heimdall/oauth2"
 	"github.com/ybbus/httpretry"
 
 	"github.com/dadrus/heimdall/x/httpx"

@@ -3,7 +3,7 @@ package extractors
 import (
 	"strings"
 
-	"github.com/dadrus/heimdall/authenticators"
+	"github.com/dadrus/heimdall/pipeline"
 )
 
 type QueryParameterExtractStrategy struct {
@@ -11,7 +11,7 @@ type QueryParameterExtractStrategy struct {
 	Prefix string
 }
 
-func (es QueryParameterExtractStrategy) GetAuthData(s authenticators.AuthDataSource) (string, error) {
+func (es QueryParameterExtractStrategy) GetAuthData(s pipeline.AuthDataSource) (string, error) {
 	if val := s.Query(es.Name); len(val) != 0 {
 		return strings.TrimSpace(strings.TrimPrefix(val, es.Prefix)), nil
 	} else {
