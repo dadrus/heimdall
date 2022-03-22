@@ -8,9 +8,9 @@ import (
 
 func NewApiKeyStrategy(raw json.RawMessage) (AuthenticationStrategy, error) {
 	type config struct {
-		In    string
-		Name  string
-		Value string
+		In    string `json:"in"`
+		Name  string `json:"name"`
+		Value string `json:"value"`
 	}
 
 	var c config
@@ -35,7 +35,7 @@ func (c *apiKeyStrategy) Apply(_ context.Context, req *http.Request) error {
 	switch c.in {
 	case "cookie":
 		req.AddCookie(&http.Cookie{Name: c.name, Value: c.value})
-	default:
+	case "header":
 		req.Header.Set(c.name, c.value)
 	}
 	return nil

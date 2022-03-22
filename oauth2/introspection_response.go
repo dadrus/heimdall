@@ -3,11 +3,8 @@ package oauth2
 import (
 	"errors"
 
-	"github.com/dadrus/heimdall/authenticators/config"
 	"gopkg.in/square/go-jose.v2/jwt"
 )
-
-type Scopes []string
 
 type IntrospectionResponse struct {
 	jwt.Claims
@@ -18,7 +15,7 @@ type IntrospectionResponse struct {
 	TokenType string `json:"token_type"`
 }
 
-func (ir *IntrospectionResponse) Verify(assertions config.Assertions) error {
+func (ir *IntrospectionResponse) Verify(assertions Assertions) error {
 	if !ir.Active {
 		return errors.New("token is not active")
 	}

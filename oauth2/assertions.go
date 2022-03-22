@@ -1,12 +1,10 @@
-package config
+package oauth2
 
 import (
 	"golang.org/x/exp/slices"
 )
 
 type ScopeStrategy string
-
-type Scopes []string
 
 type Assertions struct {
 	ScopeStrategy     ScopeStrategy `json:"scope_strategy"`

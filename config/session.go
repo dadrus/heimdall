@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/dadrus/heimdall/authenticators"
+	"github.com/dadrus/heimdall/pipeline"
 	"github.com/ory/go-convenience/stringsx"
 	"github.com/tidwall/gjson"
 )
@@ -14,7 +14,7 @@ type Session struct {
 	AttributesFrom string `json:"attributes_from"`
 }
 
-func (s *Session) GetSubject(rawData json.RawMessage) (*authenticators.Subject, error) {
+func (s *Session) GetSubject(rawData json.RawMessage) (*pipeline.Subject, error) {
 	var (
 		subjectId  string
 		attributes map[string]interface{}
@@ -30,7 +30,7 @@ func (s *Session) GetSubject(rawData json.RawMessage) (*authenticators.Subject, 
 		return nil, fmt.Errorf("configured attributes_from GJSON path returned an error on JSON output: %w", err)
 	}
 
-	return &authenticators.Subject{
+	return &pipeline.Subject{
 		Id:         subjectId,
 		Attributes: attributes,
 	}, nil

@@ -7,7 +7,7 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/dadrus/heimdall/authenticators/config"
+	"github.com/dadrus/heimdall/config"
 	"github.com/dadrus/heimdall/extractors"
 	"github.com/dadrus/heimdall/oauth2"
 	"github.com/dadrus/heimdall/pipeline"

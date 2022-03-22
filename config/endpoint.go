@@ -11,7 +11,7 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/dadrus/heimdall/authenticators/request_authentication_strategy"
+	"github.com/dadrus/heimdall/request_authentication_strategy"
 	"github.com/dadrus/heimdall/x/httpx"
 	"github.com/ybbus/httpretry"
 )
