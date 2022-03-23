@@ -12,9 +12,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/dadrus/heimdall/oauth2"
 	"github.com/ybbus/httpretry"
 
+	"github.com/dadrus/heimdall/oauth2"
 	"github.com/dadrus/heimdall/x/httpx"
 )
 
@@ -29,28 +29,26 @@ type ClientCredentialsStrategy struct {
 }
 
 func (c *ClientCredentialsStrategy) Apply(ctx context.Context, req *http.Request) error {
-	emptyResponse := oauth2.TokenEndpointResponse{}
-
-	var tokenInfo *oauth2.TokenEndpointResponse
-	var err error
+	var tokenInfo oauth2.TokenEndpointResponse
 
 	// ensure the token has still 15 seconds lifetime
 	c.mutex.RLock()
-	if c.lastResponse != emptyResponse && c.lastResponse.ExpiresIn+15 < time.Now().Unix() {
-		tokenInfo = &c.lastResponse
+	if c.lastResponse.ExpiresIn+15 < time.Now().Unix() {
+		tokenInfo = c.lastResponse
 		c.mutex.RUnlock()
 	} else {
 		c.mutex.RUnlock()
 
-		tokenInfo, err = c.getAccessToken(ctx)
+		resp, err := c.getAccessToken(ctx)
 		if err != nil {
 			return err
 		}
 		// set absolute expiration time
+		tokenInfo = *resp
 		tokenInfo.ExpiresIn += time.Now().Unix()
 
 		c.mutex.Lock()
-		c.lastResponse = *tokenInfo
+		c.lastResponse = tokenInfo
 		c.mutex.Unlock()
 	}
 
