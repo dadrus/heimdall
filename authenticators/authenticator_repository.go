@@ -35,7 +35,7 @@ func newAuthenticator(auth config.PipelineObject) (Authenticator, error) {
 	case config.OAuth2Introspection:
 		return newOAuth2IntrospectionAuthenticator(auth.Id, auth.Config)
 	case config.Jwt:
-		return nil, nil
+		return newJwtAuthenticator(auth.Id, auth.Config)
 	default:
 		return nil, errors.New("unknown authenticator type")
 	}

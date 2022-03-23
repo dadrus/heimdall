@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/dadrus/heimdall/config"
+	"github.com/dadrus/heimdall/endpoint"
 	"github.com/dadrus/heimdall/extractors"
 	"github.com/dadrus/heimdall/oauth2"
 	"github.com/dadrus/heimdall/pipeline"
@@ -19,9 +20,9 @@ var _ Authenticator = new(jwtAuthenticator)
 
 func newJwtAuthenticator(id string, rawConfig json.RawMessage) (*jwtAuthenticator, error) {
 	type _config struct {
-		Endpoint       config.Endpoint                 `json:"jwks_endpoint"`
+		Endpoint       endpoint.Endpoint               `json:"jwks_endpoint"`
 		AuthDataSource config.AuthenticationDataSource `json:"jwt_token_from"`
-		Assertions     config.Assertions               `json:"jwt_assertions"`
+		Assertions     oauth2.Assertions               `json:"jwt_assertions"`
 		Session        config.Session                  `json:"session"`
 	}
 
@@ -50,8 +51,8 @@ func newJwtAuthenticator(id string, rawConfig json.RawMessage) (*jwtAuthenticato
 type jwtAuthenticator struct {
 	id string
 
-	e  config.Endpoint
-	a  config.Assertions
+	e  endpoint.Endpoint
+	a  oauth2.Assertions
 	se config.Session
 	ae extractors.AuthDataExtractStrategy
 }

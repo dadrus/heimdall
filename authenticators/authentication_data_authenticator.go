@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/dadrus/heimdall/config"
+	"github.com/dadrus/heimdall/endpoint"
 	"github.com/dadrus/heimdall/extractors"
 	"github.com/dadrus/heimdall/pipeline"
 )
@@ -15,7 +16,7 @@ var _ Authenticator = new(authenticationDataAuthenticator)
 
 func newAuthenticationDataAuthenticator(id string, rawConfig json.RawMessage) (*authenticationDataAuthenticator, error) {
 	type _config struct {
-		Endpoint       config.Endpoint                 `json:"identity_info_endpoint"`
+		Endpoint       endpoint.Endpoint               `json:"identity_info_endpoint"`
 		AuthDataSource config.AuthenticationDataSource `json:"authentication_data_source"`
 		Session        config.Session                  `json:"session"`
 	}
@@ -36,7 +37,7 @@ func newAuthenticationDataAuthenticator(id string, rawConfig json.RawMessage) (*
 type authenticationDataAuthenticator struct {
 	id string
 
-	e  config.Endpoint
+	e  endpoint.Endpoint
 	se config.Session
 	ae extractors.AuthDataExtractStrategy
 }

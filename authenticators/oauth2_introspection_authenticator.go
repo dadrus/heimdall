@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/dadrus/heimdall/config"
+	"github.com/dadrus/heimdall/endpoint"
 	"github.com/dadrus/heimdall/extractors"
 	"github.com/dadrus/heimdall/oauth2"
 	"github.com/dadrus/heimdall/pipeline"
@@ -17,8 +18,8 @@ var _ Authenticator = new(oauth2IntrospectionAuthenticator)
 
 func newOAuth2IntrospectionAuthenticator(id string, rawConfig json.RawMessage) (*oauth2IntrospectionAuthenticator, error) {
 	type _config struct {
-		Endpoint   config.Endpoint   `json:"introspection_endpoint"`
-		Assertions config.Assertions `json:"introspection_response_assertions"`
+		Endpoint   endpoint.Endpoint `json:"introspection_endpoint"`
+		Assertions oauth2.Assertions `json:"introspection_response_assertions"`
 		Session    config.Session    `json:"session"`
 	}
 
@@ -49,8 +50,8 @@ type oauth2IntrospectionAuthenticator struct {
 	id string
 
 	ae extractors.AuthDataExtractStrategy
-	e  config.Endpoint
-	a  config.Assertions
+	e  endpoint.Endpoint
+	a  oauth2.Assertions
 	se config.Session
 }
 
