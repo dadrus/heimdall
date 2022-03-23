@@ -118,3 +118,5 @@ func TestApplyClientCredentialsStrategy(t *testing.T) {
 	assert.Equal(t, setAccessToken, s.lastResponse.AccessToken)
 	assert.Equal(t, "Bearer", s.lastResponse.TokenType)
 }
+
+// TODO: test concurrency

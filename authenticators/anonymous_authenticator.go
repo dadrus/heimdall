@@ -10,28 +10,19 @@ import (
 var _ Authenticator = new(anonymousAuthenticator)
 
 func newAnonymousAuthenticator(id string, rawConfig json.RawMessage) (*anonymousAuthenticator, error) {
-	type config struct {
-		Subject string `json:"subject"`
-	}
+	var authenticator anonymousAuthenticator
 
-	var c config
-	if err := json.Unmarshal(rawConfig, &c); err != nil {
+	if err := json.Unmarshal(rawConfig, &authenticator); err != nil {
 		return nil, err
 	}
 
-	if len(c.Subject) == 0 {
-		c.Subject = "anonymous"
-	}
-
-	return &anonymousAuthenticator{
-		id:        id,
-		subjectId: c.Subject,
-	}, nil
+	authenticator.id = id
+	return &authenticator, nil
 }
 
 type anonymousAuthenticator struct {
-	id        string
-	subjectId string
+	id      string
+	Subject string `json:"subject"`
 }
 
 func (a *anonymousAuthenticator) Id() string {
@@ -39,5 +30,11 @@ func (a *anonymousAuthenticator) Id() string {
 }
 
 func (a *anonymousAuthenticator) Authenticate(ctx context.Context, as pipeline.AuthDataSource, sc *pipeline.SubjectContext) error {
+	subjectId := a.Subject
+	if len(subjectId) == 0 {
+		subjectId = "anonymous"
+	}
+
+	sc.Subject = &pipeline.Subject{Id: subjectId}
 	return nil
 }
