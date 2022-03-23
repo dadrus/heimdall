@@ -10,11 +10,10 @@ import (
 
 func TestCreateAnonymousAuthenticatorFromJsonConfig(t *testing.T) {
 	// WHEN
-	a, err := newAnonymousAuthenticator("foo", json.RawMessage(`{"subject":"bla"}`))
+	a, err := newAnonymousAuthenticator(json.RawMessage(`{"subject":"bla"}`))
 
 	// THEN
 	assert.NoError(t, err)
-	assert.Equal(t, "foo", a.id)
 	assert.Equal(t, "bla", a.Subject)
 }
 
