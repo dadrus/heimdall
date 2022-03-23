@@ -8,19 +8,11 @@ import (
 
 var _ Authenticator = new(unauthorizedAuthenticator)
 
-func newUnauthorizedAuthenticator(id string) (*unauthorizedAuthenticator, error) {
-	return &unauthorizedAuthenticator{
-		id: id,
-	}, nil
+func newUnauthorizedAuthenticator() (*unauthorizedAuthenticator, error) {
+	return &unauthorizedAuthenticator{}, nil
 }
 
-type unauthorizedAuthenticator struct {
-	id string
-}
-
-func (a *unauthorizedAuthenticator) Id() string {
-	return a.id
-}
+type unauthorizedAuthenticator struct{}
 
 func (a *unauthorizedAuthenticator) Authenticate(ctx context.Context, as pipeline.AuthDataSource, sc *pipeline.SubjectContext) error {
 	return nil

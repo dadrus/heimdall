@@ -16,7 +16,7 @@ import (
 
 var _ Authenticator = new(oauth2IntrospectionAuthenticator)
 
-func newOAuth2IntrospectionAuthenticator(id string, rawConfig json.RawMessage) (*oauth2IntrospectionAuthenticator, error) {
+func newOAuth2IntrospectionAuthenticator(rawConfig json.RawMessage) (*oauth2IntrospectionAuthenticator, error) {
 	type _config struct {
 		Endpoint   endpoint.Endpoint `json:"introspection_endpoint"`
 		Assertions oauth2.Assertions `json:"introspection_response_assertions"`
@@ -38,7 +38,6 @@ func newOAuth2IntrospectionAuthenticator(id string, rawConfig json.RawMessage) (
 	}
 
 	return &oauth2IntrospectionAuthenticator{
-		id: id,
 		ae: extractor,
 		e:  c.Endpoint,
 		a:  c.Assertions,
@@ -47,16 +46,10 @@ func newOAuth2IntrospectionAuthenticator(id string, rawConfig json.RawMessage) (
 }
 
 type oauth2IntrospectionAuthenticator struct {
-	id string
-
 	ae extractors.AuthDataExtractStrategy
 	e  endpoint.Endpoint
 	a  oauth2.Assertions
 	se config.Session
-}
-
-func (a *oauth2IntrospectionAuthenticator) Id() string {
-	return a.id
 }
 
 func (a *oauth2IntrospectionAuthenticator) Authenticate(ctx context.Context, as pipeline.AuthDataSource, sc *pipeline.SubjectContext) error {

@@ -7,6 +7,5 @@ import (
 )
 
 type Authenticator interface {
-	Id() string
 	Authenticate(context.Context, pipeline.AuthDataSource, *pipeline.SubjectContext) error
 }

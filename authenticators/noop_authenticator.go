@@ -8,19 +8,11 @@ import (
 
 var _ Authenticator = new(noopAuthenticator)
 
-func newNoopAuthenticator(id string) (*noopAuthenticator, error) {
-	return &noopAuthenticator{
-		id: id,
-	}, nil
+func newNoopAuthenticator() (*noopAuthenticator, error) {
+	return &noopAuthenticator{}, nil
 }
 
-type noopAuthenticator struct {
-	id string
-}
-
-func (a *noopAuthenticator) Id() string {
-	return a.id
-}
+type noopAuthenticator struct{}
 
 func (*noopAuthenticator) Authenticate(ctx context.Context, as pipeline.AuthDataSource, sc *pipeline.SubjectContext) error {
 	return nil

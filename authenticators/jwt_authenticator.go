@@ -18,7 +18,7 @@ import (
 
 var _ Authenticator = new(jwtAuthenticator)
 
-func newJwtAuthenticator(id string, rawConfig json.RawMessage) (*jwtAuthenticator, error) {
+func newJwtAuthenticator(rawConfig json.RawMessage) (*jwtAuthenticator, error) {
 	type _config struct {
 		Endpoint       endpoint.Endpoint               `json:"jwks_endpoint"`
 		AuthDataSource config.AuthenticationDataSource `json:"jwt_token_from"`
@@ -39,8 +39,6 @@ func newJwtAuthenticator(id string, rawConfig json.RawMessage) (*jwtAuthenticato
 	}
 
 	return &jwtAuthenticator{
-		id: id,
-
 		e:  c.Endpoint,
 		a:  c.Assertions,
 		se: c.Session,
@@ -49,16 +47,10 @@ func newJwtAuthenticator(id string, rawConfig json.RawMessage) (*jwtAuthenticato
 }
 
 type jwtAuthenticator struct {
-	id string
-
 	e  endpoint.Endpoint
 	a  oauth2.Assertions
 	se config.Session
 	ae extractors.AuthDataExtractStrategy
-}
-
-func (a *jwtAuthenticator) Id() string {
-	return a.id
 }
 
 func (a *jwtAuthenticator) Authenticate(ctx context.Context, as pipeline.AuthDataSource, sc *pipeline.SubjectContext) error {

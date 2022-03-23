@@ -14,7 +14,7 @@ import (
 
 var _ Authenticator = new(authenticationDataAuthenticator)
 
-func newAuthenticationDataAuthenticator(id string, rawConfig json.RawMessage) (*authenticationDataAuthenticator, error) {
+func newAuthenticationDataAuthenticator(rawConfig json.RawMessage) (*authenticationDataAuthenticator, error) {
 	type _config struct {
 		Endpoint       endpoint.Endpoint               `json:"identity_info_endpoint"`
 		AuthDataSource config.AuthenticationDataSource `json:"authentication_data_source"`
@@ -27,7 +27,6 @@ func newAuthenticationDataAuthenticator(id string, rawConfig json.RawMessage) (*
 	}
 
 	return &authenticationDataAuthenticator{
-		id: id,
 		e:  c.Endpoint,
 		ae: c.AuthDataSource.Strategy(),
 		se: c.Session,
@@ -35,15 +34,9 @@ func newAuthenticationDataAuthenticator(id string, rawConfig json.RawMessage) (*
 }
 
 type authenticationDataAuthenticator struct {
-	id string
-
 	e  endpoint.Endpoint
 	se config.Session
 	ae extractors.AuthDataExtractStrategy
-}
-
-func (a *authenticationDataAuthenticator) Id() string {
-	return a.id
 }
 
 func (a *authenticationDataAuthenticator) Authenticate(ctx context.Context, as pipeline.AuthDataSource, sc *pipeline.SubjectContext) error {

@@ -1,11 +1,22 @@
 package authenticators
 
 import (
+	"encoding/json"
 	"testing"
 
 	"github.com/dadrus/heimdall/pipeline"
 	"github.com/stretchr/testify/assert"
 )
+
+func TestCreateAnonymousAuthenticatorFromJsonConfig(t *testing.T) {
+	// WHEN
+	a, err := newAnonymousAuthenticator("foo", json.RawMessage(`{"subject":"bla"}`))
+
+	// THEN
+	assert.NoError(t, err)
+	assert.Equal(t, "foo", a.id)
+	assert.Equal(t, "bla", a.Subject)
+}
 
 func TestAuthenticateWithAnonymousAuthenticatorWithDefaultSubjectId(t *testing.T) {
 	// GIVEN
