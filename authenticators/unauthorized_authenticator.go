@@ -3,17 +3,12 @@ package authenticators
 import (
 	"context"
 
+	"github.com/dadrus/heimdall/errorsx"
 	"github.com/dadrus/heimdall/pipeline"
 )
 
-var _ Authenticator = new(unauthorizedAuthenticator)
+type UnauthorizedAuthenticator struct{}
 
-func newUnauthorizedAuthenticator() (*unauthorizedAuthenticator, error) {
-	return &unauthorizedAuthenticator{}, nil
-}
-
-type unauthorizedAuthenticator struct{}
-
-func (a *unauthorizedAuthenticator) Authenticate(ctx context.Context, as pipeline.AuthDataSource, sc *pipeline.SubjectContext) error {
-	return nil
+func (a *UnauthorizedAuthenticator) Authenticate(ctx context.Context, as pipeline.AuthDataSource, sc *pipeline.SubjectContext) error {
+	return &errorsx.UnauthorizedError{Message: "denied by authenticator"}
 }

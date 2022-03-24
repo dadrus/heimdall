@@ -1,17 +1,19 @@
-package authenticators
+package repositories
 
 import (
 	"errors"
 
+	"github.com/dadrus/heimdall/authenticators"
 	"github.com/dadrus/heimdall/config"
+	"github.com/dadrus/heimdall/pipeline"
 )
 
 type AuthenticatorRepository interface {
-	FindById(id string) (Authenticator, error)
+	FindById(id string) (pipeline.Authenticator, error)
 }
 
 func NewAuthenticatorRepository(conf config.Configuration) (AuthenticatorRepository, error) {
-	var authenticators map[string]Authenticator
+	var authenticators map[string]pipeline.Authenticator
 	for _, auth := range conf.Authenticators {
 		if a, err := newAuthenticator(auth); err != nil {
 			authenticators[auth.Id] = a
@@ -22,30 +24,30 @@ func NewAuthenticatorRepository(conf config.Configuration) (AuthenticatorReposit
 	return &authenticatorRepository{r: authenticators}, nil
 }
 
-func newAuthenticator(auth config.PipelineObject) (Authenticator, error) {
+func newAuthenticator(auth config.PipelineObject) (pipeline.Authenticator, error) {
 	switch auth.Type {
 	case config.Noop:
-		return newNoopAuthenticator(auth.Id)
+		return &authenticators.NoopAuthenticator{}, nil
 	case config.Anonymous:
-		return newAnonymousAuthenticator(auth.Id, auth.Config)
+		return NewAnonymousAuthenticatorFromJSON(auth.Config)
 	case config.Unauthorized:
-		return newUnauthorizedAuthenticator(auth.Id)
+		return &authenticators.UnauthorizedAuthenticator{}, nil
 	case config.AuthenticationData:
-		return newAuthenticationDataAuthenticator(auth.Id, auth.Config)
+		return NewAuthenticationDataAuthenticatorFromJSON(auth.Config)
 	case config.OAuth2Introspection:
-		return newOAuth2IntrospectionAuthenticator(auth.Id, auth.Config)
+		return NewOAuth2IntrospectionAuthenticatorFromJSON(auth.Config)
 	case config.Jwt:
-		return newJwtAuthenticator(auth.Id, auth.Config)
+		return NewJwtAuthenticatorFromJSON(auth.Config)
 	default:
 		return nil, errors.New("unknown authenticator type")
 	}
 }
 
 type authenticatorRepository struct {
-	r map[string]Authenticator
+	r map[string]pipeline.Authenticator
 }
 
-func (r *authenticatorRepository) FindById(id string) (Authenticator, error) {
+func (r *authenticatorRepository) FindById(id string) (pipeline.Authenticator, error) {
 	if a, ok := r.r[id]; !ok {
 		return nil, errors.New("no such authenticator")
 	} else {

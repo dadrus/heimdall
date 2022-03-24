@@ -48,7 +48,7 @@ func (e Endpoint) SendRequest(ctx context.Context, body io.Reader) ([]byte, erro
 
 	a, err := request_authentication_strategy.NewAuthenticationStrategy(e.Auth.Type, e.Auth.Config)
 	if err != nil {
-		return nil, fmt.Errorf("failed to authenticate request: %w", err)
+		return nil, fmt.Errorf("failed to create authentication strategy: %w", err)
 	}
 
 	err = a.Apply(ctx, req)

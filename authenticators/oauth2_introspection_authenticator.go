@@ -7,55 +7,22 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/dadrus/heimdall/config"
-	"github.com/dadrus/heimdall/endpoint"
-	"github.com/dadrus/heimdall/extractors"
+	"github.com/dadrus/heimdall/errorsx"
 	"github.com/dadrus/heimdall/oauth2"
 	"github.com/dadrus/heimdall/pipeline"
 )
 
-var _ Authenticator = new(oauth2IntrospectionAuthenticator)
-
-func newOAuth2IntrospectionAuthenticator(rawConfig json.RawMessage) (*oauth2IntrospectionAuthenticator, error) {
-	type _config struct {
-		Endpoint   endpoint.Endpoint `json:"introspection_endpoint"`
-		Assertions oauth2.Assertions `json:"introspection_response_assertions"`
-		Session    config.Session    `json:"session"`
-	}
-
-	var c _config
-	if err := json.Unmarshal(rawConfig, &c); err != nil {
-		return nil, err
-	}
-
-	c.Endpoint.Headers["Content-Type"] = "application/x-www-form-urlencoded"
-	c.Endpoint.Headers["Accept-Type"] = "application/json"
-
-	extractor := extractors.CompositeExtractStrategy{
-		extractors.HeaderValueExtractStrategy{Name: "Authorization", Prefix: "Bearer"},
-		extractors.FormParameterExtractStrategy{Name: "access_token"},
-		extractors.QueryParameterExtractStrategy{Name: "access_token"},
-	}
-
-	return &oauth2IntrospectionAuthenticator{
-		ae: extractor,
-		e:  c.Endpoint,
-		a:  c.Assertions,
-		se: c.Session,
-	}, nil
+type OAuth2IntrospectionAuthenticator struct {
+	AuthDataGetter   AuthDataGetter
+	Endpoint         Endpoint
+	SubjectExtractor SubjectExtrator
+	Assertions       oauth2.Assertions
 }
 
-type oauth2IntrospectionAuthenticator struct {
-	ae extractors.AuthDataExtractStrategy
-	e  endpoint.Endpoint
-	a  oauth2.Assertions
-	se config.Session
-}
-
-func (a *oauth2IntrospectionAuthenticator) Authenticate(ctx context.Context, as pipeline.AuthDataSource, sc *pipeline.SubjectContext) error {
-	accessToken, err := a.ae.GetAuthData(as)
+func (a *OAuth2IntrospectionAuthenticator) Authenticate(ctx context.Context, as pipeline.AuthDataSource, sc *pipeline.SubjectContext) error {
+	accessToken, err := a.AuthDataGetter.GetAuthData(as)
 	if err != nil {
-		return fmt.Errorf("failed to extract authentication data: %w", err)
+		return &errorsx.ArgumentError{Message: "no access token present", Cause: err}
 	}
 
 	data := url.Values{
@@ -63,22 +30,25 @@ func (a *oauth2IntrospectionAuthenticator) Authenticate(ctx context.Context, as 
 		"token_type_hint": []string{"access_token"},
 	}
 
-	rawBody, err := a.e.SendRequest(ctx, strings.NewReader(data.Encode()))
+	rawBody, err := a.Endpoint.SendRequest(ctx, strings.NewReader(data.Encode()))
 	if err != nil {
 		return err
 	}
 
 	var resp oauth2.IntrospectionResponse
-	if err := json.Unmarshal(rawBody, &resp); err != nil {
+	if err = json.Unmarshal(rawBody, &resp); err != nil {
 		return fmt.Errorf("failed to unmarshal introspection response: %w", err)
 	}
 
-	if err := resp.Verify(a.a); err != nil {
-		return fmt.Errorf("validation of the introspection response failed: %w", err)
+	if err = resp.Verify(a.Assertions); err != nil {
+		return &errorsx.UnauthorizedError{
+			Message: "access token does not satisfy assertion conditions",
+			Cause:   err,
+		}
 	}
 
-	if sc.Subject, err = a.se.GetSubject(rawBody); err != nil {
-		return err
+	if sc.Subject, err = a.SubjectExtractor.GetSubject(rawBody); err != nil {
+		return fmt.Errorf("failed to extract subject information: %w", err)
 	}
 
 	return nil

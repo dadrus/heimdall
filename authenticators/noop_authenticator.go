@@ -6,14 +6,9 @@ import (
 	"github.com/dadrus/heimdall/pipeline"
 )
 
-var _ Authenticator = new(noopAuthenticator)
+type NoopAuthenticator struct{}
 
-func newNoopAuthenticator() (*noopAuthenticator, error) {
-	return &noopAuthenticator{}, nil
-}
-
-type noopAuthenticator struct{}
-
-func (*noopAuthenticator) Authenticate(ctx context.Context, as pipeline.AuthDataSource, sc *pipeline.SubjectContext) error {
+func (*NoopAuthenticator) Authenticate(_ context.Context, _ pipeline.AuthDataSource, sc *pipeline.SubjectContext) error {
+	sc.Subject = &pipeline.Subject{}
 	return nil
 }

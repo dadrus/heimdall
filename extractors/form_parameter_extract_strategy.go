@@ -1,6 +1,7 @@
 package extractors
 
 import (
+	"errors"
 	"strings"
 
 	"github.com/dadrus/heimdall/pipeline"
@@ -15,6 +16,6 @@ func (es FormParameterExtractStrategy) GetAuthData(s pipeline.AuthDataSource) (s
 	if val := s.Form(es.Name); len(val) != 0 {
 		return strings.TrimSpace(strings.TrimPrefix(val, es.Prefix)), nil
 	} else {
-		return "", ErrNoAuthDataPresent
+		return "", errors.New("no authentication data present")
 	}
 }

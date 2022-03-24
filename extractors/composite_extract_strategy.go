@@ -1,6 +1,8 @@
 package extractors
 
 import (
+	"errors"
+
 	"github.com/dadrus/heimdall/pipeline"
 )
 
@@ -13,5 +15,5 @@ func (ce CompositeExtractStrategy) GetAuthData(s pipeline.AuthDataSource) (strin
 		}
 	}
 
-	return "", ErrNoAuthDataPresent
+	return "", errors.New("no authentication data present")
 }

@@ -1,9 +1,11 @@
 package decision
 
 import (
+	"context"
 	"net/url"
 
-	"github.com/dadrus/heimdall/rule"
+	"github.com/dadrus/heimdall/errorsx"
+	"github.com/dadrus/heimdall/pipeline"
 	"github.com/dadrus/heimdall/x"
 	"github.com/gofiber/fiber/v2"
 	"github.com/rs/zerolog"
@@ -17,13 +19,11 @@ const (
 )
 
 type Handler struct {
-	rm rule.RuleMatcher
+	r executorRepo
 }
 
-func newHandler(p fiberApp, rm rule.RuleMatcher, logger zerolog.Logger) *Handler {
-	h := &Handler{
-		rm: rm,
-	}
+func newHandler(p fiberApp, logger zerolog.Logger) *Handler {
+	h := &Handler{}
 
 	h.registerRoutes(p.App.Group(""), logger)
 	return h
@@ -32,7 +32,7 @@ func newHandler(p fiberApp, rm rule.RuleMatcher, logger zerolog.Logger) *Handler
 func (h *Handler) registerRoutes(router fiber.Router, logger zerolog.Logger) {
 	logger.Debug().Msg("Registering decision api routes")
 
-	router.Get("/decisions/*", h.decisions)
+	router.All("/decisions/*", h.decisions)
 }
 
 // swagger:route GET /decisions api decisions
@@ -41,7 +41,7 @@ func (h *Handler) registerRoutes(router fiber.Router, logger zerolog.Logger) {
 //
 // > This endpoint works with all HTTP Methods (GET, POST, PUT, ...) and matches every path prefixed with /decision.
 //
-// This endpoint mirrors the proxy capability of ORY Oathkeeper's proxy functionality but instead of forwarding the
+// This endpoint mirrors the proxy capability of Heimdall's proxy functionality but instead of forwarding the
 // request to the upstream server, returns 200 (request should be allowed), 401 (unauthorized), or 403 (forbidden)
 // status codes. This endpoint can be used to integrate with other API Proxies like Ambassador, Kong, Envoy, and many more.
 //
@@ -49,10 +49,11 @@ func (h *Handler) registerRoutes(router fiber.Router, logger zerolog.Logger) {
 //
 //     Responses:
 //       200: emptyResponse
+//       400: genericError
 //       401: genericError
 //       403: genericError
-//       404: genericError
 //       500: genericError
+//       503: genericError
 func (h *Handler) decisions(c *fiber.Ctx) error {
 	ctx := c.UserContext()
 	logger := zerolog.Ctx(ctx)
@@ -71,9 +72,75 @@ func (h *Handler) decisions(c *fiber.Ctx) error {
 		"http_user_agent": c.Get("User-Agent"),
 	}
 
-	logger.Warn().Fields(fields).
-		Bool("granted", false).
-		Msg("Access request denied")
+	logger.Info().
+		Fields(fields).
+		Msg("Handling request")
+
+	r, err := h.r.FindRule(method, reqUrl)
+	if err != nil {
+		logger.Warn().
+			Fields(fields).
+			Bool("granted", false).
+			Msg("Access request denied. No rule applicable")
+
+		return c.SendStatus(fiber.StatusInternalServerError)
+	}
+
+	sc, err := r.Execute(ctx, &authDataSource{c: c})
+	if err != nil {
+		logger.Warn().
+			Fields(fields).
+			Bool("granted", false).
+			Msg("Access request denied")
+
+		switch err.(type) {
+		case *errorsx.ArgumentError:
+			return c.SendStatus(fiber.StatusBadRequest)
+		case *errorsx.ForbiddenError:
+			return c.SendStatus(fiber.StatusForbidden)
+		case *errorsx.UnauthorizedError:
+			return c.SendStatus(fiber.StatusUnauthorized)
+		case *errorsx.RemoteCallError:
+			return c.SendStatus(fiber.StatusBadGateway)
+		default:
+			return c.SendStatus(fiber.StatusInternalServerError)
+		}
+	}
+
+	if len(sc.RedirectTo) != 0 {
+		logger.Info().
+			Fields(fields).
+			Bool("granted", false).
+			Msg("Access request denied. Redirect triggered.")
+
+		return c.Redirect(sc.RedirectTo)
+	}
+
+	logger.Info().
+		Fields(fields).
+		Bool("granted", true).
+		Msg("Access request granted")
+
+	for k, _ := range sc.Header {
+		c.Response().Header.Set(k, sc.Header.Get(k))
+	}
 
 	return c.SendStatus(fiber.StatusOK)
+}
+
+type authDataSource struct {
+	c *fiber.Ctx
+}
+
+func (s *authDataSource) Header(name string) string { return s.c.Get(name) }
+func (s *authDataSource) Cookie(name string) string { return s.c.Cookies(name) }
+func (s *authDataSource) Query(name string) string  { return s.c.Query(name) }
+func (s *authDataSource) Form(name string) string   { return s.c.FormValue(name) }
+
+type executor interface {
+	Execute(ctx context.Context, source pipeline.AuthDataSource) (*pipeline.SubjectContext, error)
+}
+
+type executorRepo interface {
+	FindRule(method string, requestUrl *url.URL) (executor, error)
 }
