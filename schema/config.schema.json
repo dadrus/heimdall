@@ -891,26 +891,6 @@
         }
       }
     },
-    "mutatorNoop": {
-      "title": "Noop Mutator",
-      "description": "This mutator doesn't transform the HTTP request and simply forwards the headers as-is",
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "type",
-        "id"
-      ],
-      "properties": {
-        "type": {
-          "const": "noop"
-        },
-        "id": {
-          "type": "string",
-          "title": "Unique Mutator ID",
-          "description": "The id of the mutator to be used in the rule definition"
-        }
-      }
-    },
     "mutatorJwt": {
       "title": "JWT Mutator",
       "description": "Creates a JWT Token from the given session information",
