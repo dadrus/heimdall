@@ -4,12 +4,12 @@ import (
 	"context"
 	"net/url"
 
+	"github.com/dadrus/heimdall/internal/pipeline/interfaces"
 	"github.com/gofiber/fiber/v2"
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/errorsx"
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/x"
 )
 
@@ -140,7 +140,7 @@ func (s *authDataSource) Query(name string) string  { return s.c.Query(name) }
 func (s *authDataSource) Form(name string) string   { return s.c.FormValue(name) }
 
 type executor interface {
-	Execute(ctx context.Context, source pipeline.AuthDataSource) (*heimdall.SubjectContext, error)
+	Execute(ctx context.Context, source interfaces.AuthDataSource) (*heimdall.SubjectContext, error)
 }
 
 type executorRepo interface {

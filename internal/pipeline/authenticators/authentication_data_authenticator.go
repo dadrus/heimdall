@@ -2,20 +2,45 @@ package authenticators
 
 import (
 	"context"
+	"encoding/json"
 	"strings"
 
 	"github.com/dadrus/heimdall/internal/errorsx"
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/pipeline"
+	"github.com/dadrus/heimdall/internal/pipeline/config"
+	"github.com/dadrus/heimdall/internal/pipeline/endpoint"
+	"github.com/dadrus/heimdall/internal/pipeline/interfaces"
 )
 
-type AuthenticationDataAuthenticator struct {
+type authenticationDataAuthenticator struct {
 	Endpoint         Endpoint
 	SubjectExtractor SubjectExtrator
 	AuthDataGetter   AuthDataGetter
 }
 
-func (a *AuthenticationDataAuthenticator) Authenticate(ctx context.Context, as pipeline.AuthDataSource, sc *heimdall.SubjectContext) error {
+func NewAuthenticationDataAuthenticatorFromJSON(rawConfig json.RawMessage) (*authenticationDataAuthenticator, error) {
+	type _config struct {
+		Endpoint       endpoint.Endpoint               `json:"identity_info_endpoint"`
+		AuthDataSource config.AuthenticationDataSource `json:"authentication_data_source"`
+		Session        config.Session                  `json:"session"`
+	}
+
+	var c _config
+	if err := json.Unmarshal(rawConfig, &c); err != nil {
+		return nil, &errorsx.ArgumentError{
+			Message: "failed to unmarshal config",
+			Cause:   err,
+		}
+	}
+
+	return &authenticationDataAuthenticator{
+		Endpoint:         c.Endpoint,
+		AuthDataGetter:   c.AuthDataSource.Strategy(),
+		SubjectExtractor: &c.Session,
+	}, nil
+}
+
+func (a *authenticationDataAuthenticator) Authenticate(ctx context.Context, as interfaces.AuthDataSource, sc *heimdall.SubjectContext) error {
 	authDataRef, err := a.AuthDataGetter.GetAuthData(as)
 	if err != nil {
 		return &errorsx.ArgumentError{Message: "failed to extract authentication data", Cause: err}

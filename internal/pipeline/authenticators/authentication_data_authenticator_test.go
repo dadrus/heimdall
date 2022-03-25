@@ -33,7 +33,7 @@ func TestSuccessfulExecutionOfAuthenticationDataAuthenticator(t *testing.T) {
 	adg := &MockAuthDataGetter{}
 	adg.On("GetAuthData", mock.Anything).Return(authDataVal, nil)
 
-	a := AuthenticationDataAuthenticator{
+	a := authenticationDataAuthenticator{
 		Endpoint:         e,
 		SubjectExtractor: se,
 		AuthDataGetter:   adg,

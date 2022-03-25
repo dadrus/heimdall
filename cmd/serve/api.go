@@ -1,8 +1,8 @@
 package serve
 
 import (
-	"github.com/dadrus/heimdall/decision"
-	"github.com/dadrus/heimdall/infrafx"
+	"github.com/dadrus/heimdall/internal/decision"
+	"github.com/dadrus/heimdall/internal/infrafx"
 	"github.com/spf13/cobra"
 	"go.uber.org/fx"
 )

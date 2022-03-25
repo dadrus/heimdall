@@ -10,17 +10,49 @@ import (
 	"github.com/dadrus/heimdall/internal/errorsx"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/oauth2"
-	"github.com/dadrus/heimdall/internal/pipeline"
+	"github.com/dadrus/heimdall/internal/pipeline/config"
+	"github.com/dadrus/heimdall/internal/pipeline/endpoint"
+	"github.com/dadrus/heimdall/internal/pipeline/extractors"
+	"github.com/dadrus/heimdall/internal/pipeline/interfaces"
 )
 
-type OAuth2IntrospectionAuthenticator struct {
+type oauth2IntrospectionAuthenticator struct {
 	AuthDataGetter   AuthDataGetter
 	Endpoint         Endpoint
 	SubjectExtractor SubjectExtrator
 	Assertions       oauth2.Assertions
 }
 
-func (a *OAuth2IntrospectionAuthenticator) Authenticate(ctx context.Context, as pipeline.AuthDataSource, sc *heimdall.SubjectContext) error {
+func NewOAuth2IntrospectionAuthenticatorFromJSON(rawConfig json.RawMessage) (*oauth2IntrospectionAuthenticator, error) {
+	type _config struct {
+		Endpoint   endpoint.Endpoint `json:"introspection_endpoint"`
+		Assertions oauth2.Assertions `json:"introspection_response_assertions"`
+		Session    config.Session    `json:"session"`
+	}
+
+	var c _config
+	if err := json.Unmarshal(rawConfig, &c); err != nil {
+		return nil, err
+	}
+
+	c.Endpoint.Headers["Content-Type"] = "application/x-www-form-urlencoded"
+	c.Endpoint.Headers["Accept-Type"] = "application/json"
+
+	extractor := extractors.CompositeExtractStrategy{
+		extractors.HeaderValueExtractStrategy{Name: "Authorization", Prefix: "Bearer"},
+		extractors.FormParameterExtractStrategy{Name: "access_token"},
+		extractors.QueryParameterExtractStrategy{Name: "access_token"},
+	}
+
+	return &oauth2IntrospectionAuthenticator{
+		AuthDataGetter:   extractor,
+		Endpoint:         c.Endpoint,
+		Assertions:       c.Assertions,
+		SubjectExtractor: &c.Session,
+	}, nil
+}
+
+func (a *oauth2IntrospectionAuthenticator) Authenticate(ctx context.Context, as interfaces.AuthDataSource, sc *heimdall.SubjectContext) error {
 	accessToken, err := a.AuthDataGetter.GetAuthData(as)
 	if err != nil {
 		return &errorsx.ArgumentError{Message: "no access token present", Cause: err}

@@ -5,11 +5,15 @@ import (
 
 	"github.com/dadrus/heimdall/internal/errorsx"
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/pipeline"
+	"github.com/dadrus/heimdall/internal/pipeline/interfaces"
 )
 
-type UnauthorizedAuthenticator struct{}
+type unauthorizedAuthenticator struct{}
 
-func (a *UnauthorizedAuthenticator) Authenticate(ctx context.Context, as pipeline.AuthDataSource, sc *heimdall.SubjectContext) error {
+func NewUnauthorizedAuthenticator() *unauthorizedAuthenticator {
+	return &unauthorizedAuthenticator{}
+}
+
+func (a *unauthorizedAuthenticator) Authenticate(_ context.Context, _ interfaces.AuthDataSource, _ *heimdall.SubjectContext) error {
 	return &errorsx.UnauthorizedError{Message: "denied by authenticator"}
 }

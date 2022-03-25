@@ -13,17 +13,47 @@ import (
 	"github.com/dadrus/heimdall/internal/errorsx"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/oauth2"
-	"github.com/dadrus/heimdall/internal/pipeline"
+	"github.com/dadrus/heimdall/internal/pipeline/config"
+	"github.com/dadrus/heimdall/internal/pipeline/endpoint"
+	"github.com/dadrus/heimdall/internal/pipeline/interfaces"
 )
 
-type JwtAuthenticator struct {
+type jwtAuthenticator struct {
 	Endpoint         Endpoint
 	Assertions       oauth2.Assertions
 	SubjectExtractor SubjectExtrator
 	AuthDataGetter   AuthDataGetter
 }
 
-func (a *JwtAuthenticator) Authenticate(ctx context.Context, as pipeline.AuthDataSource, sc *heimdall.SubjectContext) error {
+func NewJwtAuthenticatorFromJSON(rawConfig json.RawMessage) (*jwtAuthenticator, error) {
+	type _config struct {
+		Endpoint       endpoint.Endpoint               `json:"jwks_endpoint"`
+		AuthDataSource config.AuthenticationDataSource `json:"jwt_token_from"`
+		Assertions     oauth2.Assertions               `json:"jwt_assertions"`
+		Session        config.Session                  `json:"session"`
+	}
+
+	var c _config
+	if err := json.Unmarshal(rawConfig, &c); err != nil {
+		return nil, err
+	}
+
+	if _, ok := c.Endpoint.Headers["Accept-Type"]; !ok {
+		c.Endpoint.Headers["Accept-Type"] = "application/json"
+	}
+	if len(c.Endpoint.Method) == 0 {
+		c.Endpoint.Method = "GET"
+	}
+
+	return &jwtAuthenticator{
+		Endpoint:         c.Endpoint,
+		Assertions:       c.Assertions,
+		SubjectExtractor: &c.Session,
+		AuthDataGetter:   c.AuthDataSource.Strategy(),
+	}, nil
+}
+
+func (a *jwtAuthenticator) Authenticate(ctx context.Context, as interfaces.AuthDataSource, sc *heimdall.SubjectContext) error {
 	// request jwks endpoint to verify jwt
 	rawBody, err := a.Endpoint.SendRequest(ctx, nil)
 	if err != nil {
@@ -53,7 +83,7 @@ func (a *JwtAuthenticator) Authenticate(ctx context.Context, as pipeline.AuthDat
 	return nil
 }
 
-func (a *JwtAuthenticator) verifyTokenAndGetClaims(jwtRaw string, jwks jose.JSONWebKeySet) (json.RawMessage, error) {
+func (a *jwtAuthenticator) verifyTokenAndGetClaims(jwtRaw string, jwks jose.JSONWebKeySet) (json.RawMessage, error) {
 	var (
 		token *jwt.JSONWebToken
 		err   error

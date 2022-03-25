@@ -27,7 +27,7 @@ func newFiberApp(conf config.Configuration) *fiber.App {
 	c := conf.DecisionApi
 
 	app := fiber.New(fiber.Config{
-		AppName:      "NGKeeper Decision API",
+		AppName:      "Heimdall Decision API",
 		ReadTimeout:  c.Timeout.Read,
 		WriteTimeout: c.Timeout.Write,
 		IdleTimeout:  c.Timeout.Idle,

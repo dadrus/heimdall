@@ -9,7 +9,7 @@ import (
 
 func TestAuthenticateWithAnonymousAuthenticatorWithDefaultSubjectId(t *testing.T) {
 	// GIVEN
-	a := AnonymousAuthenticator{}
+	a := anonymousAuthenticator{}
 	sc := heimdall.SubjectContext{}
 
 	// WHEN
@@ -25,7 +25,7 @@ func TestAuthenticateWithAnonymousAuthenticatorWithDefaultSubjectId(t *testing.T
 func TestAuthenticateWithAnonymousAuthenticatorWithCustomSubjectId(t *testing.T) {
 	// GIVEN
 	subjectId := "anon"
-	a := AnonymousAuthenticator{Subject: subjectId}
+	a := anonymousAuthenticator{Subject: subjectId}
 	sc := heimdall.SubjectContext{}
 
 	// WHEN

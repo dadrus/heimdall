@@ -1,6 +1,7 @@
 package infrafx
 
 import (
+	"github.com/dadrus/heimdall/internal/pipeline"
 	"go.uber.org/fx"
 
 	"github.com/dadrus/heimdall/internal/config"
@@ -10,4 +11,5 @@ import (
 var Module = fx.Options(
 	config.Module,
 	logging.Module,
+	pipeline.Module,
 )

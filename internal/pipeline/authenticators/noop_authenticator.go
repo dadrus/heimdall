@@ -4,12 +4,16 @@ import (
 	"context"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/pipeline"
+	"github.com/dadrus/heimdall/internal/pipeline/interfaces"
 )
 
-type NoopAuthenticator struct{}
+type noopAuthenticator struct{}
 
-func (*NoopAuthenticator) Authenticate(_ context.Context, _ pipeline.AuthDataSource, sc *heimdall.SubjectContext) error {
+func NewNoopAuthenticator() *noopAuthenticator {
+	return &noopAuthenticator{}
+}
+
+func (*noopAuthenticator) Authenticate(_ context.Context, _ interfaces.AuthDataSource, sc *heimdall.SubjectContext) error {
 	sc.Subject = &heimdall.Subject{}
 	return nil
 }

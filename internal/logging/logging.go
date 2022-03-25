@@ -3,43 +3,16 @@ package logging
 import (
 	"fmt"
 	"os"
-	"reflect"
 	"strings"
 
+	"github.com/dadrus/heimdall/internal/config"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
 
-type LogFormat int
-
-const (
-	LogTextFormat    = 0
-	LogJsonFormat    = 1
-	LogUnknownFormat = 2
-)
-
-func (f LogFormat) String() string {
-	if f == LogTextFormat {
-		return "text"
-	} else {
-		return "json"
-	}
-}
-
-func LogFormatDecode(from reflect.Type, to reflect.Type, v interface{}) (interface{}, error) {
-	if from.Kind() == reflect.String && to.Name() == "LogFormat" {
-		if v == "text" {
-			return LogTextFormat, nil
-		} else {
-			return LogJsonFormat, nil
-		}
-	}
-	return v, nil
-}
-
 // ConfigureLogging uses the given conf to configure the global log.Logger variable
-func ConfigureLogging(conf LogConfig) {
-	if conf.Format == LogTextFormat {
+func ConfigureLogging(conf config.Logging) {
+	if conf.Format == config.LogTextFormat {
 		log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 		return
 	} else {
