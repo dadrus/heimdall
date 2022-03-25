@@ -1,11 +1,13 @@
 package serve
 
 import (
-	"github.com/dadrus/heimdall/internal/decision"
-	"github.com/dadrus/heimdall/internal/infrafx"
-	"github.com/dadrus/heimdall/internal/proxy"
 	"github.com/spf13/cobra"
+
 	"go.uber.org/fx"
+
+	"github.com/dadrus/heimdall/internal/handler/decision"
+	"github.com/dadrus/heimdall/internal/handler/proxy"
+	"github.com/dadrus/heimdall/internal/infrafx"
 )
 
 // NewAllServicesCommand represents the proxy command

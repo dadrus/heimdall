@@ -1,10 +1,12 @@
 package serve
 
 import (
-	"github.com/dadrus/heimdall/internal/decision"
-	"github.com/dadrus/heimdall/internal/infrafx"
 	"github.com/spf13/cobra"
+
 	"go.uber.org/fx"
+
+	"github.com/dadrus/heimdall/internal/handler/decision"
+	"github.com/dadrus/heimdall/internal/infrafx"
 )
 
 // NewDecisionApiCommand represents the proxy command
