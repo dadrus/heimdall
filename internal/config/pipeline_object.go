@@ -16,6 +16,7 @@ const (
 	Remote              PipelineObjectType = "remote"
 	Default             PipelineObjectType = "default"
 	Header              PipelineObjectType = "header"
+	Cookie              PipelineObjectType = "cookie"
 	Json                PipelineObjectType = "json"
 	Redirect            PipelineObjectType = "redirect"
 )
