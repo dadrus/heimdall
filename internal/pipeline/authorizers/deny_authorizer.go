@@ -7,9 +7,13 @@ import (
 	"github.com/dadrus/heimdall/internal/heimdall"
 )
 
-type DenyAuthorizer struct{}
+type denyAuthorizer struct{}
 
-func (*DenyAuthorizer) Authorize(context.Context, *heimdall.SubjectContext) error {
+func NewDenyAuthorizer() denyAuthorizer {
+	return denyAuthorizer{}
+}
+
+func (denyAuthorizer) Authorize(context.Context, *heimdall.SubjectContext) error {
 	return &errorsx.ForbiddenError{
 		Message: "not authorized",
 	}

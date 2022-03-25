@@ -6,8 +6,12 @@ import (
 	"github.com/dadrus/heimdall/internal/heimdall"
 )
 
-type AllowAuthorizer struct{}
+type allowAuthorizer struct{}
 
-func (*AllowAuthorizer) Authorize(context.Context, *heimdall.SubjectContext) error {
+func NewAllowAuthorizer() allowAuthorizer {
+	return allowAuthorizer{}
+}
+
+func (allowAuthorizer) Authorize(context.Context, *heimdall.SubjectContext) error {
 	return nil
 }
