@@ -64,7 +64,7 @@ func (e Endpoint) SendRequest(ctx context.Context, body io.Reader) ([]byte, erro
 	if err != nil {
 		return nil, fmt.Errorf("failed to send request: %w", err)
 	}
-
+	
 	return e.readResponse(resp)
 }
 
