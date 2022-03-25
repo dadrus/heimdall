@@ -12,7 +12,7 @@ import (
 	"go.uber.org/fx"
 
 	"github.com/dadrus/heimdall/internal/config"
-	"github.com/dadrus/heimdall/internal/middleware"
+	"github.com/dadrus/heimdall/internal/fiber/middleware"
 )
 
 var Module = fx.Options(
