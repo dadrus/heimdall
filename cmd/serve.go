@@ -12,7 +12,7 @@ var serveCmd = &cobra.Command{
 
 ## Configuration
 
-ORY Oathkeeper can be configured using environment variables as well as a configuration file. For more information
+Heimdall can be configured using environment variables as well as a configuration file. For more information
 on configuration options, open the configuration documentation:
 
 >> https://www.ory.sh/oathkeeper/docs/configuration <<
