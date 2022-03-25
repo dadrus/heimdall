@@ -6,6 +6,7 @@ import (
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/pipeline/authenticators"
 	"github.com/dadrus/heimdall/internal/pipeline/authorizers"
+	"github.com/dadrus/heimdall/internal/pipeline/hydrators"
 )
 
 type Repository interface {
@@ -106,7 +107,7 @@ func newAuthorizer(c config.PipelineObject) (Authorizer, error) {
 func newHydrator(c config.PipelineObject) (Hydrator, error) {
 	switch c.Type {
 	case config.Default:
-		return nil, nil
+		return hydrators.NewDefaultHydratorFromJSON(c.Config)
 	default:
 		return nil, errors.New("unknown hydrator type")
 	}
@@ -151,7 +152,6 @@ func (r *authenticatorRepository) Authenticator(id string) (Authenticator, error
 		return a, nil
 	}
 }
-
 func (r *authenticatorRepository) Authorizer(id string) (Authorizer, error) {
 	if a, ok := r.authorizers[id]; !ok {
 		return nil, errors.New("no such authorizer")
