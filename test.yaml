@@ -126,8 +126,6 @@ pipeline:
         headers:
           foo: bar
   mutators:
-    - id: "foobar"
-      type: noop
     - id: "jwt"
       type: jwt
       config:
@@ -171,3 +169,11 @@ rules:
   providers:
     file:
       filename: rules.yaml
+
+    docker:
+      endpoint: docker.sock
+      timeout: 1s
+    kubernetes_crd:
+      namespaces:
+        - fooo
+      label_selector: foobar
