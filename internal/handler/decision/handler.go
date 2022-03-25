@@ -1,15 +1,13 @@
 package decision
 
 import (
-	"context"
 	"net/url"
 
-	"github.com/dadrus/heimdall/internal/pipeline/interfaces"
+	"github.com/dadrus/heimdall/internal/rules"
 	"github.com/gofiber/fiber/v2"
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/errorsx"
-	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/x"
 )
 
@@ -21,11 +19,11 @@ const (
 )
 
 type Handler struct {
-	r executorRepo
+	r rules.Repository
 }
 
-func newHandler(p fiberApp, logger zerolog.Logger) *Handler {
-	h := &Handler{}
+func newHandler(p fiberApp, r rules.Repository, logger zerolog.Logger) *Handler {
+	h := &Handler{r: r}
 
 	h.registerRoutes(p.App.Group(""), logger)
 	return h
@@ -138,11 +136,3 @@ func (s *authDataSource) Header(name string) string { return s.c.Get(name) }
 func (s *authDataSource) Cookie(name string) string { return s.c.Cookies(name) }
 func (s *authDataSource) Query(name string) string  { return s.c.Query(name) }
 func (s *authDataSource) Form(name string) string   { return s.c.FormValue(name) }
-
-type executor interface {
-	Execute(ctx context.Context, source interfaces.AuthDataSource) (*heimdall.SubjectContext, error)
-}
-
-type executorRepo interface {
-	FindRule(method string, requestUrl *url.URL) (executor, error)
-}

@@ -167,3 +167,7 @@ rules:
     error_handlers:
       - authenticate_on_unauthorized_or_forbidden
       - default_error
+
+  providers:
+    file:
+      filename: rules.yaml

@@ -3,14 +3,11 @@ module github.com/dadrus/heimdall
 go 1.18
 
 require (
-	github.com/dlclark/regexp2 v1.4.0
-	github.com/gobwas/glob v0.2.3
 	github.com/gofiber/fiber/v2 v2.29.0
 	github.com/knadh/koanf v1.4.0
 	github.com/mitchellh/mapstructure v1.4.1
 	github.com/opentracing-contrib/go-stdlib v1.0.0
 	github.com/opentracing/opentracing-go v1.2.0
-	github.com/ory/go-convenience v0.1.0
 	github.com/rs/zerolog v1.26.1
 	github.com/spf13/cobra v1.4.0
 	github.com/stretchr/testify v1.7.0
