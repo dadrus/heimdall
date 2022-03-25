@@ -18,45 +18,45 @@ type Repository interface {
 
 func NewRepository(conf config.Configuration) (Repository, error) {
 	var authenticators map[string]Authenticator
-	for _, authn := range conf.Pipeline.Authenticators {
-		if r, err := newAuthenticator(authn); err != nil {
-			authenticators[authn.Id] = r
+	for _, pe := range conf.Pipeline.Authenticators {
+		if r, err := newAuthenticator(pe); err != nil {
+			authenticators[pe.Id] = r
 		} else {
 			return nil, err
 		}
 	}
 
 	var authorizers map[string]Authorizer
-	for _, authz := range conf.Pipeline.Authorizers {
-		if r, err := newAuthorizer(authz); err != nil {
-			authorizers[authz.Id] = r
+	for _, pe := range conf.Pipeline.Authorizers {
+		if r, err := newAuthorizer(pe); err != nil {
+			authorizers[pe.Id] = r
 		} else {
 			return nil, err
 		}
 	}
 
 	var hydrators map[string]Hydrator
-	for _, h := range conf.Pipeline.Hydrators {
-		if r, err := newHydrator(h); err != nil {
-			hydrators[h.Id] = r
+	for _, pe := range conf.Pipeline.Hydrators {
+		if r, err := newHydrator(pe); err != nil {
+			hydrators[pe.Id] = r
 		} else {
 			return nil, err
 		}
 	}
 
 	var mutators map[string]Mutator
-	for _, m := range conf.Pipeline.Mutators {
-		if r, err := newMutator(m); err != nil {
-			mutators[m.Id] = r
+	for _, pe := range conf.Pipeline.Mutators {
+		if r, err := newMutator(pe); err != nil {
+			mutators[pe.Id] = r
 		} else {
 			return nil, err
 		}
 	}
 
 	var errorHandlers map[string]ErrorHandler
-	for _, e := range conf.Pipeline.ErrorHandlers {
-		if r, err := newErrorHandler(e); err != nil {
-			errorHandlers[e.Id] = r
+	for _, pe := range conf.Pipeline.ErrorHandlers {
+		if r, err := newErrorHandler(pe); err != nil {
+			errorHandlers[pe.Id] = r
 		} else {
 			return nil, err
 		}
