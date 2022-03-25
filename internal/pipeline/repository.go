@@ -17,57 +17,57 @@ type Repository interface {
 }
 
 func NewRepository(conf config.Configuration) (Repository, error) {
-	var authenticators map[string]Authenticator
+	var ans map[string]Authenticator
 	for _, pe := range conf.Pipeline.Authenticators {
 		if r, err := newAuthenticator(pe); err != nil {
-			authenticators[pe.Id] = r
+			ans[pe.Id] = r
 		} else {
 			return nil, err
 		}
 	}
 
-	var authorizers map[string]Authorizer
+	var azs map[string]Authorizer
 	for _, pe := range conf.Pipeline.Authorizers {
 		if r, err := newAuthorizer(pe); err != nil {
-			authorizers[pe.Id] = r
+			azs[pe.Id] = r
 		} else {
 			return nil, err
 		}
 	}
 
-	var hydrators map[string]Hydrator
+	var hs map[string]Hydrator
 	for _, pe := range conf.Pipeline.Hydrators {
 		if r, err := newHydrator(pe); err != nil {
-			hydrators[pe.Id] = r
+			hs[pe.Id] = r
 		} else {
 			return nil, err
 		}
 	}
 
-	var mutators map[string]Mutator
+	var ms map[string]Mutator
 	for _, pe := range conf.Pipeline.Mutators {
 		if r, err := newMutator(pe); err != nil {
-			mutators[pe.Id] = r
+			ms[pe.Id] = r
 		} else {
 			return nil, err
 		}
 	}
 
-	var errorHandlers map[string]ErrorHandler
+	var ehs map[string]ErrorHandler
 	for _, pe := range conf.Pipeline.ErrorHandlers {
 		if r, err := newErrorHandler(pe); err != nil {
-			errorHandlers[pe.Id] = r
+			ehs[pe.Id] = r
 		} else {
 			return nil, err
 		}
 	}
 
 	return &authenticatorRepository{
-		authenticators: authenticators,
-		authorizers:    authorizers,
-		hydrators:      hydrators,
-		mutators:       mutators,
-		errorHandlers:  errorHandlers,
+		authenticators: ans,
+		authorizers:    azs,
+		hydrators:      hs,
+		mutators:       ms,
+		errorHandlers:  ehs,
 	}, nil
 }
 
@@ -104,15 +104,36 @@ func newAuthorizer(c config.PipelineObject) (Authorizer, error) {
 }
 
 func newHydrator(c config.PipelineObject) (Hydrator, error) {
-	return nil, nil
+	switch c.Type {
+	case config.Default:
+		return nil, nil
+	default:
+		return nil, errors.New("unknown hydrator type")
+	}
 }
 
 func newMutator(c config.PipelineObject) (Mutator, error) {
-	return nil, nil
+	switch c.Type {
+	case config.Jwt:
+		return nil, nil
+	case config.Header:
+		return nil, nil
+	case config.Cookie:
+		return nil, nil
+	default:
+		return nil, errors.New("unknown hydrator type")
+	}
 }
 
 func newErrorHandler(c config.PipelineObject) (ErrorHandler, error) {
-	return nil, nil
+	switch c.Type {
+	case config.Json:
+		return nil, nil
+	case config.Redirect:
+		return nil, nil
+	default:
+		return nil, errors.New("unknown error handler type")
+	}
 }
 
 type authenticatorRepository struct {
