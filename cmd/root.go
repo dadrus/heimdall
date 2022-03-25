@@ -12,7 +12,7 @@ var (
 
 	// RootCmd represents the base command when called without any subcommands
 	RootCmd = &cobra.Command{
-		Use:     "ngkeeper",
+		Use:     "heimdall",
 		Short:   "A cloud native Access and Identity Proxy",
 		Version: Version,
 	}
