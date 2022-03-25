@@ -6,6 +6,7 @@ import (
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/pipeline/authenticators"
 	"github.com/dadrus/heimdall/internal/pipeline/authorizers"
+	"github.com/dadrus/heimdall/internal/pipeline/error_handlers"
 	"github.com/dadrus/heimdall/internal/pipeline/hydrators"
 	"github.com/dadrus/heimdall/internal/pipeline/mutators"
 )
@@ -130,9 +131,9 @@ func newMutator(c config.PipelineObject) (Mutator, error) {
 func newErrorHandler(c config.PipelineObject) (ErrorHandler, error) {
 	switch c.Type {
 	case config.Json:
-		return nil, nil
+		return error_handlers.NewJsonErrorHandlerFromJSON(c.Config)
 	case config.Redirect:
-		return nil, nil
+		return error_handlers.NewRedirectErrorHandlerFromJSON(c.Config)
 	default:
 		return nil, errors.New("unknown error handler type")
 	}
