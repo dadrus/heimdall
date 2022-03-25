@@ -21,7 +21,7 @@ var Module = fx.Options(
 
 func newFiberApp(conf config.Configuration) *fiber.App {
 	return fiber.New(fiber.Config{
-		AppName:      "NGKeeper Proxy",
+		AppName:      "Heimdall Proxy",
 		ReadTimeout:  conf.Proxy.Timeout.Read,
 		WriteTimeout: conf.Proxy.Timeout.Write,
 		IdleTimeout:  conf.Proxy.Timeout.Idle,
