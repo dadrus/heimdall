@@ -25,6 +25,12 @@ type Configuration struct {
 			Mutator        string   `koanf:"mutator"`
 			ErrorHandlers  []string `koanf:"error_handlers"`
 		} `koanf:"default"`
+		Providers struct {
+			File struct {
+				Src   string `koanf:"src"`
+				Watch bool   `koanf:"watch"`
+			} `koanf:"file"`
+		} `koanf:"providers"`
 	} `koanf:"rules"`
 }
 
