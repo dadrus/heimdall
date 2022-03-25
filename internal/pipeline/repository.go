@@ -7,6 +7,7 @@ import (
 	"github.com/dadrus/heimdall/internal/pipeline/authenticators"
 	"github.com/dadrus/heimdall/internal/pipeline/authorizers"
 	"github.com/dadrus/heimdall/internal/pipeline/hydrators"
+	"github.com/dadrus/heimdall/internal/pipeline/mutators"
 )
 
 type Repository interface {
@@ -116,11 +117,11 @@ func newHydrator(c config.PipelineObject) (Hydrator, error) {
 func newMutator(c config.PipelineObject) (Mutator, error) {
 	switch c.Type {
 	case config.Jwt:
-		return nil, nil
+		return mutators.NewJWTMutatorFromJSON(c.Config)
 	case config.Header:
-		return nil, nil
+		return mutators.NewHeaderMutatorFromJSON(c.Config)
 	case config.Cookie:
-		return nil, nil
+		return mutators.NewCookieMutatorFromJSON(c.Config)
 	default:
 		return nil, errors.New("unknown hydrator type")
 	}
