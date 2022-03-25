@@ -5,6 +5,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/pipeline/authenticators"
+	"github.com/dadrus/heimdall/internal/pipeline/authorizers"
 )
 
 type Repository interface {
@@ -90,7 +91,16 @@ func newAuthenticator(c config.PipelineObject) (Authenticator, error) {
 }
 
 func newAuthorizer(c config.PipelineObject) (Authorizer, error) {
-	return nil, nil
+	switch c.Type {
+	case config.Allow:
+		return authorizers.NewAllowAuthorizer(), nil
+	case config.Deny:
+		return authorizers.NewDenyAuthorizer(), nil
+	case config.Remote:
+		return authorizers.NewRemoteAuthorizerFromJSON(c.Config)
+	default:
+		return nil, errors.New("unknown authorizer type")
+	}
 }
 
 func newHydrator(c config.PipelineObject) (Hydrator, error) {
