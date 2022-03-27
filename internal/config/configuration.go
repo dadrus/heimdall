@@ -19,12 +19,7 @@ type Configuration struct {
 		ErrorHandlers  []PipelineObject `koanf:"error_handlers"`
 	} `koanf:"pipeline"`
 	Rules struct {
-		Default struct {
-			Authenticators []string `koanf:"authenticators"`
-			Authorizer     string   `koanf:"authorizer"`
-			Mutator        string   `koanf:"mutator"`
-			ErrorHandlers  []string `koanf:"error_handlers"`
-		} `koanf:"default"`
+		Default   Pipeline `koanf:"default"`
 		Providers struct {
 			File struct {
 				Src   string `koanf:"src"`
