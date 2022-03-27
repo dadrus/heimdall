@@ -3,6 +3,7 @@ package authenticators
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"strings"
 
 	"github.com/dadrus/heimdall/internal/errorsx"
@@ -60,5 +61,5 @@ func (a *authenticationDataAuthenticator) Authenticate(ctx context.Context, as i
 
 func (a *authenticationDataAuthenticator) WithConfig(_ json.RawMessage) (interfaces.Authenticator, error) {
 	// this authenticator does not allow configuration from a rule
-	return a, nil
+	return nil, errors.New("reconfiguration not allowed")
 }
