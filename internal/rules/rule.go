@@ -2,6 +2,7 @@ package rules
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"net/url"
 
@@ -35,8 +36,11 @@ func createAuthenticator(pr pipeline.Repository, configuredAuthenticators []conf
 		if err != nil {
 			return nil, err
 		}
-		// TODO: initialize a with ref.Config
-		ans = append(ans, a)
+		na, err := a.WithConfig(ref.Config)
+		if err != nil {
+			return nil, err
+		}
+		ans = append(ans, na)
 	}
 
 	return &compositeAuthenticator{
@@ -45,19 +49,19 @@ func createAuthenticator(pr pipeline.Repository, configuredAuthenticators []conf
 }
 
 func createAuthorizer(pr pipeline.Repository, configuredAuthorizer *config.PipelineObjectReference, defaultAuthorizer *config.PipelineObjectReference) (pipeline.Authorizer, error) {
-	var id string
+	var ref *config.PipelineObjectReference
 	if configuredAuthorizer == nil {
 		if defaultAuthorizer == nil {
 			return nil, errors.New("no default authorizer configured")
 		}
-		id = defaultAuthorizer.Id
+		ref = defaultAuthorizer
 	} else {
-		id = configuredAuthorizer.Id
+		ref = configuredAuthorizer
 	}
 
-	a, err := pr.Authorizer(id)
-	if err != nil {
-		// TODO: initialize a with ref.Config
+	a, err := pr.Authorizer(ref.Id)
+	if err == nil {
+		return a.WithConfig(ref.Config)
 	}
 	return a, err
 }
@@ -78,8 +82,11 @@ func createHydrator(pr pipeline.Repository, configuredHydrators []config.Pipelin
 		if err != nil {
 			return nil, err
 		}
-		// TODO: initialize h with ref.Config
-		hs = append(hs, h)
+		nh, err := h.WithConfig(ref.Config)
+		if err != nil {
+			return nil, err
+		}
+		hs = append(hs, nh)
 	}
 
 	return &compositeHydrator{
@@ -104,8 +111,11 @@ func createMutator(pr pipeline.Repository, configuredMutators []config.PipelineO
 		if err != nil {
 			return nil, err
 		}
-		// TODO: initialize m with ref.Config
-		ms = append(ms, m)
+		nm, err := m.WithConfig(ref.Config)
+		if err != nil {
+			return nil, err
+		}
+		ms = append(ms, nm)
 	}
 
 	return &compositeMutator{
@@ -126,13 +136,15 @@ func createErrorHandler(pr pipeline.Repository, configuredErrorHandlers []config
 
 	var ehs []pipeline.ErrorHandler
 	for _, ref := range refs {
-		h, err := pr.ErrorHandler(ref.Id)
+		eh, err := pr.ErrorHandler(ref.Id)
 		if err != nil {
 			return nil, err
 		}
-
-		// TODO: initialize h with ref.Config
-		ehs = append(ehs, h)
+		nhe, err := eh.WithConfig(ref.Config)
+		if err != nil {
+			return nil, err
+		}
+		ehs = append(ehs, nhe)
 	}
 
 	return &compositeErrorHandler{
@@ -237,6 +249,10 @@ func (ca *compositeAuthenticator) Authenticate(c context.Context, ads interfaces
 	return err
 }
 
+func (ca *compositeAuthenticator) WithConfig(_ json.RawMessage) (pipeline.Authenticator, error) {
+	return nil, errors.New("reconfiguration not allowed")
+}
+
 type compositeHydrator struct {
 	hs []pipeline.Hydrator
 }
@@ -253,6 +269,10 @@ func (ca *compositeHydrator) Hydrate(c context.Context, sc *heimdall.SubjectCont
 		}
 	}
 	return err
+}
+
+func (ca *compositeHydrator) WithConfig(_ json.RawMessage) (pipeline.Hydrator, error) {
+	return nil, errors.New("reconfiguration not allowed")
 }
 
 type compositeMutator struct {
@@ -273,6 +293,10 @@ func (ca *compositeMutator) Mutate(c context.Context, sc *heimdall.SubjectContex
 	return err
 }
 
+func (ca *compositeMutator) WithConfig(_ json.RawMessage) (pipeline.Mutator, error) {
+	return nil, errors.New("reconfiguration not allowed")
+}
+
 type compositeErrorHandler struct {
 	ehs []pipeline.ErrorHandler
 }
@@ -289,4 +313,8 @@ func (ceh *compositeErrorHandler) HandleError(ctx context.Context, e error) erro
 		}
 	}
 	return err
+}
+
+func (*compositeErrorHandler) WithConfig(_ json.RawMessage) (pipeline.ErrorHandler, error) {
+	return nil, errors.New("reconfiguration not allowed")
 }

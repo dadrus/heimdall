@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/dadrus/heimdall/internal/pipeline"
 	"gopkg.in/square/go-jose.v2"
 	"gopkg.in/square/go-jose.v2/jwt"
 
@@ -138,4 +139,27 @@ func (a *jwtAuthenticator) verifyTokenAndGetClaims(jwtRaw string, jwks jose.JSON
 	}
 
 	return rawPayload, nil
+}
+
+func (a *jwtAuthenticator) WithConfig(config json.RawMessage) (pipeline.Authenticator, error) {
+	// this authenticator allows assertions to be redefined on the rule level
+	if len(config) == 0 {
+		return a, nil
+	}
+
+	type _config struct {
+		Assertions oauth2.Assertions `json:"jwt_assertions"`
+	}
+
+	var c _config
+	if err := json.Unmarshal(config, &c); err != nil {
+		return nil, err
+	}
+
+	return &jwtAuthenticator{
+		Endpoint:         a.Endpoint,
+		Assertions:       c.Assertions,
+		SubjectExtractor: a.SubjectExtractor,
+		AuthDataGetter:   a.AuthDataGetter,
+	}, nil
 }

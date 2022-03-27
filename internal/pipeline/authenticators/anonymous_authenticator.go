@@ -6,6 +6,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/errorsx"
 	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/pipeline/interfaces"
 )
 
@@ -33,4 +34,13 @@ type anonymousAuthenticator struct {
 func (a *anonymousAuthenticator) Authenticate(_ context.Context, _ interfaces.AuthDataSource, sc *heimdall.SubjectContext) error {
 	sc.Subject = &heimdall.Subject{Id: a.Subject}
 	return nil
+}
+
+func (a *anonymousAuthenticator) WithConfig(config json.RawMessage) (pipeline.Authenticator, error) {
+	// this authenticator allows subject to be redefined on the rule level
+	if len(config) == 0 {
+		return a, nil
+	}
+
+	return NewAnonymousAuthenticatorFromJSON(config)
 }
