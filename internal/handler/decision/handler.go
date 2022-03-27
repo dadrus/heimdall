@@ -76,7 +76,7 @@ func (h *Handler) decisions(c *fiber.Ctx) error {
 		Fields(fields).
 		Msg("Handling request")
 
-	r, err := h.r.FindRule(method, reqUrl)
+	r, err := h.r.FindRule(reqUrl)
 	if err != nil {
 		logger.Warn().
 			Fields(fields).
@@ -84,6 +84,10 @@ func (h *Handler) decisions(c *fiber.Ctx) error {
 			Msg("Access request denied. No rule applicable")
 
 		return c.SendStatus(fiber.StatusInternalServerError)
+	}
+
+	if !r.MatchesMethod(method) {
+		return c.SendStatus(fiber.StatusMethodNotAllowed)
 	}
 
 	sc, err := r.Execute(ctx, &authDataSource{c: c})

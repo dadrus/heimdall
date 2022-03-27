@@ -7,7 +7,6 @@ import (
 
 	"github.com/dadrus/heimdall/internal/errorsx"
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/pipeline/config"
 	"github.com/dadrus/heimdall/internal/pipeline/endpoint"
 	"github.com/dadrus/heimdall/internal/pipeline/interfaces"
@@ -59,7 +58,7 @@ func (a *authenticationDataAuthenticator) Authenticate(ctx context.Context, as i
 	return nil
 }
 
-func (a *authenticationDataAuthenticator) WithConfig(_ json.RawMessage) (pipeline.Authenticator, error) {
+func (a *authenticationDataAuthenticator) WithConfig(_ json.RawMessage) (interfaces.Authenticator, error) {
 	// this authenticator does not allow configuration from a rule
 	return a, nil
 }

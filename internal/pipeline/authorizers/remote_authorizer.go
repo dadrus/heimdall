@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/pipeline/interfaces"
 )
 
 type remoteAuthorizer struct {
@@ -36,4 +37,8 @@ func (a remoteAuthorizer) Authorize(ctx context.Context, sc *heimdall.SubjectCon
 	}
 
 	return nil
+}
+
+func (remoteAuthorizer) WithConfig(config json.RawMessage) (interfaces.Authorizer, error) {
+	return nil, nil
 }

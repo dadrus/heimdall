@@ -43,7 +43,7 @@ func (r *repository) FindRule(requestUrl *url.URL) (Rule, error) {
 	r.mutex.RLock()
 	defer r.mutex.RUnlock()
 	for _, rule := range r.rules {
-		if rule.Matches(requestUrl) {
+		if rule.MatchesUrl(requestUrl) {
 			return rule, nil
 		}
 	}

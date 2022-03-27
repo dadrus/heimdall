@@ -15,10 +15,11 @@ import (
 type Rule interface {
 	Id() string
 	Execute(ctx context.Context, ads interfaces.AuthDataSource) (*heimdall.SubjectContext, error)
-	Matches(requestUrl *url.URL) bool
+	MatchesUrl(requestUrl *url.URL) bool
+	MatchesMethod(method string) bool
 }
 
-func createAuthenticator(pr pipeline.Repository, configuredAuthenticators []config.PipelineObjectReference, defaultAuthenticators []config.PipelineObjectReference) (pipeline.Authenticator, error) {
+func createAuthenticator(pr pipeline.Repository, configuredAuthenticators []config.PipelineObjectReference, defaultAuthenticators []config.PipelineObjectReference) (interfaces.Authenticator, error) {
 	var refs []config.PipelineObjectReference
 	if len(configuredAuthenticators) == 0 {
 		if len(defaultAuthenticators) == 0 {
@@ -29,7 +30,7 @@ func createAuthenticator(pr pipeline.Repository, configuredAuthenticators []conf
 		refs = configuredAuthenticators
 	}
 
-	var ans []pipeline.Authenticator
+	var ans []interfaces.Authenticator
 
 	for _, ref := range refs {
 		a, err := pr.Authenticator(ref.Id)
@@ -48,7 +49,7 @@ func createAuthenticator(pr pipeline.Repository, configuredAuthenticators []conf
 	}, nil
 }
 
-func createAuthorizer(pr pipeline.Repository, configuredAuthorizer *config.PipelineObjectReference, defaultAuthorizer *config.PipelineObjectReference) (pipeline.Authorizer, error) {
+func createAuthorizer(pr pipeline.Repository, configuredAuthorizer *config.PipelineObjectReference, defaultAuthorizer *config.PipelineObjectReference) (interfaces.Authorizer, error) {
 	var ref *config.PipelineObjectReference
 	if configuredAuthorizer == nil {
 		if defaultAuthorizer == nil {
@@ -66,7 +67,7 @@ func createAuthorizer(pr pipeline.Repository, configuredAuthorizer *config.Pipel
 	return a, err
 }
 
-func createHydrator(pr pipeline.Repository, configuredHydrators []config.PipelineObjectReference, defaultHydrators []config.PipelineObjectReference) (pipeline.Hydrator, error) {
+func createHydrator(pr pipeline.Repository, configuredHydrators []config.PipelineObjectReference, defaultHydrators []config.PipelineObjectReference) (interfaces.Hydrator, error) {
 	var refs []config.PipelineObjectReference
 	if len(configuredHydrators) == 0 {
 		if len(defaultHydrators) != 0 {
@@ -76,7 +77,7 @@ func createHydrator(pr pipeline.Repository, configuredHydrators []config.Pipelin
 		refs = configuredHydrators
 	}
 
-	var hs []pipeline.Hydrator
+	var hs []interfaces.Hydrator
 	for _, ref := range refs {
 		h, err := pr.Hydrator(ref.Id)
 		if err != nil {
@@ -94,7 +95,7 @@ func createHydrator(pr pipeline.Repository, configuredHydrators []config.Pipelin
 	}, nil
 }
 
-func createMutator(pr pipeline.Repository, configuredMutators []config.PipelineObjectReference, defaultMutators []config.PipelineObjectReference) (pipeline.Mutator, error) {
+func createMutator(pr pipeline.Repository, configuredMutators []config.PipelineObjectReference, defaultMutators []config.PipelineObjectReference) (interfaces.Mutator, error) {
 	var refs []config.PipelineObjectReference
 	if len(configuredMutators) == 0 {
 		if len(defaultMutators) == 0 {
@@ -105,7 +106,7 @@ func createMutator(pr pipeline.Repository, configuredMutators []config.PipelineO
 		refs = configuredMutators
 	}
 
-	var ms []pipeline.Mutator
+	var ms []interfaces.Mutator
 	for _, ref := range refs {
 		m, err := pr.Mutator(ref.Id)
 		if err != nil {
@@ -123,7 +124,7 @@ func createMutator(pr pipeline.Repository, configuredMutators []config.PipelineO
 	}, nil
 }
 
-func createErrorHandler(pr pipeline.Repository, configuredErrorHandlers []config.PipelineObjectReference, defaultErrorHandlers []config.PipelineObjectReference) (pipeline.ErrorHandler, error) {
+func createErrorHandler(pr pipeline.Repository, configuredErrorHandlers []config.PipelineObjectReference, defaultErrorHandlers []config.PipelineObjectReference) (interfaces.ErrorHandler, error) {
 	var refs []config.PipelineObjectReference
 	if len(configuredErrorHandlers) == 0 {
 		if len(defaultErrorHandlers) == 0 {
@@ -134,7 +135,7 @@ func createErrorHandler(pr pipeline.Repository, configuredErrorHandlers []config
 		refs = configuredErrorHandlers
 	}
 
-	var ehs []pipeline.ErrorHandler
+	var ehs []interfaces.ErrorHandler
 	for _, ref := range refs {
 		eh, err := pr.ErrorHandler(ref.Id)
 		if err != nil {
@@ -194,11 +195,11 @@ type rule struct {
 	id    string
 	url   string
 	srcId string
-	an    pipeline.Authenticator
-	az    pipeline.Authorizer
-	h     pipeline.Hydrator
-	m     pipeline.Mutator
-	eh    pipeline.ErrorHandler
+	an    interfaces.Authenticator
+	az    interfaces.Authorizer
+	h     interfaces.Hydrator
+	m     interfaces.Mutator
+	eh    interfaces.ErrorHandler
 }
 
 func (r *rule) Execute(ctx context.Context, ads interfaces.AuthDataSource) (*heimdall.SubjectContext, error) {
@@ -223,7 +224,11 @@ func (r *rule) Execute(ctx context.Context, ads interfaces.AuthDataSource) (*hei
 	return sc, nil
 }
 
-func (r *rule) Matches(requestUrl *url.URL) bool {
+func (r *rule) MatchesUrl(requestUrl *url.URL) bool {
+	return true
+}
+
+func (r *rule) MatchesMethod(method string) bool {
 	return true
 }
 
@@ -232,7 +237,7 @@ func (r *rule) Id() string {
 }
 
 type compositeAuthenticator struct {
-	ans []pipeline.Authenticator
+	ans []interfaces.Authenticator
 }
 
 func (ca *compositeAuthenticator) Authenticate(c context.Context, ads interfaces.AuthDataSource, sc *heimdall.SubjectContext) error {
@@ -249,12 +254,12 @@ func (ca *compositeAuthenticator) Authenticate(c context.Context, ads interfaces
 	return err
 }
 
-func (ca *compositeAuthenticator) WithConfig(_ json.RawMessage) (pipeline.Authenticator, error) {
+func (ca *compositeAuthenticator) WithConfig(_ json.RawMessage) (interfaces.Authenticator, error) {
 	return nil, errors.New("reconfiguration not allowed")
 }
 
 type compositeHydrator struct {
-	hs []pipeline.Hydrator
+	hs []interfaces.Hydrator
 }
 
 func (ca *compositeHydrator) Hydrate(c context.Context, sc *heimdall.SubjectContext) error {
@@ -271,12 +276,12 @@ func (ca *compositeHydrator) Hydrate(c context.Context, sc *heimdall.SubjectCont
 	return err
 }
 
-func (ca *compositeHydrator) WithConfig(_ json.RawMessage) (pipeline.Hydrator, error) {
+func (ca *compositeHydrator) WithConfig(_ json.RawMessage) (interfaces.Hydrator, error) {
 	return nil, errors.New("reconfiguration not allowed")
 }
 
 type compositeMutator struct {
-	ms []pipeline.Mutator
+	ms []interfaces.Mutator
 }
 
 func (ca *compositeMutator) Mutate(c context.Context, sc *heimdall.SubjectContext) error {
@@ -293,12 +298,12 @@ func (ca *compositeMutator) Mutate(c context.Context, sc *heimdall.SubjectContex
 	return err
 }
 
-func (ca *compositeMutator) WithConfig(_ json.RawMessage) (pipeline.Mutator, error) {
+func (ca *compositeMutator) WithConfig(_ json.RawMessage) (interfaces.Mutator, error) {
 	return nil, errors.New("reconfiguration not allowed")
 }
 
 type compositeErrorHandler struct {
-	ehs []pipeline.ErrorHandler
+	ehs []interfaces.ErrorHandler
 }
 
 func (ceh *compositeErrorHandler) HandleError(ctx context.Context, e error) error {
@@ -315,6 +320,6 @@ func (ceh *compositeErrorHandler) HandleError(ctx context.Context, e error) erro
 	return err
 }
 
-func (*compositeErrorHandler) WithConfig(_ json.RawMessage) (pipeline.ErrorHandler, error) {
+func (*compositeErrorHandler) WithConfig(_ json.RawMessage) (interfaces.ErrorHandler, error) {
 	return nil, errors.New("reconfiguration not allowed")
 }

@@ -6,7 +6,6 @@ import (
 
 	"github.com/dadrus/heimdall/internal/errorsx"
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/pipeline/interfaces"
 )
 
@@ -20,7 +19,7 @@ func (a *unauthorizedAuthenticator) Authenticate(_ context.Context, _ interfaces
 	return &errorsx.UnauthorizedError{Message: "denied by authenticator"}
 }
 
-func (a *unauthorizedAuthenticator) WithConfig(_ json.RawMessage) (pipeline.Authenticator, error) {
+func (a *unauthorizedAuthenticator) WithConfig(_ json.RawMessage) (interfaces.Authenticator, error) {
 	// nothing can be reconfigured
 	return a, nil
 }
