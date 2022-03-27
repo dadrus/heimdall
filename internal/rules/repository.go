@@ -7,21 +7,31 @@ import (
 	"net/url"
 	"sync"
 
+	"github.com/dadrus/heimdall/internal/config"
+	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/rules/provider"
+	"github.com/knadh/koanf"
+	"github.com/knadh/koanf/parsers/yaml"
+	"github.com/knadh/koanf/providers/rawbytes"
+	"github.com/mitchellh/mapstructure"
 )
 
 type Repository interface {
-	FindRule(method string, requestUrl *url.URL) (Rule, error)
+	FindRule(requestUrl *url.URL) (Rule, error)
 }
 
-func NewRepository(queue provider.RuleSetChangedEventQueue) (Repository, error) {
+func NewRepository(queue provider.RuleSetChangedEventQueue, c config.Configuration, pr pipeline.Repository) (Repository, error) {
 	return &repository{
+		pr:    pr,
+		dpc:   c.Rules.Default,
 		queue: queue,
 		quit:  make(chan bool),
 	}, nil
 }
 
 type repository struct {
+	pr    pipeline.Repository
+	dpc   config.Pipeline
 	rules []*rule
 	mutex sync.RWMutex
 
@@ -29,11 +39,11 @@ type repository struct {
 	quit  chan bool
 }
 
-func (r *repository) FindRule(method string, requestUrl *url.URL) (Rule, error) {
+func (r *repository) FindRule(requestUrl *url.URL) (Rule, error) {
 	r.mutex.RLock()
 	defer r.mutex.RUnlock()
 	for _, rule := range r.rules {
-		if rule.Matches(requestUrl, method) {
+		if rule.Matches(requestUrl) {
 			return rule, nil
 		}
 	}
@@ -45,23 +55,11 @@ func (r *repository) Start() {
 		for {
 			select {
 			case evt := <-r.queue:
-				if evt.ChangeType == provider.Write {
-					// update rules
-				} else if evt.ChangeType == provider.Create {
-					// create rules
-					rules, err := r.loadRules(evt.Src, evt.Definition)
-					if err != nil {
-						fmt.Println("error loading rule")
-					}
-					for _, rule := range rules {
-						r.addRule(rule)
-					}
+				if evt.ChangeType == provider.Create {
+					r.onRuleSetCreated(evt.Src, evt.Definition)
 				} else if evt.ChangeType == provider.Remove {
-					// remove rules
-					r.removeRules(evt.Src)
+					r.onRuleSetDeleted(evt.Src)
 				}
-				// Receive a work request.
-
 			case <-r.quit:
 				// We have been asked to stop.
 				return
@@ -71,13 +69,47 @@ func (r *repository) Start() {
 }
 
 func (r *repository) Stop() {
-	go func() {
-		r.quit <- true
-	}()
+	r.quit <- true
 }
 
 func (r *repository) loadRules(srcId string, definition json.RawMessage) ([]*rule, error) {
-	return nil, nil
+	rcs, err := parseRuleSetFromYaml(definition)
+	if err != nil {
+		return nil, err
+	}
+
+	var rules []*rule
+	for _, rc := range rcs {
+		rule, err := newRule(r.pr, r.dpc, srcId, rc)
+		if err != nil {
+			return nil, err
+		}
+		rules = append(rules, rule)
+	}
+
+	return rules, nil
+}
+
+func parseRuleSetFromYaml(data []byte) ([]config.RuleConfig, error) {
+	var k = koanf.New(".")
+	err := k.Load(rawbytes.Provider(data), yaml.Parser())
+	if err != nil {
+		return nil, fmt.Errorf("failed to read config: %w", err)
+	}
+
+	var rcs []config.RuleConfig
+
+	if err = k.UnmarshalWithConf("", rcs, koanf.UnmarshalConf{
+		Tag: "koanf",
+		DecoderConfig: &mapstructure.DecoderConfig{
+			Result:           rcs,
+			WeaklyTypedInput: true,
+		},
+	}); err != nil {
+		return nil, err
+	}
+
+	return rcs, nil
 }
 
 func (r *repository) addRule(rule *rule) {
@@ -88,4 +120,21 @@ func (r *repository) addRule(rule *rule) {
 
 func (r *repository) removeRules(srcId string) {
 	// TODO: implement remove rule
+}
+
+func (r *repository) onRuleSetCreated(src string, definition json.RawMessage) {
+	// create rules
+	rules, err := r.loadRules(src, definition)
+	if err != nil {
+		fmt.Println("error loading rule")
+	}
+
+	// add them
+	for _, rule := range rules {
+		r.addRule(rule)
+	}
+}
+
+func (r *repository) onRuleSetDeleted(src string) {
+	r.removeRules(src)
 }
