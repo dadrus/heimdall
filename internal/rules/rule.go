@@ -37,11 +37,16 @@ func createAuthenticator(pr pipeline.Repository, configuredAuthenticators []conf
 		if err != nil {
 			return nil, err
 		}
-		na, err := a.WithConfig(ref.Config)
-		if err != nil {
-			return nil, err
+
+		if len(ref.Config) != 0 {
+			na, err := a.WithConfig(ref.Config)
+			if err != nil {
+				return nil, err
+			}
+			ans = append(ans, na)
+		} else {
+			ans = append(ans, a)
 		}
-		ans = append(ans, na)
 	}
 
 	return &compositeAuthenticator{
@@ -62,7 +67,10 @@ func createAuthorizer(pr pipeline.Repository, configuredAuthorizer *config.Pipel
 
 	a, err := pr.Authorizer(ref.Id)
 	if err == nil {
-		return a.WithConfig(ref.Config)
+		if len(ref.Config) != 0 {
+			return a.WithConfig(ref.Config)
+		}
+		return a, nil
 	}
 	return a, err
 }
@@ -83,11 +91,16 @@ func createHydrator(pr pipeline.Repository, configuredHydrators []config.Pipelin
 		if err != nil {
 			return nil, err
 		}
-		nh, err := h.WithConfig(ref.Config)
-		if err != nil {
-			return nil, err
+
+		if len(ref.Config) != 0 {
+			nh, err := h.WithConfig(ref.Config)
+			if err != nil {
+				return nil, err
+			}
+			hs = append(hs, nh)
+		} else {
+			hs = append(hs, h)
 		}
-		hs = append(hs, nh)
 	}
 
 	return &compositeHydrator{
@@ -112,11 +125,16 @@ func createMutator(pr pipeline.Repository, configuredMutators []config.PipelineO
 		if err != nil {
 			return nil, err
 		}
-		nm, err := m.WithConfig(ref.Config)
-		if err != nil {
-			return nil, err
+
+		if len(ref.Config) != 0 {
+			nm, err := m.WithConfig(ref.Config)
+			if err != nil {
+				return nil, err
+			}
+			ms = append(ms, nm)
+		} else {
+			ms = append(ms, m)
 		}
-		ms = append(ms, nm)
 	}
 
 	return &compositeMutator{
@@ -141,11 +159,16 @@ func createErrorHandler(pr pipeline.Repository, configuredErrorHandlers []config
 		if err != nil {
 			return nil, err
 		}
-		nhe, err := eh.WithConfig(ref.Config)
-		if err != nil {
-			return nil, err
+
+		if len(ref.Config) != 0 {
+			neh, err := eh.WithConfig(ref.Config)
+			if err != nil {
+				return nil, err
+			}
+			ehs = append(ehs, neh)
+		} else {
+			ehs = append(ehs, eh)
 		}
-		ehs = append(ehs, nhe)
 	}
 
 	return &compositeErrorHandler{
