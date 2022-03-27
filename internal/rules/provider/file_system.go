@@ -15,7 +15,7 @@ import (
 )
 
 type fileSystemProvider struct {
-	src     string
+	src     os.FileInfo
 	watcher *fsnotify.Watcher
 	queue   RuleSetChangedEventQueue
 }
@@ -46,7 +46,7 @@ func newFileSystemProvider(c config.Configuration, queue RuleSetChangedEventQueu
 		return nil, errors.New("invalid configuration for file provider")
 	}
 
-	_, err := os.Stat(c.Rules.Providers.File.Src)
+	fi, err := os.Stat(c.Rules.Providers.File.Src)
 	if err != nil {
 		return nil, err
 	}
@@ -60,19 +60,19 @@ func newFileSystemProvider(c config.Configuration, queue RuleSetChangedEventQueu
 	}
 
 	return &fileSystemProvider{
-		src:     c.Rules.Providers.File.Src,
+		src:     fi,
 		watcher: watcher,
 		queue:   queue,
 	}, nil
 }
 
 func (p *fileSystemProvider) Start() error {
-	if err := p.readContents(p.src); err != nil {
+	if err := p.readSource(p.src.Name()); err != nil {
 		return err
 	}
 
 	if p.watcher != nil {
-		p.watcher.Add(p.src)
+		p.watcher.Add(p.src.Name())
 		go func() {
 			for {
 				select {
@@ -80,8 +80,22 @@ func (p *fileSystemProvider) Start() error {
 					if !ok {
 						return
 					}
-					if event.Op == fsnotify.Write {
-						p.readContents(event.Name)
+					if event.Op&fsnotify.Create == fsnotify.Create {
+						data, err := os.ReadFile(event.Name)
+						if err != nil {
+							fmt.Printf("Failed to read %s: %s", event.Name, err)
+						}
+
+						p.ruleSetChanged(RuleSetChangedEvent{
+							Src:        event.Name,
+							Definition: data,
+							ChangeType: Create,
+						})
+					} else if event.Op&fsnotify.Remove == fsnotify.Remove {
+						p.ruleSetChanged(RuleSetChangedEvent{
+							Src:        event.Name,
+							ChangeType: Remove,
+						})
 					}
 				case err, ok := <-p.watcher.Errors:
 					if !ok {
@@ -102,42 +116,35 @@ func (p *fileSystemProvider) Stop() error {
 	return nil
 }
 
-func (p *fileSystemProvider) readContents(file string) error {
-	fi, err := os.Stat(file)
-	if err != nil {
-		return err
-	}
-
+func (p *fileSystemProvider) readSource(file string) error {
 	var sources []string
-	if fi.IsDir() {
-		files, _ := ioutil.ReadDir(fi.Name())
+	if p.src.IsDir() {
+		files, _ := ioutil.ReadDir(p.src.Name())
 		for _, file := range files {
 			if !file.IsDir() {
 				sources = append(sources, file.Name())
 			}
 		}
 	} else {
-		sources = append(sources, fi.Name())
+		sources = append(sources, p.src.Name())
 	}
 
 	for _, src := range sources {
-		f, err := os.Open(src)
+		data, err := os.ReadFile(src)
 		if err != nil {
-			return err
+			fmt.Printf("Failed to read %s: %s", src, err)
 		}
 
-		data, err := ioutil.ReadAll(f)
-		f.Close()
-		if err != nil {
-			return err
-		}
-
-		p.queue <- RuleSetChangedEvent{
+		p.ruleSetChanged(RuleSetChangedEvent{
 			Src:        src,
 			Definition: data,
 			ChangeType: Create,
-		}
+		})
 	}
 
 	return nil
+}
+
+func (p *fileSystemProvider) ruleSetChanged(evt RuleSetChangedEvent) {
+	p.queue <- evt
 }
