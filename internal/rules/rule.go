@@ -2,7 +2,6 @@ package rules
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"net/url"
 
@@ -10,6 +9,10 @@ import (
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/pipeline/handler"
+	"github.com/dadrus/heimdall/internal/pipeline/handler/authenticators"
+	"github.com/dadrus/heimdall/internal/pipeline/handler/error_handlers"
+	"github.com/dadrus/heimdall/internal/pipeline/handler/hydrators"
+	"github.com/dadrus/heimdall/internal/pipeline/handler/mutators"
 )
 
 type Rule interface {
@@ -30,7 +33,7 @@ func createAuthenticator(pr pipeline.Repository, configuredAuthenticators []conf
 		refs = configuredAuthenticators
 	}
 
-	var ans compositeAuthenticator
+	var ans authenticators.CompositeAuthenticator
 	for _, ref := range refs {
 		a, err := pr.Authenticator(ref.Id)
 		if err != nil {
@@ -82,7 +85,7 @@ func createHydrator(pr pipeline.Repository, configuredHydrators []config.Pipelin
 		refs = configuredHydrators
 	}
 
-	var hs compositeHydrator
+	var hs hydrators.CompositeHydrator
 	for _, ref := range refs {
 		h, err := pr.Hydrator(ref.Id)
 		if err != nil {
@@ -114,7 +117,7 @@ func createMutator(pr pipeline.Repository, configuredMutators []config.PipelineO
 		refs = configuredMutators
 	}
 
-	var ms compositeMutator
+	var ms mutators.CompositeMutator
 	for _, ref := range refs {
 		m, err := pr.Mutator(ref.Id)
 		if err != nil {
@@ -146,7 +149,7 @@ func createErrorHandler(pr pipeline.Repository, configuredErrorHandlers []config
 		refs = configuredErrorHandlers
 	}
 
-	var ehs compositeErrorHandler
+	var ehs error_handlers.CompositeErrorHandler
 	for _, ref := range refs {
 		eh, err := pr.ErrorHandler(ref.Id)
 		if err != nil {
@@ -248,84 +251,4 @@ func (r *rule) MatchesMethod(method string) bool {
 
 func (r *rule) Id() string {
 	return r.id
-}
-
-type compositeAuthenticator []handler.Authenticator
-
-func (ca compositeAuthenticator) Authenticate(c context.Context, ads handler.AuthDataSource, sc *heimdall.SubjectContext) error {
-	var err error
-	for _, a := range ca {
-		err = a.Authenticate(c, ads, sc)
-		if err != nil {
-			// try next
-			continue
-		} else {
-			return nil
-		}
-	}
-	return err
-}
-
-func (ca compositeAuthenticator) WithConfig(_ json.RawMessage) (handler.Authenticator, error) {
-	return nil, errors.New("reconfiguration not allowed")
-}
-
-type compositeHydrator []handler.Hydrator
-
-func (ch compositeHydrator) Hydrate(c context.Context, sc *heimdall.SubjectContext) error {
-	var err error
-	for _, h := range ch {
-		err = h.Hydrate(c, sc)
-		if err != nil {
-			// try next
-			continue
-		} else {
-			return nil
-		}
-	}
-	return err
-}
-
-func (ch compositeHydrator) WithConfig(_ json.RawMessage) (handler.Hydrator, error) {
-	return nil, errors.New("reconfiguration not allowed")
-}
-
-type compositeMutator []handler.Mutator
-
-func (cm compositeMutator) Mutate(c context.Context, sc *heimdall.SubjectContext) error {
-	var err error
-	for _, m := range cm {
-		err = m.Mutate(c, sc)
-		if err != nil {
-			// try next
-			continue
-		} else {
-			return nil
-		}
-	}
-	return err
-}
-
-func (cm compositeMutator) WithConfig(_ json.RawMessage) (handler.Mutator, error) {
-	return nil, errors.New("reconfiguration not allowed")
-}
-
-type compositeErrorHandler []handler.ErrorHandler
-
-func (ceh compositeErrorHandler) HandleError(ctx context.Context, e error) error {
-	var err error
-	for _, eh := range ceh {
-		err = eh.HandleError(ctx, e)
-		if err != nil {
-			// try next
-			continue
-		} else {
-			return nil
-		}
-	}
-	return err
-}
-
-func (compositeErrorHandler) WithConfig(_ json.RawMessage) (handler.ErrorHandler, error) {
-	return nil, errors.New("reconfiguration not allowed")
 }
