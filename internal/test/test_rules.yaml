@@ -1,0 +1,22 @@
+- id: role:foo
+  url: http://foo.bar
+  methods:
+    - GET
+    - POST
+  authenticators:
+    - id: kratos_session_authenticator
+  authorizer:
+    id: keto_authorizer
+  hydrators:
+    - id: subscription_hydrator
+  mutators:
+    - id: jwt
+      config:
+        claims: "foo: bar"
+    - id: bla
+      config:
+        headers:
+          foo-bar: bla
+  error_handlers:
+    - id: authenticate_on_unauthorized_or_forbidden
+    - id: json
