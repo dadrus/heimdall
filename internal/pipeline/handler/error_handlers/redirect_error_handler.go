@@ -17,6 +17,6 @@ func (redirectErrorHandler) HandleError(ctx context.Context, err error) error {
 	return nil
 }
 
-func (redirectErrorHandler) WithConfig(config json.RawMessage) (handler.ErrorHandler, error) {
+func (redirectErrorHandler) WithConfig(config []byte) (handler.ErrorHandler, error) {
 	return nil, nil
 }

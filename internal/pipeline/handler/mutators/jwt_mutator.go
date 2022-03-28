@@ -18,6 +18,6 @@ func (jwtMutator) Mutate(context.Context, *heimdall.SubjectContext) error {
 	return nil
 }
 
-func (jwtMutator) WithConfig(config json.RawMessage) (handler.Mutator, error) {
+func (jwtMutator) WithConfig(config []byte) (handler.Mutator, error) {
 	return nil, nil
 }

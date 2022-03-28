@@ -139,7 +139,7 @@ func (a *jwtAuthenticator) verifyTokenAndGetClaims(jwtRaw string, jwks jose.JSON
 	return rawPayload, nil
 }
 
-func (a *jwtAuthenticator) WithConfig(config json.RawMessage) (handler.Authenticator, error) {
+func (a *jwtAuthenticator) WithConfig(config []byte) (handler.Authenticator, error) {
 	// this authenticator allows assertions to be redefined on the rule level
 	if len(config) == 0 {
 		return a, nil

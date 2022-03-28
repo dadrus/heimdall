@@ -18,6 +18,6 @@ func (headerMutator) Mutate(context.Context, *heimdall.SubjectContext) error {
 	return nil
 }
 
-func (headerMutator) WithConfig(config json.RawMessage) (handler.Mutator, error) {
+func (headerMutator) WithConfig(config []byte) (handler.Mutator, error) {
 	return nil, nil
 }

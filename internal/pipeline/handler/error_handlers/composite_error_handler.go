@@ -2,7 +2,6 @@ package error_handlers
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 
 	"github.com/dadrus/heimdall/internal/pipeline/handler"
@@ -24,6 +23,6 @@ func (ceh CompositeErrorHandler) HandleError(ctx context.Context, e error) error
 	return err
 }
 
-func (CompositeErrorHandler) WithConfig(_ json.RawMessage) (handler.ErrorHandler, error) {
+func (CompositeErrorHandler) WithConfig(_ []byte) (handler.ErrorHandler, error) {
 	return nil, errors.New("reconfiguration not allowed")
 }

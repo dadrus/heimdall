@@ -17,6 +17,6 @@ func (jsonErrorHandler) HandleError(ctx context.Context, err error) error {
 	return nil
 }
 
-func (jsonErrorHandler) WithConfig(config json.RawMessage) (handler.ErrorHandler, error) {
+func (jsonErrorHandler) WithConfig(config []byte) (handler.ErrorHandler, error) {
 	return nil, nil
 }

@@ -1,7 +1,6 @@
 package authenticators
 
 import (
-	"encoding/json"
 	"errors"
 
 	"github.com/dadrus/heimdall/internal/pipeline/handler/authenticators/extractors"
@@ -15,16 +14,16 @@ func (a AuthenticationDataSource) Strategy() extractors.AuthDataExtractStrategy 
 	return a.es
 }
 
-func (a *AuthenticationDataSource) UnmarshalJSON(data []byte) (err error) {
-	a.es, err = authenticationDataFromJson(data)
+func (a *AuthenticationDataSource) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
+	a.es, err = doUnmarshal(unmarshal)
 	return err
 }
 
-func authenticationDataFromJson(raw []byte) (extractors.AuthDataExtractStrategy, error) {
+func doUnmarshal(unmarshal func(interface{}) error) (extractors.AuthDataExtractStrategy, error) {
 	var strategies extractors.CompositeExtractStrategy
 	var sources []map[string]string
 
-	if err := json.Unmarshal(raw, &sources); err != nil {
+	if err := unmarshal(&sources); err != nil {
 		return nil, err
 	}
 

@@ -2,9 +2,10 @@ package authenticators
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"strings"
+
+	"gopkg.in/yaml.v2"
 
 	"github.com/dadrus/heimdall/internal/errorsx"
 	"github.com/dadrus/heimdall/internal/heimdall"
@@ -18,15 +19,15 @@ type authenticationDataAuthenticator struct {
 	AuthDataGetter   AuthDataGetter
 }
 
-func NewAuthenticationDataAuthenticatorFromJSON(rawConfig json.RawMessage) (*authenticationDataAuthenticator, error) {
+func NewAuthenticationDataAuthenticatorFromYAML(rawConfig []byte) (*authenticationDataAuthenticator, error) {
 	type _config struct {
-		Endpoint       endpoint.Endpoint        `json:"identity_info_endpoint"`
-		AuthDataSource AuthenticationDataSource `json:"authentication_data_source"`
-		Session        Session                  `json:"session"`
+		Endpoint       endpoint.Endpoint        `yaml:"identity_info_endpoint"`
+		AuthDataSource AuthenticationDataSource `yaml:"authentication_data_source"`
+		Session        Session                  `yaml:"session"`
 	}
 
 	var c _config
-	if err := json.Unmarshal(rawConfig, &c); err != nil {
+	if err := yaml.Unmarshal(rawConfig, &c); err != nil {
 		return nil, &errorsx.ArgumentError{
 			Message: "failed to unmarshal config",
 			Cause:   err,
@@ -58,7 +59,7 @@ func (a *authenticationDataAuthenticator) Authenticate(ctx context.Context, as h
 	return nil
 }
 
-func (a *authenticationDataAuthenticator) WithConfig(_ json.RawMessage) (handler.Authenticator, error) {
+func (a *authenticationDataAuthenticator) WithConfig(_ []byte) (handler.Authenticator, error) {
 	// this authenticator does not allow configuration from a rule
 	return nil, errors.New("reconfiguration not allowed")
 }

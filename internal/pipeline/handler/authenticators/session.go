@@ -11,8 +11,8 @@ import (
 )
 
 type Session struct {
-	SubjectFrom    string `json:"subject_from"`
-	AttributesFrom string `json:"attributes_from"`
+	SubjectFrom    string `yaml:"subject_from"`
+	AttributesFrom string `yaml:"attributes_from"`
 }
 
 func (s *Session) GetSubject(rawData json.RawMessage) (*heimdall.Subject, error) {

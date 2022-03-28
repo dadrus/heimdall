@@ -7,21 +7,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestAuthenticateWithAnonymousAuthenticatorWithDefaultSubjectId(t *testing.T) {
-	// GIVEN
-	a := anonymousAuthenticator{}
-	sc := heimdall.SubjectContext{}
-
-	// WHEN
-	err := a.Authenticate(nil, nil, &sc)
-
-	// THEN
-	assert.NoError(t, err)
-	assert.Empty(t, sc.Header)
-	assert.NotNil(t, sc.Subject)
-	assert.Equal(t, "anonymous", sc.Subject.Id)
-}
-
 func TestAuthenticateWithAnonymousAuthenticatorWithCustomSubjectId(t *testing.T) {
 	// GIVEN
 	subjectId := "anon"
@@ -36,4 +21,29 @@ func TestAuthenticateWithAnonymousAuthenticatorWithCustomSubjectId(t *testing.T)
 	assert.Empty(t, sc.Header)
 	assert.NotNil(t, sc.Subject)
 	assert.Equal(t, subjectId, sc.Subject.Id)
+}
+
+func TestCreateAnonymousAuthenticatorFromYaml(t *testing.T) {
+	// WHEN
+	a, err := NewAnonymousAuthenticatorFromYAML([]byte("subject: anon"))
+
+	// THEN
+	assert.NoError(t, err)
+	assert.Equal(t, "anon", a.Subject)
+}
+
+func TestAuthenticateWithAnonymousAuthenticatorWithDefaultSubjectId(t *testing.T) {
+	// GIVEN
+	a, err := NewAnonymousAuthenticatorFromYAML([]byte{})
+	assert.NoError(t, err)
+	sc := heimdall.SubjectContext{}
+
+	// WHEN
+	err = a.Authenticate(nil, nil, &sc)
+
+	// THEN
+	assert.NoError(t, err)
+	assert.Empty(t, sc.Header)
+	assert.NotNil(t, sc.Subject)
+	assert.Equal(t, "anonymous", sc.Subject.Id)
 }

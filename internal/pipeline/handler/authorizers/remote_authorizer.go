@@ -39,7 +39,7 @@ func (a *remoteAuthorizer) Authorize(ctx context.Context, rc handler.RequestCont
 	return nil
 }
 
-func (a *remoteAuthorizer) WithConfig(config json.RawMessage) (handler.Authorizer, error) {
+func (a *remoteAuthorizer) WithConfig(config []byte) (handler.Authorizer, error) {
 	if len(config) == 0 {
 		return a, nil
 	}

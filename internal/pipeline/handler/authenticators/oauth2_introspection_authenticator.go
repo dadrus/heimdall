@@ -86,7 +86,7 @@ func (a *oauth2IntrospectionAuthenticator) Authenticate(ctx context.Context, as 
 	return nil
 }
 
-func (a *oauth2IntrospectionAuthenticator) WithConfig(config json.RawMessage) (handler.Authenticator, error) {
+func (a *oauth2IntrospectionAuthenticator) WithConfig(config []byte) (handler.Authenticator, error) {
 	// this authenticator allows assertions to be redefined on the rule level
 	if len(config) == 0 {
 		return a, nil

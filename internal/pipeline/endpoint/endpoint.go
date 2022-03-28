@@ -17,21 +17,21 @@ import (
 )
 
 type Endpoint struct {
-	Url     *url.URL          `json:"url"`
-	Method  string            `json:"method"`
-	Retry   Retry             `json:"retry"`
-	Auth    Auth              `json:"auth"`
-	Headers map[string]string `json:"headers"`
+	Url     *url.URL          `yaml:"url"`
+	Method  string            `yaml:"method"`
+	Retry   Retry             `yaml:"retry"`
+	Auth    Auth              `yaml:"auth"`
+	Headers map[string]string `yaml:"headers"`
 }
 
 type Retry struct {
-	GiveUpAfter time.Duration `json:"give_up_after"`
-	MaxDelay    time.Duration `json:"max_delay"`
+	GiveUpAfter time.Duration `yaml:"give_up_after"`
+	MaxDelay    time.Duration `yaml:"max_delay"`
 }
 
 type Auth struct {
-	Type   string          `json:"type"`
-	Config json.RawMessage `json:"config"`
+	Type   string          `yaml:"type"`
+	Config json.RawMessage `yaml:"config"`
 }
 
 func (e Endpoint) SendRequest(ctx context.Context, body io.Reader) ([]byte, error) {
@@ -64,7 +64,7 @@ func (e Endpoint) SendRequest(ctx context.Context, body io.Reader) ([]byte, erro
 	if err != nil {
 		return nil, fmt.Errorf("failed to send request: %w", err)
 	}
-	
+
 	return e.readResponse(resp)
 }
 

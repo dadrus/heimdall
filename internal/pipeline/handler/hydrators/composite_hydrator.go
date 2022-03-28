@@ -2,7 +2,6 @@ package hydrators
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
@@ -25,6 +24,6 @@ func (ch CompositeHydrator) Hydrate(c context.Context, sc *heimdall.SubjectConte
 	return err
 }
 
-func (ch CompositeHydrator) WithConfig(_ json.RawMessage) (handler.Hydrator, error) {
+func (ch CompositeHydrator) WithConfig(_ []byte) (handler.Hydrator, error) {
 	return nil, errors.New("reconfiguration not allowed")
 }

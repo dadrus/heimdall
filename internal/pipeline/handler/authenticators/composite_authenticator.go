@@ -2,7 +2,6 @@ package authenticators
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
@@ -25,6 +24,6 @@ func (ca CompositeAuthenticator) Authenticate(c context.Context, ads handler.Req
 	return err
 }
 
-func (ca CompositeAuthenticator) WithConfig(_ json.RawMessage) (handler.Authenticator, error) {
+func (ca CompositeAuthenticator) WithConfig(_ []byte) (handler.Authenticator, error) {
 	return nil, errors.New("reconfiguration not allowed")
 }

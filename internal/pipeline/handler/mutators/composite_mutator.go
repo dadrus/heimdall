@@ -2,7 +2,6 @@ package mutators
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
@@ -25,6 +24,6 @@ func (cm CompositeMutator) Mutate(c context.Context, sc *heimdall.SubjectContext
 	return err
 }
 
-func (cm CompositeMutator) WithConfig(_ json.RawMessage) (handler.Mutator, error) {
+func (cm CompositeMutator) WithConfig(_ []byte) (handler.Mutator, error) {
 	return nil, errors.New("reconfiguration not allowed")
 }

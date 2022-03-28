@@ -72,11 +72,11 @@ func newAuthenticator(c config.PipelineObject) (handler.Authenticator, error) {
 	case config.Noop:
 		return authenticators2.NewNoopAuthenticator(), nil
 	case config.Anonymous:
-		return authenticators2.NewAnonymousAuthenticatorFromJSON(c.Config)
+		return authenticators2.NewAnonymousAuthenticatorFromYAML(c.Config)
 	case config.Unauthorized:
 		return authenticators2.NewUnauthorizedAuthenticator(), nil
 	case config.AuthenticationData:
-		return authenticators2.NewAuthenticationDataAuthenticatorFromJSON(c.Config)
+		return authenticators2.NewAuthenticationDataAuthenticatorFromYAML(c.Config)
 	case config.OAuth2Introspection:
 		return authenticators2.NewOAuth2IntrospectionAuthenticatorFromJSON(c.Config)
 	case config.Jwt:

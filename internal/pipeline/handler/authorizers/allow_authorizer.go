@@ -2,7 +2,6 @@ package authorizers
 
 import (
 	"context"
-	"encoding/json"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/pipeline/handler"
@@ -18,6 +17,6 @@ func (*allowAuthorizer) Authorize(context.Context, handler.RequestContext, *heim
 	return nil
 }
 
-func (a *allowAuthorizer) WithConfig(json.RawMessage) (handler.Authorizer, error) {
+func (a *allowAuthorizer) WithConfig([]byte) (handler.Authorizer, error) {
 	return a, nil
 }

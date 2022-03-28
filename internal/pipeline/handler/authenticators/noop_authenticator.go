@@ -2,7 +2,6 @@ package authenticators
 
 import (
 	"context"
-	"encoding/json"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/pipeline/handler"
@@ -19,7 +18,7 @@ func (*noopAuthenticator) Authenticate(_ context.Context, _ handler.RequestConte
 	return nil
 }
 
-func (a *noopAuthenticator) WithConfig(_ json.RawMessage) (handler.Authenticator, error) {
+func (a *noopAuthenticator) WithConfig(_ []byte) (handler.Authenticator, error) {
 	// nothing can be reconfigured
 	return a, nil
 }

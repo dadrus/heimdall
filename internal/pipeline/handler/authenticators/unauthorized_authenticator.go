@@ -2,7 +2,6 @@ package authenticators
 
 import (
 	"context"
-	"encoding/json"
 
 	"github.com/dadrus/heimdall/internal/errorsx"
 	"github.com/dadrus/heimdall/internal/heimdall"
@@ -19,7 +18,7 @@ func (a *unauthorizedAuthenticator) Authenticate(_ context.Context, _ handler.Re
 	return &errorsx.UnauthorizedError{Message: "denied by authenticator"}
 }
 
-func (a *unauthorizedAuthenticator) WithConfig(_ json.RawMessage) (handler.Authenticator, error) {
+func (a *unauthorizedAuthenticator) WithConfig(_ []byte) (handler.Authenticator, error) {
 	// nothing can be reconfigured
 	return a, nil
 }

@@ -18,6 +18,6 @@ func (defaultHydrator) Hydrate(context.Context, *heimdall.SubjectContext) error 
 	return nil
 }
 
-func (defaultHydrator) WithConfig(config json.RawMessage) (handler.Hydrator, error) {
+func (defaultHydrator) WithConfig(config []byte) (handler.Hydrator, error) {
 	return nil, nil
 }

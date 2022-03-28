@@ -2,7 +2,6 @@ package authorizers
 
 import (
 	"context"
-	"encoding/json"
 
 	"github.com/dadrus/heimdall/internal/errorsx"
 	"github.com/dadrus/heimdall/internal/heimdall"
@@ -21,6 +20,6 @@ func (*denyAuthorizer) Authorize(context.Context, handler.RequestContext, *heimd
 	}
 }
 
-func (a *denyAuthorizer) WithConfig(json.RawMessage) (handler.Authorizer, error) {
+func (a *denyAuthorizer) WithConfig([]byte) (handler.Authorizer, error) {
 	return a, nil
 }

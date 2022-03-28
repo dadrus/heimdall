@@ -2,17 +2,18 @@ package authenticators
 
 import (
 	"context"
-	"encoding/json"
+
+	"gopkg.in/yaml.v2"
 
 	"github.com/dadrus/heimdall/internal/errorsx"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/pipeline/handler"
 )
 
-func NewAnonymousAuthenticatorFromJSON(rawConfig json.RawMessage) (*anonymousAuthenticator, error) {
+func NewAnonymousAuthenticatorFromYAML(rawConfig []byte) (*anonymousAuthenticator, error) {
 	var a anonymousAuthenticator
 
-	if err := json.Unmarshal(rawConfig, &a); err != nil {
+	if err := yaml.Unmarshal(rawConfig, &a); err != nil {
 		return nil, &errorsx.ArgumentError{
 			Message: "failed to unmarshal config",
 			Cause:   err,
@@ -27,7 +28,7 @@ func NewAnonymousAuthenticatorFromJSON(rawConfig json.RawMessage) (*anonymousAut
 }
 
 type anonymousAuthenticator struct {
-	Subject string `json:"subject"`
+	Subject string `yaml:"subject"`
 }
 
 func (a *anonymousAuthenticator) Authenticate(_ context.Context, _ handler.RequestContext, sc *heimdall.SubjectContext) error {
@@ -35,11 +36,11 @@ func (a *anonymousAuthenticator) Authenticate(_ context.Context, _ handler.Reque
 	return nil
 }
 
-func (a *anonymousAuthenticator) WithConfig(config json.RawMessage) (handler.Authenticator, error) {
+func (a *anonymousAuthenticator) WithConfig(config []byte) (handler.Authenticator, error) {
 	// this authenticator allows subject to be redefined on the rule level
 	if len(config) == 0 {
 		return a, nil
 	}
 
-	return NewAnonymousAuthenticatorFromJSON(config)
+	return NewAnonymousAuthenticatorFromYAML(config)
 }
