@@ -60,8 +60,8 @@ func NewAuthenticationDataAuthenticatorFromYAML(rawConfig []byte) (*authenticati
 	}, nil
 }
 
-func (a *authenticationDataAuthenticator) Authenticate(ctx context.Context, as handler.RequestContext, sc *heimdall.SubjectContext) error {
-	authDataRef, err := a.AuthDataGetter.GetAuthData(as)
+func (a *authenticationDataAuthenticator) Authenticate(ctx context.Context, rc handler.RequestContext, sc *heimdall.SubjectContext) error {
+	authDataRef, err := a.AuthDataGetter.GetAuthData(rc)
 	if err != nil {
 		return &errorsx.ArgumentError{Message: "failed to extract authentication data", Cause: err}
 	}
