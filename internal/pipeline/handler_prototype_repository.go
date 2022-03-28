@@ -80,7 +80,7 @@ func newAuthenticator(c config.PipelineObject) (handler.Authenticator, error) {
 	case config.OAuth2Introspection:
 		return authenticators2.NewOAuth2IntrospectionAuthenticatorFromJSON(c.Config)
 	case config.Jwt:
-		return authenticators2.NewJwtAuthenticatorFromJSON(c.Config)
+		return authenticators2.NewJwtAuthenticatorFromYAML(c.Config)
 	default:
 		return nil, errors.New("unknown authenticator type")
 	}

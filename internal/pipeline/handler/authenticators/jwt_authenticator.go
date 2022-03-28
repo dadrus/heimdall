@@ -25,7 +25,7 @@ type jwtAuthenticator struct {
 	AuthDataGetter   AuthDataGetter
 }
 
-func NewJwtAuthenticatorFromJSON(rawConfig []byte) (*jwtAuthenticator, error) {
+func NewJwtAuthenticatorFromYAML(rawConfig []byte) (*jwtAuthenticator, error) {
 	type _config struct {
 		Endpoint       endpoint.Endpoint        `yaml:"jwks_endpoint"`
 		AuthDataSource authenticationDataSource `yaml:"jwt_token_from"`
