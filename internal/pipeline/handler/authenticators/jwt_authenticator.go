@@ -28,7 +28,7 @@ type jwtAuthenticator struct {
 func NewJwtAuthenticatorFromJSON(rawConfig []byte) (*jwtAuthenticator, error) {
 	type _config struct {
 		Endpoint       endpoint.Endpoint        `yaml:"jwks_endpoint"`
-		AuthDataSource AuthenticationDataSource `yaml:"jwt_token_from"`
+		AuthDataSource authenticationDataSource `yaml:"jwt_token_from"`
 		Assertions     oauth2.Assertions        `yaml:"jwt_assertions"`
 		Session        Session                  `yaml:"session"`
 	}
@@ -45,11 +45,16 @@ func NewJwtAuthenticatorFromJSON(rawConfig []byte) (*jwtAuthenticator, error) {
 		c.Endpoint.Method = "GET"
 	}
 
+	adg, err := c.AuthDataSource.Strategy()
+	if err != nil {
+		return nil, err
+	}
+
 	return &jwtAuthenticator{
 		Endpoint:         c.Endpoint,
 		Assertions:       c.Assertions,
 		SubjectExtractor: &c.Session,
-		AuthDataGetter:   c.AuthDataSource.Strategy(),
+		AuthDataGetter:   adg,
 	}, nil
 }
 

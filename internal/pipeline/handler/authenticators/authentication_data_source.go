@@ -6,15 +6,19 @@ import (
 	"github.com/dadrus/heimdall/internal/pipeline/handler/authenticators/extractors"
 )
 
-type AuthenticationDataSource struct {
+type authenticationDataSource struct {
 	es extractors.AuthDataExtractStrategy
 }
 
-func (a AuthenticationDataSource) Strategy() extractors.AuthDataExtractStrategy {
-	return a.es
+func (a authenticationDataSource) Strategy() (extractors.AuthDataExtractStrategy, error) {
+	if a.es == nil {
+		return nil, errors.New("no strategy to retrieve authentication data from request configured")
+	}
+
+	return a.es, nil
 }
 
-func (a *AuthenticationDataSource) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
+func (a *authenticationDataSource) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
 	a.es, err = doUnmarshal(unmarshal)
 	return err
 }

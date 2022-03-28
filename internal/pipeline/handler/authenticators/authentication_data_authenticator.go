@@ -22,7 +22,7 @@ type authenticationDataAuthenticator struct {
 func NewAuthenticationDataAuthenticatorFromYAML(rawConfig []byte) (*authenticationDataAuthenticator, error) {
 	type _config struct {
 		Endpoint       endpoint.Endpoint        `yaml:"identity_info_endpoint"`
-		AuthDataSource AuthenticationDataSource `yaml:"authentication_data_source"`
+		AuthDataSource authenticationDataSource `yaml:"authentication_data_source"`
 		Session        Session                  `yaml:"session"`
 	}
 
@@ -34,9 +34,14 @@ func NewAuthenticationDataAuthenticatorFromYAML(rawConfig []byte) (*authenticati
 		}
 	}
 
+	adg, err := c.AuthDataSource.Strategy()
+	if err != nil {
+		return nil, err
+	}
+
 	return &authenticationDataAuthenticator{
 		Endpoint:         c.Endpoint,
-		AuthDataGetter:   c.AuthDataSource.Strategy(),
+		AuthDataGetter:   adg,
 		SubjectExtractor: &c.Session,
 	}, nil
 }
