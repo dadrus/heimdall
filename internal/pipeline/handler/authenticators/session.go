@@ -23,7 +23,7 @@ func (s *Session) Validate() error {
 	return nil
 }
 
-func (s *Session) GetSubject(rawData json.RawMessage) (*heimdall.Subject, error) {
+func (s *Session) GetSubject(rawData []byte) (*heimdall.Subject, error) {
 	var (
 		subjectId  string
 		attributes map[string]interface{}

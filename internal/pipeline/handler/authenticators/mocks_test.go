@@ -2,7 +2,6 @@ package authenticators
 
 import (
 	"context"
-	"encoding/json"
 	"io"
 
 	"github.com/dadrus/heimdall/internal/pipeline/handler"
@@ -17,7 +16,11 @@ type MockEndpoint struct {
 
 func (m *MockEndpoint) SendRequest(ctx context.Context, body io.Reader) ([]byte, error) {
 	args := m.Called(ctx, body)
-	return args.Get(0).(json.RawMessage), args.Error(1)
+	i := args.Get(0)
+	if i != nil {
+		return i.([]byte), args.Error(1)
+	}
+	return nil, args.Error(1)
 }
 
 type MockAuthDataGetter struct {
@@ -33,7 +36,7 @@ type MockSubjectExtractor struct {
 	mock.Mock
 }
 
-func (m *MockSubjectExtractor) GetSubject(data json.RawMessage) (*heimdall.Subject, error) {
+func (m *MockSubjectExtractor) GetSubject(data []byte) (*heimdall.Subject, error) {
 	args := m.Called(data)
 	i := args.Get(0)
 	if i != nil {

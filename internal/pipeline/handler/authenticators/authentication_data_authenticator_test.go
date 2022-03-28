@@ -2,7 +2,6 @@ package authenticators
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"io"
 	"io/ioutil"
@@ -108,8 +107,9 @@ func TestSuccessfulExecutionOfAuthenticationDataAuthenticator(t *testing.T) {
 	sc := &heimdall.SubjectContext{}
 	sub := &heimdall.Subject{Id: "bar"}
 	ctx := context.Background()
-	eResp := json.RawMessage("foo")
+	eResp := []byte("foo")
 	authDataVal := "foobar"
+	mrc := &MockRequestContext{}
 
 	e := &MockEndpoint{}
 	e.On("SendRequest", mock.Anything, mock.MatchedBy(func(r io.Reader) bool {
@@ -122,7 +122,7 @@ func TestSuccessfulExecutionOfAuthenticationDataAuthenticator(t *testing.T) {
 	se.On("GetSubject", eResp).Return(sub, nil)
 
 	adg := &MockAuthDataGetter{}
-	adg.On("GetAuthData", mock.Anything).Return(authDataVal, nil)
+	adg.On("GetAuthData", mrc).Return(authDataVal, nil)
 
 	a := authenticationDataAuthenticator{
 		Endpoint:         e,
@@ -131,7 +131,7 @@ func TestSuccessfulExecutionOfAuthenticationDataAuthenticator(t *testing.T) {
 	}
 
 	// WHEN
-	err := a.Authenticate(ctx, nil, sc)
+	err := a.Authenticate(ctx, mrc, sc)
 
 	// THEN
 	assert.NoError(t, err)
@@ -209,7 +209,7 @@ func TestAuthenticationDataAuthenticatorExecutionFailsDueToFailedSubjectExtracti
 	sc := &heimdall.SubjectContext{}
 	ctx := context.Background()
 	authDataVal := "foobar"
-	eResp := json.RawMessage("foo")
+	eResp := []byte("foo")
 	sgErr := errors.New("failed to extract subject")
 
 	adg := &MockAuthDataGetter{}
