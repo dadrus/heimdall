@@ -20,9 +20,9 @@ type Repository interface {
 	FindRule(requestUrl *url.URL) (Rule, error)
 }
 
-func NewRepository(queue provider.RuleSetChangedEventQueue, c config.Configuration, pr pipeline.Repository) (Repository, error) {
+func NewRepository(queue provider.RuleSetChangedEventQueue, c config.Configuration, hf pipeline.HandlerFactory) (Repository, error) {
 	return &repository{
-		pr:    pr,
+		hf:    hf,
 		dpc:   c.Rules.Default,
 		queue: queue,
 		quit:  make(chan bool),
@@ -30,7 +30,7 @@ func NewRepository(queue provider.RuleSetChangedEventQueue, c config.Configurati
 }
 
 type repository struct {
-	pr    pipeline.Repository
+	hf    pipeline.HandlerFactory
 	dpc   config.Pipeline
 	rules []*rule
 	mutex sync.RWMutex
@@ -80,7 +80,7 @@ func (r *repository) loadRules(srcId string, definition json.RawMessage) ([]*rul
 
 	var rules []*rule
 	for _, rc := range rcs {
-		rule, err := newRule(r.pr, r.dpc, srcId, rc)
+		rule, err := newRule(r.hf, srcId, rc)
 		if err != nil {
 			return nil, err
 		}

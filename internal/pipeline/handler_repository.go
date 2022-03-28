@@ -12,7 +12,7 @@ import (
 	mutators2 "github.com/dadrus/heimdall/internal/pipeline/handler/mutators"
 )
 
-type Repository interface {
+type HandlerRepository interface {
 	Authenticator(id string) (handler.Authenticator, error)
 	Authorizer(id string) (handler.Authorizer, error)
 	Hydrator(id string) (handler.Hydrator, error)
@@ -20,7 +20,7 @@ type Repository interface {
 	ErrorHandler(id string) (handler.ErrorHandler, error)
 }
 
-func NewRepository(conf config.Configuration) (Repository, error) {
+func NewRepository(conf config.Configuration) (HandlerRepository, error) {
 	var ans map[string]handler.Authenticator
 	for _, pe := range conf.Pipeline.Authenticators {
 		if r, err := newAuthenticator(pe); err != nil {
