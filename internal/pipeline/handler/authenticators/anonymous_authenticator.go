@@ -13,7 +13,7 @@ import (
 func NewAnonymousAuthenticatorFromYAML(rawConfig []byte) (*anonymousAuthenticator, error) {
 	var a anonymousAuthenticator
 
-	if err := yaml.Unmarshal(rawConfig, &a); err != nil {
+	if err := yaml.UnmarshalStrict(rawConfig, &a); err != nil {
 		return nil, &errorsx.ArgumentError{
 			Message: "failed to unmarshal config",
 			Cause:   err,
