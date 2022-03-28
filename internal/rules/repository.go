@@ -201,7 +201,7 @@ func (r *rule) Execute(ctx context.Context, rc handler.RequestContext) (*heimdal
 		return nil, r.eh.HandleError(ctx, err)
 	}
 
-	if err := r.az.Authorize(ctx, sc); err != nil {
+	if err := r.az.Authorize(ctx, rc, sc); err != nil {
 		return nil, r.eh.HandleError(ctx, err)
 	}
 
