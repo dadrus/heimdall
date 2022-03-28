@@ -9,17 +9,17 @@ import (
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/pipeline"
-	"github.com/dadrus/heimdall/internal/pipeline/interfaces"
+	"github.com/dadrus/heimdall/internal/pipeline/handler"
 )
 
 type Rule interface {
 	Id() string
-	Execute(ctx context.Context, ads interfaces.AuthDataSource) (*heimdall.SubjectContext, error)
+	Execute(ctx context.Context, ads handler.AuthDataSource) (*heimdall.SubjectContext, error)
 	MatchesUrl(requestUrl *url.URL) bool
 	MatchesMethod(method string) bool
 }
 
-func createAuthenticator(pr pipeline.Repository, configuredAuthenticators []config.PipelineObjectReference, defaultAuthenticators []config.PipelineObjectReference) (interfaces.Authenticator, error) {
+func createAuthenticator(pr pipeline.Repository, configuredAuthenticators []config.PipelineObjectReference, defaultAuthenticators []config.PipelineObjectReference) (handler.Authenticator, error) {
 	var refs []config.PipelineObjectReference
 	if len(configuredAuthenticators) == 0 {
 		if len(defaultAuthenticators) == 0 {
@@ -51,7 +51,7 @@ func createAuthenticator(pr pipeline.Repository, configuredAuthenticators []conf
 	return ans, nil
 }
 
-func createAuthorizer(pr pipeline.Repository, configuredAuthorizer *config.PipelineObjectReference, defaultAuthorizer *config.PipelineObjectReference) (interfaces.Authorizer, error) {
+func createAuthorizer(pr pipeline.Repository, configuredAuthorizer *config.PipelineObjectReference, defaultAuthorizer *config.PipelineObjectReference) (handler.Authorizer, error) {
 	var ref *config.PipelineObjectReference
 	if configuredAuthorizer == nil {
 		if defaultAuthorizer == nil {
@@ -72,7 +72,7 @@ func createAuthorizer(pr pipeline.Repository, configuredAuthorizer *config.Pipel
 	return a, err
 }
 
-func createHydrator(pr pipeline.Repository, configuredHydrators []config.PipelineObjectReference, defaultHydrators []config.PipelineObjectReference) (interfaces.Hydrator, error) {
+func createHydrator(pr pipeline.Repository, configuredHydrators []config.PipelineObjectReference, defaultHydrators []config.PipelineObjectReference) (handler.Hydrator, error) {
 	var refs []config.PipelineObjectReference
 	if len(configuredHydrators) == 0 {
 		if len(defaultHydrators) != 0 {
@@ -103,7 +103,7 @@ func createHydrator(pr pipeline.Repository, configuredHydrators []config.Pipelin
 	return hs, nil
 }
 
-func createMutator(pr pipeline.Repository, configuredMutators []config.PipelineObjectReference, defaultMutators []config.PipelineObjectReference) (interfaces.Mutator, error) {
+func createMutator(pr pipeline.Repository, configuredMutators []config.PipelineObjectReference, defaultMutators []config.PipelineObjectReference) (handler.Mutator, error) {
 	var refs []config.PipelineObjectReference
 	if len(configuredMutators) == 0 {
 		if len(defaultMutators) == 0 {
@@ -135,7 +135,7 @@ func createMutator(pr pipeline.Repository, configuredMutators []config.PipelineO
 	return ms, nil
 }
 
-func createErrorHandler(pr pipeline.Repository, configuredErrorHandlers []config.PipelineObjectReference, defaultErrorHandlers []config.PipelineObjectReference) (interfaces.ErrorHandler, error) {
+func createErrorHandler(pr pipeline.Repository, configuredErrorHandlers []config.PipelineObjectReference, defaultErrorHandlers []config.PipelineObjectReference) (handler.ErrorHandler, error) {
 	var refs []config.PipelineObjectReference
 	if len(configuredErrorHandlers) == 0 {
 		if len(defaultErrorHandlers) == 0 {
@@ -209,14 +209,14 @@ type rule struct {
 	id    string
 	url   string
 	srcId string
-	an    interfaces.Authenticator
-	az    interfaces.Authorizer
-	h     interfaces.Hydrator
-	m     interfaces.Mutator
-	eh    interfaces.ErrorHandler
+	an    handler.Authenticator
+	az    handler.Authorizer
+	h     handler.Hydrator
+	m     handler.Mutator
+	eh    handler.ErrorHandler
 }
 
-func (r *rule) Execute(ctx context.Context, ads interfaces.AuthDataSource) (*heimdall.SubjectContext, error) {
+func (r *rule) Execute(ctx context.Context, ads handler.AuthDataSource) (*heimdall.SubjectContext, error) {
 	sc := &heimdall.SubjectContext{}
 
 	if err := r.an.Authenticate(ctx, ads, sc); err != nil {
@@ -250,9 +250,9 @@ func (r *rule) Id() string {
 	return r.id
 }
 
-type compositeAuthenticator []interfaces.Authenticator
+type compositeAuthenticator []handler.Authenticator
 
-func (ca compositeAuthenticator) Authenticate(c context.Context, ads interfaces.AuthDataSource, sc *heimdall.SubjectContext) error {
+func (ca compositeAuthenticator) Authenticate(c context.Context, ads handler.AuthDataSource, sc *heimdall.SubjectContext) error {
 	var err error
 	for _, a := range ca {
 		err = a.Authenticate(c, ads, sc)
@@ -266,11 +266,11 @@ func (ca compositeAuthenticator) Authenticate(c context.Context, ads interfaces.
 	return err
 }
 
-func (ca compositeAuthenticator) WithConfig(_ json.RawMessage) (interfaces.Authenticator, error) {
+func (ca compositeAuthenticator) WithConfig(_ json.RawMessage) (handler.Authenticator, error) {
 	return nil, errors.New("reconfiguration not allowed")
 }
 
-type compositeHydrator []interfaces.Hydrator
+type compositeHydrator []handler.Hydrator
 
 func (ch compositeHydrator) Hydrate(c context.Context, sc *heimdall.SubjectContext) error {
 	var err error
@@ -286,11 +286,11 @@ func (ch compositeHydrator) Hydrate(c context.Context, sc *heimdall.SubjectConte
 	return err
 }
 
-func (ch compositeHydrator) WithConfig(_ json.RawMessage) (interfaces.Hydrator, error) {
+func (ch compositeHydrator) WithConfig(_ json.RawMessage) (handler.Hydrator, error) {
 	return nil, errors.New("reconfiguration not allowed")
 }
 
-type compositeMutator []interfaces.Mutator
+type compositeMutator []handler.Mutator
 
 func (cm compositeMutator) Mutate(c context.Context, sc *heimdall.SubjectContext) error {
 	var err error
@@ -306,11 +306,11 @@ func (cm compositeMutator) Mutate(c context.Context, sc *heimdall.SubjectContext
 	return err
 }
 
-func (cm compositeMutator) WithConfig(_ json.RawMessage) (interfaces.Mutator, error) {
+func (cm compositeMutator) WithConfig(_ json.RawMessage) (handler.Mutator, error) {
 	return nil, errors.New("reconfiguration not allowed")
 }
 
-type compositeErrorHandler []interfaces.ErrorHandler
+type compositeErrorHandler []handler.ErrorHandler
 
 func (ceh compositeErrorHandler) HandleError(ctx context.Context, e error) error {
 	var err error
@@ -326,6 +326,6 @@ func (ceh compositeErrorHandler) HandleError(ctx context.Context, e error) error
 	return err
 }
 
-func (compositeErrorHandler) WithConfig(_ json.RawMessage) (interfaces.ErrorHandler, error) {
+func (compositeErrorHandler) WithConfig(_ json.RawMessage) (handler.ErrorHandler, error) {
 	return nil, errors.New("reconfiguration not allowed")
 }

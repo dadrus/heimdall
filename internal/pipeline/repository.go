@@ -4,24 +4,24 @@ import (
 	"errors"
 
 	"github.com/dadrus/heimdall/internal/config"
-	"github.com/dadrus/heimdall/internal/pipeline/authenticators"
-	"github.com/dadrus/heimdall/internal/pipeline/authorizers"
-	"github.com/dadrus/heimdall/internal/pipeline/error_handlers"
-	"github.com/dadrus/heimdall/internal/pipeline/hydrators"
-	"github.com/dadrus/heimdall/internal/pipeline/interfaces"
-	"github.com/dadrus/heimdall/internal/pipeline/mutators"
+	"github.com/dadrus/heimdall/internal/pipeline/handler"
+	authenticators2 "github.com/dadrus/heimdall/internal/pipeline/handler/authenticators"
+	authorizers2 "github.com/dadrus/heimdall/internal/pipeline/handler/authorizers"
+	error_handlers2 "github.com/dadrus/heimdall/internal/pipeline/handler/error_handlers"
+	"github.com/dadrus/heimdall/internal/pipeline/handler/hydrators"
+	mutators2 "github.com/dadrus/heimdall/internal/pipeline/handler/mutators"
 )
 
 type Repository interface {
-	Authenticator(id string) (interfaces.Authenticator, error)
-	Authorizer(id string) (interfaces.Authorizer, error)
-	Hydrator(id string) (interfaces.Hydrator, error)
-	Mutator(id string) (interfaces.Mutator, error)
-	ErrorHandler(id string) (interfaces.ErrorHandler, error)
+	Authenticator(id string) (handler.Authenticator, error)
+	Authorizer(id string) (handler.Authorizer, error)
+	Hydrator(id string) (handler.Hydrator, error)
+	Mutator(id string) (handler.Mutator, error)
+	ErrorHandler(id string) (handler.ErrorHandler, error)
 }
 
 func NewRepository(conf config.Configuration) (Repository, error) {
-	var ans map[string]interfaces.Authenticator
+	var ans map[string]handler.Authenticator
 	for _, pe := range conf.Pipeline.Authenticators {
 		if r, err := newAuthenticator(pe); err != nil {
 			ans[pe.Id] = r
@@ -30,7 +30,7 @@ func NewRepository(conf config.Configuration) (Repository, error) {
 		}
 	}
 
-	var azs map[string]interfaces.Authorizer
+	var azs map[string]handler.Authorizer
 	for _, pe := range conf.Pipeline.Authorizers {
 		if r, err := newAuthorizer(pe); err != nil {
 			azs[pe.Id] = r
@@ -39,7 +39,7 @@ func NewRepository(conf config.Configuration) (Repository, error) {
 		}
 	}
 
-	var hs map[string]interfaces.Hydrator
+	var hs map[string]handler.Hydrator
 	for _, pe := range conf.Pipeline.Hydrators {
 		if r, err := newHydrator(pe); err != nil {
 			hs[pe.Id] = r
@@ -48,7 +48,7 @@ func NewRepository(conf config.Configuration) (Repository, error) {
 		}
 	}
 
-	var ms map[string]interfaces.Mutator
+	var ms map[string]handler.Mutator
 	for _, pe := range conf.Pipeline.Mutators {
 		if r, err := newMutator(pe); err != nil {
 			ms[pe.Id] = r
@@ -57,7 +57,7 @@ func NewRepository(conf config.Configuration) (Repository, error) {
 		}
 	}
 
-	var ehs map[string]interfaces.ErrorHandler
+	var ehs map[string]handler.ErrorHandler
 	for _, pe := range conf.Pipeline.ErrorHandlers {
 		if r, err := newErrorHandler(pe); err != nil {
 			ehs[pe.Id] = r
@@ -75,39 +75,39 @@ func NewRepository(conf config.Configuration) (Repository, error) {
 	}, nil
 }
 
-func newAuthenticator(c config.PipelineObject) (interfaces.Authenticator, error) {
+func newAuthenticator(c config.PipelineObject) (handler.Authenticator, error) {
 	switch c.Type {
 	case config.Noop:
-		return authenticators.NewNoopAuthenticator(), nil
+		return authenticators2.NewNoopAuthenticator(), nil
 	case config.Anonymous:
-		return authenticators.NewAnonymousAuthenticatorFromJSON(c.Config)
+		return authenticators2.NewAnonymousAuthenticatorFromJSON(c.Config)
 	case config.Unauthorized:
-		return authenticators.NewUnauthorizedAuthenticator(), nil
+		return authenticators2.NewUnauthorizedAuthenticator(), nil
 	case config.AuthenticationData:
-		return authenticators.NewAuthenticationDataAuthenticatorFromJSON(c.Config)
+		return authenticators2.NewAuthenticationDataAuthenticatorFromJSON(c.Config)
 	case config.OAuth2Introspection:
-		return authenticators.NewOAuth2IntrospectionAuthenticatorFromJSON(c.Config)
+		return authenticators2.NewOAuth2IntrospectionAuthenticatorFromJSON(c.Config)
 	case config.Jwt:
-		return authenticators.NewJwtAuthenticatorFromJSON(c.Config)
+		return authenticators2.NewJwtAuthenticatorFromJSON(c.Config)
 	default:
 		return nil, errors.New("unknown authenticator type")
 	}
 }
 
-func newAuthorizer(c config.PipelineObject) (interfaces.Authorizer, error) {
+func newAuthorizer(c config.PipelineObject) (handler.Authorizer, error) {
 	switch c.Type {
 	case config.Allow:
-		return authorizers.NewAllowAuthorizer(), nil
+		return authorizers2.NewAllowAuthorizer(), nil
 	case config.Deny:
-		return authorizers.NewDenyAuthorizer(), nil
+		return authorizers2.NewDenyAuthorizer(), nil
 	case config.Remote:
-		return authorizers.NewRemoteAuthorizerFromJSON(c.Config)
+		return authorizers2.NewRemoteAuthorizerFromJSON(c.Config)
 	default:
 		return nil, errors.New("unknown authorizer type")
 	}
 }
 
-func newHydrator(c config.PipelineObject) (interfaces.Hydrator, error) {
+func newHydrator(c config.PipelineObject) (handler.Hydrator, error) {
 	switch c.Type {
 	case config.Default:
 		return hydrators.NewDefaultHydratorFromJSON(c.Config)
@@ -116,67 +116,67 @@ func newHydrator(c config.PipelineObject) (interfaces.Hydrator, error) {
 	}
 }
 
-func newMutator(c config.PipelineObject) (interfaces.Mutator, error) {
+func newMutator(c config.PipelineObject) (handler.Mutator, error) {
 	switch c.Type {
 	case config.Jwt:
-		return mutators.NewJWTMutatorFromJSON(c.Config)
+		return mutators2.NewJWTMutatorFromJSON(c.Config)
 	case config.Header:
-		return mutators.NewHeaderMutatorFromJSON(c.Config)
+		return mutators2.NewHeaderMutatorFromJSON(c.Config)
 	case config.Cookie:
-		return mutators.NewCookieMutatorFromJSON(c.Config)
+		return mutators2.NewCookieMutatorFromJSON(c.Config)
 	default:
 		return nil, errors.New("unknown hydrator type")
 	}
 }
 
-func newErrorHandler(c config.PipelineObject) (interfaces.ErrorHandler, error) {
+func newErrorHandler(c config.PipelineObject) (handler.ErrorHandler, error) {
 	switch c.Type {
 	case config.Json:
-		return error_handlers.NewJsonErrorHandlerFromJSON(c.Config)
+		return error_handlers2.NewJsonErrorHandlerFromJSON(c.Config)
 	case config.Redirect:
-		return error_handlers.NewRedirectErrorHandlerFromJSON(c.Config)
+		return error_handlers2.NewRedirectErrorHandlerFromJSON(c.Config)
 	default:
 		return nil, errors.New("unknown error handler type")
 	}
 }
 
 type authenticatorRepository struct {
-	authenticators map[string]interfaces.Authenticator
-	authorizers    map[string]interfaces.Authorizer
-	hydrators      map[string]interfaces.Hydrator
-	mutators       map[string]interfaces.Mutator
-	errorHandlers  map[string]interfaces.ErrorHandler
+	authenticators map[string]handler.Authenticator
+	authorizers    map[string]handler.Authorizer
+	hydrators      map[string]handler.Hydrator
+	mutators       map[string]handler.Mutator
+	errorHandlers  map[string]handler.ErrorHandler
 }
 
-func (r *authenticatorRepository) Authenticator(id string) (interfaces.Authenticator, error) {
+func (r *authenticatorRepository) Authenticator(id string) (handler.Authenticator, error) {
 	if a, ok := r.authenticators[id]; !ok {
 		return nil, errors.New("no such authenticator")
 	} else {
 		return a, nil
 	}
 }
-func (r *authenticatorRepository) Authorizer(id string) (interfaces.Authorizer, error) {
+func (r *authenticatorRepository) Authorizer(id string) (handler.Authorizer, error) {
 	if a, ok := r.authorizers[id]; !ok {
 		return nil, errors.New("no such authorizer")
 	} else {
 		return a, nil
 	}
 }
-func (r *authenticatorRepository) Hydrator(id string) (interfaces.Hydrator, error) {
+func (r *authenticatorRepository) Hydrator(id string) (handler.Hydrator, error) {
 	if a, ok := r.hydrators[id]; !ok {
 		return nil, errors.New("no such hydrator")
 	} else {
 		return a, nil
 	}
 }
-func (r *authenticatorRepository) Mutator(id string) (interfaces.Mutator, error) {
+func (r *authenticatorRepository) Mutator(id string) (handler.Mutator, error) {
 	if a, ok := r.mutators[id]; !ok {
 		return nil, errors.New("no such mutators")
 	} else {
 		return a, nil
 	}
 }
-func (r *authenticatorRepository) ErrorHandler(id string) (interfaces.ErrorHandler, error) {
+func (r *authenticatorRepository) ErrorHandler(id string) (handler.ErrorHandler, error) {
 	if a, ok := r.errorHandlers[id]; !ok {
 		return nil, errors.New("no such error handler")
 	} else {
