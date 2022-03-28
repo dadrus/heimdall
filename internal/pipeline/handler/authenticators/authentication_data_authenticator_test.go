@@ -91,7 +91,7 @@ session:
 	}
 }
 
-func TestCreateAuthenticationDataAuthenticatorFromPrototypeGivenEmptyConfig(t *testing.T) {
+func TestCreateAuthenticationDataAuthenticatorFromPrototypeNotAllowed(t *testing.T) {
 	// GIVEN
 	p := authenticationDataAuthenticator{}
 
