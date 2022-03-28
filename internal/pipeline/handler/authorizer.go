@@ -8,6 +8,6 @@ import (
 )
 
 type Authorizer interface {
-	Authorize(context.Context, *heimdall.SubjectContext) error
+	Authorize(context.Context, RequestContext, *heimdall.SubjectContext) error
 	WithConfig(config json.RawMessage) (Authorizer, error)
 }

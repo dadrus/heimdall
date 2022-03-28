@@ -12,7 +12,7 @@ type HeaderValueExtractStrategy struct {
 	Prefix string
 }
 
-func (es HeaderValueExtractStrategy) GetAuthData(s handler.AuthDataSource) (string, error) {
+func (es HeaderValueExtractStrategy) GetAuthData(s handler.RequestContext) (string, error) {
 	if val := s.Header(es.Name); len(val) != 0 {
 		return strings.TrimSpace(strings.TrimPrefix(val, es.Prefix)), nil
 	} else {

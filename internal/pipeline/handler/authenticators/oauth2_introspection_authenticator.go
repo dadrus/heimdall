@@ -51,7 +51,7 @@ func NewOAuth2IntrospectionAuthenticatorFromJSON(rawConfig json.RawMessage) (*oa
 	}, nil
 }
 
-func (a *oauth2IntrospectionAuthenticator) Authenticate(ctx context.Context, as handler.AuthDataSource, sc *heimdall.SubjectContext) error {
+func (a *oauth2IntrospectionAuthenticator) Authenticate(ctx context.Context, as handler.RequestContext, sc *heimdall.SubjectContext) error {
 	accessToken, err := a.AuthDataGetter.GetAuthData(as)
 	if err != nil {
 		return &errorsx.ArgumentError{Message: "no access token present", Cause: err}

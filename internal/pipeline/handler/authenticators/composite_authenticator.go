@@ -11,7 +11,7 @@ import (
 
 type CompositeAuthenticator []handler.Authenticator
 
-func (ca CompositeAuthenticator) Authenticate(c context.Context, ads handler.AuthDataSource, sc *heimdall.SubjectContext) error {
+func (ca CompositeAuthenticator) Authenticate(c context.Context, ads handler.RequestContext, sc *heimdall.SubjectContext) error {
 	var err error
 	for _, a := range ca {
 		err = a.Authenticate(c, ads, sc)

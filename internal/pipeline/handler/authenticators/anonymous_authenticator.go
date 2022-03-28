@@ -30,7 +30,7 @@ type anonymousAuthenticator struct {
 	Subject string `json:"subject"`
 }
 
-func (a *anonymousAuthenticator) Authenticate(_ context.Context, _ handler.AuthDataSource, sc *heimdall.SubjectContext) error {
+func (a *anonymousAuthenticator) Authenticate(_ context.Context, _ handler.RequestContext, sc *heimdall.SubjectContext) error {
 	sc.Subject = &heimdall.Subject{Id: a.Subject}
 	return nil
 }

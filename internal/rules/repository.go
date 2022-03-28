@@ -194,10 +194,10 @@ type rule struct {
 	eh      handler.ErrorHandler
 }
 
-func (r *rule) Execute(ctx context.Context, ads handler.AuthDataSource) (*heimdall.SubjectContext, error) {
+func (r *rule) Execute(ctx context.Context, rc handler.RequestContext) (*heimdall.SubjectContext, error) {
 	sc := &heimdall.SubjectContext{}
 
-	if err := r.an.Authenticate(ctx, ads, sc); err != nil {
+	if err := r.an.Authenticate(ctx, rc, sc); err != nil {
 		return nil, r.eh.HandleError(ctx, err)
 	}
 

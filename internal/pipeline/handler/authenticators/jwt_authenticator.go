@@ -52,7 +52,7 @@ func NewJwtAuthenticatorFromJSON(rawConfig json.RawMessage) (*jwtAuthenticator, 
 	}, nil
 }
 
-func (a *jwtAuthenticator) Authenticate(ctx context.Context, as handler.AuthDataSource, sc *heimdall.SubjectContext) error {
+func (a *jwtAuthenticator) Authenticate(ctx context.Context, as handler.RequestContext, sc *heimdall.SubjectContext) error {
 	// request jwks endpoint to verify jwt
 	rawBody, err := a.Endpoint.SendRequest(ctx, nil)
 	if err != nil {

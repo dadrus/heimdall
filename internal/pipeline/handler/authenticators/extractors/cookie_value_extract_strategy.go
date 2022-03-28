@@ -12,7 +12,7 @@ type CookieValueExtractStrategy struct {
 	Prefix string
 }
 
-func (es CookieValueExtractStrategy) GetAuthData(s handler.AuthDataSource) (string, error) {
+func (es CookieValueExtractStrategy) GetAuthData(s handler.RequestContext) (string, error) {
 	if val := s.Cookie(es.Name); len(val) != 0 {
 		return strings.TrimSpace(strings.TrimPrefix(val, es.Prefix)), nil
 	} else {

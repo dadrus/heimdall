@@ -8,6 +8,6 @@ import (
 )
 
 type Authenticator interface {
-	Authenticate(context.Context, AuthDataSource, *heimdall.SubjectContext) error
+	Authenticate(context.Context, RequestContext, *heimdall.SubjectContext) error
 	WithConfig(config json.RawMessage) (Authenticator, error)
 }

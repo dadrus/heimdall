@@ -15,7 +15,7 @@ func NewUnauthorizedAuthenticator() *unauthorizedAuthenticator {
 	return &unauthorizedAuthenticator{}
 }
 
-func (a *unauthorizedAuthenticator) Authenticate(_ context.Context, _ handler.AuthDataSource, _ *heimdall.SubjectContext) error {
+func (a *unauthorizedAuthenticator) Authenticate(_ context.Context, _ handler.RequestContext, _ *heimdall.SubjectContext) error {
 	return &errorsx.UnauthorizedError{Message: "denied by authenticator"}
 }
 

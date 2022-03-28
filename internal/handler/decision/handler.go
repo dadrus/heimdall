@@ -90,7 +90,7 @@ func (h *Handler) decisions(c *fiber.Ctx) error {
 		return c.SendStatus(fiber.StatusMethodNotAllowed)
 	}
 
-	sc, err := r.Execute(ctx, &authDataSource{c: c})
+	sc, err := r.Execute(ctx, &requestContext{c: c})
 	if err != nil {
 		logger.Warn().
 			Fields(fields).
@@ -126,11 +126,12 @@ func (h *Handler) decisions(c *fiber.Ctx) error {
 	return c.SendStatus(fiber.StatusOK)
 }
 
-type authDataSource struct {
+type requestContext struct {
 	c *fiber.Ctx
 }
 
-func (s *authDataSource) Header(name string) string { return s.c.Get(name) }
-func (s *authDataSource) Cookie(name string) string { return s.c.Cookies(name) }
-func (s *authDataSource) Query(name string) string  { return s.c.Query(name) }
-func (s *authDataSource) Form(name string) string   { return s.c.FormValue(name) }
+func (s *requestContext) Header(name string) string { return s.c.Get(name) }
+func (s *requestContext) Cookie(name string) string { return s.c.Cookies(name) }
+func (s *requestContext) Query(name string) string  { return s.c.Query(name) }
+func (s *requestContext) Form(name string) string   { return s.c.FormValue(name) }
+func (s *requestContext) Body() []byte              { return s.c.Body() }

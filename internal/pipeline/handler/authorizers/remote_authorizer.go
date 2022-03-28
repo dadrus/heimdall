@@ -1,9 +1,9 @@
 package authorizers
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
-	"strings"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/pipeline/handler"
@@ -19,15 +19,15 @@ func NewRemoteAuthorizerFromJSON(rawConfig json.RawMessage) (*remoteAuthorizer, 
 	return &remoteAuthorizer{}, nil
 }
 
-func (a *remoteAuthorizer) Authorize(ctx context.Context, sc *heimdall.SubjectContext) error {
-	var payload string
+func (a *remoteAuthorizer) Authorize(ctx context.Context, rc handler.RequestContext, sc *heimdall.SubjectContext) error {
+	var payload []byte
 	if a.Payload == "original_body" {
-		// TODO: get original request body
+		payload = rc.Body()
 	} else {
 		// TODO: load template
 	}
 
-	_, err := a.Endpoint.SendRequest(ctx, strings.NewReader(payload))
+	_, err := a.Endpoint.SendRequest(ctx, bytes.NewReader(payload))
 	if err != nil {
 		return err
 	}

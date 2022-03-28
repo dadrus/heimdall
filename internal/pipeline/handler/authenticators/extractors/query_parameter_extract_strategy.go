@@ -12,7 +12,7 @@ type QueryParameterExtractStrategy struct {
 	Prefix string
 }
 
-func (es QueryParameterExtractStrategy) GetAuthData(s handler.AuthDataSource) (string, error) {
+func (es QueryParameterExtractStrategy) GetAuthData(s handler.RequestContext) (string, error) {
 	if val := s.Query(es.Name); len(val) != 0 {
 		return strings.TrimSpace(strings.TrimPrefix(val, es.Prefix)), nil
 	} else {

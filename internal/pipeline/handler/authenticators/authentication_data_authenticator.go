@@ -40,7 +40,7 @@ func NewAuthenticationDataAuthenticatorFromJSON(rawConfig json.RawMessage) (*aut
 	}, nil
 }
 
-func (a *authenticationDataAuthenticator) Authenticate(ctx context.Context, as handler.AuthDataSource, sc *heimdall.SubjectContext) error {
+func (a *authenticationDataAuthenticator) Authenticate(ctx context.Context, as handler.RequestContext, sc *heimdall.SubjectContext) error {
 	authDataRef, err := a.AuthDataGetter.GetAuthData(as)
 	if err != nil {
 		return &errorsx.ArgumentError{Message: "failed to extract authentication data", Cause: err}

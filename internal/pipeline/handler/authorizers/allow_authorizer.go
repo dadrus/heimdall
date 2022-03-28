@@ -14,10 +14,10 @@ func NewAllowAuthorizer() *allowAuthorizer {
 	return &allowAuthorizer{}
 }
 
-func (*allowAuthorizer) Authorize(context.Context, *heimdall.SubjectContext) error {
+func (*allowAuthorizer) Authorize(context.Context, handler.RequestContext, *heimdall.SubjectContext) error {
 	return nil
 }
 
-func (a *allowAuthorizer) WithConfig(config json.RawMessage) (handler.Authorizer, error) {
+func (a *allowAuthorizer) WithConfig(json.RawMessage) (handler.Authorizer, error) {
 	return a, nil
 }

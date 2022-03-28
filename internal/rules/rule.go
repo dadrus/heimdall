@@ -10,7 +10,7 @@ import (
 
 type Rule interface {
 	Id() string
-	Execute(ctx context.Context, ads handler.AuthDataSource) (*heimdall.SubjectContext, error)
-	MatchesUrl(requestUrl *url.URL) bool
-	MatchesMethod(method string) bool
+	Execute(context.Context, handler.RequestContext) (*heimdall.SubjectContext, error)
+	MatchesUrl(*url.URL) bool
+	MatchesMethod(string) bool
 }

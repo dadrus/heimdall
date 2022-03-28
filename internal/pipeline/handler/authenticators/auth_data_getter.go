@@ -5,5 +5,5 @@ import (
 )
 
 type AuthDataGetter interface {
-	GetAuthData(s handler.AuthDataSource) (string, error)
+	GetAuthData(s handler.RequestContext) (string, error)
 }

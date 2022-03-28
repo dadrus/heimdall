@@ -14,7 +14,7 @@ func NewNoopAuthenticator() *noopAuthenticator {
 	return &noopAuthenticator{}
 }
 
-func (*noopAuthenticator) Authenticate(_ context.Context, _ handler.AuthDataSource, sc *heimdall.SubjectContext) error {
+func (*noopAuthenticator) Authenticate(_ context.Context, _ handler.RequestContext, sc *heimdall.SubjectContext) error {
 	sc.Subject = &heimdall.Subject{}
 	return nil
 }

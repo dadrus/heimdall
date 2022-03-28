@@ -8,7 +8,7 @@ import (
 
 type CompositeExtractStrategy []AuthDataExtractStrategy
 
-func (ce CompositeExtractStrategy) GetAuthData(s handler.AuthDataSource) (string, error) {
+func (ce CompositeExtractStrategy) GetAuthData(s handler.RequestContext) (string, error) {
 	for _, e := range ce {
 		if t, err := e.GetAuthData(s); err == nil {
 			return t, nil

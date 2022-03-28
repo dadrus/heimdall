@@ -12,7 +12,7 @@ type FormParameterExtractStrategy struct {
 	Prefix string
 }
 
-func (es FormParameterExtractStrategy) GetAuthData(s handler.AuthDataSource) (string, error) {
+func (es FormParameterExtractStrategy) GetAuthData(s handler.RequestContext) (string, error) {
 	if val := s.Form(es.Name); len(val) != 0 {
 		return strings.TrimSpace(strings.TrimPrefix(val, es.Prefix)), nil
 	} else {

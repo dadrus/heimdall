@@ -5,5 +5,5 @@ import (
 )
 
 type AuthDataExtractStrategy interface {
-	GetAuthData(s handler.AuthDataSource) (string, error)
+	GetAuthData(s handler.RequestContext) (string, error)
 }

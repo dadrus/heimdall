@@ -24,7 +24,7 @@ type MockAuthDataGetter struct {
 	mock.Mock
 }
 
-func (m *MockAuthDataGetter) GetAuthData(s handler.AuthDataSource) (string, error) {
+func (m *MockAuthDataGetter) GetAuthData(s handler.RequestContext) (string, error) {
 	args := m.Called(s)
 	return args.String(0), args.Error(1)
 }
