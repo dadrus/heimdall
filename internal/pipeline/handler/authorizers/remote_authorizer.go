@@ -15,11 +15,11 @@ type remoteAuthorizer struct {
 	ResponseHeadersToForward []string
 }
 
-func NewRemoteAuthorizerFromJSON(rawConfig json.RawMessage) (remoteAuthorizer, error) {
-	return remoteAuthorizer{}, nil
+func NewRemoteAuthorizerFromJSON(rawConfig json.RawMessage) (*remoteAuthorizer, error) {
+	return &remoteAuthorizer{}, nil
 }
 
-func (a remoteAuthorizer) Authorize(ctx context.Context, sc *heimdall.SubjectContext) error {
+func (a *remoteAuthorizer) Authorize(ctx context.Context, sc *heimdall.SubjectContext) error {
 	var payload string
 	if a.Payload == "original_body" {
 		// TODO: get original request body
@@ -39,6 +39,23 @@ func (a remoteAuthorizer) Authorize(ctx context.Context, sc *heimdall.SubjectCon
 	return nil
 }
 
-func (remoteAuthorizer) WithConfig(config json.RawMessage) (handler.Authorizer, error) {
-	return nil, nil
+func (a *remoteAuthorizer) WithConfig(config json.RawMessage) (handler.Authorizer, error) {
+	if len(config) == 0 {
+		return a, nil
+	}
+
+	type _config struct {
+		ResponseHeadersToForward []string `json:"forward_response_headers"`
+	}
+
+	var c _config
+	if err := json.Unmarshal(config, &c); err != nil {
+		return nil, err
+	}
+
+	return &remoteAuthorizer{
+		Endpoint:                 a.Endpoint,
+		Payload:                  a.Payload,
+		ResponseHeadersToForward: c.ResponseHeadersToForward,
+	}, nil
 }
