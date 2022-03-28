@@ -1,6 +1,7 @@
 package rules
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -8,7 +9,9 @@ import (
 	"sync"
 
 	"github.com/dadrus/heimdall/internal/config"
+	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/pipeline"
+	"github.com/dadrus/heimdall/internal/pipeline/handler"
 	"github.com/dadrus/heimdall/internal/rules/provider"
 	"github.com/knadh/koanf"
 	"github.com/knadh/koanf/parsers/yaml"
@@ -80,7 +83,7 @@ func (r *repository) loadRules(srcId string, definition json.RawMessage) ([]*rul
 
 	var rules []*rule
 	for _, rc := range rcs {
-		rule, err := newRule(r.hf, srcId, rc)
+		rule, err := r.newRule(srcId, rc)
 		if err != nil {
 			return nil, err
 		}
@@ -88,28 +91,6 @@ func (r *repository) loadRules(srcId string, definition json.RawMessage) ([]*rul
 	}
 
 	return rules, nil
-}
-
-func parseRuleSetFromYaml(data []byte) ([]config.RuleConfig, error) {
-	var k = koanf.New(".")
-	err := k.Load(rawbytes.Provider(data), yaml.Parser())
-	if err != nil {
-		return nil, fmt.Errorf("failed to read config: %w", err)
-	}
-
-	var rcs []config.RuleConfig
-
-	if err = k.UnmarshalWithConf("", rcs, koanf.UnmarshalConf{
-		Tag: "koanf",
-		DecoderConfig: &mapstructure.DecoderConfig{
-			Result:           rcs,
-			WeaklyTypedInput: true,
-		},
-	}); err != nil {
-		return nil, err
-	}
-
-	return rcs, nil
 }
 
 func (r *repository) addRule(rule *rule) {
@@ -137,4 +118,111 @@ func (r *repository) onRuleSetCreated(src string, definition json.RawMessage) {
 
 func (r *repository) onRuleSetDeleted(src string) {
 	r.removeRules(src)
+}
+
+func (r *repository) newRule(srcId string, rc config.RuleConfig) (*rule, error) {
+	an, err := r.hf.CreateAuthenticator(rc.Authenticators)
+	if err != nil {
+		return nil, err
+	}
+
+	az, err := r.hf.CreateAuthorizer(rc.Authorizer)
+	if err != nil {
+		return nil, err
+	}
+
+	h, err := r.hf.CreateHydrator(rc.Hydrators)
+	if err != nil {
+		return nil, err
+	}
+
+	m, err := r.hf.CreateMutator(rc.Mutators)
+	if err != nil {
+		return nil, err
+	}
+
+	eh, err := r.hf.CreateErrorHandler(rc.ErrorHandlers)
+	if err != nil {
+		return nil, err
+	}
+
+	return &rule{
+		id:      rc.Id,
+		url:     rc.Url,
+		methods: rc.Methods,
+		srcId:   srcId,
+		an:      an,
+		az:      az,
+		h:       h,
+		m:       m,
+		eh:      eh,
+	}, nil
+}
+
+func parseRuleSetFromYaml(data []byte) ([]config.RuleConfig, error) {
+	var k = koanf.New(".")
+	err := k.Load(rawbytes.Provider(data), yaml.Parser())
+	if err != nil {
+		return nil, fmt.Errorf("failed to read config: %w", err)
+	}
+
+	var rcs []config.RuleConfig
+
+	if err = k.UnmarshalWithConf("", rcs, koanf.UnmarshalConf{
+		Tag: "koanf",
+		DecoderConfig: &mapstructure.DecoderConfig{
+			Result:           rcs,
+			WeaklyTypedInput: true,
+		},
+	}); err != nil {
+		return nil, err
+	}
+
+	return rcs, nil
+}
+
+type rule struct {
+	id      string
+	url     string
+	methods []string
+	srcId   string
+	an      handler.Authenticator
+	az      handler.Authorizer
+	h       handler.Hydrator
+	m       handler.Mutator
+	eh      handler.ErrorHandler
+}
+
+func (r *rule) Execute(ctx context.Context, ads handler.AuthDataSource) (*heimdall.SubjectContext, error) {
+	sc := &heimdall.SubjectContext{}
+
+	if err := r.an.Authenticate(ctx, ads, sc); err != nil {
+		return nil, r.eh.HandleError(ctx, err)
+	}
+
+	if err := r.az.Authorize(ctx, sc); err != nil {
+		return nil, r.eh.HandleError(ctx, err)
+	}
+
+	if err := r.h.Hydrate(ctx, sc); err != nil {
+		return nil, r.eh.HandleError(ctx, err)
+	}
+
+	if err := r.m.Mutate(ctx, sc); err != nil {
+		return nil, r.eh.HandleError(ctx, err)
+	}
+
+	return sc, nil
+}
+
+func (r *rule) MatchesUrl(requestUrl *url.URL) bool {
+	return true
+}
+
+func (r *rule) MatchesMethod(method string) bool {
+	return true
+}
+
+func (r *rule) Id() string {
+	return r.id
 }
