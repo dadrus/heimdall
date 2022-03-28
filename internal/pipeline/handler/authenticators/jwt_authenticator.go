@@ -9,6 +9,7 @@ import (
 
 	"gopkg.in/square/go-jose.v2"
 	"gopkg.in/square/go-jose.v2/jwt"
+	"gopkg.in/yaml.v2"
 
 	"github.com/dadrus/heimdall/internal/errorsx"
 	"github.com/dadrus/heimdall/internal/heimdall"
@@ -24,16 +25,16 @@ type jwtAuthenticator struct {
 	AuthDataGetter   AuthDataGetter
 }
 
-func NewJwtAuthenticatorFromJSON(rawConfig json.RawMessage) (*jwtAuthenticator, error) {
+func NewJwtAuthenticatorFromJSON(rawConfig []byte) (*jwtAuthenticator, error) {
 	type _config struct {
-		Endpoint       endpoint.Endpoint        `json:"jwks_endpoint"`
-		AuthDataSource AuthenticationDataSource `json:"jwt_token_from"`
-		Assertions     oauth2.Assertions        `json:"jwt_assertions"`
-		Session        Session                  `json:"session"`
+		Endpoint       endpoint.Endpoint        `yaml:"jwks_endpoint"`
+		AuthDataSource AuthenticationDataSource `yaml:"jwt_token_from"`
+		Assertions     oauth2.Assertions        `yaml:"jwt_assertions"`
+		Session        Session                  `yaml:"session"`
 	}
 
 	var c _config
-	if err := json.Unmarshal(rawConfig, &c); err != nil {
+	if err := yaml.Unmarshal(rawConfig, &c); err != nil {
 		return nil, err
 	}
 
@@ -146,11 +147,11 @@ func (a *jwtAuthenticator) WithConfig(config []byte) (handler.Authenticator, err
 	}
 
 	type _config struct {
-		Assertions oauth2.Assertions `json:"jwt_assertions"`
+		Assertions oauth2.Assertions `yaml:"jwt_assertions"`
 	}
 
 	var c _config
-	if err := json.Unmarshal(config, &c); err != nil {
+	if err := yaml.Unmarshal(config, &c); err != nil {
 		return nil, err
 	}
 
