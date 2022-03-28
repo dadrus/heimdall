@@ -8,13 +8,22 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestCreateAnonymousAuthenticatorFromYaml(t *testing.T) {
+func TestCreateAnonymousAuthenticatorFromValidYaml(t *testing.T) {
 	// WHEN
 	a, err := NewAnonymousAuthenticatorFromYAML([]byte("subject: anon"))
 
 	// THEN
 	assert.NoError(t, err)
 	assert.Equal(t, "anon", a.Subject)
+}
+
+func TestCreateAnonymousAuthenticatorFromInvalidYaml(t *testing.T) {
+	// WHEN
+	_, err := NewAnonymousAuthenticatorFromYAML([]byte("foo: bar"))
+
+	// THEN
+	assert.Error(t, err)
+	assert.IsType(t, &errorsx.ArgumentError{}, err)
 }
 
 func TestCreateAnonymousAuthenticatorFromPrototypeGivenEmptyConfig(t *testing.T) {
