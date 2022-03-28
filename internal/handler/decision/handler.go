@@ -106,18 +106,12 @@ func (h *Handler) decisions(c *fiber.Ctx) error {
 			return c.SendStatus(fiber.StatusUnauthorized)
 		case *errorsx.RemoteCallError:
 			return c.SendStatus(fiber.StatusBadGateway)
+		case *errorsx.RedirectError:
+			re := err.(*errorsx.RedirectError)
+			return c.Redirect(re.RedirectTo)
 		default:
 			return c.SendStatus(fiber.StatusInternalServerError)
 		}
-	}
-
-	if len(sc.RedirectTo) != 0 {
-		logger.Info().
-			Fields(fields).
-			Bool("granted", false).
-			Msg("Access request denied. Redirect triggered.")
-
-		return c.Redirect(sc.RedirectTo)
 	}
 
 	logger.Info().

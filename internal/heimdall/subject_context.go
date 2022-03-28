@@ -8,7 +8,6 @@ type Subject struct {
 }
 
 type SubjectContext struct {
-	Subject    *Subject
-	Header     http.Header
-	RedirectTo string
+	Subject *Subject
+	Header  http.Header
 }
