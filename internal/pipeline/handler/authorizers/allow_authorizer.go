@@ -10,14 +10,14 @@ import (
 
 type allowAuthorizer struct{}
 
-func NewAllowAuthorizer() allowAuthorizer {
-	return allowAuthorizer{}
+func NewAllowAuthorizer() *allowAuthorizer {
+	return &allowAuthorizer{}
 }
 
-func (allowAuthorizer) Authorize(context.Context, *heimdall.SubjectContext) error {
+func (*allowAuthorizer) Authorize(context.Context, *heimdall.SubjectContext) error {
 	return nil
 }
 
-func (allowAuthorizer) WithConfig(config json.RawMessage) (handler.Authorizer, error) {
-	return nil, nil
+func (a *allowAuthorizer) WithConfig(config json.RawMessage) (handler.Authorizer, error) {
+	return a, nil
 }
