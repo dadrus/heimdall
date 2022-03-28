@@ -12,17 +12,13 @@ var serveCmd = &cobra.Command{
 
 ## Configuration
 
-Heimdall can be configured using environment variables as well as a configuration file. For more information
-on configuration options, open the configuration documentation:
-
->> https://www.ory.sh/oathkeeper/docs/configuration <<
+Heimdall can be configured using environment variables as well as a configuration file.
 `,
 }
 
 func init() {
 	RootCmd.AddCommand(serveCmd)
 
-	serveCmd.PersistentFlags().Bool("disable-telemetry", false, "Disable anonymized telemetry reports - for more information please visit https://www.ory.sh/docs/ecosystem/sqa")
 	serveCmd.PersistentFlags().StringP("config", "c", "", "Config file")
 	serveCmd.AddCommand(serve.NewProxyCommand())
 	serveCmd.AddCommand(serve.NewDecisionApiCommand())

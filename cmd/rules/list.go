@@ -11,7 +11,7 @@ func NewListCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "list",
 		Short:   "List access rules",
-		Example: "oathkeeper rules --endpoint=http://localhost:4456/ list",
+		Example: "heimdall rules --endpoint=http://localhost:4456/ list",
 		Run: func(cmd *cobra.Command, args []string) {
 			fmt.Println("calling rules ep")
 		},

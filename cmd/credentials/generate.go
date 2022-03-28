@@ -12,7 +12,7 @@ func NewGenerateCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "generate",
 		Short:   "Generate a key for the specified algorithm",
-		Example: "oathkeeper credentials generate --alg RS256 --bits 4096 > jwks.json",
+		Example: "heimdall credentials generate --alg RS256 --bits 4096 > jwks.json",
 		Run: func(cmd *cobra.Command, args []string) {
 			fmt.Println("generating keys")
 		},
