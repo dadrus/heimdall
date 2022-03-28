@@ -8,7 +8,6 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
-	"net/url"
 	"time"
 
 	"github.com/ybbus/httpretry"
@@ -17,10 +16,10 @@ import (
 )
 
 type Endpoint struct {
-	Url     *url.URL          `yaml:"url"`
+	Url     string            `yaml:"url"`
 	Method  string            `yaml:"method"`
-	Retry   Retry             `yaml:"retry"`
-	Auth    Auth              `yaml:"auth"`
+	Retry   *Retry            `yaml:"retry"`
+	Auth    *Auth             `yaml:"auth"`
 	Headers map[string]string `yaml:"headers"`
 }
 
@@ -34,6 +33,13 @@ type Auth struct {
 	Config json.RawMessage `yaml:"config"`
 }
 
+func (e Endpoint) Validate() error {
+	if len(e.Url) == 0 {
+		return errors.New("endpoint requires url to be set")
+	}
+	return nil
+}
+
 func (e Endpoint) SendRequest(ctx context.Context, body io.Reader) ([]byte, error) {
 	client := httpretry.NewCustomClient(
 		&http.Client{
@@ -41,7 +47,12 @@ func (e Endpoint) SendRequest(ctx context.Context, body io.Reader) ([]byte, erro
 		},
 		httpretry.WithBackoffPolicy(httpretry.ExponentialBackoff(e.Retry.MaxDelay, e.Retry.GiveUpAfter, 0)))
 
-	req, err := http.NewRequestWithContext(ctx, e.Method, e.Url.String(), body)
+	method := "POST"
+	if len(e.Method) != 0 {
+		method = e.Method
+	}
+
+	req, err := http.NewRequestWithContext(ctx, method, e.Url, body)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}

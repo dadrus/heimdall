@@ -35,5 +35,9 @@ type MockSubjectExtractor struct {
 
 func (m *MockSubjectExtractor) GetSubject(data json.RawMessage) (*heimdall.Subject, error) {
 	args := m.Called(data)
-	return args.Get(0).(*heimdall.Subject), args.Error(1)
+	i := args.Get(0)
+	if i != nil {
+		return i.(*heimdall.Subject), args.Error(1)
+	}
+	return nil, args.Error(1)
 }

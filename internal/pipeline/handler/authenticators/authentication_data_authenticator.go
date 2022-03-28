@@ -34,6 +34,20 @@ func NewAuthenticationDataAuthenticatorFromYAML(rawConfig []byte) (*authenticati
 		}
 	}
 
+	if err := c.Endpoint.Validate(); err != nil {
+		return nil, &errorsx.ArgumentError{
+			Message: "failed to validate endpoint configuration",
+			Cause:   err,
+		}
+	}
+
+	if err := c.Session.Validate(); err != nil {
+		return nil, &errorsx.ArgumentError{
+			Message: "failed to validate session configuration",
+			Cause:   err,
+		}
+	}
+
 	adg, err := c.AuthDataSource.Strategy()
 	if err != nil {
 		return nil, err
