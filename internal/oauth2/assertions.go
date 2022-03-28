@@ -1,6 +1,8 @@
 package oauth2
 
 import (
+	"errors"
+
 	"golang.org/x/exp/slices"
 )
 
@@ -12,6 +14,13 @@ type Assertions struct {
 	TargetAudiences   []string      `json:"target_audiences"`
 	TrustedIssuers    []string      `json:"trusted_issuers"`
 	AllowedAlgorithms []string      `json:"allowed_algorithms"`
+}
+
+func (a *Assertions) Validate() error {
+	if len(a.TrustedIssuers) == 0 {
+		return errors.New("missing trusted_issuers configuration")
+	}
+	return nil
 }
 
 func (a *Assertions) IsAlgorithmAllowed(alg string) bool {
