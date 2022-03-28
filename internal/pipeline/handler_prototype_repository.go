@@ -12,15 +12,7 @@ import (
 	mutators2 "github.com/dadrus/heimdall/internal/pipeline/handler/mutators"
 )
 
-type HandlerRepository interface {
-	Authenticator(id string) (handler.Authenticator, error)
-	Authorizer(id string) (handler.Authorizer, error)
-	Hydrator(id string) (handler.Hydrator, error)
-	Mutator(id string) (handler.Mutator, error)
-	ErrorHandler(id string) (handler.ErrorHandler, error)
-}
-
-func NewRepository(conf config.Configuration) (HandlerRepository, error) {
+func newHandlerPrototypeRepository(conf config.Configuration) (*handlerPrototypeRepository, error) {
 	var ans map[string]handler.Authenticator
 	for _, pe := range conf.Pipeline.Authenticators {
 		if r, err := newAuthenticator(pe); err != nil {
@@ -66,7 +58,7 @@ func NewRepository(conf config.Configuration) (HandlerRepository, error) {
 		}
 	}
 
-	return &authenticatorRepository{
+	return &handlerPrototypeRepository{
 		authenticators: ans,
 		authorizers:    azs,
 		hydrators:      hs,
@@ -140,7 +132,7 @@ func newErrorHandler(c config.PipelineObject) (handler.ErrorHandler, error) {
 	}
 }
 
-type authenticatorRepository struct {
+type handlerPrototypeRepository struct {
 	authenticators map[string]handler.Authenticator
 	authorizers    map[string]handler.Authorizer
 	hydrators      map[string]handler.Hydrator
@@ -148,35 +140,35 @@ type authenticatorRepository struct {
 	errorHandlers  map[string]handler.ErrorHandler
 }
 
-func (r *authenticatorRepository) Authenticator(id string) (handler.Authenticator, error) {
+func (r *handlerPrototypeRepository) Authenticator(id string) (handler.Authenticator, error) {
 	if a, ok := r.authenticators[id]; !ok {
 		return nil, errors.New("no such authenticator")
 	} else {
 		return a, nil
 	}
 }
-func (r *authenticatorRepository) Authorizer(id string) (handler.Authorizer, error) {
+func (r *handlerPrototypeRepository) Authorizer(id string) (handler.Authorizer, error) {
 	if a, ok := r.authorizers[id]; !ok {
 		return nil, errors.New("no such authorizer")
 	} else {
 		return a, nil
 	}
 }
-func (r *authenticatorRepository) Hydrator(id string) (handler.Hydrator, error) {
+func (r *handlerPrototypeRepository) Hydrator(id string) (handler.Hydrator, error) {
 	if a, ok := r.hydrators[id]; !ok {
 		return nil, errors.New("no such hydrator")
 	} else {
 		return a, nil
 	}
 }
-func (r *authenticatorRepository) Mutator(id string) (handler.Mutator, error) {
+func (r *handlerPrototypeRepository) Mutator(id string) (handler.Mutator, error) {
 	if a, ok := r.mutators[id]; !ok {
 		return nil, errors.New("no such mutators")
 	} else {
 		return a, nil
 	}
 }
-func (r *authenticatorRepository) ErrorHandler(id string) (handler.ErrorHandler, error) {
+func (r *handlerPrototypeRepository) ErrorHandler(id string) (handler.ErrorHandler, error) {
 	if a, ok := r.errorHandlers[id]; !ok {
 		return nil, errors.New("no such error handler")
 	} else {

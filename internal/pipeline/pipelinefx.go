@@ -5,6 +5,5 @@ import (
 )
 
 var Module = fx.Options(
-	fx.Provide(NewRepository),
 	fx.Provide(NewHandlerFactory),
 )

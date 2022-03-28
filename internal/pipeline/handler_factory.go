@@ -19,7 +19,12 @@ type HandlerFactory interface {
 	CreateErrorHandler([]config.PipelineObjectReference) (handler.ErrorHandler, error)
 }
 
-func NewHandlerFactory(r HandlerRepository, c config.Configuration) (HandlerFactory, error) {
+func NewHandlerFactory(c config.Configuration) (HandlerFactory, error) {
+	r, err := newHandlerPrototypeRepository(c)
+	if err != nil {
+		return nil, err
+	}
+
 	return &handlerFactory{
 		r:  r,
 		dp: c.Rules.Default,
@@ -27,7 +32,7 @@ func NewHandlerFactory(r HandlerRepository, c config.Configuration) (HandlerFact
 }
 
 type handlerFactory struct {
-	r  HandlerRepository
+	r  *handlerPrototypeRepository
 	dp config.Pipeline
 }
 
