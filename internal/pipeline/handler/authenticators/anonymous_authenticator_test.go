@@ -3,9 +3,10 @@ package authenticators
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	
 	"github.com/dadrus/heimdall/internal/errorsx"
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestCreateAnonymousAuthenticatorFromValidYaml(t *testing.T) {

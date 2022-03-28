@@ -5,8 +5,9 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/dadrus/heimdall/internal/heimdall"
 )
 
 func TestCompositeAuthenticatorExecutionWithFallback(t *testing.T) {

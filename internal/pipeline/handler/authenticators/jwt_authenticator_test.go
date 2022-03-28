@@ -3,9 +3,10 @@ package authenticators
 import (
 	"testing"
 
-	"github.com/dadrus/heimdall/internal/pipeline/handler/authenticators/extractors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/dadrus/heimdall/internal/pipeline/handler/authenticators/extractors"
 )
 
 func TestCreateJwtAuthenticator(t *testing.T) {
