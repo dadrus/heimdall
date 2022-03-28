@@ -15,7 +15,7 @@ func NewAnonymousAuthenticatorFromYAML(rawConfig []byte) (*anonymousAuthenticato
 
 	if err := yaml.UnmarshalStrict(rawConfig, &a); err != nil {
 		return nil, &errorsx.ArgumentError{
-			Message: "failed to unmarshal config",
+			Message: "failed to unmarshal anonymous authenticator config",
 			Cause:   err,
 		}
 	}
