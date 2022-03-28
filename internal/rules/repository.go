@@ -17,6 +17,7 @@ import (
 	"github.com/knadh/koanf/parsers/yaml"
 	"github.com/knadh/koanf/providers/rawbytes"
 	"github.com/mitchellh/mapstructure"
+	"golang.org/x/exp/slices"
 )
 
 type Repository interface {
@@ -220,7 +221,7 @@ func (r *rule) MatchesUrl(requestUrl *url.URL) bool {
 }
 
 func (r *rule) MatchesMethod(method string) bool {
-	return true
+	return slices.Contains(r.methods, method)
 }
 
 func (r *rule) Id() string {
