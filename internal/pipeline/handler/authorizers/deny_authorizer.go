@@ -11,16 +11,16 @@ import (
 
 type denyAuthorizer struct{}
 
-func NewDenyAuthorizer() denyAuthorizer {
-	return denyAuthorizer{}
+func NewDenyAuthorizer() *denyAuthorizer {
+	return &denyAuthorizer{}
 }
 
-func (denyAuthorizer) Authorize(context.Context, *heimdall.SubjectContext) error {
+func (*denyAuthorizer) Authorize(context.Context, *heimdall.SubjectContext) error {
 	return &errorsx.ForbiddenError{
 		Message: "not authorized",
 	}
 }
 
-func (denyAuthorizer) WithConfig(config json.RawMessage) (handler.Authorizer, error) {
-	return nil, nil
+func (a *denyAuthorizer) WithConfig(config json.RawMessage) (handler.Authorizer, error) {
+	return a, nil
 }
