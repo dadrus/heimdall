@@ -27,9 +27,9 @@ func NewAuthenticationDataAuthenticatorFromYAML(rawConfig []byte) (*authenticati
 	}
 
 	var c _config
-	if err := yaml.Unmarshal(rawConfig, &c); err != nil {
+	if err := yaml.UnmarshalStrict(rawConfig, &c); err != nil {
 		return nil, &errorsx.ArgumentError{
-			Message: "failed to unmarshal config",
+			Message: "failed to unmarshal authentication data authenticator config",
 			Cause:   err,
 		}
 	}
