@@ -9,11 +9,11 @@ import (
 type ScopeStrategy string
 
 type Assertions struct {
-	ScopeStrategy     ScopeStrategy `json:"scope_strategy"`
-	RequiredScopes    Scopes        `json:"required_scopes"`
-	TargetAudiences   []string      `json:"target_audiences"`
-	TrustedIssuers    []string      `json:"trusted_issuers"`
-	AllowedAlgorithms []string      `json:"allowed_algorithms"`
+	ScopeStrategy     ScopeStrategy `yaml:"scope_strategy"`
+	RequiredScopes    Scopes        `yaml:"required_scopes"`
+	TargetAudiences   []string      `yaml:"target_audiences"`
+	TrustedIssuers    []string      `yaml:"trusted_issuers"`
+	AllowedAlgorithms []string      `yaml:"allowed_algorithms"`
 }
 
 func (a *Assertions) Validate() error {

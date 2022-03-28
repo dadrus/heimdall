@@ -27,11 +27,9 @@ func TestUnmarshalAuthenticationDataSourceFromValidYaml(t *testing.T) {
 	err := yaml.Unmarshal([]byte(config), &as)
 	assert.NoError(t, err)
 
-	s, err := as.Strategy()
-	assert.NoError(t, err)
-	assert.IsType(t, extractors.CompositeExtractStrategy{}, s)
+	assert.NotNil(t, as.es)
 
-	es := s.(extractors.CompositeExtractStrategy)
+	es := as.es.(extractors.CompositeExtractStrategy)
 	assert.Equal(t, 4, len(es))
 
 	assert.IsType(t, &extractors.CookieValueExtractStrategy{}, es[0])
@@ -61,6 +59,5 @@ func TestUnmarshalAuthenticationDataSourceFromEmptyYaml(t *testing.T) {
 	err := yaml.Unmarshal([]byte{}, &as)
 	assert.NoError(t, err)
 
-	_, err = as.Strategy()
-	assert.Error(t, err)
+	assert.Nil(t, as.es)
 }

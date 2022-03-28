@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/dadrus/heimdall/internal/pipeline/handler/authenticators/extractors"
 	"gopkg.in/square/go-jose.v2"
 	"gopkg.in/square/go-jose.v2/jwt"
 	"gopkg.in/yaml.v2"
@@ -38,6 +39,10 @@ func NewJwtAuthenticatorFromYAML(rawConfig []byte) (*jwtAuthenticator, error) {
 		return nil, err
 	}
 
+	if c.Endpoint.Headers == nil {
+		c.Endpoint.Headers = make(map[string]string)
+	}
+
 	if _, ok := c.Endpoint.Headers["Accept-Type"]; !ok {
 		c.Endpoint.Headers["Accept-Type"] = "application/json"
 	}
@@ -59,16 +64,19 @@ func NewJwtAuthenticatorFromYAML(rawConfig []byte) (*jwtAuthenticator, error) {
 		}
 	}
 
-	if err := c.Session.Validate(); err != nil {
-		return nil, &errorsx.ArgumentError{
-			Message: "failed to validate session configuration",
-			Cause:   err,
-		}
+	if len(c.Session.SubjectFrom) == 0 {
+		c.Session.SubjectFrom = "sub"
 	}
 
-	adg, err := c.AuthDataSource.Strategy()
-	if err != nil {
-		return nil, err
+	var adg extractors.AuthDataExtractStrategy
+	if c.AuthDataSource.es == nil {
+		adg = extractors.CompositeExtractStrategy{
+			extractors.HeaderValueExtractStrategy{Name: "Authorization", Prefix: "Bearer"},
+			extractors.FormParameterExtractStrategy{Name: "access_token"},
+			extractors.QueryParameterExtractStrategy{Name: "access_token"},
+		}
+	} else {
+		adg = c.AuthDataSource.es
 	}
 
 	return &jwtAuthenticator{

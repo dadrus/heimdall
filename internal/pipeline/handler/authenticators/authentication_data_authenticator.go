@@ -48,14 +48,13 @@ func NewAuthenticationDataAuthenticatorFromYAML(rawConfig []byte) (*authenticati
 		}
 	}
 
-	adg, err := c.AuthDataSource.Strategy()
-	if err != nil {
-		return nil, err
+	if c.AuthDataSource.es == nil {
+		return nil, &errorsx.ArgumentError{Message: "no authentication_data_source configured"}
 	}
 
 	return &authenticationDataAuthenticator{
 		Endpoint:         c.Endpoint,
-		AuthDataGetter:   adg,
+		AuthDataGetter:   c.AuthDataSource.es,
 		SubjectExtractor: &c.Session,
 	}, nil
 }
