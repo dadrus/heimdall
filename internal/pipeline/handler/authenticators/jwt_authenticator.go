@@ -34,7 +34,7 @@ func NewJwtAuthenticatorFromYAML(rawConfig []byte) (*jwtAuthenticator, error) {
 	}
 
 	var c _config
-	if err := yaml.Unmarshal(rawConfig, &c); err != nil {
+	if err := yaml.UnmarshalStrict(rawConfig, &c); err != nil {
 		return nil, err
 	}
 
