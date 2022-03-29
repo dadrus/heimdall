@@ -1,6 +1,8 @@
 package oauth2
 
-import "github.com/stretchr/testify/mock"
+import (
+	"github.com/stretchr/testify/mock"
+)
 
 type MockClaimAsserter struct {
 	mock.Mock

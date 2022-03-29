@@ -9,10 +9,10 @@ import (
 
 	"github.com/dadrus/heimdall/internal/errorsx"
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/oauth2"
 	"github.com/dadrus/heimdall/internal/pipeline/endpoint"
 	"github.com/dadrus/heimdall/internal/pipeline/handler"
 	"github.com/dadrus/heimdall/internal/pipeline/handler/authenticators/extractors"
+	"github.com/dadrus/heimdall/internal/pipeline/oauth2"
 )
 
 type oauth2IntrospectionAuthenticator struct {

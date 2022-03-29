@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/dadrus/heimdall/internal/oauth2"
+	"github.com/dadrus/heimdall/internal/pipeline/oauth2"
 	"golang.org/x/exp/slices"
 )
 

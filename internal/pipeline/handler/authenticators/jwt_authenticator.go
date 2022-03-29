@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/dadrus/heimdall/internal/pipeline/handler/authenticators/extractors"
+	"github.com/dadrus/heimdall/internal/pipeline/oauth2"
 	"gopkg.in/square/go-jose.v2"
 	"gopkg.in/square/go-jose.v2/jwt"
 	"gopkg.in/yaml.v2"
@@ -20,7 +21,7 @@ import (
 
 type jwtAuthenticator struct {
 	Endpoint         Endpoint
-	Asserter         ClaimAsserter
+	Asserter         oauth2.ClaimAsserter
 	SubjectExtractor SubjectExtrator
 	AuthDataGetter   AuthDataGetter
 }
@@ -164,7 +165,7 @@ func (a *jwtAuthenticator) verifyTokenAndGetClaims(jwtRaw string, jwks jose.JSON
 		return nil, fmt.Errorf("%s algorithm is not allowed", keys[0].Algorithm)
 	}
 
-	var tokenClaims jwtPayload
+	var tokenClaims oauth2.JwtPayload
 	if err = token.Claims(&jwks, &tokenClaims); err != nil {
 		return nil, err
 	}

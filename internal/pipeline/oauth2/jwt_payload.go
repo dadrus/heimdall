@@ -1,4 +1,4 @@
-package authenticators
+package oauth2
 
 import (
 	"errors"
@@ -25,9 +25,9 @@ func getClaim[T any](claims map[string]interface{}, name string, defVal T) T {
 	return defVal
 }
 
-type jwtPayload map[string]interface{}
+type JwtPayload map[string]interface{}
 
-func (jp jwtPayload) checkIssuer(asserter ClaimAsserter) error {
+func (jp JwtPayload) checkIssuer(asserter ClaimAsserter) error {
 	if issuer, ok := jp["iss"]; !ok {
 		return errors.New("token does not contain iss claim")
 	} else {
@@ -35,7 +35,7 @@ func (jp jwtPayload) checkIssuer(asserter ClaimAsserter) error {
 	}
 }
 
-func (jp jwtPayload) checkAudience(asserter ClaimAsserter) error {
+func (jp JwtPayload) checkAudience(asserter ClaimAsserter) error {
 	var audience []string
 	aud := getClaim(jp, "aud", "")
 	if len(aud) == 0 {
@@ -47,14 +47,14 @@ func (jp jwtPayload) checkAudience(asserter ClaimAsserter) error {
 	return asserter.AssertAudience(audience)
 }
 
-func (jp jwtPayload) checkTokenId() error {
+func (jp JwtPayload) checkTokenId() error {
 	if _, ok := jp["jti"]; !ok {
 		return errors.New("token does not contain jti claim")
 	}
 	return nil
 }
 
-func (jp jwtPayload) checkScopes(asserter ClaimAsserter) error {
+func (jp JwtPayload) checkScopes(asserter ClaimAsserter) error {
 	var scopes []string
 	scope := getClaim(jp, "scope", "")
 	if len(scope) == 0 {
@@ -75,14 +75,14 @@ func (jp jwtPayload) checkScopes(asserter ClaimAsserter) error {
 	return asserter.AssertScopes(scopes)
 }
 
-func (jp jwtPayload) checkTimeValidity(asserter ClaimAsserter) error {
+func (jp JwtPayload) checkTimeValidity(asserter ClaimAsserter) error {
 	nbf := getClaim(jp, "nbf", int64(-1))
 	exp := getClaim(jp, "exp", int64(-1))
 
 	return asserter.AssertValidity(nbf, exp)
 }
 
-func (jp jwtPayload) Verify(asserter ClaimAsserter) error {
+func (jp JwtPayload) Verify(asserter ClaimAsserter) error {
 	if err := jp.checkIssuer(asserter); err != nil {
 		return err
 	}
