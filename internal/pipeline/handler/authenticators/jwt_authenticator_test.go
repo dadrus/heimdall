@@ -1,10 +1,20 @@
 package authenticators
 
 import (
+	"context"
+	"crypto/rand"
+	"crypto/rsa"
+	"encoding/json"
+	"io"
 	"testing"
 
+	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/pipeline/handler"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"gopkg.in/square/go-jose.v2"
+	"gopkg.in/square/go-jose.v2/jwt"
 
 	"github.com/dadrus/heimdall/internal/pipeline/handler/authenticators/extractors"
 )
@@ -120,4 +130,78 @@ session:
 			tc.assert(t, err, a)
 		})
 	}
+}
+
+func setup(t *testing.T, subject string, issuer string) ([]byte, string) {
+	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	require.NoError(t, err)
+
+	jwks := jose.JSONWebKeySet{
+		Keys: []jose.JSONWebKey{
+			{Key: privateKey.Public(), KeyID: "bar", Algorithm: string(jose.PS512)},
+		},
+	}
+	rawJwks, err := json.Marshal(jwks)
+	require.NoError(t, err)
+
+	var signerOpts = jose.SignerOptions{}
+	signerOpts.WithType("JWT").WithHeader("kid", "bar")
+	signer, err := jose.NewSigner(jose.SigningKey{Algorithm: jose.PS512, Key: privateKey}, &signerOpts)
+	require.NoError(t, err)
+
+	builder := jwt.Signed(signer)
+	builder = builder.Claims(&jwt.Claims{
+		Subject: subject,
+		Issuer:  issuer,
+	})
+	rawJwt, err := builder.CompactSerialize()
+	require.NoError(t, err)
+
+	return rawJwks, rawJwt
+}
+
+func TestSuccessfulExecutionOfJwtAuthenticator(t *testing.T) {
+	// GIVEN
+	subject := "foo"
+	issuer := "foobar"
+	jwks, jwt := setup(t, subject, issuer)
+
+	as := handler.Assertions{
+		TrustedIssuers:    []string{issuer},
+		AllowedAlgorithms: []string{string(jose.PS512)},
+	}
+	sc := &heimdall.SubjectContext{}
+	sub := &heimdall.Subject{Id: subject}
+	ctx := context.Background()
+	mrc := &MockRequestContext{}
+
+	adg := &MockAuthDataGetter{}
+	adg.On("GetAuthData", mrc).Return(jwt, nil)
+
+	e := &MockEndpoint{}
+	e.On("SendRequest", mock.Anything, mock.MatchedBy(func(r io.Reader) bool {
+		return r == nil
+	}),
+	).Return(jwks, nil)
+
+	se := &MockSubjectExtractor{}
+	se.On("GetSubject", []byte(`{"iss":"foobar","sub":"foo"}`)).Return(sub, nil)
+
+	a := jwtAuthenticator{
+		Endpoint:         e,
+		SubjectExtractor: se,
+		AuthDataGetter:   adg,
+		Assertions:       as,
+	}
+
+	// WHEN
+	err := a.Authenticate(ctx, mrc, sc)
+
+	// THEN
+	require.NoError(t, err)
+	assert.Equal(t, sub, sc.Subject)
+
+	e.AssertExpectations(t)
+	se.AssertExpectations(t)
+	adg.AssertExpectations(t)
 }
