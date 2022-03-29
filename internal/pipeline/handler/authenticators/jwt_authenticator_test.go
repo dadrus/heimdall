@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/pipeline/handler"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -153,6 +152,7 @@ func setup(t *testing.T, subject string, issuer string) ([]byte, string) {
 	builder = builder.Claims(&jwt.Claims{
 		Subject: subject,
 		Issuer:  issuer,
+		ID:      "foo",
 	})
 	rawJwt, err := builder.CompactSerialize()
 	require.NoError(t, err)
@@ -166,10 +166,13 @@ func TestSuccessfulExecutionOfJwtAuthenticator(t *testing.T) {
 	issuer := "foobar"
 	jwks, jwt := setup(t, subject, issuer)
 
-	as := handler.Assertions{
-		TrustedIssuers:    []string{issuer},
-		AllowedAlgorithms: []string{string(jose.PS512)},
-	}
+	as := &MockClaimAsserter{}
+	as.On("AssertIssuer", mock.Anything).Return(nil)
+	as.On("AssertAudience", mock.Anything).Return(nil)
+	as.On("AssertScopes", mock.Anything).Return(nil)
+	as.On("AssertValidity", mock.Anything, mock.Anything).Return(nil)
+	as.On("IsAlgorithmAllowed", string(jose.PS512)).Return(true)
+
 	sc := &heimdall.SubjectContext{}
 	sub := &heimdall.Subject{Id: subject}
 	ctx := context.Background()
@@ -185,13 +188,13 @@ func TestSuccessfulExecutionOfJwtAuthenticator(t *testing.T) {
 	).Return(jwks, nil)
 
 	se := &MockSubjectExtractor{}
-	se.On("GetSubject", []byte(`{"iss":"foobar","sub":"foo"}`)).Return(sub, nil)
+	se.On("GetSubject", []byte(`{"iss":"foobar","jti":"foo","sub":"foo"}`)).Return(sub, nil)
 
 	a := jwtAuthenticator{
 		Endpoint:         e,
 		SubjectExtractor: se,
 		AuthDataGetter:   adg,
-		Assertions:       as,
+		Asserter:         as,
 	}
 
 	// WHEN

@@ -10,6 +10,7 @@ type ClaimAsserter interface {
 	AssertAudience(audience []string) error
 	AssertScopes(scopes []string) error
 	AssertValidity(nbf, exp int64) error
+	IsAlgorithmAllowed(string) bool
 }
 
 func getClaim[T any](claims map[string]interface{}, name string, defVal T) T {

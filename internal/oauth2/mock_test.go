@@ -25,3 +25,8 @@ func (a *MockClaimAsserter) AssertValidity(nbf, exp int64) error {
 	args := a.Called(nbf, exp)
 	return args.Error(0)
 }
+
+func (a *MockClaimAsserter) IsAlgorithmAllowed(alg string) bool {
+	args := a.Called(alg)
+	return args.Bool(0)
+}

@@ -21,7 +21,7 @@ import (
 
 type jwtAuthenticator struct {
 	Endpoint         Endpoint
-	Assertions       handler.Assertions
+	Asserter         oauth2.ClaimAsserter
 	SubjectExtractor SubjectExtrator
 	AuthDataGetter   AuthDataGetter
 }
@@ -52,13 +52,10 @@ func NewJwtAuthenticatorFromYAML(rawConfig []byte) (*jwtAuthenticator, error) {
 
 	if len(c.Assertions.AllowedAlgorithms) == 0 {
 		c.Assertions.AllowedAlgorithms = []string{
-			string(jose.ES256),
-			string(jose.RS256),
-			string(jose.RS384),
-			string(jose.RS512),
-			string(jose.PS256),
-			string(jose.PS384),
-			string(jose.PS512),
+			// ECDSA
+			string(jose.ES256), string(jose.ES384), string(jose.ES512),
+			// RSA-PSS
+			string(jose.PS256), string(jose.PS384), string(jose.PS512),
 		}
 	}
 
@@ -93,7 +90,7 @@ func NewJwtAuthenticatorFromYAML(rawConfig []byte) (*jwtAuthenticator, error) {
 
 	return &jwtAuthenticator{
 		Endpoint:         c.Endpoint,
-		Assertions:       c.Assertions,
+		Asserter:         &c.Assertions,
 		SubjectExtractor: &c.Session,
 		AuthDataGetter:   adg,
 	}, nil
@@ -164,7 +161,7 @@ func (a *jwtAuthenticator) verifyTokenAndGetClaims(jwtRaw string, jwks jose.JSON
 		return nil, errors.New("no (unique) key found for the given key id")
 	}
 
-	if !a.Assertions.IsAlgorithmAllowed(keys[0].Algorithm) {
+	if !a.Asserter.IsAlgorithmAllowed(keys[0].Algorithm) {
 		return nil, fmt.Errorf("%s algorithm is not allowed", keys[0].Algorithm)
 	}
 
@@ -174,7 +171,7 @@ func (a *jwtAuthenticator) verifyTokenAndGetClaims(jwtRaw string, jwks jose.JSON
 		return nil, err
 	}
 
-	if err = payload.Verify(&a.Assertions); err != nil {
+	if err = payload.Verify(a.Asserter); err != nil {
 		return nil, err
 	}
 
@@ -203,7 +200,7 @@ func (a *jwtAuthenticator) WithConfig(config []byte) (handler.Authenticator, err
 
 	return &jwtAuthenticator{
 		Endpoint:         a.Endpoint,
-		Assertions:       c.Assertions,
+		Asserter:         &c.Assertions,
 		SubjectExtractor: a.SubjectExtractor,
 		AuthDataGetter:   a.AuthDataGetter,
 	}, nil
