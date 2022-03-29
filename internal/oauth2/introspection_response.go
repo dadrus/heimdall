@@ -15,7 +15,7 @@ type IntrospectionResponse struct {
 	TokenType string `json:"token_type"`
 }
 
-func (ir *IntrospectionResponse) Verify(assertions Assertions) error {
+func (ir *IntrospectionResponse) Verify(asserter ClaimAsserter) error {
 	if !ir.Active {
 		return errors.New("token is not active")
 	}
