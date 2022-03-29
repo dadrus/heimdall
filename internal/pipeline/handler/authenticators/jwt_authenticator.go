@@ -14,14 +14,13 @@ import (
 
 	"github.com/dadrus/heimdall/internal/errorsx"
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/oauth2"
 	"github.com/dadrus/heimdall/internal/pipeline/endpoint"
 	"github.com/dadrus/heimdall/internal/pipeline/handler"
 )
 
 type jwtAuthenticator struct {
 	Endpoint         Endpoint
-	Asserter         oauth2.ClaimAsserter
+	Asserter         ClaimAsserter
 	SubjectExtractor SubjectExtrator
 	AuthDataGetter   AuthDataGetter
 }
@@ -165,13 +164,12 @@ func (a *jwtAuthenticator) verifyTokenAndGetClaims(jwtRaw string, jwks jose.JSON
 		return nil, fmt.Errorf("%s algorithm is not allowed", keys[0].Algorithm)
 	}
 
-	var payload oauth2.JwtPayload
-	var tokenClaims map[string]interface{}
-	if err = token.Claims(&jwks, &tokenClaims, &payload); err != nil {
+	var tokenClaims jwtPayload
+	if err = token.Claims(&jwks, &tokenClaims); err != nil {
 		return nil, err
 	}
 
-	if err = payload.Verify(a.Asserter); err != nil {
+	if err = tokenClaims.Verify(a.Asserter); err != nil {
 		return nil, err
 	}
 

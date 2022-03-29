@@ -1,4 +1,4 @@
-package oauth2
+package authenticators
 
 import (
 	"errors"
@@ -10,19 +10,19 @@ import (
 func TestJwtPayloadIssuer(t *testing.T) {
 	for _, tc := range []struct {
 		uc        string
-		configure func(t *testing.T, jp *JwtPayload, ma *MockClaimAsserter)
+		configure func(t *testing.T, jp *jwtPayload, ma *MockClaimAsserter)
 		assert    func(t *testing.T, err error)
 	}{
 		{
 			uc:        "token without issuer",
-			configure: func(t *testing.T, jp *JwtPayload, ma *MockClaimAsserter) {},
+			configure: func(t *testing.T, jp *jwtPayload, ma *MockClaimAsserter) {},
 			assert: func(t *testing.T, err error) {
 				assert.Error(t, err)
 			},
 		},
 		{
 			uc: "token with issuer",
-			configure: func(t *testing.T, jp *JwtPayload, ma *MockClaimAsserter) {
+			configure: func(t *testing.T, jp *jwtPayload, ma *MockClaimAsserter) {
 				(*jp)["iss"] = "foo"
 				ma.On("AssertIssuer", "foo").Return(nil)
 			},
@@ -34,7 +34,7 @@ func TestJwtPayloadIssuer(t *testing.T) {
 		t.Run("case="+tc.uc, func(t *testing.T) {
 			// GIVEN
 			m := &MockClaimAsserter{}
-			jp := JwtPayload{}
+			jp := jwtPayload{}
 
 			tc.configure(t, &jp, m)
 
@@ -51,12 +51,12 @@ func TestJwtPayloadIssuer(t *testing.T) {
 func TestJwtPayloadAudience(t *testing.T) {
 	for _, tc := range []struct {
 		uc        string
-		configure func(t *testing.T, jp *JwtPayload, ma *MockClaimAsserter)
+		configure func(t *testing.T, jp *jwtPayload, ma *MockClaimAsserter)
 		assert    func(t *testing.T, err error)
 	}{
 		{
 			uc: "aud claim is expected and present as string with single value",
-			configure: func(t *testing.T, jp *JwtPayload, ma *MockClaimAsserter) {
+			configure: func(t *testing.T, jp *jwtPayload, ma *MockClaimAsserter) {
 				(*jp)["aud"] = "foo"
 				ma.On("AssertAudience", []string{"foo"}).Return(nil)
 			},
@@ -66,7 +66,7 @@ func TestJwtPayloadAudience(t *testing.T) {
 		},
 		{
 			uc: "aud claim is expected and present as string with multiple values",
-			configure: func(t *testing.T, jp *JwtPayload, ma *MockClaimAsserter) {
+			configure: func(t *testing.T, jp *jwtPayload, ma *MockClaimAsserter) {
 				(*jp)["aud"] = "foo bar"
 				ma.On("AssertAudience", []string{"foo", "bar"}).Return(nil)
 			},
@@ -76,7 +76,7 @@ func TestJwtPayloadAudience(t *testing.T) {
 		},
 		{
 			uc: "aud claim is expected and present as array with single value",
-			configure: func(t *testing.T, jp *JwtPayload, ma *MockClaimAsserter) {
+			configure: func(t *testing.T, jp *jwtPayload, ma *MockClaimAsserter) {
 				(*jp)["aud"] = []string{"foo"}
 				ma.On("AssertAudience", []string{"foo"}).Return(nil)
 			},
@@ -86,7 +86,7 @@ func TestJwtPayloadAudience(t *testing.T) {
 		},
 		{
 			uc: "aud claim is expected and present as array with multiple values",
-			configure: func(t *testing.T, jp *JwtPayload, ma *MockClaimAsserter) {
+			configure: func(t *testing.T, jp *jwtPayload, ma *MockClaimAsserter) {
 				(*jp)["aud"] = []string{"foo", "bar"}
 				ma.On("AssertAudience", []string{"foo", "bar"}).Return(nil)
 			},
@@ -96,7 +96,7 @@ func TestJwtPayloadAudience(t *testing.T) {
 		},
 		{
 			uc: "aud claim is expected but not present",
-			configure: func(t *testing.T, jp *JwtPayload, ma *MockClaimAsserter) {
+			configure: func(t *testing.T, jp *jwtPayload, ma *MockClaimAsserter) {
 				ma.On("AssertAudience", []string{}).Return(errors.New("no aud claim present"))
 			},
 			assert: func(t *testing.T, err error) {
@@ -107,7 +107,7 @@ func TestJwtPayloadAudience(t *testing.T) {
 		t.Run("case="+tc.uc, func(t *testing.T) {
 			// GIVEN
 			m := &MockClaimAsserter{}
-			jp := JwtPayload{}
+			jp := jwtPayload{}
 
 			tc.configure(t, &jp, m)
 
@@ -124,19 +124,19 @@ func TestJwtPayloadAudience(t *testing.T) {
 func TestJwtPayloadTokenId(t *testing.T) {
 	for _, tc := range []struct {
 		uc        string
-		configure func(t *testing.T, jp *JwtPayload, ma *MockClaimAsserter)
+		configure func(t *testing.T, jp *jwtPayload, ma *MockClaimAsserter)
 		assert    func(t *testing.T, err error)
 	}{
 		{
 			uc:        "token without jti",
-			configure: func(t *testing.T, jp *JwtPayload, ma *MockClaimAsserter) {},
+			configure: func(t *testing.T, jp *jwtPayload, ma *MockClaimAsserter) {},
 			assert: func(t *testing.T, err error) {
 				assert.Error(t, err)
 			},
 		},
 		{
 			uc: "token with jti",
-			configure: func(t *testing.T, jp *JwtPayload, ma *MockClaimAsserter) {
+			configure: func(t *testing.T, jp *jwtPayload, ma *MockClaimAsserter) {
 				(*jp)["jti"] = "foo"
 			},
 			assert: func(t *testing.T, err error) {
@@ -147,7 +147,7 @@ func TestJwtPayloadTokenId(t *testing.T) {
 		t.Run("case="+tc.uc, func(t *testing.T) {
 			// GIVEN
 			m := &MockClaimAsserter{}
-			jp := JwtPayload{}
+			jp := jwtPayload{}
 
 			tc.configure(t, &jp, m)
 
@@ -164,12 +164,12 @@ func TestJwtPayloadTokenId(t *testing.T) {
 func TestJwtPayloadScope(t *testing.T) {
 	for _, tc := range []struct {
 		uc        string
-		configure func(t *testing.T, jp *JwtPayload, ma *MockClaimAsserter)
+		configure func(t *testing.T, jp *jwtPayload, ma *MockClaimAsserter)
 		assert    func(t *testing.T, err error)
 	}{
 		{
 			uc: "scp claim present as string with single value",
-			configure: func(t *testing.T, jp *JwtPayload, ma *MockClaimAsserter) {
+			configure: func(t *testing.T, jp *jwtPayload, ma *MockClaimAsserter) {
 				(*jp)["scp"] = "foo"
 				ma.On("AssertScopes", []string{"foo"}).Return(nil)
 			},
@@ -179,7 +179,7 @@ func TestJwtPayloadScope(t *testing.T) {
 		},
 		{
 			uc: "scp claim present as string with multiple values",
-			configure: func(t *testing.T, jp *JwtPayload, ma *MockClaimAsserter) {
+			configure: func(t *testing.T, jp *jwtPayload, ma *MockClaimAsserter) {
 				(*jp)["scp"] = "foo bar"
 				ma.On("AssertScopes", []string{"foo", "bar"}).Return(nil)
 			},
@@ -189,7 +189,7 @@ func TestJwtPayloadScope(t *testing.T) {
 		},
 		{
 			uc: "scp claim as array with single value",
-			configure: func(t *testing.T, jp *JwtPayload, ma *MockClaimAsserter) {
+			configure: func(t *testing.T, jp *jwtPayload, ma *MockClaimAsserter) {
 				(*jp)["scp"] = []string{"foo"}
 				ma.On("AssertScopes", []string{"foo"}).Return(nil)
 			},
@@ -199,7 +199,7 @@ func TestJwtPayloadScope(t *testing.T) {
 		},
 		{
 			uc: "scp claim present as array with multiple values",
-			configure: func(t *testing.T, jp *JwtPayload, ma *MockClaimAsserter) {
+			configure: func(t *testing.T, jp *jwtPayload, ma *MockClaimAsserter) {
 				(*jp)["scp"] = []string{"foo", "bar"}
 				ma.On("AssertScopes", []string{"foo", "bar"}).Return(nil)
 			},
@@ -209,7 +209,7 @@ func TestJwtPayloadScope(t *testing.T) {
 		},
 		{
 			uc: "scope claim present as string with single value",
-			configure: func(t *testing.T, jp *JwtPayload, ma *MockClaimAsserter) {
+			configure: func(t *testing.T, jp *jwtPayload, ma *MockClaimAsserter) {
 				(*jp)["scope"] = "foo"
 				ma.On("AssertScopes", []string{"foo"}).Return(nil)
 			},
@@ -219,7 +219,7 @@ func TestJwtPayloadScope(t *testing.T) {
 		},
 		{
 			uc: "scope claim present as string with multiple values",
-			configure: func(t *testing.T, jp *JwtPayload, ma *MockClaimAsserter) {
+			configure: func(t *testing.T, jp *jwtPayload, ma *MockClaimAsserter) {
 				(*jp)["scope"] = "foo bar"
 				ma.On("AssertScopes", []string{"foo", "bar"}).Return(nil)
 			},
@@ -229,7 +229,7 @@ func TestJwtPayloadScope(t *testing.T) {
 		},
 		{
 			uc: "scope claim as array with single value",
-			configure: func(t *testing.T, jp *JwtPayload, ma *MockClaimAsserter) {
+			configure: func(t *testing.T, jp *jwtPayload, ma *MockClaimAsserter) {
 				(*jp)["scope"] = []string{"foo"}
 				ma.On("AssertScopes", []string{"foo"}).Return(nil)
 			},
@@ -239,7 +239,7 @@ func TestJwtPayloadScope(t *testing.T) {
 		},
 		{
 			uc: "scope claim present as array with multiple values",
-			configure: func(t *testing.T, jp *JwtPayload, ma *MockClaimAsserter) {
+			configure: func(t *testing.T, jp *jwtPayload, ma *MockClaimAsserter) {
 				(*jp)["scope"] = []string{"foo", "bar"}
 				ma.On("AssertScopes", []string{"foo", "bar"}).Return(nil)
 			},
@@ -251,7 +251,7 @@ func TestJwtPayloadScope(t *testing.T) {
 		t.Run("case="+tc.uc, func(t *testing.T) {
 			// GIVEN
 			m := &MockClaimAsserter{}
-			jp := JwtPayload{}
+			jp := jwtPayload{}
 
 			tc.configure(t, &jp, m)
 
@@ -273,7 +273,7 @@ func TestJwtPayloadValidity(t *testing.T) {
 	m := &MockClaimAsserter{}
 	m.On("AssertValidity", nbf, exp).Return(nil)
 
-	jp := JwtPayload{"nbf": nbf, "exp": exp}
+	jp := jwtPayload{"nbf": nbf, "exp": exp}
 
 	// WHEN
 	err := jp.checkTimeValidity(m)
@@ -286,12 +286,12 @@ func TestJwtPayloadValidity(t *testing.T) {
 func TestJwtPayloadVerify(t *testing.T) {
 	for _, tc := range []struct {
 		uc        string
-		configure func(t *testing.T, jp *JwtPayload, ma *MockClaimAsserter)
+		configure func(t *testing.T, jp *jwtPayload, ma *MockClaimAsserter)
 		assert    func(t *testing.T, err error)
 	}{
 		{
 			uc: "no errors raised by asserter",
-			configure: func(t *testing.T, jp *JwtPayload, ma *MockClaimAsserter) {
+			configure: func(t *testing.T, jp *jwtPayload, ma *MockClaimAsserter) {
 				(*jp)["iss"] = "foo"
 				(*jp)["jti"] = "foobar"
 				ma.On("AssertIssuer", "foo").Return(nil)
@@ -303,7 +303,7 @@ func TestJwtPayloadVerify(t *testing.T) {
 		},
 		{
 			uc: "jti is missing",
-			configure: func(t *testing.T, jp *JwtPayload, ma *MockClaimAsserter) {
+			configure: func(t *testing.T, jp *jwtPayload, ma *MockClaimAsserter) {
 				(*jp)["iss"] = "foo"
 				ma.On("AssertIssuer", "foo").Return(nil)
 				ma.On("AssertAudience", []string{}).Return(nil)
@@ -313,12 +313,12 @@ func TestJwtPayloadVerify(t *testing.T) {
 		},
 		{
 			uc:        "missing iss claim",
-			configure: func(t *testing.T, jp *JwtPayload, ma *MockClaimAsserter) {},
+			configure: func(t *testing.T, jp *jwtPayload, ma *MockClaimAsserter) {},
 			assert:    func(t *testing.T, err error) { assert.Error(t, err) },
 		},
 		{
 			uc: "audience verification raises error",
-			configure: func(t *testing.T, jp *JwtPayload, ma *MockClaimAsserter) {
+			configure: func(t *testing.T, jp *jwtPayload, ma *MockClaimAsserter) {
 				(*jp)["iss"] = "foo"
 				(*jp)["jti"] = "foobar"
 				ma.On("AssertIssuer", "foo").Return(nil)
@@ -328,7 +328,7 @@ func TestJwtPayloadVerify(t *testing.T) {
 		},
 		{
 			uc: "scopes verification raises error",
-			configure: func(t *testing.T, jp *JwtPayload, ma *MockClaimAsserter) {
+			configure: func(t *testing.T, jp *jwtPayload, ma *MockClaimAsserter) {
 				(*jp)["iss"] = "foo"
 				(*jp)["jti"] = "foobar"
 				ma.On("AssertIssuer", "foo").Return(nil)
@@ -339,7 +339,7 @@ func TestJwtPayloadVerify(t *testing.T) {
 		},
 		{
 			uc: "validity verification raises error",
-			configure: func(t *testing.T, jp *JwtPayload, ma *MockClaimAsserter) {
+			configure: func(t *testing.T, jp *jwtPayload, ma *MockClaimAsserter) {
 				(*jp)["iss"] = "foo"
 				(*jp)["jti"] = "foobar"
 				ma.On("AssertIssuer", "foo").Return(nil)
@@ -353,7 +353,7 @@ func TestJwtPayloadVerify(t *testing.T) {
 		t.Run("case="+tc.uc, func(t *testing.T) {
 			// GIVEN
 			m := &MockClaimAsserter{}
-			jp := JwtPayload{}
+			jp := jwtPayload{}
 
 			tc.configure(t, &jp, m)
 
