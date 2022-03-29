@@ -21,7 +21,7 @@ import (
 
 type jwtAuthenticator struct {
 	Endpoint         Endpoint
-	Assertions       oauth2.Assertions
+	Assertions       handler.Assertions
 	SubjectExtractor SubjectExtrator
 	AuthDataGetter   AuthDataGetter
 }
@@ -30,7 +30,7 @@ func NewJwtAuthenticatorFromYAML(rawConfig []byte) (*jwtAuthenticator, error) {
 	type _config struct {
 		Endpoint       endpoint.Endpoint        `yaml:"jwks_endpoint"`
 		AuthDataSource authenticationDataSource `yaml:"jwt_token_from"`
-		Assertions     oauth2.Assertions        `yaml:"jwt_assertions"`
+		Assertions     handler.Assertions       `yaml:"jwt_assertions"`
 		Session        Session                  `yaml:"session"`
 	}
 
@@ -48,6 +48,18 @@ func NewJwtAuthenticatorFromYAML(rawConfig []byte) (*jwtAuthenticator, error) {
 	}
 	if len(c.Endpoint.Method) == 0 {
 		c.Endpoint.Method = "GET"
+	}
+
+	if len(c.Assertions.AllowedAlgorithms) == 0 {
+		c.Assertions.AllowedAlgorithms = []string{
+			string(jose.ES256),
+			string(jose.RS256),
+			string(jose.RS384),
+			string(jose.RS512),
+			string(jose.PS256),
+			string(jose.PS384),
+			string(jose.PS512),
+		}
 	}
 
 	if err := c.Assertions.Validate(); err != nil {
@@ -162,7 +174,7 @@ func (a *jwtAuthenticator) verifyTokenAndGetClaims(jwtRaw string, jwks jose.JSON
 		return nil, err
 	}
 
-	if err = payload.Verify(a.Assertions); err != nil {
+	if err = payload.Verify(&a.Assertions); err != nil {
 		return nil, err
 	}
 
@@ -181,7 +193,7 @@ func (a *jwtAuthenticator) WithConfig(config []byte) (handler.Authenticator, err
 	}
 
 	type _config struct {
-		Assertions oauth2.Assertions `yaml:"jwt_assertions"`
+		Assertions handler.Assertions `yaml:"jwt_assertions"`
 	}
 
 	var c _config

@@ -19,14 +19,14 @@ type oauth2IntrospectionAuthenticator struct {
 	AuthDataGetter   AuthDataGetter
 	Endpoint         Endpoint
 	SubjectExtractor SubjectExtrator
-	Assertions       oauth2.Assertions
+	Assertions       handler.Assertions
 }
 
 func NewOAuth2IntrospectionAuthenticatorFromJSON(rawConfig json.RawMessage) (*oauth2IntrospectionAuthenticator, error) {
 	type _config struct {
-		Endpoint   endpoint.Endpoint `json:"introspection_endpoint"`
-		Assertions oauth2.Assertions `json:"introspection_response_assertions"`
-		Session    Session           `json:"session"`
+		Endpoint   endpoint.Endpoint  `json:"introspection_endpoint"`
+		Assertions handler.Assertions `json:"introspection_response_assertions"`
+		Session    Session            `json:"session"`
 	}
 
 	var c _config
@@ -72,7 +72,7 @@ func (a *oauth2IntrospectionAuthenticator) Authenticate(ctx context.Context, as 
 		return fmt.Errorf("failed to unmarshal introspection response: %w", err)
 	}
 
-	if err = resp.Verify(a.Assertions); err != nil {
+	if err = resp.Verify(&a.Assertions); err != nil {
 		return &errorsx.UnauthorizedError{
 			Message: "access token does not satisfy assertion conditions",
 			Cause:   err,
@@ -93,7 +93,7 @@ func (a *oauth2IntrospectionAuthenticator) WithConfig(config []byte) (handler.Au
 	}
 
 	type _config struct {
-		Assertions oauth2.Assertions `json:"introspection_response_assertions"`
+		Assertions handler.Assertions `json:"introspection_response_assertions"`
 	}
 
 	var c _config
