@@ -3,8 +3,8 @@ package heimdall
 import "net/http"
 
 type Subject struct {
-	Id         string                 `json:"id"`
-	Attributes map[string]interface{} `json:"attributes"`
+	Id         string      `json:"id"`
+	Attributes interface{} `json:"attributes"`
 }
 
 type SubjectContext struct {
