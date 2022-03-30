@@ -1,14 +1,11 @@
 package authenticators
 
 import (
-	"encoding/json"
 	"errors"
-	"fmt"
 
 	"github.com/tidwall/gjson"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/x/stringsx"
 )
 
 type Session struct {
@@ -24,24 +21,16 @@ func (s *Session) Validate() error {
 }
 
 func (s *Session) GetSubject(rawData []byte) (*heimdall.Subject, error) {
-	var (
-		subjectId  string
-		attributes map[string]interface{}
-	)
-
-	rawSubjectId := []byte(stringsx.Coalesce(gjson.GetBytes(rawData, s.SubjectFrom).Raw, "null"))
-	if err := json.Unmarshal(rawSubjectId, &subjectId); err != nil {
-		return nil, fmt.Errorf("configured subject_from GJSON path returned an error on JSON output: %w", err)
-	}
-
 	attributesFrom := "@this"
 	if len(s.AttributesFrom) != 0 {
 		attributesFrom = s.AttributesFrom
 	}
-	rawAttributes := []byte(stringsx.Coalesce(gjson.GetBytes(rawData, attributesFrom).Raw, "null"))
-	if err := json.Unmarshal(rawAttributes, &attributes); err != nil {
-		return nil, fmt.Errorf("configured attributes_from GJSON path returned an error on JSON output: %w", err)
+
+	subjectId := gjson.GetBytes(rawData, s.SubjectFrom).String()
+	if len(subjectId) == 0 {
+		return nil, errors.New("failed to extract subject identifier")
 	}
+	attributes := gjson.GetBytes(rawData, attributesFrom).Value()
 
 	return &heimdall.Subject{
 		Id:         subjectId,
