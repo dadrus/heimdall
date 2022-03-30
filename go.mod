@@ -3,7 +3,7 @@ module github.com/dadrus/heimdall
 go 1.18
 
 require (
-	github.com/fsnotify/fsnotify v1.4.9
+	github.com/fsnotify/fsnotify v1.5.1
 	github.com/gofiber/fiber/v2 v2.31.0
 	github.com/knadh/koanf v1.4.0
 	github.com/mitchellh/mapstructure v1.4.3
