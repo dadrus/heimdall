@@ -5,26 +5,6 @@ import (
 	"strings"
 )
 
-type ClaimAsserter interface {
-	AssertIssuer(issuer string) error
-	AssertAudience(audience []string) error
-	AssertScopes(scopes []string) error
-	AssertValidity(nbf, exp int64) error
-	IsAlgorithmAllowed(string) bool
-}
-
-func getClaim[T any](claims map[string]interface{}, name string, defVal T) T {
-	if c, ok := claims[name]; ok {
-		if v, ok := c.(T); !ok {
-			return defVal
-		} else {
-			return v
-		}
-	}
-
-	return defVal
-}
-
 type JwtPayload map[string]interface{}
 
 func (jp JwtPayload) checkIssuer(asserter ClaimAsserter) error {
