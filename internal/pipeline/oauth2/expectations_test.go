@@ -1,4 +1,4 @@
-package handler
+package oauth2
 
 import (
 	"testing"
@@ -96,7 +96,7 @@ func TestValidityAssertion(t *testing.T) {
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
 			// GIVEN
-			a := &Assertions{}
+			a := &Expectation{}
 
 			// WHEN
 			err := a.AssertValidity(tc.validities[0], tc.validities[1])

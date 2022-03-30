@@ -194,7 +194,7 @@ func TestSuccessfulExecutionOfJwtAuthenticator(t *testing.T) {
 		Endpoint:         e,
 		SubjectExtractor: se,
 		AuthDataGetter:   adg,
-		Asserter:         as,
+		Session:          as,
 	}
 
 	// WHEN

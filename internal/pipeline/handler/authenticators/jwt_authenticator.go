@@ -21,7 +21,7 @@ import (
 
 type jwtAuthenticator struct {
 	Endpoint         Endpoint
-	Asserter         oauth2.ClaimAsserter
+	Assertions       oauth2.Expectation
 	SubjectExtractor SubjectExtrator
 	AuthDataGetter   AuthDataGetter
 }
@@ -30,7 +30,7 @@ func NewJwtAuthenticatorFromYAML(rawConfig []byte) (*jwtAuthenticator, error) {
 	type _config struct {
 		Endpoint       endpoint.Endpoint        `yaml:"jwks_endpoint"`
 		AuthDataSource authenticationDataSource `yaml:"jwt_token_from"`
-		Assertions     handler.Assertions       `yaml:"jwt_assertions"`
+		Assertions     oauth2.Expectation       `yaml:"jwt_assertions"`
 		Session        Session                  `yaml:"session"`
 	}
 
@@ -90,7 +90,7 @@ func NewJwtAuthenticatorFromYAML(rawConfig []byte) (*jwtAuthenticator, error) {
 
 	return &jwtAuthenticator{
 		Endpoint:         c.Endpoint,
-		Asserter:         &c.Assertions,
+		Assertions:       c.Assertions,
 		SubjectExtractor: &c.Session,
 		AuthDataGetter:   adg,
 	}, nil
@@ -127,24 +127,11 @@ func (a *jwtAuthenticator) Authenticate(ctx context.Context, as handler.RequestC
 }
 
 func (a *jwtAuthenticator) verifyTokenAndGetClaims(jwtRaw string, jwks jose.JSONWebKeySet) (json.RawMessage, error) {
-	var (
-		token *jwt.JSONWebToken
-		err   error
-	)
-
-	delims := strings.Count(jwtRaw, ".")
-	if delims == 2 {
-		token, err = jwt.ParseSigned(jwtRaw)
-	} else if delims == 3 {
-		nestedToken, err := jwt.ParseSignedAndEncrypted(jwtRaw)
-		if err != nil {
-			return nil, err
-		}
-		token, err = nestedToken.Decrypt(&jwks)
-	} else {
-		return nil, errors.New("invalid jwt format")
+	if strings.Count(jwtRaw, ".") != 2 {
+		return nil, errors.New("unsupported jwt format")
 	}
 
+	token, err := jwt.ParseSigned(jwtRaw)
 	if err != nil {
 		return nil, err
 	}
@@ -161,20 +148,24 @@ func (a *jwtAuthenticator) verifyTokenAndGetClaims(jwtRaw string, jwks jose.JSON
 		return nil, errors.New("no (unique) key found for the given key id")
 	}
 
-	if !a.Asserter.IsAlgorithmAllowed(keys[0].Algorithm) {
+	if !a.Assertions.IsAlgorithmAllowed(keys[0].Algorithm) {
 		return nil, fmt.Errorf("%s algorithm is not allowed", keys[0].Algorithm)
 	}
 
-	var tokenClaims oauth2.JwtPayload
-	if err = token.Claims(&jwks, &tokenClaims); err != nil {
+	var mapClaims map[string]interface{}
+	var claims oauth2.Claims
+	if err = token.Claims(&jwks, &mapClaims, &claims); err != nil {
 		return nil, err
 	}
 
-	if err = tokenClaims.Verify(a.Asserter); err != nil {
-		return nil, err
+	if err := claims.Validate(a.Assertions); err != nil {
+		return nil, &errorsx.UnauthorizedError{
+			Message: "access token does not satisfy assertion conditions",
+			Cause:   err,
+		}
 	}
 
-	rawPayload, err := json.Marshal(tokenClaims)
+	rawPayload, err := json.Marshal(mapClaims)
 	if err != nil {
 		return nil, err
 	}
@@ -189,7 +180,7 @@ func (a *jwtAuthenticator) WithConfig(config []byte) (handler.Authenticator, err
 	}
 
 	type _config struct {
-		Assertions handler.Assertions `yaml:"jwt_assertions"`
+		Assertions oauth2.Expectation `yaml:"jwt_assertions"`
 	}
 
 	var c _config
@@ -199,7 +190,7 @@ func (a *jwtAuthenticator) WithConfig(config []byte) (handler.Authenticator, err
 
 	return &jwtAuthenticator{
 		Endpoint:         a.Endpoint,
-		Asserter:         &c.Assertions,
+		Assertions:       c.Assertions,
 		SubjectExtractor: a.SubjectExtractor,
 		AuthDataGetter:   a.AuthDataGetter,
 	}, nil

@@ -532,12 +532,11 @@
         "scope_strategy": {
           "description": "Sets the strategy validation algorithm.",
           "type": "string",
-          "default": "none",
+          "default": "exact",
           "enum": [
             "hierarchic",
             "exact",
-            "wildcard",
-            "none"
+            "wildcard"
           ]
         },
         "required_scopes": {
