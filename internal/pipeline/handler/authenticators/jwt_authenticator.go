@@ -39,6 +39,13 @@ func NewJwtAuthenticatorFromYAML(rawConfig []byte) (*jwtAuthenticator, error) {
 		return nil, err
 	}
 
+	if err := c.JwtAssertions.Validate(); err != nil {
+		return nil, &errorsx.ArgumentError{
+			Message: "failed to validate assertions configuration",
+			Cause:   err,
+		}
+	}
+
 	if c.Endpoint.Headers == nil {
 		c.Endpoint.Headers = make(map[string]string)
 	}
@@ -56,13 +63,6 @@ func NewJwtAuthenticatorFromYAML(rawConfig []byte) (*jwtAuthenticator, error) {
 			string(jose.ES256), string(jose.ES384), string(jose.ES512),
 			// RSA-PSS
 			string(jose.PS256), string(jose.PS384), string(jose.PS512),
-		}
-	}
-
-	if err := c.JwtAssertions.Validate(); err != nil {
-		return nil, &errorsx.ArgumentError{
-			Message: "failed to validate assertions configuration",
-			Cause:   err,
 		}
 	}
 
