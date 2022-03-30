@@ -20,17 +20,17 @@ import (
 )
 
 type jwtAuthenticator struct {
-	Endpoint         Endpoint
-	Assertions       oauth2.Expectation
-	SubjectExtractor SubjectExtrator
-	AuthDataGetter   AuthDataGetter
+	e   Endpoint
+	a   oauth2.Expectation
+	se  SubjectExtrator
+	adg AuthDataGetter
 }
 
 func NewJwtAuthenticatorFromYAML(rawConfig []byte) (*jwtAuthenticator, error) {
 	type _config struct {
 		Endpoint       endpoint.Endpoint        `yaml:"jwks_endpoint"`
 		AuthDataSource authenticationDataSource `yaml:"jwt_token_from"`
-		Assertions     oauth2.Expectation       `yaml:"jwt_assertions"`
+		JwtAssertions  oauth2.Expectation       `yaml:"jwt_assertions"`
 		Session        Session                  `yaml:"session"`
 	}
 
@@ -50,8 +50,8 @@ func NewJwtAuthenticatorFromYAML(rawConfig []byte) (*jwtAuthenticator, error) {
 		c.Endpoint.Method = "GET"
 	}
 
-	if len(c.Assertions.AllowedAlgorithms) == 0 {
-		c.Assertions.AllowedAlgorithms = []string{
+	if len(c.JwtAssertions.AllowedAlgorithms) == 0 {
+		c.JwtAssertions.AllowedAlgorithms = []string{
 			// ECDSA
 			string(jose.ES256), string(jose.ES384), string(jose.ES512),
 			// RSA-PSS
@@ -59,7 +59,7 @@ func NewJwtAuthenticatorFromYAML(rawConfig []byte) (*jwtAuthenticator, error) {
 		}
 	}
 
-	if err := c.Assertions.Validate(); err != nil {
+	if err := c.JwtAssertions.Validate(); err != nil {
 		return nil, &errorsx.ArgumentError{
 			Message: "failed to validate assertions configuration",
 			Cause:   err,
@@ -89,16 +89,16 @@ func NewJwtAuthenticatorFromYAML(rawConfig []byte) (*jwtAuthenticator, error) {
 	}
 
 	return &jwtAuthenticator{
-		Endpoint:         c.Endpoint,
-		Assertions:       c.Assertions,
-		SubjectExtractor: &c.Session,
-		AuthDataGetter:   adg,
+		e:   c.Endpoint,
+		a:   c.JwtAssertions,
+		se:  &c.Session,
+		adg: adg,
 	}, nil
 }
 
 func (a *jwtAuthenticator) Authenticate(ctx context.Context, as handler.RequestContext, sc *heimdall.SubjectContext) error {
 	// request jwks endpoint to verify jwt
-	rawBody, err := a.Endpoint.SendRequest(ctx, nil)
+	rawBody, err := a.e.SendRequest(ctx, nil)
 	if err != nil {
 		return err
 	}
@@ -109,7 +109,7 @@ func (a *jwtAuthenticator) Authenticate(ctx context.Context, as handler.RequestC
 		return err
 	}
 
-	jwtRaw, err := a.AuthDataGetter.GetAuthData(as)
+	jwtRaw, err := a.adg.GetAuthData(as)
 	if err != nil {
 		return &errorsx.ArgumentError{Message: "no jwt present", Cause: err}
 	}
@@ -119,7 +119,7 @@ func (a *jwtAuthenticator) Authenticate(ctx context.Context, as handler.RequestC
 		return err
 	}
 
-	if sc.Subject, err = a.SubjectExtractor.GetSubject(rawClaims); err != nil {
+	if sc.Subject, err = a.se.GetSubject(rawClaims); err != nil {
 		return err
 	}
 
@@ -148,7 +148,7 @@ func (a *jwtAuthenticator) verifyTokenAndGetClaims(jwtRaw string, jwks jose.JSON
 		return nil, errors.New("no (unique) key found for the given key id")
 	}
 
-	if !a.Assertions.IsAlgorithmAllowed(keys[0].Algorithm) {
+	if !a.a.IsAlgorithmAllowed(keys[0].Algorithm) {
 		return nil, fmt.Errorf("%s algorithm is not allowed", keys[0].Algorithm)
 	}
 
@@ -158,7 +158,7 @@ func (a *jwtAuthenticator) verifyTokenAndGetClaims(jwtRaw string, jwks jose.JSON
 		return nil, err
 	}
 
-	if err := claims.Validate(a.Assertions); err != nil {
+	if err := claims.Validate(a.a); err != nil {
 		return nil, &errorsx.UnauthorizedError{
 			Message: "access token does not satisfy assertion conditions",
 			Cause:   err,
@@ -180,7 +180,7 @@ func (a *jwtAuthenticator) WithConfig(config []byte) (handler.Authenticator, err
 	}
 
 	type _config struct {
-		Assertions oauth2.Expectation `yaml:"jwt_assertions"`
+		JwtAssertions oauth2.Expectation `yaml:"jwt_assertions"`
 	}
 
 	var c _config
@@ -189,9 +189,9 @@ func (a *jwtAuthenticator) WithConfig(config []byte) (handler.Authenticator, err
 	}
 
 	return &jwtAuthenticator{
-		Endpoint:         a.Endpoint,
-		Assertions:       c.Assertions,
-		SubjectExtractor: a.SubjectExtractor,
-		AuthDataGetter:   a.AuthDataGetter,
+		e:   a.e,
+		a:   c.JwtAssertions,
+		se:  a.se,
+		adg: a.adg,
 	}, nil
 }

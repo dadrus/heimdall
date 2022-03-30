@@ -4,11 +4,15 @@ import (
 	"context"
 	"crypto/rand"
 	"crypto/rsa"
+	"encoding/base64"
 	"encoding/json"
 	"io"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/pipeline/oauth2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -51,11 +55,11 @@ session:
 			assert: func(t *testing.T, err error, a *jwtAuthenticator) {
 				require.NoError(t, err)
 
-				assert.IsType(t, extractors.CompositeExtractStrategy{}, a.AuthDataGetter)
+				assert.IsType(t, extractors.CompositeExtractStrategy{}, a.adg)
 
-				assert.Contains(t, a.AuthDataGetter, extractors.HeaderValueExtractStrategy{Name: "Authorization", Prefix: "Bearer"})
-				assert.Contains(t, a.AuthDataGetter, extractors.FormParameterExtractStrategy{Name: "access_token"})
-				assert.Contains(t, a.AuthDataGetter, extractors.QueryParameterExtractStrategy{Name: "access_token"})
+				assert.Contains(t, a.adg, extractors.HeaderValueExtractStrategy{Name: "Authorization", Prefix: "Bearer"})
+				assert.Contains(t, a.adg, extractors.FormParameterExtractStrategy{Name: "access_token"})
+				assert.Contains(t, a.adg, extractors.QueryParameterExtractStrategy{Name: "access_token"})
 			},
 		},
 		{
@@ -84,8 +88,8 @@ jwt_assertions:
     - foobar`),
 			assert: func(t *testing.T, err error, a *jwtAuthenticator) {
 				assert.NoError(t, err)
-				assert.IsType(t, &Session{}, a.SubjectExtractor)
-				s := a.SubjectExtractor.(*Session)
+				assert.IsType(t, &Session{}, a.se)
+				s := a.se.(*Session)
 				assert.Equal(t, "sub", s.SubjectFrom)
 			},
 		},
@@ -131,7 +135,7 @@ session:
 	}
 }
 
-func setup(t *testing.T, subject string, issuer string) ([]byte, string) {
+func setup(t *testing.T, subject, issuer, audience string) ([]byte, string) {
 	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	require.NoError(t, err)
 
@@ -149,10 +153,15 @@ func setup(t *testing.T, subject string, issuer string) ([]byte, string) {
 	require.NoError(t, err)
 
 	builder := jwt.Signed(signer)
-	builder = builder.Claims(&jwt.Claims{
-		Subject: subject,
-		Issuer:  issuer,
-		ID:      "foo",
+	builder = builder.Claims(map[string]interface{}{
+		"sub": subject,
+		"iss": issuer,
+		"jti": "foo",
+		"iat": time.Now().Unix() - 1,
+		"nbf": time.Now().Unix() - 1,
+		"exp": time.Now().Unix() + 2,
+		"aud": []string{audience},
+		"scp": []string{"foo", "bar"},
 	})
 	rawJwt, err := builder.CompactSerialize()
 	require.NoError(t, err)
@@ -164,14 +173,17 @@ func TestSuccessfulExecutionOfJwtAuthenticator(t *testing.T) {
 	// GIVEN
 	subject := "foo"
 	issuer := "foobar"
-	jwks, jwt := setup(t, subject, issuer)
+	audience := "bar"
+	jwks, jwt := setup(t, subject, issuer, audience)
 
-	as := &MockClaimAsserter{}
-	as.On("AssertIssuer", mock.Anything).Return(nil)
-	as.On("AssertAudience", mock.Anything).Return(nil)
-	as.On("AssertScopes", mock.Anything).Return(nil)
-	as.On("AssertValidity", mock.Anything, mock.Anything).Return(nil)
-	as.On("IsAlgorithmAllowed", string(jose.PS512)).Return(true)
+	as := oauth2.Expectation{
+		ScopeStrategy:     oauth2.ExactScopeStrategy,
+		RequiredScopes:    []string{"foo"},
+		TargetAudiences:   []string{audience},
+		TrustedIssuers:    []string{issuer},
+		AllowedAlgorithms: []string{string(jose.PS512)},
+		ValidityLeeway:    oauth2.Duration(1 * time.Minute),
+	}
 
 	sc := &heimdall.SubjectContext{}
 	sub := &heimdall.Subject{Id: subject}
@@ -187,18 +199,22 @@ func TestSuccessfulExecutionOfJwtAuthenticator(t *testing.T) {
 	}),
 	).Return(jwks, nil)
 
+	encJwtPayload := strings.Split(jwt, ".")[1]
+	rawPaload, err := base64.RawStdEncoding.DecodeString(encJwtPayload)
+	require.NoError(t, err)
+
 	se := &MockSubjectExtractor{}
-	se.On("GetSubject", []byte(`{"iss":"foobar","jti":"foo","sub":"foo"}`)).Return(sub, nil)
+	se.On("GetSubject", rawPaload).Return(sub, nil)
 
 	a := jwtAuthenticator{
-		Endpoint:         e,
-		SubjectExtractor: se,
-		AuthDataGetter:   adg,
-		Session:          as,
+		e:   e,
+		a:   as,
+		se:  se,
+		adg: adg,
 	}
 
 	// WHEN
-	err := a.Authenticate(ctx, mrc, sc)
+	err = a.Authenticate(ctx, mrc, sc)
 
 	// THEN
 	require.NoError(t, err)
