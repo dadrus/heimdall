@@ -12,7 +12,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/dadrus/heimdall/internal/pipeline/oauth2"
 	"github.com/ybbus/httpretry"
 
 	"github.com/dadrus/heimdall/internal/x/httpx"
@@ -24,12 +23,12 @@ type ClientCredentialsStrategy struct {
 	Scopes       []string `json:"scopes"`
 	TokenUrl     string   `json:"token_url"`
 
-	lastResponse *oauth2.TokenEndpointResponse
+	lastResponse *tokenEndpointResponse
 	mutex        sync.RWMutex
 }
 
 func (c *ClientCredentialsStrategy) Apply(ctx context.Context, req *http.Request) error {
-	var tokenInfo oauth2.TokenEndpointResponse
+	var tokenInfo tokenEndpointResponse
 
 	// ensure the token has still 15 seconds lifetime
 	c.mutex.RLock()
@@ -56,7 +55,7 @@ func (c *ClientCredentialsStrategy) Apply(ctx context.Context, req *http.Request
 	return nil
 }
 
-func (c *ClientCredentialsStrategy) getAccessToken(ctx context.Context) (*oauth2.TokenEndpointResponse, error) {
+func (c *ClientCredentialsStrategy) getAccessToken(ctx context.Context) (*tokenEndpointResponse, error) {
 	client := httpretry.NewCustomClient(
 		&http.Client{
 			Transport: &httpx.TracingRoundTripper{Next: http.DefaultTransport},
@@ -88,8 +87,8 @@ func (c *ClientCredentialsStrategy) getAccessToken(ctx context.Context) (*oauth2
 	return readResponse(resp)
 }
 
-func readResponse(resp *http.Response) (*oauth2.TokenEndpointResponse, error) {
-	var r oauth2.TokenEndpointResponse
+func readResponse(resp *http.Response) (*tokenEndpointResponse, error) {
+	var r tokenEndpointResponse
 	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
 		rawData, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
