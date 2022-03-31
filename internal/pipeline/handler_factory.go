@@ -11,6 +11,13 @@ import (
 	"github.com/dadrus/heimdall/internal/pipeline/handler/mutators"
 )
 
+var (
+	ErrNoDefaultAuthenticator = errors.New("no default authenticators configured")
+	ErrNoDefaultAuthorizer    = errors.New("no default authorizer configured")
+	ErrNoDefaultMutator       = errors.New("no default mutator configured")
+	ErrNoDefaultErrorHandler  = errors.New("no default error handler configured")
+)
+
 type HandlerFactory interface {
 	CreateAuthenticator([]config.PipelineObjectReference) (handler.Authenticator, error)
 	CreateAuthorizer(*config.PipelineObjectReference) (handler.Authorizer, error)
@@ -19,15 +26,15 @@ type HandlerFactory interface {
 	CreateErrorHandler([]config.PipelineObjectReference) (handler.ErrorHandler, error)
 }
 
-func NewHandlerFactory(c config.Configuration) (HandlerFactory, error) {
-	r, err := newHandlerPrototypeRepository(c)
+func NewHandlerFactory(conf config.Configuration) (HandlerFactory, error) {
+	repository, err := newHandlerPrototypeRepository(conf)
 	if err != nil {
 		return nil, err
 	}
 
 	return &handlerFactory{
-		r:  r,
-		dp: c.Rules.Default,
+		r:  repository,
+		dp: conf.Rules.Default,
 	}, nil
 }
 
@@ -36,60 +43,74 @@ type handlerFactory struct {
 	dp config.Pipeline
 }
 
-func (hf *handlerFactory) CreateAuthenticator(configured []config.PipelineObjectReference) (handler.Authenticator, error) {
-	var refs []config.PipelineObjectReference
-	if len(configured) == 0 {
+func (hf *handlerFactory) CreateAuthenticator(pors []config.PipelineObjectReference) (handler.Authenticator, error) {
+	var (
+		refs []config.PipelineObjectReference
+		list authenticators.CompositeAuthenticator
+	)
+
+	if len(pors) == 0 {
 		if len(hf.dp.Authenticators) == 0 {
-			return nil, errors.New("no default authenticators configured")
+			return nil, ErrNoDefaultAuthenticator
 		}
+
 		refs = hf.dp.Authenticators
 	} else {
-		refs = configured
+		refs = pors
 	}
 
-	var ans authenticators.CompositeAuthenticator
 	for _, ref := range refs {
-		a, err := hf.r.Authenticator(ref.Id)
+		prototype, err := hf.r.Authenticator(ref.Id)
 		if err != nil {
 			return nil, err
 		}
 
 		if len(ref.Config) != 0 {
-			na, err := a.WithConfig(ref.Config)
+			authenticator, err := prototype.WithConfig(ref.Config)
 			if err != nil {
 				return nil, err
 			}
-			ans = append(ans, na)
+
+			list = append(list, authenticator)
 		} else {
-			ans = append(ans, a)
+			list = append(list, prototype)
 		}
 	}
 
-	return ans, nil
+	return list, nil
 }
 
 func (hf *handlerFactory) CreateAuthorizer(configured *config.PipelineObjectReference) (handler.Authorizer, error) {
 	var ref *config.PipelineObjectReference
+
 	if configured == nil {
 		if hf.dp.Authorizer == nil {
-			return nil, errors.New("no default authorizer configured")
+			return nil, ErrNoDefaultAuthorizer
 		}
+
 		ref = hf.dp.Authorizer
 	} else {
 		ref = configured
 	}
 
-	a, err := hf.r.Authorizer(ref.Id)
+	prototype, err := hf.r.Authorizer(ref.Id)
 	if err == nil {
 		if len(ref.Config) != 0 {
-			return a.WithConfig(ref.Config)
+			return prototype.WithConfig(ref.Config)
 		}
-		return a, nil
+
+		return prototype, nil
 	}
-	return a, err
+
+	return prototype, err
 }
+
 func (hf *handlerFactory) CreateHydrator(configured []config.PipelineObjectReference) (handler.Hydrator, error) {
-	var refs []config.PipelineObjectReference
+	var (
+		refs []config.PipelineObjectReference
+		list hydrators.CompositeHydrator
+	)
+
 	if len(configured) == 0 {
 		if len(hf.dp.Hydrators) != 0 {
 			refs = hf.dp.Hydrators
@@ -98,85 +119,97 @@ func (hf *handlerFactory) CreateHydrator(configured []config.PipelineObjectRefer
 		refs = configured
 	}
 
-	var hs hydrators.CompositeHydrator
 	for _, ref := range refs {
-		h, err := hf.r.Hydrator(ref.Id)
+		prototype, err := hf.r.Hydrator(ref.Id)
 		if err != nil {
 			return nil, err
 		}
 
 		if len(ref.Config) != 0 {
-			nh, err := h.WithConfig(ref.Config)
+			hydrator, err := prototype.WithConfig(ref.Config)
 			if err != nil {
 				return nil, err
 			}
-			hs = append(hs, nh)
+
+			list = append(list, hydrator)
 		} else {
-			hs = append(hs, h)
+			list = append(list, prototype)
 		}
 	}
 
-	return hs, nil
+	return list, nil
 }
+
 func (hf *handlerFactory) CreateMutator(configured []config.PipelineObjectReference) (handler.Mutator, error) {
-	var refs []config.PipelineObjectReference
+	var (
+		refs []config.PipelineObjectReference
+		list mutators.CompositeMutator
+	)
+
 	if len(configured) == 0 {
 		if len(hf.dp.Mutators) == 0 {
-			return nil, errors.New("no default mutators configured")
+			return nil, ErrNoDefaultMutator
 		}
+
 		refs = hf.dp.Mutators
 	} else {
 		refs = configured
 	}
 
-	var ms mutators.CompositeMutator
 	for _, ref := range refs {
-		m, err := hf.r.Mutator(ref.Id)
+		prototype, err := hf.r.Mutator(ref.Id)
 		if err != nil {
 			return nil, err
 		}
 
 		if len(ref.Config) != 0 {
-			nm, err := m.WithConfig(ref.Config)
+			mutator, err := prototype.WithConfig(ref.Config)
 			if err != nil {
 				return nil, err
 			}
-			ms = append(ms, nm)
+
+			list = append(list, mutator)
 		} else {
-			ms = append(ms, m)
+			list = append(list, prototype)
 		}
 	}
 
-	return ms, nil
+	return list, nil
 }
-func (hf *handlerFactory) CreateErrorHandler(configured []config.PipelineObjectReference) (handler.ErrorHandler, error) {
-	var refs []config.PipelineObjectReference
-	if len(configured) == 0 {
+
+func (hf *handlerFactory) CreateErrorHandler(pors []config.PipelineObjectReference) (handler.ErrorHandler, error) {
+	var (
+		refs []config.PipelineObjectReference
+		list error_handlers.CompositeErrorHandler
+	)
+
+	if len(pors) == 0 {
 		if len(hf.dp.ErrorHandlers) == 0 {
-			return nil, errors.New("no default error handler configured")
+			return nil, ErrNoDefaultErrorHandler
 		}
+
 		refs = hf.dp.ErrorHandlers
 	} else {
-		refs = configured
+		refs = pors
 	}
 
-	var ehs error_handlers.CompositeErrorHandler
 	for _, ref := range refs {
-		eh, err := hf.r.ErrorHandler(ref.Id)
+		prototype, err := hf.r.ErrorHandler(ref.Id)
 		if err != nil {
 			return nil, err
 		}
 
 		if len(ref.Config) != 0 {
-			neh, err := eh.WithConfig(ref.Config)
+			errorHandler, err := prototype.WithConfig(ref.Config)
 			if err != nil {
 				return nil, err
 			}
-			ehs = append(ehs, neh)
+
+			list = append(list, errorHandler)
 		} else {
-			ehs = append(ehs, eh)
+			list = append(list, prototype)
 		}
 	}
 
-	return ehs, nil
+	return list, nil
 }
