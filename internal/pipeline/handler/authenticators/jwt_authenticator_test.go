@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/pipeline/endpoint"
 	"github.com/dadrus/heimdall/internal/pipeline/oauth2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -43,26 +44,6 @@ session:
 			},
 		},
 		{
-			uc: "missing jwt_token_from config",
-			config: []byte(`
-jwks_endpoint:
-  url: http://test.com
-jwt_assertions:
-  trusted_issuers:
-    - foobar
-session:
-  subject_from: some_template`),
-			assert: func(t *testing.T, err error, a *jwtAuthenticator) {
-				require.NoError(t, err)
-
-				assert.IsType(t, extractors.CompositeExtractStrategy{}, a.adg)
-
-				assert.Contains(t, a.adg, extractors.HeaderValueExtractStrategy{Name: "Authorization", Prefix: "Bearer"})
-				assert.Contains(t, a.adg, extractors.FormParameterExtractStrategy{Name: "access_token"})
-				assert.Contains(t, a.adg, extractors.QueryParameterExtractStrategy{Name: "access_token"})
-			},
-		},
-		{
 			uc: "missing trusted_issuers config",
 			config: []byte(`
 jwks_endpoint:
@@ -74,23 +55,6 @@ session:
   subject_from: some_template`),
 			assert: func(t *testing.T, err error, a *jwtAuthenticator) {
 				assert.Error(t, err)
-			},
-		},
-		{
-			uc: "missing session configuration",
-			config: []byte(`
-jwks_endpoint:
-  url: http://test.com
-jwt_token_from:
-  - header: foo-header
-jwt_assertions:
-  trusted_issuers:
-    - foobar`),
-			assert: func(t *testing.T, err error, a *jwtAuthenticator) {
-				assert.NoError(t, err)
-				assert.IsType(t, &Session{}, a.se)
-				s := a.se.(*Session)
-				assert.Equal(t, "sub", s.SubjectFrom)
 			},
 		},
 		{
@@ -109,19 +73,105 @@ foo: bar`),
 			},
 		},
 		{
-			uc: "valid configuration",
+			uc: "valid configuration with defaults",
 			config: []byte(`
 jwks_endpoint:
   url: http://test.com
+jwt_assertions:
+  trusted_issuers:
+    - foobar`),
+			assert: func(t *testing.T, err error, a *jwtAuthenticator) {
+				require.NoError(t, err)
+
+				// endpoint settings
+				require.IsType(t, endpoint.Endpoint{}, a.e)
+				e := a.e.(endpoint.Endpoint)
+				assert.Equal(t, "http://test.com", e.Url)
+				assert.Equal(t, "GET", e.Method)
+				assert.Equal(t, 1, len(e.Headers))
+				assert.Contains(t, e.Headers, "Accept-Type")
+				assert.Equal(t, e.Headers["Accept-Type"], "application/json")
+
+				// token extractor settings
+				assert.IsType(t, extractors.CompositeExtractStrategy{}, a.adg)
+				assert.Contains(t, a.adg, extractors.HeaderValueExtractStrategy{Name: "Authorization", Prefix: "Bearer"})
+				assert.Contains(t, a.adg, extractors.FormParameterExtractStrategy{Name: "access_token"})
+				assert.Contains(t, a.adg, extractors.QueryParameterExtractStrategy{Name: "access_token"})
+
+				// assertions settings
+				assert.Nil(t, a.a.ScopeStrategy)
+				assert.Empty(t, a.a.RequiredScopes)
+				assert.Empty(t, a.a.TargetAudiences)
+				assert.Len(t, a.a.TrustedIssuers, 1)
+				assert.Contains(t, a.a.TrustedIssuers, "foobar")
+				assert.Len(t, a.a.AllowedAlgorithms, 6)
+
+				assert.ElementsMatch(t, a.a.AllowedAlgorithms, []string{
+					string(jose.ES256), string(jose.ES384), string(jose.ES512),
+					string(jose.PS256), string(jose.PS384), string(jose.PS512),
+				})
+				assert.Equal(t, oauth2.Duration(0), a.a.ValidityLeeway)
+
+				// session settings
+				require.IsType(t, &Session{}, a.se)
+				sess := a.se.(*Session)
+				assert.Equal(t, "sub", sess.SubjectFrom)
+				assert.Empty(t, sess.AttributesFrom)
+			},
+		},
+		{
+			uc: "valid configuration with overwrites",
+			config: []byte(`
+jwks_endpoint:
+  url: http://test.com
+  method: POST
+  headers:
+    Accept-Type: application/foobar
 jwt_token_from:
   - header: foo-header
 jwt_assertions:
+  scope_strategy: wildcard
+  required_scopes:
+    - foo
   trusted_issuers:
     - foobar
+  allowed_algorithms:
+    - ES256
 session:
-  subject_from: some_template`),
+  subject_from: some_claim`),
 			assert: func(t *testing.T, err error, a *jwtAuthenticator) {
-				assert.NoError(t, err)
+				require.NoError(t, err)
+
+				// endpoint settings
+				require.IsType(t, endpoint.Endpoint{}, a.e)
+				e := a.e.(endpoint.Endpoint)
+				assert.Equal(t, "http://test.com", e.Url)
+				assert.Equal(t, "POST", e.Method)
+				assert.Equal(t, 1, len(e.Headers))
+				assert.Contains(t, e.Headers, "Accept-Type")
+				assert.Equal(t, e.Headers["Accept-Type"], "application/foobar")
+
+				// token extractor settings
+				assert.IsType(t, extractors.CompositeExtractStrategy{}, a.adg)
+				assert.Len(t, a.adg, 1)
+				assert.Contains(t, a.adg, &extractors.HeaderValueExtractStrategy{Name: "foo-header"})
+
+				// assertions settings
+				assert.NotNil(t, a.a.ScopeStrategy)
+				assert.ElementsMatch(t, a.a.RequiredScopes, []string{"foo"})
+				assert.Empty(t, a.a.TargetAudiences)
+				assert.Len(t, a.a.TrustedIssuers, 1)
+				assert.Contains(t, a.a.TrustedIssuers, "foobar")
+				assert.Len(t, a.a.AllowedAlgorithms, 1)
+
+				assert.ElementsMatch(t, a.a.AllowedAlgorithms, []string{string(jose.ES256)})
+				assert.Equal(t, oauth2.Duration(0), a.a.ValidityLeeway)
+
+				// session settings
+				require.IsType(t, &Session{}, a.se)
+				sess := a.se.(*Session)
+				assert.Equal(t, "some_claim", sess.SubjectFrom)
+				assert.Empty(t, sess.AttributesFrom)
 			},
 		},
 	} {
