@@ -59,8 +59,10 @@ func (c Claims) Validate(a Expectation) error {
 	}
 
 	receivedScopes := x.IfThenElse(len(c.Scp) != 0, c.Scp, c.Scope)
+	checkScope := x.IfThenElse(a.ScopeStrategy != nil, a.ScopeStrategy, ExactScopeStrategy)
+
 	for _, requiredScope := range a.RequiredScopes {
-		if !a.ScopeStrategy(receivedScopes, requiredScope) {
+		if !checkScope(receivedScopes, requiredScope) {
 			return fmt.Errorf("required scope %s is missing", requiredScope)
 		}
 	}
