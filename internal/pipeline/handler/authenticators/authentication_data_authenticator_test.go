@@ -105,7 +105,7 @@ func TestCreateAuthenticationDataAuthenticatorFromPrototypeNotAllowed(t *testing
 func TestSuccessfulExecutionOfAuthenticationDataAuthenticator(t *testing.T) {
 	// GIVEN
 	sc := &heimdall.SubjectContext{}
-	sub := &heimdall.Subject{Id: "bar"}
+	sub := &heimdall.Subject{ID: "bar"}
 	ctx := context.Background()
 	eResp := []byte("foo")
 	authDataVal := "foobar"

@@ -12,6 +12,8 @@ import (
 	"golang.org/x/exp/slices"
 )
 
+var defaultLeeway = time.Duration(10)
+
 // Claims represents public claim values (as specified in RFC 7519).
 type Claims struct {
 	Issuer    string       `json:"iss,omitempty"`
@@ -27,7 +29,7 @@ type Claims struct {
 
 func (c Claims) Validate(a Expectation) error {
 	if !slices.Contains(a.TrustedIssuers, c.Issuer) {
-		return fmt.Errorf("issuer %s is not trusted", c.Issuer)
+		return fmt.Errorf("issuer is not trusted: %s", c.Issuer)
 	}
 
 	for _, aud := range a.TargetAudiences {
@@ -40,7 +42,7 @@ func (c Claims) Validate(a Expectation) error {
 	if a.ValidityLeeway != 0 {
 		leeway = a.ValidityLeeway.Duration()
 	} else {
-		leeway = 10 * time.Second
+		leeway = defaultLeeway * time.Second
 	}
 
 	now := time.Now()
@@ -111,15 +113,15 @@ func (s *Audience) UnmarshalJSON(b []byte) error {
 	case string:
 		*s = strings.Split(v, " ")
 	case []interface{}:
-		a := make([]string, len(v))
+		array := make([]string, len(v))
 		for i, e := range v {
 			s, ok := e.(string)
 			if !ok {
 				return errors.New("failed to unmarshal audience")
 			}
-			a[i] = s
+			array[i] = s
 		}
-		*s = a
+		*s = array
 	default:
 		return errors.New("failed to unmarshal audience")
 	}
@@ -141,15 +143,15 @@ func (s *Scopes) UnmarshalJSON(b []byte) error {
 	case string:
 		*s = strings.Split(v, " ")
 	case []interface{}:
-		a := make([]string, len(v))
+		array := make([]string, len(v))
 		for i, e := range v {
 			s, ok := e.(string)
 			if !ok {
 				return errors.New("failed to unmarshal scopes")
 			}
-			a[i] = s
+			array[i] = s
 		}
-		*s = a
+		*s = array
 	default:
 		return errors.New("failed to unmarshal scopes")
 	}

@@ -32,7 +32,7 @@ type anonymousAuthenticator struct {
 }
 
 func (a *anonymousAuthenticator) Authenticate(_ context.Context, _ handler.RequestContext, sc *heimdall.SubjectContext) error {
-	sc.Subject = &heimdall.Subject{Id: a.Subject}
+	sc.Subject = &heimdall.Subject{ID: a.Subject}
 	return nil
 }
 

@@ -78,6 +78,7 @@ func WildcardScopeStrategy(matchers []string, needle string) bool {
 			if k == len(matcherParts)-1 && len(matcherParts) != len(needleParts) {
 				if c != "*" {
 					noteq = true
+
 					break
 				}
 			}
@@ -87,6 +88,7 @@ func WildcardScopeStrategy(matchers []string, needle string) bool {
 				continue
 			} else if c != needleParts[k] {
 				noteq = true
+
 				break
 			}
 		}

@@ -24,26 +24,27 @@ var Module = fx.Options(
 )
 
 func newFiberApp(conf config.Configuration) *fiber.App {
-	c := conf.DecisionApi
+	api := conf.DecisionAPI
 
 	app := fiber.New(fiber.Config{
 		AppName:      "Heimdall Decision API",
-		ReadTimeout:  c.Timeout.Read,
-		WriteTimeout: c.Timeout.Write,
-		IdleTimeout:  c.Timeout.Idle,
+		ReadTimeout:  api.Timeout.Read,
+		WriteTimeout: api.Timeout.Write,
+		IdleTimeout:  api.Timeout.Idle,
 	})
 	app.Use(recover.New())
 
-	if c.CORS != nil {
+	if api.CORS != nil {
 		app.Use(cors.New(cors.Config{
-			AllowOrigins:     strings.Join(c.CORS.AllowedOrigins, ","),
-			AllowMethods:     strings.Join(c.CORS.AllowedMethods, ","),
-			AllowHeaders:     strings.Join(c.CORS.AllowedHeaders, ","),
-			AllowCredentials: c.CORS.AllowCredentials,
-			ExposeHeaders:    strings.Join(c.CORS.ExposedHeaders, ","),
-			MaxAge:           c.CORS.MaxAge,
+			AllowOrigins:     strings.Join(api.CORS.AllowedOrigins, ","),
+			AllowMethods:     strings.Join(api.CORS.AllowedMethods, ","),
+			AllowHeaders:     strings.Join(api.CORS.AllowedHeaders, ","),
+			AllowCredentials: api.CORS.AllowCredentials,
+			ExposeHeaders:    strings.Join(api.CORS.ExposedHeaders, ","),
+			MaxAge:           api.CORS.MaxAge,
 		}))
 	}
+
 	app.Use(middleware.Logger())
 
 	return app
@@ -56,28 +57,31 @@ type fiberApp struct {
 }
 
 func registerHooks(lifecycle fx.Lifecycle, logger zerolog.Logger, app fiberApp, conf config.Configuration) {
-	c := conf.DecisionApi
+	apiConf := conf.DecisionAPI
 
 	lifecycle.Append(
 		fx.Hook{
 			OnStart: func(ctx context.Context) error {
 				go func() {
 					// service connections
-					addr := c.Address()
+					addr := apiConf.Address()
 					logger.Info().Msgf("Decision API starts listening on: %s", addr)
-					if c.TLS != nil {
-						app.App.ListenTLS(addr, c.TLS.Cert, c.TLS.Key)
+					if apiConf.TLS != nil {
+						if err := app.App.ListenTLS(addr, apiConf.TLS.Cert, apiConf.TLS.Key); err != nil {
+							logger.Fatal().Err(err).Msg("Decision API terminated unexpected")
+						}
 					} else {
-						app.App.Listen(addr)
-					}
-					if err := app.App.Listen(addr); err != nil {
-						logger.Fatal().Err(err).Msg("Decision API terminated unexpected")
+						if err := app.App.Listen(addr); err != nil {
+							logger.Fatal().Err(err).Msg("Decision API terminated unexpected")
+						}
 					}
 				}()
+
 				return nil
 			},
 			OnStop: func(ctx context.Context) error {
 				logger.Info().Msg("Tearing down Decision API!")
+
 				return app.App.Shutdown()
 			},
 		},

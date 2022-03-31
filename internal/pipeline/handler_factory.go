@@ -9,6 +9,7 @@ import (
 	"github.com/dadrus/heimdall/internal/pipeline/handler/error_handlers"
 	"github.com/dadrus/heimdall/internal/pipeline/handler/hydrators"
 	"github.com/dadrus/heimdall/internal/pipeline/handler/mutators"
+	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
 var (
@@ -16,6 +17,12 @@ var (
 	ErrNoDefaultAuthorizer    = errors.New("no default authorizer configured")
 	ErrNoDefaultMutator       = errors.New("no default mutator configured")
 	ErrNoDefaultErrorHandler  = errors.New("no default error handler configured")
+
+	ErrAuthenticatorCreation = errors.New("failed to create authenticator")
+	ErrAuthorizerCreation    = errors.New("failed to create authorizer")
+	ErrMutatorCreation       = errors.New("failed to create mutator")
+	ErrHydratorCreation      = errors.New("failed to create hydrator")
+	ErrErrorHandlerCreation  = errors.New("failed to create error handler")
 )
 
 type HandlerFactory interface {
@@ -51,7 +58,7 @@ func (hf *handlerFactory) CreateAuthenticator(pors []config.PipelineObjectRefere
 
 	if len(pors) == 0 {
 		if len(hf.dp.Authenticators) == 0 {
-			return nil, ErrNoDefaultAuthenticator
+			return nil, errorchain.New(ErrAuthenticatorCreation).CausedBy(ErrNoDefaultAuthenticator)
 		}
 
 		refs = hf.dp.Authenticators
@@ -62,13 +69,13 @@ func (hf *handlerFactory) CreateAuthenticator(pors []config.PipelineObjectRefere
 	for _, ref := range refs {
 		prototype, err := hf.r.Authenticator(ref.Id)
 		if err != nil {
-			return nil, err
+			return nil, errorchain.New(ErrAuthenticatorCreation).CausedBy(err)
 		}
 
 		if len(ref.Config) != 0 {
 			authenticator, err := prototype.WithConfig(ref.Config)
 			if err != nil {
-				return nil, err
+				return nil, errorchain.New(ErrAuthenticatorCreation).CausedBy(err)
 			}
 
 			list = append(list, authenticator)
@@ -85,7 +92,7 @@ func (hf *handlerFactory) CreateAuthorizer(configured *config.PipelineObjectRefe
 
 	if configured == nil {
 		if hf.dp.Authorizer == nil {
-			return nil, ErrNoDefaultAuthorizer
+			return nil, errorchain.New(ErrAuthorizerCreation).CausedBy(ErrNoDefaultAuthorizer)
 		}
 
 		ref = hf.dp.Authorizer
@@ -94,15 +101,20 @@ func (hf *handlerFactory) CreateAuthorizer(configured *config.PipelineObjectRefe
 	}
 
 	prototype, err := hf.r.Authorizer(ref.Id)
-	if err == nil {
-		if len(ref.Config) != 0 {
-			return prototype.WithConfig(ref.Config)
-		}
-
-		return prototype, nil
+	if err != nil {
+		return nil, errorchain.New(ErrAuthorizerCreation).CausedBy(err)
 	}
 
-	return prototype, err
+	if len(ref.Config) != 0 {
+		authorizer, err := prototype.WithConfig(ref.Config)
+		if err != nil {
+			return nil, errorchain.New(ErrAuthorizerCreation).CausedBy(err)
+		}
+
+		return authorizer, nil
+	}
+
+	return prototype, nil
 }
 
 func (hf *handlerFactory) CreateHydrator(configured []config.PipelineObjectReference) (handler.Hydrator, error) {
@@ -122,13 +134,13 @@ func (hf *handlerFactory) CreateHydrator(configured []config.PipelineObjectRefer
 	for _, ref := range refs {
 		prototype, err := hf.r.Hydrator(ref.Id)
 		if err != nil {
-			return nil, err
+			return nil, errorchain.New(ErrHydratorCreation).CausedBy(err)
 		}
 
 		if len(ref.Config) != 0 {
 			hydrator, err := prototype.WithConfig(ref.Config)
 			if err != nil {
-				return nil, err
+				return nil, errorchain.New(ErrHydratorCreation).CausedBy(err)
 			}
 
 			list = append(list, hydrator)
@@ -148,7 +160,7 @@ func (hf *handlerFactory) CreateMutator(configured []config.PipelineObjectRefere
 
 	if len(configured) == 0 {
 		if len(hf.dp.Mutators) == 0 {
-			return nil, ErrNoDefaultMutator
+			return nil, errorchain.New(ErrMutatorCreation).CausedBy(ErrNoDefaultMutator)
 		}
 
 		refs = hf.dp.Mutators
@@ -159,13 +171,13 @@ func (hf *handlerFactory) CreateMutator(configured []config.PipelineObjectRefere
 	for _, ref := range refs {
 		prototype, err := hf.r.Mutator(ref.Id)
 		if err != nil {
-			return nil, err
+			return nil, errorchain.New(ErrMutatorCreation).CausedBy(err)
 		}
 
 		if len(ref.Config) != 0 {
 			mutator, err := prototype.WithConfig(ref.Config)
 			if err != nil {
-				return nil, err
+				return nil, errorchain.New(ErrMutatorCreation).CausedBy(err)
 			}
 
 			list = append(list, mutator)
@@ -185,7 +197,7 @@ func (hf *handlerFactory) CreateErrorHandler(pors []config.PipelineObjectReferen
 
 	if len(pors) == 0 {
 		if len(hf.dp.ErrorHandlers) == 0 {
-			return nil, ErrNoDefaultErrorHandler
+			return nil, errorchain.New(ErrErrorHandlerCreation).CausedBy(ErrNoDefaultErrorHandler)
 		}
 
 		refs = hf.dp.ErrorHandlers
@@ -196,13 +208,13 @@ func (hf *handlerFactory) CreateErrorHandler(pors []config.PipelineObjectReferen
 	for _, ref := range refs {
 		prototype, err := hf.r.ErrorHandler(ref.Id)
 		if err != nil {
-			return nil, err
+			return nil, errorchain.New(ErrErrorHandlerCreation).CausedBy(err)
 		}
 
 		if len(ref.Config) != 0 {
 			errorHandler, err := prototype.WithConfig(ref.Config)
 			if err != nil {
-				return nil, err
+				return nil, errorchain.New(ErrErrorHandlerCreation).CausedBy(err)
 			}
 
 			list = append(list, errorHandler)

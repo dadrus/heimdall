@@ -8,7 +8,7 @@ import (
 
 type Configuration struct {
 	Proxy       Serve      `koanf:"serve.proxy"`
-	DecisionApi Serve      `koanf:"serve.api"`
+	DecisionAPI Serve      `koanf:"serve.api"`
 	Prometheus  Prometheus `koanf:"serve.prometheus"`
 	Log         Logging    `koanf:"log"`
 	Pipeline    struct {
@@ -40,7 +40,7 @@ func NewConfiguration(configFile string) Configuration {
 				Idle:  time.Second * 120,
 			},
 		},
-		DecisionApi: Serve{
+		DecisionAPI: Serve{
 			Port: 4456,
 			Timeout: Timeout{
 				Read:  time.Second * 5,

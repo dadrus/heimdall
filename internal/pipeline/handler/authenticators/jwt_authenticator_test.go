@@ -275,7 +275,7 @@ func TestSuccessfulExecutionOfJwtAuthenticator(t *testing.T) {
 	}
 
 	sc := &heimdall.SubjectContext{}
-	sub := &heimdall.Subject{Id: subject}
+	sub := &heimdall.Subject{ID: subject}
 	ctx := context.Background()
 	mrc := &MockRequestContext{}
 

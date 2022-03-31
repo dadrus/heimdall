@@ -33,7 +33,7 @@ func (s *Session) GetSubject(rawData []byte) (*heimdall.Subject, error) {
 	attributes := gjson.GetBytes(rawData, attributesFrom).Value()
 
 	return &heimdall.Subject{
-		Id:         subjectId,
+		ID:         subjectId,
 		Attributes: attributes,
 	}, nil
 }

@@ -2,6 +2,7 @@ package pipeline
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/pipeline/handler"
@@ -10,6 +11,7 @@ import (
 	error_handlers2 "github.com/dadrus/heimdall/internal/pipeline/handler/error_handlers"
 	"github.com/dadrus/heimdall/internal/pipeline/handler/hydrators"
 	mutators2 "github.com/dadrus/heimdall/internal/pipeline/handler/mutators"
+	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
 var (
@@ -18,12 +20,20 @@ var (
 	ErrUnknownHydratorType      = errors.New("unknown hydrator type")
 	ErrUnknownMutatorType       = errors.New("unknown mutator type")
 	ErrUnknownErrorHandlerType  = errors.New("unknown error handler type")
+)
 
-	ErrNoSuchAuthenticator = errors.New("no such authenticator")
-	ErrNoSuchAuthorizer    = errors.New("no such authorizer")
-	ErrNoSuchHydrator      = errors.New("no such hydrator")
-	ErrNoSuchMutator       = errors.New("no such mutator")
-	ErrNoSuchErrorHandler  = errors.New("no such error handler")
+type noSuchObjectError struct {
+	message string
+}
+
+func (e *noSuchObjectError) Error() string { return e.message }
+
+type (
+	NoSuchAuthenticatorError = noSuchObjectError
+	NoSuchAuthorizerError    = noSuchObjectError
+	NoSuchHydratorError      = noSuchObjectError
+	NoSuchMutatorError       = noSuchObjectError
+	NoSuchErrorHandlerError  = noSuchObjectError
 )
 
 func newHandlerPrototypeRepository(conf config.Configuration) (*handlerPrototypeRepository, error) {
@@ -79,68 +89,123 @@ func createPipelineObjects[T any](
 }
 
 func newAuthenticator(obj config.PipelineObject) (handler.Authenticator, error) {
+	var (
+		err           error
+		authenticator handler.Authenticator
+	)
+
 	switch obj.Type {
 	case config.POTNoop:
-		return authenticators2.NewNoopAuthenticator(), nil
+		authenticator, err = authenticators2.NewNoopAuthenticator(), nil
 	case config.POTAnonymous:
-		return authenticators2.NewAnonymousAuthenticatorFromYAML(obj.Config)
+		authenticator, err = authenticators2.NewAnonymousAuthenticatorFromYAML(obj.Config)
 	case config.POTUnauthorized:
-		return authenticators2.NewUnauthorizedAuthenticator(), nil
+		authenticator, err = authenticators2.NewUnauthorizedAuthenticator(), nil
 	case config.POTAuthenticationData:
-		return authenticators2.NewAuthenticationDataAuthenticatorFromYAML(obj.Config)
+		authenticator, err = authenticators2.NewAuthenticationDataAuthenticatorFromYAML(obj.Config)
 	case config.POTOAuth2Introspection:
-		return authenticators2.NewOAuth2IntrospectionAuthenticatorFromJSON(obj.Config)
+		authenticator, err = authenticators2.NewOAuth2IntrospectionAuthenticatorFromJSON(obj.Config)
 	case config.POTJwt:
-		return authenticators2.NewJwtAuthenticatorFromYAML(obj.Config)
+		authenticator, err = authenticators2.NewJwtAuthenticatorFromYAML(obj.Config)
 	default:
-		return nil, ErrUnknownAuthenticatorType
+		err = ErrUnknownAuthenticatorType
 	}
+
+	if err != nil {
+		return nil, errorchain.New(ErrAuthenticatorCreation).CausedBy(err)
+	}
+
+	return authenticator, nil
 }
 
 func newAuthorizer(obj config.PipelineObject) (handler.Authorizer, error) {
+	var (
+		err        error
+		authorizer handler.Authorizer
+	)
+
 	switch obj.Type {
 	case config.POTAllow:
-		return authorizers2.NewAllowAuthorizer(), nil
+		authorizer, err = authorizers2.NewAllowAuthorizer(), nil
 	case config.POTDeny:
-		return authorizers2.NewDenyAuthorizer(), nil
+		authorizer, err = authorizers2.NewDenyAuthorizer(), nil
 	case config.POTRemote:
-		return authorizers2.NewRemoteAuthorizerFromJSON(obj.Config)
+		authorizer, err = authorizers2.NewRemoteAuthorizerFromJSON(obj.Config)
 	default:
-		return nil, ErrUnknownAuthorizerType
+		err = ErrUnknownAuthorizerType
 	}
+
+	if err != nil {
+		return nil, errorchain.New(ErrAuthorizerCreation).CausedBy(err)
+	}
+
+	return authorizer, nil
 }
 
 func newHydrator(obj config.PipelineObject) (handler.Hydrator, error) {
+	var (
+		err      error
+		hydrator handler.Hydrator
+	)
+
 	switch obj.Type {
 	case config.POTDefault:
-		return hydrators.NewDefaultHydratorFromJSON(obj.Config)
+		hydrator, err = hydrators.NewDefaultHydratorFromJSON(obj.Config)
 	default:
-		return nil, ErrUnknownHydratorType
+		err = ErrUnknownHydratorType
 	}
+
+	if err != nil {
+		return nil, errorchain.New(ErrHydratorCreation).CausedBy(err)
+	}
+
+	return hydrator, nil
 }
 
 func newMutator(obj config.PipelineObject) (handler.Mutator, error) {
+	var (
+		err     error
+		mutator handler.Mutator
+	)
+
 	switch obj.Type {
 	case config.POTJwt:
-		return mutators2.NewJWTMutatorFromJSON(obj.Config)
+		mutator, err = mutators2.NewJWTMutatorFromJSON(obj.Config)
 	case config.POTHeader:
-		return mutators2.NewHeaderMutatorFromJSON(obj.Config)
+		mutator, err = mutators2.NewHeaderMutatorFromJSON(obj.Config)
 	case config.POTCookie:
-		return mutators2.NewCookieMutatorFromJSON(obj.Config)
+		mutator, err = mutators2.NewCookieMutatorFromJSON(obj.Config)
 	default:
-		return nil, ErrUnknownMutatorType
+		err = ErrUnknownMutatorType
 	}
+
+	if err != nil {
+		return nil, errorchain.New(ErrMutatorCreation).CausedBy(err)
+	}
+
+	return mutator, nil
 }
 
 func newErrorHandler(obj config.PipelineObject) (handler.ErrorHandler, error) {
+	var (
+		err     error
+		handler handler.ErrorHandler
+	)
+
 	switch obj.Type {
 	case config.POTJson:
-		return error_handlers2.NewJsonErrorHandlerFromJSON(obj.Config)
+		handler, err = error_handlers2.NewJsonErrorHandlerFromJSON(obj.Config)
 	case config.POTRedirect:
-		return error_handlers2.NewRedirectErrorHandlerFromJSON(obj.Config)
+		handler, err = error_handlers2.NewRedirectErrorHandlerFromJSON(obj.Config)
 	default:
-		return nil, ErrUnknownErrorHandlerType
+		err = ErrUnknownErrorHandlerType
 	}
+
+	if err != nil {
+		return nil, errorchain.New(ErrErrorHandlerCreation).CausedBy(err)
+	}
+
+	return handler, nil
 }
 
 type handlerPrototypeRepository struct {
@@ -152,46 +217,56 @@ type handlerPrototypeRepository struct {
 }
 
 func (r *handlerPrototypeRepository) Authenticator(id string) (handler.Authenticator, error) {
-	a, ok := r.authenticators[id]
+	authenticator, ok := r.authenticators[id]
 	if !ok {
-		return nil, ErrNoSuchAuthenticator
+		return nil, &NoSuchAuthenticatorError{
+			message: fmt.Sprintf("no authenticator for %s found", id),
+		}
 	}
 
-	return a, nil
+	return authenticator, nil
 }
 
 func (r *handlerPrototypeRepository) Authorizer(id string) (handler.Authorizer, error) {
-	a, ok := r.authorizers[id]
+	authorizer, ok := r.authorizers[id]
 	if !ok {
-		return nil, ErrNoSuchAuthorizer
+		return nil, &NoSuchAuthorizerError{
+			message: fmt.Sprintf("no authorizer for %s found", id),
+		}
 	}
 
-	return a, nil
+	return authorizer, nil
 }
 
 func (r *handlerPrototypeRepository) Hydrator(id string) (handler.Hydrator, error) {
-	a, ok := r.hydrators[id]
+	hydrator, ok := r.hydrators[id]
 	if !ok {
-		return nil, ErrNoSuchHydrator
+		return nil, &NoSuchHydratorError{
+			message: fmt.Sprintf("no hydrator for %s found", id),
+		}
 	}
 
-	return a, nil
+	return hydrator, nil
 }
 
 func (r *handlerPrototypeRepository) Mutator(id string) (handler.Mutator, error) {
-	a, ok := r.mutators[id]
+	mutator, ok := r.mutators[id]
 	if !ok {
-		return nil, ErrNoSuchMutator
+		return nil, &NoSuchMutatorError{
+			message: fmt.Sprintf("no mutator for %s found", id),
+		}
 	}
 
-	return a, nil
+	return mutator, nil
 }
 
 func (r *handlerPrototypeRepository) ErrorHandler(id string) (handler.ErrorHandler, error) {
-	a, ok := r.errorHandlers[id]
+	errorHandler, ok := r.errorHandlers[id]
 	if !ok {
-		return nil, ErrNoSuchErrorHandler
+		return nil, &NoSuchErrorHandlerError{
+			message: fmt.Sprintf("no error handler for %s found", id),
+		}
 	}
 
-	return a, nil
+	return errorHandler, nil
 }

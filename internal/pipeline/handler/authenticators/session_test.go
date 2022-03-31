@@ -90,7 +90,7 @@ func TestGetSubjectFromSession(t *testing.T) {
 			},
 			assert: func(t *testing.T, err error, sub *heimdall.Subject) {
 				assert.NoError(t, err)
-				assert.Equal(t, "foo", sub.Id)
+				assert.Equal(t, "foo", sub.ID)
 
 				var attrs map[string]interface{}
 				e := json.Unmarshal(raw, &attrs)
@@ -106,7 +106,7 @@ func TestGetSubjectFromSession(t *testing.T) {
 			},
 			assert: func(t *testing.T, err error, sub *heimdall.Subject) {
 				assert.NoError(t, err)
-				assert.Equal(t, "val2", sub.Id)
+				assert.Equal(t, "val2", sub.ID)
 
 				rawNested, err := json.Marshal(id.Complex.Nested)
 				require.NoError(t, err)
@@ -125,7 +125,7 @@ func TestGetSubjectFromSession(t *testing.T) {
 			},
 			assert: func(t *testing.T, err error, sub *heimdall.Subject) {
 				assert.NoError(t, err)
-				assert.Equal(t, "foo", sub.Id)
+				assert.Equal(t, "foo", sub.ID)
 				assert.Empty(t, sub.Attributes)
 			},
 		},

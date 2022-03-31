@@ -46,10 +46,12 @@ func registerHooks(lifecycle fx.Lifecycle, logger zerolog.Logger, app fiberApp, 
 						logger.Fatal().Err(err).Msg("Reverse Proxy terminated unexpected")
 					}
 				}()
+
 				return nil
 			},
 			OnStop: func(ctx context.Context) error {
 				logger.Info().Msg("Tearing down Reverse Proxy!")
+
 				return app.App.Server().Shutdown()
 			},
 		},
@@ -60,8 +62,8 @@ type Handler struct{}
 
 func newHandler(p fiberApp, logger zerolog.Logger) *Handler {
 	h := &Handler{}
-
 	h.registerRoutes(p.App.Group(""), logger)
+
 	return h
 }
 
@@ -71,5 +73,4 @@ func (h *Handler) registerRoutes(router fiber.Router, logger zerolog.Logger) {
 	router.Get("/foo", func(c *fiber.Ctx) error {
 		return c.SendString("hi from foo")
 	})
-
 }

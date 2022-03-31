@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	
+
 	"github.com/dadrus/heimdall/internal/errorsx"
 	"github.com/dadrus/heimdall/internal/heimdall"
 )
@@ -85,7 +85,7 @@ func TestAuthenticateWithAnonymousAuthenticatorWithCustomSubjectId(t *testing.T)
 	assert.NoError(t, err)
 	assert.Empty(t, sc.Header)
 	assert.NotNil(t, sc.Subject)
-	assert.Equal(t, subjectId, sc.Subject.Id)
+	assert.Equal(t, subjectId, sc.Subject.ID)
 }
 
 func TestAuthenticateWithAnonymousAuthenticatorWithDefaultSubjectId(t *testing.T) {
@@ -101,5 +101,5 @@ func TestAuthenticateWithAnonymousAuthenticatorWithDefaultSubjectId(t *testing.T
 	assert.NoError(t, err)
 	assert.Empty(t, sc.Header)
 	assert.NotNil(t, sc.Subject)
-	assert.Equal(t, "anonymous", sc.Subject.Id)
+	assert.Equal(t, "anonymous", sc.Subject.ID)
 }
