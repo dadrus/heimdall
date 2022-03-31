@@ -79,7 +79,7 @@ func createPipelineObjects[T any](
 
 	for _, pe := range pObjects {
 		if r, err := create(pe); err != nil {
-			objects[pe.Id] = r
+			objects[pe.ID] = r
 		} else {
 			return nil, err
 		}

@@ -37,13 +37,13 @@ var defaultDecodeHooks = []mapstructure.DecodeHookFunc{
 // Environment Variables will be automatically converted to lowercase. The underscore "_" serves as
 // hierarchy-separator ("FOO_BAR" matches the field "bar" in the nested strut "foo".)
 //
-// Type Conversions for standard types are present as well as for slices and durations
+// Type Conversions for standard types are present as well as for slices and durations.
 func LoadConfig(config interface{}, configFile string) error {
 	return LoadConfigWithDecoder(config, configFile, nil)
 }
 
 // LoadConfigWithDecoder works like "LoadConfig", but allows to use an additional DecodeHook to allow
-// conversion from string values to custom types
+// conversion from string values to custom types.
 func LoadConfigWithDecoder(config interface{}, optionalConfigFile string, additionalDecodeHook mapstructure.DecodeHookFunc) error {
 	configFile := optionalConfigFile
 	if len(configFile) == 0 {
@@ -72,7 +72,7 @@ func LoadConfigWithDecoder(config interface{}, optionalConfigFile string, additi
 		return err
 	}
 
-	var hooks = defaultDecodeHooks
+	hooks := defaultDecodeHooks
 	if additionalDecodeHook != nil {
 		hooks = append(hooks, additionalDecodeHook)
 	}
@@ -89,7 +89,7 @@ func LoadConfigWithDecoder(config interface{}, optionalConfigFile string, additi
 }
 
 func koanfFromYaml(configFile string) (*koanf.Koanf, error) {
-	var k = koanf.New(".")
+	k := koanf.New(".")
 	err := k.Load(file.Provider(configFile), yaml.Parser())
 	if err != nil {
 		return nil, fmt.Errorf("failed to read yaml config from %s: %w", configFile, err)
@@ -107,7 +107,7 @@ func isLower(s string) bool {
 }
 
 func koanfFromStruct(s interface{}) (error, *koanf.Koanf) {
-	var k = koanf.New(".")
+	k := koanf.New(".")
 	err := k.Load(structs.Provider(s, "koanf"), nil)
 	if err != nil {
 		return err, nil
@@ -125,9 +125,7 @@ func koanfFromStruct(s interface{}) (error, *koanf.Koanf) {
 
 func koanfFromEnv() (*koanf.Koanf, error) {
 	var k = koanf.New(".")
-	err := k.Load(env.Provider("", ".", func(s string) string {
-		return strings.ToLower(s)
-	}), nil)
+	err := k.Load(env.Provider("", ".", strings.ToLower), nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse Environment Variables to Config: %w", err)
 	}
@@ -167,7 +165,7 @@ func expandSlices(parts []string) []string {
 	return result
 }
 
-// Decode zeroLog LogLevels from strings
+// Decode zeroLog LogLevels from strings.
 func logLevelDecode(from reflect.Type, to reflect.Type, v interface{}) (interface{}, error) {
 	if from.Kind() == reflect.String &&
 		to.Name() == "Level" && to.PkgPath() == "github.com/rs/zerolog" {

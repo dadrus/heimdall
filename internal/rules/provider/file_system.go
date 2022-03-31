@@ -3,7 +3,6 @@ package provider
 import (
 	"context"
 	"errors"
-	"fmt"
 	"io/ioutil"
 	"os"
 
@@ -14,16 +13,25 @@ import (
 	"github.com/dadrus/heimdall/internal/config"
 )
 
+var ErrInvalidProviderConfiguration = errors.New("invalid provider configuration")
+
 type fileSystemProvider struct {
 	src     os.FileInfo
 	watcher *fsnotify.Watcher
 	queue   RuleSetChangedEventQueue
+	logger  zerolog.Logger
 }
 
-func registerFileSystemProvider(lifecycle fx.Lifecycle, logger zerolog.Logger, c config.Configuration, queue RuleSetChangedEventQueue) {
-	provider, err := newFileSystemProvider(c, queue)
+func registerFileSystemProvider(
+	lifecycle fx.Lifecycle,
+	logger zerolog.Logger,
+	c config.Configuration,
+	queue RuleSetChangedEventQueue,
+) {
+	provider, err := newFileSystemProvider(c, queue, logger)
 	if err != nil {
 		logger.Error().Err(err).Msg("Failed to load file system based provider for rule definitions")
+
 		return
 	}
 
@@ -31,28 +39,34 @@ func registerFileSystemProvider(lifecycle fx.Lifecycle, logger zerolog.Logger, c
 		fx.Hook{
 			OnStart: func(ctx context.Context) error {
 				logger.Info().Msg("Starting file system based provider for rule definitions")
+
 				return provider.Start()
 			},
 			OnStop: func(ctx context.Context) error {
 				logger.Info().Msg("Tearing down file system based provider for rule definitions")
+
 				return provider.Stop()
 			},
 		},
 	)
 }
 
-func newFileSystemProvider(c config.Configuration, queue RuleSetChangedEventQueue) (*fileSystemProvider, error) {
-	if len(c.Rules.Providers.File.Src) == 0 {
-		return nil, errors.New("invalid configuration for file provider")
+func newFileSystemProvider(
+	conf config.Configuration,
+	queue RuleSetChangedEventQueue,
+	logger zerolog.Logger,
+) (*fileSystemProvider, error) {
+	if len(conf.Rules.Providers.File.Src) == 0 {
+		return nil, ErrInvalidProviderConfiguration
 	}
 
-	fi, err := os.Stat(c.Rules.Providers.File.Src)
+	fInfo, err := os.Stat(conf.Rules.Providers.File.Src)
 	if err != nil {
 		return nil, err
 	}
 
 	var watcher *fsnotify.Watcher
-	if c.Rules.Providers.File.Watch {
+	if conf.Rules.Providers.File.Watch {
 		watcher, err = fsnotify.NewWatcher()
 		if err != nil {
 			return nil, err
@@ -60,64 +74,77 @@ func newFileSystemProvider(c config.Configuration, queue RuleSetChangedEventQueu
 	}
 
 	return &fileSystemProvider{
-		src:     fi,
+		src:     fInfo,
 		watcher: watcher,
 		queue:   queue,
+		logger:  logger,
 	}, nil
 }
 
 func (p *fileSystemProvider) Start() error {
-	if err := p.readSource(p.src.Name()); err != nil {
+	if err := p.readSource(); err != nil {
 		return err
 	}
 
-	if p.watcher != nil {
-		p.watcher.Add(p.src.Name())
-		go func() {
-			for {
-				select {
-				case event, ok := <-p.watcher.Events:
-					if !ok {
-						return
-					}
-					if event.Op&fsnotify.Create == fsnotify.Create {
-						data, err := os.ReadFile(event.Name)
-						if err != nil {
-							fmt.Printf("Failed to read %s: %s", event.Name, err)
-						}
-
-						p.ruleSetChanged(RuleSetChangedEvent{
-							Src:        event.Name,
-							Definition: data,
-							ChangeType: Create,
-						})
-					} else if event.Op&fsnotify.Remove == fsnotify.Remove {
-						p.ruleSetChanged(RuleSetChangedEvent{
-							Src:        event.Name,
-							ChangeType: Remove,
-						})
-					}
-				case err, ok := <-p.watcher.Errors:
-					if !ok {
-						return
-					}
-					fmt.Println("error:", err)
-				}
-			}
-		}()
+	if p.watcher == nil {
+		return nil
 	}
+
+	if err := p.watcher.Add(p.src.Name()); err != nil {
+		return err
+	}
+
+	go p.watchFiles()
+
 	return nil
+}
+
+func (p *fileSystemProvider) watchFiles() {
+	for {
+		select {
+		case event, ok := <-p.watcher.Events:
+			if !ok {
+				return
+			}
+
+			if event.Op&fsnotify.Create == fsnotify.Create {
+				data, err := os.ReadFile(event.Name)
+				if err != nil {
+					p.logger.Error().Err(err).Str("file", event.Name).Msg("Failed reading")
+				}
+
+				p.ruleSetChanged(RuleSetChangedEvent{
+					Src:        event.Name,
+					Definition: data,
+					ChangeType: Create,
+				})
+			} else if event.Op&fsnotify.Remove == fsnotify.Remove {
+				p.ruleSetChanged(RuleSetChangedEvent{
+					Src:        event.Name,
+					ChangeType: Remove,
+				})
+			}
+		case err, ok := <-p.watcher.Errors:
+			if !ok {
+				return
+			}
+
+			p.logger.Error().Err(err).Msg("Watcher error received")
+		}
+	}
 }
 
 func (p *fileSystemProvider) Stop() error {
 	if p.watcher != nil {
 		return p.watcher.Close()
 	}
+
 	return nil
 }
 
-func (p *fileSystemProvider) readSource(file string) error {
+func (p *fileSystemProvider) readSource() error {
 	var sources []string
+
 	if p.src.IsDir() {
 		files, _ := ioutil.ReadDir(p.src.Name())
 		for _, file := range files {
@@ -132,7 +159,7 @@ func (p *fileSystemProvider) readSource(file string) error {
 	for _, src := range sources {
 		data, err := os.ReadFile(src)
 		if err != nil {
-			fmt.Printf("Failed to read %s: %s", src, err)
+			p.logger.Error().Err(err).Str("file", src).Msg("Failed reading")
 		}
 
 		p.ruleSetChanged(RuleSetChangedEvent{

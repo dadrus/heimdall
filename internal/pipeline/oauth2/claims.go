@@ -3,16 +3,19 @@ package oauth2
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/dadrus/heimdall/internal/x"
 	"golang.org/x/exp/slices"
+
+	"github.com/dadrus/heimdall/internal/x"
+	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
-var defaultLeeway = time.Duration(10)
+const defaultLeeway = 10
+
+var ErrClaimsNotValid = errors.New("claims not valid")
 
 // Claims represents public claim values (as specified in RFC 7519).
 type Claims struct {
@@ -27,46 +30,62 @@ type Claims struct {
 	ID        string       `json:"jti,omitempty"`
 }
 
-func (c Claims) Validate(a Expectation) error {
-	if !slices.Contains(a.TrustedIssuers, c.Issuer) {
-		return fmt.Errorf("issuer is not trusted: %s", c.Issuer)
+func (c Claims) Validate(exp Expectation) error {
+	if !slices.Contains(exp.TrustedIssuers, c.Issuer) {
+		return errorchain.NewWithMessagef(ErrClaimsNotValid, "issuer \"%s\" is not trusted", c.Issuer)
 	}
 
-	for _, aud := range a.TargetAudiences {
+	for _, aud := range exp.TargetAudiences {
 		if !slices.Contains(c.Audience, aud) {
-			return fmt.Errorf("required audience %s is not asserted", c.Issuer)
+			return errorchain.NewWithMessagef(ErrClaimsNotValid, "required audience \"%s\" is not asserted", aud)
 		}
 	}
 
+	if err := c.validateTimeValidity(exp); err != nil {
+		return err
+	}
+
+	if err := c.validateScopes(exp); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (c Claims) validateScopes(exp Expectation) error {
+	receivedScopes := x.IfThenElse(len(c.Scp) != 0, c.Scp, c.Scope)
+	checkScope := x.IfThenElse(exp.ScopeStrategy != nil, exp.ScopeStrategy, ExactScopeStrategy)
+
+	for _, requiredScope := range exp.RequiredScopes {
+		if !checkScope(receivedScopes, requiredScope) {
+			return errorchain.NewWithMessagef(ErrClaimsNotValid, "required scope %s is missing", requiredScope)
+		}
+	}
+
+	return nil
+}
+
+func (c Claims) validateTimeValidity(exp Expectation) error {
 	var leeway time.Duration
-	if a.ValidityLeeway != 0 {
-		leeway = a.ValidityLeeway.Duration()
+	if exp.ValidityLeeway != 0 {
+		leeway = exp.ValidityLeeway.Duration()
 	} else {
 		leeway = defaultLeeway * time.Second
 	}
 
 	now := time.Now()
 	if c.NotBefore != nil && now.Add(leeway).Before(c.NotBefore.Time()) {
-		return errors.New("claims not valid yet")
+		return errorchain.NewWithMessage(ErrClaimsNotValid, "not yet valid (time)")
 	}
 
 	if c.Expiry != nil && now.Add(-leeway).After(c.Expiry.Time()) {
-		return errors.New("claims expired")
+		return errorchain.NewWithMessage(ErrClaimsNotValid, "expired (time)")
 	}
 
 	// IssuedAt is optional but cannot be in the future. This is not required by the RFC, but
 	// if by misconfiguration it has been set to future, we don't trust it.
 	if c.IssuedAt != nil && now.Add(leeway).Before(c.IssuedAt.Time()) {
-		return errors.New("claims issued in the future")
-	}
-
-	receivedScopes := x.IfThenElse(len(c.Scp) != 0, c.Scp, c.Scope)
-	checkScope := x.IfThenElse(a.ScopeStrategy != nil, a.ScopeStrategy, ExactScopeStrategy)
-
-	for _, requiredScope := range a.RequiredScopes {
-		if !checkScope(receivedScopes, requiredScope) {
-			return fmt.Errorf("required scope %s is missing", requiredScope)
-		}
+		return errorchain.NewWithMessage(ErrClaimsNotValid, "issued in the future (time)")
 	}
 
 	return nil
@@ -80,14 +99,15 @@ type NumericDate int64
 
 // UnmarshalJSON reads a date from its JSON representation.
 func (n *NumericDate) UnmarshalJSON(b []byte) error {
-	s := string(b)
+	const floatPrecision = 64
 
-	f, err := strconv.ParseFloat(s, 64)
+	f, err := strconv.ParseFloat(string(b), floatPrecision)
 	if err != nil {
-		return errors.New("failed to parse date")
+		return errorchain.NewWithMessage(ErrConfiguration, "failed to parse date").CausedBy(err)
 	}
 
 	*n = NumericDate(f)
+
 	return nil
 }
 
@@ -96,6 +116,7 @@ func (n *NumericDate) Time() time.Time {
 	if n == nil {
 		return time.Time{}
 	}
+
 	return time.Unix(int64(*n), 0)
 }
 
@@ -106,24 +127,27 @@ type Audience []string
 func (s *Audience) UnmarshalJSON(b []byte) error {
 	var v interface{}
 	if err := json.Unmarshal(b, &v); err != nil {
-		return err
+		return errorchain.NewWithMessage(ErrConfiguration, "failed to unmarshal audience").CausedBy(err)
 	}
 
-	switch v := v.(type) {
+	switch value := v.(type) {
 	case string:
-		*s = strings.Split(v, " ")
+		*s = strings.Split(value, " ")
 	case []interface{}:
-		array := make([]string, len(v))
-		for i, e := range v {
-			s, ok := e.(string)
+		array := make([]string, len(value))
+
+		for idx, val := range value {
+			s, ok := val.(string)
 			if !ok {
-				return errors.New("failed to unmarshal audience")
+				return errorchain.NewWithMessage(ErrConfiguration, "failed to parse audience array")
 			}
-			array[i] = s
+
+			array[idx] = s
 		}
+
 		*s = array
 	default:
-		return errors.New("failed to unmarshal audience")
+		return errorchain.NewWithMessage(ErrConfiguration, "unexpected content for audience")
 	}
 
 	return nil
@@ -136,24 +160,27 @@ type Scopes []string
 func (s *Scopes) UnmarshalJSON(b []byte) error {
 	var v interface{}
 	if err := json.Unmarshal(b, &v); err != nil {
-		return err
+		return errorchain.NewWithMessage(ErrConfiguration, "failed to unmarshal scopes").CausedBy(err)
 	}
 
-	switch v := v.(type) {
+	switch value := v.(type) {
 	case string:
-		*s = strings.Split(v, " ")
+		*s = strings.Split(value, " ")
 	case []interface{}:
-		array := make([]string, len(v))
-		for i, e := range v {
-			s, ok := e.(string)
+		array := make([]string, len(value))
+
+		for idx, val := range value {
+			s, ok := val.(string)
 			if !ok {
-				return errors.New("failed to unmarshal scopes")
+				return errorchain.NewWithMessage(ErrConfiguration, "failed to parse scopes array")
 			}
-			array[i] = s
+
+			array[idx] = s
 		}
+
 		*s = array
 	default:
-		return errors.New("failed to unmarshal scopes")
+		return errorchain.NewWithMessage(ErrConfiguration, "unexpected content for scopes")
 	}
 
 	return nil

@@ -9,9 +9,11 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/provider"
 )
 
+const defaultQueueSize = 20
+
 var Module = fx.Options(
 	fx.Provide(func() provider.RuleSetChangedEventQueue {
-		return make(provider.RuleSetChangedEventQueue, 20)
+		return make(provider.RuleSetChangedEventQueue, defaultQueueSize)
 	}),
 	fx.Provide(NewRepository),
 	fx.Invoke(registerRuleDefinitionHandler),
@@ -22,6 +24,7 @@ func registerRuleDefinitionHandler(lifecycle fx.Lifecycle, logger zerolog.Logger
 	rdf, ok := r.(ruleDefinitionHandler)
 	if !ok {
 		logger.Error().Msg("No rule definition handler available")
+
 		return
 	}
 
@@ -30,11 +33,13 @@ func registerRuleDefinitionHandler(lifecycle fx.Lifecycle, logger zerolog.Logger
 			OnStart: func(ctx context.Context) error {
 				logger.Info().Msg("Starting rule definition handler")
 				rdf.Start()
+
 				return nil
 			},
 			OnStop: func(ctx context.Context) error {
 				logger.Info().Msg("Tearing down rule definition handler")
 				rdf.Stop()
+
 				return nil
 			},
 		},

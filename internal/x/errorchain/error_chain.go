@@ -2,6 +2,7 @@ package errorchain
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 )
 
@@ -19,6 +20,18 @@ func New(err error) *ErrorChain {
 	chain := &ErrorChain{}
 
 	return chain.CausedBy(err)
+}
+
+func NewWithMessage(err error, message string) *ErrorChain {
+	chain := &ErrorChain{}
+
+	return chain.CausedBy(fmt.Errorf("%w: %s", err, message))
+}
+
+func NewWithMessagef(err error, format string, a ...any) *ErrorChain {
+	chain := &ErrorChain{}
+
+	return chain.CausedBy(fmt.Errorf("%w: %s", err, fmt.Sprintf(format, a)))
 }
 
 func (e *ErrorChain) Error() string {

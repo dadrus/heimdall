@@ -17,25 +17,36 @@ import (
 	"github.com/knadh/koanf/parsers/yaml"
 	"github.com/knadh/koanf/providers/rawbytes"
 	"github.com/mitchellh/mapstructure"
+	"github.com/rs/zerolog"
 	"golang.org/x/exp/slices"
 )
 
+var ErrNoRuleFound = errors.New("no rule found")
+
 type Repository interface {
-	FindRule(requestUrl *url.URL) (Rule, error)
+	FindRule(*url.URL) (Rule, error)
 }
 
-func NewRepository(queue provider.RuleSetChangedEventQueue, c config.Configuration, hf pipeline.HandlerFactory) (Repository, error) {
+func NewRepository(
+	queue provider.RuleSetChangedEventQueue,
+	config config.Configuration,
+	hf pipeline.HandlerFactory,
+	logger zerolog.Logger,
+) (Repository, error) {
 	return &repository{
-		hf:    hf,
-		dpc:   c.Rules.Default,
-		queue: queue,
-		quit:  make(chan bool),
+		hf:     hf,
+		dpc:    config.Rules.Default,
+		logger: logger,
+		queue:  queue,
+		quit:   make(chan bool),
 	}, nil
 }
 
 type repository struct {
-	hf    pipeline.HandlerFactory
-	dpc   config.Pipeline
+	hf     pipeline.HandlerFactory
+	dpc    config.Pipeline
+	logger zerolog.Logger
+
 	rules []*rule
 	mutex sync.RWMutex
 
@@ -43,15 +54,17 @@ type repository struct {
 	quit  chan bool
 }
 
-func (r *repository) FindRule(requestUrl *url.URL) (Rule, error) {
+func (r *repository) FindRule(requestURL *url.URL) (Rule, error) {
 	r.mutex.RLock()
 	defer r.mutex.RUnlock()
+
 	for _, rule := range r.rules {
-		if rule.MatchesUrl(requestUrl) {
+		if rule.MatchesURL(requestURL) {
 			return rule, nil
 		}
 	}
-	return nil, errors.New("no rule found")
+
+	return nil, ErrNoRuleFound
 }
 
 func (r *repository) Start() {
@@ -76,19 +89,21 @@ func (r *repository) Stop() {
 	r.quit <- true
 }
 
-func (r *repository) loadRules(srcId string, definition json.RawMessage) ([]*rule, error) {
+func (r *repository) loadRules(srcID string, definition json.RawMessage) ([]*rule, error) {
 	rcs, err := parseRuleSetFromYaml(definition)
 	if err != nil {
 		return nil, err
 	}
 
-	var rules []*rule
-	for _, rc := range rcs {
-		rule, err := r.newRule(srcId, rc)
+	rules := make([]*rule, len(rcs))
+
+	for i, rc := range rcs {
+		rule, err := r.newRule(srcID, rc)
 		if err != nil {
 			return nil, err
 		}
-		rules = append(rules, rule)
+
+		rules[i] = rule
 	}
 
 	return rules, nil
@@ -100,7 +115,7 @@ func (r *repository) addRule(rule *rule) {
 	r.rules = append(r.rules, rule)
 }
 
-func (r *repository) removeRules(srcId string) {
+func (r *repository) removeRules(srcID string) {
 	// TODO: implement remove rule
 }
 
@@ -108,7 +123,7 @@ func (r *repository) onRuleSetCreated(src string, definition json.RawMessage) {
 	// create rules
 	rules, err := r.loadRules(src, definition)
 	if err != nil {
-		fmt.Println("error loading rule")
+		r.logger.Error().Err(err).Msg("Failed loading rule set")
 	}
 
 	// add them
@@ -121,55 +136,56 @@ func (r *repository) onRuleSetDeleted(src string) {
 	r.removeRules(src)
 }
 
-func (r *repository) newRule(srcId string, rc config.RuleConfig) (*rule, error) {
-	an, err := r.hf.CreateAuthenticator(rc.Authenticators)
+func (r *repository) newRule(srcID string, ruleConfig config.RuleConfig) (*rule, error) {
+	authenticator, err := r.hf.CreateAuthenticator(ruleConfig.Authenticators)
 	if err != nil {
 		return nil, err
 	}
 
-	az, err := r.hf.CreateAuthorizer(rc.Authorizer)
+	authorizer, err := r.hf.CreateAuthorizer(ruleConfig.Authorizer)
 	if err != nil {
 		return nil, err
 	}
 
-	h, err := r.hf.CreateHydrator(rc.Hydrators)
+	hydrator, err := r.hf.CreateHydrator(ruleConfig.Hydrators)
 	if err != nil {
 		return nil, err
 	}
 
-	m, err := r.hf.CreateMutator(rc.Mutators)
+	mutator, err := r.hf.CreateMutator(ruleConfig.Mutators)
 	if err != nil {
 		return nil, err
 	}
 
-	eh, err := r.hf.CreateErrorHandler(rc.ErrorHandlers)
+	errorHandler, err := r.hf.CreateErrorHandler(ruleConfig.ErrorHandlers)
 	if err != nil {
 		return nil, err
 	}
 
 	return &rule{
-		id:      rc.Id,
-		url:     rc.Url,
-		methods: rc.Methods,
-		srcId:   srcId,
-		an:      an,
-		az:      az,
-		h:       h,
-		m:       m,
-		eh:      eh,
+		id:      ruleConfig.ID,
+		url:     ruleConfig.URL,
+		methods: ruleConfig.Methods,
+		srcID:   srcID,
+		an:      authenticator,
+		az:      authorizer,
+		h:       hydrator,
+		m:       mutator,
+		eh:      errorHandler,
 	}, nil
 }
 
 func parseRuleSetFromYaml(data []byte) ([]config.RuleConfig, error) {
-	var k = koanf.New(".")
-	err := k.Load(rawbytes.Provider(data), yaml.Parser())
+	parser := koanf.New(".")
+
+	err := parser.Load(rawbytes.Provider(data), yaml.Parser())
 	if err != nil {
 		return nil, fmt.Errorf("failed to read config: %w", err)
 	}
 
 	var rcs []config.RuleConfig
 
-	if err = k.UnmarshalWithConf("", rcs, koanf.UnmarshalConf{
+	if err = parser.UnmarshalWithConf("", rcs, koanf.UnmarshalConf{
 		Tag: "koanf",
 		DecoderConfig: &mapstructure.DecoderConfig{
 			Result:           rcs,
@@ -186,7 +202,7 @@ type rule struct {
 	id      string
 	url     string
 	methods []string
-	srcId   string
+	srcID   string
 	an      handler.Authenticator
 	az      handler.Authorizer
 	h       handler.Hydrator
@@ -194,29 +210,29 @@ type rule struct {
 	eh      handler.ErrorHandler
 }
 
-func (r *rule) Execute(ctx context.Context, rc handler.RequestContext) (*heimdall.SubjectContext, error) {
-	sc := &heimdall.SubjectContext{}
+func (r *rule) Execute(ctx context.Context, reqCtx handler.RequestContext) (*heimdall.SubjectContext, error) {
+	subjectCtx := &heimdall.SubjectContext{}
 
-	if err := r.an.Authenticate(ctx, rc, sc); err != nil {
+	if err := r.an.Authenticate(ctx, reqCtx, subjectCtx); err != nil {
 		return nil, r.eh.HandleError(ctx, err)
 	}
 
-	if err := r.az.Authorize(ctx, rc, sc); err != nil {
+	if err := r.az.Authorize(ctx, reqCtx, subjectCtx); err != nil {
 		return nil, r.eh.HandleError(ctx, err)
 	}
 
-	if err := r.h.Hydrate(ctx, sc); err != nil {
+	if err := r.h.Hydrate(ctx, subjectCtx); err != nil {
 		return nil, r.eh.HandleError(ctx, err)
 	}
 
-	if err := r.m.Mutate(ctx, sc); err != nil {
+	if err := r.m.Mutate(ctx, subjectCtx); err != nil {
 		return nil, r.eh.HandleError(ctx, err)
 	}
 
-	return sc, nil
+	return subjectCtx, nil
 }
 
-func (r *rule) MatchesUrl(requestUrl *url.URL) bool {
+func (r *rule) MatchesURL(requestURL *url.URL) bool {
 	return true
 }
 
@@ -224,6 +240,6 @@ func (r *rule) MatchesMethod(method string) bool {
 	return slices.Contains(r.methods, method)
 }
 
-func (r *rule) Id() string {
+func (r *rule) ID() string {
 	return r.id
 }

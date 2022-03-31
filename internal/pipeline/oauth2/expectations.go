@@ -5,7 +5,11 @@ import (
 	"time"
 
 	"golang.org/x/exp/slices"
+
+	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
+
+var ErrConfiguration = errors.New("malformed configuration")
 
 // ScopeStrategy is a strategy for matching scopes.
 type ScopeStrategy func(haystack []string, needle string) bool
@@ -38,6 +42,7 @@ func (d *Duration) UnmarshalYAML(unmarshal func(interface{}) error) error {
 
 	pd, err := time.ParseDuration(v)
 	*d = Duration(pd)
+
 	return err
 }
 
@@ -56,8 +61,9 @@ type Expectation struct {
 
 func (e *Expectation) Validate() error {
 	if len(e.TrustedIssuers) == 0 {
-		return errors.New("missing trusted_issuers configuration")
+		return errorchain.NewWithMessage(ErrConfiguration, "missing trusted_issuers configuration")
 	}
+
 	return nil
 }
 

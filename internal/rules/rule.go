@@ -9,8 +9,8 @@ import (
 )
 
 type Rule interface {
-	Id() string
+	ID() string
 	Execute(context.Context, handler.RequestContext) (*heimdall.SubjectContext, error)
-	MatchesUrl(*url.URL) bool
+	MatchesURL(*url.URL) bool
 	MatchesMethod(string) bool
 }

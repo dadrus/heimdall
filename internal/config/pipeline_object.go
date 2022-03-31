@@ -22,7 +22,7 @@ const (
 )
 
 type PipelineObject struct {
-	Id     string             `koanf:"id"`
+	ID     string             `koanf:"id"`
 	Type   PipelineObjectType `koanf:"type"`
 	Config json.RawMessage    `koanf:"config"`
 }

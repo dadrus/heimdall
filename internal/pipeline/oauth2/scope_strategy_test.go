@@ -29,8 +29,10 @@ import (
 )
 
 func TestHierarchicScopeStrategy(t *testing.T) {
-	var strategy ScopeStrategy = HierarchicScopeStrategy
-	var scopes = []string{}
+	t.Parallel()
+
+	strategy := HierarchicScopeStrategy
+	scopes := []string{}
 
 	assert.False(t, strategy(scopes, "foo.bar.baz"))
 	assert.False(t, strategy(scopes, "foo.bar"))
@@ -65,8 +67,10 @@ func TestHierarchicScopeStrategy(t *testing.T) {
 }
 
 func TestWildcardScopeStrategy(t *testing.T) {
-	var strategy ScopeStrategy = WildcardScopeStrategy
-	var scopes = []string{}
+	t.Parallel()
+
+	strategy := WildcardScopeStrategy
+	scopes := []string{}
 
 	assert.False(t, strategy(scopes, "foo.bar.baz"))
 	assert.False(t, strategy(scopes, "foo.bar"))
@@ -136,6 +140,8 @@ func TestWildcardScopeStrategy(t *testing.T) {
 }
 
 func TestExactScopeStrategy2ScopeStrategy(t *testing.T) {
+	t.Parallel()
+
 	var strategy ScopeStrategy = ExactScopeStrategy
 
 	scopes := []string{"foo.bar.baz", "foo.bar"}

@@ -13,6 +13,7 @@ linters:
     - scopelint
     - golint
     - interfacer
+    - testpackage
 
 linters-settings:
   exhaustive:
@@ -24,3 +25,27 @@ linters-settings:
         # Support string case: `camel`, `pascal`, `kebab`, `snake`, `goCamel`, `goPascal`, `goKebab`, `goSnake`, `upper`, `lower`
         json: snake
         yaml: snake
+  gci:
+    no-inline-comments: true
+    no-prefix-comments: true
+    sections:
+      - standard # Captures all standard packages if they do not match another section.
+      - default # Contains all imports that could not be matched to another section type.
+      - prefix(github.com/dadrus/heimdall) # Groups all imports with the specified Prefix.
+  varnamelen:
+    ignore-type-assert-ok: true
+    ignore-map-index-ok: true
+    ignore-chan-recv-ok: true
+    ignore-names:
+      - err
+    # Optional list of variable declarations that should be ignored completely. (defaults to empty list)
+    # Entries must be in one of the following forms (see below for examples):
+    # - for variables, parameters, named return values, method receivers, or type parameters:
+    #   <name> <type>  (<type> can also be a pointer/slice/map/chan/...)
+    # - for constants: const <name>
+    ignore-decls:
+      - c *fiber.Ctx
+      - t testing.T
+      - i int
+      - T any
+      - m map[string]int

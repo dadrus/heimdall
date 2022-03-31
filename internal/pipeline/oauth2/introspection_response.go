@@ -2,6 +2,8 @@ package oauth2
 
 import "errors"
 
+var ErrTokenNotActive = errors.New("token is not active")
+
 type IntrospectionResponse struct {
 	Claims
 
@@ -12,7 +14,7 @@ type IntrospectionResponse struct {
 
 func (c IntrospectionResponse) Validate(a Expectation) error {
 	if !c.Active {
-		return errors.New("token is not active")
+		return ErrTokenNotActive
 	}
 
 	return c.Claims.Validate(a)
