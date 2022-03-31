@@ -11,6 +11,8 @@ import (
 )
 
 func TestSessionValidation(t *testing.T) {
+	t.Parallel()
+
 	for _, tc := range []struct {
 		uc        string
 		configure func(t *testing.T, s *Session)
@@ -22,6 +24,7 @@ func TestSessionValidation(t *testing.T) {
 				s.SubjectFrom = "foobar"
 			},
 			assert: func(t *testing.T, err error) {
+				t.Helper()
 				assert.NoError(t, err)
 			},
 		},
@@ -29,11 +32,13 @@ func TestSessionValidation(t *testing.T) {
 			uc:        "subject_from is not set",
 			configure: func(t *testing.T, s *Session) {},
 			assert: func(t *testing.T, err error) {
+				t.Helper()
 				assert.Error(t, err)
 			},
 		},
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
+			t.Parallel()
 			// GIVEN
 			s := Session{}
 			tc.configure(t, &s)
@@ -48,30 +53,33 @@ func TestSessionValidation(t *testing.T) {
 }
 
 func TestGetSubjectFromSession(t *testing.T) {
-	type nested struct {
+	t.Parallel()
+
+	type _nested struct {
 		Val bool `json:"val"`
 	}
 
-	type complex struct {
-		Array  []int  `json:"array"`
-		Nested nested `json:"nested"`
+	type _complex struct {
+		Array  []int   `json:"array"`
+		Nested _nested `json:"nested"`
 	}
-	type idt struct {
+
+	type _idt struct {
 		Subject             string   `json:"subject"`
 		SomeStringAttribute string   `json:"some_string_attribute"`
 		SomeInt64Attribute  int64    `json:"some_int_64_attribute"`
 		StringSlice         []string `json:"string_slice"`
-		Complex             complex  `json:"complex"`
+		Complex             _complex `json:"complex"`
 	}
 
-	id := idt{
+	id := _idt{
 		Subject:             "foo",
 		SomeStringAttribute: "attr",
 		SomeInt64Attribute:  -6,
 		StringSlice:         []string{"val1", "val2"},
-		Complex: complex{
+		Complex: _complex{
 			Array:  []int{1, 2, 3},
-			Nested: nested{Val: true},
+			Nested: _nested{Val: true},
 		},
 	}
 
@@ -89,6 +97,7 @@ func TestGetSubjectFromSession(t *testing.T) {
 				s.SubjectFrom = "subject"
 			},
 			assert: func(t *testing.T, err error, sub *heimdall.Subject) {
+				t.Helper()
 				assert.NoError(t, err)
 				assert.Equal(t, "foo", sub.ID)
 
@@ -105,6 +114,7 @@ func TestGetSubjectFromSession(t *testing.T) {
 				s.AttributesFrom = "complex.nested"
 			},
 			assert: func(t *testing.T, err error, sub *heimdall.Subject) {
+				t.Helper()
 				assert.NoError(t, err)
 				assert.Equal(t, "val2", sub.ID)
 
@@ -124,6 +134,7 @@ func TestGetSubjectFromSession(t *testing.T) {
 				s.AttributesFrom = "foobar"
 			},
 			assert: func(t *testing.T, err error, sub *heimdall.Subject) {
+				t.Helper()
 				assert.NoError(t, err)
 				assert.Equal(t, "foo", sub.ID)
 				assert.Empty(t, sub.Attributes)
@@ -135,12 +146,15 @@ func TestGetSubjectFromSession(t *testing.T) {
 				s.SubjectFrom = "foo"
 			},
 			assert: func(t *testing.T, err error, sub *heimdall.Subject) {
+				t.Helper()
 				assert.Error(t, err)
 				assert.Nil(t, sub)
 			},
 		},
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
+			t.Parallel()
+
 			// GIVEN
 			s := Session{}
 			tc.configure(t, &s)

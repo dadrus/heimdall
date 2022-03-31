@@ -26,40 +26,44 @@ func NewAuthenticationDataAuthenticatorFromYAML(rawConfig []byte) (*authenticati
 		Session        Session                  `yaml:"session"`
 	}
 
-	var c _config
-	if err := yaml.UnmarshalStrict(rawConfig, &c); err != nil {
+	var conf _config
+	if err := yaml.UnmarshalStrict(rawConfig, &conf); err != nil {
 		return nil, &errorsx.ArgumentError{
 			Message: "failed to unmarshal authentication data authenticator config",
 			Cause:   err,
 		}
 	}
 
-	if err := c.Endpoint.Validate(); err != nil {
+	if err := conf.Endpoint.Validate(); err != nil {
 		return nil, &errorsx.ArgumentError{
 			Message: "failed to validate endpoint configuration",
 			Cause:   err,
 		}
 	}
 
-	if err := c.Session.Validate(); err != nil {
+	if err := conf.Session.Validate(); err != nil {
 		return nil, &errorsx.ArgumentError{
 			Message: "failed to validate session configuration",
 			Cause:   err,
 		}
 	}
 
-	if c.AuthDataSource.es == nil {
+	if conf.AuthDataSource.es == nil {
 		return nil, &errorsx.ArgumentError{Message: "no authentication_data_source configured"}
 	}
 
 	return &authenticationDataAuthenticator{
-		Endpoint:         c.Endpoint,
-		AuthDataGetter:   c.AuthDataSource.es,
-		SubjectExtractor: &c.Session,
+		Endpoint:         conf.Endpoint,
+		AuthDataGetter:   conf.AuthDataSource.es,
+		SubjectExtractor: &conf.Session,
 	}, nil
 }
 
-func (a *authenticationDataAuthenticator) Authenticate(ctx context.Context, rc handler.RequestContext, sc *heimdall.SubjectContext) error {
+func (a *authenticationDataAuthenticator) Authenticate(
+	ctx context.Context,
+	rc handler.RequestContext,
+	sc *heimdall.SubjectContext,
+) error {
 	authDataRef, err := a.AuthDataGetter.GetAuthData(rc)
 	if err != nil {
 		return &errorsx.ArgumentError{Message: "failed to extract authentication data", Cause: err}

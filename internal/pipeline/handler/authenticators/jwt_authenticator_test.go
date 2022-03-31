@@ -11,19 +11,21 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/pipeline/endpoint"
-	"github.com/dadrus/heimdall/internal/pipeline/oauth2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/square/go-jose.v2"
 	"gopkg.in/square/go-jose.v2/jwt"
 
+	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/pipeline/endpoint"
 	"github.com/dadrus/heimdall/internal/pipeline/handler/authenticators/extractors"
+	"github.com/dadrus/heimdall/internal/pipeline/oauth2"
 )
 
 func TestCreateJwtAuthenticator(t *testing.T) {
+	t.Parallel()
+
 	for _, tc := range []struct {
 		uc     string
 		config []byte
@@ -40,6 +42,7 @@ jwt_assertions:
 session:
   subject_from: some_template`),
 			assert: func(t *testing.T, err error, a *jwtAuthenticator) {
+				t.Helper()
 				assert.Error(t, err)
 			},
 		},
@@ -54,6 +57,7 @@ jwt_assertions:
 session:
   subject_from: some_template`),
 			assert: func(t *testing.T, err error, a *jwtAuthenticator) {
+				t.Helper()
 				assert.Error(t, err)
 			},
 		},
@@ -69,6 +73,7 @@ jwt_assertions:
     - foobar
 foo: bar`),
 			assert: func(t *testing.T, err error, a *jwtAuthenticator) {
+				t.Helper()
 				assert.Error(t, err)
 			},
 		},
@@ -80,41 +85,42 @@ jwks_endpoint:
 jwt_assertions:
   trusted_issuers:
     - foobar`),
-			assert: func(t *testing.T, err error, a *jwtAuthenticator) {
+			assert: func(t *testing.T, err error, auth *jwtAuthenticator) {
+				t.Helper()
 				require.NoError(t, err)
 
 				// endpoint settings
-				require.IsType(t, endpoint.Endpoint{}, a.e)
-				e := a.e.(endpoint.Endpoint)
-				assert.Equal(t, "http://test.com", e.Url)
-				assert.Equal(t, "GET", e.Method)
-				assert.Equal(t, 1, len(e.Headers))
-				assert.Contains(t, e.Headers, "Accept-Type")
-				assert.Equal(t, e.Headers["Accept-Type"], "application/json")
+				ept, ok := auth.e.(endpoint.Endpoint)
+				require.True(t, ok)
+				assert.Equal(t, "http://test.com", ept.Url)
+				assert.Equal(t, "GET", ept.Method)
+				assert.Equal(t, 1, len(ept.Headers))
+				assert.Contains(t, ept.Headers, "Accept-Type")
+				assert.Equal(t, ept.Headers["Accept-Type"], "application/json")
 
 				// token extractor settings
-				assert.IsType(t, extractors.CompositeExtractStrategy{}, a.adg)
-				assert.Contains(t, a.adg, extractors.HeaderValueExtractStrategy{Name: "Authorization", Prefix: "Bearer"})
-				assert.Contains(t, a.adg, extractors.FormParameterExtractStrategy{Name: "access_token"})
-				assert.Contains(t, a.adg, extractors.QueryParameterExtractStrategy{Name: "access_token"})
+				assert.IsType(t, extractors.CompositeExtractStrategy{}, auth.adg)
+				assert.Contains(t, auth.adg, extractors.HeaderValueExtractStrategy{Name: "Authorization", Prefix: "Bearer"})
+				assert.Contains(t, auth.adg, extractors.FormParameterExtractStrategy{Name: "access_token"})
+				assert.Contains(t, auth.adg, extractors.QueryParameterExtractStrategy{Name: "access_token"})
 
 				// assertions settings
-				assert.Nil(t, a.a.ScopeStrategy)
-				assert.Empty(t, a.a.RequiredScopes)
-				assert.Empty(t, a.a.TargetAudiences)
-				assert.Len(t, a.a.TrustedIssuers, 1)
-				assert.Contains(t, a.a.TrustedIssuers, "foobar")
-				assert.Len(t, a.a.AllowedAlgorithms, 6)
+				assert.Nil(t, auth.a.ScopeStrategy)
+				assert.Empty(t, auth.a.RequiredScopes)
+				assert.Empty(t, auth.a.TargetAudiences)
+				assert.Len(t, auth.a.TrustedIssuers, 1)
+				assert.Contains(t, auth.a.TrustedIssuers, "foobar")
+				assert.Len(t, auth.a.AllowedAlgorithms, 6)
 
-				assert.ElementsMatch(t, a.a.AllowedAlgorithms, []string{
+				assert.ElementsMatch(t, auth.a.AllowedAlgorithms, []string{
 					string(jose.ES256), string(jose.ES384), string(jose.ES512),
 					string(jose.PS256), string(jose.PS384), string(jose.PS512),
 				})
-				assert.Equal(t, oauth2.Duration(0), a.a.ValidityLeeway)
+				assert.Equal(t, oauth2.Duration(0), auth.a.ValidityLeeway)
 
 				// session settings
-				require.IsType(t, &Session{}, a.se)
-				sess := a.se.(*Session)
+				sess, ok := auth.se.(*Session)
+				require.True(t, ok)
 				assert.Equal(t, "sub", sess.SubjectFrom)
 				assert.Empty(t, sess.AttributesFrom)
 			},
@@ -139,43 +145,46 @@ jwt_assertions:
     - ES256
 session:
   subject_from: some_claim`),
-			assert: func(t *testing.T, err error, a *jwtAuthenticator) {
+			assert: func(t *testing.T, err error, auth *jwtAuthenticator) {
+				t.Helper()
 				require.NoError(t, err)
 
 				// endpoint settings
-				require.IsType(t, endpoint.Endpoint{}, a.e)
-				e := a.e.(endpoint.Endpoint)
-				assert.Equal(t, "http://test.com", e.Url)
-				assert.Equal(t, "POST", e.Method)
-				assert.Equal(t, 1, len(e.Headers))
-				assert.Contains(t, e.Headers, "Accept-Type")
-				assert.Equal(t, e.Headers["Accept-Type"], "application/foobar")
+				ept, ok := auth.e.(endpoint.Endpoint)
+				require.True(t, ok)
+				assert.Equal(t, "http://test.com", ept.Url)
+				assert.Equal(t, "POST", ept.Method)
+				assert.Equal(t, 1, len(ept.Headers))
+				assert.Contains(t, ept.Headers, "Accept-Type")
+				assert.Equal(t, ept.Headers["Accept-Type"], "application/foobar")
 
 				// token extractor settings
-				assert.IsType(t, extractors.CompositeExtractStrategy{}, a.adg)
-				assert.Len(t, a.adg, 1)
-				assert.Contains(t, a.adg, &extractors.HeaderValueExtractStrategy{Name: "foo-header"})
+				assert.IsType(t, extractors.CompositeExtractStrategy{}, auth.adg)
+				assert.Len(t, auth.adg, 1)
+				assert.Contains(t, auth.adg, &extractors.HeaderValueExtractStrategy{Name: "foo-header"})
 
 				// assertions settings
-				assert.NotNil(t, a.a.ScopeStrategy)
-				assert.ElementsMatch(t, a.a.RequiredScopes, []string{"foo"})
-				assert.Empty(t, a.a.TargetAudiences)
-				assert.Len(t, a.a.TrustedIssuers, 1)
-				assert.Contains(t, a.a.TrustedIssuers, "foobar")
-				assert.Len(t, a.a.AllowedAlgorithms, 1)
+				assert.NotNil(t, auth.a.ScopeStrategy)
+				assert.ElementsMatch(t, auth.a.RequiredScopes, []string{"foo"})
+				assert.Empty(t, auth.a.TargetAudiences)
+				assert.Len(t, auth.a.TrustedIssuers, 1)
+				assert.Contains(t, auth.a.TrustedIssuers, "foobar")
+				assert.Len(t, auth.a.AllowedAlgorithms, 1)
 
-				assert.ElementsMatch(t, a.a.AllowedAlgorithms, []string{string(jose.ES256)})
-				assert.Equal(t, oauth2.Duration(0), a.a.ValidityLeeway)
+				assert.ElementsMatch(t, auth.a.AllowedAlgorithms, []string{string(jose.ES256)})
+				assert.Equal(t, oauth2.Duration(0), auth.a.ValidityLeeway)
 
 				// session settings
-				require.IsType(t, &Session{}, a.se)
-				sess := a.se.(*Session)
+				sess, ok := auth.se.(*Session)
+				require.True(t, ok)
 				assert.Equal(t, "some_claim", sess.SubjectFrom)
 				assert.Empty(t, sess.AttributesFrom)
 			},
 		},
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
+			t.Parallel()
+
 			// WHEN
 			a, err := NewJwtAuthenticatorFromYAML(tc.config)
 
@@ -186,6 +195,8 @@ session:
 }
 
 func setup(t *testing.T, subject, issuer, audience string) ([]byte, string) {
+	t.Helper()
+
 	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	require.NoError(t, err)
 
@@ -197,7 +208,7 @@ func setup(t *testing.T, subject, issuer, audience string) ([]byte, string) {
 	rawJwks, err := json.Marshal(jwks)
 	require.NoError(t, err)
 
-	var signerOpts = jose.SignerOptions{}
+	signerOpts := jose.SignerOptions{}
 	signerOpts.WithType("JWT").WithHeader("kid", "bar")
 	signer, err := jose.NewSigner(jose.SigningKey{Algorithm: jose.PS512, Key: privateKey}, &signerOpts)
 	require.NoError(t, err)
@@ -220,6 +231,8 @@ func setup(t *testing.T, subject, issuer, audience string) ([]byte, string) {
 }
 
 func TestCreateJwtAuthenticatorFromPrototype(t *testing.T) {
+	t.Parallel()
+
 	// GIVEN
 	prototypeConfig := []byte(`
 jwks_endpoint:
@@ -235,21 +248,21 @@ jwt_assertions:
   allowed_algorithms:
     - ES512`)
 
-	p, err := NewJwtAuthenticatorFromYAML(prototypeConfig)
+	prototype, err := NewJwtAuthenticatorFromYAML(prototypeConfig)
 	require.NoError(t, err)
 
 	// WHEN
-	a, err := p.WithConfig(config)
+	auth, err := prototype.WithConfig(config)
 
 	// THEN
 	require.NoError(t, err)
 
-	require.IsType(t, &jwtAuthenticator{}, a)
-	jwta := a.(*jwtAuthenticator)
-	assert.Equal(t, p.e, jwta.e)
-	assert.Equal(t, p.adg, jwta.adg)
-	assert.Equal(t, p.se, jwta.se)
-	assert.NotEqual(t, p.a, jwta.a)
+	jwta, ok := auth.(*jwtAuthenticator)
+	require.True(t, ok)
+	assert.Equal(t, prototype.e, jwta.e)
+	assert.Equal(t, prototype.adg, jwta.adg)
+	assert.Equal(t, prototype.se, jwta.se)
+	assert.NotEqual(t, prototype.a, jwta.a)
 
 	assert.NotNil(t, jwta.a.ScopeStrategy)
 	assert.ElementsMatch(t, jwta.a.RequiredScopes, []string{"foo"})
@@ -259,6 +272,8 @@ jwt_assertions:
 }
 
 func TestSuccessfulExecutionOfJwtAuthenticator(t *testing.T) {
+	t.Parallel()
+
 	// GIVEN
 	subject := "foo"
 	issuer := "foobar"
@@ -282,8 +297,8 @@ func TestSuccessfulExecutionOfJwtAuthenticator(t *testing.T) {
 	adg := &MockAuthDataGetter{}
 	adg.On("GetAuthData", mrc).Return(jwt, nil)
 
-	e := &MockEndpoint{}
-	e.On("SendRequest", mock.Anything, mock.MatchedBy(func(r io.Reader) bool {
+	ept := &MockEndpoint{}
+	ept.On("SendRequest", mock.Anything, mock.MatchedBy(func(r io.Reader) bool {
 		return r == nil
 	}),
 	).Return(jwks, nil)
@@ -295,21 +310,21 @@ func TestSuccessfulExecutionOfJwtAuthenticator(t *testing.T) {
 	se := &MockSubjectExtractor{}
 	se.On("GetSubject", rawPaload).Return(sub, nil)
 
-	a := jwtAuthenticator{
-		e:   e,
+	auth := jwtAuthenticator{
+		e:   ept,
 		a:   as,
 		se:  se,
 		adg: adg,
 	}
 
 	// WHEN
-	err = a.Authenticate(ctx, mrc, sc)
+	err = auth.Authenticate(ctx, mrc, sc)
 
 	// THEN
 	require.NoError(t, err)
 	assert.Equal(t, sub, sc.Subject)
 
-	e.AssertExpectations(t)
+	ept.AssertExpectations(t)
 	se.AssertExpectations(t)
 	adg.AssertExpectations(t)
 }

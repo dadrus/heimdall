@@ -12,35 +12,39 @@ type authenticationDataSource struct {
 
 func (a *authenticationDataSource) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
 	a.es, err = doUnmarshal(unmarshal)
+
 	return err
 }
 
 func doUnmarshal(unmarshal func(interface{}) error) (extractors.AuthDataExtractStrategy, error) {
-	var strategies extractors.CompositeExtractStrategy
-	var sources []map[string]string
+	var (
+		strategies extractors.CompositeExtractStrategy
+		sources    []map[string]string
+	)
 
 	if err := unmarshal(&sources); err != nil {
 		return nil, err
 	}
 
-	for _, s := range sources {
-		prefix, _ := s["strip_prefix"]
-		if v, ok := s["header"]; ok {
+	for _, source := range sources {
+		prefix, _ := source["strip_prefix"]
+
+		if v, ok := source["header"]; ok {
 			strategies = append(strategies, &extractors.HeaderValueExtractStrategy{
 				Name:   v,
 				Prefix: prefix,
 			})
-		} else if v, ok := s["cookie"]; ok {
+		} else if v, ok := source["cookie"]; ok {
 			strategies = append(strategies, &extractors.CookieValueExtractStrategy{
 				Name:   v,
 				Prefix: prefix,
 			})
-		} else if v, ok := s["query_parameter"]; ok {
+		} else if v, ok := source["query_parameter"]; ok {
 			strategies = append(strategies, &extractors.QueryParameterExtractStrategy{
 				Name:   v,
 				Prefix: prefix,
 			})
-		} else if v, ok := s["form_parameter"]; ok {
+		} else if v, ok := source["form_parameter"]; ok {
 			strategies = append(strategies, &extractors.FormParameterExtractStrategy{
 				Name:   v,
 				Prefix: prefix,

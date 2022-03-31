@@ -17,6 +17,7 @@ func (s *Session) Validate() error {
 	if len(s.SubjectFrom) == 0 {
 		return errors.New("session requires subject_from to be set")
 	}
+
 	return nil
 }
 
@@ -26,14 +27,15 @@ func (s *Session) GetSubject(rawData []byte) (*heimdall.Subject, error) {
 		attributesFrom = s.AttributesFrom
 	}
 
-	subjectId := gjson.GetBytes(rawData, s.SubjectFrom).String()
-	if len(subjectId) == 0 {
+	subjectID := gjson.GetBytes(rawData, s.SubjectFrom).String()
+	if len(subjectID) == 0 {
 		return nil, errors.New("failed to extract subject identifier")
 	}
+
 	attributes := gjson.GetBytes(rawData, attributesFrom).Value()
 
 	return &heimdall.Subject{
-		ID:         subjectId,
+		ID:         subjectID,
 		Attributes: attributes,
 	}, nil
 }

@@ -3,12 +3,15 @@ package authenticators
 import (
 	"testing"
 
-	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/dadrus/heimdall/internal/heimdall"
 )
 
 func TestNoopAuthenticatorExecution(t *testing.T) {
+	t.Parallel()
+
 	// GIVEN
 	sc := heimdall.SubjectContext{}
 	a := NewNoopAuthenticator()
@@ -23,13 +26,15 @@ func TestNoopAuthenticatorExecution(t *testing.T) {
 }
 
 func TestCreateNoopAuthenticatorFromPrototype(t *testing.T) {
+	t.Parallel()
+
 	// GIVEN
-	p := NewNoopAuthenticator()
+	prototype := NewNoopAuthenticator()
 
 	// WHEN
-	a, err := p.WithConfig(nil)
+	auth, err := prototype.WithConfig(nil)
 
 	// THEN
 	require.NoError(t, err)
-	require.Equal(t, p, a)
+	require.Equal(t, prototype, auth)
 }

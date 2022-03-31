@@ -4,12 +4,14 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/errorsx"
 	"github.com/dadrus/heimdall/internal/heimdall"
 )
 
 func TestCreateAnonymousAuthenticatorFromValidYaml(t *testing.T) {
+	t.Parallel()
 	// WHEN
 	a, err := NewAnonymousAuthenticatorFromYAML([]byte("subject: anon"))
 
@@ -19,6 +21,7 @@ func TestCreateAnonymousAuthenticatorFromValidYaml(t *testing.T) {
 }
 
 func TestCreateAnonymousAuthenticatorFromInvalidYaml(t *testing.T) {
+	t.Parallel()
 	// WHEN
 	_, err := NewAnonymousAuthenticatorFromYAML([]byte("foo: bar"))
 
@@ -28,44 +31,47 @@ func TestCreateAnonymousAuthenticatorFromInvalidYaml(t *testing.T) {
 }
 
 func TestCreateAnonymousAuthenticatorFromPrototypeGivenEmptyConfig(t *testing.T) {
+	t.Parallel()
 	// GIVEN
-	p, err := NewAnonymousAuthenticatorFromYAML([]byte("subject: anon"))
+	prototype, err := NewAnonymousAuthenticatorFromYAML([]byte("subject: anon"))
 	assert.NoError(t, err)
 
 	// WHEN
-	a, err := p.WithConfig([]byte{})
+	auth, err := prototype.WithConfig([]byte{})
 
 	// THEN
 	assert.NoError(t, err)
 
 	// prototype and "created" authenticator are same
-	assert.Equal(t, p, a)
+	assert.Equal(t, prototype, auth)
 }
 
 func TestCreateAnonymousAuthenticatorFromPrototypeGivenValidConfig(t *testing.T) {
+	t.Parallel()
 	// GIVEN
-	p, err := NewAnonymousAuthenticatorFromYAML([]byte("subject: anon"))
+	prototype, err := NewAnonymousAuthenticatorFromYAML([]byte("subject: anon"))
 	assert.NoError(t, err)
 
 	// WHEN
-	a, err := p.WithConfig([]byte("subject: foo"))
+	auth, err := prototype.WithConfig([]byte("subject: foo"))
 
 	// THEN
 	assert.NoError(t, err)
 	// prototype and "created" authenticator are different
-	assert.NotEqual(t, p, a)
-	assert.IsType(t, &anonymousAuthenticator{}, a)
-	aa := a.(*anonymousAuthenticator)
+	assert.NotEqual(t, prototype, auth)
+	aa, ok := auth.(*anonymousAuthenticator)
+	require.True(t, ok)
 	assert.Equal(t, "foo", aa.Subject)
 }
 
 func TestCreateAnonymousAuthenticatorFromPrototypeGivenInvalidConfig(t *testing.T) {
+	t.Parallel()
 	// GIVEN
-	p, err := NewAnonymousAuthenticatorFromYAML([]byte("subject: anon"))
+	prototype, err := NewAnonymousAuthenticatorFromYAML([]byte("subject: anon"))
 	assert.NoError(t, err)
 
 	// WHEN
-	_, err = p.WithConfig([]byte("foo: bar"))
+	_, err = prototype.WithConfig([]byte("foo: bar"))
 
 	// THEN
 	assert.Error(t, err)
@@ -73,9 +79,10 @@ func TestCreateAnonymousAuthenticatorFromPrototypeGivenInvalidConfig(t *testing.
 }
 
 func TestAuthenticateWithAnonymousAuthenticatorWithCustomSubjectId(t *testing.T) {
+	t.Parallel()
 	// GIVEN
-	subjectId := "anon"
-	a := anonymousAuthenticator{Subject: subjectId}
+	subjectID := "anon"
+	a := anonymousAuthenticator{Subject: subjectID}
 	sc := heimdall.SubjectContext{}
 
 	// WHEN
@@ -85,17 +92,19 @@ func TestAuthenticateWithAnonymousAuthenticatorWithCustomSubjectId(t *testing.T)
 	assert.NoError(t, err)
 	assert.Empty(t, sc.Header)
 	assert.NotNil(t, sc.Subject)
-	assert.Equal(t, subjectId, sc.Subject.ID)
+	assert.Equal(t, subjectID, sc.Subject.ID)
 }
 
 func TestAuthenticateWithAnonymousAuthenticatorWithDefaultSubjectId(t *testing.T) {
+	t.Parallel()
 	// GIVEN
-	a, err := NewAnonymousAuthenticatorFromYAML([]byte{})
+	auth, err := NewAnonymousAuthenticatorFromYAML([]byte{})
 	assert.NoError(t, err)
+
 	sc := heimdall.SubjectContext{}
 
 	// WHEN
-	err = a.Authenticate(nil, nil, &sc)
+	err = auth.Authenticate(nil, nil, &sc)
 
 	// THEN
 	assert.NoError(t, err)

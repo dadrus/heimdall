@@ -11,28 +11,33 @@ import (
 )
 
 func NewAnonymousAuthenticatorFromYAML(rawConfig []byte) (*anonymousAuthenticator, error) {
-	var a anonymousAuthenticator
+	var auth anonymousAuthenticator
 
-	if err := yaml.UnmarshalStrict(rawConfig, &a); err != nil {
+	if err := yaml.UnmarshalStrict(rawConfig, &auth); err != nil {
 		return nil, &errorsx.ArgumentError{
 			Message: "failed to unmarshal anonymous authenticator config",
 			Cause:   err,
 		}
 	}
 
-	if len(a.Subject) == 0 {
-		a.Subject = "anonymous"
+	if len(auth.Subject) == 0 {
+		auth.Subject = "anonymous"
 	}
 
-	return &a, nil
+	return &auth, nil
 }
 
 type anonymousAuthenticator struct {
 	Subject string `yaml:"subject"`
 }
 
-func (a *anonymousAuthenticator) Authenticate(_ context.Context, _ handler.RequestContext, sc *heimdall.SubjectContext) error {
+func (a *anonymousAuthenticator) Authenticate(
+	_ context.Context,
+	_ handler.RequestContext,
+	sc *heimdall.SubjectContext,
+) error {
 	sc.Subject = &heimdall.Subject{ID: a.Subject}
+
 	return nil
 }
 

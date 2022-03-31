@@ -33,6 +33,7 @@ linters-settings:
       - default # Contains all imports that could not be matched to another section type.
       - prefix(github.com/dadrus/heimdall) # Groups all imports with the specified Prefix.
   varnamelen:
+    min-name-length: 2
     ignore-type-assert-ok: true
     ignore-map-index-ok: true
     ignore-chan-recv-ok: true
@@ -49,3 +50,5 @@ linters-settings:
       - i int
       - T any
       - m map[string]int
+  goconst:
+    ignore-tests: true

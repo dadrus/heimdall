@@ -10,10 +10,15 @@ import (
 
 type CompositeAuthenticator []handler.Authenticator
 
-func (ca CompositeAuthenticator) Authenticate(c context.Context, rc handler.RequestContext, sc *heimdall.SubjectContext) error {
+func (ca CompositeAuthenticator) Authenticate(
+	ctx context.Context,
+	reqCtx handler.RequestContext,
+	subCtx *heimdall.SubjectContext,
+) error {
 	var err error
+
 	for _, a := range ca {
-		err = a.Authenticate(c, rc, sc)
+		err = a.Authenticate(ctx, reqCtx, subCtx)
 		if err != nil {
 			// try next
 			continue
@@ -21,6 +26,7 @@ func (ca CompositeAuthenticator) Authenticate(c context.Context, rc handler.Requ
 			return nil
 		}
 	}
+
 	return err
 }
 

@@ -11,58 +11,64 @@ import (
 )
 
 func TestCompositeAuthenticatorExecutionWithFallback(t *testing.T) {
+	t.Parallel()
+
 	// GIVEN
 	ctx := context.Background()
-	rc := &MockRequestContext{}
-	sc := &heimdall.SubjectContext{}
+	reqCtx := &MockRequestContext{}
+	subCtx := &heimdall.SubjectContext{}
 	authErr := errors.New("error")
 
-	m1 := &MockAuthenticator{}
-	m1.On("Authenticate", ctx, rc, sc).Return(authErr)
+	auth1 := &MockAuthenticator{}
+	auth1.On("Authenticate", ctx, reqCtx, subCtx).Return(authErr)
 
-	m2 := &MockAuthenticator{}
-	m2.On("Authenticate", ctx, rc, sc).Return(nil)
+	auth2 := &MockAuthenticator{}
+	auth2.On("Authenticate", ctx, reqCtx, subCtx).Return(nil)
 
-	ca := CompositeAuthenticator{m1, m2}
+	auth := CompositeAuthenticator{auth1, auth2}
 
 	// WHEN
-	err := ca.Authenticate(ctx, rc, sc)
+	err := auth.Authenticate(ctx, reqCtx, subCtx)
 
 	// THEN
 	assert.NoError(t, err)
 
-	m1.AssertExpectations(t)
-	m2.AssertExpectations(t)
+	auth1.AssertExpectations(t)
+	auth2.AssertExpectations(t)
 }
 
 func TestCompositeAuthenticatorExecutionWithoutFallback(t *testing.T) {
+	t.Parallel()
+
 	// GIVEN
 	ctx := context.Background()
-	rc := &MockRequestContext{}
-	sc := &heimdall.SubjectContext{}
+	reqCtx := &MockRequestContext{}
+	subCtx := &heimdall.SubjectContext{}
 
-	m1 := &MockAuthenticator{}
-	m2 := &MockAuthenticator{}
-	m2.On("Authenticate", ctx, rc, sc).Return(nil)
+	auth1 := &MockAuthenticator{}
+	auth2 := &MockAuthenticator{}
+	auth2.On("Authenticate", ctx, reqCtx, subCtx).Return(nil)
 
-	ca := CompositeAuthenticator{m2, m1}
+	auth := CompositeAuthenticator{auth2, auth1}
 
 	// WHEN
-	err := ca.Authenticate(ctx, rc, sc)
+	err := auth.Authenticate(ctx, reqCtx, subCtx)
 
 	// THEN
 	assert.NoError(t, err)
 
-	m1.AssertExpectations(t)
-	m2.AssertExpectations(t)
+	auth1.AssertExpectations(t)
+	auth2.AssertExpectations(t)
 }
 
 func TestCompositeAuthenticatorFromPrototypeIsNotAllowed(t *testing.T) {
+	t.Parallel()
+
 	// GIVEN
-	p := CompositeAuthenticator{}
+	auth := CompositeAuthenticator{}
 
 	// WHEN
-	_, err := p.WithConfig([]byte{})
+	_, err := auth.WithConfig([]byte{})
 
 	// THEN
 	assert.Error(t, err)

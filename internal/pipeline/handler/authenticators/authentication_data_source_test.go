@@ -4,13 +4,15 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-
+	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v2"
 
 	"github.com/dadrus/heimdall/internal/pipeline/handler/authenticators/extractors"
 )
 
 func TestUnmarshalAuthenticationDataSourceFromValidYaml(t *testing.T) {
+	t.Parallel()
+
 	var as authenticationDataSource
 
 	config := `
@@ -29,31 +31,34 @@ func TestUnmarshalAuthenticationDataSourceFromValidYaml(t *testing.T) {
 
 	assert.NotNil(t, as.es)
 
-	es := as.es.(extractors.CompositeExtractStrategy)
+	es, ok := as.es.(extractors.CompositeExtractStrategy)
+	require.True(t, ok)
 	assert.Equal(t, 4, len(es))
 
-	assert.IsType(t, &extractors.CookieValueExtractStrategy{}, es[0])
-	ce := es[0].(*extractors.CookieValueExtractStrategy)
+	ce, ok := es[0].(*extractors.CookieValueExtractStrategy)
+	require.True(t, ok)
 	assert.Equal(t, "foo_cookie", ce.Name)
 	assert.Equal(t, "cfoo", ce.Prefix)
 
-	assert.IsType(t, &extractors.HeaderValueExtractStrategy{}, es[1])
-	he := es[1].(*extractors.HeaderValueExtractStrategy)
+	he, ok := es[1].(*extractors.HeaderValueExtractStrategy)
+	require.True(t, ok)
 	assert.Equal(t, "foo_header", he.Name)
 	assert.Equal(t, "hfoo", he.Prefix)
 
-	assert.IsType(t, &extractors.QueryParameterExtractStrategy{}, es[2])
-	qe := es[2].(*extractors.QueryParameterExtractStrategy)
+	qe, ok := es[2].(*extractors.QueryParameterExtractStrategy)
+	require.True(t, ok)
 	assert.Equal(t, "foo_qparam", qe.Name)
 	assert.Equal(t, "qfoo", qe.Prefix)
 
-	assert.IsType(t, &extractors.FormParameterExtractStrategy{}, es[3])
-	fe := es[3].(*extractors.FormParameterExtractStrategy)
+	fe, ok := es[3].(*extractors.FormParameterExtractStrategy)
+	require.True(t, ok)
 	assert.Equal(t, "foo_fparam", fe.Name)
 	assert.Equal(t, "ffoo", fe.Prefix)
 }
 
 func TestUnmarshalAuthenticationDataSourceFromEmptyYaml(t *testing.T) {
+	t.Parallel()
+
 	var as authenticationDataSource
 
 	err := yaml.Unmarshal([]byte{}, &as)

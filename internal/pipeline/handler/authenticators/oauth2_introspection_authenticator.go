@@ -7,13 +7,14 @@ import (
 	"net/url"
 	"strings"
 
+	"gopkg.in/square/go-jose.v2"
+
 	"github.com/dadrus/heimdall/internal/errorsx"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/pipeline/endpoint"
 	"github.com/dadrus/heimdall/internal/pipeline/handler"
 	"github.com/dadrus/heimdall/internal/pipeline/handler/authenticators/extractors"
 	"github.com/dadrus/heimdall/internal/pipeline/oauth2"
-	"gopkg.in/square/go-jose.v2"
 )
 
 type oauth2IntrospectionAuthenticator struct {
@@ -30,13 +31,13 @@ func NewOAuth2IntrospectionAuthenticatorFromJSON(rawConfig json.RawMessage) (*oa
 		Session    Session            `json:"session"`
 	}
 
-	var c _config
-	if err := json.Unmarshal(rawConfig, &c); err != nil {
+	var conf _config
+	if err := json.Unmarshal(rawConfig, &conf); err != nil {
 		return nil, err
 	}
 
-	if len(c.Assertions.AllowedAlgorithms) == 0 {
-		c.Assertions.AllowedAlgorithms = []string{
+	if len(conf.Assertions.AllowedAlgorithms) == 0 {
+		conf.Assertions.AllowedAlgorithms = []string{
 			// ECDSA
 			string(jose.ES256), string(jose.ES384), string(jose.ES512),
 			// RSA-PSS
@@ -44,25 +45,27 @@ func NewOAuth2IntrospectionAuthenticatorFromJSON(rawConfig json.RawMessage) (*oa
 		}
 	}
 
-	if err := c.Assertions.Validate(); err != nil {
+	if err := conf.Assertions.Validate(); err != nil {
 		return nil, &errorsx.ArgumentError{
 			Message: "failed to validate assertions configuration",
 			Cause:   err,
 		}
 	}
 
-	if c.Endpoint.Headers == nil {
-		c.Endpoint.Headers = make(map[string]string)
+	if conf.Endpoint.Headers == nil {
+		conf.Endpoint.Headers = make(map[string]string)
 	}
 
-	if _, ok := c.Endpoint.Headers["Content-Type"]; !ok {
-		c.Endpoint.Headers["Content-Type"] = "application/x-www-form-urlencoded"
+	if _, ok := conf.Endpoint.Headers["Content-Type"]; !ok {
+		conf.Endpoint.Headers["Content-Type"] = "application/x-www-form-urlencoded"
 	}
-	if _, ok := c.Endpoint.Headers["Accept-Type"]; !ok {
-		c.Endpoint.Headers["Accept-Type"] = "application/json"
+
+	if _, ok := conf.Endpoint.Headers["Accept-Type"]; !ok {
+		conf.Endpoint.Headers["Accept-Type"] = "application/json"
 	}
-	if len(c.Endpoint.Method) == 0 {
-		c.Endpoint.Method = "POST"
+
+	if len(conf.Endpoint.Method) == 0 {
+		conf.Endpoint.Method = "POST"
 	}
 
 	extractor := extractors.CompositeExtractStrategy{
@@ -73,13 +76,17 @@ func NewOAuth2IntrospectionAuthenticatorFromJSON(rawConfig json.RawMessage) (*oa
 
 	return &oauth2IntrospectionAuthenticator{
 		adg: extractor,
-		e:   c.Endpoint,
-		a:   c.Assertions,
-		se:  &c.Session,
+		e:   conf.Endpoint,
+		a:   conf.Assertions,
+		se:  &conf.Session,
 	}, nil
 }
 
-func (a *oauth2IntrospectionAuthenticator) Authenticate(ctx context.Context, as handler.RequestContext, sc *heimdall.SubjectContext) error {
+func (a *oauth2IntrospectionAuthenticator) Authenticate(
+	ctx context.Context,
+	as handler.RequestContext,
+	sc *heimdall.SubjectContext,
+) error {
 	accessToken, err := a.adg.GetAuthData(as)
 	if err != nil {
 		return &errorsx.ArgumentError{Message: "no access token present", Cause: err}
@@ -124,14 +131,14 @@ func (a *oauth2IntrospectionAuthenticator) WithConfig(config []byte) (handler.Au
 		Assertions oauth2.Expectation `json:"introspection_response_assertions"`
 	}
 
-	var c _config
-	if err := json.Unmarshal(config, &c); err != nil {
+	var conf _config
+	if err := json.Unmarshal(config, &conf); err != nil {
 		return nil, err
 	}
 
 	return &oauth2IntrospectionAuthenticator{
 		e:   a.e,
-		a:   c.Assertions,
+		a:   conf.Assertions,
 		se:  a.se,
 		adg: a.adg,
 	}, nil

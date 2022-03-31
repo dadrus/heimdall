@@ -7,8 +7,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/dadrus/heimdall/internal/pipeline/handler/authenticators/extractors"
-	"github.com/dadrus/heimdall/internal/pipeline/oauth2"
 	"gopkg.in/square/go-jose.v2"
 	"gopkg.in/square/go-jose.v2/jwt"
 	"gopkg.in/yaml.v2"
@@ -17,6 +15,8 @@ import (
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/pipeline/endpoint"
 	"github.com/dadrus/heimdall/internal/pipeline/handler"
+	"github.com/dadrus/heimdall/internal/pipeline/handler/authenticators/extractors"
+	"github.com/dadrus/heimdall/internal/pipeline/oauth2"
 )
 
 type jwtAuthenticator struct {
@@ -34,31 +34,32 @@ func NewJwtAuthenticatorFromYAML(rawConfig []byte) (*jwtAuthenticator, error) {
 		Session        Session                  `yaml:"session"`
 	}
 
-	var c _config
-	if err := yaml.UnmarshalStrict(rawConfig, &c); err != nil {
+	var conf _config
+	if err := yaml.UnmarshalStrict(rawConfig, &conf); err != nil {
 		return nil, err
 	}
 
-	if err := c.JwtAssertions.Validate(); err != nil {
+	if err := conf.JwtAssertions.Validate(); err != nil {
 		return nil, &errorsx.ArgumentError{
 			Message: "failed to validate assertions configuration",
 			Cause:   err,
 		}
 	}
 
-	if c.Endpoint.Headers == nil {
-		c.Endpoint.Headers = make(map[string]string)
+	if conf.Endpoint.Headers == nil {
+		conf.Endpoint.Headers = make(map[string]string)
 	}
 
-	if _, ok := c.Endpoint.Headers["Accept-Type"]; !ok {
-		c.Endpoint.Headers["Accept-Type"] = "application/json"
-	}
-	if len(c.Endpoint.Method) == 0 {
-		c.Endpoint.Method = "GET"
+	if _, ok := conf.Endpoint.Headers["Accept-Type"]; !ok {
+		conf.Endpoint.Headers["Accept-Type"] = "application/json"
 	}
 
-	if len(c.JwtAssertions.AllowedAlgorithms) == 0 {
-		c.JwtAssertions.AllowedAlgorithms = []string{
+	if len(conf.Endpoint.Method) == 0 {
+		conf.Endpoint.Method = "GET"
+	}
+
+	if len(conf.JwtAssertions.AllowedAlgorithms) == 0 {
+		conf.JwtAssertions.AllowedAlgorithms = []string{
 			// ECDSA
 			string(jose.ES256), string(jose.ES384), string(jose.ES512),
 			// RSA-PSS
@@ -66,37 +67,41 @@ func NewJwtAuthenticatorFromYAML(rawConfig []byte) (*jwtAuthenticator, error) {
 		}
 	}
 
-	if err := c.Endpoint.Validate(); err != nil {
+	if err := conf.Endpoint.Validate(); err != nil {
 		return nil, &errorsx.ArgumentError{
 			Message: "failed to validate endpoint configuration",
 			Cause:   err,
 		}
 	}
 
-	if len(c.Session.SubjectFrom) == 0 {
-		c.Session.SubjectFrom = "sub"
+	if len(conf.Session.SubjectFrom) == 0 {
+		conf.Session.SubjectFrom = "sub"
 	}
 
 	var adg extractors.AuthDataExtractStrategy
-	if c.AuthDataSource.es == nil {
+	if conf.AuthDataSource.es == nil {
 		adg = extractors.CompositeExtractStrategy{
 			extractors.HeaderValueExtractStrategy{Name: "Authorization", Prefix: "Bearer"},
 			extractors.FormParameterExtractStrategy{Name: "access_token"},
 			extractors.QueryParameterExtractStrategy{Name: "access_token"},
 		}
 	} else {
-		adg = c.AuthDataSource.es
+		adg = conf.AuthDataSource.es
 	}
 
 	return &jwtAuthenticator{
-		e:   c.Endpoint,
-		a:   c.JwtAssertions,
-		se:  &c.Session,
+		e:   conf.Endpoint,
+		a:   conf.JwtAssertions,
+		se:  &conf.Session,
 		adg: adg,
 	}, nil
 }
 
-func (a *jwtAuthenticator) Authenticate(ctx context.Context, as handler.RequestContext, sc *heimdall.SubjectContext) error {
+func (a *jwtAuthenticator) Authenticate(
+	ctx context.Context,
+	as handler.RequestContext,
+	sc *heimdall.SubjectContext,
+) error {
 	// request jwks endpoint to verify jwt
 	rawBody, err := a.e.SendRequest(ctx, nil)
 	if err != nil {
@@ -152,8 +157,11 @@ func (a *jwtAuthenticator) verifyTokenAndGetClaims(jwtRaw string, jwks jose.JSON
 		return nil, fmt.Errorf("%s algorithm is not allowed", keys[0].Algorithm)
 	}
 
-	var mapClaims map[string]interface{}
-	var claims oauth2.Claims
+	var (
+		mapClaims map[string]interface{}
+		claims    oauth2.Claims
+	)
+
 	if err = token.Claims(&jwks, &mapClaims, &claims); err != nil {
 		return nil, err
 	}
@@ -183,14 +191,14 @@ func (a *jwtAuthenticator) WithConfig(config []byte) (handler.Authenticator, err
 		JwtAssertions oauth2.Expectation `yaml:"jwt_assertions"`
 	}
 
-	var c _config
-	if err := yaml.Unmarshal(config, &c); err != nil {
+	var conf _config
+	if err := yaml.Unmarshal(config, &conf); err != nil {
 		return nil, err
 	}
 
 	return &jwtAuthenticator{
 		e:   a.e,
-		a:   c.JwtAssertions,
+		a:   conf.JwtAssertions,
 		se:  a.se,
 		adg: a.adg,
 	}, nil

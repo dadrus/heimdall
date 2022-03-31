@@ -9,12 +9,15 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/errorsx"
 	"github.com/dadrus/heimdall/internal/heimdall"
 )
 
 func TestCreateAuthenticationDataAuthenticator(t *testing.T) {
+	t.Parallel()
+
 	for _, tc := range []struct {
 		uc          string
 		config      []byte
@@ -28,6 +31,7 @@ identity_info_endpoint:
 authentication_data_source:
   - header: foo-header`),
 			assertError: func(t *testing.T, err error) {
+				t.Helper()
 				assert.Error(t, err)
 			},
 		},
@@ -39,6 +43,7 @@ authentication_data_source:
 session:
   subject_from: some_template`),
 			assertError: func(t *testing.T, err error) {
+				t.Helper()
 				assert.Error(t, err)
 			},
 		},
@@ -50,6 +55,7 @@ identity_info_endpoint:
 session:
   subject_from: some_template`),
 			assertError: func(t *testing.T, err error) {
+				t.Helper()
 				assert.Error(t, err)
 			},
 		},
@@ -62,6 +68,7 @@ identity_info_endpoint:
 session:
   subject_from: some_template`),
 			assertError: func(t *testing.T, err error) {
+				t.Helper()
 				assert.Error(t, err)
 			},
 		},
@@ -76,11 +83,13 @@ authentication_data_source:
 session:
   subject_from: some_template`),
 			assertError: func(t *testing.T, err error) {
+				t.Helper()
 				assert.NoError(t, err)
 			},
 		},
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
+			t.Parallel()
 			// WHEN
 			_, err := NewAuthenticationDataAuthenticatorFromYAML(tc.config)
 
@@ -91,6 +100,7 @@ session:
 }
 
 func TestCreateAuthenticationDataAuthenticatorFromPrototypeNotAllowed(t *testing.T) {
+	t.Parallel()
 	// GIVEN
 	p := authenticationDataAuthenticator{}
 
@@ -103,136 +113,142 @@ func TestCreateAuthenticationDataAuthenticatorFromPrototypeNotAllowed(t *testing
 }
 
 func TestSuccessfulExecutionOfAuthenticationDataAuthenticator(t *testing.T) {
+	t.Parallel()
 	// GIVEN
-	sc := &heimdall.SubjectContext{}
+	subCtx := &heimdall.SubjectContext{}
 	sub := &heimdall.Subject{ID: "bar"}
 	ctx := context.Background()
 	eResp := []byte("foo")
 	authDataVal := "foobar"
-	mrc := &MockRequestContext{}
+	reqCtx := &MockRequestContext{}
 
-	e := &MockEndpoint{}
-	e.On("SendRequest", mock.Anything, mock.MatchedBy(func(r io.Reader) bool {
+	ept := &MockEndpoint{}
+	ept.On("SendRequest", mock.Anything, mock.MatchedBy(func(r io.Reader) bool {
 		val, _ := ioutil.ReadAll(r)
+
 		return string(val) == authDataVal
 	}),
 	).Return(eResp, nil)
 
-	se := &MockSubjectExtractor{}
-	se.On("GetSubject", eResp).Return(sub, nil)
+	subExtr := &MockSubjectExtractor{}
+	subExtr.On("GetSubject", eResp).Return(sub, nil)
 
 	adg := &MockAuthDataGetter{}
-	adg.On("GetAuthData", mrc).Return(authDataVal, nil)
+	adg.On("GetAuthData", reqCtx).Return(authDataVal, nil)
 
-	a := authenticationDataAuthenticator{
-		Endpoint:         e,
-		SubjectExtractor: se,
+	ada := authenticationDataAuthenticator{
+		Endpoint:         ept,
+		SubjectExtractor: subExtr,
 		AuthDataGetter:   adg,
 	}
 
 	// WHEN
-	err := a.Authenticate(ctx, mrc, sc)
+	err := ada.Authenticate(ctx, reqCtx, subCtx)
 
 	// THEN
 	assert.NoError(t, err)
-	assert.Equal(t, sub, sc.Subject)
+	assert.Equal(t, sub, subCtx.Subject)
 
-	e.AssertExpectations(t)
-	se.AssertExpectations(t)
+	ept.AssertExpectations(t)
+	subExtr.AssertExpectations(t)
 	adg.AssertExpectations(t)
 }
 
 func TestAuthenticationDataAuthenticatorExecutionFailsDueToMissingAuthData(t *testing.T) {
+	t.Parallel()
 	// GIVEN
-	sc := &heimdall.SubjectContext{}
+	subCtx := &heimdall.SubjectContext{}
 	ctx := context.Background()
-	e := &MockEndpoint{}
-	se := &MockSubjectExtractor{}
+	ept := &MockEndpoint{}
+	subExtr := &MockSubjectExtractor{}
 	failErr := errors.New("no auth data present")
 
 	adg := &MockAuthDataGetter{}
 	adg.On("GetAuthData", mock.Anything).Return("", failErr)
 
-	a := authenticationDataAuthenticator{
-		Endpoint:         e,
-		SubjectExtractor: se,
+	ada := authenticationDataAuthenticator{
+		Endpoint:         ept,
+		SubjectExtractor: subExtr,
 		AuthDataGetter:   adg,
 	}
 
 	// WHEN
-	err := a.Authenticate(ctx, nil, sc)
+	err := ada.Authenticate(ctx, nil, subCtx)
 
 	// THEN
 	assert.Error(t, err)
-	assert.IsType(t, &errorsx.ArgumentError{}, err)
-	erra := err.(*errorsx.ArgumentError)
+
+	erra, ok := err.(*errorsx.ArgumentError)
+	require.True(t, ok)
 	assert.Equal(t, failErr, erra.Cause)
 
-	e.AssertExpectations(t)
-	se.AssertExpectations(t)
+	ept.AssertExpectations(t)
+	subExtr.AssertExpectations(t)
 	adg.AssertExpectations(t)
 }
 
 func TestAuthenticationDataAuthenticatorExecutionFailsDueToEndpointError(t *testing.T) {
+	t.Parallel()
 	// GIVEN
-	sc := &heimdall.SubjectContext{}
+	subStx := &heimdall.SubjectContext{}
 	ctx := context.Background()
 	authDataVal := "foobar"
 	netErr := errors.New("no auth data present")
-
 	adg := &MockAuthDataGetter{}
-	adg.On("GetAuthData", mock.Anything).Return(authDataVal, nil)
-	e := &MockEndpoint{}
-	e.On("SendRequest", mock.Anything, mock.Anything).Return(nil, netErr)
-	se := &MockSubjectExtractor{}
+	ept := &MockEndpoint{}
+	subExtr := &MockSubjectExtractor{}
 
-	a := authenticationDataAuthenticator{
-		Endpoint:         e,
-		SubjectExtractor: se,
+	adg.On("GetAuthData", mock.Anything).Return(authDataVal, nil)
+	ept.On("SendRequest", mock.Anything, mock.Anything).Return(nil, netErr)
+
+	ada := authenticationDataAuthenticator{
+		Endpoint:         ept,
+		SubjectExtractor: subExtr,
 		AuthDataGetter:   adg,
 	}
 
 	// WHEN
-	err := a.Authenticate(ctx, nil, sc)
+	err := ada.Authenticate(ctx, nil, subStx)
 
 	// THEN
 	assert.Error(t, err)
 	assert.Equal(t, netErr, err)
 
-	e.AssertExpectations(t)
-	se.AssertExpectations(t)
+	ept.AssertExpectations(t)
+	subExtr.AssertExpectations(t)
 	adg.AssertExpectations(t)
 }
 
 func TestAuthenticationDataAuthenticatorExecutionFailsDueToFailedSubjectExtraction(t *testing.T) {
+	t.Parallel()
 	// GIVEN
-	sc := &heimdall.SubjectContext{}
+	subCtx := &heimdall.SubjectContext{}
 	ctx := context.Background()
 	authDataVal := "foobar"
 	eResp := []byte("foo")
 	sgErr := errors.New("failed to extract subject")
-
 	adg := &MockAuthDataGetter{}
-	adg.On("GetAuthData", mock.Anything).Return(authDataVal, nil)
-	e := &MockEndpoint{}
-	e.On("SendRequest", mock.Anything, mock.Anything).Return(eResp, nil)
-	se := &MockSubjectExtractor{}
-	se.On("GetSubject", eResp).Return(nil, sgErr)
+	ept := &MockEndpoint{}
+	subExtr := &MockSubjectExtractor{}
 
-	a := authenticationDataAuthenticator{
-		Endpoint:         e,
-		SubjectExtractor: se,
+	adg.On("GetAuthData", mock.Anything).Return(authDataVal, nil)
+	ept.On("SendRequest", mock.Anything, mock.Anything).Return(eResp, nil)
+	subExtr.On("GetSubject", eResp).Return(nil, sgErr)
+
+	ada := authenticationDataAuthenticator{
+		Endpoint:         ept,
+		SubjectExtractor: subExtr,
 		AuthDataGetter:   adg,
 	}
 
 	// WHEN
-	err := a.Authenticate(ctx, nil, sc)
+	err := ada.Authenticate(ctx, nil, subCtx)
 
 	// THEN
 	assert.Error(t, err)
 	assert.Equal(t, sgErr, err)
 
-	e.AssertExpectations(t)
-	se.AssertExpectations(t)
+	ept.AssertExpectations(t)
+	subExtr.AssertExpectations(t)
 	adg.AssertExpectations(t)
 }
