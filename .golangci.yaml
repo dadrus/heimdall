@@ -14,6 +14,7 @@ linters:
     - golint
     - interfacer
     - testpackage
+    - funlen
 
 linters-settings:
   exhaustive:
@@ -50,5 +51,15 @@ linters-settings:
       - i int
       - T any
       - m map[string]int
+      - w http.ResponseWriter
+      - r *http.Request
   goconst:
     ignore-tests: true
+#  revive:
+#    max-open-files: 2048
+#    severity: error
+#    enable-all-rules: true
+#    rules:
+#      - name: unexported-return
+#        severity: warning
+#        disabled: true

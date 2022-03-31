@@ -3,9 +3,9 @@ package authenticators
 import (
 	"context"
 
-	"github.com/dadrus/heimdall/internal/errorsx"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/pipeline/handler"
+	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
 type unauthorizedAuthenticator struct{}
@@ -19,7 +19,7 @@ func (a *unauthorizedAuthenticator) Authenticate(
 	_ handler.RequestContext,
 	_ *heimdall.SubjectContext,
 ) error {
-	return &errorsx.UnauthorizedError{Message: "denied by authenticator"}
+	return errorchain.NewWithMessage(heimdall.ErrAuthentication, "denied by authenticator")
 }
 
 func (a *unauthorizedAuthenticator) WithConfig(_ []byte) (handler.Authenticator, error) {

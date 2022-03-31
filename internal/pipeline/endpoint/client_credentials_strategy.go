@@ -3,8 +3,6 @@ package endpoint
 import (
 	"context"
 	"encoding/json"
-	"errors"
-	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -14,14 +12,16 @@ import (
 
 	"github.com/ybbus/httpretry"
 
+	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/httpx"
 )
 
 type ClientCredentialsStrategy struct {
-	ClientId     string   `json:"client_id"`
-	ClientSecret string   `json:"client_secret"`
-	Scopes       []string `json:"scopes"`
-	TokenUrl     string   `json:"token_url"`
+	ClientID     string   `yaml:"client_id"`
+	ClientSecret string   `yaml:"client_secret"`
+	Scopes       []string `yaml:"scopes"`
+	TokenURL     string   `yaml:"token_url"`
 
 	lastResponse *tokenEndpointResponse
 	mutex        sync.RWMutex
@@ -52,6 +52,7 @@ func (c *ClientCredentialsStrategy) Apply(ctx context.Context, req *http.Request
 	}
 
 	req.Header.Set("Authorization", tokenInfo.TokenType+" "+tokenInfo.AccessToken)
+
 	return nil
 }
 
@@ -63,19 +64,19 @@ func (c *ClientCredentialsStrategy) getAccessToken(ctx context.Context) (*tokenE
 		httpretry.WithBackoffPolicy(httpretry.ExponentialBackoff(100*time.Millisecond, 3*time.Second, 0)))
 
 	// create payload body
-	data := url.Values{
-		"grant_type": []string{"client_credentials"},
-	}
+	data := url.Values{"grant_type": []string{"client_credentials"}}
 	if len(c.Scopes) != 0 {
 		data.Add("scope", strings.Join(c.Scopes, " "))
 	}
+
 	content := data.Encode()
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.TokenUrl, strings.NewReader(content))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.TokenURL, strings.NewReader(content))
 	if err != nil {
 		return nil, err
 	}
-	req.SetBasicAuth(url.QueryEscape(c.ClientId), url.QueryEscape(c.ClientSecret))
+
+	req.SetBasicAuth(url.QueryEscape(c.ClientID), url.QueryEscape(c.ClientSecret))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.Header.Set("Accept-Type", "application/json")
 
@@ -88,17 +89,26 @@ func (c *ClientCredentialsStrategy) getAccessToken(ctx context.Context) (*tokenE
 }
 
 func readResponse(resp *http.Response) (*tokenEndpointResponse, error) {
-	var r tokenEndpointResponse
+	defer resp.Body.Close()
+
 	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
 		rawData, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
-			return nil, fmt.Errorf("failed to read response: %w", err)
+			return nil, errorchain.
+				NewWithMessage(heimdall.ErrInternal, "failed to read response").
+				CausedBy(err)
 		}
-		if err := json.Unmarshal(rawData, &r); err != nil {
-			return nil, fmt.Errorf("failed to unmarshal response: %w", err)
+
+		var ter tokenEndpointResponse
+		if err := json.Unmarshal(rawData, &ter); err != nil {
+			return nil, errorchain.
+				NewWithMessage(heimdall.ErrInternal, "failed to unmarshal response").
+				CausedBy(err)
 		}
-	} else {
-		return nil, errors.New(fmt.Sprintf("unexpected response. code: %v", resp.StatusCode))
+
+		return &ter, nil
 	}
-	return &r, nil
+
+	return nil, errorchain.
+		NewWithMessagef(heimdall.ErrInternal, "unexpected response. code: %v", resp.StatusCode)
 }

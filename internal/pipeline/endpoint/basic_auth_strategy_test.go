@@ -9,6 +9,8 @@ import (
 )
 
 func TestApplyBasicAuthStrategy(t *testing.T) {
+	t.Parallel()
+
 	// GIVEN
 	user := "Foo"
 	password := "Bar"

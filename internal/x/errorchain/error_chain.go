@@ -31,7 +31,7 @@ func NewWithMessage(err error, message string) *ErrorChain {
 func NewWithMessagef(err error, format string, a ...any) *ErrorChain {
 	chain := &ErrorChain{}
 
-	return chain.CausedBy(fmt.Errorf("%w: %s", err, fmt.Sprintf(format, a)))
+	return chain.CausedBy(fmt.Errorf("%w: %s", err, fmt.Sprintf(format, a...)))
 }
 
 func (e *ErrorChain) Error() string {

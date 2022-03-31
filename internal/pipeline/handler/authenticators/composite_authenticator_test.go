@@ -2,7 +2,6 @@ package authenticators
 
 import (
 	"context"
-	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -17,10 +16,9 @@ func TestCompositeAuthenticatorExecutionWithFallback(t *testing.T) {
 	ctx := context.Background()
 	reqCtx := &MockRequestContext{}
 	subCtx := &heimdall.SubjectContext{}
-	authErr := errors.New("error")
 
 	auth1 := &MockAuthenticator{}
-	auth1.On("Authenticate", ctx, reqCtx, subCtx).Return(authErr)
+	auth1.On("Authenticate", ctx, reqCtx, subCtx).Return(ErrTestPurpose)
 
 	auth2 := &MockAuthenticator{}
 	auth2.On("Authenticate", ctx, reqCtx, subCtx).Return(nil)
@@ -72,5 +70,5 @@ func TestCompositeAuthenticatorFromPrototypeIsNotAllowed(t *testing.T) {
 
 	// THEN
 	assert.Error(t, err)
-	assert.Equal(t, "reconfiguration not allowed", err.Error())
+	assert.Contains(t, err.Error(), "configuration error")
 }

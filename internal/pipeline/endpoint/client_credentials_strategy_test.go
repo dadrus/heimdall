@@ -18,7 +18,7 @@ import (
 
 func TestApplyClientCredentialsStrategy(t *testing.T) {
 	// GIVEN
-	clientId := "test-client"
+	clientID := "test-client"
 	clientSecret := "test-secret"
 	scopes := []string{"foo", "bar"}
 
@@ -35,10 +35,12 @@ func TestApplyClientCredentialsStrategy(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			w.WriteHeader(http.StatusMethodNotAllowed)
+
 			return
 		}
 		if err := r.ParseForm(); err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
+
 			return
 		}
 
@@ -58,6 +60,7 @@ func TestApplyClientCredentialsStrategy(t *testing.T) {
 		_, err := rand.Read(blk)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
+
 			return
 		}
 
@@ -71,41 +74,45 @@ func TestApplyClientCredentialsStrategy(t *testing.T) {
 
 		if err := r.ParseForm(); err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
+
 			return
 		}
 		rawResp, err := json.Marshal(&resp)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
+
 			return
 		}
 
 		w.Header().Set("Content-Type", receivedAcceptType)
 		w.Header().Set("Content-Length", strconv.Itoa(len(rawResp)))
 		w.Write(rawResp)
+
 		return
 	}))
 	defer srv.Close()
 
-	s := ClientCredentialsStrategy{
-		ClientId:     clientId,
+	strategy := ClientCredentialsStrategy{
+		ClientID:     clientID,
 		ClientSecret: clientSecret,
 		Scopes:       scopes,
-		TokenUrl:     srv.URL,
+		TokenURL:     srv.URL,
 	}
 
 	req := &http.Request{Header: http.Header{}}
 
 	// WHEN
-	err := s.Apply(context.Background(), req)
+	err := strategy.Apply(context.Background(), req)
 
 	// THEN
 	assert.NoError(t, err)
 
 	val, err := base64.StdEncoding.DecodeString(strings.TrimPrefix(receivedAuthorization, "Basic "))
 	assert.NoError(t, err)
-	clientIdAndSecret := strings.Split(string(val), ":")
-	assert.Equal(t, clientId, clientIdAndSecret[0])
-	assert.Equal(t, clientSecret, clientIdAndSecret[1])
+
+	clientIDAndSecret := strings.Split(string(val), ":")
+	assert.Equal(t, clientID, clientIDAndSecret[0])
+	assert.Equal(t, clientSecret, clientIDAndSecret[1])
 
 	assert.Equal(t, "application/x-www-form-urlencoded", receivedContentType)
 	assert.Equal(t, "application/json", receivedAcceptType)
@@ -114,9 +121,9 @@ func TestApplyClientCredentialsStrategy(t *testing.T) {
 
 	assert.Equal(t, "Bearer "+setAccessToken, req.Header.Get("Authorization"))
 
-	assert.GreaterOrEqual(t, setExpiresIn+time.Now().Unix(), s.lastResponse.ExpiresIn)
-	assert.Equal(t, setAccessToken, s.lastResponse.AccessToken)
-	assert.Equal(t, "Bearer", s.lastResponse.TokenType)
+	assert.GreaterOrEqual(t, setExpiresIn+time.Now().Unix(), strategy.lastResponse.ExpiresIn)
+	assert.Equal(t, setAccessToken, strategy.lastResponse.AccessToken)
+	assert.Equal(t, "Bearer", strategy.lastResponse.TokenType)
 }
 
 // TODO: test concurrency

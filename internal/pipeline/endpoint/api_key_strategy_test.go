@@ -8,11 +8,13 @@ import (
 )
 
 func TestApplyApiKeyStrategyOnHeader(t *testing.T) {
+	t.Parallel()
+
 	// GIVEN
 	name := "Foo"
 	value := "Bar"
 	req := &http.Request{Header: http.Header{}}
-	s := ApiKeyStrategy{Name: name, Value: value, In: "header"}
+	s := APIKeyStrategy{Name: name, Value: value, In: "header"}
 
 	// WHEN
 	err := s.Apply(nil, req)
@@ -23,11 +25,13 @@ func TestApplyApiKeyStrategyOnHeader(t *testing.T) {
 }
 
 func TestApplyApiKeyStrategyOnCookie(t *testing.T) {
+	t.Parallel()
+
 	// GIVEN
 	name := "Foo"
 	value := "Bar"
 	req := &http.Request{Header: http.Header{}}
-	s := ApiKeyStrategy{Name: name, Value: value, In: "cookie"}
+	s := APIKeyStrategy{Name: name, Value: value, In: "cookie"}
 
 	// WHEN
 	err := s.Apply(nil, req)

@@ -104,7 +104,7 @@ func newAuthenticator(obj config.PipelineObject) (handler.Authenticator, error) 
 	case config.POTAuthenticationData:
 		authenticator, err = authenticators2.NewAuthenticationDataAuthenticatorFromYAML(obj.Config)
 	case config.POTOAuth2Introspection:
-		authenticator, err = authenticators2.NewOAuth2IntrospectionAuthenticatorFromJSON(obj.Config)
+		authenticator, err = authenticators2.NewOAuth2IntrospectionAuthenticatorFromYAML(obj.Config)
 	case config.POTJwt:
 		authenticator, err = authenticators2.NewJwtAuthenticatorFromYAML(obj.Config)
 	default:

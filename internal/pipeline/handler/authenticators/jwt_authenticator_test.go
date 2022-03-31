@@ -92,7 +92,7 @@ jwt_assertions:
 				// endpoint settings
 				ept, ok := auth.e.(endpoint.Endpoint)
 				require.True(t, ok)
-				assert.Equal(t, "http://test.com", ept.Url)
+				assert.Equal(t, "http://test.com", ept.URL)
 				assert.Equal(t, "GET", ept.Method)
 				assert.Equal(t, 1, len(ept.Headers))
 				assert.Contains(t, ept.Headers, "Accept-Type")
@@ -152,7 +152,7 @@ session:
 				// endpoint settings
 				ept, ok := auth.e.(endpoint.Endpoint)
 				require.True(t, ok)
-				assert.Equal(t, "http://test.com", ept.Url)
+				assert.Equal(t, "http://test.com", ept.URL)
 				assert.Equal(t, "POST", ept.Method)
 				assert.Equal(t, 1, len(ept.Headers))
 				assert.Contains(t, ept.Headers, "Accept-Type")
@@ -264,8 +264,8 @@ jwt_assertions:
 	assert.Equal(t, prototype.se, jwta.se)
 	assert.NotEqual(t, prototype.a, jwta.a)
 
-	assert.NotNil(t, jwta.a.ScopeStrategy)
-	assert.ElementsMatch(t, jwta.a.RequiredScopes, []string{"foo"})
+	assert.Nil(t, jwta.a.ScopeStrategy)
+	assert.Empty(t, jwta.a.RequiredScopes)
 	assert.Empty(t, jwta.a.TargetAudiences)
 	assert.ElementsMatch(t, jwta.a.TrustedIssuers, []string{"barfoo"})
 	assert.ElementsMatch(t, jwta.a.AllowedAlgorithms, []string{string(jose.ES512)})

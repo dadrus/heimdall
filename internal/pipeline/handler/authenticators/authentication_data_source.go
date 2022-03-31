@@ -1,9 +1,9 @@
 package authenticators
 
 import (
-	"errors"
-
+	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/pipeline/handler/authenticators/extractors"
+	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
 type authenticationDataSource struct {
@@ -50,7 +50,8 @@ func doUnmarshal(unmarshal func(interface{}) error) (extractors.AuthDataExtractS
 				Prefix: prefix,
 			})
 		} else {
-			return nil, errors.New("unsupported authentication source")
+			return nil, errorchain.
+				NewWithMessagef(heimdall.ErrConfiguration, "\"%s\" authentication source not supported", source)
 		}
 	}
 

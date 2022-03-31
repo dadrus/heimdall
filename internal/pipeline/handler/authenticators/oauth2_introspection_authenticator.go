@@ -3,18 +3,18 @@ package authenticators
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"net/url"
 	"strings"
 
 	"gopkg.in/square/go-jose.v2"
+	"gopkg.in/yaml.v2"
 
-	"github.com/dadrus/heimdall/internal/errorsx"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/pipeline/endpoint"
 	"github.com/dadrus/heimdall/internal/pipeline/handler"
 	"github.com/dadrus/heimdall/internal/pipeline/handler/authenticators/extractors"
 	"github.com/dadrus/heimdall/internal/pipeline/oauth2"
+	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
 type oauth2IntrospectionAuthenticator struct {
@@ -24,16 +24,18 @@ type oauth2IntrospectionAuthenticator struct {
 	adg AuthDataGetter
 }
 
-func NewOAuth2IntrospectionAuthenticatorFromJSON(rawConfig json.RawMessage) (*oauth2IntrospectionAuthenticator, error) {
+func NewOAuth2IntrospectionAuthenticatorFromYAML(rawConfig json.RawMessage) (*oauth2IntrospectionAuthenticator, error) {
 	type _config struct {
-		Endpoint   endpoint.Endpoint  `json:"introspection_endpoint"`
-		Assertions oauth2.Expectation `json:"introspection_response_assertions"`
-		Session    Session            `json:"session"`
+		Endpoint   endpoint.Endpoint  `yaml:"introspection_endpoint"`
+		Assertions oauth2.Expectation `yaml:"introspection_response_assertions"`
+		Session    Session            `yaml:"session"`
 	}
 
 	var conf _config
-	if err := json.Unmarshal(rawConfig, &conf); err != nil {
-		return nil, err
+	if err := yaml.UnmarshalStrict(rawConfig, &conf); err != nil {
+		return nil, errorchain.
+			NewWithMessage(heimdall.ErrConfiguration, "failed to unmarshal oauth2 introspection authenticator config").
+			CausedBy(err)
 	}
 
 	if len(conf.Assertions.AllowedAlgorithms) == 0 {
@@ -46,10 +48,9 @@ func NewOAuth2IntrospectionAuthenticatorFromJSON(rawConfig json.RawMessage) (*oa
 	}
 
 	if err := conf.Assertions.Validate(); err != nil {
-		return nil, &errorsx.ArgumentError{
-			Message: "failed to validate assertions configuration",
-			Cause:   err,
-		}
+		return nil, errorchain.
+			NewWithMessage(heimdall.ErrConfiguration, "failed to validate assertions configuration").
+			CausedBy(err)
 	}
 
 	if conf.Endpoint.Headers == nil {
@@ -89,7 +90,9 @@ func (a *oauth2IntrospectionAuthenticator) Authenticate(
 ) error {
 	accessToken, err := a.adg.GetAuthData(as)
 	if err != nil {
-		return &errorsx.ArgumentError{Message: "no access token present", Cause: err}
+		return errorchain.
+			NewWithMessage(heimdall.ErrAuthentication, "no access token present").
+			CausedBy(err)
 	}
 
 	rawBody, err := a.e.SendRequest(ctx, strings.NewReader(
@@ -99,23 +102,28 @@ func (a *oauth2IntrospectionAuthenticator) Authenticate(
 		}.Encode()),
 	)
 	if err != nil {
-		return err
+		return errorchain.
+			NewWithMessage(heimdall.ErrCommunicationTimeout, "request to the introspection endpoint failed").
+			CausedBy(err)
 	}
 
 	var resp oauth2.IntrospectionResponse
 	if err = json.Unmarshal(rawBody, &resp); err != nil {
-		return fmt.Errorf("failed to unmarshal introspection response: %w", err)
+		return errorchain.
+			NewWithMessage(heimdall.ErrInternal, "failed to unmarshal received introspection response").
+			CausedBy(err)
 	}
 
 	if err = resp.Validate(a.a); err != nil {
-		return &errorsx.UnauthorizedError{
-			Message: "access token does not satisfy assertion conditions",
-			Cause:   err,
-		}
+		return errorchain.
+			NewWithMessage(heimdall.ErrAuthentication, "access token does not satisfy assertion conditions").
+			CausedBy(err)
 	}
 
 	if sc.Subject, err = a.se.GetSubject(rawBody); err != nil {
-		return fmt.Errorf("failed to extract subject information: %w", err)
+		return errorchain.
+			NewWithMessage(heimdall.ErrInternal, "failed to extract subject information from introspection response").
+			CausedBy(err)
 	}
 
 	return nil
@@ -128,12 +136,14 @@ func (a *oauth2IntrospectionAuthenticator) WithConfig(config []byte) (handler.Au
 	}
 
 	type _config struct {
-		Assertions oauth2.Expectation `json:"introspection_response_assertions"`
+		Assertions oauth2.Expectation `yaml:"introspection_response_assertions"`
 	}
 
 	var conf _config
-	if err := json.Unmarshal(config, &conf); err != nil {
-		return nil, err
+	if err := yaml.UnmarshalStrict(config, &conf); err != nil {
+		return nil, errorchain.
+			NewWithMessage(heimdall.ErrConfiguration, "failed to parse configuration").
+			CausedBy(err)
 	}
 
 	return &oauth2IntrospectionAuthenticator{

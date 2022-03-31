@@ -1,12 +1,12 @@
 package authenticators
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/dadrus/heimdall/internal/errorsx"
 	"github.com/dadrus/heimdall/internal/heimdall"
 )
 
@@ -27,7 +27,7 @@ func TestCreateAnonymousAuthenticatorFromInvalidYaml(t *testing.T) {
 
 	// THEN
 	assert.Error(t, err)
-	assert.IsType(t, &errorsx.ArgumentError{}, err)
+	assert.True(t, errors.Is(err, heimdall.ErrConfiguration))
 }
 
 func TestCreateAnonymousAuthenticatorFromPrototypeGivenEmptyConfig(t *testing.T) {
@@ -75,7 +75,7 @@ func TestCreateAnonymousAuthenticatorFromPrototypeGivenInvalidConfig(t *testing.
 
 	// THEN
 	assert.Error(t, err)
-	assert.IsType(t, &errorsx.ArgumentError{}, err)
+	assert.True(t, errors.Is(err, heimdall.ErrConfiguration))
 }
 
 func TestAuthenticateWithAnonymousAuthenticatorWithCustomSubjectId(t *testing.T) {

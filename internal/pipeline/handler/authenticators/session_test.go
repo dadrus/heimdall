@@ -21,6 +21,8 @@ func TestSessionValidation(t *testing.T) {
 		{
 			uc: "subject_from is set",
 			configure: func(t *testing.T, s *Session) {
+				t.Helper()
+
 				s.SubjectFrom = "foobar"
 			},
 			assert: func(t *testing.T, err error) {
@@ -30,7 +32,7 @@ func TestSessionValidation(t *testing.T) {
 		},
 		{
 			uc:        "subject_from is not set",
-			configure: func(t *testing.T, s *Session) {},
+			configure: func(t *testing.T, s *Session) { t.Helper() },
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 				assert.Error(t, err)
@@ -94,6 +96,8 @@ func TestGetSubjectFromSession(t *testing.T) {
 		{
 			uc: "subject is extracted and attributes are the whole object",
 			configure: func(t *testing.T, s *Session) {
+				t.Helper()
+
 				s.SubjectFrom = "subject"
 			},
 			assert: func(t *testing.T, err error, sub *heimdall.Subject) {
@@ -110,6 +114,8 @@ func TestGetSubjectFromSession(t *testing.T) {
 		{
 			uc: "subject is extracted and attributes are the nested object",
 			configure: func(t *testing.T, s *Session) {
+				t.Helper()
+
 				s.SubjectFrom = "string_slice.1"
 				s.AttributesFrom = "complex.nested"
 			},
@@ -130,6 +136,8 @@ func TestGetSubjectFromSession(t *testing.T) {
 		{
 			uc: "subject is extracted but not attributes",
 			configure: func(t *testing.T, s *Session) {
+				t.Helper()
+
 				s.SubjectFrom = "subject"
 				s.AttributesFrom = "foobar"
 			},
@@ -143,6 +151,8 @@ func TestGetSubjectFromSession(t *testing.T) {
 		{
 			uc: "subject could not be extracted",
 			configure: func(t *testing.T, s *Session) {
+				t.Helper()
+
 				s.SubjectFrom = "foo"
 			},
 			assert: func(t *testing.T, err error, sub *heimdall.Subject) {

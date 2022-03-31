@@ -9,15 +9,18 @@ import (
 )
 
 func TestExtractQueryParameterWithoutPrefix(t *testing.T) {
+	t.Parallel()
+
 	// GIVEN
 	queryParameter := "test_param"
 	actualValue := "foo"
 	mock := &test.MockAuthDataSource{}
 	mock.On("Query", queryParameter).Return(actualValue)
-	c := QueryParameterExtractStrategy{Name: queryParameter}
+
+	strategy := QueryParameterExtractStrategy{Name: queryParameter}
 
 	// WHEN
-	val, err := c.GetAuthData(mock)
+	val, err := strategy.GetAuthData(mock)
 
 	// THEN
 	assert.NoError(t, err)
@@ -26,16 +29,19 @@ func TestExtractQueryParameterWithoutPrefix(t *testing.T) {
 }
 
 func TestExtractQueryParameterWithPrefix(t *testing.T) {
+	t.Parallel()
+
 	// GIVEN
 	queryParameter := "test_param"
 	valuePrefix := "bar:"
 	actualValue := "foo"
 	mock := &test.MockAuthDataSource{}
 	mock.On("Query", queryParameter).Return(valuePrefix + " " + actualValue)
-	c := QueryParameterExtractStrategy{Name: queryParameter, Prefix: valuePrefix}
+
+	strategy := QueryParameterExtractStrategy{Name: queryParameter, Prefix: valuePrefix}
 
 	// WHEN
-	val, err := c.GetAuthData(mock)
+	val, err := strategy.GetAuthData(mock)
 
 	// THEN
 	assert.NoError(t, err)

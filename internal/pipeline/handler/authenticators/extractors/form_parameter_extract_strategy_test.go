@@ -9,15 +9,18 @@ import (
 )
 
 func TestExtractFormParameterWithoutPrefix(t *testing.T) {
+	t.Parallel()
+
 	// GIVEN
 	paramName := "test_param"
 	actualValue := "foo"
 	mock := &test.MockAuthDataSource{}
 	mock.On("Form", paramName).Return(actualValue)
-	c := FormParameterExtractStrategy{Name: paramName}
+
+	strategy := FormParameterExtractStrategy{Name: paramName}
 
 	// WHEN
-	val, err := c.GetAuthData(mock)
+	val, err := strategy.GetAuthData(mock)
 
 	// THEN
 	assert.NoError(t, err)
@@ -26,16 +29,19 @@ func TestExtractFormParameterWithoutPrefix(t *testing.T) {
 }
 
 func TestExtractFormParameterWithPrefix(t *testing.T) {
+	t.Parallel()
+
 	// GIVEN
 	paramName := "test_param"
 	valuePrefix := "bar:"
 	actualValue := "foo"
 	mock := &test.MockAuthDataSource{}
 	mock.On("Form", paramName).Return(valuePrefix + " " + actualValue)
-	c := FormParameterExtractStrategy{Name: paramName, Prefix: valuePrefix}
+
+	strategy := FormParameterExtractStrategy{Name: paramName, Prefix: valuePrefix}
 
 	// WHEN
-	val, err := c.GetAuthData(mock)
+	val, err := strategy.GetAuthData(mock)
 
 	// THEN
 	assert.NoError(t, err)

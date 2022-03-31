@@ -9,15 +9,18 @@ import (
 )
 
 func TestExtractHeaderValueWithoutPrefix(t *testing.T) {
+	t.Parallel()
+
 	// GIVEN
 	headerName := "test_param"
 	actualValue := "foo"
 	mock := &test.MockAuthDataSource{}
 	mock.On("Header", headerName).Return(actualValue)
-	c := HeaderValueExtractStrategy{Name: headerName}
+
+	strategy := HeaderValueExtractStrategy{Name: headerName}
 
 	// WHEN
-	val, err := c.GetAuthData(mock)
+	val, err := strategy.GetAuthData(mock)
 
 	// THEN
 	assert.NoError(t, err)
@@ -26,16 +29,19 @@ func TestExtractHeaderValueWithoutPrefix(t *testing.T) {
 }
 
 func TestExtractHeaderValueWithPrefix(t *testing.T) {
+	t.Parallel()
+
 	// GIVEN
 	headerName := "test_param"
 	valuePrefix := "bar:"
 	actualValue := "foo"
 	mock := &test.MockAuthDataSource{}
 	mock.On("Header", headerName).Return(valuePrefix + " " + actualValue)
-	c := HeaderValueExtractStrategy{Name: headerName, Prefix: valuePrefix}
+
+	strategy := HeaderValueExtractStrategy{Name: headerName, Prefix: valuePrefix}
 
 	// WHEN
-	val, err := c.GetAuthData(mock)
+	val, err := strategy.GetAuthData(mock)
 
 	// THEN
 	assert.NoError(t, err)

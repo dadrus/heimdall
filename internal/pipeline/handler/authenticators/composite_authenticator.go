@@ -2,10 +2,10 @@ package authenticators
 
 import (
 	"context"
-	"errors"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/pipeline/handler"
+	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
 type CompositeAuthenticator []handler.Authenticator
@@ -31,5 +31,5 @@ func (ca CompositeAuthenticator) Authenticate(
 }
 
 func (ca CompositeAuthenticator) WithConfig(_ []byte) (handler.Authenticator, error) {
-	return nil, errors.New("reconfiguration not allowed")
+	return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration, "reconfiguration not allowed")
 }

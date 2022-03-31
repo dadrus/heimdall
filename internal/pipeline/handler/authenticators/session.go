@@ -1,11 +1,10 @@
 package authenticators
 
 import (
-	"errors"
-
 	"github.com/tidwall/gjson"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
 type Session struct {
@@ -15,7 +14,7 @@ type Session struct {
 
 func (s *Session) Validate() error {
 	if len(s.SubjectFrom) == 0 {
-		return errors.New("session requires subject_from to be set")
+		return errorchain.NewWithMessage(heimdall.ErrConfiguration, "no subject_from set")
 	}
 
 	return nil
@@ -29,7 +28,7 @@ func (s *Session) GetSubject(rawData []byte) (*heimdall.Subject, error) {
 
 	subjectID := gjson.GetBytes(rawData, s.SubjectFrom).String()
 	if len(subjectID) == 0 {
-		return nil, errors.New("failed to extract subject identifier")
+		return nil, errorchain.NewWithMessagef(heimdall.ErrInternal, "no value available for \"%s\" claim", s.SubjectFrom)
 	}
 
 	attributes := gjson.GetBytes(rawData, attributesFrom).Value()

@@ -9,10 +9,9 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-	"github.com/stretchr/testify/require"
 
-	"github.com/dadrus/heimdall/internal/errorsx"
 	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
 func TestCreateAuthenticationDataAuthenticator(t *testing.T) {
@@ -109,7 +108,7 @@ func TestCreateAuthenticationDataAuthenticatorFromPrototypeNotAllowed(t *testing
 
 	// THEN
 	assert.Error(t, err)
-	assert.Equal(t, "reconfiguration not allowed", err.Error())
+	assert.Contains(t, err.Error(), "configuration error")
 }
 
 func TestSuccessfulExecutionOfAuthenticationDataAuthenticator(t *testing.T) {
@@ -137,9 +136,9 @@ func TestSuccessfulExecutionOfAuthenticationDataAuthenticator(t *testing.T) {
 	adg.On("GetAuthData", reqCtx).Return(authDataVal, nil)
 
 	ada := authenticationDataAuthenticator{
-		Endpoint:         ept,
-		SubjectExtractor: subExtr,
-		AuthDataGetter:   adg,
+		e:   ept,
+		se:  subExtr,
+		adg: adg,
 	}
 
 	// WHEN
@@ -161,15 +160,14 @@ func TestAuthenticationDataAuthenticatorExecutionFailsDueToMissingAuthData(t *te
 	ctx := context.Background()
 	ept := &MockEndpoint{}
 	subExtr := &MockSubjectExtractor{}
-	failErr := errors.New("no auth data present")
 
 	adg := &MockAuthDataGetter{}
-	adg.On("GetAuthData", mock.Anything).Return("", failErr)
+	adg.On("GetAuthData", mock.Anything).Return("", ErrTestPurpose)
 
 	ada := authenticationDataAuthenticator{
-		Endpoint:         ept,
-		SubjectExtractor: subExtr,
-		AuthDataGetter:   adg,
+		e:   ept,
+		se:  subExtr,
+		adg: adg,
 	}
 
 	// WHEN
@@ -178,9 +176,10 @@ func TestAuthenticationDataAuthenticatorExecutionFailsDueToMissingAuthData(t *te
 	// THEN
 	assert.Error(t, err)
 
-	erra, ok := err.(*errorsx.ArgumentError)
-	require.True(t, ok)
-	assert.Equal(t, failErr, erra.Cause)
+	var erc *errorchain.ErrorChain
+
+	assert.True(t, errors.As(err, &erc))
+	assert.True(t, errors.Is(erc, ErrTestPurpose))
 
 	ept.AssertExpectations(t)
 	subExtr.AssertExpectations(t)
@@ -193,18 +192,17 @@ func TestAuthenticationDataAuthenticatorExecutionFailsDueToEndpointError(t *test
 	subStx := &heimdall.SubjectContext{}
 	ctx := context.Background()
 	authDataVal := "foobar"
-	netErr := errors.New("no auth data present")
 	adg := &MockAuthDataGetter{}
 	ept := &MockEndpoint{}
 	subExtr := &MockSubjectExtractor{}
 
 	adg.On("GetAuthData", mock.Anything).Return(authDataVal, nil)
-	ept.On("SendRequest", mock.Anything, mock.Anything).Return(nil, netErr)
+	ept.On("SendRequest", mock.Anything, mock.Anything).Return(nil, ErrTestPurpose)
 
 	ada := authenticationDataAuthenticator{
-		Endpoint:         ept,
-		SubjectExtractor: subExtr,
-		AuthDataGetter:   adg,
+		e:   ept,
+		se:  subExtr,
+		adg: adg,
 	}
 
 	// WHEN
@@ -212,7 +210,7 @@ func TestAuthenticationDataAuthenticatorExecutionFailsDueToEndpointError(t *test
 
 	// THEN
 	assert.Error(t, err)
-	assert.Equal(t, netErr, err)
+	assert.True(t, errors.Is(err, ErrTestPurpose))
 
 	ept.AssertExpectations(t)
 	subExtr.AssertExpectations(t)
@@ -226,19 +224,18 @@ func TestAuthenticationDataAuthenticatorExecutionFailsDueToFailedSubjectExtracti
 	ctx := context.Background()
 	authDataVal := "foobar"
 	eResp := []byte("foo")
-	sgErr := errors.New("failed to extract subject")
 	adg := &MockAuthDataGetter{}
 	ept := &MockEndpoint{}
 	subExtr := &MockSubjectExtractor{}
 
 	adg.On("GetAuthData", mock.Anything).Return(authDataVal, nil)
 	ept.On("SendRequest", mock.Anything, mock.Anything).Return(eResp, nil)
-	subExtr.On("GetSubject", eResp).Return(nil, sgErr)
+	subExtr.On("GetSubject", eResp).Return(nil, ErrTestPurpose)
 
 	ada := authenticationDataAuthenticator{
-		Endpoint:         ept,
-		SubjectExtractor: subExtr,
-		AuthDataGetter:   adg,
+		e:   ept,
+		se:  subExtr,
+		adg: adg,
 	}
 
 	// WHEN
@@ -246,7 +243,7 @@ func TestAuthenticationDataAuthenticatorExecutionFailsDueToFailedSubjectExtracti
 
 	// THEN
 	assert.Error(t, err)
-	assert.Equal(t, sgErr, err)
+	assert.True(t, errors.Is(err, ErrTestPurpose))
 
 	ept.AssertExpectations(t)
 	subExtr.AssertExpectations(t)

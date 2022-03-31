@@ -5,6 +5,8 @@ import (
 	"context"
 	"encoding/json"
 
+	"gopkg.in/yaml.v2"
+
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/pipeline/handler"
 )
@@ -19,7 +21,11 @@ func NewRemoteAuthorizerFromJSON(rawConfig json.RawMessage) (*remoteAuthorizer, 
 	return &remoteAuthorizer{}, nil
 }
 
-func (a *remoteAuthorizer) Authorize(ctx context.Context, rc handler.RequestContext, sc *heimdall.SubjectContext) error {
+func (a *remoteAuthorizer) Authorize(
+	ctx context.Context,
+	rc handler.RequestContext,
+	sc *heimdall.SubjectContext,
+) error {
 	var payload []byte
 	if a.Payload == "original_body" {
 		payload = rc.Body()
@@ -39,23 +45,23 @@ func (a *remoteAuthorizer) Authorize(ctx context.Context, rc handler.RequestCont
 	return nil
 }
 
-func (a *remoteAuthorizer) WithConfig(config []byte) (handler.Authorizer, error) {
-	if len(config) == 0 {
+func (a *remoteAuthorizer) WithConfig(rawConfig []byte) (handler.Authorizer, error) {
+	if len(rawConfig) == 0 {
 		return a, nil
 	}
 
 	type _config struct {
-		ResponseHeadersToForward []string `json:"forward_response_headers"`
+		ResponseHeadersToForward []string `yaml:"forward_response_headers"`
 	}
 
-	var c _config
-	if err := json.Unmarshal(config, &c); err != nil {
+	var conf _config
+	if err := yaml.UnmarshalStrict(rawConfig, &conf); err != nil {
 		return nil, err
 	}
 
 	return &remoteAuthorizer{
 		Endpoint:                 a.Endpoint,
 		Payload:                  a.Payload,
-		ResponseHeadersToForward: c.ResponseHeadersToForward,
+		ResponseHeadersToForward: conf.ResponseHeadersToForward,
 	}, nil
 }

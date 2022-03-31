@@ -3,20 +3,18 @@ package authenticators
 import (
 	"context"
 	"encoding/json"
-	"errors"
-	"fmt"
 	"strings"
 
 	"gopkg.in/square/go-jose.v2"
 	"gopkg.in/square/go-jose.v2/jwt"
 	"gopkg.in/yaml.v2"
 
-	"github.com/dadrus/heimdall/internal/errorsx"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/pipeline/endpoint"
 	"github.com/dadrus/heimdall/internal/pipeline/handler"
 	"github.com/dadrus/heimdall/internal/pipeline/handler/authenticators/extractors"
 	"github.com/dadrus/heimdall/internal/pipeline/oauth2"
+	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
 type jwtAuthenticator struct {
@@ -36,14 +34,15 @@ func NewJwtAuthenticatorFromYAML(rawConfig []byte) (*jwtAuthenticator, error) {
 
 	var conf _config
 	if err := yaml.UnmarshalStrict(rawConfig, &conf); err != nil {
-		return nil, err
+		return nil, errorchain.
+			NewWithMessage(heimdall.ErrConfiguration, "failed to unmarshal jwt authenticator config").
+			CausedBy(err)
 	}
 
 	if err := conf.JwtAssertions.Validate(); err != nil {
-		return nil, &errorsx.ArgumentError{
-			Message: "failed to validate assertions configuration",
-			Cause:   err,
-		}
+		return nil, errorchain.
+			NewWithMessage(heimdall.ErrConfiguration, "failed to validate assertions configuration").
+			CausedBy(err)
 	}
 
 	if conf.Endpoint.Headers == nil {
@@ -68,10 +67,9 @@ func NewJwtAuthenticatorFromYAML(rawConfig []byte) (*jwtAuthenticator, error) {
 	}
 
 	if err := conf.Endpoint.Validate(); err != nil {
-		return nil, &errorsx.ArgumentError{
-			Message: "failed to validate endpoint configuration",
-			Cause:   err,
-		}
+		return nil, errorchain.
+			NewWithMessage(heimdall.ErrConfiguration, "failed to validate endpoint configuration").
+			CausedBy(err)
 	}
 
 	if len(conf.Session.SubjectFrom) == 0 {
@@ -102,21 +100,27 @@ func (a *jwtAuthenticator) Authenticate(
 	as handler.RequestContext,
 	sc *heimdall.SubjectContext,
 ) error {
+	jwtRaw, err := a.adg.GetAuthData(as)
+	if err != nil {
+		return errorchain.
+			NewWithMessage(heimdall.ErrAuthentication, "not jwt token present").
+			CausedBy(err)
+	}
+
 	// request jwks endpoint to verify jwt
 	rawBody, err := a.e.SendRequest(ctx, nil)
 	if err != nil {
-		return err
+		return errorchain.
+			NewWithMessage(heimdall.ErrCommunication, "request to jwks endpoint failed").
+			CausedBy(err)
 	}
 
 	// unmarshal the received key set
 	var jwks jose.JSONWebKeySet
 	if err := json.Unmarshal(rawBody, &jwks); err != nil {
-		return err
-	}
-
-	jwtRaw, err := a.adg.GetAuthData(as)
-	if err != nil {
-		return &errorsx.ArgumentError{Message: "no jwt present", Cause: err}
+		return errorchain.
+			NewWithMessage(heimdall.ErrInternal, "failed to unmarshal received jwks").
+			CausedBy(err)
 	}
 
 	rawClaims, err := a.verifyTokenAndGetClaims(jwtRaw, jwks)
@@ -125,20 +129,26 @@ func (a *jwtAuthenticator) Authenticate(
 	}
 
 	if sc.Subject, err = a.se.GetSubject(rawClaims); err != nil {
-		return err
+		return errorchain.
+			NewWithMessage(heimdall.ErrInternal, "failed to extract subject information from jwt").
+			CausedBy(err)
 	}
 
 	return nil
 }
 
 func (a *jwtAuthenticator) verifyTokenAndGetClaims(jwtRaw string, jwks jose.JSONWebKeySet) (json.RawMessage, error) {
-	if strings.Count(jwtRaw, ".") != 2 {
-		return nil, errors.New("unsupported jwt format")
+	const jwtDotCount = 2
+	if strings.Count(jwtRaw, ".") != jwtDotCount {
+		return nil, errorchain.
+			NewWithMessage(heimdall.ErrInternal, "unsupported jwt format")
 	}
 
 	token, err := jwt.ParseSigned(jwtRaw)
 	if err != nil {
-		return nil, err
+		return nil, errorchain.
+			NewWithMessage(heimdall.ErrInternal, "failed to parse jwt").
+			CausedBy(err)
 	}
 
 	var keys []jose.JSONWebKey
@@ -150,11 +160,14 @@ func (a *jwtAuthenticator) verifyTokenAndGetClaims(jwtRaw string, jwks jose.JSON
 	}
 	// even the spec allows for multiple keys for the given id, we do not
 	if len(keys) != 1 {
-		return nil, errors.New("no (unique) key found for the given key id")
+		return nil, errorchain.
+			NewWithMessage(heimdall.ErrConfiguration, "no (unique) key found for the given key id").
+			CausedBy(err)
 	}
 
 	if !a.a.IsAlgorithmAllowed(keys[0].Algorithm) {
-		return nil, fmt.Errorf("%s algorithm is not allowed", keys[0].Algorithm)
+		return nil, errorchain.
+			NewWithMessagef(heimdall.ErrAuthentication, "%s algorithm is not allowed", keys[0].Algorithm)
 	}
 
 	var (
@@ -167,15 +180,16 @@ func (a *jwtAuthenticator) verifyTokenAndGetClaims(jwtRaw string, jwks jose.JSON
 	}
 
 	if err := claims.Validate(a.a); err != nil {
-		return nil, &errorsx.UnauthorizedError{
-			Message: "access token does not satisfy assertion conditions",
-			Cause:   err,
-		}
+		return nil, errorchain.
+			NewWithMessage(heimdall.ErrAuthentication, "access token does not satisfy assertion conditions").
+			CausedBy(err)
 	}
 
 	rawPayload, err := json.Marshal(mapClaims)
 	if err != nil {
-		return nil, err
+		return nil, errorchain.
+			NewWithMessage(heimdall.ErrInternal, "failed to marshal jwt payload").
+			CausedBy(err)
 	}
 
 	return rawPayload, nil
@@ -192,8 +206,10 @@ func (a *jwtAuthenticator) WithConfig(config []byte) (handler.Authenticator, err
 	}
 
 	var conf _config
-	if err := yaml.Unmarshal(config, &conf); err != nil {
-		return nil, err
+	if err := yaml.UnmarshalStrict(config, &conf); err != nil {
+		return nil, errorchain.
+			NewWithMessage(heimdall.ErrConfiguration, "failed to parse configuration").
+			CausedBy(err)
 	}
 
 	return &jwtAuthenticator{

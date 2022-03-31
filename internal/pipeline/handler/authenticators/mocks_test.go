@@ -2,6 +2,7 @@ package authenticators
 
 import (
 	"context"
+	"errors"
 	"io"
 
 	"github.com/stretchr/testify/mock"
@@ -9,6 +10,8 @@ import (
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/pipeline/handler"
 )
+
+var ErrTestPurpose = errors.New("error raised in a test")
 
 type MockEndpoint struct {
 	mock.Mock

@@ -9,15 +9,18 @@ import (
 )
 
 func TestExtractCookieValueWithoutPrefix(t *testing.T) {
+	t.Parallel()
+
 	// GIVEN
 	cookieName := "Test-Cookie"
 	actualValue := "foo"
 	mock := &test.MockAuthDataSource{}
 	mock.On("Cookie", cookieName).Return(actualValue)
-	c := CookieValueExtractStrategy{Name: cookieName}
+
+	strategy := CookieValueExtractStrategy{Name: cookieName}
 
 	// WHEN
-	val, err := c.GetAuthData(mock)
+	val, err := strategy.GetAuthData(mock)
 
 	// THEN
 	assert.NoError(t, err)
@@ -26,16 +29,19 @@ func TestExtractCookieValueWithoutPrefix(t *testing.T) {
 }
 
 func TestExtractCookieValueWithPrefix(t *testing.T) {
+	t.Parallel()
+
 	// GIVEN
 	cookieName := "Test-Cookie"
 	valuePrefix := "bar:"
 	actualValue := "foo"
 	mock := &test.MockAuthDataSource{}
 	mock.On("Cookie", cookieName).Return(valuePrefix + " " + actualValue)
-	c := CookieValueExtractStrategy{Name: cookieName, Prefix: valuePrefix}
+
+	strategy := CookieValueExtractStrategy{Name: cookieName, Prefix: valuePrefix}
 
 	// WHEN
-	val, err := c.GetAuthData(mock)
+	val, err := strategy.GetAuthData(mock)
 
 	// THEN
 	assert.NoError(t, err)

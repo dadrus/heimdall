@@ -5,19 +5,18 @@ import (
 
 	"gopkg.in/yaml.v2"
 
-	"github.com/dadrus/heimdall/internal/errorsx"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/pipeline/handler"
+	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
 func NewAnonymousAuthenticatorFromYAML(rawConfig []byte) (*anonymousAuthenticator, error) {
 	var auth anonymousAuthenticator
 
 	if err := yaml.UnmarshalStrict(rawConfig, &auth); err != nil {
-		return nil, &errorsx.ArgumentError{
-			Message: "failed to unmarshal anonymous authenticator config",
-			Cause:   err,
-		}
+		return nil, errorchain.
+			NewWithMessage(heimdall.ErrConfiguration, "failed to unmarshal anonymous authenticator config").
+			CausedBy(err)
 	}
 
 	if len(auth.Subject) == 0 {

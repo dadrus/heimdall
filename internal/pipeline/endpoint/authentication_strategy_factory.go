@@ -1,27 +1,32 @@
 package endpoint
 
 import (
-	"encoding/json"
-	"fmt"
+	"gopkg.in/yaml.v2"
+
+	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
-func NewAuthenticationStrategy(name string, c json.RawMessage) (AuthenticationStrategy, error) {
+func NewAuthenticationStrategy(name string, conf []byte) (AuthenticationStrategy, error) {
 	switch name {
 	case "":
 		return &NoopAuthStrategy{}, nil
 	case "basic":
-		var s BasicAuthStrategy
-		err := json.Unmarshal(c, &s)
-		return &s, err
+		var strategy BasicAuthStrategy
+		err := yaml.UnmarshalStrict(conf, &strategy)
+
+		return &strategy, err
 	case "api_key":
-		var s ApiKeyStrategy
-		err := json.Unmarshal(c, &s)
-		return &s, err
+		var strategy APIKeyStrategy
+		err := yaml.UnmarshalStrict(conf, &strategy)
+
+		return &strategy, err
 	case "client_credentials":
-		var s ClientCredentialsStrategy
-		err := json.Unmarshal(c, &s)
-		return &s, err
+		var strategy ClientCredentialsStrategy
+		err := yaml.UnmarshalStrict(conf, &strategy)
+
+		return &strategy, err
 	default:
-		return nil, fmt.Errorf("unsupported authentication type: %s", name)
+		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration, "\"%s\" authentication type unsupported", name)
 	}
 }

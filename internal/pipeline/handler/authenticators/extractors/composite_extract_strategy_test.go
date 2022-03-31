@@ -9,6 +9,8 @@ import (
 )
 
 func TestCompositeExtractCookieValueWithoutPrefix(t *testing.T) {
+	t.Parallel()
+
 	// GIVEN
 	formParamName := "test_param"
 	cookieName := "Test-Cookie"
@@ -16,13 +18,14 @@ func TestCompositeExtractCookieValueWithoutPrefix(t *testing.T) {
 	mock := &test.MockAuthDataSource{}
 	mock.On("Cookie", cookieName).Return(actualValue)
 	mock.On("Form", formParamName).Return("")
-	c := CompositeExtractStrategy{
+
+	strategy := CompositeExtractStrategy{
 		FormParameterExtractStrategy{Name: formParamName},
 		CookieValueExtractStrategy{Name: cookieName},
 	}
 
 	// WHEN
-	val, err := c.GetAuthData(mock)
+	val, err := strategy.GetAuthData(mock)
 
 	// THEN
 	assert.NoError(t, err)
@@ -31,6 +34,8 @@ func TestCompositeExtractCookieValueWithoutPrefix(t *testing.T) {
 }
 
 func TestCompositeExtractHeaderValueWithPrefix(t *testing.T) {
+	t.Parallel()
+
 	// GIVEN
 	headerName := "Test-Header"
 	queryParamName := "test_param"
@@ -39,13 +44,14 @@ func TestCompositeExtractHeaderValueWithPrefix(t *testing.T) {
 	mock := &test.MockAuthDataSource{}
 	mock.On("Header", headerName).Return(valuePrefix + " " + actualValue)
 	mock.On("Query", queryParamName).Return("")
-	c := CompositeExtractStrategy{
+
+	strategy := CompositeExtractStrategy{
 		QueryParameterExtractStrategy{Name: queryParamName},
 		HeaderValueExtractStrategy{Name: headerName, Prefix: valuePrefix},
 	}
 
 	// WHEN
-	val, err := c.GetAuthData(mock)
+	val, err := strategy.GetAuthData(mock)
 
 	// THEN
 	assert.NoError(t, err)
@@ -54,6 +60,8 @@ func TestCompositeExtractHeaderValueWithPrefix(t *testing.T) {
 }
 
 func TestCompositeExtractStrategyOrder(t *testing.T) {
+	t.Parallel()
+
 	// GIVEN
 	headerName := "Test-Header"
 	queryParamName := "test_param"
@@ -61,13 +69,14 @@ func TestCompositeExtractStrategyOrder(t *testing.T) {
 	actualValue := "foo"
 	mock := &test.MockAuthDataSource{}
 	mock.On("Header", headerName).Return(valuePrefix + " " + actualValue)
-	c := CompositeExtractStrategy{
+
+	strategy := CompositeExtractStrategy{
 		HeaderValueExtractStrategy{Name: headerName, Prefix: valuePrefix},
 		QueryParameterExtractStrategy{Name: queryParamName},
 	}
 
 	// WHEN
-	val, err := c.GetAuthData(mock)
+	val, err := strategy.GetAuthData(mock)
 
 	// THEN
 	assert.NoError(t, err)
