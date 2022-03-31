@@ -3,6 +3,7 @@ package httpx
 import (
 	"net/http"
 
+	"github.com/dadrus/heimdall/internal/x"
 	"github.com/opentracing-contrib/go-stdlib/nethttp"
 	"github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/ext"
@@ -13,13 +14,13 @@ type TracingRoundTripper struct {
 	TargetName string
 }
 
-func (d *TracingRoundTripper) RoundTrip(r *http.Request) (*http.Response, error) {
+func (d *TracingRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
 	if !opentracing.IsGlobalTracerRegistered() {
-		return d.Next.RoundTrip(r)
+		return d.Next.RoundTrip(req)
 	}
 
-	req, ht := nethttp.TraceRequest(opentracing.GlobalTracer(), r,
-		nethttp.OperationName(d.operationName(r)),
+	req, ht := nethttp.TraceRequest(opentracing.GlobalTracer(), req,
+		nethttp.OperationName(d.operationName(req)),
 		nethttp.ClientSpanObserver(func(span opentracing.Span, r *http.Request) {
 			ext.SpanKindRPCClient.Set(span)
 		}))
@@ -29,10 +30,5 @@ func (d *TracingRoundTripper) RoundTrip(r *http.Request) (*http.Response, error)
 }
 
 func (d *TracingRoundTripper) operationName(r *http.Request) string {
-	opName := ""
-	if len(d.TargetName) != 0 {
-		opName = d.TargetName + " "
-	}
-	opName += r.URL.Path
-	return opName
+	return x.IfThenElse(len(d.TargetName) != 0, d.TargetName+" ", "") + r.URL.Path
 }
