@@ -219,6 +219,45 @@ func setup(t *testing.T, subject, issuer, audience string) ([]byte, string) {
 	return rawJwks, rawJwt
 }
 
+func TestCreateJwtAuthenticatorFromPrototype(t *testing.T) {
+	// GIVEN
+	prototypeConfig := []byte(`
+jwks_endpoint:
+  url: http://test.com
+jwt_assertions:
+  trusted_issuers:
+    - foobar`)
+
+	config := []byte(`
+jwt_assertions:
+  trusted_issuers:
+    - barfoo
+  allowed_algorithms:
+    - ES512`)
+
+	p, err := NewJwtAuthenticatorFromYAML(prototypeConfig)
+	require.NoError(t, err)
+
+	// WHEN
+	a, err := p.WithConfig(config)
+
+	// THEN
+	require.NoError(t, err)
+
+	require.IsType(t, &jwtAuthenticator{}, a)
+	jwta := a.(*jwtAuthenticator)
+	assert.Equal(t, p.e, jwta.e)
+	assert.Equal(t, p.adg, jwta.adg)
+	assert.Equal(t, p.se, jwta.se)
+	assert.NotEqual(t, p.a, jwta.a)
+
+	assert.NotNil(t, jwta.a.ScopeStrategy)
+	assert.ElementsMatch(t, jwta.a.RequiredScopes, []string{"foo"})
+	assert.Empty(t, jwta.a.TargetAudiences)
+	assert.ElementsMatch(t, jwta.a.TrustedIssuers, []string{"barfoo"})
+	assert.ElementsMatch(t, jwta.a.AllowedAlgorithms, []string{string(jose.ES512)})
+}
+
 func TestSuccessfulExecutionOfJwtAuthenticator(t *testing.T) {
 	// GIVEN
 	subject := "foo"
