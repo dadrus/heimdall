@@ -1,0 +1,26 @@
+# Options for analysis running.
+run:
+  modules-download-mode: readonly
+
+linters:
+  enable-all: true
+  disable:
+    - dupl
+    - wrapcheck
+    - ireturn
+    - exhaustivestruct
+    - maligned
+    - scopelint
+    - golint
+    - interfacer
+
+linters-settings:
+  exhaustive:
+    ignore-enum-members: "POT.+"
+  tagliatelle:
+    # Check the struck tag name case.
+    case:
+      rules:
+        # Support string case: `camel`, `pascal`, `kebab`, `snake`, `goCamel`, `goPascal`, `goKebab`, `goSnake`, `upper`, `lower`
+        json: snake
+        yaml: snake
