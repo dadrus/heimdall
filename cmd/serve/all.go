@@ -4,9 +4,9 @@ import (
 	"github.com/spf13/cobra"
 	"go.uber.org/fx"
 
+	"github.com/dadrus/heimdall/internal"
 	"github.com/dadrus/heimdall/internal/handler/decision"
 	"github.com/dadrus/heimdall/internal/handler/proxy"
-	"github.com/dadrus/heimdall/internal/infrafx"
 )
 
 // NewAllServicesCommand represents the proxy command.
@@ -19,7 +19,7 @@ func NewAllServicesCommand() *cobra.Command {
 
 			app := fx.New(
 				fx.Supply(configPath),
-				infrafx.Module,
+				internal.Module,
 				decision.Module,
 				proxy.Module,
 			)

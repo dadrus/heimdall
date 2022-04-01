@@ -1,4 +1,4 @@
-package infrafx
+package internal
 
 import (
 	"go.uber.org/fx"
