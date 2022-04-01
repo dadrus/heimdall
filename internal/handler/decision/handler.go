@@ -115,20 +115,22 @@ func (h *Handler) decisions(reqCtx *fiber.Ctx) error {
 }
 
 func (h *Handler) handleError(ctx *fiber.Ctx, err error) error {
-	if errors.Is(err, heimdall.ErrArgument) {
+	switch {
+	case errors.Is(err, heimdall.ErrArgument):
 		return ctx.SendStatus(fiber.StatusBadRequest)
-	} else if errors.Is(err, heimdall.ErrAuthentication) {
+	case errors.Is(err, heimdall.ErrAuthentication):
 		return ctx.SendStatus(fiber.StatusUnauthorized)
-	} else if errors.Is(err, heimdall.ErrAuthorization) {
+	case errors.Is(err, heimdall.ErrAuthorization):
 		return ctx.SendStatus(fiber.StatusForbidden)
-	} else if errors.Is(err, heimdall.ErrCommunicationTimeout) {
+	case errors.Is(err, heimdall.ErrCommunicationTimeout):
 		return ctx.SendStatus(fiber.StatusBadGateway)
-	} else if errors.Is(err, &heimdall.RedirectError{}) {
+	case errors.Is(err, &heimdall.RedirectError{}):
 		var redirectError *heimdall.RedirectError
+
 		errors.As(err, &redirectError)
 
 		return ctx.Redirect(redirectError.RedirectTo)
-	} else {
+	default:
 		return ctx.SendStatus(fiber.StatusInternalServerError)
 	}
 }
