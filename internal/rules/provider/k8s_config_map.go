@@ -2,7 +2,6 @@ package provider
 
 import (
 	"github.com/rs/zerolog"
-
 	"go.uber.org/fx"
 
 	"github.com/dadrus/heimdall/internal/config"

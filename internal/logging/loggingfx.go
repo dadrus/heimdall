@@ -6,6 +6,7 @@ import (
 	"go.uber.org/fx"
 )
 
+// nolint
 var Module = fx.Options(
 	fx.Invoke(ConfigureLogging),
 	fx.Provide(func() zerolog.Logger { return log.Logger }),

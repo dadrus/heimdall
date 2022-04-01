@@ -11,6 +11,7 @@ import (
 
 const defaultQueueSize = 20
 
+// nolint
 var Module = fx.Options(
 	fx.Provide(func() provider.RuleSetChangedEventQueue {
 		return make(provider.RuleSetChangedEventQueue, defaultQueueSize)

@@ -10,29 +10,39 @@ type MockAuthDataSource struct {
 
 func (m *MockAuthDataSource) Header(name string) string {
 	args := m.Called(name)
+
 	return args.String(0)
 }
 
 func (m *MockAuthDataSource) Cookie(name string) string {
 	args := m.Called(name)
+
 	return args.String(0)
 }
 
 func (m *MockAuthDataSource) Query(name string) string {
 	args := m.Called(name)
+
 	return args.String(0)
 }
 
 func (m *MockAuthDataSource) Form(name string) string {
 	args := m.Called(name)
+
 	return args.String(0)
 }
 
 func (m *MockAuthDataSource) Body() []byte {
 	args := m.Called()
-	i := args.Get(0)
-	if i != nil {
-		return i.([]byte)
+
+	if i := args.Get(0); i != nil {
+		val, ok := i.([]byte)
+		if !ok {
+			panic("[]byte expected")
+		}
+
+		return val
 	}
+
 	return nil
 }

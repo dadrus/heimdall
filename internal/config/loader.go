@@ -17,6 +17,7 @@ import (
 	"github.com/rs/zerolog"
 )
 
+// nolint
 var defaultDecodeHooks = []mapstructure.DecodeHookFunc{
 	mapstructure.StringToTimeDurationHookFunc(),
 	mapstructure.StringToSliceHookFunc(","),

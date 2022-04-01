@@ -11,6 +11,7 @@ type element struct {
 	next *element
 }
 
+// nolint
 type ErrorChain struct {
 	head *element
 	tail *element

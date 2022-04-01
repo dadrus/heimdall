@@ -8,13 +8,13 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/recover"
 	"github.com/rs/zerolog"
-
 	"go.uber.org/fx"
 
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/fiber/middleware"
 )
 
+// nolint
 var Module = fx.Options(
 	fx.Provide(fx.Annotated{Name: "api", Target: newFiberApp}),
 	fx.Invoke(

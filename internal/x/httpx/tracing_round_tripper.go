@@ -3,10 +3,11 @@ package httpx
 import (
 	"net/http"
 
-	"github.com/dadrus/heimdall/internal/x"
 	"github.com/opentracing-contrib/go-stdlib/nethttp"
 	"github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/ext"
+
+	"github.com/dadrus/heimdall/internal/x"
 )
 
 type TracingRoundTripper struct {

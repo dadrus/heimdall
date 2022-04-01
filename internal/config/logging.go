@@ -10,6 +10,7 @@ import (
 
 type LogFormat int
 
+// nolint
 const (
 	LogTextFormat    = 0
 	LogJsonFormat    = 1

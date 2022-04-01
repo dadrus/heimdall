@@ -30,6 +30,8 @@ func ConfigureLogging(conf config.Logging) {
 		hostname, err := os.Hostname()
 		if err != nil {
 			hostname = "unknown"
+
+			// nolint
 			fmt.Println("Failed to retrieve the hostname: " + err.Error())
 		}
 
@@ -59,6 +61,7 @@ func toSyslogLevel(level zerolog.Level) int {
 		Debugging     = 7
 	)
 
+	// nolint
 	switch level {
 	case zerolog.DebugLevel, zerolog.TraceLevel:
 		return Debugging

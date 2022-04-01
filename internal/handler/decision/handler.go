@@ -4,11 +4,11 @@ import (
 	"errors"
 	"net/url"
 
-	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/rules"
 	"github.com/gofiber/fiber/v2"
 	"github.com/rs/zerolog"
 
+	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/rules"
 	"github.com/dadrus/heimdall/internal/x"
 )
 

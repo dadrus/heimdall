@@ -8,17 +8,18 @@ import (
 	"net/url"
 	"sync"
 
-	"github.com/dadrus/heimdall/internal/config"
-	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/pipeline"
-	"github.com/dadrus/heimdall/internal/pipeline/handler"
-	"github.com/dadrus/heimdall/internal/rules/provider"
 	"github.com/knadh/koanf"
 	"github.com/knadh/koanf/parsers/yaml"
 	"github.com/knadh/koanf/providers/rawbytes"
 	"github.com/mitchellh/mapstructure"
 	"github.com/rs/zerolog"
 	"golang.org/x/exp/slices"
+
+	"github.com/dadrus/heimdall/internal/config"
+	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/pipeline"
+	"github.com/dadrus/heimdall/internal/pipeline/handler"
+	"github.com/dadrus/heimdall/internal/rules/provider"
 )
 
 var ErrNoRuleFound = errors.New("no rule found")
@@ -97,13 +98,13 @@ func (r *repository) loadRules(srcID string, definition json.RawMessage) ([]*rul
 
 	rules := make([]*rule, len(rcs))
 
-	for i, rc := range rcs {
+	for idx, rc := range rcs {
 		rule, err := r.newRule(srcID, rc)
 		if err != nil {
 			return nil, err
 		}
 
-		rules[i] = rule
+		rules[idx] = rule
 	}
 
 	return rules, nil

@@ -10,6 +10,7 @@ import (
 	"github.com/dadrus/heimdall/internal/config"
 )
 
+// nolint
 var Module = fx.Options(
 	fx.Provide(fx.Annotated{Name: "proxy", Target: newFiberApp}),
 	fx.Invoke(
