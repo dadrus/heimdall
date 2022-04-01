@@ -17,6 +17,7 @@ import (
 func TestCreateAuthenticationDataAuthenticator(t *testing.T) {
 	t.Parallel()
 
+	// nolint
 	for _, tc := range []struct {
 		uc          string
 		config      []byte
