@@ -3,6 +3,6 @@ package config
 import "encoding/json"
 
 type PipelineObjectReference struct {
-	Id     string
+	ID     string
 	Config json.RawMessage
 }

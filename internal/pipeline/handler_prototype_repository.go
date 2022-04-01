@@ -6,11 +6,11 @@ import (
 
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/pipeline/handler"
-	authenticators2 "github.com/dadrus/heimdall/internal/pipeline/handler/authenticators"
-	authorizers2 "github.com/dadrus/heimdall/internal/pipeline/handler/authorizers"
-	error_handlers2 "github.com/dadrus/heimdall/internal/pipeline/handler/error_handlers"
+	"github.com/dadrus/heimdall/internal/pipeline/handler/authenticators"
+	"github.com/dadrus/heimdall/internal/pipeline/handler/authorizers"
+	"github.com/dadrus/heimdall/internal/pipeline/handler/errorhandlers"
 	"github.com/dadrus/heimdall/internal/pipeline/handler/hydrators"
-	mutators2 "github.com/dadrus/heimdall/internal/pipeline/handler/mutators"
+	"github.com/dadrus/heimdall/internal/pipeline/handler/mutators"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
@@ -96,17 +96,17 @@ func newAuthenticator(obj config.PipelineObject) (handler.Authenticator, error) 
 
 	switch obj.Type {
 	case config.POTNoop:
-		authenticator, err = authenticators2.NewNoopAuthenticator(), nil
+		authenticator, err = authenticators.NewNoopAuthenticator(), nil
 	case config.POTAnonymous:
-		authenticator, err = authenticators2.NewAnonymousAuthenticatorFromYAML(obj.Config)
+		authenticator, err = authenticators.NewAnonymousAuthenticatorFromYAML(obj.Config)
 	case config.POTUnauthorized:
-		authenticator, err = authenticators2.NewUnauthorizedAuthenticator(), nil
+		authenticator, err = authenticators.NewUnauthorizedAuthenticator(), nil
 	case config.POTAuthenticationData:
-		authenticator, err = authenticators2.NewAuthenticationDataAuthenticatorFromYAML(obj.Config)
+		authenticator, err = authenticators.NewAuthenticationDataAuthenticatorFromYAML(obj.Config)
 	case config.POTOAuth2Introspection:
-		authenticator, err = authenticators2.NewOAuth2IntrospectionAuthenticatorFromYAML(obj.Config)
+		authenticator, err = authenticators.NewOAuth2IntrospectionAuthenticatorFromYAML(obj.Config)
 	case config.POTJwt:
-		authenticator, err = authenticators2.NewJwtAuthenticatorFromYAML(obj.Config)
+		authenticator, err = authenticators.NewJwtAuthenticatorFromYAML(obj.Config)
 	default:
 		err = ErrUnknownAuthenticatorType
 	}
@@ -126,11 +126,11 @@ func newAuthorizer(obj config.PipelineObject) (handler.Authorizer, error) {
 
 	switch obj.Type {
 	case config.POTAllow:
-		authorizer, err = authorizers2.NewAllowAuthorizer(), nil
+		authorizer, err = authorizers.NewAllowAuthorizer(), nil
 	case config.POTDeny:
-		authorizer, err = authorizers2.NewDenyAuthorizer(), nil
+		authorizer, err = authorizers.NewDenyAuthorizer(), nil
 	case config.POTRemote:
-		authorizer, err = authorizers2.NewRemoteAuthorizerFromJSON(obj.Config)
+		authorizer, err = authorizers.NewRemoteAuthorizerFromJSON(obj.Config)
 	default:
 		err = ErrUnknownAuthorizerType
 	}
@@ -170,11 +170,11 @@ func newMutator(obj config.PipelineObject) (handler.Mutator, error) {
 
 	switch obj.Type {
 	case config.POTJwt:
-		mutator, err = mutators2.NewJWTMutatorFromJSON(obj.Config)
+		mutator, err = mutators.NewJWTMutatorFromJSON(obj.Config)
 	case config.POTHeader:
-		mutator, err = mutators2.NewHeaderMutatorFromJSON(obj.Config)
+		mutator, err = mutators.NewHeaderMutatorFromJSON(obj.Config)
 	case config.POTCookie:
-		mutator, err = mutators2.NewCookieMutatorFromJSON(obj.Config)
+		mutator, err = mutators.NewCookieMutatorFromJSON(obj.Config)
 	default:
 		err = ErrUnknownMutatorType
 	}
@@ -194,9 +194,9 @@ func newErrorHandler(obj config.PipelineObject) (handler.ErrorHandler, error) {
 
 	switch obj.Type {
 	case config.POTJson:
-		handler, err = error_handlers2.NewJsonErrorHandlerFromJSON(obj.Config)
+		handler, err = errorhandlers.NewJsonErrorHandlerFromYAML(obj.Config)
 	case config.POTRedirect:
-		handler, err = error_handlers2.NewRedirectErrorHandlerFromJSON(obj.Config)
+		handler, err = errorhandlers.NewRedirectErrorHandlerFromJSON(obj.Config)
 	default:
 		err = ErrUnknownErrorHandlerType
 	}

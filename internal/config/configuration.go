@@ -59,10 +59,12 @@ func NewConfiguration(configFile string) Configuration {
 			LeakSensitiveData: false,
 		},
 	}
+
 	err := LoadConfig(&result, configFile)
 	if err != nil {
 		panic(err)
 	}
+
 	return result
 }
 

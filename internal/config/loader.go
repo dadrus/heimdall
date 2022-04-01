@@ -1,7 +1,6 @@
 package config
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"reflect"
@@ -44,13 +43,13 @@ func LoadConfig(config interface{}, configFile string) error {
 
 // LoadConfigWithDecoder works like "LoadConfig", but allows to use an additional DecodeHook to allow
 // conversion from string values to custom types.
-func LoadConfigWithDecoder(config interface{}, optionalConfigFile string, additionalDecodeHook mapstructure.DecodeHookFunc) error {
-	configFile := optionalConfigFile
+func LoadConfigWithDecoder(config interface{}, optConfFile string, addDecodeHook mapstructure.DecodeHookFunc) error {
+	configFile := optConfFile
 	if len(configFile) == 0 {
 		configFile = "configs/config.yaml"
 	}
 
-	err, k := koanfFromStruct(config)
+	parser, err := koanfFromStruct(config)
 	if err != nil {
 		return err
 	}
@@ -60,7 +59,8 @@ func LoadConfigWithDecoder(config interface{}, optionalConfigFile string, additi
 		if err != nil {
 			return err
 		}
-		return k.Merge(c)
+
+		return parser.Merge(c)
 	}
 
 	if _, err := os.Stat(configFile); err == nil {
@@ -68,16 +68,17 @@ func LoadConfigWithDecoder(config interface{}, optionalConfigFile string, additi
 			return err
 		}
 	}
+
 	if err := loadAndMergeConfig(koanfFromEnv); err != nil {
 		return err
 	}
 
 	hooks := defaultDecodeHooks
-	if additionalDecodeHook != nil {
-		hooks = append(hooks, additionalDecodeHook)
+	if addDecodeHook != nil {
+		hooks = append(hooks, addDecodeHook)
 	}
 
-	return k.UnmarshalWithConf("", config, koanf.UnmarshalConf{
+	return parser.UnmarshalWithConf("", config, koanf.UnmarshalConf{
 		Tag: "koanf",
 		DecoderConfig: &mapstructure.DecoderConfig{
 			DecodeHook:       mapstructure.ComposeDecodeHookFunc(hooks...),
@@ -89,12 +90,14 @@ func LoadConfigWithDecoder(config interface{}, optionalConfigFile string, additi
 }
 
 func koanfFromYaml(configFile string) (*koanf.Koanf, error) {
-	k := koanf.New(".")
-	err := k.Load(file.Provider(configFile), yaml.Parser())
+	parser := koanf.New(".")
+
+	err := parser.Load(file.Provider(configFile), yaml.Parser())
 	if err != nil {
 		return nil, fmt.Errorf("failed to read yaml config from %s: %w", configFile, err)
 	}
-	return k, nil
+
+	return parser, nil
 }
 
 func isLower(s string) bool {
@@ -103,39 +106,45 @@ func isLower(s string) bool {
 			return false
 		}
 	}
+
 	return true
 }
 
-func koanfFromStruct(s interface{}) (error, *koanf.Koanf) {
-	k := koanf.New(".")
-	err := k.Load(structs.Provider(s, "koanf"), nil)
+func koanfFromStruct(s interface{}) (*koanf.Koanf, error) {
+	parser := koanf.New(".")
+
+	err := parser.Load(structs.Provider(s, "koanf"), nil)
 	if err != nil {
-		return err, nil
+		return nil, err
 	}
 
-	var keys = k.Keys()
+	var keys = parser.Keys()
 	// Assert all Keys are lowercase
 	for i := 0; i < len(keys); i++ {
 		if !isLower(keys[i]) {
-			return errors.New(fmt.Sprintf("The Field %s in the Config Struct does not have lowercase Key. Use the `koanf` tag!", keys[i])), nil
+			return nil,
+				fmt.Errorf("field %s in the Config Struct does not have lowercase key, use the `koanf` tag", keys[i])
 		}
 	}
-	return nil, k
+
+	return parser, nil
 }
 
 func koanfFromEnv() (*koanf.Koanf, error) {
-	var k = koanf.New(".")
-	err := k.Load(env.Provider("", ".", strings.ToLower), nil)
+	var parser = koanf.New(".")
+
+	err := parser.Load(env.Provider("", ".", strings.ToLower), nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse Environment Variables to Config: %w", err)
 	}
 
-	return transformEnvFormat(k)
+	return transformEnvFormat(parser)
 }
 
-func transformEnvFormat(k *koanf.Koanf) (*koanf.Koanf, error) {
-	var flattened = k.All()
-	var exploded = make(map[string]interface{})
+func transformEnvFormat(parser *koanf.Koanf) (*koanf.Koanf, error) {
+	flattened := parser.All()
+	exploded := make(map[string]interface{})
+
 	for key, value := range flattened {
 		keys := expandSlices(strings.Split(key, "_"))
 		for _, newKey := range keys {
@@ -143,12 +152,14 @@ func transformEnvFormat(k *koanf.Koanf) (*koanf.Koanf, error) {
 		}
 	}
 
-	k = koanf.New(".")
-	err := k.Load(confmap.Provider(exploded, "."), nil)
+	parser = koanf.New(".")
+
+	err := parser.Load(confmap.Provider(exploded, "."), nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse flattened Environment Variables to Config: %w", err)
 	}
-	return k, nil
+
+	return parser, nil
 }
 
 func expandSlices(parts []string) []string {
@@ -158,18 +169,20 @@ func expandSlices(parts []string) []string {
 
 	next := expandSlices(parts[1:])
 	result := make([]string, 0, len(next)*2)
+
 	for _, k := range next {
 		result = append(result, parts[0]+"."+k)
 		result = append(result, parts[0]+"_"+k)
 	}
+
 	return result
 }
 
 // Decode zeroLog LogLevels from strings.
-func logLevelDecode(from reflect.Type, to reflect.Type, v interface{}) (interface{}, error) {
+func logLevelDecode(from reflect.Type, to reflect.Type, val interface{}) (interface{}, error) {
 	if from.Kind() == reflect.String &&
 		to.Name() == "Level" && to.PkgPath() == "github.com/rs/zerolog" {
-		switch v {
+		switch val {
 		case "panic":
 			return zerolog.PanicLevel, nil
 		case "fatal":
@@ -184,5 +197,6 @@ func logLevelDecode(from reflect.Type, to reflect.Type, v interface{}) (interfac
 			return zerolog.InfoLevel, nil
 		}
 	}
-	return v, nil
+
+	return val, nil
 }

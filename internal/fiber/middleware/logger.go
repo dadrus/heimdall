@@ -10,6 +10,7 @@ func Logger() fiber.Handler {
 		l := log.With().Logger()
 
 		c.SetUserContext(l.WithContext(c.UserContext()))
+
 		return c.Next()
 	}
 }

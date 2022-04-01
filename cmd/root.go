@@ -7,10 +7,11 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// nolint
 var (
 	Version = "master"
 
-	// RootCmd represents the base command when called without any subcommands
+	// RootCmd represents the base command when called without any subcommands.
 	RootCmd = &cobra.Command{
 		Use:     "heimdall",
 		Short:   "A cloud native Access and Identity Proxy",
@@ -22,6 +23,7 @@ var (
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
 	if err := RootCmd.Execute(); err != nil {
+		// nolint
 		fmt.Println(err)
 		os.Exit(-1)
 	}

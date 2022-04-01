@@ -5,7 +5,6 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/rs/zerolog"
-
 	"go.uber.org/fx"
 
 	"github.com/dadrus/heimdall/internal/config"

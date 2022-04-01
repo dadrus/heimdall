@@ -1,10 +1,12 @@
 package cmd
 
 import (
-	"github.com/dadrus/heimdall/cmd/serve"
 	"github.com/spf13/cobra"
+
+	"github.com/dadrus/heimdall/cmd/serve"
 )
 
+// nolint
 var serveCmd = &cobra.Command{
 	Use:   "serve",
 	Short: "Starts the HTTP/2 REST API and HTTP/2 Reverse Proxy",
@@ -16,11 +18,12 @@ Heimdall can be configured using environment variables as well as a configuratio
 `,
 }
 
+// nolint
 func init() {
 	RootCmd.AddCommand(serveCmd)
 
 	serveCmd.PersistentFlags().StringP("config", "c", "", "Config file")
 	serveCmd.AddCommand(serve.NewProxyCommand())
-	serveCmd.AddCommand(serve.NewDecisionApiCommand())
+	serveCmd.AddCommand(serve.NewDecisionAPICommand())
 	serveCmd.AddCommand(serve.NewAllServicesCommand())
 }

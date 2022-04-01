@@ -2,7 +2,6 @@ package serve
 
 import (
 	"github.com/spf13/cobra"
-
 	"go.uber.org/fx"
 
 	"github.com/dadrus/heimdall/internal/handler/decision"
@@ -10,7 +9,7 @@ import (
 	"github.com/dadrus/heimdall/internal/infrafx"
 )
 
-// NewAllServicesCommand represents the proxy command
+// NewAllServicesCommand represents the proxy command.
 func NewAllServicesCommand() *cobra.Command {
 	return &cobra.Command{
 		Use:   "all",

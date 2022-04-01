@@ -2,14 +2,13 @@ package serve
 
 import (
 	"github.com/spf13/cobra"
-
 	"go.uber.org/fx"
 
 	"github.com/dadrus/heimdall/internal/handler/proxy"
 	"github.com/dadrus/heimdall/internal/infrafx"
 )
 
-// NewProxyCommand represents the proxy command
+// NewProxyCommand represents the proxy command.
 func NewProxyCommand() *cobra.Command {
 	return &cobra.Command{
 		Use:   "proxy",

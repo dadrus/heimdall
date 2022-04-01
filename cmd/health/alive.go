@@ -12,6 +12,7 @@ func NewAliveCommand() *cobra.Command {
 		Short:   "Checks if an Heimdall deployment is alive",
 		Example: "heimdall health --endpoint=http://localhost:4456/ alive",
 		Run: func(cmd *cobra.Command, args []string) {
+			// nolint
 			fmt.Println("health alive")
 		},
 	}

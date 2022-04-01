@@ -2,15 +2,14 @@ package serve
 
 import (
 	"github.com/spf13/cobra"
-
 	"go.uber.org/fx"
 
 	"github.com/dadrus/heimdall/internal/handler/decision"
 	"github.com/dadrus/heimdall/internal/infrafx"
 )
 
-// NewDecisionApiCommand represents the proxy command
-func NewDecisionApiCommand() *cobra.Command {
+// NewDecisionAPICommand represents the proxy command.
+func NewDecisionAPICommand() *cobra.Command {
 	return &cobra.Command{
 		Use:   "api",
 		Short: "Starts HTTP/2 Decision API Server",

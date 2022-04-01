@@ -2,16 +2,15 @@ package hydrators
 
 import (
 	"context"
-	"errors"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/pipeline/handler"
+	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
 type CompositeHydrator []handler.Hydrator
 
-func (ch CompositeHydrator) Hydrate(c context.Context, sc *heimdall.SubjectContext) error {
-	var err error
+func (ch CompositeHydrator) Hydrate(c context.Context, sc *heimdall.SubjectContext) (err error) {
 	for _, h := range ch {
 		err = h.Hydrate(c, sc)
 		if err != nil {
@@ -21,9 +20,10 @@ func (ch CompositeHydrator) Hydrate(c context.Context, sc *heimdall.SubjectConte
 			return nil
 		}
 	}
+
 	return err
 }
 
 func (ch CompositeHydrator) WithConfig(_ []byte) (handler.Hydrator, error) {
-	return nil, errors.New("reconfiguration not allowed")
+	return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration, "reconfiguration not allowed")
 }

@@ -6,7 +6,7 @@ import (
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/pipeline/handler"
 	"github.com/dadrus/heimdall/internal/pipeline/handler/authenticators"
-	"github.com/dadrus/heimdall/internal/pipeline/handler/error_handlers"
+	"github.com/dadrus/heimdall/internal/pipeline/handler/errorhandlers"
 	"github.com/dadrus/heimdall/internal/pipeline/handler/hydrators"
 	"github.com/dadrus/heimdall/internal/pipeline/handler/mutators"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
@@ -67,7 +67,7 @@ func (hf *handlerFactory) CreateAuthenticator(pors []config.PipelineObjectRefere
 	}
 
 	for _, ref := range refs {
-		prototype, err := hf.r.Authenticator(ref.Id)
+		prototype, err := hf.r.Authenticator(ref.ID)
 		if err != nil {
 			return nil, errorchain.New(ErrAuthenticatorCreation).CausedBy(err)
 		}
@@ -100,7 +100,7 @@ func (hf *handlerFactory) CreateAuthorizer(configured *config.PipelineObjectRefe
 		ref = configured
 	}
 
-	prototype, err := hf.r.Authorizer(ref.Id)
+	prototype, err := hf.r.Authorizer(ref.ID)
 	if err != nil {
 		return nil, errorchain.New(ErrAuthorizerCreation).CausedBy(err)
 	}
@@ -132,7 +132,7 @@ func (hf *handlerFactory) CreateHydrator(configured []config.PipelineObjectRefer
 	}
 
 	for _, ref := range refs {
-		prototype, err := hf.r.Hydrator(ref.Id)
+		prototype, err := hf.r.Hydrator(ref.ID)
 		if err != nil {
 			return nil, errorchain.New(ErrHydratorCreation).CausedBy(err)
 		}
@@ -169,7 +169,7 @@ func (hf *handlerFactory) CreateMutator(configured []config.PipelineObjectRefere
 	}
 
 	for _, ref := range refs {
-		prototype, err := hf.r.Mutator(ref.Id)
+		prototype, err := hf.r.Mutator(ref.ID)
 		if err != nil {
 			return nil, errorchain.New(ErrMutatorCreation).CausedBy(err)
 		}
@@ -192,7 +192,7 @@ func (hf *handlerFactory) CreateMutator(configured []config.PipelineObjectRefere
 func (hf *handlerFactory) CreateErrorHandler(pors []config.PipelineObjectReference) (handler.ErrorHandler, error) {
 	var (
 		refs []config.PipelineObjectReference
-		list error_handlers.CompositeErrorHandler
+		list errorhandlers.CompositeErrorHandler
 	)
 
 	if len(pors) == 0 {
@@ -206,7 +206,7 @@ func (hf *handlerFactory) CreateErrorHandler(pors []config.PipelineObjectReferen
 	}
 
 	for _, ref := range refs {
-		prototype, err := hf.r.ErrorHandler(ref.Id)
+		prototype, err := hf.r.ErrorHandler(ref.ID)
 		if err != nil {
 			return nil, errorchain.New(ErrErrorHandlerCreation).CausedBy(err)
 		}

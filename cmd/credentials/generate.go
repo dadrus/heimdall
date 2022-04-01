@@ -6,14 +6,14 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// NewGenerateCommand represents the generate command
+// NewGenerateCommand represents the generate command.
 func NewGenerateCommand() *cobra.Command {
-
 	cmd := &cobra.Command{
 		Use:     "generate",
 		Short:   "Generate a key for the specified algorithm",
 		Example: "heimdall credentials generate --alg RS256 --bits 4096 > jwks.json",
 		Run: func(cmd *cobra.Command, args []string) {
+			// nolint
 			fmt.Println("generating keys")
 		},
 	}

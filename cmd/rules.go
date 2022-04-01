@@ -3,19 +3,23 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/dadrus/heimdall/cmd/rules"
 	"github.com/spf13/cobra"
+
+	"github.com/dadrus/heimdall/cmd/rules"
 )
 
-// rulesCmd represents the rules command
+// nolint
+// rulesCmd represents the rules command.
 var rulesCmd = &cobra.Command{
 	Use:   "rules",
 	Short: "Commands for managing rules",
 	Run: func(cmd *cobra.Command, args []string) {
+		// nolint
 		fmt.Println(cmd.UsageString())
 	},
 }
 
+// nolint
 func init() {
 	RootCmd.AddCommand(rulesCmd)
 

@@ -1,4 +1,4 @@
-package error_handlers
+package errorhandlers
 
 import (
 	"context"

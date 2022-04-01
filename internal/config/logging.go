@@ -4,6 +4,8 @@ import (
 	"reflect"
 
 	"github.com/rs/zerolog"
+
+	"github.com/dadrus/heimdall/internal/x"
 )
 
 type LogFormat int
@@ -15,22 +17,15 @@ const (
 )
 
 func (f LogFormat) String() string {
-	if f == LogTextFormat {
-		return "text"
-	} else {
-		return "json"
-	}
+	return x.IfThenElse(f == LogTextFormat, "text", "json")
 }
 
-func logFormatDecode(from reflect.Type, to reflect.Type, v interface{}) (interface{}, error) {
+func logFormatDecode(from reflect.Type, to reflect.Type, val interface{}) (interface{}, error) {
 	if from.Kind() == reflect.String && to.Name() == "LogFormat" {
-		if v == "text" {
-			return LogTextFormat, nil
-		} else {
-			return LogJsonFormat, nil
-		}
+		return x.IfThenElse(val == "text", LogTextFormat, LogJsonFormat), nil
 	}
-	return v, nil
+
+	return val, nil
 }
 
 type Logging struct {

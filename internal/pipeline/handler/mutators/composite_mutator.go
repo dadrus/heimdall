@@ -2,16 +2,15 @@ package mutators
 
 import (
 	"context"
-	"errors"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/pipeline/handler"
+	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
 type CompositeMutator []handler.Mutator
 
-func (cm CompositeMutator) Mutate(c context.Context, sc *heimdall.SubjectContext) error {
-	var err error
+func (cm CompositeMutator) Mutate(c context.Context, sc *heimdall.SubjectContext) (err error) {
 	for _, m := range cm {
 		err = m.Mutate(c, sc)
 		if err != nil {
@@ -21,9 +20,10 @@ func (cm CompositeMutator) Mutate(c context.Context, sc *heimdall.SubjectContext
 			return nil
 		}
 	}
+
 	return err
 }
 
 func (cm CompositeMutator) WithConfig(_ []byte) (handler.Mutator, error) {
-	return nil, errors.New("reconfiguration not allowed")
+	return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration, "reconfiguration not allowed")
 }

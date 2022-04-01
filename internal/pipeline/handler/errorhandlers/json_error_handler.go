@@ -1,4 +1,4 @@
-package error_handlers
+package errorhandlers
 
 import (
 	"context"
@@ -9,7 +9,7 @@ import (
 
 type jsonErrorHandler struct{}
 
-func NewJsonErrorHandlerFromJSON(rawConfig json.RawMessage) (jsonErrorHandler, error) {
+func NewJsonErrorHandlerFromYAML(rawConfig json.RawMessage) (jsonErrorHandler, error) {
 	return jsonErrorHandler{}, nil
 }
 

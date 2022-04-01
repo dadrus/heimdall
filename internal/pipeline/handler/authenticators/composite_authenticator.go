@@ -14,9 +14,7 @@ func (ca CompositeAuthenticator) Authenticate(
 	ctx context.Context,
 	reqCtx handler.RequestContext,
 	subCtx *heimdall.SubjectContext,
-) error {
-	var err error
-
+) (err error) {
 	for _, a := range ca {
 		err = a.Authenticate(ctx, reqCtx, subCtx)
 		if err != nil {

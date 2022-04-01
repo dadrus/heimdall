@@ -5,16 +5,16 @@ import (
 	"os"
 	"strings"
 
-	"github.com/dadrus/heimdall/internal/config"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+
+	"github.com/dadrus/heimdall/internal/config"
 )
 
-// ConfigureLogging uses the given conf to configure the global log.Logger variable
+// ConfigureLogging uses the given conf to configure the global log.Logger variable.
 func ConfigureLogging(conf config.Logging) {
 	if conf.Format == config.LogTextFormat {
 		log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
-		return
 	} else {
 		zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
 		zerolog.TimestampFieldName = "timestamp"
@@ -48,20 +48,31 @@ func ConfigureLogging(conf config.Logging) {
 }
 
 func toSyslogLevel(level zerolog.Level) int {
+	const (
+		Emergency     = 0
+		Alert         = 1
+		Critical      = 2
+		Error         = 3
+		Warning       = 4
+		Notice        = 5
+		Informational = 6
+		Debugging     = 7
+	)
+
 	switch level {
 	case zerolog.DebugLevel, zerolog.TraceLevel:
-		return 7
+		return Debugging
 	case zerolog.InfoLevel:
-		return 6
+		return Informational
 	case zerolog.WarnLevel:
-		return 4
+		return Warning
 	case zerolog.ErrorLevel:
-		return 3
+		return Error
 	case zerolog.FatalLevel:
-		return 2
+		return Critical
 	case zerolog.PanicLevel:
-		return 1
+		return Alert
 	default:
-		return 0
+		return Emergency
 	}
 }
