@@ -65,25 +65,36 @@ func (r *repository) FindRule(requestURL *url.URL) (Rule, error) {
 }
 
 func (r *repository) Start() {
-	go (func() {
-		for {
-			select {
-			case evt := <-r.queue:
-				if evt.ChangeType == provider.Create {
-					r.onRuleSetCreated(evt.Src, evt.Definition)
-				} else if evt.ChangeType == provider.Remove {
-					r.onRuleSetDeleted(evt.Src)
-				}
-			case <-r.quit:
-				// We have been asked to stop.
-				return
-			}
-		}
-	})()
+	r.logger.Info().Msg("Starting rule definition loader")
+
+	go r.watchRuleSetChanges()
 }
 
 func (r *repository) Stop() {
 	r.quit <- true
+	
+	close(r.queue)
+}
+
+func (r *repository) watchRuleSetChanges() {
+	for {
+		select {
+		case evt, ok := <-r.queue:
+			if !ok {
+				r.logger.Debug().Msg("Rule set definition queue closed")
+			}
+
+			if evt.ChangeType == provider.Create {
+				r.onRuleSetCreated(evt.Src, evt.Definition)
+			} else if evt.ChangeType == provider.Remove {
+				r.onRuleSetDeleted(evt.Src)
+			}
+		case <-r.quit:
+			r.logger.Info().Msg("Rule definition loader stopped")
+
+			return
+		}
+	}
 }
 
 func (r *repository) loadRules(srcID string, definition json.RawMessage) ([]*rule, error) {
@@ -113,16 +124,18 @@ func (r *repository) addRule(rule *rule) {
 }
 
 func (r *repository) removeRules(srcID string) {
+	r.logger.Info().Str("src", srcID).Msg("Removing rules")
+
 	// TODO: implement remove rule
 }
 
-func (r *repository) onRuleSetCreated(src string, definition json.RawMessage) {
+func (r *repository) onRuleSetCreated(srcID string, definition json.RawMessage) {
 	// create rules
-	r.logger.Info().Str("src", src).Msg("Loading rules")
+	r.logger.Info().Str("src", srcID).Msg("Loading rules")
 
-	rules, err := r.loadRules(src, definition)
+	rules, err := r.loadRules(srcID, definition)
 	if err != nil {
-		r.logger.Error().Err(err).Str("src", src).Msg("Failed loading rule set")
+		r.logger.Error().Err(err).Str("src", srcID).Msg("Failed loading rule set")
 	}
 
 	// add them

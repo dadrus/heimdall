@@ -22,9 +22,9 @@ var Module = fx.Options(
 )
 
 func registerRuleDefinitionHandler(lifecycle fx.Lifecycle, logger zerolog.Logger, r Repository) {
-	rdf, ok := r.(ruleDefinitionHandler)
+	rdf, ok := r.(ruleSetDefinitionLoader)
 	if !ok {
-		logger.Error().Msg("No rule definition handler available")
+		logger.Error().Msg("No rule set definition loader available")
 
 		return
 	}
@@ -32,13 +32,12 @@ func registerRuleDefinitionHandler(lifecycle fx.Lifecycle, logger zerolog.Logger
 	lifecycle.Append(
 		fx.Hook{
 			OnStart: func(ctx context.Context) error {
-				logger.Info().Msg("Starting rule definition handler")
 				rdf.Start()
 
 				return nil
 			},
 			OnStop: func(ctx context.Context) error {
-				logger.Info().Msg("Tearing down rule definition handler")
+				logger.Info().Msg("Tearing down rule definition loader")
 				rdf.Stop()
 
 				return nil

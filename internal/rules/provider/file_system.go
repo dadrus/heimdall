@@ -11,14 +11,9 @@ import (
 	"go.uber.org/fx"
 
 	"github.com/dadrus/heimdall/internal/config"
-	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
-var (
-	ErrInvalidProviderConfiguration = errors.New("invalid provider configuration")
-
-	ErrReceivingEvents = errors.New("failed receiving events")
-)
+var ErrInvalidProviderConfiguration = errors.New("invalid provider configuration")
 
 type fileSystemProvider struct {
 	src     os.FileInfo
@@ -35,7 +30,7 @@ func registerFileSystemProvider(
 ) {
 	provider, err := newFileSystemProvider(c, queue, logger)
 	if err != nil {
-		logger.Error().Err(err).Msg("Failed to load rule definitions provider: file system")
+		logger.Error().Err(err).Msg("Failed to load rule definitions provider: file_system")
 
 		return
 	}
@@ -43,19 +38,15 @@ func registerFileSystemProvider(
 	lifecycle.Append(
 		fx.Hook{
 			OnStart: func(ctx context.Context) error {
-				logger.Info().Msg("Starting rule definitions provider: file system")
-
 				err := provider.Start()
 				if err != nil {
-					logger.Error().Err(err).Msg("file system rule definitions provider stopped")
-				} else {
-					logger.Info().Msg("File system rule definitions provider stopped.")
+					logger.Error().Err(err).Msg("Rule definitions provider stopped unexpectedly: file_system")
 				}
 
 				return err
 			},
 			OnStop: func(ctx context.Context) error {
-				logger.Info().Msg("Tearing down rule definitions provider: file system")
+				logger.Info().Msg("Tearing down rule definitions provider: file_system")
 
 				return provider.Stop()
 			},
@@ -94,11 +85,9 @@ func newFileSystemProvider(
 }
 
 func (p *fileSystemProvider) Start() error {
-	p.logger.Info().Msg("Loading initial rule set")
+	p.logger.Info().Msg("Starting rule definitions provider: file_system")
 
-	if err := p.readSource(); err != nil {
-		p.logger.Error().Err(err).Msg("Failed loading initial rule set")
-
+	if err := p.loadInitialRuleSet(); err != nil {
 		return err
 	}
 
@@ -112,15 +101,19 @@ func (p *fileSystemProvider) Start() error {
 		return err
 	}
 
-	return p.watchFiles()
+	go p.watchFiles()
+
+	return nil
 }
 
-func (p *fileSystemProvider) watchFiles() error {
+func (p *fileSystemProvider) watchFiles() {
 	for {
 		select {
 		case event, ok := <-p.watcher.Events:
 			if !ok {
-				return errorchain.NewWithMessage(ErrReceivingEvents, "failed receiving watcher events")
+				p.logger.Debug().Msg("Watcher events channel closed")
+
+				return
 			}
 
 			if event.Op&fsnotify.Create == fsnotify.Create {
@@ -128,7 +121,7 @@ func (p *fileSystemProvider) watchFiles() error {
 				if err != nil {
 					p.logger.Error().Err(err).Str("file", event.Name).Msg("Failed reading")
 
-					return err
+					return
 				}
 
 				p.ruleSetChanged(RuleSetChangedEvent{
@@ -144,10 +137,12 @@ func (p *fileSystemProvider) watchFiles() error {
 			}
 		case err, ok := <-p.watcher.Errors:
 			if !ok {
-				return errorchain.NewWithMessage(ErrReceivingEvents, "failed receiving watcher errors")
+				p.logger.Debug().Msg("Watcher error channel closed")
+
+				return
 			}
 
-			p.logger.Error().Err(err).Msg("Watcher error received")
+			p.logger.Warn().Err(err).Msg("Watcher error received")
 		}
 	}
 }
@@ -160,7 +155,9 @@ func (p *fileSystemProvider) Stop() error {
 	return nil
 }
 
-func (p *fileSystemProvider) readSource() error {
+func (p *fileSystemProvider) loadInitialRuleSet() error {
+	p.logger.Info().Msg("Loading initial rule set")
+
 	var sources []string
 
 	if p.src.IsDir() {
@@ -177,6 +174,8 @@ func (p *fileSystemProvider) readSource() error {
 	for _, src := range sources {
 		data, err := os.ReadFile(src)
 		if err != nil {
+			p.logger.Error().Err(err).Msg("Failed loading initial rule set")
+
 			return err
 		}
 

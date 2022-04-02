@@ -1,6 +1,6 @@
 package rules
 
-type ruleDefinitionHandler interface {
+type ruleSetDefinitionLoader interface {
 	Start()
 	Stop()
 }
