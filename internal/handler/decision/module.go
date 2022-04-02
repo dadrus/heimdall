@@ -27,10 +27,11 @@ func newFiberApp(conf config.Configuration) *fiber.App {
 	api := conf.DecisionAPI
 
 	app := fiber.New(fiber.Config{
-		AppName:      "Heimdall Decision API",
-		ReadTimeout:  api.Timeout.Read,
-		WriteTimeout: api.Timeout.Write,
-		IdleTimeout:  api.Timeout.Idle,
+		AppName:               "Heimdall Decision API",
+		ReadTimeout:           api.Timeout.Read,
+		WriteTimeout:          api.Timeout.Write,
+		IdleTimeout:           api.Timeout.Idle,
+		DisableStartupMessage: true,
 	})
 	app.Use(recover.New())
 

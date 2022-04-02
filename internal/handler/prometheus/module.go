@@ -21,7 +21,8 @@ var Module = fx.Options(
 
 func newFiberApp(conf config.Configuration) *fiber.App {
 	return fiber.New(fiber.Config{
-		AppName: "Heimdall's Prometheus endpoint",
+		AppName:               "Heimdall's Prometheus endpoint",
+		DisableStartupMessage: true,
 	})
 }
 
