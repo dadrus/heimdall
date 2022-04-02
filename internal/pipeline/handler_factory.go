@@ -3,6 +3,8 @@ package pipeline
 import (
 	"errors"
 
+	"github.com/rs/zerolog"
+
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/pipeline/handler"
 	"github.com/dadrus/heimdall/internal/pipeline/handler/authenticators"
@@ -33,9 +35,13 @@ type HandlerFactory interface {
 	CreateErrorHandler([]config.PipelineObjectReference) (handler.ErrorHandler, error)
 }
 
-func NewHandlerFactory(conf config.Configuration) (HandlerFactory, error) {
-	repository, err := newHandlerPrototypeRepository(conf)
+func NewHandlerFactory(conf config.Configuration, logger zerolog.Logger) (HandlerFactory, error) {
+	logger.Info().Msg("Loading pipeline definitions")
+
+	repository, err := newHandlerPrototypeRepository(conf, logger)
 	if err != nil {
+		logger.Error().Err(err).Msg("Failed loading pipeline definitions")
+
 		return nil, err
 	}
 

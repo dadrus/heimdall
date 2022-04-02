@@ -65,7 +65,7 @@ func (r *repository) FindRule(requestURL *url.URL) (Rule, error) {
 }
 
 func (r *repository) Start() {
-	go func() {
+	go (func() {
 		for {
 			select {
 			case evt := <-r.queue:
@@ -79,7 +79,7 @@ func (r *repository) Start() {
 				return
 			}
 		}
-	}()
+	})()
 }
 
 func (r *repository) Stop() {
@@ -118,9 +118,11 @@ func (r *repository) removeRules(srcID string) {
 
 func (r *repository) onRuleSetCreated(src string, definition json.RawMessage) {
 	// create rules
+	r.logger.Info().Str("src", src).Msg("Loading rules")
+
 	rules, err := r.loadRules(src, definition)
 	if err != nil {
-		r.logger.Error().Err(err).Msg("Failed loading rule set")
+		r.logger.Error().Err(err).Str("src", src).Msg("Failed loading rule set")
 	}
 
 	// add them

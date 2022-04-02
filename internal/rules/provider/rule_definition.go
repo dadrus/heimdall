@@ -10,6 +10,14 @@ const (
 	Remove
 )
 
+func (t ChangeType) String() string {
+	if t == Create {
+		return "Create"
+	}
+
+	return "Remove"
+}
+
 type RuleSetChangedEvent struct {
 	Src        string
 	Definition json.RawMessage

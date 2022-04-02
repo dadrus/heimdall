@@ -13,7 +13,7 @@ var ErrConfiguration = errors.New("malformed configuration")
 
 type Expectation struct {
 	ScopesMatcher     ScopesMatcher `mapstructure:"scopes"`
-	TargetAudiences   []string      `mapstructure:"audiences"`
+	TargetAudiences   []string      `mapstructure:"audience"`
 	TrustedIssuers    []string      `mapstructure:"issuers"`
 	AllowedAlgorithms []string      `mapstructure:"allowed_algorithms"`
 	ValidityLeeway    time.Duration `mapstructure:"validity_leeway"`

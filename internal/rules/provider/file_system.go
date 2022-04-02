@@ -30,7 +30,7 @@ func registerFileSystemProvider(
 ) {
 	provider, err := newFileSystemProvider(c, queue, logger)
 	if err != nil {
-		logger.Error().Err(err).Msg("Failed to load file system based provider for rule definitions")
+		logger.Error().Err(err).Msg("Failed to load rule definitions provider: file system")
 
 		return
 	}
@@ -38,12 +38,19 @@ func registerFileSystemProvider(
 	lifecycle.Append(
 		fx.Hook{
 			OnStart: func(ctx context.Context) error {
-				logger.Info().Msg("Starting file system based provider for rule definitions")
+				logger.Info().Msg("Starting rule definitions provider: file system")
 
-				return provider.Start()
+				err := provider.Start()
+				if err != nil {
+					logger.Error().Err(err).Msg("file system rule definitions provider stopped")
+				} else {
+					logger.Info().Msg("File system rule definitions provider stopped.")
+				}
+
+				return err
 			},
 			OnStop: func(ctx context.Context) error {
-				logger.Info().Msg("Tearing down file system based provider for rule definitions")
+				logger.Info().Msg("Tearing down rule definitions provider: file system")
 
 				return provider.Stop()
 			},
@@ -82,11 +89,16 @@ func newFileSystemProvider(
 }
 
 func (p *fileSystemProvider) Start() error {
+	p.logger.Info().Msg("Loading initial rule set")
+
 	if err := p.readSource(); err != nil {
+		p.logger.Error().Err(err).Msg("Failed loading initial rule set")
+
 		return err
 	}
 
 	if p.watcher == nil {
+		p.logger.Warn().Msg("Watcher not configured. Exiting")
 		return nil
 	}
 
@@ -109,6 +121,7 @@ func (p *fileSystemProvider) watchFiles() error {
 				data, err := os.ReadFile(event.Name)
 				if err != nil {
 					p.logger.Error().Err(err).Str("file", event.Name).Msg("Failed reading")
+
 					return err
 				}
 
@@ -131,8 +144,6 @@ func (p *fileSystemProvider) watchFiles() error {
 			p.logger.Error().Err(err).Msg("Watcher error received")
 		}
 	}
-
-	return nil
 }
 
 func (p *fileSystemProvider) Stop() error {
@@ -160,7 +171,7 @@ func (p *fileSystemProvider) readSource() error {
 	for _, src := range sources {
 		data, err := os.ReadFile(src)
 		if err != nil {
-			p.logger.Error().Err(err).Str("file", src).Msg("Failed reading")
+			return err
 		}
 
 		p.ruleSetChanged(RuleSetChangedEvent{
@@ -174,5 +185,6 @@ func (p *fileSystemProvider) readSource() error {
 }
 
 func (p *fileSystemProvider) ruleSetChanged(evt RuleSetChangedEvent) {
+	p.logger.Info().Str("src", evt.Src).Str("type", evt.ChangeType.String()).Msg("Rule set changed")
 	p.queue <- evt
 }
