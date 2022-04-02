@@ -18,6 +18,7 @@ func NewAllServicesCommand() *cobra.Command {
 			configPath, _ := cmd.Flags().GetString("config")
 
 			app := fx.New(
+				fx.NopLogger,
 				fx.Supply(configPath),
 				internal.Module,
 				decision.Module,
