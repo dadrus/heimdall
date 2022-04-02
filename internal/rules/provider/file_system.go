@@ -11,9 +11,14 @@ import (
 	"go.uber.org/fx"
 
 	"github.com/dadrus/heimdall/internal/config"
+	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
-var ErrInvalidProviderConfiguration = errors.New("invalid provider configuration")
+var (
+	ErrInvalidProviderConfiguration = errors.New("invalid provider configuration")
+
+	ErrReceivingEvents = errors.New("failed receiving events")
+)
 
 type fileSystemProvider struct {
 	src     os.FileInfo
@@ -99,6 +104,7 @@ func (p *fileSystemProvider) Start() error {
 
 	if p.watcher == nil {
 		p.logger.Warn().Msg("Watcher not configured. Exiting")
+
 		return nil
 	}
 
@@ -114,7 +120,7 @@ func (p *fileSystemProvider) watchFiles() error {
 		select {
 		case event, ok := <-p.watcher.Events:
 			if !ok {
-				return errors.New("failed receiving watcher event")
+				return errorchain.NewWithMessage(ErrReceivingEvents, "failed receiving watcher events")
 			}
 
 			if event.Op&fsnotify.Create == fsnotify.Create {
@@ -138,7 +144,7 @@ func (p *fileSystemProvider) watchFiles() error {
 			}
 		case err, ok := <-p.watcher.Errors:
 			if !ok {
-				return errors.New("failed receiving watcher errors")
+				return errorchain.NewWithMessage(ErrReceivingEvents, "failed receiving watcher errors")
 			}
 
 			p.logger.Error().Err(err).Msg("Watcher error received")
@@ -175,7 +181,7 @@ func (p *fileSystemProvider) readSource() error {
 		}
 
 		p.ruleSetChanged(RuleSetChangedEvent{
-			Src:        src,
+			Src:        "file_system:" + src,
 			Definition: data,
 			ChangeType: Create,
 		})
