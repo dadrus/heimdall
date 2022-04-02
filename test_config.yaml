@@ -33,10 +33,7 @@ pipeline:
         authentication_data_source:
           - cookie: ory_kratos_session
         session:
-          cache:
-            enabled: true
-            ttl: 60s
-          extra_from: "@this"
+          attributes_from: "@this"
           subject_from: "identity.id"
     - id: "hydra_authenticator"
       type: oauth2_introspection
@@ -53,20 +50,16 @@ pipeline:
               client_secret: bar
               token_url: foo.bar
         introspection_response_assertions:
-          trusted_issuers:
+          issuers:
             - http://127.0.0.1:4444/
-          scope_strategy: exact
-          required_scope:
+          scopes:
             - foo
             - bar
-          target_audience:
+          audience:
             - bla
         session:
-          extra_from: "@this"
+          attributes_from: "@this"
           subject_from: "identity.id"
-          cache:
-            enabled: true
-            ttl: 60s
     - id: "jwt_authenticator"
       type: jwt
       config:
@@ -77,20 +70,16 @@ pipeline:
           - header: Authorization
             strip_prefix: Bearer
         jwt_assertions:
-          target_audience:
+          audience:
             - bla
-          required_scope:
+          scopes:
             - foo
           allowed_algorithms:
             - RSA
-          scope_strategy: exact
-          trusted_issuers:
+          issuers:
             - bla
         session:
-          cache:
-            enabled: true
-            ttl: 60s
-          extra_from: "@this"
+          attributes_from: "@this"
           subject_from: "identity.id"
   authorizers:
     - id: "allow_all_authorizer"
