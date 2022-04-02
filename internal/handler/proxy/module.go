@@ -42,16 +42,16 @@ func registerHooks(lifecycle fx.Lifecycle, logger zerolog.Logger, app fiberApp, 
 				go func() {
 					// service connections
 					addr := conf.Proxy.Address()
-					logger.Info().Msgf("Reverse Proxy starts listening on: %s", addr)
+					logger.Info().Msgf("Reverse Proxy endpoint starts listening on: %s", addr)
 					if err := app.App.Listen(addr); err != nil {
-						logger.Fatal().Err(err).Msg("Reverse Proxy terminated unexpected")
+						logger.Fatal().Err(err).Msg("Could not start Reverse Proxy endpoint")
 					}
 				}()
 
 				return nil
 			},
 			OnStop: func(ctx context.Context) error {
-				logger.Info().Msg("Tearing down Reverse Proxy!")
+				logger.Info().Msg("Tearing down Reverse Proxy endpoint")
 
 				return app.App.Server().Shutdown()
 			},

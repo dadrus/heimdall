@@ -32,15 +32,10 @@ func registerRuleDefinitionHandler(lifecycle fx.Lifecycle, logger zerolog.Logger
 	lifecycle.Append(
 		fx.Hook{
 			OnStart: func(ctx context.Context) error {
-				rdf.Start()
-
-				return nil
+				return rdf.Start()
 			},
 			OnStop: func(ctx context.Context) error {
-				logger.Info().Msg("Tearing down rule definition loader")
-				rdf.Stop()
-
-				return nil
+				return rdf.Stop()
 			},
 		},
 	)

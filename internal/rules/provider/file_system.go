@@ -38,16 +38,9 @@ func registerFileSystemProvider(
 	lifecycle.Append(
 		fx.Hook{
 			OnStart: func(ctx context.Context) error {
-				err := provider.Start()
-				if err != nil {
-					logger.Error().Err(err).Msg("Rule definitions provider stopped unexpectedly: file_system")
-				}
-
-				return err
+				return provider.Start()
 			},
 			OnStop: func(ctx context.Context) error {
-				logger.Info().Msg("Tearing down rule definitions provider: file_system")
-
 				return provider.Stop()
 			},
 		},
@@ -98,6 +91,8 @@ func (p *fileSystemProvider) Start() error {
 	}
 
 	if err := p.watcher.Add(p.src.Name()); err != nil {
+		p.logger.Error().Err(err).Msg("Failed to start rule definitions provider: file_system")
+
 		return err
 	}
 
@@ -148,6 +143,8 @@ func (p *fileSystemProvider) watchFiles() {
 }
 
 func (p *fileSystemProvider) Stop() error {
+	p.logger.Info().Msg("Tearing down rule definition loader")
+
 	if p.watcher != nil {
 		return p.watcher.Close()
 	}

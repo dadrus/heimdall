@@ -54,14 +54,14 @@ func registerHooks(lifecycle fx.Lifecycle, logger zerolog.Logger, app fiberApp, 
 					addr := conf.Prometheus.Address()
 					logger.Info().Msgf("Prometheus endpoint starts listening on: %s", addr)
 					if err := app.Prometheus.Listen(addr); err != nil {
-						logger.Fatal().Err(err).Msg("RPrometheus endpoint terminated unexpected")
+						logger.Fatal().Err(err).Msg("Could not start Prometheus endpoint")
 					}
 				}()
 
 				return nil
 			},
 			OnStop: func(ctx context.Context) error {
-				logger.Info().Msg("Tearing down Prometheus endpoint!")
+				logger.Info().Msg("Tearing down Prometheus endpoint")
 
 				return app.Prometheus.Server().Shutdown()
 			},

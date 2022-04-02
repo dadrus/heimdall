@@ -64,16 +64,22 @@ func (r *repository) FindRule(requestURL *url.URL) (Rule, error) {
 	return nil, ErrNoRuleFound
 }
 
-func (r *repository) Start() {
+func (r *repository) Start() error {
 	r.logger.Info().Msg("Starting rule definition loader")
 
 	go r.watchRuleSetChanges()
+
+	return nil
 }
 
-func (r *repository) Stop() {
+func (r *repository) Stop() error {
+	r.logger.Info().Msg("Tearing down rule definition loader")
+
 	r.quit <- true
-	
+
 	close(r.queue)
+
+	return nil
 }
 
 func (r *repository) watchRuleSetChanges() {
@@ -119,8 +125,10 @@ func (r *repository) loadRules(srcID string, definition json.RawMessage) ([]*rul
 
 func (r *repository) addRule(rule *rule) {
 	r.mutex.Lock()
-	defer r.mutex.Unlock()
 	r.rules = append(r.rules, rule)
+	r.mutex.Unlock()
+
+	r.logger.Debug().Str("src", rule.srcID).Str("id", rule.id).Msg("Rule added")
 }
 
 func (r *repository) removeRules(srcID string) {
@@ -131,7 +139,7 @@ func (r *repository) removeRules(srcID string) {
 
 func (r *repository) onRuleSetCreated(srcID string, definition json.RawMessage) {
 	// create rules
-	r.logger.Info().Str("src", srcID).Msg("Loading rules")
+	r.logger.Info().Str("src", srcID).Msg("Loading rule set")
 
 	rules, err := r.loadRules(srcID, definition)
 	if err != nil {

@@ -66,14 +66,14 @@ func registerHooks(lifecycle fx.Lifecycle, logger zerolog.Logger, app fiberApp, 
 				go func() {
 					// service connections
 					addr := apiConf.Address()
-					logger.Info().Msgf("Decision API starts listening on: %s", addr)
+					logger.Info().Msgf("Decision API endpoint starts listening on: %s", addr)
 					if apiConf.TLS != nil {
 						if err := app.App.ListenTLS(addr, apiConf.TLS.Cert, apiConf.TLS.Key); err != nil {
-							logger.Fatal().Err(err).Msg("Decision API terminated unexpected")
+							logger.Fatal().Err(err).Msg("Could not start Decision API endpoint")
 						}
 					} else {
 						if err := app.App.Listen(addr); err != nil {
-							logger.Fatal().Err(err).Msg("Decision API terminated unexpected")
+							logger.Fatal().Err(err).Msg("Could not start Decision API endpoint")
 						}
 					}
 				}()
@@ -81,7 +81,7 @@ func registerHooks(lifecycle fx.Lifecycle, logger zerolog.Logger, app fiberApp, 
 				return nil
 			},
 			OnStop: func(ctx context.Context) error {
-				logger.Info().Msg("Tearing down Decision API!")
+				logger.Info().Msg("Tearing down Decision API endpoint")
 
 				return app.App.Shutdown()
 			},

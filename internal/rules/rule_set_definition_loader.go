@@ -1,6 +1,6 @@
 package rules
 
 type ruleSetDefinitionLoader interface {
-	Start()
-	Stop()
+	Start() error
+	Stop() error
 }
