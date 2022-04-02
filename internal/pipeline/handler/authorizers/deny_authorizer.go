@@ -18,6 +18,6 @@ func (*denyAuthorizer) Authorize(context.Context, handler.RequestContext, *heimd
 	return errorchain.NewWithMessage(heimdall.ErrAuthorization, "denied by authorizer")
 }
 
-func (a *denyAuthorizer) WithConfig([]byte) (handler.Authorizer, error) {
+func (a *denyAuthorizer) WithConfig(map[string]any) (handler.Authorizer, error) {
 	return a, nil
 }

@@ -8,5 +8,5 @@ import (
 
 type Mutator interface {
 	Mutate(context.Context, *heimdall.SubjectContext) error
-	WithConfig(config []byte) (Mutator, error)
+	WithConfig(config map[string]any) (Mutator, error)
 }

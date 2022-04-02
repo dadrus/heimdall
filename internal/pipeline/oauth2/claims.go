@@ -54,24 +54,12 @@ func (c Claims) Validate(exp Expectation) error {
 
 func (c Claims) validateScopes(exp Expectation) error {
 	receivedScopes := x.IfThenElse(len(c.Scp) != 0, c.Scp, c.Scope)
-	checkScope := x.IfThenElse(exp.ScopeStrategy != nil, exp.ScopeStrategy, ExactScopeStrategy)
 
-	for _, requiredScope := range exp.RequiredScopes {
-		if !checkScope(receivedScopes, requiredScope) {
-			return errorchain.NewWithMessagef(ErrClaimsNotValid, "required scope %s is missing", requiredScope)
-		}
-	}
-
-	return nil
+	return exp.ScopesMatcher.MatchScopes(receivedScopes)
 }
 
 func (c Claims) validateTimeValidity(exp Expectation) error {
-	var leeway time.Duration
-	if exp.ValidityLeeway != 0 {
-		leeway = exp.ValidityLeeway.Duration()
-	} else {
-		leeway = defaultLeeway * time.Second
-	}
+	leeway := x.IfThenElse(exp.ValidityLeeway != 0, exp.ValidityLeeway, defaultLeeway*time.Second)
 
 	now := time.Now()
 	if c.NotBefore != nil && now.Add(leeway).Before(c.NotBefore.Time()) {

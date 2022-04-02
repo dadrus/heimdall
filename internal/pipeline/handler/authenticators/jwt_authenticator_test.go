@@ -16,6 +16,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"gopkg.in/square/go-jose.v2"
 	"gopkg.in/square/go-jose.v2/jwt"
+	"gopkg.in/yaml.v2"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/pipeline/endpoint"
@@ -25,6 +26,15 @@ import (
 
 func TestCreateJwtAuthenticator(t *testing.T) {
 	t.Parallel()
+
+	decode := func(data []byte) map[string]interface{} {
+		var res map[string]interface{}
+
+		err := yaml.Unmarshal(data, &res)
+		assert.NoError(t, err)
+
+		return res
+	}
 
 	// nolint
 	for _, tc := range []struct {
@@ -38,7 +48,7 @@ func TestCreateJwtAuthenticator(t *testing.T) {
 jwt_token_from:
   - header: foo-header
 jwt_assertions:
-  trusted_issuers:
+  issuers:
     - foobar
 session:
   subject_from: some_template`),
@@ -53,7 +63,7 @@ session:
 jwks_endpoint:
   url: http://test.com
 jwt_assertions:
-  target_audiences:
+  audiences:
     - foobar
 session:
   subject_from: some_template`),
@@ -70,7 +80,7 @@ jwks_endpoint:
 jwt_token_from:
   - header: foo-header
 jwt_assertions:
-  trusted_issuers:
+  issuers:
     - foobar
 foo: bar`),
 			assert: func(t *testing.T, err error, a *jwtAuthenticator) {
@@ -84,7 +94,7 @@ foo: bar`),
 jwks_endpoint:
   url: http://test.com
 jwt_assertions:
-  trusted_issuers:
+  issuers:
     - foobar`),
 			assert: func(t *testing.T, err error, auth *jwtAuthenticator) {
 				t.Helper()
@@ -106,8 +116,7 @@ jwt_assertions:
 				assert.Contains(t, auth.adg, extractors.QueryParameterExtractStrategy{Name: "access_token"})
 
 				// assertions settings
-				assert.Nil(t, auth.a.ScopeStrategy)
-				assert.Empty(t, auth.a.RequiredScopes)
+				assert.NoError(t, auth.a.ScopesMatcher.MatchScopes([]string{}))
 				assert.Empty(t, auth.a.TargetAudiences)
 				assert.Len(t, auth.a.TrustedIssuers, 1)
 				assert.Contains(t, auth.a.TrustedIssuers, "foobar")
@@ -117,7 +126,7 @@ jwt_assertions:
 					string(jose.ES256), string(jose.ES384), string(jose.ES512),
 					string(jose.PS256), string(jose.PS384), string(jose.PS512),
 				})
-				assert.Equal(t, oauth2.Duration(0), auth.a.ValidityLeeway)
+				assert.Equal(t, time.Duration(0), auth.a.ValidityLeeway)
 
 				// session settings
 				sess, ok := auth.se.(*Session)
@@ -137,10 +146,11 @@ jwks_endpoint:
 jwt_token_from:
   - header: foo-header
 jwt_assertions:
-  scope_strategy: wildcard
-  required_scopes:
-    - foo
-  trusted_issuers:
+  scopes:
+    matching_strategy: wildcard
+    values:
+      - foo
+  issuers:
     - foobar
   allowed_algorithms:
     - ES256
@@ -165,15 +175,15 @@ session:
 				assert.Contains(t, auth.adg, &extractors.HeaderValueExtractStrategy{Name: "foo-header"})
 
 				// assertions settings
-				assert.NotNil(t, auth.a.ScopeStrategy)
-				assert.ElementsMatch(t, auth.a.RequiredScopes, []string{"foo"})
+				assert.NotNil(t, auth.a.ScopesMatcher)
+				assert.NoError(t, auth.a.ScopesMatcher.MatchScopes([]string{"foo"}))
 				assert.Empty(t, auth.a.TargetAudiences)
 				assert.Len(t, auth.a.TrustedIssuers, 1)
 				assert.Contains(t, auth.a.TrustedIssuers, "foobar")
 				assert.Len(t, auth.a.AllowedAlgorithms, 1)
 
 				assert.ElementsMatch(t, auth.a.AllowedAlgorithms, []string{string(jose.ES256)})
-				assert.Equal(t, oauth2.Duration(0), auth.a.ValidityLeeway)
+				assert.Equal(t, time.Duration(0), auth.a.ValidityLeeway)
 
 				// session settings
 				sess, ok := auth.se.(*Session)
@@ -187,7 +197,7 @@ session:
 			t.Parallel()
 
 			// WHEN
-			a, err := NewJwtAuthenticatorFromYAML(tc.config)
+			a, err := NewJwtAuthenticator(decode(tc.config))
 
 			// THEN
 			tc.assert(t, err, a)
@@ -235,21 +245,25 @@ func TestCreateJwtAuthenticatorFromPrototype(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
-	prototypeConfig := []byte(`
+	prototypeConfig, err := decodeTestConfig([]byte(`
 jwks_endpoint:
   url: http://test.com
 jwt_assertions:
-  trusted_issuers:
-    - foobar`)
+  issuers:
+    - foobar`))
+	require.NoError(t, err)
 
-	config := []byte(`
+	val := []byte(`
 jwt_assertions:
-  trusted_issuers:
+  issuers:
     - barfoo
   allowed_algorithms:
     - ES512`)
 
-	prototype, err := NewJwtAuthenticatorFromYAML(prototypeConfig)
+	config, err := decodeTestConfig(val)
+	require.NoError(t, err)
+
+	prototype, err := NewJwtAuthenticator(prototypeConfig)
 	require.NoError(t, err)
 
 	// WHEN
@@ -265,8 +279,7 @@ jwt_assertions:
 	assert.Equal(t, prototype.se, jwta.se)
 	assert.NotEqual(t, prototype.a, jwta.a)
 
-	assert.Nil(t, jwta.a.ScopeStrategy)
-	assert.Empty(t, jwta.a.RequiredScopes)
+	assert.NoError(t, jwta.a.ScopesMatcher.MatchScopes([]string{}))
 	assert.Empty(t, jwta.a.TargetAudiences)
 	assert.ElementsMatch(t, jwta.a.TrustedIssuers, []string{"barfoo"})
 	assert.ElementsMatch(t, jwta.a.AllowedAlgorithms, []string{string(jose.ES512)})
@@ -282,12 +295,14 @@ func TestSuccessfulExecutionOfJwtAuthenticator(t *testing.T) {
 	jwks, jwt := setup(t, subject, issuer, audience)
 
 	as := oauth2.Expectation{
-		ScopeStrategy:     oauth2.ExactScopeStrategy,
-		RequiredScopes:    []string{"foo"},
+		ScopesMatcher: oauth2.ScopesMatcher{
+			Match:  oauth2.ExactScopeStrategy,
+			Scopes: []string{"foo"},
+		},
 		TargetAudiences:   []string{audience},
 		TrustedIssuers:    []string{issuer},
 		AllowedAlgorithms: []string{string(jose.PS512)},
-		ValidityLeeway:    oauth2.Duration(1 * time.Minute),
+		ValidityLeeway:    1 * time.Minute,
 	}
 
 	sc := &heimdall.SubjectContext{}

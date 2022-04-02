@@ -4,31 +4,31 @@ import (
 	"context"
 	"strings"
 
-	"gopkg.in/yaml.v2"
-
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/pipeline/endpoint"
 	"github.com/dadrus/heimdall/internal/pipeline/handler"
+	"github.com/dadrus/heimdall/internal/pipeline/handler/authenticators/extractors"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
 type authenticationDataAuthenticator struct {
 	e   Endpoint
 	se  SubjectExtrator
-	adg AuthDataGetter
+	adg extractors.AuthDataExtractStrategy
 }
 
-func NewAuthenticationDataAuthenticatorFromYAML(rawConfig []byte) (*authenticationDataAuthenticator, error) {
+func NewAuthenticationDataAuthenticator(rawConfig map[string]any) (*authenticationDataAuthenticator, error) {
 	type _config struct {
-		Endpoint       endpoint.Endpoint        `yaml:"identity_info_endpoint"`
-		AuthDataSource authenticationDataSource `yaml:"authentication_data_source"`
-		Session        Session                  `yaml:"session"`
+		Endpoint       endpoint.Endpoint                   `mapstructure:"identity_info_endpoint"`
+		AuthDataSource extractors.CompositeExtractStrategy `mapstructure:"authentication_data_source"`
+		Session        Session                             `mapstructure:"session"`
 	}
 
 	var conf _config
-	if err := yaml.UnmarshalStrict(rawConfig, &conf); err != nil {
+
+	if err := decodeConfig(rawConfig, &conf); err != nil {
 		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration, "failed to unmarshal authentication data authenticator config").
+			NewWithMessage(heimdall.ErrConfiguration, "failed to decode authentication data authenticator config").
 			CausedBy(err)
 	}
 
@@ -44,14 +44,14 @@ func NewAuthenticationDataAuthenticatorFromYAML(rawConfig []byte) (*authenticati
 			CausedBy(err)
 	}
 
-	if conf.AuthDataSource.es == nil {
+	if conf.AuthDataSource == nil {
 		return nil, errorchain.
 			NewWithMessage(heimdall.ErrConfiguration, "no authentication_data_source configured")
 	}
 
 	return &authenticationDataAuthenticator{
 		e:   conf.Endpoint,
-		adg: conf.AuthDataSource.es,
+		adg: conf.AuthDataSource,
 		se:  &conf.Session,
 	}, nil
 }
@@ -84,7 +84,7 @@ func (a *authenticationDataAuthenticator) Authenticate(
 	return nil
 }
 
-func (a *authenticationDataAuthenticator) WithConfig(_ []byte) (handler.Authenticator, error) {
+func (a *authenticationDataAuthenticator) WithConfig(_ map[string]any) (handler.Authenticator, error) {
 	// this authenticator does not allow configuration from a rule
 	return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration, "reconfiguration not allowed")
 }

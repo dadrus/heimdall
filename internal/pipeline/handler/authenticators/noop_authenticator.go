@@ -19,7 +19,7 @@ func (*noopAuthenticator) Authenticate(_ context.Context, _ handler.RequestConte
 	return nil
 }
 
-func (a *noopAuthenticator) WithConfig(_ []byte) (handler.Authenticator, error) {
+func (a *noopAuthenticator) WithConfig(_ map[string]any) (handler.Authenticator, error) {
 	// nothing can be reconfigured
 	return a, nil
 }

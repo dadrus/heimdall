@@ -66,7 +66,7 @@ func TestCompositeAuthenticatorFromPrototypeIsNotAllowed(t *testing.T) {
 	auth := CompositeAuthenticator{}
 
 	// WHEN
-	_, err := auth.WithConfig([]byte{})
+	_, err := auth.WithConfig(nil)
 
 	// THEN
 	assert.Error(t, err)

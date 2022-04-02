@@ -1,6 +1,6 @@
 log:
   level: info
-  format: json
+  format: text
 
 serve:
   api:
@@ -160,15 +160,16 @@ pipeline:
 rules:
   default:
     authenticators:
-      - deny_all_authorizer
-    authorizer: unauthorized_authenticator
+      - id: deny_all_authorizer
+    authorizer:
+      id: unauthorized_authenticator
     error_handlers:
-      - authenticate_on_unauthorized_or_forbidden
-      - default_error
+      - id: authenticate_on_unauthorized_or_forbidden
+      - id: default_error
 
   providers:
     file:
-      filename: rules.yaml
+      src: test_rules.yaml
 
     docker:
       endpoint: docker.sock

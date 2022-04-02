@@ -10,23 +10,29 @@ import (
 
 type LogFormat int
 
-// nolint
 const (
 	LogTextFormat    = 0
-	LogJsonFormat    = 1
+	LogGelfFormat    = 1
 	LogUnknownFormat = 2
 )
 
 func (f LogFormat) String() string {
-	return x.IfThenElse(f == LogTextFormat, "text", "json")
+	return x.IfThenElse(f == LogTextFormat, "text", "gelf")
 }
 
-func logFormatDecode(from reflect.Type, to reflect.Type, val interface{}) (interface{}, error) {
-	if from.Kind() == reflect.String && to.Name() == "LogFormat" {
-		return x.IfThenElse(val == "text", LogTextFormat, LogJsonFormat), nil
+func logFormatDecodeHookFunc(from reflect.Type, to reflect.Type, val interface{}) (interface{}, error) {
+	var format LogFormat
+
+	if from.Kind() != reflect.String {
+		return val, nil
 	}
 
-	return val, nil
+	dect := reflect.ValueOf(&format).Elem().Type()
+	if !dect.AssignableTo(to) {
+		return val, nil
+	}
+
+	return x.IfThenElse(val == "gelf", LogGelfFormat, LogTextFormat), nil
 }
 
 type Logging struct {

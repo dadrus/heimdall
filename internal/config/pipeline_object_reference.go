@@ -1,8 +1,6 @@
 package config
 
-import "encoding/json"
-
 type PipelineObjectReference struct {
-	ID     string
-	Config json.RawMessage
+	ID     string                 `koanf:"id" yaml:"id"`
+	Config map[string]interface{} `koanf:"config" yaml:"config"`
 }

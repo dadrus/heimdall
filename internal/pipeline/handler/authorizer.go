@@ -8,5 +8,5 @@ import (
 
 type Authorizer interface {
 	Authorize(context.Context, RequestContext, *heimdall.SubjectContext) error
-	WithConfig(config []byte) (Authorizer, error)
+	WithConfig(config map[string]any) (Authorizer, error)
 }

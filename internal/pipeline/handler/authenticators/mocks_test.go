@@ -6,12 +6,21 @@ import (
 	"io"
 
 	"github.com/stretchr/testify/mock"
+	"gopkg.in/yaml.v2"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/pipeline/handler"
 )
 
 var ErrTestPurpose = errors.New("error raised in a test")
+
+func decodeTestConfig(data []byte) (map[string]interface{}, error) {
+	var res map[string]interface{}
+
+	err := yaml.Unmarshal(data, &res)
+
+	return res, err
+}
 
 type MockEndpoint struct {
 	mock.Mock
@@ -75,7 +84,7 @@ func (a *MockAuthenticator) Authenticate(
 	return args.Error(0)
 }
 
-func (a *MockAuthenticator) WithConfig(c []byte) (handler.Authenticator, error) {
+func (a *MockAuthenticator) WithConfig(c map[string]interface{}) (handler.Authenticator, error) {
 	args := a.Called(c)
 
 	if val := args.Get(0); val != nil {

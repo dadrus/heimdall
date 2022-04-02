@@ -94,23 +94,22 @@ func (p *fileSystemProvider) Start() error {
 		return err
 	}
 
-	go p.watchFiles()
-
-	return nil
+	return p.watchFiles()
 }
 
-func (p *fileSystemProvider) watchFiles() {
+func (p *fileSystemProvider) watchFiles() error {
 	for {
 		select {
 		case event, ok := <-p.watcher.Events:
 			if !ok {
-				return
+				return errors.New("failed receiving watcher event")
 			}
 
 			if event.Op&fsnotify.Create == fsnotify.Create {
 				data, err := os.ReadFile(event.Name)
 				if err != nil {
 					p.logger.Error().Err(err).Str("file", event.Name).Msg("Failed reading")
+					return err
 				}
 
 				p.ruleSetChanged(RuleSetChangedEvent{
@@ -126,12 +125,14 @@ func (p *fileSystemProvider) watchFiles() {
 			}
 		case err, ok := <-p.watcher.Errors:
 			if !ok {
-				return
+				return errors.New("failed receiving watcher errors")
 			}
 
 			p.logger.Error().Err(err).Msg("Watcher error received")
 		}
 	}
+
+	return nil
 }
 
 func (p *fileSystemProvider) Stop() error {

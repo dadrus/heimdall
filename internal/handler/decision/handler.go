@@ -56,22 +56,22 @@ func (h *Handler) registerRoutes(router fiber.Router, logger zerolog.Logger) {
 //       403: genericError
 //       500: genericError
 //       503: genericError
-func (h *Handler) decisions(reqCtx *fiber.Ctx) error {
-	ctx := reqCtx.UserContext()
+func (h *Handler) decisions(c *fiber.Ctx) error {
+	ctx := c.UserContext()
 	logger := zerolog.Ctx(ctx)
 
-	method := x.OrDefault(reqCtx.Get(xForwardedMethod), reqCtx.Method())
+	method := x.OrDefault(c.Get(xForwardedMethod), c.Method())
 	reqURL := &url.URL{
-		Scheme: x.OrDefault(reqCtx.Get(xForwardedProto), reqCtx.Protocol()),
-		Host:   x.OrDefault(reqCtx.Get(xForwardedHost), reqCtx.Hostname()),
-		Path:   x.OrDefault(reqCtx.Get(xForwardedURI), reqCtx.Params("*")),
+		Scheme: x.OrDefault(c.Get(xForwardedProto), c.Protocol()),
+		Host:   x.OrDefault(c.Get(xForwardedHost), c.Hostname()),
+		Path:   x.OrDefault(c.Get(xForwardedURI), c.Params("*")),
 	}
 
 	fields := map[string]interface{}{
 		"http_method":     method,
 		"http_url":        reqURL.String(),
-		"http_host":       reqCtx.Hostname(),
-		"http_user_agent": reqCtx.Get("User-Agent"),
+		"http_host":       c.Hostname(),
+		"http_user_agent": c.Get("User-Agent"),
 	}
 
 	logger.Info().
@@ -85,21 +85,21 @@ func (h *Handler) decisions(reqCtx *fiber.Ctx) error {
 			Bool("granted", false).
 			Msg("Access request denied. No rule applicable")
 
-		return reqCtx.SendStatus(fiber.StatusInternalServerError)
+		return c.SendStatus(fiber.StatusInternalServerError)
 	}
 
 	if !rule.MatchesMethod(method) {
-		return reqCtx.SendStatus(fiber.StatusMethodNotAllowed)
+		return c.SendStatus(fiber.StatusMethodNotAllowed)
 	}
 
-	subjectCtx, err := rule.Execute(ctx, &requestContext{c: reqCtx})
+	subjectCtx, err := rule.Execute(ctx, &requestContext{c: c})
 	if err != nil {
 		logger.Warn().
 			Fields(fields).
 			Bool("granted", false).
 			Msg("Access request denied")
 
-		return h.handleError(reqCtx, err)
+		return h.handleError(c, err)
 	}
 
 	logger.Info().
@@ -108,30 +108,30 @@ func (h *Handler) decisions(reqCtx *fiber.Ctx) error {
 		Msg("Access request granted")
 
 	for k := range subjectCtx.Header {
-		reqCtx.Response().Header.Set(k, subjectCtx.Header.Get(k))
+		c.Response().Header.Set(k, subjectCtx.Header.Get(k))
 	}
 
-	return reqCtx.SendStatus(fiber.StatusOK)
+	return c.SendStatus(fiber.StatusOK)
 }
 
-func (h *Handler) handleError(ctx *fiber.Ctx, err error) error {
+func (h *Handler) handleError(c *fiber.Ctx, err error) error {
 	switch {
 	case errors.Is(err, heimdall.ErrArgument):
-		return ctx.SendStatus(fiber.StatusBadRequest)
+		return c.SendStatus(fiber.StatusBadRequest)
 	case errors.Is(err, heimdall.ErrAuthentication):
-		return ctx.SendStatus(fiber.StatusUnauthorized)
+		return c.SendStatus(fiber.StatusUnauthorized)
 	case errors.Is(err, heimdall.ErrAuthorization):
-		return ctx.SendStatus(fiber.StatusForbidden)
+		return c.SendStatus(fiber.StatusForbidden)
 	case errors.Is(err, heimdall.ErrCommunicationTimeout):
-		return ctx.SendStatus(fiber.StatusBadGateway)
+		return c.SendStatus(fiber.StatusBadGateway)
 	case errors.Is(err, &heimdall.RedirectError{}):
 		var redirectError *heimdall.RedirectError
 
 		errors.As(err, &redirectError)
 
-		return ctx.Redirect(redirectError.RedirectTo)
+		return c.Redirect(redirectError.RedirectTo)
 	default:
-		return ctx.SendStatus(fiber.StatusInternalServerError)
+		return c.SendStatus(fiber.StatusInternalServerError)
 	}
 }
 

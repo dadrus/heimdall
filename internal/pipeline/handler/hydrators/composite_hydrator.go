@@ -24,6 +24,6 @@ func (ch CompositeHydrator) Hydrate(c context.Context, sc *heimdall.SubjectConte
 	return err
 }
 
-func (ch CompositeHydrator) WithConfig(_ []byte) (handler.Hydrator, error) {
+func (ch CompositeHydrator) WithConfig(_ map[string]any) (handler.Hydrator, error) {
 	return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration, "reconfiguration not allowed")
 }

@@ -9,6 +9,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"gopkg.in/yaml.v2"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
@@ -16,6 +17,15 @@ import (
 
 func TestCreateAuthenticationDataAuthenticator(t *testing.T) {
 	t.Parallel()
+
+	decode := func(data []byte) map[string]interface{} {
+		var res map[string]interface{}
+
+		err := yaml.Unmarshal(data, &res)
+		assert.NoError(t, err)
+
+		return res
+	}
 
 	// nolint
 	for _, tc := range []struct {
@@ -91,7 +101,7 @@ session:
 		t.Run("case="+tc.uc, func(t *testing.T) {
 			t.Parallel()
 			// WHEN
-			_, err := NewAuthenticationDataAuthenticatorFromYAML(tc.config)
+			_, err := NewAuthenticationDataAuthenticator(decode(tc.config))
 
 			// THEN
 			tc.assertError(t, err)
@@ -105,7 +115,7 @@ func TestCreateAuthenticationDataAuthenticatorFromPrototypeNotAllowed(t *testing
 	p := authenticationDataAuthenticator{}
 
 	// WHEN
-	_, err := p.WithConfig([]byte{})
+	_, err := p.WithConfig(nil)
 
 	// THEN
 	assert.Error(t, err)

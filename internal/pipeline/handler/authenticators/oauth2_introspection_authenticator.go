@@ -6,8 +6,8 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/mitchellh/mapstructure"
 	"gopkg.in/square/go-jose.v2"
-	"gopkg.in/yaml.v2"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/pipeline/endpoint"
@@ -21,18 +21,18 @@ type oauth2IntrospectionAuthenticator struct {
 	e   Endpoint
 	a   oauth2.Expectation
 	se  SubjectExtrator
-	adg AuthDataGetter
+	adg extractors.AuthDataExtractStrategy
 }
 
-func NewOAuth2IntrospectionAuthenticatorFromYAML(rawConfig json.RawMessage) (*oauth2IntrospectionAuthenticator, error) {
+func NewOAuth2IntrospectionAuthenticator(rawConfig map[string]any) (*oauth2IntrospectionAuthenticator, error) {
 	type _config struct {
-		Endpoint   endpoint.Endpoint  `yaml:"introspection_endpoint"`
-		Assertions oauth2.Expectation `yaml:"introspection_response_assertions"`
-		Session    Session            `yaml:"session"`
+		Endpoint   endpoint.Endpoint  `mapstructure:"introspection_endpoint"`
+		Assertions oauth2.Expectation `mapstructure:"introspection_response_assertions"`
+		Session    Session            `mapstructure:"session"`
 	}
 
 	var conf _config
-	if err := yaml.UnmarshalStrict(rawConfig, &conf); err != nil {
+	if err := decodeConfig(rawConfig, &conf); err != nil {
 		return nil, errorchain.
 			NewWithMessage(heimdall.ErrConfiguration, "failed to unmarshal oauth2 introspection authenticator config").
 			CausedBy(err)
@@ -129,18 +129,18 @@ func (a *oauth2IntrospectionAuthenticator) Authenticate(
 	return nil
 }
 
-func (a *oauth2IntrospectionAuthenticator) WithConfig(config []byte) (handler.Authenticator, error) {
+func (a *oauth2IntrospectionAuthenticator) WithConfig(config map[string]any) (handler.Authenticator, error) {
 	// this authenticator allows assertions to be redefined on the rule level
 	if len(config) == 0 {
 		return a, nil
 	}
 
 	type _config struct {
-		Assertions oauth2.Expectation `yaml:"introspection_response_assertions"`
+		Assertions oauth2.Expectation `mapstructure:"introspection_response_assertions"`
 	}
 
 	var conf _config
-	if err := yaml.UnmarshalStrict(config, &conf); err != nil {
+	if err := mapstructure.Decode(config, &conf); err != nil {
 		return nil, errorchain.
 			NewWithMessage(heimdall.ErrConfiguration, "failed to parse configuration").
 			CausedBy(err)

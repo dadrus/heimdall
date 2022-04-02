@@ -8,8 +8,8 @@ import (
 )
 
 type Session struct {
-	SubjectFrom    string `yaml:"subject_from"`
-	AttributesFrom string `yaml:"attributes_from"`
+	SubjectFrom    string `mapstructure:"subject_from"`
+	AttributesFrom string `mapstructure:"attributes_from"`
 }
 
 func (s *Session) Validate() error {

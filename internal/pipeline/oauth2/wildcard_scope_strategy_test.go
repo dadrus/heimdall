@@ -1,24 +1,3 @@
-/*
- * Copyright © 2015-2018 Aeneas Rekkas <aeneas+oss@aeneas.io>
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- *
- * @author		Aeneas Rekkas <aeneas+oss@aeneas.io>
- * @copyright 	2015-2018 Aeneas Rekkas <aeneas+oss@aeneas.io>
- * @license 	Apache-2.0
- *
- */
-
 package oauth2
 
 import (
@@ -27,44 +6,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 )
-
-func TestHierarchicScopeStrategy(t *testing.T) {
-	t.Parallel()
-
-	strategy := HierarchicScopeStrategy
-	scopes := []string{}
-
-	assert.False(t, strategy(scopes, "foo.bar.baz"))
-	assert.False(t, strategy(scopes, "foo.bar"))
-	assert.False(t, strategy(scopes, "foo"))
-
-	scopes = []string{"foo.bar", "bar.baz", "baz.baz.1", "baz.baz.2", "baz.baz.3", "baz.baz.baz"}
-	assert.True(t, strategy(scopes, "foo.bar.baz"))
-	assert.True(t, strategy(scopes, "baz.baz.baz"))
-	assert.True(t, strategy(scopes, "foo.bar"))
-	assert.False(t, strategy(scopes, "foo"))
-
-	assert.True(t, strategy(scopes, "bar.baz"))
-	assert.True(t, strategy(scopes, "bar.baz.zad"))
-	assert.False(t, strategy(scopes, "bar"))
-	assert.False(t, strategy(scopes, "baz"))
-
-	scopes = []string{"fosite.keys.create", "fosite.keys.get", "fosite.keys.delete", "fosite.keys.update"}
-	assert.True(t, strategy(scopes, "fosite.keys.delete"))
-	assert.True(t, strategy(scopes, "fosite.keys.get"))
-	assert.True(t, strategy(scopes, "fosite.keys.get"))
-	assert.True(t, strategy(scopes, "fosite.keys.update"))
-
-	scopes = []string{"hydra", "openid", "offline"}
-	assert.False(t, strategy(scopes, "foo.bar"))
-	assert.False(t, strategy(scopes, "foo"))
-	assert.True(t, strategy(scopes, "hydra"))
-	assert.True(t, strategy(scopes, "hydra.bar"))
-	assert.True(t, strategy(scopes, "openid"))
-	assert.True(t, strategy(scopes, "openid.baz.bar"))
-	assert.True(t, strategy(scopes, "offline"))
-	assert.True(t, strategy(scopes, "offline.baz.bar.baz"))
-}
 
 func TestWildcardScopeStrategy(t *testing.T) {
 	t.Parallel()
@@ -137,22 +78,4 @@ func TestWildcardScopeStrategy(t *testing.T) {
 	assert.True(t, strategy(scopes, "hydra"))
 	assert.True(t, strategy(scopes, "offline"))
 	assert.True(t, strategy(scopes, "openid"))
-}
-
-func TestExactScopeStrategy2ScopeStrategy(t *testing.T) {
-	t.Parallel()
-
-	var strategy ScopeStrategy = ExactScopeStrategy
-
-	scopes := []string{"foo.bar.baz", "foo.bar"}
-	assert.True(t, strategy(scopes, "foo.bar.baz"))
-	assert.True(t, strategy(scopes, "foo.bar"))
-
-	assert.False(t, strategy(scopes, "foo.bar.baz.baz"))
-	assert.False(t, strategy(scopes, "foo.bar.bar"))
-
-	assert.False(t, strategy(scopes, "foo.bar.baz1"))
-	assert.False(t, strategy(scopes, "foo.bar1"))
-
-	assert.False(t, strategy([]string{}, "foo"))
 }

@@ -3,12 +3,10 @@ package authorizers
 import (
 	"bytes"
 	"context"
-	"encoding/json"
-
-	"gopkg.in/yaml.v2"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/pipeline/handler"
+	"github.com/mitchellh/mapstructure"
 )
 
 type remoteAuthorizer struct {
@@ -17,7 +15,7 @@ type remoteAuthorizer struct {
 	ResponseHeadersToForward []string
 }
 
-func NewRemoteAuthorizerFromJSON(rawConfig json.RawMessage) (*remoteAuthorizer, error) {
+func NewRemoteAuthorizer(rawConfig map[string]any) (*remoteAuthorizer, error) {
 	return &remoteAuthorizer{}, nil
 }
 
@@ -45,17 +43,17 @@ func (a *remoteAuthorizer) Authorize(
 	return nil
 }
 
-func (a *remoteAuthorizer) WithConfig(rawConfig []byte) (handler.Authorizer, error) {
+func (a *remoteAuthorizer) WithConfig(rawConfig map[string]any) (handler.Authorizer, error) {
 	if len(rawConfig) == 0 {
 		return a, nil
 	}
 
 	type _config struct {
-		ResponseHeadersToForward []string `yaml:"forward_response_headers"`
+		ResponseHeadersToForward []string `mapstructure:"forward_response_headers"`
 	}
 
 	var conf _config
-	if err := yaml.UnmarshalStrict(rawConfig, &conf); err != nil {
+	if err := mapstructure.Decode(rawConfig, &conf); err != nil {
 		return nil, err
 	}
 

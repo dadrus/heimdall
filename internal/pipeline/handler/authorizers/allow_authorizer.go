@@ -17,6 +17,6 @@ func (*allowAuthorizer) Authorize(context.Context, handler.RequestContext, *heim
 	return nil
 }
 
-func (a *allowAuthorizer) WithConfig([]byte) (handler.Authorizer, error) {
+func (a *allowAuthorizer) WithConfig(map[string]any) (handler.Authorizer, error) {
 	return a, nil
 }

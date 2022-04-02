@@ -5,9 +5,9 @@ import (
 	"encoding/json"
 	"strings"
 
+	"github.com/mitchellh/mapstructure"
 	"gopkg.in/square/go-jose.v2"
 	"gopkg.in/square/go-jose.v2/jwt"
-	"gopkg.in/yaml.v2"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/pipeline/endpoint"
@@ -21,19 +21,19 @@ type jwtAuthenticator struct {
 	e   Endpoint
 	a   oauth2.Expectation
 	se  SubjectExtrator
-	adg AuthDataGetter
+	adg extractors.AuthDataExtractStrategy
 }
 
-func NewJwtAuthenticatorFromYAML(rawConfig []byte) (*jwtAuthenticator, error) {
+func NewJwtAuthenticator(rawConfig map[string]any) (*jwtAuthenticator, error) {
 	type _config struct {
-		Endpoint       endpoint.Endpoint        `yaml:"jwks_endpoint"`
-		AuthDataSource authenticationDataSource `yaml:"jwt_token_from"`
-		JwtAssertions  oauth2.Expectation       `yaml:"jwt_assertions"`
-		Session        Session                  `yaml:"session"`
+		Endpoint       endpoint.Endpoint                   `mapstructure:"jwks_endpoint"`
+		AuthDataSource extractors.CompositeExtractStrategy `mapstructure:"jwt_token_from"`
+		JwtAssertions  oauth2.Expectation                  `mapstructure:"jwt_assertions"`
+		Session        Session                             `mapstructure:"session"`
 	}
 
 	var conf _config
-	if err := yaml.UnmarshalStrict(rawConfig, &conf); err != nil {
+	if err := decodeConfig(rawConfig, &conf); err != nil {
 		return nil, errorchain.
 			NewWithMessage(heimdall.ErrConfiguration, "failed to unmarshal jwt authenticator config").
 			CausedBy(err)
@@ -77,14 +77,14 @@ func NewJwtAuthenticatorFromYAML(rawConfig []byte) (*jwtAuthenticator, error) {
 	}
 
 	var adg extractors.AuthDataExtractStrategy
-	if conf.AuthDataSource.es == nil {
+	if conf.AuthDataSource == nil {
 		adg = extractors.CompositeExtractStrategy{
 			extractors.HeaderValueExtractStrategy{Name: "Authorization", Prefix: "Bearer"},
 			extractors.FormParameterExtractStrategy{Name: "access_token"},
 			extractors.QueryParameterExtractStrategy{Name: "access_token"},
 		}
 	} else {
-		adg = conf.AuthDataSource.es
+		adg = conf.AuthDataSource
 	}
 
 	return &jwtAuthenticator{
@@ -195,18 +195,18 @@ func (a *jwtAuthenticator) verifyTokenAndGetClaims(jwtRaw string, jwks jose.JSON
 	return rawPayload, nil
 }
 
-func (a *jwtAuthenticator) WithConfig(config []byte) (handler.Authenticator, error) {
+func (a *jwtAuthenticator) WithConfig(config map[string]any) (handler.Authenticator, error) {
 	// this authenticator allows assertions to be redefined on the rule level
 	if len(config) == 0 {
 		return a, nil
 	}
 
 	type _config struct {
-		JwtAssertions oauth2.Expectation `yaml:"jwt_assertions"`
+		JwtAssertions oauth2.Expectation `mapstructure:"jwt_assertions"`
 	}
 
 	var conf _config
-	if err := yaml.UnmarshalStrict(config, &conf); err != nil {
+	if err := mapstructure.Decode(config, &conf); err != nil {
 		return nil, errorchain.
 			NewWithMessage(heimdall.ErrConfiguration, "failed to parse configuration").
 			CausedBy(err)

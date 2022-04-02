@@ -1,7 +1,5 @@
 package config
 
-import "encoding/json"
-
 type PipelineObjectType string
 
 const (
@@ -22,7 +20,7 @@ const (
 )
 
 type PipelineObject struct {
-	ID     string             `koanf:"id"`
-	Type   PipelineObjectType `koanf:"type"`
-	Config json.RawMessage    `koanf:"config"`
+	ID     string                 `koanf:"id"`
+	Type   PipelineObjectType     `koanf:"type"`
+	Config map[string]interface{} `koanf:"config"`
 }

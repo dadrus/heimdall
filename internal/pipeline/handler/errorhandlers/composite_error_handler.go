@@ -24,6 +24,6 @@ func (ceh CompositeErrorHandler) HandleError(ctx context.Context, e error) (err 
 	return err
 }
 
-func (CompositeErrorHandler) WithConfig(_ []byte) (handler.ErrorHandler, error) {
+func (CompositeErrorHandler) WithConfig(_ map[string]any) (handler.ErrorHandler, error) {
 	return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration, "reconfiguration not allowed")
 }

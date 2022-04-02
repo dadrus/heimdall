@@ -4,16 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"net/url"
 	"sync"
 
-	"github.com/knadh/koanf"
-	"github.com/knadh/koanf/parsers/yaml"
-	"github.com/knadh/koanf/providers/rawbytes"
-	"github.com/mitchellh/mapstructure"
 	"github.com/rs/zerolog"
 	"golang.org/x/exp/slices"
+	"gopkg.in/yaml.v2"
 
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
@@ -177,22 +173,16 @@ func (r *repository) newRule(srcID string, ruleConfig config.RuleConfig) (*rule,
 }
 
 func parseRuleSetFromYaml(data []byte) ([]config.RuleConfig, error) {
-	parser := koanf.New(".")
-
-	err := parser.Load(rawbytes.Provider(data), yaml.Parser())
-	if err != nil {
-		return nil, fmt.Errorf("failed to read config: %w", err)
-	}
+	// parser := koanf.new(".")
+	//
+	// err := parser.load(rawbytes.provider(data), yaml.parser())
+	// if err != nil {
+	// 	return nil, fmt.errorf("failed to read config: %w", err)
+	// }
 
 	var rcs []config.RuleConfig
 
-	if err = parser.UnmarshalWithConf("", rcs, koanf.UnmarshalConf{
-		Tag: "koanf",
-		DecoderConfig: &mapstructure.DecoderConfig{
-			Result:           rcs,
-			WeaklyTypedInput: true,
-		},
-	}); err != nil {
+	if err := yaml.UnmarshalStrict(data, &rcs); err != nil {
 		return nil, err
 	}
 

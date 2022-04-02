@@ -3,19 +3,17 @@ package authenticators
 import (
 	"context"
 
-	"gopkg.in/yaml.v2"
-
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/pipeline/handler"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
-func NewAnonymousAuthenticatorFromYAML(rawConfig []byte) (*anonymousAuthenticator, error) {
+func NewAnonymousAuthenticator(rawConfig map[string]any) (*anonymousAuthenticator, error) {
 	var auth anonymousAuthenticator
 
-	if err := yaml.UnmarshalStrict(rawConfig, &auth); err != nil {
+	if err := decodeConfig(rawConfig, &auth); err != nil {
 		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration, "failed to unmarshal anonymous authenticator config").
+			NewWithMessage(heimdall.ErrConfiguration, "failed to decode anonymous authenticator config").
 			CausedBy(err)
 	}
 
@@ -27,7 +25,7 @@ func NewAnonymousAuthenticatorFromYAML(rawConfig []byte) (*anonymousAuthenticato
 }
 
 type anonymousAuthenticator struct {
-	Subject string `yaml:"subject"`
+	Subject string `mapstructure:"subject"`
 }
 
 func (a *anonymousAuthenticator) Authenticate(
@@ -40,11 +38,11 @@ func (a *anonymousAuthenticator) Authenticate(
 	return nil
 }
 
-func (a *anonymousAuthenticator) WithConfig(config []byte) (handler.Authenticator, error) {
+func (a *anonymousAuthenticator) WithConfig(config map[string]any) (handler.Authenticator, error) {
 	// this authenticator allows subject to be redefined on the rule level
 	if len(config) == 0 {
 		return a, nil
 	}
 
-	return NewAnonymousAuthenticatorFromYAML(config)
+	return NewAnonymousAuthenticator(config)
 }

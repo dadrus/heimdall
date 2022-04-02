@@ -27,7 +27,7 @@ func TestCreateUnauthorizedAuthenticatorFromPrototype(t *testing.T) {
 	prototype := NewUnauthorizedAuthenticator()
 
 	// WHEN
-	auth, err := prototype.WithConfig([]byte{})
+	auth, err := prototype.WithConfig(nil)
 
 	// THEN
 	assert.NoError(t, err)

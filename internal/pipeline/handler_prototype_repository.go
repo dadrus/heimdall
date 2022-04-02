@@ -75,10 +75,10 @@ func createPipelineObjects[T any](
 	pObjects []config.PipelineObject,
 	create func(obj config.PipelineObject) (T, error),
 ) (map[string]T, error) {
-	var objects map[string]T
+	objects := make(map[string]T)
 
 	for _, pe := range pObjects {
-		if r, err := create(pe); err != nil {
+		if r, err := create(pe); err == nil {
 			objects[pe.ID] = r
 		} else {
 			return nil, err
@@ -98,15 +98,15 @@ func newAuthenticator(obj config.PipelineObject) (handler.Authenticator, error) 
 	case config.POTNoop:
 		authenticator, err = authenticators.NewNoopAuthenticator(), nil
 	case config.POTAnonymous:
-		authenticator, err = authenticators.NewAnonymousAuthenticatorFromYAML(obj.Config)
+		authenticator, err = authenticators.NewAnonymousAuthenticator(obj.Config)
 	case config.POTUnauthorized:
 		authenticator, err = authenticators.NewUnauthorizedAuthenticator(), nil
 	case config.POTAuthenticationData:
-		authenticator, err = authenticators.NewAuthenticationDataAuthenticatorFromYAML(obj.Config)
+		authenticator, err = authenticators.NewAuthenticationDataAuthenticator(obj.Config)
 	case config.POTOAuth2Introspection:
-		authenticator, err = authenticators.NewOAuth2IntrospectionAuthenticatorFromYAML(obj.Config)
+		authenticator, err = authenticators.NewOAuth2IntrospectionAuthenticator(obj.Config)
 	case config.POTJwt:
-		authenticator, err = authenticators.NewJwtAuthenticatorFromYAML(obj.Config)
+		authenticator, err = authenticators.NewJwtAuthenticator(obj.Config)
 	default:
 		err = ErrUnknownAuthenticatorType
 	}
@@ -130,7 +130,7 @@ func newAuthorizer(obj config.PipelineObject) (handler.Authorizer, error) {
 	case config.POTDeny:
 		authorizer, err = authorizers.NewDenyAuthorizer(), nil
 	case config.POTRemote:
-		authorizer, err = authorizers.NewRemoteAuthorizerFromJSON(obj.Config)
+		authorizer, err = authorizers.NewRemoteAuthorizer(obj.Config)
 	default:
 		err = ErrUnknownAuthorizerType
 	}
@@ -150,7 +150,7 @@ func newHydrator(obj config.PipelineObject) (handler.Hydrator, error) {
 
 	switch obj.Type {
 	case config.POTDefault:
-		hydrator, err = hydrators.NewDefaultHydratorFromJSON(obj.Config)
+		hydrator, err = hydrators.NewDefaultHydrator(obj.Config)
 	default:
 		err = ErrUnknownHydratorType
 	}
@@ -170,11 +170,11 @@ func newMutator(obj config.PipelineObject) (handler.Mutator, error) {
 
 	switch obj.Type {
 	case config.POTJwt:
-		mutator, err = mutators.NewJWTMutatorFromJSON(obj.Config)
+		mutator, err = mutators.NewJWTMutator(obj.Config)
 	case config.POTHeader:
-		mutator, err = mutators.NewHeaderMutatorFromJSON(obj.Config)
+		mutator, err = mutators.NewHeaderMutator(obj.Config)
 	case config.POTCookie:
-		mutator, err = mutators.NewCookieMutatorFromJSON(obj.Config)
+		mutator, err = mutators.NewCookieMutator(obj.Config)
 	default:
 		err = ErrUnknownMutatorType
 	}
@@ -194,9 +194,9 @@ func newErrorHandler(obj config.PipelineObject) (handler.ErrorHandler, error) {
 
 	switch obj.Type {
 	case config.POTJson:
-		handler, err = errorhandlers.NewJsonErrorHandlerFromYAML(obj.Config)
+		handler, err = errorhandlers.NewJsonErrorHandler(obj.Config)
 	case config.POTRedirect:
-		handler, err = errorhandlers.NewRedirectErrorHandlerFromJSON(obj.Config)
+		handler, err = errorhandlers.NewRedirectErrorHandler(obj.Config)
 	default:
 		err = ErrUnknownErrorHandlerType
 	}

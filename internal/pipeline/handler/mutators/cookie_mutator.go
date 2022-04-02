@@ -2,7 +2,6 @@ package mutators
 
 import (
 	"context"
-	"encoding/json"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/pipeline/handler"
@@ -10,7 +9,7 @@ import (
 
 type cookieMutator struct{}
 
-func NewCookieMutatorFromJSON(rawConfig json.RawMessage) (cookieMutator, error) {
+func NewCookieMutator(rawConfig map[string]any) (cookieMutator, error) {
 	return cookieMutator{}, nil
 }
 
@@ -18,6 +17,6 @@ func (cookieMutator) Mutate(context.Context, *heimdall.SubjectContext) error {
 	return nil
 }
 
-func (cookieMutator) WithConfig(config []byte) (handler.Mutator, error) {
+func (cookieMutator) WithConfig(config map[string]any) (handler.Mutator, error) {
 	return nil, nil
 }

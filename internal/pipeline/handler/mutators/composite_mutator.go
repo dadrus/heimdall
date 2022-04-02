@@ -24,6 +24,6 @@ func (cm CompositeMutator) Mutate(c context.Context, sc *heimdall.SubjectContext
 	return err
 }
 
-func (cm CompositeMutator) WithConfig(_ []byte) (handler.Mutator, error) {
+func (cm CompositeMutator) WithConfig(_ map[string]any) (handler.Mutator, error) {
 	return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration, "reconfiguration not allowed")
 }

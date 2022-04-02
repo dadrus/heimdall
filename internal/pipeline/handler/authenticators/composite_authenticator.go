@@ -28,6 +28,6 @@ func (ca CompositeAuthenticator) Authenticate(
 	return err
 }
 
-func (ca CompositeAuthenticator) WithConfig(_ []byte) (handler.Authenticator, error) {
+func (ca CompositeAuthenticator) WithConfig(_ map[string]any) (handler.Authenticator, error) {
 	return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration, "reconfiguration not allowed")
 }

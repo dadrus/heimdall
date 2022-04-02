@@ -21,8 +21,8 @@ import (
 var defaultDecodeHooks = []mapstructure.DecodeHookFunc{
 	mapstructure.StringToTimeDurationHookFunc(),
 	mapstructure.StringToSliceHookFunc(","),
-	logLevelDecode,
-	logFormatDecode,
+	logLevelDecodeHookFunc,
+	logFormatDecodeHookFunc,
 }
 
 // LoadConfig loads configuration into the given struct. This will take into account the following
@@ -180,24 +180,32 @@ func expandSlices(parts []string) []string {
 }
 
 // Decode zeroLog LogLevels from strings.
-func logLevelDecode(from reflect.Type, to reflect.Type, val interface{}) (interface{}, error) {
-	if from.Kind() == reflect.String &&
-		to.Name() == "Level" && to.PkgPath() == "github.com/rs/zerolog" {
-		switch val {
-		case "panic":
-			return zerolog.PanicLevel, nil
-		case "fatal":
-			return zerolog.FatalLevel, nil
-		case "error":
-			return zerolog.ErrorLevel, nil
-		case "warn":
-			return zerolog.WarnLevel, nil
-		case "debug":
-			return zerolog.DebugLevel, nil
-		default:
-			return zerolog.InfoLevel, nil
-		}
+func logLevelDecodeHookFunc(from reflect.Type, to reflect.Type, val interface{}) (interface{}, error) {
+	var level zerolog.Level
+
+	if from.Kind() != reflect.String {
+		return val, nil
 	}
 
-	return val, nil
+	dect := reflect.ValueOf(&level).Elem().Type()
+	if !dect.AssignableTo(to) {
+		return val, nil
+	}
+
+	switch val {
+	case "panic":
+		level = zerolog.PanicLevel
+	case "fatal":
+		level = zerolog.FatalLevel
+	case "error":
+		level = zerolog.ErrorLevel
+	case "warn":
+		level = zerolog.WarnLevel
+	case "debug":
+		level = zerolog.DebugLevel
+	default:
+		level = zerolog.InfoLevel
+	}
+
+	return level, nil
 }

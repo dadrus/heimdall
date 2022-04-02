@@ -49,9 +49,8 @@ func NewConfiguration(configFile string) Configuration {
 			},
 		},
 		Prometheus: Prometheus{
-			Port:                 9000,
-			MetricsPath:          "/metrics",
-			CollapseRequestPaths: true,
+			Port:        9000,
+			MetricsPath: "/metrics",
 		},
 		Log: Logging{
 			Level:             zerolog.DebugLevel,

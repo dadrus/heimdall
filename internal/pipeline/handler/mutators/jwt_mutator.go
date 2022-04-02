@@ -2,7 +2,6 @@ package mutators
 
 import (
 	"context"
-	"encoding/json"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/pipeline/handler"
@@ -10,7 +9,7 @@ import (
 
 type jwtMutator struct{}
 
-func NewJWTMutatorFromJSON(rawConfig json.RawMessage) (jwtMutator, error) {
+func NewJWTMutator(rawConfig map[string]any) (jwtMutator, error) {
 	return jwtMutator{}, nil
 }
 
@@ -18,6 +17,6 @@ func (jwtMutator) Mutate(context.Context, *heimdall.SubjectContext) error {
 	return nil
 }
 
-func (jwtMutator) WithConfig(config []byte) (handler.Mutator, error) {
+func (jwtMutator) WithConfig(config map[string]any) (handler.Mutator, error) {
 	return nil, nil
 }

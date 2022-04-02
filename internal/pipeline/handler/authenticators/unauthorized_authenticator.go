@@ -22,7 +22,7 @@ func (a *unauthorizedAuthenticator) Authenticate(
 	return errorchain.NewWithMessage(heimdall.ErrAuthentication, "denied by authenticator")
 }
 
-func (a *unauthorizedAuthenticator) WithConfig(_ []byte) (handler.Authenticator, error) {
+func (a *unauthorizedAuthenticator) WithConfig(_ map[string]any) (handler.Authenticator, error) {
 	// nothing can be reconfigured
 	return a, nil
 }

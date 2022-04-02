@@ -8,5 +8,5 @@ import (
 
 type Authenticator interface {
 	Authenticate(context.Context, RequestContext, *heimdall.SubjectContext) error
-	WithConfig(config []byte) (Authenticator, error)
+	WithConfig(config map[string]any) (Authenticator, error)
 }

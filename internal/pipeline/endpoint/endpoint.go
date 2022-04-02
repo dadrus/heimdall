@@ -2,7 +2,6 @@ package endpoint
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"io"
 	"io/ioutil"
@@ -18,21 +17,21 @@ import (
 )
 
 type Endpoint struct {
-	URL     string            `yaml:"url"`
-	Method  string            `yaml:"method"`
-	Retry   *Retry            `yaml:"retry"`
-	Auth    *Auth             `yaml:"auth"`
-	Headers map[string]string `yaml:"headers"`
+	URL     string            `mapstructure:"url"`
+	Method  string            `mapstructure:"method"`
+	Retry   *Retry            `mapstructure:"retry"`
+	Auth    *Auth             `mapstructure:"auth"`
+	Headers map[string]string `mapstructure:"headers"`
 }
 
 type Retry struct {
-	GiveUpAfter time.Duration `yaml:"give_up_after"`
-	MaxDelay    time.Duration `yaml:"max_delay"`
+	GiveUpAfter time.Duration `mapstructure:"give_up_after"`
+	MaxDelay    time.Duration `mapstructure:"max_delay"`
 }
 
 type Auth struct {
-	Type   string          `yaml:"type"`
-	Config json.RawMessage `yaml:"config"`
+	Type   string                 `mapstructure:"type"`
+	Config map[string]interface{} `mapstructure:"config"`
 }
 
 func (e Endpoint) Validate() error {
