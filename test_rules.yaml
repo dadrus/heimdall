@@ -19,4 +19,4 @@
           foo-bar: bla
   error_handlers:
     - id: authenticate_on_unauthorized_or_forbidden
-    - id: json
+    - id: default_error
