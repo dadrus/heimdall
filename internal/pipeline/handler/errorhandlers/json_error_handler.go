@@ -13,7 +13,7 @@ func NewJsonErrorHandler(rawConfig map[string]any) (jsonErrorHandler, error) {
 }
 
 func (jsonErrorHandler) HandleError(ctx context.Context, err error) error {
-	return nil
+	return err
 }
 
 func (jsonErrorHandler) WithConfig(config map[string]any) (handler.ErrorHandler, error) {

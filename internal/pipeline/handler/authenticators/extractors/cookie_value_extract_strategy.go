@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/dadrus/heimdall/internal/pipeline/handler"
+	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
 type CookieValueExtractStrategy struct {
@@ -16,5 +17,5 @@ func (es CookieValueExtractStrategy) GetAuthData(s handler.RequestContext) (stri
 		return strings.TrimSpace(strings.TrimPrefix(val, es.Prefix)), nil
 	}
 
-	return "", ErrAuthData
+	return "", errorchain.NewWithMessagef(ErrAuthData, "no '%s' cookie present", es.Name)
 }

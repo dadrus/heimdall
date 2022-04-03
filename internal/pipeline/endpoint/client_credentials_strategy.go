@@ -27,22 +27,21 @@ type ClientCredentialsStrategy struct {
 
 func (c *ClientCredentialsStrategy) Apply(ctx context.Context, req *http.Request) error {
 	logger := zerolog.Ctx(ctx)
+	logger.Debug().Msg("Applying client-credentials strategy to authenticate request")
 
 	key := c.getCacheKey()
 
 	cch := cache.Ctx(ctx)
-	if cch != nil {
-		if item := cch.Get(key); item != nil {
-			logger.Debug().Msg("Reusing token from cache")
+	if item := cch.Get(key); item != nil {
+		logger.Debug().Msg("Reusing access token from cache")
 
-			if tokenInfo, ok := item.(*tokenEndpointResponse); !ok {
-				logger.Warn().Msg("Wrong object type from cache")
-				cch.Delete(key)
-			} else {
-				req.Header.Set("Authorization", tokenInfo.TokenType+" "+tokenInfo.AccessToken)
+		if tokenInfo, ok := item.(*tokenEndpointResponse); !ok {
+			logger.Warn().Msg("Wrong object type from cache")
+			cch.Delete(key)
+		} else {
+			req.Header.Set("Authorization", tokenInfo.TokenType+" "+tokenInfo.AccessToken)
 
-				return nil
-			}
+			return nil
 		}
 	}
 
@@ -53,11 +52,8 @@ func (c *ClientCredentialsStrategy) Apply(ctx context.Context, req *http.Request
 		return err
 	}
 
-	if cch != nil {
-		const defaultLeeway = 15
-
-		cch.Set(key, resp, time.Duration(resp.ExpiresIn-defaultLeeway)*time.Second)
-	}
+	const defaultLeeway = 15
+	cch.Set(key, resp, time.Duration(resp.ExpiresIn-defaultLeeway)*time.Second)
 
 	req.Header.Set("Authorization", resp.TokenType+" "+resp.AccessToken)
 

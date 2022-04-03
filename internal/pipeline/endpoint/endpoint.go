@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"time"
 
+	"github.com/rs/zerolog"
 	"github.com/ybbus/httpretry"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
@@ -59,10 +60,14 @@ func (e Endpoint) CreateClient() *http.Client {
 }
 
 func (e Endpoint) CreateRequest(ctx context.Context, body io.Reader) (*http.Request, error) {
+	logger := zerolog.Ctx(ctx)
+
 	method := "POST"
 	if len(e.Method) != 0 {
 		method = e.Method
 	}
+
+	logger.Debug().Msgf("Creating request for %s", e.URL)
 
 	req, err := http.NewRequestWithContext(ctx, method, e.URL, body)
 	if err != nil {
@@ -72,6 +77,9 @@ func (e Endpoint) CreateRequest(ctx context.Context, body io.Reader) (*http.Requ
 	}
 
 	if e.AuthStrategy != nil {
+
+		logger.Debug().Msgf("Authenticating request for %s", e.URL)
+
 		err = e.AuthStrategy.Apply(ctx, req)
 		if err != nil {
 			return nil, errorchain.

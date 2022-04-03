@@ -94,7 +94,7 @@ func (h *Handler) decisions(c *fiber.Ctx) error {
 
 	subjectCtx, err := rule.Execute(ctx, &requestContext{c: c})
 	if err != nil {
-		logger.Warn().
+		logger.Info().
 			Fields(fields).
 			Bool("granted", false).
 			Msg("Access request denied")

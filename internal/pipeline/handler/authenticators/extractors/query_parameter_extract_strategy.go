@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/dadrus/heimdall/internal/pipeline/handler"
+	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
 type QueryParameterExtractStrategy struct {
@@ -16,5 +17,5 @@ func (es QueryParameterExtractStrategy) GetAuthData(s handler.RequestContext) (s
 		return strings.TrimSpace(strings.TrimPrefix(val, es.Prefix)), nil
 	}
 
-	return "", ErrAuthData
+	return "", errorchain.NewWithMessagef(ErrAuthData, "no '%s' query parameter present", es.Name)
 }

@@ -9,6 +9,7 @@ import (
 	"github.com/dadrus/heimdall/internal/pipeline/handler"
 	"github.com/dadrus/heimdall/internal/pipeline/handler/authenticators/extractors"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
+	"github.com/rs/zerolog"
 )
 
 type authenticationDataAuthenticator struct {
@@ -61,11 +62,12 @@ func (a *authenticationDataAuthenticator) Authenticate(
 	rc handler.RequestContext,
 	sc *heimdall.SubjectContext,
 ) error {
+	logger := zerolog.Ctx(ctx)
+
+	logger.Debug().Msg("Retrieving authentication data from request")
 	authDataRef, err := a.adg.GetAuthData(rc)
 	if err != nil {
-		return errorchain.
-			NewWithMessage(heimdall.ErrAuthentication, "no authentication data present").
-			CausedBy(err)
+		return errorchain.New(heimdall.ErrAuthentication).CausedBy(err)
 	}
 
 	rawBody, err := a.e.SendRequest(ctx, strings.NewReader(authDataRef))

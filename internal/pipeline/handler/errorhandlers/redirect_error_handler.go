@@ -13,7 +13,7 @@ func NewRedirectErrorHandler(rawConfig map[string]any) (redirectErrorHandler, er
 }
 
 func (redirectErrorHandler) HandleError(ctx context.Context, err error) error {
-	return nil
+	return err
 }
 
 func (redirectErrorHandler) WithConfig(config map[string]any) (handler.ErrorHandler, error) {

@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/dadrus/heimdall/internal/pipeline/handler"
+	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
 type FormParameterExtractStrategy struct {
@@ -16,5 +17,5 @@ func (es FormParameterExtractStrategy) GetAuthData(s handler.RequestContext) (st
 		return strings.TrimSpace(strings.TrimPrefix(val, es.Prefix)), nil
 	}
 
-	return "", ErrAuthData
+	return "", errorchain.NewWithMessagef(ErrAuthData, "no '%s' form parameter present", es.Name)
 }

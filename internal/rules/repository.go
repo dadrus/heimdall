@@ -225,21 +225,31 @@ type rule struct {
 }
 
 func (r *rule) Execute(ctx context.Context, reqCtx handler.RequestContext) (*heimdall.SubjectContext, error) {
+	logger := zerolog.Ctx(ctx)
+
 	subjectCtx := &heimdall.SubjectContext{}
 
 	if err := r.an.Authenticate(ctx, reqCtx, subjectCtx); err != nil {
+		logger.Info().Err(err).Msg("Authentication failed")
+
 		return nil, r.eh.HandleError(ctx, err)
 	}
 
 	if err := r.az.Authorize(ctx, reqCtx, subjectCtx); err != nil {
+		logger.Info().Err(err).Msg("Authorization failed")
+
 		return nil, r.eh.HandleError(ctx, err)
 	}
 
 	if err := r.h.Hydrate(ctx, subjectCtx); err != nil {
+		logger.Info().Err(err).Msg("Hydration failed")
+
 		return nil, r.eh.HandleError(ctx, err)
 	}
 
 	if err := r.m.Mutate(ctx, subjectCtx); err != nil {
+		logger.Info().Err(err).Msg("Mutation failed")
+
 		return nil, r.eh.HandleError(ctx, err)
 	}
 
