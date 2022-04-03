@@ -18,10 +18,10 @@ import (
 )
 
 type ClientCredentialsStrategy struct {
-	ClientID     string   `yaml:"client_id"`
-	ClientSecret string   `yaml:"client_secret"`
-	Scopes       []string `yaml:"scopes"`
-	TokenURL     string   `yaml:"token_url"`
+	ClientID     string   `mapstructure:"client_id"`
+	ClientSecret string   `mapstructure:"client_secret"`
+	Scopes       []string `mapstructure:"scopes"`
+	TokenURL     string   `mapstructure:"token_url"`
 
 	lastResponse *tokenEndpointResponse
 	mutex        sync.RWMutex

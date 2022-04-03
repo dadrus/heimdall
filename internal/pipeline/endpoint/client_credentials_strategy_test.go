@@ -17,6 +17,8 @@ import (
 )
 
 func TestApplyClientCredentialsStrategy(t *testing.T) {
+	t.Parallel()
+
 	// GIVEN
 	clientID := "test-client"
 	clientSecret := "test-secret"
@@ -86,7 +88,9 @@ func TestApplyClientCredentialsStrategy(t *testing.T) {
 
 		w.Header().Set("Content-Type", receivedAcceptType)
 		w.Header().Set("Content-Length", strconv.Itoa(len(rawResp)))
-		w.Write(rawResp)
+
+		_, err = w.Write(rawResp)
+		assert.NoError(t, err)
 
 		return
 	}))
@@ -125,5 +129,3 @@ func TestApplyClientCredentialsStrategy(t *testing.T) {
 	assert.Equal(t, setAccessToken, strategy.lastResponse.AccessToken)
 	assert.Equal(t, "Bearer", strategy.lastResponse.TokenType)
 }
-
-// TODO: test concurrency

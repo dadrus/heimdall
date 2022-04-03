@@ -17,11 +17,11 @@ import (
 )
 
 type Endpoint struct {
-	URL     string            `mapstructure:"url"`
-	Method  string            `mapstructure:"method"`
-	Retry   *Retry            `mapstructure:"retry"`
-	Auth    *Auth             `mapstructure:"auth"`
-	Headers map[string]string `mapstructure:"headers"`
+	URL          string                 `mapstructure:"url"`
+	Method       string                 `mapstructure:"method"`
+	Retry        *Retry                 `mapstructure:"retry"`
+	AuthStrategy AuthenticationStrategy `mapstructure:"auth"`
+	Headers      map[string]string      `mapstructure:"headers"`
 }
 
 type Retry struct {
@@ -62,18 +62,13 @@ func (e Endpoint) SendRequest(ctx context.Context, body io.Reader) ([]byte, erro
 			CausedBy(err)
 	}
 
-	authStrategy, err := NewAuthenticationStrategy(e.Auth.Type, e.Auth.Config)
-	if err != nil {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrInternal, "failed to create authentication strategy").
-			CausedBy(err)
-	}
-
-	err = authStrategy.Apply(ctx, req)
-	if err != nil {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrInternal, "failed to authenticate request").
-			CausedBy(err)
+	if e.AuthStrategy != nil {
+		err = e.AuthStrategy.Apply(ctx, req)
+		if err != nil {
+			return nil, errorchain.
+				NewWithMessage(heimdall.ErrInternal, "failed to authenticate request").
+				CausedBy(err)
+		}
 	}
 
 	for k, v := range e.Headers {

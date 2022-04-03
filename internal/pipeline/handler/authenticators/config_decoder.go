@@ -1,10 +1,11 @@
 package authenticators
 
 import (
-	"github.com/dadrus/heimdall/internal/pipeline/oauth2"
 	"github.com/mitchellh/mapstructure"
 
+	"github.com/dadrus/heimdall/internal/pipeline/endpoint"
 	"github.com/dadrus/heimdall/internal/pipeline/handler/authenticators/extractors"
+	"github.com/dadrus/heimdall/internal/pipeline/oauth2"
 )
 
 func decodeConfig(input any, output any) error {
@@ -13,6 +14,7 @@ func decodeConfig(input any, output any) error {
 			mapstructure.StringToTimeDurationHookFunc(),
 			extractors.DecodeCompositeExtractStrategyHookFunc(),
 			oauth2.DecodeScopesMatcherHookFunc(),
+			endpoint.DecodeAuthenticationStrategyHookFunc(),
 		),
 		Result:      output,
 		ErrorUnused: true,

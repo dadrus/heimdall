@@ -6,9 +6,9 @@ import (
 )
 
 type APIKeyStrategy struct {
-	In    string `yaml:"in"`
-	Name  string `yaml:"name"`
-	Value string `yaml:"value"`
+	In    string `mapstructure:"in"`
+	Name  string `mapstructure:"name"`
+	Value string `mapstructure:"value"`
 }
 
 func (c *APIKeyStrategy) Apply(_ context.Context, req *http.Request) error {
