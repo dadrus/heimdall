@@ -43,6 +43,50 @@ func (e Endpoint) Validate() error {
 	return nil
 }
 
+func (e Endpoint) CreateClient() *http.Client {
+	client := &http.Client{
+		Transport: &httpx.TracingRoundTripper{Next: http.DefaultTransport},
+	}
+
+	if e.Retry != nil {
+		client = httpretry.NewCustomClient(
+			client,
+			httpretry.WithBackoffPolicy(
+				httpretry.ExponentialBackoff(e.Retry.MaxDelay, e.Retry.GiveUpAfter, 0)))
+	}
+
+	return client
+}
+
+func (e Endpoint) CreateRequest(ctx context.Context, body io.Reader) (*http.Request, error) {
+	method := "POST"
+	if len(e.Method) != 0 {
+		method = e.Method
+	}
+
+	req, err := http.NewRequestWithContext(ctx, method, e.URL, body)
+	if err != nil {
+		return nil, errorchain.
+			NewWithMessage(heimdall.ErrInternal, "failed to create request").
+			CausedBy(err)
+	}
+
+	if e.AuthStrategy != nil {
+		err = e.AuthStrategy.Apply(ctx, req)
+		if err != nil {
+			return nil, errorchain.
+				NewWithMessage(heimdall.ErrInternal, "failed to authenticate request").
+				CausedBy(err)
+		}
+	}
+
+	for k, v := range e.Headers {
+		req.Header.Set(k, v)
+	}
+
+	return req, nil
+}
+
 func (e Endpoint) SendRequest(ctx context.Context, body io.Reader) ([]byte, error) {
 	client := httpretry.NewCustomClient(
 		&http.Client{
