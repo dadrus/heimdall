@@ -88,48 +88,19 @@ func (e Endpoint) CreateRequest(ctx context.Context, body io.Reader) (*http.Requ
 }
 
 func (e Endpoint) SendRequest(ctx context.Context, body io.Reader) ([]byte, error) {
-	client := httpretry.NewCustomClient(
-		&http.Client{
-			Transport: &httpx.TracingRoundTripper{Next: http.DefaultTransport},
-		},
-		httpretry.WithBackoffPolicy(httpretry.ExponentialBackoff(e.Retry.MaxDelay, e.Retry.GiveUpAfter, 0)))
-
-	method := "POST"
-	if len(e.Method) != 0 {
-		method = e.Method
-	}
-
-	req, err := http.NewRequestWithContext(ctx, method, e.URL, body)
+	req, err := e.CreateRequest(ctx, body)
 	if err != nil {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrInternal, "failed to create request").
-			CausedBy(err)
+		return nil, err
 	}
 
-	if e.AuthStrategy != nil {
-		err = e.AuthStrategy.Apply(ctx, req)
-		if err != nil {
-			return nil, errorchain.
-				NewWithMessage(heimdall.ErrInternal, "failed to authenticate request").
-				CausedBy(err)
-		}
-	}
-
-	for k, v := range e.Headers {
-		req.Header.Set(k, v)
-	}
-
-	resp, err := client.Do(req)
+	resp, err := e.CreateClient().Do(req)
 	if err != nil {
 		var clientErr *url.Error
 		if errors.As(err, &clientErr) && clientErr.Timeout() {
-			return nil, errorchain.New(heimdall.ErrCommunicationTimeout).
-				CausedBy(err)
+			return nil, errorchain.New(heimdall.ErrCommunicationTimeout).CausedBy(err)
 		}
 
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrCommunication, "failed to send request").
-			CausedBy(err)
+		return nil, errorchain.New(heimdall.ErrCommunication).CausedBy(err)
 	}
 
 	return e.readResponse(resp)
@@ -150,5 +121,5 @@ func (e Endpoint) readResponse(resp *http.Response) ([]byte, error) {
 	}
 
 	return nil, errorchain.
-		NewWithMessagef(heimdall.ErrInternal, "unexpected response. code: %v", resp.StatusCode)
+		NewWithMessagef(heimdall.ErrCommunication, "unexpected response. code: %v", resp.StatusCode)
 }
