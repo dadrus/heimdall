@@ -2,6 +2,7 @@ package cache
 
 import (
 	"context"
+	"time"
 )
 
 type ctxKey struct{}
@@ -16,8 +17,8 @@ type ctxKey struct{}
 //     cch := cache.Ctx(ctx)
 //     val, ok := cch.Get("some key")
 //     use val and ok
-func (c *Cache) WithContext(ctx context.Context) context.Context {
-	if known, ok := ctx.Value(ctxKey{}).(*Cache); ok {
+func (c *cacheImpl) WithContext(ctx context.Context) context.Context {
+	if known, ok := ctx.Value(ctxKey{}).(Cache); ok {
 		if known == c {
 			// Do not store same cache.
 			return ctx
@@ -27,11 +28,24 @@ func (c *Cache) WithContext(ctx context.Context) context.Context {
 	return context.WithValue(ctx, ctxKey{}, c)
 }
 
-// Ctx returns the Cache associated with the ctx. If no cache is associated, nil is returned.
-func Ctx(ctx context.Context) *Cache {
-	if c, ok := ctx.Value(ctxKey{}).(*Cache); ok {
+// Ctx returns the Cache associated with the ctx. If no cache is associated, an instance is
+// returned, which does nothing.
+func Ctx(ctx context.Context) Cache {
+	if c, ok := ctx.Value(ctxKey{}).(Cache); ok {
 		return c
 	}
 
-	return nil
+	return noopCache{}
 }
+
+type noopCache struct{}
+
+func (c noopCache) Start() {}
+
+func (c noopCache) Stop() {}
+
+func (c noopCache) Get(_ string) any { return nil }
+
+func (c noopCache) Set(_ string, _ any, _ time.Duration) {}
+
+func (c noopCache) Delete(_ string) {}

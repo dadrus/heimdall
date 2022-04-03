@@ -13,7 +13,7 @@ var Module = fx.Options(
 	fx.Invoke(registerCacheEviction),
 )
 
-func registerCacheEviction(lifecycle fx.Lifecycle, logger zerolog.Logger, cache *Cache) {
+func registerCacheEviction(lifecycle fx.Lifecycle, logger zerolog.Logger, cache Cache) {
 	lifecycle.Append(
 		fx.Hook{
 			OnStart: func(ctx context.Context) error {
