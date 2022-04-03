@@ -4,13 +4,13 @@ import (
 	"context"
 	"strings"
 
-	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/recover"
 	"github.com/rs/zerolog"
 	"go.uber.org/fx"
 
+	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/fiber/middleware"
 )
@@ -24,7 +24,7 @@ var Module = fx.Options(
 	),
 )
 
-func newFiberApp(conf config.Configuration, cache *cache.Cache) *fiber.App {
+func newFiberApp(conf config.Configuration, cache cache.Cache) *fiber.App {
 	api := conf.DecisionAPI
 
 	app := fiber.New(fiber.Config{

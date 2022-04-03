@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"io"
+	"net/http"
 
 	"github.com/stretchr/testify/mock"
 	"gopkg.in/yaml.v2"
@@ -24,6 +25,36 @@ func decodeTestConfig(data []byte) (map[string]interface{}, error) {
 
 type MockEndpoint struct {
 	mock.Mock
+}
+
+func (m *MockEndpoint) CreateClient() *http.Client {
+	args := m.Called()
+
+	if val := args.Get(0); val != nil {
+		res, ok := val.(*http.Client)
+		if !ok {
+			panic("*http.Client expected")
+		}
+
+		return res
+	}
+
+	return nil
+}
+
+func (m *MockEndpoint) CreateRequest(ctx context.Context, body io.Reader) (*http.Request, error) {
+	args := m.Called(ctx, body)
+
+	if val := args.Get(0); val != nil {
+		res, ok := val.(*http.Request)
+		if !ok {
+			panic("*http.Request expected")
+		}
+
+		return res, args.Error(1)
+	}
+
+	return nil, args.Error(1)
 }
 
 func (m *MockEndpoint) SendRequest(ctx context.Context, body io.Reader) ([]byte, error) {

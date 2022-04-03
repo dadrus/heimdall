@@ -24,7 +24,7 @@ var Module = fx.Options(
 	),
 )
 
-func newFiberApp(conf config.Configuration, cache *cache.Cache) *fiber.App {
+func newFiberApp(conf config.Configuration, cache cache.Cache) *fiber.App {
 	proxy := conf.Proxy
 
 	app := fiber.New(fiber.Config{

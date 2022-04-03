@@ -17,15 +17,15 @@ type ctxKey struct{}
 //     cch := cache.Ctx(ctx)
 //     val, ok := cch.Get("some key")
 //     use val and ok
-func (c *cacheImpl) WithContext(ctx context.Context) context.Context {
+func WithContext(ctx context.Context, cch Cache) context.Context {
 	if known, ok := ctx.Value(ctxKey{}).(Cache); ok {
-		if known == c {
+		if known == cch {
 			// Do not store same cache.
 			return ctx
 		}
 	}
 
-	return context.WithValue(ctx, ctxKey{}, c)
+	return context.WithValue(ctx, ctxKey{}, cch)
 }
 
 // Ctx returns the Cache associated with the ctx. If no cache is associated, an instance is

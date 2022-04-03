@@ -6,9 +6,9 @@ import (
 	"github.com/dadrus/heimdall/internal/cache"
 )
 
-func Cache(cch *cache.Cache) fiber.Handler {
+func Cache(cch cache.Cache) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		c.SetUserContext(cch.WithContext(c.UserContext()))
+		c.SetUserContext(cache.WithContext(c.UserContext(), cch))
 
 		return c.Next()
 	}
