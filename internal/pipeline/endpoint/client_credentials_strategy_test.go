@@ -11,7 +11,6 @@ import (
 	"strconv"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -124,8 +123,5 @@ func TestApplyClientCredentialsStrategy(t *testing.T) {
 	assert.Equal(t, strings.Join(scopes, " "), receivedScope)
 
 	assert.Equal(t, "Bearer "+setAccessToken, req.Header.Get("Authorization"))
-
-	assert.GreaterOrEqual(t, setExpiresIn+time.Now().Unix(), strategy.lastResponse.ExpiresIn)
-	assert.Equal(t, setAccessToken, strategy.lastResponse.AccessToken)
-	assert.Equal(t, "Bearer", strategy.lastResponse.TokenType)
+	// TODO: update test to check cache usage
 }

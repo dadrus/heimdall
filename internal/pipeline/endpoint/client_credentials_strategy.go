@@ -2,12 +2,16 @@ package endpoint
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
 	"net/url"
 	"strings"
 	"time"
+
+	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/dadrus/heimdall/internal/heimdall"
@@ -22,16 +26,27 @@ type ClientCredentialsStrategy struct {
 }
 
 func (c *ClientCredentialsStrategy) Apply(ctx context.Context, req *http.Request) error {
+	logger := zerolog.Ctx(ctx)
+
+	key := c.getCacheKey()
+
 	cch := cache.Ctx(ctx)
 	if cch != nil {
-		item := cch.Get("foo")
-		if item != nil {
-			tokenInfo := item.(*tokenEndpointResponse)
-			req.Header.Set("Authorization", tokenInfo.TokenType+" "+tokenInfo.AccessToken)
+		if item := cch.Get(key); item != nil {
+			logger.Debug().Msg("Reusing token from cache")
 
-			return nil
+			if tokenInfo, ok := item.(*tokenEndpointResponse); !ok {
+				logger.Warn().Msg("Wrong object type from cache")
+				cch.Delete(key)
+			} else {
+				req.Header.Set("Authorization", tokenInfo.TokenType+" "+tokenInfo.AccessToken)
+
+				return nil
+			}
 		}
 	}
+
+	logger.Debug().Msg("Retrieving new access token")
 
 	resp, err := c.getAccessToken(ctx)
 	if err != nil {
@@ -39,12 +54,24 @@ func (c *ClientCredentialsStrategy) Apply(ctx context.Context, req *http.Request
 	}
 
 	if cch != nil {
-		cch.Set("foo", resp, time.Duration(resp.ExpiresIn-15)*time.Second)
+		const defaultLeeway = 15
+
+		cch.Set(key, resp, time.Duration(resp.ExpiresIn-defaultLeeway)*time.Second)
 	}
 
 	req.Header.Set("Authorization", resp.TokenType+" "+resp.AccessToken)
 
 	return nil
+}
+
+func (c *ClientCredentialsStrategy) getCacheKey() string {
+	digest := sha256.New()
+	digest.Write([]byte(c.ClientID))
+	digest.Write([]byte(c.ClientSecret))
+	digest.Write([]byte(c.TokenURL))
+	res := digest.Sum([]byte(strings.Join(c.Scopes, "")))
+
+	return hex.EncodeToString(res)
 }
 
 func (c *ClientCredentialsStrategy) getAccessToken(ctx context.Context) (*tokenEndpointResponse, error) {
