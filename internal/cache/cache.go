@@ -30,3 +30,7 @@ func (c *Cache) Get(key string) any {
 func (c *Cache) Set(key string, value any, ttl time.Duration) {
 	c.c.Set(key, value, ttl)
 }
+
+func (c *Cache) Delete(key string) {
+	c.c.Delete(key)
+}
