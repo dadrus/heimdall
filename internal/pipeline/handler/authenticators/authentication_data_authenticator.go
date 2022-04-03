@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/rs/zerolog"
-	
+
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/pipeline/endpoint"
 	"github.com/dadrus/heimdall/internal/pipeline/handler"

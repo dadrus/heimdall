@@ -14,6 +14,6 @@ func IfThenElse[T any](c bool, thenVal, elseVal T) T {
 	if c {
 		return thenVal
 	}
-	
+
 	return elseVal
 }

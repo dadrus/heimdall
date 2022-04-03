@@ -37,7 +37,7 @@ func (a *remoteAuthorizer) Authorize(
 		return err
 	}
 
-	for _, _ = range a.ResponseHeadersToForward {
+	for range a.ResponseHeadersToForward {
 		// TODO: get header hn from response and add it to the sc.Headers
 	}
 
