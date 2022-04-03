@@ -6,6 +6,7 @@ require (
 	github.com/ansrivas/fiberprometheus/v2 v2.2.0
 	github.com/fsnotify/fsnotify v1.5.1
 	github.com/gofiber/fiber/v2 v2.31.0
+	github.com/jellydator/ttlcache/v3 v3.0.0
 	github.com/knadh/koanf v1.4.0
 	github.com/mitchellh/mapstructure v1.4.3
 	github.com/opentracing-contrib/go-stdlib v1.0.0
@@ -52,6 +53,7 @@ require (
 	go.uber.org/multierr v1.5.0 // indirect
 	go.uber.org/zap v1.16.0 // indirect
 	golang.org/x/crypto v0.0.0-20220214200702-86341886e292 // indirect
+	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c // indirect
 	golang.org/x/sys v0.0.0-20220227234510-4e6760a101f9 // indirect
 	google.golang.org/protobuf v1.26.0 // indirect
 	gopkg.in/yaml.v3 v3.0.0-20200313102051-9f266ea9e77c // indirect
