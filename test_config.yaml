@@ -20,16 +20,10 @@ pipeline:
       type: authentication_data
       config:
         identity_info_endpoint:
-          url: http://kratos:4433/sessions/whoami
+          url: http://127.0.0.1:4433/sessions/whoami
           retry:
             max_delay: 300ms
             give_up_after: 2s
-          auth:
-            type: client-credentials
-            config:
-              client_id: foo
-              client_secret: bar
-              token_url: foo.bar
         authentication_data_source:
           - cookie: ory_kratos_session
         session:
