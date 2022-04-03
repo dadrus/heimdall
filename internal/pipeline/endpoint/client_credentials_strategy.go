@@ -54,7 +54,7 @@ func (c *ClientCredentialsStrategy) Apply(ctx context.Context, req *http.Request
 }
 
 func (c *ClientCredentialsStrategy) getAccessToken(ctx context.Context) (*tokenEndpointResponse, error) {
-	e := Endpoint{
+	ept := Endpoint{
 		URL:    c.TokenURL,
 		Method: http.MethodPost,
 		AuthStrategy: &BasicAuthStrategy{
@@ -73,12 +73,12 @@ func (c *ClientCredentialsStrategy) getAccessToken(ctx context.Context) (*tokenE
 		data.Add("scope", strings.Join(c.Scopes, " "))
 	}
 
-	req, err := e.CreateRequest(ctx, strings.NewReader(data.Encode()))
+	req, err := ept.CreateRequest(ctx, strings.NewReader(data.Encode()))
 	if err != nil {
 		return nil, err
 	}
 
-	resp, err := e.CreateClient().Do(req)
+	resp, err := ept.CreateClient().Do(req)
 	if err != nil {
 		return nil, err
 	}
