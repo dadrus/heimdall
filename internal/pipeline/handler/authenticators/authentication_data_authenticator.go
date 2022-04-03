@@ -4,12 +4,13 @@ import (
 	"context"
 	"strings"
 
+	"github.com/rs/zerolog"
+	
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/pipeline/endpoint"
 	"github.com/dadrus/heimdall/internal/pipeline/handler"
 	"github.com/dadrus/heimdall/internal/pipeline/handler/authenticators/extractors"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
-	"github.com/rs/zerolog"
 )
 
 type authenticationDataAuthenticator struct {
@@ -65,6 +66,7 @@ func (a *authenticationDataAuthenticator) Authenticate(
 	logger := zerolog.Ctx(ctx)
 
 	logger.Debug().Msg("Retrieving authentication data from request")
+
 	authDataRef, err := a.adg.GetAuthData(rc)
 	if err != nil {
 		return errorchain.New(heimdall.ErrAuthentication).CausedBy(err)

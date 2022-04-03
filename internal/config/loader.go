@@ -15,6 +15,9 @@ import (
 	"github.com/knadh/koanf/providers/structs"
 	"github.com/mitchellh/mapstructure"
 	"github.com/rs/zerolog"
+
+	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
 // nolint
@@ -119,12 +122,12 @@ func koanfFromStruct(s interface{}) (*koanf.Koanf, error) {
 		return nil, err
 	}
 
-	var keys = parser.Keys()
+	keys := parser.Keys()
 	// Assert all Keys are lowercase
 	for i := 0; i < len(keys); i++ {
 		if !isLower(keys[i]) {
-			return nil,
-				fmt.Errorf("field %s in the Config Struct does not have lowercase key, use the `koanf` tag", keys[i])
+			return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+				"field %s in the Config Struct does not have lowercase key, use the `koanf` tag", keys[i])
 		}
 	}
 
@@ -132,7 +135,7 @@ func koanfFromStruct(s interface{}) (*koanf.Koanf, error) {
 }
 
 func koanfFromEnv() (*koanf.Koanf, error) {
-	var parser = koanf.New(".")
+	parser := koanf.New(".")
 
 	err := parser.Load(env.Provider("", ".", strings.ToLower), nil)
 	if err != nil {
@@ -169,6 +172,7 @@ func expandSlices(parts []string) []string {
 	}
 
 	next := expandSlices(parts[1:])
+	// nolint
 	result := make([]string, 0, len(next)*2)
 
 	for _, k := range next {

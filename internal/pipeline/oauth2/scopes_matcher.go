@@ -17,5 +17,6 @@ func (s ScopesMatcher) MatchScopes(scopes []string) error {
 			return errorchain.NewWithMessagef(ErrClaimsNotValid, "required scope %s is missing", required)
 		}
 	}
+
 	return nil
 }

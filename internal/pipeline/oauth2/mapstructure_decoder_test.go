@@ -25,6 +25,8 @@ func TestDecodeScopesMatcherHookFunc(t *testing.T) {
 		return res
 	}
 
+	// nolint
+	// due to a bug in linter
 	for _, tc := range []struct {
 		uc     string
 		config []byte

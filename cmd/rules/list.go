@@ -18,6 +18,7 @@ func NewListCommand() *cobra.Command {
 		},
 	}
 
+	// nolint
 	cmd.Flags().Int("limit", 20, "The maximum amount of policies returned.")
 	cmd.Flags().Int("page", 1, "The number of page.")
 

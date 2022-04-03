@@ -7,15 +7,18 @@ import (
 
 type CompositeExtractStrategy []AuthDataExtractStrategy
 
-func (ce CompositeExtractStrategy) GetAuthData(s handler.RequestContext) (string, error) {
+func (ce CompositeExtractStrategy) GetAuthData(reqCtx handler.RequestContext) (string, error) {
+	// nolint
+	// preallocation not possible
 	var errors []error
 
 	for _, e := range ce {
-		if val, err := e.GetAuthData(s); err == nil {
+		val, err := e.GetAuthData(reqCtx)
+		if err == nil {
 			return val, nil
-		} else {
-			errors = append(errors, err)
 		}
+
+		errors = append(errors, err)
 	}
 
 	err := errorchain.New(errors[0])

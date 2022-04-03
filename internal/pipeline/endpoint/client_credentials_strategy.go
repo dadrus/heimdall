@@ -53,6 +53,7 @@ func (c *ClientCredentialsStrategy) Apply(ctx context.Context, req *http.Request
 	}
 
 	const defaultLeeway = 15
+
 	cch.Set(key, resp, time.Duration(resp.ExpiresIn-defaultLeeway)*time.Second)
 
 	req.Header.Set("Authorization", resp.TokenType+" "+resp.AccessToken)

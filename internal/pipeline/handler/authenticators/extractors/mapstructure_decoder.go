@@ -22,7 +22,12 @@ func DecodeCompositeExtractStrategyHookFunc() mapstructure.DecodeHookFunc {
 			return data, nil
 		}
 
+		// nolint
+		// already checked above
 		strategies = make(CompositeExtractStrategy, len(data.([]any)))
+
+		// nolint
+		// already checked above
 		for i, entry := range data.([]any) {
 			if values, ok := entry.(map[any]any); ok {
 				strategy, err := createStrategyFromAnyAnyMap(values)
@@ -48,16 +53,26 @@ func DecodeCompositeExtractStrategyHookFunc() mapstructure.DecodeHookFunc {
 func createStrategyFromAnyAnyMap(data map[any]any) (AuthDataExtractStrategy, error) {
 	var prefix string
 	if p, ok := data["strip_prefix"]; ok {
+		// nolint
+		// ok if panics
 		prefix = p.(string)
 	}
 
 	if v, ok := data["header"]; ok {
+		// nolint
+		// ok if panics
 		return &HeaderValueExtractStrategy{Name: v.(string), Prefix: prefix}, nil
 	} else if v, ok := data["cookie"]; ok {
+		// nolint
+		// ok if panics
 		return &CookieValueExtractStrategy{Name: v.(string), Prefix: prefix}, nil
 	} else if v, ok := data["query_parameter"]; ok {
+		// nolint
+		// ok if panics
 		return &QueryParameterExtractStrategy{Name: v.(string), Prefix: prefix}, nil
 	} else if v, ok := data["form_parameter"]; ok {
+		// nolint
+		// ok if panics
 		return &FormParameterExtractStrategy{Name: v.(string), Prefix: prefix}, nil
 	} else {
 		return nil, errorchain.
@@ -68,16 +83,26 @@ func createStrategyFromAnyAnyMap(data map[any]any) (AuthDataExtractStrategy, err
 func createStrategyFromStringAnyMap(data map[string]any) (AuthDataExtractStrategy, error) {
 	var prefix string
 	if p, ok := data["strip_prefix"]; ok {
+		// nolint
+		// ok if panics
 		prefix = p.(string)
 	}
 
 	if v, ok := data["header"]; ok {
+		// nolint
+		// ok if panics
 		return &HeaderValueExtractStrategy{Name: v.(string), Prefix: prefix}, nil
 	} else if v, ok := data["cookie"]; ok {
+		// nolint
+		// ok if panics
 		return &CookieValueExtractStrategy{Name: v.(string), Prefix: prefix}, nil
 	} else if v, ok := data["query_parameter"]; ok {
+		// nolint
+		// ok if panics
 		return &QueryParameterExtractStrategy{Name: v.(string), Prefix: prefix}, nil
 	} else if v, ok := data["form_parameter"]; ok {
+		// nolint
+		// ok if panics
 		return &FormParameterExtractStrategy{Name: v.(string), Prefix: prefix}, nil
 	} else {
 		return nil, errorchain.

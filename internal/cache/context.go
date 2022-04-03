@@ -8,15 +8,15 @@ import (
 type ctxKey struct{}
 
 // WithContext returns a copy of ctx with cache associated. If a Cache instance
-// is already in the context, the context is not updated.
+// is already in the context, the ctx is not updated.
 //
 // For instance, to make use of the cache in the context, use this
 // notation:
 //
 //     ctx := r.Context()
 //     cch := cache.Ctx(ctx)
-//     val, ok := cch.Get("some key")
-//     use val and ok
+//     val := cch.Get("some key")
+//     use val
 func WithContext(ctx context.Context, cch Cache) context.Context {
 	if known, ok := ctx.Value(ctxKey{}).(Cache); ok {
 		if known == cch {

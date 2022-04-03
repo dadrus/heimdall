@@ -6,6 +6,16 @@ import (
 	"github.com/rs/zerolog"
 )
 
+const (
+	defaultReadTimeout  = time.Second * 5
+	defaultWriteTimeout = time.Second * 10
+	defaultIdleTimeout  = time.Second * 120
+
+	defaultProxyPort       = 4455
+	defaultDecisionAPIPort = 4456
+	defaultPrometheusPort  = 9000
+)
+
 type Configuration struct {
 	Proxy       Serve      `koanf:"serve.proxy"`
 	DecisionAPI Serve      `koanf:"serve.api"`
@@ -33,23 +43,23 @@ func NewConfiguration(configFile string) Configuration {
 	// defaults
 	result := Configuration{
 		Proxy: Serve{
-			Port: 4455,
+			Port: defaultProxyPort,
 			Timeout: Timeout{
-				Read:  time.Second * 5,
-				Write: time.Second * 10,
-				Idle:  time.Second * 120,
+				Read:  defaultReadTimeout,
+				Write: defaultWriteTimeout,
+				Idle:  defaultIdleTimeout,
 			},
 		},
 		DecisionAPI: Serve{
-			Port: 4456,
+			Port: defaultDecisionAPIPort,
 			Timeout: Timeout{
-				Read:  time.Second * 5,
-				Write: time.Second * 10,
-				Idle:  time.Second * 120,
+				Read:  defaultReadTimeout,
+				Write: defaultWriteTimeout,
+				Idle:  defaultIdleTimeout,
 			},
 		},
 		Prometheus: Prometheus{
-			Port:        9000,
+			Port:        defaultPrometheusPort,
 			MetricsPath: "/metrics",
 		},
 		Log: Logging{

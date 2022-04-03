@@ -3,25 +3,30 @@ package oauth2
 import (
 	"reflect"
 
+	"github.com/mitchellh/mapstructure"
+
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
-	"github.com/mitchellh/mapstructure"
 )
 
 func DecodeScopesMatcherHookFunc() mapstructure.DecodeHookFunc {
 	return func(from reflect.Type, to reflect.Type, data any) (any, error) {
-		var s ScopesMatcher
+		var matcher ScopesMatcher
 
 		if from.Kind() != reflect.Map && from.Kind() != reflect.Slice {
 			return data, nil
 		}
 
-		dect := reflect.ValueOf(&s).Elem().Type()
+		dect := reflect.ValueOf(&matcher).Elem().Type()
 		if !dect.AssignableTo(to) {
 			return data, nil
 		}
 
-		if from.Kind() == reflect.Map {
+		// nolint
+		// we care about these two cases only
+		switch from.Kind() {
+		case reflect.Map:
+			// nolint
 			if m, ok := data.(map[string]any); ok {
 				if name, ok := m["matching_strategy"]; ok {
 					match, err := decodeStrategy(name.(string))
@@ -29,11 +34,11 @@ func DecodeScopesMatcherHookFunc() mapstructure.DecodeHookFunc {
 						return nil, err
 					}
 
-					s.Match = match
+					matcher.Match = match
 				}
 
 				if values, ok := m["values"]; ok {
-					copyScopeValues(&s, values)
+					copyScopeValues(&matcher, values)
 				}
 			} else if m, ok := data.(map[any]any); ok {
 				if name, ok := m["matching_strategy"]; ok {
@@ -42,36 +47,38 @@ func DecodeScopesMatcherHookFunc() mapstructure.DecodeHookFunc {
 						return nil, err
 					}
 
-					s.Match = match
+					matcher.Match = match
 				}
 
 				if values, ok := m["values"]; ok {
-					copyScopeValues(&s, values)
+					copyScopeValues(&matcher, values)
 				}
 			}
 
-			s.Match = x.IfThenElse(s.Match != nil, s.Match, ExactScopeStrategy)
+			matcher.Match = x.IfThenElse(matcher.Match != nil, matcher.Match, ExactScopeStrategy)
+		case reflect.Slice:
+			matcher.Match = ExactScopeStrategy
 
-		} else if from.Kind() == reflect.Slice {
-			s.Match = ExactScopeStrategy
-
-			copyScopeValues(&s, data)
-		} else {
+			copyScopeValues(&matcher, data)
+		default:
 			return nil, errorchain.NewWithMessage(ErrConfiguration, "invalid structure for scopes matcher")
 		}
 
-		if len(s.Scopes) == 0 {
+		if len(matcher.Scopes) == 0 {
 			return nil, errorchain.NewWithMessage(ErrConfiguration, "scopes matcher configured, but no scopes provided")
 		}
 
-		return s, nil
+		return matcher, nil
 	}
 }
 
-func copyScopeValues(s *ScopesMatcher, values any) {
-	s.Scopes = make([]string, len(values.([]any)))
+func copyScopeValues(matcher *ScopesMatcher, values any) {
+	// nolint
+	matcher.Scopes = make([]string, len(values.([]any)))
+	// nolint
 	for i, v := range values.([]any) {
-		s.Scopes[i] = v.(string)
+		// nolint
+		matcher.Scopes[i] = v.(string)
 	}
 }
 

@@ -4,9 +4,10 @@ import (
 	"bytes"
 	"context"
 
+	"github.com/mitchellh/mapstructure"
+
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/pipeline/handler"
-	"github.com/mitchellh/mapstructure"
 )
 
 type remoteAuthorizer struct {

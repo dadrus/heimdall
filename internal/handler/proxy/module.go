@@ -4,13 +4,13 @@ import (
 	"context"
 	"strings"
 
-	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/recover"
 	"github.com/rs/zerolog"
 	"go.uber.org/fx"
 
+	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/fiber/middleware"
 )
@@ -29,9 +29,9 @@ func newFiberApp(conf config.Configuration, cache cache.Cache) *fiber.App {
 
 	app := fiber.New(fiber.Config{
 		AppName:               "Heimdall Proxy",
-		ReadTimeout:           conf.Proxy.Timeout.Read,
-		WriteTimeout:          conf.Proxy.Timeout.Write,
-		IdleTimeout:           conf.Proxy.Timeout.Idle,
+		ReadTimeout:           proxy.Timeout.Read,
+		WriteTimeout:          proxy.Timeout.Write,
+		IdleTimeout:           proxy.Timeout.Idle,
 		DisableStartupMessage: true,
 	})
 

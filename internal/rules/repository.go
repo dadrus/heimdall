@@ -196,13 +196,6 @@ func (r *repository) newRule(srcID string, ruleConfig config.RuleConfig) (*rule,
 }
 
 func parseRuleSetFromYaml(data []byte) ([]config.RuleConfig, error) {
-	// parser := koanf.new(".")
-	//
-	// err := parser.load(rawbytes.provider(data), yaml.parser())
-	// if err != nil {
-	// 	return nil, fmt.errorf("failed to read config: %w", err)
-	// }
-
 	var rcs []config.RuleConfig
 
 	if err := yaml.UnmarshalStrict(data, &rcs); err != nil {

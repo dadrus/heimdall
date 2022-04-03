@@ -18,10 +18,13 @@ func NewGenerateCommand() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().String("alg", "", fmt.Sprintf("Generate a key to be used for one of the following algorithms: %v",
-		"RS256 ..."))
-	cmd.Flags().String("kid", "", "The JSON Web Key ID (kid) to be used. A random value will be used if left empty.")
-	cmd.Flags().Int("bits", 0, "The key size in bits. If left empty will default to a secure value for the selected algorithm.")
+	cmd.Flags().String("alg", "",
+		fmt.Sprintf("Generate a key to be used for one of the following algorithms: %v",
+			"RS256 ..."))
+	cmd.Flags().String("kid", "",
+		"The JSON Web Key ID (kid) to be used. A random value will be used if left empty.")
+	cmd.Flags().Int("bits", 0,
+		"The key size in bits. If left empty will default to a secure value for the selected algorithm.")
 
 	if err := cmd.MarkFlagRequired("alg"); err != nil {
 		panic(err)

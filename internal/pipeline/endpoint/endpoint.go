@@ -77,7 +77,6 @@ func (e Endpoint) CreateRequest(ctx context.Context, body io.Reader) (*http.Requ
 	}
 
 	if e.AuthStrategy != nil {
-
 		logger.Debug().Msgf("Authenticating request for %s", e.URL)
 
 		err = e.AuthStrategy.Apply(ctx, req)
