@@ -7,9 +7,9 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
-	"sync"
 	"time"
 
+	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
@@ -19,36 +19,30 @@ type ClientCredentialsStrategy struct {
 	ClientSecret string   `mapstructure:"client_secret"`
 	Scopes       []string `mapstructure:"scopes"`
 	TokenURL     string   `mapstructure:"token_url"`
-
-	lastResponse *tokenEndpointResponse
-	mutex        sync.RWMutex
 }
 
 func (c *ClientCredentialsStrategy) Apply(ctx context.Context, req *http.Request) error {
-	var tokenInfo tokenEndpointResponse
+	cch := cache.Ctx(ctx)
+	if cch != nil {
+		item := cch.Get("foo")
+		if item != nil {
+			tokenInfo := item.(*tokenEndpointResponse)
+			req.Header.Set("Authorization", tokenInfo.TokenType+" "+tokenInfo.AccessToken)
 
-	// ensure the token has still 15 seconds lifetime
-	c.mutex.RLock()
-	if c.lastResponse != nil && c.lastResponse.ExpiresIn+15 < time.Now().Unix() {
-		tokenInfo = *c.lastResponse
-		c.mutex.RUnlock()
-	} else {
-		c.mutex.RUnlock()
-
-		resp, err := c.getAccessToken(ctx)
-		if err != nil {
-			return err
+			return nil
 		}
-		// set absolute expiration time
-		tokenInfo = *resp
-		tokenInfo.ExpiresIn += time.Now().Unix()
-
-		c.mutex.Lock()
-		c.lastResponse = &tokenInfo
-		c.mutex.Unlock()
 	}
 
-	req.Header.Set("Authorization", tokenInfo.TokenType+" "+tokenInfo.AccessToken)
+	resp, err := c.getAccessToken(ctx)
+	if err != nil {
+		return err
+	}
+
+	if cch != nil {
+		cch.Set("foo", resp, time.Duration(resp.ExpiresIn-15)*time.Second)
+	}
+
+	req.Header.Set("Authorization", resp.TokenType+" "+resp.AccessToken)
 
 	return nil
 }

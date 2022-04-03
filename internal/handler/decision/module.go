@@ -4,6 +4,7 @@ import (
 	"context"
 	"strings"
 
+	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/recover"
@@ -23,7 +24,7 @@ var Module = fx.Options(
 	),
 )
 
-func newFiberApp(conf config.Configuration) *fiber.App {
+func newFiberApp(conf config.Configuration, cache *cache.Cache) *fiber.App {
 	api := conf.DecisionAPI
 
 	app := fiber.New(fiber.Config{
@@ -46,6 +47,7 @@ func newFiberApp(conf config.Configuration) *fiber.App {
 		}))
 	}
 
+	app.Use(middleware.Cache(cache))
 	app.Use(middleware.Logger())
 
 	return app

@@ -2,12 +2,17 @@ package proxy
 
 import (
 	"context"
+	"strings"
 
+	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/cors"
+	"github.com/gofiber/fiber/v2/middleware/recover"
 	"github.com/rs/zerolog"
 	"go.uber.org/fx"
 
 	"github.com/dadrus/heimdall/internal/config"
+	"github.com/dadrus/heimdall/internal/fiber/middleware"
 )
 
 // nolint
@@ -19,14 +24,34 @@ var Module = fx.Options(
 	),
 )
 
-func newFiberApp(conf config.Configuration) *fiber.App {
-	return fiber.New(fiber.Config{
+func newFiberApp(conf config.Configuration, cache *cache.Cache) *fiber.App {
+	proxy := conf.Proxy
+
+	app := fiber.New(fiber.Config{
 		AppName:               "Heimdall Proxy",
 		ReadTimeout:           conf.Proxy.Timeout.Read,
 		WriteTimeout:          conf.Proxy.Timeout.Write,
 		IdleTimeout:           conf.Proxy.Timeout.Idle,
 		DisableStartupMessage: true,
 	})
+
+	app.Use(recover.New())
+
+	if proxy.CORS != nil {
+		app.Use(cors.New(cors.Config{
+			AllowOrigins:     strings.Join(proxy.CORS.AllowedOrigins, ","),
+			AllowMethods:     strings.Join(proxy.CORS.AllowedMethods, ","),
+			AllowHeaders:     strings.Join(proxy.CORS.AllowedHeaders, ","),
+			AllowCredentials: proxy.CORS.AllowCredentials,
+			ExposeHeaders:    strings.Join(proxy.CORS.ExposedHeaders, ","),
+			MaxAge:           proxy.CORS.MaxAge,
+		}))
+	}
+
+	app.Use(middleware.Cache(cache))
+	app.Use(middleware.Logger())
+
+	return app
 }
 
 type fiberApp struct {
