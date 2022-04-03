@@ -25,7 +25,7 @@ pipeline:
             max_delay: 300ms
             give_up_after: 2s
           auth:
-            type: client_credentials
+            type: client-credentials
             config:
               client_id: foo
               client_secret: bar
@@ -44,11 +44,10 @@ pipeline:
             max_delay: 300ms
             give_up_after: 2s
           auth:
-            type: client_credentials
+            type: basic-auth
             config:
-              client_id: foo
-              client_secret: bar
-              token_url: foo.bar
+              user: foo
+              password: bar
         introspection_response_assertions:
           issuers:
             - http://127.0.0.1:4444/
