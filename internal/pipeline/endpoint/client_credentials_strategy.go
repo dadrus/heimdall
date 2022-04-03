@@ -10,11 +10,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ybbus/httpretry"
-
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
-	"github.com/dadrus/heimdall/internal/x/httpx"
 )
 
 type ClientCredentialsStrategy struct {
@@ -57,11 +54,18 @@ func (c *ClientCredentialsStrategy) Apply(ctx context.Context, req *http.Request
 }
 
 func (c *ClientCredentialsStrategy) getAccessToken(ctx context.Context) (*tokenEndpointResponse, error) {
-	client := httpretry.NewCustomClient(
-		&http.Client{
-			Transport: &httpx.TracingRoundTripper{Next: http.DefaultTransport},
+	e := Endpoint{
+		URL:    c.TokenURL,
+		Method: http.MethodPost,
+		AuthStrategy: &BasicAuthStrategy{
+			User:     url.QueryEscape(c.ClientID),
+			Password: url.QueryEscape(c.ClientSecret),
 		},
-		httpretry.WithBackoffPolicy(httpretry.ExponentialBackoff(100*time.Millisecond, 3*time.Second, 0)))
+		Headers: map[string]string{
+			"Content-Type": "application/x-www-form-urlencoded",
+			"Accept-Type":  "application/json",
+		},
+	}
 
 	// create payload body
 	data := url.Values{"grant_type": []string{"client_credentials"}}
@@ -69,18 +73,12 @@ func (c *ClientCredentialsStrategy) getAccessToken(ctx context.Context) (*tokenE
 		data.Add("scope", strings.Join(c.Scopes, " "))
 	}
 
-	content := data.Encode()
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.TokenURL, strings.NewReader(content))
+	req, err := e.CreateRequest(ctx, strings.NewReader(data.Encode()))
 	if err != nil {
 		return nil, err
 	}
 
-	req.SetBasicAuth(url.QueryEscape(c.ClientID), url.QueryEscape(c.ClientSecret))
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	req.Header.Set("Accept-Type", "application/json")
-
-	resp, err := client.Do(req)
+	resp, err := e.CreateClient().Do(req)
 	if err != nil {
 		return nil, err
 	}
