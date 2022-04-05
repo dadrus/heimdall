@@ -2,18 +2,21 @@ package authorizers
 
 import (
 	"bytes"
+	"errors"
+	"net/url"
 
-	"github.com/dadrus/heimdall/internal/pipeline/handler/subject"
 	"github.com/mitchellh/mapstructure"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/pipeline/handler"
+	"github.com/dadrus/heimdall/internal/pipeline/handler/subject"
+	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
 type remoteAuthorizer struct {
-	Endpoint                 Endpoint
-	Payload                  string
-	ResponseHeadersToForward []string
+	e    Endpoint
+	p    string
+	rhtf []string
 }
 
 func NewRemoteAuthorizer(rawConfig map[string]any) (*remoteAuthorizer, error) {
@@ -21,20 +24,35 @@ func NewRemoteAuthorizer(rawConfig map[string]any) (*remoteAuthorizer, error) {
 }
 
 func (a *remoteAuthorizer) Authorize(ctx heimdall.Context, sub *subject.Subject) error {
-	var payload []byte
-	if a.Payload == "original_body" {
-		payload = ctx.RequestBody()
-	} else {
-		// TODO: load template
-	}
-
-	_, err := a.Endpoint.SendRequest(ctx.AppContext(), bytes.NewReader(payload))
+	payload, err := a.createRequestPayload(ctx, sub)
 	if err != nil {
 		return err
 	}
 
-	for range a.ResponseHeadersToForward {
-		// TODO: get header hn from response and add it to the sc.Headers
+	req, err := a.e.CreateRequest(ctx.AppContext(), bytes.NewReader(payload))
+	if err != nil {
+		return err
+	}
+
+	resp, err := a.e.CreateClient().Do(req)
+	if err != nil {
+		var clientErr *url.Error
+		if errors.As(err, &clientErr) && clientErr.Timeout() {
+			return errorchain.NewWithMessage(heimdall.ErrCommunicationTimeout,
+				"request to the authorization endpoint timed out").CausedBy(err)
+		}
+
+		return errorchain.NewWithMessage(heimdall.ErrCommunication,
+			"request to the authorization endpoint failed").CausedBy(err)
+	}
+
+	defer resp.Body.Close()
+
+	for _, headerName := range a.rhtf {
+		headerValue := resp.Header.Get(headerName)
+		if len(headerValue) != 0 {
+			ctx.AddResponseHeader(headerName, headerValue)
+		}
 	}
 
 	return nil
@@ -55,8 +73,20 @@ func (a *remoteAuthorizer) WithConfig(rawConfig map[string]any) (handler.Authori
 	}
 
 	return &remoteAuthorizer{
-		Endpoint:                 a.Endpoint,
-		Payload:                  a.Payload,
-		ResponseHeadersToForward: conf.ResponseHeadersToForward,
+		e:    a.e,
+		p:    a.p,
+		rhtf: conf.ResponseHeadersToForward,
 	}, nil
+}
+
+func (a *remoteAuthorizer) createRequestPayload(ctx heimdall.Context, sub *subject.Subject) ([]byte, error) {
+	if a.p == "original_body" {
+		return ctx.RequestBody(), nil
+	}
+
+	return a.executeTemplate(sub)
+}
+
+func (a *remoteAuthorizer) executeTemplate(sub *subject.Subject) ([]byte, error) {
+	return nil, nil
 }
