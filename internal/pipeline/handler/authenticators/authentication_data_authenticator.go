@@ -1,15 +1,19 @@
 package authenticators
 
 import (
+	"errors"
+	"io/ioutil"
+	"net/http"
+	"net/url"
 	"strings"
 
-	"github.com/dadrus/heimdall/internal/pipeline/handler/subject"
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/pipeline/endpoint"
 	"github.com/dadrus/heimdall/internal/pipeline/handler"
 	"github.com/dadrus/heimdall/internal/pipeline/handler/authenticators/extractors"
+	"github.com/dadrus/heimdall/internal/pipeline/handler/subject"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
@@ -68,14 +72,31 @@ func (a *authenticationDataAuthenticator) Authenticate(ctx heimdall.Context) (*s
 		return nil, errorchain.New(heimdall.ErrAuthentication).CausedBy(err)
 	}
 
-	rawBody, err := a.e.SendRequest(ctx.AppContext(), strings.NewReader(authDataRef))
+	req, err := a.e.CreateRequest(ctx.AppContext(), strings.NewReader(authDataRef))
 	if err != nil {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrCommunication, "request to get information about the user failed").
-			CausedBy(err)
+		return nil, err
 	}
 
-	sub, err := a.se.GetSubject(rawBody)
+	resp, err := a.e.CreateClient().Do(req)
+	if err != nil {
+		var clientErr *url.Error
+		if errors.As(err, &clientErr) && clientErr.Timeout() {
+			return nil, errorchain.NewWithMessage(heimdall.ErrCommunicationTimeout,
+				"request to get information about the user timed out").CausedBy(err)
+		}
+
+		return nil, errorchain.NewWithMessage(heimdall.ErrCommunication,
+			"request to get information about the user failed").CausedBy(err)
+	}
+
+	defer resp.Body.Close()
+
+	payload, err := a.readResponse(resp)
+	if err != nil {
+		return nil, err
+	}
+
+	sub, err := a.se.GetSubject(payload)
 	if err != nil {
 		return nil, errorchain.
 			NewWithMessage(heimdall.ErrInternal, "failed to extract subject information from response").
@@ -83,6 +104,22 @@ func (a *authenticationDataAuthenticator) Authenticate(ctx heimdall.Context) (*s
 	}
 
 	return sub, nil
+}
+
+func (*authenticationDataAuthenticator) readResponse(resp *http.Response) ([]byte, error) {
+	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
+		rawData, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return nil, errorchain.
+				NewWithMessage(heimdall.ErrInternal, "failed to read response").
+				CausedBy(err)
+		}
+
+		return rawData, nil
+	}
+
+	return nil, errorchain.
+		NewWithMessagef(heimdall.ErrCommunication, "unexpected response. code: %v", resp.StatusCode)
 }
 
 func (a *authenticationDataAuthenticator) WithConfig(_ map[string]any) (handler.Authenticator, error) {

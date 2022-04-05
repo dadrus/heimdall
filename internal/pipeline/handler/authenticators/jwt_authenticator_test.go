@@ -11,8 +11,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dadrus/heimdall/internal/pipeline/handler/subject"
-	"github.com/dadrus/heimdall/internal/testsupport"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -22,7 +20,9 @@ import (
 
 	"github.com/dadrus/heimdall/internal/pipeline/endpoint"
 	"github.com/dadrus/heimdall/internal/pipeline/handler/authenticators/extractors"
+	"github.com/dadrus/heimdall/internal/pipeline/handler/subject"
 	"github.com/dadrus/heimdall/internal/pipeline/oauth2"
+	"github.com/dadrus/heimdall/internal/testsupport"
 )
 
 func TestCreateJwtAuthenticator(t *testing.T) {

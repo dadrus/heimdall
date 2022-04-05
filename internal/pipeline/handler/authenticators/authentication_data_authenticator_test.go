@@ -7,12 +7,12 @@ import (
 	"io/ioutil"
 	"testing"
 
-	"github.com/dadrus/heimdall/internal/pipeline/handler/subject"
-	"github.com/dadrus/heimdall/internal/testsupport"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"gopkg.in/yaml.v2"
 
+	"github.com/dadrus/heimdall/internal/pipeline/handler/subject"
+	"github.com/dadrus/heimdall/internal/testsupport"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
@@ -193,6 +193,7 @@ func TestAuthenticationDataAuthenticatorExecutionFailsDueToMissingAuthData(t *te
 	assert.Nil(t, sub)
 
 	var erc *errorchain.ErrorChain
+
 	assert.ErrorAs(t, err, &erc)
 	assert.ErrorIs(t, erc, testsupport.ErrTestPurpose)
 

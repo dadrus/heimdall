@@ -1,10 +1,10 @@
 package authenticators
 
 import (
-	"github.com/dadrus/heimdall/internal/pipeline/handler/subject"
 	"github.com/tidwall/gjson"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/pipeline/handler/subject"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 

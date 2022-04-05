@@ -4,9 +4,10 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/dadrus/heimdall/internal/pipeline/handler/subject"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/dadrus/heimdall/internal/pipeline/handler/subject"
 )
 
 func TestSessionValidation(t *testing.T) {

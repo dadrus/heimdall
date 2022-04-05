@@ -2,9 +2,12 @@ package authenticators
 
 import (
 	"encoding/json"
+	"errors"
+	"io/ioutil"
+	"net/http"
+	"net/url"
 	"strings"
 
-	"github.com/dadrus/heimdall/internal/pipeline/handler/subject"
 	"github.com/mitchellh/mapstructure"
 	"gopkg.in/square/go-jose.v2"
 	"gopkg.in/square/go-jose.v2/jwt"
@@ -13,6 +16,7 @@ import (
 	"github.com/dadrus/heimdall/internal/pipeline/endpoint"
 	"github.com/dadrus/heimdall/internal/pipeline/handler"
 	"github.com/dadrus/heimdall/internal/pipeline/handler/authenticators/extractors"
+	"github.com/dadrus/heimdall/internal/pipeline/handler/subject"
 	"github.com/dadrus/heimdall/internal/pipeline/oauth2"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
@@ -103,20 +107,28 @@ func (a *jwtAuthenticator) Authenticate(ctx heimdall.Context) (*subject.Subject,
 			CausedBy(err)
 	}
 
-	// request jwks endpoint to verify jwt
-	rawBody, err := a.e.SendRequest(ctx.AppContext(), nil)
+	req, err := a.e.CreateRequest(ctx.AppContext(), nil)
 	if err != nil {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrCommunication, "request to jwks endpoint failed").
-			CausedBy(err)
+		return nil, err
 	}
 
-	// unmarshal the received key set
-	var jwks jose.JSONWebKeySet
-	if err := json.Unmarshal(rawBody, &jwks); err != nil {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrInternal, "failed to unmarshal received jwks").
-			CausedBy(err)
+	resp, err := a.e.CreateClient().Do(req)
+	if err != nil {
+		var clientErr *url.Error
+		if errors.As(err, &clientErr) && clientErr.Timeout() {
+			return nil, errorchain.NewWithMessage(heimdall.ErrCommunicationTimeout,
+				"request to jwks endpoint timed out").CausedBy(err)
+		}
+
+		return nil, errorchain.NewWithMessage(heimdall.ErrCommunication,
+			"request to jwks endpoint failed").CausedBy(err)
+	}
+
+	defer resp.Body.Close()
+
+	jwks, err := a.readJWKS(resp)
+	if err != nil {
+		return nil, err
 	}
 
 	rawClaims, err := a.verifyTokenAndGetClaims(jwtRaw, jwks)
@@ -134,7 +146,31 @@ func (a *jwtAuthenticator) Authenticate(ctx heimdall.Context) (*subject.Subject,
 	return sub, nil
 }
 
-func (a *jwtAuthenticator) verifyTokenAndGetClaims(jwtRaw string, jwks jose.JSONWebKeySet) (json.RawMessage, error) {
+func (a *jwtAuthenticator) readJWKS(resp *http.Response) (*jose.JSONWebKeySet, error) {
+	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
+		rawData, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return nil, errorchain.
+				NewWithMessage(heimdall.ErrInternal, "failed to read response").
+				CausedBy(err)
+		}
+
+		// unmarshal the received key set
+		var jwks jose.JSONWebKeySet
+		if err := json.Unmarshal(rawData, &jwks); err != nil {
+			return nil, errorchain.
+				NewWithMessage(heimdall.ErrInternal, "failed to unmarshal received jwks").
+				CausedBy(err)
+		}
+
+		return &jwks, nil
+	}
+
+	return nil, errorchain.
+		NewWithMessagef(heimdall.ErrCommunication, "unexpected response. code: %v", resp.StatusCode)
+}
+
+func (a *jwtAuthenticator) verifyTokenAndGetClaims(jwtRaw string, jwks *jose.JSONWebKeySet) (json.RawMessage, error) {
 	const jwtDotCount = 2
 	if strings.Count(jwtRaw, ".") != jwtDotCount {
 		return nil, errorchain.
@@ -158,7 +194,8 @@ func (a *jwtAuthenticator) verifyTokenAndGetClaims(jwtRaw string, jwks jose.JSON
 	// even the spec allows for multiple keys for the given id, we do not
 	if len(keys) != 1 {
 		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration, "no (unique) key found for the given key id").
+			NewWithMessage(heimdall.ErrConfiguration,
+				"no (unique) key found for the given key id referenced in the JWT").
 			CausedBy(err)
 	}
 

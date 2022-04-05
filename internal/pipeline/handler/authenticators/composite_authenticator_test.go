@@ -4,9 +4,10 @@ import (
 	"context"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/dadrus/heimdall/internal/pipeline/handler/subject"
 	"github.com/dadrus/heimdall/internal/testsupport"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestCompositeAuthenticatorExecutionWithFallback(t *testing.T) {
