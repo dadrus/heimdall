@@ -1,4 +1,4 @@
-package authenticators
+package testsupport
 
 import (
 	"context"
@@ -6,22 +6,13 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/stretchr/testify/mock"
-	"gopkg.in/yaml.v2"
-
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/pipeline/handler"
+	"github.com/dadrus/heimdall/internal/pipeline/handler/subject"
+	"github.com/stretchr/testify/mock"
 )
 
 var ErrTestPurpose = errors.New("error raised in a test")
-
-func decodeTestConfig(data []byte) (map[string]interface{}, error) {
-	var res map[string]interface{}
-
-	err := yaml.Unmarshal(data, &res)
-
-	return res, err
-}
 
 type MockEndpoint struct {
 	mock.Mock
@@ -76,7 +67,7 @@ type MockAuthDataGetter struct {
 	mock.Mock
 }
 
-func (m *MockAuthDataGetter) GetAuthData(s handler.RequestContext) (string, error) {
+func (m *MockAuthDataGetter) GetAuthData(s heimdall.Context) (string, error) {
 	args := m.Called(s)
 
 	return args.String(0), args.Error(1)
@@ -86,11 +77,11 @@ type MockSubjectExtractor struct {
 	mock.Mock
 }
 
-func (m *MockSubjectExtractor) GetSubject(data []byte) (*heimdall.Subject, error) {
+func (m *MockSubjectExtractor) GetSubject(data []byte) (*subject.Subject, error) {
 	args := m.Called(data)
 
 	if val := args.Get(0); val != nil {
-		res, ok := val.(*heimdall.Subject)
+		res, ok := val.(*subject.Subject)
 		if !ok {
 			panic("*heimdal.Subject expected")
 		}
@@ -105,14 +96,19 @@ type MockAuthenticator struct {
 	mock.Mock
 }
 
-func (a *MockAuthenticator) Authenticate(
-	c context.Context,
-	rc handler.RequestContext,
-	sc *heimdall.SubjectContext,
-) error {
-	args := a.Called(c, rc, sc)
+func (a *MockAuthenticator) Authenticate(ctx heimdall.Context) (*subject.Subject, error) {
+	args := a.Called(ctx)
 
-	return args.Error(0)
+	if val := args.Get(0); val != nil {
+		res, ok := val.(*subject.Subject)
+		if !ok {
+			panic("*subject.Subject expected")
+		}
+
+		return res, args.Error(1)
+	}
+
+	return nil, args.Error(1)
 }
 
 func (a *MockAuthenticator) WithConfig(c map[string]interface{}) (handler.Authenticator, error) {
@@ -130,44 +126,86 @@ func (a *MockAuthenticator) WithConfig(c map[string]interface{}) (handler.Authen
 	return nil, args.Error(1)
 }
 
-type MockRequestContext struct {
+type MockContext struct {
 	mock.Mock
 }
 
-func (a *MockRequestContext) Header(key string) string {
-	args := a.Called(key)
+func (m *MockContext) RequestHeader(name string) string {
+	args := m.Called(name)
 
 	return args.String(0)
 }
 
-func (a *MockRequestContext) Cookie(key string) string {
-	args := a.Called(key)
+func (m *MockContext) RequestCookie(name string) string {
+	args := m.Called(name)
 
 	return args.String(0)
 }
 
-func (a *MockRequestContext) Query(key string) string {
-	args := a.Called(key)
+func (m *MockContext) RequestQueryParameter(name string) string {
+	args := m.Called(name)
 
 	return args.String(0)
 }
 
-func (a *MockRequestContext) Form(key string) string {
-	args := a.Called(key)
+func (m *MockContext) RequestFormParameter(name string) string {
+	args := m.Called(name)
 
 	return args.String(0)
 }
 
-func (a *MockRequestContext) Body() []byte {
-	args := a.Called()
+func (m *MockContext) RequestBody() []byte {
+	args := m.Called()
 
-	if val := args.Get(0); val != nil {
-		res, ok := val.([]byte)
+	if i := args.Get(0); i != nil {
+		val, ok := i.([]byte)
 		if !ok {
 			panic("[]byte expected")
 		}
 
-		return res
+		return val
+	}
+
+	return nil
+}
+
+func (m *MockContext) AppContext() context.Context {
+	args := m.Called()
+
+	if i := args.Get(0); i != nil {
+		val, ok := i.(context.Context)
+		if !ok {
+			panic("context.Context")
+		}
+
+		return val
+	}
+
+	return nil
+}
+
+func (m *MockContext) SetPipelineError(err error) {
+	m.Called(err)
+}
+
+func (m *MockContext) AddResponseHeader(name, value string) {
+	m.Called(name, value)
+}
+
+func (m *MockContext) SetSubject(sub *subject.Subject) {
+	m.Called(sub)
+}
+
+func (m *MockContext) Subject() *subject.Subject {
+	args := m.Called()
+
+	if i := args.Get(0); i != nil {
+		val, ok := i.(*subject.Subject)
+		if !ok {
+			panic("*heimdall.Subject")
+		}
+
+		return val
 	}
 
 	return nil

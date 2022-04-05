@@ -1,9 +1,9 @@
 package extractors
 
 import (
-	"github.com/dadrus/heimdall/internal/pipeline/handler"
+	"github.com/dadrus/heimdall/internal/heimdall"
 )
 
 type AuthDataExtractStrategy interface {
-	GetAuthData(s handler.RequestContext) (string, error)
+	GetAuthData(ctx heimdall.Context) (string, error)
 }

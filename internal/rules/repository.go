@@ -1,7 +1,6 @@
 package rules
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"net/url"
@@ -217,36 +216,35 @@ type rule struct {
 	eh      handler.ErrorHandler
 }
 
-func (r *rule) Execute(ctx context.Context, reqCtx handler.RequestContext) (*heimdall.SubjectContext, error) {
-	logger := zerolog.Ctx(ctx)
+func (r *rule) Execute(ctx heimdall.Context) error {
+	logger := zerolog.Ctx(ctx.AppContext())
 
-	subjectCtx := &heimdall.SubjectContext{}
-
-	if err := r.an.Authenticate(ctx, reqCtx, subjectCtx); err != nil {
+	sub, err := r.an.Authenticate(ctx)
+	if err != nil {
 		logger.Info().Err(err).Msg("Authentication failed")
 
-		return nil, r.eh.HandleError(ctx, err)
+		return r.eh.HandleError(ctx, err)
 	}
 
-	if err := r.az.Authorize(ctx, reqCtx, subjectCtx); err != nil {
+	if err := r.az.Authorize(ctx, sub); err != nil {
 		logger.Info().Err(err).Msg("Authorization failed")
 
-		return nil, r.eh.HandleError(ctx, err)
+		return r.eh.HandleError(ctx, err)
 	}
 
-	if err := r.h.Hydrate(ctx, subjectCtx); err != nil {
+	if err := r.h.Hydrate(ctx, sub); err != nil {
 		logger.Info().Err(err).Msg("Hydration failed")
 
-		return nil, r.eh.HandleError(ctx, err)
+		return r.eh.HandleError(ctx, err)
 	}
 
-	if err := r.m.Mutate(ctx, subjectCtx); err != nil {
+	if err := r.m.Mutate(ctx, sub); err != nil {
 		logger.Info().Err(err).Msg("Mutation failed")
 
-		return nil, r.eh.HandleError(ctx, err)
+		return r.eh.HandleError(ctx, err)
 	}
 
-	return subjectCtx, nil
+	return nil
 }
 
 func (r *rule) MatchesURL(requestURL *url.URL) bool {

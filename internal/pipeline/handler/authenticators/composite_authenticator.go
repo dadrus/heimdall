@@ -1,31 +1,26 @@
 package authenticators
 
 import (
-	"context"
-
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/pipeline/handler"
+	"github.com/dadrus/heimdall/internal/pipeline/handler/subject"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
 type CompositeAuthenticator []handler.Authenticator
 
-func (ca CompositeAuthenticator) Authenticate(
-	ctx context.Context,
-	reqCtx handler.RequestContext,
-	subCtx *heimdall.SubjectContext,
-) (err error) {
+func (ca CompositeAuthenticator) Authenticate(ctx heimdall.Context) (sub *subject.Subject, err error) {
 	for _, a := range ca {
-		err = a.Authenticate(ctx, reqCtx, subCtx)
+		sub, err = a.Authenticate(ctx)
 		if err != nil {
 			// try next
 			continue
 		} else {
-			return nil
+			return sub, nil
 		}
 	}
 
-	return err
+	return nil, err
 }
 
 func (ca CompositeAuthenticator) WithConfig(_ map[string]any) (handler.Authenticator, error) {

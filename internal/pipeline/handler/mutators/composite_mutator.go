@@ -1,18 +1,17 @@
 package mutators
 
 import (
-	"context"
-
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/pipeline/handler"
+	"github.com/dadrus/heimdall/internal/pipeline/handler/subject"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
 type CompositeMutator []handler.Mutator
 
-func (cm CompositeMutator) Mutate(c context.Context, sc *heimdall.SubjectContext) (err error) {
+func (cm CompositeMutator) Mutate(ctx heimdall.Context, sub *subject.Subject) (err error) {
 	for _, m := range cm {
-		err = m.Mutate(c, sc)
+		err = m.Mutate(ctx, sub)
 		if err != nil {
 			// try next
 			continue

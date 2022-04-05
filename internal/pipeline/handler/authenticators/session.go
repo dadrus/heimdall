@@ -1,6 +1,7 @@
 package authenticators
 
 import (
+	"github.com/dadrus/heimdall/internal/pipeline/handler/subject"
 	"github.com/tidwall/gjson"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
@@ -20,7 +21,7 @@ func (s *Session) Validate() error {
 	return nil
 }
 
-func (s *Session) GetSubject(rawData []byte) (*heimdall.Subject, error) {
+func (s *Session) GetSubject(rawData []byte) (*subject.Subject, error) {
 	attributesFrom := "@this"
 	if len(s.AttributesFrom) != 0 {
 		attributesFrom = s.AttributesFrom
@@ -33,7 +34,7 @@ func (s *Session) GetSubject(rawData []byte) (*heimdall.Subject, error) {
 
 	attributes := gjson.GetBytes(rawData, attributesFrom).Value()
 
-	return &heimdall.Subject{
+	return &subject.Subject{
 		ID:         subjectID,
 		Attributes: attributes,
 	}, nil

@@ -1,10 +1,9 @@
 package authorizers
 
 import (
-	"context"
-
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/pipeline/handler"
+	"github.com/dadrus/heimdall/internal/pipeline/handler/subject"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
@@ -14,7 +13,7 @@ func NewDenyAuthorizer() *denyAuthorizer {
 	return &denyAuthorizer{}
 }
 
-func (*denyAuthorizer) Authorize(context.Context, handler.RequestContext, *heimdall.SubjectContext) error {
+func (*denyAuthorizer) Authorize(ctx heimdall.Context, sub *subject.Subject) error {
 	return errorchain.NewWithMessage(heimdall.ErrAuthorization, "denied by authorizer")
 }
 

@@ -1,10 +1,9 @@
 package mutators
 
 import (
-	"context"
-
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/pipeline/handler"
+	"github.com/dadrus/heimdall/internal/pipeline/handler/subject"
 )
 
 type jwtMutator struct{}
@@ -13,7 +12,7 @@ func NewJWTMutator(rawConfig map[string]any) (jwtMutator, error) {
 	return jwtMutator{}, nil
 }
 
-func (jwtMutator) Mutate(context.Context, *heimdall.SubjectContext) error {
+func (jwtMutator) Mutate(ctx heimdall.Context, sub *subject.Subject) error {
 	return nil
 }
 

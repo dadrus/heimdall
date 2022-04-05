@@ -5,24 +5,21 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	"github.com/dadrus/heimdall/internal/heimdall"
 )
 
 func TestNoopAuthenticatorExecution(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
-	sc := heimdall.SubjectContext{}
 	a := NewNoopAuthenticator()
 
 	// WHEN
-	err := a.Authenticate(nil, nil, &sc)
+	sub, err := a.Authenticate(nil)
 
 	// THEN
 	require.NoError(t, err)
-	require.NotNil(t, sc.Subject)
-	assert.Empty(t, sc.Subject)
+	require.NotNil(t, sub)
+	assert.Empty(t, sub)
 }
 
 func TestCreateNoopAuthenticatorFromPrototype(t *testing.T) {

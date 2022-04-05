@@ -1,9 +1,12 @@
 package decision
 
 import (
+	"context"
 	"errors"
+	"net/http"
 	"net/url"
 
+	"github.com/dadrus/heimdall/internal/pipeline/handler/subject"
 	"github.com/gofiber/fiber/v2"
 	"github.com/rs/zerolog"
 
@@ -92,7 +95,12 @@ func (h *Handler) decisions(c *fiber.Ctx) error {
 		return c.SendStatus(fiber.StatusMethodNotAllowed)
 	}
 
-	subjectCtx, err := rule.Execute(ctx, &requestContext{c: c})
+	reqCtx := &requestContext{c: c, respHeader: make(http.Header)}
+	err = rule.Execute(reqCtx)
+	if err == nil {
+		err = reqCtx.err
+	}
+
 	if err != nil {
 		logger.Info().
 			Fields(fields).
@@ -107,8 +115,8 @@ func (h *Handler) decisions(c *fiber.Ctx) error {
 		Bool("granted", true).
 		Msg("Access request granted")
 
-	for k := range subjectCtx.Header {
-		c.Response().Header.Set(k, subjectCtx.Header.Get(k))
+	for k := range reqCtx.respHeader {
+		c.Response().Header.Set(k, reqCtx.respHeader.Get(k))
 	}
 
 	return c.SendStatus(fiber.StatusOK)
@@ -136,11 +144,19 @@ func (h *Handler) handleError(c *fiber.Ctx, err error) error {
 }
 
 type requestContext struct {
-	c *fiber.Ctx
+	c          *fiber.Ctx
+	respHeader http.Header
+	sub        *subject.Subject
+	err        error
 }
 
-func (s *requestContext) Header(name string) string { return s.c.Get(name) }
-func (s *requestContext) Cookie(name string) string { return s.c.Cookies(name) }
-func (s *requestContext) Query(name string) string  { return s.c.Query(name) }
-func (s *requestContext) Form(name string) string   { return s.c.FormValue(name) }
-func (s *requestContext) Body() []byte              { return s.c.Body() }
+func (s *requestContext) RequestHeader(name string) string         { return s.c.Get(name) }
+func (s *requestContext) RequestCookie(name string) string         { return s.c.Cookies(name) }
+func (s *requestContext) RequestQueryParameter(name string) string { return s.c.Query(name) }
+func (s *requestContext) RequestFormParameter(name string) string  { return s.c.FormValue(name) }
+func (s *requestContext) RequestBody() []byte                      { return s.c.Body() }
+func (s *requestContext) AppContext() context.Context              { return s.c.UserContext() }
+func (s *requestContext) SetPipelineError(err error)               { s.err = err }
+func (s *requestContext) AddResponseHeader(name, value string)     { s.respHeader.Add(name, value) }
+func (s *requestContext) SetSubject(sub *subject.Subject)          { s.sub = sub }
+func (s *requestContext) Subject() *subject.Subject                { return s.sub }

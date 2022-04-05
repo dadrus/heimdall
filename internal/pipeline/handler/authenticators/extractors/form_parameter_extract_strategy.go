@@ -3,7 +3,7 @@ package extractors
 import (
 	"strings"
 
-	"github.com/dadrus/heimdall/internal/pipeline/handler"
+	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
@@ -12,8 +12,8 @@ type FormParameterExtractStrategy struct {
 	Prefix string
 }
 
-func (es FormParameterExtractStrategy) GetAuthData(s handler.RequestContext) (string, error) {
-	if val := s.Form(es.Name); len(val) != 0 {
+func (es FormParameterExtractStrategy) GetAuthData(s heimdall.Context) (string, error) {
+	if val := s.RequestFormParameter(es.Name); len(val) != 0 {
 		return strings.TrimSpace(strings.TrimPrefix(val, es.Prefix)), nil
 	}
 

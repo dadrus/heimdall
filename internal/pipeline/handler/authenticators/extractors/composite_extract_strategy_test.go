@@ -3,9 +3,8 @@ package extractors
 import (
 	"testing"
 
+	"github.com/dadrus/heimdall/internal/testsupport"
 	"github.com/stretchr/testify/assert"
-
-	"github.com/dadrus/heimdall/internal/test"
 )
 
 func TestCompositeExtractCookieValueWithoutPrefix(t *testing.T) {
@@ -15,9 +14,10 @@ func TestCompositeExtractCookieValueWithoutPrefix(t *testing.T) {
 	formParamName := "test_param"
 	cookieName := "Test-Cookie"
 	actualValue := "foo"
-	mock := &test.MockAuthDataSource{}
-	mock.On("Cookie", cookieName).Return(actualValue)
-	mock.On("Form", formParamName).Return("")
+
+	ctx := &testsupport.MockContext{}
+	ctx.On("RequestCookie", cookieName).Return(actualValue)
+	ctx.On("RequestFormParameter", formParamName).Return("")
 
 	strategy := CompositeExtractStrategy{
 		FormParameterExtractStrategy{Name: formParamName},
@@ -25,12 +25,12 @@ func TestCompositeExtractCookieValueWithoutPrefix(t *testing.T) {
 	}
 
 	// WHEN
-	val, err := strategy.GetAuthData(mock)
+	val, err := strategy.GetAuthData(ctx)
 
 	// THEN
 	assert.NoError(t, err)
 	assert.Equal(t, actualValue, val)
-	mock.AssertExpectations(t)
+	ctx.AssertExpectations(t)
 }
 
 func TestCompositeExtractHeaderValueWithPrefix(t *testing.T) {
@@ -41,9 +41,10 @@ func TestCompositeExtractHeaderValueWithPrefix(t *testing.T) {
 	queryParamName := "test_param"
 	valuePrefix := "bar:"
 	actualValue := "foo"
-	mock := &test.MockAuthDataSource{}
-	mock.On("Header", headerName).Return(valuePrefix + " " + actualValue)
-	mock.On("Query", queryParamName).Return("")
+
+	ctx := &testsupport.MockContext{}
+	ctx.On("RequestHeader", headerName).Return(valuePrefix + " " + actualValue)
+	ctx.On("RequestQueryParameter", queryParamName).Return("")
 
 	strategy := CompositeExtractStrategy{
 		QueryParameterExtractStrategy{Name: queryParamName},
@@ -51,12 +52,12 @@ func TestCompositeExtractHeaderValueWithPrefix(t *testing.T) {
 	}
 
 	// WHEN
-	val, err := strategy.GetAuthData(mock)
+	val, err := strategy.GetAuthData(ctx)
 
 	// THEN
 	assert.NoError(t, err)
 	assert.Equal(t, actualValue, val)
-	mock.AssertExpectations(t)
+	ctx.AssertExpectations(t)
 }
 
 func TestCompositeExtractStrategyOrder(t *testing.T) {
@@ -67,8 +68,9 @@ func TestCompositeExtractStrategyOrder(t *testing.T) {
 	queryParamName := "test_param"
 	valuePrefix := "bar:"
 	actualValue := "foo"
-	mock := &test.MockAuthDataSource{}
-	mock.On("Header", headerName).Return(valuePrefix + " " + actualValue)
+
+	ctx := &testsupport.MockContext{}
+	ctx.On("RequestHeader", headerName).Return(valuePrefix + " " + actualValue)
 
 	strategy := CompositeExtractStrategy{
 		HeaderValueExtractStrategy{Name: headerName, Prefix: valuePrefix},
@@ -76,10 +78,10 @@ func TestCompositeExtractStrategyOrder(t *testing.T) {
 	}
 
 	// WHEN
-	val, err := strategy.GetAuthData(mock)
+	val, err := strategy.GetAuthData(ctx)
 
 	// THEN
 	assert.NoError(t, err)
 	assert.Equal(t, actualValue, val)
-	mock.AssertExpectations(t)
+	ctx.AssertExpectations(t)
 }

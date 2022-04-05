@@ -1,12 +1,11 @@
 package handler
 
 import (
-	"context"
-
 	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/pipeline/handler/subject"
 )
 
 type Authorizer interface {
-	Authorize(context.Context, RequestContext, *heimdall.SubjectContext) error
+	Authorize(heimdall.Context, *subject.Subject) error
 	WithConfig(config map[string]any) (Authorizer, error)
 }

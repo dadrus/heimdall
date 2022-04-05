@@ -7,11 +7,12 @@ import (
 	"io/ioutil"
 	"testing"
 
+	"github.com/dadrus/heimdall/internal/pipeline/handler/subject"
+	"github.com/dadrus/heimdall/internal/testsupport"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"gopkg.in/yaml.v2"
 
-	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
@@ -125,14 +126,14 @@ func TestCreateAuthenticationDataAuthenticatorFromPrototypeNotAllowed(t *testing
 func TestSuccessfulExecutionOfAuthenticationDataAuthenticator(t *testing.T) {
 	t.Parallel()
 	// GIVEN
-	subCtx := &heimdall.SubjectContext{}
-	sub := &heimdall.Subject{ID: "bar"}
-	ctx := context.Background()
+	sub := &subject.Subject{ID: "bar"}
 	eResp := []byte("foo")
 	authDataVal := "foobar"
-	reqCtx := &MockRequestContext{}
 
-	ept := &MockEndpoint{}
+	ctx := &testsupport.MockContext{}
+	ctx.On("AppContext").Return(context.Background())
+
+	ept := &testsupport.MockEndpoint{}
 	ept.On("SendRequest", mock.Anything, mock.MatchedBy(func(r io.Reader) bool {
 		val, _ := ioutil.ReadAll(r)
 
@@ -140,11 +141,11 @@ func TestSuccessfulExecutionOfAuthenticationDataAuthenticator(t *testing.T) {
 	}),
 	).Return(eResp, nil)
 
-	subExtr := &MockSubjectExtractor{}
+	subExtr := &testsupport.MockSubjectExtractor{}
 	subExtr.On("GetSubject", eResp).Return(sub, nil)
 
-	adg := &MockAuthDataGetter{}
-	adg.On("GetAuthData", reqCtx).Return(authDataVal, nil)
+	adg := &testsupport.MockAuthDataGetter{}
+	adg.On("GetAuthData", ctx).Return(authDataVal, nil)
 
 	ada := authenticationDataAuthenticator{
 		e:   ept,
@@ -153,12 +154,14 @@ func TestSuccessfulExecutionOfAuthenticationDataAuthenticator(t *testing.T) {
 	}
 
 	// WHEN
-	err := ada.Authenticate(ctx, reqCtx, subCtx)
+	rSub, err := ada.Authenticate(ctx)
 
 	// THEN
 	assert.NoError(t, err)
-	assert.Equal(t, sub, subCtx.Subject)
+	assert.NotNil(t, rSub)
+	assert.Equal(t, sub, rSub)
 
+	ctx.AssertExpectations(t)
 	ept.AssertExpectations(t)
 	subExtr.AssertExpectations(t)
 	adg.AssertExpectations(t)
@@ -167,13 +170,14 @@ func TestSuccessfulExecutionOfAuthenticationDataAuthenticator(t *testing.T) {
 func TestAuthenticationDataAuthenticatorExecutionFailsDueToMissingAuthData(t *testing.T) {
 	t.Parallel()
 	// GIVEN
-	subCtx := &heimdall.SubjectContext{}
-	ctx := context.Background()
-	ept := &MockEndpoint{}
-	subExtr := &MockSubjectExtractor{}
+	ept := &testsupport.MockEndpoint{}
+	subExtr := &testsupport.MockSubjectExtractor{}
 
-	adg := &MockAuthDataGetter{}
-	adg.On("GetAuthData", mock.Anything).Return("", ErrTestPurpose)
+	ctx := &testsupport.MockContext{}
+	ctx.On("AppContext").Return(context.Background())
+
+	adg := &testsupport.MockAuthDataGetter{}
+	adg.On("GetAuthData", mock.Anything).Return("", testsupport.ErrTestPurpose)
 
 	ada := authenticationDataAuthenticator{
 		e:   ept,
@@ -182,16 +186,17 @@ func TestAuthenticationDataAuthenticatorExecutionFailsDueToMissingAuthData(t *te
 	}
 
 	// WHEN
-	err := ada.Authenticate(ctx, nil, subCtx)
+	sub, err := ada.Authenticate(ctx)
 
 	// THEN
 	assert.Error(t, err)
+	assert.Nil(t, sub)
 
 	var erc *errorchain.ErrorChain
+	assert.ErrorAs(t, err, &erc)
+	assert.ErrorIs(t, erc, testsupport.ErrTestPurpose)
 
-	assert.True(t, errors.As(err, &erc))
-	assert.True(t, errors.Is(erc, ErrTestPurpose))
-
+	ctx.AssertExpectations(t)
 	ept.AssertExpectations(t)
 	subExtr.AssertExpectations(t)
 	adg.AssertExpectations(t)
@@ -200,15 +205,18 @@ func TestAuthenticationDataAuthenticatorExecutionFailsDueToMissingAuthData(t *te
 func TestAuthenticationDataAuthenticatorExecutionFailsDueToEndpointError(t *testing.T) {
 	t.Parallel()
 	// GIVEN
-	subStx := &heimdall.SubjectContext{}
-	ctx := context.Background()
 	authDataVal := "foobar"
-	adg := &MockAuthDataGetter{}
-	ept := &MockEndpoint{}
-	subExtr := &MockSubjectExtractor{}
 
-	adg.On("GetAuthData", mock.Anything).Return(authDataVal, nil)
-	ept.On("SendRequest", mock.Anything, mock.Anything).Return(nil, ErrTestPurpose)
+	ctx := &testsupport.MockContext{}
+	ctx.On("AppContext").Return(context.Background())
+
+	adg := &testsupport.MockAuthDataGetter{}
+	adg.On("GetAuthData", ctx).Return(authDataVal, nil)
+
+	ept := &testsupport.MockEndpoint{}
+	ept.On("SendRequest", mock.Anything, mock.Anything).Return(nil, testsupport.ErrTestPurpose)
+
+	subExtr := &testsupport.MockSubjectExtractor{}
 
 	ada := authenticationDataAuthenticator{
 		e:   ept,
@@ -217,11 +225,13 @@ func TestAuthenticationDataAuthenticatorExecutionFailsDueToEndpointError(t *test
 	}
 
 	// WHEN
-	err := ada.Authenticate(ctx, nil, subStx)
+	sub, err := ada.Authenticate(ctx)
 
 	// THEN
 	assert.Error(t, err)
-	assert.True(t, errors.Is(err, ErrTestPurpose))
+	assert.True(t, errors.Is(err, testsupport.ErrTestPurpose))
+
+	assert.Nil(t, sub)
 
 	ept.AssertExpectations(t)
 	subExtr.AssertExpectations(t)
@@ -231,17 +241,20 @@ func TestAuthenticationDataAuthenticatorExecutionFailsDueToEndpointError(t *test
 func TestAuthenticationDataAuthenticatorExecutionFailsDueToFailedSubjectExtraction(t *testing.T) {
 	t.Parallel()
 	// GIVEN
-	subCtx := &heimdall.SubjectContext{}
-	ctx := context.Background()
 	authDataVal := "foobar"
 	eResp := []byte("foo")
-	adg := &MockAuthDataGetter{}
-	ept := &MockEndpoint{}
-	subExtr := &MockSubjectExtractor{}
 
-	adg.On("GetAuthData", mock.Anything).Return(authDataVal, nil)
+	ctx := &testsupport.MockContext{}
+	ctx.On("AppContext").Return(context.Background())
+
+	adg := &testsupport.MockAuthDataGetter{}
+	adg.On("GetAuthData", ctx).Return(authDataVal, nil)
+
+	ept := &testsupport.MockEndpoint{}
 	ept.On("SendRequest", mock.Anything, mock.Anything).Return(eResp, nil)
-	subExtr.On("GetSubject", eResp).Return(nil, ErrTestPurpose)
+
+	subExtr := &testsupport.MockSubjectExtractor{}
+	subExtr.On("GetSubject", eResp).Return(nil, testsupport.ErrTestPurpose)
 
 	ada := authenticationDataAuthenticator{
 		e:   ept,
@@ -250,11 +263,13 @@ func TestAuthenticationDataAuthenticatorExecutionFailsDueToFailedSubjectExtracti
 	}
 
 	// WHEN
-	err := ada.Authenticate(ctx, nil, subCtx)
+	sub, err := ada.Authenticate(ctx)
 
 	// THEN
 	assert.Error(t, err)
-	assert.True(t, errors.Is(err, ErrTestPurpose))
+	assert.True(t, errors.Is(err, testsupport.ErrTestPurpose))
+
+	assert.Nil(t, sub)
 
 	ept.AssertExpectations(t)
 	subExtr.AssertExpectations(t)

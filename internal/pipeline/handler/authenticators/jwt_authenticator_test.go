@@ -11,6 +11,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/dadrus/heimdall/internal/pipeline/handler/subject"
+	"github.com/dadrus/heimdall/internal/testsupport"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -18,7 +20,6 @@ import (
 	"gopkg.in/square/go-jose.v2/jwt"
 	"gopkg.in/yaml.v2"
 
-	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/pipeline/endpoint"
 	"github.com/dadrus/heimdall/internal/pipeline/handler/authenticators/extractors"
 	"github.com/dadrus/heimdall/internal/pipeline/oauth2"
@@ -245,7 +246,7 @@ func TestCreateJwtAuthenticatorFromPrototype(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
-	prototypeConfig, err := decodeTestConfig([]byte(`
+	prototypeConfig, err := testsupport.DecodeTestConfig([]byte(`
 jwks_endpoint:
   url: http://test.com
 jwt_assertions:
@@ -260,7 +261,7 @@ jwt_assertions:
   allowed_algorithms:
     - ES512`)
 
-	config, err := decodeTestConfig(val)
+	config, err := testsupport.DecodeTestConfig(val)
 	require.NoError(t, err)
 
 	prototype, err := NewJwtAuthenticator(prototypeConfig)
@@ -289,10 +290,10 @@ func TestSuccessfulExecutionOfJwtAuthenticator(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
-	subject := "foo"
+	subjectID := "foo"
 	issuer := "foobar"
 	audience := "bar"
-	jwks, jwt := setup(t, subject, issuer, audience)
+	jwks, jwt := setup(t, subjectID, issuer, audience)
 
 	as := oauth2.Expectation{
 		ScopesMatcher: oauth2.ScopesMatcher{
@@ -305,26 +306,27 @@ func TestSuccessfulExecutionOfJwtAuthenticator(t *testing.T) {
 		ValidityLeeway:    1 * time.Minute,
 	}
 
-	sc := &heimdall.SubjectContext{}
-	sub := &heimdall.Subject{ID: subject}
-	ctx := context.Background()
-	mrc := &MockRequestContext{}
+	ctx := &testsupport.MockContext{}
+	ctx.On("AppContext").Return(context.Background())
 
-	adg := &MockAuthDataGetter{}
-	adg.On("GetAuthData", mrc).Return(jwt, nil)
+	adg := &testsupport.MockAuthDataGetter{}
+	adg.On("GetAuthData", ctx).Return(jwt, nil)
 
-	ept := &MockEndpoint{}
-	ept.On("SendRequest", mock.Anything, mock.MatchedBy(func(r io.Reader) bool {
+	ept := &testsupport.MockEndpoint{}
+	ept.On("SendRequest", ctx.AppContext(), mock.MatchedBy(func(r io.Reader) bool {
 		return r == nil
-	}),
-	).Return(jwks, nil)
+	})).Return(jwks, nil)
 
 	encJwtPayload := strings.Split(jwt, ".")[1]
 	rawPaload, err := base64.RawStdEncoding.DecodeString(encJwtPayload)
 	require.NoError(t, err)
 
-	se := &MockSubjectExtractor{}
-	se.On("GetSubject", rawPaload).Return(sub, nil)
+	var attrs map[string]any
+	err = json.Unmarshal(rawPaload, &attrs)
+	require.NoError(t, err)
+
+	se := &testsupport.MockSubjectExtractor{}
+	se.On("GetSubject", rawPaload).Return(&subject.Subject{ID: subjectID, Attributes: attrs}, nil)
 
 	auth := jwtAuthenticator{
 		e:   ept,
@@ -334,12 +336,16 @@ func TestSuccessfulExecutionOfJwtAuthenticator(t *testing.T) {
 	}
 
 	// WHEN
-	err = auth.Authenticate(ctx, mrc, sc)
+	sub, err := auth.Authenticate(ctx)
 
 	// THEN
 	require.NoError(t, err)
-	assert.Equal(t, sub, sc.Subject)
 
+	assert.NotNil(t, sub)
+	assert.Equal(t, subjectID, sub.ID)
+	assert.Equal(t, attrs, sub.Attributes)
+
+	ctx.AssertExpectations(t)
 	ept.AssertExpectations(t)
 	se.AssertExpectations(t)
 	adg.AssertExpectations(t)

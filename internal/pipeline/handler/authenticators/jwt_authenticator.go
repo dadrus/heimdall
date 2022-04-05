@@ -1,10 +1,10 @@
 package authenticators
 
 import (
-	"context"
 	"encoding/json"
 	"strings"
 
+	"github.com/dadrus/heimdall/internal/pipeline/handler/subject"
 	"github.com/mitchellh/mapstructure"
 	"gopkg.in/square/go-jose.v2"
 	"gopkg.in/square/go-jose.v2/jwt"
@@ -95,22 +95,18 @@ func NewJwtAuthenticator(rawConfig map[string]any) (*jwtAuthenticator, error) {
 	}, nil
 }
 
-func (a *jwtAuthenticator) Authenticate(
-	ctx context.Context,
-	as handler.RequestContext,
-	sc *heimdall.SubjectContext,
-) error {
-	jwtRaw, err := a.adg.GetAuthData(as)
+func (a *jwtAuthenticator) Authenticate(ctx heimdall.Context) (*subject.Subject, error) {
+	jwtRaw, err := a.adg.GetAuthData(ctx)
 	if err != nil {
-		return errorchain.
+		return nil, errorchain.
 			NewWithMessage(heimdall.ErrAuthentication, "not jwt token present").
 			CausedBy(err)
 	}
 
 	// request jwks endpoint to verify jwt
-	rawBody, err := a.e.SendRequest(ctx, nil)
+	rawBody, err := a.e.SendRequest(ctx.AppContext(), nil)
 	if err != nil {
-		return errorchain.
+		return nil, errorchain.
 			NewWithMessage(heimdall.ErrCommunication, "request to jwks endpoint failed").
 			CausedBy(err)
 	}
@@ -118,23 +114,24 @@ func (a *jwtAuthenticator) Authenticate(
 	// unmarshal the received key set
 	var jwks jose.JSONWebKeySet
 	if err := json.Unmarshal(rawBody, &jwks); err != nil {
-		return errorchain.
+		return nil, errorchain.
 			NewWithMessage(heimdall.ErrInternal, "failed to unmarshal received jwks").
 			CausedBy(err)
 	}
 
 	rawClaims, err := a.verifyTokenAndGetClaims(jwtRaw, jwks)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	if sc.Subject, err = a.se.GetSubject(rawClaims); err != nil {
-		return errorchain.
+	sub, err := a.se.GetSubject(rawClaims)
+	if err != nil {
+		return nil, errorchain.
 			NewWithMessage(heimdall.ErrInternal, "failed to extract subject information from jwt").
 			CausedBy(err)
 	}
 
-	return nil
+	return sub, nil
 }
 
 func (a *jwtAuthenticator) verifyTokenAndGetClaims(jwtRaw string, jwks jose.JSONWebKeySet) (json.RawMessage, error) {

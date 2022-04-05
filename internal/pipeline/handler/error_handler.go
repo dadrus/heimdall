@@ -1,10 +1,10 @@
 package handler
 
 import (
-	"context"
+	"github.com/dadrus/heimdall/internal/heimdall"
 )
 
 type ErrorHandler interface {
-	HandleError(ctx context.Context, err error) error
+	HandleError(ctx heimdall.Context, err error) error
 	WithConfig(config map[string]any) (ErrorHandler, error)
 }

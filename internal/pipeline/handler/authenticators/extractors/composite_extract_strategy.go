@@ -1,19 +1,19 @@
 package extractors
 
 import (
-	"github.com/dadrus/heimdall/internal/pipeline/handler"
+	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
 type CompositeExtractStrategy []AuthDataExtractStrategy
 
-func (ce CompositeExtractStrategy) GetAuthData(reqCtx handler.RequestContext) (string, error) {
+func (ce CompositeExtractStrategy) GetAuthData(ctx heimdall.Context) (string, error) {
 	// nolint
 	// preallocation not possible
 	var errors []error
 
 	for _, e := range ce {
-		val, err := e.GetAuthData(reqCtx)
+		val, err := e.GetAuthData(ctx)
 		if err == nil {
 			return val, nil
 		}

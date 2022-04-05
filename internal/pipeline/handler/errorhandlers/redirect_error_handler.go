@@ -1,8 +1,7 @@
 package errorhandlers
 
 import (
-	"context"
-
+	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/pipeline/handler"
 )
 
@@ -12,7 +11,8 @@ func NewRedirectErrorHandler(rawConfig map[string]any) (redirectErrorHandler, er
 	return redirectErrorHandler{}, nil
 }
 
-func (redirectErrorHandler) HandleError(ctx context.Context, err error) error {
+func (redirectErrorHandler) HandleError(ctx heimdall.Context, err error) error {
+	ctx.SetPipelineError(err)
 	return err
 }
 

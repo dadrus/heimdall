@@ -1,9 +1,9 @@
 package authenticators
 
 import (
-	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/pipeline/handler/subject"
 )
 
 type SubjectExtrator interface {
-	GetSubject(rawData []byte) (*heimdall.Subject, error)
+	GetSubject(rawData []byte) (*subject.Subject, error)
 }

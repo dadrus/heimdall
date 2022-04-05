@@ -1,9 +1,9 @@
 package authenticators
 
 import (
-	"context"
 	"strings"
 
+	"github.com/dadrus/heimdall/internal/pipeline/handler/subject"
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
@@ -58,34 +58,31 @@ func NewAuthenticationDataAuthenticator(rawConfig map[string]any) (*authenticati
 	}, nil
 }
 
-func (a *authenticationDataAuthenticator) Authenticate(
-	ctx context.Context,
-	rc handler.RequestContext,
-	sc *heimdall.SubjectContext,
-) error {
-	logger := zerolog.Ctx(ctx)
+func (a *authenticationDataAuthenticator) Authenticate(ctx heimdall.Context) (*subject.Subject, error) {
+	logger := zerolog.Ctx(ctx.AppContext())
 
 	logger.Debug().Msg("Retrieving authentication data from request")
 
-	authDataRef, err := a.adg.GetAuthData(rc)
+	authDataRef, err := a.adg.GetAuthData(ctx)
 	if err != nil {
-		return errorchain.New(heimdall.ErrAuthentication).CausedBy(err)
+		return nil, errorchain.New(heimdall.ErrAuthentication).CausedBy(err)
 	}
 
-	rawBody, err := a.e.SendRequest(ctx, strings.NewReader(authDataRef))
+	rawBody, err := a.e.SendRequest(ctx.AppContext(), strings.NewReader(authDataRef))
 	if err != nil {
-		return errorchain.
+		return nil, errorchain.
 			NewWithMessage(heimdall.ErrCommunication, "request to get information about the user failed").
 			CausedBy(err)
 	}
 
-	if sc.Subject, err = a.se.GetSubject(rawBody); err != nil {
-		return errorchain.
+	sub, err := a.se.GetSubject(rawBody)
+	if err != nil {
+		return nil, errorchain.
 			NewWithMessage(heimdall.ErrInternal, "failed to extract subject information from response").
 			CausedBy(err)
 	}
 
-	return nil
+	return sub, nil
 }
 
 func (a *authenticationDataAuthenticator) WithConfig(_ map[string]any) (handler.Authenticator, error) {

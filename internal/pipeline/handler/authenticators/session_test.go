@@ -4,10 +4,9 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/dadrus/heimdall/internal/pipeline/handler/subject"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	"github.com/dadrus/heimdall/internal/heimdall"
 )
 
 func TestSessionValidation(t *testing.T) {
@@ -93,7 +92,7 @@ func TestGetSubjectFromSession(t *testing.T) {
 	for _, tc := range []struct {
 		uc        string
 		configure func(t *testing.T, s *Session)
-		assert    func(t *testing.T, err error, sub *heimdall.Subject)
+		assert    func(t *testing.T, err error, sub *subject.Subject)
 	}{
 		{
 			uc: "subject is extracted and attributes are the whole object",
@@ -102,7 +101,7 @@ func TestGetSubjectFromSession(t *testing.T) {
 
 				s.SubjectFrom = "subject"
 			},
-			assert: func(t *testing.T, err error, sub *heimdall.Subject) {
+			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
 				assert.NoError(t, err)
 				assert.Equal(t, "foo", sub.ID)
@@ -121,7 +120,7 @@ func TestGetSubjectFromSession(t *testing.T) {
 				s.SubjectFrom = "string_slice.1"
 				s.AttributesFrom = "complex.nested"
 			},
-			assert: func(t *testing.T, err error, sub *heimdall.Subject) {
+			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
 				assert.NoError(t, err)
 				assert.Equal(t, "val2", sub.ID)
@@ -143,7 +142,7 @@ func TestGetSubjectFromSession(t *testing.T) {
 				s.SubjectFrom = "subject"
 				s.AttributesFrom = "foobar"
 			},
-			assert: func(t *testing.T, err error, sub *heimdall.Subject) {
+			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
 				assert.NoError(t, err)
 				assert.Equal(t, "foo", sub.ID)
@@ -157,7 +156,7 @@ func TestGetSubjectFromSession(t *testing.T) {
 
 				s.SubjectFrom = "foo"
 			},
-			assert: func(t *testing.T, err error, sub *heimdall.Subject) {
+			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
 				assert.Error(t, err)
 				assert.Nil(t, sub)

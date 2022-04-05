@@ -1,10 +1,9 @@
 package authenticators
 
 import (
-	"context"
-
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/pipeline/handler"
+	"github.com/dadrus/heimdall/internal/pipeline/handler/subject"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
@@ -28,14 +27,8 @@ type anonymousAuthenticator struct {
 	Subject string `mapstructure:"subject"`
 }
 
-func (a *anonymousAuthenticator) Authenticate(
-	_ context.Context,
-	_ handler.RequestContext,
-	sc *heimdall.SubjectContext,
-) error {
-	sc.Subject = &heimdall.Subject{ID: a.Subject}
-
-	return nil
+func (a *anonymousAuthenticator) Authenticate(ctx heimdall.Context) (*subject.Subject, error) {
+	return &subject.Subject{ID: a.Subject}, nil
 }
 
 func (a *anonymousAuthenticator) WithConfig(config map[string]any) (handler.Authenticator, error) {

@@ -1,18 +1,17 @@
 package hydrators
 
 import (
-	"context"
-
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/pipeline/handler"
+	"github.com/dadrus/heimdall/internal/pipeline/handler/subject"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
 type CompositeHydrator []handler.Hydrator
 
-func (ch CompositeHydrator) Hydrate(c context.Context, sc *heimdall.SubjectContext) (err error) {
+func (ch CompositeHydrator) Hydrate(ctx heimdall.Context, sub *subject.Subject) (err error) {
 	for _, h := range ch {
-		err = h.Hydrate(c, sc)
+		err = h.Hydrate(ctx, sub)
 		if err != nil {
 			// try next
 			continue

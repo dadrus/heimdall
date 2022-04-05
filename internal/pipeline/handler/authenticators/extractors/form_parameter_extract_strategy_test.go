@@ -3,9 +3,8 @@ package extractors
 import (
 	"testing"
 
+	"github.com/dadrus/heimdall/internal/testsupport"
 	"github.com/stretchr/testify/assert"
-
-	"github.com/dadrus/heimdall/internal/test"
 )
 
 func TestExtractFormParameterWithoutPrefix(t *testing.T) {
@@ -14,18 +13,19 @@ func TestExtractFormParameterWithoutPrefix(t *testing.T) {
 	// GIVEN
 	paramName := "test_param"
 	actualValue := "foo"
-	mock := &test.MockAuthDataSource{}
-	mock.On("Form", paramName).Return(actualValue)
+
+	ctx := &testsupport.MockContext{}
+	ctx.On("RequestFormParameter", paramName).Return(actualValue)
 
 	strategy := FormParameterExtractStrategy{Name: paramName}
 
 	// WHEN
-	val, err := strategy.GetAuthData(mock)
+	val, err := strategy.GetAuthData(ctx)
 
 	// THEN
 	assert.NoError(t, err)
 	assert.Equal(t, actualValue, val)
-	mock.AssertExpectations(t)
+	ctx.AssertExpectations(t)
 }
 
 func TestExtractFormParameterWithPrefix(t *testing.T) {
@@ -35,16 +35,17 @@ func TestExtractFormParameterWithPrefix(t *testing.T) {
 	paramName := "test_param"
 	valuePrefix := "bar:"
 	actualValue := "foo"
-	mock := &test.MockAuthDataSource{}
-	mock.On("Form", paramName).Return(valuePrefix + " " + actualValue)
+
+	ctx := &testsupport.MockContext{}
+	ctx.On("RequestFormParameter", paramName).Return(valuePrefix + " " + actualValue)
 
 	strategy := FormParameterExtractStrategy{Name: paramName, Prefix: valuePrefix}
 
 	// WHEN
-	val, err := strategy.GetAuthData(mock)
+	val, err := strategy.GetAuthData(ctx)
 
 	// THEN
 	assert.NoError(t, err)
 	assert.Equal(t, actualValue, val)
-	mock.AssertExpectations(t)
+	ctx.AssertExpectations(t)
 }

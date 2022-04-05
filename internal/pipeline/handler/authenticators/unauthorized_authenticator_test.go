@@ -14,11 +14,12 @@ func TestUnauthorizedAuthenticatorExecution(t *testing.T) {
 	auth := NewUnauthorizedAuthenticator()
 
 	// WHEN
-	err := auth.Authenticate(nil, nil, nil)
+	sub, err := auth.Authenticate(nil)
 
 	// THEN
 	assert.ErrorIs(t, err, heimdall.ErrAuthentication)
 	assert.ErrorContains(t, err, "denied by authenticator")
+	assert.Nil(t, sub)
 }
 
 func TestCreateUnauthorizedAuthenticatorFromPrototype(t *testing.T) {

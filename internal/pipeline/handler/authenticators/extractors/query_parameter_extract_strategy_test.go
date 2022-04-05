@@ -3,9 +3,8 @@ package extractors
 import (
 	"testing"
 
+	"github.com/dadrus/heimdall/internal/testsupport"
 	"github.com/stretchr/testify/assert"
-
-	"github.com/dadrus/heimdall/internal/test"
 )
 
 func TestExtractQueryParameterWithoutPrefix(t *testing.T) {
@@ -14,18 +13,19 @@ func TestExtractQueryParameterWithoutPrefix(t *testing.T) {
 	// GIVEN
 	queryParameter := "test_param"
 	actualValue := "foo"
-	mock := &test.MockAuthDataSource{}
-	mock.On("Query", queryParameter).Return(actualValue)
+	
+	ctx := &testsupport.MockContext{}
+	ctx.On("RequestQueryParameter", queryParameter).Return(actualValue)
 
 	strategy := QueryParameterExtractStrategy{Name: queryParameter}
 
 	// WHEN
-	val, err := strategy.GetAuthData(mock)
+	val, err := strategy.GetAuthData(ctx)
 
 	// THEN
 	assert.NoError(t, err)
 	assert.Equal(t, actualValue, val)
-	mock.AssertExpectations(t)
+	ctx.AssertExpectations(t)
 }
 
 func TestExtractQueryParameterWithPrefix(t *testing.T) {
@@ -35,16 +35,17 @@ func TestExtractQueryParameterWithPrefix(t *testing.T) {
 	queryParameter := "test_param"
 	valuePrefix := "bar:"
 	actualValue := "foo"
-	mock := &test.MockAuthDataSource{}
-	mock.On("Query", queryParameter).Return(valuePrefix + " " + actualValue)
+
+	ctx := &testsupport.MockContext{}
+	ctx.On("RequestQueryParameter", queryParameter).Return(valuePrefix + " " + actualValue)
 
 	strategy := QueryParameterExtractStrategy{Name: queryParameter, Prefix: valuePrefix}
 
 	// WHEN
-	val, err := strategy.GetAuthData(mock)
+	val, err := strategy.GetAuthData(ctx)
 
 	// THEN
 	assert.NoError(t, err)
 	assert.Equal(t, actualValue, val)
-	mock.AssertExpectations(t)
+	ctx.AssertExpectations(t)
 }

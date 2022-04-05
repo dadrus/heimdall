@@ -1,11 +1,11 @@
 package authenticators
 
 import (
-	"context"
 	"encoding/json"
 	"net/url"
 	"strings"
 
+	"github.com/dadrus/heimdall/internal/pipeline/handler/subject"
 	"github.com/mitchellh/mapstructure"
 	"gopkg.in/square/go-jose.v2"
 
@@ -83,50 +83,47 @@ func NewOAuth2IntrospectionAuthenticator(rawConfig map[string]any) (*oauth2Intro
 	}, nil
 }
 
-func (a *oauth2IntrospectionAuthenticator) Authenticate(
-	ctx context.Context,
-	as handler.RequestContext,
-	sc *heimdall.SubjectContext,
-) error {
-	accessToken, err := a.adg.GetAuthData(as)
+func (a *oauth2IntrospectionAuthenticator) Authenticate(ctx heimdall.Context) (*subject.Subject, error) {
+	accessToken, err := a.adg.GetAuthData(ctx)
 	if err != nil {
-		return errorchain.
+		return nil, errorchain.
 			NewWithMessage(heimdall.ErrAuthentication, "no access token present").
 			CausedBy(err)
 	}
 
-	rawBody, err := a.e.SendRequest(ctx, strings.NewReader(
+	rawBody, err := a.e.SendRequest(ctx.AppContext(), strings.NewReader(
 		url.Values{
 			"token":           []string{accessToken},
 			"token_type_hint": []string{"access_token"},
 		}.Encode()),
 	)
 	if err != nil {
-		return errorchain.
+		return nil, errorchain.
 			NewWithMessage(heimdall.ErrCommunicationTimeout, "request to the introspection endpoint failed").
 			CausedBy(err)
 	}
 
 	var resp oauth2.IntrospectionResponse
 	if err = json.Unmarshal(rawBody, &resp); err != nil {
-		return errorchain.
+		return nil, errorchain.
 			NewWithMessage(heimdall.ErrInternal, "failed to unmarshal received introspection response").
 			CausedBy(err)
 	}
 
 	if err = resp.Validate(a.a); err != nil {
-		return errorchain.
+		return nil, errorchain.
 			NewWithMessage(heimdall.ErrAuthentication, "access token does not satisfy assertion conditions").
 			CausedBy(err)
 	}
 
-	if sc.Subject, err = a.se.GetSubject(rawBody); err != nil {
-		return errorchain.
+	sub, err := a.se.GetSubject(rawBody)
+	if err != nil {
+		return nil, errorchain.
 			NewWithMessage(heimdall.ErrInternal, "failed to extract subject information from introspection response").
 			CausedBy(err)
 	}
 
-	return nil
+	return sub, nil
 }
 
 func (a *oauth2IntrospectionAuthenticator) WithConfig(config map[string]any) (handler.Authenticator, error) {

@@ -2,8 +2,8 @@ package authorizers
 
 import (
 	"bytes"
-	"context"
 
+	"github.com/dadrus/heimdall/internal/pipeline/handler/subject"
 	"github.com/mitchellh/mapstructure"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
@@ -20,19 +20,15 @@ func NewRemoteAuthorizer(rawConfig map[string]any) (*remoteAuthorizer, error) {
 	return &remoteAuthorizer{}, nil
 }
 
-func (a *remoteAuthorizer) Authorize(
-	ctx context.Context,
-	rc handler.RequestContext,
-	sc *heimdall.SubjectContext,
-) error {
+func (a *remoteAuthorizer) Authorize(ctx heimdall.Context, sub *subject.Subject) error {
 	var payload []byte
 	if a.Payload == "original_body" {
-		payload = rc.Body()
+		payload = ctx.RequestBody()
 	} else {
 		// TODO: load template
 	}
 
-	_, err := a.Endpoint.SendRequest(ctx, bytes.NewReader(payload))
+	_, err := a.Endpoint.SendRequest(ctx.AppContext(), bytes.NewReader(payload))
 	if err != nil {
 		return err
 	}
