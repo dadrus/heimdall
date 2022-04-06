@@ -4,11 +4,11 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/dadrus/heimdall/internal/pipeline/handler"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/pipeline/handler"
 )
 
 func TestCreateAnonymousAuthenticatorFromValidYaml(t *testing.T) {

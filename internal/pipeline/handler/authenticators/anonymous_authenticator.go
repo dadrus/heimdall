@@ -8,6 +8,8 @@ import (
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
+// by intention. Used only during application bootstrap
+// nolint
 func init() {
 	handler.RegisterAuthenticatorTypeFactory(
 		func(typ config.PipelineObjectType, conf map[string]any) (bool, handler.Authenticator, error) {

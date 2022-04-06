@@ -7,6 +7,8 @@ import (
 	"github.com/dadrus/heimdall/internal/pipeline/handler/subject"
 )
 
+// by intention. Used only during application bootstrap
+// nolint
 func init() {
 	handler.RegisterHydratorTypeFactory(
 		func(typ config.PipelineObjectType, conf map[string]any) (bool, handler.Hydrator, error) {

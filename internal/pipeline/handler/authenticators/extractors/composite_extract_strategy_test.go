@@ -3,8 +3,9 @@ package extractors
 import (
 	"testing"
 
-	"github.com/dadrus/heimdall/internal/pipeline/handler"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/dadrus/heimdall/internal/pipeline/handler"
 )
 
 func TestCompositeExtractCookieValueWithoutPrefix(t *testing.T) {

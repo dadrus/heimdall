@@ -6,11 +6,11 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/dadrus/heimdall/internal/pipeline/handler/subject"
 	"github.com/gofiber/fiber/v2"
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/pipeline/handler/subject"
 	"github.com/dadrus/heimdall/internal/rules"
 	"github.com/dadrus/heimdall/internal/x"
 )
@@ -96,6 +96,7 @@ func (h *Handler) decisions(c *fiber.Ctx) error {
 	}
 
 	reqCtx := &requestContext{c: c, respHeader: make(http.Header)}
+
 	err = rule.Execute(reqCtx)
 	if err == nil {
 		err = reqCtx.err

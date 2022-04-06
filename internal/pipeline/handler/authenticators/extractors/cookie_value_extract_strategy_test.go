@@ -4,9 +4,10 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/dadrus/heimdall/internal/pipeline/handler"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/dadrus/heimdall/internal/pipeline/handler"
 )
 
 func TestExtractCookieValue(t *testing.T) {

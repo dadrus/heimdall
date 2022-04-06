@@ -6,6 +6,8 @@ import (
 	"github.com/dadrus/heimdall/internal/pipeline/handler"
 )
 
+// by intention. Used only during application bootstrap
+// nolint
 func init() {
 	handler.RegisterErrorHandlerTypeFactory(
 		func(typ config.PipelineObjectType, conf map[string]any) (bool, handler.ErrorHandler, error) {
