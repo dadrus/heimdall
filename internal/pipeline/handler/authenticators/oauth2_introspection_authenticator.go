@@ -8,6 +8,8 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/mitchellh/mapstructure"
+
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/pipeline/endpoint"
@@ -16,7 +18,6 @@ import (
 	"github.com/dadrus/heimdall/internal/pipeline/handler/subject"
 	"github.com/dadrus/heimdall/internal/pipeline/oauth2"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
-	"github.com/mitchellh/mapstructure"
 )
 
 // by intention. Used only during application bootstrap
