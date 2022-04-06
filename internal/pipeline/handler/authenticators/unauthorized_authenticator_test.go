@@ -11,7 +11,7 @@ import (
 func TestUnauthorizedAuthenticatorExecution(t *testing.T) {
 	t.Parallel()
 	// GIVEN
-	auth := NewUnauthorizedAuthenticator()
+	auth := newUnauthorizedAuthenticator()
 
 	// WHEN
 	sub, err := auth.Authenticate(nil)
@@ -25,7 +25,7 @@ func TestUnauthorizedAuthenticatorExecution(t *testing.T) {
 func TestCreateUnauthorizedAuthenticatorFromPrototype(t *testing.T) {
 	t.Parallel()
 	// GIVEN
-	prototype := NewUnauthorizedAuthenticator()
+	prototype := newUnauthorizedAuthenticator()
 
 	// WHEN
 	auth, err := prototype.WithConfig(nil)

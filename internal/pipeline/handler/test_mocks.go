@@ -1,4 +1,4 @@
-package testsupport
+package handler
 
 import (
 	"context"
@@ -7,7 +7,6 @@ import (
 	"github.com/stretchr/testify/mock"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/pipeline/handler"
 	"github.com/dadrus/heimdall/internal/pipeline/handler/subject"
 )
 
@@ -51,11 +50,11 @@ func (a *MockAuthenticator) Authenticate(ctx heimdall.Context) (*subject.Subject
 	return nil, args.Error(1)
 }
 
-func (a *MockAuthenticator) WithConfig(c map[string]interface{}) (handler.Authenticator, error) {
+func (a *MockAuthenticator) WithConfig(c map[string]interface{}) (Authenticator, error) {
 	args := a.Called(c)
 
 	if val := args.Get(0); val != nil {
-		res, ok := val.(handler.Authenticator)
+		res, ok := val.(Authenticator)
 		if !ok {
 			panic("handler.Authenticator expected")
 		}

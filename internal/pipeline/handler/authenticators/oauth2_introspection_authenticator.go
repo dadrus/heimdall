@@ -11,6 +11,7 @@ import (
 	"github.com/mitchellh/mapstructure"
 	"gopkg.in/square/go-jose.v2"
 
+	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/pipeline/endpoint"
 	"github.com/dadrus/heimdall/internal/pipeline/handler"
@@ -20,6 +21,19 @@ import (
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
+func init() {
+	handler.RegisterAuthenticatorTypeFactory(
+		func(typ config.PipelineObjectType, conf map[string]any) (bool, handler.Authenticator, error) {
+			if typ != config.POTOAuth2Introspection {
+				return false, nil, nil
+			}
+
+			auth, err := newOAuth2IntrospectionAuthenticator(conf)
+
+			return true, auth, err
+		})
+}
+
 type oauth2IntrospectionAuthenticator struct {
 	e   Endpoint
 	a   oauth2.Expectation
@@ -27,7 +41,7 @@ type oauth2IntrospectionAuthenticator struct {
 	adg extractors.AuthDataExtractStrategy
 }
 
-func NewOAuth2IntrospectionAuthenticator(rawConfig map[string]any) (*oauth2IntrospectionAuthenticator, error) {
+func newOAuth2IntrospectionAuthenticator(rawConfig map[string]any) (*oauth2IntrospectionAuthenticator, error) {
 	type _config struct {
 		Endpoint   endpoint.Endpoint  `mapstructure:"introspection_endpoint"`
 		Assertions oauth2.Expectation `mapstructure:"introspection_response_assertions"`

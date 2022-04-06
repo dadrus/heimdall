@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/url"
 
+	"github.com/dadrus/heimdall/internal/config"
 	"github.com/mitchellh/mapstructure"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
@@ -13,13 +14,26 @@ import (
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
+func init() {
+	handler.RegisterAuthorizerTypeFactory(
+		func(typ config.PipelineObjectType, conf map[string]any) (bool, handler.Authorizer, error) {
+			if typ != config.POTRemote {
+				return false, nil, nil
+			}
+
+			auth, err := newRemoteAuthorizer(conf)
+
+			return true, auth, err
+		})
+}
+
 type remoteAuthorizer struct {
 	e    Endpoint
 	p    string
 	rhtf []string
 }
 
-func NewRemoteAuthorizer(rawConfig map[string]any) (*remoteAuthorizer, error) {
+func newRemoteAuthorizer(rawConfig map[string]any) (*remoteAuthorizer, error) {
 	return &remoteAuthorizer{}, nil
 }
 

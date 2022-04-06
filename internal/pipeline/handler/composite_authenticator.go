@@ -1,13 +1,12 @@
-package authenticators
+package handler
 
 import (
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/pipeline/handler"
 	"github.com/dadrus/heimdall/internal/pipeline/handler/subject"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
-type CompositeAuthenticator []handler.Authenticator
+type CompositeAuthenticator []Authenticator
 
 func (ca CompositeAuthenticator) Authenticate(ctx heimdall.Context) (sub *subject.Subject, err error) {
 	for _, a := range ca {
@@ -23,6 +22,6 @@ func (ca CompositeAuthenticator) Authenticate(ctx heimdall.Context) (sub *subjec
 	return nil, err
 }
 
-func (ca CompositeAuthenticator) WithConfig(_ map[string]any) (handler.Authenticator, error) {
+func (ca CompositeAuthenticator) WithConfig(_ map[string]any) (Authenticator, error) {
 	return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration, "reconfiguration not allowed")
 }

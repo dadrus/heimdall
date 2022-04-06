@@ -1,14 +1,28 @@
 package mutators
 
 import (
+	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/pipeline/handler"
 	"github.com/dadrus/heimdall/internal/pipeline/handler/subject"
 )
 
+func init() {
+	handler.RegisterMutatorTypeFactory(
+		func(typ config.PipelineObjectType, conf map[string]any) (bool, handler.Mutator, error) {
+			if typ != config.POTJwt {
+				return false, nil, nil
+			}
+
+			mut, err := newJWTMutator(conf)
+
+			return true, mut, err
+		})
+}
+
 type jwtMutator struct{}
 
-func NewJWTMutator(rawConfig map[string]any) (jwtMutator, error) {
+func newJWTMutator(rawConfig map[string]any) (jwtMutator, error) {
 	return jwtMutator{}, nil
 }
 

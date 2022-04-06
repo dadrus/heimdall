@@ -4,10 +4,9 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/dadrus/heimdall/internal/pipeline/handler"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	"github.com/dadrus/heimdall/internal/testsupport"
 )
 
 func TestExtractHeaderValueWithoutPrefix(t *testing.T) {
@@ -19,7 +18,7 @@ func TestExtractHeaderValueWithoutPrefix(t *testing.T) {
 	req, err := http.NewRequest(http.MethodGet, "foobar.local", nil)
 	require.NoError(t, err)
 
-	ctx := &testsupport.MockContext{}
+	ctx := &handler.MockContext{}
 	ctx.On("RequestHeader", headerName).Return(headerValue)
 
 	strategy := HeaderValueExtractStrategy{Name: headerName}
@@ -47,7 +46,7 @@ func TestExtractHeaderValueWithPrefix(t *testing.T) {
 	req, err := http.NewRequest(http.MethodGet, "foobar.local", nil)
 	require.NoError(t, err)
 
-	ctx := &testsupport.MockContext{}
+	ctx := &handler.MockContext{}
 	ctx.On("RequestHeader", headerName).Return(valuePrefix + " " + actualValue)
 
 	strategy := HeaderValueExtractStrategy{Name: headerName, Prefix: valuePrefix}

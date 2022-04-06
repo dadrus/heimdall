@@ -1,14 +1,26 @@
 package authenticators
 
 import (
+	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/pipeline/handler"
 	"github.com/dadrus/heimdall/internal/pipeline/handler/subject"
 )
 
+func init() {
+	handler.RegisterAuthenticatorTypeFactory(
+		func(typ config.PipelineObjectType, conf map[string]any) (bool, handler.Authenticator, error) {
+			if typ != config.POTNoop {
+				return false, nil, nil
+			}
+
+			return true, newNoopAuthenticator(), nil
+		})
+}
+
 type noopAuthenticator struct{}
 
-func NewNoopAuthenticator() *noopAuthenticator {
+func newNoopAuthenticator() *noopAuthenticator {
 	return &noopAuthenticator{}
 }
 

@@ -1,12 +1,11 @@
-package errorhandlers
+package handler
 
 import (
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/pipeline/handler"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
-type CompositeErrorHandler []handler.ErrorHandler
+type CompositeErrorHandler []ErrorHandler
 
 func (ceh CompositeErrorHandler) HandleError(ctx heimdall.Context, e error) (err error) {
 	for _, eh := range ceh {
@@ -22,6 +21,6 @@ func (ceh CompositeErrorHandler) HandleError(ctx heimdall.Context, e error) (err
 	return err
 }
 
-func (CompositeErrorHandler) WithConfig(_ map[string]any) (handler.ErrorHandler, error) {
+func (CompositeErrorHandler) WithConfig(_ map[string]any) (ErrorHandler, error) {
 	return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration, "reconfiguration not allowed")
 }

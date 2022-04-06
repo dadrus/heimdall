@@ -11,7 +11,7 @@ func TestNoopAuthenticatorExecution(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
-	a := NewNoopAuthenticator()
+	a := newNoopAuthenticator()
 
 	// WHEN
 	sub, err := a.Authenticate(nil)
@@ -26,7 +26,7 @@ func TestCreateNoopAuthenticatorFromPrototype(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
-	prototype := NewNoopAuthenticator()
+	prototype := newNoopAuthenticator()
 
 	// WHEN
 	auth, err := prototype.WithConfig(nil)

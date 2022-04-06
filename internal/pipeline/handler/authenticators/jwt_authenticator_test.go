@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/dadrus/heimdall/internal/pipeline/handler"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/square/go-jose.v2"
@@ -23,7 +24,6 @@ import (
 	"github.com/dadrus/heimdall/internal/pipeline/handler/authenticators/extractors"
 	"github.com/dadrus/heimdall/internal/pipeline/handler/subject"
 	"github.com/dadrus/heimdall/internal/pipeline/oauth2"
-	"github.com/dadrus/heimdall/internal/testsupport"
 )
 
 func TestCreateJwtAuthenticator(t *testing.T) {
@@ -199,7 +199,7 @@ session:
 			t.Parallel()
 
 			// WHEN
-			a, err := NewJwtAuthenticator(decode(tc.config))
+			a, err := newJwtAuthenticator(decode(tc.config))
 
 			// THEN
 			tc.assert(t, err, a)
@@ -247,7 +247,7 @@ func TestCreateJwtAuthenticatorFromPrototype(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
-	prototypeConfig, err := testsupport.DecodeTestConfig([]byte(`
+	prototypeConfig, err := handler.DecodeTestConfig([]byte(`
 jwks_endpoint:
   url: http://test.com
 jwt_assertions:
@@ -262,10 +262,10 @@ jwt_assertions:
   allowed_algorithms:
     - ES512`)
 
-	config, err := testsupport.DecodeTestConfig(val)
+	config, err := handler.DecodeTestConfig(val)
 	require.NoError(t, err)
 
-	prototype, err := NewJwtAuthenticator(prototypeConfig)
+	prototype, err := newJwtAuthenticator(prototypeConfig)
 	require.NoError(t, err)
 
 	// WHEN
@@ -326,7 +326,7 @@ func TestSuccessfulExecutionOfJwtAuthenticator(t *testing.T) {
 		ValidityLeeway:    1 * time.Minute,
 	}
 
-	ctx := &testsupport.MockContext{}
+	ctx := &handler.MockContext{}
 	ctx.On("AppContext").Return(context.Background())
 
 	adg := &MockAuthDataGetter{}
@@ -340,7 +340,7 @@ func TestSuccessfulExecutionOfJwtAuthenticator(t *testing.T) {
 	err = json.Unmarshal(rawPaload, &attrs)
 	require.NoError(t, err)
 
-	se := &testsupport.MockSubjectExtractor{}
+	se := &handler.MockSubjectExtractor{}
 	se.On("GetSubject", rawPaload).Return(&subject.Subject{ID: subjectID, Attributes: attrs}, nil)
 
 	auth := jwtAuthenticator{

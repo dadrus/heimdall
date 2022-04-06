@@ -12,6 +12,7 @@ import (
 	"gopkg.in/square/go-jose.v2"
 	"gopkg.in/square/go-jose.v2/jwt"
 
+	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/pipeline/endpoint"
 	"github.com/dadrus/heimdall/internal/pipeline/handler"
@@ -21,6 +22,19 @@ import (
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
+func init() {
+	handler.RegisterAuthenticatorTypeFactory(
+		func(typ config.PipelineObjectType, conf map[string]any) (bool, handler.Authenticator, error) {
+			if typ != config.POTJwt {
+				return false, nil, nil
+			}
+
+			auth, err := newJwtAuthenticator(conf)
+
+			return true, auth, err
+		})
+}
+
 type jwtAuthenticator struct {
 	e   Endpoint
 	a   oauth2.Expectation
@@ -28,7 +42,7 @@ type jwtAuthenticator struct {
 	adg extractors.AuthDataExtractStrategy
 }
 
-func NewJwtAuthenticator(rawConfig map[string]any) (*jwtAuthenticator, error) {
+func newJwtAuthenticator(rawConfig map[string]any) (*jwtAuthenticator, error) {
 	type _config struct {
 		Endpoint       endpoint.Endpoint                   `mapstructure:"jwks_endpoint"`
 		AuthDataSource extractors.CompositeExtractStrategy `mapstructure:"jwt_token_from"`

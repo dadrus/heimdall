@@ -8,6 +8,7 @@ import (
 
 	"github.com/rs/zerolog"
 
+	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/pipeline/endpoint"
 	"github.com/dadrus/heimdall/internal/pipeline/handler"
@@ -16,13 +17,26 @@ import (
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
+func init() {
+	handler.RegisterAuthenticatorTypeFactory(
+		func(typ config.PipelineObjectType, conf map[string]any) (bool, handler.Authenticator, error) {
+			if typ != config.POTAuthenticationData {
+				return false, nil, nil
+			}
+
+			auth, err := newAuthenticationDataAuthenticator(conf)
+
+			return true, auth, err
+		})
+}
+
 type authenticationDataAuthenticator struct {
 	e   Endpoint
 	se  SubjectExtrator
 	adg extractors.AuthDataExtractStrategy
 }
 
-func NewAuthenticationDataAuthenticator(rawConfig map[string]any) (*authenticationDataAuthenticator, error) {
+func newAuthenticationDataAuthenticator(rawConfig map[string]any) (*authenticationDataAuthenticator, error) {
 	type _config struct {
 		Endpoint       endpoint.Endpoint                   `mapstructure:"identity_info_endpoint"`
 		AuthDataSource extractors.CompositeExtractStrategy `mapstructure:"authentication_data_source"`

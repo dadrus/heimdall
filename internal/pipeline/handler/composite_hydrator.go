@@ -1,13 +1,12 @@
-package hydrators
+package handler
 
 import (
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/pipeline/handler"
 	"github.com/dadrus/heimdall/internal/pipeline/handler/subject"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
-type CompositeHydrator []handler.Hydrator
+type CompositeHydrator []Hydrator
 
 func (ch CompositeHydrator) Hydrate(ctx heimdall.Context, sub *subject.Subject) (err error) {
 	for _, h := range ch {
@@ -23,6 +22,6 @@ func (ch CompositeHydrator) Hydrate(ctx heimdall.Context, sub *subject.Subject) 
 	return err
 }
 
-func (ch CompositeHydrator) WithConfig(_ map[string]any) (handler.Hydrator, error) {
+func (ch CompositeHydrator) WithConfig(_ map[string]any) (Hydrator, error) {
 	return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration, "reconfiguration not allowed")
 }

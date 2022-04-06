@@ -4,21 +4,21 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/dadrus/heimdall/internal/pipeline/handler"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/testsupport"
 )
 
 func TestCreateAnonymousAuthenticatorFromValidYaml(t *testing.T) {
 	t.Parallel()
 	// GIVEN
-	conf, err := testsupport.DecodeTestConfig([]byte("subject: anon"))
+	conf, err := handler.DecodeTestConfig([]byte("subject: anon"))
 	require.NoError(t, err)
 
 	// WHEN
-	a, err := NewAnonymousAuthenticator(conf)
+	a, err := newAnonymousAuthenticator(conf)
 
 	// THEN
 	assert.NoError(t, err)
@@ -28,11 +28,11 @@ func TestCreateAnonymousAuthenticatorFromValidYaml(t *testing.T) {
 func TestCreateAnonymousAuthenticatorFromInvalidYaml(t *testing.T) {
 	t.Parallel()
 	// GIVEN
-	conf, err := testsupport.DecodeTestConfig([]byte("foo: bar"))
+	conf, err := handler.DecodeTestConfig([]byte("foo: bar"))
 	require.NoError(t, err)
 
 	// WHEN
-	_, err = NewAnonymousAuthenticator(conf)
+	_, err = newAnonymousAuthenticator(conf)
 
 	// THEN
 	assert.Error(t, err)
@@ -42,10 +42,10 @@ func TestCreateAnonymousAuthenticatorFromInvalidYaml(t *testing.T) {
 func TestCreateAnonymousAuthenticatorFromPrototypeGivenEmptyConfig(t *testing.T) {
 	t.Parallel()
 	// GIVEN
-	conf, err := testsupport.DecodeTestConfig([]byte("subject: anon"))
+	conf, err := handler.DecodeTestConfig([]byte("subject: anon"))
 	require.NoError(t, err)
 
-	prototype, err := NewAnonymousAuthenticator(conf)
+	prototype, err := newAnonymousAuthenticator(conf)
 	assert.NoError(t, err)
 
 	// WHEN
@@ -61,13 +61,13 @@ func TestCreateAnonymousAuthenticatorFromPrototypeGivenEmptyConfig(t *testing.T)
 func TestCreateAnonymousAuthenticatorFromPrototypeGivenValidConfig(t *testing.T) {
 	t.Parallel()
 	// GIVEN
-	protoConf, err := testsupport.DecodeTestConfig([]byte("subject: anon"))
+	protoConf, err := handler.DecodeTestConfig([]byte("subject: anon"))
 	require.NoError(t, err)
 
-	authConf, err := testsupport.DecodeTestConfig([]byte("subject: foo"))
+	authConf, err := handler.DecodeTestConfig([]byte("subject: foo"))
 	require.NoError(t, err)
 
-	prototype, err := NewAnonymousAuthenticator(protoConf)
+	prototype, err := newAnonymousAuthenticator(protoConf)
 	assert.NoError(t, err)
 
 	// WHEN
@@ -85,13 +85,13 @@ func TestCreateAnonymousAuthenticatorFromPrototypeGivenValidConfig(t *testing.T)
 func TestCreateAnonymousAuthenticatorFromPrototypeGivenInvalidConfig(t *testing.T) {
 	t.Parallel()
 	// GIVEN
-	protoConf, err := testsupport.DecodeTestConfig([]byte("subject: anon"))
+	protoConf, err := handler.DecodeTestConfig([]byte("subject: anon"))
 	require.NoError(t, err)
 
-	authConf, err := testsupport.DecodeTestConfig([]byte("foo: bar"))
+	authConf, err := handler.DecodeTestConfig([]byte("foo: bar"))
 	require.NoError(t, err)
 
-	prototype, err := NewAnonymousAuthenticator(protoConf)
+	prototype, err := newAnonymousAuthenticator(protoConf)
 	assert.NoError(t, err)
 
 	// WHEN
@@ -108,7 +108,7 @@ func TestAuthenticateWithAnonymousAuthenticatorWithCustomSubjectId(t *testing.T)
 	subjectID := "anon"
 	a := anonymousAuthenticator{Subject: subjectID}
 
-	ctx := &testsupport.MockContext{}
+	ctx := &handler.MockContext{}
 
 	// WHEN
 	sub, err := a.Authenticate(ctx)
@@ -124,10 +124,10 @@ func TestAuthenticateWithAnonymousAuthenticatorWithCustomSubjectId(t *testing.T)
 func TestAuthenticateWithAnonymousAuthenticatorWithDefaultSubjectId(t *testing.T) {
 	t.Parallel()
 	// GIVEN
-	auth, err := NewAnonymousAuthenticator(nil)
+	auth, err := newAnonymousAuthenticator(nil)
 	assert.NoError(t, err)
 
-	ctx := &testsupport.MockContext{}
+	ctx := &handler.MockContext{}
 
 	// WHEN
 	sub, err := auth.Authenticate(ctx)

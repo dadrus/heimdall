@@ -1,13 +1,27 @@
 package authenticators
 
 import (
+	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/pipeline/handler"
 	"github.com/dadrus/heimdall/internal/pipeline/handler/subject"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
-func NewAnonymousAuthenticator(rawConfig map[string]any) (*anonymousAuthenticator, error) {
+func init() {
+	handler.RegisterAuthenticatorTypeFactory(
+		func(typ config.PipelineObjectType, conf map[string]any) (bool, handler.Authenticator, error) {
+			if typ != config.POTAnonymous {
+				return false, nil, nil
+			}
+
+			auth, err := newAnonymousAuthenticator(conf)
+
+			return true, auth, err
+		})
+}
+
+func newAnonymousAuthenticator(rawConfig map[string]any) (*anonymousAuthenticator, error) {
 	var auth anonymousAuthenticator
 
 	if err := decodeConfig(rawConfig, &auth); err != nil {
@@ -37,5 +51,5 @@ func (a *anonymousAuthenticator) WithConfig(config map[string]any) (handler.Auth
 		return a, nil
 	}
 
-	return NewAnonymousAuthenticator(config)
+	return newAnonymousAuthenticator(config)
 }

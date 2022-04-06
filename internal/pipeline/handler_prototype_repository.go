@@ -7,18 +7,10 @@ import (
 
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/pipeline/handler"
-	"github.com/dadrus/heimdall/internal/pipeline/handler/authenticators"
-	"github.com/dadrus/heimdall/internal/pipeline/handler/authorizers"
-	"github.com/dadrus/heimdall/internal/pipeline/handler/errorhandlers"
-	"github.com/dadrus/heimdall/internal/pipeline/handler/hydrators"
-	"github.com/dadrus/heimdall/internal/pipeline/handler/mutators"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
-var (
-	ErrUnsupportedPipelineObjectType = errors.New("pipeline object type unsupported")
-	ErrNoSuchPipelineObject          = errors.New("pipeline object not found")
-)
+var ErrNoSuchPipelineObject = errors.New("pipeline object not found")
 
 func newHandlerPrototypeRepository(
 	conf config.Configuration,
@@ -26,7 +18,8 @@ func newHandlerPrototypeRepository(
 ) (*handlerPrototypeRepository, error) {
 	logger.Debug().Msg("Loading definitions for authenticators")
 
-	authenticatorMap, err := createPipelineObjects(conf.Pipeline.Authenticators, logger, newAuthenticator)
+	authenticatorMap, err := createPipelineObjects(conf.Pipeline.Authenticators, logger,
+		handler.CreateAuthenticatorType)
 	if err != nil {
 		logger.Error().Err(err).Msg("Failed loading authenticators definitions")
 
@@ -35,7 +28,8 @@ func newHandlerPrototypeRepository(
 
 	logger.Debug().Msg("Loading definitions for authorizers")
 
-	authorizerMap, err := createPipelineObjects(conf.Pipeline.Authorizers, logger, newAuthorizer)
+	authorizerMap, err := createPipelineObjects(conf.Pipeline.Authorizers, logger,
+		handler.CreateAuthorizerType)
 	if err != nil {
 		logger.Error().Err(err).Msg("Failed loading authorizers definitions")
 
@@ -44,7 +38,8 @@ func newHandlerPrototypeRepository(
 
 	logger.Debug().Msg("Loading definitions for hydrators")
 
-	hydratorMap, err := createPipelineObjects(conf.Pipeline.Hydrators, logger, newHydrator)
+	hydratorMap, err := createPipelineObjects(conf.Pipeline.Hydrators, logger,
+		handler.CreateHydratorType)
 	if err != nil {
 		logger.Error().Err(err).Msg("Failed loading hydrators definitions")
 
@@ -53,7 +48,8 @@ func newHandlerPrototypeRepository(
 
 	logger.Debug().Msg("Loading definitions for mutators")
 
-	mutatorMap, err := createPipelineObjects(conf.Pipeline.Mutators, logger, newMutator)
+	mutatorMap, err := createPipelineObjects(conf.Pipeline.Mutators, logger,
+		handler.CreateMutatorType)
 	if err != nil {
 		logger.Error().Err(err).Msg("Failed loading mutators definitions")
 
@@ -62,7 +58,8 @@ func newHandlerPrototypeRepository(
 
 	logger.Debug().Msg("Loading definitions for error handler")
 
-	ehMap, err := createPipelineObjects(conf.Pipeline.ErrorHandlers, logger, newErrorHandler)
+	ehMap, err := createPipelineObjects(conf.Pipeline.ErrorHandlers, logger,
+		handler.CreateErrorHandlerType)
 	if err != nil {
 		logger.Error().Err(err).Msg("Failed loading error handler definitions")
 
@@ -81,14 +78,14 @@ func newHandlerPrototypeRepository(
 func createPipelineObjects[T any](
 	pObjects []config.PipelineObject,
 	logger zerolog.Logger,
-	create func(obj config.PipelineObject) (T, error),
+	create func(t config.PipelineObjectType, c map[string]any) (T, error),
 ) (map[string]T, error) {
 	objects := make(map[string]T)
 
 	for _, pe := range pObjects {
 		logger.Debug().Str("id", pe.ID).Str("type", string(pe.Type)).Msg("Loading pipeline definition")
 
-		if r, err := create(pe); err == nil {
+		if r, err := create(pe.Type, pe.Config); err == nil {
 			objects[pe.ID] = r
 		} else {
 			return nil, err
@@ -96,128 +93,6 @@ func createPipelineObjects[T any](
 	}
 
 	return objects, nil
-}
-
-func newAuthenticator(obj config.PipelineObject) (handler.Authenticator, error) {
-	var (
-		err           error
-		authenticator handler.Authenticator
-	)
-
-	switch obj.Type {
-	case config.POTNoop:
-		authenticator, err = authenticators.NewNoopAuthenticator(), nil
-	case config.POTAnonymous:
-		authenticator, err = authenticators.NewAnonymousAuthenticator(obj.Config)
-	case config.POTUnauthorized:
-		authenticator, err = authenticators.NewUnauthorizedAuthenticator(), nil
-	case config.POTAuthenticationData:
-		authenticator, err = authenticators.NewAuthenticationDataAuthenticator(obj.Config)
-	case config.POTOAuth2Introspection:
-		authenticator, err = authenticators.NewOAuth2IntrospectionAuthenticator(obj.Config)
-	case config.POTJwt:
-		authenticator, err = authenticators.NewJwtAuthenticator(obj.Config)
-	default:
-		err = errorchain.NewWithMessagef(ErrUnsupportedPipelineObjectType,
-			"authenticator type \"%s\" unknown", string(obj.Type))
-	}
-
-	if err != nil {
-		return nil, errorchain.New(ErrAuthenticatorCreation).CausedBy(err)
-	}
-
-	return authenticator, nil
-}
-
-func newAuthorizer(obj config.PipelineObject) (handler.Authorizer, error) {
-	var (
-		err        error
-		authorizer handler.Authorizer
-	)
-
-	switch obj.Type {
-	case config.POTAllow:
-		authorizer, err = authorizers.NewAllowAuthorizer(), nil
-	case config.POTDeny:
-		authorizer, err = authorizers.NewDenyAuthorizer(), nil
-	case config.POTRemote:
-		authorizer, err = authorizers.NewRemoteAuthorizer(obj.Config)
-	default:
-		err = errorchain.NewWithMessagef(ErrUnsupportedPipelineObjectType, "authorizer type '%s' unknown", string(obj.Type))
-	}
-
-	if err != nil {
-		return nil, errorchain.New(ErrAuthorizerCreation).CausedBy(err)
-	}
-
-	return authorizer, nil
-}
-
-func newHydrator(obj config.PipelineObject) (handler.Hydrator, error) {
-	var (
-		err      error
-		hydrator handler.Hydrator
-	)
-
-	switch obj.Type {
-	case config.POTDefault:
-		hydrator, err = hydrators.NewDefaultHydrator(obj.Config)
-	default:
-		err = errorchain.NewWithMessagef(ErrUnsupportedPipelineObjectType, "hydrator type '%s' unknown", string(obj.Type))
-	}
-
-	if err != nil {
-		return nil, errorchain.New(ErrHydratorCreation).CausedBy(err)
-	}
-
-	return hydrator, nil
-}
-
-func newMutator(obj config.PipelineObject) (handler.Mutator, error) {
-	var (
-		err     error
-		mutator handler.Mutator
-	)
-
-	switch obj.Type {
-	case config.POTJwt:
-		mutator, err = mutators.NewJWTMutator(obj.Config)
-	case config.POTHeader:
-		mutator, err = mutators.NewHeaderMutator(obj.Config)
-	case config.POTCookie:
-		mutator, err = mutators.NewCookieMutator(obj.Config)
-	default:
-		err = errorchain.NewWithMessagef(ErrUnsupportedPipelineObjectType, "mutator type '%s' unknown", string(obj.Type))
-	}
-
-	if err != nil {
-		return nil, errorchain.New(ErrMutatorCreation).CausedBy(err)
-	}
-
-	return mutator, nil
-}
-
-func newErrorHandler(obj config.PipelineObject) (handler.ErrorHandler, error) {
-	var (
-		err     error
-		handler handler.ErrorHandler
-	)
-
-	switch obj.Type {
-	case config.POTJson:
-		handler, err = errorhandlers.NewJsonErrorHandler(obj.Config)
-	case config.POTRedirect:
-		handler, err = errorhandlers.NewRedirectErrorHandler(obj.Config)
-	default:
-		err = errorchain.NewWithMessagef(ErrUnsupportedPipelineObjectType,
-			"error handler type '%s' unknown", string(obj.Type))
-	}
-
-	if err != nil {
-		return nil, errorchain.New(ErrErrorHandlerCreation).CausedBy(err)
-	}
-
-	return handler, nil
 }
 
 type handlerPrototypeRepository struct {

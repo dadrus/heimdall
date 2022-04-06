@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/dadrus/heimdall/internal/pipeline/handler"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"gopkg.in/yaml.v2"
@@ -15,7 +16,6 @@ import (
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/pipeline/endpoint"
 	"github.com/dadrus/heimdall/internal/pipeline/handler/subject"
-	"github.com/dadrus/heimdall/internal/testsupport"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
@@ -105,7 +105,7 @@ session:
 		t.Run("case="+tc.uc, func(t *testing.T) {
 			t.Parallel()
 			// WHEN
-			_, err := NewAuthenticationDataAuthenticator(decode(tc.config))
+			_, err := newAuthenticationDataAuthenticator(decode(tc.config))
 
 			// THEN
 			tc.assertError(t, err)
@@ -152,13 +152,13 @@ func TestSuccessfulExecutionOfAuthenticationDataAuthenticator(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	ctx := &testsupport.MockContext{}
+	ctx := &handler.MockContext{}
 	ctx.On("AppContext").Return(context.Background())
 
 	adg := &MockAuthDataGetter{}
 	adg.On("GetAuthData", ctx).Return(&DummyAuthData{Val: authDataVal}, nil)
 
-	subExtr := &testsupport.MockSubjectExtractor{}
+	subExtr := &handler.MockSubjectExtractor{}
 	subExtr.On("GetSubject", subjectData).Return(sub, nil)
 
 	ada := authenticationDataAuthenticator{
@@ -183,13 +183,13 @@ func TestSuccessfulExecutionOfAuthenticationDataAuthenticator(t *testing.T) {
 func TestAuthenticationDataAuthenticatorExecutionFailsDueToMissingAuthData(t *testing.T) {
 	t.Parallel()
 	// GIVEN
-	subExtr := &testsupport.MockSubjectExtractor{}
+	subExtr := &handler.MockSubjectExtractor{}
 
-	ctx := &testsupport.MockContext{}
+	ctx := &handler.MockContext{}
 	ctx.On("AppContext").Return(context.Background())
 
 	adg := &MockAuthDataGetter{}
-	adg.On("GetAuthData", mock.Anything).Return(nil, testsupport.ErrTestPurpose)
+	adg.On("GetAuthData", mock.Anything).Return(nil, handler.ErrTestPurpose)
 
 	ada := authenticationDataAuthenticator{
 		e:   endpoint.Endpoint{URL: "foobar.local"},
@@ -207,7 +207,7 @@ func TestAuthenticationDataAuthenticatorExecutionFailsDueToMissingAuthData(t *te
 	var erc *errorchain.ErrorChain
 
 	assert.ErrorAs(t, err, &erc)
-	assert.ErrorIs(t, erc, testsupport.ErrTestPurpose)
+	assert.ErrorIs(t, erc, handler.ErrTestPurpose)
 
 	ctx.AssertExpectations(t)
 	subExtr.AssertExpectations(t)
@@ -219,13 +219,13 @@ func TestAuthenticationDataAuthenticatorExecutionFailsDueToEndpointError(t *test
 	// GIVEN
 	authDataVal := "foobar"
 
-	ctx := &testsupport.MockContext{}
+	ctx := &handler.MockContext{}
 	ctx.On("AppContext").Return(context.Background())
 
 	adg := &MockAuthDataGetter{}
 	adg.On("GetAuthData", ctx).Return(DummyAuthData{Val: authDataVal}, nil)
 
-	subExtr := &testsupport.MockSubjectExtractor{}
+	subExtr := &handler.MockSubjectExtractor{}
 
 	ada := authenticationDataAuthenticator{
 		e:   endpoint.Endpoint{URL: "foobar.local"},
@@ -270,14 +270,14 @@ func TestAuthenticationDataAuthenticatorExecutionFailsDueToFailedSubjectExtracti
 	}))
 	defer srv.Close()
 
-	ctx := &testsupport.MockContext{}
+	ctx := &handler.MockContext{}
 	ctx.On("AppContext").Return(context.Background())
 
 	adg := &MockAuthDataGetter{}
 	adg.On("GetAuthData", ctx).Return(DummyAuthData{Val: authDataVal}, nil)
 
-	subExtr := &testsupport.MockSubjectExtractor{}
-	subExtr.On("GetSubject", subjectData).Return(nil, testsupport.ErrTestPurpose)
+	subExtr := &handler.MockSubjectExtractor{}
+	subExtr.On("GetSubject", subjectData).Return(nil, handler.ErrTestPurpose)
 
 	ada := authenticationDataAuthenticator{
 		e:   endpoint.Endpoint{URL: srv.URL, Method: http.MethodGet},
@@ -290,7 +290,7 @@ func TestAuthenticationDataAuthenticatorExecutionFailsDueToFailedSubjectExtracti
 
 	// THEN
 	assert.Error(t, err)
-	assert.True(t, errors.Is(err, testsupport.ErrTestPurpose))
+	assert.True(t, errors.Is(err, handler.ErrTestPurpose))
 
 	assert.Nil(t, sub)
 

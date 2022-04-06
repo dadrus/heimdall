@@ -1,4 +1,4 @@
-package authenticators
+package handler
 
 import (
 	"context"
@@ -7,7 +7,6 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/dadrus/heimdall/internal/pipeline/handler/subject"
-	"github.com/dadrus/heimdall/internal/testsupport"
 )
 
 func TestCompositeAuthenticatorExecutionWithFallback(t *testing.T) {
@@ -16,13 +15,13 @@ func TestCompositeAuthenticatorExecutionWithFallback(t *testing.T) {
 	// GIVEN
 	sub := &subject.Subject{ID: "foo"}
 
-	ctx := &testsupport.MockContext{}
+	ctx := &MockContext{}
 	ctx.On("AppContext").Return(context.Background())
 
-	auth1 := &testsupport.MockAuthenticator{}
-	auth1.On("Authenticate", ctx).Return(nil, testsupport.ErrTestPurpose)
+	auth1 := &MockAuthenticator{}
+	auth1.On("Authenticate", ctx).Return(nil, ErrTestPurpose)
 
-	auth2 := &testsupport.MockAuthenticator{}
+	auth2 := &MockAuthenticator{}
 	auth2.On("Authenticate", ctx).Return(sub, nil)
 
 	auth := CompositeAuthenticator{auth1, auth2}
@@ -44,11 +43,11 @@ func TestCompositeAuthenticatorExecutionWithoutFallback(t *testing.T) {
 	// GIVEN
 	sub := &subject.Subject{ID: "foo"}
 
-	ctx := &testsupport.MockContext{}
+	ctx := &MockContext{}
 	ctx.On("AppContext").Return(context.Background())
 
-	auth1 := &testsupport.MockAuthenticator{}
-	auth2 := &testsupport.MockAuthenticator{}
+	auth1 := &MockAuthenticator{}
+	auth2 := &MockAuthenticator{}
 	auth2.On("Authenticate", ctx).Return(sub, nil)
 
 	auth := CompositeAuthenticator{auth2, auth1}

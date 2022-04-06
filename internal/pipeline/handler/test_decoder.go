@@ -1,4 +1,4 @@
-package testsupport
+package handler
 
 import "gopkg.in/yaml.v2"
 

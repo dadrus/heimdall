@@ -1,14 +1,28 @@
 package mutators
 
 import (
+	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/pipeline/handler"
 	"github.com/dadrus/heimdall/internal/pipeline/handler/subject"
 )
 
+func init() {
+	handler.RegisterMutatorTypeFactory(
+		func(typ config.PipelineObjectType, conf map[string]any) (bool, handler.Mutator, error) {
+			if typ != config.POTHeader {
+				return false, nil, nil
+			}
+
+			mut, err := newHeaderMutator(conf)
+
+			return true, mut, err
+		})
+}
+
 type headerMutator struct{}
 
-func NewHeaderMutator(rawConfig map[string]any) (headerMutator, error) {
+func newHeaderMutator(rawConfig map[string]any) (headerMutator, error) {
 	return headerMutator{}, nil
 }
 

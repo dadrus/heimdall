@@ -1,0 +1,45 @@
+package handler
+
+import (
+	"errors"
+	"sync"
+
+	"github.com/dadrus/heimdall/internal/config"
+	"github.com/dadrus/heimdall/internal/x/errorchain"
+)
+
+var (
+	ErrUnsupportedMutatorType = errors.New("mutator type unsupported")
+
+	// by intention. Used only during application bootstrap
+	// nolint
+	mutatorTypeFactories []MutatorTypeFactory
+	// nolint
+	mutatorTypeFactoriesMu sync.RWMutex
+)
+
+type MutatorTypeFactory func(t config.PipelineObjectType, c map[string]any) (bool, Mutator, error)
+
+func RegisterMutatorTypeFactory(factory MutatorTypeFactory) {
+	mutatorTypeFactoriesMu.Lock()
+	defer mutatorTypeFactoriesMu.Unlock()
+
+	if factory == nil {
+		panic("RegisterMutatorType factory is nil")
+	}
+
+	mutatorTypeFactories = append(mutatorTypeFactories, factory)
+}
+
+func CreateMutatorType(typ config.PipelineObjectType, config map[string]any) (Mutator, error) {
+	mutatorTypeFactoriesMu.RLock()
+	defer mutatorTypeFactoriesMu.RUnlock()
+
+	for _, create := range mutatorTypeFactories {
+		if ok, at, err := create(typ, config); ok {
+			return at, err
+		}
+	}
+
+	return nil, errorchain.NewWithMessagef(ErrUnsupportedMutatorType, "'%s'", typ)
+}

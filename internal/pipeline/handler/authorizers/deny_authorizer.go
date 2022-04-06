@@ -1,15 +1,27 @@
 package authorizers
 
 import (
+	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/pipeline/handler"
 	"github.com/dadrus/heimdall/internal/pipeline/handler/subject"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
+func init() {
+	handler.RegisterAuthorizerTypeFactory(
+		func(typ config.PipelineObjectType, conf map[string]any) (bool, handler.Authorizer, error) {
+			if typ != config.POTDeny {
+				return false, nil, nil
+			}
+
+			return true, newDenyAuthorizer(), nil
+		})
+}
+
 type denyAuthorizer struct{}
 
-func NewDenyAuthorizer() *denyAuthorizer {
+func newDenyAuthorizer() *denyAuthorizer {
 	return &denyAuthorizer{}
 }
 

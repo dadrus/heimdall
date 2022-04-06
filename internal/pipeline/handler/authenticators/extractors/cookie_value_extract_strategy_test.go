@@ -4,10 +4,9 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/dadrus/heimdall/internal/pipeline/handler"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	"github.com/dadrus/heimdall/internal/testsupport"
 )
 
 func TestExtractCookieValue(t *testing.T) {
@@ -19,7 +18,7 @@ func TestExtractCookieValue(t *testing.T) {
 	req, err := http.NewRequest(http.MethodGet, "foobar.local", nil)
 	require.NoError(t, err)
 
-	ctx := &testsupport.MockContext{}
+	ctx := &handler.MockContext{}
 	ctx.On("RequestCookie", cookieName).Return(cookieValue)
 
 	strategy := CookieValueExtractStrategy{Name: cookieName}

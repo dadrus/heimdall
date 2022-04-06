@@ -3,9 +3,8 @@ package extractors
 import (
 	"testing"
 
+	"github.com/dadrus/heimdall/internal/pipeline/handler"
 	"github.com/stretchr/testify/assert"
-
-	"github.com/dadrus/heimdall/internal/testsupport"
 )
 
 func TestCompositeExtractCookieValueWithoutPrefix(t *testing.T) {
@@ -16,7 +15,7 @@ func TestCompositeExtractCookieValueWithoutPrefix(t *testing.T) {
 	cookieName := "Test-Cookie"
 	actualValue := "foo"
 
-	ctx := &testsupport.MockContext{}
+	ctx := &handler.MockContext{}
 	ctx.On("RequestCookie", cookieName).Return(actualValue)
 	ctx.On("RequestHeader", headerName).Return("")
 
@@ -43,7 +42,7 @@ func TestCompositeExtractHeaderValueWithPrefix(t *testing.T) {
 	valuePrefix := "bar:"
 	actualValue := "foo"
 
-	ctx := &testsupport.MockContext{}
+	ctx := &handler.MockContext{}
 	ctx.On("RequestHeader", headerName).Return(valuePrefix + " " + actualValue)
 	ctx.On("RequestQueryParameter", queryParamName).Return("")
 
@@ -70,7 +69,7 @@ func TestCompositeExtractStrategyOrder(t *testing.T) {
 	valuePrefix := "bar:"
 	actualValue := "foo"
 
-	ctx := &testsupport.MockContext{}
+	ctx := &handler.MockContext{}
 	ctx.On("RequestHeader", headerName).Return(valuePrefix + " " + actualValue)
 
 	strategy := CompositeExtractStrategy{
