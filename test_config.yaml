@@ -26,6 +26,7 @@ pipeline:
             give_up_after: 2s
         authentication_data_source:
           - cookie: ory_kratos_session
+            transform_to: 
         session:
           attributes_from: "@this"
           subject_from: "identity.id"

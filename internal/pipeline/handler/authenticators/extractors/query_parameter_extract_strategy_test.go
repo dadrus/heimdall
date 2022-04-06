@@ -1,51 +1,38 @@
 package extractors
 
 import (
+	"net/http"
 	"testing"
 
-	"github.com/dadrus/heimdall/internal/testsupport"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"github.com/dadrus/heimdall/internal/testsupport"
 )
 
-func TestExtractQueryParameterWithoutPrefix(t *testing.T) {
+func TestExtractQueryParameter(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
-	queryParameter := "test_param"
-	actualValue := "foo"
-	
-	ctx := &testsupport.MockContext{}
-	ctx.On("RequestQueryParameter", queryParameter).Return(actualValue)
+	queryParam := "test_param"
+	queryParamValue := "foo"
+	req, err := http.NewRequest(http.MethodGet, "foobar.local", nil)
+	require.NoError(t, err)
 
-	strategy := QueryParameterExtractStrategy{Name: queryParameter}
+	ctx := &testsupport.MockContext{}
+	ctx.On("RequestQueryParameter", queryParam).Return(queryParamValue)
+
+	strategy := QueryParameterExtractStrategy{Name: queryParam}
 
 	// WHEN
 	val, err := strategy.GetAuthData(ctx)
 
 	// THEN
 	assert.NoError(t, err)
-	assert.Equal(t, actualValue, val)
-	ctx.AssertExpectations(t)
-}
+	assert.Equal(t, queryParamValue, val.Value())
 
-func TestExtractQueryParameterWithPrefix(t *testing.T) {
-	t.Parallel()
+	val.ApplyTo(req)
+	assert.Equal(t, queryParamValue, req.URL.Query().Get(queryParam))
 
-	// GIVEN
-	queryParameter := "test_param"
-	valuePrefix := "bar:"
-	actualValue := "foo"
-
-	ctx := &testsupport.MockContext{}
-	ctx.On("RequestQueryParameter", queryParameter).Return(valuePrefix + " " + actualValue)
-
-	strategy := QueryParameterExtractStrategy{Name: queryParameter, Prefix: valuePrefix}
-
-	// WHEN
-	val, err := strategy.GetAuthData(ctx)
-
-	// THEN
-	assert.NoError(t, err)
-	assert.Equal(t, actualValue, val)
 	ctx.AssertExpectations(t)
 }

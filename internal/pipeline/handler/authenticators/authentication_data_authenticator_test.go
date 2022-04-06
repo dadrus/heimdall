@@ -3,14 +3,17 @@ package authenticators
 import (
 	"context"
 	"errors"
-	"io"
-	"io/ioutil"
+	"net/http"
+	"net/http/httptest"
+	"strconv"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"gopkg.in/yaml.v2"
 
+	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/pipeline/endpoint"
 	"github.com/dadrus/heimdall/internal/pipeline/handler/subject"
 	"github.com/dadrus/heimdall/internal/testsupport"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
@@ -126,29 +129,40 @@ func TestCreateAuthenticationDataAuthenticatorFromPrototypeNotAllowed(t *testing
 func TestSuccessfulExecutionOfAuthenticationDataAuthenticator(t *testing.T) {
 	t.Parallel()
 	// GIVEN
+
 	sub := &subject.Subject{ID: "bar"}
-	eResp := []byte("foo")
 	authDataVal := "foobar"
+	subjectData := []byte(`{"foo":"bar", "bar":"foo"}`)
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+
+			return
+		}
+
+		receivedAuthData := r.Header.Get("Dummy")
+		assert.Equal(t, authDataVal, receivedAuthData)
+
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Content-Length", strconv.Itoa(len(subjectData)))
+
+		_, err := w.Write(subjectData)
+		assert.NoError(t, err)
+	}))
+	defer srv.Close()
 
 	ctx := &testsupport.MockContext{}
 	ctx.On("AppContext").Return(context.Background())
 
-	ept := &testsupport.MockEndpoint{}
-	ept.On("SendRequest", mock.Anything, mock.MatchedBy(func(r io.Reader) bool {
-		val, _ := ioutil.ReadAll(r)
-
-		return string(val) == authDataVal
-	}),
-	).Return(eResp, nil)
+	adg := &MockAuthDataGetter{}
+	adg.On("GetAuthData", ctx).Return(&DummyAuthData{Val: authDataVal}, nil)
 
 	subExtr := &testsupport.MockSubjectExtractor{}
-	subExtr.On("GetSubject", eResp).Return(sub, nil)
-
-	adg := &testsupport.MockAuthDataGetter{}
-	adg.On("GetAuthData", ctx).Return(authDataVal, nil)
+	subExtr.On("GetSubject", subjectData).Return(sub, nil)
 
 	ada := authenticationDataAuthenticator{
-		e:   ept,
+		e:   endpoint.Endpoint{URL: srv.URL, Method: http.MethodGet},
 		se:  subExtr,
 		adg: adg,
 	}
@@ -162,7 +176,6 @@ func TestSuccessfulExecutionOfAuthenticationDataAuthenticator(t *testing.T) {
 	assert.Equal(t, sub, rSub)
 
 	ctx.AssertExpectations(t)
-	ept.AssertExpectations(t)
 	subExtr.AssertExpectations(t)
 	adg.AssertExpectations(t)
 }
@@ -170,17 +183,16 @@ func TestSuccessfulExecutionOfAuthenticationDataAuthenticator(t *testing.T) {
 func TestAuthenticationDataAuthenticatorExecutionFailsDueToMissingAuthData(t *testing.T) {
 	t.Parallel()
 	// GIVEN
-	ept := &testsupport.MockEndpoint{}
 	subExtr := &testsupport.MockSubjectExtractor{}
 
 	ctx := &testsupport.MockContext{}
 	ctx.On("AppContext").Return(context.Background())
 
-	adg := &testsupport.MockAuthDataGetter{}
-	adg.On("GetAuthData", mock.Anything).Return("", testsupport.ErrTestPurpose)
+	adg := &MockAuthDataGetter{}
+	adg.On("GetAuthData", mock.Anything).Return(nil, testsupport.ErrTestPurpose)
 
 	ada := authenticationDataAuthenticator{
-		e:   ept,
+		e:   endpoint.Endpoint{URL: "foobar.local"},
 		se:  subExtr,
 		adg: adg,
 	}
@@ -198,7 +210,6 @@ func TestAuthenticationDataAuthenticatorExecutionFailsDueToMissingAuthData(t *te
 	assert.ErrorIs(t, erc, testsupport.ErrTestPurpose)
 
 	ctx.AssertExpectations(t)
-	ept.AssertExpectations(t)
 	subExtr.AssertExpectations(t)
 	adg.AssertExpectations(t)
 }
@@ -211,16 +222,13 @@ func TestAuthenticationDataAuthenticatorExecutionFailsDueToEndpointError(t *test
 	ctx := &testsupport.MockContext{}
 	ctx.On("AppContext").Return(context.Background())
 
-	adg := &testsupport.MockAuthDataGetter{}
-	adg.On("GetAuthData", ctx).Return(authDataVal, nil)
-
-	ept := &testsupport.MockEndpoint{}
-	ept.On("SendRequest", mock.Anything, mock.Anything).Return(nil, testsupport.ErrTestPurpose)
+	adg := &MockAuthDataGetter{}
+	adg.On("GetAuthData", ctx).Return(DummyAuthData{Val: authDataVal}, nil)
 
 	subExtr := &testsupport.MockSubjectExtractor{}
 
 	ada := authenticationDataAuthenticator{
-		e:   ept,
+		e:   endpoint.Endpoint{URL: "foobar.local"},
 		se:  subExtr,
 		adg: adg,
 	}
@@ -230,11 +238,10 @@ func TestAuthenticationDataAuthenticatorExecutionFailsDueToEndpointError(t *test
 
 	// THEN
 	assert.Error(t, err)
-	assert.True(t, errors.Is(err, testsupport.ErrTestPurpose))
+	assert.True(t, errors.Is(err, heimdall.ErrCommunication))
 
 	assert.Nil(t, sub)
 
-	ept.AssertExpectations(t)
 	subExtr.AssertExpectations(t)
 	adg.AssertExpectations(t)
 }
@@ -243,22 +250,37 @@ func TestAuthenticationDataAuthenticatorExecutionFailsDueToFailedSubjectExtracti
 	t.Parallel()
 	// GIVEN
 	authDataVal := "foobar"
-	eResp := []byte("foo")
+	subjectData := []byte(`{"foo":"bar", "bar":"foo"}`)
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+
+			return
+		}
+
+		receivedAuthData := r.Header.Get("Dummy")
+		assert.Equal(t, authDataVal, receivedAuthData)
+
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Content-Length", strconv.Itoa(len(subjectData)))
+
+		_, err := w.Write(subjectData)
+		assert.NoError(t, err)
+	}))
+	defer srv.Close()
 
 	ctx := &testsupport.MockContext{}
 	ctx.On("AppContext").Return(context.Background())
 
-	adg := &testsupport.MockAuthDataGetter{}
-	adg.On("GetAuthData", ctx).Return(authDataVal, nil)
-
-	ept := &testsupport.MockEndpoint{}
-	ept.On("SendRequest", mock.Anything, mock.Anything).Return(eResp, nil)
+	adg := &MockAuthDataGetter{}
+	adg.On("GetAuthData", ctx).Return(DummyAuthData{Val: authDataVal}, nil)
 
 	subExtr := &testsupport.MockSubjectExtractor{}
-	subExtr.On("GetSubject", eResp).Return(nil, testsupport.ErrTestPurpose)
+	subExtr.On("GetSubject", subjectData).Return(nil, testsupport.ErrTestPurpose)
 
 	ada := authenticationDataAuthenticator{
-		e:   ept,
+		e:   endpoint.Endpoint{URL: srv.URL, Method: http.MethodGet},
 		se:  subExtr,
 		adg: adg,
 	}
@@ -272,7 +294,6 @@ func TestAuthenticationDataAuthenticatorExecutionFailsDueToFailedSubjectExtracti
 
 	assert.Nil(t, sub)
 
-	ept.AssertExpectations(t)
 	subExtr.AssertExpectations(t)
 	adg.AssertExpectations(t)
 }

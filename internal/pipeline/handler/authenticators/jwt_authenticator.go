@@ -84,7 +84,7 @@ func NewJwtAuthenticator(rawConfig map[string]any) (*jwtAuthenticator, error) {
 	if conf.AuthDataSource == nil {
 		adg = extractors.CompositeExtractStrategy{
 			extractors.HeaderValueExtractStrategy{Name: "Authorization", Prefix: "Bearer"},
-			extractors.FormParameterExtractStrategy{Name: "access_token"},
+			extractors.CookieValueExtractStrategy{Name: "access_token"},
 			extractors.QueryParameterExtractStrategy{Name: "access_token"},
 		}
 	} else {
@@ -100,7 +100,7 @@ func NewJwtAuthenticator(rawConfig map[string]any) (*jwtAuthenticator, error) {
 }
 
 func (a *jwtAuthenticator) Authenticate(ctx heimdall.Context) (*subject.Subject, error) {
-	jwtRaw, err := a.adg.GetAuthData(ctx)
+	jwt, err := a.adg.GetAuthData(ctx)
 	if err != nil {
 		return nil, errorchain.
 			NewWithMessage(heimdall.ErrAuthentication, "not jwt token present").
@@ -131,7 +131,7 @@ func (a *jwtAuthenticator) Authenticate(ctx heimdall.Context) (*subject.Subject,
 		return nil, err
 	}
 
-	rawClaims, err := a.verifyTokenAndGetClaims(jwtRaw, jwks)
+	rawClaims, err := a.verifyTokenAndGetClaims(jwt.Value(), jwks)
 	if err != nil {
 		return nil, err
 	}
@@ -209,7 +209,7 @@ func (a *jwtAuthenticator) verifyTokenAndGetClaims(jwtRaw string, jwks *jose.JSO
 		claims    oauth2.Claims
 	)
 
-	if err = token.Claims(&jwks, &mapClaims, &claims); err != nil {
+	if err = token.Claims(keys[0], &mapClaims, &claims); err != nil {
 		return nil, err
 	}
 

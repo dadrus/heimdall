@@ -6,13 +6,14 @@ import (
 	"crypto/rsa"
 	"encoding/base64"
 	"encoding/json"
-	"io"
+	"net/http"
+	"net/http/httptest"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/square/go-jose.v2"
 	"gopkg.in/square/go-jose.v2/jwt"
@@ -113,7 +114,7 @@ jwt_assertions:
 				// token extractor settings
 				assert.IsType(t, extractors.CompositeExtractStrategy{}, auth.adg)
 				assert.Contains(t, auth.adg, extractors.HeaderValueExtractStrategy{Name: "Authorization", Prefix: "Bearer"})
-				assert.Contains(t, auth.adg, extractors.FormParameterExtractStrategy{Name: "access_token"})
+				assert.Contains(t, auth.adg, extractors.CookieValueExtractStrategy{Name: "access_token"})
 				assert.Contains(t, auth.adg, extractors.QueryParameterExtractStrategy{Name: "access_token"})
 
 				// assertions settings
@@ -290,10 +291,29 @@ func TestSuccessfulExecutionOfJwtAuthenticator(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
+	var receivedAcceptType string
+
 	subjectID := "foo"
 	issuer := "foobar"
 	audience := "bar"
 	jwks, jwt := setup(t, subjectID, issuer, audience)
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+
+			return
+		}
+
+		receivedAcceptType = r.Header.Get("Accept-Type")
+
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Content-Length", strconv.Itoa(len(jwks)))
+
+		_, err := w.Write(jwks)
+		assert.NoError(t, err)
+	}))
+	defer srv.Close()
 
 	as := oauth2.Expectation{
 		ScopesMatcher: oauth2.ScopesMatcher{
@@ -309,13 +329,8 @@ func TestSuccessfulExecutionOfJwtAuthenticator(t *testing.T) {
 	ctx := &testsupport.MockContext{}
 	ctx.On("AppContext").Return(context.Background())
 
-	adg := &testsupport.MockAuthDataGetter{}
-	adg.On("GetAuthData", ctx).Return(jwt, nil)
-
-	ept := &testsupport.MockEndpoint{}
-	ept.On("SendRequest", ctx.AppContext(), mock.MatchedBy(func(r io.Reader) bool {
-		return r == nil
-	})).Return(jwks, nil)
+	adg := &MockAuthDataGetter{}
+	adg.On("GetAuthData", ctx).Return(DummyAuthData{Val: jwt}, nil)
 
 	encJwtPayload := strings.Split(jwt, ".")[1]
 	rawPaload, err := base64.RawStdEncoding.DecodeString(encJwtPayload)
@@ -329,7 +344,11 @@ func TestSuccessfulExecutionOfJwtAuthenticator(t *testing.T) {
 	se.On("GetSubject", rawPaload).Return(&subject.Subject{ID: subjectID, Attributes: attrs}, nil)
 
 	auth := jwtAuthenticator{
-		e:   ept,
+		e: endpoint.Endpoint{
+			URL:     srv.URL,
+			Method:  http.MethodGet,
+			Headers: map[string]string{"Accept-Type": "application/json"},
+		},
 		a:   as,
 		se:  se,
 		adg: adg,
@@ -344,9 +363,9 @@ func TestSuccessfulExecutionOfJwtAuthenticator(t *testing.T) {
 	assert.NotNil(t, sub)
 	assert.Equal(t, subjectID, sub.ID)
 	assert.Equal(t, attrs, sub.Attributes)
+	assert.Equal(t, "application/json", receivedAcceptType)
 
 	ctx.AssertExpectations(t)
-	ept.AssertExpectations(t)
 	se.AssertExpectations(t)
 	adg.AssertExpectations(t)
 }

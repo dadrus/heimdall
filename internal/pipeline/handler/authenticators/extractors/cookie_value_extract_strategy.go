@@ -1,6 +1,7 @@
 package extractors
 
 import (
+	"net/http"
 	"strings"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
@@ -8,14 +9,29 @@ import (
 )
 
 type CookieValueExtractStrategy struct {
-	Name   string
-	Prefix string
+	Name string
 }
 
-func (es CookieValueExtractStrategy) GetAuthData(s heimdall.Context) (string, error) {
+func (es CookieValueExtractStrategy) GetAuthData(s heimdall.Context) (AuthData, error) {
 	if val := s.RequestCookie(es.Name); len(val) != 0 {
-		return strings.TrimSpace(strings.TrimPrefix(val, es.Prefix)), nil
+		return &cookieAuthData{
+			name:  es.Name,
+			value: strings.TrimSpace(val),
+		}, nil
 	}
 
-	return "", errorchain.NewWithMessagef(ErrAuthData, "no '%s' cookie present", es.Name)
+	return nil, errorchain.NewWithMessagef(ErrAuthData, "no '%s' cookie present", es.Name)
+}
+
+type cookieAuthData struct {
+	name  string
+	value string
+}
+
+func (c *cookieAuthData) ApplyTo(req *http.Request) {
+	req.AddCookie(&http.Cookie{Name: c.name, Value: c.value})
+}
+
+func (c *cookieAuthData) Value() string {
+	return c.value
 }

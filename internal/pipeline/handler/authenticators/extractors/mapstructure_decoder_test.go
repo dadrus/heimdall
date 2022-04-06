@@ -24,8 +24,6 @@ func TestUnmarshalAuthenticationDataSourceFromValidYaml(t *testing.T) {
   strip_prefix: hfoo
 - query_parameter: foo_qparam
   strip_prefix: qfoo
-- form_parameter: foo_fparam
-  strip_prefix: ffoo
 `
 
 	err := yaml.Unmarshal([]byte(config), &settings)
@@ -41,12 +39,11 @@ func TestUnmarshalAuthenticationDataSourceFromValidYaml(t *testing.T) {
 
 	err = dec.Decode(settings)
 	assert.NoError(t, err)
-	assert.Equal(t, 4, len(ces))
+	assert.Equal(t, 3, len(ces))
 
 	ce, ok := ces[0].(*CookieValueExtractStrategy)
 	require.True(t, ok)
 	assert.Equal(t, "foo_cookie", ce.Name)
-	assert.Equal(t, "cfoo", ce.Prefix)
 
 	he, ok := ces[1].(*HeaderValueExtractStrategy)
 	require.True(t, ok)
@@ -56,10 +53,4 @@ func TestUnmarshalAuthenticationDataSourceFromValidYaml(t *testing.T) {
 	qe, ok := ces[2].(*QueryParameterExtractStrategy)
 	require.True(t, ok)
 	assert.Equal(t, "foo_qparam", qe.Name)
-	assert.Equal(t, "qfoo", qe.Prefix)
-
-	fe, ok := ces[3].(*FormParameterExtractStrategy)
-	require.True(t, ok)
-	assert.Equal(t, "foo_fparam", fe.Name)
-	assert.Equal(t, "ffoo", fe.Prefix)
 }

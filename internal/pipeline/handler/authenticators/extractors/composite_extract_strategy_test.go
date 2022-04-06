@@ -3,24 +3,25 @@ package extractors
 import (
 	"testing"
 
-	"github.com/dadrus/heimdall/internal/testsupport"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/dadrus/heimdall/internal/testsupport"
 )
 
 func TestCompositeExtractCookieValueWithoutPrefix(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
-	formParamName := "test_param"
+	headerName := "test-header"
 	cookieName := "Test-Cookie"
 	actualValue := "foo"
 
 	ctx := &testsupport.MockContext{}
 	ctx.On("RequestCookie", cookieName).Return(actualValue)
-	ctx.On("RequestFormParameter", formParamName).Return("")
+	ctx.On("RequestHeader", headerName).Return("")
 
 	strategy := CompositeExtractStrategy{
-		FormParameterExtractStrategy{Name: formParamName},
+		HeaderValueExtractStrategy{Name: headerName},
 		CookieValueExtractStrategy{Name: cookieName},
 	}
 
@@ -29,7 +30,7 @@ func TestCompositeExtractCookieValueWithoutPrefix(t *testing.T) {
 
 	// THEN
 	assert.NoError(t, err)
-	assert.Equal(t, actualValue, val)
+	assert.Equal(t, actualValue, val.Value())
 	ctx.AssertExpectations(t)
 }
 
@@ -56,7 +57,7 @@ func TestCompositeExtractHeaderValueWithPrefix(t *testing.T) {
 
 	// THEN
 	assert.NoError(t, err)
-	assert.Equal(t, actualValue, val)
+	assert.Equal(t, actualValue, val.Value())
 	ctx.AssertExpectations(t)
 }
 
@@ -82,6 +83,6 @@ func TestCompositeExtractStrategyOrder(t *testing.T) {
 
 	// THEN
 	assert.NoError(t, err)
-	assert.Equal(t, actualValue, val)
+	assert.Equal(t, actualValue, val.Value())
 	ctx.AssertExpectations(t)
 }

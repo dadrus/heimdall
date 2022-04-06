@@ -1,21 +1,26 @@
 package extractors
 
 import (
+	"net/http"
 	"testing"
 
-	"github.com/dadrus/heimdall/internal/testsupport"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"github.com/dadrus/heimdall/internal/testsupport"
 )
 
-func TestExtractCookieValueWithoutPrefix(t *testing.T) {
+func TestExtractCookieValue(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
 	cookieName := "Test-Cookie"
-	actualValue := "foo"
+	cookieValue := "foo"
+	req, err := http.NewRequest(http.MethodGet, "foobar.local", nil)
+	require.NoError(t, err)
 
 	ctx := &testsupport.MockContext{}
-	ctx.On("RequestCookie", cookieName).Return(actualValue)
+	ctx.On("RequestCookie", cookieName).Return(cookieValue)
 
 	strategy := CookieValueExtractStrategy{Name: cookieName}
 
@@ -24,28 +29,12 @@ func TestExtractCookieValueWithoutPrefix(t *testing.T) {
 
 	// THEN
 	assert.NoError(t, err)
-	assert.Equal(t, actualValue, val)
-	ctx.AssertExpectations(t)
-}
+	assert.Equal(t, cookieValue, val.Value())
 
-func TestExtractCookieValueWithPrefix(t *testing.T) {
-	t.Parallel()
-
-	// GIVEN
-	cookieName := "Test-Cookie"
-	valuePrefix := "bar:"
-	actualValue := "foo"
-
-	ctx := &testsupport.MockContext{}
-	ctx.On("RequestCookie", cookieName).Return(valuePrefix + " " + actualValue)
-
-	strategy := CookieValueExtractStrategy{Name: cookieName, Prefix: valuePrefix}
-
-	// WHEN
-	val, err := strategy.GetAuthData(ctx)
-
-	// THEN
+	val.ApplyTo(req)
+	cookie, err := req.Cookie(cookieName)
 	assert.NoError(t, err)
-	assert.Equal(t, actualValue, val)
+	assert.Equal(t, cookieValue, cookie.Value)
+
 	ctx.AssertExpectations(t)
 }

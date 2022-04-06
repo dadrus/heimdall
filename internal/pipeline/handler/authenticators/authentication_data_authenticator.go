@@ -5,7 +5,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
-	"strings"
 
 	"github.com/rs/zerolog"
 
@@ -67,15 +66,17 @@ func (a *authenticationDataAuthenticator) Authenticate(ctx heimdall.Context) (*s
 
 	logger.Debug().Msg("Retrieving authentication data from request")
 
-	authDataRef, err := a.adg.GetAuthData(ctx)
+	authData, err := a.adg.GetAuthData(ctx)
 	if err != nil {
 		return nil, errorchain.New(heimdall.ErrAuthentication).CausedBy(err)
 	}
 
-	req, err := a.e.CreateRequest(ctx.AppContext(), strings.NewReader(authDataRef))
+	req, err := a.e.CreateRequest(ctx.AppContext(), nil)
 	if err != nil {
 		return nil, err
 	}
+
+	authData.ApplyTo(req)
 
 	resp, err := a.e.CreateClient().Do(req)
 	if err != nil {

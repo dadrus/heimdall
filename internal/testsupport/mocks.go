@@ -3,75 +3,15 @@ package testsupport
 import (
 	"context"
 	"errors"
-	"io"
-	"net/http"
+
+	"github.com/stretchr/testify/mock"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/pipeline/handler"
 	"github.com/dadrus/heimdall/internal/pipeline/handler/subject"
-	"github.com/stretchr/testify/mock"
 )
 
 var ErrTestPurpose = errors.New("error raised in a test")
-
-type MockEndpoint struct {
-	mock.Mock
-}
-
-func (m *MockEndpoint) CreateClient() *http.Client {
-	args := m.Called()
-
-	if val := args.Get(0); val != nil {
-		res, ok := val.(*http.Client)
-		if !ok {
-			panic("*http.Client expected")
-		}
-
-		return res
-	}
-
-	return nil
-}
-
-func (m *MockEndpoint) CreateRequest(ctx context.Context, body io.Reader) (*http.Request, error) {
-	args := m.Called(ctx, body)
-
-	if val := args.Get(0); val != nil {
-		res, ok := val.(*http.Request)
-		if !ok {
-			panic("*http.Request expected")
-		}
-
-		return res, args.Error(1)
-	}
-
-	return nil, args.Error(1)
-}
-
-func (m *MockEndpoint) SendRequest(ctx context.Context, body io.Reader) ([]byte, error) {
-	args := m.Called(ctx, body)
-
-	if val := args.Get(0); val != nil {
-		res, ok := val.([]byte)
-		if !ok {
-			panic("[]byte expected")
-		}
-
-		return res, args.Error(1)
-	}
-
-	return nil, args.Error(1)
-}
-
-type MockAuthDataGetter struct {
-	mock.Mock
-}
-
-func (m *MockAuthDataGetter) GetAuthData(s heimdall.Context) (string, error) {
-	args := m.Called(s)
-
-	return args.String(0), args.Error(1)
-}
 
 type MockSubjectExtractor struct {
 	mock.Mock

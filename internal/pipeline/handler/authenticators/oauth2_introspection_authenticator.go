@@ -74,7 +74,7 @@ func NewOAuth2IntrospectionAuthenticator(rawConfig map[string]any) (*oauth2Intro
 
 	extractor := extractors.CompositeExtractStrategy{
 		extractors.HeaderValueExtractStrategy{Name: "Authorization", Prefix: "Bearer"},
-		extractors.FormParameterExtractStrategy{Name: "access_token"},
+		extractors.CookieValueExtractStrategy{Name: "access_token"},
 		extractors.QueryParameterExtractStrategy{Name: "access_token"},
 	}
 
@@ -96,7 +96,7 @@ func (a *oauth2IntrospectionAuthenticator) Authenticate(ctx heimdall.Context) (*
 
 	req, err := a.e.CreateRequest(ctx.AppContext(), strings.NewReader(
 		url.Values{
-			"token":           []string{accessToken},
+			"token":           []string{accessToken.Value()},
 			"token_type_hint": []string{"access_token"},
 		}.Encode()))
 	if err != nil {
@@ -138,7 +138,9 @@ func (a *oauth2IntrospectionAuthenticator) Authenticate(ctx heimdall.Context) (*
 	return sub, nil
 }
 
-func (a *oauth2IntrospectionAuthenticator) readIntrospectionResponse(resp *http.Response) (*oauth2.IntrospectionResponse, []byte, error) {
+func (a *oauth2IntrospectionAuthenticator) readIntrospectionResponse(
+	resp *http.Response,
+) (*oauth2.IntrospectionResponse, []byte, error) {
 	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
 		rawData, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
