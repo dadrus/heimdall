@@ -13,7 +13,11 @@ import (
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/pipeline"
-	"github.com/dadrus/heimdall/internal/pipeline/handler"
+	"github.com/dadrus/heimdall/internal/pipeline/authenticators"
+	"github.com/dadrus/heimdall/internal/pipeline/authorizers"
+	"github.com/dadrus/heimdall/internal/pipeline/errorhandlers"
+	"github.com/dadrus/heimdall/internal/pipeline/hydrators"
+	"github.com/dadrus/heimdall/internal/pipeline/mutators"
 	"github.com/dadrus/heimdall/internal/rules/provider"
 )
 
@@ -209,11 +213,11 @@ type rule struct {
 	url     string
 	methods []string
 	srcID   string
-	an      handler.Authenticator
-	az      handler.Authorizer
-	h       handler.Hydrator
-	m       handler.Mutator
-	eh      handler.ErrorHandler
+	an      authenticators.Authenticator
+	az      authorizers.Authorizer
+	h       hydrators.Hydrator
+	m       mutators.Mutator
+	eh      errorhandlers.ErrorHandler
 }
 
 func (r *rule) Execute(ctx heimdall.Context) error {

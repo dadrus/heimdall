@@ -6,7 +6,11 @@ import (
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/config"
-	"github.com/dadrus/heimdall/internal/pipeline/handler"
+	"github.com/dadrus/heimdall/internal/pipeline/authenticators"
+	"github.com/dadrus/heimdall/internal/pipeline/authorizers"
+	"github.com/dadrus/heimdall/internal/pipeline/errorhandlers"
+	"github.com/dadrus/heimdall/internal/pipeline/hydrators"
+	"github.com/dadrus/heimdall/internal/pipeline/mutators"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
@@ -24,11 +28,11 @@ var (
 )
 
 type HandlerFactory interface {
-	CreateAuthenticator([]config.PipelineObjectReference) (handler.Authenticator, error)
-	CreateAuthorizer(*config.PipelineObjectReference) (handler.Authorizer, error)
-	CreateHydrator([]config.PipelineObjectReference) (handler.Hydrator, error)
-	CreateMutator([]config.PipelineObjectReference) (handler.Mutator, error)
-	CreateErrorHandler([]config.PipelineObjectReference) (handler.ErrorHandler, error)
+	CreateAuthenticator([]config.PipelineObjectReference) (authenticators.Authenticator, error)
+	CreateAuthorizer(*config.PipelineObjectReference) (authorizers.Authorizer, error)
+	CreateHydrator([]config.PipelineObjectReference) (hydrators.Hydrator, error)
+	CreateMutator([]config.PipelineObjectReference) (mutators.Mutator, error)
+	CreateErrorHandler([]config.PipelineObjectReference) (errorhandlers.ErrorHandler, error)
 }
 
 func NewHandlerFactory(conf config.Configuration, logger zerolog.Logger) (HandlerFactory, error) {
@@ -52,10 +56,12 @@ type handlerFactory struct {
 	dp config.Pipeline
 }
 
-func (hf *handlerFactory) CreateAuthenticator(pors []config.PipelineObjectReference) (handler.Authenticator, error) {
+func (hf *handlerFactory) CreateAuthenticator(
+	pors []config.PipelineObjectReference,
+) (authenticators.Authenticator, error) {
 	var (
 		refs []config.PipelineObjectReference
-		list handler.CompositeAuthenticator
+		list authenticators.CompositeAuthenticator
 	)
 
 	if len(pors) == 0 {
@@ -89,7 +95,7 @@ func (hf *handlerFactory) CreateAuthenticator(pors []config.PipelineObjectRefere
 	return list, nil
 }
 
-func (hf *handlerFactory) CreateAuthorizer(configured *config.PipelineObjectReference) (handler.Authorizer, error) {
+func (hf *handlerFactory) CreateAuthorizer(configured *config.PipelineObjectReference) (authorizers.Authorizer, error) {
 	var ref *config.PipelineObjectReference
 
 	if configured == nil {
@@ -119,10 +125,10 @@ func (hf *handlerFactory) CreateAuthorizer(configured *config.PipelineObjectRefe
 	return prototype, nil
 }
 
-func (hf *handlerFactory) CreateHydrator(configured []config.PipelineObjectReference) (handler.Hydrator, error) {
+func (hf *handlerFactory) CreateHydrator(configured []config.PipelineObjectReference) (hydrators.Hydrator, error) {
 	var (
 		refs []config.PipelineObjectReference
-		list handler.CompositeHydrator
+		list hydrators.CompositeHydrator
 	)
 
 	if len(configured) == 0 {
@@ -154,10 +160,10 @@ func (hf *handlerFactory) CreateHydrator(configured []config.PipelineObjectRefer
 	return list, nil
 }
 
-func (hf *handlerFactory) CreateMutator(configured []config.PipelineObjectReference) (handler.Mutator, error) {
+func (hf *handlerFactory) CreateMutator(configured []config.PipelineObjectReference) (mutators.Mutator, error) {
 	var (
 		refs []config.PipelineObjectReference
-		list handler.CompositeMutator
+		list mutators.CompositeMutator
 	)
 
 	if len(configured) == 0 {
@@ -191,10 +197,12 @@ func (hf *handlerFactory) CreateMutator(configured []config.PipelineObjectRefere
 	return list, nil
 }
 
-func (hf *handlerFactory) CreateErrorHandler(pors []config.PipelineObjectReference) (handler.ErrorHandler, error) {
+func (hf *handlerFactory) CreateErrorHandler(
+	pors []config.PipelineObjectReference,
+) (errorhandlers.ErrorHandler, error) {
 	var (
 		refs []config.PipelineObjectReference
-		list handler.CompositeErrorHandler
+		list errorhandlers.CompositeErrorHandler
 	)
 
 	if len(pors) == 0 {
