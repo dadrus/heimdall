@@ -28,7 +28,7 @@ func RegisterErrorHandlerTypeFactory(factory ErrorHandlerTypeFactory) {
 	errorHandlerTypeFactories = append(errorHandlerTypeFactories, factory)
 }
 
-func CreateErrorHandlerType(typ config.PipelineObjectType, config map[string]any) (ErrorHandler, error) {
+func CreateErrorHandlerPrototype(typ config.PipelineObjectType, config map[string]any) (ErrorHandler, error) {
 	errorHandlerTypeFactoriesMu.RLock()
 	defer errorHandlerTypeFactoriesMu.RUnlock()
 

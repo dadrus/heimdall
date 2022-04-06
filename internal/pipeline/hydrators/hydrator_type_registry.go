@@ -31,7 +31,7 @@ func RegisterHydratorTypeFactory(factory HydratorTypeFactory) {
 	hydratorTypeFactories = append(hydratorTypeFactories, factory)
 }
 
-func CreateHydratorType(typ config.PipelineObjectType, config map[string]any) (Hydrator, error) {
+func CreateHydratorPrototype(typ config.PipelineObjectType, config map[string]any) (Hydrator, error) {
 	hydratorTypeFactoriesMu.RLock()
 	defer hydratorTypeFactoriesMu.RUnlock()
 

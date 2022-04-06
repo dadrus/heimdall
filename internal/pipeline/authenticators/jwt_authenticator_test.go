@@ -329,8 +329,8 @@ func TestSuccessfulExecutionOfJwtAuthenticator(t *testing.T) {
 	ctx := &testsupport.MockContext{}
 	ctx.On("AppContext").Return(context.Background())
 
-	adg := &MockAuthDataGetter{}
-	adg.On("GetAuthData", ctx).Return(DummyAuthData{Val: jwt}, nil)
+	adg := &mockAuthDataGetter{}
+	adg.On("GetAuthData", ctx).Return(dummyAuthData{Val: jwt}, nil)
 
 	encJwtPayload := strings.Split(jwt, ".")[1]
 	rawPaload, err := base64.RawStdEncoding.DecodeString(encJwtPayload)

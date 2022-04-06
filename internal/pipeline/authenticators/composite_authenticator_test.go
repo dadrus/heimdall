@@ -19,10 +19,10 @@ func TestCompositeAuthenticatorExecutionWithFallback(t *testing.T) {
 	ctx := &testsupport.MockContext{}
 	ctx.On("AppContext").Return(context.Background())
 
-	auth1 := &MockAuthenticator{}
+	auth1 := &mockAuthenticator{}
 	auth1.On("Authenticate", ctx).Return(nil, testsupport.ErrTestPurpose)
 
-	auth2 := &MockAuthenticator{}
+	auth2 := &mockAuthenticator{}
 	auth2.On("Authenticate", ctx).Return(sub, nil)
 
 	auth := CompositeAuthenticator{auth1, auth2}
@@ -47,8 +47,8 @@ func TestCompositeAuthenticatorExecutionWithoutFallback(t *testing.T) {
 	ctx := &testsupport.MockContext{}
 	ctx.On("AppContext").Return(context.Background())
 
-	auth1 := &MockAuthenticator{}
-	auth2 := &MockAuthenticator{}
+	auth1 := &mockAuthenticator{}
+	auth2 := &mockAuthenticator{}
 	auth2.On("Authenticate", ctx).Return(sub, nil)
 
 	auth := CompositeAuthenticator{auth2, auth1}

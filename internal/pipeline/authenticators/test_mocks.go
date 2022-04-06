@@ -10,18 +10,18 @@ import (
 	"github.com/dadrus/heimdall/internal/pipeline/subject"
 )
 
-type DummyAuthData struct {
+type dummyAuthData struct {
 	Val string
 }
 
-func (c DummyAuthData) ApplyTo(req *http.Request) { req.Header.Add("Dummy", c.Val) }
-func (c DummyAuthData) Value() string             { return c.Val }
+func (c dummyAuthData) ApplyTo(req *http.Request) { req.Header.Add("Dummy", c.Val) }
+func (c dummyAuthData) Value() string             { return c.Val }
 
-type MockAuthDataGetter struct {
+type mockAuthDataGetter struct {
 	mock.Mock
 }
 
-func (m *MockAuthDataGetter) GetAuthData(s heimdall.Context) (extractors.AuthData, error) {
+func (m *mockAuthDataGetter) GetAuthData(s heimdall.Context) (extractors.AuthData, error) {
 	args := m.Called(s)
 
 	if val := args.Get(0); val != nil {
@@ -36,11 +36,11 @@ func (m *MockAuthDataGetter) GetAuthData(s heimdall.Context) (extractors.AuthDat
 	return nil, args.Error(1)
 }
 
-type MockAuthenticator struct {
+type mockAuthenticator struct {
 	mock.Mock
 }
 
-func (a *MockAuthenticator) Authenticate(ctx heimdall.Context) (*subject.Subject, error) {
+func (a *mockAuthenticator) Authenticate(ctx heimdall.Context) (*subject.Subject, error) {
 	args := a.Called(ctx)
 
 	if val := args.Get(0); val != nil {
@@ -55,7 +55,7 @@ func (a *MockAuthenticator) Authenticate(ctx heimdall.Context) (*subject.Subject
 	return nil, args.Error(1)
 }
 
-func (a *MockAuthenticator) WithConfig(c map[string]interface{}) (Authenticator, error) {
+func (a *mockAuthenticator) WithConfig(c map[string]interface{}) (Authenticator, error) {
 	args := a.Called(c)
 
 	if val := args.Get(0); val != nil {

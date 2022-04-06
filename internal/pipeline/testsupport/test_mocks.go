@@ -5,7 +5,7 @@ import (
 	"errors"
 
 	"github.com/stretchr/testify/mock"
-	
+
 	"github.com/dadrus/heimdall/internal/pipeline/subject"
 )
 

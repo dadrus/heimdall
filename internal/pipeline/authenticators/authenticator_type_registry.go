@@ -31,7 +31,7 @@ func RegisterAuthenticatorTypeFactory(factory AuthenticatorTypeFactory) {
 	authenticatorTypeFactories = append(authenticatorTypeFactories, factory)
 }
 
-func CreateAuthenticatorType(typ config.PipelineObjectType, config map[string]any) (Authenticator, error) {
+func CreateAuthenticatorPrototype(typ config.PipelineObjectType, config map[string]any) (Authenticator, error) {
 	authenticatorTypeFactoriesMu.RLock()
 	defer authenticatorTypeFactoriesMu.RUnlock()
 

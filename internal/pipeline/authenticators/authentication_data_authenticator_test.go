@@ -155,8 +155,8 @@ func TestSuccessfulExecutionOfAuthenticationDataAuthenticator(t *testing.T) {
 	ctx := &testsupport.MockContext{}
 	ctx.On("AppContext").Return(context.Background())
 
-	adg := &MockAuthDataGetter{}
-	adg.On("GetAuthData", ctx).Return(&DummyAuthData{Val: authDataVal}, nil)
+	adg := &mockAuthDataGetter{}
+	adg.On("GetAuthData", ctx).Return(&dummyAuthData{Val: authDataVal}, nil)
 
 	subExtr := &testsupport.MockSubjectExtractor{}
 	subExtr.On("GetSubject", subjectData).Return(sub, nil)
@@ -188,7 +188,7 @@ func TestAuthenticationDataAuthenticatorExecutionFailsDueToMissingAuthData(t *te
 	ctx := &testsupport.MockContext{}
 	ctx.On("AppContext").Return(context.Background())
 
-	adg := &MockAuthDataGetter{}
+	adg := &mockAuthDataGetter{}
 	adg.On("GetAuthData", mock.Anything).Return(nil, testsupport.ErrTestPurpose)
 
 	ada := authenticationDataAuthenticator{
@@ -222,8 +222,8 @@ func TestAuthenticationDataAuthenticatorExecutionFailsDueToEndpointError(t *test
 	ctx := &testsupport.MockContext{}
 	ctx.On("AppContext").Return(context.Background())
 
-	adg := &MockAuthDataGetter{}
-	adg.On("GetAuthData", ctx).Return(DummyAuthData{Val: authDataVal}, nil)
+	adg := &mockAuthDataGetter{}
+	adg.On("GetAuthData", ctx).Return(dummyAuthData{Val: authDataVal}, nil)
 
 	subExtr := &testsupport.MockSubjectExtractor{}
 
@@ -273,8 +273,8 @@ func TestAuthenticationDataAuthenticatorExecutionFailsDueToFailedSubjectExtracti
 	ctx := &testsupport.MockContext{}
 	ctx.On("AppContext").Return(context.Background())
 
-	adg := &MockAuthDataGetter{}
-	adg.On("GetAuthData", ctx).Return(DummyAuthData{Val: authDataVal}, nil)
+	adg := &mockAuthDataGetter{}
+	adg.On("GetAuthData", ctx).Return(dummyAuthData{Val: authDataVal}, nil)
 
 	subExtr := &testsupport.MockSubjectExtractor{}
 	subExtr.On("GetSubject", subjectData).Return(nil, testsupport.ErrTestPurpose)

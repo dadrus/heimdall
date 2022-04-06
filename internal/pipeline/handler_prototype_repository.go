@@ -23,7 +23,7 @@ func newHandlerPrototypeRepository(
 	logger.Debug().Msg("Loading definitions for authenticators")
 
 	authenticatorMap, err := createPipelineObjects(conf.Pipeline.Authenticators, logger,
-		authenticators.CreateAuthenticatorType)
+		authenticators.CreateAuthenticatorPrototype)
 	if err != nil {
 		logger.Error().Err(err).Msg("Failed loading authenticators definitions")
 
@@ -33,7 +33,7 @@ func newHandlerPrototypeRepository(
 	logger.Debug().Msg("Loading definitions for authorizers")
 
 	authorizerMap, err := createPipelineObjects(conf.Pipeline.Authorizers, logger,
-		authorizers.CreateAuthorizerType)
+		authorizers.CreateAuthorizerPrototype)
 	if err != nil {
 		logger.Error().Err(err).Msg("Failed loading authorizers definitions")
 
@@ -43,7 +43,7 @@ func newHandlerPrototypeRepository(
 	logger.Debug().Msg("Loading definitions for hydrators")
 
 	hydratorMap, err := createPipelineObjects(conf.Pipeline.Hydrators, logger,
-		hydrators.CreateHydratorType)
+		hydrators.CreateHydratorPrototype)
 	if err != nil {
 		logger.Error().Err(err).Msg("Failed loading hydrators definitions")
 
@@ -53,7 +53,7 @@ func newHandlerPrototypeRepository(
 	logger.Debug().Msg("Loading definitions for mutators")
 
 	mutatorMap, err := createPipelineObjects(conf.Pipeline.Mutators, logger,
-		mutators.CreateMutatorType)
+		mutators.CreateMutatorPrototype)
 	if err != nil {
 		logger.Error().Err(err).Msg("Failed loading mutators definitions")
 
@@ -63,7 +63,7 @@ func newHandlerPrototypeRepository(
 	logger.Debug().Msg("Loading definitions for error handler")
 
 	ehMap, err := createPipelineObjects(conf.Pipeline.ErrorHandlers, logger,
-		errorhandlers.CreateErrorHandlerType)
+		errorhandlers.CreateErrorHandlerPrototype)
 	if err != nil {
 		logger.Error().Err(err).Msg("Failed loading error handler definitions")
 

@@ -31,7 +31,7 @@ func RegisterAuthorizerTypeFactory(factory AuthorizerTypeFactory) {
 	authorizerTypeFactories = append(authorizerTypeFactories, factory)
 }
 
-func CreateAuthorizerType(typ config.PipelineObjectType, config map[string]any) (Authorizer, error) {
+func CreateAuthorizerPrototype(typ config.PipelineObjectType, config map[string]any) (Authorizer, error) {
 	authorizerTypeFactoriesMu.RLock()
 	defer authorizerTypeFactoriesMu.RUnlock()
 

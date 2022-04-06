@@ -31,7 +31,7 @@ func RegisterMutatorTypeFactory(factory MutatorTypeFactory) {
 	mutatorTypeFactories = append(mutatorTypeFactories, factory)
 }
 
-func CreateMutatorType(typ config.PipelineObjectType, config map[string]any) (Mutator, error) {
+func CreateMutatorPrototype(typ config.PipelineObjectType, config map[string]any) (Mutator, error) {
 	mutatorTypeFactoriesMu.RLock()
 	defer mutatorTypeFactoriesMu.RUnlock()
 
