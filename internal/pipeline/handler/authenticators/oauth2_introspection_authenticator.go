@@ -57,7 +57,7 @@ func newOAuth2IntrospectionAuthenticator(rawConfig map[string]any) (*oauth2Intro
 	}
 
 	if len(conf.Assertions.AllowedAlgorithms) == 0 {
-		conf.Assertions.AllowedAlgorithms = defaultAllowedAlgorithms
+		conf.Assertions.AllowedAlgorithms = defaultAllowedAlgorithms()
 	}
 
 	if err := conf.Assertions.Validate(); err != nil {

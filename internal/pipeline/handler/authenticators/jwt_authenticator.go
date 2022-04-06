@@ -78,7 +78,7 @@ func newJwtAuthenticator(rawConfig map[string]any) (*jwtAuthenticator, error) {
 	}
 
 	if len(conf.JwtAssertions.AllowedAlgorithms) == 0 {
-		conf.JwtAssertions.AllowedAlgorithms = defaultAllowedAlgorithms
+		conf.JwtAssertions.AllowedAlgorithms = defaultAllowedAlgorithms()
 	}
 
 	if err := conf.Endpoint.Validate(); err != nil {
