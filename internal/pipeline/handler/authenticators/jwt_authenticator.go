@@ -78,12 +78,7 @@ func newJwtAuthenticator(rawConfig map[string]any) (*jwtAuthenticator, error) {
 	}
 
 	if len(conf.JwtAssertions.AllowedAlgorithms) == 0 {
-		conf.JwtAssertions.AllowedAlgorithms = []string{
-			// ECDSA
-			string(jose.ES256), string(jose.ES384), string(jose.ES512),
-			// RSA-PSS
-			string(jose.PS256), string(jose.PS384), string(jose.PS512),
-		}
+		conf.JwtAssertions.AllowedAlgorithms = defaultAllowedAlgorithms
 	}
 
 	if err := conf.Endpoint.Validate(); err != nil {

@@ -8,9 +8,6 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/mitchellh/mapstructure"
-	"gopkg.in/square/go-jose.v2"
-
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/pipeline/endpoint"
@@ -19,6 +16,7 @@ import (
 	"github.com/dadrus/heimdall/internal/pipeline/handler/subject"
 	"github.com/dadrus/heimdall/internal/pipeline/oauth2"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
+	"github.com/mitchellh/mapstructure"
 )
 
 // by intention. Used only during application bootstrap
@@ -58,12 +56,7 @@ func newOAuth2IntrospectionAuthenticator(rawConfig map[string]any) (*oauth2Intro
 	}
 
 	if len(conf.Assertions.AllowedAlgorithms) == 0 {
-		conf.Assertions.AllowedAlgorithms = []string{
-			// ECDSA
-			string(jose.ES256), string(jose.ES384), string(jose.ES512),
-			// RSA-PSS
-			string(jose.PS256), string(jose.PS384), string(jose.PS512),
-		}
+		conf.Assertions.AllowedAlgorithms = defaultAllowedAlgorithms
 	}
 
 	if err := conf.Assertions.Validate(); err != nil {
