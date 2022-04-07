@@ -20,7 +20,7 @@ var (
 
 type AuthorizerTypeFactory func(typ config.PipelineObjectType, config map[string]any) (bool, Authorizer, error)
 
-func RegisterAuthorizerTypeFactory(factory AuthorizerTypeFactory) {
+func registerAuthorizerTypeFactory(factory AuthorizerTypeFactory) {
 	authorizerTypeFactoriesMu.Lock()
 	defer authorizerTypeFactoriesMu.Unlock()
 

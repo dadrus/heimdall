@@ -16,7 +16,7 @@ import (
 // by intention. Used only during application bootstrap
 // nolint
 func init() {
-	RegisterAuthorizerTypeFactory(
+	registerAuthorizerTypeFactory(
 		func(typ config.PipelineObjectType, conf map[string]any) (bool, Authorizer, error) {
 			if typ != config.POTRemote {
 				return false, nil, nil
