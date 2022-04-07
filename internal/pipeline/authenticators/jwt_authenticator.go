@@ -131,7 +131,7 @@ func (a *jwtAuthenticator) Authenticate(ctx heimdall.Context) (*subject.Subject,
 		return nil, err
 	}
 
-	sigKey, err := a.fetchKey(ctx, token.Headers[0].KeyID)
+	sigKey, err := a.getKey(ctx, token.Headers[0].KeyID)
 	if err != nil {
 		return nil, err
 	}
@@ -151,6 +151,33 @@ func (a *jwtAuthenticator) Authenticate(ctx heimdall.Context) (*subject.Subject,
 	return sub, nil
 }
 
+func (a *jwtAuthenticator) WithConfig(config map[string]any) (Authenticator, error) {
+	// this authenticator allows assertions and ttl to be redefined on the rule level
+	if len(config) == 0 {
+		return a, nil
+	}
+
+	type _config struct {
+		JwtAssertions oauth2.Expectation `mapstructure:"jwt_assertions"`
+		CacheTTL      *time.Duration     `mapstructure:"cache_ttl"`
+	}
+
+	var conf _config
+	if err := decodeConfig(config, &conf); err != nil {
+		return nil, errorchain.
+			NewWithMessage(heimdall.ErrConfiguration, "failed to parse configuration").
+			CausedBy(err)
+	}
+
+	return &jwtAuthenticator{
+		e:   a.e,
+		a:   conf.JwtAssertions,
+		ttl: x.IfThenElse(conf.CacheTTL != nil, conf.CacheTTL, a.ttl),
+		se:  a.se,
+		adg: a.adg,
+	}, nil
+}
+
 func (a *jwtAuthenticator) parseJWT(rawJWT string) (*jwt.JSONWebToken, error) {
 	const jwtDotCount = 2
 
@@ -168,7 +195,7 @@ func (a *jwtAuthenticator) parseJWT(rawJWT string) (*jwt.JSONWebToken, error) {
 	return token, nil
 }
 
-func (a *jwtAuthenticator) fetchKey(ctx heimdall.Context, keyID string) (*jose.JSONWebKey, error) {
+func (a *jwtAuthenticator) getKey(ctx heimdall.Context, keyID string) (*jose.JSONWebKey, error) {
 	cch := cache.Ctx(ctx.AppContext())
 	logger := zerolog.Ctx(ctx.AppContext())
 	cacheKey := a.getCacheKey(keyID)
@@ -304,33 +331,6 @@ func (a *jwtAuthenticator) verifyTokenAndGetClaims(
 	}
 
 	return rawPayload, nil
-}
-
-func (a *jwtAuthenticator) WithConfig(config map[string]any) (Authenticator, error) {
-	// this authenticator allows assertions and ttl to be redefined on the rule level
-	if len(config) == 0 {
-		return a, nil
-	}
-
-	type _config struct {
-		JwtAssertions oauth2.Expectation `mapstructure:"jwt_assertions"`
-		CacheTTL      *time.Duration     `mapstructure:"cache_ttl"`
-	}
-
-	var conf _config
-	if err := decodeConfig(config, &conf); err != nil {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration, "failed to parse configuration").
-			CausedBy(err)
-	}
-
-	return &jwtAuthenticator{
-		e:   a.e,
-		a:   conf.JwtAssertions,
-		ttl: x.IfThenElse(conf.CacheTTL != nil, conf.CacheTTL, a.ttl),
-		se:  a.se,
-		adg: a.adg,
-	}, nil
 }
 
 func (a *jwtAuthenticator) getCacheKey(reference string) string {
