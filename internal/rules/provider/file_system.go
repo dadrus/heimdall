@@ -85,7 +85,7 @@ func (p *fileSystemProvider) Start() error {
 	}
 
 	if p.watcher == nil {
-		p.logger.Warn().Msg("Watcher not configured. Exiting")
+		p.logger.Warn().Msg("Watcher not configured. Updates to rules will have no effects.")
 
 		return nil
 	}
