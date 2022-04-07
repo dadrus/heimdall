@@ -1,15 +1,24 @@
 package authenticators
 
 import (
+	"context"
+	"encoding/json"
 	"net/http"
+	"net/http/httptest"
+	"strconv"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/square/go-jose.v2"
 
+	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/dadrus/heimdall/internal/pipeline/authenticators/extractors"
+	"github.com/dadrus/heimdall/internal/pipeline/endpoint"
+	"github.com/dadrus/heimdall/internal/pipeline/oauth2"
+	"github.com/dadrus/heimdall/internal/pipeline/subject"
 	"github.com/dadrus/heimdall/internal/pipeline/testsupport"
 )
 
@@ -271,4 +280,117 @@ cache_ttl: 15s
 			tc.assert(t, err, prototype, oaia)
 		})
 	}
+}
+
+func TestSuccessfulExecutionOfOAuth2IntrospectionAuthenticatorWithoutCacheUsage(t *testing.T) {
+	// GIVEN
+	var (
+		receivedAcceptType    string
+		receivedContentType   string
+		receivedTokenTypeHint string
+		receivedToken         string
+	)
+
+	tokenValue := "foooooobaaaaar"
+	subjectID := "foo"
+	issuer := "foobar"
+	audience := "bar"
+	attrs := map[string]any{
+		"active":     true,
+		"scope":      "foo bar",
+		"username":   "unknown",
+		"token_type": "Bearer",
+		"aud":        audience,
+		"sub":        subjectID,
+		"iss":        issuer,
+		"iat":        time.Now().Unix(),
+		"nbf":        time.Now().Unix(),
+		"exp":        time.Now().Unix() + 30,
+	}
+	cacheTTL := 0 * time.Second
+
+	rawIntrospectResponse, err := json.Marshal(attrs)
+	require.NoError(t, err)
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+
+			return
+		}
+
+		assert.NoError(t, r.ParseForm())
+
+		receivedAcceptType = r.Header.Get("Accept-Type")
+		receivedContentType = r.Header.Get("Content-Type")
+		receivedTokenTypeHint = r.Form.Get("token_type_hint")
+		receivedToken = r.Form.Get("token")
+
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Content-Length", strconv.Itoa(len(rawIntrospectResponse)))
+
+		_, err := w.Write(rawIntrospectResponse)
+		assert.NoError(t, err)
+	}))
+	defer srv.Close()
+
+	cch := &testsupport.MockCache{}
+	cch.On("Get", mock.Anything).Return(nil)
+
+	ctx := &testsupport.MockContext{}
+	ctx.On("AppContext").Return(cache.WithContext(context.Background(), cch))
+
+	adg := &mockAuthDataGetter{}
+	adg.On("GetAuthData", ctx).Return(dummyAuthData{Val: tokenValue}, nil)
+
+	sf := &testsupport.MockSubjectFactory{}
+	sf.On("CreateSubject", rawIntrospectResponse).
+		Return(&subject.Subject{ID: subjectID, Attributes: attrs}, nil)
+
+	as := oauth2.Expectation{
+		ScopesMatcher: oauth2.ScopesMatcher{
+			Match:  oauth2.ExactScopeStrategy,
+			Scopes: []string{"foo"},
+		},
+		TargetAudiences: []string{audience},
+		TrustedIssuers:  []string{issuer},
+		ValidityLeeway:  1 * time.Minute,
+	}
+
+	auth := oauth2IntrospectionAuthenticator{
+		e: endpoint.Endpoint{
+			URL:    srv.URL,
+			Method: http.MethodPost,
+			Headers: map[string]string{
+				"Accept-Type":  "application/json",
+				"Content-Type": "application/x-www-form-urlencoded",
+			},
+		},
+		a:   as,
+		sf:  sf,
+		adg: adg,
+		ttl: &cacheTTL,
+	}
+
+	// WHEN
+	sub, err := auth.Authenticate(ctx)
+
+	// THEN
+	require.NoError(t, err)
+
+	// assert networking
+	assert.Equal(t, "application/x-www-form-urlencoded", receivedContentType)
+	assert.Equal(t, "application/json", receivedAcceptType)
+	assert.Equal(t, tokenValue, receivedToken)
+	assert.Equal(t, "access_token", receivedTokenTypeHint)
+
+	// assert subject
+	assert.NotNil(t, sub)
+	assert.Equal(t, subjectID, sub.ID)
+	assert.Equal(t, attrs, sub.Attributes)
+
+	// assert mocks
+	cch.AssertExpectations(t)
+	adg.AssertExpectations(t)
+	sf.AssertExpectations(t)
 }
