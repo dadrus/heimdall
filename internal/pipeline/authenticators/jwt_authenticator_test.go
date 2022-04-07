@@ -438,6 +438,23 @@ cache_ttl: 15s`),
 				assert.Equal(t, 15*time.Second, *configured.ttl)
 			},
 		},
+		{
+			uc: "valid prototype config and empty target config",
+			prototypeConfig: []byte(`
+jwks_endpoint:
+  url: http://test.com
+jwt_assertions:
+  issuers:
+    - foobar
+cache_ttl: 5s`),
+			config: []byte{},
+			assert: func(t *testing.T, err error, prototype *jwtAuthenticator, configured *jwtAuthenticator) {
+				// THEN
+				require.NoError(t, err)
+
+				assert.Equal(t, prototype, configured)
+			},
+		},
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
 			t.Parallel()
