@@ -18,7 +18,6 @@ import (
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/pipeline/authenticators/extractors"
-	"github.com/dadrus/heimdall/internal/pipeline/cachesettings"
 	"github.com/dadrus/heimdall/internal/pipeline/endpoint"
 	"github.com/dadrus/heimdall/internal/pipeline/oauth2"
 	"github.com/dadrus/heimdall/internal/pipeline/subject"
@@ -44,7 +43,7 @@ func init() {
 type jwtAuthenticator struct {
 	e   endpoint.Endpoint
 	a   oauth2.Expectation
-	c   *cachesettings.Cache
+	ttl *time.Duration
 	se  SubjectExtrator
 	adg extractors.AuthDataExtractStrategy
 }
@@ -55,7 +54,7 @@ func newJwtAuthenticator(rawConfig map[string]any) (*jwtAuthenticator, error) {
 		AuthDataSource extractors.CompositeExtractStrategy `mapstructure:"jwt_token_from"`
 		JwtAssertions  oauth2.Expectation                  `mapstructure:"jwt_assertions"`
 		Session        Session                             `mapstructure:"session"`
-		Cache          *cachesettings.Cache                `mapstructure:"cache"`
+		CacheTTL       *time.Duration                      `mapstructure:"cache_ttl"`
 	}
 
 	var conf _config
@@ -111,7 +110,7 @@ func newJwtAuthenticator(rawConfig map[string]any) (*jwtAuthenticator, error) {
 	return &jwtAuthenticator{
 		e:   conf.Endpoint,
 		a:   conf.JwtAssertions,
-		c:   conf.Cache,
+		ttl: conf.CacheTTL,
 		se:  &conf.Session,
 		adg: adg,
 	}, nil
@@ -170,26 +169,16 @@ func (a *jwtAuthenticator) parseJWT(rawJWT string) (*jwt.JSONWebToken, error) {
 }
 
 func (a *jwtAuthenticator) fetchKey(ctx heimdall.Context, keyID string) (*jose.JSONWebKey, error) {
-	const defaultTTL = 5 * time.Minute
-
-	var (
-		cacheEnabled bool
-		cacheTTL     time.Duration
-	)
-
-	if a.c != nil {
-		cacheEnabled = a.c.Enabled
-		cacheTTL = a.c.TTL
-	} else {
-		cacheEnabled = true
-		cacheTTL = defaultTTL
-	}
-
 	cch := cache.Ctx(ctx.AppContext())
 	logger := zerolog.Ctx(ctx.AppContext())
 	cacheKey := a.getCacheKey(keyID)
 
-	if cacheEnabled {
+	var cacheTTL time.Duration
+	if a.ttl != nil {
+		cacheTTL = *a.ttl
+	}
+
+	if cacheTTL != 0 {
 		if item := cch.Get(cacheKey); item != nil {
 			logger.Debug().Msg("Reusing signature key from cache")
 
@@ -215,7 +204,7 @@ func (a *jwtAuthenticator) fetchKey(ctx heimdall.Context, keyID string) (*jose.J
 			CausedBy(err)
 	}
 
-	if cacheEnabled {
+	if cacheTTL != 0 {
 		cch.Set(cacheKey, &keys[0], cacheTTL)
 	}
 
@@ -318,14 +307,14 @@ func (a *jwtAuthenticator) verifyTokenAndGetClaims(
 }
 
 func (a *jwtAuthenticator) WithConfig(config map[string]any) (Authenticator, error) {
-	// this authenticator allows assertions to be redefined on the rule level
+	// this authenticator allows assertions and ttl to be redefined on the rule level
 	if len(config) == 0 {
 		return a, nil
 	}
 
 	type _config struct {
-		JwtAssertions oauth2.Expectation   `mapstructure:"jwt_assertions"`
-		Cache         *cachesettings.Cache `mapstructure:"cache"`
+		JwtAssertions oauth2.Expectation `mapstructure:"jwt_assertions"`
+		CacheTTL      *time.Duration     `mapstructure:"cache_ttl"`
 	}
 
 	var conf _config
@@ -338,7 +327,7 @@ func (a *jwtAuthenticator) WithConfig(config map[string]any) (Authenticator, err
 	return &jwtAuthenticator{
 		e:   a.e,
 		a:   conf.JwtAssertions,
-		c:   x.IfThenElse(conf.Cache != nil, conf.Cache, a.c),
+		ttl: x.IfThenElse(conf.CacheTTL != nil, conf.CacheTTL, a.ttl),
 		se:  a.se,
 		adg: a.adg,
 	}, nil
