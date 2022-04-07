@@ -14,11 +14,13 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/square/go-jose.v2"
 	"gopkg.in/square/go-jose.v2/jwt"
 	"gopkg.in/yaml.v2"
 
+	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/dadrus/heimdall/internal/pipeline/authenticators/extractors"
 	"github.com/dadrus/heimdall/internal/pipeline/endpoint"
 	"github.com/dadrus/heimdall/internal/pipeline/oauth2"
@@ -91,7 +93,7 @@ foo: bar`),
 			},
 		},
 		{
-			uc: "valid configuration with defaults",
+			uc: "valid configuration with defaults, without cache",
 			config: []byte(`
 jwks_endpoint:
   url: http://test.com
@@ -133,10 +135,63 @@ jwt_assertions:
 				require.True(t, ok)
 				assert.Equal(t, "sub", sess.SubjectFrom)
 				assert.Empty(t, sess.AttributesFrom)
+
+				// cache sessiong
+				assert.Nil(t, auth.ttl)
 			},
 		},
 		{
-			uc: "valid configuration with overwrites",
+			uc: "valid configuration with defaults and cache",
+			config: []byte(`
+jwks_endpoint:
+  url: http://test.com
+jwt_assertions:
+  issuers:
+    - foobar
+cache_ttl: 5s`),
+			assert: func(t *testing.T, err error, auth *jwtAuthenticator) {
+				t.Helper()
+				require.NoError(t, err)
+
+				// endpoint settings
+				assert.Equal(t, "http://test.com", auth.e.URL)
+				assert.Equal(t, "GET", auth.e.Method)
+				assert.Equal(t, 1, len(auth.e.Headers))
+				assert.Contains(t, auth.e.Headers, "Accept-Type")
+				assert.Equal(t, auth.e.Headers["Accept-Type"], "application/json")
+
+				// token extractor settings
+				assert.IsType(t, extractors.CompositeExtractStrategy{}, auth.adg)
+				assert.Contains(t, auth.adg, extractors.HeaderValueExtractStrategy{Name: "Authorization", Prefix: "Bearer"})
+				assert.Contains(t, auth.adg, extractors.CookieValueExtractStrategy{Name: "access_token"})
+				assert.Contains(t, auth.adg, extractors.QueryParameterExtractStrategy{Name: "access_token"})
+
+				// assertions settings
+				assert.NoError(t, auth.a.ScopesMatcher.MatchScopes([]string{}))
+				assert.Empty(t, auth.a.TargetAudiences)
+				assert.Len(t, auth.a.TrustedIssuers, 1)
+				assert.Contains(t, auth.a.TrustedIssuers, "foobar")
+				assert.Len(t, auth.a.AllowedAlgorithms, 6)
+
+				assert.ElementsMatch(t, auth.a.AllowedAlgorithms, []string{
+					string(jose.ES256), string(jose.ES384), string(jose.ES512),
+					string(jose.PS256), string(jose.PS384), string(jose.PS512),
+				})
+				assert.Equal(t, time.Duration(0), auth.a.ValidityLeeway)
+
+				// session settings
+				sess, ok := auth.se.(*Session)
+				require.True(t, ok)
+				assert.Equal(t, "sub", sess.SubjectFrom)
+				assert.Empty(t, sess.AttributesFrom)
+
+				// cache sessiong
+				assert.NotNil(t, auth.ttl)
+				assert.Equal(t, 5*time.Second, *auth.ttl)
+			},
+		},
+		{
+			uc: "valid configuration with overwrites, without cache",
 			config: []byte(`
 jwks_endpoint:
   url: http://test.com
@@ -188,6 +243,9 @@ session:
 				require.True(t, ok)
 				assert.Equal(t, "some_claim", sess.SubjectFrom)
 				assert.Empty(t, sess.AttributesFrom)
+
+				// cache sessiong
+				assert.Nil(t, auth.ttl)
 			},
 		},
 	} {
@@ -242,48 +300,169 @@ func setup(t *testing.T, subject, issuer, audience string) ([]byte, string) {
 func TestCreateJwtAuthenticatorFromPrototype(t *testing.T) {
 	t.Parallel()
 
-	// GIVEN
-	prototypeConfig, err := testsupport.DecodeTestConfig([]byte(`
+	// nolint
+	for _, tc := range []struct {
+		uc              string
+		prototypeConfig []byte
+		config          []byte
+		assert          func(t *testing.T, err error, prototype *jwtAuthenticator, configured *jwtAuthenticator)
+	}{
+		{
+			uc: "prototype config without cache, config without cache",
+			prototypeConfig: []byte(`
 jwks_endpoint:
   url: http://test.com
 jwt_assertions:
   issuers:
-    - foobar`))
-	require.NoError(t, err)
-
-	val := []byte(`
+    - foobar`),
+			config: []byte(`
 jwt_assertions:
   issuers:
     - barfoo
   allowed_algorithms:
-    - ES512`)
+    - ES512`),
+			assert: func(t *testing.T, err error, prototype *jwtAuthenticator, configured *jwtAuthenticator) {
+				// THEN
+				require.NoError(t, err)
 
-	config, err := testsupport.DecodeTestConfig(val)
-	require.NoError(t, err)
+				assert.Equal(t, prototype.e, configured.e)
+				assert.Equal(t, prototype.adg, configured.adg)
+				assert.Equal(t, prototype.se, configured.se)
+				assert.NotEqual(t, prototype.a, configured.a)
 
-	prototype, err := newJwtAuthenticator(prototypeConfig)
-	require.NoError(t, err)
+				assert.NoError(t, configured.a.ScopesMatcher.MatchScopes([]string{}))
+				assert.Empty(t, configured.a.TargetAudiences)
+				assert.ElementsMatch(t, configured.a.TrustedIssuers, []string{"barfoo"})
+				assert.ElementsMatch(t, configured.a.AllowedAlgorithms, []string{string(jose.ES512)})
 
-	// WHEN
-	auth, err := prototype.WithConfig(config)
+				assert.Equal(t, prototype.ttl, configured.ttl)
+			},
+		},
+		{
+			uc: "prototype config without cache, config with cache",
+			prototypeConfig: []byte(`
+jwks_endpoint:
+  url: http://test.com
+jwt_assertions:
+  issuers:
+    - foobar`),
+			config: []byte(`
+jwt_assertions:
+  issuers:
+    - barfoo
+  allowed_algorithms:
+    - ES512
+cache_ttl: 5s`),
+			assert: func(t *testing.T, err error, prototype *jwtAuthenticator, configured *jwtAuthenticator) {
+				// THEN
+				require.NoError(t, err)
 
-	// THEN
-	require.NoError(t, err)
+				assert.Equal(t, prototype.e, configured.e)
+				assert.Equal(t, prototype.adg, configured.adg)
+				assert.Equal(t, prototype.se, configured.se)
+				assert.NotEqual(t, prototype.a, configured.a)
 
-	jwta, ok := auth.(*jwtAuthenticator)
-	require.True(t, ok)
-	assert.Equal(t, prototype.e, jwta.e)
-	assert.Equal(t, prototype.adg, jwta.adg)
-	assert.Equal(t, prototype.se, jwta.se)
-	assert.NotEqual(t, prototype.a, jwta.a)
+				assert.NoError(t, configured.a.ScopesMatcher.MatchScopes([]string{}))
+				assert.Empty(t, configured.a.TargetAudiences)
+				assert.ElementsMatch(t, configured.a.TrustedIssuers, []string{"barfoo"})
+				assert.ElementsMatch(t, configured.a.AllowedAlgorithms, []string{string(jose.ES512)})
 
-	assert.NoError(t, jwta.a.ScopesMatcher.MatchScopes([]string{}))
-	assert.Empty(t, jwta.a.TargetAudiences)
-	assert.ElementsMatch(t, jwta.a.TrustedIssuers, []string{"barfoo"})
-	assert.ElementsMatch(t, jwta.a.AllowedAlgorithms, []string{string(jose.ES512)})
+				assert.NotEqual(t, prototype.ttl, configured.ttl)
+				assert.Equal(t, 5*time.Second, *configured.ttl)
+			},
+		},
+		{
+			uc: "prototype config with cache, config without cache",
+			prototypeConfig: []byte(`
+jwks_endpoint:
+  url: http://test.com
+jwt_assertions:
+  issuers:
+    - foobar
+cache_ttl: 5s`),
+			config: []byte(`
+jwt_assertions:
+  issuers:
+    - barfoo
+  allowed_algorithms:
+    - ES512`),
+			assert: func(t *testing.T, err error, prototype *jwtAuthenticator, configured *jwtAuthenticator) {
+				// THEN
+				require.NoError(t, err)
+
+				assert.Equal(t, prototype.e, configured.e)
+				assert.Equal(t, prototype.adg, configured.adg)
+				assert.Equal(t, prototype.se, configured.se)
+				assert.NotEqual(t, prototype.a, configured.a)
+
+				assert.NoError(t, configured.a.ScopesMatcher.MatchScopes([]string{}))
+				assert.Empty(t, configured.a.TargetAudiences)
+				assert.ElementsMatch(t, configured.a.TrustedIssuers, []string{"barfoo"})
+				assert.ElementsMatch(t, configured.a.AllowedAlgorithms, []string{string(jose.ES512)})
+
+				assert.Equal(t, prototype.ttl, configured.ttl)
+				assert.Equal(t, 5*time.Second, *configured.ttl)
+			},
+		},
+		{
+			uc: "prototype config with cache, config with cache",
+			prototypeConfig: []byte(`
+jwks_endpoint:
+  url: http://test.com
+jwt_assertions:
+  issuers:
+    - foobar
+cache_ttl: 5s`),
+			config: []byte(`
+jwt_assertions:
+  issuers:
+    - barfoo
+  allowed_algorithms:
+    - ES512
+cache_ttl: 15s`),
+			assert: func(t *testing.T, err error, prototype *jwtAuthenticator, configured *jwtAuthenticator) {
+				// THEN
+				require.NoError(t, err)
+
+				assert.Equal(t, prototype.e, configured.e)
+				assert.Equal(t, prototype.adg, configured.adg)
+				assert.Equal(t, prototype.se, configured.se)
+				assert.NotEqual(t, prototype.a, configured.a)
+
+				assert.NoError(t, configured.a.ScopesMatcher.MatchScopes([]string{}))
+				assert.Empty(t, configured.a.TargetAudiences)
+				assert.ElementsMatch(t, configured.a.TrustedIssuers, []string{"barfoo"})
+				assert.ElementsMatch(t, configured.a.AllowedAlgorithms, []string{string(jose.ES512)})
+
+				assert.NotEqual(t, prototype.ttl, configured.ttl)
+				assert.Equal(t, 15*time.Second, *configured.ttl)
+			},
+		},
+	} {
+		t.Run("case="+tc.uc, func(t *testing.T) {
+			t.Parallel()
+
+			pc, err := testsupport.DecodeTestConfig(tc.prototypeConfig)
+			require.NoError(t, err)
+
+			conf, err := testsupport.DecodeTestConfig(tc.config)
+			require.NoError(t, err)
+
+			prototype, err := newJwtAuthenticator(pc)
+
+			// WHEN
+			auth, err := prototype.WithConfig(conf)
+
+			// THEN
+			jwta, ok := auth.(*jwtAuthenticator)
+			require.True(t, ok)
+
+			tc.assert(t, err, prototype, jwta)
+		})
+	}
 }
 
-func TestSuccessfulExecutionOfJwtAuthenticator(t *testing.T) {
+func TestSuccessfulExecutionOfJwtAuthenticatorWithoutCacheUsage(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
@@ -292,7 +471,9 @@ func TestSuccessfulExecutionOfJwtAuthenticator(t *testing.T) {
 	subjectID := "foo"
 	issuer := "foobar"
 	audience := "bar"
-	jwks, jwt := setup(t, subjectID, issuer, audience)
+	jwksRaw, jwtRaw := setup(t, subjectID, issuer, audience)
+
+	appCtx := context.Background()
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
@@ -304,9 +485,9 @@ func TestSuccessfulExecutionOfJwtAuthenticator(t *testing.T) {
 		receivedAcceptType = r.Header.Get("Accept-Type")
 
 		w.Header().Set("Content-Type", "application/json")
-		w.Header().Set("Content-Length", strconv.Itoa(len(jwks)))
+		w.Header().Set("Content-Length", strconv.Itoa(len(jwksRaw)))
 
-		_, err := w.Write(jwks)
+		_, err := w.Write(jwksRaw)
 		assert.NoError(t, err)
 	}))
 	defer srv.Close()
@@ -322,13 +503,15 @@ func TestSuccessfulExecutionOfJwtAuthenticator(t *testing.T) {
 		ValidityLeeway:    1 * time.Minute,
 	}
 
+	cch := &testsupport.MockCache{}
+
 	ctx := &testsupport.MockContext{}
-	ctx.On("AppContext").Return(context.Background())
+	ctx.On("AppContext").Return(cache.WithContext(appCtx, cch))
 
 	adg := &mockAuthDataGetter{}
-	adg.On("GetAuthData", ctx).Return(dummyAuthData{Val: jwt}, nil)
+	adg.On("GetAuthData", ctx).Return(dummyAuthData{Val: jwtRaw}, nil)
 
-	encJwtPayload := strings.Split(jwt, ".")[1]
+	encJwtPayload := strings.Split(jwtRaw, ".")[1]
 	rawPaload, err := base64.RawStdEncoding.DecodeString(encJwtPayload)
 	require.NoError(t, err)
 
@@ -364,4 +547,176 @@ func TestSuccessfulExecutionOfJwtAuthenticator(t *testing.T) {
 	ctx.AssertExpectations(t)
 	se.AssertExpectations(t)
 	adg.AssertExpectations(t)
+	cch.AssertExpectations(t)
+}
+
+func TestSuccessfulExecutionOfJwtAuthenticatorWithKeyFromCache(t *testing.T) {
+	t.Parallel()
+
+	// GIVEN
+	ttlKey := 5 * time.Minute
+	subjectID := "foo"
+	issuer := "foobar"
+	audience := "bar"
+	jwksRaw, jwtRaw := setup(t, subjectID, issuer, audience)
+	appCtx := context.Background()
+
+	var jwks jose.JSONWebKeySet
+	err := json.Unmarshal(jwksRaw, &jwks)
+	require.NoError(t, err)
+
+	token, err := jwt.ParseSigned(jwtRaw)
+	require.NoError(t, err)
+
+	sigKey := jwks.Key(token.Headers[0].KeyID)[0]
+
+	as := oauth2.Expectation{
+		ScopesMatcher: oauth2.ScopesMatcher{
+			Match:  oauth2.ExactScopeStrategy,
+			Scopes: []string{"foo"},
+		},
+		TargetAudiences:   []string{audience},
+		TrustedIssuers:    []string{issuer},
+		AllowedAlgorithms: []string{string(jose.PS512)},
+		ValidityLeeway:    1 * time.Minute,
+	}
+
+	cch := &testsupport.MockCache{}
+	cch.On("Get", mock.Anything).Return(&sigKey)
+
+	ctx := &testsupport.MockContext{}
+	ctx.On("AppContext").Return(cache.WithContext(appCtx, cch))
+
+	adg := &mockAuthDataGetter{}
+	adg.On("GetAuthData", ctx).Return(dummyAuthData{Val: jwtRaw}, nil)
+
+	encJwtPayload := strings.Split(jwtRaw, ".")[1]
+	rawPaload, err := base64.RawStdEncoding.DecodeString(encJwtPayload)
+	require.NoError(t, err)
+
+	var attrs map[string]any
+	err = json.Unmarshal(rawPaload, &attrs)
+	require.NoError(t, err)
+
+	se := &testsupport.MockSubjectExtractor{}
+	se.On("GetSubject", rawPaload).Return(&subject.Subject{ID: subjectID, Attributes: attrs}, nil)
+
+	auth := jwtAuthenticator{
+		e: endpoint.Endpoint{
+			URL:     "foobar.local",
+			Method:  http.MethodGet,
+			Headers: map[string]string{"Accept-Type": "application/json"},
+		},
+		a:   as,
+		se:  se,
+		adg: adg,
+		ttl: &ttlKey,
+	}
+
+	// WHEN
+	sub, err := auth.Authenticate(ctx)
+
+	// THEN
+	require.NoError(t, err)
+
+	assert.NotNil(t, sub)
+	assert.Equal(t, subjectID, sub.ID)
+	assert.Equal(t, attrs, sub.Attributes)
+
+	ctx.AssertExpectations(t)
+	se.AssertExpectations(t)
+	adg.AssertExpectations(t)
+	cch.AssertExpectations(t)
+}
+
+func TestSuccessfulExecutionOfJwtAuthenticatorWithCacheMiss(t *testing.T) {
+	t.Parallel()
+
+	// GIVEN
+	var receivedAcceptType string
+
+	subjectID := "foo"
+	issuer := "foobar"
+	audience := "bar"
+	jwksRaw, jwtRaw := setup(t, subjectID, issuer, audience)
+	keyTTL := 5 * time.Second
+
+	appCtx := context.Background()
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+
+			return
+		}
+
+		receivedAcceptType = r.Header.Get("Accept-Type")
+
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Content-Length", strconv.Itoa(len(jwksRaw)))
+
+		_, err := w.Write(jwksRaw)
+		assert.NoError(t, err)
+	}))
+	defer srv.Close()
+
+	as := oauth2.Expectation{
+		ScopesMatcher: oauth2.ScopesMatcher{
+			Match:  oauth2.ExactScopeStrategy,
+			Scopes: []string{"foo"},
+		},
+		TargetAudiences:   []string{audience},
+		TrustedIssuers:    []string{issuer},
+		AllowedAlgorithms: []string{string(jose.PS512)},
+		ValidityLeeway:    1 * time.Minute,
+	}
+
+	cch := &testsupport.MockCache{}
+	cch.On("Get", mock.Anything).Return(nil)
+	cch.On("Set", mock.Anything, mock.IsType(&jose.JSONWebKey{}), keyTTL)
+
+	ctx := &testsupport.MockContext{}
+	ctx.On("AppContext").Return(cache.WithContext(appCtx, cch))
+
+	adg := &mockAuthDataGetter{}
+	adg.On("GetAuthData", ctx).Return(dummyAuthData{Val: jwtRaw}, nil)
+
+	encJwtPayload := strings.Split(jwtRaw, ".")[1]
+	rawPaload, err := base64.RawStdEncoding.DecodeString(encJwtPayload)
+	require.NoError(t, err)
+
+	var attrs map[string]any
+	err = json.Unmarshal(rawPaload, &attrs)
+	require.NoError(t, err)
+
+	se := &testsupport.MockSubjectExtractor{}
+	se.On("GetSubject", rawPaload).Return(&subject.Subject{ID: subjectID, Attributes: attrs}, nil)
+
+	auth := jwtAuthenticator{
+		e: endpoint.Endpoint{
+			URL:     srv.URL,
+			Method:  http.MethodGet,
+			Headers: map[string]string{"Accept-Type": "application/json"},
+		},
+		a:   as,
+		se:  se,
+		adg: adg,
+		ttl: &keyTTL,
+	}
+
+	// WHEN
+	sub, err := auth.Authenticate(ctx)
+
+	// THEN
+	require.NoError(t, err)
+
+	assert.NotNil(t, sub)
+	assert.Equal(t, subjectID, sub.ID)
+	assert.Equal(t, attrs, sub.Attributes)
+	assert.Equal(t, "application/json", receivedAcceptType)
+
+	ctx.AssertExpectations(t)
+	se.AssertExpectations(t)
+	adg.AssertExpectations(t)
+	cch.AssertExpectations(t)
 }

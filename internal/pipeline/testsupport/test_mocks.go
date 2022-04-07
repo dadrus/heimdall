@@ -3,6 +3,7 @@ package testsupport
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/stretchr/testify/mock"
 
@@ -148,3 +149,21 @@ func (a *MockClaimAsserter) IsAlgorithmAllowed(alg string) bool {
 
 	return args.Bool(0)
 }
+
+type MockCache struct {
+	mock.Mock
+}
+
+func (m *MockCache) Start() { m.Called() }
+
+func (m *MockCache) Stop() { m.Called() }
+
+func (m *MockCache) Get(key string) any {
+	args := m.Called(key)
+
+	return args.Get(0)
+}
+
+func (m *MockCache) Set(key string, value any, ttl time.Duration) { m.Called(key, value, ttl) }
+
+func (m *MockCache) Delete(key string) { m.Called() }
