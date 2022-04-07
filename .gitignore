@@ -1,3 +1,5 @@
 .idea
 .run
 heimdall
+cover.out
+coverage.*
