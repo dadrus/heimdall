@@ -13,32 +13,21 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
-	"github.com/stretchr/testify/require"
-	"gopkg.in/square/go-jose.v2"
-	"gopkg.in/square/go-jose.v2/jwt"
-	"gopkg.in/yaml.v2"
-
 	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/dadrus/heimdall/internal/pipeline/authenticators/extractors"
 	"github.com/dadrus/heimdall/internal/pipeline/endpoint"
 	"github.com/dadrus/heimdall/internal/pipeline/oauth2"
 	"github.com/dadrus/heimdall/internal/pipeline/subject"
 	"github.com/dadrus/heimdall/internal/pipeline/testsupport"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
+	"gopkg.in/square/go-jose.v2"
+	"gopkg.in/square/go-jose.v2/jwt"
 )
 
 func TestCreateJwtAuthenticator(t *testing.T) {
 	t.Parallel()
-
-	decode := func(data []byte) map[string]interface{} {
-		var res map[string]interface{}
-
-		err := yaml.Unmarshal(data, &res)
-		assert.NoError(t, err)
-
-		return res
-	}
 
 	// nolint
 	for _, tc := range []struct {
@@ -252,8 +241,11 @@ session:
 		t.Run("case="+tc.uc, func(t *testing.T) {
 			t.Parallel()
 
+			conf, err := testsupport.DecodeTestConfig(tc.config)
+			require.NoError(t, err)
+
 			// WHEN
-			a, err := newJwtAuthenticator(decode(tc.config))
+			a, err := newJwtAuthenticator(conf)
 
 			// THEN
 			tc.assert(t, err, a)
