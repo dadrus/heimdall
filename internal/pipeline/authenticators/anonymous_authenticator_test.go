@@ -107,13 +107,13 @@ func TestAuthenticateWithAnonymousAuthenticatorWithCustomSubjectId(t *testing.T)
 	t.Parallel()
 	// GIVEN
 	subjectID := "anon"
-	a := anonymousAuthenticator{Subject: subjectID}
+	auth := anonymousAuthenticator{Subject: subjectID}
 
 	ctx := &testsupport.MockContext{}
 	ctx.On("AppContext").Return(context.Background())
 
 	// WHEN
-	sub, err := a.Authenticate(ctx)
+	sub, err := auth.Authenticate(ctx)
 
 	// THEN
 	assert.NoError(t, err)
