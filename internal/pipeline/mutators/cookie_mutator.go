@@ -9,7 +9,7 @@ import (
 // by intention. Used only during application bootstrap
 // nolint
 func init() {
-	RegisterMutatorTypeFactory(
+	registerMutatorTypeFactory(
 		func(typ config.PipelineObjectType, conf map[string]any) (bool, Mutator, error) {
 			if typ != config.POTCookie {
 				return false, nil, nil

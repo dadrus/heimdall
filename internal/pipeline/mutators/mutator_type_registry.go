@@ -20,7 +20,7 @@ var (
 
 type MutatorTypeFactory func(t config.PipelineObjectType, c map[string]any) (bool, Mutator, error)
 
-func RegisterMutatorTypeFactory(factory MutatorTypeFactory) {
+func registerMutatorTypeFactory(factory MutatorTypeFactory) {
 	mutatorTypeFactoriesMu.Lock()
 	defer mutatorTypeFactoriesMu.Unlock()
 
