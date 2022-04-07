@@ -294,7 +294,7 @@ func TestCreateJwtAuthenticatorFromPrototype(t *testing.T) {
 		assert          func(t *testing.T, err error, prototype *jwtAuthenticator, configured *jwtAuthenticator)
 	}{
 		{
-			uc: "prototype config without cache, config without cache",
+			uc: "prototype config without cache, target config with overwrites, but without cache",
 			prototypeConfig: []byte(`
 jwks_endpoint:
   url: http://test.com
@@ -325,7 +325,7 @@ jwt_assertions:
 			},
 		},
 		{
-			uc: "prototype config without cache, config with cache",
+			uc: "prototype config without cache, config with overwrites incl cache",
 			prototypeConfig: []byte(`
 jwks_endpoint:
   url: http://test.com
@@ -358,7 +358,7 @@ cache_ttl: 5s`),
 			},
 		},
 		{
-			uc: "prototype config with cache, config without cache",
+			uc: "prototype config with cache, config without but with overwrites cache",
 			prototypeConfig: []byte(`
 jwks_endpoint:
   url: http://test.com
@@ -391,7 +391,7 @@ jwt_assertions:
 			},
 		},
 		{
-			uc: "prototype config with cache, config with cache",
+			uc: "prototype config with cache, target config with cache only",
 			prototypeConfig: []byte(`
 jwks_endpoint:
   url: http://test.com
@@ -399,13 +399,7 @@ jwt_assertions:
   issuers:
     - foobar
 cache_ttl: 5s`),
-			config: []byte(`
-jwt_assertions:
-  issuers:
-    - barfoo
-  allowed_algorithms:
-    - ES512
-cache_ttl: 15s`),
+			config: []byte(`cache_ttl: 15s`),
 			assert: func(t *testing.T, err error, prototype *jwtAuthenticator, configured *jwtAuthenticator) {
 				// THEN
 				require.NoError(t, err)
@@ -413,14 +407,9 @@ cache_ttl: 15s`),
 				assert.Equal(t, prototype.e, configured.e)
 				assert.Equal(t, prototype.adg, configured.adg)
 				assert.Equal(t, prototype.sf, configured.sf)
-				assert.NotEqual(t, prototype.a, configured.a)
+				assert.Equal(t, prototype.a, configured.a)
 
-				assert.NoError(t, configured.a.ScopesMatcher.MatchScopes([]string{}))
-				assert.Empty(t, configured.a.TargetAudiences)
-				assert.ElementsMatch(t, configured.a.TrustedIssuers, []string{"barfoo"})
-				assert.ElementsMatch(t, configured.a.AllowedAlgorithms, []string{string(jose.ES512)})
-
-				assert.NotEqual(t, prototype.ttl, configured.ttl)
+				assert.Equal(t, 5*time.Second, *prototype.ttl)
 				assert.Equal(t, 15*time.Second, *configured.ttl)
 			},
 		},

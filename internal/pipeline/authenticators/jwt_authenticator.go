@@ -44,7 +44,7 @@ type jwtAuthenticator struct {
 	e   endpoint.Endpoint
 	a   oauth2.Expectation
 	ttl *time.Duration
-	se  SubjectFactory
+	sf  SubjectFactory
 	adg extractors.AuthDataExtractStrategy
 }
 
@@ -111,7 +111,7 @@ func newJwtAuthenticator(rawConfig map[string]any) (*jwtAuthenticator, error) {
 		e:   conf.Endpoint,
 		a:   conf.JwtAssertions,
 		ttl: conf.CacheTTL,
-		se:  &conf.Session,
+		sf:  &conf.Session,
 		adg: adg,
 	}, nil
 }
@@ -141,7 +141,7 @@ func (a *jwtAuthenticator) Authenticate(ctx heimdall.Context) (*subject.Subject,
 		return nil, err
 	}
 
-	sub, err := a.se.CreateSubject(rawClaims)
+	sub, err := a.sf.CreateSubject(rawClaims)
 	if err != nil {
 		return nil, errorchain.
 			NewWithMessage(heimdall.ErrInternal, "failed to extract subject information from jwt").
@@ -158,8 +158,8 @@ func (a *jwtAuthenticator) WithConfig(config map[string]any) (Authenticator, err
 	}
 
 	type _config struct {
-		JwtAssertions oauth2.Expectation `mapstructure:"jwt_assertions"`
-		CacheTTL      *time.Duration     `mapstructure:"cache_ttl"`
+		Assertions *oauth2.Expectation `mapstructure:"jwt_assertions"`
+		CacheTTL   *time.Duration      `mapstructure:"cache_ttl"`
 	}
 
 	var conf _config
@@ -169,11 +169,18 @@ func (a *jwtAuthenticator) WithConfig(config map[string]any) (Authenticator, err
 			CausedBy(err)
 	}
 
+	var assertions oauth2.Expectation
+	if conf.Assertions != nil {
+		assertions = *conf.Assertions
+	} else {
+		assertions = a.a
+	}
+
 	return &jwtAuthenticator{
 		e:   a.e,
-		a:   conf.JwtAssertions,
+		a:   assertions,
 		ttl: x.IfThenElse(conf.CacheTTL != nil, conf.CacheTTL, a.ttl),
-		se:  a.se,
+		sf:  a.sf,
 		adg: a.adg,
 	}, nil
 }
