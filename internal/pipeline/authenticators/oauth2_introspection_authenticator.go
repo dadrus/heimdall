@@ -10,7 +10,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/mitchellh/mapstructure"
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/cache"
@@ -42,7 +41,7 @@ func init() {
 type oauth2IntrospectionAuthenticator struct {
 	e   endpoint.Endpoint
 	a   oauth2.Expectation
-	se  SubjectFactory
+	sf  SubjectFactory
 	adg extractors.AuthDataExtractStrategy
 	ttl *time.Duration
 }
@@ -110,7 +109,7 @@ func newOAuth2IntrospectionAuthenticator(rawConfig map[string]any) (*oauth2Intro
 		adg: extractor,
 		e:   conf.Endpoint,
 		a:   conf.Assertions,
-		se:  &conf.Session,
+		sf:  &conf.Session,
 		ttl: conf.CacheTTL,
 	}, nil
 }
@@ -131,7 +130,7 @@ func (a *oauth2IntrospectionAuthenticator) Authenticate(ctx heimdall.Context) (*
 		return nil, err
 	}
 
-	sub, err := a.se.CreateSubject(rawResp)
+	sub, err := a.sf.CreateSubject(rawResp)
 	if err != nil {
 		return nil, errorchain.
 			NewWithMessage(heimdall.ErrInternal, "failed to extract subject information from introspection response").
@@ -148,21 +147,28 @@ func (a *oauth2IntrospectionAuthenticator) WithConfig(config map[string]any) (Au
 	}
 
 	type _config struct {
-		Assertions oauth2.Expectation `mapstructure:"introspection_response_assertions"`
-		CacheTTL   *time.Duration     `mapstructure:"cache_ttl"`
+		Assertions *oauth2.Expectation `mapstructure:"introspection_response_assertions"`
+		CacheTTL   *time.Duration      `mapstructure:"cache_ttl"`
 	}
 
 	var conf _config
-	if err := mapstructure.Decode(config, &conf); err != nil {
+	if err := decodeConfig(config, &conf); err != nil {
 		return nil, errorchain.
 			NewWithMessage(heimdall.ErrConfiguration, "failed to parse configuration").
 			CausedBy(err)
 	}
 
+	var assertions oauth2.Expectation
+	if conf.Assertions != nil {
+		assertions = *conf.Assertions
+	} else {
+		assertions = a.a
+	}
+
 	return &oauth2IntrospectionAuthenticator{
 		e:   a.e,
-		a:   conf.Assertions,
-		se:  a.se,
+		a:   assertions,
+		sf:  a.sf,
 		adg: a.adg,
 		ttl: x.IfThenElse(conf.CacheTTL != nil, conf.CacheTTL, a.ttl),
 	}, nil
