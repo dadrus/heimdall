@@ -13,21 +13,21 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
+	"gopkg.in/square/go-jose.v2"
+	"gopkg.in/square/go-jose.v2/jwt"
+
 	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/dadrus/heimdall/internal/pipeline/authenticators/extractors"
 	"github.com/dadrus/heimdall/internal/pipeline/endpoint"
 	"github.com/dadrus/heimdall/internal/pipeline/oauth2"
 	"github.com/dadrus/heimdall/internal/pipeline/subject"
 	"github.com/dadrus/heimdall/internal/pipeline/testsupport"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
-	"github.com/stretchr/testify/require"
-	"gopkg.in/square/go-jose.v2"
-	"gopkg.in/square/go-jose.v2/jwt"
 )
 
 func TestCreateJwtAuthenticator(t *testing.T) {
-	t.Parallel()
 
 	// nolint
 	for _, tc := range []struct {
@@ -239,8 +239,6 @@ session:
 		},
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
-			t.Parallel()
-
 			conf, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
 
@@ -290,8 +288,6 @@ func setup(t *testing.T, subject, issuer, audience string) ([]byte, string) {
 }
 
 func TestCreateJwtAuthenticatorFromPrototype(t *testing.T) {
-	t.Parallel()
-
 	// nolint
 	for _, tc := range []struct {
 		uc              string
@@ -449,8 +445,6 @@ cache_ttl: 5s`),
 		},
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
-			t.Parallel()
-
 			pc, err := testsupport.DecodeTestConfig(tc.prototypeConfig)
 			require.NoError(t, err)
 
