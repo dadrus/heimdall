@@ -9,16 +9,17 @@ import (
 )
 
 func decodeConfig(input any, output any) error {
-	dec, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
-		DecodeHook: mapstructure.ComposeDecodeHookFunc(
-			mapstructure.StringToTimeDurationHookFunc(),
-			extractors.DecodeCompositeExtractStrategyHookFunc(),
-			oauth2.DecodeScopesMatcherHookFunc(),
-			endpoint.DecodeAuthenticationStrategyHookFunc(),
-		),
-		Result:      output,
-		ErrorUnused: true,
-	})
+	dec, err := mapstructure.NewDecoder(
+		&mapstructure.DecoderConfig{
+			DecodeHook: mapstructure.ComposeDecodeHookFunc(
+				mapstructure.StringToTimeDurationHookFunc(),
+				extractors.DecodeCompositeExtractStrategyHookFunc(),
+				oauth2.DecodeScopesMatcherHookFunc(),
+				endpoint.DecodeAuthenticationStrategyHookFunc(),
+			),
+			Result:      output,
+			ErrorUnused: true,
+		})
 
 	if err != nil {
 		return err
