@@ -12,11 +12,11 @@ import (
 
 var ErrTestPurpose = errors.New("error raised in a test")
 
-type MockSubjectExtractor struct {
+type MockSubjectFactory struct {
 	mock.Mock
 }
 
-func (m *MockSubjectExtractor) GetSubject(data []byte) (*subject.Subject, error) {
+func (m *MockSubjectFactory) CreateSubject(data []byte) (*subject.Subject, error) {
 	args := m.Called(data)
 
 	if val := args.Get(0); val != nil {

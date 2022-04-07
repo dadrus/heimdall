@@ -23,8 +23,6 @@ import (
 )
 
 func TestCreateAuthenticationDataAuthenticator(t *testing.T) {
-	t.Parallel()
-
 	decode := func(data []byte) map[string]interface{} {
 		var res map[string]interface{}
 
@@ -34,7 +32,6 @@ func TestCreateAuthenticationDataAuthenticator(t *testing.T) {
 		return res
 	}
 
-	// nolint
 	for _, tc := range []struct {
 		uc          string
 		config      []byte
@@ -106,7 +103,6 @@ session:
 		},
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
-			t.Parallel()
 			// WHEN
 			_, err := newAuthenticationDataAuthenticator(decode(tc.config))
 
@@ -117,8 +113,6 @@ session:
 }
 
 func TestCreateAuthenticationDataAuthenticatorFromPrototype(t *testing.T) {
-	t.Parallel()
-
 	// nolint
 	for _, tc := range []struct {
 		uc              string
@@ -195,8 +189,6 @@ cache_ttl: 15s`),
 		},
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
-			t.Parallel()
-
 			pc, err := testsupport.DecodeTestConfig(tc.prototypeConfig)
 			require.NoError(t, err)
 
@@ -251,8 +243,8 @@ func TestSuccessfulExecutionOfAuthenticationDataAuthenticatorWithoutCacheUsage(t
 	adg := &mockAuthDataGetter{}
 	adg.On("GetAuthData", ctx).Return(&dummyAuthData{Val: authDataVal}, nil)
 
-	subExtr := &testsupport.MockSubjectExtractor{}
-	subExtr.On("GetSubject", subjectData).Return(sub, nil)
+	subExtr := &testsupport.MockSubjectFactory{}
+	subExtr.On("CreateSubject", subjectData).Return(sub, nil)
 
 	ada := authenticationDataAuthenticator{
 		e:   endpoint.Endpoint{URL: srv.URL, Method: http.MethodGet},
@@ -291,8 +283,8 @@ func TestSuccessfulExecutionOfAuthenticationDataAuthenticatorWithSubjectInfoFrom
 	adg := &mockAuthDataGetter{}
 	adg.On("GetAuthData", ctx).Return(&dummyAuthData{Val: authDataVal}, nil)
 
-	subExtr := &testsupport.MockSubjectExtractor{}
-	subExtr.On("GetSubject", subjectData).Return(sub, nil)
+	subExtr := &testsupport.MockSubjectFactory{}
+	subExtr.On("CreateSubject", subjectData).Return(sub, nil)
 
 	ada := authenticationDataAuthenticator{
 		e:   endpoint.Endpoint{URL: "foobar.local", Method: http.MethodGet},
@@ -352,8 +344,8 @@ func TestSuccessfulExecutionOfAuthenticationDataAuthenticatorWithCacheMiss(t *te
 	adg := &mockAuthDataGetter{}
 	adg.On("GetAuthData", ctx).Return(&dummyAuthData{Val: authDataVal}, nil)
 
-	subExtr := &testsupport.MockSubjectExtractor{}
-	subExtr.On("GetSubject", subjectData).Return(sub, nil)
+	subExtr := &testsupport.MockSubjectFactory{}
+	subExtr.On("CreateSubject", subjectData).Return(sub, nil)
 
 	ada := authenticationDataAuthenticator{
 		e:   endpoint.Endpoint{URL: srv.URL, Method: http.MethodGet},
@@ -379,7 +371,7 @@ func TestSuccessfulExecutionOfAuthenticationDataAuthenticatorWithCacheMiss(t *te
 func TestAuthenticationDataAuthenticatorExecutionFailsDueToMissingAuthData(t *testing.T) {
 	t.Parallel()
 	// GIVEN
-	subExtr := &testsupport.MockSubjectExtractor{}
+	subExtr := &testsupport.MockSubjectFactory{}
 
 	ctx := &testsupport.MockContext{}
 	ctx.On("AppContext").Return(context.Background())
@@ -421,7 +413,7 @@ func TestAuthenticationDataAuthenticatorExecutionFailsDueToEndpointError(t *test
 	adg := &mockAuthDataGetter{}
 	adg.On("GetAuthData", ctx).Return(dummyAuthData{Val: authDataVal}, nil)
 
-	subExtr := &testsupport.MockSubjectExtractor{}
+	subExtr := &testsupport.MockSubjectFactory{}
 
 	ada := authenticationDataAuthenticator{
 		e:   endpoint.Endpoint{URL: "foobar.local"},
@@ -472,8 +464,8 @@ func TestAuthenticationDataAuthenticatorExecutionFailsDueToFailedSubjectExtracti
 	adg := &mockAuthDataGetter{}
 	adg.On("GetAuthData", ctx).Return(dummyAuthData{Val: authDataVal}, nil)
 
-	subExtr := &testsupport.MockSubjectExtractor{}
-	subExtr.On("GetSubject", subjectData).Return(nil, testsupport.ErrTestPurpose)
+	subExtr := &testsupport.MockSubjectFactory{}
+	subExtr.On("CreateSubject", subjectData).Return(nil, testsupport.ErrTestPurpose)
 
 	ada := authenticationDataAuthenticator{
 		e:   endpoint.Endpoint{URL: srv.URL, Method: http.MethodGet},

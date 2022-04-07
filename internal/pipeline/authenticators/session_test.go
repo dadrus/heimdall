@@ -11,9 +11,6 @@ import (
 )
 
 func TestSessionValidation(t *testing.T) {
-	t.Parallel()
-
-	// nolint
 	for _, tc := range []struct {
 		uc        string
 		configure func(t *testing.T, s *Session)
@@ -41,7 +38,6 @@ func TestSessionValidation(t *testing.T) {
 		},
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
-			t.Parallel()
 			// GIVEN
 			s := Session{}
 			tc.configure(t, &s)
@@ -56,8 +52,6 @@ func TestSessionValidation(t *testing.T) {
 }
 
 func TestGetSubjectFromSession(t *testing.T) {
-	t.Parallel()
-
 	type _nested struct {
 		Val bool `json:"val"`
 	}
@@ -89,7 +83,6 @@ func TestGetSubjectFromSession(t *testing.T) {
 	raw, err := json.Marshal(id)
 	require.NoError(t, err)
 
-	// nolint
 	for _, tc := range []struct {
 		uc        string
 		configure func(t *testing.T, s *Session)
@@ -165,14 +158,12 @@ func TestGetSubjectFromSession(t *testing.T) {
 		},
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
-			t.Parallel()
-
 			// GIVEN
 			s := Session{}
 			tc.configure(t, &s)
 
 			// WHEN
-			sub, err := s.GetSubject(raw)
+			sub, err := s.CreateSubject(raw)
 
 			// THEN
 			tc.assert(t, err, sub)

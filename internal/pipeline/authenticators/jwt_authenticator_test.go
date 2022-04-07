@@ -28,8 +28,6 @@ import (
 )
 
 func TestCreateJwtAuthenticator(t *testing.T) {
-
-	// nolint
 	for _, tc := range []struct {
 		uc     string
 		config []byte
@@ -120,7 +118,7 @@ jwt_assertions:
 				assert.Equal(t, time.Duration(0), auth.a.ValidityLeeway)
 
 				// session settings
-				sess, ok := auth.se.(*Session)
+				sess, ok := auth.sf.(*Session)
 				require.True(t, ok)
 				assert.Equal(t, "sub", sess.SubjectFrom)
 				assert.Empty(t, sess.AttributesFrom)
@@ -169,7 +167,7 @@ cache_ttl: 5s`),
 				assert.Equal(t, time.Duration(0), auth.a.ValidityLeeway)
 
 				// session settings
-				sess, ok := auth.se.(*Session)
+				sess, ok := auth.sf.(*Session)
 				require.True(t, ok)
 				assert.Equal(t, "sub", sess.SubjectFrom)
 				assert.Empty(t, sess.AttributesFrom)
@@ -228,7 +226,7 @@ session:
 				assert.Equal(t, time.Duration(0), auth.a.ValidityLeeway)
 
 				// session settings
-				sess, ok := auth.se.(*Session)
+				sess, ok := auth.sf.(*Session)
 				require.True(t, ok)
 				assert.Equal(t, "some_claim", sess.SubjectFrom)
 				assert.Empty(t, sess.AttributesFrom)
@@ -315,7 +313,7 @@ jwt_assertions:
 
 				assert.Equal(t, prototype.e, configured.e)
 				assert.Equal(t, prototype.adg, configured.adg)
-				assert.Equal(t, prototype.se, configured.se)
+				assert.Equal(t, prototype.sf, configured.sf)
 				assert.NotEqual(t, prototype.a, configured.a)
 
 				assert.NoError(t, configured.a.ScopesMatcher.MatchScopes([]string{}))
@@ -347,7 +345,7 @@ cache_ttl: 5s`),
 
 				assert.Equal(t, prototype.e, configured.e)
 				assert.Equal(t, prototype.adg, configured.adg)
-				assert.Equal(t, prototype.se, configured.se)
+				assert.Equal(t, prototype.sf, configured.sf)
 				assert.NotEqual(t, prototype.a, configured.a)
 
 				assert.NoError(t, configured.a.ScopesMatcher.MatchScopes([]string{}))
@@ -380,7 +378,7 @@ jwt_assertions:
 
 				assert.Equal(t, prototype.e, configured.e)
 				assert.Equal(t, prototype.adg, configured.adg)
-				assert.Equal(t, prototype.se, configured.se)
+				assert.Equal(t, prototype.sf, configured.sf)
 				assert.NotEqual(t, prototype.a, configured.a)
 
 				assert.NoError(t, configured.a.ScopesMatcher.MatchScopes([]string{}))
@@ -414,7 +412,7 @@ cache_ttl: 15s`),
 
 				assert.Equal(t, prototype.e, configured.e)
 				assert.Equal(t, prototype.adg, configured.adg)
-				assert.Equal(t, prototype.se, configured.se)
+				assert.Equal(t, prototype.sf, configured.sf)
 				assert.NotEqual(t, prototype.a, configured.a)
 
 				assert.NoError(t, configured.a.ScopesMatcher.MatchScopes([]string{}))
@@ -520,8 +518,8 @@ func TestSuccessfulExecutionOfJwtAuthenticatorWithoutCacheUsage(t *testing.T) {
 	err = json.Unmarshal(rawPaload, &attrs)
 	require.NoError(t, err)
 
-	se := &testsupport.MockSubjectExtractor{}
-	se.On("GetSubject", rawPaload).Return(&subject.Subject{ID: subjectID, Attributes: attrs}, nil)
+	sf := &testsupport.MockSubjectFactory{}
+	sf.On("CreateSubject", rawPaload).Return(&subject.Subject{ID: subjectID, Attributes: attrs}, nil)
 
 	auth := jwtAuthenticator{
 		e: endpoint.Endpoint{
@@ -530,7 +528,7 @@ func TestSuccessfulExecutionOfJwtAuthenticatorWithoutCacheUsage(t *testing.T) {
 			Headers: map[string]string{"Accept-Type": "application/json"},
 		},
 		a:   as,
-		se:  se,
+		sf:  sf,
 		adg: adg,
 	}
 
@@ -546,7 +544,7 @@ func TestSuccessfulExecutionOfJwtAuthenticatorWithoutCacheUsage(t *testing.T) {
 	assert.Equal(t, "application/json", receivedAcceptType)
 
 	ctx.AssertExpectations(t)
-	se.AssertExpectations(t)
+	sf.AssertExpectations(t)
 	adg.AssertExpectations(t)
 	cch.AssertExpectations(t)
 }
@@ -598,8 +596,8 @@ func TestSuccessfulExecutionOfJwtAuthenticatorWithKeyFromCache(t *testing.T) {
 	err = json.Unmarshal(rawPaload, &attrs)
 	require.NoError(t, err)
 
-	se := &testsupport.MockSubjectExtractor{}
-	se.On("GetSubject", rawPaload).Return(&subject.Subject{ID: subjectID, Attributes: attrs}, nil)
+	sf := &testsupport.MockSubjectFactory{}
+	sf.On("CreateSubject", rawPaload).Return(&subject.Subject{ID: subjectID, Attributes: attrs}, nil)
 
 	auth := jwtAuthenticator{
 		e: endpoint.Endpoint{
@@ -608,7 +606,7 @@ func TestSuccessfulExecutionOfJwtAuthenticatorWithKeyFromCache(t *testing.T) {
 			Headers: map[string]string{"Accept-Type": "application/json"},
 		},
 		a:   as,
-		se:  se,
+		sf:  sf,
 		adg: adg,
 		ttl: &ttlKey,
 	}
@@ -624,7 +622,7 @@ func TestSuccessfulExecutionOfJwtAuthenticatorWithKeyFromCache(t *testing.T) {
 	assert.Equal(t, attrs, sub.Attributes)
 
 	ctx.AssertExpectations(t)
-	se.AssertExpectations(t)
+	sf.AssertExpectations(t)
 	adg.AssertExpectations(t)
 	cch.AssertExpectations(t)
 }
@@ -687,8 +685,8 @@ func TestSuccessfulExecutionOfJwtAuthenticatorWithCacheMiss(t *testing.T) {
 	err = json.Unmarshal(rawPaload, &attrs)
 	require.NoError(t, err)
 
-	se := &testsupport.MockSubjectExtractor{}
-	se.On("GetSubject", rawPaload).Return(&subject.Subject{ID: subjectID, Attributes: attrs}, nil)
+	sf := &testsupport.MockSubjectFactory{}
+	sf.On("CreateSubject", rawPaload).Return(&subject.Subject{ID: subjectID, Attributes: attrs}, nil)
 
 	auth := jwtAuthenticator{
 		e: endpoint.Endpoint{
@@ -697,7 +695,7 @@ func TestSuccessfulExecutionOfJwtAuthenticatorWithCacheMiss(t *testing.T) {
 			Headers: map[string]string{"Accept-Type": "application/json"},
 		},
 		a:   as,
-		se:  se,
+		sf:  sf,
 		adg: adg,
 		ttl: &keyTTL,
 	}
@@ -714,7 +712,7 @@ func TestSuccessfulExecutionOfJwtAuthenticatorWithCacheMiss(t *testing.T) {
 	assert.Equal(t, "application/json", receivedAcceptType)
 
 	ctx.AssertExpectations(t)
-	se.AssertExpectations(t)
+	sf.AssertExpectations(t)
 	adg.AssertExpectations(t)
 	cch.AssertExpectations(t)
 }
