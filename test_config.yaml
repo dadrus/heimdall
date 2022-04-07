@@ -75,6 +75,9 @@ pipeline:
         session:
           attributes_from: "@this"
           subject_from: "identity.id"
+        cache:
+          enabled: true
+          ttl: 5m
   authorizers:
     - id: "allow_all_authorizer"
       type: allow
