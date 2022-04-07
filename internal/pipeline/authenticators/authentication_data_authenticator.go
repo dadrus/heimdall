@@ -2,6 +2,7 @@ package authenticators
 
 import (
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -35,7 +36,7 @@ func init() {
 }
 
 type authenticationDataAuthenticator struct {
-	e   Endpoint
+	e   endpoint.Endpoint
 	se  SubjectExtrator
 	adg extractors.AuthDataExtractStrategy
 	ttl *time.Duration
@@ -147,12 +148,12 @@ func (a *authenticationDataAuthenticator) getSubjectInformation(
 
 	if cacheTTL != 0 {
 		if item := cch.Get(cacheKey); item != nil {
-			logger.Debug().Msg("Reusing subject information from cache")
-
 			if cachedSubjectInfo, ok := item.([]byte); !ok {
 				logger.Warn().Msg("Wrong object type from cache")
 				cch.Delete(cacheKey)
 			} else {
+				logger.Debug().Msg("Reusing subject information from cache")
+
 				return cachedSubjectInfo, nil
 			}
 		}
@@ -214,6 +215,6 @@ func (*authenticationDataAuthenticator) readResponse(resp *http.Response) ([]byt
 		NewWithMessagef(heimdall.ErrCommunication, "unexpected response. code: %v", resp.StatusCode)
 }
 
-func (a *authenticationDataAuthenticator) getCacheKey(value string) string {
-	return ""
+func (a *authenticationDataAuthenticator) getCacheKey(reference string) string {
+	return fmt.Sprintf("%s-%s", a.e.URL, reference)
 }

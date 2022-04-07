@@ -207,12 +207,12 @@ func (a *jwtAuthenticator) getKey(ctx heimdall.Context, keyID string) (*jose.JSO
 
 	if cacheTTL != 0 {
 		if item := cch.Get(cacheKey); item != nil {
-			logger.Debug().Msg("Reusing signature key from cache")
-
 			if cachedSigKey, ok := item.(*jose.JSONWebKey); !ok {
 				logger.Warn().Msg("Wrong object type from cache")
 				cch.Delete(cacheKey)
 			} else {
+				logger.Debug().Msg("Reusing signature key from cache")
+
 				return cachedSigKey, nil
 			}
 		}
