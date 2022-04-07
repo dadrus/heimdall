@@ -273,11 +273,10 @@ func (a *oauth2IntrospectionAuthenticator) readIntrospectionResponse(
 func (a *oauth2IntrospectionAuthenticator) getCacheTTL(introspectResp *oauth2.IntrospectionResponse) time.Duration {
 	var cacheTTL time.Duration
 
+	// we cache be default using the settings in the introspection response (if available)
+	// or if ttl has been configured (which overwrites the settings in the response). Latter
+	// overwrites the settings in the introspection response
 	if a.ttl == nil || (a.ttl != nil && *a.ttl != 0) {
-		// we cache be default using the settings in the introspection response (if available)
-		// or if ttl has been configured (which overwrites the settings in the response). Latter
-		// overwrites the settings in the introspection response
-
 		// timeLeeway defines the default time deviation to ensure the token is still valid
 		// when used from cache
 		const timeLeeway = 10
