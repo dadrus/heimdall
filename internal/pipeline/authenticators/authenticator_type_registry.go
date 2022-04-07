@@ -20,7 +20,7 @@ var (
 
 type AuthenticatorTypeFactory func(typ config.PipelineObjectType, config map[string]any) (bool, Authenticator, error)
 
-func RegisterAuthenticatorTypeFactory(factory AuthenticatorTypeFactory) {
+func registerAuthenticatorTypeFactory(factory AuthenticatorTypeFactory) {
 	authenticatorTypeFactoriesMu.Lock()
 	defer authenticatorTypeFactoriesMu.Unlock()
 

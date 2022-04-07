@@ -28,7 +28,7 @@ import (
 // by intention. Used only during application bootstrap
 // nolint
 func init() {
-	RegisterAuthenticatorTypeFactory(
+	registerAuthenticatorTypeFactory(
 		func(typ config.PipelineObjectType, conf map[string]any) (bool, Authenticator, error) {
 			if typ != config.POTJwt {
 				return false, nil, nil
