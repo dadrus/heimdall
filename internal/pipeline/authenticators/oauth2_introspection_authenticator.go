@@ -42,7 +42,7 @@ func init() {
 type oauth2IntrospectionAuthenticator struct {
 	e   endpoint.Endpoint
 	a   oauth2.Expectation
-	se  SubjectExtrator
+	se  SubjectFactory
 	adg extractors.AuthDataExtractStrategy
 	ttl *time.Duration
 }
@@ -62,13 +62,21 @@ func newOAuth2IntrospectionAuthenticator(rawConfig map[string]any) (*oauth2Intro
 			CausedBy(err)
 	}
 
-	if len(conf.Assertions.AllowedAlgorithms) == 0 {
-		conf.Assertions.AllowedAlgorithms = defaultAllowedAlgorithms()
+	if err := conf.Endpoint.Validate(); err != nil {
+		return nil, errorchain.
+			NewWithMessage(heimdall.ErrConfiguration, "failed to validate endpoint configuration").
+			CausedBy(err)
 	}
 
 	if err := conf.Assertions.Validate(); err != nil {
 		return nil, errorchain.
 			NewWithMessage(heimdall.ErrConfiguration, "failed to validate assertions configuration").
+			CausedBy(err)
+	}
+
+	if err := conf.Session.Validate(); err != nil {
+		return nil, errorchain.
+			NewWithMessage(heimdall.ErrConfiguration, "failed to validate session configuration").
 			CausedBy(err)
 	}
 
@@ -85,7 +93,11 @@ func newOAuth2IntrospectionAuthenticator(rawConfig map[string]any) (*oauth2Intro
 	}
 
 	if len(conf.Endpoint.Method) == 0 {
-		conf.Endpoint.Method = "POST"
+		conf.Endpoint.Method = http.MethodPost
+	}
+
+	if len(conf.Assertions.AllowedAlgorithms) == 0 {
+		conf.Assertions.AllowedAlgorithms = defaultAllowedAlgorithms()
 	}
 
 	extractor := extractors.CompositeExtractStrategy{
@@ -119,7 +131,7 @@ func (a *oauth2IntrospectionAuthenticator) Authenticate(ctx heimdall.Context) (*
 		return nil, err
 	}
 
-	sub, err := a.se.GetSubject(rawResp)
+	sub, err := a.se.CreateSubject(rawResp)
 	if err != nil {
 		return nil, errorchain.
 			NewWithMessage(heimdall.ErrInternal, "failed to extract subject information from introspection response").

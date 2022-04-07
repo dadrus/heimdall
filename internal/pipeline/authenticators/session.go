@@ -21,7 +21,7 @@ func (s *Session) Validate() error {
 	return nil
 }
 
-func (s *Session) GetSubject(rawData []byte) (*subject.Subject, error) {
+func (s *Session) CreateSubject(rawData []byte) (*subject.Subject, error) {
 	attributesFrom := "@this"
 	if len(s.AttributesFrom) != 0 {
 		attributesFrom = s.AttributesFrom

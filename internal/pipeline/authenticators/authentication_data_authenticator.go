@@ -37,7 +37,7 @@ func init() {
 
 type authenticationDataAuthenticator struct {
 	e   endpoint.Endpoint
-	se  SubjectExtrator
+	se  SubjectFactory
 	adg extractors.AuthDataExtractStrategy
 	ttl *time.Duration
 }
@@ -98,7 +98,7 @@ func (a *authenticationDataAuthenticator) Authenticate(ctx heimdall.Context) (*s
 		return nil, err
 	}
 
-	sub, err := a.se.GetSubject(payload)
+	sub, err := a.se.CreateSubject(payload)
 	if err != nil {
 		return nil, errorchain.
 			NewWithMessage(heimdall.ErrInternal, "failed to extract subject information from response").

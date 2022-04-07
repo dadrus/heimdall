@@ -44,7 +44,7 @@ type jwtAuthenticator struct {
 	e   endpoint.Endpoint
 	a   oauth2.Expectation
 	ttl *time.Duration
-	se  SubjectExtrator
+	se  SubjectFactory
 	adg extractors.AuthDataExtractStrategy
 }
 
@@ -141,7 +141,7 @@ func (a *jwtAuthenticator) Authenticate(ctx heimdall.Context) (*subject.Subject,
 		return nil, err
 	}
 
-	sub, err := a.se.GetSubject(rawClaims)
+	sub, err := a.se.CreateSubject(rawClaims)
 	if err != nil {
 		return nil, errorchain.
 			NewWithMessage(heimdall.ErrInternal, "failed to extract subject information from jwt").

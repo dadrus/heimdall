@@ -4,6 +4,6 @@ import (
 	"github.com/dadrus/heimdall/internal/pipeline/subject"
 )
 
-type SubjectExtrator interface {
-	GetSubject(rawData []byte) (*subject.Subject, error)
+type SubjectFactory interface {
+	CreateSubject(rawData []byte) (*subject.Subject, error)
 }
