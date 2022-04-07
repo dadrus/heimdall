@@ -9,7 +9,7 @@ import (
 // by intention. Used only during application bootstrap
 // nolint
 func init() {
-	RegisterHydratorTypeFactory(
+	registerHydratorTypeFactory(
 		func(typ config.PipelineObjectType, conf map[string]any) (bool, Hydrator, error) {
 			if typ != config.POTDefault {
 				return false, nil, nil

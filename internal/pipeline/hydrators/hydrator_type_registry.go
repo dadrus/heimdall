@@ -20,7 +20,7 @@ var (
 
 type HydratorTypeFactory func(t config.PipelineObjectType, c map[string]any) (bool, Hydrator, error)
 
-func RegisterHydratorTypeFactory(factory HydratorTypeFactory) {
+func registerHydratorTypeFactory(factory HydratorTypeFactory) {
 	hydratorTypeFactoriesMu.Lock()
 	defer hydratorTypeFactoriesMu.Unlock()
 
