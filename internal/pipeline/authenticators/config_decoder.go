@@ -20,7 +20,6 @@ func decodeConfig(input any, output any) error {
 			Result:      output,
 			ErrorUnused: true,
 		})
-
 	if err != nil {
 		return err
 	}

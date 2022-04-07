@@ -161,7 +161,8 @@ introspection_response_assertions:
     - ES512
 `),
 			assert: func(t *testing.T, err error, prototype *oauth2IntrospectionAuthenticator,
-				configured *oauth2IntrospectionAuthenticator) {
+				configured *oauth2IntrospectionAuthenticator,
+			) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -192,7 +193,8 @@ session:
   subject_from: some_template`),
 			config: []byte(`cache_ttl: 5s`),
 			assert: func(t *testing.T, err error, prototype *oauth2IntrospectionAuthenticator,
-				configured *oauth2IntrospectionAuthenticator) {
+				configured *oauth2IntrospectionAuthenticator,
+			) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -204,7 +206,6 @@ session:
 
 				assert.Nil(t, prototype.ttl)
 				assert.Equal(t, 5*time.Second, *configured.ttl)
-
 			},
 		},
 		{
@@ -219,7 +220,8 @@ session:
   subject_from: some_template`),
 			config: []byte{},
 			assert: func(t *testing.T, err error, prototype *oauth2IntrospectionAuthenticator,
-				configured *oauth2IntrospectionAuthenticator) {
+				configured *oauth2IntrospectionAuthenticator,
+			) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -245,7 +247,8 @@ introspection_response_assertions:
 cache_ttl: 15s
 `),
 			assert: func(t *testing.T, err error, prototype *oauth2IntrospectionAuthenticator,
-				configured *oauth2IntrospectionAuthenticator) {
+				configured *oauth2IntrospectionAuthenticator,
+			) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -591,7 +594,6 @@ func TestExecutionOfOAuth2IntrospectionAuthenticator(t *testing.T) {
 		{
 			uc: "erroneous with failing to create subject from introspection response",
 			configureTestOverwrites: func() {
-
 			},
 			configureCache: func(cch *testsupport.MockCache) *time.Duration {
 				t.Helper()
@@ -715,7 +717,6 @@ func TestExecutionOfOAuth2IntrospectionAuthenticator(t *testing.T) {
 			cch.AssertExpectations(t)
 			adg.AssertExpectations(t)
 			sf.AssertExpectations(t)
-
 		})
 	}
 }
