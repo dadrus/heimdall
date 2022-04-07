@@ -8,7 +8,7 @@ import (
 // by intention. Used only during application bootstrap
 // nolint
 func init() {
-	RegisterErrorHandlerTypeFactory(
+	registerErrorHandlerTypeFactory(
 		func(typ config.PipelineObjectType, conf map[string]any) (bool, ErrorHandler, error) {
 			if typ != config.POTJson {
 				return false, nil, nil

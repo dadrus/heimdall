@@ -17,7 +17,7 @@ var (
 
 type ErrorHandlerTypeFactory func(t config.PipelineObjectType, c map[string]any) (bool, ErrorHandler, error)
 
-func RegisterErrorHandlerTypeFactory(factory ErrorHandlerTypeFactory) {
+func registerErrorHandlerTypeFactory(factory ErrorHandlerTypeFactory) {
 	errorHandlerTypeFactoriesMu.Lock()
 	defer errorHandlerTypeFactoriesMu.Unlock()
 
