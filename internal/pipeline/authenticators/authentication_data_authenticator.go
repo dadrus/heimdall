@@ -85,7 +85,6 @@ func newAuthenticationDataAuthenticator(rawConfig map[string]any) (*authenticati
 
 func (a *authenticationDataAuthenticator) Authenticate(ctx heimdall.Context) (*subject.Subject, error) {
 	logger := zerolog.Ctx(ctx.AppContext())
-
 	logger.Debug().Msg("Retrieving authentication data from request")
 
 	authData, err := a.adg.GetAuthData(ctx)

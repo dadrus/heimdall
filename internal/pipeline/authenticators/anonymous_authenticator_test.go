@@ -1,6 +1,7 @@
 package authenticators
 
 import (
+	"context"
 	"errors"
 	"testing"
 
@@ -109,6 +110,7 @@ func TestAuthenticateWithAnonymousAuthenticatorWithCustomSubjectId(t *testing.T)
 	a := anonymousAuthenticator{Subject: subjectID}
 
 	ctx := &testsupport.MockContext{}
+	ctx.On("AppContext").Return(context.Background())
 
 	// WHEN
 	sub, err := a.Authenticate(ctx)
@@ -128,6 +130,7 @@ func TestAuthenticateWithAnonymousAuthenticatorWithDefaultSubjectId(t *testing.T
 	assert.NoError(t, err)
 
 	ctx := &testsupport.MockContext{}
+	ctx.On("AppContext").Return(context.Background())
 
 	// WHEN
 	sub, err := auth.Authenticate(ctx)

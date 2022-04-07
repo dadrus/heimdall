@@ -1,6 +1,8 @@
 package authenticators
 
 import (
+	"github.com/rs/zerolog"
+
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/pipeline/subject"
@@ -26,7 +28,10 @@ func newUnauthorizedAuthenticator() *unauthorizedAuthenticator {
 	return &unauthorizedAuthenticator{}
 }
 
-func (a *unauthorizedAuthenticator) Authenticate(_ heimdall.Context) (*subject.Subject, error) {
+func (a *unauthorizedAuthenticator) Authenticate(ctx heimdall.Context) (*subject.Subject, error) {
+	logger := zerolog.Ctx(ctx.AppContext())
+	logger.Debug().Msg("Authenticating using unauthorized authenticator")
+
 	return nil, errorchain.NewWithMessage(heimdall.ErrAuthentication, "denied by authenticator")
 }
 

@@ -1,20 +1,25 @@
 package authenticators
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/pipeline/testsupport"
 )
 
 func TestUnauthorizedAuthenticatorExecution(t *testing.T) {
 	t.Parallel()
 	// GIVEN
+	ctx := &testsupport.MockContext{}
+	ctx.On("AppContext").Return(context.Background())
+
 	auth := newUnauthorizedAuthenticator()
 
 	// WHEN
-	sub, err := auth.Authenticate(nil)
+	sub, err := auth.Authenticate(ctx)
 
 	// THEN
 	assert.ErrorIs(t, err, heimdall.ErrAuthentication)

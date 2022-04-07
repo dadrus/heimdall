@@ -1,6 +1,8 @@
 package authenticators
 
 import (
+	"github.com/rs/zerolog"
+
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/pipeline/subject"
@@ -26,6 +28,9 @@ func newNoopAuthenticator() *noopAuthenticator {
 }
 
 func (*noopAuthenticator) Authenticate(ctx heimdall.Context) (*subject.Subject, error) {
+	logger := zerolog.Ctx(ctx.AppContext())
+	logger.Debug().Msg("Authenticating using noop authenticator")
+
 	return &subject.Subject{}, nil
 }
 
