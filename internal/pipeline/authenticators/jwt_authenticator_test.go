@@ -490,8 +490,6 @@ func TestSuccessfulExecutionOfJwtAuthenticatorWithoutCacheUsage(t *testing.T) {
 	audience := "bar"
 	jwksRaw, jwtRaw := setup(t, subjectID, issuer, audience)
 
-	appCtx := context.Background()
-
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
 			w.WriteHeader(http.StatusMethodNotAllowed)
@@ -523,7 +521,7 @@ func TestSuccessfulExecutionOfJwtAuthenticatorWithoutCacheUsage(t *testing.T) {
 	cch := &testsupport.MockCache{}
 
 	ctx := &testsupport.MockContext{}
-	ctx.On("AppContext").Return(cache.WithContext(appCtx, cch))
+	ctx.On("AppContext").Return(cache.WithContext(context.Background(), cch))
 
 	adg := &mockAuthDataGetter{}
 	adg.On("GetAuthData", ctx).Return(dummyAuthData{Val: jwtRaw}, nil)
@@ -576,7 +574,6 @@ func TestSuccessfulExecutionOfJwtAuthenticatorWithKeyFromCache(t *testing.T) {
 	issuer := "foobar"
 	audience := "bar"
 	jwksRaw, jwtRaw := setup(t, subjectID, issuer, audience)
-	appCtx := context.Background()
 
 	var jwks jose.JSONWebKeySet
 	err := json.Unmarshal(jwksRaw, &jwks)
@@ -602,7 +599,7 @@ func TestSuccessfulExecutionOfJwtAuthenticatorWithKeyFromCache(t *testing.T) {
 	cch.On("Get", mock.Anything).Return(&sigKey)
 
 	ctx := &testsupport.MockContext{}
-	ctx.On("AppContext").Return(cache.WithContext(appCtx, cch))
+	ctx.On("AppContext").Return(cache.WithContext(context.Background(), cch))
 
 	adg := &mockAuthDataGetter{}
 	adg.On("GetAuthData", ctx).Return(dummyAuthData{Val: jwtRaw}, nil)
@@ -658,8 +655,6 @@ func TestSuccessfulExecutionOfJwtAuthenticatorWithCacheMiss(t *testing.T) {
 	jwksRaw, jwtRaw := setup(t, subjectID, issuer, audience)
 	keyTTL := 5 * time.Second
 
-	appCtx := context.Background()
-
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
 			w.WriteHeader(http.StatusMethodNotAllowed)
@@ -693,7 +688,7 @@ func TestSuccessfulExecutionOfJwtAuthenticatorWithCacheMiss(t *testing.T) {
 	cch.On("Set", mock.Anything, mock.IsType(&jose.JSONWebKey{}), keyTTL)
 
 	ctx := &testsupport.MockContext{}
-	ctx.On("AppContext").Return(cache.WithContext(appCtx, cch))
+	ctx.On("AppContext").Return(cache.WithContext(context.Background(), cch))
 
 	adg := &mockAuthDataGetter{}
 	adg.On("GetAuthData", ctx).Return(dummyAuthData{Val: jwtRaw}, nil)
