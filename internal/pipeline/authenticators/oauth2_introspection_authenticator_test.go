@@ -15,6 +15,7 @@ import (
 	"gopkg.in/square/go-jose.v2"
 
 	"github.com/dadrus/heimdall/internal/cache"
+	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/pipeline/authenticators/extractors"
 	"github.com/dadrus/heimdall/internal/pipeline/endpoint"
 	"github.com/dadrus/heimdall/internal/pipeline/oauth2"
@@ -282,13 +283,14 @@ cache_ttl: 15s
 	}
 }
 
-func TestSuccessfulExecutionOfOAuth2IntrospectionAuthenticatorWithoutCacheUsage(t *testing.T) {
+func TestExecutionOfOAuth2IntrospectionAuthenticator(t *testing.T) {
 	// GIVEN
 	var (
 		receivedAcceptType    string
 		receivedContentType   string
 		receivedTokenTypeHint string
 		receivedToken         string
+		endpointCalled        bool
 	)
 
 	tokenValue := "foooooobaaaaar"
@@ -307,12 +309,13 @@ func TestSuccessfulExecutionOfOAuth2IntrospectionAuthenticatorWithoutCacheUsage(
 		"nbf":        time.Now().Unix(),
 		"exp":        time.Now().Unix() + 30,
 	}
-	cacheTTL := 0 * time.Second
 
 	rawIntrospectResponse, err := json.Marshal(attrs)
 	require.NoError(t, err)
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		endpointCalled = true
+
 		if r.Method != http.MethodPost {
 			w.WriteHeader(http.StatusMethodNotAllowed)
 
@@ -334,63 +337,385 @@ func TestSuccessfulExecutionOfOAuth2IntrospectionAuthenticatorWithoutCacheUsage(
 	}))
 	defer srv.Close()
 
-	cch := &testsupport.MockCache{}
-	cch.On("Get", mock.Anything).Return(nil)
+	for _, tc := range []struct {
+		uc                      string
+		configureTestOverwrites func()
+		configureCache          func(cch *testsupport.MockCache) *time.Duration
+		configureAuthDataGetter func(cch *mockAuthDataGetter, ctx *testsupport.MockContext)
+		configureSubjectFactory func(sf *testsupport.MockSubjectFactory)
+		assert                  func(t *testing.T, err error, sub *subject.Subject)
+	}{
+		{
+			uc:                      "successful with cache disabled",
+			configureTestOverwrites: func() {},
+			configureCache: func(cch *testsupport.MockCache) *time.Duration {
+				t.Helper()
 
-	ctx := &testsupport.MockContext{}
-	ctx.On("AppContext").Return(cache.WithContext(context.Background(), cch))
+				cch.On("Get", mock.Anything).Return(nil)
 
-	adg := &mockAuthDataGetter{}
-	adg.On("GetAuthData", ctx).Return(dummyAuthData{Val: tokenValue}, nil)
+				cacheTTL := 0 * time.Second
 
-	sf := &testsupport.MockSubjectFactory{}
-	sf.On("CreateSubject", rawIntrospectResponse).
-		Return(&subject.Subject{ID: subjectID, Attributes: attrs}, nil)
+				return &cacheTTL
+			},
+			configureAuthDataGetter: func(adg *mockAuthDataGetter, ctx *testsupport.MockContext) {
+				t.Helper()
 
-	as := oauth2.Expectation{
-		ScopesMatcher: oauth2.ScopesMatcher{
-			Match:  oauth2.ExactScopeStrategy,
-			Scopes: []string{"foo"},
-		},
-		TargetAudiences: []string{audience},
-		TrustedIssuers:  []string{issuer},
-		ValidityLeeway:  1 * time.Minute,
-	}
+				adg.On("GetAuthData", ctx).Return(dummyAuthData{Val: tokenValue}, nil)
+			},
+			configureSubjectFactory: func(sf *testsupport.MockSubjectFactory) {
+				t.Helper()
 
-	auth := oauth2IntrospectionAuthenticator{
-		e: endpoint.Endpoint{
-			URL:    srv.URL,
-			Method: http.MethodPost,
-			Headers: map[string]string{
-				"Accept-Type":  "application/json",
-				"Content-Type": "application/x-www-form-urlencoded",
+				sf.On("CreateSubject", rawIntrospectResponse).
+					Return(&subject.Subject{ID: subjectID, Attributes: attrs}, nil)
+			},
+			assert: func(t *testing.T, err error, sub *subject.Subject) {
+				t.Helper()
+
+				require.NoError(t, err)
+
+				// assert networking
+				assert.Equal(t, "application/x-www-form-urlencoded", receivedContentType)
+				assert.Equal(t, "application/json", receivedAcceptType)
+				assert.Equal(t, tokenValue, receivedToken)
+				assert.Equal(t, "access_token", receivedTokenTypeHint)
+
+				// assert subject
+				assert.NotNil(t, sub)
+				assert.Equal(t, subjectID, sub.ID)
+				assert.Equal(t, attrs, sub.Attributes)
 			},
 		},
-		a:   as,
-		sf:  sf,
-		adg: adg,
-		ttl: &cacheTTL,
+		{
+			uc:                      "successful with usage of default cache ttl and cache miss",
+			configureTestOverwrites: func() {},
+			configureCache: func(cch *testsupport.MockCache) *time.Duration {
+				t.Helper()
+
+				cch.On("Get", mock.Anything).Return(nil)
+				cch.On("Set", mock.Anything, rawIntrospectResponse, mock.MatchedBy(
+					func(dur time.Duration) bool {
+						exp := attrs["exp"]
+						expDur, ok := exp.(int64)
+
+						require.True(t, ok)
+
+						calcDur := time.Duration(expDur-time.Now().Unix()) * time.Second
+
+						return calcDur > dur
+					}))
+
+				return nil
+			},
+			configureAuthDataGetter: func(adg *mockAuthDataGetter, ctx *testsupport.MockContext) {
+				t.Helper()
+
+				adg.On("GetAuthData", ctx).Return(dummyAuthData{Val: tokenValue}, nil)
+			},
+			configureSubjectFactory: func(sf *testsupport.MockSubjectFactory) {
+				t.Helper()
+
+				sf.On("CreateSubject", rawIntrospectResponse).
+					Return(&subject.Subject{ID: subjectID, Attributes: attrs}, nil)
+			},
+			assert: func(t *testing.T, err error, sub *subject.Subject) {
+				t.Helper()
+
+				require.NoError(t, err)
+
+				// assert networking
+				assert.Equal(t, "application/x-www-form-urlencoded", receivedContentType)
+				assert.Equal(t, "application/json", receivedAcceptType)
+				assert.Equal(t, tokenValue, receivedToken)
+				assert.Equal(t, "access_token", receivedTokenTypeHint)
+
+				// assert subject
+				assert.NotNil(t, sub)
+				assert.Equal(t, subjectID, sub.ID)
+				assert.Equal(t, attrs, sub.Attributes)
+			},
+		},
+		{
+			uc:                      "successful with usage of configured cache ttl and cache miss",
+			configureTestOverwrites: func() {},
+			configureCache: func(cch *testsupport.MockCache) *time.Duration {
+				t.Helper()
+
+				cacheTTL := 20 * time.Second
+
+				cch.On("Get", mock.Anything).Return(nil)
+				cch.On("Set", mock.Anything, rawIntrospectResponse, mock.MatchedBy(
+					func(dur time.Duration) bool { return dur == cacheTTL }))
+
+				return &cacheTTL
+			},
+			configureAuthDataGetter: func(adg *mockAuthDataGetter, ctx *testsupport.MockContext) {
+				t.Helper()
+
+				adg.On("GetAuthData", ctx).Return(dummyAuthData{Val: tokenValue}, nil)
+			},
+			configureSubjectFactory: func(sf *testsupport.MockSubjectFactory) {
+				t.Helper()
+
+				sf.On("CreateSubject", rawIntrospectResponse).
+					Return(&subject.Subject{ID: subjectID, Attributes: attrs}, nil)
+			},
+			assert: func(t *testing.T, err error, sub *subject.Subject) {
+				t.Helper()
+
+				require.NoError(t, err)
+
+				// assert networking
+				assert.Equal(t, "application/x-www-form-urlencoded", receivedContentType)
+				assert.Equal(t, "application/json", receivedAcceptType)
+				assert.Equal(t, tokenValue, receivedToken)
+				assert.Equal(t, "access_token", receivedTokenTypeHint)
+
+				// assert subject
+				assert.NotNil(t, sub)
+				assert.Equal(t, subjectID, sub.ID)
+				assert.Equal(t, attrs, sub.Attributes)
+			},
+		},
+		{
+			uc:                      "successful using valid cached results using default cache ttl",
+			configureTestOverwrites: func() {},
+			configureCache: func(cch *testsupport.MockCache) *time.Duration {
+				t.Helper()
+
+				cch.On("Get", mock.Anything).Return(rawIntrospectResponse)
+
+				return nil
+			},
+			configureAuthDataGetter: func(adg *mockAuthDataGetter, ctx *testsupport.MockContext) {
+				t.Helper()
+
+				adg.On("GetAuthData", ctx).Return(dummyAuthData{Val: tokenValue}, nil)
+			},
+			configureSubjectFactory: func(sf *testsupport.MockSubjectFactory) {
+				t.Helper()
+
+				sf.On("CreateSubject", rawIntrospectResponse).
+					Return(&subject.Subject{ID: subjectID, Attributes: attrs}, nil)
+			},
+			assert: func(t *testing.T, err error, sub *subject.Subject) {
+				t.Helper()
+
+				require.NoError(t, err)
+
+				// assert networking
+				assert.False(t, endpointCalled)
+
+				// assert subject
+				assert.NotNil(t, sub)
+				assert.Equal(t, subjectID, sub.ID)
+				assert.Equal(t, attrs, sub.Attributes)
+			},
+		},
+		{
+			uc:                      "successful using invalid cached results using default cache ttl",
+			configureTestOverwrites: func() {},
+			configureCache: func(cch *testsupport.MockCache) *time.Duration {
+				t.Helper()
+
+				cch.On("Get", mock.Anything).Return(attrs)
+				cch.On("Set", mock.Anything, rawIntrospectResponse, mock.MatchedBy(
+					func(dur time.Duration) bool {
+						exp := attrs["exp"]
+						expDur, ok := exp.(int64)
+
+						require.True(t, ok)
+
+						calcDur := time.Duration(expDur-time.Now().Unix()) * time.Second
+
+						return calcDur > dur
+					}))
+				cch.On("Delete", mock.Anything)
+
+				return nil
+			},
+			configureAuthDataGetter: func(adg *mockAuthDataGetter, ctx *testsupport.MockContext) {
+				t.Helper()
+
+				adg.On("GetAuthData", ctx).Return(dummyAuthData{Val: tokenValue}, nil)
+			},
+			configureSubjectFactory: func(sf *testsupport.MockSubjectFactory) {
+				t.Helper()
+
+				sf.On("CreateSubject", rawIntrospectResponse).
+					Return(&subject.Subject{ID: subjectID, Attributes: attrs}, nil)
+			},
+			assert: func(t *testing.T, err error, sub *subject.Subject) {
+				t.Helper()
+
+				require.NoError(t, err)
+
+				// assert networking
+				assert.True(t, endpointCalled)
+				assert.Equal(t, "application/x-www-form-urlencoded", receivedContentType)
+				assert.Equal(t, "application/json", receivedAcceptType)
+				assert.Equal(t, tokenValue, receivedToken)
+				assert.Equal(t, "access_token", receivedTokenTypeHint)
+
+				// assert subject
+				assert.NotNil(t, sub)
+				assert.Equal(t, subjectID, sub.ID)
+				assert.Equal(t, attrs, sub.Attributes)
+			},
+		},
+		{
+			uc:                      "erroneous with failing getting token from request",
+			configureTestOverwrites: func() {},
+			configureCache: func(cch *testsupport.MockCache) *time.Duration {
+				t.Helper()
+
+				return nil
+			},
+			configureAuthDataGetter: func(adg *mockAuthDataGetter, ctx *testsupport.MockContext) {
+				t.Helper()
+
+				adg.On("GetAuthData", ctx).Return(nil, testsupport.ErrTestPurpose)
+			},
+			configureSubjectFactory: func(sf *testsupport.MockSubjectFactory) {
+				t.Helper()
+			},
+			assert: func(t *testing.T, err error, sub *subject.Subject) {
+				t.Helper()
+
+				assert.False(t, endpointCalled)
+
+				assert.Error(t, err)
+				assert.ErrorIs(t, err, heimdall.ErrAuthentication)
+				assert.Nil(t, sub)
+			},
+		},
+		{
+			uc: "erroneous with failing to create subject from introspection response",
+			configureTestOverwrites: func() {
+
+			},
+			configureCache: func(cch *testsupport.MockCache) *time.Duration {
+				t.Helper()
+
+				cacheTTL := 20 * time.Second
+
+				cch.On("Get", mock.Anything).Return(nil)
+				cch.On("Set", mock.Anything, rawIntrospectResponse, mock.MatchedBy(
+					func(dur time.Duration) bool { return dur == cacheTTL }))
+
+				return &cacheTTL
+			},
+			configureAuthDataGetter: func(adg *mockAuthDataGetter, ctx *testsupport.MockContext) {
+				t.Helper()
+
+				adg.On("GetAuthData", ctx).Return(dummyAuthData{Val: tokenValue}, nil)
+			},
+			configureSubjectFactory: func(sf *testsupport.MockSubjectFactory) {
+				t.Helper()
+
+				sf.On("CreateSubject", rawIntrospectResponse).
+					Return(nil, testsupport.ErrTestPurpose)
+			},
+			assert: func(t *testing.T, err error, sub *subject.Subject) {
+				t.Helper()
+
+				assert.True(t, endpointCalled)
+
+				assert.Error(t, err)
+				assert.ErrorIs(t, err, heimdall.ErrInternal)
+				assert.Nil(t, sub)
+			},
+		},
+		{
+			uc: "erroneous with failing introspection response validation",
+			configureTestOverwrites: func() {
+				attrs = map[string]any{"active": false}
+				rawIntrospectResponse, err = json.Marshal(attrs)
+
+				require.NoError(t, err)
+			},
+			configureCache: func(cch *testsupport.MockCache) *time.Duration {
+				t.Helper()
+
+				cacheTTL := 20 * time.Second
+
+				cch.On("Get", mock.Anything).Return(nil)
+
+				return &cacheTTL
+			},
+			configureAuthDataGetter: func(adg *mockAuthDataGetter, ctx *testsupport.MockContext) {
+				t.Helper()
+
+				adg.On("GetAuthData", ctx).Return(dummyAuthData{Val: tokenValue}, nil)
+			},
+			configureSubjectFactory: func(sf *testsupport.MockSubjectFactory) {
+				t.Helper()
+			},
+			assert: func(t *testing.T, err error, sub *subject.Subject) {
+				t.Helper()
+
+				assert.True(t, endpointCalled)
+
+				assert.Error(t, err)
+				assert.ErrorIs(t, err, heimdall.ErrAuthentication)
+				assert.Nil(t, sub)
+			},
+		},
+	} {
+		t.Run("case="+tc.uc, func(t *testing.T) {
+			receivedToken = ""
+			receivedTokenTypeHint = ""
+			receivedContentType = ""
+			receivedAcceptType = ""
+			endpointCalled = false
+
+			tc.configureTestOverwrites()
+
+			cch := &testsupport.MockCache{}
+			ttl := tc.configureCache(cch)
+
+			ctx := &testsupport.MockContext{}
+			ctx.On("AppContext").Return(cache.WithContext(context.Background(), cch))
+
+			adg := &mockAuthDataGetter{}
+			tc.configureAuthDataGetter(adg, ctx)
+
+			sf := &testsupport.MockSubjectFactory{}
+			tc.configureSubjectFactory(sf)
+
+			auth := oauth2IntrospectionAuthenticator{
+				e: endpoint.Endpoint{
+					URL:    srv.URL,
+					Method: http.MethodPost,
+					Headers: map[string]string{
+						"Accept-Type":  "application/json",
+						"Content-Type": "application/x-www-form-urlencoded",
+					},
+				},
+				a: oauth2.Expectation{
+					ScopesMatcher: oauth2.ScopesMatcher{
+						Match:  oauth2.ExactScopeStrategy,
+						Scopes: []string{"foo"},
+					},
+					TargetAudiences: []string{audience},
+					TrustedIssuers:  []string{issuer},
+					ValidityLeeway:  1 * time.Minute,
+				},
+				sf:  sf,
+				adg: adg,
+				ttl: ttl,
+			}
+
+			// WHEN
+			sub, err := auth.Authenticate(ctx)
+
+			// THEN
+			tc.assert(t, err, sub)
+
+			// assert mocks
+			cch.AssertExpectations(t)
+			adg.AssertExpectations(t)
+			sf.AssertExpectations(t)
+
+		})
 	}
-
-	// WHEN
-	sub, err := auth.Authenticate(ctx)
-
-	// THEN
-	require.NoError(t, err)
-
-	// assert networking
-	assert.Equal(t, "application/x-www-form-urlencoded", receivedContentType)
-	assert.Equal(t, "application/json", receivedAcceptType)
-	assert.Equal(t, tokenValue, receivedToken)
-	assert.Equal(t, "access_token", receivedTokenTypeHint)
-
-	// assert subject
-	assert.NotNil(t, sub)
-	assert.Equal(t, subjectID, sub.ID)
-	assert.Equal(t, attrs, sub.Attributes)
-
-	// assert mocks
-	cch.AssertExpectations(t)
-	adg.AssertExpectations(t)
-	sf.AssertExpectations(t)
 }
