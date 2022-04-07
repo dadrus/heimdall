@@ -103,13 +103,11 @@ jwt_assertions:
 				require.NoError(t, err)
 
 				// endpoint settings
-				ept, ok := auth.e.(endpoint.Endpoint)
-				require.True(t, ok)
-				assert.Equal(t, "http://test.com", ept.URL)
-				assert.Equal(t, "GET", ept.Method)
-				assert.Equal(t, 1, len(ept.Headers))
-				assert.Contains(t, ept.Headers, "Accept-Type")
-				assert.Equal(t, ept.Headers["Accept-Type"], "application/json")
+				assert.Equal(t, "http://test.com", auth.e.URL)
+				assert.Equal(t, "GET", auth.e.Method)
+				assert.Equal(t, 1, len(auth.e.Headers))
+				assert.Contains(t, auth.e.Headers, "Accept-Type")
+				assert.Equal(t, auth.e.Headers["Accept-Type"], "application/json")
 
 				// token extractor settings
 				assert.IsType(t, extractors.CompositeExtractStrategy{}, auth.adg)
@@ -163,13 +161,11 @@ session:
 				require.NoError(t, err)
 
 				// endpoint settings
-				ept, ok := auth.e.(endpoint.Endpoint)
-				require.True(t, ok)
-				assert.Equal(t, "http://test.com", ept.URL)
-				assert.Equal(t, "POST", ept.Method)
-				assert.Equal(t, 1, len(ept.Headers))
-				assert.Contains(t, ept.Headers, "Accept-Type")
-				assert.Equal(t, ept.Headers["Accept-Type"], "application/foobar")
+				assert.Equal(t, "http://test.com", auth.e.URL)
+				assert.Equal(t, "POST", auth.e.Method)
+				assert.Equal(t, 1, len(auth.e.Headers))
+				assert.Contains(t, auth.e.Headers, "Accept-Type")
+				assert.Equal(t, auth.e.Headers["Accept-Type"], "application/foobar")
 
 				// token extractor settings
 				assert.IsType(t, extractors.CompositeExtractStrategy{}, auth.adg)
