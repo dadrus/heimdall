@@ -15,6 +15,7 @@ linters:
     - interfacer
     - testpackage
     - funlen
+    - paralleltest
 
 linters-settings:
   exhaustive:
