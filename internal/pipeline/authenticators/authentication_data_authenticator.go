@@ -5,14 +5,17 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"time"
 
 	"github.com/rs/zerolog"
 
+	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/pipeline/authenticators/extractors"
 	"github.com/dadrus/heimdall/internal/pipeline/endpoint"
 	"github.com/dadrus/heimdall/internal/pipeline/subject"
+	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
@@ -35,6 +38,7 @@ type authenticationDataAuthenticator struct {
 	e   Endpoint
 	se  SubjectExtrator
 	adg extractors.AuthDataExtractStrategy
+	ttl *time.Duration
 }
 
 func newAuthenticationDataAuthenticator(rawConfig map[string]any) (*authenticationDataAuthenticator, error) {
@@ -42,6 +46,7 @@ func newAuthenticationDataAuthenticator(rawConfig map[string]any) (*authenticati
 		Endpoint       endpoint.Endpoint                   `mapstructure:"identity_info_endpoint"`
 		AuthDataSource extractors.CompositeExtractStrategy `mapstructure:"authentication_data_source"`
 		Session        Session                             `mapstructure:"session"`
+		CacheTTL       *time.Duration                      `mapstructure:"cache_ttl"`
 	}
 
 	var conf _config
@@ -73,6 +78,7 @@ func newAuthenticationDataAuthenticator(rawConfig map[string]any) (*authenticati
 		e:   conf.Endpoint,
 		adg: conf.AuthDataSource,
 		se:  &conf.Session,
+		ttl: conf.CacheTTL,
 	}, nil
 }
 
@@ -86,6 +92,88 @@ func (a *authenticationDataAuthenticator) Authenticate(ctx heimdall.Context) (*s
 		return nil, errorchain.New(heimdall.ErrAuthentication).CausedBy(err)
 	}
 
+	payload, err := a.getSubjectInformation(ctx, authData)
+	if err != nil {
+		return nil, err
+	}
+
+	sub, err := a.se.GetSubject(payload)
+	if err != nil {
+		return nil, errorchain.
+			NewWithMessage(heimdall.ErrInternal, "failed to extract subject information from response").
+			CausedBy(err)
+	}
+
+	return sub, nil
+}
+
+func (a *authenticationDataAuthenticator) WithConfig(config map[string]any) (Authenticator, error) {
+	// this authenticator allows ttl to be redefined on the rule level
+	if len(config) == 0 {
+		return a, nil
+	}
+
+	type _config struct {
+		CacheTTL *time.Duration `mapstructure:"cache_ttl"`
+	}
+
+	var conf _config
+	if err := decodeConfig(config, &conf); err != nil {
+		return nil, errorchain.
+			NewWithMessage(heimdall.ErrConfiguration, "failed to parse configuration").
+			CausedBy(err)
+	}
+
+	return &authenticationDataAuthenticator{
+		e:   a.e,
+		se:  a.se,
+		adg: a.adg,
+		ttl: x.IfThenElse(conf.CacheTTL != nil, conf.CacheTTL, a.ttl),
+	}, nil
+}
+
+func (a *authenticationDataAuthenticator) getSubjectInformation(
+	ctx heimdall.Context,
+	authData extractors.AuthData,
+) ([]byte, error) {
+	cch := cache.Ctx(ctx.AppContext())
+	logger := zerolog.Ctx(ctx.AppContext())
+	cacheKey := a.getCacheKey(authData.Value())
+
+	var cacheTTL time.Duration
+	if a.ttl != nil {
+		cacheTTL = *a.ttl
+	}
+
+	if cacheTTL != 0 {
+		if item := cch.Get(cacheKey); item != nil {
+			logger.Debug().Msg("Reusing subject information from cache")
+
+			if cachedSubjectInfo, ok := item.([]byte); !ok {
+				logger.Warn().Msg("Wrong object type from cache")
+				cch.Delete(cacheKey)
+			} else {
+				return cachedSubjectInfo, nil
+			}
+		}
+	}
+
+	payload, err := a.fetchSubjectInformation(ctx, authData)
+	if err != nil {
+		return nil, err
+	}
+
+	if cacheTTL != 0 {
+		cch.Set(cacheKey, payload, cacheTTL)
+	}
+
+	return payload, nil
+}
+
+func (a *authenticationDataAuthenticator) fetchSubjectInformation(
+	ctx heimdall.Context,
+	authData extractors.AuthData,
+) ([]byte, error) {
 	req, err := a.e.CreateRequest(ctx.AppContext(), nil)
 	if err != nil {
 		return nil, err
@@ -107,19 +195,7 @@ func (a *authenticationDataAuthenticator) Authenticate(ctx heimdall.Context) (*s
 
 	defer resp.Body.Close()
 
-	payload, err := a.readResponse(resp)
-	if err != nil {
-		return nil, err
-	}
-
-	sub, err := a.se.GetSubject(payload)
-	if err != nil {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrInternal, "failed to extract subject information from response").
-			CausedBy(err)
-	}
-
-	return sub, nil
+	return a.readResponse(resp)
 }
 
 func (*authenticationDataAuthenticator) readResponse(resp *http.Response) ([]byte, error) {
@@ -138,7 +214,6 @@ func (*authenticationDataAuthenticator) readResponse(resp *http.Response) ([]byt
 		NewWithMessagef(heimdall.ErrCommunication, "unexpected response. code: %v", resp.StatusCode)
 }
 
-func (a *authenticationDataAuthenticator) WithConfig(_ map[string]any) (Authenticator, error) {
-	// this authenticator does not allow configuration from a rule
-	return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration, "reconfiguration not allowed")
+func (a *authenticationDataAuthenticator) getCacheKey(value string) string {
+	return ""
 }
