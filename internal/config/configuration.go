@@ -28,7 +28,8 @@ type Configuration struct {
 		Mutators       []PipelineObject `koanf:"mutators"`
 		ErrorHandlers  []PipelineObject `koanf:"error_handlers"`
 	} `koanf:"pipeline"`
-	Rules struct {
+	Signer *Signer `koanf:"signer"`
+	Rules  struct {
 		Default   Pipeline `koanf:"default"`
 		Providers struct {
 			File struct {
