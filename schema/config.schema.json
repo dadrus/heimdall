@@ -932,6 +932,9 @@
             "jwt_body": {
               "type": "object",
               "additionalProperties": false,
+              "required": [
+                "issuer"
+              ],
               "properties": {
                 "claims": {
                   "type": "string"
