@@ -6,13 +6,13 @@ import (
 	"net/url"
 	"sync"
 
-	"github.com/dadrus/heimdall/internal/keystore"
 	"github.com/rs/zerolog"
 	"golang.org/x/exp/slices"
 	"gopkg.in/yaml.v2"
 
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/keystore"
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/pipeline/authenticators"
 	"github.com/dadrus/heimdall/internal/pipeline/authorizers"
