@@ -97,6 +97,10 @@ func (m *MockContext) AddResponseHeader(name, value string) {
 	m.Called(name, value)
 }
 
+func (m *MockContext) AddResponseCookie(name, value string) {
+	m.Called(name, value)
+}
+
 func (m *MockContext) SetSubject(sub *subject.Subject) {
 	m.Called(sub)
 }

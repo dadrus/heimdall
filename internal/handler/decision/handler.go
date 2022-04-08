@@ -95,7 +95,11 @@ func (h *Handler) decisions(c *fiber.Ctx) error {
 		return c.SendStatus(fiber.StatusMethodNotAllowed)
 	}
 
-	reqCtx := &requestContext{c: c, respHeader: make(http.Header)}
+	reqCtx := &requestContext{
+		c:           c,
+		respHeader:  make(http.Header),
+		respCookies: make(map[string]string),
+	}
 
 	err = rule.Execute(reqCtx)
 	if err == nil {
@@ -145,10 +149,11 @@ func (h *Handler) handleError(c *fiber.Ctx, err error) error {
 }
 
 type requestContext struct {
-	c          *fiber.Ctx
-	respHeader http.Header
-	sub        *subject.Subject
-	err        error
+	c           *fiber.Ctx
+	respHeader  http.Header
+	respCookies map[string]string
+	sub         *subject.Subject
+	err         error
 }
 
 func (s *requestContext) RequestHeader(name string) string         { return s.c.Get(name) }
@@ -159,5 +164,6 @@ func (s *requestContext) RequestBody() []byte                      { return s.c.
 func (s *requestContext) AppContext() context.Context              { return s.c.UserContext() }
 func (s *requestContext) SetPipelineError(err error)               { s.err = err }
 func (s *requestContext) AddResponseHeader(name, value string)     { s.respHeader.Add(name, value) }
+func (s *requestContext) AddResponseCookie(name, value string)     { s.respCookies[name] = value }
 func (s *requestContext) SetSubject(sub *subject.Subject)          { s.sub = sub }
 func (s *requestContext) Subject() *subject.Subject                { return s.sub }
