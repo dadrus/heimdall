@@ -6,6 +6,7 @@ require (
 	github.com/ansrivas/fiberprometheus/v2 v2.2.0
 	github.com/fsnotify/fsnotify v1.5.1
 	github.com/gofiber/fiber/v2 v2.31.0
+	github.com/google/uuid v1.0.0
 	github.com/jellydator/ttlcache/v3 v3.0.0
 	github.com/knadh/koanf v1.4.0
 	github.com/mitchellh/mapstructure v1.4.3
@@ -16,6 +17,7 @@ require (
 	github.com/stretchr/testify v1.7.1
 	github.com/tidwall/gjson v1.14.0
 	github.com/ybbus/httpretry v1.0.1
+	github.com/youmark/pkcs8 v0.0.0-20201027041543-1326539a0a0a
 	go.uber.org/fx v1.17.1
 	golang.org/x/exp v0.0.0-20220318154914-8dddf5d87bd8
 	gopkg.in/square/go-jose.v2 v2.6.0
