@@ -8,18 +8,15 @@ import (
 
 type CompositeMutator []Mutator
 
-func (cm CompositeMutator) Mutate(ctx heimdall.Context, sub *subject.Subject) (err error) {
+func (cm CompositeMutator) Mutate(ctx heimdall.Context, sub *subject.Subject) error {
 	for _, m := range cm {
-		err = m.Mutate(ctx, sub)
+		err := m.Mutate(ctx, sub)
 		if err != nil {
-			// try next
-			continue
-		} else {
-			return nil
+			return err
 		}
 	}
 
-	return err
+	return nil
 }
 
 func (cm CompositeMutator) WithConfig(_ map[string]any) (Mutator, error) {
