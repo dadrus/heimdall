@@ -25,6 +25,9 @@ const (
 	pemBlockTypePrivateKey          = "PRIVATE KEY"
 	pemBlockTypeECPrivateKey        = "EC PRIVATE KEY"
 	pemBlockTypeRSAPrivateKey       = "RSA PRIVATE KEY"
+
+	AlgRSA   = "RSA"
+	AlgECDSA = "ECDSA"
 )
 
 var ErrNoSuchKey = errors.New("no such key")
@@ -158,11 +161,11 @@ func createEntry(key any) (*Entry, error) {
 	case *rsa.PrivateKey:
 		const bitsInByte = 8
 
-		algorithm = "RSA"
+		algorithm = AlgRSA
 		sigKey = typ
 		size = typ.Size() * bitsInByte
 	case *ecdsa.PrivateKey:
-		algorithm = "ECDSA"
+		algorithm = AlgECDSA
 		sigKey = typ
 		size = typ.Params().BitSize
 	default:
