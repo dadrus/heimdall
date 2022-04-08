@@ -34,8 +34,13 @@ func (s *Session) CreateSubject(rawData []byte) (*subject.Subject, error) {
 
 	attributes := gjson.GetBytes(rawData, attributesFrom).Value()
 
+	attrs, ok := attributes.(map[string]any)
+	if !ok {
+		return nil, errorchain.NewWithMessage(heimdall.ErrInternal, "unexpected response from gjson template")
+	}
+
 	return &subject.Subject{
 		ID:         subjectID,
-		Attributes: attributes,
+		Attributes: attrs,
 	}, nil
 }

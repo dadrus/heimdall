@@ -1,6 +1,6 @@
 package subject
 
 type Subject struct {
-	ID         string `json:"id"`
-	Attributes any    `json:"attributes"`
+	ID         string         `json:"id"`
+	Attributes map[string]any `json:"attributes"`
 }
