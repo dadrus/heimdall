@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/pipeline/testsupport"
@@ -61,6 +62,25 @@ func TestExtractHeaderValueWithPrefix(t *testing.T) {
 
 	val.ApplyTo(req)
 	assert.Equal(t, actualValue, req.Header.Get(headerName))
+
+	ctx.AssertExpectations(t)
+}
+
+func TestExtractNotExistingHeaderValue(t *testing.T) {
+	t.Parallel()
+
+	// GIVEN
+	ctx := &testsupport.MockContext{}
+	ctx.On("RequestHeader", mock.Anything).Return("")
+
+	strategy := HeaderValueExtractStrategy{Name: "Test-Cookie"}
+
+	// WHEN
+	_, err := strategy.GetAuthData(ctx)
+
+	// THEN
+	assert.Error(t, err)
+	assert.ErrorIs(t, err, ErrAuthData)
 
 	ctx.AssertExpectations(t)
 }

@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/pipeline/testsupport"
@@ -33,6 +34,25 @@ func TestExtractQueryParameter(t *testing.T) {
 
 	val.ApplyTo(req)
 	assert.Equal(t, queryParamValue, req.URL.Query().Get(queryParam))
+
+	ctx.AssertExpectations(t)
+}
+
+func TestExtractNotExistingQueryParameterValue(t *testing.T) {
+	t.Parallel()
+
+	// GIVEN
+	ctx := &testsupport.MockContext{}
+	ctx.On("RequestQueryParameter", mock.Anything).Return("")
+
+	strategy := QueryParameterExtractStrategy{Name: "Test-Cookie"}
+
+	// WHEN
+	_, err := strategy.GetAuthData(ctx)
+
+	// THEN
+	assert.Error(t, err)
+	assert.ErrorIs(t, err, ErrAuthData)
 
 	ctx.AssertExpectations(t)
 }
