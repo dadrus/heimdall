@@ -1,9 +1,12 @@
 package mutators
 
 import (
+	"github.com/rs/zerolog"
+
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/pipeline/subject"
+	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
 // by intention. Used only during application bootstrap
@@ -21,16 +24,47 @@ func init() {
 		})
 }
 
-type cookieMutator struct{}
-
-func newCookieMutator(rawConfig map[string]any) (cookieMutator, error) {
-	return cookieMutator{}, nil
+type cookieMutator struct {
+	cookies map[string]Template
 }
 
-func (cookieMutator) Mutate(ctx heimdall.Context, sub *subject.Subject) error {
+func newCookieMutator(rawConfig map[string]any) (*cookieMutator, error) {
+	type _config struct {
+		Cookies map[string]Template `mapstructure:"cookies"`
+	}
+
+	var conf _config
+	if err := decodeConfig(rawConfig, &conf); err != nil {
+		return nil, errorchain.
+			NewWithMessage(heimdall.ErrConfiguration, "failed to unmarshal cookie mutator config").
+			CausedBy(err)
+	}
+
+	return &cookieMutator{
+		cookies: conf.Cookies,
+	}, nil
+}
+
+func (m *cookieMutator) Mutate(ctx heimdall.Context, sub *subject.Subject) error {
+	logger := zerolog.Ctx(ctx.AppContext())
+	logger.Debug().Msg("Mutating using cookie mutator")
+
+	for name, tmpl := range m.cookies {
+		value, err := tmpl.Render(sub)
+		if err != nil {
+			return err
+		}
+
+		ctx.AddResponseCookie(name, value)
+	}
+
 	return nil
 }
 
-func (cookieMutator) WithConfig(config map[string]any) (Mutator, error) {
-	return nil, nil
+func (m *cookieMutator) WithConfig(config map[string]any) (Mutator, error) {
+	if len(config) == 0 {
+		return m, nil
+	}
+
+	return newCookieMutator(config)
 }
