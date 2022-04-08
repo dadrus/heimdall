@@ -470,7 +470,9 @@
             "type": "object",
             "description": "The header (case insensitive) that contains the authentication information.",
             "additionalProperties": false,
-            "required": ["header"],
+            "required": [
+              "header"
+            ],
             "properties": {
               "header": {
                 "type": "string"
@@ -484,7 +486,9 @@
             "type": "object",
             "description": "The cookie (case sensitive) that contains the authentication information.",
             "additionalProperties": false,
-            "required": ["cookie"],
+            "required": [
+              "cookie"
+            ],
             "properties": {
               "cookie": {
                 "type": "string"
@@ -498,7 +502,9 @@
             "type": "object",
             "description": "The query parameter (case sensitive) that contains the authentication information.",
             "additionalProperties": false,
-            "required": ["query_parameter"],
+            "required": [
+              "query_parameter"
+            ],
             "properties": {
               "query_parameter": {
                 "type": "string"
@@ -512,7 +518,9 @@
             "type": "object",
             "description": "The form parameter (case sensitive) that contains the authentication information.",
             "additionalProperties": false,
-            "required": ["form_parameter"],
+            "required": [
+              "form_parameter"
+            ],
             "properties": {
               "form_parameter": {
                 "type": "string"
@@ -914,49 +922,28 @@
           "title": "JWT Mutator Configuration",
           "additionalProperties": false,
           "required": [
-            "jwks_url",
-            "jwt_body"
+            "issuer"
           ],
           "properties": {
-            "jwks_url": {
-              "type": "string",
-              "format": "uri",
-              "title": "JSON Web Key URL",
-              "description": "Sets the URL where keys should be fetched from. Supports remote locations (http, https) as well as local filesystem paths.\n\n>If this mutator is enabled, this value is required.",
-              "examples": [
-                "https://fetch-keys/from/this/location.json",
-                "file:///from/this/absolute/location.json",
-                "file://../from/this/relative/location.json"
-              ]
+            "claims": {
+              "type": "string"
             },
-            "jwt_body": {
-              "type": "object",
-              "additionalProperties": false,
-              "required": [
-                "issuer"
-              ],
-              "properties": {
-                "claims": {
-                  "type": "string"
-                },
-                "issuer": {
-                  "type": "string",
-                  "title": "Issuer URL",
-                  "description": "Sets the \"iss\" value of the JWT Token.\n\n>If this mutator is enabled, this value is required."
-                },
-                "ttl": {
-                  "type": "string",
-                  "title": "Expire After",
-                  "description": "Sets the time-to-live of the JSON Web Token.",
-                  "pattern": "^[0-9]+(ns|us|ms|s|m|h)$",
-                  "default": "15m",
-                  "examples": [
-                    "1h",
-                    "1m",
-                    "30s"
-                  ]
-                }
-              }
+            "issuer": {
+              "type": "string",
+              "title": "Issuer URL",
+              "description": "Sets the \"iss\" value of the JWT Token."
+            },
+            "ttl": {
+              "type": "string",
+              "title": "Expire After",
+              "description": "Sets the time-to-live of the JSON Web Token.",
+              "pattern": "^[0-9]+(ns|us|ms|s|m|h)$",
+              "default": "15m",
+              "examples": [
+                "1h",
+                "1m",
+                "30s"
+              ]
             }
           }
         }
@@ -1248,10 +1235,14 @@
       "additionalProperties": false,
       "oneOf": [
         {
-          "required": ["directory"]
+          "required": [
+            "directory"
+          ]
         },
         {
-          "required": ["filename"]
+          "required": [
+            "filename"
+          ]
         }
       ],
       "properties": {
@@ -1370,7 +1361,11 @@
       "description": "Individual pipeline handlers used by rules",
       "type": "object",
       "additionalProperties": false,
-      "required": ["authenticators","authorizers","mutators"],
+      "required": [
+        "authenticators",
+        "authorizers",
+        "mutators"
+      ],
       "properties": {
         "error_handlers": {
           "description": "Individual Error Handler Configurations",

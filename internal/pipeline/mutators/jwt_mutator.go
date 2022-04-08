@@ -58,11 +58,9 @@ type jwtMutator struct {
 
 func newJWTMutator(rawConfig map[string]any) (*jwtMutator, error) {
 	type _config struct {
-		JWTBody struct {
-			Claims *Template      `mapstructure:"claims"`
-			Issuer string         `mapstructure:"issuer"`
-			TTL    *time.Duration `mapstructure:"ttl"`
-		} `mapstructure:"jwt_body"`
+		Claims *Template      `mapstructure:"claims"`
+		Issuer string         `mapstructure:"issuer"`
+		TTL    *time.Duration `mapstructure:"ttl"`
 	}
 
 	var conf _config
@@ -73,13 +71,13 @@ func newJWTMutator(rawConfig map[string]any) (*jwtMutator, error) {
 	}
 
 	ttl := defaultJWTTTL
-	if conf.JWTBody.TTL != nil {
-		ttl = *conf.JWTBody.TTL
+	if conf.TTL != nil {
+		ttl = *conf.TTL
 	}
 
 	return &jwtMutator{
-		claims: conf.JWTBody.Claims,
-		issuer: conf.JWTBody.Issuer,
+		claims: conf.Claims,
+		issuer: conf.Issuer,
 		ttl:    ttl,
 	}, nil
 }
@@ -128,10 +126,8 @@ func (m *jwtMutator) WithConfig(rawConfig map[string]any) (Mutator, error) {
 	}
 
 	type _config struct {
-		JWTBody struct {
-			Claims *Template      `mapstructure:"claims"`
-			TTL    *time.Duration `mapstructure:"ttl"`
-		} `mapstructure:"jwt_body"`
+		Claims *Template      `mapstructure:"claims"`
+		TTL    *time.Duration `mapstructure:"ttl"`
 	}
 
 	var conf _config
@@ -142,14 +138,14 @@ func (m *jwtMutator) WithConfig(rawConfig map[string]any) (Mutator, error) {
 	}
 
 	var ttl time.Duration
-	if conf.JWTBody.TTL != nil {
-		ttl = *conf.JWTBody.TTL
+	if conf.TTL != nil {
+		ttl = *conf.TTL
 	} else {
 		ttl = m.ttl
 	}
 
 	return &jwtMutator{
-		claims: x.IfThenElse(conf.JWTBody.Claims != nil, conf.JWTBody.Claims, m.claims),
+		claims: x.IfThenElse(conf.Claims != nil, conf.Claims, m.claims),
 		ttl:    ttl,
 	}, nil
 }

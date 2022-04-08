@@ -113,10 +113,8 @@ pipeline:
     - id: "jwt"
       type: jwt
       config:
-        jwks_url: foo.bar
-        jwt_body:
-          issuer: foo.bar
-          ttl: 5m
+        issuer: foo.bar
+        ttl: 5m
     - id: "bla"
       type: header
       config:
