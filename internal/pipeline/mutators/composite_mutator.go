@@ -2,15 +2,16 @@ package mutators
 
 import (
 	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/keystore"
 	"github.com/dadrus/heimdall/internal/pipeline/subject"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
 type CompositeMutator []Mutator
 
-func (cm CompositeMutator) Mutate(ctx heimdall.Context, sub *subject.Subject) error {
+func (cm CompositeMutator) Mutate(ctx heimdall.Context, sub *subject.Subject, sigKey *keystore.Entry) error {
 	for _, m := range cm {
-		err := m.Mutate(ctx, sub)
+		err := m.Mutate(ctx, sub, sigKey)
 		if err != nil {
 			return err
 		}

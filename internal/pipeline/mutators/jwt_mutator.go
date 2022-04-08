@@ -16,13 +16,23 @@ import (
 	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/keystore"
 	"github.com/dadrus/heimdall/internal/pipeline/subject"
+	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
 const (
 	defaultJWTTTL      = 15 * time.Minute
 	defaultCacheLeeway = 10 * time.Second
+
+	rsa2048 = 2048
+	rsa3072 = 3072
+	rsa4096 = 4096
+
+	ecdsa256 = 256
+	ecdsa384 = 384
+	ecdsa512 = 512
 )
 
 // by intention. Used only during application bootstrap
@@ -41,15 +51,13 @@ func init() {
 }
 
 type jwtMutator struct {
-	jwksURL string
-	claims  *Template
-	issuer  string
-	ttl     time.Duration
+	claims *Template
+	issuer string
+	ttl    time.Duration
 }
 
 func newJWTMutator(rawConfig map[string]any) (*jwtMutator, error) {
 	type _config struct {
-		JWKSURL string `mapstructure:"jwks_url"`
 		JWTBody struct {
 			Claims *Template      `mapstructure:"claims"`
 			Issuer string         `mapstructure:"issuer"`
@@ -70,14 +78,13 @@ func newJWTMutator(rawConfig map[string]any) (*jwtMutator, error) {
 	}
 
 	return &jwtMutator{
-		jwksURL: conf.JWKSURL,
-		claims:  conf.JWTBody.Claims,
-		issuer:  conf.JWTBody.Issuer,
-		ttl:     ttl,
+		claims: conf.JWTBody.Claims,
+		issuer: conf.JWTBody.Issuer,
+		ttl:    ttl,
 	}, nil
 }
 
-func (m *jwtMutator) Mutate(ctx heimdall.Context, sub *subject.Subject) error {
+func (m *jwtMutator) Mutate(ctx heimdall.Context, sub *subject.Subject, sigKey *keystore.Entry) error {
 	logger := zerolog.Ctx(ctx.AppContext())
 	logger.Debug().Msg("Mutating using JWT mutator")
 
@@ -85,7 +92,7 @@ func (m *jwtMutator) Mutate(ctx heimdall.Context, sub *subject.Subject) error {
 
 	cch := cache.Ctx(ctx.AppContext())
 
-	cacheKey, err := m.cacheKey(sub)
+	cacheKey, err := m.calculateCacheKey(sub, sigKey)
 	if err != nil {
 		logger.Error().Err(err).Msg("Failed to calculate cache key. Will not be able to cache token")
 	} else if item := cch.Get(cacheKey); item != nil {
@@ -100,7 +107,7 @@ func (m *jwtMutator) Mutate(ctx heimdall.Context, sub *subject.Subject) error {
 	}
 
 	if len(jwtToken) == 0 {
-		jwtToken, err = m.generateToken(sub)
+		jwtToken, err = m.generateToken(sub, sigKey)
 		if err != nil {
 			return err
 		}
@@ -115,13 +122,45 @@ func (m *jwtMutator) Mutate(ctx heimdall.Context, sub *subject.Subject) error {
 	return nil
 }
 
-func (m *jwtMutator) WithConfig(config map[string]any) (Mutator, error) {
-	return nil, nil
+func (m *jwtMutator) WithConfig(rawConfig map[string]any) (Mutator, error) {
+	if len(rawConfig) == 0 {
+		return m, nil
+	}
+
+	type _config struct {
+		JWTBody struct {
+			Claims *Template      `mapstructure:"claims"`
+			TTL    *time.Duration `mapstructure:"ttl"`
+		} `mapstructure:"jwt_body"`
+	}
+
+	var conf _config
+	if err := decodeConfig(rawConfig, &conf); err != nil {
+		return nil, errorchain.
+			NewWithMessage(heimdall.ErrConfiguration, "failed to unmarshal JWT mutator config").
+			CausedBy(err)
+	}
+
+	var ttl time.Duration
+	if conf.JWTBody.TTL != nil {
+		ttl = *conf.JWTBody.TTL
+	} else {
+		ttl = m.ttl
+	}
+
+	return &jwtMutator{
+		claims: x.IfThenElse(conf.JWTBody.Claims != nil, conf.JWTBody.Claims, m.claims),
+		ttl:    ttl,
+	}, nil
 }
 
-func (m *jwtMutator) generateToken(sub *subject.Subject) (string, error) {
-	claims := map[string]any{}
+func (m *jwtMutator) generateToken(sub *subject.Subject, sigKey *keystore.Entry) (string, error) {
+	alg, err := getJOSEAlgorithm(sigKey)
+	if err != nil {
+		return "", err
+	}
 
+	claims := map[string]any{}
 	if m.claims != nil {
 		vals, err := m.claims.Render(sub)
 		if err != nil {
@@ -132,7 +171,7 @@ func (m *jwtMutator) generateToken(sub *subject.Subject) (string, error) {
 
 		if err := json.Unmarshal([]byte(vals), &claims); err != nil {
 			return "", errorchain.
-				NewWithMessage(heimdall.ErrInternal, "failed to unmarshal rendered claims template").
+				NewWithMessage(heimdall.ErrInternal, "failed to unmarshal claims rendered by template").
 				CausedBy(err)
 		}
 	}
@@ -149,11 +188,10 @@ func (m *jwtMutator) generateToken(sub *subject.Subject) (string, error) {
 	signerOpts := jose.SignerOptions{}
 	signerOpts.
 		WithType("JWT").
-		WithHeader("kid", "bar").
-		WithHeader("alg", "foo").
-		WithHeader("jku", "foo")
+		WithHeader("kid", sigKey.KeyID).
+		WithHeader("alg", alg)
 
-	signer, err := jose.NewSigner(jose.SigningKey{Algorithm: jose.PS256, Key: nil}, &signerOpts)
+	signer, err := jose.NewSigner(jose.SigningKey{Algorithm: alg, Key: sigKey.PrivateKey}, &signerOpts)
 	if err != nil {
 		return "", errorchain.
 			NewWithMessage(heimdall.ErrInternal, "failed to create JWT signer").
@@ -172,7 +210,39 @@ func (m *jwtMutator) generateToken(sub *subject.Subject) (string, error) {
 	return rawJwt, nil
 }
 
-func (m *jwtMutator) cacheKey(sub *subject.Subject) (string, error) {
+func getJOSEAlgorithm(key *keystore.Entry) (jose.SignatureAlgorithm, error) {
+	switch key.Alg {
+	case keystore.AlgRSA:
+		switch key.KeySize {
+		case rsa2048:
+			return jose.PS256, nil
+		case rsa3072:
+			return jose.PS384, nil
+		case rsa4096:
+			return jose.PS512, nil
+		default:
+			return "", errorchain.
+				NewWithMessage(heimdall.ErrInternal, "unsupported RSA key size")
+		}
+	case keystore.AlgECDSA:
+		switch key.KeySize {
+		case ecdsa256:
+			return jose.ES256, nil
+		case ecdsa384:
+			return jose.ES384, nil
+		case ecdsa512:
+			return jose.ES512, nil
+		default:
+			return "", errorchain.
+				NewWithMessage(heimdall.ErrInternal, "unsupported ECDSA key size")
+		}
+	default:
+		return "", errorchain.
+			NewWithMessage(heimdall.ErrInternal, "unsupported signature key type")
+	}
+}
+
+func (m *jwtMutator) calculateCacheKey(sub *subject.Subject, sigKey *keystore.Entry) (string, error) {
 	const int64BytesCount = 8
 
 	claims := "null"
@@ -191,10 +261,12 @@ func (m *jwtMutator) cacheKey(sub *subject.Subject) (string, error) {
 	binary.LittleEndian.PutUint64(ttlBytes, uint64(m.ttl))
 
 	hash := sha256.New()
-	hash.Write([]byte(m.jwksURL))
+	hash.Write([]byte(sigKey.KeyID))
+	hash.Write([]byte(sigKey.Alg))
 	hash.Write([]byte(m.issuer))
 	hash.Write([]byte(claims))
 	hash.Write(ttlBytes)
+	hash.Write(rawSub)
 
-	return hex.EncodeToString(hash.Sum(rawSub)), nil
+	return hex.EncodeToString(hash.Sum(nil)), nil
 }

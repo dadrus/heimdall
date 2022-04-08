@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"sync"
 
+	"github.com/dadrus/heimdall/internal/keystore"
 	"github.com/rs/zerolog"
 	"golang.org/x/exp/slices"
 	"gopkg.in/yaml.v2"
@@ -31,21 +32,40 @@ func NewRepository(
 	queue provider.RuleSetChangedEventQueue,
 	config config.Configuration,
 	hf pipeline.HandlerFactory,
+	ks keystore.KeyStore,
 	logger zerolog.Logger,
 ) (Repository, error) {
+	var (
+		ksEntry *keystore.Entry
+		err     error
+	)
+
+	if len(config.Signer.KeyID) == 0 {
+		logger.Warn().Msg("No key id for signer configured. Taking first entry from the key store")
+
+		ksEntry = ks.Entries()[0]
+	} else {
+		ksEntry, err = ks.GetKey(config.Signer.KeyID)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	return &repository{
-		hf:     hf,
-		dpc:    config.Rules.Default,
-		logger: logger,
-		queue:  queue,
-		quit:   make(chan bool),
+		hf:      hf,
+		dpc:     config.Rules.Default,
+		logger:  logger,
+		ksEntry: ksEntry,
+		queue:   queue,
+		quit:    make(chan bool),
 	}, nil
 }
 
 type repository struct {
-	hf     pipeline.HandlerFactory
-	dpc    config.Pipeline
-	logger zerolog.Logger
+	hf      pipeline.HandlerFactory
+	dpc     config.Pipeline
+	logger  zerolog.Logger
+	ksEntry *keystore.Entry
 
 	rules []*rule
 	mutex sync.RWMutex
@@ -190,6 +210,7 @@ func (r *repository) newRule(srcID string, ruleConfig config.RuleConfig) (*rule,
 		url:     ruleConfig.URL,
 		methods: ruleConfig.Methods,
 		srcID:   srcID,
+		ksEntry: r.ksEntry,
 		an:      authenticator,
 		az:      authorizer,
 		h:       hydrator,
@@ -213,6 +234,7 @@ type rule struct {
 	url     string
 	methods []string
 	srcID   string
+	ksEntry *keystore.Entry
 	an      authenticators.Authenticator
 	az      authorizers.Authorizer
 	h       hydrators.Hydrator
@@ -242,7 +264,7 @@ func (r *rule) Execute(ctx heimdall.Context) error {
 		return r.eh.HandleError(ctx, err)
 	}
 
-	if err := r.m.Mutate(ctx, sub); err != nil {
+	if err := r.m.Mutate(ctx, sub, r.ksEntry); err != nil {
 		logger.Debug().Err(err).Msg("Mutation failed")
 
 		return r.eh.HandleError(ctx, err)

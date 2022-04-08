@@ -5,6 +5,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/keystore"
 	"github.com/dadrus/heimdall/internal/pipeline/subject"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
@@ -45,7 +46,7 @@ func newCookieMutator(rawConfig map[string]any) (*cookieMutator, error) {
 	}, nil
 }
 
-func (m *cookieMutator) Mutate(ctx heimdall.Context, sub *subject.Subject) error {
+func (m *cookieMutator) Mutate(ctx heimdall.Context, sub *subject.Subject, _ *keystore.Entry) error {
 	logger := zerolog.Ctx(ctx.AppContext())
 	logger.Debug().Msg("Mutating using cookie mutator")
 
