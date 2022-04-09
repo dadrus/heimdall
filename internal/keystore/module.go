@@ -21,7 +21,7 @@ func newKeyStore(conf config.Configuration, logger zerolog.Logger) (KeyStore, er
 	const rsa2048 = 2048
 
 	if len(conf.Signer.KeyStore) == 0 {
-		logger.Warn().Msg("Signer key store is not configured. NEVER DO IT IN PRODUCTION!!!! Generating an RSA key pair.")
+		logger.Warn().Msg("Key store is not configured. NEVER DO IT IN PRODUCTION!!!! Generating an RSA key pair.")
 
 		privateKey, err := rsa.GenerateKey(rand.Reader, rsa2048)
 		if err != nil {
