@@ -12,14 +12,11 @@ func (ch CompositeHydrator) Hydrate(ctx heimdall.Context, sub *subject.Subject) 
 	for _, h := range ch {
 		err = h.Hydrate(ctx, sub)
 		if err != nil {
-			// try next
-			continue
-		} else {
-			return nil
+			return err
 		}
 	}
 
-	return err
+	return nil
 }
 
 func (ch CompositeHydrator) WithConfig(_ map[string]any) (Hydrator, error) {
