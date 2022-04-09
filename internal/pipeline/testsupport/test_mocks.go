@@ -7,6 +7,7 @@ import (
 
 	"github.com/stretchr/testify/mock"
 
+	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/pipeline/subject"
 )
 
@@ -101,17 +102,13 @@ func (m *MockContext) AddResponseCookie(name, value string) {
 	m.Called(name, value)
 }
 
-func (m *MockContext) SetSubject(sub *subject.Subject) {
-	m.Called(sub)
-}
-
-func (m *MockContext) Subject() *subject.Subject {
+func (m *MockContext) Signer() heimdall.JWTSigner {
 	args := m.Called()
 
 	if i := args.Get(0); i != nil {
-		val, ok := i.(*subject.Subject)
+		val, ok := i.(heimdall.JWTSigner)
 		if !ok {
-			panic("*heimdall.Subject")
+			panic("heimdall.JWTSigner")
 		}
 
 		return val
