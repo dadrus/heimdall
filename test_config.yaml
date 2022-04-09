@@ -113,7 +113,6 @@ pipeline:
     - id: "jwt"
       type: jwt
       config:
-        issuer: http://issuer
         ttl: 5m
     - id: "bla"
       type: header
