@@ -21,6 +21,7 @@ type Configuration struct {
 	DecisionAPI Serve      `koanf:"serve.api"`
 	Prometheus  Prometheus `koanf:"serve.prometheus"`
 	Log         Logging    `koanf:"log"`
+	Signer      *Signer    `koanf:"signer"`
 	Pipeline    struct {
 		Authenticators []PipelineObject `koanf:"authenticators"`
 		Authorizers    []PipelineObject `koanf:"authorizers"`
@@ -28,8 +29,7 @@ type Configuration struct {
 		Mutators       []PipelineObject `koanf:"mutators"`
 		ErrorHandlers  []PipelineObject `koanf:"error_handlers"`
 	} `koanf:"pipeline"`
-	Signer *Signer `koanf:"signer"`
-	Rules  struct {
+	Rules struct {
 		Default   Pipeline `koanf:"default"`
 		Providers struct {
 			File struct {
