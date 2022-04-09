@@ -1326,6 +1326,7 @@
       "title": "Log",
       "description": "Configure logging using the following options. Logging will always be sent to stdout and stderr.",
       "type": "object",
+      "additionalProperties": false,
       "properties": {
         "level": {
           "description": "Debug enables stack traces on errors. Can also be set using environment variable LOG_LEVEL.",
@@ -1349,8 +1350,31 @@
             "text"
           ]
         }
-      },
-      "additionalProperties": false
+      }
+    },
+    "signer": {
+      "description": "Configures signer options for issued JWTs.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name" : {
+          "description": "The name of the signer (string or URL). Used for the 'iss' claim in the issued JWTs",
+          "type": "string",
+          "default": "heimdall"
+        },
+        "key_store": {
+          "description": "Path to a pem file containing the key material.",
+          "type": "string"
+        },
+        "password":{
+          "description": "Password for the key material in the key store if PKCS#8 encrypted format is used.",
+          "type": "string"
+        },
+        "key_id": {
+          "description": "The sha256 hash of the public key from the the store to use for JWT signing purposes.",
+          "type": "string"
+        }
+      }
     },
     "pipeline": {
       "description": "Individual pipeline handlers used by rules",
