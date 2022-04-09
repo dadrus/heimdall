@@ -124,6 +124,10 @@ func (h *Handler) decisions(c *fiber.Ctx) error {
 		c.Response().Header.Set(k, reqCtx.respHeader.Get(k))
 	}
 
+	for k, v := range reqCtx.respCookies {
+		c.Cookie(&fiber.Cookie{Name: k, Value: v})
+	}
+
 	return c.SendStatus(fiber.StatusOK)
 }
 
