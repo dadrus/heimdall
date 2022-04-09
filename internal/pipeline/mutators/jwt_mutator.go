@@ -177,7 +177,7 @@ func (m *jwtMutator) generateToken(ctx heimdall.Context, sub *subject.Subject) (
 	signer, err := jose.NewSigner(
 		jose.SigningKey{
 			Algorithm: iss.Algorithm(),
-			Key:       iss.SignatureKey(),
+			Key:       iss.Key(),
 		},
 		&signerOpts)
 	if err != nil {

@@ -95,4 +95,4 @@ type jwtSigner struct {
 func (s *jwtSigner) Name() string                       { return s.iss }
 func (s *jwtSigner) KeyID() string                      { return s.kid }
 func (s *jwtSigner) Algorithm() jose.SignatureAlgorithm { return s.alg }
-func (s *jwtSigner) SignatureKey() crypto.Signer        { return s.key }
+func (s *jwtSigner) Key() crypto.Signer                 { return s.key }
