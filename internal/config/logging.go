@@ -24,7 +24,7 @@ func logFormatDecodeHookFunc(from reflect.Type, to reflect.Type, val any) (any, 
 	if from.Kind() == reflect.String && to.Name() == "LogFormat" {
 		return x.IfThenElse(val == "text", LogTextFormat, LogGelfFormat), nil
 	}
-	
+
 	return val, nil
 }
 
