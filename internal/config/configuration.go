@@ -64,9 +64,8 @@ func NewConfiguration(configFile string) Configuration {
 			MetricsPath: "/metrics",
 		},
 		Log: Logging{
-			Level:             zerolog.DebugLevel,
-			Format:            LogTextFormat,
-			LeakSensitiveData: false,
+			Level:  zerolog.DebugLevel,
+			Format: LogTextFormat,
 		},
 	}
 
