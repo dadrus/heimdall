@@ -10,7 +10,6 @@ import (
 	"github.com/rs/zerolog"
 	"go.uber.org/fx"
 
-	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules"
 	"github.com/dadrus/heimdall/internal/x"
@@ -25,7 +24,6 @@ const (
 
 type Handler struct {
 	r rules.Repository
-	c config.Configuration
 	s heimdall.JWTSigner
 }
 
@@ -34,7 +32,6 @@ type HandlerParams struct {
 
 	App             *fiber.App `name:"api"`
 	RulesRepository rules.Repository
-	Conf            config.Configuration
 	Logger          zerolog.Logger
 	Signer          heimdall.JWTSigner
 }
@@ -42,7 +39,6 @@ type HandlerParams struct {
 func newHandler(params HandlerParams) (*Handler, error) {
 	handler := &Handler{
 		r: params.RulesRepository,
-		c: params.Conf,
 		s: params.Signer,
 	}
 
