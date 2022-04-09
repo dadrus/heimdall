@@ -5,7 +5,6 @@ import (
 
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/keystore"
 	"github.com/dadrus/heimdall/internal/pipeline/subject"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
@@ -46,7 +45,7 @@ func newHeaderMutator(rawConfig map[string]any) (*headerMutator, error) {
 	}, nil
 }
 
-func (m *headerMutator) Mutate(ctx heimdall.Context, sub *subject.Subject, _ *keystore.Entry) error {
+func (m *headerMutator) Mutate(ctx heimdall.Context, sub *subject.Subject) error {
 	logger := zerolog.Ctx(ctx.AppContext())
 	logger.Debug().Msg("Mutating using header mutator")
 

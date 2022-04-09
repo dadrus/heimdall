@@ -8,9 +8,10 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/rs/zerolog"
+	"go.uber.org/fx"
 
+	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/pipeline/subject"
 	"github.com/dadrus/heimdall/internal/rules"
 	"github.com/dadrus/heimdall/internal/x"
 )
@@ -24,13 +25,30 @@ const (
 
 type Handler struct {
 	r rules.Repository
+	c config.Configuration
+	s heimdall.JWTSigner
 }
 
-func newHandler(p fiberApp, r rules.Repository, logger zerolog.Logger) *Handler {
-	h := &Handler{r: r}
-	h.registerRoutes(p.App.Group(""), logger)
+type HandlerParams struct {
+	fx.In
 
-	return h
+	App             *fiber.App `name:"api"`
+	RulesRepository rules.Repository
+	Conf            config.Configuration
+	Logger          zerolog.Logger
+	Signer          heimdall.JWTSigner
+}
+
+func newHandler(params HandlerParams) (*Handler, error) {
+	handler := &Handler{
+		r: params.RulesRepository,
+		c: params.Conf,
+		s: params.Signer,
+	}
+
+	handler.registerRoutes(params.App.Group(""), params.Logger)
+
+	return handler, nil
 }
 
 func (h *Handler) registerRoutes(router fiber.Router, logger zerolog.Logger) {
@@ -97,6 +115,7 @@ func (h *Handler) decisions(c *fiber.Ctx) error {
 
 	reqCtx := &requestContext{
 		c:           c,
+		signer:      h.s,
 		respHeader:  make(http.Header),
 		respCookies: make(map[string]string),
 	}
@@ -156,7 +175,7 @@ type requestContext struct {
 	c           *fiber.Ctx
 	respHeader  http.Header
 	respCookies map[string]string
-	sub         *subject.Subject
+	signer      heimdall.JWTSigner
 	err         error
 }
 
@@ -169,5 +188,4 @@ func (s *requestContext) AppContext() context.Context              { return s.c.
 func (s *requestContext) SetPipelineError(err error)               { s.err = err }
 func (s *requestContext) AddResponseHeader(name, value string)     { s.respHeader.Add(name, value) }
 func (s *requestContext) AddResponseCookie(name, value string)     { s.respCookies[name] = value }
-func (s *requestContext) SetSubject(sub *subject.Subject)          { s.sub = sub }
-func (s *requestContext) Subject() *subject.Subject                { return s.sub }
+func (s *requestContext) Signer() heimdall.JWTSigner               { return s.signer }

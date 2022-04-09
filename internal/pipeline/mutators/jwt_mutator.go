@@ -16,7 +16,6 @@ import (
 	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/keystore"
 	"github.com/dadrus/heimdall/internal/pipeline/subject"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
@@ -25,14 +24,6 @@ import (
 const (
 	defaultJWTTTL      = 15 * time.Minute
 	defaultCacheLeeway = 10 * time.Second
-
-	rsa2048 = 2048
-	rsa3072 = 3072
-	rsa4096 = 4096
-
-	ecdsa256 = 256
-	ecdsa384 = 384
-	ecdsa512 = 512
 )
 
 // by intention. Used only during application bootstrap
@@ -52,14 +43,12 @@ func init() {
 
 type jwtMutator struct {
 	claims *Template
-	issuer string
 	ttl    time.Duration
 }
 
 func newJWTMutator(rawConfig map[string]any) (*jwtMutator, error) {
 	type _config struct {
 		Claims *Template      `mapstructure:"claims"`
-		Issuer string         `mapstructure:"issuer"`
 		TTL    *time.Duration `mapstructure:"ttl"`
 	}
 
@@ -76,13 +65,12 @@ func newJWTMutator(rawConfig map[string]any) (*jwtMutator, error) {
 	}
 
 	return &jwtMutator{
-		// claims: conf.Claims,
-		issuer: conf.Issuer,
+		claims: conf.Claims,
 		ttl:    ttl,
 	}, nil
 }
 
-func (m *jwtMutator) Mutate(ctx heimdall.Context, sub *subject.Subject, sigKey *keystore.Entry) error {
+func (m *jwtMutator) Mutate(ctx heimdall.Context, sub *subject.Subject) error {
 	logger := zerolog.Ctx(ctx.AppContext())
 	logger.Debug().Msg("Mutating using JWT mutator")
 
@@ -90,7 +78,7 @@ func (m *jwtMutator) Mutate(ctx heimdall.Context, sub *subject.Subject, sigKey *
 
 	cch := cache.Ctx(ctx.AppContext())
 
-	cacheKey, err := m.calculateCacheKey(sub, sigKey)
+	cacheKey, err := m.calculateCacheKey(sub, ctx.Signer())
 	if err != nil {
 		logger.Error().Err(err).Msg("Failed to calculate cache key. Will not be able to cache token")
 	} else if item := cch.Get(cacheKey); item != nil {
@@ -107,7 +95,7 @@ func (m *jwtMutator) Mutate(ctx heimdall.Context, sub *subject.Subject, sigKey *
 	if len(jwtToken) == 0 {
 		logger.Debug().Msg("Generating new JWT")
 
-		jwtToken, err = m.generateToken(sub, sigKey)
+		jwtToken, err = m.generateToken(ctx, sub)
 		if err != nil {
 			return err
 		}
@@ -147,17 +135,13 @@ func (m *jwtMutator) WithConfig(rawConfig map[string]any) (Mutator, error) {
 	}
 
 	return &jwtMutator{
-		issuer: m.issuer,
 		claims: x.IfThenElse(conf.Claims != nil, conf.Claims, m.claims),
 		ttl:    ttl,
 	}, nil
 }
 
-func (m *jwtMutator) generateToken(sub *subject.Subject, sigKey *keystore.Entry) (string, error) {
-	alg, err := getJOSEAlgorithm(sigKey)
-	if err != nil {
-		return "", err
-	}
+func (m *jwtMutator) generateToken(ctx heimdall.Context, sub *subject.Subject) (string, error) {
+	iss := ctx.Signer()
 
 	claims := map[string]any{}
 	if m.claims != nil {
@@ -180,17 +164,22 @@ func (m *jwtMutator) generateToken(sub *subject.Subject, sigKey *keystore.Entry)
 	claims["exp"] = exp.Unix()
 	claims["jti"] = uuid.New()
 	claims["iat"] = now.Unix()
-	claims["iss"] = m.issuer
+	claims["iss"] = iss.Name()
 	claims["nbf"] = now.Unix()
 	claims["sub"] = sub.ID
 
 	signerOpts := jose.SignerOptions{}
 	signerOpts.
 		WithType("JWT").
-		WithHeader("kid", sigKey.KeyID).
-		WithHeader("alg", alg)
+		WithHeader("kid", iss.KeyID()).
+		WithHeader("alg", iss.Algorithm())
 
-	signer, err := jose.NewSigner(jose.SigningKey{Algorithm: alg, Key: sigKey.PrivateKey}, &signerOpts)
+	signer, err := jose.NewSigner(
+		jose.SigningKey{
+			Algorithm: iss.Algorithm(),
+			Key:       iss.SignatureKey(),
+		},
+		&signerOpts)
 	if err != nil {
 		return "", errorchain.
 			NewWithMessage(heimdall.ErrInternal, "failed to create JWT signer").
@@ -209,39 +198,7 @@ func (m *jwtMutator) generateToken(sub *subject.Subject, sigKey *keystore.Entry)
 	return rawJwt, nil
 }
 
-func getJOSEAlgorithm(key *keystore.Entry) (jose.SignatureAlgorithm, error) {
-	switch key.Alg {
-	case keystore.AlgRSA:
-		switch key.KeySize {
-		case rsa2048:
-			return jose.PS256, nil
-		case rsa3072:
-			return jose.PS384, nil
-		case rsa4096:
-			return jose.PS512, nil
-		default:
-			return "", errorchain.
-				NewWithMessage(heimdall.ErrInternal, "unsupported RSA key size")
-		}
-	case keystore.AlgECDSA:
-		switch key.KeySize {
-		case ecdsa256:
-			return jose.ES256, nil
-		case ecdsa384:
-			return jose.ES384, nil
-		case ecdsa512:
-			return jose.ES512, nil
-		default:
-			return "", errorchain.
-				NewWithMessage(heimdall.ErrInternal, "unsupported ECDSA key size")
-		}
-	default:
-		return "", errorchain.
-			NewWithMessage(heimdall.ErrInternal, "unsupported signature key type")
-	}
-}
-
-func (m *jwtMutator) calculateCacheKey(sub *subject.Subject, sigKey *keystore.Entry) (string, error) {
+func (m *jwtMutator) calculateCacheKey(sub *subject.Subject, iss heimdall.JWTSigner) (string, error) {
 	const int64BytesCount = 8
 
 	claims := "null"
@@ -260,9 +217,9 @@ func (m *jwtMutator) calculateCacheKey(sub *subject.Subject, sigKey *keystore.En
 	binary.LittleEndian.PutUint64(ttlBytes, uint64(m.ttl))
 
 	hash := sha256.New()
-	hash.Write([]byte(sigKey.KeyID))
-	hash.Write([]byte(sigKey.Alg))
-	hash.Write([]byte(m.issuer))
+	hash.Write([]byte(iss.KeyID()))
+	hash.Write([]byte(iss.Algorithm()))
+	hash.Write([]byte(iss.Name()))
 	hash.Write([]byte(claims))
 	hash.Write(ttlBytes)
 	hash.Write(rawSub)
