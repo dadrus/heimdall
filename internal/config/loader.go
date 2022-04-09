@@ -1,6 +1,7 @@
 package config
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"reflect"
@@ -16,9 +17,10 @@ import (
 	"github.com/mitchellh/mapstructure"
 	"github.com/rs/zerolog"
 
-	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
+
+var ErrConfiguration = errors.New("configuration error")
 
 // nolint
 var defaultDecodeHooks = []mapstructure.DecodeHookFunc{
@@ -126,7 +128,7 @@ func koanfFromStruct(s interface{}) (*koanf.Koanf, error) {
 	// Assert all Keys are lowercase
 	for i := 0; i < len(keys); i++ {
 		if !isLower(keys[i]) {
-			return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+			return nil, errorchain.NewWithMessagef(ErrConfiguration,
 				"field %s in the Config Struct does not have lowercase key, use the `koanf` tag", keys[i])
 		}
 	}
