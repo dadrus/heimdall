@@ -102,7 +102,7 @@ func TestCreateKeyStoreFromPEMFile(t *testing.T) {
 
 	defer os.Remove(file.Name())
 
-	err = ioutil.WriteFile(file.Name(), pemContents, 0o664)
+	err = ioutil.WriteFile(file.Name(), pemContents, 0o600)
 	require.NoError(t, err)
 
 	// WHEN
