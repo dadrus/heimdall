@@ -20,7 +20,7 @@ const (
 )
 
 type PipelineObject struct {
-	ID     string                 `koanf:"id"`
-	Type   PipelineObjectType     `koanf:"type"`
-	Config map[string]interface{} `koanf:"config"`
+	ID     string             `koanf:"id"`
+	Type   PipelineObjectType `koanf:"type"`
+	Config map[string]any     `koanf:"config"`
 }
