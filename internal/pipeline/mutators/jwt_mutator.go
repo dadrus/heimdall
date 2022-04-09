@@ -76,7 +76,7 @@ func newJWTMutator(rawConfig map[string]any) (*jwtMutator, error) {
 	}
 
 	return &jwtMutator{
-		claims: conf.Claims,
+		// claims: conf.Claims,
 		issuer: conf.Issuer,
 		ttl:    ttl,
 	}, nil
@@ -98,13 +98,15 @@ func (m *jwtMutator) Mutate(ctx heimdall.Context, sub *subject.Subject, sigKey *
 			logger.Warn().Msg("Wrong object type from cache")
 			cch.Delete(cacheKey)
 		} else {
-			logger.Debug().Msg("Reusing token from cache")
+			logger.Debug().Msg("Reusing JWT from cache")
 
 			jwtToken = cachedToken
 		}
 	}
 
 	if len(jwtToken) == 0 {
+		logger.Debug().Msg("Generating new JWT")
+
 		jwtToken, err = m.generateToken(sub, sigKey)
 		if err != nil {
 			return err
@@ -145,6 +147,7 @@ func (m *jwtMutator) WithConfig(rawConfig map[string]any) (Mutator, error) {
 	}
 
 	return &jwtMutator{
+		issuer: m.issuer,
 		claims: x.IfThenElse(conf.Claims != nil, conf.Claims, m.claims),
 		ttl:    ttl,
 	}, nil
