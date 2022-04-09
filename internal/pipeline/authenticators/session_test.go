@@ -97,12 +97,12 @@ func TestGetSubjectFromSession(t *testing.T) {
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				assert.Equal(t, "foo", sub.ID)
 
 				var attrs map[string]interface{}
 				e := json.Unmarshal(raw, &attrs)
-				assert.NoError(t, e)
+				require.NoError(t, e)
 				assert.Equal(t, attrs, sub.Attributes)
 			},
 		},
@@ -116,7 +116,7 @@ func TestGetSubjectFromSession(t *testing.T) {
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				assert.Equal(t, "val2", sub.ID)
 
 				rawNested, err := json.Marshal(id.Complex.Nested)
@@ -124,23 +124,22 @@ func TestGetSubjectFromSession(t *testing.T) {
 
 				var attrs map[string]interface{}
 				e := json.Unmarshal(rawNested, &attrs)
-				assert.NoError(t, e)
+				require.NoError(t, e)
 				assert.Equal(t, attrs, sub.Attributes)
 			},
 		},
 		{
-			uc: "subject is extracted but not attributes",
+			uc: "attributes could no be extracted",
 			configure: func(t *testing.T, s *Session) {
 				t.Helper()
 
 				s.SubjectFrom = "subject"
 				s.AttributesFrom = "foobar"
 			},
-			assert: func(t *testing.T, err error, sub *subject.Subject) {
+			assert: func(t *testing.T, err error, _ *subject.Subject) {
 				t.Helper()
-				assert.NoError(t, err)
-				assert.Equal(t, "foo", sub.ID)
-				assert.Empty(t, sub.Attributes)
+				assert.Error(t, err)
+				assert.ErrorContains(t, err, "could not extract attributes")
 			},
 		},
 		{
@@ -153,7 +152,7 @@ func TestGetSubjectFromSession(t *testing.T) {
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
 				assert.Error(t, err)
-				assert.Nil(t, sub)
+				assert.ErrorContains(t, err, "could not extract subject")
 			},
 		},
 	} {

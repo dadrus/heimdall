@@ -29,10 +29,15 @@ func (s *Session) CreateSubject(rawData []byte) (*subject.Subject, error) {
 
 	subjectID := gjson.GetBytes(rawData, s.SubjectFrom).String()
 	if len(subjectID) == 0 {
-		return nil, errorchain.NewWithMessagef(heimdall.ErrInternal, "no value available for \"%s\" claim", s.SubjectFrom)
+		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+			"could not extract subject identifier using '%s' template", s.SubjectFrom)
 	}
 
 	attributes := gjson.GetBytes(rawData, attributesFrom).Value()
+	if attributes == nil {
+		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+			"could not extract attributes using '%s' template", attributesFrom)
+	}
 
 	attrs, ok := attributes.(map[string]any)
 	if !ok {
