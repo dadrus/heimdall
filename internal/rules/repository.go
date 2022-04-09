@@ -40,7 +40,7 @@ func NewRepository(
 		err     error
 	)
 
-	if len(config.Signer.KeyID) == 0 {
+	if config.Signer == nil || len(config.Signer.KeyID) == 0 {
 		logger.Warn().Msg("No key id for signer configured. Taking first entry from the key store")
 
 		ksEntry = ks.Entries()[0]
