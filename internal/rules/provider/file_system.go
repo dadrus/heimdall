@@ -143,7 +143,7 @@ func (p *fileSystemProvider) watchFiles() {
 }
 
 func (p *fileSystemProvider) Stop() error {
-	p.logger.Info().Msg("Tearing down rule definition loader")
+	p.logger.Info().Msg("Tearing down rule definitions provider: file_system")
 
 	if p.watcher != nil {
 		return p.watcher.Close()
