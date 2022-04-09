@@ -27,7 +27,7 @@ type Handler struct {
 	s heimdall.JWTSigner
 }
 
-type HandlerParams struct {
+type handlerParams struct {
 	fx.In
 
 	App             *fiber.App `name:"api"`
@@ -36,7 +36,7 @@ type HandlerParams struct {
 	Signer          heimdall.JWTSigner
 }
 
-func newHandler(params HandlerParams) (*Handler, error) {
+func newHandler(params handlerParams) (*Handler, error) {
 	handler := &Handler{
 		r: params.RulesRepository,
 		s: params.Signer,
