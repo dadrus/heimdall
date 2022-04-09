@@ -24,7 +24,7 @@ var Module = fx.Options(
 func registerRuleDefinitionHandler(lifecycle fx.Lifecycle, logger zerolog.Logger, r Repository) {
 	rdf, ok := r.(ruleSetDefinitionLoader)
 	if !ok {
-		logger.Error().Msg("No rule set definition loader available")
+		logger.Fatal().Msg("No rule set definition loader available")
 
 		return
 	}
