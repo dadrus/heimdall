@@ -20,8 +20,8 @@ var Module = fx.Options(
 func newKeyStore(conf config.Configuration, logger zerolog.Logger) (KeyStore, error) {
 	const rsa2048 = 2048
 
-	if conf.Signer == nil {
-		logger.Warn().Msg("Signer is not configured. NEVER DO IT IN PRODUCTION!!!! Generating an RSA key pair.")
+	if len(conf.Signer.KeyStore) == 0 {
+		logger.Warn().Msg("Signer key store is not configured. NEVER DO IT IN PRODUCTION!!!! Generating an RSA key pair.")
 
 		privateKey, err := rsa.GenerateKey(rand.Reader, rsa2048)
 		if err != nil {
@@ -33,5 +33,5 @@ func newKeyStore(conf config.Configuration, logger zerolog.Logger) (KeyStore, er
 		return NewKeyStoreFromKey(privateKey)
 	}
 
-	return NewKeyStoreFromPEMFile(conf.Signer.File, conf.Signer.Password)
+	return NewKeyStoreFromPEMFile(conf.Signer.KeyStore, conf.Signer.Password)
 }

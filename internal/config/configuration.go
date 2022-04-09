@@ -21,7 +21,7 @@ type Configuration struct {
 	DecisionAPI Serve      `koanf:"serve.api"`
 	Prometheus  Prometheus `koanf:"serve.prometheus"`
 	Log         Logging    `koanf:"log"`
-	Signer      *Signer    `koanf:"signer"`
+	Signer      Signer     `koanf:"signer"`
 	Pipeline    struct {
 		Authenticators []PipelineObject `koanf:"authenticators"`
 		Authorizers    []PipelineObject `koanf:"authorizers"`
@@ -66,6 +66,9 @@ func NewConfiguration(configFile string) Configuration {
 		Log: Logging{
 			Level:  zerolog.DebugLevel,
 			Format: LogTextFormat,
+		},
+		Signer: Signer{
+			Name: "heimdall",
 		},
 	}
 
