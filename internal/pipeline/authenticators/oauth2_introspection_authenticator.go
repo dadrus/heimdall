@@ -1,9 +1,10 @@
 package authenticators
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -180,7 +181,7 @@ func (a *oauth2IntrospectionAuthenticator) getSubjectInformation(
 ) ([]byte, error) {
 	cch := cache.Ctx(ctx.AppContext())
 	logger := zerolog.Ctx(ctx.AppContext())
-	cacheKey := a.getCacheKey(token)
+	cacheKey := a.calculateCacheKey(token)
 
 	if item := cch.Get(cacheKey); item != nil {
 		if cachedResponse, ok := item.([]byte); !ok {
@@ -294,6 +295,10 @@ func (a *oauth2IntrospectionAuthenticator) getCacheTTL(introspectResp *oauth2.In
 	return cacheTTL
 }
 
-func (a *oauth2IntrospectionAuthenticator) getCacheKey(reference string) string {
-	return fmt.Sprintf("%s-%s", a.e.URL, reference)
+func (a *oauth2IntrospectionAuthenticator) calculateCacheKey(reference string) string {
+	digest := sha256.New()
+	digest.Write([]byte(a.e.URL))
+	digest.Write([]byte(reference))
+
+	return hex.EncodeToString(digest.Sum(nil))
 }

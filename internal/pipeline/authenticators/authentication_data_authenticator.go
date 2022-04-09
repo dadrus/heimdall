@@ -1,8 +1,9 @@
 package authenticators
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
-	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -138,7 +139,7 @@ func (a *authenticationDataAuthenticator) getSubjectInformation(
 ) ([]byte, error) {
 	cch := cache.Ctx(ctx.AppContext())
 	logger := zerolog.Ctx(ctx.AppContext())
-	cacheKey := a.getCacheKey(authData.Value())
+	cacheKey := a.calculateCacheKey(authData.Value())
 
 	var cacheTTL time.Duration
 	if a.ttl != nil {
@@ -214,6 +215,10 @@ func (*authenticationDataAuthenticator) readResponse(resp *http.Response) ([]byt
 		NewWithMessagef(heimdall.ErrCommunication, "unexpected response. code: %v", resp.StatusCode)
 }
 
-func (a *authenticationDataAuthenticator) getCacheKey(reference string) string {
-	return fmt.Sprintf("%s-%s", a.e.URL, reference)
+func (a *authenticationDataAuthenticator) calculateCacheKey(reference string) string {
+	digest := sha256.New()
+	digest.Write([]byte(a.e.URL))
+	digest.Write([]byte(reference))
+
+	return hex.EncodeToString(digest.Sum(nil))
 }

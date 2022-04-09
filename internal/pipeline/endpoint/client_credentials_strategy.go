@@ -29,7 +29,7 @@ func (c *ClientCredentialsStrategy) Apply(ctx context.Context, req *http.Request
 	logger := zerolog.Ctx(ctx)
 	logger.Debug().Msg("Applying client-credentials strategy to authenticate request")
 
-	key := c.getCacheKey()
+	key := c.calculateCacheKey()
 
 	cch := cache.Ctx(ctx)
 	if item := cch.Get(key); item != nil {
@@ -61,14 +61,14 @@ func (c *ClientCredentialsStrategy) Apply(ctx context.Context, req *http.Request
 	return nil
 }
 
-func (c *ClientCredentialsStrategy) getCacheKey() string {
+func (c *ClientCredentialsStrategy) calculateCacheKey() string {
 	digest := sha256.New()
 	digest.Write([]byte(c.ClientID))
 	digest.Write([]byte(c.ClientSecret))
 	digest.Write([]byte(c.TokenURL))
-	res := digest.Sum([]byte(strings.Join(c.Scopes, "")))
+	digest.Write([]byte(strings.Join(c.Scopes, "")))
 
-	return hex.EncodeToString(res)
+	return hex.EncodeToString(digest.Sum(nil))
 }
 
 func (c *ClientCredentialsStrategy) getAccessToken(ctx context.Context) (*tokenEndpointResponse, error) {

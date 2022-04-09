@@ -1,9 +1,10 @@
 package authenticators
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -205,7 +206,7 @@ func (a *jwtAuthenticator) parseJWT(rawJWT string) (*jwt.JSONWebToken, error) {
 func (a *jwtAuthenticator) getKey(ctx heimdall.Context, keyID string) (*jose.JSONWebKey, error) {
 	cch := cache.Ctx(ctx.AppContext())
 	logger := zerolog.Ctx(ctx.AppContext())
-	cacheKey := a.getCacheKey(keyID)
+	cacheKey := a.calculateCacheKey(keyID)
 
 	var cacheTTL time.Duration
 	if a.ttl != nil {
@@ -340,6 +341,10 @@ func (a *jwtAuthenticator) verifyTokenAndGetClaims(
 	return rawPayload, nil
 }
 
-func (a *jwtAuthenticator) getCacheKey(reference string) string {
-	return fmt.Sprintf("%s-%s", a.e.URL, reference)
+func (a *jwtAuthenticator) calculateCacheKey(reference string) string {
+	digest := sha256.New()
+	digest.Write([]byte(a.e.URL))
+	digest.Write([]byte(reference))
+
+	return hex.EncodeToString(digest.Sum(nil))
 }
