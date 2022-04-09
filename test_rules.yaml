@@ -4,19 +4,18 @@
     - GET
     - POST
   authenticators:
-    - id: kratos_session_authenticator
+    - id: anonymous_authenticator
   authorizer:
-    id: keto_authorizer
-  hydrators:
-    - id: subscription_hydrator
+    id: allow_all_authorizer
   mutators:
     - id: jwt
       config:
-        claims: "foo: bar"
+        claims: '{"foo": "bar"}'
     - id: bla
       config:
         headers:
           foo-bar: bla
+    - id: blabla
   error_handlers:
     - id: authenticate_on_unauthorized_or_forbidden
     - id: default_error

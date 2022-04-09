@@ -113,13 +113,18 @@ pipeline:
     - id: "jwt"
       type: jwt
       config:
-        issuer: foo.bar
+        issuer: http://issuer
         ttl: 5m
     - id: "bla"
       type: header
       config:
         headers:
           foo-bar: bla
+    - id: "blabla"
+      type: cookie
+      config:
+        cookies:
+          foo-bar: '{{ .ID }}'
   error_handlers:
     - id: default_error
       type: json
