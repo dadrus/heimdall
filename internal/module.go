@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"github.com/dadrus/heimdall/internal/signer"
 	"go.uber.org/fx"
 
 	"github.com/dadrus/heimdall/internal/cache"
@@ -18,6 +19,7 @@ var Module = fx.Options(
 	logging.Module,
 	cache.Module,
 	keystore.Module,
+	signer.Module,
 	pipeline.Module,
 	rules.Module,
 	prometheus.Module,
