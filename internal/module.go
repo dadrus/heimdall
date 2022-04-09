@@ -1,7 +1,6 @@
 package internal
 
 import (
-	"github.com/dadrus/heimdall/internal/signer"
 	"go.uber.org/fx"
 
 	"github.com/dadrus/heimdall/internal/cache"
@@ -11,6 +10,7 @@ import (
 	"github.com/dadrus/heimdall/internal/logging"
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/rules"
+	"github.com/dadrus/heimdall/internal/signer"
 )
 
 // nolint
