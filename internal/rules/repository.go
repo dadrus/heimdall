@@ -228,6 +228,7 @@ func (r *rule) Execute(ctx heimdall.Context) error {
 		logger.Debug().Err(err).Msg("Authentication failed")
 
 		_, err := r.eh.HandleError(ctx, err)
+		
 		return err
 	}
 
@@ -235,6 +236,7 @@ func (r *rule) Execute(ctx heimdall.Context) error {
 		logger.Debug().Err(err).Msg("Authorization failed")
 
 		_, err := r.eh.HandleError(ctx, err)
+
 		return err
 	}
 
@@ -242,6 +244,7 @@ func (r *rule) Execute(ctx heimdall.Context) error {
 		logger.Debug().Err(err).Msg("Hydration failed")
 
 		_, err := r.eh.HandleError(ctx, err)
+
 		return err
 	}
 
@@ -249,6 +252,7 @@ func (r *rule) Execute(ctx heimdall.Context) error {
 		logger.Debug().Err(err).Msg("Mutation failed")
 
 		_, err := r.eh.HandleError(ctx, err)
+
 		return err
 	}
 
