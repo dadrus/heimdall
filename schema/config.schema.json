@@ -1053,32 +1053,24 @@
               ]
             }
           },
-          "request": {
-            "title": "HTTP Request Conditions",
-            "description": "Defines which HTTP Request conditions must be met for this error handler to be executed. If left empty, all HTTP requests will match. All subkeys (e.g. cidr, header.accept, header.content_type) are handled as AND.",
-            "type": "object",
-            "additionalProperties": false,
-            "properties": {
-              "cidr": {
-                "title": "Client IP CIDR Mask",
-                "description": "Defines one or more CIDR masks to match the client IP (remote address and X-Forwarded-For) against. If empty, all IPs will be matched. If more than one value, OR will be applied (e.g. 129.168.1.0/24 OR 188.177.0.0/16.",
-                "type": "array",
-                "additionalItems": false,
-                "items": {
-                  "type": "string"
-                }
-              },
-              "header": {
-                "description": "Defines conditions the HTTP Request Header must full fill for this handler to match the request. Subkeys are matched with AND. If, for example, content-type and accept-type are set, both requirements must be matched for the handler to be responsible.",
-                "type": "object",
-                "additionalProperties": {
-                  "type": "array"
-                },
-                "minLength": 0,
-                "uniqueItems": true,
-                "default": []
-              }
+          "request_cidr": {
+            "title": "Client IP CIDR Mask",
+            "description": "Defines one or more CIDR masks to match the client IP (remote address and X-Forwarded-For) against. If empty, all IPs will be matched. If more than one value, OR will be applied (e.g. 129.168.1.0/24 OR 188.177.0.0/16.",
+            "type": "array",
+            "additionalItems": false,
+            "items": {
+              "type": "string"
             }
+          },
+          "request_header": {
+            "description": "Defines conditions the HTTP Request Header must full fill for this handler to match the request. Subkeys are matched with AND. If, for example, content-type and accept-type are set, both requirements must be matched for the handler to be responsible.",
+            "type": "object",
+            "additionalProperties": {
+              "type": "array"
+            },
+            "minLength": 0,
+            "uniqueItems": true,
+            "default": []
           }
         }
       }
@@ -1341,7 +1333,7 @@
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "name" : {
+        "name": {
           "description": "The name of the signer (string or URL). Used for the 'iss' claim in the issued JWTs",
           "type": "string",
           "default": "heimdall"
@@ -1350,7 +1342,7 @@
           "description": "Path to a pem file containing the key material.",
           "type": "string"
         },
-        "password":{
+        "password": {
           "description": "Password for the key material in the key store if PKCS#8 encrypted format is used.",
           "type": "string"
         },
