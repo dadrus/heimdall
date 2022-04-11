@@ -1,11 +1,9 @@
 package errorhandlers
 
 import (
-	"net"
 	"reflect"
 
 	"github.com/mitchellh/mapstructure"
-	"github.com/yl2chen/cidranger"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
 )
@@ -23,22 +21,14 @@ func DecodeCIDRMatcherHookFunc() mapstructure.DecodeHookFunc {
 			return data, nil
 		}
 
-		ranger := cidranger.NewPCTrieRanger()
+		var cidrs []string
 
 		// nolint: forcetypeassert
 		for _, v := range data.([]any) {
-			// nolint
-			_, ipNet, err := net.ParseCIDR(v.(string))
-			if err != nil {
-				return nil, err
-			}
-
-			if err := ranger.Insert(cidranger.NewBasicRangerEntry(*ipNet)); err != nil {
-				return nil, err
-			}
+			cidrs = append(cidrs, v.(string))
 		}
 
-		return &CIDRMatcher{r: ranger}, nil
+		return NewCIDRMatcher(cidrs)
 	}
 }
 
