@@ -4,7 +4,7 @@
     - GET
     - POST
   authenticators:
-    - id: anonymous_authenticator
+    - id: unauthorized_authenticator
   authorizer:
     id: allow_all_authorizer
   mutators:
