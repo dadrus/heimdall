@@ -9,6 +9,7 @@ import (
 	"github.com/dadrus/heimdall/internal/pipeline/errorhandlers/matcher"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
+	"github.com/rs/zerolog"
 )
 
 // by intention. Used only during application bootstrap
@@ -70,6 +71,9 @@ func (eh *redirectErrorHandler) HandleError(ctx heimdall.Context, err error) (bo
 	if !eh.m.Match(ctx, err) {
 		return false, nil
 	}
+
+	logger := zerolog.Ctx(ctx.AppContext())
+	logger.Debug().Msg("Handling error using redirect error handler")
 
 	toURL := *eh.to
 	if len(eh.returnTo) != 0 {

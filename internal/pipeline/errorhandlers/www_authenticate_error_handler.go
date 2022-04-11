@@ -8,6 +8,7 @@ import (
 	"github.com/dadrus/heimdall/internal/pipeline/errorhandlers/matcher"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
+	"github.com/rs/zerolog"
 )
 
 // by intention. Used only during application bootstrap
@@ -57,6 +58,9 @@ func (eh *wwwAuthenticateErrorHandler) HandleError(ctx heimdall.Context, err err
 	if !eh.m.Match(ctx, err) {
 		return false, nil
 	}
+
+	logger := zerolog.Ctx(ctx.AppContext())
+	logger.Debug().Msg("Handling error using www-authenticate error handler")
 
 	ctx.AddResponseHeader("WWW-Authenticate", fmt.Sprintf("Basic realm=%s", eh.realm))
 	ctx.SetPipelineError(heimdall.ErrAuthentication)

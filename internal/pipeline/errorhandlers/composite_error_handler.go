@@ -3,11 +3,15 @@ package errorhandlers
 import (
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
+	"github.com/rs/zerolog"
 )
 
 type CompositeErrorHandler []ErrorHandler
 
 func (ceh CompositeErrorHandler) HandleError(ctx heimdall.Context, e error) (ok bool, err error) {
+	logger := zerolog.Ctx(ctx.AppContext())
+	logger.Debug().Msg("Handling pipeline error")
+
 	for _, eh := range ceh {
 		ok, err = eh.HandleError(ctx, e)
 		if err != nil {
