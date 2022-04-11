@@ -17,6 +17,7 @@ require (
 	github.com/stretchr/testify v1.7.1
 	github.com/tidwall/gjson v1.14.0
 	github.com/ybbus/httpretry v1.0.1
+	github.com/yl2chen/cidranger v1.0.2
 	github.com/youmark/pkcs8 v0.0.0-20201027041543-1326539a0a0a
 	go.uber.org/fx v1.17.1
 	golang.org/x/exp v0.0.0-20220318154914-8dddf5d87bd8
