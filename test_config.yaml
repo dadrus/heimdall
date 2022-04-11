@@ -133,17 +133,16 @@ pipeline:
       type: redirect
       config:
         to: http://127.0.0.1:4433/self-service/login/browser
-        return_to_query_param: return_to
+        return_to_query_parameter: return_to
         when:
-          - error:
-              - unauthorized
-              - forbidden
-            request:
-              header:
-                content-type:
-                  - text/html
-                accept-type:
-                  - text/html
+          error:
+            - unauthorized
+            - forbidden
+          request_header:
+            content-type:
+              - text/html
+            accept-type:
+              - text/html
 
 rules:
   default:
