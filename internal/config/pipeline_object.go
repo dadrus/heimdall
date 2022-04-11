@@ -17,6 +17,7 @@ const (
 	POTCookie              PipelineObjectType = "cookie"
 	POTJson                PipelineObjectType = "json"
 	POTRedirect            PipelineObjectType = "redirect"
+	POTWWWAuthenticate     PipelineObjectType = "www_authenticate"
 )
 
 type PipelineObject struct {
