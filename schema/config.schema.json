@@ -1049,7 +1049,7 @@
                 "unauthorized",
                 "forbidden",
                 "internal_server_error",
-                "not_found"
+                "bad_argument"
               ]
             }
           },
@@ -1069,30 +1069,14 @@
                 }
               },
               "header": {
-                "title": "HTTP Request Header Conditions",
-                "description": "Defines conditions the HTTP Request Header must full fill for this handler to match the request. Subkeys are matched with AND. If, for example, both content_type and accept are set, both requirements must be matched for the handler to be responsible.",
+                "description": "Defines conditions the HTTP Request Header must full fill for this handler to match the request. Subkeys are matched with AND. If, for example, content-type and accept-type are set, both requirements must be matched for the handler to be responsible.",
                 "type": "object",
-                "additionalProperties": false,
-                "properties": {
-                  "content_type": {
-                    "type": "array",
-                    "title": "HTTP Request Header Content Type Condition",
-                    "description": "Defines the HTTP Header Content-Type condition. If left empty, all content types match. If more than one element is defined, at least one has to match.",
-                    "additionalItems": false,
-                    "item": {
-                      "type": "string"
-                    }
-                  },
-                  "accept": {
-                    "type": "array",
-                    "title": "HTTP Request Header Accept Condition",
-                    "description": "Defines the HTTP Header Accept condition. If left empty, all accept values match. If more than one element is defined, at least one has to match.",
-                    "additionalItems": false,
-                    "item": {
-                      "type": "string"
-                    }
-                  }
-                }
+                "additionalProperties": {
+                  "type": "array"
+                },
+                "minLength": 0,
+                "uniqueItems": true,
+                "default": []
               }
             }
           }
@@ -1207,7 +1191,7 @@
             },
             "code": {
               "title": "HTTP Redirect Status Code",
-              "description": "Defines the HTTP Redirect status code which can bei 301 (Moved Permanently) or 302 (Found).",
+              "description": "Defines the HTTP Redirect status code which can be 301 (Moved Permanently) or 302 (Found).",
               "type": "integer",
               "enum": [
                 301,
