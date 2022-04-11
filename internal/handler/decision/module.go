@@ -29,6 +29,7 @@ func newFiberApp(conf config.Configuration, cache cache.Cache) *fiber.App {
 
 	app := fiber.New(fiber.Config{
 		AppName:               "Heimdall Decision API",
+		ServerHeader:          "Heimdall Decision API",
 		ReadTimeout:           api.Timeout.Read,
 		WriteTimeout:          api.Timeout.Write,
 		IdleTimeout:           api.Timeout.Idle,
