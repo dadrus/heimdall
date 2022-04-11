@@ -73,7 +73,9 @@ func TestErrorConditionMatcherMatch(t *testing.T) {
 				CIDR:   cidrMatcher,
 				Header: &HeaderMatcher{"foobar": {"bar", "foo"}},
 			},
-			setupCtx: func(ctx *testsupport.MockContext) {},
+			setupCtx: func(ctx *testsupport.MockContext) {
+				t.Helper()
+			},
 			err:      heimdall.ErrConfiguration,
 			matching: true,
 		},
@@ -85,6 +87,8 @@ func TestErrorConditionMatcherMatch(t *testing.T) {
 				Header: &HeaderMatcher{"foobar": {"bar", "foo"}},
 			},
 			setupCtx: func(ctx *testsupport.MockContext) {
+				t.Helper()
+
 				ctx.On("RequestClientIPs").Return([]string{
 					"192.168.1.2",
 				})
@@ -100,6 +104,8 @@ func TestErrorConditionMatcherMatch(t *testing.T) {
 				Header: &HeaderMatcher{"foobar": {"bar", "foo"}},
 			},
 			setupCtx: func(ctx *testsupport.MockContext) {
+				t.Helper()
+
 				ctx.On("RequestHeaders").Return(map[string]string{
 					"foobar": "bar",
 				})
@@ -118,6 +124,8 @@ func TestErrorConditionMatcherMatch(t *testing.T) {
 				Header: &HeaderMatcher{"foobar": {"bar", "foo"}},
 			},
 			setupCtx: func(ctx *testsupport.MockContext) {
+				t.Helper()
+
 				ctx.On("RequestHeaders").Return(map[string]string{
 					"foobar": "barfoo",
 				})
