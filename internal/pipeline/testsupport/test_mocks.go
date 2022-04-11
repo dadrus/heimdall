@@ -3,6 +3,7 @@ package testsupport
 import (
 	"context"
 	"errors"
+	"net/url"
 	"time"
 
 	"github.com/stretchr/testify/mock"
@@ -34,6 +35,12 @@ func (m *MockSubjectFactory) CreateSubject(data []byte) (*subject.Subject, error
 
 type MockContext struct {
 	mock.Mock
+}
+
+func (m *MockContext) RequestHeaders() map[string]string {
+	args := m.Called()
+
+	return args.Get(0).(map[string]string)
 }
 
 func (m *MockContext) RequestHeader(name string) string {
@@ -115,6 +122,18 @@ func (m *MockContext) Signer() heimdall.JWTSigner {
 	}
 
 	return nil
+}
+
+func (m *MockContext) RequestURL() *url.URL {
+	args := m.Called()
+
+	return args.Get(0).(*url.URL)
+}
+
+func (m *MockContext) RequestClientIPs() []string {
+	args := m.Called()
+
+	return args.Get(0).([]string)
 }
 
 type MockClaimAsserter struct {

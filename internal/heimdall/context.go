@@ -6,6 +6,7 @@ import (
 )
 
 type Context interface {
+	RequestHeaders() map[string]string
 	RequestHeader(key string) string
 	RequestCookie(key string) string
 	RequestQueryParameter(key string) string
