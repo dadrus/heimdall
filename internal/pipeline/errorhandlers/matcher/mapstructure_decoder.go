@@ -1,4 +1,4 @@
-package errorhandlers
+package matcher
 
 import (
 	"reflect"

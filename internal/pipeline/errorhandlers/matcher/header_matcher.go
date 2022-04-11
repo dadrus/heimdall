@@ -1,4 +1,4 @@
-package errorhandlers
+package matcher
 
 type HeaderMatcher map[string][]string
 

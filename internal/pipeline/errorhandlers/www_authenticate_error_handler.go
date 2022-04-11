@@ -5,6 +5,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/pipeline/errorhandlers/matcher"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
@@ -26,13 +27,13 @@ func init() {
 
 type wwwAuthenticateErrorHandler struct {
 	realm string
-	m     *ErrorConditionMatcher
+	m     *matcher.ErrorConditionMatcher
 }
 
 func newWWWAuthenticateErrorHandler(rawConfig map[string]any) (*wwwAuthenticateErrorHandler, error) {
 	type _config struct {
-		Realm string                `mapstructure:"realm"`
-		When  ErrorConditionMatcher `mapstructure:"when"`
+		Realm string                        `mapstructure:"realm"`
+		When  matcher.ErrorConditionMatcher `mapstructure:"when"`
 	}
 
 	var conf _config
@@ -65,8 +66,8 @@ func (eh *wwwAuthenticateErrorHandler) HandleError(ctx heimdall.Context, err err
 
 func (eh *wwwAuthenticateErrorHandler) WithConfig(rawConfig map[string]any) (ErrorHandler, error) {
 	type _config struct {
-		Realm *string                `mapstructure:"realm"`
-		When  *ErrorConditionMatcher `mapstructure:"when"`
+		Realm *string                        `mapstructure:"realm"`
+		When  *matcher.ErrorConditionMatcher `mapstructure:"when"`
 	}
 
 	var conf _config

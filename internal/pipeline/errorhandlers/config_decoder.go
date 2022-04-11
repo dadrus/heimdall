@@ -2,14 +2,16 @@ package errorhandlers
 
 import (
 	"github.com/mitchellh/mapstructure"
+
+	"github.com/dadrus/heimdall/internal/pipeline/errorhandlers/matcher"
 )
 
 func decodeConfig(input any, output any) error {
 	dec, err := mapstructure.NewDecoder(
 		&mapstructure.DecoderConfig{
 			DecodeHook: mapstructure.ComposeDecodeHookFunc(
-				DecodeCIDRMatcherHookFunc(),
-				DecodeErrorTypeMatcherHookFunc(),
+				matcher.DecodeCIDRMatcherHookFunc(),
+				matcher.DecodeErrorTypeMatcherHookFunc(),
 			),
 			Result:      output,
 			ErrorUnused: true,

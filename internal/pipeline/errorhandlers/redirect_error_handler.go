@@ -6,6 +6,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/pipeline/errorhandlers/matcher"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
@@ -29,15 +30,15 @@ type redirectErrorHandler struct {
 	to       *url.URL
 	returnTo string
 	code     int
-	m        *ErrorConditionMatcher
+	m        *matcher.ErrorConditionMatcher
 }
 
 func newRedirectErrorHandler(rawConfig map[string]any) (*redirectErrorHandler, error) {
 	type _config struct {
-		To       *url.URL              `mapstructure:"to"`
-		Code     int                   `mapstructure:"code"`
-		ReturnTo string                `mapstructure:"return_to_query_parameter"`
-		When     ErrorConditionMatcher `mapstructure:"when"`
+		To       *url.URL                      `mapstructure:"to"`
+		Code     int                           `mapstructure:"code"`
+		ReturnTo string                        `mapstructure:"return_to_query_parameter"`
+		When     matcher.ErrorConditionMatcher `mapstructure:"when"`
 	}
 
 	var conf _config
@@ -89,7 +90,7 @@ func (eh *redirectErrorHandler) HandleError(ctx heimdall.Context, err error) (bo
 
 func (eh *redirectErrorHandler) WithConfig(rawConfig map[string]any) (ErrorHandler, error) {
 	type _config struct {
-		When ErrorConditionMatcher `mapstructure:"when"`
+		When matcher.ErrorConditionMatcher `mapstructure:"when"`
 	}
 
 	var conf _config
