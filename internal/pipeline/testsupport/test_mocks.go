@@ -40,7 +40,16 @@ type MockContext struct {
 func (m *MockContext) RequestHeaders() map[string]string {
 	args := m.Called()
 
-	return args.Get(0).(map[string]string)
+	if i := args.Get(0); i != nil {
+		val, ok := i.(map[string]string)
+		if !ok {
+			panic("map[string]string expected")
+		}
+
+		return val
+	}
+
+	return nil
 }
 
 func (m *MockContext) RequestHeader(name string) string {
@@ -127,13 +136,31 @@ func (m *MockContext) Signer() heimdall.JWTSigner {
 func (m *MockContext) RequestURL() *url.URL {
 	args := m.Called()
 
-	return args.Get(0).(*url.URL)
+	if i := args.Get(0); i != nil {
+		val, ok := i.(*url.URL)
+		if !ok {
+			panic("*url.URL expected")
+		}
+
+		return val
+	}
+
+	return nil
 }
 
 func (m *MockContext) RequestClientIPs() []string {
 	args := m.Called()
 
-	return args.Get(0).([]string)
+	if i := args.Get(0); i != nil {
+		val, ok := i.([]string)
+		if !ok {
+			panic("[]string expected")
+		}
+
+		return val
+	}
+
+	return nil
 }
 
 type MockClaimAsserter struct {
