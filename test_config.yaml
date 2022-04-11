@@ -140,7 +140,9 @@ pipeline:
               - forbidden
             request:
               header:
-                accept:
+                content-type:
+                  - text/html
+                accept-type:
                   - text/html
 
 rules:
