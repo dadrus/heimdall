@@ -1,16 +1,18 @@
 package errorhandlers
 
-import (
-	"github.com/dadrus/heimdall/internal/heimdall"
-)
-
 type HeaderMatcher map[string][]string
 
-func (hm HeaderMatcher) Match(ctx heimdall.Context) bool {
+func (hm HeaderMatcher) Match(headers map[string]string) bool {
 	for name, valueList := range hm {
+		headerVal, found := headers[name]
+		if !found {
+			return false
+		}
+
 		var ok bool
+
 		for _, val := range valueList {
-			if val == ctx.RequestHeader(name) {
+			if val == headerVal {
 				ok = true
 			}
 		}
