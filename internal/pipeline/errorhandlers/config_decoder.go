@@ -12,6 +12,7 @@ func decodeConfig(input any, output any) error {
 			DecodeHook: mapstructure.ComposeDecodeHookFunc(
 				matcher.DecodeCIDRMatcherHookFunc(),
 				matcher.DecodeErrorTypeMatcherHookFunc(),
+				matcher.StringToURLHookFunc(),
 			),
 			Result:      output,
 			ErrorUnused: true,
