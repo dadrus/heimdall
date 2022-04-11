@@ -7,18 +7,19 @@ import (
 
 type CompositeErrorHandler []ErrorHandler
 
-func (ceh CompositeErrorHandler) HandleError(ctx heimdall.Context, e error) (err error) {
+func (ceh CompositeErrorHandler) HandleError(ctx heimdall.Context, e error) (ok bool, err error) {
 	for _, eh := range ceh {
-		err = eh.HandleError(ctx, e)
+		ok, err = eh.HandleError(ctx, e)
 		if err != nil {
-			// try next
-			continue
-		} else {
-			return nil
+			return false, err
+		}
+
+		if ok {
+			return true, nil
 		}
 	}
 
-	return err
+	return false, errorchain.NewWithMessage(heimdall.ErrInternal, "no applicable error handler available")
 }
 
 func (CompositeErrorHandler) WithConfig(_ map[string]any) (ErrorHandler, error) {

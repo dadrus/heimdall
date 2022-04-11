@@ -15,10 +15,10 @@ type mockErrorHandler struct {
 	mock.Mock
 }
 
-func (m *mockErrorHandler) HandleError(ctx heimdall.Context, e error) error {
+func (m *mockErrorHandler) HandleError(ctx heimdall.Context, e error) (bool, error) {
 	args := m.Called(ctx, e)
 
-	return args.Error(0)
+	return args.Bool(0), args.Error(1)
 }
 
 func (m *mockErrorHandler) WithConfig(conf map[string]any) (ErrorHandler, error) {
@@ -44,18 +44,19 @@ func TestCompositeErrorHandlerExecutionWithFallback(t *testing.T) {
 	ctx.On("AppContext").Return(context.Background())
 
 	eh1 := &mockErrorHandler{}
-	eh1.On("HandleError", ctx, testsupport.ErrTestPurpose).Return(testsupport.ErrTestPurpose)
+	eh1.On("HandleError", ctx, testsupport.ErrTestPurpose).Return(false, nil)
 
 	eh2 := &mockErrorHandler{}
-	eh2.On("HandleError", ctx, testsupport.ErrTestPurpose).Return(nil)
+	eh2.On("HandleError", ctx, testsupport.ErrTestPurpose).Return(true, nil)
 
 	eh := CompositeErrorHandler{eh1, eh2}
 
 	// WHEN
-	err := eh.HandleError(ctx, testsupport.ErrTestPurpose)
+	ok, err := eh.HandleError(ctx, testsupport.ErrTestPurpose)
 
 	// THEN
 	assert.NoError(t, err)
+	assert.True(t, ok)
 
 	eh1.AssertExpectations(t)
 	eh2.AssertExpectations(t)
@@ -69,17 +70,44 @@ func TestCompositeErrorHandlerExecutionWithoutFallback(t *testing.T) {
 	ctx.On("AppContext").Return(context.Background())
 
 	eh1 := &mockErrorHandler{}
-	eh1.On("HandleError", ctx, testsupport.ErrTestPurpose).Return(nil)
+	eh1.On("HandleError", ctx, testsupport.ErrTestPurpose).Return(true, nil)
 
 	eh2 := &mockErrorHandler{}
 
 	eh := CompositeErrorHandler{eh1, eh2}
 
 	// WHEN
-	err := eh.HandleError(ctx, testsupport.ErrTestPurpose)
+	ok, err := eh.HandleError(ctx, testsupport.ErrTestPurpose)
 
 	// THEN
 	assert.NoError(t, err)
+	assert.True(t, ok)
+
+	eh1.AssertExpectations(t)
+	eh2.AssertExpectations(t)
+}
+
+func TestCompositeErrorHandlerExecutionWithNoApplicableErrorHandler(t *testing.T) {
+	t.Parallel()
+
+	// GIVEN
+	ctx := &testsupport.MockContext{}
+	ctx.On("AppContext").Return(context.Background())
+
+	eh1 := &mockErrorHandler{}
+	eh1.On("HandleError", ctx, testsupport.ErrTestPurpose).Return(false, nil)
+
+	eh2 := &mockErrorHandler{}
+	eh2.On("HandleError", ctx, testsupport.ErrTestPurpose).Return(false, nil)
+
+	eh := CompositeErrorHandler{eh1, eh2}
+
+	// WHEN
+	ok, err := eh.HandleError(ctx, testsupport.ErrTestPurpose)
+
+	// THEN
+	assert.Error(t, err)
+	assert.False(t, ok)
 
 	eh1.AssertExpectations(t)
 	eh2.AssertExpectations(t)

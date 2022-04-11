@@ -26,10 +26,10 @@ func newJSONErrorHandler(rawConfig map[string]any) (jsonErrorHandler, error) {
 	return jsonErrorHandler{}, nil
 }
 
-func (jsonErrorHandler) HandleError(ctx heimdall.Context, err error) error {
+func (jsonErrorHandler) HandleError(ctx heimdall.Context, err error) (bool, error) {
 	ctx.SetPipelineError(err)
 
-	return nil
+	return true, nil
 }
 
 func (jsonErrorHandler) WithConfig(config map[string]any) (ErrorHandler, error) {

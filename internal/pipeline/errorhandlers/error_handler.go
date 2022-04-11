@@ -5,6 +5,6 @@ import (
 )
 
 type ErrorHandler interface {
-	HandleError(ctx heimdall.Context, err error) error
+	HandleError(ctx heimdall.Context, err error) (bool, error)
 	WithConfig(config map[string]any) (ErrorHandler, error)
 }

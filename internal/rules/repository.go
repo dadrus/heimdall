@@ -227,25 +227,29 @@ func (r *rule) Execute(ctx heimdall.Context) error {
 	if err != nil {
 		logger.Debug().Err(err).Msg("Authentication failed")
 
-		return r.eh.HandleError(ctx, err)
+		_, err := r.eh.HandleError(ctx, err)
+		return err
 	}
 
 	if err := r.az.Authorize(ctx, sub); err != nil {
 		logger.Debug().Err(err).Msg("Authorization failed")
 
-		return r.eh.HandleError(ctx, err)
+		_, err := r.eh.HandleError(ctx, err)
+		return err
 	}
 
 	if err := r.h.Hydrate(ctx, sub); err != nil {
 		logger.Debug().Err(err).Msg("Hydration failed")
 
-		return r.eh.HandleError(ctx, err)
+		_, err := r.eh.HandleError(ctx, err)
+		return err
 	}
 
 	if err := r.m.Mutate(ctx, sub); err != nil {
 		logger.Debug().Err(err).Msg("Mutation failed")
 
-		return r.eh.HandleError(ctx, err)
+		_, err := r.eh.HandleError(ctx, err)
+		return err
 	}
 
 	return nil
