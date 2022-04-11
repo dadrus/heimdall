@@ -18,7 +18,6 @@ import (
 const (
 	xForwardedMethod = "X-Forwarded-Method"
 	xForwardedProto  = "X-Forwarded-Proto"
-	xForwardedHost   = "X-Forwarded-Host"
 	xForwardedURI    = "X-Forwarded-Uri"
 )
 
@@ -74,15 +73,10 @@ func (h *Handler) registerRoutes(router fiber.Router, logger zerolog.Logger) {
 //       500: genericError
 //       503: genericError
 func (h *Handler) decisions(c *fiber.Ctx) error {
-	ctx := c.UserContext()
-	logger := zerolog.Ctx(ctx)
+	logger := zerolog.Ctx(c.UserContext())
 
-	method := x.OrDefault(c.Get(xForwardedMethod), c.Method())
-	reqURL := &url.URL{
-		Scheme: x.OrDefault(c.Get(xForwardedProto), c.Protocol()),
-		Host:   x.OrDefault(c.Get(xForwardedHost), c.Hostname()),
-		Path:   x.OrDefault(c.Get(xForwardedURI), c.Params("*")),
-	}
+	method := h.getRequestMethod(c)
+	reqURL := h.getRequestURL(c)
 
 	fields := map[string]interface{}{
 		"http_method":     method,
@@ -109,16 +103,17 @@ func (h *Handler) decisions(c *fiber.Ctx) error {
 		return c.SendStatus(fiber.StatusMethodNotAllowed)
 	}
 
-	reqCtx := &requestContext{
+	ctx := &requestContext{
 		c:           c,
 		signer:      h.s,
+		reqURL:      reqURL,
 		respHeader:  make(http.Header),
 		respCookies: make(map[string]string),
 	}
 
-	err = rule.Execute(reqCtx)
+	err = rule.Execute(ctx)
 	if err == nil {
-		err = reqCtx.err
+		err = ctx.err
 	}
 
 	if err != nil {
@@ -135,15 +130,57 @@ func (h *Handler) decisions(c *fiber.Ctx) error {
 		Bool("granted", true).
 		Msg("Access request granted")
 
-	for k := range reqCtx.respHeader {
-		c.Response().Header.Set(k, reqCtx.respHeader.Get(k))
+	for k := range ctx.respHeader {
+		c.Response().Header.Set(k, ctx.respHeader.Get(k))
 	}
 
-	for k, v := range reqCtx.respCookies {
+	for k, v := range ctx.respCookies {
 		c.Cookie(&fiber.Cookie{Name: k, Value: v})
 	}
 
 	return c.SendStatus(fiber.StatusOK)
+}
+
+func (h *Handler) getRequestURL(c *fiber.Ctx) *url.URL {
+	var (
+		path   string
+		query  string
+		scheme string
+	)
+
+	if c.IsProxyTrusted() {
+		forwardedURIVal := c.Get(xForwardedURI)
+		if len(forwardedURIVal) != 0 {
+			forwardedURI, _ := url.ParseRequestURI(forwardedURIVal)
+			path = forwardedURI.Path
+			query = forwardedURI.Query().Encode()
+		}
+	}
+
+	if len(path) == 0 {
+		path = c.Params("*")
+		origReqURL := *c.Request().URI()
+		query = string(origReqURL.QueryString())
+	}
+
+	if c.IsProxyTrusted() {
+		scheme = c.Get(xForwardedProto)
+	}
+
+	return &url.URL{
+		Scheme:   x.OrDefault(scheme, c.Protocol()),
+		Host:     c.Hostname(),
+		Path:     path,
+		RawQuery: query,
+	}
+}
+
+func (h *Handler) getRequestMethod(c *fiber.Ctx) string {
+	if c.IsProxyTrusted() {
+		return x.OrDefault(c.Get(xForwardedMethod), c.Method())
+	}
+
+	return c.Method()
 }
 
 func (h *Handler) handleError(c *fiber.Ctx, err error) error {
@@ -161,7 +198,7 @@ func (h *Handler) handleError(c *fiber.Ctx, err error) error {
 
 		errors.As(err, &redirectError)
 
-		return c.Redirect(redirectError.RedirectTo)
+		return c.Redirect(redirectError.RedirectTo.String(), redirectError.Code)
 	default:
 		return c.SendStatus(fiber.StatusInternalServerError)
 	}
@@ -169,6 +206,7 @@ func (h *Handler) handleError(c *fiber.Ctx, err error) error {
 
 type requestContext struct {
 	c           *fiber.Ctx
+	reqURL      *url.URL
 	respHeader  http.Header
 	respCookies map[string]string
 	signer      heimdall.JWTSigner
@@ -185,3 +223,12 @@ func (s *requestContext) SetPipelineError(err error)               { s.err = err
 func (s *requestContext) AddResponseHeader(name, value string)     { s.respHeader.Add(name, value) }
 func (s *requestContext) AddResponseCookie(name, value string)     { s.respCookies[name] = value }
 func (s *requestContext) Signer() heimdall.JWTSigner               { return s.signer }
+func (s *requestContext) RequestURL() *url.URL                     { return s.reqURL }
+func (s *requestContext) RequestClientIPs() []string {
+	ips := s.c.IPs()
+	if len(ips) == 0 {
+		ips = append(ips, s.c.IP())
+	}
+
+	return ips
+}
