@@ -6,15 +6,13 @@ import (
 )
 
 type ErrorConditionMatcher struct {
-	Error   *ErrorTypeMatcher `mapstructure:"error"`
-	Request struct {
-		CIDR   *CIDRMatcher   `mapstructure:"cidr"`
-		Header *HeaderMatcher `mapstructure:"header"`
-	} `mapstructure:"request"`
+	Error  *ErrorTypeMatcher `mapstructure:"error"`
+	CIDR   *CIDRMatcher      `mapstructure:"request_cidr"`
+	Header *HeaderMatcher    `mapstructure:"request_header"`
 }
 
 func (ecm *ErrorConditionMatcher) Validate() error {
-	if ecm.Error == nil && ecm.Request.CIDR == nil && ecm.Request.Header == nil {
+	if ecm.Error == nil && ecm.CIDR == nil && ecm.Header == nil {
 		return errorchain.NewWithMessage(heimdall.ErrConfiguration, "no error conditions configured")
 	}
 
@@ -22,17 +20,17 @@ func (ecm *ErrorConditionMatcher) Validate() error {
 }
 
 func (ecm *ErrorConditionMatcher) Match(ctx heimdall.Context, err error) bool {
-	if ecm.Error != nil && !ecm.Error.Match(err) {
-		return false
+	if ecm.Error != nil && ecm.Error.Match(err) {
+		return true
 	}
 
-	if ecm.Request.CIDR != nil && !ecm.Request.CIDR.Match(ctx) {
-		return false
+	if ecm.CIDR != nil && ecm.CIDR.Match(ctx.RequestClientIPs()...) {
+		return true
 	}
 
-	if ecm.Request.Header != nil && !ecm.Request.Header.Match(ctx) {
-		return false
+	if ecm.Header != nil && ecm.Header.Match(ctx.RequestHeaders()) {
+		return true
 	}
 
-	return true
+	return false
 }
