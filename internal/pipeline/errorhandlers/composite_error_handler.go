@@ -1,9 +1,10 @@
 package errorhandlers
 
 import (
+	"github.com/rs/zerolog"
+
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
-	"github.com/rs/zerolog"
 )
 
 type CompositeErrorHandler []ErrorHandler

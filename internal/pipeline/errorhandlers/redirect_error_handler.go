@@ -4,12 +4,13 @@ import (
 	"net/http"
 	"net/url"
 
+	"github.com/rs/zerolog"
+
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/pipeline/errorhandlers/matcher"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
-	"github.com/rs/zerolog"
 )
 
 // by intention. Used only during application bootstrap
