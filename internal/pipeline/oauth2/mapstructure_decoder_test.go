@@ -148,7 +148,6 @@ scopes:
 		},
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
-			t.Parallel()
 			// GIVEN
 			var typ Type
 
