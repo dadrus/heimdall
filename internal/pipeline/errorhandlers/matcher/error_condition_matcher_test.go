@@ -67,20 +67,7 @@ func TestErrorConditionMatcherMatch(t *testing.T) {
 		matching bool
 	}{
 		{
-			uc: "matches on error",
-			matcher: ErrorConditionMatcher{
-				Error:  &ErrorTypeMatcher{heimdall.ErrConfiguration},
-				CIDR:   cidrMatcher,
-				Header: &HeaderMatcher{"foobar": {"bar", "foo"}},
-			},
-			setupCtx: func(ctx *testsupport.MockContext) {
-				t.Helper()
-			},
-			err:      heimdall.ErrConfiguration,
-			matching: true,
-		},
-		{
-			uc: "matches on ip",
+			uc: "doesn't match on error only",
 			matcher: ErrorConditionMatcher{
 				Error:  &ErrorTypeMatcher{heimdall.ErrConfiguration},
 				CIDR:   cidrMatcher,
@@ -89,15 +76,38 @@ func TestErrorConditionMatcherMatch(t *testing.T) {
 			setupCtx: func(ctx *testsupport.MockContext) {
 				t.Helper()
 
+				ctx.On("RequestHeaders").Return(map[string]string{
+					"foobar": "barfoo",
+				})
+				ctx.On("RequestClientIPs").Return([]string{
+					"192.168.10.2",
+				})
+			},
+			err:      heimdall.ErrConfiguration,
+			matching: false,
+		},
+		{
+			uc: "doesn't match on ip only",
+			matcher: ErrorConditionMatcher{
+				Error:  &ErrorTypeMatcher{heimdall.ErrConfiguration},
+				CIDR:   cidrMatcher,
+				Header: &HeaderMatcher{"foobar": {"bar", "foo"}},
+			},
+			setupCtx: func(ctx *testsupport.MockContext) {
+				t.Helper()
+
+				ctx.On("RequestHeaders").Return(map[string]string{
+					"foobar": "barfoo",
+				})
 				ctx.On("RequestClientIPs").Return([]string{
 					"192.168.1.2",
 				})
 			},
 			err:      heimdall.ErrArgument,
-			matching: true,
+			matching: false,
 		},
 		{
-			uc: "matches on header",
+			uc: "doesn't match on header only",
 			matcher: ErrorConditionMatcher{
 				Error:  &ErrorTypeMatcher{heimdall.ErrConfiguration},
 				CIDR:   cidrMatcher,
@@ -114,7 +124,7 @@ func TestErrorConditionMatcherMatch(t *testing.T) {
 				})
 			},
 			err:      heimdall.ErrArgument,
-			matching: true,
+			matching: false,
 		},
 		{
 			uc: "doesn't match at all",
@@ -135,6 +145,67 @@ func TestErrorConditionMatcherMatch(t *testing.T) {
 			},
 			err:      heimdall.ErrArgument,
 			matching: false,
+		},
+		{
+			uc: "matches having all matchers defined",
+			matcher: ErrorConditionMatcher{
+				Error:  &ErrorTypeMatcher{heimdall.ErrConfiguration},
+				CIDR:   cidrMatcher,
+				Header: &HeaderMatcher{"foobar": {"bar", "foo"}},
+			},
+			setupCtx: func(ctx *testsupport.MockContext) {
+				t.Helper()
+
+				ctx.On("RequestHeaders").Return(map[string]string{
+					"foobar": "bar",
+				})
+				ctx.On("RequestClientIPs").Return([]string{
+					"192.168.1.2",
+				})
+			},
+			err:      heimdall.ErrConfiguration,
+			matching: true,
+		},
+		{
+			uc: "matches having only error matcher defined",
+			matcher: ErrorConditionMatcher{
+				Error: &ErrorTypeMatcher{heimdall.ErrConfiguration},
+			},
+			setupCtx: func(ctx *testsupport.MockContext) {
+				t.Helper()
+			},
+			err:      heimdall.ErrConfiguration,
+			matching: true,
+		},
+		{
+			uc: "matches having only header matcher defined",
+			matcher: ErrorConditionMatcher{
+				Header: &HeaderMatcher{"foobar": {"bar", "foo"}},
+			},
+			setupCtx: func(ctx *testsupport.MockContext) {
+				t.Helper()
+
+				ctx.On("RequestHeaders").Return(map[string]string{
+					"foobar": "bar",
+				})
+			},
+			err:      heimdall.ErrArgument,
+			matching: true,
+		},
+		{
+			uc: "matches having only cidr matcher defined",
+			matcher: ErrorConditionMatcher{
+				CIDR: cidrMatcher,
+			},
+			setupCtx: func(ctx *testsupport.MockContext) {
+				t.Helper()
+
+				ctx.On("RequestClientIPs").Return([]string{
+					"192.168.1.2",
+				})
+			},
+			err:      heimdall.ErrConfiguration,
+			matching: true,
 		},
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {

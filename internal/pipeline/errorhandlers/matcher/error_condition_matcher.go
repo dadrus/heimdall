@@ -2,6 +2,7 @@ package matcher
 
 import (
 	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
@@ -20,17 +21,17 @@ func (ecm *ErrorConditionMatcher) Validate() error {
 }
 
 func (ecm *ErrorConditionMatcher) Match(ctx heimdall.Context, err error) bool {
-	if ecm.Error != nil && ecm.Error.Match(err) {
-		return true
-	}
+	errorMatched := x.IfThenElseExec(ecm.Error != nil,
+		func() bool { return ecm.Error.Match(err) },
+		func() bool { return true })
 
-	if ecm.CIDR != nil && ecm.CIDR.Match(ctx.RequestClientIPs()...) {
-		return true
-	}
+	ipMatched := x.IfThenElseExec(ecm.CIDR != nil,
+		func() bool { return ecm.CIDR.Match(ctx.RequestClientIPs()...) },
+		func() bool { return true })
 
-	if ecm.Header != nil && ecm.Header.Match(ctx.RequestHeaders()) {
-		return true
-	}
+	headerMatched := x.IfThenElseExec(ecm.Header != nil,
+		func() bool { return ecm.Header.Match(ctx.RequestHeaders()) },
+		func() bool { return true })
 
-	return false
+	return errorMatched && ipMatched && headerMatched
 }
