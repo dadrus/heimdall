@@ -2,7 +2,6 @@ package decision
 
 import (
 	"context"
-	"errors"
 	"net/http"
 	"net/url"
 
@@ -13,6 +12,7 @@ import (
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules"
 	"github.com/dadrus/heimdall/internal/x"
+	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
 const (
@@ -96,7 +96,7 @@ func (h *Handler) decisions(c *fiber.Ctx) error {
 			Bool("granted", false).
 			Msg("Access request denied. No rule applicable")
 
-		return c.Status(fiber.StatusInternalServerError).Format(err)
+		return errorchain.New(heimdall.ErrInternal).CausedBy(err)
 	}
 
 	if !rule.MatchesMethod(method) {
@@ -122,7 +122,7 @@ func (h *Handler) decisions(c *fiber.Ctx) error {
 			Bool("granted", false).
 			Msg("Access request denied")
 
-		return h.handleError(c, err)
+		return err
 	}
 
 	logger.Info().
@@ -181,27 +181,6 @@ func (h *Handler) getRequestMethod(c *fiber.Ctx) string {
 	}
 
 	return c.Method()
-}
-
-func (h *Handler) handleError(c *fiber.Ctx, err error) error {
-	switch {
-	case errors.Is(err, heimdall.ErrArgument):
-		return c.Status(fiber.StatusBadRequest).Format(err)
-	case errors.Is(err, heimdall.ErrAuthentication):
-		return c.Status(fiber.StatusUnauthorized).Format(err)
-	case errors.Is(err, heimdall.ErrAuthorization):
-		return c.Status(fiber.StatusForbidden).Format(err)
-	case errors.Is(err, heimdall.ErrCommunicationTimeout):
-		return c.Status(fiber.StatusBadGateway).Format(err)
-	case errors.Is(err, &heimdall.RedirectError{}):
-		var redirectError *heimdall.RedirectError
-
-		errors.As(err, &redirectError)
-
-		return c.Redirect(redirectError.RedirectTo.String(), redirectError.Code)
-	default:
-		return c.Status(fiber.StatusInternalServerError).Format(err)
-	}
 }
 
 type requestContext struct {
