@@ -7,6 +7,7 @@ require (
 	github.com/fsnotify/fsnotify v1.5.1
 	github.com/gofiber/fiber/v2 v2.31.0
 	github.com/google/uuid v1.0.0
+	github.com/instana/go-sensor v1.41.1
 	github.com/jellydator/ttlcache/v3 v3.0.0
 	github.com/knadh/koanf v1.4.0
 	github.com/mitchellh/mapstructure v1.4.3
@@ -16,6 +17,7 @@ require (
 	github.com/spf13/cobra v1.4.0
 	github.com/stretchr/testify v1.7.1
 	github.com/tidwall/gjson v1.14.0
+	github.com/uber/jaeger-client-go v2.30.0+incompatible
 	github.com/ybbus/httpretry v1.0.1
 	github.com/yl2chen/cidranger v1.0.2
 	github.com/youmark/pkcs8 v0.0.0-20201027041543-1326539a0a0a
@@ -26,6 +28,7 @@ require (
 )
 
 require (
+	github.com/HdrHistogram/hdrhistogram-go v1.1.2 // indirect
 	github.com/andybalholm/brotli v1.0.4 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.1.2 // indirect
@@ -36,9 +39,12 @@ require (
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
 	github.com/klauspost/compress v1.15.0 // indirect
+	github.com/looplab/fsm v0.1.0 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.1 // indirect
 	github.com/mitchellh/copystructure v1.2.0 // indirect
 	github.com/mitchellh/reflectwalk v1.0.2 // indirect
+	github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e // indirect
+	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/prometheus/client_golang v1.12.1 // indirect
 	github.com/prometheus/client_model v0.2.0 // indirect
@@ -48,6 +54,7 @@ require (
 	github.com/stretchr/objx v0.1.1 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.0 // indirect
+	github.com/uber/jaeger-lib v2.4.1+incompatible // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/valyala/fasthttp v1.34.0 // indirect
 	github.com/valyala/tcplisten v1.0.0 // indirect
@@ -59,5 +66,6 @@ require (
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c // indirect
 	golang.org/x/sys v0.0.0-20220227234510-4e6760a101f9 // indirect
 	google.golang.org/protobuf v1.26.0 // indirect
+	gopkg.in/check.v1 v1.0.0-20200227125254-8fa46927fb4f // indirect
 	gopkg.in/yaml.v3 v3.0.0-20200313102051-9f266ea9e77c // indirect
 )
