@@ -14,7 +14,7 @@ The current implementation is a pre alpha version, which alreay supports
 * Error Handlers (default, redirect, www-authenticate), which support accept type negotiation as well
 * Opentracing support (jaeger & instana)
 
-  Features to come are (more or less in this sequence):
+Features to come are (more or less in this sequence):
 
 * Proper rules loading, reloading and matching
 * Hydrators - to enrich the subject information retrieved from the authenticator
