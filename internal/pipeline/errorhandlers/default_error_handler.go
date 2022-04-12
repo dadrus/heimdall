@@ -10,28 +10,28 @@ import (
 func init() {
 	registerErrorHandlerTypeFactory(
 		func(typ config.PipelineObjectType, conf map[string]any) (bool, ErrorHandler, error) {
-			if typ != config.POTJson {
+			if typ != config.POTDefault {
 				return false, nil, nil
 			}
 
-			eh, err := newJSONErrorHandler(conf)
+			eh, err := newDefaultErrorHandler(conf)
 
 			return true, eh, err
 		})
 }
 
-type jsonErrorHandler struct{}
+type defaultErrorHandler struct{}
 
-func newJSONErrorHandler(rawConfig map[string]any) (jsonErrorHandler, error) {
-	return jsonErrorHandler{}, nil
+func newDefaultErrorHandler(rawConfig map[string]any) (*defaultErrorHandler, error) {
+	return &defaultErrorHandler{}, nil
 }
 
-func (jsonErrorHandler) HandleError(ctx heimdall.Context, err error) (bool, error) {
+func (eh *defaultErrorHandler) HandleError(ctx heimdall.Context, err error) (bool, error) {
 	ctx.SetPipelineError(err)
 
 	return true, nil
 }
 
-func (jsonErrorHandler) WithConfig(config map[string]any) (ErrorHandler, error) {
-	return nil, nil
+func (eh *defaultErrorHandler) WithConfig(config map[string]any) (ErrorHandler, error) {
+	return eh, nil
 }
