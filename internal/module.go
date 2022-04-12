@@ -11,12 +11,14 @@ import (
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/rules"
 	"github.com/dadrus/heimdall/internal/signer"
+	"github.com/dadrus/heimdall/internal/tracing"
 )
 
 // nolint
 var Module = fx.Options(
 	config.Module,
 	logging.Module,
+	tracing.Module,
 	cache.Module,
 	keystore.Module,
 	signer.Module,
