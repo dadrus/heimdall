@@ -107,6 +107,10 @@ func (eh *redirectErrorHandler) HandleError(ctx heimdall.Context, err error) (bo
 }
 
 func (eh *redirectErrorHandler) WithConfig(rawConfig map[string]any) (ErrorHandler, error) {
+	if len(rawConfig) == 0 {
+		return eh, nil
+	}
+
 	type _config struct {
 		When []matcher.ErrorConditionMatcher `mapstructure:"when"`
 	}
@@ -116,6 +120,12 @@ func (eh *redirectErrorHandler) WithConfig(rawConfig map[string]any) (ErrorHandl
 		return nil, errorchain.
 			NewWithMessage(heimdall.ErrConfiguration, "failed to unmarshal redirect error handler config").
 			CausedBy(err)
+	}
+
+	if len(conf.When) == 0 {
+		return nil, errorchain.
+			NewWithMessage(heimdall.ErrConfiguration,
+				"no error handler conditions defined for the redirect error handler")
 	}
 
 	for idx, ecm := range conf.When {
