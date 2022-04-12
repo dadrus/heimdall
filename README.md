@@ -7,12 +7,11 @@ Heimdall authenticates and authorizes incoming HTTP requests as well as enriches
 The current implementation is a pre alpha version, which alreay supports
 
 * Decision API
-* Loading rules from the file system
+* Loading rules from the file system (Limitations: Only the default rule has effect. All other rules are ignored for now)
 * Different authenticator types (allow, deny, jwt, oauth2 introspection, generic)
 * Declarative authorizers (allow, deny)
 * Mutators (opaque cookie, opaque header, jwt in the Authorization header) to transform the subject information
 * Error Handlers (default, redirect, www-authenticate), which support accept type negotiation as well
-* Only the default rule has effect. All other rules are ignored for now.
 
 Features to come are (more or less in this sequence):
 
@@ -20,6 +19,7 @@ Features to come are (more or less in this sequence):
 * Hydrators - to enrich the subject information retrieved from the authenticator
 * Authorizer (remote) - to make use of an external authorization system.
 * Opentracing support
-* k8s CDRs to load rules from.
+* Health & Readiness Probes
+* k8s CRDs to load rules from.
 * Reverse Proxy
 
