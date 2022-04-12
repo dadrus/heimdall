@@ -29,7 +29,6 @@ func logFormatDecodeHookFunc(from reflect.Type, to reflect.Type, val any) (any, 
 }
 
 type Logging struct {
-	Format            LogFormat     `koanf:"format"`
-	Level             zerolog.Level `koanf:"level"`
-	LeakSensitiveData bool          `koanf:"leak_sensitive_data"`
+	Format LogFormat     `koanf:"format"`
+	Level  zerolog.Level `koanf:"level"`
 }
