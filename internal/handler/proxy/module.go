@@ -13,6 +13,7 @@ import (
 	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/fiber/middleware"
+	"github.com/dadrus/heimdall/internal/handler/errorhandler"
 )
 
 // nolint
@@ -33,6 +34,7 @@ func newFiberApp(conf config.Configuration, cache cache.Cache) *fiber.App {
 		WriteTimeout:          proxy.Timeout.Write,
 		IdleTimeout:           proxy.Timeout.Idle,
 		DisableStartupMessage: true,
+		ErrorHandler:          errorhandler.NewErrorHandler(proxy.VerboseErrors),
 	})
 
 	app.Use(recover.New())
