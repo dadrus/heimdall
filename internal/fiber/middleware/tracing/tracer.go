@@ -48,7 +48,7 @@ func startSpan(ctx *fiber.Ctx, config opts) (opentracing.Span, error) {
 }
 
 func spanContext(ctx *fiber.Ctx, config opts) (opentracing.SpanContext, error) {
-	var header opentracing.HTTPHeadersCarrier
+	header := make(opentracing.HTTPHeadersCarrier)
 
 	ctx.Request().Header.VisitAll(func(key, value []byte) {
 		header.Set(string(key), string(value))
