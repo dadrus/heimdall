@@ -7,12 +7,14 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/recover"
+	"github.com/opentracing/opentracing-go"
 	"github.com/rs/zerolog"
 	"go.uber.org/fx"
 
 	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/fiber/middleware"
+	"github.com/dadrus/heimdall/internal/fiber/middleware/tracing"
 	"github.com/dadrus/heimdall/internal/handler/errorhandler"
 )
 
@@ -50,6 +52,7 @@ func newFiberApp(conf config.Configuration, cache cache.Cache) *fiber.App {
 		}))
 	}
 
+	app.Use(tracing.New(tracing.WithTracer(opentracing.GlobalTracer())))
 	app.Use(middleware.Cache(cache))
 	app.Use(middleware.Logger())
 
