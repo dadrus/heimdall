@@ -140,7 +140,6 @@ pipeline:
             - forbidden
             request_header:
               Accept:
-              - text/html
               - '*/*'
 
 rules:
