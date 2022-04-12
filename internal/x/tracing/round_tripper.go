@@ -1,4 +1,4 @@
-package httpx
+package tracing
 
 import (
 	"net/http"
@@ -10,12 +10,12 @@ import (
 	"github.com/dadrus/heimdall/internal/x"
 )
 
-type TracingRoundTripper struct {
+type RoundTripper struct {
 	Next       http.RoundTripper
 	TargetName string
 }
 
-func (d *TracingRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
+func (d *RoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
 	if !opentracing.IsGlobalTracerRegistered() {
 		return d.Next.RoundTrip(req)
 	}
@@ -30,6 +30,6 @@ func (d *TracingRoundTripper) RoundTrip(req *http.Request) (*http.Response, erro
 	return d.Next.RoundTrip(req)
 }
 
-func (d *TracingRoundTripper) operationName(r *http.Request) string {
+func (d *RoundTripper) operationName(r *http.Request) string {
 	return x.IfThenElse(len(d.TargetName) != 0, d.TargetName+" ", "") + r.URL.Path
 }
