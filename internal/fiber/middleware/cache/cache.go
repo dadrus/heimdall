@@ -1,4 +1,4 @@
-package middleware
+package cache
 
 import (
 	"github.com/gofiber/fiber/v2"
@@ -6,7 +6,7 @@ import (
 	"github.com/dadrus/heimdall/internal/cache"
 )
 
-func Cache(cch cache.Cache) fiber.Handler {
+func New(cch cache.Cache) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		c.SetUserContext(cache.WithContext(c.UserContext(), cch))
 

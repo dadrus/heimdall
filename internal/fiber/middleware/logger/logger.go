@@ -1,11 +1,11 @@
-package middleware
+package logger
 
 import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/rs/zerolog/log"
 )
 
-func Logger() fiber.Handler {
+func New() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		l := log.With().Logger()
 

@@ -13,8 +13,9 @@ import (
 
 	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/dadrus/heimdall/internal/config"
-	"github.com/dadrus/heimdall/internal/fiber/middleware"
-	"github.com/dadrus/heimdall/internal/fiber/middleware/tracing"
+	fibercache "github.com/dadrus/heimdall/internal/fiber/middleware/cache"
+	fiberlogger "github.com/dadrus/heimdall/internal/fiber/middleware/logger"
+	fibertracing "github.com/dadrus/heimdall/internal/fiber/middleware/tracing"
 	"github.com/dadrus/heimdall/internal/handler/errorhandler"
 )
 
@@ -52,9 +53,9 @@ func newFiberApp(conf config.Configuration, cache cache.Cache) *fiber.App {
 		}))
 	}
 
-	app.Use(tracing.New(tracing.WithTracer(opentracing.GlobalTracer())))
-	app.Use(middleware.Cache(cache))
-	app.Use(middleware.Logger())
+	app.Use(fibertracing.New(fibertracing.WithTracer(opentracing.GlobalTracer())))
+	app.Use(fibercache.New(cache))
+	app.Use(fiberlogger.New())
 
 	return app
 }
