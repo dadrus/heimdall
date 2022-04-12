@@ -14,7 +14,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
-	"github.com/dadrus/heimdall/internal/x/httpx"
+	"github.com/dadrus/heimdall/internal/x/tracing"
 )
 
 type Endpoint struct {
@@ -46,7 +46,7 @@ func (e Endpoint) Validate() error {
 
 func (e Endpoint) CreateClient() *http.Client {
 	client := &http.Client{
-		Transport: &httpx.TracingRoundTripper{Next: http.DefaultTransport},
+		Transport: &tracing.RoundTripper{Next: http.DefaultTransport},
 	}
 
 	if e.Retry != nil {
