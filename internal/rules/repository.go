@@ -12,7 +12,6 @@ import (
 
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/keystore"
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/pipeline/authenticators"
 	"github.com/dadrus/heimdall/internal/pipeline/authorizers"
@@ -24,20 +23,21 @@ import (
 
 var ErrNoRuleFound = errors.New("no rule found")
 
+const defaultRuleListSize = 0
+
 type Repository interface {
 	FindRule(*url.URL) (Rule, error)
 }
 
 func NewRepository(
 	queue provider.RuleSetChangedEventQueue,
-	config config.Configuration,
 	hf pipeline.HandlerFactory,
-	ks keystore.KeyStore,
 	logger zerolog.Logger,
 ) (Repository, error) {
 	return &repository{
 		hf:     hf,
 		logger: logger,
+		rules:  make([]*rule, defaultRuleListSize),
 		queue:  queue,
 		quit:   make(chan bool),
 	}, nil
@@ -128,8 +128,9 @@ func (r *repository) loadRules(srcID string, definition json.RawMessage) ([]*rul
 
 func (r *repository) addRule(rule *rule) {
 	r.mutex.Lock()
+	defer r.mutex.Unlock()
+
 	r.rules = append(r.rules, rule)
-	r.mutex.Unlock()
 
 	r.logger.Debug().Str("src", rule.srcID).Str("id", rule.id).Msg("Rule added")
 }
@@ -137,7 +138,41 @@ func (r *repository) addRule(rule *rule) {
 func (r *repository) removeRules(srcID string) {
 	r.logger.Info().Str("src", srcID).Msg("Removing rules")
 
-	// TODO: implement remove rule
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
+
+	// find all indexes for affected rules
+	var idxs []int
+
+	for idx, rule := range r.rules {
+		if rule.srcID == srcID {
+			idxs = append(idxs, idx)
+
+			r.logger.Debug().Str("id", rule.id).Msg("Removing rule")
+		}
+	}
+
+	// if all rules should be dropped, just create a new slice
+	if len(idxs) == len(r.rules) {
+		r.rules = make([]*rule, defaultRuleListSize)
+
+		return
+	}
+
+	// move the elements from the end of the rules slice to the found positions
+	// end set the corresponding "emptied" values to nil
+	for i, idx := range idxs {
+		tailIdx := len(r.rules) - (1 + i)
+
+		r.rules[idx] = r.rules[tailIdx]
+
+		// the below reslice preserves the capacity of the slice
+		// so this is required to avoid memory leaks
+		r.rules[tailIdx] = nil
+	}
+
+	// reslice
+	r.rules = r.rules[:len(r.rules)-len(idxs)]
 }
 
 func (r *repository) onRuleSetCreated(srcID string, definition json.RawMessage) {
@@ -228,7 +263,7 @@ func (r *rule) Execute(ctx heimdall.Context) error {
 		logger.Debug().Err(err).Msg("Authentication failed")
 
 		_, err := r.eh.HandleError(ctx, err)
-		
+
 		return err
 	}
 
