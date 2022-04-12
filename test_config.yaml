@@ -1,5 +1,5 @@
 log:
-  level: info
+  level: debug
   format: text
 
 serve:
@@ -154,6 +154,7 @@ rules:
   providers:
     file:
       src: test_rules.yaml
+      watch: true
 
     docker:
       endpoint: docker.sock
