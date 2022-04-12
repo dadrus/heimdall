@@ -1,9 +1,10 @@
 package config
 
 type RuleConfig struct {
-	ID      string   `yaml:"id"`
-	URL     string   `yaml:"url"`
-	Methods []string `yaml:"methods"`
+	ID               string   `yaml:"id"`
+	URL              string   `yaml:"url"`
+	MatchingStrategy string   `yaml:"matching_strategy"`
+	Methods          []string `yaml:"methods"`
 
 	Authenticators []PipelineObjectReference `yaml:"authenticators"`
 	Authorizer     *PipelineObjectReference  `yaml:"authorizer"`

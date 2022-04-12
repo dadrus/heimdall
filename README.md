@@ -14,10 +14,12 @@ The current implementation is a pre alpha version, which alreay supports
 * Error Handlers (default, redirect, www-authenticate), which support accept type negotiation as well
 * Opentracing support (jaeger & instana)
 * key store in pem format for rsa-pss and ecdsa keys (pkcs#1 - plain only & pkcs#8 - plain and encrypted)
+* Rules loading and reloading from file system
 
 Features to come are (more or less in this sequence):
 
-* Proper rules loading, reloading and matching
+
+* Proper rules matching (to be tested)
 * Hydrators - to enrich the subject information retrieved from the authenticator
 * Authorizer (remote) - to make use of an external authorization system.
 * X.509 certificates in key store

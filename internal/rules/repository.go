@@ -18,7 +18,9 @@ import (
 	"github.com/dadrus/heimdall/internal/pipeline/errorhandlers"
 	"github.com/dadrus/heimdall/internal/pipeline/hydrators"
 	"github.com/dadrus/heimdall/internal/pipeline/mutators"
+	"github.com/dadrus/heimdall/internal/rules/patternmatcher"
 	"github.com/dadrus/heimdall/internal/rules/provider"
+	"github.com/dadrus/heimdall/internal/x"
 )
 
 var ErrNoRuleFound = errors.New("no rule found")
@@ -220,16 +222,23 @@ func (r *repository) newRule(srcID string, ruleConfig config.RuleConfig) (*rule,
 		return nil, err
 	}
 
+	strategy := x.IfThenElse(len(ruleConfig.MatchingStrategy) == 0, "glob", ruleConfig.MatchingStrategy)
+
+	matcher, err := patternmatcher.NewPatternMatcher(strategy, ruleConfig.URL)
+	if err != nil {
+		return nil, err
+	}
+
 	return &rule{
-		id:      ruleConfig.ID,
-		url:     ruleConfig.URL,
-		methods: ruleConfig.Methods,
-		srcID:   srcID,
-		an:      authenticator,
-		az:      authorizer,
-		h:       hydrator,
-		m:       mutator,
-		eh:      errorHandler,
+		id:         ruleConfig.ID,
+		urlMatcher: matcher,
+		methods:    ruleConfig.Methods,
+		srcID:      srcID,
+		an:         authenticator,
+		az:         authorizer,
+		h:          hydrator,
+		m:          mutator,
+		eh:         errorHandler,
 	}, nil
 }
 
@@ -244,15 +253,15 @@ func parseRuleSetFromYaml(data []byte) ([]config.RuleConfig, error) {
 }
 
 type rule struct {
-	id      string
-	url     string
-	methods []string
-	srcID   string
-	an      authenticators.Authenticator
-	az      authorizers.Authorizer
-	h       hydrators.Hydrator
-	m       mutators.Mutator
-	eh      errorhandlers.ErrorHandler
+	id         string
+	urlMatcher patternmatcher.PatternMatcher
+	methods    []string
+	srcID      string
+	an         authenticators.Authenticator
+	az         authorizers.Authorizer
+	h          hydrators.Hydrator
+	m          mutators.Mutator
+	eh         errorhandlers.ErrorHandler
 }
 
 func (r *rule) Execute(ctx heimdall.Context) error {
@@ -295,7 +304,7 @@ func (r *rule) Execute(ctx heimdall.Context) error {
 }
 
 func (r *rule) MatchesURL(requestURL *url.URL) bool {
-	return true
+	return r.urlMatcher.Match(requestURL.RequestURI())
 }
 
 func (r *rule) MatchesMethod(method string) bool {
