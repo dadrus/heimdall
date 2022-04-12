@@ -12,15 +12,15 @@ type ErrorConditionMatcher struct {
 	Header *HeaderMatcher    `mapstructure:"request_header"`
 }
 
-func (ecm *ErrorConditionMatcher) Validate() error {
+func (ecm ErrorConditionMatcher) Validate() error {
 	if ecm.Error == nil && ecm.CIDR == nil && ecm.Header == nil {
-		return errorchain.NewWithMessage(heimdall.ErrConfiguration, "no error conditions configured")
+		return errorchain.NewWithMessage(heimdall.ErrInternal, "no error conditions configured")
 	}
 
 	return nil
 }
 
-func (ecm *ErrorConditionMatcher) Match(ctx heimdall.Context, err error) bool {
+func (ecm ErrorConditionMatcher) Match(ctx heimdall.Context, err error) bool {
 	errorMatched := x.IfThenElseExec(ecm.Error != nil,
 		func() bool { return ecm.Error.Match(err) },
 		func() bool { return true })

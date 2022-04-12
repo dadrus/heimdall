@@ -32,15 +32,15 @@ type redirectErrorHandler struct {
 	to       *url.URL
 	returnTo string
 	code     int
-	m        *matcher.ErrorConditionMatcher
+	m        []matcher.ErrorConditionMatcher
 }
 
 func newRedirectErrorHandler(rawConfig map[string]any) (*redirectErrorHandler, error) {
 	type _config struct {
-		To       *url.URL                      `mapstructure:"to"`
-		Code     int                           `mapstructure:"code"`
-		ReturnTo string                        `mapstructure:"return_to_query_parameter"`
-		When     matcher.ErrorConditionMatcher `mapstructure:"when"`
+		To       *url.URL                        `mapstructure:"to"`
+		Code     int                             `mapstructure:"code"`
+		ReturnTo string                          `mapstructure:"return_to_query_parameter"`
+		When     []matcher.ErrorConditionMatcher `mapstructure:"when"`
 	}
 
 	var conf _config
@@ -53,24 +53,37 @@ func newRedirectErrorHandler(rawConfig map[string]any) (*redirectErrorHandler, e
 	if conf.To == nil {
 		return nil, errorchain.
 			NewWithMessage(heimdall.ErrConfiguration,
-				"redirect error handler requires 'to' parameter to be ser")
+				"redirect error handler requires 'to' parameter to be set")
 	}
 
-	if err := conf.When.Validate(); err != nil {
-		return nil, err
+	if len(conf.When) == 0 {
+		return nil, errorchain.
+			NewWithMessage(heimdall.ErrConfiguration,
+				"no error handler conditions defined for the redirect error handler")
+	}
+
+	for idx, ecm := range conf.When {
+		if err := ecm.Validate(); err != nil {
+			return nil, errorchain.
+				NewWithMessagef(heimdall.ErrConfiguration,
+					"failed to validate %d 'when' condition for the redirect error handler", idx).
+				CausedBy(err)
+		}
 	}
 
 	return &redirectErrorHandler{
 		to:       conf.To,
 		returnTo: conf.ReturnTo,
 		code:     x.IfThenElse(conf.Code != 0, conf.Code, http.StatusFound),
-		m:        &conf.When,
+		m:        conf.When,
 	}, nil
 }
 
 func (eh *redirectErrorHandler) HandleError(ctx heimdall.Context, err error) (bool, error) {
-	if !eh.m.Match(ctx, err) {
-		return false, nil
+	for _, ecm := range eh.m {
+		if !ecm.Match(ctx, err) {
+			return false, nil
+		}
 	}
 
 	logger := zerolog.Ctx(ctx.AppContext())
@@ -95,7 +108,7 @@ func (eh *redirectErrorHandler) HandleError(ctx heimdall.Context, err error) (bo
 
 func (eh *redirectErrorHandler) WithConfig(rawConfig map[string]any) (ErrorHandler, error) {
 	type _config struct {
-		When matcher.ErrorConditionMatcher `mapstructure:"when"`
+		When []matcher.ErrorConditionMatcher `mapstructure:"when"`
 	}
 
 	var conf _config
@@ -105,14 +118,19 @@ func (eh *redirectErrorHandler) WithConfig(rawConfig map[string]any) (ErrorHandl
 			CausedBy(err)
 	}
 
-	if err := conf.When.Validate(); err != nil {
-		return nil, err
+	for idx, ecm := range conf.When {
+		if err := ecm.Validate(); err != nil {
+			return nil, errorchain.
+				NewWithMessagef(heimdall.ErrConfiguration,
+					"failed to validate %d 'when' condition for the redirect error handler", idx).
+				CausedBy(err)
+		}
 	}
 
 	return &redirectErrorHandler{
 		to:       eh.to,
 		returnTo: eh.returnTo,
 		code:     eh.code,
-		m:        &conf.When,
+		m:        conf.When,
 	}, nil
 }
