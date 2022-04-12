@@ -13,6 +13,8 @@ import (
 
 // ConfigureLogging uses the given conf to configure the global log.Logger variable.
 func ConfigureLogging(conf config.Logging) {
+	zerolog.SetGlobalLevel(conf.Level)
+
 	if conf.Format == config.LogTextFormat {
 		log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 	} else {
@@ -25,7 +27,6 @@ func ConfigureLogging(conf config.Logging) {
 		zerolog.MessageFieldName = "short_message"
 		zerolog.ErrorFieldName = "full_message"
 		zerolog.CallerFieldName = "_caller"
-		zerolog.SetGlobalLevel(conf.Level)
 
 		hostname, err := os.Hostname()
 		if err != nil {
