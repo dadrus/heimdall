@@ -5,6 +5,7 @@ log:
 serve:
   api:
     port: 4468
+    verbose_errors: true
   proxy:
     port: 4469
 
@@ -125,10 +126,8 @@ pipeline:
         cookies:
           foo-bar: '{{ .ID }}'
   error_handlers:
-    - id: default_error
-      type: json
-      config:
-        verbose: false
+    - id: default
+      type: default
     - id: authenticate_on_unauthorized_or_forbidden
       type: redirect
       config:
