@@ -149,7 +149,7 @@ rules:
       id: unauthorized_authenticator
     error_handlers:
       - id: authenticate_on_unauthorized_or_forbidden
-      - id: default_error
+      - id: default
 
   providers:
     file:
