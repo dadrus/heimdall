@@ -17,12 +17,10 @@ const (
 )
 
 type Configuration struct {
-	Proxy       Serve      `koanf:"serve.proxy"`
-	DecisionAPI Serve      `koanf:"serve.api"`
-	Prometheus  Prometheus `koanf:"serve.prometheus"`
-	Log         Logging    `koanf:"log"`
-	Signer      Signer     `koanf:"signer"`
-	Pipeline    struct {
+	Serve    Serve   `koanf:"serve"`
+	Log      Logging `koanf:"log"`
+	Signer   Signer  `koanf:"signer"`
+	Pipeline struct {
 		Authenticators []PipelineObject `koanf:"authenticators"`
 		Authorizers    []PipelineObject `koanf:"authorizers"`
 		Hydrators      []PipelineObject `koanf:"hydrators"`
@@ -43,25 +41,27 @@ type Configuration struct {
 func NewConfiguration(configFile string) Configuration {
 	// defaults
 	result := Configuration{
-		Proxy: Serve{
-			Port: defaultProxyPort,
-			Timeout: Timeout{
-				Read:  defaultReadTimeout,
-				Write: defaultWriteTimeout,
-				Idle:  defaultIdleTimeout,
+		Serve: Serve{
+			Proxy: Service{
+				Port: defaultProxyPort,
+				Timeout: Timeout{
+					Read:  defaultReadTimeout,
+					Write: defaultWriteTimeout,
+					Idle:  defaultIdleTimeout,
+				},
 			},
-		},
-		DecisionAPI: Serve{
-			Port: defaultDecisionAPIPort,
-			Timeout: Timeout{
-				Read:  defaultReadTimeout,
-				Write: defaultWriteTimeout,
-				Idle:  defaultIdleTimeout,
+			DecisionAPI: Service{
+				Port: defaultDecisionAPIPort,
+				Timeout: Timeout{
+					Read:  defaultReadTimeout,
+					Write: defaultWriteTimeout,
+					Idle:  defaultIdleTimeout,
+				},
 			},
-		},
-		Prometheus: Prometheus{
-			Port:        defaultPrometheusPort,
-			MetricsPath: "/metrics",
+			Prometheus: Prometheus{
+				Port:        defaultPrometheusPort,
+				MetricsPath: "/metrics",
+			},
 		},
 		Log: Logging{
 			Level:  zerolog.DebugLevel,

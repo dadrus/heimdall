@@ -26,7 +26,7 @@ var Module = fx.Options(
 )
 
 func newFiberApp(conf config.Configuration, cache cache.Cache) *fiber.App {
-	api := conf.DecisionAPI
+	api := conf.Serve.DecisionAPI
 
 	app := fiber.New(fiber.Config{
 		AppName:               "Heimdall Decision API",
@@ -63,7 +63,7 @@ type fiberApp struct {
 }
 
 func registerHooks(lifecycle fx.Lifecycle, logger zerolog.Logger, app fiberApp, conf config.Configuration) {
-	apiConf := conf.DecisionAPI
+	apiConf := conf.Serve.DecisionAPI
 
 	lifecycle.Append(
 		fx.Hook{

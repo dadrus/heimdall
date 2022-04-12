@@ -25,7 +25,7 @@ type TLS struct {
 	Cert string `koanf:"cert"`
 }
 
-type Serve struct {
+type Service struct {
 	Host          string  `koanf:"host"`
 	Port          int     `koanf:"port"`
 	VerboseErrors bool    `koanf:"verbose_errors"`
@@ -34,6 +34,12 @@ type Serve struct {
 	TLS           *TLS    `koanf:"tls"`
 }
 
-func (c Serve) Address() string {
+func (c Service) Address() string {
 	return c.Host + ":" + strconv.Itoa(c.Port)
+}
+
+type Serve struct {
+	Proxy       Service    `koanf:"proxy"`
+	DecisionAPI Service    `koanf:"api"`
+	Prometheus  Prometheus `koanf:"prometheus"`
 }

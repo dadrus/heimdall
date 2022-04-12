@@ -36,7 +36,7 @@ type fiberApp struct {
 
 func registerHooks(lifecycle fx.Lifecycle, logger zerolog.Logger, app fiberApp, conf config.Configuration) {
 	prometheus := fiberprometheus.New("heimdall")
-	prometheus.RegisterAt(app.Prometheus, conf.Prometheus.MetricsPath)
+	prometheus.RegisterAt(app.Prometheus, conf.Serve.Prometheus.MetricsPath)
 
 	if app.API != nil {
 		app.API.Use(prometheus.Middleware)
@@ -51,7 +51,7 @@ func registerHooks(lifecycle fx.Lifecycle, logger zerolog.Logger, app fiberApp, 
 			OnStart: func(ctx context.Context) error {
 				go func() {
 					// service connections
-					addr := conf.Prometheus.Address()
+					addr := conf.Serve.Prometheus.Address()
 					logger.Info().Msgf("Prometheus endpoint starts listening on: %s", addr)
 					if err := app.Prometheus.Listen(addr); err != nil {
 						logger.Fatal().Err(err).Msg("Could not start Prometheus endpoint")

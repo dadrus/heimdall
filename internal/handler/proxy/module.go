@@ -26,7 +26,7 @@ var Module = fx.Options(
 )
 
 func newFiberApp(conf config.Configuration, cache cache.Cache) *fiber.App {
-	proxy := conf.Proxy
+	proxy := conf.Serve.Proxy
 
 	app := fiber.New(fiber.Config{
 		AppName:               "Heimdall Proxy",
@@ -68,7 +68,7 @@ func registerHooks(lifecycle fx.Lifecycle, logger zerolog.Logger, app fiberApp, 
 			OnStart: func(ctx context.Context) error {
 				go func() {
 					// service connections
-					addr := conf.Proxy.Address()
+					addr := conf.Serve.Proxy.Address()
 					logger.Info().Msgf("Reverse Proxy endpoint starts listening on: %s", addr)
 					if err := app.App.Listen(addr); err != nil {
 						logger.Fatal().Err(err).Msg("Could not start Reverse Proxy endpoint")
