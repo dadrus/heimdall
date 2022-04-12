@@ -1,6 +1,8 @@
 package errorhandlers
 
 import (
+	"github.com/rs/zerolog"
+	
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
 )
@@ -27,6 +29,9 @@ func newDefaultErrorHandler(rawConfig map[string]any) (*defaultErrorHandler, err
 }
 
 func (eh *defaultErrorHandler) HandleError(ctx heimdall.Context, err error) (bool, error) {
+	logger := zerolog.Ctx(ctx.AppContext())
+	logger.Debug().Msg("Handling error using default error handler")
+
 	ctx.SetPipelineError(err)
 
 	return true, nil
