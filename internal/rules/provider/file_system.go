@@ -102,6 +102,8 @@ func (p *fileSystemProvider) Start() error {
 }
 
 func (p *fileSystemProvider) watchFiles() {
+	p.logger.Debug().Msg("Watching rule files for changes")
+
 	for {
 		select {
 		case event, ok := <-p.watcher.Events:
@@ -110,6 +112,11 @@ func (p *fileSystemProvider) watchFiles() {
 
 				return
 			}
+
+			p.logger.Debug().
+				Str("event", event.String()).
+				Str("src", event.Name).
+				Msg("Rule update event received")
 
 			if event.Op&fsnotify.Create == fsnotify.Create {
 				data, err := os.ReadFile(event.Name)
@@ -129,6 +136,26 @@ func (p *fileSystemProvider) watchFiles() {
 					Src:        event.Name,
 					ChangeType: Remove,
 				})
+			} else if event.Op&fsnotify.Write == fsnotify.Write {
+				p.ruleSetChanged(RuleSetChangedEvent{
+					Src:        event.Name,
+					ChangeType: Remove,
+				})
+
+				data, err := os.ReadFile(event.Name)
+				if err != nil {
+					p.logger.Error().Err(err).Str("file", event.Name).Msg("Failed reading")
+
+					return
+				}
+
+				if len(data) != 0 {
+					p.ruleSetChanged(RuleSetChangedEvent{
+						Src:        event.Name,
+						Definition: data,
+						ChangeType: Create,
+					})
+				}
 			}
 		case err, ok := <-p.watcher.Errors:
 			if !ok {
