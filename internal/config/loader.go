@@ -186,24 +186,27 @@ func expandSlices(parts []string) []string {
 }
 
 // Decode zeroLog LogLevels from strings.
-func logLevelDecodeHookFunc(from reflect.Type, to reflect.Type, val any) (any, error) {
-	if from.Kind() == reflect.String &&
-		to.Name() == "Level" && to.PkgPath() == "github.com/rs/zerolog" {
-		switch val {
-		case "panic":
-			return zerolog.PanicLevel, nil
-		case "fatal":
-			return zerolog.FatalLevel, nil
-		case "error":
-			return zerolog.ErrorLevel, nil
-		case "warn":
-			return zerolog.WarnLevel, nil
-		case "debug":
-			return zerolog.DebugLevel, nil
-		default:
-			return zerolog.InfoLevel, nil
-		}
+func logLevelDecodeHookFunc(from reflect.Type, to reflect.Type, data any) (any, error) {
+	if from.Kind() != reflect.String {
+		return data, nil
 	}
 
-	return val, nil
+	if to != reflect.TypeOf(zerolog.Level(0)) {
+		return data, nil
+	}
+
+	switch data {
+	case "panic":
+		return zerolog.PanicLevel, nil
+	case "fatal":
+		return zerolog.FatalLevel, nil
+	case "error":
+		return zerolog.ErrorLevel, nil
+	case "warn":
+		return zerolog.WarnLevel, nil
+	case "debug":
+		return zerolog.DebugLevel, nil
+	default:
+		return zerolog.InfoLevel, nil
+	}
 }
