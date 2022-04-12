@@ -6,6 +6,7 @@ import (
 	"net/url"
 
 	"github.com/mitchellh/mapstructure"
+	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
@@ -39,6 +40,9 @@ func newRemoteAuthorizer(rawConfig map[string]any) (*remoteAuthorizer, error) {
 }
 
 func (a *remoteAuthorizer) Authorize(ctx heimdall.Context, sub *subject.Subject) error {
+	logger := zerolog.Ctx(ctx.AppContext())
+	logger.Debug().Msg("Authorizing using remote authorizer")
+
 	payload, err := a.createRequestPayload(ctx, sub)
 	if err != nil {
 		return err

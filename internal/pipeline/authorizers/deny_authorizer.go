@@ -1,6 +1,8 @@
 package authorizers
 
 import (
+	"github.com/rs/zerolog"
+
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/pipeline/subject"
@@ -26,7 +28,10 @@ func newDenyAuthorizer() *denyAuthorizer {
 	return &denyAuthorizer{}
 }
 
-func (*denyAuthorizer) Authorize(ctx heimdall.Context, sub *subject.Subject) error {
+func (*denyAuthorizer) Authorize(ctx heimdall.Context, _ *subject.Subject) error {
+	logger := zerolog.Ctx(ctx.AppContext())
+	logger.Debug().Msg("Authorizing using deny authorizer")
+
 	return errorchain.NewWithMessage(heimdall.ErrAuthorization, "denied by authorizer")
 }
 

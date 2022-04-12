@@ -1,6 +1,8 @@
 package hydrators
 
 import (
+	"github.com/rs/zerolog"
+	
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/pipeline/subject"
@@ -28,6 +30,9 @@ func newDefaultHydrator(rawConfig map[string]any) (defaultHydrator, error) {
 }
 
 func (defaultHydrator) Hydrate(ctx heimdall.Context, sub *subject.Subject) error {
+	logger := zerolog.Ctx(ctx.AppContext())
+	logger.Debug().Msg("Hydrating using default hydrator")
+
 	return nil
 }
 

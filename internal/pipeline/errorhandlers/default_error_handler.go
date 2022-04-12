@@ -2,7 +2,7 @@ package errorhandlers
 
 import (
 	"github.com/rs/zerolog"
-	
+
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
 )

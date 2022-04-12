@@ -1,6 +1,8 @@
 package authorizers
 
 import (
+	"github.com/rs/zerolog"
+
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/pipeline/subject"
@@ -25,7 +27,10 @@ func newAllowAuthorizer() *allowAuthorizer {
 	return &allowAuthorizer{}
 }
 
-func (*allowAuthorizer) Authorize(ctx heimdall.Context, sub *subject.Subject) error {
+func (*allowAuthorizer) Authorize(ctx heimdall.Context, _ *subject.Subject) error {
+	logger := zerolog.Ctx(ctx.AppContext())
+	logger.Debug().Msg("Authorizing using allow authorizer")
+
 	return nil
 }
 
