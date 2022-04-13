@@ -151,7 +151,7 @@ func (h *Handler) getRequestURL(c *fiber.Ctx) *url.URL {
 	if c.IsProxyTrusted() {
 		forwardedURIVal := c.Get(xForwardedURI)
 		if len(forwardedURIVal) != 0 {
-			forwardedURI, _ := url.ParseRequestURI(forwardedURIVal)
+			forwardedURI, _ := url.Parse(forwardedURIVal)
 			path = forwardedURI.Path
 			query = forwardedURI.Query().Encode()
 		}

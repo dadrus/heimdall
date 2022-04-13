@@ -304,7 +304,7 @@ func (r *rule) Execute(ctx heimdall.Context) error {
 }
 
 func (r *rule) MatchesURL(requestURL *url.URL) bool {
-	return r.urlMatcher.Match(requestURL.RequestURI())
+	return r.urlMatcher.Match(requestURL.String())
 }
 
 func (r *rule) MatchesMethod(method string) bool {
