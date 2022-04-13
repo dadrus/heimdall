@@ -75,7 +75,8 @@ func StringToURLHookFunc() mapstructure.DecodeHookFunc {
 			return data, nil
 		}
 
-		// Convert it by parsing
+		// Convert it by parsing (type check is already done above)
+		// nolint: forcetypeassert
 		return url.Parse(data.(string))
 	}
 }
