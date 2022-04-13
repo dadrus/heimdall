@@ -25,5 +25,4 @@ func init() {
 	serveCmd.PersistentFlags().StringP("config", "c", "", "Config file")
 	serveCmd.AddCommand(serve.NewProxyCommand())
 	serveCmd.AddCommand(serve.NewDecisionAPICommand())
-	serveCmd.AddCommand(serve.NewAllServicesCommand())
 }
