@@ -17,6 +17,7 @@ import (
 	fiberlogger "github.com/dadrus/heimdall/internal/fiber/middleware/logger"
 	fibertracing "github.com/dadrus/heimdall/internal/fiber/middleware/tracing"
 	"github.com/dadrus/heimdall/internal/handler/errorhandler"
+	"github.com/dadrus/heimdall/internal/x"
 )
 
 // nolint
@@ -32,13 +33,15 @@ func newFiberApp(conf config.Configuration, cache cache.Cache) *fiber.App {
 	api := conf.Serve.DecisionAPI
 
 	app := fiber.New(fiber.Config{
-		AppName:               "Heimdall Decision API",
-		ServerHeader:          "Heimdall Decision API",
-		ReadTimeout:           api.Timeout.Read,
-		WriteTimeout:          api.Timeout.Write,
-		IdleTimeout:           api.Timeout.Idle,
-		DisableStartupMessage: true,
-		ErrorHandler:          errorhandler.NewErrorHandler(api.VerboseErrors),
+		AppName:                 "Heimdall Decision API",
+		ServerHeader:            "Heimdall Decision API",
+		ReadTimeout:             api.Timeout.Read,
+		WriteTimeout:            api.Timeout.Write,
+		IdleTimeout:             api.Timeout.Idle,
+		DisableStartupMessage:   true,
+		ErrorHandler:            errorhandler.NewErrorHandler(api.VerboseErrors),
+		EnableTrustedProxyCheck: api.TrustedProxies != nil,
+		TrustedProxies:          x.IfThenElse(api.TrustedProxies != nil, *api.TrustedProxies, []string{}),
 	})
 	app.Use(recover.New())
 
