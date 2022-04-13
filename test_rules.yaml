@@ -1,5 +1,5 @@
 - id: role:foo
-  url: http://foo.bar
+  url: http://foo.bar/<**>
   methods:
     - GET
     - POST
