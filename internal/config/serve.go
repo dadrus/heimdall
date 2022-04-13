@@ -26,12 +26,13 @@ type TLS struct {
 }
 
 type Service struct {
-	Host          string  `koanf:"host"`
-	Port          int     `koanf:"port"`
-	VerboseErrors bool    `koanf:"verbose_errors"`
-	Timeout       Timeout `koanf:"timeout"`
-	CORS          *CORS   `koanf:"cors"`
-	TLS           *TLS    `koanf:"tls"`
+	Host           string    `koanf:"host"`
+	Port           int       `koanf:"port"`
+	VerboseErrors  bool      `koanf:"verbose_errors"`
+	Timeout        Timeout   `koanf:"timeout"`
+	CORS           *CORS     `koanf:"cors"`
+	TLS            *TLS      `koanf:"tls"`
+	TrustedProxies *[]string `koanf:"trusted_proxies"`
 }
 
 func (c Service) Address() string {
