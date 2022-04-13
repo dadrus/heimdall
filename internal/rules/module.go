@@ -17,6 +17,7 @@ var Module = fx.Options(
 		return make(provider.RuleSetChangedEventQueue, defaultQueueSize)
 	}),
 	fx.Provide(NewRepository),
+	fx.Provide(NewRuleFactory),
 	fx.Invoke(registerRuleDefinitionHandler),
 	provider.Module,
 )

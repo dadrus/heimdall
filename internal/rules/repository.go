@@ -7,20 +7,10 @@ import (
 	"sync"
 
 	"github.com/rs/zerolog"
-	"golang.org/x/exp/slices"
 	"gopkg.in/yaml.v2"
 
 	"github.com/dadrus/heimdall/internal/config"
-	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/pipeline"
-	"github.com/dadrus/heimdall/internal/pipeline/authenticators"
-	"github.com/dadrus/heimdall/internal/pipeline/authorizers"
-	"github.com/dadrus/heimdall/internal/pipeline/errorhandlers"
-	"github.com/dadrus/heimdall/internal/pipeline/hydrators"
-	"github.com/dadrus/heimdall/internal/pipeline/mutators"
-	"github.com/dadrus/heimdall/internal/rules/patternmatcher"
 	"github.com/dadrus/heimdall/internal/rules/provider"
-	"github.com/dadrus/heimdall/internal/x"
 )
 
 var ErrNoRuleFound = errors.New("no rule found")
@@ -33,23 +23,23 @@ type Repository interface {
 
 func NewRepository(
 	queue provider.RuleSetChangedEventQueue,
-	hf pipeline.HandlerFactory,
+	rf RuleFactory,
 	logger zerolog.Logger,
 ) (Repository, error) {
 	return &repository{
-		hf:     hf,
+		rf:     rf,
 		logger: logger,
-		rules:  make([]*rule, defaultRuleListSize),
+		rules:  make([]Rule, defaultRuleListSize),
 		queue:  queue,
 		quit:   make(chan bool),
 	}, nil
 }
 
 type repository struct {
-	hf     pipeline.HandlerFactory
+	rf     RuleFactory
 	logger zerolog.Logger
 
-	rules []*rule
+	rules []Rule
 	mutex sync.RWMutex
 
 	queue provider.RuleSetChangedEventQueue
@@ -108,16 +98,16 @@ func (r *repository) watchRuleSetChanges() {
 	}
 }
 
-func (r *repository) loadRules(srcID string, definition json.RawMessage) ([]*rule, error) {
+func (r *repository) loadRules(srcID string, definition json.RawMessage) ([]Rule, error) {
 	rcs, err := parseRuleSetFromYaml(definition)
 	if err != nil {
 		return nil, err
 	}
 
-	rules := make([]*rule, len(rcs))
+	rules := make([]Rule, len(rcs))
 
 	for idx, rc := range rcs {
-		rule, err := r.newRule(srcID, rc)
+		rule, err := r.rf.CreateRule(srcID, rc)
 		if err != nil {
 			return nil, err
 		}
@@ -128,13 +118,13 @@ func (r *repository) loadRules(srcID string, definition json.RawMessage) ([]*rul
 	return rules, nil
 }
 
-func (r *repository) addRule(rule *rule) {
+func (r *repository) addRule(rule Rule) {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
 
 	r.rules = append(r.rules, rule)
 
-	r.logger.Debug().Str("src", rule.srcID).Str("id", rule.id).Msg("Rule added")
+	r.logger.Debug().Str("src", rule.SrcID()).Str("id", rule.ID()).Msg("Rule added")
 }
 
 func (r *repository) removeRules(srcID string) {
@@ -147,16 +137,16 @@ func (r *repository) removeRules(srcID string) {
 	var idxs []int
 
 	for idx, rule := range r.rules {
-		if rule.srcID == srcID {
+		if rule.SrcID() == srcID {
 			idxs = append(idxs, idx)
 
-			r.logger.Debug().Str("id", rule.id).Msg("Removing rule")
+			r.logger.Debug().Str("id", rule.ID()).Msg("Removing rule")
 		}
 	}
 
 	// if all rules should be dropped, just create a new slice
 	if len(idxs) == len(r.rules) {
-		r.rules = make([]*rule, defaultRuleListSize)
+		r.rules = make([]Rule, defaultRuleListSize)
 
 		return
 	}
@@ -196,52 +186,6 @@ func (r *repository) onRuleSetDeleted(src string) {
 	r.removeRules(src)
 }
 
-func (r *repository) newRule(srcID string, ruleConfig config.RuleConfig) (*rule, error) {
-	authenticator, err := r.hf.CreateAuthenticator(ruleConfig.Authenticators)
-	if err != nil {
-		return nil, err
-	}
-
-	authorizer, err := r.hf.CreateAuthorizer(ruleConfig.Authorizer)
-	if err != nil {
-		return nil, err
-	}
-
-	hydrator, err := r.hf.CreateHydrator(ruleConfig.Hydrators)
-	if err != nil {
-		return nil, err
-	}
-
-	mutator, err := r.hf.CreateMutator(ruleConfig.Mutators)
-	if err != nil {
-		return nil, err
-	}
-
-	errorHandler, err := r.hf.CreateErrorHandler(ruleConfig.ErrorHandlers)
-	if err != nil {
-		return nil, err
-	}
-
-	strategy := x.IfThenElse(len(ruleConfig.MatchingStrategy) == 0, "glob", ruleConfig.MatchingStrategy)
-
-	matcher, err := patternmatcher.NewPatternMatcher(strategy, ruleConfig.URL)
-	if err != nil {
-		return nil, err
-	}
-
-	return &rule{
-		id:         ruleConfig.ID,
-		urlMatcher: matcher,
-		methods:    ruleConfig.Methods,
-		srcID:      srcID,
-		an:         authenticator,
-		az:         authorizer,
-		h:          hydrator,
-		m:          mutator,
-		eh:         errorHandler,
-	}, nil
-}
-
 func parseRuleSetFromYaml(data []byte) ([]config.RuleConfig, error) {
 	var rcs []config.RuleConfig
 
@@ -250,67 +194,4 @@ func parseRuleSetFromYaml(data []byte) ([]config.RuleConfig, error) {
 	}
 
 	return rcs, nil
-}
-
-type rule struct {
-	id         string
-	urlMatcher patternmatcher.PatternMatcher
-	methods    []string
-	srcID      string
-	an         authenticators.Authenticator
-	az         authorizers.Authorizer
-	h          hydrators.Hydrator
-	m          mutators.Mutator
-	eh         errorhandlers.ErrorHandler
-}
-
-func (r *rule) Execute(ctx heimdall.Context) error {
-	logger := zerolog.Ctx(ctx.AppContext())
-
-	sub, err := r.an.Authenticate(ctx)
-	if err != nil {
-		logger.Debug().Err(err).Msg("Authentication failed")
-
-		_, err := r.eh.HandleError(ctx, err)
-
-		return err
-	}
-
-	if err := r.az.Authorize(ctx, sub); err != nil {
-		logger.Debug().Err(err).Msg("Authorization failed")
-
-		_, err := r.eh.HandleError(ctx, err)
-
-		return err
-	}
-
-	if err := r.h.Hydrate(ctx, sub); err != nil {
-		logger.Debug().Err(err).Msg("Hydration failed")
-
-		_, err := r.eh.HandleError(ctx, err)
-
-		return err
-	}
-
-	if err := r.m.Mutate(ctx, sub); err != nil {
-		logger.Debug().Err(err).Msg("Mutation failed")
-
-		_, err := r.eh.HandleError(ctx, err)
-
-		return err
-	}
-
-	return nil
-}
-
-func (r *rule) MatchesURL(requestURL *url.URL) bool {
-	return r.urlMatcher.Match(requestURL.String())
-}
-
-func (r *rule) MatchesMethod(method string) bool {
-	return slices.Contains(r.methods, method)
-}
-
-func (r *rule) ID() string {
-	return r.id
 }

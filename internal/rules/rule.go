@@ -8,6 +8,7 @@ import (
 
 type Rule interface {
 	ID() string
+	SrcID() string
 	Execute(heimdall.Context) error
 	MatchesURL(*url.URL) bool
 	MatchesMethod(string) bool
