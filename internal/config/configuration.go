@@ -28,7 +28,7 @@ type Configuration struct {
 		ErrorHandlers  []PipelineObject `koanf:"error_handlers"`
 	} `koanf:"pipeline"`
 	Rules struct {
-		Default   Pipeline `koanf:"default"`
+		Default   *DefaultRuleConfig `koanf:"default"`
 		Providers struct {
 			File struct {
 				Src   string `koanf:"src"`

@@ -40,15 +40,11 @@ func NewHandlerFactory(conf config.Configuration, logger zerolog.Logger) (Handle
 		return nil, err
 	}
 
-	return &handlerFactory{
-		r:  repository,
-		dp: conf.Rules.Default,
-	}, nil
+	return &handlerFactory{r: repository}, nil
 }
 
 type handlerFactory struct {
-	r  *handlerPrototypeRepository
-	dp config.Pipeline
+	r *handlerPrototypeRepository
 }
 
 func (hf *handlerFactory) CreateAuthenticator(id string, conf any) (authenticators.Authenticator, error) {
