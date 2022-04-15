@@ -18,6 +18,10 @@ var Module = fx.Options(
 	}),
 	fx.Provide(NewRepository),
 	fx.Provide(NewRuleFactory),
+	fx.Provide(
+		fx.Annotate(
+			func(rf RuleFactory) Rule { return rf.DefaultRule() },
+			fx.ResultTags(`name:"default_rule" optional:"true"`))),
 	fx.Invoke(registerRuleDefinitionHandler),
 	provider.Module,
 )

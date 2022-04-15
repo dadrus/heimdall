@@ -19,20 +19,32 @@ var ErrUnsupportedPipelineObject = errors.New("unsupported pipeline object")
 
 type RuleFactory interface {
 	CreateRule(srcID string, ruleConfig config.RuleConfig) (Rule, error)
+	DefaultRule() Rule
 }
 
-func NewRuleFactory(hf pipeline.HandlerFactory, logger zerolog.Logger) (RuleFactory, error) {
-	return &ruleFactory{hf: hf, logger: logger}, nil
+func NewRuleFactory(hf pipeline.HandlerFactory, conf config.Configuration, logger zerolog.Logger) (RuleFactory, error) {
+	logger.Debug().Msg("Creating rule factory")
+
+	rf := &ruleFactory{hf: hf, logger: logger}
+
+	if err := rf.initWithDefaultRule(conf.Rules.Default, logger); err != nil {
+		logger.Error().Err(err).Msg("Loading default rule failed")
+
+		return nil, err
+	}
+
+	return rf, nil
 }
 
 type ruleFactory struct {
-	hf     pipeline.HandlerFactory
-	logger zerolog.Logger
+	hf          pipeline.HandlerFactory
+	logger      zerolog.Logger
+	defaultRule *rule
 }
 
 func (f *ruleFactory) createExecutePipeline(
 	pipeline []map[string]any,
-) (subjectCreator, subjectHandler, subjectHandler, error) {
+) (compositeSubjectCreator, compositeSubjectHandler, compositeSubjectHandler, error) {
 	var (
 		authenticators  compositeSubjectCreator
 		subjectHandlers compositeSubjectHandler
@@ -123,15 +135,43 @@ func (f *ruleFactory) createExecutePipeline(
 	return authenticators, subjectHandlers, mutators, nil
 }
 
+func (f *ruleFactory) DefaultRule() Rule {
+	return f.defaultRule
+}
+
 func (f *ruleFactory) CreateRule(srcID string, ruleConfig config.RuleConfig) (Rule, error) {
-	authenticator, subHandler, mutator, err := f.createExecutePipeline(ruleConfig.Pipeline)
+	authenticators, subHandlers, mutators, err := f.createExecutePipeline(ruleConfig.Execute)
 	if err != nil {
 		return nil, err
 	}
 
-	errorHandlers, err := f.createOnErrorPipeline(ruleConfig)
+	errorHandlers, err := f.createOnErrorPipeline(ruleConfig.ErrorHandler)
 	if err != nil {
 		return nil, err
+	}
+
+	methods := ruleConfig.Methods
+	if f.defaultRule != nil {
+		authenticators = x.IfThenElse(len(authenticators) != 0, authenticators, f.defaultRule.sc)
+		subHandlers = x.IfThenElse(len(subHandlers) != 0, subHandlers, f.defaultRule.sh)
+		mutators = x.IfThenElse(len(mutators) != 0, mutators, f.defaultRule.m)
+		errorHandlers = x.IfThenElse(len(errorHandlers) != 0, errorHandlers, f.defaultRule.eh)
+		methods = x.IfThenElse(len(methods) != 0, methods, f.defaultRule.methods)
+	}
+
+	if len(authenticators) == 0 {
+		return nil, errorchain.NewWithMessagef(config.ErrConfiguration,
+			"No authenticator defined for rule ID=%s from %s", ruleConfig.ID, srcID)
+	}
+
+	if len(mutators) == 0 {
+		return nil, errorchain.NewWithMessagef(config.ErrConfiguration,
+			"No mutator defined for rule ID=%s from %s", ruleConfig.ID, srcID)
+	}
+
+	if len(methods) == 0 {
+		return nil, errorchain.NewWithMessagef(config.ErrConfiguration,
+			"No methods defined for rule ID=%s from %s", ruleConfig.ID, srcID)
 	}
 
 	strategy := x.IfThenElse(len(ruleConfig.MatchingStrategy) == 0, "glob", ruleConfig.MatchingStrategy)
@@ -144,19 +184,20 @@ func (f *ruleFactory) CreateRule(srcID string, ruleConfig config.RuleConfig) (Ru
 	return &rule{
 		id:         ruleConfig.ID,
 		urlMatcher: matcher,
-		methods:    ruleConfig.Methods,
+		methods:    methods,
 		srcID:      srcID,
-		sc:         authenticator,
-		sh:         subHandler,
-		m:          mutator,
+		isDefault:  false,
+		sc:         authenticators,
+		sh:         subHandlers,
+		m:          mutators,
 		eh:         errorHandlers,
 	}, nil
 }
 
-func (f *ruleFactory) createOnErrorPipeline(ruleConfig config.RuleConfig) (errorHandler, error) {
+func (f *ruleFactory) createOnErrorPipeline(ehConfigs []map[string]any) (compositeErrorHandler, error) {
 	var errorHandlers compositeErrorHandler
 
-	for _, ehStep := range ruleConfig.ErrorHandler {
+	for _, ehStep := range ehConfigs {
 		id, found := ehStep["error_handler"]
 		if found {
 			stepID, ok := id.(string)
@@ -179,18 +220,72 @@ func (f *ruleFactory) createOnErrorPipeline(ruleConfig config.RuleConfig) (error
 	return errorHandlers, nil
 }
 
+func (f *ruleFactory) initWithDefaultRule(ruleConfig *config.DefaultRuleConfig, logger zerolog.Logger) error {
+	if ruleConfig == nil {
+		logger.Info().Msg("No default rule configured")
+
+		return nil
+	}
+
+	logger.Debug().Msg("Loading default rule")
+
+	authenticators, subHandlers, mutators, err := f.createExecutePipeline(ruleConfig.Execute)
+	if err != nil {
+		return err
+	}
+
+	errorHandlers, err := f.createOnErrorPipeline(ruleConfig.ErrorHandler)
+	if err != nil {
+		return err
+	}
+
+	if len(authenticators) == 0 {
+		return errorchain.NewWithMessage(config.ErrConfiguration, "No authenticator defined for default rule")
+	}
+
+	if len(mutators) == 0 {
+		return errorchain.NewWithMessagef(config.ErrConfiguration, "No mutator defined for default rule")
+	}
+
+	if len(ruleConfig.Methods) == 0 {
+		return errorchain.NewWithMessagef(config.ErrConfiguration, "No methods defined for default rule")
+	}
+
+	f.defaultRule = &rule{
+		id:        "default",
+		methods:   ruleConfig.Methods,
+		srcID:     "config",
+		isDefault: true,
+		sc:        authenticators,
+		sh:        subHandlers,
+		m:         mutators,
+		eh:        errorHandlers,
+	}
+
+	return nil
+}
+
 type rule struct {
 	id         string
 	urlMatcher patternmatcher.PatternMatcher
 	methods    []string
 	srcID      string
-	sc         subjectCreator
-	sh         subjectHandler
-	m          subjectHandler
-	eh         errorHandler
+	isDefault  bool
+	sc         compositeSubjectCreator
+	sh         compositeSubjectHandler
+	m          compositeSubjectHandler
+	eh         compositeErrorHandler
 }
 
 func (r *rule) Execute(ctx heimdall.Context) error {
+	logger := zerolog.Ctx(ctx.AppContext())
+
+	if r.isDefault {
+		logger.Debug().Msg("Executing default rule")
+	} else {
+		logger.Debug().Msgf("Executing rule id=%s, from src=%s", r.id, r.srcID)
+	}
+
 	// authenticators
 	sub, err := r.sc.Execute(ctx)
 	if err != nil {

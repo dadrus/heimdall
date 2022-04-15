@@ -1,4 +1,4 @@
-- id: role:foo
+- id: rule:foo
   url: http://foo.bar/<**>
   methods:
     - GET

@@ -143,6 +143,9 @@ pipeline:
 
 rules:
   default:
+    methods:
+      - GET
+      - POST
     execute:
       - authenticator: anonymous_authenticator
       - authorizer: allow_all_authorizer
