@@ -3,19 +3,19 @@
   methods:
     - GET
     - POST
-  authenticators:
-    - id: unauthorized_authenticator
-  authorizer:
-    id: allow_all_authorizer
-  mutators:
-    - id: jwt
+  execute:
+    - authenticator: unauthorized_authenticator
+    - authorizer: allow_all_authorizer
+    - hydrator: subscription_hydrator
+    - authorizer: allow_all_authorizer
+    - mutator: jwt
       config:
         claims: '{"foo": "bar"}'
-    - id: bla
+    - mutator: bla
       config:
         headers:
           foo-bar: bla
-    - id: blabla
-  error_handlers:
-    - id: authenticate_on_unauthorized_or_forbidden
-    - id: default
+    - mutator: blabla
+  on_error:
+    - error_handler: authenticate_on_unauthorized_or_forbidden
+    - error_handler: default

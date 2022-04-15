@@ -13,7 +13,7 @@ import (
 // nolint
 func init() {
 	registerMutatorTypeFactory(
-		func(typ config.PipelineObjectType, conf map[string]any) (bool, Mutator, error) {
+		func(typ config.PipelineObjectType, conf map[any]any) (bool, Mutator, error) {
 			if typ != config.POTHeader {
 				return false, nil, nil
 			}
@@ -28,7 +28,7 @@ type headerMutator struct {
 	headers map[string]Template
 }
 
-func newHeaderMutator(rawConfig map[string]any) (*headerMutator, error) {
+func newHeaderMutator(rawConfig map[any]any) (*headerMutator, error) {
 	type _config struct {
 		Headers map[string]Template `mapstructure:"headers"`
 	}
@@ -45,7 +45,7 @@ func newHeaderMutator(rawConfig map[string]any) (*headerMutator, error) {
 	}, nil
 }
 
-func (m *headerMutator) Mutate(ctx heimdall.Context, sub *subject.Subject) error {
+func (m *headerMutator) Execute(ctx heimdall.Context, sub *subject.Subject) error {
 	logger := zerolog.Ctx(ctx.AppContext())
 	logger.Debug().Msg("Mutating using header mutator")
 
@@ -61,7 +61,7 @@ func (m *headerMutator) Mutate(ctx heimdall.Context, sub *subject.Subject) error
 	return nil
 }
 
-func (m *headerMutator) WithConfig(config map[string]any) (Mutator, error) {
+func (m *headerMutator) WithConfig(config map[any]any) (Mutator, error) {
 	if len(config) == 0 {
 		return m, nil
 	}

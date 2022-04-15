@@ -16,7 +16,7 @@ import (
 // nolint
 func init() {
 	registerErrorHandlerTypeFactory(
-		func(typ config.PipelineObjectType, conf map[string]any) (bool, ErrorHandler, error) {
+		func(typ config.PipelineObjectType, conf map[any]any) (bool, ErrorHandler, error) {
 			if typ != config.POTWWWAuthenticate {
 				return false, nil, nil
 			}
@@ -32,7 +32,7 @@ type wwwAuthenticateErrorHandler struct {
 	m     *matcher.ErrorConditionMatcher
 }
 
-func newWWWAuthenticateErrorHandler(rawConfig map[string]any) (*wwwAuthenticateErrorHandler, error) {
+func newWWWAuthenticateErrorHandler(rawConfig map[any]any) (*wwwAuthenticateErrorHandler, error) {
 	type _config struct {
 		Realm string                        `mapstructure:"realm"`
 		When  matcher.ErrorConditionMatcher `mapstructure:"when"`
@@ -55,7 +55,7 @@ func newWWWAuthenticateErrorHandler(rawConfig map[string]any) (*wwwAuthenticateE
 	}, nil
 }
 
-func (eh *wwwAuthenticateErrorHandler) HandleError(ctx heimdall.Context, err error) (bool, error) {
+func (eh *wwwAuthenticateErrorHandler) Execute(ctx heimdall.Context, err error) (bool, error) {
 	if !eh.m.Match(ctx, err) {
 		return false, nil
 	}
@@ -69,7 +69,7 @@ func (eh *wwwAuthenticateErrorHandler) HandleError(ctx heimdall.Context, err err
 	return true, nil
 }
 
-func (eh *wwwAuthenticateErrorHandler) WithConfig(rawConfig map[string]any) (ErrorHandler, error) {
+func (eh *wwwAuthenticateErrorHandler) WithConfig(rawConfig map[any]any) (ErrorHandler, error) {
 	type _config struct {
 		Realm *string                        `mapstructure:"realm"`
 		When  *matcher.ErrorConditionMatcher `mapstructure:"when"`

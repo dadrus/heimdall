@@ -1,6 +1,7 @@
 package rules
 
 import (
+	"errors"
 	"net/url"
 
 	"github.com/rs/zerolog"
@@ -9,14 +10,12 @@ import (
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/pipeline"
-	"github.com/dadrus/heimdall/internal/pipeline/authenticators"
-	"github.com/dadrus/heimdall/internal/pipeline/authorizers"
-	"github.com/dadrus/heimdall/internal/pipeline/errorhandlers"
-	"github.com/dadrus/heimdall/internal/pipeline/hydrators"
-	"github.com/dadrus/heimdall/internal/pipeline/mutators"
 	"github.com/dadrus/heimdall/internal/rules/patternmatcher"
 	"github.com/dadrus/heimdall/internal/x"
+	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
+
+var ErrUnsupportedPipelineObject = errors.New("unsupported pipeline object")
 
 type RuleFactory interface {
 	CreateRule(srcID string, ruleConfig config.RuleConfig) (Rule, error)
@@ -31,28 +30,106 @@ type ruleFactory struct {
 	logger zerolog.Logger
 }
 
+func (f *ruleFactory) createExecutePipeline(
+	pipeline []map[string]any,
+) (subjectCreator, subjectHandler, subjectHandler, error) {
+	var (
+		authenticators  compositeSubjectCreator
+		subjectHandlers compositeSubjectHandler
+		mutators        compositeSubjectHandler
+	)
+
+	for _, pipelineStep := range pipeline {
+		id, found := pipelineStep["authenticator"]
+		if found {
+			stepID, ok := id.(string)
+			if !ok {
+				return nil, nil, nil, errorchain.NewWithMessage(heimdall.ErrInternal,
+					"failed to convert rule step identifier to string")
+			}
+
+			authenticator, err := f.hf.CreateAuthenticator(stepID, pipelineStep["config"])
+			if err != nil {
+				return nil, nil, nil, err
+			}
+
+			if len(subjectHandlers) != 0 {
+				return nil, nil, nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
+					"malformed execute configuration")
+			}
+
+			authenticators = append(authenticators, authenticator)
+
+			continue
+		}
+
+		id, found = pipelineStep["authorizer"]
+		if found {
+			stepID, ok := id.(string)
+			if !ok {
+				return nil, nil, nil, errorchain.NewWithMessage(heimdall.ErrInternal,
+					"failed to convert rule step identifier to string")
+			}
+
+			authorizer, err := f.hf.CreateAuthorizer(stepID, pipelineStep["config"])
+			if err != nil {
+				return nil, nil, nil, err
+			}
+
+			subjectHandlers = append(subjectHandlers, authorizer)
+
+			continue
+		}
+
+		id, found = pipelineStep["hydrator"]
+		if found {
+			stepID, ok := id.(string)
+			if !ok {
+				return nil, nil, nil, errorchain.NewWithMessage(heimdall.ErrInternal,
+					"failed to convert rule step identifier to string")
+			}
+
+			hydrator, err := f.hf.CreateHydrator(stepID, pipelineStep["config"])
+			if err != nil {
+				return nil, nil, nil, err
+			}
+
+			subjectHandlers = append(subjectHandlers, hydrator)
+
+			continue
+		}
+
+		id, found = pipelineStep["mutator"]
+		if found {
+			stepID, ok := id.(string)
+			if !ok {
+				return nil, nil, nil, errorchain.NewWithMessage(heimdall.ErrInternal,
+					"failed to convert rule step identifier to string")
+			}
+
+			mutator, err := f.hf.CreateMutator(stepID, pipelineStep["config"])
+			if err != nil {
+				return nil, nil, nil, err
+			}
+
+			mutators = append(mutators, mutator)
+
+			continue
+		}
+
+		return nil, nil, nil, errorchain.NewWithMessagef(ErrUnsupportedPipelineObject, "%s", pipelineStep)
+	}
+
+	return authenticators, subjectHandlers, mutators, nil
+}
+
 func (f *ruleFactory) CreateRule(srcID string, ruleConfig config.RuleConfig) (Rule, error) {
-	authenticator, err := f.hf.CreateAuthenticator(ruleConfig.Authenticators)
+	authenticator, subHandler, mutator, err := f.createExecutePipeline(ruleConfig.Pipeline)
 	if err != nil {
 		return nil, err
 	}
 
-	authorizer, err := f.hf.CreateAuthorizer(ruleConfig.Authorizer)
-	if err != nil {
-		return nil, err
-	}
-
-	hydrator, err := f.hf.CreateHydrator(ruleConfig.Hydrators)
-	if err != nil {
-		return nil, err
-	}
-
-	mutator, err := f.hf.CreateMutator(ruleConfig.Mutators)
-	if err != nil {
-		return nil, err
-	}
-
-	errorHandler, err := f.hf.CreateErrorHandler(ruleConfig.ErrorHandlers)
+	errorHandlers, err := f.createOnErrorPipeline(ruleConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -69,12 +146,37 @@ func (f *ruleFactory) CreateRule(srcID string, ruleConfig config.RuleConfig) (Ru
 		urlMatcher: matcher,
 		methods:    ruleConfig.Methods,
 		srcID:      srcID,
-		an:         authenticator,
-		az:         authorizer,
-		h:          hydrator,
+		sc:         authenticator,
+		sh:         subHandler,
 		m:          mutator,
-		eh:         errorHandler,
+		eh:         errorHandlers,
 	}, nil
+}
+
+func (f *ruleFactory) createOnErrorPipeline(ruleConfig config.RuleConfig) (errorHandler, error) {
+	var errorHandlers compositeErrorHandler
+
+	for _, ehStep := range ruleConfig.ErrorHandler {
+		id, found := ehStep["error_handler"]
+		if found {
+			stepID, ok := id.(string)
+			if !ok {
+				return nil, errorchain.NewWithMessage(heimdall.ErrInternal,
+					"failed to convert rule step identifier to string")
+			}
+
+			eh, err := f.hf.CreateErrorHandler(stepID, ehStep["config"])
+			if err != nil {
+				return nil, err
+			}
+
+			errorHandlers = append(errorHandlers, eh)
+		} else {
+			return nil, errorchain.NewWithMessagef(ErrUnsupportedPipelineObject, "%s", ehStep)
+		}
+	}
+
+	return errorHandlers, nil
 }
 
 type rule struct {
@@ -82,45 +184,31 @@ type rule struct {
 	urlMatcher patternmatcher.PatternMatcher
 	methods    []string
 	srcID      string
-	an         authenticators.Authenticator
-	az         authorizers.Authorizer
-	h          hydrators.Hydrator
-	m          mutators.Mutator
-	eh         errorhandlers.ErrorHandler
+	sc         subjectCreator
+	sh         subjectHandler
+	m          subjectHandler
+	eh         errorHandler
 }
 
 func (r *rule) Execute(ctx heimdall.Context) error {
-	logger := zerolog.Ctx(ctx.AppContext())
-
-	sub, err := r.an.Authenticate(ctx)
+	// authenticators
+	sub, err := r.sc.Execute(ctx)
 	if err != nil {
-		logger.Debug().Err(err).Msg("Authentication failed")
-
-		_, err := r.eh.HandleError(ctx, err)
+		_, err := r.eh.Execute(ctx, err)
 
 		return err
 	}
 
-	if err := r.az.Authorize(ctx, sub); err != nil {
-		logger.Debug().Err(err).Msg("Authorization failed")
-
-		_, err := r.eh.HandleError(ctx, err)
-
-		return err
-	}
-
-	if err := r.h.Hydrate(ctx, sub); err != nil {
-		logger.Debug().Err(err).Msg("Hydration failed")
-
-		_, err := r.eh.HandleError(ctx, err)
+	// authorizers & hydrators
+	if err := r.sh.Execute(ctx, sub); err != nil {
+		_, err := r.eh.Execute(ctx, err)
 
 		return err
 	}
 
-	if err := r.m.Mutate(ctx, sub); err != nil {
-		logger.Debug().Err(err).Msg("Mutation failed")
-
-		_, err := r.eh.HandleError(ctx, err)
+	// mutators
+	if err := r.m.Execute(ctx, sub); err != nil {
+		_, err := r.eh.Execute(ctx, err)
 
 		return err
 	}

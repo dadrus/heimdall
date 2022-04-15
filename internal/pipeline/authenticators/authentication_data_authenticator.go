@@ -25,7 +25,7 @@ import (
 // nolint
 func init() {
 	registerAuthenticatorTypeFactory(
-		func(typ config.PipelineObjectType, conf map[string]any) (bool, Authenticator, error) {
+		func(typ config.PipelineObjectType, conf map[any]any) (bool, Authenticator, error) {
 			if typ != config.POTAuthenticationData {
 				return false, nil, nil
 			}
@@ -43,7 +43,7 @@ type authenticationDataAuthenticator struct {
 	ttl *time.Duration
 }
 
-func newAuthenticationDataAuthenticator(rawConfig map[string]any) (*authenticationDataAuthenticator, error) {
+func newAuthenticationDataAuthenticator(rawConfig map[any]any) (*authenticationDataAuthenticator, error) {
 	type _config struct {
 		Endpoint       endpoint.Endpoint                   `mapstructure:"identity_info_endpoint"`
 		AuthDataSource extractors.CompositeExtractStrategy `mapstructure:"authentication_data_source"`
@@ -84,7 +84,7 @@ func newAuthenticationDataAuthenticator(rawConfig map[string]any) (*authenticati
 	}, nil
 }
 
-func (a *authenticationDataAuthenticator) Authenticate(ctx heimdall.Context) (*subject.Subject, error) {
+func (a *authenticationDataAuthenticator) Execute(ctx heimdall.Context) (*subject.Subject, error) {
 	logger := zerolog.Ctx(ctx.AppContext())
 	logger.Debug().Msg("Authenticating using authentication data authenticator")
 
@@ -108,7 +108,7 @@ func (a *authenticationDataAuthenticator) Authenticate(ctx heimdall.Context) (*s
 	return sub, nil
 }
 
-func (a *authenticationDataAuthenticator) WithConfig(config map[string]any) (Authenticator, error) {
+func (a *authenticationDataAuthenticator) WithConfig(config map[any]any) (Authenticator, error) {
 	// this authenticator allows ttl to be redefined on the rule level
 	if len(config) == 0 {
 		return a, nil

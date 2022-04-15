@@ -19,7 +19,7 @@ func TestUnauthorizedAuthenticatorExecution(t *testing.T) {
 	auth := newUnauthorizedAuthenticator()
 
 	// WHEN
-	sub, err := auth.Authenticate(ctx)
+	sub, err := auth.Execute(ctx)
 
 	// THEN
 	assert.ErrorIs(t, err, heimdall.ErrAuthentication)

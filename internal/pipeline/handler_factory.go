@@ -15,11 +15,6 @@ import (
 )
 
 var (
-	ErrNoDefaultAuthenticator = errors.New("no default authenticators configured")
-	ErrNoDefaultAuthorizer    = errors.New("no default authorizer configured")
-	ErrNoDefaultMutator       = errors.New("no default mutator configured")
-	ErrNoDefaultErrorHandler  = errors.New("no default error handler configured")
-
 	ErrAuthenticatorCreation = errors.New("failed to create authenticator")
 	ErrAuthorizerCreation    = errors.New("failed to create authorizer")
 	ErrMutatorCreation       = errors.New("failed to create mutator")
@@ -28,11 +23,11 @@ var (
 )
 
 type HandlerFactory interface {
-	CreateAuthenticator([]config.PipelineObjectReference) (authenticators.Authenticator, error)
-	CreateAuthorizer(*config.PipelineObjectReference) (authorizers.Authorizer, error)
-	CreateHydrator([]config.PipelineObjectReference) (hydrators.Hydrator, error)
-	CreateMutator([]config.PipelineObjectReference) (mutators.Mutator, error)
-	CreateErrorHandler([]config.PipelineObjectReference) (errorhandlers.ErrorHandler, error)
+	CreateAuthenticator(id string, conf any) (authenticators.Authenticator, error)
+	CreateAuthorizer(id string, conf any) (authorizers.Authorizer, error)
+	CreateHydrator(id string, conf any) (hydrators.Hydrator, error)
+	CreateMutator(id string, conf any) (mutators.Mutator, error)
+	CreateErrorHandler(id string, conf any) (errorhandlers.ErrorHandler, error)
 }
 
 func NewHandlerFactory(conf config.Configuration, logger zerolog.Logger) (HandlerFactory, error) {
@@ -56,65 +51,44 @@ type handlerFactory struct {
 	dp config.Pipeline
 }
 
-func (hf *handlerFactory) CreateAuthenticator(
-	pors []config.PipelineObjectReference,
-) (authenticators.Authenticator, error) {
-	var (
-		refs []config.PipelineObjectReference
-		list authenticators.CompositeAuthenticator
-	)
-
-	if len(pors) == 0 {
-		if len(hf.dp.Authenticators) == 0 {
-			return nil, errorchain.New(ErrAuthenticatorCreation).CausedBy(ErrNoDefaultAuthenticator)
-		}
-
-		refs = hf.dp.Authenticators
-	} else {
-		refs = pors
+func (hf *handlerFactory) CreateAuthenticator(id string, conf any) (authenticators.Authenticator, error) {
+	prototype, err := hf.r.Authenticator(id)
+	if err != nil {
+		return nil, errorchain.New(ErrAuthenticatorCreation).CausedBy(err)
 	}
 
-	for _, ref := range refs {
-		prototype, err := hf.r.Authenticator(ref.ID)
+	if conf != nil {
+		mConf, ok := conf.(map[any]any)
+		if !ok {
+			return nil, errorchain.NewWithMessage(ErrAuthenticatorCreation,
+				"Could not convert config to the expected type")
+		}
+
+		authenticator, err := prototype.WithConfig(mConf)
 		if err != nil {
 			return nil, errorchain.New(ErrAuthenticatorCreation).CausedBy(err)
 		}
 
-		if len(ref.Config) != 0 {
-			authenticator, err := prototype.WithConfig(ref.Config)
-			if err != nil {
-				return nil, errorchain.New(ErrAuthenticatorCreation).CausedBy(err)
-			}
-
-			list = append(list, authenticator)
-		} else {
-			list = append(list, prototype)
-		}
+		return authenticator, nil
 	}
 
-	return list, nil
+	return prototype, nil
 }
 
-func (hf *handlerFactory) CreateAuthorizer(configured *config.PipelineObjectReference) (authorizers.Authorizer, error) {
-	var ref *config.PipelineObjectReference
-
-	if configured == nil {
-		if hf.dp.Authorizer == nil {
-			return nil, errorchain.New(ErrAuthorizerCreation).CausedBy(ErrNoDefaultAuthorizer)
-		}
-
-		ref = hf.dp.Authorizer
-	} else {
-		ref = configured
-	}
-
-	prototype, err := hf.r.Authorizer(ref.ID)
+func (hf *handlerFactory) CreateAuthorizer(id string, conf any) (authorizers.Authorizer, error) {
+	prototype, err := hf.r.Authorizer(id)
 	if err != nil {
 		return nil, errorchain.New(ErrAuthorizerCreation).CausedBy(err)
 	}
 
-	if len(ref.Config) != 0 {
-		authorizer, err := prototype.WithConfig(ref.Config)
+	if conf != nil {
+		mConf, ok := conf.(map[any]any)
+		if !ok {
+			return nil, errorchain.NewWithMessage(ErrAuthenticatorCreation,
+				"Could not convert config to the expected type")
+		}
+
+		authorizer, err := prototype.WithConfig(mConf)
 		if err != nil {
 			return nil, errorchain.New(ErrAuthorizerCreation).CausedBy(err)
 		}
@@ -125,113 +99,74 @@ func (hf *handlerFactory) CreateAuthorizer(configured *config.PipelineObjectRefe
 	return prototype, nil
 }
 
-func (hf *handlerFactory) CreateHydrator(configured []config.PipelineObjectReference) (hydrators.Hydrator, error) {
-	var (
-		refs []config.PipelineObjectReference
-		list hydrators.CompositeHydrator
-	)
-
-	if len(configured) == 0 {
-		if len(hf.dp.Hydrators) != 0 {
-			refs = hf.dp.Hydrators
-		}
-	} else {
-		refs = configured
+func (hf *handlerFactory) CreateHydrator(id string, conf any) (hydrators.Hydrator, error) {
+	prototype, err := hf.r.Hydrator(id)
+	if err != nil {
+		return nil, errorchain.New(ErrHydratorCreation).CausedBy(err)
 	}
 
-	for _, ref := range refs {
-		prototype, err := hf.r.Hydrator(ref.ID)
+	if conf != nil {
+		mConf, ok := conf.(map[any]any)
+		if !ok {
+			return nil, errorchain.NewWithMessage(ErrAuthenticatorCreation,
+				"Could not convert config to the expected type")
+		}
+
+		hydrator, err := prototype.WithConfig(mConf)
 		if err != nil {
 			return nil, errorchain.New(ErrHydratorCreation).CausedBy(err)
 		}
 
-		if len(ref.Config) != 0 {
-			hydrator, err := prototype.WithConfig(ref.Config)
-			if err != nil {
-				return nil, errorchain.New(ErrHydratorCreation).CausedBy(err)
-			}
-
-			list = append(list, hydrator)
-		} else {
-			list = append(list, prototype)
-		}
+		return hydrator, nil
 	}
 
-	return list, nil
+	return prototype, nil
 }
 
-func (hf *handlerFactory) CreateMutator(configured []config.PipelineObjectReference) (mutators.Mutator, error) {
-	var (
-		refs []config.PipelineObjectReference
-		list mutators.CompositeMutator
-	)
-
-	if len(configured) == 0 {
-		if len(hf.dp.Mutators) == 0 {
-			return nil, errorchain.New(ErrMutatorCreation).CausedBy(ErrNoDefaultMutator)
-		}
-
-		refs = hf.dp.Mutators
-	} else {
-		refs = configured
+func (hf *handlerFactory) CreateMutator(id string, conf any) (mutators.Mutator, error) {
+	prototype, err := hf.r.Mutator(id)
+	if err != nil {
+		return nil, errorchain.New(ErrMutatorCreation).CausedBy(err)
 	}
 
-	for _, ref := range refs {
-		prototype, err := hf.r.Mutator(ref.ID)
+	if conf != nil {
+		mConf, ok := conf.(map[any]any)
+		if !ok {
+			return nil, errorchain.NewWithMessage(ErrAuthenticatorCreation,
+				"Could not convert config to the expected type")
+		}
+
+		mutator, err := prototype.WithConfig(mConf)
 		if err != nil {
 			return nil, errorchain.New(ErrMutatorCreation).CausedBy(err)
 		}
 
-		if len(ref.Config) != 0 {
-			mutator, err := prototype.WithConfig(ref.Config)
-			if err != nil {
-				return nil, errorchain.New(ErrMutatorCreation).CausedBy(err)
-			}
-
-			list = append(list, mutator)
-		} else {
-			list = append(list, prototype)
-		}
+		return mutator, nil
 	}
 
-	return list, nil
+	return prototype, nil
 }
 
-func (hf *handlerFactory) CreateErrorHandler(
-	pors []config.PipelineObjectReference,
-) (errorhandlers.ErrorHandler, error) {
-	var (
-		refs []config.PipelineObjectReference
-		list errorhandlers.CompositeErrorHandler
-	)
-
-	if len(pors) == 0 {
-		if len(hf.dp.ErrorHandlers) == 0 {
-			return nil, errorchain.New(ErrErrorHandlerCreation).CausedBy(ErrNoDefaultErrorHandler)
-		}
-
-		refs = hf.dp.ErrorHandlers
-	} else {
-		refs = pors
+func (hf *handlerFactory) CreateErrorHandler(id string, conf any) (errorhandlers.ErrorHandler, error) {
+	prototype, err := hf.r.ErrorHandler(id)
+	if err != nil {
+		return nil, errorchain.New(ErrErrorHandlerCreation).CausedBy(err)
 	}
 
-	for _, ref := range refs {
-		prototype, err := hf.r.ErrorHandler(ref.ID)
+	if conf != nil {
+		mConf, ok := conf.(map[any]any)
+		if !ok {
+			return nil, errorchain.NewWithMessage(ErrAuthenticatorCreation,
+				"Could not convert config to the expected type")
+		}
+
+		errorHandler, err := prototype.WithConfig(mConf)
 		if err != nil {
 			return nil, errorchain.New(ErrErrorHandlerCreation).CausedBy(err)
 		}
 
-		if len(ref.Config) != 0 {
-			errorHandler, err := prototype.WithConfig(ref.Config)
-			if err != nil {
-				return nil, errorchain.New(ErrErrorHandlerCreation).CausedBy(err)
-			}
-
-			list = append(list, errorHandler)
-		} else {
-			list = append(list, prototype)
-		}
+		return errorHandler, nil
 	}
 
-	return list, nil
+	return prototype, nil
 }

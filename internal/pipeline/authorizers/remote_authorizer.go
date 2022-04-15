@@ -18,7 +18,7 @@ import (
 // nolint
 func init() {
 	registerAuthorizerTypeFactory(
-		func(typ config.PipelineObjectType, conf map[string]any) (bool, Authorizer, error) {
+		func(typ config.PipelineObjectType, conf map[any]any) (bool, Authorizer, error) {
 			if typ != config.POTRemote {
 				return false, nil, nil
 			}
@@ -35,11 +35,11 @@ type remoteAuthorizer struct {
 	rhtf []string
 }
 
-func newRemoteAuthorizer(rawConfig map[string]any) (*remoteAuthorizer, error) {
+func newRemoteAuthorizer(rawConfig map[any]any) (*remoteAuthorizer, error) {
 	return &remoteAuthorizer{}, nil
 }
 
-func (a *remoteAuthorizer) Authorize(ctx heimdall.Context, sub *subject.Subject) error {
+func (a *remoteAuthorizer) Execute(ctx heimdall.Context, sub *subject.Subject) error {
 	logger := zerolog.Ctx(ctx.AppContext())
 	logger.Debug().Msg("Authorizing using remote authorizer")
 
@@ -77,7 +77,7 @@ func (a *remoteAuthorizer) Authorize(ctx heimdall.Context, sub *subject.Subject)
 	return nil
 }
 
-func (a *remoteAuthorizer) WithConfig(rawConfig map[string]any) (Authorizer, error) {
+func (a *remoteAuthorizer) WithConfig(rawConfig map[any]any) (Authorizer, error) {
 	if len(rawConfig) == 0 {
 		return a, nil
 	}

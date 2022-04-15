@@ -7,7 +7,6 @@ import (
 
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/pipeline/authenticators/extractors"
-	"github.com/dadrus/heimdall/internal/pipeline/subject"
 )
 
 type dummyAuthData struct {
@@ -28,40 +27,6 @@ func (m *mockAuthDataGetter) GetAuthData(s heimdall.Context) (extractors.AuthDat
 		res, ok := val.(extractors.AuthData)
 		if !ok {
 			panic("extractors.AuthData expected")
-		}
-
-		return res, args.Error(1)
-	}
-
-	return nil, args.Error(1)
-}
-
-type mockAuthenticator struct {
-	mock.Mock
-}
-
-func (a *mockAuthenticator) Authenticate(ctx heimdall.Context) (*subject.Subject, error) {
-	args := a.Called(ctx)
-
-	if val := args.Get(0); val != nil {
-		res, ok := val.(*subject.Subject)
-		if !ok {
-			panic("*subject.Subject expected")
-		}
-
-		return res, args.Error(1)
-	}
-
-	return nil, args.Error(1)
-}
-
-func (a *mockAuthenticator) WithConfig(c map[string]interface{}) (Authenticator, error) {
-	args := a.Called(c)
-
-	if val := args.Get(0); val != nil {
-		res, ok := val.(Authenticator)
-		if !ok {
-			panic("handler.Authenticator expected")
 		}
 
 		return res, args.Error(1)

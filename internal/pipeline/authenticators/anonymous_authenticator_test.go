@@ -113,7 +113,7 @@ func TestAuthenticateWithAnonymousAuthenticatorWithCustomSubjectId(t *testing.T)
 	ctx.On("AppContext").Return(context.Background())
 
 	// WHEN
-	sub, err := auth.Authenticate(ctx)
+	sub, err := auth.Execute(ctx)
 
 	// THEN
 	assert.NoError(t, err)
@@ -133,7 +133,7 @@ func TestAuthenticateWithAnonymousAuthenticatorWithDefaultSubjectId(t *testing.T
 	ctx.On("AppContext").Return(context.Background())
 
 	// WHEN
-	sub, err := auth.Authenticate(ctx)
+	sub, err := auth.Execute(ctx)
 
 	// THEN
 	assert.NoError(t, err)

@@ -12,7 +12,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	"gopkg.in/yaml.v2"
 
 	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/dadrus/heimdall/internal/heimdall"
@@ -23,15 +22,6 @@ import (
 )
 
 func TestCreateAuthenticationDataAuthenticator(t *testing.T) {
-	decode := func(data []byte) map[string]interface{} {
-		var res map[string]interface{}
-
-		err := yaml.Unmarshal(data, &res)
-		assert.NoError(t, err)
-
-		return res
-	}
-
 	for _, tc := range []struct {
 		uc          string
 		config      []byte
@@ -103,8 +93,11 @@ session:
 		},
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
+			conf, err := testsupport.DecodeTestConfig(tc.config)
+			require.NoError(t, err)
+
 			// WHEN
-			_, err := newAuthenticationDataAuthenticator(decode(tc.config))
+			_, err = newAuthenticationDataAuthenticator(conf)
 
 			// THEN
 			tc.assertError(t, err)
@@ -253,7 +246,7 @@ func TestSuccessfulExecutionOfAuthenticationDataAuthenticatorWithoutCacheUsage(t
 	}
 
 	// WHEN
-	rSub, err := ada.Authenticate(ctx)
+	rSub, err := ada.Execute(ctx)
 
 	// THEN
 	assert.NoError(t, err)
@@ -294,7 +287,7 @@ func TestSuccessfulExecutionOfAuthenticationDataAuthenticatorWithSubjectInfoFrom
 	}
 
 	// WHEN
-	rSub, err := ada.Authenticate(ctx)
+	rSub, err := ada.Execute(ctx)
 
 	// THEN
 	assert.NoError(t, err)
@@ -355,7 +348,7 @@ func TestSuccessfulExecutionOfAuthenticationDataAuthenticatorWithCacheMiss(t *te
 	}
 
 	// WHEN
-	rSub, err := ada.Authenticate(ctx)
+	rSub, err := ada.Execute(ctx)
 
 	// THEN
 	assert.NoError(t, err)
@@ -386,7 +379,7 @@ func TestAuthenticationDataAuthenticatorExecutionFailsDueToMissingAuthData(t *te
 	}
 
 	// WHEN
-	sub, err := ada.Authenticate(ctx)
+	sub, err := ada.Execute(ctx)
 
 	// THEN
 	assert.Error(t, err)
@@ -422,7 +415,7 @@ func TestAuthenticationDataAuthenticatorExecutionFailsDueToEndpointError(t *test
 	}
 
 	// WHEN
-	sub, err := ada.Authenticate(ctx)
+	sub, err := ada.Execute(ctx)
 
 	// THEN
 	assert.Error(t, err)
@@ -474,7 +467,7 @@ func TestAuthenticationDataAuthenticatorExecutionFailsDueToFailedSubjectExtracti
 	}
 
 	// WHEN
-	sub, err := ada.Authenticate(ctx)
+	sub, err := ada.Execute(ctx)
 
 	// THEN
 	assert.Error(t, err)

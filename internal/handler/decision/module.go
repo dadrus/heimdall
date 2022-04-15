@@ -41,7 +41,10 @@ func newFiberApp(conf config.Configuration, cache cache.Cache) *fiber.App {
 		DisableStartupMessage:   true,
 		ErrorHandler:            errorhandler.NewErrorHandler(api.VerboseErrors),
 		EnableTrustedProxyCheck: api.TrustedProxies != nil,
-		TrustedProxies:          x.IfThenElse(api.TrustedProxies != nil, *api.TrustedProxies, []string{}),
+		TrustedProxies: x.IfThenElseExec(
+			api.TrustedProxies != nil,
+			func() []string { return *api.TrustedProxies },
+			func() []string { return []string{} }),
 	})
 	app.Use(recover.New())
 

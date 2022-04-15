@@ -1,11 +1,10 @@
-package authenticators
+package rules
 
 import (
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/pipeline/subject"
 )
 
-type Authenticator interface {
+type subjectCreator interface {
 	Execute(heimdall.Context) (*subject.Subject, error)
-	WithConfig(config map[any]any) (Authenticator, error)
 }

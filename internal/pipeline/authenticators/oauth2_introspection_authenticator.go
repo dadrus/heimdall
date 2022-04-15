@@ -28,7 +28,7 @@ import (
 // nolint
 func init() {
 	registerAuthenticatorTypeFactory(
-		func(typ config.PipelineObjectType, conf map[string]any) (bool, Authenticator, error) {
+		func(typ config.PipelineObjectType, conf map[any]any) (bool, Authenticator, error) {
 			if typ != config.POTOAuth2Introspection {
 				return false, nil, nil
 			}
@@ -47,7 +47,7 @@ type oauth2IntrospectionAuthenticator struct {
 	ttl *time.Duration
 }
 
-func newOAuth2IntrospectionAuthenticator(rawConfig map[string]any) (*oauth2IntrospectionAuthenticator, error) {
+func newOAuth2IntrospectionAuthenticator(rawConfig map[any]any) (*oauth2IntrospectionAuthenticator, error) {
 	type _config struct {
 		Endpoint   endpoint.Endpoint  `mapstructure:"introspection_endpoint"`
 		Assertions oauth2.Expectation `mapstructure:"introspection_response_assertions"`
@@ -115,7 +115,7 @@ func newOAuth2IntrospectionAuthenticator(rawConfig map[string]any) (*oauth2Intro
 	}, nil
 }
 
-func (a *oauth2IntrospectionAuthenticator) Authenticate(ctx heimdall.Context) (*subject.Subject, error) {
+func (a *oauth2IntrospectionAuthenticator) Execute(ctx heimdall.Context) (*subject.Subject, error) {
 	logger := zerolog.Ctx(ctx.AppContext())
 	logger.Debug().Msg("Authenticating using OAuth2 introspect authenticator")
 
@@ -141,7 +141,7 @@ func (a *oauth2IntrospectionAuthenticator) Authenticate(ctx heimdall.Context) (*
 	return sub, nil
 }
 
-func (a *oauth2IntrospectionAuthenticator) WithConfig(config map[string]any) (Authenticator, error) {
+func (a *oauth2IntrospectionAuthenticator) WithConfig(config map[any]any) (Authenticator, error) {
 	// this authenticator allows assertions and ttl to be redefined on the rule level
 	if len(config) == 0 {
 		return a, nil

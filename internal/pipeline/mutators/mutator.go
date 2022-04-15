@@ -6,6 +6,6 @@ import (
 )
 
 type Mutator interface {
-	Mutate(ctx heimdall.Context, sub *subject.Subject) error
-	WithConfig(config map[string]any) (Mutator, error)
+	Execute(ctx heimdall.Context, sub *subject.Subject) error
+	WithConfig(config map[any]any) (Mutator, error)
 }

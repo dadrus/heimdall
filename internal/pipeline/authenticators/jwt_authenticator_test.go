@@ -522,7 +522,7 @@ func TestSuccessfulExecutionOfJwtAuthenticatorWithoutCacheUsage(t *testing.T) {
 	}
 
 	// WHEN
-	sub, err := auth.Authenticate(ctx)
+	sub, err := auth.Execute(ctx)
 
 	// THEN
 	require.NoError(t, err)
@@ -601,7 +601,7 @@ func TestSuccessfulExecutionOfJwtAuthenticatorWithKeyFromCache(t *testing.T) {
 	}
 
 	// WHEN
-	sub, err := auth.Authenticate(ctx)
+	sub, err := auth.Execute(ctx)
 
 	// THEN
 	require.NoError(t, err)
@@ -690,7 +690,7 @@ func TestSuccessfulExecutionOfJwtAuthenticatorWithCacheMiss(t *testing.T) {
 	}
 
 	// WHEN
-	sub, err := auth.Authenticate(ctx)
+	sub, err := auth.Execute(ctx)
 
 	// THEN
 	require.NoError(t, err)

@@ -98,7 +98,7 @@ func (r *repository) watchRuleSetChanges() {
 	}
 }
 
-func (r *repository) loadRules(srcID string, definition json.RawMessage) ([]Rule, error) {
+func (r *repository) loadRules(srcID string, definition []byte) ([]Rule, error) {
 	rcs, err := parseRuleSetFromYaml(definition)
 	if err != nil {
 		return nil, err

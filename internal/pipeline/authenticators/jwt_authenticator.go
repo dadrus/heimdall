@@ -30,7 +30,7 @@ import (
 // nolint
 func init() {
 	registerAuthenticatorTypeFactory(
-		func(typ config.PipelineObjectType, conf map[string]any) (bool, Authenticator, error) {
+		func(typ config.PipelineObjectType, conf map[any]any) (bool, Authenticator, error) {
 			if typ != config.POTJwt {
 				return false, nil, nil
 			}
@@ -49,7 +49,7 @@ type jwtAuthenticator struct {
 	adg extractors.AuthDataExtractStrategy
 }
 
-func newJwtAuthenticator(rawConfig map[string]any) (*jwtAuthenticator, error) {
+func newJwtAuthenticator(rawConfig map[any]any) (*jwtAuthenticator, error) {
 	type _config struct {
 		Endpoint       endpoint.Endpoint                   `mapstructure:"jwks_endpoint"`
 		AuthDataSource extractors.CompositeExtractStrategy `mapstructure:"jwt_token_from"`
@@ -117,7 +117,7 @@ func newJwtAuthenticator(rawConfig map[string]any) (*jwtAuthenticator, error) {
 	}, nil
 }
 
-func (a *jwtAuthenticator) Authenticate(ctx heimdall.Context) (*subject.Subject, error) {
+func (a *jwtAuthenticator) Execute(ctx heimdall.Context) (*subject.Subject, error) {
 	logger := zerolog.Ctx(ctx.AppContext())
 	logger.Debug().Msg("Authenticating using JWT authenticator")
 
@@ -152,7 +152,7 @@ func (a *jwtAuthenticator) Authenticate(ctx heimdall.Context) (*subject.Subject,
 	return sub, nil
 }
 
-func (a *jwtAuthenticator) WithConfig(config map[string]any) (Authenticator, error) {
+func (a *jwtAuthenticator) WithConfig(config map[any]any) (Authenticator, error) {
 	// this authenticator allows assertions and ttl to be redefined on the rule level
 	if len(config) == 0 {
 		return a, nil

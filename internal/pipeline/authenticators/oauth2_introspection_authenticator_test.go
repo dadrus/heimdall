@@ -708,7 +708,7 @@ func TestExecutionOfOAuth2IntrospectionAuthenticator(t *testing.T) {
 			}
 
 			// WHEN
-			sub, err := auth.Authenticate(ctx)
+			sub, err := auth.Execute(ctx)
 
 			// THEN
 			tc.assert(t, err, sub)

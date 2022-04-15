@@ -15,7 +15,7 @@ var (
 	errorHandlerTypeFactoriesMu sync.RWMutex
 )
 
-type ErrorHandlerTypeFactory func(t config.PipelineObjectType, c map[string]any) (bool, ErrorHandler, error)
+type ErrorHandlerTypeFactory func(t config.PipelineObjectType, c map[any]any) (bool, ErrorHandler, error)
 
 func registerErrorHandlerTypeFactory(factory ErrorHandlerTypeFactory) {
 	errorHandlerTypeFactoriesMu.Lock()
@@ -28,7 +28,7 @@ func registerErrorHandlerTypeFactory(factory ErrorHandlerTypeFactory) {
 	errorHandlerTypeFactories = append(errorHandlerTypeFactories, factory)
 }
 
-func CreateErrorHandlerPrototype(typ config.PipelineObjectType, config map[string]any) (ErrorHandler, error) {
+func CreateErrorHandlerPrototype(typ config.PipelineObjectType, config map[any]any) (ErrorHandler, error) {
 	errorHandlerTypeFactoriesMu.RLock()
 	defer errorHandlerTypeFactoriesMu.RUnlock()
 

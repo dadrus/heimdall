@@ -143,13 +143,12 @@ pipeline:
 
 rules:
   default:
-    authenticators:
-      - id: deny_all_authorizer
-    authorizer:
-      id: unauthorized_authenticator
-    error_handlers:
-      - id: authenticate_on_unauthorized_or_forbidden
-      - id: default
+    execute:
+      - authenticator: anonymous_authenticator
+      - authorizer: allow_all_authorizer
+      - mutator: jwt
+    on_error:
+      - error_handler: authenticate_on_unauthorized_or_forbidden
 
   providers:
     file:

@@ -22,5 +22,5 @@ const (
 type PipelineObject struct {
 	ID     string             `koanf:"id"`
 	Type   PipelineObjectType `koanf:"type"`
-	Config map[string]any     `koanf:"config"`
+	Config map[any]any        `koanf:"config"`
 }

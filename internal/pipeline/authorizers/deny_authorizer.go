@@ -13,7 +13,7 @@ import (
 // nolint
 func init() {
 	registerAuthorizerTypeFactory(
-		func(typ config.PipelineObjectType, conf map[string]any) (bool, Authorizer, error) {
+		func(typ config.PipelineObjectType, conf map[any]any) (bool, Authorizer, error) {
 			if typ != config.POTDeny {
 				return false, nil, nil
 			}
@@ -28,13 +28,13 @@ func newDenyAuthorizer() *denyAuthorizer {
 	return &denyAuthorizer{}
 }
 
-func (*denyAuthorizer) Authorize(ctx heimdall.Context, _ *subject.Subject) error {
+func (*denyAuthorizer) Execute(ctx heimdall.Context, _ *subject.Subject) error {
 	logger := zerolog.Ctx(ctx.AppContext())
 	logger.Debug().Msg("Authorizing using deny authorizer")
 
 	return errorchain.NewWithMessage(heimdall.ErrAuthorization, "denied by authorizer")
 }
 
-func (a *denyAuthorizer) WithConfig(map[string]any) (Authorizer, error) {
+func (a *denyAuthorizer) WithConfig(map[any]any) (Authorizer, error) {
 	return a, nil
 }

@@ -1,4 +1,4 @@
-package authenticators
+package rules
 
 import (
 	"context"
@@ -19,16 +19,16 @@ func TestCompositeAuthenticatorExecutionWithFallback(t *testing.T) {
 	ctx := &testsupport.MockContext{}
 	ctx.On("AppContext").Return(context.Background())
 
-	auth1 := &mockAuthenticator{}
-	auth1.On("Authenticate", ctx).Return(nil, testsupport.ErrTestPurpose)
+	auth1 := &mockSubjectCreator{}
+	auth1.On("Execute", ctx).Return(nil, testsupport.ErrTestPurpose)
 
-	auth2 := &mockAuthenticator{}
-	auth2.On("Authenticate", ctx).Return(sub, nil)
+	auth2 := &mockSubjectCreator{}
+	auth2.On("Execute", ctx).Return(sub, nil)
 
-	auth := CompositeAuthenticator{auth1, auth2}
+	auth := compositeSubjectCreator{auth1, auth2}
 
 	// WHEN
-	rSub, err := auth.Authenticate(ctx)
+	rSub, err := auth.Execute(ctx)
 
 	// THEN
 	assert.NoError(t, err)
@@ -47,14 +47,14 @@ func TestCompositeAuthenticatorExecutionWithoutFallback(t *testing.T) {
 	ctx := &testsupport.MockContext{}
 	ctx.On("AppContext").Return(context.Background())
 
-	auth1 := &mockAuthenticator{}
-	auth2 := &mockAuthenticator{}
-	auth2.On("Authenticate", ctx).Return(sub, nil)
+	auth1 := &mockSubjectCreator{}
+	auth2 := &mockSubjectCreator{}
+	auth2.On("Execute", ctx).Return(sub, nil)
 
-	auth := CompositeAuthenticator{auth2, auth1}
+	auth := compositeSubjectCreator{auth2, auth1}
 
 	// WHEN
-	rSub, err := auth.Authenticate(ctx)
+	rSub, err := auth.Execute(ctx)
 
 	// THEN
 	assert.NoError(t, err)
@@ -63,18 +63,4 @@ func TestCompositeAuthenticatorExecutionWithoutFallback(t *testing.T) {
 
 	auth1.AssertExpectations(t)
 	auth2.AssertExpectations(t)
-}
-
-func TestCompositeAuthenticatorFromPrototypeIsNotAllowed(t *testing.T) {
-	t.Parallel()
-
-	// GIVEN
-	auth := CompositeAuthenticator{}
-
-	// WHEN
-	_, err := auth.WithConfig(nil)
-
-	// THEN
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "configuration error")
 }

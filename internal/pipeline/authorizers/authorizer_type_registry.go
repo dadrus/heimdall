@@ -18,7 +18,7 @@ var (
 	authorizerTypeFactoriesMu sync.RWMutex
 )
 
-type AuthorizerTypeFactory func(typ config.PipelineObjectType, config map[string]any) (bool, Authorizer, error)
+type AuthorizerTypeFactory func(typ config.PipelineObjectType, config map[any]any) (bool, Authorizer, error)
 
 func registerAuthorizerTypeFactory(factory AuthorizerTypeFactory) {
 	authorizerTypeFactoriesMu.Lock()
@@ -31,7 +31,7 @@ func registerAuthorizerTypeFactory(factory AuthorizerTypeFactory) {
 	authorizerTypeFactories = append(authorizerTypeFactories, factory)
 }
 
-func CreateAuthorizerPrototype(typ config.PipelineObjectType, config map[string]any) (Authorizer, error) {
+func CreateAuthorizerPrototype(typ config.PipelineObjectType, config map[any]any) (Authorizer, error) {
 	authorizerTypeFactoriesMu.RLock()
 	defer authorizerTypeFactoriesMu.RUnlock()
 

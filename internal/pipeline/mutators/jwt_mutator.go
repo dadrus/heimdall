@@ -30,7 +30,7 @@ const (
 // nolint
 func init() {
 	registerMutatorTypeFactory(
-		func(typ config.PipelineObjectType, conf map[string]any) (bool, Mutator, error) {
+		func(typ config.PipelineObjectType, conf map[any]any) (bool, Mutator, error) {
 			if typ != config.POTJwt {
 				return false, nil, nil
 			}
@@ -46,7 +46,7 @@ type jwtMutator struct {
 	ttl    time.Duration
 }
 
-func newJWTMutator(rawConfig map[string]any) (*jwtMutator, error) {
+func newJWTMutator(rawConfig map[any]any) (*jwtMutator, error) {
 	type _config struct {
 		Claims *Template      `mapstructure:"claims"`
 		TTL    *time.Duration `mapstructure:"ttl"`
@@ -70,7 +70,7 @@ func newJWTMutator(rawConfig map[string]any) (*jwtMutator, error) {
 	}, nil
 }
 
-func (m *jwtMutator) Mutate(ctx heimdall.Context, sub *subject.Subject) error {
+func (m *jwtMutator) Execute(ctx heimdall.Context, sub *subject.Subject) error {
 	logger := zerolog.Ctx(ctx.AppContext())
 	logger.Debug().Msg("Mutating using JWT mutator")
 
@@ -110,7 +110,7 @@ func (m *jwtMutator) Mutate(ctx heimdall.Context, sub *subject.Subject) error {
 	return nil
 }
 
-func (m *jwtMutator) WithConfig(rawConfig map[string]any) (Mutator, error) {
+func (m *jwtMutator) WithConfig(rawConfig map[any]any) (Mutator, error) {
 	if len(rawConfig) == 0 {
 		return m, nil
 	}

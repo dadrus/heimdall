@@ -20,7 +20,7 @@ func TestNoopAuthenticatorExecution(t *testing.T) {
 	a := newNoopAuthenticator()
 
 	// WHEN
-	sub, err := a.Authenticate(ctx)
+	sub, err := a.Execute(ctx)
 
 	// THEN
 	require.NoError(t, err)

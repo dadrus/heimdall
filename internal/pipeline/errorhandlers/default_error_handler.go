@@ -11,7 +11,7 @@ import (
 // nolint
 func init() {
 	registerErrorHandlerTypeFactory(
-		func(typ config.PipelineObjectType, conf map[string]any) (bool, ErrorHandler, error) {
+		func(typ config.PipelineObjectType, conf map[any]any) (bool, ErrorHandler, error) {
 			if typ != config.POTDefault {
 				return false, nil, nil
 			}
@@ -24,11 +24,11 @@ func init() {
 
 type defaultErrorHandler struct{}
 
-func newDefaultErrorHandler(rawConfig map[string]any) (*defaultErrorHandler, error) {
+func newDefaultErrorHandler(rawConfig map[any]any) (*defaultErrorHandler, error) {
 	return &defaultErrorHandler{}, nil
 }
 
-func (eh *defaultErrorHandler) HandleError(ctx heimdall.Context, err error) (bool, error) {
+func (eh *defaultErrorHandler) Execute(ctx heimdall.Context, err error) (bool, error) {
 	logger := zerolog.Ctx(ctx.AppContext())
 	logger.Debug().Msg("Handling error using default error handler")
 
@@ -37,6 +37,6 @@ func (eh *defaultErrorHandler) HandleError(ctx heimdall.Context, err error) (boo
 	return true, nil
 }
 
-func (eh *defaultErrorHandler) WithConfig(config map[string]any) (ErrorHandler, error) {
+func (eh *defaultErrorHandler) WithConfig(config map[any]any) (ErrorHandler, error) {
 	return eh, nil
 }
