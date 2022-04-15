@@ -16,6 +16,3 @@
         headers:
           foo-bar: bla
     - mutator: blabla
-  on_error:
-    - error_handler: authenticate_on_unauthorized_or_forbidden
-    - error_handler: default

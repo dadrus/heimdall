@@ -19,13 +19,14 @@ var ErrUnsupportedPipelineObject = errors.New("unsupported pipeline object")
 
 type RuleFactory interface {
 	CreateRule(srcID string, ruleConfig config.RuleConfig) (Rule, error)
+	HasDefaultRule() bool
 	DefaultRule() Rule
 }
 
 func NewRuleFactory(hf pipeline.HandlerFactory, conf config.Configuration, logger zerolog.Logger) (RuleFactory, error) {
 	logger.Debug().Msg("Creating rule factory")
 
-	rf := &ruleFactory{hf: hf, logger: logger}
+	rf := &ruleFactory{hf: hf, hasDefaultRule: false, logger: logger}
 
 	if err := rf.initWithDefaultRule(conf.Rules.Default, logger); err != nil {
 		logger.Error().Err(err).Msg("Loading default rule failed")
@@ -37,9 +38,10 @@ func NewRuleFactory(hf pipeline.HandlerFactory, conf config.Configuration, logge
 }
 
 type ruleFactory struct {
-	hf          pipeline.HandlerFactory
-	logger      zerolog.Logger
-	defaultRule *rule
+	hf             pipeline.HandlerFactory
+	logger         zerolog.Logger
+	defaultRule    *rule
+	hasDefaultRule bool
 }
 
 func (f *ruleFactory) createExecutePipeline(
@@ -139,6 +141,10 @@ func (f *ruleFactory) DefaultRule() Rule {
 	return f.defaultRule
 }
 
+func (f *ruleFactory) HasDefaultRule() bool {
+	return f.hasDefaultRule
+}
+
 func (f *ruleFactory) CreateRule(srcID string, ruleConfig config.RuleConfig) (Rule, error) {
 	authenticators, subHandlers, mutators, err := f.createExecutePipeline(ruleConfig.Execute)
 	if err != nil {
@@ -224,6 +230,8 @@ func (f *ruleFactory) initWithDefaultRule(ruleConfig *config.DefaultRuleConfig, 
 	if ruleConfig == nil {
 		logger.Info().Msg("No default rule configured")
 
+		f.hasDefaultRule = false
+
 		return nil
 	}
 
@@ -261,6 +269,8 @@ func (f *ruleFactory) initWithDefaultRule(ruleConfig *config.DefaultRuleConfig, 
 		m:         mutators,
 		eh:        errorHandlers,
 	}
+
+	f.hasDefaultRule = true
 
 	return nil
 }

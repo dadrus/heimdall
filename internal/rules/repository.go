@@ -27,7 +27,6 @@ type repositoryParams struct {
 
 	Queue       provider.RuleSetChangedEventQueue
 	RuleFactory RuleFactory
-	DefaultRule Rule `name:"default_rule" optional:"true"`
 }
 
 func NewRepository(
@@ -35,12 +34,11 @@ func NewRepository(
 	logger zerolog.Logger,
 ) (Repository, error) {
 	return &repository{
-		rf:          params.RuleFactory,
-		logger:      logger,
-		rules:       make([]Rule, defaultRuleListSize),
-		queue:       params.Queue,
-		defaultRule: params.DefaultRule,
-		quit:        make(chan bool),
+		rf:     params.RuleFactory,
+		logger: logger,
+		rules:  make([]Rule, defaultRuleListSize),
+		queue:  params.Queue,
+		quit:   make(chan bool),
 	}, nil
 }
 
@@ -53,8 +51,6 @@ type repository struct {
 
 	queue provider.RuleSetChangedEventQueue
 	quit  chan bool
-
-	defaultRule Rule
 }
 
 func (r *repository) FindRule(requestURL *url.URL) (Rule, error) {
@@ -67,8 +63,8 @@ func (r *repository) FindRule(requestURL *url.URL) (Rule, error) {
 		}
 	}
 
-	if r.defaultRule != nil {
-		return r.defaultRule, nil
+	if r.rf.HasDefaultRule() {
+		return r.rf.DefaultRule(), nil
 	}
 
 	return nil, ErrNoRuleFound
