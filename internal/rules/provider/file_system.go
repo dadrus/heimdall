@@ -118,44 +118,14 @@ func (p *fileSystemProvider) watchFiles() {
 				Str("src", event.Name).
 				Msg("Rule update event received")
 
-			if event.Op&fsnotify.Create == fsnotify.Create {
-				data, err := os.ReadFile(event.Name)
-				if err != nil {
-					p.logger.Error().Err(err).Str("file", event.Name).Msg("Failed reading")
-
-					return
-				}
-
-				p.ruleSetChanged(RuleSetChangedEvent{
-					Src:        event.Name,
-					Definition: data,
-					ChangeType: Create,
-				})
-			} else if event.Op&fsnotify.Remove == fsnotify.Remove {
-				p.ruleSetChanged(RuleSetChangedEvent{
-					Src:        event.Name,
-					ChangeType: Remove,
-				})
-			} else if event.Op&fsnotify.Write == fsnotify.Write {
-				p.ruleSetChanged(RuleSetChangedEvent{
-					Src:        event.Name,
-					ChangeType: Remove,
-				})
-
-				data, err := os.ReadFile(event.Name)
-				if err != nil {
-					p.logger.Error().Err(err).Str("file", event.Name).Msg("Failed reading")
-
-					return
-				}
-
-				if len(data) != 0 {
-					p.ruleSetChanged(RuleSetChangedEvent{
-						Src:        event.Name,
-						Definition: data,
-						ChangeType: Create,
-					})
-				}
+			switch {
+			case event.Op&fsnotify.Create == fsnotify.Create:
+				p.notifyRuleSetCreated(event)
+			case event.Op&fsnotify.Remove == fsnotify.Remove:
+				p.notifyRuleSetDeleted(event)
+			case event.Op&fsnotify.Write == fsnotify.Write:
+				p.notifyRuleSetDeleted(event)
+				p.notifyRuleSetCreated(event)
 			}
 		case err, ok := <-p.watcher.Errors:
 			if !ok {
@@ -167,6 +137,28 @@ func (p *fileSystemProvider) watchFiles() {
 			p.logger.Warn().Err(err).Msg("Watcher error received")
 		}
 	}
+}
+
+func (p *fileSystemProvider) notifyRuleSetDeleted(event fsnotify.Event) {
+	p.ruleSetChanged(RuleSetChangedEvent{
+		Src:        "file_system:" + event.Name,
+		ChangeType: Remove,
+	})
+}
+
+func (p *fileSystemProvider) notifyRuleSetCreated(event fsnotify.Event) {
+	data, err := os.ReadFile(event.Name)
+	if err != nil {
+		p.logger.Error().Err(err).Str("file", event.Name).Msg("Failed reading")
+
+		return
+	}
+
+	p.ruleSetChanged(RuleSetChangedEvent{
+		Src:        "file_system:" + event.Name,
+		Definition: data,
+		ChangeType: Create,
+	})
 }
 
 func (p *fileSystemProvider) Stop() error {
