@@ -49,6 +49,11 @@ func (m *headerMutator) Execute(ctx heimdall.Context, sub *subject.Subject) erro
 	logger := zerolog.Ctx(ctx.AppContext())
 	logger.Debug().Msg("Mutating using header mutator")
 
+	if sub == nil {
+		return errorchain.NewWithMessage(heimdall.ErrArgument,
+			"failed to execute header mutator due to 'nil' subject")
+	}
+
 	for name, tmpl := range m.headers {
 		value, err := tmpl.Render(sub)
 		if err != nil {
