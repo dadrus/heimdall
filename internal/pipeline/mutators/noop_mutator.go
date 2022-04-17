@@ -1,0 +1,35 @@
+package mutators
+
+import (
+	"github.com/rs/zerolog"
+
+	"github.com/dadrus/heimdall/internal/config"
+	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/pipeline/subject"
+)
+
+// by intention. Used only during application bootstrap
+// nolint
+func init() {
+	registerMutatorTypeFactory(
+		func(typ config.PipelineObjectType, conf map[any]any) (bool, Mutator, error) {
+			if typ != config.POTNoop {
+				return false, nil, nil
+			}
+
+			return true, &noopMutator{}, nil
+		})
+}
+
+type noopMutator struct{}
+
+func (m *noopMutator) Execute(ctx heimdall.Context, sub *subject.Subject) error {
+	logger := zerolog.Ctx(ctx.AppContext())
+	logger.Debug().Msg("Mutating using noop mutator")
+
+	return nil
+}
+
+func (m *noopMutator) WithConfig(map[any]any) (Mutator, error) {
+	return m, nil
+}
