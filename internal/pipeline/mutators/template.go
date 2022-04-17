@@ -2,7 +2,9 @@ package mutators
 
 import (
 	"bytes"
-	"html/template"
+	"text/template"
+
+	"github.com/Masterminds/sprig"
 
 	"github.com/dadrus/heimdall/internal/pipeline/subject"
 )
@@ -10,7 +12,7 @@ import (
 type Template string
 
 func (t Template) Render(sub *subject.Subject) (string, error) {
-	tmpl, err := template.New("Subject").Parse(string(t))
+	tmpl, err := template.New("Subject").Funcs(sprig.TxtFuncMap()).Parse(string(t))
 	if err != nil {
 		return "", err
 	}
