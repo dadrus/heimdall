@@ -29,7 +29,7 @@ var Module = fx.Options(
 	),
 )
 
-func newFiberApp(conf config.Configuration, cache cache.Cache) *fiber.App {
+func newFiberApp(conf config.Configuration, cache cache.Cache, logger zerolog.Logger) *fiber.App {
 	api := conf.Serve.DecisionAPI
 
 	app := fiber.New(fiber.Config{
@@ -39,7 +39,7 @@ func newFiberApp(conf config.Configuration, cache cache.Cache) *fiber.App {
 		WriteTimeout:            api.Timeout.Write,
 		IdleTimeout:             api.Timeout.Idle,
 		DisableStartupMessage:   true,
-		ErrorHandler:            errorhandler.NewErrorHandler(api.VerboseErrors),
+		ErrorHandler:            errorhandler.NewErrorHandler(api.VerboseErrors, logger),
 		EnableTrustedProxyCheck: api.TrustedProxies != nil,
 		TrustedProxies: x.IfThenElseExec(
 			api.TrustedProxies != nil,
