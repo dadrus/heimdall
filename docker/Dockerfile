@@ -1,7 +1,7 @@
 # syntax = docker/dockerfile:experimental
 # Builder image to build the app
 # hadolint ignore=DL3006
-FROM golang:1.18.0-buster as builder
+FROM golang:1.18.1-buster as builder
 LABEL maintainer=dadrus@gmx.de
 
 ENV USER=heimdall
