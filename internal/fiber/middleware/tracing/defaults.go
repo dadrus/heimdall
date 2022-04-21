@@ -11,9 +11,5 @@ var defaultOptions = opts{
 	operationName:          func(ctx *fiber.Ctx) string { return "HTTP " + ctx.Method() + " URL: " + ctx.Path() },
 	filterOperation:        func(ctx *fiber.Ctx) bool { return false },
 	skipSpansWithoutParent: false,
-	spanObserver: func(ctx *fiber.Ctx, span opentracing.Span) {
-		span.SetTag("http.host", ctx.Hostname())
-		span.SetTag("http.scheme", ctx.Protocol())
-		span.SetTag("http.path", ctx.Path())
-	},
+	spanObserver:           func(span opentracing.Span, ctx *fiber.Ctx) {},
 }
