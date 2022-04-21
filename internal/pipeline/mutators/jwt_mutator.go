@@ -17,6 +17,7 @@ import (
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/pipeline/subject"
+	"github.com/dadrus/heimdall/internal/pipeline/template"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
@@ -42,14 +43,14 @@ func init() {
 }
 
 type jwtMutator struct {
-	claims *Template
+	claims *template.Template
 	ttl    time.Duration
 }
 
 func newJWTMutator(rawConfig map[any]any) (*jwtMutator, error) {
 	type _config struct {
-		Claims *Template      `mapstructure:"claims"`
-		TTL    *time.Duration `mapstructure:"ttl"`
+		Claims *template.Template `mapstructure:"claims"`
+		TTL    *time.Duration     `mapstructure:"ttl"`
 	}
 
 	var conf _config
@@ -121,8 +122,8 @@ func (m *jwtMutator) WithConfig(rawConfig map[any]any) (Mutator, error) {
 	}
 
 	type _config struct {
-		Claims *Template      `mapstructure:"claims"`
-		TTL    *time.Duration `mapstructure:"ttl"`
+		Claims *template.Template `mapstructure:"claims"`
+		TTL    *time.Duration     `mapstructure:"ttl"`
 	}
 
 	var conf _config

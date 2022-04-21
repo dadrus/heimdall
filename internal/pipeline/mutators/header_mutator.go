@@ -6,6 +6,7 @@ import (
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/pipeline/subject"
+	"github.com/dadrus/heimdall/internal/pipeline/template"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
@@ -25,12 +26,12 @@ func init() {
 }
 
 type headerMutator struct {
-	headers map[string]Template
+	headers map[string]template.Template
 }
 
 func newHeaderMutator(rawConfig map[any]any) (*headerMutator, error) {
 	type _config struct {
-		Headers map[string]Template `mapstructure:"headers"`
+		Headers map[string]template.Template `mapstructure:"headers"`
 	}
 
 	var conf _config

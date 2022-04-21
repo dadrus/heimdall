@@ -6,6 +6,7 @@ import (
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/pipeline/subject"
+	"github.com/dadrus/heimdall/internal/pipeline/template"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
@@ -25,12 +26,12 @@ func init() {
 }
 
 type cookieMutator struct {
-	cookies map[string]Template
+	cookies map[string]template.Template
 }
 
 func newCookieMutator(rawConfig map[any]any) (*cookieMutator, error) {
 	type _config struct {
-		Cookies map[string]Template `mapstructure:"cookies"`
+		Cookies map[string]template.Template `mapstructure:"cookies"`
 	}
 
 	var conf _config
