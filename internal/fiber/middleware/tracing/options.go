@@ -6,14 +6,14 @@ import (
 )
 
 type (
-	SpanTagsModifier      func(ctx *fiber.Ctx, span opentracing.Span)
-	OperationNameProvider func(ctx *fiber.Ctx) string
+	SpanObserver          func(opentracing.Span, *fiber.Ctx)
+	OperationNameProvider func(*fiber.Ctx) string
 	OperationFilter       func(*fiber.Ctx) bool
 )
 
 type opts struct {
 	tracer                 opentracing.Tracer
-	modifySpan             SpanTagsModifier
+	spanObserver           SpanObserver
 	operationName          OperationNameProvider
 	filterOperation        OperationFilter
 	skipSpansWithoutParent bool
@@ -27,9 +27,9 @@ func WithTracer(tracer opentracing.Tracer) Option {
 	}
 }
 
-func WithSpanTagsModifier(modifier SpanTagsModifier) Option {
+func WithSpanObserver(modifier SpanObserver) Option {
 	return func(o *opts) {
-		o.modifySpan = modifier
+		o.spanObserver = modifier
 	}
 }
 

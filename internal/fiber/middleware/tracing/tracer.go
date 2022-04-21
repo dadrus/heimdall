@@ -41,7 +41,11 @@ func startSpan(ctx *fiber.Ctx, config opts) (opentracing.Span, error) {
 	}
 
 	if span != nil {
-		config.modifySpan(ctx, span)
+		ext.SpanKindRPCServer.Set(span)
+		ext.HTTPMethod.Set(span, ctx.Method())
+		ext.HTTPUrl.Set(span, ctx.OriginalURL())
+
+		config.spanObserver(span, ctx)
 	}
 
 	return span, err
