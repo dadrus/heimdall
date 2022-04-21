@@ -16,7 +16,7 @@ var Module = fx.Options(
 )
 
 func registerTracer(lifecycle fx.Lifecycle, logger zerolog.Logger) {
-	tracer, closer, err := tracing.New("Heimdall")
+	tracer, closer, err := tracing.New("heimdall")
 	if err != nil {
 		logger.Warn().Err(err).Msg("Could not initialize opentracing tracer. Tracing will be disabled.")
 
