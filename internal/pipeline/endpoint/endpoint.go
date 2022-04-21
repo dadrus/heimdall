@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"time"
 
+	"github.com/opentracing-contrib/go-stdlib/nethttp"
 	"github.com/rs/zerolog"
 	"github.com/ybbus/httpretry"
 
@@ -46,7 +47,7 @@ func (e Endpoint) Validate() error {
 
 func (e Endpoint) CreateClient() *http.Client {
 	client := &http.Client{
-		Transport: &tracing.RoundTripper{Next: http.DefaultTransport},
+		Transport: &tracing.RoundTripper{Next: &nethttp.Transport{}},
 	}
 
 	if e.Retry != nil {
