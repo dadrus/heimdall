@@ -46,6 +46,8 @@ func startSpan(ctx *fiber.Ctx, config opts) (opentracing.Span, error) {
 		ext.HTTPUrl.Set(span, ctx.OriginalURL())
 
 		config.spanObserver(span, ctx)
+
+		ctx.SetUserContext(opentracing.ContextWithSpan(ctx.UserContext(), span))
 	}
 
 	return span, err
