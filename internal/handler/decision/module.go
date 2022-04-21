@@ -8,6 +8,7 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/recover"
 	"github.com/opentracing/opentracing-go"
+	"github.com/opentracing/opentracing-go/ext"
 	"github.com/rs/zerolog"
 	"go.uber.org/fx"
 
@@ -59,7 +60,11 @@ func newFiberApp(conf config.Configuration, cache cache.Cache, logger zerolog.Lo
 		}))
 	}
 
-	app.Use(fibertracing.New(fibertracing.WithTracer(opentracing.GlobalTracer())))
+	app.Use(fibertracing.New(
+		fibertracing.WithTracer(opentracing.GlobalTracer()),
+		fibertracing.WithSpanObserver(func(span opentracing.Span, ctx *fiber.Ctx) {
+			ext.Component.Set(span, "Heimdall")
+		})))
 	app.Use(fibercache.New(cache))
 	app.Use(fiberlogger.New())
 
