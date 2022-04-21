@@ -4,7 +4,7 @@
 #    - GET
 #    - POST
   execute:
-#    - authenticator: anonymous_authenticator # can be omitted (same as default)
+    - authenticator: unauthorized_authenticator # can be omitted (same as default)
     - hydrator: subscription_hydrator
     - authorizer: allow_all_authorizer
     - mutator: jwt
