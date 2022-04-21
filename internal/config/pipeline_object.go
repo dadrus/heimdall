@@ -13,6 +13,7 @@ const (
 	POTDeny                PipelineObjectType = "deny"
 	POTRemote              PipelineObjectType = "remote"
 	POTDefault             PipelineObjectType = "default"
+	POTGeneric             PipelineObjectType = "generic"
 	POTHeader              PipelineObjectType = "header"
 	POTCookie              PipelineObjectType = "cookie"
 	POTRedirect            PipelineObjectType = "redirect"

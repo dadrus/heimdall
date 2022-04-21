@@ -13,29 +13,29 @@ import (
 func init() {
 	registerHydratorTypeFactory(
 		func(typ config.PipelineObjectType, conf map[any]any) (bool, Hydrator, error) {
-			if typ != config.POTDefault {
+			if typ != config.POTGeneric {
 				return false, nil, nil
 			}
 
-			eh, err := newDefaultHydrator(conf)
+			eh, err := newGenericHydrator(conf)
 
 			return true, eh, err
 		})
 }
 
-type defaultHydrator struct{}
+type genericHydrator struct{}
 
-func newDefaultHydrator(rawConfig map[any]any) (defaultHydrator, error) {
-	return defaultHydrator{}, nil
+func newGenericHydrator(rawConfig map[any]any) (genericHydrator, error) {
+	return genericHydrator{}, nil
 }
 
-func (defaultHydrator) Execute(ctx heimdall.Context, sub *subject.Subject) error {
+func (genericHydrator) Execute(ctx heimdall.Context, sub *subject.Subject) error {
 	logger := zerolog.Ctx(ctx.AppContext())
-	logger.Debug().Msg("Hydrating using default hydrator")
+	logger.Debug().Msg("Hydrating using generic hydrator")
 
 	return nil
 }
 
-func (defaultHydrator) WithConfig(config map[any]any) (Hydrator, error) {
+func (genericHydrator) WithConfig(config map[any]any) (Hydrator, error) {
 	return nil, nil
 }
