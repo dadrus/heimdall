@@ -53,7 +53,7 @@ func newJwtAuthenticator(rawConfig map[any]any) (*jwtAuthenticator, error) {
 	type _config struct {
 		Endpoint       endpoint.Endpoint                   `mapstructure:"jwks_endpoint"`
 		AuthDataSource extractors.CompositeExtractStrategy `mapstructure:"jwt_token_from"`
-		JwtAssertions  oauth2.Expectation                  `mapstructure:"jwt_assertions"`
+		JwtAssertions  oauth2.Expectation                  `mapstructure:"assertions"`
 		Session        Session                             `mapstructure:"session"`
 		CacheTTL       *time.Duration                      `mapstructure:"cache_ttl"`
 	}
@@ -159,7 +159,7 @@ func (a *jwtAuthenticator) WithConfig(config map[any]any) (Authenticator, error)
 	}
 
 	type _config struct {
-		Assertions *oauth2.Expectation `mapstructure:"jwt_assertions"`
+		Assertions *oauth2.Expectation `mapstructure:"assertions"`
 		CacheTTL   *time.Duration      `mapstructure:"cache_ttl"`
 	}
 
@@ -256,7 +256,7 @@ func (a *jwtAuthenticator) fetchJWKS(ctx heimdall.Context) (*jose.JSONWebKeySet,
 		return nil, err
 	}
 
-	resp, err := a.e.CreateClient().Do(req)
+	resp, err := a.e.CreateClient(req.URL.Hostname()).Do(req)
 	if err != nil {
 		var clientErr *url.Error
 		if errors.As(err, &clientErr) && clientErr.Timeout() {

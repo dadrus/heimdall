@@ -182,7 +182,7 @@ func (a *authenticationDataAuthenticator) fetchSubjectInformation(
 
 	authData.ApplyTo(req)
 
-	resp, err := a.e.CreateClient().Do(req)
+	resp, err := a.e.CreateClient(req.URL.Hostname()).Do(req)
 	if err != nil {
 		var clientErr *url.Error
 		if errors.As(err, &clientErr) && clientErr.Timeout() {

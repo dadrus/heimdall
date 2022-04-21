@@ -50,7 +50,7 @@ type oauth2IntrospectionAuthenticator struct {
 func newOAuth2IntrospectionAuthenticator(rawConfig map[any]any) (*oauth2IntrospectionAuthenticator, error) {
 	type _config struct {
 		Endpoint   endpoint.Endpoint  `mapstructure:"introspection_endpoint"`
-		Assertions oauth2.Expectation `mapstructure:"introspection_response_assertions"`
+		Assertions oauth2.Expectation `mapstructure:"assertions"`
 		Session    Session            `mapstructure:"session"`
 		CacheTTL   *time.Duration     `mapstructure:"cache_ttl"`
 	}
@@ -146,7 +146,7 @@ func (a *oauth2IntrospectionAuthenticator) WithConfig(config map[any]any) (Authe
 	}
 
 	type _config struct {
-		Assertions *oauth2.Expectation `mapstructure:"introspection_response_assertions"`
+		Assertions *oauth2.Expectation `mapstructure:"assertions"`
 		CacheTTL   *time.Duration      `mapstructure:"cache_ttl"`
 	}
 
@@ -227,7 +227,7 @@ func (a *oauth2IntrospectionAuthenticator) fetchTokenIntrospectionResponse(
 		return nil, nil, err
 	}
 
-	resp, err := a.e.CreateClient().Do(req)
+	resp, err := a.e.CreateClient(req.URL.Hostname()).Do(req)
 	if err != nil {
 		var clientErr *url.Error
 		if errors.As(err, &clientErr) && clientErr.Timeout() {
