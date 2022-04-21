@@ -46,7 +46,7 @@ func newFiberApp(conf config.Configuration, cache cache.Cache, logger zerolog.Lo
 			func() []string { return *api.TrustedProxies },
 			func() []string { return []string{} }),
 	})
-	app.Use(recover.New())
+	app.Use(recover.New(recover.Config{EnableStackTrace: true}))
 
 	if api.CORS != nil {
 		app.Use(cors.New(cors.Config{
