@@ -63,7 +63,7 @@ func newFiberApp(conf config.Configuration, cache cache.Cache, logger zerolog.Lo
 	app.Use(fibertracing.New(
 		fibertracing.WithTracer(opentracing.GlobalTracer()),
 		fibertracing.WithSpanObserver(func(span opentracing.Span, ctx *fiber.Ctx) {
-			ext.Component.Set(span, "Heimdall")
+			ext.Component.Set(span, "heimdall")
 		})))
 	app.Use(fibercache.New(cache))
 	app.Use(fiberlogger.New())
