@@ -3,8 +3,9 @@ package provider
 import (
 	"context"
 	"errors"
-	"io/ioutil"
 	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/rs/zerolog"
@@ -16,7 +17,7 @@ import (
 var ErrInvalidProviderConfiguration = errors.New("invalid provider configuration")
 
 type fileSystemProvider struct {
-	src     os.FileInfo
+	src     string
 	watcher *fsnotify.Watcher
 	queue   RuleSetChangedEventQueue
 	logger  zerolog.Logger
@@ -56,7 +57,12 @@ func newFileSystemProvider(
 		return nil, ErrInvalidProviderConfiguration
 	}
 
-	fInfo, err := os.Stat(conf.Rules.Providers.File.Src)
+	absPath, err := filepath.Abs(conf.Rules.Providers.File.Src)
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = os.Stat(absPath)
 	if err != nil {
 		return nil, err
 	}
@@ -70,7 +76,7 @@ func newFileSystemProvider(
 	}
 
 	return &fileSystemProvider{
-		src:     fInfo,
+		src:     absPath,
 		watcher: watcher,
 		queue:   queue,
 		logger:  logger,
@@ -90,7 +96,7 @@ func (p *fileSystemProvider) Start() error {
 		return nil
 	}
 
-	if err := p.watcher.Add(p.src.Name()); err != nil {
+	if err := p.watcher.Add(p.src); err != nil {
 		p.logger.Error().Err(err).Msg("Failed to start rule definitions provider: file_system")
 
 		return err
@@ -139,15 +145,28 @@ func (p *fileSystemProvider) watchFiles() {
 	}
 }
 
+func (p *fileSystemProvider) getFilePath(event fsnotify.Event) string {
+	if strings.HasSuffix(p.src, event.Name) {
+		return p.src
+	}
+
+	// rule sets are in a directory
+	return filepath.Join(p.src, event.Name)
+}
+
 func (p *fileSystemProvider) notifyRuleSetDeleted(event fsnotify.Event) {
+	file := p.getFilePath(event)
+
 	p.ruleSetChanged(RuleSetChangedEvent{
-		Src:        "file_system:" + event.Name,
+		Src:        "file_system:" + file,
 		ChangeType: Remove,
 	})
 }
 
 func (p *fileSystemProvider) notifyRuleSetCreated(event fsnotify.Event) {
-	data, err := os.ReadFile(event.Name)
+	file := p.getFilePath(event)
+
+	data, err := os.ReadFile(file)
 	if err != nil {
 		p.logger.Error().Err(err).Str("file", event.Name).Msg("Failed reading")
 
@@ -176,15 +195,30 @@ func (p *fileSystemProvider) loadInitialRuleSet() error {
 
 	var sources []string
 
-	if p.src.IsDir() {
-		files, _ := ioutil.ReadDir(p.src.Name())
-		for _, file := range files {
-			if !file.IsDir() {
-				sources = append(sources, file.Name())
+	fInfo, err := os.Stat(p.src)
+	if err != nil {
+		return err
+	}
+
+	if fInfo.IsDir() {
+		dirEntries, err := os.ReadDir(p.src)
+		if err != nil {
+			return err
+		}
+
+		for _, entry := range dirEntries {
+			path := filepath.Join(p.src, entry.Name())
+
+			if entry.IsDir() {
+				p.logger.Warn().Msgf("Ignoring directory: %s", path)
+
+				continue
 			}
+
+			sources = append(sources, path)
 		}
 	} else {
-		sources = append(sources, p.src.Name())
+		sources = append(sources, p.src)
 	}
 
 	for _, src := range sources {
