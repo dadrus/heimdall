@@ -74,10 +74,8 @@ func newOAuth2IntrospectionAuthenticator(rawConfig map[any]any) (*oauth2Introspe
 			CausedBy(err)
 	}
 
-	if err := conf.Session.Validate(); err != nil {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration, "failed to validate session configuration").
-			CausedBy(err)
+	if len(conf.Session.SubjectFrom) == 0 {
+		conf.Session.SubjectFrom = "sub"
 	}
 
 	if conf.Endpoint.Headers == nil {
