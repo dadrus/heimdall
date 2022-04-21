@@ -3,11 +3,9 @@ package tracing
 import (
 	"net/http"
 
+	"github.com/dadrus/heimdall/internal/x"
 	"github.com/opentracing-contrib/go-stdlib/nethttp"
 	"github.com/opentracing/opentracing-go"
-	"github.com/opentracing/opentracing-go/ext"
-
-	"github.com/dadrus/heimdall/internal/x"
 )
 
 type RoundTripper struct {
@@ -21,10 +19,7 @@ func (d *RoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
 	}
 
 	req, ht := nethttp.TraceRequest(opentracing.GlobalTracer(), req,
-		nethttp.OperationName(d.operationName(req)),
-		nethttp.ClientSpanObserver(func(span opentracing.Span, r *http.Request) {
-			ext.SpanKindRPCClient.Set(span)
-		}))
+		nethttp.OperationName(d.operationName(req)))
 	defer ht.Finish()
 
 	return d.Next.RoundTrip(req)

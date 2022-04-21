@@ -45,9 +45,9 @@ func (e Endpoint) Validate() error {
 	return nil
 }
 
-func (e Endpoint) CreateClient() *http.Client {
+func (e Endpoint) CreateClient(peerName string) *http.Client {
 	client := &http.Client{
-		Transport: &tracing.RoundTripper{Next: &nethttp.Transport{}},
+		Transport: &tracing.RoundTripper{Next: &nethttp.Transport{}, TargetName: peerName},
 	}
 
 	if e.Retry != nil {
@@ -101,7 +101,7 @@ func (e Endpoint) SendRequest(ctx context.Context, body io.Reader) ([]byte, erro
 		return nil, err
 	}
 
-	resp, err := e.CreateClient().Do(req)
+	resp, err := e.CreateClient(req.URL.Hostname()).Do(req)
 	if err != nil {
 		var clientErr *url.Error
 		if errors.As(err, &clientErr) && clientErr.Timeout() {

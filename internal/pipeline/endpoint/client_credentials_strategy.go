@@ -96,7 +96,7 @@ func (c *ClientCredentialsStrategy) getAccessToken(ctx context.Context) (*tokenE
 		return nil, err
 	}
 
-	resp, err := ept.CreateClient().Do(req)
+	resp, err := ept.CreateClient(req.URL.Hostname()).Do(req)
 	if err != nil {
 		return nil, err
 	}
