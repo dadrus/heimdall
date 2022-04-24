@@ -482,8 +482,8 @@ func TestSuccessfulExecutionOfJwtAuthenticatorWithoutCacheUsage(t *testing.T) {
 
 	as := oauth2.Expectation{
 		ScopesMatcher: oauth2.ScopesMatcher{
-			Match:  oauth2.ExactScopeStrategy,
-			Scopes: []string{"foo"},
+			Matcher: oauth2.ExactScopeStrategyMatcher{},
+			Scopes:  []string{"foo"},
 		},
 		TargetAudiences:   []string{audience},
 		TrustedIssuers:    []string{issuer},
@@ -559,8 +559,8 @@ func TestSuccessfulExecutionOfJwtAuthenticatorWithKeyFromCache(t *testing.T) {
 
 	as := oauth2.Expectation{
 		ScopesMatcher: oauth2.ScopesMatcher{
-			Match:  oauth2.ExactScopeStrategy,
-			Scopes: []string{"foo"},
+			Matcher: oauth2.ExactScopeStrategyMatcher{},
+			Scopes:  []string{"foo"},
 		},
 		TargetAudiences:   []string{audience},
 		TrustedIssuers:    []string{issuer},
@@ -647,8 +647,8 @@ func TestSuccessfulExecutionOfJwtAuthenticatorWithCacheMiss(t *testing.T) {
 
 	as := oauth2.Expectation{
 		ScopesMatcher: oauth2.ScopesMatcher{
-			Match:  oauth2.ExactScopeStrategy,
-			Scopes: []string{"foo"},
+			Matcher: oauth2.ExactScopeStrategyMatcher{},
+			Scopes:  []string{"foo"},
 		},
 		TargetAudiences:   []string{audience},
 		TrustedIssuers:    []string{issuer},

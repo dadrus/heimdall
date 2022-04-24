@@ -5,7 +5,6 @@ import (
 
 	"github.com/mitchellh/mapstructure"
 
-	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
@@ -27,41 +26,28 @@ func DecodeScopesMatcherHookFunc() mapstructure.DecodeHookFunc {
 		switch from.Kind() {
 		case reflect.Map:
 			// nolint
-			if m, ok := data.(map[string]any); ok {
+			if m, ok := data.(map[any]any); ok {
 				if name, ok := m["matching_strategy"]; ok {
-					match, err := decodeStrategy(name.(string))
+					strategy, err := decodeStrategy(name.(string))
 					if err != nil {
 						return nil, err
 					}
 
-					matcher.Match = match
-				}
-
-				if values, ok := m["values"]; ok {
-					copyScopeValues(&matcher, values)
-				}
-			} else if m, ok := data.(map[any]any); ok {
-				if name, ok := m["matching_strategy"]; ok {
-					match, err := decodeStrategy(name.(string))
-					if err != nil {
-						return nil, err
-					}
-
-					matcher.Match = match
+					matcher.Matcher = strategy
 				}
 
 				if values, ok := m["values"]; ok {
 					copyScopeValues(&matcher, values)
 				}
 			}
-
-			matcher.Match = x.IfThenElse(matcher.Match != nil, matcher.Match, ExactScopeStrategy)
 		case reflect.Slice:
-			matcher.Match = ExactScopeStrategy
-
 			copyScopeValues(&matcher, data)
 		default:
 			return nil, errorchain.NewWithMessage(ErrConfiguration, "invalid structure for scopes matcher")
+		}
+
+		if matcher.Matcher == nil {
+			matcher.Matcher = ExactScopeStrategyMatcher{}
 		}
 
 		if len(matcher.Scopes) == 0 {
@@ -82,14 +68,14 @@ func copyScopeValues(matcher *ScopesMatcher, values any) {
 	}
 }
 
-func decodeStrategy(name string) (ScopesMatcherFunc, error) {
+func decodeStrategy(name string) (ScopeMatchingStrategy, error) {
 	switch name {
 	case "exact":
-		return ExactScopeStrategy, nil
+		return ExactScopeStrategyMatcher{}, nil
 	case "hierarchic":
-		return HierarchicScopeStrategy, nil
+		return HierarchicScopeStrategyMatcher{}, nil
 	case "wildcard":
-		return WildcardScopeStrategy, nil
+		return WildcardScopeStrategyMatcher{}, nil
 	default:
 		return nil, errorchain.NewWithMessagef(ErrConfiguration, "unsupported strategy \"%s\"", name)
 	}

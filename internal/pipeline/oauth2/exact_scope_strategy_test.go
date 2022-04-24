@@ -9,17 +9,17 @@ import (
 func TestExactScopeStrategy2ScopeStrategy(t *testing.T) {
 	t.Parallel()
 
-	strategy := ExactScopeStrategy
+	strategy := ExactScopeStrategyMatcher{}
 
 	scopes := []string{"foo.bar.baz", "foo.bar"}
-	assert.True(t, strategy(scopes, "foo.bar.baz"))
-	assert.True(t, strategy(scopes, "foo.bar"))
+	assert.True(t, strategy.Match(scopes, "foo.bar.baz"))
+	assert.True(t, strategy.Match(scopes, "foo.bar"))
 
-	assert.False(t, strategy(scopes, "foo.bar.baz.baz"))
-	assert.False(t, strategy(scopes, "foo.bar.bar"))
+	assert.False(t, strategy.Match(scopes, "foo.bar.baz.baz"))
+	assert.False(t, strategy.Match(scopes, "foo.bar.bar"))
 
-	assert.False(t, strategy(scopes, "foo.bar.baz1"))
-	assert.False(t, strategy(scopes, "foo.bar1"))
+	assert.False(t, strategy.Match(scopes, "foo.bar.baz1"))
+	assert.False(t, strategy.Match(scopes, "foo.bar1"))
 
-	assert.False(t, strategy([]string{}, "foo"))
+	assert.False(t, strategy.Match([]string{}, "foo"))
 }

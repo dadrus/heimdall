@@ -2,7 +2,9 @@ package oauth2
 
 import "strings"
 
-func HierarchicScopeStrategy(haystack []string, needle string) bool {
+type HierarchicScopeStrategyMatcher struct{}
+
+func (HierarchicScopeStrategyMatcher) Match(haystack []string, needle string) bool {
 	for _, this := range haystack {
 		// foo == foo -> true
 		if this == needle {

@@ -1,11 +1,11 @@
 package oauth2
 
 import (
-	"reflect"
 	"testing"
 
 	"github.com/mitchellh/mapstructure"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v2"
 )
 
@@ -20,7 +20,7 @@ func TestDecodeScopesMatcherHookFunc(t *testing.T) {
 		var res map[any]any
 
 		err := yaml.Unmarshal(data, &res)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		return res
 	}
@@ -42,10 +42,9 @@ scopes:
 			assert: func(t *testing.T, err error, matcher *ScopesMatcher) {
 				t.Helper()
 
-				assert.NoError(t, err)
+				require.NoError(t, err)
 
-				assert.True(t, reflect.ValueOf(matcher.MatchScopes).Pointer() ==
-					reflect.ValueOf(WildcardScopeStrategy).Pointer())
+				assert.IsType(t, WildcardScopeStrategyMatcher{}, matcher.Matcher)
 				assert.ElementsMatch(t, matcher.Scopes, []string{"foo", "bar"})
 			},
 		},
@@ -61,10 +60,9 @@ scopes:
 			assert: func(t *testing.T, err error, matcher *ScopesMatcher) {
 				t.Helper()
 
-				assert.NoError(t, err)
+				require.NoError(t, err)
 
-				assert.True(t, reflect.ValueOf(matcher.MatchScopes).Pointer() ==
-					reflect.ValueOf(ExactScopeStrategy).Pointer())
+				assert.IsType(t, ExactScopeStrategyMatcher{}, matcher.Matcher)
 				assert.ElementsMatch(t, matcher.Scopes, []string{"foo", "bar"})
 			},
 		},
@@ -80,10 +78,9 @@ scopes:
 			assert: func(t *testing.T, err error, matcher *ScopesMatcher) {
 				t.Helper()
 
-				assert.NoError(t, err)
+				require.NoError(t, err)
 
-				assert.True(t, reflect.ValueOf(matcher.MatchScopes).Pointer() ==
-					reflect.ValueOf(HierarchicScopeStrategy).Pointer())
+				assert.IsType(t, HierarchicScopeStrategyMatcher{}, matcher.Matcher)
 				assert.ElementsMatch(t, matcher.Scopes, []string{"foo", "bar"})
 			},
 		},
@@ -98,10 +95,9 @@ scopes:
 			assert: func(t *testing.T, err error, matcher *ScopesMatcher) {
 				t.Helper()
 
-				assert.NoError(t, err)
+				require.NoError(t, err)
 
-				assert.True(t, reflect.ValueOf(matcher.MatchScopes).Pointer() ==
-					reflect.ValueOf(ExactScopeStrategy).Pointer())
+				assert.IsType(t, ExactScopeStrategyMatcher{}, matcher.Matcher)
 				assert.ElementsMatch(t, matcher.Scopes, []string{"foo", "bar"})
 			},
 		},
@@ -115,10 +111,9 @@ scopes:
 			assert: func(t *testing.T, err error, matcher *ScopesMatcher) {
 				t.Helper()
 
-				assert.NoError(t, err)
+				require.NoError(t, err)
 
-				assert.True(t, reflect.ValueOf(matcher.MatchScopes).Pointer() ==
-					reflect.ValueOf(ExactScopeStrategy).Pointer())
+				assert.IsType(t, ExactScopeStrategyMatcher{}, matcher.Matcher)
 				assert.ElementsMatch(t, matcher.Scopes, []string{"foo", "bar"})
 			},
 		},
@@ -157,7 +152,7 @@ scopes:
 				),
 				Result: &typ,
 			})
-			assert.NoError(t, err)
+			require.NoError(t, err)
 
 			// WHEN
 			err = dec.Decode(decode(tc.config))

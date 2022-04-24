@@ -2,7 +2,10 @@ package oauth2
 
 import "strings"
 
-func WildcardScopeStrategy(matchers []string, needle string) bool {
+type WildcardScopeStrategyMatcher struct{}
+
+// nolint: cyclop
+func (WildcardScopeStrategyMatcher) Match(matchers []string, needle string) bool {
 	needleParts := strings.Split(needle, ".")
 
 	for _, matcher := range matchers {

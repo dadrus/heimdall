@@ -702,8 +702,8 @@ func TestExecutionOfOAuth2IntrospectionAuthenticator(t *testing.T) {
 				},
 				a: oauth2.Expectation{
 					ScopesMatcher: oauth2.ScopesMatcher{
-						Match:  oauth2.ExactScopeStrategy,
-						Scopes: []string{"foo"},
+						Matcher: oauth2.ExactScopeStrategyMatcher{},
+						Scopes:  []string{"foo"},
 					},
 					TargetAudiences: []string{audience},
 					TrustedIssuers:  []string{issuer},
