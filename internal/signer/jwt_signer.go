@@ -56,32 +56,40 @@ func newJWTSigner(ks keystore.KeyStore, conf config.Configuration, logger zerolo
 func getJOSEAlgorithm(key *keystore.Entry) (jose.SignatureAlgorithm, error) {
 	switch key.Alg {
 	case keystore.AlgRSA:
-		switch key.KeySize {
-		case rsa2048:
-			return jose.PS256, nil
-		case rsa3072:
-			return jose.PS384, nil
-		case rsa4096:
-			return jose.PS512, nil
-		default:
-			return "", errorchain.
-				NewWithMessage(heimdall.ErrInternal, "unsupported RSA key size")
-		}
+		return getRSAAlgorithm(key)
 	case keystore.AlgECDSA:
-		switch key.KeySize {
-		case ecdsa256:
-			return jose.ES256, nil
-		case ecdsa384:
-			return jose.ES384, nil
-		case ecdsa512:
-			return jose.ES512, nil
-		default:
-			return "", errorchain.
-				NewWithMessage(heimdall.ErrInternal, "unsupported ECDSA key size")
-		}
+		return getECDSAAlgorithm(key)
 	default:
 		return "", errorchain.
 			NewWithMessage(heimdall.ErrInternal, "unsupported signature key type")
+	}
+}
+
+func getECDSAAlgorithm(key *keystore.Entry) (jose.SignatureAlgorithm, error) {
+	switch key.KeySize {
+	case ecdsa256:
+		return jose.ES256, nil
+	case ecdsa384:
+		return jose.ES384, nil
+	case ecdsa512:
+		return jose.ES512, nil
+	default:
+		return "", errorchain.
+			NewWithMessage(heimdall.ErrInternal, "unsupported ECDSA key size")
+	}
+}
+
+func getRSAAlgorithm(key *keystore.Entry) (jose.SignatureAlgorithm, error) {
+	switch key.KeySize {
+	case rsa2048:
+		return jose.PS256, nil
+	case rsa3072:
+		return jose.PS384, nil
+	case rsa4096:
+		return jose.PS512, nil
+	default:
+		return "", errorchain.
+			NewWithMessage(heimdall.ErrInternal, "unsupported RSA key size")
 	}
 }
 
