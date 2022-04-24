@@ -1,5 +1,7 @@
 package matcher
 
+import "strings"
+
 type HeaderMatcher map[string][]string
 
 func (hm HeaderMatcher) Match(headers map[string]string) bool {
@@ -12,8 +14,9 @@ func (hm HeaderMatcher) Match(headers map[string]string) bool {
 		var ok bool
 
 		for _, val := range valueList {
-			if val == headerVal {
-				ok = true
+			ok = strings.Contains(headerVal, val)
+			if ok {
+				break
 			}
 		}
 
