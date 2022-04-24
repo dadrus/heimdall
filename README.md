@@ -2,6 +2,7 @@
 [![CI](https://github.com/dadrus/heimdall/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/dadrus/heimdall/actions/workflows/ci.yml)
 [![Security-Scan](https://github.com/dadrus/heimdall/actions/workflows/trivy.yml/badge.svg)](https://github.com/dadrus/heimdall/actions/workflows/trivy.yml)
 [![codecov](https://codecov.io/gh/dadrus/heimdall/branch/main/graph/badge.svg)](https://codecov.io/gh/dadrus/heimdall)
+[![License](https://img.shields.io/github/license/dadrus/heimdall)](https://github.com/dadrus/heimdall/blob/master/LICENSE)
 
 Heimdall is inspired by [Ory's OAthkeeper](https://www.ory.sh/docs/oathkeeper), tries however to resolve the functional limitations of that product by also building on a more modern technology stack resulting in a much simpler and faster implementation.
 
