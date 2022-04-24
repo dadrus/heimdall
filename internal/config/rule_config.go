@@ -1,9 +1,9 @@
 package config
 
 type DefaultRuleConfig struct {
-	Methods      []string         `yaml:"methods"`
-	Execute      []map[string]any `yaml:"execute"`
-	ErrorHandler []map[string]any `yaml:"on_error"`
+	Methods      []string         `koanf:"methods"`
+	Execute      []map[string]any `koanf:"execute"`
+	ErrorHandler []map[string]any `koanf:"on_error"`
 }
 
 type RuleConfig struct {
