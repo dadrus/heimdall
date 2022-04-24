@@ -123,5 +123,4 @@ func TestApplyClientCredentialsStrategy(t *testing.T) {
 	assert.Equal(t, strings.Join(scopes, " "), receivedScope)
 
 	assert.Equal(t, "Bearer "+setAccessToken, req.Header.Get("Authorization"))
-	// TODO: update test to check cache usage
 }
