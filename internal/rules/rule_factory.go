@@ -44,6 +44,8 @@ type ruleFactory struct {
 	hasDefaultRule bool
 }
 
+// will address the warning later
+// nolint: gocognit, cyclop
 func (f *ruleFactory) createExecutePipeline(
 	pipeline []map[string]any,
 ) (compositeSubjectCreator, compositeSubjectHandler, compositeSubjectHandler, error) {

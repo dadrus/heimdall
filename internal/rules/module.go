@@ -6,6 +6,7 @@ import (
 	"github.com/rs/zerolog"
 	"go.uber.org/fx"
 
+	"github.com/dadrus/heimdall/internal/rules/event"
 	"github.com/dadrus/heimdall/internal/rules/provider"
 )
 
@@ -13,8 +14,8 @@ const defaultQueueSize = 20
 
 // nolint
 var Module = fx.Options(
-	fx.Provide(func() provider.RuleSetChangedEventQueue {
-		return make(provider.RuleSetChangedEventQueue, defaultQueueSize)
+	fx.Provide(func() event.RuleSetChangedEventQueue {
+		return make(event.RuleSetChangedEventQueue, defaultQueueSize)
 	}),
 	fx.Provide(NewRepository),
 	fx.Provide(NewRuleFactory),
