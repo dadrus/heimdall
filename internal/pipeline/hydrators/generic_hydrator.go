@@ -20,6 +20,7 @@ import (
 	"github.com/dadrus/heimdall/internal/pipeline/endpoint"
 	"github.com/dadrus/heimdall/internal/pipeline/subject"
 	"github.com/dadrus/heimdall/internal/pipeline/template"
+	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
@@ -228,6 +229,35 @@ func (h *genericHydrator) calculateCacheKey(sub *subject.Subject) (string, error
 	return hex.EncodeToString(hash.Sum(nil)), nil
 }
 
-func (genericHydrator) WithConfig(config map[any]any) (Hydrator, error) {
-	return nil, nil
+func (h *genericHydrator) WithConfig(rawConfig map[any]any) (Hydrator, error) {
+	if len(rawConfig) == 0 {
+		return h, nil
+	}
+
+	type _config struct {
+		ForwardHeaders []string           `mapstructure:"forward_headers"`
+		ForwardCookies []string           `mapstructure:"forward_cookies"`
+		Payload        *template.Template `mapstructure:"payload"`
+		CacheTTL       *time.Duration     `mapstructure:"cache_ttl"`
+	}
+
+	var conf _config
+	if err := decodeConfig(rawConfig, &conf); err != nil {
+		return nil, errorchain.
+			NewWithMessage(heimdall.ErrConfiguration, "failed to unmarshal JWT mutator config").
+			CausedBy(err)
+	}
+
+	return &genericHydrator{
+		e:    h.e,
+		name: h.name,
+		payload: x.IfThenElseExec(conf.Payload != nil,
+			func() template.Template { return *conf.Payload },
+			func() template.Template { return h.payload }),
+		fwdHeaders: x.IfThenElse(len(conf.ForwardHeaders) != 0, conf.ForwardHeaders, h.fwdHeaders),
+		fwdCookies: x.IfThenElse(len(conf.ForwardCookies) != 0, conf.ForwardCookies, h.fwdCookies),
+		ttl: x.IfThenElseExec(conf.CacheTTL != nil,
+			func() time.Duration { return *conf.CacheTTL },
+			func() time.Duration { return h.ttl }),
+	}, nil
 }
