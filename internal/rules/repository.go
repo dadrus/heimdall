@@ -7,7 +7,6 @@ import (
 	"sync"
 
 	"github.com/rs/zerolog"
-	"go.uber.org/fx"
 	"gopkg.in/yaml.v2"
 
 	"github.com/dadrus/heimdall/internal/config"
@@ -22,22 +21,16 @@ type Repository interface {
 	FindRule(*url.URL) (Rule, error)
 }
 
-type repositoryParams struct {
-	fx.In
-
-	Queue       provider.RuleSetChangedEventQueue
-	RuleFactory RuleFactory
-}
-
 func NewRepository(
-	params repositoryParams,
+	queue provider.RuleSetChangedEventQueue,
+	ruleFactory RuleFactory,
 	logger zerolog.Logger,
 ) (Repository, error) {
 	return &repository{
-		rf:     params.RuleFactory,
+		rf:     ruleFactory,
 		logger: logger,
 		rules:  make([]Rule, defaultRuleListSize),
-		queue:  params.Queue,
+		queue:  queue,
 		quit:   make(chan bool),
 	}, nil
 }
