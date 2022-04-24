@@ -11,7 +11,7 @@ on:
       - main
 
 jobs:
-  setup:
+  lint:
     runs-on: ubuntu-20.04
     steps:
     - name: Set up Go
@@ -20,11 +20,6 @@ jobs:
         go-version: 1.18.1
     - name: Checkout
       uses: actions/checkout@v3
-
-  lint:
-    runs-on: ubuntu-20.04
-    needs: setup
-    steps:
     - name: golangci-lint
       uses: golangci/golangci-lint-action@v3
       with:
@@ -52,8 +47,13 @@ jobs:
 
   test:
     runs-on: ubuntu-20.04
-    needs: setup
     steps:
+    - name: Set up Go
+      uses: actions/setup-go@v3
+      with:
+        go-version: 1.18.1
+    - name: Checkout
+      uses: actions/checkout@v3
     - name: Test
       run: go test -v -coverprofile=heimdall.cov ./...
     - name: Send coverage
