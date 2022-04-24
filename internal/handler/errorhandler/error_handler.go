@@ -16,8 +16,6 @@ func NewErrorHandler(verbose bool, logger zerolog.Logger) fiber.ErrorHandler {
 
 func defaultErrorHandler(logger zerolog.Logger) fiber.ErrorHandler {
 	return func(ctx *fiber.Ctx, err error) error {
-		logger.Debug().Err(err).Msg("Error occurred")
-
 		switch {
 		case errors.Is(err, heimdall.ErrArgument):
 			return ctx.SendStatus(fiber.StatusBadRequest)
@@ -34,6 +32,8 @@ func defaultErrorHandler(logger zerolog.Logger) fiber.ErrorHandler {
 
 			return ctx.Redirect(redirectError.RedirectTo.String(), redirectError.Code)
 		default:
+			logger.Error().Err(err).Msg("Error occurred")
+
 			return ctx.SendStatus(fiber.StatusInternalServerError)
 		}
 	}
@@ -41,8 +41,6 @@ func defaultErrorHandler(logger zerolog.Logger) fiber.ErrorHandler {
 
 func verboseErrorHandler(logger zerolog.Logger) fiber.ErrorHandler {
 	return func(ctx *fiber.Ctx, err error) error {
-		logger.Debug().Err(err).Msg("Error occurred")
-
 		switch {
 		case errors.Is(err, heimdall.ErrArgument):
 			return ctx.Status(fiber.StatusBadRequest).Format(err)
@@ -59,6 +57,8 @@ func verboseErrorHandler(logger zerolog.Logger) fiber.ErrorHandler {
 
 			return ctx.Redirect(redirectError.RedirectTo.String(), redirectError.Code)
 		default:
+			logger.Error().Err(err).Msg("Error occurred")
+
 			return ctx.Status(fiber.StatusInternalServerError).Format(err)
 		}
 	}
