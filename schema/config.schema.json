@@ -5,24 +5,22 @@
   "type": "object",
   "definitions": {
     "tlsConfig": {
-      "title": "TLS Configuration",
+      "description": "TLS Configuration",
       "type": "object",
       "additionalProperties": false,
       "properties": {
         "key": {
-          "title": "Private Key (PEM)",
+          "description": "URI pointing to a PEM encoded private key",
           "type": "string",
           "format": "uri",
-          "description": "URI pointing to a PEM encoded key",
           "examples": [
             "/path/to/key.pem"
           ]
         },
         "cert": {
-          "title": "TLS Certificate (PEM)",
+          "description": "URI pointing to a PEM encoded certificate",
           "type": "string",
           "format": "uri",
-          "description": "URI pointing to a PEM encoded certificate",
           "examples": [
             "/path/to/cert.pem"
           ]
@@ -30,14 +28,12 @@
       }
     },
     "corsConfig": {
-      "title": "Cross Origin Resource Sharing (CORS)",
       "description": "Configure [Cross Origin Resource Sharing (CORS)](http://www.w3.org/TR/cors/) using the following options.",
       "type": "object",
       "additionalProperties": false,
       "properties": {
         "allowed_origins": {
-          "title": "Allowed Origins",
-          "description": "A list of origins a cross-domain request can be executed from. If the special * value is present in the list, all origins will be allowed. An origin may contain a wildcard (*) to replace 0 or more characters (i.e.: https://*.domain.com). Usage of wildcards implies a small performance penalty. Only one wildcard can be used per origin.",
+          "description": "A list of allowed origins a cross-domain request can be executed from. If the special * value is present in the list, all origins will be allowed. An origin may contain a wildcard (*) to replace 0 or more characters (i.e.: https://*.domain.com). Usage of wildcards implies a small performance penalty. Only one wildcard can be used per origin.",
           "type": "array",
           "items": {
             "type": "string",
@@ -57,8 +53,7 @@
         },
         "allowed_methods": {
           "type": "array",
-          "title": "Allowed HTTP Methods",
-          "description": "A list of methods the client is allowed to use with cross-domain requests.",
+          "description": "A list of HTTP methods the client is allowed to use with cross-domain requests.",
           "items": {
             "type": "string",
             "enum": [
@@ -82,8 +77,7 @@
           ]
         },
         "allowed_headers": {
-          "description": "A list of non simple headers the client is allowed to use with cross-domain requests.",
-          "title": "Allowed Request HTTP Headers",
+          "description": "A list of HTTP headers the client is allowed to use with cross-domain requests.",
           "type": "array",
           "items": {
             "type": "string"
@@ -96,8 +90,7 @@
           ]
         },
         "exposed_headers": {
-          "description": "Indicates which headers are safe to expose to the API of a CORS API specification",
-          "title": "Allowed Response HTTP Headers",
+          "description": "Indicates which headers are allowed and safe to expose to the API of a CORS API specification",
           "type": "array",
           "items": {
             "type": "string"
@@ -109,31 +102,27 @@
           ]
         },
         "allow_credentials": {
+          "description": "Indicates whether the request can include user credentials like cookies, HTTP authentication or client side SSL certificates.",
           "type": "boolean",
-          "title": "Allow HTTP Credentials",
-          "default": false,
-          "description": "Indicates whether the request can include user credentials like cookies, HTTP authentication or client side SSL certificates."
+          "default": false
         },
         "max_age": {
+          "description": "Indicates how long (in seconds) the results of a preflight request can be cached. The default is 0 which stands for no max age.",
           "type": "integer",
-          "default": 0,
-          "title": "Maximum Age",
-          "description": "Indicates how long (in seconds) the results of a preflight request can be cached. The default is 0 which stands for no max age."
+          "default": 0
         }
       }
     },
     "timeoutConfig": {
-      "title": "HTTP Timeouts",
-      "description": "Control the HTTP timeouts.",
+      "description": "Controls the HTTP timeouts.",
       "type": "object",
       "additionalProperties": false,
       "properties": {
         "read": {
-          "title": "HTTP Read Timeout",
+          "description": "The maximum duration for reading the entire request, including the body.",
           "type": "string",
           "default": "5s",
           "pattern": "^[0-9]+(ns|us|ms|s|m|h)$",
-          "description": "The maximum duration for reading the entire request, including the body.",
           "examples": [
             "5s",
             "5m",
@@ -141,11 +130,10 @@
           ]
         },
         "write": {
-          "title": "HTTP Write Timeout",
+          "description": "The maximum duration before timing out writes of the response. Increase this parameter to prevent unexpected closing a client connection if an upstream request is responding slowly.",
           "type": "string",
           "default": "120s",
           "pattern": "^[0-9]+(ns|us|ms|s|m|h)$",
-          "description": "The maximum duration before timing out writes of the response. Increase this parameter to prevent unexpected closing a client connection if an upstream request is responding slowly.",
           "examples": [
             "5s",
             "5m",
@@ -153,11 +141,10 @@
           ]
         },
         "idle": {
-          "title": "HTTP Idle Timeout",
+          "description": " The maximum amount of time to wait for any action of a request session, reading data or writing the response.",
           "type": "string",
           "default": "120s",
           "pattern": "^[0-9]+(ns|us|ms|s|m|h)$",
-          "description": " The maximum amount of time to wait for any action of a request session, reading data or writing the response.",
           "examples": [
             "5s",
             "5m",
@@ -167,24 +154,22 @@
       }
     },
     "serviceConfig": {
-      "title": "Service Configuration",
+      "description": "Service Configuration",
       "additionalProperties": false,
       "type": "object",
       "properties": {
         "port": {
-          "type": "integer",
-          "title": "Port",
-          "description": "The port to listen on."
+          "description": "The port to listen on.",
+          "type": "integer"
         },
         "host": {
+          "description": "The network interface to listen on.",
           "type": "string",
           "default": "",
           "examples": [
             "localhost",
             "127.0.0.1"
-          ],
-          "title": "Host",
-          "description": "The network interface to listen on."
+          ]
         },
         "timeout": {
           "$ref": "#/definitions/timeoutConfig"
@@ -198,37 +183,33 @@
       }
     },
     "prometheusConfig": {
-      "type": "object",
       "title": "Prometheus scraping endpoint",
+      "type": "object",
       "additionalProperties": false,
       "properties": {
         "port": {
+          "description": "The port to listen on.",
           "type": "integer",
-          "default": 9000,
-          "title": "Port",
-          "description": "The port to listen on."
+          "default": 9000
         },
         "host": {
+          "description": "The network interface to listen on. Leave empty to listen on all interfaces.",
           "type": "string",
           "default": "",
           "examples": [
             "localhost",
             "127.0.0.1"
-          ],
-          "title": "Host",
-          "description": "The network interface to listen on. Leave empty to listen on all interfaces."
+          ]
         },
         "metrics_path": {
+          "description": "The path to provide metrics on",
           "type": "string",
-          "default": "/metrics",
-          "title": "Path",
-          "description": "The path to provide metrics on"
+          "default": "/metrics"
         },
         "collapse_request_paths": {
+          "description": "When set to true the request label will include just the first segment of the request path",
           "type": "boolean",
-          "default": true,
-          "title": "CollapsePaths",
-          "description": "When set to true the request label will include just the first segment of the request path"
+          "default": true
         }
       }
     },
@@ -237,43 +218,19 @@
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "extra_from": {
-          "title": "Extra JSON Path",
-          "description": "The `extra` field in the Heimdall authentication session is set using this JSON Path. Defaults to `extra`, and could be `@this` (for the root element), `foo.bar` (for key foo.bar), or any other valid GJSON path. See [GSJON Syntax](https://github.com/tidwall/gjson/blob/master/SYNTAX.md) for reference.",
+        "attributes_from": {
+          "description": "The `attributes` field in the Heimdall authentication session is set using this JSON Path. Defaults to `@this` (for the root element), `foo.bar` (for key foo.bar), or any other valid GJSON path. See [GSJON Syntax](https://github.com/tidwall/gjson/blob/master/SYNTAX.md) for reference.",
           "type": "string",
-          "default": "extra"
+          "default": "@this"
         },
-        "subject_from": {
-          "title": "Subject JSON Path",
-          "description": "The `subject` field in the Heimdall authentication session is set using this JSON Path. Defaults to `subject`. See [GSJON Syntax](https://github.com/tidwall/gjson/blob/master/SYNTAX.md) for reference.",
-          "type": "string",
-          "default": "subject"
-        },
-        "cache": {
-          "title": "Cache",
-          "description": "Allows reuse of previously received data",
-          "additionalProperties": false,
-          "properties": {
-            "enabled": {
-              "type": "boolean",
-              "description": "Whether the cache is enabled or not",
-              "default": false
-            },
-            "ttl": {
-              "title": "Cache Time to Live",
-              "description": "How long the received data should be reused",
-              "type": "string",
-              "pattern": "^[0-9]+(ns|us|ms|s|m|h)$",
-              "examples": [
-                "5s"
-              ]
-            }
-          }
+        "id_from": {
+          "description": "The `id` field in the Heimdall authentication session is set using this JSON Path. See [GSJON Syntax](https://github.com/tidwall/gjson/blob/master/SYNTAX.md) for reference.",
+          "type": "string"
         }
       }
     },
     "endpointConfiguration": {
-      "description": "Endpoint to get the information about the authenticated user from",
+      "description": "Endpoint to to communicate to",
       "type": "object",
       "additionalProperties": false,
       "required": [
@@ -281,7 +238,7 @@
       ],
       "properties": {
         "url": {
-          "description": "The URL to get information about the authenticated user from",
+          "description": "The URL to communicate to.",
           "type": "string",
           "format": "uri",
           "examples": [
@@ -289,8 +246,7 @@
           ]
         },
         "method": {
-          "title": "HTTP Method",
-          "description": "HTTP Method to use when communicating with the endpoint",
+          "description": "The HTTP Method to use when communicating with the endpoint",
           "type": "string",
           "default": "GET",
           "examples": [
@@ -299,7 +255,7 @@
           ]
         },
         "headers": {
-          "description": "HTTP headers to be send to the end point",
+          "description": "The HTTP headers to be send to the end point",
           "type": "object",
           "additionalProperties": {
             "type": "string"
@@ -309,9 +265,8 @@
           "default": []
         },
         "retry": {
-          "type": "object",
-          "title": "Retry",
           "description": "How the implementation should behave when trying to access the configured endpoint",
+          "type": "object",
           "additionalProperties": false,
           "properties": {
             "give_up_after": {
@@ -329,8 +284,8 @@
           }
         },
         "auth": {
-          "type": "object",
           "description": "How to authenticate against the endpoint",
+          "type": "object",
           "oneOf": [
             {
               "$ref": "#/definitions/endpointAuthApiKeyProperties"
@@ -354,12 +309,12 @@
           "type": "object",
           "properties": {
             "user": {
-              "type": "string",
-              "description": "user name for basic auth"
+              "description": "user name for basic auth",
+              "type": "string"
             },
             "password": {
-              "type": "string",
-              "description": "password for basic auth"
+              "description": "password for basic auth",
+              "type": "string"
             }
           },
           "additionalProperties": false,
@@ -384,16 +339,16 @@
           "type": "object",
           "properties": {
             "name": {
-              "type": "string",
-              "description": "The name of the api key"
+              "description": "The name of the api key",
+              "type": "string"
             },
             "value": {
-              "type": "string",
-              "description": "The value of the api key"
+              "description": "The value of the api key",
+              "type": "string"
             },
             "in": {
-              "type": "string",
               "description": "How the api key should be transferred",
+              "type": "string",
               "enum": [
                 "header",
                 "cookie"
@@ -434,24 +389,24 @@
           ],
           "properties": {
             "client_id": {
-              "type": "string",
-              "description": "The OAuth 2.0 Client ID to be used for the OAuth 2.0 Client Credentials Grant"
+              "description": "The OAuth 2.0 Client ID to be used for the OAuth 2.0 Client Credentials Grant",
+              "type": "string"
             },
             "client_secret": {
-              "type": "string",
-              "description": "The OAuth 2.0 Client Secret to be used for the OAuth 2.0 Client Credentials Grant"
+              "description": "The OAuth 2.0 Client Secret to be used for the OAuth 2.0 Client Credentials Grant",
+              "type": "string"
             },
             "token_url": {
-              "type": "string",
-              "description": "The OAuth 2.0 Token Endpoint where the OAuth 2.0 Client Credentials Grant will be performed"
+              "description": "The OAuth 2.0 Token Endpoint where the OAuth 2.0 Client Credentials Grant will be performed",
+              "type": "string"
             },
             "audience": {
-              "type": "string",
-              "description": "The OAuth 2.0 Audience to be requested during the OAuth 2.0 Client Credentials Grant"
+              "description": "The OAuth 2.0 Audience to be requested during the OAuth 2.0 Client Credentials Grant",
+              "type": "string"
             },
             "scopes": {
-              "type": "array",
               "description": "The OAuth 2.0 Scopes to be requested during the OAuth 2.0 Client Credentials Grant",
+              "type": "array",
               "items": {
                 "type": "string"
               }
@@ -467,8 +422,8 @@
       "items": {
         "anyOf": [
           {
-            "type": "object",
             "description": "The header (case insensitive) that contains the authentication information.",
+            "type": "object",
             "additionalProperties": false,
             "required": [
               "header"
@@ -483,8 +438,8 @@
             }
           },
           {
-            "type": "object",
             "description": "The cookie (case sensitive) that contains the authentication information.",
+            "type": "object",
             "additionalProperties": false,
             "required": [
               "cookie"
@@ -499,8 +454,8 @@
             }
           },
           {
-            "type": "object",
             "description": "The query parameter (case sensitive) that contains the authentication information.",
+            "type": "object",
             "additionalProperties": false,
             "required": [
               "query_parameter"
@@ -515,8 +470,8 @@
             }
           },
           {
-            "type": "object",
             "description": "The form parameter (case sensitive) that contains the authentication information.",
+            "type": "object",
             "additionalProperties": false,
             "required": [
               "form_parameter"
@@ -537,32 +492,47 @@
       "description": "Defines verification requirements for the assertion, like the introspection response or a JWT token",
       "type": "object",
       "properties": {
-        "scope_strategy": {
-          "description": "Sets the strategy validation algorithm.",
-          "type": "string",
-          "default": "exact",
-          "enum": [
-            "hierarchic",
-            "exact",
-            "wildcard"
+        "scopes": {
+          "oneOf": [
+            {
+              "description": "An array of OAuth 2.0 scopes that are required when accessing an endpoint protected by this handler.\n If the token used in the Authorization header did not request that specific scope, the request is denied.",
+              "type": "object",
+              "properties": {
+                "matching_strategy": {
+                  "description": "Sets the strategy validation algorithm.",
+                  "type": "string",
+                  "default": "exact",
+                  "enum": [
+                    "hierarchic",
+                    "exact",
+                    "wildcard"
+                  ]
+                },
+                "values": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            {
+              "description": "An array of OAuth 2.0 scopes that are required when accessing an endpoint protected by this handler.\n If the token used in the Authorization header did not request that specific scope, the request is denied. When only the actual scopes are configured the matching strategy is 'exact'",
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
           ]
         },
-        "required_scopes": {
-          "description": "An array of OAuth 2.0 scopes that are required when accessing an endpoint protected by this handler.\n If the token used in the Authorization header did not request that specific scope, the request is denied.",
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "target_audiences": {
+        "audience": {
           "description": "An array of audiences that are required when accessing an endpoint protected by this handler.",
           "type": "array",
           "items": {
             "type": "string"
           }
         },
-        "trusted_issuers": {
-          "title": "Trusted Issuers",
+        "issuers": {
           "description": "The assertion/token must have been issued by one of the issuers listed in this array.",
           "type": "array",
           "items": {
@@ -570,16 +540,22 @@
           }
         },
         "allowed_algorithms": {
-          "description": "If the assertion (introspection response or JWT token) is signed, which algorithms are allowed",
+          "description": "If the assertion (e.g., a JWT) is signed, which algorithms are allowed",
           "type": "array",
           "items": {
             "type": "string"
           }
+        },
+        "validity_leeway": {
+          "description": "If the assertion (e.g. a JWT) has a validity, which deviation from the current system time is allowed",
+          "type": "string",
+          "pattern": "^[0-9]+(ns|us|ms|s|m|h)$",
+          "default": "10s"
         }
       }
     },
     "authenticatorAnonymous": {
-      "title": "Anonymous Authenticator",
+      "description": "Anonymous Authenticator",
       "type": "object",
       "additionalProperties": false,
       "properties": {
@@ -587,17 +563,15 @@
           "const": "anonymous"
         },
         "id": {
-          "type": "string",
-          "title": "Unique Authenticator ID",
-          "description": "The id of the authenticator to be used in the rule definition"
+          "description": "The unique id of the authenticator to be used in the rule definition",
+          "type": "string"
         },
         "config": {
           "type": "object",
           "additionalProperties": false,
           "properties": {
             "subject": {
-              "title": "Anonymous Subject",
-              "description": "Sets the anonymous username.",
+              "description": "Sets the name/id of the anonymous subject.",
               "type": "string",
               "examples": [
                 "guest",
@@ -611,7 +585,7 @@
       }
     },
     "authenticatorNoop": {
-      "title": "Noop Authenticator",
+      "description": "Noop Authenticator",
       "type": "object",
       "additionalProperties": false,
       "properties": {
@@ -619,14 +593,13 @@
           "const": "noop"
         },
         "id": {
-          "type": "string",
-          "title": "Unique Authenticator ID",
-          "description": "The id of the authenticator to be used in the rule definition"
+          "description": "The unique id of the authenticator to be used in the rule definition",
+          "type": "string"
         }
       }
     },
     "authenticatorUnauthorized": {
-      "title": "Unauthorized Authenticator",
+      "description": "Unauthorized Authenticator",
       "type": "object",
       "additionalProperties": false,
       "properties": {
@@ -635,13 +608,12 @@
         },
         "id": {
           "type": "string",
-          "title": "Unique Authenticator ID",
-          "description": "The id of the authenticator to be used in the rule definition"
+          "description": "The unique id of the authenticator to be used in the rule definition"
         }
       }
     },
     "authenticatorAuthenticationData": {
-      "title": "Authentication Data Authenticator",
+      "description": "Authentication Data Authenticator",
       "type": "object",
       "additionalProperties": false,
       "properties": {
@@ -649,13 +621,12 @@
           "const": "authentication_data"
         },
         "id": {
-          "type": "string",
-          "title": "Unique Authenticator ID",
-          "description": "The id of the authenticator to be used in the rule definition"
+          "description": "The unique id of the authenticator to be used in the rule definition",
+          "type": "string"
         },
         "config": {
-          "type": "object",
           "title": "Authentication Data Authenticator Configuration",
+          "type": "object",
           "additionalProperties": false,
           "required": [
             "identity_info_endpoint"
@@ -675,7 +646,7 @@
       }
     },
     "authenticatorOAuth2Introspection": {
-      "title": "OAuth2 Introspection Authenticator",
+      "description": "OAuth2 Introspection Authenticator",
       "type": "object",
       "additionalProperties": false,
       "properties": {
@@ -683,13 +654,12 @@
           "const": "oauth2_introspection"
         },
         "id": {
-          "type": "string",
-          "title": "Unique Authenticator ID",
-          "description": "The id of the authenticator to be used in the rule definition"
+          "description": "The unique id of the authenticator to be used in the rule definition",
+          "type": "string"
         },
         "config": {
+          "description": "OAuth2 Introspection Configuration",
           "type": "object",
-          "title": "OAuth2 Introspection Configuration",
           "additionalProperties": false,
           "required": [
             "introspection_endpoint"
@@ -709,7 +679,7 @@
       }
     },
     "authenticatorJwt": {
-      "title": "JWT Authenticator",
+      "description": "JWT Authenticator",
       "type": "object",
       "additionalProperties": false,
       "properties": {
@@ -717,13 +687,12 @@
           "const": "jwt"
         },
         "id": {
-          "type": "string",
-          "title": "Unique Authenticator ID",
-          "description": "The id of the authenticator to be used in the rule definition"
+          "description": "The unique id of the authenticator to be used in the rule definition",
+          "type": "string"
         },
         "config": {
+          "description": "JWT Authenticator Configuration",
           "type": "object",
-          "title": "JWT Authenticator Configuration",
           "additionalProperties": false,
           "required": [
             "jwks_endpoint"
@@ -746,7 +715,7 @@
       }
     },
     "authorizerAllow": {
-      "title": "Allow Authorizer",
+      "description": "Allow Authorizer",
       "type": "object",
       "additionalProperties": false,
       "properties": {
@@ -754,14 +723,13 @@
           "const": "allow"
         },
         "id": {
-          "type": "string",
-          "title": "Unique Authorizer ID",
-          "description": "The id of the authorizer to be used in the rule definition"
+          "description": "The unique id of the authorizer to be used in the rule definition",
+          "type": "string"
         }
       }
     },
     "authorizerDeny": {
-      "title": "Deny Authorizer",
+      "description": "Deny Authorizer",
       "type": "object",
       "additionalProperties": false,
       "properties": {
@@ -769,14 +737,13 @@
           "const": "deny"
         },
         "id": {
-          "type": "string",
-          "title": "Unique Authorizer ID",
-          "description": "The id of the authorizer to be used in the rule definition"
+          "description": "The unique id of the authorizer to be used in the rule definition",
+          "type": "string"
         }
       }
     },
     "authorizerRemote": {
-      "title": "Remote Authorizer",
+      "description": "Remote Authorizer",
       "type": "object",
       "additionalProperties": false,
       "properties": {
@@ -784,13 +751,12 @@
           "const": "remote"
         },
         "id": {
-          "type": "string",
-          "title": "Unique Authorizer ID",
-          "description": "The id of the authorizer to be used in the rule definition"
+          "description": "The unique id of the authorizer to be used in the rule definition",
+          "type": "string"
         },
         "config": {
+          "description": "Remote Authorizer Configuration",
           "type": "object",
-          "title": "Remote Authorizer Configuration",
           "additionalProperties": false,
           "required": [
             "endpoint"
@@ -802,16 +768,8 @@
             "payload": {
               "oneOf": [
                 {
-                  "type": "string",
-                  "format": "uri",
-                  "pattern": "^(http|https|file|base64)://",
-                  "description": "URI pointing to the jsonnet template used for payload generation. Only used for those HTTP methods, which support HTTP body payloads",
-                  "examples": [
-                    "file:///path/to/body.jsonnet",
-                    "file://./body.jsonnet",
-                    "base64://ZnVuY3Rpb24oY3R4KSB7CiAgaWRlbnRpdHlfaWQ6IGlmIGN0eFsiaWRlbnRpdHkiXSAhPSBudWxsIHRoZW4gY3R4LmlkZW50aXR5LmlkLAp9=",
-                    "https://test.com/default_body.jsonnet"
-                  ]
+                  "description": "The Go text template used for payload generation.",
+                  "type": "string"
                 },
                 {
                   "const": "original_body"
@@ -824,16 +782,14 @@
               "items": {
                 "type": "string"
               },
-              "minLength": 0,
-              "uniqueItems": true,
-              "default": []
+              "uniqueItems": true
             }
           }
         }
       }
     },
-    "hydratorDefault": {
-      "title": "Default Hydrator",
+    "hydratorGeneric": {
+      "description": "Generic Hydrator",
       "type": "object",
       "additionalProperties": false,
       "required": [
@@ -846,13 +802,12 @@
           "const": "default"
         },
         "id": {
-          "type": "string",
-          "title": "Unique Hydrator ID",
-          "description": "The id of the hydrator to be used in the rule definition"
+          "description": "The unique id of the hydrator to be used in the rule definition",
+          "type": "string"
         },
         "config": {
+          "description": "Generic Hydrator Configuration",
           "type": "object",
-          "title": "Default Hydrator Configuration",
           "additionalProperties": false,
           "anyOf": [
             {
@@ -872,26 +827,35 @@
             "endpoint": {
               "$ref": "#/definitions/endpointConfiguration"
             },
-            "headers": {
-              "description": "HTTP headers to be send to the hydrator end point",
-              "type": "object",
-              "additionalProperties": {
+            "forward_headers": {
+              "description": "The HTTP header names from the request to be send to the hydrator end point",
+              "type": "array",
+              "additionalItems": false,
+              "items": {
                 "type": "string"
-              },
-              "minLength": 0,
-              "uniqueItems": true,
-              "default": []
+              }
+            },
+            "forward_cookies": {
+              "description": "The HTTP cookie names from the request to be send to the hydrator end point",
+              "type": "array",
+              "additionalItems": false,
+              "items": {
+                "type": "string"
+              }
             },
             "payload": {
+              "description": "The Go template with access to heimdall.Context and Subject used for request's HTTP body generation",
+              "type": "string"
+            },
+            "cache_ttl": {
               "type": "string",
-              "format": "uri",
-              "pattern": "^(http|https|file|base64)://",
-              "description": "URI pointing to the jsonnet template used for payload generation. Only used for those HTTP methods, which support HTTP body payloads",
+              "description": "How long to cache the response from the hydration endpoint.",
+              "pattern": "^[0-9]+(ns|us|ms|s|m|h)$",
+              "default": "15m",
               "examples": [
-                "file:///path/to/body.jsonnet",
-                "file://./body.jsonnet",
-                "base64://ZnVuY3Rpb24oY3R4KSB7CiAgaWRlbnRpdHlfaWQ6IGlmIGN0eFsiaWRlbnRpdHkiXSAhPSBudWxsIHRoZW4gY3R4LmlkZW50aXR5LmlkLAp9=",
-                "https://test.com/default_body.jsonnet"
+                "1h",
+                "1m",
+                "30s"
               ]
             }
           }
@@ -899,7 +863,6 @@
       }
     },
     "mutatorJwt": {
-      "title": "JWT Mutator",
       "description": "Creates a JWT Token from the given session information",
       "type": "object",
       "additionalProperties": false,
@@ -913,13 +876,12 @@
           "const": "jwt"
         },
         "id": {
-          "type": "string",
-          "title": "Unique Mutator ID",
-          "description": "The id of the mutator to be used in the rule definition"
+          "description": "The unique id of the mutator to be used in the rule definition",
+          "type": "string"
         },
         "config": {
+          "description": "JWT Mutator Configuration",
           "type": "object",
-          "title": "JWT Mutator Configuration",
           "additionalProperties": false,
           "required": [
             "issuer"
@@ -929,14 +891,12 @@
               "type": "string"
             },
             "issuer": {
-              "type": "string",
-              "title": "Issuer URL",
-              "description": "Sets the \"iss\" value of the JWT Token."
+              "description": "Sets the 'iss' value of the JWT.",
+              "type": "string"
             },
             "ttl": {
+              "description": "Sets the time-to-live of the JWT.",
               "type": "string",
-              "title": "Expire After",
-              "description": "Sets the time-to-live of the JSON Web Token.",
               "pattern": "^[0-9]+(ns|us|ms|s|m|h)$",
               "default": "15m",
               "examples": [
@@ -950,8 +910,7 @@
       }
     },
     "mutatorHeader": {
-      "title": "Header Mutator",
-      "description": "Transforms the request, allowing you to pass the credentials to the upstream application via the headers",
+      "description": "Transforms the request, allowing passing the credentials to the upstream application via headers",
       "type": "object",
       "additionalProperties": false,
       "required": [
@@ -964,9 +923,8 @@
           "const": "header"
         },
         "id": {
-          "type": "string",
-          "title": "Unique Mutator ID",
-          "description": "The id of the mutator to be used in the rule definition"
+          "description": "The unique id of the mutator to be used in the rule definition",
+          "type": "string"
         },
         "config": {
           "type": "object",
@@ -981,17 +939,14 @@
               "additionalProperties": {
                 "type": "string"
               },
-              "minLength": 0,
-              "uniqueItems": true,
-              "default": []
+              "uniqueItems": true
             }
           }
         }
       }
     },
     "mutatorCookie": {
-      "title": "Cookie Mutator",
-      "description": "Transforms the request, allowing you to pass the credentials to the upstream application via cookies",
+      "description": "Transforms the request, allowing passing the credentials to the upstream application via cookies",
       "type": "object",
       "additionalProperties": false,
       "required": [
@@ -1004,9 +959,8 @@
           "const": "cookie"
         },
         "id": {
-          "type": "string",
-          "title": "Unique Mutator ID",
-          "description": "The id of the mutator to be used in the rule definition"
+          "description": "The unique id of the mutator to be used in the rule definition",
+          "type": "string"
         },
         "config": {
           "type": "object",
@@ -1021,17 +975,28 @@
               "additionalProperties": {
                 "type": "string"
               },
-              "minLength": 0,
-              "uniqueItems": true,
-              "default": []
+              "uniqueItems": true
             }
           }
         }
       }
     },
+    "mutatorNoop": {
+      "description": "Noop Mutator",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "noop"
+        },
+        "id": {
+          "description": "The unique id of the mutator to be used in the rule definition",
+          "type": "string"
+        }
+      }
+    },
     "errorsWhen": {
-      "title": "Error Handler Conditions",
-      "description": "Conditions set under which circumstances an error handler should be responsible for handling the request. If no conditions are given, the error handler will be responsible for all requests. Sections error and request are combined using AND.",
+      "description": "Conditions under which circumstances an error handler should be responsible for handling the request. If no conditions are given, the error handler will be responsible for all errors. Sections error and request are combined using AND.",
       "type": "array",
       "additionalItems": false,
       "items": {
@@ -1039,8 +1004,7 @@
         "additionalProperties": false,
         "properties": {
           "error": {
-            "title": "Error Type Conditions",
-            "description": "Defines which error this error handler should listen to. The list uses OR (e.g. when the error is not_found OR unauthorized). If left empty, all errors will be handled by this error handler.",
+            "description": "Defines which error this error handler should be responsible for. The list uses OR (e.g. when the error is not_found OR unauthorized). If left empty, all errors will be handled by this error handler.",
             "type": "array",
             "additionalItems": false,
             "items": {
@@ -1054,7 +1018,6 @@
             }
           },
           "request_cidr": {
-            "title": "Client IP CIDR Mask",
             "description": "Defines one or more CIDR masks to match the client IP (remote address and X-Forwarded-For) against. If empty, all IPs will be matched. If more than one value, OR will be applied (e.g. 129.168.1.0/24 OR 188.177.0.0/16.",
             "type": "array",
             "additionalItems": false,
@@ -1068,15 +1031,13 @@
             "additionalProperties": {
               "type": "array"
             },
-            "minLength": 0,
-            "uniqueItems": true,
-            "default": []
+            "uniqueItems": true
           }
         }
       }
     },
     "errorHandlerWWWAuthenticate": {
-      "title": "WWW-Authenticate Error Handler",
+      "description": "WWW-Authenticate Error Handler",
       "type": "object",
       "additionalProperties": false,
       "required": [
@@ -1089,9 +1050,8 @@
           "const": "www-authenticate"
         },
         "id": {
-          "type": "string",
-          "title": "Unique Error Handler ID",
-          "description": "The id of the error handler to be used in the rule definition"
+          "description": "The unique id of the error handler to be used in the rule definition",
+          "type": "string"
         },
         "config": {
           "type": "object",
@@ -1101,9 +1061,8 @@
           ],
           "properties": {
             "realm": {
+              "description": "Message that will be displayed by the browser. Most browsers show a message like \"The website says: `,<realm>`\". Using a real message is thus more appropriate than a Realm identifier.",
               "type": "string",
-              "title": "The WWW-Authenticate Realm",
-              "description": "This is a message that will be displayed by the browser. Most browsers show a message like \"The website says: `,<realm>`\". Using a real message is thus more appropriate than a Realm identifier.",
               "default": "Please authenticate."
             },
             "when": {
@@ -1113,8 +1072,8 @@
         }
       }
     },
-    "errorsHandlerJsonResponse": {
-      "title": "JSON Response Error Handler",
+    "errorsHandlerRegular": {
+      "description": "Regular error handler, which just converts the error based on the information available in the HTTP Accept header",
       "type": "object",
       "additionalProperties": false,
       "required": [
@@ -1124,12 +1083,11 @@
       ],
       "properties": {
         "type": {
-          "const": "json"
+          "const": "regular"
         },
         "id": {
-          "type": "string",
-          "title": "Unique Error Handler ID",
-          "description": "The id of the error handler to be used in the rule definition"
+          "description": "The unique id of the error handler to be used in the rule definition",
+          "type": "string"
         },
         "config": {
           "type": "object",
@@ -1146,7 +1104,7 @@
       }
     },
     "errorsHandlerRedirect": {
-      "title": "Redirect Error Handler",
+      "description": "Redirect Error Handler",
       "type": "object",
       "additionalProperties": false,
       "required": [
@@ -1159,9 +1117,8 @@
           "const": "redirect"
         },
         "id": {
-          "type": "string",
-          "title": "Unique Error Handler ID",
-          "description": "The id of the error handler to be used in the rule definition"
+          "description": "The unique id of the error handler to be used in the rule definition",
+          "type": "string"
         },
         "config": {
           "type": "object",
@@ -1171,7 +1128,6 @@
           ],
           "properties": {
             "to": {
-              "title": "Redirect to",
               "description": "Set the redirect target. Can either be a http/https URL, or a relative URL.",
               "type": "string",
               "format": "uri-reference",
@@ -1182,7 +1138,6 @@
               ]
             },
             "code": {
-              "title": "HTTP Redirect Status Code",
               "description": "Defines the HTTP Redirect status code which can be 301 (Moved Permanently) or 302 (Found).",
               "type": "integer",
               "enum": [
@@ -1192,7 +1147,6 @@
               "default": 302
             },
             "return_to_query_param": {
-              "title": "URL query parameter",
               "description": "Adds the original URL the request tried to access to the query parameter.",
               "type": "string",
               "pattern": "^[A-Za-z0-9,._~-]*$",
@@ -1243,7 +1197,7 @@
       "additionalProperties": false,
       "properties": {
         "endpoint": {
-          "description": "docker server endpoint. Can be tcp or socket endpoint.",
+          "description": "Docker server endpoint. Can be tcp or socket endpoint.",
           "type": "string"
         },
         "timeout": {
@@ -1277,13 +1231,12 @@
   },
   "properties": {
     "version": {
+      "description": "The Heimdall version this config is written for. SemVer according to https://semver.org/ prefixed with `v` as in our releases.",
       "type": "string",
-      "title": "The Heimdall version this config is written for.",
-      "description": "SemVer according to https://semver.org/ prefixed with `v` as in our releases.",
       "pattern": "^v(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$"
     },
     "serve": {
-      "title": "HTTP(s) configuration of exposed services",
+      "description": "HTTP(s) configuration of exposed services",
       "additionalProperties": false,
       "type": "object",
       "properties": {
@@ -1299,8 +1252,7 @@
       }
     },
     "log": {
-      "title": "Log",
-      "description": "Configure logging using the following options. Logging will always be sent to stdout and stderr.",
+      "description": "Logging configuration. Logging will always be sent to stdout and stderr.",
       "type": "object",
       "additionalProperties": false,
       "properties": {
@@ -1309,7 +1261,6 @@
           "type": "string",
           "default": "info",
           "enum": [
-            "trace",
             "debug",
             "info",
             "warning",
@@ -1319,12 +1270,13 @@
           ]
         },
         "format": {
-          "description": "The log format can either be text or JSON.",
+          "description": "The log format can either be 'text' or 'gelf'. If format is not recognized, 'gelf' format is used",
           "type": "string",
           "enum": [
-            "json",
+            "gelf",
             "text"
-          ]
+          ],
+          "default": "gelf"
         }
       }
     },
@@ -1363,7 +1315,7 @@
       ],
       "properties": {
         "error_handlers": {
-          "description": "Individual Error Handler Configurations",
+          "description": "Individual error handler configurations",
           "type": "array",
           "additionalItems": false,
           "items": {
@@ -1375,13 +1327,13 @@
                 "$ref": "#/definitions/errorsHandlerRedirect"
               },
               {
-                "$ref": "#/definitions/errorsHandlerJsonResponse"
+                "$ref": "#/definitions/errorsHandlerRegular"
               }
             ]
           }
         },
         "authenticators": {
-          "title": "Authenticators",
+          "description": "Authenticators",
           "type": "array",
           "additionalItems": false,
           "uniqueItems": true,
@@ -1409,7 +1361,7 @@
           }
         },
         "authorizers": {
-          "title": "Authorizers",
+          "description": "Authorizers",
           "type": "array",
           "additionalItems": false,
           "uniqueItems": true,
@@ -1428,16 +1380,16 @@
           }
         },
         "hydrators": {
-          "title": "Hydrators",
+          "description": "Hydrators",
           "type": "array",
           "additionalItems": false,
           "uniqueItems": true,
           "items": {
-            "$ref": "#/definitions/hydratorDefault"
+            "$ref": "#/definitions/hydratorGeneric"
           }
         },
         "mutators": {
-          "title": "Mutators",
+          "description": "Mutators",
           "type": "array",
           "additionalItems": false,
           "uniqueItems": true,
@@ -1481,36 +1433,38 @@
           }
         },
         "default": {
-          "description": "Defines the fallbacks for any rule if a particular handler is not defined",
+          "description": "Defines the defaults, respectively fallbacks for any rule.",
           "type": "object",
           "additionalProperties": false,
           "properties": {
-            "authenticators": {
-              "title": "Fallback authenticators",
-              "description": "The list should contain the ids of the authenticators. Order matters",
+            "methods": {
+              "description": "Allowed HTTP methods for any endpoint",
               "type": "array",
               "additionalItems": false,
               "uniqueItems": true,
               "items": {
                 "type": "string"
+              },
+              "examples": [
+                "GET", "POST"
+              ]
+            },
+            "execute": {
+              "description": "The handlers to execute (authenticators, authorizers, etc)",
+              "type": "array",
+              "additionalItems": false,
+              "uniqueItems": true,
+              "items": {
+                "type": "object"
               }
             },
-            "authorizer": {
-              "title": "Fallback authorizer",
-              "type": "string"
-            },
-            "mutator": {
-              "title": "Fallback mutator",
-              "type": "string"
-            },
-            "error_handlers": {
-              "title": "Fallback error handlers",
-              "description": "The list should contain the ids of the error handlers. Order matters",
+            "on_error": {
+              "description": "error handlers",
               "type": "array",
               "additionalItems": false,
               "uniqueItems": true,
               "items": {
-                "type": "string"
+                "type": "object"
               }
             }
           }
