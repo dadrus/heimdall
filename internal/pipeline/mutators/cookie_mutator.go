@@ -56,7 +56,7 @@ func (m *cookieMutator) Execute(ctx heimdall.Context, sub *subject.Subject) erro
 	}
 
 	for name, tmpl := range m.cookies {
-		value, err := tmpl.Render(sub)
+		value, err := tmpl.Render(nil, sub)
 		if err != nil {
 			return err
 		}

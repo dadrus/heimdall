@@ -6,12 +6,13 @@ import (
 
 	"github.com/Masterminds/sprig"
 
+	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/pipeline/subject"
 )
 
 type Template string
 
-func (t Template) Render(sub *subject.Subject) (string, error) {
+func (t Template) Render(ctx heimdall.Context, sub *subject.Subject) (string, error) {
 	tmpl, err := template.New("Subject").Funcs(sprig.TxtFuncMap()).Parse(string(t))
 	if err != nil {
 		return "", err

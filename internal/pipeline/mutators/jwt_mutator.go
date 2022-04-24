@@ -151,7 +151,7 @@ func (m *jwtMutator) generateToken(ctx heimdall.Context, sub *subject.Subject) (
 
 	claims := map[string]any{}
 	if m.claims != nil {
-		vals, err := m.claims.Render(sub)
+		vals, err := m.claims.Render(nil, sub)
 		if err != nil {
 			return "", errorchain.
 				NewWithMessage(heimdall.ErrInternal, "failed to render claims template").
