@@ -157,6 +157,7 @@ func (f *ruleFactory) CreateRule(srcID string, ruleConfig config.RuleConfig) (Ru
 	}
 
 	methods := ruleConfig.Methods
+
 	if f.defaultRule != nil {
 		authenticators = x.IfThenElse(len(authenticators) != 0, authenticators, f.defaultRule.sc)
 		subHandlers = x.IfThenElse(len(subHandlers) != 0, subHandlers, f.defaultRule.sh)
