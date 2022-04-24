@@ -12,7 +12,7 @@ import (
 // nolint
 func init() {
 	registerMutatorTypeFactory(
-		func(typ config.PipelineObjectType, conf map[any]any) (bool, Mutator, error) {
+		func(_ string, typ config.PipelineObjectType, conf map[any]any) (bool, Mutator, error) {
 			if typ != config.POTNoop {
 				return false, nil, nil
 			}

@@ -18,7 +18,7 @@ var (
 	hydratorTypeFactoriesMu sync.RWMutex
 )
 
-type HydratorTypeFactory func(t config.PipelineObjectType, c map[any]any) (bool, Hydrator, error)
+type HydratorTypeFactory func(id string, t config.PipelineObjectType, c map[any]any) (bool, Hydrator, error)
 
 func registerHydratorTypeFactory(factory HydratorTypeFactory) {
 	hydratorTypeFactoriesMu.Lock()
@@ -31,12 +31,12 @@ func registerHydratorTypeFactory(factory HydratorTypeFactory) {
 	hydratorTypeFactories = append(hydratorTypeFactories, factory)
 }
 
-func CreateHydratorPrototype(typ config.PipelineObjectType, config map[any]any) (Hydrator, error) {
+func CreateHydratorPrototype(id string, typ config.PipelineObjectType, config map[any]any) (Hydrator, error) {
 	hydratorTypeFactoriesMu.RLock()
 	defer hydratorTypeFactoriesMu.RUnlock()
 
 	for _, create := range hydratorTypeFactories {
-		if ok, at, err := create(typ, config); ok {
+		if ok, at, err := create(id, typ, config); ok {
 			return at, err
 		}
 	}

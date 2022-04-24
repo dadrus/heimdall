@@ -33,12 +33,12 @@ const (
 // nolint
 func init() {
 	registerHydratorTypeFactory(
-		func(typ config.PipelineObjectType, conf map[any]any) (bool, Hydrator, error) {
+		func(id string, typ config.PipelineObjectType, conf map[any]any) (bool, Hydrator, error) {
 			if typ != config.POTGeneric {
 				return false, nil, nil
 			}
 
-			eh, err := newGenericHydrator(conf)
+			eh, err := newGenericHydrator(id, conf)
 
 			return true, eh, err
 		})
@@ -53,7 +53,7 @@ type genericHydrator struct {
 	name       string
 }
 
-func newGenericHydrator(rawConfig map[any]any) (*genericHydrator, error) {
+func newGenericHydrator(id string, rawConfig map[any]any) (*genericHydrator, error) {
 	type _config struct {
 		Endpoint       endpoint.Endpoint `mapstructure:"endpoint"`
 		ForwardHeaders []string          `mapstructure:"forward_headers"`
@@ -80,7 +80,7 @@ func newGenericHydrator(rawConfig map[any]any) (*genericHydrator, error) {
 		fwdHeaders: conf.ForwardHeaders,
 		fwdCookies: conf.ForwardCookies,
 		ttl:        ttl,
-		name:       "hydrator",
+		name:       id,
 	}, nil
 }
 

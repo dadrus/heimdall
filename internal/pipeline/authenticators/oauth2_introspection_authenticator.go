@@ -28,7 +28,7 @@ import (
 // nolint
 func init() {
 	registerAuthenticatorTypeFactory(
-		func(typ config.PipelineObjectType, conf map[any]any) (bool, Authenticator, error) {
+		func(_ string, typ config.PipelineObjectType, conf map[any]any) (bool, Authenticator, error) {
 			if typ != config.POTOAuth2Introspection {
 				return false, nil, nil
 			}

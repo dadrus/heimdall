@@ -82,14 +82,14 @@ func newHandlerPrototypeRepository(
 func createPipelineObjects[T any](
 	pObjects []config.PipelineObject,
 	logger zerolog.Logger,
-	create func(t config.PipelineObjectType, c map[any]any) (T, error),
+	create func(id string, t config.PipelineObjectType, c map[any]any) (T, error),
 ) (map[string]T, error) {
 	objects := make(map[string]T)
 
 	for _, pe := range pObjects {
 		logger.Debug().Str("id", pe.ID).Str("type", string(pe.Type)).Msg("Loading pipeline definition")
 
-		if r, err := create(pe.Type, pe.Config); err == nil {
+		if r, err := create(pe.ID, pe.Type, pe.Config); err == nil {
 			objects[pe.ID] = r
 		} else {
 			return nil, err

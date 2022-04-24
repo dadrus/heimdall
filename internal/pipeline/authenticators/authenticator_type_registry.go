@@ -18,7 +18,7 @@ var (
 	authenticatorTypeFactoriesMu sync.RWMutex
 )
 
-type AuthenticatorTypeFactory func(typ config.PipelineObjectType, config map[any]any) (bool, Authenticator, error)
+type AuthenticatorTypeFactory func(id string, typ config.PipelineObjectType, config map[any]any) (bool, Authenticator, error)
 
 func registerAuthenticatorTypeFactory(factory AuthenticatorTypeFactory) {
 	authenticatorTypeFactoriesMu.Lock()
@@ -31,12 +31,12 @@ func registerAuthenticatorTypeFactory(factory AuthenticatorTypeFactory) {
 	authenticatorTypeFactories = append(authenticatorTypeFactories, factory)
 }
 
-func CreateAuthenticatorPrototype(typ config.PipelineObjectType, config map[any]any) (Authenticator, error) {
+func CreateAuthenticatorPrototype(id string, typ config.PipelineObjectType, config map[any]any) (Authenticator, error) {
 	authenticatorTypeFactoriesMu.RLock()
 	defer authenticatorTypeFactoriesMu.RUnlock()
 
 	for _, create := range authenticatorTypeFactories {
-		if ok, at, err := create(typ, config); ok {
+		if ok, at, err := create(id, typ, config); ok {
 			return at, err
 		}
 	}

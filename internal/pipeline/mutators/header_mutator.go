@@ -14,7 +14,7 @@ import (
 // nolint
 func init() {
 	registerMutatorTypeFactory(
-		func(typ config.PipelineObjectType, conf map[any]any) (bool, Mutator, error) {
+		func(_ string, typ config.PipelineObjectType, conf map[any]any) (bool, Mutator, error) {
 			if typ != config.POTHeader {
 				return false, nil, nil
 			}
