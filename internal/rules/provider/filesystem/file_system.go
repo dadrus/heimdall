@@ -1,4 +1,4 @@
-package provider
+package filesystem
 
 import (
 	"context"
@@ -12,6 +12,7 @@ import (
 	"go.uber.org/fx"
 
 	"github.com/dadrus/heimdall/internal/config"
+	"github.com/dadrus/heimdall/internal/rules/event"
 )
 
 var ErrInvalidProviderConfiguration = errors.New("invalid provider configuration")
@@ -19,7 +20,7 @@ var ErrInvalidProviderConfiguration = errors.New("invalid provider configuration
 type fileSystemProvider struct {
 	src     string
 	watcher *fsnotify.Watcher
-	queue   RuleSetChangedEventQueue
+	queue   event.RuleSetChangedEventQueue
 	logger  zerolog.Logger
 }
 
@@ -27,7 +28,7 @@ func registerFileSystemProvider(
 	lifecycle fx.Lifecycle,
 	logger zerolog.Logger,
 	c config.Configuration,
-	queue RuleSetChangedEventQueue,
+	queue event.RuleSetChangedEventQueue,
 ) {
 	provider, err := newFileSystemProvider(c, queue, logger)
 	if err != nil {
@@ -50,7 +51,7 @@ func registerFileSystemProvider(
 
 func newFileSystemProvider(
 	conf config.Configuration,
-	queue RuleSetChangedEventQueue,
+	queue event.RuleSetChangedEventQueue,
 	logger zerolog.Logger,
 ) (*fileSystemProvider, error) {
 	if len(conf.Rules.Providers.File.Src) == 0 {
@@ -154,29 +155,29 @@ func (p *fileSystemProvider) getFilePath(event fsnotify.Event) string {
 	return filepath.Join(p.src, event.Name)
 }
 
-func (p *fileSystemProvider) notifyRuleSetDeleted(event fsnotify.Event) {
-	file := p.getFilePath(event)
+func (p *fileSystemProvider) notifyRuleSetDeleted(evt fsnotify.Event) {
+	file := p.getFilePath(evt)
 
-	p.ruleSetChanged(RuleSetChangedEvent{
+	p.ruleSetChanged(event.RuleSetChangedEvent{
 		Src:        "file_system:" + file,
-		ChangeType: Remove,
+		ChangeType: event.Remove,
 	})
 }
 
-func (p *fileSystemProvider) notifyRuleSetCreated(event fsnotify.Event) {
-	file := p.getFilePath(event)
+func (p *fileSystemProvider) notifyRuleSetCreated(evt fsnotify.Event) {
+	file := p.getFilePath(evt)
 
 	data, err := os.ReadFile(file)
 	if err != nil {
-		p.logger.Error().Err(err).Str("file", event.Name).Msg("Failed reading")
+		p.logger.Error().Err(err).Str("file", evt.Name).Msg("Failed reading")
 
 		return
 	}
 
-	p.ruleSetChanged(RuleSetChangedEvent{
-		Src:        "file_system:" + event.Name,
+	p.ruleSetChanged(event.RuleSetChangedEvent{
+		Src:        "file_system:" + evt.Name,
 		Definition: data,
-		ChangeType: Create,
+		ChangeType: event.Create,
 	})
 }
 
@@ -229,17 +230,17 @@ func (p *fileSystemProvider) loadInitialRuleSet() error {
 			return err
 		}
 
-		p.ruleSetChanged(RuleSetChangedEvent{
+		p.ruleSetChanged(event.RuleSetChangedEvent{
 			Src:        "file_system:" + src,
 			Definition: data,
-			ChangeType: Create,
+			ChangeType: event.Create,
 		})
 	}
 
 	return nil
 }
 
-func (p *fileSystemProvider) ruleSetChanged(evt RuleSetChangedEvent) {
+func (p *fileSystemProvider) ruleSetChanged(evt event.RuleSetChangedEvent) {
 	p.logger.Info().Str("src", evt.Src).Str("type", evt.ChangeType.String()).Msg("Rule set changed")
 	p.queue <- evt
 }

@@ -1,4 +1,4 @@
-package provider
+package event
 
 import "encoding/json"
 

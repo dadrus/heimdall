@@ -10,7 +10,7 @@ import (
 	"gopkg.in/yaml.v2"
 
 	"github.com/dadrus/heimdall/internal/config"
-	"github.com/dadrus/heimdall/internal/rules/provider"
+	"github.com/dadrus/heimdall/internal/rules/event"
 )
 
 var ErrNoRuleFound = errors.New("no rule found")
@@ -22,7 +22,7 @@ type Repository interface {
 }
 
 func NewRepository(
-	queue provider.RuleSetChangedEventQueue,
+	queue event.RuleSetChangedEventQueue,
 	ruleFactory RuleFactory,
 	logger zerolog.Logger,
 ) (Repository, error) {
@@ -42,7 +42,7 @@ type repository struct {
 	rules []Rule
 	mutex sync.RWMutex
 
-	queue provider.RuleSetChangedEventQueue
+	queue event.RuleSetChangedEventQueue
 	quit  chan bool
 }
 
@@ -89,9 +89,9 @@ func (r *repository) watchRuleSetChanges() {
 				r.logger.Debug().Msg("Rule set definition queue closed")
 			}
 
-			if evt.ChangeType == provider.Create {
+			if evt.ChangeType == event.Create {
 				r.onRuleSetCreated(evt.Src, evt.Definition)
-			} else if evt.ChangeType == provider.Remove {
+			} else if evt.ChangeType == event.Remove {
 				r.onRuleSetDeleted(evt.Src)
 			}
 		case <-r.quit:

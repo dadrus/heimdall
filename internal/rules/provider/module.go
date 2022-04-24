@@ -1,12 +1,12 @@
 package provider
 
-import "go.uber.org/fx"
+import (
+	"go.uber.org/fx"
+
+	"github.com/dadrus/heimdall/internal/rules/provider/filesystem"
+)
 
 // nolint
 var Module = fx.Options(
-	fx.Invoke(
-		registerFileSystemProvider,
-		registerDockerProvider,
-		registerK8sConfigMapProvider,
-	),
+	filesystem.Module,
 )

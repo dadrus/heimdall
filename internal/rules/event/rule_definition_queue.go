@@ -1,3 +1,3 @@
-package provider
+package event
 
 type RuleSetChangedEventQueue chan RuleSetChangedEvent
