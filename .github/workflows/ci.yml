@@ -60,3 +60,7 @@ jobs:
       uses: shogo82148/actions-goveralls@v1
       with:
         path-to-profile: heimdall.cov
+    - uses: codecov/codecov-action@v2
+      with:
+        files: heimdall.cov
+        verbose: true
