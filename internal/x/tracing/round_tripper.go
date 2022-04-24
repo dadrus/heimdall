@@ -3,9 +3,10 @@ package tracing
 import (
 	"net/http"
 
-	"github.com/dadrus/heimdall/internal/x"
 	"github.com/opentracing-contrib/go-stdlib/nethttp"
 	"github.com/opentracing/opentracing-go"
+
+	"github.com/dadrus/heimdall/internal/x"
 )
 
 type RoundTripper struct {
