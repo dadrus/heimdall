@@ -25,20 +25,9 @@ func DecodeScopesMatcherHookFunc() mapstructure.DecodeHookFunc {
 		// we care about these two cases only
 		switch from.Kind() {
 		case reflect.Map:
-			// nolint
-			if m, ok := data.(map[any]any); ok {
-				if name, ok := m["matching_strategy"]; ok {
-					strategy, err := decodeStrategy(name.(string))
-					if err != nil {
-						return nil, err
-					}
-
-					matcher.Matcher = strategy
-				}
-
-				if values, ok := m["values"]; ok {
-					copyScopeValues(&matcher, values)
-				}
+			err := decodeMatcherFromMap(&matcher, data)
+			if err != nil {
+				return nil, err
 			}
 		case reflect.Slice:
 			copyScopeValues(&matcher, data)
@@ -56,6 +45,26 @@ func DecodeScopesMatcherHookFunc() mapstructure.DecodeHookFunc {
 
 		return matcher, nil
 	}
+}
+
+func decodeMatcherFromMap(matcher *ScopesMatcher, data any) error {
+	// nolint
+	if m, ok := data.(map[any]any); ok {
+		if name, ok := m["matching_strategy"]; ok {
+			strategy, err := decodeStrategy(name.(string))
+			if err != nil {
+				return err
+			}
+
+			matcher.Matcher = strategy
+		}
+
+		if values, ok := m["values"]; ok {
+			copyScopeValues(matcher, values)
+		}
+	}
+
+	return nil
 }
 
 func copyScopeValues(matcher *ScopesMatcher, values any) {
