@@ -1,4 +1,4 @@
-name: "Trivy"
+name: "Security Scan"
 
 on:
   push:
@@ -10,7 +10,6 @@ on:
 
 jobs:
   security-scan:
-    name: Security Scan
     runs-on: ubuntu-latest
 
     permissions:
