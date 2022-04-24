@@ -9,15 +9,17 @@ on:
 jobs:
 
   test:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
     - name: Checkout
       uses: actions/checkout@v3
-
     - name: Set up Go
       uses: actions/setup-go@v3
       with:
         go-version: 1.18.1
-
     - name: Test
-      run: go test -v ./...
+      run: go test -v -coverprofile=heimdall.cov ./...
+    - name: Send coverage
+      uses: shogo82148/actions-goveralls@v1
+      with:
+        path-to-profile: heimdall.cov
