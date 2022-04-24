@@ -28,8 +28,8 @@ pipeline:
         authentication_data_source:
           - cookie: ory_kratos_session
         session:
-          attributes_from: "@this"
-          subject_from: "identity.id"
+          subject_attributes_from: "@this"
+          subject_id_from: "identity.id"
     - id: "hydra_authenticator"
       type: oauth2_introspection
       config:
@@ -52,15 +52,15 @@ pipeline:
           audience:
             - bla
         session:
-          attributes_from: "@this"
-          subject_from: "sub"
+          subject_attributes_from: "@this"
+          subject_id_from: "sub"
     - id: "jwt_authenticator"
       type: jwt
       config:
         jwks_endpoint:
           url: foo/token
           method: GET
-        jwt_token_from:
+        jwt_from:
           - header: Authorization
             strip_prefix: Bearer
         assertions:
@@ -73,8 +73,8 @@ pipeline:
           issuers:
             - bla
         session:
-          attributes_from: "@this"
-          subject_from: "identity.id"
+          subject_attributes_from: "@this"
+          subject_id_from: "identity.id"
         cache_ttl: 5m
   authorizers:
     - id: "allow_all_authorizer"

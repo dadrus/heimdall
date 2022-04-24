@@ -52,7 +52,7 @@ type jwtAuthenticator struct {
 func newJwtAuthenticator(rawConfig map[any]any) (*jwtAuthenticator, error) {
 	type _config struct {
 		Endpoint       endpoint.Endpoint                   `mapstructure:"jwks_endpoint"`
-		AuthDataSource extractors.CompositeExtractStrategy `mapstructure:"jwt_token_from"`
+		AuthDataSource extractors.CompositeExtractStrategy `mapstructure:"jwt_from"`
 		JwtAssertions  oauth2.Expectation                  `mapstructure:"assertions"`
 		Session        Session                             `mapstructure:"session"`
 		CacheTTL       *time.Duration                      `mapstructure:"cache_ttl"`
@@ -93,8 +93,8 @@ func newJwtAuthenticator(rawConfig map[any]any) (*jwtAuthenticator, error) {
 			CausedBy(err)
 	}
 
-	if len(conf.Session.SubjectFrom) == 0 {
-		conf.Session.SubjectFrom = "sub"
+	if len(conf.Session.SubjectIDFrom) == 0 {
+		conf.Session.SubjectIDFrom = "sub"
 	}
 
 	var adg extractors.AuthDataExtractStrategy

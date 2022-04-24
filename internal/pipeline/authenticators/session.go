@@ -9,12 +9,12 @@ import (
 )
 
 type Session struct {
-	SubjectFrom    string `mapstructure:"subject_from"`
-	AttributesFrom string `mapstructure:"attributes_from"`
+	SubjectIDFrom         string `mapstructure:"subject_id_from"`
+	SubjectAttributesFrom string `mapstructure:"subject_attributes_from"`
 }
 
 func (s *Session) Validate() error {
-	if len(s.SubjectFrom) == 0 {
+	if len(s.SubjectIDFrom) == 0 {
 		return errorchain.NewWithMessage(heimdall.ErrConfiguration, "no subject_from set")
 	}
 
@@ -23,14 +23,14 @@ func (s *Session) Validate() error {
 
 func (s *Session) CreateSubject(rawData []byte) (*subject.Subject, error) {
 	attributesFrom := "@this"
-	if len(s.AttributesFrom) != 0 {
-		attributesFrom = s.AttributesFrom
+	if len(s.SubjectAttributesFrom) != 0 {
+		attributesFrom = s.SubjectAttributesFrom
 	}
 
-	subjectID := gjson.GetBytes(rawData, s.SubjectFrom).String()
+	subjectID := gjson.GetBytes(rawData, s.SubjectIDFrom).String()
 	if len(subjectID) == 0 {
 		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
-			"could not extract subject identifier using '%s' template", s.SubjectFrom)
+			"could not extract subject identifier using '%s' template", s.SubjectIDFrom)
 	}
 
 	attributes := gjson.GetBytes(rawData, attributesFrom).Value()

@@ -32,13 +32,13 @@ func TestCreateOAuth2IntrospectionAuthenticator(t *testing.T) {
 		{
 			uc: "missing introspection url config",
 			config: []byte(`
-introspection_response_assertions:
+assertions:
   issuers:
     - foobar
 session:
-  subject_from: some_template
+  subject_id_from: some_template
 `),
-			assert: func(t *testing.T, err error, a *oauth2IntrospectionAuthenticator) {
+			assert: func(t *testing.T, err error, _ *oauth2IntrospectionAuthenticator) {
 				t.Helper()
 				assert.Error(t, err)
 			},
@@ -49,9 +49,9 @@ session:
 introspection_endpoint:
   url: foobar.local
 session:
-  subject_from: some_template
+  subject_id_from: some_template
 `),
-			assert: func(t *testing.T, err error, a *oauth2IntrospectionAuthenticator) {
+			assert: func(t *testing.T, err error, _ *oauth2IntrospectionAuthenticator) {
 				t.Helper()
 				assert.Error(t, err)
 			},
@@ -61,13 +61,19 @@ session:
 			config: []byte(`
 introspection_endpoint:
   url: foobar.local
-introspection_response_assertions:
+assertions:
   issuers:
     - foobar
 `),
-			assert: func(t *testing.T, err error, a *oauth2IntrospectionAuthenticator) {
+			assert: func(t *testing.T, err error, auth *oauth2IntrospectionAuthenticator) {
 				t.Helper()
-				assert.Error(t, err)
+
+				require.NoError(t, err)
+
+				assert.IsType(t, &Session{}, auth.sf)
+				sess, ok := auth.sf.(*Session)
+				assert.True(t, ok)
+				assert.Equal(t, "sub", sess.SubjectIDFrom)
 			},
 		},
 		{
@@ -75,11 +81,11 @@ introspection_response_assertions:
 			config: []byte(`
 introspection_endpoint:
   url: foobar.local
-introspection_response_assertions:
+assertions:
   issuers:
     - foobar
 session:
-  subject_from: some_template
+  subject_id_from: some_template
 `),
 			assert: func(t *testing.T, err error, auth *oauth2IntrospectionAuthenticator) {
 				t.Helper()
@@ -148,13 +154,13 @@ func TestCreateOAuth2IntrospectionAuthenticatorFromPrototype(t *testing.T) {
 			prototypeConfig: []byte(`
 introspection_endpoint:
   url: foobar.local
-introspection_response_assertions:
+assertions:
   issuers:
     - foobar
 session:
-  subject_from: some_template`),
+  subject_id_from: some_template`),
 			config: []byte(`
-introspection_response_assertions:
+assertions:
   issuers:
     - barfoo
   allowed_algorithms:
@@ -186,11 +192,11 @@ introspection_response_assertions:
 			prototypeConfig: []byte(`
 introspection_endpoint:
   url: foobar.local
-introspection_response_assertions:
+assertions:
   issuers:
     - foobar
 session:
-  subject_from: some_template`),
+  subject_id_from: some_template`),
 			config: []byte(`cache_ttl: 5s`),
 			assert: func(t *testing.T, err error, prototype *oauth2IntrospectionAuthenticator,
 				configured *oauth2IntrospectionAuthenticator,
@@ -213,11 +219,11 @@ session:
 			prototypeConfig: []byte(`
 introspection_endpoint:
   url: foobar.local
-introspection_response_assertions:
+assertions:
   issuers:
     - foobar
 session:
-  subject_from: some_template`),
+  subject_id_from: some_template`),
 			config: []byte{},
 			assert: func(t *testing.T, err error, prototype *oauth2IntrospectionAuthenticator,
 				configured *oauth2IntrospectionAuthenticator,
@@ -234,14 +240,14 @@ session:
 			prototypeConfig: []byte(`
 introspection_endpoint:
   url: foobar.local
-introspection_response_assertions:
+assertions:
   issuers:
     - foobar
 session:
-  subject_from: some_template
+  subject_id_from: some_template
 cache_ttl: 5s`),
 			config: []byte(`
-introspection_response_assertions:
+assertions:
   issuers:
     - barfoo
 cache_ttl: 15s
@@ -286,6 +292,7 @@ cache_ttl: 15s
 	}
 }
 
+// nolint: maintidx
 func TestExecutionOfOAuth2IntrospectionAuthenticator(t *testing.T) {
 	// GIVEN
 	var (

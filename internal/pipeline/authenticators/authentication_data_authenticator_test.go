@@ -45,7 +45,7 @@ authentication_data_source:
 authentication_data_source:
   - header: foo-header
 session:
-  subject_from: some_template`),
+  subject_id_from: some_template`),
 			assertError: func(t *testing.T, err error) {
 				t.Helper()
 				assert.Error(t, err)
@@ -57,7 +57,7 @@ session:
 identity_info_endpoint:
   url: http://test.com
 session:
-  subject_from: some_template`),
+  subject_id_from: some_template`),
 			assertError: func(t *testing.T, err error) {
 				t.Helper()
 				assert.Error(t, err)
@@ -70,7 +70,7 @@ foo: bar
 identity_info_endpoint:
   url: http://test.com
 session:
-  subject_from: some_template`),
+  subject_id_from: some_template`),
 			assertError: func(t *testing.T, err error) {
 				t.Helper()
 				assert.Error(t, err)
@@ -85,7 +85,7 @@ identity_info_endpoint:
 authentication_data_source:
   - header: foo-header
 session:
-  subject_from: some_template`),
+  subject_id_from: some_template`),
 			assertError: func(t *testing.T, err error) {
 				t.Helper()
 				assert.NoError(t, err)
@@ -123,7 +123,7 @@ identity_info_endpoint:
 authentication_data_source:
   - header: foo-header
 session:
-  subject_from: some_template`),
+  subject_id_from: some_template`),
 			config: []byte{},
 			assert: func(t *testing.T, err error, prototype *authenticationDataAuthenticator,
 				configured *authenticationDataAuthenticator) {
@@ -141,7 +141,7 @@ identity_info_endpoint:
 authentication_data_source:
   - header: foo-header
 session:
-  subject_from: some_template`),
+  subject_id_from: some_template`),
 			config: []byte(`cache_ttl: 5s`),
 			assert: func(t *testing.T, err error, prototype *authenticationDataAuthenticator,
 				configured *authenticationDataAuthenticator) {
@@ -164,7 +164,7 @@ identity_info_endpoint:
 authentication_data_source:
   - header: foo-header
 session:
-  subject_from: some_template
+  subject_id_from: some_template
 cache_ttl: 5s`),
 			config: []byte(`
 cache_ttl: 15s`),

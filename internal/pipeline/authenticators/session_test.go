@@ -21,7 +21,7 @@ func TestSessionValidation(t *testing.T) {
 			configure: func(t *testing.T, s *Session) {
 				t.Helper()
 
-				s.SubjectFrom = "foobar"
+				s.SubjectIDFrom = "foobar"
 			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
@@ -93,7 +93,7 @@ func TestGetSubjectFromSession(t *testing.T) {
 			configure: func(t *testing.T, s *Session) {
 				t.Helper()
 
-				s.SubjectFrom = "subject"
+				s.SubjectIDFrom = "subject"
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
@@ -111,8 +111,8 @@ func TestGetSubjectFromSession(t *testing.T) {
 			configure: func(t *testing.T, s *Session) {
 				t.Helper()
 
-				s.SubjectFrom = "string_slice.1"
-				s.AttributesFrom = "complex.nested"
+				s.SubjectIDFrom = "string_slice.1"
+				s.SubjectAttributesFrom = "complex.nested"
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
@@ -133,8 +133,8 @@ func TestGetSubjectFromSession(t *testing.T) {
 			configure: func(t *testing.T, s *Session) {
 				t.Helper()
 
-				s.SubjectFrom = "subject"
-				s.AttributesFrom = "foobar"
+				s.SubjectIDFrom = "subject"
+				s.SubjectAttributesFrom = "foobar"
 			},
 			assert: func(t *testing.T, err error, _ *subject.Subject) {
 				t.Helper()
@@ -147,7 +147,7 @@ func TestGetSubjectFromSession(t *testing.T) {
 			configure: func(t *testing.T, s *Session) {
 				t.Helper()
 
-				s.SubjectFrom = "foo"
+				s.SubjectIDFrom = "foo"
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()

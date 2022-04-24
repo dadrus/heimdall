@@ -36,13 +36,13 @@ func TestCreateJwtAuthenticator(t *testing.T) {
 		{
 			uc: "missing jwks url config",
 			config: []byte(`
-jwt_token_from:
+jwt_from:
   - header: foo-header
-jwt_assertions:
+assertions:
   issuers:
     - foobar
 session:
-  subject_from: some_template`),
+  subject_id_from: some_template`),
 			assert: func(t *testing.T, err error, a *jwtAuthenticator) {
 				t.Helper()
 				assert.Error(t, err)
@@ -53,11 +53,11 @@ session:
 			config: []byte(`
 jwks_endpoint:
   url: http://test.com
-jwt_assertions:
+assertions:
   audiences:
     - foobar
 session:
-  subject_from: some_template`),
+  subject_id_from: some_template`),
 			assert: func(t *testing.T, err error, a *jwtAuthenticator) {
 				t.Helper()
 				assert.Error(t, err)
@@ -68,9 +68,9 @@ session:
 			config: []byte(`
 jwks_endpoint:
   url: http://test.com
-jwt_token_from:
+jwt_from:
   - header: foo-header
-jwt_assertions:
+assertions:
   issuers:
     - foobar
 foo: bar`),
@@ -84,7 +84,7 @@ foo: bar`),
 			config: []byte(`
 jwks_endpoint:
   url: http://test.com
-jwt_assertions:
+assertions:
   issuers:
     - foobar`),
 			assert: func(t *testing.T, err error, auth *jwtAuthenticator) {
@@ -120,8 +120,8 @@ jwt_assertions:
 				// session settings
 				sess, ok := auth.sf.(*Session)
 				require.True(t, ok)
-				assert.Equal(t, "sub", sess.SubjectFrom)
-				assert.Empty(t, sess.AttributesFrom)
+				assert.Equal(t, "sub", sess.SubjectIDFrom)
+				assert.Empty(t, sess.SubjectAttributesFrom)
 
 				// cache sessiong
 				assert.Nil(t, auth.ttl)
@@ -132,7 +132,7 @@ jwt_assertions:
 			config: []byte(`
 jwks_endpoint:
   url: http://test.com
-jwt_assertions:
+assertions:
   issuers:
     - foobar
 cache_ttl: 5s`),
@@ -169,8 +169,8 @@ cache_ttl: 5s`),
 				// session settings
 				sess, ok := auth.sf.(*Session)
 				require.True(t, ok)
-				assert.Equal(t, "sub", sess.SubjectFrom)
-				assert.Empty(t, sess.AttributesFrom)
+				assert.Equal(t, "sub", sess.SubjectIDFrom)
+				assert.Empty(t, sess.SubjectAttributesFrom)
 
 				// cache sessiong
 				assert.NotNil(t, auth.ttl)
@@ -185,9 +185,9 @@ jwks_endpoint:
   method: POST
   headers:
     Accept-Type: application/foobar
-jwt_token_from:
+jwt_from:
   - header: foo-header
-jwt_assertions:
+assertions:
   scopes:
     matching_strategy: wildcard
     values:
@@ -197,7 +197,7 @@ jwt_assertions:
   allowed_algorithms:
     - ES256
 session:
-  subject_from: some_claim`),
+  subject_id_from: some_claim`),
 			assert: func(t *testing.T, err error, auth *jwtAuthenticator) {
 				t.Helper()
 				require.NoError(t, err)
@@ -228,8 +228,8 @@ session:
 				// session settings
 				sess, ok := auth.sf.(*Session)
 				require.True(t, ok)
-				assert.Equal(t, "some_claim", sess.SubjectFrom)
-				assert.Empty(t, sess.AttributesFrom)
+				assert.Equal(t, "some_claim", sess.SubjectIDFrom)
+				assert.Empty(t, sess.SubjectAttributesFrom)
 
 				// cache sessiong
 				assert.Nil(t, auth.ttl)
@@ -298,11 +298,11 @@ func TestCreateJwtAuthenticatorFromPrototype(t *testing.T) {
 			prototypeConfig: []byte(`
 jwks_endpoint:
   url: http://test.com
-jwt_assertions:
+assertions:
   issuers:
     - foobar`),
 			config: []byte(`
-jwt_assertions:
+assertions:
   issuers:
     - barfoo
   allowed_algorithms:
@@ -329,11 +329,11 @@ jwt_assertions:
 			prototypeConfig: []byte(`
 jwks_endpoint:
   url: http://test.com
-jwt_assertions:
+assertions:
   issuers:
     - foobar`),
 			config: []byte(`
-jwt_assertions:
+assertions:
   issuers:
     - barfoo
   allowed_algorithms:
@@ -362,12 +362,12 @@ cache_ttl: 5s`),
 			prototypeConfig: []byte(`
 jwks_endpoint:
   url: http://test.com
-jwt_assertions:
+assertions:
   issuers:
     - foobar
 cache_ttl: 5s`),
 			config: []byte(`
-jwt_assertions:
+assertions:
   issuers:
     - barfoo
   allowed_algorithms:
@@ -395,7 +395,7 @@ jwt_assertions:
 			prototypeConfig: []byte(`
 jwks_endpoint:
   url: http://test.com
-jwt_assertions:
+assertions:
   issuers:
     - foobar
 cache_ttl: 5s`),
@@ -418,7 +418,7 @@ cache_ttl: 5s`),
 			prototypeConfig: []byte(`
 jwks_endpoint:
   url: http://test.com
-jwt_assertions:
+assertions:
   issuers:
     - foobar
 cache_ttl: 5s`),
