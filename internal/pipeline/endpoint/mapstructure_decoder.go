@@ -11,10 +11,7 @@ import (
 
 func DecodeAuthenticationStrategyHookFunc() mapstructure.DecodeHookFunc {
 	return func(from reflect.Type, to reflect.Type, data any) (any, error) {
-		var (
-			as  AuthenticationStrategy
-			err error
-		)
+		var as AuthenticationStrategy
 
 		if from.Kind() != reflect.Map {
 			return data, nil
@@ -30,28 +27,17 @@ func DecodeAuthenticationStrategyHookFunc() mapstructure.DecodeHookFunc {
 		if m, ok := data.(map[any]any); ok {
 			switch m["type"] {
 			case "basic-auth":
-				as, err = decodeBasicAuthStrategy(m["config"])
+				return decodeBasicAuthStrategy(m["config"])
 			case "api-key":
-				as, err = decodeAPIKeyStrategy(m["config"])
+				return decodeAPIKeyStrategy(m["config"])
 			case "client-credentials":
-				as, err = decodeClientCredentialsStrategy(m["config"])
-			default:
-				return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration, "unsupported authentication type: '%s'", m["type"])
-			}
-		} else if m, ok := data.(map[string]any); ok {
-			switch m["type"] {
-			case "basic-auth":
-				as, err = decodeBasicAuthStrategy(m["config"])
-			case "api-key":
-				as, err = decodeAPIKeyStrategy(m["config"])
-			case "client-credentials":
-				as, err = decodeClientCredentialsStrategy(m["config"])
+				return decodeClientCredentialsStrategy(m["config"])
 			default:
 				return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration, "unsupported authentication type: '%s'", m["type"])
 			}
 		}
 
-		return as, err
+		return data, nil
 	}
 }
 
