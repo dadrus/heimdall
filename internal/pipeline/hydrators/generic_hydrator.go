@@ -133,6 +133,31 @@ func (h *genericHydrator) callHydrationEndpoint(ctx heimdall.Context, sub *subje
 	logger := zerolog.Ctx(ctx.AppContext())
 	logger.Debug().Msg("Calling hydration endpoint")
 
+	req, err := h.createRequest(ctx, sub)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := h.e.CreateClient(req.URL.Hostname()).Do(req)
+	if err != nil {
+		var clientErr *url.Error
+		if errors.As(err, &clientErr) && clientErr.Timeout() {
+			return nil, errorchain.NewWithMessage(heimdall.ErrCommunicationTimeout,
+				"request to the introspection endpoint timed out").CausedBy(err)
+		}
+
+		return nil, errorchain.NewWithMessage(heimdall.ErrCommunication,
+			"request to the introspection endpoint failed").CausedBy(err)
+	}
+
+	defer resp.Body.Close()
+
+	return h.readResponse(resp)
+}
+
+func (h *genericHydrator) createRequest(ctx heimdall.Context, sub *subject.Subject) (*http.Request, error) {
+	logger := zerolog.Ctx(ctx.AppContext())
+
 	var (
 		value string
 		err   error
@@ -170,21 +195,7 @@ func (h *genericHydrator) callHydrationEndpoint(ctx heimdall.Context, sub *subje
 		req.AddCookie(&http.Cookie{Name: cookieName, Value: cookieValue})
 	}
 
-	resp, err := h.e.CreateClient(req.URL.Hostname()).Do(req)
-	if err != nil {
-		var clientErr *url.Error
-		if errors.As(err, &clientErr) && clientErr.Timeout() {
-			return nil, errorchain.NewWithMessage(heimdall.ErrCommunicationTimeout,
-				"request to the introspection endpoint timed out").CausedBy(err)
-		}
-
-		return nil, errorchain.NewWithMessage(heimdall.ErrCommunication,
-			"request to the introspection endpoint failed").CausedBy(err)
-	}
-
-	defer resp.Body.Close()
-
-	return h.readResponse(resp)
+	return req, nil
 }
 
 func (h *genericHydrator) readResponse(resp *http.Response) (map[string]any, error) {
