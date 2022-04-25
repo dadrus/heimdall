@@ -2,6 +2,8 @@ package hydrators
 
 import (
 	"github.com/mitchellh/mapstructure"
+
+	"github.com/dadrus/heimdall/internal/pipeline/endpoint"
 )
 
 func decodeConfig(input any, output any) error {
@@ -9,6 +11,7 @@ func decodeConfig(input any, output any) error {
 		&mapstructure.DecoderConfig{
 			DecodeHook: mapstructure.ComposeDecodeHookFunc(
 				mapstructure.StringToTimeDurationHookFunc(),
+				endpoint.DecodeAuthenticationStrategyHookFunc(),
 			),
 			Result:      output,
 			ErrorUnused: true,
