@@ -47,7 +47,7 @@ func init() {
 type genericHydrator struct {
 	e          endpoint.Endpoint
 	ttl        time.Duration
-	payload    template.Template
+	payload    *template.Template
 	fwdHeaders []string
 	fwdCookies []string
 	name       string
@@ -55,11 +55,11 @@ type genericHydrator struct {
 
 func newGenericHydrator(id string, rawConfig map[any]any) (*genericHydrator, error) {
 	type _config struct {
-		Endpoint       endpoint.Endpoint `mapstructure:"endpoint"`
-		ForwardHeaders []string          `mapstructure:"forward_headers"`
-		ForwardCookies []string          `mapstructure:"forward_cookies"`
-		Payload        template.Template `mapstructure:"payload"`
-		CacheTTL       *time.Duration    `mapstructure:"cache_ttl"`
+		Endpoint       endpoint.Endpoint  `mapstructure:"endpoint"`
+		ForwardHeaders []string           `mapstructure:"forward_headers"`
+		ForwardCookies []string           `mapstructure:"forward_cookies"`
+		Payload        *template.Template `mapstructure:"payload"`
+		CacheTTL       *time.Duration     `mapstructure:"cache_ttl"`
 	}
 
 	var conf _config
@@ -133,9 +133,16 @@ func (h *genericHydrator) callHydrationEndpoint(ctx heimdall.Context, sub *subje
 	logger := zerolog.Ctx(ctx.AppContext())
 	logger.Debug().Msg("Calling hydration endpoint")
 
-	value, err := h.payload.Render(ctx, sub)
-	if err != nil {
-		return nil, err
+	var (
+		value string
+		err   error
+	)
+
+	if h.payload != nil {
+		value, err = h.payload.Render(ctx, sub)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	req, err := h.e.CreateRequest(ctx.AppContext(), strings.NewReader(value))
@@ -221,7 +228,11 @@ func (h *genericHydrator) calculateCacheKey(sub *subject.Subject) (string, error
 	hash.Write([]byte(h.name))
 	hash.Write([]byte(strings.Join(h.fwdHeaders, ",")))
 	hash.Write([]byte(strings.Join(h.fwdCookies, ",")))
-	hash.Write([]byte(h.payload))
+
+	if h.payload != nil {
+		hash.Write([]byte(*h.payload))
+	}
+
 	hash.Write([]byte(h.e.URL))
 	hash.Write(ttlBytes)
 	hash.Write(rawSub)
@@ -249,11 +260,9 @@ func (h *genericHydrator) WithConfig(rawConfig map[any]any) (Hydrator, error) {
 	}
 
 	return &genericHydrator{
-		e:    h.e,
-		name: h.name,
-		payload: x.IfThenElseExec(conf.Payload != nil,
-			func() template.Template { return *conf.Payload },
-			func() template.Template { return h.payload }),
+		e:          h.e,
+		name:       h.name,
+		payload:    x.IfThenElse(conf.Payload != nil, conf.Payload, h.payload),
 		fwdHeaders: x.IfThenElse(len(conf.ForwardHeaders) != 0, conf.ForwardHeaders, h.fwdHeaders),
 		fwdCookies: x.IfThenElse(len(conf.ForwardCookies) != 0, conf.ForwardCookies, h.fwdCookies),
 		ttl: x.IfThenElseExec(conf.CacheTTL != nil,
