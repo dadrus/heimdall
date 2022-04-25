@@ -69,6 +69,12 @@ func newGenericHydrator(id string, rawConfig map[any]any) (*genericHydrator, err
 			CausedBy(err)
 	}
 
+	if err := conf.Endpoint.Validate(); err != nil {
+		return nil, errorchain.
+			NewWithMessage(heimdall.ErrConfiguration, "failed to validate endpoint configuration").
+			CausedBy(err)
+	}
+
 	ttl := defaultTTL
 	if conf.CacheTTL != nil {
 		ttl = *conf.CacheTTL
@@ -143,11 +149,11 @@ func (h *genericHydrator) callHydrationEndpoint(ctx heimdall.Context, sub *subje
 		var clientErr *url.Error
 		if errors.As(err, &clientErr) && clientErr.Timeout() {
 			return nil, errorchain.NewWithMessage(heimdall.ErrCommunicationTimeout,
-				"request to the introspection endpoint timed out").CausedBy(err)
+				"request to the hydration endpoint timed out").CausedBy(err)
 		}
 
 		return nil, errorchain.NewWithMessage(heimdall.ErrCommunication,
-			"request to the introspection endpoint failed").CausedBy(err)
+			"request to the hydration endpoint failed").CausedBy(err)
 	}
 
 	defer resp.Body.Close()
