@@ -213,4 +213,4 @@ func (m *MockCache) Get(key string) any {
 
 func (m *MockCache) Set(key string, value any, ttl time.Duration) { m.Called(key, value, ttl) }
 
-func (m *MockCache) Delete(key string) { m.Called() }
+func (m *MockCache) Delete(key string) { m.Called(key) }
