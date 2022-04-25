@@ -23,11 +23,14 @@ The current implementation is a pre alpha version, which alreay supports
 * Optional default rule taking effect if no rule matches
 * If Default rule is configured, the actual rule definition can reuse it (less yaml code)
 * Typical execution time if caches are active is around 300µs (on my laptop)
+* Hydrators - to enrich the subject information retrieved from the authenticator
 
 Features to come are (more or less in this sequence):
 
-* Hydrators - to enrich the subject information retrieved from the authenticator
+* Not really a feature - but tests, tests, tests ;)
 * Authorizer (remote) - to make use of an external authorization system.
+* Use the defined JSON schema to validate the configuration.
+* Documentation
 * X.509 certificates in key store
 * jwks endpoint to let the upstream service verify the jwt signatures 
 * Health & Readiness Probes
