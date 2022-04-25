@@ -18,7 +18,11 @@ var (
 	authenticatorTypeFactoriesMu sync.RWMutex
 )
 
-type AuthenticatorTypeFactory func(id string, typ config.PipelineObjectType, config map[any]any) (bool, Authenticator, error)
+type AuthenticatorTypeFactory func(
+	id string,
+	typ config.PipelineObjectType,
+	config map[any]any,
+) (bool, Authenticator, error)
 
 func registerAuthenticatorTypeFactory(factory AuthenticatorTypeFactory) {
 	authenticatorTypeFactoriesMu.Lock()
