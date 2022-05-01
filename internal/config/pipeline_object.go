@@ -4,6 +4,7 @@ type PipelineObjectType string
 
 const (
 	POTNoop                PipelineObjectType = "noop"
+	POTBasicAuth           PipelineObjectType = "basic_auth"
 	POTAnonymous           PipelineObjectType = "anonymous"
 	POTUnauthorized        PipelineObjectType = "unauthorized"
 	POTAuthenticationData  PipelineObjectType = "authentication_data"
