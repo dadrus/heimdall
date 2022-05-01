@@ -114,7 +114,6 @@ func TestCreateBasicAuthAuthenticatorFromPrototype(t *testing.T) {
 			prototypeConfig: []byte(`
 user_id: foo
 password: bar`),
-			config: nil,
 			assert: func(t *testing.T, err error, prototype *basicAuthAuthenticator, configured *basicAuthAuthenticator) {
 				t.Helper()
 
@@ -407,5 +406,6 @@ password: bar`))
 
 		// THEN
 		tc.assert(t, err, sub)
+		ctx.AssertExpectations(t)
 	}
 }
