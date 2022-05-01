@@ -439,6 +439,7 @@ cache_ttl: 5s`),
 			require.NoError(t, err)
 
 			prototype, err := newJwtAuthenticator(pc)
+			require.NoError(t, err)
 
 			// WHEN
 			auth, err := prototype.WithConfig(conf)
