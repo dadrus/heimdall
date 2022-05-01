@@ -1,6 +1,7 @@
 package matcher
 
 import (
+	"net/url"
 	"testing"
 
 	"github.com/mitchellh/mapstructure"
@@ -80,4 +81,35 @@ error:
 
 	assert.True(t, typ.Matcher.Match(heimdall.ErrConfiguration))
 	assert.False(t, typ.Matcher.Match(heimdall.ErrCommunication))
+}
+
+func TestStringToURLHookFunc(t *testing.T) {
+	t.Parallel()
+
+	type Type struct {
+		Ref *url.URL `mapstructure:"url"`
+	}
+
+	rawConfig := []byte("url: http://test.com/foo")
+
+	var typ Type
+
+	dec, err := mapstructure.NewDecoder(
+		&mapstructure.DecoderConfig{
+			DecodeHook: mapstructure.ComposeDecodeHookFunc(
+				StringToURLHookFunc(),
+			),
+			Result:      &typ,
+			ErrorUnused: true,
+		})
+	require.NoError(t, err)
+
+	mapConfig, err := testsupport.DecodeTestConfig(rawConfig)
+	require.NoError(t, err)
+
+	err = dec.Decode(mapConfig)
+	require.NoError(t, err)
+
+	assert.NotNil(t, typ.Ref)
+	assert.Equal(t, "http://test.com/foo", typ.Ref.String())
 }
