@@ -11,6 +11,7 @@ import (
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/pipeline/subject"
+	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
@@ -40,32 +41,39 @@ type basicAuthAuthenticator struct {
 }
 
 func newBasicAuthAuthenticator(rawConfig map[any]any) (*basicAuthAuthenticator, error) {
-	var auth basicAuthAuthenticator
+	type _config struct {
+		UserID   string `mapstructure:"user_id"`
+		Password string `mapstructure:"password"`
+	}
 
-	if err := decodeConfig(rawConfig, &auth); err != nil {
+	var conf _config
+
+	if err := decodeConfig(rawConfig, &conf); err != nil {
 		return nil, errorchain.
 			NewWithMessage(heimdall.ErrConfiguration, "failed to decode basic_auth authenticator config").
 			CausedBy(err)
 	}
 
-	if len(auth.UserID) == 0 {
+	if len(conf.UserID) == 0 {
 		return nil, errorchain.
 			NewWithMessagef(heimdall.ErrConfiguration, "basic_auth authenticator requires user_id to be set")
 	}
 
-	if len(auth.Password) == 0 {
+	if len(conf.Password) == 0 {
 		return nil, errorchain.
 			NewWithMessagef(heimdall.ErrConfiguration, "basic_auth authenticator requires password to be set")
 	}
 
+	var auth basicAuthAuthenticator
+
 	// rewrite user id and password as hashes to mitigate potential side-channel attacks
 	// during credentials check
 	md := sha256.New()
-	md.Write([]byte(auth.UserID))
+	md.Write([]byte(conf.UserID))
 	auth.UserID = hex.EncodeToString(md.Sum(nil))
 
 	md.Reset()
-	md.Write([]byte(auth.Password))
+	md.Write([]byte(conf.Password))
 	auth.Password = hex.EncodeToString(md.Sum(nil))
 
 	return &auth, nil
@@ -123,11 +131,43 @@ func (a *basicAuthAuthenticator) Execute(ctx heimdall.Context) (*subject.Subject
 	return &subject.Subject{ID: userIDAndPassword[0], Attributes: make(map[string]any)}, nil
 }
 
-func (a *basicAuthAuthenticator) WithConfig(config map[any]any) (Authenticator, error) {
+func (a *basicAuthAuthenticator) WithConfig(rawConfig map[any]any) (Authenticator, error) {
 	// this authenticator allows full redefinition on the rule level
-	if len(config) == 0 {
+	if len(rawConfig) == 0 {
 		return a, nil
 	}
 
-	return newBasicAuthAuthenticator(config)
+	type _config struct {
+		UserID   string `mapstructure:"user_id"`
+		Password string `mapstructure:"password"`
+	}
+
+	var conf _config
+
+	if err := decodeConfig(rawConfig, &conf); err != nil {
+		return nil, errorchain.
+			NewWithMessage(heimdall.ErrConfiguration, "failed to decode basic_auth authenticator config").
+			CausedBy(err)
+	}
+
+	return &basicAuthAuthenticator{
+		UserID: x.IfThenElseExec(len(conf.UserID) != 0,
+			func() string {
+				md := sha256.New()
+				md.Write([]byte(conf.UserID))
+
+				return hex.EncodeToString(md.Sum(nil))
+			}, func() string {
+				return a.UserID
+			}),
+		Password: x.IfThenElseExec(len(conf.Password) != 0,
+			func() string {
+				md := sha256.New()
+				md.Write([]byte(conf.Password))
+
+				return hex.EncodeToString(md.Sum(nil))
+			}, func() string {
+				return a.Password
+			}),
+	}, nil
 }

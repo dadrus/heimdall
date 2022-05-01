@@ -141,6 +141,40 @@ password: baz`),
 			},
 		},
 		{
+			uc: "no user_id provided",
+			prototypeConfig: []byte(`
+user_id: foo
+password: bar`),
+			config: []byte(`
+password: baz`),
+			assert: func(t *testing.T, err error, prototype *basicAuthAuthenticator, configured *basicAuthAuthenticator) {
+				t.Helper()
+
+				require.NoError(t, err)
+				assert.NotEqual(t, prototype, configured)
+
+				assert.Equal(t, prototype.UserID, configured.UserID)
+				assert.NotEqual(t, prototype.Password, configured.Password)
+			},
+		},
+		{
+			uc: "no password provided",
+			prototypeConfig: []byte(`
+user_id: foo
+password: bar`),
+			config: []byte(`
+user_id: baz`),
+			assert: func(t *testing.T, err error, prototype *basicAuthAuthenticator, configured *basicAuthAuthenticator) {
+				t.Helper()
+
+				require.NoError(t, err)
+				assert.NotEqual(t, prototype, configured)
+
+				assert.NotEqual(t, prototype.UserID, configured.UserID)
+				assert.Equal(t, prototype.Password, configured.Password)
+			},
+		},
+		{
 			uc: "user_id differs",
 			prototypeConfig: []byte(`
 user_id: foo
