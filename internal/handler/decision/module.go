@@ -56,7 +56,7 @@ func newFiberApp(conf config.Configuration, cache cache.Cache, logger zerolog.Lo
 			AllowHeaders:     strings.Join(api.CORS.AllowedHeaders, ","),
 			AllowCredentials: api.CORS.AllowCredentials,
 			ExposeHeaders:    strings.Join(api.CORS.ExposedHeaders, ","),
-			MaxAge:           api.CORS.MaxAge,
+			MaxAge:           int(api.CORS.MaxAge.Seconds()),
 		}))
 	}
 
