@@ -1,5 +1,17 @@
+# Ignore GoLand meta directories
 .idea
 .run
+
+# Ignore heimdall build artifact
+/heimdall
+
+# Ignore files ending with ~
 *~
+
+# Ignore coverage files
 cover.out
 coverage.*
+
+# Ignore Jekyll cache and generated page
+/docs/_site/
+/docs/.jekyll-cache/
