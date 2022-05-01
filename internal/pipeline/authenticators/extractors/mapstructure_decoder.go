@@ -36,13 +36,9 @@ func DecodeCompositeExtractStrategyHookFunc() mapstructure.DecodeHookFunc {
 				}
 
 				strategies[i] = strategy
-			} else if values, ok := entry.(map[string]any); ok {
-				strategy, err := createStrategyFromStringAnyMap(values)
-				if err != nil {
-					return data, err
-				}
-
-				strategies[i] = strategy
+			} else {
+				return nil, errorchain.
+					NewWithMessage(heimdall.ErrInternal, "unexpected authentication config type")
 			}
 		}
 
@@ -58,32 +54,6 @@ func createStrategyFromAnyAnyMap(data map[any]any) (AuthDataExtractStrategy, err
 			// ok if panics
 			prefix = p.(string)
 		}
-		// nolint
-		// ok if panics
-		return &HeaderValueExtractStrategy{Name: value.(string), Prefix: prefix}, nil
-	} else if value, ok := data["cookie"]; ok {
-		// nolint
-		// ok if panics
-		return &CookieValueExtractStrategy{Name: value.(string)}, nil
-	} else if value, ok := data["query_parameter"]; ok {
-		// nolint
-		// ok if panics
-		return &QueryParameterExtractStrategy{Name: value.(string)}, nil
-	} else {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration, "unsupported authentication source")
-	}
-}
-
-func createStrategyFromStringAnyMap(data map[string]any) (AuthDataExtractStrategy, error) {
-	if value, ok := data["header"]; ok {
-		var prefix string
-		if p, ok := data["strip_prefix"]; ok {
-			// nolint
-			// ok if panics
-			prefix = p.(string)
-		}
-
 		// nolint
 		// ok if panics
 		return &HeaderValueExtractStrategy{Name: value.(string), Prefix: prefix}, nil
