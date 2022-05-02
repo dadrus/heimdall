@@ -55,7 +55,7 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v3
     - name: Test
-      run: go test -v -coverprofile=heimdall.cov ./...
+      run: go test -v -coverprofile=heimdall.cov -coverpkg=./... ./...
     - name: Code Coverage
       uses: codecov/codecov-action@v2
       with:
