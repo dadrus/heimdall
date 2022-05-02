@@ -49,11 +49,12 @@ type jwtAuthenticator struct {
 	adg extractors.AuthDataExtractStrategy
 }
 
+// nolint: cyclop
 func newJwtAuthenticator(rawConfig map[any]any) (*jwtAuthenticator, error) {
 	type _config struct {
 		Endpoint       endpoint.Endpoint                   `mapstructure:"jwks_endpoint"`
 		AuthDataSource extractors.CompositeExtractStrategy `mapstructure:"jwt_from"`
-		JwtAssertions  oauth2.Expectation                  `mapstructure:"assertions"`
+		Assertions     oauth2.Expectation                  `mapstructure:"assertions"`
 		Session        Session                             `mapstructure:"session"`
 		CacheTTL       *time.Duration                      `mapstructure:"cache_ttl"`
 	}
@@ -65,7 +66,7 @@ func newJwtAuthenticator(rawConfig map[any]any) (*jwtAuthenticator, error) {
 			CausedBy(err)
 	}
 
-	if err := conf.JwtAssertions.Validate(); err != nil {
+	if err := conf.Assertions.Validate(); err != nil {
 		return nil, errorchain.
 			NewWithMessage(heimdall.ErrConfiguration, "failed to validate assertions configuration").
 			CausedBy(err)
@@ -83,8 +84,12 @@ func newJwtAuthenticator(rawConfig map[any]any) (*jwtAuthenticator, error) {
 		conf.Endpoint.Method = "GET"
 	}
 
-	if len(conf.JwtAssertions.AllowedAlgorithms) == 0 {
-		conf.JwtAssertions.AllowedAlgorithms = defaultAllowedAlgorithms()
+	if len(conf.Assertions.AllowedAlgorithms) == 0 {
+		conf.Assertions.AllowedAlgorithms = defaultAllowedAlgorithms()
+	}
+
+	if conf.Assertions.ScopesMatcher == nil {
+		conf.Assertions.ScopesMatcher = oauth2.NoopMatcher{}
 	}
 
 	if err := conf.Endpoint.Validate(); err != nil {
@@ -110,7 +115,7 @@ func newJwtAuthenticator(rawConfig map[any]any) (*jwtAuthenticator, error) {
 
 	return &jwtAuthenticator{
 		e:   conf.Endpoint,
-		a:   conf.JwtAssertions,
+		a:   conf.Assertions,
 		ttl: conf.CacheTTL,
 		sf:  &conf.Session,
 		adg: adg,
@@ -173,6 +178,10 @@ func (a *jwtAuthenticator) WithConfig(config map[any]any) (Authenticator, error)
 	var assertions oauth2.Expectation
 	if conf.Assertions != nil {
 		assertions = *conf.Assertions
+
+		if assertions.ScopesMatcher == nil {
+			assertions.ScopesMatcher = oauth2.NoopMatcher{}
+		}
 	} else {
 		assertions = a.a
 	}

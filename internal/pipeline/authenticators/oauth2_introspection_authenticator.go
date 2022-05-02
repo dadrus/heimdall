@@ -47,6 +47,7 @@ type oauth2IntrospectionAuthenticator struct {
 	ttl *time.Duration
 }
 
+// nolint: cyclop
 func newOAuth2IntrospectionAuthenticator(rawConfig map[any]any) (*oauth2IntrospectionAuthenticator, error) {
 	type _config struct {
 		Endpoint   endpoint.Endpoint  `mapstructure:"introspection_endpoint"`
@@ -96,6 +97,10 @@ func newOAuth2IntrospectionAuthenticator(rawConfig map[any]any) (*oauth2Introspe
 
 	if len(conf.Assertions.AllowedAlgorithms) == 0 {
 		conf.Assertions.AllowedAlgorithms = defaultAllowedAlgorithms()
+	}
+
+	if conf.Assertions.ScopesMatcher == nil {
+		conf.Assertions.ScopesMatcher = oauth2.NoopMatcher{}
 	}
 
 	extractor := extractors.CompositeExtractStrategy{
@@ -160,6 +165,10 @@ func (a *oauth2IntrospectionAuthenticator) WithConfig(config map[any]any) (Authe
 	var assertions oauth2.Expectation
 	if conf.Assertions != nil {
 		assertions = *conf.Assertions
+
+		if assertions.ScopesMatcher == nil {
+			assertions.ScopesMatcher = oauth2.NoopMatcher{}
+		}
 	} else {
 		assertions = a.a
 	}
