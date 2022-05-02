@@ -64,7 +64,7 @@ auth:
 				t.Helper()
 
 				assert.Error(t, err)
-				assert.ErrorContains(t, err, "'name' property to be set")
+				assert.ErrorContains(t, err, "'user' property to be set")
 			},
 		},
 		{
@@ -97,7 +97,6 @@ auth:
 		},
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
-			t.Parallel()
 			// GIVEN
 			var typ Type
 
@@ -254,7 +253,6 @@ auth:
 		},
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
-			t.Parallel()
 			// GIVEN
 			var typ Type
 
@@ -307,7 +305,7 @@ auth:
 				ccs := as.(*ClientCredentialsStrategy)
 				assert.Equal(t, "foo", ccs.ClientID)
 				assert.Equal(t, "bar", ccs.ClientSecret)
-				assert.Equal(t, "cookie", ccs.TokenURL)
+				assert.Equal(t, "http://foobar.foo", ccs.TokenURL)
 			},
 		},
 		{
@@ -331,8 +329,8 @@ auth:
 				ccs := as.(*ClientCredentialsStrategy)
 				assert.Equal(t, "foo", ccs.ClientID)
 				assert.Equal(t, "bar", ccs.ClientSecret)
-				assert.Equal(t, "cookie", ccs.TokenURL)
-				assert.Contains(t, ccs.Scopes, []string{"foo", "bar"})
+				assert.Equal(t, "http://foobar.foo", ccs.TokenURL)
+				assert.ElementsMatch(t, ccs.Scopes, []string{"foo", "bar"})
 			},
 		},
 		{
@@ -398,7 +396,6 @@ auth:
 		},
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
-			t.Parallel()
 			// GIVEN
 			var typ Type
 

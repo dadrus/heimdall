@@ -51,23 +51,25 @@ func decodeClientCredentialsStrategy(config any) (AuthenticationStrategy, error)
 
 	err := mapstructure.Decode(config, &strategy)
 	if err != nil {
-		if len(strategy.ClientID) == 0 {
-			return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
-				"client-credentials strategy requires 'client_id' property to be set")
-		}
-
-		if len(strategy.ClientSecret) == 0 {
-			return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
-				"client-credentials strategy requires 'client_secret' property to be set")
-		}
-
-		if len(strategy.TokenURL) == 0 {
-			return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
-				"client-credentials strategy requires 'token_url' property to be set")
-		}
+		return nil, err
 	}
 
-	return &strategy, err
+	if len(strategy.ClientID) == 0 {
+		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
+			"client-credentials strategy requires 'client_id' property to be set")
+	}
+
+	if len(strategy.ClientSecret) == 0 {
+		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
+			"client-credentials strategy requires 'client_secret' property to be set")
+	}
+
+	if len(strategy.TokenURL) == 0 {
+		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
+			"client-credentials strategy requires 'token_url' property to be set")
+	}
+
+	return &strategy, nil
 }
 
 func decodeAPIKeyStrategy(config any) (AuthenticationStrategy, error) {
@@ -80,28 +82,30 @@ func decodeAPIKeyStrategy(config any) (AuthenticationStrategy, error) {
 
 	err := mapstructure.Decode(config, &strategy)
 	if err != nil {
-		if len(strategy.Name) == 0 {
-			return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
-				"api-key strategy requires 'name' property to be set")
-		}
-
-		if len(strategy.Value) == 0 {
-			return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
-				"api-key strategy requires 'value' property to be set")
-		}
-
-		if len(strategy.In) == 0 {
-			return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
-				"api-key strategy requires 'in' property to be set")
-		}
-
-		if strategy.In != "header" && strategy.In != "cookie" {
-			return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
-				"api-key strategy requires 'in' property to be set to either 'header' or 'cookie'")
-		}
+		return nil, err
 	}
 
-	return &strategy, err
+	if len(strategy.Name) == 0 {
+		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
+			"api-key strategy requires 'name' property to be set")
+	}
+
+	if len(strategy.Value) == 0 {
+		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
+			"api-key strategy requires 'value' property to be set")
+	}
+
+	if len(strategy.In) == 0 {
+		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
+			"api-key strategy requires 'in' property to be set")
+	}
+
+	if strategy.In != "header" && strategy.In != "cookie" {
+		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
+			"api-key strategy requires 'in' property to be set to either 'header' or 'cookie'")
+	}
+
+	return &strategy, nil
 }
 
 func decodeBasicAuthStrategy(config any) (AuthenticationStrategy, error) {
@@ -114,16 +118,18 @@ func decodeBasicAuthStrategy(config any) (AuthenticationStrategy, error) {
 
 	err := mapstructure.Decode(config, &strategy)
 	if err != nil {
-		if len(strategy.User) == 0 {
-			return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
-				"basic-auth strategy requires 'user' property to be set")
-		}
-
-		if len(strategy.Password) == 0 {
-			return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
-				"basic-auth strategy requires 'password' property to be set")
-		}
+		return nil, err
 	}
 
-	return &strategy, err
+	if len(strategy.User) == 0 {
+		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
+			"basic-auth strategy requires 'user' property to be set")
+	}
+
+	if len(strategy.Password) == 0 {
+		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
+			"basic-auth strategy requires 'password' property to be set")
+	}
+
+	return &strategy, nil
 }
