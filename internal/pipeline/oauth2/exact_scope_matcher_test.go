@@ -10,15 +10,15 @@ func TestExactScopeMatcherMatch(t *testing.T) {
 	t.Parallel()
 
 	for _, tc := range []struct {
-		uc      string
-		matcher ExactScopeStrategyMatcher
-		scopes  []string
-		assert  func(t *testing.T, err error)
+		uc             string
+		requiredScopes ExactScopeStrategyMatcher
+		providedScopes []string
+		assert         func(t *testing.T, err error)
 	}{
 		{
-			uc:      "doesn't match if only first scope is present",
-			matcher: ExactScopeStrategyMatcher{"foo.bar.baz", "foo.bar"},
-			scopes:  []string{"foo.bar.baz"},
+			uc:             "doesn't match if only first scope is present",
+			requiredScopes: ExactScopeStrategyMatcher{"foo.bar.baz", "foo.bar"},
+			providedScopes: []string{"foo.bar.baz"},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
@@ -26,9 +26,9 @@ func TestExactScopeMatcherMatch(t *testing.T) {
 			},
 		},
 		{
-			uc:      "doesn't match if only second scope is present",
-			matcher: ExactScopeStrategyMatcher{"foo.bar.baz", "foo.bar"},
-			scopes:  []string{"foo.bar"},
+			uc:             "doesn't match if only second scope is present",
+			requiredScopes: ExactScopeStrategyMatcher{"foo.bar.baz", "foo.bar"},
+			providedScopes: []string{"foo.bar"},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
@@ -36,9 +36,9 @@ func TestExactScopeMatcherMatch(t *testing.T) {
 			},
 		},
 		{
-			uc:      "matches when all required scopes are present",
-			matcher: ExactScopeStrategyMatcher{"foo.bar.baz", "foo.bar"},
-			scopes:  []string{"foo.bar.baz", "foo.bar"},
+			uc:             "matches when all required scopes are present",
+			requiredScopes: ExactScopeStrategyMatcher{"foo.bar.baz", "foo.bar"},
+			providedScopes: []string{"foo.bar.baz", "foo.bar"},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
@@ -46,9 +46,9 @@ func TestExactScopeMatcherMatch(t *testing.T) {
 			},
 		},
 		{
-			uc:      "matches when more than all required scopes are present",
-			matcher: ExactScopeStrategyMatcher{"foo.bar.baz", "foo.bar"},
-			scopes:  []string{"foo.bar.baz", "foo.bar", "baz.baz"},
+			uc:             "matches when more than all required scopes are present",
+			requiredScopes: ExactScopeStrategyMatcher{"foo.bar.baz", "foo.bar"},
+			providedScopes: []string{"foo.bar.baz", "foo.bar", "baz.baz"},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
@@ -56,9 +56,9 @@ func TestExactScopeMatcherMatch(t *testing.T) {
 			},
 		},
 		{
-			uc:      "doesn't match when no required scopes are present",
-			matcher: ExactScopeStrategyMatcher{"foo.bar.baz", "foo.bar"},
-			scopes:  []string{},
+			uc:             "doesn't match when no required scopes are present",
+			requiredScopes: ExactScopeStrategyMatcher{"foo.bar.baz", "foo.bar"},
+			providedScopes: []string{},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
@@ -66,9 +66,9 @@ func TestExactScopeMatcherMatch(t *testing.T) {
 			},
 		},
 		{
-			uc:      "doesn't match not included scope",
-			matcher: ExactScopeStrategyMatcher{"foo.bar.baz", "foo.bar"},
-			scopes:  []string{"baz.baz"},
+			uc:             "doesn't match not included scope",
+			requiredScopes: ExactScopeStrategyMatcher{"foo.bar.baz", "foo.bar"},
+			providedScopes: []string{"baz.baz"},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
@@ -76,9 +76,9 @@ func TestExactScopeMatcherMatch(t *testing.T) {
 			},
 		},
 		{
-			uc:      "matches if no required scopes are defined",
-			matcher: ExactScopeStrategyMatcher{},
-			scopes:  []string{"baz.baz"},
+			uc:             "matches if no required scopes are defined",
+			requiredScopes: ExactScopeStrategyMatcher{},
+			providedScopes: []string{"baz.baz"},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
@@ -88,7 +88,7 @@ func TestExactScopeMatcherMatch(t *testing.T) {
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
 			// WHEN
-			err := tc.matcher.Match(tc.scopes)
+			err := tc.requiredScopes.Match(tc.providedScopes)
 
 			// THEN
 			tc.assert(t, err)
