@@ -3,23 +3,95 @@ package oauth2
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-func TestExactScopeStrategy2ScopeStrategy(t *testing.T) {
+func TestExactScopeMatcherMatch(t *testing.T) {
 	t.Parallel()
 
-	strategy := ExactScopeStrategyMatcher{}
+	for _, tc := range []struct {
+		uc      string
+		matcher ExactScopeStrategyMatcher
+		scopes  []string
+		assert  func(t *testing.T, err error)
+	}{
+		{
+			uc:      "doesn't match if only first scope is present",
+			matcher: ExactScopeStrategyMatcher{"foo.bar.baz", "foo.bar"},
+			scopes:  []string{"foo.bar.baz"},
+			assert: func(t *testing.T, err error) {
+				t.Helper()
 
-	scopes := []string{"foo.bar.baz", "foo.bar"}
-	assert.True(t, strategy.doMatch(scopes, "foo.bar.baz"))
-	assert.True(t, strategy.doMatch(scopes, "foo.bar"))
+				require.Error(t, err)
+			},
+		},
+		{
+			uc:      "doesn't match if only second scope is present",
+			matcher: ExactScopeStrategyMatcher{"foo.bar.baz", "foo.bar"},
+			scopes:  []string{"foo.bar"},
+			assert: func(t *testing.T, err error) {
+				t.Helper()
 
-	assert.False(t, strategy.doMatch(scopes, "foo.bar.baz.baz"))
-	assert.False(t, strategy.doMatch(scopes, "foo.bar.bar"))
+				require.Error(t, err)
+			},
+		},
+		{
+			uc:      "matches when all required scopes are present",
+			matcher: ExactScopeStrategyMatcher{"foo.bar.baz", "foo.bar"},
+			scopes:  []string{"foo.bar.baz", "foo.bar"},
+			assert: func(t *testing.T, err error) {
+				t.Helper()
 
-	assert.False(t, strategy.doMatch(scopes, "foo.bar.baz1"))
-	assert.False(t, strategy.doMatch(scopes, "foo.bar1"))
+				require.NoError(t, err)
+			},
+		},
+		{
+			uc:      "matches when more than all required scopes are present",
+			matcher: ExactScopeStrategyMatcher{"foo.bar.baz", "foo.bar"},
+			scopes:  []string{"foo.bar.baz", "foo.bar", "baz.baz"},
+			assert: func(t *testing.T, err error) {
+				t.Helper()
 
-	assert.False(t, strategy.doMatch([]string{}, "foo"))
+				require.NoError(t, err)
+			},
+		},
+		{
+			uc:      "doesn't match when no required scopes are present",
+			matcher: ExactScopeStrategyMatcher{"foo.bar.baz", "foo.bar"},
+			scopes:  []string{},
+			assert: func(t *testing.T, err error) {
+				t.Helper()
+
+				require.Error(t, err)
+			},
+		},
+		{
+			uc:      "doesn't match not included scope",
+			matcher: ExactScopeStrategyMatcher{"foo.bar.baz", "foo.bar"},
+			scopes:  []string{"baz.baz"},
+			assert: func(t *testing.T, err error) {
+				t.Helper()
+
+				require.Error(t, err)
+			},
+		},
+		{
+			uc:      "matches if no required scopes are defined",
+			matcher: ExactScopeStrategyMatcher{},
+			scopes:  []string{"baz.baz"},
+			assert: func(t *testing.T, err error) {
+				t.Helper()
+
+				require.NoError(t, err)
+			},
+		},
+	} {
+		t.Run("case="+tc.uc, func(t *testing.T) {
+			// WHEN
+			err := tc.matcher.Match(tc.scopes)
+
+			// THEN
+			tc.assert(t, err)
+		})
+	}
 }
