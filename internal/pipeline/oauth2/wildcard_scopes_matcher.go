@@ -1,11 +1,25 @@
 package oauth2
 
-import "strings"
+import (
+	"strings"
 
-type WildcardScopeStrategyMatcher struct{}
+	"github.com/dadrus/heimdall/internal/x/errorchain"
+)
+
+type WildcardScopeStrategyMatcher []string
+
+func (m WildcardScopeStrategyMatcher) Match(scopes []string) error {
+	for _, required := range m {
+		if !m.doMatch(scopes, required) {
+			return errorchain.NewWithMessagef(ErrClaimsNotValid, "required scope %s is missing", required)
+		}
+	}
+
+	return nil
+}
 
 // nolint: cyclop
-func (WildcardScopeStrategyMatcher) Match(matchers []string, needle string) bool {
+func (m WildcardScopeStrategyMatcher) doMatch(matchers []string, needle string) bool {
 	needleParts := strings.Split(needle, ".")
 
 	for _, matcher := range matchers {

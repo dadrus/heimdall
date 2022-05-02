@@ -105,7 +105,7 @@ assertions:
 				assert.Contains(t, auth.adg, extractors.QueryParameterExtractStrategy{Name: "access_token"})
 
 				// assertions settings
-				assert.NoError(t, auth.a.ScopesMatcher.MatchScopes([]string{}))
+				assert.NoError(t, auth.a.ScopesMatcher.Match([]string{}))
 				assert.Empty(t, auth.a.TargetAudiences)
 				assert.Len(t, auth.a.TrustedIssuers, 1)
 				assert.Contains(t, auth.a.TrustedIssuers, "foobar")
@@ -154,7 +154,7 @@ cache_ttl: 5s`),
 				assert.Contains(t, auth.adg, extractors.QueryParameterExtractStrategy{Name: "access_token"})
 
 				// assertions settings
-				assert.NoError(t, auth.a.ScopesMatcher.MatchScopes([]string{}))
+				assert.NoError(t, auth.a.ScopesMatcher.Match([]string{}))
 				assert.Empty(t, auth.a.TargetAudiences)
 				assert.Len(t, auth.a.TrustedIssuers, 1)
 				assert.Contains(t, auth.a.TrustedIssuers, "foobar")
@@ -216,7 +216,7 @@ session:
 
 				// assertions settings
 				assert.NotNil(t, auth.a.ScopesMatcher)
-				assert.NoError(t, auth.a.ScopesMatcher.MatchScopes([]string{"foo"}))
+				assert.NoError(t, auth.a.ScopesMatcher.Match([]string{"foo"}))
 				assert.Empty(t, auth.a.TargetAudiences)
 				assert.Len(t, auth.a.TrustedIssuers, 1)
 				assert.Contains(t, auth.a.TrustedIssuers, "foobar")
@@ -316,7 +316,7 @@ assertions:
 				assert.Equal(t, prototype.sf, configured.sf)
 				assert.NotEqual(t, prototype.a, configured.a)
 
-				assert.NoError(t, configured.a.ScopesMatcher.MatchScopes([]string{}))
+				assert.NoError(t, configured.a.ScopesMatcher.Match([]string{}))
 				assert.Empty(t, configured.a.TargetAudiences)
 				assert.ElementsMatch(t, configured.a.TrustedIssuers, []string{"barfoo"})
 				assert.ElementsMatch(t, configured.a.AllowedAlgorithms, []string{string(jose.ES512)})
@@ -348,7 +348,7 @@ cache_ttl: 5s`),
 				assert.Equal(t, prototype.sf, configured.sf)
 				assert.NotEqual(t, prototype.a, configured.a)
 
-				assert.NoError(t, configured.a.ScopesMatcher.MatchScopes([]string{}))
+				assert.NoError(t, configured.a.ScopesMatcher.Match([]string{}))
 				assert.Empty(t, configured.a.TargetAudiences)
 				assert.ElementsMatch(t, configured.a.TrustedIssuers, []string{"barfoo"})
 				assert.ElementsMatch(t, configured.a.AllowedAlgorithms, []string{string(jose.ES512)})
@@ -381,7 +381,7 @@ assertions:
 				assert.Equal(t, prototype.sf, configured.sf)
 				assert.NotEqual(t, prototype.a, configured.a)
 
-				assert.NoError(t, configured.a.ScopesMatcher.MatchScopes([]string{}))
+				assert.NoError(t, configured.a.ScopesMatcher.Match([]string{}))
 				assert.Empty(t, configured.a.TargetAudiences)
 				assert.ElementsMatch(t, configured.a.TrustedIssuers, []string{"barfoo"})
 				assert.ElementsMatch(t, configured.a.AllowedAlgorithms, []string{string(jose.ES512)})
@@ -482,10 +482,7 @@ func TestSuccessfulExecutionOfJwtAuthenticatorWithoutCacheUsage(t *testing.T) {
 	defer srv.Close()
 
 	as := oauth2.Expectation{
-		ScopesMatcher: oauth2.ScopesMatcher{
-			Matcher: oauth2.ExactScopeStrategyMatcher{},
-			Scopes:  []string{"foo"},
-		},
+		ScopesMatcher:     oauth2.ExactScopeStrategyMatcher{"foo"},
 		TargetAudiences:   []string{audience},
 		TrustedIssuers:    []string{issuer},
 		AllowedAlgorithms: []string{string(jose.PS512)},
@@ -559,10 +556,7 @@ func TestSuccessfulExecutionOfJwtAuthenticatorWithKeyFromCache(t *testing.T) {
 	sigKey := jwks.Key(token.Headers[0].KeyID)[0]
 
 	as := oauth2.Expectation{
-		ScopesMatcher: oauth2.ScopesMatcher{
-			Matcher: oauth2.ExactScopeStrategyMatcher{},
-			Scopes:  []string{"foo"},
-		},
+		ScopesMatcher:     oauth2.ExactScopeStrategyMatcher{"foo"},
 		TargetAudiences:   []string{audience},
 		TrustedIssuers:    []string{issuer},
 		AllowedAlgorithms: []string{string(jose.PS512)},
@@ -647,10 +641,7 @@ func TestSuccessfulExecutionOfJwtAuthenticatorWithCacheMiss(t *testing.T) {
 	defer srv.Close()
 
 	as := oauth2.Expectation{
-		ScopesMatcher: oauth2.ScopesMatcher{
-			Matcher: oauth2.ExactScopeStrategyMatcher{},
-			Scopes:  []string{"foo"},
-		},
+		ScopesMatcher:     oauth2.ExactScopeStrategyMatcher{"foo"},
 		TargetAudiences:   []string{audience},
 		TrustedIssuers:    []string{issuer},
 		AllowedAlgorithms: []string{string(jose.PS512)},

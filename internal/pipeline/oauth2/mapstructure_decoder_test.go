@@ -28,7 +28,7 @@ func TestDecodeScopesMatcherHookFunc(t *testing.T) {
 	for _, tc := range []struct {
 		uc     string
 		config []byte
-		assert func(t *testing.T, err error, matcher *ScopesMatcher)
+		assert func(t *testing.T, err error, matcher ScopesMatcher)
 	}{
 		{
 			uc: "structure with scopes under value and wildcard strategy",
@@ -39,13 +39,13 @@ scopes:
     - bar
   matching_strategy: wildcard
 `),
-			assert: func(t *testing.T, err error, matcher *ScopesMatcher) {
+			assert: func(t *testing.T, err error, matcher ScopesMatcher) {
 				t.Helper()
 
 				require.NoError(t, err)
 
-				assert.IsType(t, WildcardScopeStrategyMatcher{}, matcher.Matcher)
-				assert.ElementsMatch(t, matcher.Scopes, []string{"foo", "bar"})
+				assert.IsType(t, WildcardScopeStrategyMatcher{}, matcher)
+				assert.ElementsMatch(t, matcher, []string{"foo", "bar"})
 			},
 		},
 		{
@@ -57,13 +57,13 @@ scopes:
     - bar
   matching_strategy: exact
 `),
-			assert: func(t *testing.T, err error, matcher *ScopesMatcher) {
+			assert: func(t *testing.T, err error, matcher ScopesMatcher) {
 				t.Helper()
 
 				require.NoError(t, err)
 
-				assert.IsType(t, ExactScopeStrategyMatcher{}, matcher.Matcher)
-				assert.ElementsMatch(t, matcher.Scopes, []string{"foo", "bar"})
+				assert.IsType(t, ExactScopeStrategyMatcher{}, matcher)
+				assert.ElementsMatch(t, matcher, []string{"foo", "bar"})
 			},
 		},
 		{
@@ -75,13 +75,13 @@ scopes:
     - bar
   matching_strategy: hierarchic
 `),
-			assert: func(t *testing.T, err error, matcher *ScopesMatcher) {
+			assert: func(t *testing.T, err error, matcher ScopesMatcher) {
 				t.Helper()
 
 				require.NoError(t, err)
 
-				assert.IsType(t, HierarchicScopeStrategyMatcher{}, matcher.Matcher)
-				assert.ElementsMatch(t, matcher.Scopes, []string{"foo", "bar"})
+				assert.IsType(t, HierarchicScopeStrategyMatcher{}, matcher)
+				assert.ElementsMatch(t, matcher, []string{"foo", "bar"})
 			},
 		},
 		{
@@ -92,13 +92,13 @@ scopes:
     - foo
     - bar
 `),
-			assert: func(t *testing.T, err error, matcher *ScopesMatcher) {
+			assert: func(t *testing.T, err error, matcher ScopesMatcher) {
 				t.Helper()
 
 				require.NoError(t, err)
 
-				assert.IsType(t, ExactScopeStrategyMatcher{}, matcher.Matcher)
-				assert.ElementsMatch(t, matcher.Scopes, []string{"foo", "bar"})
+				assert.IsType(t, ExactScopeStrategyMatcher{}, matcher)
+				assert.ElementsMatch(t, matcher, []string{"foo", "bar"})
 			},
 		},
 		{
@@ -108,13 +108,13 @@ scopes:
   - foo
   - bar
 `),
-			assert: func(t *testing.T, err error, matcher *ScopesMatcher) {
+			assert: func(t *testing.T, err error, matcher ScopesMatcher) {
 				t.Helper()
 
 				require.NoError(t, err)
 
-				assert.IsType(t, ExactScopeStrategyMatcher{}, matcher.Matcher)
-				assert.ElementsMatch(t, matcher.Scopes, []string{"foo", "bar"})
+				assert.IsType(t, ExactScopeStrategyMatcher{}, matcher)
+				assert.ElementsMatch(t, matcher, []string{"foo", "bar"})
 			},
 		},
 		{
@@ -123,7 +123,7 @@ scopes:
 scopes:
   matching_strategy: exact
 `),
-			assert: func(t *testing.T, err error, matcher *ScopesMatcher) {
+			assert: func(t *testing.T, err error, matcher ScopesMatcher) {
 				t.Helper()
 
 				assert.Error(t, err)
@@ -135,7 +135,7 @@ scopes:
 scopes:
   foo: bar
 `),
-			assert: func(t *testing.T, err error, matcher *ScopesMatcher) {
+			assert: func(t *testing.T, err error, matcher ScopesMatcher) {
 				t.Helper()
 
 				assert.Error(t, err)
@@ -158,7 +158,7 @@ scopes:
 			err = dec.Decode(decode(tc.config))
 
 			// THEN
-			tc.assert(t, err, &typ.Matcher)
+			tc.assert(t, err, typ.Matcher)
 		})
 	}
 }

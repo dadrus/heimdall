@@ -107,7 +107,7 @@ session:
 				assert.ElementsMatch(t, auth.a.AllowedAlgorithms, defaultAllowedAlgorithms())
 				assert.Len(t, auth.a.TrustedIssuers, 1)
 				assert.Contains(t, auth.a.TrustedIssuers, "foobar")
-				assert.NoError(t, auth.a.ScopesMatcher.MatchScopes([]string{}))
+				assert.NoError(t, auth.a.ScopesMatcher.Match([]string{}))
 				assert.Equal(t, time.Duration(0), auth.a.ValidityLeeway)
 				assert.Empty(t, auth.a.TargetAudiences)
 
@@ -178,7 +178,7 @@ assertions:
 				assert.Equal(t, prototype.sf, configured.sf)
 				assert.NotEqual(t, prototype.a, configured.a)
 
-				assert.NoError(t, configured.a.ScopesMatcher.MatchScopes([]string{}))
+				assert.NoError(t, configured.a.ScopesMatcher.Match([]string{}))
 				assert.Empty(t, configured.a.TargetAudiences)
 				assert.ElementsMatch(t, configured.a.TrustedIssuers, []string{"barfoo"})
 				assert.ElementsMatch(t, configured.a.AllowedAlgorithms, []string{string(jose.ES512)})
@@ -701,10 +701,7 @@ func TestExecutionOfOAuth2IntrospectionAuthenticator(t *testing.T) {
 					},
 				},
 				a: oauth2.Expectation{
-					ScopesMatcher: oauth2.ScopesMatcher{
-						Matcher: oauth2.ExactScopeStrategyMatcher{},
-						Scopes:  []string{"foo"},
-					},
+					ScopesMatcher:   oauth2.ExactScopeStrategyMatcher{"foo"},
 					TargetAudiences: []string{audience},
 					TrustedIssuers:  []string{issuer},
 					ValidityLeeway:  1 * time.Minute,

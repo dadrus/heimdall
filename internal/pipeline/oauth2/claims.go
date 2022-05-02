@@ -55,7 +55,7 @@ func (c Claims) Validate(exp Expectation) error {
 func (c Claims) validateScopes(exp Expectation) error {
 	receivedScopes := x.IfThenElse(len(c.Scp) != 0, c.Scp, c.Scope)
 
-	return exp.ScopesMatcher.MatchScopes(receivedScopes)
+	return exp.ScopesMatcher.Match(receivedScopes)
 }
 
 func (c Claims) validateTimeValidity(exp Expectation) error {

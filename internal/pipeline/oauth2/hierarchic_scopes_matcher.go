@@ -1,10 +1,24 @@
 package oauth2
 
-import "strings"
+import (
+	"strings"
 
-type HierarchicScopeStrategyMatcher struct{}
+	"github.com/dadrus/heimdall/internal/x/errorchain"
+)
 
-func (HierarchicScopeStrategyMatcher) Match(haystack []string, needle string) bool {
+type HierarchicScopeStrategyMatcher []string
+
+func (m HierarchicScopeStrategyMatcher) Match(scopes []string) error {
+	for _, required := range m {
+		if !m.doMatch(scopes, required) {
+			return errorchain.NewWithMessagef(ErrClaimsNotValid, "required scope %s is missing", required)
+		}
+	}
+
+	return nil
+}
+
+func (m HierarchicScopeStrategyMatcher) doMatch(haystack []string, needle string) bool {
 	for _, this := range haystack {
 		// foo == foo -> true
 		if this == needle {

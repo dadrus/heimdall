@@ -10,7 +10,10 @@ import (
 
 func DecodeScopesMatcherHookFunc() mapstructure.DecodeHookFunc {
 	return func(from reflect.Type, to reflect.Type, data any) (any, error) {
-		var matcher ScopesMatcher
+		var (
+			matcher ScopesMatcher
+			err     error
+		)
 
 		if from.Kind() != reflect.Map && from.Kind() != reflect.Slice {
 			return data, nil
@@ -25,66 +28,80 @@ func DecodeScopesMatcherHookFunc() mapstructure.DecodeHookFunc {
 		// we care about these two cases only
 		switch from.Kind() {
 		case reflect.Map:
-			err := decodeMatcherFromMap(&matcher, data)
+			matcher, err = decodeMatcherFromMap(data)
 			if err != nil {
 				return nil, err
 			}
 		case reflect.Slice:
-			copyScopeValues(&matcher, data)
+			createMatcher := func(scopes []string) (ScopesMatcher, error) {
+				return ExactScopeStrategyMatcher(scopes), nil
+			}
+			return createMatcherFromValues(createMatcher, data)
 		default:
 			return nil, errorchain.NewWithMessage(ErrConfiguration, "invalid structure for scopes matcher")
-		}
-
-		if matcher.Matcher == nil {
-			matcher.Matcher = ExactScopeStrategyMatcher{}
-		}
-
-		if len(matcher.Scopes) == 0 {
-			return nil, errorchain.NewWithMessage(ErrConfiguration, "scopes matcher configured, but no scopes provided")
 		}
 
 		return matcher, nil
 	}
 }
 
-func decodeMatcherFromMap(matcher *ScopesMatcher, data any) error {
+type ScopeMatcherFactory func(scopes []string) (ScopesMatcher, error)
+
+func decodeMatcherFromMap(data any) (ScopesMatcher, error) {
+	var (
+		createMatcher ScopeMatcherFactory
+		err           error
+	)
+
 	// nolint
 	if m, ok := data.(map[any]any); ok {
 		if name, ok := m["matching_strategy"]; ok {
-			strategy, err := decodeStrategy(name.(string))
+			createMatcher, err = matcherFactory(name.(string))
 			if err != nil {
-				return err
+				return nil, err
 			}
-
-			matcher.Matcher = strategy
+		} else {
+			createMatcher = func(scopes []string) (ScopesMatcher, error) {
+				return ExactScopeStrategyMatcher(scopes), nil
+			}
 		}
 
 		if values, ok := m["values"]; ok {
-			copyScopeValues(matcher, values)
+			return createMatcherFromValues(createMatcher, values)
+		} else {
+			return nil, errorchain.NewWithMessage(ErrConfiguration, "invalid structure for scopes matcher")
 		}
 	}
 
-	return nil
+	return nil, errorchain.NewWithMessage(ErrConfiguration, "invalid structure for scopes matcher")
 }
 
-func copyScopeValues(matcher *ScopesMatcher, values any) {
+func createMatcherFromValues(createMatcher ScopeMatcherFactory, values any) (ScopesMatcher, error) {
 	// nolint
-	matcher.Scopes = make([]string, len(values.([]any)))
+	scopes := make([]string, len(values.([]any)))
 	// nolint
 	for i, v := range values.([]any) {
 		// nolint
-		matcher.Scopes[i] = v.(string)
+		scopes[i] = v.(string)
 	}
+
+	return createMatcher(scopes)
 }
 
-func decodeStrategy(name string) (ScopeMatchingStrategy, error) {
+func matcherFactory(name string) (ScopeMatcherFactory, error) {
 	switch name {
 	case "exact":
-		return ExactScopeStrategyMatcher{}, nil
+		return func(scopes []string) (ScopesMatcher, error) {
+			return ExactScopeStrategyMatcher(scopes), nil
+		}, nil
 	case "hierarchic":
-		return HierarchicScopeStrategyMatcher{}, nil
+		return func(scopes []string) (ScopesMatcher, error) {
+			return HierarchicScopeStrategyMatcher(scopes), nil
+		}, nil
 	case "wildcard":
-		return WildcardScopeStrategyMatcher{}, nil
+		return func(scopes []string) (ScopesMatcher, error) {
+			return WildcardScopeStrategyMatcher(scopes), nil
+		}, nil
 	default:
 		return nil, errorchain.NewWithMessagef(ErrConfiguration, "unsupported strategy \"%s\"", name)
 	}
