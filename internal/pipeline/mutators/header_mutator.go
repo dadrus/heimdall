@@ -41,6 +41,11 @@ func newHeaderMutator(rawConfig map[any]any) (*headerMutator, error) {
 			CausedBy(err)
 	}
 
+	if len(conf.Headers) == 0 {
+		return nil, errorchain.
+			NewWithMessage(heimdall.ErrConfiguration, "no headers definitions provided")
+	}
+
 	return &headerMutator{
 		headers: conf.Headers,
 	}, nil
@@ -51,14 +56,15 @@ func (m *headerMutator) Execute(ctx heimdall.Context, sub *subject.Subject) erro
 	logger.Debug().Msg("Mutating using header mutator")
 
 	if sub == nil {
-		return errorchain.NewWithMessage(heimdall.ErrArgument,
+		return errorchain.NewWithMessage(heimdall.ErrInternal,
 			"failed to execute header mutator due to 'nil' subject")
 	}
 
 	for name, tmpl := range m.headers {
 		value, err := tmpl.Render(nil, sub)
 		if err != nil {
-			return err
+			return errorchain.NewWithMessagef(heimdall.ErrInternal,
+				"failed to render value for '%s' cookie", name).CausedBy(err)
 		}
 
 		ctx.AddResponseHeader(name, value)
