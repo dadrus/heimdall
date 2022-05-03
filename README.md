@@ -8,7 +8,7 @@ Heimdall is inspired by [Ory's OAthkeeper](https://www.ory.sh/docs/oathkeeper), 
 
 Heimdall authenticates and authorizes incoming HTTP requests as well as enriches these with further information and transforms resulting subject information to a format, both required by the upstream services. It is supposed to be used either as a Reverse Proxy in front of your upstream API or web server that rejects unauthorized requests and forwards authorized ones to your end points, or as a Decision API, which integrates with your API Gateway (Kong, NGNIX, Envoy, Traefik, etc) and then acts as a Policy Decision Point.
 
-The current implementation is a pre alpha version, which alreay supports
+The current implementation is a pre alpha version, but already supports
 
 * Decision API
 * Loading rules from the file system
