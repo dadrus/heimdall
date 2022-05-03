@@ -28,6 +28,8 @@ import (
 )
 
 func TestCreateJwtAuthenticator(t *testing.T) {
+	t.Parallel()
+
 	for _, tc := range []struct {
 		uc     string
 		config []byte
@@ -286,6 +288,8 @@ func setup(t *testing.T, subject, issuer, audience string) ([]byte, string) {
 }
 
 func TestCreateJwtAuthenticatorFromPrototype(t *testing.T) {
+	t.Parallel()
+
 	// nolint
 	for _, tc := range []struct {
 		uc              string
