@@ -24,6 +24,8 @@ import (
 )
 
 func TestCreateOAuth2IntrospectionAuthenticator(t *testing.T) {
+	t.Parallel()
+
 	testCases := []struct {
 		uc     string
 		config []byte
@@ -142,6 +144,8 @@ session:
 }
 
 func TestCreateOAuth2IntrospectionAuthenticatorFromPrototype(t *testing.T) {
+	t.Parallel()
+
 	for _, tc := range []struct {
 		uc              string
 		prototypeConfig []byte
@@ -294,6 +298,8 @@ cache_ttl: 15s
 
 // nolint: maintidx
 func TestExecutionOfOAuth2IntrospectionAuthenticator(t *testing.T) {
+	t.Parallel()
+
 	// GIVEN
 	var (
 		receivedAcceptType    string
