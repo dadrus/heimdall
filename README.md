@@ -12,18 +12,18 @@ The current implementation is a pre alpha version, which alreay supports
 
 * Decision API
 * Loading rules from the file system
-* Different authenticator types (allow, deny, jwt, oauth2 introspection, generic)
-* Declarative authorizers (allow, deny)
-* Mutators (opaque cookie, opaque header, jwt in the Authorization header) to transform the subject information
+* Authenticator types (anonymous, basic-auth, generic, jwt, noop, oauth2 introspection, unauthorized)
+* Authorizers (allow, deny, subject attributes)
+* Hydrators (generic) - to enrich the subject information retrieved from the authenticator
+* Mutators (opaque cookie, opaque header, jwt in the Authorization header, noop) to transform the subject information
 * Error Handlers (default, redirect, www-authenticate), which support accept type negotiation as well
 * Opentracing support (jaeger & instana)
-* key store in pem format for rsa-pss and ecdsa keys (pkcs#1 - plain only & pkcs#8 - plain and encrypted)
+* Key store in pem format for rsa-pss and ecdsa keys (pkcs#1 - plain only & pkcs#8 - plain and encrypted)
 * Rules URL matching
 * Flexible pipeline definition: authenticators+ -> any order(authorizer+, hydrator*) -> mutator+ -> error_handler+
 * Optional default rule taking effect if no rule matches
 * If Default rule is configured, the actual rule definition can reuse it (less yaml code)
 * Typical execution time if caches are active is around 300µs (on my laptop)
-* Hydrators - to enrich the subject information retrieved from the authenticator
 
 Features to come are (more or less in this sequence):
 
@@ -36,4 +36,3 @@ Features to come are (more or less in this sequence):
 * Health & Readiness Probes
 * k8s CRDs to load rules from.
 * Reverse Proxy
-
