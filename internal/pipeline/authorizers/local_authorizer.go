@@ -63,7 +63,10 @@ func (a *localAuthorizer) Execute(ctx heimdall.Context, sub *subject.Subject) er
 	vm := goja.New()
 
 	// the error checks below are ignored by intention as these cannot happen here
-	// we can also not test the corresponding occurrence
+	// we can also not test the corresponding occurrence and if these would happen
+	// the script execution would result in an error anyway, which basically means
+	// failed authorization, which also would happen if any of these errors would
+	// happen.
 
 	hmdl := vm.NewObject()
 	// nolint: errcheck
