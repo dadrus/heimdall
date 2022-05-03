@@ -12,6 +12,7 @@ const (
 	POTJwt                 PipelineObjectType = "jwt"
 	POTAllow               PipelineObjectType = "allow"
 	POTDeny                PipelineObjectType = "deny"
+	POTLocal               PipelineObjectType = "local"
 	POTRemote              PipelineObjectType = "remote"
 	POTDefault             PipelineObjectType = "default"
 	POTGeneric             PipelineObjectType = "generic"
