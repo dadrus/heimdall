@@ -148,10 +148,10 @@ func TestCreateLocalAuthorizerFromPrototype(t *testing.T) {
 			auth, err := prototype.WithConfig(conf)
 
 			// THEN
-			jwta, ok := auth.(*localAuthorizer)
+			locAuth, ok := auth.(*localAuthorizer)
 			require.True(t, ok)
 
-			tc.assert(t, err, prototype, jwta)
+			tc.assert(t, err, prototype, locAuth)
 		})
 	}
 }
