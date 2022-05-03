@@ -61,40 +61,24 @@ func (a *localAuthorizer) Execute(ctx heimdall.Context, sub *subject.Subject) er
 	logger.Debug().Msg("Authorizing using local authorizer")
 
 	vm := goja.New()
+
+	// the error checks below are ignored by intention as these cannot happen here
+	// we can also not test the corresponding occurrence
+
 	hmdl := vm.NewObject()
-
-	if err := hmdl.Set("subject", sub); err != nil {
-		return errorchain.
-			NewWithMessage(heimdall.ErrInternal, "failed to set subject for the heimdall object").
-			CausedBy(err)
-	}
-
-	if err := hmdl.Set("ctx", ctx); err != nil {
-		return errorchain.
-			NewWithMessage(heimdall.ErrInternal, "failed to set heimdall ctx for the heimdall object").
-			CausedBy(err)
-	}
-
-	if err := vm.Set("heimdall", hmdl); err != nil {
-		return errorchain.
-			NewWithMessage(heimdall.ErrInternal, "failed to set heimdall object for the script").
-			CausedBy(err)
-	}
+	// nolint: errcheck
+	hmdl.Set("subject", sub)
+	// nolint: errcheck
+	hmdl.Set("ctx", ctx)
 
 	console := vm.NewObject()
-	if err := console.Set("log", func(val string) {
-		logger.Debug().Msg(val)
-	}); err != nil {
-		return errorchain.
-			NewWithMessage(heimdall.ErrInternal, "failed to set log function for the console object").
-			CausedBy(err)
-	}
+	// nolint: errcheck
+	console.Set("log", func(val string) { logger.Debug().Msg(val) })
 
-	if err := vm.Set("console", console); err != nil {
-		return errorchain.
-			NewWithMessage(heimdall.ErrInternal, "failed to set console object for the script").
-			CausedBy(err)
-	}
+	// nolint: errcheck
+	vm.Set("heimdall", hmdl)
+	// nolint: errcheck
+	vm.Set("console", console)
 
 	if _, err := vm.RunProgram(a.p); err != nil {
 		return errorchain.
