@@ -76,7 +76,7 @@ func (m *jwtMutator) Execute(ctx heimdall.Context, sub *subject.Subject) error {
 	logger.Debug().Msg("Mutating using JWT mutator")
 
 	if sub == nil {
-		return errorchain.NewWithMessage(heimdall.ErrArgument,
+		return errorchain.NewWithMessage(heimdall.ErrInternal,
 			"failed to execute jwt mutator due to 'nil' subject")
 	}
 
