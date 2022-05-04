@@ -16,7 +16,7 @@ func init() {
 				return false, nil, nil
 			}
 
-			eh, err := newDefaultErrorHandler(conf)
+			eh, err := newDefaultErrorHandler()
 
 			return true, eh, err
 		})
@@ -24,7 +24,7 @@ func init() {
 
 type defaultErrorHandler struct{}
 
-func newDefaultErrorHandler(rawConfig map[any]any) (*defaultErrorHandler, error) {
+func newDefaultErrorHandler() (*defaultErrorHandler, error) {
 	return &defaultErrorHandler{}, nil
 }
 

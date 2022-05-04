@@ -1,0 +1,49 @@
+package errorhandlers
+
+import (
+	"context"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/pipeline/testsupport"
+)
+
+func TestDefaultErrorHandlerExecution(t *testing.T) {
+	t.Parallel()
+
+	// GIVEN
+	ctx := &testsupport.MockContext{}
+	ctx.On("AppContext").Return(context.Background())
+
+	errorHandler, err := newDefaultErrorHandler()
+	require.NoError(t, err)
+
+	// WHEN
+	wasHandled, err := errorHandler.Execute(ctx, heimdall.ErrConfiguration)
+
+	// THEN
+	assert.True(t, wasHandled)
+	assert.NoError(t, err)
+}
+
+func TestDefaultErrorHandlerPrototype(t *testing.T) {
+	t.Parallel()
+
+	// GIVEN
+	prototype, err := newDefaultErrorHandler()
+	require.NoError(t, err)
+
+	// WHEN
+	mut1, err1 := prototype.WithConfig(nil)
+	mut2, err2 := prototype.WithConfig(map[any]any{"foo": "bar"})
+
+	// THEN
+	assert.NoError(t, err1)
+	assert.Equal(t, prototype, mut1)
+
+	assert.NoError(t, err2)
+	assert.Equal(t, prototype, mut2)
+}
