@@ -78,10 +78,10 @@ headers:
 			require.NoError(t, err)
 
 			// WHEN
-			a, err := newHeaderMutator(conf)
+			mutator, err := newHeaderMutator(conf)
 
 			// THEN
-			tc.assert(t, err, a)
+			tc.assert(t, err, mutator)
 		})
 	}
 }
@@ -154,10 +154,10 @@ headers:
 			require.NoError(t, err)
 
 			// WHEN
-			mut, err := prototype.WithConfig(conf)
+			mutator, err := prototype.WithConfig(conf)
 
 			// THEN
-			headerMut, ok := mut.(*headerMutator)
+			headerMut, ok := mutator.(*headerMutator)
 			require.True(t, ok)
 
 			tc.assert(t, err, prototype, headerMut)
@@ -261,11 +261,11 @@ headers:
 
 			tc.configureContext(t, mctx)
 
-			auth, err := newHeaderMutator(conf)
+			mutator, err := newHeaderMutator(conf)
 			require.NoError(t, err)
 
 			// WHEN
-			err = auth.Execute(mctx, sub)
+			err = mutator.Execute(mctx, sub)
 
 			// THEN
 			tc.assert(t, err)
