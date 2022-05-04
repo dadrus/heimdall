@@ -17,6 +17,7 @@ func TestDefaultErrorHandlerExecution(t *testing.T) {
 	// GIVEN
 	ctx := &testsupport.MockContext{}
 	ctx.On("AppContext").Return(context.Background())
+	ctx.On("SetPipelineError", heimdall.ErrConfiguration)
 
 	errorHandler, err := newDefaultErrorHandler()
 	require.NoError(t, err)
