@@ -37,13 +37,13 @@ func TestDefaultErrorHandlerPrototype(t *testing.T) {
 	require.NoError(t, err)
 
 	// WHEN
-	mut1, err1 := prototype.WithConfig(nil)
-	mut2, err2 := prototype.WithConfig(map[any]any{"foo": "bar"})
+	eh1, err1 := prototype.WithConfig(nil)
+	eh2, err2 := prototype.WithConfig(map[any]any{"foo": "bar"})
 
 	// THEN
 	assert.NoError(t, err1)
-	assert.Equal(t, prototype, mut1)
+	assert.Equal(t, prototype, eh1)
 
 	assert.NoError(t, err2)
-	assert.Equal(t, prototype, mut2)
+	assert.Equal(t, prototype, eh2)
 }
