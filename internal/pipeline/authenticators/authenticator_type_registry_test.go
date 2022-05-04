@@ -9,7 +9,7 @@ import (
 	"github.com/dadrus/heimdall/internal/config"
 )
 
-func TestCreateAuthenticatorPrototypeUsingKnowType(t *testing.T) {
+func TestCreateAuthenticatorPrototype(t *testing.T) {
 	t.Parallel()
 
 	// there are seven authenticators implemented, which should have been registered
