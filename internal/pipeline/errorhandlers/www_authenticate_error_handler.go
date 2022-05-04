@@ -29,13 +29,13 @@ func init() {
 
 type wwwAuthenticateErrorHandler struct {
 	realm string
-	m     *matcher.ErrorConditionMatcher
+	m     []matcher.ErrorConditionMatcher
 }
 
 func newWWWAuthenticateErrorHandler(rawConfig map[any]any) (*wwwAuthenticateErrorHandler, error) {
 	type _config struct {
-		Realm string                        `mapstructure:"realm"`
-		When  matcher.ErrorConditionMatcher `mapstructure:"when"`
+		Realm string                          `mapstructure:"realm"`
+		When  []matcher.ErrorConditionMatcher `mapstructure:"when"`
 	}
 
 	var conf _config
@@ -45,18 +45,27 @@ func newWWWAuthenticateErrorHandler(rawConfig map[any]any) (*wwwAuthenticateErro
 			CausedBy(err)
 	}
 
+	if len(conf.When) == 0 {
+		return nil, errorchain.
+			NewWithMessage(heimdall.ErrConfiguration,
+				"no 'when' error handler conditions defined for the www-authenticate error handler")
+	}
+
 	return &wwwAuthenticateErrorHandler{
 		realm: x.IfThenElse(len(conf.Realm) != 0, conf.Realm, "Please authenticate"),
-		m:     &conf.When,
+		m:     conf.When,
 	}, nil
 }
 
 func (eh *wwwAuthenticateErrorHandler) Execute(ctx heimdall.Context, err error) (bool, error) {
-	if !eh.m.Match(ctx, err) {
-		return false, nil
+	logger := zerolog.Ctx(ctx.AppContext())
+
+	for _, ecm := range eh.m {
+		if !ecm.Match(ctx, err) {
+			return false, nil
+		}
 	}
 
-	logger := zerolog.Ctx(ctx.AppContext())
 	logger.Debug().Msg("Handling error using www-authenticate error handler")
 
 	ctx.AddResponseHeader("WWW-Authenticate", fmt.Sprintf("Basic realm=%s", eh.realm))
@@ -66,9 +75,13 @@ func (eh *wwwAuthenticateErrorHandler) Execute(ctx heimdall.Context, err error) 
 }
 
 func (eh *wwwAuthenticateErrorHandler) WithConfig(rawConfig map[any]any) (ErrorHandler, error) {
+	if len(rawConfig) == 0 {
+		return eh, nil
+	}
+
 	type _config struct {
-		Realm *string                        `mapstructure:"realm"`
-		When  *matcher.ErrorConditionMatcher `mapstructure:"when"`
+		Realm *string                          `mapstructure:"realm"`
+		When  *[]matcher.ErrorConditionMatcher `mapstructure:"when"`
 	}
 
 	var conf _config
@@ -79,13 +92,13 @@ func (eh *wwwAuthenticateErrorHandler) WithConfig(rawConfig map[any]any) (ErrorH
 			CausedBy(err)
 	}
 
-	if conf.Realm == nil && conf.When == nil {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration, "either 'realm' or 'when' conditions must be set")
-	}
-
 	return &wwwAuthenticateErrorHandler{
-		realm: x.IfThenElse(conf.Realm != nil, *conf.Realm, eh.realm),
-		m:     x.IfThenElse(conf.When != nil, conf.When, eh.m),
+		realm: x.IfThenElseExec(conf.Realm != nil,
+			func() string { return *conf.Realm },
+			func() string { return eh.realm }),
+		m: x.IfThenElseExec(conf.When != nil,
+			func() []matcher.ErrorConditionMatcher { return *conf.When },
+			func() []matcher.ErrorConditionMatcher { return eh.m },
+		),
 	}, nil
 }
