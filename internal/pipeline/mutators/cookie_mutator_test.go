@@ -11,6 +11,7 @@ import (
 	"github.com/dadrus/heimdall/internal/pipeline/subject"
 	"github.com/dadrus/heimdall/internal/pipeline/template"
 	"github.com/dadrus/heimdall/internal/pipeline/testsupport"
+	"github.com/dadrus/heimdall/internal/x"
 )
 
 func TestCreateCookieMutator(t *testing.T) {
@@ -182,15 +183,6 @@ cookies:
   foo: bar
   bar: "{{ .ID }}"
 `),
-			configureContext: func(t *testing.T, ctx *testsupport.MockContext) {
-				// nothing is required here
-				t.Helper()
-			},
-			createSubject: func(t *testing.T) *subject.Subject {
-				t.Helper()
-
-				return nil
-			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
@@ -205,10 +197,6 @@ cookies:
 cookies:
   bar: "{{ .ID | foobar }}"
 `),
-			configureContext: func(t *testing.T, ctx *testsupport.MockContext) {
-				// nothing is required here
-				t.Helper()
-			},
 			createSubject: func(t *testing.T) *subject.Subject {
 				t.Helper()
 
@@ -251,15 +239,27 @@ cookies:
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
 			// GIVEN
+			createSubject := x.IfThenElse(tc.createSubject != nil,
+				tc.createSubject,
+				func(t *testing.T) *subject.Subject {
+					t.Helper()
+
+					return nil
+				})
+
+			configureContext := x.IfThenElse(tc.configureContext != nil,
+				tc.configureContext,
+				func(t *testing.T, ctx *testsupport.MockContext) { t.Helper() })
+
 			conf, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
 
 			mctx := &testsupport.MockContext{}
 			mctx.On("AppContext").Return(context.Background())
 
-			sub := tc.createSubject(t)
+			sub := createSubject(t)
 
-			tc.configureContext(t, mctx)
+			configureContext(t, mctx)
 
 			mutator, err := newCookieMutator(conf)
 			require.NoError(t, err)
