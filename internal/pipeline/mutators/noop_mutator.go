@@ -17,8 +17,12 @@ func init() {
 				return false, nil, nil
 			}
 
-			return true, &noopMutator{}, nil
+			return true, newNoopMutator(), nil
 		})
+}
+
+func newNoopMutator() *noopMutator {
+	return &noopMutator{}
 }
 
 type noopMutator struct{}
