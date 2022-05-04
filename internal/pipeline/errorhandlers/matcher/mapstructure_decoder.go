@@ -7,6 +7,7 @@ import (
 	"github.com/mitchellh/mapstructure"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
 func DecodeCIDRMatcherHookFunc() mapstructure.DecodeHookFunc {
@@ -47,8 +48,8 @@ func DecodeErrorTypeMatcherHookFunc() mapstructure.DecodeHookFunc {
 		}
 
 		// nolint: forcetypeassert
-		for _, v := range data.([]any) {
-			switch v {
+		for _, val := range data.([]any) {
+			switch val {
 			case "unauthorized":
 				matcher = append(matcher, heimdall.ErrAuthentication)
 			case "forbidden":
@@ -58,6 +59,9 @@ func DecodeErrorTypeMatcherHookFunc() mapstructure.DecodeHookFunc {
 				matcher = append(matcher, heimdall.ErrConfiguration)
 			case "bad_argument":
 				matcher = append(matcher, heimdall.ErrArgument)
+			default:
+				return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+					"unsupported error type: %s", val)
 			}
 		}
 
