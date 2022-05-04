@@ -17,10 +17,10 @@ func TestNoopAuthenticatorExecution(t *testing.T) {
 	ctx := &testsupport.MockContext{}
 	ctx.On("AppContext").Return(context.Background())
 
-	a := newNoopAuthenticator()
+	auth := newNoopAuthenticator()
 
 	// WHEN
-	sub, err := a.Execute(ctx)
+	sub, err := auth.Execute(ctx)
 
 	// THEN
 	require.NoError(t, err)
@@ -35,9 +35,13 @@ func TestCreateNoopAuthenticatorFromPrototype(t *testing.T) {
 	prototype := newNoopAuthenticator()
 
 	// WHEN
-	auth, err := prototype.WithConfig(nil)
+	auth1, err1 := prototype.WithConfig(nil)
+	auth2, err2 := prototype.WithConfig(map[any]any{"foo": "bar"})
 
 	// THEN
-	require.NoError(t, err)
-	require.Equal(t, prototype, auth)
+	assert.NoError(t, err1)
+	assert.Equal(t, prototype, auth1)
+
+	assert.NoError(t, err2)
+	assert.Equal(t, prototype, auth2)
 }
