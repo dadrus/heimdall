@@ -102,6 +102,20 @@ claims: "{{ foobar }}"
 				assert.Equal(t, expectedTemplate, *mut.claims)
 			},
 		},
+		{
+			uc: "with unknown entries in configuration",
+			config: []byte(`
+ttl: 5s
+foo: bar"
+`),
+			assert: func(t *testing.T, err error, mut *jwtMutator) {
+				t.Helper()
+
+				require.Error(t, err)
+				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				assert.Contains(t, err.Error(), "failed to unmarshal")
+			},
+		},
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
 			conf, err := testsupport.DecodeTestConfig(tc.config)
@@ -191,6 +205,20 @@ claims: "{{ foobar }}"
 				assert.Equal(t, expectedTemplate, *configured.claims)
 			},
 		},
+		{
+			uc: "with unknown entries in configuration",
+			config: []byte(`
+ttl: 5s
+foo: bar
+`),
+			assert: func(t *testing.T, err error, prototype *jwtMutator, configured *jwtMutator) {
+				t.Helper()
+
+				require.Error(t, err)
+				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				assert.Contains(t, err.Error(), "failed to unmarshal")
+			},
+		},
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
 			conf, err := testsupport.DecodeTestConfig(tc.config)
@@ -203,8 +231,15 @@ claims: "{{ foobar }}"
 			mutator, err := prototype.WithConfig(conf)
 
 			// THEN
-			jwtMut, ok := mutator.(*jwtMutator)
-			require.True(t, ok)
+			var (
+				jwtMut *jwtMutator
+				ok     bool
+			)
+
+			if err == nil {
+				jwtMut, ok = mutator.(*jwtMutator)
+				require.True(t, ok)
+			}
 
 			tc.assert(t, err, prototype, jwtMut)
 		})
