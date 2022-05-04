@@ -78,10 +78,10 @@ cookies:
 			require.NoError(t, err)
 
 			// WHEN
-			a, err := newCookieMutator(conf)
+			mutator, err := newCookieMutator(conf)
 
 			// THEN
-			tc.assert(t, err, a)
+			tc.assert(t, err, mutator)
 		})
 	}
 }
@@ -261,11 +261,11 @@ cookies:
 
 			tc.configureContext(t, mctx)
 
-			auth, err := newCookieMutator(conf)
+			mutator, err := newCookieMutator(conf)
 			require.NoError(t, err)
 
 			// WHEN
-			err = auth.Execute(mctx, sub)
+			err = mutator.Execute(mctx, sub)
 
 			// THEN
 			tc.assert(t, err)
