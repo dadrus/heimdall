@@ -328,13 +328,13 @@ func TestJWTMutatorExecute(t *testing.T) {
 		uc               string
 		config           []byte
 		subject          *subject.Subject
-		configureContext func(ctx *testsupport.MockContext)
-		configureCache   func(cch *testsupport.MockCache, sub *subject.Subject)
-		assert           func(err error)
+		configureContext func(t *testing.T, ctx *testsupport.MockContext)
+		configureCache   func(t *testing.T, cch *testsupport.MockCache, sub *subject.Subject)
+		assert           func(t *testing.T, err error)
 	}{
 		{
 			uc: "with 'nil' subject",
-			assert: func(err error) {
+			assert: func(t *testing.T, err error) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -345,7 +345,7 @@ func TestJWTMutatorExecute(t *testing.T) {
 		{
 			uc:      "with used prefilled cache",
 			subject: &subject.Subject{ID: "foo", Attributes: map[string]any{"baz": "bar"}},
-			configureCache: func(cch *testsupport.MockCache, sub *subject.Subject) {
+			configureCache: func(t *testing.T, cch *testsupport.MockCache, sub *subject.Subject) {
 				t.Helper()
 
 				mut := jwtMutator{ttl: defaultJWTTTL}
@@ -355,13 +355,13 @@ func TestJWTMutatorExecute(t *testing.T) {
 
 				cch.On("Get", cacheKey).Return("TestToken")
 			},
-			configureContext: func(ctx *testsupport.MockContext) {
+			configureContext: func(t *testing.T, ctx *testsupport.MockContext) {
 				t.Helper()
 
 				ctx.On("Signer").Return(signer)
 				ctx.On("AddResponseHeader", "Authorization", "Bearer TestToken")
 			},
-			assert: func(err error) {
+			assert: func(t *testing.T, err error) {
 				t.Helper()
 
 				assert.NoError(t, err)
@@ -371,7 +371,7 @@ func TestJWTMutatorExecute(t *testing.T) {
 			uc:      "with bad prefilled cache",
 			config:  []byte(`ttl: 1m`),
 			subject: &subject.Subject{ID: "foo", Attributes: map[string]any{"baz": "bar"}},
-			configureCache: func(cch *testsupport.MockCache, sub *subject.Subject) {
+			configureCache: func(t *testing.T, cch *testsupport.MockCache, sub *subject.Subject) {
 				t.Helper()
 
 				mut := jwtMutator{ttl: configuredTTL}
@@ -385,14 +385,14 @@ func TestJWTMutatorExecute(t *testing.T) {
 					mock.MatchedBy(validateGeneratedJWT(sub, configuredTTL, nil)),
 					configuredTTL-defaultCacheLeeway)
 			},
-			configureContext: func(ctx *testsupport.MockContext) {
+			configureContext: func(t *testing.T, ctx *testsupport.MockContext) {
 				t.Helper()
 
 				ctx.On("Signer").Return(signer)
 				ctx.On("AddResponseHeader", "Authorization",
 					mock.MatchedBy(func(val string) bool { return strings.HasPrefix(val, "Bearer ") }))
 			},
-			assert: func(err error) {
+			assert: func(t *testing.T, err error) {
 				t.Helper()
 
 				assert.NoError(t, err)
@@ -402,7 +402,7 @@ func TestJWTMutatorExecute(t *testing.T) {
 			uc:      "with no cache hit and without custom claims",
 			config:  []byte(`ttl: 1m`),
 			subject: &subject.Subject{ID: "foo", Attributes: map[string]any{"baz": "bar"}},
-			configureCache: func(cch *testsupport.MockCache, sub *subject.Subject) {
+			configureCache: func(t *testing.T, cch *testsupport.MockCache, sub *subject.Subject) {
 				t.Helper()
 
 				cch.On("Get", mock.Anything).Return(nil)
@@ -410,14 +410,14 @@ func TestJWTMutatorExecute(t *testing.T) {
 					mock.MatchedBy(validateGeneratedJWT(sub, configuredTTL, nil)),
 					configuredTTL-defaultCacheLeeway)
 			},
-			configureContext: func(ctx *testsupport.MockContext) {
+			configureContext: func(t *testing.T, ctx *testsupport.MockContext) {
 				t.Helper()
 
 				ctx.On("Signer").Return(signer)
 				ctx.On("AddResponseHeader", "Authorization",
 					mock.MatchedBy(func(val string) bool { return strings.HasPrefix(val, "Bearer ") }))
 			},
-			assert: func(err error) {
+			assert: func(t *testing.T, err error) {
 				t.Helper()
 
 				assert.NoError(t, err)
@@ -432,7 +432,7 @@ claims: "{
   {{ quote $val }}: \"baz\"
 }"`),
 			subject: &subject.Subject{ID: "foo", Attributes: map[string]any{"baz": "bar"}},
-			configureCache: func(cch *testsupport.MockCache, sub *subject.Subject) {
+			configureCache: func(t *testing.T, cch *testsupport.MockCache, sub *subject.Subject) {
 				t.Helper()
 
 				cch.On("Get", mock.Anything).Return(nil)
@@ -440,14 +440,14 @@ claims: "{
 					mock.MatchedBy(validateGeneratedJWT(sub, defaultJWTTTL, map[string]any{"sub_id": "foo", "bar": "baz"})),
 					defaultJWTTTL-defaultCacheLeeway)
 			},
-			configureContext: func(ctx *testsupport.MockContext) {
+			configureContext: func(t *testing.T, ctx *testsupport.MockContext) {
 				t.Helper()
 
 				ctx.On("Signer").Return(signer)
 				ctx.On("AddResponseHeader", "Authorization",
 					mock.MatchedBy(func(val string) bool { return strings.HasPrefix(val, "Bearer ") }))
 			},
-			assert: func(err error) {
+			assert: func(t *testing.T, err error) {
 				t.Helper()
 
 				assert.NoError(t, err)
@@ -457,17 +457,17 @@ claims: "{
 			uc:      "with custom claims template, which does not result in a JSON object",
 			config:  []byte(`claims: "foo: bar"`),
 			subject: &subject.Subject{ID: "foo", Attributes: map[string]any{"baz": "bar"}},
-			configureCache: func(cch *testsupport.MockCache, sub *subject.Subject) {
+			configureCache: func(t *testing.T, cch *testsupport.MockCache, sub *subject.Subject) {
 				t.Helper()
 
 				cch.On("Get", mock.Anything).Return(nil)
 			},
-			configureContext: func(ctx *testsupport.MockContext) {
+			configureContext: func(t *testing.T, ctx *testsupport.MockContext) {
 				t.Helper()
 
 				ctx.On("Signer").Return(signer)
 			},
-			assert: func(err error) {
+			assert: func(t *testing.T, err error) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -479,17 +479,17 @@ claims: "{
 			uc:      "with custom claims template, which fails during rendering",
 			config:  []byte(`claims: "{{ .foobar }}"`),
 			subject: &subject.Subject{ID: "foo", Attributes: map[string]any{"baz": "bar"}},
-			configureCache: func(cch *testsupport.MockCache, sub *subject.Subject) {
+			configureCache: func(t *testing.T, cch *testsupport.MockCache, sub *subject.Subject) {
 				t.Helper()
 
 				cch.On("Get", mock.Anything).Return(nil)
 			},
-			configureContext: func(ctx *testsupport.MockContext) {
+			configureContext: func(t *testing.T, ctx *testsupport.MockContext) {
 				t.Helper()
 
 				ctx.On("Signer").Return(signer)
 			},
-			assert: func(err error) {
+			assert: func(t *testing.T, err error) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -500,12 +500,12 @@ claims: "{
 		{
 			uc:      "with bad signer configuration",
 			subject: &subject.Subject{ID: "foo", Attributes: map[string]any{"baz": "bar"}},
-			configureCache: func(cch *testsupport.MockCache, sub *subject.Subject) {
+			configureCache: func(t *testing.T, cch *testsupport.MockCache, sub *subject.Subject) {
 				t.Helper()
 
 				cch.On("Get", mock.Anything).Return(nil)
 			},
-			configureContext: func(ctx *testsupport.MockContext) {
+			configureContext: func(t *testing.T, ctx *testsupport.MockContext) {
 				t.Helper()
 
 				badSigner := &MockJWTSigner{}
@@ -516,7 +516,7 @@ claims: "{
 
 				ctx.On("Signer").Return(badSigner)
 			},
-			assert: func(err error) {
+			assert: func(t *testing.T, err error) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -529,21 +529,21 @@ claims: "{
 			// GIVEN
 			configureCache := x.IfThenElse(tc.configureCache != nil,
 				tc.configureCache,
-				func(_ *testsupport.MockCache, _ *subject.Subject) {})
+				func(_ *testing.T, _ *testsupport.MockCache, _ *subject.Subject) {})
 
 			configureContext := x.IfThenElse(tc.configureContext != nil,
 				tc.configureContext,
-				func(_ *testsupport.MockContext) {})
+				func(_ *testing.T, _ *testsupport.MockContext) {})
 
 			conf, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
 
 			cch := &testsupport.MockCache{}
-			configureCache(cch, tc.subject)
+			configureCache(t, cch, tc.subject)
 
 			mctx := &testsupport.MockContext{}
 			mctx.On("AppContext").Return(cache.WithContext(context.Background(), cch))
-			configureContext(mctx)
+			configureContext(t, mctx)
 
 			mutator, err := newJWTMutator(conf)
 			require.NoError(t, err)
@@ -552,7 +552,7 @@ claims: "{
 			err = mutator.Execute(mctx, tc.subject)
 
 			// THEN
-			tc.assert(err)
+			tc.assert(t, err)
 
 			mctx.AssertExpectations(t)
 		})
