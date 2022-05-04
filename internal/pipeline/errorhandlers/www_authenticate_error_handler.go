@@ -45,10 +45,6 @@ func newWWWAuthenticateErrorHandler(rawConfig map[any]any) (*wwwAuthenticateErro
 			CausedBy(err)
 	}
 
-	if err := conf.When.Validate(); err != nil {
-		return nil, err
-	}
-
 	return &wwwAuthenticateErrorHandler{
 		realm: x.IfThenElse(len(conf.Realm) != 0, conf.Realm, "Please authenticate"),
 		m:     &conf.When,
@@ -85,13 +81,7 @@ func (eh *wwwAuthenticateErrorHandler) WithConfig(rawConfig map[any]any) (ErrorH
 
 	if conf.Realm == nil && conf.When == nil {
 		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration, "either realm or when conditions must be set")
-	}
-
-	if conf.When != nil {
-		if err := conf.When.Validate(); err != nil {
-			return nil, err
-		}
+			NewWithMessage(heimdall.ErrConfiguration, "either 'realm' or 'when' conditions must be set")
 	}
 
 	return &wwwAuthenticateErrorHandler{

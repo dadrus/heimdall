@@ -59,16 +59,7 @@ func newRedirectErrorHandler(rawConfig map[any]any) (*redirectErrorHandler, erro
 	if len(conf.When) == 0 {
 		return nil, errorchain.
 			NewWithMessage(heimdall.ErrConfiguration,
-				"no error handler conditions defined for the redirect error handler")
-	}
-
-	for idx, ecm := range conf.When {
-		if err := ecm.Validate(); err != nil {
-			return nil, errorchain.
-				NewWithMessagef(heimdall.ErrConfiguration,
-					"failed to validate %d 'when' condition for the redirect error handler", idx).
-				CausedBy(err)
-		}
+				"no 'when' error handler conditions defined for the redirect error handler")
 	}
 
 	return &redirectErrorHandler{
@@ -80,13 +71,14 @@ func newRedirectErrorHandler(rawConfig map[any]any) (*redirectErrorHandler, erro
 }
 
 func (eh *redirectErrorHandler) Execute(ctx heimdall.Context, err error) (bool, error) {
+	logger := zerolog.Ctx(ctx.AppContext())
+
 	for _, ecm := range eh.m {
 		if !ecm.Match(ctx, err) {
 			return false, nil
 		}
 	}
 
-	logger := zerolog.Ctx(ctx.AppContext())
 	logger.Debug().Msg("Handling error using redirect error handler")
 
 	toURL := *eh.to
@@ -126,15 +118,6 @@ func (eh *redirectErrorHandler) WithConfig(rawConfig map[any]any) (ErrorHandler,
 		return nil, errorchain.
 			NewWithMessage(heimdall.ErrConfiguration,
 				"no error handler conditions defined for the redirect error handler")
-	}
-
-	for idx, ecm := range conf.When {
-		if err := ecm.Validate(); err != nil {
-			return nil, errorchain.
-				NewWithMessagef(heimdall.ErrConfiguration,
-					"failed to validate %d 'when' condition for the redirect error handler", idx).
-				CausedBy(err)
-		}
 	}
 
 	return &redirectErrorHandler{

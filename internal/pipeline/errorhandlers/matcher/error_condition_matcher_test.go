@@ -10,49 +10,6 @@ import (
 	"github.com/dadrus/heimdall/internal/pipeline/testsupport"
 )
 
-func TestErrorConditionMatcherValidation(t *testing.T) {
-	t.Parallel()
-
-	for _, tc := range []struct {
-		uc      string
-		matcher ErrorConditionMatcher
-		valid   bool
-	}{
-		{
-			uc:      "only no error conditions defined",
-			matcher: ErrorConditionMatcher{CIDR: &CIDRMatcher{}, Header: &HeaderMatcher{}},
-			valid:   true,
-		},
-		{
-			uc:      "only no cidr conditions defined",
-			matcher: ErrorConditionMatcher{Error: &ErrorTypeMatcher{}, Header: &HeaderMatcher{}},
-			valid:   true,
-		},
-		{
-			uc:      "only no header conditions defined",
-			matcher: ErrorConditionMatcher{Error: &ErrorTypeMatcher{}, CIDR: &CIDRMatcher{}},
-			valid:   true,
-		},
-		{
-			uc:      "invalid configuration",
-			matcher: ErrorConditionMatcher{},
-			valid:   false,
-		},
-	} {
-		t.Run("case="+tc.uc, func(t *testing.T) {
-			// WHEN
-			err := tc.matcher.Validate()
-
-			// THEN
-			if tc.valid {
-				assert.NoError(t, err)
-			} else {
-				assert.Error(t, err)
-			}
-		})
-	}
-}
-
 func TestErrorConditionMatcherMatch(t *testing.T) {
 	t.Parallel()
 
