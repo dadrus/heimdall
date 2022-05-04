@@ -285,6 +285,10 @@ func TestJWTMutatorExecute(t *testing.T) {
 
 			var claims map[string]any
 
+			assert.Len(t, token.Headers, 1)
+			assert.Equal(t, keyID, token.Headers[0].KeyID)
+			assert.Equal(t, sigAlg, token.Headers[0].Algorithm)
+
 			err = token.Claims(privateKey.Public(), &claims)
 			require.NoError(t, err)
 
@@ -491,6 +495,33 @@ claims: "{
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrInternal)
 				assert.Contains(t, err.Error(), "failed to render")
+			},
+		},
+		{
+			uc:      "with bad signer configuration",
+			subject: &subject.Subject{ID: "foo", Attributes: map[string]any{"baz": "bar"}},
+			configureCache: func(cch *testsupport.MockCache, sub *subject.Subject) {
+				t.Helper()
+
+				cch.On("Get", mock.Anything).Return(nil)
+			},
+			configureContext: func(ctx *testsupport.MockContext) {
+				t.Helper()
+
+				badSigner := &MockJWTSigner{}
+				badSigner.On("Name").Return(issuerName)
+				badSigner.On("KeyID").Return(keyID)
+				badSigner.On("Algorithm").Return("FooBar")
+				badSigner.On("Key").Return(privateKey)
+
+				ctx.On("Signer").Return(badSigner)
+			},
+			assert: func(err error) {
+				t.Helper()
+
+				require.Error(t, err)
+				assert.ErrorIs(t, err, heimdall.ErrInternal)
+				assert.Contains(t, err.Error(), "JWT signer")
 			},
 		},
 	} {
