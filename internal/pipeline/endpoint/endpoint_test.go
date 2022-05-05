@@ -303,13 +303,14 @@ func TestEndpointSendRequest(t *testing.T) {
 			},
 		},
 		{
-			uc:       "with communication timeout",
-			endpoint: Endpoint{URL: "http://test.local"},
+			uc:       "with dns error",
+			endpoint: Endpoint{URL: "http://heimdall.test.local"},
 			assert: func(t *testing.T, response []byte, err error) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrCommunicationTimeout)
+				assert.ErrorIs(t, err, heimdall.ErrCommunication)
+				assert.Contains(t, err.Error(), "lookup heimdall")
 			},
 		},
 		{
@@ -385,23 +386,8 @@ func TestEndpointSendRequest(t *testing.T) {
 				body = bytes.NewReader(tc.body)
 			}
 
-			ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
-
-			var (
-				response []byte
-				err      error
-			)
-
 			// WHEN
-			go func() {
-				select {
-				case <-time.After(1 * time.Second):
-					cancel()
-				case <-ctx.Done(): // do nothing
-				}
-			}()
-
-			response, err = tc.endpoint.SendRequest(ctx, body)
+			response, err := tc.endpoint.SendRequest(context.Background(), body)
 
 			// THEN
 			tc.assert(t, response, err)
