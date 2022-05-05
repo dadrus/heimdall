@@ -31,11 +31,6 @@ type Retry struct {
 	MaxDelay    time.Duration `mapstructure:"max_delay"`
 }
 
-type Auth struct {
-	Type   string                 `mapstructure:"type"`
-	Config map[string]interface{} `mapstructure:"config"`
-}
-
 func (e Endpoint) Validate() error {
 	if len(e.URL) == 0 {
 		return errorchain.
@@ -129,5 +124,5 @@ func (e Endpoint) readResponse(resp *http.Response) ([]byte, error) {
 	}
 
 	return nil, errorchain.
-		NewWithMessagef(heimdall.ErrCommunication, "unexpected response. code: %v", resp.StatusCode)
+		NewWithMessagef(heimdall.ErrCommunication, "unexpected response code: %v", resp.StatusCode)
 }
