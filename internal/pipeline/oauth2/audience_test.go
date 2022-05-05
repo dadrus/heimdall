@@ -18,13 +18,15 @@ func TestAudienceUnmarshalJSON(t *testing.T) {
 	for _, tc := range []struct {
 		uc     string
 		json   []byte
-		assert func(t *testing.T, audience Audience)
+		assert func(t *testing.T, err error, audience Audience)
 	}{
 		{
 			uc:   "audience encoded as string",
 			json: []byte(`{ "aud": "foo bar baz" }`),
-			assert: func(t *testing.T, audience Audience) {
+			assert: func(t *testing.T, err error, audience Audience) {
 				t.Helper()
+
+				require.NoError(t, err)
 
 				assert.Len(t, audience, 3)
 				assert.Contains(t, audience, "foo")
@@ -35,13 +37,46 @@ func TestAudienceUnmarshalJSON(t *testing.T) {
 		{
 			uc:   "audience encoded as json array",
 			json: []byte(`{ "aud": ["foo", "bar", "baz"] }`),
-			assert: func(t *testing.T, audience Audience) {
+			assert: func(t *testing.T, err error, audience Audience) {
 				t.Helper()
+
+				require.NoError(t, err)
 
 				assert.Len(t, audience, 3)
 				assert.Contains(t, audience, "foo")
 				assert.Contains(t, audience, "bar")
 				assert.Contains(t, audience, "baz")
+			},
+		},
+		{
+			uc:   "bad audience encoding (not a json object)",
+			json: []byte(`"aud": ["foo", "bar", "baz"]`),
+			assert: func(t *testing.T, err error, audience Audience) {
+				t.Helper()
+
+				require.Error(t, err)
+			},
+		},
+		{
+			uc:   "bad audience encoding (not expected content)",
+			json: []byte(`{ "aud": true }`),
+			assert: func(t *testing.T, err error, audience Audience) {
+				t.Helper()
+
+				require.Error(t, err)
+				assert.ErrorIs(t, err, ErrConfiguration)
+				assert.Contains(t, err.Error(), "unexpected content")
+			},
+		},
+		{
+			uc:   "bad audience encoding (not expected json array content)",
+			json: []byte(`{ "aud": [true] }`),
+			assert: func(t *testing.T, err error, audience Audience) {
+				t.Helper()
+
+				require.Error(t, err)
+				assert.ErrorIs(t, err, ErrConfiguration)
+				assert.Contains(t, err.Error(), "audience array")
 			},
 		},
 	} {
@@ -53,8 +88,7 @@ func TestAudienceUnmarshalJSON(t *testing.T) {
 			err := json.Unmarshal(tc.json, &typ)
 
 			// THEN
-			require.NoError(t, err)
-			tc.assert(t, typ.Audience)
+			tc.assert(t, err, typ.Audience)
 		})
 	}
 }
