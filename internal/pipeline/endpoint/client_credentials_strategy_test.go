@@ -11,8 +11,15 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
+
+	"github.com/dadrus/heimdall/internal/cache"
+	"github.com/dadrus/heimdall/internal/pipeline/testsupport"
+	"github.com/dadrus/heimdall/internal/x"
 )
 
 func TestApplyClientCredentialsStrategy(t *testing.T) {
@@ -31,9 +38,12 @@ func TestApplyClientCredentialsStrategy(t *testing.T) {
 		receivedScope         string
 		setAccessToken        string
 		setExpiresIn          int64
+		endpointCalled        bool
 	)
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		endpointCalled = true
+
 		if r.Method != http.MethodPost {
 			w.WriteHeader(http.StatusMethodNotAllowed)
 
@@ -95,32 +105,162 @@ func TestApplyClientCredentialsStrategy(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	strategy := ClientCredentialsStrategy{
-		ClientID:     clientID,
-		ClientSecret: clientSecret,
-		Scopes:       scopes,
-		TokenURL:     srv.URL,
+	defaultCacheSetup := func(t *testing.T, cch *testsupport.MockCache, key string) {
+		t.Helper()
+
+		cch.On("Get", key).Return(nil)
+
+		var resp *tokenEndpointResponse
+
+		cch.On("Set", key,
+			mock.MatchedBy(func(val *tokenEndpointResponse) bool {
+				resp = val
+
+				return true
+			}),
+			mock.MatchedBy(func(val time.Duration) bool {
+				require.NotNil(t, resp)
+				assert.Equal(t, time.Duration(resp.ExpiresIn-defaultCacheLeeway)*time.Second, val)
+
+				return true
+			}))
 	}
 
-	req := &http.Request{Header: http.Header{}}
+	for _, tc := range []struct {
+		uc         string
+		strategy   ClientCredentialsStrategy
+		setupCache func(t *testing.T, cch *testsupport.MockCache, key string)
+		assert     func(t *testing.T, err error, req *http.Request)
+	}{
+		{
+			uc: "without cache hit",
+			strategy: ClientCredentialsStrategy{
+				ClientID:     clientID,
+				ClientSecret: clientSecret,
+				Scopes:       scopes,
+				TokenURL:     srv.URL,
+			},
+			assert: func(t *testing.T, err error, req *http.Request) {
+				t.Helper()
 
-	// WHEN
-	err := strategy.Apply(context.Background(), req)
+				assert.NoError(t, err)
 
-	// THEN
-	assert.NoError(t, err)
+				require.True(t, endpointCalled)
 
-	val, err := base64.StdEncoding.DecodeString(strings.TrimPrefix(receivedAuthorization, "Basic "))
-	assert.NoError(t, err)
+				val, err := base64.StdEncoding.DecodeString(strings.TrimPrefix(receivedAuthorization, "Basic "))
+				assert.NoError(t, err)
 
-	clientIDAndSecret := strings.Split(string(val), ":")
-	assert.Equal(t, clientID, clientIDAndSecret[0])
-	assert.Equal(t, clientSecret, clientIDAndSecret[1])
+				clientIDAndSecret := strings.Split(string(val), ":")
+				assert.Equal(t, clientID, clientIDAndSecret[0])
+				assert.Equal(t, clientSecret, clientIDAndSecret[1])
 
-	assert.Equal(t, "application/x-www-form-urlencoded", receivedContentType)
-	assert.Equal(t, "application/json", receivedAcceptType)
-	assert.Equal(t, "client_credentials", receivedGrantType)
-	assert.Equal(t, strings.Join(scopes, " "), receivedScope)
+				assert.Equal(t, "application/x-www-form-urlencoded", receivedContentType)
+				assert.Equal(t, "application/json", receivedAcceptType)
+				assert.Equal(t, "client_credentials", receivedGrantType)
+				assert.Equal(t, strings.Join(scopes, " "), receivedScope)
 
-	assert.Equal(t, "Bearer "+setAccessToken, req.Header.Get("Authorization"))
+				assert.Equal(t, "Bearer "+setAccessToken, req.Header.Get("Authorization"))
+			},
+		},
+		{
+			uc: "with not valid cache hit",
+			strategy: ClientCredentialsStrategy{
+				ClientID:     clientID,
+				ClientSecret: clientSecret,
+				Scopes:       scopes,
+				TokenURL:     srv.URL,
+			},
+			setupCache: func(t *testing.T, cch *testsupport.MockCache, key string) {
+				t.Helper()
+
+				var resp *tokenEndpointResponse
+
+				cch.On("Get", key).Return("foo")
+				cch.On("Delete", key)
+				cch.On("Set", key,
+					mock.MatchedBy(func(val *tokenEndpointResponse) bool {
+						resp = val
+
+						return true
+					}),
+					mock.MatchedBy(func(val time.Duration) bool {
+						require.NotNil(t, resp)
+						assert.Equal(t, time.Duration(resp.ExpiresIn-defaultCacheLeeway)*time.Second, val)
+
+						return true
+					}))
+			},
+			assert: func(t *testing.T, err error, req *http.Request) {
+				t.Helper()
+
+				assert.NoError(t, err)
+
+				require.True(t, endpointCalled)
+
+				val, err := base64.StdEncoding.DecodeString(strings.TrimPrefix(receivedAuthorization, "Basic "))
+				assert.NoError(t, err)
+
+				clientIDAndSecret := strings.Split(string(val), ":")
+				assert.Equal(t, clientID, clientIDAndSecret[0])
+				assert.Equal(t, clientSecret, clientIDAndSecret[1])
+
+				assert.Equal(t, "application/x-www-form-urlencoded", receivedContentType)
+				assert.Equal(t, "application/json", receivedAcceptType)
+				assert.Equal(t, "client_credentials", receivedGrantType)
+				assert.Equal(t, strings.Join(scopes, " "), receivedScope)
+
+				assert.Equal(t, "Bearer "+setAccessToken, req.Header.Get("Authorization"))
+			},
+		},
+		{
+			uc: "with valid cache hit",
+			strategy: ClientCredentialsStrategy{
+				ClientID:     clientID,
+				ClientSecret: clientSecret,
+				Scopes:       scopes,
+				TokenURL:     srv.URL,
+			},
+			setupCache: func(t *testing.T, cch *testsupport.MockCache, key string) {
+				t.Helper()
+
+				cached := &tokenEndpointResponse{
+					AccessToken: "FooBar",
+					ExpiresIn:   time.Now().Unix() + 100,
+					TokenType:   "Baz",
+				}
+
+				cch.On("Get", key).Return(cached)
+			},
+			assert: func(t *testing.T, err error, req *http.Request) {
+				t.Helper()
+
+				assert.NoError(t, err)
+				assert.False(t, endpointCalled)
+
+				assert.Equal(t, "Baz FooBar", req.Header.Get("Authorization"))
+			},
+		},
+	} {
+		t.Run("case="+tc.uc, func(t *testing.T) {
+			//  GIVEN
+			endpointCalled = false
+
+			setupCache := x.IfThenElse(tc.setupCache != nil, tc.setupCache, defaultCacheSetup)
+
+			cacheKey := tc.strategy.calculateCacheKey()
+			cch := &testsupport.MockCache{}
+			setupCache(t, cch, cacheKey)
+
+			ctx := cache.WithContext(context.Background(), cch)
+
+			req := &http.Request{Header: http.Header{}}
+
+			// WHEN
+			err := tc.strategy.Apply(ctx, req)
+
+			// THEN
+			tc.assert(t, err, req)
+			cch.AssertExpectations(t)
+		})
+	}
 }

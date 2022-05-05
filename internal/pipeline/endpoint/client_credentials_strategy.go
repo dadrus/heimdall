@@ -5,7 +5,6 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"strings"
@@ -17,6 +16,8 @@ import (
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
+
+const defaultCacheLeeway = 15
 
 type ClientCredentialsStrategy struct {
 	ClientID     string   `mapstructure:"client_id"`
@@ -52,9 +53,7 @@ func (c *ClientCredentialsStrategy) Apply(ctx context.Context, req *http.Request
 		return err
 	}
 
-	const defaultLeeway = 15
-
-	cch.Set(key, resp, time.Duration(resp.ExpiresIn-defaultLeeway)*time.Second)
+	cch.Set(key, resp, time.Duration(resp.ExpiresIn-defaultCacheLeeway)*time.Second)
 
 	req.Header.Set("Authorization", resp.TokenType+" "+resp.AccessToken)
 
@@ -85,46 +84,22 @@ func (c *ClientCredentialsStrategy) getAccessToken(ctx context.Context) (*tokenE
 		},
 	}
 
-	// create payload body
 	data := url.Values{"grant_type": []string{"client_credentials"}}
 	if len(c.Scopes) != 0 {
 		data.Add("scope", strings.Join(c.Scopes, " "))
 	}
 
-	req, err := ept.CreateRequest(ctx, strings.NewReader(data.Encode()))
+	rawData, err := ept.SendRequest(ctx, strings.NewReader(data.Encode()))
 	if err != nil {
 		return nil, err
 	}
 
-	resp, err := ept.CreateClient(req.URL.Hostname()).Do(req)
-	if err != nil {
-		return nil, err
+	var ter tokenEndpointResponse
+	if err := json.Unmarshal(rawData, &ter); err != nil {
+		return nil, errorchain.
+			NewWithMessage(heimdall.ErrInternal, "failed to unmarshal response").
+			CausedBy(err)
 	}
 
-	return readResponse(resp)
-}
-
-func readResponse(resp *http.Response) (*tokenEndpointResponse, error) {
-	defer resp.Body.Close()
-
-	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
-		rawData, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			return nil, errorchain.
-				NewWithMessage(heimdall.ErrInternal, "failed to read response").
-				CausedBy(err)
-		}
-
-		var ter tokenEndpointResponse
-		if err := json.Unmarshal(rawData, &ter); err != nil {
-			return nil, errorchain.
-				NewWithMessage(heimdall.ErrInternal, "failed to unmarshal response").
-				CausedBy(err)
-		}
-
-		return &ter, nil
-	}
-
-	return nil, errorchain.
-		NewWithMessagef(heimdall.ErrInternal, "unexpected response. code: %v", resp.StatusCode)
+	return &ter, nil
 }
