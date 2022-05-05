@@ -11,7 +11,7 @@ type WildcardScopeStrategyMatcher []string
 func (m WildcardScopeStrategyMatcher) Match(scopes []string) error {
 	for _, required := range m {
 		if !m.doMatch(scopes, required) {
-			return errorchain.NewWithMessagef(ErrClaimsNotValid, "required scope %s is missing", required)
+			return errorchain.NewWithMessagef(ErrScopeMatch, "required scope %s is missing", required)
 		}
 	}
 

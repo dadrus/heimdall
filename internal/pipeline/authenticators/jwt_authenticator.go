@@ -318,9 +318,8 @@ func (a *jwtAuthenticator) verifyTokenAndGetClaims(
 				"algorithm in the JWT header does not match the algorithm referenced in the key")
 	}
 
-	if !a.a.IsAlgorithmAllowed(key.Algorithm) {
-		return nil, errorchain.
-			NewWithMessagef(heimdall.ErrAuthentication, "%s algorithm is not allowed", key.Algorithm)
+	if err := a.a.AssertAlgorithm(key.Algorithm); err != nil {
+		return nil, errorchain.New(heimdall.ErrAuthentication).CausedBy(err)
 	}
 
 	var (
