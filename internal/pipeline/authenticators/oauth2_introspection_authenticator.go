@@ -69,10 +69,9 @@ func newOAuth2IntrospectionAuthenticator(rawConfig map[any]any) (*oauth2Introspe
 			CausedBy(err)
 	}
 
-	if err := conf.Assertions.Validate(); err != nil {
+	if len(conf.Assertions.TrustedIssuers) == 0 {
 		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration, "failed to validate assertions configuration").
-			CausedBy(err)
+			NewWithMessage(heimdall.ErrConfiguration, "no trusted issuers configured")
 	}
 
 	if len(conf.Session.SubjectIDFrom) == 0 {
