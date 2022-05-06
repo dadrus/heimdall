@@ -7,43 +7,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestExpectationValidate(t *testing.T) {
-	t.Parallel()
-
-	for _, tc := range []struct {
-		uc     string
-		exp    Expectation
-		assert func(t *testing.T, err error)
-	}{
-		{
-			uc:  "invalid configuration",
-			exp: Expectation{},
-			assert: func(t *testing.T, err error) {
-				t.Helper()
-
-				assert.Error(t, err)
-			},
-		},
-		{
-			uc:  "valid configuration",
-			exp: Expectation{TrustedIssuers: []string{"foo"}},
-			assert: func(t *testing.T, err error) {
-				t.Helper()
-
-				assert.NoError(t, err)
-			},
-		},
-	} {
-		t.Run("case="+tc.uc, func(t *testing.T) {
-			// WHEN
-			err := tc.exp.Validate()
-
-			// THEN
-			tc.assert(t, err)
-		})
-	}
-}
-
 func TestExpectationAssertAlgorithm(t *testing.T) {
 	t.Parallel()
 

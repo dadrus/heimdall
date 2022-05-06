@@ -22,14 +22,6 @@ type Expectation struct {
 	ValidityLeeway    time.Duration `mapstructure:"validity_leeway"`
 }
 
-func (e *Expectation) Validate() error {
-	if len(e.TrustedIssuers) == 0 {
-		return errorchain.NewWithMessage(ErrConfiguration, "missing trusted_issuers configuration")
-	}
-
-	return nil
-}
-
 func (e *Expectation) AssertAlgorithm(alg string) error {
 	if !slices.Contains(e.AllowedAlgorithms, alg) {
 		return errorchain.NewWithMessagef(ErrAssertion, "algorithm %s is not allowed", alg)
