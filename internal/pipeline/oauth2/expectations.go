@@ -57,14 +57,16 @@ func (e *Expectation) AssertAudience(audience []string) error {
 }
 
 func (e *Expectation) AssertValidity(notBefore, notAfter time.Time) error {
-	leeway := x.IfThenElse(e.ValidityLeeway != 0, e.ValidityLeeway, defaultLeeway)
+	leeway := int64(x.IfThenElse(e.ValidityLeeway != 0, e.ValidityLeeway, defaultLeeway).Seconds())
+	now := time.Now().Unix()
+	nbf := notBefore.Unix()
+	exp := notAfter.Unix()
 
-	now := time.Now()
-	if !notBefore.Equal(time.Time{}) && now.Add(leeway).Before(notBefore) {
+	if nbf > 0 && now+leeway < nbf {
 		return errorchain.NewWithMessage(ErrAssertion, "not yet valid")
 	}
 
-	if !notAfter.Equal(time.Time{}) && now.Add(-leeway).After(notAfter) {
+	if exp > 0 && now-leeway >= exp {
 		return errorchain.NewWithMessage(ErrAssertion, "expired")
 	}
 

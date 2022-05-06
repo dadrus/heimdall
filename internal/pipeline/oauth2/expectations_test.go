@@ -225,7 +225,7 @@ func TestExpectationAssertValidity(t *testing.T) {
 		},
 		{
 			uc:    "notBefore not set and notAfter in the past with disabled leeway",
-			exp:   Expectation{},
+			exp:   Expectation{ValidityLeeway: 0},
 			times: []time.Time{{}, time.Now().Add(-1 * time.Minute)},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
@@ -265,7 +265,7 @@ func TestExpectationAssertValidity(t *testing.T) {
 		},
 		{
 			uc:    "notBefore not set and notAfter in the future with disabled leeway",
-			exp:   Expectation{},
+			exp:   Expectation{ValidityLeeway: 0},
 			times: []time.Time{{}, time.Now().Add(1 * time.Minute)},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
@@ -295,7 +295,7 @@ func TestExpectationAssertValidity(t *testing.T) {
 		},
 		{
 			uc:    "notBefore in the past and notAfter not set with disabled leeway",
-			exp:   Expectation{},
+			exp:   Expectation{ValidityLeeway: 0},
 			times: []time.Time{time.Now().Add(-1 * time.Minute), {}},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
@@ -315,7 +315,7 @@ func TestExpectationAssertValidity(t *testing.T) {
 		},
 		{
 			uc:    "notBefore now and notAfter not set with disabled leeway",
-			exp:   Expectation{},
+			exp:   Expectation{ValidityLeeway: 0},
 			times: []time.Time{time.Now(), {}},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
