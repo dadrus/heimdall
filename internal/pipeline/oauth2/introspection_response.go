@@ -12,10 +12,10 @@ type IntrospectionResponse struct {
 	TokenType string `json:"token_type,omitempty"`
 }
 
-func (c IntrospectionResponse) Validate(a Expectation) error {
+func (c IntrospectionResponse) Validate(exp Expectation) error {
 	if !c.Active {
 		return ErrTokenNotActive
 	}
 
-	return c.Claims.Validate(a)
+	return c.Claims.Validate(exp)
 }
