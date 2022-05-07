@@ -200,7 +200,7 @@ func (a *authenticationDataAuthenticator) fetchSubjectInformation(
 }
 
 func (*authenticationDataAuthenticator) readResponse(resp *http.Response) ([]byte, error) {
-	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
+	if resp.StatusCode >= http.StatusOK && resp.StatusCode < http.StatusMultipleChoices {
 		rawData, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
 			return nil, errorchain.

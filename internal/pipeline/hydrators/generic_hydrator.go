@@ -205,7 +205,7 @@ func (h *genericHydrator) createRequest(ctx heimdall.Context, sub *subject.Subje
 }
 
 func (h *genericHydrator) readResponse(resp *http.Response) (map[string]any, error) {
-	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
+	if resp.StatusCode >= http.StatusOK && resp.StatusCode < http.StatusMultipleChoices {
 		rawData, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
 			return nil, errorchain.
