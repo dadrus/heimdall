@@ -1,6 +1,10 @@
 package authorizers
 
 import (
+	"bytes"
+	"crypto/sha256"
+	"encoding/binary"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"io/ioutil"
@@ -105,13 +109,15 @@ func (a *remoteAuthorizer) Execute(ctx heimdall.Context, sub *subject.Subject) e
 	)
 
 	if a.ttl != nil {
-		cacheKey = a.calculateCacheKey(sub)
-		if item := cch.Get(cacheKey); item != nil {
+		cacheKey, err = a.calculateCacheKey(sub)
+		if err != nil {
+			logger.Error().Err(err).Msg("Failed to calculate cache key. Will not be able to use cache.")
+		} else if item := cch.Get(cacheKey); item != nil {
 			if cachedResponse, ok := item.(*authorizationInformation); !ok {
 				logger.Warn().Msg("Wrong object type from cache")
 				cch.Delete(cacheKey)
 			} else {
-				logger.Debug().Msg("Reusing introspection response from cache")
+				logger.Debug().Msg("Reusing hydration response from cache")
 
 				authInfo = cachedResponse
 			}
@@ -248,6 +254,35 @@ func (a *remoteAuthorizer) WithConfig(rawConfig map[any]any) (Authorizer, error)
 	}, nil
 }
 
-func (a *remoteAuthorizer) calculateCacheKey(sub *subject.Subject) string {
-	return ""
+func (a *remoteAuthorizer) calculateCacheKey(sub *subject.Subject) (string, error) {
+	const int64BytesCount = 8
+
+	rawSub, err := json.Marshal(sub)
+	if err != nil {
+		return "", errorchain.
+			NewWithMessage(heimdall.ErrInternal, "failed to marshal subject data").
+			CausedBy(err)
+	}
+
+	ttlBytes := make([]byte, int64BytesCount)
+	if a.ttl != nil {
+		binary.LittleEndian.PutUint64(ttlBytes, uint64(*a.ttl))
+	}
+
+	buf := bytes.NewBufferString("")
+	for k, v := range a.headers {
+		buf.Write([]byte(k))
+		buf.Write([]byte(v))
+	}
+
+	hash := sha256.New()
+	hash.Write([]byte(a.e.Hash()))
+	hash.Write([]byte(a.name))
+	hash.Write([]byte(strings.Join(a.headersForUpstream, ",")))
+	hash.Write([]byte(a.payload))
+	hash.Write(buf.Bytes())
+	hash.Write(ttlBytes)
+	hash.Write(rawSub)
+
+	return hex.EncodeToString(hash.Sum(nil)), nil
 }
