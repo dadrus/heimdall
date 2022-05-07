@@ -250,7 +250,7 @@ func (h *genericHydrator) calculateCacheKey(sub *subject.Subject) (string, error
 		hash.Write([]byte(*h.payload))
 	}
 
-	hash.Write([]byte(h.e.URL))
+	hash.Write([]byte(h.e.Hash()))
 	hash.Write(ttlBytes)
 	hash.Write(rawSub)
 
