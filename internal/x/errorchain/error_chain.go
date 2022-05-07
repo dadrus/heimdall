@@ -42,7 +42,11 @@ func (ec *ErrorChain) Error() string {
 	var errs []string
 
 	for c := ec.head; c != nil; c = c.next {
-		errs = append(errs, fmt.Sprintf("%s: %s", c.err.Error(), c.msg))
+		if len(c.msg) == 0 {
+			errs = append(errs, c.err.Error())
+		} else {
+			errs = append(errs, fmt.Sprintf("%s: %s", c.err.Error(), c.msg))
+		}
 	}
 
 	return strings.Join(errs, ": ")
