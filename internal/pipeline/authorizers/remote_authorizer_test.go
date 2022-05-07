@@ -297,6 +297,11 @@ cache_ttl: 15s
 				assert.Len(t, configured.header, 1)
 				assert.Equal(t, template.Template("Foo"), configured.header["Bar"])
 				assert.Equal(t, 15*time.Second, *configured.ttl)
+
+				assert.NotEqual(t, prototype.ttl, configured.ttl)
+				assert.NotEqual(t, prototype.headerForUpstream, configured.headerForUpstream)
+				assert.NotEqual(t, prototype.header, configured.header)
+				assert.NotEqual(t, prototype.payload, configured.payload)
 			},
 		},
 	} {
