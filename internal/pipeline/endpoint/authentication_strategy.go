@@ -7,4 +7,5 @@ import (
 
 type AuthenticationStrategy interface {
 	Apply(context.Context, *http.Request) error
+	Hash() string
 }

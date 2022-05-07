@@ -2,6 +2,8 @@ package endpoint
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"net/http"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
@@ -26,4 +28,14 @@ func (c *APIKeyStrategy) Apply(_ context.Context, req *http.Request) error {
 	}
 
 	return nil
+}
+
+func (c *APIKeyStrategy) Hash() string {
+	hash := sha256.New()
+
+	hash.Write([]byte(c.In))
+	hash.Write([]byte(c.Name))
+	hash.Write([]byte(c.Value))
+
+	return hex.EncodeToString(hash.Sum(nil))
 }
