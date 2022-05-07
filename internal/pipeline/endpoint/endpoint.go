@@ -1,7 +1,11 @@
 package endpoint
 
 import (
+	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/binary"
+	"encoding/hex"
 	"errors"
 	"io"
 	"io/ioutil"
@@ -125,4 +129,35 @@ func (e Endpoint) readResponse(resp *http.Response) ([]byte, error) {
 
 	return nil, errorchain.
 		NewWithMessagef(heimdall.ErrCommunication, "unexpected response code: %v", resp.StatusCode)
+}
+
+func (e Endpoint) Hash() string {
+	const int64BytesCount = 8
+
+	hash := sha256.New()
+
+	hash.Write([]byte(e.URL))
+	hash.Write([]byte(e.Method))
+
+	if e.Retry != nil {
+		maxDelayBytes := make([]byte, int64BytesCount)
+		binary.LittleEndian.PutUint64(maxDelayBytes, uint64(e.Retry.MaxDelay))
+
+		giveUpAfterBytes := make([]byte, int64BytesCount)
+		binary.LittleEndian.PutUint64(giveUpAfterBytes, uint64(e.Retry.GiveUpAfter))
+
+		hash.Write(maxDelayBytes)
+		hash.Write(giveUpAfterBytes)
+	}
+
+	buf := bytes.NewBufferString("")
+	for k, v := range e.Headers {
+		buf.Write([]byte(k))
+		buf.Write([]byte(v))
+	}
+
+	hash.Write(buf.Bytes())
+	hash.Write([]byte(e.AuthStrategy.Hash()))
+
+	return hex.EncodeToString(hash.Sum(nil))
 }
