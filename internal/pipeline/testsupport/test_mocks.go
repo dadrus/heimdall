@@ -37,6 +37,12 @@ type MockContext struct {
 	mock.Mock
 }
 
+func (m *MockContext) RequestMethod() string {
+	args := m.Called()
+
+	return args.String(0)
+}
+
 func (m *MockContext) RequestHeaders() map[string]string {
 	args := m.Called()
 

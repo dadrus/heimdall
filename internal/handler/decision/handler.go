@@ -192,6 +192,7 @@ type requestContext struct {
 	err         error
 }
 
+func (s *requestContext) RequestMethod() string                    { return s.c.Method() }
 func (s *requestContext) RequestHeaders() map[string]string        { return s.c.GetReqHeaders() }
 func (s *requestContext) RequestHeader(name string) string         { return s.c.Get(name) }
 func (s *requestContext) RequestCookie(name string) string         { return s.c.Cookies(name) }
