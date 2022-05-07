@@ -22,6 +22,7 @@ import (
 	"github.com/dadrus/heimdall/internal/pipeline/endpoint"
 	"github.com/dadrus/heimdall/internal/pipeline/subject"
 	"github.com/dadrus/heimdall/internal/pipeline/template"
+	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
@@ -240,17 +241,23 @@ func (a *remoteAuthorizer) WithConfig(rawConfig map[any]any) (Authorizer, error)
 		Headers                  map[string]template.Template `mapstructure:"headers"`
 		Payload                  template.Template            `mapstructure:"payload"`
 		ResponseHeadersToForward []string                     `mapstructure:"forward_response_headers_to_upstream"`
+		CacheTTL                 *time.Duration               `mapstructure:"cache_ttl"`
 	}
 
 	var conf _config
 	if err := mapstructure.Decode(rawConfig, &conf); err != nil {
-		return nil, err
+		return nil, errorchain.
+			NewWithMessage(heimdall.ErrConfiguration, "failed to unmarshal remote authorizer config").
+			CausedBy(err)
 	}
 
 	return &remoteAuthorizer{
-		e:                  a.e,
-		payload:            a.payload,
-		headersForUpstream: conf.ResponseHeadersToForward,
+		e:       a.e,
+		payload: x.IfThenElse(len(conf.Payload) != 0, conf.Payload, a.payload),
+		headers: x.IfThenElse(len(conf.Headers) != 0, conf.Headers, a.headers),
+		headersForUpstream: x.IfThenElse(len(conf.ResponseHeadersToForward) != 0,
+			conf.ResponseHeadersToForward, a.headersForUpstream),
+		ttl: x.IfThenElse(conf.CacheTTL != nil, conf.CacheTTL, a.ttl),
 	}, nil
 }
 
