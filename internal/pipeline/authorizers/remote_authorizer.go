@@ -219,7 +219,7 @@ func (a *remoteAuthorizer) createRequest(ctx heimdall.Context, sub *subject.Subj
 }
 
 func (a *remoteAuthorizer) readResponse(resp *http.Response) (map[string]any, error) {
-	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
+	if resp.StatusCode >= http.StatusOK && resp.StatusCode < http.StatusMultipleChoices {
 		if resp.ContentLength == 0 {
 			return map[string]any{}, nil
 		}
@@ -243,7 +243,8 @@ func (a *remoteAuthorizer) readResponse(resp *http.Response) (map[string]any, er
 	}
 
 	return nil, errorchain.
-		NewWithMessagef(heimdall.ErrCommunication, "unexpected response code: %v", resp.StatusCode)
+		NewWithMessagef(heimdall.ErrAuthorization,
+			"authorization failed based on received response code: %v", resp.StatusCode)
 }
 
 func (a *remoteAuthorizer) WithConfig(rawConfig map[any]any) (Authorizer, error) {
