@@ -264,3 +264,18 @@ func TestApplyClientCredentialsStrategy(t *testing.T) {
 		})
 	}
 }
+
+func TestClientCredentialsStrategyHash(t *testing.T) {
+	// GIVEN
+	s1 := &ClientCredentialsStrategy{ClientID: "Foo", ClientSecret: "Bar"}
+	s2 := &ClientCredentialsStrategy{ClientID: "Baz", ClientSecret: "Bar"}
+
+	// WHEN
+	hash1 := s1.Hash()
+	hash2 := s2.Hash()
+
+	// THEN
+	assert.NotEmpty(t, hash1)
+	assert.NotEmpty(t, hash2)
+	assert.NotEqual(t, hash1, hash2)
+}

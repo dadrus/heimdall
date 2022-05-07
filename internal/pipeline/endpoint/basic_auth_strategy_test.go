@@ -25,3 +25,18 @@ func TestApplyBasicAuthStrategy(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, expectedValue, req.Header.Get("Authorization"))
 }
+
+func TestBasicAuthStrategyHash(t *testing.T) {
+	// GIVEN
+	s1 := &BasicAuthStrategy{User: "Foo", Password: "Bar"}
+	s2 := &BasicAuthStrategy{User: "Foo", Password: "Baz"}
+
+	// WHEN
+	hash1 := s1.Hash()
+	hash2 := s2.Hash()
+
+	// THEN
+	assert.NotEmpty(t, hash1)
+	assert.NotEmpty(t, hash2)
+	assert.NotEqual(t, hash1, hash2)
+}
