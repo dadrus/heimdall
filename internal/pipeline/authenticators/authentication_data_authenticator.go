@@ -200,19 +200,19 @@ func (a *authenticationDataAuthenticator) fetchSubjectInformation(
 }
 
 func (*authenticationDataAuthenticator) readResponse(resp *http.Response) ([]byte, error) {
-	if resp.StatusCode >= http.StatusOK && resp.StatusCode < http.StatusMultipleChoices {
-		rawData, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			return nil, errorchain.
-				NewWithMessage(heimdall.ErrInternal, "failed to read response").
-				CausedBy(err)
-		}
-
-		return rawData, nil
+	if !(resp.StatusCode >= http.StatusOK && resp.StatusCode < http.StatusMultipleChoices) {
+		return nil, errorchain.
+			NewWithMessagef(heimdall.ErrCommunication, "unexpected response. code: %v", resp.StatusCode)
 	}
 
-	return nil, errorchain.
-		NewWithMessagef(heimdall.ErrCommunication, "unexpected response. code: %v", resp.StatusCode)
+	rawData, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, errorchain.
+			NewWithMessage(heimdall.ErrInternal, "failed to read response").
+			CausedBy(err)
+	}
+
+	return rawData, nil
 }
 
 func (a *authenticationDataAuthenticator) calculateCacheKey(reference string) string {

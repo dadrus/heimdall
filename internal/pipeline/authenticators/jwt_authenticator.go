@@ -282,27 +282,27 @@ func (a *jwtAuthenticator) fetchJWKS(ctx heimdall.Context) (*jose.JSONWebKeySet,
 }
 
 func (a *jwtAuthenticator) readJWKS(resp *http.Response) (*jose.JSONWebKeySet, error) {
-	if resp.StatusCode >= http.StatusOK && resp.StatusCode < http.StatusMultipleChoices {
-		rawData, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			return nil, errorchain.
-				NewWithMessage(heimdall.ErrInternal, "failed to read response").
-				CausedBy(err)
-		}
-
-		// unmarshal the received key set
-		var jwks jose.JSONWebKeySet
-		if err := json.Unmarshal(rawData, &jwks); err != nil {
-			return nil, errorchain.
-				NewWithMessage(heimdall.ErrInternal, "failed to unmarshal received jwks").
-				CausedBy(err)
-		}
-
-		return &jwks, nil
+	if !(resp.StatusCode >= http.StatusOK && resp.StatusCode < http.StatusMultipleChoices) {
+		return nil, errorchain.
+			NewWithMessagef(heimdall.ErrCommunication, "unexpected response. code: %v", resp.StatusCode)
 	}
 
-	return nil, errorchain.
-		NewWithMessagef(heimdall.ErrCommunication, "unexpected response. code: %v", resp.StatusCode)
+	rawData, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, errorchain.
+			NewWithMessage(heimdall.ErrInternal, "failed to read response").
+			CausedBy(err)
+	}
+
+	// unmarshal the received key set
+	var jwks jose.JSONWebKeySet
+	if err := json.Unmarshal(rawData, &jwks); err != nil {
+		return nil, errorchain.
+			NewWithMessage(heimdall.ErrInternal, "failed to unmarshal received jwks").
+			CausedBy(err)
+	}
+
+	return &jwks, nil
 }
 
 func (a *jwtAuthenticator) verifyTokenAndGetClaims(

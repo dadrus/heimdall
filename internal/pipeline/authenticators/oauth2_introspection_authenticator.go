@@ -255,26 +255,26 @@ func (a *oauth2IntrospectionAuthenticator) fetchTokenIntrospectionResponse(
 func (a *oauth2IntrospectionAuthenticator) readIntrospectionResponse(
 	resp *http.Response,
 ) (*oauth2.IntrospectionResponse, []byte, error) {
-	if resp.StatusCode >= http.StatusOK && resp.StatusCode < http.StatusMultipleChoices {
-		rawData, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			return nil, nil, errorchain.
-				NewWithMessage(heimdall.ErrInternal, "failed to read response").
-				CausedBy(err)
-		}
-
-		var resp oauth2.IntrospectionResponse
-		if err = json.Unmarshal(rawData, &resp); err != nil {
-			return nil, nil, errorchain.
-				NewWithMessage(heimdall.ErrInternal, "failed to unmarshal received introspection response").
-				CausedBy(err)
-		}
-
-		return &resp, rawData, nil
+	if !(resp.StatusCode >= http.StatusOK && resp.StatusCode < http.StatusMultipleChoices) {
+		return nil, nil, errorchain.
+			NewWithMessagef(heimdall.ErrCommunication, "unexpected response code: %v", resp.StatusCode)
 	}
 
-	return nil, nil, errorchain.
-		NewWithMessagef(heimdall.ErrCommunication, "unexpected response code: %v", resp.StatusCode)
+	rawData, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, nil, errorchain.
+			NewWithMessage(heimdall.ErrInternal, "failed to read response").
+			CausedBy(err)
+	}
+
+	var introspectionResponse oauth2.IntrospectionResponse
+	if err = json.Unmarshal(rawData, &introspectionResponse); err != nil {
+		return nil, nil, errorchain.
+			NewWithMessage(heimdall.ErrInternal, "failed to unmarshal received introspection response").
+			CausedBy(err)
+	}
+
+	return &introspectionResponse, rawData, nil
 }
 
 func (a *oauth2IntrospectionAuthenticator) getCacheTTL(introspectResp *oauth2.IntrospectionResponse) time.Duration {
