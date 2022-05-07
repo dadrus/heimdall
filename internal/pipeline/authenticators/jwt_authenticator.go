@@ -350,7 +350,7 @@ func (a *jwtAuthenticator) verifyTokenAndGetClaims(
 
 func (a *jwtAuthenticator) calculateCacheKey(reference string) string {
 	digest := sha256.New()
-	digest.Write([]byte(a.e.URL))
+	digest.Write([]byte(a.e.Hash()))
 	digest.Write([]byte(reference))
 
 	return hex.EncodeToString(digest.Sum(nil))
