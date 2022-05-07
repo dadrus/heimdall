@@ -13,7 +13,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/mitchellh/mapstructure"
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/cache"
@@ -42,12 +41,12 @@ func init() {
 }
 
 type remoteAuthorizer struct {
-	e                  endpoint.Endpoint
-	name               string
-	headers            map[string]template.Template
-	payload            template.Template
-	headersForUpstream []string
-	ttl                *time.Duration
+	e                 endpoint.Endpoint
+	name              string
+	header            map[string]template.Template
+	payload           template.Template
+	headerForUpstream []string
+	ttl               *time.Duration
 }
 
 type authorizationInformation struct {
@@ -72,11 +71,11 @@ func (ai *authorizationInformation) AddAttributesTo(key string, sub *subject.Sub
 
 func newRemoteAuthorizer(name string, rawConfig map[any]any) (*remoteAuthorizer, error) {
 	type _config struct {
-		Endpoint                 endpoint.Endpoint            `mapstructure:"endpoint"`
-		Headers                  map[string]template.Template `mapstructure:"headers"`
-		Payload                  template.Template            `mapstructure:"payload"`
-		ResponseHeadersToForward []string                     `mapstructure:"forward_response_headers_to_upstream"`
-		CacheTTL                 *time.Duration               `mapstructure:"cache_ttl"`
+		Endpoint                endpoint.Endpoint            `mapstructure:"endpoint"`
+		Header                  map[string]template.Template `mapstructure:"header"`
+		Payload                 template.Template            `mapstructure:"payload"`
+		ResponseHeaderToForward []string                     `mapstructure:"forward_response_header_to_upstream"`
+		CacheTTL                *time.Duration               `mapstructure:"cache_ttl"`
 	}
 
 	var conf _config
@@ -92,7 +91,7 @@ func newRemoteAuthorizer(name string, rawConfig map[any]any) (*remoteAuthorizer,
 			CausedBy(err)
 	}
 
-	if len(conf.Headers) == 0 && len(conf.Payload) == 0 {
+	if len(conf.Header) == 0 && len(conf.Payload) == 0 {
 		return nil, errorchain.
 			NewWithMessage(heimdall.ErrConfiguration,
 				"either a payload or at least one header must be configured for remote authorizer")
@@ -103,12 +102,12 @@ func newRemoteAuthorizer(name string, rawConfig map[any]any) (*remoteAuthorizer,
 	}
 
 	return &remoteAuthorizer{
-		e:                  conf.Endpoint,
-		name:               name,
-		payload:            conf.Payload,
-		headers:            conf.Headers,
-		headersForUpstream: conf.ResponseHeadersToForward,
-		ttl:                conf.CacheTTL,
+		e:                 conf.Endpoint,
+		name:              name,
+		payload:           conf.Payload,
+		header:            conf.Header,
+		headerForUpstream: conf.ResponseHeaderToForward,
+		ttl:               conf.CacheTTL,
 	}, nil
 }
 
@@ -155,7 +154,7 @@ func (a *remoteAuthorizer) Execute(ctx heimdall.Context, sub *subject.Subject) e
 		}
 	}
 
-	authInfo.AddHeadersTo(a.headersForUpstream, ctx)
+	authInfo.AddHeadersTo(a.headerForUpstream, ctx)
 	authInfo.AddAttributesTo(a.name, sub)
 
 	return nil
@@ -206,7 +205,7 @@ func (a *remoteAuthorizer) createRequest(ctx heimdall.Context, sub *subject.Subj
 		return nil, err
 	}
 
-	for headerName, headerTemplate := range a.headers {
+	for headerName, headerTemplate := range a.header {
 		headerValue, err := headerTemplate.Render(ctx, sub)
 		if err != nil {
 			return nil, err
@@ -258,14 +257,14 @@ func (a *remoteAuthorizer) WithConfig(rawConfig map[any]any) (Authorizer, error)
 	}
 
 	type _config struct {
-		Headers                  map[string]template.Template `mapstructure:"headers"`
-		Payload                  template.Template            `mapstructure:"payload"`
-		ResponseHeadersToForward []string                     `mapstructure:"forward_response_headers_to_upstream"`
-		CacheTTL                 *time.Duration               `mapstructure:"cache_ttl"`
+		Header                  map[string]template.Template `mapstructure:"header"`
+		Payload                 template.Template            `mapstructure:"payload"`
+		ResponseHeaderToForward []string                     `mapstructure:"forward_response_header_to_upstream"`
+		CacheTTL                *time.Duration               `mapstructure:"cache_ttl"`
 	}
 
 	var conf _config
-	if err := mapstructure.Decode(rawConfig, &conf); err != nil {
+	if err := decodeConfig(rawConfig, &conf); err != nil {
 		return nil, errorchain.
 			NewWithMessage(heimdall.ErrConfiguration, "failed to unmarshal remote authorizer config").
 			CausedBy(err)
@@ -273,10 +272,11 @@ func (a *remoteAuthorizer) WithConfig(rawConfig map[any]any) (Authorizer, error)
 
 	return &remoteAuthorizer{
 		e:       a.e,
+		name:    a.name,
 		payload: x.IfThenElse(len(conf.Payload) != 0, conf.Payload, a.payload),
-		headers: x.IfThenElse(len(conf.Headers) != 0, conf.Headers, a.headers),
-		headersForUpstream: x.IfThenElse(len(conf.ResponseHeadersToForward) != 0,
-			conf.ResponseHeadersToForward, a.headersForUpstream),
+		header:  x.IfThenElse(len(conf.Header) != 0, conf.Header, a.header),
+		headerForUpstream: x.IfThenElse(len(conf.ResponseHeaderToForward) != 0,
+			conf.ResponseHeaderToForward, a.headerForUpstream),
 		ttl: x.IfThenElse(conf.CacheTTL != nil, conf.CacheTTL, a.ttl),
 	}, nil
 }
@@ -297,7 +297,7 @@ func (a *remoteAuthorizer) calculateCacheKey(sub *subject.Subject) (string, erro
 	}
 
 	buf := bytes.NewBufferString("")
-	for k, v := range a.headers {
+	for k, v := range a.header {
 		buf.Write([]byte(k))
 		buf.Write([]byte(v))
 	}
@@ -305,7 +305,7 @@ func (a *remoteAuthorizer) calculateCacheKey(sub *subject.Subject) (string, erro
 	hash := sha256.New()
 	hash.Write([]byte(a.e.Hash()))
 	hash.Write([]byte(a.name))
-	hash.Write([]byte(strings.Join(a.headersForUpstream, ",")))
+	hash.Write([]byte(strings.Join(a.headerForUpstream, ",")))
 	hash.Write([]byte(a.payload))
 	hash.Write(buf.Bytes())
 	hash.Write(ttlBytes)
