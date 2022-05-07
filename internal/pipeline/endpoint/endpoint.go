@@ -157,7 +157,10 @@ func (e Endpoint) Hash() string {
 	}
 
 	hash.Write(buf.Bytes())
-	hash.Write([]byte(e.AuthStrategy.Hash()))
+
+	if e.AuthStrategy != nil {
+		hash.Write([]byte(e.AuthStrategy.Hash()))
+	}
 
 	return hex.EncodeToString(hash.Sum(nil))
 }
