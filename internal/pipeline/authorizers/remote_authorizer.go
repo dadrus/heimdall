@@ -55,6 +55,21 @@ type authorizationInformation struct {
 	payload map[string]any
 }
 
+func (ai *authorizationInformation) AddHeadersTo(headerNames []string, ctx heimdall.Context) {
+	for _, headerName := range headerNames {
+		headerValue := ai.header.Get(headerName)
+		if len(headerValue) != 0 {
+			ctx.AddResponseHeader(headerName, headerValue)
+		}
+	}
+}
+
+func (ai *authorizationInformation) AddAttributesTo(key string, sub *subject.Subject) {
+	if len(ai.payload) != 0 {
+		sub.Attributes[key] = ai.payload
+	}
+}
+
 func newRemoteAuthorizer(name string, rawConfig map[any]any) (*remoteAuthorizer, error) {
 	type _config struct {
 		Endpoint                 endpoint.Endpoint            `mapstructure:"endpoint"`
@@ -104,24 +119,28 @@ func (a *remoteAuthorizer) Execute(ctx heimdall.Context, sub *subject.Subject) e
 	cch := cache.Ctx(ctx.AppContext())
 
 	var (
-		cacheKey string
-		authInfo *authorizationInformation
-		err      error
+		cacheKey   string
+		cacheEntry any
+		authInfo   *authorizationInformation
+		err        error
+		ok         bool
 	)
 
 	if a.ttl != nil {
 		cacheKey, err = a.calculateCacheKey(sub)
 		if err != nil {
 			logger.Error().Err(err).Msg("Failed to calculate cache key. Will not be able to use cache.")
-		} else if item := cch.Get(cacheKey); item != nil {
-			if cachedResponse, ok := item.(*authorizationInformation); !ok {
-				logger.Warn().Msg("Wrong object type from cache")
-				cch.Delete(cacheKey)
-			} else {
-				logger.Debug().Msg("Reusing hydration response from cache")
+		} else {
+			cacheEntry = cch.Get(cacheKey)
+		}
+	}
 
-				authInfo = cachedResponse
-			}
+	if cacheEntry != nil {
+		if authInfo, ok = cacheEntry.(*authorizationInformation); !ok {
+			logger.Warn().Msg("Wrong object type from cache")
+			cch.Delete(cacheKey)
+		} else {
+			logger.Debug().Msg("Reusing authorization information from cache")
 		}
 	}
 
@@ -131,26 +150,21 @@ func (a *remoteAuthorizer) Execute(ctx heimdall.Context, sub *subject.Subject) e
 			return err
 		}
 
-		if a.ttl != nil {
+		if a.ttl != nil && len(cacheKey) != 0 {
 			cch.Set(cacheKey, authInfo, *a.ttl)
 		}
 	}
 
-	for _, headerName := range a.headersForUpstream {
-		headerValue := authInfo.header.Get(headerName)
-		if len(headerValue) != 0 {
-			ctx.AddResponseHeader(headerName, headerValue)
-		}
-	}
-
-	if len(authInfo.payload) != 0 {
-		sub.Attributes[a.name] = authInfo.payload
-	}
+	authInfo.AddHeadersTo(a.headersForUpstream, ctx)
+	authInfo.AddAttributesTo(a.name, sub)
 
 	return nil
 }
 
 func (a *remoteAuthorizer) doAuthorize(ctx heimdall.Context, sub *subject.Subject) (*authorizationInformation, error) {
+	logger := zerolog.Ctx(ctx.AppContext())
+	logger.Debug().Msg("Calling remote authorization endpoint")
+
 	req, err := a.createRequest(ctx, sub)
 	if err != nil {
 		return nil, err
