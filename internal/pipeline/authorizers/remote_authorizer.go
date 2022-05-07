@@ -52,7 +52,7 @@ type remoteAuthorizer struct {
 
 type authorizationInformation struct {
 	header  http.Header
-	payload map[string]any
+	payload any
 }
 
 func (ai *authorizationInformation) AddHeadersTo(headerNames []string, ctx heimdall.Context) {
@@ -65,7 +65,7 @@ func (ai *authorizationInformation) AddHeadersTo(headerNames []string, ctx heimd
 }
 
 func (ai *authorizationInformation) AddAttributesTo(key string, sub *subject.Subject) {
-	if len(ai.payload) != 0 {
+	if ai.payload != nil {
 		sub.Attributes[key] = ai.payload
 	}
 }
@@ -218,19 +218,26 @@ func (a *remoteAuthorizer) createRequest(ctx heimdall.Context, sub *subject.Subj
 	return req, nil
 }
 
-func (a *remoteAuthorizer) readResponse(resp *http.Response) (map[string]any, error) {
-	if resp.StatusCode >= http.StatusOK && resp.StatusCode < http.StatusMultipleChoices {
-		if resp.ContentLength == 0 {
-			return map[string]any{}, nil
-		}
+func (a *remoteAuthorizer) readResponse(resp *http.Response) (any, error) {
+	if !(resp.StatusCode >= http.StatusOK && resp.StatusCode < http.StatusMultipleChoices) {
+		return nil, errorchain.
+			NewWithMessagef(heimdall.ErrAuthorization,
+				"authorization failed based on received response code: %v", resp.StatusCode)
+	}
 
-		rawData, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			return nil, errorchain.
-				NewWithMessage(heimdall.ErrInternal, "failed to read response").
-				CausedBy(err)
-		}
+	if resp.ContentLength == 0 {
+		return map[string]any{}, nil
+	}
 
+	rawData, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, errorchain.
+			NewWithMessage(heimdall.ErrInternal, "failed to read response").
+			CausedBy(err)
+	}
+
+	contentType := resp.Header.Get("Content-Type")
+	if strings.Contains(contentType, "json") {
 		var mapData map[string]any
 		if err = json.Unmarshal(rawData, &mapData); err != nil {
 			return nil, errorchain.
@@ -242,9 +249,7 @@ func (a *remoteAuthorizer) readResponse(resp *http.Response) (map[string]any, er
 		return mapData, nil
 	}
 
-	return nil, errorchain.
-		NewWithMessagef(heimdall.ErrAuthorization,
-			"authorization failed based on received response code: %v", resp.StatusCode)
+	return string(rawData), nil
 }
 
 func (a *remoteAuthorizer) WithConfig(rawConfig map[any]any) (Authorizer, error) {
