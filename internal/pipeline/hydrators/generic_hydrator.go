@@ -99,7 +99,7 @@ func (h *genericHydrator) Execute(ctx heimdall.Context, sub *subject.Subject) er
 			"failed to execute generic hydrator due to 'nil' subject")
 	}
 
-	var hydrationResponse map[string]any
+	var hydrationResponse any
 
 	cch := cache.Ctx(ctx.AppContext())
 
@@ -117,7 +117,7 @@ func (h *genericHydrator) Execute(ctx heimdall.Context, sub *subject.Subject) er
 		}
 	}
 
-	if len(hydrationResponse) == 0 {
+	if hydrationResponse == nil {
 		respValue, err := h.callHydrationEndpoint(ctx, sub)
 		if err != nil {
 			return err
@@ -135,7 +135,7 @@ func (h *genericHydrator) Execute(ctx heimdall.Context, sub *subject.Subject) er
 	return nil
 }
 
-func (h *genericHydrator) callHydrationEndpoint(ctx heimdall.Context, sub *subject.Subject) (map[string]any, error) {
+func (h *genericHydrator) callHydrationEndpoint(ctx heimdall.Context, sub *subject.Subject) (any, error) {
 	logger := zerolog.Ctx(ctx.AppContext())
 	logger.Debug().Msg("Calling hydration endpoint")
 
@@ -158,7 +158,7 @@ func (h *genericHydrator) callHydrationEndpoint(ctx heimdall.Context, sub *subje
 
 	defer resp.Body.Close()
 
-	return h.readResponse(resp)
+	return h.readResponse(ctx, resp)
 }
 
 func (h *genericHydrator) createRequest(ctx heimdall.Context, sub *subject.Subject) (*http.Request, error) {
@@ -204,15 +204,29 @@ func (h *genericHydrator) createRequest(ctx heimdall.Context, sub *subject.Subje
 	return req, nil
 }
 
-func (h *genericHydrator) readResponse(resp *http.Response) (map[string]any, error) {
-	if resp.StatusCode >= http.StatusOK && resp.StatusCode < http.StatusMultipleChoices {
-		rawData, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			return nil, errorchain.
-				NewWithMessage(heimdall.ErrInternal, "failed to read response").
-				CausedBy(err)
-		}
+func (h *genericHydrator) readResponse(ctx heimdall.Context, resp *http.Response) (any, error) {
+	logger := zerolog.Ctx(ctx.AppContext())
 
+	if !(resp.StatusCode >= http.StatusOK && resp.StatusCode < http.StatusMultipleChoices) {
+		return nil, errorchain.
+			NewWithMessagef(heimdall.ErrCommunication, "unexpected response code: %v", resp.StatusCode)
+	}
+
+	if resp.ContentLength == 0 {
+		logger.Warn().Msg("No data received from the hydration endpoint")
+
+		return map[string]any{}, nil
+	}
+
+	rawData, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, errorchain.
+			NewWithMessage(heimdall.ErrInternal, "failed to read response").
+			CausedBy(err)
+	}
+
+	contentType := resp.Header.Get("Content-Type")
+	if strings.Contains(contentType, "json") {
 		var mapData map[string]any
 		if err = json.Unmarshal(rawData, &mapData); err != nil {
 			return nil, errorchain.
@@ -224,8 +238,7 @@ func (h *genericHydrator) readResponse(resp *http.Response) (map[string]any, err
 		return mapData, nil
 	}
 
-	return nil, errorchain.
-		NewWithMessagef(heimdall.ErrCommunication, "unexpected response code: %v", resp.StatusCode)
+	return string(rawData), nil
 }
 
 func (h *genericHydrator) calculateCacheKey(sub *subject.Subject) (string, error) {
