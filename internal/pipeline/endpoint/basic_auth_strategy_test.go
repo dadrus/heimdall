@@ -27,6 +27,8 @@ func TestApplyBasicAuthStrategy(t *testing.T) {
 }
 
 func TestBasicAuthStrategyHash(t *testing.T) {
+	t.Parallel()
+
 	// GIVEN
 	s1 := &BasicAuthStrategy{User: "Foo", Password: "Bar"}
 	s2 := &BasicAuthStrategy{User: "Foo", Password: "Baz"}

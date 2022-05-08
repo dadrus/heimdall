@@ -45,6 +45,8 @@ func TestApplyApiKeyStrategyOnCookie(t *testing.T) {
 }
 
 func TestAPIKeyStrategyHash(t *testing.T) {
+	t.Parallel()
+
 	// GIVEN
 	s1 := &APIKeyStrategy{In: "header", Name: "Foo", Value: "Bar"}
 	s2 := &APIKeyStrategy{In: "cookie", Name: "Foo", Value: "Bar"}

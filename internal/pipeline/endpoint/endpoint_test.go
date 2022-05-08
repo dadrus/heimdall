@@ -396,6 +396,8 @@ func TestEndpointSendRequest(t *testing.T) {
 }
 
 func TestEndpointHash(t *testing.T) {
+	t.Parallel()
+
 	// GIVEN
 	e1 := Endpoint{URL: "foo.bar"}
 	e2 := Endpoint{URL: "foo.bar", Method: "FOO", Headers: map[string]string{"baz": "foo"}}

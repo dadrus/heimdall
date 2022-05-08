@@ -266,6 +266,8 @@ func TestApplyClientCredentialsStrategy(t *testing.T) {
 }
 
 func TestClientCredentialsStrategyHash(t *testing.T) {
+	t.Parallel()
+
 	// GIVEN
 	s1 := &ClientCredentialsStrategy{ClientID: "Foo", ClientSecret: "Bar"}
 	s2 := &ClientCredentialsStrategy{ClientID: "Baz", ClientSecret: "Bar"}
