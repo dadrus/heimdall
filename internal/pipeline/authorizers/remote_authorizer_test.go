@@ -1,15 +1,27 @@
 package authorizers
 
 import (
+	"context"
+	"encoding/json"
+	"io/ioutil"
+	"net/http"
+	"net/http/httptest"
+	"net/url"
+	"strconv"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
+	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/pipeline/endpoint"
+	"github.com/dadrus/heimdall/internal/pipeline/subject"
 	"github.com/dadrus/heimdall/internal/pipeline/template"
 	"github.com/dadrus/heimdall/internal/pipeline/testsupport"
+	"github.com/dadrus/heimdall/internal/x"
 )
 
 func TestCreateRemoteAuthorizer(t *testing.T) {
@@ -82,7 +94,7 @@ header:
 				assert.Equal(t, template.Template("Baz"), auth.header["Foo-Bar"])
 				assert.Empty(t, auth.payload)
 				assert.Empty(t, auth.headerForUpstream)
-				assert.Nil(t, auth.ttl)
+				assert.Zero(t, auth.ttl)
 			},
 		},
 		{
@@ -101,7 +113,7 @@ payload: "{{ .ID }}"
 				assert.Empty(t, auth.header)
 				assert.Equal(t, template.Template("{{ .ID }}"), auth.payload)
 				assert.Empty(t, auth.headerForUpstream)
-				assert.Nil(t, auth.ttl)
+				assert.Zero(t, auth.ttl)
 			},
 		},
 		{
@@ -132,7 +144,7 @@ cache_ttl: 5s
 				assert.Contains(t, auth.headerForUpstream, "Foo")
 				assert.Contains(t, auth.headerForUpstream, "Bar")
 				assert.NotNil(t, auth.ttl)
-				assert.Equal(t, 5*time.Second, *auth.ttl)
+				assert.Equal(t, 5*time.Second, auth.ttl)
 			},
 		},
 	} {
@@ -296,7 +308,7 @@ cache_ttl: 15s
 				assert.Contains(t, configured.headerForUpstream, "Foo")
 				assert.Len(t, configured.header, 1)
 				assert.Equal(t, template.Template("Foo"), configured.header["Bar"])
-				assert.Equal(t, 15*time.Second, *configured.ttl)
+				assert.Equal(t, 15*time.Second, configured.ttl)
 
 				assert.NotEqual(t, prototype.ttl, configured.ttl)
 				assert.NotEqual(t, prototype.headerForUpstream, configured.headerForUpstream)
@@ -330,6 +342,472 @@ cache_ttl: 15s
 			}
 
 			tc.assert(t, err, prototype, locAuth)
+		})
+	}
+}
+
+// nolint: maintidx
+func TestRemoteAuthorizerExecute(t *testing.T) {
+	t.Parallel()
+
+	var (
+		authorizationEndpointCalled bool
+		checkRequest                func(req *http.Request)
+
+		responseHeader      map[string]string
+		responseContentType string
+		responseContent     []byte
+		responseCode        int
+	)
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		authorizationEndpointCalled = true
+
+		checkRequest(r)
+
+		for hn, hv := range responseHeader {
+			w.Header().Set(hn, hv)
+		}
+
+		if responseContent != nil {
+			w.Header().Set("Content-Type", responseContentType)
+			w.Header().Set("Content-Length", strconv.Itoa(len(responseContent)))
+			_, err := w.Write(responseContent)
+			assert.NoError(t, err)
+		}
+
+		w.WriteHeader(responseCode)
+	}))
+	defer srv.Close()
+
+	for _, tc := range []struct {
+		uc               string
+		authorizer       *remoteAuthorizer
+		subject          *subject.Subject
+		instructServer   func(t *testing.T)
+		configureContext func(t *testing.T, ctx *testsupport.MockContext)
+		configureCache   func(t *testing.T, cch *testsupport.MockCache, authorizer *remoteAuthorizer, sub *subject.Subject)
+		assert           func(t *testing.T, err error, sub *subject.Subject)
+	}{
+		{
+			// nolint: lll
+			uc: "successful with payload and with header, without payload from server and without header forwarding and with disabled cache",
+			authorizer: &remoteAuthorizer{
+				e: endpoint.Endpoint{
+					URL: srv.URL,
+				},
+				payload: "{{ .ID }}",
+				header:  map[string]template.Template{"Foo-Bar": "{{ .Attributes.bar }}"},
+			},
+			subject: &subject.Subject{
+				ID:         "my-id",
+				Attributes: map[string]any{"bar": "baz"},
+			},
+			instructServer: func(t *testing.T) {
+				t.Helper()
+
+				responseCode = http.StatusOK
+
+				checkRequest = func(req *http.Request) {
+					t.Helper()
+
+					assert.Equal(t, "POST", req.Method)
+					assert.Equal(t, "baz", req.Header.Get("Foo-Bar"))
+					assert.Empty(t, req.Header.Get("Content-Type"))
+					assert.Empty(t, req.Header.Get("Accept"))
+
+					data, err := ioutil.ReadAll(req.Body)
+					assert.NoError(t, err)
+
+					assert.Equal(t, "my-id", string(data))
+				}
+			},
+			assert: func(t *testing.T, err error, sub *subject.Subject) {
+				t.Helper()
+
+				require.NoError(t, err)
+
+				assert.True(t, authorizationEndpointCalled)
+				assert.Len(t, sub.Attributes, 1)
+				assert.Equal(t, "baz", sub.Attributes["bar"])
+			},
+		},
+		{
+			// nolint: lll
+			uc: "successful with json payload and with header, with json payload from server and with header forwarding and with disabled cache",
+			authorizer: &remoteAuthorizer{
+				name: "authorizer",
+				e: endpoint.Endpoint{
+					URL: srv.URL,
+					Headers: map[string]string{
+						"Content-Type": "application/json",
+						"Accept":       "application/json",
+					},
+				},
+				payload:           `{ "user_id": {{ quote .ID }} }`,
+				header:            map[string]template.Template{"Foo-Bar": "{{ .Attributes.bar }}"},
+				headerForUpstream: []string{"X-Foo-Bar", "X-Bar-Foo"},
+			},
+			subject: &subject.Subject{
+				ID:         "my-id",
+				Attributes: map[string]any{"bar": "baz"},
+			},
+			instructServer: func(t *testing.T) {
+				t.Helper()
+
+				checkRequest = func(req *http.Request) {
+					t.Helper()
+
+					assert.Equal(t, "POST", req.Method)
+					assert.Equal(t, "baz", req.Header.Get("Foo-Bar"))
+					assert.Equal(t, "application/json", req.Header.Get("Content-Type"))
+					assert.Equal(t, "application/json", req.Header.Get("Accept"))
+
+					data, err := ioutil.ReadAll(req.Body)
+					assert.NoError(t, err)
+
+					var mapData map[string]string
+
+					err = json.Unmarshal(data, &mapData)
+					require.NoError(t, err)
+
+					assert.Len(t, mapData, 1)
+					assert.Equal(t, "my-id", mapData["user_id"])
+				}
+
+				responseCode = http.StatusOK
+				rawData, err := json.Marshal(map[string]any{
+					"access_granted": true,
+					"permissions":    []string{"read_foo", "write_foo"},
+					"groups":         []string{"Foo-Users"},
+				})
+				require.NoError(t, err)
+				responseContent = rawData
+				responseContentType = "application/json"
+				responseHeader = map[string]string{"X-Foo-Bar": "HeyFoo"}
+			},
+			configureContext: func(t *testing.T, ctx *testsupport.MockContext) {
+				t.Helper()
+
+				ctx.On("AddResponseHeader", "X-Foo-Bar", "HeyFoo")
+			},
+			assert: func(t *testing.T, err error, sub *subject.Subject) {
+				t.Helper()
+
+				require.NoError(t, err)
+
+				assert.True(t, authorizationEndpointCalled)
+				assert.Len(t, sub.Attributes, 2)
+				assert.Equal(t, "baz", sub.Attributes["bar"])
+
+				attrs := sub.Attributes["authorizer"]
+				assert.NotEmpty(t, attrs)
+				authorizerAttrs, ok := attrs.(map[string]any)
+				require.True(t, ok)
+				assert.Len(t, authorizerAttrs, 3)
+				assert.Equal(t, true, authorizerAttrs["access_granted"])
+				assert.Len(t, authorizerAttrs["permissions"], 2)
+				assert.Contains(t, authorizerAttrs["permissions"], "read_foo")
+				assert.Contains(t, authorizerAttrs["permissions"], "write_foo")
+				assert.Len(t, authorizerAttrs["groups"], 1)
+				assert.Contains(t, authorizerAttrs["groups"], "Foo-Users")
+			},
+		},
+		{
+			// nolint: lll
+			uc: "successful with www-form-urlencoded payload and without header, without payload from server and with header forwarding and with failing cache hit",
+			authorizer: &remoteAuthorizer{
+				name: "authorizer",
+				e: endpoint.Endpoint{
+					URL: srv.URL,
+					Headers: map[string]string{
+						"Content-Type": "application/x-www-form-urlencoded",
+					},
+				},
+				payload:           `user_id={{ urlenc .ID }}&{{ .Attributes.bar }}=foo`,
+				headerForUpstream: []string{"X-Foo-Bar", "X-Bar-Foo"},
+				ttl:               20 * time.Second,
+			},
+			subject: &subject.Subject{
+				ID:         "my id",
+				Attributes: map[string]any{"bar": "baz"},
+			},
+			instructServer: func(t *testing.T) {
+				t.Helper()
+
+				checkRequest = func(req *http.Request) {
+					t.Helper()
+
+					assert.Equal(t, "POST", req.Method)
+					assert.Equal(t, "application/x-www-form-urlencoded", req.Header.Get("Content-Type"))
+
+					data, err := ioutil.ReadAll(req.Body)
+					assert.NoError(t, err)
+
+					formValues, err := url.ParseQuery(string(data))
+					require.NoError(t, err)
+
+					assert.Len(t, formValues, 2)
+					assert.Equal(t, []string{"my id"}, formValues["user_id"])
+					assert.Equal(t, []string{"foo"}, formValues["baz"])
+				}
+
+				responseCode = http.StatusOK
+				responseHeader = map[string]string{"X-Foo-Bar": "HeyFoo"}
+			},
+			configureContext: func(t *testing.T, ctx *testsupport.MockContext) {
+				t.Helper()
+
+				ctx.On("AddResponseHeader", "X-Foo-Bar", "HeyFoo")
+			},
+			configureCache: func(t *testing.T, cch *testsupport.MockCache, auth *remoteAuthorizer, sub *subject.Subject) {
+				t.Helper()
+
+				cacheKey, err := auth.calculateCacheKey(sub)
+				require.NoError(t, err)
+
+				cch.On("Get", cacheKey).Return(nil)
+				cch.On("Set", cacheKey,
+					mock.MatchedBy(func(val *authorizationInformation) bool {
+						return val != nil && val.payload == nil && len(val.header.Get("X-Foo-Bar")) != 0
+					}), auth.ttl)
+			},
+			assert: func(t *testing.T, err error, sub *subject.Subject) {
+				t.Helper()
+
+				require.NoError(t, err)
+
+				assert.True(t, authorizationEndpointCalled)
+				assert.Len(t, sub.Attributes, 1)
+				assert.Equal(t, "baz", sub.Attributes["bar"])
+
+				assert.Empty(t, sub.Attributes["authorizer"])
+			},
+		},
+		{
+			uc: "successfully reuse cache",
+			authorizer: &remoteAuthorizer{
+				name: "authorizer",
+				e: endpoint.Endpoint{
+					URL: srv.URL,
+					Headers: map[string]string{
+						"Content-Type": "application/x-www-form-urlencoded",
+					},
+				},
+				payload:           `user_id={{ urlenc .ID }}&{{ .Attributes.bar }}=foo`,
+				headerForUpstream: []string{"X-Foo-Bar", "X-Bar-Foo"},
+				header:            map[string]template.Template{"Foo-Bar": "{{ .Attributes.bar }}"},
+				ttl:               20 * time.Second,
+			},
+			subject: &subject.Subject{
+				ID:         "my id",
+				Attributes: map[string]any{"bar": "baz"},
+			},
+			configureContext: func(t *testing.T, ctx *testsupport.MockContext) {
+				t.Helper()
+
+				ctx.On("AddResponseHeader", "X-Foo-Bar", "HeyFoo")
+				ctx.On("AddResponseHeader", "X-Bar-Foo", "HeyBar")
+			},
+			configureCache: func(t *testing.T, cch *testsupport.MockCache, auth *remoteAuthorizer, sub *subject.Subject) {
+				t.Helper()
+
+				cacheKey, err := auth.calculateCacheKey(sub)
+				require.NoError(t, err)
+
+				cch.On("Get", cacheKey).Return(&authorizationInformation{
+					header: http.Header{
+						"X-Foo-Bar": {"HeyFoo"},
+						"X-Bar-Foo": {"HeyBar"},
+					},
+					payload: map[string]string{"foo": "bar"},
+				})
+			},
+			assert: func(t *testing.T, err error, sub *subject.Subject) {
+				t.Helper()
+
+				require.NoError(t, err)
+
+				assert.False(t, authorizationEndpointCalled)
+				assert.Len(t, sub.Attributes, 2)
+				assert.Equal(t, "baz", sub.Attributes["bar"])
+
+				attrs := sub.Attributes["authorizer"]
+				assert.NotEmpty(t, attrs)
+				authorizerAttrs, ok := attrs.(map[string]string)
+				require.True(t, ok)
+				assert.Len(t, authorizerAttrs, 1)
+				assert.Equal(t, "bar", authorizerAttrs["foo"])
+			},
+		},
+		{
+			uc: "cache with bad object in cache",
+			authorizer: &remoteAuthorizer{
+				name: "authorizer",
+				e: endpoint.Endpoint{
+					URL: srv.URL,
+					Headers: map[string]string{
+						"Content-Type": "application/x-www-form-urlencoded",
+					},
+				},
+				payload:           `user_id={{ urlenc .ID }}&{{ .Attributes.bar }}=foo`,
+				headerForUpstream: []string{"X-Foo-Bar", "X-Bar-Foo"},
+				header:            map[string]template.Template{"Foo-Bar": "{{ .Attributes.bar }}"},
+				ttl:               20 * time.Second,
+			},
+			subject: &subject.Subject{
+				ID:         "my id",
+				Attributes: map[string]any{"bar": "baz"},
+			},
+			configureContext: func(t *testing.T, ctx *testsupport.MockContext) {
+				t.Helper()
+
+				ctx.On("AddResponseHeader", "X-Foo-Bar", "HeyFoo")
+			},
+			configureCache: func(t *testing.T, cch *testsupport.MockCache, auth *remoteAuthorizer, sub *subject.Subject) {
+				t.Helper()
+
+				cacheKey, err := auth.calculateCacheKey(sub)
+				require.NoError(t, err)
+
+				cch.On("Get", mock.Anything).Return("Hello Foo")
+				cch.On("Delete", cacheKey)
+				cch.On("Set", cacheKey, mock.Anything, auth.ttl)
+			},
+			instructServer: func(t *testing.T) {
+				t.Helper()
+
+				responseCode = http.StatusOK
+				responseHeader = map[string]string{"X-Foo-Bar": "HeyFoo"}
+
+				rawData, err := json.Marshal(map[string]any{
+					"access_granted": true,
+				})
+				require.NoError(t, err)
+				responseContent = rawData
+				responseContentType = "application/json"
+			},
+			assert: func(t *testing.T, err error, sub *subject.Subject) {
+				t.Helper()
+
+				require.NoError(t, err)
+
+				assert.True(t, authorizationEndpointCalled)
+				assert.Len(t, sub.Attributes, 2)
+				assert.Equal(t, "baz", sub.Attributes["bar"])
+
+				assert.Len(t, sub.Attributes["authorizer"], 1)
+			},
+		},
+		{
+			uc: "with failed authorization",
+			authorizer: &remoteAuthorizer{
+				name:   "authorizer",
+				e:      endpoint.Endpoint{URL: srv.URL},
+				header: map[string]template.Template{"X-User-ID": "{{ .ID }}"},
+			},
+			subject: &subject.Subject{ID: "foo"},
+			instructServer: func(t *testing.T) {
+				t.Helper()
+
+				checkRequest = func(req *http.Request) {
+					assert.Equal(t, "foo", req.Header.Get("X-User-ID"))
+				}
+
+				responseCode = http.StatusUnauthorized
+			},
+			assert: func(t *testing.T, err error, sub *subject.Subject) {
+				t.Helper()
+
+				require.Error(t, err)
+
+				assert.ErrorIs(t, err, heimdall.ErrAuthorization)
+				assert.Contains(t, err.Error(), "authorization failed")
+			},
+		},
+		{
+			uc: "with unsupported response content type",
+			authorizer: &remoteAuthorizer{
+				name:   "foo",
+				e:      endpoint.Endpoint{URL: srv.URL},
+				header: map[string]template.Template{"X-User-ID": "{{ .ID }}"},
+			},
+			subject: &subject.Subject{ID: "foo", Attributes: map[string]any{}},
+			instructServer: func(t *testing.T) {
+				t.Helper()
+
+				responseContent = []byte("Hi Foo")
+				responseContentType = "text/text"
+				responseCode = http.StatusOK
+			},
+			assert: func(t *testing.T, err error, sub *subject.Subject) {
+				t.Helper()
+
+				require.NoError(t, err)
+
+				assert.True(t, authorizationEndpointCalled)
+				assert.Equal(t, "Hi Foo", sub.Attributes["foo"])
+			},
+		},
+		{
+			uc: "with communication error (dns)",
+			authorizer: &remoteAuthorizer{
+				name:   "authorizer",
+				e:      endpoint.Endpoint{URL: "http://heimdall.test.local"},
+				header: map[string]template.Template{"X-User-ID": "{{ .ID }}"},
+			},
+			subject: &subject.Subject{ID: "foo"},
+			assert: func(t *testing.T, err error, sub *subject.Subject) {
+				t.Helper()
+
+				require.Error(t, err)
+				assert.ErrorIs(t, err, heimdall.ErrCommunication)
+				assert.Contains(t, err.Error(), "endpoint failed")
+
+				assert.False(t, authorizationEndpointCalled)
+			},
+		},
+	} {
+		t.Run("case="+tc.uc, func(t *testing.T) {
+			// GIVEN
+			authorizationEndpointCalled = false
+			responseHeader = nil
+			responseContentType = ""
+			responseContent = nil
+
+			checkRequest = func(req *http.Request) { t.Helper() }
+
+			instructServer := x.IfThenElse(tc.instructServer != nil,
+				tc.instructServer,
+				func(t *testing.T) { t.Helper() })
+
+			configureContext := x.IfThenElse(tc.configureContext != nil,
+				tc.configureContext,
+				func(t *testing.T, ctx *testsupport.MockContext) { t.Helper() })
+
+			configureCache := x.IfThenElse(tc.configureCache != nil,
+				tc.configureCache,
+				func(t *testing.T, ctx *testsupport.MockCache, auth *remoteAuthorizer, sub *subject.Subject) {
+					t.Helper()
+				})
+
+			cch := &testsupport.MockCache{}
+
+			ctx := &testsupport.MockContext{}
+			ctx.On("AppContext").Return(cache.WithContext(context.Background(), cch))
+
+			configureContext(t, ctx)
+			configureCache(t, cch, tc.authorizer, tc.subject)
+			instructServer(t)
+
+			// WHEN
+			err := tc.authorizer.Execute(ctx, tc.subject)
+
+			// THEN
+			tc.assert(t, err, tc.subject)
+
+			ctx.AssertExpectations(t)
+			cch.AssertExpectations(t)
 		})
 	}
 }

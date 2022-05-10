@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -18,6 +19,7 @@ import (
 	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/pipeline/contenttype"
 	"github.com/dadrus/heimdall/internal/pipeline/endpoint"
 	"github.com/dadrus/heimdall/internal/pipeline/subject"
 	"github.com/dadrus/heimdall/internal/pipeline/template"
@@ -46,7 +48,7 @@ type remoteAuthorizer struct {
 	header            map[string]template.Template
 	payload           template.Template
 	headerForUpstream []string
-	ttl               *time.Duration
+	ttl               time.Duration
 }
 
 type authorizationInformation struct {
@@ -75,7 +77,7 @@ func newRemoteAuthorizer(name string, rawConfig map[any]any) (*remoteAuthorizer,
 		Header                  map[string]template.Template `mapstructure:"header"`
 		Payload                 template.Template            `mapstructure:"payload"`
 		ResponseHeaderToForward []string                     `mapstructure:"forward_response_header_to_upstream"`
-		CacheTTL                *time.Duration               `mapstructure:"cache_ttl"`
+		CacheTTL                time.Duration                `mapstructure:"cache_ttl"`
 	}
 
 	var conf _config
@@ -125,7 +127,7 @@ func (a *remoteAuthorizer) Execute(ctx heimdall.Context, sub *subject.Subject) e
 		ok         bool
 	)
 
-	if a.ttl != nil {
+	if a.ttl > 0 {
 		cacheKey, err = a.calculateCacheKey(sub)
 		if err != nil {
 			logger.Error().Err(err).Msg("Failed to calculate cache key. Will not be able to use cache.")
@@ -149,8 +151,8 @@ func (a *remoteAuthorizer) Execute(ctx heimdall.Context, sub *subject.Subject) e
 			return err
 		}
 
-		if a.ttl != nil && len(cacheKey) != 0 {
-			cch.Set(cacheKey, authInfo, *a.ttl)
+		if a.ttl > 0 && len(cacheKey) != 0 {
+			cch.Set(cacheKey, authInfo, a.ttl)
 		}
 	}
 
@@ -183,7 +185,7 @@ func (a *remoteAuthorizer) doAuthorize(ctx heimdall.Context, sub *subject.Subjec
 
 	defer resp.Body.Close()
 
-	data, err := a.readResponse(resp)
+	data, err := a.readResponse(ctx, resp)
 	if err != nil {
 		return nil, err
 	}
@@ -195,12 +197,20 @@ func (a *remoteAuthorizer) doAuthorize(ctx heimdall.Context, sub *subject.Subjec
 }
 
 func (a *remoteAuthorizer) createRequest(ctx heimdall.Context, sub *subject.Subject) (*http.Request, error) {
-	body, err := a.payload.Render(ctx, sub)
-	if err != nil {
-		return nil, err
+	var body io.Reader
+
+	if len(a.payload) != 0 {
+		bodyContents, err := a.payload.Render(ctx, sub)
+		if err != nil {
+			return nil, errorchain.NewWithMessage(heimdall.ErrInternal,
+				"failed to render payload for the authorization endpoint").
+				CausedBy(err)
+		}
+
+		body = strings.NewReader(bodyContents)
 	}
 
-	req, err := a.e.CreateRequest(ctx.AppContext(), strings.NewReader(body))
+	req, err := a.e.CreateRequest(ctx.AppContext(), body)
 	if err != nil {
 		return nil, err
 	}
@@ -208,7 +218,9 @@ func (a *remoteAuthorizer) createRequest(ctx heimdall.Context, sub *subject.Subj
 	for headerName, headerTemplate := range a.header {
 		headerValue, err := headerTemplate.Render(ctx, sub)
 		if err != nil {
-			return nil, err
+			return nil, errorchain.NewWithMessagef(heimdall.ErrInternal,
+				"failed to render %s header value for the authorization endpoint", headerName).
+				CausedBy(err)
 		}
 
 		req.Header.Add(headerName, headerValue)
@@ -217,7 +229,9 @@ func (a *remoteAuthorizer) createRequest(ctx heimdall.Context, sub *subject.Subj
 	return req, nil
 }
 
-func (a *remoteAuthorizer) readResponse(resp *http.Response) (any, error) {
+func (a *remoteAuthorizer) readResponse(ctx heimdall.Context, resp *http.Response) (any, error) {
+	logger := zerolog.Ctx(ctx.AppContext())
+
 	if !(resp.StatusCode >= http.StatusOK && resp.StatusCode < http.StatusMultipleChoices) {
 		return nil, errorchain.
 			NewWithMessagef(heimdall.ErrAuthorization,
@@ -225,7 +239,9 @@ func (a *remoteAuthorizer) readResponse(resp *http.Response) (any, error) {
 	}
 
 	if resp.ContentLength == 0 {
-		return map[string]any{}, nil
+		logger.Debug().Msg("No content received")
+
+		return nil, nil
 	}
 
 	rawData, err := ioutil.ReadAll(resp.Body)
@@ -236,19 +252,24 @@ func (a *remoteAuthorizer) readResponse(resp *http.Response) (any, error) {
 	}
 
 	contentType := resp.Header.Get("Content-Type")
-	if strings.Contains(contentType, "json") {
-		var mapData map[string]any
-		if err = json.Unmarshal(rawData, &mapData); err != nil {
-			return nil, errorchain.
-				NewWithMessage(heimdall.ErrInternal,
-					"failed to unmarshal received response from hydration endpoint").
-				CausedBy(err)
-		}
 
-		return mapData, nil
+	logger.Debug().Msgf("Received response of %s content type", contentType)
+
+	decoder, err := contenttype.NewDecoder(contentType)
+	if err != nil {
+		logger.Warn().Msgf("%s content type is not supported. Treating it as string", contentType)
+
+		return string(rawData), nil
 	}
 
-	return string(rawData), nil
+	result, err := decoder.Decode(rawData)
+	if err != nil {
+		return nil, errorchain.
+			NewWithMessage(heimdall.ErrInternal, "failed to unmarshal response").
+			CausedBy(err)
+	}
+
+	return result, nil
 }
 
 func (a *remoteAuthorizer) WithConfig(rawConfig map[any]any) (Authorizer, error) {
@@ -260,7 +281,7 @@ func (a *remoteAuthorizer) WithConfig(rawConfig map[any]any) (Authorizer, error)
 		Header                  map[string]template.Template `mapstructure:"header"`
 		Payload                 template.Template            `mapstructure:"payload"`
 		ResponseHeaderToForward []string                     `mapstructure:"forward_response_header_to_upstream"`
-		CacheTTL                *time.Duration               `mapstructure:"cache_ttl"`
+		CacheTTL                time.Duration                `mapstructure:"cache_ttl"`
 	}
 
 	var conf _config
@@ -277,7 +298,7 @@ func (a *remoteAuthorizer) WithConfig(rawConfig map[any]any) (Authorizer, error)
 		header:  x.IfThenElse(len(conf.Header) != 0, conf.Header, a.header),
 		headerForUpstream: x.IfThenElse(len(conf.ResponseHeaderToForward) != 0,
 			conf.ResponseHeaderToForward, a.headerForUpstream),
-		ttl: x.IfThenElse(conf.CacheTTL != nil, conf.CacheTTL, a.ttl),
+		ttl: x.IfThenElse(conf.CacheTTL > 0, conf.CacheTTL, a.ttl),
 	}, nil
 }
 
@@ -292,9 +313,7 @@ func (a *remoteAuthorizer) calculateCacheKey(sub *subject.Subject) (string, erro
 	}
 
 	ttlBytes := make([]byte, int64BytesCount)
-	if a.ttl != nil {
-		binary.LittleEndian.PutUint64(ttlBytes, uint64(*a.ttl))
-	}
+	binary.LittleEndian.PutUint64(ttlBytes, uint64(a.ttl))
 
 	buf := bytes.NewBufferString("")
 	for k, v := range a.header {
