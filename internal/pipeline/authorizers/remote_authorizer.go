@@ -82,21 +82,18 @@ func newRemoteAuthorizer(name string, rawConfig map[any]any) (*remoteAuthorizer,
 
 	var conf _config
 	if err := decodeConfig(rawConfig, &conf); err != nil {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration, "failed to unmarshal remote authorizer config").
-			CausedBy(err)
+		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
+			"failed to unmarshal remote authorizer config").CausedBy(err)
 	}
 
 	if err := conf.Endpoint.Validate(); err != nil {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration, "failed to validate endpoint configuration").
-			CausedBy(err)
+		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
+			"failed to validate endpoint configuration").CausedBy(err)
 	}
 
 	if len(conf.Header) == 0 && len(conf.Payload) == 0 {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration,
-				"either a payload or at least one header must be configured for remote authorizer")
+		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
+			"either a payload or at least one header must be configured for remote authorizer")
 	}
 
 	if conf.Endpoint.Headers == nil {
@@ -203,8 +200,7 @@ func (a *remoteAuthorizer) createRequest(ctx heimdall.Context, sub *subject.Subj
 		bodyContents, err := a.payload.Render(ctx, sub)
 		if err != nil {
 			return nil, errorchain.NewWithMessage(heimdall.ErrInternal,
-				"failed to render payload for the authorization endpoint").
-				CausedBy(err)
+				"failed to render payload for the authorization endpoint").CausedBy(err)
 		}
 
 		body = strings.NewReader(bodyContents)
@@ -246,9 +242,7 @@ func (a *remoteAuthorizer) readResponse(ctx heimdall.Context, resp *http.Respons
 
 	rawData, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrInternal, "failed to read response").
-			CausedBy(err)
+		return nil, errorchain.NewWithMessage(heimdall.ErrInternal, "failed to read response").CausedBy(err)
 	}
 
 	contentType := resp.Header.Get("Content-Type")
@@ -264,9 +258,8 @@ func (a *remoteAuthorizer) readResponse(ctx heimdall.Context, resp *http.Respons
 
 	result, err := decoder.Decode(rawData)
 	if err != nil {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrInternal, "failed to unmarshal response").
-			CausedBy(err)
+		return nil, errorchain.NewWithMessage(heimdall.ErrInternal,
+			"failed to unmarshal response").CausedBy(err)
 	}
 
 	return result, nil
@@ -286,9 +279,8 @@ func (a *remoteAuthorizer) WithConfig(rawConfig map[any]any) (Authorizer, error)
 
 	var conf _config
 	if err := decodeConfig(rawConfig, &conf); err != nil {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration, "failed to unmarshal remote authorizer config").
-			CausedBy(err)
+		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
+			"failed to unmarshal remote authorizer config").CausedBy(err)
 	}
 
 	return &remoteAuthorizer{
@@ -307,9 +299,8 @@ func (a *remoteAuthorizer) calculateCacheKey(sub *subject.Subject) (string, erro
 
 	rawSub, err := json.Marshal(sub)
 	if err != nil {
-		return "", errorchain.
-			NewWithMessage(heimdall.ErrInternal, "failed to marshal subject data").
-			CausedBy(err)
+		return "", errorchain.NewWithMessage(heimdall.ErrInternal,
+			"failed to marshal subject data").CausedBy(err)
 	}
 
 	ttlBytes := make([]byte, int64BytesCount)
