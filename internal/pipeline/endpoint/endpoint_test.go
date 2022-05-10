@@ -268,12 +268,12 @@ func TestEndpointSendRequest(t *testing.T) {
 
 	var (
 		statusCode     int
-		checkRequest   func(t *testing.T, req *http.Request)
+		checkRequest   func(req *http.Request)
 		serverResponse []byte
 	)
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		checkRequest(t, r)
+		checkRequest(r)
 
 		if serverResponse != nil {
 			_, err := w.Write(serverResponse)
@@ -343,7 +343,7 @@ func TestEndpointSendRequest(t *testing.T) {
 
 				serverResponse = []byte("hello from srv")
 
-				checkRequest = func(t *testing.T, request *http.Request) {
+				checkRequest = func(request *http.Request) {
 					t.Helper()
 
 					assert.Equal(t, "PATCH", request.Method)
@@ -374,7 +374,7 @@ func TestEndpointSendRequest(t *testing.T) {
 		t.Run("case="+tc.uc, func(t *testing.T) {
 			//  GIVEN
 			statusCode = http.StatusOK
-			checkRequest = func(t *testing.T, req *http.Request) { t.Helper() }
+			checkRequest = func(req *http.Request) { t.Helper() }
 
 			instructServer := x.IfThenElse(tc.instructServer != nil,
 				tc.instructServer,
