@@ -1,7 +1,6 @@
 package authorizers
 
 import (
-	"bytes"
 	"crypto/sha256"
 	"encoding/binary"
 	"encoding/hex"
@@ -21,6 +20,7 @@ import (
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/pipeline/contenttype"
 	"github.com/dadrus/heimdall/internal/pipeline/endpoint"
+	"github.com/dadrus/heimdall/internal/pipeline/renderer"
 	"github.com/dadrus/heimdall/internal/pipeline/subject"
 	"github.com/dadrus/heimdall/internal/pipeline/template"
 	"github.com/dadrus/heimdall/internal/x"
@@ -45,7 +45,6 @@ func init() {
 type remoteAuthorizer struct {
 	e                 endpoint.Endpoint
 	name              string
-	header            map[string]template.Template
 	payload           template.Template
 	headerForUpstream []string
 	ttl               time.Duration
@@ -73,11 +72,10 @@ func (ai *authorizationInformation) AddAttributesTo(key string, sub *subject.Sub
 
 func newRemoteAuthorizer(name string, rawConfig map[any]any) (*remoteAuthorizer, error) {
 	type _config struct {
-		Endpoint                endpoint.Endpoint            `mapstructure:"endpoint"`
-		Header                  map[string]template.Template `mapstructure:"header"`
-		Payload                 template.Template            `mapstructure:"payload"`
-		ResponseHeaderToForward []string                     `mapstructure:"forward_response_header_to_upstream"`
-		CacheTTL                time.Duration                `mapstructure:"cache_ttl"`
+		Endpoint                endpoint.Endpoint `mapstructure:"endpoint"`
+		Payload                 template.Template `mapstructure:"payload"`
+		ResponseHeaderToForward []string          `mapstructure:"forward_response_header_to_upstream"`
+		CacheTTL                time.Duration     `mapstructure:"cache_ttl"`
 	}
 
 	var conf _config
@@ -91,20 +89,15 @@ func newRemoteAuthorizer(name string, rawConfig map[any]any) (*remoteAuthorizer,
 			"failed to validate endpoint configuration").CausedBy(err)
 	}
 
-	if len(conf.Header) == 0 && len(conf.Payload) == 0 {
+	if len(conf.Endpoint.Headers) == 0 && len(conf.Payload) == 0 {
 		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
-			"either a payload or at least one header must be configured for remote authorizer")
-	}
-
-	if conf.Endpoint.Headers == nil {
-		conf.Endpoint.Headers = make(map[string]string)
+			"either a payload or at least one endpoint header must be configured for remote authorizer")
 	}
 
 	return &remoteAuthorizer{
 		e:                 conf.Endpoint,
 		name:              name,
 		payload:           conf.Payload,
-		header:            conf.Header,
 		headerForUpstream: conf.ResponseHeaderToForward,
 		ttl:               conf.CacheTTL,
 	}, nil
@@ -206,20 +199,12 @@ func (a *remoteAuthorizer) createRequest(ctx heimdall.Context, sub *subject.Subj
 		body = strings.NewReader(bodyContents)
 	}
 
-	req, err := a.e.CreateRequest(ctx.AppContext(), body)
+	req, err := a.e.CreateRequest(ctx.AppContext(), body,
+		renderer.RenderFunc(func(value string) (string, error) {
+			return template.Template(value).Render(ctx, sub)
+		}))
 	if err != nil {
 		return nil, err
-	}
-
-	for headerName, headerTemplate := range a.header {
-		headerValue, err := headerTemplate.Render(ctx, sub)
-		if err != nil {
-			return nil, errorchain.NewWithMessagef(heimdall.ErrInternal,
-				"failed to render %s header value for the authorization endpoint", headerName).
-				CausedBy(err)
-		}
-
-		req.Header.Add(headerName, headerValue)
 	}
 
 	return req, nil
@@ -287,7 +272,6 @@ func (a *remoteAuthorizer) WithConfig(rawConfig map[any]any) (Authorizer, error)
 		e:       a.e,
 		name:    a.name,
 		payload: x.IfThenElse(len(conf.Payload) != 0, conf.Payload, a.payload),
-		header:  x.IfThenElse(len(conf.Header) != 0, conf.Header, a.header),
 		headerForUpstream: x.IfThenElse(len(conf.ResponseHeaderToForward) != 0,
 			conf.ResponseHeaderToForward, a.headerForUpstream),
 		ttl: x.IfThenElse(conf.CacheTTL > 0, conf.CacheTTL, a.ttl),
@@ -306,18 +290,11 @@ func (a *remoteAuthorizer) calculateCacheKey(sub *subject.Subject) (string, erro
 	ttlBytes := make([]byte, int64BytesCount)
 	binary.LittleEndian.PutUint64(ttlBytes, uint64(a.ttl))
 
-	buf := bytes.NewBufferString("")
-	for k, v := range a.header {
-		buf.Write([]byte(k))
-		buf.Write([]byte(v))
-	}
-
 	hash := sha256.New()
 	hash.Write([]byte(a.e.Hash()))
 	hash.Write([]byte(a.name))
 	hash.Write([]byte(strings.Join(a.headerForUpstream, ",")))
 	hash.Write([]byte(a.payload))
-	hash.Write(buf.Bytes())
 	hash.Write(ttlBytes)
 	hash.Write(rawSub)
 

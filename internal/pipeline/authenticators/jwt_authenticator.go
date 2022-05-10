@@ -259,7 +259,7 @@ func (a *jwtAuthenticator) fetchJWKS(ctx heimdall.Context) (*jose.JSONWebKeySet,
 
 	logger.Debug().Msg("Retrieving JWKS from configured endpoint")
 
-	req, err := a.e.CreateRequest(ctx.AppContext(), nil)
+	req, err := a.e.CreateRequest(ctx.AppContext(), nil, nil)
 	if err != nil {
 		return nil, err
 	}

@@ -230,7 +230,7 @@ func (a *oauth2IntrospectionAuthenticator) fetchTokenIntrospectionResponse(
 		url.Values{
 			"token":           []string{token},
 			"token_type_hint": []string{"access_token"},
-		}.Encode()))
+		}.Encode()), nil)
 	if err != nil {
 		return nil, nil, err
 	}

@@ -89,7 +89,7 @@ func (c *ClientCredentialsStrategy) getAccessToken(ctx context.Context) (*tokenE
 		data.Add("scope", strings.Join(c.Scopes, " "))
 	}
 
-	rawData, err := ept.SendRequest(ctx, strings.NewReader(data.Encode()))
+	rawData, err := ept.SendRequest(ctx, strings.NewReader(data.Encode()), nil)
 	if err != nil {
 		return nil, err
 	}

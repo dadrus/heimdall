@@ -175,7 +175,7 @@ func (a *authenticationDataAuthenticator) fetchSubjectInformation(
 	ctx heimdall.Context,
 	authData extractors.AuthData,
 ) ([]byte, error) {
-	req, err := a.e.CreateRequest(ctx.AppContext(), nil)
+	req, err := a.e.CreateRequest(ctx.AppContext(), nil, nil)
 	if err != nil {
 		return nil, err
 	}

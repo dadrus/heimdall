@@ -73,28 +73,7 @@ endpoint:
 
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "either a payload or at least one header")
-			},
-		},
-		{
-			uc: "configuration with endpoint and header",
-			config: []byte(`
-endpoint:
-  url: http://foo.bar
-header:
-  Foo-Bar: Baz
-`),
-			assert: func(t *testing.T, err error, auth *remoteAuthorizer) {
-				t.Helper()
-
-				require.NoError(t, err)
-
-				require.NotNil(t, auth)
-				assert.Len(t, auth.header, 1)
-				assert.Equal(t, template.Template("Baz"), auth.header["Foo-Bar"])
-				assert.Empty(t, auth.payload)
-				assert.Empty(t, auth.headerForUpstream)
-				assert.Zero(t, auth.ttl)
+				assert.Contains(t, err.Error(), "either a payload or at least")
 			},
 		},
 		{
@@ -110,7 +89,6 @@ payload: "{{ .ID }}"
 				require.NoError(t, err)
 
 				require.NotNil(t, auth)
-				assert.Empty(t, auth.header)
 				assert.Equal(t, template.Template("{{ .ID }}"), auth.payload)
 				assert.Empty(t, auth.headerForUpstream)
 				assert.Zero(t, auth.ttl)
@@ -121,9 +99,6 @@ payload: "{{ .ID }}"
 			config: []byte(`
 endpoint:
   url: http://foo.bar
-header:
-  Foo-Bar: Baz
-  Baz-Foo: Bar
 payload: "{{ .Attributes.foo }}"
 forward_response_header_to_upstream:
   - Foo
@@ -136,9 +111,6 @@ cache_ttl: 5s
 				require.NoError(t, err)
 
 				require.NotNil(t, auth)
-				assert.Len(t, auth.header, 2)
-				assert.Equal(t, template.Template("Baz"), auth.header["Foo-Bar"])
-				assert.Equal(t, template.Template("Bar"), auth.header["Baz-Foo"])
 				assert.Equal(t, template.Template("{{ .Attributes.foo }}"), auth.payload)
 				assert.Len(t, auth.headerForUpstream, 2)
 				assert.Contains(t, auth.headerForUpstream, "Foo")
@@ -245,34 +217,6 @@ cache_ttl: 1s
 				assert.Equal(t, prototype.name, configured.name)
 				assert.Equal(t, prototype.payload, configured.payload)
 				assert.Empty(t, configured.headerForUpstream)
-				assert.Empty(t, configured.header)
-				assert.NotNil(t, configured.ttl)
-			},
-		},
-		{
-			uc: "with overwritten empty header",
-			prototypeConfig: []byte(`
-endpoint:
-  url: http://foo.bar
-header:
-  Foo: Bar
-`),
-			config: []byte(`
-header:
-cache_ttl: 1s
-`),
-			assert: func(t *testing.T, err error, prototype *remoteAuthorizer, configured *remoteAuthorizer) {
-				t.Helper()
-
-				require.NoError(t, err)
-
-				assert.NotEqual(t, prototype, configured)
-				assert.NotNil(t, configured)
-				assert.Equal(t, prototype.e, configured.e)
-				assert.Equal(t, prototype.name, configured.name)
-				assert.Empty(t, configured.payload)
-				assert.Empty(t, configured.headerForUpstream)
-				assert.Equal(t, prototype.header, configured.header)
 				assert.NotNil(t, configured.ttl)
 			},
 		},
@@ -281,12 +225,10 @@ cache_ttl: 1s
 			prototypeConfig: []byte(`
 endpoint:
   url: http://foo.bar
-header:
-  Foo: Bar
+  headers:
+    Foo: Bar
 `),
 			config: []byte(`
-header:
-  Bar: Foo
 payload: Baz
 forward_response_header_to_upstream:
   - Bar
@@ -306,13 +248,10 @@ cache_ttl: 15s
 				assert.Len(t, configured.headerForUpstream, 2)
 				assert.Contains(t, configured.headerForUpstream, "Bar")
 				assert.Contains(t, configured.headerForUpstream, "Foo")
-				assert.Len(t, configured.header, 1)
-				assert.Equal(t, template.Template("Foo"), configured.header["Bar"])
 				assert.Equal(t, 15*time.Second, configured.ttl)
 
 				assert.NotEqual(t, prototype.ttl, configured.ttl)
 				assert.NotEqual(t, prototype.headerForUpstream, configured.headerForUpstream)
-				assert.NotEqual(t, prototype.header, configured.header)
 				assert.NotEqual(t, prototype.payload, configured.payload)
 			},
 		},
@@ -394,10 +333,10 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 			uc: "successful with payload and with header, without payload from server and without header forwarding and with disabled cache",
 			authorizer: &remoteAuthorizer{
 				e: endpoint.Endpoint{
-					URL: srv.URL,
+					URL:     srv.URL,
+					Headers: map[string]string{"Foo-Bar": "{{ .Attributes.bar }}"},
 				},
 				payload: "{{ .ID }}",
-				header:  map[string]template.Template{"Foo-Bar": "{{ .Attributes.bar }}"},
 			},
 			subject: &subject.Subject{
 				ID:         "my-id",
@@ -442,10 +381,10 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 					Headers: map[string]string{
 						"Content-Type": "application/json",
 						"Accept":       "application/json",
+						"Foo-Bar":      "{{ .Attributes.bar }}",
 					},
 				},
 				payload:           `{ "user_id": {{ quote .ID }} }`,
-				header:            map[string]template.Template{"Foo-Bar": "{{ .Attributes.bar }}"},
 				headerForUpstream: []string{"X-Foo-Bar", "X-Bar-Foo"},
 			},
 			subject: &subject.Subject{
@@ -592,11 +531,11 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 					URL: srv.URL,
 					Headers: map[string]string{
 						"Content-Type": "application/x-www-form-urlencoded",
+						"Foo-Bar":      "{{ .Attributes.bar }}",
 					},
 				},
 				payload:           `user_id={{ urlenc .ID }}&{{ .Attributes.bar }}=foo`,
 				headerForUpstream: []string{"X-Foo-Bar", "X-Bar-Foo"},
-				header:            map[string]template.Template{"Foo-Bar": "{{ .Attributes.bar }}"},
 				ttl:               20 * time.Second,
 			},
 			subject: &subject.Subject{
@@ -648,11 +587,11 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 					URL: srv.URL,
 					Headers: map[string]string{
 						"Content-Type": "application/x-www-form-urlencoded",
+						"Foo-Bar":      "{{ .Attributes.bar }}",
 					},
 				},
 				payload:           `user_id={{ urlenc .ID }}&{{ .Attributes.bar }}=foo`,
 				headerForUpstream: []string{"X-Foo-Bar", "X-Bar-Foo"},
-				header:            map[string]template.Template{"Foo-Bar": "{{ .Attributes.bar }}"},
 				ttl:               20 * time.Second,
 			},
 			subject: &subject.Subject{
@@ -702,9 +641,11 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 		{
 			uc: "with failed authorization",
 			authorizer: &remoteAuthorizer{
-				name:   "authorizer",
-				e:      endpoint.Endpoint{URL: srv.URL},
-				header: map[string]template.Template{"X-User-ID": "{{ .ID }}"},
+				name: "authorizer",
+				e: endpoint.Endpoint{
+					URL:     srv.URL,
+					Headers: map[string]string{"X-User-ID": "{{ .ID }}"},
+				},
 			},
 			subject: &subject.Subject{ID: "foo"},
 			instructServer: func(t *testing.T) {
@@ -728,9 +669,11 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 		{
 			uc: "with unsupported response content type",
 			authorizer: &remoteAuthorizer{
-				name:   "foo",
-				e:      endpoint.Endpoint{URL: srv.URL},
-				header: map[string]template.Template{"X-User-ID": "{{ .ID }}"},
+				name: "foo",
+				e: endpoint.Endpoint{
+					URL:     srv.URL,
+					Headers: map[string]string{"X-User-ID": "{{ .ID }}"},
+				},
 			},
 			subject: &subject.Subject{ID: "foo", Attributes: map[string]any{}},
 			instructServer: func(t *testing.T) {
@@ -752,9 +695,9 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 		{
 			uc: "with communication error (dns)",
 			authorizer: &remoteAuthorizer{
-				name:   "authorizer",
-				e:      endpoint.Endpoint{URL: "http://heimdall.test.local"},
-				header: map[string]template.Template{"X-User-ID": "{{ .ID }}"},
+				name:    "authorizer",
+				e:       endpoint.Endpoint{URL: "http://heimdall.test.local"},
+				payload: template.Template("bar"),
 			},
 			subject: &subject.Subject{ID: "foo"},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
