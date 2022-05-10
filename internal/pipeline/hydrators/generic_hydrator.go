@@ -18,6 +18,7 @@ import (
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/pipeline/endpoint"
+	"github.com/dadrus/heimdall/internal/pipeline/renderer"
 	"github.com/dadrus/heimdall/internal/pipeline/subject"
 	"github.com/dadrus/heimdall/internal/pipeline/template"
 	"github.com/dadrus/heimdall/internal/x"
@@ -47,7 +48,7 @@ func init() {
 type genericHydrator struct {
 	e          endpoint.Endpoint
 	ttl        time.Duration
-	payload    *template.Template
+	payload    template.Template
 	fwdHeaders []string
 	fwdCookies []string
 	name       string
@@ -55,17 +56,17 @@ type genericHydrator struct {
 
 func newGenericHydrator(id string, rawConfig map[any]any) (*genericHydrator, error) {
 	type _config struct {
-		Endpoint       endpoint.Endpoint  `mapstructure:"endpoint"`
-		ForwardHeaders []string           `mapstructure:"forward_headers"`
-		ForwardCookies []string           `mapstructure:"forward_cookies"`
-		Payload        *template.Template `mapstructure:"payload"`
-		CacheTTL       *time.Duration     `mapstructure:"cache_ttl"`
+		Endpoint       endpoint.Endpoint `mapstructure:"endpoint"`
+		ForwardHeaders []string          `mapstructure:"forward_headers"`
+		ForwardCookies []string          `mapstructure:"forward_cookies"`
+		Payload        template.Template `mapstructure:"payload"`
+		CacheTTL       *time.Duration    `mapstructure:"cache_ttl"`
 	}
 
 	var conf _config
 	if err := decodeConfig(rawConfig, &conf); err != nil {
 		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration, "failed to unmarshal JWT mutator config").
+			NewWithMessage(heimdall.ErrConfiguration, "failed to unmarshal hydrator config").
 			CausedBy(err)
 	}
 
@@ -169,14 +170,17 @@ func (h *genericHydrator) createRequest(ctx heimdall.Context, sub *subject.Subje
 		err   error
 	)
 
-	if h.payload != nil {
+	if len(h.payload) != 0 {
 		value, err = h.payload.Render(ctx, sub)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	req, err := h.e.CreateRequest(ctx.AppContext(), strings.NewReader(value))
+	req, err := h.e.CreateRequest(ctx.AppContext(), strings.NewReader(value),
+		renderer.RenderFunc(func(value string) (string, error) {
+			return template.Template(value).Render(ctx, sub)
+		}))
 	if err != nil {
 		return nil, err
 	}
@@ -258,11 +262,7 @@ func (h *genericHydrator) calculateCacheKey(sub *subject.Subject) (string, error
 	hash.Write([]byte(h.name))
 	hash.Write([]byte(strings.Join(h.fwdHeaders, ",")))
 	hash.Write([]byte(strings.Join(h.fwdCookies, ",")))
-
-	if h.payload != nil {
-		hash.Write([]byte(*h.payload))
-	}
-
+	hash.Write([]byte(h.payload))
 	hash.Write([]byte(h.e.Hash()))
 	hash.Write(ttlBytes)
 	hash.Write(rawSub)
@@ -276,10 +276,10 @@ func (h *genericHydrator) WithConfig(rawConfig map[any]any) (Hydrator, error) {
 	}
 
 	type _config struct {
-		ForwardHeaders []string           `mapstructure:"forward_headers"`
-		ForwardCookies []string           `mapstructure:"forward_cookies"`
-		Payload        *template.Template `mapstructure:"payload"`
-		CacheTTL       *time.Duration     `mapstructure:"cache_ttl"`
+		ForwardHeaders []string          `mapstructure:"forward_headers"`
+		ForwardCookies []string          `mapstructure:"forward_cookies"`
+		Payload        template.Template `mapstructure:"payload"`
+		CacheTTL       *time.Duration    `mapstructure:"cache_ttl"`
 	}
 
 	var conf _config
@@ -292,7 +292,7 @@ func (h *genericHydrator) WithConfig(rawConfig map[any]any) (Hydrator, error) {
 	return &genericHydrator{
 		e:          h.e,
 		name:       h.name,
-		payload:    x.IfThenElse(conf.Payload != nil, conf.Payload, h.payload),
+		payload:    x.IfThenElse(len(conf.Payload) != 0, conf.Payload, h.payload),
 		fwdHeaders: x.IfThenElse(len(conf.ForwardHeaders) != 0, conf.ForwardHeaders, h.fwdHeaders),
 		fwdCookies: x.IfThenElse(len(conf.ForwardCookies) != 0, conf.ForwardCookies, h.fwdCookies),
 		ttl: x.IfThenElseExec(conf.CacheTTL != nil,
