@@ -2,6 +2,7 @@ package template
 
 import (
 	"bytes"
+	"net/url"
 	"text/template"
 
 	"github.com/Masterminds/sprig"
@@ -13,7 +14,10 @@ import (
 type Template string
 
 func (t Template) Render(ctx heimdall.Context, sub *subject.Subject) (string, error) {
-	tmpl, err := template.New("Subject").Funcs(sprig.TxtFuncMap()).Parse(string(t))
+	tmpl, err := template.New("Subject").
+		Funcs(sprig.TxtFuncMap()).
+		Funcs(template.FuncMap{"urlenc": url.QueryEscape}).
+		Parse(string(t))
 	if err != nil {
 		return "", err
 	}
