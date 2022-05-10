@@ -18,6 +18,8 @@ import (
 	"github.com/ybbus/httpretry"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/pipeline/renderer"
+	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/tracing"
 )
@@ -34,6 +36,10 @@ type Retry struct {
 	GiveUpAfter time.Duration `mapstructure:"give_up_after"`
 	MaxDelay    time.Duration `mapstructure:"max_delay"`
 }
+
+type noopRenderer struct{}
+
+func (noopRenderer) Render(value string) (string, error) { return value, nil }
 
 func (e Endpoint) Validate() error {
 	if len(e.URL) == 0 {
@@ -59,17 +65,24 @@ func (e Endpoint) CreateClient(peerName string) *http.Client {
 	return client
 }
 
-func (e Endpoint) CreateRequest(ctx context.Context, body io.Reader) (*http.Request, error) {
+func (e Endpoint) CreateRequest(ctx context.Context, body io.Reader, rndr renderer.Renderer) (*http.Request, error) {
 	logger := zerolog.Ctx(ctx)
+	tpl := x.IfThenElse[renderer.Renderer](rndr != nil, rndr, noopRenderer{})
 
 	method := "POST"
 	if len(e.Method) != 0 {
 		method = e.Method
 	}
 
-	logger.Debug().Msgf("Creating request for %s", e.URL)
+	endpointURL, err := tpl.Render(e.URL)
+	if err != nil {
+		return nil, errorchain.NewWithMessage(heimdall.ErrInternal,
+			"failed to render URL for the endpoint").CausedBy(err)
+	}
 
-	req, err := http.NewRequestWithContext(ctx, method, e.URL, body)
+	logger.Debug().Msgf("Creating request for %s", endpointURL)
+
+	req, err := http.NewRequestWithContext(ctx, method, endpointURL, body)
 	if err != nil {
 		return nil, errorchain.
 			NewWithMessage(heimdall.ErrInternal, "failed to create request").
@@ -87,15 +100,21 @@ func (e Endpoint) CreateRequest(ctx context.Context, body io.Reader) (*http.Requ
 		}
 	}
 
-	for k, v := range e.Headers {
-		req.Header.Set(k, v)
+	for headerName, valueTemplate := range e.Headers {
+		headerValue, err := tpl.Render(valueTemplate)
+		if err != nil {
+			return nil, errorchain.NewWithMessagef(heimdall.ErrInternal,
+				"failed to render %s header value", headerName).CausedBy(err)
+		}
+
+		req.Header.Set(headerName, headerValue)
 	}
 
 	return req, nil
 }
 
-func (e Endpoint) SendRequest(ctx context.Context, body io.Reader) ([]byte, error) {
-	req, err := e.CreateRequest(ctx, body)
+func (e Endpoint) SendRequest(ctx context.Context, body io.Reader, renderer renderer.Renderer) ([]byte, error) {
+	req, err := e.CreateRequest(ctx, body, renderer)
 	if err != nil {
 		return nil, err
 	}

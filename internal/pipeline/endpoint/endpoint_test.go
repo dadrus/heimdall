@@ -255,7 +255,7 @@ func TestEndpointCreateRequest(t *testing.T) {
 			}
 
 			// WHEN
-			req, err := tc.endpoint.CreateRequest(context.Background(), body)
+			req, err := tc.endpoint.CreateRequest(context.Background(), body, nil)
 
 			// THEN
 			tc.assert(t, req, err)
@@ -387,7 +387,7 @@ func TestEndpointSendRequest(t *testing.T) {
 			}
 
 			// WHEN
-			response, err := tc.endpoint.SendRequest(context.Background(), body)
+			response, err := tc.endpoint.SendRequest(context.Background(), body, nil)
 
 			// THEN
 			tc.assert(t, response, err)
