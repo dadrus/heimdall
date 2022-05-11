@@ -343,6 +343,7 @@ cache_ttl: 15s
 	}
 }
 
+// nolint: maintidx
 func TestGenericHydratorExecute(t *testing.T) {
 	t.Parallel()
 
@@ -391,7 +392,6 @@ func TestGenericHydratorExecute(t *testing.T) {
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrInternal)
 				assert.Contains(t, err.Error(), "'nil' subject")
-
 			},
 		},
 		{
