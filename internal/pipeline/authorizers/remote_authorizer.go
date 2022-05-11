@@ -107,6 +107,11 @@ func (a *remoteAuthorizer) Execute(ctx heimdall.Context, sub *subject.Subject) e
 	logger := zerolog.Ctx(ctx.AppContext())
 	logger.Debug().Msg("Authorizing using remote authorizer")
 
+	if sub == nil {
+		return errorchain.NewWithMessage(heimdall.ErrInternal,
+			"failed to execute remote authorizer due to 'nil' subject")
+	}
+
 	cch := cache.Ctx(ctx.AppContext())
 
 	var (

@@ -710,6 +710,19 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 				assert.False(t, authorizationEndpointCalled)
 			},
 		},
+		{
+			uc:         "with error due to nil subject",
+			authorizer: &remoteAuthorizer{},
+			assert: func(t *testing.T, err error, sub *subject.Subject) {
+				t.Helper()
+
+				assert.False(t, authorizationEndpointCalled)
+
+				require.Error(t, err)
+				assert.ErrorIs(t, err, heimdall.ErrInternal)
+				assert.Contains(t, err.Error(), "due to 'nil' subject")
+			},
+		},
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
 			// GIVEN
