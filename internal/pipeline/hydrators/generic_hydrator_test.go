@@ -1,15 +1,25 @@
 package hydrators
 
 import (
+	"context"
+	"io/ioutil"
+	"net/http"
+	"net/http/httptest"
+	"strconv"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
+	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/pipeline/endpoint"
+	"github.com/dadrus/heimdall/internal/pipeline/subject"
 	"github.com/dadrus/heimdall/internal/pipeline/template"
 	"github.com/dadrus/heimdall/internal/pipeline/testsupport"
+	"github.com/dadrus/heimdall/internal/x"
 )
 
 func TestCreateGenericHydrator(t *testing.T) {
@@ -329,6 +339,312 @@ cache_ttl: 15s
 			}
 
 			tc.assert(t, err, prototype, locAuth)
+		})
+	}
+}
+
+func TestGenericHydratorExecute(t *testing.T) {
+	t.Parallel()
+
+	var (
+		hydrationEndpointCalled bool
+		checkRequest            func(req *http.Request)
+
+		responseContentType string
+		responseContent     []byte
+		responseCode        int
+	)
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		hydrationEndpointCalled = true
+
+		checkRequest(r)
+
+		if responseContent != nil {
+			w.Header().Set("Content-Type", responseContentType)
+			w.Header().Set("Content-Length", strconv.Itoa(len(responseContent)))
+			_, err := w.Write(responseContent)
+			assert.NoError(t, err)
+		}
+
+		w.WriteHeader(responseCode)
+	}))
+	defer srv.Close()
+
+	for _, tc := range []struct {
+		uc               string
+		hydrator         *genericHydrator
+		subject          *subject.Subject
+		instructServer   func(t *testing.T)
+		configureContext func(t *testing.T, ctx *testsupport.MockContext)
+		configureCache   func(t *testing.T, cch *testsupport.MockCache, hydrator *genericHydrator, sub *subject.Subject)
+		assert           func(t *testing.T, err error, sub *subject.Subject)
+	}{
+		{
+			uc:       "fails due to nil subject",
+			hydrator: &genericHydrator{e: endpoint.Endpoint{URL: srv.URL}},
+			assert: func(t *testing.T, err error, sub *subject.Subject) {
+				t.Helper()
+
+				assert.False(t, hydrationEndpointCalled)
+
+				require.Error(t, err)
+				assert.ErrorIs(t, err, heimdall.ErrInternal)
+				assert.Contains(t, err.Error(), "'nil' subject")
+
+			},
+		},
+		{
+			uc: "with successful cache hit",
+			hydrator: &genericHydrator{
+				name: "hydrator",
+				e:    endpoint.Endpoint{URL: srv.URL},
+				ttl:  5 * time.Second,
+			},
+			subject: &subject.Subject{ID: "Foo", Attributes: map[string]any{"bar": "baz"}},
+			configureCache: func(t *testing.T, cch *testsupport.MockCache, hydrator *genericHydrator, sub *subject.Subject) {
+				t.Helper()
+
+				key, err := hydrator.calculateCacheKey(sub)
+				require.NoError(t, err)
+
+				cch.On("Get", key).Return(&hydrationData{payload: "Hi Foo"})
+			},
+			assert: func(t *testing.T, err error, sub *subject.Subject) {
+				t.Helper()
+
+				assert.False(t, hydrationEndpointCalled)
+
+				require.NoError(t, err)
+				assert.Len(t, sub.Attributes, 2)
+				assert.Equal(t, sub.Attributes["hydrator"], "Hi Foo")
+			},
+		},
+		{
+			uc: "with wrong object type in cache",
+			hydrator: &genericHydrator{
+				name: "hydrator",
+				e:    endpoint.Endpoint{URL: srv.URL},
+				ttl:  5 * time.Second,
+			},
+			subject: &subject.Subject{ID: "Foo", Attributes: map[string]any{"bar": "baz"}},
+			configureCache: func(t *testing.T, cch *testsupport.MockCache, hydrator *genericHydrator, sub *subject.Subject) {
+				t.Helper()
+
+				key, err := hydrator.calculateCacheKey(sub)
+				require.NoError(t, err)
+
+				cch.On("Get", key).Return("Hi Foo")
+				cch.On("Delete", key)
+				cch.On("Set", key, mock.MatchedBy(func(val *hydrationData) bool {
+					return val != nil && val.payload == "Hi from endpoint"
+				}), 5*time.Second)
+			},
+			instructServer: func(t *testing.T) {
+				t.Helper()
+
+				responseContentType = "text/text"
+				responseContent = []byte(`Hi from endpoint`)
+				responseCode = http.StatusOK
+			},
+			assert: func(t *testing.T, err error, sub *subject.Subject) {
+				t.Helper()
+
+				assert.True(t, hydrationEndpointCalled)
+
+				require.NoError(t, err)
+				assert.Len(t, sub.Attributes, 2)
+				assert.Equal(t, sub.Attributes["hydrator"], "Hi from endpoint")
+			},
+		},
+		{
+			uc: "with error in payload rendering",
+			hydrator: &genericHydrator{
+				name:    "hydrator",
+				e:       endpoint.Endpoint{URL: srv.URL},
+				payload: template.Template("{{ .foo }}"),
+			},
+			subject: &subject.Subject{ID: "Foo", Attributes: map[string]any{"bar": "baz"}},
+			assert: func(t *testing.T, err error, sub *subject.Subject) {
+				t.Helper()
+
+				assert.False(t, hydrationEndpointCalled)
+
+				require.Error(t, err)
+				assert.ErrorIs(t, err, heimdall.ErrInternal)
+				assert.Contains(t, err.Error(), "failed to render payload")
+			},
+		},
+		{
+			uc: "with communication error (dns)",
+			hydrator: &genericHydrator{
+				name: "hydrator",
+				e:    endpoint.Endpoint{URL: "http://heimdall.test.local"},
+			},
+			subject: &subject.Subject{ID: "Foo", Attributes: map[string]any{"bar": "baz"}},
+			assert: func(t *testing.T, err error, sub *subject.Subject) {
+				t.Helper()
+
+				assert.False(t, hydrationEndpointCalled)
+
+				require.Error(t, err)
+				assert.ErrorIs(t, err, heimdall.ErrCommunication)
+				assert.Contains(t, err.Error(), "hydration endpoint failed")
+			},
+		},
+		{
+			uc: "with unexpected response code from server",
+			hydrator: &genericHydrator{
+				name: "hydrator",
+				e:    endpoint.Endpoint{URL: srv.URL},
+			},
+			subject: &subject.Subject{ID: "Foo", Attributes: map[string]any{"bar": "baz"}},
+			instructServer: func(t *testing.T) {
+				t.Helper()
+
+				responseCode = http.StatusInternalServerError
+			},
+			assert: func(t *testing.T, err error, sub *subject.Subject) {
+				t.Helper()
+
+				assert.True(t, hydrationEndpointCalled)
+
+				require.Error(t, err)
+				assert.ErrorIs(t, err, heimdall.ErrCommunication)
+				assert.Contains(t, err.Error(), "unexpected response code")
+			},
+		},
+		{
+			uc: "without any content sent",
+			hydrator: &genericHydrator{
+				name: "test-hydrator",
+				e:    endpoint.Endpoint{URL: srv.URL + "/{{ .ID }}"},
+			},
+			subject: &subject.Subject{ID: "Foo", Attributes: map[string]any{"bar": "baz"}},
+			instructServer: func(t *testing.T) {
+				t.Helper()
+
+				checkRequest = func(req *http.Request) {
+					t.Helper()
+
+					assert.Equal(t, "/Foo", req.URL.Path)
+				}
+
+				responseCode = http.StatusAccepted
+			},
+			assert: func(t *testing.T, err error, sub *subject.Subject) {
+				t.Helper()
+
+				assert.True(t, hydrationEndpointCalled)
+
+				require.NoError(t, err)
+
+				assert.Len(t, sub.Attributes, 1)
+			},
+		},
+		{
+			uc: "with rendered payload and headers, as well as forwarded headers and cookies",
+			hydrator: &genericHydrator{
+				name: "test-hydrator",
+				e: endpoint.Endpoint{
+					URL: srv.URL + "/{{.ID}}",
+					Headers: map[string]string{
+						"Content-Type": "application/json",
+						"Accept":       "application/json",
+						"X-Bar":        "{{ .Attributes.bar }}",
+					},
+				},
+				payload:    template.Template(`{ "user_id": {{ quote .ID }}}`),
+				fwdHeaders: []string{"X-Bar-Foo"},
+				fwdCookies: []string{"X-Foo-Session"},
+			},
+			subject: &subject.Subject{ID: "Foo", Attributes: map[string]any{"bar": "baz"}},
+			instructServer: func(t *testing.T) {
+				t.Helper()
+
+				checkRequest = func(req *http.Request) {
+					t.Helper()
+
+					assert.Equal(t, "/Foo", req.URL.Path)
+					assert.Equal(t, "application/json", req.Header.Get("Content-Type"))
+					assert.Equal(t, "application/json", req.Header.Get("Accept"))
+					assert.Equal(t, "baz", req.Header.Get("X-Bar"))
+					assert.Equal(t, "Hi Foo", req.Header.Get("X-Bar-Foo"))
+					cookie, err := req.Cookie("X-Foo-Session")
+					require.NoError(t, err)
+					assert.Equal(t, "Foo-Session-Value", cookie.Value)
+
+					content, err := ioutil.ReadAll(req.Body)
+					require.NoError(t, err)
+
+					assert.JSONEq(t, `{"user_id": "Foo"}`, string(content))
+				}
+
+				responseContentType = "application/json"
+				responseContent = []byte(`{ "baz": "foo" }`)
+				responseCode = http.StatusOK
+			},
+			configureContext: func(t *testing.T, ctx *testsupport.MockContext) {
+				t.Helper()
+
+				ctx.On("RequestHeader", "X-Bar-Foo").
+					Return("Hi Foo")
+				ctx.On("RequestCookie", "X-Foo-Session").
+					Return("Foo-Session-Value")
+			},
+			assert: func(t *testing.T, err error, sub *subject.Subject) {
+				t.Helper()
+
+				assert.True(t, hydrationEndpointCalled)
+
+				require.NoError(t, err)
+
+				assert.Len(t, sub.Attributes, 2)
+				entry := sub.Attributes["test-hydrator"]
+				assert.Len(t, entry, 1)
+				assert.Contains(t, entry, "baz")
+			},
+		},
+	} {
+		t.Run("case="+tc.uc, func(t *testing.T) {
+			// GIVEN
+			hydrationEndpointCalled = false
+			responseContentType = ""
+			responseContent = nil
+
+			checkRequest = func(req *http.Request) { t.Helper() }
+
+			instructServer := x.IfThenElse(tc.instructServer != nil,
+				tc.instructServer,
+				func(t *testing.T) { t.Helper() })
+
+			configureContext := x.IfThenElse(tc.configureContext != nil,
+				tc.configureContext,
+				func(t *testing.T, ctx *testsupport.MockContext) { t.Helper() })
+
+			configureCache := x.IfThenElse(tc.configureCache != nil,
+				tc.configureCache,
+				func(t *testing.T, ctx *testsupport.MockCache, auth *genericHydrator, sub *subject.Subject) {
+					t.Helper()
+				})
+
+			cch := &testsupport.MockCache{}
+
+			ctx := &testsupport.MockContext{}
+			ctx.On("AppContext").Return(cache.WithContext(context.Background(), cch))
+
+			configureContext(t, ctx)
+			configureCache(t, cch, tc.hydrator, tc.subject)
+			instructServer(t)
+
+			// WHEN
+			err := tc.hydrator.Execute(ctx, tc.subject)
+
+			// THEN
+			tc.assert(t, err, tc.subject)
+
+			ctx.AssertExpectations(t)
+			cch.AssertExpectations(t)
 		})
 	}
 }

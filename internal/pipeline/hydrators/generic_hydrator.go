@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -17,6 +18,7 @@ import (
 	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/pipeline/contenttype"
 	"github.com/dadrus/heimdall/internal/pipeline/endpoint"
 	"github.com/dadrus/heimdall/internal/pipeline/renderer"
 	"github.com/dadrus/heimdall/internal/pipeline/subject"
@@ -26,8 +28,7 @@ import (
 )
 
 const (
-	defaultTTL         = 10 * time.Second
-	defaultCacheLeeway = 10 * time.Second
+	defaultTTL = 10 * time.Second
 )
 
 // by intention. Used only during application bootstrap
@@ -43,6 +44,10 @@ func init() {
 
 			return true, eh, err
 		})
+}
+
+type hydrationData struct {
+	payload any
 }
 
 type genericHydrator struct {
@@ -96,47 +101,57 @@ func (h *genericHydrator) Execute(ctx heimdall.Context, sub *subject.Subject) er
 	logger.Debug().Msg("Hydrating using generic hydrator")
 
 	if sub == nil {
-		return errorchain.NewWithMessage(heimdall.ErrArgument,
+		return errorchain.NewWithMessage(heimdall.ErrInternal,
 			"failed to execute generic hydrator due to 'nil' subject")
 	}
 
-	var hydrationResponse any
-
 	cch := cache.Ctx(ctx.AppContext())
 
-	cacheKey, err := h.calculateCacheKey(sub)
-	if err != nil {
-		logger.Error().Err(err).Msg("Failed to calculate cache key. Will not be able to use cache.")
-	} else if item := cch.Get(cacheKey); item != nil {
-		if cachedResponse, ok := item.(map[string]any); !ok {
+	var (
+		cacheKey          string
+		err               error
+		ok                bool
+		cacheEntry        any
+		hydrationResponse *hydrationData
+	)
+
+	if h.ttl > 0 {
+		cacheKey, err = h.calculateCacheKey(sub)
+		if err != nil {
+			logger.Error().Err(err).Msg("Failed to calculate cache key. Will not be able to use cache.")
+		} else {
+			cacheEntry = cch.Get(cacheKey)
+		}
+	}
+
+	if cacheEntry != nil {
+		if hydrationResponse, ok = cacheEntry.(*hydrationData); !ok {
 			logger.Warn().Msg("Wrong object type from cache")
 			cch.Delete(cacheKey)
 		} else {
 			logger.Debug().Msg("Reusing hydration response from cache")
-
-			hydrationResponse = cachedResponse
 		}
 	}
 
 	if hydrationResponse == nil {
-		respValue, err := h.callHydrationEndpoint(ctx, sub)
+		hydrationResponse, err = h.callHydrationEndpoint(ctx, sub)
 		if err != nil {
 			return err
 		}
 
-		hydrationResponse = respValue
-
-		if len(cacheKey) != 0 {
-			cch.Set(cacheKey, hydrationResponse, h.ttl-defaultCacheLeeway)
+		if h.ttl > 0 && len(cacheKey) != 0 {
+			cch.Set(cacheKey, hydrationResponse, h.ttl)
 		}
 	}
 
-	sub.Attributes[h.name] = hydrationResponse
+	if hydrationResponse.payload != nil {
+		sub.Attributes[h.name] = hydrationResponse.payload
+	}
 
 	return nil
 }
 
-func (h *genericHydrator) callHydrationEndpoint(ctx heimdall.Context, sub *subject.Subject) (any, error) {
+func (h *genericHydrator) callHydrationEndpoint(ctx heimdall.Context, sub *subject.Subject) (*hydrationData, error) {
 	logger := zerolog.Ctx(ctx.AppContext())
 	logger.Debug().Msg("Calling hydration endpoint")
 
@@ -159,25 +174,30 @@ func (h *genericHydrator) callHydrationEndpoint(ctx heimdall.Context, sub *subje
 
 	defer resp.Body.Close()
 
-	return h.readResponse(ctx, resp)
+	data, err := h.readResponse(ctx, resp)
+	if err != nil {
+		return nil, err
+	}
+
+	return &hydrationData{payload: data}, nil
 }
 
 func (h *genericHydrator) createRequest(ctx heimdall.Context, sub *subject.Subject) (*http.Request, error) {
 	logger := zerolog.Ctx(ctx.AppContext())
 
-	var (
-		value string
-		err   error
-	)
+	var body io.Reader
 
 	if len(h.payload) != 0 {
-		value, err = h.payload.Render(ctx, sub)
+		value, err := h.payload.Render(ctx, sub)
 		if err != nil {
-			return nil, err
+			return nil, errorchain.NewWithMessage(heimdall.ErrInternal,
+				"failed to render payload for the hydration endpoint").CausedBy(err)
 		}
+
+		body = strings.NewReader(value)
 	}
 
-	req, err := h.e.CreateRequest(ctx.AppContext(), strings.NewReader(value),
+	req, err := h.e.CreateRequest(ctx.AppContext(), body,
 		renderer.RenderFunc(func(value string) (string, error) {
 			return template.Template(value).Render(ctx, sub)
 		}))
@@ -219,30 +239,32 @@ func (h *genericHydrator) readResponse(ctx heimdall.Context, resp *http.Response
 	if resp.ContentLength == 0 {
 		logger.Warn().Msg("No data received from the hydration endpoint")
 
-		return map[string]any{}, nil
+		return nil, nil
 	}
 
 	rawData, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrInternal, "failed to read response").
-			CausedBy(err)
+		return nil, errorchain.NewWithMessage(heimdall.ErrInternal, "failed to read response").CausedBy(err)
 	}
 
 	contentType := resp.Header.Get("Content-Type")
-	if strings.Contains(contentType, "json") {
-		var mapData map[string]any
-		if err = json.Unmarshal(rawData, &mapData); err != nil {
-			return nil, errorchain.
-				NewWithMessage(heimdall.ErrInternal,
-					"failed to unmarshal received response from hydration endpoint").
-				CausedBy(err)
-		}
 
-		return mapData, nil
+	logger.Debug().Msgf("Received response of %s content type", contentType)
+
+	decoder, err := contenttype.NewDecoder(contentType)
+	if err != nil {
+		logger.Warn().Msgf("%s content type is not supported. Treating it as string", contentType)
+
+		return string(rawData), nil
 	}
 
-	return string(rawData), nil
+	result, err := decoder.Decode(rawData)
+	if err != nil {
+		return nil, errorchain.NewWithMessage(heimdall.ErrInternal,
+			"failed to unmarshal response").CausedBy(err)
+	}
+
+	return result, nil
 }
 
 func (h *genericHydrator) calculateCacheKey(sub *subject.Subject) (string, error) {
