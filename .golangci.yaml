@@ -64,3 +64,6 @@ linters-settings:
 #      - name: unexported-return
 #        severity: warning
 #        disabled: true
+  cyclop:
+    # The maximal code complexity to report.
+    max-complexity: 11
