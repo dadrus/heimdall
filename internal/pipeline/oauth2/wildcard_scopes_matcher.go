@@ -18,7 +18,6 @@ func (m WildcardScopeStrategyMatcher) Match(scopes []string) error {
 	return nil
 }
 
-// nolint: cyclop
 func (m WildcardScopeStrategyMatcher) doMatch(matchers []string, needle string) bool {
 	needleParts := strings.Split(needle, ".")
 

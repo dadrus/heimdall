@@ -47,7 +47,6 @@ type oauth2IntrospectionAuthenticator struct {
 	ttl *time.Duration
 }
 
-// nolint: cyclop
 func newOAuth2IntrospectionAuthenticator(rawConfig map[any]any) (*oauth2IntrospectionAuthenticator, error) {
 	type _config struct {
 		Endpoint   endpoint.Endpoint  `mapstructure:"introspection_endpoint"`

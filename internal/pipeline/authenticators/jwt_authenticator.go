@@ -49,7 +49,6 @@ type jwtAuthenticator struct {
 	adg extractors.AuthDataExtractStrategy
 }
 
-// nolint: cyclop
 func newJwtAuthenticator(rawConfig map[any]any) (*jwtAuthenticator, error) {
 	type _config struct {
 		Endpoint       endpoint.Endpoint                   `mapstructure:"jwks_endpoint"`
