@@ -580,6 +580,8 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 			},
 		},
 		{
+			// nolint: godox
+			// FIXME: This test fails from time to time
 			uc: "cache with bad object in cache",
 			authorizer: &remoteAuthorizer{
 				name: "authorizer",
