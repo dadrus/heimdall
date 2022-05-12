@@ -43,7 +43,7 @@ type oauth2IntrospectionAuthenticator struct {
 	e   endpoint.Endpoint
 	a   oauth2.Expectation
 	sf  SubjectFactory
-	adg extractors.AuthDataExtractStrategy
+	ads extractors.AuthDataExtractStrategy
 	ttl *time.Duration
 }
 
@@ -82,8 +82,8 @@ func newOAuth2IntrospectionAuthenticator(rawConfig map[any]any) (*oauth2Introspe
 		conf.Endpoint.Headers["Content-Type"] = "application/x-www-form-urlencoded"
 	}
 
-	if _, ok := conf.Endpoint.Headers["Accept-Type"]; !ok {
-		conf.Endpoint.Headers["Accept-Type"] = "application/json"
+	if _, ok := conf.Endpoint.Headers["Accept"]; !ok {
+		conf.Endpoint.Headers["Accept"] = "application/json"
 	}
 
 	if len(conf.Endpoint.Method) == 0 {
@@ -105,7 +105,7 @@ func newOAuth2IntrospectionAuthenticator(rawConfig map[any]any) (*oauth2Introspe
 	}
 
 	return &oauth2IntrospectionAuthenticator{
-		adg: extractor,
+		ads: extractor,
 		e:   conf.Endpoint,
 		a:   conf.Assertions,
 		sf:  &conf.Session,
@@ -117,7 +117,7 @@ func (a *oauth2IntrospectionAuthenticator) Execute(ctx heimdall.Context) (*subje
 	logger := zerolog.Ctx(ctx.AppContext())
 	logger.Debug().Msg("Authenticating using OAuth2 introspect authenticator")
 
-	accessToken, err := a.adg.GetAuthData(ctx)
+	accessToken, err := a.ads.GetAuthData(ctx)
 	if err != nil {
 		return nil, errorchain.NewWithMessage(heimdall.ErrAuthentication,
 			"no access token present").CausedBy(err)
@@ -158,7 +158,7 @@ func (a *oauth2IntrospectionAuthenticator) WithConfig(rawConfig map[any]any) (Au
 		e:   a.e,
 		a:   conf.Assertions.Merge(&a.a),
 		sf:  a.sf,
-		adg: a.adg,
+		ads: a.ads,
 		ttl: x.IfThenElse(conf.CacheTTL != nil, conf.CacheTTL, a.ttl),
 	}, nil
 }
