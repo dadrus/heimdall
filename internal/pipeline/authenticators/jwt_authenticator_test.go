@@ -503,8 +503,8 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 	t.Parallel()
 
 	var (
-		jwtEndpointCalled bool
-		checkRequest      func(req *http.Request)
+		endpointCalled bool
+		checkRequest   func(req *http.Request)
 
 		responseHeader      map[string]string
 		responseContentType string
@@ -520,7 +520,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 	notUniqueJWKSRaw, notUniqueJWTRaw := setup(t, keyID, subjectID, issuer, audience, false)
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		jwtEndpointCalled = true
+		endpointCalled = true
 
 		checkRequest(r)
 
@@ -566,7 +566,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
 
-				assert.False(t, jwtEndpointCalled)
+				assert.False(t, endpointCalled)
 
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrAuthentication)
@@ -589,7 +589,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
 
-				assert.False(t, jwtEndpointCalled)
+				assert.False(t, endpointCalled)
 
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrAuthentication)
@@ -612,7 +612,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
 
-				assert.False(t, jwtEndpointCalled)
+				assert.False(t, endpointCalled)
 
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrAuthentication)
@@ -637,7 +637,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
 
-				assert.False(t, jwtEndpointCalled)
+				assert.False(t, endpointCalled)
 
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrCommunication)
@@ -667,7 +667,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
 
-				assert.True(t, jwtEndpointCalled)
+				assert.True(t, endpointCalled)
 
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrCommunication)
@@ -706,7 +706,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
 
-				assert.True(t, jwtEndpointCalled)
+				assert.True(t, endpointCalled)
 
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrInternal)
@@ -745,7 +745,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
 
-				assert.True(t, jwtEndpointCalled)
+				assert.True(t, endpointCalled)
 
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrAuthentication)
@@ -784,7 +784,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
 
-				assert.False(t, jwtEndpointCalled)
+				assert.False(t, endpointCalled)
 
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrAuthentication)
@@ -823,7 +823,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
 
-				assert.False(t, jwtEndpointCalled)
+				assert.False(t, endpointCalled)
 
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrAuthentication)
@@ -862,7 +862,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
 
-				assert.False(t, jwtEndpointCalled)
+				assert.False(t, endpointCalled)
 
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrAuthentication)
@@ -906,7 +906,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
 
-				assert.False(t, jwtEndpointCalled)
+				assert.False(t, endpointCalled)
 
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrInternal)
@@ -950,7 +950,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
 
-				assert.False(t, jwtEndpointCalled)
+				assert.False(t, endpointCalled)
 
 				require.NoError(t, err)
 
@@ -1017,7 +1017,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
 
-				assert.True(t, jwtEndpointCalled)
+				assert.True(t, endpointCalled)
 
 				require.NoError(t, err)
 
@@ -1085,7 +1085,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
 
-				assert.True(t, jwtEndpointCalled)
+				assert.True(t, endpointCalled)
 
 				require.NoError(t, err)
 
@@ -1106,7 +1106,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
 			// GIVEN
-			jwtEndpointCalled = false
+			endpointCalled = false
 			responseHeader = nil
 			responseContentType = ""
 			responseContent = nil
