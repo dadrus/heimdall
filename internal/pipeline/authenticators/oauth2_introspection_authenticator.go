@@ -57,20 +57,17 @@ func newOAuth2IntrospectionAuthenticator(rawConfig map[any]any) (*oauth2Introspe
 
 	var conf _config
 	if err := decodeConfig(rawConfig, &conf); err != nil {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration, "failed to unmarshal oauth2 introspection authenticator config").
-			CausedBy(err)
+		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
+			"failed to unmarshal oauth2 introspection authenticator config").CausedBy(err)
 	}
 
 	if err := conf.Endpoint.Validate(); err != nil {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration, "failed to validate endpoint configuration").
-			CausedBy(err)
+		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
+			"failed to validate endpoint configuration").CausedBy(err)
 	}
 
 	if len(conf.Assertions.TrustedIssuers) == 0 {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration, "no trusted issuers configured")
+		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration, "no trusted issuers configured")
 	}
 
 	if len(conf.Session.SubjectIDFrom) == 0 {
@@ -122,9 +119,8 @@ func (a *oauth2IntrospectionAuthenticator) Execute(ctx heimdall.Context) (*subje
 
 	accessToken, err := a.adg.GetAuthData(ctx)
 	if err != nil {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrAuthentication, "no access token present").
-			CausedBy(err)
+		return nil, errorchain.NewWithMessage(heimdall.ErrAuthentication,
+			"no access token present").CausedBy(err)
 	}
 
 	rawResp, err := a.getSubjectInformation(ctx, accessToken.Value())
@@ -134,17 +130,16 @@ func (a *oauth2IntrospectionAuthenticator) Execute(ctx heimdall.Context) (*subje
 
 	sub, err := a.sf.CreateSubject(rawResp)
 	if err != nil {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrInternal, "failed to extract subject information from introspection response").
-			CausedBy(err)
+		return nil, errorchain.NewWithMessage(heimdall.ErrInternal,
+			"failed to extract subject information from introspection response").CausedBy(err)
 	}
 
 	return sub, nil
 }
 
-func (a *oauth2IntrospectionAuthenticator) WithConfig(config map[any]any) (Authenticator, error) {
+func (a *oauth2IntrospectionAuthenticator) WithConfig(rawConfig map[any]any) (Authenticator, error) {
 	// this authenticator allows assertions and ttl to be redefined on the rule level
-	if len(config) == 0 {
+	if len(rawConfig) == 0 {
 		return a, nil
 	}
 
@@ -154,42 +149,38 @@ func (a *oauth2IntrospectionAuthenticator) WithConfig(config map[any]any) (Authe
 	}
 
 	var conf _config
-	if err := decodeConfig(config, &conf); err != nil {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration, "failed to parse configuration").
-			CausedBy(err)
-	}
-
-	var assertions oauth2.Expectation
-	if conf.Assertions != nil {
-		assertions = *conf.Assertions
-
-		if assertions.ScopesMatcher == nil {
-			assertions.ScopesMatcher = oauth2.NoopMatcher{}
-		}
-	} else {
-		assertions = a.a
+	if err := decodeConfig(rawConfig, &conf); err != nil {
+		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
+			"failed to unmarshal configuration").CausedBy(err)
 	}
 
 	return &oauth2IntrospectionAuthenticator{
 		e:   a.e,
-		a:   assertions,
+		a:   conf.Assertions.Merge(&a.a),
 		sf:  a.sf,
 		adg: a.adg,
 		ttl: x.IfThenElse(conf.CacheTTL != nil, conf.CacheTTL, a.ttl),
 	}, nil
 }
 
-func (a *oauth2IntrospectionAuthenticator) getSubjectInformation(
-	ctx heimdall.Context,
-	token string,
-) ([]byte, error) {
+func (a *oauth2IntrospectionAuthenticator) getSubjectInformation(ctx heimdall.Context, token string) ([]byte, error) {
 	cch := cache.Ctx(ctx.AppContext())
 	logger := zerolog.Ctx(ctx.AppContext())
-	cacheKey := a.calculateCacheKey(token)
 
-	if item := cch.Get(cacheKey); item != nil {
-		if cachedResponse, ok := item.([]byte); !ok {
+	var (
+		cacheKey       string
+		cacheEntry     any
+		cachedResponse []byte
+		ok             bool
+	)
+
+	if a.isCacheEnabled() {
+		cacheKey = a.calculateCacheKey(token)
+		cacheEntry = cch.Get(cacheKey)
+	}
+
+	if cacheEntry != nil {
+		if cachedResponse, ok = cacheEntry.([]byte); !ok {
 			logger.Warn().Msg("Wrong object type from cache")
 			cch.Delete(cacheKey)
 		} else {
@@ -205,12 +196,11 @@ func (a *oauth2IntrospectionAuthenticator) getSubjectInformation(
 	}
 
 	if err = introspectResp.Validate(a.a); err != nil {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrAuthentication, "access token does not satisfy assertion conditions").
-			CausedBy(err)
+		return nil, errorchain.NewWithMessage(heimdall.ErrAuthentication,
+			"access token does not satisfy assertion conditions").CausedBy(err)
 	}
 
-	if cacheTTL := a.getCacheTTL(introspectResp); cacheTTL != 0 {
+	if cacheTTL := a.getCacheTTL(introspectResp); cacheTTL > 0 {
 		cch.Set(cacheKey, rawResp, cacheTTL)
 	}
 
@@ -218,8 +208,7 @@ func (a *oauth2IntrospectionAuthenticator) getSubjectInformation(
 }
 
 func (a *oauth2IntrospectionAuthenticator) fetchTokenIntrospectionResponse(
-	ctx heimdall.Context,
-	token string,
+	ctx heimdall.Context, token string,
 ) (*oauth2.IntrospectionResponse, []byte, error) {
 	logger := zerolog.Ctx(ctx.AppContext())
 
@@ -255,49 +244,65 @@ func (a *oauth2IntrospectionAuthenticator) readIntrospectionResponse(
 	resp *http.Response,
 ) (*oauth2.IntrospectionResponse, []byte, error) {
 	if !(resp.StatusCode >= http.StatusOK && resp.StatusCode < http.StatusMultipleChoices) {
-		return nil, nil, errorchain.
-			NewWithMessagef(heimdall.ErrCommunication, "unexpected response code: %v", resp.StatusCode)
+		return nil, nil, errorchain.NewWithMessagef(heimdall.ErrCommunication,
+			"unexpected response code: %v", resp.StatusCode)
 	}
 
 	rawData, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return nil, nil, errorchain.
-			NewWithMessage(heimdall.ErrInternal, "failed to read response").
-			CausedBy(err)
+		return nil, nil, errorchain.NewWithMessage(heimdall.ErrInternal,
+			"failed to read response").CausedBy(err)
 	}
 
 	var introspectionResponse oauth2.IntrospectionResponse
 	if err = json.Unmarshal(rawData, &introspectionResponse); err != nil {
-		return nil, nil, errorchain.
-			NewWithMessage(heimdall.ErrInternal, "failed to unmarshal received introspection response").
-			CausedBy(err)
+		return nil, nil, errorchain.NewWithMessage(heimdall.ErrInternal,
+			"failed to unmarshal received introspection response").CausedBy(err)
 	}
 
 	return &introspectionResponse, rawData, nil
 }
 
+func (a *oauth2IntrospectionAuthenticator) isCacheEnabled() bool {
+	// cache is enabled if it is not configured (in that case the ttl value from the
+	// introspection response if used), or if it is configured and the value > 0
+	return a.ttl == nil || (a.ttl != nil && *a.ttl > 0)
+}
+
 func (a *oauth2IntrospectionAuthenticator) getCacheTTL(introspectResp *oauth2.IntrospectionResponse) time.Duration {
-	var cacheTTL time.Duration
+	// timeLeeway defines the default time deviation to ensure the token is still valid
+	// when used from cache
+	const timeLeeway = 10
 
-	// we cache be default using the settings in the introspection response (if available)
-	// or if ttl has been configured (which overwrites the settings in the response). Latter
-	// overwrites the settings in the introspection response
-	if a.ttl == nil || (a.ttl != nil && *a.ttl != 0) {
-		// timeLeeway defines the default time deviation to ensure the token is still valid
-		// when used from cache
-		const timeLeeway = 10
+	// we cache by default using the settings in the introspection response (if available)
+	// or if ttl has been configured. Latter overwrites the settings in the introspection response
+	// if it is shorter than the ttl in the introspection response
+	if a.isCacheEnabled() {
+		introspectionResponseTTL := x.IfThenElseExec(introspectResp.Expiry != nil,
+			func() time.Duration {
+				expiresIn := introspectResp.Expiry.Time().Unix() - time.Now().Unix() - timeLeeway
 
-		if a.ttl != nil && *a.ttl != 0 {
-			cacheTTL = *a.ttl
-		} else if introspectResp.Expiry != nil {
-			expiresIn := introspectResp.Expiry.Time().Unix() - time.Now().Unix() - timeLeeway
-			if expiresIn > 0 {
-				cacheTTL = time.Duration(expiresIn) * time.Second
-			}
+				return x.IfThenElse(expiresIn > 0, time.Duration(expiresIn)*time.Second, 0)
+			},
+			func() time.Duration { return 0 })
+
+		configuredTTL := x.IfThenElseExec(a.ttl != nil,
+			func() time.Duration { return *a.ttl },
+			func() time.Duration { return 0 })
+
+		switch {
+		case configuredTTL == 0 && introspectionResponseTTL == 0:
+			return 0
+		case configuredTTL == 0 && introspectionResponseTTL != 0:
+			return introspectionResponseTTL
+		case configuredTTL != 0 && introspectionResponseTTL == 0:
+			return configuredTTL
+		default:
+			return x.IfThenElse(configuredTTL < introspectionResponseTTL, configuredTTL, introspectionResponseTTL)
 		}
 	}
 
-	return cacheTTL
+	return 0
 }
 
 func (a *oauth2IntrospectionAuthenticator) calculateCacheKey(reference string) string {
