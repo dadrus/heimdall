@@ -22,6 +22,20 @@ type Expectation struct {
 	ValidityLeeway    time.Duration `mapstructure:"validity_leeway"`
 }
 
+func (e *Expectation) Merge(other *Expectation) Expectation {
+	if e == nil {
+		return *other
+	}
+
+	e.TrustedIssuers = x.IfThenElse(len(e.TrustedIssuers) != 0, e.TrustedIssuers, other.TrustedIssuers)
+	e.ScopesMatcher = x.IfThenElse(e.ScopesMatcher != nil, e.ScopesMatcher, other.ScopesMatcher)
+	e.TargetAudiences = x.IfThenElse(len(e.TargetAudiences) != 0, e.TargetAudiences, other.TargetAudiences)
+	e.AllowedAlgorithms = x.IfThenElse(len(e.AllowedAlgorithms) != 0, e.AllowedAlgorithms, other.AllowedAlgorithms)
+	e.ValidityLeeway = x.IfThenElse(e.ValidityLeeway != 0, e.ValidityLeeway, other.ValidityLeeway)
+
+	return *e
+}
+
 func (e *Expectation) AssertAlgorithm(alg string) error {
 	if !slices.Contains(e.AllowedAlgorithms, alg) {
 		return errorchain.NewWithMessagef(ErrAssertion, "algorithm %s is not allowed", alg)
