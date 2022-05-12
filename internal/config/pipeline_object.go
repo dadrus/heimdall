@@ -7,7 +7,6 @@ const (
 	POTBasicAuth           PipelineObjectType = "basic_auth"
 	POTAnonymous           PipelineObjectType = "anonymous"
 	POTUnauthorized        PipelineObjectType = "unauthorized"
-	POTAuthenticationData  PipelineObjectType = "authentication_data"
 	POTOAuth2Introspection PipelineObjectType = "oauth2_introspection"
 	POTJwt                 PipelineObjectType = "jwt"
 	POTAllow               PipelineObjectType = "allow"
