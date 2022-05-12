@@ -26,7 +26,7 @@ import (
 func init() {
 	registerAuthenticatorTypeFactory(
 		func(_ string, typ config.PipelineObjectType, conf map[any]any) (bool, Authenticator, error) {
-			if typ != config.POTAuthenticationData {
+			if typ != config.POTGeneric {
 				return false, nil, nil
 			}
 

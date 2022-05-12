@@ -21,7 +21,7 @@ import (
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
-func TestCreateAuthenticationDataAuthenticator(t *testing.T) {
+func TestCreateGenericAuthenticator(t *testing.T) {
 	for _, tc := range []struct {
 		uc          string
 		config      []byte
@@ -105,7 +105,7 @@ session:
 	}
 }
 
-func TestCreateAuthenticationDataAuthenticatorFromPrototype(t *testing.T) {
+func TestCreateGenericAuthenticatorFromPrototype(t *testing.T) {
 	// nolint
 	for _, tc := range []struct {
 		uc              string
@@ -202,7 +202,7 @@ cache_ttl: 15s`),
 	}
 }
 
-func TestSuccessfulExecutionOfAuthenticationDataAuthenticatorWithoutCacheUsage(t *testing.T) {
+func TestSuccessfulExecutionOfGenericAuthenticatorWithoutCacheUsage(t *testing.T) {
 	t.Parallel()
 	// GIVEN
 
@@ -259,7 +259,7 @@ func TestSuccessfulExecutionOfAuthenticationDataAuthenticatorWithoutCacheUsage(t
 	cch.AssertExpectations(t)
 }
 
-func TestSuccessfulExecutionOfAuthenticationDataAuthenticatorWithSubjectInfoFromCache(t *testing.T) {
+func TestSuccessfulExecutionOfGenricAuthenticatorWithSubjectInfoFromCache(t *testing.T) {
 	t.Parallel()
 
 	sub := &subject.Subject{ID: "bar"}
@@ -300,7 +300,7 @@ func TestSuccessfulExecutionOfAuthenticationDataAuthenticatorWithSubjectInfoFrom
 	cch.AssertExpectations(t)
 }
 
-func TestSuccessfulExecutionOfAuthenticationDataAuthenticatorWithCacheMiss(t *testing.T) {
+func TestSuccessfulExecutionOfGenericAuthenticatorWithCacheMiss(t *testing.T) {
 	t.Parallel()
 	// GIVEN
 
@@ -361,7 +361,7 @@ func TestSuccessfulExecutionOfAuthenticationDataAuthenticatorWithCacheMiss(t *te
 	cch.AssertExpectations(t)
 }
 
-func TestAuthenticationDataAuthenticatorExecutionFailsDueToMissingAuthData(t *testing.T) {
+func TestGenericAuthenticatorExecutionFailsDueToMissingAuthData(t *testing.T) {
 	t.Parallel()
 	// GIVEN
 	subExtr := &testsupport.MockSubjectFactory{}
@@ -395,7 +395,7 @@ func TestAuthenticationDataAuthenticatorExecutionFailsDueToMissingAuthData(t *te
 	adg.AssertExpectations(t)
 }
 
-func TestAuthenticationDataAuthenticatorExecutionFailsDueToEndpointError(t *testing.T) {
+func TestGenericAuthenticatorExecutionFailsDueToEndpointError(t *testing.T) {
 	t.Parallel()
 	// GIVEN
 	authDataVal := "foobar"
@@ -427,7 +427,7 @@ func TestAuthenticationDataAuthenticatorExecutionFailsDueToEndpointError(t *test
 	adg.AssertExpectations(t)
 }
 
-func TestAuthenticationDataAuthenticatorExecutionFailsDueToFailedSubjectExtraction(t *testing.T) {
+func TestGenericAuthenticatorExecutionFailsDueToFailedSubjectExtraction(t *testing.T) {
 	t.Parallel()
 	// GIVEN
 	authDataVal := "foobar"
