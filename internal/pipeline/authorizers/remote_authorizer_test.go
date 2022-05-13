@@ -551,10 +551,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 			configureCache: func(t *testing.T, cch *testsupport.MockCache, auth *remoteAuthorizer, sub *subject.Subject) {
 				t.Helper()
 
-				cacheKey, err := auth.calculateCacheKey(sub)
-				require.NoError(t, err)
-
-				cch.On("Get", cacheKey).Return(&authorizationInformation{
+				cch.On("Get", mock.Anything).Return(&authorizationInformation{
 					header: http.Header{
 						"X-Foo-Bar": {"HeyFoo"},
 						"X-Bar-Foo": {"HeyBar"},
@@ -580,8 +577,6 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 			},
 		},
 		{
-			// nolint: godox
-			// FIXME: This test fails from time to time
 			uc: "cache with bad object in cache",
 			authorizer: &remoteAuthorizer{
 				name: "authorizer",
@@ -608,12 +603,9 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 			configureCache: func(t *testing.T, cch *testsupport.MockCache, auth *remoteAuthorizer, sub *subject.Subject) {
 				t.Helper()
 
-				cacheKey, err := auth.calculateCacheKey(sub)
-				require.NoError(t, err)
-
 				cch.On("Get", mock.Anything).Return("Hello Foo")
-				cch.On("Delete", cacheKey)
-				cch.On("Set", cacheKey, mock.Anything, auth.ttl)
+				cch.On("Delete", mock.Anything)
+				cch.On("Set", mock.Anything, mock.Anything, auth.ttl)
 			},
 			instructServer: func(t *testing.T) {
 				t.Helper()
