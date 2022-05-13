@@ -198,13 +198,22 @@ func TestHandlerFactoryCreateAuthenticator(t *testing.T) {
 			},
 		},
 		{
-			uc:   "successful creation",
+			uc:   "successful creation from prototype",
 			conf: map[any]any{"foo": "bar"},
 			configureMock: func(t *testing.T, mAuth *mockAuthenticator) {
 				t.Helper()
 
 				mAuth.On("WithConfig", mock.Anything).Return(mAuth, nil)
 			},
+			assert: func(t *testing.T, err error, auth authenticators.Authenticator) {
+				t.Helper()
+
+				require.NoError(t, err)
+				assert.NotNil(t, auth)
+			},
+		},
+		{
+			uc: "successful creation with empty config",
 			assert: func(t *testing.T, err error, auth authenticators.Authenticator) {
 				t.Helper()
 
@@ -293,13 +302,22 @@ func TestHandlerFactoryCreateAuthorizer(t *testing.T) {
 			},
 		},
 		{
-			uc:   "successful creation",
+			uc:   "successful creation from prototype",
 			conf: map[any]any{"foo": "bar"},
 			configureMock: func(t *testing.T, mAuth *mockAuthorizer) {
 				t.Helper()
 
 				mAuth.On("WithConfig", mock.Anything).Return(mAuth, nil)
 			},
+			assert: func(t *testing.T, err error, auth authorizers.Authorizer) {
+				t.Helper()
+
+				require.NoError(t, err)
+				assert.NotNil(t, auth)
+			},
+		},
+		{
+			uc: "successful creation with empty config",
 			assert: func(t *testing.T, err error, auth authorizers.Authorizer) {
 				t.Helper()
 
@@ -388,13 +406,22 @@ func TestHandlerFactoryCreateHydrator(t *testing.T) {
 			},
 		},
 		{
-			uc:   "successful creation",
+			uc:   "successful creation from prototype",
 			conf: map[any]any{"foo": "bar"},
 			configureMock: func(t *testing.T, mHydr *mockHydrator) {
 				t.Helper()
 
 				mHydr.On("WithConfig", mock.Anything).Return(mHydr, nil)
 			},
+			assert: func(t *testing.T, err error, hydrator hydrators.Hydrator) {
+				t.Helper()
+
+				require.NoError(t, err)
+				assert.NotNil(t, hydrator)
+			},
+		},
+		{
+			uc: "successful creation with empty config",
 			assert: func(t *testing.T, err error, hydrator hydrators.Hydrator) {
 				t.Helper()
 
@@ -483,13 +510,22 @@ func TestHandlerFactoryCreateMutator(t *testing.T) {
 			},
 		},
 		{
-			uc:   "successful creation",
+			uc:   "successful creation from prototype",
 			conf: map[any]any{"foo": "bar"},
 			configureMock: func(t *testing.T, mMut *mockMutator) {
 				t.Helper()
 
 				mMut.On("WithConfig", mock.Anything).Return(mMut, nil)
 			},
+			assert: func(t *testing.T, err error, mutator mutators.Mutator) {
+				t.Helper()
+
+				require.NoError(t, err)
+				assert.NotNil(t, mutator)
+			},
+		},
+		{
+			uc: "successful creation with empty config",
 			assert: func(t *testing.T, err error, mutator mutators.Mutator) {
 				t.Helper()
 
@@ -578,13 +614,22 @@ func TestHandlerFactoryCreateErrorHandler(t *testing.T) {
 			},
 		},
 		{
-			uc:   "successful creation",
+			uc:   "successful creation from prototype",
 			conf: map[any]any{"foo": "bar"},
 			configureMock: func(t *testing.T, mEH *mockErrorHandler) {
 				t.Helper()
 
 				mEH.On("WithConfig", mock.Anything).Return(mEH, nil)
 			},
+			assert: func(t *testing.T, err error, errorHandler errorhandlers.ErrorHandler) {
+				t.Helper()
+
+				require.NoError(t, err)
+				assert.NotNil(t, errorHandler)
+			},
+		},
+		{
+			uc: "successful creation with empty config",
 			assert: func(t *testing.T, err error, errorHandler errorhandlers.ErrorHandler) {
 				t.Helper()
 
