@@ -764,11 +764,9 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				cacheKey := auth.calculateCacheKey("test_access_token")
-
 				ads.On("GetAuthData", ctx).Return(dummyAuthData{Val: "test_access_token"}, nil)
-				cch.On("Get", cacheKey).Return(nil)
-				cch.On("Set", cacheKey, mock.Anything, mock.Anything)
+				cch.On("Get", mock.Anything).Return(nil)
+				cch.On("Set", mock.Anything, mock.Anything, mock.Anything)
 			},
 			instructServer: func(t *testing.T) {
 				t.Helper()
@@ -850,12 +848,10 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				cacheKey := auth.calculateCacheKey("test_access_token")
-
 				ads.On("GetAuthData", ctx).Return(dummyAuthData{Val: "test_access_token"}, nil)
-				cch.On("Get", cacheKey).Return(zeroTTL)
-				cch.On("Delete", cacheKey)
-				cch.On("Set", cacheKey, mock.Anything, mock.Anything)
+				cch.On("Get", mock.Anything).Return(zeroTTL)
+				cch.On("Delete", mock.Anything)
+				cch.On("Set", mock.Anything, mock.Anything, mock.Anything)
 			},
 			instructServer: func(t *testing.T) {
 				t.Helper()
@@ -937,8 +933,6 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				cacheKey := auth.calculateCacheKey("test_access_token")
-
 				ads.On("GetAuthData", ctx).Return(dummyAuthData{Val: "test_access_token"}, nil)
 
 				rawIntrospectResponse, err := json.Marshal(map[string]any{
@@ -955,7 +949,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				})
 				require.NoError(t, err)
 
-				cch.On("Get", cacheKey).Return(rawIntrospectResponse)
+				cch.On("Get", mock.Anything).Return(rawIntrospectResponse)
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
