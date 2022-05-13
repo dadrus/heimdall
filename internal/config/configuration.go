@@ -17,17 +17,11 @@ const (
 )
 
 type Configuration struct {
-	Serve    Serve   `koanf:"serve"`
-	Log      Logging `koanf:"log"`
-	Signer   Signer  `koanf:"signer"`
-	Pipeline struct {
-		Authenticators []PipelineObject `koanf:"authenticators"`
-		Authorizers    []PipelineObject `koanf:"authorizers"`
-		Hydrators      []PipelineObject `koanf:"hydrators"`
-		Mutators       []PipelineObject `koanf:"mutators"`
-		ErrorHandlers  []PipelineObject `koanf:"error_handlers"`
-	} `koanf:"pipeline"`
-	Rules struct {
+	Serve    Serve    `koanf:"serve"`
+	Log      Logging  `koanf:"log"`
+	Signer   Signer   `koanf:"signer"`
+	Pipeline Pipeline `koanf:"pipeline"`
+	Rules    struct {
 		Default   *DefaultRuleConfig `koanf:"default"`
 		Providers struct {
 			File struct {
