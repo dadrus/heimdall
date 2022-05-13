@@ -1,7 +1,6 @@
 package rules
 
 import (
-	"encoding/json"
 	"errors"
 	"net/url"
 	"sync"
@@ -171,7 +170,7 @@ func (r *repository) removeRules(srcID string) {
 	r.rules = r.rules[:len(r.rules)-len(idxs)]
 }
 
-func (r *repository) onRuleSetCreated(srcID string, definition json.RawMessage) {
+func (r *repository) onRuleSetCreated(srcID string, definition []byte) {
 	// create rules
 	r.logger.Info().Str("src", srcID).Msg("Loading rule set")
 
