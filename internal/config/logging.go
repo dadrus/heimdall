@@ -28,7 +28,7 @@ func logFormatDecodeHookFunc(from reflect.Type, to reflect.Type, val any) (any, 
 	return val, nil
 }
 
-type Logging struct {
+type LoggingConfig struct {
 	Format LogFormat     `koanf:"format"`
 	Level  zerolog.Level `koanf:"level"`
 }

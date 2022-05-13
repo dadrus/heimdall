@@ -17,26 +17,18 @@ const (
 )
 
 type Configuration struct {
-	Serve    Serve    `koanf:"serve"`
-	Log      Logging  `koanf:"log"`
-	Signer   Signer   `koanf:"signer"`
-	Pipeline Pipeline `koanf:"pipeline"`
-	Rules    struct {
-		Default   *DefaultRuleConfig `koanf:"default"`
-		Providers struct {
-			File struct {
-				Src   string `koanf:"src"`
-				Watch bool   `koanf:"watch"`
-			} `koanf:"file"`
-		} `koanf:"providers"`
-	} `koanf:"rules"`
+	Serve    ServeConfig    `koanf:"serve"`
+	Log      LoggingConfig  `koanf:"log"`
+	Signer   SignerConfig   `koanf:"signer"`
+	Pipeline PipelineConfig `koanf:"pipeline"`
+	Rules    RulesConfig    `koanf:"rules"`
 }
 
 func NewConfiguration(configFile string) Configuration {
 	// defaults
 	result := Configuration{
-		Serve: Serve{
-			Proxy: Service{
+		Serve: ServeConfig{
+			Proxy: ServiceConfig{
 				Port: defaultProxyPort,
 				Timeout: Timeout{
 					Read:  defaultReadTimeout,
@@ -44,7 +36,7 @@ func NewConfiguration(configFile string) Configuration {
 					Idle:  defaultIdleTimeout,
 				},
 			},
-			DecisionAPI: Service{
+			DecisionAPI: ServiceConfig{
 				Port: defaultDecisionAPIPort,
 				Timeout: Timeout{
 					Read:  defaultReadTimeout,
@@ -52,16 +44,16 @@ func NewConfiguration(configFile string) Configuration {
 					Idle:  defaultIdleTimeout,
 				},
 			},
-			Prometheus: Prometheus{
+			Prometheus: PrometheusConfig{
 				Port:        defaultPrometheusPort,
 				MetricsPath: "/metrics",
 			},
 		},
-		Log: Logging{
+		Log: LoggingConfig{
 			Level:  zerolog.DebugLevel,
 			Format: LogTextFormat,
 		},
-		Signer: Signer{
+		Signer: SignerConfig{
 			Name: "heimdall",
 		},
 	}
@@ -74,6 +66,6 @@ func NewConfiguration(configFile string) Configuration {
 	return result
 }
 
-func LogConfiguration(configuration Configuration) Logging {
+func LogConfiguration(configuration Configuration) LoggingConfig {
 	return configuration.Log
 }

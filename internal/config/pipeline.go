@@ -1,6 +1,6 @@
 package config
 
-type Pipeline struct {
+type PipelineConfig struct {
 	Authenticators []PipelineObject `koanf:"authenticators"`
 	Authorizers    []PipelineObject `koanf:"authorizers"`
 	Hydrators      []PipelineObject `koanf:"hydrators"`

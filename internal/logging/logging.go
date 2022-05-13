@@ -12,7 +12,7 @@ import (
 )
 
 // ConfigureLogging uses the given conf to configure the global log.Logger variable.
-func ConfigureLogging(conf config.Logging) {
+func ConfigureLogging(conf config.LoggingConfig) {
 	zerolog.SetGlobalLevel(conf.Level)
 
 	if conf.Format == config.LogTextFormat {
