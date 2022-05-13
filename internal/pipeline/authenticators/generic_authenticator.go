@@ -38,8 +38,8 @@ func init() {
 
 type authenticationDataAuthenticator struct {
 	e   endpoint.Endpoint
-	se  SubjectFactory
-	adg extractors.AuthDataExtractStrategy
+	sf  SubjectFactory
+	ads extractors.AuthDataExtractStrategy
 	ttl *time.Duration
 }
 
@@ -78,8 +78,8 @@ func newAuthenticationDataAuthenticator(rawConfig map[any]any) (*authenticationD
 
 	return &authenticationDataAuthenticator{
 		e:   conf.Endpoint,
-		adg: conf.AuthDataSource,
-		se:  &conf.Session,
+		ads: conf.AuthDataSource,
+		sf:  &conf.Session,
 		ttl: conf.CacheTTL,
 	}, nil
 }
@@ -88,7 +88,7 @@ func (a *authenticationDataAuthenticator) Execute(ctx heimdall.Context) (*subjec
 	logger := zerolog.Ctx(ctx.AppContext())
 	logger.Debug().Msg("Authenticating using authentication data authenticator")
 
-	authData, err := a.adg.GetAuthData(ctx)
+	authData, err := a.ads.GetAuthData(ctx)
 	if err != nil {
 		return nil, errorchain.New(heimdall.ErrAuthentication).CausedBy(err)
 	}
@@ -98,7 +98,7 @@ func (a *authenticationDataAuthenticator) Execute(ctx heimdall.Context) (*subjec
 		return nil, err
 	}
 
-	sub, err := a.se.CreateSubject(payload)
+	sub, err := a.sf.CreateSubject(payload)
 	if err != nil {
 		return nil, errorchain.
 			NewWithMessage(heimdall.ErrInternal, "failed to extract subject information from response").
@@ -127,8 +127,8 @@ func (a *authenticationDataAuthenticator) WithConfig(config map[any]any) (Authen
 
 	return &authenticationDataAuthenticator{
 		e:   a.e,
-		se:  a.se,
-		adg: a.adg,
+		sf:  a.sf,
+		ads: a.ads,
 		ttl: x.IfThenElse(conf.CacheTTL != nil, conf.CacheTTL, a.ttl),
 	}, nil
 }

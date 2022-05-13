@@ -148,8 +148,8 @@ session:
 				require.NoError(t, err)
 
 				assert.Equal(t, prototype.e, configured.e)
-				assert.Equal(t, prototype.adg, configured.adg)
-				assert.Equal(t, prototype.se, configured.se)
+				assert.Equal(t, prototype.ads, configured.ads)
+				assert.Equal(t, prototype.sf, configured.sf)
 				assert.Nil(t, prototype.ttl)
 				assert.NotEqual(t, prototype.ttl, *configured.ttl)
 				assert.Equal(t, 5*time.Second, *configured.ttl)
@@ -173,8 +173,8 @@ cache_ttl: 15s`),
 				require.NoError(t, err)
 
 				assert.Equal(t, prototype.e, configured.e)
-				assert.Equal(t, prototype.adg, configured.adg)
-				assert.Equal(t, prototype.se, configured.se)
+				assert.Equal(t, prototype.ads, configured.ads)
+				assert.Equal(t, prototype.sf, configured.sf)
 				assert.NotEqual(t, prototype.ttl, configured.ttl)
 				assert.Equal(t, 15*time.Second, *configured.ttl)
 				assert.Equal(t, 5*time.Second, *prototype.ttl)
@@ -241,8 +241,8 @@ func TestSuccessfulExecutionOfGenericAuthenticatorWithoutCacheUsage(t *testing.T
 
 	ada := authenticationDataAuthenticator{
 		e:   endpoint.Endpoint{URL: srv.URL, Method: http.MethodGet},
-		se:  subExtr,
-		adg: adg,
+		sf:  subExtr,
+		ads: adg,
 	}
 
 	// WHEN
@@ -281,8 +281,8 @@ func TestSuccessfulExecutionOfGenricAuthenticatorWithSubjectInfoFromCache(t *tes
 
 	ada := authenticationDataAuthenticator{
 		e:   endpoint.Endpoint{URL: "foobar.local", Method: http.MethodGet},
-		se:  subExtr,
-		adg: adg,
+		sf:  subExtr,
+		ads: adg,
 		ttl: &subjectInfoTTL,
 	}
 
@@ -342,8 +342,8 @@ func TestSuccessfulExecutionOfGenericAuthenticatorWithCacheMiss(t *testing.T) {
 
 	ada := authenticationDataAuthenticator{
 		e:   endpoint.Endpoint{URL: srv.URL, Method: http.MethodGet},
-		se:  subExtr,
-		adg: adg,
+		sf:  subExtr,
+		ads: adg,
 		ttl: &subjectInfoTTL,
 	}
 
@@ -374,8 +374,8 @@ func TestGenericAuthenticatorExecutionFailsDueToMissingAuthData(t *testing.T) {
 
 	ada := authenticationDataAuthenticator{
 		e:   endpoint.Endpoint{URL: "foobar.local"},
-		se:  subExtr,
-		adg: adg,
+		sf:  subExtr,
+		ads: adg,
 	}
 
 	// WHEN
@@ -410,8 +410,8 @@ func TestGenericAuthenticatorExecutionFailsDueToEndpointError(t *testing.T) {
 
 	ada := authenticationDataAuthenticator{
 		e:   endpoint.Endpoint{URL: "foobar.local"},
-		se:  subExtr,
-		adg: adg,
+		sf:  subExtr,
+		ads: adg,
 	}
 
 	// WHEN
@@ -462,8 +462,8 @@ func TestGenericAuthenticatorExecutionFailsDueToFailedSubjectExtraction(t *testi
 
 	ada := authenticationDataAuthenticator{
 		e:   endpoint.Endpoint{URL: srv.URL, Method: http.MethodGet},
-		se:  subExtr,
-		adg: adg,
+		sf:  subExtr,
+		ads: adg,
 	}
 
 	// WHEN
