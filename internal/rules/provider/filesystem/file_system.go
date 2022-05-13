@@ -27,14 +27,20 @@ type fileSystemProvider struct {
 func registerFileSystemProvider(
 	lifecycle fx.Lifecycle,
 	logger zerolog.Logger,
-	c config.Configuration,
+	conf config.Configuration,
 	queue event.RuleSetChangedEventQueue,
-) {
-	provider, err := newFileSystemProvider(c, queue, logger)
+) error {
+	if conf.Rules.Provider.File == nil {
+		logger.Debug().Msg("File based rule provider not configured. Skipping it.")
+
+		return nil
+	}
+
+	provider, err := newFileSystemProvider(conf.Rules.Provider.File, queue, logger)
 	if err != nil {
 		logger.Error().Err(err).Msg("Failed to load rule definitions provider: file_system")
 
-		return
+		return err
 	}
 
 	lifecycle.Append(
@@ -47,18 +53,20 @@ func registerFileSystemProvider(
 			},
 		},
 	)
+
+	return nil
 }
 
 func newFileSystemProvider(
-	conf config.Configuration,
+	conf *config.FileBasedRuleProviderConfig,
 	queue event.RuleSetChangedEventQueue,
 	logger zerolog.Logger,
 ) (*fileSystemProvider, error) {
-	if len(conf.Rules.Providers.File.Src) == 0 {
+	if len(conf.Src) == 0 {
 		return nil, ErrInvalidProviderConfiguration
 	}
 
-	absPath, err := filepath.Abs(conf.Rules.Providers.File.Src)
+	absPath, err := filepath.Abs(conf.Src)
 	if err != nil {
 		return nil, err
 	}
@@ -69,7 +77,7 @@ func newFileSystemProvider(
 	}
 
 	var watcher *fsnotify.Watcher
-	if conf.Rules.Providers.File.Watch {
+	if conf.Watch {
 		watcher, err = fsnotify.NewWatcher()
 		if err != nil {
 			return nil, err
@@ -228,6 +236,12 @@ func (p *fileSystemProvider) loadInitialRuleSet() error {
 			p.logger.Error().Err(err).Msg("Failed loading initial rule set")
 
 			return err
+		}
+
+		if len(data) == 0 {
+			p.logger.Warn().Msgf("%s is empty", src)
+
+			continue
 		}
 
 		p.ruleSetChanged(event.RuleSetChangedEvent{
