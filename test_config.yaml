@@ -18,7 +18,7 @@ pipeline:
     - id: "unauthorized_authenticator"
       type: unauthorized
     - id: "kratos_session_authenticator"
-      type: authentication_data
+      type: generic
       config:
         identity_info_endpoint:
           url: http://127.0.0.1:4433/sessions/whoami
