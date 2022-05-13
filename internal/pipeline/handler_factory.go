@@ -80,7 +80,7 @@ func (hf *handlerFactory) CreateAuthorizer(id string, conf any) (authorizers.Aut
 	if conf != nil {
 		mConf, ok := conf.(map[any]any)
 		if !ok {
-			return nil, errorchain.NewWithMessage(ErrAuthenticatorCreation,
+			return nil, errorchain.NewWithMessage(ErrAuthorizerCreation,
 				"Could not convert config to the expected type")
 		}
 
@@ -104,7 +104,7 @@ func (hf *handlerFactory) CreateHydrator(id string, conf any) (hydrators.Hydrato
 	if conf != nil {
 		mConf, ok := conf.(map[any]any)
 		if !ok {
-			return nil, errorchain.NewWithMessage(ErrAuthenticatorCreation,
+			return nil, errorchain.NewWithMessage(ErrHydratorCreation,
 				"Could not convert config to the expected type")
 		}
 
@@ -128,7 +128,7 @@ func (hf *handlerFactory) CreateMutator(id string, conf any) (mutators.Mutator, 
 	if conf != nil {
 		mConf, ok := conf.(map[any]any)
 		if !ok {
-			return nil, errorchain.NewWithMessage(ErrAuthenticatorCreation,
+			return nil, errorchain.NewWithMessage(ErrMutatorCreation,
 				"Could not convert config to the expected type")
 		}
 
@@ -152,7 +152,7 @@ func (hf *handlerFactory) CreateErrorHandler(id string, conf any) (errorhandlers
 	if conf != nil {
 		mConf, ok := conf.(map[any]any)
 		if !ok {
-			return nil, errorchain.NewWithMessage(ErrAuthenticatorCreation,
+			return nil, errorchain.NewWithMessage(ErrErrorHandlerCreation,
 				"Could not convert config to the expected type")
 		}
 
