@@ -2,7 +2,6 @@ package authenticators
 
 import (
 	"context"
-	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
@@ -10,33 +9,39 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/pipeline/authenticators/extractors"
 	"github.com/dadrus/heimdall/internal/pipeline/endpoint"
 	"github.com/dadrus/heimdall/internal/pipeline/subject"
 	"github.com/dadrus/heimdall/internal/pipeline/testsupport"
-	"github.com/dadrus/heimdall/internal/x/errorchain"
+	"github.com/dadrus/heimdall/internal/x"
 )
 
 func TestCreateGenericAuthenticator(t *testing.T) {
+	t.Parallel()
+
 	for _, tc := range []struct {
 		uc          string
 		config      []byte
-		assertError func(t *testing.T, err error)
+		assertError func(t *testing.T, err error, auth *genericAuthenticator)
 	}{
 		{
-			uc: "missing session config",
+			uc: "config with undefined fields",
 			config: []byte(`
+foo: bar
 identity_info_endpoint:
   url: http://test.com
-authentication_data_source:
-  - header: foo-header`),
-			assertError: func(t *testing.T, err error) {
+session:
+  subject_id_from: some_template`),
+			assertError: func(t *testing.T, err error, auth *genericAuthenticator) {
 				t.Helper()
-				assert.Error(t, err)
+
+				require.Error(t, err)
+				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				assert.Contains(t, err.Error(), "failed to decode")
 			},
 		},
 		{
@@ -46,9 +51,27 @@ authentication_data_source:
   - header: foo-header
 session:
   subject_id_from: some_template`),
-			assertError: func(t *testing.T, err error) {
+			assertError: func(t *testing.T, err error, auth *genericAuthenticator) {
 				t.Helper()
-				assert.Error(t, err)
+
+				require.Error(t, err)
+				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				assert.Contains(t, err.Error(), "endpoint configuration")
+			},
+		},
+		{
+			uc: "missing session config",
+			config: []byte(`
+identity_info_endpoint:
+  url: http://test.com
+authentication_data_source:
+  - header: foo-header`),
+			assertError: func(t *testing.T, err error, auth *genericAuthenticator) {
+				t.Helper()
+
+				require.Error(t, err)
+				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				assert.Contains(t, err.Error(), "session configuration")
 			},
 		},
 		{
@@ -58,37 +81,65 @@ identity_info_endpoint:
   url: http://test.com
 session:
   subject_id_from: some_template`),
-			assertError: func(t *testing.T, err error) {
+			assertError: func(t *testing.T, err error, auth *genericAuthenticator) {
 				t.Helper()
-				assert.Error(t, err)
+
+				require.Error(t, err)
+				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				assert.Contains(t, err.Error(), "authentication_data_source")
 			},
 		},
 		{
-			uc: "config with undefined fields",
+			uc: "with valid configuration but disabled cache",
 			config: []byte(`
-foo: bar
 identity_info_endpoint:
   url: http://test.com
+  method: GET
+authentication_data_source:
+  - header: foo-header
 session:
   subject_id_from: some_template`),
-			assertError: func(t *testing.T, err error) {
+			assertError: func(t *testing.T, err error, auth *genericAuthenticator) {
 				t.Helper()
-				assert.Error(t, err)
+
+				require.NoError(t, err)
+
+				require.NotNil(t, auth)
+				assert.Equal(t, "http://test.com", auth.e.URL)
+				assert.Equal(t, http.MethodGet, auth.e.Method)
+				ces, ok := auth.ads.(extractors.CompositeExtractStrategy)
+				assert.True(t, ok)
+				assert.Len(t, ces, 1)
+				assert.Contains(t, ces, &extractors.HeaderValueExtractStrategy{Name: "foo-header"})
+				assert.Equal(t, &Session{SubjectIDFrom: "some_template"}, auth.sf)
+				assert.Equal(t, time.Duration(0), auth.ttl)
 			},
 		},
 		{
-			uc: "valid configuration",
+			uc: "with valid configuration and enabled cache",
 			config: []byte(`
 identity_info_endpoint:
   url: http://test.com
   method: POST
 authentication_data_source:
-  - header: foo-header
+  - cookie: foo-cookie
 session:
-  subject_id_from: some_template`),
-			assertError: func(t *testing.T, err error) {
+  subject_id_from: some_template
+cache_ttl: 5s`),
+			assertError: func(t *testing.T, err error, auth *genericAuthenticator) {
 				t.Helper()
-				assert.NoError(t, err)
+
+				require.NoError(t, err)
+
+				require.NotNil(t, auth)
+				assert.Equal(t, "http://test.com", auth.e.URL)
+				assert.Equal(t, http.MethodPost, auth.e.Method)
+				ces, ok := auth.ads.(extractors.CompositeExtractStrategy)
+				assert.True(t, ok)
+				assert.Len(t, ces, 1)
+				assert.Contains(t, ces, &extractors.CookieValueExtractStrategy{Name: "foo-cookie"})
+				assert.Equal(t, &Session{SubjectIDFrom: "some_template"}, auth.sf)
+				assert.Equal(t, 5*time.Second, auth.ttl)
 			},
 		},
 	} {
@@ -97,22 +148,23 @@ session:
 			require.NoError(t, err)
 
 			// WHEN
-			_, err = newAuthenticationDataAuthenticator(conf)
+			auth, err := newGenericAuthenticator(conf)
 
 			// THEN
-			tc.assertError(t, err)
+			tc.assertError(t, err, auth)
 		})
 	}
 }
 
 func TestCreateGenericAuthenticatorFromPrototype(t *testing.T) {
-	// nolint
+	t.Parallel()
+
 	for _, tc := range []struct {
 		uc              string
 		prototypeConfig []byte
 		config          []byte
-		assert          func(t *testing.T, err error, prototype *authenticationDataAuthenticator,
-			configured *authenticationDataAuthenticator)
+		assert          func(t *testing.T, err error, prototype *genericAuthenticator,
+			configured *genericAuthenticator)
 	}{
 		{
 			uc: "prototype config without cache configured and empty target config",
@@ -124,12 +176,35 @@ authentication_data_source:
   - header: foo-header
 session:
   subject_id_from: some_template`),
-			config: []byte{},
-			assert: func(t *testing.T, err error, prototype *authenticationDataAuthenticator,
-				configured *authenticationDataAuthenticator) {
+			assert: func(t *testing.T, err error, prototype *genericAuthenticator,
+				configured *genericAuthenticator,
+			) {
+				t.Helper()
+
 				require.NoError(t, err)
 
 				assert.Equal(t, prototype, configured)
+			},
+		},
+		{
+			uc: "with unsupported fields in target config",
+			prototypeConfig: []byte(`
+identity_info_endpoint:
+  url: http://test.com
+  method: POST
+authentication_data_source:
+  - header: foo-header
+session:
+  subject_id_from: some_template`),
+			config: []byte(`foo: bar`),
+			assert: func(t *testing.T, err error, prototype *genericAuthenticator,
+				configured *genericAuthenticator,
+			) {
+				t.Helper()
+
+				require.Error(t, err)
+				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				assert.Contains(t, err.Error(), "failed to parse")
 			},
 		},
 		{
@@ -143,20 +218,23 @@ authentication_data_source:
 session:
   subject_id_from: some_template`),
 			config: []byte(`cache_ttl: 5s`),
-			assert: func(t *testing.T, err error, prototype *authenticationDataAuthenticator,
-				configured *authenticationDataAuthenticator) {
+			assert: func(t *testing.T, err error, prototype *genericAuthenticator,
+				configured *genericAuthenticator,
+			) {
+				t.Helper()
+
 				require.NoError(t, err)
 
 				assert.Equal(t, prototype.e, configured.e)
 				assert.Equal(t, prototype.ads, configured.ads)
 				assert.Equal(t, prototype.sf, configured.sf)
-				assert.Nil(t, prototype.ttl)
-				assert.NotEqual(t, prototype.ttl, *configured.ttl)
-				assert.Equal(t, 5*time.Second, *configured.ttl)
+				assert.Equal(t, time.Duration(0), prototype.ttl)
+				assert.NotEqual(t, prototype.ttl, configured.ttl)
+				assert.Equal(t, 5*time.Second, configured.ttl)
 			},
 		},
 		{
-			uc: "prototype config with cache, config with cache",
+			uc: "prototype config with cache ttl, config with cache tll",
 			prototypeConfig: []byte(`
 identity_info_endpoint:
   url: http://test.com
@@ -168,16 +246,19 @@ session:
 cache_ttl: 5s`),
 			config: []byte(`
 cache_ttl: 15s`),
-			assert: func(t *testing.T, err error, prototype *authenticationDataAuthenticator,
-				configured *authenticationDataAuthenticator) {
+			assert: func(t *testing.T, err error, prototype *genericAuthenticator,
+				configured *genericAuthenticator,
+			) {
+				t.Helper()
+
 				require.NoError(t, err)
 
 				assert.Equal(t, prototype.e, configured.e)
 				assert.Equal(t, prototype.ads, configured.ads)
 				assert.Equal(t, prototype.sf, configured.sf)
 				assert.NotEqual(t, prototype.ttl, configured.ttl)
-				assert.Equal(t, 15*time.Second, *configured.ttl)
-				assert.Equal(t, 5*time.Second, *prototype.ttl)
+				assert.Equal(t, 15*time.Second, configured.ttl)
+				assert.Equal(t, 5*time.Second, prototype.ttl)
 			},
 		},
 	} {
@@ -188,293 +269,439 @@ cache_ttl: 15s`),
 			conf, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
 
-			prototype, err := newAuthenticationDataAuthenticator(pc)
+			prototype, err := newGenericAuthenticator(pc)
+			require.NoError(t, err)
 
 			// WHEN
 			auth, err := prototype.WithConfig(conf)
 
 			// THEN
-			ada, ok := auth.(*authenticationDataAuthenticator)
-			require.True(t, ok)
+			var (
+				genAuth *genericAuthenticator
+				ok      bool
+			)
 
-			tc.assert(t, err, prototype, ada)
+			if err == nil {
+				genAuth, ok = auth.(*genericAuthenticator)
+				require.True(t, ok)
+			}
+
+			tc.assert(t, err, prototype, genAuth)
 		})
 	}
 }
 
-func TestSuccessfulExecutionOfGenericAuthenticatorWithoutCacheUsage(t *testing.T) {
+// nolint: maintidx
+func TestGenericAuthenticatorExecute(t *testing.T) {
 	t.Parallel()
-	// GIVEN
 
-	sub := &subject.Subject{ID: "bar"}
-	authDataVal := "foobar"
-	subjectData := []byte(`{"foo":"bar", "bar":"foo"}`)
+	var (
+		endpointCalled bool
+		checkRequest   func(req *http.Request)
+
+		responseHeader      map[string]string
+		responseContentType string
+		responseContent     []byte
+		responseCode        int
+	)
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodGet {
-			w.WriteHeader(http.StatusMethodNotAllowed)
+		endpointCalled = true
 
-			return
+		checkRequest(r)
+
+		for hn, hv := range responseHeader {
+			w.Header().Set(hn, hv)
 		}
 
-		receivedAuthData := r.Header.Get("Dummy")
-		assert.Equal(t, authDataVal, receivedAuthData)
+		if responseContent != nil {
+			w.Header().Set("Content-Type", responseContentType)
+			w.Header().Set("Content-Length", strconv.Itoa(len(responseContent)))
+			_, err := w.Write(responseContent)
+			assert.NoError(t, err)
+		}
 
-		w.Header().Set("Content-Type", "application/json")
-		w.Header().Set("Content-Length", strconv.Itoa(len(subjectData)))
-
-		_, err := w.Write(subjectData)
-		assert.NoError(t, err)
+		w.WriteHeader(responseCode)
 	}))
 	defer srv.Close()
 
-	cch := &testsupport.MockCache{}
+	for _, tc := range []struct {
+		uc             string
+		authenticator  *genericAuthenticator
+		instructServer func(t *testing.T)
+		configureMocks func(t *testing.T,
+			ctx *testsupport.MockContext,
+			cch *testsupport.MockCache,
+			ads *mockAuthDataGetter,
+			auth *genericAuthenticator)
+		assert func(t *testing.T, err error, sub *subject.Subject)
+	}{
+		{
+			uc:            "with failing auth data source",
+			authenticator: &genericAuthenticator{},
+			configureMocks: func(t *testing.T,
+				ctx *testsupport.MockContext,
+				cch *testsupport.MockCache,
+				ads *mockAuthDataGetter,
+				auth *genericAuthenticator,
+			) {
+				t.Helper()
 
-	ctx := &testsupport.MockContext{}
-	ctx.On("AppContext").Return(cache.WithContext(context.Background(), cch))
+				ads.On("GetAuthData", ctx).Return(nil, heimdall.ErrCommunicationTimeout)
+			},
+			assert: func(t *testing.T, err error, sub *subject.Subject) {
+				t.Helper()
 
-	adg := &mockAuthDataGetter{}
-	adg.On("GetAuthData", ctx).Return(&dummyAuthData{Val: authDataVal}, nil)
+				assert.False(t, endpointCalled)
 
-	subExtr := &testsupport.MockSubjectFactory{}
-	subExtr.On("CreateSubject", subjectData).Return(sub, nil)
+				require.Error(t, err)
+				assert.ErrorIs(t, err, heimdall.ErrAuthentication)
+				assert.Contains(t, err.Error(), "failed to get authentication data")
+			},
+		},
+		{
+			uc: "with endpoint communication error (dns)",
+			authenticator: &genericAuthenticator{
+				e: endpoint.Endpoint{URL: "http://heimdall.test.local"},
+			},
+			configureMocks: func(t *testing.T,
+				ctx *testsupport.MockContext,
+				cch *testsupport.MockCache,
+				ads *mockAuthDataGetter,
+				auth *genericAuthenticator,
+			) {
+				t.Helper()
 
-	ada := authenticationDataAuthenticator{
-		e:   endpoint.Endpoint{URL: srv.URL, Method: http.MethodGet},
-		sf:  subExtr,
-		ads: adg,
+				ads.On("GetAuthData", ctx).Return(dummyAuthData{Val: "session_token"}, nil)
+			},
+			assert: func(t *testing.T, err error, sub *subject.Subject) {
+				t.Helper()
+
+				assert.False(t, endpointCalled)
+
+				require.Error(t, err)
+				assert.ErrorIs(t, err, heimdall.ErrCommunication)
+				assert.Contains(t, err.Error(), "request to the endpoint")
+			},
+		},
+		{
+			uc: "with unexpected response code from server",
+			authenticator: &genericAuthenticator{
+				e: endpoint.Endpoint{URL: srv.URL},
+			},
+			configureMocks: func(t *testing.T,
+				ctx *testsupport.MockContext,
+				cch *testsupport.MockCache,
+				ads *mockAuthDataGetter,
+				auth *genericAuthenticator,
+			) {
+				t.Helper()
+
+				ads.On("GetAuthData", ctx).Return(dummyAuthData{Val: "session_token"}, nil)
+			},
+			instructServer: func(t *testing.T) {
+				t.Helper()
+
+				responseCode = http.StatusInternalServerError
+			},
+			assert: func(t *testing.T, err error, sub *subject.Subject) {
+				t.Helper()
+
+				assert.True(t, endpointCalled)
+
+				require.Error(t, err)
+				assert.ErrorIs(t, err, heimdall.ErrCommunication)
+				assert.Contains(t, err.Error(), "unexpected response code")
+			},
+		},
+		{
+			uc: "with error while extracting subject information",
+			authenticator: &genericAuthenticator{
+				e: endpoint.Endpoint{
+					URL:    srv.URL,
+					Method: http.MethodGet,
+					Headers: map[string]string{
+						"Accept": "application/json",
+					},
+				},
+				sf: &Session{SubjectIDFrom: "barfoo"},
+			},
+			configureMocks: func(t *testing.T,
+				ctx *testsupport.MockContext,
+				cch *testsupport.MockCache,
+				ads *mockAuthDataGetter,
+				auth *genericAuthenticator,
+			) {
+				t.Helper()
+
+				ads.On("GetAuthData", ctx).Return(dummyAuthData{Val: "session_token"}, nil)
+			},
+			instructServer: func(t *testing.T) {
+				t.Helper()
+
+				checkRequest = func(req *http.Request) {
+					t.Helper()
+
+					assert.Equal(t, http.MethodGet, req.Method)
+					assert.Equal(t, "application/json", req.Header.Get("Accept"))
+					assert.Equal(t, "session_token", req.Header.Get("Dummy"))
+				}
+
+				responseCode = http.StatusOK
+				responseContent = []byte(`{ "user_id": "barbar" }`)
+				responseContentType = "application/json"
+			},
+			assert: func(t *testing.T, err error, sub *subject.Subject) {
+				t.Helper()
+
+				assert.True(t, endpointCalled)
+
+				require.Error(t, err)
+				assert.ErrorIs(t, err, heimdall.ErrInternal)
+				assert.Contains(t, err.Error(), "failed to extract subject")
+			},
+		},
+		{
+			uc: "successful execution without cache usage",
+			authenticator: &genericAuthenticator{
+				e: endpoint.Endpoint{
+					URL:    srv.URL,
+					Method: http.MethodGet,
+					Headers: map[string]string{
+						"Accept": "application/json",
+					},
+				},
+				sf: &Session{SubjectIDFrom: "user_id"},
+			},
+			configureMocks: func(t *testing.T,
+				ctx *testsupport.MockContext,
+				cch *testsupport.MockCache,
+				ads *mockAuthDataGetter,
+				auth *genericAuthenticator,
+			) {
+				t.Helper()
+
+				ads.On("GetAuthData", ctx).Return(dummyAuthData{Val: "session_token"}, nil)
+			},
+			instructServer: func(t *testing.T) {
+				t.Helper()
+
+				checkRequest = func(req *http.Request) {
+					t.Helper()
+
+					assert.Equal(t, http.MethodGet, req.Method)
+					assert.Equal(t, "application/json", req.Header.Get("Accept"))
+					assert.Equal(t, "session_token", req.Header.Get("Dummy"))
+				}
+
+				responseCode = http.StatusOK
+				responseContent = []byte(`{ "user_id": "barbar" }`)
+				responseContentType = "application/json"
+			},
+			assert: func(t *testing.T, err error, sub *subject.Subject) {
+				t.Helper()
+
+				assert.True(t, endpointCalled)
+
+				require.NoError(t, err)
+
+				require.NotNil(t, sub)
+				assert.Equal(t, "barbar", sub.ID)
+				assert.Len(t, sub.Attributes, 1)
+			},
+		},
+		{
+			uc: "successful execution with bad cache hit",
+			authenticator: &genericAuthenticator{
+				e: endpoint.Endpoint{
+					URL:    srv.URL,
+					Method: http.MethodGet,
+					Headers: map[string]string{
+						"Accept": "application/json",
+					},
+				},
+				sf:  &Session{SubjectIDFrom: "user_id"},
+				ttl: 5 * time.Second,
+			},
+			configureMocks: func(t *testing.T,
+				ctx *testsupport.MockContext,
+				cch *testsupport.MockCache,
+				ads *mockAuthDataGetter,
+				auth *genericAuthenticator,
+			) {
+				t.Helper()
+
+				cacheKey := auth.calculateCacheKey("session_token")
+
+				ads.On("GetAuthData", ctx).Return(dummyAuthData{Val: "session_token"}, nil)
+				cch.On("Get", cacheKey).Return(time.Duration(10))
+				cch.On("Delete", cacheKey)
+				cch.On("Set", cacheKey, []byte(`{ "user_id": "barbar" }`), auth.ttl)
+			},
+			instructServer: func(t *testing.T) {
+				t.Helper()
+
+				checkRequest = func(req *http.Request) {
+					t.Helper()
+
+					assert.Equal(t, http.MethodGet, req.Method)
+					assert.Equal(t, "application/json", req.Header.Get("Accept"))
+					assert.Equal(t, "session_token", req.Header.Get("Dummy"))
+				}
+
+				responseCode = http.StatusOK
+				responseContent = []byte(`{ "user_id": "barbar" }`)
+				responseContentType = "application/json"
+			},
+			assert: func(t *testing.T, err error, sub *subject.Subject) {
+				t.Helper()
+
+				assert.True(t, endpointCalled)
+
+				require.NoError(t, err)
+
+				require.NotNil(t, sub)
+				assert.Equal(t, "barbar", sub.ID)
+				assert.Len(t, sub.Attributes, 1)
+			},
+		},
+		{
+			uc: "successful execution with positive cache hit",
+			authenticator: &genericAuthenticator{
+				e: endpoint.Endpoint{
+					URL:    srv.URL,
+					Method: http.MethodGet,
+					Headers: map[string]string{
+						"Accept": "application/json",
+					},
+				},
+				sf:  &Session{SubjectIDFrom: "user_id"},
+				ttl: 5 * time.Second,
+			},
+			configureMocks: func(t *testing.T,
+				ctx *testsupport.MockContext,
+				cch *testsupport.MockCache,
+				ads *mockAuthDataGetter,
+				auth *genericAuthenticator,
+			) {
+				t.Helper()
+
+				cacheKey := auth.calculateCacheKey("session_token")
+
+				ads.On("GetAuthData", ctx).Return(dummyAuthData{Val: "session_token"}, nil)
+				cch.On("Get", cacheKey).Return([]byte(`{ "user_id": "barbar" }`))
+			},
+			assert: func(t *testing.T, err error, sub *subject.Subject) {
+				t.Helper()
+
+				assert.False(t, endpointCalled)
+
+				require.NoError(t, err)
+
+				require.NotNil(t, sub)
+				assert.Equal(t, "barbar", sub.ID)
+				assert.Len(t, sub.Attributes, 1)
+			},
+		},
+		{
+			uc: "successful execution with negative cache hit",
+			authenticator: &genericAuthenticator{
+				e: endpoint.Endpoint{
+					URL:    srv.URL,
+					Method: http.MethodGet,
+					Headers: map[string]string{
+						"Accept": "application/json",
+					},
+				},
+				sf:  &Session{SubjectIDFrom: "user_id"},
+				ttl: 5 * time.Second,
+			},
+			configureMocks: func(t *testing.T,
+				ctx *testsupport.MockContext,
+				cch *testsupport.MockCache,
+				ads *mockAuthDataGetter,
+				auth *genericAuthenticator,
+			) {
+				t.Helper()
+
+				cacheKey := auth.calculateCacheKey("session_token")
+
+				ads.On("GetAuthData", ctx).Return(dummyAuthData{Val: "session_token"}, nil)
+				cch.On("Get", cacheKey).Return(nil)
+				cch.On("Set", cacheKey, []byte(`{ "user_id": "barbar" }`), auth.ttl)
+			},
+			instructServer: func(t *testing.T) {
+				t.Helper()
+
+				checkRequest = func(req *http.Request) {
+					t.Helper()
+
+					assert.Equal(t, http.MethodGet, req.Method)
+					assert.Equal(t, "application/json", req.Header.Get("Accept"))
+					assert.Equal(t, "session_token", req.Header.Get("Dummy"))
+				}
+
+				responseCode = http.StatusOK
+				responseContent = []byte(`{ "user_id": "barbar" }`)
+				responseContentType = "application/json"
+			},
+			assert: func(t *testing.T, err error, sub *subject.Subject) {
+				t.Helper()
+
+				assert.True(t, endpointCalled)
+
+				require.NoError(t, err)
+
+				require.NotNil(t, sub)
+				assert.Equal(t, "barbar", sub.ID)
+				assert.Len(t, sub.Attributes, 1)
+			},
+		},
+	} {
+		t.Run("case="+tc.uc, func(t *testing.T) {
+			// GIVEN
+			endpointCalled = false
+			responseHeader = nil
+			responseContentType = ""
+			responseContent = nil
+
+			checkRequest = func(req *http.Request) { t.Helper() }
+
+			instructServer := x.IfThenElse(tc.instructServer != nil,
+				tc.instructServer,
+				func(t *testing.T) { t.Helper() })
+
+			configureMocks := x.IfThenElse(tc.configureMocks != nil,
+				tc.configureMocks,
+				func(t *testing.T,
+					ctx *testsupport.MockContext,
+					cch *testsupport.MockCache,
+					ads *mockAuthDataGetter,
+					auth *genericAuthenticator,
+				) {
+					t.Helper()
+				})
+
+			ads := &mockAuthDataGetter{}
+			tc.authenticator.ads = ads
+
+			cch := &testsupport.MockCache{}
+
+			ctx := &testsupport.MockContext{}
+			ctx.On("AppContext").Return(cache.WithContext(context.Background(), cch))
+
+			configureMocks(t, ctx, cch, ads, tc.authenticator)
+			instructServer(t)
+
+			// WHEN
+			sub, err := tc.authenticator.Execute(ctx)
+
+			// THEN
+			tc.assert(t, err, sub)
+
+			ctx.AssertExpectations(t)
+			cch.AssertExpectations(t)
+			ads.AssertExpectations(t)
+		})
 	}
-
-	// WHEN
-	rSub, err := ada.Execute(ctx)
-
-	// THEN
-	assert.NoError(t, err)
-	assert.NotNil(t, rSub)
-	assert.Equal(t, sub, rSub)
-
-	ctx.AssertExpectations(t)
-	subExtr.AssertExpectations(t)
-	adg.AssertExpectations(t)
-	cch.AssertExpectations(t)
-}
-
-func TestSuccessfulExecutionOfGenricAuthenticatorWithSubjectInfoFromCache(t *testing.T) {
-	t.Parallel()
-
-	sub := &subject.Subject{ID: "bar"}
-	authDataVal := "foobar"
-	subjectData := []byte(`{"foo":"bar", "bar":"foo"}`)
-	subjectInfoTTL := 5 * time.Second
-
-	cch := &testsupport.MockCache{}
-	cch.On("Get", mock.Anything).Return(subjectData)
-
-	ctx := &testsupport.MockContext{}
-	ctx.On("AppContext").Return(cache.WithContext(context.Background(), cch))
-
-	adg := &mockAuthDataGetter{}
-	adg.On("GetAuthData", ctx).Return(&dummyAuthData{Val: authDataVal}, nil)
-
-	subExtr := &testsupport.MockSubjectFactory{}
-	subExtr.On("CreateSubject", subjectData).Return(sub, nil)
-
-	ada := authenticationDataAuthenticator{
-		e:   endpoint.Endpoint{URL: "foobar.local", Method: http.MethodGet},
-		sf:  subExtr,
-		ads: adg,
-		ttl: &subjectInfoTTL,
-	}
-
-	// WHEN
-	rSub, err := ada.Execute(ctx)
-
-	// THEN
-	assert.NoError(t, err)
-	assert.NotNil(t, rSub)
-	assert.Equal(t, sub, rSub)
-
-	ctx.AssertExpectations(t)
-	subExtr.AssertExpectations(t)
-	adg.AssertExpectations(t)
-	cch.AssertExpectations(t)
-}
-
-func TestSuccessfulExecutionOfGenericAuthenticatorWithCacheMiss(t *testing.T) {
-	t.Parallel()
-	// GIVEN
-
-	sub := &subject.Subject{ID: "bar"}
-	authDataVal := "foobar"
-	subjectData := []byte(`{"foo":"bar", "bar":"foo"}`)
-	subjectInfoTTL := 5 * time.Second
-
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodGet {
-			w.WriteHeader(http.StatusMethodNotAllowed)
-
-			return
-		}
-
-		receivedAuthData := r.Header.Get("Dummy")
-		assert.Equal(t, authDataVal, receivedAuthData)
-
-		w.Header().Set("Content-Type", "application/json")
-		w.Header().Set("Content-Length", strconv.Itoa(len(subjectData)))
-
-		_, err := w.Write(subjectData)
-		assert.NoError(t, err)
-	}))
-	defer srv.Close()
-
-	cch := &testsupport.MockCache{}
-	cch.On("Get", mock.Anything).Return(nil)
-	cch.On("Set", mock.Anything, subjectData, subjectInfoTTL)
-
-	ctx := &testsupport.MockContext{}
-	ctx.On("AppContext").Return(cache.WithContext(context.Background(), cch))
-
-	adg := &mockAuthDataGetter{}
-	adg.On("GetAuthData", ctx).Return(&dummyAuthData{Val: authDataVal}, nil)
-
-	subExtr := &testsupport.MockSubjectFactory{}
-	subExtr.On("CreateSubject", subjectData).Return(sub, nil)
-
-	ada := authenticationDataAuthenticator{
-		e:   endpoint.Endpoint{URL: srv.URL, Method: http.MethodGet},
-		sf:  subExtr,
-		ads: adg,
-		ttl: &subjectInfoTTL,
-	}
-
-	// WHEN
-	rSub, err := ada.Execute(ctx)
-
-	// THEN
-	assert.NoError(t, err)
-	assert.NotNil(t, rSub)
-	assert.Equal(t, sub, rSub)
-
-	ctx.AssertExpectations(t)
-	subExtr.AssertExpectations(t)
-	adg.AssertExpectations(t)
-	cch.AssertExpectations(t)
-}
-
-func TestGenericAuthenticatorExecutionFailsDueToMissingAuthData(t *testing.T) {
-	t.Parallel()
-	// GIVEN
-	subExtr := &testsupport.MockSubjectFactory{}
-
-	ctx := &testsupport.MockContext{}
-	ctx.On("AppContext").Return(context.Background())
-
-	adg := &mockAuthDataGetter{}
-	adg.On("GetAuthData", mock.Anything).Return(nil, testsupport.ErrTestPurpose)
-
-	ada := authenticationDataAuthenticator{
-		e:   endpoint.Endpoint{URL: "foobar.local"},
-		sf:  subExtr,
-		ads: adg,
-	}
-
-	// WHEN
-	sub, err := ada.Execute(ctx)
-
-	// THEN
-	assert.Error(t, err)
-	assert.Nil(t, sub)
-
-	var erc *errorchain.ErrorChain
-
-	assert.ErrorAs(t, err, &erc)
-	assert.ErrorIs(t, erc, testsupport.ErrTestPurpose)
-
-	ctx.AssertExpectations(t)
-	subExtr.AssertExpectations(t)
-	adg.AssertExpectations(t)
-}
-
-func TestGenericAuthenticatorExecutionFailsDueToEndpointError(t *testing.T) {
-	t.Parallel()
-	// GIVEN
-	authDataVal := "foobar"
-
-	ctx := &testsupport.MockContext{}
-	ctx.On("AppContext").Return(context.Background())
-
-	adg := &mockAuthDataGetter{}
-	adg.On("GetAuthData", ctx).Return(dummyAuthData{Val: authDataVal}, nil)
-
-	subExtr := &testsupport.MockSubjectFactory{}
-
-	ada := authenticationDataAuthenticator{
-		e:   endpoint.Endpoint{URL: "foobar.local"},
-		sf:  subExtr,
-		ads: adg,
-	}
-
-	// WHEN
-	sub, err := ada.Execute(ctx)
-
-	// THEN
-	assert.Error(t, err)
-	assert.True(t, errors.Is(err, heimdall.ErrCommunication))
-
-	assert.Nil(t, sub)
-
-	subExtr.AssertExpectations(t)
-	adg.AssertExpectations(t)
-}
-
-func TestGenericAuthenticatorExecutionFailsDueToFailedSubjectExtraction(t *testing.T) {
-	t.Parallel()
-	// GIVEN
-	authDataVal := "foobar"
-	subjectData := []byte(`{"foo":"bar", "bar":"foo"}`)
-
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodGet {
-			w.WriteHeader(http.StatusMethodNotAllowed)
-
-			return
-		}
-
-		receivedAuthData := r.Header.Get("Dummy")
-		assert.Equal(t, authDataVal, receivedAuthData)
-
-		w.Header().Set("Content-Type", "application/json")
-		w.Header().Set("Content-Length", strconv.Itoa(len(subjectData)))
-
-		_, err := w.Write(subjectData)
-		assert.NoError(t, err)
-	}))
-	defer srv.Close()
-
-	ctx := &testsupport.MockContext{}
-	ctx.On("AppContext").Return(context.Background())
-
-	adg := &mockAuthDataGetter{}
-	adg.On("GetAuthData", ctx).Return(dummyAuthData{Val: authDataVal}, nil)
-
-	subExtr := &testsupport.MockSubjectFactory{}
-	subExtr.On("CreateSubject", subjectData).Return(nil, testsupport.ErrTestPurpose)
-
-	ada := authenticationDataAuthenticator{
-		e:   endpoint.Endpoint{URL: srv.URL, Method: http.MethodGet},
-		sf:  subExtr,
-		ads: adg,
-	}
-
-	// WHEN
-	sub, err := ada.Execute(ctx)
-
-	// THEN
-	assert.Error(t, err)
-	assert.True(t, errors.Is(err, testsupport.ErrTestPurpose))
-
-	assert.Nil(t, sub)
-
-	subExtr.AssertExpectations(t)
-	adg.AssertExpectations(t)
 }

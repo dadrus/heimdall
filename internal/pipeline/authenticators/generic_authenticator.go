@@ -30,20 +30,20 @@ func init() {
 				return false, nil, nil
 			}
 
-			auth, err := newAuthenticationDataAuthenticator(conf)
+			auth, err := newGenericAuthenticator(conf)
 
 			return true, auth, err
 		})
 }
 
-type authenticationDataAuthenticator struct {
+type genericAuthenticator struct {
 	e   endpoint.Endpoint
 	sf  SubjectFactory
 	ads extractors.AuthDataExtractStrategy
-	ttl *time.Duration
+	ttl time.Duration
 }
 
-func newAuthenticationDataAuthenticator(rawConfig map[any]any) (*authenticationDataAuthenticator, error) {
+func newGenericAuthenticator(rawConfig map[any]any) (*genericAuthenticator, error) {
 	type _config struct {
 		Endpoint       endpoint.Endpoint                   `mapstructure:"identity_info_endpoint"`
 		AuthDataSource extractors.CompositeExtractStrategy `mapstructure:"authentication_data_source"`
@@ -55,7 +55,7 @@ func newAuthenticationDataAuthenticator(rawConfig map[any]any) (*authenticationD
 
 	if err := decodeConfig(rawConfig, &conf); err != nil {
 		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration, "failed to decode authentication data authenticator config").
+			NewWithMessage(heimdall.ErrConfiguration, "failed to decode generic authenticator config").
 			CausedBy(err)
 	}
 
@@ -76,21 +76,24 @@ func newAuthenticationDataAuthenticator(rawConfig map[any]any) (*authenticationD
 			NewWithMessage(heimdall.ErrConfiguration, "no authentication_data_source configured")
 	}
 
-	return &authenticationDataAuthenticator{
+	return &genericAuthenticator{
 		e:   conf.Endpoint,
 		ads: conf.AuthDataSource,
 		sf:  &conf.Session,
-		ttl: conf.CacheTTL,
+		ttl: x.IfThenElseExec(conf.CacheTTL != nil,
+			func() time.Duration { return *conf.CacheTTL },
+			func() time.Duration { return 0 }),
 	}, nil
 }
 
-func (a *authenticationDataAuthenticator) Execute(ctx heimdall.Context) (*subject.Subject, error) {
+func (a *genericAuthenticator) Execute(ctx heimdall.Context) (*subject.Subject, error) {
 	logger := zerolog.Ctx(ctx.AppContext())
-	logger.Debug().Msg("Authenticating using authentication data authenticator")
+	logger.Debug().Msg("Authenticating using generic authenticator")
 
 	authData, err := a.ads.GetAuthData(ctx)
 	if err != nil {
-		return nil, errorchain.New(heimdall.ErrAuthentication).CausedBy(err)
+		return nil, errorchain.NewWithMessage(heimdall.ErrAuthentication,
+			"failed to get authentication data from request").CausedBy(err)
 	}
 
 	payload, err := a.getSubjectInformation(ctx, authData)
@@ -108,7 +111,7 @@ func (a *authenticationDataAuthenticator) Execute(ctx heimdall.Context) (*subjec
 	return sub, nil
 }
 
-func (a *authenticationDataAuthenticator) WithConfig(config map[any]any) (Authenticator, error) {
+func (a *genericAuthenticator) WithConfig(config map[any]any) (Authenticator, error) {
 	// this authenticator allows ttl to be redefined on the rule level
 	if len(config) == 0 {
 		return a, nil
@@ -125,37 +128,42 @@ func (a *authenticationDataAuthenticator) WithConfig(config map[any]any) (Authen
 			CausedBy(err)
 	}
 
-	return &authenticationDataAuthenticator{
+	return &genericAuthenticator{
 		e:   a.e,
 		sf:  a.sf,
 		ads: a.ads,
-		ttl: x.IfThenElse(conf.CacheTTL != nil, conf.CacheTTL, a.ttl),
+		ttl: x.IfThenElseExec(conf.CacheTTL != nil,
+			func() time.Duration { return *conf.CacheTTL },
+			func() time.Duration { return a.ttl }),
 	}, nil
 }
 
-func (a *authenticationDataAuthenticator) getSubjectInformation(
-	ctx heimdall.Context,
+func (a *genericAuthenticator) getSubjectInformation(ctx heimdall.Context,
 	authData extractors.AuthData,
 ) ([]byte, error) {
-	cch := cache.Ctx(ctx.AppContext())
 	logger := zerolog.Ctx(ctx.AppContext())
-	cacheKey := a.calculateCacheKey(authData.Value())
+	cch := cache.Ctx(ctx.AppContext())
 
-	var cacheTTL time.Duration
-	if a.ttl != nil {
-		cacheTTL = *a.ttl
+	var (
+		cacheKey       string
+		cacheEntry     any
+		cachedResponse []byte
+		ok             bool
+	)
+
+	if a.ttl > 0 {
+		cacheKey = a.calculateCacheKey(authData.Value())
+		cacheEntry = cch.Get(cacheKey)
 	}
 
-	if cacheTTL != 0 {
-		if item := cch.Get(cacheKey); item != nil {
-			if cachedSubjectInfo, ok := item.([]byte); !ok {
-				logger.Warn().Msg("Wrong object type from cache")
-				cch.Delete(cacheKey)
-			} else {
-				logger.Debug().Msg("Reusing subject information from cache")
+	if cacheEntry != nil {
+		if cachedResponse, ok = cacheEntry.([]byte); !ok {
+			logger.Warn().Msg("Wrong object type from cache")
+			cch.Delete(cacheKey)
+		} else {
+			logger.Debug().Msg("Reusing subject information from cache")
 
-				return cachedSubjectInfo, nil
-			}
+			return cachedResponse, nil
 		}
 	}
 
@@ -164,15 +172,14 @@ func (a *authenticationDataAuthenticator) getSubjectInformation(
 		return nil, err
 	}
 
-	if cacheTTL != 0 {
-		cch.Set(cacheKey, payload, cacheTTL)
+	if a.ttl > 0 {
+		cch.Set(cacheKey, payload, a.ttl)
 	}
 
 	return payload, nil
 }
 
-func (a *authenticationDataAuthenticator) fetchSubjectInformation(
-	ctx heimdall.Context,
+func (a *genericAuthenticator) fetchSubjectInformation(ctx heimdall.Context,
 	authData extractors.AuthData,
 ) ([]byte, error) {
 	req, err := a.e.CreateRequest(ctx.AppContext(), nil, nil)
@@ -187,11 +194,11 @@ func (a *authenticationDataAuthenticator) fetchSubjectInformation(
 		var clientErr *url.Error
 		if errors.As(err, &clientErr) && clientErr.Timeout() {
 			return nil, errorchain.NewWithMessage(heimdall.ErrCommunicationTimeout,
-				"request to get information about the user timed out").CausedBy(err)
+				"request to the endpoint to get information about the user timed out").CausedBy(err)
 		}
 
 		return nil, errorchain.NewWithMessage(heimdall.ErrCommunication,
-			"request to get information about the user failed").CausedBy(err)
+			"request to the endpoint to get information about the user failed").CausedBy(err)
 	}
 
 	defer resp.Body.Close()
@@ -199,10 +206,10 @@ func (a *authenticationDataAuthenticator) fetchSubjectInformation(
 	return a.readResponse(resp)
 }
 
-func (*authenticationDataAuthenticator) readResponse(resp *http.Response) ([]byte, error) {
+func (*genericAuthenticator) readResponse(resp *http.Response) ([]byte, error) {
 	if !(resp.StatusCode >= http.StatusOK && resp.StatusCode < http.StatusMultipleChoices) {
 		return nil, errorchain.
-			NewWithMessagef(heimdall.ErrCommunication, "unexpected response. code: %v", resp.StatusCode)
+			NewWithMessagef(heimdall.ErrCommunication, "unexpected response code: %v", resp.StatusCode)
 	}
 
 	rawData, err := ioutil.ReadAll(resp.Body)
@@ -215,7 +222,7 @@ func (*authenticationDataAuthenticator) readResponse(resp *http.Response) ([]byt
 	return rawData, nil
 }
 
-func (a *authenticationDataAuthenticator) calculateCacheKey(reference string) string {
+func (a *genericAuthenticator) calculateCacheKey(reference string) string {
 	digest := sha256.New()
 	digest.Write([]byte(a.e.Hash()))
 	digest.Write([]byte(reference))
