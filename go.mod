@@ -12,6 +12,7 @@ require (
 	github.com/gofiber/fiber/v2 v2.31.0
 	github.com/google/uuid v1.0.0
 	github.com/instana/go-sensor v1.41.1
+	github.com/instana/testify v1.6.2-0.20200721153833-94b1851f4d65
 	github.com/jellydator/ttlcache/v3 v3.0.0
 	github.com/knadh/koanf v1.4.0
 	github.com/mitchellh/mapstructure v1.4.3
