@@ -5,9 +5,9 @@ import (
 	"os"
 	"testing"
 
-	"github.com/instana/testify/mock"
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/fx"
 
