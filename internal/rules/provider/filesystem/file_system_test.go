@@ -4,6 +4,7 @@ import (
 	"io/ioutil"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
@@ -94,6 +95,26 @@ func TestRegisterFileSystemProvider(t *testing.T) {
 				require.NoError(t, err)
 			},
 		},
+		{
+			uc: "with existing rules file and enabled watcher",
+			conf: config.Configuration{
+				Rules: config.RulesConfig{
+					Provider: config.RuleProvider{
+						File: &config.FileBasedRuleProviderConfig{Src: tmpFile.Name(), Watch: true},
+					},
+				},
+			},
+			setupMocks: func(t *testing.T, mockLC *mockLifecycle) {
+				t.Helper()
+
+				mockLC.On("Append", mock.AnythingOfType("fx.Hook"))
+			},
+			assert: func(t *testing.T, err error) {
+				t.Helper()
+
+				require.NoError(t, err)
+			},
+		},
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
 			// GIVEN
@@ -116,12 +137,14 @@ func TestRegisterFileSystemProvider(t *testing.T) {
 	}
 }
 
+// nolint: maintidx
 func TestStartFileSystemProvider(t *testing.T) {
 	t.Parallel()
 
 	for _, tc := range []struct {
 		uc             string
 		createProvider func(t *testing.T, file *os.File, dir string) *fileSystemProvider
+		writeContents  func(t *testing.T, file *os.File, dir string)
 		assert         func(t *testing.T, err error, provider *fileSystemProvider)
 	}{
 		{
@@ -285,9 +308,109 @@ func TestStartFileSystemProvider(t *testing.T) {
 				assert.Len(t, provider.queue, 0)
 			},
 		},
+		{
+			uc: "successfully start provider with watcher using initially empty dir and adding rule " +
+				"file and deleting it then",
+			createProvider: func(t *testing.T, file *os.File, dir string) *fileSystemProvider {
+				t.Helper()
+
+				provider, err := newFileSystemProvider(
+					&config.FileBasedRuleProviderConfig{Src: dir, Watch: true},
+					make(event.RuleSetChangedEventQueue, 10),
+					log.Logger)
+				require.NoError(t, err)
+
+				return provider
+			},
+			writeContents: func(t *testing.T, file *os.File, dir string) {
+				t.Helper()
+
+				tmpFile, err := ioutil.TempFile(dir, "test-rule-")
+				require.NoError(t, err)
+
+				time.Sleep(200 * time.Millisecond)
+
+				_, err = tmpFile.Write([]byte(`Hi Foo`))
+				require.NoError(t, err)
+
+				time.Sleep(200 * time.Millisecond)
+
+				err = os.Remove(tmpFile.Name())
+				require.NoError(t, err)
+
+				time.Sleep(200 * time.Millisecond)
+			},
+			assert: func(t *testing.T, err error, provider *fileSystemProvider) {
+				t.Helper()
+
+				require.NoError(t, err)
+
+				require.Len(t, provider.queue, 3)
+
+				evt := <-provider.queue
+				assert.Contains(t, evt.Src, "file_system:"+provider.src)
+				assert.Equal(t, []byte(nil), evt.Definition)
+				assert.Equal(t, event.Remove, evt.ChangeType)
+
+				evt = <-provider.queue
+				assert.Contains(t, evt.Src, "file_system:"+provider.src)
+				assert.Equal(t, []byte(`Hi Foo`), evt.Definition)
+				assert.Equal(t, event.Create, evt.ChangeType)
+
+				evt = <-provider.queue
+				assert.Contains(t, evt.Src, "file_system:"+provider.src)
+				assert.Equal(t, []byte(nil), evt.Definition)
+				assert.Equal(t, event.Remove, evt.ChangeType)
+			},
+		},
+		{
+			uc: "successfully start provider with watcher using initially empty file, " +
+				"updating it afterwards and deleting it then",
+			createProvider: func(t *testing.T, file *os.File, dir string) *fileSystemProvider {
+				t.Helper()
+
+				provider, err := newFileSystemProvider(
+					&config.FileBasedRuleProviderConfig{Src: file.Name(), Watch: true},
+					make(event.RuleSetChangedEventQueue, 10),
+					log.Logger)
+				require.NoError(t, err)
+
+				return provider
+			},
+			writeContents: func(t *testing.T, file *os.File, dir string) {
+				t.Helper()
+
+				_, err := file.Write([]byte(`Hi Foo`))
+				require.NoError(t, err)
+
+				time.Sleep(200 * time.Millisecond)
+
+				err = os.Remove(file.Name())
+				require.NoError(t, err)
+
+				time.Sleep(200 * time.Millisecond)
+			},
+			assert: func(t *testing.T, err error, provider *fileSystemProvider) {
+				t.Helper()
+
+				require.NoError(t, err)
+
+				require.Len(t, provider.queue, 2)
+
+				evt := <-provider.queue
+				assert.Contains(t, evt.Src, "file_system:"+provider.src)
+				assert.Equal(t, []byte(nil), evt.Definition)
+				assert.Equal(t, event.Remove, evt.ChangeType)
+
+				evt = <-provider.queue
+				assert.Contains(t, evt.Src, "file_system:"+provider.src)
+				assert.Equal(t, []byte(`Hi Foo`), evt.Definition)
+				assert.Equal(t, event.Create, evt.ChangeType)
+			},
+		},
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
-			tmpFile, err := ioutil.TempFile(os.TempDir(), "test-rule-")
+			tmpFile, err := ioutil.TempFile(os.TempDir(), "test-dir-")
 			require.NoError(t, err)
 
 			defer os.Remove(tmpFile.Name())
@@ -297,11 +420,17 @@ func TestStartFileSystemProvider(t *testing.T) {
 
 			defer os.Remove(tmpDir)
 
+			writeContents := x.IfThenElse(tc.writeContents != nil,
+				tc.writeContents,
+				func(t *testing.T, file *os.File, dir string) { t.Helper() },
+			)
+
 			// GIVEN
 			provider := tc.createProvider(t, tmpFile, tmpDir)
 
 			// WHEN
 			err = provider.Start()
+			writeContents(t, tmpFile, tmpDir)
 
 			// nolint: errcheck
 			defer provider.Stop()

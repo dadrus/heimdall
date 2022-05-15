@@ -5,7 +5,6 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/rs/zerolog"
@@ -154,36 +153,31 @@ func (p *fileSystemProvider) watchFiles() {
 	}
 }
 
-func (p *fileSystemProvider) getFilePath(event fsnotify.Event) string {
-	if strings.HasSuffix(p.src, event.Name) {
-		return p.src
-	}
-
-	// rule sets are in a directory
-	return filepath.Join(p.src, event.Name)
-}
-
 func (p *fileSystemProvider) notifyRuleSetDeleted(evt fsnotify.Event) {
-	file := p.getFilePath(evt)
-
 	p.ruleSetChanged(event.RuleSetChangedEvent{
-		Src:        "file_system:" + file,
+		Src:        "file_system:" + evt.Name,
 		ChangeType: event.Remove,
 	})
 }
 
 func (p *fileSystemProvider) notifyRuleSetCreated(evt fsnotify.Event) {
-	file := p.getFilePath(evt)
+	file := evt.Name
 
 	data, err := os.ReadFile(file)
 	if err != nil {
-		p.logger.Error().Err(err).Str("file", evt.Name).Msg("Failed reading")
+		p.logger.Error().Err(err).Str("file", file).Msg("Failed reading")
+
+		return
+	}
+
+	if len(data) == 0 {
+		p.logger.Warn().Msgf("%s is empty", file)
 
 		return
 	}
 
 	p.ruleSetChanged(event.RuleSetChangedEvent{
-		Src:        "file_system:" + evt.Name,
+		Src:        "file_system:" + file,
 		Definition: data,
 		ChangeType: event.Create,
 	})
