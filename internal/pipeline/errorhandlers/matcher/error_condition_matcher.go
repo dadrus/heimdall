@@ -6,9 +6,9 @@ import (
 )
 
 type ErrorConditionMatcher struct {
-	Error  *ErrorTypeMatcher `mapstructure:"error"`
-	CIDR   *CIDRMatcher      `mapstructure:"request_cidr"`
-	Header *HeaderMatcher    `mapstructure:"request_header"`
+	Error   *ErrorTypeMatcher `mapstructure:"error"`
+	CIDR    *CIDRMatcher      `mapstructure:"request_cidr"`
+	Headers *HeaderMatcher    `mapstructure:"request_headers"`
 }
 
 func (ecm ErrorConditionMatcher) Match(ctx heimdall.Context, err error) bool {
@@ -20,8 +20,8 @@ func (ecm ErrorConditionMatcher) Match(ctx heimdall.Context, err error) bool {
 		func() bool { return ecm.CIDR.Match(ctx.RequestClientIPs()...) },
 		func() bool { return true })
 
-	headerMatched := x.IfThenElseExec(ecm.Header != nil,
-		func() bool { return ecm.Header.Match(ctx.RequestHeaders()) },
+	headerMatched := x.IfThenElseExec(ecm.Headers != nil,
+		func() bool { return ecm.Headers.Match(ctx.RequestHeaders()) },
 		func() bool { return true })
 
 	return errorMatched && ipMatched && headerMatched

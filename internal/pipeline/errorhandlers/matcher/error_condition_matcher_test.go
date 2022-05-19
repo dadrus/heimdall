@@ -26,9 +26,9 @@ func TestErrorConditionMatcherMatch(t *testing.T) {
 		{
 			uc: "doesn't match on error only",
 			matcher: ErrorConditionMatcher{
-				Error:  &ErrorTypeMatcher{heimdall.ErrConfiguration},
-				CIDR:   cidrMatcher,
-				Header: &HeaderMatcher{"foobar": {"bar", "foo"}},
+				Error:   &ErrorTypeMatcher{heimdall.ErrConfiguration},
+				CIDR:    cidrMatcher,
+				Headers: &HeaderMatcher{"foobar": {"bar", "foo"}},
 			},
 			setupCtx: func(ctx *testsupport.MockContext) {
 				t.Helper()
@@ -46,9 +46,9 @@ func TestErrorConditionMatcherMatch(t *testing.T) {
 		{
 			uc: "doesn't match on ip only",
 			matcher: ErrorConditionMatcher{
-				Error:  &ErrorTypeMatcher{heimdall.ErrConfiguration},
-				CIDR:   cidrMatcher,
-				Header: &HeaderMatcher{"foobar": {"bar", "foo"}},
+				Error:   &ErrorTypeMatcher{heimdall.ErrConfiguration},
+				CIDR:    cidrMatcher,
+				Headers: &HeaderMatcher{"foobar": {"bar", "foo"}},
 			},
 			setupCtx: func(ctx *testsupport.MockContext) {
 				t.Helper()
@@ -66,9 +66,9 @@ func TestErrorConditionMatcherMatch(t *testing.T) {
 		{
 			uc: "doesn't match on header only",
 			matcher: ErrorConditionMatcher{
-				Error:  &ErrorTypeMatcher{heimdall.ErrConfiguration},
-				CIDR:   cidrMatcher,
-				Header: &HeaderMatcher{"foobar": {"bar", "foo"}},
+				Error:   &ErrorTypeMatcher{heimdall.ErrConfiguration},
+				CIDR:    cidrMatcher,
+				Headers: &HeaderMatcher{"foobar": {"bar", "foo"}},
 			},
 			setupCtx: func(ctx *testsupport.MockContext) {
 				t.Helper()
@@ -86,9 +86,9 @@ func TestErrorConditionMatcherMatch(t *testing.T) {
 		{
 			uc: "doesn't match at all",
 			matcher: ErrorConditionMatcher{
-				Error:  &ErrorTypeMatcher{heimdall.ErrConfiguration},
-				CIDR:   cidrMatcher,
-				Header: &HeaderMatcher{"foobar": {"bar", "foo"}},
+				Error:   &ErrorTypeMatcher{heimdall.ErrConfiguration},
+				CIDR:    cidrMatcher,
+				Headers: &HeaderMatcher{"foobar": {"bar", "foo"}},
 			},
 			setupCtx: func(ctx *testsupport.MockContext) {
 				t.Helper()
@@ -106,9 +106,9 @@ func TestErrorConditionMatcherMatch(t *testing.T) {
 		{
 			uc: "matches having all matchers defined",
 			matcher: ErrorConditionMatcher{
-				Error:  &ErrorTypeMatcher{heimdall.ErrConfiguration},
-				CIDR:   cidrMatcher,
-				Header: &HeaderMatcher{"foobar": {"bar", "foo"}},
+				Error:   &ErrorTypeMatcher{heimdall.ErrConfiguration},
+				CIDR:    cidrMatcher,
+				Headers: &HeaderMatcher{"foobar": {"bar", "foo"}},
 			},
 			setupCtx: func(ctx *testsupport.MockContext) {
 				t.Helper()
@@ -137,7 +137,7 @@ func TestErrorConditionMatcherMatch(t *testing.T) {
 		{
 			uc: "matches having only header matcher defined",
 			matcher: ErrorConditionMatcher{
-				Header: &HeaderMatcher{"foobar": {"bar", "foo"}},
+				Headers: &HeaderMatcher{"foobar": {"bar", "foo"}},
 			},
 			setupCtx: func(ctx *testsupport.MockContext) {
 				t.Helper()

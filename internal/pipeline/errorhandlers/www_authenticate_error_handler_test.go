@@ -86,7 +86,7 @@ when:
 				assert.Equal(t, "Please authenticate", errorHandler.realm)
 				require.Len(t, errorHandler.m, 1)
 				assert.Nil(t, errorHandler.m[0].CIDR)
-				assert.Nil(t, errorHandler.m[0].Header)
+				assert.Nil(t, errorHandler.m[0].Headers)
 				require.NotNil(t, errorHandler.m[0].Error)
 				matchingErrors := *errorHandler.m[0].Error
 				assert.Len(t, matchingErrors, 1)
@@ -109,7 +109,7 @@ when:
 				assert.Equal(t, "What is your password", errorHandler.realm)
 				require.Len(t, errorHandler.m, 1)
 				assert.Nil(t, errorHandler.m[0].CIDR)
-				assert.Nil(t, errorHandler.m[0].Header)
+				assert.Nil(t, errorHandler.m[0].Headers)
 				require.NotNil(t, errorHandler.m[0].Error)
 				matchingErrors := *errorHandler.m[0].Error
 				assert.Len(t, matchingErrors, 1)
@@ -217,7 +217,7 @@ when:
 				assert.NotEqual(t, prototype.m, configured.m)
 				assert.Len(t, configured.m, 1)
 				assert.Nil(t, configured.m[0].CIDR)
-				assert.Nil(t, configured.m[0].Header)
+				assert.Nil(t, configured.m[0].Headers)
 				assert.NotNil(t, configured.m[0].Error)
 
 				matchingErrors := *configured.m[0].Error

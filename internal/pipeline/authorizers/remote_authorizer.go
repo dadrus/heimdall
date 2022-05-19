@@ -43,21 +43,21 @@ func init() {
 }
 
 type remoteAuthorizer struct {
-	e                 endpoint.Endpoint
-	name              string
-	payload           template.Template
-	headerForUpstream []string
-	ttl               time.Duration
+	e                  endpoint.Endpoint
+	name               string
+	payload            template.Template
+	headersForUpstream []string
+	ttl                time.Duration
 }
 
 type authorizationInformation struct {
-	header  http.Header
+	headers http.Header
 	payload any
 }
 
 func (ai *authorizationInformation) AddHeadersTo(headerNames []string, ctx heimdall.Context) {
 	for _, headerName := range headerNames {
-		headerValue := ai.header.Get(headerName)
+		headerValue := ai.headers.Get(headerName)
 		if len(headerValue) != 0 {
 			ctx.AddResponseHeader(headerName, headerValue)
 		}
@@ -72,10 +72,10 @@ func (ai *authorizationInformation) AddAttributesTo(key string, sub *subject.Sub
 
 func newRemoteAuthorizer(name string, rawConfig map[any]any) (*remoteAuthorizer, error) {
 	type _config struct {
-		Endpoint                endpoint.Endpoint `mapstructure:"endpoint"`
-		Payload                 template.Template `mapstructure:"payload"`
-		ResponseHeaderToForward []string          `mapstructure:"forward_response_header_to_upstream"`
-		CacheTTL                time.Duration     `mapstructure:"cache_ttl"`
+		Endpoint                 endpoint.Endpoint `mapstructure:"endpoint"`
+		Payload                  template.Template `mapstructure:"payload"`
+		ResponseHeadersToForward []string          `mapstructure:"forward_response_headers_to_upstream"`
+		CacheTTL                 time.Duration     `mapstructure:"cache_ttl"`
 	}
 
 	var conf _config
@@ -95,11 +95,11 @@ func newRemoteAuthorizer(name string, rawConfig map[any]any) (*remoteAuthorizer,
 	}
 
 	return &remoteAuthorizer{
-		e:                 conf.Endpoint,
-		name:              name,
-		payload:           conf.Payload,
-		headerForUpstream: conf.ResponseHeaderToForward,
-		ttl:               conf.CacheTTL,
+		e:                  conf.Endpoint,
+		name:               name,
+		payload:            conf.Payload,
+		headersForUpstream: conf.ResponseHeadersToForward,
+		ttl:                conf.CacheTTL,
 	}, nil
 }
 
@@ -151,7 +151,7 @@ func (a *remoteAuthorizer) Execute(ctx heimdall.Context, sub *subject.Subject) e
 		}
 	}
 
-	authInfo.AddHeadersTo(a.headerForUpstream, ctx)
+	authInfo.AddHeadersTo(a.headersForUpstream, ctx)
 	authInfo.AddAttributesTo(a.name, sub)
 
 	return nil
@@ -186,7 +186,7 @@ func (a *remoteAuthorizer) doAuthorize(ctx heimdall.Context, sub *subject.Subjec
 	}
 
 	return &authorizationInformation{
-		header:  resp.Header,
+		headers: resp.Header,
 		payload: data,
 	}, nil
 }
@@ -261,10 +261,9 @@ func (a *remoteAuthorizer) WithConfig(rawConfig map[any]any) (Authorizer, error)
 	}
 
 	type _config struct {
-		Header                  map[string]template.Template `mapstructure:"header"`
-		Payload                 template.Template            `mapstructure:"payload"`
-		ResponseHeaderToForward []string                     `mapstructure:"forward_response_header_to_upstream"`
-		CacheTTL                time.Duration                `mapstructure:"cache_ttl"`
+		Payload                  template.Template `mapstructure:"payload"`
+		ResponseHeadersToForward []string          `mapstructure:"forward_response_headers_to_upstream"`
+		CacheTTL                 time.Duration     `mapstructure:"cache_ttl"`
 	}
 
 	var conf _config
@@ -277,8 +276,8 @@ func (a *remoteAuthorizer) WithConfig(rawConfig map[any]any) (Authorizer, error)
 		e:       a.e,
 		name:    a.name,
 		payload: x.IfThenElse(len(conf.Payload) != 0, conf.Payload, a.payload),
-		headerForUpstream: x.IfThenElse(len(conf.ResponseHeaderToForward) != 0,
-			conf.ResponseHeaderToForward, a.headerForUpstream),
+		headersForUpstream: x.IfThenElse(len(conf.ResponseHeadersToForward) != 0,
+			conf.ResponseHeadersToForward, a.headersForUpstream),
 		ttl: x.IfThenElse(conf.CacheTTL > 0, conf.CacheTTL, a.ttl),
 	}, nil
 }
@@ -298,7 +297,7 @@ func (a *remoteAuthorizer) calculateCacheKey(sub *subject.Subject) (string, erro
 	hash := sha256.New()
 	hash.Write([]byte(a.e.Hash()))
 	hash.Write([]byte(a.name))
-	hash.Write([]byte(strings.Join(a.headerForUpstream, ",")))
+	hash.Write([]byte(strings.Join(a.headersForUpstream, ",")))
 	hash.Write([]byte(a.payload))
 	hash.Write(ttlBytes)
 	hash.Write(rawSub)

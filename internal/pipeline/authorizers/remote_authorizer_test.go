@@ -90,7 +90,7 @@ payload: "{{ .ID }}"
 
 				require.NotNil(t, auth)
 				assert.Equal(t, template.Template("{{ .ID }}"), auth.payload)
-				assert.Empty(t, auth.headerForUpstream)
+				assert.Empty(t, auth.headersForUpstream)
 				assert.Zero(t, auth.ttl)
 			},
 		},
@@ -100,7 +100,7 @@ payload: "{{ .ID }}"
 endpoint:
   url: http://foo.bar
 payload: "{{ .Attributes.foo }}"
-forward_response_header_to_upstream:
+forward_response_headers_to_upstream:
   - Foo
   - Bar
 cache_ttl: 5s
@@ -112,9 +112,9 @@ cache_ttl: 5s
 
 				require.NotNil(t, auth)
 				assert.Equal(t, template.Template("{{ .Attributes.foo }}"), auth.payload)
-				assert.Len(t, auth.headerForUpstream, 2)
-				assert.Contains(t, auth.headerForUpstream, "Foo")
-				assert.Contains(t, auth.headerForUpstream, "Bar")
+				assert.Len(t, auth.headersForUpstream, 2)
+				assert.Contains(t, auth.headersForUpstream, "Foo")
+				assert.Contains(t, auth.headersForUpstream, "Bar")
 				assert.NotNil(t, auth.ttl)
 				assert.Equal(t, 5*time.Second, auth.ttl)
 			},
@@ -216,7 +216,7 @@ cache_ttl: 1s
 				assert.Equal(t, prototype.e, configured.e)
 				assert.Equal(t, prototype.name, configured.name)
 				assert.Equal(t, prototype.payload, configured.payload)
-				assert.Empty(t, configured.headerForUpstream)
+				assert.Empty(t, configured.headersForUpstream)
 				assert.NotNil(t, configured.ttl)
 			},
 		},
@@ -230,7 +230,7 @@ endpoint:
 `),
 			config: []byte(`
 payload: Baz
-forward_response_header_to_upstream:
+forward_response_headers_to_upstream:
   - Bar
   - Foo
 cache_ttl: 15s
@@ -245,13 +245,13 @@ cache_ttl: 15s
 				assert.Equal(t, prototype.e, configured.e)
 				assert.Equal(t, prototype.name, configured.name)
 				assert.Equal(t, template.Template("Baz"), configured.payload)
-				assert.Len(t, configured.headerForUpstream, 2)
-				assert.Contains(t, configured.headerForUpstream, "Bar")
-				assert.Contains(t, configured.headerForUpstream, "Foo")
+				assert.Len(t, configured.headersForUpstream, 2)
+				assert.Contains(t, configured.headersForUpstream, "Bar")
+				assert.Contains(t, configured.headersForUpstream, "Foo")
 				assert.Equal(t, 15*time.Second, configured.ttl)
 
 				assert.NotEqual(t, prototype.ttl, configured.ttl)
-				assert.NotEqual(t, prototype.headerForUpstream, configured.headerForUpstream)
+				assert.NotEqual(t, prototype.headersForUpstream, configured.headersForUpstream)
 				assert.NotEqual(t, prototype.payload, configured.payload)
 			},
 		},
@@ -293,7 +293,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 		authorizationEndpointCalled bool
 		checkRequest                func(req *http.Request)
 
-		responseHeader      map[string]string
+		responseHeaders     map[string]string
 		responseContentType string
 		responseContent     []byte
 		responseCode        int
@@ -304,7 +304,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 
 		checkRequest(r)
 
-		for hn, hv := range responseHeader {
+		for hn, hv := range responseHeaders {
 			w.Header().Set(hn, hv)
 		}
 
@@ -384,8 +384,8 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 						"Foo-Bar":      "{{ .Attributes.bar }}",
 					},
 				},
-				payload:           `{ "user_id": {{ quote .ID }} }`,
-				headerForUpstream: []string{"X-Foo-Bar", "X-Bar-Foo"},
+				payload:            `{ "user_id": {{ quote .ID }} }`,
+				headersForUpstream: []string{"X-Foo-Bar", "X-Bar-Foo"},
 			},
 			subject: &subject.Subject{
 				ID:         "my-id",
@@ -423,7 +423,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 				require.NoError(t, err)
 				responseContent = rawData
 				responseContentType = "application/json"
-				responseHeader = map[string]string{"X-Foo-Bar": "HeyFoo"}
+				responseHeaders = map[string]string{"X-Foo-Bar": "HeyFoo"}
 			},
 			configureContext: func(t *testing.T, ctx *testsupport.MockContext) {
 				t.Helper()
@@ -463,9 +463,9 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 						"Content-Type": "application/x-www-form-urlencoded",
 					},
 				},
-				payload:           `user_id={{ urlenc .ID }}&{{ .Attributes.bar }}=foo`,
-				headerForUpstream: []string{"X-Foo-Bar", "X-Bar-Foo"},
-				ttl:               20 * time.Second,
+				payload:            `user_id={{ urlenc .ID }}&{{ .Attributes.bar }}=foo`,
+				headersForUpstream: []string{"X-Foo-Bar", "X-Bar-Foo"},
+				ttl:                20 * time.Second,
 			},
 			subject: &subject.Subject{
 				ID:         "my id",
@@ -492,7 +492,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 				}
 
 				responseCode = http.StatusOK
-				responseHeader = map[string]string{"X-Foo-Bar": "HeyFoo"}
+				responseHeaders = map[string]string{"X-Foo-Bar": "HeyFoo"}
 			},
 			configureContext: func(t *testing.T, ctx *testsupport.MockContext) {
 				t.Helper()
@@ -508,7 +508,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 				cch.On("Get", cacheKey).Return(nil)
 				cch.On("Set", cacheKey,
 					mock.MatchedBy(func(val *authorizationInformation) bool {
-						return val != nil && val.payload == nil && len(val.header.Get("X-Foo-Bar")) != 0
+						return val != nil && val.payload == nil && len(val.headers.Get("X-Foo-Bar")) != 0
 					}), auth.ttl)
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
@@ -534,9 +534,9 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 						"Foo-Bar":      "{{ .Attributes.bar }}",
 					},
 				},
-				payload:           `user_id={{ urlenc .ID }}&{{ .Attributes.bar }}=foo`,
-				headerForUpstream: []string{"X-Foo-Bar", "X-Bar-Foo"},
-				ttl:               20 * time.Second,
+				payload:            `user_id={{ urlenc .ID }}&{{ .Attributes.bar }}=foo`,
+				headersForUpstream: []string{"X-Foo-Bar", "X-Bar-Foo"},
+				ttl:                20 * time.Second,
 			},
 			subject: &subject.Subject{
 				ID:         "my id",
@@ -552,7 +552,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 				t.Helper()
 
 				cch.On("Get", mock.Anything).Return(&authorizationInformation{
-					header: http.Header{
+					headers: http.Header{
 						"X-Foo-Bar": {"HeyFoo"},
 						"X-Bar-Foo": {"HeyBar"},
 					},
@@ -587,9 +587,9 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 						"Foo-Bar":      "{{ .Attributes.bar }}",
 					},
 				},
-				payload:           `user_id={{ urlenc .ID }}&{{ .Attributes.bar }}=foo`,
-				headerForUpstream: []string{"X-Foo-Bar", "X-Bar-Foo"},
-				ttl:               20 * time.Second,
+				payload:            `user_id={{ urlenc .ID }}&{{ .Attributes.bar }}=foo`,
+				headersForUpstream: []string{"X-Foo-Bar", "X-Bar-Foo"},
+				ttl:                20 * time.Second,
 			},
 			subject: &subject.Subject{
 				ID:         "my id",
@@ -611,7 +611,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 				t.Helper()
 
 				responseCode = http.StatusOK
-				responseHeader = map[string]string{"X-Foo-Bar": "HeyFoo"}
+				responseHeaders = map[string]string{"X-Foo-Bar": "HeyFoo"}
 
 				rawData, err := json.Marshal(map[string]any{
 					"access_granted": true,
@@ -721,7 +721,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 		t.Run("case="+tc.uc, func(t *testing.T) {
 			// GIVEN
 			authorizationEndpointCalled = false
-			responseHeader = nil
+			responseHeaders = nil
 			responseContentType = ""
 			responseContent = nil
 

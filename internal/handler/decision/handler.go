@@ -107,7 +107,7 @@ func (h *Handler) decisions(c *fiber.Ctx) error {
 		c:           c,
 		signer:      h.s,
 		reqURL:      reqURL,
-		respHeader:  make(http.Header),
+		respHeaders: make(http.Header),
 		respCookies: make(map[string]string),
 	}
 
@@ -130,8 +130,8 @@ func (h *Handler) decisions(c *fiber.Ctx) error {
 		Bool("granted", true).
 		Msg("Access request granted")
 
-	for k := range ctx.respHeader {
-		c.Response().Header.Set(k, ctx.respHeader.Get(k))
+	for k := range ctx.respHeaders {
+		c.Response().Header.Set(k, ctx.respHeaders.Get(k))
 	}
 
 	for k, v := range ctx.respCookies {
@@ -186,7 +186,7 @@ func (h *Handler) getRequestMethod(c *fiber.Ctx) string {
 type requestContext struct {
 	c           *fiber.Ctx
 	reqURL      *url.URL
-	respHeader  http.Header
+	respHeaders http.Header
 	respCookies map[string]string
 	signer      heimdall.JWTSigner
 	err         error
@@ -201,7 +201,7 @@ func (s *requestContext) RequestFormParameter(name string) string  { return s.c.
 func (s *requestContext) RequestBody() []byte                      { return s.c.Body() }
 func (s *requestContext) AppContext() context.Context              { return s.c.UserContext() }
 func (s *requestContext) SetPipelineError(err error)               { s.err = err }
-func (s *requestContext) AddResponseHeader(name, value string)     { s.respHeader.Add(name, value) }
+func (s *requestContext) AddResponseHeader(name, value string)     { s.respHeaders.Add(name, value) }
 func (s *requestContext) AddResponseCookie(name, value string)     { s.respCookies[name] = value }
 func (s *requestContext) Signer() heimdall.JWTSigner               { return s.signer }
 func (s *requestContext) RequestURL() *url.URL                     { return s.reqURL }

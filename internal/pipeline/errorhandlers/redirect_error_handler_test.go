@@ -120,7 +120,7 @@ when:
 				assert.Len(t, redEH.returnTo, 0)
 				require.Len(t, redEH.m, 1)
 				assert.Nil(t, redEH.m[0].CIDR)
-				assert.Nil(t, redEH.m[0].Header)
+				assert.Nil(t, redEH.m[0].Headers)
 				require.NotNil(t, redEH.m[0].Error)
 				matchingErrors := *redEH.m[0].Error
 				assert.Len(t, matchingErrors, 1)
@@ -137,14 +137,14 @@ when:
   - error:
       - unauthorized
       - forbidden
-    request_header:
+    request_headers:
       Accept:
         - text/html
     request_cidr:
       - 192.168.10.0/24
   - error:
       - internal_server_error
-    request_header:
+    request_headers:
       Accept:
         - '*/*'
         - application/json
@@ -171,9 +171,9 @@ when:
 				condition1 := redEH.m[0]
 				require.NotNil(t, condition1.CIDR)
 				assert.True(t, condition1.CIDR.Match("192.168.10.1", "192.168.10.10"))
-				require.NotNil(t, condition1.Header)
-				require.Len(t, *condition1.Header, 1)
-				assert.Equal(t, []string{"text/html"}, (*condition1.Header)["Accept"])
+				require.NotNil(t, condition1.Headers)
+				require.Len(t, *condition1.Headers, 1)
+				assert.Equal(t, []string{"text/html"}, (*condition1.Headers)["Accept"])
 				require.NotNil(t, condition1.Error)
 				matchingErrors1 := *condition1.Error
 				assert.Len(t, matchingErrors1, 2)
@@ -183,10 +183,10 @@ when:
 				condition2 := redEH.m[1]
 				require.NotNil(t, condition2.CIDR)
 				assert.True(t, condition2.CIDR.Match("192.168.1.1", "192.168.1.3", "1.1.1.2", "1.1.1.3"))
-				require.NotNil(t, condition2.Header)
-				require.Len(t, *condition2.Header, 2)
-				assert.Equal(t, []string{"*/*", "application/json"}, (*condition2.Header)["Accept"])
-				assert.Equal(t, []string{"application/json"}, (*condition2.Header)["Content-Type"])
+				require.NotNil(t, condition2.Headers)
+				require.Len(t, *condition2.Headers, 2)
+				assert.Equal(t, []string{"*/*", "application/json"}, (*condition2.Headers)["Accept"])
+				assert.Equal(t, []string{"application/json"}, (*condition2.Headers)["Content-Type"])
 				require.NotNil(t, condition2.Error)
 				matchingErrors2 := *condition2.Error
 				assert.Len(t, matchingErrors2, 2)
@@ -293,7 +293,7 @@ when:
 				assert.NotEqual(t, prototype.m, configured.m)
 				assert.Len(t, configured.m, 1)
 				assert.Nil(t, configured.m[0].CIDR)
-				assert.Nil(t, configured.m[0].Header)
+				assert.Nil(t, configured.m[0].Headers)
 				assert.NotNil(t, configured.m[0].Error)
 
 				matchingErrors := *configured.m[0].Error

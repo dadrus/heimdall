@@ -299,7 +299,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 		endpointCalled bool
 		checkRequest   func(req *http.Request)
 
-		responseHeader      map[string]string
+		responseHeaders     map[string]string
 		responseContentType string
 		responseContent     []byte
 		responseCode        int
@@ -310,7 +310,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 
 		checkRequest(r)
 
-		for hn, hv := range responseHeader {
+		for hn, hv := range responseHeaders {
 			w.Header().Set(hn, hv)
 		}
 
@@ -661,7 +661,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 		t.Run("case="+tc.uc, func(t *testing.T) {
 			// GIVEN
 			endpointCalled = false
-			responseHeader = nil
+			responseHeaders = nil
 			responseContentType = ""
 			responseContent = nil
 
