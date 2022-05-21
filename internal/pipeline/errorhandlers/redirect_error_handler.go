@@ -17,7 +17,7 @@ import (
 // nolint
 func init() {
 	registerErrorHandlerTypeFactory(
-		func(_ string, typ config.PipelineObjectType, conf map[any]any) (bool, ErrorHandler, error) {
+		func(_ string, typ config.PipelineObjectType, conf map[string]any) (bool, ErrorHandler, error) {
 			if typ != config.POTRedirect {
 				return false, nil, nil
 			}
@@ -35,7 +35,7 @@ type redirectErrorHandler struct {
 	m        []matcher.ErrorConditionMatcher
 }
 
-func newRedirectErrorHandler(rawConfig map[any]any) (*redirectErrorHandler, error) {
+func newRedirectErrorHandler(rawConfig map[string]any) (*redirectErrorHandler, error) {
 	type _config struct {
 		To       *url.URL                        `mapstructure:"to"`
 		Code     int                             `mapstructure:"code"`
@@ -98,7 +98,7 @@ func (eh *redirectErrorHandler) Execute(ctx heimdall.Context, err error) (bool, 
 	return true, nil
 }
 
-func (eh *redirectErrorHandler) WithConfig(rawConfig map[any]any) (ErrorHandler, error) {
+func (eh *redirectErrorHandler) WithConfig(rawConfig map[string]any) (ErrorHandler, error) {
 	if len(rawConfig) == 0 {
 		return eh, nil
 	}

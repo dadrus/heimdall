@@ -44,8 +44,6 @@ type ruleFactory struct {
 	hasDefaultRule bool
 }
 
-// will address the warning later
-// nolint: gocognit, cyclop
 func (f *ruleFactory) createExecutePipeline(
 	pipeline []map[string]any,
 ) (compositeSubjectCreator, compositeSubjectHandler, compositeSubjectHandler, error) {
@@ -58,13 +56,7 @@ func (f *ruleFactory) createExecutePipeline(
 	for _, pipelineStep := range pipeline {
 		id, found := pipelineStep["authenticator"]
 		if found {
-			stepID, ok := id.(string)
-			if !ok {
-				return nil, nil, nil, errorchain.NewWithMessage(heimdall.ErrInternal,
-					"failed to convert rule step identifier to string")
-			}
-
-			authenticator, err := f.hf.CreateAuthenticator(stepID, pipelineStep["config"])
+			authenticator, err := f.hf.CreateAuthenticator(id.(string), f.getConfig(pipelineStep["config"]))
 			if err != nil {
 				return nil, nil, nil, err
 			}
@@ -81,13 +73,7 @@ func (f *ruleFactory) createExecutePipeline(
 
 		id, found = pipelineStep["authorizer"]
 		if found {
-			stepID, ok := id.(string)
-			if !ok {
-				return nil, nil, nil, errorchain.NewWithMessage(heimdall.ErrInternal,
-					"failed to convert rule step identifier to string")
-			}
-
-			authorizer, err := f.hf.CreateAuthorizer(stepID, pipelineStep["config"])
+			authorizer, err := f.hf.CreateAuthorizer(id.(string), f.getConfig(pipelineStep["config"]))
 			if err != nil {
 				return nil, nil, nil, err
 			}
@@ -99,13 +85,7 @@ func (f *ruleFactory) createExecutePipeline(
 
 		id, found = pipelineStep["hydrator"]
 		if found {
-			stepID, ok := id.(string)
-			if !ok {
-				return nil, nil, nil, errorchain.NewWithMessage(heimdall.ErrInternal,
-					"failed to convert rule step identifier to string")
-			}
-
-			hydrator, err := f.hf.CreateHydrator(stepID, pipelineStep["config"])
+			hydrator, err := f.hf.CreateHydrator(id.(string), f.getConfig(pipelineStep["config"]))
 			if err != nil {
 				return nil, nil, nil, err
 			}
@@ -117,13 +97,7 @@ func (f *ruleFactory) createExecutePipeline(
 
 		id, found = pipelineStep["mutator"]
 		if found {
-			stepID, ok := id.(string)
-			if !ok {
-				return nil, nil, nil, errorchain.NewWithMessage(heimdall.ErrInternal,
-					"failed to convert rule step identifier to string")
-			}
-
-			mutator, err := f.hf.CreateMutator(stepID, pipelineStep["config"])
+			mutator, err := f.hf.CreateMutator(id.(string), f.getConfig(pipelineStep["config"]))
 			if err != nil {
 				return nil, nil, nil, err
 			}
@@ -137,6 +111,28 @@ func (f *ruleFactory) createExecutePipeline(
 	}
 
 	return authenticators, subjectHandlers, mutators, nil
+}
+
+func (f *ruleFactory) getConfig(conf any) map[string]any {
+	var mapConf map[string]any
+
+	if conf != nil {
+		if m, ok := conf.(map[any]any); ok {
+			mapConf = make(map[string]any, len(m))
+
+			for k, v := range m {
+				// nolint: forcetypeassert
+				// ok if panics
+				mapConf[k.(string)] = v
+			}
+		} else if m, ok := conf.(map[string]any); ok {
+			mapConf = m
+		} else {
+			panic("unexpected type for config")
+		}
+	}
+
+	return mapConf
 }
 
 func (f *ruleFactory) DefaultRule() Rule {
@@ -209,13 +205,7 @@ func (f *ruleFactory) createOnErrorPipeline(ehConfigs []map[string]any) (composi
 	for _, ehStep := range ehConfigs {
 		id, found := ehStep["error_handler"]
 		if found {
-			stepID, ok := id.(string)
-			if !ok {
-				return nil, errorchain.NewWithMessage(heimdall.ErrInternal,
-					"failed to convert rule step identifier to string")
-			}
-
-			eh, err := f.hf.CreateErrorHandler(stepID, ehStep["config"])
+			eh, err := f.hf.CreateErrorHandler(id.(string), f.getConfig(ehStep["config"]))
 			if err != nil {
 				return nil, err
 			}

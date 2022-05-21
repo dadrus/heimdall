@@ -11,7 +11,7 @@ import (
 // nolint
 func init() {
 	registerErrorHandlerTypeFactory(
-		func(_ string, typ config.PipelineObjectType, conf map[any]any) (bool, ErrorHandler, error) {
+		func(_ string, typ config.PipelineObjectType, conf map[string]any) (bool, ErrorHandler, error) {
 			if typ != config.POTDefault {
 				return false, nil, nil
 			}
@@ -37,6 +37,6 @@ func (eh *defaultErrorHandler) Execute(ctx heimdall.Context, err error) (bool, e
 	return true, nil
 }
 
-func (eh *defaultErrorHandler) WithConfig(config map[any]any) (ErrorHandler, error) {
+func (eh *defaultErrorHandler) WithConfig(config map[string]any) (ErrorHandler, error) {
 	return eh, nil
 }

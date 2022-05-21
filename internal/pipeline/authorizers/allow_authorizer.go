@@ -12,7 +12,7 @@ import (
 // nolint
 func init() {
 	registerAuthorizerTypeFactory(
-		func(_ string, typ config.PipelineObjectType, conf map[any]any) (bool, Authorizer, error) {
+		func(_ string, typ config.PipelineObjectType, conf map[string]any) (bool, Authorizer, error) {
 			if typ != config.POTAllow {
 				return false, nil, nil
 			}
@@ -34,6 +34,6 @@ func (*allowAuthorizer) Execute(ctx heimdall.Context, _ *subject.Subject) error 
 	return nil
 }
 
-func (a *allowAuthorizer) WithConfig(map[any]any) (Authorizer, error) {
+func (a *allowAuthorizer) WithConfig(map[string]any) (Authorizer, error) {
 	return a, nil
 }

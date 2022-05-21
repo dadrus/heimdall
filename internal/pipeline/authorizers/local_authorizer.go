@@ -14,7 +14,7 @@ import (
 // nolint
 func init() {
 	registerAuthorizerTypeFactory(
-		func(_ string, typ config.PipelineObjectType, conf map[any]any) (bool, Authorizer, error) {
+		func(_ string, typ config.PipelineObjectType, conf map[string]any) (bool, Authorizer, error) {
 			if typ != config.POTLocal {
 				return false, nil, nil
 			}
@@ -29,7 +29,7 @@ type localAuthorizer struct {
 	p *goja.Program
 }
 
-func newLocalAuthorizer(rawConfig map[any]any) (*localAuthorizer, error) {
+func newLocalAuthorizer(rawConfig map[string]any) (*localAuthorizer, error) {
 	type _config struct {
 		Script string `mapstructure:"script"`
 	}
@@ -92,7 +92,7 @@ func (a *localAuthorizer) Execute(ctx heimdall.Context, sub *subject.Subject) er
 	return nil
 }
 
-func (a *localAuthorizer) WithConfig(rawConfig map[any]any) (Authorizer, error) {
+func (a *localAuthorizer) WithConfig(rawConfig map[string]any) (Authorizer, error) {
 	if len(rawConfig) == 0 {
 		return a, nil
 	}

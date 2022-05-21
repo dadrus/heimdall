@@ -1,11 +1,14 @@
 package testsupport
 
-import "gopkg.in/yaml.v2"
+import (
+	"gopkg.in/yaml.v2"
+)
 
-func DecodeTestConfig(data []byte) (map[any]any, error) {
-	var res map[any]any
+func DecodeTestConfig(data []byte) (map[string]any, error) {
+	var out map[string]any
+	if err := yaml.Unmarshal(data, &out); err != nil {
+		return nil, err
+	}
 
-	err := yaml.Unmarshal(data, &res)
-
-	return res, err
+	return out, nil
 }

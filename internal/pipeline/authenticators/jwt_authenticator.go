@@ -32,7 +32,7 @@ const defaultTTL = 10 * time.Minute
 // nolint
 func init() {
 	registerAuthenticatorTypeFactory(
-		func(_ string, typ config.PipelineObjectType, conf map[any]any) (bool, Authenticator, error) {
+		func(_ string, typ config.PipelineObjectType, conf map[string]any) (bool, Authenticator, error) {
 			if typ != config.POTJwt {
 				return false, nil, nil
 			}
@@ -51,7 +51,7 @@ type jwtAuthenticator struct {
 	ads extractors.AuthDataExtractStrategy
 }
 
-func newJwtAuthenticator(rawConfig map[any]any) (*jwtAuthenticator, error) {
+func newJwtAuthenticator(rawConfig map[string]any) (*jwtAuthenticator, error) {
 	type _config struct {
 		Endpoint       endpoint.Endpoint                   `mapstructure:"jwks_endpoint"`
 		AuthDataSource extractors.CompositeExtractStrategy `mapstructure:"jwt_from"`
@@ -159,7 +159,7 @@ func (a *jwtAuthenticator) Execute(ctx heimdall.Context) (*subject.Subject, erro
 	return sub, nil
 }
 
-func (a *jwtAuthenticator) WithConfig(config map[any]any) (Authenticator, error) {
+func (a *jwtAuthenticator) WithConfig(config map[string]any) (Authenticator, error) {
 	// this authenticator allows assertions and ttl to be redefined on the rule level
 	if len(config) == 0 {
 		return a, nil

@@ -29,13 +29,13 @@ func registerFileSystemProvider(
 	conf config.Configuration,
 	queue event.RuleSetChangedEventQueue,
 ) error {
-	if conf.Rules.Provider.File == nil {
+	if conf.Rules.Providers.File == nil {
 		logger.Debug().Msg("File based rule provider not configured. Skipping it.")
 
 		return nil
 	}
 
-	provider, err := newFileSystemProvider(conf.Rules.Provider.File, queue, logger)
+	provider, err := newFileSystemProvider(conf.Rules.Providers.File, queue, logger)
 	if err != nil {
 		logger.Error().Err(err).Msg("Failed to load rule definitions provider: file_system")
 

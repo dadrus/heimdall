@@ -22,49 +22,56 @@ func DecodeCompositeExtractStrategyHookFunc() mapstructure.DecodeHookFunc {
 			return data, nil
 		}
 
-		// nolint
+		// nolint: forcetypeassert
 		// already checked above
-		strategies = make(CompositeExtractStrategy, len(data.([]any)))
+		array := data.([]any)
+		strategies = make(CompositeExtractStrategy, len(array))
 
-		// nolint
-		// already checked above
-		for i, entry := range data.([]any) {
-			if values, ok := entry.(map[any]any); ok {
-				strategy, err := createStrategyFromAnyAnyMap(values)
-				if err != nil {
-					return data, err
+		for idx, entry := range array {
+			typed := map[string]string{}
+
+			if values, ok := entry.(map[string]any); ok {
+				for k, v := range values {
+					// nolint: forcetypeassert
+					// ok if panics
+					typed[k] = v.(string)
 				}
-
-				strategies[i] = strategy
+			} else if values, ok := entry.(map[any]any); ok {
+				for k, v := range values {
+					// nolint: forcetypeassert
+					// ok if panics
+					typed[k.(string)] = v.(string)
+				}
 			} else {
 				return nil, errorchain.
-					NewWithMessage(heimdall.ErrInternal, "unexpected authentication config type")
+					NewWithMessagef(heimdall.ErrInternal,
+						"unexpected authentication config type %s", reflect.TypeOf(entry).String())
 			}
+
+			strategy, err := createStrategy(typed)
+			if err != nil {
+				return data, err
+			}
+
+			strategies[idx] = strategy
 		}
 
 		return strategies, nil
 	}
 }
 
-func createStrategyFromAnyAnyMap(data map[any]any) (AuthDataExtractStrategy, error) {
+func createStrategy(data map[string]string) (AuthDataExtractStrategy, error) {
 	if value, ok := data["header"]; ok {
 		var prefix string
 		if p, ok := data["strip_prefix"]; ok {
-			// nolint
-			// ok if panics
-			prefix = p.(string)
+			prefix = p
 		}
-		// nolint
-		// ok if panics
-		return &HeaderValueExtractStrategy{Name: value.(string), Prefix: prefix}, nil
+
+		return &HeaderValueExtractStrategy{Name: value, Prefix: prefix}, nil
 	} else if value, ok := data["cookie"]; ok {
-		// nolint
-		// ok if panics
-		return &CookieValueExtractStrategy{Name: value.(string)}, nil
+		return &CookieValueExtractStrategy{Name: value}, nil
 	} else if value, ok := data["query_parameter"]; ok {
-		// nolint
-		// ok if panics
-		return &QueryParameterExtractStrategy{Name: value.(string)}, nil
+		return &QueryParameterExtractStrategy{Name: value}, nil
 	} else {
 		return nil, errorchain.
 			NewWithMessage(heimdall.ErrConfiguration, "unsupported authentication source")

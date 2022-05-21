@@ -39,7 +39,7 @@ func TestDefaultErrorHandlerPrototype(t *testing.T) {
 
 	// WHEN
 	eh1, err1 := prototype.WithConfig(nil)
-	eh2, err2 := prototype.WithConfig(map[any]any{"foo": "bar"})
+	eh2, err2 := prototype.WithConfig(map[string]any{"foo": "bar"})
 
 	// THEN
 	assert.NoError(t, err1)

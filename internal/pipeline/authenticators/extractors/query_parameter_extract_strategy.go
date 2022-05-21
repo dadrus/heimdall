@@ -20,7 +20,7 @@ func (es QueryParameterExtractStrategy) GetAuthData(s heimdall.Context) (AuthDat
 		}, nil
 	}
 
-	return nil, errorchain.NewWithMessagef(ErrAuthData, "no '%s' query parameter present", es.Name)
+	return nil, errorchain.NewWithMessagef(heimdall.ErrArgument, "no '%s' query parameter present", es.Name)
 }
 
 type queryParameterAuthData struct {

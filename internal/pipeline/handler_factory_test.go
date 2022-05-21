@@ -38,7 +38,7 @@ func (m *mockAuthenticator) Execute(ctx heimdall.Context) (*subject.Subject, err
 	return nil, args.Error(1)
 }
 
-func (m *mockAuthenticator) WithConfig(config map[any]any) (authenticators.Authenticator, error) {
+func (m *mockAuthenticator) WithConfig(config map[string]any) (authenticators.Authenticator, error) {
 	args := m.Called(config)
 
 	if val := args.Get(0); val != nil {
@@ -61,7 +61,7 @@ func (m *mockAuthorizer) Execute(ctx heimdall.Context, sub *subject.Subject) err
 	return m.Called(ctx, sub).Error(0)
 }
 
-func (m *mockAuthorizer) WithConfig(config map[any]any) (authorizers.Authorizer, error) {
+func (m *mockAuthorizer) WithConfig(config map[string]any) (authorizers.Authorizer, error) {
 	args := m.Called(config)
 
 	if val := args.Get(0); val != nil {
@@ -84,7 +84,7 @@ func (m *mockHydrator) Execute(ctx heimdall.Context, sub *subject.Subject) error
 	return m.Called(ctx, sub).Error(0)
 }
 
-func (m *mockHydrator) WithConfig(config map[any]any) (hydrators.Hydrator, error) {
+func (m *mockHydrator) WithConfig(config map[string]any) (hydrators.Hydrator, error) {
 	args := m.Called(config)
 
 	if val := args.Get(0); val != nil {
@@ -107,7 +107,7 @@ func (m *mockMutator) Execute(ctx heimdall.Context, sub *subject.Subject) error 
 	return m.Called(ctx, sub).Error(0)
 }
 
-func (m *mockMutator) WithConfig(config map[any]any) (mutators.Mutator, error) {
+func (m *mockMutator) WithConfig(config map[string]any) (mutators.Mutator, error) {
 	args := m.Called(config)
 
 	if val := args.Get(0); val != nil {
@@ -132,7 +132,7 @@ func (m *mockErrorHandler) Execute(ctx heimdall.Context, err error) (bool, error
 	return args.Bool(0), args.Error(0)
 }
 
-func (m *mockErrorHandler) WithConfig(config map[any]any) (errorhandlers.ErrorHandler, error) {
+func (m *mockErrorHandler) WithConfig(config map[string]any) (errorhandlers.ErrorHandler, error) {
 	args := m.Called(config)
 
 	if val := args.Get(0); val != nil {
@@ -155,7 +155,7 @@ func TestHandlerFactoryCreateAuthenticator(t *testing.T) {
 	for _, tc := range []struct {
 		uc            string
 		id            string
-		conf          any
+		conf          map[string]any
 		configureMock func(t *testing.T, mAuth *mockAuthenticator)
 		assert        func(t *testing.T, err error, auth authenticators.Authenticator)
 	}{
@@ -171,19 +171,8 @@ func TestHandlerFactoryCreateAuthenticator(t *testing.T) {
 			},
 		},
 		{
-			uc:   "with bad config type",
-			conf: "hi Foo",
-			assert: func(t *testing.T, err error, auth authenticators.Authenticator) {
-				t.Helper()
-
-				require.Error(t, err)
-				assert.ErrorIs(t, err, ErrAuthenticatorCreation)
-				assert.Contains(t, err.Error(), "expected type")
-			},
-		},
-		{
 			uc:   "with failing creation from prototype",
-			conf: map[any]any{"foo": "bar"},
+			conf: map[string]any{"foo": "bar"},
 			configureMock: func(t *testing.T, mAuth *mockAuthenticator) {
 				t.Helper()
 
@@ -199,7 +188,7 @@ func TestHandlerFactoryCreateAuthenticator(t *testing.T) {
 		},
 		{
 			uc:   "successful creation from prototype",
-			conf: map[any]any{"foo": "bar"},
+			conf: map[string]any{"foo": "bar"},
 			configureMock: func(t *testing.T, mAuth *mockAuthenticator) {
 				t.Helper()
 
@@ -259,7 +248,7 @@ func TestHandlerFactoryCreateAuthorizer(t *testing.T) {
 	for _, tc := range []struct {
 		uc            string
 		id            string
-		conf          any
+		conf          map[string]any
 		configureMock func(t *testing.T, mAuth *mockAuthorizer)
 		assert        func(t *testing.T, err error, auth authorizers.Authorizer)
 	}{
@@ -275,19 +264,8 @@ func TestHandlerFactoryCreateAuthorizer(t *testing.T) {
 			},
 		},
 		{
-			uc:   "with bad config type",
-			conf: "hi Foo",
-			assert: func(t *testing.T, err error, auth authorizers.Authorizer) {
-				t.Helper()
-
-				require.Error(t, err)
-				assert.ErrorIs(t, err, ErrAuthorizerCreation)
-				assert.Contains(t, err.Error(), "expected type")
-			},
-		},
-		{
 			uc:   "with failing creation from prototype",
-			conf: map[any]any{"foo": "bar"},
+			conf: map[string]any{"foo": "bar"},
 			configureMock: func(t *testing.T, mAuth *mockAuthorizer) {
 				t.Helper()
 
@@ -303,7 +281,7 @@ func TestHandlerFactoryCreateAuthorizer(t *testing.T) {
 		},
 		{
 			uc:   "successful creation from prototype",
-			conf: map[any]any{"foo": "bar"},
+			conf: map[string]any{"foo": "bar"},
 			configureMock: func(t *testing.T, mAuth *mockAuthorizer) {
 				t.Helper()
 
@@ -363,7 +341,7 @@ func TestHandlerFactoryCreateHydrator(t *testing.T) {
 	for _, tc := range []struct {
 		uc            string
 		id            string
-		conf          any
+		conf          map[string]any
 		configureMock func(t *testing.T, mHydr *mockHydrator)
 		assert        func(t *testing.T, err error, hydrator hydrators.Hydrator)
 	}{
@@ -379,19 +357,8 @@ func TestHandlerFactoryCreateHydrator(t *testing.T) {
 			},
 		},
 		{
-			uc:   "with bad config type",
-			conf: "hi Foo",
-			assert: func(t *testing.T, err error, hydrator hydrators.Hydrator) {
-				t.Helper()
-
-				require.Error(t, err)
-				assert.ErrorIs(t, err, ErrHydratorCreation)
-				assert.Contains(t, err.Error(), "expected type")
-			},
-		},
-		{
 			uc:   "with failing creation from prototype",
-			conf: map[any]any{"foo": "bar"},
+			conf: map[string]any{"foo": "bar"},
 			configureMock: func(t *testing.T, mHydr *mockHydrator) {
 				t.Helper()
 
@@ -407,7 +374,7 @@ func TestHandlerFactoryCreateHydrator(t *testing.T) {
 		},
 		{
 			uc:   "successful creation from prototype",
-			conf: map[any]any{"foo": "bar"},
+			conf: map[string]any{"foo": "bar"},
 			configureMock: func(t *testing.T, mHydr *mockHydrator) {
 				t.Helper()
 
@@ -467,7 +434,7 @@ func TestHandlerFactoryCreateMutator(t *testing.T) {
 	for _, tc := range []struct {
 		uc            string
 		id            string
-		conf          any
+		conf          map[string]any
 		configureMock func(t *testing.T, mMut *mockMutator)
 		assert        func(t *testing.T, err error, mutator mutators.Mutator)
 	}{
@@ -483,19 +450,8 @@ func TestHandlerFactoryCreateMutator(t *testing.T) {
 			},
 		},
 		{
-			uc:   "with bad config type",
-			conf: "hi Foo",
-			assert: func(t *testing.T, err error, mutator mutators.Mutator) {
-				t.Helper()
-
-				require.Error(t, err)
-				assert.ErrorIs(t, err, ErrMutatorCreation)
-				assert.Contains(t, err.Error(), "expected type")
-			},
-		},
-		{
 			uc:   "with failing creation from prototype",
-			conf: map[any]any{"foo": "bar"},
+			conf: map[string]any{"foo": "bar"},
 			configureMock: func(t *testing.T, mMut *mockMutator) {
 				t.Helper()
 
@@ -511,7 +467,7 @@ func TestHandlerFactoryCreateMutator(t *testing.T) {
 		},
 		{
 			uc:   "successful creation from prototype",
-			conf: map[any]any{"foo": "bar"},
+			conf: map[string]any{"foo": "bar"},
 			configureMock: func(t *testing.T, mMut *mockMutator) {
 				t.Helper()
 
@@ -571,7 +527,7 @@ func TestHandlerFactoryCreateErrorHandler(t *testing.T) {
 	for _, tc := range []struct {
 		uc            string
 		id            string
-		conf          any
+		conf          map[string]any
 		configureMock func(t *testing.T, mEH *mockErrorHandler)
 		assert        func(t *testing.T, err error, errorHandler errorhandlers.ErrorHandler)
 	}{
@@ -587,19 +543,8 @@ func TestHandlerFactoryCreateErrorHandler(t *testing.T) {
 			},
 		},
 		{
-			uc:   "with bad config type",
-			conf: "hi Foo",
-			assert: func(t *testing.T, err error, errorHandler errorhandlers.ErrorHandler) {
-				t.Helper()
-
-				require.Error(t, err)
-				assert.ErrorIs(t, err, ErrErrorHandlerCreation)
-				assert.Contains(t, err.Error(), "expected type")
-			},
-		},
-		{
 			uc:   "with failing creation from prototype",
-			conf: map[any]any{"foo": "bar"},
+			conf: map[string]any{"foo": "bar"},
 			configureMock: func(t *testing.T, mEH *mockErrorHandler) {
 				t.Helper()
 
@@ -615,7 +560,7 @@ func TestHandlerFactoryCreateErrorHandler(t *testing.T) {
 		},
 		{
 			uc:   "successful creation from prototype",
-			conf: map[any]any{"foo": "bar"},
+			conf: map[string]any{"foo": "bar"},
 			configureMock: func(t *testing.T, mEH *mockErrorHandler) {
 				t.Helper()
 

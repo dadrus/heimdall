@@ -20,7 +20,7 @@ func (es CookieValueExtractStrategy) GetAuthData(s heimdall.Context) (AuthData, 
 		}, nil
 	}
 
-	return nil, errorchain.NewWithMessagef(ErrAuthData, "no '%s' cookie present", es.Name)
+	return nil, errorchain.NewWithMessagef(heimdall.ErrArgument, "no '%s' cookie present", es.Name)
 }
 
 type cookieAuthData struct {

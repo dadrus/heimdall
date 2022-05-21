@@ -22,22 +22,31 @@ func DecodeAuthenticationStrategyHookFunc() mapstructure.DecodeHookFunc {
 			return data, nil
 		}
 
-		// nolint
-		// already checked above
+		typed := map[string]any{}
+
 		if m, ok := data.(map[any]any); ok {
-			switch m["type"] {
-			case "basic-auth":
-				return decodeBasicAuthStrategy(m["config"])
-			case "api-key":
-				return decodeAPIKeyStrategy(m["config"])
-			case "client-credentials":
-				return decodeClientCredentialsStrategy(m["config"])
-			default:
-				return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration, "unsupported authentication type: '%s'", m["type"])
+			for k, v := range m {
+				// nolint: forcetypeassert
+				// ok if panics
+				typed[k.(string)] = v
 			}
+		} else if m, ok := data.(map[string]any); ok {
+			typed = m
+		} else {
+			return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration, "unexpected configuration type")
 		}
 
-		return data, nil
+		switch typed["type"] {
+		case "basic-auth":
+			return decodeBasicAuthStrategy(typed["config"])
+		case "api-key":
+			return decodeAPIKeyStrategy(typed["config"])
+		case "client-credentials":
+			return decodeClientCredentialsStrategy(typed["config"])
+		default:
+			return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+				"unsupported authentication type: '%s'", typed["type"])
+		}
 	}
 }
 

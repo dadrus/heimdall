@@ -4,7 +4,17 @@
 #    - GET
 #    - POST
   execute:
-    - authenticator: unauthorized_authenticator # can be omitted (same as default)
+    - authenticator: unauthorized_authenticator
+    - authenticator: jwt_authenticator
+      config:
+        assertions:
+          allowed_algorithms:
+            - RS256
+          issuers:
+            - http://127.0.0.1:4444/
+          scopes:
+            - profile
+    - authenticator: hydra_authenticator
     - hydrator: subscription_hydrator
     - authorizer: allow_all_authorizer
     - mutator: jwt

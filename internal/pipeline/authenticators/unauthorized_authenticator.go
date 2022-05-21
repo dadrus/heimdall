@@ -13,7 +13,7 @@ import (
 // nolint
 func init() {
 	registerAuthenticatorTypeFactory(
-		func(_ string, typ config.PipelineObjectType, conf map[any]any) (bool, Authenticator, error) {
+		func(_ string, typ config.PipelineObjectType, conf map[string]any) (bool, Authenticator, error) {
 			if typ != config.POTUnauthorized {
 				return false, nil, nil
 			}
@@ -35,7 +35,7 @@ func (a *unauthorizedAuthenticator) Execute(ctx heimdall.Context) (*subject.Subj
 	return nil, errorchain.NewWithMessage(heimdall.ErrAuthentication, "denied by authenticator")
 }
 
-func (a *unauthorizedAuthenticator) WithConfig(_ map[any]any) (Authenticator, error) {
+func (a *unauthorizedAuthenticator) WithConfig(_ map[string]any) (Authenticator, error) {
 	// nothing can be reconfigured
 	return a, nil
 }

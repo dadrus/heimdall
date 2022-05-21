@@ -31,7 +31,7 @@ import (
 // nolint
 func init() {
 	registerAuthorizerTypeFactory(
-		func(id string, typ config.PipelineObjectType, conf map[any]any) (bool, Authorizer, error) {
+		func(id string, typ config.PipelineObjectType, conf map[string]any) (bool, Authorizer, error) {
 			if typ != config.POTRemote {
 				return false, nil, nil
 			}
@@ -70,7 +70,7 @@ func (ai *authorizationInformation) AddAttributesTo(key string, sub *subject.Sub
 	}
 }
 
-func newRemoteAuthorizer(name string, rawConfig map[any]any) (*remoteAuthorizer, error) {
+func newRemoteAuthorizer(name string, rawConfig map[string]any) (*remoteAuthorizer, error) {
 	type _config struct {
 		Endpoint                 endpoint.Endpoint `mapstructure:"endpoint"`
 		Payload                  template.Template `mapstructure:"payload"`
@@ -255,7 +255,7 @@ func (a *remoteAuthorizer) readResponse(ctx heimdall.Context, resp *http.Respons
 	return result, nil
 }
 
-func (a *remoteAuthorizer) WithConfig(rawConfig map[any]any) (Authorizer, error) {
+func (a *remoteAuthorizer) WithConfig(rawConfig map[string]any) (Authorizer, error) {
 	if len(rawConfig) == 0 {
 		return a, nil
 	}

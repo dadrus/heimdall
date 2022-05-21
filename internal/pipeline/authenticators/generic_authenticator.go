@@ -25,7 +25,7 @@ import (
 // nolint
 func init() {
 	registerAuthenticatorTypeFactory(
-		func(_ string, typ config.PipelineObjectType, conf map[any]any) (bool, Authenticator, error) {
+		func(_ string, typ config.PipelineObjectType, conf map[string]any) (bool, Authenticator, error) {
 			if typ != config.POTGeneric {
 				return false, nil, nil
 			}
@@ -43,7 +43,7 @@ type genericAuthenticator struct {
 	ttl time.Duration
 }
 
-func newGenericAuthenticator(rawConfig map[any]any) (*genericAuthenticator, error) {
+func newGenericAuthenticator(rawConfig map[string]any) (*genericAuthenticator, error) {
 	type _config struct {
 		Endpoint       endpoint.Endpoint                   `mapstructure:"identity_info_endpoint"`
 		AuthDataSource extractors.CompositeExtractStrategy `mapstructure:"authentication_data_source"`
@@ -111,7 +111,7 @@ func (a *genericAuthenticator) Execute(ctx heimdall.Context) (*subject.Subject, 
 	return sub, nil
 }
 
-func (a *genericAuthenticator) WithConfig(config map[any]any) (Authenticator, error) {
+func (a *genericAuthenticator) WithConfig(config map[string]any) (Authenticator, error) {
 	// this authenticator allows ttl to be redefined on the rule level
 	if len(config) == 0 {
 		return a, nil

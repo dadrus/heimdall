@@ -36,7 +36,7 @@ func TestCreateNoopAuthenticatorFromPrototype(t *testing.T) {
 
 	// WHEN
 	auth1, err1 := prototype.WithConfig(nil)
-	auth2, err2 := prototype.WithConfig(map[any]any{"foo": "bar"})
+	auth2, err2 := prototype.WithConfig(map[string]any{"foo": "bar"})
 
 	// THEN
 	assert.NoError(t, err1)

@@ -1,6 +1,6 @@
 package config
 
 type RulesConfig struct {
-	Default  *DefaultRuleConfig `koanf:"default"`
-	Provider RuleProvider       `koanf:"provider"`
+	Default   *DefaultRuleConfig `koanf:"default"`
+	Providers RuleProviders      `koanf:"providers"`
 }

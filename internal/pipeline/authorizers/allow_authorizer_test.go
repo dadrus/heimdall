@@ -16,7 +16,7 @@ func TestCreateAllowAuthorizerFromPrototype(t *testing.T) {
 
 	// WHEN
 	conf1, err1 := prototype.WithConfig(nil)
-	conf2, err2 := prototype.WithConfig(map[any]any{"foo": "bar"})
+	conf2, err2 := prototype.WithConfig(map[string]any{"foo": "bar"})
 
 	// THEN
 	require.NoError(t, err1)

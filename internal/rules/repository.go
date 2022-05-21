@@ -75,7 +75,7 @@ func (r *repository) Stop() error {
 
 	r.quit <- true
 
-	close(r.queue)
+	close(r.quit)
 
 	return nil
 }

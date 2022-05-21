@@ -17,14 +17,14 @@ func NewErrorHandler(verbose bool, logger zerolog.Logger) fiber.ErrorHandler {
 func defaultErrorHandler(logger zerolog.Logger) fiber.ErrorHandler {
 	return func(ctx *fiber.Ctx, err error) error {
 		switch {
-		case errors.Is(err, heimdall.ErrArgument):
-			return ctx.SendStatus(fiber.StatusBadRequest)
 		case errors.Is(err, heimdall.ErrAuthentication):
 			return ctx.SendStatus(fiber.StatusUnauthorized)
 		case errors.Is(err, heimdall.ErrAuthorization):
 			return ctx.SendStatus(fiber.StatusForbidden)
-		case errors.Is(err, heimdall.ErrCommunicationTimeout):
+		case errors.Is(err, heimdall.ErrCommunicationTimeout) || errors.Is(err, heimdall.ErrCommunication):
 			return ctx.SendStatus(fiber.StatusBadGateway)
+		case errors.Is(err, heimdall.ErrArgument):
+			return ctx.SendStatus(fiber.StatusBadRequest)
 		case errors.Is(err, &heimdall.RedirectError{}):
 			var redirectError *heimdall.RedirectError
 
@@ -42,14 +42,14 @@ func defaultErrorHandler(logger zerolog.Logger) fiber.ErrorHandler {
 func verboseErrorHandler(logger zerolog.Logger) fiber.ErrorHandler {
 	return func(ctx *fiber.Ctx, err error) error {
 		switch {
-		case errors.Is(err, heimdall.ErrArgument):
-			return ctx.Status(fiber.StatusBadRequest).Format(err)
 		case errors.Is(err, heimdall.ErrAuthentication):
 			return ctx.Status(fiber.StatusUnauthorized).Format(err)
 		case errors.Is(err, heimdall.ErrAuthorization):
 			return ctx.Status(fiber.StatusForbidden).Format(err)
-		case errors.Is(err, heimdall.ErrCommunicationTimeout):
+		case errors.Is(err, heimdall.ErrCommunicationTimeout) || errors.Is(err, heimdall.ErrCommunication):
 			return ctx.Status(fiber.StatusBadGateway).Format(err)
+		case errors.Is(err, heimdall.ErrArgument):
+			return ctx.Status(fiber.StatusBadRequest).Format(err)
 		case errors.Is(err, &heimdall.RedirectError{}):
 			var redirectError *heimdall.RedirectError
 

@@ -14,15 +14,12 @@ func (ca compositeSubjectCreator) Execute(ctx heimdall.Context) (sub *subject.Su
 
 	for _, a := range ca {
 		sub, err = a.Execute(ctx)
-		if err != nil {
-			// try next
-			continue
-		} else {
+		if err == nil {
 			return sub, nil
 		}
-	}
 
-	logger.Debug().Err(err).Msg("Pipeline step execution failed")
+		logger.Info().Err(err).Msg("Pipeline step execution failed")
+	}
 
 	return nil, err
 }

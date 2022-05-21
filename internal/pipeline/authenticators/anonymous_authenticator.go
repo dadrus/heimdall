@@ -13,7 +13,7 @@ import (
 // nolint
 func init() {
 	registerAuthenticatorTypeFactory(
-		func(_ string, typ config.PipelineObjectType, conf map[any]any) (bool, Authenticator, error) {
+		func(_ string, typ config.PipelineObjectType, conf map[string]any) (bool, Authenticator, error) {
 			if typ != config.POTAnonymous {
 				return false, nil, nil
 			}
@@ -24,7 +24,7 @@ func init() {
 		})
 }
 
-func newAnonymousAuthenticator(rawConfig map[any]any) (*anonymousAuthenticator, error) {
+func newAnonymousAuthenticator(rawConfig map[string]any) (*anonymousAuthenticator, error) {
 	var auth anonymousAuthenticator
 
 	if err := decodeConfig(rawConfig, &auth); err != nil {
@@ -51,7 +51,7 @@ func (a *anonymousAuthenticator) Execute(ctx heimdall.Context) (*subject.Subject
 	return &subject.Subject{ID: a.Subject}, nil
 }
 
-func (a *anonymousAuthenticator) WithConfig(config map[any]any) (Authenticator, error) {
+func (a *anonymousAuthenticator) WithConfig(config map[string]any) (Authenticator, error) {
 	// this authenticator allows subject to be redefined on the rule level
 	if len(config) == 0 {
 		return a, nil

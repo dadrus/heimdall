@@ -24,7 +24,7 @@ const (
 // nolint
 func init() {
 	registerAuthenticatorTypeFactory(
-		func(_ string, typ config.PipelineObjectType, conf map[any]any) (bool, Authenticator, error) {
+		func(_ string, typ config.PipelineObjectType, conf map[string]any) (bool, Authenticator, error) {
 			if typ != config.POTBasicAuth {
 				return false, nil, nil
 			}
@@ -40,7 +40,7 @@ type basicAuthAuthenticator struct {
 	Password string `mapstructure:"password"`
 }
 
-func newBasicAuthAuthenticator(rawConfig map[any]any) (*basicAuthAuthenticator, error) {
+func newBasicAuthAuthenticator(rawConfig map[string]any) (*basicAuthAuthenticator, error) {
 	type _config struct {
 		UserID   string `mapstructure:"user_id"`
 		Password string `mapstructure:"password"`
@@ -131,7 +131,7 @@ func (a *basicAuthAuthenticator) Execute(ctx heimdall.Context) (*subject.Subject
 	return &subject.Subject{ID: userIDAndPassword[0], Attributes: make(map[string]any)}, nil
 }
 
-func (a *basicAuthAuthenticator) WithConfig(rawConfig map[any]any) (Authenticator, error) {
+func (a *basicAuthAuthenticator) WithConfig(rawConfig map[string]any) (Authenticator, error) {
 	// this authenticator allows full redefinition on the rule level
 	if len(rawConfig) == 0 {
 		return a, nil

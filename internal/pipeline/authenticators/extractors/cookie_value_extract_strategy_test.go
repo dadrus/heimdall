@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
+	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/pipeline/testsupport"
 )
 
@@ -56,7 +57,7 @@ func TestExtractNotExistingCookieValue(t *testing.T) {
 
 	// THEN
 	assert.Error(t, err)
-	assert.ErrorIs(t, err, ErrAuthData)
+	assert.ErrorIs(t, err, heimdall.ErrArgument)
 
 	ctx.AssertExpectations(t)
 }

@@ -12,7 +12,7 @@ import (
 // nolint
 func init() {
 	registerMutatorTypeFactory(
-		func(_ string, typ config.PipelineObjectType, conf map[any]any) (bool, Mutator, error) {
+		func(_ string, typ config.PipelineObjectType, conf map[string]any) (bool, Mutator, error) {
 			if typ != config.POTNoop {
 				return false, nil, nil
 			}
@@ -34,6 +34,6 @@ func (m *noopMutator) Execute(ctx heimdall.Context, sub *subject.Subject) error 
 	return nil
 }
 
-func (m *noopMutator) WithConfig(map[any]any) (Mutator, error) {
+func (m *noopMutator) WithConfig(map[string]any) (Mutator, error) {
 	return m, nil
 }

@@ -15,7 +15,7 @@ var Module = fx.Options(
 )
 
 func checkRuleProvider(logger zerolog.Logger, c config.Configuration) {
-	if c.Rules.Provider.File == nil {
+	if c.Rules.Providers.File == nil {
 		logger.Warn().Msg("No rule provider configured. Only defaults will be used.")
 	}
 }

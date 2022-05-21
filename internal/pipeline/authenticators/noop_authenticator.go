@@ -12,7 +12,7 @@ import (
 // nolint
 func init() {
 	registerAuthenticatorTypeFactory(
-		func(_ string, typ config.PipelineObjectType, conf map[any]any) (bool, Authenticator, error) {
+		func(_ string, typ config.PipelineObjectType, conf map[string]any) (bool, Authenticator, error) {
 			if typ != config.POTNoop {
 				return false, nil, nil
 			}
@@ -34,7 +34,7 @@ func (*noopAuthenticator) Execute(ctx heimdall.Context) (*subject.Subject, error
 	return &subject.Subject{}, nil
 }
 
-func (a *noopAuthenticator) WithConfig(_ map[any]any) (Authenticator, error) {
+func (a *noopAuthenticator) WithConfig(_ map[string]any) (Authenticator, error) {
 	// nothing can be reconfigured
 	return a, nil
 }

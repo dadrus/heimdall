@@ -47,7 +47,7 @@ func TestRegisterFileSystemProvider(t *testing.T) {
 			uc: "without provided rules file/directory",
 			conf: config.Configuration{
 				Rules: config.RulesConfig{
-					Provider: config.RuleProvider{
+					Providers: config.RuleProviders{
 						File: &config.FileBasedRuleProviderConfig{},
 					},
 				},
@@ -63,7 +63,7 @@ func TestRegisterFileSystemProvider(t *testing.T) {
 			uc: "with not existing referenced file",
 			conf: config.Configuration{
 				Rules: config.RulesConfig{
-					Provider: config.RuleProvider{
+					Providers: config.RuleProviders{
 						File: &config.FileBasedRuleProviderConfig{Src: "foo.bar"},
 					},
 				},
@@ -79,7 +79,7 @@ func TestRegisterFileSystemProvider(t *testing.T) {
 			uc: "with existing rules file",
 			conf: config.Configuration{
 				Rules: config.RulesConfig{
-					Provider: config.RuleProvider{
+					Providers: config.RuleProviders{
 						File: &config.FileBasedRuleProviderConfig{Src: tmpFile.Name()},
 					},
 				},
@@ -99,7 +99,7 @@ func TestRegisterFileSystemProvider(t *testing.T) {
 			uc: "with existing rules file and enabled watcher",
 			conf: config.Configuration{
 				Rules: config.RulesConfig{
-					Provider: config.RuleProvider{
+					Providers: config.RuleProviders{
 						File: &config.FileBasedRuleProviderConfig{Src: tmpFile.Name(), Watch: true},
 					},
 				},

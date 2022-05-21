@@ -21,7 +21,7 @@ func (es HeaderValueExtractStrategy) GetAuthData(s heimdall.Context) (AuthData, 
 		}, nil
 	}
 
-	return nil, errorchain.NewWithMessagef(ErrAuthData, "no '%s' header present", es.Name)
+	return nil, errorchain.NewWithMessagef(heimdall.ErrArgument, "no '%s' header present", es.Name)
 }
 
 type headerAuthData struct {

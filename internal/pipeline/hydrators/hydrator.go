@@ -7,5 +7,5 @@ import (
 
 type Hydrator interface {
 	Execute(heimdall.Context, *subject.Subject) error
-	WithConfig(config map[any]any) (Hydrator, error)
+	WithConfig(config map[string]any) (Hydrator, error)
 }

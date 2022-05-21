@@ -53,24 +53,33 @@ func decodeMatcherFromMap(data any) (ScopesMatcher, error) {
 		err           error
 	)
 
-	// nolint
-	if m, ok := data.(map[any]any); ok {
-		if name, ok := m["matching_strategy"]; ok {
-			createMatcher, err = matcherFactory(name.(string))
-			if err != nil {
-				return nil, err
-			}
-		} else {
-			createMatcher = func(scopes []string) (ScopesMatcher, error) {
-				return ExactScopeStrategyMatcher(scopes), nil
-			}
-		}
+	typed := map[string]any{}
 
-		if values, ok := m["values"]; ok {
-			return createMatcherFromValues(createMatcher, values)
-		} else {
-			return nil, errorchain.NewWithMessage(ErrConfiguration, "invalid structure for scopes matcher")
+	if m, ok := data.(map[any]any); ok {
+		// nolint: forcetypeassert
+		// ok if panics
+		for k, v := range m {
+			typed[k.(string)] = v
 		}
+	} else if m, ok := data.(map[string]any); ok {
+		typed = m
+	} else {
+		return nil, errorchain.NewWithMessage(ErrConfiguration, "invalid structure for scopes matcher")
+	}
+
+	if name, ok := typed["matching_strategy"]; ok {
+		createMatcher, err = matcherFactory(name.(string))
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		createMatcher = func(scopes []string) (ScopesMatcher, error) {
+			return ExactScopeStrategyMatcher(scopes), nil
+		}
+	}
+
+	if values, ok := typed["values"]; ok {
+		return createMatcherFromValues(createMatcher, values)
 	}
 
 	return nil, errorchain.NewWithMessage(ErrConfiguration, "invalid structure for scopes matcher")

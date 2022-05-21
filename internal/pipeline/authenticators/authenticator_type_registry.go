@@ -21,7 +21,7 @@ var (
 type AuthenticatorTypeFactory func(
 	id string,
 	typ config.PipelineObjectType,
-	config map[any]any,
+	config map[string]any,
 ) (bool, Authenticator, error)
 
 func registerAuthenticatorTypeFactory(factory AuthenticatorTypeFactory) {
@@ -35,7 +35,11 @@ func registerAuthenticatorTypeFactory(factory AuthenticatorTypeFactory) {
 	authenticatorTypeFactories = append(authenticatorTypeFactories, factory)
 }
 
-func CreateAuthenticatorPrototype(id string, typ config.PipelineObjectType, config map[any]any) (Authenticator, error) {
+func CreateAuthenticatorPrototype(
+	id string,
+	typ config.PipelineObjectType,
+	config map[string]any,
+) (Authenticator, error) {
 	authenticatorTypeFactoriesMu.RLock()
 	defer authenticatorTypeFactoriesMu.RUnlock()
 

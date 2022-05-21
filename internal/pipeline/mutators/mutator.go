@@ -7,5 +7,5 @@ import (
 
 type Mutator interface {
 	Execute(ctx heimdall.Context, sub *subject.Subject) error
-	WithConfig(config map[any]any) (Mutator, error)
+	WithConfig(config map[string]any) (Mutator, error)
 }

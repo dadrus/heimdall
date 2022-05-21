@@ -90,25 +90,25 @@ pipeline:
           headers:
             foo-bar: "{{ .Subject }}"
         payload: "https://bla.bar"
-        forward_response_headers:
+        forward_response_headers_to_upstream:
           - bla-bar
   hydrators:
     - id: "subscription_hydrator"
-      type: default
+      type: generic
       config:
         endpoint:
           url: foo.bar
           method: GET
+          headers:
+            bla: bla
         payload: http://foo
-        headers:
-          bla: bla
     - id: "profile_data_hydrator"
-      type: default
+      type: generic
       config:
         endpoint:
           url: http://profile
-        headers:
-          foo: bar
+          headers:
+            foo: bar
   mutators:
     - id: "jwt"
       type: jwt
@@ -136,7 +136,7 @@ pipeline:
           - error:
             - unauthorized
             - forbidden
-            request_header:
+            request_headers:
               Accept:
               - '*/*'
 

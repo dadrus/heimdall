@@ -7,5 +7,5 @@ import (
 
 type Authorizer interface {
 	Execute(heimdall.Context, *subject.Subject) error
-	WithConfig(config map[any]any) (Authorizer, error)
+	WithConfig(config map[string]any) (Authorizer, error)
 }

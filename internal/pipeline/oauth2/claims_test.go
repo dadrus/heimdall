@@ -106,7 +106,7 @@ func TestClaimsValidate(t *testing.T) {
 				t.Helper()
 
 				assert.Error(t, err)
-				assert.Contains(t, err.Error(), "scopes")
+				assert.Contains(t, err.Error(), "scope")
 			},
 		},
 		{
@@ -127,7 +127,7 @@ func TestClaimsValidate(t *testing.T) {
 				t.Helper()
 
 				assert.Error(t, err)
-				assert.Contains(t, err.Error(), "scopes")
+				assert.Contains(t, err.Error(), "scope")
 			},
 		},
 		{

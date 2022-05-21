@@ -23,11 +23,11 @@ var (
 )
 
 type HandlerFactory interface {
-	CreateAuthenticator(id string, conf any) (authenticators.Authenticator, error)
-	CreateAuthorizer(id string, conf any) (authorizers.Authorizer, error)
-	CreateHydrator(id string, conf any) (hydrators.Hydrator, error)
-	CreateMutator(id string, conf any) (mutators.Mutator, error)
-	CreateErrorHandler(id string, conf any) (errorhandlers.ErrorHandler, error)
+	CreateAuthenticator(id string, conf map[string]any) (authenticators.Authenticator, error)
+	CreateAuthorizer(id string, conf map[string]any) (authorizers.Authorizer, error)
+	CreateHydrator(id string, conf map[string]any) (hydrators.Hydrator, error)
+	CreateMutator(id string, conf map[string]any) (mutators.Mutator, error)
+	CreateErrorHandler(id string, conf map[string]any) (errorhandlers.ErrorHandler, error)
 }
 
 func NewHandlerFactory(conf config.Configuration, logger zerolog.Logger) (HandlerFactory, error) {
@@ -47,20 +47,14 @@ type handlerFactory struct {
 	r *handlerPrototypeRepository
 }
 
-func (hf *handlerFactory) CreateAuthenticator(id string, conf any) (authenticators.Authenticator, error) {
+func (hf *handlerFactory) CreateAuthenticator(id string, conf map[string]any) (authenticators.Authenticator, error) {
 	prototype, err := hf.r.Authenticator(id)
 	if err != nil {
 		return nil, errorchain.New(ErrAuthenticatorCreation).CausedBy(err)
 	}
 
 	if conf != nil {
-		mConf, ok := conf.(map[any]any)
-		if !ok {
-			return nil, errorchain.NewWithMessage(ErrAuthenticatorCreation,
-				"Could not convert config to the expected type")
-		}
-
-		authenticator, err := prototype.WithConfig(mConf)
+		authenticator, err := prototype.WithConfig(conf)
 		if err != nil {
 			return nil, errorchain.New(ErrAuthenticatorCreation).CausedBy(err)
 		}
@@ -71,20 +65,14 @@ func (hf *handlerFactory) CreateAuthenticator(id string, conf any) (authenticato
 	return prototype, nil
 }
 
-func (hf *handlerFactory) CreateAuthorizer(id string, conf any) (authorizers.Authorizer, error) {
+func (hf *handlerFactory) CreateAuthorizer(id string, conf map[string]any) (authorizers.Authorizer, error) {
 	prototype, err := hf.r.Authorizer(id)
 	if err != nil {
 		return nil, errorchain.New(ErrAuthorizerCreation).CausedBy(err)
 	}
 
 	if conf != nil {
-		mConf, ok := conf.(map[any]any)
-		if !ok {
-			return nil, errorchain.NewWithMessage(ErrAuthorizerCreation,
-				"Could not convert config to the expected type")
-		}
-
-		authorizer, err := prototype.WithConfig(mConf)
+		authorizer, err := prototype.WithConfig(conf)
 		if err != nil {
 			return nil, errorchain.New(ErrAuthorizerCreation).CausedBy(err)
 		}
@@ -95,20 +83,14 @@ func (hf *handlerFactory) CreateAuthorizer(id string, conf any) (authorizers.Aut
 	return prototype, nil
 }
 
-func (hf *handlerFactory) CreateHydrator(id string, conf any) (hydrators.Hydrator, error) {
+func (hf *handlerFactory) CreateHydrator(id string, conf map[string]any) (hydrators.Hydrator, error) {
 	prototype, err := hf.r.Hydrator(id)
 	if err != nil {
 		return nil, errorchain.New(ErrHydratorCreation).CausedBy(err)
 	}
 
 	if conf != nil {
-		mConf, ok := conf.(map[any]any)
-		if !ok {
-			return nil, errorchain.NewWithMessage(ErrHydratorCreation,
-				"Could not convert config to the expected type")
-		}
-
-		hydrator, err := prototype.WithConfig(mConf)
+		hydrator, err := prototype.WithConfig(conf)
 		if err != nil {
 			return nil, errorchain.New(ErrHydratorCreation).CausedBy(err)
 		}
@@ -119,20 +101,14 @@ func (hf *handlerFactory) CreateHydrator(id string, conf any) (hydrators.Hydrato
 	return prototype, nil
 }
 
-func (hf *handlerFactory) CreateMutator(id string, conf any) (mutators.Mutator, error) {
+func (hf *handlerFactory) CreateMutator(id string, conf map[string]any) (mutators.Mutator, error) {
 	prototype, err := hf.r.Mutator(id)
 	if err != nil {
 		return nil, errorchain.New(ErrMutatorCreation).CausedBy(err)
 	}
 
 	if conf != nil {
-		mConf, ok := conf.(map[any]any)
-		if !ok {
-			return nil, errorchain.NewWithMessage(ErrMutatorCreation,
-				"Could not convert config to the expected type")
-		}
-
-		mutator, err := prototype.WithConfig(mConf)
+		mutator, err := prototype.WithConfig(conf)
 		if err != nil {
 			return nil, errorchain.New(ErrMutatorCreation).CausedBy(err)
 		}
@@ -143,20 +119,14 @@ func (hf *handlerFactory) CreateMutator(id string, conf any) (mutators.Mutator, 
 	return prototype, nil
 }
 
-func (hf *handlerFactory) CreateErrorHandler(id string, conf any) (errorhandlers.ErrorHandler, error) {
+func (hf *handlerFactory) CreateErrorHandler(id string, conf map[string]any) (errorhandlers.ErrorHandler, error) {
 	prototype, err := hf.r.ErrorHandler(id)
 	if err != nil {
 		return nil, errorchain.New(ErrErrorHandlerCreation).CausedBy(err)
 	}
 
 	if conf != nil {
-		mConf, ok := conf.(map[any]any)
-		if !ok {
-			return nil, errorchain.NewWithMessage(ErrErrorHandlerCreation,
-				"Could not convert config to the expected type")
-		}
-
-		errorHandler, err := prototype.WithConfig(mConf)
+		errorHandler, err := prototype.WithConfig(conf)
 		if err != nil {
 			return nil, errorchain.New(ErrErrorHandlerCreation).CausedBy(err)
 		}

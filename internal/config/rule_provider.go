@@ -1,6 +1,6 @@
 package config
 
-type RuleProvider struct {
+type RuleProviders struct {
 	File *FileBasedRuleProviderConfig `koanf:"file"`
 }
 

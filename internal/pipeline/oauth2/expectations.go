@@ -93,7 +93,7 @@ func (e *Expectation) AssertIssuanceTime(issuedAt time.Time) error {
 
 func (e *Expectation) AssertScopes(scopes []string) error {
 	if err := e.ScopesMatcher.Match(scopes); err != nil {
-		return errorchain.NewWithMessage(ErrAssertion, "scopes not valid").CausedBy(err)
+		return err
 	}
 
 	return nil

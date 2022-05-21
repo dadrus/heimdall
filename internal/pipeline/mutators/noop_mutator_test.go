@@ -34,7 +34,7 @@ func TestCreateNoopMutatorFromPrototype(t *testing.T) {
 
 	// WHEN
 	mut1, err1 := prototype.WithConfig(nil)
-	mut2, err2 := prototype.WithConfig(map[any]any{"foo": "bar"})
+	mut2, err2 := prototype.WithConfig(map[string]any{"foo": "bar"})
 
 	// THEN
 	assert.NoError(t, err1)

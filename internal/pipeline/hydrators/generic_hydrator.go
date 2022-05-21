@@ -35,7 +35,7 @@ const (
 // nolint
 func init() {
 	registerHydratorTypeFactory(
-		func(id string, typ config.PipelineObjectType, conf map[any]any) (bool, Hydrator, error) {
+		func(id string, typ config.PipelineObjectType, conf map[string]any) (bool, Hydrator, error) {
 			if typ != config.POTGeneric {
 				return false, nil, nil
 			}
@@ -59,7 +59,7 @@ type genericHydrator struct {
 	name       string
 }
 
-func newGenericHydrator(id string, rawConfig map[any]any) (*genericHydrator, error) {
+func newGenericHydrator(id string, rawConfig map[string]any) (*genericHydrator, error) {
 	type _config struct {
 		Endpoint       endpoint.Endpoint `mapstructure:"endpoint"`
 		ForwardHeaders []string          `mapstructure:"forward_headers"`
@@ -71,7 +71,7 @@ func newGenericHydrator(id string, rawConfig map[any]any) (*genericHydrator, err
 	var conf _config
 	if err := decodeConfig(rawConfig, &conf); err != nil {
 		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration, "failed to unmarshal hydrator config").
+			NewWithMessage(heimdall.ErrConfiguration, "failed to unmarshal generic hydrator config").
 			CausedBy(err)
 	}
 
@@ -292,7 +292,7 @@ func (h *genericHydrator) calculateCacheKey(sub *subject.Subject) (string, error
 	return hex.EncodeToString(hash.Sum(nil)), nil
 }
 
-func (h *genericHydrator) WithConfig(rawConfig map[any]any) (Hydrator, error) {
+func (h *genericHydrator) WithConfig(rawConfig map[string]any) (Hydrator, error) {
 	if len(rawConfig) == 0 {
 		return h, nil
 	}

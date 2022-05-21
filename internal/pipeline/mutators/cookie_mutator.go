@@ -14,7 +14,7 @@ import (
 // nolint
 func init() {
 	registerMutatorTypeFactory(
-		func(_ string, typ config.PipelineObjectType, conf map[any]any) (bool, Mutator, error) {
+		func(_ string, typ config.PipelineObjectType, conf map[string]any) (bool, Mutator, error) {
 			if typ != config.POTCookie {
 				return false, nil, nil
 			}
@@ -29,7 +29,7 @@ type cookieMutator struct {
 	cookies map[string]template.Template
 }
 
-func newCookieMutator(rawConfig map[any]any) (*cookieMutator, error) {
+func newCookieMutator(rawConfig map[string]any) (*cookieMutator, error) {
 	type _config struct {
 		Cookies map[string]template.Template `mapstructure:"cookies"`
 	}
@@ -73,7 +73,7 @@ func (m *cookieMutator) Execute(ctx heimdall.Context, sub *subject.Subject) erro
 	return nil
 }
 
-func (m *cookieMutator) WithConfig(config map[any]any) (Mutator, error) {
+func (m *cookieMutator) WithConfig(config map[string]any) (Mutator, error) {
 	if len(config) == 0 {
 		return m, nil
 	}

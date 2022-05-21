@@ -31,7 +31,7 @@ const (
 // nolint
 func init() {
 	registerMutatorTypeFactory(
-		func(_ string, typ config.PipelineObjectType, conf map[any]any) (bool, Mutator, error) {
+		func(_ string, typ config.PipelineObjectType, conf map[string]any) (bool, Mutator, error) {
 			if typ != config.POTJwt {
 				return false, nil, nil
 			}
@@ -47,7 +47,7 @@ type jwtMutator struct {
 	ttl    time.Duration
 }
 
-func newJWTMutator(rawConfig map[any]any) (*jwtMutator, error) {
+func newJWTMutator(rawConfig map[string]any) (*jwtMutator, error) {
 	type _config struct {
 		Claims *template.Template `mapstructure:"claims"`
 		TTL    *time.Duration     `mapstructure:"ttl"`
@@ -55,9 +55,8 @@ func newJWTMutator(rawConfig map[any]any) (*jwtMutator, error) {
 
 	var conf _config
 	if err := decodeConfig(rawConfig, &conf); err != nil {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration, "failed to unmarshal JWT mutator config").
-			CausedBy(err)
+		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
+			"failed to unmarshal JWT mutator config").CausedBy(err)
 	}
 
 	ttl := defaultJWTTTL
@@ -116,7 +115,7 @@ func (m *jwtMutator) Execute(ctx heimdall.Context, sub *subject.Subject) error {
 	return nil
 }
 
-func (m *jwtMutator) WithConfig(rawConfig map[any]any) (Mutator, error) {
+func (m *jwtMutator) WithConfig(rawConfig map[string]any) (Mutator, error) {
 	if len(rawConfig) == 0 {
 		return m, nil
 	}
@@ -128,9 +127,8 @@ func (m *jwtMutator) WithConfig(rawConfig map[any]any) (Mutator, error) {
 
 	var conf _config
 	if err := decodeConfig(rawConfig, &conf); err != nil {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration, "failed to unmarshal JWT mutator config").
-			CausedBy(err)
+		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
+			"failed to unmarshal JWT mutator config").CausedBy(err)
 	}
 
 	var ttl time.Duration
@@ -153,15 +151,13 @@ func (m *jwtMutator) generateToken(ctx heimdall.Context, sub *subject.Subject) (
 	if m.claims != nil {
 		vals, err := m.claims.Render(nil, sub)
 		if err != nil {
-			return "", errorchain.
-				NewWithMessage(heimdall.ErrInternal, "failed to render claims template").
-				CausedBy(err)
+			return "", errorchain.NewWithMessage(heimdall.ErrInternal,
+				"failed to render claims").CausedBy(err)
 		}
 
 		if err := json.Unmarshal([]byte(vals), &claims); err != nil {
-			return "", errorchain.
-				NewWithMessage(heimdall.ErrInternal, "failed to unmarshal claims rendered by template").
-				CausedBy(err)
+			return "", errorchain.NewWithMessage(heimdall.ErrInternal,
+				"failed to unmarshal claims rendered by template").CausedBy(err)
 		}
 	}
 
@@ -187,8 +183,7 @@ func (m *jwtMutator) generateToken(ctx heimdall.Context, sub *subject.Subject) (
 		},
 		&signerOpts)
 	if err != nil {
-		return "", errorchain.
-			NewWithMessage(heimdall.ErrInternal, "failed to create JWT signer").
+		return "", errorchain.NewWithMessage(heimdall.ErrInternal, "failed to create JWT signer").
 			CausedBy(err)
 	}
 
@@ -196,8 +191,7 @@ func (m *jwtMutator) generateToken(ctx heimdall.Context, sub *subject.Subject) (
 
 	rawJwt, err := builder.CompactSerialize()
 	if err != nil {
-		return "", errorchain.
-			NewWithMessage(heimdall.ErrInternal, "failed to sign JWT").
+		return "", errorchain.NewWithMessage(heimdall.ErrInternal, "failed to sign JWT").
 			CausedBy(err)
 	}
 
@@ -214,8 +208,7 @@ func (m *jwtMutator) calculateCacheKey(sub *subject.Subject, iss heimdall.JWTSig
 
 	rawSub, err := json.Marshal(sub)
 	if err != nil {
-		return "", errorchain.
-			NewWithMessage(heimdall.ErrInternal, "failed to marshal subject data").
+		return "", errorchain.NewWithMessage(heimdall.ErrInternal, "failed to marshal subject data").
 			CausedBy(err)
 	}
 

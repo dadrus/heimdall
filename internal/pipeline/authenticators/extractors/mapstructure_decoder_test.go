@@ -3,10 +3,12 @@ package extractors
 import (
 	"testing"
 
+	"github.com/knadh/koanf"
+	"github.com/knadh/koanf/parsers/yaml"
+	"github.com/knadh/koanf/providers/rawbytes"
 	"github.com/mitchellh/mapstructure"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gopkg.in/yaml.v2"
 )
 
 func TestUnmarshalAuthenticationDataSourceFromValidYaml(t *testing.T) {
@@ -14,20 +16,25 @@ func TestUnmarshalAuthenticationDataSourceFromValidYaml(t *testing.T) {
 
 	var (
 		ces      CompositeExtractStrategy
-		settings interface{}
+		settings map[string]any
 	)
 
-	config := `
-- cookie: foo_cookie
-  strip_prefix: cfoo
-- header: foo_header
-  strip_prefix: hfoo
-- query_parameter: foo_qparam
-  strip_prefix: qfoo
-`
+	config := []byte(`
+authentication_data_source:
+  - cookie: foo_cookie
+    strip_prefix: cfoo
+  - header: foo_header
+    strip_prefix: hfoo
+  - query_parameter: foo_qparam
+    strip_prefix: qfoo
+`)
 
-	err := yaml.Unmarshal([]byte(config), &settings)
-	assert.NoError(t, err)
+	parser := koanf.New(".")
+
+	err := parser.Load(rawbytes.Provider(config), yaml.Parser())
+	require.NoError(t, err)
+
+	settings = parser.All()
 
 	dec, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
 		DecodeHook: mapstructure.ComposeDecodeHookFunc(
@@ -37,7 +44,7 @@ func TestUnmarshalAuthenticationDataSourceFromValidYaml(t *testing.T) {
 	})
 	assert.NoError(t, err)
 
-	err = dec.Decode(settings)
+	err = dec.Decode(settings["authentication_data_source"])
 	assert.NoError(t, err)
 	assert.Equal(t, 3, len(ces))
 
