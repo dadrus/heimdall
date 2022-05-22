@@ -1,0 +1,38 @@
+package mocks
+
+import (
+	"github.com/dadrus/heimdall/internal/rules/rule"
+	"github.com/stretchr/testify/mock"
+
+	"github.com/dadrus/heimdall/internal/config"
+)
+
+type MockRuleFactory struct {
+	mock.Mock
+}
+
+func (m *MockRuleFactory) CreateRule(srcID string, ruleConfig config.RuleConfig) (rule.Rule, error) {
+	args := m.Called(srcID, ruleConfig)
+
+	if val := args.Get(0); val != nil {
+		// nolint: forcetypeassert
+		return val.(rule.Rule), nil
+	}
+
+	return nil, args.Error(1)
+}
+
+func (m *MockRuleFactory) HasDefaultRule() bool {
+	return m.Called().Bool(0)
+}
+
+func (m *MockRuleFactory) DefaultRule() rule.Rule {
+	args := m.Called()
+
+	if val := args.Get(0); val != nil {
+		// nolint: forcetypeassert
+		return val.(rule.Rule)
+	}
+
+	return nil
+}
