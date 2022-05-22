@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/dadrus/heimdall/internal/heimdall/mocks"
+	rulemocks "github.com/dadrus/heimdall/internal/rules/mocks"
 	"github.com/dadrus/heimdall/internal/testsupport"
 )
 
@@ -17,10 +18,10 @@ func TestCompositeErrorHandlerExecutionWithFallback(t *testing.T) {
 	ctx := &mocks.MockContext{}
 	ctx.On("AppContext").Return(context.Background())
 
-	eh1 := &mockErrorHandler{}
+	eh1 := &rulemocks.MockErrorHandler{}
 	eh1.On("Execute", ctx, testsupport.ErrTestPurpose).Return(false, nil)
 
-	eh2 := &mockErrorHandler{}
+	eh2 := &rulemocks.MockErrorHandler{}
 	eh2.On("Execute", ctx, testsupport.ErrTestPurpose).Return(true, nil)
 
 	eh := compositeErrorHandler{eh1, eh2}
@@ -43,10 +44,10 @@ func TestCompositeErrorHandlerExecutionWithoutFallback(t *testing.T) {
 	ctx := &mocks.MockContext{}
 	ctx.On("AppContext").Return(context.Background())
 
-	eh1 := &mockErrorHandler{}
+	eh1 := &rulemocks.MockErrorHandler{}
 	eh1.On("Execute", ctx, testsupport.ErrTestPurpose).Return(true, nil)
 
-	eh2 := &mockErrorHandler{}
+	eh2 := &rulemocks.MockErrorHandler{}
 
 	eh := compositeErrorHandler{eh1, eh2}
 
@@ -68,10 +69,10 @@ func TestCompositeErrorHandlerExecutionWithNoApplicableErrorHandler(t *testing.T
 	ctx := &mocks.MockContext{}
 	ctx.On("AppContext").Return(context.Background())
 
-	eh1 := &mockErrorHandler{}
+	eh1 := &rulemocks.MockErrorHandler{}
 	eh1.On("Execute", ctx, testsupport.ErrTestPurpose).Return(false, nil)
 
-	eh2 := &mockErrorHandler{}
+	eh2 := &rulemocks.MockErrorHandler{}
 	eh2.On("Execute", ctx, testsupport.ErrTestPurpose).Return(false, nil)
 
 	eh := compositeErrorHandler{eh1, eh2}

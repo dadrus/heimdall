@@ -10,6 +10,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/rules/mocks"
 	"github.com/dadrus/heimdall/internal/testsupport"
 	"github.com/dadrus/heimdall/internal/x"
 )
@@ -21,7 +22,7 @@ func TestRuleFactoryNew(t *testing.T) {
 	for _, tc := range []struct {
 		uc             string
 		config         config.Configuration
-		configureMocks func(t *testing.T, mhf *mockHandlerFactory)
+		configureMocks func(t *testing.T, mhf *mocks.MockHandlerFactory)
 		assert         func(t *testing.T, err error, ruleFactory *ruleFactory)
 	}{
 		{
@@ -81,7 +82,7 @@ func TestRuleFactoryNew(t *testing.T) {
 					},
 				},
 			}},
-			configureMocks: func(t *testing.T, mhf *mockHandlerFactory) {
+			configureMocks: func(t *testing.T, mhf *mocks.MockHandlerFactory) {
 				t.Helper()
 
 				mhf.On("CreateHydrator", "bar", mock.Anything).
@@ -105,7 +106,7 @@ func TestRuleFactoryNew(t *testing.T) {
 					},
 				},
 			}},
-			configureMocks: func(t *testing.T, mhf *mockHandlerFactory) {
+			configureMocks: func(t *testing.T, mhf *mocks.MockHandlerFactory) {
 				t.Helper()
 
 				mhf.On("CreateMutator", "bar", mock.Anything).
@@ -126,7 +127,7 @@ func TestRuleFactoryNew(t *testing.T) {
 					Execute: []map[string]any{{"authenticator": "foo"}},
 				},
 			}},
-			configureMocks: func(t *testing.T, mhf *mockHandlerFactory) {
+			configureMocks: func(t *testing.T, mhf *mocks.MockHandlerFactory) {
 				t.Helper()
 
 				mhf.On("CreateAuthenticator", "foo", mock.Anything).
@@ -149,7 +150,7 @@ func TestRuleFactoryNew(t *testing.T) {
 					},
 				},
 			}},
-			configureMocks: func(t *testing.T, mhf *mockHandlerFactory) {
+			configureMocks: func(t *testing.T, mhf *mocks.MockHandlerFactory) {
 				t.Helper()
 
 				mhf.On("CreateMutator", "bar", mock.Anything).
@@ -170,7 +171,7 @@ func TestRuleFactoryNew(t *testing.T) {
 					Execute: []map[string]any{{"authorizer": "foo"}},
 				},
 			}},
-			configureMocks: func(t *testing.T, mhf *mockHandlerFactory) {
+			configureMocks: func(t *testing.T, mhf *mocks.MockHandlerFactory) {
 				t.Helper()
 
 				mhf.On("CreateAuthorizer", "foo", mock.Anything).
@@ -193,7 +194,7 @@ func TestRuleFactoryNew(t *testing.T) {
 					},
 				},
 			}},
-			configureMocks: func(t *testing.T, mhf *mockHandlerFactory) {
+			configureMocks: func(t *testing.T, mhf *mocks.MockHandlerFactory) {
 				t.Helper()
 
 				mhf.On("CreateMutator", "bar", mock.Anything).
@@ -214,7 +215,7 @@ func TestRuleFactoryNew(t *testing.T) {
 					Execute: []map[string]any{{"hydrator": "foo"}},
 				},
 			}},
-			configureMocks: func(t *testing.T, mhf *mockHandlerFactory) {
+			configureMocks: func(t *testing.T, mhf *mocks.MockHandlerFactory) {
 				t.Helper()
 
 				mhf.On("CreateHydrator", "foo", mock.Anything).
@@ -234,7 +235,7 @@ func TestRuleFactoryNew(t *testing.T) {
 					Execute: []map[string]any{{"mutator": "foo"}},
 				},
 			}},
-			configureMocks: func(t *testing.T, mhf *mockHandlerFactory) {
+			configureMocks: func(t *testing.T, mhf *mocks.MockHandlerFactory) {
 				t.Helper()
 
 				mhf.On("CreateMutator", "foo", mock.Anything).
@@ -254,7 +255,7 @@ func TestRuleFactoryNew(t *testing.T) {
 					ErrorHandler: []map[string]any{{"error_handler": "foo"}},
 				},
 			}},
-			configureMocks: func(t *testing.T, mhf *mockHandlerFactory) {
+			configureMocks: func(t *testing.T, mhf *mocks.MockHandlerFactory) {
 				t.Helper()
 
 				mhf.On("CreateErrorHandler", "foo", mock.Anything).
@@ -291,7 +292,7 @@ func TestRuleFactoryNew(t *testing.T) {
 					},
 				},
 			}},
-			configureMocks: func(t *testing.T, mhf *mockHandlerFactory) {
+			configureMocks: func(t *testing.T, mhf *mocks.MockHandlerFactory) {
 				t.Helper()
 
 				mhf.On("CreateAuthenticator", "bar", mock.Anything).
@@ -315,7 +316,7 @@ func TestRuleFactoryNew(t *testing.T) {
 					},
 				},
 			}},
-			configureMocks: func(t *testing.T, mhf *mockHandlerFactory) {
+			configureMocks: func(t *testing.T, mhf *mocks.MockHandlerFactory) {
 				t.Helper()
 
 				mhf.On("CreateAuthenticator", "bar", mock.Anything).
@@ -342,7 +343,7 @@ func TestRuleFactoryNew(t *testing.T) {
 					},
 				},
 			}},
-			configureMocks: func(t *testing.T, mhf *mockHandlerFactory) {
+			configureMocks: func(t *testing.T, mhf *mocks.MockHandlerFactory) {
 				t.Helper()
 
 				mhf.On("CreateAuthenticator", "bar", mock.Anything).
@@ -370,7 +371,7 @@ func TestRuleFactoryNew(t *testing.T) {
 					},
 				},
 			}},
-			configureMocks: func(t *testing.T, mhf *mockHandlerFactory) {
+			configureMocks: func(t *testing.T, mhf *mocks.MockHandlerFactory) {
 				t.Helper()
 
 				mhf.On("CreateAuthenticator", "bar", mock.Anything).
@@ -397,7 +398,7 @@ func TestRuleFactoryNew(t *testing.T) {
 					Methods: []string{"FOO"},
 				},
 			}},
-			configureMocks: func(t *testing.T, mhf *mockHandlerFactory) {
+			configureMocks: func(t *testing.T, mhf *mocks.MockHandlerFactory) {
 				t.Helper()
 
 				mhf.On("CreateAuthenticator", "bar", mock.Anything).
@@ -442,7 +443,7 @@ func TestRuleFactoryNew(t *testing.T) {
 					Methods: []string{"FOO", "BAR"},
 				},
 			}},
-			configureMocks: func(t *testing.T, mhf *mockHandlerFactory) {
+			configureMocks: func(t *testing.T, mhf *mocks.MockHandlerFactory) {
 				t.Helper()
 
 				mhf.On("CreateAuthenticator", "bar", mock.Anything).
@@ -483,9 +484,9 @@ func TestRuleFactoryNew(t *testing.T) {
 			// GIVEN
 			configureMocks := x.IfThenElse(tc.configureMocks != nil,
 				tc.configureMocks,
-				func(t *testing.T, mhf *mockHandlerFactory) { t.Helper() })
+				func(t *testing.T, mhf *mocks.MockHandlerFactory) { t.Helper() })
 
-			handlerFactory := &mockHandlerFactory{}
+			handlerFactory := &mocks.MockHandlerFactory{}
 			configureMocks(t, handlerFactory)
 
 			// WHEN
@@ -517,7 +518,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 		uc             string
 		config         config.RuleConfig
 		defaultRule    *rule
-		configureMocks func(t *testing.T, mhf *mockHandlerFactory)
+		configureMocks func(t *testing.T, mhf *mocks.MockHandlerFactory)
 		assert         func(t *testing.T, err error, rul *rule)
 	}{
 		{
@@ -560,7 +561,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				URL:     "http://foo.bar",
 				Execute: []map[string]any{{"authenticator": "foo"}},
 			},
-			configureMocks: func(t *testing.T, mhf *mockHandlerFactory) {
+			configureMocks: func(t *testing.T, mhf *mocks.MockHandlerFactory) {
 				t.Helper()
 
 				mhf.On("CreateAuthenticator", "foo", mock.Anything).
@@ -580,7 +581,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				URL:          "http://foo.bar",
 				ErrorHandler: []map[string]any{{"error_handler": "foo"}},
 			},
-			configureMocks: func(t *testing.T, mhf *mockHandlerFactory) {
+			configureMocks: func(t *testing.T, mhf *mocks.MockHandlerFactory) {
 				t.Helper()
 
 				mhf.On("CreateErrorHandler", "foo", mock.Anything).
@@ -614,7 +615,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				URL:     "http://foo.bar",
 				Execute: []map[string]any{{"authenticator": "foo"}},
 			},
-			configureMocks: func(t *testing.T, mhf *mockHandlerFactory) {
+			configureMocks: func(t *testing.T, mhf *mocks.MockHandlerFactory) {
 				t.Helper()
 
 				mhf.On("CreateAuthenticator", "foo", mock.Anything).
@@ -638,7 +639,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 					{"hydrator": "bar"},
 				},
 			},
-			configureMocks: func(t *testing.T, mhf *mockHandlerFactory) {
+			configureMocks: func(t *testing.T, mhf *mocks.MockHandlerFactory) {
 				t.Helper()
 
 				mhf.On("CreateAuthenticator", "foo", mock.Anything).
@@ -665,7 +666,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 					{"authorizer": "baz"},
 				},
 			},
-			configureMocks: func(t *testing.T, mhf *mockHandlerFactory) {
+			configureMocks: func(t *testing.T, mhf *mocks.MockHandlerFactory) {
 				t.Helper()
 
 				mhf.On("CreateAuthenticator", "foo", mock.Anything).
@@ -693,7 +694,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 					{"mutator": "bar"},
 				},
 			},
-			configureMocks: func(t *testing.T, mhf *mockHandlerFactory) {
+			configureMocks: func(t *testing.T, mhf *mocks.MockHandlerFactory) {
 				t.Helper()
 
 				mhf.On("CreateAuthenticator", "foo", mock.Anything).
@@ -720,7 +721,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				},
 				Methods: []string{"FOO", "BAR"},
 			},
-			configureMocks: func(t *testing.T, mhf *mockHandlerFactory) {
+			configureMocks: func(t *testing.T, mhf *mocks.MockHandlerFactory) {
 				t.Helper()
 
 				mhf.On("CreateAuthenticator", "foo", mock.Anything).
@@ -753,10 +754,10 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 			},
 			defaultRule: &rule{
 				methods: []string{"FOO"},
-				sc:      compositeSubjectCreator{&mockSubjectCreator{}},
-				sh:      compositeSubjectHandler{&mockSubjectHandler{}},
-				m:       compositeSubjectHandler{&mockSubjectHandler{}},
-				eh:      compositeErrorHandler{&mockErrorHandler{}},
+				sc:      compositeSubjectCreator{&mocks.MockSubjectCreator{}},
+				sh:      compositeSubjectHandler{&mocks.MockSubjectHandler{}},
+				m:       compositeSubjectHandler{&mocks.MockSubjectHandler{}},
+				eh:      compositeErrorHandler{&mocks.MockErrorHandler{}},
 			},
 			assert: func(t *testing.T, err error, rul *rule) {
 				t.Helper()
@@ -793,12 +794,12 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 			},
 			defaultRule: &rule{
 				methods: []string{"FOO"},
-				sc:      compositeSubjectCreator{&mockSubjectCreator{}},
-				sh:      compositeSubjectHandler{&mockSubjectHandler{}},
-				m:       compositeSubjectHandler{&mockSubjectHandler{}},
-				eh:      compositeErrorHandler{&mockErrorHandler{}},
+				sc:      compositeSubjectCreator{&mocks.MockSubjectCreator{}},
+				sh:      compositeSubjectHandler{&mocks.MockSubjectHandler{}},
+				m:       compositeSubjectHandler{&mocks.MockSubjectHandler{}},
+				eh:      compositeErrorHandler{&mocks.MockErrorHandler{}},
 			},
-			configureMocks: func(t *testing.T, mhf *mockHandlerFactory) {
+			configureMocks: func(t *testing.T, mhf *mocks.MockHandlerFactory) {
 				t.Helper()
 
 				mhf.On("CreateAuthenticator", "foo", mock.Anything).
@@ -842,9 +843,9 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 			// GIVEN
 			configureMocks := x.IfThenElse(tc.configureMocks != nil,
 				tc.configureMocks,
-				func(t *testing.T, mhf *mockHandlerFactory) { t.Helper() })
+				func(t *testing.T, mhf *mocks.MockHandlerFactory) { t.Helper() })
 
-			handlerFactory := &mockHandlerFactory{}
+			handlerFactory := &mocks.MockHandlerFactory{}
 			configureMocks(t, handlerFactory)
 
 			factory := &ruleFactory{
@@ -871,6 +872,58 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 			// THEN
 			tc.assert(t, err, impl)
 			handlerFactory.AssertExpectations(t)
+		})
+	}
+}
+
+func TestRuleFactoryConfigExtraction(t *testing.T) {
+	t.Parallel()
+
+	for _, tc := range []struct {
+		uc     string
+		config any
+		assert func(t *testing.T, conf map[string]any)
+	}{
+		{
+			uc: "nil config",
+			assert: func(t *testing.T, conf map[string]any) {
+				t.Helper()
+
+				require.Nil(t, conf)
+			},
+		},
+		{
+			uc:     "map[any]any",
+			config: map[any]any{"foo": "bar", "baz": []string{"zab"}},
+			assert: func(t *testing.T, conf map[string]any) {
+				t.Helper()
+
+				require.NotEmpty(t, conf)
+				assert.Equal(t, "bar", conf["foo"])
+				assert.Equal(t, []string{"zab"}, conf["baz"])
+			},
+		},
+		{
+			uc:     "map[string]any",
+			config: map[string]any{"foo": "bar", "baz": []string{"zab"}},
+			assert: func(t *testing.T, conf map[string]any) {
+				t.Helper()
+
+				require.NotEmpty(t, conf)
+				assert.Equal(t, "bar", conf["foo"])
+				assert.Equal(t, []string{"zab"}, conf["baz"])
+			},
+		},
+	} {
+		t.Run("case="+tc.uc, func(t *testing.T) {
+			// GIVEN
+			factory := &ruleFactory{logger: log.Logger}
+
+			// WHEN
+			conf := factory.getConfig(tc.config)
+
+			// THEN
+			tc.assert(t, conf)
 		})
 	}
 }

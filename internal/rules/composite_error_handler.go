@@ -20,7 +20,7 @@ func (eh compositeErrorHandler) Execute(ctx heimdall.Context, exErr error) (ok b
 		}
 
 		if ok {
-			return true, nil
+			return true, err
 		}
 	}
 

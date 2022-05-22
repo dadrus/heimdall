@@ -8,6 +8,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/heimdall/mocks"
 	"github.com/dadrus/heimdall/internal/pipeline/subject"
+	rulemocks "github.com/dadrus/heimdall/internal/rules/mocks"
 	"github.com/dadrus/heimdall/internal/testsupport"
 )
 
@@ -20,10 +21,10 @@ func TestCompositeAuthenticatorExecutionWithFallback(t *testing.T) {
 	ctx := &mocks.MockContext{}
 	ctx.On("AppContext").Return(context.Background())
 
-	auth1 := &mockSubjectCreator{}
+	auth1 := &rulemocks.MockSubjectCreator{}
 	auth1.On("Execute", ctx).Return(nil, testsupport.ErrTestPurpose)
 
-	auth2 := &mockSubjectCreator{}
+	auth2 := &rulemocks.MockSubjectCreator{}
 	auth2.On("Execute", ctx).Return(sub, nil)
 
 	auth := compositeSubjectCreator{auth1, auth2}
@@ -48,8 +49,8 @@ func TestCompositeAuthenticatorExecutionWithoutFallback(t *testing.T) {
 	ctx := &mocks.MockContext{}
 	ctx.On("AppContext").Return(context.Background())
 
-	auth1 := &mockSubjectCreator{}
-	auth2 := &mockSubjectCreator{}
+	auth1 := &rulemocks.MockSubjectCreator{}
+	auth2 := &rulemocks.MockSubjectCreator{}
 	auth2.On("Execute", ctx).Return(sub, nil)
 
 	auth := compositeSubjectCreator{auth2, auth1}
