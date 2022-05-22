@@ -5,11 +5,13 @@ import (
 
 	"github.com/rs/zerolog"
 	"go.uber.org/fx"
+
+	"github.com/dadrus/heimdall/internal/cache/memory"
 )
 
 // nolint
 var Module = fx.Options(
-	fx.Provide(New),
+	fx.Provide(memory.New),
 	fx.Invoke(registerCacheEviction),
 )
 
