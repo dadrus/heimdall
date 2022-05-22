@@ -11,6 +11,7 @@ import (
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/rules/patternmatcher"
+	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
@@ -18,9 +19,9 @@ import (
 var ErrUnsupportedPipelineObject = errors.New("unsupported pipeline object")
 
 type RuleFactory interface {
-	CreateRule(srcID string, ruleConfig config.RuleConfig) (Rule, error)
+	CreateRule(srcID string, ruleConfig config.RuleConfig) (rule.Rule, error)
 	HasDefaultRule() bool
-	DefaultRule() Rule
+	DefaultRule() rule.Rule
 }
 
 func NewRuleFactory(hf pipeline.HandlerFactory, conf config.Configuration, logger zerolog.Logger) (RuleFactory, error) {
@@ -40,7 +41,7 @@ func NewRuleFactory(hf pipeline.HandlerFactory, conf config.Configuration, logge
 type ruleFactory struct {
 	hf             pipeline.HandlerFactory
 	logger         zerolog.Logger
-	defaultRule    *rule
+	defaultRule    *ruleImpl
 	hasDefaultRule bool
 }
 
@@ -147,7 +148,7 @@ func (f *ruleFactory) getConfig(conf any) map[string]any {
 	return mapConf
 }
 
-func (f *ruleFactory) DefaultRule() Rule {
+func (f *ruleFactory) DefaultRule() rule.Rule {
 	return f.defaultRule
 }
 
@@ -155,7 +156,7 @@ func (f *ruleFactory) HasDefaultRule() bool {
 	return f.hasDefaultRule
 }
 
-func (f *ruleFactory) CreateRule(srcID string, ruleConfig config.RuleConfig) (Rule, error) {
+func (f *ruleFactory) CreateRule(srcID string, ruleConfig config.RuleConfig) (rule.Rule, error) {
 	if len(ruleConfig.ID) == 0 {
 		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
 			"no ID defined for rule ID=%s from %s", ruleConfig.ID, srcID)
@@ -210,7 +211,7 @@ func (f *ruleFactory) CreateRule(srcID string, ruleConfig config.RuleConfig) (Ru
 			"no methods defined for rule ID=%s from %s", ruleConfig.ID, srcID)
 	}
 
-	return &rule{
+	return &ruleImpl{
 		id:         ruleConfig.ID,
 		urlMatcher: matcher,
 		methods:    methods,
@@ -277,7 +278,7 @@ func (f *ruleFactory) initWithDefaultRule(ruleConfig *config.DefaultRuleConfig, 
 		return errorchain.NewWithMessagef(heimdall.ErrConfiguration, "no methods defined for default rule")
 	}
 
-	f.defaultRule = &rule{
+	f.defaultRule = &ruleImpl{
 		id:        "default",
 		methods:   ruleConfig.Methods,
 		srcID:     "config",
@@ -293,7 +294,7 @@ func (f *ruleFactory) initWithDefaultRule(ruleConfig *config.DefaultRuleConfig, 
 	return nil
 }
 
-type rule struct {
+type ruleImpl struct {
 	id         string
 	urlMatcher patternmatcher.PatternMatcher
 	methods    []string
@@ -305,7 +306,7 @@ type rule struct {
 	eh         compositeErrorHandler
 }
 
-func (r *rule) Execute(ctx heimdall.Context) error {
+func (r *ruleImpl) Execute(ctx heimdall.Context) error {
 	logger := zerolog.Ctx(ctx.AppContext())
 
 	if r.isDefault {
@@ -339,10 +340,12 @@ func (r *rule) Execute(ctx heimdall.Context) error {
 	return nil
 }
 
-func (r *rule) MatchesURL(requestURL *url.URL) bool { return r.urlMatcher.Match(requestURL.String()) }
+func (r *ruleImpl) MatchesURL(requestURL *url.URL) bool {
+	return r.urlMatcher.Match(requestURL.String())
+}
 
-func (r *rule) MatchesMethod(method string) bool { return slices.Contains(r.methods, method) }
+func (r *ruleImpl) MatchesMethod(method string) bool { return slices.Contains(r.methods, method) }
 
-func (r *rule) ID() string { return r.id }
+func (r *ruleImpl) ID() string { return r.id }
 
-func (r *rule) SrcID() string { return r.srcID }
+func (r *ruleImpl) SrcID() string { return r.srcID }

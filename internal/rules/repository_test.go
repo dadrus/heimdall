@@ -18,10 +18,10 @@ func TestAddingAndRemovingRules(t *testing.T) {
 	repo, ok := r.(*repository)
 	require.True(t, ok)
 
-	repo.addRule(&rule{id: "1", srcID: "bar"})
-	repo.addRule(&rule{id: "2", srcID: "bar"})
-	repo.addRule(&rule{id: "3", srcID: "bar"})
-	repo.addRule(&rule{id: "4", srcID: "bar"})
+	repo.addRule(&ruleImpl{id: "1", srcID: "bar"})
+	repo.addRule(&ruleImpl{id: "2", srcID: "bar"})
+	repo.addRule(&ruleImpl{id: "3", srcID: "bar"})
+	repo.addRule(&ruleImpl{id: "4", srcID: "bar"})
 
 	assert.Len(t, repo.rules, 4)
 

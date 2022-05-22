@@ -47,7 +47,7 @@ func TestRuleMatchMethod(t *testing.T) {
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
 			// GIVEN
-			rul := &rule{methods: tc.methods}
+			rul := &ruleImpl{methods: tc.methods}
 
 			// WHEN
 			matched := rul.MatchesMethod(tc.toBeMatched)
@@ -104,7 +104,7 @@ func TestRuleMatchURL(t *testing.T) {
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
 			// GIVEN
-			rul := &rule{urlMatcher: tc.matcher(t)}
+			rul := &ruleImpl{urlMatcher: tc.matcher(t)}
 
 			// WHEN
 			matched := rul.MatchesURL(tc.toBeMatched)
@@ -286,7 +286,7 @@ func TestRuleExecute(t *testing.T) {
 			mutator := &mocks.MockSubjectHandler{}
 			errHandler := &mocks.MockErrorHandler{}
 
-			rul := &rule{
+			rul := &ruleImpl{
 				sc: compositeSubjectCreator{authenticator},
 				sh: compositeSubjectHandler{authorizer},
 				m:  compositeSubjectHandler{mutator},

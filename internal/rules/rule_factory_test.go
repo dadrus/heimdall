@@ -517,14 +517,14 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 	for _, tc := range []struct {
 		uc             string
 		config         config.RuleConfig
-		defaultRule    *rule
+		defaultRule    *ruleImpl
 		configureMocks func(t *testing.T, mhf *mocks.MockHandlerFactory)
-		assert         func(t *testing.T, err error, rul *rule)
+		assert         func(t *testing.T, err error, rul *ruleImpl)
 	}{
 		{
 			uc:     "without default rule and with missing id",
 			config: config.RuleConfig{},
-			assert: func(t *testing.T, err error, rul *rule) {
+			assert: func(t *testing.T, err error, rul *ruleImpl) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -535,7 +535,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 		{
 			uc:     "without default rule, with id, but without url",
 			config: config.RuleConfig{ID: "foobar"},
-			assert: func(t *testing.T, err error, rul *rule) {
+			assert: func(t *testing.T, err error, rul *ruleImpl) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -546,7 +546,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 		{
 			uc:     "without default rule, with id, but bad url pattern",
 			config: config.RuleConfig{ID: "foobar", URL: "?>?<*??"},
-			assert: func(t *testing.T, err error, rul *rule) {
+			assert: func(t *testing.T, err error, rul *ruleImpl) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -567,7 +567,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				mhf.On("CreateAuthenticator", "foo", mock.Anything).
 					Return(nil, testsupport.ErrTestPurpose)
 			},
-			assert: func(t *testing.T, err error, rul *rule) {
+			assert: func(t *testing.T, err error, rul *ruleImpl) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -587,7 +587,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				mhf.On("CreateErrorHandler", "foo", mock.Anything).
 					Return(nil, testsupport.ErrTestPurpose)
 			},
-			assert: func(t *testing.T, err error, rul *rule) {
+			assert: func(t *testing.T, err error, rul *ruleImpl) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -600,7 +600,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				ID:  "foobar",
 				URL: "http://foo.bar",
 			},
-			assert: func(t *testing.T, err error, rul *rule) {
+			assert: func(t *testing.T, err error, rul *ruleImpl) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -621,7 +621,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				mhf.On("CreateAuthenticator", "foo", mock.Anything).
 					Return(nil, nil)
 			},
-			assert: func(t *testing.T, err error, rul *rule) {
+			assert: func(t *testing.T, err error, rul *ruleImpl) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -647,7 +647,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				mhf.On("CreateHydrator", "bar", mock.Anything).
 					Return(nil, nil)
 			},
-			assert: func(t *testing.T, err error, rul *rule) {
+			assert: func(t *testing.T, err error, rul *ruleImpl) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -676,7 +676,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				mhf.On("CreateAuthorizer", "baz", mock.Anything).
 					Return(nil, nil)
 			},
-			assert: func(t *testing.T, err error, rul *rule) {
+			assert: func(t *testing.T, err error, rul *ruleImpl) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -702,7 +702,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				mhf.On("CreateMutator", "bar", mock.Anything).
 					Return(nil, nil)
 			},
-			assert: func(t *testing.T, err error, rul *rule) {
+			assert: func(t *testing.T, err error, rul *ruleImpl) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -729,7 +729,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				mhf.On("CreateMutator", "bar", mock.Anything).
 					Return(nil, nil)
 			},
-			assert: func(t *testing.T, err error, rul *rule) {
+			assert: func(t *testing.T, err error, rul *ruleImpl) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -752,14 +752,14 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				ID:  "foobar",
 				URL: "http://foo.bar",
 			},
-			defaultRule: &rule{
+			defaultRule: &ruleImpl{
 				methods: []string{"FOO"},
 				sc:      compositeSubjectCreator{&mocks.MockSubjectCreator{}},
 				sh:      compositeSubjectHandler{&mocks.MockSubjectHandler{}},
 				m:       compositeSubjectHandler{&mocks.MockSubjectHandler{}},
 				eh:      compositeErrorHandler{&mocks.MockErrorHandler{}},
 			},
-			assert: func(t *testing.T, err error, rul *rule) {
+			assert: func(t *testing.T, err error, rul *ruleImpl) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -792,7 +792,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				},
 				Methods: []string{"BAR", "BAZ"},
 			},
-			defaultRule: &rule{
+			defaultRule: &ruleImpl{
 				methods: []string{"FOO"},
 				sc:      compositeSubjectCreator{&mocks.MockSubjectCreator{}},
 				sh:      compositeSubjectHandler{&mocks.MockSubjectHandler{}},
@@ -813,7 +813,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				mhf.On("CreateErrorHandler", "foo", mock.Anything).
 					Return(nil, nil)
 			},
-			assert: func(t *testing.T, err error, rul *rule) {
+			assert: func(t *testing.T, err error, rul *ruleImpl) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -860,12 +860,12 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 
 			// THEN
 			var (
-				impl *rule
+				impl *ruleImpl
 				ok   bool
 			)
 
 			if err == nil {
-				impl, ok = rul.(*rule)
+				impl, ok = rul.(*ruleImpl)
 				require.True(t, ok)
 			}
 

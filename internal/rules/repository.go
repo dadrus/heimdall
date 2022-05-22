@@ -11,6 +11,7 @@ import (
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/event"
+	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
@@ -19,7 +20,7 @@ var ErrNoRuleFound = errors.New("no rule found")
 const defaultRuleListSize = 0
 
 type Repository interface {
-	FindRule(*url.URL) (Rule, error)
+	FindRule(*url.URL) (rule.Rule, error)
 }
 
 func NewRepository(
@@ -30,7 +31,7 @@ func NewRepository(
 	return &repository{
 		rf:     ruleFactory,
 		logger: logger,
-		rules:  make([]Rule, defaultRuleListSize),
+		rules:  make([]rule.Rule, defaultRuleListSize),
 		queue:  queue,
 		quit:   make(chan bool),
 	}, nil
@@ -40,14 +41,14 @@ type repository struct {
 	rf     RuleFactory
 	logger zerolog.Logger
 
-	rules []Rule
+	rules []rule.Rule
 	mutex sync.RWMutex
 
 	queue event.RuleSetChangedEventQueue
 	quit  chan bool
 }
 
-func (r *repository) FindRule(requestURL *url.URL) (Rule, error) {
+func (r *repository) FindRule(requestURL *url.URL) (rule.Rule, error) {
 	r.mutex.RLock()
 	defer r.mutex.RUnlock()
 
@@ -103,13 +104,13 @@ func (r *repository) watchRuleSetChanges() {
 	}
 }
 
-func (r *repository) loadRules(srcID string, definition []byte) ([]Rule, error) {
-	rcs, err := parseRuleSetFromYaml(definition)
+func (r *repository) loadRules(srcID string, definition []byte) ([]rule.Rule, error) {
+	rcs, err := parseRuleSet(definition)
 	if err != nil {
 		return nil, err
 	}
 
-	rules := make([]Rule, len(rcs))
+	rules := make([]rule.Rule, len(rcs))
 
 	for idx, rc := range rcs {
 		rule, err := r.rf.CreateRule(srcID, rc)
@@ -123,7 +124,7 @@ func (r *repository) loadRules(srcID string, definition []byte) ([]Rule, error) 
 	return rules, nil
 }
 
-func (r *repository) addRule(rule Rule) {
+func (r *repository) addRule(rule rule.Rule) {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
 
@@ -151,24 +152,24 @@ func (r *repository) removeRules(srcID string) {
 
 	// if all rules should be dropped, just create a new slice
 	if len(idxs) == len(r.rules) {
-		r.rules = make([]Rule, defaultRuleListSize)
+		r.rules = make([]rule.Rule, defaultRuleListSize)
 
 		return
 	}
 
 	// move the elements from the end of the rules slice to the found positions
-	// end set the corresponding "emptied" values to nil
+	// and set the corresponding "emptied" values to nil
 	for i, idx := range idxs {
 		tailIdx := len(r.rules) - (1 + i)
 
 		r.rules[idx] = r.rules[tailIdx]
 
-		// the below reslice preserves the capacity of the slice
-		// so this is required to avoid memory leaks
+		// the below re-slice preserves the capacity of the slice.
+		// this is required to avoid memory leaks
 		r.rules[tailIdx] = nil
 	}
 
-	// reslice
+	// re-slice
 	r.rules = r.rules[:len(r.rules)-len(idxs)]
 }
 
@@ -191,7 +192,7 @@ func (r *repository) onRuleSetDeleted(src string) {
 	r.removeRules(src)
 }
 
-func parseRuleSetFromYaml(data []byte) ([]config.RuleConfig, error) {
+func parseRuleSet(data []byte) ([]config.RuleConfig, error) {
 	var rcs []config.RuleConfig
 
 	if err := yaml.UnmarshalStrict(data, &rcs); err != nil {
