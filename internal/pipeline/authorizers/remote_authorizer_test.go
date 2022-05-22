@@ -16,11 +16,13 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/cache"
+	"github.com/dadrus/heimdall/internal/cache/mocks"
 	"github.com/dadrus/heimdall/internal/heimdall"
+	heimdallmocks "github.com/dadrus/heimdall/internal/heimdall/mocks"
 	"github.com/dadrus/heimdall/internal/pipeline/endpoint"
 	"github.com/dadrus/heimdall/internal/pipeline/subject"
 	"github.com/dadrus/heimdall/internal/pipeline/template"
-	"github.com/dadrus/heimdall/internal/pipeline/testsupport"
+	"github.com/dadrus/heimdall/internal/testsupport"
 	"github.com/dadrus/heimdall/internal/x"
 )
 
@@ -324,8 +326,8 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 		authorizer       *remoteAuthorizer
 		subject          *subject.Subject
 		instructServer   func(t *testing.T)
-		configureContext func(t *testing.T, ctx *testsupport.MockContext)
-		configureCache   func(t *testing.T, cch *testsupport.MockCache, authorizer *remoteAuthorizer, sub *subject.Subject)
+		configureContext func(t *testing.T, ctx *heimdallmocks.MockContext)
+		configureCache   func(t *testing.T, cch *mocks.MockCache, authorizer *remoteAuthorizer, sub *subject.Subject)
 		assert           func(t *testing.T, err error, sub *subject.Subject)
 	}{
 		{
@@ -425,7 +427,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 				responseContentType = "application/json"
 				responseHeaders = map[string]string{"X-Foo-Bar": "HeyFoo"}
 			},
-			configureContext: func(t *testing.T, ctx *testsupport.MockContext) {
+			configureContext: func(t *testing.T, ctx *heimdallmocks.MockContext) {
 				t.Helper()
 
 				ctx.On("AddResponseHeader", "X-Foo-Bar", "HeyFoo")
@@ -494,12 +496,12 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 				responseCode = http.StatusOK
 				responseHeaders = map[string]string{"X-Foo-Bar": "HeyFoo"}
 			},
-			configureContext: func(t *testing.T, ctx *testsupport.MockContext) {
+			configureContext: func(t *testing.T, ctx *heimdallmocks.MockContext) {
 				t.Helper()
 
 				ctx.On("AddResponseHeader", "X-Foo-Bar", "HeyFoo")
 			},
-			configureCache: func(t *testing.T, cch *testsupport.MockCache, auth *remoteAuthorizer, sub *subject.Subject) {
+			configureCache: func(t *testing.T, cch *mocks.MockCache, auth *remoteAuthorizer, sub *subject.Subject) {
 				t.Helper()
 
 				cacheKey, err := auth.calculateCacheKey(sub)
@@ -542,13 +544,13 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 				ID:         "my id",
 				Attributes: map[string]any{"bar": "baz"},
 			},
-			configureContext: func(t *testing.T, ctx *testsupport.MockContext) {
+			configureContext: func(t *testing.T, ctx *heimdallmocks.MockContext) {
 				t.Helper()
 
 				ctx.On("AddResponseHeader", "X-Foo-Bar", "HeyFoo")
 				ctx.On("AddResponseHeader", "X-Bar-Foo", "HeyBar")
 			},
-			configureCache: func(t *testing.T, cch *testsupport.MockCache, auth *remoteAuthorizer, sub *subject.Subject) {
+			configureCache: func(t *testing.T, cch *mocks.MockCache, auth *remoteAuthorizer, sub *subject.Subject) {
 				t.Helper()
 
 				cch.On("Get", mock.Anything).Return(&authorizationInformation{
@@ -595,12 +597,12 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 				ID:         "my id",
 				Attributes: map[string]any{"bar": "baz"},
 			},
-			configureContext: func(t *testing.T, ctx *testsupport.MockContext) {
+			configureContext: func(t *testing.T, ctx *heimdallmocks.MockContext) {
 				t.Helper()
 
 				ctx.On("AddResponseHeader", "X-Foo-Bar", "HeyFoo")
 			},
-			configureCache: func(t *testing.T, cch *testsupport.MockCache, auth *remoteAuthorizer, sub *subject.Subject) {
+			configureCache: func(t *testing.T, cch *mocks.MockCache, auth *remoteAuthorizer, sub *subject.Subject) {
 				t.Helper()
 
 				cch.On("Get", mock.Anything).Return("Hello Foo")
@@ -733,17 +735,17 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 
 			configureContext := x.IfThenElse(tc.configureContext != nil,
 				tc.configureContext,
-				func(t *testing.T, ctx *testsupport.MockContext) { t.Helper() })
+				func(t *testing.T, ctx *heimdallmocks.MockContext) { t.Helper() })
 
 			configureCache := x.IfThenElse(tc.configureCache != nil,
 				tc.configureCache,
-				func(t *testing.T, ctx *testsupport.MockCache, auth *remoteAuthorizer, sub *subject.Subject) {
+				func(t *testing.T, ctx *mocks.MockCache, auth *remoteAuthorizer, sub *subject.Subject) {
 					t.Helper()
 				})
 
-			cch := &testsupport.MockCache{}
+			cch := &mocks.MockCache{}
 
-			ctx := &testsupport.MockContext{}
+			ctx := &heimdallmocks.MockContext{}
 			ctx.On("AppContext").Return(cache.WithContext(context.Background(), cch))
 
 			configureContext(t, ctx)

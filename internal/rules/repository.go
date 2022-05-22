@@ -9,7 +9,9 @@ import (
 	"gopkg.in/yaml.v2"
 
 	"github.com/dadrus/heimdall/internal/config"
+	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/event"
+	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
 var ErrNoRuleFound = errors.New("no rule found")
@@ -112,7 +114,7 @@ func (r *repository) loadRules(srcID string, definition []byte) ([]Rule, error) 
 	for idx, rc := range rcs {
 		rule, err := r.rf.CreateRule(srcID, rc)
 		if err != nil {
-			return nil, err
+			return nil, errorchain.NewWithMessage(heimdall.ErrInternal, "failed loading rule").CausedBy(err)
 		}
 
 		rules[idx] = rule

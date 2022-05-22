@@ -11,7 +11,8 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/pipeline/testsupport"
+	"github.com/dadrus/heimdall/internal/heimdall/mocks"
+	"github.com/dadrus/heimdall/internal/testsupport"
 	"github.com/dadrus/heimdall/internal/x"
 )
 
@@ -338,7 +339,7 @@ func TestRedirectErrorHandlerExecute(t *testing.T) {
 		uc               string
 		config           []byte
 		error            error
-		configureContext func(t *testing.T, ctx *testsupport.MockContext)
+		configureContext func(t *testing.T, ctx *mocks.MockContext)
 		assert           func(t *testing.T, wasResponsible bool, err error)
 	}{
 		{
@@ -366,7 +367,7 @@ when:
       - unauthorized
 `),
 			error: heimdall.ErrAuthentication,
-			configureContext: func(t *testing.T, ctx *testsupport.MockContext) {
+			configureContext: func(t *testing.T, ctx *mocks.MockContext) {
 				t.Helper()
 
 				ctx.On("SetPipelineError", mock.MatchedBy(func(redirErr *heimdall.RedirectError) bool {
@@ -400,7 +401,7 @@ when:
       - unauthorized
 `),
 			error: heimdall.ErrAuthentication,
-			configureContext: func(t *testing.T, ctx *testsupport.MockContext) {
+			configureContext: func(t *testing.T, ctx *mocks.MockContext) {
 				t.Helper()
 
 				requestURL, err := url.Parse("http://test.org")
@@ -433,12 +434,12 @@ when:
 			// GIVEN
 			configureContext := x.IfThenElse(tc.configureContext != nil,
 				tc.configureContext,
-				func(t *testing.T, ctx *testsupport.MockContext) { t.Helper() })
+				func(t *testing.T, ctx *mocks.MockContext) { t.Helper() })
 
 			conf, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
 
-			mctx := &testsupport.MockContext{}
+			mctx := &mocks.MockContext{}
 			mctx.On("AppContext").Return(context.Background())
 
 			configureContext(t, mctx)

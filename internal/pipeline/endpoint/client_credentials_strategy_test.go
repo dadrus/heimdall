@@ -18,7 +18,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/cache"
-	"github.com/dadrus/heimdall/internal/pipeline/testsupport"
+	"github.com/dadrus/heimdall/internal/cache/mocks"
 	"github.com/dadrus/heimdall/internal/x"
 )
 
@@ -105,7 +105,7 @@ func TestApplyClientCredentialsStrategy(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	defaultCacheSetup := func(t *testing.T, cch *testsupport.MockCache, key string) {
+	defaultCacheSetup := func(t *testing.T, cch *mocks.MockCache, key string) {
 		t.Helper()
 
 		cch.On("Get", key).Return(nil)
@@ -129,7 +129,7 @@ func TestApplyClientCredentialsStrategy(t *testing.T) {
 	for _, tc := range []struct {
 		uc         string
 		strategy   ClientCredentialsStrategy
-		setupCache func(t *testing.T, cch *testsupport.MockCache, key string)
+		setupCache func(t *testing.T, cch *mocks.MockCache, key string)
 		assert     func(t *testing.T, err error, req *http.Request)
 	}{
 		{
@@ -170,7 +170,7 @@ func TestApplyClientCredentialsStrategy(t *testing.T) {
 				Scopes:       scopes,
 				TokenURL:     srv.URL,
 			},
-			setupCache: func(t *testing.T, cch *testsupport.MockCache, key string) {
+			setupCache: func(t *testing.T, cch *mocks.MockCache, key string) {
 				t.Helper()
 
 				var resp *tokenEndpointResponse
@@ -220,7 +220,7 @@ func TestApplyClientCredentialsStrategy(t *testing.T) {
 				Scopes:       scopes,
 				TokenURL:     srv.URL,
 			},
-			setupCache: func(t *testing.T, cch *testsupport.MockCache, key string) {
+			setupCache: func(t *testing.T, cch *mocks.MockCache, key string) {
 				t.Helper()
 
 				cached := &tokenEndpointResponse{
@@ -248,7 +248,7 @@ func TestApplyClientCredentialsStrategy(t *testing.T) {
 			setupCache := x.IfThenElse(tc.setupCache != nil, tc.setupCache, defaultCacheSetup)
 
 			cacheKey := tc.strategy.calculateCacheKey()
-			cch := &testsupport.MockCache{}
+			cch := &mocks.MockCache{}
 			setupCache(t, cch, cacheKey)
 
 			ctx := cache.WithContext(context.Background(), cch)

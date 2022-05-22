@@ -7,13 +7,13 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/pipeline/testsupport"
+	"github.com/dadrus/heimdall/internal/heimdall/mocks"
 )
 
 func TestUnauthorizedAuthenticatorExecution(t *testing.T) {
 	t.Parallel()
 	// GIVEN
-	ctx := &testsupport.MockContext{}
+	ctx := &mocks.MockContext{}
 	ctx.On("AppContext").Return(context.Background())
 
 	auth := newUnauthorizedAuthenticator()

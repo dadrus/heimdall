@@ -7,14 +7,14 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/dadrus/heimdall/internal/pipeline/testsupport"
+	"github.com/dadrus/heimdall/internal/heimdall/mocks"
 )
 
 func TestNoopMutatorExecution(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
-	ctx := &testsupport.MockContext{}
+	ctx := &mocks.MockContext{}
 	ctx.On("AppContext").Return(context.Background())
 
 	mutator := newNoopMutator()

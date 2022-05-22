@@ -15,10 +15,12 @@ import (
 	"gopkg.in/square/go-jose.v2/jwt"
 
 	"github.com/dadrus/heimdall/internal/cache"
+	"github.com/dadrus/heimdall/internal/cache/mocks"
 	"github.com/dadrus/heimdall/internal/heimdall"
+	heimdallmocks "github.com/dadrus/heimdall/internal/heimdall/mocks"
 	"github.com/dadrus/heimdall/internal/pipeline/subject"
 	"github.com/dadrus/heimdall/internal/pipeline/template"
-	"github.com/dadrus/heimdall/internal/pipeline/testsupport"
+	"github.com/dadrus/heimdall/internal/testsupport"
 	"github.com/dadrus/heimdall/internal/x"
 )
 
@@ -328,8 +330,8 @@ func TestJWTMutatorExecute(t *testing.T) {
 		uc               string
 		config           []byte
 		subject          *subject.Subject
-		configureContext func(t *testing.T, ctx *testsupport.MockContext)
-		configureCache   func(t *testing.T, cch *testsupport.MockCache, sub *subject.Subject)
+		configureContext func(t *testing.T, ctx *heimdallmocks.MockContext)
+		configureCache   func(t *testing.T, cch *mocks.MockCache, sub *subject.Subject)
 		assert           func(t *testing.T, err error)
 	}{
 		{
@@ -345,7 +347,7 @@ func TestJWTMutatorExecute(t *testing.T) {
 		{
 			uc:      "with used prefilled cache",
 			subject: &subject.Subject{ID: "foo", Attributes: map[string]any{"baz": "bar"}},
-			configureCache: func(t *testing.T, cch *testsupport.MockCache, sub *subject.Subject) {
+			configureCache: func(t *testing.T, cch *mocks.MockCache, sub *subject.Subject) {
 				t.Helper()
 
 				mut := jwtMutator{ttl: defaultJWTTTL}
@@ -355,7 +357,7 @@ func TestJWTMutatorExecute(t *testing.T) {
 
 				cch.On("Get", cacheKey).Return("TestToken")
 			},
-			configureContext: func(t *testing.T, ctx *testsupport.MockContext) {
+			configureContext: func(t *testing.T, ctx *heimdallmocks.MockContext) {
 				t.Helper()
 
 				ctx.On("Signer").Return(signer)
@@ -371,7 +373,7 @@ func TestJWTMutatorExecute(t *testing.T) {
 			uc:      "with bad prefilled cache",
 			config:  []byte(`ttl: 1m`),
 			subject: &subject.Subject{ID: "foo", Attributes: map[string]any{"baz": "bar"}},
-			configureCache: func(t *testing.T, cch *testsupport.MockCache, sub *subject.Subject) {
+			configureCache: func(t *testing.T, cch *mocks.MockCache, sub *subject.Subject) {
 				t.Helper()
 
 				mut := jwtMutator{ttl: configuredTTL}
@@ -385,7 +387,7 @@ func TestJWTMutatorExecute(t *testing.T) {
 					mock.MatchedBy(validateGeneratedJWT(sub, configuredTTL, nil)),
 					configuredTTL-defaultCacheLeeway)
 			},
-			configureContext: func(t *testing.T, ctx *testsupport.MockContext) {
+			configureContext: func(t *testing.T, ctx *heimdallmocks.MockContext) {
 				t.Helper()
 
 				ctx.On("Signer").Return(signer)
@@ -402,7 +404,7 @@ func TestJWTMutatorExecute(t *testing.T) {
 			uc:      "with no cache hit and without custom claims",
 			config:  []byte(`ttl: 1m`),
 			subject: &subject.Subject{ID: "foo", Attributes: map[string]any{"baz": "bar"}},
-			configureCache: func(t *testing.T, cch *testsupport.MockCache, sub *subject.Subject) {
+			configureCache: func(t *testing.T, cch *mocks.MockCache, sub *subject.Subject) {
 				t.Helper()
 
 				cch.On("Get", mock.Anything).Return(nil)
@@ -410,7 +412,7 @@ func TestJWTMutatorExecute(t *testing.T) {
 					mock.MatchedBy(validateGeneratedJWT(sub, configuredTTL, nil)),
 					configuredTTL-defaultCacheLeeway)
 			},
-			configureContext: func(t *testing.T, ctx *testsupport.MockContext) {
+			configureContext: func(t *testing.T, ctx *heimdallmocks.MockContext) {
 				t.Helper()
 
 				ctx.On("Signer").Return(signer)
@@ -432,7 +434,7 @@ claims: "{
   {{ quote $val }}: \"baz\"
 }"`),
 			subject: &subject.Subject{ID: "foo", Attributes: map[string]any{"baz": "bar"}},
-			configureCache: func(t *testing.T, cch *testsupport.MockCache, sub *subject.Subject) {
+			configureCache: func(t *testing.T, cch *mocks.MockCache, sub *subject.Subject) {
 				t.Helper()
 
 				cch.On("Get", mock.Anything).Return(nil)
@@ -440,7 +442,7 @@ claims: "{
 					mock.MatchedBy(validateGeneratedJWT(sub, defaultJWTTTL, map[string]any{"sub_id": "foo", "bar": "baz"})),
 					defaultJWTTTL-defaultCacheLeeway)
 			},
-			configureContext: func(t *testing.T, ctx *testsupport.MockContext) {
+			configureContext: func(t *testing.T, ctx *heimdallmocks.MockContext) {
 				t.Helper()
 
 				ctx.On("Signer").Return(signer)
@@ -457,12 +459,12 @@ claims: "{
 			uc:      "with custom claims template, which does not result in a JSON object",
 			config:  []byte(`claims: "foo: bar"`),
 			subject: &subject.Subject{ID: "foo", Attributes: map[string]any{"baz": "bar"}},
-			configureCache: func(t *testing.T, cch *testsupport.MockCache, sub *subject.Subject) {
+			configureCache: func(t *testing.T, cch *mocks.MockCache, sub *subject.Subject) {
 				t.Helper()
 
 				cch.On("Get", mock.Anything).Return(nil)
 			},
-			configureContext: func(t *testing.T, ctx *testsupport.MockContext) {
+			configureContext: func(t *testing.T, ctx *heimdallmocks.MockContext) {
 				t.Helper()
 
 				ctx.On("Signer").Return(signer)
@@ -479,12 +481,12 @@ claims: "{
 			uc:      "with custom claims template, which fails during rendering",
 			config:  []byte(`claims: "{{ .foobar }}"`),
 			subject: &subject.Subject{ID: "foo", Attributes: map[string]any{"baz": "bar"}},
-			configureCache: func(t *testing.T, cch *testsupport.MockCache, sub *subject.Subject) {
+			configureCache: func(t *testing.T, cch *mocks.MockCache, sub *subject.Subject) {
 				t.Helper()
 
 				cch.On("Get", mock.Anything).Return(nil)
 			},
-			configureContext: func(t *testing.T, ctx *testsupport.MockContext) {
+			configureContext: func(t *testing.T, ctx *heimdallmocks.MockContext) {
 				t.Helper()
 
 				ctx.On("Signer").Return(signer)
@@ -500,12 +502,12 @@ claims: "{
 		{
 			uc:      "with bad signer configuration",
 			subject: &subject.Subject{ID: "foo", Attributes: map[string]any{"baz": "bar"}},
-			configureCache: func(t *testing.T, cch *testsupport.MockCache, sub *subject.Subject) {
+			configureCache: func(t *testing.T, cch *mocks.MockCache, sub *subject.Subject) {
 				t.Helper()
 
 				cch.On("Get", mock.Anything).Return(nil)
 			},
-			configureContext: func(t *testing.T, ctx *testsupport.MockContext) {
+			configureContext: func(t *testing.T, ctx *heimdallmocks.MockContext) {
 				t.Helper()
 
 				badSigner := &MockJWTSigner{}
@@ -529,19 +531,19 @@ claims: "{
 			// GIVEN
 			configureCache := x.IfThenElse(tc.configureCache != nil,
 				tc.configureCache,
-				func(_ *testing.T, _ *testsupport.MockCache, _ *subject.Subject) {})
+				func(_ *testing.T, _ *mocks.MockCache, _ *subject.Subject) {})
 
 			configureContext := x.IfThenElse(tc.configureContext != nil,
 				tc.configureContext,
-				func(_ *testing.T, _ *testsupport.MockContext) {})
+				func(_ *testing.T, _ *heimdallmocks.MockContext) {})
 
 			conf, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
 
-			cch := &testsupport.MockCache{}
+			cch := &mocks.MockCache{}
 			configureCache(t, cch, tc.subject)
 
-			mctx := &testsupport.MockContext{}
+			mctx := &heimdallmocks.MockContext{}
 			mctx.On("AppContext").Return(cache.WithContext(context.Background(), cch))
 			configureContext(t, mctx)
 
@@ -555,6 +557,7 @@ claims: "{
 			tc.assert(t, err)
 
 			mctx.AssertExpectations(t)
+			cch.AssertExpectations(t)
 		})
 	}
 }

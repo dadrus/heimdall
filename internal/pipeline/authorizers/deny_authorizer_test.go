@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/pipeline/testsupport"
+	"github.com/dadrus/heimdall/internal/heimdall/mocks"
 )
 
 func TestCreateDenyAuthorizerFromPrototype(t *testing.T) {
@@ -29,7 +29,7 @@ func TestCreateDenyAuthorizerFromPrototype(t *testing.T) {
 
 func TestDenyAuthorizerExecute(t *testing.T) {
 	// GIVEN
-	ctx := &testsupport.MockContext{}
+	ctx := &mocks.MockContext{}
 	ctx.On("AppContext").Return(context.Background())
 
 	auth := newDenyAuthorizer()

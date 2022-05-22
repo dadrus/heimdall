@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/dadrus/heimdall/internal/pipeline/testsupport"
+	"github.com/dadrus/heimdall/internal/heimdall/mocks"
 )
 
 func TestCreateAllowAuthorizerFromPrototype(t *testing.T) {
@@ -28,7 +28,7 @@ func TestCreateAllowAuthorizerFromPrototype(t *testing.T) {
 
 func TestAllowAuthorizerExecute(t *testing.T) {
 	// GIVEN
-	ctx := &testsupport.MockContext{}
+	ctx := &mocks.MockContext{}
 	ctx.On("AppContext").Return(context.Background())
 
 	auth := newAllowAuthorizer()

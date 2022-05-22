@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/pipeline/testsupport"
+	"github.com/dadrus/heimdall/internal/heimdall/mocks"
 )
 
 func TestErrorConditionMatcherMatch(t *testing.T) {
@@ -19,7 +19,7 @@ func TestErrorConditionMatcherMatch(t *testing.T) {
 	for _, tc := range []struct {
 		uc       string
 		matcher  ErrorConditionMatcher
-		setupCtx func(ctx *testsupport.MockContext)
+		setupCtx func(ctx *mocks.MockContext)
 		err      error
 		matching bool
 	}{
@@ -30,7 +30,7 @@ func TestErrorConditionMatcherMatch(t *testing.T) {
 				CIDR:    cidrMatcher,
 				Headers: &HeaderMatcher{"foobar": {"bar", "foo"}},
 			},
-			setupCtx: func(ctx *testsupport.MockContext) {
+			setupCtx: func(ctx *mocks.MockContext) {
 				t.Helper()
 
 				ctx.On("RequestHeaders").Return(map[string]string{
@@ -50,7 +50,7 @@ func TestErrorConditionMatcherMatch(t *testing.T) {
 				CIDR:    cidrMatcher,
 				Headers: &HeaderMatcher{"foobar": {"bar", "foo"}},
 			},
-			setupCtx: func(ctx *testsupport.MockContext) {
+			setupCtx: func(ctx *mocks.MockContext) {
 				t.Helper()
 
 				ctx.On("RequestHeaders").Return(map[string]string{
@@ -70,7 +70,7 @@ func TestErrorConditionMatcherMatch(t *testing.T) {
 				CIDR:    cidrMatcher,
 				Headers: &HeaderMatcher{"foobar": {"bar", "foo"}},
 			},
-			setupCtx: func(ctx *testsupport.MockContext) {
+			setupCtx: func(ctx *mocks.MockContext) {
 				t.Helper()
 
 				ctx.On("RequestHeaders").Return(map[string]string{
@@ -90,7 +90,7 @@ func TestErrorConditionMatcherMatch(t *testing.T) {
 				CIDR:    cidrMatcher,
 				Headers: &HeaderMatcher{"foobar": {"bar", "foo"}},
 			},
-			setupCtx: func(ctx *testsupport.MockContext) {
+			setupCtx: func(ctx *mocks.MockContext) {
 				t.Helper()
 
 				ctx.On("RequestHeaders").Return(map[string]string{
@@ -110,7 +110,7 @@ func TestErrorConditionMatcherMatch(t *testing.T) {
 				CIDR:    cidrMatcher,
 				Headers: &HeaderMatcher{"foobar": {"bar", "foo"}},
 			},
-			setupCtx: func(ctx *testsupport.MockContext) {
+			setupCtx: func(ctx *mocks.MockContext) {
 				t.Helper()
 
 				ctx.On("RequestHeaders").Return(map[string]string{
@@ -128,7 +128,7 @@ func TestErrorConditionMatcherMatch(t *testing.T) {
 			matcher: ErrorConditionMatcher{
 				Error: &ErrorTypeMatcher{heimdall.ErrConfiguration},
 			},
-			setupCtx: func(ctx *testsupport.MockContext) {
+			setupCtx: func(ctx *mocks.MockContext) {
 				t.Helper()
 			},
 			err:      heimdall.ErrConfiguration,
@@ -139,7 +139,7 @@ func TestErrorConditionMatcherMatch(t *testing.T) {
 			matcher: ErrorConditionMatcher{
 				Headers: &HeaderMatcher{"foobar": {"bar", "foo"}},
 			},
-			setupCtx: func(ctx *testsupport.MockContext) {
+			setupCtx: func(ctx *mocks.MockContext) {
 				t.Helper()
 
 				ctx.On("RequestHeaders").Return(map[string]string{
@@ -154,7 +154,7 @@ func TestErrorConditionMatcherMatch(t *testing.T) {
 			matcher: ErrorConditionMatcher{
 				CIDR: cidrMatcher,
 			},
-			setupCtx: func(ctx *testsupport.MockContext) {
+			setupCtx: func(ctx *mocks.MockContext) {
 				t.Helper()
 
 				ctx.On("RequestClientIPs").Return([]string{
@@ -167,7 +167,7 @@ func TestErrorConditionMatcherMatch(t *testing.T) {
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
 			// GIVEN
-			ctx := &testsupport.MockContext{}
+			ctx := &mocks.MockContext{}
 			tc.setupCtx(ctx)
 
 			// WHEN

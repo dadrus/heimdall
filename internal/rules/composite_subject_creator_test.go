@@ -6,8 +6,9 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"github.com/dadrus/heimdall/internal/heimdall/mocks"
 	"github.com/dadrus/heimdall/internal/pipeline/subject"
-	"github.com/dadrus/heimdall/internal/pipeline/testsupport"
+	"github.com/dadrus/heimdall/internal/testsupport"
 )
 
 func TestCompositeAuthenticatorExecutionWithFallback(t *testing.T) {
@@ -16,7 +17,7 @@ func TestCompositeAuthenticatorExecutionWithFallback(t *testing.T) {
 	// GIVEN
 	sub := &subject.Subject{ID: "foo"}
 
-	ctx := &testsupport.MockContext{}
+	ctx := &mocks.MockContext{}
 	ctx.On("AppContext").Return(context.Background())
 
 	auth1 := &mockSubjectCreator{}
@@ -44,7 +45,7 @@ func TestCompositeAuthenticatorExecutionWithoutFallback(t *testing.T) {
 	// GIVEN
 	sub := &subject.Subject{ID: "foo"}
 
-	ctx := &testsupport.MockContext{}
+	ctx := &mocks.MockContext{}
 	ctx.On("AppContext").Return(context.Background())
 
 	auth1 := &mockSubjectCreator{}

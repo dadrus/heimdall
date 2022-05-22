@@ -5,7 +5,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/dadrus/heimdall/internal/pipeline/testsupport"
+	"github.com/dadrus/heimdall/internal/heimdall/mocks"
 )
 
 func TestCompositeExtractCookieValueWithoutPrefix(t *testing.T) {
@@ -16,7 +16,7 @@ func TestCompositeExtractCookieValueWithoutPrefix(t *testing.T) {
 	cookieName := "Test-Cookie"
 	actualValue := "foo"
 
-	ctx := &testsupport.MockContext{}
+	ctx := &mocks.MockContext{}
 	ctx.On("RequestCookie", cookieName).Return(actualValue)
 	ctx.On("RequestHeader", headerName).Return("")
 
@@ -43,7 +43,7 @@ func TestCompositeExtractHeaderValueWithPrefix(t *testing.T) {
 	valuePrefix := "bar:"
 	actualValue := "foo"
 
-	ctx := &testsupport.MockContext{}
+	ctx := &mocks.MockContext{}
 	ctx.On("RequestHeader", headerName).Return(valuePrefix + " " + actualValue)
 	ctx.On("RequestQueryParameter", queryParamName).Return("")
 
@@ -70,7 +70,7 @@ func TestCompositeExtractStrategyOrder(t *testing.T) {
 	valuePrefix := "bar:"
 	actualValue := "foo"
 
-	ctx := &testsupport.MockContext{}
+	ctx := &mocks.MockContext{}
 	ctx.On("RequestHeader", headerName).Return(valuePrefix + " " + actualValue)
 
 	strategy := CompositeExtractStrategy{

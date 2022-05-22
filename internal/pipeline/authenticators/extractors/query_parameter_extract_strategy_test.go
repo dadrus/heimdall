@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/pipeline/testsupport"
+	"github.com/dadrus/heimdall/internal/heimdall/mocks"
 )
 
 func TestExtractQueryParameter(t *testing.T) {
@@ -21,7 +21,7 @@ func TestExtractQueryParameter(t *testing.T) {
 	req, err := http.NewRequest(http.MethodGet, "foobar.local", nil)
 	require.NoError(t, err)
 
-	ctx := &testsupport.MockContext{}
+	ctx := &mocks.MockContext{}
 	ctx.On("RequestQueryParameter", queryParam).Return(queryParamValue)
 
 	strategy := QueryParameterExtractStrategy{Name: queryParam}
@@ -43,7 +43,7 @@ func TestExtractNotExistingQueryParameterValue(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
-	ctx := &testsupport.MockContext{}
+	ctx := &mocks.MockContext{}
 	ctx.On("RequestQueryParameter", mock.Anything).Return("")
 
 	strategy := QueryParameterExtractStrategy{Name: "Test-Cookie"}

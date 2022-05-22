@@ -8,8 +8,9 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/heimdall/mocks"
 	"github.com/dadrus/heimdall/internal/pipeline/subject"
-	"github.com/dadrus/heimdall/internal/pipeline/testsupport"
+	"github.com/dadrus/heimdall/internal/testsupport"
 )
 
 func TestCreateLocalAuthorizer(t *testing.T) {
@@ -162,13 +163,13 @@ func TestLocalAuthorizerExecute(t *testing.T) {
 	for _, tc := range []struct {
 		uc                         string
 		config                     []byte
-		configureContextAndSubject func(t *testing.T, ctx *testsupport.MockContext, sub *subject.Subject)
+		configureContextAndSubject func(t *testing.T, ctx *mocks.MockContext, sub *subject.Subject)
 		assert                     func(t *testing.T, err error)
 	}{
 		{
 			uc:     "denied by script",
 			config: []byte(`script: "throw('denied by script')"`),
-			configureContextAndSubject: func(t *testing.T, ctx *testsupport.MockContext, sub *subject.Subject) {
+			configureContextAndSubject: func(t *testing.T, ctx *mocks.MockContext, sub *subject.Subject) {
 				// nothing is required here
 				t.Helper()
 			},
@@ -183,7 +184,7 @@ func TestLocalAuthorizerExecute(t *testing.T) {
 		{
 			uc:     "script can use subject and context",
 			config: []byte(`script: "throw(heimdall.ctx.RequestHeader(heimdall.subject.ID))"`),
-			configureContextAndSubject: func(t *testing.T, ctx *testsupport.MockContext, sub *subject.Subject) {
+			configureContextAndSubject: func(t *testing.T, ctx *mocks.MockContext, sub *subject.Subject) {
 				t.Helper()
 
 				sub.ID = "foobar"
@@ -200,7 +201,7 @@ func TestLocalAuthorizerExecute(t *testing.T) {
 		{
 			uc:     "allowed by script",
 			config: []byte(`script: "true"`),
-			configureContextAndSubject: func(t *testing.T, ctx *testsupport.MockContext, sub *subject.Subject) {
+			configureContextAndSubject: func(t *testing.T, ctx *mocks.MockContext, sub *subject.Subject) {
 				// nothing is required here
 				t.Helper()
 			},
@@ -216,7 +217,7 @@ func TestLocalAuthorizerExecute(t *testing.T) {
 			conf, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
 
-			mctx := &testsupport.MockContext{}
+			mctx := &mocks.MockContext{}
 			mctx.On("AppContext").Return(context.Background())
 
 			sub := &subject.Subject{}

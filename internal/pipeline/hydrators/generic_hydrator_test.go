@@ -14,11 +14,13 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/cache"
+	"github.com/dadrus/heimdall/internal/cache/mocks"
 	"github.com/dadrus/heimdall/internal/heimdall"
+	heimdallmocks "github.com/dadrus/heimdall/internal/heimdall/mocks"
 	"github.com/dadrus/heimdall/internal/pipeline/endpoint"
 	"github.com/dadrus/heimdall/internal/pipeline/subject"
 	"github.com/dadrus/heimdall/internal/pipeline/template"
-	"github.com/dadrus/heimdall/internal/pipeline/testsupport"
+	"github.com/dadrus/heimdall/internal/testsupport"
 	"github.com/dadrus/heimdall/internal/x"
 )
 
@@ -377,8 +379,8 @@ func TestGenericHydratorExecute(t *testing.T) {
 		hydrator         *genericHydrator
 		subject          *subject.Subject
 		instructServer   func(t *testing.T)
-		configureContext func(t *testing.T, ctx *testsupport.MockContext)
-		configureCache   func(t *testing.T, cch *testsupport.MockCache, hydrator *genericHydrator, sub *subject.Subject)
+		configureContext func(t *testing.T, ctx *heimdallmocks.MockContext)
+		configureCache   func(t *testing.T, cch *mocks.MockCache, hydrator *genericHydrator, sub *subject.Subject)
 		assert           func(t *testing.T, err error, sub *subject.Subject)
 	}{
 		{
@@ -402,7 +404,7 @@ func TestGenericHydratorExecute(t *testing.T) {
 				ttl:  5 * time.Second,
 			},
 			subject: &subject.Subject{ID: "Foo", Attributes: map[string]any{"bar": "baz"}},
-			configureCache: func(t *testing.T, cch *testsupport.MockCache, hydrator *genericHydrator, sub *subject.Subject) {
+			configureCache: func(t *testing.T, cch *mocks.MockCache, hydrator *genericHydrator, sub *subject.Subject) {
 				t.Helper()
 
 				key, err := hydrator.calculateCacheKey(sub)
@@ -428,7 +430,7 @@ func TestGenericHydratorExecute(t *testing.T) {
 				ttl:  5 * time.Second,
 			},
 			subject: &subject.Subject{ID: "Foo", Attributes: map[string]any{"bar": "baz"}},
-			configureCache: func(t *testing.T, cch *testsupport.MockCache, hydrator *genericHydrator, sub *subject.Subject) {
+			configureCache: func(t *testing.T, cch *mocks.MockCache, hydrator *genericHydrator, sub *subject.Subject) {
 				t.Helper()
 
 				key, err := hydrator.calculateCacheKey(sub)
@@ -584,7 +586,7 @@ func TestGenericHydratorExecute(t *testing.T) {
 				responseContent = []byte(`{ "baz": "foo" }`)
 				responseCode = http.StatusOK
 			},
-			configureContext: func(t *testing.T, ctx *testsupport.MockContext) {
+			configureContext: func(t *testing.T, ctx *heimdallmocks.MockContext) {
 				t.Helper()
 
 				ctx.On("RequestHeader", "X-Bar-Foo").
@@ -620,17 +622,17 @@ func TestGenericHydratorExecute(t *testing.T) {
 
 			configureContext := x.IfThenElse(tc.configureContext != nil,
 				tc.configureContext,
-				func(t *testing.T, ctx *testsupport.MockContext) { t.Helper() })
+				func(t *testing.T, ctx *heimdallmocks.MockContext) { t.Helper() })
 
 			configureCache := x.IfThenElse(tc.configureCache != nil,
 				tc.configureCache,
-				func(t *testing.T, ctx *testsupport.MockCache, auth *genericHydrator, sub *subject.Subject) {
+				func(t *testing.T, ctx *mocks.MockCache, auth *genericHydrator, sub *subject.Subject) {
 					t.Helper()
 				})
 
-			cch := &testsupport.MockCache{}
+			cch := &mocks.MockCache{}
 
-			ctx := &testsupport.MockContext{}
+			ctx := &heimdallmocks.MockContext{}
 			ctx.On("AppContext").Return(cache.WithContext(context.Background(), cch))
 
 			configureContext(t, ctx)

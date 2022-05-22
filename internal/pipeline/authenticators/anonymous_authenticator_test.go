@@ -8,7 +8,8 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/pipeline/testsupport"
+	"github.com/dadrus/heimdall/internal/heimdall/mocks"
+	"github.com/dadrus/heimdall/internal/testsupport"
 )
 
 func TestCreateAnonymousAuthenticator(t *testing.T) {
@@ -143,7 +144,7 @@ func TestAnonymousAuthenticatorExecute(t *testing.T) {
 	subjectID := "anon"
 	auth := anonymousAuthenticator{Subject: subjectID}
 
-	ctx := &testsupport.MockContext{}
+	ctx := &mocks.MockContext{}
 	ctx.On("AppContext").Return(context.Background())
 
 	// WHEN

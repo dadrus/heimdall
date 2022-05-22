@@ -11,8 +11,9 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/heimdall/mocks"
 	"github.com/dadrus/heimdall/internal/pipeline/subject"
-	"github.com/dadrus/heimdall/internal/pipeline/testsupport"
+	"github.com/dadrus/heimdall/internal/testsupport"
 )
 
 func TestCreateBasicAuthAuthenticator(t *testing.T) {
@@ -249,12 +250,12 @@ password: bar`))
 
 	for _, tc := range []struct {
 		uc               string
-		configureContext func(t *testing.T, ctx *testsupport.MockContext)
+		configureContext func(t *testing.T, ctx *mocks.MockContext)
 		assert           func(t *testing.T, err error, sub *subject.Subject)
 	}{
 		{
 			uc: "no authorization header",
-			configureContext: func(t *testing.T, ctx *testsupport.MockContext) {
+			configureContext: func(t *testing.T, ctx *mocks.MockContext) {
 				t.Helper()
 
 				ctx.On("RequestHeader", "Authorization").Return("")
@@ -271,7 +272,7 @@ password: bar`))
 		},
 		{
 			uc: "malformed scheme",
-			configureContext: func(t *testing.T, ctx *testsupport.MockContext) {
+			configureContext: func(t *testing.T, ctx *mocks.MockContext) {
 				t.Helper()
 
 				ctx.On("RequestHeader", "Authorization").Return("foo bar baz")
@@ -288,7 +289,7 @@ password: bar`))
 		},
 		{
 			uc: "unexpected authentication scheme",
-			configureContext: func(t *testing.T, ctx *testsupport.MockContext) {
+			configureContext: func(t *testing.T, ctx *mocks.MockContext) {
 				t.Helper()
 
 				ctx.On("RequestHeader", "Authorization").Return("foo bar")
@@ -305,7 +306,7 @@ password: bar`))
 		},
 		{
 			uc: "base64 decoding error",
-			configureContext: func(t *testing.T, ctx *testsupport.MockContext) {
+			configureContext: func(t *testing.T, ctx *mocks.MockContext) {
 				t.Helper()
 
 				ctx.On("RequestHeader", "Authorization").Return("Basic bar")
@@ -322,7 +323,7 @@ password: bar`))
 		},
 		{
 			uc: "malformed encoding",
-			configureContext: func(t *testing.T, ctx *testsupport.MockContext) {
+			configureContext: func(t *testing.T, ctx *mocks.MockContext) {
 				t.Helper()
 
 				ctx.On("RequestHeader", "Authorization").
@@ -340,7 +341,7 @@ password: bar`))
 		},
 		{
 			uc: "invalid user id",
-			configureContext: func(t *testing.T, ctx *testsupport.MockContext) {
+			configureContext: func(t *testing.T, ctx *mocks.MockContext) {
 				t.Helper()
 
 				ctx.On("RequestHeader", "Authorization").
@@ -358,7 +359,7 @@ password: bar`))
 		},
 		{
 			uc: "invalid password",
-			configureContext: func(t *testing.T, ctx *testsupport.MockContext) {
+			configureContext: func(t *testing.T, ctx *mocks.MockContext) {
 				t.Helper()
 
 				ctx.On("RequestHeader", "Authorization").
@@ -376,7 +377,7 @@ password: bar`))
 		},
 		{
 			uc: "valid credentials",
-			configureContext: func(t *testing.T, ctx *testsupport.MockContext) {
+			configureContext: func(t *testing.T, ctx *mocks.MockContext) {
 				t.Helper()
 
 				ctx.On("RequestHeader", "Authorization").
@@ -397,7 +398,7 @@ password: bar`))
 		auth, err := newBasicAuthAuthenticator(conf)
 		require.NoError(t, err)
 
-		ctx := &testsupport.MockContext{}
+		ctx := &mocks.MockContext{}
 		ctx.On("AppContext").Return(context.Background())
 		tc.configureContext(t, ctx)
 

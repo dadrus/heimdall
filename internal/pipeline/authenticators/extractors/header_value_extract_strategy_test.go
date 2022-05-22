@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/pipeline/testsupport"
+	"github.com/dadrus/heimdall/internal/heimdall/mocks"
 )
 
 func TestExtractHeaderValueWithoutPrefix(t *testing.T) {
@@ -21,7 +21,7 @@ func TestExtractHeaderValueWithoutPrefix(t *testing.T) {
 	req, err := http.NewRequest(http.MethodGet, "foobar.local", nil)
 	require.NoError(t, err)
 
-	ctx := &testsupport.MockContext{}
+	ctx := &mocks.MockContext{}
 	ctx.On("RequestHeader", headerName).Return(headerValue)
 
 	strategy := HeaderValueExtractStrategy{Name: headerName}
@@ -49,7 +49,7 @@ func TestExtractHeaderValueWithPrefix(t *testing.T) {
 	req, err := http.NewRequest(http.MethodGet, "foobar.local", nil)
 	require.NoError(t, err)
 
-	ctx := &testsupport.MockContext{}
+	ctx := &mocks.MockContext{}
 	ctx.On("RequestHeader", headerName).Return(valuePrefix + " " + actualValue)
 
 	strategy := HeaderValueExtractStrategy{Name: headerName, Prefix: valuePrefix}
@@ -71,7 +71,7 @@ func TestExtractNotExistingHeaderValue(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
-	ctx := &testsupport.MockContext{}
+	ctx := &mocks.MockContext{}
 	ctx.On("RequestHeader", mock.Anything).Return("")
 
 	strategy := HeaderValueExtractStrategy{Name: "Test-Cookie"}

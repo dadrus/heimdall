@@ -8,9 +8,10 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/heimdall/mocks"
 	"github.com/dadrus/heimdall/internal/pipeline/subject"
 	"github.com/dadrus/heimdall/internal/pipeline/template"
-	"github.com/dadrus/heimdall/internal/pipeline/testsupport"
+	"github.com/dadrus/heimdall/internal/testsupport"
 	"github.com/dadrus/heimdall/internal/x"
 )
 
@@ -172,7 +173,7 @@ func TestHeaderMutatorExecute(t *testing.T) {
 	for _, tc := range []struct {
 		uc               string
 		config           []byte
-		configureContext func(t *testing.T, ctx *testsupport.MockContext)
+		configureContext func(t *testing.T, ctx *mocks.MockContext)
 		createSubject    func(t *testing.T) *subject.Subject
 		assert           func(t *testing.T, err error)
 	}{
@@ -218,7 +219,7 @@ headers:
   bar: "{{ .ID }}"
   baz: bar
 `),
-			configureContext: func(t *testing.T, ctx *testsupport.MockContext) {
+			configureContext: func(t *testing.T, ctx *mocks.MockContext) {
 				t.Helper()
 
 				ctx.On("AddResponseHeader", "foo", "baz")
@@ -249,12 +250,12 @@ headers:
 
 			configureContext := x.IfThenElse(tc.configureContext != nil,
 				tc.configureContext,
-				func(t *testing.T, ctx *testsupport.MockContext) { t.Helper() })
+				func(t *testing.T, ctx *mocks.MockContext) { t.Helper() })
 
 			conf, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
 
-			mctx := &testsupport.MockContext{}
+			mctx := &mocks.MockContext{}
 			mctx.On("AppContext").Return(context.Background())
 
 			sub := createSubject(t)

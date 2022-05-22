@@ -6,14 +6,15 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/dadrus/heimdall/internal/pipeline/testsupport"
+	"github.com/dadrus/heimdall/internal/heimdall/mocks"
+	"github.com/dadrus/heimdall/internal/testsupport"
 )
 
 func TestCompositeErrorHandlerExecutionWithFallback(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
-	ctx := &testsupport.MockContext{}
+	ctx := &mocks.MockContext{}
 	ctx.On("AppContext").Return(context.Background())
 
 	eh1 := &mockErrorHandler{}
@@ -39,7 +40,7 @@ func TestCompositeErrorHandlerExecutionWithoutFallback(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
-	ctx := &testsupport.MockContext{}
+	ctx := &mocks.MockContext{}
 	ctx.On("AppContext").Return(context.Background())
 
 	eh1 := &mockErrorHandler{}
@@ -64,7 +65,7 @@ func TestCompositeErrorHandlerExecutionWithNoApplicableErrorHandler(t *testing.T
 	t.Parallel()
 
 	// GIVEN
-	ctx := &testsupport.MockContext{}
+	ctx := &mocks.MockContext{}
 	ctx.On("AppContext").Return(context.Background())
 
 	eh1 := &mockErrorHandler{}

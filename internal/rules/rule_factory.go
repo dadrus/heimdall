@@ -44,6 +44,7 @@ type ruleFactory struct {
 	hasDefaultRule bool
 }
 
+// nolint: gocognit, cyclop
 func (f *ruleFactory) createExecutePipeline(
 	pipeline []map[string]any,
 ) (compositeSubjectCreator, compositeSubjectHandler, compositeSubjectHandler, error) {
@@ -56,14 +57,14 @@ func (f *ruleFactory) createExecutePipeline(
 	for _, pipelineStep := range pipeline {
 		id, found := pipelineStep["authenticator"]
 		if found {
+			if len(subjectHandlers) != 0 || len(mutators) != 0 {
+				return nil, nil, nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
+					"an authenticator is defined after some other non authenticator type")
+			}
+
 			authenticator, err := f.hf.CreateAuthenticator(id.(string), f.getConfig(pipelineStep["config"]))
 			if err != nil {
 				return nil, nil, nil, err
-			}
-
-			if len(subjectHandlers) != 0 {
-				return nil, nil, nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
-					"malformed execute configuration")
 			}
 
 			authenticators = append(authenticators, authenticator)
@@ -73,6 +74,11 @@ func (f *ruleFactory) createExecutePipeline(
 
 		id, found = pipelineStep["authorizer"]
 		if found {
+			if len(mutators) != 0 {
+				return nil, nil, nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
+					"at least one mutator is defined before an authorizer")
+			}
+
 			authorizer, err := f.hf.CreateAuthorizer(id.(string), f.getConfig(pipelineStep["config"]))
 			if err != nil {
 				return nil, nil, nil, err
@@ -85,6 +91,11 @@ func (f *ruleFactory) createExecutePipeline(
 
 		id, found = pipelineStep["hydrator"]
 		if found {
+			if len(mutators) != 0 {
+				return nil, nil, nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
+					"at least one mutator is defined before a hydrator")
+			}
+
 			hydrator, err := f.hf.CreateHydrator(id.(string), f.getConfig(pipelineStep["config"]))
 			if err != nil {
 				return nil, nil, nil, err
@@ -107,7 +118,8 @@ func (f *ruleFactory) createExecutePipeline(
 			continue
 		}
 
-		return nil, nil, nil, errorchain.NewWithMessagef(ErrUnsupportedPipelineObject, "%s", pipelineStep)
+		return nil, nil, nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
+			"unsupported configuration in execute")
 	}
 
 	return authenticators, subjectHandlers, mutators, nil
@@ -144,6 +156,25 @@ func (f *ruleFactory) HasDefaultRule() bool {
 }
 
 func (f *ruleFactory) CreateRule(srcID string, ruleConfig config.RuleConfig) (Rule, error) {
+	if len(ruleConfig.ID) == 0 {
+		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+			"no ID defined for rule ID=%s from %s", ruleConfig.ID, srcID)
+	}
+
+	if len(ruleConfig.URL) == 0 {
+		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+			"no URL defined for rule ID=%s from %s", ruleConfig.ID, srcID)
+	}
+
+	strategy := x.IfThenElse(len(ruleConfig.MatchingStrategy) == 0, "glob", ruleConfig.MatchingStrategy)
+
+	matcher, err := patternmatcher.NewPatternMatcher(strategy, ruleConfig.URL)
+	if err != nil {
+		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+			"bad URL pattern for %s strategy defined for rule ID=%s from %s", strategy, ruleConfig.ID, srcID).
+			CausedBy(err)
+	}
+
 	authenticators, subHandlers, mutators, err := f.createExecutePipeline(ruleConfig.Execute)
 	if err != nil {
 		return nil, err
@@ -165,25 +196,18 @@ func (f *ruleFactory) CreateRule(srcID string, ruleConfig config.RuleConfig) (Ru
 	}
 
 	if len(authenticators) == 0 {
-		return nil, errorchain.NewWithMessagef(config.ErrConfiguration,
-			"No authenticator defined for rule ID=%s from %s", ruleConfig.ID, srcID)
+		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+			"no authenticator defined for rule ID=%s from %s", ruleConfig.ID, srcID)
 	}
 
 	if len(mutators) == 0 {
-		return nil, errorchain.NewWithMessagef(config.ErrConfiguration,
-			"No mutator defined for rule ID=%s from %s", ruleConfig.ID, srcID)
+		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+			"no mutator defined for rule ID=%s from %s", ruleConfig.ID, srcID)
 	}
 
 	if len(methods) == 0 {
-		return nil, errorchain.NewWithMessagef(config.ErrConfiguration,
-			"No methods defined for rule ID=%s from %s", ruleConfig.ID, srcID)
-	}
-
-	strategy := x.IfThenElse(len(ruleConfig.MatchingStrategy) == 0, "glob", ruleConfig.MatchingStrategy)
-
-	matcher, err := patternmatcher.NewPatternMatcher(strategy, ruleConfig.URL)
-	if err != nil {
-		return nil, err
+		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+			"no methods defined for rule ID=%s from %s", ruleConfig.ID, srcID)
 	}
 
 	return &rule{
@@ -212,7 +236,8 @@ func (f *ruleFactory) createOnErrorPipeline(ehConfigs []map[string]any) (composi
 
 			errorHandlers = append(errorHandlers, eh)
 		} else {
-			return nil, errorchain.NewWithMessagef(ErrUnsupportedPipelineObject, "%s", ehStep)
+			return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
+				"unsupported configuration in error handler")
 		}
 	}
 
@@ -241,15 +266,15 @@ func (f *ruleFactory) initWithDefaultRule(ruleConfig *config.DefaultRuleConfig, 
 	}
 
 	if len(authenticators) == 0 {
-		return errorchain.NewWithMessage(config.ErrConfiguration, "No authenticator defined for default rule")
+		return errorchain.NewWithMessage(heimdall.ErrConfiguration, "no authenticator defined for default rule")
 	}
 
 	if len(mutators) == 0 {
-		return errorchain.NewWithMessagef(config.ErrConfiguration, "No mutator defined for default rule")
+		return errorchain.NewWithMessagef(config.ErrConfiguration, "no mutator defined for default rule")
 	}
 
 	if len(ruleConfig.Methods) == 0 {
-		return errorchain.NewWithMessagef(config.ErrConfiguration, "No methods defined for default rule")
+		return errorchain.NewWithMessagef(heimdall.ErrConfiguration, "no methods defined for default rule")
 	}
 
 	f.defaultRule = &rule{
@@ -314,18 +339,10 @@ func (r *rule) Execute(ctx heimdall.Context) error {
 	return nil
 }
 
-func (r *rule) MatchesURL(requestURL *url.URL) bool {
-	return r.urlMatcher.Match(requestURL.String())
-}
+func (r *rule) MatchesURL(requestURL *url.URL) bool { return r.urlMatcher.Match(requestURL.String()) }
 
-func (r *rule) MatchesMethod(method string) bool {
-	return slices.Contains(r.methods, method)
-}
+func (r *rule) MatchesMethod(method string) bool { return slices.Contains(r.methods, method) }
 
-func (r *rule) ID() string {
-	return r.id
-}
+func (r *rule) ID() string { return r.id }
 
-func (r *rule) SrcID() string {
-	return r.srcID
-}
+func (r *rule) SrcID() string { return r.srcID }
