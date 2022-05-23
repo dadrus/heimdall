@@ -1,10 +1,10 @@
 package mocks
 
 import (
-	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/stretchr/testify/mock"
 
 	"github.com/dadrus/heimdall/internal/config"
+	"github.com/dadrus/heimdall/internal/rules/rule"
 )
 
 type MockRuleFactory struct {
