@@ -138,7 +138,7 @@ func (h *Handler) decisions(c *fiber.Ctx) error {
 		c.Cookie(&fiber.Cookie{Name: k, Value: v})
 	}
 
-	return c.SendStatus(fiber.StatusOK)
+	return c.SendStatus(fiber.StatusAccepted)
 }
 
 func (h *Handler) getRequestURL(c *fiber.Ctx) *url.URL {
