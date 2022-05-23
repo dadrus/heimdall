@@ -23,6 +23,8 @@ func newCache(conf config.Configuration, logger zerolog.Logger) Cache {
 		return memory.New()
 	}
 
+	logger.Info().Msg("Cache is disabled")
+
 	return noopCache{}
 }
 
