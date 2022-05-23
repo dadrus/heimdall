@@ -138,7 +138,9 @@ func loadKeys(blocks []*pem.Block, password string) (keyStore, error) {
 	return ks, nil
 }
 
-func readPEMContents(data []byte) (blocks []*pem.Block) {
+func readPEMContents(data []byte) []*pem.Block {
+	var blocks []*pem.Block
+
 	block, next := pem.Decode(data)
 	blocks = append(blocks, block)
 
@@ -169,20 +171,19 @@ func createEntry(key any) (*Entry, error) {
 		sigKey = typ
 		size = typ.Params().BitSize
 	default:
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrInternal, "unsupported key type")
+		return nil, errorchain.NewWithMessage(heimdall.ErrInternal, "unsupported key type")
 	}
 
 	hash, err := fingerprint(sigKey.Public())
 	if err != nil {
-		return nil, err
+		return nil, errorchain.NewWithMessage(heimdall.ErrInternal,
+			"failed calculating fingerprint for signature key").CausedBy(err)
 	}
 
 	id, err := uuid.FromBytes(hash)
 	if err != nil {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrInternal, "failed to generate key id").
-			CausedBy(err)
+		return nil, errorchain.NewWithMessage(heimdall.ErrInternal,
+			"failed to generate key id from key fingerprint").CausedBy(err)
 	}
 
 	return &Entry{
@@ -196,15 +197,16 @@ func createEntry(key any) (*Entry, error) {
 func fingerprint(key crypto.PublicKey) ([]byte, error) {
 	derEncoded, err := x509.MarshalPKIXPublicKey(key)
 	if err != nil {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrInternal, "failed to generate RSA-2048 key pair").
-			CausedBy(err)
+		return nil, err
 	}
 
-	// nolint
+	// nolint: gosec
 	// need 20 bytes hash for uuid generation only
 	hash := md5.New()
-	hash.Write(derEncoded)
+
+	if _, err = hash.Write(derEncoded); err != nil {
+		return nil, err
+	}
 
 	return hash.Sum(nil), nil
 }
