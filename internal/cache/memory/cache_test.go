@@ -10,8 +10,6 @@ import (
 func TestCacheUsage(t *testing.T) {
 	t.Parallel()
 
-	cache := New()
-
 	for _, tc := range []struct {
 		uc             string
 		key            string
@@ -77,8 +75,8 @@ func TestCacheUsage(t *testing.T) {
 		},
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
-			// SETUP
-			cache.Delete(tc.key)
+			// GIVEN
+			cache := New()
 
 			// WHEN
 			tc.configureCache(t, cache)
