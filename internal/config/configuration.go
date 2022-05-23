@@ -20,6 +20,7 @@ type Configuration struct {
 	Serve    ServeConfig    `koanf:"serve"`
 	Log      LoggingConfig  `koanf:"log"`
 	Signer   SignerConfig   `koanf:"signer"`
+	Cache    CacheConfig    `koanf:"cache"`
 	Pipeline PipelineConfig `koanf:"pipeline"`
 	Rules    RulesConfig    `koanf:"rules"`
 }
