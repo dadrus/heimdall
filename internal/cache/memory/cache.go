@@ -27,10 +27,6 @@ func (c *InMemoryCache) Get(key string) any {
 	return nil
 }
 
-func (c *InMemoryCache) Set(key string, value any, ttl time.Duration) {
-	c.c.Set(key, value, ttl)
-}
+func (c *InMemoryCache) Set(key string, value any, ttl time.Duration) { c.c.Set(key, value, ttl) }
 
-func (c *InMemoryCache) Delete(key string) {
-	c.c.Delete(key)
-}
+func (c *InMemoryCache) Delete(key string) { c.c.Delete(key) }
