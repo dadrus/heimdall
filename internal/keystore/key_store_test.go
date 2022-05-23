@@ -1,8 +1,11 @@
 package keystore
 
 import (
+	"bytes"
+	"crypto"
 	"crypto/rand"
 	"crypto/rsa"
+	"io"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -11,13 +14,17 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// nolint
-var pemContents = []byte(`
+// nolint: gochecknoglobals
+var pemECPrivateKey = []byte(`
 -----BEGIN EC PRIVATE KEY-----
 MHcCAQEEIEOoptIY9tD4tkMnK1tUWCOAYkskw+Gs8VC54GvrDGSaoAoGCCqGSM49
 AwEHoUQDQgAEmK78mrIE2dddKSTmANA/coTQpabnpdPmVgIGAGuO7SA1BSrySZi1
 aAsyCuJI3sZ0/++l8UZRyKNtA7J0e4X+yw==
 -----END EC PRIVATE KEY-----
+`)
+
+// nolint: gochecknoglobals
+var pemECEncryptedPrivateKey = []byte(`
 -----BEGIN ENCRYPTED PRIVATE KEY-----
 MIHsMFcGCSqGSIb3DQEFDTBKMCkGCSqGSIb3DQEFDDAcBAgLTDlvF7q25AICCAAw
 DAYIKoZIhvcNAgkFADAdBglghkgBZQMEASoEEFeNKfRWbGTzNAVgwS4RRCYEgZDD
@@ -25,6 +32,10 @@ kEiCnT+7PrO3Bjj9+2GbrWLAQlhhDwLbLnpFJITaLhyxlyvkkrqi/9usMAwAqjkd
 P1gquO94eELxoUbqJbimklcYZgwVr9yO7qVtzYHG1BeBf7cnkxK0l0544yXVp5ul
 Cx3Ljo2vI48aZm3HiebE06fc+/HwRSKT+nuvmS94km1FmEnF9t5ya2yW1XV+6hc=
 -----END ENCRYPTED PRIVATE KEY-----
+`)
+
+// nolint: gochecknoglobals
+var pemRSAPrivateKey = []byte(`
 -----BEGIN PRIVATE KEY-----
 MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQD2R5MppaQsa99m
 Hnnq8m7ldHsTYtQMK8/ze3Ms0PYDCgCPX8bL+N/XNvsaYuNvY6RtlfcKCS8rTNdX
@@ -53,6 +64,10 @@ yyrTB02JDbkY3TSK7h/c+dvSn37C8HyyNDZFu1wyVIIfFkR21sX3JPvlfwiUUde9
 9fh7jdR0m/vVkEfXqQhj3us96m87XPf4dvwbbP6/JlPOcwIdwsbV1sNbKOO27vT0
 APqGqnhC+v2U1uPEk4mJabnl
 -----END PRIVATE KEY-----
+`)
+
+// nolint: gochecknoglobals
+var pemRSAEncryptedPrivateKey = []byte(`
 -----BEGIN ENCRYPTED PRIVATE KEY-----
 MIIFLTBXBgkqhkiG9w0BBQ0wSjApBgkqhkiG9w0BBQwwHAQInDBpQxdsnGACAggA
 MAwGCCqGSIb3DQIJBQAwHQYJYIZIAWUDBAEqBBDNMuNfjF1giUmbvpwuKjT9BIIE
@@ -96,91 +111,277 @@ func findKeyType(entries []*Entry, alg string) *Entry {
 }
 
 func TestCreateKeyStoreFromPEMFile(t *testing.T) {
-	// GIVEN
-	file, err := ioutil.TempFile("", "test_ks.*")
-	require.NoError(t, err)
+	t.Parallel()
 
-	defer os.Remove(file.Name())
+	for _, tc := range []struct {
+		uc                 string
+		password           string
+		keyStoreFile       func(t *testing.T) string
+		removeKeyStoreFile func(t *testing.T, file string)
+		assert             func(t *testing.T, ks KeyStore, err error)
+	}{
+		{
+			uc: "file does not exist",
+			keyStoreFile: func(t *testing.T) string {
+				t.Helper()
 
-	err = ioutil.WriteFile(file.Name(), pemContents, 0o600)
-	require.NoError(t, err)
+				return "foobar.pem"
+			},
+			removeKeyStoreFile: func(t *testing.T, file string) { t.Helper() },
+			assert: func(t *testing.T, ks KeyStore, err error) {
+				t.Helper()
 
-	// WHEN
-	ks, err := NewKeyStoreFromPEMFile(file.Name(), "password")
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), "no such file")
+			},
+		},
+		{
+			uc: "path is a directory",
+			keyStoreFile: func(t *testing.T) string {
+				t.Helper()
 
-	// THEN
-	require.NoError(t, err)
+				dir, err := ioutil.TempDir("", "test_dir.*")
+				require.NoError(t, err)
 
-	require.NotNil(t, ks)
+				return dir
+			},
+			removeKeyStoreFile: func(t *testing.T, file string) {
+				t.Helper()
 
-	// expecting just two entries as the above ec and rsa key are just formatted differently
-	assert.Len(t, ks.Entries(), 2)
+				os.Remove(file)
+			},
+			assert: func(t *testing.T, ks KeyStore, err error) {
+				t.Helper()
 
-	ecdsaKeyEntry := findKeyType(ks.Entries(), "ECDSA")
-	assert.NotNil(t, ecdsaKeyEntry)
-	assert.NotEmpty(t, ecdsaKeyEntry.KeyID)
-	assert.NotNil(t, ecdsaKeyEntry.PrivateKey)
-	assert.Equal(t, 256, ecdsaKeyEntry.KeySize)
-	assert.Nil(t, ecdsaKeyEntry.CertChain)
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), "not a file")
+			},
+		},
+		{
+			uc: "file not readable",
+			keyStoreFile: func(t *testing.T) string {
+				t.Helper()
 
-	rsaKeyEntry := findKeyType(ks.Entries(), "RSA")
-	assert.NotNil(t, rsaKeyEntry)
-	assert.NotEmpty(t, rsaKeyEntry.KeyID)
-	assert.NotNil(t, rsaKeyEntry.PrivateKey)
-	assert.Equal(t, 2048, rsaKeyEntry.KeySize)
-	assert.Nil(t, rsaKeyEntry.CertChain)
+				file, err := ioutil.TempFile("", "test_ks.*")
+				require.NoError(t, err)
 
-	assert.NotEqual(t, ecdsaKeyEntry.KeyID, rsaKeyEntry.KeyID)
+				err = file.Chmod(0o200)
+				require.NoError(t, err)
+
+				return file.Name()
+			},
+			removeKeyStoreFile: func(t *testing.T, file string) {
+				t.Helper()
+
+				os.Remove(file)
+			},
+			assert: func(t *testing.T, ks KeyStore, err error) {
+				t.Helper()
+
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), "failed to read")
+			},
+		},
+		{
+			uc:       "file contains two keys, each in two formats",
+			password: "password",
+			keyStoreFile: func(t *testing.T) string {
+				t.Helper()
+
+				file, err := ioutil.TempFile("", "test_ks.*")
+				require.NoError(t, err)
+
+				buf := bytes.NewBuffer(pemECPrivateKey)
+				_, err = buf.Write(pemECEncryptedPrivateKey)
+				require.NoError(t, err)
+				_, err = buf.Write(pemRSAPrivateKey)
+				require.NoError(t, err)
+				_, err = buf.Write(pemRSAEncryptedPrivateKey)
+				require.NoError(t, err)
+
+				err = ioutil.WriteFile(file.Name(), buf.Bytes(), 0o600)
+				require.NoError(t, err)
+
+				return file.Name()
+			},
+			removeKeyStoreFile: func(t *testing.T, file string) {
+				t.Helper()
+
+				os.Remove(file)
+			},
+			assert: func(t *testing.T, ks KeyStore, err error) {
+				t.Helper()
+
+				require.NoError(t, err)
+
+				require.NotNil(t, ks)
+
+				// expecting just two entries as the above ec and rsa key are just formatted differently
+				assert.Len(t, ks.Entries(), 2)
+
+				ecdsaKeyEntry := findKeyType(ks.Entries(), "ECDSA")
+				assert.NotNil(t, ecdsaKeyEntry)
+				assert.NotEmpty(t, ecdsaKeyEntry.KeyID)
+				assert.NotNil(t, ecdsaKeyEntry.PrivateKey)
+				assert.Equal(t, 256, ecdsaKeyEntry.KeySize)
+				assert.Nil(t, ecdsaKeyEntry.CertChain)
+
+				rsaKeyEntry := findKeyType(ks.Entries(), "RSA")
+				assert.NotNil(t, rsaKeyEntry)
+				assert.NotEmpty(t, rsaKeyEntry.KeyID)
+				assert.NotNil(t, rsaKeyEntry.PrivateKey)
+				assert.Equal(t, 2048, rsaKeyEntry.KeySize)
+				assert.Nil(t, rsaKeyEntry.CertChain)
+
+				assert.NotEqual(t, ecdsaKeyEntry.KeyID, rsaKeyEntry.KeyID)
+			},
+		},
+	} {
+		t.Run("case="+tc.uc, func(t *testing.T) {
+			// GIVEN
+			file := tc.keyStoreFile(t)
+
+			defer tc.removeKeyStoreFile(t, file)
+
+			// WHEN
+			ks, err := NewKeyStoreFromPEMFile(file, tc.password)
+
+			// THEN
+			tc.assert(t, ks, err)
+		})
+	}
 }
 
 func TestCreateKeyStoreFromPEMBytes(t *testing.T) {
-	// WHEN
-	ks, err := NewKeyStoreFromPEMBytes(pemContents, "password")
+	t.Parallel()
 
-	// THEN
-	assert.NoError(t, err)
-	assert.NotNil(t, ks)
+	for _, tc := range []struct {
+		uc          string
+		password    string
+		pemContents func(t *testing.T) []byte
+		assert      func(t *testing.T, ks KeyStore, err error)
+	}{
+		{
+			uc:       "pem contains two keys, each in two formats",
+			password: "password",
+			pemContents: func(t *testing.T) []byte {
+				t.Helper()
 
-	// expecting just two entries as the above ec and rsa key are just formatted differently
-	assert.Len(t, ks.Entries(), 2)
+				buf := bytes.NewBuffer(pemECPrivateKey)
+				_, err := buf.Write(pemECEncryptedPrivateKey)
+				require.NoError(t, err)
+				_, err = buf.Write(pemRSAPrivateKey)
+				require.NoError(t, err)
+				_, err = buf.Write(pemRSAEncryptedPrivateKey)
+				require.NoError(t, err)
 
-	ecdsaKeyEntry := findKeyType(ks.Entries(), "ECDSA")
-	assert.NotNil(t, ecdsaKeyEntry)
-	assert.NotEmpty(t, ecdsaKeyEntry.KeyID)
-	assert.NotNil(t, ecdsaKeyEntry.PrivateKey)
-	assert.Equal(t, 256, ecdsaKeyEntry.KeySize)
-	assert.Nil(t, ecdsaKeyEntry.CertChain)
+				return buf.Bytes()
+			},
+			assert: func(t *testing.T, ks KeyStore, err error) {
+				t.Helper()
 
-	rsaKeyEntry := findKeyType(ks.Entries(), "RSA")
-	assert.NotNil(t, rsaKeyEntry)
-	assert.NotEmpty(t, rsaKeyEntry.KeyID)
-	assert.NotNil(t, rsaKeyEntry.PrivateKey)
-	assert.Equal(t, 2048, rsaKeyEntry.KeySize)
-	assert.Nil(t, rsaKeyEntry.CertChain)
+				require.NoError(t, err)
+				require.NotNil(t, ks)
 
-	assert.NotEqual(t, ecdsaKeyEntry.KeyID, rsaKeyEntry.KeyID)
+				// expecting just two entries as the above ec and rsa key are just formatted differently
+				assert.Len(t, ks.Entries(), 2)
+
+				ecdsaKeyEntry := findKeyType(ks.Entries(), "ECDSA")
+				assert.NotNil(t, ecdsaKeyEntry)
+				assert.NotEmpty(t, ecdsaKeyEntry.KeyID)
+				assert.NotNil(t, ecdsaKeyEntry.PrivateKey)
+				assert.Equal(t, 256, ecdsaKeyEntry.KeySize)
+				assert.Nil(t, ecdsaKeyEntry.CertChain)
+
+				rsaKeyEntry := findKeyType(ks.Entries(), "RSA")
+				assert.NotNil(t, rsaKeyEntry)
+				assert.NotEmpty(t, rsaKeyEntry.KeyID)
+				assert.NotNil(t, rsaKeyEntry.PrivateKey)
+				assert.Equal(t, 2048, rsaKeyEntry.KeySize)
+				assert.Nil(t, rsaKeyEntry.CertChain)
+
+				assert.NotEqual(t, ecdsaKeyEntry.KeyID, rsaKeyEntry.KeyID)
+			},
+		},
+	} {
+		t.Run("case="+tc.uc, func(t *testing.T) {
+			// GIVEN
+			file := tc.pemContents(t)
+
+			// WHEN
+			ks, err := NewKeyStoreFromPEMBytes(file, tc.password)
+
+			// THEN
+			tc.assert(t, ks, err)
+		})
+	}
 }
 
+type testSigner struct{}
+
+func (s testSigner) Public() crypto.PublicKey                                  { return nil }
+func (s testSigner) Sign(io.Reader, []byte, crypto.SignerOpts) ([]byte, error) { return nil, nil }
+
 func TestCreateKeyStoreFromKey(t *testing.T) {
-	// GIVEN
-	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
-	require.NoError(t, err)
+	t.Parallel()
 
-	// WHEN
-	ks, err := NewKeyStoreFromKey(privateKey)
+	for _, tc := range []struct {
+		uc     string
+		signer func(t *testing.T) crypto.Signer
+		assert func(t *testing.T, ks KeyStore, err error)
+	}{
+		{
+			uc: "from unsupported key type",
+			signer: func(t *testing.T) crypto.Signer {
+				t.Helper()
 
-	// THEN
-	assert.NoError(t, err)
-	assert.NotNil(t, ks)
+				return testSigner{}
+			},
+			assert: func(t *testing.T, ks KeyStore, err error) {
+				t.Helper()
 
-	assert.Len(t, ks.Entries(), 1)
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), "unsupported key type")
+			},
+		},
+		{
+			uc: "from rsa private key",
+			signer: func(t *testing.T) crypto.Signer {
+				t.Helper()
 
-	rsaKeyEntry := findKeyType(ks.Entries(), "RSA")
-	assert.NotNil(t, rsaKeyEntry)
-	assert.NotEmpty(t, rsaKeyEntry.KeyID)
-	assert.NotNil(t, rsaKeyEntry.PrivateKey)
-	assert.Equal(t, 2048, rsaKeyEntry.KeySize)
-	assert.Nil(t, rsaKeyEntry.CertChain)
+				privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
+				require.NoError(t, err)
+
+				return privateKey
+			},
+			assert: func(t *testing.T, ks KeyStore, err error) {
+				t.Helper()
+
+				require.NoError(t, err)
+				require.NotNil(t, ks)
+
+				assert.Len(t, ks.Entries(), 1)
+
+				rsaKeyEntry := findKeyType(ks.Entries(), "RSA")
+				assert.NotNil(t, rsaKeyEntry)
+				assert.NotEmpty(t, rsaKeyEntry.KeyID)
+				assert.NotNil(t, rsaKeyEntry.PrivateKey)
+				assert.Equal(t, 2048, rsaKeyEntry.KeySize)
+				assert.Nil(t, rsaKeyEntry.CertChain)
+			},
+		},
+	} {
+		t.Run("case="+tc.uc, func(t *testing.T) {
+			// GIVEN
+			key := tc.signer(t)
+
+			// WHEN
+			ks, err := NewKeyStoreFromKey(key)
+
+			// THEN
+			tc.assert(t, ks, err)
+		})
+	}
 }
 
 func TestKeyStoreNoSuchKeyEntry(t *testing.T) {
