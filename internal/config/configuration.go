@@ -66,7 +66,3 @@ func NewConfiguration(configFile string) Configuration {
 
 	return result
 }
-
-func LogConfiguration(configuration Configuration) LoggingConfig {
-	return configuration.Log
-}

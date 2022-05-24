@@ -32,3 +32,7 @@ type LoggingConfig struct {
 	Format LogFormat     `koanf:"format"`
 	Level  zerolog.Level `koanf:"level"`
 }
+
+func LogConfiguration(configuration Configuration) LoggingConfig {
+	return configuration.Log
+}
