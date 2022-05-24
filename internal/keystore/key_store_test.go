@@ -1,4 +1,4 @@
-package keystore
+package keystore_test
 
 import (
 	"bytes"
@@ -10,97 +10,146 @@ import (
 	"os"
 	"testing"
 
+	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/dadrus/heimdall/internal/keystore"
 )
 
 // nolint: gochecknoglobals
-var pemECPrivateKey = []byte(`
+// generated with openssl ecparam -name prime256v1 -genkey -noout -out key.pem
+var pemPKCS1ECPrivateKey = []byte(`
 -----BEGIN EC PRIVATE KEY-----
-MHcCAQEEIEOoptIY9tD4tkMnK1tUWCOAYkskw+Gs8VC54GvrDGSaoAoGCCqGSM49
-AwEHoUQDQgAEmK78mrIE2dddKSTmANA/coTQpabnpdPmVgIGAGuO7SA1BSrySZi1
-aAsyCuJI3sZ0/++l8UZRyKNtA7J0e4X+yw==
+MHcCAQEEIAcCM9VY6RRiUlz3UoywbT9yN9UlWEEWKIPqiA2D86pCoAoGCCqGSM49
+AwEHoUQDQgAEPEmirqVF2KoNguFuh4GGyShM3OIZt/yD6WESlOvAJhJX6HZyOgFu
+xijD/4gPFRBfs2GsfVZzSL9kH7HH0chB9w==
 -----END EC PRIVATE KEY-----
 `)
 
 // nolint: gochecknoglobals
-var pemECEncryptedPrivateKey = []byte(`
+// converted with openssl pkcs8 -topk8 -in key.pem -out pkcs8.pem
+var pemPKCS8ECEncryptedPrivateKey = []byte(`
 -----BEGIN ENCRYPTED PRIVATE KEY-----
-MIHsMFcGCSqGSIb3DQEFDTBKMCkGCSqGSIb3DQEFDDAcBAgLTDlvF7q25AICCAAw
-DAYIKoZIhvcNAgkFADAdBglghkgBZQMEASoEEFeNKfRWbGTzNAVgwS4RRCYEgZDD
-kEiCnT+7PrO3Bjj9+2GbrWLAQlhhDwLbLnpFJITaLhyxlyvkkrqi/9usMAwAqjkd
-P1gquO94eELxoUbqJbimklcYZgwVr9yO7qVtzYHG1BeBf7cnkxK0l0544yXVp5ul
-Cx3Ljo2vI48aZm3HiebE06fc+/HwRSKT+nuvmS94km1FmEnF9t5ya2yW1XV+6hc=
+MIHsMFcGCSqGSIb3DQEFDTBKMCkGCSqGSIb3DQEFDDAcBAiJ8VMMyD9LkQICCAAw
+DAYIKoZIhvcNAgkFADAdBglghkgBZQMEASoEEDM4MvufeWaeKFIyuILKBAYEgZC0
+iSSw1qwqVWxIik/YWxn90MvvNCg9P1MHyF2i5w7Xp+uPFjRM4o+7PdHhRgJSnsDT
+6JYTU6S5Gdl6t5JsFqhIBDYyqrs/+cegw0dSGl/B/UoZ0taNK66RKQ6wuv/VCcuY
+MtusvyePIsJKGGKsTyHwla4eWpjorL+V116zP35J5x32AFIT8hCbZlLGdL5dpVU=
 -----END ENCRYPTED PRIVATE KEY-----
 `)
 
 // nolint: gochecknoglobals
-var pemRSAPrivateKey = []byte(`
+// converted with openssl pkcs8 -topk8 -in key.pem -out pkcs8.pem -nocrypt
+var pemPKCS8ECPrivateKey = []byte(`
 -----BEGIN PRIVATE KEY-----
-MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQD2R5MppaQsa99m
-Hnnq8m7ldHsTYtQMK8/ze3Ms0PYDCgCPX8bL+N/XNvsaYuNvY6RtlfcKCS8rTNdX
-dqgRlDbfH7QM83WevSIT2e5OpL4Hn0vLWSCwlaNveYZ0Ubx5WOT0Tgmd6W7UkFm/
-AOogrBTOByALquAK/9HOgTsJq1TLvYbIa45w9D1MXe43mLBpdWSoQZpD+OhbS4O4
-3MndbEfJ5cED3+gEx1cOgkN0PiadkIsggarnTtyECfPnK7a/YCSvVzw5ovpcAMOA
-wGejsqxXTsZ8pnxnF6kHlvtfQyOsstj61fJz5zu5P//+A/R7M7tIRzLTkfPuPoJK
-r4QMnhutAgMBAAECggEBAMCMr1NFbTlJ0az+sOVvTCLb0goTH6SwcHJ2F1N3wJAZ
-ttxhzoTU/PU/yE0V+amyJvGC6VWQXq+k8Uwxui+cSNZj7BqgElrclpMctUQJa4V8
-Fv9SnMtTAyf5xJSW/xuE0+TqSnyK8JsCjRhXt7V5tP5r9bMJkwcmgbvJsAXcTXzI
-Fb/2LFDHXTmK0+SCdENT52o///s0Xb8xcRUtaNGaw258WwjMnQjJDlegAqei+IAK
-5A+BBmwa0Fxp32XZl3cyMFiEYm+oQcLFZ4fDSW+iIIq7lbNwiLQpuDdbeHSLaNq5
-vPpmt9Cm40AA2o6QY6WEJLeaaebFNqcVaR8WpgznDIUCgYEA/NqjeIVAjPefU7Qo
-kgyBpq/tC2fniYE7IJ+l3++nwkSU5IISXJdohyJOX23M8EvG6IBCiuI1LrARPWkS
-h64BzD0AwUWhD4DL8DTl/3wxD+Thdt0cBlAvKpf7jAvy/77KOj/NAZpeaQHf00sg
-Zb1XGszaCh1QvOH3x4f4h+rnBd8CgYEA+Vf+/g8i8vNkuEi4kIb4IpAJpNoT37Sz
-l2aLC3K7xJ8XoJoWD2tw/iJR2LSfFiiulyC0C9/nB7+V/S9jbPybKA4SDsFfYlXK
-yiW+O3lH+/CgD2l4i1HgSxHYXAFNGwzoN4IvS6daqzOzUYdVFH7H6p82pyy4DCJY
-GvMotmrDl/MCgYEA+VjSo+MkCN+YKv8akwvqPup2JC1O0vaxzDYjaXX4RUdEXSM3
-4D8fQUO/bbPlyYGwoU76T+NK9sOB/MFFGK+r7jCqMe3sKlGkyzgfJ5bc+wOGo6Tg
-IgmouaQu16hg9Xq8Cj0oeVA1ke/bPY50YGAbKb6hth+6osljg0y+9ancMJkCgYBK
-01hnP32acOYR02jnnklKffUW7oa2RFD8pz4kwlqMx71cacEjAXgYG456PMHc8Xpr
-SdoeEiQPlDPbleP9adTZ8VcD7I3GQb6oaSksSdoLRguSdHFDRd/MR1+pRI6yBm6N
-cdjlmCRCajJuzfD/RIiT5RGOm4Hjyk6sT7ow+9sUdwKBgFLRPGElXQ4zML6ZmJwc
-yyrTB02JDbkY3TSK7h/c+dvSn37C8HyyNDZFu1wyVIIfFkR21sX3JPvlfwiUUde9
-9fh7jdR0m/vVkEfXqQhj3us96m87XPf4dvwbbP6/JlPOcwIdwsbV1sNbKOO27vT0
-APqGqnhC+v2U1uPEk4mJabnl
+MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgBwIz1VjpFGJSXPdS
+jLBtP3I31SVYQRYog+qIDYPzqkKhRANCAAQ8SaKupUXYqg2C4W6HgYbJKEzc4hm3
+/IPpYRKU68AmElfodnI6AW7GKMP/iA8VEF+zYax9VnNIv2QfscfRyEH3
 -----END PRIVATE KEY-----
 `)
 
 // nolint: gochecknoglobals
-var pemRSAEncryptedPrivateKey = []byte(`
+// generated with openssl genrsa -out key.pem 2048
+var pemPKCS1RSAPrivateKey = []byte(`
+-----BEGIN RSA PRIVATE KEY-----
+MIIEowIBAAKCAQEAvxc3ZHNNVafIJvYRdIZ+DDV0qDom15k97pLzcgnNjRtA/CKr
+bd4M6qMUcKp6T99rEvRDWRlBEE1sTEa3OtA3tW+32pRMOzUBoUaLzPtXAxYJzzKx
+lyIeRLAK8pxtOcwP0s9FQbNndmV08S0at5EZJzYLqN9yRuC+2It+5fvOUyIrcNGs
+uFB52MIoy9JYWjIw2gdqjWXVRqV5SvWT4ftVjt43Lt/sjBrTiZrDSS6HpgbYw0CU
+BsX0LKedLYER3SRfSKy7E/vAhOhAEINppakjFTPAtUAxTI4pSnvTxe4+9LTcqVQ4
+UieQcDBFdqaLhW7kp6XpIdhyWylzzVepPBtMTwIDAQABAoIBACtNVIUTx8uIOMfz
+bOMt8vRLTMMuYkzq8ejVLguCgyzdpy07ogNElUK6b9BUIWFmLHpgFb7kBSVvlgH2
+6GCQfH9F8LC8eEXWbicguF9b+Uy+urxULYAlABzqk6CEqA+32UIZLAWGZQSkWwqo
+AOzmGYAUNDIxaFD9buHdQoVVOV0G9Ypu2L7fadatjmAbWsd5VI888Dcps3zguMQW
+RSk5z8ycebD1F0V6dgukTg6SWqOLXTM3I+XVzbdHBfXhNJ5KJ+DRCW53Oll+F8TN
+miPOMMkWj6WvQJJSt+TWymEpbViTb9AOeZ+5tJfbFkr1QP14zO78aTuQMJNu4va1
+Yi3VLGECgYEA8rmfsNYllb/a9hXaNdfUynjolsC59yiRMyM+6Zq6UxNGY15O0uoT
+WevyjpcXc4pAhEE3tQa43TALXOJW3uYmtF49HlbB0kvj9aFTM/JOlFD3Y1DVPPpC
+QrjKQFCjKJNtYRpuJ6U0skf0qdogEzPyV1hfg+V0UxYsaI1GxoOuy/ECgYEAyYqp
+v+9VpV3zihzd72beVrwcVlcgqREGyGzap1J1hBHrh4eRbHfr7+aIaDjMFw7UOm8r
+p7xlxO7XfmLdNL+/ULXYOYssXhWRabSmkO8K+jSe8/GdeWfFGLjHBCSj+XjUdvbj
+1GiPbyKrptC2UsL8BO1XLm/kAfi4U6xzrY4U3D8CgYAnMhB2hu5E01lxea/mF/dV
+xtaQWYjuP4/K+TsUkBbciXVJYJZL+t6rG63slruDveSTNtDfG7nIhhSfqDEtB29i
+mwE1n/7mjbi/FpEQB2XnD3gTgp8cnLEMgzit0Be42q3EC3eUUVpEG9iHgSDC2RWe
+QzgRXYE+VYtQStgOAH++kQKBgQDIfWuOZx1xKzw5eawCGvg1ml4qOfRgm3J+8WK2
+rt3+qwD9ywwMtmN8PH4YB+BnU7YmBy+LZmxq8xpmPR1G+zTrqmpWHC/fzF7io/ZL
+GbF249/4VrRL8MHubOp2IakJZH0fd01/oSCG8xuFD/0/6X5hvGVM6bwNhgqAGn7c
++QmhawKBgCUGxf5zYov6ZEVup06O/hlwAwMsq1vw2KPlwYMcjAKDj6rIz8mAZmT+
+Yxty35glWR1l8sPN0rD9+QdEYuLY3Ov23SVxHnNKy1pGSJjTinBkfjNEBOdfDUrV
+ga1bMw04tVw/6O9EEKNGaQsS6B0fzq99acgVHADvRji+eqw18x0J
+-----END RSA PRIVATE KEY-----
+`)
+
+// nolint: gochecknoglobals
+// converted with openssl pkcs8 -topk8 -in key.pem -out pkcs8.pem
+var pemPKCS8RSAEncryptedPrivateKey = []byte(`
 -----BEGIN ENCRYPTED PRIVATE KEY-----
-MIIFLTBXBgkqhkiG9w0BBQ0wSjApBgkqhkiG9w0BBQwwHAQInDBpQxdsnGACAggA
-MAwGCCqGSIb3DQIJBQAwHQYJYIZIAWUDBAEqBBDNMuNfjF1giUmbvpwuKjT9BIIE
-0K8qUL0JibhZ6+d4+jAcRvTWfqUU9wTHmXhR67LtbrTII7H174VKe8/E34IJuDWh
-KPIz3GEv1i3dG8pTSC3pGD23ADtLCs836RvdI72J/malCS0gor13jF0jtCRa6XCh
-aFqSyT08TDMi9SSDnfMDRJQly22mH1/fY9AU92+pkG8NesLMUF/WTOTQhf3plGQZ
-1WqPa6vhIRjMpSH8T6cXWbF0No9DCqj1EluIKgVBWD8YslOPXV8mfsbykGNpvJSt
-HCE3lpivA2PZ+XYXpGStcR89TtRZoWK8FVjKPyzFVlfufwZdzWYArQYE1msadKg2
-0d7urJArQXXwGKwf7B41rOaQuv4MDe9M1IfVhQF/cDZGt+aCAzbxYlK/MxDpj/zX
-P8E+q+bJoqBOPezmc7V8UD05NFtN0xRdulTyPmQPEcF1zqItSRh2rA4rLX4NxIeb
-GQ5WW0djnm1A3bELPDX67VuKm9KU3njjpSp5w/12a0qKc1HifHi8mGmVV2KWx9Fi
-OCKPjwNe567P+QqJvRraQS4UXgVHYWy/7iwIX+wh61/ocMcLIApQHn5gtAw+fnSr
-j6VIMnrc84DZgBioOLddnrC45lsIK9+aDqIh6ZTj/9XMwSS1eKgGNfeNDFZVmaRz
-9ErskkUTsqFdfYkSPSzoucwY9C8uDCvgwebajg7cK9uujrl68izWnnOU7+OPr9B/
-zMdpW4GueGWfZAPe9z0qf08le/X3+srklJ2mzxgJHs+TdjOE62pm2ZjGlU+hoFFs
-DpJ4u45+fbZQSOAcvVDMUd57I3ZQTRXYH1fXTO/PGf+zTVONUJ35XmYqV7pypw9F
-0/k9becMWioomqhCTSy7iII0mEfXO8HDPC0r8Qnf7dwa9FyllXqzWJS5bABcrNPn
-0yx5KHZ4gf9GwgeRZzQmiSAoeVUTnwDDEVOvTXl7E4Kcm9BfY6g1pj158t/j+kIV
-rQS8U8NOhrgkBRbFeX8jIJVGK7sm5DQXVUjtPTNl2BJjSWb7CXz83MN19/NfeqmB
-cn7udbRnh3N4MeIWg4ID24WtG0rr82r5JAAGOkiZj+HWvpTtqoDoAEVhXlNBUz4c
-93N89Zjc/4evTcS8tOi2BDZ16bdfdhUQ1Tpt0iep8+JKX8KP6hq9PLQvFo1l4cE3
-Nr7qJYz3EQCOCwk1+6GvNMQRRgdCzfPJPtGyds1Gjk+K+avPDs/VZ+NaTO2vWcQX
-GP1SOCVY29NIt+qGSj7X249+8XN6PO4CgEadDq0w1IPSZR8+UFbH+2Rr+V7dYQbF
-/vnrX31wzqXIWWb32YegKAAYyjqRk0q7VW2CBe1Lk8dRCXdGUlvl3ubSmwidhbZU
-DuZF9h8k5as9onc5SM566Wgg114jof/1U6xCD3E813GU9FrVJvew1qwsQ+00IAZ6
-fW8lpkdhQH73p2ArgVeMq7W3XxmSz6T+tmlK0n2jepDu0XMkcsiQRLhcyuBEgAlM
-BXY20wo8ih/B83jW2WFTiKXsJQFI1Ad+72h6BimSW58r2sqaQONT9WU5QwjC6d9Q
-T4MaOBQq12H+JXV3ZKhqOvLQcRt2iWB61wOz1YWf8gCLBXXEyDBI/ef67hiMM0p4
-x74uTA0d1Gow/gWK0CVcgnko/J0Wuebldkx68fK0Xjto
+MIIFLTBXBgkqhkiG9w0BBQ0wSjApBgkqhkiG9w0BBQwwHAQI2GK20IxuPzwCAggA
+MAwGCCqGSIb3DQIJBQAwHQYJYIZIAWUDBAEqBBCR3q6ur2Vas0CfsnCyEDqoBIIE
+0CUJpUEry5TTIoFmC2n/mXQAhtN6USharJQ8/Lt38DUtRqHsFaOPSqPcedzgDRNo
+Dw9sIWD20l4ii5ucIn4nn69HbroCUg5y5P1i/0ldwsKJgy/FNFdVnS5ft/x5qlkO
++bpqalKd14xiNlnbT5jCyb8HbcsjzQjL4y7o/K4V6283nBiwl0FNkSvSNn4LV2ud
+kiVYWhz3NN40Amwk5vnBgjOjTLaDcN8GCGpUlPy3Rvxx2GdccEpXuHRwqpOO4m4c
+y1CbiLy+L95YnWkYCtJOsLJohCG9WW+OwjeF3sOsnosM6cbG1D+/eonAd5g1TinG
+ejlZKHrxihgU6cgdfkw0dP6S7ullFHaqV8gEr5sn9hLYeOZsH3HMAf3DA8pJncvu
+owLabIizTfXLQvBSrjiho2nlZRIjbzV/0T6fY1pS7mr6wiMGGkjOT/bfEZCO8CMu
+7C3wh3gcpb0/AoIP1Gd0+hM80pkKcjkb+OrblkdtdWwhlCsb0YBtnuQ0LW39Q0B+
+8kNOpWB+ff6mq17SC2IqPl2obMiWkzn8HHAPsECtikdWKXN2weC6/+jvbOlDPKjY
+4Esva0nEwzFI6mfLdbULidaIsbAYS4IKzXwKYbpMVvU0brYv/zMby56yPj/TEHlo
+nm0uOiinvrmTM+QEOFjamxleBlCHHcLoCMsds8fwtlXhFoI8bdGIisVtpZjcnI2x
+cyKFCPn3RMj8aUs3gdhjIcmfZdzpiwjGwlLEDKYQ60qsATJv5z0jv1nUPxkz1ush
+bsigCn3LzekOZFSWZd7d0CVswYQI9Hn8/H3bkDZyf4dyQQ6kPPWqFocJ7BnS0j+4
+I/RleaXNEKp7xxWGgxF1lT/Eaj3GUDz4UmEvcnNseP96LTx6sQwIQYxnNXWQOzrT
+sez3v7DARP10HoMurvF7/++0LX0WbvimHKZNj0Itc1ejndVdoFKYX626VmsvWL+i
+gxmq8jeGqnPvLXXRgnGuksVMfrvrW4vtP2xqNL8xhVlGU0fUFAgdrSfuWhH6l209
+anvhfEo1SGvoezBY/HOaWyG4Dt5A2k9TPqXxbFHuC3U/tAAzUHwwKVSgmapJB8o1
+Gp+sZ+z+dBl5prKYamjNtwC6lrX3ijCeyJnX8FRIQfIbAsdEuq9ZH7elWHxCQ68n
+oEyQ/ZVs7JE5rTd01cE3vt1d6R7qY2H7xBwaWHrTr3RI0N/zMIhSuMIYReH01B84
+9G8jgPB40vmLHGF2Se0zDSwu4PZIcCrByaiYcWATKjMifcun5RxmG6ugYBQkBjU8
+AE/aspRv54APkxXCGVsW+E/w9R7g5cXDeHBI4Ec51N+dX+brDR0p/SE19+ksr5/g
+cCw2rv/URcrbYrFKokxGIohwBKpZCbl61KenYarp5ubZAGHG4SP8kK/t8K+s9DAL
+LGsu0gqooxzHiiFlS2PFvM4an3QtMolGSOnAeRP/YXIMLyTmM/Bs0Zw9Hi9w35xR
+8UAbG5e5xL/ghOkXmSNuWAiLYctbjHJI5ERSYeERbElrJJjWdGO5caFB8uawVKWM
+6leXdluelYQdTibV3Khrx2YqrNBP55NVXctEfHekG19SqTzSWIif3py+JbVTQF31
+OK9MsGDvuCMUZH6RSGZrEOrepKg3c04DxoVaBamdz7mj
 -----END ENCRYPTED PRIVATE KEY-----
 `)
 
-func findKeyType(entries []*Entry, alg string) *Entry {
+// nolint: gochecknoglobals
+// converted with openssl pkcs8 -topk8 -in key.pem -out pkcs8.pem
+var pemPKCS8RSAPrivateKey = []byte(`
+-----BEGIN PRIVATE KEY-----
+MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC/Fzdkc01Vp8gm
+9hF0hn4MNXSoOibXmT3ukvNyCc2NG0D8Iqtt3gzqoxRwqnpP32sS9ENZGUEQTWxM
+Rrc60De1b7falEw7NQGhRovM+1cDFgnPMrGXIh5EsArynG05zA/Sz0VBs2d2ZXTx
+LRq3kRknNguo33JG4L7Yi37l+85TIitw0ay4UHnYwijL0lhaMjDaB2qNZdVGpXlK
+9ZPh+1WO3jcu3+yMGtOJmsNJLoemBtjDQJQGxfQsp50tgRHdJF9IrLsT+8CE6EAQ
+g2mlqSMVM8C1QDFMjilKe9PF7j70tNypVDhSJ5BwMEV2pouFbuSnpekh2HJbKXPN
+V6k8G0xPAgMBAAECggEAK01UhRPHy4g4x/Ns4y3y9EtMwy5iTOrx6NUuC4KDLN2n
+LTuiA0SVQrpv0FQhYWYsemAVvuQFJW+WAfboYJB8f0XwsLx4RdZuJyC4X1v5TL66
+vFQtgCUAHOqToISoD7fZQhksBYZlBKRbCqgA7OYZgBQ0MjFoUP1u4d1ChVU5XQb1
+im7Yvt9p1q2OYBtax3lUjzzwNymzfOC4xBZFKTnPzJx5sPUXRXp2C6RODpJao4td
+Mzcj5dXNt0cF9eE0nkon4NEJbnc6WX4XxM2aI84wyRaPpa9AklK35NbKYSltWJNv
+0A55n7m0l9sWSvVA/XjM7vxpO5Awk27i9rViLdUsYQKBgQDyuZ+w1iWVv9r2Fdo1
+19TKeOiWwLn3KJEzIz7pmrpTE0ZjXk7S6hNZ6/KOlxdzikCEQTe1BrjdMAtc4lbe
+5ia0Xj0eVsHSS+P1oVMz8k6UUPdjUNU8+kJCuMpAUKMok21hGm4npTSyR/Sp2iAT
+M/JXWF+D5XRTFixojUbGg67L8QKBgQDJiqm/71WlXfOKHN3vZt5WvBxWVyCpEQbI
+bNqnUnWEEeuHh5Fsd+vv5ohoOMwXDtQ6byunvGXE7td+Yt00v79Qtdg5iyxeFZFp
+tKaQ7wr6NJ7z8Z15Z8UYuMcEJKP5eNR29uPUaI9vIqum0LZSwvwE7Vcub+QB+LhT
+rHOtjhTcPwKBgCcyEHaG7kTTWXF5r+YX91XG1pBZiO4/j8r5OxSQFtyJdUlglkv6
+3qsbreyWu4O95JM20N8buciGFJ+oMS0Hb2KbATWf/uaNuL8WkRAHZecPeBOCnxyc
+sQyDOK3QF7jarcQLd5RRWkQb2IeBIMLZFZ5DOBFdgT5Vi1BK2A4Af76RAoGBAMh9
+a45nHXErPDl5rAIa+DWaXio59GCbcn7xYrau3f6rAP3LDAy2Y3w8fhgH4GdTtiYH
+L4tmbGrzGmY9HUb7NOuqalYcL9/MXuKj9ksZsXbj3/hWtEvwwe5s6nYhqQlkfR93
+TX+hIIbzG4UP/T/pfmG8ZUzpvA2GCoAaftz5CaFrAoGAJQbF/nNii/pkRW6nTo7+
+GXADAyyrW/DYo+XBgxyMAoOPqsjPyYBmZP5jG3LfmCVZHWXyw83SsP35B0Ri4tjc
+6/bdJXEec0rLWkZImNOKcGR+M0QE518NStWBrVszDTi1XD/o70QQo0ZpCxLoHR/O
+r31pyBUcAO9GOL56rDXzHQk=
+-----END PRIVATE KEY-----
+`)
+
+func findKeyType(entries []*keystore.Entry, alg string) *keystore.Entry {
 	for _, entry := range entries {
 		if entry.Alg == alg {
 			return entry
@@ -118,7 +167,7 @@ func TestCreateKeyStoreFromPEMFile(t *testing.T) {
 		password           string
 		keyStoreFile       func(t *testing.T) string
 		removeKeyStoreFile func(t *testing.T, file string)
-		assert             func(t *testing.T, ks KeyStore, err error)
+		assert             func(t *testing.T, ks keystore.KeyStore, err error)
 	}{
 		{
 			uc: "file does not exist",
@@ -128,7 +177,7 @@ func TestCreateKeyStoreFromPEMFile(t *testing.T) {
 				return "foobar.pem"
 			},
 			removeKeyStoreFile: func(t *testing.T, file string) { t.Helper() },
-			assert: func(t *testing.T, ks KeyStore, err error) {
+			assert: func(t *testing.T, ks keystore.KeyStore, err error) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -150,7 +199,7 @@ func TestCreateKeyStoreFromPEMFile(t *testing.T) {
 
 				os.Remove(file)
 			},
-			assert: func(t *testing.T, ks KeyStore, err error) {
+			assert: func(t *testing.T, ks keystore.KeyStore, err error) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -175,7 +224,7 @@ func TestCreateKeyStoreFromPEMFile(t *testing.T) {
 
 				os.Remove(file)
 			},
-			assert: func(t *testing.T, ks KeyStore, err error) {
+			assert: func(t *testing.T, ks keystore.KeyStore, err error) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -183,7 +232,7 @@ func TestCreateKeyStoreFromPEMFile(t *testing.T) {
 			},
 		},
 		{
-			uc:       "file contains two keys, each in two formats",
+			uc:       "file contains two keys, each in three formats",
 			password: "password",
 			keyStoreFile: func(t *testing.T) string {
 				t.Helper()
@@ -191,12 +240,16 @@ func TestCreateKeyStoreFromPEMFile(t *testing.T) {
 				file, err := ioutil.TempFile("", "test_ks.*")
 				require.NoError(t, err)
 
-				buf := bytes.NewBuffer(pemECPrivateKey)
-				_, err = buf.Write(pemECEncryptedPrivateKey)
+				buf := bytes.NewBuffer(pemPKCS1ECPrivateKey)
+				_, err = buf.Write(pemPKCS8ECEncryptedPrivateKey)
 				require.NoError(t, err)
-				_, err = buf.Write(pemRSAPrivateKey)
+				_, err = buf.Write(pemPKCS8ECPrivateKey)
 				require.NoError(t, err)
-				_, err = buf.Write(pemRSAEncryptedPrivateKey)
+				_, err = buf.Write(pemPKCS1RSAPrivateKey)
+				require.NoError(t, err)
+				_, err = buf.Write(pemPKCS8RSAEncryptedPrivateKey)
+				require.NoError(t, err)
+				_, err = buf.Write(pemPKCS8RSAPrivateKey)
 				require.NoError(t, err)
 
 				err = ioutil.WriteFile(file.Name(), buf.Bytes(), 0o600)
@@ -209,7 +262,7 @@ func TestCreateKeyStoreFromPEMFile(t *testing.T) {
 
 				os.Remove(file)
 			},
-			assert: func(t *testing.T, ks KeyStore, err error) {
+			assert: func(t *testing.T, ks keystore.KeyStore, err error) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -244,7 +297,7 @@ func TestCreateKeyStoreFromPEMFile(t *testing.T) {
 			defer tc.removeKeyStoreFile(t, file)
 
 			// WHEN
-			ks, err := NewKeyStoreFromPEMFile(file, tc.password)
+			ks, err := keystore.NewKeyStoreFromPEMFile(file, tc.password)
 
 			// THEN
 			tc.assert(t, ks, err)
@@ -259,25 +312,29 @@ func TestCreateKeyStoreFromPEMBytes(t *testing.T) {
 		uc          string
 		password    string
 		pemContents func(t *testing.T) []byte
-		assert      func(t *testing.T, ks KeyStore, err error)
+		assert      func(t *testing.T, ks keystore.KeyStore, err error)
 	}{
 		{
-			uc:       "pem contains two keys, each in two formats",
+			uc:       "pem contains two keys, each in three formats",
 			password: "password",
 			pemContents: func(t *testing.T) []byte {
 				t.Helper()
 
-				buf := bytes.NewBuffer(pemECPrivateKey)
-				_, err := buf.Write(pemECEncryptedPrivateKey)
+				buf := bytes.NewBuffer(pemPKCS1ECPrivateKey)
+				_, err := buf.Write(pemPKCS8ECEncryptedPrivateKey)
 				require.NoError(t, err)
-				_, err = buf.Write(pemRSAPrivateKey)
+				_, err = buf.Write(pemPKCS8ECPrivateKey)
 				require.NoError(t, err)
-				_, err = buf.Write(pemRSAEncryptedPrivateKey)
+				_, err = buf.Write(pemPKCS1RSAPrivateKey)
+				require.NoError(t, err)
+				_, err = buf.Write(pemPKCS8RSAEncryptedPrivateKey)
+				require.NoError(t, err)
+				_, err = buf.Write(pemPKCS8RSAPrivateKey)
 				require.NoError(t, err)
 
 				return buf.Bytes()
 			},
-			assert: func(t *testing.T, ks KeyStore, err error) {
+			assert: func(t *testing.T, ks keystore.KeyStore, err error) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -303,13 +360,55 @@ func TestCreateKeyStoreFromPEMBytes(t *testing.T) {
 				assert.NotEqual(t, ecdsaKeyEntry.KeyID, rsaKeyEntry.KeyID)
 			},
 		},
+		{
+			uc: "pem contains unsupported entries",
+			pemContents: func(t *testing.T) []byte {
+				t.Helper()
+
+				return []byte(`
+-----BEGIN FOOBAR KEY-----
+MHcCAQEEIAcCM9VY6RRiUlz3UoywbT9yN9UlWEEWKIPqiA2D86pCoAoGCCqGSM49
+AwEHoUQDQgAEPEmirqVF2KoNguFuh4GGyShM3OIZt/yD6WESlOvAJhJX6HZyOgFu
+xijD/4gPFRBfs2GsfVZzSL9kH7HH0chB9w==
+-----END FOOBAR KEY-----
+`)
+			},
+			assert: func(t *testing.T, ks keystore.KeyStore, err error) {
+				t.Helper()
+
+				require.Error(t, err)
+				assert.ErrorIs(t, err, heimdall.ErrInternal)
+				assert.Contains(t, err.Error(), "unsupported entry")
+			},
+		},
+		{
+			uc: "key decoding error",
+			pemContents: func(t *testing.T) []byte {
+				t.Helper()
+
+				return []byte(`
+-----BEGIN RSA PRIVATE KEY-----
+MHcCAQEEIAcCM9VY6RRiUlz3UoywbT9yN9UlWEEWKIPqiA2D86pCoAoGCCqGSM49
+AwEHoUQDQgAEPEmirqVF2KoNguFuh4GGyShM3OIZt/yD6WESlOvAJhJX6HZyOgFu
+xijD/4gPFRBfs2GsfVZzSL9kH7HH0chB9w==
+-----END RSA PRIVATE KEY-----
+`)
+			},
+			assert: func(t *testing.T, ks keystore.KeyStore, err error) {
+				t.Helper()
+
+				require.Error(t, err)
+				assert.ErrorIs(t, err, heimdall.ErrInternal)
+				assert.Contains(t, err.Error(), "failed to parse")
+			},
+		},
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
 			// GIVEN
 			file := tc.pemContents(t)
 
 			// WHEN
-			ks, err := NewKeyStoreFromPEMBytes(file, tc.password)
+			ks, err := keystore.NewKeyStoreFromPEMBytes(file, tc.password)
 
 			// THEN
 			tc.assert(t, ks, err)
@@ -328,7 +427,7 @@ func TestCreateKeyStoreFromKey(t *testing.T) {
 	for _, tc := range []struct {
 		uc     string
 		signer func(t *testing.T) crypto.Signer
-		assert func(t *testing.T, ks KeyStore, err error)
+		assert func(t *testing.T, ks keystore.KeyStore, err error)
 	}{
 		{
 			uc: "from unsupported key type",
@@ -337,7 +436,7 @@ func TestCreateKeyStoreFromKey(t *testing.T) {
 
 				return testSigner{}
 			},
-			assert: func(t *testing.T, ks KeyStore, err error) {
+			assert: func(t *testing.T, ks keystore.KeyStore, err error) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -354,7 +453,7 @@ func TestCreateKeyStoreFromKey(t *testing.T) {
 
 				return privateKey
 			},
-			assert: func(t *testing.T, ks KeyStore, err error) {
+			assert: func(t *testing.T, ks keystore.KeyStore, err error) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -376,7 +475,7 @@ func TestCreateKeyStoreFromKey(t *testing.T) {
 			key := tc.signer(t)
 
 			// WHEN
-			ks, err := NewKeyStoreFromKey(key)
+			ks, err := keystore.NewKeyStoreFromKey(key)
 
 			// THEN
 			tc.assert(t, ks, err)
@@ -384,15 +483,61 @@ func TestCreateKeyStoreFromKey(t *testing.T) {
 	}
 }
 
-func TestKeyStoreNoSuchKeyEntry(t *testing.T) {
+func TestKeyStoreGetKey(t *testing.T) {
+	t.Parallel()
+
 	// GIVEN
-	ks := make(keyStore)
+	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	require.NoError(t, err)
 
-	// WHEN
-	entry, err := ks.GetKey("foo")
+	ks, err := keystore.NewKeyStoreFromKey(privateKey)
+	require.NoError(t, err)
 
-	// THEN
-	require.Error(t, err)
-	assert.ErrorIs(t, err, ErrNoSuchKey)
-	assert.Nil(t, entry)
+	for _, tc := range []struct {
+		uc     string
+		keyID  func(t *testing.T, ks keystore.KeyStore) string
+		assert func(t *testing.T, entry *keystore.Entry, err error)
+	}{
+		{
+			uc: "not existing key entry",
+			keyID: func(t *testing.T, ks keystore.KeyStore) string {
+				t.Helper()
+
+				return "foo"
+			},
+			assert: func(t *testing.T, entry *keystore.Entry, err error) {
+				t.Helper()
+
+				require.Error(t, err)
+				assert.ErrorIs(t, err, keystore.ErrNoSuchKey)
+			},
+		},
+		{
+			uc: "existing key entry",
+			keyID: func(t *testing.T, ks keystore.KeyStore) string {
+				t.Helper()
+
+				entry := ks.Entries()[0]
+
+				return entry.KeyID
+			},
+			assert: func(t *testing.T, entry *keystore.Entry, err error) {
+				t.Helper()
+
+				require.NoError(t, err)
+				assert.NotNil(t, entry)
+			},
+		},
+	} {
+		t.Run("case="+tc.uc, func(t *testing.T) {
+			// GIVEN
+			keyID := tc.keyID(t, ks)
+
+			// WHEN
+			entry, err := ks.GetKey(keyID)
+
+			// THEN
+			tc.assert(t, entry, err)
+		})
+	}
 }
