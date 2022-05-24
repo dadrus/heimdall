@@ -5,14 +5,14 @@ package keystore
 import (
 	"crypto"
 	"crypto/ecdsa"
-	"crypto/md5"
 	"crypto/rsa"
+	"crypto/sha1"
 	"crypto/x509"
+	"encoding/hex"
 	"encoding/pem"
 	"errors"
 	"os"
 
-	"github.com/google/uuid"
 	"github.com/youmark/pkcs8"
 	"golang.org/x/exp/maps"
 
@@ -180,14 +180,8 @@ func createEntry(key any) (*Entry, error) {
 			"failed calculating fingerprint for signature key").CausedBy(err)
 	}
 
-	id, err := uuid.FromBytes(hash)
-	if err != nil {
-		return nil, errorchain.NewWithMessage(heimdall.ErrInternal,
-			"failed to generate key id from key fingerprint").CausedBy(err)
-	}
-
 	return &Entry{
-		KeyID:      id.String(),
+		KeyID:      hex.EncodeToString(hash),
 		Alg:        algorithm,
 		KeySize:    size,
 		PrivateKey: sigKey,
@@ -201,8 +195,8 @@ func fingerprint(key crypto.PublicKey) ([]byte, error) {
 	}
 
 	// nolint: gosec
-	// need 20 bytes hash for uuid generation only
-	hash := md5.New()
+	// need it for fingerprint only
+	hash := sha1.New()
 
 	if _, err = hash.Write(derEncoded); err != nil {
 		return nil, err
