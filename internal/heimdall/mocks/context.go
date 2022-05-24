@@ -14,9 +14,7 @@ type MockContext struct {
 }
 
 func (m *MockContext) RequestMethod() string {
-	args := m.Called()
-
-	return args.String(0)
+	return m.Called().String(0)
 }
 
 func (m *MockContext) RequestHeaders() map[string]string {
@@ -31,27 +29,19 @@ func (m *MockContext) RequestHeaders() map[string]string {
 }
 
 func (m *MockContext) RequestHeader(name string) string {
-	args := m.Called(name)
-
-	return args.String(0)
+	return m.Called(name).String(0)
 }
 
 func (m *MockContext) RequestCookie(name string) string {
-	args := m.Called(name)
-
-	return args.String(0)
+	return m.Called(name).String(0)
 }
 
 func (m *MockContext) RequestQueryParameter(name string) string {
-	args := m.Called(name)
-
-	return args.String(0)
+	return m.Called(name).String(0)
 }
 
 func (m *MockContext) RequestFormParameter(name string) string {
-	args := m.Called(name)
-
-	return args.String(0)
+	return m.Called(name).String(0)
 }
 
 func (m *MockContext) RequestBody() []byte {
