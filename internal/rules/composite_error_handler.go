@@ -8,9 +8,14 @@ import (
 
 type compositeErrorHandler []errorHandler
 
-func (eh compositeErrorHandler) Execute(ctx heimdall.Context, exErr error) (ok bool, err error) {
+func (eh compositeErrorHandler) Execute(ctx heimdall.Context, exErr error) (bool, error) {
 	logger := zerolog.Ctx(ctx.AppContext())
 	logger.Debug().Msg("Handling pipeline error")
+
+	var (
+		err error
+		ok  bool
+	)
 
 	for _, eh := range eh {
 		ok, err = eh.Execute(ctx, exErr)
@@ -20,7 +25,7 @@ func (eh compositeErrorHandler) Execute(ctx heimdall.Context, exErr error) (ok b
 		}
 
 		if ok {
-			return true, err
+			return ok, err
 		}
 	}
 

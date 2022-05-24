@@ -1,6 +1,7 @@
 package endpoint
 
 import (
+	"context"
 	"encoding/base64"
 	"net/http"
 	"testing"
@@ -19,7 +20,7 @@ func TestApplyBasicAuthStrategy(t *testing.T) {
 	s := BasicAuthStrategy{User: user, Password: password}
 
 	// WHEN
-	err := s.Apply(nil, req)
+	err := s.Apply(context.Background(), req)
 
 	// THEN
 	assert.NoError(t, err)

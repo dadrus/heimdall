@@ -10,6 +10,7 @@ import (
 	"github.com/dadrus/heimdall/internal/x/tracing"
 )
 
+// Module is used on app bootstrap.
 // nolint: gochecknoglobals
 var Module = fx.Options(
 	fx.Invoke(registerTracer),

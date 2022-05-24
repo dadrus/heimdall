@@ -1,6 +1,7 @@
 package endpoint
 
 import (
+	"context"
 	"net/http"
 	"testing"
 
@@ -17,7 +18,7 @@ func TestApplyApiKeyStrategyOnHeader(t *testing.T) {
 	s := APIKeyStrategy{Name: name, Value: value, In: "header"}
 
 	// WHEN
-	err := s.Apply(nil, req)
+	err := s.Apply(context.Background(), req)
 
 	// THEN
 	assert.NoError(t, err)
@@ -34,7 +35,7 @@ func TestApplyApiKeyStrategyOnCookie(t *testing.T) {
 	s := APIKeyStrategy{Name: name, Value: value, In: "cookie"}
 
 	// WHEN
-	err := s.Apply(nil, req)
+	err := s.Apply(context.Background(), req)
 
 	// THEN
 	assert.NoError(t, err)

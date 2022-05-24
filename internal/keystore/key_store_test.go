@@ -18,7 +18,7 @@ import (
 )
 
 // nolint: gochecknoglobals
-// generated with openssl ecparam -name prime256v1 -genkey -noout -out key.pem
+// generated with openssl ecparam -name prime256v1 -genkey -noout -out key.pem.
 var pemPKCS1ECPrivateKey = []byte(`
 -----BEGIN EC PRIVATE KEY-----
 MHcCAQEEIAcCM9VY6RRiUlz3UoywbT9yN9UlWEEWKIPqiA2D86pCoAoGCCqGSM49
@@ -28,7 +28,7 @@ xijD/4gPFRBfs2GsfVZzSL9kH7HH0chB9w==
 `)
 
 // nolint: gochecknoglobals
-// converted with openssl pkcs8 -topk8 -in key.pem -out pkcs8.pem
+// converted with openssl pkcs8 -topk8 -in key.pem -out pkcs8.pem.
 var pemPKCS8ECEncryptedPrivateKey = []byte(`
 -----BEGIN ENCRYPTED PRIVATE KEY-----
 MIHsMFcGCSqGSIb3DQEFDTBKMCkGCSqGSIb3DQEFDDAcBAiJ8VMMyD9LkQICCAAw
@@ -40,7 +40,7 @@ MtusvyePIsJKGGKsTyHwla4eWpjorL+V116zP35J5x32AFIT8hCbZlLGdL5dpVU=
 `)
 
 // nolint: gochecknoglobals
-// converted with openssl pkcs8 -topk8 -in key.pem -out pkcs8.pem -nocrypt
+// converted with openssl pkcs8 -topk8 -in key.pem -out pkcs8.pem -nocrypt.
 var pemPKCS8ECPrivateKey = []byte(`
 -----BEGIN PRIVATE KEY-----
 MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgBwIz1VjpFGJSXPdS
@@ -50,7 +50,7 @@ jLBtP3I31SVYQRYog+qIDYPzqkKhRANCAAQ8SaKupUXYqg2C4W6HgYbJKEzc4hm3
 `)
 
 // nolint: gochecknoglobals
-// generated with openssl genrsa -out key.pem 2048
+// generated with openssl genrsa -out key.pem 2048.
 var pemPKCS1RSAPrivateKey = []byte(`
 -----BEGIN RSA PRIVATE KEY-----
 MIIEowIBAAKCAQEAvxc3ZHNNVafIJvYRdIZ+DDV0qDom15k97pLzcgnNjRtA/CKr
@@ -82,7 +82,7 @@ ga1bMw04tVw/6O9EEKNGaQsS6B0fzq99acgVHADvRji+eqw18x0J
 `)
 
 // nolint: gochecknoglobals
-// converted with openssl pkcs8 -topk8 -in key.pem -out pkcs8.pem
+// converted with openssl pkcs8 -topk8 -in key.pem -out pkcs8.pem.
 var pemPKCS8RSAEncryptedPrivateKey = []byte(`
 -----BEGIN ENCRYPTED PRIVATE KEY-----
 MIIFLTBXBgkqhkiG9w0BBQ0wSjApBgkqhkiG9w0BBQwwHAQI2GK20IxuPzwCAggA
@@ -117,7 +117,7 @@ OK9MsGDvuCMUZH6RSGZrEOrepKg3c04DxoVaBamdz7mj
 `)
 
 // nolint: gochecknoglobals
-// converted with openssl pkcs8 -topk8 -in key.pem -out pkcs8.pem
+// converted with openssl pkcs8 -topk8 -in key.pem -out pkcs8.pem.
 var pemPKCS8RSAPrivateKey = []byte(`
 -----BEGIN PRIVATE KEY-----
 MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC/Fzdkc01Vp8gm

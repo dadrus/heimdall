@@ -100,8 +100,6 @@ func TestApplyClientCredentialsStrategy(t *testing.T) {
 
 		_, err = w.Write(rawResp)
 		assert.NoError(t, err)
-
-		return
 	}))
 	defer srv.Close()
 

@@ -9,8 +9,13 @@ import (
 
 type compositeSubjectCreator []subjectCreator
 
-func (ca compositeSubjectCreator) Execute(ctx heimdall.Context) (sub *subject.Subject, err error) {
+func (ca compositeSubjectCreator) Execute(ctx heimdall.Context) (*subject.Subject, error) {
 	logger := zerolog.Ctx(ctx.AppContext())
+
+	var (
+		sub *subject.Subject
+		err error
+	)
 
 	for _, a := range ca {
 		sub, err = a.Execute(ctx)
