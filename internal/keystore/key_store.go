@@ -5,6 +5,7 @@ package keystore
 import (
 	"crypto"
 	"crypto/ecdsa"
+	"crypto/elliptic"
 	"crypto/rsa"
 	"crypto/sha1"
 	"crypto/x509"
@@ -15,7 +16,7 @@ import (
 
 	"github.com/youmark/pkcs8"
 	"golang.org/x/exp/maps"
-
+	
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
@@ -157,27 +158,24 @@ func createEntry(key any) (*Entry, error) {
 		sigKey    crypto.Signer
 		algorithm string
 		size      int
+		hash      []byte
 	)
 
-	switch typ := key.(type) {
+	switch typedKey := key.(type) {
 	case *rsa.PrivateKey:
 		const bitsInByte = 8
 
 		algorithm = AlgRSA
-		sigKey = typ
-		size = typ.Size() * bitsInByte
+		sigKey = typedKey
+		size = typedKey.Size() * bitsInByte
+		hash = hashKeyBytes(x509.MarshalPKCS1PublicKey(&typedKey.PublicKey))
 	case *ecdsa.PrivateKey:
 		algorithm = AlgECDSA
-		sigKey = typ
-		size = typ.Params().BitSize
+		sigKey = typedKey
+		size = typedKey.Params().BitSize
+		hash = hashKeyBytes(elliptic.Marshal(typedKey.PublicKey.Curve, typedKey.PublicKey.X, typedKey.PublicKey.Y))
 	default:
 		return nil, errorchain.NewWithMessage(heimdall.ErrInternal, "unsupported key type")
-	}
-
-	hash, err := fingerprint(sigKey.Public())
-	if err != nil {
-		return nil, errorchain.NewWithMessage(heimdall.ErrInternal,
-			"failed calculating fingerprint for signature key").CausedBy(err)
 	}
 
 	return &Entry{
@@ -188,19 +186,11 @@ func createEntry(key any) (*Entry, error) {
 	}, nil
 }
 
-func fingerprint(key crypto.PublicKey) ([]byte, error) {
-	derEncoded, err := x509.MarshalPKIXPublicKey(key)
-	if err != nil {
-		return nil, err
-	}
-
+func hashKeyBytes(val []byte) []byte {
 	// nolint: gosec
-	// need it for fingerprint only
-	hash := sha1.New()
+	// used for fingerprinting
+	md := sha1.New()
+	md.Write(val)
 
-	if _, err = hash.Write(derEncoded); err != nil {
-		return nil, err
-	}
-
-	return hash.Sum(nil), nil
+	return md.Sum(nil)
 }
