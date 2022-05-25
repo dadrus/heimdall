@@ -8,11 +8,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/google/uuid"
-	"github.com/rs/zerolog"
-	"gopkg.in/square/go-jose.v2"
-	"gopkg.in/square/go-jose.v2/jwt"
-
 	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
@@ -20,6 +15,8 @@ import (
 	"github.com/dadrus/heimdall/internal/pipeline/template"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
+	"github.com/google/uuid"
+	"github.com/rs/zerolog"
 )
 
 const (
@@ -170,32 +167,7 @@ func (m *jwtMutator) generateToken(ctx heimdall.Context, sub *subject.Subject) (
 	claims["nbf"] = now.Unix()
 	claims["sub"] = sub.ID
 
-	signerOpts := jose.SignerOptions{}
-	signerOpts.
-		WithType("JWT").
-		WithHeader("kid", iss.KeyID()).
-		WithHeader("alg", iss.Algorithm())
-
-	signer, err := jose.NewSigner(
-		jose.SigningKey{
-			Algorithm: iss.Algorithm(),
-			Key:       iss.Key(),
-		},
-		&signerOpts)
-	if err != nil {
-		return "", errorchain.NewWithMessage(heimdall.ErrInternal, "failed to create JWT signer").
-			CausedBy(err)
-	}
-
-	builder := jwt.Signed(signer).Claims(claims)
-
-	rawJwt, err := builder.CompactSerialize()
-	if err != nil {
-		return "", errorchain.NewWithMessage(heimdall.ErrInternal, "failed to sign JWT").
-			CausedBy(err)
-	}
-
-	return rawJwt, nil
+	return iss.Sign(claims)
 }
 
 func (m *jwtMutator) calculateCacheKey(sub *subject.Subject, iss heimdall.JWTSigner) (string, error) {

@@ -5,6 +5,7 @@ import (
 
 	"github.com/rs/zerolog"
 	"gopkg.in/square/go-jose.v2"
+	"gopkg.in/square/go-jose.v2/jwt"
 
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
@@ -100,7 +101,30 @@ type jwtSigner struct {
 	key crypto.Signer
 }
 
-func (s *jwtSigner) Name() string                       { return s.iss }
-func (s *jwtSigner) KeyID() string                      { return s.kid }
-func (s *jwtSigner) Algorithm() jose.SignatureAlgorithm { return s.alg }
-func (s *jwtSigner) Key() crypto.Signer                 { return s.key }
+func (s *jwtSigner) Name() string      { return s.iss }
+func (s *jwtSigner) KeyID() string     { return s.kid }
+func (s *jwtSigner) Algorithm() string { return string(s.alg) }
+
+func (s *jwtSigner) Sign(claims map[string]any) (string, error) {
+	signerOpts := jose.SignerOptions{}
+	signerOpts.
+		WithType("JWT").
+		WithHeader("kid", s.kid).
+		WithHeader("alg", s.alg)
+
+	signer, err := jose.NewSigner(jose.SigningKey{Algorithm: s.alg, Key: s.key}, &signerOpts)
+	if err != nil {
+		return "", errorchain.NewWithMessage(heimdall.ErrInternal, "failed to create JWT signer").
+			CausedBy(err)
+	}
+
+	builder := jwt.Signed(signer).Claims(claims)
+
+	rawJwt, err := builder.CompactSerialize()
+	if err != nil {
+		return "", errorchain.NewWithMessage(heimdall.ErrInternal, "failed to sign claims").
+			CausedBy(err)
+	}
+
+	return rawJwt, nil
+}
