@@ -4,10 +4,10 @@ import (
 	"crypto/sha256"
 	"encoding/binary"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"time"
 
+	"github.com/goccy/go-json"
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/cache"

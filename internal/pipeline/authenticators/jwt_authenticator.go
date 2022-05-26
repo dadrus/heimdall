@@ -3,7 +3,6 @@ package authenticators
 import (
 	"crypto/sha256"
 	"encoding/hex"
-	"encoding/json"
 	"errors"
 	"io/ioutil"
 	"net/http"
@@ -11,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/goccy/go-json"
 	"github.com/rs/zerolog"
 	"gopkg.in/square/go-jose.v2"
 	"gopkg.in/square/go-jose.v2/jwt"

@@ -1,11 +1,12 @@
 package errorchain
 
 import (
-	"encoding/json"
 	"encoding/xml"
 	"errors"
 	"fmt"
 	"strings"
+
+	"github.com/goccy/go-json"
 )
 
 type element struct {

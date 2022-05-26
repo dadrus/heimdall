@@ -1,7 +1,7 @@
 package contenttype
 
 import (
-	"encoding/json"
+	"github.com/goccy/go-json"
 )
 
 type JSONDecoder struct{}

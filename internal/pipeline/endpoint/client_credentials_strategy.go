@@ -4,12 +4,12 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
-	"encoding/json"
 	"net/http"
 	"net/url"
 	"strings"
 	"time"
 
+	"github.com/goccy/go-json"
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/cache"

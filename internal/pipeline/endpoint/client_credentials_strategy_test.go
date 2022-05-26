@@ -5,7 +5,6 @@ import (
 	"crypto"
 	"crypto/rand"
 	"encoding/base64"
-	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
@@ -13,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/goccy/go-json"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"

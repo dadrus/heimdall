@@ -22,10 +22,6 @@ type RedirectError struct {
 	RedirectTo *url.URL
 }
 
-func (e *RedirectError) Error() string {
-	return e.Message
-}
+func (e *RedirectError) Error() string { return e.Message }
 
-func (e *RedirectError) Is(target error) bool {
-	return reflect.TypeOf(e) == reflect.TypeOf(target)
-}
+func (e *RedirectError) Is(target error) bool { return reflect.TypeOf(e) == reflect.TypeOf(target) }

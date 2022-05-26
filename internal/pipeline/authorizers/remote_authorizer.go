@@ -4,7 +4,6 @@ import (
 	"crypto/sha256"
 	"encoding/binary"
 	"encoding/hex"
-	"encoding/json"
 	"errors"
 	"io"
 	"io/ioutil"
@@ -13,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/goccy/go-json"
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/cache"
