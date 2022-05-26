@@ -2,7 +2,12 @@ package signer
 
 import (
 	"crypto"
+	"crypto/sha256"
+	"encoding/hex"
+	"time"
 
+	"github.com/google/uuid"
+	"github.com/knadh/koanf/maps"
 	"github.com/rs/zerolog"
 	"gopkg.in/square/go-jose.v2"
 	"gopkg.in/square/go-jose.v2/jwt"
@@ -101,11 +106,16 @@ type jwtSigner struct {
 	key crypto.Signer
 }
 
-func (s *jwtSigner) Name() string      { return s.iss }
-func (s *jwtSigner) KeyID() string     { return s.kid }
-func (s *jwtSigner) Algorithm() string { return string(s.alg) }
+func (s *jwtSigner) Hash() string {
+	hash := sha256.New()
+	hash.Write([]byte(s.kid))
+	hash.Write([]byte(s.alg))
+	hash.Write([]byte(s.iss))
 
-func (s *jwtSigner) Sign(claims map[string]any) (string, error) {
+	return hex.EncodeToString(hash.Sum(nil))
+}
+
+func (s *jwtSigner) Sign(sub string, ttl time.Duration, custClaims map[string]any) (string, error) {
 	signerOpts := jose.SignerOptions{}
 	signerOpts.
 		WithType("JWT").
@@ -114,16 +124,27 @@ func (s *jwtSigner) Sign(claims map[string]any) (string, error) {
 
 	signer, err := jose.NewSigner(jose.SigningKey{Algorithm: s.alg, Key: s.key}, &signerOpts)
 	if err != nil {
-		return "", errorchain.NewWithMessage(heimdall.ErrInternal, "failed to create JWT signer").
-			CausedBy(err)
+		return "", errorchain.NewWithMessage(heimdall.ErrInternal, "failed to create JWT signer").CausedBy(err)
 	}
+
+	claims := make(map[string]any)
+
+	now := time.Now().UTC()
+	exp := now.Add(ttl)
+	claims["exp"] = exp.Unix()
+	claims["jti"] = uuid.New()
+	claims["iat"] = now.Unix()
+	claims["iss"] = s.iss
+	claims["nbf"] = now.Unix()
+	claims["sub"] = sub
+
+	maps.Merge(custClaims, claims)
 
 	builder := jwt.Signed(signer).Claims(claims)
 
 	rawJwt, err := builder.CompactSerialize()
 	if err != nil {
-		return "", errorchain.NewWithMessage(heimdall.ErrInternal, "failed to sign claims").
-			CausedBy(err)
+		return "", errorchain.NewWithMessage(heimdall.ErrInternal, "failed to sign claims").CausedBy(err)
 	}
 
 	return rawJwt, nil

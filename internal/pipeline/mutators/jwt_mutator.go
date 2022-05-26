@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/rs/zerolog"
+
 	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
@@ -15,13 +17,11 @@ import (
 	"github.com/dadrus/heimdall/internal/pipeline/template"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
-	"github.com/google/uuid"
-	"github.com/rs/zerolog"
 )
 
 const (
-	defaultJWTTTL      = 15 * time.Minute
-	defaultCacheLeeway = 10 * time.Second
+	defaultJWTTTL      = 5 * time.Minute
+	defaultCacheLeeway = 5 * time.Second
 )
 
 // by intention. Used only during application bootstrap
@@ -56,14 +56,16 @@ func newJWTMutator(rawConfig map[string]any) (*jwtMutator, error) {
 			"failed to unmarshal JWT mutator config").CausedBy(err)
 	}
 
-	ttl := defaultJWTTTL
-	if conf.TTL != nil {
-		ttl = *conf.TTL
+	if conf.TTL != nil && *conf.TTL <= 1*time.Second {
+		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
+			"configured JWT ttl is less than one second")
 	}
 
 	return &jwtMutator{
 		claims: conf.Claims,
-		ttl:    ttl,
+		ttl: x.IfThenElseExec(conf.TTL != nil,
+			func() time.Duration { return *conf.TTL },
+			func() time.Duration { return defaultJWTTTL }),
 	}, nil
 }
 
@@ -76,21 +78,27 @@ func (m *jwtMutator) Execute(ctx heimdall.Context, sub *subject.Subject) error {
 			"failed to execute jwt mutator due to 'nil' subject")
 	}
 
-	var jwtToken string
-
 	cch := cache.Ctx(ctx.AppContext())
+
+	var (
+		cacheEntry any
+		jwtToken   string
+		ok         bool
+	)
 
 	cacheKey, err := m.calculateCacheKey(sub, ctx.Signer())
 	if err != nil {
 		logger.Error().Err(err).Msg("Failed to calculate cache key. Will not be able to cache token")
-	} else if item := cch.Get(cacheKey); item != nil {
-		if cachedToken, ok := item.(string); !ok {
+	} else {
+		cacheEntry = cch.Get(cacheKey)
+	}
+
+	if cacheEntry != nil {
+		if jwtToken, ok = cacheEntry.(string); !ok {
 			logger.Warn().Msg("Wrong object type from cache")
 			cch.Delete(cacheKey)
 		} else {
 			logger.Debug().Msg("Reusing JWT from cache")
-
-			jwtToken = cachedToken
 		}
 	}
 
@@ -102,7 +110,7 @@ func (m *jwtMutator) Execute(ctx heimdall.Context, sub *subject.Subject) error {
 			return err
 		}
 
-		if len(cacheKey) != 0 {
+		if len(cacheKey) != 0 && m.ttl > defaultCacheLeeway {
 			cch.Set(cacheKey, jwtToken, m.ttl-defaultCacheLeeway)
 		}
 	}
@@ -128,16 +136,16 @@ func (m *jwtMutator) WithConfig(rawConfig map[string]any) (Mutator, error) {
 			"failed to unmarshal JWT mutator config").CausedBy(err)
 	}
 
-	var ttl time.Duration
-	if conf.TTL != nil {
-		ttl = *conf.TTL
-	} else {
-		ttl = m.ttl
+	if conf.TTL != nil && *conf.TTL < 1*time.Second {
+		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
+			"configured JWT ttl is less than one second")
 	}
 
 	return &jwtMutator{
 		claims: x.IfThenElse(conf.Claims != nil, conf.Claims, m.claims),
-		ttl:    ttl,
+		ttl: x.IfThenElseExec(conf.TTL != nil,
+			func() time.Duration { return *conf.TTL },
+			func() time.Duration { return m.ttl }),
 	}, nil
 }
 
@@ -158,16 +166,7 @@ func (m *jwtMutator) generateToken(ctx heimdall.Context, sub *subject.Subject) (
 		}
 	}
 
-	now := time.Now().UTC()
-	exp := now.Add(m.ttl)
-	claims["exp"] = exp.Unix()
-	claims["jti"] = uuid.New()
-	claims["iat"] = now.Unix()
-	claims["iss"] = iss.Name()
-	claims["nbf"] = now.Unix()
-	claims["sub"] = sub.ID
-
-	return iss.Sign(claims)
+	return iss.Sign(sub.ID, m.ttl, claims)
 }
 
 func (m *jwtMutator) calculateCacheKey(sub *subject.Subject, iss heimdall.JWTSigner) (string, error) {
@@ -188,9 +187,7 @@ func (m *jwtMutator) calculateCacheKey(sub *subject.Subject, iss heimdall.JWTSig
 	binary.LittleEndian.PutUint64(ttlBytes, uint64(m.ttl))
 
 	hash := sha256.New()
-	hash.Write([]byte(iss.KeyID()))
-	hash.Write([]byte(iss.Algorithm()))
-	hash.Write([]byte(iss.Name()))
+	hash.Write([]byte(iss.Hash()))
 	hash.Write([]byte(claims))
 	hash.Write(ttlBytes)
 	hash.Write(rawSub)
