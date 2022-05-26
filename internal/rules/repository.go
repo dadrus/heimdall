@@ -1,12 +1,13 @@
 package rules
 
 import (
+	"bytes"
 	"errors"
 	"net/url"
 	"sync"
 
 	"github.com/rs/zerolog"
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
@@ -195,7 +196,10 @@ func (r *repository) onRuleSetDeleted(src string) {
 func parseRuleSet(data []byte) ([]config.RuleConfig, error) {
 	var rcs []config.RuleConfig
 
-	if err := yaml.UnmarshalStrict(data, &rcs); err != nil {
+	dec := yaml.NewDecoder(bytes.NewReader(data))
+	dec.KnownFields(true)
+
+	if err := dec.Decode(&rcs); err != nil {
 		return nil, err
 	}
 

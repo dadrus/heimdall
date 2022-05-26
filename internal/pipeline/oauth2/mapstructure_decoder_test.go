@@ -6,7 +6,8 @@ import (
 	"github.com/mitchellh/mapstructure"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gopkg.in/yaml.v2"
+
+	"github.com/dadrus/heimdall/internal/testsupport"
 )
 
 func TestDecodeScopesMatcherHookFunc(t *testing.T) {
@@ -14,15 +15,6 @@ func TestDecodeScopesMatcherHookFunc(t *testing.T) {
 
 	type Type struct {
 		Matcher ScopesMatcher `mapstructure:"scopes"`
-	}
-
-	decode := func(data []byte) map[any]any {
-		var res map[any]any
-
-		err := yaml.Unmarshal(data, &res)
-		require.NoError(t, err)
-
-		return res
 	}
 
 	for _, tc := range []struct {
@@ -154,8 +146,11 @@ scopes:
 			})
 			require.NoError(t, err)
 
+			conf, err := testsupport.DecodeTestConfig(tc.config)
+			require.NoError(t, err)
+
 			// WHEN
-			err = dec.Decode(decode(tc.config))
+			err = dec.Decode(conf)
 
 			// THEN
 			tc.assert(t, err, typ.Matcher)

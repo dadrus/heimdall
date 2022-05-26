@@ -6,19 +6,9 @@ import (
 	"github.com/mitchellh/mapstructure"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gopkg.in/yaml.v2"
+
+	"github.com/dadrus/heimdall/internal/testsupport"
 )
-
-func decodeTestDataFromYAML(data []byte) map[any]any {
-	var res map[any]any
-
-	err := yaml.Unmarshal(data, &res)
-	if err != nil {
-		panic(err)
-	}
-
-	return res
-}
 
 func TestDecodeAuthenticationStrategyHookFuncForBasicAuthStrategy(t *testing.T) {
 	t.Parallel()
@@ -108,8 +98,11 @@ auth:
 			})
 			assert.NoError(t, err)
 
+			conf, err := testsupport.DecodeTestConfig(tc.config)
+			require.NoError(t, err)
+
 			// WHEN
-			err = dec.Decode(decodeTestDataFromYAML(tc.config))
+			err = dec.Decode(conf)
 
 			// THEN
 			tc.assert(t, err, typ.AuthStrategy)
@@ -264,8 +257,11 @@ auth:
 			})
 			assert.NoError(t, err)
 
+			conf, err := testsupport.DecodeTestConfig(tc.config)
+			require.NoError(t, err)
+
 			// WHEN
-			err = dec.Decode(decodeTestDataFromYAML(tc.config))
+			err = dec.Decode(conf)
 
 			// THEN
 			tc.assert(t, err, typ.AuthStrategy)
@@ -407,8 +403,11 @@ auth:
 			})
 			assert.NoError(t, err)
 
+			conf, err := testsupport.DecodeTestConfig(tc.config)
+			require.NoError(t, err)
+
 			// WHEN
-			err = dec.Decode(decodeTestDataFromYAML(tc.config))
+			err = dec.Decode(conf)
 
 			// THEN
 			tc.assert(t, err, typ.AuthStrategy)
@@ -434,15 +433,16 @@ func TestDecodeAuthenticationStrategyHookFuncForUnknownStrategy(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	config := []byte(`
+	conf, err := testsupport.DecodeTestConfig([]byte(`
 auth:
   type: "foo-bar"
   config:
     foo: bar
-`)
+`))
+	require.NoError(t, err)
 
 	// WHEN
-	err = dec.Decode(decodeTestDataFromYAML(config))
+	err = dec.Decode(conf)
 
 	// THEN
 	require.Error(t, err)
