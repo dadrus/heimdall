@@ -207,9 +207,6 @@ func (s *requestContext) Signer() heimdall.JWTSigner               { return s.si
 func (s *requestContext) RequestURL() *url.URL                     { return s.reqURL }
 func (s *requestContext) RequestClientIPs() []string {
 	ips := s.c.IPs()
-	if len(ips) == 0 {
-		ips = append(ips, s.c.IP())
-	}
 
-	return ips
+	return x.IfThenElse(len(ips) != 0, ips, []string{s.c.IP()})
 }
