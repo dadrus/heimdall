@@ -5,6 +5,7 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/goccy/go-json"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -75,7 +76,7 @@ func TestErrorChainJSONMarshal(t *testing.T) {
 	testErr := errorchain.NewWithMessage(errTest1, "foo").CausedBy(errTest2)
 
 	// WHEN
-	res, err := testErr.MarshalJSON()
+	res, err := json.Marshal(testErr)
 
 	// THEN
 	require.NoError(t, err)

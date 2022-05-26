@@ -4,6 +4,7 @@ import (
 	"context"
 	"strings"
 
+	"github.com/goccy/go-json"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/recover"
@@ -46,6 +47,8 @@ func newFiberApp(conf config.Configuration, cache cache.Cache, logger zerolog.Lo
 			api.TrustedProxies != nil,
 			func() []string { return *api.TrustedProxies },
 			func() []string { return []string{} }),
+		JSONDecoder: json.Unmarshal,
+		JSONEncoder: json.Marshal,
 	})
 	app.Use(recover.New(recover.Config{EnableStackTrace: true}))
 
