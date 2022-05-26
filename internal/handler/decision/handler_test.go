@@ -105,6 +105,75 @@ func TestHandleDecisionAPIRequest(t *testing.T) {
 				assert.Equal(t, "Unauthorized", string(data))
 			},
 		},
+		{
+			uc: "rule execution fails with pipeline authorization error",
+			createRequest: func(t *testing.T) *http.Request {
+				t.Helper()
+
+				return httptest.NewRequest("POST", "/decisions", nil)
+			},
+			configureMocks: func(t *testing.T, repository *mocks2.MockRepository, rule *mocks4.MockRule) {
+				t.Helper()
+
+				rule.On("MatchesMethod", "POST").Return(true)
+				rule.On("Execute", mock.MatchedBy(func(ctx *requestContext) bool {
+					ctx.SetPipelineError(heimdall.ErrAuthorization)
+
+					return true
+				})).Return(nil)
+
+				repository.On("FindRule", mock.Anything).Return(rule, nil)
+			},
+			assertResponse: func(t *testing.T, err error, response *http.Response) {
+				t.Helper()
+
+				require.NoError(t, err)
+				assert.Equal(t, http.StatusForbidden, response.StatusCode)
+
+				data, err := ioutil.ReadAll(response.Body)
+				require.NoError(t, err)
+				assert.Equal(t, "Forbidden", string(data))
+			},
+		},
+		{
+			uc: "rule execution succeeds and sets a response cookie and header",
+			createRequest: func(t *testing.T) *http.Request {
+				t.Helper()
+
+				return httptest.NewRequest("POST", "/decisions", nil)
+			},
+			configureMocks: func(t *testing.T, repository *mocks2.MockRepository, rule *mocks4.MockRule) {
+				t.Helper()
+
+				rule.On("MatchesMethod", "POST").Return(true)
+				rule.On("Execute", mock.MatchedBy(func(ctx *requestContext) bool {
+					ctx.AddResponseHeader("X-Foo-Bar", "baz")
+					ctx.AddResponseCookie("X-Bar-Foo", "zab")
+
+					return true
+				})).Return(nil)
+
+				repository.On("FindRule", mock.Anything).Return(rule, nil)
+			},
+			assertResponse: func(t *testing.T, err error, response *http.Response) {
+				t.Helper()
+
+				require.NoError(t, err)
+				assert.Equal(t, http.StatusAccepted, response.StatusCode)
+
+				data, err := ioutil.ReadAll(response.Body)
+				require.NoError(t, err)
+				assert.Equal(t, "Accepted", string(data))
+
+				headerVal := response.Header.Get("X-Foo-Bar")
+				assert.Equal(t, headerVal, "baz")
+
+				cookies := response.Cookies()
+				require.Len(t, cookies, 1)
+				assert.Equal(t, "X-Bar-Foo", cookies[0].Name)
+				assert.Equal(t, "zab", cookies[0].Value)
+			},
+		},
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
 			// GIVEN
