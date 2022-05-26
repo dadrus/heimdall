@@ -12,7 +12,8 @@ import (
 
 const defaultQueueSize = 20
 
-// nolint
+// Module is invoked on app bootstrapping.
+// nolint: gochecknoglobals
 var Module = fx.Options(
 	fx.Provide(func(logger zerolog.Logger) event.RuleSetChangedEventQueue {
 		logger.Debug().Msg("Creating rule set event queue.")
