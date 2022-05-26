@@ -25,7 +25,7 @@ const (
 
 	ecdsa256 = 256
 	ecdsa384 = 384
-	ecdsa512 = 512
+	ecdsa512 = 521
 )
 
 func newJWTSigner(ks keystore.KeyStore, conf config.Configuration, logger zerolog.Logger) (heimdall.JWTSigner, error) {

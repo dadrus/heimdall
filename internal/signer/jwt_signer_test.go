@@ -279,7 +279,7 @@ func TestNewJWTSigner(t *testing.T) {
 					KeyID:      "baz",
 					PrivateKey: ecdsaPrivKey3,
 					Alg:        keystore.AlgECDSA,
-					KeySize:    ecdsaPrivKey2.Params().BitSize,
+					KeySize:    ecdsaPrivKey3.Params().BitSize,
 				}, nil)
 			},
 			assert: func(t *testing.T, err error, signer *jwtSigner) {
@@ -290,7 +290,7 @@ func TestNewJWTSigner(t *testing.T) {
 				assert.Equal(t, "foo", signer.iss)
 				assert.Equal(t, ecdsaPrivKey3, signer.key)
 				assert.Equal(t, "baz", signer.kid)
-				assert.Equal(t, jose.ES384, signer.alg)
+				assert.Equal(t, jose.ES512, signer.alg)
 			},
 		},
 	} {
@@ -424,4 +424,19 @@ func validateTestJWT(t *testing.T, rawJWT string, signer *jwtSigner,
 		assert.Contains(t, jwtClaims, k)
 		assert.Equal(t, v, jwtClaims[k])
 	}
+}
+
+func TestJWTSignerHash(t *testing.T) {
+	t.Parallel()
+
+	// GIVEN
+	signer := &jwtSigner{iss: "foo", alg: "bar", kid: "baz"}
+
+	// WHEN
+	hash1 := signer.Hash()
+	hash2 := signer.Hash()
+
+	// THEN
+	assert.NotEmpty(t, hash1)
+	assert.Equal(t, hash1, hash2)
 }
