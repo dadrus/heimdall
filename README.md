@@ -25,11 +25,12 @@ The current implementation is a pre alpha version, but already supports
 * Optional default rule taking effect if no rule matches
 * If Default rule is configured, the actual rule definition can reuse it (less yaml code)
 * Typical execution time if caches are active is around 300µs (on my laptop)
+* The configuration is validated on startup. You can also validate it by making use of the "validate config" command.
 
 Features to come are (more or less in this sequence):
 
 * Not really a feature - but tests, tests, tests ;)
-* Use the defined JSON schema to validate the configuration.
+* Validation for rules
 * Documentation
 * X.509 certificates in key store
 * jwks endpoint to let the upstream service verify the jwt signatures 
