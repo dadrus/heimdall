@@ -8,7 +8,7 @@ import (
 	"github.com/dadrus/heimdall/internal/handler/decision"
 )
 
-// NewDecisionAPICommand represents the proxy command.
+// NewDecisionAPICommand represents the "serve api" command.
 func NewDecisionAPICommand() *cobra.Command {
 	return &cobra.Command{
 		Use:   "api",
@@ -23,11 +23,13 @@ func NewDecisionAPICommand() *cobra.Command {
 				decision.Module,
 			)
 
-			if err := app.Err(); err == nil {
-				app.Run()
-			} else {
+			err := app.Err()
+			if err != nil {
+				cmd.PrintErrf("Failed to initialize decision endpoint: %v", err)
 				panic(err)
 			}
+
+			app.Run()
 		},
 	}
 }

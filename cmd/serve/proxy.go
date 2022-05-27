@@ -23,11 +23,13 @@ func NewProxyCommand() *cobra.Command {
 				proxy.Module,
 			)
 
-			if err := app.Err(); err == nil {
-				app.Run()
-			} else {
+			err := app.Err()
+			if err != nil {
+				cmd.PrintErrf("Failed to initialize proxy endpoint: %v", err)
 				panic(err)
 			}
+
+			app.Run()
 		},
 	}
 }
