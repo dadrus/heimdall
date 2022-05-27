@@ -1,13 +1,12 @@
 package cmd
 
 import (
-	"fmt"
 	"os"
 
 	"github.com/spf13/cobra"
 )
 
-// nolint
+// nolint: gochecknoglobals
 var (
 	Version = "master"
 
@@ -23,8 +22,7 @@ var (
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
 	if err := RootCmd.Execute(); err != nil {
-		// nolint
-		fmt.Println(err)
+		RootCmd.PrintErr(err)
 		os.Exit(-1)
 	}
 }
