@@ -37,11 +37,11 @@ func DecodeAuthenticationStrategyHookFunc() mapstructure.DecodeHookFunc {
 		}
 
 		switch typed["type"] {
-		case "basic-auth":
+		case "basic_auth":
 			return decodeBasicAuthStrategy(typed["config"])
-		case "api-key":
+		case "api_key":
 			return decodeAPIKeyStrategy(typed["config"])
-		case "client-credentials":
+		case "client_credentials":
 			return decodeClientCredentialsStrategy(typed["config"])
 		default:
 			return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,

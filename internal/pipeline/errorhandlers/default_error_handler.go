@@ -37,6 +37,6 @@ func (eh *defaultErrorHandler) Execute(ctx heimdall.Context, err error) (bool, e
 	return true, nil
 }
 
-func (eh *defaultErrorHandler) WithConfig(config map[string]any) (ErrorHandler, error) {
+func (eh *defaultErrorHandler) WithConfig(_ map[string]any) (ErrorHandler, error) {
 	return eh, nil
 }

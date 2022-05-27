@@ -28,7 +28,7 @@ func TestDecodeAuthenticationStrategyHookFuncForBasicAuthStrategy(t *testing.T) 
 			uc: "basic auth with all required properties",
 			config: []byte(`
 auth:
-  type: basic-auth
+  type: basic_auth
   config:
     user: foo
     password: bar`),
@@ -46,7 +46,7 @@ auth:
 			uc: "basic auth without user property",
 			config: []byte(`
 auth:
-  type: basic-auth
+  type: basic_auth
   config:
     password: bar
 `),
@@ -61,7 +61,7 @@ auth:
 			uc: "basic auth without password property",
 			config: []byte(`
 auth:
-  type: basic-auth
+  type: basic_auth
   config:
     user: foo
 `),
@@ -76,7 +76,7 @@ auth:
 			uc: "basic auth without config property",
 			config: []byte(`
 auth:
-  type: basic-auth
+  type: basic_auth
 `),
 			assert: func(t *testing.T, err error, as AuthenticationStrategy) {
 				t.Helper()
@@ -128,7 +128,7 @@ func TestDecodeAuthenticationStrategyHookFuncForAPIKeyStrategy(t *testing.T) {
 			uc: "api key with all required properties, with in=header",
 			config: []byte(`
 auth:
-  type: api-key
+  type: api_key
   config:
     name: foo
     value: bar
@@ -149,7 +149,7 @@ auth:
 			uc: "api key with all required properties, with in=cookie",
 			config: []byte(`
 auth:
-  type: api-key
+  type: api_key
   config:
     name: foo
     value: bar
@@ -170,7 +170,7 @@ auth:
 			uc: "api key with all required properties, with in=foobar",
 			config: []byte(`
 auth:
-  type: api-key
+  type: api_key
   config:
     name: foo
     value: bar
@@ -187,7 +187,7 @@ auth:
 			uc: "api key without in property",
 			config: []byte(`
 auth:
-  type: api-key
+  type: api_key
   config:
     name: foo
     value: bar
@@ -203,7 +203,7 @@ auth:
 			uc: "api key without name property",
 			config: []byte(`
 auth:
-  type: api-key
+  type: api_key
   config:
     value: bar
     in: header
@@ -219,7 +219,7 @@ auth:
 			uc: "api key without value property",
 			config: []byte(`
 auth:
-  type: api-key
+  type: api_key
   config:
     name: foo
     in: header
@@ -235,7 +235,7 @@ auth:
 			uc: "api key without config property",
 			config: []byte(`
 auth:
-  type: api-key
+  type: api_key
 `),
 			assert: func(t *testing.T, err error, as AuthenticationStrategy) {
 				t.Helper()
@@ -287,7 +287,7 @@ func TestDecodeAuthenticationStrategyHookFuncForClientCredentialsStrategy(t *tes
 			uc: "client credentials with all required properties",
 			config: []byte(`
 auth:
-  type: client-credentials
+  type: client_credentials
   config:
     client_id: foo
     client_secret: bar
@@ -308,7 +308,7 @@ auth:
 			uc: "client credentials with all possible properties",
 			config: []byte(`
 auth:
-  type: client-credentials
+  type: client_credentials
   config:
     client_id: foo
     client_secret: bar
@@ -333,7 +333,7 @@ auth:
 			uc: "client credentials without client_id property",
 			config: []byte(`
 auth:
-  type: client-credentials
+  type: client_credentials
   config:
     client_secret: bar
     token_url: http://foobar.foo
@@ -349,7 +349,7 @@ auth:
 			uc: "client credentials without client_secret property",
 			config: []byte(`
 auth:
-  type: client-credentials
+  type: client_credentials
   config:
     client_id: foo
     token_url: http://foobar.foo
@@ -365,7 +365,7 @@ auth:
 			uc: "client credentials without token_url property",
 			config: []byte(`
 auth:
-  type: client-credentials
+  type: client_credentials
   config:
     client_id: foo
     client_secret: bar
@@ -381,7 +381,7 @@ auth:
 			uc: "client credentials without config property",
 			config: []byte(`
 auth:
-  type: client-credentials
+  type: client_credentials
 `),
 			assert: func(t *testing.T, err error, as AuthenticationStrategy) {
 				t.Helper()
