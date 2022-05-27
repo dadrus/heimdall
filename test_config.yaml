@@ -39,7 +39,7 @@ pipeline:
             max_delay: 300ms
             give_up_after: 2s
           auth:
-            type: basic-auth
+            type: basic_auth
             config:
               user: foo
               password: bar
@@ -58,7 +58,7 @@ pipeline:
       type: jwt
       config:
         jwks_endpoint:
-          url: foo/token
+          url: http://foo/token
           method: GET
         jwt_from:
           - header: Authorization
@@ -85,19 +85,23 @@ pipeline:
       type: remote
       config:
         endpoint:
-          url: keto
+          url: http://keto
           method: POST
           headers:
             foo-bar: "{{ .Subject }}"
         payload: "https://bla.bar"
         forward_response_headers_to_upstream:
           - bla-bar
+    - id: "attributes_based_authorizer"
+      type: local
+      config:
+        script: "console.log('New JS script')"
   hydrators:
     - id: "subscription_hydrator"
       type: generic
       config:
         endpoint:
-          url: foo.bar
+          url: http://foo.bar
           method: GET
           headers:
             bla: bla
@@ -114,6 +118,7 @@ pipeline:
       type: jwt
       config:
         ttl: 5m
+        claims: "{'user': {{ quote .ID }} }"
     - id: "bla"
       type: header
       config:
@@ -156,10 +161,3 @@ rules:
       src: test_rules.yaml
       watch: true
 
-    docker:
-      endpoint: docker.sock
-      timeout: 1s
-    kubernetes_crd:
-      namespaces:
-        - fooo
-      label_selector: foobar
