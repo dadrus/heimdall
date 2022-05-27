@@ -5,7 +5,8 @@ import (
 	"github.com/rs/zerolog"
 	"go.uber.org/fx"
 
-	"github.com/dadrus/heimdall/internal/fiber/middleware/xforwarded"
+	fiberauditor "github.com/dadrus/heimdall/internal/fiber/middleware/auditor"
+	fiberxforwarded "github.com/dadrus/heimdall/internal/fiber/middleware/xforwarded"
 	"github.com/dadrus/heimdall/internal/handler/requestcontext"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules"
@@ -40,14 +41,14 @@ func newHandler(params handlerParams) (*Handler, error) {
 func (h *Handler) registerRoutes(router fiber.Router, logger zerolog.Logger) {
 	logger.Debug().Msg("Registering decision api routes")
 
-	router.All("/decisions/*", h.decisions)
+	router.All("/decisions/*", fiberxforwarded.New(), fiberauditor.New(), h.decisions)
 }
 
 func (h *Handler) decisions(c *fiber.Ctx) error {
 	logger := zerolog.Ctx(c.UserContext())
 	logger.Debug().Msg("Decision API called")
 
-	reqURL := xforwarded.RequestURL(c.UserContext())
+	reqURL := fiberxforwarded.RequestURL(c.UserContext())
 
 	rule, err := h.r.FindRule(reqURL)
 	if err != nil {
@@ -55,7 +56,7 @@ func (h *Handler) decisions(c *fiber.Ctx) error {
 			"no applicable rule found for %s", reqURL.String()).CausedBy(err)
 	}
 
-	method := xforwarded.RequestMethod(c.UserContext())
+	method := fiberxforwarded.RequestMethod(c.UserContext())
 	if !rule.MatchesMethod(method) {
 		return errorchain.NewWithMessagef(heimdall.ErrMethodNotAllowed,
 			"rule doesn't match %s method", method)

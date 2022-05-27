@@ -15,11 +15,9 @@ import (
 
 	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/dadrus/heimdall/internal/config"
-	fiberauditor "github.com/dadrus/heimdall/internal/fiber/middleware/auditor"
 	fibercache "github.com/dadrus/heimdall/internal/fiber/middleware/cache"
 	fiberlogger "github.com/dadrus/heimdall/internal/fiber/middleware/logger"
 	fibertracing "github.com/dadrus/heimdall/internal/fiber/middleware/tracing"
-	fiberxforwarded "github.com/dadrus/heimdall/internal/fiber/middleware/xforwarded"
 	"github.com/dadrus/heimdall/internal/handler/errorhandler"
 	"github.com/dadrus/heimdall/internal/x"
 )
@@ -69,10 +67,8 @@ func newFiberApp(conf config.Configuration, cache cache.Cache, logger zerolog.Lo
 		}))
 	}
 
-	app.Use(fiberxforwarded.New())
 	app.Use(fibercache.New(cache))
 	app.Use(fiberlogger.New())
-	app.Use(fiberauditor.New())
 
 	return app
 }

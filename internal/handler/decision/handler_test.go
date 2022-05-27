@@ -80,7 +80,7 @@ func TestHandleDecisionAPIRequest(t *testing.T) {
 
 				data, err := ioutil.ReadAll(response.Body)
 				require.NoError(t, err)
-				assert.Equal(t, "Method Not Allowed", string(data))
+				assert.Len(t, data, 0)
 			},
 		},
 		{
@@ -173,7 +173,7 @@ func TestHandleDecisionAPIRequest(t *testing.T) {
 
 				data, err := ioutil.ReadAll(response.Body)
 				require.NoError(t, err)
-				assert.Equal(t, "Accepted", string(data))
+				assert.Len(t, data, 0)
 
 				headerVal := response.Header.Get("X-Foo-Bar")
 				assert.Equal(t, headerVal, "baz")
@@ -225,7 +225,7 @@ func TestHandleDecisionAPIRequest(t *testing.T) {
 
 				data, err := ioutil.ReadAll(response.Body)
 				require.NoError(t, err)
-				assert.Equal(t, "Accepted", string(data))
+				assert.Len(t, data, 0)
 
 				headerVal := response.Header.Get("X-Foo-Bar")
 				assert.Equal(t, headerVal, "baz")
@@ -278,7 +278,7 @@ func TestHandleDecisionAPIRequest(t *testing.T) {
 
 				data, err := ioutil.ReadAll(response.Body)
 				require.NoError(t, err)
-				assert.Equal(t, "Accepted", string(data))
+				assert.Len(t, data, 0)
 
 				headerVal := response.Header.Get("X-Foo-Bar")
 				assert.Equal(t, headerVal, "baz")
