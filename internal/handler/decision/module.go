@@ -15,9 +15,11 @@ import (
 
 	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/dadrus/heimdall/internal/config"
+	fiberauditor "github.com/dadrus/heimdall/internal/fiber/middleware/auditor"
 	fibercache "github.com/dadrus/heimdall/internal/fiber/middleware/cache"
 	fiberlogger "github.com/dadrus/heimdall/internal/fiber/middleware/logger"
 	fibertracing "github.com/dadrus/heimdall/internal/fiber/middleware/tracing"
+	fiberxforwarded "github.com/dadrus/heimdall/internal/fiber/middleware/xforwarded"
 	"github.com/dadrus/heimdall/internal/handler/errorhandler"
 	"github.com/dadrus/heimdall/internal/x"
 )
@@ -43,14 +45,18 @@ func newFiberApp(conf config.Configuration, cache cache.Cache, logger zerolog.Lo
 		DisableStartupMessage:   true,
 		ErrorHandler:            errorhandler.NewErrorHandler(api.VerboseErrors, logger),
 		EnableTrustedProxyCheck: api.TrustedProxies != nil,
-		TrustedProxies: x.IfThenElseExec(
-			api.TrustedProxies != nil,
+		TrustedProxies: x.IfThenElseExec(api.TrustedProxies != nil,
 			func() []string { return *api.TrustedProxies },
 			func() []string { return []string{} }),
 		JSONDecoder: json.Unmarshal,
 		JSONEncoder: json.Marshal,
 	})
 	app.Use(recover.New(recover.Config{EnableStackTrace: true}))
+	app.Use(fibertracing.New(
+		fibertracing.WithTracer(opentracing.GlobalTracer()),
+		fibertracing.WithSpanObserver(func(span opentracing.Span, ctx *fiber.Ctx) {
+			ext.Component.Set(span, "heimdall")
+		})))
 
 	if api.CORS != nil {
 		app.Use(cors.New(cors.Config{
@@ -63,13 +69,10 @@ func newFiberApp(conf config.Configuration, cache cache.Cache, logger zerolog.Lo
 		}))
 	}
 
-	app.Use(fibertracing.New(
-		fibertracing.WithTracer(opentracing.GlobalTracer()),
-		fibertracing.WithSpanObserver(func(span opentracing.Span, ctx *fiber.Ctx) {
-			ext.Component.Set(span, "heimdall")
-		})))
+	app.Use(fiberxforwarded.New())
 	app.Use(fibercache.New(cache))
 	app.Use(fiberlogger.New())
+	app.Use(fiberauditor.New())
 
 	return app
 }
