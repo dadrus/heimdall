@@ -14,6 +14,7 @@ var (
 	ErrCommunicationTimeout = errors.New("communication timeout error")
 	ErrConfiguration        = errors.New("configuration error")
 	ErrInternal             = errors.New("internal error")
+	ErrMethodNotAllowed     = errors.New("method not allowed")
 )
 
 type RedirectError struct {
