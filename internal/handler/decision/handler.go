@@ -9,16 +9,11 @@ import (
 	"github.com/rs/zerolog"
 	"go.uber.org/fx"
 
+	"github.com/dadrus/heimdall/internal/fiber/middleware/xforwarded"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
-)
-
-const (
-	xForwardedMethod = "X-Forwarded-Method"
-	xForwardedProto  = "X-Forwarded-Proto"
-	xForwardedURI    = "X-Forwarded-Uri"
 )
 
 type Handler struct {
@@ -52,55 +47,17 @@ func (h *Handler) registerRoutes(router fiber.Router, logger zerolog.Logger) {
 	router.All("/decisions/*", h.decisions)
 }
 
-// swagger:route GET /decisions api decisions
-//
-// Access Control Decision API
-//
-// > This endpoint works with all HTTP Methods (GET, POST, PUT, ...) and matches every path prefixed with /decision.
-//
-// This endpoint mirrors the proxy capability of Heimdall's proxy functionality but instead of forwarding the
-// request to the upstream server, returns 200 (request should be allowed), 401 (unauthorized), or 403 (forbidden)
-// status codes. This endpoint can be used to integrate with other API Proxies like Ambassador, Kong, Envoy, and many
-// more.
-//
-//     Schemes: http, https
-//
-//     Responses:
-//       200: emptyResponse
-//       400: genericError
-//       401: genericError
-//       403: genericError
-//       500: genericError
-//       503: genericError
 func (h *Handler) decisions(c *fiber.Ctx) error {
-	logger := zerolog.Ctx(c.UserContext())
-
-	method := h.getRequestMethod(c)
-	reqURL := h.getRequestURL(c)
-
-	fields := map[string]interface{}{
-		"http_method":     method,
-		"http_url":        reqURL.String(),
-		"http_host":       c.Hostname(),
-		"http_user_agent": c.Get("User-Agent"),
-	}
-
-	logger.Info().
-		Fields(fields).
-		Msg("Handling request")
+	reqURL := xforwarded.RequestURL(c.UserContext())
 
 	rule, err := h.r.FindRule(reqURL)
 	if err != nil {
-		logger.Warn().
-			Fields(fields).
-			Bool("granted", false).
-			Msg("Access request denied. No rule applicable")
-
-		return errorchain.New(heimdall.ErrInternal).CausedBy(err)
+		return errorchain.NewWithMessage(heimdall.ErrInternal, "no applicable rule found").CausedBy(err)
 	}
 
+	method := xforwarded.RequestMethod(c.UserContext())
 	if !rule.MatchesMethod(method) {
-		return c.SendStatus(fiber.StatusMethodNotAllowed)
+		return errorchain.NewWithMessage(heimdall.ErrMethodNotAllowed, "rule doesn't match method")
 	}
 
 	ctx := &requestContext{
@@ -117,18 +74,8 @@ func (h *Handler) decisions(c *fiber.Ctx) error {
 	}
 
 	if err != nil {
-		logger.Info().
-			Fields(fields).
-			Bool("granted", false).
-			Msg("Access request denied")
-
 		return err
 	}
-
-	logger.Info().
-		Fields(fields).
-		Bool("granted", true).
-		Msg("Access request granted")
 
 	for k := range ctx.respHeaders {
 		c.Response().Header.Set(k, ctx.respHeaders.Get(k))
@@ -138,49 +85,9 @@ func (h *Handler) decisions(c *fiber.Ctx) error {
 		c.Cookie(&fiber.Cookie{Name: k, Value: v})
 	}
 
-	return c.SendStatus(fiber.StatusAccepted)
-}
+	c.Status(fiber.StatusAccepted)
 
-func (h *Handler) getRequestURL(c *fiber.Ctx) *url.URL {
-	var (
-		path   string
-		query  string
-		scheme string
-	)
-
-	if c.IsProxyTrusted() {
-		forwardedURIVal := c.Get(xForwardedURI)
-		if len(forwardedURIVal) != 0 {
-			forwardedURI, _ := url.Parse(forwardedURIVal)
-			path = forwardedURI.Path
-			query = forwardedURI.Query().Encode()
-		}
-	}
-
-	if len(path) == 0 {
-		path = c.Params("*")
-		origReqURL := *c.Request().URI()
-		query = string(origReqURL.QueryString())
-	}
-
-	if c.IsProxyTrusted() {
-		scheme = c.Get(xForwardedProto)
-	}
-
-	return &url.URL{
-		Scheme:   x.OrDefault(scheme, c.Protocol()),
-		Host:     c.Hostname(),
-		Path:     path,
-		RawQuery: query,
-	}
-}
-
-func (h *Handler) getRequestMethod(c *fiber.Ctx) string {
-	if c.IsProxyTrusted() {
-		return x.OrDefault(c.Get(xForwardedMethod), c.Method())
-	}
-
-	return c.Method()
+	return nil
 }
 
 type requestContext struct {
