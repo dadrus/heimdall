@@ -177,6 +177,10 @@
         "cors": {
           "$ref": "#/definitions/corsConfig"
         },
+        "verbose_errors": {
+          "description": "Set to true to render error responses according to the requested MIME type",
+          "type": "boolean"
+        },
         "tls": {
           "$ref": "#/definitions/tlsConfig"
         }
@@ -218,12 +222,12 @@
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "attributes_from": {
+        "subject_attributes_from": {
           "description": "The `attributes` field in the Heimdall authentication session is set using this JSON Path. Defaults to `@this` (for the root element), `foo.bar` (for key foo.bar), or any other valid GJSON path. See [GSJON Syntax](https://github.com/tidwall/gjson/blob/master/SYNTAX.md) for reference.",
           "type": "string",
           "default": "@this"
         },
-        "id_from": {
+        "subject_id_from": {
           "description": "The `id` field in the Heimdall authentication session is set using this JSON Path. See [GSJON Syntax](https://github.com/tidwall/gjson/blob/master/SYNTAX.md) for reference.",
           "type": "string"
         }
@@ -612,20 +616,20 @@
         }
       }
     },
-    "authenticatorAuthenticationData": {
-      "description": "Authentication Data Authenticator",
+    "authenticatorGeneric": {
+      "description": "Generic Authenticator",
       "type": "object",
       "additionalProperties": false,
       "properties": {
         "type": {
-          "const": "authentication_data"
+          "const": "generic"
         },
         "id": {
           "description": "The unique id of the authenticator to be used in the rule definition",
           "type": "string"
         },
         "config": {
-          "title": "Authentication Data Authenticator Configuration",
+          "title": "Generic Authenticator Configuration",
           "type": "object",
           "additionalProperties": false,
           "required": [
@@ -640,6 +644,17 @@
             },
             "session": {
               "$ref": "#/definitions/sessionConfiguration"
+            },
+            "cache_ttl": {
+              "type": "string",
+              "description": "How long to cache the response from the identity info endpoint.",
+              "pattern": "^[0-9]+(ns|us|ms|s|m|h)$",
+              "default": "15m",
+              "examples": [
+                "1h",
+                "1m",
+                "30s"
+              ]
             }
           }
         }
@@ -668,11 +683,22 @@
             "introspection_endpoint": {
               "$ref": "#/definitions/endpointConfiguration"
             },
-            "introspection_response_assertions": {
+            "assertions": {
               "$ref": "#/definitions/assertionRequirements"
             },
             "session": {
               "$ref": "#/definitions/sessionConfiguration"
+            },
+            "cache_ttl": {
+              "type": "string",
+              "description": "How long to cache the response from the introspection endpoint.",
+              "pattern": "^[0-9]+(ns|us|ms|s|m|h)$",
+              "default": "15m",
+              "examples": [
+                "1h",
+                "1m",
+                "30s"
+              ]
             }
           }
         }
@@ -701,14 +727,25 @@
             "jwks_endpoint": {
               "$ref": "#/definitions/endpointConfiguration"
             },
-            "jwt_token_from": {
+            "jwt_from": {
               "$ref": "#/definitions/authenticationDataSource"
             },
-            "jwt_assertions": {
+            "assertions": {
               "$ref": "#/definitions/assertionRequirements"
             },
             "session": {
               "$ref": "#/definitions/sessionConfiguration"
+            },
+            "cache_ttl": {
+              "type": "string",
+              "description": "How long to cache the key received from the JWKS endpoint.",
+              "pattern": "^[0-9]+(ns|us|ms|s|m|h)$",
+              "default": "15m",
+              "examples": [
+                "1h",
+                "1m",
+                "30s"
+              ]
             }
           }
         }
@@ -742,6 +779,34 @@
         }
       }
     },
+    "authorizerLocal": {
+      "description": "Authorizer, which acts on subject attributes and the request context by using a JavaScript",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "local"
+        },
+        "id": {
+          "description": "The unique id of the authorizer to be used in the rule definition",
+          "type": "string"
+        },
+        "config": {
+          "description": "Local Authorizer Configuration",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "script"
+          ],
+          "properties": {
+            "script": {
+              "description": "JavaScript which defines the required logic",
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
     "authorizerRemote": {
       "description": "Remote Authorizer",
       "type": "object",
@@ -766,23 +831,27 @@
               "$ref": "#/definitions/endpointConfiguration"
             },
             "payload": {
-              "oneOf": [
-                {
-                  "description": "The Go text template used for payload generation.",
-                  "type": "string"
-                },
-                {
-                  "const": "original_body"
-                }
-              ]
+              "description": "The Go template with access to heimdall.Context and Subject used for request's HTTP body generation",
+              "type": "string"
             },
-            "forward_response_headers": {
+            "forward_response_headers_to_upstream": {
               "description": "A list of headers to forward to the upstream service.",
               "type": "array",
               "items": {
                 "type": "string"
               },
               "uniqueItems": true
+            },
+            "cache_ttl": {
+              "type": "string",
+              "description": "How long to cache the response received from the authorization endpoint. 0 or less means no caching",
+              "pattern": "^[0-9]+(ns|us|ms|s|m|h)$",
+              "default": "0",
+              "examples": [
+                "1h",
+                "1m",
+                "30s"
+              ]
             }
           }
         }
@@ -799,7 +868,7 @@
       ],
       "properties": {
         "type": {
-          "const": "default"
+          "const": "generic"
         },
         "id": {
           "description": "The unique id of the hydrator to be used in the rule definition",
@@ -809,19 +878,8 @@
           "description": "Generic Hydrator Configuration",
           "type": "object",
           "additionalProperties": false,
-          "anyOf": [
-            {
-              "required": [
-                "endpoint",
-                "headers"
-              ]
-            },
-            {
-              "required": [
-                "endpoint",
-                "payload"
-              ]
-            }
+          "required": [
+            "endpoint"
           ],
           "properties": {
             "endpoint": {
@@ -884,14 +942,10 @@
           "type": "object",
           "additionalProperties": false,
           "required": [
-            "issuer"
+            "claims"
           ],
           "properties": {
             "claims": {
-              "type": "string"
-            },
-            "issuer": {
-              "description": "Sets the 'iss' value of the JWT.",
               "type": "string"
             },
             "ttl": {
@@ -1025,8 +1079,8 @@
               "type": "string"
             }
           },
-          "request_header": {
-            "description": "Defines conditions the HTTP Request Header must full fill for this handler to match the request. Subkeys are matched with AND. If, for example, content-type and accept-type are set, both requirements must be matched for the handler to be responsible.",
+          "request_headers": {
+            "description": "Defines conditions the HTTP Request Headers must full fill for this handler to match the request. Subkeys are matched with AND. If, for example, content-type and accept-type are set, both requirements must be matched for the handler to be responsible.",
             "type": "object",
             "additionalProperties": {
               "type": "array"
@@ -1072,34 +1126,21 @@
         }
       }
     },
-    "errorsHandlerRegular": {
+    "errorsHandlerDefault": {
       "description": "Regular error handler, which just converts the error based on the information available in the HTTP Accept header",
       "type": "object",
       "additionalProperties": false,
       "required": [
         "id",
-        "type",
-        "config"
+        "type"
       ],
       "properties": {
         "type": {
-          "const": "regular"
+          "const": "default"
         },
         "id": {
           "description": "The unique id of the error handler to be used in the rule definition",
           "type": "string"
-        },
-        "config": {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "verbose": {
-              "type": "boolean"
-            },
-            "when": {
-              "$ref": "#/definitions/errorsWhen"
-            }
-          }
         }
       }
     },
@@ -1146,7 +1187,7 @@
               ],
               "default": 302
             },
-            "return_to_query_param": {
+            "return_to_query_parameter": {
               "description": "Adds the original URL the request tried to access to the query parameter.",
               "type": "string",
               "pattern": "^[A-Za-z0-9,._~-]*$",
@@ -1163,17 +1204,8 @@
       "description": "Enables file backend to load rules from",
       "type": "object",
       "additionalProperties": false,
-      "oneOf": [
-        {
-          "required": [
-            "directory"
-          ]
-        },
-        {
-          "required": [
-            "filename"
-          ]
-        }
+      "required": [
+         "src"
       ],
       "properties": {
         "watch": {
@@ -1181,49 +1213,8 @@
           "type": "boolean",
           "default": false
         },
-        "directory": {
-          "description": "Load rules from one or more rule files",
-          "type": "string"
-        },
-        "filename": {
-          "description": "load rules from a file",
-          "type": "string"
-        }
-      }
-    },
-    "dockerProvider": {
-      "description": "Enables docker backend to load rules from label annotations",
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "endpoint": {
-          "description": "Docker server endpoint. Can be tcp or socket endpoint.",
-          "type": "string"
-        },
-        "timeout": {
-          "description": "Client timeout settings for HTTP connections",
-          "type": "string",
-          "default": "1s",
-          "pattern": "^[0-9]+(ns|us|ms|s|m|h)$"
-        }
-      }
-    },
-    "kubernetesCrdProvider": {
-      "description": "Enables kubernetes crd backend to load rules from kubernetes crd",
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "namespaces": {
-          "description": "Kubernetes namespaces",
-          "type": "array",
-          "additionalItems": false,
-          "uniqueItems": true,
-          "items": {
-            "type": "string"
-          }
-        },
-        "label_selector": {
-          "description": "Kubernetes label selector to use",
+        "src": {
+          "description": "Load rules from one or more rule files. Can be a directory containing ruleset files or a single ruleset file",
           "type": "string"
         }
       }
@@ -1327,7 +1318,7 @@
                 "$ref": "#/definitions/errorsHandlerRedirect"
               },
               {
-                "$ref": "#/definitions/errorsHandlerRegular"
+                "$ref": "#/definitions/errorsHandlerDefault"
               }
             ]
           }
@@ -1349,7 +1340,7 @@
                 "$ref": "#/definitions/authenticatorUnauthorized"
               },
               {
-                "$ref": "#/definitions/authenticatorAuthenticationData"
+                "$ref": "#/definitions/authenticatorGeneric"
               },
               {
                 "$ref": "#/definitions/authenticatorOAuth2Introspection"
@@ -1375,6 +1366,9 @@
               },
               {
                 "$ref": "#/definitions/authorizerRemote"
+              },
+              {
+                "$ref": "#/definitions/authorizerLocal"
               }
             ]
           }
@@ -1423,12 +1417,6 @@
           "properties": {
             "file": {
               "$ref": "#/definitions/fileProvider"
-            },
-            "docker": {
-              "$ref": "#/definitions/dockerProvider"
-            },
-            "kubernetes_crd": {
-              "$ref": "#/definitions/kubernetesCrdProvider"
             }
           }
         },
