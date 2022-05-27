@@ -54,7 +54,7 @@ func TestHandleDecisionAPIRequest(t *testing.T) {
 
 				data, err := ioutil.ReadAll(response.Body)
 				require.NoError(t, err)
-				assert.Equal(t, "Internal Server Error", string(data))
+				assert.Len(t, data, 0)
 			},
 		},
 		{
@@ -105,7 +105,7 @@ func TestHandleDecisionAPIRequest(t *testing.T) {
 
 				data, err := ioutil.ReadAll(response.Body)
 				require.NoError(t, err)
-				assert.Equal(t, "Unauthorized", string(data))
+				assert.Len(t, data, 0)
 			},
 		},
 		{
@@ -135,7 +135,7 @@ func TestHandleDecisionAPIRequest(t *testing.T) {
 
 				data, err := ioutil.ReadAll(response.Body)
 				require.NoError(t, err)
-				assert.Equal(t, "Forbidden", string(data))
+				assert.Len(t, data, 0)
 			},
 		},
 		{

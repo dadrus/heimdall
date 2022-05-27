@@ -18,13 +18,13 @@ func defaultErrorHandler(logger zerolog.Logger) fiber.ErrorHandler {
 	return func(ctx *fiber.Ctx, err error) error {
 		switch {
 		case errors.Is(err, heimdall.ErrAuthentication):
-			return ctx.SendStatus(fiber.StatusUnauthorized)
+			ctx.Status(fiber.StatusUnauthorized)
 		case errors.Is(err, heimdall.ErrAuthorization):
-			return ctx.SendStatus(fiber.StatusForbidden)
+			ctx.Status(fiber.StatusForbidden)
 		case errors.Is(err, heimdall.ErrCommunicationTimeout) || errors.Is(err, heimdall.ErrCommunication):
-			return ctx.SendStatus(fiber.StatusBadGateway)
+			ctx.Status(fiber.StatusBadGateway)
 		case errors.Is(err, heimdall.ErrArgument):
-			return ctx.SendStatus(fiber.StatusBadRequest)
+			ctx.Status(fiber.StatusBadRequest)
 		case errors.Is(err, &heimdall.RedirectError{}):
 			var redirectError *heimdall.RedirectError
 
@@ -34,8 +34,10 @@ func defaultErrorHandler(logger zerolog.Logger) fiber.ErrorHandler {
 		default:
 			logger.Error().Err(err).Msg("Error occurred")
 
-			return ctx.SendStatus(fiber.StatusInternalServerError)
+			ctx.Status(fiber.StatusInternalServerError)
 		}
+
+		return nil
 	}
 }
 
