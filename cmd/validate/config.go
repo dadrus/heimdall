@@ -23,6 +23,8 @@ func NewValidateConfigCommand() *cobra.Command {
 
 			if err := config.ValidateConfig(configPath); err != nil {
 				cmd.PrintErrf("%v\n", err)
+
+				return nil
 			}
 
 			cmd.Printf("Configuration is valid\n")
