@@ -15,6 +15,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/cache/mocks"
 	"github.com/dadrus/heimdall/internal/config"
+	"github.com/dadrus/heimdall/internal/handler/requestcontext"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	mocks3 "github.com/dadrus/heimdall/internal/heimdall/mocks"
 	mocks2 "github.com/dadrus/heimdall/internal/rules/mocks"
@@ -119,7 +120,7 @@ func TestHandleDecisionAPIRequest(t *testing.T) {
 				t.Helper()
 
 				rule.On("MatchesMethod", "POST").Return(true)
-				rule.On("Execute", mock.MatchedBy(func(ctx *requestContext) bool {
+				rule.On("Execute", mock.MatchedBy(func(ctx *requestcontext.RequestContext) bool {
 					ctx.SetPipelineError(heimdall.ErrAuthorization)
 
 					return true
@@ -153,7 +154,7 @@ func TestHandleDecisionAPIRequest(t *testing.T) {
 				t.Helper()
 
 				rule.On("MatchesMethod", "POST").Return(true)
-				rule.On("Execute", mock.MatchedBy(func(ctx *requestContext) bool {
+				rule.On("Execute", mock.MatchedBy(func(ctx *requestcontext.RequestContext) bool {
 					ctx.AddResponseHeader("X-Foo-Bar", "baz")
 					ctx.AddResponseCookie("X-Bar-Foo", "zab")
 
@@ -205,7 +206,7 @@ func TestHandleDecisionAPIRequest(t *testing.T) {
 				t.Helper()
 
 				rule.On("MatchesMethod", "GET").Return(true)
-				rule.On("Execute", mock.MatchedBy(func(ctx *requestContext) bool {
+				rule.On("Execute", mock.MatchedBy(func(ctx *requestcontext.RequestContext) bool {
 					ctx.AddResponseHeader("X-Foo-Bar", "baz")
 					ctx.AddResponseCookie("X-Bar-Foo", "zab")
 
@@ -258,7 +259,7 @@ func TestHandleDecisionAPIRequest(t *testing.T) {
 				t.Helper()
 
 				rule.On("MatchesMethod", "POST").Return(true)
-				rule.On("Execute", mock.MatchedBy(func(ctx *requestContext) bool {
+				rule.On("Execute", mock.MatchedBy(func(ctx *requestcontext.RequestContext) bool {
 					ctx.AddResponseHeader("X-Foo-Bar", "baz")
 					ctx.AddResponseCookie("X-Bar-Foo", "zab")
 

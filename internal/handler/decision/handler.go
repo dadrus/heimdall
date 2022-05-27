@@ -1,12 +1,12 @@
 package decision
 
 import (
-	"github.com/dadrus/heimdall/internal/handler/requestcontext"
 	"github.com/gofiber/fiber/v2"
 	"github.com/rs/zerolog"
 	"go.uber.org/fx"
 
 	"github.com/dadrus/heimdall/internal/fiber/middleware/xforwarded"
+	"github.com/dadrus/heimdall/internal/handler/requestcontext"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
@@ -67,6 +67,7 @@ func (h *Handler) decisions(c *fiber.Ctx) error {
 	}
 
 	logger.Debug().Msg("Finalizing request")
+
 	if err = reqCtx.Finalize(); err != nil {
 		return err
 	}
