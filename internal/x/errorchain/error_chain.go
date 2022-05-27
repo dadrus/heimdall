@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/goccy/go-json"
+	"github.com/iancoleman/strcase"
 )
 
 type element struct {
@@ -105,8 +106,8 @@ func (ec *ErrorChain) Errors() []error {
 func (ec *ErrorChain) MarshalJSON() ([]byte, error) {
 	return json.Marshal(
 		message{
-			Msg:     ec.head.err.Error(),
-			Details: ec.head.msg,
+			Code:    strcase.ToLowerCamel(ec.head.err.Error()),
+			Message: ec.head.msg,
 		})
 }
 
@@ -114,13 +115,13 @@ func (ec *ErrorChain) MarshalXML(encoder *xml.Encoder, start xml.StartElement) e
 	return encoder.Encode(
 		message{
 			XMLName: xml.Name{Local: "error"},
-			Msg:     ec.head.err.Error(),
-			Details: ec.head.msg,
+			Code:    strcase.ToLowerCamel(ec.head.err.Error()),
+			Message: ec.head.msg,
 		})
 }
 
 type message struct {
 	XMLName xml.Name `json:"-"`
-	Msg     string   `xml:"message" json:"message"`
-	Details string   `xml:"details" json:"details"`
+	Code    string   `xml:"code" json:"code"`
+	Message string   `xml:"message,omitempty" json:"message,omitempty"`
 }

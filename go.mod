@@ -12,6 +12,7 @@ require (
 	github.com/goccy/go-json v0.9.7
 	github.com/gofiber/fiber/v2 v2.34.0
 	github.com/google/uuid v1.3.0
+	github.com/iancoleman/strcase v0.2.0
 	github.com/instana/go-sensor v1.42.1
 	github.com/jellydator/ttlcache/v3 v3.0.0
 	github.com/knadh/koanf v1.4.1

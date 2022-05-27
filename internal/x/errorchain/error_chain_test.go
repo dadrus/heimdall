@@ -80,7 +80,7 @@ func TestErrorChainJSONMarshal(t *testing.T) {
 
 	// THEN
 	require.NoError(t, err)
-	assert.JSONEq(t, `{"message":"test error 1","details":"foo"}`, string(res))
+	assert.JSONEq(t, `{"code":"testError1","message":"foo"}`, string(res))
 }
 
 func TestErrorChainXMLMarshal(t *testing.T) {
@@ -94,5 +94,5 @@ func TestErrorChainXMLMarshal(t *testing.T) {
 
 	// THEN
 	require.NoError(t, err)
-	assert.Equal(t, `<error><message>test error 1</message><details>foo</details></error>`, string(res))
+	assert.Equal(t, `<error><code>testError1</code><message>foo</message></error>`, string(res))
 }
