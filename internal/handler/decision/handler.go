@@ -44,6 +44,9 @@ func (h *Handler) registerRoutes(router fiber.Router, logger zerolog.Logger) {
 }
 
 func (h *Handler) decisions(c *fiber.Ctx) error {
+	logger := zerolog.Ctx(c.UserContext())
+	logger.Debug().Msg("Decision API called")
+
 	reqURL := xforwarded.RequestURL(c.UserContext())
 
 	rule, err := h.r.FindRule(reqURL)
@@ -63,6 +66,7 @@ func (h *Handler) decisions(c *fiber.Ctx) error {
 		return err
 	}
 
+	logger.Debug().Msg("Finalizing request")
 	if err = reqCtx.Finalize(); err != nil {
 		return err
 	}
