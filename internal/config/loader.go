@@ -17,6 +17,7 @@ import (
 	"github.com/mitchellh/mapstructure"
 	"github.com/rs/zerolog"
 
+	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
@@ -96,11 +97,16 @@ func LoadConfigWithDecoder(config interface{}, optConfFile string, addDecodeHook
 }
 
 func koanfFromYaml(configFile string) (*koanf.Koanf, error) {
+	if err := ValidateConfig(configFile); err != nil {
+		return nil, err
+	}
+
 	parser := koanf.New(".")
 
 	err := parser.Load(file.Provider(configFile), yaml.Parser())
 	if err != nil {
-		return nil, fmt.Errorf("failed to read yaml config from %s: %w", configFile, err)
+		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+			"failed to read yaml config from %s", configFile).CausedBy(err)
 	}
 
 	return parser, nil

@@ -20,5 +20,5 @@ func init() {
 	RootCmd.AddCommand(validateCmd)
 
 	validateCmd.PersistentFlags().StringP("config", "c", "", "Config file")
-	validateCmd.AddCommand(validate.NewValidateConfig())
+	validateCmd.AddCommand(validate.NewValidateConfigCommand())
 }
