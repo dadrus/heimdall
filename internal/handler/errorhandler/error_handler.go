@@ -25,6 +25,8 @@ func defaultErrorHandler(logger zerolog.Logger) fiber.ErrorHandler {
 			ctx.Status(fiber.StatusBadGateway)
 		case errors.Is(err, heimdall.ErrArgument):
 			ctx.Status(fiber.StatusBadRequest)
+		case errors.Is(err, heimdall.ErrMethodNotAllowed):
+			ctx.Status(fiber.StatusMethodNotAllowed)
 		case errors.Is(err, &heimdall.RedirectError{}):
 			var redirectError *heimdall.RedirectError
 
@@ -52,6 +54,8 @@ func verboseErrorHandler(logger zerolog.Logger) fiber.ErrorHandler {
 			return ctx.Status(fiber.StatusBadGateway).Format(err)
 		case errors.Is(err, heimdall.ErrArgument):
 			return ctx.Status(fiber.StatusBadRequest).Format(err)
+		case errors.Is(err, heimdall.ErrMethodNotAllowed):
+			return ctx.Status(fiber.StatusMethodNotAllowed).Format(err)
 		case errors.Is(err, &heimdall.RedirectError{}):
 			var redirectError *heimdall.RedirectError
 
