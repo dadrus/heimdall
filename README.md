@@ -9,7 +9,7 @@ Heimdall is inspired by [Ory's OAthkeeper](https://www.ory.sh/docs/oathkeeper), 
 
 Heimdall authenticates and authorizes incoming HTTP requests as well as enriches these with further information and transforms resulting subject information to a format, both required by the upstream services. It is supposed to be used either as a Reverse Proxy in front of your upstream API or web server that rejects unauthorized requests and forwards authorized ones to your end points, or as a Decision API, which integrates with your API Gateway (Kong, NGNIX, Envoy, Traefik, etc) and then acts as a Policy Decision Point.
 
-The current implementation is a pre alpha version, but already supports
+The current implementation is a pre alpha version, but already supports functionality listed below. A first alpha release will be available as soon as the test coverage hits 85%, health & readyness probes, as well as the jwks endpoint are implemented.
 
 * Decision API
 * Loading rules from the file system
@@ -29,11 +29,14 @@ The current implementation is a pre alpha version, but already supports
 
 Features to come are (more or less in this sequence):
 
-* Not really a feature - but tests, tests, tests ;)
-* Validation for rules
-* Documentation
-* X.509 certificates in key store
-* jwks endpoint to let the upstream service verify the jwt signatures 
+* Not really a feature - but tests, tests, tests ;) - at least 85%
 * Health & Readiness Probes
-* k8s CRDs to load rules from.
+* Extend template implementation to enable the usage of the heimdall object. As of today only the subject is available.
+* jwks endpoint to let the upstream service verify the jwt signatures
+* Documentation
 * Reverse Proxy
+* Deal with multiple entries for the same kid in responses from jwks endpoints
+* Validation for rules
+* X.509 certificates in key store
+* k8s CRDs to load rules from.
+* Ensure the builds are [reproducible](https://reproducible-builds.org/).
