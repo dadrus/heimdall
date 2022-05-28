@@ -142,7 +142,7 @@ func TestStartFileSystemProvider(t *testing.T) {
 	t.Parallel()
 
 	var tearDownFuncs []func()
-	
+
 	defer func() {
 		for _, f := range tearDownFuncs {
 			f()
