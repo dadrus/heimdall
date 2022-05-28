@@ -19,6 +19,10 @@ func ValidateConfig(configPath string) error {
 			"could not read config file").CausedBy(err)
 	}
 
+	if len(contents) == 0 {
+		return errorchain.NewWithMessage(heimdall.ErrConfiguration, "empty config file")
+	}
+
 	var conf map[string]any
 
 	err = yaml.Unmarshal(contents, &conf)
