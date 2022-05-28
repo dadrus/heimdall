@@ -18,7 +18,7 @@ func TestValidateNotExistingConfigFile(t *testing.T) {
 
 	require.Error(t, err)
 	assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-	assert.Contains(t, err.Error(), "read file")
+	assert.Contains(t, err.Error(), "read config file")
 }
 
 func TestValidateNotReadableConfigFile(t *testing.T) {
@@ -35,7 +35,7 @@ func TestValidateNotReadableConfigFile(t *testing.T) {
 
 	require.Error(t, err)
 	assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-	assert.Contains(t, err.Error(), "read file")
+	assert.Contains(t, err.Error(), "read config file")
 }
 
 func TestValidateEmptyConfigFile(t *testing.T) {
