@@ -14,7 +14,7 @@ The current implementation is a pre alpha version, but already supports
 * Decision API
 * Loading rules from the file system
 * Authenticator types (anonymous, basic-auth, generic, jwt, noop, oauth2 introspection, unauthorized)
-* Authorizers (allow, deny, subject attributes & remote)
+* Authorizers (allow, deny, subject attributes (to evaluate available subject information by using JS) & remote (e.g. to communicate with open policy agent, ory keto, a zanzibar implementation, or any other authorization engine))
 * Hydrators (generic) - to enrich the subject information retrieved from the authenticator
 * Mutators (opaque cookie, opaque header, jwt in the Authorization header, noop) to transform the subject information
 * Error Handlers (default, redirect, www-authenticate), which support accept type negotiation as well
