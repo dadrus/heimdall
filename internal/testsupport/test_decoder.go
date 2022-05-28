@@ -6,9 +6,7 @@ import (
 
 func DecodeTestConfig(data []byte) (map[string]any, error) {
 	var out map[string]any
-	if err := yaml.Unmarshal(data, &out); err != nil {
-		return nil, err
-	}
+	err := yaml.Unmarshal(data, &out)
 
-	return out, nil
+	return out, err
 }
