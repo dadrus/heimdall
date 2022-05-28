@@ -141,6 +141,14 @@ func TestRegisterFileSystemProvider(t *testing.T) {
 func TestStartFileSystemProvider(t *testing.T) {
 	t.Parallel()
 
+	var tearDownFuncs []func()
+	
+	defer func() {
+		for _, f := range tearDownFuncs {
+			f()
+		}
+	}()
+
 	for _, tc := range []struct {
 		uc             string
 		createProvider func(t *testing.T, file *os.File, dir string) *fileSystemProvider
@@ -413,12 +421,12 @@ func TestStartFileSystemProvider(t *testing.T) {
 			tmpFile, err := ioutil.TempFile(os.TempDir(), "test-dir-")
 			require.NoError(t, err)
 
-			defer os.Remove(tmpFile.Name())
+			tearDownFuncs = append(tearDownFuncs, func() { os.Remove(tmpFile.Name()) })
 
 			tmpDir, err := ioutil.TempDir(os.TempDir(), "test-rule-")
 			require.NoError(t, err)
 
-			defer os.Remove(tmpDir)
+			tearDownFuncs = append(tearDownFuncs, func() { os.Remove(tmpDir) })
 
 			writeContents := x.IfThenElse(tc.writeContents != nil,
 				tc.writeContents,
@@ -433,7 +441,7 @@ func TestStartFileSystemProvider(t *testing.T) {
 			writeContents(t, tmpFile, tmpDir)
 
 			// nolint: errcheck
-			defer provider.Stop()
+			tearDownFuncs = append(tearDownFuncs, func() { provider.Stop() })
 
 			// THEN
 			tc.assert(t, err, provider)
