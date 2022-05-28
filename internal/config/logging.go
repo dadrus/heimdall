@@ -22,7 +22,7 @@ func (f LogFormat) String() string {
 
 func logFormatDecodeHookFunc(from reflect.Type, to reflect.Type, val any) (any, error) {
 	if from.Kind() == reflect.String && to.Name() == "LogFormat" {
-		return x.IfThenElse(val == "text", LogTextFormat, LogGelfFormat), nil
+		return x.IfThenElse(val == "gelf", LogGelfFormat, LogTextFormat), nil
 	}
 
 	return val, nil
@@ -33,6 +33,4 @@ type LoggingConfig struct {
 	Level  zerolog.Level `koanf:"level"`
 }
 
-func LogConfiguration(configuration Configuration) LoggingConfig {
-	return configuration.Log
-}
+func LogConfiguration(configuration Configuration) LoggingConfig { return configuration.Log }
