@@ -23,25 +23,33 @@ type Option func(*opts)
 
 func WithTracer(tracer opentracing.Tracer) Option {
 	return func(o *opts) {
-		o.tracer = tracer
+		if tracer != nil {
+			o.tracer = tracer
+		}
 	}
 }
 
-func WithSpanObserver(modifier SpanObserver) Option {
+func WithSpanObserver(observer SpanObserver) Option {
 	return func(o *opts) {
-		o.spanObserver = modifier
+		if observer != nil {
+			o.spanObserver = observer
+		}
 	}
 }
 
 func WithOperationNameProvider(provider OperationNameProvider) Option {
 	return func(o *opts) {
-		o.operationName = provider
+		if provider != nil {
+			o.operationName = provider
+		}
 	}
 }
 
 func WithOperationFiler(filter OperationFilter) Option {
 	return func(o *opts) {
-		o.filterOperation = filter
+		if filter != nil {
+			o.filterOperation = filter
+		}
 	}
 }
 
