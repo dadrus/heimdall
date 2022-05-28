@@ -2,8 +2,6 @@ package config
 
 import (
 	"time"
-
-	"github.com/rs/zerolog"
 )
 
 const (
@@ -25,44 +23,11 @@ type Configuration struct {
 	Rules    RulesConfig    `koanf:"rules"`
 }
 
-func NewConfiguration(configFile string) Configuration {
-	// defaults
-	result := Configuration{
-		Serve: ServeConfig{
-			Proxy: ServiceConfig{
-				Port: defaultProxyPort,
-				Timeout: Timeout{
-					Read:  defaultReadTimeout,
-					Write: defaultWriteTimeout,
-					Idle:  defaultIdleTimeout,
-				},
-			},
-			DecisionAPI: ServiceConfig{
-				Port: defaultDecisionAPIPort,
-				Timeout: Timeout{
-					Read:  defaultReadTimeout,
-					Write: defaultWriteTimeout,
-					Idle:  defaultIdleTimeout,
-				},
-			},
-			Prometheus: PrometheusConfig{
-				Port:        defaultPrometheusPort,
-				MetricsPath: "/metrics",
-			},
-		},
-		Log: LoggingConfig{
-			Level:  zerolog.DebugLevel,
-			Format: LogTextFormat,
-		},
-		Signer: SignerConfig{
-			Name: "heimdall",
-		},
-	}
+func NewConfiguration(configFile string) (Configuration, error) {
+	// copy defaults
+	result := defaultConfig
 
 	err := LoadConfig(&result, configFile)
-	if err != nil {
-		panic(err)
-	}
 
-	return result
+	return result, err
 }
