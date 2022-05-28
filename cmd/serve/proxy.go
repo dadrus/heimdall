@@ -1,6 +1,8 @@
 package serve
 
 import (
+	"os"
+
 	"github.com/spf13/cobra"
 	"go.uber.org/fx"
 
@@ -14,6 +16,10 @@ func NewProxyCommand() *cobra.Command {
 		Use:   "proxy",
 		Short: "Starts HTTP/2 Reverse Proxy",
 		Run: func(cmd *cobra.Command, args []string) {
+			cmd.PrintErrf("Not yet supported")
+
+			os.Exit(-1)
+
 			configPath, _ := cmd.Flags().GetString("config")
 
 			app := fx.New(
