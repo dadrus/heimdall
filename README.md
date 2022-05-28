@@ -31,7 +31,7 @@ Features to come are (more or less in this sequence):
 
 * Not really a feature - but tests, tests, tests ;) - at least 85%
 * Health & Readiness Probes
-* Extend template implementation to enable the usage of the heimdall object. As of today only the subject is available.
+* Extend template implementation to enable the usage of the heimdall context. As of today only the subject is available.
 * jwks endpoint to let the upstream service verify the jwt signatures
 * Documentation
 * Reverse Proxy
