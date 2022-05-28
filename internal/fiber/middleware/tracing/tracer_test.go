@@ -1,6 +1,7 @@
 package tracing
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -233,4 +234,44 @@ func TestTracerSpanManagementWithSkippingOnMissingParentSpan(t *testing.T) {
 			tc.assert(t, mtracer)
 		})
 	}
+}
+
+func TestSpanIsSetToContextToEnablePropagationToUpstreamServices(t *testing.T) {
+	t.Parallel()
+
+	// GIVEN
+	app := fiber.New()
+	app.Use(New(WithTracer(mocktracer.New())))
+
+	var ctx context.Context
+
+	app.Get("test", func(fiberCtx *fiber.Ctx) error {
+		ctx = fiberCtx.UserContext()
+
+		return nil
+	})
+	// nolint: errcheck
+	defer app.Shutdown()
+
+	// WHEN
+	_, err := app.Test(httptest.NewRequest("GET", "/test", nil), -1)
+
+	// THEN
+	require.NoError(t, err)
+
+	span := opentracing.SpanFromContext(ctx)
+	require.NotNil(t, span)
+
+	impl, ok := span.(*mocktracer.MockSpan)
+	require.True(t, ok)
+
+	assert.Equal(t, "HTTP GET URL: /test", impl.OperationName)
+
+	tags := impl.Tags()
+	assert.Len(t, tags, 5)
+	assert.Equal(t, ext.SpanKindRPCServerEnum, tags[string(ext.SpanKind)])
+	assert.Equal(t, "GET", tags[string(ext.HTTPMethod)])
+	assert.Equal(t, "/test", tags[string(ext.HTTPUrl)])
+	assert.Equal(t, uint16(200), tags[string(ext.HTTPStatusCode)])
+	assert.Equal(t, "0.0.0.0", tags[string(ext.PeerAddress)])
 }
