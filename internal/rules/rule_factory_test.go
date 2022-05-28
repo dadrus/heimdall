@@ -10,6 +10,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
+	mocks2 "github.com/dadrus/heimdall/internal/pipeline/mocks"
 	"github.com/dadrus/heimdall/internal/rules/mocks"
 	"github.com/dadrus/heimdall/internal/testsupport"
 	"github.com/dadrus/heimdall/internal/x"
@@ -619,7 +620,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				t.Helper()
 
 				mhf.On("CreateAuthenticator", "foo", mock.Anything).
-					Return(nil, nil)
+					Return(&mocks2.MockAuthenticator{}, nil)
 			},
 			assert: func(t *testing.T, err error, rul *ruleImpl) {
 				t.Helper()
@@ -643,9 +644,9 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				t.Helper()
 
 				mhf.On("CreateAuthenticator", "foo", mock.Anything).
-					Return(nil, nil)
+					Return(&mocks2.MockAuthenticator{}, nil)
 				mhf.On("CreateHydrator", "bar", mock.Anything).
-					Return(nil, nil)
+					Return(&mocks2.MockHydrator{}, nil)
 			},
 			assert: func(t *testing.T, err error, rul *ruleImpl) {
 				t.Helper()
@@ -670,11 +671,11 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				t.Helper()
 
 				mhf.On("CreateAuthenticator", "foo", mock.Anything).
-					Return(nil, nil)
+					Return(&mocks2.MockAuthenticator{}, nil)
 				mhf.On("CreateHydrator", "bar", mock.Anything).
-					Return(nil, nil)
+					Return(&mocks2.MockHydrator{}, nil)
 				mhf.On("CreateAuthorizer", "baz", mock.Anything).
-					Return(nil, nil)
+					Return(&mocks2.MockAuthorizer{}, nil)
 			},
 			assert: func(t *testing.T, err error, rul *ruleImpl) {
 				t.Helper()
@@ -698,9 +699,9 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				t.Helper()
 
 				mhf.On("CreateAuthenticator", "foo", mock.Anything).
-					Return(nil, nil)
+					Return(&mocks2.MockAuthenticator{}, nil)
 				mhf.On("CreateMutator", "bar", mock.Anything).
-					Return(nil, nil)
+					Return(&mocks2.MockMutator{}, nil)
 			},
 			assert: func(t *testing.T, err error, rul *ruleImpl) {
 				t.Helper()
@@ -725,9 +726,9 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				t.Helper()
 
 				mhf.On("CreateAuthenticator", "foo", mock.Anything).
-					Return(nil, nil)
+					Return(&mocks2.MockAuthenticator{}, nil)
 				mhf.On("CreateMutator", "bar", mock.Anything).
-					Return(nil, nil)
+					Return(&mocks2.MockMutator{}, nil)
 			},
 			assert: func(t *testing.T, err error, rul *ruleImpl) {
 				t.Helper()
@@ -803,15 +804,15 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				t.Helper()
 
 				mhf.On("CreateAuthenticator", "foo", mock.Anything).
-					Return(nil, nil)
+					Return(&mocks2.MockAuthenticator{}, nil)
 				mhf.On("CreateHydrator", "bar", mock.Anything).
-					Return(nil, nil)
+					Return(&mocks2.MockHydrator{}, nil)
 				mhf.On("CreateAuthorizer", "zab", mock.Anything).
-					Return(nil, nil)
+					Return(&mocks2.MockAuthorizer{}, nil)
 				mhf.On("CreateMutator", "baz", mock.Anything).
-					Return(nil, nil)
+					Return(&mocks2.MockMutator{}, nil)
 				mhf.On("CreateErrorHandler", "foo", mock.Anything).
-					Return(nil, nil)
+					Return(&mocks2.MockErrorHandler{}, nil)
 			},
 			assert: func(t *testing.T, err error, rul *ruleImpl) {
 				t.Helper()
@@ -828,14 +829,14 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				// nil checks above mean the responses from the mockHandlerFactory are used
 				// and not the values from the default rule
 				require.Len(t, rul.sc, 1)
-				assert.Nil(t, rul.sc[0])
+				assert.NotNil(t, rul.sc[0])
 				require.Len(t, rul.sh, 2)
-				assert.Nil(t, rul.sh[0])
-				assert.Nil(t, rul.sh[1])
+				assert.NotNil(t, rul.sh[0])
+				assert.NotNil(t, rul.sh[1])
 				require.Len(t, rul.m, 1)
-				assert.Nil(t, rul.m[0])
+				assert.NotNil(t, rul.m[0])
 				require.Len(t, rul.eh, 1)
-				assert.Nil(t, rul.eh[0])
+				assert.NotNil(t, rul.eh[0])
 			},
 		},
 	} {
