@@ -8,7 +8,7 @@ import (
 	"go.uber.org/fx"
 
 	"github.com/dadrus/heimdall/internal/config"
-	"github.com/dadrus/heimdall/internal/x/tracing"
+	"github.com/dadrus/heimdall/internal/x/tracing/provider"
 )
 
 // Module is used on app bootstrap.
@@ -24,7 +24,7 @@ func registerTracer(lifecycle fx.Lifecycle, conf config.Configuration, logger ze
 		return
 	}
 
-	tracer, closer, err := tracing.New(conf.Tracing.Provider, conf.Tracing.ServiceName, logger)
+	tracer, closer, err := provider.New(conf.Tracing.Provider, conf.Tracing.ServiceName, logger)
 	if err != nil {
 		logger.Warn().Err(err).Msg("Could not initialize opentracing tracer. Tracing will be disabled.")
 
