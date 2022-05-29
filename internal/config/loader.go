@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"reflect"
 	"strings"
 	"unicode"
 
@@ -15,7 +14,6 @@ import (
 	"github.com/knadh/koanf/providers/file"
 	"github.com/knadh/koanf/providers/structs"
 	"github.com/mitchellh/mapstructure"
-	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
@@ -189,30 +187,4 @@ func expandSlices(parts []string) []string {
 	}
 
 	return result
-}
-
-// Decode zeroLog LogLevels from strings.
-func logLevelDecodeHookFunc(from reflect.Type, to reflect.Type, data any) (any, error) {
-	if from.Kind() != reflect.String {
-		return data, nil
-	}
-
-	if to != reflect.TypeOf(zerolog.Level(0)) {
-		return data, nil
-	}
-
-	switch data {
-	case "panic":
-		return zerolog.PanicLevel, nil
-	case "fatal":
-		return zerolog.FatalLevel, nil
-	case "error":
-		return zerolog.ErrorLevel, nil
-	case "warn":
-		return zerolog.WarnLevel, nil
-	case "debug":
-		return zerolog.DebugLevel, nil
-	default:
-		return zerolog.InfoLevel, nil
-	}
 }

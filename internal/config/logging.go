@@ -1,8 +1,6 @@
 package config
 
 import (
-	"reflect"
-
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/x"
@@ -11,21 +9,12 @@ import (
 type LogFormat int
 
 const (
-	LogTextFormat    = 0
-	LogGelfFormat    = 1
-	LogUnknownFormat = 2
+	LogTextFormat LogFormat = iota
+	LogGelfFormat
 )
 
 func (f LogFormat) String() string {
 	return x.IfThenElse(f == LogTextFormat, "text", "gelf")
-}
-
-func logFormatDecodeHookFunc(from reflect.Type, to reflect.Type, val any) (any, error) {
-	if from.Kind() == reflect.String && to.Name() == "LogFormat" {
-		return x.IfThenElse(val == "gelf", LogGelfFormat, LogTextFormat), nil
-	}
-
-	return val, nil
 }
 
 type LoggingConfig struct {
