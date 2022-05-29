@@ -3,9 +3,9 @@ package tracing
 import (
 	"errors"
 	"io"
-	"os"
 
 	"github.com/opentracing/opentracing-go"
+	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/x/tracing/provider/instana"
 	"github.com/dadrus/heimdall/internal/x/tracing/provider/jaeger"
@@ -13,14 +13,12 @@ import (
 
 var ErrOpentracingProvider = errors.New("no supported/configured opentracing provider")
 
-func New(serviceName string) (opentracing.Tracer, io.Closer, error) {
-	provider := os.Getenv("TRACING_PROVIDER")
-
+func New(provider, serviceName string, log zerolog.Logger) (opentracing.Tracer, io.Closer, error) {
 	switch provider {
 	case "jaeger":
-		return jaeger.New(serviceName)
+		return jaeger.New(serviceName, log)
 	case "instana":
-		return instana.New(serviceName)
+		return instana.New(serviceName, log)
 	default:
 		return nil, nil, ErrOpentracingProvider
 	}

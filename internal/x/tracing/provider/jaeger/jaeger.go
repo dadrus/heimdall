@@ -4,10 +4,11 @@ import (
 	"io"
 
 	"github.com/opentracing/opentracing-go"
+	"github.com/rs/zerolog"
 	"github.com/uber/jaeger-client-go/config"
 )
 
-func New(serviceName string) (opentracing.Tracer, io.Closer, error) {
+func New(serviceName string, log zerolog.Logger) (opentracing.Tracer, io.Closer, error) {
 	cfg, err := config.FromEnv()
 	if err != nil {
 		return nil, nil, err
@@ -17,5 +18,5 @@ func New(serviceName string) (opentracing.Tracer, io.Closer, error) {
 		cfg.ServiceName = serviceName
 	}
 
-	return cfg.NewTracer(config.Logger(&stdLogger{}))
+	return cfg.NewTracer(config.Logger(&logger{l: log}))
 }

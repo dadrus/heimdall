@@ -7,6 +7,7 @@ import (
 	"github.com/rs/zerolog"
 	"go.uber.org/fx"
 
+	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/x/tracing"
 )
 
@@ -16,8 +17,14 @@ var Module = fx.Options(
 	fx.Invoke(registerTracer),
 )
 
-func registerTracer(lifecycle fx.Lifecycle, logger zerolog.Logger) {
-	tracer, closer, err := tracing.New("heimdall")
+func registerTracer(lifecycle fx.Lifecycle, conf config.Configuration, logger zerolog.Logger) {
+	if len(conf.Tracing.Provider) == 0 {
+		logger.Info().Msg("No opentracing provider configured. Tracing will be disabled.")
+
+		return
+	}
+
+	tracer, closer, err := tracing.New(conf.Tracing.Provider, conf.Tracing.ServiceName, logger)
 	if err != nil {
 		logger.Warn().Err(err).Msg("Could not initialize opentracing tracer. Tracing will be disabled.")
 

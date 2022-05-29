@@ -30,6 +30,9 @@ var defaultConfig = Configuration{
 		Level:  zerolog.DebugLevel,
 		Format: LogTextFormat,
 	},
+	Tracing: TracingConfig{
+		ServiceName: "heimdall",
+	},
 	Signer: SignerConfig{
 		Name: "heimdall",
 	},

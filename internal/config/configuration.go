@@ -17,6 +17,7 @@ const (
 type Configuration struct {
 	Serve    ServeConfig    `koanf:"serve"`
 	Log      LoggingConfig  `koanf:"log"`
+	Tracing  TracingConfig  `koanf:"tracing"`
 	Signer   SignerConfig   `koanf:"signer"`
 	Cache    CacheConfig    `koanf:"cache"`
 	Pipeline PipelineConfig `koanf:"pipeline"`
