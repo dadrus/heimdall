@@ -33,7 +33,7 @@ func ConfigureLogging(conf config.LoggingConfig) {
 			hostname = "unknown"
 
 			// nolint
-			fmt.Println("Failed to retrieve the hostname: " + err.Error())
+			fmt.Println("Warn: failed to retrieve the hostname: " + err.Error())
 		}
 
 		log.Logger = zerolog.New(os.Stdout).With().
