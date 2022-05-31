@@ -11,8 +11,9 @@ import (
 // NewDecisionAPICommand represents the "serve api" command.
 func NewDecisionAPICommand() *cobra.Command {
 	return &cobra.Command{
-		Use:   "api",
-		Short: "Starts HTTP/2 Decision API Server",
+		Use:     "api",
+		Short:   "Starts HTTP/2 Decision API Server",
+		Example: "heimdall serve api",
 		Run: func(cmd *cobra.Command, args []string) {
 			configPath, _ := cmd.Flags().GetString("config")
 
