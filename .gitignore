@@ -13,5 +13,5 @@ cover.out
 coverage.*
 
 # Ignore Jekyll cache and generated page
-/docs/_site/
-/docs/.jekyll-cache/
+/docs/old/_site/
+/docs/old/.jekyll-cache/
