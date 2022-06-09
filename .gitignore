@@ -12,6 +12,8 @@
 cover.out
 coverage.*
 
-# Ignore Jekyll cache and generated page
-/docs/old/_site/
-/docs/old/.jekyll-cache/
+# Ignore npm modules
+/docs/node_modules
+
+# Ignore hugo output directory
+/docs/public

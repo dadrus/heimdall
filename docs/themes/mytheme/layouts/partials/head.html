@@ -1,0 +1,19 @@
+<head>
+  <title>{{ .Title }}</title>
+  <meta charset="utf-8">
+  <meta name="description" content="Website meta description for google search results go here" />
+  <meta name="dc.relation" content="{{ .Site.BaseURL }}" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <meta name="theme-color" content="#1A94D2" />
+
+  {{- $options := (dict "targetPath" "css/styles.css" "outputStyle" "compressed") -}}
+  {{- $style := resources.Get "sass/main.scss" | toCSS  $options | minify -}}
+  <link rel="stylesheet" href="{{ $style.RelPermalink }}" media="screen">
+
+  <!--
+      include a favicon for your site if you have it, else omit the line below
+      Location of favicon can be in mytheme/static/favicon.ico
+  -->
+  <link rel='shortcut icon' type='image/x-icon' href='/favicon.ico' />
+
+</head>

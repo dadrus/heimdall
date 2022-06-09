@@ -1,0 +1,15 @@
+{
+  "name": "heimdall-docs",
+  "version": "1.0.0",
+  "description": "Heimdall documentation",
+  "main": "index.html",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "Apache 2.0",
+  "dependencies": {
+    "bootstrap": "^5.2.0-beta1",
+    "bootstrap-icons": "^1.8.3"
+  }
+}

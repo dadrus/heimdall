@@ -1,0 +1,47 @@
+baseURL: http://example.org/
+languageCode: en-us
+title: Heimdall
+theme: mytheme
+relativeURLS: true
+sectionPagesMenu: main
+
+menu:
+  main:
+    - identifier: docs
+      title: Docs
+      url: /docs/
+      weight: 100
+    - identifier: api
+      title: API
+      url: /docs/api/
+      weight: 200
+    - identifier: get_started
+      title: Get Started
+      url: /docs/introduction/
+      weight: 300
+
+frontmatter:
+  date:
+    - date
+    - publishDate
+    - lastmod
+  lastmod:
+    - lastmod
+    - ':fileModTime'
+    - ':default'
+
+params:
+  copyright: 2022 © Heimdall Project Authors. All rights reserved.
+  license:
+    name: Apache 2.0
+    url: https://github.com/dadrus/heimdall/blob/master/LICENSE
+  author: Dimitrij Drus
+  description: Heimdall is an open source identity & access proxy (IAP) and access control decision API, designed for cloud native applications
+  github:
+    user: dadrus
+    project: heimdall
+
+module:
+  mounts:
+    - source: node_modules/bootstrap/dist/js/bootstrap.bundle.js
+      target: assets/js/bootstrap.bundle.js
