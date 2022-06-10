@@ -9,12 +9,11 @@ images: []
 weight: 999
 toc: true
 menu:
+  docs:
+    parent: Introduction
   main:
-    weight: 999
-    parent: "get_started"
+    parent: get_started
 ---
-
-# Quick Start
 
 > :warning:&ensp; This functionality is not available right now. What you can see below is just the idea.
 

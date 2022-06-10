@@ -1,16 +1,17 @@
 ---
-title: "From_source"
+title: "Install from Source"
 date: 2022-06-09T15:54:18+02:00
 lastmod: 2022-06-09T15:54:18+02:00
 description: ""
 lead: ""
 draft: true
 images: []
-weight: 999
+weight: 1
 toc: true
+menu:
+  docs:
+    parent: Introduction
 ---
-
-# Install from Source
 
 This document covers how to build heimdall from its source code as well as how to run heimdall using a minimum configuration. If you want to try out a scenario close to real-life, head over to [Quick Start]({{ site.baseurl }}{% link install/quick_start.md %}) chapter.
 

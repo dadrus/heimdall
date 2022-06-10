@@ -1,0 +1,13 @@
+{{- define "main" -}}
+  <div class="row">
+    <div class="col-3">
+        {{ partial "sidebar/docs-menu.html" . }}
+    </div>
+    <div class="col-9">
+      <h1>{{ .Title }}</h1>
+      <div>
+        {{ .Content }}
+      </div>
+    </div>
+  </div>
+{{ end }}

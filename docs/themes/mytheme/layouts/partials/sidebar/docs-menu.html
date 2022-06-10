@@ -1,0 +1,21 @@
+{{ $currentPage := . -}}
+{{ $section := $currentPage.Section -}}
+<ul class="nav flex-column">
+  {{ range (index .Site.Menus $section) -}}
+  <li class="nav-item"><a class="nav-link" href="{{ .URL }}">{{ .Title }}</a></li>
+    {{ if .HasChildren -}}
+    <ul>
+      {{ range .Children -}}
+        <li class="nav-item"><a class="nav-link" href="{{ .URL }}">{{ .Title }}</a></li>
+          {{ if .HasChildren -}}
+          <ul>
+            {{ range .Children -}}
+            <li class="nav-item"><a class="nav-link" href="{{ .URL }}">{{ .Title }}</a></li>
+            {{ end }}
+          </ul>
+          {{ end }}
+      {{ end }}
+    </ul>
+    {{ end }}
+  {{ end }}
+</ul>

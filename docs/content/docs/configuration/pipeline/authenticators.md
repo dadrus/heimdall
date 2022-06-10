@@ -10,5 +10,8 @@ weight: 999
 toc: true
 menu:
   docs:
-    parent: ""
+    weight: 10
+    parent: "Pipeline"
 ---
+
+foo bar

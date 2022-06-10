@@ -9,11 +9,10 @@ images: []
 weight: 999
 toc: true
 menu:
+  docs:
+    parent: Introduction
   main:
-    weight: 999
-    parent: "get_started"
+    parent: get_started
 ---
-
-# Install
 
 Heimdall runs on any operating system (FreeBSD, macOS, Linux, Windows, ...) and supports all major CPU platforms (ARM64, ARMv7, x86_64, x86, ...). The documents, referenced below will guide you through available installation and usage options.

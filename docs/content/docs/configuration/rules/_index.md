@@ -8,7 +8,10 @@ draft: true
 images: []
 weight: 999
 toc: true
-menu:
+menu: 
   docs:
-    parent: ""
+    weight: 70
+    parent: "Configuration"
 ---
+
+foo bar

@@ -10,5 +10,5 @@ weight: 999
 toc: true
 menu:
   docs:
-    parent: ""
+    parent: "Rules"
 ---

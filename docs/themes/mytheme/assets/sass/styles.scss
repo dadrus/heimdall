@@ -5,7 +5,7 @@
   border-radius: .3rem;
 }
 
-.footer {
+footer {
   background-color: rgba(var(--bs-light-rgb),var(--bs-bg-opacity)) !important;
   a {
     color: $gray-600;
@@ -17,4 +17,8 @@
       text-decoration: underline;
     }
   }
+}
+
+#content {
+  padding-top: 75px;
 }

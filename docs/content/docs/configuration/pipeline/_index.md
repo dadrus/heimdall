@@ -8,12 +8,11 @@ draft: true
 images: []
 weight: 999
 toc: true
-menu:
+menu: 
   docs:
-    parent: ""
+    weight: 60
+    parent: "Configuration"
 ---
-
-# Pipeline
 
 This section explains the available pipeline handlers and mechanisms in detail. Before diving onto the details of these, we recommend to make yourself familiar with the principal architecture and components.
 
