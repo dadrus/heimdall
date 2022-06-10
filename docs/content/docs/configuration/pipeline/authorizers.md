@@ -13,3 +13,7 @@ menu:
     weight: 20
     parent: "Pipeline"
 ---
+
+Authorizers ensure that the subject obtained via an authenticator step has the required permissions to submit the given HTTP request and thus to execute the corresponding logic in the upstream service. E.g. a specific endpoint of the upstream service might only be accessible to a "user" from the "admin" group, or to an HTTP request if a specific HTTP header is set.
+
+<!--more-->

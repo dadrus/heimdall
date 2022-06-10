@@ -1,22 +1,25 @@
 {{ define "main" }}
-<div class="row justify-content-center">
-  <div class="col-md-12 col-lg-10 col-xl-8">
-    <article>
-      <h1>{{ if eq .CurrentSection .FirstSection }}{{ .Section | humanize }}{{ else }}{{ .Title }}{{ end }}</h1>
-      <div>{{ .Content }}</div>
-      <div class="card-list">
-        {{ $currentSection := .CurrentSection }}
-        {{ range where .Site.RegularPages.ByTitle "Section" .Section }}
-        {{ if in (.RelPermalink | string) $currentSection.RelPermalink }}
-        <div class="card my-3">
-          <div class="card-body">
-            <a class="stretched-link" href="{{ .RelPermalink }}">{{ .Params.title | title }} &rarr;</a>
-          </div>
-        </div>
-        {{ end }}
-        {{ end }}
-      </div>
-    </article>
+<div class="row">
+  <div class="col-3">
+    {{ partial "sidebar/docs-menu.html" . }}
+  </div>
+  <div class="col-9">
+    <h1>{{ .Title }}</h1>
+    {{ if .Params.referenceSubpages }}
+    <ul class="card-list">
+      {{- $currentSection := .CurrentSection -}}
+      {{- range where .Site.RegularPages.ByTitle "Section" .Section -}}
+      {{- if in (.RelPermalink | string) $currentSection.RelPermalink -}}
+      <li>
+        <a href="{{ .RelPermalink }}">{{- .Title -}}</a> {{- .Summary -}}
+      </li>
+      {{- end -}}
+      {{- end -}}
+    </ul>
+    {{ else }}
+    <div>{{ .Content }}</div>
+    {{ end }}
   </div>
 </div>
-{{ end }}
+
+{{ end -}}
