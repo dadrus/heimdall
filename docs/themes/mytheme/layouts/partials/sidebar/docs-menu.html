@@ -2,7 +2,13 @@
 {{ $section := $currentPage.Section -}}
 <ul class="nav flex-column">
   {{ range (index .Site.Menus $section) -}}
-  <li class="nav-item"><a class="nav-link" href="{{ .URL }}">{{ .Title }}</a></li>
+  <li class="nav-item">
+    {{ if .URL }}
+    <a class="nav-link" href="{{ .URL }}">{{ .Title }}</a>
+    {{ else }}
+    {{ .Title }}
+    {{ end }}
+  </li>
     {{ if .HasChildren -}}
     <ul>
       {{ range .Children -}}
