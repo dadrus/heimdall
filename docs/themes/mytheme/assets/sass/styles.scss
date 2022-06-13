@@ -6,7 +6,7 @@
 }
 
 footer {
-  background-color: rgba(var(--bs-light-rgb),var(--bs-bg-opacity)) !important;
+  background-color: rgba(var(--bs-light-rgb),1) !important;
   a {
     color: $gray-600;
     text-decoration: none;
