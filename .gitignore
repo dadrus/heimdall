@@ -15,5 +15,9 @@ coverage.*
 # Ignore npm modules
 /docs/node_modules
 
-# Ignore hugo output directory
+# hugo
+# ignore output directory
 /docs/public
+
+# ignore directory with generated resources
+docs/resources/_gen
