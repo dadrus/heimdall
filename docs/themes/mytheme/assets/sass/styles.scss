@@ -5,8 +5,18 @@
   border-radius: .3rem;
 }
 
+.nav .nav {
+  padding-left: 1rem;
+
+  .nav-link {
+    padding-top: calc(var(--bs-nav-link-padding-y) / 2);
+    padding-bottom: calc(var(--bs-nav-link-padding-y) / 2);
+  }
+}
+
 footer {
-  background-color: rgba(var(--bs-light-rgb),1) !important;
+  background-color: rgba(var(--bs-light-rgb), 1) !important;
+
   a {
     color: $gray-600;
     text-decoration: none;

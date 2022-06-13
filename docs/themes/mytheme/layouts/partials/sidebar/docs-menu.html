@@ -6,22 +6,23 @@
     {{- if .URL -}}
     <a class="nav-link" href="{{ .URL }}">{{ .Title }}</a>
     {{- else -}}
-    {{- .Title -}}
+    <span class="nav-link">{{- .Title -}}</span>
     {{- end -}}
-  </li>
     {{ if .HasChildren -}}
-    <ul>
+    <ul class="nav flex-column">
       {{ range .Children -}}
-        <li class="nav-item"><a class="nav-link" href="{{ .URL }}">{{ .Title }}</a></li>
+        <li class="nav-item"><a class="nav-link" href="{{ .URL }}">{{ .Title }}</a>
           {{ if .HasChildren -}}
-          <ul>
+          <ul class="nav flex-column">
             {{ range .Children -}}
             <li class="nav-item"><a class="nav-link" href="{{ .URL }}">{{ .Title }}</a></li>
             {{ end }}
           </ul>
           {{ end }}
+        </li>
       {{ end }}
     </ul>
     {{ end }}
+  </li>
   {{ end }}
 </ul>
