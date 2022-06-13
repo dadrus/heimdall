@@ -2,12 +2,7 @@
 title: "Pipeline"
 date: 2022-06-09T18:56:56+02:00
 lastmod: 2022-06-09T18:56:56+02:00
-description: ""
-lead: ""
 draft: true
-images: []
-weight: 999
-toc: true
 menu: 
   docs:
     weight: 60
@@ -18,11 +13,29 @@ This section explains the available pipeline handlers and mechanisms in detail. 
 
 The general pipeline handlers are:
 
-* [Authenticators]({{< ref "authenticators.md">}}) inspect HTTP requests, like the presence of a specific cookie, which represents the authentication session of the subject with the service and execute logic required to obtain information about that subject. A subject, could be a user who tries to use particular functionality of the upstream service, a machine (if you have machine-2-machine interaction), or something different. Authenticators ensure the subject has already been authenticated and the information available about it is valid.
+* [Authenticators]({{< ref "authenticators.md">}}) inspect HTTP requests, like the presence of a specific cookie, which represents the authentication object of the subject with the service and execute logic required to verify the authentication status and obtain information about that subject. A subject, could be a user who tries to use particular functionality of the upstream service, a machine (if you have machine-2-machine interaction), or something different. Authenticators ensure the subject has already been authenticated and the information available about it is valid.
 * [Authorizers]({{< ref "authorizers.md">}}) ensure that the subject obtained via an authenticator step has the required permissions to submit the given HTTP request and thus to execute the corresponding logic in the upstream service. E.g. a specific endpoint of the upstream service might only be accessible to a "user" from the "admin" group, or to an HTTP request if a specific HTTP header is set.
 * [Hydrators]({{< ref "hydrators.md">}}) enrich the information about the subject obtained in the authenticator step with further information, required by either the endpoint of the upstream service itself or an authorizer step. This can be handy if the actual authentication system doesn't have all information about the subject (which is usually the case in microservice architectures), or if dynamic information about the subject, like the current location based on the IP address, is required.
 * [Mutators]({{< ref "mutators.md">}}) finalize the successful execution of the pipeline and transform the available information about the subject into a format expected, respectively required by the upstream service. This ranges from adding a query parameter, to a structured JWT in a specific header.
-* [Error Handlers]({{< ref "error_handlers.md">}}) are responsible for execution of logic if any of the handlers described above failed. These range from a simple error response to the client which sent the request to sophisticated handlers supporting complex logic and redirects. 
+* [Error Handlers]({{< ref "error_handlers.md">}}) are responsible for execution of logic if any of the handlers described above failed. These range from a simple error response to the client which sent the request to sophisticated handlers supporting complex logic and redirects.
+
+All of these can be configured in the corresponding section of the pipeline configuration entry:
+
+```.yaml
+pipeline:
+  authenticators:
+    <list of authenticators>
+  authorizers:
+    <list of authorizers>
+  hydrators:
+    <list of hydrators>
+  mutators:
+    <list of mutators>
+  error_handlers:
+    <list of error handlers>
+```
+
+Many pipeline handlers require configuration. Event the configuration is handler specific, many properties share same types. These are described in [Configuration Types]({{< ref "configuration_types.md" >}}).
 
 ## Templating
 

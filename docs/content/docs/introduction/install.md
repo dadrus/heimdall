@@ -11,6 +11,7 @@ toc: true
 menu:
   docs:
     parent: Introduction
+    weight: 20
   main:
     parent: get_started
 ---

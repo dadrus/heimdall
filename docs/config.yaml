@@ -9,7 +9,7 @@ menu:
   main:
     - identifier: docs
       title: Docs
-      url: /docs/introduction/from_source
+      url: /docs/introduction/architecture
       weight: 100
     - identifier: api
       title: API

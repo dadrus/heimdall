@@ -3,11 +3,11 @@
 <ul class="nav flex-column">
   {{ range (index .Site.Menus $section) -}}
   <li class="nav-item">
-    {{ if .URL }}
+    {{- if .URL -}}
     <a class="nav-link" href="{{ .URL }}">{{ .Title }}</a>
-    {{ else }}
-    {{ .Title }}
-    {{ end }}
+    {{- else -}}
+    {{- .Title -}}
+    {{- end -}}
   </li>
     {{ if .HasChildren -}}
     <ul>
