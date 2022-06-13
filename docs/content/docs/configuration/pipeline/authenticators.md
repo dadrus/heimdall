@@ -15,7 +15,7 @@ Authenticators inspect HTTP requests, like the presence of a specific cookie, wh
 
 Before being able to use authenticators in a rule, the required ones must be configured:
 
-```.yaml
+```yaml
 pipeline:
   authenticators:
     <list of authenticators>
@@ -30,7 +30,7 @@ Depending on authenticator type, there can be an additional `config` property fo
 
 So your authenticator definitions could look like this:
 
-```.yaml
+```yaml
 pipeline:
   authenticators:
     - id: foo
@@ -59,10 +59,9 @@ To enable the usage of this authenticator, you have to set the `type` property t
 
 **Example**
 
-```.yaml
-authenticators:
-  - id: foo
-    type: noop
+```yaml
+id: foo
+type: noop
 ```
 
 ### Unauthorized
@@ -73,10 +72,9 @@ To enable the usage of this authenticator, you have to set the `type` property t
 
 **Example:**
 
-```.yaml
-authenticators:
-  - id: foo
-    type: unauthorized
+```yaml
+id: foo
+type: unauthorized
 ```
 
 ### Anonymous
@@ -93,12 +91,11 @@ Configuration using the `config` property is optional. Following properties are 
 
 **Example:**
 
-```.yaml
-authenticators:
-  - id: foo
-    type: anonymous
-    config:
-      subject: anon
+```yaml
+id: foo
+type: anonymous
+config:
+  subject: anon
 ```
 
 ### Basic Auth
@@ -116,13 +113,12 @@ Configuration using the `config` property is mandatory. Following properties are
 
 **Example:**
 
-```.yaml
-authenticators:
-  - id: foo
-    type: basic_auth
-    config:
-      user_id: bar
-      password: baz
+```yaml
+id: foo
+type: basic_auth
+config:
+  user_id: bar
+  password: baz
 ```
 
 ### Generic
@@ -144,42 +140,40 @@ Configuration using the `config` property is mandatory. Following properties are
 
 This example shows how to configure this authenticator to work with an authentication system, which issues a cookie upon successful user authentication to maintain the authentication state. To reduce the communication overhead, it also makes use of `cache_ttl` to cache the response for 5 minutes. 
 
-```.yaml
-authenticators:
-  - id: session_cookie
-    type: generic
-    config:
-      identity_info_endpoint:
-        url: http://my-auth.system/sessions/whoami
-      authentication_data_source:
-        - cookie: my_session
-      session:
-        subject_id_from: "identity.id"
-      cache_ttl: 5m
+```yaml
+id: session_cookie
+type: generic
+config:
+  identity_info_endpoint:
+    url: http://my-auth.system/sessions/whoami
+  authentication_data_source:
+    - cookie: my_session
+  session:
+    subject_id_from: "identity.id"
+  cache_ttl: 5m
 ```
 
 **Example 2**
 
 This example shows how to configure this authenticator to work with an authentication system, which issues a Bearer token upon successful user authentication to maintain the authentication state. To reduce the communication overhead, it also makes use of `cache_ttl` to cache the response for 5 minutes. In this example we configure the handler to use the `GET` method instead of the default `POST` for sending the bearer token to the authentication system for verification purposes and also to authenticate using HTTP basic auth schema. According to the below configuration, the Bearer token is located in the `X-Custom-Bearer-Token` header, which as also used as is while calling the `http://my-auth.system/introspect` endpoint.
 
-```.yaml
-authenticators:
-  - id: bearer_token
-    type: generic
-    config:
-      identity_info_endpoint:
-        url: http://my-auth.system/introspect
-        method: GET
-        auth:
-          type: basic_auth
-          config:
-            user: Heimdall
-            password: super-secure
-      authentication_data_source:
-        - header: X-Custom-Bearer-Token
-      session:
-        subject_id_from: "sub"
-      cache_ttl: 5m
+```yaml
+id: bearer_token
+type: generic
+config:
+  identity_info_endpoint:
+    url: http://my-auth.system/introspect
+    method: GET
+    auth:
+      type: basic_auth
+      config:
+        user: Heimdall
+        password: super-secure
+  authentication_data_source:
+    - header: X-Custom-Bearer-Token
+  session:
+    subject_id_from: "sub"
+  cache_ttl: 5m
 ```
 
 Usually, Bearer tokens are issued by an OAuth2 auth provider and there is a need to verify not only the validity of such, but also a couple of claims. This can be achieved by a "Local Authorizer", but there is also a special purpose [OAuth2 Introspection]({{< ref "#oauth2-introspection">}}) authenticator type, which supports asserting all security relevant claims in just one place.
@@ -204,15 +198,14 @@ Configuration using the `config` property is mandatory. Following properties are
 Here a minimal possible configuration
 
 ```yaml
-authenticators:
-  - id: at_opaque
-    type: oauth2_introspection
-    config:
-      introspection_endpoint:
-        url: http://hydra:4445/oauth2/introspect
-      assertions:
-        issuers:
-          - http://127.0.0.1:4444/
+id: at_opaque
+type: oauth2_introspection
+config:
+  introspection_endpoint:
+    url: http://hydra:4445/oauth2/introspect
+  assertions:
+    issuers:
+      - http://127.0.0.1:4444/
 ```
 
 ### JWT

@@ -9,7 +9,7 @@ menu:
     parent: "Configuration"
 ---
 
-This section explains the available pipeline handlers and mechanisms in detail. Before diving onto the details of these, we recommend to make yourself familiar with the principal architecture and components.
+This section explains the available pipeline handler and mechanisms in detail. Before diving onto the details of these, we recommend to make yourself familiar with the principal architecture and components.
 
 The general pipeline handlers are:
 
@@ -19,9 +19,9 @@ The general pipeline handlers are:
 * [Mutators]({{< ref "mutators.md">}}) finalize the successful execution of the pipeline and transform the available information about the subject into a format expected, respectively required by the upstream service. This ranges from adding a query parameter, to a structured JWT in a specific header.
 * [Error Handlers]({{< ref "error_handlers.md">}}) are responsible for execution of logic if any of the handlers described above failed. These range from a simple error response to the client which sent the request to sophisticated handlers supporting complex logic and redirects.
 
-All of these can be configured in the corresponding section of the pipeline configuration entry:
+All of these can be configured in the corresponding section of the pipeline configuration entry as prototypes for the actual rule definition. 
 
-```.yaml
+```yaml
 pipeline:
   authenticators:
     <list of authenticators>
@@ -35,7 +35,79 @@ pipeline:
     <list of error handlers>
 ```
 
-Many pipeline handlers require configuration. Event the configuration is handler specific, many properties share same types. These are described in [Configuration Types]({{< ref "configuration_types.md" >}}).
+Only those handler, which are configured can be used in a rule definition. Rules can however then overwrite parts of a particular handler configuration.
+
+Many pipeline handlers require a specific configuration. Even being handler specific, many properties share same types. These are described in [Configuration Types]({{< ref "configuration_types.md" >}}).
+
+Here is an example which configures three authenticator prototypes, three authorizer prototypes, a hydrator prototype, a mutator prototype and the error handler prototypes:
+
+```yaml
+pipeline:
+  authenticators:
+    - id: noop_authn
+      type: noop
+    - id: anon_authn
+      type: anonymous
+    - id: opaque_auth_token_authn
+      type: oauth2_introspection
+      config:
+        introspection_endpoint:
+          url: http://hydra:4445/oauth2/introspect
+      assertions:
+        issuers:
+          - http://127.0.0.1:4444/
+  authorizers:
+    - id: allow_all_authz
+      type: allow
+    - id: deny_all_authz
+      type: deny
+    - id: local_authz
+      type: local
+      config:
+        script: |
+          if !heimdall.subject.Attributes.group_manager.groups["foo"] {
+            raise("user not in the expected group")
+          }
+  hydrators:
+    - id: group_manager
+      type: generic
+      config:
+        endpoint:
+          url: http://group-manager.local/groups
+          method: GET
+        forward_headers:
+          - Authorization
+        cache_ttl: 1m
+  mutators:
+    - id: noop_mut
+      type: noop
+    - id: jwt_mut
+      type: jwt
+      config:
+        ttl: 5m
+        claims: |
+            {
+              {{ if .Attributes }}
+                {{ $email := .Attributes.identity.traits.email }}
+                {{ $user_name := .Attributes.identity.traits.user_name }}
+                {{ $verified := false }}
+                {{ range .Attributes.identity.verifiable_addresses }}
+                  {{ if eq .value $email }}
+                    {{ $verified = .verified }}
+                  {{ end }}
+                {{ end }}
+                "email": {{ quote $email }},
+                "email_verified": {{ $verified }},
+                {{ if $user_name }}
+                "name": {{ quote $user_name }}
+                {{ else }}
+                "name": {{ quote $email }}
+                {{ end }}
+              {{ end }}
+            }
+  error_handlers:
+    <list of error handlers>
+```
 
 ## Templating
 
