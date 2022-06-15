@@ -229,13 +229,12 @@ Configuration using the `config` property is mandatory. Following properties are
 Here a minimal possible configuration
 
 ```yaml
-authenticators:
- - id: at_jwt
-   type: jwt
-   config:
-     jwks_endpoint:
-       url: http://hydra:4444/.well-known/jwks.json
-     assertions:
-       issuers:
-         - http://127.0.0.1:4444/
+id: at_jwt
+type: jwt
+config:
+  jwks_endpoint:
+    url: http://hydra:4444/.well-known/jwks.json
+  assertions:
+    issuers:
+      - http://127.0.0.1:4444/
 ```
