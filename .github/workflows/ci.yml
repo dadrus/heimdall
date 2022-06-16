@@ -11,13 +11,13 @@ on:
       - main
 
 jobs:
-  lint:
+  lint-code:
     runs-on: ubuntu-20.04
     steps:
     - name: Set up Go
       uses: actions/setup-go@v3
       with:
-        go-version: 1.18.1
+        go-version: 1.18.3
     - name: Checkout repository
       uses: actions/checkout@v3
     - name: golangci-lint
@@ -25,13 +25,28 @@ jobs:
       with:
         version: v1.46.2
 
+  lint-dockerfiles:
+    runs-on: ubuntu-20.04
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+    - name: Run hadolint for Dockerfile
+      uses: hadolint/hadolint-action@v2.0.0
+      with:
+        dockerfile: docker/Dockerfile
+    - name: Run hadolint for debug.Dockerfile
+      uses: hadolint/hadolint-action@v2.0.0
+      with:
+        dockerfile: docker/debug.Dockerfile
+
   test:
     runs-on: ubuntu-20.04
+    needs: ["lint-code"]
     steps:
     - name: Set up Go
       uses: actions/setup-go@v3
       with:
-        go-version: 1.18.1
+        go-version: 1.18.3
     - name: Checkout repository
       uses: actions/checkout@v3
     - name: Test
