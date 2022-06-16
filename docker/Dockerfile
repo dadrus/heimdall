@@ -11,7 +11,7 @@ ENV UID=10001
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 RUN useradd -l -s "/sbin/nologin" -M -U -r -u ${UID} ${USER}
-RUN apt-get update && apt-get install --no-install-recommends -y xz-utils
+RUN apt-get update && apt-get install --no-install-recommends -y xz-utils=5.2.4-1
 
 # UPX is GPL
 ADD https://github.com/upx/upx/releases/download/v3.96/upx-3.96-amd64_linux.tar.xz /usr/local
