@@ -1,14 +1,17 @@
 # syntax = docker/dockerfile:experimental
 # Builder image to build the app
-# hadolint ignore=DL3006
-FROM golang:1.18.1-buster as builder
+FROM golang:1.18.3-buster as builder
 LABEL maintainer=dadrus@gmx.de
+
+ARG HOST_ARCH
 
 ENV USER=heimdall
 ENV UID=10001
-RUN useradd -s "/sbin/nologin" -M -U -r -u ${UID} ${USER}
 
-RUN apt-get update && apt-get install -y xz-utils
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+
+RUN useradd -l -s "/sbin/nologin" -M -U -r -u ${UID} ${USER}
+RUN apt-get update && apt-get install --no-install-recommends -y xz-utils=5.2.4-1
 
 # UPX is GPL
 ADD https://github.com/upx/upx/releases/download/v3.96/upx-3.96-amd64_linux.tar.xz /usr/local
@@ -23,13 +26,10 @@ WORKDIR /go/src/heimdall
 COPY . .
 RUN go mod download
 
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags="-buildid= -w -s -X heimdall/cmd.Version=${VERSION}"
-# hadolint ignore=DL3059
-ARG HOST_ARCH
-RUN if [ "$HOST_ARCH" = "arm64" ] ; then echo "skipping upx on ARM" ; else upx  heimdall; fi
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags="-buildid= -w -s -X heimdall/cmd.Version=${VERSION}" \
+    && if [ "$HOST_ARCH" = "arm64" ] ; then echo "skipping upx on ARM" ; else upx  heimdall; fi
 
 # The actual image of the app
-# hadolint ignore=DL3007
 FROM scratch
 LABEL maintainer=dadrus@gmx.de
 

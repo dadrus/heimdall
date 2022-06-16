@@ -1,6 +1,8 @@
 package rules
 
 import (
+	"errors"
+
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
@@ -17,13 +19,21 @@ func (ca compositeSubjectCreator) Execute(ctx heimdall.Context) (*subject.Subjec
 		err error
 	)
 
-	for _, a := range ca {
+	for idx, a := range ca {
 		sub, err = a.Execute(ctx)
-		if err == nil {
-			return sub, nil
+		if err != nil {
+			logger.Info().Err(err).Msg("Pipeline step execution failed")
+
+			if errors.Is(err, heimdall.ErrArgument) && idx < len(ca) {
+				logger.Info().Msg("Falling back to next configured one.")
+
+				continue
+			}
+
+			break
 		}
 
-		logger.Info().Err(err).Msg("Pipeline step execution failed")
+		return sub, nil
 	}
 
 	return nil, err

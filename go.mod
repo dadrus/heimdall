@@ -6,11 +6,11 @@ require (
 	github.com/Masterminds/sprig/v3 v3.2.2
 	github.com/ansrivas/fiberprometheus/v2 v2.2.0
 	github.com/dlclark/regexp2 v1.4.1-0.20201116162257-a2a8dda75c91
-	github.com/dop251/goja v0.0.0-20220501172647-e1eca0b61fa9
+	github.com/dop251/goja v0.0.0-20220516123900-4418d4575a41
 	github.com/fsnotify/fsnotify v1.5.4
 	github.com/gobwas/glob v0.2.3
 	github.com/goccy/go-json v0.9.7
-	github.com/gofiber/fiber/v2 v2.34.0
+	github.com/gofiber/fiber/v2 v2.34.1
 	github.com/google/uuid v1.3.0
 	github.com/iancoleman/strcase v0.2.0
 	github.com/instana/go-sensor v1.42.1
@@ -20,19 +20,19 @@ require (
 	github.com/opentracing-contrib/go-stdlib v1.0.0
 	github.com/opentracing/opentracing-go v1.2.0
 	github.com/ory/ladon v1.2.0
-	github.com/rs/zerolog v1.26.1
+	github.com/rs/zerolog v1.27.0
 	github.com/santhosh-tekuri/jsonschema/v5 v5.0.0
 	github.com/spf13/cobra v1.4.0
-	github.com/stretchr/testify v1.7.1
+	github.com/stretchr/testify v1.7.2
 	github.com/tidwall/gjson v1.14.1
 	github.com/uber/jaeger-client-go v2.30.0+incompatible
 	github.com/ybbus/httpretry v1.0.1
 	github.com/yl2chen/cidranger v1.0.2
 	github.com/youmark/pkcs8 v0.0.0-20201027041543-1326539a0a0a
 	go.uber.org/fx v1.17.1
-	golang.org/x/exp v0.0.0-20220318154914-8dddf5d87bd8
+	golang.org/x/exp v0.0.0-20220613132600-b0d781184e0d
 	gopkg.in/square/go-jose.v2 v2.6.0
-	gopkg.in/yaml.v3 v3.0.0
+	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
@@ -53,6 +53,8 @@ require (
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
 	github.com/klauspost/compress v1.15.0 // indirect
 	github.com/looplab/fsm v0.1.0 // indirect
+	github.com/mattn/go-colorable v0.1.12 // indirect
+	github.com/mattn/go-isatty v0.0.14 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.1 // indirect
 	github.com/mitchellh/copystructure v1.2.0 // indirect
 	github.com/mitchellh/reflectwalk v1.0.2 // indirect
