@@ -265,6 +265,7 @@ password: bar`))
 
 				assert.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrAuthentication)
+				assert.ErrorIs(t, err, heimdall.ErrArgument)
 				assert.Contains(t, err.Error(), "no Authorization header")
 
 				assert.Nil(t, sub)

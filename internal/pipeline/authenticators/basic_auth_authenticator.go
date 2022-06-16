@@ -85,8 +85,8 @@ func (a *basicAuthAuthenticator) Execute(ctx heimdall.Context) (*subject.Subject
 
 	headerValue := ctx.RequestHeader("Authorization")
 	if len(headerValue) == 0 {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrAuthentication, "no Authorization header received")
+		return nil, errorchain.NewWithMessage(heimdall.ErrAuthentication, "no Authorization header received").
+			CausedBy(heimdall.ErrArgument)
 	}
 
 	schemeAndValue := strings.Split(headerValue, " ")
