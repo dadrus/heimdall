@@ -1,0 +1,25 @@
+{{ define "main" }}
+<div class="row">
+  <div class="col-3">
+    {{ partial "sidebar/docs-menu.html" . }}
+  </div>
+  <div class="col-9">
+    <h1>{{ .Title }}</h1>
+    {{ if .Params.referenceSubpages }}
+    <ul class="card-list">
+      {{- $currentSection := .CurrentSection -}}
+      {{- range where .Site.RegularPages.ByTitle "Section" .Section -}}
+      {{- if in (.RelPermalink | string) $currentSection.RelPermalink -}}
+      <li>
+        <a href="{{ .RelPermalink }}">{{- .Title -}}</a> {{- .Summary -}}
+      </li>
+      {{- end -}}
+      {{- end -}}
+    </ul>
+    {{ else }}
+    <div>{{ .Content }}</div>
+    {{ end }}
+  </div>
+</div>
+
+{{ end -}}
