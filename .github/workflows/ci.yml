@@ -24,6 +24,7 @@ jobs:
       uses: golangci/golangci-lint-action@v3
       with:
         version: v1.46.2
+        args: --timeout 4m
 
   lint-dockerfiles:
     runs-on: ubuntu-20.04
@@ -31,11 +32,11 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v3
     - name: Run hadolint for Dockerfile
-      uses: hadolint/hadolint-action@v2.1.0
+      uses: hadolint/hadolint-action@v2.0.0
       with:
         dockerfile: docker/Dockerfile
     - name: Run hadolint for debug.Dockerfile
-      uses: hadolint/hadolint-action@v2.1.0
+      uses: hadolint/hadolint-action@v2.0.0
       with:
         dockerfile: docker/debug.Dockerfile
 
