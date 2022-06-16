@@ -37,7 +37,7 @@ jobs:
     - name: Test
       run: go test -v -coverprofile=heimdall.cov -coverpkg=./... ./...
     - name: Code Coverage
-      uses: codecov/codecov-action@v2
+      uses: codecov/codecov-action@v3
       with:
         files: heimdall.cov
         verbose: true
