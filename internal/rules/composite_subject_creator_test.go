@@ -6,63 +6,98 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/heimdall/mocks"
 	"github.com/dadrus/heimdall/internal/pipeline/subject"
 	rulemocks "github.com/dadrus/heimdall/internal/rules/mocks"
 	"github.com/dadrus/heimdall/internal/testsupport"
 )
 
-func TestCompositeAuthenticatorExecutionWithFallback(t *testing.T) {
+func TestCompositeAuthenticatorExecution(t *testing.T) {
 	t.Parallel()
 
-	// GIVEN
-	sub := &subject.Subject{ID: "foo"}
+	for _, tc := range []struct {
+		uc             string
+		configureMocks func(t *testing.T, ctx heimdall.Context, first *rulemocks.MockSubjectCreator,
+			second *rulemocks.MockSubjectCreator, sub *subject.Subject)
+		assert func(t *testing.T, err error)
+	}{
+		{
+			uc: "with fallback due to argument error on first authenticator",
+			configureMocks: func(t *testing.T, ctx heimdall.Context, first *rulemocks.MockSubjectCreator,
+				second *rulemocks.MockSubjectCreator, sub *subject.Subject,
+			) {
+				t.Helper()
 
-	ctx := &mocks.MockContext{}
-	ctx.On("AppContext").Return(context.Background())
+				first.On("Execute", ctx).Return(nil, heimdall.ErrArgument)
+				second.On("Execute", ctx).Return(sub, nil)
+			},
+			assert: func(t *testing.T, err error) {
+				t.Helper()
 
-	auth1 := &rulemocks.MockSubjectCreator{}
-	auth1.On("Execute", ctx).Return(nil, testsupport.ErrTestPurpose)
+				assert.NoError(t, err)
+			},
+		},
+		{
+			uc: "with fallback and both authenticators returning argument error",
+			configureMocks: func(t *testing.T, ctx heimdall.Context, first *rulemocks.MockSubjectCreator,
+				second *rulemocks.MockSubjectCreator, _ *subject.Subject,
+			) {
+				t.Helper()
 
-	auth2 := &rulemocks.MockSubjectCreator{}
-	auth2.On("Execute", ctx).Return(sub, nil)
+				first.On("Execute", ctx).Return(nil, heimdall.ErrArgument)
+				second.On("Execute", ctx).Return(nil, heimdall.ErrArgument)
+			},
+			assert: func(t *testing.T, err error) {
+				t.Helper()
 
-	auth := compositeSubjectCreator{auth1, auth2}
+				assert.Error(t, err)
+				assert.Equal(t, err, heimdall.ErrArgument)
+			},
+		},
+		{
+			uc: "without fallback as first authenticator returns an error not equal to argument error",
+			configureMocks: func(t *testing.T, ctx heimdall.Context, first *rulemocks.MockSubjectCreator,
+				second *rulemocks.MockSubjectCreator, _ *subject.Subject,
+			) {
+				t.Helper()
 
-	// WHEN
-	rSub, err := auth.Execute(ctx)
+				first.On("Execute", ctx).Return(nil, testsupport.ErrTestPurpose)
+			},
+			assert: func(t *testing.T, err error) {
+				t.Helper()
 
-	// THEN
-	assert.NoError(t, err)
-	assert.Equal(t, sub, rSub)
+				assert.Error(t, err)
+				assert.Equal(t, err, testsupport.ErrTestPurpose)
+			},
+		},
+	} {
+		t.Run("case="+tc.uc, func(t *testing.T) {
+			// GIVEN
+			sub := &subject.Subject{ID: "foo"}
 
-	auth1.AssertExpectations(t)
-	auth2.AssertExpectations(t)
-}
+			ctx := &mocks.MockContext{}
+			ctx.On("AppContext").Return(context.Background())
 
-func TestCompositeAuthenticatorExecutionWithoutFallback(t *testing.T) {
-	t.Parallel()
+			auth1 := &rulemocks.MockSubjectCreator{}
+			auth2 := &rulemocks.MockSubjectCreator{}
+			tc.configureMocks(t, ctx, auth1, auth2, sub)
 
-	// GIVEN
-	sub := &subject.Subject{ID: "foo"}
+			auth := compositeSubjectCreator{auth1, auth2}
 
-	ctx := &mocks.MockContext{}
-	ctx.On("AppContext").Return(context.Background())
+			// WHEN
+			rSub, err := auth.Execute(ctx)
 
-	auth1 := &rulemocks.MockSubjectCreator{}
-	auth2 := &rulemocks.MockSubjectCreator{}
-	auth2.On("Execute", ctx).Return(sub, nil)
+			// THEN
+			tc.assert(t, err)
 
-	auth := compositeSubjectCreator{auth2, auth1}
+			if err == nil {
+				assert.Equal(t, sub, rSub)
+			}
 
-	// WHEN
-	rSub, err := auth.Execute(ctx)
-
-	// THEN
-	assert.NoError(t, err)
-
-	assert.Equal(t, sub, rSub)
-
-	auth1.AssertExpectations(t)
-	auth2.AssertExpectations(t)
+			auth1.AssertExpectations(t)
+			auth2.AssertExpectations(t)
+			ctx.AssertExpectations(t)
+		})
+	}
 }
