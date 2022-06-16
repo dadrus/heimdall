@@ -100,7 +100,6 @@ func newOAuth2IntrospectionAuthenticator(rawConfig map[string]any) (*oauth2Intro
 
 	extractor := extractors.CompositeExtractStrategy{
 		extractors.HeaderValueExtractStrategy{Name: "Authorization", Prefix: "Bearer"},
-		extractors.CookieValueExtractStrategy{Name: "access_token"},
 		extractors.QueryParameterExtractStrategy{Name: "access_token"},
 	}
 
