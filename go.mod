@@ -23,7 +23,7 @@ require (
 	github.com/rs/zerolog v1.26.1
 	github.com/santhosh-tekuri/jsonschema/v5 v5.0.0
 	github.com/spf13/cobra v1.4.0
-	github.com/stretchr/testify v1.7.1
+	github.com/stretchr/testify v1.7.2
 	github.com/tidwall/gjson v1.14.1
 	github.com/uber/jaeger-client-go v2.30.0+incompatible
 	github.com/ybbus/httpretry v1.0.1
@@ -32,7 +32,7 @@ require (
 	go.uber.org/fx v1.17.1
 	golang.org/x/exp v0.0.0-20220613132600-b0d781184e0d
 	gopkg.in/square/go-jose.v2 v2.6.0
-	gopkg.in/yaml.v3 v3.0.0
+	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
