@@ -318,7 +318,7 @@ func TestJWTMutatorExecute(t *testing.T) {
 			},
 		},
 		{
-			uc:      "with bad prefilled cache nd without custom claims",
+			uc:      "with bad prefilled cache and without custom claims",
 			config:  []byte(`ttl: 1m`),
 			subject: &subject.Subject{ID: "foo", Attributes: map[string]any{"baz": "bar"}},
 			configureMocks: func(t *testing.T, ctx *heimdallmocks.MockContext, signer *heimdallmocks.MockJWTSigner,
