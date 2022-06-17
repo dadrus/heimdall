@@ -143,7 +143,7 @@ pipeline:
 
 ## Templating
 
-All pipeline handlers, except error handlers, support templating using [Golang Text Templates](https://golang.org/pkg/text/template/). To ease the usage, all [sprig](http://masterminds.github.io/sprig/) functions as well as a `urlenc` function are available. Latter is handy if you need to add e.g. a query parameter to the original request and encode it properly. In addition to the above said functions, heimdall makes the following objects available to the template:
+Some pipeline handlers support templating using [Golang Text Templates](https://golang.org/pkg/text/template/). To ease the usage, all [sprig](http://masterminds.github.io/sprig/) functions as well as a `urlenc` function are available. Latter is handy if you need to add e.g. a query parameter to the original request and encode it properly. In addition to the above said functions, heimdall makes the following objects available to the template:
 
 * `subject` - to provide access to all attributes available for the given subject. The access is read only.
 * `ctx` - to provide access to the actual HTTP request, like headers, cookies, URL, etc. The access is read only
