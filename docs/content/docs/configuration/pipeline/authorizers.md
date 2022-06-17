@@ -2,11 +2,7 @@
 title: "Authorizers"
 date: 2022-06-09T18:57:03+02:00
 lastmod: 2022-06-09T18:57:03+02:00
-description: ""
-lead: ""
 draft: true
-images: []
-weight: 999
 toc: true
 menu:
   docs:
@@ -85,7 +81,7 @@ Configuration using the `config` property is mandatory. Following properties are
 | Name                                   | Type                                                        | Mandatory | Overridable | Description                                                                                                                                                                                                                                                                                                                                                                             |
 |----------------------------------------|-------------------------------------------------------------|-----------|-------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `endpoint`                             | *[Endpoint]({{< ref "configuration_types.md#endpoint">}})*  | yes       | no          | The API endpoint of your authorization system. At least the `url` must be configured. By default this authorizer will use HTTP `POST` to send the rendered payload to this endpoint. You can override this behavior by configuring `method` as well. Depending on the API requirements of your authorization system, you might need to configure further properties, like headers, etc. |
-| `payload`                              | *string*                                                    | yes       | yes         | Your template with definitions required to communicate to the authorization endpoint. See also [Templating]({{< ref "_index.md#templating" >}})                                                                                                                                                                                                                                         |
+| `payload`                              | *string*                                                    | yes       | yes         | Your template with definitions required to communicate to the authorization endpoint. See also [Templating]({{< ref "_index.md#templating" >}}).                                                                                                                                                                                                                                        |
 | `forward_response_headers_to_upstream` | *string array*                                              | no        | yes         | Enables forwarding of any headers from the authorization endpoint response to the upstream service.                                                                                                                                                                                                                                                                                     |
 | `cache_ttl`                            | *[Duration]({{< ref "configuration_types.md#duration" >}})* | no        | yes         | Allows caching of the authorization endpoint responses. Defaults to 0s, which means no caching. The cache key is calculated from the entire configuration of the authorizer instance and the available information about the current subject.                                                                                                                                           |
 
@@ -111,4 +107,4 @@ config:
     { "input": { "user": {{ quote .ID }}, "access": "write" } }
 ```
 
-Since a response from OPA could look like `{ "result": true }` or `{ "result": false }`, which obviously needs further evaluation, Heimdall makes it available under `.Attributes["foo"]` as a map, with `"foo"` being the id of the authorizer in this example. 
+Since an OPA response could look like `{ "result": true }` or `{ "result": false }`, which obviously needs further evaluation, Heimdall makes it available under `.Attributes["foo"]` as a map, with `"foo"` being the id of the authorizer in this example. 
