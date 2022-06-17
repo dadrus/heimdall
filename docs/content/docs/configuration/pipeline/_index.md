@@ -19,7 +19,9 @@ The general pipeline handlers are:
 * [Mutators]({{< ref "mutators.md">}}) finalize the successful execution of the pipeline and transform the available information about the subject into a format expected, respectively required by the upstream service. This ranges from adding a query parameter, to a structured JWT in a specific header.
 * [Error Handlers]({{< ref "error_handlers.md">}}) are responsible for execution of logic if any of the handlers described above failed. These range from a simple error response to the client which sent the request to sophisticated handlers supporting complex logic and redirects.
 
-All of these can be configured in the corresponding section of the pipeline configuration entry as prototypes for the actual rule definition. 
+## General Configuration
+
+All of the above said handlers must be configured in the `pipeline` section of Heimdall's configuration as prototypes for usage in the actual rule definition. With other words only those handlers, which have been configured, can then be reused by a rule.
 
 ```yaml
 pipeline:
@@ -35,11 +37,37 @@ pipeline:
     <list of error handlers>
 ```
 
-Only those handler, which are configured can be used in a rule definition. Rules can however then overwrite parts of a particular handler configuration.
+Each handler configuration entry must contain at least the following properties:
 
-Many pipeline handlers require a specific configuration. Even being handler specific, many properties share same types. These are described in [Configuration Types]({{< ref "configuration_types.md" >}}).
+* `id` - The unique identifier of a handler. Identifiers are used to reference the required handler from a rule. You can choose whatever identifier, you want. It is just a name. It must however be unique across all defined handlers of a particular general type (like authenticator, authorizer, etc.).
+* `type` - The specific type of pipeline handler.
 
-Here is an example which configures three authenticator prototypes, three authorizer prototypes, a hydrator prototype, a mutator prototype and the error handler prototypes:
+Depending on a pipeline handler type, there can be an additional `config` property, as the name implies, for the definition of handler's specific configuration. Every handler specific type can be defined as many times as needed in the pipeline definition. However, for those, which don't have a configuration, it doesn't really make sense, as all of them would behave the same way.
+
+For e.g. your authenticator definitions could look like this:
+
+```yaml
+pipeline:
+  authenticators:
+    - id: foo
+      type: bar
+    - id: baz
+      type: bla
+      config:
+        bla: bar
+    - id: zab
+      type: bar
+    - id: oof
+      type: bla
+      config:
+        bar: bla
+```
+
+The above pipeline configures two instances of an imaginary authenticator of a specific type `bar` available via ids `foo` and `zab`, as well as two instances of an imaginary authenticator of a specific type `bla` available via ids `baz` and `oof`. The `baz` and `oof` authenticators are different, as they are configured differently, but `foo` and `zab` authenticators do not have a configuration. So, they behave the same way and there is actually no need to define two instances of them.
+
+In simplest case a rule will just reuse a handler. In more complex cases a rule can reconfigure parts of it (More about rules configuration can be found [here]({{< ref "../rules/_index.md" >}})). Which parts can be reconfigured are handler specific and described in the documentation of each handler.
+
+Here is an example which configures a couple of prototypes:
 
 ```yaml
 pipeline:
@@ -65,7 +93,7 @@ pipeline:
       type: local
       config:
         script: |
-          if !heimdall.subject.Attributes.group_manager.groups["foo"] {
+          if (!heimdall.subject.Attributes.group_manager.groups["foo"]) {
             raise("user not in the expected group")
           }
   hydrators:
@@ -87,26 +115,30 @@ pipeline:
         ttl: 5m
         claims: |
             {
-              {{ if .Attributes }}
-                {{ $email := .Attributes.identity.traits.email }}
-                {{ $user_name := .Attributes.identity.traits.user_name }}
-                {{ $verified := false }}
-                {{ range .Attributes.identity.verifiable_addresses }}
-                  {{ if eq .value $email }}
-                    {{ $verified = .verified }}
-                  {{ end }}
-                {{ end }}
-                "email": {{ quote $email }},
-                "email_verified": {{ $verified }},
-                {{ if $user_name }}
-                "name": {{ quote $user_name }}
-                {{ else }}
-                "name": {{ quote $email }}
-                {{ end }}
-              {{ end }}
+              {{ $user_name := .Attributes.identity.user_name -}}
+              "email": {{ quote .Attributes.identity.email }},
+              "email_verified": {{ .Attributes.identity.email_verified }},
+              {{ if $user_name -}}
+              "name": {{ quote $user_name }}
+              {{ else -}}
+              "name": {{ quote $email }}
+              {{ end -}}
             }
   error_handlers:
-    <list of error handlers>
+    - id: default
+      type: default
+    - id: authenticate_with_kratos
+      type: redirect
+      config:
+        to: http://127.0.0.1:4433/self-service/login/browser
+        return_to_query_parameter: return_to
+        when:
+          - error:
+              - unauthorized
+              - forbidden
+            request_headers:
+              Accept:
+                - text/html
 ```
 
 ## Templating
