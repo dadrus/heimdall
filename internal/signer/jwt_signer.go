@@ -128,6 +128,7 @@ func (s *jwtSigner) Sign(sub string, ttl time.Duration, custClaims map[string]an
 	}
 
 	claims := make(map[string]any)
+	maps.Merge(custClaims, claims)
 
 	now := time.Now().UTC()
 	exp := now.Add(ttl)
@@ -137,8 +138,6 @@ func (s *jwtSigner) Sign(sub string, ttl time.Duration, custClaims map[string]an
 	claims["iss"] = s.iss
 	claims["nbf"] = now.Unix()
 	claims["sub"] = sub
-
-	maps.Merge(custClaims, claims)
 
 	builder := jwt.Signed(signer).Claims(claims)
 

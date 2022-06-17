@@ -359,6 +359,18 @@ func TestJWTSignerSign(t *testing.T) {
 			},
 		},
 		{
+			uc:     "sign claims, which contain JWT specific claims",
+			signer: &jwtSigner{iss: "foo", key: ecdsaPrivKey1, kid: "bar", alg: jose.ES256},
+			claims: map[string]any{"iss": "bar"},
+			assert: func(t *testing.T, err error, rawJWT string, signer *jwtSigner, claims map[string]any) {
+				t.Helper()
+
+				require.NoError(t, err)
+				claims["iss"] = signer.iss
+				validateTestJWT(t, rawJWT, signer, subjectID, ttl, claims)
+			},
+		},
+		{
 			uc:     "sign with unsupported algorithm",
 			signer: &jwtSigner{iss: "foo", key: rsaPrivKey1, kid: "bar", alg: jose.SignatureAlgorithm("foobar")},
 			claims: map[string]any{"baz": "zab", "bla": "foo"},
