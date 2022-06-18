@@ -15,7 +15,7 @@ require (
 	github.com/iancoleman/strcase v0.2.0
 	github.com/instana/go-sensor v1.42.1
 	github.com/jellydator/ttlcache/v3 v3.0.0
-	github.com/knadh/koanf v1.4.1
+	github.com/knadh/koanf v1.4.2
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/opentracing-contrib/go-stdlib v1.0.0
 	github.com/opentracing/opentracing-go v1.2.0
