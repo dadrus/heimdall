@@ -11,43 +11,7 @@ menu:
 
 Authenticators inspect HTTP requests, like the presence of a specific cookie, which represents the authentication object of the subject with the service and execute logic required to verify the authentication status and obtain information about that subject. A subject, could be a user who tries to use particular functionality of the upstream service, a machine (if you have machine-2-machine interaction), or something different. Authenticators ensure the subject has already been authenticated and the information available about it is valid.
 
-## General Configuration
-
-Before being able to use authenticators in a rule, the required ones must be configured:
-
-```yaml
-pipeline:
-  authenticators:
-    <list of authenticators>
-```
-
-Each authenticator configuration entry must contain at least the following properties:
-
-* `id` - The unique identifier of an authenticator. Identifiers are used to reference the required authenticator from a rule. You can choose whatever identifier, you want. It is just a name. It must however be unique across all defined authenticators in the pipeline.
-* `type` - The type of authenticator. This is used to select the required authenticator type. Available types are described in the next section.
-
-Depending on authenticator type, there can be an additional `config` property for, as the name implies the definition of authenticator's specific configuration. Every authenticator type can be defined as many times as needed in the pipeline definition. However, for those, which don't have a configuration, it doesn't really make sense, as all of them would behave the same way.
-
-So your authenticator definitions could look like this:
-
-```yaml
-pipeline:
-  authenticators:
-    - id: foo
-      type: bar
-    - id: baz
-      type: bla
-      config:
-        bla: bar
-    - id: zab
-      type: bar
-    - id: oof
-      type: bla
-      config:
-        bar: bla
-```
-
-The above pipeline configures two instances of an imaginary authenticator of type `bar` available via ids `foo` and `zab`, as well as two instances of an imaginary authenticator of type `bla` available via ids `baz` and `oof`. The `baz` and `oof` authenticators are different, as they are configured differently, but `foo` and `zab` authenticators do not have a configuration, so they behave the same way and there is actually no need to define two instances of them.
+The following section describes the available authenticator types in more detail.
 
 ## Authenticator Types
 
@@ -55,7 +19,7 @@ The above pipeline configures two instances of an imaginary authenticator of typ
 
 As the name implies, this authenticator does nothing. It tells Heimdall to bypass the authentication. This is the only one authenticator type, which does not create a subject object on a successful execution, which is required by the most other pipeline handlers. This authenticator type also doesn't have any configuration options.
 
-To enable the usage of this authenticator, you have to set the `type` property to `noop`. 
+To enable the usage of this authenticator, you have to set the `type` property to `noop`.
 
 **Example**
 
@@ -66,9 +30,9 @@ type: noop
 
 ### Unauthorized
 
-This authenticator tells Heimdall to reject all requests as unauthorized. It basically stops the successful execution of the pipeline resulting in the execution of the error handlers. This authenticator type doesn't have any configuration options.
+This authenticator rejects all requests as unauthenticated (on HTTP response code level this is then mapped to `Unauthorized`, hence the type name). It basically stops the successful execution of the pipeline resulting in the execution of the error handlers. This authenticator type doesn't have any configuration options.
 
-To enable the usage of this authenticator, you have to set the `type` property to `unauthorized`. 
+To enable the usage of this authenticator, you have to set the `type` property to `unauthorized`.
 
 **Example:**
 
@@ -85,9 +49,9 @@ To enable the usage of this authenticator, you have to set the `type` property t
 
 Configuration using the `config` property is optional. Following properties are available:
 
-| Name      | Type     | Description                                                             |
-|-----------|----------|-------------------------------------------------------------------------|
-| `subject` | *string* | Enables setting the id of the created subject object to a custom value. |
+| Name      | Type     | Mandatory | Overridable | Description                                                             |
+|-----------|----------|-----------|-------------|-------------------------------------------------------------------------|
+| `subject` | *string* | no        | yes         | Enables setting the id of the created subject object to a custom value. |
 
 **Example:**
 
@@ -106,10 +70,10 @@ To enable the usage of this authenticator, you have to set the `type` property t
 
 Configuration using the `config` property is mandatory. Following properties are available:
 
-| Name       | Type     | Description                                               |
-|------------|----------|-----------------------------------------------------------|
-| `user_id`  | *string* | The identifier of the subject to be verified (mandatory). |
-| `password` | *string* | The password of the subject to be verified (mandatory).   |
+| Name       | Type     | Mandatory | Overridable | Description                                   |
+|------------|----------|-----------|-------------|-----------------------------------------------|
+| `user_id`  | *string* | yes       | yes         | The identifier of the subject to be verified. |
+| `password` | *string* | yes       | yes         | The password of the subject to be verified.   |
 
 **Example:**
 
@@ -129,12 +93,12 @@ To enable the usage of this authenticator, you have to set the `type` property t
 
 Configuration using the `config` property is mandatory. Following properties are available:
 
-| Name                         | Type                                                                                            | Mandatory | Description                                                                                                                                                                                                                                                                                                                                                                           |
-|------------------------------|-------------------------------------------------------------------------------------------------|-----------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `identity_info_endpoint`     | *[Endpoint]({{< ref "configuration_types.md#endpoint">}})*                                      | yes       | The endpoint to communicate to for the actual subject authentication status verification purpose. At least the `url` must be configured. If you don't configure `method`, HTTP `POST` will be used. The `Accept` header is set to `application/json` by default. You can overwrite these setting however if required. Don't forget - this authenticator supports only JSON responses. |
-| `authentication_data_source` | *[Authentication Data Source]({{< ref "configuration_types.md#authentication-data-source" >}})* | yes       | Where to extract the authentication data from the request. This authenticator will use the matched authentication data source as is while sending it to the `identity_info_endpoint`. If you configure to strip a prefix (if header is defined, this will most probably not work)                                                                                                     |
-| `session`                    | *[Session]({{< ref "configuration_types.md#session" >}})*                                       | yes       | Where to extract the subject id from the identity info endpoint response, as well as which attributes to use.                                                                                                                                                                                                                                                                         |
-| `cache_ttl`                  | *[Duration]({{< ref "configuration_types.md#duration" >}})*                                     | no        | How long to cache the response. If not set, response caching if disabled.                                                                                                                                                                                                                                                                                                             |
+| Name                         | Type                                                                                            | Mandatory | Overridable | Description                                                                                                                                                                                                                                                                                                                                                                           |
+|------------------------------|-------------------------------------------------------------------------------------------------|-----------|-------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `identity_info_endpoint`     | *[Endpoint]({{< ref "configuration_types.md#endpoint">}})*                                      | yes       | no          | The endpoint to communicate to for the actual subject authentication status verification purpose. At least the `url` must be configured. If you don't configure `method`, HTTP `POST` will be used. The `Accept` header is set to `application/json` by default. You can overwrite these setting however if required. Don't forget - this authenticator supports only JSON responses. |
+| `authentication_data_source` | *[Authentication Data Source]({{< ref "configuration_types.md#authentication-data-source" >}})* | yes       | no          | Where to extract the authentication data from the request. This authenticator will use the matched authentication data source as is while sending it to the `identity_info_endpoint`. If you configure to strip a prefix (if header is defined, this will most probably not work)                                                                                                     |
+| `session`                    | *[Session]({{< ref "configuration_types.md#session" >}})*                                       | yes       | no          | Where to extract the subject id from the identity info endpoint response, as well as which attributes to use.                                                                                                                                                                                                                                                                         |
+| `cache_ttl`                  | *[Duration]({{< ref "configuration_types.md#duration" >}})*                                     | no        | yes         | How long to cache the response. If not set, response caching if disabled. The cache key is calculated from the `identity_info_endpoint` configuration and the actual authentication data value.                                                                                                                                                                                       |
 
 **Example 1**
 
@@ -186,12 +150,12 @@ To enable the usage of this authenticator, you have to set the `type` property t
 
 Configuration using the `config` property is mandatory. Following properties are available:
 
-| Name                     | Type                                                            | Mandatory | Description                                                                                                                                                                                                                                                                                                                                                                                |
-|--------------------------|-----------------------------------------------------------------|-----------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `introspection_endpoint` | *[Endpoint]({{< ref "configuration_types.md#endpoint">}})*      | yes       | The introspection endpoint of the OAuth2 authorization provider. At least the `url` must be configured. There is no need to define the `method` property or setting the `Content-Type` or the `Accept` header. These are set by default to the values required by the [OAuth 2.0 Token Introspection](https://datatracker.ietf.org/doc/html/rfc7662) RFC. You can however overwrite these. |
-| `assertions`             | *[Assertions]({{< ref "configuration_types.md#assertions" >}})* | yes       | Configures the required claim assertions.                                                                                                                                                                                                                                                                                                                                                  |
-| `session`                | *[Session]({{< ref "configuration_types.md#session" >}})*       | no        | Where to extract the subject id from the introspection endpoint response, as well as which attributes to use. If not configured `sub` is used to extract the subject id and all attributes from the introspection endpoint response are made available as attributes of the subject.                                                                                                       |
-| `cache_ttl`              | *[Duration]({{< ref "configuration_types.md#duration" >}})*     | no        | How long to cache the response. If not set, caching of the introspection response is based on the available token expiration information. To disable caching, set it to `0s`. If you set the ttl to a custom value > 0, the expiration time (if available) of the token will be considered.                                                                                                |
+| Name                     | Type                                                            | Mandatory | Overridable | Description                                                                                                                                                                                                                                                                                                                                                                                                |
+|--------------------------|-----------------------------------------------------------------|-----------|-------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `introspection_endpoint` | *[Endpoint]({{< ref "configuration_types.md#endpoint">}})*      | yes       | no          | The introspection endpoint of the OAuth2 authorization provider. At least the `url` must be configured. There is no need to define the `method` property or setting the `Content-Type` or the `Accept` header. These are set by default to the values required by the [OAuth 2.0 Token Introspection](https://datatracker.ietf.org/doc/html/rfc7662) RFC. You can however overwrite these.                 |
+| `assertions`             | *[Assertions]({{< ref "configuration_types.md#assertions" >}})* | yes       | yes         | Configures the required claim assertions. Overriding on rule level is possible even partially. Those parts of the assertion, which have not been overridden are taken from the prototype configuration.                                                                                                                                                                                                    |
+| `session`                | *[Session]({{< ref "configuration_types.md#session" >}})*       | no        | no          | Where to extract the subject id from the introspection endpoint response, as well as which attributes to use. If not configured `sub` is used to extract the subject id and all attributes from the introspection endpoint response are made available as attributes of the subject.                                                                                                                       |
+| `cache_ttl`              | *[Duration]({{< ref "configuration_types.md#duration" >}})*     | no        | yes         | How long to cache the response. If not set, caching of the introspection response is based on the available token expiration information. To disable caching, set it to `0s`. If you set the ttl to a custom value > 0, the expiration time (if available) of the token will be considered. The cache key is calculated from the `introspection_endpoint` configuration and the value of the access token. |
 
 **Example**
 
@@ -216,13 +180,13 @@ To enable the usage of this authenticator, you have to set the `type` property t
 
 Configuration using the `config` property is mandatory. Following properties are available:
 
-| Name          | Type                                                                                            | Mandatory | Description                                                                                                                                                                                                                                                                                                            |
-|---------------|-------------------------------------------------------------------------------------------------|-----------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| jwks_endpoint | *[Endpoint]({{< ref "configuration_types.md#endpoint">}})*                                      | yes       | The JWKS endpoint, this authenticator retrieves the key material in a format specified in [RFC 7519](https://datatracker.ietf.org/doc/html/rfc7519) from for JWT signature verification purposes. The `url` must be configured. By default `method` is set to `GET` and the HTTP `Accept` header to `application/json` |
-| jwt_from      | *[Authentication Data Source]({{< ref "configuration_types.md#authentication-data-source" >}})* | no        | Where to get the access token from. If not set, this authenticator tries to retrieve it from the `Authorization` header and the `access_token` query paramter.                                                                                                                                                         |
-| assertions    | *[Assertions]({{< ref "configuration_types.md#assertions" >}})*                                 | yes       | Configures the required claim assertions.                                                                                                                                                                                                                                                                              |
-| session       | *[Session]({{< ref "configuration_types.md#session" >}})*                                       | no        | Where to extract the subject id from the JWT, as well as which attributes to use. If not configured `sub` is used to extract the subject id and all attributes from the JWT payload are made available as attributes of the subject.                                                                                   |
-| cache_ttl     | *[Duration]({{< ref "configuration_types.md#duration" >}})*                                     | no        | How long to cache the key from the JWKS response, which was used for signature verification purposes. If not set, Heimdall will cache this key for 10 minutes and not call JWKS endpoint again if the same `kid` is referenced in an JWT and same JWKS endpoint is used.                                               |
+| Name          | Type                                                                                            | Mandatory | Overridable | Description                                                                                                                                                                                                                                                                                                                                                                      |
+|---------------|-------------------------------------------------------------------------------------------------|-----------|-------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| jwks_endpoint | *[Endpoint]({{< ref "configuration_types.md#endpoint">}})*                                      | yes       | no          | The JWKS endpoint, this authenticator retrieves the key material in a format specified in [RFC 7519](https://datatracker.ietf.org/doc/html/rfc7519) from for JWT signature verification purposes. The `url` must be configured. By default `method` is set to `GET` and the HTTP `Accept` header to `application/json`                                                           |
+| jwt_from      | *[Authentication Data Source]({{< ref "configuration_types.md#authentication-data-source" >}})* | no        | no          | Where to get the access token from. If not set, this authenticator tries to retrieve it from the `Authorization` header and the `access_token` query paramter.                                                                                                                                                                       s                                           |
+| assertions    | *[Assertions]({{< ref "configuration_types.md#assertions" >}})*                                 | yes       | yes         | Configures the required claim assertions. Overriding on rule level is possible even partially. Those parts of the assertion, which have not been overridden are taken from the prototype configuration.                                                                                                                                                                          |
+| session       | *[Session]({{< ref "configuration_types.md#session" >}})*                                       | no        | no          | Where to extract the subject id from the JWT, as well as which attributes to use. If not configured `sub` is used to extract the subject id and all attributes from the JWT payload are made available as attributes of the subject.                                                                                                                                             |
+| cache_ttl     | *[Duration]({{< ref "configuration_types.md#duration" >}})*                                     | no        | yes         | How long to cache the key from the JWKS response, which was used for signature verification purposes. If not set, Heimdall will cache this key for 10 minutes and not call JWKS endpoint again if the same `kid` is referenced in an JWT and same JWKS endpoint is used. The cache key is calculated from the `jwks_endpoint` configuration and the `kid` referenced in the JWT. |
 
 **Example**
 
