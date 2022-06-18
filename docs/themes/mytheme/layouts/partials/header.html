@@ -1,6 +1,6 @@
 <nav class="navbar navbar-expand-lg navbar-light bg-dark fixed-top">
   <div class="container">
-    <a class="navbar-brand text-white {{- if .IsHome }} active {{ end -}}" href="{{ .Site.Home.Permalink }}">{{ .Site.Title }}</a>
+    <a class="navbar-brand text-white {{- if .IsHome }} active {{ end -}}" href="{{ .Site.Home.RelPermalink }}">{{ .Site.Title }}</a>
 
     <button class="navbar-toggler" type="button"
             data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent"
@@ -29,7 +29,7 @@
         {{ else }}
         <li class="nav-item">
           <a class='text-white nav-link {{- if or ($currentPage.IsMenuCurrent "main" .) ($currentPage.HasMenuCurrent "main" .) }} active {{ end -}}'
-             href="{{ absURL .URL }}">
+             href="{{ relURL .URL }}">
             {{ .Title }}
           </a>
         </li>
