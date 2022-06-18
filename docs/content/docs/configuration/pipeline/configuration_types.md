@@ -14,13 +14,13 @@ menu:
 
 This type enables configuration of required token and claim assertions. Depending on the object type (JWT or introspection response), the assertions apply to different parts of such objects.
 
-| Name                 | Type                                              | Mandatory | Description                                                                                                                                                                      |
-|----------------------|---------------------------------------------------|-----------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `scopes`             | *[Scopes Matcher]({{< ref "#scopes-matcher" >}})* | no        | Required scopes given to the client.                                                                                                                                             |
-| `audience`           | *string array*                                    | no        | Required entries in the `aud` claim. Both cases, either as whitespace separated string, or a JSON array are considered.                                                          |
-| `issuers`            | *string array*                                    | yes       | Issuers to trust. At least one issuer must be configured                                                                                                                         |
-| `allowed_algorithms` | *string array*                                    | no        | Algorithms, which are trusted (according to [RFC 7518](https://datatracker.ietf.org/doc/html/rfc7518)). Defaults to the following list: ES256, ES384, ES512, PS256, PS384, PS512 |
-| `validity_leeway`    | *[Duration]({{< ref "#duration" >}})*             | yes       | The time leeway to consider while verifying the `iat`, `exp` and the `nbf`.                                                                                                      |
+| Name                 | Type                                                 | Mandatory | Description                                                                                                                                                                      |
+|----------------------|------------------------------------------------------|-----------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `scopes`             | *[Scopes Matcher]({{< relref "#scopes-matcher" >}})* | no        | Required scopes given to the client.                                                                                                                                             |
+| `audience`           | *string array*                                       | no        | Required entries in the `aud` claim. Both cases, either as whitespace separated string, or a JSON array are considered.                                                          |
+| `issuers`            | *string array*                                       | yes       | Issuers to trust. At least one issuer must be configured                                                                                                                         |
+| `allowed_algorithms` | *string array*                                       | no        | Algorithms, which are trusted (according to [RFC 7518](https://datatracker.ietf.org/doc/html/rfc7518)). Defaults to the following list: ES256, ES384, ES512, PS256, PS384, PS512 |
+| `validity_leeway`    | *[Duration]({{< relref "#duration" >}})*             | yes       | The time leeway to consider while verifying the `iat`, `exp` and the `nbf`.                                                                                                      |
 
 **Example**
 
@@ -200,13 +200,13 @@ So with `10s` you can define the duration of 10 seconds and with `2h` you can sa
 
 The Endpoint type defines properties required for the communication with an endpoint.
 
-| Name      | Type                                                                | Mandatory | Description                                                                              |
-|-----------|---------------------------------------------------------------------|-----------|------------------------------------------------------------------------------------------|
-| `url`     | *string*                                                            | yes       | the actual url of the endpoint                                                           |
-| `method`  | *string*                                                            | no        | the HTTP method to use while communicating with the endpoint. If not set `POST` is used. |
-| `retry`   | *[Retry]({{< ref "#retry" >}})*                                     | no        | what to do if the communication fails. If not configured, no retry attempts are done.    |
-| `auth`    | *[Authentication Strategy]({{< ref "#authentication-strategy" >}})* | no        | authentication strategy to apply, if the endpoint requires authentication.               |
-| `headers` | *Map of strings*                                                    | no        | HTTP headers to be send to the endpoint                                                  |
+| Name      | Type                                                                   | Mandatory | Description                                                                              |
+|-----------|------------------------------------------------------------------------|-----------|------------------------------------------------------------------------------------------|
+| `url`     | *string*                                                               | yes       | the actual url of the endpoint                                                           |
+| `method`  | *string*                                                               | no        | the HTTP method to use while communicating with the endpoint. If not set `POST` is used. |
+| `retry`   | *[Retry]({{< relref "#retry" >}})*                                     | no        | what to do if the communication fails. If not configured, no retry attempts are done.    |
+| `auth`    | *[Authentication Strategy]({{< relref "#authentication-strategy" >}})* | no        | authentication strategy to apply, if the endpoint requires authentication.               |
+| `headers` | *Map of strings*                                                       | no        | HTTP headers to be send to the endpoint                                                  |
 
 **Example**
 
@@ -232,11 +232,11 @@ endpoint:
 
 This type supports definition of conditions, under which an error handler should execute its logic. Such conditions are required for all error handlers, but the default one. Each entry element in a condition is evaluated using boolean `and`.
 
-| Name              | Type                                            | Mandatory | Description                                                                                                                                                    |
-|-------------------|-------------------------------------------------|-----------|----------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `error`           | *[Error Type]({{< ref "#error-type" >}}) array* | yes       | A list with error types to match. Each entry is evaluated using a boolean `or` logic.                                                                          |
-| `request_cidr`    | *string array*                                  | no        | A list with CIDR entries to match. Each entry is evaluated using a boolean `or` logic.                                                                         |
-| `request_headers` | *string array map*                              | no        | A map with header names and the corresponding values to match. Each entry is evaluated using a boolean `or` logic. This holds also true for the header values. |
+| Name              | Type                                               | Mandatory | Description                                                                                                                                                    |
+|-------------------|----------------------------------------------------|-----------|----------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `error`           | *[Error Type]({{< relref "#error-type" >}}) array* | yes       | A list with error types to match. Each entry is evaluated using a boolean `or` logic.                                                                          |
+| `request_cidr`    | *string array*                                     | no        | A list with CIDR entries to match. Each entry is evaluated using a boolean `or` logic.                                                                         |
+| `request_headers` | *string array map*                                 | no        | A map with header names and the corresponding values to match. Each entry is evaluated using a boolean `or` logic. This holds also true for the header values. |
 
 **Example 1**
 
@@ -281,7 +281,7 @@ This condition evaluate to true, if the encountered error was `authentication_er
 
 ## Error Type
 
-Heimdall defines a couple of error types, which it uses to signal errors. Some of them are available for configuring your [Error Condition]({{< ref "#error-condition" >}})s.
+Heimdall defines a couple of error types, which it uses to signal errors. Some of them are available for configuring your [Error Condition]({{< relref "#error-condition" >}})s.
 
 Following types are available:
 
@@ -294,10 +294,10 @@ Following types are available:
 
 Implements an exponential backoff strategy for endpoint communication. It increases the backoff exponentially by multiplying the `max_delay` with 2^(attempt count)
 
-| Name            | Type                                  | Mandatory | Description                                                                                                    |
-|-----------------|---------------------------------------|-----------|----------------------------------------------------------------------------------------------------------------|
-| `give_up_after` | *[Duration]({{< ref "#duration" >}})* | no        | sets an upper bound on the maximum time to wait between two requests. Default to 0, which means no upper bound |
-| `max_delay`     | *[Duration]({{< ref "#duration" >}})* | yes       | the initial backoff.                                                                                           |
+| Name            | Type                                     | Mandatory | Description                                                                                                    |
+|-----------------|------------------------------------------|-----------|----------------------------------------------------------------------------------------------------------------|
+| `give_up_after` | *[Duration]({{< relref "#duration" >}})* | no        | sets an upper bound on the maximum time to wait between two requests. Default to 0, which means no upper bound |
+| `max_delay`     | *[Duration]({{< relref "#duration" >}})* | yes       | the initial backoff.                                                                                           |
 
 **Example**
 
@@ -311,7 +311,7 @@ In this example the backoff will be 1, 2, 4, 8, 16, 32, 60, ...
 
 ## Scopes Matcher
 
-Scopes matcher is a configuration type allowing configuration of different strategies to match required scopes. In its simplest shape it can be just an array of strings (implemented by the [Exact]({{< ref "#exact">}})) scope mtcher. To cover many use cases, different strategies are available and described in the following sections.
+Scopes matcher is a configuration type allowing configuration of different strategies to match required scopes. In its simplest shape it can be just an array of strings (implemented by the [Exact]({{< relref "#exact">}})) scope mtcher. To cover many use cases, different strategies are available and described in the following sections.
 
 Regardless of the strategy, each matcher can explicitly be configured and supports the following configuration properties:
 
@@ -327,7 +327,7 @@ This the simplest matcher and is automatically selected, if just an array of str
 - bar
 ```
 
-However, as written in the [Scopes Matcher]({{< ref "#scopes-matcher">}}) section, it can also explicitly be selected by setting `matching_strategy` to `exact` and defining the required scopes in the `values` property.
+However, as written in the [Scopes Matcher]({{< relref "#scopes-matcher">}}) section, it can also explicitly be selected by setting `matching_strategy` to `exact` and defining the required scopes in the `values` property.
 
 **Example**
 
@@ -389,7 +389,7 @@ would not match.
 
 ### Wildcard
 
-This matcher enables matching scopes using wildcards. It goes beyond the [Hierarchic]({{< ref "#hierarchic">}}) scope matcher by enabling usage of wildcards.
+This matcher enables matching scopes using wildcards. It goes beyond the [Hierarchic]({{< relref "#hierarchic">}}) scope matcher by enabling usage of wildcards.
 
 This matcher can only be used by explicitly setting the `matching_strategy` to `wildcard` and defining the required patterns in the `values` property.
 

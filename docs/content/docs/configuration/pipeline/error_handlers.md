@@ -10,7 +10,7 @@ menu:
     parent: "Pipeline"
 ---
 
-Error Handlers are responsible for execution of logic if any of the handlers [authenticators]({{< ref "authenticators.md" >}}), [authorizers]({{< ref "authorizers.md" >}}), [hydrators]({{< ref "hydrators.md" >}}) or [mutators]({{< ref "mutators.md" >}}) fail. The error handlers range from a simple error response to the client which sent the request to sophisticated handlers supporting complex logic and redirects. 
+Error Handlers are responsible for execution of logic if any of the handlers [authenticators]({{< relref "authenticators.md" >}}), [authorizers]({{< relref "authorizers.md" >}}), [hydrators]({{< relref "hydrators.md" >}}) or [mutators]({{< relref "mutators.md" >}}) fail. The error handlers range from a simple error response to the client which sent the request to sophisticated handlers supporting complex logic and redirects. 
 
 The following section describes the available error handler types in more detail.
 
@@ -18,7 +18,7 @@ The following section describes the available error handler types in more detail
 
 ### Default
 
-This error handler is always there and is executed if no other error handler is responsible for the handling of an error. Actually, there is no need to explicitly configure it. The only exception is to allow overriding the [default rule]({{< ref "../rules/_index.md#default-rule" >}})'s error handler chain in a rule for performance reasons (if configured error handlers in the default rule should not be considered). This error handler type doesn't have any configuration options.
+This error handler is always there and is executed if no other error handler is responsible for the handling of an error. Actually, there is no need to explicitly configure it. The only exception is to allow overriding the [default rule]({{< relref "../rules/_index.md#default-rule" >}})'s error handler chain in a rule for performance reasons (if configured error handlers in the default rule should not be considered). This error handler type doesn't have any configuration options.
 
 To enable the usage of this error handler, you have to set the `type` property to `default`.
 
@@ -37,12 +37,12 @@ To enable the usage of this hydrator, you have to set the `type` property to `re
 
 Configuration using the `config` property is mandatory. Following properties are available:
 
-| Name                        | Type                                                                            | Mandatory | Overridable | Description                                                                                                                                                                                                                         |
-|-----------------------------|---------------------------------------------------------------------------------|-----------|-------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `to`                        | *URL*                                                                           | yes       | no          | The url to redirect the client to. If no `return_to_query_parameter` is defined, the value of the HTTP `Location` hader is set to the configured value.                                                                             |
-| `return_to_query_parameter` | *string*                                                                        | no        | no          | If you want to return the user back to the url, Heimdall was handling when this error handler kicked in and your authentication system supports this by considering a specific query parameter, you can configure it here.          |
-| `code`                      | *int*                                                                           | no        | no          | The code to be used for the redirect. Defaults to `302 Found`. Heimdall does not check the configured code for HTTP redirect validity!                                                                                              |
-| `when`                      | *[Error Condition]({{< ref "configuration_types.md#error-condition" >}}) array* | yes       | yes         | Conditions, which must hold true for this error handler to execute. The defined conditions are evaluated using a boolean or. So at least one of the defined conditions must evaluate to `true` to have this error handler executed. |
+| Name                        | Type                                                                               | Mandatory | Overridable | Description                                                                                                                                                                                                                         |
+|-----------------------------|------------------------------------------------------------------------------------|-----------|-------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `to`                        | *URL*                                                                              | yes       | no          | The url to redirect the client to. If no `return_to_query_parameter` is defined, the value of the HTTP `Location` hader is set to the configured value.                                                                             |
+| `return_to_query_parameter` | *string*                                                                           | no        | no          | If you want to return the user back to the url, Heimdall was handling when this error handler kicked in and your authentication system supports this by considering a specific query parameter, you can configure it here.          |
+| `code`                      | *int*                                                                              | no        | no          | The code to be used for the redirect. Defaults to `302 Found`. Heimdall does not check the configured code for HTTP redirect validity!                                                                                              |
+| `when`                      | *[Error Condition]({{< relref "configuration_types.md#error-condition" >}}) array* | yes       | yes         | Conditions, which must hold true for this error handler to execute. The defined conditions are evaluated using a boolean or. So at least one of the defined conditions must evaluate to `true` to have this error handler executed. |
 
 **Example**
 
@@ -91,16 +91,16 @@ config:
 
 ### WWW-Authenticate
 
-This error handler responds with HTTP `401 Unauthorized` and a `WWW-Authenticate` HTTP header set. As of now, this error handler is the only one error handler, which transforms Heimdall into an authentication system, a very simple one though ;). By configuring this error handler you can implement the [Basic HTTP Authentication Scheme](https://datatracker.ietf.org/doc/html/rfc7617) by also making use of the [Basic Auth]({{< ref "authenticators.md#basic-auth" >}}) authenticator. Without that authenticator, the usage of this error handler does actually not make any sense.
+This error handler responds with HTTP `401 Unauthorized` and a `WWW-Authenticate` HTTP header set. As of now, this error handler is the only one error handler, which transforms Heimdall into an authentication system, a very simple one though ;). By configuring this error handler you can implement the [Basic HTTP Authentication Scheme](https://datatracker.ietf.org/doc/html/rfc7617) by also making use of the [Basic Auth]({{< relref "authenticators.md#basic-auth" >}}) authenticator. Without that authenticator, the usage of this error handler does actually not make any sense.
 
 To enable the usage of this hydrator, you have to set the `type` property to `www_authenticate`.
 
 Configuration using the `config` property is mandatory. Following properties are available:
 
-| Name    | Type                                                                              | Mandatory | Overridable | Description                                                                                                                                                                                                                         |
-|---------|-----------------------------------------------------------------------------------|-----------|-------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `realm` | *string*                                                                          | no        | yes         | The "realm" according to [RFC 7235, section 2.2](https://datatracker.ietf.org/doc/html/rfc7235#section-2.2). Defaults to "Please authenticate".                                                                                     |
-| `when`  | **[Error Condition]({{< ref "configuration_types.md#error-condition" >}}) array** | yes       | yes         | Conditions, which must hold true for this error handler to execute. The defined conditions are evaluated using a boolean or. So at least one of the defined conditions must evaluate to `true` to have this error handler executed. |
+| Name    | Type                                                                                 | Mandatory | Overridable | Description                                                                                                                                                                                                                         |
+|---------|--------------------------------------------------------------------------------------|-----------|-------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `realm` | *string*                                                                             | no        | yes         | The "realm" according to [RFC 7235, section 2.2](https://datatracker.ietf.org/doc/html/rfc7235#section-2.2). Defaults to "Please authenticate".                                                                                     |
+| `when`  | **[Error Condition]({{< relref "configuration_types.md#error-condition" >}}) array** | yes       | yes         | Conditions, which must hold true for this error handler to execute. The defined conditions are evaluated using a boolean or. So at least one of the defined conditions must evaluate to `true` to have this error handler executed. |
 
 **Example**
 

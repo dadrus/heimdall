@@ -18,7 +18,7 @@ The following section describes the available mutator types in more detail.
 
 ### Noop
 
-As the name implies, this mutator does nothing. As mutators are the last step in Heimdall's pipeline and transform available subject information into an object required by the upstream service, the usage of this mutator makes only sense in combination with the [Noop Authenticator]({{< ref "authenticators.md#noop">}}) for public APIs. This authenticator type also doesn't have any configuration options.
+As the name implies, this mutator does nothing. As mutators are the last step in Heimdall's pipeline and transform available subject information into an object required by the upstream service, the usage of this mutator makes only sense in combination with the [Noop Authenticator]({{< relref "authenticators.md#noop">}}) for public APIs. This authenticator type also doesn't have any configuration options.
 
 To enable the usage of this mutator, you have to set the `type` property to `noop`.
 
@@ -83,10 +83,10 @@ To enable the usage of this mutator, you have to set the `type` property to `jwt
 
 Configuration using the `config` property is optional. Following properties are available:
 
-| Name     | Type                                                        | Mandatory | Overridable | Description                                                                                                                                                                                                      |
-|----------|-------------------------------------------------------------|-----------|-------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `claims` | *string*                                                    | no        | yes         | Your template with custom claims, you would like to add to the JWT. See also [Templating]({{< ref "_index.md#templating" >}}).                                                                                   |
-| `ttl`    | *[Duration]({{< ref "configuration_types.md#duration" >}})* | no        | yes         | Defines how long the JWT should be valid. Defaults to 5 minutes. Heimdall sets the `iat` and the `nbf` claims to the current system time. The value of the `exp` claim is then influenced by the `ttl` property. | 
+| Name     | Type                                                           | Mandatory | Overridable | Description                                                                                                                                                                                                      |
+|----------|----------------------------------------------------------------|-----------|-------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `claims` | *string*                                                       | no        | yes         | Your template with custom claims, you would like to add to the JWT. See also [Templating]({{< relref "_index.md#templating" >}}).                                                                                |
+| `ttl`    | *[Duration]({{< relref "configuration_types.md#duration" >}})* | no        | yes         | Defines how long the JWT should be valid. Defaults to 5 minutes. Heimdall sets the `iat` and the `nbf` claims to the current system time. The value of the `exp` claim is then influenced by the `ttl` property. | 
 
 The generated JWT is always cached until 5 seconds before its expiration. The cache key is calculated from the entire configuration of the mutator instance and the available information about the current subject.
 

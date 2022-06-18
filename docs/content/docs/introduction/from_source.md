@@ -14,7 +14,7 @@ menu:
     weight: 50
 ---
 
-This document covers how to build heimdall from its source code as well as how to run heimdall using a minimum configuration. If you want to try out a scenario close to real-life, head over to [Quick Start]({{ site.baseurl }}{% link install/quick_start.md %}) chapter.
+This document covers how to build heimdall from its source code as well as how to run heimdall using a minimum configuration. If you want to try out a working scenario, head over to [Quick Start]({{< relref "quickstart.md" >}}).
 
 ## Prerequisites
 
