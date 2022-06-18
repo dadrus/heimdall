@@ -9,5 +9,5 @@ weight: 20
 menu: docs
 ---
 
-foo bar
+
 

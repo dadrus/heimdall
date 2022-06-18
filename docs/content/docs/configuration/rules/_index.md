@@ -13,5 +13,3 @@ menu:
     weight: 70
     parent: "Configuration"
 ---
-
-foo bar
