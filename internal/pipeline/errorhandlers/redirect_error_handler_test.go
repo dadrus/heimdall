@@ -89,7 +89,7 @@ to: http://foo.bar
 bar: foo
 when:
   - error:
-    - unauthorized
+    - authentication_error
 `),
 			assert: func(t *testing.T, err error, redEH *redirectErrorHandler) {
 				t.Helper()
@@ -105,7 +105,7 @@ when:
 to: http://foo.bar
 when:
   - error:
-    - unauthorized
+    - authentication_error
 `),
 			assert: func(t *testing.T, err error, redEH *redirectErrorHandler) {
 				t.Helper()
@@ -136,15 +136,15 @@ code: 301
 return_to_query_parameter: foobar
 when:
   - error:
-      - unauthorized
-      - forbidden
+      - authentication_error
+      - authorization_error
     request_headers:
       Accept:
         - text/html
     request_cidr:
       - 192.168.10.0/24
   - error:
-      - internal_server_error
+      - internal_error
     request_headers:
       Accept:
         - '*/*'
@@ -224,7 +224,7 @@ func TestCreateRedirectErrorHandlerFromPrototype(t *testing.T) {
 to: http://foo.bar
 when:
   - error:
-      - unauthorized
+      - authentication_error
 `),
 			assert: func(t *testing.T, err error, prototype *redirectErrorHandler, configured *redirectErrorHandler) {
 				t.Helper()
@@ -239,7 +239,7 @@ when:
 to: http://foo.bar
 when:
   - error:
-      - unauthorized
+      - authentication_error
 `),
 			config: []byte(``),
 			assert: func(t *testing.T, err error, prototype *redirectErrorHandler, configured *redirectErrorHandler) {
@@ -255,7 +255,7 @@ when:
 to: http://foo.bar
 when:
   - error:
-      - unauthorized
+      - authentication_error
 `),
 			config: []byte(`to: http://foo.bar`),
 			assert: func(t *testing.T, err error, prototype *redirectErrorHandler, configured *redirectErrorHandler) {
@@ -274,13 +274,13 @@ code: 301
 return_to_query_parameter: foobar
 when:
   - error:
-      - unauthorized
-      - forbidden
+      - authentication_error
+      - authorization_error
 `),
 			config: []byte(`
 when:
   - error:
-      - bad_argument
+      - precondition_error
 `),
 			assert: func(t *testing.T, err error, prototype *redirectErrorHandler, configured *redirectErrorHandler) {
 				t.Helper()
@@ -348,7 +348,7 @@ func TestRedirectErrorHandlerExecute(t *testing.T) {
 to: http://foo.bar
 when:
   - error:
-      - unauthorized
+      - authentication_error
 `),
 			error: heimdall.ErrInternal,
 			assert: func(t *testing.T, wasResponsible bool, err error) {
@@ -364,7 +364,7 @@ when:
 to: http://foo.bar
 when:
   - error:
-      - unauthorized
+      - authentication_error
 `),
 			error: heimdall.ErrAuthentication,
 			configureContext: func(t *testing.T, ctx *mocks.MockContext) {
@@ -398,7 +398,7 @@ code: 300
 return_to_query_parameter: foobar
 when:
   - error:
-      - unauthorized
+      - authentication_error
 `),
 			error: heimdall.ErrAuthentication,
 			configureContext: func(t *testing.T, ctx *mocks.MockContext) {

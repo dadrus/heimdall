@@ -61,7 +61,7 @@ func TestCreateWWWAuthenticateErrorHandler(t *testing.T) {
 realm: FooBar
 when:
   - error:
-      - unauthorized
+      - authentication_error
 foo: bar
 `),
 			assert: func(t *testing.T, err error, errorHandler *wwwAuthenticateErrorHandler) {
@@ -77,7 +77,7 @@ foo: bar
 			config: []byte(`
 when:
   - error:
-      - unauthorized
+      - authentication_error
 `),
 			assert: func(t *testing.T, err error, errorHandler *wwwAuthenticateErrorHandler) {
 				t.Helper()
@@ -100,7 +100,7 @@ when:
 realm: "What is your password"
 when:
   - error:
-      - bad_argument
+      - precondition_error
 `),
 			assert: func(t *testing.T, err error, errorHandler *wwwAuthenticateErrorHandler) {
 				t.Helper()
@@ -146,7 +146,7 @@ func TestCreateWWWAuthenticateErrorHandlerFromPrototype(t *testing.T) {
 			prototypeConfig: []byte(`
 when:
   - error:
-      - unauthorized
+      - authentication_error
 `),
 			assert: func(t *testing.T, err error, prototype *wwwAuthenticateErrorHandler,
 				configured *wwwAuthenticateErrorHandler,
@@ -162,7 +162,7 @@ when:
 			prototypeConfig: []byte(`
 when:
   - error:
-      - unauthorized
+      - authentication_error
 `),
 			config: []byte(``),
 			assert: func(t *testing.T, err error, prototype *wwwAuthenticateErrorHandler,
@@ -179,7 +179,7 @@ when:
 			prototypeConfig: []byte(`
 when:
   - error:
-      - unauthorized
+      - authentication_error
 `),
 			config: []byte(`to: http://foo.bar`),
 			assert: func(t *testing.T, err error, prototype *wwwAuthenticateErrorHandler,
@@ -197,13 +197,13 @@ when:
 			prototypeConfig: []byte(`
 when:
   - error:
-      - unauthorized
-      - forbidden
+      - authentication_error
+      - authorization_error
 `),
 			config: []byte(`
 when:
   - error:
-      - bad_argument
+      - precondition_error
 `),
 			assert: func(t *testing.T, err error, prototype *wwwAuthenticateErrorHandler,
 				configured *wwwAuthenticateErrorHandler,
@@ -231,7 +231,7 @@ when:
 			prototypeConfig: []byte(`
 when:
   - error:
-      - unauthorized
+      - authentication_error
 `),
 			config: []byte(`realm: "You password please"`),
 			assert: func(t *testing.T, err error, prototype *wwwAuthenticateErrorHandler,
@@ -292,7 +292,7 @@ func TestWWWAuthenticateErrorHandlerExecute(t *testing.T) {
 			config: []byte(`
 when:
   - error:
-      - unauthorized
+      - authentication_error
 `),
 			error: heimdall.ErrInternal,
 			assert: func(t *testing.T, wasResponsible bool, err error) {
@@ -307,7 +307,7 @@ when:
 			config: []byte(`
 when:
   - error:
-      - unauthorized
+      - authentication_error
 `),
 			error: heimdall.ErrAuthentication,
 			configureContext: func(t *testing.T, ctx *mocks.MockContext) {
@@ -336,7 +336,7 @@ when:
 realm: "Your password please"
 when:
   - error:
-      - unauthorized
+      - authentication_error
 `),
 			error: heimdall.ErrAuthentication,
 			configureContext: func(t *testing.T, ctx *mocks.MockContext) {
