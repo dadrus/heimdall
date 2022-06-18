@@ -244,9 +244,9 @@ This example shows in principle all possible combinations. The actual values and
 
 ```yaml
 error:
-  - argument_error
+  - precondition_error
   # OR
-  - forbidden
+  - authorization_error
 # AND
 request_cidr:
   - 192.168.0.0/16
@@ -264,7 +264,7 @@ request_headers:
 ```
 
 This condition evaluates to true only if all parts of it (`error`, `request_cidr`, `request_headers`) evaluate to true. With
-* `error` evaluates to true, if the encountered error was either `argument_error` or `forbidden`. 
+* `error` evaluates to true, if the encountered error was either `precondition_error` or `authorization_error`. 
 * `request_cidr` evaluates to true, if the request came from an IP in either `192.168.0.0/16` or `10.0.0.0/8` range. And
 * `request_headers` evaluates to true, if either the HTTP `Accept` header contains one of `text/html`, or `*/*`, or the HTTP `Contet-Type` header contains `application/json`. 
 
@@ -274,21 +274,21 @@ This example is a very simple one, showing just the usage of the `error` attribu
 
 ```yaml
 error:
-  - unauthorized
+  - authentication_error
 ```
 
-This condition evaluate to true, if the encountered error was `unauthorized`. 
+This condition evaluate to true, if the encountered error was `authentication_error`. 
 
 ## Error Type
 
-Heimdall defines a couple of error types, which it uses to signal errors and which you can use while configuring your [Error Condition]({{< ref "#error-condition" >}})s.
+Heimdall defines a couple of error types, which it uses to signal errors. Some of them are available for configuring your [Error Condition]({{< ref "#error-condition" >}})s.
 
 Following types are available:
 
-* `unauthorized` - used if an authenticator failed to verify authentication data available in the request. E.g. an authenticator was configured to verify a JWT and the signature of it was invalid. 
-* `forbidden` - used if an authorizer failed to authorize the subject. E.g. an authorizer is configured to use a script to execute on the given subject and request context, but this script returned with an error.
-* `internal_server_error` - used if Heimdall run into an internal error condition while processing the request. E.g. something went wrong while unmarshalling a JSON object, or if there was a configuration error, which couldn't be raised while loading a rule, etc. 
-* `bad_argument` - used if the request does not contain required/expected data. E.g. if an authenticator could not find a cookie configured.
+* `authentication_error` - used if an authenticator failed to verify authentication data available in the request. E.g. an authenticator was configured to verify a JWT and the signature of it was invalid. 
+* `authorization_error` - used if an authorizer failed to authorize the subject. E.g. an authorizer is configured to use a script to execute on the given subject and request context, but this script returned with an error.
+* `internal_error` - used if Heimdall run into an internal error condition while processing the request. E.g. something went wrong while unmarshalling a JSON object, or if there was a configuration error, which couldn't be raised while loading a rule, etc. 
+* `precondition_error` - used if the request does not contain required/expected data. E.g. if an authenticator could not find a cookie configured.
 
 ## Retry
 

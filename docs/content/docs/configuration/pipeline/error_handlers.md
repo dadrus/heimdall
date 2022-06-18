@@ -47,8 +47,8 @@ Configuration using the `config` property is mandatory. Following properties are
 **Example**
 
 The redirect error handler below is configured to kick in if either 
-* a first error condition evaluates to true. This condition is for web requests (HTTP `Accept` header contains `text/html`) if an `unauthorized` error occurred (an error raised by authenticators). In this case, it will redirect the client (for web requests, usually a browser) to `http://127.0.0.1:4433/self-service/login/browser` and also add the `return_to` query parameter with the current url to the redirect url.
-* Or if a second condition evaluates to true. The only difference to the previous one is the error type, which is `forbidden` in this case.
+* a first error condition evaluates to true. This condition is for web requests (HTTP `Accept` header contains `text/html`) if an `authentication_error` error occurred (an error raised by authenticators). In this case, it will redirect the client (for web requests, usually a browser) to `http://127.0.0.1:4433/self-service/login/browser` and also add the `return_to` query parameter with the current url to the redirect url.
+* Or if a second condition evaluates to true. The only difference to the previous one is the error type, which is `authorization_error` in this case.
 
 So, e.g. if Heimdall was handling the request for `http://my-service.local/foo` and run into an error like described above, the value of the HTTP `Location` header will be set to `http://127.0.0.1:4433/self-service/login/browser?return_to=http%3A%2F%2Fmy-service.local%2Ffoo`
 
@@ -60,12 +60,12 @@ config:
   return_to_query_parameter: return_to
   when:
     - error:
-        - unauthorized
+        - authentication_error
       request_headers:
         Accept:
           - text/html
     - error:
-        - forbidden
+        - authorization_error
       request_headers:
         Accept:
           - text/html
@@ -81,8 +81,8 @@ config:
   return_to_query_parameter: return_to
   when:
     - error:
-        - unauthorized
-        - forbidden
+        - authentication_error
+        - authorization_error
       request_headers:
         Accept:
           - text/html
@@ -104,7 +104,7 @@ Configuration using the `config` property is mandatory. Following properties are
 
 **Example**
 
-The www authenticate error handler below is configured to kick in for web requests (HTTP `Accept` header contains `text/html`) if an `unauthorized` error occurred (an error raised by authenticators). In this case, it will respond with HTTP `401 Unauthorized` and a `WWW-Authenticate` header set to `Basic realm="My fancy app"`.
+The www authenticate error handler below is configured to kick in for web requests (HTTP `Accept` header contains `text/html`) if an `authentication_error` error occurred (an error raised by authenticators). In this case, it will respond with HTTP `401 Unauthorized` and a `WWW-Authenticate` header set to `Basic realm="My fancy app"`.
 
 ```yaml
 id: basic_authenticate
@@ -113,7 +113,7 @@ config:
   realm: "My fancy app"
   when:
     - error:
-        - unauthorized
+        - authentication_error
       request_headers:
         Accept:
           - text/html

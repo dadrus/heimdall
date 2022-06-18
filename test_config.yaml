@@ -132,15 +132,15 @@ pipeline:
   error_handlers:
     - id: default
       type: default
-    - id: authenticate_on_unauthorized_or_forbidden
+    - id: authenticate_with_kratos
       type: redirect
       config:
         to: http://127.0.0.1:4433/self-service/login/browser
         return_to_query_parameter: return_to
         when:
           - error:
-            - unauthorized
-            - forbidden
+            - authentication_error
+            - authorization_error
             request_headers:
               Accept:
               - '*/*'
@@ -154,7 +154,7 @@ rules:
       - authenticator: anonymous_authenticator
       - mutator: jwt
     on_error:
-      - error_handler: authenticate_on_unauthorized_or_forbidden
+      - error_handler: authenticate_with_kratos
 
   providers:
     file:

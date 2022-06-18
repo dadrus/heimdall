@@ -55,10 +55,10 @@ func TestDecodeErrorTypeMatcherHookFunc(t *testing.T) {
 
 	rawConfig := []byte(`
 error:
-  - unauthorized
-  - forbidden
-  - internal_server_error
-  - bad_argument
+  - authentication_error
+  - authorization_error
+  - internal_error
+  - precondition_error
 `)
 
 	var typ Type

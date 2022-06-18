@@ -30,7 +30,7 @@ type: noop
 
 ### Unauthorized
 
-This authenticator rejects all requests as unauthenticated (on HTTP response code level this is then mapped to `Unauthorized`, hence the type name). It basically stops the successful execution of the pipeline resulting in the execution of the error handlers. This authenticator type doesn't have any configuration options.
+This authenticator rejects all requests as unauthenticated (on HTTP response code level this is then mapped to `401 Unauthorized`, hence the type name). It basically stops the successful execution of the pipeline resulting in the execution of the error handlers. This authenticator type doesn't have any configuration options.
 
 To enable the usage of this authenticator, you have to set the `type` property to `unauthorized`.
 

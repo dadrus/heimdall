@@ -50,14 +50,14 @@ func DecodeErrorTypeMatcherHookFunc() mapstructure.DecodeHookFunc {
 		// nolint: forcetypeassert
 		for _, val := range data.([]any) {
 			switch val {
-			case "unauthorized":
+			case "authentication_error":
 				matcher = append(matcher, heimdall.ErrAuthentication)
-			case "forbidden":
+			case "authorization_error":
 				matcher = append(matcher, heimdall.ErrAuthorization)
-			case "internal_server_error":
+			case "internal_error":
 				matcher = append(matcher, heimdall.ErrInternal)
 				matcher = append(matcher, heimdall.ErrConfiguration)
-			case "bad_argument":
+			case "precondition_error":
 				matcher = append(matcher, heimdall.ErrArgument)
 			default:
 				return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
