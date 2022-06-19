@@ -169,3 +169,11 @@ api:
   trusted_proxies:
     - 192.168.2.0/24
 ```
+
+### Common Configuration Types
+
+#### Duration
+
+Duration is actually a string type, which adheres to the following pattern: `^[0-9]+(ns|us|ms|s|m|h)$`
+
+So with `10s` you can define the duration of 10 seconds and with `2h` you can say 2 hours.

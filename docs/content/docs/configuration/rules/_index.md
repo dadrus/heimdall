@@ -18,6 +18,6 @@ All rule specific static configuration can be done by making use of Heimdall's `
 In general, following three aspects are important when dealing with rules:
 
 * [Rule Definition]({{< relref "rule_definition.md" >}}), which describes the configuration options of a single rule and how the [pipeline handlers]({{< relref "/docs/configuration/pipeline/_index.md" >}}) are used.
-* [Providers]({{< relref "providers/_index.md" >}}), which describes available options on how rules can be loaded.
-* [Default Rule]({{< relref "#default" >}}), which describes, how the default rule can be configured and used.
+* [Providers]({{< relref "providers.md" >}}), which describes available options on how rules can be loaded.
+* [Default Rule]({{< relref "default_rule.md" >}}), which describes, how the default rule can be configured and used.
 
