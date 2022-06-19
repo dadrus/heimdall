@@ -24,6 +24,8 @@ Following configuration options are supported:
 | `src`   | *string*  | yes       | Can either be a single file, containing a rule set, or a directory with files, each containing a rule set.                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 | `watch` | *boolean* | no        | Whether the configured `src` should be watched for updates. Defaults to `false`. If the `src` has been configured to a single file, the provider will watch for changes in that file. Otherwise, if the `src` has been configured to a directory, the provider will watch for files appearing and disappearing in this directory, as well as for changes in each particular file in this directory. Recursive lookup is not supported. That is, if the configured directory contains further directories, these, as well as their contents are ignored. |
 
+This provider doesn't need any additional configuration for a rule set. So the contents of files can be just a list of rules as described in [Rule Sets]({{< relref "rule_definition.md#rule-set" >}}).
+
 **Example 1**
 
 In this example, the filesystem provider is configured to load rule sets from the files residing in the  `/path/to/rules/dir` directory and watch for changes.
