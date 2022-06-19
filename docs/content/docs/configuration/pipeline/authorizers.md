@@ -2,8 +2,7 @@
 title: "Authorizers"
 date: 2022-06-09T18:57:03+02:00
 lastmod: 2022-06-09T18:57:03+02:00
-draft: true
-toc: true
+draft: false
 menu:
   docs:
     weight: 20
