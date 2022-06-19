@@ -9,3 +9,5 @@ menu:
     weight: 20
     parent: "Configuration"
 ---
+
+Not implemented yet. Will however support the same configuration options as [Decision APi]({{< relref "decision_api.md" >}})
