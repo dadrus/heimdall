@@ -5,7 +5,7 @@ lastmod: 2022-06-09T18:56:56+02:00
 draft: false
 menu: 
   docs:
-    weight: 60
+    weight: 30
     parent: "Configuration"
 ---
 
