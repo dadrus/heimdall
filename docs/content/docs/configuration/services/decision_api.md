@@ -6,7 +6,7 @@ draft: false
 menu: 
   docs:
     weight: 10
-    parent: "Configuration"
+    parent: "Services"
 ---
 
 Decision API is one of the operating modes supported by Heimdall, used if you start Heimdall with `heimdall serve api`. By default, Heimdall listens on `0.0.0.0:4456/decisions` endpoint for incoming requests in this mode of operation and also configures useful default timeouts. No other options are configured. You can, and should however adjust the configuration for your needs.

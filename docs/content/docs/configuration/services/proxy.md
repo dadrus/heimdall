@@ -6,7 +6,7 @@ draft: false
 menu:
   docs:
     weight: 20
-    parent: "Configuration"
+    parent: "Services"
 ---
 
 Not implemented yet. Will however support the same configuration options as [Decision APi]({{< relref "decision_api.md" >}})
