@@ -7,7 +7,7 @@ toc: true
 menu:
   docs:
     weight: 50
-    parent: "Pipeline"
+    parent: "Pipeline Handler"
 ---
 
 Error Handlers are responsible for execution of logic if any of the handlers [authenticators]({{< relref "authenticators.md" >}}), [authorizers]({{< relref "authorizers.md" >}}), [hydrators]({{< relref "hydrators.md" >}}) or [mutators]({{< relref "mutators.md" >}}) fail. The error handlers range from a simple error response to the client which sent the request to sophisticated handlers supporting complex logic and redirects. 

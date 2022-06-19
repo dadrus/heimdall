@@ -7,7 +7,7 @@ toc: true
 menu:
   docs:
     weight: 40
-    parent: "Pipeline"
+    parent: "Pipeline Handler"
 ---
 
 Mutators finalize the successful execution of the pipeline and transform the available information about the subject into a format expected, respectively required by the upstream service. This ranges from adding a query parameter, to a structured JWT in a specific header.
