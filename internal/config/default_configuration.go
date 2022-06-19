@@ -27,7 +27,7 @@ var defaultConfig = Configuration{
 		},
 	},
 	Log: LoggingConfig{
-		Level:  zerolog.DebugLevel,
+		Level:  zerolog.ErrorLevel,
 		Format: LogTextFormat,
 	},
 	Tracing: TracingConfig{
