@@ -1,13 +1,20 @@
-log:
-  level: debug
-  format: text
-
 serve:
   api:
     port: 4468
     verbose_errors: true
   proxy:
     port: 4469
+
+log:
+  level: debug
+  format: text
+
+metrics:
+  prometheus:
+    port: 9000
+
+tracing:
+  provider: jaeger
 
 pipeline:
   authenticators:
