@@ -13,7 +13,7 @@ As of today, heimdall only supports [Prometheus](https://grafana.com/oss/prometh
 
 ## Configuration
 
-Metrics configuration can be adjusted in the `prometheus` property of heimdall's configuration and supports following properties.
+Metrics configuration can be adjusted in the `prometheus` property, which lives in the `metrics` property of heimdall's configuration and supports following properties.
 
 ### Host
 
@@ -24,8 +24,9 @@ By making use of the `host` (*string*) property, you can specify the TCP/IP addr
 In this example, we configure heimdall to allow only local TCP/IP “loopback” connections to be made.
 
 ```yaml
-prometheus:
-  host: 127.0.0.1
+metrics:
+  prometheus:
+    host: 127.0.0.1
 ```
 
 ### Port
@@ -37,8 +38,9 @@ By making use of the `port` (*integer*) property, you can specify the TCP port t
 In this example, we configure heimdall to listen on port `9999` for metrics requests.
 
 ```yaml
-prometheus:
-  port: 9999
+metrics:
+  prometheus:
+    port: 9999
 ```
 
 ### Metrics Path
@@ -50,7 +52,8 @@ By making use of the `metrics_path` (*string*) property, you can specify the pat
 In this example, we configure heimdall expose metrics information behind `/prometheus` path.
 
 ```yaml
-prometheus:
-  metrics_path: /prometheus
+metrics:
+  prometheus:
+    metrics_path: /prometheus
 ```
 
