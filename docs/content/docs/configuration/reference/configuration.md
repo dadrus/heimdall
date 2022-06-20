@@ -9,6 +9,8 @@ menu:
     parent: "Reference"
 ---
 
+Below you can find possible contents (not exhaustive) for Heimdall's `config.yaml` file. Head over to configuration documentation to get detailed explanation.
+
 ```yaml
 serve:
   api:
