@@ -8,3 +8,5 @@ menu:
     weight: 80
     parent: "Configuration"
 ---
+
+foo
