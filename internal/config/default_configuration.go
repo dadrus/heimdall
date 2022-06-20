@@ -21,10 +21,6 @@ var defaultConfig = Configuration{
 				Idle:  defaultIdleTimeout,
 			},
 		},
-		Prometheus: PrometheusConfig{
-			Port:        defaultPrometheusPort,
-			MetricsPath: "/metrics",
-		},
 	},
 	Log: LoggingConfig{
 		Level:  zerolog.ErrorLevel,
@@ -32,6 +28,12 @@ var defaultConfig = Configuration{
 	},
 	Tracing: TracingConfig{
 		ServiceName: "heimdall",
+	},
+	Metrics: MetricsConfig{
+		Prometheus: PrometheusConfig{
+			Port:        defaultPrometheusPort,
+			MetricsPath: "/metrics",
+		},
 	},
 	Signer: SignerConfig{
 		Name: "heimdall",
