@@ -2,6 +2,7 @@
 
 <div class="container pb-5">
   {{ .Content }}
+  <time>{{ .Date.Format "Mon, Jan 2, 2006" }}</time>
 </div>
 
 {{- end -}}

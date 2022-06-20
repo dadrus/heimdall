@@ -1,7 +1,6 @@
 ---
 title: "Logging"
 date: 2022-06-09T18:56:07+02:00
-lastmod: 2022-06-09T18:56:07+02:00
 draft: false
 menu:
   docs:

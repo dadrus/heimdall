@@ -4,6 +4,7 @@ title: Heimdall
 theme: mytheme
 relativeURLS: true
 sectionPagesMenu: main
+enableGitInfo: true
 
 menu:
   main:

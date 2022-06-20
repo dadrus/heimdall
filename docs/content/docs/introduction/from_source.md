@@ -1,13 +1,7 @@
 ---
 title: "Install from Source"
 date: 2022-06-09T15:54:18+02:00
-lastmod: 2022-06-09T15:54:18+02:00
-description: ""
-lead: ""
 draft: true
-images: []
-weight: 1
-toc: true
 menu:
   docs:
     parent: Introduction
