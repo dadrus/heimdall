@@ -1237,9 +1237,6 @@
         },
         "proxy": {
           "$ref": "#/definitions/serviceConfig"
-        },
-        "prometheus": {
-          "$ref": "#/definitions/prometheusConfig"
         }
       }
     },
@@ -1269,6 +1266,34 @@
             "text"
           ],
           "default": "gelf"
+        }
+      }
+    },
+    "metrics": {
+      "description": "Configures metrics options",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["prometheus"],
+      "properties": {
+        "prometheus": {
+          "$ref": "#/definitions/prometheusConfig"
+        }
+      }
+    },
+    "tracing": {
+      "description": "Configures tracing options",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["provider"],
+      "properties": {
+        "service_name": {
+          "description": "The name, which would appear for heimdall in the tracing system",
+          "type": "string",
+          "default": "heimdall"
+        },
+        "provider": {
+          "description": "Tracing provider to use. Currently only 'jaeger' and 'instana' are supported.",
+          "type": "string"
         }
       }
     },
