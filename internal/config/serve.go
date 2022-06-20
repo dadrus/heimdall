@@ -40,7 +40,6 @@ func (c ServiceConfig) Address() string {
 }
 
 type ServeConfig struct {
-	Proxy       ServiceConfig    `koanf:"proxy"`
-	DecisionAPI ServiceConfig    `koanf:"api"`
-	Prometheus  PrometheusConfig `koanf:"prometheus"`
+	Proxy       ServiceConfig `koanf:"proxy"`
+	DecisionAPI ServiceConfig `koanf:"api"`
 }

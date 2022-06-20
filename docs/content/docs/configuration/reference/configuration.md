@@ -1,20 +1,83 @@
+---
+title: "Static Configuration"
+date: 2022-06-09T18:57:50+02:00
+lastmod: 2022-06-09T18:57:50+02:00
+draft: true
+menu:
+  docs:
+    weight: 10
+    parent: "Reference"
+---
+
+Below you can find possible contents (not exhaustive) for Heimdall's `config.yaml` file. Head over to configuration documentation to get detailed explanation.
+
+```yaml
 serve:
   api:
+    host: 127.0.0.1
     port: 4468
     verbose_errors: true
+    timeout:
+      read: 2s
+      write: 5s
+      idle: 2m
+    cors:
+      allowed_origins:
+        - example.org
+      allowed_methods:
+        - GET
+        - POST
+      allowed_headers:
+        - Authorization
+      exposed_headers:
+        - X-My-Header
+      allow_credentials: true
+      max_age: 1m
+    tls:
+      key: /path/to/key/file.pem
+      cert: /path/to/cert/file.pem
+    trusted_proxies:
+      - 192.168.1.0/24
+
   proxy:
+    host: 127.0.0.1
     port: 4469
+    verbose_errors: false
+    timeout:
+      read: 2s
+      write: 5s
+      idle: 2m
+    cors:
+      allowed_origins:
+        - example.org
+      allowed_methods:
+        - GET
+        - POST
+      allowed_headers:
+        - Authorization
+      exposed_headers:
+        - X-My-Header
+      allow_credentials: true
+      max_age: 1m
+    tls:
+      key: /path/to/key/file.pem
+      cert: /path/to/cert/file.pem
+    trusted_proxies:
+      - 192.168.1.0/24
 
 log:
   level: debug
   format: text
-
+  
+tracing:
+  service_name: heimdall
+  provider: jaeger
+  
 metrics:
   prometheus:
+    host: 0.0.0.0
     port: 9000
-
-tracing:
-  provider: jaeger
+    metrics_path: /metrics
 
 pipeline:
   authenticators:
@@ -83,6 +146,7 @@ pipeline:
           subject_attributes_from: "@this"
           subject_id_from: "identity.id"
         cache_ttl: 5m
+
   authorizers:
     - id: "allow_all_authorizer"
       type: allow
@@ -103,6 +167,7 @@ pipeline:
       type: local
       config:
         script: "console.log('New JS script')"
+
   hydrators:
     - id: "subscription_hydrator"
       type: generic
@@ -120,6 +185,7 @@ pipeline:
           url: http://profile
           headers:
             foo: bar
+
   mutators:
     - id: "jwt"
       type: jwt
@@ -136,6 +202,7 @@ pipeline:
       config:
         cookies:
           foo-bar: '{{ .ID }}'
+
   error_handlers:
     - id: default
       type: default
@@ -167,4 +234,5 @@ rules:
     file:
       src: test_rules.yaml
       watch: true
+```
 
