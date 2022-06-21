@@ -7,16 +7,20 @@ menu:
     parent: "Guides"
 ---
 
-[Traefik Proxy](https://doc.traefik.io/traefik/) is modern HTTP proxy and load balancer for microservices, heimdall can be integrated with via the [ForwardAuth Middleware](https://doc.traefik.io/traefik/middlewares/http/forwardauth/) by making use of the available [Decision API]({{ site.baseurl }}{% link index.md %}).
+[Traefik Proxy](https://doc.traefik.io/traefik/) is a modern HTTP proxy and load balancer for microservices, heimdall can be integrated with via the [ForwardAuth Middleware](https://doc.traefik.io/traefik/middlewares/http/forwardauth/) by making use of the [Decision API]({{< relref "/docs/introduction/architecture.md#decision-api" >}}). In such setup, traefik delegates authentication and authorization to heimdall. If heimdall answers with a 2XX code, traefik grants access and forwards the original request to the upstream service. Otherwise, the response  from heimdall is returned to the client.
 
 To achieve this,
 
-* configure traefik
-  * to make use of the aforesaid ForwardAuth middleware by setting the address property to the decision api endpoint and
-  * by including the required header name(s), heimdall sets in the HTTP responses into the authResponseHeaders property.
-* configure the route of your service to make use of this middleware
+* Configure traefik
+  * to make use of the aforesaid ForwardAuth middleware by setting the `address` property to the decision api endpoint and
+  * configure the `authResponseHeaders` to contain the required header name(s), heimdall sets in the HTTP responses (depends on your [Mutators]({{< relref "/docs/configuration/pipeline/mutators.md" >}}) configuration).
+* Configure the route of your service to make use of this middleware.
 
-Example (using Docker labels):
+{{< warning >}}
+Traefik makes use of `X-Forwarded-*` HTTP headers to forward the HTTP method, protocol, host, etc. to the ForwardAuth middleware. These headers can be spoofed, if no caution is taken. To ensure, heimdall accepts such headers only from trusted sources, you should consider setting trusted proxies in heimdall's decision api configuration.
+{{< /warning >}}
+
+**Example (using Docker labels)**
 
 ```yaml
 edge-router:
