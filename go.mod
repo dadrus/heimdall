@@ -22,7 +22,7 @@ require (
 	github.com/ory/ladon v1.2.0
 	github.com/rs/zerolog v1.27.0
 	github.com/santhosh-tekuri/jsonschema/v5 v5.0.0
-	github.com/spf13/cobra v1.4.0
+	github.com/spf13/cobra v1.5.0
 	github.com/stretchr/testify v1.7.4
 	github.com/tidwall/gjson v1.14.1
 	github.com/uber/jaeger-client-go v2.30.0+incompatible
