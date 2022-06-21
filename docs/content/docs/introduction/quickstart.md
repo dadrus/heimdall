@@ -10,7 +10,9 @@ menu:
     parent: get_started
 ---
 
-> :warning:&ensp; This functionality is not available right now. What you can see below is just the idea.
+{{< warning >}}
+This functionality is not available right now. What you can see below is just the idea.
+{{< /warning >}}
 
 
 In this quick-start document we'll use a fully functional environment with heimdall using Docker. To make you understand, what you're doing, the used configuration and all the steps will be explained. To gain more in-depth understanding about the available configuration options, please head over to [Configuration]({{< relref "docs/configuration/_index.md" >}}).
