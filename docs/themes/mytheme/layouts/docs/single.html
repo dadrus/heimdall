@@ -1,6 +1,6 @@
 {{- define "main" -}}
-<div class="container-xxl docs-layout my-md-3">
-  <aside>
+<div class="container-xxl docs-layout my-3 d-flex">
+  <aside class="d-none d-md-block">
     {{ partial "sidebar/docs-menu.html" . }}
   </aside>
   <main>
@@ -8,7 +8,10 @@
     <div>
       {{ .Content }}
     </div>
-    <p class="small text-muted fst-italic text-end">Last updated on <time class="fw-bold">{{ .Lastmod.Format "01/02/2006" }}</time>{{ if .GitInfo -}} by {{ .GitInfo.AuthorName }}{{ end -}}</p>
+    <p class="small text-muted fst-italic text-end">Last updated on
+      <time class="fw-bold">{{ .Lastmod.Format "01/02/2006" }}</time>
+      {{ if .GitInfo -}} by {{ .GitInfo.AuthorName }}{{ end -}}
+    </p>
   </main>
 </div>
 {{ end }}
