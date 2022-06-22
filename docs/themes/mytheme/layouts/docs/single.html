@@ -1,14 +1,33 @@
 {{- define "main" -}}
-  <div class="row">
-    <div class="col-3">
-        {{ partial "sidebar/docs-menu.html" . }}
-    </div>
-    <div class="col-9">
-      <h1>{{ .Title }}</h1>
-      <div>
-        {{ .Content }}
-      </div>
-      <p class="small text-muted fst-italic text-end">Last updated on <time class="fw-bold">{{ .Lastmod.Format "01/02/2006" }}</time> by {{ .GitInfo.AuthorName }}</p>
+<nav class="navbar navbar-expand-lg bg-light d-md-none" aria-label="Docs menu">
+  <div class="container-xxl">
+    <span>Docs menu</span>
+    <button class="navbar-toggler " type="button"
+            data-bs-toggle="collapse" data-bs-target="#docsMenuContent"
+            aria-controls="docsMenuContent" aria-expanded="false" aria-label="Open docs menu">
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-down-up"
+           viewBox="0 0 16 16">
+        <path fill-rule="evenodd"
+              d="M11.5 15a.5.5 0 0 0 .5-.5V2.707l3.146 3.147a.5.5 0 0 0 .708-.708l-4-4a.5.5 0 0 0-.708 0l-4 4a.5.5 0 1 0 .708.708L11 2.707V14.5a.5.5 0 0 0 .5.5zm-7-14a.5.5 0 0 1 .5.5v11.793l3.146-3.147a.5.5 0 0 1 .708.708l-4 4a.5.5 0 0 1-.708 0l-4-4a.5.5 0 0 1 .708-.708L4 13.293V1.5a.5.5 0 0 1 .5-.5z"/>
+      </svg>
+    </button>
+
+    <div class="collapse navbar-collapse" id="docsMenuContent">
+      {{ partial "sidebar/docs-menu.html" . }}
     </div>
   </div>
+</nav>
+
+<div class="container-xxl d-xxl-flex">
+  <aside class="d-none d-md-block pe-4 pt-4 flex-xxl-shrink-0">
+    {{ partial "sidebar/docs-menu.html" . }}
+  </aside>
+
+  <main class="px-3 pt-4 flex-xxl-grow-0">
+    <h1>{{ .Title }}</h1>
+    <div>
+      {{ .Content }}
+    </div>
+  </main>
+</div>
 {{ end }}
