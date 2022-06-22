@@ -21,6 +21,9 @@
           </button>
           <div id="section-{{ sha1 .Title }}" class="collapse show">
             <ul class="nav flex-column">
+              {{ if and .URL (not (eq .Page.WordCount 0)) }}
+              <li class="nav-item"><a class="nav-link" href="{{ .URL }}">Overview</a></li>
+              {{ end }}
               {{ range .Children -}}
               <li class="nav-item"><a class="nav-link" href="{{ .URL }}">{{ .Title }}</a></li>
               {{ end }}
