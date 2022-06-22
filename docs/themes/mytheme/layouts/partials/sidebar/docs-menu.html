@@ -4,7 +4,7 @@
   {{ range (index .Site.Menus $section) -}}
   <li class="nav-item">
     {{ if .HasChildren -}}
-    <button class="btn btn-toggle align-items-center rounded collapsed"
+    <button class="btn btn-toggle align-items-center rounded collapsed fw-bold border-0"
             data-bs-toggle="collapse" data-bs-target="#section-{{ sha1 .Title }}"
             aria-expanded="true">
       {{ .Title }}
@@ -14,7 +14,7 @@
         {{ range .Children -}}
         <li class="nav-item">
           {{ if .HasChildren -}}
-          <button class="btn btn-toggle align-items-center rounded collapsed"
+          <button class="btn btn-toggle align-items-center rounded collapsed fw-bold border-0"
                   data-bs-toggle="collapse" data-bs-target="#section-{{ sha1 .Title }}"
                   aria-expanded="true">
             {{ .Title }}
