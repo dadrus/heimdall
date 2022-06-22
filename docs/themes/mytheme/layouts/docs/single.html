@@ -8,7 +8,7 @@
       <div>
         {{ .Content }}
       </div>
-      <p class="small text-muted fst-italic text-end">Last updated on <time class="fw-bold">{{ .Lastmod.Format "01/02/2006" }}</time> by {{ .GitInfo.AuthorName }}</p>
+      <p class="small text-muted fst-italic text-end">Last updated on <time class="fw-bold">{{ .Lastmod.Format "01/02/2006" }}</time>{{ if .GitInfo -}} by {{ .GitInfo.AuthorName }}{{ end -}}</p>
     </div>
   </div>
 {{ end }}
