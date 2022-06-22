@@ -3,26 +3,39 @@
 <ul class="nav flex-column">
   {{ range (index .Site.Menus $section) -}}
   <li class="nav-item">
-    {{- if .URL -}}
-    <a class="nav-link" href="{{ .URL }}">{{ .Title }}</a>
+    {{ if .HasChildren -}}
+    <button class="btn btn-toggle align-items-center rounded collapsed"
+            data-bs-toggle="collapse" data-bs-target="#section-{{ sha1 .Title }}"
+            aria-expanded="true">
+      {{ .Title }}
+    </button>
+    <div id="section-{{ sha1 .Title }}" class="collapse show">
+      <ul class="nav flex-column">
+        {{ range .Children -}}
+        <li class="nav-item">
+          {{ if .HasChildren -}}
+          <button class="btn btn-toggle align-items-center rounded collapsed"
+                  data-bs-toggle="collapse" data-bs-target="#section-{{ sha1 .Title }}"
+                  aria-expanded="true">
+            {{ .Title }}
+          </button>
+          <div id="section-{{ sha1 .Title }}" class="collapse show">
+            <ul class="nav flex-column">
+              {{ range .Children -}}
+              <li class="nav-item"><a class="nav-link" href="{{ .URL }}">{{ .Title }}</a></li>
+              {{ end }}
+            </ul>
+          </div>
+          {{ else }}
+          <a class="nav-link" href="{{ .URL }}">{{ .Title }}</a>
+          {{ end }}
+        </li>
+        {{ end }}
+      </ul>
+    </div>
     {{- else -}}
     <span class="nav-link">{{- .Title -}}</span>
     {{- end -}}
-    {{ if .HasChildren -}}
-    <ul class="nav flex-column">
-      {{ range .Children -}}
-        <li class="nav-item"><a class="nav-link" href="{{ .URL }}">{{ .Title }}</a>
-          {{ if .HasChildren -}}
-          <ul class="nav flex-column">
-            {{ range .Children -}}
-            <li class="nav-item"><a class="nav-link" href="{{ .URL }}">{{ .Title }}</a></li>
-            {{ end }}
-          </ul>
-          {{ end }}
-        </li>
-      {{ end }}
-    </ul>
-    {{ end }}
   </li>
   {{ end }}
 </ul>
