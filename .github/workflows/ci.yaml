@@ -42,7 +42,6 @@ jobs:
 
   test:
     runs-on: ubuntu-20.04
-    needs: ["lint-code"]
     steps:
     - name: Set up Go
       uses: actions/setup-go@v3
