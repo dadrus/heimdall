@@ -20,18 +20,24 @@ jobs:
       - name: Setup Hugo
         uses: peaceiris/actions-hugo@v2
         with:
-          hugo-version: '0.100.1'
+          hugo-version: 0.100.1
           extended: true
       - name: Setup Node
         uses: actions/setup-node@v3
         with:
-          node-version: '17.7'
+          node-version: 17.7
+      - name: Setup ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: 2.7
+      - name: Install asciidoctor
+        run: gem install asciidoctor asciidoctor-diagram asciidoctor-html5s rouge
       - name: Install dependencies
         working-directory: ./docs
         run: npm install
       - name: Build documentation
         working-directory: ./docs
-        run: hugo -D --minify
+        run: hugo --minify
       - name: Deploy documentation
         uses: peaceiris/actions-gh-pages@v3
         if: github.ref == 'refs/heads/main'
