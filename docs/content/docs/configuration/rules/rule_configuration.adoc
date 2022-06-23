@@ -1,0 +1,172 @@
+---
+title: "Rule Definition"
+date: 2022-06-09T22:13:32+02:00
+draft: true
+menu:
+  docs:
+    weight: 20
+    parent: "Rules"
+---
+
+Rules are the heart of heimdall. These allow execution of arbitrary logic, required by your upstream service. This section describes everything related to the configuration of a particular rule and how can these be combined to rule sets, which can then be loaded by a link:{{< relref "providers.adoc" >}}[rule provider].
+
+== Rule Configuration
+
+A single rule consists of the following properties:
+
+* *`id`*: _string_ (mandatory)
++
+The unique identifier of a rule. It must be unique across all rules. To ensure this it is recommended to let the `id` include the name of your upstream service, as well as its purpose. E.g. `rule:my-service:public-api`.
+
+* *`url`*: _string_ (mandatory)
++
+Glob or Regex pattern of the endpoints of your upstream service, which this rule should apply to. Query parameters are ignored.
+
+* *`matching_strategy`*: _link:{{< relref "#matching-strategy" >}}[Matching Strategy]_ (optional)
++
+Which strategy to use for matching of the value, provided in the `url` property. Can be `glob` or `regex`. Defaults to `glob`.
+
+* *`methods`*: _string array_ (optional)
++
+Which HTTP methods (`GET`, `POST`, `PATCH`, etc) are allowed for the matched URL. If not specified, every request to that URL will result in `405 Method Not Allowed` response from Heimdall.
+
+* *`execute`*: _link:{{< relref "#regular-pipeline" >}}[Regular Pipeline]_ (mandatory)
++
+Which handlers to use to authenticate, authorize, hydrate (enrich) and mutate the subject of the request.
+
+* *`on_error`*: _link:{{< relref "#error-handler-pipeline" >}}[Error Handler Pipeline]_ (optional)
++
+Which error handlers to use if any of the handlers, defined in the `execute` property, fails. This property is optional only, if a link:{{< relref "default_rule.adoc" >}}[default rule] has been configured and contains an `on_error` definition.
+
+.An example rule
+====
+[source, yaml]
+----
+id: rule:foo:bar
+url: http://my-service.local/<**>
+methods:
+  - GET
+  - POST
+execute:
+  - authenticator: foo
+  - authorizer: bar
+  - hydrator: foo
+  - mutator: zab
+on_error:
+  - error_handler: foobar
+----
+====
+
+=== Matching Strategy
+
+Matching strategies are used to match the `url` patterns in rules and explicitly set by making use of `matching_strategy` rule property. Following strategies are available:
+
+* `regex` - to match `url` expressions by making use of regular expressions.
+* `glob` - to match `url` expressions by making use of glob expressions.
+
+Heimdall uses https://github.com/dlclark/regexp2[dlclark/regexp2] and https://github.com/gobwas/glob[gobwas/glob] to match `regex` expressions, respectively `glob` expressions. Head over to linked resources to get more insights about possible options for expression definitions.
+
+.Regular expressions patterns
+====
+* `\https://mydomain.com/` matches `\https://mydomain.com/` and doesn't match `\https://mydomain.com/foo` or `\https://mydomain.com`.
+* `<https|http>://mydomain.com/<.*>` matches `\https://mydomain.com/` and `\http://mydomain.com/foo`. Doesn't match `\https://other-domain.com/` or `\https://mydomain.com`.
+* `\http://mydomain.com/<[[:digit:]]+>` matches `\http://mydomain.com/123`, but doesn't match `\http://mydomain/abc`.
+* `\http://mydomain.com/<(?!protected).*>` matches `\http://mydomain.com/resource`, but doesn't match `\http://mydomain.com/protected`.
+====
+
+
+.Glob patterns
+====
+* `\https://mydomain.com/<m?n>` matches `\https://mydomain.com/man` and does not match `\http://mydomain.com/foo`.
+* `\https://mydomain.com/<{foo*,bar*}>` matches `\https://mydomain.com/foo` or `\https://mydomain.com/bar` and doesn't match `\https://mydomain.com/any`.
+====
+
+=== Regular Pipeline
+
+As described in the link:{{< relref "/docs/introduction/architecture.adoc" >}}[Architecture Overview], Heimdall's decision pipeline consists of multiple steps - at least consisting of link:{{< relref "/docs/configuration/pipeline/authenticators.adoc" >}}[authenticators] and link:{{< relref "/docs/configuration/pipeline/mutators.adoc" >}}[mutators]. The definition of such a pipeline happens as a list of required types with the corresponding ids (previously defined in Heimdall's link:{{< relref "/docs/configuration/pipeline/_index.adoc" >}}[Pipeline] configuration), in the following order:
+
+* List of link:{{< relref "/docs/configuration/pipeline/authenticators.adoc" >}}[authenticators] using `authenticator` as key, followed by the required authenticator `id`. Authenticators following the first defined in the list are used by Heimdall as fallback. That is, if first authenticator fails due to missing authentication data, second is executed, etc. Fallback is not used if an authenticator fails due to validation errors of the given authentication data. E.g. if an authenticator fails to validate the signature of a JWT token, the next authenticator in the list will not be executed. Instead, the entire pipeline will fail and lead to the execution of the link:{{< relref "#error-handler-pipeline" >}}[error handler pipeline]. This list is mandatory if no link:{{< relref "default_rule.adoc" >}}[default rule] is configured.
+* List of link:({{< relref "/docs/configuration/pipeline/hydrators.adoc" >}}[hydrators] and link:({{< relref "/docs/configuration/pipeline/authorizers.adoc" >}}[authorizers] in any order (optional). Can also be mixed. As with authenticators, the list definition happens using either `hydrator` or `authorizer` as key, followed by the required `id`. All handlers in this list are executed in the order, they are defined. If any of these fails, the entire pipeline fails, which leads to the execution of the link:{{< relref "#error-handler-pipeline" >}}[error handler pipeline]. This list is optional.
+* List link:{{< relref "/docs/configuration/pipeline/mutators.adoc" >}}[mutators] using `mutator` as key, followed by the required mutator `id`. All mutators in this list are executed in the order, they are defined. If any of these fails, the entire pipeline fails, which leads to the execution of the link:{{< relref "#error-handler-pipeline" >}}[error handler pipeline]. This list is mandatory if no link:{{< relref "default_rule.adoc" >}}[default rule] is configured.
+
+In all cases, parts of the used pipeline type configurations can be overridden if supported by the corresponding pipeline type. Overriding has no effect on the handler prototypes defined in Heimdall's link:{{< relref "/docs/configuration/pipeline/_index.adoc" >}}[Pipeline] configuration. Overrides are always local to the given rule. With other words, you can adjust your rule specific pipeline as you want without any side effects.
+
+.Complex pipeline
+====
+
+[source, yaml]
+----
+# list of authenticators
+- authenticator: foo
+- authenticator: bar
+  config:
+    subject: anon
+  # ... any further required authenticator
+# list of authorizers and hydrators in any order
+- hydrator: baz
+  config:
+    cache_ttl: 0s
+- authorizer: zab
+- hydrator: foo
+- hydrator: bar
+- authorizer: foo
+  config:
+    script: |
+      // some script logic deviating from the definition in the pipeline configuration.
+  # ... any further required authorizer or hydrator
+# list of mutators
+- mutator: foo
+- mutator: bar
+  config:
+    headers:
+    - X-User-ID: {{ quote .ID }}
+  # ... any further required mutators
+----
+
+This example uses 
+
+* two authenticators, with authenticator named `bar` being the fallback for the authenticator named `foo`. This fallback authenticator is obviously of type link:{{< relref "/docs/configuration/pipeline/authenticators.adoc#anonymous" >}}[anonymous] as it reconfigures the referenced prototype to use `anon` for subject id.
+* multiple hydrators and authorizers, with first hydrator having its cache disabled (`cache_ttl` set to 0s) and the last authorizer being of type link:{{< relref "/docs/configuration/pipeline/authorizers.adoc#local" >}}[local] as it reconfigures the referenced prototype to use a different authorization script.
+* two mutators, with the second one being obviously of type link:{{< relref "/docs/configuration/pipeline/mutators.adoc#header" >}}[header], as it defines a `X-User-ID` header set to the value of the subject id to be forwarded to the upstream service.
+====
+
+=== Error Handler Pipeline
+
+Compared to the link:{{< relref "#regular-pipeline" >}}[Regular Pipeline], the error handler pipeline is pretty simple. It is also a list of handlers, but all referenced handler types are link:{{< relref "/docs/configuration/pipeline/error_handlers.adoc" >}}[error handler types]. Thus, each entry in this list must have `error_handler` as key, followed by the `ìd` of the required error handler, previously defined in Heimdall's link:{{< relref "/docs/configuration/pipeline/_index.adoc" >}}[Pipeline] configuration. Error handlers are always executed as fallbacks. So, if the condition of the first error handler does not match, second is selected, if its condition matches, it is executed, otherwise the next one is selected, etc. If none of the conditions of the defined error handlers match, the link:{{< relref "/docs/configuration/pipeline/error_handlers.adoc#default" >}}[default error handler] is executed.
+
+As with the regular pipeline, parts of the used error handler configurations can be overridden if supported by the corresponding type. Overriding has no effect on the handler prototypes defined in Heimdall's link:{{< relref "/docs/configuration/pipeline/_index.adoc" >}}[Pipeline] configuration. Overrides are always local to the given rule. With other words, you can adjust your rule specific pipeline as you want without any side effects.
+
+.Two error handlers
+====
+[source, yaml]
+----
+- error_handler: foo
+- error_handler: bar
+  config:
+    when:
+      # rule specific conditions
+----
+====
+
+This example uses two error handlers, named `foo` and `bar`. `bar` will only be selected by Heimdall if `foo` 's error condition (defined in Heimdall's link:{{< relref "/docs/configuration/pipeline/_index.adoc" >}}[Pipeline] configuration) does not match. `bar` does also override the default condition, defined by the prototype to the one required, by the given rule.
+
+== Rule Set
+
+A rule set is just a list of rules, typically defined in a format specified by a particular link:({{< relref "providers.adoc" >}}[provider]. In its simplest case, a rule set does not require further configuration options and can look like shown below:
+
+.Rule set with two rules
+====
+[source, yaml]
+----
+- id: rule:1
+  url: https://my-service1.local/<**>
+  methods: [ "GET" ]
+  execute:
+    - authorizer: foobar
+- id: rule:2
+  url: https://my-service2.local/<**>
+  methods: [ "GET" ]
+  execute:
+    - authorizer: barfoo
+----
+====

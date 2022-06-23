@@ -10,7 +10,8 @@ menu:
 
 Below you can find possible contents (not exhaustive) for Heimdall's `config.yaml` file. Head over to configuration documentation to get detailed explanation.
 
-```yaml
+[source, yaml]
+----
 serve:
   api:
     host: 127.0.0.1
@@ -233,5 +234,5 @@ rules:
     file:
       src: test_rules.yaml
       watch: true
-```
+----
 

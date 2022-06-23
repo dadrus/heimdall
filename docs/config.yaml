@@ -6,6 +6,33 @@ relativeURLS: true
 sectionPagesMenu: main
 enableGitInfo: true
 
+security:
+  enableInlineShortcodes: false
+  exec:
+    allow: ['^dart-sass-embedded$', '^go$', '^npx$', '^postcss$', 'asciidoctor']
+    osEnv: ['(?i)^(PATH|PATHEXT|APPDATA|TMP|TEMP|TERM)$']
+
+  funcs:
+    getenv: ['^HUGO_']
+
+  http:
+    methods: ['(?i)GET|POST']
+    urls: ['.*']
+
+markup:
+  asciidocExt:
+    extensions: ['asciidoctor-diagram', 'asciidoctor-html5s']
+    backend: html5
+    trace: true
+    verbose: true
+    workingFolderCurrent: true
+    attributes:
+      source-highlighter: rouge
+      rouge-css: style
+      rouge-style: github
+      icons: font
+
+
 menu:
   main:
     - identifier: docs
