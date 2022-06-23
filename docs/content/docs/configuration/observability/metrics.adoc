@@ -14,7 +14,7 @@ As of today, heimdall only supports https://grafana.com/oss/prometheus/[Promethe
 
 Configuration for Prometheus can be adjusted in the `prometheus` property, which lives in the `metrics` property of heimdall's configuration and supports following properties.
 
-* *`host`*: _string_
+* *`host`*: _string_ (optional)
 +
 By making use of this property, you can specify the TCP/IP address on which heimdall should listen for connections from client applications. The entry `0.0.0.0` allows listening for all IPv4 addresses. `0.0.0.0` is also the default setting.
 +
@@ -28,7 +28,7 @@ metrics:
 ----
 ====
 
-* *`port`*: _integer_
+* *`port`*: _integer_ (optional)
 +
 By making use of this property, you can specify the TCP port the heimdall should listen on. Defaults to `9000`.
 +
@@ -42,7 +42,7 @@ metrics:
 ----
 ====
 
-* *`metrics_path`*: _string_
+* *`metrics_path`*: _string_ (optional)
 +
 By making use of this property, you can specify the path under which prometheus metrics information is made available. Defaults to `/metrics`.
 +

@@ -14,7 +14,7 @@ Heimdall logs concern everything that happens to Heimdall itself (startup, confi
 
 Logging configuration can be adjusted in the `log` property of heimdall's configuration and supports following properties.
 
-* *`format`*: _string_
+* *`format`*: _string_ (optional)
 +
 With `text` and `gelf` being the available formats. `text` is the default format. And `gelf` defines a a JSON format more or less adhering to https://docs.graylog.org/v1/docs/gelf[GELF].
 +
@@ -27,7 +27,7 @@ log:
 ----
 ====
 
-* *`level`*: _string_
+* *`level`*: _string_ (optional)
 +
 Following log levels are available: `debug`, `info`, `warn`, `error`, `fatal`, `panic` and `disabled`. The last one effectively disables logging. You usually do not want to do this. By default, the level is set to `error`.
 +

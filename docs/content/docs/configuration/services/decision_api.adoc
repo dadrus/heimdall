@@ -14,7 +14,7 @@ Decision API is one of the operating modes supported by Heimdall, used if you st
 
 The configuration for the Decision API can be adjusted in the `api` property, which lives in the `serve` property of heimdall's configuration and supports the following properties.
 
-* *`host`*: _string_
+* *`host`*: _string_ (optional)
 +
 By making use of this property, you can specify the TCP/IP address on which heimdall should listen for connections from client applications. The entry `0.0.0.0` allows listening for all IPv4 addresses. `0.0.0.0` is also the default setting.
 +
@@ -29,7 +29,7 @@ api:
 ----
 ====
 
-* *`port`*: _integer_
+* *`port`*: _integer_ (optional)
 +
 By making use of this property, you can specify the TCP port the heimdall should listen on. Defaults to `4456`.
 +
@@ -42,7 +42,7 @@ api:
 ----
 ====
 
-* *`verbose_errors`*: _boolean_
+* *`verbose_errors`*: _boolean_ (optional)
 +
 By making use of this property you can instruct Heimdall's default error handler to preserve error information and provide it in the response body to the caller. Defaults to `false`.
 +
@@ -67,7 +67,7 @@ api:
 ----
 ====
 
-* *`timeout`*: _link:{{< relref "configuration_types.adoc#timeout" >}}[Timeout]_
+* *`timeout`*: _link:{{< relref "configuration_types.adoc#timeout" >}}[Timeout]_ (optional)
 +
 Like written in the introduction of this section, Heimdall configures useful timeout defaults. You can however override this by making use of the `timeout` option and specifying the timeouts, you need.
 +
@@ -83,7 +83,7 @@ api:
 ----
 ====
 
-* *`cors`*: _link:{{< relref "configuration_types.adoc#cors" >}}[CORS]_
+* *`cors`*: _link:{{< relref "configuration_types.adoc#cors" >}}[CORS]_ (optional)
 +
 https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS[CORS] (Cross-Origin Resource Sharing) headers can be added and configured by making use of this option. This functionality allows for advanced security features to quickly be set. If CORS headers are set, then the Heimdall does not pass preflight requests to its decision pipeline, instead the response will be generated and sent back to the client directly.
 +
@@ -103,7 +103,7 @@ api:
 ----
 ====
 
-* *`tls`*: _link:{{< relref "configuration_types.adoc#tls" >}}[TLS]_
+* *`tls`*: _link:{{< relref "configuration_types.adoc#tls" >}}[TLS]_ (optional)
 +
 By default, the Decision API accepts HTTP requests. Depending on your deployment scenario, you could require Heimdall to accept HTTPS requests only. You can do so by making use of this option.
 +
@@ -118,7 +118,7 @@ api:
 ----
 ====
 
-* *`trusted_proxies`*: _string array_
+* *`trusted_proxies`*: _string array_ (optional)
 +
 The usage of the Decision API makes only sense, if operated behind some sort of proxy, like API Gateway, etc. In such cases certain header information may be sent to Heimdall using special `X-Forwarded-*` headers or the https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Forwarded[Forwarded] header. For example, the `Host` HTTP header is usually used to return the requested host. But when you’re behind a proxy, the actual host may be stored in an `X-Forwarded-Host` header, which could, however, also be spoofed.
 +

@@ -19,7 +19,7 @@ Following tracing backends are currently supported:
 
 By default, tracing is disabled, but can be configured in the `tracing` property of heimdall's configuration and supports following properties.
 
-* *`provider`*: _string_
+* *`provider`*: _string_ (mandatory)
 +
 By making use of this property, you can configure heimdall to enable tracing and use one of the supported tracing providers:
 +
@@ -41,7 +41,7 @@ tracing:
 By default, Jaeger client assumes the agent is running on the same host. You can however, as mentioned above, change it by making use of `JAEGER_AGENT_HOST` environment variable.
 ====
 
-* *`service_name`*: _string_
+* *`service_name`*: _string_ (optional)
 +
 By setting this property, you can adjust the service name, appearing for Heimdall for your tracing backend. Defaults to `heimdall`. You can also override this value by making use of tracer specific configuration via environment variables.
 +
