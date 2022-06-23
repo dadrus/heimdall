@@ -16,7 +16,7 @@ The following section describes the available error handler types in more detail
 
 ### Default
 
-This error handler is always there and is executed if no other error handler is responsible for the handling of an error. Actually, there is no need to explicitly configure it. The only exception is to allow overriding the [default rule]({{< relref "../rules/_index.md#default-rule" >}})'s error handler chain in a rule for performance reasons (if configured error handlers in the default rule should not be considered). This error handler type doesn't have any configuration options.
+This error handler is always there and is executed if no other error handler is responsible for the handling of an error. Actually, there is no need to explicitly configure it. The only exception is to allow overriding the [default rule]({{< relref "../rules/_index.adoc#default-rule" >}})'s error handler chain in a rule for performance reasons (if configured error handlers in the default rule should not be considered). This error handler type doesn't have any configuration options.
 
 To enable the usage of this error handler, you have to set the `type` property to `default`.
 

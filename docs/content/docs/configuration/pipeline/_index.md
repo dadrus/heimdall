@@ -64,7 +64,7 @@ pipeline:
 
 The above pipeline configures two instances of an imaginary authenticator of a specific type `bar` available via ids `foo` and `zab`, as well as two instances of an imaginary authenticator of a specific type `bla` available via ids `baz` and `oof`. The `baz` and `oof` authenticators are different, as they are configured differently, but `foo` and `zab` authenticators do not have a configuration. So, they behave the same way and there is actually no need to define two instances of them.
 
-In simplest case a rule will just reuse a handler. In more complex cases a rule can reconfigure parts of it (More about rules configuration can be found [here]({{< relref "../rules/_index.md" >}})). Which parts can be reconfigured are handler specific and described in the documentation of each handler.
+In simplest case a rule will just reuse a handler. In more complex cases a rule can reconfigure parts of it (More about rules configuration can be found [here]({{< relref "../rules/_index.adoc" >}})). Which parts can be reconfigured are handler specific and described in the documentation of each handler.
 
 Here is an example which configures a couple of prototypes:
 

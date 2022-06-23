@@ -1,0 +1,42 @@
+---
+title: "Logging"
+date: 2022-06-09T18:56:07+02:00
+draft: false
+menu:
+  docs:
+    weight: 10
+    parent: "Observability"
+---
+
+Heimdall logs concern everything that happens to Heimdall itself (startup, configuration, events, shutdown, and so on). Logs are written to stdout by default in text format.
+
+== Configuration
+
+Logging configuration can be adjusted in the `log` property of heimdall's configuration and supports following properties.
+
+* *`format`*: _string_
++
+With `text` and `gelf` being the available formats. `text` is the default format. And `gelf` defines a a JSON format more or less adhering to https://docs.graylog.org/v1/docs/gelf[GELF].
++
+.Configuring logging to emit logs using GELD format.
+====
+[source, yaml]
+----
+log:
+  level: debug
+----
+====
+
+* *`level`*: _string_
++
+Following log levels are available: `debug`, `info`, `warn`, `error`, `fatal`, `panic` and `disabled`. The last one effectively disables logging. You usually do not want to do this. By default, the level is set to `error`.
++
+.Configuring logging to emit logs in debug level.
+====
+[source, yaml]
+----
+log:
+  level: debug
+----
+====
+
