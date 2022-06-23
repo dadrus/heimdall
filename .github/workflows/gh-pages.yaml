@@ -37,7 +37,7 @@ jobs:
         run: npm install
       - name: Build documentation
         working-directory: ./docs
-        run: hugo --minify
+        run: hugo --minify -d ./public
       - name: Deploy documentation
         uses: peaceiris/actions-gh-pages@v3
         if: github.ref == 'refs/heads/main'
