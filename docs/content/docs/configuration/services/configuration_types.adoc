@@ -12,15 +12,15 @@ menu:
 
 Following configuration options are supported:
 
-* *`read`*: _link:{{< relref "#duration" >}}[Duration]_ (optional)
+* *`read`*: _link:{{< relref "#_duration" >}}[Duration]_ (optional)
 +
 The amount of time allowed to read the full request including body. Defaults to 5 seconds.
 
-* *`write`*: _link:{{< relref "#duration" >}}[Duration]_ (optional)
+* *`write`*: _link:{{< relref "#_duration" >}}[Duration]_ (optional)
 +
 The maximum duration before timing out writes of the response. Defaults to 10 seconds.
 
-* *`idle`*: _link:{{< relref "#duration" >}}[Duration]_ (optional)
+* *`idle`*: _link:{{< relref "#_duration" >}}[Duration]_ (optional)
 +
 The maximum amount of time to wait for the next request when keep-alive is enabled. If `ìdle` is `0`, the value of `read` timeout is used. Defaults to 2 minutes.
 
@@ -64,7 +64,7 @@ List of request headers that can be used when making the actual request.
 +
 Indicates whether the response to the request can be exposed when the credentials flag is true. When used as part of a response to a preflight request, this indicates whether the actual request can be made using credentials. Defaults to `false` if not set, but any of the other CORS options are configured.
 
-* *`max_age`*: _link:{{< relref "#duration" >}}[Duration]_ (optional)
+* *`max_age`*: _link:{{< relref "#_duration" >}}[Duration]_ (optional)
 +
 Indicates how long the results of a preflight request can be cached. Defaults to 0 seconds if not set, but any of the other CORS options are configured.
 

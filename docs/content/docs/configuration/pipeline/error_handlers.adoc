@@ -16,7 +16,7 @@ The following section describes the available error handler types in more detail
 
 === Default
 
-This error handler is always there and is executed if no other error handler is responsible for the handling of an error. Actually, there is no need to explicitly configure it. The only exception is to allow overriding the link:{{< relref "../rules/_index.adoc#default-rule" >}}[default rule]'s error handler chain in a rule for performance reasons (if configured error handlers in the default rule should not be considered). This error handler type doesn't have any configuration options.
+This error handler is always there and is executed if no other error handler is responsible for the handling of an error. Actually, there is no need to explicitly configure it. The only exception is to allow overriding the link:{{< relref "../rules/_index.adoc#_default_rule" >}}[default rule]'s error handler chain in a rule for performance reasons (if configured error handlers in the default rule should not be considered). This error handler type doesn't have any configuration options.
 
 To enable the usage of this error handler, you have to set the `type` property to `default`.
 
@@ -51,7 +51,7 @@ If you want to return the user back to the url, Heimdall was handling when this 
 +
 The code to be used for the redirect. Defaults to `302 Found`. Heimdall does not check the configured code for HTTP redirect validity!
 
-* *`when`*: _link:{{< relref "configuration_types.adoc#error-condition" >}}[Error Condition] array_ (mandatory, overridable)
+* *`when`*: _link:{{< relref "configuration_types.adoc#_error_condition" >}}[Error Condition] array_ (mandatory, overridable)
 +
 Conditions, which must hold true for this error handler to execute. The defined conditions are evaluated using a boolean or. So at least one of the defined conditions must evaluate to `true` to have this error handler executed.
 
@@ -107,7 +107,7 @@ config:
 
 === WWW-Authenticate
 
-This error handler responds with HTTP `401 Unauthorized` and a `WWW-Authenticate` HTTP header set. As of now, this error handler is the only one error handler, which transforms Heimdall into an authentication system, a very simple one though ;). By configuring this error handler you can implement the https://datatracker.ietf.org/doc/html/rfc7617[Basic HTTP Authentication Scheme] by also making use of the link:{{< relref "authenticators.adoc#basic-auth" >}}[Basic Auth] authenticator. Without that authenticator, the usage of this error handler does actually not make any sense.
+This error handler responds with HTTP `401 Unauthorized` and a `WWW-Authenticate` HTTP header set. As of now, this error handler is the only one error handler, which transforms Heimdall into an authentication system, a very simple one though ;). By configuring this error handler you can implement the https://datatracker.ietf.org/doc/html/rfc7617[Basic HTTP Authentication Scheme] by also making use of the link:{{< relref "authenticators.adoc#_basic_auth" >}}[Basic Auth] authenticator. Without that authenticator, the usage of this error handler does actually not make any sense.
 
 To enable the usage of this hydrator, you have to set the `type` property to `www_authenticate`.
 
@@ -117,7 +117,7 @@ Configuration using the `config` property is mandatory. Following properties are
 +
 The "realm" according to https://datatracker.ietf.org/doc/html/rfc7235#section-2.2[RFC 7235, section 2.2]. Defaults to "Please authenticate".
 
-* *`when`*: _link:{{< relref "configuration_types.adoc#error-condition" >}}[Error Condition] array_ (optional, overridable)
+* *`when`*: _link:{{< relref "configuration_types.adoc#_error_condition" >}}[Error Condition] array_ (optional, overridable)
 +
 Conditions, which must hold true for this error handler to execute. The defined conditions are evaluated using a boolean or. So at least one of the defined conditions must evaluate to `true` to have this error handler executed.
 

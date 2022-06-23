@@ -7,7 +7,7 @@ menu:
     parent: "Guides"
 ---
 
-https://doc.traefik.io/traefik/[Traefik Proxy] is a modern HTTP proxy and load balancer for microservices, heimdall can be integrated with via the https://doc.traefik.io/traefik/middlewares/http/forwardauth/[ForwardAuth Middleware] by making use of the [Decision API]({{< relref "/docs/introduction/architecture.adoc#decision-api" >}}). In such setup, traefik delegates authentication and authorization to heimdall. If heimdall answers with a 2XX code, traefik grants access and forwards the original request to the upstream service. Otherwise, the response  from heimdall is returned to the client.
+https://doc.traefik.io/traefik/[Traefik Proxy] is a modern HTTP proxy and load balancer for microservices, heimdall can be integrated with via the https://doc.traefik.io/traefik/middlewares/http/forwardauth/[ForwardAuth Middleware] by making use of the [Decision API]({{< relref "/docs/introduction/architecture.adoc#_decision_api" >}}). In such setup, traefik delegates authentication and authorization to heimdall. If heimdall answers with a 2XX code, traefik grants access and forwards the original request to the upstream service. Otherwise, the response  from heimdall is returned to the client.
 
 To achieve this,
 
@@ -18,7 +18,7 @@ To achieve this,
 
 [IMPORTANT]
 ====
-Traefik makes use of `X-Forwarded-*` HTTP headers to forward the HTTP method, protocol, host, etc. to the ForwardAuth middleware. These headers can be spoofed, if no caution is taken. To ensure, heimdall accepts such headers only from trusted sources, you should consider setting [trusted proxies]({{< relref "/docs/configuration/services/decision_api.adoc#trusted-proxies" >}}) in heimdall's decision api configuration.
+Traefik makes use of `X-Forwarded-*` HTTP headers to forward the HTTP method, protocol, host, etc. to the ForwardAuth middleware. These headers can be spoofed, if no caution is taken. To ensure, heimdall accepts such headers only from trusted sources, you should consider setting [trusted proxies]({{< relref "/docs/configuration/services/decision_api.adoc#_trusted_proxies" >}}) in heimdall's decision api configuration.
 ====
 
 .Using Docker labels

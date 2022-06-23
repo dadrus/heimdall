@@ -12,7 +12,7 @@ menu:
 
 This type enables configuration of required token and claim assertions. Depending on the object type (JWT or introspection response), the assertions apply to different parts of such objects.
 
-* *`scopes`*: _link:{{< relref "#scopes-matcher" >}}[Scopes Matcher]_ (optional)
+* *`scopes`*: _link:{{< relref "#_scopes_matcher" >}}[Scopes Matcher]_ (optional)
 +
 Required scopes given to the client.
 
@@ -28,7 +28,7 @@ Issuers to trust. At least one issuer must be configured.
 +
 Algorithms, which are trusted (according to https://datatracker.ietf.org/doc/html/rfc7518[RFC 7518]). Defaults to the following list: ES256, ES384, ES512, PS256, PS384, PS512.
 
-* *`validity_leeway`* _link:{{< relref "#duration" >}}[Duration]_ (optional)
+* *`validity_leeway`* _link:{{< relref "#_duration" >}}[Duration]_ (optional)
 +
 The time leeway to consider while verifying the `iat`, `exp` and the `nbf`. Defaults to 10 seconds.
 
@@ -202,7 +202,7 @@ config:
 
 === Client Credentials Strategy
 
-This strategy implements the [OAuth2 Client Credentials Grant Flow](https://datatracker.ietf.org/doc/html/rfc6749#section-4.4) to obtain an access token expected by the endpoint. Heimdall caches the received access token.
+This strategy implements the https://datatracker.ietf.org/doc/html/rfc6749#section-4.4[OAuth2 Client Credentials Grant Flow] to obtain an access token expected by the endpoint. Heimdall caches the received access token.
 
 `type` must be set to `client_credentials`. `config` supports the following properties:
 
@@ -257,11 +257,11 @@ The actual url of the endpoint.
 +
 The HTTP method to use while communicating with the endpoint. If not set `POST` is used.
 
-* *`retry`* _link:{{< relref "#retry" >}}[Retry]_ (optional)
+* *`retry`* _link:{{< relref "#_retry" >}}[Retry]_ (optional)
 +
 What to do if the communication fails. If not configured, no retry attempts are done.
 
-* *`auth`* _link:{{< relref "#authentication-strategy" >}}:[Authentication Strategy]_ (optional)
+* *`auth`* _link:{{< relref "#_authentication_strategy" >}}:[Authentication Strategy]_ (optional)
 +
 Authentication strategy to apply, if the endpoint requires authentication.
 
@@ -297,7 +297,7 @@ endpoint:
 
 This type supports definition of conditions, under which an error handler should execute its logic. Such conditions are required for all error handlers, but the default one. All condition elements are evaluated using boolean `and`. Following conditions are possible:
 
-* *`error`*: _link:{{< relref "#error-type" >}}[Error Type] array_ (mandatory)
+* *`error`*: _link:{{< relref "#_error_type" >}}[Error Type] array_ (mandatory)
 +
 A list with error types to match. Configured entries are evaluated using a boolean `or` logic.
 
@@ -358,7 +358,7 @@ This condition evaluate to true, if the encountered error was `authentication_er
 
 == Error Type
 
-Heimdall defines a couple of error types, which it uses to signal errors. Some of them are available for configuring your link:{{< relref "#error-condition" >}}[Error Conditions].
+Heimdall defines a couple of error types, which it uses to signal errors. Some of them are available for configuring your link:{{< relref "#_error_condition" >}}[Error Conditions].
 
 Following types are available:
 
@@ -371,11 +371,11 @@ Following types are available:
 
 Implements an exponential backoff strategy for endpoint communication. It increases the backoff exponentially by multiplying the `max_delay` with 2^(attempt count)
 
-* *`give_up_after`*: link:{{< relref "#duration" >}}[Duration] (optional)
+* *`give_up_after`*: link:{{< relref "#_duration" >}}[Duration] (optional)
 +
 Sets an upper bound on the maximum time to wait between two requests. Default to 0, which means no upper bound.
 
-* *`max_delay`*: _link:{{< relref "#duration" >}}[Duration] (mandatory)
+* *`max_delay`*: _link:{{< relref "#_duration" >}}[Duration] (mandatory)
 +
 The initial backoff.
 
@@ -393,7 +393,7 @@ retry:
 
 == Scopes Matcher
 
-Scopes matcher is a configuration type allowing configuration of different strategies to match required scopes. In its simplest shape it can be just an array of strings (implemented by the link:{{< relref "#exact">}}[Exact]) scope matcher. To cover many use cases, different strategies are available and described in the following sections.
+Scopes matcher is a configuration type allowing configuration of different strategies to match required scopes. In its simplest shape it can be just an array of strings (implemented by the link:{{< relref "#_exact">}}[Exact]) scope matcher. To cover many use cases, different strategies are available and described in the following sections.
 
 Regardless of the strategy, each matcher can explicitly be configured and supports the following configuration properties:
 
@@ -410,7 +410,7 @@ This the simplest matcher and is automatically selected, if just an array of str
 - bar
 ----
 
-However, as written in the link:{{< relref "#scopes-matcher">}}[Scopes Matcher] section, it can also explicitly be selected by setting `matching_strategy` to `exact` and defining the required scopes in the `values` property.
+However, as written in the link:{{< relref "#_scopes_matcher">}}[Scopes Matcher] section, it can also explicitly be selected by setting `matching_strategy` to `exact` and defining the required scopes in the `values` property.
 
 .Essentially same configurations
 ====
@@ -479,7 +479,7 @@ would not match.
 
 === Wildcard
 
-This matcher enables matching scopes using wildcards. It goes beyond the link:{{< relref "#hierarchic">}}[Hierarchic] scope matcher by enabling usage of wildcards.
+This matcher enables matching scopes using wildcards. It goes beyond the link:{{< relref "#_hierarchic">}}[Hierarchic] scope matcher by enabling usage of wildcards.
 
 This matcher can only be used by explicitly setting the `matching_strategy` to `wildcard` and defining the required patterns in the `values` property.
 

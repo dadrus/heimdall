@@ -24,7 +24,7 @@ To enable the usage of this hydrator, you have to set the `type` property to `ge
 
 Configuration using the `config` property is mandatory. Following properties are available:
 
-* *`endpoint`*: _link:{{< relref "configuration_types.adoc#endpoint">}}[Endpoint]_ (mandatory, not overridable)
+* *`endpoint`*: _link:{{< relref "configuration_types.adoc#_endpoint">}}[Endpoint]_ (mandatory, not overridable)
 +
 The API of the service providing additional attributes about the authenticated user. At least the `url` must be configured. This hydrator allows templating of the url. By default, this authorizer will use HTTP `POST` to send the rendered payload to this endpoint. You can override this behavior by configuring `method`. Depending on the API requirements you might need to configure further properties, like headers, etc.
 
@@ -38,9 +38,9 @@ If the API requires any cookies from the request to Heimdall, you can forward th
 
 * *`payload`*: _string_ (optional, overridable)
 +
-Your template with definitions required to communicate to the API. See also link:{{< relref "_index.adoc#templating" >}}[Templating].
+Your template with definitions required to communicate to the API. See also link:{{< relref "_index.adoc#_templating" >}}[Templating].
 
-* *`cache_ttl`*: _link:{{< relref "configuration_types.adoc#duration" >}}[Duration]_ (optional, overridable)
+* *`cache_ttl`*: _link:{{< relref "configuration_types.adoc#_duration" >}}[Duration]_ (optional, overridable)
 +
 Allows caching of the API responses. Defaults to 10 seconds. The cache key is calculated from the entire configuration of the hydrator instance and the available information about the current subject.
 

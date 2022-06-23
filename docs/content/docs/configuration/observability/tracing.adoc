@@ -15,7 +15,7 @@ Following tracing backends are currently supported:
 * https://www.jaegertracing.io/[Jaeger]
 * https://www.instana.com/[Instana]
 
-## Configuration
+== Configuration
 
 By default, tracing is disabled, but can be configured in the `tracing` property of heimdall's configuration and supports following properties.
 

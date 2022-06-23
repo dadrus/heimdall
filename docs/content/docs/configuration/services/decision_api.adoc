@@ -67,7 +67,7 @@ api:
 ----
 ====
 
-* *`timeout`*: _link:{{< relref "configuration_types.adoc#timeout" >}}[Timeout]_ (optional)
+* *`timeout`*: _link:{{< relref "configuration_types.adoc#_timeout" >}}[Timeout]_ (optional)
 +
 Like written in the introduction of this section, Heimdall configures useful timeout defaults. You can however override this by making use of the `timeout` option and specifying the timeouts, you need.
 +
@@ -83,7 +83,7 @@ api:
 ----
 ====
 
-* *`cors`*: _link:{{< relref "configuration_types.adoc#cors" >}}[CORS]_ (optional)
+* *`cors`*: _link:{{< relref "configuration_types.adoc#_cors" >}}[CORS]_ (optional)
 +
 https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS[CORS] (Cross-Origin Resource Sharing) headers can be added and configured by making use of this option. This functionality allows for advanced security features to quickly be set. If CORS headers are set, then the Heimdall does not pass preflight requests to its decision pipeline, instead the response will be generated and sent back to the client directly.
 +
@@ -103,7 +103,7 @@ api:
 ----
 ====
 
-* *`tls`*: _link:{{< relref "configuration_types.adoc#tls" >}}[TLS]_ (optional)
+* *`tls`*: _link:{{< relref "configuration_types.adoc#_tls" >}}[TLS]_ (optional)
 +
 By default, the Decision API accepts HTTP requests. Depending on your deployment scenario, you could require Heimdall to accept HTTPS requests only. You can do so by making use of this option.
 +
