@@ -22,11 +22,13 @@ To enable the usage of this error handler, you have to set the `type` property t
 
 .Configuring Default error handler to enable referencing it from rules
 ====
+
 [source, yaml]
 ----
 id: foo
 type: default
 ----
+
 ====
 
 === Redirect
@@ -99,6 +101,7 @@ config:
         Accept:
           - text/html
 ----
+
 ====
 
 
@@ -136,4 +139,5 @@ config:
         Accept:
           - text/html
 ----
-=====
+
+====

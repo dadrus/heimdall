@@ -1,7 +1,7 @@
 ---
 title: "Install from Source"
 date: 2022-06-09T15:54:18+02:00
-draft: true
+draft: false
 menu:
   docs:
     parent: Introduction
