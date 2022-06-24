@@ -28,3 +28,70 @@ footer {
     }
   }
 }
+
+.imageblock {
+  .title {
+    font-weight: bold;
+  }
+  img {
+    height: auto !important;
+    max-width: 100% !important;
+  }
+
+  margin-bottom: 1.5rem;
+}
+
+h2 {
+  margin-top: 3rem;
+  margin-bottom: 1rem;
+  font-size: 2rem;
+}
+
+h3 {
+  margin-top: 2rem;
+  margin-bottom: 1rem;
+  font-size: 1.5rem;
+}
+
+.paragraph {
+  p {
+    line-height: 1.7;
+  }
+}
+
+.exampleblock {
+  margin: 2rem 0;
+
+  .title {
+    font-weight: bold;
+    margin-bottom: 0.5rem;
+  }
+}
+
+.listingblock {
+  pre {
+    padding: .75rem;
+  }
+}
+
+p {
+  code {
+    //background-color: #f8f8f8;
+    //padding: .2rem .5rem;
+    color: #f92672;//#6610f2; //#f92672;
+  }
+}
+
+.ulist, .olist {
+  li {
+    p {
+      margin-bottom: .5rem;
+    }
+    &:last-of-type {
+      p {
+        margin-bottom: 0;
+      }
+    }
+  }
+}
+
