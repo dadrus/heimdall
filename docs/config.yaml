@@ -29,7 +29,7 @@ markup:
     attributes:
       source-highlighter: rouge
       rouge-css: style
-      rouge-style: github
+      rouge-style: monokai.sublime
       icons: font
 
 
