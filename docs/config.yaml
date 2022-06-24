@@ -37,7 +37,7 @@ menu:
   main:
     - identifier: docs
       title: Docs
-      url: docs/introduction/architecture
+      url: docs/introduction/about
       weight: 100
     - identifier: api
       title: API
