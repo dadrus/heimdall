@@ -5,5 +5,166 @@ draft: false
 menu:
   docs:
     parent: "Introduction"
-    weight: 10
+    weight: 20
 ---
+
+As described in the link:{{< relref "about.adoc" >}}[About] section, Heimdall authenticates and authorizes incoming HTTP requests, rejecting unauthenticated or unauthorized ones, as well as enriches the valid requests with further information and transforms resulting subject information to a format, required by the upstream services.
+
+To support different deployment scenarios, it supports two operation modes:
+
+* as a link:{{< relref "#_proxy_mode" >}}[Reverse Proxy] in front of your upstream API or web server, or
+* as a link:{{< relref "#_decision_api_mode" >}}[Decision API], integrated with your API Gateway (Kong, NGNIX, Envoy, Traefik, etc)
+
+These are described in detail below.
+
+== Operation Modes
+
+=== Proxy Mode
+
+[[_fig_heimdall_proxy_deployment]]
+.Proxy Deployment
+[ditaa, format=svg, scale=0.7]
+....
+                                                                          +------------------------+
+                                                                          |     Backend Service    |
+                                                                          |                        |
++------------+                    +---------------------+                 |  +------------------+  |
+|            |                    |                     |                 |  |                  |  |
+|   Client   |                    |                     |                 |  |    Business      |  |
+|            |----- request ----->|      Heimdall       |---- request --->|  |                  |  |
+|            |                    |                     |     + header    |  |    Logic         |  |
+|            |                    |                     |                 |  |                  |  |
++------------+                    +---------------------+                 |  +------------------+  |
+                                             :                            |                        |
+                                        uses |                            +------------------------+
+                                             v                                         |
+                                      -----------------+                               |
+                                    -----------------+ |                               |
+                                  +----------------+ | |                               :
+                                  |                | | |<----=-- defined by>  ---------+
+                                  |    pipeline    | | |
+                                  |                | | |
+                                  |   definitions  | | +
+                                  |                | +
+                                  +----------------+
+....
+
+In this mode heimdall forwards requests to the upstream server, if these satisfy the conditions defined in pipeline definition rules. Otherwise, heimdall returns an error to the client. If the pipeline execution was successful, it also forwards additional headers, specified in the used pipeline to the upstream service.
+
+.Reverse Proxy Example
+====
+Imagine following request hits Heimdall
+
+[source, bash]
+----
+GET /my-service/api HTTP/1.1
+Host: heimdall:4455
+
+Some payload
+----
+
+And there is a rule, which defines a pipeline, allowing anonymous requests and setting a header with subject id set to `anonymous` like this
+
+[source, yaml]
+----
+id: rule:my-service:anonymous-api-access
+url: /my-service/api
+for: https://my-backend-service:8888
+methods:
+  - GET
+execute:
+  - authenticator: anonymous-authn
+  - mutator: id-header
+----
+
+Then the request will be forwarded as follows:
+
+[source, bash]
+----
+GET /my-service/api HTTP/1.1
+Host: my-backend-service:8888
+X-User-ID: anonymous
+
+Some payload
+----
+
+====
+
+=== Decision API Mode
+
+[[_fig_heimdall_decision_api_deployment]]
+.Decision API Deployment
+[ditaa, format=svg, scale=0.7]
+....
+                                                                          +------------------------+
+                                                                          |     Backend Service    |
+                                                                          |                        |
++------------+                    +---------------------+                 |  +------------------+  |
+|            |                    |                     |                 |  |                  |  |
+|   Client   |                    |                     |                 |  |    Business      |  |
+|            |----- request ----->|      API Gateway    |---- request --->|  |                  |  |
+|            |                    |                     |     + header    |  |    Logic         |  |
+|            |                    |                     |                 |  |                  |  |
++------------+                    +---------------------+                 |  +------------------+  |
+                                         |       ^                        |                        |
+                                         |       |                        +------------------------+
+                           ok to forward |  ok / not ok                                |
+                           request?      |   + header                                  |
+                                         |       |                                     |
+                                         |       |                                     |
+                                         v       |                                     |
+                                  +---------------------+                              |
+                                  |                     |                              |
+                                  |       Heimdall      |                              |
+                                  |                     |                              |
+                                  +---------------------+                              |
+                                             |                                         |
+                                        uses :                                         |
+                                             v                                         |
+                                      -----------------+                               |
+                                    -----------------+ |                               |
+                                  +----------------+ | |                               :
+                                  |                | | |<----=-- defined by>  ---------+
+                                  |    pipeline    | | |
+                                  |                | | |
+                                  |   definitions  | | +
+                                  |                | +
+                                  +----------------+
+....
+
+In this mode, you can integrate heimdall with most probably all modern API gateways and reverse proxies as a so-called "authentication middleware". Here the reverse proxy, respectively API gateway integrating with heimdall, will forward requests to heimdall by making use of its `decisions` endpoint for authentication and authorization purposes. As in the link:{{< relref "#_proxy_mode" >}}[Reverse Proxy] mode, heimdall will check if these satisfy the conditions defined in pipeline definition rules. Otherwise, heimdall returns an error to its client (here API gateway/reverse proxy). If the pipeline execution was successful, it also responds to the API gateway/reverse proxy with additional headers, specified in the used pipeline, which can then be forwarded by it to the upstream service.
+
+.Decision API Example
+====
+Imagine following request hits Heimdall (sent to it by an API gateway)
+
+[source, bash]
+----
+GET decisions/my-service/api HTTP/1.1
+Host: heimdall:4455
+
+Some payload
+----
+
+And there is a rule, which defines a pipeline, allowing anonymous requests and setting a header with subject id set to `anonymous` like this
+
+[source, yaml]
+----
+id: rule:my-service:anonymous-api-access
+url: /my-service/api
+methods:
+  - GET
+execute:
+  - authenticator: anonymous-authn
+  - mutator: id-header
+----
+
+Then heimdall will respond with:
+
+[source, bash]
+----
+HTTP/1.1 202 Accepted
+X-User-ID: anonymous
+----
+
+====

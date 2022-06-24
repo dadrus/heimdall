@@ -5,7 +5,7 @@ draft: false
 menu:
   docs:
     parent: Introduction
-    weight: 20
+    weight: 30
   main:
     parent: get_started
 ---
