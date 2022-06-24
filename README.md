@@ -1,6 +1,6 @@
 # Heimdall
-[![CI](https://github.com/dadrus/heimdall/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/dadrus/heimdall/actions/workflows/ci.yml)
-[![Security-Scan](https://github.com/dadrus/heimdall/actions/workflows/trivy.yml/badge.svg)](https://github.com/dadrus/heimdall/actions/workflows/trivy.yml)
+[![CI](https://github.com/dadrus/heimdall/actions/workflows/ci.yaml/badge.svg?branch=main)](https://github.com/dadrus/heimdall/actions/workflows/ci.yml)
+[![Security-Scan](https://github.com/dadrus/heimdall/actions/workflows/trivy.yaml/badge.svg)](https://github.com/dadrus/heimdall/actions/workflows/trivy.yml)
 [![codecov](https://codecov.io/gh/dadrus/heimdall/branch/main/graph/badge.svg)](https://codecov.io/gh/dadrus/heimdall)
 [![Go Report Card](https://goreportcard.com/badge/github.com/dadrus/heimdall)](https://goreportcard.com/report/github.com/dadrus/heimdall) 
 [![License](https://img.shields.io/github/license/dadrus/heimdall)](https://github.com/dadrus/heimdall/blob/master/LICENSE)
