@@ -27,7 +27,7 @@ jobs:
         with:
           node-version: 17.7
       - name: Install mermaid
-        run: npm install @mermaid-js/mermaid-cli
+        run: npm install -g @mermaid-js/mermaid-cli
       - name: Setup ruby
         uses: ruby/setup-ruby@v1
         with:
