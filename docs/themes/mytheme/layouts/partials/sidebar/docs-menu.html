@@ -37,7 +37,7 @@
       </ul>
     </div>
     {{- else -}}
-    <span class="nav-link">{{- .Title -}}</span>
+    <a class="nav-link"  href="{{ .URL }}">{{- .Title -}}</a>
     {{- end -}}
   </li>
   {{ end }}
