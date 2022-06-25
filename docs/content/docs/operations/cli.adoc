@@ -9,7 +9,7 @@ menu:
     parent: "Operations"
 ---
 
-Heimdall's Command Line
+Heimdall's Command Line Interface
 
 == General
 
