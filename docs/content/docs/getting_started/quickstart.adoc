@@ -1,14 +1,16 @@
 ---
-title: "Install from Source"
-date: 2022-06-09T15:54:18+02:00
+title: "Quickstart"
+date: 2022-06-08T20:43:27+02:00
 draft: false
 menu:
   docs:
-    parent: Introduction
-    weight: 50
+    parent: "Getting Started"
+    weight: 20
+  main:
+    parent: get_started
 ---
 
-This document covers how to build heimdall from its source code as well as how to run heimdall using a minimum configuration. If you want to try out a working scenario, head over to link:{{< relref "quickstart.adoc" >}}[Quick Start].
+This document describes a very simple use case.
 
 == Prerequisites
 
@@ -50,6 +52,9 @@ heimdall can be configured via environment variables, as well as using a configu
 
 [source, yaml]
 ----
+log:
+  level: info
+
 pipeline:
   authenticators:
     - id: anonymous_authenticator
@@ -80,9 +85,9 @@ If you've built heimdall using `go build`, just execute
 $ ./heimdall serve api -c config.yaml
 ----
 
-The above command will start heimdall in a decision api mode. By default, the service will be served on port `4456`.
+The above command will start heimdall in a link:{{< relref "concepts.adoc#_decision_api_mode" >}}[decision api] mode. By default, the service will be served on port `4456`.
 
-Otherwise, if you've built a Docker image, run heimdall in the decision api mode it via
+Otherwise, if you've built a Docker image, run heimdall in the link:{{< relref "concepts.adoc#_decision_api_mode" >}}[decision api] mode it via
 
 [source, bash]
 ----
@@ -94,21 +99,19 @@ In both cases, you'll see similar output to
 
 [source, bash]
 ----
-8:16PM WRN Could not initialize opentracing tracer. Tracing will be disabled. error="no 
-supported/configured opentracing provider"
-8:16PM INF Loading pipeline definitions
-8:16PM ERR Failed to load rule definitions provider: file_system error="invalid provider 
-configuration"
-8:16PM WRN Key store is not configured. NEVER DO IT IN PRODUCTION!!!! Generating an RSA 
-key pair.
-8:16PM WRN No key id for signer configured. Taking first entry from the key store
-8:16PM INF Starting cache evictor
-8:16PM INF Starting rule definition loader
-8:16PM INF Prometheus endpoint starts listening on: :9000
-8:16PM INF Decision API endpoint starts listening on: :4456
+4:07PM INF No opentracing provider configured. Tracing will be disabled.
+4:07PM INF Instantiating in memory cache
+4:07PM INF Loading pipeline definitions
+4:07PM WRN No rule provider configured. Only defaults will be used.
+4:07PM WRN Key store is not configured. NEVER DO IT IN PRODUCTION!!!! Generating an RSA key pair.
+4:07PM WRN No key id for signer configured. Taking first entry from the key store
+4:07PM INF Starting cache evictor
+4:07PM INF Starting rule definition loader
+4:07PM INF Prometheus endpoint starts listening on: :9000
+4:07PM INF Decision API endpoint starts listening on: :4456
 ----
 
-Ignore the error. It is expected as we've not configured any rule set. Nevertheless, the default rule can be used.
+Ignore the warnings. They are expected as we've neither configured a rule provider, nor have we configured a key store for JWT signing purposes. Nevertheless, the default rule can be used.
 
 == Use
 
@@ -123,7 +126,7 @@ Here, we're asking to apply the default rule for the `foobar` path using the `GE
 
 On completion, you should see the `Authorization` header in the response, like in the output below:
 
-[source]
+[source, bash]
 ----
 *   Trying 127.0.0.1:4456...
 * Connected to 127.0.0.1 (127.0.0.1) port 4456 (#0)
@@ -131,20 +134,31 @@ On completion, you should see the `Authorization` header in the response, like i
 > Host: 127.0.0.1:4456
 > User-Agent: curl/7.74.0
 > Accept: */*
-> 
+>
 * Mark bundle as not supporting multiuse
-< HTTP/1.1 200 OK
+< HTTP/1.1 202 Accepted
 < Server: Heimdall Decision API
-< Date: Wed, 27 Apr 2022 18:16:19 GMT
-< Content-Type: text/plain; charset=utf-8
-< Content-Length: 2
-< Authorization: Bearer eyJhbGciOiJQUzI1NiIsImtpZCI6ImU5NmZmYmMyLTlkMGItNmU3Ni0wZGE1LWVhMGNhZmNjMz
-BhOSIsInR5cCI6IkpXVCJ9.eyJleHAiOjE2NTEwODQyNzksImlhdCI6MTY1MTA4MzM3OSwiaXNzIjoiaGVpbWRhbGwiLCJqdGk
-iOiJkN2I5OGIzMy05NWIyLTRmMjgtOWE3NS1mZmUxMzJlMzYzYTciLCJuYmYiOjE2NTEwODMzNzksInN1YiI6ImFub255bW91c
-yJ9.merxkl1pcexeFS73tGWUfmOJoyIK1390gnaaiJ3ajtHVsvnvuo9xYPlAQvRnEdeXN-J439nI426Cin9KZF8JJYETgG7KtU
-qo_n5dkLrsokdi-STv609QQ-2rVmqjSnf9kd7e0ww5Qh0p-WSEbKkLng-sVmBUQ3Dg-qyAJ9YA5f_qgCPRuO5tgRVPRX-NHwKy
-cA28BnKwmHUPOmjuwBD7PeL3m_yOQEJgWhjGeIY_zkYE6F637JVS9QdesM-fOoPXeDXziOHtzMzy6QclhwofQn4FjgkF7FGIbH
-BamFj_xtTMUonvqjPXu8KYp39GXXnpIlEv2jdQ5u2C0gmuIpsBIw
-< 
+< Date: Sat, 25 Jun 2022 14:10:16 GMT
+< Content-Length: 0
+< Authorization: Bearer eyJhbGciOiJQUzI1NiIsImtpZCI6IjJkZGIxZDM3MWU1MGFjNDQ5ZGJhNjcyNj
+ZmZDRjMzU0OWZjNmRmYTYiLCJ0eXAiOiJKV1QifQeyJleHAiOjE2NTYxNjY1MTYsImlhdCI6MTY1NjE2NjIxNi
+wiaXNzIjoiaGVpbWRhbGwiLCJqdGkiOiIxYjdlODdjYi0zYjdjLTQ1ZDAtYWEyZi00MTRhYmI2YjBlMzciLCJu
+YmYiOjE2NTYxNjYyMTYsInN1YiI6ImFub255bW91cyJ9MY6fjk7K6ZNn57Mrjy6UGI1cvIMCOOEJoCQF45PHQ3
+4BfoPxMuTRjdVUZPX4xnT4suyWySsaU1wisgXv4CuMf4WsEUCPKOH8NKv5Zty6eXjTdWQpekDWYsHpVVwz8UHL
+mrRASlo_JKErj64wPbRcQWyLMR9X-4cR28ZuH3IbyXh4-XlGNEMAVWYFaZGv1QlEd7jcw3jSVK0b5AtY-NUcVQ
+lccWpqWD43AE-3spchqboFuiuW5IxFGd4Mc0Dp6uepuQ-XiWEFg9rxnaxl-Grr3LfSY83oML53Akrl4lGtVBu5
+5QVVjduv_b2ykRnqh7Im9lSivokuVMEuSE8bN2qnqg
+<
 * Connection #0 to host 127.0.0.1 left intact
+----
+
+You should also be able to see similar output as below from the heimdall instance
+
+[source, bash]
+----
+...
+4:10PM INF Handling request http_host=127.0.0.1:4456 http_method=GET
+           http_url=http://127.0.0.1:4456/foobar http_user_agent=curl/7.74.0
+4:10PM INF Access request granted. granted=true http_host=127.0.0.1:4456
+           http_method=GET http_url=http://127.0.0.1:4456/foobar http_user_agent=curl/7.74.0
 ----

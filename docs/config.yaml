@@ -37,26 +37,15 @@ menu:
   main:
     - identifier: docs
       title: Docs
-      url: docs/introduction/about
+      url: docs/welcome
       weight: 100
     - identifier: api
       title: API
       url: docs/api/
       weight: 200
     - identifier: get_started
-      title: Get Started
-      url: docs/introduction/
+      title: Getting Started
       weight: 300
-  docs:
-    - identifier: Introduction
-      title: Introduction
-      weight: 10
-    - identifier: Operations
-      title: Operations
-      weight: 20
-    - identifier: Guides
-      title: Guides
-      weight: 30
 
 frontmatter:
   date:

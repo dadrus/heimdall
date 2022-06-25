@@ -1,0 +1,7 @@
+---
+title: "Getting Started"
+date: 2022-06-25T14:28:36+02:00
+draft: false
+weight: 10
+menu: docs
+---
