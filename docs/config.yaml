@@ -51,6 +51,9 @@ menu:
     - identifier: Introduction
       title: Introduction
       weight: 10
+    - identifier: Operations
+      title: Operations
+      weight: 20
     - identifier: Guides
       title: Guides
       weight: 30
