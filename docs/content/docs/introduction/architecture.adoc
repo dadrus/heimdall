@@ -10,32 +10,30 @@ menu:
 
 == Pipeline
 
-As described in the link:{{< relref "about.adoc" >}}[About] section and also shown in the link:{{< relref "#_fig_heimdall_request_pipeline" >}}[diagram] below, Heimdall authenticates and authorizes incoming HTTP requests, rejecting unauthenticated or unauthorized ones, as well as enriches the valid requests with further information and transforms resulting subject information to a format, required by the upstream services. This is done in upstream service specific link:{{< relref "/docs/configuration/rules/_index.adoc" >}}[rules], which define the required link:{{< relref "/docs/configuration/pipeline/_index.adoc" >}}[pipelines].
+As described in the link:{{< relref "about.adoc" >}}[About] section and also shown in the link:{{< relref "#_fig_heimdall_request_pipeline" >}}[diagram] below, Heimdall authenticates and authorizes incoming HTTP requests, rejecting unauthenticated or unauthorized ones, as well as enriches the valid requests with further information and transforms resulting subject information to a format, required by the upstream services. This is done in upstream service specific link:{{< relref "/docs/configuration/rules/_index.adoc" >}}[rules], which define the required individual link:{{< relref "/docs/configuration/pipeline/_index.adoc" >}}[pipelines].
 
 [[_fig_heimdall_request_pipeline]]
 .Request Pipeline
-[ditaa, format=svg, scale=0.7]
+[ditaa, format=svg]
 ....
-
-                   /-----------------------------------------------------------------------------------------------------\
-                   |                                                                                                     |
-                   :                                        Heimdall's Pipeline                                          |<- controlled by> --+
-                   |                                                                                                     |                    |
-                   |  +------------------+      +------------------+     +------------------+     +------------------+   |                    |
-                   |  | cCCC             |      | cCCC             |     | cCCC             |     | cCCC             |   |                    :
-                   |  | 1. Authenticate  |      | 2. Contextualize |     | 3. Authorize     |     | 4. Unify         |   |                    |
-                   |  |                  |      |                  |     |                  |     |                  |   |      +------------------------+
-                   |  +------------------+      +------------------+     +------------------+     +------------------+   |      |     Backend Service    |
-                   |                                                                                                     |      |                        |
-+------------+     |                                                                                                     |      |  +------------------+  |
-|            |     |                                                                                                     |      |  |                  |  |
-|   Client   |     |                                     Client Request Journey                                          |      |  |    Business      |  |
-|            |----------------------------------------------------------------------------------------------------------------->|  |                  |  |
-|   Request  |     :                                                                                                     |      |  |    Logic         |  |
-|            |     |                                                                                                     |      |  |                  |  |
-+------------+     \-----------------------------------------------------------------------------------------------------/      |  +------------------+  |
-                                                                                                                                |                        |
-                                                                                                                                +------------------------+
+                 /-----------------------------------------------------------------------------------\
+                 |                                                                                   |
+                 :                                Heimdall's Pipeline                                |<- controlled by> --+
+                 |                                                                                   |                    |
+                 |+------------------+ +------------------+ +------------------+ +------------------+|                    |
+                 || cCCC             | | cCCC             | | cCCC             | | cCCC             ||                    :
+                 || 1. Authenticate  | | 2. Contextualize | | 3. Authorize     | | 4. Unify         ||                    |
+                 ||                  | |                  | |                  | |                  ||   +------------------+
+                 |+------------------+ +------------------+ +------------------+ +------------------+|   |  Backend Service |
+                 |                                                                                   |   |                  |
++------------+   |                                                                                   |   |+----------------+|
+|            |   |                                                                                   |   ||                ||
+|   Client   |   |                                   Client Request Journey                          |   ||    Business    ||
+|            |------------------------------------------------------------------------------------------>||                ||
+|   Request  |   :                                                                                   |   ||    Logic       ||
+|            |   |                                                                                   |   ||                ||
+|            |   \-----------------------------------------------------------------------------------/   |+----------------+|
++------------+                                                                                           +------------------+
 ....
 
 Each rule defines which pipeline steps are required and executed in which order.
@@ -43,43 +41,49 @@ Each rule defines which pipeline steps are required and executed in which order.
 In general each rule contains
 
 * an identifier - to uniquely identify a rule
-* an url pattern - to match the incoming request
-* a list of allowed HTTP methods for the matched url
+* an url pattern - to match the incoming request against
+* a list of allowed HTTP methods for the matched requests
 * a regular pipeline, consisting of a list with
-** authentication mechanisms, so-called link:{{< relref "/docs/configuration/pipeline/authenticators.adoc" >}}[Authenticators], to be executed (if multiple are defined, they are executed as fallbacks) - step 1 in the figure above
-** contextualization mechanisms, so-called link:{{< relref "/docs/configuration/pipeline/hydrators.adoc" >}}[Hydrators], to be executed (if multiple are defined, they are executed in the order of their definition; can be mixed with authorization mechanisms) - step 2 in the figure above.
-** authorization mechanisms, so-called link:{{< relref "/docs/configuration/pipeline/authorizers.adoc" >}}[Authorizers], to be executed (if multiple are defined, they are executed in the order of their definition; can be mixed with contextualization mechanisms) - step 3 in the figure above.
-** unification mechanisms, so-called link:{{< relref "/docs/configuration/pipeline/mutators.adoc" >}}[Mutators], to be executed (if multiple are defined, they are executed in the order of their definition) - step 4 in the figure above.
-* an error pipeline, consisting of an link:{{< relref "/docs/configuration/pipeline/error_handlers.adoc" >}}[error handler] list (if multiple are defined, they are executed as fallbacks), which are executed if any of the regular pipeline mechanisms fails.
+** *authentication* mechanisms, so-called link:{{< relref "/docs/configuration/pipeline/authenticators.adoc" >}}[Authenticators], to be executed (if multiple are defined, they are executed as fallbacks) - step 1 in the figure above.
+** *contextualization* mechanisms, so-called link:{{< relref "/docs/configuration/pipeline/hydrators.adoc" >}}[Hydrators], to be executed (if multiple are defined, they are executed in the order of their definition; can be mixed with authorization mechanisms) - step 2 in the figure above.
+** *authorization* mechanisms, so-called link:{{< relref "/docs/configuration/pipeline/authorizers.adoc" >}}[Authorizers], to be executed (if multiple are defined, they are executed in the order of their definition; can be mixed with contextualization mechanisms) - step 3 in the figure above.
+** *unification* mechanisms, so-called link:{{< relref "/docs/configuration/pipeline/mutators.adoc" >}}[Mutators], to be executed (if multiple are defined, they are executed in the order of their definition) - step 4 in the figure above.
+* an error pipeline, consisting of an link:{{< relref "/docs/configuration/pipeline/error_handlers.adoc" >}}[error handler] list (if multiple are defined, they are executed as fallbacks), which are executed if any of the regular pipeline mechanisms fails. These range from a simple error response to the client, which sent the request, to sophisticated handlers supporting complex logic and redirects.
 
 The diagram below sketches the related execution logic
 
-[mermaid, format=svg]
+[mermaid, format=svg, width=70%]
 ....
-flowchart LR
-    req[Request] --> findRule{matches\nrule?}
-    findRule -->|yes| methodCheck{method\nallowed?}
+flowchart TD
+    req[Request] --> findRule{1: url\nmatches\nrule?}
+    findRule -->|yes| methodCheck{2: method\nallowed?}
     findRule -->|no| err1[500 Internal Server Error]
-    methodCheck -->|yes| regularPipeline[execute regular pipeline]
+    methodCheck -->|yes| regularPipeline[3: execute regular pipeline]
     methodCheck -->|no| err2[405 Method Not Allowed]
     regularPipeline --> failed{failed?}
     failed -->|yes| errPipeline[execute error pipeline]
-    failed -->|no| success[Forward request,\nrespectively respond\nto the API gateway]
-    errPipeline --> errResult[Result of the\nused error handler]
+    failed -->|no| success[4: forward request,\nrespectively respond\nto the API gateway]
+    errPipeline --> errResult[5: result of the\nused error handler]
 ....
+
+. *Url matches rule?* - This is the first step executed by heimdall. The information about the scheme, host and path is taken either from the URL itself, or if present from the `X-Forwarded-Proto`, `X-Forwarded-Host`, `X-Forwarded-Uri` headers of the incoming request. The request is denied if there is no matching rule. Otherwise, the rule specific pipeline is executed.
+. *Method allowed?* - As soon as a rule matches a request, a verification is done whether the used HTTP method is allowed or not. The information about the HTTP method is either taken from the request itself or, if present from the `X-Forwarded-Method`.
+. *Execute regular pipeline* - when the above steps succeed, the regular pipeline mechanisms defined in the matched rule are executed.
+. *Forward request, respectively respond to the API gateway* - when the above steps succeed, heimdall responds with whatever was defined in the pipeline. Otherwise
+. *Execute error pipeline* is executed if any of the mechanisms, defined in the regular pipeline fail. This again results in a response, this time however, based on the definition in the used error handler.
 
 == Operating Modes
 
 To support different deployment scenarios, Heimdall supports two operating modes:
 
 * as a link:{{< relref "#_proxy_mode" >}}[Reverse Proxy] in front of your upstream API or web server, or
-* as a link:{{< relref "#_decision_api_mode" >}}[Decision API], integrated with your API Gateway (Kong, NGNIX, Envoy, Traefik, etc)
+* as a link:{{< relref "#_decision_api_mode" >}}[Decision API], integrated with your Reverse Proxy, or API Gateway (like https://konghq.com/[Kong], https://nginx.org[NGNIX], https://www.envoyproxy.io/[Envoy], https://traefik.io/[Traefik] and much more)
 
 === Proxy Mode
 
 [[_fig_heimdall_proxy_deployment]]
 .Proxy Deployment
-[ditaa, format=svg, scale=0.75]
+[ditaa, format=svg]
 ....
                                                                           +------------------------+
                                                                           |     Backend Service    |
@@ -105,7 +109,7 @@ To support different deployment scenarios, Heimdall supports two operating modes
                                   +----------------+
 ....
 
-In this mode heimdall forwards requests to the upstream server, if these satisfy the conditions defined in pipeline definition rules. Otherwise, heimdall returns an error to the client. If the pipeline execution was successful, it also forwards additional headers, specified in the used pipeline to the upstream service.
+In this mode heimdall forwards requests to the upstream service, if these satisfy the conditions defined in pipeline definition rules. Otherwise, heimdall returns an error to the client. If the pipeline execution was successful, it also forwards additional headers, specified in the used pipeline to the upstream service.
 
 Starting heimdall in this mode happens via the `serve proxy` command. Head over to the description of link:{{< relref "/docs/operations/cli.adoc" >}}[CLI] as well as link:{{< relref "/docs/configuration/services/proxy.adoc" >}}[Configuration] options for more details.
 
@@ -152,7 +156,7 @@ Some payload
 
 [[_fig_heimdall_decision_api_deployment]]
 .Decision API Deployment
-[ditaa, format=svg, scale=0.75]
+[ditaa, format=svg]
 ....
                                                                           +------------------------+
                                                                           |     Backend Service    |
