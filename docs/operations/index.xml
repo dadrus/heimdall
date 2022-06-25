@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Operations on Heimdall</title><link>https://dadrus.github.io/docs/operations/</link><description>Recent content in Operations on Heimdall</description><generator>Hugo -- gohugo.io</generator><language>en-us</language><lastBuildDate>Sat, 25 Jun 2022 14:39:36 +0200</lastBuildDate><atom:link href="https://dadrus.github.io/docs/operations/index.xml" rel="self" type="application/rss+xml"/><item><title>CLI</title><link>https://dadrus.github.io/docs/operations/cli/</link><pubDate>Thu, 09 Jun 2022 18:57:50 +0200</pubDate><guid>https://dadrus.github.io/docs/operations/cli/</guid><description>Heimdall’s Command Line Interface
+General heimdall [command] [flags] [arguments] Use heimdall help to get overview about available commands, respectively heimdall [command] help for help on any command.
+Flag’s usage:
+# set flag_argument to flag(s) heimdall [--flag=flag_argument] [-f [flag_argument]] E.g.
+heimdall validate config -c config.yaml Commands completion
+Generates the autocompletion script for the specified shell.
+health
+Calls heimdall’s healthcheck endpoint to verify the status of the deployment.
+serve
+Starts heimdall in the decision api, or the reverse proxy mode.</description></item></channel></rss>
