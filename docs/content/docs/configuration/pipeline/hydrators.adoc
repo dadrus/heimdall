@@ -18,7 +18,7 @@ As of today, there is just one hydrator, which is described below.
 
 === Generic
 
-This handler allows you to communicate to any API you want, to fetch further information about the subject. Typical scenarios is getting specific attributes for later authorization purposes which are not known to the authentication system and thus were not made available in subject's `.Attributes` object. If the API responses with a 2xx HTTP response code, the payload made available in the `.Attributes` property of the subject. To avoid overwriting of existing attributes, this object is however not available on the top level, but under a key named by the `id` of the authorizer (See also the example below). If the `Content-Type` of the response is either ending with `json` or is `application/x-www-form-urlencoded`, the payload is decoded and made available as map, otherwise it is treated as string, but, as written above, is made available as well.
+This handler allows you to communicate to any API you want, to fetch further information about the subject. Typical scenarios is getting specific attributes for later authorization purposes which are not known to the authentication system and thus were not made available in `Subject` 's `Attributes` object. If the API responses with a 2xx HTTP response code, the payload made available in the `Attributes` property of the `Subject`. To avoid overwriting of existing attributes, this object is however not available on the top level, but under a key named by the `id` of the authorizer (See also the example below). If the `Content-Type` of the response is either ending with `json` or is `application/x-www-form-urlencoded`, the payload is decoded and made available as map, otherwise it is treated as string, but, as written above, is made available as well.
 
 To enable the usage of this hydrator, you have to set the `type` property to `generic`.
 
@@ -55,7 +55,7 @@ id: foo
 type: generic
 config:
   endpoint:
-    url: https://some-other.service/users/{{.ID}}
+    url: https://some-other.service/users/{{.Subject.ID}}
     method: GET
   forward_cookies:
     - X-My-Session-Cookie

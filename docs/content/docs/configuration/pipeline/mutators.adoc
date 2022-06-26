@@ -49,8 +49,8 @@ id: foo
 type: header
 config:
   headers:
-    - X-User-ID: {{ quote .ID }}
-    - X-User-Email: {{ quote .Attributes["email"] }}
+    - X-User-ID: {{ quote .Subject.ID }}
+    - X-User-Email: {{ quote .Subject.Attributes["email"] }}
 ----
 ====
 
@@ -74,8 +74,8 @@ id: foo
 type: header
 config:
   cookies:
-    - user_id_cookie: {{ quote .ID }}
-    - user_email_cookie: {{ quote .Attributes["email"] }}
+    - user_id_cookie: {{ quote .Subject.ID }}
+    - user_email_cookie: {{ quote .Subject.Attributes["email"] }}
 ----
 ====
 
@@ -107,9 +107,9 @@ config:
   ttl: 5m
   claims: |
     {
-      {{ $user_name := .Attributes.identity.user_name -}}
-      "email": {{ quote .Attributes.identity.email }},
-      "email_verified": {{ .Attributes.identity.email_verified }},
+      {{ $user_name := .Subject.Attributes.identity.user_name -}}
+      "email": {{ quote .Subject.Attributes.identity.email }},
+      "email_verified": {{ .Subject.Attributes.identity.email_verified }},
       {{ if $user_name -}}
         "name": {{ quote $user_name }}
       {{ else -}}

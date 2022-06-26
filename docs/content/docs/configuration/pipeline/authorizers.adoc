@@ -66,7 +66,7 @@ id: foo
 type: local
 config:
   script: |
-    if (heimdall.subject.Attributes["group"] !== "admin") {
+    if (heimdall.Subject.Attributes["group"] !== "admin") {
       raise("user not in admin group")
     }
 ----
@@ -76,7 +76,7 @@ config:
 
 This authorizer allows communication with other systems, like https://www.openpolicyagent.org/[Open Policy Agent], https://www.ory.sh/docs/keto/[Ory Keto], etc. for the actual authorization purpose. If the used endpoint answers with a not 2xx HTTP response code, this authorizer assumes, the authorization has failed and denies the request. So, the successful execution of the pipeline stops, resulting in the execution of the error handlers. Otherwise, the authorizer assumes, the request has been authorized.
 
-If your authorization system provides a payload in the response, Heimdall inspects the `Content-Type` header to prepare the payload for further usage, e.g. in a link:{{< relref "#_local" >}}[Local] authorizer. It can however deal only with a content type, which either ends with `json` or which is `application/x-www-form-urlencoded`. In these two cases, the payload is decoded and made available as map in the `.Attributes` of the subject. Otherwise, the payload is treated as string and made also available in the `.Attributes` property of the subject. To avoid overwriting of existing attributes, this object is however not available on the top level, but under a key named by the `id` of the authorizer (See also the example below).
+If your authorization system provides a payload in the response, Heimdall inspects the `Content-Type` header to prepare the payload for further usage, e.g. in a link:{{< relref "#_local" >}}[Local] authorizer. It can however deal only with a content type, which either ends with `json` or which is `application/x-www-form-urlencoded`. In these two cases, the payload is decoded and made available as map in the `.Subject.Attributes` of the subject. Otherwise, the payload is treated as string and made also available in the `.Subject.Attributes` property of the subject. To avoid overwriting of existing attributes, this object is however not available on the top level, but under a key named by the `id` of the authorizer (See also the example below).
 
 To enable the usage of this authorizer, you have to set the `type` property to `remote`.
 
@@ -118,8 +118,8 @@ config:
         user: MyOpaUser
         password: SuperSecretPassword
   payload: |
-    { "input": { "user": {{ quote .ID }}, "access": "write" } }
+    { "input": { "user": {{ quote .Subject.ID }}, "access": "write" } }
 ----
 
-Since an OPA response could look like `{ "result": true }` or `{ "result": false }`, which obviously needs further evaluation, Heimdall makes it available under `.Attributes["foo"]` as a map, with `"foo"` being the id of the authorizer in this example.
+Since an OPA response could look like `{ "result": true }` or `{ "result": false }`, which obviously needs further evaluation, Heimdall makes it available under `.Subject.Attributes["foo"]` as a map, with `"foo"` being the id of the authorizer in this example.
 ====
