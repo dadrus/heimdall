@@ -24,7 +24,7 @@ func (t Template) Render(ctx heimdall.Context, sub *subject.Subject) (string, er
 
 	var buf bytes.Buffer
 
-	err = tmpl.Execute(&buf, templateData{Subject: sub, ctx: ctx})
+	err = tmpl.Execute(&buf, data{Subject: sub, ctx: ctx})
 	if err != nil {
 		return "", err
 	}
@@ -32,35 +32,31 @@ func (t Template) Render(ctx heimdall.Context, sub *subject.Subject) (string, er
 	return buf.String(), nil
 }
 
-type templateData struct {
+type data struct {
 	ctx     heimdall.Context
 	Subject *subject.Subject
 }
 
-func (t templateData) RequestMethod() string {
+func (t data) RequestMethod() string {
 	return t.ctx.RequestMethod()
 }
 
-func (t templateData) RequestHeaders() map[string]string {
-	return t.ctx.RequestHeaders()
+func (t data) RequestURL() string {
+	return t.ctx.RequestURL().String()
 }
 
-func (t templateData) RequestHeader(name string) string {
+func (t data) RequestClientIPs() []string {
+	return t.ctx.RequestClientIPs()
+}
+
+func (t data) RequestHeader(name string) string {
 	return t.ctx.RequestHeader(name)
 }
 
-func (t templateData) RequestCookie(name string) string {
+func (t data) RequestCookie(name string) string {
 	return t.ctx.RequestCookie(name)
 }
 
-func (t templateData) RequestQueryParameter(name string) string {
+func (t data) RequestQueryParameter(name string) string {
 	return t.ctx.RequestQueryParameter(name)
-}
-
-func (t templateData) RequestURL() *url.URL {
-	return t.ctx.RequestURL()
-}
-
-func (t templateData) RequestClientIPs() []string {
-	return t.ctx.RequestClientIPs()
 }
