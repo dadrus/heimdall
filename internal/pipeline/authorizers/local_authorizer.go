@@ -70,9 +70,31 @@ func (a *localAuthorizer) Execute(ctx heimdall.Context, sub *subject.Subject) er
 
 	hmdl := vm.NewObject()
 	// nolint: errcheck
-	hmdl.Set("subject", sub)
+	hmdl.Set("Subject", sub)
 	// nolint: errcheck
-	hmdl.Set("ctx", ctx)
+	hmdl.Set("RequestMethod", func() string {
+		return ctx.RequestMethod()
+	})
+	// nolint: errcheck
+	hmdl.Set("RequestURL", func() string {
+		return ctx.RequestURL().String()
+	})
+	// nolint: errcheck
+	hmdl.Set("RequestClientIPs", func() []string {
+		return ctx.RequestClientIPs()
+	})
+	// nolint: errcheck
+	hmdl.Set("RequestHeader", func(name string) string {
+		return ctx.RequestHeader(name)
+	})
+	// nolint: errcheck
+	hmdl.Set("RequestCookie", func(name string) string {
+		return ctx.RequestCookie(name)
+	})
+	// nolint: errcheck
+	hmdl.Set("RequestQueryParameter", func(name string) string {
+		return ctx.RequestQueryParameter(name)
+	})
 
 	console := vm.NewObject()
 	// nolint: errcheck
