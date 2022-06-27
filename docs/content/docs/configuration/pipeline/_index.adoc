@@ -200,7 +200,7 @@ You can find further examples as part of handler descriptions, supporting templa
 
 == Scripting
 
-Some authorizers, which verify the presence or values of particular attributes of the subject can make use of https://262.ecma-international.org/5.1/[ECMAScript 5.1(+)]. Heimdall uses https://github.com/dop251/goja[goja] as ECMAScript engine. In addition to the general ECMAScript functionality, heimdall makes the same functions and object available to the script, which are also available for the link:{{< relref "#_templating" >}}[templates]. The only difference is, that these are available as part of a `heimdall` object. In addition, this object implements a `log` function to enable logging from the script. Latter can become handy during development of debugging. The output is only available if `debug` log level is set.
+Some authorizers, which verify the presence or values of particular attributes of the subject can make use of https://262.ecma-international.org/5.1/[ECMAScript 5.1(+)]. Heimdall uses https://github.com/dop251/goja[goja] as ECMAScript engine. In addition to the general ECMAScript functionality, heimdall makes the same functions and object available to the script, which are also available for the link:{{< relref "#_templating" >}}[templates]. The only difference is, that these are available as part of a `heimdall` object. In addition, there is also a `console` object implementing a `log` function to enable logging from the script. Latter can become handy during development of debugging. The output is only available if `debug` log level is set.
 
 .Script, rendering a JSON object
 ====
@@ -209,18 +209,20 @@ The following script creates the same JSON object, as in the example provided in
 
 [source, javascript]
 ----
-heimdall.log("This statement is only present in the logs, if the log level is set to debug")
+console.log("This statement is only present in the logs, if the log level is set to debug")
 
-return `{
-  "subject_id": {{ quote heimdall.Subject.ID }},
-  "email": {{ quote heimdall.Subject.Attributes.email }},
-  "request_url": {{ quote heimdall.RequestURL }},
-  "request_method": {{ quote heimdall.RequestMethod }},
-  "x_foo_value": {{ heimdall.RequestHeader "X-Foo" | quote }}
-}`
+var data = {
+    "subject_id": heimdall.Subject.ID,
+    "email": heimdall.Subject.Attributes.email,
+    "request_url": heimdall.RequestURL(),
+    "request_method": heimdall.RequestMethod(),
+    "x_foo_value": heimdall.RequestHeader("X-Foo")
+}
+
+data
 ----
 
-The result is again the already known JSON object
+The result is again the already known JSON object.
 
 [source, json]
 ----
