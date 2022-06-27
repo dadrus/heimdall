@@ -74,7 +74,7 @@ foo: bar
 				t.Helper()
 
 				require.NoError(t, err)
-				assert.NotNil(t, auth.p)
+				assert.NotNil(t, auth.s)
 			},
 		},
 	} {
@@ -131,7 +131,7 @@ func TestCreateLocalAuthorizerFromPrototype(t *testing.T) {
 				require.NoError(t, err)
 				assert.NotEqual(t, prototype, configured)
 				require.NotNil(t, configured)
-				assert.NotNil(t, configured.p)
+				assert.NotEqual(t, prototype.s, configured.s)
 			},
 		},
 	} {
@@ -183,7 +183,7 @@ func TestLocalAuthorizerExecute(t *testing.T) {
 		},
 		{
 			uc:     "script can use subject and context",
-			config: []byte(`script: "throw(heimdall.ctx.RequestHeader(heimdall.subject.ID))"`),
+			config: []byte(`script: "throw(heimdall.RequestHeader(heimdall.Subject.ID))"`),
 			configureContextAndSubject: func(t *testing.T, ctx *mocks.MockContext, sub *subject.Subject) {
 				t.Helper()
 
