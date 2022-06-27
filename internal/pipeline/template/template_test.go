@@ -12,8 +12,10 @@ import (
 	"github.com/dadrus/heimdall/internal/pipeline/template"
 )
 
-func TestTemplate(t *testing.T) {
+func TestTemplateRender(t *testing.T) {
 	t.Parallel()
+
+	// GIVEN
 
 	ctx := &mocks.MockContext{}
 	ctx.On("RequestMethod").Return("PATCH")
@@ -37,7 +39,7 @@ func TestTemplate(t *testing.T) {
 		},
 	}
 
-	tpl := template.Template(`{
+	tpl, err := template.New(`{
 "subject_id": {{ quote .Subject.ID }},
 "name": {{ quote .Subject.Attributes.name }},
 "email": {{ quote .Subject.Attributes.email }},
@@ -45,13 +47,16 @@ func TestTemplate(t *testing.T) {
 "request_url": {{ quote .RequestURL }},
 "request_method": {{ quote .RequestMethod }},
 "my_header": {{ .RequestHeader "X-My-Header" | quote }},
-"header_count": {{ len .RequestHeaders }},
 "my_cookie": {{ .RequestCookie "session_cookie" | quote }},
 "my_query_param": {{ .RequestQueryParameter "my_query_param" | quote }},
 "ips": "{{ range $i, $el := .RequestClientIPs -}}{{ if $i }} {{ end }}{{ $el }}{{ end }}"
 }`)
+	require.NoError(t, err)
 
+	// WHEN
 	res, err := tpl.Render(ctx, sub)
+
+	// THEN
 	require.NoError(t, err)
 
 	assert.JSONEq(t, `{
@@ -62,7 +67,6 @@ func TestTemplate(t *testing.T) {
 "request_url": "http://foobar.baz/zab",
 "request_method": "PATCH",
 "my_header": "my-value",
-"header_count": 2,
 "my_cookie": "session-value",
 "my_query_param": "query_value",
 "ips": "192.168.1.1"
