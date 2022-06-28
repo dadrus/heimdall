@@ -26,7 +26,7 @@ Configuration using the `config` property is mandatory. Following properties are
 
 * *`endpoint`*: _link:{{< relref "configuration_types.adoc#_endpoint">}}[Endpoint]_ (mandatory, not overridable)
 +
-The API of the service providing additional attributes about the authenticated user. At least the `url` must be configured. This hydrator allows templating of the url. By default, this authorizer will use HTTP `POST` to send the rendered payload to this endpoint. You can override this behavior by configuring `method`. Depending on the API requirements you might need to configure further properties, like headers, etc.
+The API of the service providing additional attributes about the authenticated user. At least the `url` must be configured. This handler allows templating of the url and makes the `Subject` object available to it. By default, this authorizer will use HTTP `POST` to send the rendered payload to this endpoint. You can override this behavior by configuring `method`. Depending on the API requirements you might need to configure further properties, like headers, etc.
 
 * *`forward_headers`*: _string array_ (optional, overridable)
 +

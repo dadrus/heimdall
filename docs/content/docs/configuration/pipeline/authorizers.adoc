@@ -84,7 +84,7 @@ Configuration using the `config` property is mandatory. Following properties are
 
 * *`endpoint`*: _link:{{< relref "configuration_types.adoc#_endpoint">}}[Endpoint]_ (mandatory, not overridable)
 +
-The API endpoint of your authorization system. At least the `url` must be configured. By default this authorizer will use HTTP `POST` to send the rendered payload to this endpoint. You can override this behavior by configuring `method` as well. Depending on the API requirements of your authorization system, you might need to configure further properties, like headers, etc.
+The API endpoint of your authorization system. At least the `url` must be configured. This handler allows templating of the url and makes the `Subject` object available to it. By default, this authorizer will use HTTP `POST` to send the rendered payload to this endpoint. You can override this behavior by configuring `method` as well. Depending on the API requirements of your authorization system, you might need to configure further properties, like headers, etc.
 
 * *`payload`*: _string_ (mandatory, overridable)
 +

@@ -39,7 +39,7 @@ Configuration using the `config` property is mandatory. Following properties are
 
 * *`headers`*: _string map_ (mandatory, overridable)
 +
-Enables configuration of arbitrary headers with any values build from available subject information.
+Enables configuration of arbitrary headers with any values build from available subject information (See also link:{{< relref "_index.adoc#_templating" >}}[Templating]). Only `Subject` object is available in the template, not the `Request*` functions.
 
 .Header mutator configuration
 ====
@@ -64,7 +64,7 @@ Configuration using the `config` property is mandatory. Following properties are
 
 * *`cookies`*: _string map_ (mandatory, overridable)
 +
-Enables configuration of arbitrary cookies with any values build from available subject information.
+Enables configuration of arbitrary cookies with any values build from available subject information (See also link:{{< relref "_index.adoc#_templating" >}}[Templating]). Only `Subject` object is available in the template, not the `Request*` functions.
 
 .Cookie mutator configuration
 ====
@@ -89,7 +89,7 @@ Configuration using the `config` property is optional. Following properties are 
 
 * *`claims`*: _string_ (optional, overridable)
 +
-Your template with custom claims, you would like to add to the JWT. See also link:{{< relref "_index.adoc#_templating" >}}[Templating].
+Your template with custom claims, you would like to add to the JWT (See also link:{{< relref "_index.adoc#_templating" >}}[Templating]). Only `Subject` object is available in the template, not the `Request*` functions.
 
 * *`ttl`*: _link:{{< relref "configuration_types.adoc#_duration" >}}[Duration]_ (optional, overridable)
 +
