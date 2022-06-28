@@ -211,7 +211,7 @@ func (a *remoteAuthorizer) createRequest(ctx heimdall.Context, sub *subject.Subj
 				return "", err
 			}
 
-			return tpl.Render(ctx, sub)
+			return tpl.Render(nil, sub)
 		}))
 	if err != nil {
 		return nil, err

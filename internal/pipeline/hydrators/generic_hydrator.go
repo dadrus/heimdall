@@ -204,7 +204,7 @@ func (h *genericHydrator) createRequest(ctx heimdall.Context, sub *subject.Subje
 				return "", err
 			}
 
-			return tpl.Render(ctx, sub)
+			return tpl.Render(nil, sub)
 		}))
 	if err != nil {
 		return nil, err
