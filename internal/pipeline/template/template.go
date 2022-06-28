@@ -2,6 +2,9 @@ package template
 
 import (
 	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
+	"errors"
 	"net/url"
 	"text/template"
 
@@ -9,25 +12,75 @@ import (
 
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/pipeline/subject"
+	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
-type Template string
+var ErrTemplateRender = errors.New("template error")
 
-func (t Template) Render(ctx heimdall.Context, sub *subject.Subject) (string, error) {
-	tmpl, err := template.New("Subject").
+type Template interface {
+	Render(ctx heimdall.Context, sub *subject.Subject) (string, error)
+	Hash() string
+}
+
+type _template struct {
+	t    *template.Template
+	hash string
+}
+
+func New(val string) (Template, error) {
+	tmpl, err := template.New("Heimdall").
 		Funcs(sprig.TxtFuncMap()).
 		Funcs(template.FuncMap{"urlenc": url.QueryEscape}).
-		Parse(string(t))
+		Parse(val)
 	if err != nil {
-		return "", err
+		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration, "failed to parse template").
+			CausedBy(err)
 	}
 
+	hash := sha256.New()
+	hash.Write([]byte(val))
+
+	return &_template{t: tmpl, hash: hex.EncodeToString(hash.Sum(nil))}, nil
+}
+
+func (t *_template) Render(ctx heimdall.Context, sub *subject.Subject) (string, error) {
 	var buf bytes.Buffer
 
-	err = tmpl.Execute(&buf, sub)
+	err := t.t.Execute(&buf, data{Subject: sub, ctx: ctx})
 	if err != nil {
-		return "", err
+		return "", errorchain.New(ErrTemplateRender).CausedBy(err)
 	}
 
 	return buf.String(), nil
+}
+
+func (t *_template) Hash() string { return t.hash }
+
+type data struct {
+	ctx     heimdall.Context
+	Subject *subject.Subject
+}
+
+func (t data) RequestMethod() string {
+	return t.ctx.RequestMethod()
+}
+
+func (t data) RequestURL() string {
+	return t.ctx.RequestURL().String()
+}
+
+func (t data) RequestClientIPs() []string {
+	return t.ctx.RequestClientIPs()
+}
+
+func (t data) RequestHeader(name string) string {
+	return t.ctx.RequestHeader(name)
+}
+
+func (t data) RequestCookie(name string) string {
+	return t.ctx.RequestCookie(name)
+}
+
+func (t data) RequestQueryParameter(name string) string {
+	return t.ctx.RequestQueryParameter(name)
 }

@@ -187,7 +187,7 @@ func (h *genericHydrator) createRequest(ctx heimdall.Context, sub *subject.Subje
 
 	var body io.Reader
 
-	if len(h.payload) != 0 {
+	if h.payload != nil {
 		value, err := h.payload.Render(ctx, sub)
 		if err != nil {
 			return nil, errorchain.NewWithMessage(heimdall.ErrInternal,
@@ -199,7 +199,12 @@ func (h *genericHydrator) createRequest(ctx heimdall.Context, sub *subject.Subje
 
 	req, err := h.e.CreateRequest(ctx.AppContext(), body,
 		renderer.RenderFunc(func(value string) (string, error) {
-			return template.Template(value).Render(ctx, sub)
+			tpl, err := template.New(value)
+			if err != nil {
+				return "", err
+			}
+
+			return tpl.Render(nil, sub)
 		}))
 	if err != nil {
 		return nil, err
@@ -284,7 +289,7 @@ func (h *genericHydrator) calculateCacheKey(sub *subject.Subject) (string, error
 	hash.Write([]byte(h.name))
 	hash.Write([]byte(strings.Join(h.fwdHeaders, ",")))
 	hash.Write([]byte(strings.Join(h.fwdCookies, ",")))
-	hash.Write([]byte(h.payload))
+	hash.Write([]byte(h.payload.Hash()))
 	hash.Write([]byte(h.e.Hash()))
 	hash.Write(ttlBytes)
 	hash.Write(rawSub)
@@ -314,7 +319,7 @@ func (h *genericHydrator) WithConfig(rawConfig map[string]any) (Hydrator, error)
 	return &genericHydrator{
 		e:          h.e,
 		name:       h.name,
-		payload:    x.IfThenElse(len(conf.Payload) != 0, conf.Payload, h.payload),
+		payload:    x.IfThenElse(conf.Payload != nil, conf.Payload, h.payload),
 		fwdHeaders: x.IfThenElse(len(conf.ForwardHeaders) != 0, conf.ForwardHeaders, h.fwdHeaders),
 		fwdCookies: x.IfThenElse(len(conf.ForwardCookies) != 0, conf.ForwardCookies, h.fwdCookies),
 		ttl: x.IfThenElseExec(conf.CacheTTL != nil,

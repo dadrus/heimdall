@@ -159,7 +159,7 @@ pipeline:
           url: http://keto
           method: POST
           headers:
-            foo-bar: "{{ .Subject }}"
+            foo-bar: "{{ .Subject.ID }}"
         payload: "https://bla.bar"
         forward_response_headers_to_upstream:
           - bla-bar
@@ -191,7 +191,7 @@ pipeline:
       type: jwt
       config:
         ttl: 5m
-        claims: "{'user': {{ quote .ID }} }"
+        claims: "{'user': {{ quote .Subject.ID }} }"
     - id: "bla"
       type: header
       config:
@@ -201,7 +201,7 @@ pipeline:
       type: cookie
       config:
         cookies:
-          foo-bar: '{{ .ID }}'
+          foo-bar: '{{ .Subject.ID }}'
 
   error_handlers:
     - id: default

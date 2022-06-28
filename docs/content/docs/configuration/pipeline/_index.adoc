@@ -95,7 +95,7 @@ pipeline:
       type: local
       config:
         script: |
-          if (!heimdall.subject.Attributes.group_manager.groups["foo"]) {
+          if (!heimdall.Subject.Attributes.group_manager.groups["foo"]) {
             raise("user not in the expected group")
           }
   hydrators:
@@ -117,9 +117,9 @@ pipeline:
         ttl: 5m
         claims: |
             {
-              {{ $user_name := .Attributes.identity.user_name -}}
-              "email": {{ quote .Attributes.identity.email }},
-              "email_verified": {{ .Attributes.identity.email_verified }},
+              {{ $user_name := .Subject.Attributes.identity.user_name -}}
+              "email": {{ quote .Subject.Attributes.identity.email }},
+              "email_verified": {{ .Subject.Attributes.identity.email_verified }},
               {{ if $user_name -}}
               "name": {{ quote $user_name }}
               {{ else -}}
@@ -145,19 +145,95 @@ pipeline:
 
 == Templating
 
-Some pipeline handlers support templating using https://golang.org/pkg/text/template/[Golang Text Templates]. To ease the usage, all http://masterminds.github.io/sprig/[sprig] functions as well as a `urlenc` function are available. Latter is handy if you need to add e.g. a query parameter to the original request and encode it properly. In addition to the above said functions, heimdall makes the following objects available to the template:
+Some pipeline handlers support templating using https://golang.org/pkg/text/template/[Golang Text Templates]. To ease the usage, all http://masterminds.github.io/sprig/[sprig] functions as well as a `urlenc` function are available. Latter is handy if you need to generate request body or query parameters e.g. for communication with further systems. In addition to the above said functions, heimdall makes the following objects and functions available to the template:
 
-* `subject` - to provide access to all attributes available for the given subject. The access is read only.
-* `ctx` - to provide access to the actual HTTP request, like headers, cookies, URL, etc. The access is read only
+* `Subject` - object, providing access to all attributes available for the given subject.
++
+The type of this object is `heimdall.Subject` and is defined as follows:
++
+[source, go]
+----
+type Subject struct {
+	// The id of the subject
+	ID         string
+	// All attributes known about the subject
+	Attributes map[string]any
+}
+----
+* `RequestMethod` - function, providing access to the used HTTP method for the given request. Returns a `string`.
+* `RequestURL` - function, providing access to the matched URL of the given request. Returns a `string`.
+* `RequestClientIPs` - function, providing information about the client IPs known about the request. Returns a `string array`.
+* `RequestHeader` - function, expecting the name of a header as input. Returns the value of the header as `string` if present in the HTTP request. If not present an empty string (`""`) is returned.
+* `RequestCookie` - function, expecting the name of a cookie as input. Returns the value of the cookie as `string` if present in the HTTP request. If not present an empty string (`""`) is returned.
+* `RequestQueryParameter` - function, expecting the name of a query parameter as input. Returns the value of the query parameter as `string` if present in the HTTP request. If not present an empty string (`""`) is returned.
 
-Examples are provided as part of handler description supporting scripting.
+.Template, rendering a JSON object
+====
+Imagine, we have a `POST` request for the URL `\http://foobar.baz/zab`, with a header `X-Foo` set to `bar` value, for which heimdall was able to identify a subject, with `ID=foo` and which `Attributes` contain an entry `email: foo@bar`, then you can generate a JSON object with this information with the following template:
+
+[source, go]
+----
+{
+  "subject_id": {{ quote .Subject.ID }},
+  "email": {{ quote .Subject.Attributes.email }},
+  "request_url": {{ quote .RequestURL }},
+  "request_method": {{ quote .RequestMethod }},
+  "x_foo_value": {{ .RequestHeader "X-Foo" | quote }}
+}
+----
+
+This will result in the following JSON object:
+
+[source, json]
+----
+{
+    "subject_id": "foo",
+    "email": "foo@bar.baz",
+    "request_url": "http://foobar.baz/zab",
+    "request_method": "POST",
+    "x_foo_value": "bar"
+}
+----
+====
+
+You can find further examples as part of handler descriptions, supporting templating.
 
 == Scripting
 
-Some authorizers, which verify the presence or values of particular attributes of the subject can make use of https://262.ecma-international.org/5.1/[ECMAScript 5.1(+)]. Heimdall uses https://github.com/dop251/goja[goja] as ECMAScript engine. In addition to the general ECMAScript functionality, heimdall makes the following functions and object available to the script:
+Some authorizers, which verify the presence or values of particular attributes of the subject can make use of https://262.ecma-international.org/5.1/[ECMAScript 5.1(+)]. Heimdall uses https://github.com/dop251/goja[goja] as ECMAScript engine. In addition to the general ECMAScript functionality, heimdall makes the same functions and object available to the script, which are also available for the link:{{< relref "#_templating" >}}[templates]. The only difference is, that these are available as part of a `heimdall` object. In addition, there is also a `console` object implementing a `log` function to enable logging from the script. Latter can become handy during development of debugging. The output is only available if `debug` log level is set.
 
-* `console.log` - to log the activities in the script. Can become handy during development of debugging. The output is only available if `debug` log level is set.
-* `heimdall.subject` - to provide access to all attributes available for the given subject. The access is read only.
-* `heimdall.ctx` - to provide access to the actual HTTP request, like headers, cookies, URL, etc. You can only add new elements (like headers, query parameter), but not change existing.
+.Script, rendering a JSON object
+====
 
-Examples are provided as part of handler description supporting scripting.
+The following script creates the same JSON object, as in the example provided in the previous section, logs however also a statement
+
+[source, javascript]
+----
+console.log("This statement is only present in the logs, if the log level is set to debug")
+
+var data = {
+    "subject_id": heimdall.Subject.ID,
+    "email": heimdall.Subject.Attributes.email,
+    "request_url": heimdall.RequestURL(),
+    "request_method": heimdall.RequestMethod(),
+    "x_foo_value": heimdall.RequestHeader("X-Foo")
+}
+
+data
+----
+
+The result is again the already known JSON object.
+
+[source, json]
+----
+{
+    "subject_id": "foo",
+    "email": "foo@bar.baz",
+    "request_url": "http://foobar.baz/zab",
+    "request_method": "POST",
+    "x_foo_value": "bar"
+}
+----
+====
+
+You can find further examples as part of handler descriptions, supporting scripting.

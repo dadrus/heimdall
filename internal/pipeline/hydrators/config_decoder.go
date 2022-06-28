@@ -4,6 +4,7 @@ import (
 	"github.com/mitchellh/mapstructure"
 
 	"github.com/dadrus/heimdall/internal/pipeline/endpoint"
+	"github.com/dadrus/heimdall/internal/pipeline/template"
 )
 
 func decodeConfig(input any, output any) error {
@@ -12,6 +13,7 @@ func decodeConfig(input any, output any) error {
 			DecodeHook: mapstructure.ComposeDecodeHookFunc(
 				mapstructure.StringToTimeDurationHookFunc(),
 				endpoint.DecodeAuthenticationStrategyHookFunc(),
+				template.DecodeTemplateHookFunc(),
 			),
 			Result:      output,
 			ErrorUnused: true,

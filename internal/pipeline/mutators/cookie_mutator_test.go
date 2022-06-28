@@ -10,7 +10,6 @@ import (
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/heimdall/mocks"
 	"github.com/dadrus/heimdall/internal/pipeline/subject"
-	"github.com/dadrus/heimdall/internal/pipeline/template"
 	"github.com/dadrus/heimdall/internal/testsupport"
 	"github.com/dadrus/heimdall/internal/x"
 )
@@ -60,18 +59,39 @@ foo: bar
 			},
 		},
 		{
+			uc: "with bad template",
+			config: []byte(`
+cookies:
+  bar: "{{ .Subject.ID | foobar }}"
+`),
+			assert: func(t *testing.T, err error, mut *cookieMutator) {
+				t.Helper()
+
+				require.Nil(t, mut)
+				require.Error(t, err)
+				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				assert.Contains(t, err.Error(), "failed to unmarshal")
+			},
+		},
+		{
 			uc: "with valid config",
 			config: []byte(`
 cookies:
   foo: bar
-  bar: "{{ .ID }}"`),
+  bar: "{{ .Subject.ID }}"`),
 			assert: func(t *testing.T, err error, mut *cookieMutator) {
 				t.Helper()
 
 				require.NoError(t, err)
 				assert.Len(t, mut.cookies, 2)
-				assert.Equal(t, template.Template("bar"), mut.cookies["foo"])
-				assert.Equal(t, template.Template("{{ .ID }}"), mut.cookies["bar"])
+
+				val, err := mut.cookies["foo"].Render(nil, nil)
+				require.NoError(t, err)
+				assert.Equal(t, "bar", val)
+
+				val, err = mut.cookies["bar"].Render(nil, &subject.Subject{ID: "baz"})
+				require.NoError(t, err)
+				assert.Equal(t, "baz", val)
 			},
 		},
 	} {
@@ -141,7 +161,10 @@ cookies:
 				assert.NotEqual(t, prototype, configured)
 				require.NotNil(t, configured)
 				assert.NotEmpty(t, configured.cookies)
-				assert.Equal(t, template.Template("foo"), configured.cookies["bar"])
+
+				val, err := configured.cookies["bar"].Render(nil, nil)
+				require.NoError(t, err)
+				assert.Equal(t, "foo", val)
 			},
 		},
 	} {
@@ -182,7 +205,7 @@ func TestCookieMutatorExecute(t *testing.T) {
 			config: []byte(`
 cookies:
   foo: bar
-  bar: "{{ .ID }}"
+  bar: "{{ .Subject.ID }}"
 `),
 			assert: func(t *testing.T, err error) {
 				t.Helper()
@@ -193,30 +216,11 @@ cookies:
 			},
 		},
 		{
-			uc: "with bad template",
-			config: []byte(`
-cookies:
-  bar: "{{ .ID | foobar }}"
-`),
-			createSubject: func(t *testing.T) *subject.Subject {
-				t.Helper()
-
-				return &subject.Subject{ID: "FooBar"}
-			},
-			assert: func(t *testing.T, err error) {
-				t.Helper()
-
-				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrInternal)
-				assert.Contains(t, err.Error(), "failed to render")
-			},
-		},
-		{
 			uc: "with all preconditions satisfied",
 			config: []byte(`
 cookies:
-  foo: "{{ .Attributes.bar }}"
-  bar: "{{ .ID }}"
+  foo: "{{ .Subject.Attributes.bar }}"
+  bar: "{{ .Subject.ID }}"
   baz: bar
 `),
 			configureContext: func(t *testing.T, ctx *mocks.MockContext) {

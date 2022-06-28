@@ -76,7 +76,10 @@ payload: bar
 				require.NotNil(t, hydrator)
 
 				assert.Equal(t, "http://foo.bar", hydrator.e.URL)
-				assert.Equal(t, template.Template("bar"), hydrator.payload)
+				require.NotNil(t, hydrator.payload)
+				val, err := hydrator.payload.Render(nil, &subject.Subject{ID: "baz"})
+				require.NoError(t, err)
+				assert.Equal(t, "bar", val)
 				assert.Empty(t, hydrator.fwdCookies)
 				assert.Empty(t, hydrator.fwdHeaders)
 				assert.Equal(t, defaultTTL, hydrator.ttl)
@@ -92,7 +95,7 @@ forward_headers:
   - X-Foo-Bar
 forward_cookies:
   - My-Foo-Session
-payload: "{{ .ID }}"
+payload: "{{ .Subject.ID }}"
 cache_ttl: 5s
 `),
 			assert: func(t *testing.T, err error, hydrator *genericHydrator) {
@@ -102,7 +105,10 @@ cache_ttl: 5s
 				require.NotNil(t, hydrator)
 
 				assert.Equal(t, "http://bar.foo", hydrator.e.URL)
-				assert.Equal(t, template.Template("{{ .ID }}"), hydrator.payload)
+				require.NotNil(t, hydrator.payload)
+				val, err := hydrator.payload.Render(nil, &subject.Subject{ID: "baz"})
+				require.NoError(t, err)
+				assert.Equal(t, "baz", val)
 				assert.Len(t, hydrator.fwdCookies, 1)
 				assert.Contains(t, hydrator.fwdCookies, "My-Foo-Session")
 				assert.Len(t, hydrator.fwdHeaders, 2)
@@ -194,7 +200,10 @@ payload: foo
 				assert.Equal(t, prototype.e, configured.e)
 				assert.Equal(t, prototype.name, configured.name)
 				assert.NotEqual(t, prototype.payload, configured.payload)
-				assert.Equal(t, template.Template("foo"), configured.payload)
+				require.NotNil(t, configured.payload)
+				val, err := configured.payload.Render(nil, &subject.Subject{ID: "baz"})
+				require.NoError(t, err)
+				assert.Equal(t, "foo", val)
 				assert.Equal(t, prototype.fwdHeaders, configured.fwdHeaders)
 				assert.Equal(t, prototype.fwdCookies, configured.fwdCookies)
 				assert.Equal(t, prototype.ttl, configured.ttl)
@@ -227,7 +236,10 @@ forward_headers:
 				assert.Equal(t, prototype.e, configured.e)
 				assert.Equal(t, prototype.name, configured.name)
 				assert.NotEqual(t, prototype.payload, configured.payload)
-				assert.Equal(t, template.Template("foo"), configured.payload)
+				require.NotNil(t, configured.payload)
+				val, err := configured.payload.Render(nil, &subject.Subject{ID: "baz"})
+				require.NoError(t, err)
+				assert.Equal(t, "foo", val)
 				assert.NotEqual(t, prototype.fwdHeaders, configured.fwdHeaders)
 				assert.Len(t, configured.fwdHeaders, 1)
 				assert.Contains(t, configured.fwdHeaders, "Foo-Bar")
@@ -264,7 +276,10 @@ forward_cookies:
 				assert.Equal(t, prototype.e, configured.e)
 				assert.Equal(t, prototype.name, configured.name)
 				assert.NotEqual(t, prototype.payload, configured.payload)
-				assert.Equal(t, template.Template("foo"), configured.payload)
+				require.NotNil(t, configured.payload)
+				val, err := configured.payload.Render(nil, &subject.Subject{ID: "baz"})
+				require.NoError(t, err)
+				assert.Equal(t, "foo", val)
 				assert.NotEqual(t, prototype.fwdHeaders, configured.fwdHeaders)
 				assert.Len(t, configured.fwdHeaders, 1)
 				assert.Contains(t, configured.fwdHeaders, "Foo-Bar")
@@ -304,7 +319,10 @@ cache_ttl: 15s
 				assert.Equal(t, prototype.e, configured.e)
 				assert.Equal(t, prototype.name, configured.name)
 				assert.NotEqual(t, prototype.payload, configured.payload)
-				assert.Equal(t, template.Template("foo"), configured.payload)
+				require.NotNil(t, configured.payload)
+				val, err := configured.payload.Render(nil, &subject.Subject{ID: "baz"})
+				require.NoError(t, err)
+				assert.Equal(t, "foo", val)
 				assert.NotEqual(t, prototype.fwdHeaders, configured.fwdHeaders)
 				assert.Len(t, configured.fwdHeaders, 1)
 				assert.Contains(t, configured.fwdHeaders, "Foo-Bar")
@@ -402,6 +420,11 @@ func TestGenericHydratorExecute(t *testing.T) {
 				name: "hydrator",
 				e:    endpoint.Endpoint{URL: srv.URL},
 				ttl:  5 * time.Second,
+				payload: func() template.Template {
+					tpl, _ := template.New("foo")
+
+					return tpl
+				}(),
 			},
 			subject: &subject.Subject{ID: "Foo", Attributes: map[string]any{"bar": "baz"}},
 			configureCache: func(t *testing.T, cch *mocks.MockCache, hydrator *genericHydrator, sub *subject.Subject) {
@@ -428,6 +451,11 @@ func TestGenericHydratorExecute(t *testing.T) {
 				name: "hydrator",
 				e:    endpoint.Endpoint{URL: srv.URL},
 				ttl:  5 * time.Second,
+				payload: func() template.Template {
+					tpl, _ := template.New("foo")
+
+					return tpl
+				}(),
 			},
 			subject: &subject.Subject{ID: "Foo", Attributes: map[string]any{"bar": "baz"}},
 			configureCache: func(t *testing.T, cch *mocks.MockCache, hydrator *genericHydrator, sub *subject.Subject) {
@@ -462,9 +490,13 @@ func TestGenericHydratorExecute(t *testing.T) {
 		{
 			uc: "with error in payload rendering",
 			hydrator: &genericHydrator{
-				name:    "hydrator",
-				e:       endpoint.Endpoint{URL: srv.URL},
-				payload: template.Template("{{ .foo }}"),
+				name: "hydrator",
+				e:    endpoint.Endpoint{URL: srv.URL},
+				payload: func() template.Template {
+					tpl, _ := template.New("{{ .foo }}")
+
+					return tpl
+				}(),
 			},
 			subject: &subject.Subject{ID: "Foo", Attributes: map[string]any{"bar": "baz"}},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
@@ -520,7 +552,7 @@ func TestGenericHydratorExecute(t *testing.T) {
 			uc: "without any content sent",
 			hydrator: &genericHydrator{
 				name: "test-hydrator",
-				e:    endpoint.Endpoint{URL: srv.URL + "/{{ .ID }}"},
+				e:    endpoint.Endpoint{URL: srv.URL + "/{{ .Subject.ID }}"},
 			},
 			subject: &subject.Subject{ID: "Foo", Attributes: map[string]any{"bar": "baz"}},
 			instructServer: func(t *testing.T) {
@@ -549,14 +581,18 @@ func TestGenericHydratorExecute(t *testing.T) {
 			hydrator: &genericHydrator{
 				name: "test-hydrator",
 				e: endpoint.Endpoint{
-					URL: srv.URL + "/{{.ID}}",
+					URL: srv.URL + "/{{ .Subject.ID }}",
 					Headers: map[string]string{
 						"Content-Type": "application/json",
 						"Accept":       "application/json",
-						"X-Bar":        "{{ .Attributes.bar }}",
+						"X-Bar":        "{{ .Subject.Attributes.bar }}",
 					},
 				},
-				payload:    template.Template(`{ "user_id": {{ quote .ID }}}`),
+				payload: func() template.Template {
+					tpl, _ := template.New(`{ "user_id": {{ quote .Subject.ID }}}`)
+
+					return tpl
+				}(),
 				fwdHeaders: []string{"X-Bar-Foo"},
 				fwdCookies: []string{"X-Foo-Session"},
 			},
