@@ -14,7 +14,6 @@ import (
 	"github.com/dadrus/heimdall/internal/heimdall"
 	heimdallmocks "github.com/dadrus/heimdall/internal/heimdall/mocks"
 	"github.com/dadrus/heimdall/internal/pipeline/subject"
-	"github.com/dadrus/heimdall/internal/pipeline/template"
 	"github.com/dadrus/heimdall/internal/testsupport"
 	"github.com/dadrus/heimdall/internal/x"
 )
@@ -22,10 +21,7 @@ import (
 func TestCreateJWTMutator(t *testing.T) {
 	t.Parallel()
 
-	const (
-		expectedTTL      = 5 * time.Second
-		expectedTemplate = template.Template("{{ foobar }}")
-	)
+	const expectedTTL = 5 * time.Second
 
 	for _, tc := range []struct {
 		uc     string
@@ -82,8 +78,11 @@ func TestCreateJWTMutator(t *testing.T) {
 			},
 		},
 		{
-			uc:     "with claims only",
-			config: []byte(`claims: "{{ foobar }}"`),
+			uc: "with claims only",
+			config: []byte(`
+claims: 
+  '{ "sub": {{ quote .Subject.ID }} }'
+`),
 			assert: func(t *testing.T, err error, mut *jwtMutator) {
 				t.Helper()
 
@@ -91,14 +90,18 @@ func TestCreateJWTMutator(t *testing.T) {
 
 				require.NotNil(t, mut)
 				assert.Equal(t, defaultJWTTTL, mut.ttl)
-				assert.Equal(t, expectedTemplate, *mut.claims)
+				require.NotNil(t, mut.claims)
+				val, err := mut.claims.Render(nil, &subject.Subject{ID: "bar"})
+				require.NoError(t, err)
+				assert.Equal(t, `{ "sub": "bar" }`, val)
 			},
 		},
 		{
 			uc: "with claims and ttl",
 			config: []byte(`
 ttl: 5s
-claims: "{{ foobar }}"
+claims: 
+  '{ "sub": {{ quote .Subject.ID }} }'
 `),
 			assert: func(t *testing.T, err error, mut *jwtMutator) {
 				t.Helper()
@@ -107,7 +110,10 @@ claims: "{{ foobar }}"
 
 				require.NotNil(t, mut)
 				assert.Equal(t, expectedTTL, mut.ttl)
-				assert.Equal(t, expectedTemplate, *mut.claims)
+				require.NotNil(t, mut.claims)
+				val, err := mut.claims.Render(nil, &subject.Subject{ID: "bar"})
+				require.NoError(t, err)
+				assert.Equal(t, `{ "sub": "bar" }`, val)
 			},
 		},
 		{
@@ -142,8 +148,7 @@ func TestCreateJWTMutatorFromPrototype(t *testing.T) {
 	t.Parallel()
 
 	const (
-		expectedTTL      = 5 * time.Second
-		expectedTemplate = template.Template("{{ foobar }}")
+		expectedTTL = 5 * time.Second
 	)
 
 	for _, tc := range []struct {
@@ -195,8 +200,11 @@ func TestCreateJWTMutatorFromPrototype(t *testing.T) {
 			},
 		},
 		{
-			uc:     "configuration with claims only provided",
-			config: []byte(`claims: "{{ foobar }}"`),
+			uc: "configuration with claims only provided",
+			config: []byte(`
+claims:
+  '{ "sub": {{ quote .Subject.ID }} }'
+`),
 			assert: func(t *testing.T, err error, prototype *jwtMutator, configured *jwtMutator) {
 				t.Helper()
 
@@ -204,14 +212,18 @@ func TestCreateJWTMutatorFromPrototype(t *testing.T) {
 				assert.NotEqual(t, prototype, configured)
 				assert.Equal(t, prototype.ttl, configured.ttl)
 				assert.NotEqual(t, prototype.claims, configured.claims)
-				assert.Equal(t, expectedTemplate, *configured.claims)
+				require.NotNil(t, configured.claims)
+				val, err := configured.claims.Render(nil, &subject.Subject{ID: "bar"})
+				require.NoError(t, err)
+				assert.Equal(t, `{ "sub": "bar" }`, val)
 			},
 		},
 		{
 			uc: "configuration with both ttl and claims provided",
 			config: []byte(`
 ttl: 5s
-claims: "{{ foobar }}"
+claims:
+  '{ "sub": {{ quote .Subject.ID }} }'
 `),
 			assert: func(t *testing.T, err error, prototype *jwtMutator, configured *jwtMutator) {
 				t.Helper()
@@ -221,7 +233,10 @@ claims: "{{ foobar }}"
 				assert.NotEqual(t, prototype.ttl, configured.ttl)
 				assert.Equal(t, expectedTTL, configured.ttl)
 				assert.NotEqual(t, prototype.claims, configured.claims)
-				assert.Equal(t, expectedTemplate, *configured.claims)
+				require.NotNil(t, configured.claims)
+				val, err := configured.claims.Render(nil, &subject.Subject{ID: "bar"})
+				require.NoError(t, err)
+				assert.Equal(t, `{ "sub": "bar" }`, val)
 			},
 		},
 		{
@@ -376,11 +391,11 @@ func TestJWTMutatorExecute(t *testing.T) {
 		{
 			uc: "with no cache hit and with custom claims",
 			config: []byte(`
-claims: "{
-  {{ $val := .Attributes.baz }}
-  \"sub_id\": {{ quote .ID }}, 
-  {{ quote $val }}: \"baz\"
-}"`),
+claims: '{
+  {{ $val := .Subject.Attributes.baz }}
+  "sub_id": {{ quote .Subject.ID }}, 
+  {{ quote $val }}: "baz"
+}'`),
 			subject: &subject.Subject{ID: "foo", Attributes: map[string]any{"baz": "bar"}},
 			configureMocks: func(t *testing.T, ctx *heimdallmocks.MockContext, signer *heimdallmocks.MockJWTSigner,
 				cch *mocks.MockCache, sub *subject.Subject,

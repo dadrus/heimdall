@@ -10,7 +10,6 @@ import (
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/heimdall/mocks"
 	"github.com/dadrus/heimdall/internal/pipeline/subject"
-	"github.com/dadrus/heimdall/internal/pipeline/template"
 	"github.com/dadrus/heimdall/internal/testsupport"
 	"github.com/dadrus/heimdall/internal/x"
 )
@@ -60,18 +59,38 @@ foo: bar
 			},
 		},
 		{
+			uc: "with bad template",
+			config: []byte(`
+headers:
+  bar: "{{ .Subject.ID | foobar }}"
+`),
+			assert: func(t *testing.T, err error, mut *headerMutator) {
+				t.Helper()
+
+				require.Error(t, err)
+				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				assert.Contains(t, err.Error(), "failed to unmarshal")
+			},
+		},
+		{
 			uc: "with valid config",
 			config: []byte(`
 headers:
   foo: bar
-  bar: "{{ .ID }}"`),
+  bar: "{{ .Subject.ID }}"`),
 			assert: func(t *testing.T, err error, mut *headerMutator) {
 				t.Helper()
 
 				require.NoError(t, err)
 				assert.Len(t, mut.headers, 2)
-				assert.Equal(t, template.Template("bar"), mut.headers["foo"])
-				assert.Equal(t, template.Template("{{ .ID }}"), mut.headers["bar"])
+
+				val, err := mut.headers["foo"].Render(nil, nil)
+				require.NoError(t, err)
+				assert.Equal(t, "bar", val)
+
+				val, err = mut.headers["bar"].Render(nil, &subject.Subject{ID: "baz"})
+				require.NoError(t, err)
+				assert.Equal(t, "baz", val)
 			},
 		},
 	} {
@@ -141,7 +160,10 @@ headers:
 				assert.NotEqual(t, prototype, configured)
 				require.NotNil(t, configured)
 				assert.NotEmpty(t, configured.headers)
-				assert.Equal(t, template.Template("foo"), configured.headers["bar"])
+
+				val, err := configured.headers["bar"].Render(nil, nil)
+				require.NoError(t, err)
+				assert.Equal(t, "foo", val)
 			},
 		},
 	} {
@@ -182,7 +204,7 @@ func TestHeaderMutatorExecute(t *testing.T) {
 			config: []byte(`
 headers:
   foo: bar
-  bar: "{{ .ID }}"
+  bar: "{{ .Subject.ID }}"
 `),
 			assert: func(t *testing.T, err error) {
 				t.Helper()
@@ -193,30 +215,11 @@ headers:
 			},
 		},
 		{
-			uc: "with bad template",
-			config: []byte(`
-headers:
-  bar: "{{ .ID | foobar }}"
-`),
-			createSubject: func(t *testing.T) *subject.Subject {
-				t.Helper()
-
-				return &subject.Subject{ID: "FooBar"}
-			},
-			assert: func(t *testing.T, err error) {
-				t.Helper()
-
-				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrInternal)
-				assert.Contains(t, err.Error(), "failed to render")
-			},
-		},
-		{
 			uc: "with all preconditions satisfied",
 			config: []byte(`
 headers:
-  foo: "{{ .Attributes.bar }}"
-  bar: "{{ .ID }}"
+  foo: "{{ .Subject.Attributes.bar }}"
+  bar: "{{ .Subject.ID }}"
   baz: bar
 `),
 			configureContext: func(t *testing.T, ctx *mocks.MockContext) {

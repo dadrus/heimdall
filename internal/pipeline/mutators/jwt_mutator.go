@@ -40,14 +40,14 @@ func init() {
 }
 
 type jwtMutator struct {
-	claims *template.Template
+	claims template.Template
 	ttl    time.Duration
 }
 
 func newJWTMutator(rawConfig map[string]any) (*jwtMutator, error) {
 	type _config struct {
-		Claims *template.Template `mapstructure:"claims"`
-		TTL    *time.Duration     `mapstructure:"ttl"`
+		Claims template.Template `mapstructure:"claims"`
+		TTL    *time.Duration    `mapstructure:"ttl"`
 	}
 
 	var conf _config
@@ -126,8 +126,8 @@ func (m *jwtMutator) WithConfig(rawConfig map[string]any) (Mutator, error) {
 	}
 
 	type _config struct {
-		Claims *template.Template `mapstructure:"claims"`
-		TTL    *time.Duration     `mapstructure:"ttl"`
+		Claims template.Template `mapstructure:"claims"`
+		TTL    *time.Duration    `mapstructure:"ttl"`
 	}
 
 	var conf _config
@@ -172,11 +172,6 @@ func (m *jwtMutator) generateToken(ctx heimdall.Context, sub *subject.Subject) (
 func (m *jwtMutator) calculateCacheKey(sub *subject.Subject, iss heimdall.JWTSigner) (string, error) {
 	const int64BytesCount = 8
 
-	claims := "null"
-	if m.claims != nil {
-		claims = string(*m.claims)
-	}
-
 	rawSub, err := json.Marshal(sub)
 	if err != nil {
 		return "", errorchain.NewWithMessage(heimdall.ErrInternal, "failed to marshal subject data").
@@ -188,7 +183,9 @@ func (m *jwtMutator) calculateCacheKey(sub *subject.Subject, iss heimdall.JWTSig
 
 	hash := sha256.New()
 	hash.Write([]byte(iss.Hash()))
-	hash.Write([]byte(claims))
+	hash.Write([]byte(x.IfThenElseExec(m.claims != nil,
+		func() string { return m.claims.Hash() },
+		func() string { return "null" })))
 	hash.Write(ttlBytes)
 	hash.Write(rawSub)
 
