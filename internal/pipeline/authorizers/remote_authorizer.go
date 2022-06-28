@@ -89,7 +89,7 @@ func newRemoteAuthorizer(name string, rawConfig map[string]any) (*remoteAuthoriz
 			"failed to validate endpoint configuration").CausedBy(err)
 	}
 
-	if len(conf.Endpoint.Headers) == 0 && len(conf.Payload) == 0 {
+	if len(conf.Endpoint.Headers) == 0 && conf.Payload == nil {
 		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
 			"either a payload or at least one endpoint header must be configured for remote authorizer")
 	}
@@ -194,7 +194,7 @@ func (a *remoteAuthorizer) doAuthorize(ctx heimdall.Context, sub *subject.Subjec
 func (a *remoteAuthorizer) createRequest(ctx heimdall.Context, sub *subject.Subject) (*http.Request, error) {
 	var body io.Reader
 
-	if len(a.payload) != 0 {
+	if a.payload != nil {
 		bodyContents, err := a.payload.Render(ctx, sub)
 		if err != nil {
 			return nil, errorchain.NewWithMessage(heimdall.ErrInternal,
@@ -206,7 +206,12 @@ func (a *remoteAuthorizer) createRequest(ctx heimdall.Context, sub *subject.Subj
 
 	req, err := a.e.CreateRequest(ctx.AppContext(), body,
 		renderer.RenderFunc(func(value string) (string, error) {
-			return template.Template(value).Render(ctx, sub)
+			tpl, err := template.New(value)
+			if err != nil {
+				return "", err
+			}
+
+			return tpl.Render(ctx, sub)
 		}))
 	if err != nil {
 		return nil, err
@@ -275,7 +280,7 @@ func (a *remoteAuthorizer) WithConfig(rawConfig map[string]any) (Authorizer, err
 	return &remoteAuthorizer{
 		e:       a.e,
 		name:    a.name,
-		payload: x.IfThenElse(len(conf.Payload) != 0, conf.Payload, a.payload),
+		payload: x.IfThenElse(conf.Payload != nil, conf.Payload, a.payload),
 		headersForUpstream: x.IfThenElse(len(conf.ResponseHeadersToForward) != 0,
 			conf.ResponseHeadersToForward, a.headersForUpstream),
 		ttl: x.IfThenElse(conf.CacheTTL > 0, conf.CacheTTL, a.ttl),
@@ -298,7 +303,7 @@ func (a *remoteAuthorizer) calculateCacheKey(sub *subject.Subject) (string, erro
 	hash.Write([]byte(a.e.Hash()))
 	hash.Write([]byte(a.name))
 	hash.Write([]byte(strings.Join(a.headersForUpstream, ",")))
-	hash.Write([]byte(a.payload))
+	hash.Write([]byte(a.payload.Hash()))
 	hash.Write(ttlBytes)
 	hash.Write(rawSub)
 
