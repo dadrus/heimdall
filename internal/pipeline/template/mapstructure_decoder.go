@@ -19,8 +19,13 @@ func DecodeTemplateHookFunc() mapstructure.DecodeHookFunc {
 			return data, nil
 		}
 
-		// nolint: forcetypeassert
-		// already checked above
-		return New(data.(string))
+		switch data {
+		case "":
+			return nil, nil
+		default:
+			// nolint: forcetypeassert
+			// already checked above
+			return New(data.(string))
+		}
 	}
 }
