@@ -83,7 +83,7 @@ endpoint:
 			config: []byte(`
 endpoint:
   url: http://foo.bar
-payload: "{{ .ID }}"
+payload: "{{ .Subject.ID }}"
 `),
 			assert: func(t *testing.T, err error, auth *remoteAuthorizer) {
 				t.Helper()
@@ -91,7 +91,10 @@ payload: "{{ .ID }}"
 				require.NoError(t, err)
 
 				require.NotNil(t, auth)
-				assert.Equal(t, template.Template("{{ .ID }}"), auth.payload)
+				require.NotNil(t, auth.payload)
+				val, err := auth.payload.Render(nil, &subject.Subject{ID: "bar"})
+				require.NoError(t, err)
+				assert.Equal(t, "bar", val)
 				assert.Empty(t, auth.headersForUpstream)
 				assert.Zero(t, auth.ttl)
 			},
@@ -101,7 +104,7 @@ payload: "{{ .ID }}"
 			config: []byte(`
 endpoint:
   url: http://foo.bar
-payload: "{{ .Attributes.foo }}"
+payload: "{{ .Subject.ID }}"
 forward_response_headers_to_upstream:
   - Foo
   - Bar
@@ -113,7 +116,10 @@ cache_ttl: 5s
 				require.NoError(t, err)
 
 				require.NotNil(t, auth)
-				assert.Equal(t, template.Template("{{ .Attributes.foo }}"), auth.payload)
+				require.NotNil(t, auth.payload)
+				val, err := auth.payload.Render(nil, &subject.Subject{ID: "bar"})
+				require.NoError(t, err)
+				assert.Equal(t, "bar", val)
 				assert.Len(t, auth.headersForUpstream, 2)
 				assert.Contains(t, auth.headersForUpstream, "Foo")
 				assert.Contains(t, auth.headersForUpstream, "Bar")
@@ -198,7 +204,7 @@ foo: bar
 			},
 		},
 		{
-			uc: "with overwritten empty payload",
+			uc: "with overridden empty payload",
 			prototypeConfig: []byte(`
 endpoint:
   url: http://foo.bar
@@ -246,7 +252,10 @@ cache_ttl: 15s
 				assert.NotNil(t, configured)
 				assert.Equal(t, prototype.e, configured.e)
 				assert.Equal(t, prototype.name, configured.name)
-				assert.Equal(t, template.Template("Baz"), configured.payload)
+				require.NotNil(t, configured.payload)
+				val, err := configured.payload.Render(nil, nil)
+				require.NoError(t, err)
+				assert.Equal(t, "Baz", val)
 				assert.Len(t, configured.headersForUpstream, 2)
 				assert.Contains(t, configured.headersForUpstream, "Bar")
 				assert.Contains(t, configured.headersForUpstream, "Foo")
@@ -336,9 +345,13 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 			authorizer: &remoteAuthorizer{
 				e: endpoint.Endpoint{
 					URL:     srv.URL,
-					Headers: map[string]string{"Foo-Bar": "{{ .Attributes.bar }}"},
+					Headers: map[string]string{"Foo-Bar": "{{ .Subject.Attributes.bar }}"},
 				},
-				payload: "{{ .ID }}",
+				payload: func() template.Template {
+					tpl, _ := template.New("{{ .Subject.ID }}")
+
+					return tpl
+				}(),
 			},
 			subject: &subject.Subject{
 				ID:         "my-id",
@@ -383,10 +396,14 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 					Headers: map[string]string{
 						"Content-Type": "application/json",
 						"Accept":       "application/json",
-						"Foo-Bar":      "{{ .Attributes.bar }}",
+						"Foo-Bar":      "{{ .Subject.Attributes.bar }}",
 					},
 				},
-				payload:            `{ "user_id": {{ quote .ID }} }`,
+				payload: func() template.Template {
+					tpl, _ := template.New(`{ "user_id": {{ quote .Subject.ID }} }`)
+
+					return tpl
+				}(),
 				headersForUpstream: []string{"X-Foo-Bar", "X-Bar-Foo"},
 			},
 			subject: &subject.Subject{
@@ -465,7 +482,11 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 						"Content-Type": "application/x-www-form-urlencoded",
 					},
 				},
-				payload:            `user_id={{ urlenc .ID }}&{{ .Attributes.bar }}=foo`,
+				payload: func() template.Template {
+					tpl, _ := template.New(`user_id={{ urlenc .Subject.ID }}&{{ .Subject.Attributes.bar }}=foo`)
+
+					return tpl
+				}(),
 				headersForUpstream: []string{"X-Foo-Bar", "X-Bar-Foo"},
 				ttl:                20 * time.Second,
 			},
@@ -533,10 +554,14 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 					URL: srv.URL,
 					Headers: map[string]string{
 						"Content-Type": "application/x-www-form-urlencoded",
-						"Foo-Bar":      "{{ .Attributes.bar }}",
+						"Foo-Bar":      "{{ .Subject.Attributes.bar }}",
 					},
 				},
-				payload:            `user_id={{ urlenc .ID }}&{{ .Attributes.bar }}=foo`,
+				payload: func() template.Template {
+					tpl, _ := template.New(`user_id={{ urlenc .Subject.ID }}&{{ urlenc .Subject.Attributes.bar }}=foo`)
+
+					return tpl
+				}(),
 				headersForUpstream: []string{"X-Foo-Bar", "X-Bar-Foo"},
 				ttl:                20 * time.Second,
 			},
@@ -586,10 +611,14 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 					URL: srv.URL,
 					Headers: map[string]string{
 						"Content-Type": "application/x-www-form-urlencoded",
-						"Foo-Bar":      "{{ .Attributes.bar }}",
+						"Foo-Bar":      "{{ .Subject.Attributes.bar }}",
 					},
 				},
-				payload:            `user_id={{ urlenc .ID }}&{{ .Attributes.bar }}=foo`,
+				payload: func() template.Template {
+					tpl, _ := template.New(`user_id={{ urlenc .Subject.ID }}&{{ urlenc .Subject.Attributes.bar }}=foo`)
+
+					return tpl
+				}(),
 				headersForUpstream: []string{"X-Foo-Bar", "X-Bar-Foo"},
 				ttl:                20 * time.Second,
 			},
@@ -640,7 +669,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 				name: "authorizer",
 				e: endpoint.Endpoint{
 					URL:     srv.URL,
-					Headers: map[string]string{"X-User-ID": "{{ .ID }}"},
+					Headers: map[string]string{"X-User-ID": "{{ .Subject.ID }}"},
 				},
 			},
 			subject: &subject.Subject{ID: "foo"},
@@ -668,7 +697,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 				name: "foo",
 				e: endpoint.Endpoint{
 					URL:     srv.URL,
-					Headers: map[string]string{"X-User-ID": "{{ .ID }}"},
+					Headers: map[string]string{"X-User-ID": "{{ .Subject.ID }}"},
 				},
 			},
 			subject: &subject.Subject{ID: "foo", Attributes: map[string]any{}},
@@ -691,9 +720,13 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 		{
 			uc: "with communication error (dns)",
 			authorizer: &remoteAuthorizer{
-				name:    "authorizer",
-				e:       endpoint.Endpoint{URL: "http://heimdall.test.local"},
-				payload: template.Template("bar"),
+				name: "authorizer",
+				e:    endpoint.Endpoint{URL: "http://heimdall.test.local"},
+				payload: func() template.Template {
+					tpl, _ := template.New("bar")
+
+					return tpl
+				}(),
 			},
 			subject: &subject.Subject{ID: "foo"},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
