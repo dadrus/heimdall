@@ -1,21 +1,65 @@
 package cmd
 
 import (
-	"github.com/spf13/cobra"
+	"fmt"
+	"io/ioutil"
+	"net/http"
+	"os"
 
-	"github.com/dadrus/heimdall/cmd/health"
+	"github.com/goccy/go-json"
+	"github.com/spf13/cobra"
+	"gopkg.in/yaml.v3"
+
+	"github.com/dadrus/heimdall/internal/handler/health"
 )
 
 // nolint: gochecknoglobals
 var healthCmd = &cobra.Command{
-	Use:   "health",
-	Short: "Commands for checking the status of an Heimdall deployment",
-	Long: `Note:
-  The endpoint URL should point to a single Heimdall deployment.
-  If the endpoint URL points to a Load Balancer, these commands will effective test the Load Balancer.
-`,
+	Use:     "health",
+	Short:   "Checks the health status of a Heimdall deployment",
+	Example: "heimdall health -e https://heimdall.local",
 	Run: func(cmd *cobra.Command, args []string) {
-		cmd.Println(cmd.UsageString())
+		endpointURL, _ := cmd.Flags().GetString("endpoint")
+		outputFormat, _ := cmd.Flags().GetString("output")
+
+		resp, err := http.DefaultClient.Get(fmt.Sprintf("%s%s", endpointURL, health.EndpointHealth))
+		if err != nil {
+			cmd.PrintErrf("Failed to send request: %v", err)
+			os.Exit(-1)
+		}
+
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			cmd.PrintErrf("Unexpected HTTP status code : %s", resp.Status)
+			os.Exit(-1)
+		}
+
+		rawResp, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			cmd.PrintErrf("Failed to read response: %v", err)
+			os.Exit(-1)
+		}
+
+		var structuredResponse map[string]any
+		if err := json.Unmarshal(rawResp, &structuredResponse); err != nil {
+			cmd.PrintErrf("Failed to unmarshal response: %v", err)
+			os.Exit(-1)
+		}
+
+		switch outputFormat {
+		case "json":
+			cmd.Println(string(rawResp))
+		case "yaml":
+			rawYaml, err := yaml.Marshal(structuredResponse)
+			if err != nil {
+				cmd.PrintErrf("Failed to convert response to yaml: %v", err)
+				os.Exit(-1)
+			}
+			cmd.Println(string(rawYaml))
+		default:
+			cmd.Println(structuredResponse["status"])
+		}
 	},
 }
 
@@ -23,9 +67,9 @@ var healthCmd = &cobra.Command{
 func init() {
 	RootCmd.AddCommand(healthCmd)
 
-	healthCmd.PersistentFlags().StringP("endpoint", "e", "", `The endpoint URL of Heimdall's management API. 
+	healthCmd.PersistentFlags().StringP("endpoint", "e", "", `The base URL of Heimdall's deployment. 
 Note: The endpoint URL should point to a single Heimdall deployment. 
 If the endpoint URL points to a Load Balancer, these commands will effective test the Load Balancer.`)
-	healthCmd.AddCommand(health.NewAliveCommand())
-	healthCmd.AddCommand(health.NewReadyCommand())
+	healthCmd.PersistentFlags().StringP("output", "o", "text", `The format for the result output.
+Can be "json", "text", or "yaml". Defaults to "text".`)
 }
