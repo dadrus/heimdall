@@ -71,5 +71,5 @@ func init() {
 Note: The endpoint URL should point to a single Heimdall deployment. 
 If the endpoint URL points to a Load Balancer, these commands will effective test the Load Balancer.`)
 	healthCmd.PersistentFlags().StringP("output", "o", "text", `The format for the result output.
-Can be "json", "text", or "yaml". Defaults to "text".`)
+Can be "json", "text", or "yaml".`)
 }
