@@ -4,7 +4,6 @@ import (
 	"context"
 	"strings"
 
-	"github.com/dadrus/heimdall/internal/handler/health"
 	"github.com/goccy/go-json"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
@@ -20,6 +19,7 @@ import (
 	fiberlogger "github.com/dadrus/heimdall/internal/fiber/middleware/logger"
 	fibertracing "github.com/dadrus/heimdall/internal/fiber/middleware/tracing"
 	"github.com/dadrus/heimdall/internal/handler/errorhandler"
+	"github.com/dadrus/heimdall/internal/handler/health"
 	"github.com/dadrus/heimdall/internal/x"
 )
 
