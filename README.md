@@ -5,14 +5,28 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/dadrus/heimdall)](https://goreportcard.com/report/github.com/dadrus/heimdall) 
 [![License](https://img.shields.io/github/license/dadrus/heimdall)](https://github.com/dadrus/heimdall/blob/master/LICENSE)
 
-Heimdall is inspired by the ZeroTrust idea and also by [Ory's OAthkeeper](https://www.ory.sh/docs/oathkeeper). Some experience with the latter and my inability to update it to include the desired functionality and behavior was the born hour of Heimdall. 
+## Background
 
-Heimdall authenticates and authorizes incoming HTTP requests as well as enriches these with further information and transforms resulting subject information to a format, required by the upstream services. It is supposed to be used either as a Reverse Proxy (not yet implemented) in front of your upstream API or web server that rejects unauthorized requests and forwards authorized ones to your end points, or as a Decision API, which integrates with your API Gateway (Kong, NGNIX, Envoy, Traefik, etc) and then acts as a Policy Decision Point.
+Heimdall is inspired by the ZeroTrust idea and also by [Ory's OAthkeeper](https://www.ory.sh/docs/oathkeeper). Some experience with the latter and my inability to update it to include the desired functionality and behavior was Heimdall's born hour. 
+
+## Heimdall's Promise
+
+Heimdall authenticates and authorizes incoming HTTP requests as well as enriches these with further contextual information and finally transforms resulting subject information into a format, required by the upstream services. All of these steps can be defined and controlled by each upstream service individually.
+
+And all of that can be controlled by each and every backend service individually.
+
+It is supposed to be used either as 
+* a *Reverse Proxy* (not yet implemented) in front of your upstream API or web server that rejects unauthorized requests and forwards authorized ones to your end points, or as 
+* a *Decision API*, which integrates with your API Gateway (Kong, NGNIX, Envoy, Traefik, etc) and then acts as a Policy Decision Point.
+
+## Beyond the Functionality
 
 Heimdall's main focus points beyond its functionality are:
 * Performance - To achieve this, Heimdall makes use of [Fiber](https://gofiber.io/) and does not load or convert data during execution whenever possible. This is also true for reflection use.
 * Clear abstractions - To allow extensibility and even replacement components if required, like e.g. of the currently used HTTP engine, and this without any side effects.
 * Simplicity - To allow better understanding of code to everybody, who would like to contribute.
+
+## Current State
 
 The current implementation is a pre alpha version, but already supports functionality listed below. A first alpha release will be available as soon as the test coverage hits 85% and all tasks for the [0.1.0-alpha](https://github.com/dadrus/heimdall/milestone/1) milestone are implemented.
 
