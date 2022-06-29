@@ -5,11 +5,16 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/dadrus/heimdall)](https://goreportcard.com/report/github.com/dadrus/heimdall) 
 [![License](https://img.shields.io/github/license/dadrus/heimdall)](https://github.com/dadrus/heimdall/blob/master/LICENSE)
 
-Heimdall is inspired by [Ory's OAthkeeper](https://www.ory.sh/docs/oathkeeper), tries however to resolve the functional limitations of that product by also building on a more modern technology stack resulting in a much simpler and faster implementation.
+Heimdall is inspired by the ZeroTrust idea and also by [Ory's OAthkeeper](https://www.ory.sh/docs/oathkeeper). Some experience with the latter and my inability to update it to include the desired functionality and behavior was the born hour of Heimdall. 
 
-Heimdall authenticates and authorizes incoming HTTP requests as well as enriches these with further information and transforms resulting subject information to a format, both required by the upstream services. It is supposed to be used either as a Reverse Proxy in front of your upstream API or web server that rejects unauthorized requests and forwards authorized ones to your end points, or as a Decision API, which integrates with your API Gateway (Kong, NGNIX, Envoy, Traefik, etc) and then acts as a Policy Decision Point.
+Heimdall authenticates and authorizes incoming HTTP requests as well as enriches these with further information and transforms resulting subject information to a format, required by the upstream services. It is supposed to be used either as a Reverse Proxy (not yet implemented) in front of your upstream API or web server that rejects unauthorized requests and forwards authorized ones to your end points, or as a Decision API, which integrates with your API Gateway (Kong, NGNIX, Envoy, Traefik, etc) and then acts as a Policy Decision Point.
 
-The current implementation is a pre alpha version, but already supports functionality listed below. A first alpha release will be available as soon as the test coverage hits 85%, health & readyness probes, as well as the jwks endpoint are implemented.
+Heimdall's main focus points beyond its functionality are:
+* Performance - To achieve this, Heimdall makes use of [Fiber](https://gofiber.io/) and does not load or convert data during execution whenever possible. This is also true for reflection use.
+* Clear abstractions - To allow extensibility and even replacement components if required, like e.g. of the currently used HTTP engine, and this without any side effects.
+* Simplicity - To allow better understanding of code to everybody, who would like to contribute.
+
+The current implementation is a pre alpha version, but already supports functionality listed below. A first alpha release will be available as soon as the test coverage hits 85% and all tasks for the [0.1.0-alpha](https://github.com/dadrus/heimdall/milestone/1) milestone are implemented.
 
 * Decision API
 * Loading rules from the file system
@@ -21,22 +26,11 @@ The current implementation is a pre alpha version, but already supports function
 * Opentracing support (jaeger & instana)
 * Key store in pem format for rsa-pss and ecdsa keys (pkcs#1 - plain only & pkcs#8 - plain and encrypted)
 * Rules URL matching
-* Flexible pipeline definition: authenticators+ -> any order(authorizer+, hydrator*) -> mutator+ -> error_handler+
+* Flexible pipeline definition: authenticators+ -> any order(authorizer*, hydrator*) -> mutator+ -> error_handler+
 * Optional default rule taking effect if no rule matches
 * If Default rule is configured, the actual rule definition can reuse it (less yaml code)
 * Typical execution time if caches are active is around 300µs (on my laptop)
 * The configuration is validated on startup. You can also validate it by making use of the "validate config" command.
+* Health Probe
 
-Features to come are (more or less in this sequence):
-
-* Not really a feature - but tests, tests, tests ;) - at least 85%
-* Health & Readiness Probes
-* Extend template implementation to enable the usage of the heimdall context. As of today only the subject is available.
-* jwks endpoint to let the upstream service verify the jwt signatures
-* Documentation
-* Reverse Proxy
-* Deal with multiple entries for the same kid in responses from jwks endpoints
-* Validation for rules
-* X.509 certificates in key store
-* k8s CRDs to load rules from.
-* Ensure the builds are [reproducible](https://reproducible-builds.org/).
+If you like to give it a try, checkout out the [documentation](https://dadrus.github.io/heimdall/docs/welcome/).
