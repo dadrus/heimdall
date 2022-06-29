@@ -493,3 +493,37 @@ func TestHandleDecisionAPIRequest(t *testing.T) {
 		})
 	}
 }
+
+func TestHealthRequest(t *testing.T) {
+	// GIVEN
+	conf := config.Configuration{Serve: config.ServeConfig{DecisionAPI: config.ServiceConfig{}}}
+	cch := &mocks.MockCache{}
+	repo := &mocks2.MockRepository{}
+	signer := &mocks3.MockJWTSigner{}
+
+	app := newFiberApp(conf, cch, log.Logger)
+
+	_, err := newHandler(handlerParams{
+		App:             app,
+		RulesRepository: repo,
+		Logger:          log.Logger,
+		Signer:          signer,
+	})
+	require.NoError(t, err)
+
+	// WHEN
+	resp, err := app.Test(
+		httptest.NewRequest("GET", "http://heimdall.test.local/.well-known/health", nil),
+		-1)
+
+	// THEN
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	defer resp.Body.Close()
+
+	rawResp, err := ioutil.ReadAll(resp.Body)
+	require.NoError(t, err)
+
+	assert.JSONEq(t, `{ "status": "ok"}`, string(rawResp))
+}
