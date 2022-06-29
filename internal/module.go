@@ -10,7 +10,6 @@ import (
 	"github.com/dadrus/heimdall/internal/logging"
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/rules"
-	"github.com/dadrus/heimdall/internal/signer"
 	"github.com/dadrus/heimdall/internal/tracing"
 )
 
@@ -21,7 +20,6 @@ var Module = fx.Options(
 	tracing.Module,
 	cache.Module,
 	keystore.Module,
-	signer.Module,
 	pipeline.Module,
 	rules.Module,
 	prometheus.Module,
