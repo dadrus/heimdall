@@ -2,6 +2,7 @@
 title: "Rules"
 date: 2022-06-09T22:11:50+02:00
 draft: false
+weight: 100
 menu: 
   docs:
     weight: 40

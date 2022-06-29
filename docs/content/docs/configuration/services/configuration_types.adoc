@@ -2,6 +2,7 @@
 title: "Common Configuration Options"
 date: 2022-06-09T18:55:36+02:00
 draft: false
+weight: 45
 menu:
   docs:
     weight: 30

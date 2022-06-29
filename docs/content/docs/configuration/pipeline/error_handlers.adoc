@@ -2,6 +2,7 @@
 title: "Error Handlers"
 date: 2022-06-09T18:57:29+02:00
 draft: false
+weight: 90
 menu:
   docs:
     weight: 50

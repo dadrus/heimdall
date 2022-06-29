@@ -2,6 +2,7 @@
 title: "Default Rule"
 date: 2022-06-09T22:13:32+02:00
 draft: false
+weight: 105
 menu:
   docs:
     weight: 10

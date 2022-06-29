@@ -2,6 +2,7 @@
 title: "Quickstart"
 date: 2022-06-08T20:43:27+02:00
 draft: false
+weight: 15
 menu:
   docs:
     parent: "Getting Started"

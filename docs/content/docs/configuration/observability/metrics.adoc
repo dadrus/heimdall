@@ -2,6 +2,7 @@
 title: "Metrics"
 date: 2022-06-09T22:16:45+02:00
 draft: false
+weight: 55
 menu:
   docs:
     weight: 20

@@ -2,8 +2,10 @@
 title: "API"
 date: 2022-06-29T17:32:36+02:00
 draft: false
-weight: 40
-menu: docs
+weight: 30
+menu:
+  docs:
+    weight: 40
 ---
 
 This section lists available endpoints implemented by heimdall:

@@ -2,6 +2,7 @@
 title: "Operations"
 date: 2022-06-25T14:39:36+02:00
 draft: false
-weight: 20
-menu: docs
+menu:
+  docs:
+    weight: 20
 ---
