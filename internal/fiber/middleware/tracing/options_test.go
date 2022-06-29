@@ -186,7 +186,7 @@ func TestOptionsWithOperationFilter(t *testing.T) {
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
 			// GIVEN
-			apply := WithOperationFiler(tc.filter)
+			apply := WithOperationFilter(tc.filter)
 
 			// WHEN
 			apply(&tc.opt)

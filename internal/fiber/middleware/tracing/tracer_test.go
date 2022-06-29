@@ -27,7 +27,7 @@ func TestTracerSpanManagementWithoutSkippingOnMissingParentSpan(t *testing.T) {
 	app := fiber.New()
 	app.Use(New(
 		WithTracer(mtracer),
-		WithOperationFiler(func(ctx *fiber.Ctx) bool { return ctx.Path() == "/filtered" }),
+		WithOperationFilter(func(ctx *fiber.Ctx) bool { return ctx.Path() == "/filtered" }),
 		WithSpanObserver(func(span opentracing.Span, ctx *fiber.Ctx) {
 			if ctx.Method() == fiber.MethodGet {
 				span.SetTag("foo", "bar")
