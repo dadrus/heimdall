@@ -26,7 +26,7 @@ WORKDIR /go/src/heimdall
 COPY . .
 RUN go mod download
 
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags="-buildid= -w -s -X heimdall/cmd.Version=${VERSION}" \
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags="-buildid= -w -s -X github.com/dadrus/heimdall/cmd.Version=${VERSION}" \
     && if [ "$HOST_ARCH" = "arm64" ] ; then echo "skipping upx on ARM" ; else upx  heimdall; fi
 
 # The actual image of the app
