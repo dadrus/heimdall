@@ -23,7 +23,7 @@ With `text` and `gelf` being the available formats. `text` is the default format
 [source, yaml]
 ----
 log:
-  level: debug
+  format: gelf
 ----
 ====
 
