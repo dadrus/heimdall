@@ -4,6 +4,7 @@ import (
 	"context"
 	"strings"
 
+	"github.com/dadrus/heimdall/internal/handler/health"
 	"github.com/goccy/go-json"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
@@ -52,7 +53,7 @@ func newFiberApp(conf config.Configuration, cache cache.Cache, logger zerolog.Lo
 	app.Use(recover.New(recover.Config{EnableStackTrace: true}))
 	app.Use(fibertracing.New(
 		fibertracing.WithTracer(opentracing.GlobalTracer()),
-		fibertracing.WithOperationFilter(func(ctx *fiber.Ctx) bool { return ctx.Path() == "/.well-known/health" }),
+		fibertracing.WithOperationFilter(func(ctx *fiber.Ctx) bool { return ctx.Path() == health.EndpointHealth }),
 		fibertracing.WithSpanObserver(func(span opentracing.Span, ctx *fiber.Ctx) {
 			ext.Component.Set(span, "heimdall")
 		})))

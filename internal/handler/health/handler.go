@@ -5,10 +5,12 @@ import (
 	"github.com/rs/zerolog"
 )
 
+const EndpointHealth = "/.well-known/health"
+
 func RegisterRoutes(router fiber.Router, logger zerolog.Logger) {
 	logger.Debug().Msg("Registering health route")
 
-	router.Get("/.well-known/health", health)
+	router.Get(EndpointHealth, health)
 }
 
 func health(c *fiber.Ctx) error {
