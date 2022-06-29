@@ -45,7 +45,7 @@ func WithOperationNameProvider(provider OperationNameProvider) Option {
 	}
 }
 
-func WithOperationFiler(filter OperationFilter) Option {
+func WithOperationFilter(filter OperationFilter) Option {
 	return func(o *opts) {
 		if filter != nil {
 			o.filterOperation = filter

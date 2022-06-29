@@ -7,6 +7,7 @@ import (
 
 	fiberauditor "github.com/dadrus/heimdall/internal/fiber/middleware/auditor"
 	fiberxforwarded "github.com/dadrus/heimdall/internal/fiber/middleware/xforwarded"
+	"github.com/dadrus/heimdall/internal/handler/health"
 	"github.com/dadrus/heimdall/internal/handler/requestcontext"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules"
@@ -33,7 +34,10 @@ func newHandler(params handlerParams) (*Handler, error) {
 		s: params.Signer,
 	}
 
-	handler.registerRoutes(params.App.Group(""), params.Logger)
+	router := params.App.Group("/")
+
+	handler.registerRoutes(router, params.Logger)
+	health.RegisterRoutes(router, params.Logger)
 
 	return handler, nil
 }
