@@ -16,7 +16,7 @@ import (
 
 	"github.com/youmark/pkcs8"
 	"golang.org/x/exp/maps"
-	
+
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
@@ -36,14 +36,6 @@ var ErrNoSuchKey = errors.New("no such key")
 type KeyStore interface {
 	GetKey(id string) (*Entry, error)
 	Entries() []*Entry
-}
-
-type Entry struct {
-	KeyID      string
-	Alg        string
-	KeySize    int
-	PrivateKey crypto.Signer
-	CertChain  []*x509.Certificate
 }
 
 type keyStore map[string]*Entry

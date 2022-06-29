@@ -18,98 +18,41 @@ import (
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
-const (
-	rsa2048 = 2048
-	rsa3072 = 3072
-	rsa4096 = 4096
-
-	ecdsa256 = 256
-	ecdsa384 = 384
-	ecdsa512 = 521
-)
-
-func newJWTSigner(ks keystore.KeyStore, conf config.Configuration, logger zerolog.Logger) (heimdall.JWTSigner, error) {
+func NewJWTSigner(ks keystore.KeyStore, conf config.SignerConfig, logger zerolog.Logger) (heimdall.JWTSigner, error) {
 	var (
 		kse *keystore.Entry
 		err error
 	)
 
-	if len(conf.Signer.KeyID) == 0 {
+	if len(conf.KeyID) == 0 {
 		logger.Warn().Msg("No key id for signer configured. Taking first entry from the key store")
 
 		kse, err = ks.Entries()[0], nil
 	} else {
-		kse, err = ks.GetKey(conf.Signer.KeyID)
+		kse, err = ks.GetKey(conf.KeyID)
 	}
 
-	if err != nil {
-		return nil, err
-	}
-
-	alg, err := getJOSEAlgorithm(kse)
 	if err != nil {
 		return nil, err
 	}
 
 	return &jwtSigner{
-		iss: conf.Signer.Name,
-		kid: kse.KeyID,
-		alg: alg,
+		iss: conf.Name,
+		jwk: kse.JWK(),
 		key: kse.PrivateKey,
 	}, nil
 }
 
-func getJOSEAlgorithm(key *keystore.Entry) (jose.SignatureAlgorithm, error) {
-	switch key.Alg {
-	case keystore.AlgRSA:
-		return getRSAAlgorithm(key)
-	case keystore.AlgECDSA:
-		return getECDSAAlgorithm(key)
-	default:
-		return "", errorchain.
-			NewWithMessage(heimdall.ErrInternal, "unsupported signature key type")
-	}
-}
-
-func getECDSAAlgorithm(key *keystore.Entry) (jose.SignatureAlgorithm, error) {
-	switch key.KeySize {
-	case ecdsa256:
-		return jose.ES256, nil
-	case ecdsa384:
-		return jose.ES384, nil
-	case ecdsa512:
-		return jose.ES512, nil
-	default:
-		return "", errorchain.
-			NewWithMessage(heimdall.ErrInternal, "unsupported ECDSA key size")
-	}
-}
-
-func getRSAAlgorithm(key *keystore.Entry) (jose.SignatureAlgorithm, error) {
-	switch key.KeySize {
-	case rsa2048:
-		return jose.PS256, nil
-	case rsa3072:
-		return jose.PS384, nil
-	case rsa4096:
-		return jose.PS512, nil
-	default:
-		return "", errorchain.
-			NewWithMessage(heimdall.ErrInternal, "unsupported RSA key size")
-	}
-}
-
 type jwtSigner struct {
 	iss string
-	kid string
-	alg jose.SignatureAlgorithm
+	jwk jose.JSONWebKey
 	key crypto.Signer
 }
 
 func (s *jwtSigner) Hash() string {
 	hash := sha256.New()
-	hash.Write([]byte(s.kid))
-	hash.Write([]byte(s.alg))
+	hash.Write([]byte(s.jwk.KeyID))
+	hash.Write([]byte(s.jwk.Algorithm))
 	hash.Write([]byte(s.iss))
 
 	return hex.EncodeToString(hash.Sum(nil))
@@ -119,10 +62,12 @@ func (s *jwtSigner) Sign(sub string, ttl time.Duration, custClaims map[string]an
 	signerOpts := jose.SignerOptions{}
 	signerOpts.
 		WithType("JWT").
-		WithHeader("kid", s.kid).
-		WithHeader("alg", s.alg)
+		WithHeader("kid", s.jwk.KeyID).
+		WithHeader("alg", s.jwk.Algorithm)
 
-	signer, err := jose.NewSigner(jose.SigningKey{Algorithm: s.alg, Key: s.key}, &signerOpts)
+	signer, err := jose.NewSigner(
+		jose.SigningKey{Algorithm: jose.SignatureAlgorithm(s.jwk.Algorithm), Key: s.key},
+		&signerOpts)
 	if err != nil {
 		return "", errorchain.NewWithMessage(heimdall.ErrInternal, "failed to create JWT signer").CausedBy(err)
 	}

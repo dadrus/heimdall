@@ -5,12 +5,16 @@ import (
 	"github.com/rs/zerolog"
 	"go.uber.org/fx"
 
+	"github.com/dadrus/heimdall/internal/config"
 	fiberauditor "github.com/dadrus/heimdall/internal/fiber/middleware/auditor"
 	fiberxforwarded "github.com/dadrus/heimdall/internal/fiber/middleware/xforwarded"
 	"github.com/dadrus/heimdall/internal/handler/health"
+	"github.com/dadrus/heimdall/internal/handler/jwks"
 	"github.com/dadrus/heimdall/internal/handler/requestcontext"
 	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/keystore"
 	"github.com/dadrus/heimdall/internal/rules"
+	"github.com/dadrus/heimdall/internal/signer"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
@@ -24,20 +28,27 @@ type handlerParams struct {
 
 	App             *fiber.App `name:"api"`
 	RulesRepository rules.Repository
+	KeyStore        keystore.KeyStore
+	Config          config.Configuration
 	Logger          zerolog.Logger
-	Signer          heimdall.JWTSigner
 }
 
 func newHandler(params handlerParams) (*Handler, error) {
+	jwtSigner, err := signer.NewJWTSigner(params.KeyStore, params.Config.Signer, params.Logger)
+	if err != nil {
+		return nil, err
+	}
+
 	handler := &Handler{
 		r: params.RulesRepository,
-		s: params.Signer,
+		s: jwtSigner,
 	}
 
 	router := params.App.Group("/")
 
 	handler.registerRoutes(router, params.Logger)
 	health.RegisterRoutes(router, params.Logger)
+	jwks.RegisterRoutes(router, params.Logger, params.KeyStore)
 
 	return handler, nil
 }

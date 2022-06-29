@@ -1,6 +1,8 @@
 package decision
 
 import (
+	"crypto/rand"
+	"crypto/rsa"
 	"errors"
 	"io/ioutil"
 	"net/http"
@@ -12,12 +14,14 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"gopkg.in/square/go-jose.v2"
+	"gopkg.in/square/go-jose.v2/json"
 
 	"github.com/dadrus/heimdall/internal/cache/mocks"
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/handler/requestcontext"
 	"github.com/dadrus/heimdall/internal/heimdall"
-	mocks3 "github.com/dadrus/heimdall/internal/heimdall/mocks"
+	"github.com/dadrus/heimdall/internal/keystore"
 	mocks2 "github.com/dadrus/heimdall/internal/rules/mocks"
 	mocks4 "github.com/dadrus/heimdall/internal/rules/rule/mocks"
 )
@@ -27,6 +31,14 @@ var errTest = errors.New("test purpose error")
 // nolint: gocognit, cyclop, maintidx
 func TestHandleDecisionAPIRequest(t *testing.T) {
 	t.Parallel()
+
+	const rsa2048 = 2048
+
+	privateKey, err := rsa.GenerateKey(rand.Reader, rsa2048)
+	require.NoError(t, err)
+
+	ks, err := keystore.NewKeyStoreFromKey(privateKey)
+	require.NoError(t, err)
 
 	for _, tc := range []struct {
 		uc             string
@@ -463,7 +475,6 @@ func TestHandleDecisionAPIRequest(t *testing.T) {
 			conf := config.Configuration{Serve: config.ServeConfig{DecisionAPI: tc.serviceConf}}
 			cch := &mocks.MockCache{}
 			repo := &mocks2.MockRepository{}
-			signer := &mocks3.MockJWTSigner{}
 			rule := &mocks4.MockRule{}
 			logger := log.Logger
 
@@ -475,7 +486,7 @@ func TestHandleDecisionAPIRequest(t *testing.T) {
 				App:             app,
 				RulesRepository: repo,
 				Logger:          logger,
-				Signer:          signer,
+				KeyStore:        ks,
 			})
 			require.NoError(t, err)
 
@@ -496,18 +507,25 @@ func TestHandleDecisionAPIRequest(t *testing.T) {
 
 func TestHealthRequest(t *testing.T) {
 	// GIVEN
+	const rsa2048 = 2048
+
+	privateKey, err := rsa.GenerateKey(rand.Reader, rsa2048)
+	require.NoError(t, err)
+
+	ks, err := keystore.NewKeyStoreFromKey(privateKey)
+	require.NoError(t, err)
+
 	conf := config.Configuration{Serve: config.ServeConfig{DecisionAPI: config.ServiceConfig{}}}
 	cch := &mocks.MockCache{}
 	repo := &mocks2.MockRepository{}
-	signer := &mocks3.MockJWTSigner{}
 
 	app := newFiberApp(conf, cch, log.Logger)
 
-	_, err := newHandler(handlerParams{
+	_, err = newHandler(handlerParams{
 		App:             app,
 		RulesRepository: repo,
 		Logger:          log.Logger,
-		Signer:          signer,
+		KeyStore:        ks,
 	})
 	require.NoError(t, err)
 
@@ -526,4 +544,60 @@ func TestHealthRequest(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.JSONEq(t, `{ "status": "ok"}`, string(rawResp))
+}
+
+func TestJWKSRequest(t *testing.T) {
+	// GIVEN
+	const rsa2048 = 2048
+
+	privateKey, err := rsa.GenerateKey(rand.Reader, rsa2048)
+	require.NoError(t, err)
+
+	ks, err := keystore.NewKeyStoreFromKey(privateKey)
+	require.NoError(t, err)
+
+	conf := config.Configuration{Serve: config.ServeConfig{DecisionAPI: config.ServiceConfig{}}}
+	cch := &mocks.MockCache{}
+	repo := &mocks2.MockRepository{}
+
+	app := newFiberApp(conf, cch, log.Logger)
+
+	_, err = newHandler(handlerParams{
+		App:             app,
+		RulesRepository: repo,
+		Logger:          log.Logger,
+		KeyStore:        ks,
+	})
+	require.NoError(t, err)
+
+	// WHEN
+	resp, err := app.Test(
+		httptest.NewRequest("GET", "http://heimdall.test.local/.well-known/jwks", nil),
+		-1)
+
+	// THEN
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	defer resp.Body.Close()
+
+	var jwks jose.JSONWebKeySet
+
+	decoder := json.NewDecoder(resp.Body)
+	err = decoder.Decode(&jwks)
+	require.NoError(t, err)
+
+	assert.Len(t, jwks.Keys, 1)
+	jwk := jwks.Key(ks.Entries()[0].KeyID)
+	assert.Len(t, jwk, 1)
+
+	expected := ks.Entries()[0].JWK()
+	assert.Equal(t, expected.KeyID, jwk[0].KeyID)
+	assert.Equal(t, expected.Key, jwk[0].Key)
+	assert.Equal(t, expected.Algorithm, jwk[0].Algorithm)
+	assert.Equal(t, expected.Use, jwk[0].Use)
+	assert.Empty(t, jwk[0].Certificates)
+	assert.Nil(t, jwk[0].CertificatesURL)
+	assert.Empty(t, jwk[0].CertificateThumbprintSHA1)
+	assert.Empty(t, jwk[0].CertificateThumbprintSHA256)
 }
