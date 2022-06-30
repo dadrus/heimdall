@@ -16,7 +16,7 @@ func ConfigureLogging(conf config.LoggingConfig) {
 	zerolog.SetGlobalLevel(conf.Level)
 
 	if conf.Format == config.LogTextFormat {
-		log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
+		log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stdout})
 	} else {
 		zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
 		zerolog.TimestampFieldName = "timestamp"
@@ -41,42 +41,11 @@ func ConfigureLogging(conf config.LoggingConfig) {
 			Str("host", hostname).
 			Timestamp().
 			Caller().
-			Logger().Hook(zerolog.HookFunc(
-			func(e *zerolog.Event, level zerolog.Level, message string) {
+			Logger().
+			Hook(zerolog.HookFunc(func(e *zerolog.Event, level zerolog.Level, message string) {
 				if level != zerolog.NoLevel {
-					e.Int("level", toSyslogLevel(level))
+					e.Int8("level", int8(toSyslogLevel(level)))
 				}
 			}))
-	}
-}
-
-func toSyslogLevel(level zerolog.Level) int {
-	const (
-		Emergency     = 0
-		Alert         = 1
-		Critical      = 2
-		Error         = 3
-		Warning       = 4
-		Notice        = 5
-		Informational = 6
-		Debugging     = 7
-	)
-
-	// nolint
-	switch level {
-	case zerolog.DebugLevel, zerolog.TraceLevel:
-		return Debugging
-	case zerolog.InfoLevel:
-		return Informational
-	case zerolog.WarnLevel:
-		return Warning
-	case zerolog.ErrorLevel:
-		return Error
-	case zerolog.FatalLevel:
-		return Critical
-	case zerolog.PanicLevel:
-		return Alert
-	default:
-		return Emergency
 	}
 }
