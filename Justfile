@@ -1,6 +1,9 @@
 default:
   @just --list
 
+lint:
+  golangci-lint run
+
 build:
   #!/usr/bin/env bash
   git_ref=$(git rev-parse --short HEAD)
