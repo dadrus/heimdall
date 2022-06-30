@@ -39,7 +39,7 @@ If the API requires any cookies from the request to Heimdall, you can forward th
 
 * *`payload`*: _string_ (optional, overridable)
 +
-Your template with definitions required to communicate to the API. See also link:{{< relref "_index.adoc#_templating" >}}[Templating].
+Your template with definitions required to communicate to the API. See also link:{{< relref "overview.adoc#_templating" >}}[Templating].
 
 * *`cache_ttl`*: _link:{{< relref "configuration_types.adoc#_duration" >}}[Duration]_ (optional, overridable)
 +

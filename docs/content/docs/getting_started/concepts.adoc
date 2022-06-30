@@ -15,7 +15,7 @@ Everything you need to know.
 
 == Pipeline
 
-As described in the link:{{< relref "/docs/welcome.adoc" >}}[Welcome] section and also shown in the link:{{< relref "#_fig_heimdall_request_pipeline" >}}[diagram] below, Heimdall authenticates and authorizes incoming HTTP requests, rejecting unauthenticated or unauthorized ones, as well as enriches the valid requests with further information and transforms resulting subject information to a format, required by the upstream services. This is done in upstream service specific link:{{< relref "/docs/configuration/rules/_index.adoc" >}}[rules], which define the required individual link:{{< relref "/docs/configuration/pipeline/_index.adoc" >}}[pipelines].
+As described in the link:{{< relref "/docs/welcome.adoc" >}}[Welcome] section and also shown in the link:{{< relref "#_fig_heimdall_request_pipeline" >}}[diagram] below, Heimdall authenticates and authorizes incoming HTTP requests, rejecting unauthenticated or unauthorized ones, as well as enriches the valid requests with further information and transforms resulting subject information to a format, required by the upstream services. This is done in upstream service specific link:{{< relref "/docs/configuration/rules/overview.adoc" >}}[rules], which define the required individual link:{{< relref "/docs/configuration/pipeline/overview.adoc" >}}[pipelines].
 
 [[_fig_heimdall_request_pipeline]]
 .Request Pipeline

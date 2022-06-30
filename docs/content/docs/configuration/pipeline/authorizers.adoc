@@ -89,7 +89,7 @@ The API endpoint of your authorization system. At least the `url` must be config
 
 * *`payload`*: _string_ (mandatory, overridable)
 +
-Your template with definitions required to communicate to the authorization endpoint. See also link:{{< relref "_index.adoc#_templating" >}}[Templating].
+Your template with definitions required to communicate to the authorization endpoint. See also link:{{< relref "overview.adoc#_templating" >}}[Templating].
 
 * *`forward_response_headers_to_upstream`*: _string array_ (optional, overridable)
 +

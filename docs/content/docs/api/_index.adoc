@@ -20,4 +20,4 @@ This endpoint is available under `/.well-known/health` and can be called using H
 
 == JWKS
 
-This endpoint is available under `/.well-known/jwks` and can be called using HTTP `GET` verb. The response is a JSON Web Key Set according to https://datatracker.ietf.org/doc/html/rfc7517[RFC 7517]. This key set contains the key material configured for signing JWTs.
+This endpoint is available under `/.well-known/jwks` and can be called using HTTP `GET` verb. The response is a JSON Web Key Set according to https://datatracker.ietf.org/doc/html/rfc7517[RFC 7517]. This key set contains the key material configured for signing JWTs. This endpoint make use of https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/ETag[ETag] for caching purposes.
