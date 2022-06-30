@@ -303,7 +303,7 @@ func TestRuleFactoryNew(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, config.ErrConfiguration)
+				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
 				assert.Contains(t, err.Error(), "no mutator")
 			},
 		},
@@ -329,7 +329,7 @@ func TestRuleFactoryNew(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, config.ErrConfiguration)
+				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
 				assert.Contains(t, err.Error(), "no mutator")
 			},
 		},
@@ -358,7 +358,7 @@ func TestRuleFactoryNew(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, config.ErrConfiguration)
+				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
 				assert.Contains(t, err.Error(), "no mutator")
 			},
 		},

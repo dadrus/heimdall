@@ -1,6 +1,8 @@
 package config
 
-import "strconv"
+import (
+	"fmt"
+)
 
 type PrometheusConfig struct {
 	Host        string `koanf:"host"`
@@ -8,6 +10,4 @@ type PrometheusConfig struct {
 	MetricsPath string `koanf:"metrics_path"`
 }
 
-func (c PrometheusConfig) Address() string {
-	return c.Host + ":" + strconv.Itoa(c.Port)
-}
+func (c PrometheusConfig) Address() string { return fmt.Sprintf("%s:%d", c.Host, c.Port) }

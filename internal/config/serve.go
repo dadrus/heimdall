@@ -1,7 +1,7 @@
 package config
 
 import (
-	"strconv"
+	"fmt"
 	"time"
 )
 
@@ -35,9 +35,7 @@ type ServiceConfig struct {
 	TrustedProxies *[]string `koanf:"trusted_proxies"`
 }
 
-func (c ServiceConfig) Address() string {
-	return c.Host + ":" + strconv.Itoa(c.Port)
-}
+func (c ServiceConfig) Address() string { return fmt.Sprintf("%s:%d", c.Host, c.Port) }
 
 type ServeConfig struct {
 	Proxy       ServiceConfig `koanf:"proxy"`
