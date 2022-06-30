@@ -10,23 +10,23 @@ import (
 	"github.com/dadrus/heimdall/internal/heimdall"
 )
 
-type TestNestedConfig struct {
-	SomeBool   bool   `koanf:"somebool"`
-	SomeString string `koanf:"some_string"`
-}
-
-type TestConfig struct {
-	SomeString string             `koanf:"some_string"`
-	SomeInt    int                `koanf:"someint"`
-	Nested1    TestNestedConfig   `koanf:"nested1"`
-	Nested2    []TestNestedConfig `koanf:"nested_2"`
-}
-
 func TestKoanfFromStruct(t *testing.T) {
 	t.Parallel()
 
 	type TestConfigWithUppercase struct {
 		ThisIsMissingAKoanfTag string
+	}
+
+	type TestNestedConfig struct {
+		SomeBool   bool   `koanf:"somebool"`
+		SomeString string `koanf:"some_string"`
+	}
+
+	type TestConfig struct {
+		SomeString string             `koanf:"some_string"`
+		SomeInt    int                `koanf:"someint"`
+		Nested1    TestNestedConfig   `koanf:"nested1"`
+		Nested2    []TestNestedConfig `koanf:"nested_2"`
 	}
 
 	for _, tc := range []struct {
