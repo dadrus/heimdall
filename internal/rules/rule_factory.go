@@ -271,7 +271,7 @@ func (f *ruleFactory) initWithDefaultRule(ruleConfig *config.DefaultRuleConfig, 
 	}
 
 	if len(mutators) == 0 {
-		return errorchain.NewWithMessagef(config.ErrConfiguration, "no mutator defined for default rule")
+		return errorchain.NewWithMessagef(heimdall.ErrConfiguration, "no mutator defined for default rule")
 	}
 
 	if len(ruleConfig.Methods) == 0 {

@@ -1,0 +1,128 @@
+package parser
+
+import (
+	"crypto/sha256"
+	"encoding/hex"
+	"fmt"
+	"regexp"
+	"strconv"
+	"strings"
+
+	"github.com/knadh/koanf"
+	"github.com/knadh/koanf/providers/env"
+	"gopkg.in/yaml.v3"
+
+	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/x/errorchain"
+)
+
+var isNumRegex = regexp.MustCompile(`^\d+$`)
+
+func messageDigest(val, hash string) string {
+	mds := sha256.New()
+	mds.Write([]byte(val))
+	mds.Write([]byte(hash))
+
+	return hex.EncodeToString(mds.Sum(nil))
+}
+
+func toRealType(val string) any {
+	var parsed map[string]any
+
+	// here we're using the ability of the yaml parser to "guess" the type and convert the given string to it.
+	// this is not the fastest way, but ok for now.
+	yaml.Unmarshal([]byte(fmt.Sprintf("val: %s", val)), &parsed) // nolint: errcheck
+
+	return parsed["val"]
+}
+
+func convert(key, val, hash string) (string, any, string) {
+	parts := strings.Split(key, ".")
+	if len(parts) == 0 {
+		return key, toRealType(val), messageDigest(val, hash)
+	}
+
+	var (
+		pos             int
+		prefix, postfix string
+	)
+
+	pos = -1
+
+	for idx, part := range parts {
+		if !isNumRegex.MatchString(part) {
+			continue
+		}
+
+		pos, _ = strconv.Atoi(part)
+		prefix = strings.Join(parts[:idx], ".")
+		postfix = strings.Join(parts[idx+1:], ".")
+
+		break
+	}
+
+	if pos == -1 {
+		return key, toRealType(val), messageDigest(val, hash)
+	}
+
+	slice := make([]any, pos+1)
+
+	newKey, newVal, hash := convert(postfix, val, messageDigest(val, hash))
+	if len(newKey) != 0 {
+		slice[pos] = map[string]any{newKey: newVal}
+	} else {
+		slice[pos] = newVal
+	}
+
+	return prefix, slice, hash
+}
+
+func cleanSuffix(val any) any {
+	result := make(map[string]any)
+
+	switch t := val.(type) {
+	case map[string]any:
+		for k, v := range t {
+			parts := strings.Split(k, "#")
+
+			result[parts[0]] = cleanSuffix(v)
+		}
+
+		return result
+	default:
+		return val
+	}
+}
+
+func koanfFromEnv(prefix string) (*koanf.Koanf, error) {
+	parser := koanf.New(".")
+
+	err := parser.Load(env.ProviderWithValue(prefix, ".",
+		func(key, val string) (string, any) {
+			tmp := strings.ReplaceAll(strings.ToLower(strings.TrimPrefix(key, prefix)), "__", `\:\`)
+			tmp = strings.ReplaceAll(tmp, "_", ".")
+			normalizedKey := strings.ReplaceAll(tmp, `\:\`, "_")
+
+			newKey, newVal, hash := convert(normalizedKey, val, normalizedKey)
+
+			return fmt.Sprintf("%s#%s", newKey, hash), newVal
+		}),
+		nil,
+		koanf.WithMergeFunc(func(src, dest map[string]any) error {
+			for key, val := range src {
+				parts := strings.Split(key, "#")
+				key := parts[0]
+
+				dest[key] = merge(dest[key], val)
+			}
+
+			return nil
+		}),
+	)
+	if err != nil {
+		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+			"failed to parse environment variables to config").CausedBy(err)
+	}
+
+	return parser, nil
+}

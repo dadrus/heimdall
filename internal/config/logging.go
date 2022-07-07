@@ -13,9 +13,7 @@ const (
 	LogGelfFormat
 )
 
-func (f LogFormat) String() string {
-	return x.IfThenElse(f == LogTextFormat, "text", "gelf")
-}
+func (f LogFormat) String() string { return x.IfThenElse(f == LogTextFormat, "text", "gelf") }
 
 type LoggingConfig struct {
 	Format LogFormat     `koanf:"format"`
