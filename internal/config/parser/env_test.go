@@ -47,7 +47,7 @@ func TestKoanfFromEnv(t *testing.T) {
 	entry1, ok := slice[0].(map[string]any)
 	require.True(t, ok)
 	assert.Len(t, entry1, 2)
-	assert.Equal(t, "10", entry1["int_key"])
+	assert.Equal(t, 10, entry1["int_key"])
 	assert.Equal(t, "first val", entry1["string_key"])
 
 	require.Nil(t, slice[1])
@@ -55,7 +55,7 @@ func TestKoanfFromEnv(t *testing.T) {
 	entry3, ok := slice[2].(map[string]any)
 	require.True(t, ok)
 	assert.Len(t, entry3, 1)
-	assert.Equal(t, "11", entry3["int_key"])
+	assert.Equal(t, 11, entry3["int_key"])
 
 	entry4, ok := slice[3].(map[string]any)
 	require.True(t, ok)
