@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/knadh/koanf"
+	"github.com/knadh/koanf/providers/confmap"
 	"github.com/mitchellh/mapstructure"
 )
 
@@ -43,13 +44,24 @@ func (c *configLoader) Load(config any) error {
 		return err
 	}
 
+	parser.Print()
+
 	loadAndMergeConfig := func(loadConfig func() (*koanf.Koanf, error)) error {
-		c, err := loadConfig()
+		konf, err := loadConfig()
 		if err != nil {
 			return err
 		}
 
-		return parser.Merge(c)
+		return parser.Load(
+			confmap.Provider(konf.Raw(), ""),
+			nil,
+			koanf.WithMergeFunc(func(src, dest map[string]any) error {
+				for key, val := range src {
+					dest[key] = merge(dest[key], val)
+				}
+
+				return nil
+			}))
 	}
 
 	if len(configFile) != 0 {
@@ -60,7 +72,9 @@ func (c *configLoader) Load(config any) error {
 		}
 	}
 
-	if err := loadAndMergeConfig(koanfFromEnv); err != nil {
+	if err := loadAndMergeConfig(func() (*koanf.Koanf, error) {
+		return koanfFromEnv(c.o.envPrefix)
+	}); err != nil {
 		return err
 	}
 

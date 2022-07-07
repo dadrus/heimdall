@@ -36,17 +36,17 @@ func NewConfiguration(configFile string) (Configuration, error) {
 	result := defaultConfig
 
 	opts := []parser.Option{
-		parser.WithConfigFile(configFile),
-		parser.WithDefaultConfigFilename("heimdall.yaml"),
-		parser.WithConfigValidator(ValidateConfig),
 		parser.WithDecodeHookFunc(mapstructure.StringToTimeDurationHookFunc()),
 		parser.WithDecodeHookFunc(mapstructure.StringToSliceHookFunc(",")),
 		parser.WithDecodeHookFunc(logLevelDecodeHookFunc),
 		parser.WithDecodeHookFunc(logFormatDecodeHookFunc),
+		parser.WithEnvPrefix("HEIMDALL_"),
+		parser.WithDefaultConfigFilename("heimdall.yaml"),
+		parser.WithConfigFile(configFile),
+		parser.WithConfigValidator(ValidateConfig),
 	}
 
-	// if no config file provided, the lookup order for the heimdall.yaml file
-	// is:
+	// if no config file provided, the lookup order for the heimdall.yaml file is:
 	//
 	// 1. current working directory
 	// 2. $HOME/.config

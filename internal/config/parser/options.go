@@ -14,6 +14,7 @@ type opts struct {
 	configLookupDirs      []string
 	decodeHooks           []mapstructure.DecodeHookFunc
 	validate              ConfigValidator
+	envPrefix             string
 }
 
 type Option func(*opts)
@@ -57,6 +58,15 @@ func WithConfigValidator(validator ConfigValidator) Option {
 	return func(o *opts) {
 		if validator != nil {
 			o.validate = validator
+		}
+	}
+}
+
+func WithEnvPrefix(prefix string) Option {
+	return func(o *opts) {
+		prefix = strings.TrimSpace(prefix)
+		if len(prefix) != 0 {
+			o.envPrefix = prefix
 		}
 	}
 }
