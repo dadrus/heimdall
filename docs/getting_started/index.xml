@@ -6,4 +6,7 @@ The Go programming language &amp;gt;= 1.18.1
 Docker if you want to build a docker container (you don’t need Golang then)
 Download Retrieve the latest copy of heimdall source code by cloning the git repository
 $ git clone git@github.com:dadrus/heimdall.git Build with go Build using a single line with go build
-$ go build -trimpath -ldflags=&amp;#34;-buildid= -w -s -X heimdall/cmd.Version=my-custom-build&amp;#34; The flags are set by intention.</description></item></channel></rss>
+$ go build -trimpath -ldflags=&amp;#34;-buildid= -w -s -X heimdall/cmd.Version=my-custom-build&amp;#34; The flags are set by intention.</description></item><item><title>Configuration Introduction</title><link>https://dadrus.github.io/docs/getting_started/configuration_introduction/</link><pubDate>Fri, 08 Jul 2022 09:16:36 +0200</pubDate><guid>https://dadrus.github.io/docs/getting_started/configuration_introduction/</guid><description>Configuration in Heimdall can refer to two different things:
+The fully dynamic configuration of rules - the rule set
+The static startup configuration
+Elements in the static configuration set up the services, like decision api, which basically define the entrypoints, Heimdall will listen to, the observability capabilities, like logging, the supported pipeline mechanisms, the default rule, as well as the rule providers (these elements are not expected to change often).</description></item></channel></rss>
