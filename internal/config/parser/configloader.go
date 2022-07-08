@@ -44,8 +44,6 @@ func (c *configLoader) Load(config any) error {
 		return err
 	}
 
-	parser.Print()
-
 	loadAndMergeConfig := func(loadConfig func() (*koanf.Koanf, error)) error {
 		konf, err := loadConfig()
 		if err != nil {
