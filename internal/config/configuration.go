@@ -28,7 +28,7 @@ type Configuration struct {
 	Signer   SignerConfig   `koanf:"signer"`
 	Cache    CacheConfig    `koanf:"cache"`
 	Pipeline PipelineConfig `koanf:"pipeline"`
-	Rules    RulesConfig    `koanf:"rules"`
+	Rules    RulesConfig    `koanf:"rules,omitempty"`
 }
 
 func NewConfiguration(configFile string) (Configuration, error) {

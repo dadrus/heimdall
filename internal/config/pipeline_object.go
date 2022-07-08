@@ -21,8 +21,10 @@ const (
 	POTWWWAuthenticate     PipelineObjectType = "www_authenticate"
 )
 
+func (p PipelineObjectType) String() string { return string(p) }
+
 type PipelineObject struct {
 	ID     string             `koanf:"id"`
-	Type   PipelineObjectType `koanf:"type"`
+	Type   PipelineObjectType `koanf:"type,string"`
 	Config map[string]any     `koanf:"config"`
 }

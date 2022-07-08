@@ -1,6 +1,9 @@
 package parser
 
-import "reflect"
+import (
+	"fmt"
+	"reflect"
+)
 
 func merge(dest, src any) any {
 	if dest == nil {
@@ -11,7 +14,7 @@ func merge(dest, src any) any {
 	vSrc := reflect.ValueOf(src)
 
 	if vSrc.Type() != vDst.Type() {
-		panic("types are different")
+		panic(fmt.Sprintf("Cannot merge %s and %s. Types are different: %s - %s", dest, src, vDst.Type(), vSrc.Type()))
 	}
 
 	// nolint: exhaustive

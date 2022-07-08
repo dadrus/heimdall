@@ -1,7 +1,7 @@
 package config
 
 type RuleProviders struct {
-	File *FileBasedRuleProviderConfig `koanf:"file"`
+	File *FileBasedRuleProviderConfig `koanf:"file,omitempty"`
 }
 
 type FileBasedRuleProviderConfig struct {
