@@ -2,11 +2,13 @@ package authorizers
 
 import (
 	"context"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -533,6 +535,54 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 					mock.MatchedBy(func(val *authorizationInformation) bool {
 						return val != nil && val.payload == nil && len(val.headers.Get("X-Foo-Bar")) != 0
 					}), auth.ttl)
+			},
+			assert: func(t *testing.T, err error, sub *subject.Subject) {
+				t.Helper()
+
+				require.NoError(t, err)
+
+				assert.True(t, authorizationEndpointCalled)
+				assert.Len(t, sub.Attributes, 1)
+				assert.Equal(t, "baz", sub.Attributes["bar"])
+
+				assert.Empty(t, sub.Attributes["authorizer"])
+			},
+		},
+		{
+			uc: "successful without headers and payload and with cache",
+			authorizer: &remoteAuthorizer{
+				name: "authorizer",
+				e: endpoint.Endpoint{
+					URL:     fmt.Sprintf("%s/{{ .Subject.ID }}", srv.URL),
+					Headers: map[string]string{"Accept": "application/x-www-form-urlencoded"},
+				},
+				ttl: 10 * time.Second,
+			},
+			subject: &subject.Subject{
+				ID:         "foobar",
+				Attributes: map[string]any{"bar": "baz"},
+			},
+			instructServer: func(t *testing.T) {
+				t.Helper()
+
+				checkRequest = func(req *http.Request) {
+					t.Helper()
+
+					assert.Equal(t, "POST", req.Method)
+					assert.Equal(t, "application/x-www-form-urlencoded", req.Header.Get("Accept"))
+					assert.True(t, strings.HasSuffix(req.URL.Path, "/foobar"))
+				}
+
+				responseCode = http.StatusOK
+			},
+			configureCache: func(t *testing.T, cch *mocks.MockCache, auth *remoteAuthorizer, sub *subject.Subject) {
+				t.Helper()
+
+				cacheKey, err := auth.calculateCacheKey(sub)
+				require.NoError(t, err)
+
+				cch.On("Get", cacheKey).Return(nil)
+				cch.On("Set", cacheKey, mock.Anything, auth.ttl)
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()

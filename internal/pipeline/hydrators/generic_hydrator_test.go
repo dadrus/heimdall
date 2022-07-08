@@ -549,7 +549,7 @@ func TestGenericHydratorExecute(t *testing.T) {
 			},
 		},
 		{
-			uc: "without any content sent",
+			uc: "without payload",
 			hydrator: &genericHydrator{
 				name: "test-hydrator",
 				e:    endpoint.Endpoint{URL: srv.URL + "/{{ .Subject.ID }}"},
@@ -574,6 +574,48 @@ func TestGenericHydratorExecute(t *testing.T) {
 				require.NoError(t, err)
 
 				assert.Len(t, sub.Attributes, 1)
+			},
+		},
+		{
+			uc: "without payload, but with cache",
+			hydrator: &genericHydrator{
+				name: "test-hydrator",
+				e:    endpoint.Endpoint{URL: srv.URL + "/{{ .Subject.ID }}"},
+				ttl:  10 * time.Second,
+			},
+			subject: &subject.Subject{ID: "Foo", Attributes: map[string]any{"bar": "baz"}},
+			configureCache: func(t *testing.T, cch *mocks.MockCache, hydrator *genericHydrator, sub *subject.Subject) {
+				t.Helper()
+
+				key, err := hydrator.calculateCacheKey(sub)
+				require.NoError(t, err)
+
+				cch.On("Get", key).Return(nil)
+				cch.On("Set", key, mock.MatchedBy(func(val *hydrationData) bool {
+					return val != nil && val.payload == "Hi from endpoint"
+				}), hydrator.ttl)
+			},
+			instructServer: func(t *testing.T) {
+				t.Helper()
+
+				checkRequest = func(req *http.Request) {
+					t.Helper()
+
+					assert.Equal(t, "/Foo", req.URL.Path)
+				}
+
+				responseContentType = "text/text"
+				responseContent = []byte(`Hi from endpoint`)
+				responseCode = http.StatusOK
+			},
+			assert: func(t *testing.T, err error, sub *subject.Subject) {
+				t.Helper()
+
+				assert.True(t, hydrationEndpointCalled)
+
+				require.NoError(t, err)
+
+				assert.Len(t, sub.Attributes, 2)
 			},
 		},
 		{

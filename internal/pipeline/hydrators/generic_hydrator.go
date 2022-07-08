@@ -289,7 +289,9 @@ func (h *genericHydrator) calculateCacheKey(sub *subject.Subject) (string, error
 	hash.Write([]byte(h.name))
 	hash.Write([]byte(strings.Join(h.fwdHeaders, ",")))
 	hash.Write([]byte(strings.Join(h.fwdCookies, ",")))
-	hash.Write([]byte(h.payload.Hash()))
+	hash.Write(x.IfThenElseExec(h.payload != nil,
+		func() []byte { return []byte(h.payload.Hash()) },
+		func() []byte { return []byte("nil") }))
 	hash.Write([]byte(h.e.Hash()))
 	hash.Write(ttlBytes)
 	hash.Write(rawSub)
