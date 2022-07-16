@@ -1,6 +1,6 @@
 # syntax = docker/dockerfile:experimental
 # Builder image to build the app
-FROM golang:1.18.3-buster as builder
+FROM golang:1.18.4-buster as builder
 LABEL maintainer=dadrus@gmx.de
 
 ARG HOST_ARCH
