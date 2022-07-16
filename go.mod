@@ -9,7 +9,7 @@ require (
 	github.com/dop251/goja v0.0.0-20220705101429-189bfeb9f530
 	github.com/fsnotify/fsnotify v1.5.4
 	github.com/gobwas/glob v0.2.3
-	github.com/goccy/go-json v0.9.8
+	github.com/goccy/go-json v0.9.10
 	github.com/gofiber/fiber/v2 v2.35.0
 	github.com/google/uuid v1.3.0
 	github.com/iancoleman/strcase v0.2.0
