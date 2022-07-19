@@ -104,20 +104,3 @@ func registerHooks(lifecycle fx.Lifecycle, logger zerolog.Logger, app fiberApp, 
 		},
 	)
 }
-
-type Handler struct{}
-
-func newHandler(p fiberApp, logger zerolog.Logger) *Handler {
-	h := &Handler{}
-	h.registerRoutes(p.App.Group(""), logger)
-
-	return h
-}
-
-func (h *Handler) registerRoutes(router fiber.Router, logger zerolog.Logger) {
-	logger.Debug().Msg("Registering proxy routes")
-
-	router.Get("/foo", func(c *fiber.Ctx) error {
-		return c.SendString("hi from foo")
-	})
-}

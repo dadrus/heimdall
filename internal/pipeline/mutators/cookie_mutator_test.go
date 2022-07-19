@@ -226,9 +226,9 @@ cookies:
 			configureContext: func(t *testing.T, ctx *mocks.MockContext) {
 				t.Helper()
 
-				ctx.On("AddResponseCookie", "foo", "baz")
-				ctx.On("AddResponseCookie", "bar", "FooBar")
-				ctx.On("AddResponseCookie", "baz", "bar")
+				ctx.On("AddCookieForUpstream", "foo", "baz")
+				ctx.On("AddCookieForUpstream", "bar", "FooBar")
+				ctx.On("AddCookieForUpstream", "baz", "bar")
 			},
 			createSubject: func(t *testing.T) *subject.Subject {
 				t.Helper()

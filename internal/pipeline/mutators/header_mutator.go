@@ -67,7 +67,7 @@ func (m *headerMutator) Execute(ctx heimdall.Context, sub *subject.Subject) erro
 				"failed to render value for '%s' cookie", name).CausedBy(err)
 		}
 
-		ctx.AddResponseHeader(name, value)
+		ctx.AddHeaderForUpstream(name, value)
 	}
 
 	return nil

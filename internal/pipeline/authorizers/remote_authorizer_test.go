@@ -449,7 +449,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 			configureContext: func(t *testing.T, ctx *heimdallmocks.MockContext) {
 				t.Helper()
 
-				ctx.On("AddResponseHeader", "X-Foo-Bar", "HeyFoo")
+				ctx.On("AddHeaderForUpstream", "X-Foo-Bar", "HeyFoo")
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
@@ -522,7 +522,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 			configureContext: func(t *testing.T, ctx *heimdallmocks.MockContext) {
 				t.Helper()
 
-				ctx.On("AddResponseHeader", "X-Foo-Bar", "HeyFoo")
+				ctx.On("AddHeaderForUpstream", "X-Foo-Bar", "HeyFoo")
 			},
 			configureCache: func(t *testing.T, cch *mocks.MockCache, auth *remoteAuthorizer, sub *subject.Subject) {
 				t.Helper()
@@ -622,8 +622,8 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 			configureContext: func(t *testing.T, ctx *heimdallmocks.MockContext) {
 				t.Helper()
 
-				ctx.On("AddResponseHeader", "X-Foo-Bar", "HeyFoo")
-				ctx.On("AddResponseHeader", "X-Bar-Foo", "HeyBar")
+				ctx.On("AddHeaderForUpstream", "X-Foo-Bar", "HeyFoo")
+				ctx.On("AddHeaderForUpstream", "X-Bar-Foo", "HeyBar")
 			},
 			configureCache: func(t *testing.T, cch *mocks.MockCache, auth *remoteAuthorizer, sub *subject.Subject) {
 				t.Helper()
@@ -679,7 +679,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 			configureContext: func(t *testing.T, ctx *heimdallmocks.MockContext) {
 				t.Helper()
 
-				ctx.On("AddResponseHeader", "X-Foo-Bar", "HeyFoo")
+				ctx.On("AddHeaderForUpstream", "X-Foo-Bar", "HeyFoo")
 			},
 			configureCache: func(t *testing.T, cch *mocks.MockCache, auth *remoteAuthorizer, sub *subject.Subject) {
 				t.Helper()

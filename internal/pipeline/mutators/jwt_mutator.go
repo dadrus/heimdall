@@ -115,7 +115,7 @@ func (m *jwtMutator) Execute(ctx heimdall.Context, sub *subject.Subject) error {
 		}
 	}
 
-	ctx.AddResponseHeader("Authorization", fmt.Sprintf("Bearer %s", jwtToken))
+	ctx.AddHeaderForUpstream("Authorization", fmt.Sprintf("Bearer %s", jwtToken))
 
 	return nil
 }

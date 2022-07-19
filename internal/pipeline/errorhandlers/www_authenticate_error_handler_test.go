@@ -314,7 +314,7 @@ when:
 				t.Helper()
 
 				ctx.On("SetPipelineError", heimdall.ErrAuthentication)
-				ctx.On("AddResponseHeader", "WWW-Authenticate",
+				ctx.On("AddHeaderForUpstream", "WWW-Authenticate",
 					mock.MatchedBy(func(val string) bool {
 						assert.True(t, strings.HasPrefix(val, "Basic "))
 						realm := strings.TrimLeft(val, "Basic ")
@@ -343,7 +343,7 @@ when:
 				t.Helper()
 
 				ctx.On("SetPipelineError", heimdall.ErrAuthentication)
-				ctx.On("AddResponseHeader", "WWW-Authenticate",
+				ctx.On("AddHeaderForUpstream", "WWW-Authenticate",
 					mock.MatchedBy(func(val string) bool {
 						assert.True(t, strings.HasPrefix(val, "Basic "))
 						realm := strings.TrimLeft(val, "Basic ")

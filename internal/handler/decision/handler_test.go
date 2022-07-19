@@ -167,8 +167,8 @@ func TestHandleDecisionAPIRequest(t *testing.T) {
 
 				rule.On("MatchesMethod", "POST").Return(true)
 				rule.On("Execute", mock.MatchedBy(func(ctx *requestcontext.RequestContext) bool {
-					ctx.AddResponseHeader("X-Foo-Bar", "baz")
-					ctx.AddResponseCookie("X-Bar-Foo", "zab")
+					ctx.AddHeaderForUpstream("X-Foo-Bar", "baz")
+					ctx.AddCookieForUpstream("X-Bar-Foo", "zab")
 
 					return true
 				})).Return(nil)
@@ -219,8 +219,8 @@ func TestHandleDecisionAPIRequest(t *testing.T) {
 
 				rule.On("MatchesMethod", "GET").Return(true)
 				rule.On("Execute", mock.MatchedBy(func(ctx *requestcontext.RequestContext) bool {
-					ctx.AddResponseHeader("X-Foo-Bar", "baz")
-					ctx.AddResponseCookie("X-Bar-Foo", "zab")
+					ctx.AddHeaderForUpstream("X-Foo-Bar", "baz")
+					ctx.AddCookieForUpstream("X-Bar-Foo", "zab")
 
 					return true
 				})).Return(nil)
@@ -272,8 +272,8 @@ func TestHandleDecisionAPIRequest(t *testing.T) {
 
 				rule.On("MatchesMethod", "POST").Return(true)
 				rule.On("Execute", mock.MatchedBy(func(ctx *requestcontext.RequestContext) bool {
-					ctx.AddResponseHeader("X-Foo-Bar", "baz")
-					ctx.AddResponseCookie("X-Bar-Foo", "zab")
+					ctx.AddHeaderForUpstream("X-Foo-Bar", "baz")
+					ctx.AddCookieForUpstream("X-Bar-Foo", "zab")
 
 					return true
 				})).Return(nil)

@@ -46,9 +46,9 @@ func (m *MockContext) AppContext() context.Context {
 
 func (m *MockContext) SetPipelineError(err error) { m.Called(err) }
 
-func (m *MockContext) AddResponseHeader(name, value string) { m.Called(name, value) }
+func (m *MockContext) AddHeaderForUpstream(name, value string) { m.Called(name, value) }
 
-func (m *MockContext) AddResponseCookie(name, value string) { m.Called(name, value) }
+func (m *MockContext) AddCookieForUpstream(name, value string) { m.Called(name, value) }
 
 func (m *MockContext) Signer() heimdall.JWTSigner {
 	return convertTo[heimdall.JWTSigner](m.Called().Get(0))
