@@ -22,7 +22,6 @@ jobs:
         with:
           command: manifest
           token: ${{ secrets.GITHUB_TOKEN }}
-          signoff: release-bot[bot] <${{ github.run_id }}+release-bot[bot]@users.noreply.github.com>
 
   release-binaries:
     if: needs.prepare-release.outputs.release_created
