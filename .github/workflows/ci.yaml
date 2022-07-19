@@ -85,7 +85,7 @@ jobs:
       - name: Build
         run: CGO_ENABLED=0 GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -trimpath -ldflags="-buildid= -w -s -X github.com/dadrus/heimdall/cmd.Version=${{ github.sha }}" -o ./build/
       - uses: actions/upload-artifact@v3
-        if: success()
+        if: github.event_name != 'pull_request'
         with:
           name: build-result-${{ matrix.goos }}-${{ matrix.goarch }}
           path: ./build/*
