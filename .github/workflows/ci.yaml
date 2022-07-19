@@ -2,13 +2,15 @@ name: CI
 
 on:
   push:
-    tags:
-      - v*
     branches:
       - main
   pull_request:
     branches:
       - main
+
+env:
+  GO_VERSION: 1.18.4
+  GOLANGCI_LINT_VERSION: v1.46.2
 
 jobs:
   lint-code:
@@ -17,13 +19,13 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v3
       with:
-        go-version: 1.18.3
+        go-version: ${{ env.GO_VERSION }}
     - name: Checkout repository
       uses: actions/checkout@v3
     - name: golangci-lint
       uses: golangci/golangci-lint-action@v3
       with:
-        version: v1.46.2
+        version: ${{ env.GOLANGCI_LINT_VERSION }}
         args: --timeout 4m
 
   lint-dockerfiles:
@@ -46,13 +48,67 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v3
       with:
-        go-version: 1.18.3
+        go-version: ${{ env.GO_VERSION }}
     - name: Checkout repository
       uses: actions/checkout@v3
     - name: Test
-      run: go test -v -coverprofile=heimdall.cov -coverpkg=./... ./...
+      run: go test -v -coverprofile=coverage.cov -coverpkg=./... ./...
     - name: Code Coverage
       uses: codecov/codecov-action@v3
       with:
-        files: heimdall.cov
+        files: coverage.cov
         verbose: true
+
+  build:
+    runs-on: ubuntu-20.04
+    needs:
+      - test
+    strategy:
+      matrix:
+        # build and publish in parallel: linux/amd64, linux/arm64, windows/amd64, darwin/amd64, darwin/arm64
+        goos: [ linux, windows, darwin ]
+        goarch: [ amd64, arm64, arm ]
+        exclude:
+          - goarch: arm
+            goos: darwin
+          - goarch: arm
+            goos: windows
+          - goarch: arm64
+            goos: windows
+    steps:
+      - name: Set up Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: ${{ env.GO_VERSION }}
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      - name: Build
+        run: CGO_ENABLED=0 GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -trimpath -ldflags="-buildid= -w -s -X github.com/dadrus/heimdall/cmd.Version=${{ github.sha }}" -o ./build/
+      - uses: actions/upload-artifact@v3
+        if: success()
+        with:
+          name: build-result-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: ./build/*
+          retention-days: 30
+
+  # this job is here only for the verification purpose of the docker images build
+  build-docker-images:
+    runs-on: ubuntu-20.04
+    needs:
+      - test
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+      - name: Build and push
+        uses: docker/build-push-action@v3
+        with:
+          context: .
+          file: ./docker/Dockerfile
+          platforms: linux/amd64,linux/arm64,linux/arm
+          push: false
+          build-args: VERSION=${{ github.sha }}
+          tags: ${{ github.repository }}:latest

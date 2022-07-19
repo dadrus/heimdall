@@ -2,14 +2,11 @@ name: Documentation Build
 
 on:
   push:
-    tags:
-      - v*
     branches:
       - main
-  pull_request:
 
 jobs:
-  deploy:
+  build-documentation:
     runs-on: ubuntu-20.04
     steps:
       - name: Checkout repository
