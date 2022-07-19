@@ -4,6 +4,7 @@
 [![codecov](https://codecov.io/gh/dadrus/heimdall/branch/main/graph/badge.svg)](https://codecov.io/gh/dadrus/heimdall)
 [![Go Report Card](https://goreportcard.com/badge/github.com/dadrus/heimdall)](https://goreportcard.com/report/github.com/dadrus/heimdall) 
 [![License](https://img.shields.io/github/license/dadrus/heimdall)](https://github.com/dadrus/heimdall/blob/master/LICENSE)
+[![Docker](https://img.shields.io/docker/v/dadrus/heimdall?color=lightblue&label=docker)](https://hub.docker.com/repository/docker/dadrus/heimdall)
 
 ## Background
 
@@ -26,23 +27,6 @@ Heimdall's main focus points beyond its functionality are:
 
 ## Current State
 
-The current implementation is a pre alpha version, but already supports functionality listed below. A first alpha release will be available as soon as the test coverage hits 85% and all tasks for the [0.1.0-alpha](https://github.com/dadrus/heimdall/milestone/1) milestone are implemented.
-
-* Decision API
-* Loading rules from the file system
-* Authenticator types (anonymous, basic-auth, generic, jwt, noop, oauth2 introspection, unauthorized)
-* Authorizers (allow, deny, subject attributes (to evaluate available subject information by using JS) & remote (e.g. to communicate with open policy agent, ory keto, a zanzibar implementation, or any other authorization engine))
-* Hydrators (generic) - to enrich the subject information retrieved from the authenticator
-* Mutators (opaque cookie, opaque header, jwt in the Authorization header, noop) to transform the subject information
-* Error Handlers (default, redirect, www-authenticate), which support accept type negotiation as well
-* Opentracing support (jaeger & instana)
-* Key store in pem format for rsa-pss and ecdsa keys (pkcs#1 - plain only & pkcs#8 - plain and encrypted)
-* Rules URL matching
-* Flexible pipeline definition: authenticators+ -> any order(authorizer*, hydrator*) -> mutator+ -> error_handler+
-* Optional default rule taking effect if no rule matches
-* If Default rule is configured, the actual rule definition can reuse it (less yaml code)
-* Typical execution time if caches are active is around 300µs (on my laptop)
-* The configuration is validated on startup. You can also validate it by making use of the "validate config" command.
-* Health Probe
+The current implementation is an alpha version. That means it does not solve all the problems heimdall aims to solve. With other words a lot of functionality is missing. In addition, alpha version means, there will be breaking changes (configuration-wise). Nevertheless, the code base is stable and pretty good tested. Functionality already supported can be found in the current [Release description](https://github.com/dadrus/heimdall/releases/latest). Planned features can be found in the defined [Milestones](https://github.com/dadrus/heimdall/milestones).
 
 If you like to give it a try, checkout out the [documentation](https://dadrus.github.io/heimdall/docs/welcome/).
