@@ -9,7 +9,7 @@ on:
     - cron: '34 0 * * 6'
 
 jobs:
-  security-scan:
+  trivy-scan:
     runs-on: ubuntu-latest
 
     permissions:
@@ -17,13 +17,9 @@ jobs:
       contents: read
       security-events: write
 
-    strategy:
-      fail-fast: false
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
-
       - name: Run Trivy vulnerability scanner in repo mode
         uses: aquasecurity/trivy-action@master
         with:
@@ -32,7 +28,6 @@ jobs:
           format: 'sarif'
           output: 'trivy-results.sarif'
           severity: 'CRITICAL'
-
       - name: Upload Trivy scan results to GitHub Security tab
         uses: github/codeql-action/upload-sarif@v2
         with:
