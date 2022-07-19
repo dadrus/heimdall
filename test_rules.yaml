@@ -20,7 +20,8 @@
     - authorizer: allow_all_authorizer
     - mutator: jwt
       config:
-        claims: '{"foo": "bar"}'
+        claims: |
+          {"foo": "bar"}
     - mutator: bla
       config:
         headers:
