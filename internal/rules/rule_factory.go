@@ -156,7 +156,7 @@ func (f *ruleFactory) HasDefaultRule() bool {
 	return f.hasDefaultRule
 }
 
-func (f *ruleFactory) CreateRule(srcID string, ruleConfig config.RuleConfig) (rule.Rule, error) {
+func (f *ruleFactory) CreateRule(srcID string, ruleConfig config.RuleConfig) (rule.Rule, error) { // nolint: cyclop
 	if len(ruleConfig.ID) == 0 {
 		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
 			"no ID defined for rule ID=%s from %s", ruleConfig.ID, srcID)
@@ -174,6 +174,17 @@ func (f *ruleFactory) CreateRule(srcID string, ruleConfig config.RuleConfig) (ru
 		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
 			"bad URL pattern for %s strategy defined for rule ID=%s from %s", strategy, ruleConfig.ID, srcID).
 			CausedBy(err)
+	}
+
+	var upstreamURL *url.URL
+
+	if len(ruleConfig.Upstream) != 0 {
+		upstreamURL, err = url.Parse(ruleConfig.Upstream)
+		if err != nil {
+			return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+				"bad upstream URL defined for rule ID=%s from %s", ruleConfig.ID, srcID).
+				CausedBy(err)
+		}
 	}
 
 	authenticators, subHandlers, mutators, err := f.createExecutePipeline(ruleConfig.Execute)
@@ -212,15 +223,16 @@ func (f *ruleFactory) CreateRule(srcID string, ruleConfig config.RuleConfig) (ru
 	}
 
 	return &ruleImpl{
-		id:         ruleConfig.ID,
-		urlMatcher: matcher,
-		methods:    methods,
-		srcID:      srcID,
-		isDefault:  false,
-		sc:         authenticators,
-		sh:         subHandlers,
-		m:          mutators,
-		eh:         errorHandlers,
+		id:          ruleConfig.ID,
+		urlMatcher:  matcher,
+		upstreamURL: upstreamURL,
+		methods:     methods,
+		srcID:       srcID,
+		isDefault:   false,
+		sc:          authenticators,
+		sh:          subHandlers,
+		m:           mutators,
+		eh:          errorHandlers,
 	}, nil
 }
 
@@ -357,15 +369,12 @@ func (r *ruleImpl) UpstreamURL(initialURL *url.URL) *url.URL {
 	}
 
 	return &url.URL{
-		Scheme:      r.upstreamURL.Scheme,
-		Opaque:      initialURL.Opaque,
-		User:        r.upstreamURL.User,
-		Host:        r.upstreamURL.Host,
-		Path:        initialURL.Path,
-		RawPath:     initialURL.RawPath,
-		ForceQuery:  initialURL.ForceQuery,
-		RawQuery:    initialURL.RawQuery,
-		Fragment:    initialURL.Fragment,
-		RawFragment: initialURL.RawFragment,
+		Scheme:     r.upstreamURL.Scheme,
+		Opaque:     initialURL.Opaque,
+		Host:       r.upstreamURL.Host,
+		Path:       initialURL.Path,
+		RawPath:    initialURL.RawPath,
+		ForceQuery: initialURL.ForceQuery,
+		RawQuery:   initialURL.RawQuery,
 	}
 }
