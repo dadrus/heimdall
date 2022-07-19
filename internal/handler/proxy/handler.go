@@ -50,9 +50,9 @@ func newHandler(params handlerParams) (*Handler, error) {
 
 	router := params.App.Group("/")
 
-	handler.registerRoutes(router, params.Logger)
 	health.RegisterRoutes(router, params.Logger)
 	jwks.RegisterRoutes(router, params.Logger, params.KeyStore)
+	handler.registerRoutes(router, params.Logger)
 
 	return handler, nil
 }
