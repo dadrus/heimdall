@@ -52,31 +52,31 @@ func TestSessionValidation(t *testing.T) {
 }
 
 func TestGetSubjectFromSession(t *testing.T) {
-	type _nested struct {
+	type Nested struct {
 		Val bool `json:"val"`
 	}
 
-	type _complex struct {
-		Array  []int   `json:"array"`
-		Nested _nested `json:"nested"`
+	type Complex struct {
+		Array  []int  `json:"array"`
+		Nested Nested `json:"nested"`
 	}
 
-	type _idt struct {
+	type IDT struct {
 		Subject             string   `json:"subject"`
 		SomeStringAttribute string   `json:"some_string_attribute"`
 		SomeInt64Attribute  int64    `json:"some_int_64_attribute"`
 		StringSlice         []string `json:"string_slice"`
-		Complex             _complex `json:"complex"`
+		Complex             Complex  `json:"complex"`
 	}
 
-	id := _idt{
+	id := IDT{
 		Subject:             "foo",
 		SomeStringAttribute: "attr",
 		SomeInt64Attribute:  -6,
 		StringSlice:         []string{"val1", "val2"},
-		Complex: _complex{
+		Complex: Complex{
 			Array:  []int{1, 2, 3},
-			Nested: _nested{Val: true},
+			Nested: Nested{Val: true},
 		},
 	}
 

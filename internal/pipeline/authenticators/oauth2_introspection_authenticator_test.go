@@ -982,7 +982,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 			responseContentType = ""
 			responseContent = nil
 
-			checkRequest = func(req *http.Request) { t.Helper() }
+			checkRequest = func(*http.Request) { t.Helper() }
 
 			instructServer := x.IfThenElse(tc.instructServer != nil,
 				tc.instructServer,

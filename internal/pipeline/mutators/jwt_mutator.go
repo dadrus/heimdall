@@ -45,12 +45,12 @@ type jwtMutator struct {
 }
 
 func newJWTMutator(rawConfig map[string]any) (*jwtMutator, error) {
-	type _config struct {
+	type Config struct {
 		Claims template.Template `mapstructure:"claims"`
 		TTL    *time.Duration    `mapstructure:"ttl"`
 	}
 
-	var conf _config
+	var conf Config
 	if err := decodeConfig(rawConfig, &conf); err != nil {
 		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
 			"failed to unmarshal JWT mutator config").CausedBy(err)
@@ -125,12 +125,12 @@ func (m *jwtMutator) WithConfig(rawConfig map[string]any) (Mutator, error) {
 		return m, nil
 	}
 
-	type _config struct {
+	type Config struct {
 		Claims template.Template `mapstructure:"claims"`
 		TTL    *time.Duration    `mapstructure:"ttl"`
 	}
 
-	var conf _config
+	var conf Config
 	if err := decodeConfig(rawConfig, &conf); err != nil {
 		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
 			"failed to unmarshal JWT mutator config").CausedBy(err)

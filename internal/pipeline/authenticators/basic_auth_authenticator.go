@@ -41,12 +41,12 @@ type basicAuthAuthenticator struct {
 }
 
 func newBasicAuthAuthenticator(rawConfig map[string]any) (*basicAuthAuthenticator, error) {
-	type _config struct {
+	type Config struct {
 		UserID   string `mapstructure:"user_id"`
 		Password string `mapstructure:"password"`
 	}
 
-	var conf _config
+	var conf Config
 
 	if err := decodeConfig(rawConfig, &conf); err != nil {
 		return nil, errorchain.
@@ -137,12 +137,12 @@ func (a *basicAuthAuthenticator) WithConfig(rawConfig map[string]any) (Authentic
 		return a, nil
 	}
 
-	type _config struct {
+	type Config struct {
 		UserID   string `mapstructure:"user_id"`
 		Password string `mapstructure:"password"`
 	}
 
-	var conf _config
+	var conf Config
 
 	if err := decodeConfig(rawConfig, &conf); err != nil {
 		return nil, errorchain.

@@ -30,11 +30,11 @@ type headerMutator struct {
 }
 
 func newHeaderMutator(rawConfig map[string]any) (*headerMutator, error) {
-	type _config struct {
+	type Config struct {
 		Headers map[string]template.Template `mapstructure:"headers"`
 	}
 
-	var conf _config
+	var conf Config
 	if err := decodeConfig(rawConfig, &conf); err != nil {
 		return nil, errorchain.
 			NewWithMessage(heimdall.ErrConfiguration, "failed to unmarshal header mutator config").
