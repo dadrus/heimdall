@@ -23,7 +23,7 @@ type RequestContext struct {
 }
 
 func New(c *fiber.Ctx, reqURL *url.URL, signer heimdall.JWTSigner) *RequestContext {
-	return &RequestContext{
+	return &RequestContext{ //nolint:exhaustruct
 		c:               c,
 		jwtSigner:       signer,
 		reqURL:          reqURL,
@@ -51,11 +51,6 @@ func (s *RequestContext) RequestClientIPs() []string {
 	return x.IfThenElse(len(ips) != 0, ips, []string{s.c.IP()})
 }
 
-type Callback interface {
-	SetHeader(key, value string)
-	SetCookie(key, value string)
-}
-
 func (s *RequestContext) Finalize() error {
 	if s.err != nil {
 		return s.err
@@ -66,7 +61,7 @@ func (s *RequestContext) Finalize() error {
 	}
 
 	for k, v := range s.upstreamCookies {
-		s.c.Cookie(&fiber.Cookie{Name: k, Value: v})
+		s.c.Cookie(&fiber.Cookie{Name: k, Value: v}) //nolint:exhaustruct
 	}
 
 	return nil
