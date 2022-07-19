@@ -11,6 +11,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/x"
+	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
 type RequestContext struct {
@@ -70,6 +71,11 @@ func (s *RequestContext) Finalize() error {
 func (s *RequestContext) FinalizeAndForward(upstreamURL *url.URL, timeout time.Duration) error {
 	if s.err != nil {
 		return s.err
+	}
+
+	if string(s.c.Request().URI().Host()) == upstreamURL.Host {
+		return errorchain.NewWithMessage(heimdall.ErrInternal,
+			"cannot forward request to same host & port. Have you forgotten to configure upstream in the rule?")
 	}
 
 	for k := range s.upstreamHeaders {
