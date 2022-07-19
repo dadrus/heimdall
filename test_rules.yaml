@@ -1,5 +1,6 @@
 - id: rule:foo
   url: http://foo.bar/<**>
+  upstream: http://bar.foo
 #  methods: # reuses default
 #    - GET
 #    - POST
