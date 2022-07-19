@@ -2,6 +2,7 @@ package requestcontext
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"net/url"
 	"time"
@@ -12,17 +13,6 @@ import (
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
-)
-
-const (
-	forwarded          = "Forwarded"
-	xForwardedMethod   = "X-Forwarded-Method"
-	xForwardedProto    = "X-Forwarded-Proto"
-	xForwardedProtocol = "X-Forwarded-Protocol"
-	xForwardedURI      = "X-Forwarded-Uri"
-	xForwardedHost     = "X-Forwarded-Host"
-	xForwardedFor      = "X-Forwarded-For"
-	xForwardedSsl      = "X-Forwarded-Ssl"
 )
 
 type RequestContext struct {
@@ -99,7 +89,13 @@ func (s *RequestContext) FinalizeAndForward(upstreamURL *url.URL, timeout time.D
 		s.c.Request().Header.SetCookie(k, v)
 	}
 
-	// TODO: If present update Forwarded header, else update or set X-Forwarded-For header
+	forwardedForHeaderValue := s.c.Get("X-Forwarded-For")
+	clientIP := s.c.IP()
+
+	s.c.Request().Header.Set("X-Forwarded-For", x.IfThenElse(
+		len(forwardedForHeaderValue) == 0,
+		clientIP,
+		fmt.Sprintf("%s, %s", forwardedForHeaderValue, clientIP)))
 
 	s.c.Request().SetRequestURI(upstreamURL.String())
 
