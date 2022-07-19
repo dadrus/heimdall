@@ -370,7 +370,6 @@ func (r *ruleImpl) UpstreamURL(initialURL *url.URL) *url.URL {
 
 	return &url.URL{
 		Scheme:     r.upstreamURL.Scheme,
-		Opaque:     initialURL.Opaque,
 		Host:       r.upstreamURL.Host,
 		Path:       initialURL.Path,
 		RawPath:    initialURL.RawPath,
