@@ -29,7 +29,7 @@ type Handler struct {
 type handlerParams struct {
 	fx.In
 
-	App             *fiber.App `name:"api"`
+	App             *fiber.App `name:"proxy"`
 	RulesRepository rules.Repository
 	KeyStore        keystore.KeyStore
 	Config          config.Configuration
