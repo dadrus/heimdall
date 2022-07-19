@@ -2,7 +2,8 @@ name: Release
 
 on:
   push:
-    branches: [ main ]
+    branches:
+      - main
 
 env:
   GO_VERSION: 1.18.4
