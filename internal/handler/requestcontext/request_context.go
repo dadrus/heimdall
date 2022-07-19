@@ -14,6 +14,17 @@ import (
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
+const (
+	forwarded          = "Forwarded"
+	xForwardedMethod   = "X-Forwarded-Method"
+	xForwardedProto    = "X-Forwarded-Proto"
+	xForwardedProtocol = "X-Forwarded-Protocol"
+	xForwardedURI      = "X-Forwarded-Uri"
+	xForwardedHost     = "X-Forwarded-Host"
+	xForwardedFor      = "X-Forwarded-For"
+	xForwardedSsl      = "X-Forwarded-Ssl"
+)
+
 type RequestContext struct {
 	c               *fiber.Ctx
 	reqURL          *url.URL
@@ -62,8 +73,10 @@ func (s *RequestContext) Finalize() error {
 	}
 
 	for k, v := range s.upstreamCookies {
-		s.c.Cookie(&fiber.Cookie{Name: k, Value: v}) //nolint:exhaustruct
+		s.c.Cookie(&fiber.Cookie{Name: k, Value: v})
 	}
+
+	s.c.Status(fiber.StatusAccepted)
 
 	return nil
 }
@@ -85,6 +98,8 @@ func (s *RequestContext) FinalizeAndForward(upstreamURL *url.URL, timeout time.D
 	for k, v := range s.upstreamCookies {
 		s.c.Request().Header.SetCookie(k, v)
 	}
+
+	// TODO: If present update Forwarded header, else update or set X-Forwarded-For header
 
 	s.c.Request().SetRequestURI(upstreamURL.String())
 

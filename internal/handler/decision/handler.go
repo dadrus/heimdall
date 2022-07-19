@@ -84,11 +84,5 @@ func (h *Handler) decisions(c *fiber.Ctx) error {
 
 	logger.Debug().Msg("Finalizing request")
 
-	if err = reqCtx.Finalize(); err != nil {
-		return err
-	}
-
-	c.Status(fiber.StatusAccepted)
-
-	return nil
+	return reqCtx.Finalize()
 }
