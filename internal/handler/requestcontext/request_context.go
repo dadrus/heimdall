@@ -80,7 +80,7 @@ func (s *RequestContext) FinalizeAndForward(upstreamURL *url.URL, timeout time.D
 		s.c.Request().Header.SetCookie(k, v)
 	}
 
-	s.c.Request().SetHost(upstreamURL.Host)
+	s.c.Request().SetRequestURI(upstreamURL.String())
 
 	return fasthttp.DoTimeout(s.c.Request(), s.c.Response(), timeout)
 }

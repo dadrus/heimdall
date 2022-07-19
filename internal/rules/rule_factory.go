@@ -295,15 +295,16 @@ func (f *ruleFactory) initWithDefaultRule(ruleConfig *config.DefaultRuleConfig, 
 }
 
 type ruleImpl struct {
-	id         string
-	urlMatcher patternmatcher.PatternMatcher
-	methods    []string
-	srcID      string
-	isDefault  bool
-	sc         compositeSubjectCreator
-	sh         compositeSubjectHandler
-	m          compositeSubjectHandler
-	eh         compositeErrorHandler
+	id          string
+	urlMatcher  patternmatcher.PatternMatcher
+	upstreamURL *url.URL
+	methods     []string
+	srcID       string
+	isDefault   bool
+	sc          compositeSubjectCreator
+	sh          compositeSubjectHandler
+	m           compositeSubjectHandler
+	eh          compositeErrorHandler
 }
 
 func (r *ruleImpl) Execute(ctx heimdall.Context) error {
@@ -349,3 +350,22 @@ func (r *ruleImpl) MatchesMethod(method string) bool { return slices.Contains(r.
 func (r *ruleImpl) ID() string { return r.id }
 
 func (r *ruleImpl) SrcID() string { return r.srcID }
+
+func (r *ruleImpl) UpstreamURL(initialURL *url.URL) *url.URL {
+	if r.upstreamURL == nil {
+		return initialURL
+	}
+
+	return &url.URL{
+		Scheme:      r.upstreamURL.Scheme,
+		Opaque:      initialURL.Opaque,
+		User:        r.upstreamURL.User,
+		Host:        r.upstreamURL.Host,
+		Path:        initialURL.Path,
+		RawPath:     initialURL.RawPath,
+		ForceQuery:  initialURL.ForceQuery,
+		RawQuery:    initialURL.RawQuery,
+		Fragment:    initialURL.Fragment,
+		RawFragment: initialURL.RawFragment,
+	}
+}

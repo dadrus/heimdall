@@ -88,5 +88,5 @@ func (h *Handler) proxy(c *fiber.Ctx) error {
 
 	logger.Debug().Msg("Finalizing request")
 
-	return reqCtx.FinalizeAndForward(reqURL, h.t)
+	return reqCtx.FinalizeAndForward(rule.UpstreamURL(reqURL), h.t)
 }
