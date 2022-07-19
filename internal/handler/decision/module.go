@@ -23,8 +23,7 @@ import (
 	"github.com/dadrus/heimdall/internal/x"
 )
 
-// nolint
-var Module = fx.Options(
+var Module = fx.Options( // nolint: gochecknoglobals
 	fx.Provide(fx.Annotated{Name: "api", Target: newFiberApp}),
 	fx.Invoke(
 		newHandler,
@@ -33,19 +32,19 @@ var Module = fx.Options(
 )
 
 func newFiberApp(conf config.Configuration, cache cache.Cache, logger zerolog.Logger) *fiber.App {
-	api := conf.Serve.DecisionAPI
+	service := conf.Serve.DecisionAPI
 
 	app := fiber.New(fiber.Config{
 		AppName:                 "Heimdall Decision API",
-		ServerHeader:            "Heimdall Decision API",
-		ReadTimeout:             api.Timeout.Read,
-		WriteTimeout:            api.Timeout.Write,
-		IdleTimeout:             api.Timeout.Idle,
+		ServerHeader:            "Heimdall",
+		ReadTimeout:             service.Timeout.Read,
+		WriteTimeout:            service.Timeout.Write,
+		IdleTimeout:             service.Timeout.Idle,
 		DisableStartupMessage:   true,
-		ErrorHandler:            errorhandler.NewErrorHandler(api.VerboseErrors, logger),
-		EnableTrustedProxyCheck: api.TrustedProxies != nil,
-		TrustedProxies: x.IfThenElseExec(api.TrustedProxies != nil,
-			func() []string { return *api.TrustedProxies },
+		ErrorHandler:            errorhandler.NewErrorHandler(service.VerboseErrors, logger),
+		EnableTrustedProxyCheck: service.TrustedProxies != nil,
+		TrustedProxies: x.IfThenElseExec(service.TrustedProxies != nil,
+			func() []string { return *service.TrustedProxies },
 			func() []string { return []string{} }),
 		JSONDecoder: json.Unmarshal,
 		JSONEncoder: json.Marshal,
@@ -58,14 +57,14 @@ func newFiberApp(conf config.Configuration, cache cache.Cache, logger zerolog.Lo
 			ext.Component.Set(span, "heimdall")
 		})))
 
-	if api.CORS != nil {
+	if service.CORS != nil {
 		app.Use(cors.New(cors.Config{
-			AllowOrigins:     strings.Join(api.CORS.AllowedOrigins, ","),
-			AllowMethods:     strings.Join(api.CORS.AllowedMethods, ","),
-			AllowHeaders:     strings.Join(api.CORS.AllowedHeaders, ","),
-			AllowCredentials: api.CORS.AllowCredentials,
-			ExposeHeaders:    strings.Join(api.CORS.ExposedHeaders, ","),
-			MaxAge:           int(api.CORS.MaxAge.Seconds()),
+			AllowOrigins:     strings.Join(service.CORS.AllowedOrigins, ","),
+			AllowMethods:     strings.Join(service.CORS.AllowedMethods, ","),
+			AllowHeaders:     strings.Join(service.CORS.AllowedHeaders, ","),
+			AllowCredentials: service.CORS.AllowCredentials,
+			ExposeHeaders:    strings.Join(service.CORS.ExposedHeaders, ","),
+			MaxAge:           int(service.CORS.MaxAge.Seconds()),
 		}))
 	}
 
@@ -82,17 +81,17 @@ type fiberApp struct {
 }
 
 func registerHooks(lifecycle fx.Lifecycle, logger zerolog.Logger, app fiberApp, conf config.Configuration) {
-	apiConf := conf.Serve.DecisionAPI
+	service := conf.Serve.DecisionAPI
 
 	lifecycle.Append(
 		fx.Hook{
 			OnStart: func(ctx context.Context) error {
 				go func() {
 					// service connections
-					addr := apiConf.Address()
+					addr := service.Address()
 					logger.Info().Msgf("Decision API endpoint starts listening on: %s", addr)
-					if apiConf.TLS != nil {
-						if err := app.App.ListenTLS(addr, apiConf.TLS.Cert, apiConf.TLS.Key); err != nil {
+					if service.TLS != nil {
+						if err := app.App.ListenTLS(addr, service.TLS.Cert, service.TLS.Key); err != nil {
 							logger.Fatal().Err(err).Msg("Could not start Decision API endpoint")
 						}
 					} else {
