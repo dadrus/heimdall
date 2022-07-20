@@ -7,8 +7,10 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/opentracing/opentracing-go"
 	"github.com/valyala/fasthttp"
 
+	"github.com/dadrus/heimdall/internal/fasthttp/tracing"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
@@ -97,5 +99,7 @@ func (s *RequestContext) FinalizeAndForward(upstreamURL *url.URL, timeout time.D
 
 	s.c.Request().SetRequestURI(upstreamURL.String())
 
-	return fasthttp.DoTimeout(s.c.Request(), s.c.Response(), timeout)
+	client := tracing.NewClient(&fasthttp.Client{}, opentracing.GlobalTracer())
+
+	return client.DoTimeout(s.c.UserContext(), s.c.Request(), s.c.Response(), timeout)
 }
