@@ -89,13 +89,26 @@ func (s *RequestContext) FinalizeAndForward(upstreamURL *url.URL, timeout time.D
 		s.c.Request().Header.SetCookie(k, v)
 	}
 
+	// delete headers, which are useless for the upstream service, before forwarding the request
+	for _, name := range []string{
+		"X-Forwarded-Method", "X-Forwarded-Proto", "X-Forwarded-Host", "X-Forwarded-Uri", "X-Forwarded-Path",
+	} {
+		s.c.Request().Header.Del(name)
+	}
+
 	forwardedForHeaderValue := s.c.Get("X-Forwarded-For")
+	forwardedHeaderValue := s.c.Get("Forwarded")
 	clientIP := s.c.IP()
 
-	s.c.Request().Header.Set("X-Forwarded-For", x.IfThenElse(
-		len(forwardedForHeaderValue) == 0,
-		clientIP,
-		fmt.Sprintf("%s, %s", forwardedForHeaderValue, clientIP)))
+	// Set either the X-Forwarded-For (if present), or the "new" Forwarded header
+	if len(forwardedForHeaderValue) != 0 {
+		s.c.Request().Header.Set("X-Forwarded-For",
+			fmt.Sprintf("%s, %s", forwardedForHeaderValue, clientIP))
+	} else {
+		s.c.Request().Header.Set("Forwarded", x.IfThenElse(len(forwardedHeaderValue) == 0,
+			fmt.Sprintf("for=%s", clientIP),
+			fmt.Sprintf("%s, for=%s", forwardedHeaderValue, clientIP)))
+	}
 
 	s.c.Request().SetRequestURI(upstreamURL.String())
 
