@@ -2,7 +2,6 @@ package requestcontext
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"net/url"
 	"time"
@@ -94,20 +93,6 @@ func (s *RequestContext) FinalizeAndForward(upstreamURL *url.URL, timeout time.D
 		"X-Forwarded-Method", "X-Forwarded-Proto", "X-Forwarded-Host", "X-Forwarded-Uri", "X-Forwarded-Path",
 	} {
 		s.c.Request().Header.Del(name)
-	}
-
-	forwardedForHeaderValue := s.c.Get("X-Forwarded-For")
-	forwardedHeaderValue := s.c.Get("Forwarded")
-	clientIP := s.c.IP()
-
-	// Set either the X-Forwarded-For (if present), or the "new" Forwarded header
-	if len(forwardedForHeaderValue) != 0 {
-		s.c.Request().Header.Set("X-Forwarded-For",
-			fmt.Sprintf("%s, %s", forwardedForHeaderValue, clientIP))
-	} else {
-		s.c.Request().Header.Set("Forwarded", x.IfThenElse(len(forwardedHeaderValue) == 0,
-			fmt.Sprintf("for=%s", clientIP),
-			fmt.Sprintf("%s, for=%s", forwardedHeaderValue, clientIP)))
 	}
 
 	s.c.Request().SetRequestURI(upstreamURL.String())

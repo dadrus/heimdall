@@ -17,6 +17,7 @@ import (
 	"github.com/dadrus/heimdall/internal/config"
 	fibercache "github.com/dadrus/heimdall/internal/fiber/middleware/cache"
 	fiberlogger "github.com/dadrus/heimdall/internal/fiber/middleware/logger"
+	fiberproxy "github.com/dadrus/heimdall/internal/fiber/middleware/proxyheader"
 	fibertracing "github.com/dadrus/heimdall/internal/fiber/middleware/tracing"
 	"github.com/dadrus/heimdall/internal/handler/errorhandler"
 	"github.com/dadrus/heimdall/internal/handler/health"
@@ -50,6 +51,7 @@ func newFiberApp(conf config.Configuration, cache cache.Cache, logger zerolog.Lo
 		JSONEncoder: json.Marshal,
 	})
 	app.Use(recover.New(recover.Config{EnableStackTrace: true}))
+	app.Use(fiberproxy.New())
 	app.Use(fibertracing.New(
 		fibertracing.WithTracer(opentracing.GlobalTracer()),
 		fibertracing.WithOperationFilter(func(ctx *fiber.Ctx) bool { return ctx.Path() == health.EndpointHealth }),
