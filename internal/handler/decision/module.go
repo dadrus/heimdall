@@ -40,7 +40,7 @@ func newFiberApp(conf config.Configuration, cache cache.Cache, logger zerolog.Lo
 		WriteTimeout:            service.Timeout.Write,
 		IdleTimeout:             service.Timeout.Idle,
 		DisableStartupMessage:   true,
-		ErrorHandler:            errorhandler.NewErrorHandler(service.VerboseErrors, logger),
+		ErrorHandler:            errorhandler.NewErrorHandler(service.VerboseErrors),
 		EnableTrustedProxyCheck: service.TrustedProxies != nil,
 		TrustedProxies: x.IfThenElseExec(service.TrustedProxies != nil,
 			func() []string { return *service.TrustedProxies },

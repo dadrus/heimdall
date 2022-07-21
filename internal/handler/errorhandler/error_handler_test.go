@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -21,7 +20,7 @@ func TestDefaultErrorHandler(t *testing.T) {
 
 	var appError error
 
-	app := fiber.New(fiber.Config{ErrorHandler: NewErrorHandler(false, log.Logger)})
+	app := fiber.New(fiber.Config{ErrorHandler: NewErrorHandler(false)})
 	app.Get("test", func(ctx *fiber.Ctx) error { return appError })
 
 	for _, tc := range []struct {
@@ -129,7 +128,7 @@ func TestVerboseErrorHandler(t *testing.T) {
 
 	var appError error
 
-	app := fiber.New(fiber.Config{ErrorHandler: NewErrorHandler(true, log.Logger)})
+	app := fiber.New(fiber.Config{ErrorHandler: NewErrorHandler(true)})
 	app.Get("test", func(ctx *fiber.Ctx) error { return appError })
 
 	for _, tc := range []struct {
