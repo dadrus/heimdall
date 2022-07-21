@@ -2,8 +2,12 @@ serve:
   api:
     port: 4468
     verbose_errors: true
+    trusted_proxies:
+      - 0.0.0.0/0
   proxy:
     port: 4469
+    trusted_proxies:
+      - 0.0.0.0/0
 
 log:
   level: debug
@@ -125,7 +129,8 @@ pipeline:
       type: jwt
       config:
         ttl: 5m
-        claims: "{'user': {{ quote .Subject.ID }} }"
+        claims: |
+          {"user": {{ quote .Subject.ID }} }
     - id: bla
       type: header
       config:
