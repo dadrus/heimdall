@@ -1,10 +1,8 @@
 {
   "extends": [
     "config:base",
-    ":semanticCommitTypeAll(chore)",
-    ":semanticCommitScopeDisabled"
+    ":semanticCommitTypeAll(chore)"
   ],
-  "assigneesFromCodeOwners": true,
   "addLabels": ["dependency"],
   "automerge": false
 }
