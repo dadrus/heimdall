@@ -1,4 +1,4 @@
-package decision
+package management
 
 import (
 	"context"
@@ -13,43 +13,38 @@ import (
 	"github.com/rs/zerolog"
 	"go.uber.org/fx"
 
-	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/dadrus/heimdall/internal/config"
-	fibercache "github.com/dadrus/heimdall/internal/fiber/middleware/cache"
 	fiberlogger "github.com/dadrus/heimdall/internal/fiber/middleware/logger"
 	fibertracing "github.com/dadrus/heimdall/internal/fiber/middleware/tracing"
 	"github.com/dadrus/heimdall/internal/handler/errorhandler"
-	"github.com/dadrus/heimdall/internal/x"
 )
 
 var Module = fx.Options( // nolint: gochecknoglobals
-	fx.Provide(fx.Annotated{Name: "api", Target: newFiberApp}),
+	fx.Provide(fx.Annotated{Name: "management", Target: newFiberApp}),
 	fx.Invoke(
 		newHandler,
 		registerHooks,
 	),
 )
 
-func newFiberApp(conf config.Configuration, cache cache.Cache) *fiber.App {
-	service := conf.Serve.Decision
+func newFiberApp(conf config.Configuration) *fiber.App {
+	service := conf.Serve.Management
 
 	app := fiber.New(fiber.Config{
-		AppName:                 "Heimdall Decision API",
+		AppName:                 "Heimdall Management API",
 		ReadTimeout:             service.Timeout.Read,
 		WriteTimeout:            service.Timeout.Write,
 		IdleTimeout:             service.Timeout.Idle,
 		DisableStartupMessage:   true,
+		EnableTrustedProxyCheck: true,
 		ErrorHandler:            errorhandler.NewErrorHandler(service.VerboseErrors),
-		EnableTrustedProxyCheck: service.TrustedProxies != nil,
-		TrustedProxies: x.IfThenElseExec(service.TrustedProxies != nil,
-			func() []string { return *service.TrustedProxies },
-			func() []string { return []string{} }),
-		JSONDecoder: json.Unmarshal,
-		JSONEncoder: json.Marshal,
+		JSONDecoder:             json.Unmarshal,
+		JSONEncoder:             json.Marshal,
 	})
 	app.Use(recover.New(recover.Config{EnableStackTrace: true}))
 	app.Use(fibertracing.New(
 		fibertracing.WithTracer(opentracing.GlobalTracer()),
+		fibertracing.WithOperationFilter(func(ctx *fiber.Ctx) bool { return ctx.Path() == EndpointHealth }),
 		fibertracing.WithSpanObserver(func(span opentracing.Span, ctx *fiber.Ctx) {
 			ext.Component.Set(span, "heimdall")
 		})))
@@ -65,7 +60,6 @@ func newFiberApp(conf config.Configuration, cache cache.Cache) *fiber.App {
 		}))
 	}
 
-	app.Use(fibercache.New(cache))
 	app.Use(fiberlogger.New())
 
 	return app
@@ -74,11 +68,11 @@ func newFiberApp(conf config.Configuration, cache cache.Cache) *fiber.App {
 type fiberApp struct {
 	fx.In
 
-	App *fiber.App `name:"api"`
+	App *fiber.App `name:"management"`
 }
 
 func registerHooks(lifecycle fx.Lifecycle, logger zerolog.Logger, app fiberApp, conf config.Configuration) {
-	service := conf.Serve.Decision
+	service := conf.Serve.Management
 
 	lifecycle.Append(
 		fx.Hook{
@@ -86,14 +80,14 @@ func registerHooks(lifecycle fx.Lifecycle, logger zerolog.Logger, app fiberApp, 
 				go func() {
 					// service connections
 					addr := service.Address()
-					logger.Info().Msgf("Decision API endpoint starts listening on: %s", addr)
+					logger.Info().Msgf("Management endpoint starts listening on: %s", addr)
 					if service.TLS != nil {
 						if err := app.App.ListenTLS(addr, service.TLS.Cert, service.TLS.Key); err != nil {
-							logger.Fatal().Err(err).Msg("Could not start Decision API endpoint")
+							logger.Fatal().Err(err).Msg("Could not start Management endpoint")
 						}
 					} else {
 						if err := app.App.Listen(addr); err != nil {
-							logger.Fatal().Err(err).Msg("Could not start Decision API endpoint")
+							logger.Fatal().Err(err).Msg("Could not start Management endpoint")
 						}
 					}
 				}()
@@ -101,7 +95,7 @@ func registerHooks(lifecycle fx.Lifecycle, logger zerolog.Logger, app fiberApp, 
 				return nil
 			},
 			OnStop: func(ctx context.Context) error {
-				logger.Info().Msg("Tearing down Decision API endpoint")
+				logger.Info().Msg("Tearing down Management endpoint")
 
 				return app.App.Shutdown()
 			},

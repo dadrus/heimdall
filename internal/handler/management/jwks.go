@@ -1,21 +1,13 @@
-package jwks
+package management
 
 import (
 	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/middleware/etag"
-	"github.com/rs/zerolog"
 	"gopkg.in/square/go-jose.v2"
 
 	"github.com/dadrus/heimdall/internal/keystore"
 )
 
 const EndpointJWKS = "/.well-known/jwks"
-
-func RegisterRoutes(router fiber.Router, logger zerolog.Logger, ks keystore.KeyStore) {
-	logger.Debug().Msg("Registering jwks route")
-
-	router.Get(EndpointJWKS, etag.New(), jwks(ks))
-}
 
 // jwks implements an endpoint returning JWKS objects according to
 // https://datatracker.ietf.org/doc/html/rfc7517

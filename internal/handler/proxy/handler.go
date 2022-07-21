@@ -10,8 +10,6 @@ import (
 	"github.com/dadrus/heimdall/internal/config"
 	fiberauditor "github.com/dadrus/heimdall/internal/fiber/middleware/auditor"
 	fiberxforwarded "github.com/dadrus/heimdall/internal/fiber/middleware/xforwarded"
-	"github.com/dadrus/heimdall/internal/handler/health"
-	"github.com/dadrus/heimdall/internal/handler/jwks"
 	"github.com/dadrus/heimdall/internal/handler/requestcontext"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/keystore"
@@ -50,8 +48,6 @@ func newHandler(params handlerParams) (*Handler, error) {
 
 	router := params.App.Group("/")
 
-	health.RegisterRoutes(router, params.Logger)
-	jwks.RegisterRoutes(router, params.Logger, params.KeyStore)
 	handler.registerRoutes(router, params.Logger)
 
 	return handler, nil

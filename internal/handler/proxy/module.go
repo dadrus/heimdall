@@ -20,7 +20,6 @@ import (
 	fiberproxy "github.com/dadrus/heimdall/internal/fiber/middleware/proxyheader"
 	fibertracing "github.com/dadrus/heimdall/internal/fiber/middleware/tracing"
 	"github.com/dadrus/heimdall/internal/handler/errorhandler"
-	"github.com/dadrus/heimdall/internal/handler/health"
 	"github.com/dadrus/heimdall/internal/x"
 )
 
@@ -32,7 +31,7 @@ var Module = fx.Options( // nolint: gochecknoglobals
 	),
 )
 
-func newFiberApp(conf config.Configuration, cache cache.Cache, logger zerolog.Logger) *fiber.App {
+func newFiberApp(conf config.Configuration, cache cache.Cache) *fiber.App {
 	service := conf.Serve.Proxy
 
 	app := fiber.New(fiber.Config{
@@ -53,7 +52,6 @@ func newFiberApp(conf config.Configuration, cache cache.Cache, logger zerolog.Lo
 	app.Use(fiberproxy.New())
 	app.Use(fibertracing.New(
 		fibertracing.WithTracer(opentracing.GlobalTracer()),
-		fibertracing.WithOperationFilter(func(ctx *fiber.Ctx) bool { return ctx.Path() == health.EndpointHealth }),
 		fibertracing.WithSpanObserver(func(span opentracing.Span, ctx *fiber.Ctx) {
 			ext.Component.Set(span, "heimdall")
 		})))

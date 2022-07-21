@@ -1,6 +1,21 @@
 package config
 
-import "github.com/rs/zerolog"
+import (
+	"time"
+
+	"github.com/rs/zerolog"
+)
+
+const (
+	defaultReadTimeout  = time.Second * 5
+	defaultWriteTimeout = time.Second * 10
+	defaultIdleTimeout  = time.Second * 120
+
+	defaultProxyPort         = 4455
+	defaultDecisionAPIPort   = 4456
+	defaultManagementAPIPort = 4457
+	defaultPrometheusPort    = 9000
+)
 
 // nolint: gochecknoglobals
 var defaultConfig = Configuration{
@@ -13,8 +28,16 @@ var defaultConfig = Configuration{
 				Idle:  defaultIdleTimeout,
 			},
 		},
-		DecisionAPI: ServiceConfig{
+		Decision: ServiceConfig{
 			Port: defaultDecisionAPIPort,
+			Timeout: Timeout{
+				Read:  defaultReadTimeout,
+				Write: defaultWriteTimeout,
+				Idle:  defaultIdleTimeout,
+			},
+		},
+		Management: ServiceConfig{
+			Port: defaultManagementAPIPort,
 			Timeout: Timeout{
 				Read:  defaultReadTimeout,
 				Write: defaultWriteTimeout,
