@@ -4,6 +4,8 @@ serve:
     verbose_errors: true
   proxy:
     port: 4469
+    trusted_proxies:
+      - 127.0.0.1
 
 log:
   level: debug
