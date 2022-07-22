@@ -30,7 +30,7 @@ require (
 	github.com/yl2chen/cidranger v1.0.2
 	github.com/youmark/pkcs8 v0.0.0-20201027041543-1326539a0a0a
 	go.uber.org/fx v1.17.1
-	golang.org/x/exp v0.0.0-20220713135740-79cabaa25d75
+	golang.org/x/exp v0.0.0-20220722155223-a9213eeb770e
 	gopkg.in/square/go-jose.v2 v2.6.0
 	gopkg.in/yaml.v3 v3.0.1
 )
