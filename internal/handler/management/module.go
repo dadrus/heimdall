@@ -14,9 +14,9 @@ import (
 	"go.uber.org/fx"
 
 	"github.com/dadrus/heimdall/internal/config"
+	"github.com/dadrus/heimdall/internal/fiber/errorhandler"
 	fiberlogger "github.com/dadrus/heimdall/internal/fiber/middleware/logger"
 	fibertracing "github.com/dadrus/heimdall/internal/fiber/middleware/tracing"
-	"github.com/dadrus/heimdall/internal/handler/errorhandler"
 )
 
 var Module = fx.Options( // nolint: gochecknoglobals

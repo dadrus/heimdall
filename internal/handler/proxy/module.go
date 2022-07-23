@@ -15,11 +15,11 @@ import (
 
 	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/dadrus/heimdall/internal/config"
+	"github.com/dadrus/heimdall/internal/fiber/errorhandler"
 	fibercache "github.com/dadrus/heimdall/internal/fiber/middleware/cache"
 	fiberlogger "github.com/dadrus/heimdall/internal/fiber/middleware/logger"
 	fiberproxy "github.com/dadrus/heimdall/internal/fiber/middleware/proxyheader"
 	fibertracing "github.com/dadrus/heimdall/internal/fiber/middleware/tracing"
-	"github.com/dadrus/heimdall/internal/handler/errorhandler"
 	"github.com/dadrus/heimdall/internal/x"
 )
 
