@@ -572,6 +572,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrAuthentication)
+				assert.NotErrorIs(t, err, heimdall.ErrArgument)
 				assert.Contains(t, err.Error(), "no JWT")
 			},
 		},
@@ -595,7 +596,8 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrAuthentication)
-				assert.Contains(t, err.Error(), "unsupported JWT format")
+				assert.ErrorIs(t, err, heimdall.ErrArgument)
+				assert.Contains(t, err.Error(), "JWS format must have three parts")
 			},
 		},
 		{
@@ -618,6 +620,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrAuthentication)
+				assert.ErrorIs(t, err, heimdall.ErrArgument)
 				assert.Contains(t, err.Error(), "parse JWT")
 			},
 		},
@@ -643,6 +646,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrCommunication)
+				assert.NotErrorIs(t, err, heimdall.ErrArgument)
 				assert.Contains(t, err.Error(), "jwks endpoint failed")
 			},
 		},
@@ -673,6 +677,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrCommunication)
+				assert.NotErrorIs(t, err, heimdall.ErrArgument)
 				assert.Contains(t, err.Error(), "unexpected response")
 			},
 		},
@@ -712,6 +717,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrInternal)
+				assert.NotErrorIs(t, err, heimdall.ErrArgument)
 				assert.Contains(t, err.Error(), "failed to unmarshal")
 			},
 		},
@@ -751,6 +757,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrAuthentication)
+				assert.NotErrorIs(t, err, heimdall.ErrArgument)
 				assert.Contains(t, err.Error(), "no (unique) key found")
 			},
 		},
@@ -790,6 +797,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrAuthentication)
+				assert.NotErrorIs(t, err, heimdall.ErrArgument)
 				assert.Contains(t, err.Error(), "algorithm is not allowed")
 			},
 		},
@@ -829,6 +837,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrAuthentication)
+				assert.NotErrorIs(t, err, heimdall.ErrArgument)
 				assert.Contains(t, err.Error(), "JWT signature")
 			},
 		},
@@ -868,6 +877,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrAuthentication)
+				assert.NotErrorIs(t, err, heimdall.ErrArgument)
 				assert.Contains(t, err.Error(), "assertion conditions")
 			},
 		},
@@ -912,6 +922,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrInternal)
+				assert.NotErrorIs(t, err, heimdall.ErrArgument)
 				assert.Contains(t, err.Error(), "failed to extract subject")
 			},
 		},
