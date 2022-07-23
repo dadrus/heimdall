@@ -7,7 +7,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
-	"strings"
 	"time"
 
 	"github.com/goccy/go-json"
@@ -52,7 +51,7 @@ type jwtAuthenticator struct {
 }
 
 func newJwtAuthenticator(rawConfig map[string]any) (*jwtAuthenticator, error) {
-	type _config struct {
+	type Config struct {
 		Endpoint       endpoint.Endpoint                   `mapstructure:"jwks_endpoint"`
 		AuthDataSource extractors.CompositeExtractStrategy `mapstructure:"jwt_from"`
 		Assertions     oauth2.Expectation                  `mapstructure:"assertions"`
@@ -60,22 +59,19 @@ func newJwtAuthenticator(rawConfig map[string]any) (*jwtAuthenticator, error) {
 		CacheTTL       *time.Duration                      `mapstructure:"cache_ttl"`
 	}
 
-	var conf _config
+	var conf Config
 	if err := decodeConfig(rawConfig, &conf); err != nil {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration, "failed to unmarshal jwt authenticator config").
-			CausedBy(err)
+		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
+			"failed to unmarshal jwt authenticator config").CausedBy(err)
 	}
 
 	if err := conf.Endpoint.Validate(); err != nil {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration, "failed to validate endpoint configuration").
-			CausedBy(err)
+		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
+			"failed to validate endpoint configuration").CausedBy(err)
 	}
 
 	if len(conf.Assertions.TrustedIssuers) == 0 {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration, "no trusted issuers configured")
+		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration, "no trusted issuers configured")
 	}
 
 	if conf.Endpoint.Headers == nil {
@@ -129,13 +125,13 @@ func (a *jwtAuthenticator) Execute(ctx heimdall.Context) (*subject.Subject, erro
 
 	jwtAd, err := a.ads.GetAuthData(ctx)
 	if err != nil {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrAuthentication, "no JWT present").CausedBy(err)
+		return nil, errorchain.NewWithMessage(heimdall.ErrAuthentication, "no JWT present").CausedBy(err)
 	}
 
-	token, err := a.parseJWT(jwtAd.Value())
+	token, err := jwt.ParseSigned(jwtAd.Value())
 	if err != nil {
-		return nil, err
+		return nil, errorchain.NewWithMessage(heimdall.ErrAuthentication,
+			"failed to parse JWT").CausedBy(err).CausedBy(heimdall.ErrArgument)
 	}
 
 	sigKey, err := a.getKey(ctx, token.Headers[0].KeyID)
@@ -150,9 +146,8 @@ func (a *jwtAuthenticator) Execute(ctx heimdall.Context) (*subject.Subject, erro
 
 	sub, err := a.sf.CreateSubject(rawClaims)
 	if err != nil {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrInternal, "failed to extract subject information from jwt").
-			CausedBy(err)
+		return nil, errorchain.NewWithMessage(heimdall.ErrInternal,
+			"failed to extract subject information from jwt").CausedBy(err)
 	}
 
 	return sub, nil
@@ -164,16 +159,15 @@ func (a *jwtAuthenticator) WithConfig(config map[string]any) (Authenticator, err
 		return a, nil
 	}
 
-	type _config struct {
+	type Config struct {
 		Assertions *oauth2.Expectation `mapstructure:"assertions"`
 		CacheTTL   *time.Duration      `mapstructure:"cache_ttl"`
 	}
 
-	var conf _config
+	var conf Config
 	if err := decodeConfig(config, &conf); err != nil {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration, "failed to unmarshal jwt authenticator config").
-			CausedBy(err)
+		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
+			"failed to unmarshal jwt authenticator config").CausedBy(err)
 	}
 
 	return &jwtAuthenticator{
@@ -185,23 +179,6 @@ func (a *jwtAuthenticator) WithConfig(config map[string]any) (Authenticator, err
 		sf:  a.sf,
 		ads: a.ads,
 	}, nil
-}
-
-func (a *jwtAuthenticator) parseJWT(rawJWT string) (*jwt.JSONWebToken, error) {
-	const jwtDotCount = 2
-
-	if strings.Count(rawJWT, ".") != jwtDotCount {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrAuthentication, "unsupported JWT format")
-	}
-
-	token, err := jwt.ParseSigned(rawJWT)
-	if err != nil {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrAuthentication, "failed to parse JWT").CausedBy(err)
-	}
-
-	return token, nil
 }
 
 func (a *jwtAuthenticator) getKey(ctx heimdall.Context, keyID string) (*jose.JSONWebKey, error) {
