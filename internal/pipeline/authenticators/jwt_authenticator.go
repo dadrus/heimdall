@@ -52,7 +52,7 @@ type jwtAuthenticator struct {
 }
 
 func newJwtAuthenticator(rawConfig map[string]any) (*jwtAuthenticator, error) {
-	type _config struct {
+	type Config struct {
 		Endpoint       endpoint.Endpoint                   `mapstructure:"jwks_endpoint"`
 		AuthDataSource extractors.CompositeExtractStrategy `mapstructure:"jwt_from"`
 		Assertions     oauth2.Expectation                  `mapstructure:"assertions"`
@@ -60,7 +60,7 @@ func newJwtAuthenticator(rawConfig map[string]any) (*jwtAuthenticator, error) {
 		CacheTTL       *time.Duration                      `mapstructure:"cache_ttl"`
 	}
 
-	var conf _config
+	var conf Config
 	if err := decodeConfig(rawConfig, &conf); err != nil {
 		return nil, errorchain.
 			NewWithMessage(heimdall.ErrConfiguration, "failed to unmarshal jwt authenticator config").
@@ -164,12 +164,12 @@ func (a *jwtAuthenticator) WithConfig(config map[string]any) (Authenticator, err
 		return a, nil
 	}
 
-	type _config struct {
+	type Config struct {
 		Assertions *oauth2.Expectation `mapstructure:"assertions"`
 		CacheTTL   *time.Duration      `mapstructure:"cache_ttl"`
 	}
 
-	var conf _config
+	var conf Config
 	if err := decodeConfig(config, &conf); err != nil {
 		return nil, errorchain.
 			NewWithMessage(heimdall.ErrConfiguration, "failed to unmarshal jwt authenticator config").
