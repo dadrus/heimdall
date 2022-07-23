@@ -65,6 +65,11 @@ func TestDefaultErrorHandler(t *testing.T) {
 			responseCode: http.StatusMethodNotAllowed,
 		},
 		{
+			uc:           "no rule found error",
+			serverError:  heimdall.ErrNoRuleFound,
+			responseCode: http.StatusNotFound,
+		},
+		{
 			uc:           "internal error",
 			serverError:  heimdall.ErrInternal,
 			responseCode: http.StatusInternalServerError,
@@ -179,6 +184,11 @@ func TestVerboseErrorHandler(t *testing.T) {
 			uc:           "method not allowed error",
 			serverError:  heimdall.ErrMethodNotAllowed,
 			responseCode: http.StatusMethodNotAllowed,
+		},
+		{
+			uc:           "no rule found error",
+			serverError:  heimdall.ErrNoRuleFound,
+			responseCode: http.StatusNotFound,
 		},
 		{
 			uc:           "internal error",

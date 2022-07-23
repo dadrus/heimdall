@@ -55,13 +55,13 @@ func TestHandleDecisionAPIRequest(t *testing.T) {
 			configureMocks: func(t *testing.T, repository *mocks2.MockRepository, rule *mocks4.MockRule) {
 				t.Helper()
 
-				repository.On("FindRule", mock.Anything).Return(nil, errTest)
+				repository.On("FindRule", mock.Anything).Return(nil, heimdall.ErrNoRuleFound)
 			},
 			assertResponse: func(t *testing.T, err error, response *http.Response) {
 				t.Helper()
 
 				require.NoError(t, err)
-				assert.Equal(t, http.StatusInternalServerError, response.StatusCode)
+				assert.Equal(t, http.StatusNotFound, response.StatusCode)
 
 				data, err := ioutil.ReadAll(response.Body)
 				require.NoError(t, err)

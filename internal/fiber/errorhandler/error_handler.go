@@ -26,6 +26,8 @@ func defaultErrorHandler(ctx *fiber.Ctx, err error) error {
 		ctx.Status(fiber.StatusBadRequest)
 	case errors.Is(err, heimdall.ErrMethodNotAllowed):
 		ctx.Status(fiber.StatusMethodNotAllowed)
+	case errors.Is(err, heimdall.ErrNoRuleFound):
+		ctx.Status(fiber.StatusNotFound)
 	case errors.Is(err, &heimdall.RedirectError{}):
 		var redirectError *heimdall.RedirectError
 
@@ -54,6 +56,8 @@ func verboseErrorHandler(ctx *fiber.Ctx, err error) error {
 		return ctx.Status(fiber.StatusBadRequest).Format(err)
 	case errors.Is(err, heimdall.ErrMethodNotAllowed):
 		return ctx.Status(fiber.StatusMethodNotAllowed).Format(err)
+	case errors.Is(err, heimdall.ErrNoRuleFound):
+		return ctx.Status(fiber.StatusNotFound).Format(err)
 	case errors.Is(err, &heimdall.RedirectError{}):
 		var redirectError *heimdall.RedirectError
 

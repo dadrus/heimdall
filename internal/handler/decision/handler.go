@@ -60,14 +60,13 @@ func (h *Handler) decisions(c *fiber.Ctx) error {
 	logger.Debug().Msg("Decision API called")
 
 	reqURL := fiberxforwarded.RequestURL(c.UserContext())
+	method := fiberxforwarded.RequestMethod(c.UserContext())
 
 	rule, err := h.r.FindRule(reqURL)
 	if err != nil {
-		return errorchain.NewWithMessagef(heimdall.ErrInternal,
-			"no applicable rule found for %s", reqURL.String()).CausedBy(err)
+		return err
 	}
 
-	method := fiberxforwarded.RequestMethod(c.UserContext())
 	if !rule.MatchesMethod(method) {
 		return errorchain.NewWithMessagef(heimdall.ErrMethodNotAllowed,
 			"rule doesn't match %s method", method)
