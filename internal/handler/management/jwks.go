@@ -7,8 +7,6 @@ import (
 	"github.com/dadrus/heimdall/internal/keystore"
 )
 
-const EndpointJWKS = "/.well-known/jwks"
-
 // jwks implements an endpoint returning JWKS objects according to
 // https://datatracker.ietf.org/doc/html/rfc7517
 func jwks(ks keystore.KeyStore) fiber.Handler {
