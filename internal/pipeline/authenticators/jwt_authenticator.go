@@ -61,20 +61,17 @@ func newJwtAuthenticator(rawConfig map[string]any) (*jwtAuthenticator, error) {
 
 	var conf Config
 	if err := decodeConfig(rawConfig, &conf); err != nil {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration, "failed to unmarshal jwt authenticator config").
-			CausedBy(err)
+		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
+			"failed to unmarshal jwt authenticator config").CausedBy(err)
 	}
 
 	if err := conf.Endpoint.Validate(); err != nil {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration, "failed to validate endpoint configuration").
-			CausedBy(err)
+		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
+			"failed to validate endpoint configuration").CausedBy(err)
 	}
 
 	if len(conf.Assertions.TrustedIssuers) == 0 {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration, "no trusted issuers configured")
+		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration, "no trusted issuers configured")
 	}
 
 	if conf.Endpoint.Headers == nil {
@@ -149,9 +146,8 @@ func (a *jwtAuthenticator) Execute(ctx heimdall.Context) (*subject.Subject, erro
 
 	sub, err := a.sf.CreateSubject(rawClaims)
 	if err != nil {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrInternal, "failed to extract subject information from jwt").
-			CausedBy(err)
+		return nil, errorchain.NewWithMessage(heimdall.ErrInternal,
+			"failed to extract subject information from jwt").CausedBy(err)
 	}
 
 	return sub, nil
@@ -170,9 +166,8 @@ func (a *jwtAuthenticator) WithConfig(config map[string]any) (Authenticator, err
 
 	var conf Config
 	if err := decodeConfig(config, &conf); err != nil {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration, "failed to unmarshal jwt authenticator config").
-			CausedBy(err)
+		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
+			"failed to unmarshal jwt authenticator config").CausedBy(err)
 	}
 
 	return &jwtAuthenticator{
