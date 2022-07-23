@@ -44,14 +44,14 @@ type genericAuthenticator struct {
 }
 
 func newGenericAuthenticator(rawConfig map[string]any) (*genericAuthenticator, error) {
-	type _config struct {
+	type Config struct {
 		Endpoint       endpoint.Endpoint                   `mapstructure:"identity_info_endpoint"`
 		AuthDataSource extractors.CompositeExtractStrategy `mapstructure:"authentication_data_source"`
 		Session        Session                             `mapstructure:"session"`
 		CacheTTL       *time.Duration                      `mapstructure:"cache_ttl"`
 	}
 
-	var conf _config
+	var conf Config
 
 	if err := decodeConfig(rawConfig, &conf); err != nil {
 		return nil, errorchain.
@@ -117,11 +117,11 @@ func (a *genericAuthenticator) WithConfig(config map[string]any) (Authenticator,
 		return a, nil
 	}
 
-	type _config struct {
+	type Config struct {
 		CacheTTL *time.Duration `mapstructure:"cache_ttl"`
 	}
 
-	var conf _config
+	var conf Config
 	if err := decodeConfig(config, &conf); err != nil {
 		return nil, errorchain.
 			NewWithMessage(heimdall.ErrConfiguration, "failed to parse configuration").

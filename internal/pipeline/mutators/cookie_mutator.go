@@ -30,11 +30,11 @@ type cookieMutator struct {
 }
 
 func newCookieMutator(rawConfig map[string]any) (*cookieMutator, error) {
-	type _config struct {
+	type Config struct {
 		Cookies map[string]template.Template `mapstructure:"cookies"`
 	}
 
-	var conf _config
+	var conf Config
 	if err := decodeConfig(rawConfig, &conf); err != nil {
 		return nil, errorchain.
 			NewWithMessage(heimdall.ErrConfiguration, "failed to unmarshal cookie mutator config").

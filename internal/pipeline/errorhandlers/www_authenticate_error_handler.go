@@ -33,12 +33,12 @@ type wwwAuthenticateErrorHandler struct {
 }
 
 func newWWWAuthenticateErrorHandler(rawConfig map[string]any) (*wwwAuthenticateErrorHandler, error) {
-	type _config struct {
+	type Config struct {
 		Realm string                          `mapstructure:"realm"`
 		When  []matcher.ErrorConditionMatcher `mapstructure:"when"`
 	}
 
-	var conf _config
+	var conf Config
 	if err := decodeConfig(rawConfig, &conf); err != nil {
 		return nil, errorchain.
 			NewWithMessage(heimdall.ErrConfiguration, "failed to unmarshal redirect error handler config").
@@ -79,12 +79,12 @@ func (eh *wwwAuthenticateErrorHandler) WithConfig(rawConfig map[string]any) (Err
 		return eh, nil
 	}
 
-	type _config struct {
+	type Config struct {
 		Realm *string                          `mapstructure:"realm"`
 		When  *[]matcher.ErrorConditionMatcher `mapstructure:"when"`
 	}
 
-	var conf _config
+	var conf Config
 	if err := decodeConfig(rawConfig, &conf); err != nil {
 		return nil, errorchain.
 			NewWithMessage(heimdall.ErrConfiguration,

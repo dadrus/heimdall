@@ -36,14 +36,14 @@ type redirectErrorHandler struct {
 }
 
 func newRedirectErrorHandler(rawConfig map[string]any) (*redirectErrorHandler, error) {
-	type _config struct {
+	type Config struct {
 		To       *url.URL                        `mapstructure:"to"`
 		Code     int                             `mapstructure:"code"`
 		ReturnTo string                          `mapstructure:"return_to_query_parameter"`
 		When     []matcher.ErrorConditionMatcher `mapstructure:"when"`
 	}
 
-	var conf _config
+	var conf Config
 	if err := decodeConfig(rawConfig, &conf); err != nil {
 		return nil, errorchain.
 			NewWithMessage(heimdall.ErrConfiguration, "failed to unmarshal redirect error handler config").
@@ -103,11 +103,11 @@ func (eh *redirectErrorHandler) WithConfig(rawConfig map[string]any) (ErrorHandl
 		return eh, nil
 	}
 
-	type _config struct {
+	type Config struct {
 		When []matcher.ErrorConditionMatcher `mapstructure:"when"`
 	}
 
-	var conf _config
+	var conf Config
 	if err := decodeConfig(rawConfig, &conf); err != nil {
 		return nil, errorchain.
 			NewWithMessage(heimdall.ErrConfiguration, "failed to unmarshal redirect error handler config").

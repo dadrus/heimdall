@@ -374,7 +374,7 @@ func TestEndpointSendRequest(t *testing.T) {
 		t.Run("case="+tc.uc, func(t *testing.T) {
 			//  GIVEN
 			statusCode = http.StatusOK
-			checkRequest = func(req *http.Request) { t.Helper() }
+			checkRequest = func(*http.Request) { t.Helper() }
 
 			instructServer := x.IfThenElse(tc.instructServer != nil,
 				tc.instructServer,

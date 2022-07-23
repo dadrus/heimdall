@@ -48,14 +48,14 @@ type oauth2IntrospectionAuthenticator struct {
 }
 
 func newOAuth2IntrospectionAuthenticator(rawConfig map[string]any) (*oauth2IntrospectionAuthenticator, error) {
-	type _config struct {
+	type Config struct {
 		Endpoint   endpoint.Endpoint  `mapstructure:"introspection_endpoint"`
 		Assertions oauth2.Expectation `mapstructure:"assertions"`
 		Session    Session            `mapstructure:"session"`
 		CacheTTL   *time.Duration     `mapstructure:"cache_ttl"`
 	}
 
-	var conf _config
+	var conf Config
 	if err := decodeConfig(rawConfig, &conf); err != nil {
 		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
 			"failed to unmarshal oauth2 introspection authenticator config").CausedBy(err)
@@ -142,12 +142,12 @@ func (a *oauth2IntrospectionAuthenticator) WithConfig(rawConfig map[string]any) 
 		return a, nil
 	}
 
-	type _config struct {
+	type Config struct {
 		Assertions *oauth2.Expectation `mapstructure:"assertions"`
 		CacheTTL   *time.Duration      `mapstructure:"cache_ttl"`
 	}
 
-	var conf _config
+	var conf Config
 	if err := decodeConfig(rawConfig, &conf); err != nil {
 		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
 			"failed to unmarshal configuration").CausedBy(err)

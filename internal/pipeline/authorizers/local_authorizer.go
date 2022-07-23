@@ -30,11 +30,11 @@ type localAuthorizer struct {
 }
 
 func newLocalAuthorizer(rawConfig map[string]any) (*localAuthorizer, error) {
-	type _config struct {
+	type Config struct {
 		Script script.Script `mapstructure:"script"`
 	}
 
-	var conf _config
+	var conf Config
 	if err := decodeConfig(rawConfig, &conf); err != nil {
 		return nil, errorchain.
 			NewWithMessage(heimdall.ErrConfiguration, "failed to unmarshal local authorizer config").

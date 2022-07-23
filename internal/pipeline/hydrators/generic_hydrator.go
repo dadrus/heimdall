@@ -60,7 +60,7 @@ type genericHydrator struct {
 }
 
 func newGenericHydrator(id string, rawConfig map[string]any) (*genericHydrator, error) {
-	type _config struct {
+	type Config struct {
 		Endpoint       endpoint.Endpoint `mapstructure:"endpoint"`
 		ForwardHeaders []string          `mapstructure:"forward_headers"`
 		ForwardCookies []string          `mapstructure:"forward_cookies"`
@@ -68,7 +68,7 @@ func newGenericHydrator(id string, rawConfig map[string]any) (*genericHydrator, 
 		CacheTTL       *time.Duration    `mapstructure:"cache_ttl"`
 	}
 
-	var conf _config
+	var conf Config
 	if err := decodeConfig(rawConfig, &conf); err != nil {
 		return nil, errorchain.
 			NewWithMessage(heimdall.ErrConfiguration, "failed to unmarshal generic hydrator config").
@@ -304,14 +304,14 @@ func (h *genericHydrator) WithConfig(rawConfig map[string]any) (Hydrator, error)
 		return h, nil
 	}
 
-	type _config struct {
+	type Config struct {
 		ForwardHeaders []string          `mapstructure:"forward_headers"`
 		ForwardCookies []string          `mapstructure:"forward_cookies"`
 		Payload        template.Template `mapstructure:"payload"`
 		CacheTTL       *time.Duration    `mapstructure:"cache_ttl"`
 	}
 
-	var conf _config
+	var conf Config
 	if err := decodeConfig(rawConfig, &conf); err != nil {
 		return nil, errorchain.
 			NewWithMessage(heimdall.ErrConfiguration, "failed to unmarshal JWT mutator config").

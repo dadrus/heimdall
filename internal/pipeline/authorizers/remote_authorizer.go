@@ -71,14 +71,14 @@ func (ai *authorizationInformation) AddAttributesTo(key string, sub *subject.Sub
 }
 
 func newRemoteAuthorizer(name string, rawConfig map[string]any) (*remoteAuthorizer, error) {
-	type _config struct {
+	type Config struct {
 		Endpoint                 endpoint.Endpoint `mapstructure:"endpoint"`
 		Payload                  template.Template `mapstructure:"payload"`
 		ResponseHeadersToForward []string          `mapstructure:"forward_response_headers_to_upstream"`
 		CacheTTL                 time.Duration     `mapstructure:"cache_ttl"`
 	}
 
-	var conf _config
+	var conf Config
 	if err := decodeConfig(rawConfig, &conf); err != nil {
 		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
 			"failed to unmarshal remote authorizer config").CausedBy(err)
@@ -265,13 +265,13 @@ func (a *remoteAuthorizer) WithConfig(rawConfig map[string]any) (Authorizer, err
 		return a, nil
 	}
 
-	type _config struct {
+	type Config struct {
 		Payload                  template.Template `mapstructure:"payload"`
 		ResponseHeadersToForward []string          `mapstructure:"forward_response_headers_to_upstream"`
 		CacheTTL                 time.Duration     `mapstructure:"cache_ttl"`
 	}
 
-	var conf _config
+	var conf Config
 	if err := decodeConfig(rawConfig, &conf); err != nil {
 		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
 			"failed to unmarshal remote authorizer config").CausedBy(err)

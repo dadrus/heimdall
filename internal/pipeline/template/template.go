@@ -22,7 +22,7 @@ type Template interface {
 	Hash() string
 }
 
-type _template struct {
+type templateImpl struct {
 	t    *template.Template
 	hash string
 }
@@ -40,10 +40,10 @@ func New(val string) (Template, error) {
 	hash := sha256.New()
 	hash.Write([]byte(val))
 
-	return &_template{t: tmpl, hash: hex.EncodeToString(hash.Sum(nil))}, nil
+	return &templateImpl{t: tmpl, hash: hex.EncodeToString(hash.Sum(nil))}, nil
 }
 
-func (t *_template) Render(ctx heimdall.Context, sub *subject.Subject) (string, error) {
+func (t *templateImpl) Render(ctx heimdall.Context, sub *subject.Subject) (string, error) {
 	var buf bytes.Buffer
 
 	err := t.t.Execute(&buf, data{Subject: sub, ctx: ctx})
@@ -54,7 +54,7 @@ func (t *_template) Render(ctx heimdall.Context, sub *subject.Subject) (string, 
 	return buf.String(), nil
 }
 
-func (t *_template) Hash() string { return t.hash }
+func (t *templateImpl) Hash() string { return t.hash }
 
 type data struct {
 	ctx     heimdall.Context
