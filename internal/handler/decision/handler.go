@@ -7,7 +7,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/config"
 	fiberauditor "github.com/dadrus/heimdall/internal/fiber/middleware/auditor"
-	fiberxforwarded "github.com/dadrus/heimdall/internal/fiber/middleware/xforwarded"
+	fiberxforwarded "github.com/dadrus/heimdall/internal/fiber/middleware/xfmphu"
 	"github.com/dadrus/heimdall/internal/handler/requestcontext"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/keystore"
