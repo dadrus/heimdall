@@ -3,7 +3,6 @@ package decision
 import (
 	"crypto/rand"
 	"crypto/rsa"
-	"errors"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -23,8 +22,6 @@ import (
 	mocks2 "github.com/dadrus/heimdall/internal/rules/mocks"
 	mocks4 "github.com/dadrus/heimdall/internal/rules/rule/mocks"
 )
-
-var errTest = errors.New("test purpose error")
 
 // nolint: gocognit, cyclop, maintidx
 func TestHandleDecisionAPIRequest(t *testing.T) {
