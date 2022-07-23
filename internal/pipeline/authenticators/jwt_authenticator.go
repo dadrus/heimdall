@@ -192,7 +192,7 @@ func (a *jwtAuthenticator) parseJWT(rawJWT string) (*jwt.JSONWebToken, error) {
 
 	if strings.Count(rawJWT, ".") != jwtDotCount {
 		return nil, errorchain.
-			NewWithMessage(heimdall.ErrAuthentication, "unsupported JWT format")
+			NewWithMessage(heimdall.ErrAuthentication, "unsupported JWT format").CausedBy(heimdall.ErrArgument)
 	}
 
 	token, err := jwt.ParseSigned(rawJWT)
