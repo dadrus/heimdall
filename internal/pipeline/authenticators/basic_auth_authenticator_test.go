@@ -283,6 +283,7 @@ password: bar`))
 
 				assert.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrAuthentication)
+				assert.ErrorIs(t, err, heimdall.ErrArgument)
 				assert.Contains(t, err.Error(), "unexpected value")
 
 				assert.Nil(t, sub)
@@ -300,6 +301,7 @@ password: bar`))
 
 				assert.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrAuthentication)
+				assert.ErrorIs(t, err, heimdall.ErrArgument)
 				assert.Contains(t, err.Error(), "unexpected authentication scheme")
 
 				assert.Nil(t, sub)
@@ -317,6 +319,7 @@ password: bar`))
 
 				assert.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrAuthentication)
+				assert.NotErrorIs(t, err, heimdall.ErrArgument)
 				assert.Contains(t, err.Error(), "failed to decode")
 
 				assert.Nil(t, sub)
@@ -335,6 +338,7 @@ password: bar`))
 
 				assert.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrAuthentication)
+				assert.NotErrorIs(t, err, heimdall.ErrArgument)
 				assert.Contains(t, err.Error(), "malformed user-id - password")
 
 				assert.Nil(t, sub)
@@ -353,6 +357,7 @@ password: bar`))
 
 				assert.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrAuthentication)
+				assert.NotErrorIs(t, err, heimdall.ErrArgument)
 				assert.Contains(t, err.Error(), "invalid user credentials")
 
 				assert.Nil(t, sub)
@@ -371,6 +376,7 @@ password: bar`))
 
 				assert.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrAuthentication)
+				assert.NotErrorIs(t, err, heimdall.ErrArgument)
 				assert.Contains(t, err.Error(), "invalid user credentials")
 
 				assert.Nil(t, sub)

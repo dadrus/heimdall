@@ -85,19 +85,19 @@ func (a *basicAuthAuthenticator) Execute(ctx heimdall.Context) (*subject.Subject
 
 	headerValue := ctx.RequestHeader("Authorization")
 	if len(headerValue) == 0 {
-		return nil, errorchain.NewWithMessage(heimdall.ErrAuthentication, "no Authorization header received").
-			CausedBy(heimdall.ErrArgument)
+		return nil, errorchain.NewWithMessage(heimdall.ErrAuthentication,
+			"no Authorization header received").CausedBy(heimdall.ErrArgument)
 	}
 
 	schemeAndValue := strings.Split(headerValue, " ")
 	if len(schemeAndValue) != basicAuthSchemeAttributes {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrAuthentication, "unexpected value in the Authorization header")
+		return nil, errorchain.NewWithMessage(heimdall.ErrAuthentication,
+			"unexpected value in the Authorization header").CausedBy(heimdall.ErrArgument)
 	}
 
 	if schemeAndValue[0] != "Basic" {
-		return nil, errorchain.
-			NewWithMessagef(heimdall.ErrAuthentication, "unexpected authentication scheme: %s", schemeAndValue[0])
+		return nil, errorchain.NewWithMessagef(heimdall.ErrAuthentication,
+			"unexpected authentication scheme: %s", schemeAndValue[0]).CausedBy(heimdall.ErrArgument)
 	}
 
 	res, err := base64.StdEncoding.DecodeString(schemeAndValue[1])
