@@ -64,14 +64,13 @@ func (h *Handler) proxy(c *fiber.Ctx) error {
 	logger.Debug().Msg("Proxy endpoint called")
 
 	reqURL := fiberxforwarded.RequestURL(c.UserContext())
+	method := fiberxforwarded.RequestMethod(c.UserContext())
 
 	rule, err := h.r.FindRule(reqURL)
 	if err != nil {
-		return errorchain.NewWithMessagef(heimdall.ErrInternal,
-			"no applicable rule found for %s", reqURL.String()).CausedBy(err)
+		return err
 	}
 
-	method := fiberxforwarded.RequestMethod(c.UserContext())
 	if !rule.MatchesMethod(method) {
 		return errorchain.NewWithMessagef(heimdall.ErrMethodNotAllowed,
 			"rule (id=%s, src=%s) doesn't match %s method", rule.ID(), rule.SrcID(), method)
