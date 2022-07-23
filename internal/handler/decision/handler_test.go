@@ -24,7 +24,7 @@ import (
 )
 
 // nolint: gocognit, cyclop, maintidx
-func TestHandleDecisionAPIRequest(t *testing.T) {
+func TestHandleDecisionEndpointRequest(t *testing.T) {
 	t.Parallel()
 
 	const rsa2048 = 2048
