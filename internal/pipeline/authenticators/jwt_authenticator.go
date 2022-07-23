@@ -7,7 +7,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
-	"strings"
 	"time"
 
 	"github.com/goccy/go-json"
@@ -129,13 +128,13 @@ func (a *jwtAuthenticator) Execute(ctx heimdall.Context) (*subject.Subject, erro
 
 	jwtAd, err := a.ads.GetAuthData(ctx)
 	if err != nil {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrAuthentication, "no JWT present").CausedBy(err)
+		return nil, errorchain.NewWithMessage(heimdall.ErrAuthentication, "no JWT present").CausedBy(err)
 	}
 
-	token, err := a.parseJWT(jwtAd.Value())
+	token, err := jwt.ParseSigned(jwtAd.Value())
 	if err != nil {
-		return nil, err
+		return nil, errorchain.NewWithMessage(heimdall.ErrAuthentication,
+			"failed to parse JWT").CausedBy(err).CausedBy(heimdall.ErrArgument)
 	}
 
 	sigKey, err := a.getKey(ctx, token.Headers[0].KeyID)
@@ -185,23 +184,6 @@ func (a *jwtAuthenticator) WithConfig(config map[string]any) (Authenticator, err
 		sf:  a.sf,
 		ads: a.ads,
 	}, nil
-}
-
-func (a *jwtAuthenticator) parseJWT(rawJWT string) (*jwt.JSONWebToken, error) {
-	const jwtDotCount = 2
-
-	if strings.Count(rawJWT, ".") != jwtDotCount {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrAuthentication, "unsupported JWT format").CausedBy(heimdall.ErrArgument)
-	}
-
-	token, err := jwt.ParseSigned(rawJWT)
-	if err != nil {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrAuthentication, "failed to parse JWT").CausedBy(err)
-	}
-
-	return token, nil
 }
 
 func (a *jwtAuthenticator) getKey(ctx heimdall.Context, keyID string) (*jose.JSONWebKey, error) {
