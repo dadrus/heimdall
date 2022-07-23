@@ -5,10 +5,11 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/dadrus/heimdall/internal/x"
 	"github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/ext"
 	"github.com/valyala/fasthttp"
+
+	"github.com/dadrus/heimdall/internal/x"
 )
 
 func NewClient(client *fasthttp.Client, tracer opentracing.Tracer) *WrappedClient {
@@ -20,7 +21,9 @@ type WrappedClient struct {
 	client *fasthttp.Client
 }
 
-func (c *WrappedClient) DoTimeout(ctx context.Context, req *fasthttp.Request, resp *fasthttp.Response, timeout time.Duration) error {
+func (c *WrappedClient) DoTimeout(ctx context.Context, req *fasthttp.Request, resp *fasthttp.Response,
+	timeout time.Duration,
+) error {
 	span := c.startSpan(ctx, req)
 	err := c.client.DoTimeout(req, resp, timeout)
 	span.finish(x.IfThenElse(err == nil, resp, nil))
@@ -28,7 +31,9 @@ func (c *WrappedClient) DoTimeout(ctx context.Context, req *fasthttp.Request, re
 	return err
 }
 
-func (c *WrappedClient) DoDeadline(ctx context.Context, req *fasthttp.Request, resp *fasthttp.Response, deadline time.Time) error {
+func (c *WrappedClient) DoDeadline(ctx context.Context, req *fasthttp.Request, resp *fasthttp.Response,
+	deadline time.Time,
+) error {
 	span := c.startSpan(ctx, req)
 	err := c.client.DoDeadline(req, resp, deadline)
 	span.finish(x.IfThenElse(err == nil, resp, nil))
@@ -36,7 +41,9 @@ func (c *WrappedClient) DoDeadline(ctx context.Context, req *fasthttp.Request, r
 	return err
 }
 
-func (c *WrappedClient) DoRedirects(ctx context.Context, req *fasthttp.Request, resp *fasthttp.Response, maxRedirectsCount int) error {
+func (c *WrappedClient) DoRedirects(ctx context.Context, req *fasthttp.Request, resp *fasthttp.Response,
+	maxRedirectsCount int,
+) error {
 	span := c.startSpan(ctx, req)
 	err := c.client.DoRedirects(req, resp, maxRedirectsCount)
 	span.finish(x.IfThenElse(err == nil, resp, nil))
@@ -78,6 +85,7 @@ func (s spanFinisher) finish(resp *fasthttp.Response) {
 	statusCode := resp.StatusCode()
 
 	ext.HTTPStatusCode.Set(s.sp, uint16(statusCode))
+
 	if statusCode >= http.StatusInternalServerError {
 		ext.Error.Set(s.sp, true)
 	}
@@ -95,8 +103,13 @@ func (c *WrappedClient) startSpan(ctx context.Context, req *fasthttp.Request) sp
 	ext.HTTPUrl.Set(span, req.URI().String())
 
 	headers := make(opentracing.HTTPHeadersCarrier)
+
 	req.Header.VisitAll(func(key, value []byte) { headers.Set(string(key), string(value)) })
 
+	// nolint: errcheck
+	// we cannot do anything if an error is raised anyway
+	// can also only happen, if multiple different opentracing clients are used and
+	// some custom carriers are used, which is not the case here.
 	span.Tracer().Inject(span.Context(), opentracing.HTTPHeaders, headers)
 
 	return spanFinisher{
