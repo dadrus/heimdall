@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/opentracing/opentracing-go"
 	"github.com/valyala/fasthttp"
 
 	"github.com/dadrus/heimdall/internal/fasthttp/tracing"
@@ -94,7 +93,5 @@ func (s *RequestContext) FinalizeAndForward(method string, upstreamURL *url.URL,
 	s.c.Request().Header.SetMethod(method)
 	s.c.Request().SetRequestURI(upstreamURL.String())
 
-	client := tracing.NewClient(&fasthttp.Client{}, opentracing.GlobalTracer())
-
-	return client.DoTimeout(s.c.UserContext(), s.c.Request(), s.c.Response(), timeout)
+	return tracing.NewClient(&fasthttp.Client{}).DoTimeout(s.c.UserContext(), s.c.Request(), s.c.Response(), timeout)
 }
