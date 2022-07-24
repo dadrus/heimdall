@@ -484,6 +484,7 @@ func TestHandleProxyEndpointRequest(t *testing.T) {
 			instructUpstream(t)
 
 			app := newFiberApp(conf, cch)
+			defer app.Shutdown() // nolint: errcheck
 
 			_, err := newHandler(handlerParams{
 				App:             app,
