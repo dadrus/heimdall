@@ -369,11 +369,9 @@ func (r *ruleImpl) UpstreamURL(initialURL *url.URL) *url.URL {
 	}
 
 	return &url.URL{
-		Scheme:     r.upstreamURL.Scheme,
-		Host:       r.upstreamURL.Host,
-		Path:       initialURL.Path,
-		RawPath:    initialURL.RawPath,
-		ForceQuery: initialURL.ForceQuery,
-		RawQuery:   initialURL.RawQuery,
+		Scheme:   r.upstreamURL.Scheme,
+		Host:     r.upstreamURL.Host,
+		Path:     initialURL.Path,
+		RawQuery: initialURL.RawQuery,
 	}
 }
