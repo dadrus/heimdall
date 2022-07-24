@@ -68,7 +68,7 @@ func (eh *wwwAuthenticateErrorHandler) Execute(ctx heimdall.Context, err error) 
 
 	logger.Debug().Msg("Handling error using www-authenticate error handler")
 
-	ctx.AddResponseHeader("WWW-Authenticate", fmt.Sprintf("Basic realm=%s", eh.realm))
+	ctx.AddHeaderForUpstream("WWW-Authenticate", fmt.Sprintf("Basic realm=%s", eh.realm))
 	ctx.SetPipelineError(heimdall.ErrAuthentication)
 
 	return true, nil

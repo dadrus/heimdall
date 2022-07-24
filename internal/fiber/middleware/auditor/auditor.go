@@ -4,15 +4,15 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/rs/zerolog/log"
 
-	"github.com/dadrus/heimdall/internal/fiber/middleware/xforwarded"
+	"github.com/dadrus/heimdall/internal/fiber/middleware/xfmphu"
 )
 
 func New() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		logger := log.With().Logger()
 
-		method := xforwarded.RequestMethod(c.UserContext())
-		reqURL := xforwarded.RequestURL(c.UserContext())
+		method := xfmphu.RequestMethod(c.UserContext())
+		reqURL := xfmphu.RequestURL(c.UserContext())
 
 		fields := map[string]interface{}{
 			"http_method":     method,

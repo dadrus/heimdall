@@ -3,21 +3,10 @@ package config
 import (
 	"fmt"
 	"os"
-	"time"
 
 	"github.com/mitchellh/mapstructure"
 
 	"github.com/dadrus/heimdall/internal/config/parser"
-)
-
-const (
-	defaultReadTimeout  = time.Second * 5
-	defaultWriteTimeout = time.Second * 10
-	defaultIdleTimeout  = time.Second * 120
-
-	defaultProxyPort       = 4455
-	defaultDecisionAPIPort = 4456
-	defaultPrometheusPort  = 9000
 )
 
 type Configuration struct {

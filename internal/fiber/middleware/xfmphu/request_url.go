@@ -1,18 +1,15 @@
-package xforwarded
+package xfmphu
 
 import (
 	"net/url"
 
 	"github.com/gofiber/fiber/v2"
-
-	"github.com/dadrus/heimdall/internal/x"
 )
 
 func requestURL(c *fiber.Ctx) *url.URL {
 	var (
-		path   string
-		query  string
-		scheme string
+		path  string
+		query string
 	)
 
 	if c.IsProxyTrusted() {
@@ -30,12 +27,8 @@ func requestURL(c *fiber.Ctx) *url.URL {
 		query = string(origReqURL.QueryString())
 	}
 
-	if c.IsProxyTrusted() {
-		scheme = c.Get(xForwardedProto)
-	}
-
 	return &url.URL{
-		Scheme:   x.OrDefault(scheme, c.Protocol()),
+		Scheme:   c.Protocol(),
 		Host:     c.Hostname(),
 		Path:     path,
 		RawQuery: query,

@@ -12,4 +12,5 @@ type Rule interface {
 	Execute(heimdall.Context) error
 	MatchesURL(*url.URL) bool
 	MatchesMethod(string) bool
+	UpstreamURL(initialURL *url.URL) *url.URL
 }

@@ -17,3 +17,6 @@ func (m *MockRule) SrcID() string                      { return m.Called().Strin
 func (m *MockRule) Execute(ctx heimdall.Context) error { return m.Called(ctx).Error(0) }
 func (m *MockRule) MatchesMethod(method string) bool   { return m.Called(method).Bool(0) }
 func (m *MockRule) MatchesURL(reqURL *url.URL) bool    { return m.Called(reqURL).Bool(0) }
+func (m *MockRule) UpstreamURL(initialURL *url.URL) *url.URL {
+	return m.Called(initialURL).Get(0).(*url.URL) // nolint: forcetypeassert
+}

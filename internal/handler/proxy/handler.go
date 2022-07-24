@@ -1,6 +1,8 @@
-package decision
+package proxy
 
 import (
+	"time"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/rs/zerolog"
 	"go.uber.org/fx"
@@ -19,12 +21,13 @@ import (
 type Handler struct {
 	r rules.Repository
 	s heimdall.JWTSigner
+	t time.Duration
 }
 
 type handlerParams struct {
 	fx.In
 
-	App             *fiber.App `name:"api"`
+	App             *fiber.App `name:"proxy"`
 	RulesRepository rules.Repository
 	KeyStore        keystore.KeyStore
 	Config          config.Configuration
@@ -40,6 +43,7 @@ func newHandler(params handlerParams) (*Handler, error) {
 	handler := &Handler{
 		r: params.RulesRepository,
 		s: jwtSigner,
+		t: params.Config.Serve.Proxy.Timeout.Read,
 	}
 
 	router := params.App.Group("/")
@@ -50,14 +54,14 @@ func newHandler(params handlerParams) (*Handler, error) {
 }
 
 func (h *Handler) registerRoutes(router fiber.Router, logger zerolog.Logger) {
-	logger.Debug().Msg("Registering decision api routes")
+	logger.Debug().Msg("Registering proxy routes")
 
-	router.All("/decisions/*", fiberxforwarded.New(), fiberauditor.New(), h.decisions)
+	router.All("/*", fiberxforwarded.New(), fiberauditor.New(), h.proxy)
 }
 
-func (h *Handler) decisions(c *fiber.Ctx) error {
+func (h *Handler) proxy(c *fiber.Ctx) error {
 	logger := zerolog.Ctx(c.UserContext())
-	logger.Debug().Msg("Decision API called")
+	logger.Debug().Msg("Proxy endpoint called")
 
 	reqURL := fiberxforwarded.RequestURL(c.UserContext())
 	method := fiberxforwarded.RequestMethod(c.UserContext())
@@ -69,7 +73,16 @@ func (h *Handler) decisions(c *fiber.Ctx) error {
 
 	if !rule.MatchesMethod(method) {
 		return errorchain.NewWithMessagef(heimdall.ErrMethodNotAllowed,
-			"rule doesn't match %s method", method)
+			"rule (id=%s, src=%s) doesn't match %s method", rule.ID(), rule.SrcID(), method)
+	}
+
+	upstreamURL := rule.UpstreamURL(reqURL)
+
+	if string(c.Request().URI().Host()) == upstreamURL.Host {
+		return errorchain.NewWithMessagef(heimdall.ErrInternal,
+			"cannot forward request to same host & port. "+
+				"Have you forgotten to configure your trusted proxies or the upstream url in the matched rule (id=%s, src=%s)?",
+			rule.ID(), rule.SrcID())
 	}
 
 	reqCtx := requestcontext.New(c, reqURL, h.s)
@@ -77,7 +90,7 @@ func (h *Handler) decisions(c *fiber.Ctx) error {
 		return err
 	}
 
-	logger.Debug().Msg("Finalizing request")
+	logger.Debug().Msgf("Finalizing request and forwarding request to %s", upstreamURL.String())
 
-	return reqCtx.Finalize()
+	return reqCtx.FinalizeAndForward(method, upstreamURL, h.t)
 }

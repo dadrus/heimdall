@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -21,7 +20,7 @@ func TestDefaultErrorHandler(t *testing.T) {
 
 	var appError error
 
-	app := fiber.New(fiber.Config{ErrorHandler: NewErrorHandler(false, log.Logger)})
+	app := fiber.New(fiber.Config{ErrorHandler: NewErrorHandler(false)})
 	app.Get("test", func(ctx *fiber.Ctx) error { return appError })
 
 	for _, tc := range []struct {
@@ -64,6 +63,11 @@ func TestDefaultErrorHandler(t *testing.T) {
 			uc:           "method not allowed error",
 			serverError:  heimdall.ErrMethodNotAllowed,
 			responseCode: http.StatusMethodNotAllowed,
+		},
+		{
+			uc:           "no rule found error",
+			serverError:  heimdall.ErrNoRuleFound,
+			responseCode: http.StatusNotFound,
 		},
 		{
 			uc:           "internal error",
@@ -129,7 +133,7 @@ func TestVerboseErrorHandler(t *testing.T) {
 
 	var appError error
 
-	app := fiber.New(fiber.Config{ErrorHandler: NewErrorHandler(true, log.Logger)})
+	app := fiber.New(fiber.Config{ErrorHandler: NewErrorHandler(true)})
 	app.Get("test", func(ctx *fiber.Ctx) error { return appError })
 
 	for _, tc := range []struct {
@@ -180,6 +184,11 @@ func TestVerboseErrorHandler(t *testing.T) {
 			uc:           "method not allowed error",
 			serverError:  heimdall.ErrMethodNotAllowed,
 			responseCode: http.StatusMethodNotAllowed,
+		},
+		{
+			uc:           "no rule found error",
+			serverError:  heimdall.ErrNoRuleFound,
+			responseCode: http.StatusNotFound,
 		},
 		{
 			uc:           "internal error",

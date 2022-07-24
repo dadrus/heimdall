@@ -59,7 +59,7 @@ func (ai *authorizationInformation) AddHeadersTo(headerNames []string, ctx heimd
 	for _, headerName := range headerNames {
 		headerValue := ai.headers.Get(headerName)
 		if len(headerValue) != 0 {
-			ctx.AddResponseHeader(headerName, headerValue)
+			ctx.AddHeaderForUpstream(headerName, headerValue)
 		}
 	}
 }

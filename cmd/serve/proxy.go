@@ -1,8 +1,6 @@
 package serve
 
 import (
-	"os"
-
 	"github.com/spf13/cobra"
 	"go.uber.org/fx"
 
@@ -13,13 +11,10 @@ import (
 // NewProxyCommand represents the proxy command.
 func NewProxyCommand() *cobra.Command {
 	return &cobra.Command{
-		Use:   "proxy",
-		Short: "Starts HTTP/2 Reverse Proxy",
+		Use:     "proxy",
+		Short:   "Starts heimdall in Reverse Proxy mode",
+		Example: "heimdall serve proxy",
 		Run: func(cmd *cobra.Command, args []string) {
-			cmd.PrintErrf("Not yet supported")
-
-			os.Exit(-1)
-
 			configPath, _ := cmd.Flags().GetString("config")
 
 			app := fx.New(

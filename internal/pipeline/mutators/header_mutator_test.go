@@ -225,9 +225,9 @@ headers:
 			configureContext: func(t *testing.T, ctx *mocks.MockContext) {
 				t.Helper()
 
-				ctx.On("AddResponseHeader", "foo", "baz")
-				ctx.On("AddResponseHeader", "bar", "FooBar")
-				ctx.On("AddResponseHeader", "baz", "bar")
+				ctx.On("AddHeaderForUpstream", "foo", "baz")
+				ctx.On("AddHeaderForUpstream", "bar", "FooBar")
+				ctx.On("AddHeaderForUpstream", "baz", "bar")
 			},
 			createSubject: func(t *testing.T) *subject.Subject {
 				t.Helper()

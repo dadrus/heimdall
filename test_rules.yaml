@@ -1,5 +1,6 @@
 - id: rule:foo
   url: http://foo.bar/<**>
+  upstream: http://bar.foo
 #  methods: # reuses default
 #    - GET
 #    - POST
@@ -19,7 +20,8 @@
     - authorizer: allow_all_authorizer
     - mutator: jwt
       config:
-        claims: '{"foo": "bar"}'
+        claims: |
+          {"foo": "bar"}
     - mutator: bla
       config:
         headers:

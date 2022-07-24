@@ -1,14 +1,15 @@
-package xforwarded
+package xfmphu
 
 import (
 	"github.com/gofiber/fiber/v2"
-
-	"github.com/dadrus/heimdall/internal/x"
 )
 
 func requestMethod(c *fiber.Ctx) string {
 	if c.IsProxyTrusted() {
-		return x.OrDefault(c.Get(xForwardedMethod), c.Method())
+		forwardedMethodVal := c.Get(xForwardedMethod)
+		if len(forwardedMethodVal) != 0 {
+			return forwardedMethodVal
+		}
 	}
 
 	return c.Method()
