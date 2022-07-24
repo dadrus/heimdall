@@ -31,34 +31,6 @@ func (c *WrappedClient) DoTimeout(ctx context.Context, req *fasthttp.Request, re
 	return err
 }
 
-func (c *WrappedClient) DoDeadline(ctx context.Context, req *fasthttp.Request, resp *fasthttp.Response,
-	deadline time.Time,
-) error {
-	span := c.startSpan(ctx, req)
-	err := c.client.DoDeadline(req, resp, deadline)
-	span.finish(x.IfThenElse(err == nil, resp, nil))
-
-	return err
-}
-
-func (c *WrappedClient) DoRedirects(ctx context.Context, req *fasthttp.Request, resp *fasthttp.Response,
-	maxRedirectsCount int,
-) error {
-	span := c.startSpan(ctx, req)
-	err := c.client.DoRedirects(req, resp, maxRedirectsCount)
-	span.finish(x.IfThenElse(err == nil, resp, nil))
-
-	return err
-}
-
-func (c *WrappedClient) Do(ctx context.Context, req *fasthttp.Request, resp *fasthttp.Response) error {
-	span := c.startSpan(ctx, req)
-	err := c.client.Do(req, resp)
-	span.finish(x.IfThenElse(err == nil, resp, nil))
-
-	return err
-}
-
 func spanContext(ctx context.Context) opentracing.SpanContext {
 	parent := opentracing.SpanFromContext(ctx)
 
