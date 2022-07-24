@@ -59,6 +59,8 @@ func (s spanFinisherImpl) Finish(resp *fasthttp.Response) {
 	defer s.root.Finish()
 
 	if resp == nil {
+		ext.Error.Set(s.sp, true)
+
 		return
 	}
 

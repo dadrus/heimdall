@@ -34,6 +34,7 @@ func TestWrappedClientDoTimeout(t *testing.T) {
 	for _, tc := range []struct {
 		uc                 string
 		tracer             *mocktracer.MockTracer
+		timeout            time.Duration
 		serverResponseCode int
 		assert             func(t *testing.T, err error, req *fasthttp.Request, resp *fasthttp.Response,
 			spans []*mocktracer.MockSpan)
@@ -41,6 +42,7 @@ func TestWrappedClientDoTimeout(t *testing.T) {
 		{
 			uc:                 "without tracer",
 			serverResponseCode: http.StatusOK,
+			timeout:            10 * time.Second,
 			assert: func(t *testing.T, err error, req *fasthttp.Request, resp *fasthttp.Response,
 				spans []*mocktracer.MockSpan,
 			) {
@@ -53,9 +55,38 @@ func TestWrappedClientDoTimeout(t *testing.T) {
 			},
 		},
 		{
+			uc:                 "with tracer and error while communicating with the server",
+			tracer:             mocktracer.New(),
+			serverResponseCode: http.StatusOK,
+			timeout:            0 * time.Second,
+			assert: func(t *testing.T, err error, req *fasthttp.Request, resp *fasthttp.Response,
+				spans []*mocktracer.MockSpan,
+			) {
+				t.Helper()
+
+				require.Error(t, err)
+
+				assert.Len(t, spans, 2)
+				assert.Equal(t, srvURL.Host+" /foobar", spans[0].OperationName)
+				assert.Empty(t, spans[0].Tags())
+				assert.Empty(t, spans[0].Logs())
+
+				assert.Equal(t, "HTTP GET", spans[1].OperationName)
+				assert.Len(t, spans[1].Tags(), 5)
+				assert.Equal(t, ext.SpanKindEnum("client"), spans[1].Tag("span.kind"))
+				assert.Equal(t, "net/http", spans[1].Tag("component"))
+				assert.Equal(t, "GET", spans[1].Tag("http.method"))
+				assert.Equal(t, srvURL.String()+"/foobar", spans[1].Tag("http.url"))
+				assert.Equal(t, true, spans[1].Tag("error"))
+
+				assert.Empty(t, spans[1].Logs())
+			},
+		},
+		{
 			uc:                 "with tracer and successful server response",
 			tracer:             mocktracer.New(),
 			serverResponseCode: http.StatusOK,
+			timeout:            10 * time.Second,
 			assert: func(t *testing.T, err error, req *fasthttp.Request, resp *fasthttp.Response,
 				spans []*mocktracer.MockSpan,
 			) {
@@ -76,6 +107,7 @@ func TestWrappedClientDoTimeout(t *testing.T) {
 				assert.Equal(t, "GET", spans[1].Tag("http.method"))
 				assert.Equal(t, srvURL.String()+"/foobar", spans[1].Tag("http.url"))
 				assert.Equal(t, uint16(http.StatusOK), spans[1].Tag("http.status_code"))
+
 				assert.Empty(t, spans[1].Logs())
 			},
 		},
@@ -83,6 +115,7 @@ func TestWrappedClientDoTimeout(t *testing.T) {
 			uc:                 "with tracer and error server response",
 			tracer:             mocktracer.New(),
 			serverResponseCode: http.StatusInternalServerError,
+			timeout:            10 * time.Second,
 			assert: func(t *testing.T, err error, req *fasthttp.Request, resp *fasthttp.Response,
 				spans []*mocktracer.MockSpan,
 			) {
@@ -104,6 +137,7 @@ func TestWrappedClientDoTimeout(t *testing.T) {
 				assert.Equal(t, srvURL.String()+"/foobar", spans[1].Tag("http.url"))
 				assert.Equal(t, uint16(http.StatusInternalServerError), spans[1].Tag("http.status_code"))
 				assert.Equal(t, true, spans[1].Tag("error"))
+
 				assert.Empty(t, spans[1].Logs())
 			},
 		},
@@ -134,7 +168,7 @@ func TestWrappedClientDoTimeout(t *testing.T) {
 			client := NewClient(&fasthttp.Client{})
 
 			// WHEN
-			err = client.DoTimeout(context.Background(), req, resp, 30*time.Second)
+			err = client.DoTimeout(context.Background(), req, resp, tc.timeout)
 
 			// THEN
 			tc.assert(t, err, req, resp, x.IfThenElseExec(tc.tracer != nil,
