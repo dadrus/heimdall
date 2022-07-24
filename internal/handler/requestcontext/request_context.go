@@ -71,7 +71,7 @@ func (s *RequestContext) Finalize() error {
 	return nil
 }
 
-func (s *RequestContext) FinalizeAndForward(upstreamURL *url.URL, timeout time.Duration) error {
+func (s *RequestContext) FinalizeAndForward(method string, upstreamURL *url.URL, timeout time.Duration) error {
 	if s.err != nil {
 		return s.err
 	}
@@ -91,6 +91,7 @@ func (s *RequestContext) FinalizeAndForward(upstreamURL *url.URL, timeout time.D
 		s.c.Request().Header.Del(name)
 	}
 
+	s.c.Request().Header.SetMethod(method)
 	s.c.Request().SetRequestURI(upstreamURL.String())
 
 	client := tracing.NewClient(&fasthttp.Client{}, opentracing.GlobalTracer())
