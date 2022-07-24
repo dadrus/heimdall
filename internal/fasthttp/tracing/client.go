@@ -2,6 +2,7 @@ package tracing
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -12,12 +13,11 @@ import (
 	"github.com/dadrus/heimdall/internal/x"
 )
 
-func NewClient(client *fasthttp.Client, tracer opentracing.Tracer) *WrappedClient {
-	return &WrappedClient{tracer: tracer, client: client}
+func NewClient(client *fasthttp.Client) *WrappedClient {
+	return &WrappedClient{client: client}
 }
 
 type WrappedClient struct {
-	tracer opentracing.Tracer
 	client *fasthttp.Client
 }
 
@@ -26,7 +26,7 @@ func (c *WrappedClient) DoTimeout(ctx context.Context, req *fasthttp.Request, re
 ) error {
 	span := c.startSpan(ctx, req)
 	err := c.client.DoTimeout(req, resp, timeout)
-	span.finish(x.IfThenElse(err == nil, resp, nil))
+	span.Finish(x.IfThenElse(err == nil, resp, nil))
 
 	return err
 }
@@ -41,12 +41,20 @@ func spanContext(ctx context.Context) opentracing.SpanContext {
 	return nil
 }
 
-type spanFinisher struct {
+type spanFinisher interface {
+	Finish(*fasthttp.Response)
+}
+
+type dummyFinisher struct{}
+
+func (s dummyFinisher) Finish(*fasthttp.Response) {}
+
+type spanFinisherImpl struct {
 	root opentracing.Span
 	sp   opentracing.Span
 }
 
-func (s spanFinisher) finish(resp *fasthttp.Response) {
+func (s spanFinisherImpl) Finish(resp *fasthttp.Response) {
 	defer s.sp.Finish()
 	defer s.root.Finish()
 
@@ -64,10 +72,16 @@ func (s spanFinisher) finish(resp *fasthttp.Response) {
 }
 
 func (c *WrappedClient) startSpan(ctx context.Context, req *fasthttp.Request) spanFinisher {
-	method := string(req.Header.Method())
+	tracer := opentracing.GlobalTracer()
+	if tracer == nil {
+		return dummyFinisher{}
+	}
 
-	root := c.tracer.StartSpan("HTTP Client", opentracing.ChildOf(spanContext(ctx)))
-	span := c.tracer.StartSpan("HTTP "+string(req.Header.Method()), opentracing.ChildOf(root.Context()))
+	method := string(req.Header.Method())
+	operationName := fmt.Sprintf("%s %s", string(req.Host()), string(req.URI().Path()))
+
+	root := tracer.StartSpan(operationName, opentracing.ChildOf(spanContext(ctx)))
+	span := tracer.StartSpan("HTTP "+string(req.Header.Method()), opentracing.ChildOf(root.Context()))
 
 	ext.SpanKindRPCClient.Set(span)
 	ext.Component.Set(span, "net/http")
@@ -84,7 +98,7 @@ func (c *WrappedClient) startSpan(ctx context.Context, req *fasthttp.Request) sp
 	// some custom carriers are used, which is not the case here.
 	span.Tracer().Inject(span.Context(), opentracing.HTTPHeaders, headers)
 
-	return spanFinisher{
+	return spanFinisherImpl{
 		root: root,
 		sp:   span,
 	}
