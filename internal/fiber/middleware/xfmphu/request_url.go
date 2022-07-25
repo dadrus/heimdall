@@ -3,8 +3,9 @@ package xfmphu
 import (
 	"net/url"
 
-	"github.com/dadrus/heimdall/internal/x"
 	"github.com/gofiber/fiber/v2"
+
+	"github.com/dadrus/heimdall/internal/x"
 )
 
 func requestURL(c *fiber.Ctx) *url.URL {
