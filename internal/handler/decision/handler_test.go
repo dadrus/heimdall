@@ -169,7 +169,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				})).Return(nil)
 
 				repository.On("FindRule", mock.MatchedBy(func(reqURL *url.URL) bool {
-					return reqURL.Scheme == "http" && reqURL.Host == "heimdall.test.local" && reqURL.Path == "foobar"
+					return reqURL.Scheme == "http" && reqURL.Host == "heimdall.test.local" && reqURL.Path == "/foobar"
 				})).Return(rule, nil)
 			},
 			assertResponse: func(t *testing.T, err error, response *http.Response) {
@@ -274,7 +274,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				})).Return(nil)
 
 				repository.On("FindRule", mock.MatchedBy(func(reqURL *url.URL) bool {
-					return reqURL.Scheme == "http" && reqURL.Host == "heimdall.test.local" && reqURL.Path == "foobar"
+					return reqURL.Scheme == "http" && reqURL.Host == "heimdall.test.local" && reqURL.Path == "/foobar"
 				})).Return(rule, nil)
 			},
 			assertResponse: func(t *testing.T, err error, response *http.Response) {
@@ -319,7 +319,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				rule.On("Execute", mock.Anything).Return(nil)
 
 				repository.On("FindRule", mock.MatchedBy(func(reqURL *url.URL) bool {
-					return reqURL.Scheme == "http" && reqURL.Host == "heimdall.test.local" && reqURL.Path == "foobar"
+					return reqURL.Scheme == "http" && reqURL.Host == "heimdall.test.local" && reqURL.Path == "/foobar"
 				})).Return(rule, nil)
 			},
 			assertResponse: func(t *testing.T, err error, response *http.Response) {
@@ -352,7 +352,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				rule.On("Execute", mock.Anything).Return(nil)
 
 				repository.On("FindRule", mock.MatchedBy(func(reqURL *url.URL) bool {
-					return reqURL.Scheme == "http" && reqURL.Host == "test.com" && reqURL.Path == "foobar"
+					return reqURL.Scheme == "http" && reqURL.Host == "test.com" && reqURL.Path == "/foobar"
 				})).Return(rule, nil)
 			},
 			assertResponse: func(t *testing.T, err error, response *http.Response) {
@@ -418,7 +418,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				rule.On("Execute", mock.Anything).Return(nil)
 
 				repository.On("FindRule", mock.MatchedBy(func(reqURL *url.URL) bool {
-					return reqURL.Scheme == "https" && reqURL.Host == "heimdall.test.local" && reqURL.Path == "foobar"
+					return reqURL.Scheme == "https" && reqURL.Host == "heimdall.test.local" && reqURL.Path == "/foobar"
 				})).Return(rule, nil)
 			},
 			assertResponse: func(t *testing.T, err error, response *http.Response) {
