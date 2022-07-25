@@ -1,6 +1,7 @@
 package xfmphu
 
 import (
+	"fmt"
 	"net/url"
 
 	"github.com/gofiber/fiber/v2"
@@ -27,8 +28,15 @@ func requestURL(c *fiber.Ctx) *url.URL {
 		}
 	}
 
+	if len(path) == 0 && c.IsProxyTrusted() {
+		path = c.Get(xForwardedPath)
+	}
+
 	if len(path) == 0 {
-		path = c.Params("*")
+		path = fmt.Sprintf("/%s", c.Params("*"))
+	}
+
+	if len(query) == 0 {
 		origReqURL := *c.Request().URI()
 		query = string(origReqURL.QueryString())
 	}
