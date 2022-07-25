@@ -4,6 +4,7 @@ import (
 	"context"
 	"strings"
 
+	fiberproxy "github.com/dadrus/heimdall/internal/fiber/middleware/proxyheader"
 	"github.com/goccy/go-json"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
@@ -18,7 +19,6 @@ import (
 	"github.com/dadrus/heimdall/internal/fiber/errorhandler"
 	fibercache "github.com/dadrus/heimdall/internal/fiber/middleware/cache"
 	fiberlogger "github.com/dadrus/heimdall/internal/fiber/middleware/logger"
-	fiberproxy "github.com/dadrus/heimdall/internal/fiber/middleware/proxyheader"
 	fibertracing "github.com/dadrus/heimdall/internal/fiber/middleware/tracing"
 	"github.com/dadrus/heimdall/internal/x"
 )
@@ -49,7 +49,6 @@ func newFiberApp(conf config.Configuration, cache cache.Cache) *fiber.App {
 		JSONEncoder: json.Marshal,
 	})
 	app.Use(recover.New(recover.Config{EnableStackTrace: true}))
-	app.Use(fiberproxy.New())
 	app.Use(fibertracing.New(
 		fibertracing.WithTracer(opentracing.GlobalTracer()),
 		fibertracing.WithSpanObserver(func(span opentracing.Span, ctx *fiber.Ctx) {
@@ -69,6 +68,7 @@ func newFiberApp(conf config.Configuration, cache cache.Cache) *fiber.App {
 
 	app.Use(fibercache.New(cache))
 	app.Use(fiberlogger.New())
+	app.Use(fiberproxy.New())
 
 	return app
 }
