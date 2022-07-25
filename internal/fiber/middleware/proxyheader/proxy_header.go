@@ -37,7 +37,7 @@ func New() fiber.Handler {
 
 		// Set the X-Forwarded-For
 		c.Request().Header.Set(headerXForwardedFor,
-			x.IfThenElseExec(len(forwardedHeaderValue) == 0,
+			x.IfThenElseExec(len(forwardedForHeaderValue) == 0,
 				func() string { return clientIP },
 				func() string { return fmt.Sprintf("%s, %s", forwardedForHeaderValue, clientIP) }))
 

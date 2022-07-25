@@ -49,8 +49,14 @@ func TestMiddlewareApplicationWithoutConfiguredTrustedProxy(t *testing.T) {
 				t.Helper()
 
 				assert.True(t, testAppCalled)
-				assert.Empty(t, valueForwarded)
-				assert.Empty(t, valueXForwardedFor)
+
+				receivedValues := strings.Split(valueXForwardedFor, ",")
+				require.Len(t, receivedValues, 1)
+				assert.Equal(t, strings.TrimSpace(receivedValues[0]), "0.0.0.0")
+
+				receivedValues = strings.Split(valueForwarded, ",")
+				require.Len(t, receivedValues, 1)
+				assert.Equal(t, strings.TrimSpace(receivedValues[0]), "for=0.0.0.0;proto=http")
 			},
 		},
 		{
@@ -64,8 +70,14 @@ func TestMiddlewareApplicationWithoutConfiguredTrustedProxy(t *testing.T) {
 				t.Helper()
 
 				assert.True(t, testAppCalled)
-				assert.Empty(t, valueForwarded)
-				assert.Empty(t, valueXForwardedFor)
+
+				receivedValues := strings.Split(valueXForwardedFor, ",")
+				require.Len(t, receivedValues, 1)
+				assert.Equal(t, strings.TrimSpace(receivedValues[0]), "0.0.0.0")
+
+				receivedValues = strings.Split(valueForwarded, ",")
+				require.Len(t, receivedValues, 1)
+				assert.Equal(t, strings.TrimSpace(receivedValues[0]), "for=0.0.0.0;proto=http")
 			},
 		},
 		{
@@ -80,8 +92,14 @@ func TestMiddlewareApplicationWithoutConfiguredTrustedProxy(t *testing.T) {
 				t.Helper()
 
 				assert.True(t, testAppCalled)
-				assert.Empty(t, valueXForwardedFor)
-				assert.Empty(t, valueForwarded)
+
+				receivedValues := strings.Split(valueXForwardedFor, ",")
+				require.Len(t, receivedValues, 1)
+				assert.Equal(t, strings.TrimSpace(receivedValues[0]), "0.0.0.0")
+
+				receivedValues = strings.Split(valueForwarded, ",")
+				require.Len(t, receivedValues, 1)
+				assert.Equal(t, strings.TrimSpace(receivedValues[0]), "for=0.0.0.0;proto=http")
 			},
 		},
 	} {
@@ -146,10 +164,13 @@ func TestMiddlewareApplicationWithConfiguredTrustedProxy(t *testing.T) {
 				t.Helper()
 
 				assert.True(t, testAppCalled)
-				assert.Empty(t, valueForwarded)
 
-				receivedValues := strings.Split(valueXForwardedFor, ",")
-				assert.Len(t, receivedValues, 2)
+				receivedValues := strings.Split(valueForwarded, ",")
+				require.Len(t, receivedValues, 1)
+				assert.Equal(t, strings.TrimSpace(receivedValues[0]), "for=0.0.0.0;proto=http")
+
+				receivedValues = strings.Split(valueXForwardedFor, ",")
+				require.Len(t, receivedValues, 2)
 				assert.Equal(t, strings.TrimSpace(receivedValues[0]), "1.1.1.1")
 				assert.Equal(t, strings.TrimSpace(receivedValues[1]), "0.0.0.0")
 			},
@@ -165,10 +186,13 @@ func TestMiddlewareApplicationWithConfiguredTrustedProxy(t *testing.T) {
 				t.Helper()
 
 				assert.True(t, testAppCalled)
-				assert.Empty(t, valueXForwardedFor)
 
-				receivedValues := strings.Split(valueForwarded, ",")
-				assert.Len(t, receivedValues, 2)
+				receivedValues := strings.Split(valueXForwardedFor, ",")
+				require.Len(t, receivedValues, 1)
+				assert.Equal(t, strings.TrimSpace(receivedValues[0]), "0.0.0.0")
+
+				receivedValues = strings.Split(valueForwarded, ",")
+				require.Len(t, receivedValues, 2)
 				assert.Equal(t, strings.TrimSpace(receivedValues[0]), "for=1.1.1.1;proto=http")
 				assert.Equal(t, strings.TrimSpace(receivedValues[1]), "for=0.0.0.0;proto=http")
 			},
@@ -187,12 +211,12 @@ func TestMiddlewareApplicationWithConfiguredTrustedProxy(t *testing.T) {
 				assert.True(t, testAppCalled)
 
 				receivedValues := strings.Split(valueXForwardedFor, ",")
-				assert.Len(t, receivedValues, 2)
+				require.Len(t, receivedValues, 2)
 				assert.Equal(t, strings.TrimSpace(receivedValues[0]), "1.1.1.1")
 				assert.Equal(t, strings.TrimSpace(receivedValues[1]), "0.0.0.0")
 
 				receivedValues = strings.Split(valueForwarded, ",")
-				assert.Len(t, receivedValues, 2)
+				require.Len(t, receivedValues, 2)
 				assert.Equal(t, strings.TrimSpace(receivedValues[0]), "for=1.1.1.1;proto=http")
 				assert.Equal(t, strings.TrimSpace(receivedValues[1]), "for=0.0.0.0;proto=http")
 			},
