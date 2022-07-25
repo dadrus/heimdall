@@ -35,12 +35,12 @@ func New() fiber.Handler {
 		clientIP := c.IP()
 		proto := string(c.Request().URI().Scheme())
 
-		// Set the X-Forwarded-For (if present), or the "new" Forwarded header
+		// Set the X-Forwarded-For (if present)
 		if len(forwardedForHeaderValue) != 0 {
-			c.Request().Header.Set(headerXForwardedFor,
-				fmt.Sprintf("%s, %s", forwardedForHeaderValue, clientIP))
+			c.Request().Header.Set(headerXForwardedFor, fmt.Sprintf("%s, %s", forwardedForHeaderValue, clientIP))
 		}
 
+		// Set the Forwarded header (if present)
 		if len(forwardedHeaderValue) != 0 {
 			c.Request().Header.Set(headerForwarded,
 				x.IfThenElseExec(len(forwardedHeaderValue) == 0,
