@@ -4,7 +4,6 @@ import (
 	"context"
 	"strings"
 
-	fiberproxy "github.com/dadrus/heimdall/internal/fiber/middleware/proxyheader"
 	"github.com/goccy/go-json"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
@@ -19,6 +18,7 @@ import (
 	"github.com/dadrus/heimdall/internal/fiber/errorhandler"
 	fibercache "github.com/dadrus/heimdall/internal/fiber/middleware/cache"
 	fiberlogger "github.com/dadrus/heimdall/internal/fiber/middleware/logger"
+	fiberproxy "github.com/dadrus/heimdall/internal/fiber/middleware/proxyheader"
 	fibertracing "github.com/dadrus/heimdall/internal/fiber/middleware/tracing"
 	"github.com/dadrus/heimdall/internal/x"
 )
