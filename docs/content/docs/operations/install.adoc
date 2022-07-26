@@ -1,0 +1,103 @@
+---
+title: "Install"
+date: 2022-07-25T18:22:50+02:00
+draft: false
+weight: 19
+menu:
+  docs:
+    weight: 10
+    identifier: install
+    parent: "Operations"
+---
+
+Heimdall is shipped in multiple formats and architectures as to suit a variety of deployment patterns. Available installation options are:
+
+* Source code
+* Binary
+* Docker Image
+
+== Source Code
+
+You can always build a copy of Heimdall by following the following instructions for your OS/environment.
+
+=== Prerequisites
+
+* https://git-scm.com/[git]
+* The https://go.dev/dl/[Go] programming language >= 1.18.1
+
+=== Download
+Retrieve the latest copy of heimdall source code by cloning the git repository
+
+[source, bash]
+----
+$ git clone git@github.com:dadrus/heimdall.git
+----
+
+=== Build with go
+Build using a single line with `go build`
+
+[source, bash]
+----
+$ CGO_ENABLED=0 go build -trimpath -ldflags="-buildid= -w -s -X heimdall/cmd.Version=my-custom-build"
+----
+
+The flags are set by intention. Using `-trimpath` and `-buildid=` as part of the `-ldflags` argument ensures the build is reproducible (See also https://reproducible-builds.org/[Reproducible Builds]). Other flags remove unused symbols and debug information.
+
+== Binary
+
+Prebuild binaries are available with every released version on https://github.com/dadrus/heimdall/releases/latest[GitHub], as well as for every merged PR to the main branch. The version of the latter is set to the git SHA1. Supported operating systems/architectures are:
+
+* `linux/amd64`
+* `linux/arm64`
+* `linux/arm` - which is `armv7` architecture
+* `darwin/amd64`
+* `darwin/arm64`, and
+* `windows/amd64`
+
+For Linux and Darwin the binaries are archived with tar.gz and for Windows with zip.
+
+=== Download
+Retrieve the desired released of heimdall source binary for your operating system/architecture
+
+[source, bash]
+----
+ARCH=[your arch]
+OS=[your os]
+VERSION=[desired version]
+curl -L https://github.com/dadrus/heimdall/releases/download/${VERSION}/heimdall-${VERSION}-${OS}-${ARCH}.tar.gz \
+    | tar -z -x
+----
+
+== Docker Image
+
+Heimdall utilizes a minimal docker multi-arch image which you can find on https://hub.docker.com/r/dadrus/heimdall[DockerHub]. As with link:{{< relref "#_binary" >}}[Binary] releases, Heimdall can be pulled in several flavors. Here however currently limited to the Linux OS. Supported architectures are:
+
+* `amd64`
+* `arm64`
+* `armv7`
+
+All docker images are rootless - so heimdall will always run as a non-root user. Since Heimdall does not have any dependencies, the images contain only the binary of Heimdall and the settings related to the OS user and group permissions, Heimdall is running with.
+
+=== Prerequisites
+
+* https://docs.docker.com/install/[Docker]
+
+=== Pull Image
+
+Following tag patterns exist:
+
+* `x.y.z[-<prerelease-identifier>]` - will pull a specific tagged release.
++
+[source, bash]
+----
+$ docker pull dadrus/heimdall:0.1.0-alpha && docker run dadrus/heimdall:0.1.0-alpha --version
+heimdall version v0.1.0-alpha
+----
+
+* `latest` - will pull the most recent tagged release.
++
+[source, bash]
+----
+$ docker pull dadrus/heimdall:latest && docker run dadrus/heimdall:latest --version
+heimdall version v0.1.0-alpha
+----

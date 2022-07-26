@@ -5,7 +5,7 @@ draft: false
 weight: 20
 menu:
   docs:
-    weight: 10
+    weight: 20
     identifier: cli_overview
     parent: "Operations"
 ---
