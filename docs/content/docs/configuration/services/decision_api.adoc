@@ -125,20 +125,9 @@ api:
 +
 The usage of the Decision API makes only sense, if operated behind some sort of proxy, like API Gateway, etc. In such cases certain header information may be sent to Heimdall using special `X-Forwarded-*` headers or the https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Forwarded[Forwarded] header. For example, the `Host` HTTP header is usually used to return the requested host. But when you’re behind a proxy, the actual host may be stored in an `X-Forwarded-Host` header, which could, however, also be spoofed.
 +
-To prevent header spoofing and allowing such headers to be accepted from trusted proxies only (so the systems, you have configured to make use of Heimdall's Decision API), you should configure the `trusted_proxies` option and list the IPs, or IP ranges (CIDR notation) of your proxies, which make use of Heimdall's Decision API. If not configured, Heimdall will accept those headers from any client.
+To prevent header spoofing and allowing such headers to be accepted from trusted proxies only (so the systems, you have configured to make use of Heimdall's Decision API), you should configure the `trusted_proxies` option and list the IPs, or IP ranges (CIDR notation) of your proxies, which make use of Heimdall's Decision API. If not configured, Heimdall will not accept those headers from any client.
 +
-If you configure `trusted_proxies` to an empty list, Heimdall will not make use of any headers that could be spoofed. This would usually be the configuration for proxies, which do not send information about the client request in headers, but use the corresponding HTTP scheme, method, path, etc, while communicating with Heimdall (e.g. Nginx). If you put Heimdall behind e.g. Traefik, which forwards this information in `X-Forwarded-*` headers, you should configure the `trusted_proxies` list to contain the addresses of your Traefik instances only.
-+
-.Disable usage of any headers, which could be spoofed for all clients
-====
-[source, yaml]
-----
-api:
-  trusted_proxies: []
-----
-====
-+
-.Disable usage of any headers, which could be spoofed for all clients, except those listed in the configuration.
+.Enable the usage of the above said headers for only those requests, which came from the IPs listed in the configuration.
 ====
 [source, yaml]
 ----
@@ -149,7 +138,7 @@ api:
 ----
 ====
 +
-.Disable usage of any headers, which could be spoofed for all clients, except those which are within the configured IP range.
+.Enable the usage of the above said headers for only those requests, which came from the network listed in the configuration.
 ====
 [source, yaml]
 ----
