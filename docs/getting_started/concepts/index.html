@@ -24,7 +24,7 @@ Host: heimdall:4455
 
 Some payload</code></pre></div></div><div class=paragraph><p>And there is a rule, which defines a pipeline, allowing anonymous requests and setting a header with subject id set to <code>anonymous</code> like this</p></div><div class=listingblock><div class=content><pre class="rouge highlight" style=color:#fff;background-color:#272822><code data-lang=yaml><span style=color:#a6e22e>id</span><span style=color:#fff;background-color:#272822>:</span> <span style=color:#e6db74>rule:my-service:anonymous-api-access</span>
 <span style=color:#a6e22e>url</span><span style=color:#fff;background-color:#272822>:</span> <span style=color:#e6db74>/my-service/api</span>
-<span style=color:#a6e22e>for</span><span style=color:#fff;background-color:#272822>:</span> <span style=color:#e6db74>https://my-backend-service:8888</span>
+<span style=color:#a6e22e>upstream</span><span style=color:#fff;background-color:#272822>:</span> <span style=color:#e6db74>https://my-backend-service:8888</span>
 <span style=color:#a6e22e>methods</span><span style=color:#fff;background-color:#272822>:</span>
   <span style=color:#fff;background-color:#272822>-</span> <span style=color:#e6db74>GET</span>
 <span style=color:#a6e22e>execute</span><span style=color:#fff;background-color:#272822>:</span>
