@@ -1,0 +1,175 @@
+---
+title: "Proxy Quickstart"
+date: 2022-07-26T09:40:27+02:00
+draft: false
+weight: 16
+menu:
+  docs:
+    parent: "Getting Started"
+    weight: 30
+  main:
+    parent: get_started
+---
+
+This document describes a very simple use case in which you'll see Heimdall's Proxy in action. Here, we'll create a minimal but complete environment for running Heimdall with containers.
+
+== Prerequisites
+
+* https://docs.docker.com/install/[Docker] and https://docs.docker.com/compose/install/[docker-compose]
+
+== Configure
+
+Heimdall can be configured via environment variables, as well as using a configuration file. For simplicity reasons, we'll use a configuration file here.
+
+. So create a config file (`config.yaml`) with the following content:
++
+[source, yaml]
+----
+log:
+  level: info // <1>
+
+serve:
+  proxy:
+    trusted_proxies:
+      - "0.0.0.0/0"  // <2>
+
+pipeline:
+  authenticators:
+    - id: anonymous_authenticator // <3>
+      type: anonymous
+  mutators:
+    - id: create_jwt // <4>
+      type: jwt
+
+rules:
+  default: // <5>
+    methods:
+      - GET
+      - POST
+    execute:
+      - authenticator: anonymous_authenticator
+      - mutator: create_jwt
+----
+<1> Here we are setting the log level to `info` to be able to see any log output. By default, Heimdall logs on `error` log level.
+<2> Allow usage of `X-Forwarded-*` headers from any source. Since we're not going to create rules and use the default rule only, we'll have to use `X-Forwarded-Host` to let Heimdall know where to forward our request to.
+<3> Configures the `anonymous` authenticator.
+<4> Configured the `jwt` mutator.
+<5> Configures the default rule.
++
+Put together, this configuration will let Heimdall create a JSON Web Token (JWT) with `sub` claim set to `anonymous` for every request on every URL for the HTTP methods GET and POST. The JWT itself will be put into the `Authorization` header as a bearer token.
+
+. Create or copy the following `docker-compose.yaml` file and modify it to include the correct paths to your `config.yaml`:
++
+[source, yaml]
+----
+version: "3"
+
+services:
+  heimdall: // <1>
+    image: dadrus/heimdall:latest
+    volumes:
+      # Mount your config file:
+      - ./config.yaml:/heimdall/conf/config.yaml:ro
+    ports:
+      - 4455:4455
+    command: -c /heimdall/conf/config.yaml serve proxy
+  upstream: // <2>
+    image: containous/whoami:latest
+----
+<1> Configures Heimdall service to use our `config.yaml` and run in proxy operation mode.
+<2> Configures the "upstream" service. Here it is a very simple service, which just echoes back everything it receives.
+
+== Run
+Run docker compose:
+
+[source, bash]
+----
+$ docker-compose up
+----
+
+Docker will automatically download the required container images. Then, Heimdall will start in the link:{{< relref "concepts.adoc#_proxy_mode" >}}[proxy] mode and run with the configuration details set in the previous steps. You'll then be able to see an output similar to
+
+[source, bash]
+----
+Creating network "heimdall_default" with the default driver
+Creating heimdall_heimdall_1 ... done
+Creating heimdall_upstream_1 ... done
+Attaching to heimdall_heimdall_1, heimdall_upstream_1
+heimdall_1  | 8:26AM INF No opentracing provider configured. Tracing will be disabled.
+heimdall_1  | 8:26AM INF Instantiating in memory cache
+heimdall_1  | 8:26AM INF Loading pipeline definitions
+heimdall_1  | 8:26AM WRN No rule provider configured. Only defaults will be used.
+heimdall_1  | 8:26AM WRN Key store is not configured. NEVER DO IT IN PRODUCTION!!!! Generating an RSA key pair.
+upstream_1  | Starting up on port 80
+heimdall_1  | 8:26AM WRN No key id for signer configured. Taking first entry from the key store
+heimdall_1  | 8:26AM INF Starting cache evictor
+heimdall_1  | 8:26AM INF Starting rule definition loader
+heimdall_1  | 8:26AM INF Management endpoint starts listening on: :4457
+heimdall_1  | 8:26AM INF Prometheus endpoint starts listening on: :9000
+heimdall_1  | 8:26AM INF Proxy endpoint starts listening on: :4455
+----
+
+Ignore the warnings. They are expected as we've neither configured a rule provider, nor have we configured a key store for JWT signing purposes. Nevertheless, the default rule can be used.
+
+== Use
+
+Send a request to heimdall's proxy endpoint:
+
+[source, bash]
+----
+$ curl -v -H "X-Forwarded-Host: upstream" 127.0.0.1:4455/foobar
+----
+
+Here, Heimdall will apply the default rule for the `foobar` path and forward the request to the `upstream` service, we've also configured in the environment. If you do not set the `X-Forwarded-Host` header, Heimdall will respond with an error as it doesn't know where to forward the request to.
+
+On completion, you should see the `Authorization` header in the proxied response from the `upstream` service, like in the output below:
+
+[source, bash]
+----
+*   Trying 127.0.0.1:4455...
+* Connected to 127.0.0.1 (127.0.0.1) port 4455 (#0)
+> GET /foobar HTTP/1.1
+> Host: 127.0.0.1:4455
+> User-Agent: curl/7.74.0
+> Accept: */*
+> X-Forwarded-Host: upstream
+>
+* Mark bundle as not supporting multiuse
+< HTTP/1.1 200 OK
+< Date: Tue, 26 Jul 2022 08:28:06 GMT
+< Content-Type: text/plain; charset=utf-8
+< Content-Length: 872
+<
+Hostname: 4f809f75f31b
+IP: 127.0.0.1
+IP: 172.22.0.3
+RemoteAddr: 172.22.0.2:42056
+GET /foobar HTTP/1.1
+Host: upstream
+User-Agent: curl/7.74.0
+Accept: */*
+Authorization: Bearer eyJhbGciOiJQUzI1NiIsImtpZCI6ImNiZjdiNDJhM2MxMjYzZjhjZDQ3ZTg2N2Q5
+OWFhNzFiZmUwOTlhOGYiLCJ0eXAiOiJKV1QifQeyJleHAiOjE2NTg4MjQzODYsImlhdCI6MTY1ODgyNDA4Niwi
+aXNzIjoiaGVpbWRhbGwiLCJqdGkiOiI4M2FmMGM4OS1hZDk4LTRmMmUtOTRmOC1hYWQ4MDA4ZmQzMTEiLCJuYm
+YiOjE2NTg4MjQwODYsInN1YiI6ImFub255bW91cyJ9.KYeR2steMD9pp3PJDBMcyTfhGKD-yV6prejH_UzKl6s
+3_VYc4nXiVI6CrS5Pg2EcMt8M1mGqIUwiCklwZngPlZbQ-o82jBi0INc9cHzKWjanFogPxnKaMhUVJqqT1LLF0
+U-MqGREmPP3Wj1b379e1W7KnYARSUltWHLAWY0SMEL7LQ7hDJbbBUuXYpUwLmO70F0jJ5BPm56Ncey3HYPuiCV
+z32V2GegTLzJnFHsxtLnWvLrzm0TEFmQrkcPG_VV1kE9-wlqt4eJusU3gDs1pFlTyVgLW9TAxiiJojuOe4Pb2B
+oHsOzpX5cFhv-CI111or_WyoaoNlH5KGdIym_JaCA
+Forwarded: for=172.22.0.1;proto=http
+X-Forwarded-For: 172.22.0.1
+
+* Connection #0 to host 127.0.0.1 left intact
+
+----
+
+You should also be able to see similar output as below from the docker-compose environment:
+
+[source, bash]
+----
+...
+heimdall_1  | 8:28AM INF Handling request http_host=upstream http_method=GET
+                         http_url=http://upstream/foobar http_user_agent=curl/7.74.0
+heimdall_1  | 8:28AM INF Access request granted. granted=true http_host=upstream
+                         http_method=GET http_url=http://upstream/foobar http_user_agent=curl/7.74.0
+----
