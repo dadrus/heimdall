@@ -136,7 +136,7 @@ And there is a rule, which defines a pipeline, allowing anonymous requests and s
 ----
 id: rule:my-service:anonymous-api-access
 url: /my-service/api
-for: https://my-backend-service:8888
+upstream: https://my-backend-service:8888
 methods:
   - GET
 execute:
