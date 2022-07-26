@@ -11,7 +11,7 @@ menu:
     parent: get_started
 ---
 
-This document describes a very simple use case.
+This document describes a very simple use case in which you'll see Heimdall's Decision API in action.
 
 == Prerequisites
 
@@ -44,10 +44,9 @@ rules:
       - mutator: create_jwt
 ----
 <1> Here we are setting the log level to `info` to be able to see any log output. By default, Heimdall logs on `error` log level.
-<2> Allow usage of `X-Forwarded-*` headers from any source. Since we're not going to create rules and use the default rule only and this configuration file will be used to showcase the decision and the proxy mode of operation, we'll have to use `X-Forwarded-Host` to let Heimdall forward our request to our "upstream" service in proxy mode.
-<3> Configures the `anonymous` authenticator.
-<4> Configured the `jwt` mutator.
-<5> Configures the default rule.
+<2> Configures the `anonymous` authenticator.
+<3> Configured the `jwt` mutator.
+<4> Configures the default rule.
 
 Put together, this configuration will let Heimdall create a JSON Web Token (JWT) with `sub` claim set to `anonymous` for every request on every URL for the HTTP methods GET and POST. The JWT itself will be put into the `Authorization` header as a bearer token.
 
@@ -63,7 +62,7 @@ $ ./heimdall serve api -c config.yaml
 
 The above command will start heimdall in a link:{{< relref "concepts.adoc#_decision_api_mode" >}}[decision api] mode. By default, the service will be served on port `4456`.
 
-Otherwise, if you've built a Docker image, run heimdall in the link:{{< relref "concepts.adoc#_decision_api_mode" >}}[decision api] mode it via
+Otherwise, if you've built a Docker image, run heimdall in the link:{{< relref "concepts.adoc#_decision_api_mode" >}}[decision api] mode via
 
 [source, bash]
 ----
@@ -85,6 +84,7 @@ In both cases, you'll see similar output to
 4:07PM INF Starting rule definition loader
 4:07PM INF Prometheus endpoint starts listening on: :9000
 4:07PM INF Decision API endpoint starts listening on: :4456
+4:07PM INF Management endpoint starts listening on: :4457
 ----
 
 Ignore the warnings. They are expected as we've neither configured a rule provider, nor have we configured a key store for JWT signing purposes. Nevertheless, the default rule can be used.
