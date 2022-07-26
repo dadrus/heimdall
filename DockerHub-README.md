@@ -50,7 +50,7 @@ docker run -t -p 4456:4456 -v $PWD:/heimdall/conf \
 Call the decision api endpoint to emulate behavior of an API-Gateway:
 
 ```bash
-curl -v 127.0.0.1:4456/decisions/foobar
+curl -v 127.0.0.1:4456/foobar
 ```
 
 You should now see similar output to the following snippet:
@@ -58,7 +58,7 @@ You should now see similar output to the following snippet:
 ```bash
 *   Trying 127.0.0.1:4456...
 * Connected to 127.0.0.1 (127.0.0.1) port 4456 (#0)
-> GET /decisions/foobar HTTP/1.1
+> GET /foobar HTTP/1.1
 > Host: 127.0.0.1:4456
 > User-Agent: curl/7.74.0
 > Accept: */*

@@ -47,7 +47,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 			createRequest: func(t *testing.T) *http.Request {
 				t.Helper()
 
-				return httptest.NewRequest("GET", "/decisions", nil)
+				return httptest.NewRequest("GET", "/", nil)
 			},
 			configureMocks: func(t *testing.T, repository *mocks2.MockRepository, rule *mocks4.MockRule) {
 				t.Helper()
@@ -70,7 +70,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 			createRequest: func(t *testing.T) *http.Request {
 				t.Helper()
 
-				return httptest.NewRequest("POST", "/decisions", nil)
+				return httptest.NewRequest("POST", "/", nil)
 			},
 			configureMocks: func(t *testing.T, repository *mocks2.MockRepository, rule *mocks4.MockRule) {
 				t.Helper()
@@ -95,7 +95,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 			createRequest: func(t *testing.T) *http.Request {
 				t.Helper()
 
-				return httptest.NewRequest("POST", "/decisions", nil)
+				return httptest.NewRequest("POST", "/", nil)
 			},
 			configureMocks: func(t *testing.T, repository *mocks2.MockRepository, rule *mocks4.MockRule) {
 				t.Helper()
@@ -121,7 +121,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 			createRequest: func(t *testing.T) *http.Request {
 				t.Helper()
 
-				return httptest.NewRequest("POST", "/decisions", nil)
+				return httptest.NewRequest("POST", "/", nil)
 			},
 			configureMocks: func(t *testing.T, repository *mocks2.MockRepository, rule *mocks4.MockRule) {
 				t.Helper()
@@ -154,7 +154,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 
 				return httptest.NewRequest(
 					"POST",
-					"http://heimdall.test.local/decisions/foobar",
+					"http://heimdall.test.local/foobar",
 					nil)
 			},
 			configureMocks: func(t *testing.T, repository *mocks2.MockRepository, rule *mocks4.MockRule) {
@@ -199,7 +199,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 
 				req := httptest.NewRequest(
 					"POST",
-					"http://heimdall.test.local/decisions/foobar",
+					"http://heimdall.test.local/foobar",
 					nil)
 
 				req.Header.Set("X-Forwarded-Proto", "https")
@@ -252,7 +252,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 
 				req := httptest.NewRequest(
 					"POST",
-					"http://heimdall.test.local/decisions/foobar",
+					"http://heimdall.test.local/foobar",
 					nil)
 
 				req.Header.Set("X-Forwarded-Proto", "https")
@@ -305,7 +305,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 
 				req := httptest.NewRequest(
 					"POST",
-					"http://heimdall.test.local/decisions/foobar",
+					"http://heimdall.test.local/foobar",
 					nil)
 
 				req.Header.Set("X-Forwarded-Method", "GET")
@@ -338,7 +338,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 
 				req := httptest.NewRequest(
 					"POST",
-					"http://heimdall.test.local/decisions/foobar",
+					"http://heimdall.test.local/foobar",
 					nil)
 
 				req.Header.Set("X-Forwarded-Host", "test.com")
@@ -371,7 +371,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 
 				req := httptest.NewRequest(
 					"POST",
-					"http://heimdall.test.local/decisions/foobar",
+					"http://heimdall.test.local/foobar",
 					nil)
 
 				req.Header.Set("X-Forwarded-Path", "bar")
@@ -404,7 +404,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 
 				req := httptest.NewRequest(
 					"POST",
-					"http://heimdall.test.local/decisions/foobar",
+					"http://heimdall.test.local/foobar",
 					nil)
 
 				req.Header.Set("X-Forwarded-Proto", "https")
@@ -437,7 +437,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 
 				req := httptest.NewRequest(
 					"POST",
-					"http://heimdall.test.local/decisions/foobar",
+					"http://heimdall.test.local/foobar",
 					nil)
 
 				req.Header.Set("X-Forwarded-Proto", "https")
