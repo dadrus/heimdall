@@ -1,5 +1,5 @@
 ---
-title: "Quickstart"
+title: "Decision API Quickstart"
 date: 2022-06-08T20:43:27+02:00
 draft: false
 weight: 15
@@ -15,37 +15,7 @@ This document describes a very simple use case.
 
 == Prerequisites
 
-* https://git-scm.com/[git]
-* The https://go.dev/dl/[Go] programming language >= 1.18.1
-* https://docs.docker.com/install/[Docker] if you want to build a docker container (you don't need Golang then)
-
-== Download
-Retrieve the latest copy of heimdall source code by cloning the git repository
-
-[source, bash]
-----
-$ git clone git@github.com:dadrus/heimdall.git
-----
-
-== Build with go
-Build using a single line with `go build`
-
-[source, bash]
-----
-$ go build -trimpath -ldflags="-buildid= -w -s -X heimdall/cmd.Version=my-custom-build"
-----
-
-The flags are set by intention. Using `-trimpath` and `-buildid=` as part of the `-ldflags` argument ensures the build is reproducible (See also https://reproducible-builds.org/[Reproducible Builds]). Other flags remove unused symbols and debug information.
-
-== Build with Docker
-The Docker build uses exactly the same `go build` command from above, compresses the binary and ensures the resulting docker image is secure.
-
-[source, bash]
-----
-$ docker build -t heimdal:local ./docker/Dockerfile .
-----
-
-The Dockerfile builds the heimdall image for linux with amd64 architecture.
+* link:{{< relref "/docs/operations/install.adoc" >}}[Download Heimdall] in your flavor.
 
 == Configure
 
@@ -54,18 +24,18 @@ heimdall can be configured via environment variables, as well as using a configu
 [source, yaml]
 ----
 log:
-  level: info
+  level: info // <1>
 
 pipeline:
   authenticators:
-    - id: anonymous_authenticator
+    - id: anonymous_authenticator // <2>
       type: anonymous
   mutators:
-    - id: create_jwt
+    - id: create_jwt // <3>
       type: jwt
 
 rules:
-  default:
+  default: // <4>
     methods:
       - GET
       - POST
@@ -73,13 +43,18 @@ rules:
       - authenticator: anonymous_authenticator
       - mutator: create_jwt
 ----
+<1> Here we are setting the log level to `info` to be able to see any log output. By default, Heimdall logs on `error` log level.
+<2> Allow usage of `X-Forwarded-*` headers from any source. Since we're not going to create rules and use the default rule only and this configuration file will be used to showcase the decision and the proxy mode of operation, we'll have to use `X-Forwarded-Host` to let Heimdall forward our request to our "upstream" service in proxy mode.
+<3> Configures the `anonymous` authenticator.
+<4> Configured the `jwt` mutator.
+<5> Configures the default rule.
 
-This configuration will create a JSON Web Token (JWT) with `sub` claim set to `anonymous` for every request on every URL for the HTTP methods GET and POST. The JWT itself will be put into the `Authorization` header as a bearer token.
+Put together, this configuration will let Heimdall create a JSON Web Token (JWT) with `sub` claim set to `anonymous` for every request on every URL for the HTTP methods GET and POST. The JWT itself will be put into the `Authorization` header as a bearer token.
 
-== Run
-Finally, run heimdall specifying the configuration file from above
+== Run in Decision operation mode
+Run heimdall specifying the configuration file from above
 
-If you've built heimdall using `go build`, just execute
+If you're using a binary, just execute
 
 [source, bash]
 ----
