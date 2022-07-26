@@ -31,7 +31,7 @@ edge-router:
   image: traefik
   # further configuration
   labels:
-    - traefik.http.middlewares.heimdall.forwardauth.address=http://heimdall:4456/decisions
+    - traefik.http.middlewares.heimdall.forwardauth.address=http://heimdall:4456
     - traefik.http.middlewares.heimdall.forwardauth.authResponseHeaders=X-Id-Token,Authorization
     # further labels
 

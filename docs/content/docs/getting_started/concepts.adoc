@@ -209,7 +209,7 @@ Imagine following request hits Heimdall (sent to it by an API gateway)
 
 [source, bash]
 ----
-GET decisions/my-service/api HTTP/1.1
+GET /my-service/api HTTP/1.1
 Host: heimdall:4455
 
 Some payload
