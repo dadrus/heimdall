@@ -67,7 +67,7 @@ func (m *cookieMutator) Execute(ctx heimdall.Context, sub *subject.Subject) erro
 				"failed to render value for '%s' cookie", name).CausedBy(err)
 		}
 
-		ctx.AddResponseCookie(name, value)
+		ctx.AddCookieForUpstream(name, value)
 	}
 
 	return nil

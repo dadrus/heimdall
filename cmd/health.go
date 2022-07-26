@@ -10,7 +10,7 @@ import (
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 
-	"github.com/dadrus/heimdall/internal/handler/health"
+	"github.com/dadrus/heimdall/internal/handler/management"
 )
 
 // nolint: gochecknoglobals
@@ -22,7 +22,7 @@ var healthCmd = &cobra.Command{
 		endpointURL, _ := cmd.Flags().GetString("endpoint")
 		outputFormat, _ := cmd.Flags().GetString("output")
 
-		resp, err := http.DefaultClient.Get(fmt.Sprintf("%s%s", endpointURL, health.EndpointHealth))
+		resp, err := http.DefaultClient.Get(fmt.Sprintf("%s%s", endpointURL, management.EndpointHealth))
 		if err != nil {
 			cmd.PrintErrf("Failed to send request: %v", err)
 			os.Exit(-1)

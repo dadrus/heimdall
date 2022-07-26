@@ -2,7 +2,6 @@ package rules
 
 import (
 	"bytes"
-	"errors"
 	"net/url"
 	"sync"
 
@@ -15,8 +14,6 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
-
-var ErrNoRuleFound = errors.New("no rule found")
 
 const defaultRuleListSize = 0
 
@@ -63,7 +60,8 @@ func (r *repository) FindRule(requestURL *url.URL) (rule.Rule, error) {
 		return r.rf.DefaultRule(), nil
 	}
 
-	return nil, ErrNoRuleFound
+	return nil, errorchain.NewWithMessagef(heimdall.ErrNoRuleFound,
+		"no applicable rule found for %s", requestURL.String())
 }
 
 func (r *repository) Start() error {

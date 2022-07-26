@@ -1,4 +1,4 @@
-package jwks
+package management
 
 import (
 	"crypto/rand"
@@ -8,12 +8,12 @@ import (
 	"testing"
 
 	"github.com/goccy/go-json"
-	"github.com/gofiber/fiber/v2"
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/square/go-jose.v2"
 
+	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/keystore"
 )
 
@@ -27,13 +27,13 @@ func TestJWKSRequestWithoutEtagUsage(t *testing.T) {
 	ks, err := keystore.NewKeyStoreFromKey(privateKey)
 	require.NoError(t, err)
 
-	app := fiber.New(fiber.Config{
-		JSONDecoder: json.Unmarshal,
-		JSONEncoder: json.Marshal,
+	app := newFiberApp(config.Configuration{Serve: config.ServeConfig{Management: config.ServiceConfig{}}})
+	_, err = newHandler(handlerParams{
+		App:      app,
+		Logger:   log.Logger,
+		KeyStore: ks,
 	})
-
-	router := app.Group("/")
-	RegisterRoutes(router, log.Logger, ks)
+	require.NoError(t, err)
 
 	// WHEN
 	resp, err := app.Test(
@@ -77,13 +77,13 @@ func TestJWKSRequestWithEtagUsage(t *testing.T) {
 	ks, err := keystore.NewKeyStoreFromKey(privateKey)
 	require.NoError(t, err)
 
-	app := fiber.New(fiber.Config{
-		JSONDecoder: json.Unmarshal,
-		JSONEncoder: json.Marshal,
+	app := newFiberApp(config.Configuration{Serve: config.ServeConfig{Management: config.ServiceConfig{}}})
+	_, err = newHandler(handlerParams{
+		App:      app,
+		Logger:   log.Logger,
+		KeyStore: ks,
 	})
-
-	router := app.Group("/")
-	RegisterRoutes(router, log.Logger, ks)
+	require.NoError(t, err)
 
 	resp1, err := app.Test(
 		httptest.NewRequest("GET", "http://heimdall.test.local/.well-known/jwks", nil),

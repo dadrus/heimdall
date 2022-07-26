@@ -317,7 +317,7 @@ func TestJWTMutatorExecute(t *testing.T) {
 				signer.On("Hash").Return("foobar")
 
 				ctx.On("Signer").Return(signer)
-				ctx.On("AddResponseHeader", "Authorization", "Bearer TestToken")
+				ctx.On("AddHeaderForUpstream", "Authorization", "Bearer TestToken")
 
 				mut := jwtMutator{ttl: defaultJWTTTL}
 
@@ -346,7 +346,7 @@ func TestJWTMutatorExecute(t *testing.T) {
 					Return("barfoo", nil)
 
 				ctx.On("Signer").Return(signer)
-				ctx.On("AddResponseHeader", "Authorization", "Bearer barfoo")
+				ctx.On("AddHeaderForUpstream", "Authorization", "Bearer barfoo")
 
 				mut := jwtMutator{ttl: configuredTTL}
 
@@ -377,7 +377,7 @@ func TestJWTMutatorExecute(t *testing.T) {
 					Return("barfoo", nil)
 
 				ctx.On("Signer").Return(signer)
-				ctx.On("AddResponseHeader", "Authorization", "Bearer barfoo")
+				ctx.On("AddHeaderForUpstream", "Authorization", "Bearer barfoo")
 
 				cch.On("Get", mock.Anything).Return(nil)
 				cch.On("Set", mock.Anything, "barfoo", configuredTTL-defaultCacheLeeway)
@@ -409,7 +409,7 @@ claims: '{
 				}).Return("barfoo", nil)
 
 				ctx.On("Signer").Return(signer)
-				ctx.On("AddResponseHeader", "Authorization", "Bearer barfoo")
+				ctx.On("AddHeaderForUpstream", "Authorization", "Bearer barfoo")
 
 				cch.On("Get", mock.Anything).Return(nil)
 				cch.On("Set", mock.Anything, "barfoo", defaultJWTTTL-defaultCacheLeeway)

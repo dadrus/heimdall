@@ -62,7 +62,7 @@ The diagram below sketches the related execution logic
 flowchart TD
     req[Request] --> findRule{1: url\nmatches\nrule?}
     findRule -->|yes| methodCheck{2: method\nallowed?}
-    findRule -->|no| err1[500 Internal Server Error]
+    findRule -->|no| err1[404 Not Found]
     methodCheck -->|yes| regularPipeline[3: execute regular pipeline]
     methodCheck -->|no| err2[405 Method Not Allowed]
     regularPipeline --> failed{failed?}

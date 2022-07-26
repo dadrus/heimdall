@@ -9,6 +9,7 @@ type DefaultRuleConfig struct {
 type RuleConfig struct {
 	ID               string           `yaml:"id"`
 	URL              string           `yaml:"url"`
+	Upstream         string           `yaml:"upstream"`
 	MatchingStrategy string           `yaml:"matching_strategy"`
 	Methods          []string         `yaml:"methods"`
 	Execute          []map[string]any `yaml:"execute"`

@@ -7,9 +7,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/config"
 	fiberauditor "github.com/dadrus/heimdall/internal/fiber/middleware/auditor"
-	fiberxforwarded "github.com/dadrus/heimdall/internal/fiber/middleware/xforwarded"
-	"github.com/dadrus/heimdall/internal/handler/health"
-	"github.com/dadrus/heimdall/internal/handler/jwks"
+	fiberxforwarded "github.com/dadrus/heimdall/internal/fiber/middleware/xfmphu"
 	"github.com/dadrus/heimdall/internal/handler/requestcontext"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/keystore"
@@ -47,8 +45,6 @@ func newHandler(params handlerParams) (*Handler, error) {
 	router := params.App.Group("/")
 
 	handler.registerRoutes(router, params.Logger)
-	health.RegisterRoutes(router, params.Logger)
-	jwks.RegisterRoutes(router, params.Logger, params.KeyStore)
 
 	return handler, nil
 }
@@ -64,14 +60,13 @@ func (h *Handler) decisions(c *fiber.Ctx) error {
 	logger.Debug().Msg("Decision API called")
 
 	reqURL := fiberxforwarded.RequestURL(c.UserContext())
+	method := fiberxforwarded.RequestMethod(c.UserContext())
 
 	rule, err := h.r.FindRule(reqURL)
 	if err != nil {
-		return errorchain.NewWithMessagef(heimdall.ErrInternal,
-			"no applicable rule found for %s", reqURL.String()).CausedBy(err)
+		return err
 	}
 
-	method := fiberxforwarded.RequestMethod(c.UserContext())
 	if !rule.MatchesMethod(method) {
 		return errorchain.NewWithMessagef(heimdall.ErrMethodNotAllowed,
 			"rule doesn't match %s method", method)
@@ -84,11 +79,5 @@ func (h *Handler) decisions(c *fiber.Ctx) error {
 
 	logger.Debug().Msg("Finalizing request")
 
-	if err = reqCtx.Finalize(); err != nil {
-		return err
-	}
-
-	c.Status(fiber.StatusAccepted)
-
-	return nil
+	return reqCtx.Finalize()
 }

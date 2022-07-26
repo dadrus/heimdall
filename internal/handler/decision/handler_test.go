@@ -3,7 +3,6 @@ package decision
 import (
 	"crypto/rand"
 	"crypto/rsa"
-	"errors"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -14,8 +13,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	"gopkg.in/square/go-jose.v2"
-	"gopkg.in/square/go-jose.v2/json"
 
 	"github.com/dadrus/heimdall/internal/cache/mocks"
 	"github.com/dadrus/heimdall/internal/config"
@@ -26,10 +23,8 @@ import (
 	mocks4 "github.com/dadrus/heimdall/internal/rules/rule/mocks"
 )
 
-var errTest = errors.New("test purpose error")
-
 // nolint: gocognit, cyclop, maintidx
-func TestHandleDecisionAPIRequest(t *testing.T) {
+func TestHandleDecisionEndpointRequest(t *testing.T) {
 	t.Parallel()
 
 	const rsa2048 = 2048
@@ -57,13 +52,13 @@ func TestHandleDecisionAPIRequest(t *testing.T) {
 			configureMocks: func(t *testing.T, repository *mocks2.MockRepository, rule *mocks4.MockRule) {
 				t.Helper()
 
-				repository.On("FindRule", mock.Anything).Return(nil, errTest)
+				repository.On("FindRule", mock.Anything).Return(nil, heimdall.ErrNoRuleFound)
 			},
 			assertResponse: func(t *testing.T, err error, response *http.Response) {
 				t.Helper()
 
 				require.NoError(t, err)
-				assert.Equal(t, http.StatusInternalServerError, response.StatusCode)
+				assert.Equal(t, http.StatusNotFound, response.StatusCode)
 
 				data, err := ioutil.ReadAll(response.Body)
 				require.NoError(t, err)
@@ -167,14 +162,14 @@ func TestHandleDecisionAPIRequest(t *testing.T) {
 
 				rule.On("MatchesMethod", "POST").Return(true)
 				rule.On("Execute", mock.MatchedBy(func(ctx *requestcontext.RequestContext) bool {
-					ctx.AddResponseHeader("X-Foo-Bar", "baz")
-					ctx.AddResponseCookie("X-Bar-Foo", "zab")
+					ctx.AddHeaderForUpstream("X-Foo-Bar", "baz")
+					ctx.AddCookieForUpstream("X-Bar-Foo", "zab")
 
 					return true
 				})).Return(nil)
 
 				repository.On("FindRule", mock.MatchedBy(func(reqURL *url.URL) bool {
-					return reqURL.Scheme == "http" && reqURL.Host == "heimdall.test.local" && reqURL.Path == "foobar"
+					return reqURL.Scheme == "http" && reqURL.Host == "heimdall.test.local" && reqURL.Path == "/foobar"
 				})).Return(rule, nil)
 			},
 			assertResponse: func(t *testing.T, err error, response *http.Response) {
@@ -219,8 +214,8 @@ func TestHandleDecisionAPIRequest(t *testing.T) {
 
 				rule.On("MatchesMethod", "GET").Return(true)
 				rule.On("Execute", mock.MatchedBy(func(ctx *requestcontext.RequestContext) bool {
-					ctx.AddResponseHeader("X-Foo-Bar", "baz")
-					ctx.AddResponseCookie("X-Bar-Foo", "zab")
+					ctx.AddHeaderForUpstream("X-Foo-Bar", "baz")
+					ctx.AddCookieForUpstream("X-Bar-Foo", "zab")
 
 					return true
 				})).Return(nil)
@@ -251,7 +246,7 @@ func TestHandleDecisionAPIRequest(t *testing.T) {
 		{
 			uc: "successful rule execution - request method, path and hostname " +
 				"all are not taken from the headers (trusted proxy configured and does not match host)",
-			serviceConf: config.ServiceConfig{TrustedProxies: &[]string{"foobar.local"}},
+			serviceConf: config.ServiceConfig{TrustedProxies: &[]string{"111.111.111.111"}},
 			createRequest: func(t *testing.T) *http.Request {
 				t.Helper()
 
@@ -272,14 +267,14 @@ func TestHandleDecisionAPIRequest(t *testing.T) {
 
 				rule.On("MatchesMethod", "POST").Return(true)
 				rule.On("Execute", mock.MatchedBy(func(ctx *requestcontext.RequestContext) bool {
-					ctx.AddResponseHeader("X-Foo-Bar", "baz")
-					ctx.AddResponseCookie("X-Bar-Foo", "zab")
+					ctx.AddHeaderForUpstream("X-Foo-Bar", "baz")
+					ctx.AddCookieForUpstream("X-Bar-Foo", "zab")
 
 					return true
 				})).Return(nil)
 
 				repository.On("FindRule", mock.MatchedBy(func(reqURL *url.URL) bool {
-					return reqURL.Scheme == "http" && reqURL.Host == "heimdall.test.local" && reqURL.Path == "foobar"
+					return reqURL.Scheme == "http" && reqURL.Host == "heimdall.test.local" && reqURL.Path == "/foobar"
 				})).Return(rule, nil)
 			},
 			assertResponse: func(t *testing.T, err error, response *http.Response) {
@@ -304,7 +299,7 @@ func TestHandleDecisionAPIRequest(t *testing.T) {
 		{
 			uc: "successful rule execution - only request method is sent via header" +
 				"(trusted proxy configured and matches host)",
-			serviceConf: config.ServiceConfig{TrustedProxies: &[]string{"0.0.0.0"}},
+			serviceConf: config.ServiceConfig{TrustedProxies: &[]string{"0.0.0.0/0"}},
 			createRequest: func(t *testing.T) *http.Request {
 				t.Helper()
 
@@ -324,7 +319,7 @@ func TestHandleDecisionAPIRequest(t *testing.T) {
 				rule.On("Execute", mock.Anything).Return(nil)
 
 				repository.On("FindRule", mock.MatchedBy(func(reqURL *url.URL) bool {
-					return reqURL.Scheme == "http" && reqURL.Host == "heimdall.test.local" && reqURL.Path == "foobar"
+					return reqURL.Scheme == "http" && reqURL.Host == "heimdall.test.local" && reqURL.Path == "/foobar"
 				})).Return(rule, nil)
 			},
 			assertResponse: func(t *testing.T, err error, response *http.Response) {
@@ -337,7 +332,7 @@ func TestHandleDecisionAPIRequest(t *testing.T) {
 		{
 			uc: "successful rule execution - only host is sent via header" +
 				"(trusted proxy configured and matches host)",
-			serviceConf: config.ServiceConfig{TrustedProxies: &[]string{"0.0.0.0"}},
+			serviceConf: config.ServiceConfig{TrustedProxies: &[]string{"0.0.0.0/0"}},
 			createRequest: func(t *testing.T) *http.Request {
 				t.Helper()
 
@@ -357,7 +352,7 @@ func TestHandleDecisionAPIRequest(t *testing.T) {
 				rule.On("Execute", mock.Anything).Return(nil)
 
 				repository.On("FindRule", mock.MatchedBy(func(reqURL *url.URL) bool {
-					return reqURL.Scheme == "http" && reqURL.Host == "test.com" && reqURL.Path == "foobar"
+					return reqURL.Scheme == "http" && reqURL.Host == "test.com" && reqURL.Path == "/foobar"
 				})).Return(rule, nil)
 			},
 			assertResponse: func(t *testing.T, err error, response *http.Response) {
@@ -370,7 +365,7 @@ func TestHandleDecisionAPIRequest(t *testing.T) {
 		{
 			uc: "successful rule execution - only path is sent via header" +
 				"(trusted proxy configured and matches host)",
-			serviceConf: config.ServiceConfig{TrustedProxies: &[]string{"0.0.0.0"}},
+			serviceConf: config.ServiceConfig{TrustedProxies: &[]string{"0.0.0.0/0"}},
 			createRequest: func(t *testing.T) *http.Request {
 				t.Helper()
 
@@ -403,7 +398,7 @@ func TestHandleDecisionAPIRequest(t *testing.T) {
 		{
 			uc: "successful rule execution - only scheme is sent via header" +
 				"(trusted proxy configured and matches host)",
-			serviceConf: config.ServiceConfig{TrustedProxies: &[]string{"0.0.0.0"}},
+			serviceConf: config.ServiceConfig{TrustedProxies: &[]string{"0.0.0.0/0"}},
 			createRequest: func(t *testing.T) *http.Request {
 				t.Helper()
 
@@ -423,7 +418,7 @@ func TestHandleDecisionAPIRequest(t *testing.T) {
 				rule.On("Execute", mock.Anything).Return(nil)
 
 				repository.On("FindRule", mock.MatchedBy(func(reqURL *url.URL) bool {
-					return reqURL.Scheme == "https" && reqURL.Host == "heimdall.test.local" && reqURL.Path == "foobar"
+					return reqURL.Scheme == "https" && reqURL.Host == "heimdall.test.local" && reqURL.Path == "/foobar"
 				})).Return(rule, nil)
 			},
 			assertResponse: func(t *testing.T, err error, response *http.Response) {
@@ -436,7 +431,7 @@ func TestHandleDecisionAPIRequest(t *testing.T) {
 		{
 			uc: "successful rule execution - scheme, host, path and method sent via header" +
 				"(trusted proxy configured and matches host)",
-			serviceConf: config.ServiceConfig{TrustedProxies: &[]string{"0.0.0.0"}},
+			serviceConf: config.ServiceConfig{TrustedProxies: &[]string{"0.0.0.0/0"}},
 			createRequest: func(t *testing.T) *http.Request {
 				t.Helper()
 
@@ -472,7 +467,7 @@ func TestHandleDecisionAPIRequest(t *testing.T) {
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
 			// GIVEN
-			conf := config.Configuration{Serve: config.ServeConfig{DecisionAPI: tc.serviceConf}}
+			conf := config.Configuration{Serve: config.ServeConfig{Decision: tc.serviceConf}}
 			cch := &mocks.MockCache{}
 			repo := &mocks2.MockRepository{}
 			rule := &mocks4.MockRule{}
@@ -480,7 +475,8 @@ func TestHandleDecisionAPIRequest(t *testing.T) {
 
 			tc.configureMocks(t, repo, rule)
 
-			app := newFiberApp(conf, cch, logger)
+			app := newFiberApp(conf, cch)
+			defer app.Shutdown() // nolint: errcheck
 
 			_, err := newHandler(handlerParams{
 				App:             app,
@@ -503,101 +499,4 @@ func TestHandleDecisionAPIRequest(t *testing.T) {
 			rule.AssertExpectations(t)
 		})
 	}
-}
-
-func TestHealthRequest(t *testing.T) {
-	// GIVEN
-	const rsa2048 = 2048
-
-	privateKey, err := rsa.GenerateKey(rand.Reader, rsa2048)
-	require.NoError(t, err)
-
-	ks, err := keystore.NewKeyStoreFromKey(privateKey)
-	require.NoError(t, err)
-
-	conf := config.Configuration{Serve: config.ServeConfig{DecisionAPI: config.ServiceConfig{}}}
-	cch := &mocks.MockCache{}
-	repo := &mocks2.MockRepository{}
-
-	app := newFiberApp(conf, cch, log.Logger)
-
-	_, err = newHandler(handlerParams{
-		App:             app,
-		RulesRepository: repo,
-		Logger:          log.Logger,
-		KeyStore:        ks,
-	})
-	require.NoError(t, err)
-
-	// WHEN
-	resp, err := app.Test(
-		httptest.NewRequest("GET", "http://heimdall.test.local/.well-known/health", nil),
-		-1)
-
-	// THEN
-	require.NoError(t, err)
-	require.Equal(t, http.StatusOK, resp.StatusCode)
-
-	defer resp.Body.Close()
-
-	rawResp, err := ioutil.ReadAll(resp.Body)
-	require.NoError(t, err)
-
-	assert.JSONEq(t, `{ "status": "ok"}`, string(rawResp))
-}
-
-func TestJWKSRequest(t *testing.T) {
-	// GIVEN
-	const rsa2048 = 2048
-
-	privateKey, err := rsa.GenerateKey(rand.Reader, rsa2048)
-	require.NoError(t, err)
-
-	ks, err := keystore.NewKeyStoreFromKey(privateKey)
-	require.NoError(t, err)
-
-	conf := config.Configuration{Serve: config.ServeConfig{DecisionAPI: config.ServiceConfig{}}}
-	cch := &mocks.MockCache{}
-	repo := &mocks2.MockRepository{}
-
-	app := newFiberApp(conf, cch, log.Logger)
-
-	_, err = newHandler(handlerParams{
-		App:             app,
-		RulesRepository: repo,
-		Logger:          log.Logger,
-		KeyStore:        ks,
-	})
-	require.NoError(t, err)
-
-	// WHEN
-	resp, err := app.Test(
-		httptest.NewRequest("GET", "http://heimdall.test.local/.well-known/jwks", nil),
-		-1)
-
-	// THEN
-	require.NoError(t, err)
-	require.Equal(t, http.StatusOK, resp.StatusCode)
-
-	defer resp.Body.Close()
-
-	var jwks jose.JSONWebKeySet
-
-	decoder := json.NewDecoder(resp.Body)
-	err = decoder.Decode(&jwks)
-	require.NoError(t, err)
-
-	assert.Len(t, jwks.Keys, 1)
-	jwk := jwks.Key(ks.Entries()[0].KeyID)
-	assert.Len(t, jwk, 1)
-
-	expected := ks.Entries()[0].JWK()
-	assert.Equal(t, expected.KeyID, jwk[0].KeyID)
-	assert.Equal(t, expected.Key, jwk[0].Key)
-	assert.Equal(t, expected.Algorithm, jwk[0].Algorithm)
-	assert.Equal(t, expected.Use, jwk[0].Use)
-	assert.Empty(t, jwk[0].Certificates)
-	assert.Nil(t, jwk[0].CertificatesURL)
-	assert.Empty(t, jwk[0].CertificateThumbprintSHA1)
-	assert.Empty(t, jwk[0].CertificateThumbprintSHA256)
 }

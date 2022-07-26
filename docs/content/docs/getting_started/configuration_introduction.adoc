@@ -6,7 +6,7 @@ weight: 17
 menu:
   docs:
     parent: "Getting Started"
-    weight: 30
+    weight: 40
 ---
 
 Configuration in Heimdall can refer to two different things:

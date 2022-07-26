@@ -11,8 +11,7 @@ import (
 	"github.com/dadrus/heimdall/internal/config"
 )
 
-// nolint
-var Module = fx.Options(
+var Module = fx.Options( // nolint: gochecknoglobals
 	fx.Provide(fx.Annotated{Name: "prometheus", Target: newFiberApp}),
 	fx.Invoke(
 		registerHooks,
@@ -31,6 +30,7 @@ type fiberApp struct {
 
 	Proxy      *fiber.App `name:"proxy" optional:"true"`
 	API        *fiber.App `name:"api" optional:"true"`
+	Management *fiber.App `name:"management" optional:"false"`
 	Prometheus *fiber.App `name:"prometheus"`
 }
 
@@ -44,6 +44,10 @@ func registerHooks(lifecycle fx.Lifecycle, logger zerolog.Logger, app fiberApp, 
 
 	if app.Proxy != nil {
 		app.Proxy.Use(prometheus.Middleware)
+	}
+
+	if app.Proxy != nil {
+		app.Management.Use(prometheus.Middleware)
 	}
 
 	lifecycle.Append(

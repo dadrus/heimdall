@@ -303,3 +303,55 @@ func TestRuleExecute(t *testing.T) {
 		})
 	}
 }
+
+func TestRuleUpstreamURL(t *testing.T) {
+	t.Parallel()
+
+	for _, tc := range []struct {
+		uc          string
+		initialURL  *url.URL
+		upstreamURL *url.URL
+		assert      func(t *testing.T, resultURL, initialURL, upstreamURL *url.URL)
+	}{
+		{
+			uc: "no upstream url defined",
+			initialURL: &url.URL{
+				Scheme: "http", Host: "foo.bar", Path: "/bar", RawQuery: url.Values{"bar": []string{"foo"}}.Encode(),
+			},
+			assert: func(t *testing.T, resultURL, initialURL, _ *url.URL) {
+				t.Helper()
+
+				assert.Equal(t, initialURL, resultURL)
+			},
+		},
+		{
+			uc: "upstream url defined",
+			upstreamURL: &url.URL{
+				Scheme: "http", Host: "bar.foo", Path: "/foo", RawQuery: url.Values{"foo": []string{"bar"}}.Encode(),
+			},
+			initialURL: &url.URL{
+				Scheme: "https", Host: "foo.bar", Path: "/bar", RawQuery: url.Values{"bar": []string{"foo"}}.Encode(),
+			},
+			assert: func(t *testing.T, resultURL, initialURL, upstreamURL *url.URL) {
+				t.Helper()
+
+				assert.NotEqual(t, initialURL, resultURL)
+				assert.Equal(t, upstreamURL.Scheme, resultURL.Scheme)
+				assert.Equal(t, upstreamURL.Host, resultURL.Host)
+				assert.Equal(t, initialURL.Path, resultURL.Path)
+				assert.Equal(t, initialURL.RawQuery, resultURL.RawQuery)
+			},
+		},
+	} {
+		t.Run("case="+tc.uc, func(t *testing.T) {
+			// GIVEN
+			rul := &ruleImpl{upstreamURL: tc.upstreamURL}
+
+			// WHEN
+			result := rul.UpstreamURL(tc.initialURL)
+
+			// THEN
+			tc.assert(t, result, tc.initialURL, tc.upstreamURL)
+		})
+	}
+}

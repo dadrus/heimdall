@@ -9,4 +9,130 @@ menu:
     parent: "Services"
 ---
 
-Not implemented yet. Will however support the same configuration options as link:{{< relref "decision_api.adoc" >}}[Decision APi]
+Proxy is one of the operating modes supported by Heimdall, used if you start Heimdall with `heimdall serve proxy`. By default, Heimdall listens on `0.0.0.0:4455` endpoint for incoming requests in this mode of operation and also configures useful default timeouts. No other options are configured. You can, and should however adjust the configuration for your needs.
+
+This service exposes only the proxy endpoint.
+
+== Configuration
+
+The configuration of the Proxy endpoint can be adjusted in the `proxy` property, which lives in the `serve` property of heimdall's configuration and supports the following properties.
+
+* *`host`*: _string_ (optional)
++
+By making use of this property, you can specify the TCP/IP address on which heimdall should listen for connections from client applications. The entry `0.0.0.0` allows listening for all IPv4 addresses. `0.0.0.0` is also the default setting.
++
+.Configure heimdall to allow only local TCP/IP “loopback” connections to be made.
+====
+Makes actually only sense, if your reverse proxy/gateway, which communicates with Heimdall, runs on the same machine.
+
+[source, yaml]
+----
+proxy:
+  host: 127.0.0.1
+----
+====
+
+* *`port`*: _integer_ (optional)
++
+By making use of this property, you can specify the TCP port the heimdall should listen on. Defaults to `4455`.
++
+.Configure heimdall to listen on port `4444` for incoming requests.
+====
+[source, yaml]
+----
+proxy:
+  port: 4444
+----
+====
+
+* *`verbose_errors`*: _boolean_ (optional)
++
+By making use of this property you can instruct Heimdall's default error handler to preserve error information and provide it in the response body to the caller. Defaults to `false`.
++
+Heimdall supports MIME type negotiation. So, if the client sets the HTTP `Accept` header to e.g. `application/json`, and Heimdall run into an unhandled internal error condition, in addition to responding with `500 Internal Server Error`, it will render an error message, like shown below, if `verbose_errors` has been set to `true`.
++
+[source, json]
+----
+{
+  "code": "internalServerError",
+  "message": "whatever led to the error"
+}
+----
++
+The `message` will however contain just high-level information, like "failed to parse something", but will not contain any stack traces.
++
+.Configure verbose errors
+====
+[source, yaml]
+----
+proxy:
+  verbose_errors: true
+----
+====
+
+* *`timeout`*: _link:{{< relref "configuration_types.adoc#_timeout" >}}[Timeout]_ (optional)
++
+Like written in the introduction of this section, Heimdall configures useful timeout defaults. You can however override this by making use of the `timeout` option and specifying the timeouts, you need. The `read` timeout is also used while waiting for the responses from the upstream service. Setting it to `0` will make forwarding the requests to the upstream service impossible.
++
+.Setting the read timeout to 1 second, write timeout to 2 seconds and the idle timeout to 1 minute.
+====
+[source, yaml]
+----
+proxy:
+  timeout:
+    read: 1s
+    write: 2s
+    idle: 1m
+----
+====
+
+* *`cors`*: _link:{{< relref "configuration_types.adoc#_cors" >}}[CORS]_ (optional)
++
+https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS[CORS] (Cross-Origin Resource Sharing) headers can be added and configured by making use of this option. This functionality allows for advanced security features to quickly be set. If CORS headers are set, then the Heimdall does not pass preflight requests neither to its pipeline, nor to the upstream service. Instead, the response will be generated and sent back to the client directly.
++
+.Possible CORS configuration
+====
+[source, yaml]
+----
+proxy:
+  cors:
+    allowed_origins:
+      - example.org
+    allowed_methods:
+      - HEAD
+      - PATCH
+    allow_credentials: true
+    max_age: 10s
+----
+====
+
+* *`tls`*: _link:{{< relref "configuration_types.adoc#_tls" >}}[TLS]_ (optional)
++
+By default, the Proxy endpoint accepts HTTP requests. Depending on your deployment scenario, you could require Heimdall to accept HTTPS requests only. You can do so by making use of this option.
++
+.TLS configuration
+====
+[source, yaml]
+----
+proxy:
+  tls:
+    key: /path/to/private_key.pem
+    cert: /path/to/certificate.pem
+----
+====
+
+* *`trusted_proxies`*: _string array_ (optional)
++
+Heimdall can make use of `X-Forwarded-\*`, like `X-Forwarded-For`, `X-Forwarded-Method`, etc, or the https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Forwarded[`Forwarded`] header sent by its clients and also forward some of these (`X-Forwarded-For` and `Forwarded`) to the configured upstream services. However, since these headers can easily be spoofed, the usage of them is only possible, when the request comes from a trusted source. This is typically the case, when Heimdall is operated behind yet another proxy. For example, the `Host` HTTP header is usually used to return the requested host. But when you’re behind a proxy, the actual host may be stored in an `X-Forwarded-Host` header, which could, however, also be spoofed.
++
+To prevent header spoofing and allowing such headers to be accepted from trusted clients only (so the systems, you have configured to forward requests to Heimdall), you should configure the `trusted_proxies` option and list the IPs, or IP ranges (CIDR notation) of your proxies, which make use of Heimdall's Proxy endpoint.
++
+.Enable the usage of headers mentioned above only for clients residing in the `192.168.1.0/24` network
+====
+[source, yaml]
+----
+proxy:
+  trusted_proxies:
+    - 192.168.1.0/24
+----
+====

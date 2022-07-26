@@ -1243,6 +1243,9 @@
         },
         "proxy": {
           "$ref": "#/definitions/serviceConfig"
+        },
+        "management": {
+          "$ref": "#/definitions/serviceConfig"
         }
       }
     },

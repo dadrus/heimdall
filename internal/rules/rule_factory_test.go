@@ -556,6 +556,17 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 			},
 		},
 		{
+			uc:     "without default rule and error in upstream url",
+			config: config.RuleConfig{ID: "foobar", URL: "http://foo.bar", Upstream: "http://[::1]:namedport"},
+			assert: func(t *testing.T, err error, rul *ruleImpl) {
+				t.Helper()
+
+				require.Error(t, err)
+				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				assert.Contains(t, err.Error(), "bad upstream URL")
+			},
+		},
+		{
 			uc: "with error while creating execute pipeline",
 			config: config.RuleConfig{
 				ID:      "foobar",
@@ -780,8 +791,9 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 		{
 			uc: "with default rule and with all attributes defined by the rule itself",
 			config: config.RuleConfig{
-				ID:  "foobar",
-				URL: "http://foo.bar",
+				ID:       "foobar",
+				URL:      "http://foo.bar",
+				Upstream: "http://bar.foo",
 				Execute: []map[string]any{
 					{"authenticator": "foo"},
 					{"hydrator": "bar"},
@@ -825,6 +837,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				assert.Equal(t, "foobar", rul.id)
 				assert.NotNil(t, rul.urlMatcher)
 				assert.ElementsMatch(t, rul.methods, []string{"BAR", "BAZ"})
+				assert.Equal(t, "http://bar.foo", rul.upstreamURL.String())
 
 				// nil checks above mean the responses from the mockHandlerFactory are used
 				// and not the values from the default rule

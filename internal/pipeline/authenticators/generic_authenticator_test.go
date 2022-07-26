@@ -676,10 +676,10 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 			configureMocks := x.IfThenElse(tc.configureMocks != nil,
 				tc.configureMocks,
 				func(t *testing.T,
-					ctx *heimdallmocks.MockContext,
-					cch *mocks.MockCache,
-					ads *mockAuthDataGetter,
-					auth *genericAuthenticator,
+					_ *heimdallmocks.MockContext,
+					_ *mocks.MockCache,
+					_ *mockAuthDataGetter,
+					_ *genericAuthenticator,
 				) {
 					t.Helper()
 				})

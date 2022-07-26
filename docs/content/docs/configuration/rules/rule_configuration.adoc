@@ -31,6 +31,10 @@ Which strategy to use for matching of the value, provided in the `url` property.
 +
 Which HTTP methods (`GET`, `POST`, `PATCH`, etc) are allowed for the matched URL. If not specified, every request to that URL will result in `405 Method Not Allowed` response from Heimdall.
 
+* *`upstream`*: _string_ (optional)
++
+Defines where to forward the proxied request to. Used only when Heimdall is operated in the Proxy operation mode and when Heimdall's client does not send `X-Forwarded-Host` header, respectively Heimdall ignores it due to not satisfied trust conditions. Only the URL schema and the host parts are used if this property is specified.
+
 * *`execute`*: _link:{{< relref "#_regular_pipeline" >}}[Regular Pipeline]_ (mandatory)
 +
 Which handlers to use to authenticate, authorize, hydrate (enrich) and mutate the subject of the request.
@@ -45,6 +49,7 @@ Which error handlers to use if any of the handlers, defined in the `execute` pro
 ----
 id: rule:foo:bar
 url: http://my-service.local/<**>
+upstream: http://backend-a:8080
 methods:
   - GET
   - POST

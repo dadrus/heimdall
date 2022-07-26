@@ -16,8 +16,8 @@ type Context interface {
 	RequestURL() *url.URL
 	RequestClientIPs() []string
 
-	AddResponseHeader(name, value string)
-	AddResponseCookie(name, value string)
+	AddHeaderForUpstream(name, value string)
+	AddCookieForUpstream(name, value string)
 
 	AppContext() context.Context
 
