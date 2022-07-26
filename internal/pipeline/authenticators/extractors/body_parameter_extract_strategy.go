@@ -38,14 +38,14 @@ func (es BodyParameterExtractStrategy) GetAuthData(ctx heimdall.Context) (AuthDa
 		value = val
 	case []string:
 		if len(val) != 1 {
-			return nil, errorchain.NewWithMessage(heimdall.ErrInternal,
-				"configured request body parameter is present multiple times")
+			return nil, errorchain.NewWithMessagef(heimdall.ErrArgument,
+				"%s request body parameter is present multiple times", es.Name)
 		}
 
 		value = val[0]
 	default:
-		return nil, errorchain.NewWithMessage(heimdall.ErrInternal,
-			"unexpected type for request body parameter")
+		return nil, errorchain.NewWithMessagef(heimdall.ErrInternal,
+			"unexpected type for %s request body parameter", es.Name)
 	}
 
 	return &bodyParameterAuthData{
