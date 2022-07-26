@@ -72,6 +72,30 @@ Reference</button><div id=section-db1c784524e1b54011a95823026161f7c8517fe0 class
     <span style=color:#a6e22e>trusted_proxies</span><span style=color:#fff;background-color:#272822>:</span>
       <span style=color:#fff;background-color:#272822>-</span> <span style=color:#e6db74>192.168.1.0/24</span>
 
+  <span style=color:#a6e22e>management</span><span style=color:#fff;background-color:#272822>:</span>
+    <span style=color:#a6e22e>host</span><span style=color:#fff;background-color:#272822>:</span> <span style=color:#e6db74>127.0.0.1</span>
+    <span style=color:#a6e22e>port</span><span style=color:#fff;background-color:#272822>:</span> <span style=color:#ae81ff>4457</span>
+    <span style=color:#a6e22e>verbose_errors</span><span style=color:#fff;background-color:#272822>:</span> <span style=color:#66d9ef>false</span>
+    <span style=color:#a6e22e>timeout</span><span style=color:#fff;background-color:#272822>:</span>
+      <span style=color:#a6e22e>read</span><span style=color:#fff;background-color:#272822>:</span> <span style=color:#e6db74>2s</span>
+      <span style=color:#a6e22e>write</span><span style=color:#fff;background-color:#272822>:</span> <span style=color:#e6db74>5s</span>
+      <span style=color:#a6e22e>idle</span><span style=color:#fff;background-color:#272822>:</span> <span style=color:#e6db74>2m</span>
+    <span style=color:#a6e22e>cors</span><span style=color:#fff;background-color:#272822>:</span>
+      <span style=color:#a6e22e>allowed_origins</span><span style=color:#fff;background-color:#272822>:</span>
+        <span style=color:#fff;background-color:#272822>-</span> <span style=color:#e6db74>example.org</span>
+      <span style=color:#a6e22e>allowed_methods</span><span style=color:#fff;background-color:#272822>:</span>
+        <span style=color:#fff;background-color:#272822>-</span> <span style=color:#e6db74>GET</span>
+        <span style=color:#fff;background-color:#272822>-</span> <span style=color:#e6db74>POST</span>
+      <span style=color:#a6e22e>allowed_headers</span><span style=color:#fff;background-color:#272822>:</span>
+        <span style=color:#fff;background-color:#272822>-</span> <span style=color:#e6db74>Authorization</span>
+      <span style=color:#a6e22e>exposed_headers</span><span style=color:#fff;background-color:#272822>:</span>
+        <span style=color:#fff;background-color:#272822>-</span> <span style=color:#e6db74>X-My-Header</span>
+      <span style=color:#a6e22e>allow_credentials</span><span style=color:#fff;background-color:#272822>:</span> <span style=color:#66d9ef>true</span>
+      <span style=color:#a6e22e>max_age</span><span style=color:#fff;background-color:#272822>:</span> <span style=color:#e6db74>1m</span>
+    <span style=color:#a6e22e>tls</span><span style=color:#fff;background-color:#272822>:</span>
+      <span style=color:#a6e22e>key</span><span style=color:#fff;background-color:#272822>:</span> <span style=color:#e6db74>/path/to/key/file.pem</span>
+      <span style=color:#a6e22e>cert</span><span style=color:#fff;background-color:#272822>:</span> <span style=color:#e6db74>/path/to/cert/file.pem</span>
+
 <span style=color:#a6e22e>log</span><span style=color:#fff;background-color:#272822>:</span>
   <span style=color:#a6e22e>level</span><span style=color:#fff;background-color:#272822>:</span> <span style=color:#e6db74>debug</span>
   <span style=color:#a6e22e>format</span><span style=color:#fff;background-color:#272822>:</span> <span style=color:#e6db74>text</span>
