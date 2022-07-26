@@ -19,7 +19,7 @@ To achieve this,
 
 [IMPORTANT]
 ====
-Traefik makes use of `X-Forwarded-*` HTTP headers to forward the HTTP method, protocol, host, etc. to the ForwardAuth middleware. These headers can be spoofed, if no caution is taken. To ensure, heimdall accepts such headers only from trusted sources, you should consider setting link:{{< relref "/docs/configuration/services/decision_api.adoc#_trusted_proxies" >}}[trusted proxies] in heimdall's decision api configuration.
+Traefik makes use of `X-Forwarded-*` HTTP headers to forward the HTTP method, protocol, host, etc. to the ForwardAuth middleware. These headers can be spoofed, if no caution is taken. To allow, heimdall making use of such headers, you must configure link:{{< relref "/docs/configuration/services/decision_api.adoc#_trusted_proxies" >}}[trusted proxies] in heimdall's decision api configuration to contain the IPs or networks of your traefik instances. For test purposes, you can set it to "0.0.0.0/0", which would basically disable the check and let heimdall trust requests from any client.
 ====
 
 .Using Docker labels

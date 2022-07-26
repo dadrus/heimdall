@@ -193,7 +193,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 		},
 		{
 			uc: "successful rule execution - request method, path and hostname " +
-				"all are taken from the headers (trusted proxy not configured)",
+				"are not taken from the headers (trusted proxy not configured)",
 			createRequest: func(t *testing.T) *http.Request {
 				t.Helper()
 
@@ -204,7 +204,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 
 				req.Header.Set("X-Forwarded-Proto", "https")
 				req.Header.Set("X-Forwarded-Host", "test.com")
-				req.Header.Set("X-Forwarded-Uri", "bar")
+				req.Header.Set("X-Forwarded-Path", "bar")
 				req.Header.Set("X-Forwarded-Method", "GET")
 
 				return req
@@ -212,7 +212,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 			configureMocks: func(t *testing.T, repository *mocks2.MockRepository, rule *mocks4.MockRule) {
 				t.Helper()
 
-				rule.On("MatchesMethod", "GET").Return(true)
+				rule.On("MatchesMethod", "POST").Return(true)
 				rule.On("Execute", mock.MatchedBy(func(ctx *requestcontext.RequestContext) bool {
 					ctx.AddHeaderForUpstream("X-Foo-Bar", "baz")
 					ctx.AddCookieForUpstream("X-Bar-Foo", "zab")
@@ -221,7 +221,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				})).Return(nil)
 
 				repository.On("FindRule", mock.MatchedBy(func(reqURL *url.URL) bool {
-					return reqURL.Scheme == "https" && reqURL.Host == "test.com" && reqURL.Path == "bar"
+					return reqURL.Scheme == "http" && reqURL.Host == "heimdall.test.local" && reqURL.Path == "/foobar"
 				})).Return(rule, nil)
 			},
 			assertResponse: func(t *testing.T, err error, response *http.Response) {
@@ -257,7 +257,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 
 				req.Header.Set("X-Forwarded-Proto", "https")
 				req.Header.Set("X-Forwarded-Host", "test.com")
-				req.Header.Set("X-Forwarded-Uri", "bar")
+				req.Header.Set("X-Forwarded-Path", "bar")
 				req.Header.Set("X-Forwarded-Method", "GET")
 
 				return req
@@ -374,7 +374,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 					"http://heimdall.test.local/decisions/foobar",
 					nil)
 
-				req.Header.Set("X-Forwarded-Uri", "bar")
+				req.Header.Set("X-Forwarded-Path", "bar")
 
 				return req
 			},
@@ -442,7 +442,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 
 				req.Header.Set("X-Forwarded-Proto", "https")
 				req.Header.Set("X-Forwarded-Host", "test.com")
-				req.Header.Set("X-Forwarded-Uri", "bar")
+				req.Header.Set("X-Forwarded-Path", "bar")
 				req.Header.Set("X-Forwarded-Method", "PATCH")
 
 				return req
