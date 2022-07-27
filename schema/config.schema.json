@@ -459,9 +459,6 @@
             "properties": {
               "cookie": {
                 "type": "string"
-              },
-              "strip_prefix": {
-                "type": "string"
               }
             }
           },
@@ -475,24 +472,18 @@
             "properties": {
               "query_parameter": {
                 "type": "string"
-              },
-              "strip_prefix": {
-                "type": "string"
               }
             }
           },
           {
-            "description": "The form parameter (case sensitive) that contains the authentication information.",
+            "description": "The body parameter (case sensitive) that contains the authentication information.",
             "type": "object",
             "additionalProperties": false,
             "required": [
-              "form_parameter"
+              "body_parameter"
             ],
             "properties": {
-              "form_parameter": {
-                "type": "string"
-              },
-              "strip_prefix": {
+              "body_parameter": {
                 "type": "string"
               }
             }
