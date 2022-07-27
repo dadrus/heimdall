@@ -15,7 +15,8 @@ import (
 var ErrScriptExecution = errors.New("script error")
 
 type Script interface {
-	Execute(ctx heimdall.Context, sub *subject.Subject) (Result, error)
+	ExecuteOnSubject(ctx heimdall.Context, sub *subject.Subject) (Result, error)
+	ExecuteOnPayload(ctx heimdall.Context, payload any) (Result, error)
 }
 
 type script struct {
@@ -41,9 +42,7 @@ func New(val string) (Script, error) {
 	return &script{p: programm}, nil
 }
 
-func (s *script) Execute(ctx heimdall.Context, sub *subject.Subject) (Result, error) {
-	logger := zerolog.Ctx(ctx.AppContext())
-
+func (s *script) ExecuteOnSubject(ctx heimdall.Context, sub *subject.Subject) (Result, error) {
 	vm := goja.New()
 
 	// the error checks below are ignored by intention as these cannot happen here
@@ -77,7 +76,39 @@ func (s *script) Execute(ctx heimdall.Context, sub *subject.Subject) (Result, er
 	console := vm.NewObject()
 
 	// nolint: errcheck
-	console.Set("log", func(val string) { logger.Debug().Msg(val) })
+	console.Set("log", func(val string) { zerolog.Ctx(ctx.AppContext()).Debug().Msg(val) })
+
+	// nolint: errcheck
+	vm.Set("heimdall", hmdl)
+
+	// nolint: errcheck
+	vm.Set("console", console)
+
+	val, err := vm.RunProgram(s.p)
+	if err != nil {
+		return nil, errorchain.New(ErrScriptExecution).CausedBy(err)
+	}
+
+	return val, nil
+}
+
+func (s *script) ExecuteOnPayload(ctx heimdall.Context, payload any) (Result, error) {
+	vm := goja.New()
+
+	// the error checks below are ignored by intention as these cannot happen here
+	// we can also not test the corresponding occurrence and if these would happen
+	// the script execution would result in an error anyway, which basically means
+	// failed execution of the handler using it.
+
+	hmdl := vm.NewObject()
+
+	// nolint: errcheck
+	hmdl.Set("Payload", payload)
+
+	console := vm.NewObject()
+
+	// nolint: errcheck
+	console.Set("log", func(val string) { zerolog.Ctx(ctx.AppContext()).Debug().Msg(val) })
 
 	// nolint: errcheck
 	vm.Set("heimdall", hmdl)

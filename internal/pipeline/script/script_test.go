@@ -57,7 +57,7 @@ foo
 	require.NoError(t, err)
 
 	// WHEN
-	res, err := ecmaScript.Execute(ctx, sub)
+	res, err := ecmaScript.ExecuteOnSubject(ctx, sub)
 
 	// THEN
 	require.NoError(t, err)
