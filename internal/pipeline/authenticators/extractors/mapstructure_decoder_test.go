@@ -22,11 +22,10 @@ func TestUnmarshalAuthenticationDataSourceFromValidYaml(t *testing.T) {
 	config := []byte(`
 authentication_data_source:
   - cookie: foo_cookie
-    strip_prefix: cfoo
   - header: foo_header
     strip_prefix: hfoo
   - query_parameter: foo_qparam
-    strip_prefix: qfoo
+  - body_parameter: foo_bparam
 `)
 
 	parser := koanf.New(".")
@@ -46,7 +45,7 @@ authentication_data_source:
 
 	err = dec.Decode(settings["authentication_data_source"])
 	assert.NoError(t, err)
-	assert.Equal(t, 3, len(ces))
+	assert.Equal(t, 4, len(ces))
 
 	ce, ok := ces[0].(*CookieValueExtractStrategy)
 	require.True(t, ok)
@@ -60,4 +59,8 @@ authentication_data_source:
 	qe, ok := ces[2].(*QueryParameterExtractStrategy)
 	require.True(t, ok)
 	assert.Equal(t, "foo_qparam", qe.Name)
+
+	be, ok := ces[3].(*BodyParameterExtractStrategy)
+	require.True(t, ok)
+	assert.Equal(t, "foo_bparam", be.Name)
 }
