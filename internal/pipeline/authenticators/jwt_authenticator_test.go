@@ -199,6 +199,9 @@ jwks_endpoint:
     Accept-Type: application/foobar
 jwt_from:
   - header: foo-header
+    strip_prefix: foo
+  - query_parameter: foo_query_param
+  - body_parameter: foo_body_param
 assertions:
   scopes:
     matching_strategy: wildcard
@@ -224,8 +227,12 @@ session:
 
 				// token extractor settings
 				assert.IsType(t, extractors.CompositeExtractStrategy{}, auth.ads)
-				assert.Len(t, auth.ads, 1)
-				assert.Contains(t, auth.ads, &extractors.HeaderValueExtractStrategy{Name: "foo-header"})
+				assert.Len(t, auth.ads, 3)
+				assert.Contains(t, auth.ads, &extractors.HeaderValueExtractStrategy{
+					Name: "foo-header", Prefix: "foo",
+				})
+				assert.Contains(t, auth.ads, &extractors.QueryParameterExtractStrategy{Name: "foo_query_param"})
+				assert.Contains(t, auth.ads, &extractors.BodyParameterExtractStrategy{Name: "foo_body_param"})
 
 				// assertions settings
 				assert.NotNil(t, auth.a.ScopesMatcher)
