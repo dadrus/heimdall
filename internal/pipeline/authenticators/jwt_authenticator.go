@@ -103,6 +103,7 @@ func newJwtAuthenticator(rawConfig map[string]any) (*jwtAuthenticator, error) {
 		adg = extractors.CompositeExtractStrategy{
 			extractors.HeaderValueExtractStrategy{Name: "Authorization", Prefix: "Bearer"},
 			extractors.QueryParameterExtractStrategy{Name: "access_token"},
+			extractors.BodyParameterExtractStrategy{Name: "access_token"},
 		}
 	} else {
 		adg = conf.AuthDataSource

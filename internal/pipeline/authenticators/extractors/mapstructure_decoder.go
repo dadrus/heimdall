@@ -61,7 +61,7 @@ func DecodeCompositeExtractStrategyHookFunc() mapstructure.DecodeHookFunc {
 }
 
 func createStrategy(data map[string]string) (AuthDataExtractStrategy, error) {
-	if value, ok := data["header"]; ok {
+	if value, ok := data["header"]; ok { // nolint: nestif
 		var prefix string
 		if p, ok := data["strip_prefix"]; ok {
 			prefix = p
@@ -72,6 +72,8 @@ func createStrategy(data map[string]string) (AuthDataExtractStrategy, error) {
 		return &CookieValueExtractStrategy{Name: value}, nil
 	} else if value, ok := data["query_parameter"]; ok {
 		return &QueryParameterExtractStrategy{Name: value}, nil
+	} else if value, ok := data["body_parameter"]; ok {
+		return &BodyParameterExtractStrategy{Name: value}, nil
 	} else {
 		return nil, errorchain.
 			NewWithMessage(heimdall.ErrConfiguration, "unsupported authentication source")

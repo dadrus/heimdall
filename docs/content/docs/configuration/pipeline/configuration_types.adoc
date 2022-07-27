@@ -130,6 +130,25 @@ Imagine you want Heimdall to verify an access token used to protect your upstrea
 ----
 ====
 
+=== Body Parameter Strategy
+
+The usage of this strategy is only possible when the request payload is either JSON or `application/x-www-form-urlencoded` encoded. The `Content-Type` of the request must also either be set to `application/x-www-form-urlencoded` or to a MIME type, which contains `json`.
+
+* *`body_parameter`*: _string_ (mandatory)
++
+The name of the body parameter to use.
+
+.Body Parameter Strategy usage
+====
+
+Imagine you want Heimdall to verify an access token used to protect your upstream service. If the client of your upstream application sends the access token in the body parameter named "access_token", you can inform Heimdall to extract it from there by configuring this strategy as follows:
+
+[source, yaml]
+----
+- body_parameter: access_token
+----
+====
+
 == Authentication Strategy
 
 Authentication strategy is kind of abstract type, so you have to define which specific type to use. Each type has its own configuration options.
