@@ -21,6 +21,7 @@ import (
 	"github.com/dadrus/heimdall/internal/pipeline/contenttype"
 	"github.com/dadrus/heimdall/internal/pipeline/endpoint"
 	"github.com/dadrus/heimdall/internal/pipeline/renderer"
+	"github.com/dadrus/heimdall/internal/pipeline/script"
 	"github.com/dadrus/heimdall/internal/pipeline/subject"
 	"github.com/dadrus/heimdall/internal/pipeline/template"
 	"github.com/dadrus/heimdall/internal/x"
@@ -46,6 +47,7 @@ type remoteAuthorizer struct {
 	e                  endpoint.Endpoint
 	name               string
 	payload            template.Template
+	verificationScript script.Script
 	headersForUpstream []string
 	ttl                time.Duration
 }
@@ -55,7 +57,7 @@ type authorizationInformation struct {
 	payload any
 }
 
-func (ai *authorizationInformation) AddHeadersTo(headerNames []string, ctx heimdall.Context) {
+func (ai *authorizationInformation) addHeadersTo(headerNames []string, ctx heimdall.Context) {
 	for _, headerName := range headerNames {
 		headerValue := ai.headers.Get(headerName)
 		if len(headerValue) != 0 {
@@ -64,16 +66,37 @@ func (ai *authorizationInformation) AddHeadersTo(headerNames []string, ctx heimd
 	}
 }
 
-func (ai *authorizationInformation) AddAttributesTo(key string, sub *subject.Subject) {
+func (ai *authorizationInformation) addAttributesTo(key string, sub *subject.Subject) {
 	if ai.payload != nil {
 		sub.Attributes[key] = ai.payload
 	}
+}
+
+func (ai *authorizationInformation) verify(ctx heimdall.Context, verificationScript script.Script) error {
+	if verificationScript == nil {
+		return nil
+	}
+
+	logger := zerolog.Ctx(ctx.AppContext())
+	logger.Debug().Msg("Authorizing using verification script")
+
+	res, err := verificationScript.ExecuteOnPayload(ctx, ai.payload)
+	if err != nil {
+		return errorchain.New(heimdall.ErrAuthorization).CausedBy(err)
+	}
+
+	if !res.ToBoolean() {
+		return errorchain.NewWithMessage(heimdall.ErrAuthorization, "script failed")
+	}
+
+	return nil
 }
 
 func newRemoteAuthorizer(name string, rawConfig map[string]any) (*remoteAuthorizer, error) {
 	type Config struct {
 		Endpoint                 endpoint.Endpoint `mapstructure:"endpoint"`
 		Payload                  template.Template `mapstructure:"payload"`
+		Script                   script.Script     `mapstructure:"verification_script"`
 		ResponseHeadersToForward []string          `mapstructure:"forward_response_headers_to_upstream"`
 		CacheTTL                 time.Duration     `mapstructure:"cache_ttl"`
 	}
@@ -98,6 +121,7 @@ func newRemoteAuthorizer(name string, rawConfig map[string]any) (*remoteAuthoriz
 		e:                  conf.Endpoint,
 		name:               name,
 		payload:            conf.Payload,
+		verificationScript: conf.Script,
 		headersForUpstream: conf.ResponseHeadersToForward,
 		ttl:                conf.CacheTTL,
 	}, nil
@@ -151,8 +175,13 @@ func (a *remoteAuthorizer) Execute(ctx heimdall.Context, sub *subject.Subject) e
 		}
 	}
 
-	authInfo.AddHeadersTo(a.headersForUpstream, ctx)
-	authInfo.AddAttributesTo(a.name, sub)
+	err = authInfo.verify(ctx, a.verificationScript)
+	if err != nil {
+		return err
+	}
+
+	authInfo.addHeadersTo(a.headersForUpstream, ctx)
+	authInfo.addAttributesTo(a.name, sub)
 
 	return nil
 }
@@ -267,6 +296,7 @@ func (a *remoteAuthorizer) WithConfig(rawConfig map[string]any) (Authorizer, err
 
 	type Config struct {
 		Payload                  template.Template `mapstructure:"payload"`
+		Script                   script.Script     `mapstructure:"verification_script"`
 		ResponseHeadersToForward []string          `mapstructure:"forward_response_headers_to_upstream"`
 		CacheTTL                 time.Duration     `mapstructure:"cache_ttl"`
 	}
@@ -278,9 +308,10 @@ func (a *remoteAuthorizer) WithConfig(rawConfig map[string]any) (Authorizer, err
 	}
 
 	return &remoteAuthorizer{
-		e:       a.e,
-		name:    a.name,
-		payload: x.IfThenElse(conf.Payload != nil, conf.Payload, a.payload),
+		e:                  a.e,
+		name:               a.name,
+		payload:            x.IfThenElse(conf.Payload != nil, conf.Payload, a.payload),
+		verificationScript: x.IfThenElse(conf.Script != nil, conf.Script, a.verificationScript),
 		headersForUpstream: x.IfThenElse(len(conf.ResponseHeadersToForward) != 0,
 			conf.ResponseHeadersToForward, a.headersForUpstream),
 		ttl: x.IfThenElse(conf.CacheTTL > 0, conf.CacheTTL, a.ttl),
