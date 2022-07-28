@@ -186,6 +186,7 @@ pipeline:
           headers:
             foo-bar: "{{ .Subject.ID }}"
         payload: "https://bla.bar"
+        script: "heimdall.Payload.response === true"
         forward_response_headers_to_upstream:
           - bla-bar
     - id: "attributes_based_authorizer"

@@ -87,7 +87,7 @@ Configuration using the `config` property is mandatory. Following properties are
 +
 The API endpoint of your authorization system. At least the `url` must be configured. This handler allows templating of the url and makes the `Subject` object available to it. By default, this authorizer will use HTTP `POST` to send the rendered payload to this endpoint. You can override this behavior by configuring `method` as well. Depending on the API requirements of your authorization system, you might need to configure further properties, like headers, etc.
 
-* *`payload`*: _string_ (mandatory, overridable)
+* *`payload`*: _string_ (optional, overridable)
 +
 Your template with definitions required to communicate to the authorization endpoint. See also link:{{< relref "overview.adoc#_templating" >}}[Templating].
 
