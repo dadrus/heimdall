@@ -271,7 +271,7 @@ func (a *remoteAuthorizer) WithConfig(rawConfig map[string]any) (Authorizer, err
 
 	type Config struct {
 		Payload                  template.Template `mapstructure:"payload"`
-		Script                   script.Script     `mapstructure:"verification_script"`
+		Script                   script.Script     `mapstructure:"script"`
 		ResponseHeadersToForward []string          `mapstructure:"forward_response_headers_to_upstream"`
 		CacheTTL                 time.Duration     `mapstructure:"cache_ttl"`
 	}
