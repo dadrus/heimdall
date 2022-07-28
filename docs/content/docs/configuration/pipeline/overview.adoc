@@ -201,7 +201,7 @@ You can find further examples as part of handler descriptions, supporting templa
 
 == Scripting
 
-Some authorizers, which verify the presence or values of particular attributes of the subject can make use of https://262.ecma-international.org/5.1/[ECMAScript 5.1(+)]. Heimdall uses https://github.com/dop251/goja[goja] as ECMAScript engine. In addition to the general ECMAScript functionality, heimdall makes the same functions and object available to the script, which are also available for the link:{{< relref "#_templating" >}}[templates]. The only difference is, that these are available as part of a `heimdall` object. In addition, there is also a `console` object implementing a `log` function to enable logging from the script. Latter can become handy during development of debugging. The output is only available if `debug` log level is set.
+Some authorizers, which verify the presence or values of particular attributes of the subject can make use of https://262.ecma-international.org/5.1/[ECMAScript 5.1(+)]. Heimdall uses https://github.com/dop251/goja[goja] as ECMAScript engine. In addition to the general ECMAScript functionality, heimdall makes the same functions and object available to the script, which are also available for the link:{{< relref "#_templating" >}}[templates]. All scripts can make use of a `console` object implementing a `log` function to enable logging from the script, which can become handy during development or debugging. The output is only available if `debug` log level is set. Beyond this there is also a `heimdall` object available. Depending on the authorizer it contains the `Subject` object and the request context function  (already described in link:{{< relref "_templating" >}}[Templating] section), or the `Payload` object, which makes allows access to the response from remote authorization endpoints.
 
 .Script, rendering a JSON object
 ====
@@ -235,6 +235,12 @@ The result is again the already known JSON object.
     "x_foo_value": "bar"
 }
 ----
+====
+
+.Script, checking the response from an OPA endpoint
+====
+[source, javascript]
+heimdall.Payload.result === true
 ====
 
 You can find further examples as part of handler descriptions, supporting scripting.
