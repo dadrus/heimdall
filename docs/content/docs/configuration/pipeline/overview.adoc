@@ -201,7 +201,12 @@ You can find further examples as part of handler descriptions, supporting templa
 
 == Scripting
 
-Some authorizers, which verify the presence or values of particular attributes of the subject can make use of https://262.ecma-international.org/5.1/[ECMAScript 5.1(+)]. Heimdall uses https://github.com/dop251/goja[goja] as ECMAScript engine. In addition to the general ECMAScript functionality, heimdall makes the same functions and object available to the script, which are also available for the link:{{< relref "#_templating" >}}[templates]. All scripts can make use of a `console` object implementing a `log` function to enable logging from the script, which can become handy during development or debugging. The output is only available if `debug` log level is set. Beyond this there is also a `heimdall` object available. Depending on the authorizer it contains the `Subject` object and the request context function  (already described in link:{{< relref "_templating" >}}[Templating] section), or the `Payload` object, which makes allows access to the response from remote authorization endpoints.
+Some authorizers, which verify the presence or values of particular attributes of the subject can make use of https://262.ecma-international.org/5.1/[ECMAScript 5.1(+)]. Heimdall uses https://github.com/dop251/goja[goja] as ECMAScript engine. In addition to the general ECMAScript functionality, heimdall makes following objects and functions to the script:
+
+* a `console` object implementing a `log` function to enable logging from the script. This can become handy during development or debugging. The output is only available if `debug` log level is set.
+* a `heimdall` object, which, depending on the authorizer, contains either
+** the `Subject` object and the request context functions, like `RequestMethod` (already described in link:{{< relref "#_templating" >}}[Templating] section), or
+** the `Payload` object, which allows access to the response from remote authorization endpoints.
 
 .Script, rendering a JSON object
 ====
@@ -237,8 +242,11 @@ The result is again the already known JSON object.
 ----
 ====
 
-.Script, checking the response from an OPA endpoint
+.Script, checking simple response from an Open Policy Agent endpoint
 ====
+
+Imagine you, respectively heimdall, sends something like `'{ "input": { "user_id": "foobar", "access": "write" } }'` to your OPA service. A typical "yes" or "no" response from OPA will contain a payload like `{ "result": true }` or `{ "result": false }` which obviously contains the authorization status. To check this status, you could use the following script.
+
 [source, javascript]
 heimdall.Payload.result === true
 ====

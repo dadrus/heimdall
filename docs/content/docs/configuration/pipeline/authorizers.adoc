@@ -57,7 +57,7 @@ Configuration using the `config` property is mandatory. Following properties are
 
 * *`script`*: _string_ (mandatory, overridable)
 +
-ECMAScript wich executes the actual authorization logic. Heimdall expects the script to return either `true`, if the authorization was successful, or otherwise `false`, or to raise an error. In latter case the message from the raised error will also be logged.
+ECMAScript wich executes the actual authorization logic (see also link:{{< relref "overview.adoc#_scripting" >}}[Scripting]). Heimdall expects the script to return either `true`, if the authorization was successful, or otherwise `false`, or to raise an error. In latter case the message from the raised error will also be logged.
 
 .Configuration of Local authorizer
 ====
@@ -93,7 +93,7 @@ Your template with definitions required to communicate to the authorization endp
 
 * *`script`*:  _string_ (optional, overridable)
 +
-ECMAScript wich executed further authorization logic on the given response from the authorization endpoint. Heimdall expects the script to return either `true`, if the authorization was successful, or otherwise `false`, or to raise an error. In latter case the message from the raised error will also be logged. Compared to the link:{{< relref "#_local" >}}[Local] authorizer, only `heimdall.Payload` object is available, which contains the response from the authorization endpoint, as well as the `console.log` function, which enables logging from the script. Latter can become handy during development of debugging. The output is only available if debug log level is set.
+ECMAScript wich executed further authorization logic on the given response from the authorization endpoint (See also link:{{< relref "overview.adoc#_scripting" >}}[Scripting]). Heimdall expects the script to return either `true`, if the authorization was successful, or otherwise `false`, or to raise an error. In latter case the message from the raised error will also be logged. Compared to the link:{{< relref "#_local" >}}[Local] authorizer, only `heimdall.Payload` object is available, which contains the response from the authorization endpoint, as well as the `console.log` function, which enables logging from the script. Latter can become handy during development of debugging. The output is only available if debug log level is set.
 
 * *`forward_response_headers_to_upstream`*: _string array_ (optional, overridable)
 +
