@@ -14,7 +14,7 @@ import (
 	"github.com/dadrus/heimdall/internal/pipeline/subject"
 )
 
-func TestScriptExecution(t *testing.T) {
+func TestScriptExecuteOnSubject(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
@@ -77,4 +77,89 @@ foo
 "my_query_param": "query_value",
 "ips": "192.168.1.1"
 }`, string(rawJSON))
+}
+
+func TestScriptExecuteOnPayload(t *testing.T) {
+	t.Parallel()
+
+	// GIVEN
+	ctx := &mocks.MockContext{}
+	ctx.On("AppContext").Return(context.Background())
+
+	for _, tc := range []struct {
+		uc      string
+		script  string
+		payload []byte
+		assert  func(t *testing.T, err error, result script.Result)
+	}{
+		{
+			uc:      "simple payload is checked by script",
+			payload: []byte(`{ "result": true }`),
+			script:  `heimdall.Payload.result === true`,
+			assert: func(t *testing.T, err error, result script.Result) {
+				t.Helper()
+
+				require.NoError(t, err)
+				assert.True(t, result.ToBoolean())
+			},
+		},
+		{
+			uc:      "script raises exception",
+			payload: []byte(`{ "result": true }`),
+			script: `
+if (heimdall.Payload.result === true) {
+  throw "result is true"
+}`,
+			assert: func(t *testing.T, err error, result script.Result) {
+				t.Helper()
+
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), "result is true")
+			},
+		},
+		{
+			uc:      "script checks more complex payload",
+			payload: []byte(`{ "result": ["foo", "bar"] }`),
+			script: `
+var groups = heimdall.Payload.result
+if (groups.includes("foo")) {
+  true
+} else {
+  false
+}`,
+			assert: func(t *testing.T, err error, result script.Result) {
+				t.Helper()
+
+				require.NoError(t, err)
+				assert.True(t, result.ToBoolean())
+			},
+		},
+	} {
+		t.Run("case="+tc.uc, func(t *testing.T) {
+			// GIVEN
+			ecmaScript, err := script.New(tc.script)
+			require.NoError(t, err)
+
+			var payload map[string]any
+			err = json.Unmarshal(tc.payload, &payload)
+			require.NoError(t, err)
+
+			// WHEN
+			res, err := ecmaScript.ExecuteOnPayload(ctx, payload)
+
+			// THEN
+			tc.assert(t, err, res)
+		})
+	}
+
+	ecmaScript, err := script.New(`heimdall.Payload.result === true`)
+	require.NoError(t, err)
+
+	// WHEN
+	res, err := ecmaScript.ExecuteOnPayload(ctx, map[string]any{"result": true})
+
+	// THEN
+	require.NoError(t, err)
+
+	assert.True(t, res.ToBoolean())
 }
