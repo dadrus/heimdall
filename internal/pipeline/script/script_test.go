@@ -152,3 +152,21 @@ if (groups.includes("foo")) {
 		})
 	}
 }
+
+func TestScriptExecuteOnEmptyStringPayload(t *testing.T) {
+	t.Parallel()
+
+	// GIVEN
+	ctx := &mocks.MockContext{}
+	ctx.On("AppContext").Return(context.Background())
+
+	ecmaScript, err := script.New(`heimdall.Payload === ''`)
+	require.NoError(t, err)
+
+	// WHEN
+	res, err := ecmaScript.ExecuteOnPayload(ctx, "")
+
+	// THEN
+	require.NoError(t, err)
+	assert.True(t, res.ToBoolean())
+}
