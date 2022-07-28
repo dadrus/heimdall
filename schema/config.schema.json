@@ -833,6 +833,10 @@
               "description": "The Go template with access to heimdall.Context and Subject used for request's HTTP body generation",
               "type": "string"
             },
+            "script": {
+              "description": "JavaScript which defines the required logic to verify the response from the endpoint",
+              "type": "string"
+            },
             "forward_response_headers_to_upstream": {
               "description": "A list of headers to forward to the upstream service.",
               "type": "array",

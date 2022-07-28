@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"reflect"
 	"strconv"
 	"strings"
 	"testing"
@@ -22,10 +23,12 @@ import (
 	"github.com/dadrus/heimdall/internal/heimdall"
 	heimdallmocks "github.com/dadrus/heimdall/internal/heimdall/mocks"
 	"github.com/dadrus/heimdall/internal/pipeline/endpoint"
+	"github.com/dadrus/heimdall/internal/pipeline/script"
 	"github.com/dadrus/heimdall/internal/pipeline/subject"
 	"github.com/dadrus/heimdall/internal/pipeline/template"
 	"github.com/dadrus/heimdall/internal/testsupport"
 	"github.com/dadrus/heimdall/internal/x"
+	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
 func TestCreateRemoteAuthorizer(t *testing.T) {
@@ -107,6 +110,7 @@ payload: "{{ .Subject.ID }}"
 endpoint:
   url: http://foo.bar
 payload: "{{ .Subject.ID }}"
+script: "throw 'foobar'"
 forward_response_headers_to_upstream:
   - Foo
   - Bar
@@ -115,12 +119,19 @@ cache_ttl: 5s
 			assert: func(t *testing.T, err error, auth *remoteAuthorizer) {
 				t.Helper()
 
+				ctx := &heimdallmocks.MockContext{}
+				ctx.On("AppContext").Return(context.Background())
+
 				require.NoError(t, err)
 
 				require.NotNil(t, auth)
 				require.NotNil(t, auth.payload)
 				val, err := auth.payload.Render(nil, &subject.Subject{ID: "bar"})
 				require.NoError(t, err)
+				require.NotNil(t, auth.script)
+				_, err = auth.script.ExecuteOnPayload(ctx, nil)
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), "foobar")
 				assert.Equal(t, "bar", val)
 				assert.Len(t, auth.headersForUpstream, 2)
 				assert.Contains(t, auth.headersForUpstream, "Foo")
@@ -226,6 +237,7 @@ cache_ttl: 1s
 				assert.Equal(t, prototype.e, configured.e)
 				assert.Equal(t, prototype.name, configured.name)
 				assert.Equal(t, prototype.payload, configured.payload)
+				assert.Equal(t, prototype.script, configured.script)
 				assert.Empty(t, configured.headersForUpstream)
 				assert.NotNil(t, configured.ttl)
 			},
@@ -243,10 +255,14 @@ payload: Baz
 forward_response_headers_to_upstream:
   - Bar
   - Foo
+script: "throw 'foobar'"
 cache_ttl: 15s
 `),
 			assert: func(t *testing.T, err error, prototype *remoteAuthorizer, configured *remoteAuthorizer) {
 				t.Helper()
+
+				ctx := &heimdallmocks.MockContext{}
+				ctx.On("AppContext").Return(context.Background())
 
 				require.NoError(t, err)
 
@@ -257,6 +273,11 @@ cache_ttl: 15s
 				require.NotNil(t, configured.payload)
 				val, err := configured.payload.Render(nil, nil)
 				require.NoError(t, err)
+				assert.Nil(t, prototype.script)
+				require.NotNil(t, configured.script)
+				_, err = configured.script.ExecuteOnPayload(ctx, nil)
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), "foobar")
 				assert.Equal(t, "Baz", val)
 				assert.Len(t, configured.headersForUpstream, 2)
 				assert.Contains(t, configured.headersForUpstream, "Bar")
@@ -342,8 +363,8 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 		assert           func(t *testing.T, err error, sub *subject.Subject)
 	}{
 		{
-			// nolint: lll
-			uc: "successful with payload and with header, without payload from server and without header forwarding and with disabled cache",
+			uc: "successful with payload and with header, without payload from server and without header " +
+				"forwarding and with disabled cache",
 			authorizer: &remoteAuthorizer{
 				e: endpoint.Endpoint{
 					URL:     srv.URL,
@@ -389,8 +410,8 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 			},
 		},
 		{
-			// nolint: lll
-			uc: "successful with json payload and with header, with json payload from server and with header forwarding and with disabled cache",
+			uc: "successful with json payload and with header, with json payload from server and with header" +
+				" forwarding and with disabled cache",
 			authorizer: &remoteAuthorizer{
 				name: "authorizer",
 				e: endpoint.Endpoint{
@@ -474,8 +495,8 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 			},
 		},
 		{
-			// nolint: lll
-			uc: "successful with www-form-urlencoded payload and without header, without payload from server and with header forwarding and with failing cache hit",
+			uc: "successful with www-form-urlencoded payload and without header, without payload from server " +
+				"and with header forwarding and with failing cache hit",
 			authorizer: &remoteAuthorizer{
 				name: "authorizer",
 				e: endpoint.Endpoint{
@@ -802,6 +823,158 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 				assert.Contains(t, err.Error(), "due to 'nil' subject")
 			},
 		},
+		{
+			uc: "with script, which fails",
+			authorizer: &remoteAuthorizer{
+				name: "authorizer",
+				e: endpoint.Endpoint{
+					URL: srv.URL,
+					Headers: map[string]string{
+						"Content-Type": "application/json",
+						"Accept":       "application/json",
+					},
+				},
+				payload: func() template.Template {
+					tpl, _ := template.New(`{ "user_id": {{ quote .Subject.ID }} }`)
+
+					return tpl
+				}(),
+				script: func() script.Script {
+					ecma := &mockScript{}
+					ecma.On("ExecuteOnPayload", mock.Anything, mock.Anything).
+						Return(nil, errorchain.NewWithMessage(heimdall.ErrInternal, "test"))
+
+					return ecma
+				}(),
+			},
+			subject: &subject.Subject{
+				ID:         "my-id",
+				Attributes: map[string]any{},
+			},
+			instructServer: func(t *testing.T) {
+				t.Helper()
+
+				checkRequest = func(req *http.Request) {
+					t.Helper()
+
+					assert.Equal(t, "POST", req.Method)
+					assert.Equal(t, "application/json", req.Header.Get("Content-Type"))
+					assert.Equal(t, "application/json", req.Header.Get("Accept"))
+
+					data, err := ioutil.ReadAll(req.Body)
+					assert.NoError(t, err)
+
+					var mapData map[string]string
+
+					err = json.Unmarshal(data, &mapData)
+					require.NoError(t, err)
+
+					assert.Len(t, mapData, 1)
+					assert.Equal(t, "my-id", mapData["user_id"])
+				}
+
+				responseCode = http.StatusOK
+				rawData, err := json.Marshal(map[string]any{
+					"access_granted": true,
+					"permissions":    []string{"read_foo", "write_foo"},
+					"groups":         []string{"Foo-Users"},
+				})
+				require.NoError(t, err)
+				responseContent = rawData
+				responseContentType = "application/json"
+			},
+			assert: func(t *testing.T, err error, sub *subject.Subject) {
+				t.Helper()
+
+				assert.True(t, authorizationEndpointCalled)
+
+				require.Error(t, err)
+				assert.ErrorIs(t, err, heimdall.ErrAuthorization)
+				assert.Contains(t, err.Error(), "test")
+			},
+		},
+		{
+			uc: "with script, which succeeds",
+			authorizer: &remoteAuthorizer{
+				name: "authorizer",
+				e: endpoint.Endpoint{
+					URL: srv.URL,
+					Headers: map[string]string{
+						"Content-Type": "application/json",
+						"Accept":       "application/json",
+					},
+				},
+				payload: func() template.Template {
+					tpl, _ := template.New(`{ "user_id": {{ quote .Subject.ID }} }`)
+
+					return tpl
+				}(),
+				script: func() script.Script {
+					ecma := &mockScript{}
+					ecma.On("ExecuteOnPayload", mock.Anything, mock.MatchedBy(
+						func(data map[string]any) bool { return data["access_granted"] == true })).
+						Return(boolValue(true), nil)
+
+					return ecma
+				}(),
+			},
+			subject: &subject.Subject{
+				ID:         "my-id",
+				Attributes: map[string]any{},
+			},
+			instructServer: func(t *testing.T) {
+				t.Helper()
+
+				checkRequest = func(req *http.Request) {
+					t.Helper()
+
+					assert.Equal(t, "POST", req.Method)
+					assert.Equal(t, "application/json", req.Header.Get("Content-Type"))
+					assert.Equal(t, "application/json", req.Header.Get("Accept"))
+
+					data, err := ioutil.ReadAll(req.Body)
+					assert.NoError(t, err)
+
+					var mapData map[string]string
+
+					err = json.Unmarshal(data, &mapData)
+					require.NoError(t, err)
+
+					assert.Len(t, mapData, 1)
+					assert.Equal(t, "my-id", mapData["user_id"])
+				}
+
+				responseCode = http.StatusOK
+				rawData, err := json.Marshal(map[string]any{
+					"access_granted": true,
+					"permissions":    []string{"read_foo", "write_foo"},
+					"groups":         []string{"Foo-Users"},
+				})
+				require.NoError(t, err)
+				responseContent = rawData
+				responseContentType = "application/json"
+			},
+			assert: func(t *testing.T, err error, sub *subject.Subject) {
+				t.Helper()
+
+				assert.True(t, authorizationEndpointCalled)
+
+				require.NoError(t, err)
+
+				require.Len(t, sub.Attributes, 1)
+				attrs := sub.Attributes["authorizer"]
+				assert.NotEmpty(t, attrs)
+				authorizerAttrs, ok := attrs.(map[string]any)
+				require.True(t, ok)
+				assert.Len(t, authorizerAttrs, 3)
+				assert.Equal(t, true, authorizerAttrs["access_granted"])
+				assert.Len(t, authorizerAttrs["permissions"], 2)
+				assert.Contains(t, authorizerAttrs["permissions"], "read_foo")
+				assert.Contains(t, authorizerAttrs["permissions"], "write_foo")
+				assert.Len(t, authorizerAttrs["groups"], 1)
+				assert.Contains(t, authorizerAttrs["groups"], "Foo-Users")
+			},
+		},
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
 			// GIVEN
@@ -845,4 +1018,39 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 			cch.AssertExpectations(t)
 		})
 	}
+}
+
+type boolValue bool
+
+func (v boolValue) ToInteger() int64         { return 1 }
+func (v boolValue) String() string           { return "bool" }
+func (v boolValue) ToFloat() float64         { return 1 }
+func (v boolValue) ToBoolean() bool          { return bool(v) }
+func (v boolValue) Export() interface{}      { return v }
+func (v boolValue) ExportType() reflect.Type { return nil }
+
+type mockScript struct {
+	mock.Mock
+}
+
+func (m *mockScript) ExecuteOnSubject(ctx heimdall.Context, sub *subject.Subject) (script.Result, error) {
+	args := m.Called(ctx, sub)
+
+	if val := args.Get(0); val != nil {
+		// nolint: forcetypeassert
+		return val.(script.Result), nil
+	}
+
+	return nil, args.Error(1)
+}
+
+func (m *mockScript) ExecuteOnPayload(ctx heimdall.Context, payload any) (script.Result, error) {
+	args := m.Called(ctx, payload)
+
+	if val := args.Get(0); val != nil {
+		// nolint: forcetypeassert
+		return val.(script.Result), nil
+	}
+
+	return nil, args.Error(1)
 }

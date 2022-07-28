@@ -21,6 +21,7 @@ import (
 	"github.com/dadrus/heimdall/internal/pipeline/contenttype"
 	"github.com/dadrus/heimdall/internal/pipeline/endpoint"
 	"github.com/dadrus/heimdall/internal/pipeline/renderer"
+	"github.com/dadrus/heimdall/internal/pipeline/script"
 	"github.com/dadrus/heimdall/internal/pipeline/subject"
 	"github.com/dadrus/heimdall/internal/pipeline/template"
 	"github.com/dadrus/heimdall/internal/x"
@@ -46,6 +47,7 @@ type remoteAuthorizer struct {
 	e                  endpoint.Endpoint
 	name               string
 	payload            template.Template
+	script             script.Script
 	headersForUpstream []string
 	ttl                time.Duration
 }
@@ -55,7 +57,7 @@ type authorizationInformation struct {
 	payload any
 }
 
-func (ai *authorizationInformation) AddHeadersTo(headerNames []string, ctx heimdall.Context) {
+func (ai *authorizationInformation) addHeadersTo(headerNames []string, ctx heimdall.Context) {
 	for _, headerName := range headerNames {
 		headerValue := ai.headers.Get(headerName)
 		if len(headerValue) != 0 {
@@ -64,7 +66,7 @@ func (ai *authorizationInformation) AddHeadersTo(headerNames []string, ctx heimd
 	}
 }
 
-func (ai *authorizationInformation) AddAttributesTo(key string, sub *subject.Subject) {
+func (ai *authorizationInformation) addAttributesTo(key string, sub *subject.Subject) {
 	if ai.payload != nil {
 		sub.Attributes[key] = ai.payload
 	}
@@ -74,6 +76,7 @@ func newRemoteAuthorizer(name string, rawConfig map[string]any) (*remoteAuthoriz
 	type Config struct {
 		Endpoint                 endpoint.Endpoint `mapstructure:"endpoint"`
 		Payload                  template.Template `mapstructure:"payload"`
+		Script                   script.Script     `mapstructure:"script"`
 		ResponseHeadersToForward []string          `mapstructure:"forward_response_headers_to_upstream"`
 		CacheTTL                 time.Duration     `mapstructure:"cache_ttl"`
 	}
@@ -98,6 +101,7 @@ func newRemoteAuthorizer(name string, rawConfig map[string]any) (*remoteAuthoriz
 		e:                  conf.Endpoint,
 		name:               name,
 		payload:            conf.Payload,
+		script:             conf.Script,
 		headersForUpstream: conf.ResponseHeadersToForward,
 		ttl:                conf.CacheTTL,
 	}, nil
@@ -151,8 +155,8 @@ func (a *remoteAuthorizer) Execute(ctx heimdall.Context, sub *subject.Subject) e
 		}
 	}
 
-	authInfo.AddHeadersTo(a.headersForUpstream, ctx)
-	authInfo.AddAttributesTo(a.name, sub)
+	authInfo.addHeadersTo(a.headersForUpstream, ctx)
+	authInfo.addAttributesTo(a.name, sub)
 
 	return nil
 }
@@ -185,10 +189,12 @@ func (a *remoteAuthorizer) doAuthorize(ctx heimdall.Context, sub *subject.Subjec
 		return nil, err
 	}
 
-	return &authorizationInformation{
-		headers: resp.Header,
-		payload: data,
-	}, nil
+	err = a.verify(ctx, data)
+	if err != nil {
+		return nil, err
+	}
+
+	return &authorizationInformation{headers: resp.Header, payload: data}, nil
 }
 
 func (a *remoteAuthorizer) createRequest(ctx heimdall.Context, sub *subject.Subject) (*http.Request, error) {
@@ -242,8 +248,6 @@ func (a *remoteAuthorizer) readResponse(ctx heimdall.Context, resp *http.Respons
 
 	contentType := resp.Header.Get("Content-Type")
 
-	logger.Debug().Msgf("Received response of %s content type", contentType)
-
 	decoder, err := contenttype.NewDecoder(contentType)
 	if err != nil {
 		logger.Warn().Msgf("%s content type is not supported. Treating it as string", contentType)
@@ -267,6 +271,7 @@ func (a *remoteAuthorizer) WithConfig(rawConfig map[string]any) (Authorizer, err
 
 	type Config struct {
 		Payload                  template.Template `mapstructure:"payload"`
+		Script                   script.Script     `mapstructure:"script"`
 		ResponseHeadersToForward []string          `mapstructure:"forward_response_headers_to_upstream"`
 		CacheTTL                 time.Duration     `mapstructure:"cache_ttl"`
 	}
@@ -281,6 +286,7 @@ func (a *remoteAuthorizer) WithConfig(rawConfig map[string]any) (Authorizer, err
 		e:       a.e,
 		name:    a.name,
 		payload: x.IfThenElse(conf.Payload != nil, conf.Payload, a.payload),
+		script:  x.IfThenElse(conf.Script != nil, conf.Script, a.script),
 		headersForUpstream: x.IfThenElse(len(conf.ResponseHeadersToForward) != 0,
 			conf.ResponseHeadersToForward, a.headersForUpstream),
 		ttl: x.IfThenElse(conf.CacheTTL > 0, conf.CacheTTL, a.ttl),
@@ -310,4 +316,24 @@ func (a *remoteAuthorizer) calculateCacheKey(sub *subject.Subject) (string, erro
 	hash.Write(rawSub)
 
 	return hex.EncodeToString(hash.Sum(nil)), nil
+}
+
+func (a *remoteAuthorizer) verify(ctx heimdall.Context, result any) error {
+	if a.script == nil {
+		return nil
+	}
+
+	logger := zerolog.Ctx(ctx.AppContext())
+	logger.Debug().Msg("Verifying authorization response using script")
+
+	res, err := a.script.ExecuteOnPayload(ctx, result)
+	if err != nil {
+		return errorchain.New(heimdall.ErrAuthorization).CausedBy(err)
+	}
+
+	if !res.ToBoolean() {
+		return errorchain.NewWithMessage(heimdall.ErrAuthorization, "script failed")
+	}
+
+	return nil
 }

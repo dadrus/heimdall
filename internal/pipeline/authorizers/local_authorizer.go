@@ -53,7 +53,7 @@ func (a *localAuthorizer) Execute(ctx heimdall.Context, sub *subject.Subject) er
 	logger := zerolog.Ctx(ctx.AppContext())
 	logger.Debug().Msg("Authorizing using local authorizer")
 
-	res, err := a.s.Execute(ctx, sub)
+	res, err := a.s.ExecuteOnSubject(ctx, sub)
 	if err != nil {
 		return errorchain.New(heimdall.ErrAuthorization).CausedBy(err)
 	}
