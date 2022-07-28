@@ -72,26 +72,6 @@ func (ai *authorizationInformation) addAttributesTo(key string, sub *subject.Sub
 	}
 }
 
-func (ai *authorizationInformation) verify(ctx heimdall.Context, verificationScript script.Script) error {
-	if verificationScript == nil {
-		return nil
-	}
-
-	logger := zerolog.Ctx(ctx.AppContext())
-	logger.Debug().Msg("Verifying authorization response using script")
-
-	res, err := verificationScript.ExecuteOnPayload(ctx, ai.payload)
-	if err != nil {
-		return errorchain.New(heimdall.ErrAuthorization).CausedBy(err)
-	}
-
-	if !res.ToBoolean() {
-		return errorchain.NewWithMessage(heimdall.ErrAuthorization, "script failed")
-	}
-
-	return nil
-}
-
 func newRemoteAuthorizer(name string, rawConfig map[string]any) (*remoteAuthorizer, error) {
 	type Config struct {
 		Endpoint                 endpoint.Endpoint `mapstructure:"endpoint"`
@@ -175,11 +155,6 @@ func (a *remoteAuthorizer) Execute(ctx heimdall.Context, sub *subject.Subject) e
 		}
 	}
 
-	err = authInfo.verify(ctx, a.verificationScript)
-	if err != nil {
-		return err
-	}
-
 	authInfo.addHeadersTo(a.headersForUpstream, ctx)
 	authInfo.addAttributesTo(a.name, sub)
 
@@ -214,10 +189,12 @@ func (a *remoteAuthorizer) doAuthorize(ctx heimdall.Context, sub *subject.Subjec
 		return nil, err
 	}
 
-	return &authorizationInformation{
-		headers: resp.Header,
-		payload: data,
-	}, nil
+	err = a.verify(ctx, data)
+	if err != nil {
+		return nil, err
+	}
+
+	return &authorizationInformation{headers: resp.Header, payload: data}, nil
 }
 
 func (a *remoteAuthorizer) createRequest(ctx heimdall.Context, sub *subject.Subject) (*http.Request, error) {
@@ -270,8 +247,6 @@ func (a *remoteAuthorizer) readResponse(ctx heimdall.Context, resp *http.Respons
 	}
 
 	contentType := resp.Header.Get("Content-Type")
-
-	logger.Debug().Msgf("Received response of %s content type", contentType)
 
 	decoder, err := contenttype.NewDecoder(contentType)
 	if err != nil {
@@ -341,4 +316,24 @@ func (a *remoteAuthorizer) calculateCacheKey(sub *subject.Subject) (string, erro
 	hash.Write(rawSub)
 
 	return hex.EncodeToString(hash.Sum(nil)), nil
+}
+
+func (a *remoteAuthorizer) verify(ctx heimdall.Context, result any) error {
+	if a.verificationScript == nil {
+		return nil
+	}
+
+	logger := zerolog.Ctx(ctx.AppContext())
+	logger.Debug().Msg("Verifying authorization response using script")
+
+	res, err := a.verificationScript.ExecuteOnPayload(ctx, result)
+	if err != nil {
+		return errorchain.New(heimdall.ErrAuthorization).CausedBy(err)
+	}
+
+	if !res.ToBoolean() {
+		return errorchain.NewWithMessage(heimdall.ErrAuthorization, "script failed")
+	}
+
+	return nil
 }
