@@ -47,7 +47,7 @@ type remoteAuthorizer struct {
 	e                  endpoint.Endpoint
 	name               string
 	payload            template.Template
-	verificationScript script.Script
+	script             script.Script
 	headersForUpstream []string
 	ttl                time.Duration
 }
@@ -76,7 +76,7 @@ func newRemoteAuthorizer(name string, rawConfig map[string]any) (*remoteAuthoriz
 	type Config struct {
 		Endpoint                 endpoint.Endpoint `mapstructure:"endpoint"`
 		Payload                  template.Template `mapstructure:"payload"`
-		Script                   script.Script     `mapstructure:"verification_script"`
+		Script                   script.Script     `mapstructure:"script"`
 		ResponseHeadersToForward []string          `mapstructure:"forward_response_headers_to_upstream"`
 		CacheTTL                 time.Duration     `mapstructure:"cache_ttl"`
 	}
@@ -101,7 +101,7 @@ func newRemoteAuthorizer(name string, rawConfig map[string]any) (*remoteAuthoriz
 		e:                  conf.Endpoint,
 		name:               name,
 		payload:            conf.Payload,
-		verificationScript: conf.Script,
+		script:             conf.Script,
 		headersForUpstream: conf.ResponseHeadersToForward,
 		ttl:                conf.CacheTTL,
 	}, nil
@@ -283,10 +283,10 @@ func (a *remoteAuthorizer) WithConfig(rawConfig map[string]any) (Authorizer, err
 	}
 
 	return &remoteAuthorizer{
-		e:                  a.e,
-		name:               a.name,
-		payload:            x.IfThenElse(conf.Payload != nil, conf.Payload, a.payload),
-		verificationScript: x.IfThenElse(conf.Script != nil, conf.Script, a.verificationScript),
+		e:       a.e,
+		name:    a.name,
+		payload: x.IfThenElse(conf.Payload != nil, conf.Payload, a.payload),
+		script:  x.IfThenElse(conf.Script != nil, conf.Script, a.script),
 		headersForUpstream: x.IfThenElse(len(conf.ResponseHeadersToForward) != 0,
 			conf.ResponseHeadersToForward, a.headersForUpstream),
 		ttl: x.IfThenElse(conf.CacheTTL > 0, conf.CacheTTL, a.ttl),
@@ -319,14 +319,14 @@ func (a *remoteAuthorizer) calculateCacheKey(sub *subject.Subject) (string, erro
 }
 
 func (a *remoteAuthorizer) verify(ctx heimdall.Context, result any) error {
-	if a.verificationScript == nil {
+	if a.script == nil {
 		return nil
 	}
 
 	logger := zerolog.Ctx(ctx.AppContext())
 	logger.Debug().Msg("Verifying authorization response using script")
 
-	res, err := a.verificationScript.ExecuteOnPayload(ctx, result)
+	res, err := a.script.ExecuteOnPayload(ctx, result)
 	if err != nil {
 		return errorchain.New(heimdall.ErrAuthorization).CausedBy(err)
 	}
