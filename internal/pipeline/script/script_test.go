@@ -151,15 +151,4 @@ if (groups.includes("foo")) {
 			tc.assert(t, err, res)
 		})
 	}
-
-	ecmaScript, err := script.New(`heimdall.Payload.result === true`)
-	require.NoError(t, err)
-
-	// WHEN
-	res, err := ecmaScript.ExecuteOnPayload(ctx, map[string]any{"result": true})
-
-	// THEN
-	require.NoError(t, err)
-
-	assert.True(t, res.ToBoolean())
 }
