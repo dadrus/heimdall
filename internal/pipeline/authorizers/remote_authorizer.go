@@ -78,7 +78,7 @@ func (ai *authorizationInformation) verify(ctx heimdall.Context, verificationScr
 	}
 
 	logger := zerolog.Ctx(ctx.AppContext())
-	logger.Debug().Msg("Authorizing using verification script")
+	logger.Debug().Msg("Verifying authorization response using script")
 
 	res, err := verificationScript.ExecuteOnPayload(ctx, ai.payload)
 	if err != nil {
