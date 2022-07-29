@@ -92,7 +92,7 @@ func TestValidateConfigFileWithValidYAMLContentButFailingSchemaValidation(t *tes
 func TestValidateValidConfigFile(t *testing.T) {
 	t.Parallel()
 
-	err := ValidateConfig("../../test_config.yaml")
+	err := ValidateConfig("./test_data/test_config.yaml")
 
 	require.NoError(t, err)
 }
