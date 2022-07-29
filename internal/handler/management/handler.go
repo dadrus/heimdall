@@ -28,7 +28,7 @@ func newHandler(params handlerParams) (*Handler, error) {
 }
 
 func (h *Handler) registerRoutes(router fiber.Router, logger zerolog.Logger, ks keystore.KeyStore) {
-	logger.Debug().Msg("Registering management routes")
+	logger.Debug().Msg("Registering Management service routes")
 
 	router.Get(EndpointHealth, health)
 	router.Get(EndpointJWKS, etag.New(), jwks(ks))

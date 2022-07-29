@@ -8,12 +8,12 @@ import (
 	"github.com/dadrus/heimdall/internal/handler/decision"
 )
 
-// NewDecisionAPICommand represents the "serve api" command.
-func NewDecisionAPICommand() *cobra.Command {
+// NewDecisionCommand represents the "serve decision" command.
+func NewDecisionCommand() *cobra.Command {
 	return &cobra.Command{
-		Use:     "api",
-		Short:   "Starts heimdall in Decision API mode",
-		Example: "heimdall serve api",
+		Use:     "decision",
+		Short:   "Starts heimdall in Decision operation mode",
+		Example: "heimdall serve decision",
 		Run: func(cmd *cobra.Command, args []string) {
 			configPath, _ := cmd.Flags().GetString("config")
 
@@ -26,7 +26,7 @@ func NewDecisionAPICommand() *cobra.Command {
 
 			err := app.Err()
 			if err != nil {
-				cmd.PrintErrf("Failed to initialize decision endpoint: %v", err)
+				cmd.PrintErrf("Failed to initialize decision service: %v", err)
 				panic(err)
 			}
 

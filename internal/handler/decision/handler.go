@@ -24,7 +24,7 @@ type Handler struct {
 type handlerParams struct {
 	fx.In
 
-	App             *fiber.App `name:"api"`
+	App             *fiber.App `name:"decision"`
 	RulesRepository rules.Repository
 	KeyStore        keystore.KeyStore
 	Config          config.Configuration
@@ -50,14 +50,14 @@ func newHandler(params handlerParams) (*Handler, error) {
 }
 
 func (h *Handler) registerRoutes(router fiber.Router, logger zerolog.Logger) {
-	logger.Debug().Msg("Registering decision api routes")
+	logger.Debug().Msg("Registering decision service routes")
 
 	router.All("/*", fiberxforwarded.New(), fiberauditor.New(), h.decisions)
 }
 
 func (h *Handler) decisions(c *fiber.Ctx) error {
 	logger := zerolog.Ctx(c.UserContext())
-	logger.Debug().Msg("Decision API called")
+	logger.Debug().Msg("Decision endpoint called")
 
 	reqURL := fiberxforwarded.RequestURL(c.UserContext())
 	method := fiberxforwarded.RequestMethod(c.UserContext())

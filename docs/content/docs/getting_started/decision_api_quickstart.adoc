@@ -57,17 +57,17 @@ If you're using a binary, just execute
 
 [source, bash]
 ----
-$ ./heimdall serve api -c config.yaml
+$ ./heimdall serve decision -c config.yaml
 ----
 
-The above command will start heimdall in a link:{{< relref "concepts.adoc#_decision_api_mode" >}}[decision api] mode. By default, the service will be served on port `4456`.
+The above command will start heimdall in a link:{{< relref "concepts.adoc#_decision_api_mode" >}}[decision] operation mode. By default, the service will be served on port `4456`.
 
-Otherwise, if you've built a Docker image, run heimdall in the link:{{< relref "concepts.adoc#_decision_api_mode" >}}[decision api] mode via
+Otherwise, if you've built a Docker image, run heimdall in the link:{{< relref "concepts.adoc#_decision_api_mode" >}}[decision] operation mode via
 
 [source, bash]
 ----
 $ docker run -t -v $PWD:/heimdall/conf -p 4456:4456 \
-  heimdal:local serve api -c /heimdall/conf/config.yaml
+  heimdal:local serve decision -c /heimdall/conf/config.yaml
 ----
 
 In both cases, you'll see similar output to
@@ -91,7 +91,7 @@ Ignore the warnings. They are expected as we've neither configured a rule provid
 
 == Use
 
-Sent some request to heimdall's decision endpoint:
+Sent some request to heimdall's decision service endpoint:
 
 [source, bash]
 ----

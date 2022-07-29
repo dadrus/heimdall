@@ -11,17 +11,17 @@ const (
 	defaultWriteTimeout = time.Second * 10
 	defaultIdleTimeout  = time.Second * 120
 
-	defaultProxyPort         = 4455
-	defaultDecisionAPIPort   = 4456
-	defaultManagementAPIPort = 4457
-	defaultPrometheusPort    = 9000
+	defaultProxyServicePort      = 4455
+	defaultDecisionServicePort   = 4456
+	defaultManagementServicePort = 4457
+	defaultPrometheusServicePort = 9000
 )
 
 // nolint: gochecknoglobals
 var defaultConfig = Configuration{
 	Serve: ServeConfig{
 		Proxy: ServiceConfig{
-			Port: defaultProxyPort,
+			Port: defaultProxyServicePort,
 			Timeout: Timeout{
 				Read:  defaultReadTimeout,
 				Write: defaultWriteTimeout,
@@ -29,7 +29,7 @@ var defaultConfig = Configuration{
 			},
 		},
 		Decision: ServiceConfig{
-			Port: defaultDecisionAPIPort,
+			Port: defaultDecisionServicePort,
 			Timeout: Timeout{
 				Read:  defaultReadTimeout,
 				Write: defaultWriteTimeout,
@@ -37,7 +37,7 @@ var defaultConfig = Configuration{
 			},
 		},
 		Management: ServiceConfig{
-			Port: defaultManagementAPIPort,
+			Port: defaultManagementServicePort,
 			Timeout: Timeout{
 				Read:  defaultReadTimeout,
 				Write: defaultWriteTimeout,
@@ -54,7 +54,7 @@ var defaultConfig = Configuration{
 	},
 	Metrics: MetricsConfig{
 		Prometheus: PrometheusConfig{
-			Port:        defaultPrometheusPort,
+			Port:        defaultPrometheusServicePort,
 			MetricsPath: "/metrics",
 		},
 	},

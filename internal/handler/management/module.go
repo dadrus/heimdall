@@ -31,7 +31,7 @@ func newFiberApp(conf config.Configuration) *fiber.App {
 	service := conf.Serve.Management
 
 	app := fiber.New(fiber.Config{
-		AppName:                 "Heimdall Management API",
+		AppName:                 "Heimdall Management Service",
 		ReadTimeout:             service.Timeout.Read,
 		WriteTimeout:            service.Timeout.Write,
 		IdleTimeout:             service.Timeout.Idle,

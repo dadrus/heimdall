@@ -1233,7 +1233,7 @@
       "additionalProperties": false,
       "type": "object",
       "properties": {
-        "api": {
+        "decision": {
           "$ref": "#/definitions/serviceConfig"
         },
         "proxy": {

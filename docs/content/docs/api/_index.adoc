@@ -10,9 +10,9 @@ menu:
 
 This section lists available endpoints implemented by heimdall:
 
-== Decision API
+== Decision
 
-This endpoint is available under `<decision service>/` path when Heimdall is operated in the Decision API mode. It accepts any subpaths, headers, cookies, etc. Also, all methods can be used as well.
+This endpoint is available under `<decision service>/` path when Heimdall is operated in the Decision operation mode. It accepts any subpaths, headers, cookies, etc. Also, all methods can be used as well.
 
 == Proxy
 
