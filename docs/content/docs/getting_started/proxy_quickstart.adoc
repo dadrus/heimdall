@@ -104,9 +104,9 @@ upstream_1  | Starting up on port 80
 heimdall_1  | 8:26AM WRN No key id for signer configured. Taking first entry from the key store
 heimdall_1  | 8:26AM INF Starting cache evictor
 heimdall_1  | 8:26AM INF Starting rule definition loader
-heimdall_1  | 8:26AM INF Management endpoint starts listening on: :4457
-heimdall_1  | 8:26AM INF Prometheus endpoint starts listening on: :9000
-heimdall_1  | 8:26AM INF Proxy endpoint starts listening on: :4455
+heimdall_1  | 8:26AM INF Management service starts listening on: :4457
+heimdall_1  | 8:26AM INF Prometheus service starts listening on: :9000
+heimdall_1  | 8:26AM INF Proxy service starts listening on: :4455
 ----
 
 Ignore the warnings. They are expected as we've neither configured a rule provider, nor have we configured a key store for JWT signing purposes. Nevertheless, the default rule can be used.

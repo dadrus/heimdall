@@ -1,5 +1,5 @@
 serve:
-  api:
+  decision:
     host: 127.0.0.1
     port: 4468
     verbose_errors: true

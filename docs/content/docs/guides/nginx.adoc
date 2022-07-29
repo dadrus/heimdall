@@ -14,7 +14,7 @@ NOTE: If there is no matching rule on heimdall side, heimdall responds with `404
 
 Since NGINX is highly configurable and heimdall supports different integration options, you can use any of the configuration examples given below. All of these enable heimdall to build the URL of the protected backend server for rule matching purposes.
 
-In most cases you must configure heimdall to trust your NGINX instances by setting link:{{< relref "/docs/configuration/services/decision_api.adoc#_trusted_proxies" >}}[`trusted_proxies`] for the Decision APi service. Exceptions are described in the sections below.
+In most cases you must configure heimdall to trust your NGINX instances by setting link:{{< relref "/docs/configuration/services/decision_api.adoc#_trusted_proxies" >}}[`trusted_proxies`] for the Decision service. Exceptions are described in the sections below.
 
 [#_first_option]
 == Forward only the host information in the header
@@ -138,7 +138,7 @@ ingress:
     nginx.ingress.kubernetes.io/auth-url: "http://heimdall:4456$request_uri" <1>
     nginx.ingress.kubernetes.io/auth-response-headers: Authorization         <2>
 ----
-<1> Configures the controller to pass the request path and query parameters to heimdall's decision endpoint.
+<1> Configures the controller to pass the request path and query parameters to heimdall's decision service endpoint.
 <2> Let NGINX forward the `Authorization` header set by heimdall to the upstream service. This configuration depends on
 your link:{{< relref "/docs/configuration/pipeline/hydrators.adoc" >}}[Hydrators] and link:{{< relref "/docs/configuration/pipeline/mutators.adoc" >}}[Mutators] configuration
 ====

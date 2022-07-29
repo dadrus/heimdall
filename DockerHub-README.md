@@ -40,14 +40,14 @@ rules:
       - mutator: create_jwt
 ```
 
-Start heimdall (here in the decision api mode):
+Start heimdall (here in the decision operation mode):
 
 ```bash
 docker run -t -p 4456:4456 -v $PWD:/heimdall/conf \
   dadrus/heimdall:latest serve api -c /heimdall/conf/heimdall.yaml
 ```
 
-Call the decision api endpoint to emulate behavior of an API-Gateway:
+Call the decision service endpoint to emulate behavior of an API-Gateway:
 
 ```bash
 curl -v 127.0.0.1:4456/foobar
@@ -83,7 +83,7 @@ lccWpqWD43AE-3spchqboFuiuW5IxFGd4Mc0Dp6uepuQ-XiWEFg9rxnaxl-Grr3LfSY83oML53Akrl4l
 What did you actually do? ;)
 
 * You've created a very simple configuration with a default rule, which instructs heimdall to create a JSON Web Token (JWT) with the 'sub' claim set to 'anonymous' for every request on every URL for the HTTP methods GET and POST. You've seen the resulting JWT in the snipped above.
-* You've started heimdall in the decision api mode
+* You've started heimdall in the decision operation mode
 * And sent an HTTP GET request to an imaginary `foobar` endpoint. This is also what an API-Gateway will do before forwarding the received request to an upstream's `foobar` endpoint.
 * Heimdall answered with an HTTP `202 Accepted` response and set the expected `Authorization` header, which the API-Gateway would forward to the upstream service together with the original request.
 

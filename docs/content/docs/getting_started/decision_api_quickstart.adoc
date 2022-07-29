@@ -57,41 +57,41 @@ If you're using a binary, just execute
 
 [source, bash]
 ----
-$ ./heimdall serve api -c config.yaml
+$ ./heimdall serve decision -c config.yaml
 ----
 
-The above command will start heimdall in a link:{{< relref "concepts.adoc#_decision_api_mode" >}}[decision api] mode. By default, the service will be served on port `4456`.
+The above command will start heimdall in a link:{{< relref "concepts.adoc#_decision_api_mode" >}}[decision] operation mode. By default, the service will be served on port `4456`.
 
-Otherwise, if you've built a Docker image, run heimdall in the link:{{< relref "concepts.adoc#_decision_api_mode" >}}[decision api] mode via
+Otherwise, if you've built a Docker image, run heimdall in the link:{{< relref "concepts.adoc#_decision_api_mode" >}}[decision] operation mode via
 
 [source, bash]
 ----
 $ docker run -t -v $PWD:/heimdall/conf -p 4456:4456 \
-  heimdal:local serve api -c /heimdall/conf/config.yaml
+  heimdal:local serve decision -c /heimdall/conf/config.yaml
 ----
 
 In both cases, you'll see similar output to
 
 [source, bash]
 ----
-4:07PM INF No opentracing provider configured. Tracing will be disabled.
-4:07PM INF Instantiating in memory cache
-4:07PM INF Loading pipeline definitions
-4:07PM WRN No rule provider configured. Only defaults will be used.
-4:07PM WRN Key store is not configured. NEVER DO IT IN PRODUCTION!!!! Generating an RSA key pair.
-4:07PM WRN No key id for signer configured. Taking first entry from the key store
-4:07PM INF Starting cache evictor
-4:07PM INF Starting rule definition loader
-4:07PM INF Prometheus endpoint starts listening on: :9000
-4:07PM INF Decision API endpoint starts listening on: :4456
-4:07PM INF Management endpoint starts listening on: :4457
+1:11PM INF No opentracing provider configured. Tracing will be disabled.
+1:11PM INF Instantiating in memory cache
+1:11PM INF Loading pipeline definitions
+1:11PM WRN No rule provider configured. Only defaults will be used.
+1:11PM WRN Key store is not configured. NEVER DO IT IN PRODUCTION!!!! Generating an RSA key pair.
+1:11PM WRN No key id for signer configured. Taking first entry from the key store
+1:11PM INF Starting cache evictor
+1:11PM INF Starting rule definition loader
+1:11PM INF Management service starts listening on: :4457
+1:11PM INF Prometheus service starts listening on: :9000
+1:11PM INF Decision service starts listening on: :4456
 ----
 
 Ignore the warnings. They are expected as we've neither configured a rule provider, nor have we configured a key store for JWT signing purposes. Nevertheless, the default rule can be used.
 
 == Use
 
-Sent some request to heimdall's decision endpoint:
+Sent some request to heimdall's decision service endpoint:
 
 [source, bash]
 ----
@@ -133,8 +133,8 @@ You should also be able to see similar output as below from the heimdall instanc
 [source, bash]
 ----
 ...
-4:10PM INF Handling request http_host=127.0.0.1:4456 http_method=GET
+1:12PM INF Handling request http_host=127.0.0.1:4456 http_method=GET
            http_url=http://127.0.0.1:4456/foobar http_user_agent=curl/7.74.0
-4:10PM INF Access request granted. granted=true http_host=127.0.0.1:4456
+1:12PM INF Access request granted. granted=true http_host=127.0.0.1:4456
            http_method=GET http_url=http://127.0.0.1:4456/foobar http_user_agent=curl/7.74.0
 ----

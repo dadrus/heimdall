@@ -39,6 +39,6 @@ func (c ServiceConfig) Address() string { return fmt.Sprintf("%s:%d", c.Host, c.
 
 type ServeConfig struct {
 	Proxy      ServiceConfig `koanf:"proxy"`
-	Decision   ServiceConfig `koanf:"api"`
+	Decision   ServiceConfig `koanf:"decision"`
 	Management ServiceConfig `koanf:"management"`
 }

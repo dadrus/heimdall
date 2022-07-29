@@ -23,7 +23,7 @@ import (
 )
 
 var Module = fx.Options( // nolint: gochecknoglobals
-	fx.Provide(fx.Annotated{Name: "api", Target: newFiberApp}),
+	fx.Provide(fx.Annotated{Name: "decision", Target: newFiberApp}),
 	fx.Invoke(
 		newHandler,
 		registerHooks,
@@ -34,7 +34,7 @@ func newFiberApp(conf config.Configuration, cache cache.Cache) *fiber.App {
 	service := conf.Serve.Decision
 
 	app := fiber.New(fiber.Config{
-		AppName:                 "Heimdall Decision API",
+		AppName:                 "Heimdall Decision Service",
 		ReadTimeout:             service.Timeout.Read,
 		WriteTimeout:            service.Timeout.Write,
 		IdleTimeout:             service.Timeout.Idle,
@@ -74,7 +74,7 @@ func newFiberApp(conf config.Configuration, cache cache.Cache) *fiber.App {
 type fiberApp struct {
 	fx.In
 
-	App *fiber.App `name:"api"`
+	App *fiber.App `name:"decision"`
 }
 
 func registerHooks(lifecycle fx.Lifecycle, logger zerolog.Logger, app fiberApp, conf config.Configuration) {
@@ -86,14 +86,14 @@ func registerHooks(lifecycle fx.Lifecycle, logger zerolog.Logger, app fiberApp, 
 				go func() {
 					// service connections
 					addr := service.Address()
-					logger.Info().Msgf("Decision API endpoint starts listening on: %s", addr)
+					logger.Info().Msgf("Decision service starts listening on: %s", addr)
 					if service.TLS != nil {
 						if err := app.App.ListenTLS(addr, service.TLS.Cert, service.TLS.Key); err != nil {
-							logger.Fatal().Err(err).Msg("Could not start Decision API endpoint")
+							logger.Fatal().Err(err).Msg("Could not start Decision service")
 						}
 					} else {
 						if err := app.App.Listen(addr); err != nil {
-							logger.Fatal().Err(err).Msg("Could not start Decision API endpoint")
+							logger.Fatal().Err(err).Msg("Could not start Decision service")
 						}
 					}
 				}()
@@ -101,7 +101,7 @@ func registerHooks(lifecycle fx.Lifecycle, logger zerolog.Logger, app fiberApp, 
 				return nil
 			},
 			OnStop: func(ctx context.Context) error {
-				logger.Info().Msg("Tearing down Decision API endpoint")
+				logger.Info().Msg("Tearing down Decision service")
 
 				return app.App.Shutdown()
 			},

@@ -12,7 +12,7 @@ import (
 func NewProxyCommand() *cobra.Command {
 	return &cobra.Command{
 		Use:     "proxy",
-		Short:   "Starts heimdall in Reverse Proxy mode",
+		Short:   "Starts heimdall in Reverse Proxy operation mode",
 		Example: "heimdall serve proxy",
 		Run: func(cmd *cobra.Command, args []string) {
 			configPath, _ := cmd.Flags().GetString("config")
@@ -26,7 +26,7 @@ func NewProxyCommand() *cobra.Command {
 
 			err := app.Err()
 			if err != nil {
-				cmd.PrintErrf("Failed to initialize proxy endpoint: %v", err)
+				cmd.PrintErrf("Failed to initialize proxy service: %v", err)
 				panic(err)
 			}
 

@@ -9,13 +9,13 @@ menu:
     parent: "Services"
 ---
 
-Decision API is one of the operating modes supported by Heimdall, used if you start Heimdall with `heimdall serve api`. By default, Heimdall listens on `0.0.0.0:4456/` endpoint for incoming requests in this mode of operation and also configures useful default timeouts. No other options are configured. You can, and should however adjust the configuration for your needs.
+Decision API is one of the operating modes supported by Heimdall, used if you start Heimdall with `heimdall serve decision`. By default, Heimdall listens on `0.0.0.0:4456/` endpoint for incoming requests in this mode of operation and also configures useful default timeouts. No other options are configured. You can, and should however adjust the configuration for your needs.
 
 This service exposes only the Decision API endpoint.
 
 == Configuration
 
-The configuration for the Decision API can be adjusted in the `api` property, which lives in the `serve` property of heimdall's configuration and supports the following properties.
+The configuration for the Decision service can be adjusted in the `decision` property, which lives in the `serve` property of heimdall's configuration and supports the following properties.
 
 * *`host`*: _string_ (optional)
 +
@@ -27,7 +27,7 @@ Makes actually only sense, if your reverse proxy/gateway, which communicates wit
 
 [source, yaml]
 ----
-api:
+decision:
   host: 127.0.0.1
 ----
 ====
@@ -40,7 +40,7 @@ By making use of this property, you can specify the TCP port the heimdall should
 ====
 [source, yaml]
 ----
-api:
+decision:
   port: 4444
 ----
 ====
@@ -65,7 +65,7 @@ The `message` will however contain just high-level information, like "failed to 
 ====
 [source, yaml]
 ----
-api:
+decision:
   verbose_errors: true
 ----
 ====
@@ -78,7 +78,7 @@ Like written in the introduction of this section, Heimdall configures useful tim
 ====
 [source, yaml]
 ----
-api:
+decision:
   timeout:
     read: 1s
     write: 2s
@@ -94,7 +94,7 @@ https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS[CORS] (Cross-Origin Resou
 ====
 [source, yaml]
 ----
-api:
+decision:
   cors:
     allowed_origins:
       - example.org
@@ -108,13 +108,13 @@ api:
 
 * *`tls`*: _link:{{< relref "configuration_types.adoc#_tls" >}}[TLS]_ (optional)
 +
-By default, the Decision API accepts HTTP requests. Depending on your deployment scenario, you could require Heimdall to accept HTTPS requests only. You can do so by making use of this option.
+By default, the Decision service accepts HTTP requests. Depending on your deployment scenario, you could require Heimdall to accept HTTPS requests only. You can do so by making use of this option.
 +
 .TLS configuration
 ====
 [source, yaml]
 ----
-api:
+decision:
   tls:
     key: /path/to/private_key.pem
     cert: /path/to/certificate.pem
@@ -126,13 +126,13 @@ api:
 +
 The usage of the Decision API makes only sense, if operated behind some sort of proxy, like API Gateway, etc. In such cases certain header information may be sent to Heimdall using special `X-Forwarded-*` headers or the https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Forwarded[Forwarded] header. For example, the `Host` HTTP header is usually used to return the requested host. But when you’re behind a proxy, the actual host may be stored in an `X-Forwarded-Host` header, which could, however, also be spoofed.
 +
-To prevent header spoofing and allowing such headers to be accepted from trusted proxies only (so the systems, you have configured to make use of Heimdall's Decision API), you should configure the `trusted_proxies` option and list the IPs, or IP ranges (CIDR notation) of your proxies, which make use of Heimdall's Decision API. If not configured, Heimdall will not accept those headers from any client.
+To prevent header spoofing and allowing such headers to be accepted from trusted proxies only (so the systems, you have configured to make use of Heimdall's Decision API), you should configure the `trusted_proxies` option and list the IPs, or IP ranges (CIDR notation) of your proxies, which make use of that service. If not configured, Heimdall will not accept those headers from any client.
 +
 .Enable the usage of the above said headers for only those requests, which came from the IPs listed in the configuration.
 ====
 [source, yaml]
 ----
-api:
+decision:
   trusted_proxies:
     - 192.168.2.15
     - 192.168.2.16 
@@ -143,7 +143,7 @@ api:
 ====
 [source, yaml]
 ----
-api:
+decision:
   trusted_proxies:
     - 192.168.2.0/24
 ----

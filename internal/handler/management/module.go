@@ -31,7 +31,7 @@ func newFiberApp(conf config.Configuration) *fiber.App {
 	service := conf.Serve.Management
 
 	app := fiber.New(fiber.Config{
-		AppName:                 "Heimdall Management API",
+		AppName:                 "Heimdall Management Service",
 		ReadTimeout:             service.Timeout.Read,
 		WriteTimeout:            service.Timeout.Write,
 		IdleTimeout:             service.Timeout.Idle,
@@ -80,14 +80,14 @@ func registerHooks(lifecycle fx.Lifecycle, logger zerolog.Logger, app fiberApp, 
 				go func() {
 					// service connections
 					addr := service.Address()
-					logger.Info().Msgf("Management endpoint starts listening on: %s", addr)
+					logger.Info().Msgf("Management service starts listening on: %s", addr)
 					if service.TLS != nil {
 						if err := app.App.ListenTLS(addr, service.TLS.Cert, service.TLS.Key); err != nil {
-							logger.Fatal().Err(err).Msg("Could not start Management endpoint")
+							logger.Fatal().Err(err).Msg("Could not start Management service")
 						}
 					} else {
 						if err := app.App.Listen(addr); err != nil {
-							logger.Fatal().Err(err).Msg("Could not start Management endpoint")
+							logger.Fatal().Err(err).Msg("Could not start Management service")
 						}
 					}
 				}()
@@ -95,7 +95,7 @@ func registerHooks(lifecycle fx.Lifecycle, logger zerolog.Logger, app fiberApp, 
 				return nil
 			},
 			OnStop: func(ctx context.Context) error {
-				logger.Info().Msg("Tearing down Management endpoint")
+				logger.Info().Msg("Tearing down Management service")
 
 				return app.App.Shutdown()
 			},

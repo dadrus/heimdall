@@ -14,7 +14,7 @@ Below you can find possible contents (not exhaustive) for Heimdall's `config.yam
 [source, yaml]
 ----
 serve:
-  api:
+  decision:
     host: 127.0.0.1
     port: 4468
     verbose_errors: true

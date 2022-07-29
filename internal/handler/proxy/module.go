@@ -35,7 +35,7 @@ func newFiberApp(conf config.Configuration, cache cache.Cache) *fiber.App {
 	service := conf.Serve.Proxy
 
 	app := fiber.New(fiber.Config{
-		AppName:                 "Heimdall Proxy",
+		AppName:                 "Heimdall Proxy Service",
 		ReadTimeout:             service.Timeout.Read,
 		WriteTimeout:            service.Timeout.Write,
 		IdleTimeout:             service.Timeout.Idle,
@@ -88,14 +88,14 @@ func registerHooks(lifecycle fx.Lifecycle, logger zerolog.Logger, app fiberApp, 
 				go func() {
 					// service connections
 					addr := service.Address()
-					logger.Info().Msgf("Proxy endpoint starts listening on: %s", addr)
+					logger.Info().Msgf("Proxy service starts listening on: %s", addr)
 					if service.TLS != nil {
 						if err := app.App.ListenTLS(addr, service.TLS.Cert, service.TLS.Key); err != nil {
-							logger.Fatal().Err(err).Msg("Could not start Proxy endpoint")
+							logger.Fatal().Err(err).Msg("Could not start Proxy service")
 						}
 					} else {
 						if err := app.App.Listen(addr); err != nil {
-							logger.Fatal().Err(err).Msg("Could not start Proxy endpoint")
+							logger.Fatal().Err(err).Msg("Could not start Proxy service")
 						}
 					}
 				}()
@@ -103,7 +103,7 @@ func registerHooks(lifecycle fx.Lifecycle, logger zerolog.Logger, app fiberApp, 
 				return nil
 			},
 			OnStop: func(ctx context.Context) error {
-				logger.Info().Msg("Tearing down Proxy endpoint")
+				logger.Info().Msg("Tearing down Proxy service")
 
 				return app.App.Shutdown()
 			},

@@ -1,5 +1,5 @@
 serve:
-  api:
+  decision:
     port: 4468
     verbose_errors: true
     trusted_proxies:

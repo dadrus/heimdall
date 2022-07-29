@@ -84,7 +84,7 @@ max_age: 10s
 ====
 
 == TLS
-As of today, the available configuration options are however limited to setting up the private key, as well as the corresponding certificate. TLSv1.2 and TLSv1.3 can however be used by the Decision API client. TLSv1.2 cipher spec usage is however limited to what the Go Language supports.
+As of today, the available configuration options are however limited to setting up the private key, as well as the corresponding certificate. TLSv1.2 and TLSv1.3 can however be used by the clients, with TLSv1.2 cipher spec usage limited to what the Go Language supports.
 
 * *`key`*: _string_ (mandatory)
 +
