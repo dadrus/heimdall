@@ -15,4 +15,4 @@ Generates the autocompletion script for the specified shell.
 health
 Calls heimdall’s healthcheck endpoint to verify the status of the deployment.
 serve
-Starts heimdall in the decision api, or the reverse proxy mode.</description></item></channel></rss>
+Starts heimdall in the decision, or the reverse proxy operation mode.</description></item></channel></rss>
