@@ -33,7 +33,7 @@ There are two different, not mutually exclusive (you can combine them), ways to 
 
 The evaluation happens also in the order stated above. That also means, you can always overwrite configuration options defined in a configuration file with corresponding environment variables.
 
-If no configuration is provided, heimdall will set useful defaults. These are however not enough, as heimdall doesn't know your context - which mechanisms are required for the one or the other of your upstream endpoints. So, you'll not really be able to use heimdall as all requests will be answered with an HTTP `500 Internal Server Error` response code.
+If no configuration is provided, heimdall will set useful defaults. These are however not enough, as heimdall doesn't know your context - which mechanisms are required for the one or the other of your upstream endpoints. So, you'll not really be able to use heimdall as all requests will be answered with an HTTP `404 Not Found` response code.
 
 === Configuration File
 
