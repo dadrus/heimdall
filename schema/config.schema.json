@@ -11,17 +11,15 @@
       "additionalProperties": false,
       "properties": {
         "key": {
-          "description": "URI pointing to a PEM encoded private key",
+          "description": "path to a PEM encoded private key",
           "type": "string",
-          "format": "uri",
           "examples": [
             "/path/to/key.pem"
           ]
         },
         "cert": {
-          "description": "URI pointing to a PEM encoded certificate",
+          "description": "path to a PEM encoded certificate",
           "type": "string",
-          "format": "uri",
           "examples": [
             "/path/to/cert.pem"
           ]
@@ -108,9 +106,15 @@
           "default": false
         },
         "max_age": {
-          "description": "Indicates how long (in seconds) the results of a preflight request can be cached. The default is 0 which stands for no max age.",
-          "type": "integer",
-          "default": 0
+          "description": "Indicates how long the results of a preflight request can be cached. The default is 0s which stands for no max age.",
+          "type": "string",
+          "default": "0s",
+          "pattern": "^[0-9]+(ns|us|ms|s|m|h)$",
+          "examples": [
+            "5s",
+            "5m",
+            "5h"
+          ]
         }
       }
     },
