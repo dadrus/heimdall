@@ -121,6 +121,7 @@ api:
 ----
 ====
 
+[#_trusted_proxies]
 * *`trusted_proxies`*: _string array_ (optional)
 +
 The usage of the Decision API makes only sense, if operated behind some sort of proxy, like API Gateway, etc. In such cases certain header information may be sent to Heimdall using special `X-Forwarded-*` headers or the https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Forwarded[Forwarded] header. For example, the `Host` HTTP header is usually used to return the requested host. But when you’re behind a proxy, the actual host may be stored in an `X-Forwarded-Host` header, which could, however, also be spoofed.
