@@ -102,6 +102,8 @@ github.com/dop251/goja v0.0.0-20220722151623-4765a9872229 h1:tZlMnVCISkoA6ibywWN
 github.com/dop251/goja v0.0.0-20220722151623-4765a9872229/go.mod h1:1jWwHOtOkEqsfX6tYsufUc7BBTuGHH2ekiJabpkN4CA=
 github.com/dop251/goja v0.0.0-20220727084619-a070957bbee3 h1:8En2WCGM1h/aOkkvGw2cE7PlSq4YSyenrjcNBGgGhPU=
 github.com/dop251/goja v0.0.0-20220727084619-a070957bbee3/go.mod h1:1jWwHOtOkEqsfX6tYsufUc7BBTuGHH2ekiJabpkN4CA=
+github.com/dop251/goja v0.0.0-20220729102323-fca9b959775c h1:3OzSWdpA1aq1LqhIOYe9X54XNejng6xHLksxBP6YFrU=
+github.com/dop251/goja v0.0.0-20220729102323-fca9b959775c/go.mod h1:1jWwHOtOkEqsfX6tYsufUc7BBTuGHH2ekiJabpkN4CA=
 github.com/dop251/goja_nodejs v0.0.0-20210225215109-d91c329300e7/go.mod h1:hn7BA7c8pLvoGndExHudxTDKZ84Pyvv+90pbBjbTz0Y=
 github.com/dop251/goja_nodejs v0.0.0-20211022123610-8dd9abb0616d/go.mod h1:DngW8aVqWbuLRMHItjPUyqdj+HWPvnQe8V8y1nDpIbM=
 github.com/envoyproxy/go-control-plane v0.9.0/go.mod h1:YTl/9mNaCwkRvm6d1a2C3ymFceY/DCBVvsKhRF0iEA4=
