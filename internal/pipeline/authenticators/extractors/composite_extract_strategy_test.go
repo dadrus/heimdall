@@ -8,7 +8,7 @@ import (
 	"github.com/dadrus/heimdall/internal/heimdall/mocks"
 )
 
-func TestCompositeExtractCookieValueWithoutPrefix(t *testing.T) {
+func TestCompositeExtractCookieValueWithoutSchema(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
@@ -34,7 +34,7 @@ func TestCompositeExtractCookieValueWithoutPrefix(t *testing.T) {
 	ctx.AssertExpectations(t)
 }
 
-func TestCompositeExtractHeaderValueWithPrefix(t *testing.T) {
+func TestCompositeExtractHeaderValueWithSchema(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
