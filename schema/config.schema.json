@@ -448,7 +448,7 @@
               "header": {
                 "type": "string"
               },
-              "strip_prefix": {
+              "schema": {
                 "type": "string"
               }
             }
