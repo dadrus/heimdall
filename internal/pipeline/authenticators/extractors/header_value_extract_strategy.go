@@ -1,6 +1,7 @@
 package extractors
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -15,9 +16,15 @@ type HeaderValueExtractStrategy struct {
 
 func (es HeaderValueExtractStrategy) GetAuthData(s heimdall.Context) (AuthData, error) {
 	if val := s.RequestHeader(es.Name); len(val) != 0 {
+		if len(es.Prefix) != 0 && !strings.HasPrefix(val, fmt.Sprintf("%s ", es.Prefix)) {
+			return nil, errorchain.NewWithMessagef(heimdall.ErrArgument,
+				"'%s' header present, but without required '%s' schema", es.Name, es.Prefix)
+		}
+
 		return &headerAuthData{
-			name:  es.Name,
-			value: strings.TrimSpace(strings.TrimPrefix(val, es.Prefix)),
+			name:     es.Name,
+			rawValue: val,
+			value:    strings.TrimSpace(strings.TrimPrefix(val, es.Prefix)),
 		}, nil
 	}
 
@@ -25,12 +32,13 @@ func (es HeaderValueExtractStrategy) GetAuthData(s heimdall.Context) (AuthData, 
 }
 
 type headerAuthData struct {
-	name  string
-	value string
+	name     string
+	rawValue string
+	value    string
 }
 
 func (c *headerAuthData) ApplyTo(req *http.Request) {
-	req.Header.Add(c.name, c.value)
+	req.Header.Add(c.name, c.rawValue)
 }
 
 func (c *headerAuthData) Value() string {
