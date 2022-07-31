@@ -37,7 +37,7 @@ func TestExtractHeaderValue(t *testing.T) {
 		},
 		{
 			uc:       "schema is required, header is present, but without any schema",
-			strategy: HeaderValueExtractStrategy{Name: "X-Test-Header", Prefix: "Foo"},
+			strategy: HeaderValueExtractStrategy{Name: "X-Test-Header", Schema: "Foo"},
 			configureMocks: func(t *testing.T, ctx *mocks.MockContext) {
 				t.Helper()
 
@@ -53,7 +53,7 @@ func TestExtractHeaderValue(t *testing.T) {
 		},
 		{
 			uc:       "schema is required, header is present, but with different schema",
-			strategy: HeaderValueExtractStrategy{Name: "X-Test-Header", Prefix: "Foo"},
+			strategy: HeaderValueExtractStrategy{Name: "X-Test-Header", Schema: "Foo"},
 			configureMocks: func(t *testing.T, ctx *mocks.MockContext) {
 				t.Helper()
 
@@ -69,7 +69,7 @@ func TestExtractHeaderValue(t *testing.T) {
 		},
 		{
 			uc:       "header with required schema is present",
-			strategy: HeaderValueExtractStrategy{Name: "X-Test-Header", Prefix: "Foo"},
+			strategy: HeaderValueExtractStrategy{Name: "X-Test-Header", Schema: "Foo"},
 			configureMocks: func(t *testing.T, ctx *mocks.MockContext) {
 				t.Helper()
 
@@ -84,7 +84,7 @@ func TestExtractHeaderValue(t *testing.T) {
 		},
 		{
 			uc:       "header is not present at all",
-			strategy: HeaderValueExtractStrategy{Name: "X-Test-Header", Prefix: "Foo"},
+			strategy: HeaderValueExtractStrategy{Name: "X-Test-Header", Schema: "Foo"},
 			configureMocks: func(t *testing.T, ctx *mocks.MockContext) {
 				t.Helper()
 

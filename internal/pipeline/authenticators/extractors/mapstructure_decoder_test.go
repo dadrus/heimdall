@@ -23,7 +23,7 @@ func TestUnmarshalAuthenticationDataSourceFromValidYaml(t *testing.T) {
 authentication_data_source:
   - cookie: foo_cookie
   - header: foo_header
-    strip_prefix: hfoo
+    schema: hfoo
   - query_parameter: foo_qparam
   - body_parameter: foo_bparam
 `)
@@ -54,7 +54,7 @@ authentication_data_source:
 	he, ok := ces[1].(*HeaderValueExtractStrategy)
 	require.True(t, ok)
 	assert.Equal(t, "foo_header", he.Name)
-	assert.Equal(t, "hfoo", he.Prefix)
+	assert.Equal(t, "hfoo", he.Schema)
 
 	qe, ok := ces[2].(*QueryParameterExtractStrategy)
 	require.True(t, ok)

@@ -10,13 +10,13 @@ import (
 
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/pipeline/authenticators/extractors"
 	"github.com/dadrus/heimdall/internal/pipeline/subject"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
 const (
-	basicAuthSchemeAttributes          = 2
 	basicAuthSchemeCredentialsElements = 2
 )
 
@@ -83,24 +83,15 @@ func (a *basicAuthAuthenticator) Execute(ctx heimdall.Context) (*subject.Subject
 	logger := zerolog.Ctx(ctx.AppContext())
 	logger.Debug().Msg("Authenticating using basic_auth authenticator")
 
-	headerValue := ctx.RequestHeader("Authorization")
-	if len(headerValue) == 0 {
+	strategy := extractors.HeaderValueExtractStrategy{Name: "Authorization", Schema: "Basic"}
+
+	authData, err := strategy.GetAuthData(ctx)
+	if err != nil {
 		return nil, errorchain.NewWithMessage(heimdall.ErrAuthentication,
-			"no Authorization header received").CausedBy(heimdall.ErrArgument)
+			"expected header not present in request").CausedBy(err)
 	}
 
-	schemeAndValue := strings.Split(headerValue, " ")
-	if len(schemeAndValue) != basicAuthSchemeAttributes {
-		return nil, errorchain.NewWithMessage(heimdall.ErrAuthentication,
-			"unexpected value in the Authorization header").CausedBy(heimdall.ErrArgument)
-	}
-
-	if schemeAndValue[0] != "Basic" {
-		return nil, errorchain.NewWithMessagef(heimdall.ErrAuthentication,
-			"unexpected authentication scheme: %s", schemeAndValue[0]).CausedBy(heimdall.ErrArgument)
-	}
-
-	res, err := base64.StdEncoding.DecodeString(schemeAndValue[1])
+	res, err := base64.StdEncoding.DecodeString(authData.Value())
 	if err != nil {
 		return nil, errorchain.
 			NewWithMessage(heimdall.ErrAuthentication, "failed to decode received credentials value")

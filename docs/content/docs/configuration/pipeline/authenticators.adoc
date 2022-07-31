@@ -110,7 +110,7 @@ The endpoint to communicate to for the actual subject authentication status veri
 
 * *`authentication_data_source`*: _link:{{< relref "configuration_types.adoc#_authentication_data_source" >}}[Authentication Data Source]_ (mandatory, not overridable)
 +
-Where to extract the authentication data from the request. This authenticator will use the matched authentication data source as is while sending it to the `identity_info_endpoint`. If you configure to strip a prefix (if header is defined, this will most probably not work).
+Where to extract the authentication data from the request. This authenticator will use the matched authentication data source as is while sending it to the `identity_info_endpoint`.
 
 * *`session`*: _link:{{< relref "configuration_types.adoc#_session" >}}[Session]_ (mandatory, not overridable)
 +

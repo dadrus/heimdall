@@ -8,7 +8,7 @@ import (
 	"github.com/dadrus/heimdall/internal/heimdall/mocks"
 )
 
-func TestCompositeExtractCookieValueWithoutPrefix(t *testing.T) {
+func TestCompositeExtractCookieValueWithoutSchema(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
@@ -34,22 +34,22 @@ func TestCompositeExtractCookieValueWithoutPrefix(t *testing.T) {
 	ctx.AssertExpectations(t)
 }
 
-func TestCompositeExtractHeaderValueWithPrefix(t *testing.T) {
+func TestCompositeExtractHeaderValueWithSchema(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
 	headerName := "Test-Header"
 	queryParamName := "test_param"
-	valuePrefix := "bar:"
+	headerSchema := "bar:"
 	actualValue := "foo"
 
 	ctx := &mocks.MockContext{}
-	ctx.On("RequestHeader", headerName).Return(valuePrefix + " " + actualValue)
+	ctx.On("RequestHeader", headerName).Return(headerSchema + " " + actualValue)
 	ctx.On("RequestQueryParameter", queryParamName).Return("")
 
 	strategy := CompositeExtractStrategy{
 		QueryParameterExtractStrategy{Name: queryParamName},
-		HeaderValueExtractStrategy{Name: headerName, Prefix: valuePrefix},
+		HeaderValueExtractStrategy{Name: headerName, Schema: headerSchema},
 	}
 
 	// WHEN
@@ -67,14 +67,14 @@ func TestCompositeExtractStrategyOrder(t *testing.T) {
 	// GIVEN
 	headerName := "Test-Header"
 	queryParamName := "test_param"
-	valuePrefix := "bar:"
+	headerSchema := "bar:"
 	actualValue := "foo"
 
 	ctx := &mocks.MockContext{}
-	ctx.On("RequestHeader", headerName).Return(valuePrefix + " " + actualValue)
+	ctx.On("RequestHeader", headerName).Return(headerSchema + " " + actualValue)
 
 	strategy := CompositeExtractStrategy{
-		HeaderValueExtractStrategy{Name: headerName, Prefix: valuePrefix},
+		HeaderValueExtractStrategy{Name: headerName, Schema: headerSchema},
 		QueryParameterExtractStrategy{Name: queryParamName},
 	}
 

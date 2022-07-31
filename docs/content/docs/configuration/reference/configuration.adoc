@@ -157,7 +157,7 @@ pipeline:
           method: GET
         jwt_from:
           - header: Authorization
-            strip_prefix: Bearer
+            schema: Bearer
         assertions:
           audience:
             - bla
