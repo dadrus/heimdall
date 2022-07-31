@@ -11,20 +11,20 @@ import (
 
 type HeaderValueExtractStrategy struct {
 	Name   string
-	Prefix string
+	Schema string
 }
 
 func (es HeaderValueExtractStrategy) GetAuthData(s heimdall.Context) (AuthData, error) {
 	if val := s.RequestHeader(es.Name); len(val) != 0 {
-		if len(es.Prefix) != 0 && !strings.HasPrefix(val, fmt.Sprintf("%s ", es.Prefix)) {
+		if len(es.Schema) != 0 && !strings.HasPrefix(val, fmt.Sprintf("%s ", es.Schema)) {
 			return nil, errorchain.NewWithMessagef(heimdall.ErrArgument,
-				"'%s' header present, but without required '%s' schema", es.Name, es.Prefix)
+				"'%s' header present, but without required '%s' schema", es.Name, es.Schema)
 		}
 
 		return &headerAuthData{
 			name:     es.Name,
 			rawValue: val,
-			value:    strings.TrimSpace(strings.TrimPrefix(val, es.Prefix)),
+			value:    strings.TrimSpace(strings.TrimPrefix(val, es.Schema)),
 		}, nil
 	}
 
