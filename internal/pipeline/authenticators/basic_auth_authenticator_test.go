@@ -254,7 +254,7 @@ password: bar`))
 		assert           func(t *testing.T, err error, sub *subject.Subject)
 	}{
 		{
-			uc: "no authorization header",
+			uc: "no no required header present",
 			configureContext: func(t *testing.T, ctx *mocks.MockContext) {
 				t.Helper()
 
@@ -266,43 +266,7 @@ password: bar`))
 				assert.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrAuthentication)
 				assert.ErrorIs(t, err, heimdall.ErrArgument)
-				assert.Contains(t, err.Error(), "no Authorization header")
-
-				assert.Nil(t, sub)
-			},
-		},
-		{
-			uc: "malformed scheme",
-			configureContext: func(t *testing.T, ctx *mocks.MockContext) {
-				t.Helper()
-
-				ctx.On("RequestHeader", "Authorization").Return("foo bar baz")
-			},
-			assert: func(t *testing.T, err error, sub *subject.Subject) {
-				t.Helper()
-
-				assert.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrAuthentication)
-				assert.ErrorIs(t, err, heimdall.ErrArgument)
-				assert.Contains(t, err.Error(), "unexpected value")
-
-				assert.Nil(t, sub)
-			},
-		},
-		{
-			uc: "unexpected authentication scheme",
-			configureContext: func(t *testing.T, ctx *mocks.MockContext) {
-				t.Helper()
-
-				ctx.On("RequestHeader", "Authorization").Return("foo bar")
-			},
-			assert: func(t *testing.T, err error, sub *subject.Subject) {
-				t.Helper()
-
-				assert.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrAuthentication)
-				assert.ErrorIs(t, err, heimdall.ErrArgument)
-				assert.Contains(t, err.Error(), "unexpected authentication scheme")
+				assert.Contains(t, err.Error(), "expected header not present")
 
 				assert.Nil(t, sub)
 			},
