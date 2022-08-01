@@ -40,19 +40,21 @@ func init() {
 }
 
 type oauth2IntrospectionAuthenticator struct {
-	e   endpoint.Endpoint
-	a   oauth2.Expectation
-	sf  SubjectFactory
-	ads extractors.AuthDataExtractStrategy
-	ttl *time.Duration
+	e                    endpoint.Endpoint
+	a                    oauth2.Expectation
+	sf                   SubjectFactory
+	ads                  extractors.AuthDataExtractStrategy
+	ttl                  *time.Duration
+	allowFallbackOnError bool
 }
 
 func newOAuth2IntrospectionAuthenticator(rawConfig map[string]any) (*oauth2IntrospectionAuthenticator, error) {
 	type Config struct {
-		Endpoint   endpoint.Endpoint  `mapstructure:"introspection_endpoint"`
-		Assertions oauth2.Expectation `mapstructure:"assertions"`
-		Session    Session            `mapstructure:"session"`
-		CacheTTL   *time.Duration     `mapstructure:"cache_ttl"`
+		Endpoint             endpoint.Endpoint  `mapstructure:"introspection_endpoint"`
+		Assertions           oauth2.Expectation `mapstructure:"assertions"`
+		Session              Session            `mapstructure:"session"`
+		CacheTTL             *time.Duration     `mapstructure:"cache_ttl"`
+		AllowFallbackOnError bool               `mapstructure:"allow_fallback_on_error"`
 	}
 
 	var conf Config
@@ -105,11 +107,12 @@ func newOAuth2IntrospectionAuthenticator(rawConfig map[string]any) (*oauth2Intro
 	}
 
 	return &oauth2IntrospectionAuthenticator{
-		ads: extractor,
-		e:   conf.Endpoint,
-		a:   conf.Assertions,
-		sf:  &conf.Session,
-		ttl: conf.CacheTTL,
+		ads:                  extractor,
+		e:                    conf.Endpoint,
+		a:                    conf.Assertions,
+		sf:                   &conf.Session,
+		ttl:                  conf.CacheTTL,
+		allowFallbackOnError: conf.AllowFallbackOnError,
 	}, nil
 }
 
@@ -144,8 +147,9 @@ func (a *oauth2IntrospectionAuthenticator) WithConfig(rawConfig map[string]any) 
 	}
 
 	type Config struct {
-		Assertions *oauth2.Expectation `mapstructure:"assertions"`
-		CacheTTL   *time.Duration      `mapstructure:"cache_ttl"`
+		Assertions           *oauth2.Expectation `mapstructure:"assertions"`
+		CacheTTL             *time.Duration      `mapstructure:"cache_ttl"`
+		AllowFallbackOnError *bool               `mapstructure:"allow_fallback_on_error"`
 	}
 
 	var conf Config
@@ -160,7 +164,14 @@ func (a *oauth2IntrospectionAuthenticator) WithConfig(rawConfig map[string]any) 
 		sf:  a.sf,
 		ads: a.ads,
 		ttl: x.IfThenElse(conf.CacheTTL != nil, conf.CacheTTL, a.ttl),
+		allowFallbackOnError: x.IfThenElseExec(conf.AllowFallbackOnError != nil,
+			func() bool { return *conf.AllowFallbackOnError },
+			func() bool { return a.allowFallbackOnError }),
 	}, nil
+}
+
+func (a *oauth2IntrospectionAuthenticator) IsFallbackOnErrorAllowed() bool {
+	return a.allowFallbackOnError
 }
 
 func (a *oauth2IntrospectionAuthenticator) getSubjectInformation(ctx heimdall.Context, token string) ([]byte, error) {

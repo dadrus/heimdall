@@ -39,3 +39,8 @@ func (a *unauthorizedAuthenticator) WithConfig(_ map[string]any) (Authenticator,
 	// nothing can be reconfigured
 	return a, nil
 }
+
+func (a *unauthorizedAuthenticator) IsFallbackOnErrorAllowed() bool {
+	// not allowed, as this authenticator fails always
+	return false
+}

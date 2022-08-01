@@ -33,3 +33,7 @@ func (m *MockAuthenticator) WithConfig(config map[string]any) (authenticators.Au
 
 	return nil, args.Error(1)
 }
+
+func (m *MockAuthenticator) IsFallbackOnErrorAllowed() bool {
+	return m.Called().Bool(0)
+}

@@ -38,3 +38,8 @@ func (a *noopAuthenticator) WithConfig(_ map[string]any) (Authenticator, error) 
 	// nothing can be reconfigured
 	return a, nil
 }
+
+func (a *noopAuthenticator) IsFallbackOnErrorAllowed() bool {
+	// not allowed, as no error can happen when this authenticator is executed
+	return false
+}

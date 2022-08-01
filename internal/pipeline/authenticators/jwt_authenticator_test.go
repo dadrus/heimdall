@@ -28,6 +28,7 @@ import (
 	"github.com/dadrus/heimdall/internal/x"
 )
 
+// nolint: maintidx
 func TestCreateJwtAuthenticator(t *testing.T) {
 	t.Parallel()
 
@@ -135,6 +136,8 @@ assertions:
 
 				// cache sessiong
 				assert.Equal(t, defaultTTL, auth.ttl)
+
+				assert.False(t, auth.IsFallbackOnErrorAllowed())
 			},
 		},
 		{
@@ -255,6 +258,59 @@ session:
 				assert.Equal(t, defaultTTL, auth.ttl)
 			},
 		},
+		{
+			uc: "with defaults and fallback on error allowed",
+			config: []byte(`
+jwks_endpoint:
+  url: http://test.com
+assertions:
+  issuers:
+    - foobar
+allow_fallback_on_error: true`),
+			assert: func(t *testing.T, err error, auth *jwtAuthenticator) {
+				t.Helper()
+
+				require.NoError(t, err)
+
+				// endpoint settings
+				assert.Equal(t, "http://test.com", auth.e.URL)
+				assert.Equal(t, "GET", auth.e.Method)
+				assert.Equal(t, 1, len(auth.e.Headers))
+				assert.Contains(t, auth.e.Headers, "Accept-Type")
+				assert.Equal(t, auth.e.Headers["Accept-Type"], "application/json")
+
+				// token extractor settings
+				assert.IsType(t, extractors.CompositeExtractStrategy{}, auth.ads)
+				assert.Len(t, auth.ads, 3)
+				assert.Contains(t, auth.ads, extractors.HeaderValueExtractStrategy{Name: "Authorization", Schema: "Bearer"})
+				assert.Contains(t, auth.ads, extractors.QueryParameterExtractStrategy{Name: "access_token"})
+				assert.Contains(t, auth.ads, extractors.BodyParameterExtractStrategy{Name: "access_token"})
+
+				// assertions settings
+				assert.NoError(t, auth.a.ScopesMatcher.Match([]string{}))
+				assert.Empty(t, auth.a.TargetAudiences)
+				assert.Len(t, auth.a.TrustedIssuers, 1)
+				assert.Contains(t, auth.a.TrustedIssuers, "foobar")
+				assert.Len(t, auth.a.AllowedAlgorithms, 6)
+
+				assert.ElementsMatch(t, auth.a.AllowedAlgorithms, []string{
+					string(jose.ES256), string(jose.ES384), string(jose.ES512),
+					string(jose.PS256), string(jose.PS384), string(jose.PS512),
+				})
+				assert.Equal(t, time.Duration(0), auth.a.ValidityLeeway)
+
+				// session settings
+				sess, ok := auth.sf.(*Session)
+				require.True(t, ok)
+				assert.Equal(t, "sub", sess.SubjectIDFrom)
+				assert.Empty(t, sess.SubjectAttributesFrom)
+
+				// cache sessiong
+				assert.Equal(t, defaultTTL, auth.ttl)
+
+				assert.True(t, auth.IsFallbackOnErrorAllowed())
+			},
+		},
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
 			conf, err := testsupport.DecodeTestConfig(tc.config)
@@ -269,6 +325,7 @@ session:
 	}
 }
 
+// nolint: maintidx
 func TestCreateJwtAuthenticatorFromPrototype(t *testing.T) {
 	t.Parallel()
 
@@ -346,6 +403,7 @@ assertions:
 				assert.ElementsMatch(t, configured.a.AllowedAlgorithms, []string{string(jose.ES512)})
 
 				assert.Equal(t, prototype.ttl, configured.ttl)
+				assert.Equal(t, prototype.IsFallbackOnErrorAllowed(), configured.IsFallbackOnErrorAllowed())
 			},
 		},
 		{
@@ -381,6 +439,7 @@ cache_ttl: 5s`),
 
 				assert.NotEqual(t, prototype.ttl, configured.ttl)
 				assert.Equal(t, 5*time.Second, configured.ttl)
+				assert.Equal(t, prototype.IsFallbackOnErrorAllowed(), configured.IsFallbackOnErrorAllowed())
 			},
 		},
 		{
@@ -416,6 +475,7 @@ assertions:
 
 				assert.Equal(t, prototype.ttl, configured.ttl)
 				assert.Equal(t, 5*time.Second, configured.ttl)
+				assert.Equal(t, prototype.IsFallbackOnErrorAllowed(), configured.IsFallbackOnErrorAllowed())
 			},
 		},
 		{
@@ -441,6 +501,7 @@ cache_ttl: 5s`),
 
 				assert.Equal(t, 5*time.Second, prototype.ttl)
 				assert.Equal(t, 15*time.Second, configured.ttl)
+				assert.Equal(t, prototype.IsFallbackOnErrorAllowed(), configured.IsFallbackOnErrorAllowed())
 			},
 		},
 		{
@@ -477,6 +538,34 @@ assertions:
 				assert.Len(t, configured.a.ScopesMatcher, 2)
 				assert.Contains(t, configured.a.ScopesMatcher, "foo")
 				assert.Contains(t, configured.a.ScopesMatcher, "bar")
+				assert.Equal(t, prototype.IsFallbackOnErrorAllowed(), configured.IsFallbackOnErrorAllowed())
+			},
+		},
+		{
+			uc: "prototype with defaults, configured allows fallback on errors",
+			prototypeConfig: []byte(`
+jwks_endpoint:
+  url: http://test.com
+assertions:
+  issuers:
+    - foobar
+cache_ttl: 5s`),
+			config: []byte(`
+allow_fallback_on_error: true
+`),
+			assert: func(t *testing.T, err error, prototype *jwtAuthenticator, configured *jwtAuthenticator) {
+				t.Helper()
+
+				require.NoError(t, err)
+
+				assert.NotEqual(t, prototype, configured)
+				assert.Equal(t, prototype.e, configured.e)
+				assert.Equal(t, prototype.ads, configured.ads)
+				assert.Equal(t, prototype.sf, configured.sf)
+				assert.Equal(t, prototype.a, configured.a)
+
+				assert.NotEqual(t, prototype.IsFallbackOnErrorAllowed(), configured.IsFallbackOnErrorAllowed())
+				assert.True(t, configured.IsFallbackOnErrorAllowed())
 			},
 		},
 	} {

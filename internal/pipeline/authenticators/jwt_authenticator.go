@@ -43,20 +43,22 @@ func init() {
 }
 
 type jwtAuthenticator struct {
-	e   endpoint.Endpoint
-	a   oauth2.Expectation
-	ttl time.Duration
-	sf  SubjectFactory
-	ads extractors.AuthDataExtractStrategy
+	e                    endpoint.Endpoint
+	a                    oauth2.Expectation
+	ttl                  time.Duration
+	sf                   SubjectFactory
+	ads                  extractors.AuthDataExtractStrategy
+	allowFallbackOnError bool
 }
 
 func newJwtAuthenticator(rawConfig map[string]any) (*jwtAuthenticator, error) {
 	type Config struct {
-		Endpoint       endpoint.Endpoint                   `mapstructure:"jwks_endpoint"`
-		AuthDataSource extractors.CompositeExtractStrategy `mapstructure:"jwt_from"`
-		Assertions     oauth2.Expectation                  `mapstructure:"assertions"`
-		Session        Session                             `mapstructure:"session"`
-		CacheTTL       *time.Duration                      `mapstructure:"cache_ttl"`
+		Endpoint             endpoint.Endpoint                   `mapstructure:"jwks_endpoint"`
+		AuthDataSource       extractors.CompositeExtractStrategy `mapstructure:"jwt_from"`
+		Assertions           oauth2.Expectation                  `mapstructure:"assertions"`
+		Session              Session                             `mapstructure:"session"`
+		CacheTTL             *time.Duration                      `mapstructure:"cache_ttl"`
+		AllowFallbackOnError bool                                `mapstructure:"allow_fallback_on_error"`
 	}
 
 	var conf Config
@@ -115,8 +117,9 @@ func newJwtAuthenticator(rawConfig map[string]any) (*jwtAuthenticator, error) {
 		ttl: x.IfThenElseExec(conf.CacheTTL != nil,
 			func() time.Duration { return *conf.CacheTTL },
 			func() time.Duration { return defaultTTL }),
-		sf:  &conf.Session,
-		ads: adg,
+		sf:                   &conf.Session,
+		ads:                  adg,
+		allowFallbackOnError: conf.AllowFallbackOnError,
 	}, nil
 }
 
@@ -161,8 +164,9 @@ func (a *jwtAuthenticator) WithConfig(config map[string]any) (Authenticator, err
 	}
 
 	type Config struct {
-		Assertions *oauth2.Expectation `mapstructure:"assertions"`
-		CacheTTL   *time.Duration      `mapstructure:"cache_ttl"`
+		Assertions           *oauth2.Expectation `mapstructure:"assertions"`
+		CacheTTL             *time.Duration      `mapstructure:"cache_ttl"`
+		AllowFallbackOnError *bool               `mapstructure:"allow_fallback_on_error"`
 	}
 
 	var conf Config
@@ -179,7 +183,14 @@ func (a *jwtAuthenticator) WithConfig(config map[string]any) (Authenticator, err
 			func() time.Duration { return a.ttl }),
 		sf:  a.sf,
 		ads: a.ads,
+		allowFallbackOnError: x.IfThenElseExec(conf.AllowFallbackOnError != nil,
+			func() bool { return *conf.AllowFallbackOnError },
+			func() bool { return a.allowFallbackOnError }),
 	}, nil
+}
+
+func (a *jwtAuthenticator) IsFallbackOnErrorAllowed() bool {
+	return a.allowFallbackOnError
 }
 
 func (a *jwtAuthenticator) getKey(ctx heimdall.Context, keyID string) (*jose.JSONWebKey, error) {

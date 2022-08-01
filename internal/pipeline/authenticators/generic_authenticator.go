@@ -37,18 +37,20 @@ func init() {
 }
 
 type genericAuthenticator struct {
-	e   endpoint.Endpoint
-	sf  SubjectFactory
-	ads extractors.AuthDataExtractStrategy
-	ttl time.Duration
+	e                    endpoint.Endpoint
+	sf                   SubjectFactory
+	ads                  extractors.AuthDataExtractStrategy
+	ttl                  time.Duration
+	allowFallbackOnError bool
 }
 
 func newGenericAuthenticator(rawConfig map[string]any) (*genericAuthenticator, error) {
 	type Config struct {
-		Endpoint       endpoint.Endpoint                   `mapstructure:"identity_info_endpoint"`
-		AuthDataSource extractors.CompositeExtractStrategy `mapstructure:"authentication_data_source"`
-		Session        Session                             `mapstructure:"session"`
-		CacheTTL       *time.Duration                      `mapstructure:"cache_ttl"`
+		Endpoint             endpoint.Endpoint                   `mapstructure:"identity_info_endpoint"`
+		AuthDataSource       extractors.CompositeExtractStrategy `mapstructure:"authentication_data_source"`
+		Session              Session                             `mapstructure:"session"`
+		CacheTTL             *time.Duration                      `mapstructure:"cache_ttl"`
+		AllowFallbackOnError bool                                `mapstructure:"allow_fallback_on_error"`
 	}
 
 	var conf Config
@@ -83,6 +85,7 @@ func newGenericAuthenticator(rawConfig map[string]any) (*genericAuthenticator, e
 		ttl: x.IfThenElseExec(conf.CacheTTL != nil,
 			func() time.Duration { return *conf.CacheTTL },
 			func() time.Duration { return 0 }),
+		allowFallbackOnError: conf.AllowFallbackOnError,
 	}, nil
 }
 
@@ -118,7 +121,8 @@ func (a *genericAuthenticator) WithConfig(config map[string]any) (Authenticator,
 	}
 
 	type Config struct {
-		CacheTTL *time.Duration `mapstructure:"cache_ttl"`
+		CacheTTL             *time.Duration `mapstructure:"cache_ttl"`
+		AllowFallbackOnError *bool          `mapstructure:"allow_fallback_on_error"`
 	}
 
 	var conf Config
@@ -135,7 +139,14 @@ func (a *genericAuthenticator) WithConfig(config map[string]any) (Authenticator,
 		ttl: x.IfThenElseExec(conf.CacheTTL != nil,
 			func() time.Duration { return *conf.CacheTTL },
 			func() time.Duration { return a.ttl }),
+		allowFallbackOnError: x.IfThenElseExec(conf.AllowFallbackOnError != nil,
+			func() bool { return *conf.AllowFallbackOnError },
+			func() bool { return a.allowFallbackOnError }),
 	}, nil
+}
+
+func (a *genericAuthenticator) IsFallbackOnErrorAllowed() bool {
+	return a.allowFallbackOnError
 }
 
 func (a *genericAuthenticator) getSubjectInformation(ctx heimdall.Context,

@@ -115,6 +115,7 @@ session:
 				assert.Contains(t, ces, &extractors.HeaderValueExtractStrategy{Name: "foo-header"})
 				assert.Equal(t, &Session{SubjectIDFrom: "some_template"}, auth.sf)
 				assert.Equal(t, time.Duration(0), auth.ttl)
+				assert.False(t, auth.IsFallbackOnErrorAllowed())
 			},
 		},
 		{
@@ -142,6 +143,35 @@ cache_ttl: 5s`),
 				assert.Contains(t, ces, &extractors.CookieValueExtractStrategy{Name: "foo-cookie"})
 				assert.Equal(t, &Session{SubjectIDFrom: "some_template"}, auth.sf)
 				assert.Equal(t, 5*time.Second, auth.ttl)
+				assert.False(t, auth.IsFallbackOnErrorAllowed())
+			},
+		},
+		{
+			uc: "with valid configuration enabling fallback on errors",
+			config: []byte(`
+identity_info_endpoint:
+  url: http://test.com
+  method: POST
+authentication_data_source:
+  - cookie: foo-cookie
+session:
+  subject_id_from: some_template
+allow_fallback_on_error: true`),
+			assertError: func(t *testing.T, err error, auth *genericAuthenticator) {
+				t.Helper()
+
+				require.NoError(t, err)
+
+				require.NotNil(t, auth)
+				assert.Equal(t, "http://test.com", auth.e.URL)
+				assert.Equal(t, http.MethodPost, auth.e.Method)
+				ces, ok := auth.ads.(extractors.CompositeExtractStrategy)
+				assert.True(t, ok)
+				assert.Len(t, ces, 1)
+				assert.Contains(t, ces, &extractors.CookieValueExtractStrategy{Name: "foo-cookie"})
+				assert.Equal(t, &Session{SubjectIDFrom: "some_template"}, auth.sf)
+				assert.Equal(t, time.Duration(0), auth.ttl)
+				assert.True(t, auth.IsFallbackOnErrorAllowed())
 			},
 		},
 	} {
@@ -177,7 +207,8 @@ identity_info_endpoint:
 authentication_data_source:
   - header: foo-header
 session:
-  subject_id_from: some_template`),
+  subject_id_from: some_template
+allow_fallback_on_error: true`),
 			assert: func(t *testing.T, err error, prototype *genericAuthenticator,
 				configured *genericAuthenticator,
 			) {
@@ -233,6 +264,33 @@ session:
 				assert.Equal(t, time.Duration(0), prototype.ttl)
 				assert.NotEqual(t, prototype.ttl, configured.ttl)
 				assert.Equal(t, 5*time.Second, configured.ttl)
+				assert.Equal(t, prototype.IsFallbackOnErrorAllowed(), configured.IsFallbackOnErrorAllowed())
+			},
+		},
+		{
+			uc: "prototype config with disabled fallback on error, config with enabled fallback on error",
+			prototypeConfig: []byte(`
+identity_info_endpoint:
+  url: http://test.com
+  method: POST
+authentication_data_source:
+  - header: foo-header
+session:
+  subject_id_from: some_template`),
+			config: []byte(`allow_fallback_on_error: true`),
+			assert: func(t *testing.T, err error, prototype *genericAuthenticator,
+				configured *genericAuthenticator,
+			) {
+				t.Helper()
+
+				require.NoError(t, err)
+
+				assert.Equal(t, prototype.e, configured.e)
+				assert.Equal(t, prototype.ads, configured.ads)
+				assert.Equal(t, prototype.sf, configured.sf)
+				assert.Equal(t, prototype.ttl, configured.ttl)
+				assert.NotEqual(t, prototype.IsFallbackOnErrorAllowed(), configured.IsFallbackOnErrorAllowed())
+				assert.True(t, configured.IsFallbackOnErrorAllowed())
 			},
 		},
 		{
@@ -261,6 +319,7 @@ cache_ttl: 15s`),
 				assert.NotEqual(t, prototype.ttl, configured.ttl)
 				assert.Equal(t, 15*time.Second, configured.ttl)
 				assert.Equal(t, 5*time.Second, prototype.ttl)
+				assert.Equal(t, prototype.IsFallbackOnErrorAllowed(), configured.IsFallbackOnErrorAllowed())
 			},
 		},
 	} {

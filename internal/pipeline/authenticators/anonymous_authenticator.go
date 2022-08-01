@@ -59,3 +59,8 @@ func (a *anonymousAuthenticator) WithConfig(config map[string]any) (Authenticato
 
 	return newAnonymousAuthenticator(config)
 }
+
+func (a *anonymousAuthenticator) IsFallbackOnErrorAllowed() bool {
+	// not allowed, as no error can happen when this authenticator is executed
+	return false
+}

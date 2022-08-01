@@ -21,3 +21,7 @@ func (a *MockSubjectCreator) Execute(ctx heimdall.Context) (*subject.Subject, er
 
 	return nil, args.Error(1)
 }
+
+func (a *MockSubjectCreator) IsFallbackOnErrorAllowed() bool {
+	return a.Called().Bool(0)
+}

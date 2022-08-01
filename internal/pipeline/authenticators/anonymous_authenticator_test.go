@@ -157,3 +157,16 @@ func TestAnonymousAuthenticatorExecute(t *testing.T) {
 	assert.Empty(t, sub.Attributes)
 	ctx.AssertExpectations(t)
 }
+
+func TestAnonymousAuthenticatorIsFallbackOnErrorAllowed(t *testing.T) {
+	t.Parallel()
+
+	// GIVEN
+	auth := anonymousAuthenticator{Subject: "foo"}
+
+	// WHEN
+	isAllowed := auth.IsFallbackOnErrorAllowed()
+
+	// THEN
+	require.False(t, isAllowed)
+}

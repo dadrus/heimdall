@@ -45,3 +45,16 @@ func TestCreateNoopAuthenticatorFromPrototype(t *testing.T) {
 	assert.NoError(t, err2)
 	assert.Equal(t, prototype, auth2)
 }
+
+func TestNoopAuthenticatorIsFallbackOnErrorAllowed(t *testing.T) {
+	t.Parallel()
+
+	// GIVEN
+	auth := newNoopAuthenticator()
+
+	// WHEN
+	isAllowed := auth.IsFallbackOnErrorAllowed()
+
+	// THEN
+	require.False(t, isAllowed)
+}

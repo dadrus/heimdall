@@ -36,14 +36,16 @@ func init() {
 }
 
 type basicAuthAuthenticator struct {
-	UserID   string `mapstructure:"user_id"`
-	Password string `mapstructure:"password"`
+	userID               string
+	password             string
+	allowFallbackOnError bool
 }
 
 func newBasicAuthAuthenticator(rawConfig map[string]any) (*basicAuthAuthenticator, error) {
 	type Config struct {
-		UserID   string `mapstructure:"user_id"`
-		Password string `mapstructure:"password"`
+		UserID               string `mapstructure:"user_id"`
+		Password             string `mapstructure:"password"`
+		AllowFallbackOnError bool   `mapstructure:"allow_fallback_on_error"`
 	}
 
 	var conf Config
@@ -64,17 +66,17 @@ func newBasicAuthAuthenticator(rawConfig map[string]any) (*basicAuthAuthenticato
 			NewWithMessagef(heimdall.ErrConfiguration, "basic_auth authenticator requires password to be set")
 	}
 
-	var auth basicAuthAuthenticator
+	auth := basicAuthAuthenticator{allowFallbackOnError: conf.AllowFallbackOnError}
 
 	// rewrite user id and password as hashes to mitigate potential side-channel attacks
 	// during credentials check
 	md := sha256.New()
 	md.Write([]byte(conf.UserID))
-	auth.UserID = hex.EncodeToString(md.Sum(nil))
+	auth.userID = hex.EncodeToString(md.Sum(nil))
 
 	md.Reset()
 	md.Write([]byte(conf.Password))
-	auth.Password = hex.EncodeToString(md.Sum(nil))
+	auth.password = hex.EncodeToString(md.Sum(nil))
 
 	return &auth, nil
 }
@@ -111,8 +113,8 @@ func (a *basicAuthAuthenticator) Execute(ctx heimdall.Context) (*subject.Subject
 	md.Write([]byte(userIDAndPassword[1]))
 	password := hex.EncodeToString(md.Sum(nil))
 
-	userIDOK := userID == a.UserID
-	passwordOK := password == a.Password
+	userIDOK := userID == a.userID
+	passwordOK := password == a.password
 
 	if !(userIDOK && passwordOK) {
 		return nil, errorchain.
@@ -129,8 +131,9 @@ func (a *basicAuthAuthenticator) WithConfig(rawConfig map[string]any) (Authentic
 	}
 
 	type Config struct {
-		UserID   string `mapstructure:"user_id"`
-		Password string `mapstructure:"password"`
+		UserID               string `mapstructure:"user_id"`
+		Password             string `mapstructure:"password"`
+		AllowFallbackOnError *bool  `mapstructure:"allow_fallback_on_error"`
 	}
 
 	var conf Config
@@ -142,23 +145,30 @@ func (a *basicAuthAuthenticator) WithConfig(rawConfig map[string]any) (Authentic
 	}
 
 	return &basicAuthAuthenticator{
-		UserID: x.IfThenElseExec(len(conf.UserID) != 0,
+		userID: x.IfThenElseExec(len(conf.UserID) != 0,
 			func() string {
 				md := sha256.New()
 				md.Write([]byte(conf.UserID))
 
 				return hex.EncodeToString(md.Sum(nil))
 			}, func() string {
-				return a.UserID
+				return a.userID
 			}),
-		Password: x.IfThenElseExec(len(conf.Password) != 0,
+		password: x.IfThenElseExec(len(conf.Password) != 0,
 			func() string {
 				md := sha256.New()
 				md.Write([]byte(conf.Password))
 
 				return hex.EncodeToString(md.Sum(nil))
 			}, func() string {
-				return a.Password
+				return a.password
 			}),
+		allowFallbackOnError: x.IfThenElseExec(conf.AllowFallbackOnError != nil,
+			func() bool { return *conf.AllowFallbackOnError },
+			func() bool { return a.allowFallbackOnError }),
 	}, nil
+}
+
+func (a *basicAuthAuthenticator) IsFallbackOnErrorAllowed() bool {
+	return a.allowFallbackOnError
 }
