@@ -63,12 +63,30 @@ func TestCompositeAuthenticatorExecution(t *testing.T) {
 				t.Helper()
 
 				first.On("Execute", ctx).Return(nil, testsupport.ErrTestPurpose)
+				first.On("IsFallbackOnErrorAllowed").Return(false)
 			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
 				assert.Error(t, err)
 				assert.Equal(t, err, testsupport.ErrTestPurpose)
+			},
+		},
+		{
+			uc: "with fallback on error since first authenticator allows fallback on any error",
+			configureMocks: func(t *testing.T, ctx heimdall.Context, first *rulemocks.MockSubjectCreator,
+				second *rulemocks.MockSubjectCreator, sub *subject.Subject,
+			) {
+				t.Helper()
+
+				first.On("Execute", ctx).Return(nil, testsupport.ErrTestPurpose)
+				first.On("IsFallbackOnErrorAllowed").Return(true)
+				second.On("Execute", ctx).Return(sub, nil)
+			},
+			assert: func(t *testing.T, err error) {
+				t.Helper()
+
+				assert.NoError(t, err)
 			},
 		},
 	} {
