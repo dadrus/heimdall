@@ -84,6 +84,10 @@ The identifier of the subject to be verified.
 +
 The password of the subject to be verified.
 
+* *`allow_fallback_on_error`*: _boolean_ (optional, overridable)
++
+If set to `true`, allows the pipeline to fall back to the next authenticator in the pipeline if this one to verify the credentials. Defaults to `false`.
+
 .Configuration of Basic Auth authenticator
 ====
 [source, yaml]
@@ -119,6 +123,10 @@ Where to extract the subject id from the identity info endpoint response, as wel
 * *`cache_ttl`*: _link:{{< relref "configuration_types.adoc#_duration" >}}[Duration]_ (optional, overridable)
 +
 How long to cache the response. If not set, response caching if disabled. The cache key is calculated from the `identity_info_endpoint` configuration and the actual authentication data value.
+
+* *`allow_fallback_on_error`*: _boolean_ (optional, overridable)
++
+If set to `true`, allows the pipeline to fall back to the next authenticator in the pipeline if this one to verify the credentials. Defaults to `false`.
 
 .Configuration of Generic authenticator to work with session cookies
 ====
@@ -192,6 +200,10 @@ Where to extract the subject id from the introspection endpoint response, as wel
 +
 How long to cache the response. If not set, caching of the introspection response is based on the available token expiration information. To disable caching, set it to `0s`. If you set the ttl to a custom value > 0, the expiration time (if available) of the token will be considered. The cache key is calculated from the `introspection_endpoint` configuration and the value of the access token.
 
+* *`allow_fallback_on_error`*: _boolean_ (optional, overridable)
++
+If set to `true`, allows the pipeline to fall back to the next authenticator in the pipeline if this one to verify the credentials. Defaults to `false`.
+
 .Minimal possible configuration
 ====
 [source, yaml]
@@ -234,6 +246,10 @@ Where to extract the subject id from the JWT, as well as which attributes to use
 * *`cache_ttl`*: _link:{{< relref "configuration_types.adoc#_duration" >}}[Duration]_ (optional, overridable)
 +
 How long to cache the key from the JWKS response, which was used for signature verification purposes. If not set, Heimdall will cache this key for 10 minutes and not call JWKS endpoint again if the same `kid` is referenced in an JWT and same JWKS endpoint is used. The cache key is calculated from the `jwks_endpoint` configuration and the `kid` referenced in the JWT.
+
+* *`allow_fallback_on_error`*: _boolean_ (optional, overridable)
++
+If set to `true`, allows the pipeline to fall back to the next authenticator in the pipeline if this one to verify the credentials. Defaults to `false`.
 
 .Minimal possible configuration
 ====

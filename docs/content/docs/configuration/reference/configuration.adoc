@@ -106,13 +106,19 @@ metrics:
 
 pipeline:
   authenticators:
-    - id: "noop_authenticator"
+    - id: noop_authenticator
       type: noop
-    - id: "anonymous_authenticator"
+    - id: anonymous_authenticator
       type: anonymous
-    - id: "unauthorized_authenticator"
+    - id: unauthorized_authenticator
       type: unauthorized
-    - id: "kratos_session_authenticator"
+    - id: foo
+      type: basic_auth
+      config:
+        user_id: bar
+        password: baz
+        allow_fallback_on_error: true
+    - id: kratos_session_authenticator
       type: generic
       config:
         identity_info_endpoint:
@@ -125,7 +131,8 @@ pipeline:
         session:
           subject_attributes_from: "@this"
           subject_id_from: "identity.id"
-    - id: "hydra_authenticator"
+        allow_fallback_on_error: true
+    - id: hydra_authenticator
       type: oauth2_introspection
       config:
         introspection_endpoint:
@@ -149,7 +156,8 @@ pipeline:
         session:
           subject_attributes_from: "@this"
           subject_id_from: "sub"
-    - id: "jwt_authenticator"
+        allow_fallback_on_error: true
+    - id: jwt_authenticator
       type: jwt
       config:
         jwks_endpoint:
@@ -171,13 +179,14 @@ pipeline:
           subject_attributes_from: "@this"
           subject_id_from: "identity.id"
         cache_ttl: 5m
+        allow_fallback_on_error: true
 
   authorizers:
-    - id: "allow_all_authorizer"
+    - id: allow_all_authorizer
       type: allow
-    - id: "deny_all_authorizer"
+    - id: deny_all_authorizer
       type: deny
-    - id: "keto_authorizer"
+    - id: keto_authorizer
       type: remote
       config:
         endpoint:
@@ -189,13 +198,13 @@ pipeline:
         script: "heimdall.Payload.response === true"
         forward_response_headers_to_upstream:
           - bla-bar
-    - id: "attributes_based_authorizer"
+    - id: attributes_based_authorizer
       type: local
       config:
         script: "console.log('New JS script')"
 
   hydrators:
-    - id: "subscription_hydrator"
+    - id: subscription_hydrator
       type: generic
       config:
         endpoint:
@@ -204,7 +213,7 @@ pipeline:
           headers:
             bla: bla
         payload: http://foo
-    - id: "profile_data_hydrator"
+    - id: profile_data_hydrator
       type: generic
       config:
         endpoint:
@@ -213,17 +222,17 @@ pipeline:
             foo: bar
 
   mutators:
-    - id: "jwt"
+    - id: jwt
       type: jwt
       config:
         ttl: 5m
         claims: "{'user': {{ quote .Subject.ID }} }"
-    - id: "bla"
+    - id: bla
       type: header
       config:
         headers:
           foo-bar: bla
-    - id: "blabla"
+    - id: blabla
       type: cookie
       config:
         cookies:
