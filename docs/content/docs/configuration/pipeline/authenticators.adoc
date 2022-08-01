@@ -86,7 +86,7 @@ The password of the subject to be verified.
 
 * *`allow_fallback_on_error`*: _boolean_ (optional, overridable)
 +
-If set to `true`, allows the pipeline to fall back to the next authenticator in the pipeline if this one to verify the credentials. Defaults to `false`.
+If set to `true`, allows the pipeline to fall back to the next authenticator in the pipeline if this one fails to verify the credentials. Defaults to `false`.
 
 .Configuration of Basic Auth authenticator
 ====
@@ -126,7 +126,7 @@ How long to cache the response. If not set, response caching if disabled. The ca
 
 * *`allow_fallback_on_error`*: _boolean_ (optional, overridable)
 +
-If set to `true`, allows the pipeline to fall back to the next authenticator in the pipeline if this one to verify the credentials. Defaults to `false`.
+If set to `true`, allows the pipeline to fall back to the next authenticator in the pipeline if this one fails to verify the credentials. Defaults to `false`.
 
 .Configuration of Generic authenticator to work with session cookies
 ====
@@ -202,7 +202,7 @@ How long to cache the response. If not set, caching of the introspection respons
 
 * *`allow_fallback_on_error`*: _boolean_ (optional, overridable)
 +
-If set to `true`, allows the pipeline to fall back to the next authenticator in the pipeline if this one to verify the credentials. Defaults to `false`.
+If set to `true`, allows the pipeline to fall back to the next authenticator in the pipeline if this one fails to verify the credentials. Defaults to `false`.
 
 .Minimal possible configuration
 ====
@@ -249,7 +249,7 @@ How long to cache the key from the JWKS response, which was used for signature v
 
 * *`allow_fallback_on_error`*: _boolean_ (optional, overridable)
 +
-If set to `true`, allows the pipeline to fall back to the next authenticator in the pipeline if this one to verify the credentials. Defaults to `false`.
+If set to `true`, allows the pipeline to fall back to the next authenticator in the pipeline if this one fails to verify the credentials. Defaults to `false`.
 
 .Minimal possible configuration
 ====
