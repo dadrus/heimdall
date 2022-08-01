@@ -101,7 +101,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				t.Helper()
 
 				rule.On("MatchesMethod", "POST").Return(true)
-				rule.On("Execute", mock.Anything).Return(heimdall.ErrAuthentication)
+				rule.On("Execute", mock.Anything).Return(nil, heimdall.ErrAuthentication)
 
 				repository.On("FindRule", mock.Anything).Return(rule, nil)
 			},
@@ -131,7 +131,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 					ctx.SetPipelineError(heimdall.ErrAuthorization)
 
 					return true
-				})).Return(nil)
+				})).Return(nil, nil)
 
 				repository.On("FindRule", mock.Anything).Return(rule, nil)
 			},
@@ -152,10 +152,17 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 			createRequest: func(t *testing.T) *http.Request {
 				t.Helper()
 
-				return httptest.NewRequest(
+				req := httptest.NewRequest(
 					"POST",
 					"http://heimdall.test.local/foobar",
 					nil)
+
+				req.Header.Set("X-Forwarded-Proto", "https")
+				req.Header.Set("X-Forwarded-Host", "test.com")
+				req.Header.Set("X-Forwarded-Path", "bar")
+				req.Header.Set("X-Forwarded-Method", "GET")
+
+				return req
 			},
 			configureMocks: func(t *testing.T, repository *mocks2.MockRepository, rule *mocks4.MockRule) {
 				t.Helper()
@@ -166,7 +173,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 					ctx.AddCookieForUpstream("X-Bar-Foo", "zab")
 
 					return true
-				})).Return(nil)
+				})).Return(&url.URL{Scheme: "http", Host: "heimdall.test.local", Path: "/foobar"}, nil)
 
 				repository.On("FindRule", mock.MatchedBy(func(reqURL *url.URL) bool {
 					return reqURL.Scheme == "http" && reqURL.Host == "heimdall.test.local" && reqURL.Path == "/foobar"
@@ -218,7 +225,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 					ctx.AddCookieForUpstream("X-Bar-Foo", "zab")
 
 					return true
-				})).Return(nil)
+				})).Return(&url.URL{Scheme: "https", Host: "test.com", Path: "/bar"}, nil)
 
 				repository.On("FindRule", mock.MatchedBy(func(reqURL *url.URL) bool {
 					return reqURL.Scheme == "http" && reqURL.Host == "heimdall.test.local" && reqURL.Path == "/foobar"
@@ -271,7 +278,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 					ctx.AddCookieForUpstream("X-Bar-Foo", "zab")
 
 					return true
-				})).Return(nil)
+				})).Return(&url.URL{Scheme: "http", Host: "heimdall.test.local", Path: "/foobar"}, nil)
 
 				repository.On("FindRule", mock.MatchedBy(func(reqURL *url.URL) bool {
 					return reqURL.Scheme == "http" && reqURL.Host == "heimdall.test.local" && reqURL.Path == "/foobar"
@@ -316,7 +323,8 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				t.Helper()
 
 				rule.On("MatchesMethod", "GET").Return(true)
-				rule.On("Execute", mock.Anything).Return(nil)
+				rule.On("Execute", mock.Anything).
+					Return(&url.URL{Scheme: "http", Host: "heimdall.test.local", Path: "/foobar"}, nil)
 
 				repository.On("FindRule", mock.MatchedBy(func(reqURL *url.URL) bool {
 					return reqURL.Scheme == "http" && reqURL.Host == "heimdall.test.local" && reqURL.Path == "/foobar"
@@ -349,7 +357,8 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				t.Helper()
 
 				rule.On("MatchesMethod", "POST").Return(true)
-				rule.On("Execute", mock.Anything).Return(nil)
+				rule.On("Execute", mock.Anything).
+					Return(&url.URL{Scheme: "http", Host: "test.com", Path: "/foobar"}, nil)
 
 				repository.On("FindRule", mock.MatchedBy(func(reqURL *url.URL) bool {
 					return reqURL.Scheme == "http" && reqURL.Host == "test.com" && reqURL.Path == "/foobar"
@@ -382,7 +391,8 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				t.Helper()
 
 				rule.On("MatchesMethod", "POST").Return(true)
-				rule.On("Execute", mock.Anything).Return(nil)
+				rule.On("Execute", mock.Anything).
+					Return(&url.URL{Scheme: "http", Host: "heimdall.test.local", Path: "/bar"}, nil)
 
 				repository.On("FindRule", mock.MatchedBy(func(reqURL *url.URL) bool {
 					return reqURL.Scheme == "http" && reqURL.Host == "heimdall.test.local" && reqURL.Path == "bar"
@@ -415,7 +425,8 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				t.Helper()
 
 				rule.On("MatchesMethod", "POST").Return(true)
-				rule.On("Execute", mock.Anything).Return(nil)
+				rule.On("Execute", mock.Anything).
+					Return(&url.URL{Scheme: "https", Host: "heimdall.test.local", Path: "/foobar"}, nil)
 
 				repository.On("FindRule", mock.MatchedBy(func(reqURL *url.URL) bool {
 					return reqURL.Scheme == "https" && reqURL.Host == "heimdall.test.local" && reqURL.Path == "/foobar"
@@ -451,7 +462,8 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				t.Helper()
 
 				rule.On("MatchesMethod", "PATCH").Return(true)
-				rule.On("Execute", mock.Anything).Return(nil)
+				rule.On("Execute", mock.Anything).
+					Return(&url.URL{Scheme: "https", Host: "test.com", Path: "/bar"}, nil)
 
 				repository.On("FindRule", mock.MatchedBy(func(reqURL *url.URL) bool {
 					return reqURL.Scheme == "https" && reqURL.Host == "test.com" && reqURL.Path == "bar"

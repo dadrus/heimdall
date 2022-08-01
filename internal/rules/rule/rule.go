@@ -9,8 +9,7 @@ import (
 type Rule interface {
 	ID() string
 	SrcID() string
-	Execute(heimdall.Context) error
+	Execute(heimdall.Context) (*url.URL, error)
 	MatchesURL(*url.URL) bool
 	MatchesMethod(string) bool
-	UpstreamURL(initialURL *url.URL) *url.URL
 }

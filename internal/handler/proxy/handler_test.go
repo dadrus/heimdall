@@ -41,7 +41,6 @@ func TestHandleProxyEndpointRequest(t *testing.T) {
 
 	var (
 		upstreamCalled       bool
-		upstreamUsedMethod   string
 		upstreamCheckRequest func(req *http.Request)
 
 		upstreamResponseContentType string
@@ -51,7 +50,6 @@ func TestHandleProxyEndpointRequest(t *testing.T) {
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		upstreamCalled = true
-		upstreamUsedMethod = r.Method
 
 		upstreamCheckRequest(r)
 
@@ -141,12 +139,8 @@ func TestHandleProxyEndpointRequest(t *testing.T) {
 			configureMocks: func(t *testing.T, repository *mocks2.MockRepository, rule *mocks4.MockRule) {
 				t.Helper()
 
-				rule.On("ID").Return("test")
-				rule.On("SrcID").Return("test")
-				rule.On("UpstreamURL", mock.MatchedBy(
-					func(URL *url.URL) bool { return URL.String() == "http://heimdall.test.local/foobar" }),
-				).Return(&url.URL{Scheme: "http", Host: "heimdall.test.local", Path: "/foobar"})
 				rule.On("MatchesMethod", "POST").Return(true)
+				rule.On("Execute", mock.Anything, mock.Anything).Return(nil, nil)
 
 				repository.On("FindRule", mock.Anything).Return(rule, nil)
 			},
@@ -173,11 +167,8 @@ func TestHandleProxyEndpointRequest(t *testing.T) {
 			configureMocks: func(t *testing.T, repository *mocks2.MockRepository, rule *mocks4.MockRule) {
 				t.Helper()
 
-				rule.On("UpstreamURL", mock.MatchedBy(
-					func(URL *url.URL) bool { return URL.String() == "http://heimdall.test.local/foobar" }),
-				).Return(&url.URL{Scheme: "http", Host: "test.local", Path: "/foobar"})
 				rule.On("MatchesMethod", "POST").Return(true)
-				rule.On("Execute", mock.Anything).Return(heimdall.ErrAuthentication)
+				rule.On("Execute", mock.Anything).Return(nil, heimdall.ErrAuthentication)
 
 				repository.On("FindRule", mock.Anything).Return(rule, nil)
 			},
@@ -204,15 +195,12 @@ func TestHandleProxyEndpointRequest(t *testing.T) {
 			configureMocks: func(t *testing.T, repository *mocks2.MockRepository, rule *mocks4.MockRule) {
 				t.Helper()
 
-				rule.On("UpstreamURL", mock.MatchedBy(
-					func(URL *url.URL) bool { return URL.String() == "http://heimdall.test.local/foobar" }),
-				).Return(&url.URL{Scheme: "http", Host: "test.local", Path: "/foobar"})
 				rule.On("MatchesMethod", "POST").Return(true)
 				rule.On("Execute", mock.MatchedBy(func(ctx *requestcontext.RequestContext) bool {
 					ctx.SetPipelineError(heimdall.ErrAuthorization)
 
 					return true
-				})).Return(nil)
+				})).Return(upstreamURL, nil)
 
 				repository.On("FindRule", mock.Anything).Return(rule, nil)
 			},
@@ -243,25 +231,20 @@ func TestHandleProxyEndpointRequest(t *testing.T) {
 
 				req.Header.Set("Content-Type", "text/html")
 				req.Header.Set("X-Forwarded-Method", "GET")
-				req.Header.Set("X-Forwarded-Uri", "/barfoo")
+				req.Header.Set("X-Forwarded-Uri", "https://test.com/barfoo")
 
 				return req
 			},
 			configureMocks: func(t *testing.T, repository *mocks2.MockRepository, rule *mocks4.MockRule) {
 				t.Helper()
 
-				upstreamURL.Path = "/foobar"
-
-				rule.On("UpstreamURL", mock.MatchedBy(
-					func(reqURL *url.URL) bool { return reqURL.String() == "http://heimdall.test.local/foobar" }),
-				).Return(upstreamURL)
 				rule.On("MatchesMethod", "POST").Return(true)
 				rule.On("Execute", mock.MatchedBy(func(ctx *requestcontext.RequestContext) bool {
 					ctx.AddHeaderForUpstream("X-Foo-Bar", "baz")
 					ctx.AddCookieForUpstream("X-Bar-Foo", "zab")
 
 					return true
-				})).Return(nil)
+				})).Return(upstreamURL, nil)
 
 				repository.On("FindRule", mock.MatchedBy(func(reqURL *url.URL) bool {
 					return reqURL.String() == "http://heimdall.test.local/foobar"
@@ -271,6 +254,8 @@ func TestHandleProxyEndpointRequest(t *testing.T) {
 				t.Helper()
 
 				upstreamCheckRequest = func(req *http.Request) {
+					assert.Equal(t, "POST", req.Method)
+
 					assert.Equal(t, "/foobar", req.URL.Path)
 
 					assert.Equal(t, "baz", req.Header.Get("X-Foo-Bar"))
@@ -293,7 +278,6 @@ func TestHandleProxyEndpointRequest(t *testing.T) {
 				t.Helper()
 
 				require.True(t, upstreamCalled)
-				assert.Equal(t, "POST", upstreamUsedMethod)
 
 				require.NoError(t, err)
 				assert.Equal(t, http.StatusOK, response.StatusCode)
@@ -328,18 +312,13 @@ func TestHandleProxyEndpointRequest(t *testing.T) {
 			configureMocks: func(t *testing.T, repository *mocks2.MockRepository, rule *mocks4.MockRule) {
 				t.Helper()
 
-				upstreamURL.Path = "/foobar"
-
-				rule.On("UpstreamURL", mock.MatchedBy(
-					func(reqURL *url.URL) bool { return reqURL.String() == "http://heimdall.test.local/foobar" }),
-				).Return(upstreamURL)
 				rule.On("MatchesMethod", "GET").Return(true)
 				rule.On("Execute", mock.MatchedBy(func(ctx *requestcontext.RequestContext) bool {
 					ctx.AddHeaderForUpstream("X-Foo-Bar", "baz")
 					ctx.AddCookieForUpstream("X-Bar-Foo", "zab")
 
 					return true
-				})).Return(nil)
+				})).Return(upstreamURL, nil)
 
 				repository.On("FindRule", mock.MatchedBy(func(reqURL *url.URL) bool {
 					return reqURL.String() == "http://heimdall.test.local/foobar"
@@ -349,6 +328,7 @@ func TestHandleProxyEndpointRequest(t *testing.T) {
 				t.Helper()
 
 				upstreamCheckRequest = func(req *http.Request) {
+					assert.Equal(t, "GET", req.Method)
 					assert.Equal(t, "/foobar", req.URL.Path)
 
 					assert.Equal(t, "baz", req.Header.Get("X-Foo-Bar"))
@@ -371,7 +351,6 @@ func TestHandleProxyEndpointRequest(t *testing.T) {
 				t.Helper()
 
 				require.True(t, upstreamCalled)
-				assert.Equal(t, "GET", upstreamUsedMethod)
 
 				require.NoError(t, err)
 				assert.Equal(t, http.StatusOK, response.StatusCode)
@@ -399,25 +378,20 @@ func TestHandleProxyEndpointRequest(t *testing.T) {
 					strings.NewReader("hello"))
 
 				req.Header.Set("Content-Type", "text/html")
-				req.Header.Set("X-Forwarded-Uri", "/barfoo")
+				req.Header.Set("X-Forwarded-Path", "/barfoo")
 
 				return req
 			},
 			configureMocks: func(t *testing.T, repository *mocks2.MockRepository, rule *mocks4.MockRule) {
 				t.Helper()
 
-				upstreamURL.Path = "/barfoo"
-
-				rule.On("UpstreamURL", mock.MatchedBy(
-					func(reqURL *url.URL) bool { return reqURL.String() == "http://heimdall.test.local/barfoo" }),
-				).Return(upstreamURL)
 				rule.On("MatchesMethod", "POST").Return(true)
 				rule.On("Execute", mock.MatchedBy(func(ctx *requestcontext.RequestContext) bool {
 					ctx.AddHeaderForUpstream("X-Foo-Bar", "baz")
 					ctx.AddCookieForUpstream("X-Bar-Foo", "zab")
 
 					return true
-				})).Return(nil)
+				})).Return(upstreamURL, nil)
 
 				repository.On("FindRule", mock.MatchedBy(func(reqURL *url.URL) bool {
 					return reqURL.String() == "http://heimdall.test.local/barfoo"
@@ -427,6 +401,7 @@ func TestHandleProxyEndpointRequest(t *testing.T) {
 				t.Helper()
 
 				upstreamCheckRequest = func(req *http.Request) {
+					assert.Equal(t, "POST", req.Method)
 					assert.Equal(t, "/barfoo", req.URL.Path)
 
 					assert.Equal(t, "baz", req.Header.Get("X-Foo-Bar"))
@@ -449,7 +424,6 @@ func TestHandleProxyEndpointRequest(t *testing.T) {
 				t.Helper()
 
 				require.True(t, upstreamCalled)
-				assert.Equal(t, "POST", upstreamUsedMethod)
 
 				require.NoError(t, err)
 				assert.Equal(t, http.StatusOK, response.StatusCode)
@@ -465,7 +439,6 @@ func TestHandleProxyEndpointRequest(t *testing.T) {
 		t.Run("case="+tc.uc, func(t *testing.T) {
 			// GIVEN
 			upstreamCalled = false
-			upstreamUsedMethod = ""
 			upstreamResponseContentType = ""
 			upstreamResponseContent = nil
 			upstreamCheckRequest = func(*http.Request) { t.Helper() }
