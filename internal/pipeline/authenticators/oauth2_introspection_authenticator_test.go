@@ -153,6 +153,61 @@ session:
 
 				// assert subject factory
 				assert.NotNil(t, auth.sf)
+
+				assert.False(t, auth.IsFallbackOnErrorAllowed())
+			},
+		},
+		{
+			uc: "with valid config with defaults and enabled fallback on errors",
+			config: []byte(`
+introspection_endpoint:
+  url: foobar.local
+assertions:
+  issuers:
+    - foobar
+session:
+  subject_id_from: some_template
+allow_fallback_on_error: true
+`),
+			assert: func(t *testing.T, err error, auth *oauth2IntrospectionAuthenticator) {
+				t.Helper()
+
+				require.NoError(t, err)
+
+				// assert endpoint config
+				assert.Equal(t, "foobar.local", auth.e.URL)
+				assert.Equal(t, http.MethodPost, auth.e.Method)
+				assert.Len(t, auth.e.Headers, 2)
+				assert.Contains(t, auth.e.Headers, "Content-Type")
+				assert.Equal(t, auth.e.Headers["Content-Type"], "application/x-www-form-urlencoded")
+				assert.Contains(t, auth.e.Headers, "Accept")
+				assert.Equal(t, auth.e.Headers["Accept"], "application/json")
+				assert.Nil(t, auth.e.AuthStrategy)
+				assert.Nil(t, auth.e.Retry)
+
+				// assert assertions
+				assert.Len(t, auth.a.AllowedAlgorithms, len(defaultAllowedAlgorithms()))
+				assert.ElementsMatch(t, auth.a.AllowedAlgorithms, defaultAllowedAlgorithms())
+				assert.Len(t, auth.a.TrustedIssuers, 1)
+				assert.Contains(t, auth.a.TrustedIssuers, "foobar")
+				assert.NoError(t, auth.a.ScopesMatcher.Match([]string{}))
+				assert.Equal(t, time.Duration(0), auth.a.ValidityLeeway)
+				assert.Empty(t, auth.a.TargetAudiences)
+
+				// assert ttl
+				assert.Nil(t, auth.ttl)
+
+				// assert token extractor settings
+				assert.IsType(t, extractors.CompositeExtractStrategy{}, auth.ads)
+				assert.Len(t, auth.ads, 3)
+				assert.Contains(t, auth.ads, extractors.HeaderValueExtractStrategy{Name: "Authorization", Schema: "Bearer"})
+				assert.Contains(t, auth.ads, extractors.QueryParameterExtractStrategy{Name: "access_token"})
+				assert.Contains(t, auth.ads, extractors.BodyParameterExtractStrategy{Name: "access_token"})
+
+				// assert subject factory
+				assert.NotNil(t, auth.sf)
+
+				assert.True(t, auth.IsFallbackOnErrorAllowed())
 			},
 		},
 	}
@@ -261,6 +316,7 @@ assertions:
 
 				assert.Nil(t, prototype.ttl)
 				assert.Equal(t, prototype.ttl, configured.ttl)
+				assert.Equal(t, prototype.IsFallbackOnErrorAllowed(), configured.IsFallbackOnErrorAllowed())
 			},
 		},
 		{
@@ -288,6 +344,7 @@ session:
 
 				assert.Nil(t, prototype.ttl)
 				assert.Equal(t, 5*time.Second, *configured.ttl)
+				assert.Equal(t, prototype.IsFallbackOnErrorAllowed(), configured.IsFallbackOnErrorAllowed())
 			},
 		},
 		{
@@ -322,6 +379,35 @@ cache_ttl: 15s
 
 				assert.Equal(t, 5*time.Second, *prototype.ttl)
 				assert.Equal(t, 15*time.Second, *configured.ttl)
+				assert.Equal(t, prototype.IsFallbackOnErrorAllowed(), configured.IsFallbackOnErrorAllowed())
+			},
+		},
+		{
+			uc: "prototype config with defaults, target config with fallback on error enabled",
+			prototypeConfig: []byte(`
+introspection_endpoint:
+  url: foobar.local
+assertions:
+  issuers:
+    - foobar
+session:
+  subject_id_from: some_template`),
+			config: []byte(`allow_fallback_on_error: true`),
+			assert: func(t *testing.T, err error, prototype *oauth2IntrospectionAuthenticator,
+				configured *oauth2IntrospectionAuthenticator,
+			) {
+				t.Helper()
+
+				require.NoError(t, err)
+
+				assert.Equal(t, prototype.e, configured.e)
+				assert.Equal(t, prototype.ads, configured.ads)
+				assert.Equal(t, prototype.sf, configured.sf)
+				assert.Equal(t, prototype.a, configured.a)
+
+				assert.Equal(t, prototype.ttl, configured.ttl)
+				assert.NotEqual(t, prototype.IsFallbackOnErrorAllowed(), configured.IsFallbackOnErrorAllowed())
+				assert.True(t, configured.IsFallbackOnErrorAllowed())
 			},
 		},
 	} {
