@@ -138,6 +138,10 @@ func (a *genericAuthenticator) WithConfig(config map[string]any) (Authenticator,
 	}, nil
 }
 
+func (a *genericAuthenticator) IsFallbackOnErrorAllowed() bool {
+	return false
+}
+
 func (a *genericAuthenticator) getSubjectInformation(ctx heimdall.Context,
 	authData extractors.AuthData,
 ) ([]byte, error) {

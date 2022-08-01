@@ -182,6 +182,10 @@ func (a *jwtAuthenticator) WithConfig(config map[string]any) (Authenticator, err
 	}, nil
 }
 
+func (a *jwtAuthenticator) IsFallbackOnErrorAllowed() bool {
+	return false
+}
+
 func (a *jwtAuthenticator) getKey(ctx heimdall.Context, keyID string) (*jose.JSONWebKey, error) {
 	cch := cache.Ctx(ctx.AppContext())
 	logger := zerolog.Ctx(ctx.AppContext())

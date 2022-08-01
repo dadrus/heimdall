@@ -162,3 +162,7 @@ func (a *basicAuthAuthenticator) WithConfig(rawConfig map[string]any) (Authentic
 			}),
 	}, nil
 }
+
+func (a *basicAuthAuthenticator) IsFallbackOnErrorAllowed() bool {
+	return false
+}

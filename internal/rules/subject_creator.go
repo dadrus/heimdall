@@ -7,4 +7,5 @@ import (
 
 type subjectCreator interface {
 	Execute(heimdall.Context) (*subject.Subject, error)
+	IsFallbackOnErrorAllowed() bool
 }

@@ -24,7 +24,7 @@ func (ca compositeSubjectCreator) Execute(ctx heimdall.Context) (*subject.Subjec
 		if err != nil {
 			logger.Info().Err(err).Msg("Pipeline step execution failed")
 
-			if errors.Is(err, heimdall.ErrArgument) && idx < len(ca) {
+			if (errors.Is(err, heimdall.ErrArgument) || a.IsFallbackOnErrorAllowed()) && idx < len(ca) {
 				logger.Info().Msg("Falling back to next configured one.")
 
 				continue

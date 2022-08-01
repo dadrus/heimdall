@@ -163,6 +163,10 @@ func (a *oauth2IntrospectionAuthenticator) WithConfig(rawConfig map[string]any) 
 	}, nil
 }
 
+func (a *oauth2IntrospectionAuthenticator) IsFallbackOnErrorAllowed() bool {
+	return false
+}
+
 func (a *oauth2IntrospectionAuthenticator) getSubjectInformation(ctx heimdall.Context, token string) ([]byte, error) {
 	cch := cache.Ctx(ctx.AppContext())
 	logger := zerolog.Ctx(ctx.AppContext())
