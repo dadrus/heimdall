@@ -24,18 +24,18 @@ heimdall can be configured via environment variables, as well as using a configu
 [source, yaml]
 ----
 log:
-  level: info // <1>
+  level: info                     // <1>
 
 pipeline:
   authenticators:
     - id: anonymous_authenticator // <2>
       type: anonymous
   mutators:
-    - id: create_jwt // <3>
+    - id: create_jwt              // <3>
       type: jwt
 
 rules:
-  default: // <4>
+  default:                        // <4>
     methods:
       - GET
       - POST
@@ -67,7 +67,7 @@ Otherwise, if you've built a Docker image, run heimdall in the link:{{< relref "
 [source, bash]
 ----
 $ docker run -t -v $PWD:/heimdall/conf -p 4456:4456 \
-  heimdal:local serve decision -c /heimdall/conf/config.yaml
+  dadrus/heimdal:latest serve decision -c /heimdall/conf/config.yaml
 ----
 
 In both cases, you'll see similar output to
