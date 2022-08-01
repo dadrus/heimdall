@@ -141,6 +141,7 @@ func TestRuleExecute(t *testing.T) {
 				t.Helper()
 
 				authenticator.On("Execute", ctx).Return(nil, testsupport.ErrTestPurpose)
+				authenticator.On("IsFallbackOnErrorAllowed").Return(false)
 				errHandler.On("Execute", ctx, testsupport.ErrTestPurpose).
 					Return(true, nil)
 			},
@@ -161,6 +162,7 @@ func TestRuleExecute(t *testing.T) {
 				t.Helper()
 
 				authenticator.On("Execute", ctx).Return(nil, testsupport.ErrTestPurpose)
+				authenticator.On("IsFallbackOnErrorAllowed").Return(false)
 				errHandler.On("Execute", ctx, testsupport.ErrTestPurpose).
 					Return(true, testsupport.ErrTestPurpose2)
 			},
