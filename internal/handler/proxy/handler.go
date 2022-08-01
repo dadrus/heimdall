@@ -76,21 +76,14 @@ func (h *Handler) proxy(c *fiber.Ctx) error {
 			"rule (id=%s, src=%s) doesn't match %s method", rule.ID(), rule.SrcID(), method)
 	}
 
-	upstreamURL := rule.UpstreamURL(reqURL)
+	reqCtx := requestcontext.New(c, method, reqURL, h.s)
 
-	if string(c.Request().URI().Host()) == upstreamURL.Host {
-		return errorchain.NewWithMessagef(heimdall.ErrInternal,
-			"cannot forward request to same host & port. "+
-				"Have you forgotten to configure your trusted proxies or the upstream url in the matched rule (id=%s, src=%s)?",
-			rule.ID(), rule.SrcID())
-	}
-
-	reqCtx := requestcontext.New(c, reqURL, h.s)
-	if err = rule.Execute(reqCtx); err != nil {
+	upstreamURL, err := rule.Execute(reqCtx)
+	if err != nil {
 		return err
 	}
 
-	logger.Debug().Msgf("Finalizing request and forwarding request to %s", upstreamURL.String())
+	logger.Debug().Msg("Finalizing request")
 
-	return reqCtx.FinalizeAndForward(method, upstreamURL, h.t)
+	return reqCtx.FinalizeAndForward(upstreamURL, h.t)
 }

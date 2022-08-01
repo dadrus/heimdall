@@ -72,8 +72,10 @@ func (h *Handler) decisions(c *fiber.Ctx) error {
 			"rule doesn't match %s method", method)
 	}
 
-	reqCtx := requestcontext.New(c, reqURL, h.s)
-	if err = rule.Execute(reqCtx); err != nil {
+	reqCtx := requestcontext.New(c, method, reqURL, h.s)
+
+	_, err = rule.Execute(reqCtx)
+	if err != nil {
 		return err
 	}
 

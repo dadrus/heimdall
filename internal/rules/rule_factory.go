@@ -319,7 +319,7 @@ type ruleImpl struct {
 	eh          compositeErrorHandler
 }
 
-func (r *ruleImpl) Execute(ctx heimdall.Context) error {
+func (r *ruleImpl) Execute(ctx heimdall.Context) (*url.URL, error) {
 	logger := zerolog.Ctx(ctx.AppContext())
 
 	if r.isDefault {
@@ -333,24 +333,24 @@ func (r *ruleImpl) Execute(ctx heimdall.Context) error {
 	if err != nil {
 		_, err := r.eh.Execute(ctx, err)
 
-		return err
+		return nil, err
 	}
 
 	// authorizers & hydrators
 	if err := r.sh.Execute(ctx, sub); err != nil {
 		_, err := r.eh.Execute(ctx, err)
 
-		return err
+		return nil, err
 	}
 
 	// mutators
 	if err := r.m.Execute(ctx, sub); err != nil {
 		_, err := r.eh.Execute(ctx, err)
 
-		return err
+		return nil, err
 	}
 
-	return nil
+	return r.upstreamURL, nil
 }
 
 func (r *ruleImpl) MatchesURL(requestURL *url.URL) bool {
@@ -362,16 +362,3 @@ func (r *ruleImpl) MatchesMethod(method string) bool { return slices.Contains(r.
 func (r *ruleImpl) ID() string { return r.id }
 
 func (r *ruleImpl) SrcID() string { return r.srcID }
-
-func (r *ruleImpl) UpstreamURL(initialURL *url.URL) *url.URL {
-	if r.upstreamURL == nil {
-		return initialURL
-	}
-
-	return &url.URL{
-		Scheme:   r.upstreamURL.Scheme,
-		Host:     r.upstreamURL.Host,
-		Path:     initialURL.Path,
-		RawQuery: initialURL.RawQuery,
-	}
-}

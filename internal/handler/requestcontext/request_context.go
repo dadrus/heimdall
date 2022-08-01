@@ -12,10 +12,12 @@ import (
 	"github.com/dadrus/heimdall/internal/fasthttp/tracing"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/x"
+	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
 type RequestContext struct {
 	c               *fiber.Ctx
+	reqMethod       string
 	reqURL          *url.URL
 	upstreamHeaders http.Header
 	upstreamCookies map[string]string
@@ -23,17 +25,18 @@ type RequestContext struct {
 	err             error
 }
 
-func New(c *fiber.Ctx, reqURL *url.URL, signer heimdall.JWTSigner) *RequestContext {
+func New(c *fiber.Ctx, method string, reqURL *url.URL, signer heimdall.JWTSigner) *RequestContext {
 	return &RequestContext{ //nolint:exhaustruct
 		c:               c,
 		jwtSigner:       signer,
+		reqMethod:       method,
 		reqURL:          reqURL,
 		upstreamHeaders: make(http.Header),
 		upstreamCookies: make(map[string]string),
 	}
 }
 
-func (s *RequestContext) RequestMethod() string                    { return s.c.Method() }
+func (s *RequestContext) RequestMethod() string                    { return s.reqMethod }
 func (s *RequestContext) RequestHeaders() map[string]string        { return s.c.GetReqHeaders() }
 func (s *RequestContext) RequestHeader(name string) string         { return s.c.Get(name) }
 func (s *RequestContext) RequestCookie(name string) string         { return s.c.Cookies(name) }
@@ -70,9 +73,15 @@ func (s *RequestContext) Finalize() error {
 	return nil
 }
 
-func (s *RequestContext) FinalizeAndForward(method string, upstreamURL *url.URL, timeout time.Duration) error {
+func (s *RequestContext) FinalizeAndForward(upstreamURL *url.URL, timeout time.Duration) error {
 	if s.err != nil {
 		return s.err
+	}
+
+	if upstreamURL == nil {
+		// happens only if default rule has been applied or if the rule does not have an upstream defined
+		return errorchain.NewWithMessage(heimdall.ErrConfiguration,
+			"cannot forward request due to missing upstream URL")
 	}
 
 	for k := range s.upstreamHeaders {
@@ -90,8 +99,15 @@ func (s *RequestContext) FinalizeAndForward(method string, upstreamURL *url.URL,
 		s.c.Request().Header.Del(name)
 	}
 
-	s.c.Request().Header.SetMethod(method)
-	s.c.Request().SetRequestURI(upstreamURL.String())
+	URL := &url.URL{
+		Scheme:   upstreamURL.Scheme,
+		Host:     upstreamURL.Host,
+		Path:     s.reqURL.Path,
+		RawQuery: s.reqURL.RawQuery,
+	}
+
+	s.c.Request().Header.SetMethod(s.reqMethod)
+	s.c.Request().SetRequestURI(URL.String())
 
 	return tracing.NewClient(&fasthttp.Client{}).DoTimeout(s.c.UserContext(), s.c.Request(), s.c.Response(), timeout)
 }
