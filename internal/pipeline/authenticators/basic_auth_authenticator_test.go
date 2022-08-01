@@ -25,7 +25,7 @@ func TestCreateBasicAuthAuthenticator(t *testing.T) {
 		assert func(t *testing.T, err error, auth *basicAuthAuthenticator)
 	}{
 		{
-			uc: "valid configuration",
+			uc: "valid configuration without set fallback",
 			config: []byte(`
 user_id: foo
 password: bar`),
@@ -42,8 +42,34 @@ password: bar`),
 				md.Write([]byte("bar"))
 				password := hex.EncodeToString(md.Sum(nil))
 
-				assert.Equal(t, userID, auth.UserID)
-				assert.Equal(t, password, auth.Password)
+				assert.Equal(t, userID, auth.userID)
+				assert.Equal(t, password, auth.password)
+				assert.False(t, auth.IsFallbackOnErrorAllowed())
+			},
+		},
+		{
+			uc: "valid configuration without fallback set to true",
+			config: []byte(`
+user_id: foo
+password: bar
+allow_fallback_on_error: true
+`),
+			assert: func(t *testing.T, err error, auth *basicAuthAuthenticator) {
+				t.Helper()
+
+				require.NoError(t, err)
+
+				md := sha256.New()
+				md.Write([]byte("foo"))
+				userID := hex.EncodeToString(md.Sum(nil))
+
+				md.Reset()
+				md.Write([]byte("bar"))
+				password := hex.EncodeToString(md.Sum(nil))
+
+				assert.Equal(t, userID, auth.userID)
+				assert.Equal(t, password, auth.password)
+				assert.True(t, auth.IsFallbackOnErrorAllowed())
 			},
 		},
 		{
@@ -123,6 +149,24 @@ password: bar`),
 			},
 		},
 		{
+			uc: "fallback on error set to true",
+			prototypeConfig: []byte(`
+user_id: foo
+password: bar`),
+			config: []byte(`
+allow_fallback_on_error: true
+`),
+			assert: func(t *testing.T, err error, prototype *basicAuthAuthenticator, configured *basicAuthAuthenticator) {
+				t.Helper()
+
+				require.NoError(t, err)
+				assert.Equal(t, prototype.userID, configured.userID)
+				assert.Equal(t, prototype.password, configured.password)
+				assert.NotEqual(t, prototype.IsFallbackOnErrorAllowed(), configured.IsFallbackOnErrorAllowed())
+				assert.True(t, configured.IsFallbackOnErrorAllowed())
+			},
+		},
+		{
 			uc: "password differs",
 			prototypeConfig: []byte(`
 user_id: foo
@@ -136,8 +180,9 @@ password: baz`),
 				require.NoError(t, err)
 				assert.NotEqual(t, prototype, configured)
 
-				assert.Equal(t, prototype.UserID, configured.UserID)
-				assert.NotEqual(t, prototype.Password, configured.Password)
+				assert.Equal(t, prototype.userID, configured.userID)
+				assert.NotEqual(t, prototype.password, configured.password)
+				assert.Equal(t, prototype.IsFallbackOnErrorAllowed(), configured.IsFallbackOnErrorAllowed())
 			},
 		},
 		{
@@ -153,8 +198,9 @@ password: baz`),
 				require.NoError(t, err)
 				assert.NotEqual(t, prototype, configured)
 
-				assert.Equal(t, prototype.UserID, configured.UserID)
-				assert.NotEqual(t, prototype.Password, configured.Password)
+				assert.Equal(t, prototype.userID, configured.userID)
+				assert.NotEqual(t, prototype.password, configured.password)
+				assert.Equal(t, prototype.IsFallbackOnErrorAllowed(), configured.IsFallbackOnErrorAllowed())
 			},
 		},
 		{
@@ -170,8 +216,9 @@ user_id: baz`),
 				require.NoError(t, err)
 				assert.NotEqual(t, prototype, configured)
 
-				assert.NotEqual(t, prototype.UserID, configured.UserID)
-				assert.Equal(t, prototype.Password, configured.Password)
+				assert.NotEqual(t, prototype.userID, configured.userID)
+				assert.Equal(t, prototype.password, configured.password)
+				assert.Equal(t, prototype.IsFallbackOnErrorAllowed(), configured.IsFallbackOnErrorAllowed())
 			},
 		},
 		{
@@ -188,8 +235,9 @@ password: bar`),
 				require.NoError(t, err)
 				assert.NotEqual(t, prototype, configured)
 
-				assert.NotEqual(t, prototype.UserID, configured.UserID)
-				assert.Equal(t, prototype.Password, configured.Password)
+				assert.NotEqual(t, prototype.userID, configured.userID)
+				assert.Equal(t, prototype.password, configured.password)
+				assert.Equal(t, prototype.IsFallbackOnErrorAllowed(), configured.IsFallbackOnErrorAllowed())
 			},
 		},
 		{
@@ -206,15 +254,16 @@ password: baz`),
 				require.NoError(t, err)
 				assert.NotEqual(t, prototype, configured)
 
-				assert.NotEqual(t, prototype.UserID, configured.UserID)
-				assert.NotEqual(t, prototype.Password, configured.Password)
+				assert.NotEqual(t, prototype.userID, configured.userID)
+				assert.NotEqual(t, prototype.password, configured.password)
+				assert.Equal(t, prototype.IsFallbackOnErrorAllowed(), configured.IsFallbackOnErrorAllowed())
 
 				md := sha256.New()
 				md.Write([]byte("baz"))
 				value := hex.EncodeToString(md.Sum(nil))
 
-				assert.Equal(t, value, configured.UserID)
-				assert.Equal(t, value, configured.Password)
+				assert.Equal(t, value, configured.userID)
+				assert.Equal(t, value, configured.password)
 			},
 		},
 	} {
