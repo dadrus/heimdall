@@ -5,7 +5,6 @@ import (
 	"os"
 	"testing"
 
-	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -35,12 +34,12 @@ func redirStdout(exec func()) ([]byte, error) {
 	return ioutil.ReadFile(fileName)
 }
 
-func TestConfigureTextLogger(t *testing.T) {
+func TestNewTextLogger(t *testing.T) {
 	// WHEN
 	data, err := redirStdout(func() {
-		ConfigureLogging(config.LoggingConfig{Format: config.LogTextFormat})
+		logger := NewLogger(config.LoggingConfig{Format: config.LogTextFormat})
 
-		log.Logger.Info().Msg("Hello Heimdall")
+		logger.Info().Msg("Hello Heimdall")
 	})
 
 	require.NoError(t, err)
@@ -52,9 +51,9 @@ func TestConfigureTextLogger(t *testing.T) {
 func TestConfigureGelfLogger(t *testing.T) {
 	// WHEN
 	data, err := redirStdout(func() {
-		ConfigureLogging(config.LoggingConfig{Format: config.LogGelfFormat})
+		logger := NewLogger(config.LoggingConfig{Format: config.LogGelfFormat})
 
-		log.Logger.Info().Msg("Hello Heimdall")
+		logger.Info().Msg("Hello Heimdall")
 	})
 
 	require.NoError(t, err)
