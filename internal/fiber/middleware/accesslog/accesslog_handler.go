@@ -33,14 +33,10 @@ func createAccessLogger(c *fiber.Ctx, logger zerolog.Logger, start time.Time) ze
 		Str("_http_method", c.Method()).
 		Str("_http_path", c.Path()).
 		Str("_http_user_agent", c.Get("User-Agent")).
-		Str("_http_host", c.Hostname()).
+		Str("_http_host", string(c.Request().URI().Host())).
 		Str("_http_scheme", string(c.Request().URI().Scheme()))
 
 	if c.IsProxyTrusted() { // nolint: nestif
-		if headerValue := c.Get("X-Request-Id"); len(headerValue) != 0 {
-			logContext = logContext.Str("_http_x_request_id", headerValue)
-		}
-
 		if headerValue := c.Get("X-Forwarded-Proto"); len(headerValue) != 0 {
 			logContext = logContext.Str("_http_x_forwarded_proto", headerValue)
 		}
@@ -89,5 +85,6 @@ func createAccessLogFinalizationEvent(c *fiber.Ctx, accessLogger zerolog.Logger,
 	} else if len(alc.Subject) != 0 {
 		event.Str("_subject", alc.Subject).Bool("_access_granted", true)
 	}
+
 	return event
 }
