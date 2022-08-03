@@ -56,7 +56,7 @@ func newHandler(params handlerParams) (*Handler, error) {
 func (h *Handler) registerRoutes(router fiber.Router, logger zerolog.Logger) {
 	logger.Debug().Msg("Registering Proxy service routes")
 
-	router.All("/*", fiberxforwarded.New(), fiberauditor.New(), h.proxy)
+	router.All("/*", fiberxforwarded.New(), fiberauditor.New(logger), h.proxy)
 }
 
 func (h *Handler) proxy(c *fiber.Ctx) error {

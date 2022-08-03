@@ -52,7 +52,7 @@ func newHandler(params handlerParams) (*Handler, error) {
 func (h *Handler) registerRoutes(router fiber.Router, logger zerolog.Logger) {
 	logger.Debug().Msg("Registering decision service routes")
 
-	router.All("/*", fiberxforwarded.New(), fiberauditor.New(), h.decisions)
+	router.All("/*", fiberxforwarded.New(), fiberauditor.New(logger), h.decisions)
 }
 
 func (h *Handler) decisions(c *fiber.Ctx) error {

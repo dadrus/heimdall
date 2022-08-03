@@ -487,7 +487,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 
 			tc.configureMocks(t, repo, rule)
 
-			app := newFiberApp(conf, cch)
+			app := newFiberApp(conf, cch, log.Logger)
 			defer app.Shutdown() // nolint: errcheck
 
 			_, err := newHandler(handlerParams{

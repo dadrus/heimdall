@@ -27,7 +27,7 @@ var Module = fx.Options( // nolint: gochecknoglobals
 	),
 )
 
-func newFiberApp(conf config.Configuration) *fiber.App {
+func newFiberApp(conf config.Configuration, logger zerolog.Logger) *fiber.App {
 	service := conf.Serve.Management
 
 	app := fiber.New(fiber.Config{
@@ -60,7 +60,7 @@ func newFiberApp(conf config.Configuration) *fiber.App {
 		}))
 	}
 
-	app.Use(fiberlogger.New())
+	app.Use(fiberlogger.New(logger))
 
 	return app
 }

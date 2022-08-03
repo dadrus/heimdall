@@ -1,18 +1,21 @@
 package logging
 
 import (
-	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/config"
+	"github.com/dadrus/heimdall/internal/x"
 )
 
 func NewLogger(conf config.LoggingConfig) zerolog.Logger {
 	if conf.Format == config.LogTextFormat {
-		return zerolog.New(zerolog.ConsoleWriter{Out: os.Stdout}).Level(conf.Level)
+		return zerolog.New(zerolog.NewConsoleWriter(func(w *zerolog.ConsoleWriter) {
+			w.TimeFormat = time.RFC3339
+		})).Level(conf.Level).With().Timestamp().Logger()
 	}
 
 	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
@@ -24,18 +27,11 @@ func NewLogger(conf config.LoggingConfig) zerolog.Logger {
 	zerolog.MessageFieldName = "short_message"
 	zerolog.ErrorFieldName = "full_message"
 	zerolog.CallerFieldName = "_caller"
-
 	hostname, err := os.Hostname()
-	if err != nil {
-		hostname = "unknown"
 
-		// nolint
-		fmt.Println("Warn: failed to retrieve the hostname: " + err.Error())
-	}
-
-	return zerolog.New(zerolog.ConsoleWriter{Out: os.Stdout}).Level(conf.Level).With().
+	return zerolog.New(os.Stdout).Level(conf.Level).With().
 		Str("version", "1.1").
-		Str("host", hostname).
+		Str("host", x.IfThenElse(err != nil, hostname, "unknown")).
 		Timestamp().
 		Caller().
 		Logger().

@@ -456,7 +456,7 @@ func TestHandleProxyEndpointRequest(t *testing.T) {
 			tc.configureMocks(t, repo, rule)
 			instructUpstream(t)
 
-			app := newFiberApp(conf, cch)
+			app := newFiberApp(conf, cch, log.Logger)
 			defer app.Shutdown() // nolint: errcheck
 
 			_, err := newHandler(handlerParams{

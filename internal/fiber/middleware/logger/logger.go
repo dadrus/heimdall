@@ -2,14 +2,12 @@ package logger
 
 import (
 	"github.com/gofiber/fiber/v2"
-	"github.com/rs/zerolog/log"
+	"github.com/rs/zerolog"
 )
 
-func New() fiber.Handler {
+func New(logger zerolog.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		l := log.With().Logger()
-
-		c.SetUserContext(l.WithContext(c.UserContext()))
+		c.SetUserContext(logger.WithContext(c.UserContext()))
 
 		return c.Next()
 	}

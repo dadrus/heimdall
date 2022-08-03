@@ -48,7 +48,7 @@ func TestNewTextLogger(t *testing.T) {
 	assert.Contains(t, string(data), "Hello Heimdall")
 }
 
-func TestConfigureGelfLogger(t *testing.T) {
+func TestNewGelfLogger(t *testing.T) {
 	// WHEN
 	data, err := redirStdout(func() {
 		logger := NewLogger(config.LoggingConfig{Format: config.LogGelfFormat})

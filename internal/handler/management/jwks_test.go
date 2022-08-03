@@ -27,7 +27,9 @@ func TestJWKSRequestWithoutEtagUsage(t *testing.T) {
 	ks, err := keystore.NewKeyStoreFromKey(privateKey)
 	require.NoError(t, err)
 
-	app := newFiberApp(config.Configuration{Serve: config.ServeConfig{Management: config.ServiceConfig{}}})
+	app := newFiberApp(
+		config.Configuration{Serve: config.ServeConfig{Management: config.ServiceConfig{}}},
+		log.Logger)
 	_, err = newHandler(handlerParams{
 		App:      app,
 		Logger:   log.Logger,
@@ -77,7 +79,10 @@ func TestJWKSRequestWithEtagUsage(t *testing.T) {
 	ks, err := keystore.NewKeyStoreFromKey(privateKey)
 	require.NoError(t, err)
 
-	app := newFiberApp(config.Configuration{Serve: config.ServeConfig{Management: config.ServiceConfig{}}})
+	app := newFiberApp(
+		config.Configuration{Serve: config.ServeConfig{Management: config.ServiceConfig{}}},
+		log.Logger,
+	)
 	_, err = newHandler(handlerParams{
 		App:      app,
 		Logger:   log.Logger,
