@@ -1,11 +1,27 @@
 package accesslog
 
 import (
+	"context"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/rs/zerolog"
 )
+
+type ctxKey struct{}
+
+type Context struct {
+	Err     error
+	Subject string
+}
+
+func Ctx(ctx context.Context) *Context {
+	if c, ok := ctx.Value(ctxKey{}).(*Context); ok {
+		return c
+	}
+
+	panic("No access log context available")
+}
 
 func New(logger zerolog.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
@@ -54,6 +70,8 @@ func New(logger zerolog.Logger) fiber.Handler {
 
 		accessLogger.Info().Msg("TX started")
 
+		alc := &Context{}
+		c.SetUserContext(context.WithValue(c.UserContext(), ctxKey{}, alc))
 		err := c.Next()
 
 		end := time.Now()
@@ -66,6 +84,12 @@ func New(logger zerolog.Logger) fiber.Handler {
 
 		if err != nil {
 			event = event.Err(err)
+		}
+
+		if alc.Err != nil {
+			event = event.Err(alc.Err).Bool("_access_granted", false)
+		} else if len(alc.Subject) != 0 {
+			event.Str("_subject", alc.Subject).Bool("_access_granted", true)
 		}
 
 		event.Msg("TX finished")

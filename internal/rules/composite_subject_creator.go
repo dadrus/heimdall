@@ -3,6 +3,7 @@ package rules
 import (
 	"errors"
 
+	"github.com/dadrus/heimdall/internal/fiber/middleware/accesslog"
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
@@ -13,6 +14,7 @@ type compositeSubjectCreator []subjectCreator
 
 func (ca compositeSubjectCreator) Execute(ctx heimdall.Context) (*subject.Subject, error) {
 	logger := zerolog.Ctx(ctx.AppContext())
+	acl := accesslog.Ctx(ctx.AppContext())
 
 	var (
 		sub *subject.Subject
@@ -32,6 +34,8 @@ func (ca compositeSubjectCreator) Execute(ctx heimdall.Context) (*subject.Subjec
 
 			break
 		}
+
+		acl.Subject = sub.ID
 
 		return sub, nil
 	}

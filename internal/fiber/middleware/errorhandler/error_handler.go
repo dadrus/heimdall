@@ -3,6 +3,7 @@ package errorhandler
 import (
 	"errors"
 
+	"github.com/dadrus/heimdall/internal/fiber/middleware/accesslog"
 	"github.com/gofiber/fiber/v2"
 	"github.com/rs/zerolog"
 
@@ -13,6 +14,9 @@ import (
 func New(verbose bool) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		if err := c.Next(); err != nil {
+			acl := accesslog.Ctx(c.UserContext())
+			acl.Err = err
+
 			return x.IfThenElse(verbose, verboseErrorHandler, defaultErrorHandler)(c, err)
 		}
 
