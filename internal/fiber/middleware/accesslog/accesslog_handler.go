@@ -8,21 +8,6 @@ import (
 	"github.com/rs/zerolog"
 )
 
-type ctxKey struct{}
-
-type Context struct {
-	Err     error
-	Subject string
-}
-
-func Ctx(ctx context.Context) *Context {
-	if c, ok := ctx.Value(ctxKey{}).(*Context); ok {
-		return c
-	}
-
-	panic("No access log context available")
-}
-
 func New(logger zerolog.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		start := time.Now()
