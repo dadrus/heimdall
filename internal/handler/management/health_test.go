@@ -3,7 +3,7 @@ package management
 import (
 	"crypto/rand"
 	"crypto/rsa"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -48,7 +48,7 @@ func TestHealthRequest(t *testing.T) {
 
 	defer resp.Body.Close()
 
-	rawResp, err := ioutil.ReadAll(resp.Body)
+	rawResp, err := io.ReadAll(resp.Body)
 	require.NoError(t, err)
 
 	assert.JSONEq(t, `{ "status": "ok"}`, string(rawResp))

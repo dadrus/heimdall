@@ -6,7 +6,6 @@ import (
 	"go.uber.org/fx"
 
 	"github.com/dadrus/heimdall/internal/config"
-	fiberauditor "github.com/dadrus/heimdall/internal/fiber/middleware/auditor"
 	fiberxforwarded "github.com/dadrus/heimdall/internal/fiber/middleware/xfmphu"
 	"github.com/dadrus/heimdall/internal/handler/requestcontext"
 	"github.com/dadrus/heimdall/internal/heimdall"
@@ -52,7 +51,7 @@ func newHandler(params handlerParams) (*Handler, error) {
 func (h *Handler) registerRoutes(router fiber.Router, logger zerolog.Logger) {
 	logger.Debug().Msg("Registering decision service routes")
 
-	router.All("/*", fiberxforwarded.New(), fiberauditor.New(logger), h.decisions)
+	router.All("/*", fiberxforwarded.New(), h.decisions)
 }
 
 func (h *Handler) decisions(c *fiber.Ctx) error {

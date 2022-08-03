@@ -10,8 +10,14 @@ import (
 	"github.com/dadrus/heimdall/internal/x"
 )
 
-func NewErrorHandler(verbose bool) fiber.ErrorHandler {
-	return x.IfThenElse(verbose, verboseErrorHandler, defaultErrorHandler)
+func New(verbose bool) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		if err := c.Next(); err != nil {
+			return x.IfThenElse(verbose, verboseErrorHandler, defaultErrorHandler)(c, err)
+		}
+
+		return nil
+	}
 }
 
 func defaultErrorHandler(ctx *fiber.Ctx, err error) error {

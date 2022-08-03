@@ -3,7 +3,7 @@ package decision
 import (
 	"crypto/rand"
 	"crypto/rsa"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -60,7 +60,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				require.NoError(t, err)
 				assert.Equal(t, http.StatusNotFound, response.StatusCode)
 
-				data, err := ioutil.ReadAll(response.Body)
+				data, err := io.ReadAll(response.Body)
 				require.NoError(t, err)
 				assert.Len(t, data, 0)
 			},
@@ -85,7 +85,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				require.NoError(t, err)
 				assert.Equal(t, http.StatusMethodNotAllowed, response.StatusCode)
 
-				data, err := ioutil.ReadAll(response.Body)
+				data, err := io.ReadAll(response.Body)
 				require.NoError(t, err)
 				assert.Len(t, data, 0)
 			},
@@ -111,7 +111,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				require.NoError(t, err)
 				assert.Equal(t, http.StatusUnauthorized, response.StatusCode)
 
-				data, err := ioutil.ReadAll(response.Body)
+				data, err := io.ReadAll(response.Body)
 				require.NoError(t, err)
 				assert.Len(t, data, 0)
 			},
@@ -141,7 +141,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				require.NoError(t, err)
 				assert.Equal(t, http.StatusForbidden, response.StatusCode)
 
-				data, err := ioutil.ReadAll(response.Body)
+				data, err := io.ReadAll(response.Body)
 				require.NoError(t, err)
 				assert.Len(t, data, 0)
 			},
@@ -185,7 +185,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				require.NoError(t, err)
 				assert.Equal(t, http.StatusAccepted, response.StatusCode)
 
-				data, err := ioutil.ReadAll(response.Body)
+				data, err := io.ReadAll(response.Body)
 				require.NoError(t, err)
 				assert.Len(t, data, 0)
 
@@ -237,7 +237,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				require.NoError(t, err)
 				assert.Equal(t, http.StatusAccepted, response.StatusCode)
 
-				data, err := ioutil.ReadAll(response.Body)
+				data, err := io.ReadAll(response.Body)
 				require.NoError(t, err)
 				assert.Len(t, data, 0)
 
@@ -290,7 +290,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				require.NoError(t, err)
 				assert.Equal(t, http.StatusAccepted, response.StatusCode)
 
-				data, err := ioutil.ReadAll(response.Body)
+				data, err := io.ReadAll(response.Body)
 				require.NoError(t, err)
 				assert.Len(t, data, 0)
 

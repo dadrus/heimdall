@@ -14,8 +14,9 @@ import (
 	"go.uber.org/fx"
 
 	"github.com/dadrus/heimdall/internal/config"
-	"github.com/dadrus/heimdall/internal/fiber/errorhandler"
-	fiberlogger "github.com/dadrus/heimdall/internal/fiber/middleware/logger"
+	accesslogmiddleware "github.com/dadrus/heimdall/internal/fiber/middleware/accesslog"
+	errorhandlermiddleware "github.com/dadrus/heimdall/internal/fiber/middleware/errorhandler"
+	loggermiddlerware "github.com/dadrus/heimdall/internal/fiber/middleware/logger"
 	fibertracing "github.com/dadrus/heimdall/internal/fiber/middleware/tracing"
 )
 
@@ -37,11 +38,12 @@ func newFiberApp(conf config.Configuration, logger zerolog.Logger) *fiber.App {
 		IdleTimeout:             service.Timeout.Idle,
 		DisableStartupMessage:   true,
 		EnableTrustedProxyCheck: true,
-		ErrorHandler:            errorhandler.NewErrorHandler(service.VerboseErrors),
 		JSONDecoder:             json.Unmarshal,
 		JSONEncoder:             json.Marshal,
 	})
 	app.Use(recover.New(recover.Config{EnableStackTrace: true}))
+	app.Use(accesslogmiddleware.New(logger))
+	app.Use(loggermiddlerware.New(logger))
 	app.Use(fibertracing.New(
 		fibertracing.WithTracer(opentracing.GlobalTracer()),
 		fibertracing.WithOperationFilter(func(ctx *fiber.Ctx) bool { return ctx.Path() == EndpointHealth }),
@@ -60,7 +62,7 @@ func newFiberApp(conf config.Configuration, logger zerolog.Logger) *fiber.App {
 		}))
 	}
 
-	app.Use(fiberlogger.New(logger))
+	app.Use(errorhandlermiddleware.New(service.VerboseErrors))
 
 	return app
 }
