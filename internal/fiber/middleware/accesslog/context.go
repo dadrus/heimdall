@@ -14,5 +14,6 @@ func Ctx(ctx context.Context) *Context {
 		return c
 	}
 
-	panic("No access log context available")
+	// can only happen in tests
+	return &Context{}
 }
