@@ -3,10 +3,10 @@ package errorhandler
 import (
 	"errors"
 
-	"github.com/dadrus/heimdall/internal/fiber/middleware/accesslog"
 	"github.com/gofiber/fiber/v2"
 	"github.com/rs/zerolog"
 
+	"github.com/dadrus/heimdall/internal/fiber/middleware/accesslog"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/x"
 )
