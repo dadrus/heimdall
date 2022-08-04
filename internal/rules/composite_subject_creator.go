@@ -14,7 +14,6 @@ type compositeSubjectCreator []subjectCreator
 
 func (ca compositeSubjectCreator) Execute(ctx heimdall.Context) (*subject.Subject, error) {
 	logger := zerolog.Ctx(ctx.AppContext())
-	acl := accesslog.Ctx(ctx.AppContext())
 
 	var (
 		sub *subject.Subject
@@ -35,7 +34,7 @@ func (ca compositeSubjectCreator) Execute(ctx heimdall.Context) (*subject.Subjec
 			break
 		}
 
-		acl.Subject = sub.ID
+		accesslog.AddSubject(ctx.AppContext(), sub.ID)
 
 		return sub, nil
 	}

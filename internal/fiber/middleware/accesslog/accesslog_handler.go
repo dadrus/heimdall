@@ -12,7 +12,7 @@ func New(logger zerolog.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		start := time.Now()
 
-		alc := &Context{}
+		alc := &accessContext{}
 		c.SetUserContext(context.WithValue(c.UserContext(), ctxKey{}, alc))
 
 		accLog := createAccessLogger(c, logger, start)
@@ -66,7 +66,7 @@ func createAccessLogger(c *fiber.Ctx, logger zerolog.Logger, start time.Time) ze
 }
 
 func createAccessLogFinalizationEvent(c *fiber.Ctx, accessLogger zerolog.Logger, err error,
-	start time.Time, alc *Context,
+	start time.Time, alc *accessContext,
 ) *zerolog.Event {
 	end := time.Now()
 	duration := end.Sub(start)
@@ -80,10 +80,10 @@ func createAccessLogFinalizationEvent(c *fiber.Ctx, accessLogger zerolog.Logger,
 		event = event.Err(err)
 	}
 
-	if alc.Err != nil {
-		event = event.Err(alc.Err).Bool("_access_granted", false)
-	} else if len(alc.Subject) != 0 {
-		event.Str("_subject", alc.Subject).Bool("_access_granted", true)
+	if alc.err != nil {
+		event = event.Err(alc.err).Bool("_access_granted", false)
+	} else if len(alc.subject) != 0 {
+		event.Str("_subject", alc.subject).Bool("_access_granted", true)
 	}
 
 	return event

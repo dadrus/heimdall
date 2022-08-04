@@ -14,8 +14,7 @@ import (
 func New(verbose bool) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		if err := c.Next(); err != nil {
-			acl := accesslog.Ctx(c.UserContext())
-			acl.Err = err
+			accesslog.AddError(c.UserContext(), err)
 
 			return x.IfThenElse(verbose, verboseErrorHandler, defaultErrorHandler)(c, err)
 		}
