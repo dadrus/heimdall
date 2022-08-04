@@ -148,8 +148,8 @@ Otherwise, if you configure it to use `gelf` format, the output will look as fol
 
 == Tracing in Heimdall
 
-TBD
+See link:{{< relref "/docs/configuration/observability/tracing.adoc" >}}[Tracing Configuration].
 
 == Metrics in Heimdall
 
-TBD
+See link:{{< relref "/docs/configuration/observability/metrics.adoc" >}}[Metrics Configuration].
