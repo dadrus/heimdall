@@ -45,49 +45,48 @@ Otherwise, if you configure it to use `gelf` format, the output will look as fol
 [source, json]
 ----
 {"_level_name": "INFO", "version":"1.1", "host": "unknown", "timestamp": 1659523288,
- "_caller": "/home/dimi/Projects/github/heimdall/internal/tracing/module.go:36",
+ "_caller": "/heimdall/internal/tracing/module.go:36",
  "level": 6, "short_message": "Opentracing tracer initialized."}
 {"_level_name": "INFO", "version": "1.1", "host": "unknown", "timestamp": 1659523288,
- "_caller": "/home/dimi/Projects/github/heimdall/internal/cache/module.go:21",
+ "_caller": "/heimdall/internal/cache/module.go:21",
  "level": 6, "short_message": "Instantiating in memory cache"}
 {"_level_name": "DEBUG", "version": "1.1", "host": "unknown", "timestamp": 1659523288,
- "_caller": "/home/dimi/Projects/github/heimdall/internal/rules/module.go:19",
+ "_caller": "/heimdall/internal/rules/module.go:19",
  "level": 7, "short_message": "Creating rule set event queue."}
 {"_level_name": "INFO", "version": "1.1", "host": "unknown", "timestamp": 1659523288,
- "_caller": "/home/dimi/Projects/github/heimdall/internal/pipeline/handler_factory.go:34",
+ "_caller": "/heimdall/internal/pipeline/handler_factory.go:34",
  "level": 6, "short_message": "Loading pipeline definitions"}
 {"_level_name": "DEBUG", "version": "1.1", "host": "unknown", "timestamp": 1659523288,
- "_caller": "/home/dimi/Projects/github/heimdall/internal/pipeline/handler_prototype_repository.go:23",
+ "_caller": "/heimdall/internal/pipeline/handler_prototype_repository.go:23",
  "level": 7,"short_message": "Loading definitions for authenticators"}
 {"_level_name": "DEBUG", "version": "1.1", "host": "unknown", "id": "noop_authenticator",
  "type": "noop","timestamp": 1659523288,
- "_caller": "/home/dimi/Projects/github/heimdall/internal/pipeline/handler_prototype_repository.go:90",
+ "_caller": "/heimdall/internal/pipeline/handler_prototype_repository.go:90",
  "level": 7, "short_message": "Loading pipeline definition"}
 {"_level_name": "DEBUG", "version": "1.1", "host": "unknown", "id": "anonymous_authenticator",
  "type": "anonymous","timestamp": 1659523288,
- "_caller": "/home/dimi/Projects/github/heimdall/internal/pipeline/handler_prototype_repository.go:90",
+ "_caller": "/heimdall/internal/pipeline/handler_prototype_repository.go:90",
  "level": 7, "short_message": "Loading pipeline definition"}
 
 ...
 
 {"_level_name": "DEBUG", "version": "1.1", "host": "unknown", "timestamp": 1659523295,
- "_caller":"/home/dimi/Projects/github/heimdall/internal/handler/decision/handler.go:59",
+ "_caller":"/heimdall/internal/handler/decision/handler.go:59",
  "level": 7, "short_message": "Decision endpoint called"}
 {"_level_name": "DEBUG", "version": "1.1", "host": "unknown", "timestamp":1659523295,
- "_caller": "/home/dimi/Projects/github/heimdall/internal/rules/rule_factory.go:326",
+ "_caller": "/heimdall/internal/rules/rule_factory.go:326",
  "level": 7, "short_message": "Executing default rule"}
 {"_level_name": "DEBUG", "version":"1.1", "host": "unknown", "timestamp":1659523295,
- "_caller": "/home/dimi/Projects/github/heimdall/internal/pipeline/authenticators/anonymous
- _authenticator.go:49",
+ "_caller": "/eimdall/internal/pipeline/authenticators/anonymous_authenticator.go:49",
  "level": 7, "short_message": "Authenticating using anonymous authenticator"}
 {"_level_name": "DEBUG", "version": "1.1", "host": "unknown", "timestamp": 1659523295,
- "_caller": "/home/dimi/Projects/github/heimdall/internal/pipeline/mutators/jwt_mutator.go:74",
+ "_caller": "/heimdall/internal/pipeline/mutators/jwt_mutator.go:74",
  "level": 7, "short_message": "Mutating using JWT mutator"}
 {"_level_name": "DEBUG", "version": "1.1", "host": "unknown", "timestamp": 1659523295,
- "_caller": "/home/dimi/Projects/github/heimdall/internal/pipeline/mutators/jwt_mutator.go:106",
+ "_caller": "/heimdall/internal/pipeline/mutators/jwt_mutator.go:106",
  "level": 7, "short_message": "Generating new JWT"}
 {"_level_name": "DEBUG", "version": "1.1", "host": "unknown", "timestamp": 1659523295,
- "_caller": "/home/dimi/Projects/github/heimdall/internal/handler/decision/handler.go:81",
+ "_caller": "/heimdall/internal/handler/decision/handler.go:81",
  "level": 7, "short_message": "Finalizing request"}
 ----
 
@@ -149,8 +148,7 @@ Otherwise, if you configure it to use `gelf` format, the output will look as fol
 {"_level_name": "INFO", "version":"1.1", "host":"unknown", "_tx_start":1659523295,
  "_client_ip": "127.0.0.1", "_http_method": "GET", "_http_path":"/foo",
  "_http_user_agent": "curl/7.74.0", "_http_host": "127.0.0.1:4468", "_http_scheme": "http",
- "timestamp": 1659523295, "_caller":"/home/dimi/Projects/github/heimdall/internal/fiber/
-  middleware/accesslog/accesslog_handler.go:19", "level": 6,"short_message": "TX started"}
+ "timestamp": 1659523295, "level": 6,"short_message": "TX started"}
 
 ....
 
@@ -158,9 +156,7 @@ Otherwise, if you configure it to use `gelf` format, the output will look as fol
  "_client_ip": "127.0.0.1", "_http_method": "GET", "_http_path": "/foo",
  "_http_user_agent": "curl/7.74.0", "_http_host": "127.0.0.1:4468", "_http_scheme": "http",
  "_body_bytes_sent": 0, "_http_status_code":202, "_tx_duration_ms":0, "_subject": "anonymous",
- "_access_granted": true, "timestamp":1659523295,
- "_caller":"/home/dimi/Projects/github/heimdall/internal/fiber/middleware/accesslog/accesslog_
-  handler.go:23", "level": 6, "short_message": "TX finished"}
+ "_access_granted": true, "timestamp":1659523295, "level": 6, "short_message": "TX finished"}
 ----
 
 == Tracing in Heimdall
