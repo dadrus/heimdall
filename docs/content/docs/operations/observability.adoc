@@ -40,53 +40,40 @@ If you configure Heimdall to log in `text` format, you can expect output as show
 2022-08-03T12:51:52+02:00 DBG Finalizing request
 ----
 
-Otherwise, if you configure it to use `gelf` format, the output will look as follows:
+Otherwise, if you configure it to use `gelf` (see https://docs.graylog.org/v1/docs/gelf[GELF] for format details) format, the output will look as follows:
 
 [source, json]
 ----
 {"_level_name": "INFO", "version":"1.1", "host": "unknown", "timestamp": 1659523288,
- "_caller": "/heimdall/internal/tracing/module.go:36",
  "level": 6, "short_message": "Opentracing tracer initialized."}
 {"_level_name": "INFO", "version": "1.1", "host": "unknown", "timestamp": 1659523288,
- "_caller": "/heimdall/internal/cache/module.go:21",
  "level": 6, "short_message": "Instantiating in memory cache"}
 {"_level_name": "DEBUG", "version": "1.1", "host": "unknown", "timestamp": 1659523288,
- "_caller": "/heimdall/internal/rules/module.go:19",
  "level": 7, "short_message": "Creating rule set event queue."}
 {"_level_name": "INFO", "version": "1.1", "host": "unknown", "timestamp": 1659523288,
- "_caller": "/heimdall/internal/pipeline/handler_factory.go:34",
  "level": 6, "short_message": "Loading pipeline definitions"}
 {"_level_name": "DEBUG", "version": "1.1", "host": "unknown", "timestamp": 1659523288,
- "_caller": "/heimdall/internal/pipeline/handler_prototype_repository.go:23",
  "level": 7,"short_message": "Loading definitions for authenticators"}
 {"_level_name": "DEBUG", "version": "1.1", "host": "unknown", "id": "noop_authenticator",
  "type": "noop","timestamp": 1659523288,
- "_caller": "/heimdall/internal/pipeline/handler_prototype_repository.go:90",
  "level": 7, "short_message": "Loading pipeline definition"}
 {"_level_name": "DEBUG", "version": "1.1", "host": "unknown", "id": "anonymous_authenticator",
  "type": "anonymous","timestamp": 1659523288,
- "_caller": "/heimdall/internal/pipeline/handler_prototype_repository.go:90",
  "level": 7, "short_message": "Loading pipeline definition"}
 
 ...
 
 {"_level_name": "DEBUG", "version": "1.1", "host": "unknown", "timestamp": 1659523295,
- "_caller":"/heimdall/internal/handler/decision/handler.go:59",
  "level": 7, "short_message": "Decision endpoint called"}
 {"_level_name": "DEBUG", "version": "1.1", "host": "unknown", "timestamp":1659523295,
- "_caller": "/heimdall/internal/rules/rule_factory.go:326",
  "level": 7, "short_message": "Executing default rule"}
 {"_level_name": "DEBUG", "version":"1.1", "host": "unknown", "timestamp":1659523295,
- "_caller": "/eimdall/internal/pipeline/authenticators/anonymous_authenticator.go:49",
  "level": 7, "short_message": "Authenticating using anonymous authenticator"}
 {"_level_name": "DEBUG", "version": "1.1", "host": "unknown", "timestamp": 1659523295,
- "_caller": "/heimdall/internal/pipeline/mutators/jwt_mutator.go:74",
  "level": 7, "short_message": "Mutating using JWT mutator"}
 {"_level_name": "DEBUG", "version": "1.1", "host": "unknown", "timestamp": 1659523295,
- "_caller": "/heimdall/internal/pipeline/mutators/jwt_mutator.go:106",
  "level": 7, "short_message": "Generating new JWT"}
 {"_level_name": "DEBUG", "version": "1.1", "host": "unknown", "timestamp": 1659523295,
- "_caller": "/heimdall/internal/handler/decision/handler.go:81",
  "level": 7, "short_message": "Finalizing request"}
 ----
 
