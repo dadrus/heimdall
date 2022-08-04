@@ -1,7 +1,7 @@
 package errorhandler
 
 import (
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -20,7 +20,8 @@ func TestDefaultErrorHandler(t *testing.T) {
 
 	var appError error
 
-	app := fiber.New(fiber.Config{ErrorHandler: NewErrorHandler(false)})
+	app := fiber.New()
+	app.Use(New(false))
 	app.Get("test", func(ctx *fiber.Ctx) error { return appError })
 
 	for _, tc := range []struct {
@@ -121,7 +122,7 @@ func TestDefaultErrorHandler(t *testing.T) {
 			defer resp.Body.Close()
 
 			assertResponse(t, resp)
-			data, err := ioutil.ReadAll(resp.Body)
+			data, err := io.ReadAll(resp.Body)
 			require.NoError(t, err)
 			assert.Len(t, data, 0)
 		})
@@ -133,7 +134,8 @@ func TestVerboseErrorHandler(t *testing.T) {
 
 	var appError error
 
-	app := fiber.New(fiber.Config{ErrorHandler: NewErrorHandler(true)})
+	app := fiber.New()
+	app.Use(New(true))
 	app.Get("test", func(ctx *fiber.Ctx) error { return appError })
 
 	for _, tc := range []struct {
@@ -150,7 +152,7 @@ func TestVerboseErrorHandler(t *testing.T) {
 
 				assert.Equal(t, http.StatusOK, response.StatusCode)
 
-				data, err := ioutil.ReadAll(response.Body)
+				data, err := io.ReadAll(response.Body)
 				require.NoError(t, err)
 				assert.Empty(t, data)
 			},
@@ -207,7 +209,7 @@ func TestVerboseErrorHandler(t *testing.T) {
 				assert.Equal(t, http.StatusSeeOther, response.StatusCode)
 				assert.Equal(t, "http://foo.bar.local/foobar", response.Header.Get("Location"))
 
-				data, err := ioutil.ReadAll(response.Body)
+				data, err := io.ReadAll(response.Body)
 				require.NoError(t, err)
 				assert.Empty(t, data)
 			},
@@ -224,7 +226,7 @@ func TestVerboseErrorHandler(t *testing.T) {
 				assert.Equal(t, http.StatusFound, response.StatusCode)
 				assert.Equal(t, "http://foo.bar.local/foobar", response.Header.Get("Location"))
 
-				data, err := ioutil.ReadAll(response.Body)
+				data, err := io.ReadAll(response.Body)
 				require.NoError(t, err)
 				assert.Empty(t, data)
 			},
@@ -240,7 +242,7 @@ func TestVerboseErrorHandler(t *testing.T) {
 					t.Helper()
 
 					assert.Equal(t, tc.responseCode, response.StatusCode)
-					data, err := ioutil.ReadAll(response.Body)
+					data, err := io.ReadAll(response.Body)
 					require.NoError(t, err)
 					assert.NotEmpty(t, data)
 				})

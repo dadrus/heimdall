@@ -6,12 +6,21 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/rs/zerolog"
 
+	"github.com/dadrus/heimdall/internal/fiber/middleware/accesslog"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/x"
 )
 
-func NewErrorHandler(verbose bool) fiber.ErrorHandler {
-	return x.IfThenElse(verbose, verboseErrorHandler, defaultErrorHandler)
+func New(verbose bool) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		if err := c.Next(); err != nil {
+			accesslog.AddError(c.UserContext(), err)
+
+			return x.IfThenElse(verbose, verboseErrorHandler, defaultErrorHandler)(c, err)
+		}
+
+		return nil
+	}
 }
 
 func defaultErrorHandler(ctx *fiber.Ctx, err error) error {

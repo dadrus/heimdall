@@ -14,8 +14,9 @@ import (
 	"go.uber.org/fx"
 
 	"github.com/dadrus/heimdall/internal/config"
-	"github.com/dadrus/heimdall/internal/fiber/errorhandler"
-	fiberlogger "github.com/dadrus/heimdall/internal/fiber/middleware/logger"
+	accesslogmiddleware "github.com/dadrus/heimdall/internal/fiber/middleware/accesslog"
+	errorhandlermiddleware "github.com/dadrus/heimdall/internal/fiber/middleware/errorhandler"
+	loggermiddlerware "github.com/dadrus/heimdall/internal/fiber/middleware/logger"
 	fibertracing "github.com/dadrus/heimdall/internal/fiber/middleware/tracing"
 )
 
@@ -27,7 +28,7 @@ var Module = fx.Options( // nolint: gochecknoglobals
 	),
 )
 
-func newFiberApp(conf config.Configuration) *fiber.App {
+func newFiberApp(conf config.Configuration, logger zerolog.Logger) *fiber.App {
 	service := conf.Serve.Management
 
 	app := fiber.New(fiber.Config{
@@ -37,11 +38,12 @@ func newFiberApp(conf config.Configuration) *fiber.App {
 		IdleTimeout:             service.Timeout.Idle,
 		DisableStartupMessage:   true,
 		EnableTrustedProxyCheck: true,
-		ErrorHandler:            errorhandler.NewErrorHandler(service.VerboseErrors),
 		JSONDecoder:             json.Unmarshal,
 		JSONEncoder:             json.Marshal,
 	})
 	app.Use(recover.New(recover.Config{EnableStackTrace: true}))
+	app.Use(accesslogmiddleware.New(logger))
+	app.Use(loggermiddlerware.New(logger))
 	app.Use(fibertracing.New(
 		fibertracing.WithTracer(opentracing.GlobalTracer()),
 		fibertracing.WithOperationFilter(func(ctx *fiber.Ctx) bool { return ctx.Path() == EndpointHealth }),
@@ -60,7 +62,7 @@ func newFiberApp(conf config.Configuration) *fiber.App {
 		}))
 	}
 
-	app.Use(fiberlogger.New())
+	app.Use(errorhandlermiddleware.New(service.VerboseErrors))
 
 	return app
 }
@@ -80,7 +82,7 @@ func registerHooks(lifecycle fx.Lifecycle, logger zerolog.Logger, app fiberApp, 
 				go func() {
 					// service connections
 					addr := service.Address()
-					logger.Info().Msgf("Management service starts listening on: %s", addr)
+					logger.Info().Str("address", addr).Msg("Management service starts listening")
 					if service.TLS != nil {
 						if err := app.App.ListenTLS(addr, service.TLS.Cert, service.TLS.Key); err != nil {
 							logger.Fatal().Err(err).Msg("Could not start Management service")

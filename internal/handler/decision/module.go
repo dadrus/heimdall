@@ -15,10 +15,11 @@ import (
 
 	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/dadrus/heimdall/internal/config"
-	"github.com/dadrus/heimdall/internal/fiber/errorhandler"
-	fibercache "github.com/dadrus/heimdall/internal/fiber/middleware/cache"
-	fiberlogger "github.com/dadrus/heimdall/internal/fiber/middleware/logger"
-	fibertracing "github.com/dadrus/heimdall/internal/fiber/middleware/tracing"
+	accesslogmiddleware "github.com/dadrus/heimdall/internal/fiber/middleware/accesslog"
+	cachemiddleware "github.com/dadrus/heimdall/internal/fiber/middleware/cache"
+	errorhandlermiddleware "github.com/dadrus/heimdall/internal/fiber/middleware/errorhandler"
+	loggermiddlerware "github.com/dadrus/heimdall/internal/fiber/middleware/logger"
+	tracingmiddleware "github.com/dadrus/heimdall/internal/fiber/middleware/tracing"
 	"github.com/dadrus/heimdall/internal/x"
 )
 
@@ -30,7 +31,7 @@ var Module = fx.Options( // nolint: gochecknoglobals
 	),
 )
 
-func newFiberApp(conf config.Configuration, cache cache.Cache) *fiber.App {
+func newFiberApp(conf config.Configuration, cache cache.Cache, logger zerolog.Logger) *fiber.App {
 	service := conf.Serve.Decision
 
 	app := fiber.New(fiber.Config{
@@ -39,7 +40,6 @@ func newFiberApp(conf config.Configuration, cache cache.Cache) *fiber.App {
 		WriteTimeout:            service.Timeout.Write,
 		IdleTimeout:             service.Timeout.Idle,
 		DisableStartupMessage:   true,
-		ErrorHandler:            errorhandler.NewErrorHandler(service.VerboseErrors),
 		EnableTrustedProxyCheck: true,
 		TrustedProxies: x.IfThenElseExec(service.TrustedProxies != nil,
 			func() []string { return *service.TrustedProxies },
@@ -48,9 +48,11 @@ func newFiberApp(conf config.Configuration, cache cache.Cache) *fiber.App {
 		JSONEncoder: json.Marshal,
 	})
 	app.Use(recover.New(recover.Config{EnableStackTrace: true}))
-	app.Use(fibertracing.New(
-		fibertracing.WithTracer(opentracing.GlobalTracer()),
-		fibertracing.WithSpanObserver(func(span opentracing.Span, ctx *fiber.Ctx) {
+	app.Use(accesslogmiddleware.New(logger))
+	app.Use(loggermiddlerware.New(logger))
+	app.Use(tracingmiddleware.New(
+		tracingmiddleware.WithTracer(opentracing.GlobalTracer()),
+		tracingmiddleware.WithSpanObserver(func(span opentracing.Span, ctx *fiber.Ctx) {
 			ext.Component.Set(span, "heimdall")
 		})))
 
@@ -65,8 +67,8 @@ func newFiberApp(conf config.Configuration, cache cache.Cache) *fiber.App {
 		}))
 	}
 
-	app.Use(fibercache.New(cache))
-	app.Use(fiberlogger.New())
+	app.Use(errorhandlermiddleware.New(service.VerboseErrors))
+	app.Use(cachemiddleware.New(cache))
 
 	return app
 }
@@ -86,7 +88,7 @@ func registerHooks(lifecycle fx.Lifecycle, logger zerolog.Logger, app fiberApp, 
 				go func() {
 					// service connections
 					addr := service.Address()
-					logger.Info().Msgf("Decision service starts listening on: %s", addr)
+					logger.Info().Str("address", addr).Msg("Decision service starts listening")
 					if service.TLS != nil {
 						if err := app.App.ListenTLS(addr, service.TLS.Cert, service.TLS.Key); err != nil {
 							logger.Fatal().Err(err).Msg("Could not start Decision service")

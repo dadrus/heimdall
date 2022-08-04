@@ -37,7 +37,7 @@ func registerFileSystemProvider(
 
 	provider, err := newFileSystemProvider(conf.Rules.Providers.File, queue, logger)
 	if err != nil {
-		logger.Error().Err(err).Msg("Failed to load rule definitions provider: file_system")
+		logger.Error().Err(err).Str("type", "file_system").Msg("Failed to load rule definitions provider.")
 
 		return err
 	}
@@ -92,7 +92,7 @@ func newFileSystemProvider(
 }
 
 func (p *fileSystemProvider) Start() error {
-	p.logger.Info().Msg("Starting rule definitions provider: file_system")
+	p.logger.Info().Str("type", "file_system").Msg("Starting rule definitions provider")
 
 	if err := p.loadInitialRuleSet(); err != nil {
 		return err
@@ -105,7 +105,7 @@ func (p *fileSystemProvider) Start() error {
 	}
 
 	if err := p.watcher.Add(p.src); err != nil {
-		p.logger.Error().Err(err).Msg("Failed to start rule definitions provider: file_system")
+		p.logger.Error().Err(err).Str("type", "file_system").Msg("Failed to start rule definitions provider")
 
 		return err
 	}

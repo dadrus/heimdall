@@ -8,7 +8,6 @@ import (
 	"go.uber.org/fx"
 
 	"github.com/dadrus/heimdall/internal/config"
-	fiberauditor "github.com/dadrus/heimdall/internal/fiber/middleware/auditor"
 	fiberxforwarded "github.com/dadrus/heimdall/internal/fiber/middleware/xfmphu"
 	"github.com/dadrus/heimdall/internal/handler/requestcontext"
 	"github.com/dadrus/heimdall/internal/heimdall"
@@ -56,7 +55,7 @@ func newHandler(params handlerParams) (*Handler, error) {
 func (h *Handler) registerRoutes(router fiber.Router, logger zerolog.Logger) {
 	logger.Debug().Msg("Registering Proxy service routes")
 
-	router.All("/*", fiberxforwarded.New(), fiberauditor.New(), h.proxy)
+	router.All("/*", fiberxforwarded.New(), h.proxy)
 }
 
 func (h *Handler) proxy(c *fiber.Ctx) error {

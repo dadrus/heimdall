@@ -3,7 +3,7 @@ package proxy
 import (
 	"crypto/rand"
 	"crypto/rsa"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -95,7 +95,7 @@ func TestHandleProxyEndpointRequest(t *testing.T) {
 				require.NoError(t, err)
 				assert.Equal(t, http.StatusNotFound, response.StatusCode)
 
-				data, err := ioutil.ReadAll(response.Body)
+				data, err := io.ReadAll(response.Body)
 				require.NoError(t, err)
 				assert.Len(t, data, 0)
 			},
@@ -124,7 +124,7 @@ func TestHandleProxyEndpointRequest(t *testing.T) {
 				require.NoError(t, err)
 				assert.Equal(t, http.StatusMethodNotAllowed, response.StatusCode)
 
-				data, err := ioutil.ReadAll(response.Body)
+				data, err := io.ReadAll(response.Body)
 				require.NoError(t, err)
 				assert.Len(t, data, 0)
 			},
@@ -152,7 +152,7 @@ func TestHandleProxyEndpointRequest(t *testing.T) {
 				require.NoError(t, err)
 				assert.Equal(t, http.StatusInternalServerError, response.StatusCode)
 
-				data, err := ioutil.ReadAll(response.Body)
+				data, err := io.ReadAll(response.Body)
 				require.NoError(t, err)
 				assert.Len(t, data, 0)
 			},
@@ -180,7 +180,7 @@ func TestHandleProxyEndpointRequest(t *testing.T) {
 				require.NoError(t, err)
 				assert.Equal(t, http.StatusUnauthorized, response.StatusCode)
 
-				data, err := ioutil.ReadAll(response.Body)
+				data, err := io.ReadAll(response.Body)
 				require.NoError(t, err)
 				assert.Len(t, data, 0)
 			},
@@ -212,7 +212,7 @@ func TestHandleProxyEndpointRequest(t *testing.T) {
 				require.NoError(t, err)
 				assert.Equal(t, http.StatusForbidden, response.StatusCode)
 
-				data, err := ioutil.ReadAll(response.Body)
+				data, err := io.ReadAll(response.Body)
 				require.NoError(t, err)
 				assert.Len(t, data, 0)
 			},
@@ -265,7 +265,7 @@ func TestHandleProxyEndpointRequest(t *testing.T) {
 
 					assert.Equal(t, "text/html", req.Header.Get("Content-Type"))
 
-					data, err := ioutil.ReadAll(req.Body)
+					data, err := io.ReadAll(req.Body)
 					require.NoError(t, err)
 					assert.Equal(t, "hello", string(data))
 				}
@@ -284,7 +284,7 @@ func TestHandleProxyEndpointRequest(t *testing.T) {
 
 				assert.Equal(t, "application/json", response.Header.Get("Content-Type"))
 
-				data, err := ioutil.ReadAll(response.Body)
+				data, err := io.ReadAll(response.Body)
 				require.NoError(t, err)
 				assert.JSONEq(t, `{ "foo": "bar" }`, string(data))
 			},
@@ -338,7 +338,7 @@ func TestHandleProxyEndpointRequest(t *testing.T) {
 
 					assert.Equal(t, "text/html", req.Header.Get("Content-Type"))
 
-					data, err := ioutil.ReadAll(req.Body)
+					data, err := io.ReadAll(req.Body)
 					require.NoError(t, err)
 					assert.Equal(t, "hello", string(data))
 				}
@@ -357,7 +357,7 @@ func TestHandleProxyEndpointRequest(t *testing.T) {
 
 				assert.Equal(t, "application/json", response.Header.Get("Content-Type"))
 
-				data, err := ioutil.ReadAll(response.Body)
+				data, err := io.ReadAll(response.Body)
 				require.NoError(t, err)
 				assert.JSONEq(t, `{ "foo": "bar" }`, string(data))
 			},
@@ -411,7 +411,7 @@ func TestHandleProxyEndpointRequest(t *testing.T) {
 
 					assert.Equal(t, "text/html", req.Header.Get("Content-Type"))
 
-					data, err := ioutil.ReadAll(req.Body)
+					data, err := io.ReadAll(req.Body)
 					require.NoError(t, err)
 					assert.Equal(t, "hello", string(data))
 				}
@@ -430,7 +430,7 @@ func TestHandleProxyEndpointRequest(t *testing.T) {
 
 				assert.Equal(t, "application/json", response.Header.Get("Content-Type"))
 
-				data, err := ioutil.ReadAll(response.Body)
+				data, err := io.ReadAll(response.Body)
 				require.NoError(t, err)
 				assert.JSONEq(t, `{ "foo": "bar" }`, string(data))
 			},
@@ -456,7 +456,7 @@ func TestHandleProxyEndpointRequest(t *testing.T) {
 			tc.configureMocks(t, repo, rule)
 			instructUpstream(t)
 
-			app := newFiberApp(conf, cch)
+			app := newFiberApp(conf, cch, log.Logger)
 			defer app.Shutdown() // nolint: errcheck
 
 			_, err := newHandler(handlerParams{

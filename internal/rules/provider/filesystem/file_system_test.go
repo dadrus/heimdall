@@ -1,7 +1,6 @@
 package filesystem
 
 import (
-	"io/ioutil"
 	"os"
 	"testing"
 	"time"
@@ -24,7 +23,7 @@ func (m *mockLifecycle) Append(hook fx.Hook) { m.Called(hook) }
 func TestRegisterFileSystemProvider(t *testing.T) {
 	t.Parallel()
 
-	tmpFile, err := ioutil.TempFile(os.TempDir(), "test-rule-")
+	tmpFile, err := os.CreateTemp(os.TempDir(), "test-rule-")
 	require.NoError(t, err)
 
 	defer os.Remove(tmpFile.Name())
@@ -262,7 +261,7 @@ func TestStartFileSystemProvider(t *testing.T) {
 			createProvider: func(t *testing.T, file *os.File, dir string) *fileSystemProvider {
 				t.Helper()
 
-				tmpFile, err := ioutil.TempFile(dir, "test-rule-")
+				tmpFile, err := os.CreateTemp(dir, "test-rule-")
 				require.NoError(t, err)
 
 				_, err = tmpFile.Write([]byte(`Hi Foo`))
@@ -293,10 +292,10 @@ func TestStartFileSystemProvider(t *testing.T) {
 			createProvider: func(t *testing.T, file *os.File, dir string) *fileSystemProvider {
 				t.Helper()
 
-				tmpDir, err := ioutil.TempDir(dir, "test-dir-")
+				tmpDir, err := os.MkdirTemp(dir, "test-dir-")
 				require.NoError(t, err)
 
-				tmpFile, err := ioutil.TempFile(tmpDir, "test-rule-")
+				tmpFile, err := os.CreateTemp(tmpDir, "test-rule-")
 				require.NoError(t, err)
 
 				_, err = tmpFile.Write([]byte(`Hi Foo`))
@@ -333,7 +332,7 @@ func TestStartFileSystemProvider(t *testing.T) {
 			writeContents: func(t *testing.T, file *os.File, dir string) {
 				t.Helper()
 
-				tmpFile, err := ioutil.TempFile(dir, "test-rule-")
+				tmpFile, err := os.CreateTemp(dir, "test-rule-")
 				require.NoError(t, err)
 
 				time.Sleep(200 * time.Millisecond)
@@ -418,12 +417,12 @@ func TestStartFileSystemProvider(t *testing.T) {
 		},
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
-			tmpFile, err := ioutil.TempFile(os.TempDir(), "test-dir-")
+			tmpFile, err := os.CreateTemp(os.TempDir(), "test-dir-")
 			require.NoError(t, err)
 
 			tearDownFuncs = append(tearDownFuncs, func() { os.Remove(tmpFile.Name()) })
 
-			tmpDir, err := ioutil.TempDir(os.TempDir(), "test-rule-")
+			tmpDir, err := os.MkdirTemp(os.TempDir(), "test-rule-")
 			require.NoError(t, err)
 
 			tearDownFuncs = append(tearDownFuncs, func() { os.Remove(tmpDir) })

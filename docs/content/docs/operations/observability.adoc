@@ -1,0 +1,155 @@
+---
+title: "Observability"
+date: 2022-08-03T18:53:31+02:00
+draft: false
+weight: 21
+menu:
+  docs:
+    weight: 30
+    identifier: observability_and_operations
+    parent: "Operations"
+---
+
+Hemdall implements different observability to support easier operation and integration in different APM products. The following sections provide insights about what can be expected.
+
+== Logging in Heimdall
+
+Heimdall's implementation uses https://github.com/rs/zerolog[zorolog] - Zero Allocation JSON Logger, which can however also log in plain text.
+
+Available Logging configuration options are described in link:{{< relref "/docs/configuration/observability/logging.adoc" >}}[Logging Configuration].
+
+=== Regular Log Events
+
+If you configure Heimdall to log in `text` format, you can expect output as shown below:
+
+[source, log]
+----
+2022-08-03T12:51:48+02:00 INF Opentracing tracer initialized.
+2022-08-03T12:51:48+02:00 INF Instantiating in memory cache
+2022-08-03T12:51:48+02:00 DBG Creating rule set event queue.
+2022-08-03T12:51:48+02:00 INF Loading pipeline definitions
+2022-08-03T12:51:48+02:00 DBG Loading definitions for authenticators
+2022-08-03T12:51:48+02:00 DBG Loading pipeline definition id=noop_authenticator type=noop
+2022-08-03T12:51:48+02:00 DBG Loading pipeline definition id=anonymous_authenticator type=anonymous
+...
+2022-08-03T12:51:52+02:00 DBG Decision endpoint called
+2022-08-03T12:51:52+02:00 DBG Executing default rule
+2022-08-03T12:51:52+02:00 DBG Authenticating using anonymous authenticator
+2022-08-03T12:51:52+02:00 DBG Mutating using JWT mutator
+2022-08-03T12:51:52+02:00 DBG Generating new JWT
+2022-08-03T12:51:52+02:00 DBG Finalizing request
+----
+
+Otherwise, if you configure it to use `gelf` (see https://docs.graylog.org/v1/docs/gelf[GELF] for format details) format, the output will look as follows:
+
+[source, json]
+----
+{"_level_name": "INFO", "version":"1.1", "host": "unknown", "timestamp": 1659523288,
+ "level": 6, "short_message": "Opentracing tracer initialized."}
+{"_level_name": "INFO", "version": "1.1", "host": "unknown", "timestamp": 1659523288,
+ "level": 6, "short_message": "Instantiating in memory cache"}
+{"_level_name": "DEBUG", "version": "1.1", "host": "unknown", "timestamp": 1659523288,
+ "level": 7, "short_message": "Creating rule set event queue."}
+{"_level_name": "INFO", "version": "1.1", "host": "unknown", "timestamp": 1659523288,
+ "level": 6, "short_message": "Loading pipeline definitions"}
+{"_level_name": "DEBUG", "version": "1.1", "host": "unknown", "timestamp": 1659523288,
+ "level": 7,"short_message": "Loading definitions for authenticators"}
+{"_level_name": "DEBUG", "version": "1.1", "host": "unknown", "id": "noop_authenticator",
+ "type": "noop","timestamp": 1659523288,
+ "level": 7, "short_message": "Loading pipeline definition"}
+{"_level_name": "DEBUG", "version": "1.1", "host": "unknown", "id": "anonymous_authenticator",
+ "type": "anonymous","timestamp": 1659523288,
+ "level": 7, "short_message": "Loading pipeline definition"}
+
+...
+
+{"_level_name": "DEBUG", "version": "1.1", "host": "unknown", "timestamp": 1659523295,
+ "level": 7, "short_message": "Decision endpoint called"}
+{"_level_name": "DEBUG", "version": "1.1", "host": "unknown", "timestamp":1659523295,
+ "level": 7, "short_message": "Executing default rule"}
+{"_level_name": "DEBUG", "version":"1.1", "host": "unknown", "timestamp":1659523295,
+ "level": 7, "short_message": "Authenticating using anonymous authenticator"}
+{"_level_name": "DEBUG", "version": "1.1", "host": "unknown", "timestamp": 1659523295,
+ "level": 7, "short_message": "Mutating using JWT mutator"}
+{"_level_name": "DEBUG", "version": "1.1", "host": "unknown", "timestamp": 1659523295,
+ "level": 7, "short_message": "Generating new JWT"}
+{"_level_name": "DEBUG", "version": "1.1", "host": "unknown", "timestamp": 1659523295,
+ "level": 7, "short_message": "Finalizing request"}
+----
+
+=== Access Log Events
+
+In addition to regular logs, Heimdall emits access logs. These events are always emitted regardless the configured log level and the log level of these events in the log output is always `INFO`.
+
+Each request to any of Heimdall's endpoints will result in two access events:
+
+* event describing the start of the transaction, and an
+* event describing the finalization of the transaction.
+
+Following are the fields, which are always set for both events:
+
+* `_tx_start` - Timestamp in Unix epoch format, when the transaction started.
+* `_client_ip` - The IP of the client of the request.
+* `_http_method` - The HTTP method used by the client while calling heimdall's endpoint.
+* `_http_path` - The used HTTP path.
+* `_http_user_agent` - The agent used by the client. The value is taken from the HTTP "User-Agent" header.
+* `_http_host` - The host part of the URI, the client is using while communicating with Heimdall.
+* `_http_scheme` - The scheme part of the URI, the client is using while communicating with Heimdall.
+
+If the request comes from an intermediary, like e.g. an API Gateway and heimdall is configured to trust that "proxy" (see link:{{< relref "/docs/configuration/services/decision_api.adoc#_trusted_proxies" >}}[`trusted_proxies` configuration] of the Decision service, as well as the link:{{< relref "/docs/configuration/services/proxy.adoc#_trusted_proxies" >}}[`trusted_proxies` configuration] of the Proxy service), then following fields will be part of the events as well if the corresponding HTTP headers were sent.
+
+* `_http_x_forwarded_proto` - The value of the "X-Forwarded-Proto" header.
+* `_http_x_forwarded_host` - The value of the "X-Forwarded-Host" header.
+* `_http_x_forwarded_path` - The value of the "X-Forwarded-Path" header.
+* `_http_x_forwarded_uri` - The value of the "X-Forwarded-Uri" header.
+* `_http_x_forwarded_for` - The value of the "X-Forwarded-For" header.
+* `_http_forwarded` - The value of the "Forwarded" header.
+
+Following are the fields, which are set in the transaction finalization event in addition:
+
+* `_body_bytes_sent` - The length of the response body.
+* `_http_status_code` - The numeric HTTP response status code
+* `_tx_duration_ms` - The duration of the transaction in milliseconds. If heimdall is operated in proxy mode, it will also include the time used to communicate with the upstream service.
+* `_access_granted` - Set either to `true` or `false`, indicating whether heimdall granted access or not.
+* `_subject` - The subject identifier if the access was granted.
+* `error` - The information about an error, which e.g. led to the denial of the request.
+
+If you configure Heimdall to log in `text` format, you can expect output as shown below:
+
+[source, text]
+----
+2022-08-03T12:40:16+02:00 INF TX started _client_ip=127.0.0.1 _http_host=127.0.0.1:4468 _http_method=GET
+ _http_path=/foo _http_scheme=http _http_user_agent=curl/7.74.0 _tx_start=1659523216
+
+....
+
+2022-08-03T12:40:16+02:00 INF TX finished _access_granted=true _body_bytes_sent=0 _client_ip=127.0.0.1
+ _http_host=127.0.0.1:4468 _http_method=GET _http_path=/foo _http_scheme=http _http_status_code=202
+ _http_user_agent=curl/7.74.0 _subject=anonymous _tx_duration_ms=0 _tx_start=1659523216
+----
+
+Otherwise, if you configure it to use `gelf` format, the output will look as follows:
+
+[source, json]
+----
+{"_level_name": "INFO", "version":"1.1", "host":"unknown", "_tx_start":1659523295,
+ "_client_ip": "127.0.0.1", "_http_method": "GET", "_http_path":"/foo",
+ "_http_user_agent": "curl/7.74.0", "_http_host": "127.0.0.1:4468", "_http_scheme": "http",
+ "timestamp": 1659523295, "level": 6,"short_message": "TX started"}
+
+....
+
+{"_level_name": "INFO", "version": "1.1", "host": "unknown", "_tx_start": 1659523295,
+ "_client_ip": "127.0.0.1", "_http_method": "GET", "_http_path": "/foo",
+ "_http_user_agent": "curl/7.74.0", "_http_host": "127.0.0.1:4468", "_http_scheme": "http",
+ "_body_bytes_sent": 0, "_http_status_code":202, "_tx_duration_ms":0, "_subject": "anonymous",
+ "_access_granted": true, "timestamp":1659523295, "level": 6, "short_message": "TX finished"}
+----
+
+== Tracing in Heimdall
+
+See link:{{< relref "/docs/configuration/observability/tracing.adoc" >}}[Tracing Configuration].
+
+== Metrics in Heimdall
+
+See link:{{< relref "/docs/configuration/observability/metrics.adoc" >}}[Metrics Configuration].

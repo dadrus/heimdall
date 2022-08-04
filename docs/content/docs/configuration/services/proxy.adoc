@@ -121,6 +121,7 @@ proxy:
 ----
 ====
 
+[#_trusted_proxies]
 * *`trusted_proxies`*: _string array_ (optional)
 +
 Heimdall can make use of `X-Forwarded-\*`, like `X-Forwarded-For`, `X-Forwarded-Method`, etc, or the https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Forwarded[`Forwarded`] header sent by its clients and also forward some of these (`X-Forwarded-For` and `Forwarded`) to the configured upstream services. However, since these headers can easily be spoofed, the usage of them is only possible, when the request comes from a trusted source. This is typically the case, when Heimdall is operated behind yet another proxy. For example, the `Host` HTTP header is usually used to return the requested host. But when you’re behind a proxy, the actual host may be stored in an `X-Forwarded-Host` header, which could, however, also be spoofed.
