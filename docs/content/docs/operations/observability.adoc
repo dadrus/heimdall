@@ -93,8 +93,8 @@ Following are the fields, which are always set for both events:
 * `_http_method` - The HTTP method used by the client while calling heimdall's endpoint.
 * `_http_path` - The used HTTP path.
 * `_http_user_agent` - The agent used by the client. The value is taken from the HTTP "User-Agent" header.
-* `_http_host` - The host part of the URI, the client is using while communicating ith Heimdall.
-* `_http_scheme` - The scheme part of the URI, the client is using while communicating ith Heimdall.
+* `_http_host` - The host part of the URI, the client is using while communicating with Heimdall.
+* `_http_scheme` - The scheme part of the URI, the client is using while communicating with Heimdall.
 
 If the request comes from an intermediary, like e.g. an API Gateway and heimdall is configured to trust that "proxy" (see link:{{< relref "/docs/configuration/services/decision_api.adoc#_trusted_proxies" >}}[`trusted_proxies` configuration] of the Decision service, as well as the link:{{< relref "/docs/configuration/services/proxy.adoc#_trusted_proxies" >}}[`trusted_proxies` configuration] of the Proxy service), then following fields will be part of the events as well if the corresponding HTTP headers were sent.
 
@@ -108,11 +108,11 @@ If the request comes from an intermediary, like e.g. an API Gateway and heimdall
 Following are the fields, which are set in the transaction finalization event in addition:
 
 * `_body_bytes_sent` - The length of the response body.
-* `_http_status_code` - The numeric HTTP status code
+* `_http_status_code` - The numeric HTTP response status code
 * `_tx_duration_ms` - The duration of the transaction in milliseconds. If heimdall is operated in proxy mode, it will also include the time used to communicate with the upstream service.
 * `_access_granted` - Set either to `true` or `false`, indicating whether heimdall granted access or not.
 * `_subject` - The subject identifier if the access was granted.
-* `error` - The information about an error, which led to the denial of the request.
+* `error` - The information about an error, which e.g. led to the denial of the request.
 
 If you configure Heimdall to log in `text` format, you can expect output as shown below:
 
