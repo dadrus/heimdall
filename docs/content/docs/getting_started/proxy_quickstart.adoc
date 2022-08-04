@@ -162,7 +162,7 @@ Here, Heimdall will match our rule and forward the request to the `upstream` ser
 >
 * Mark bundle as not supporting multiuse
 < HTTP/1.1 200 OK
-< Date: Mon, 04 Aug 2022 07:50:25 GMT
+< Date: Thu, 04 Aug 2022 07:53:41 GMT
 < Content-Type: text/plain; charset=utf-8
 < Content-Length: 872
 <
@@ -193,11 +193,11 @@ You should also be able to see similar output as below from the docker-compose e
 [source, bash]
 ----
 ...
-heimdall_1  | 2022-08-04T07:50:25+02:00 INF Handling request http_host=127.0.0.1:4455 http_method=GET
-                     http_url=http://127.0.0.1:4455/foobar http_user_agent=curl/7.74.0
-heimdall_1  | 2022-08-04T07:50:25+02:00 INF Access request granted. granted=true http_host=upstream1:4455
-                     http_method=GET http_url=http://127.0.0.1:4455/foobar
-                     http_user_agent=curl/7.74.0
+2022-08-04T07:53:41+02:00 INF TX started _client_ip=127.0.0.1 _http_host=127.0.0.1:4455 _http_method=GET
+ _http_path=/foobar _http_scheme=http _http_user_agent=curl/7.74.0 _tx_start=1659599621
+2022-08-04T07:53:41+02:00 INF TX finished _access_granted=true _body_bytes_sent=0 _client_ip=127.0.0.1
+ _http_host=127.0.0.1:4455 _http_method=GET _http_path=/foobar _http_scheme=http _http_status_code=202
+ _http_user_agent=curl/7.74.0 _subject=anonymous _tx_duration_ms=0 _tx_start=1659599621
 ----
 
 Try using another method, like e.g. DELETE to see, what will happen then. Or change the `rule.yaml` file (you don't need to restart the environment as the file provider will watch the `rule.yaml` faile for changes) to let it match only on a specific path and send the request again using another path. You'll then see the `deny` authorizer in action.

@@ -115,7 +115,7 @@ On completion, you should see the `Authorization` header in the response, like i
 * Mark bundle as not supporting multiuse
 < HTTP/1.1 202 Accepted
 < Server: Heimdall Decision API
-< Date: Sat, 04 Aug 2022 07:45:16 GMT
+< Date: Thu, 04 Aug 2022 07:45:16 GMT
 < Content-Length: 0
 < Authorization: Bearer eyJhbGciOiJQUzI1NiIsImtpZCI6IjJkZGIxZDM3MWU1MGFjNDQ5ZGJhNjcyNj
 ZmZDRjMzU0OWZjNmRmYTYiLCJ0eXAiOiJKV1QifQ.eyJleHAiOjE2NTYxNjY1MTYsImlhdCI6MTY1NjE2NjIxN
@@ -134,8 +134,9 @@ You should also be able to see similar output as below from the heimdall instanc
 [source, bash]
 ----
 ...
-2022-08-04T07:45:16+02:00 INF Handling request http_host=127.0.0.1:4456 http_method=GET
-           http_url=http://127.0.0.1:4456/foobar http_user_agent=curl/7.74.0
-2022-08-04T07:45:16+02:00 INF Access request granted. granted=true http_host=127.0.0.1:4456
-           http_method=GET http_url=http://127.0.0.1:4456/foobar http_user_agent=curl/7.74.0
+2022-08-04T07:45:16+02:00 INF TX started _client_ip=127.0.0.1 _http_host=127.0.0.1:4456 _http_method=GET
+ _http_path=/foobar _http_scheme=http _http_user_agent=curl/7.74.0 _tx_start=1659599116
+2022-08-04T07:45:16+02:00 INF TX finished _access_granted=true _body_bytes_sent=0 _client_ip=127.0.0.1
+ _http_host=127.0.0.1:4456 _http_method=GET _http_path=/foobar _http_scheme=http _http_status_code=202
+ _http_user_agent=curl/7.74.0 _subject=anonymous _tx_duration_ms=0 _tx_start=1659599116
 ----
