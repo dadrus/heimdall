@@ -52,6 +52,8 @@ github.com/andybalholm/brotli v1.0.4 h1:V7DdXeJtZscaqfNuAdSRuRFzuiKlHSC/Zh3zl9qY
 github.com/andybalholm/brotli v1.0.4/go.mod h1:fO7iG3H7G2nSZ7m0zPUDn85XEX2GTukHGRSepvi9Eig=
 github.com/ansrivas/fiberprometheus/v2 v2.3.0 h1:WTZmj7jWI9YvuN+dhdN5VCJwzCt7Tvhcf9FyhDsEmNQ=
 github.com/ansrivas/fiberprometheus/v2 v2.3.0/go.mod h1:lArdP4S+TlsxQw1vgO8ZkteUVQ9fYyKgXVdycuu0L3g=
+github.com/ansrivas/fiberprometheus/v2 v2.4.0 h1:oUCcrLFaoXgbWOqdg7GoKESO9aDwbkdGBHVtGEhraTo=
+github.com/ansrivas/fiberprometheus/v2 v2.4.0/go.mod h1:lArdP4S+TlsxQw1vgO8ZkteUVQ9fYyKgXVdycuu0L3g=
 github.com/armon/go-metrics v0.0.0-20180917152333-f0300d1749da/go.mod h1:Q73ZrmVTwzkszR9V5SSuryQ31EELlFMUz1kKyl939pY=
 github.com/armon/go-radix v0.0.0-20180808171621-7fddfc383310/go.mod h1:ufUuZ+zHj4x4TnLV4JWEpy2hxWSpsRywHrMgIH9cCH8=
 github.com/aws/aws-sdk-go-v2 v1.9.2/go.mod h1:cK/D0BBs0b/oWPIcX/Z/obahJK1TT7IPVjy53i/mX/4=

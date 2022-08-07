@@ -4,7 +4,7 @@ go 1.18
 
 require (
 	github.com/Masterminds/sprig/v3 v3.2.2
-	github.com/ansrivas/fiberprometheus/v2 v2.3.0
+	github.com/ansrivas/fiberprometheus/v2 v2.4.0
 	github.com/dlclark/regexp2 v1.7.0
 	github.com/dop251/goja v0.0.0-20220806120448-1444e6b94559
 	github.com/fsnotify/fsnotify v1.5.4
