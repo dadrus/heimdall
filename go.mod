@@ -6,7 +6,7 @@ require (
 	github.com/Masterminds/sprig/v3 v3.2.2
 	github.com/ansrivas/fiberprometheus/v2 v2.3.0
 	github.com/dlclark/regexp2 v1.7.0
-	github.com/dop251/goja v0.0.0-20220805083922-fdb999e670c9
+	github.com/dop251/goja v0.0.0-20220806120448-1444e6b94559
 	github.com/fsnotify/fsnotify v1.5.4
 	github.com/gobwas/glob v0.2.3
 	github.com/goccy/go-json v0.9.10
