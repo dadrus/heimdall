@@ -95,3 +95,46 @@ p {
   }
 }
 
+td {
+  b {
+    vertical-align: top;
+  }
+}
+
+.admonitionblock {
+  padding: 1rem;
+  margin-top: 1.25rem;
+  margin-bottom: 1.25rem;
+  border: 1px solid #e9ecef;
+  border-left-color: rgb(233, 236, 239);
+  border-radius: .4rem;
+}
+
+.tip {
+  color: #0f5132;
+  border-color: #badbcc;
+  border-left-color: #0f5132;
+  border-left-width: .3rem;
+}
+
+.note {
+  color: #055160;
+  border-color: #b6effb;
+  border-left-color: #5bc0de;
+  border-left-width: .3rem;
+}
+
+.caution {
+  color: #664d03;
+  border-color: #ffecb5;
+  border-left-color: #f0ad4e;
+  border-left-width: .3rem;
+}
+
+.warning {
+  color: #842029;
+  border-color: #f5c2c7;
+  border-left-color: #d9534f;
+  border-left-width: .3rem;
+}
+
