@@ -72,6 +72,35 @@ h3 {
   pre {
     padding: .75rem;
   }
+  b {
+    display: none;
+  }
+}
+
+.colist {
+  b {
+    display: none;
+  }
+}
+
+.conum {
+  border: 1px solid;
+  border-radius: 100%;
+  display: inline-block;
+  font-style: normal;
+  line-height: 1.2;
+  text-align: center;
+  width: 1.25em;
+  height: 1.25em;
+  letter-spacing: -.25ex;
+  text-indent: -.25ex;
+  font-size: calc(13.5/var(--rem-base)*1rem);
+  font-family: var(--body-font-family);
+  margin-right: 1rem;
+}
+
+.conum[data-value]::after {
+  content:attr(data-value)
 }
 
 p {
