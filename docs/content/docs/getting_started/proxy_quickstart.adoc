@@ -195,7 +195,7 @@ You should also be able to see similar output as below from the docker-compose e
 ...
 2022-08-04T07:53:41+02:00 INF TX started _client_ip=127.0.0.1 _http_host=127.0.0.1:4455 _http_method=GET
  _http_path=/foobar _http_scheme=http _http_user_agent=curl/7.74.0 _tx_start=1659599621
-2022-08-04T07:53:41+02:00 INF TX finished _access_granted=true _body_bytes_sent=0 _client_ip=127.0.0.1
+2022-08-04T07:53:41+02:00 INF TX finished _access_granted=true _body_bytes_sent=872 _client_ip=127.0.0.1
  _http_host=127.0.0.1:4455 _http_method=GET _http_path=/foobar _http_scheme=http _http_status_code=200
  _http_user_agent=curl/7.74.0 _subject=anonymous _tx_duration_ms=0 _tx_start=1659599621
 ----

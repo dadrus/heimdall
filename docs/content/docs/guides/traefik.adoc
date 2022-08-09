@@ -17,7 +17,7 @@ To achieve this,
   * configure the `authResponseHeaders` to contain the required header name(s), heimdall sets in the HTTP responses (depends on your link:{{< relref "/docs/configuration/pipeline/hydrators.adoc" >}}[Hydrators] and link:{{< relref "/docs/configuration/pipeline/mutators.adoc" >}}[Mutators] configuration).
 * Configure the route of your service to make use of this middleware.
 
-[IMPORTANT]
+[CAUTION]
 ====
 Traefik makes use of `X-Forwarded-*` HTTP headers to forward the HTTP method, protocol, host, etc. to the ForwardAuth middleware. These headers can be spoofed, if no caution is taken. To allow, heimdall making use of such headers, you must configure link:{{< relref "/docs/configuration/services/decision_api.adoc#_trusted_proxies" >}}[trusted proxies] in heimdall's decision configuration to contain the IPs or networks of your traefik instances. For test purposes, you can set it to "0.0.0.0/0", which would basically disable the check and let heimdall trust requests from any client.
 ====
