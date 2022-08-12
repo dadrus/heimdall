@@ -71,7 +71,7 @@ params:
 
 module:
   mounts:
-    - source: static
+    - source: versions
       target: static
     - source: node_modules/bootstrap/dist/js/bootstrap.bundle.js
       target: assets/js/bootstrap.bundle.js
