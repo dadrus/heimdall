@@ -59,6 +59,7 @@ frontmatter:
 
 params:
   copyright: 2022 © Heimdall Project Authors. All rights reserved.
+  version: x-current-version
   license:
     name: Apache 2.0
     url: https://github.com/dadrus/heimdall/blob/master/LICENSE
@@ -70,5 +71,9 @@ params:
 
 module:
   mounts:
+    - source: versions
+      target: static
     - source: node_modules/bootstrap/dist/js/bootstrap.bundle.js
       target: assets/js/bootstrap.bundle.js
+    - source: node_modules/bootstrap-icons/font/fonts
+      target: static/css/fonts

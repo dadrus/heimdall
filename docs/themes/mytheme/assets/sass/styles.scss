@@ -141,6 +141,32 @@ td {
   border: 1px solid #e9ecef;
   border-left-color: rgb(233, 236, 239);
   border-radius: .4rem;
+
+  table {
+    margin-top: 2rem;
+
+    td.icon {
+      position: relative;
+
+      i {
+        position: absolute;
+        top: -30px;
+        text-decoration-style: double;
+      }
+
+      i[title]::after {
+        content:attr(title);
+        font-weight: bold;
+        font-style: normal;
+      }
+
+      i[title] {
+        &::after,&::before {
+          display: inline;
+        }
+      }
+    }
+  }
 }
 
 .tip {
@@ -171,3 +197,17 @@ td {
   border-left-width: .3rem;
 }
 
+doc-version-select {
+  .dropdown-item.current {
+    position: relative;
+    padding-right: 1.5rem;
+
+    &:after {
+      content: "✔";
+      position: absolute;
+      right: .5rem;
+      top: 50%;
+      transform: translateY(-50%);
+    }
+  }
+}
