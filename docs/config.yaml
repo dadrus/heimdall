@@ -59,7 +59,7 @@ frontmatter:
 
 params:
   copyright: 2022 © Heimdall Project Authors. All rights reserved.
-  version: v0.6.0-alpha
+  version: x-current-version
   license:
     name: Apache 2.0
     url: https://github.com/dadrus/heimdall/blob/master/LICENSE
