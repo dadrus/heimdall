@@ -11,7 +11,7 @@ const linkList = (elements = [], currentVersion) => {
   const linkItem = linkListItem(currentVersion)
 
   return html(`
-    <ul class="dropdown-menu dropdown-menu-end">
+    <ul class="dropdown-menu">
       ${linkItem(elements[0])}
       <li><hr class="dropdown-divider"></li>
       ${elements.slice(1).map(linkItem).join('\n')}
