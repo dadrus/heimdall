@@ -76,14 +76,21 @@ func createAccessLogFinalizationEvent(c *fiber.Ctx, accessLogger zerolog.Logger,
 		Int("_http_status_code", c.Response().StatusCode()).
 		Int64("_tx_duration_ms", duration.Milliseconds())
 
-	if err != nil {
-		event = event.Err(err)
-	}
+	switch {
+	case err != nil:
+		if len(alc.subject) != 0 {
+			event = event.Str("_subject", alc.subject)
+		}
 
-	if alc.err != nil {
+		event = event.Err(err).Bool("_access_granted", false)
+	case alc.err != nil:
+		if len(alc.subject) != 0 {
+			event = event.Str("_subject", alc.subject)
+		}
+
 		event = event.Err(alc.err).Bool("_access_granted", false)
-	} else if len(alc.subject) != 0 {
-		event.Str("_subject", alc.subject).Bool("_access_granted", true)
+	default:
+		event = event.Str("_subject", alc.subject).Bool("_access_granted", true)
 	}
 
 	return event
