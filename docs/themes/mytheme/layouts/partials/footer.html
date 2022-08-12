@@ -45,4 +45,5 @@
   {{- $js := slice $bootstrap | resources.Concat "js/bundle.js" | resources.Minify -}}
 
   <script src="{{$js.RelPermalink}}" defer></script>
+  <script src="/js/doc-version-select.js" defer></script>
 </footer>
