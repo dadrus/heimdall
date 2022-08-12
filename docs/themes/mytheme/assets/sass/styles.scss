@@ -196,3 +196,18 @@ td {
   border-left-color: #d9534f;
   border-left-width: .3rem;
 }
+
+doc-version-select {
+  .dropdown-item.current {
+    position: relative;
+    padding-right: 1.5rem;
+
+    &:after {
+      content: "✔";
+      position: absolute;
+      right: .5rem;
+      top: 50%;
+      transform: translateY(-50%);
+    }
+  }
+}
