@@ -62,6 +62,7 @@ jobs:
 
   prepare-release:
     runs-on: ubuntu-20.04
+    if: github.ref == 'refs/heads/main'
     outputs:
       release_created: ${{ steps.release_prepare.outputs.release_created }}
       tag_name: ${{ steps.release_prepare.outputs.tag_name }}
