@@ -6,7 +6,6 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"io"
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -189,7 +188,7 @@ func TestCreateKeyStoreFromPEMFile(t *testing.T) {
 			keyStoreFile: func(t *testing.T) string {
 				t.Helper()
 
-				dir, err := ioutil.TempDir("", "test_dir.*")
+				dir, err := os.MkdirTemp("", "test_dir.*")
 				require.NoError(t, err)
 
 				return dir
@@ -211,7 +210,7 @@ func TestCreateKeyStoreFromPEMFile(t *testing.T) {
 			keyStoreFile: func(t *testing.T) string {
 				t.Helper()
 
-				file, err := ioutil.TempFile("", "test_ks.*")
+				file, err := os.CreateTemp("", "test_ks.*")
 				require.NoError(t, err)
 
 				err = file.Chmod(0o200)
@@ -237,7 +236,7 @@ func TestCreateKeyStoreFromPEMFile(t *testing.T) {
 			keyStoreFile: func(t *testing.T) string {
 				t.Helper()
 
-				file, err := ioutil.TempFile("", "test_ks.*")
+				file, err := os.CreateTemp("", "test_ks.*")
 				require.NoError(t, err)
 
 				buf := bytes.NewBuffer(pemPKCS1ECPrivateKey)
@@ -252,7 +251,7 @@ func TestCreateKeyStoreFromPEMFile(t *testing.T) {
 				_, err = buf.Write(pemPKCS8RSAPrivateKey)
 				require.NoError(t, err)
 
-				err = ioutil.WriteFile(file.Name(), buf.Bytes(), 0o600)
+				err = os.WriteFile(file.Name(), buf.Bytes(), 0o600)
 				require.NoError(t, err)
 
 				return file.Name()

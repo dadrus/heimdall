@@ -1,6 +1,7 @@
 package xfmphu
 
 import (
+	"context"
 	"net/http"
 	"net/url"
 	"testing"
@@ -140,14 +141,16 @@ func TestMiddlewareApplicationWithoutConfiguredTrustedProxy(t *testing.T) {
 			extractedURL = nil
 			extractedMethod = ""
 
-			req, err := http.NewRequest("GET", "http://heimdall.test.local/test", nil)
+			req, err := http.NewRequestWithContext(context.Background(), http.MethodGet,
+				"http://heimdall.test.local/test", nil)
 			require.NoError(t, err)
 
 			tc.configureRequest(t, req)
 
 			// WHEN
-			_, err = app.Test(req, -1)
+			resp, err := app.Test(req, -1)
 			require.NoError(t, err)
+			defer resp.Body.Close()
 
 			// THEN
 			tc.assert(t)
@@ -286,14 +289,16 @@ func TestMiddlewareApplicationWithConfiguredTrustedProxy(t *testing.T) {
 			extractedURL = nil
 			extractedMethod = ""
 
-			req, err := http.NewRequest("GET", "http://heimdall.test.local/test", nil)
+			req, err := http.NewRequestWithContext(context.Background(), http.MethodGet,
+				"http://heimdall.test.local/test", nil)
 			require.NoError(t, err)
 
 			tc.configureRequest(t, req)
 
 			// WHEN
-			_, err = app.Test(req, -1)
+			resp, err := app.Test(req, -1)
 			require.NoError(t, err)
+			defer resp.Body.Close()
 
 			// THEN
 			tc.assert(t)

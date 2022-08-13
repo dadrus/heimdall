@@ -39,7 +39,7 @@ func TestJWKSRequestWithoutEtagUsage(t *testing.T) {
 
 	// WHEN
 	resp, err := app.Test(
-		httptest.NewRequest("GET", "http://heimdall.test.local/.well-known/jwks", nil),
+		httptest.NewRequest(http.MethodGet, "http://heimdall.test.local/.well-known/jwks", nil),
 		-1)
 
 	// THEN
@@ -91,7 +91,7 @@ func TestJWKSRequestWithEtagUsage(t *testing.T) {
 	require.NoError(t, err)
 
 	resp1, err := app.Test(
-		httptest.NewRequest("GET", "http://heimdall.test.local/.well-known/jwks", nil),
+		httptest.NewRequest(http.MethodGet, "http://heimdall.test.local/.well-known/jwks", nil),
 		-1)
 
 	require.NoError(t, err)
@@ -103,7 +103,7 @@ func TestJWKSRequestWithEtagUsage(t *testing.T) {
 	etagValue := resp1.Header.Get("ETag")
 	require.NotEmpty(t, etagValue)
 
-	req := httptest.NewRequest("GET", "http://heimdall.test.local/.well-known/jwks", nil)
+	req := httptest.NewRequest(http.MethodGet, "http://heimdall.test.local/.well-known/jwks", nil)
 	req.Header.Set("If-None-Match", etagValue)
 
 	// WHEN

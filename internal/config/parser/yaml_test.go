@@ -1,7 +1,6 @@
 package parser
 
 import (
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -13,7 +12,7 @@ func TestKoanfFromYaml(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
-	tempFile, err := ioutil.TempFile("", "config-test-*")
+	tempFile, err := os.CreateTemp("", "config-test-*")
 	require.NoError(t, err)
 
 	defer tempFile.Close()

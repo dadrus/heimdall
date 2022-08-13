@@ -2,7 +2,7 @@ package cmd
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"os"
 
@@ -35,7 +35,7 @@ var healthCmd = &cobra.Command{
 			os.Exit(-1)
 		}
 
-		rawResp, err := ioutil.ReadAll(resp.Body)
+		rawResp, err := io.ReadAll(resp.Body)
 		if err != nil {
 			cmd.PrintErrf("Failed to read response: %v", err)
 			os.Exit(-1)

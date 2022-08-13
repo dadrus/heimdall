@@ -1,7 +1,6 @@
 package parser
 
 import (
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -36,7 +35,7 @@ func TestConfigLoaderLoad(t *testing.T) {
 	}
 
 	// override parts of the above config with values from a yaml config file
-	tempFile, err := ioutil.TempFile("", "config-test-*")
+	tempFile, err := os.CreateTemp("", "config-test-*")
 	require.NoError(t, err)
 
 	defer tempFile.Close()

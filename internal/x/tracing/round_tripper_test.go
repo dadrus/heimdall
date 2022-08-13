@@ -1,6 +1,7 @@
 package tracing
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -26,11 +27,17 @@ func TestRoundTripperWithoutAvailableTracer(t *testing.T) {
 		Transport: &RoundTripper{Next: &nethttp.Transport{}, TargetName: "test_client"},
 	}
 
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, ts.URL, nil)
+	require.NoError(t, err)
+
 	// WHEN
-	resp, err := client.Get(ts.URL)
+	resp, err := client.Do(req)
 
 	// THEN
 	require.NoError(t, err)
+
+	defer resp.Body.Close()
+
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 	assert.Len(t, mtracer.FinishedSpans(), 0)
 }
@@ -51,7 +58,7 @@ func TestRoundTripperWithAvailableTracer(t *testing.T) {
 		Transport: &RoundTripper{Next: &nethttp.Transport{}, TargetName: "test_client"},
 	}
 
-	req, err := http.NewRequest(http.MethodGet, ts.URL+"/test", nil)
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, ts.URL+"/test", nil)
 	require.NoError(t, err)
 
 	// WHEN
@@ -59,6 +66,9 @@ func TestRoundTripperWithAvailableTracer(t *testing.T) {
 
 	// THEN
 	require.NoError(t, err)
+
+	defer resp.Body.Close()
+
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 
 	spans := mtracer.FinishedSpans()

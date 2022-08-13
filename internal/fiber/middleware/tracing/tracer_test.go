@@ -55,7 +55,7 @@ func TestTracerSpanManagementWithoutSkippingOnMissingParentSpan(t *testing.T) {
 	}{
 		{
 			uc:      "request without parent span, resulting in http 200",
-			request: httptest.NewRequest("GET", "/test", nil),
+			request: httptest.NewRequest(http.MethodGet, "/test", nil),
 			assert: func(t *testing.T, mtracer *mocktracer.MockTracer) {
 				t.Helper()
 
@@ -69,7 +69,7 @@ func TestTracerSpanManagementWithoutSkippingOnMissingParentSpan(t *testing.T) {
 				tags := spans[0].Tags()
 				assert.Len(t, tags, 6)
 				assert.Equal(t, ext.SpanKindRPCServerEnum, tags[string(ext.SpanKind)])
-				assert.Equal(t, "GET", tags[string(ext.HTTPMethod)])
+				assert.Equal(t, http.MethodGet, tags[string(ext.HTTPMethod)])
 				assert.Equal(t, "/test", tags[string(ext.HTTPUrl)])
 				assert.Equal(t, uint16(200), tags[string(ext.HTTPStatusCode)])
 				assert.Equal(t, "0.0.0.0", tags[string(ext.PeerAddress)])
@@ -78,7 +78,7 @@ func TestTracerSpanManagementWithoutSkippingOnMissingParentSpan(t *testing.T) {
 		},
 		{
 			uc:      "request without parent span, resulting in http 500",
-			request: httptest.NewRequest("POST", "/test", nil),
+			request: httptest.NewRequest(http.MethodPost, "/test", nil),
 			assert: func(t *testing.T, mtracer *mocktracer.MockTracer) {
 				t.Helper()
 
@@ -92,7 +92,7 @@ func TestTracerSpanManagementWithoutSkippingOnMissingParentSpan(t *testing.T) {
 				tags := spans[0].Tags()
 				assert.Len(t, tags, 6)
 				assert.Equal(t, ext.SpanKindRPCServerEnum, tags[string(ext.SpanKind)])
-				assert.Equal(t, "POST", tags[string(ext.HTTPMethod)])
+				assert.Equal(t, http.MethodPost, tags[string(ext.HTTPMethod)])
 				assert.Equal(t, "/test", tags[string(ext.HTTPUrl)])
 				assert.Equal(t, uint16(500), tags[string(ext.HTTPStatusCode)])
 				assert.Equal(t, "0.0.0.0", tags[string(ext.PeerAddress)])
@@ -102,7 +102,7 @@ func TestTracerSpanManagementWithoutSkippingOnMissingParentSpan(t *testing.T) {
 		{
 			uc: "request with parent span, resulting in http 200",
 			request: func() *http.Request {
-				req := httptest.NewRequest("GET", "/test", nil)
+				req := httptest.NewRequest(http.MethodGet, "/test", nil)
 				setParentContextHeader(req)
 
 				return req
@@ -120,7 +120,7 @@ func TestTracerSpanManagementWithoutSkippingOnMissingParentSpan(t *testing.T) {
 				tags := spans[0].Tags()
 				assert.Len(t, tags, 6)
 				assert.Equal(t, ext.SpanKindRPCServerEnum, tags[string(ext.SpanKind)])
-				assert.Equal(t, "GET", tags[string(ext.HTTPMethod)])
+				assert.Equal(t, http.MethodGet, tags[string(ext.HTTPMethod)])
 				assert.Equal(t, "/test", tags[string(ext.HTTPUrl)])
 				assert.Equal(t, uint16(200), tags[string(ext.HTTPStatusCode)])
 				assert.Equal(t, "0.0.0.0", tags[string(ext.PeerAddress)])
@@ -129,7 +129,7 @@ func TestTracerSpanManagementWithoutSkippingOnMissingParentSpan(t *testing.T) {
 		},
 		{
 			uc:      "filtered request",
-			request: httptest.NewRequest("GET", "/filtered", nil),
+			request: httptest.NewRequest(http.MethodGet, "/filtered", nil),
 			assert: func(t *testing.T, mtracer *mocktracer.MockTracer) {
 				t.Helper()
 
@@ -143,8 +143,9 @@ func TestTracerSpanManagementWithoutSkippingOnMissingParentSpan(t *testing.T) {
 			mtracer.Reset()
 
 			// WHEN
-			_, err := app.Test(tc.request, -1)
+			resp, err := app.Test(tc.request, -1)
 			require.NoError(t, err)
+			resp.Body.Close()
 
 			// THEN
 			tc.assert(t, mtracer)
@@ -186,7 +187,7 @@ func TestTracerSpanManagementWithSkippingOnMissingParentSpan(t *testing.T) {
 	}{
 		{
 			uc:      "request without parent span",
-			request: httptest.NewRequest("GET", "/test", nil),
+			request: httptest.NewRequest(http.MethodGet, "/test", nil),
 			assert: func(t *testing.T, mtracer *mocktracer.MockTracer) {
 				t.Helper()
 
@@ -197,7 +198,7 @@ func TestTracerSpanManagementWithSkippingOnMissingParentSpan(t *testing.T) {
 		{
 			uc: "request with parent span",
 			request: func() *http.Request {
-				req := httptest.NewRequest("GET", "/test", nil)
+				req := httptest.NewRequest(http.MethodGet, "/test", nil)
 				setParentContextHeader(req)
 
 				return req
@@ -215,7 +216,7 @@ func TestTracerSpanManagementWithSkippingOnMissingParentSpan(t *testing.T) {
 				tags := spans[0].Tags()
 				assert.Len(t, tags, 5)
 				assert.Equal(t, ext.SpanKindRPCServerEnum, tags[string(ext.SpanKind)])
-				assert.Equal(t, "GET", tags[string(ext.HTTPMethod)])
+				assert.Equal(t, http.MethodGet, tags[string(ext.HTTPMethod)])
 				assert.Equal(t, "/test", tags[string(ext.HTTPUrl)])
 				assert.Equal(t, uint16(200), tags[string(ext.HTTPStatusCode)])
 				assert.Equal(t, "0.0.0.0", tags[string(ext.PeerAddress)])
@@ -227,8 +228,9 @@ func TestTracerSpanManagementWithSkippingOnMissingParentSpan(t *testing.T) {
 			mtracer.Reset()
 
 			// WHEN
-			_, err := app.Test(tc.request, -1)
+			resp, err := app.Test(tc.request, -1)
 			require.NoError(t, err)
+			resp.Body.Close()
 
 			// THEN
 			tc.assert(t, mtracer)
@@ -254,10 +256,11 @@ func TestSpanIsSetToContextToEnablePropagationToUpstreamServices(t *testing.T) {
 	defer app.Shutdown()
 
 	// WHEN
-	_, err := app.Test(httptest.NewRequest("GET", "/test", nil), -1)
+	resp, err := app.Test(httptest.NewRequest(http.MethodGet, "/test", nil), -1)
 
 	// THEN
 	require.NoError(t, err)
+	resp.Body.Close()
 
 	span := opentracing.SpanFromContext(ctx)
 	require.NotNil(t, span)
@@ -270,7 +273,7 @@ func TestSpanIsSetToContextToEnablePropagationToUpstreamServices(t *testing.T) {
 	tags := impl.Tags()
 	assert.Len(t, tags, 5)
 	assert.Equal(t, ext.SpanKindRPCServerEnum, tags[string(ext.SpanKind)])
-	assert.Equal(t, "GET", tags[string(ext.HTTPMethod)])
+	assert.Equal(t, http.MethodGet, tags[string(ext.HTTPMethod)])
 	assert.Equal(t, "/test", tags[string(ext.HTTPUrl)])
 	assert.Equal(t, uint16(200), tags[string(ext.HTTPStatusCode)])
 	assert.Equal(t, "0.0.0.0", tags[string(ext.PeerAddress)])

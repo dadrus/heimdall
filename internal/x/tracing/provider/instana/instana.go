@@ -2,7 +2,6 @@ package instana
 
 import (
 	"io"
-	"io/ioutil"
 
 	instana "github.com/instana/go-sensor"
 	"github.com/opentracing/opentracing-go"
@@ -17,5 +16,5 @@ func New(serviceName string, log zerolog.Logger) (opentracing.Tracer, io.Closer,
 		opts.Service = serviceName
 	}
 
-	return instana.NewTracerWithOptions(opts), ioutil.NopCloser(nil), nil
+	return instana.NewTracerWithOptions(opts), io.NopCloser(nil), nil
 }

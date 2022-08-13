@@ -6,7 +6,6 @@ import (
 	"encoding/hex"
 	"errors"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"strings"
@@ -247,7 +246,7 @@ func (h *genericHydrator) readResponse(ctx heimdall.Context, resp *http.Response
 		return nil, nil
 	}
 
-	rawData, err := ioutil.ReadAll(resp.Body)
+	rawData, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, errorchain.NewWithMessage(heimdall.ErrInternal, "failed to read response").CausedBy(err)
 	}
@@ -260,7 +259,7 @@ func (h *genericHydrator) readResponse(ctx heimdall.Context, resp *http.Response
 	if err != nil {
 		logger.Warn().Msgf("%s content type is not supported. Treating it as string", contentType)
 
-		return string(rawData), nil
+		return string(rawData), nil // nolint: nilerr
 	}
 
 	result, err := decoder.Decode(rawData)

@@ -1,6 +1,7 @@
 package extractors
 
 import (
+	"context"
 	"net/http"
 	"testing"
 
@@ -121,7 +122,7 @@ func TestApplyHeaderAuthDataToRequest(t *testing.T) {
 	headerName := "X-Test-Header"
 	rawHeaderValue := "Foo Bar"
 	headerValueWithoutSchema := "Bar"
-	req, err := http.NewRequest(http.MethodGet, "foobar.local", nil)
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, "foobar.local", nil)
 	require.NoError(t, err)
 
 	authData := &headerAuthData{name: headerName, rawValue: rawHeaderValue, value: headerValueWithoutSchema}
