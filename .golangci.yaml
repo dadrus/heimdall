@@ -13,10 +13,13 @@ linters:
     - maligned
     - scopelint
     - golint
+    - ifshort
     - interfacer
     - testpackage
     - funlen
     - paralleltest
+    - nolintlint
+    - tparallel
 
 linters-settings:
   exhaustive:

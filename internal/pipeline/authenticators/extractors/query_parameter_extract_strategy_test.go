@@ -1,6 +1,7 @@
 package extractors
 
 import (
+	"context"
 	"net/http"
 	"testing"
 
@@ -18,7 +19,7 @@ func TestExtractQueryParameter(t *testing.T) {
 	// GIVEN
 	queryParam := "test_param"
 	queryParamValue := "foo"
-	req, err := http.NewRequest(http.MethodGet, "foobar.local", nil)
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, "foobar.local", nil)
 	require.NoError(t, err)
 
 	ctx := &mocks.MockContext{}

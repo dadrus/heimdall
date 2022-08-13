@@ -1,6 +1,7 @@
 package proxyheader
 
 import (
+	"context"
 	"net/http"
 	"strings"
 	"testing"
@@ -109,14 +110,15 @@ func TestMiddlewareApplicationWithoutConfiguredTrustedProxy(t *testing.T) {
 			valueXForwardedFor = ""
 			valueForwarded = ""
 
-			req, err := http.NewRequest("GET", "/test", nil)
+			req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, "/test", nil)
 			require.NoError(t, err)
 
 			tc.configureRequest(t, req)
 
 			// WHEN
-			_, err = app.Test(req, -1)
+			resp, err := app.Test(req, -1)
 			require.NoError(t, err)
+			resp.Body.Close()
 
 			// THEN
 			tc.assert(t)
@@ -228,14 +230,15 @@ func TestMiddlewareApplicationWithConfiguredTrustedProxy(t *testing.T) {
 			valueXForwardedFor = ""
 			valueForwarded = ""
 
-			req, err := http.NewRequest("GET", "/test", nil)
+			req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, "/test", nil)
 			require.NoError(t, err)
 
 			tc.configureRequest(t, req)
 
 			// WHEN
-			_, err = app.Test(req, -1)
+			resp, err := app.Test(req, -1)
 			require.NoError(t, err)
+			resp.Body.Close()
 
 			// THEN
 			tc.assert(t)

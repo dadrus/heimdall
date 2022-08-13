@@ -39,7 +39,7 @@ func TestHealthRequest(t *testing.T) {
 
 	// WHEN
 	resp, err := app.Test(
-		httptest.NewRequest("GET", "http://heimdall.test.local/.well-known/health", nil),
+		httptest.NewRequest(http.MethodGet, "http://heimdall.test.local/.well-known/health", nil),
 		-1)
 
 	// THEN

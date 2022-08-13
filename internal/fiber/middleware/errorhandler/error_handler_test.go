@@ -105,6 +105,9 @@ func TestDefaultErrorHandler(t *testing.T) {
 		t.Run("case="+tc.uc, func(t *testing.T) {
 			// GIVEN
 			appError = tc.serverError
+
+			// nolint: bodyclose
+			// false positive. closed below
 			assertResponse := x.IfThenElse(
 				tc.assertResponse != nil,
 				tc.assertResponse,
@@ -115,7 +118,7 @@ func TestDefaultErrorHandler(t *testing.T) {
 				})
 
 			// WHEN
-			resp, err := app.Test(httptest.NewRequest("GET", "/test", nil))
+			resp, err := app.Test(httptest.NewRequest(http.MethodGet, "/test", nil))
 
 			// THEN
 			require.NoError(t, err)
@@ -235,6 +238,9 @@ func TestVerboseErrorHandler(t *testing.T) {
 		t.Run("case="+tc.uc, func(t *testing.T) {
 			// GIVEN
 			appError = tc.serverError
+
+			// nolint: bodyclose
+			// false positive. closed below
 			assertResponse := x.IfThenElse(
 				tc.assertResponse != nil,
 				tc.assertResponse,
@@ -248,7 +254,7 @@ func TestVerboseErrorHandler(t *testing.T) {
 				})
 
 			// WHEN
-			resp, err := app.Test(httptest.NewRequest("GET", "/test", nil))
+			resp, err := app.Test(httptest.NewRequest(http.MethodGet, "/test", nil))
 
 			// THEN
 			require.NoError(t, err)

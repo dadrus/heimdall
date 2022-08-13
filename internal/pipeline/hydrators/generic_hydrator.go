@@ -260,7 +260,7 @@ func (h *genericHydrator) readResponse(ctx heimdall.Context, resp *http.Response
 	if err != nil {
 		logger.Warn().Msgf("%s content type is not supported. Treating it as string", contentType)
 
-		return string(rawData), nil
+		return string(rawData), nil // nolint: nilerr
 	}
 
 	result, err := decoder.Decode(rawData)
