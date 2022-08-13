@@ -3,7 +3,7 @@ package authorizers
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -393,7 +393,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 					assert.Empty(t, req.Header.Get("Content-Type"))
 					assert.Empty(t, req.Header.Get("Accept"))
 
-					data, err := ioutil.ReadAll(req.Body)
+					data, err := io.ReadAll(req.Body)
 					assert.NoError(t, err)
 
 					assert.Equal(t, "my-id", string(data))
@@ -444,7 +444,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 					assert.Equal(t, "application/json", req.Header.Get("Content-Type"))
 					assert.Equal(t, "application/json", req.Header.Get("Accept"))
 
-					data, err := ioutil.ReadAll(req.Body)
+					data, err := io.ReadAll(req.Body)
 					assert.NoError(t, err)
 
 					var mapData map[string]string
@@ -526,7 +526,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 					assert.Equal(t, "POST", req.Method)
 					assert.Equal(t, "application/x-www-form-urlencoded", req.Header.Get("Content-Type"))
 
-					data, err := ioutil.ReadAll(req.Body)
+					data, err := io.ReadAll(req.Body)
 					assert.NoError(t, err)
 
 					formValues, err := url.ParseQuery(string(data))
@@ -861,7 +861,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 					assert.Equal(t, "application/json", req.Header.Get("Content-Type"))
 					assert.Equal(t, "application/json", req.Header.Get("Accept"))
 
-					data, err := ioutil.ReadAll(req.Body)
+					data, err := io.ReadAll(req.Body)
 					assert.NoError(t, err)
 
 					var mapData map[string]string
@@ -932,7 +932,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 					assert.Equal(t, "application/json", req.Header.Get("Content-Type"))
 					assert.Equal(t, "application/json", req.Header.Get("Accept"))
 
-					data, err := ioutil.ReadAll(req.Body)
+					data, err := io.ReadAll(req.Body)
 					assert.NoError(t, err)
 
 					var mapData map[string]string

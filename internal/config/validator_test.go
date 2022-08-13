@@ -1,7 +1,6 @@
 package config
 
 import (
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -24,7 +23,7 @@ func TestValidateNotExistingConfigFile(t *testing.T) {
 func TestValidateNotReadableConfigFile(t *testing.T) {
 	t.Parallel()
 
-	tmpFile, err := ioutil.TempFile("", "test-config-")
+	tmpFile, err := os.CreateTemp("", "test-config-")
 	require.NoError(t, err)
 
 	require.NoError(t, tmpFile.Chmod(0o200))
@@ -41,7 +40,7 @@ func TestValidateNotReadableConfigFile(t *testing.T) {
 func TestValidateEmptyConfigFile(t *testing.T) {
 	t.Parallel()
 
-	tmpFile, err := ioutil.TempFile("", "test-config-")
+	tmpFile, err := os.CreateTemp("", "test-config-")
 	require.NoError(t, err)
 
 	defer os.Remove(tmpFile.Name())
@@ -56,7 +55,7 @@ func TestValidateEmptyConfigFile(t *testing.T) {
 func TestValidateConfigFileWithInvalidYAMLContent(t *testing.T) {
 	t.Parallel()
 
-	tmpFile, err := ioutil.TempFile("", "test-config-")
+	tmpFile, err := os.CreateTemp("", "test-config-")
 	require.NoError(t, err)
 
 	defer os.Remove(tmpFile.Name())
@@ -74,7 +73,7 @@ func TestValidateConfigFileWithInvalidYAMLContent(t *testing.T) {
 func TestValidateConfigFileWithValidYAMLContentButFailingSchemaValidation(t *testing.T) {
 	t.Parallel()
 
-	tmpFile, err := ioutil.TempFile("", "test-config-")
+	tmpFile, err := os.CreateTemp("", "test-config-")
 	require.NoError(t, err)
 
 	defer os.Remove(tmpFile.Name())

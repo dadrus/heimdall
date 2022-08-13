@@ -8,7 +8,6 @@ import (
 	"encoding/hex"
 	"errors"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"time"
@@ -136,7 +135,7 @@ func (e Endpoint) readResponse(resp *http.Response) ([]byte, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
-		rawData, err := ioutil.ReadAll(resp.Body)
+		rawData, err := io.ReadAll(resp.Body)
 		if err != nil {
 			return nil, errorchain.
 				NewWithMessage(heimdall.ErrInternal, "failed to read response").

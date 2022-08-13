@@ -1,7 +1,7 @@
 package instana_test
 
 import (
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -72,7 +72,7 @@ func TestInstanaTracer(t *testing.T) {
 		if r.URL.Path == "/com.instana.plugin.golang.discovery" {
 			t.Log("Got Agent discovery request")
 
-			body, err := ioutil.ReadAll(r.Body)
+			body, err := io.ReadAll(r.Body)
 			assert.NoError(t, err)
 
 			var dReq discoveryRequest
@@ -96,7 +96,7 @@ func TestInstanaTracer(t *testing.T) {
 		if strings.Contains(r.URL.Path, "/com.instana.plugin.golang/traces.") {
 			t.Log("Got trace request")
 
-			body, err := ioutil.ReadAll(r.Body)
+			body, err := io.ReadAll(r.Body)
 			assert.NoError(t, err)
 
 			var req []traceRequest

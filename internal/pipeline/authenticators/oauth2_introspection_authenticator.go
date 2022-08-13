@@ -4,7 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 	"strings"
@@ -259,7 +259,7 @@ func (a *oauth2IntrospectionAuthenticator) readIntrospectionResponse(
 			"unexpected response code: %v", resp.StatusCode)
 	}
 
-	rawData, err := ioutil.ReadAll(resp.Body)
+	rawData, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, nil, errorchain.NewWithMessage(heimdall.ErrInternal,
 			"failed to read response").CausedBy(err)

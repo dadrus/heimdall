@@ -2,7 +2,7 @@ package hydrators
 
 import (
 	"context"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
@@ -654,7 +654,7 @@ func TestGenericHydratorExecute(t *testing.T) {
 					require.NoError(t, err)
 					assert.Equal(t, "Foo-Session-Value", cookie.Value)
 
-					content, err := ioutil.ReadAll(req.Body)
+					content, err := io.ReadAll(req.Body)
 					require.NoError(t, err)
 
 					assert.JSONEq(t, `{"user_id": "Foo"}`, string(content))

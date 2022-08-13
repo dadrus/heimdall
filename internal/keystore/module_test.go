@@ -2,7 +2,6 @@ package keystore_test
 
 import (
 	"bytes"
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -17,14 +16,14 @@ import (
 func TestNewKeyStore(t *testing.T) {
 	t.Parallel()
 
-	file, err := ioutil.TempFile("", "test_ks.*")
+	file, err := os.CreateTemp("", "test_ks.*")
 	require.NoError(t, err)
 
 	buf := bytes.NewBuffer(pemPKCS1ECPrivateKey)
 	_, err = buf.Write(pemPKCS8RSAPrivateKey)
 	require.NoError(t, err)
 
-	err = ioutil.WriteFile(file.Name(), buf.Bytes(), 0o600)
+	err = os.WriteFile(file.Name(), buf.Bytes(), 0o600)
 	require.NoError(t, err)
 
 	defer os.Remove(file.Name())

@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -357,7 +356,7 @@ func TestEndpointSendRequest(t *testing.T) {
 
 					assert.Equal(t, "baz", request.Header.Get("Foo-Bar"))
 
-					rawData, err := ioutil.ReadAll(request.Body)
+					rawData, err := io.ReadAll(request.Body)
 					require.NoError(t, err)
 					assert.Equal(t, []byte(`{"hello":"world"}`), rawData)
 				}

@@ -1,7 +1,6 @@
 package logging
 
 import (
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -12,7 +11,7 @@ import (
 )
 
 func redirStdout(exec func()) ([]byte, error) {
-	tempFile, err := ioutil.TempFile("", "logconfig-test")
+	tempFile, err := os.CreateTemp("", "logconfig-test")
 	if err != nil {
 		return nil, err
 	}
@@ -31,7 +30,7 @@ func redirStdout(exec func()) ([]byte, error) {
 
 	exec()
 
-	return ioutil.ReadFile(fileName)
+	return os.ReadFile(fileName)
 }
 
 func TestNewTextLogger(t *testing.T) {
