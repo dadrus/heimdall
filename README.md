@@ -15,7 +15,7 @@ Heimdall is inspired by the ZeroTrust idea and also by [Ory's OAthkeeper](https:
 Heimdall authenticates and authorizes incoming HTTP requests as well as enriches these with further contextual information and finally transforms resulting subject information into a format, required by the upstream services. And all of that can be controlled by each and every backend service individually.
 
 It is supposed to be used either as 
-* a **Reverse Proxy** (not yet released) in front of your upstream API or web server that rejects unauthorized requests and forwards authorized ones to your end points, or as 
+* a **Reverse Proxy** in front of your upstream API or web server that rejects unauthorized requests and forwards authorized ones to your end points, or as 
 * a **Decision API**, which integrates with your API Gateway (Kong, NGNIX, Envoy, Traefik, etc) and then acts as a Policy Decision Point.
 
 ## Beyond the Functionality
@@ -27,6 +27,6 @@ Heimdall's main focus points beyond its functionality are:
 
 ## Current State
 
-The current implementation is an alpha version. That means it does not solve all the problems heimdall aims to solve. With other words a lot of functionality is missing. In addition, alpha version means, there will be breaking changes (configuration-wise). Nevertheless, the code base is stable and pretty good tested. Functionality already supported can be found in the current [Release description](https://github.com/dadrus/heimdall/releases/latest). Planned features can be found in the defined [Milestones](https://github.com/dadrus/heimdall/milestones).
+The current implementation is an alpha version. That means it does not solve all the problems heimdall aims to solve. With other words a lot of functionality is missing. In addition, alpha version means, there will be breaking changes. Nevertheless, the code base is stable and pretty good tested. Functionality already supported can be found in [Release descriptions](https://github.com/dadrus/heimdall/releases). Planned features can be found in the defined [Milestones](https://github.com/dadrus/heimdall/milestones).
 
-If you like to give it a try, checkout out the [documentation](https://dadrus.github.io/heimdall/docs/welcome/).
+If you like to give it a try, checkout out the [documentation](https://dadrus.github.io/heimdall/v0.2.0-alpha/docs/welcome/).
