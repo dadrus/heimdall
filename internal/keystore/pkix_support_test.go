@@ -5,7 +5,6 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
-	"crypto/sha1" // nolint: gosec
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
@@ -13,6 +12,9 @@ import (
 	"time"
 
 	"golang.org/x/exp/slices"
+
+	"github.com/dadrus/heimdall/internal/keystore"
+	"github.com/dadrus/heimdall/internal/x"
 )
 
 func WithX509Certificate(cert *x509.Certificate) PEMBuilderOption {
@@ -243,31 +245,19 @@ func NewCertificateBuilder(opts ...CertificateBuilderOption) *CertificateBuilder
 }
 
 func (cb *CertificateBuilder) Build() (*x509.Certificate, error) {
-	var parent *x509.Certificate
+	var err error
 
 	// generate public key identifier
 	if cb.generateKeyIdentifier {
-		// Subject Key Identifier support
-		// https://www.ietf.org/rfc/rfc3280.txt (section 4.2.1.2)
-		marshaledKey, err := x509.MarshalPKIXPublicKey(cb.subjectPubKey)
-		if err != nil {
+		if cb.tmpl.SubjectKeyId, err = keystore.SubjectKeyID(cb.subjectPubKey); err != nil {
 			return nil, err
 		}
-
-		subjKeyID := sha1.Sum(marshaledKey) // nolint: gosec
-		cb.tmpl.SubjectKeyId = subjKeyID[:]
-	}
-
-	if cb.selfSigned {
-		parent = cb.tmpl
-	} else {
-		parent = cb.issuerCert
 	}
 
 	raw, err := x509.CreateCertificate(
 		rand.Reader,
 		cb.tmpl,
-		parent,
+		x.IfThenElse(cb.selfSigned, cb.tmpl, cb.issuerCert),
 		cb.subjectPubKey,
 		cb.privKey,
 	)

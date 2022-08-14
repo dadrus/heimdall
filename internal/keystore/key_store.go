@@ -1,13 +1,9 @@
 package keystore
 
-// nolint
-// md5 is used for fingerprint generation only
 import (
 	"crypto"
 	"crypto/ecdsa"
-	"crypto/elliptic"
 	"crypto/rsa"
-	"crypto/sha1"
 	"crypto/x509"
 	"encoding/hex"
 	"encoding/pem"
@@ -26,6 +22,7 @@ const (
 	pemBlockTypePrivateKey          = "PRIVATE KEY"
 	pemBlockTypeECPrivateKey        = "EC PRIVATE KEY"
 	pemBlockTypeRSAPrivateKey       = "RSA PRIVATE KEY"
+	pemBlockTypeCertificate         = "CERTIFICATE"
 
 	AlgRSA   = "RSA"
 	AlgECDSA = "ECDSA"
@@ -90,10 +87,13 @@ func NewKeyStoreFromPEMBytes(pemBytes []byte, password string) (KeyStore, error)
 func loadKeys(blocks []*pem.Block, password string) (keyStore, error) {
 	ks := make(keyStore)
 
+	var certs []*x509.Certificate
+
 	for idx, block := range blocks {
 		var (
-			key any
-			err error
+			cert *x509.Certificate
+			key  any
+			err  error
 		)
 
 		switch block.Type {
@@ -109,6 +109,8 @@ func loadKeys(blocks []*pem.Block, password string) (keyStore, error) {
 		case pemBlockTypeRSAPrivateKey:
 			// PKCS#1 - unencrypted
 			key, err = x509.ParsePKCS1PrivateKey(block.Bytes)
+		case pemBlockTypeCertificate:
+			cert, err = x509.ParseCertificate(block.Bytes)
 		default:
 			return nil, errorchain.
 				NewWithMessagef(heimdall.ErrInternal, "unsupported entry '%s' entry in the pem file", block.Type)
@@ -120,12 +122,33 @@ func loadKeys(blocks []*pem.Block, password string) (keyStore, error) {
 				CausedBy(err)
 		}
 
-		entry, err := createEntry(key)
-		if err != nil {
+		if cert != nil {
+			certs = append(certs, cert)
+		} else {
+			entry, err := createEntry(key)
+			if err != nil {
+				return nil, err
+			}
+
+			ks[entry.KeyID] = entry
+		}
+	}
+
+	return addCertificates(ks, certs)
+}
+
+func addCertificates(ks keyStore, certs []*x509.Certificate) (keyStore, error) {
+	for _, entry := range ks {
+		chain := FindChain(entry.PrivateKey.Public(), certs)
+		if len(chain) == 0 {
+			continue
+		}
+
+		if err := ValidateChain(chain); err != nil {
 			return nil, err
 		}
 
-		ks[entry.KeyID] = entry
+		entry.CertChain = chain
 	}
 
 	return ks, nil
@@ -151,6 +174,7 @@ func createEntry(key any) (*Entry, error) {
 		algorithm string
 		size      int
 		hash      []byte
+		err       error
 	)
 
 	switch typedKey := key.(type) {
@@ -160,14 +184,16 @@ func createEntry(key any) (*Entry, error) {
 		algorithm = AlgRSA
 		sigKey = typedKey
 		size = typedKey.Size() * bitsInByte
-		hash = hashKeyBytes(x509.MarshalPKCS1PublicKey(&typedKey.PublicKey))
 	case *ecdsa.PrivateKey:
 		algorithm = AlgECDSA
 		sigKey = typedKey
 		size = typedKey.Params().BitSize
-		hash = hashKeyBytes(elliptic.Marshal(typedKey.PublicKey.Curve, typedKey.PublicKey.X, typedKey.PublicKey.Y))
 	default:
 		return nil, errorchain.NewWithMessage(heimdall.ErrInternal, "unsupported key type")
+	}
+
+	if hash, err = SubjectKeyID(sigKey.Public()); err != nil {
+		return nil, err
 	}
 
 	return &Entry{
@@ -176,13 +202,4 @@ func createEntry(key any) (*Entry, error) {
 		KeySize:    size,
 		PrivateKey: sigKey,
 	}, nil
-}
-
-func hashKeyBytes(val []byte) []byte {
-	// nolint: gosec
-	// used for fingerprinting
-	md := sha1.New()
-	md.Write(val)
-
-	return md.Sum(nil)
 }
