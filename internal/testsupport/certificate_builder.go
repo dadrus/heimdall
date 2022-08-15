@@ -1,165 +1,15 @@
-package keystore_test
+package testsupport
 
 import (
-	"bytes"
-	"crypto/ecdsa"
-	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/x509"
 	"crypto/x509/pkix"
-	"encoding/pem"
 	"math/big"
 	"time"
 
-	"golang.org/x/exp/slices"
-
-	"github.com/dadrus/heimdall/internal/keystore"
 	"github.com/dadrus/heimdall/internal/x"
+	pkix2 "github.com/dadrus/heimdall/internal/x/pkix"
 )
-
-type PEMBlockOption func(*pem.Block)
-
-func WithPEMHeader(key, value string) PEMBlockOption {
-	return func(block *pem.Block) {
-		block.Headers[key] = value
-	}
-}
-
-func WithX509Certificate(cert *x509.Certificate, opts ...PEMBlockOption) PEMEntryOption {
-	return func(block *pem.Block) error {
-		block.Type = "CERTIFICATE"
-		block.Bytes = cert.Raw
-
-		for _, opt := range opts {
-			opt(block)
-		}
-
-		return nil
-	}
-}
-
-func WithECDSAPublicKey(key *ecdsa.PublicKey, opts ...PEMBlockOption) PEMEntryOption {
-	return func(block *pem.Block) error {
-		raw, err := x509.MarshalPKIXPublicKey(key)
-		if err != nil {
-			return err
-		}
-
-		block.Type = "ECDSA PUBLIC KEY"
-		block.Bytes = raw
-
-		for _, opt := range opts {
-			opt(block)
-		}
-
-		return nil
-	}
-}
-
-func WithECDSAPrivateKey(key *ecdsa.PrivateKey, opts ...PEMBlockOption) PEMEntryOption {
-	return func(block *pem.Block) error {
-		raw, err := x509.MarshalECPrivateKey(key)
-		if err != nil {
-			return err
-		}
-
-		block.Type = "EC PRIVATE KEY"
-		block.Bytes = raw
-
-		for _, opt := range opts {
-			opt(block)
-		}
-
-		return nil
-	}
-}
-
-type PEMEntryOption func(*pem.Block) error
-
-func BuildPEM(opts ...PEMEntryOption) ([]byte, error) {
-	buf := new(bytes.Buffer)
-
-	for _, opt := range opts {
-		block := &pem.Block{Headers: make(map[string]string)}
-
-		err := opt(block)
-		if err != nil {
-			return nil, err
-		}
-
-		if err = pem.Encode(buf, block); err != nil {
-			return nil, err
-		}
-	}
-
-	return buf.Bytes(), nil
-}
-
-type CA struct {
-	lastEECertSN int64
-	priv         *ecdsa.PrivateKey
-	cert         *x509.Certificate
-}
-
-func (ca *CA) NextSN() *big.Int {
-	ca.lastEECertSN++
-
-	return big.NewInt(ca.lastEECertSN)
-}
-
-func (ca *CA) IssueCertificate(opts ...CertificateBuilderOption) (*x509.Certificate, error) {
-	options := slices.Clone(opts)
-	options = append(options,
-		WithSerialNumber(ca.NextSN()),
-		WithIssuer(ca.priv, ca.cert),
-	)
-
-	cb := NewCertificateBuilder(options...)
-
-	return cb.Build()
-}
-
-func NewCA(privKey *ecdsa.PrivateKey, cert *x509.Certificate) *CA {
-	return &CA{
-		lastEECertSN: 0,
-		priv:         privKey,
-		cert:         cert,
-	}
-}
-
-func NewRootCA(CN string, validity time.Duration) (*CA, error) { // nolint: gocritic
-	priv, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
-	if err != nil {
-		return nil, err
-	}
-
-	opts := []CertificateBuilderOption{
-		WithValidity(time.Now(), validity),
-		WithSerialNumber(big.NewInt(1)),
-		WithSubject(pkix.Name{
-			CommonName:   CN,
-			Organization: []string{"Test"},
-			Country:      []string{"EU"},
-		}),
-		WithSubjectPubKey(&priv.PublicKey, x509.ECDSAWithSHA384),
-		WithIsCA(),
-		WithSelfSigned(),
-		WithSignaturePrivKey(priv),
-	}
-
-	cb := NewCertificateBuilder(opts...)
-
-	cert, err := cb.Build()
-	if err != nil {
-		return nil, err
-	}
-
-	return &CA{
-		priv:         priv,
-		cert:         cert,
-		lastEECertSN: 0,
-	}, nil
-}
 
 type CertificateBuilderOption func(*CertificateBuilder)
 
@@ -275,7 +125,7 @@ func (cb *CertificateBuilder) Build() (*x509.Certificate, error) {
 
 	// generate public key identifier
 	if cb.generateKeyIdentifier {
-		if cb.tmpl.SubjectKeyId, err = keystore.SubjectKeyID(cb.subjectPubKey); err != nil {
+		if cb.tmpl.SubjectKeyId, err = pkix2.SubjectKeyID(cb.subjectPubKey); err != nil {
 			return nil, err
 		}
 	}

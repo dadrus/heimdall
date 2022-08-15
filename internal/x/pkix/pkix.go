@@ -1,4 +1,4 @@
-package keystore
+package pkix
 
 import (
 	"crypto/sha1" // nolint: gosec

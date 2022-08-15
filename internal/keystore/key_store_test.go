@@ -15,6 +15,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/dadrus/heimdall/internal/testsupport"
+	pkix2 "github.com/dadrus/heimdall/internal/x/pkix"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -354,7 +356,7 @@ func TestCreateKeyStoreFromPEMBytes(t *testing.T) {
 				assert.NotNil(t, ecdsaKeyEntry.PrivateKey)
 				assert.Equal(t, 256, ecdsaKeyEntry.KeySize)
 				assert.Nil(t, ecdsaKeyEntry.CertChain)
-				kid, err := keystore.SubjectKeyID(ecdsaKeyEntry.PrivateKey.Public())
+				kid, err := pkix2.SubjectKeyID(ecdsaKeyEntry.PrivateKey.Public())
 				require.NoError(t, err)
 				assert.Equal(t, hex.EncodeToString(kid), ecdsaKeyEntry.KeyID)
 
@@ -363,7 +365,7 @@ func TestCreateKeyStoreFromPEMBytes(t *testing.T) {
 				assert.NotNil(t, rsaKeyEntry.PrivateKey)
 				assert.Equal(t, 2048, rsaKeyEntry.KeySize)
 				assert.Nil(t, rsaKeyEntry.CertChain)
-				kid, err = keystore.SubjectKeyID(rsaKeyEntry.PrivateKey.Public())
+				kid, err = pkix2.SubjectKeyID(rsaKeyEntry.PrivateKey.Public())
 				require.NoError(t, err)
 				assert.Equal(t, hex.EncodeToString(kid), rsaKeyEntry.KeyID)
 			},
@@ -418,8 +420,8 @@ xijD/4gPFRBfs2GsfVZzSL9kH7HH0chB9w==
 				privKey1, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
 				require.NoError(t, err)
 
-				pemBytes, err := BuildPEM(
-					WithECDSAPrivateKey(privKey1, WithPEMHeader("X-Key-ID", "bar")),
+				pemBytes, err := testsupport.BuildPEM(
+					testsupport.WithECDSAPrivateKey(privKey1, testsupport.WithPEMHeader("X-Key-ID", "bar")),
 				)
 				require.NoError(t, err)
 
@@ -446,26 +448,26 @@ xijD/4gPFRBfs2GsfVZzSL9kH7HH0chB9w==
 			pemContents: func(t *testing.T) []byte {
 				t.Helper()
 
-				ca, err := NewRootCA("Test CA", time.Hour*24)
+				ca, err := testsupport.NewRootCA("Test CA", time.Hour*24)
 				require.NoError(t, err)
 
 				privKey, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
 				require.NoError(t, err)
 				cert, err := ca.IssueCertificate(
-					WithSubject(pkix.Name{
+					testsupport.WithSubject(pkix.Name{
 						CommonName:   "Test EE",
 						Organization: []string{"Test"},
 						Country:      []string{"EU"},
 					}),
-					WithValidity(time.Now(), time.Hour*1),
-					WithSubjectPubKey(&privKey.PublicKey, x509.ECDSAWithSHA384),
-					WithKeyUsage(x509.KeyUsageDigitalSignature))
+					testsupport.WithValidity(time.Now(), time.Hour*1),
+					testsupport.WithSubjectPubKey(&privKey.PublicKey, x509.ECDSAWithSHA384),
+					testsupport.WithKeyUsage(x509.KeyUsageDigitalSignature))
 				require.NoError(t, err)
 
-				pemBytes, err := BuildPEM(
-					WithECDSAPrivateKey(privKey),
-					WithX509Certificate(cert),
-					WithX509Certificate(ca.cert),
+				pemBytes, err := testsupport.BuildPEM(
+					testsupport.WithECDSAPrivateKey(privKey),
+					testsupport.WithX509Certificate(cert),
+					testsupport.WithX509Certificate(ca.Certificate),
 				)
 				require.NoError(t, err)
 
@@ -484,7 +486,7 @@ xijD/4gPFRBfs2GsfVZzSL9kH7HH0chB9w==
 				assert.NotNil(t, entry.PrivateKey)
 				assert.Equal(t, 384, entry.KeySize)
 				assert.Len(t, entry.CertChain, 2)
-				kid, err := keystore.SubjectKeyID(entry.PrivateKey.Public())
+				kid, err := pkix2.SubjectKeyID(entry.PrivateKey.Public())
 				require.NoError(t, err)
 				assert.Equal(t, hex.EncodeToString(kid), entry.KeyID)
 			},
@@ -494,27 +496,27 @@ xijD/4gPFRBfs2GsfVZzSL9kH7HH0chB9w==
 			pemContents: func(t *testing.T) []byte {
 				t.Helper()
 
-				ca, err := NewRootCA("Test CA", time.Hour*24)
+				ca, err := testsupport.NewRootCA("Test CA", time.Hour*24)
 				require.NoError(t, err)
 
 				privKey, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
 				require.NoError(t, err)
 				cert, err := ca.IssueCertificate(
-					WithSubject(pkix.Name{
+					testsupport.WithSubject(pkix.Name{
 						CommonName:   "Test EE 1",
 						Organization: []string{"Test"},
 						Country:      []string{"EU"},
 					}),
-					WithValidity(time.Now(), time.Hour*1),
-					WithSubjectKeyID([]byte("bar")),
-					WithSubjectPubKey(&privKey.PublicKey, x509.ECDSAWithSHA384),
-					WithKeyUsage(x509.KeyUsageDigitalSignature))
+					testsupport.WithValidity(time.Now(), time.Hour*1),
+					testsupport.WithSubjectKeyID([]byte("bar")),
+					testsupport.WithSubjectPubKey(&privKey.PublicKey, x509.ECDSAWithSHA384),
+					testsupport.WithKeyUsage(x509.KeyUsageDigitalSignature))
 				require.NoError(t, err)
 
-				pemBytes, err := BuildPEM(
-					WithECDSAPrivateKey(privKey),
-					WithX509Certificate(cert),
-					WithX509Certificate(ca.cert),
+				pemBytes, err := testsupport.BuildPEM(
+					testsupport.WithECDSAPrivateKey(privKey),
+					testsupport.WithX509Certificate(cert),
+					testsupport.WithX509Certificate(ca.Certificate),
 				)
 				require.NoError(t, err)
 
@@ -541,27 +543,27 @@ xijD/4gPFRBfs2GsfVZzSL9kH7HH0chB9w==
 			pemContents: func(t *testing.T) []byte {
 				t.Helper()
 
-				ca, err := NewRootCA("Test CA", time.Hour*24)
+				ca, err := testsupport.NewRootCA("Test CA", time.Hour*24)
 				require.NoError(t, err)
 
 				privKey, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
 				require.NoError(t, err)
 				cert, err := ca.IssueCertificate(
-					WithSubject(pkix.Name{
+					testsupport.WithSubject(pkix.Name{
 						CommonName:   "Test EE 1",
 						Organization: []string{"Test"},
 						Country:      []string{"EU"},
 					}),
-					WithValidity(time.Now(), time.Hour*1),
-					WithSubjectKeyID([]byte("bar")),
-					WithSubjectPubKey(&privKey.PublicKey, x509.ECDSAWithSHA384),
-					WithKeyUsage(x509.KeyUsageDigitalSignature))
+					testsupport.WithValidity(time.Now(), time.Hour*1),
+					testsupport.WithSubjectKeyID([]byte("bar")),
+					testsupport.WithSubjectPubKey(&privKey.PublicKey, x509.ECDSAWithSHA384),
+					testsupport.WithKeyUsage(x509.KeyUsageDigitalSignature))
 				require.NoError(t, err)
 
-				pemBytes, err := BuildPEM(
-					WithECDSAPrivateKey(privKey, WithPEMHeader("X-Key-ID", "foo")),
-					WithX509Certificate(cert),
-					WithX509Certificate(ca.cert),
+				pemBytes, err := testsupport.BuildPEM(
+					testsupport.WithECDSAPrivateKey(privKey, testsupport.WithPEMHeader("X-Key-ID", "foo")),
+					testsupport.WithX509Certificate(cert),
+					testsupport.WithX509Certificate(ca.Certificate),
 				)
 				require.NoError(t, err)
 
@@ -588,26 +590,26 @@ xijD/4gPFRBfs2GsfVZzSL9kH7HH0chB9w==
 			pemContents: func(t *testing.T) []byte {
 				t.Helper()
 
-				ca, err := NewRootCA("Test CA", time.Hour*24)
+				ca, err := testsupport.NewRootCA("Test CA", time.Hour*24)
 				require.NoError(t, err)
 
 				privKey1, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
 				require.NoError(t, err)
 				cert1, err := ca.IssueCertificate(
-					WithSubject(pkix.Name{
+					testsupport.WithSubject(pkix.Name{
 						CommonName:   "Test EE 1",
 						Organization: []string{"Test"},
 						Country:      []string{"EU"},
 					}),
-					WithValidity(time.Now(), time.Hour*1),
-					WithSubjectKeyID([]byte("bar")),
-					WithSubjectPubKey(&privKey1.PublicKey, x509.ECDSAWithSHA384))
+					testsupport.WithValidity(time.Now(), time.Hour*1),
+					testsupport.WithSubjectKeyID([]byte("bar")),
+					testsupport.WithSubjectPubKey(&privKey1.PublicKey, x509.ECDSAWithSHA384))
 				require.NoError(t, err)
 
-				pemBytes, err := BuildPEM(
-					WithECDSAPrivateKey(privKey1),
-					WithX509Certificate(cert1),
-					WithX509Certificate(ca.cert),
+				pemBytes, err := testsupport.BuildPEM(
+					testsupport.WithECDSAPrivateKey(privKey1),
+					testsupport.WithX509Certificate(cert1),
+					testsupport.WithX509Certificate(ca.Certificate),
 				)
 				require.NoError(t, err)
 
@@ -632,9 +634,9 @@ xijD/4gPFRBfs2GsfVZzSL9kH7HH0chB9w==
 				privKey2, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
 				require.NoError(t, err)
 
-				pemBytes, err := BuildPEM(
-					WithECDSAPrivateKey(privKey1, WithPEMHeader("X-Key-ID", "foo")),
-					WithECDSAPrivateKey(privKey2, WithPEMHeader("X-Key-ID", "foo")),
+				pemBytes, err := testsupport.BuildPEM(
+					testsupport.WithECDSAPrivateKey(privKey1, testsupport.WithPEMHeader("X-Key-ID", "foo")),
+					testsupport.WithECDSAPrivateKey(privKey2, testsupport.WithPEMHeader("X-Key-ID", "foo")),
 				)
 				require.NoError(t, err)
 

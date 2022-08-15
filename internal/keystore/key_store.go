@@ -10,6 +10,7 @@ import (
 	"errors"
 	"os"
 
+	"github.com/dadrus/heimdall/internal/x/pkix"
 	"github.com/youmark/pkcs8"
 	"golang.org/x/exp/maps"
 
@@ -160,7 +161,7 @@ func verifyAndBuildKeyStore(entries []*Entry, certs []*x509.Certificate) (keySto
 			// if certificate did not have subject key identifier set
 			// calculate subject key identifier and use it
 			if len(keyID) == 0 {
-				keyID, err = SubjectKeyID(entry.PrivateKey.Public())
+				keyID, err = pkix.SubjectKeyID(entry.PrivateKey.Public())
 				if err != nil {
 					return nil, err
 				}

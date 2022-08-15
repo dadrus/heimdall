@@ -1,50 +1,121 @@
 package management
 
 import (
+	"crypto/ecdsa"
+	"crypto/elliptic"
 	"crypto/rand"
-	"crypto/rsa"
+	"crypto/x509"
+	"crypto/x509/pkix"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
+	"github.com/dadrus/heimdall/internal/testsupport"
 	"github.com/goccy/go-json"
+	"github.com/gofiber/fiber/v2"
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/suite"
 	"gopkg.in/square/go-jose.v2"
 
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/keystore"
 )
 
-func TestJWKSRequestWithoutEtagUsage(t *testing.T) {
-	// GIVEN
-	const rsa2048 = 2048
+type JWKSTestSuite struct {
+	suite.Suite
+	rootCA1 *testsupport.CA
+	intCA1  *testsupport.CA
+	ee1     *testsupport.EndEntity
+	ee2     *testsupport.EndEntity
 
-	privateKey, err := rsa.GenerateKey(rand.Reader, rsa2048)
-	require.NoError(t, err)
+	app *fiber.App
+	ks  keystore.KeyStore
+}
 
-	ks, err := keystore.NewKeyStoreFromKey(privateKey)
-	require.NoError(t, err)
+func (suite *JWKSTestSuite) SetupSuite() {
+	var err error
 
-	app := newFiberApp(
+	// ROOT CAs
+	suite.rootCA1, err = testsupport.NewRootCA("Test Root CA 1", time.Hour*24)
+	suite.NoError(err)
+
+	// INT CA
+	intCA1PrivKey, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
+	suite.NoError(err)
+	intCA1Cert, err := suite.rootCA1.IssueCertificate(
+		testsupport.WithSubject(pkix.Name{
+			CommonName:   "Test Int CA 1",
+			Organization: []string{"Test"},
+			Country:      []string{"EU"},
+		}),
+		testsupport.WithIsCA(),
+		testsupport.WithValidity(time.Now(), time.Hour*24),
+		testsupport.WithSubjectPubKey(&intCA1PrivKey.PublicKey, x509.ECDSAWithSHA384))
+	suite.NoError(err)
+	suite.intCA1 = testsupport.NewCA(intCA1PrivKey, intCA1Cert)
+
+	// EE CERTS
+	ee1PrivKey, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
+	require.NoError(suite.T(), err)
+	ee1cert, err := suite.intCA1.IssueCertificate(
+		testsupport.WithSubject(pkix.Name{
+			CommonName:   "Test EE 1",
+			Organization: []string{"Test"},
+			Country:      []string{"EU"},
+		}),
+		testsupport.WithValidity(time.Now(), time.Hour*24),
+		testsupport.WithSubjectPubKey(&ee1PrivKey.PublicKey, x509.ECDSAWithSHA384),
+		testsupport.WithKeyUsage(x509.KeyUsageDigitalSignature))
+	suite.NoError(err)
+	suite.ee1 = &testsupport.EndEntity{Certificate: ee1cert, PrivKey: ee1PrivKey}
+
+	ee2PrivKey, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
+	suite.NoError(err)
+	suite.ee2 = &testsupport.EndEntity{PrivKey: ee2PrivKey}
+
+	pemBytes, err := testsupport.BuildPEM(
+		testsupport.WithECDSAPrivateKey(ee1PrivKey, testsupport.WithPEMHeader("X-Key-ID", "foo")),
+		testsupport.WithX509Certificate(ee1cert),
+		testsupport.WithECDSAPrivateKey(ee2PrivKey, testsupport.WithPEMHeader("X-Key-ID", "bar")),
+		testsupport.WithX509Certificate(intCA1Cert),
+		testsupport.WithX509Certificate(suite.rootCA1.Certificate),
+	)
+	suite.NoError(err)
+
+	suite.ks, err = keystore.NewKeyStoreFromPEMBytes(pemBytes, "")
+	suite.NoError(err)
+
+	suite.app = newFiberApp(
 		config.Configuration{Serve: config.ServeConfig{Management: config.ServiceConfig{}}},
 		log.Logger)
 	_, err = newHandler(handlerParams{
-		App:      app,
+		App:      suite.app,
 		Logger:   log.Logger,
-		KeyStore: ks,
+		KeyStore: suite.ks,
 	})
-	require.NoError(t, err)
+	suite.NoError(err)
+}
 
+func (suite *JWKSTestSuite) TearDownSuite() {
+	suite.app.Shutdown()
+}
+
+func TestJWKSTestSuite(t *testing.T) {
+	suite.Run(t, new(JWKSTestSuite))
+}
+
+func (suite *JWKSTestSuite) TestJWKSRequestWithoutEtagUsage() {
 	// WHEN
-	resp, err := app.Test(
+	resp, err := suite.app.Test(
 		httptest.NewRequest(http.MethodGet, "http://heimdall.test.local/.well-known/jwks", nil),
 		-1)
 
 	// THEN
-	require.NoError(t, err)
-	require.Equal(t, http.StatusOK, resp.StatusCode)
+	require.NoError(suite.T(), err)
+	require.Equal(suite.T(), http.StatusOK, resp.StatusCode)
 
 	defer resp.Body.Close()
 
@@ -52,68 +123,69 @@ func TestJWKSRequestWithoutEtagUsage(t *testing.T) {
 
 	decoder := json.NewDecoder(resp.Body)
 	err = decoder.Decode(&jwks)
-	require.NoError(t, err)
+	require.NoError(suite.T(), err)
 
-	assert.Len(t, jwks.Keys, 1)
-	jwk := jwks.Key(ks.Entries()[0].KeyID)
-	assert.Len(t, jwk, 1)
+	require.Len(suite.T(), jwks.Keys, 2)
 
-	expected := ks.Entries()[0].JWK()
-	assert.Equal(t, expected.KeyID, jwk[0].KeyID)
-	assert.Equal(t, expected.Key, jwk[0].Key)
-	assert.Equal(t, expected.Algorithm, jwk[0].Algorithm)
-	assert.Equal(t, expected.Use, jwk[0].Use)
-	assert.Empty(t, jwk[0].Certificates)
-	assert.Nil(t, jwk[0].CertificatesURL)
-	assert.Empty(t, jwk[0].CertificateThumbprintSHA1)
-	assert.Empty(t, jwk[0].CertificateThumbprintSHA256)
+	jwk := jwks.Key("bar")
+	require.Len(suite.T(), jwk, 1)
+	entry, err := suite.ks.GetKey("bar")
+	require.NoError(suite.T(), err)
+
+	expected := entry.JWK()
+	assert.Equal(suite.T(), expected.KeyID, jwk[0].KeyID)
+	assert.Equal(suite.T(), expected.Key, jwk[0].Key)
+	assert.Equal(suite.T(), expected.Algorithm, jwk[0].Algorithm)
+	assert.Equal(suite.T(), expected.Use, jwk[0].Use)
+	assert.Empty(suite.T(), jwk[0].Certificates)
+	assert.Nil(suite.T(), jwk[0].CertificatesURL)
+	assert.Empty(suite.T(), jwk[0].CertificateThumbprintSHA1)
+	assert.Empty(suite.T(), jwk[0].CertificateThumbprintSHA256)
+
+	jwk = jwks.Key("foo")
+	require.Len(suite.T(), jwk, 1)
+	entry, err = suite.ks.GetKey("foo")
+	require.NoError(suite.T(), err)
+
+	expected = entry.JWK()
+	assert.Equal(suite.T(), expected.KeyID, jwk[0].KeyID)
+	assert.Equal(suite.T(), expected.Key, jwk[0].Key)
+	assert.Equal(suite.T(), expected.Algorithm, jwk[0].Algorithm)
+	assert.Equal(suite.T(), expected.Use, jwk[0].Use)
+	assert.Len(suite.T(), jwk[0].Certificates, 3)
+	assert.Equal(suite.T(), expected.Certificates[0], jwk[0].Certificates[0])
+	assert.Equal(suite.T(), expected.Certificates[1], jwk[0].Certificates[1])
+	assert.Equal(suite.T(), expected.Certificates[2], jwk[0].Certificates[2])
+	assert.Nil(suite.T(), jwk[0].CertificatesURL)
+	assert.Empty(suite.T(), jwk[0].CertificateThumbprintSHA1)
+	assert.Empty(suite.T(), jwk[0].CertificateThumbprintSHA256)
 }
 
-func TestJWKSRequestWithEtagUsage(t *testing.T) {
+func (suite *JWKSTestSuite) TestJWKSRequestWithEtagUsage() {
 	// GIVEN
-	const rsa2048 = 2048
-
-	privateKey, err := rsa.GenerateKey(rand.Reader, rsa2048)
-	require.NoError(t, err)
-
-	ks, err := keystore.NewKeyStoreFromKey(privateKey)
-	require.NoError(t, err)
-
-	app := newFiberApp(
-		config.Configuration{Serve: config.ServeConfig{Management: config.ServiceConfig{}}},
-		log.Logger,
-	)
-	_, err = newHandler(handlerParams{
-		App:      app,
-		Logger:   log.Logger,
-		KeyStore: ks,
-	})
-	require.NoError(t, err)
-
-	resp1, err := app.Test(
+	resp1, err := suite.app.Test(
 		httptest.NewRequest(http.MethodGet, "http://heimdall.test.local/.well-known/jwks", nil),
 		-1)
-
-	require.NoError(t, err)
+	require.NoError(suite.T(), err)
 
 	defer resp1.Body.Close()
 
-	require.Equal(t, http.StatusOK, resp1.StatusCode)
+	require.Equal(suite.T(), http.StatusOK, resp1.StatusCode)
 
 	etagValue := resp1.Header.Get("ETag")
-	require.NotEmpty(t, etagValue)
+	require.NotEmpty(suite.T(), etagValue)
 
 	req := httptest.NewRequest(http.MethodGet, "http://heimdall.test.local/.well-known/jwks", nil)
 	req.Header.Set("If-None-Match", etagValue)
 
 	// WHEN
-	resp2, err := app.Test(req, -1)
+	resp2, err := suite.app.Test(req, -1)
 
 	// THEN
-	require.NoError(t, err)
+	require.NoError(suite.T(), err)
 
 	defer resp2.Body.Close()
 
-	assert.Equal(t, http.StatusNotModified, resp2.StatusCode)
-	assert.Empty(t, resp2.Header.Get("Content-Length"))
+	assert.Equal(suite.T(), http.StatusNotModified, resp2.StatusCode)
+	assert.Empty(suite.T(), resp2.Header.Get("Content-Length"))
 }
