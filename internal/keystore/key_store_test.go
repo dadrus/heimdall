@@ -3,17 +3,25 @@ package keystore_test
 import (
 	"bytes"
 	"crypto"
+	"crypto/ecdsa"
+	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/rsa"
+	"crypto/x509"
+	"crypto/x509/pkix"
+	"encoding/hex"
 	"io"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/keystore"
+	"github.com/dadrus/heimdall/internal/testsupport"
+	pkix2 "github.com/dadrus/heimdall/internal/x/pkix"
 )
 
 // nolint: gochecknoglobals
@@ -231,7 +239,7 @@ func TestCreateKeyStoreFromPEMFile(t *testing.T) {
 			},
 		},
 		{
-			uc:       "file contains two keys, each in three formats",
+			uc:       "file contains three keys",
 			password: "password",
 			keyStoreFile: func(t *testing.T) string {
 				t.Helper()
@@ -239,15 +247,7 @@ func TestCreateKeyStoreFromPEMFile(t *testing.T) {
 				file, err := os.CreateTemp("", "test_ks.*")
 				require.NoError(t, err)
 
-				buf := bytes.NewBuffer(pemPKCS1ECPrivateKey)
-				_, err = buf.Write(pemPKCS8ECEncryptedPrivateKey)
-				require.NoError(t, err)
-				_, err = buf.Write(pemPKCS8ECPrivateKey)
-				require.NoError(t, err)
-				_, err = buf.Write(pemPKCS1RSAPrivateKey)
-				require.NoError(t, err)
-				_, err = buf.Write(pemPKCS8RSAEncryptedPrivateKey)
-				require.NoError(t, err)
+				buf := bytes.NewBuffer(pemPKCS8ECEncryptedPrivateKey)
 				_, err = buf.Write(pemPKCS8RSAPrivateKey)
 				require.NoError(t, err)
 
@@ -268,7 +268,6 @@ func TestCreateKeyStoreFromPEMFile(t *testing.T) {
 
 				require.NotNil(t, ks)
 
-				// expecting just two entries as the above ec and rsa key are just formatted differently
 				assert.Len(t, ks.Entries(), 2)
 
 				ecdsaKeyEntry := findKeyType(ks.Entries(), "ECDSA")
@@ -288,6 +287,39 @@ func TestCreateKeyStoreFromPEMFile(t *testing.T) {
 				assert.NotEqual(t, ecdsaKeyEntry.KeyID, rsaKeyEntry.KeyID)
 			},
 		},
+		{
+			uc:       "file contains same EC key but in different formats",
+			password: "password",
+			keyStoreFile: func(t *testing.T) string {
+				t.Helper()
+
+				file, err := os.CreateTemp("", "test_ks.*")
+				require.NoError(t, err)
+
+				buf := bytes.NewBuffer(pemPKCS1ECPrivateKey)
+				_, err = buf.Write(pemPKCS8ECEncryptedPrivateKey)
+				require.NoError(t, err)
+				_, err = buf.Write(pemPKCS8ECPrivateKey)
+				require.NoError(t, err)
+
+				err = os.WriteFile(file.Name(), buf.Bytes(), 0o600)
+				require.NoError(t, err)
+
+				return file.Name()
+			},
+			removeKeyStoreFile: func(t *testing.T, file string) {
+				t.Helper()
+
+				os.Remove(file)
+			},
+			assert: func(t *testing.T, ks keystore.KeyStore, err error) {
+				t.Helper()
+
+				require.Error(t, err)
+				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				assert.Contains(t, err.Error(), "duplicate entry")
+			},
+		},
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
 			// GIVEN
@@ -304,6 +336,7 @@ func TestCreateKeyStoreFromPEMFile(t *testing.T) {
 	}
 }
 
+// nolint: maintidx
 func TestCreateKeyStoreFromPEMBytes(t *testing.T) {
 	t.Parallel()
 
@@ -314,19 +347,13 @@ func TestCreateKeyStoreFromPEMBytes(t *testing.T) {
 		assert      func(t *testing.T, ks keystore.KeyStore, err error)
 	}{
 		{
-			uc:       "pem contains two keys, each in three formats",
+			uc:       "pem contains same RSA keys but just formatted differently",
 			password: "password",
 			pemContents: func(t *testing.T) []byte {
 				t.Helper()
 
-				buf := bytes.NewBuffer(pemPKCS1ECPrivateKey)
-				_, err := buf.Write(pemPKCS8ECEncryptedPrivateKey)
-				require.NoError(t, err)
-				_, err = buf.Write(pemPKCS8ECPrivateKey)
-				require.NoError(t, err)
-				_, err = buf.Write(pemPKCS1RSAPrivateKey)
-				require.NoError(t, err)
-				_, err = buf.Write(pemPKCS8RSAEncryptedPrivateKey)
+				buf := bytes.NewBuffer(pemPKCS1RSAPrivateKey)
+				_, err := buf.Write(pemPKCS8RSAEncryptedPrivateKey)
 				require.NoError(t, err)
 				_, err = buf.Write(pemPKCS8RSAPrivateKey)
 				require.NoError(t, err)
@@ -336,27 +363,9 @@ func TestCreateKeyStoreFromPEMBytes(t *testing.T) {
 			assert: func(t *testing.T, ks keystore.KeyStore, err error) {
 				t.Helper()
 
-				require.NoError(t, err)
-				require.NotNil(t, ks)
-
-				// expecting just two entries as the above ec and rsa key are just formatted differently
-				assert.Len(t, ks.Entries(), 2)
-
-				ecdsaKeyEntry := findKeyType(ks.Entries(), "ECDSA")
-				assert.NotNil(t, ecdsaKeyEntry)
-				assert.NotEmpty(t, ecdsaKeyEntry.KeyID)
-				assert.NotNil(t, ecdsaKeyEntry.PrivateKey)
-				assert.Equal(t, 256, ecdsaKeyEntry.KeySize)
-				assert.Nil(t, ecdsaKeyEntry.CertChain)
-
-				rsaKeyEntry := findKeyType(ks.Entries(), "RSA")
-				assert.NotNil(t, rsaKeyEntry)
-				assert.NotEmpty(t, rsaKeyEntry.KeyID)
-				assert.NotNil(t, rsaKeyEntry.PrivateKey)
-				assert.Equal(t, 2048, rsaKeyEntry.KeySize)
-				assert.Nil(t, rsaKeyEntry.CertChain)
-
-				assert.NotEqual(t, ecdsaKeyEntry.KeyID, rsaKeyEntry.KeyID)
+				require.Error(t, err)
+				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				assert.Contains(t, err.Error(), "duplicate entry")
 			},
 		},
 		{
@@ -399,6 +408,244 @@ xijD/4gPFRBfs2GsfVZzSL9kH7HH0chB9w==
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrInternal)
 				assert.Contains(t, err.Error(), "failed to parse")
+			},
+		},
+		{
+			uc: "pem contains a key with X-Key-ID specified",
+			pemContents: func(t *testing.T) []byte {
+				t.Helper()
+
+				privKey1, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
+				require.NoError(t, err)
+
+				pemBytes, err := testsupport.BuildPEM(
+					testsupport.WithECDSAPrivateKey(privKey1, testsupport.WithPEMHeader("X-Key-ID", "bar")),
+				)
+				require.NoError(t, err)
+
+				return pemBytes
+			},
+			assert: func(t *testing.T, ks keystore.KeyStore, err error) {
+				t.Helper()
+
+				require.NoError(t, err)
+				require.NotNil(t, ks)
+
+				assert.Len(t, ks.Entries(), 1)
+
+				entry1 := ks.Entries()[0]
+				assert.NotNil(t, entry1)
+				assert.NotNil(t, entry1.PrivateKey)
+				assert.Equal(t, 384, entry1.KeySize)
+				assert.Nil(t, entry1.CertChain)
+				assert.Equal(t, "bar", entry1.KeyID)
+			},
+		},
+		{
+			uc: "pem contains key with cert without SubjectKeyID and without X-Key-ID specified",
+			pemContents: func(t *testing.T) []byte {
+				t.Helper()
+
+				ca, err := testsupport.NewRootCA("Test CA", time.Hour*24)
+				require.NoError(t, err)
+
+				privKey, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
+				require.NoError(t, err)
+				cert, err := ca.IssueCertificate(
+					testsupport.WithSubject(pkix.Name{
+						CommonName:   "Test EE",
+						Organization: []string{"Test"},
+						Country:      []string{"EU"},
+					}),
+					testsupport.WithValidity(time.Now(), time.Hour*1),
+					testsupport.WithSubjectPubKey(&privKey.PublicKey, x509.ECDSAWithSHA384),
+					testsupport.WithKeyUsage(x509.KeyUsageDigitalSignature))
+				require.NoError(t, err)
+
+				pemBytes, err := testsupport.BuildPEM(
+					testsupport.WithECDSAPrivateKey(privKey),
+					testsupport.WithX509Certificate(cert),
+					testsupport.WithX509Certificate(ca.Certificate),
+				)
+				require.NoError(t, err)
+
+				return pemBytes
+			},
+			assert: func(t *testing.T, ks keystore.KeyStore, err error) {
+				t.Helper()
+
+				require.NoError(t, err)
+				require.NotNil(t, ks)
+
+				assert.Len(t, ks.Entries(), 1)
+
+				entry := ks.Entries()[0]
+				assert.NotNil(t, entry)
+				assert.NotNil(t, entry.PrivateKey)
+				assert.Equal(t, 384, entry.KeySize)
+				assert.Len(t, entry.CertChain, 2)
+				kid, err := pkix2.SubjectKeyID(entry.PrivateKey.Public())
+				require.NoError(t, err)
+				assert.Equal(t, hex.EncodeToString(kid), entry.KeyID)
+			},
+		},
+		{
+			uc: "pem contains keys with cert with SubjectKeyID and without X-Key-ID specified",
+			pemContents: func(t *testing.T) []byte {
+				t.Helper()
+
+				ca, err := testsupport.NewRootCA("Test CA", time.Hour*24)
+				require.NoError(t, err)
+
+				privKey, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
+				require.NoError(t, err)
+				cert, err := ca.IssueCertificate(
+					testsupport.WithSubject(pkix.Name{
+						CommonName:   "Test EE 1",
+						Organization: []string{"Test"},
+						Country:      []string{"EU"},
+					}),
+					testsupport.WithValidity(time.Now(), time.Hour*1),
+					testsupport.WithSubjectKeyID([]byte("bar")),
+					testsupport.WithSubjectPubKey(&privKey.PublicKey, x509.ECDSAWithSHA384),
+					testsupport.WithKeyUsage(x509.KeyUsageDigitalSignature))
+				require.NoError(t, err)
+
+				pemBytes, err := testsupport.BuildPEM(
+					testsupport.WithECDSAPrivateKey(privKey),
+					testsupport.WithX509Certificate(cert),
+					testsupport.WithX509Certificate(ca.Certificate),
+				)
+				require.NoError(t, err)
+
+				return pemBytes
+			},
+			assert: func(t *testing.T, ks keystore.KeyStore, err error) {
+				t.Helper()
+
+				require.NoError(t, err)
+				require.NotNil(t, ks)
+
+				assert.Len(t, ks.Entries(), 1)
+
+				entry := ks.Entries()[0]
+				assert.NotNil(t, entry)
+				assert.NotNil(t, entry.PrivateKey)
+				assert.Equal(t, 384, entry.KeySize)
+				assert.Len(t, entry.CertChain, 2)
+				assert.Equal(t, hex.EncodeToString(entry.CertChain[0].SubjectKeyId), entry.KeyID)
+			},
+		},
+		{
+			uc: "pem contains keys with cert with SubjectKeyID and with X-Key-ID specified",
+			pemContents: func(t *testing.T) []byte {
+				t.Helper()
+
+				ca, err := testsupport.NewRootCA("Test CA", time.Hour*24)
+				require.NoError(t, err)
+
+				privKey, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
+				require.NoError(t, err)
+				cert, err := ca.IssueCertificate(
+					testsupport.WithSubject(pkix.Name{
+						CommonName:   "Test EE 1",
+						Organization: []string{"Test"},
+						Country:      []string{"EU"},
+					}),
+					testsupport.WithValidity(time.Now(), time.Hour*1),
+					testsupport.WithSubjectKeyID([]byte("bar")),
+					testsupport.WithSubjectPubKey(&privKey.PublicKey, x509.ECDSAWithSHA384),
+					testsupport.WithKeyUsage(x509.KeyUsageDigitalSignature))
+				require.NoError(t, err)
+
+				pemBytes, err := testsupport.BuildPEM(
+					testsupport.WithECDSAPrivateKey(privKey, testsupport.WithPEMHeader("X-Key-ID", "foo")),
+					testsupport.WithX509Certificate(cert),
+					testsupport.WithX509Certificate(ca.Certificate),
+				)
+				require.NoError(t, err)
+
+				return pemBytes
+			},
+			assert: func(t *testing.T, ks keystore.KeyStore, err error) {
+				t.Helper()
+
+				require.NoError(t, err)
+				require.NotNil(t, ks)
+
+				assert.Len(t, ks.Entries(), 1)
+
+				entry := ks.Entries()[0]
+				assert.NotNil(t, entry)
+				assert.NotNil(t, entry.PrivateKey)
+				assert.Equal(t, 384, entry.KeySize)
+				assert.Len(t, entry.CertChain, 2)
+				assert.Equal(t, "foo", entry.KeyID)
+			},
+		},
+		{
+			uc: "pem contains key with invalid chain for signature purpose",
+			pemContents: func(t *testing.T) []byte {
+				t.Helper()
+
+				ca, err := testsupport.NewRootCA("Test CA", time.Hour*24)
+				require.NoError(t, err)
+
+				privKey1, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
+				require.NoError(t, err)
+				cert1, err := ca.IssueCertificate(
+					testsupport.WithSubject(pkix.Name{
+						CommonName:   "Test EE 1",
+						Organization: []string{"Test"},
+						Country:      []string{"EU"},
+					}),
+					testsupport.WithValidity(time.Now(), time.Hour*1),
+					testsupport.WithSubjectKeyID([]byte("bar")),
+					testsupport.WithSubjectPubKey(&privKey1.PublicKey, x509.ECDSAWithSHA384))
+				require.NoError(t, err)
+
+				pemBytes, err := testsupport.BuildPEM(
+					testsupport.WithECDSAPrivateKey(privKey1),
+					testsupport.WithX509Certificate(cert1),
+					testsupport.WithX509Certificate(ca.Certificate),
+				)
+				require.NoError(t, err)
+
+				return pemBytes
+			},
+			assert: func(t *testing.T, ks keystore.KeyStore, err error) {
+				t.Helper()
+
+				require.Error(t, err)
+				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				assert.Contains(t, err.Error(), "digital signature")
+			},
+		},
+		{
+			uc: "duplicate key id entry",
+			pemContents: func(t *testing.T) []byte {
+				t.Helper()
+
+				privKey1, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
+				require.NoError(t, err)
+
+				privKey2, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
+				require.NoError(t, err)
+
+				pemBytes, err := testsupport.BuildPEM(
+					testsupport.WithECDSAPrivateKey(privKey1, testsupport.WithPEMHeader("X-Key-ID", "foo")),
+					testsupport.WithECDSAPrivateKey(privKey2, testsupport.WithPEMHeader("X-Key-ID", "foo")),
+				)
+				require.NoError(t, err)
+
+				return pemBytes
+			},
+			assert: func(t *testing.T, ks keystore.KeyStore, err error) {
+				t.Helper()
+
+				require.Error(t, err)
+				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				assert.Contains(t, err.Error(), "duplicate entry for key_id=foo")
 			},
 		},
 	} {

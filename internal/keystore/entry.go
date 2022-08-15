@@ -28,10 +28,11 @@ type Entry struct {
 
 func (e *Entry) JWK() jose.JSONWebKey {
 	return jose.JSONWebKey{
-		KeyID:     e.KeyID,
-		Algorithm: string(e.joseAlgorithm()),
-		Key:       e.PrivateKey.Public(),
-		Use:       "sig",
+		KeyID:        e.KeyID,
+		Algorithm:    string(e.joseAlgorithm()),
+		Key:          e.PrivateKey.Public(),
+		Use:          "sig",
+		Certificates: e.CertChain,
 	}
 }
 

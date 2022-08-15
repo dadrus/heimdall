@@ -1,0 +1,30 @@
+---
+title: "Cryptographic Material"
+date: 2022-08-15T08:33:35+02:00
+draft: false
+weight: 22
+menu:
+  docs:
+    weight: 40
+    identifier: cryptographic_material
+    parent: "Operations"
+---
+
+To operate heimdall in a secure way, you should configure heimdall accordingly. Following sections address the corresponding areas.
+
+== TLS
+
+See link:{{< relref "/docs/configuration/services/configuration_types.adoc#_tls" >}}[TLS Configuration].
+
+== Signatures
+
+When heimdall is used to issue signed objects, like JWTs, to enable upstream services to rely on authentic subject information, it acts as an issuer of such objects and requires corresponding configuration (see link:{{< relref "/docs/configuration/signature_keys_and_certificates.adoc" >}}[Signature Keys & Certificates]).
+
+In a typical production scenario, there is a need for proper key and certificate management. This is supported by heimdall in the following way:
+
+* you can and should configure not only the private key for signature creation purposes, but also the corresponding certificate chain. This way your upstream services are able not only to verify the signatures of the signed objects for cryptographic validity, but also perform verification of the revocation status of used certificates and also their time validity. All of that is crucial for secure communication.
++
+The cryptographic material for the above said verification purposes is available via the link:{{< relref "/docs/api/_index.adoc#_jwks" >}}[JWKS endpoint] for the upstream services.
+* you can configure multiple keys in heimdall's `key_store` and specify the `key_id` of the key to use. The easiest way to let heimdall use the key id, you need, is to set `X-Key-ID` header in the PEM block of the corresponding private key. With that in place you can perform key roll over without down-times by first updating the key stores of all heimdall instances to include the new key and certificates, and when this is done, by updating the key id to reference the new key material instance by instance. This way all upstream services can verify the signatures of the objects issued by heimdall, regardless of the used key material, as all heimdall instances, are able to serve the new and the old cryptographic material.
+
+
