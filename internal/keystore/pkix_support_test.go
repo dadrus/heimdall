@@ -17,16 +17,28 @@ import (
 	"github.com/dadrus/heimdall/internal/x"
 )
 
-func WithX509Certificate(cert *x509.Certificate) PEMBuilderOption {
+type PEMBlockOption func(*pem.Block)
+
+func WithPEMHeader(key, value string) PEMBlockOption {
+	return func(block *pem.Block) {
+		block.Headers[key] = value
+	}
+}
+
+func WithX509Certificate(cert *x509.Certificate, opts ...PEMBlockOption) PEMEntryOption {
 	return func(block *pem.Block) error {
 		block.Type = "CERTIFICATE"
 		block.Bytes = cert.Raw
+
+		for _, opt := range opts {
+			opt(block)
+		}
 
 		return nil
 	}
 }
 
-func WithECDSAPublicKey(key *ecdsa.PublicKey) PEMBuilderOption {
+func WithECDSAPublicKey(key *ecdsa.PublicKey, opts ...PEMBlockOption) PEMEntryOption {
 	return func(block *pem.Block) error {
 		raw, err := x509.MarshalPKIXPublicKey(key)
 		if err != nil {
@@ -36,11 +48,15 @@ func WithECDSAPublicKey(key *ecdsa.PublicKey) PEMBuilderOption {
 		block.Type = "ECDSA PUBLIC KEY"
 		block.Bytes = raw
 
+		for _, opt := range opts {
+			opt(block)
+		}
+
 		return nil
 	}
 }
 
-func WithECDSAPrivateKey(key *ecdsa.PrivateKey) PEMBuilderOption {
+func WithECDSAPrivateKey(key *ecdsa.PrivateKey, opts ...PEMBlockOption) PEMEntryOption {
 	return func(block *pem.Block) error {
 		raw, err := x509.MarshalECPrivateKey(key)
 		if err != nil {
@@ -50,17 +66,21 @@ func WithECDSAPrivateKey(key *ecdsa.PrivateKey) PEMBuilderOption {
 		block.Type = "EC PRIVATE KEY"
 		block.Bytes = raw
 
+		for _, opt := range opts {
+			opt(block)
+		}
+
 		return nil
 	}
 }
 
-type PEMBuilderOption func(*pem.Block) error
+type PEMEntryOption func(*pem.Block) error
 
-func BuildPEM(opts ...PEMBuilderOption) ([]byte, error) {
+func BuildPEM(opts ...PEMEntryOption) ([]byte, error) {
 	buf := new(bytes.Buffer)
 
 	for _, opt := range opts {
-		block := &pem.Block{}
+		block := &pem.Block{Headers: make(map[string]string)}
 
 		err := opt(block)
 		if err != nil {
@@ -222,7 +242,13 @@ func WithIssuer(key any, cert *x509.Certificate) CertificateBuilderOption {
 	}
 }
 
-func WithPublicKeyIdentifier() CertificateBuilderOption {
+func WithSubjectKeyID(skid []byte) CertificateBuilderOption {
+	return func(builder *CertificateBuilder) {
+		builder.tmpl.SubjectKeyId = skid
+	}
+}
+
+func WithGeneratedSubjectKeyID() CertificateBuilderOption {
 	return func(builder *CertificateBuilder) {
 		builder.generateKeyIdentifier = true
 	}

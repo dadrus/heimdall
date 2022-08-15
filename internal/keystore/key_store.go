@@ -156,8 +156,13 @@ func verifyAndBuildKeyStore(entries []*Entry, certs []*x509.Certificate) (keySto
 			)
 
 			if len(chain) != 0 {
+				// use subject key identifier from certificate (if present)
 				keyID = chain[0].SubjectKeyId
-			} else {
+			}
+
+			// if certificate did not have subject key identifier set
+			// calculate subject key identifier and use it
+			if len(keyID) == 0 {
 				keyID, err = SubjectKeyID(entry.PrivateKey.Public())
 				if err != nil {
 					return nil, err
@@ -168,7 +173,6 @@ func verifyAndBuildKeyStore(entries []*Entry, certs []*x509.Certificate) (keySto
 		}
 
 		entry.CertChain = chain
-
 		ks[entry.KeyID] = entry
 	}
 
