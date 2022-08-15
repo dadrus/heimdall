@@ -9,7 +9,7 @@ Heimdall is inspired by the ZeroTrust idea and also by [Ory's OAthkeeper](https:
 Heimdall authenticates and authorizes incoming HTTP requests as well as enriches these with further contextual information and finally transforms resulting subject information into a format, required by the upstream services. And all of that can be controlled by each and every backend service individually.
 
 It is supposed to be used either as
-* a **Reverse Proxy** (not yet implemented) in front of your upstream API or web server that rejects unauthorized requests and forwards authorized ones to your end points, or as
+* a **Reverse Proxy** in front of your upstream API or web server that rejects unauthorized requests and forwards authorized ones to your end points, or as
 * a **Decision API**, which integrates with your API Gateway (Kong, NGNIX, Envoy, Traefik, etc) and then acts as a Policy Decision Point.
 
 ## Example Usage
