@@ -51,12 +51,12 @@ func (ks keyStore) Entries() []*Entry {
 }
 
 func NewKeyStoreFromKey(privateKey crypto.Signer) (KeyStore, error) {
-	entry, err := createEntry(privateKey)
+	entry, err := createEntry(privateKey, "")
 	if err != nil {
 		return nil, err
 	}
 
-	return keyStore{entry.KeyID: entry}, nil
+	return verifyAndBuildKeyStore([]*Entry{entry}, nil)
 }
 
 func NewKeyStoreFromPEMFile(pemFilePath, password string) (KeyStore, error) {
@@ -81,13 +81,14 @@ func NewKeyStoreFromPEMFile(pemFilePath, password string) (KeyStore, error) {
 }
 
 func NewKeyStoreFromPEMBytes(pemBytes []byte, password string) (KeyStore, error) {
-	return loadKeys(readPEMContents(pemBytes), password)
+	return createKeyStore(readPEMContents(pemBytes), password)
 }
 
-func loadKeys(blocks []*pem.Block, password string) (keyStore, error) {
-	ks := make(keyStore)
-
-	var certs []*x509.Certificate
+func createKeyStore(blocks []*pem.Block, password string) (keyStore, error) {
+	var (
+		entries []*Entry
+		certs   []*x509.Certificate
+	)
 
 	for idx, block := range blocks {
 		var (
@@ -125,30 +126,50 @@ func loadKeys(blocks []*pem.Block, password string) (keyStore, error) {
 		if cert != nil {
 			certs = append(certs, cert)
 		} else {
-			entry, err := createEntry(key)
+			entry, err := createEntry(key, block.Headers["X-Key-ID"])
 			if err != nil {
 				return nil, err
 			}
 
-			ks[entry.KeyID] = entry
+			entries = append(entries, entry)
 		}
 	}
 
-	return addCertificates(ks, certs)
+	return verifyAndBuildKeyStore(entries, certs)
 }
 
-func addCertificates(ks keyStore, certs []*x509.Certificate) (keyStore, error) {
-	for _, entry := range ks {
+func verifyAndBuildKeyStore(entries []*Entry, certs []*x509.Certificate) (keyStore, error) {
+	ks := make(keyStore)
+
+	for _, entry := range entries {
 		chain := FindChain(entry.PrivateKey.Public(), certs)
-		if len(chain) == 0 {
-			continue
+		if len(chain) != 0 {
+			if err := ValidateChain(chain); err != nil {
+				return nil, err
+			}
 		}
 
-		if err := ValidateChain(chain); err != nil {
-			return nil, err
+		if len(entry.KeyID) == 0 {
+			var (
+				keyID []byte
+				err   error
+			)
+
+			if len(chain) != 0 {
+				keyID = chain[0].SubjectKeyId
+			} else {
+				keyID, err = SubjectKeyID(entry.PrivateKey.Public())
+				if err != nil {
+					return nil, err
+				}
+			}
+
+			entry.KeyID = hex.EncodeToString(keyID)
 		}
 
 		entry.CertChain = chain
+
+		ks[entry.KeyID] = entry
 	}
 
 	return ks, nil
@@ -168,13 +189,11 @@ func readPEMContents(data []byte) []*pem.Block {
 	return blocks
 }
 
-func createEntry(key any) (*Entry, error) {
+func createEntry(key any, keyID string) (*Entry, error) {
 	var (
 		sigKey    crypto.Signer
 		algorithm string
 		size      int
-		hash      []byte
-		err       error
 	)
 
 	switch typedKey := key.(type) {
@@ -192,12 +211,8 @@ func createEntry(key any) (*Entry, error) {
 		return nil, errorchain.NewWithMessage(heimdall.ErrInternal, "unsupported key type")
 	}
 
-	if hash, err = SubjectKeyID(sigKey.Public()); err != nil {
-		return nil, err
-	}
-
 	return &Entry{
-		KeyID:      hex.EncodeToString(hash),
+		KeyID:      keyID,
 		Alg:        algorithm,
 		KeySize:    size,
 		PrivateKey: sigKey,
