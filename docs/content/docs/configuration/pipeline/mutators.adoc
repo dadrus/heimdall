@@ -84,7 +84,7 @@ config:
 
 This mutator enables transformation of a subject into a bearer token in a https://www.rfc-editor.org/rfc/rfc7519[JWT] format, which is made available to your upstream service in the HTTP `Authorization` header . In addition to setting the JWT specific claims, it allows setting custom claims as well. Your upstream service can then verify the signature of the JWT by making use of Heimdall's JWKS endpoint to retrieve the required public keys/certificates from.
 
-To enable the usage of this mutator, you have to set the `type` property to `jwt`. The usage of this mutator type requires a Signer as well.
+To enable the usage of this mutator, you have to set the `type` property to `jwt`. The usage of this mutator type requires a configured link:{{< relref "/docs/configuration/signature_keys_and_certificates.adoc" >}}[Signer] as well. At least it is highly recommended in production environments.
 
 Configuration using the `config` property is optional. Following properties are available:
 
