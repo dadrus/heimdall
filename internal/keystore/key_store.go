@@ -208,7 +208,8 @@ func createEntry(key any, keyID string) (*Entry, error) {
 		sigKey = typedKey
 		size = typedKey.Params().BitSize
 	default:
-		return nil, errorchain.NewWithMessage(heimdall.ErrInternal, "unsupported key type")
+		return nil, errorchain.NewWithMessage(heimdall.ErrInternal,
+			"unsupported key type; only rsa and ecdsa keys are supported")
 	}
 
 	return &Entry{
