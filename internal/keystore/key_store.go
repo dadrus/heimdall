@@ -66,15 +66,13 @@ func NewKeyStoreFromPEMFile(pemFilePath, password string) (KeyStore, error) {
 	}
 
 	if fInfo.IsDir() {
-		return nil, errorchain.
-			NewWithMessagef(heimdall.ErrConfiguration, "'%s' is not a file", pemFilePath)
+		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration, "'%s' is not a file", pemFilePath)
 	}
 
 	contents, err := os.ReadFile(pemFilePath)
 	if err != nil {
-		return nil, errorchain.
-			NewWithMessagef(heimdall.ErrConfiguration, "failed to read %s", pemFilePath).
-			CausedBy(err)
+		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+			"failed to read %s", pemFilePath).CausedBy(err)
 	}
 
 	return NewKeyStoreFromPEMBytes(contents, password)
@@ -113,14 +111,13 @@ func createKeyStore(blocks []*pem.Block, password string) (keyStore, error) {
 		case pemBlockTypeCertificate:
 			cert, err = x509.ParseCertificate(block.Bytes)
 		default:
-			return nil, errorchain.
-				NewWithMessagef(heimdall.ErrInternal, "unsupported entry '%s' entry in the pem file", block.Type)
+			return nil, errorchain.NewWithMessagef(heimdall.ErrInternal,
+				"unsupported entry '%s' entry in the pem file", block.Type)
 		}
 
 		if err != nil {
-			return nil, errorchain.
-				NewWithMessagef(heimdall.ErrInternal, "failed to parse %d entry in the pem file", idx).
-				CausedBy(err)
+			return nil, errorchain.NewWithMessagef(heimdall.ErrInternal,
+				"failed to parse %d entry in the pem file", idx).CausedBy(err)
 		}
 
 		if cert != nil {
