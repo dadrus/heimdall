@@ -300,6 +300,7 @@ func TestCreateKeyStoreFromPEMFile(t *testing.T) {
 				_, err = buf.Write(pemPKCS8ECEncryptedPrivateKey)
 				require.NoError(t, err)
 				_, err = buf.Write(pemPKCS8ECPrivateKey)
+				require.NoError(t, err)
 
 				err = os.WriteFile(file.Name(), buf.Bytes(), 0o600)
 				require.NoError(t, err)
