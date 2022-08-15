@@ -89,6 +89,12 @@ tracing:
   service_name: heimdall
   provider: jaeger
 
+signer:
+  name: foobar
+  key_store: /opt/heimdall/keystore.pem
+  password: VeryInsecure!
+  key_id: foo
+
 pipeline:
   authenticators:
     - id: noop_authenticator
