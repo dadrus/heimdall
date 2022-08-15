@@ -104,6 +104,12 @@ metrics:
     port: 9000
     metrics_path: /metrics
 
+signer:
+  name: foobar
+  key_store: /opt/heimdall/keystore.pem
+  password: VeryInsecure!
+  key_id: foo
+
 pipeline:
   authenticators:
     - id: noop_authenticator
