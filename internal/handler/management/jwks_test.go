@@ -11,7 +11,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dadrus/heimdall/internal/testsupport"
 	"github.com/goccy/go-json"
 	"github.com/gofiber/fiber/v2"
 	"github.com/rs/zerolog/log"
@@ -22,6 +21,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/keystore"
+	"github.com/dadrus/heimdall/internal/testsupport"
 )
 
 type JWKSTestSuite struct {
@@ -100,7 +100,7 @@ func (suite *JWKSTestSuite) SetupSuite() {
 }
 
 func (suite *JWKSTestSuite) TearDownSuite() {
-	suite.app.Shutdown()
+	suite.NoError(suite.app.Shutdown())
 }
 
 func TestJWKSTestSuite(t *testing.T) {

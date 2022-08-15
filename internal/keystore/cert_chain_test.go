@@ -9,13 +9,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dadrus/heimdall/internal/testsupport"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/keystore"
+	"github.com/dadrus/heimdall/internal/testsupport"
 )
 
 type CertChainTestSuite struct {

@@ -10,12 +10,12 @@ import (
 	"errors"
 	"os"
 
-	"github.com/dadrus/heimdall/internal/x/pkix"
 	"github.com/youmark/pkcs8"
 	"golang.org/x/exp/maps"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
+	"github.com/dadrus/heimdall/internal/x/pkix"
 )
 
 const (

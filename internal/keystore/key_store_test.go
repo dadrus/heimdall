@@ -15,13 +15,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dadrus/heimdall/internal/testsupport"
-	pkix2 "github.com/dadrus/heimdall/internal/x/pkix"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/keystore"
+	"github.com/dadrus/heimdall/internal/testsupport"
+	pkix2 "github.com/dadrus/heimdall/internal/x/pkix"
 )
 
 // nolint: gochecknoglobals
