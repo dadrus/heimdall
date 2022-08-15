@@ -89,7 +89,7 @@ What did you actually do? ;)
 
 ## Reference
 
-* [Documentation](https://dadrus.github.io/heimdall/docs/welcome/) - Checkout the documentation for more details.
+* [Documentation](https://dadrus.github.io/heimdall/) - Checkout the documentation for more details.
 * [GitHub](https://github.com/dadrus/heimdall) - Visit heimdall on GitHub.
 
 ## Image Variants
