@@ -28,7 +28,9 @@ func NewKeyStore(conf config.Configuration, logger zerolog.Logger) (KeyStore, er
 	if len(conf.Signer.KeyStore) == 0 {
 		logger.Warn().Msg("Key store is not configured. NEVER DO IT IN PRODUCTION!!!! Generating an RSA key pair.")
 
-		privateKey, err := rsa.GenerateKey(rand.Reader, rsa2048)
+		var privateKey *rsa.PrivateKey
+
+		privateKey, err = rsa.GenerateKey(rand.Reader, rsa2048)
 		if err != nil {
 			return nil, errorchain.NewWithMessage(heimdall.ErrInternal,
 				"failed to generate RSA-2048 key pair").CausedBy(err)
