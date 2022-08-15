@@ -239,7 +239,7 @@ func TestCreateKeyStoreFromPEMFile(t *testing.T) {
 			},
 		},
 		{
-			uc:       "file contains two keys, each in three formats",
+			uc:       "file contains three keys",
 			password: "password",
 			keyStoreFile: func(t *testing.T) string {
 				t.Helper()
@@ -247,15 +247,7 @@ func TestCreateKeyStoreFromPEMFile(t *testing.T) {
 				file, err := os.CreateTemp("", "test_ks.*")
 				require.NoError(t, err)
 
-				buf := bytes.NewBuffer(pemPKCS1ECPrivateKey)
-				_, err = buf.Write(pemPKCS8ECEncryptedPrivateKey)
-				require.NoError(t, err)
-				_, err = buf.Write(pemPKCS8ECPrivateKey)
-				require.NoError(t, err)
-				_, err = buf.Write(pemPKCS1RSAPrivateKey)
-				require.NoError(t, err)
-				_, err = buf.Write(pemPKCS8RSAEncryptedPrivateKey)
-				require.NoError(t, err)
+				buf := bytes.NewBuffer(pemPKCS8ECEncryptedPrivateKey)
 				_, err = buf.Write(pemPKCS8RSAPrivateKey)
 				require.NoError(t, err)
 
@@ -276,7 +268,6 @@ func TestCreateKeyStoreFromPEMFile(t *testing.T) {
 
 				require.NotNil(t, ks)
 
-				// expecting just two entries as the above ec and rsa key are just formatted differently
 				assert.Len(t, ks.Entries(), 2)
 
 				ecdsaKeyEntry := findKeyType(ks.Entries(), "ECDSA")
@@ -294,6 +285,38 @@ func TestCreateKeyStoreFromPEMFile(t *testing.T) {
 				assert.Nil(t, rsaKeyEntry.CertChain)
 
 				assert.NotEqual(t, ecdsaKeyEntry.KeyID, rsaKeyEntry.KeyID)
+			},
+		},
+		{
+			uc:       "file contains same EC key but in different formats",
+			password: "password",
+			keyStoreFile: func(t *testing.T) string {
+				t.Helper()
+
+				file, err := os.CreateTemp("", "test_ks.*")
+				require.NoError(t, err)
+
+				buf := bytes.NewBuffer(pemPKCS1ECPrivateKey)
+				_, err = buf.Write(pemPKCS8ECEncryptedPrivateKey)
+				require.NoError(t, err)
+				_, err = buf.Write(pemPKCS8ECPrivateKey)
+
+				err = os.WriteFile(file.Name(), buf.Bytes(), 0o600)
+				require.NoError(t, err)
+
+				return file.Name()
+			},
+			removeKeyStoreFile: func(t *testing.T, file string) {
+				t.Helper()
+
+				os.Remove(file)
+			},
+			assert: func(t *testing.T, ks keystore.KeyStore, err error) {
+				t.Helper()
+
+				require.Error(t, err)
+				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				assert.Contains(t, err.Error(), "duplicate entry")
 			},
 		},
 	} {
@@ -323,19 +346,13 @@ func TestCreateKeyStoreFromPEMBytes(t *testing.T) {
 		assert      func(t *testing.T, ks keystore.KeyStore, err error)
 	}{
 		{
-			uc:       "pem contains two keys, each in three formats",
+			uc:       "pem contains same RSA keys but just formatted differently",
 			password: "password",
 			pemContents: func(t *testing.T) []byte {
 				t.Helper()
 
-				buf := bytes.NewBuffer(pemPKCS1ECPrivateKey)
-				_, err := buf.Write(pemPKCS8ECEncryptedPrivateKey)
-				require.NoError(t, err)
-				_, err = buf.Write(pemPKCS8ECPrivateKey)
-				require.NoError(t, err)
-				_, err = buf.Write(pemPKCS1RSAPrivateKey)
-				require.NoError(t, err)
-				_, err = buf.Write(pemPKCS8RSAEncryptedPrivateKey)
+				buf := bytes.NewBuffer(pemPKCS1RSAPrivateKey)
+				_, err := buf.Write(pemPKCS8RSAEncryptedPrivateKey)
 				require.NoError(t, err)
 				_, err = buf.Write(pemPKCS8RSAPrivateKey)
 				require.NoError(t, err)
@@ -345,29 +362,9 @@ func TestCreateKeyStoreFromPEMBytes(t *testing.T) {
 			assert: func(t *testing.T, ks keystore.KeyStore, err error) {
 				t.Helper()
 
-				require.NoError(t, err)
-				require.NotNil(t, ks)
-
-				// expecting just two entries as the above ec and rsa key are just formatted differently
-				assert.Len(t, ks.Entries(), 2)
-
-				ecdsaKeyEntry := findKeyType(ks.Entries(), "ECDSA")
-				assert.NotNil(t, ecdsaKeyEntry)
-				assert.NotNil(t, ecdsaKeyEntry.PrivateKey)
-				assert.Equal(t, 256, ecdsaKeyEntry.KeySize)
-				assert.Nil(t, ecdsaKeyEntry.CertChain)
-				kid, err := pkix2.SubjectKeyID(ecdsaKeyEntry.PrivateKey.Public())
-				require.NoError(t, err)
-				assert.Equal(t, hex.EncodeToString(kid), ecdsaKeyEntry.KeyID)
-
-				rsaKeyEntry := findKeyType(ks.Entries(), "RSA")
-				assert.NotNil(t, rsaKeyEntry)
-				assert.NotNil(t, rsaKeyEntry.PrivateKey)
-				assert.Equal(t, 2048, rsaKeyEntry.KeySize)
-				assert.Nil(t, rsaKeyEntry.CertChain)
-				kid, err = pkix2.SubjectKeyID(rsaKeyEntry.PrivateKey.Public())
-				require.NoError(t, err)
-				assert.Equal(t, hex.EncodeToString(kid), rsaKeyEntry.KeyID)
+				require.Error(t, err)
+				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				assert.Contains(t, err.Error(), "duplicate entry")
 			},
 		},
 		{
