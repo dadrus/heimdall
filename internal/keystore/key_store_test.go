@@ -621,6 +621,33 @@ xijD/4gPFRBfs2GsfVZzSL9kH7HH0chB9w==
 				assert.Contains(t, err.Error(), "digital signature")
 			},
 		},
+		{
+			uc: "duplicate key id entry",
+			pemContents: func(t *testing.T) []byte {
+				t.Helper()
+
+				privKey1, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
+				require.NoError(t, err)
+
+				privKey2, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
+				require.NoError(t, err)
+
+				pemBytes, err := BuildPEM(
+					WithECDSAPrivateKey(privKey1, WithPEMHeader("X-Key-ID", "foo")),
+					WithECDSAPrivateKey(privKey2, WithPEMHeader("X-Key-ID", "foo")),
+				)
+				require.NoError(t, err)
+
+				return pemBytes
+			},
+			assert: func(t *testing.T, ks keystore.KeyStore, err error) {
+				t.Helper()
+
+				require.Error(t, err)
+				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				assert.Contains(t, err.Error(), "duplicate entry for key_id=foo")
+			},
+		},
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
 			// GIVEN

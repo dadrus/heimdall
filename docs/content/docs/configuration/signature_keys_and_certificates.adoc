@@ -17,20 +17,17 @@ The configuration related to the issuance of signed objects can be done using th
 
 * *`name`*: _string_ (optional)
 +
-The name used to specify the issuer. E.g. if a JWT is generated, this value is used to set the `iss` claim. If not set the value `heimdall` is used.
+The name used to specify the issuer. E.g. if a JWT is generated, this value is used to set the `iss` claim. If not set, the value `heimdall` is used.
 
 * *`key_store`*: _string_ (optional)
 +
 Path to a file in PEM format, containing the cryptographic material for signature creation purposes. If this file is specified, at least one private key must be present.
 +
-If the PEM file contains X.509 certificates in addition to the keys, heimdall will try to identify a certificate (incl its chain) for each private key (the order of the certificates doesn't matter). If heimdall was able to identify the certificate chain, the chain is validated. This includes the following steps:
-
-** cryptographic validity
-** time validity
-** certificate to allow creation of digital signatures.
-
+If the PEM file contains X.509 certificates in addition to the keys, heimdall will try to identify a certificate (incl its chain) for each private key (the order of the certificates doesn't matter). If heimdall was able to identify the certificate chain, the chain is validated, which includes cryptographic validity, time validity, as well as whther the certificate attributes the private key for creation of digital signatures.
 +
 PKCS#1, as well as PKCS#8 encodings are supported for private keys. If `key_store` is not specified, heimdall generates an RSA key on startup.
++
+NOTE: While loading cryptographic material from the given key store file, heimdall ensures uniqueness of key ids and rejects key store files which violate this condition (see also link:{{< relref "#_key_id_lookup" >}}[Key-Id Lookup]).
 
 * *`password`*: _string_ (optional)
 +
@@ -40,7 +37,7 @@ CAUTION: If the PEM file contains multiple keys and these keys are password prot
 
 * *`key_id`*: _string_ (optional)
 +
-If the `key_store` references a PEM file, containing multiple keys, this property can be used to specify the key to use (see also link:{{< relref "#_key_id_lookup" >}}[Key-Id Lookup]). If not specified, the first key is used. If specified, but there is no key for the given key id present, an error is raised on startup.
+If the `key_store` references a PEM file, containing multiple keys, this property can be used to specify the key to use (see also link:{{< relref "#_key_id_lookup" >}}[Key-Id Lookup]). If not specified, the first key is used. If specified, but there is no key for the given key id present, an error is raised.
 
 .Possible configuration
 ====

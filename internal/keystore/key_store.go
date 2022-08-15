@@ -169,6 +169,11 @@ func verifyAndBuildKeyStore(entries []*Entry, certs []*x509.Certificate) (keySto
 			entry.KeyID = hex.EncodeToString(keyID)
 		}
 
+		if _, ok := ks[entry.KeyID]; ok {
+			return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+				"duplicate entry for key_id=%s found", entry.KeyID)
+		}
+
 		entry.CertChain = chain
 		ks[entry.KeyID] = entry
 	}
