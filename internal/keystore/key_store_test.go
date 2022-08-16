@@ -618,7 +618,7 @@ xijD/4gPFRBfs2GsfVZzSL9kH7HH0chB9w==
 
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "digital signature")
+				assert.Contains(t, err.Error(), "DigitalSignature")
 			},
 		},
 		{
