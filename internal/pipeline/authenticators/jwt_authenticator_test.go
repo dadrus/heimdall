@@ -2,14 +2,19 @@ package authenticators
 
 import (
 	"context"
+	"crypto/ecdsa"
+	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/rsa"
+	"crypto/x509"
+	"crypto/x509/pkix"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
 	"testing"
 	"time"
 
+	"github.com/dadrus/heimdall/internal/keystore"
 	"github.com/goccy/go-json"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -26,6 +31,11 @@ import (
 	"github.com/dadrus/heimdall/internal/pipeline/subject"
 	"github.com/dadrus/heimdall/internal/testsupport"
 	"github.com/dadrus/heimdall/internal/x"
+)
+
+const (
+	kidKeyWithoutCert = "key_without_cert"
+	kidKeyWithCert    = "key_with_cert"
 )
 
 // nolint: maintidx
@@ -612,12 +622,36 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 		responseCode        int
 	)
 
+	ks := createKS(t)
+	keyOnlyEntry, err := ks.GetKey(kidKeyWithoutCert)
+	require.NoError(t, err)
+	keyAndCertEntry, err := ks.GetKey(kidKeyWithCert)
+	require.NoError(t, err)
+
+	jwksWithDuplicateEntries, err := json.Marshal(jose.JSONWebKeySet{Keys: []jose.JSONWebKey{
+		keyOnlyEntry.JWK(), keyOnlyEntry.JWK(),
+	}})
+	require.NoError(t, err)
+
+	jwksWithOneKeyOnlyEntry, err := json.Marshal(jose.JSONWebKeySet{Keys: []jose.JSONWebKey{
+		keyOnlyEntry.JWK(),
+	}})
+	require.NoError(t, err)
+
+	jwksWithOneEntryWithKeyOnlyAndOneCertificate, err := json.Marshal(jose.JSONWebKeySet{Keys: []jose.JSONWebKey{
+		keyOnlyEntry.JWK(), keyAndCertEntry.JWK(),
+	}})
+	require.NoError(t, err)
+
 	subjectID := "foo"
 	issuer := "foobar"
 	audience := "bar"
-	keyID := "baz"
-	uniqueJWKSRaw, uniqueJWTRaw := setup(t, keyID, subjectID, issuer, audience, true)
-	notUniqueJWKSRaw, notUniqueJWTRaw := setup(t, keyID, subjectID, issuer, audience, false)
+
+	jwtSignedWithKeyOnlyJWK := createJWT(t, keyOnlyEntry, subjectID, issuer, audience)
+	jwtSignedWithKeyAndCertJWK := createJWT(t, keyAndCertEntry, subjectID, issuer, audience)
+
+	// uniqueJWKSRaw, uniqueJWTRaw := setup(t, keyID, subjectID, issuer, audience, true)
+	// notUniqueJWKSRaw, notUniqueJWTRaw := setup(t, keyID, subjectID, issuer, audience, false)
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		endpointCalled = true
@@ -735,7 +769,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				ads.On("GetAuthData", ctx).Return(dummyAuthData{Val: uniqueJWTRaw}, nil)
+				ads.On("GetAuthData", ctx).Return(dummyAuthData{Val: jwtSignedWithKeyOnlyJWK}, nil)
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
@@ -745,7 +779,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrCommunication)
 				assert.NotErrorIs(t, err, heimdall.ErrArgument)
-				assert.Contains(t, err.Error(), "jwks endpoint failed")
+				assert.Contains(t, err.Error(), "JWKS endpoint failed")
 			},
 		},
 		{
@@ -761,7 +795,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				ads.On("GetAuthData", ctx).Return(dummyAuthData{Val: uniqueJWTRaw}, nil)
+				ads.On("GetAuthData", ctx).Return(dummyAuthData{Val: jwtSignedWithKeyOnlyJWK}, nil)
 			},
 			instructServer: func(t *testing.T) {
 				t.Helper()
@@ -795,7 +829,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				ads.On("GetAuthData", ctx).Return(dummyAuthData{Val: uniqueJWTRaw}, nil)
+				ads.On("GetAuthData", ctx).Return(dummyAuthData{Val: jwtSignedWithKeyOnlyJWK}, nil)
 			},
 			instructServer: func(t *testing.T) {
 				t.Helper()
@@ -835,7 +869,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				ads.On("GetAuthData", ctx).Return(dummyAuthData{Val: notUniqueJWTRaw}, nil)
+				ads.On("GetAuthData", ctx).Return(dummyAuthData{Val: jwtSignedWithKeyOnlyJWK}, nil)
 			},
 			instructServer: func(t *testing.T) {
 				t.Helper()
@@ -845,7 +879,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				}
 
 				responseCode = http.StatusOK
-				responseContent = notUniqueJWKSRaw
+				responseContent = jwksWithDuplicateEntries
 				responseContentType = "application/json"
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
@@ -877,15 +911,15 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				cacheKey := auth.calculateCacheKey(keyID)
+				cacheKey := auth.calculateCacheKey(kidKeyWithoutCert)
 
 				var jwks jose.JSONWebKeySet
-				err := json.Unmarshal(uniqueJWKSRaw, &jwks)
+				err := json.Unmarshal(jwksWithOneKeyOnlyEntry, &jwks)
 				require.NoError(t, err)
 
-				keys := jwks.Key(keyID)
+				keys := jwks.Key(kidKeyWithoutCert)
 
-				ads.On("GetAuthData", ctx).Return(dummyAuthData{Val: uniqueJWTRaw}, nil)
+				ads.On("GetAuthData", ctx).Return(dummyAuthData{Val: jwtSignedWithKeyOnlyJWK}, nil)
 				cch.On("Get", cacheKey).Return(&keys[0])
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
@@ -906,7 +940,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 					URL:     srv.URL,
 					Headers: map[string]string{"Accept": "application/json"},
 				},
-				a:   oauth2.Expectation{AllowedAlgorithms: []string{"PS512"}},
+				a:   oauth2.Expectation{AllowedAlgorithms: []string{"ES384"}},
 				ttl: 10 * time.Second,
 			},
 			configureMocks: func(t *testing.T,
@@ -917,15 +951,15 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				cacheKey := auth.calculateCacheKey(keyID)
+				cacheKey := auth.calculateCacheKey(kidKeyWithCert)
 
 				var jwks jose.JSONWebKeySet
-				err := json.Unmarshal(uniqueJWKSRaw, &jwks)
+				err := json.Unmarshal(jwksWithOneKeyOnlyEntry, &jwks)
 				require.NoError(t, err)
 
-				keys := jwks.Key(keyID)
+				keys := jwks.Key(kidKeyWithoutCert)
 
-				ads.On("GetAuthData", ctx).Return(dummyAuthData{Val: notUniqueJWTRaw}, nil)
+				ads.On("GetAuthData", ctx).Return(dummyAuthData{Val: jwtSignedWithKeyAndCertJWK}, nil)
 				cch.On("Get", cacheKey).Return(&keys[0])
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
@@ -946,7 +980,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 					URL:     srv.URL,
 					Headers: map[string]string{"Accept": "application/json"},
 				},
-				a:   oauth2.Expectation{AllowedAlgorithms: []string{"PS512"}, TrustedIssuers: []string{"untrusted"}},
+				a:   oauth2.Expectation{AllowedAlgorithms: []string{"ES384"}, TrustedIssuers: []string{"untrusted"}},
 				ttl: 10 * time.Second,
 			},
 			configureMocks: func(t *testing.T,
@@ -957,15 +991,15 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				cacheKey := auth.calculateCacheKey(keyID)
+				cacheKey := auth.calculateCacheKey(kidKeyWithoutCert)
 
 				var jwks jose.JSONWebKeySet
-				err := json.Unmarshal(uniqueJWKSRaw, &jwks)
+				err := json.Unmarshal(jwksWithOneKeyOnlyEntry, &jwks)
 				require.NoError(t, err)
 
-				keys := jwks.Key(keyID)
+				keys := jwks.Key(kidKeyWithoutCert)
 
-				ads.On("GetAuthData", ctx).Return(dummyAuthData{Val: uniqueJWTRaw}, nil)
+				ads.On("GetAuthData", ctx).Return(dummyAuthData{Val: jwtSignedWithKeyOnlyJWK}, nil)
 				cch.On("Get", cacheKey).Return(&keys[0])
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
@@ -987,7 +1021,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 					Headers: map[string]string{"Accept": "application/json"},
 				},
 				a: oauth2.Expectation{
-					AllowedAlgorithms: []string{"PS512"},
+					AllowedAlgorithms: []string{"ES384"},
 					TrustedIssuers:    []string{issuer},
 					ScopesMatcher:     oauth2.ExactScopeStrategyMatcher{},
 				},
@@ -1002,15 +1036,15 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				cacheKey := auth.calculateCacheKey(keyID)
+				cacheKey := auth.calculateCacheKey(kidKeyWithoutCert)
 
 				var jwks jose.JSONWebKeySet
-				err := json.Unmarshal(uniqueJWKSRaw, &jwks)
+				err := json.Unmarshal(jwksWithOneKeyOnlyEntry, &jwks)
 				require.NoError(t, err)
 
-				keys := jwks.Key(keyID)
+				keys := jwks.Key(kidKeyWithoutCert)
 
-				ads.On("GetAuthData", ctx).Return(dummyAuthData{Val: uniqueJWTRaw}, nil)
+				ads.On("GetAuthData", ctx).Return(dummyAuthData{Val: jwtSignedWithKeyOnlyJWK}, nil)
 				cch.On("Get", cacheKey).Return(&keys[0])
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
@@ -1032,7 +1066,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 					Headers: map[string]string{"Accept": "application/json"},
 				},
 				a: oauth2.Expectation{
-					AllowedAlgorithms: []string{"PS512"},
+					AllowedAlgorithms: []string{"ES384"},
 					TrustedIssuers:    []string{issuer},
 					ScopesMatcher:     oauth2.ExactScopeStrategyMatcher{},
 				},
@@ -1047,15 +1081,15 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				cacheKey := auth.calculateCacheKey(keyID)
+				cacheKey := auth.calculateCacheKey(kidKeyWithoutCert)
 
 				var jwks jose.JSONWebKeySet
-				err := json.Unmarshal(uniqueJWKSRaw, &jwks)
+				err := json.Unmarshal(jwksWithOneKeyOnlyEntry, &jwks)
 				require.NoError(t, err)
 
-				keys := jwks.Key(keyID)
+				keys := jwks.Key(kidKeyWithoutCert)
 
-				ads.On("GetAuthData", ctx).Return(dummyAuthData{Val: uniqueJWTRaw}, nil)
+				ads.On("GetAuthData", ctx).Return(dummyAuthData{Val: jwtSignedWithKeyOnlyJWK}, nil)
 				cch.On("Get", cacheKey).Return(&keys[0])
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
@@ -1080,14 +1114,14 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			},
 		},
 		{
-			uc: "successful without cache hit",
+			uc: "successful without cache hit using key only",
 			authenticator: &jwtAuthenticator{
 				e: endpoint.Endpoint{
 					URL:     srv.URL,
 					Headers: map[string]string{"Accept": "application/json"},
 				},
 				a: oauth2.Expectation{
-					AllowedAlgorithms: []string{"PS512"},
+					AllowedAlgorithms: []string{"ES384"},
 					TrustedIssuers:    []string{issuer},
 					ScopesMatcher:     oauth2.ExactScopeStrategyMatcher{},
 				},
@@ -1102,15 +1136,15 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				cacheKey := auth.calculateCacheKey(keyID)
+				cacheKey := auth.calculateCacheKey(kidKeyWithoutCert)
 
 				var jwks jose.JSONWebKeySet
-				err := json.Unmarshal(uniqueJWKSRaw, &jwks)
+				err := json.Unmarshal(jwksWithOneKeyOnlyEntry, &jwks)
 				require.NoError(t, err)
 
-				keys := jwks.Key(keyID)
+				keys := jwks.Key(kidKeyWithoutCert)
 
-				ads.On("GetAuthData", ctx).Return(dummyAuthData{Val: uniqueJWTRaw}, nil)
+				ads.On("GetAuthData", ctx).Return(dummyAuthData{Val: jwtSignedWithKeyOnlyJWK}, nil)
 				cch.On("Get", cacheKey).Return(nil)
 				cch.On("Set", cacheKey, &keys[0], auth.ttl)
 			},
@@ -1122,7 +1156,74 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				}
 
 				responseCode = http.StatusOK
-				responseContent = uniqueJWKSRaw
+				responseContent = jwksWithOneKeyOnlyEntry
+				responseContentType = "application/json"
+			},
+			assert: func(t *testing.T, err error, sub *subject.Subject) {
+				t.Helper()
+
+				assert.True(t, endpointCalled)
+
+				require.NoError(t, err)
+
+				require.NotNil(t, sub)
+				assert.Equal(t, subjectID, sub.ID)
+				assert.Len(t, sub.Attributes, 8)
+				assert.Len(t, sub.Attributes["aud"], 1)
+				assert.Contains(t, sub.Attributes["aud"], audience)
+				assert.Contains(t, sub.Attributes, "exp")
+				assert.Contains(t, sub.Attributes, "iat")
+				assert.Contains(t, sub.Attributes, "nbf")
+				assert.Equal(t, issuer, sub.Attributes["iss"])
+				assert.Contains(t, sub.Attributes["scp"], "foo")
+				assert.Contains(t, sub.Attributes["scp"], "bar")
+				assert.Equal(t, subjectID, sub.Attributes["sub"])
+			},
+		},
+		{
+			uc: "successful without cache hit using key & cert only",
+			authenticator: &jwtAuthenticator{
+				e: endpoint.Endpoint{
+					URL:     srv.URL,
+					Headers: map[string]string{"Accept": "application/json"},
+				},
+				a: oauth2.Expectation{
+					AllowedAlgorithms: []string{"ES384"},
+					TrustedIssuers:    []string{issuer},
+					ScopesMatcher:     oauth2.ExactScopeStrategyMatcher{},
+				},
+				sf:  &Session{SubjectIDFrom: "sub"},
+				ttl: 10 * time.Second,
+			},
+			configureMocks: func(t *testing.T,
+				ctx *heimdallmocks.MockContext,
+				cch *mocks.MockCache,
+				ads *mockAuthDataGetter,
+				auth *jwtAuthenticator,
+			) {
+				t.Helper()
+
+				cacheKey := auth.calculateCacheKey(kidKeyWithCert)
+
+				var jwks jose.JSONWebKeySet
+				err := json.Unmarshal(jwksWithOneEntryWithKeyOnlyAndOneCertificate, &jwks)
+				require.NoError(t, err)
+
+				keys := jwks.Key(kidKeyWithCert)
+
+				ads.On("GetAuthData", ctx).Return(dummyAuthData{Val: jwtSignedWithKeyAndCertJWK}, nil)
+				cch.On("Get", cacheKey).Return(nil)
+				cch.On("Set", cacheKey, &keys[0], auth.ttl)
+			},
+			instructServer: func(t *testing.T) {
+				t.Helper()
+
+				checkRequest = func(req *http.Request) {
+					assert.Equal(t, "application/json", req.Header.Get("Accept"))
+				}
+
+				responseCode = http.StatusOK
+				responseContent = jwksWithOneEntryWithKeyOnlyAndOneCertificate
 				responseContentType = "application/json"
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
@@ -1154,7 +1255,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 					Headers: map[string]string{"Accept": "application/json"},
 				},
 				a: oauth2.Expectation{
-					AllowedAlgorithms: []string{"PS512"},
+					AllowedAlgorithms: []string{"ES384"},
 					TrustedIssuers:    []string{issuer},
 					ScopesMatcher:     oauth2.ExactScopeStrategyMatcher{},
 				},
@@ -1169,15 +1270,15 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				cacheKey := auth.calculateCacheKey(keyID)
+				cacheKey := auth.calculateCacheKey(kidKeyWithoutCert)
 
 				var jwks jose.JSONWebKeySet
-				err := json.Unmarshal(uniqueJWKSRaw, &jwks)
+				err := json.Unmarshal(jwksWithOneKeyOnlyEntry, &jwks)
 				require.NoError(t, err)
 
-				keys := jwks.Key(keyID)
+				keys := jwks.Key(kidKeyWithoutCert)
 
-				ads.On("GetAuthData", ctx).Return(dummyAuthData{Val: uniqueJWTRaw}, nil)
+				ads.On("GetAuthData", ctx).Return(dummyAuthData{Val: jwtSignedWithKeyOnlyJWK}, nil)
 				cch.On("Get", cacheKey).Return("Hi Foo")
 				cch.On("Delete", cacheKey)
 				cch.On("Set", cacheKey, &keys[0], auth.ttl)
@@ -1190,7 +1291,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				}
 
 				responseCode = http.StatusOK
-				responseContent = uniqueJWKSRaw
+				responseContent = jwksWithOneKeyOnlyEntry
 				responseContentType = "application/json"
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
@@ -1261,6 +1362,90 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			ads.AssertExpectations(t)
 		})
 	}
+}
+
+func createKS(t *testing.T) keystore.KeyStore {
+	t.Helper()
+
+	// ROOT CAs
+	rootCA1, err := testsupport.NewRootCA("Test Root CA 1", time.Hour*24)
+	require.NoError(t, err)
+
+	// INT CA
+	intCA1PrivKey, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
+	require.NoError(t, err)
+	intCA1Cert, err := rootCA1.IssueCertificate(
+		testsupport.WithSubject(pkix.Name{
+			CommonName:   "Test Int CA 1",
+			Organization: []string{"Test"},
+			Country:      []string{"EU"},
+		}),
+		testsupport.WithIsCA(),
+		testsupport.WithValidity(time.Now(), time.Hour*24),
+		testsupport.WithSubjectPubKey(&intCA1PrivKey.PublicKey, x509.ECDSAWithSHA384))
+	require.NoError(t, err)
+
+	intCA1 := testsupport.NewCA(intCA1PrivKey, intCA1Cert)
+
+	// EE CERTS
+	ee1PrivKey, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
+	require.NoError(t, err)
+	ee1cert, err := intCA1.IssueCertificate(
+		testsupport.WithSubject(pkix.Name{
+			CommonName:   "Test EE 1",
+			Organization: []string{"Test"},
+			Country:      []string{"EU"},
+		}),
+		testsupport.WithValidity(time.Now(), time.Hour*24),
+		testsupport.WithSubjectPubKey(&ee1PrivKey.PublicKey, x509.ECDSAWithSHA384),
+		testsupport.WithKeyUsage(x509.KeyUsageDigitalSignature))
+	require.NoError(t, err)
+
+	ee2PrivKey, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
+	require.NoError(t, err)
+
+	pemBytes, err := testsupport.BuildPEM(
+		testsupport.WithECDSAPrivateKey(ee1PrivKey, testsupport.WithPEMHeader("X-Key-ID", kidKeyWithCert)),
+		testsupport.WithECDSAPrivateKey(ee2PrivKey, testsupport.WithPEMHeader("X-Key-ID", kidKeyWithoutCert)),
+		testsupport.WithX509Certificate(ee1cert),
+		testsupport.WithX509Certificate(intCA1Cert),
+		testsupport.WithX509Certificate(rootCA1.Certificate),
+	)
+	require.NoError(t, err)
+
+	ks, err := keystore.NewKeyStoreFromPEMBytes(pemBytes, "")
+	require.NoError(t, err)
+
+	return ks
+}
+
+func createJWT(t *testing.T, keyEntry *keystore.Entry, subject, issuer, audience string) string {
+	signerOpts := jose.SignerOptions{}
+	signerOpts.WithType("JWT").WithHeader("kid", keyEntry.KeyID)
+	signer, err := jose.NewSigner(
+		jose.SigningKey{
+			Algorithm: keyEntry.JOSEAlgorithm(),
+			Key:       keyEntry.PrivateKey,
+		},
+		&signerOpts)
+	require.NoError(t, err)
+
+	builder := jwt.Signed(signer)
+	builder = builder.Claims(map[string]interface{}{
+		"sub": subject,
+		"iss": issuer,
+		"jti": "foo",
+		"iat": time.Now().Unix() - 1,
+		"nbf": time.Now().Unix() - 1,
+		"exp": time.Now().Unix() + 2,
+		"aud": []string{audience},
+		"scp": []string{"foo", "bar"},
+	})
+
+	rawJwt, err := builder.CompactSerialize()
+	require.NoError(t, err)
+
+	return rawJwt
 }
 
 func setup(t *testing.T, keyid, subject, issuer, audience string, uniqueKey bool) ([]byte, string) {
