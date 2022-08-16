@@ -5,7 +5,6 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
-	"crypto/rsa"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"net/http"
@@ -1446,47 +1445,4 @@ func createJWT(t *testing.T, keyEntry *keystore.Entry, subject, issuer, audience
 	require.NoError(t, err)
 
 	return rawJwt
-}
-
-func setup(t *testing.T, keyid, subject, issuer, audience string, uniqueKey bool) ([]byte, string) {
-	t.Helper()
-
-	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
-	require.NoError(t, err)
-
-	jwks := jose.JSONWebKeySet{
-		Keys: []jose.JSONWebKey{
-			{Key: privateKey.Public(), KeyID: keyid, Algorithm: string(jose.PS512)},
-		},
-	}
-
-	if !uniqueKey {
-		jwks.Keys = append(jwks.Keys, jose.JSONWebKey{
-			Key: privateKey.Public(), KeyID: keyid, Algorithm: string(jose.PS512),
-		})
-	}
-
-	rawJwks, err := json.Marshal(jwks)
-	require.NoError(t, err)
-
-	signerOpts := jose.SignerOptions{}
-	signerOpts.WithType("JWT").WithHeader("kid", keyid)
-	signer, err := jose.NewSigner(jose.SigningKey{Algorithm: jose.PS512, Key: privateKey}, &signerOpts)
-	require.NoError(t, err)
-
-	builder := jwt.Signed(signer)
-	builder = builder.Claims(map[string]interface{}{
-		"sub": subject,
-		"iss": issuer,
-		"jti": "foo",
-		"iat": time.Now().Unix() - 1,
-		"nbf": time.Now().Unix() - 1,
-		"exp": time.Now().Unix() + 2,
-		"aud": []string{audience},
-		"scp": []string{"foo", "bar"},
-	})
-	rawJwt, err := builder.CompactSerialize()
-	require.NoError(t, err)
-
-	return rawJwks, rawJwt
 }
