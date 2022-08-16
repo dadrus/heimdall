@@ -13,7 +13,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dadrus/heimdall/internal/keystore"
 	"github.com/goccy/go-json"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -24,6 +23,7 @@ import (
 	"github.com/dadrus/heimdall/internal/cache/mocks"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	heimdallmocks "github.com/dadrus/heimdall/internal/heimdall/mocks"
+	"github.com/dadrus/heimdall/internal/keystore"
 	"github.com/dadrus/heimdall/internal/pipeline/authenticators/extractors"
 	"github.com/dadrus/heimdall/internal/pipeline/endpoint"
 	"github.com/dadrus/heimdall/internal/pipeline/oauth2"
@@ -1419,6 +1419,8 @@ func createKS(t *testing.T) keystore.KeyStore {
 }
 
 func createJWT(t *testing.T, keyEntry *keystore.Entry, subject, issuer, audience string) string {
+	t.Helper()
+
 	signerOpts := jose.SignerOptions{}
 	signerOpts.WithType("JWT").WithHeader("kid", keyEntry.KeyID)
 	signer, err := jose.NewSigner(

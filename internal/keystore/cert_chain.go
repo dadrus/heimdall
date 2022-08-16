@@ -56,7 +56,6 @@ func ValidateChain(chain []*x509.Certificate) error {
 	// is the actual end entity certificate and all others are intermediaries.
 	// That also means, that if the chain consists of just one certificate, it is
 	// trusted explicitly.
-
 	const certificateCount = 2
 
 	var intermediatePool []*x509.Certificate

@@ -53,9 +53,7 @@ func WithIntermediateCACertificates(certs []*x509.Certificate) ValidationOption 
 
 func WithRootCACertificates(certs []*x509.Certificate) ValidationOption {
 	return func(opts *options) error {
-		for _, cert := range certs {
-			opts.rootCAs = append(opts.rootCAs, cert)
-		}
+		opts.rootCAs = append(opts.rootCAs, certs...)
 
 		return nil
 	}
@@ -122,7 +120,7 @@ func ValidateCertificate(cert *x509.Certificate, opts ...ValidationOption) error
 	if validationOpts.verifyOpts.Roots == nil {
 		validationOpts.verifyOpts.Roots = x509.NewCertPool()
 	}
-	
+
 	for _, cert := range validationOpts.rootCAs {
 		validationOpts.verifyOpts.Roots.AddCert(cert)
 	}

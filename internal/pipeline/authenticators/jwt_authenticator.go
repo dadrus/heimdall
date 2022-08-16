@@ -10,7 +10,6 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/dadrus/heimdall/internal/x/pkix"
 	"github.com/goccy/go-json"
 	"github.com/rs/zerolog"
 	"gopkg.in/square/go-jose.v2"
@@ -25,6 +24,7 @@ import (
 	"github.com/dadrus/heimdall/internal/pipeline/subject"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
+	"github.com/dadrus/heimdall/internal/x/pkix"
 )
 
 const defaultTTL = 10 * time.Minute
@@ -111,17 +111,6 @@ func newJwtAuthenticator(rawConfig map[string]any) (*jwtAuthenticator, error) {
 		conf.Session.SubjectIDFrom = "sub"
 	}
 
-	var adg extractors.AuthDataExtractStrategy
-	if conf.AuthDataSource == nil {
-		adg = extractors.CompositeExtractStrategy{
-			extractors.HeaderValueExtractStrategy{Name: "Authorization", Schema: "Bearer"},
-			extractors.QueryParameterExtractStrategy{Name: "access_token"},
-			extractors.BodyParameterExtractStrategy{Name: "access_token"},
-		}
-	} else {
-		adg = conf.AuthDataSource
-	}
-
 	if trustStore, err = loadTrustStore(conf.TrustStore); err != nil {
 		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
 			"failed to load trust store certificates").CausedBy(err)
@@ -133,8 +122,17 @@ func newJwtAuthenticator(rawConfig map[string]any) (*jwtAuthenticator, error) {
 		ttl: x.IfThenElseExec(conf.CacheTTL != nil,
 			func() time.Duration { return *conf.CacheTTL },
 			func() time.Duration { return defaultTTL }),
-		sf:                   &conf.Session,
-		ads:                  adg,
+		sf: &conf.Session,
+		ads: x.IfThenElseExec(conf.AuthDataSource == nil,
+			func() extractors.CompositeExtractStrategy {
+				return extractors.CompositeExtractStrategy{
+					extractors.HeaderValueExtractStrategy{Name: "Authorization", Schema: "Bearer"},
+					extractors.QueryParameterExtractStrategy{Name: "access_token"},
+					extractors.BodyParameterExtractStrategy{Name: "access_token"},
+				}
+			},
+			func() extractors.CompositeExtractStrategy { return conf.AuthDataSource },
+		),
 		allowFallbackOnError: conf.AllowFallbackOnError,
 		validateJWKCert: x.IfThenElseExec(conf.ValidateJWKCertificate != nil,
 			func() bool { return *conf.ValidateJWKCertificate },
