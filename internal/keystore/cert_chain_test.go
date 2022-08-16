@@ -308,7 +308,7 @@ func (suite *CertChainTestSuite) TestValidateChain() {
 
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "cannot be used for digital signature")
+				assert.Contains(t, err.Error(), "DigitalSignature")
 			},
 		},
 		{
