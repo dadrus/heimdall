@@ -183,14 +183,20 @@ func verifyAndBuildKeyStore(entries []*Entry, certs []*x509.Certificate) (keySto
 }
 
 func readPEMContents(data []byte) []*pem.Block {
-	var blocks []*pem.Block
+	var (
+		blocks []*pem.Block
+		block  *pem.Block
+	)
 
-	block, next := pem.Decode(data)
-	blocks = append(blocks, block)
+	next := data
 
-	for len(next) != 0 {
+	for {
 		block, next = pem.Decode(next)
 		blocks = append(blocks, block)
+
+		if len(next) == 0 {
+			break
+		}
 	}
 
 	return blocks
