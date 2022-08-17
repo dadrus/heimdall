@@ -10,7 +10,6 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/dadrus/heimdall/internal/truststore"
 	"github.com/goccy/go-json"
 	"github.com/rs/zerolog"
 	"gopkg.in/square/go-jose.v2"
@@ -23,6 +22,7 @@ import (
 	"github.com/dadrus/heimdall/internal/pipeline/endpoint"
 	"github.com/dadrus/heimdall/internal/pipeline/oauth2"
 	"github.com/dadrus/heimdall/internal/pipeline/subject"
+	"github.com/dadrus/heimdall/internal/truststore"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/pkix"

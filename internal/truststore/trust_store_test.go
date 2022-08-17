@@ -17,7 +17,6 @@ import (
 
 func TestNewKeyStoreFromPEMBytes(t *testing.T) {
 	// GIVEN
-
 	// ROOT CAs
 	rootCA1, err := testsupport.NewRootCA("Test Root CA 1", time.Hour*24)
 	require.NoError(t, err)
