@@ -1727,7 +1727,9 @@ func TestGetCacheTTL(t *testing.T) {
 			assert: func(t *testing.T, ttl time.Duration) {
 				t.Helper()
 
-				assert.Equal(t, time.Duration(ee1cert.NotAfter.Unix()-time.Now().Unix()-10), ttl)
+				expTTL := time.Duration(ee1cert.NotAfter.Unix()-time.Now().Unix()-10) * time.Second
+
+				assert.Equal(t, expTTL, ttl)
 			},
 		},
 		{
