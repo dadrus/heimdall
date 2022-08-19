@@ -251,6 +251,14 @@ How long to cache the key from the JWKS response, which was used for signature v
 +
 If set to `true`, allows the pipeline to fall back to the next authenticator in the pipeline if this one fails to verify the credentials. Defaults to `false`.
 
+* *`validate_jwk`*: _boolean_ (optional, not overridable)
++
+Enables or disables the verification of the JWK certificate used for JWT signature verification purposes. Effective only if the JWK contains a certificate. The verification happens according to https://www.rfc-editor.org/rfc/rfc5280#section-6.1[RFC 5280, section 6.1] and also includes the check, that the certificate is allowed to be used for signature verification purposes. Revokation check is not supported. Defaults to `true`.
+
+* *`trust_store`*: _string_ (optional, not overridable)
++
+The path to a PEM file containing the trust anchors, to be used for the JWK certificate validation. Defaults to system trust store.
+
 .Minimal possible configuration
 ====
 [source, yaml]
