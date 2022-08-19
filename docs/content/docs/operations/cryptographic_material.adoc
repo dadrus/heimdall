@@ -14,7 +14,19 @@ To operate heimdall in a secure way, you should configure heimdall accordingly. 
 
 == TLS
 
-See link:{{< relref "/docs/configuration/services/configuration_types.adoc#_tls" >}}[TLS Configuration].
+As documented in link:{{< relref "/docs/getting_started/concepts.adoc" >}}[Concepts] section, the execution of heimdall's pipeline typically includes communication to other systems. The endpoints of the corresponding systems should be TLS protected. This is however actually out of scope for heimdall. What is in scope, is the verification of the used TLS server certificate, if TLS is used. This happens by making use of the operating system-wide trust store, containing the certificates of Root and Intermediate CAs (trust anchors) shipped with the OS. That means, you should
+
+1. ensure this trust store contains the certificates of the Root CAs of your PKI hierarchy and
+2. ensure the endpoints, heimdall communicates with over TLS, provide not only their own certificates, but also the intermediate certificates and cross certificates not included within the OS trust store
+
+Both is required to enable heimdall building the certificate chain for TLS server certificate verification purpose. If heimdall fails doing so, the connection will be dropped.
+
+[NOTE]
+====
+heimdall Docker image is shipped without any certificates by intention to ensure you take care about the up-to-date status of the trust store. This way, you have to mount the OS trust store into heimdall's container to enable its usage.
+====
+
+The verification of TLS server certificates is not the single configuration option. You should also ensure heimdall's services, you're using, are configured to be available via TLS as well. See link:{{< relref "/docs/configuration/services/configuration_types.adoc#_tls" >}}[TLS Configuration] for all available options.
 
 == Signatures
 
