@@ -285,35 +285,35 @@ func (a *oauth2IntrospectionAuthenticator) getCacheTTL(introspectResp *oauth2.In
 	// when used from cache
 	const timeLeeway = 10
 
+	if !a.isCacheEnabled() {
+		return 0
+	}
+
 	// we cache by default using the settings in the introspection response (if available)
 	// or if ttl has been configured. Latter overwrites the settings in the introspection response
 	// if it is shorter than the ttl in the introspection response
-	if a.isCacheEnabled() {
-		introspectionResponseTTL := x.IfThenElseExec(introspectResp.Expiry != nil,
-			func() time.Duration {
-				expiresIn := introspectResp.Expiry.Time().Unix() - time.Now().Unix() - timeLeeway
+	introspectionResponseTTL := x.IfThenElseExec(introspectResp.Expiry != nil,
+		func() time.Duration {
+			expiresIn := introspectResp.Expiry.Time().Unix() - time.Now().Unix() - timeLeeway
 
-				return x.IfThenElse(expiresIn > 0, time.Duration(expiresIn)*time.Second, 0)
-			},
-			func() time.Duration { return 0 })
+			return x.IfThenElse(expiresIn > 0, time.Duration(expiresIn)*time.Second, 0)
+		},
+		func() time.Duration { return 0 })
 
-		configuredTTL := x.IfThenElseExec(a.ttl != nil,
-			func() time.Duration { return *a.ttl },
-			func() time.Duration { return 0 })
+	configuredTTL := x.IfThenElseExec(a.ttl != nil,
+		func() time.Duration { return *a.ttl },
+		func() time.Duration { return 0 })
 
-		switch {
-		case configuredTTL == 0 && introspectionResponseTTL == 0:
-			return 0
-		case configuredTTL == 0 && introspectionResponseTTL != 0:
-			return introspectionResponseTTL
-		case configuredTTL != 0 && introspectionResponseTTL == 0:
-			return configuredTTL
-		default:
-			return x.IfThenElse(configuredTTL < introspectionResponseTTL, configuredTTL, introspectionResponseTTL)
-		}
+	switch {
+	case configuredTTL == 0 && introspectionResponseTTL == 0:
+		return 0
+	case configuredTTL == 0 && introspectionResponseTTL != 0:
+		return introspectionResponseTTL
+	case configuredTTL != 0 && introspectionResponseTTL == 0:
+		return configuredTTL
+	default:
+		return x.IfThenElse(configuredTTL < introspectionResponseTTL, configuredTTL, introspectionResponseTTL)
 	}
-
-	return 0
 }
 
 func (a *oauth2IntrospectionAuthenticator) calculateCacheKey(reference string) string {
