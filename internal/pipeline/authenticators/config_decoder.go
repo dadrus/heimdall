@@ -1,6 +1,7 @@
 package authenticators
 
 import (
+	"github.com/dadrus/heimdall/internal/truststore"
 	"github.com/mitchellh/mapstructure"
 
 	"github.com/dadrus/heimdall/internal/pipeline/authenticators/extractors"
@@ -16,6 +17,7 @@ func decodeConfig(input any, output any) error {
 				extractors.DecodeCompositeExtractStrategyHookFunc(),
 				oauth2.DecodeScopesMatcherHookFunc(),
 				endpoint.DecodeAuthenticationStrategyHookFunc(),
+				truststore.DecodeTrustStoreHookFunc(),
 			),
 			Result:      output,
 			ErrorUnused: true,
