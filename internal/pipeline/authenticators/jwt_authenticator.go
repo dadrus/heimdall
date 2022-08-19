@@ -209,13 +209,14 @@ func (a *jwtAuthenticator) IsFallbackOnErrorAllowed() bool {
 }
 
 func (a *jwtAuthenticator) isCacheEnabled() bool {
-	// cache is enabled if it is not configured (in that case the ttl value from the
-	// introspection response if used), or if it is configured and the value > 0
+	// cache is enabled if ttl is not configured (in that case the ttl value from either
+	// the jwk cert (if available) or the defaultTTL is used), or if ttl is configured and
+	// the value > 0
 	return a.ttl == nil || (a.ttl != nil && *a.ttl > 0)
 }
 
 func (a *jwtAuthenticator) getCacheTTL(key *jose.JSONWebKey) time.Duration {
-	// timeLeeway defines the default time deviation to ensure the token is still valid
+	// timeLeeway defines the default time deviation to ensure the cert of the JWK is still valid
 	// when used from cache
 	const timeLeeway = 10
 
@@ -239,11 +240,11 @@ func (a *jwtAuthenticator) getCacheTTL(key *jose.JSONWebKey) time.Duration {
 		func() time.Duration { return defaultTTL })
 
 	switch {
-	case configuredTTL <= 0 && certTTL <= 0:
+	case configuredTTL == 0 && certTTL == 0:
 		return 0
-	case configuredTTL <= 0 && certTTL > 0:
+	case configuredTTL == 0 && certTTL != 0:
 		return certTTL
-	case configuredTTL > 0 && certTTL == 0:
+	case configuredTTL != 0 && certTTL == 0:
 		return configuredTTL
 	default:
 		return x.IfThenElse(configuredTTL < certTTL, configuredTTL, certTTL)

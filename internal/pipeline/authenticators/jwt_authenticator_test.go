@@ -674,7 +674,8 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 		responseCode        int
 	)
 
-	tenSecondsTTL := time.Duration(0)
+	tenSecondsTTL := 10 * time.Second
+	disabledTTL := 0 * time.Second
 
 	ks := createKS(t)
 	keyOnlyEntry, err := ks.GetKey(kidKeyWithoutCert)
@@ -813,7 +814,8 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 		{
 			uc: "with jwks endpoint communication error (dns)",
 			authenticator: &jwtAuthenticator{
-				e: endpoint.Endpoint{URL: "http://heimdall.test.local"},
+				e:   endpoint.Endpoint{URL: "http://heimdall.test.local"},
+				ttl: &disabledTTL,
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.MockContext,
@@ -839,7 +841,8 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 		{
 			uc: "with unexpected response code from server",
 			authenticator: &jwtAuthenticator{
-				e: endpoint.Endpoint{URL: srv.URL},
+				e:   endpoint.Endpoint{URL: srv.URL},
+				ttl: &disabledTTL,
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.MockContext,
@@ -874,6 +877,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 					URL:     srv.URL,
 					Headers: map[string]string{"Accept": "application/json"},
 				},
+				ttl: &disabledTTL,
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.MockContext,
@@ -914,6 +918,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 					URL:     srv.URL,
 					Headers: map[string]string{"Accept": "application/json"},
 				},
+				ttl: &disabledTTL,
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.MockContext,
@@ -1200,7 +1205,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 
 				ads.On("GetAuthData", ctx).Return(dummyAuthData{Val: jwtSignedWithKeyOnlyJWK}, nil)
 				cch.On("Get", cacheKey).Return(nil)
-				cch.On("Set", cacheKey, &keys[0], auth.ttl)
+				cch.On("Set", cacheKey, &keys[0], *auth.ttl)
 			},
 			instructServer: func(t *testing.T) {
 				t.Helper()
@@ -1267,7 +1272,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 
 				ads.On("GetAuthData", ctx).Return(dummyAuthData{Val: jwtSignedWithKeyAndCertJWK}, nil)
 				cch.On("Get", cacheKey).Return(nil)
-				cch.On("Set", cacheKey, &keys[0], auth.ttl)
+				cch.On("Set", cacheKey, &keys[0], *auth.ttl)
 			},
 			instructServer: func(t *testing.T) {
 				t.Helper()
@@ -1391,7 +1396,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 
 				ads.On("GetAuthData", ctx).Return(dummyAuthData{Val: jwtSignedWithKeyAndCertJWK}, nil)
 				cch.On("Get", cacheKey).Return(nil)
-				cch.On("Set", cacheKey, &keys[0], auth.ttl)
+				cch.On("Set", cacheKey, &keys[0], *auth.ttl)
 			},
 			instructServer: func(t *testing.T) {
 				t.Helper()
@@ -1459,7 +1464,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				ads.On("GetAuthData", ctx).Return(dummyAuthData{Val: jwtSignedWithKeyOnlyJWK}, nil)
 				cch.On("Get", cacheKey).Return("Hi Foo")
 				cch.On("Delete", cacheKey)
-				cch.On("Set", cacheKey, &keys[0], auth.ttl)
+				cch.On("Set", cacheKey, &keys[0], *auth.ttl)
 			},
 			instructServer: func(t *testing.T) {
 				t.Helper()
