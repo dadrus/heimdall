@@ -764,6 +764,16 @@
               "type": "boolean",
               "description": "Whether the pipeline should fallback to a next authenticator if this one fails validating the given credentials",
               "default": false
+            },
+            "validate_jwk": {
+              "type": "boolean",
+              "description": "Whether the certificate chain (if present) in the JWK should be validated",
+              "default": true
+            },
+            "trust_store": {
+              "type": "string",
+              "description": "The path to the trust store PEM file, which contains the trust anchors used for JWK certificate verification purposes",
+              "default": "system trust store"
             }
           }
         }
