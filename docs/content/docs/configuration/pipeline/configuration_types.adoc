@@ -288,6 +288,8 @@ Authentication strategy to apply, if the endpoint requires authentication.
 * *`headers`* _map of strings_ (optional)
 +
 HTTP headers to be sent to the endpoint.
++
+CAUTION: These headers are not analyzed by heimdall and are just forwarded to the endpoint. E.g. if you configure the `Content-Encoding` to something like `gzip`, the service behind the used endpoint might fail to answer, as it would expect the body to be compressed.
 
 .Endpoint configuration
 ====
