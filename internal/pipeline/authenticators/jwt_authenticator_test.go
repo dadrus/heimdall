@@ -1760,7 +1760,11 @@ func TestGetCacheTTL(t *testing.T) {
 		},
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
+			// WHEN
+			ttl := tc.authenticator.getCacheTTL(tc.jwk)
 
+			// THEN
+			tc.assert(t, ttl)
 		})
 	}
 }
