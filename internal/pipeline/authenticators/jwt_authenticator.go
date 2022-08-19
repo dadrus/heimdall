@@ -64,10 +64,8 @@ func newJwtAuthenticator(rawConfig map[string]any) (*jwtAuthenticator, error) {
 		Session              Session                             `mapstructure:"session"`
 		CacheTTL             *time.Duration                      `mapstructure:"cache_ttl"`
 		AllowFallbackOnError bool                                `mapstructure:"allow_fallback_on_error"`
-		JWKValidation        struct {
-			Enabled    *bool                 `mapstructure:"enabled"`
-			TrustStore truststore.TrustStore `mapstructure:"trust_store"`
-		} `mapstructure:"jwk_validation"`
+		ValidateJWK          *bool                               `mapstructure:"validate_jwk"`
+		TrustStore           truststore.TrustStore               `mapstructure:"trust_store"`
 	}
 
 	var (
@@ -113,8 +111,8 @@ func newJwtAuthenticator(rawConfig map[string]any) (*jwtAuthenticator, error) {
 		conf.Session.SubjectIDFrom = "sub"
 	}
 
-	validateJWKCert := x.IfThenElseExec(conf.JWKValidation.Enabled != nil,
-		func() bool { return *conf.JWKValidation.Enabled },
+	validateJWKCert := x.IfThenElseExec(conf.ValidateJWK != nil,
+		func() bool { return *conf.ValidateJWK },
 		func() bool { return true })
 
 	ads := x.IfThenElseExec(conf.AuthDataSource == nil,
@@ -140,7 +138,7 @@ func newJwtAuthenticator(rawConfig map[string]any) (*jwtAuthenticator, error) {
 		ads:                  ads,
 		allowFallbackOnError: conf.AllowFallbackOnError,
 		validateJWKCert:      validateJWKCert,
-		trustStore:           conf.JWKValidation.TrustStore,
+		trustStore:           conf.TrustStore,
 	}, nil
 }
 
@@ -239,7 +237,7 @@ func (a *jwtAuthenticator) getKey(ctx heimdall.Context, keyID string) (*jose.JSO
 			logger.Warn().Msg("Wrong object type from cache")
 			cch.Delete(cacheKey)
 		} else {
-			logger.Debug().Msg("Reusing signature key from cache")
+			logger.Debug().Msg("Reusing JWK from cache")
 		}
 	}
 
