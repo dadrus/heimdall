@@ -12,13 +12,11 @@ It is supposed to be used either as
 * a **Reverse Proxy** in front of your upstream API or web server that rejects unauthorized requests and forwards authorized ones to your end points, or as
 * a **Decision API**, which integrates with your API Gateway (Kong, NGNIX, Envoy, Traefik, etc) and then acts as a Policy Decision Point.
 
-## Example Usage
+## Run heimdall in Decision API operation mode
 
-Create a configuration file:
+Create a configuration file named `heimdall.yaml`:
 
 ```yaml
-# heimdall.yaml
-
 log:
   level: info
 
@@ -40,7 +38,7 @@ rules:
       - mutator: create_jwt
 ```
 
-Start heimdall (here in the decision operation mode):
+Start heimdall:
 
 ```bash
 docker run -t -p 4456:4456 -v $PWD:/heimdall/conf \
@@ -86,6 +84,133 @@ What did you actually do? ;)
 * You've started heimdall in the decision operation mode
 * And sent an HTTP GET request to an imaginary `foobar` endpoint. This is also what an API-Gateway will do before forwarding the received request to an upstream's `foobar` endpoint.
 * Heimdall answered with an HTTP `202 Accepted` response and set the expected `Authorization` header, which the API-Gateway would forward to the upstream service together with the original request.
+
+## Run heimdall in Proxy operation mode
+
+To run the following configuration, you need docker-compose. 
+
+Create a config file (`config.yaml`) with the following content:
+```yaml
+log:
+  level: info
+
+pipeline:
+  authenticators:
+    - id: anonymous_authenticator
+      type: anonymous
+  authorizers:
+    - id: deny_all_requests
+      type: deny
+    - id: allow_all_requests
+      type: allow
+  mutators:
+    - id: create_jwt
+      type: jwt
+
+rules:
+  default:
+    methods:
+      - GET
+      - POST
+    execute:
+      - authenticator: anonymous_authenticator
+      - authorizer: deny_all_requests
+      - mutator: create_jwt
+
+  providers:
+    file:
+      src: /heimdall/conf/rule.yaml
+      watch: true
+```
+
+Create a rule file (`rule.yaml`) with the following contents:
+
+```yaml
+- id: test-rule
+  url: http://<**>/<**>
+  upstream: http://upstream
+  execute:
+    - authorizer: allow_all_requests
+```
+
+Create a `docker-compose.yaml` file with the following contents and modify it to include the correct paths to your `config.yaml` and `rule.yaml` files:
+
+```yaml
+version: "3"
+
+services:
+  heimdall:
+    image: dadrus/heimdall:latest
+    volumes:
+      # Mount your config file:
+      - ./config.yaml:/heimdall/conf/config.yaml:ro
+      # Mount your rule file:
+      - ./rule.yaml:/heimdall/conf/rule.yaml:ro
+    ports:
+      - 4455:4455
+    command: -c /heimdall/conf/config.yaml serve proxy
+  
+  upstream:
+    image: containous/whoami:latest
+```
+
+Start the docker compose environment:
+
+```bash
+docker-compose up
+```
+
+Call the proxy service endpoint to emulate behavior of a client application:
+
+```bash
+curl -v 127.0.0.1:4455/foobar
+```
+
+You should now see similar output to the following snippet:
+
+```bash
+*   Trying 127.0.0.1:4455...
+* Connected to 127.0.0.1 (127.0.0.1) port 4455 (#0)
+> GET /foobar HTTP/1.1
+> Host: 127.0.0.1:4455
+> User-Agent: curl/7.74.0
+> Accept: */*
+>
+* Mark bundle as not supporting multiuse
+< HTTP/1.1 200 OK
+< Date: Thu, 04 Aug 2022 07:53:41 GMT
+< Content-Type: text/plain; charset=utf-8
+< Content-Length: 872
+<
+Hostname: 4f809f75f31b
+IP: 127.0.0.1
+IP: 172.22.0.3
+RemoteAddr: 172.22.0.2:42100
+GET /foobar HTTP/1.1
+Host: upstream
+User-Agent: curl/7.74.0
+Accept: */*
+Authorization: Bearer eyJhbGciOiJQUzI1NiIsImtpZCI6IjNhYjFiMDdmMmMyNjlkMWVlMTRjNzQ2NDA4
+OTAyZjRlNWQ1MDAyOTgiLCJ0eXAiOiJKV1QifQ.eyJleHAiOjE2NTkzMzczMjEsImlhdCI6MTY1OTMzNzAyMSw
+iaXNzIjoiaGVpbWRhbGwiLCJqdGkiOiJjMmEzNjczMy04ZDBjLTQzYWQtOGFkNi0xM2Q4NGVhNDI1MTgiLCJuY
+mYiOjE2NTkzMzcwMjEsInN1YiI6ImFub255bW91cyJ9.gw-h15LaUUYV-Sjk6Vf-kZflnZxn88lejVIIatKliv
+FkeUz8oo9x9juKBSzr4nIVWjGZ_atGVmLoKshudHdnpvABx5cgBaz2_KDgifVzGORE1zld9vGDpU7IPjOyC9-M
+b7vOOA1fq9pbQ4nfXw100AJJKFXSct9cYa3163kk_s-jEIPclhB0ZiPqGI-t_GiYJBCVKOTJPkkLKB51KCgn2y
+PvO3qLCwO81JdCSFG9k2WLjWZlQe-a8u4El-2qctx8yB-vBFPIaQlwCJh66of3hcUs98IoVlMLGdTJSI4pX9nK
+s8OMxVO37eI501gZXXkF5IiSsRAqV_o8pMcGZ47Ztg
+Forwarded: for=172.22.0.1;proto=http
+X-Forwarded-For: 172.22.0.1
+
+* Connection #0 to host 127.0.0.1 left intact
+```
+
+What did you actually do? ;)
+
+* You've created a very simple configuration with a default rule, with preconfigured defaults. The used authenticator instructs heimdall to create an anonymous subject for every request on every URL for the HTTP methods GET and POST. The default authenticator rejects any request and the default mutator creates a JWT from the subject mentioned above.
+* You've created a very simple rule, which reuses the default authenticator and mutator and configures an authorizer, which allows any request to pass through.
+* You've created and started a docker compose environment with heimdall operated in proxy mode and a "upstream" service, which responds with everything it receives.
+* And sent an HTTP GET request to an imaginary `foobar` endpoint. 
+* Heimdall run the request through its pipeline and forwarded the enriched (`Authorization` header) request to the "upstream" service, which just returned all it has received to the caller. 
 
 ## Reference
 
