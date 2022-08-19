@@ -29,14 +29,14 @@ type Entry struct {
 func (e *Entry) JWK() jose.JSONWebKey {
 	return jose.JSONWebKey{
 		KeyID:        e.KeyID,
-		Algorithm:    string(e.joseAlgorithm()),
+		Algorithm:    string(e.JOSEAlgorithm()),
 		Key:          e.PrivateKey.Public(),
 		Use:          "sig",
 		Certificates: e.CertChain,
 	}
 }
 
-func (e *Entry) joseAlgorithm() jose.SignatureAlgorithm {
+func (e *Entry) JOSEAlgorithm() jose.SignatureAlgorithm {
 	switch e.Alg {
 	case AlgRSA:
 		return getRSAAlgorithm(e.KeySize)

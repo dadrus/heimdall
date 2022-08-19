@@ -6,6 +6,7 @@ import (
 	"github.com/dadrus/heimdall/internal/pipeline/authenticators/extractors"
 	"github.com/dadrus/heimdall/internal/pipeline/endpoint"
 	"github.com/dadrus/heimdall/internal/pipeline/oauth2"
+	"github.com/dadrus/heimdall/internal/truststore"
 )
 
 func decodeConfig(input any, output any) error {
@@ -16,6 +17,7 @@ func decodeConfig(input any, output any) error {
 				extractors.DecodeCompositeExtractStrategyHookFunc(),
 				oauth2.DecodeScopesMatcherHookFunc(),
 				endpoint.DecodeAuthenticationStrategyHookFunc(),
+				truststore.DecodeTrustStoreHookFunc(),
 			),
 			Result:      output,
 			ErrorUnused: true,

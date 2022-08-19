@@ -2,6 +2,7 @@ package authenticators
 
 import (
 	"crypto/sha256"
+	"crypto/x509"
 	"encoding/hex"
 	"errors"
 	"io"
@@ -21,8 +22,10 @@ import (
 	"github.com/dadrus/heimdall/internal/pipeline/endpoint"
 	"github.com/dadrus/heimdall/internal/pipeline/oauth2"
 	"github.com/dadrus/heimdall/internal/pipeline/subject"
+	"github.com/dadrus/heimdall/internal/truststore"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
+	"github.com/dadrus/heimdall/internal/x/pkix"
 )
 
 const defaultTTL = 10 * time.Minute
@@ -45,10 +48,12 @@ func init() {
 type jwtAuthenticator struct {
 	e                    endpoint.Endpoint
 	a                    oauth2.Expectation
-	ttl                  time.Duration
+	ttl                  *time.Duration
 	sf                   SubjectFactory
 	ads                  extractors.AuthDataExtractStrategy
 	allowFallbackOnError bool
+	trustStore           truststore.TrustStore
+	validateJWKCert      bool
 }
 
 func newJwtAuthenticator(rawConfig map[string]any) (*jwtAuthenticator, error) {
@@ -59,15 +64,21 @@ func newJwtAuthenticator(rawConfig map[string]any) (*jwtAuthenticator, error) {
 		Session              Session                             `mapstructure:"session"`
 		CacheTTL             *time.Duration                      `mapstructure:"cache_ttl"`
 		AllowFallbackOnError bool                                `mapstructure:"allow_fallback_on_error"`
+		ValidateJWK          *bool                               `mapstructure:"validate_jwk"`
+		TrustStore           truststore.TrustStore               `mapstructure:"trust_store"`
 	}
 
-	var conf Config
-	if err := decodeConfig(rawConfig, &conf); err != nil {
+	var (
+		conf Config
+		err  error
+	)
+
+	if err = decodeConfig(rawConfig, &conf); err != nil {
 		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
 			"failed to unmarshal jwt authenticator config").CausedBy(err)
 	}
 
-	if err := conf.Endpoint.Validate(); err != nil {
+	if err = conf.Endpoint.Validate(); err != nil {
 		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
 			"failed to validate endpoint configuration").CausedBy(err)
 	}
@@ -100,26 +111,30 @@ func newJwtAuthenticator(rawConfig map[string]any) (*jwtAuthenticator, error) {
 		conf.Session.SubjectIDFrom = "sub"
 	}
 
-	var adg extractors.AuthDataExtractStrategy
-	if conf.AuthDataSource == nil {
-		adg = extractors.CompositeExtractStrategy{
-			extractors.HeaderValueExtractStrategy{Name: "Authorization", Schema: "Bearer"},
-			extractors.QueryParameterExtractStrategy{Name: "access_token"},
-			extractors.BodyParameterExtractStrategy{Name: "access_token"},
-		}
-	} else {
-		adg = conf.AuthDataSource
-	}
+	validateJWKCert := x.IfThenElseExec(conf.ValidateJWK != nil,
+		func() bool { return *conf.ValidateJWK },
+		func() bool { return true })
+
+	ads := x.IfThenElseExec(conf.AuthDataSource == nil,
+		func() extractors.CompositeExtractStrategy {
+			return extractors.CompositeExtractStrategy{
+				extractors.HeaderValueExtractStrategy{Name: "Authorization", Schema: "Bearer"},
+				extractors.QueryParameterExtractStrategy{Name: "access_token"},
+				extractors.BodyParameterExtractStrategy{Name: "access_token"},
+			}
+		},
+		func() extractors.CompositeExtractStrategy { return conf.AuthDataSource },
+	)
 
 	return &jwtAuthenticator{
-		e: conf.Endpoint,
-		a: conf.Assertions,
-		ttl: x.IfThenElseExec(conf.CacheTTL != nil,
-			func() time.Duration { return *conf.CacheTTL },
-			func() time.Duration { return defaultTTL }),
+		e:                    conf.Endpoint,
+		a:                    conf.Assertions,
+		ttl:                  conf.CacheTTL,
 		sf:                   &conf.Session,
-		ads:                  adg,
+		ads:                  ads,
 		allowFallbackOnError: conf.AllowFallbackOnError,
+		validateJWKCert:      validateJWKCert,
+		trustStore:           conf.TrustStore,
 	}, nil
 }
 
@@ -176,21 +191,64 @@ func (a *jwtAuthenticator) WithConfig(config map[string]any) (Authenticator, err
 	}
 
 	return &jwtAuthenticator{
-		e: a.e,
-		a: conf.Assertions.Merge(&a.a),
-		ttl: x.IfThenElseExec(conf.CacheTTL != nil,
-			func() time.Duration { return *conf.CacheTTL },
-			func() time.Duration { return a.ttl }),
+		e:   a.e,
+		a:   conf.Assertions.Merge(&a.a),
+		ttl: x.IfThenElse(conf.CacheTTL != nil, conf.CacheTTL, a.ttl),
 		sf:  a.sf,
 		ads: a.ads,
 		allowFallbackOnError: x.IfThenElseExec(conf.AllowFallbackOnError != nil,
 			func() bool { return *conf.AllowFallbackOnError },
 			func() bool { return a.allowFallbackOnError }),
+		validateJWKCert: a.validateJWKCert,
+		trustStore:      a.trustStore,
 	}, nil
 }
 
 func (a *jwtAuthenticator) IsFallbackOnErrorAllowed() bool {
 	return a.allowFallbackOnError
+}
+
+func (a *jwtAuthenticator) isCacheEnabled() bool {
+	// cache is enabled if ttl is not configured (in that case the ttl value from either
+	// the jwk cert (if available) or the defaultTTL is used), or if ttl is configured and
+	// the value > 0
+	return a.ttl == nil || (a.ttl != nil && *a.ttl > 0)
+}
+
+func (a *jwtAuthenticator) getCacheTTL(key *jose.JSONWebKey) time.Duration {
+	// timeLeeway defines the default time deviation to ensure the cert of the JWK is still valid
+	// when used from cache
+	const timeLeeway = 10
+
+	if !a.isCacheEnabled() {
+		return 0
+	}
+
+	// we cache by default using the settings in the certificate (if available)
+	// or based on ttl. Latter overwrites the settings in the certificate
+	// if it is shorter than the ttl of the certificate
+	certTTL := x.IfThenElseExec(len(key.Certificates) != 0,
+		func() time.Duration {
+			expiresIn := key.Certificates[0].NotAfter.Unix() - time.Now().Unix() - timeLeeway
+
+			return x.IfThenElse(expiresIn > 0, time.Duration(expiresIn)*time.Second, 0)
+		},
+		func() time.Duration { return 0 })
+
+	configuredTTL := x.IfThenElseExec(a.ttl != nil,
+		func() time.Duration { return *a.ttl },
+		func() time.Duration { return defaultTTL })
+
+	switch {
+	case configuredTTL == 0 && certTTL == 0:
+		return 0
+	case configuredTTL == 0 && certTTL != 0:
+		return certTTL
+	case configuredTTL != 0 && certTTL == 0:
+		return configuredTTL
+	default:
+		return x.IfThenElse(configuredTTL < certTTL, configuredTTL, certTTL)
+	}
 }
 
 func (a *jwtAuthenticator) getKey(ctx heimdall.Context, keyID string) (*jose.JSONWebKey, error) {
@@ -206,7 +264,7 @@ func (a *jwtAuthenticator) getKey(ctx heimdall.Context, keyID string) (*jose.JSO
 		ok         bool
 	)
 
-	if a.ttl > 0 {
+	if a.isCacheEnabled() {
 		cacheKey = a.calculateCacheKey(keyID)
 		cacheEntry = cch.Get(cacheKey)
 	}
@@ -216,7 +274,7 @@ func (a *jwtAuthenticator) getKey(ctx heimdall.Context, keyID string) (*jose.JSO
 			logger.Warn().Msg("Wrong object type from cache")
 			cch.Delete(cacheKey)
 		} else {
-			logger.Debug().Msg("Reusing signature key from cache")
+			logger.Debug().Msg("Reusing JWK from cache")
 		}
 	}
 
@@ -236,9 +294,13 @@ func (a *jwtAuthenticator) getKey(ctx heimdall.Context, keyID string) (*jose.JSO
 	}
 
 	jwk = &keys[0]
+	if err = a.validateJWK(jwk); err != nil {
+		return nil, errorchain.NewWithMessagef(heimdall.ErrAuthentication,
+			"JWK for keyID=%s is invalid", keyID).CausedBy(err)
+	}
 
-	if len(cacheKey) != 0 {
-		cch.Set(cacheKey, jwk, a.ttl)
+	if cacheTTL := a.getCacheTTL(jwk); cacheTTL > 0 {
+		cch.Set(cacheKey, jwk, cacheTTL)
 	}
 
 	return jwk, nil
@@ -259,11 +321,11 @@ func (a *jwtAuthenticator) fetchJWKS(ctx heimdall.Context) (*jose.JSONWebKeySet,
 		var clientErr *url.Error
 		if errors.As(err, &clientErr) && clientErr.Timeout() {
 			return nil, errorchain.NewWithMessage(heimdall.ErrCommunicationTimeout,
-				"request to jwks endpoint timed out").CausedBy(err)
+				"request to JWKS endpoint timed out").CausedBy(err)
 		}
 
 		return nil, errorchain.NewWithMessage(heimdall.ErrCommunication,
-			"request to jwks endpoint failed").CausedBy(err)
+			"request to JWKS endpoint failed").CausedBy(err)
 	}
 
 	defer resp.Body.Close()
@@ -345,4 +407,18 @@ func (a *jwtAuthenticator) calculateCacheKey(reference string) string {
 	digest.Write([]byte(reference))
 
 	return hex.EncodeToString(digest.Sum(nil))
+}
+
+func (a *jwtAuthenticator) validateJWK(jwk *jose.JSONWebKey) error {
+	if !a.validateJWKCert || len(jwk.Certificates) == 0 {
+		return nil
+	}
+
+	return pkix.ValidateCertificate(jwk.Certificates[0],
+		pkix.WithIntermediateCACertificates(jwk.Certificates[1:]),
+		pkix.WithKeyUsage(x509.KeyUsageDigitalSignature),
+		x.IfThenElseExec(len(a.trustStore) == 0,
+			pkix.WithSystemTrustStore,
+			func() pkix.ValidationOption { return pkix.WithRootCACertificates(a.trustStore) }),
+	)
 }

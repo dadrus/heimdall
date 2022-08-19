@@ -165,6 +165,8 @@ pipeline:
           subject_id_from: "identity.id"
         cache_ttl: 5m
         allow_fallback_on_error: true
+        validate_jwk: true
+        trust_store: /opt/heimdall/trust_store.pem
     - id: basic_auth_authenticator
       type: basic_auth
       config:

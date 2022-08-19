@@ -7,6 +7,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
+	"github.com/dadrus/heimdall/internal/x/pkix"
 )
 
 func FindChain(key crypto.PublicKey, pool []*x509.Certificate) []*x509.Certificate {
@@ -57,31 +58,20 @@ func ValidateChain(chain []*x509.Certificate) error {
 	// trusted explicitly.
 	const certificateCount = 2
 
-	rootPool := x509.NewCertPool()
-	intermediatePool := x509.NewCertPool()
-
-	rootPool.AddCert(chain[len(chain)-1])
+	var intermediatePool []*x509.Certificate
 
 	if len(chain) > certificateCount {
 		for i := 1; i < len(chain)-1; i++ {
-			intermediatePool.AddCert(chain[i])
+			intermediatePool = append(intermediatePool, chain[i])
 		}
 	}
 
-	if _, err := chain[0].Verify(
-		x509.VerifyOptions{
-			Roots:         rootPool,
-			Intermediates: intermediatePool,
-			KeyUsages:     []x509.ExtKeyUsage{x509.ExtKeyUsageAny},
-		},
+	if err := pkix.ValidateCertificate(chain[0],
+		pkix.WithKeyUsage(x509.KeyUsageDigitalSignature),
+		pkix.WithRootCACertificates([]*x509.Certificate{chain[len(chain)-1]}),
+		pkix.WithIntermediateCACertificates(intermediatePool),
 	); err != nil {
-		return errorchain.NewWithMessagef(heimdall.ErrConfiguration,
-			"failed to verify %s certificate", chain[0].Subject.String()).CausedBy(err)
-	}
-
-	if chain[0].KeyUsage&x509.KeyUsageDigitalSignature != x509.KeyUsageDigitalSignature {
-		return errorchain.NewWithMessagef(heimdall.ErrConfiguration,
-			"certificate %s cannot be used for digital signature purposes", chain[0].Subject.String())
+		return errorchain.New(heimdall.ErrConfiguration).CausedBy(err)
 	}
 
 	return nil
