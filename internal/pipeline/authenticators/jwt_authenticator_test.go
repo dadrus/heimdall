@@ -1632,3 +1632,135 @@ func createJWT(t *testing.T, keyEntry *keystore.Entry, subject, issuer, audience
 
 	return rawJwt
 }
+
+func TestGetCacheTTL(t *testing.T) {
+	t.Parallel()
+
+	disabledTTL := -1 * time.Second
+	veryLongTTL := time.Hour * 24 * 100
+	shortTTL := time.Hour * 2
+
+	// ROOT CAs
+	ca, err := testsupport.NewRootCA("Test CA", time.Hour*24)
+	require.NoError(t, err)
+
+	// EE cert 1
+	ee1PrivKey, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
+	require.NoError(t, err)
+	ee1cert, err := ca.IssueCertificate(
+		testsupport.WithSubject(pkix.Name{
+			CommonName:   "Test EE 1",
+			Organization: []string{"Test"},
+			Country:      []string{"EU"},
+		}),
+		testsupport.WithValidity(time.Now(), time.Hour*24),
+		testsupport.WithSubjectPubKey(&ee1PrivKey.PublicKey, x509.ECDSAWithSHA384))
+	require.NoError(t, err)
+
+	for _, tc := range []struct {
+		uc            string
+		authenticator *jwtAuthenticator
+		jwk           *jose.JSONWebKey
+		assert        func(t *testing.T, ttl time.Duration)
+	}{
+		{
+			uc:            "jwk does not contain certificate and no ttl configured",
+			authenticator: &jwtAuthenticator{},
+			jwk: &jose.JSONWebKey{
+				KeyID: "1",
+				Key:   ee1PrivKey.PublicKey,
+			},
+			assert: func(t *testing.T, ttl time.Duration) {
+				t.Helper()
+
+				assert.Equal(t, defaultTTL, ttl)
+			},
+		},
+		{
+			uc:            "jwk does not contain certificate and ttl configured",
+			authenticator: &jwtAuthenticator{ttl: &shortTTL},
+			jwk: &jose.JSONWebKey{
+				KeyID: "1",
+				Key:   ee1PrivKey.PublicKey,
+			},
+			assert: func(t *testing.T, ttl time.Duration) {
+				t.Helper()
+
+				assert.Equal(t, shortTTL, ttl)
+			},
+		},
+		{
+			uc:            "jwk does not contain certificate and ttl disabled",
+			authenticator: &jwtAuthenticator{ttl: &disabledTTL},
+			jwk: &jose.JSONWebKey{
+				KeyID: "1",
+				Key:   ee1PrivKey.PublicKey,
+			},
+			assert: func(t *testing.T, ttl time.Duration) {
+				t.Helper()
+
+				assert.Equal(t, 0*time.Second, ttl)
+			},
+		},
+		{
+			uc:            "jwk contains certificate and no ttl configured",
+			authenticator: &jwtAuthenticator{},
+			jwk: &jose.JSONWebKey{
+				KeyID:        "1",
+				Key:          ee1PrivKey.PublicKey,
+				Certificates: []*x509.Certificate{ee1cert},
+			},
+			assert: func(t *testing.T, ttl time.Duration) {
+				t.Helper()
+
+				assert.Equal(t, defaultTTL, ttl)
+			},
+		},
+		{
+			uc:            "jwk contains certificate and ttl configured to a time point exceeding the ttl of certificate",
+			authenticator: &jwtAuthenticator{ttl: &veryLongTTL},
+			jwk: &jose.JSONWebKey{
+				KeyID:        "1",
+				Key:          ee1PrivKey.PublicKey,
+				Certificates: []*x509.Certificate{ee1cert},
+			},
+			assert: func(t *testing.T, ttl time.Duration) {
+				t.Helper()
+
+				assert.Equal(t, time.Duration(ee1cert.NotAfter.Unix()-time.Now().Unix()-10), ttl)
+			},
+		},
+		{
+			uc:            "jwk contains certificate and ttl configured to a time point before the certificate expires",
+			authenticator: &jwtAuthenticator{ttl: &shortTTL},
+			jwk: &jose.JSONWebKey{
+				KeyID:        "1",
+				Key:          ee1PrivKey.PublicKey,
+				Certificates: []*x509.Certificate{ee1cert},
+			},
+			assert: func(t *testing.T, ttl time.Duration) {
+				t.Helper()
+
+				assert.Equal(t, shortTTL, ttl)
+			},
+		},
+		{
+			uc:            "jwk contains certificate and ttl disabled",
+			authenticator: &jwtAuthenticator{ttl: &disabledTTL},
+			jwk: &jose.JSONWebKey{
+				KeyID:        "1",
+				Key:          ee1PrivKey.PublicKey,
+				Certificates: []*x509.Certificate{ee1cert},
+			},
+			assert: func(t *testing.T, ttl time.Duration) {
+				t.Helper()
+
+				assert.Equal(t, 0*time.Second, ttl)
+			},
+		},
+	} {
+		t.Run("case="+tc.uc, func(t *testing.T) {
+
+		})
+	}
+}
