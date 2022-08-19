@@ -48,7 +48,7 @@ func init() {
 type jwtAuthenticator struct {
 	e                    endpoint.Endpoint
 	a                    oauth2.Expectation
-	ttl                  time.Duration
+	ttl                  *time.Duration
 	sf                   SubjectFactory
 	ads                  extractors.AuthDataExtractStrategy
 	allowFallbackOnError bool
@@ -126,14 +126,10 @@ func newJwtAuthenticator(rawConfig map[string]any) (*jwtAuthenticator, error) {
 		func() extractors.CompositeExtractStrategy { return conf.AuthDataSource },
 	)
 
-	ttl := x.IfThenElseExec(conf.CacheTTL != nil,
-		func() time.Duration { return *conf.CacheTTL },
-		func() time.Duration { return defaultTTL })
-
 	return &jwtAuthenticator{
 		e:                    conf.Endpoint,
 		a:                    conf.Assertions,
-		ttl:                  ttl,
+		ttl:                  conf.CacheTTL,
 		sf:                   &conf.Session,
 		ads:                  ads,
 		allowFallbackOnError: conf.AllowFallbackOnError,
@@ -195,11 +191,9 @@ func (a *jwtAuthenticator) WithConfig(config map[string]any) (Authenticator, err
 	}
 
 	return &jwtAuthenticator{
-		e: a.e,
-		a: conf.Assertions.Merge(&a.a),
-		ttl: x.IfThenElseExec(conf.CacheTTL != nil,
-			func() time.Duration { return *conf.CacheTTL },
-			func() time.Duration { return a.ttl }),
+		e:   a.e,
+		a:   conf.Assertions.Merge(&a.a),
+		ttl: x.IfThenElse(conf.CacheTTL != nil, conf.CacheTTL, a.ttl),
 		sf:  a.sf,
 		ads: a.ads,
 		allowFallbackOnError: x.IfThenElseExec(conf.AllowFallbackOnError != nil,
@@ -212,6 +206,48 @@ func (a *jwtAuthenticator) WithConfig(config map[string]any) (Authenticator, err
 
 func (a *jwtAuthenticator) IsFallbackOnErrorAllowed() bool {
 	return a.allowFallbackOnError
+}
+
+func (a *jwtAuthenticator) isCacheEnabled() bool {
+	// cache is enabled if it is not configured (in that case the ttl value from the
+	// introspection response if used), or if it is configured and the value > 0
+	return a.ttl == nil || (a.ttl != nil && *a.ttl > 0)
+}
+
+func (a *jwtAuthenticator) getCacheTTL(key *jose.JSONWebKey) time.Duration {
+	// timeLeeway defines the default time deviation to ensure the token is still valid
+	// when used from cache
+	const timeLeeway = 10
+
+	if !a.isCacheEnabled() {
+		return 0
+	}
+
+	// we cache by default using the settings in the certificate (if available)
+	// or based on ttl. Latter overwrites the settings in the certificate
+	// if it is shorter than the ttl of the certificate
+	certTTL := x.IfThenElseExec(len(key.Certificates) != 0,
+		func() time.Duration {
+			expiresIn := key.Certificates[0].NotAfter.Unix() - time.Now().Unix() - timeLeeway
+
+			return x.IfThenElse(expiresIn > 0, time.Duration(expiresIn)*time.Second, 0)
+		},
+		func() time.Duration { return 0 })
+
+	configuredTTL := x.IfThenElseExec(a.ttl != nil,
+		func() time.Duration { return *a.ttl },
+		func() time.Duration { return defaultTTL })
+
+	switch {
+	case configuredTTL <= 0 && certTTL <= 0:
+		return 0
+	case configuredTTL <= 0 && certTTL > 0:
+		return certTTL
+	case configuredTTL > 0 && certTTL == 0:
+		return configuredTTL
+	default:
+		return x.IfThenElse(configuredTTL < certTTL, configuredTTL, certTTL)
+	}
 }
 
 func (a *jwtAuthenticator) getKey(ctx heimdall.Context, keyID string) (*jose.JSONWebKey, error) {
@@ -227,7 +263,7 @@ func (a *jwtAuthenticator) getKey(ctx heimdall.Context, keyID string) (*jose.JSO
 		ok         bool
 	)
 
-	if a.ttl > 0 {
+	if a.isCacheEnabled() {
 		cacheKey = a.calculateCacheKey(keyID)
 		cacheEntry = cch.Get(cacheKey)
 	}
@@ -262,8 +298,8 @@ func (a *jwtAuthenticator) getKey(ctx heimdall.Context, keyID string) (*jose.JSO
 			"JWK for keyID=%s is invalid", keyID).CausedBy(err)
 	}
 
-	if len(cacheKey) != 0 {
-		cch.Set(cacheKey, jwk, a.ttl)
+	if cacheTTL := a.getCacheTTL(jwk); cacheTTL > 0 {
+		cch.Set(cacheKey, jwk, cacheTTL)
 	}
 
 	return jwk, nil
