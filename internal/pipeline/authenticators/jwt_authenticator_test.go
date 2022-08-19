@@ -163,7 +163,7 @@ assertions:
 				assert.Empty(t, sess.SubjectAttributesFrom)
 
 				// cache settings
-				assert.Equal(t, defaultTTL, auth.ttl)
+				assert.Nil(t, auth.ttl)
 
 				// fallback settings
 				assert.False(t, auth.IsFallbackOnErrorAllowed())
@@ -222,7 +222,7 @@ cache_ttl: 5s`),
 
 				// cache settings
 				assert.NotNil(t, auth.ttl)
-				assert.Equal(t, 5*time.Second, auth.ttl)
+				assert.Equal(t, 5*time.Second, *auth.ttl)
 
 				// fallback settings
 				assert.False(t, auth.IsFallbackOnErrorAllowed())
@@ -298,7 +298,7 @@ trust_store: ` + trustStorePath),
 				assert.Empty(t, sess.SubjectAttributesFrom)
 
 				// cache settings
-				assert.Equal(t, defaultTTL, auth.ttl)
+				assert.Nil(t, auth.ttl)
 
 				// fallback settings
 				assert.True(t, auth.IsFallbackOnErrorAllowed())
@@ -454,7 +454,7 @@ cache_ttl: 5s`),
 				assert.ElementsMatch(t, configured.a.AllowedAlgorithms, []string{string(jose.ES512)})
 
 				assert.NotEqual(t, prototype.ttl, configured.ttl)
-				assert.Equal(t, 5*time.Second, configured.ttl)
+				assert.Equal(t, 5*time.Second, *configured.ttl)
 				assert.Equal(t, prototype.IsFallbackOnErrorAllowed(), configured.IsFallbackOnErrorAllowed())
 				assert.Equal(t, prototype.validateJWKCert, configured.validateJWKCert)
 				assert.Equal(t, prototype.trustStore, configured.trustStore)
@@ -492,7 +492,7 @@ assertions:
 				assert.ElementsMatch(t, configured.a.AllowedAlgorithms, []string{string(jose.ES512)})
 
 				assert.Equal(t, prototype.ttl, configured.ttl)
-				assert.Equal(t, 5*time.Second, configured.ttl)
+				assert.Equal(t, 5*time.Second, *configured.ttl)
 				assert.Equal(t, prototype.IsFallbackOnErrorAllowed(), configured.IsFallbackOnErrorAllowed())
 				assert.Equal(t, prototype.validateJWKCert, configured.validateJWKCert)
 				assert.Equal(t, prototype.trustStore, configured.trustStore)
@@ -519,8 +519,8 @@ cache_ttl: 5s`),
 				assert.Equal(t, prototype.sf, configured.sf)
 				assert.Equal(t, prototype.a, configured.a)
 
-				assert.Equal(t, 5*time.Second, prototype.ttl)
-				assert.Equal(t, 15*time.Second, configured.ttl)
+				assert.Equal(t, 5*time.Second, *prototype.ttl)
+				assert.Equal(t, 15*time.Second, *configured.ttl)
 				assert.Equal(t, prototype.IsFallbackOnErrorAllowed(), configured.IsFallbackOnErrorAllowed())
 				assert.Equal(t, prototype.validateJWKCert, configured.validateJWKCert)
 				assert.Equal(t, prototype.trustStore, configured.trustStore)
@@ -673,6 +673,8 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 		responseContent     []byte
 		responseCode        int
 	)
+
+	tenSecondsTTL := time.Duration(0)
 
 	ks := createKS(t)
 	keyOnlyEntry, err := ks.GetKey(kidKeyWithoutCert)
@@ -953,7 +955,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 					Headers: map[string]string{"Accept": "application/json"},
 				},
 				a:   oauth2.Expectation{AllowedAlgorithms: []string{"foo"}},
-				ttl: 10 * time.Second,
+				ttl: &tenSecondsTTL,
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.MockContext,
@@ -993,7 +995,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 					Headers: map[string]string{"Accept": "application/json"},
 				},
 				a:   oauth2.Expectation{AllowedAlgorithms: []string{"ES384"}},
-				ttl: 10 * time.Second,
+				ttl: &tenSecondsTTL,
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.MockContext,
@@ -1033,7 +1035,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 					Headers: map[string]string{"Accept": "application/json"},
 				},
 				a:   oauth2.Expectation{AllowedAlgorithms: []string{"ES384"}, TrustedIssuers: []string{"untrusted"}},
-				ttl: 10 * time.Second,
+				ttl: &tenSecondsTTL,
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.MockContext,
@@ -1078,7 +1080,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 					ScopesMatcher:     oauth2.ExactScopeStrategyMatcher{},
 				},
 				sf:  &Session{SubjectIDFrom: "foobar"},
-				ttl: 10 * time.Second,
+				ttl: &tenSecondsTTL,
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.MockContext,
@@ -1123,7 +1125,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 					ScopesMatcher:     oauth2.ExactScopeStrategyMatcher{},
 				},
 				sf:  &Session{SubjectIDFrom: "sub"},
-				ttl: 10 * time.Second,
+				ttl: &tenSecondsTTL,
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.MockContext,
@@ -1178,7 +1180,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 					ScopesMatcher:     oauth2.ExactScopeStrategyMatcher{},
 				},
 				sf:  &Session{SubjectIDFrom: "sub"},
-				ttl: 10 * time.Second,
+				ttl: &tenSecondsTTL,
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.MockContext,
@@ -1245,7 +1247,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 					ScopesMatcher:     oauth2.ExactScopeStrategyMatcher{},
 				},
 				sf:  &Session{SubjectIDFrom: "sub"},
-				ttl: 10 * time.Second,
+				ttl: &tenSecondsTTL,
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.MockContext,
@@ -1312,7 +1314,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 					ScopesMatcher:     oauth2.ExactScopeStrategyMatcher{},
 				},
 				sf:              &Session{SubjectIDFrom: "sub"},
-				ttl:             10 * time.Second,
+				ttl:             &tenSecondsTTL,
 				validateJWKCert: true,
 			},
 			configureMocks: func(t *testing.T,
@@ -1367,7 +1369,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 					ScopesMatcher:     oauth2.ExactScopeStrategyMatcher{},
 				},
 				sf:              &Session{SubjectIDFrom: "sub"},
-				ttl:             10 * time.Second,
+				ttl:             &tenSecondsTTL,
 				validateJWKCert: true,
 				trustStore:      truststore.TrustStore{keyAndCertEntry.CertChain[2]},
 			},
@@ -1436,7 +1438,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 					ScopesMatcher:     oauth2.ExactScopeStrategyMatcher{},
 				},
 				sf:  &Session{SubjectIDFrom: "sub"},
-				ttl: 10 * time.Second,
+				ttl: &tenSecondsTTL,
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.MockContext,
