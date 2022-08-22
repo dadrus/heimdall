@@ -247,35 +247,8 @@ func (a *jwtAuthenticator) getCacheTTL(key *jose.JSONWebKey) time.Duration {
 }
 
 func (a *jwtAuthenticator) verifyToken(ctx heimdall.Context, token *jwt.JSONWebToken) (json.RawMessage, error) {
-	logger := zerolog.Ctx(ctx.AppContext())
-
 	if len(token.Headers[0].KeyID) == 0 {
-		logger.Warn().Msg("No kid present in the JWT")
-
-		var rawClaims json.RawMessage
-
-		jwks, err := a.fetchJWKS(ctx)
-		if err != nil {
-			return nil, err
-		}
-
-		for idx := range jwks.Keys {
-			sigKey := jwks.Keys[idx]
-
-			rawClaims, err = a.verifyTokenWithKey(token, &sigKey)
-			if err == nil {
-				break
-			} else {
-				logger.Warn().Err(err).Msgf("Failed to verify JWT using key with kid=%s", sigKey.KeyID)
-			}
-		}
-
-		if len(rawClaims) == 0 {
-			return nil, errorchain.NewWithMessage(heimdall.ErrAuthentication,
-				"None of the keys received from the JWKS endpoint could be used to verify the JWT")
-		}
-
-		return rawClaims, nil
+		return a.verifyTokenWithoutKID(ctx, token)
 	}
 
 	sigKey, err := a.getKey(ctx, token.Headers[0].KeyID)
@@ -284,6 +257,43 @@ func (a *jwtAuthenticator) verifyToken(ctx heimdall.Context, token *jwt.JSONWebT
 	}
 
 	return a.verifyTokenWithKey(token, sigKey)
+}
+
+func (a *jwtAuthenticator) verifyTokenWithoutKID(ctx heimdall.Context, token *jwt.JSONWebToken) (
+	json.RawMessage, error,
+) {
+	logger := zerolog.Ctx(ctx.AppContext())
+	logger.Info().Msg("No kid present in the JWT")
+
+	var rawClaims json.RawMessage
+
+	jwks, err := a.fetchJWKS(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	for idx := range jwks.Keys {
+		sigKey := jwks.Keys[idx]
+		if err = a.validateJWK(&sigKey); err != nil {
+			logger.Info().Err(err).Msgf("JWK for keyID=%s is invalid", sigKey.KeyID)
+
+			continue
+		}
+
+		rawClaims, err = a.verifyTokenWithKey(token, &sigKey)
+		if err == nil {
+			break
+		} else {
+			logger.Info().Err(err).Msgf("Failed to verify JWT using key with kid=%s", sigKey.KeyID)
+		}
+	}
+
+	if len(rawClaims) == 0 {
+		return nil, errorchain.NewWithMessage(heimdall.ErrAuthentication,
+			"None of the keys received from the JWKS endpoint could be used to verify the JWT")
+	}
+
+	return rawClaims, nil
 }
 
 func (a *jwtAuthenticator) getKey(ctx heimdall.Context, keyID string) (*jose.JSONWebKey, error) {
