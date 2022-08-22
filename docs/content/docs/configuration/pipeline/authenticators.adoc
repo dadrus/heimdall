@@ -259,7 +259,7 @@ Enables or disables the verification of the JWK certificate used for JWT signatu
 +
 The path to a PEM file containing the trust anchors, to be used for the JWK certificate validation. Defaults to system trust store.
 
-NOTE: If a JWT does not reference a `kid`, heimdall always fetches a JWKS from the configured endpoint (so no caching is done) and iterates over the received keys until one matches. If none matches, the authenticator fails with an authentication error.
+NOTE: If a JWT does not reference a `kid`, heimdall always fetches a JWKS from the configured endpoint (so no caching is done) and iterates over the received keys until one matches. If none matches, the authenticator fails.
 
 .Minimal possible configuration
 ====
