@@ -46,7 +46,10 @@
         </ul>
         <hr class="text-white-50 d-md-none">
         <ul class="navbar-nav flex-column ms-auto">
-          <doc-version-select class="nav-item dropdown" version-info="/heimdall/data.json" current-version="{{ .Site.Params.version }}">
+          <doc-version-select class="nav-item dropdown"
+                              version-file="/{{ .Site.Params.github.project }}/data.json"
+                              current-version="{{ .Site.Params.version }}"
+                              current-page="{{ .RelPermalink }}" >
             <button class="btn btn-dark dropdown-toggle me-4" data-bs-toggle="dropdown" aria-expanded="false">
               {{ .Site.Params.version }}
             </button>
