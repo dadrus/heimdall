@@ -1797,9 +1797,11 @@ func createJWT(t *testing.T, keyEntry *keystore.Entry, subject, issuer, audience
 
 	signerOpts := &jose.SignerOptions{}
 	signerOpts = signerOpts.WithType("JWT")
+
 	if setKid {
 		signerOpts = signerOpts.WithHeader("kid", keyEntry.KeyID)
 	}
+
 	signer, err := jose.NewSigner(
 		jose.SigningKey{
 			Algorithm: keyEntry.JOSEAlgorithm(),
