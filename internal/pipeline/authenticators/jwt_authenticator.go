@@ -153,12 +153,7 @@ func (a *jwtAuthenticator) Execute(ctx heimdall.Context) (*subject.Subject, erro
 			"failed to parse JWT").CausedBy(err).CausedBy(heimdall.ErrArgument)
 	}
 
-	sigKey, err := a.getKey(ctx, token.Headers[0].KeyID)
-	if err != nil {
-		return nil, err
-	}
-
-	rawClaims, err := a.verifyTokenAndGetClaims(token, sigKey)
+	rawClaims, err := a.verifyToken(ctx, token)
 	if err != nil {
 		return nil, err
 	}
@@ -249,6 +244,56 @@ func (a *jwtAuthenticator) getCacheTTL(key *jose.JSONWebKey) time.Duration {
 	default:
 		return x.IfThenElse(configuredTTL < certTTL, configuredTTL, certTTL)
 	}
+}
+
+func (a *jwtAuthenticator) verifyToken(ctx heimdall.Context, token *jwt.JSONWebToken) (json.RawMessage, error) {
+	if len(token.Headers[0].KeyID) == 0 {
+		return a.verifyTokenWithoutKID(ctx, token)
+	}
+
+	sigKey, err := a.getKey(ctx, token.Headers[0].KeyID)
+	if err != nil {
+		return nil, err
+	}
+
+	return a.verifyTokenWithKey(token, sigKey)
+}
+
+func (a *jwtAuthenticator) verifyTokenWithoutKID(ctx heimdall.Context, token *jwt.JSONWebToken) (
+	json.RawMessage, error,
+) {
+	logger := zerolog.Ctx(ctx.AppContext())
+	logger.Info().Msg("No kid present in the JWT")
+
+	var rawClaims json.RawMessage
+
+	jwks, err := a.fetchJWKS(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	for idx := range jwks.Keys {
+		sigKey := jwks.Keys[idx]
+		if err = a.validateJWK(&sigKey); err != nil {
+			logger.Info().Err(err).Msgf("JWK for keyID=%s is invalid", sigKey.KeyID)
+
+			continue
+		}
+
+		rawClaims, err = a.verifyTokenWithKey(token, &sigKey)
+		if err == nil {
+			break
+		} else {
+			logger.Info().Err(err).Msgf("Failed to verify JWT using key with kid=%s", sigKey.KeyID)
+		}
+	}
+
+	if len(rawClaims) == 0 {
+		return nil, errorchain.NewWithMessage(heimdall.ErrAuthentication,
+			"None of the keys received from the JWKS endpoint could be used to verify the JWT")
+	}
+
+	return rawClaims, nil
 }
 
 func (a *jwtAuthenticator) getKey(ctx heimdall.Context, keyID string) (*jose.JSONWebKey, error) {
@@ -357,10 +402,7 @@ func (a *jwtAuthenticator) readJWKS(resp *http.Response) (*jose.JSONWebKeySet, e
 	return &jwks, nil
 }
 
-func (a *jwtAuthenticator) verifyTokenAndGetClaims(
-	token *jwt.JSONWebToken,
-	key *jose.JSONWebKey,
-) (json.RawMessage, error) {
+func (a *jwtAuthenticator) verifyTokenWithKey(token *jwt.JSONWebToken, key *jose.JSONWebKey) (json.RawMessage, error) {
 	header := token.Headers[0]
 
 	if len(header.Algorithm) != 0 && key.Algorithm != header.Algorithm {

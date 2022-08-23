@@ -3,6 +3,7 @@ package testsupport
 import (
 	"bytes"
 	"crypto/ecdsa"
+	"crypto/rsa"
 	"crypto/x509"
 	"encoding/pem"
 )
@@ -55,6 +56,19 @@ func WithECDSAPrivateKey(key *ecdsa.PrivateKey, opts ...PEMBlockOption) PEMEntry
 
 		block.Type = "EC PRIVATE KEY"
 		block.Bytes = raw
+
+		for _, opt := range opts {
+			opt(block)
+		}
+
+		return nil
+	}
+}
+
+func WithRSAPrivateKey(key *rsa.PrivateKey, opts ...PEMBlockOption) PEMEntryOption {
+	return func(block *pem.Block) error {
+		block.Type = "RSA PRIVATE KEY"
+		block.Bytes = x509.MarshalPKCS1PrivateKey(key)
 
 		for _, opt := range opts {
 			opt(block)
