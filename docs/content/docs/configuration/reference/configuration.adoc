@@ -174,7 +174,7 @@ pipeline:
         jwks_endpoint:
           url: http://foo/token
           method: GET
-        jwt_from:
+        jwt_source:
           - header: Authorization
             schema: Bearer
           - query_parameter: access_token

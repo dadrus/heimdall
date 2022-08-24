@@ -743,7 +743,7 @@
             "jwks_endpoint": {
               "$ref": "#/definitions/endpointConfiguration"
             },
-            "jwt_from": {
+            "jwt_source": {
               "$ref": "#/definitions/authenticationDataSource"
             },
             "assertions": {
