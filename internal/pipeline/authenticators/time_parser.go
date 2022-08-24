@@ -26,15 +26,22 @@ func TimeParser(format string) ParseTime {
 	case "RFC3339":
 		return func(value string) (time.Time, error) { return time.Parse(time.RFC3339, value) }
 	case "Unix":
-		return func(value string) (time.Time, error) {
-			intVal, err := strconv.ParseInt(value, 10, 64)
-			if err != nil {
-				return time.Time{}, err
-			}
-
-			return time.UnixMilli(intVal), nil
-		}
+		return parseUnixTime
 	default:
 		return func(value string) (time.Time, error) { return time.Parse(format, value) }
 	}
+}
+
+func parseUnixTime(value string) (time.Time, error) {
+	const (
+		base10    = 10
+		bitSize64 = 64
+	)
+
+	intVal, err := strconv.ParseInt(value, base10, bitSize64)
+	if err != nil {
+		return time.Time{}, err
+	}
+
+	return time.UnixMilli(intVal), nil
 }

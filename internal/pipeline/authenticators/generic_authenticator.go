@@ -9,6 +9,8 @@ import (
 	"net/url"
 	"time"
 
+	"github.com/rs/zerolog"
+
 	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
@@ -17,7 +19,6 @@ import (
 	"github.com/dadrus/heimdall/internal/pipeline/subject"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
-	"github.com/rs/zerolog"
 )
 
 // by intention. Used only during application bootstrap
