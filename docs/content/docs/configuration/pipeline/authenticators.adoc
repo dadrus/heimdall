@@ -17,7 +17,7 @@ The following section describes the available authenticator types in more detail
 
 === Noop
 
-As the name implies, this authenticator does nothing. It tells Heimdall to bypass the authentication. This is the only one authenticator type, which does not create a subject object on a successful execution, which is required by the most other pipeline handlers. This authenticator type also doesn't have any configuration options.
+As the name implies, this authenticator does nothing. It tells Heimdall to bypass the authentication. This is the only one authenticator type, which does not create a subject object on a successful execution, which is required by the most others pipeline handlers. This authenticator type also doesn't have any configuration options.
 
 To enable the usage of this authenticator, you have to set the `type` property to `noop`.
 
@@ -168,12 +168,13 @@ config:
         password: super-secure
   authentication_data_source:
     - header: X-Custom-Bearer-Token
+      schema: Bearer
   session:
     subject_id_from: "sub"
   cache_ttl: 5m
 ----
 
-Usually, Bearer tokens are issued by an OAuth2 auth provider and there is a need to verify not only the validity of such, but also a couple of claims. This can be achieved by a "Local Authorizer", but there is also a special purpose [OAuth2 Introspection]({{< relref "#_oauth2_introspection">}}) authenticator type, which supports asserting all security relevant claims in just one place.
+Usually, Bearer tokens are issued by an OAuth2 auth provider and there is a need to verify not only the validity of such, but also a couple of claims. This can be achieved by a link:{{< relref "/docs/configuration/pipeline/authorizers.adoc#_local" >}}[Local Authorizer], but there is also a special purpose link:{{< relref "#_oauth2_introspection">}}[OAuth2 Introspection] authenticator type, which supports asserting all security relevant claims in just one place.
 ====
 
 === OAuth2 Introspection
