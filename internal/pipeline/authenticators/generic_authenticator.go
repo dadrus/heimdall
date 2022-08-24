@@ -48,7 +48,7 @@ func newGenericAuthenticator(rawConfig map[string]any) (*genericAuthenticator, e
 	type Config struct {
 		Endpoint             endpoint.Endpoint                   `mapstructure:"identity_info_endpoint"`
 		AuthDataSource       extractors.CompositeExtractStrategy `mapstructure:"authentication_data_source"`
-		Session              Session                             `mapstructure:"session"`
+		Session              SubjectInfo                         `mapstructure:"session"`
 		CacheTTL             *time.Duration                      `mapstructure:"cache_ttl"`
 		AllowFallbackOnError bool                                `mapstructure:"allow_fallback_on_error"`
 	}

@@ -13,15 +13,15 @@ import (
 func TestSessionValidation(t *testing.T) {
 	for _, tc := range []struct {
 		uc        string
-		configure func(t *testing.T, s *Session)
+		configure func(t *testing.T, s *SubjectInfo)
 		assert    func(t *testing.T, err error)
 	}{
 		{
 			uc: "subject_from is set",
-			configure: func(t *testing.T, s *Session) {
+			configure: func(t *testing.T, s *SubjectInfo) {
 				t.Helper()
 
-				s.SubjectIDFrom = "foobar"
+				s.IDFrom = "foobar"
 			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
@@ -30,7 +30,7 @@ func TestSessionValidation(t *testing.T) {
 		},
 		{
 			uc:        "subject_from is not set",
-			configure: func(t *testing.T, s *Session) { t.Helper() },
+			configure: func(t *testing.T, s *SubjectInfo) { t.Helper() },
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 				assert.Error(t, err)
@@ -39,7 +39,7 @@ func TestSessionValidation(t *testing.T) {
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
 			// GIVEN
-			s := Session{}
+			s := SubjectInfo{}
 			tc.configure(t, &s)
 
 			// WHEN
@@ -85,15 +85,15 @@ func TestGetSubjectFromSession(t *testing.T) {
 
 	for _, tc := range []struct {
 		uc        string
-		configure func(t *testing.T, s *Session)
+		configure func(t *testing.T, s *SubjectInfo)
 		assert    func(t *testing.T, err error, sub *subject.Subject)
 	}{
 		{
 			uc: "subject is extracted and attributes are the whole object",
-			configure: func(t *testing.T, s *Session) {
+			configure: func(t *testing.T, s *SubjectInfo) {
 				t.Helper()
 
-				s.SubjectIDFrom = "subject"
+				s.IDFrom = "subject"
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
@@ -108,11 +108,11 @@ func TestGetSubjectFromSession(t *testing.T) {
 		},
 		{
 			uc: "subject is extracted and attributes are the nested object",
-			configure: func(t *testing.T, s *Session) {
+			configure: func(t *testing.T, s *SubjectInfo) {
 				t.Helper()
 
-				s.SubjectIDFrom = "string_slice.1"
-				s.SubjectAttributesFrom = "complex.nested"
+				s.IDFrom = "string_slice.1"
+				s.AttributesFrom = "complex.nested"
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
@@ -130,11 +130,11 @@ func TestGetSubjectFromSession(t *testing.T) {
 		},
 		{
 			uc: "attributes could no be extracted",
-			configure: func(t *testing.T, s *Session) {
+			configure: func(t *testing.T, s *SubjectInfo) {
 				t.Helper()
 
-				s.SubjectIDFrom = "subject"
-				s.SubjectAttributesFrom = "foobar"
+				s.IDFrom = "subject"
+				s.AttributesFrom = "foobar"
 			},
 			assert: func(t *testing.T, err error, _ *subject.Subject) {
 				t.Helper()
@@ -144,10 +144,10 @@ func TestGetSubjectFromSession(t *testing.T) {
 		},
 		{
 			uc: "subject could not be extracted",
-			configure: func(t *testing.T, s *Session) {
+			configure: func(t *testing.T, s *SubjectInfo) {
 				t.Helper()
 
-				s.SubjectIDFrom = "foo"
+				s.IDFrom = "foo"
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
@@ -158,7 +158,7 @@ func TestGetSubjectFromSession(t *testing.T) {
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
 			// GIVEN
-			s := Session{}
+			s := SubjectInfo{}
 			tc.configure(t, &s)
 
 			// WHEN

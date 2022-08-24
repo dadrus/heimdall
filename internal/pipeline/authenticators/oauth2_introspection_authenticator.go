@@ -53,7 +53,7 @@ func newOAuth2IntrospectionAuthenticator(rawConfig map[string]any) (*oauth2Intro
 		Endpoint             endpoint.Endpoint                   `mapstructure:"introspection_endpoint"`
 		AuthDataSource       extractors.CompositeExtractStrategy `mapstructure:"token_source"`
 		Assertions           oauth2.Expectation                  `mapstructure:"assertions"`
-		Session              Session                             `mapstructure:"session"`
+		Session              SubjectInfo                         `mapstructure:"session"`
 		CacheTTL             *time.Duration                      `mapstructure:"cache_ttl"`
 		AllowFallbackOnError bool                                `mapstructure:"allow_fallback_on_error"`
 	}
@@ -73,8 +73,8 @@ func newOAuth2IntrospectionAuthenticator(rawConfig map[string]any) (*oauth2Intro
 		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration, "no trusted issuers configured")
 	}
 
-	if len(conf.Session.SubjectIDFrom) == 0 {
-		conf.Session.SubjectIDFrom = "sub"
+	if len(conf.Session.IDFrom) == 0 {
+		conf.Session.IDFrom = "sub"
 	}
 
 	if conf.Endpoint.Headers == nil {

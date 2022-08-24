@@ -99,10 +99,10 @@ assertions:
 
 				require.NoError(t, err)
 
-				assert.IsType(t, &Session{}, auth.sf)
-				sess, ok := auth.sf.(*Session)
+				assert.IsType(t, &SubjectInfo{}, auth.sf)
+				sess, ok := auth.sf.(*SubjectInfo)
 				assert.True(t, ok)
-				assert.Equal(t, "sub", sess.SubjectIDFrom)
+				assert.Equal(t, "sub", sess.IDFrom)
 			},
 		},
 		{
@@ -775,7 +775,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 					TrustedIssuers: []string{"foobar"},
 					ScopesMatcher:  oauth2.ExactScopeStrategyMatcher{},
 				},
-				sf:  &Session{SubjectIDFrom: "sub"},
+				sf:  &SubjectInfo{IDFrom: "sub"},
 				ttl: &zeroTTL,
 			},
 			configureMocks: func(t *testing.T,
@@ -858,7 +858,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 					TrustedIssuers: []string{"foobar"},
 					ScopesMatcher:  oauth2.ExactScopeStrategyMatcher{},
 				},
-				sf: &Session{SubjectIDFrom: "sub"},
+				sf: &SubjectInfo{IDFrom: "sub"},
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.MockContext,
@@ -942,7 +942,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 					TrustedIssuers: []string{"foobar"},
 					ScopesMatcher:  oauth2.ExactScopeStrategyMatcher{},
 				},
-				sf: &Session{SubjectIDFrom: "sub"},
+				sf: &SubjectInfo{IDFrom: "sub"},
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.MockContext,
@@ -1027,7 +1027,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 					TrustedIssuers: []string{"foobar"},
 					ScopesMatcher:  oauth2.ExactScopeStrategyMatcher{},
 				},
-				sf: &Session{SubjectIDFrom: "sub"},
+				sf: &SubjectInfo{IDFrom: "sub"},
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.MockContext,

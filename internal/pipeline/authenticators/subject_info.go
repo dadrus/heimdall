@@ -8,29 +8,29 @@ import (
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
-type Session struct {
-	SubjectIDFrom         string `mapstructure:"subject_id_from"`
-	SubjectAttributesFrom string `mapstructure:"subject_attributes_from"`
+type SubjectInfo struct {
+	IDFrom         string `mapstructure:"subject_id_from"`
+	AttributesFrom string `mapstructure:"subject_attributes_from"`
 }
 
-func (s *Session) Validate() error {
-	if len(s.SubjectIDFrom) == 0 {
+func (s *SubjectInfo) Validate() error {
+	if len(s.IDFrom) == 0 {
 		return errorchain.NewWithMessage(heimdall.ErrConfiguration, "no subject_from set")
 	}
 
 	return nil
 }
 
-func (s *Session) CreateSubject(rawData []byte) (*subject.Subject, error) {
+func (s *SubjectInfo) CreateSubject(rawData []byte) (*subject.Subject, error) {
 	attributesFrom := "@this"
-	if len(s.SubjectAttributesFrom) != 0 {
-		attributesFrom = s.SubjectAttributesFrom
+	if len(s.AttributesFrom) != 0 {
+		attributesFrom = s.AttributesFrom
 	}
 
-	subjectID := gjson.GetBytes(rawData, s.SubjectIDFrom).String()
+	subjectID := gjson.GetBytes(rawData, s.IDFrom).String()
 	if len(subjectID) == 0 {
 		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
-			"could not extract subject identifier using '%s' template", s.SubjectIDFrom)
+			"could not extract subject identifier using '%s' template", s.IDFrom)
 	}
 
 	attributes := gjson.GetBytes(rawData, attributesFrom).Value()
