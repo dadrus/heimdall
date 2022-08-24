@@ -158,6 +158,11 @@ Reference</button><div id=section-db1c784524e1b54011a95823026161f7c8517fe0 class
             <span style=color:#a6e22e>config</span><span style=color:#fff;background-color:#272822>:</span>
               <span style=color:#a6e22e>user</span><span style=color:#fff;background-color:#272822>:</span> <span style=color:#e6db74>foo</span>
               <span style=color:#a6e22e>password</span><span style=color:#fff;background-color:#272822>:</span> <span style=color:#e6db74>bar</span>
+        <span style=color:#a6e22e>token_source</span><span style=color:#fff;background-color:#272822>:</span>
+          <span style=color:#fff;background-color:#272822>-</span> <span style=color:#a6e22e>header</span><span style=color:#fff;background-color:#272822>:</span> <span style=color:#e6db74>Authorization</span>
+            <span style=color:#a6e22e>schema</span><span style=color:#fff;background-color:#272822>:</span> <span style=color:#e6db74>Bearer</span>
+          <span style=color:#fff;background-color:#272822>-</span> <span style=color:#a6e22e>query_parameter</span><span style=color:#fff;background-color:#272822>:</span> <span style=color:#e6db74>access_token</span>
+          <span style=color:#fff;background-color:#272822>-</span> <span style=color:#a6e22e>body_parameter</span><span style=color:#fff;background-color:#272822>:</span> <span style=color:#e6db74>access_token</span>
         <span style=color:#a6e22e>assertions</span><span style=color:#fff;background-color:#272822>:</span>
           <span style=color:#a6e22e>issuers</span><span style=color:#fff;background-color:#272822>:</span>
             <span style=color:#fff;background-color:#272822>-</span> <span style=color:#e6db74>http://127.0.0.1:4444/</span>
@@ -179,6 +184,8 @@ Reference</button><div id=section-db1c784524e1b54011a95823026161f7c8517fe0 class
         <span style=color:#a6e22e>jwt_from</span><span style=color:#fff;background-color:#272822>:</span>
           <span style=color:#fff;background-color:#272822>-</span> <span style=color:#a6e22e>header</span><span style=color:#fff;background-color:#272822>:</span> <span style=color:#e6db74>Authorization</span>
             <span style=color:#a6e22e>schema</span><span style=color:#fff;background-color:#272822>:</span> <span style=color:#e6db74>Bearer</span>
+          <span style=color:#fff;background-color:#272822>-</span> <span style=color:#a6e22e>query_parameter</span><span style=color:#fff;background-color:#272822>:</span> <span style=color:#e6db74>access_token</span>
+          <span style=color:#fff;background-color:#272822>-</span> <span style=color:#a6e22e>body_parameter</span><span style=color:#fff;background-color:#272822>:</span> <span style=color:#e6db74>access_token</span>
         <span style=color:#a6e22e>assertions</span><span style=color:#fff;background-color:#272822>:</span>
           <span style=color:#a6e22e>audience</span><span style=color:#fff;background-color:#272822>:</span>
             <span style=color:#fff;background-color:#272822>-</span> <span style=color:#e6db74>bla</span>
