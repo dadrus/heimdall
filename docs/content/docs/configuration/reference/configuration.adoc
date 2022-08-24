@@ -93,11 +93,11 @@ serve:
 log:
   level: debug
   format: text
-  
+
 tracing:
   service_name: heimdall
   provider: jaeger
-  
+
 metrics:
   prometheus:
     host: 0.0.0.0
@@ -151,6 +151,11 @@ pipeline:
             config:
               user: foo
               password: bar
+        token_source:
+          - header: Authorization
+            schema: Bearer
+          - query_parameter: access_token
+          - body_parameter: access_token
         assertions:
           issuers:
             - http://127.0.0.1:4444/
@@ -172,6 +177,8 @@ pipeline:
         jwt_from:
           - header: Authorization
             schema: Bearer
+          - query_parameter: access_token
+          - body_parameter: access_token
         assertions:
           audience:
             - bla

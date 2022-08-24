@@ -691,6 +691,9 @@
             "introspection_endpoint": {
               "$ref": "#/definitions/endpointConfiguration"
             },
+            "token_source": {
+              "$ref": "#/definitions/authenticationDataSource"
+            },
             "assertions": {
               "$ref": "#/definitions/assertionRequirements"
             },

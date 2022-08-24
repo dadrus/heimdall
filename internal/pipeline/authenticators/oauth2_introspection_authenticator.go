@@ -50,11 +50,12 @@ type oauth2IntrospectionAuthenticator struct {
 
 func newOAuth2IntrospectionAuthenticator(rawConfig map[string]any) (*oauth2IntrospectionAuthenticator, error) {
 	type Config struct {
-		Endpoint             endpoint.Endpoint  `mapstructure:"introspection_endpoint"`
-		Assertions           oauth2.Expectation `mapstructure:"assertions"`
-		Session              Session            `mapstructure:"session"`
-		CacheTTL             *time.Duration     `mapstructure:"cache_ttl"`
-		AllowFallbackOnError bool               `mapstructure:"allow_fallback_on_error"`
+		Endpoint             endpoint.Endpoint                   `mapstructure:"introspection_endpoint"`
+		AuthDataSource       extractors.CompositeExtractStrategy `mapstructure:"token_source"`
+		Assertions           oauth2.Expectation                  `mapstructure:"assertions"`
+		Session              Session                             `mapstructure:"session"`
+		CacheTTL             *time.Duration                      `mapstructure:"cache_ttl"`
+		AllowFallbackOnError bool                                `mapstructure:"allow_fallback_on_error"`
 	}
 
 	var conf Config
@@ -100,14 +101,19 @@ func newOAuth2IntrospectionAuthenticator(rawConfig map[string]any) (*oauth2Intro
 		conf.Assertions.ScopesMatcher = oauth2.NoopMatcher{}
 	}
 
-	extractor := extractors.CompositeExtractStrategy{
-		extractors.HeaderValueExtractStrategy{Name: "Authorization", Schema: "Bearer"},
-		extractors.QueryParameterExtractStrategy{Name: "access_token"},
-		extractors.BodyParameterExtractStrategy{Name: "access_token"},
-	}
+	ads := x.IfThenElseExec(conf.AuthDataSource == nil,
+		func() extractors.CompositeExtractStrategy {
+			return extractors.CompositeExtractStrategy{
+				extractors.HeaderValueExtractStrategy{Name: "Authorization", Schema: "Bearer"},
+				extractors.QueryParameterExtractStrategy{Name: "access_token"},
+				extractors.BodyParameterExtractStrategy{Name: "access_token"},
+			}
+		},
+		func() extractors.CompositeExtractStrategy { return conf.AuthDataSource },
+	)
 
 	return &oauth2IntrospectionAuthenticator{
-		ads:                  extractor,
+		ads:                  ads,
 		e:                    conf.Endpoint,
 		a:                    conf.Assertions,
 		sf:                   &conf.Session,

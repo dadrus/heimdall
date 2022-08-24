@@ -17,7 +17,7 @@ The following section describes the available authenticator types in more detail
 
 === Noop
 
-As the name implies, this authenticator does nothing. It tells Heimdall to bypass the authentication. This is the only one authenticator type, which does not create a subject object on a successful execution, which is required by the most other pipeline handlers. This authenticator type also doesn't have any configuration options.
+As the name implies, this authenticator does nothing. It tells Heimdall to bypass the authentication. This is the only one authenticator type, which does not create a subject object on a successful execution, which is required by the most others pipeline handlers. This authenticator type also doesn't have any configuration options.
 
 To enable the usage of this authenticator, you have to set the `type` property to `noop`.
 
@@ -168,12 +168,13 @@ config:
         password: super-secure
   authentication_data_source:
     - header: X-Custom-Bearer-Token
+      schema: Bearer
   session:
     subject_id_from: "sub"
   cache_ttl: 5m
 ----
 
-Usually, Bearer tokens are issued by an OAuth2 auth provider and there is a need to verify not only the validity of such, but also a couple of claims. This can be achieved by a "Local Authorizer", but there is also a special purpose [OAuth2 Introspection]({{< relref "#_oauth2_introspection">}}) authenticator type, which supports asserting all security relevant claims in just one place.
+Usually, Bearer tokens are issued by an OAuth2 auth provider and there is a need to verify not only the validity of such, but also a couple of claims. This can be achieved by a link:{{< relref "/docs/configuration/pipeline/authorizers.adoc#_local" >}}[Local Authorizer], but there is also a special purpose link:{{< relref "#_oauth2_introspection">}}[OAuth2 Introspection] authenticator type, which supports asserting all security relevant claims in just one place.
 ====
 
 === OAuth2 Introspection
@@ -187,6 +188,10 @@ Configuration using the `config` property is mandatory. Following properties are
 * *`introspection_endpoint`*: _link:{{< relref "configuration_types.adoc#_endpoint">}}[Endpoint]_ (mandatory, not overridable)
 +
 The introspection endpoint of the OAuth2 authorization provider. At least the `url` must be configured. There is no need to define the `method` property or setting the `Content-Type` or the `Accept` header. These are set by default to the values required by the https://datatracker.ietf.org/doc/html/rfc7662[OAuth 2.0 Token Introspection] RFC. You can however override these while configuring the authenticator.
+
+* *`token_source`*: _link:{{< relref "configuration_types.adoc#_authentication_data_source" >}}[Authentication Data Source]_ (optional, not overridable)
++
+Where to get the access token from. Defaults to retrieve it from the `Authorization` header, the `access_token` query parameter or the `access_token` body parameter (latter, if the body is of `application/x-www-form-urlencoded` MIME type).
 
 * *`assertions`*: _link:{{< relref "configuration_types.adoc#_assertions" >}}[Assertions]_ (mandatory, overridable)
 +
