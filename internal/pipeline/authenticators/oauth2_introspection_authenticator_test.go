@@ -158,15 +158,30 @@ session:
 			},
 		},
 		{
-			uc: "with valid config with defaults and enabled fallback on errors",
+			uc: "with valid config with overwrites",
 			config: []byte(`
 introspection_endpoint:
-  url: foobar.local
+  url: http://test.com
+  method: PATCH
+  headers:
+    Accept: application/foobar
+token_source:
+  - header: foo-header
+    schema: foo
+  - query_parameter: foo_query_param
+  - body_parameter: foo_body_param
 assertions:
+  scopes:
+    matching_strategy: wildcard
+    values:
+      - foo
   issuers:
     - foobar
+  allowed_algorithms:
+    - ES256
 session:
-  subject_id_from: some_template
+  subject_id_from: some_claim
+cache_ttl: 5s
 allow_fallback_on_error: true
 `),
 			assert: func(t *testing.T, err error, auth *oauth2IntrospectionAuthenticator) {
@@ -175,34 +190,34 @@ allow_fallback_on_error: true
 				require.NoError(t, err)
 
 				// assert endpoint config
-				assert.Equal(t, "foobar.local", auth.e.URL)
-				assert.Equal(t, http.MethodPost, auth.e.Method)
+				assert.Equal(t, "http://test.com", auth.e.URL)
+				assert.Equal(t, http.MethodPatch, auth.e.Method)
 				assert.Len(t, auth.e.Headers, 2)
 				assert.Contains(t, auth.e.Headers, "Content-Type")
 				assert.Equal(t, auth.e.Headers["Content-Type"], "application/x-www-form-urlencoded")
 				assert.Contains(t, auth.e.Headers, "Accept")
-				assert.Equal(t, auth.e.Headers["Accept"], "application/json")
+				assert.Equal(t, auth.e.Headers["Accept"], "application/foobar")
 				assert.Nil(t, auth.e.AuthStrategy)
 				assert.Nil(t, auth.e.Retry)
 
 				// assert assertions
-				assert.Len(t, auth.a.AllowedAlgorithms, len(defaultAllowedAlgorithms()))
-				assert.ElementsMatch(t, auth.a.AllowedAlgorithms, defaultAllowedAlgorithms())
+				assert.Len(t, auth.a.AllowedAlgorithms, 1)
+				assert.ElementsMatch(t, auth.a.AllowedAlgorithms, []string{"ES256"})
 				assert.Len(t, auth.a.TrustedIssuers, 1)
 				assert.Contains(t, auth.a.TrustedIssuers, "foobar")
-				assert.NoError(t, auth.a.ScopesMatcher.Match([]string{}))
+				assert.NoError(t, auth.a.ScopesMatcher.Match([]string{"foo"}))
 				assert.Equal(t, time.Duration(0), auth.a.ValidityLeeway)
 				assert.Empty(t, auth.a.TargetAudiences)
 
 				// assert ttl
-				assert.Nil(t, auth.ttl)
+				assert.Equal(t, 5*time.Second, *auth.ttl)
 
 				// assert token extractor settings
 				assert.IsType(t, extractors.CompositeExtractStrategy{}, auth.ads)
 				assert.Len(t, auth.ads, 3)
-				assert.Contains(t, auth.ads, extractors.HeaderValueExtractStrategy{Name: "Authorization", Schema: "Bearer"})
-				assert.Contains(t, auth.ads, extractors.QueryParameterExtractStrategy{Name: "access_token"})
-				assert.Contains(t, auth.ads, extractors.BodyParameterExtractStrategy{Name: "access_token"})
+				assert.Contains(t, auth.ads, &extractors.HeaderValueExtractStrategy{Name: "foo-header", Schema: "foo"})
+				assert.Contains(t, auth.ads, &extractors.QueryParameterExtractStrategy{Name: "foo_query_param"})
+				assert.Contains(t, auth.ads, &extractors.BodyParameterExtractStrategy{Name: "foo_body_param"})
 
 				// assert subject factory
 				assert.NotNil(t, auth.sf)
