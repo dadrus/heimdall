@@ -236,7 +236,7 @@ Configuration using the `config` property is mandatory. Following properties are
 +
 The JWKS endpoint, this authenticator retrieves the key material in a format specified in https://datatracker.ietf.org/doc/html/rfc7519[RFC 7519] from for JWT signature verification purposes. The `url` must be configured. By default `method` is set to `GET` and the HTTP `Accept` header to `application/json`
 
-* *`jwt_from`*: _link:{{< relref "configuration_types.adoc#_authentication_data_source" >}}[Authentication Data Source]_ (optional, not overridable)
+* *`jwt_source`*: _link:{{< relref "configuration_types.adoc#_authentication_data_source" >}}[Authentication Data Source]_ (optional, not overridable)
 +
 Where to get the access token from. Defaults to retrieve it from the `Authorization` header, the `access_token` query parameter or the `access_token` body parameter (latter, if the body is of `application/x-www-form-urlencoded` MIME type).
 
