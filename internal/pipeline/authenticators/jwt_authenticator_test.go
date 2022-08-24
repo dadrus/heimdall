@@ -1868,7 +1868,7 @@ func TestGetCacheTTL(t *testing.T) {
 			assert: func(t *testing.T, ttl time.Duration) {
 				t.Helper()
 
-				assert.Equal(t, defaultTTL, ttl)
+				assert.Equal(t, defaultJWTAuthenticatorTTL, ttl)
 			},
 		},
 		{
@@ -1908,7 +1908,7 @@ func TestGetCacheTTL(t *testing.T) {
 			assert: func(t *testing.T, ttl time.Duration) {
 				t.Helper()
 
-				assert.Equal(t, defaultTTL, ttl)
+				assert.Equal(t, defaultJWTAuthenticatorTTL, ttl)
 			},
 		},
 		{

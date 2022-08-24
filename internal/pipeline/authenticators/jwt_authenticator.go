@@ -28,7 +28,7 @@ import (
 	"github.com/dadrus/heimdall/internal/x/pkix"
 )
 
-const defaultTTL = 10 * time.Minute
+const defaultJWTAuthenticatorTTL = 10 * time.Minute
 
 // by intention. Used only during application bootstrap
 // nolint
@@ -232,7 +232,7 @@ func (a *jwtAuthenticator) getCacheTTL(key *jose.JSONWebKey) time.Duration {
 
 	configuredTTL := x.IfThenElseExec(a.ttl != nil,
 		func() time.Duration { return *a.ttl },
-		func() time.Duration { return defaultTTL })
+		func() time.Duration { return defaultJWTAuthenticatorTTL })
 
 	switch {
 	case configuredTTL == 0 && certTTL == 0:
