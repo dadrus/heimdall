@@ -18,7 +18,7 @@ type SessionConfig struct {
 	ValidityLeeway time.Duration `mapstructure:"validity_leeway"`
 }
 
-func (vc *SessionConfig) CreateValidity(rawData []byte) (*Session, error) {
+func (vc *SessionConfig) CreateSession(rawData []byte) (*Session, error) {
 	activeValue := gjson.GetBytes(rawData, vc.ActiveField)
 	issuedAtValue := gjson.GetBytes(rawData, vc.IssuedAtField)
 	notBeforeValue := gjson.GetBytes(rawData, vc.NotBeforeField)

@@ -604,7 +604,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				ads.On("GetAuthData", ctx).Return(dummyAuthData{Val: "session_token"}, nil)
 				cch.On("Get", cacheKey).Return(time.Duration(10))
 				cch.On("Delete", cacheKey)
-				cch.On("Set", cacheKey, []byte(`{ "user_id": "barbar" }`), auth.ttl)
+				cch.On("Set", cacheKey, []byte(`{ "user_id": "barbar" }`), *auth.ttl)
 			},
 			instructServer: func(t *testing.T) {
 				t.Helper()
@@ -696,7 +696,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 
 				ads.On("GetAuthData", ctx).Return(dummyAuthData{Val: "session_token"}, nil)
 				cch.On("Get", cacheKey).Return(nil)
-				cch.On("Set", cacheKey, []byte(`{ "user_id": "barbar" }`), auth.ttl)
+				cch.On("Set", cacheKey, []byte(`{ "user_id": "barbar" }`), *auth.ttl)
 			},
 			instructServer: func(t *testing.T) {
 				t.Helper()
