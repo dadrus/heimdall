@@ -505,15 +505,15 @@ This matcher enables matching scopes using wildcards. It goes beyond the link:{{
 
 This matcher can only be used by explicitly setting the `matching_strategy` to `wildcard` and defining the required patterns in the `values` property.
 
-== Session
+== Subject
 
 This configuration type enables extraction of subject information from responses received by Heimdall from authentication services. Following properties are available.
 
-* *`subject_id_from`*: _string_ (mandatory)
+* *`id`*: _string_ (mandatory)
 +
 A https://github.com/tidwall/gjson/blob/master/SYNTAX.md[GJSON Path] pointing to the id of the subject in the JSON object.
 
-* *`subject_attributes_from`*: _string_ (optional)
+* *`attributes`*: _string_ (optional)
 +
 A https://github.com/tidwall/gjson/blob/master/SYNTAX.md[GJSON Path] pointing to the attributes of the subject in the JSON object. Defaults to `@this`.
 
@@ -524,20 +524,20 @@ This example shows how to extract the subject id from an https://tools.ietf.org/
 
 [source, yaml]
 ----
-subject_id_from: sub
-subject_attributes_from: @this
+id: sub
+attributes: @this
 ----
 
-Setting `subject_attributes_from` was actually not required, as `@this` would be set by default anyway.
+Setting `attributes` was actually not required, as `@this` would be set by default anyway.
 ====
 
 .Extracting subject id from an https://www.ory.sh/docs/kratos/[Ory Kratos] "whoami" endpoint response
 ====
 
-This example shows how to extract the subject id from an https://www.ory.sh/docs/kratos/[Ory Kratos] "whoami" endpoint response and set the subject attributes to the entire response. `subject_attributes_from` is not configured, so default is used.
+This example shows how to extract the subject id from an https://www.ory.sh/docs/kratos/[Ory Kratos] "whoami" endpoint response and set the subject attributes to the entire response. `attributes` is not configured, so default is used.
 
 [source, yaml]
 ----
-subject_id_from: identity.id
+id: identity.id
 ----
 ====

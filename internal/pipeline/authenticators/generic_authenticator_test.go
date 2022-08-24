@@ -36,8 +36,8 @@ func TestCreateGenericAuthenticator(t *testing.T) {
 foo: bar
 identity_info_endpoint:
   url: http://test.com
-session:
-  subject_id_from: some_template`),
+subject:
+  id: some_template`),
 			assertError: func(t *testing.T, err error, auth *genericAuthenticator) {
 				t.Helper()
 
@@ -51,8 +51,8 @@ session:
 			config: []byte(`
 authentication_data_source:
   - header: foo-header
-session:
-  subject_id_from: some_template`),
+subject:
+  id: some_template`),
 			assertError: func(t *testing.T, err error, auth *genericAuthenticator) {
 				t.Helper()
 
@@ -62,7 +62,7 @@ session:
 			},
 		},
 		{
-			uc: "missing session config",
+			uc: "missing subject config",
 			config: []byte(`
 identity_info_endpoint:
   url: http://test.com
@@ -73,7 +73,7 @@ authentication_data_source:
 
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "session configuration")
+				assert.Contains(t, err.Error(), "subject configuration")
 			},
 		},
 		{
@@ -81,8 +81,8 @@ authentication_data_source:
 			config: []byte(`
 identity_info_endpoint:
   url: http://test.com
-session:
-  subject_id_from: some_template`),
+subject:
+  id: some_template`),
 			assertError: func(t *testing.T, err error, auth *genericAuthenticator) {
 				t.Helper()
 
@@ -99,8 +99,8 @@ identity_info_endpoint:
   method: GET
 authentication_data_source:
   - header: foo-header
-session:
-  subject_id_from: some_template`),
+subject:
+  id: some_template`),
 			assertError: func(t *testing.T, err error, auth *genericAuthenticator) {
 				t.Helper()
 
@@ -113,7 +113,7 @@ session:
 				assert.True(t, ok)
 				assert.Len(t, ces, 1)
 				assert.Contains(t, ces, &extractors.HeaderValueExtractStrategy{Name: "foo-header"})
-				assert.Equal(t, &Session{SubjectIDFrom: "some_template"}, auth.sf)
+				assert.Equal(t, &SubjectInfo{IDFrom: "some_template"}, auth.sf)
 				assert.Equal(t, time.Duration(0), auth.ttl)
 				assert.False(t, auth.IsFallbackOnErrorAllowed())
 			},
@@ -126,8 +126,8 @@ identity_info_endpoint:
   method: POST
 authentication_data_source:
   - cookie: foo-cookie
-session:
-  subject_id_from: some_template
+subject:
+  id: some_template
 cache_ttl: 5s`),
 			assertError: func(t *testing.T, err error, auth *genericAuthenticator) {
 				t.Helper()
@@ -141,7 +141,7 @@ cache_ttl: 5s`),
 				assert.True(t, ok)
 				assert.Len(t, ces, 1)
 				assert.Contains(t, ces, &extractors.CookieValueExtractStrategy{Name: "foo-cookie"})
-				assert.Equal(t, &Session{SubjectIDFrom: "some_template"}, auth.sf)
+				assert.Equal(t, &SubjectInfo{IDFrom: "some_template"}, auth.sf)
 				assert.Equal(t, 5*time.Second, auth.ttl)
 				assert.False(t, auth.IsFallbackOnErrorAllowed())
 			},
@@ -154,8 +154,8 @@ identity_info_endpoint:
   method: POST
 authentication_data_source:
   - cookie: foo-cookie
-session:
-  subject_id_from: some_template
+subject:
+  id: some_template
 allow_fallback_on_error: true`),
 			assertError: func(t *testing.T, err error, auth *genericAuthenticator) {
 				t.Helper()
@@ -169,7 +169,7 @@ allow_fallback_on_error: true`),
 				assert.True(t, ok)
 				assert.Len(t, ces, 1)
 				assert.Contains(t, ces, &extractors.CookieValueExtractStrategy{Name: "foo-cookie"})
-				assert.Equal(t, &Session{SubjectIDFrom: "some_template"}, auth.sf)
+				assert.Equal(t, &SubjectInfo{IDFrom: "some_template"}, auth.sf)
 				assert.Equal(t, time.Duration(0), auth.ttl)
 				assert.True(t, auth.IsFallbackOnErrorAllowed())
 			},
@@ -206,8 +206,8 @@ identity_info_endpoint:
   method: POST
 authentication_data_source:
   - header: foo-header
-session:
-  subject_id_from: some_template
+subject:
+  id: some_template
 allow_fallback_on_error: true`),
 			assert: func(t *testing.T, err error, prototype *genericAuthenticator,
 				configured *genericAuthenticator,
@@ -227,8 +227,8 @@ identity_info_endpoint:
   method: POST
 authentication_data_source:
   - header: foo-header
-session:
-  subject_id_from: some_template`),
+subject:
+  id: some_template`),
 			config: []byte(`foo: bar`),
 			assert: func(t *testing.T, err error, prototype *genericAuthenticator,
 				configured *genericAuthenticator,
@@ -248,8 +248,8 @@ identity_info_endpoint:
   method: POST
 authentication_data_source:
   - header: foo-header
-session:
-  subject_id_from: some_template`),
+subject:
+  id: some_template`),
 			config: []byte(`cache_ttl: 5s`),
 			assert: func(t *testing.T, err error, prototype *genericAuthenticator,
 				configured *genericAuthenticator,
@@ -275,8 +275,8 @@ identity_info_endpoint:
   method: POST
 authentication_data_source:
   - header: foo-header
-session:
-  subject_id_from: some_template`),
+subject:
+  id: some_template`),
 			config: []byte(`allow_fallback_on_error: true`),
 			assert: func(t *testing.T, err error, prototype *genericAuthenticator,
 				configured *genericAuthenticator,
@@ -301,8 +301,8 @@ identity_info_endpoint:
   method: POST
 authentication_data_source:
   - header: foo-header
-session:
-  subject_id_from: some_template
+subject:
+  id: some_template
 cache_ttl: 5s`),
 			config: []byte(`
 cache_ttl: 15s`),
@@ -485,7 +485,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 						"Accept": "application/json",
 					},
 				},
-				sf: &Session{SubjectIDFrom: "barfoo"},
+				sf: &SubjectInfo{IDFrom: "barfoo"},
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.MockContext,
@@ -532,7 +532,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 						"Accept": "application/json",
 					},
 				},
-				sf: &Session{SubjectIDFrom: "user_id"},
+				sf: &SubjectInfo{IDFrom: "user_id"},
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.MockContext,
@@ -581,7 +581,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 						"Accept": "application/json",
 					},
 				},
-				sf:  &Session{SubjectIDFrom: "user_id"},
+				sf:  &SubjectInfo{IDFrom: "user_id"},
 				ttl: 5 * time.Second,
 			},
 			configureMocks: func(t *testing.T,
@@ -636,7 +636,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 						"Accept": "application/json",
 					},
 				},
-				sf:  &Session{SubjectIDFrom: "user_id"},
+				sf:  &SubjectInfo{IDFrom: "user_id"},
 				ttl: 5 * time.Second,
 			},
 			configureMocks: func(t *testing.T,
@@ -674,7 +674,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 						"Accept": "application/json",
 					},
 				},
-				sf:  &Session{SubjectIDFrom: "user_id"},
+				sf:  &SubjectInfo{IDFrom: "user_id"},
 				ttl: 5 * time.Second,
 			},
 			configureMocks: func(t *testing.T,

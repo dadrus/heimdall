@@ -61,7 +61,7 @@ func newJwtAuthenticator(rawConfig map[string]any) (*jwtAuthenticator, error) {
 		Endpoint             endpoint.Endpoint                   `mapstructure:"jwks_endpoint"`
 		AuthDataSource       extractors.CompositeExtractStrategy `mapstructure:"jwt_source"`
 		Assertions           oauth2.Expectation                  `mapstructure:"assertions"`
-		Session              Session                             `mapstructure:"session"`
+		SubjectInfo          SubjectInfo                         `mapstructure:"subject"`
 		CacheTTL             *time.Duration                      `mapstructure:"cache_ttl"`
 		AllowFallbackOnError bool                                `mapstructure:"allow_fallback_on_error"`
 		ValidateJWK          *bool                               `mapstructure:"validate_jwk"`
@@ -107,8 +107,8 @@ func newJwtAuthenticator(rawConfig map[string]any) (*jwtAuthenticator, error) {
 		conf.Assertions.ScopesMatcher = oauth2.NoopMatcher{}
 	}
 
-	if len(conf.Session.SubjectIDFrom) == 0 {
-		conf.Session.SubjectIDFrom = "sub"
+	if len(conf.SubjectInfo.IDFrom) == 0 {
+		conf.SubjectInfo.IDFrom = "sub"
 	}
 
 	validateJWKCert := x.IfThenElseExec(conf.ValidateJWK != nil,
@@ -130,7 +130,7 @@ func newJwtAuthenticator(rawConfig map[string]any) (*jwtAuthenticator, error) {
 		e:                    conf.Endpoint,
 		a:                    conf.Assertions,
 		ttl:                  conf.CacheTTL,
-		sf:                   &conf.Session,
+		sf:                   &conf.SubjectInfo,
 		ads:                  ads,
 		allowFallbackOnError: conf.AllowFallbackOnError,
 		validateJWKCert:      validateJWKCert,

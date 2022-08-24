@@ -48,7 +48,7 @@ func newGenericAuthenticator(rawConfig map[string]any) (*genericAuthenticator, e
 	type Config struct {
 		Endpoint             endpoint.Endpoint                   `mapstructure:"identity_info_endpoint"`
 		AuthDataSource       extractors.CompositeExtractStrategy `mapstructure:"authentication_data_source"`
-		Session              Session                             `mapstructure:"session"`
+		SubjectInfo          SubjectInfo                         `mapstructure:"subject"`
 		CacheTTL             *time.Duration                      `mapstructure:"cache_ttl"`
 		AllowFallbackOnError bool                                `mapstructure:"allow_fallback_on_error"`
 	}
@@ -67,9 +67,9 @@ func newGenericAuthenticator(rawConfig map[string]any) (*genericAuthenticator, e
 			CausedBy(err)
 	}
 
-	if err := conf.Session.Validate(); err != nil {
+	if err := conf.SubjectInfo.Validate(); err != nil {
 		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration, "failed to validate session configuration").
+			NewWithMessage(heimdall.ErrConfiguration, "failed to validate subject configuration").
 			CausedBy(err)
 	}
 
@@ -81,7 +81,7 @@ func newGenericAuthenticator(rawConfig map[string]any) (*genericAuthenticator, e
 	return &genericAuthenticator{
 		e:   conf.Endpoint,
 		ads: conf.AuthDataSource,
-		sf:  &conf.Session,
+		sf:  &conf.SubjectInfo,
 		ttl: x.IfThenElseExec(conf.CacheTTL != nil,
 			func() time.Duration { return *conf.CacheTTL },
 			func() time.Duration { return 0 }),

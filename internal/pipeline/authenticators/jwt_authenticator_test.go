@@ -90,8 +90,8 @@ jwt_source:
 assertions:
   issuers:
     - foobar
-session:
-  subject_id_from: some_template`),
+subject:
+  id: some_template`),
 			assert: func(t *testing.T, err error, a *jwtAuthenticator) {
 				t.Helper()
 
@@ -108,8 +108,8 @@ jwks_endpoint:
 assertions:
   audience:
     - foobar
-session:
-  subject_id_from: some_template`),
+subject:
+  id: some_template`),
 			assert: func(t *testing.T, err error, a *jwtAuthenticator) {
 				t.Helper()
 
@@ -158,11 +158,11 @@ assertions:
 				})
 				assert.Equal(t, time.Duration(0), auth.a.ValidityLeeway)
 
-				// session settings
-				sess, ok := auth.sf.(*Session)
+				// subject settings
+				sess, ok := auth.sf.(*SubjectInfo)
 				require.True(t, ok)
-				assert.Equal(t, "sub", sess.SubjectIDFrom)
-				assert.Empty(t, sess.SubjectAttributesFrom)
+				assert.Equal(t, "sub", sess.IDFrom)
+				assert.Empty(t, sess.AttributesFrom)
 
 				// cache settings
 				assert.Nil(t, auth.ttl)
@@ -216,11 +216,11 @@ cache_ttl: 5s`),
 				})
 				assert.Equal(t, time.Duration(0), auth.a.ValidityLeeway)
 
-				// session settings
-				sess, ok := auth.sf.(*Session)
+				// subject settings
+				sess, ok := auth.sf.(*SubjectInfo)
 				require.True(t, ok)
-				assert.Equal(t, "sub", sess.SubjectIDFrom)
-				assert.Empty(t, sess.SubjectAttributesFrom)
+				assert.Equal(t, "sub", sess.IDFrom)
+				assert.Empty(t, sess.AttributesFrom)
 
 				// cache settings
 				assert.NotNil(t, auth.ttl)
@@ -256,8 +256,8 @@ assertions:
     - foobar
   allowed_algorithms:
     - ES256
-session:
-  subject_id_from: some_claim
+subject:
+  id: some_claim
 allow_fallback_on_error: true
 validate_jwk: false
 trust_store: ` + trustStorePath),
@@ -293,11 +293,11 @@ trust_store: ` + trustStorePath),
 				assert.ElementsMatch(t, auth.a.AllowedAlgorithms, []string{string(jose.ES256)})
 				assert.Equal(t, time.Duration(0), auth.a.ValidityLeeway)
 
-				// session settings
-				sess, ok := auth.sf.(*Session)
+				// subject settings
+				sess, ok := auth.sf.(*SubjectInfo)
 				require.True(t, ok)
-				assert.Equal(t, "some_claim", sess.SubjectIDFrom)
-				assert.Empty(t, sess.SubjectAttributesFrom)
+				assert.Equal(t, "some_claim", sess.IDFrom)
+				assert.Empty(t, sess.AttributesFrom)
 
 				// cache settings
 				assert.Nil(t, auth.ttl)
@@ -1091,7 +1091,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 					TrustedIssuers:    []string{issuer},
 					ScopesMatcher:     oauth2.ExactScopeStrategyMatcher{},
 				},
-				sf:  &Session{SubjectIDFrom: "foobar"},
+				sf:  &SubjectInfo{IDFrom: "foobar"},
 				ttl: &tenSecondsTTL,
 			},
 			configureMocks: func(t *testing.T,
@@ -1136,7 +1136,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 					TrustedIssuers:    []string{issuer},
 					ScopesMatcher:     oauth2.ExactScopeStrategyMatcher{},
 				},
-				sf:  &Session{SubjectIDFrom: "sub"},
+				sf:  &SubjectInfo{IDFrom: "sub"},
 				ttl: &tenSecondsTTL,
 			},
 			configureMocks: func(t *testing.T,
@@ -1191,7 +1191,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 					TrustedIssuers:    []string{issuer},
 					ScopesMatcher:     oauth2.ExactScopeStrategyMatcher{},
 				},
-				sf:  &Session{SubjectIDFrom: "sub"},
+				sf:  &SubjectInfo{IDFrom: "sub"},
 				ttl: &tenSecondsTTL,
 			},
 			configureMocks: func(t *testing.T,
@@ -1258,7 +1258,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 					TrustedIssuers:    []string{issuer},
 					ScopesMatcher:     oauth2.ExactScopeStrategyMatcher{},
 				},
-				sf:  &Session{SubjectIDFrom: "sub"},
+				sf:  &SubjectInfo{IDFrom: "sub"},
 				ttl: &tenSecondsTTL,
 			},
 			configureMocks: func(t *testing.T,
@@ -1325,7 +1325,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 					TrustedIssuers:    []string{issuer},
 					ScopesMatcher:     oauth2.ExactScopeStrategyMatcher{},
 				},
-				sf:              &Session{SubjectIDFrom: "sub"},
+				sf:              &SubjectInfo{IDFrom: "sub"},
 				ttl:             &tenSecondsTTL,
 				validateJWKCert: true,
 			},
@@ -1380,7 +1380,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 					TrustedIssuers:    []string{issuer},
 					ScopesMatcher:     oauth2.ExactScopeStrategyMatcher{},
 				},
-				sf:              &Session{SubjectIDFrom: "sub"},
+				sf:              &SubjectInfo{IDFrom: "sub"},
 				ttl:             &tenSecondsTTL,
 				validateJWKCert: true,
 				trustStore:      truststore.TrustStore{keyAndCertEntry.CertChain[2]},
@@ -1449,7 +1449,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 					TrustedIssuers:    []string{issuer},
 					ScopesMatcher:     oauth2.ExactScopeStrategyMatcher{},
 				},
-				sf:  &Session{SubjectIDFrom: "sub"},
+				sf:  &SubjectInfo{IDFrom: "sub"},
 				ttl: &tenSecondsTTL,
 			},
 			configureMocks: func(t *testing.T,
@@ -1517,7 +1517,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 					TrustedIssuers:    []string{issuer},
 					ScopesMatcher:     oauth2.ExactScopeStrategyMatcher{},
 				},
-				sf:              &Session{SubjectIDFrom: "sub"},
+				sf:              &SubjectInfo{IDFrom: "sub"},
 				validateJWKCert: true,
 				trustStore:      truststore.TrustStore{keyAndCertEntry.CertChain[2]},
 			},

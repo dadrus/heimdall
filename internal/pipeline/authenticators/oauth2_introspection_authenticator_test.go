@@ -40,8 +40,8 @@ func TestCreateOAuth2IntrospectionAuthenticator(t *testing.T) {
 assertions:
   issuers:
     - foobar
-session:
-  subject_id_from: some_template
+subject:
+  id: some_template
 foo: bar
 `),
 			assert: func(t *testing.T, err error, _ *oauth2IntrospectionAuthenticator) {
@@ -58,8 +58,8 @@ foo: bar
 assertions:
   issuers:
     - foobar
-session:
-  subject_id_from: some_template
+subject:
+  id: some_template
 `),
 			assert: func(t *testing.T, err error, _ *oauth2IntrospectionAuthenticator) {
 				t.Helper()
@@ -74,8 +74,8 @@ session:
 			config: []byte(`
 introspection_endpoint:
   url: foobar.local
-session:
-  subject_id_from: some_template
+subject:
+  id: some_template
 `),
 			assert: func(t *testing.T, err error, _ *oauth2IntrospectionAuthenticator) {
 				t.Helper()
@@ -86,7 +86,7 @@ session:
 			},
 		},
 		{
-			uc: "with missing session config",
+			uc: "with missing subject config",
 			config: []byte(`
 introspection_endpoint:
   url: foobar.local
@@ -99,10 +99,10 @@ assertions:
 
 				require.NoError(t, err)
 
-				assert.IsType(t, &Session{}, auth.sf)
-				sess, ok := auth.sf.(*Session)
+				assert.IsType(t, &SubjectInfo{}, auth.sf)
+				sess, ok := auth.sf.(*SubjectInfo)
 				assert.True(t, ok)
-				assert.Equal(t, "sub", sess.SubjectIDFrom)
+				assert.Equal(t, "sub", sess.IDFrom)
 			},
 		},
 		{
@@ -113,8 +113,8 @@ introspection_endpoint:
 assertions:
   issuers:
     - foobar
-session:
-  subject_id_from: some_template
+subject:
+  id: some_template
 `),
 			assert: func(t *testing.T, err error, auth *oauth2IntrospectionAuthenticator) {
 				t.Helper()
@@ -179,8 +179,8 @@ assertions:
     - foobar
   allowed_algorithms:
     - ES256
-session:
-  subject_id_from: some_claim
+subject:
+  id: some_claim
 cache_ttl: 5s
 allow_fallback_on_error: true
 `),
@@ -260,8 +260,8 @@ introspection_endpoint:
 assertions:
   issuers:
     - foobar
-session:
-  subject_id_from: some_template`),
+subject:
+  id: some_template`),
 			assert: func(t *testing.T, err error, prototype *oauth2IntrospectionAuthenticator,
 				configured *oauth2IntrospectionAuthenticator,
 			) {
@@ -280,8 +280,8 @@ introspection_endpoint:
 assertions:
   issuers:
     - foobar
-session:
-  subject_id_from: some_template`),
+subject:
+  id: some_template`),
 			config: []byte(`foo: bar`),
 			assert: func(t *testing.T, err error, _ *oauth2IntrospectionAuthenticator,
 				_ *oauth2IntrospectionAuthenticator,
@@ -303,8 +303,8 @@ assertions:
     - foobar
   audience:
     - baz
-session:
-  subject_id_from: some_template`),
+subject:
+  id: some_template`),
 			config: []byte(`
 assertions:
   issuers:
@@ -342,8 +342,8 @@ introspection_endpoint:
 assertions:
   issuers:
     - foobar
-session:
-  subject_id_from: some_template`),
+subject:
+  id: some_template`),
 			config: []byte(`cache_ttl: 5s`),
 			assert: func(t *testing.T, err error, prototype *oauth2IntrospectionAuthenticator,
 				configured *oauth2IntrospectionAuthenticator,
@@ -370,8 +370,8 @@ introspection_endpoint:
 assertions:
   issuers:
     - foobar
-session:
-  subject_id_from: some_template
+subject:
+  id: some_template
 cache_ttl: 5s`),
 			config: []byte(`
 assertions:
@@ -405,8 +405,8 @@ introspection_endpoint:
 assertions:
   issuers:
     - foobar
-session:
-  subject_id_from: some_template`),
+subject:
+  id: some_template`),
 			config: []byte(`allow_fallback_on_error: true`),
 			assert: func(t *testing.T, err error, prototype *oauth2IntrospectionAuthenticator,
 				configured *oauth2IntrospectionAuthenticator,
@@ -775,7 +775,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 					TrustedIssuers: []string{"foobar"},
 					ScopesMatcher:  oauth2.ExactScopeStrategyMatcher{},
 				},
-				sf:  &Session{SubjectIDFrom: "sub"},
+				sf:  &SubjectInfo{IDFrom: "sub"},
 				ttl: &zeroTTL,
 			},
 			configureMocks: func(t *testing.T,
@@ -858,7 +858,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 					TrustedIssuers: []string{"foobar"},
 					ScopesMatcher:  oauth2.ExactScopeStrategyMatcher{},
 				},
-				sf: &Session{SubjectIDFrom: "sub"},
+				sf: &SubjectInfo{IDFrom: "sub"},
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.MockContext,
@@ -942,7 +942,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 					TrustedIssuers: []string{"foobar"},
 					ScopesMatcher:  oauth2.ExactScopeStrategyMatcher{},
 				},
-				sf: &Session{SubjectIDFrom: "sub"},
+				sf: &SubjectInfo{IDFrom: "sub"},
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.MockContext,
@@ -1027,7 +1027,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 					TrustedIssuers: []string{"foobar"},
 					ScopesMatcher:  oauth2.ExactScopeStrategyMatcher{},
 				},
-				sf: &Session{SubjectIDFrom: "sub"},
+				sf: &SubjectInfo{IDFrom: "sub"},
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.MockContext,

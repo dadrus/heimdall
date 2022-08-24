@@ -38,9 +38,9 @@ pipeline:
             give_up_after: 2s
         authentication_data_source:
           - cookie: ory_kratos_session
-        session:
-          subject_attributes_from: "@this"
-          subject_id_from: "identity.id"
+        subject:
+          attributes: "@this"
+          id: "identity.id"
     - id: hydra_authenticator
       type: oauth2_introspection
       config:
@@ -62,9 +62,9 @@ pipeline:
             - bar
           audience:
             - bla
-        session:
-          subject_attributes_from: "@this"
-          subject_id_from: sub
+        subject:
+          attributes: "@this"
+          id: sub
     - id: jwt_authenticator
       type: jwt
       config:
@@ -83,9 +83,9 @@ pipeline:
             - RSA
           issuers:
             - bla
-        session:
-          subject_attributes_from: "@this"
-          subject_id_from: "identity.id"
+        subject:
+          attributes: "@this"
+          id: "identity.id"
         cache_ttl: 5m
   authorizers:
     - id: allow_all_authorizer
