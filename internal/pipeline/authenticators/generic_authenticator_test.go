@@ -25,6 +25,8 @@ import (
 func TestCreateGenericAuthenticator(t *testing.T) {
 	t.Parallel()
 
+	fiveSecondsTTL := 5 * time.Second
+
 	for _, tc := range []struct {
 		uc          string
 		config      []byte
@@ -114,7 +116,7 @@ subject:
 				assert.Len(t, ces, 1)
 				assert.Contains(t, ces, &extractors.HeaderValueExtractStrategy{Name: "foo-header"})
 				assert.Equal(t, &SubjectInfo{IDFrom: "some_template"}, auth.sf)
-				assert.Equal(t, time.Duration(0), auth.ttl)
+				assert.Nil(t, auth.ttl)
 				assert.False(t, auth.IsFallbackOnErrorAllowed())
 			},
 		},
@@ -142,7 +144,7 @@ cache_ttl: 5s`),
 				assert.Len(t, ces, 1)
 				assert.Contains(t, ces, &extractors.CookieValueExtractStrategy{Name: "foo-cookie"})
 				assert.Equal(t, &SubjectInfo{IDFrom: "some_template"}, auth.sf)
-				assert.Equal(t, 5*time.Second, auth.ttl)
+				assert.Equal(t, &fiveSecondsTTL, auth.ttl)
 				assert.False(t, auth.IsFallbackOnErrorAllowed())
 			},
 		},
@@ -170,7 +172,7 @@ allow_fallback_on_error: true`),
 				assert.Len(t, ces, 1)
 				assert.Contains(t, ces, &extractors.CookieValueExtractStrategy{Name: "foo-cookie"})
 				assert.Equal(t, &SubjectInfo{IDFrom: "some_template"}, auth.sf)
-				assert.Equal(t, time.Duration(0), auth.ttl)
+				assert.Nil(t, auth.ttl)
 				assert.True(t, auth.IsFallbackOnErrorAllowed())
 			},
 		},
@@ -190,6 +192,9 @@ allow_fallback_on_error: true`),
 
 func TestCreateGenericAuthenticatorFromPrototype(t *testing.T) {
 	t.Parallel()
+
+	fiveSecondsTTL := 5 * time.Second
+	fifteenSecondsTTL := 15 * time.Second
 
 	for _, tc := range []struct {
 		uc              string
@@ -261,9 +266,9 @@ subject:
 				assert.Equal(t, prototype.e, configured.e)
 				assert.Equal(t, prototype.ads, configured.ads)
 				assert.Equal(t, prototype.sf, configured.sf)
-				assert.Equal(t, time.Duration(0), prototype.ttl)
+				assert.Nil(t, prototype.ttl)
 				assert.NotEqual(t, prototype.ttl, configured.ttl)
-				assert.Equal(t, 5*time.Second, configured.ttl)
+				assert.Equal(t, &fiveSecondsTTL, configured.ttl)
 				assert.Equal(t, prototype.IsFallbackOnErrorAllowed(), configured.IsFallbackOnErrorAllowed())
 			},
 		},
@@ -317,8 +322,8 @@ cache_ttl: 15s`),
 				assert.Equal(t, prototype.ads, configured.ads)
 				assert.Equal(t, prototype.sf, configured.sf)
 				assert.NotEqual(t, prototype.ttl, configured.ttl)
-				assert.Equal(t, 15*time.Second, configured.ttl)
-				assert.Equal(t, 5*time.Second, prototype.ttl)
+				assert.Equal(t, &fifteenSecondsTTL, configured.ttl)
+				assert.Equal(t, &fiveSecondsTTL, prototype.ttl)
 				assert.Equal(t, prototype.IsFallbackOnErrorAllowed(), configured.IsFallbackOnErrorAllowed())
 			},
 		},
