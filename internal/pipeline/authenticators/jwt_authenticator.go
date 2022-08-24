@@ -59,7 +59,7 @@ type jwtAuthenticator struct {
 func newJwtAuthenticator(rawConfig map[string]any) (*jwtAuthenticator, error) {
 	type Config struct {
 		Endpoint             endpoint.Endpoint                   `mapstructure:"jwks_endpoint"`
-		AuthDataSource       extractors.CompositeExtractStrategy `mapstructure:"jwt_from"`
+		AuthDataSource       extractors.CompositeExtractStrategy `mapstructure:"jwt_source"`
 		Assertions           oauth2.Expectation                  `mapstructure:"assertions"`
 		Session              Session                             `mapstructure:"session"`
 		CacheTTL             *time.Duration                      `mapstructure:"cache_ttl"`
