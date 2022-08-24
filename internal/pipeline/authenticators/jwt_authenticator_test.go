@@ -70,7 +70,7 @@ func TestCreateJwtAuthenticator(t *testing.T) {
 		{
 			uc: "with unsupported fields",
 			config: []byte(`
-jwt_from:
+jwt_source:
   - header: foo-header
 foo: bar
 `),
@@ -85,7 +85,7 @@ foo: bar
 		{
 			uc: "missing jwks url config",
 			config: []byte(`
-jwt_from:
+jwt_source:
   - header: foo-header
 assertions:
   issuers:
@@ -242,7 +242,7 @@ jwks_endpoint:
   method: POST
   headers:
     Accept-Type: application/foobar
-jwt_from:
+jwt_source:
   - header: foo-header
     schema: foo
   - query_parameter: foo_query_param
