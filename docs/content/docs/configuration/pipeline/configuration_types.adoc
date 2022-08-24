@@ -505,7 +505,7 @@ This matcher enables matching scopes using wildcards. It goes beyond the link:{{
 
 This matcher can only be used by explicitly setting the `matching_strategy` to `wildcard` and defining the required patterns in the `values` property.
 
-== Session
+== Subject
 
 This configuration type enables extraction of subject information from responses received by Heimdall from authentication services. Following properties are available.
 

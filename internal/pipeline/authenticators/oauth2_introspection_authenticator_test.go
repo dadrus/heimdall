@@ -40,7 +40,7 @@ func TestCreateOAuth2IntrospectionAuthenticator(t *testing.T) {
 assertions:
   issuers:
     - foobar
-session:
+subject:
   id_from: some_template
 foo: bar
 `),
@@ -58,7 +58,7 @@ foo: bar
 assertions:
   issuers:
     - foobar
-session:
+subject:
   id_from: some_template
 `),
 			assert: func(t *testing.T, err error, _ *oauth2IntrospectionAuthenticator) {
@@ -74,7 +74,7 @@ session:
 			config: []byte(`
 introspection_endpoint:
   url: foobar.local
-session:
+subject:
   id_from: some_template
 `),
 			assert: func(t *testing.T, err error, _ *oauth2IntrospectionAuthenticator) {
@@ -86,7 +86,7 @@ session:
 			},
 		},
 		{
-			uc: "with missing session config",
+			uc: "with missing subject config",
 			config: []byte(`
 introspection_endpoint:
   url: foobar.local
@@ -113,7 +113,7 @@ introspection_endpoint:
 assertions:
   issuers:
     - foobar
-session:
+subject:
   id_from: some_template
 `),
 			assert: func(t *testing.T, err error, auth *oauth2IntrospectionAuthenticator) {
@@ -179,7 +179,7 @@ assertions:
     - foobar
   allowed_algorithms:
     - ES256
-session:
+subject:
   id_from: some_claim
 cache_ttl: 5s
 allow_fallback_on_error: true
@@ -260,7 +260,7 @@ introspection_endpoint:
 assertions:
   issuers:
     - foobar
-session:
+subject:
   id_from: some_template`),
 			assert: func(t *testing.T, err error, prototype *oauth2IntrospectionAuthenticator,
 				configured *oauth2IntrospectionAuthenticator,
@@ -280,7 +280,7 @@ introspection_endpoint:
 assertions:
   issuers:
     - foobar
-session:
+subject:
   id_from: some_template`),
 			config: []byte(`foo: bar`),
 			assert: func(t *testing.T, err error, _ *oauth2IntrospectionAuthenticator,
@@ -303,7 +303,7 @@ assertions:
     - foobar
   audience:
     - baz
-session:
+subject:
   id_from: some_template`),
 			config: []byte(`
 assertions:
@@ -342,7 +342,7 @@ introspection_endpoint:
 assertions:
   issuers:
     - foobar
-session:
+subject:
   id_from: some_template`),
 			config: []byte(`cache_ttl: 5s`),
 			assert: func(t *testing.T, err error, prototype *oauth2IntrospectionAuthenticator,
@@ -370,7 +370,7 @@ introspection_endpoint:
 assertions:
   issuers:
     - foobar
-session:
+subject:
   id_from: some_template
 cache_ttl: 5s`),
 			config: []byte(`
@@ -405,7 +405,7 @@ introspection_endpoint:
 assertions:
   issuers:
     - foobar
-session:
+subject:
   id_from: some_template`),
 			config: []byte(`allow_fallback_on_error: true`),
 			assert: func(t *testing.T, err error, prototype *oauth2IntrospectionAuthenticator,

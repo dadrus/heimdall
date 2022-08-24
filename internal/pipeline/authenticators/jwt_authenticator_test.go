@@ -90,7 +90,7 @@ jwt_source:
 assertions:
   issuers:
     - foobar
-session:
+subject:
   id_from: some_template`),
 			assert: func(t *testing.T, err error, a *jwtAuthenticator) {
 				t.Helper()
@@ -108,7 +108,7 @@ jwks_endpoint:
 assertions:
   audience:
     - foobar
-session:
+subject:
   id_from: some_template`),
 			assert: func(t *testing.T, err error, a *jwtAuthenticator) {
 				t.Helper()
@@ -158,7 +158,7 @@ assertions:
 				})
 				assert.Equal(t, time.Duration(0), auth.a.ValidityLeeway)
 
-				// session settings
+				// subject settings
 				sess, ok := auth.sf.(*SubjectInfo)
 				require.True(t, ok)
 				assert.Equal(t, "sub", sess.IDFrom)
@@ -216,7 +216,7 @@ cache_ttl: 5s`),
 				})
 				assert.Equal(t, time.Duration(0), auth.a.ValidityLeeway)
 
-				// session settings
+				// subject settings
 				sess, ok := auth.sf.(*SubjectInfo)
 				require.True(t, ok)
 				assert.Equal(t, "sub", sess.IDFrom)
@@ -256,7 +256,7 @@ assertions:
     - foobar
   allowed_algorithms:
     - ES256
-session:
+subject:
   id_from: some_claim
 allow_fallback_on_error: true
 validate_jwk: false
@@ -293,7 +293,7 @@ trust_store: ` + trustStorePath),
 				assert.ElementsMatch(t, auth.a.AllowedAlgorithms, []string{string(jose.ES256)})
 				assert.Equal(t, time.Duration(0), auth.a.ValidityLeeway)
 
-				// session settings
+				// subject settings
 				sess, ok := auth.sf.(*SubjectInfo)
 				require.True(t, ok)
 				assert.Equal(t, "some_claim", sess.IDFrom)

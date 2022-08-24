@@ -229,18 +229,18 @@
         }
       }
     },
-    "sessionConfiguration": {
-      "description": "Session information about the subject to maintain",
+    "subjectConfiguration": {
+      "description": "Configuration of where to get subject information/attributes from",
       "type": "object",
       "additionalProperties": false,
       "properties": {
         "attributes_from": {
-          "description": "The `attributes` field in the Heimdall authentication session is set using this JSON Path. Defaults to `@this` (for the root element), `foo.bar` (for key foo.bar), or any other valid GJSON path. See [GSJON Syntax](https://github.com/tidwall/gjson/blob/master/SYNTAX.md) for reference.",
+          "description": "The `attributes` field in the Heimdall's subject object is set using this JSON Path. Defaults to `@this` (for the root element), `foo.bar` (for key foo.bar), or any other valid GJSON path. See [GSJON Syntax](https://github.com/tidwall/gjson/blob/master/SYNTAX.md) for reference.",
           "type": "string",
           "default": "@this"
         },
         "id_from": {
-          "description": "The `id` field in the Heimdall authentication session is set using this JSON Path. See [GSJON Syntax](https://github.com/tidwall/gjson/blob/master/SYNTAX.md) for reference.",
+          "description": "The `id` field in the Heimdall's subject object is set using this JSON Path. See [GSJON Syntax](https://github.com/tidwall/gjson/blob/master/SYNTAX.md) for reference.",
           "type": "string"
         }
       }
@@ -645,8 +645,8 @@
             "authentication_data_source": {
               "$ref": "#/definitions/authenticationDataSource"
             },
-            "session": {
-              "$ref": "#/definitions/sessionConfiguration"
+            "subject": {
+              "$ref": "#/definitions/subjectConfiguration"
             },
             "cache_ttl": {
               "type": "string",
@@ -697,8 +697,8 @@
             "assertions": {
               "$ref": "#/definitions/assertionRequirements"
             },
-            "session": {
-              "$ref": "#/definitions/sessionConfiguration"
+            "subject": {
+              "$ref": "#/definitions/subjectConfiguration"
             },
             "cache_ttl": {
               "type": "string",
@@ -749,8 +749,8 @@
             "assertions": {
               "$ref": "#/definitions/assertionRequirements"
             },
-            "session": {
-              "$ref": "#/definitions/sessionConfiguration"
+            "subject": {
+              "$ref": "#/definitions/subjectConfiguration"
             },
             "cache_ttl": {
               "type": "string",
@@ -994,7 +994,7 @@
       }
     },
     "mutatorJwt": {
-      "description": "Creates a JWT Token from the given session information",
+      "description": "Creates a JWT Token from the given subject information",
       "type": "object",
       "additionalProperties": false,
       "required": [

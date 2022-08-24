@@ -116,7 +116,7 @@ The endpoint to communicate to for the actual subject authentication status veri
 +
 Where to extract the authentication data from the request. This authenticator will use the matched authentication data source as is while sending it to the `identity_info_endpoint`.
 
-* *`session`*: _link:{{< relref "configuration_types.adoc#_session" >}}[Session]_ (mandatory, not overridable)
+* *`subject`*: _link:{{< relref "configuration_types.adoc#_subject" >}}[Subject]_ (mandatory, not overridable)
 +
 Where to extract the subject id from the identity info endpoint response, as well as which attributes to use.
 
@@ -142,7 +142,7 @@ config:
     url: http://my-auth.system/sessions/whoami
   authentication_data_source:
     - cookie: my_session
-  session:
+  subject:
     id_from: "identity.id"
   cache_ttl: 5m
 ----
@@ -169,7 +169,7 @@ config:
   authentication_data_source:
     - header: X-Custom-Bearer-Token
       schema: Bearer
-  session:
+  subject:
     id_from: "sub"
   cache_ttl: 5m
 ----
@@ -197,7 +197,7 @@ Where to get the access token from. Defaults to retrieve it from the `Authorizat
 +
 Configures the required claim assertions. Overriding on rule level is possible even partially. Those parts of the assertion, which have not been overridden are taken from the prototype configuration.
 
-* *`session`*: _link:{{< relref "configuration_types.adoc#_session" >}}[Session]_ (optional, not overridable)
+* *`subject`*: _link:{{< relref "configuration_types.adoc#_subject" >}}[Subject]_ (optional, not overridable)
 +
 Where to extract the subject id from the introspection endpoint response, as well as which attributes to use. If not configured `sub` is used to extract the subject id and all attributes from the introspection endpoint response are made available as attributes of the subject.
 
@@ -244,7 +244,7 @@ Where to get the access token from. Defaults to retrieve it from the `Authorizat
 +
 Configures the required claim assertions. Overriding on rule level is possible even partially. Those parts of the assertion, which have not been overridden are taken from the prototype configuration.
 
-* *`session`*: _link:{{< relref "configuration_types.adoc#_session" >}}[Session]_ (optional, not overridable)
+* *`subject`*: _link:{{< relref "configuration_types.adoc#_subject" >}}[Subject]_ (optional, not overridable)
 +
 Where to extract the subject id from the JWT, as well as which attributes to use. If not configured `sub` is used to extract the subject id and all attributes from the JWT payload are made available as attributes of the subject.
 

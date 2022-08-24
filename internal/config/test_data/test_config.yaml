@@ -113,7 +113,7 @@ pipeline:
             give_up_after: 2s
         authentication_data_source:
           - cookie: ory_kratos_session
-        session:
+        subject:
           attributes_from: "@this"
           id_from: "identity.id"
         allow_fallback_on_error: true
@@ -141,7 +141,7 @@ pipeline:
             - bar
           audience:
             - bla
-        session:
+        subject:
           attributes_from: "@this"
           id_from: sub
         allow_fallback_on_error: true
@@ -163,7 +163,7 @@ pipeline:
             - RSA
           issuers:
             - bla
-        session:
+        subject:
           attributes_from: "@this"
           id_from: "identity.id"
         cache_ttl: 5m

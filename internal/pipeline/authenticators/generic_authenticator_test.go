@@ -36,7 +36,7 @@ func TestCreateGenericAuthenticator(t *testing.T) {
 foo: bar
 identity_info_endpoint:
   url: http://test.com
-session:
+subject:
   id_from: some_template`),
 			assertError: func(t *testing.T, err error, auth *genericAuthenticator) {
 				t.Helper()
@@ -51,7 +51,7 @@ session:
 			config: []byte(`
 authentication_data_source:
   - header: foo-header
-session:
+subject:
   id_from: some_template`),
 			assertError: func(t *testing.T, err error, auth *genericAuthenticator) {
 				t.Helper()
@@ -62,7 +62,7 @@ session:
 			},
 		},
 		{
-			uc: "missing session config",
+			uc: "missing subject config",
 			config: []byte(`
 identity_info_endpoint:
   url: http://test.com
@@ -73,7 +73,7 @@ authentication_data_source:
 
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "session configuration")
+				assert.Contains(t, err.Error(), "subject configuration")
 			},
 		},
 		{
@@ -81,7 +81,7 @@ authentication_data_source:
 			config: []byte(`
 identity_info_endpoint:
   url: http://test.com
-session:
+subject:
   id_from: some_template`),
 			assertError: func(t *testing.T, err error, auth *genericAuthenticator) {
 				t.Helper()
@@ -99,7 +99,7 @@ identity_info_endpoint:
   method: GET
 authentication_data_source:
   - header: foo-header
-session:
+subject:
   id_from: some_template`),
 			assertError: func(t *testing.T, err error, auth *genericAuthenticator) {
 				t.Helper()
@@ -126,7 +126,7 @@ identity_info_endpoint:
   method: POST
 authentication_data_source:
   - cookie: foo-cookie
-session:
+subject:
   id_from: some_template
 cache_ttl: 5s`),
 			assertError: func(t *testing.T, err error, auth *genericAuthenticator) {
@@ -154,7 +154,7 @@ identity_info_endpoint:
   method: POST
 authentication_data_source:
   - cookie: foo-cookie
-session:
+subject:
   id_from: some_template
 allow_fallback_on_error: true`),
 			assertError: func(t *testing.T, err error, auth *genericAuthenticator) {
@@ -206,7 +206,7 @@ identity_info_endpoint:
   method: POST
 authentication_data_source:
   - header: foo-header
-session:
+subject:
   id_from: some_template
 allow_fallback_on_error: true`),
 			assert: func(t *testing.T, err error, prototype *genericAuthenticator,
@@ -227,7 +227,7 @@ identity_info_endpoint:
   method: POST
 authentication_data_source:
   - header: foo-header
-session:
+subject:
   id_from: some_template`),
 			config: []byte(`foo: bar`),
 			assert: func(t *testing.T, err error, prototype *genericAuthenticator,
@@ -248,7 +248,7 @@ identity_info_endpoint:
   method: POST
 authentication_data_source:
   - header: foo-header
-session:
+subject:
   id_from: some_template`),
 			config: []byte(`cache_ttl: 5s`),
 			assert: func(t *testing.T, err error, prototype *genericAuthenticator,
@@ -275,7 +275,7 @@ identity_info_endpoint:
   method: POST
 authentication_data_source:
   - header: foo-header
-session:
+subject:
   id_from: some_template`),
 			config: []byte(`allow_fallback_on_error: true`),
 			assert: func(t *testing.T, err error, prototype *genericAuthenticator,
@@ -301,7 +301,7 @@ identity_info_endpoint:
   method: POST
 authentication_data_source:
   - header: foo-header
-session:
+subject:
   id_from: some_template
 cache_ttl: 5s`),
 			config: []byte(`
