@@ -91,7 +91,7 @@ assertions:
   issuers:
     - foobar
 session:
-  subject_id_from: some_template`),
+  id_from: some_template`),
 			assert: func(t *testing.T, err error, a *jwtAuthenticator) {
 				t.Helper()
 
@@ -109,7 +109,7 @@ assertions:
   audience:
     - foobar
 session:
-  subject_id_from: some_template`),
+  id_from: some_template`),
 			assert: func(t *testing.T, err error, a *jwtAuthenticator) {
 				t.Helper()
 
@@ -257,7 +257,7 @@ assertions:
   allowed_algorithms:
     - ES256
 session:
-  subject_id_from: some_claim
+  id_from: some_claim
 allow_fallback_on_error: true
 validate_jwk: false
 trust_store: ` + trustStorePath),

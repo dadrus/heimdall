@@ -234,12 +234,12 @@
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "subject_attributes_from": {
+        "attributes_from": {
           "description": "The `attributes` field in the Heimdall authentication session is set using this JSON Path. Defaults to `@this` (for the root element), `foo.bar` (for key foo.bar), or any other valid GJSON path. See [GSJON Syntax](https://github.com/tidwall/gjson/blob/master/SYNTAX.md) for reference.",
           "type": "string",
           "default": "@this"
         },
-        "subject_id_from": {
+        "id_from": {
           "description": "The `id` field in the Heimdall authentication session is set using this JSON Path. See [GSJON Syntax](https://github.com/tidwall/gjson/blob/master/SYNTAX.md) for reference.",
           "type": "string"
         }

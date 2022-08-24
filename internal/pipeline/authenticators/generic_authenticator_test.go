@@ -37,7 +37,7 @@ foo: bar
 identity_info_endpoint:
   url: http://test.com
 session:
-  subject_id_from: some_template`),
+  id_from: some_template`),
 			assertError: func(t *testing.T, err error, auth *genericAuthenticator) {
 				t.Helper()
 
@@ -52,7 +52,7 @@ session:
 authentication_data_source:
   - header: foo-header
 session:
-  subject_id_from: some_template`),
+  id_from: some_template`),
 			assertError: func(t *testing.T, err error, auth *genericAuthenticator) {
 				t.Helper()
 
@@ -82,7 +82,7 @@ authentication_data_source:
 identity_info_endpoint:
   url: http://test.com
 session:
-  subject_id_from: some_template`),
+  id_from: some_template`),
 			assertError: func(t *testing.T, err error, auth *genericAuthenticator) {
 				t.Helper()
 
@@ -100,7 +100,7 @@ identity_info_endpoint:
 authentication_data_source:
   - header: foo-header
 session:
-  subject_id_from: some_template`),
+  id_from: some_template`),
 			assertError: func(t *testing.T, err error, auth *genericAuthenticator) {
 				t.Helper()
 
@@ -127,7 +127,7 @@ identity_info_endpoint:
 authentication_data_source:
   - cookie: foo-cookie
 session:
-  subject_id_from: some_template
+  id_from: some_template
 cache_ttl: 5s`),
 			assertError: func(t *testing.T, err error, auth *genericAuthenticator) {
 				t.Helper()
@@ -155,7 +155,7 @@ identity_info_endpoint:
 authentication_data_source:
   - cookie: foo-cookie
 session:
-  subject_id_from: some_template
+  id_from: some_template
 allow_fallback_on_error: true`),
 			assertError: func(t *testing.T, err error, auth *genericAuthenticator) {
 				t.Helper()
@@ -207,7 +207,7 @@ identity_info_endpoint:
 authentication_data_source:
   - header: foo-header
 session:
-  subject_id_from: some_template
+  id_from: some_template
 allow_fallback_on_error: true`),
 			assert: func(t *testing.T, err error, prototype *genericAuthenticator,
 				configured *genericAuthenticator,
@@ -228,7 +228,7 @@ identity_info_endpoint:
 authentication_data_source:
   - header: foo-header
 session:
-  subject_id_from: some_template`),
+  id_from: some_template`),
 			config: []byte(`foo: bar`),
 			assert: func(t *testing.T, err error, prototype *genericAuthenticator,
 				configured *genericAuthenticator,
@@ -249,7 +249,7 @@ identity_info_endpoint:
 authentication_data_source:
   - header: foo-header
 session:
-  subject_id_from: some_template`),
+  id_from: some_template`),
 			config: []byte(`cache_ttl: 5s`),
 			assert: func(t *testing.T, err error, prototype *genericAuthenticator,
 				configured *genericAuthenticator,
@@ -276,7 +276,7 @@ identity_info_endpoint:
 authentication_data_source:
   - header: foo-header
 session:
-  subject_id_from: some_template`),
+  id_from: some_template`),
 			config: []byte(`allow_fallback_on_error: true`),
 			assert: func(t *testing.T, err error, prototype *genericAuthenticator,
 				configured *genericAuthenticator,
@@ -302,7 +302,7 @@ identity_info_endpoint:
 authentication_data_source:
   - header: foo-header
 session:
-  subject_id_from: some_template
+  id_from: some_template
 cache_ttl: 5s`),
 			config: []byte(`
 cache_ttl: 15s`),

@@ -9,8 +9,8 @@ import (
 )
 
 type SubjectInfo struct {
-	IDFrom         string `mapstructure:"subject_id_from"`
-	AttributesFrom string `mapstructure:"subject_attributes_from"`
+	IDFrom         string `mapstructure:"id_from"`
+	AttributesFrom string `mapstructure:"attributes_from"`
 }
 
 func (s *SubjectInfo) Validate() error {
