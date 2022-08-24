@@ -188,6 +188,10 @@ Configuration using the `config` property is mandatory. Following properties are
 +
 The introspection endpoint of the OAuth2 authorization provider. At least the `url` must be configured. There is no need to define the `method` property or setting the `Content-Type` or the `Accept` header. These are set by default to the values required by the https://datatracker.ietf.org/doc/html/rfc7662[OAuth 2.0 Token Introspection] RFC. You can however override these while configuring the authenticator.
 
+* *`token_source`*: _link:{{< relref "configuration_types.adoc#_authentication_data_source" >}}[Authentication Data Source]_ (optional, not overridable)
++
+Where to get the access token from. Defaults to retrieve it from the `Authorization` header, the `access_token` query parameter or the `access_token` body parameter (latter, if the body is of `application/x-www-form-urlencoded` MIME type).
+
 * *`assertions`*: _link:{{< relref "configuration_types.adoc#_assertions" >}}[Assertions]_ (mandatory, overridable)
 +
 Configures the required claim assertions. Overriding on rule level is possible even partially. Those parts of the assertion, which have not been overridden are taken from the prototype configuration.
