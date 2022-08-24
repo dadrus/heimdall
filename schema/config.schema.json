@@ -234,12 +234,12 @@
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "attributes_from": {
+        "attributes": {
           "description": "The `attributes` field in the Heimdall's subject object is set using this JSON Path. Defaults to `@this` (for the root element), `foo.bar` (for key foo.bar), or any other valid GJSON path. See [GSJON Syntax](https://github.com/tidwall/gjson/blob/master/SYNTAX.md) for reference.",
           "type": "string",
           "default": "@this"
         },
-        "id_from": {
+        "id": {
           "description": "The `id` field in the Heimdall's subject object is set using this JSON Path. See [GSJON Syntax](https://github.com/tidwall/gjson/blob/master/SYNTAX.md) for reference.",
           "type": "string"
         }

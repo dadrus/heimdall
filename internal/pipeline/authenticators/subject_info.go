@@ -9,13 +9,13 @@ import (
 )
 
 type SubjectInfo struct {
-	IDFrom         string `mapstructure:"id_from"`
-	AttributesFrom string `mapstructure:"attributes_from"`
+	IDFrom         string `mapstructure:"id"`
+	AttributesFrom string `mapstructure:"attributes"`
 }
 
 func (s *SubjectInfo) Validate() error {
 	if len(s.IDFrom) == 0 {
-		return errorchain.NewWithMessage(heimdall.ErrConfiguration, "no subject_from set")
+		return errorchain.NewWithMessage(heimdall.ErrConfiguration, "no subject.id set")
 	}
 
 	return nil

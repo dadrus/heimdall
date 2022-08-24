@@ -17,7 +17,7 @@ func TestSubjectInfoValidate(t *testing.T) {
 		assert    func(t *testing.T, err error)
 	}{
 		{
-			uc: "subject_from is set",
+			uc: "subject.id is set",
 			configure: func(t *testing.T, s *SubjectInfo) {
 				t.Helper()
 
@@ -29,7 +29,7 @@ func TestSubjectInfoValidate(t *testing.T) {
 			},
 		},
 		{
-			uc:        "subject_from is not set",
+			uc:        "subject.id is not set",
 			configure: func(t *testing.T, s *SubjectInfo) { t.Helper() },
 			assert: func(t *testing.T, err error) {
 				t.Helper()

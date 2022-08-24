@@ -143,7 +143,7 @@ config:
   authentication_data_source:
     - cookie: my_session
   subject:
-    id_from: "identity.id"
+    id: "identity.id"
   cache_ttl: 5m
 ----
 ====
@@ -170,7 +170,7 @@ config:
     - header: X-Custom-Bearer-Token
       schema: Bearer
   subject:
-    id_from: "sub"
+    id: "sub"
   cache_ttl: 5m
 ----
 

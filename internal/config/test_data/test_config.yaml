@@ -114,8 +114,8 @@ pipeline:
         authentication_data_source:
           - cookie: ory_kratos_session
         subject:
-          attributes_from: "@this"
-          id_from: "identity.id"
+          attributes: "@this"
+          id: "identity.id"
         allow_fallback_on_error: true
     - id: hydra_authenticator
       type: oauth2_introspection
@@ -142,8 +142,8 @@ pipeline:
           audience:
             - bla
         subject:
-          attributes_from: "@this"
-          id_from: sub
+          attributes: "@this"
+          id: sub
         allow_fallback_on_error: true
     - id: jwt_authenticator
       type: jwt
@@ -164,8 +164,8 @@ pipeline:
           issuers:
             - bla
         subject:
-          attributes_from: "@this"
-          id_from: "identity.id"
+          attributes: "@this"
+          id: "identity.id"
         cache_ttl: 5m
         allow_fallback_on_error: true
         validate_jwk: true
