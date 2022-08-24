@@ -366,6 +366,8 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 		responseCode        int
 	)
 
+	fiveSecondsTTL := 5 * time.Second
+
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		endpointCalled = true
 
@@ -582,7 +584,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 					},
 				},
 				sf:  &SubjectInfo{IDFrom: "user_id"},
-				ttl: 5 * time.Second,
+				ttl: &fiveSecondsTTL,
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.MockContext,
@@ -637,7 +639,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 					},
 				},
 				sf:  &SubjectInfo{IDFrom: "user_id"},
-				ttl: 5 * time.Second,
+				ttl: &fiveSecondsTTL,
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.MockContext,
@@ -675,7 +677,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 					},
 				},
 				sf:  &SubjectInfo{IDFrom: "user_id"},
-				ttl: 5 * time.Second,
+				ttl: &fiveSecondsTTL,
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.MockContext,

@@ -9,8 +9,6 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/rs/zerolog"
-
 	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
@@ -19,6 +17,7 @@ import (
 	"github.com/dadrus/heimdall/internal/pipeline/subject"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
+	"github.com/rs/zerolog"
 )
 
 // by intention. Used only during application bootstrap
@@ -40,7 +39,8 @@ type genericAuthenticator struct {
 	e                    endpoint.Endpoint
 	sf                   SubjectFactory
 	ads                  extractors.AuthDataExtractStrategy
-	ttl                  time.Duration
+	ttl                  *time.Duration
+	validityConf         *SessionConfig
 	allowFallbackOnError bool
 }
 
@@ -49,6 +49,7 @@ func newGenericAuthenticator(rawConfig map[string]any) (*genericAuthenticator, e
 		Endpoint             endpoint.Endpoint                   `mapstructure:"identity_info_endpoint"`
 		AuthDataSource       extractors.CompositeExtractStrategy `mapstructure:"authentication_data_source"`
 		SubjectInfo          SubjectInfo                         `mapstructure:"subject"`
+		SessionInfo          *SessionConfig                      `mapstructure:"session"`
 		CacheTTL             *time.Duration                      `mapstructure:"cache_ttl"`
 		AllowFallbackOnError bool                                `mapstructure:"allow_fallback_on_error"`
 	}
@@ -79,13 +80,12 @@ func newGenericAuthenticator(rawConfig map[string]any) (*genericAuthenticator, e
 	}
 
 	return &genericAuthenticator{
-		e:   conf.Endpoint,
-		ads: conf.AuthDataSource,
-		sf:  &conf.SubjectInfo,
-		ttl: x.IfThenElseExec(conf.CacheTTL != nil,
-			func() time.Duration { return *conf.CacheTTL },
-			func() time.Duration { return 0 }),
+		e:                    conf.Endpoint,
+		ads:                  conf.AuthDataSource,
+		sf:                   &conf.SubjectInfo,
+		ttl:                  conf.CacheTTL,
 		allowFallbackOnError: conf.AllowFallbackOnError,
+		validityConf:         conf.SessionInfo,
 	}, nil
 }
 
@@ -136,9 +136,7 @@ func (a *genericAuthenticator) WithConfig(config map[string]any) (Authenticator,
 		e:   a.e,
 		sf:  a.sf,
 		ads: a.ads,
-		ttl: x.IfThenElseExec(conf.CacheTTL != nil,
-			func() time.Duration { return *conf.CacheTTL },
-			func() time.Duration { return a.ttl }),
+		ttl: x.IfThenElse(conf.CacheTTL != nil, conf.CacheTTL, a.ttl),
 		allowFallbackOnError: x.IfThenElseExec(conf.AllowFallbackOnError != nil,
 			func() bool { return *conf.AllowFallbackOnError },
 			func() bool { return a.allowFallbackOnError }),
@@ -162,7 +160,7 @@ func (a *genericAuthenticator) getSubjectInformation(ctx heimdall.Context,
 		ok             bool
 	)
 
-	if a.ttl > 0 {
+	if a.isCacheEnabled() {
 		cacheKey = a.calculateCacheKey(authData.Value())
 		cacheEntry = cch.Get(cacheKey)
 	}
@@ -183,8 +181,17 @@ func (a *genericAuthenticator) getSubjectInformation(ctx heimdall.Context,
 		return nil, err
 	}
 
-	if a.ttl > 0 {
-		cch.Set(cacheKey, payload, a.ttl)
+	validity, err := a.validityConf.CreateValidity(payload)
+	if err != nil {
+		return nil, errorchain.New(heimdall.ErrInternal).CausedBy(err)
+	}
+
+	if err = validity.Assert(); err != nil {
+		return nil, errorchain.New(heimdall.ErrAuthentication).CausedBy(err)
+	}
+
+	if cacheTTL := a.getCacheTTL(validity); cacheTTL > 0 {
+		cch.Set(cacheKey, payload, cacheTTL)
 	}
 
 	return payload, nil
@@ -231,6 +238,49 @@ func (*genericAuthenticator) readResponse(resp *http.Response) ([]byte, error) {
 	}
 
 	return rawData, nil
+}
+
+func (a *genericAuthenticator) isCacheEnabled() bool {
+	// cache is enabled if ttl is not configured (in that case the ttl value from either
+	// the jwk cert (if available) or the defaultTTL is used), or if ttl is configured and
+	// the value > 0
+	return a.ttl == nil || (a.ttl != nil && *a.ttl > 0)
+}
+
+func (a *genericAuthenticator) getCacheTTL(sessionValidity *Session) time.Duration {
+	// timeLeeway defines the default time deviation to ensure the session is still valid
+	// when used from cache
+	const timeLeeway = 10
+
+	if !a.isCacheEnabled() {
+		return 0
+	}
+
+	// we cache by default using the settings in the certificate (if available)
+	// or based on ttl. Latter overwrites the settings in the certificate
+	// if it is shorter than the ttl of the certificate
+	sessionTTL := x.IfThenElseExec(sessionValidity.naf != time.Time{},
+		func() time.Duration {
+			expiresIn := sessionValidity.naf.Unix() - time.Now().Unix() - timeLeeway
+
+			return x.IfThenElse(expiresIn > 0, time.Duration(expiresIn)*time.Second, 0)
+		},
+		func() time.Duration { return 0 })
+
+	configuredTTL := x.IfThenElseExec(a.ttl != nil,
+		func() time.Duration { return *a.ttl },
+		func() time.Duration { return defaultTTL })
+
+	switch {
+	case configuredTTL == 0 && sessionTTL == 0:
+		return 0
+	case configuredTTL == 0 && sessionTTL != 0:
+		return sessionTTL
+	case configuredTTL != 0 && sessionTTL == 0:
+		return configuredTTL
+	default:
+		return x.IfThenElse(configuredTTL < sessionTTL, configuredTTL, sessionTTL)
+	}
 }
 
 func (a *genericAuthenticator) calculateCacheKey(reference string) string {
