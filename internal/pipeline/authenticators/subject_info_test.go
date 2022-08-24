@@ -10,7 +10,7 @@ import (
 	"github.com/dadrus/heimdall/internal/pipeline/subject"
 )
 
-func TestSessionValidation(t *testing.T) {
+func TestSubjectInfoValidate(t *testing.T) {
 	for _, tc := range []struct {
 		uc        string
 		configure func(t *testing.T, s *SubjectInfo)
@@ -51,7 +51,7 @@ func TestSessionValidation(t *testing.T) {
 	}
 }
 
-func TestGetSubjectFromSession(t *testing.T) {
+func TestSubjectInfoCreateSubject(t *testing.T) {
 	type Nested struct {
 		Val bool `json:"val"`
 	}
