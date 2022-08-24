@@ -15,3 +15,11 @@ func IfThenElseExec[T any](c bool, thenFunc func() T, elseFunc func() T) T {
 
 	return elseFunc()
 }
+
+func IfThenElseExecErr[T any](c bool, thenFunc func() (T, error), elseFunc func() (T, error)) (T, error) {
+	if c {
+		return thenFunc()
+	}
+
+	return elseFunc()
+}
