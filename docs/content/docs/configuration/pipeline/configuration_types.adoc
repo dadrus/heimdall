@@ -605,7 +605,7 @@ validity_leeway: 10s
 
 .Making use of session information received from a compliant OAuth2 authorization service
 ====
-A typical response from a `token introspection` endpoint looks like follows:
+A typical response from a token `introspection` endpoint looks like follows:
 
 [source, json]
 ----
@@ -632,4 +632,7 @@ issued_at: iat
 not_after: exp
 validity_leeway: 10s
 ----
+
+As you see, there is no need to define the time format as the times values appearing in the responses from an introspection endpoint are Unix Epoch time stamps.
+
 ====
