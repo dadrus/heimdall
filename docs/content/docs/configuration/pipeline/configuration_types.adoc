@@ -541,3 +541,30 @@ This example shows how to extract the subject id from an https://www.ory.sh/docs
 id: identity.id
 ----
 ====
+
+== Session Lifespan
+This configuration type enables the configuration of session lifespans, used for session validation for those authenticators, which act on non-standard protocols. Following properties are available.
+
+* *`active`*: _string_ (optional)
++
+A https://github.com/tidwall/gjson/blob/master/SYNTAX.md[GJSON Path] pointing to the field describing the "active" status of the session in the corresponding JSON object. The actual value in that field should be convertable to a `bool` type. If not provided, or not found in the session object, the session is considered to be "active". "active" means it can be used and represent a valid session between the authentication system and the subject, the session has been issued to.
+
+* *`issued_at`*: _string_ (optional)
++
+A https://github.com/tidwall/gjson/blob/master/SYNTAX.md[GJSON Path] pointing to the field in the corresponding JSON object, describing the time, when the session object has been issued. If not provided or not found, the issuance time is not considered during session validation.
+
+* *`not_before`*: _string_ (optional)
++
+A https://github.com/tidwall/gjson/blob/master/SYNTAX.md[GJSON Path] pointing to the field in the corresponding JSON object describing the time, until which the session object is not allowed to be used. If not provided or not found, the corresponding time is not considered during session validation.
+
+* *`not_after`*: _string_ (optional)
++
+A https://github.com/tidwall/gjson/blob/master/SYNTAX.md[GJSON Path] pointing to the field in the corresponding JSON object describing the time, after which the session object is not allowed to be used. If not provided or not found, the corresponding time is not considered during session validation.
+
+* *`time_format`*: _string_ (optional)
++
+Since different authentication system use different representations for time strings, this property allows the definition of the format used by the authentication system. Defaults to Unix Epoch time stamp.
+
+* *`validity_leeway`: link:{{< relref "#_duration" >}}[Duration] (optional)
++
+Enables definition of an allowed time drift between the authentication system and heimdall for the validation of the session validity. Defaults to 0.
