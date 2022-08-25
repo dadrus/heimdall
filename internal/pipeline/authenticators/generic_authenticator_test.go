@@ -118,6 +118,7 @@ subject:
 				assert.Equal(t, &SubjectInfo{IDFrom: "some_template"}, auth.sf)
 				assert.Nil(t, auth.ttl)
 				assert.False(t, auth.IsFallbackOnErrorAllowed())
+				assert.Nil(t, auth.sessionLifespanConf)
 			},
 		},
 		{
@@ -146,6 +147,7 @@ cache_ttl: 5s`),
 				assert.Equal(t, &SubjectInfo{IDFrom: "some_template"}, auth.sf)
 				assert.Equal(t, &fiveSecondsTTL, auth.ttl)
 				assert.False(t, auth.IsFallbackOnErrorAllowed())
+				assert.Nil(t, auth.sessionLifespanConf)
 			},
 		},
 		{
@@ -174,6 +176,48 @@ allow_fallback_on_error: true`),
 				assert.Equal(t, &SubjectInfo{IDFrom: "some_template"}, auth.sf)
 				assert.Nil(t, auth.ttl)
 				assert.True(t, auth.IsFallbackOnErrorAllowed())
+				assert.Nil(t, auth.sessionLifespanConf)
+			},
+		},
+		{
+			uc: "with session lifespan config",
+			config: []byte(`
+identity_info_endpoint:
+  url: http://test.com
+  method: PATCH
+authentication_data_source:
+  - cookie: foo-cookie
+subject:
+  id: some_template
+session_lifespan:
+  active_from: foo
+  issued_at_from: bar
+  not_before_from: baz
+  not_after_from: zab
+  time_format: foo bar
+  validity_leeway: 2s`),
+			assertError: func(t *testing.T, err error, auth *genericAuthenticator) {
+				t.Helper()
+
+				require.NoError(t, err)
+
+				require.NotNil(t, auth)
+				assert.Equal(t, "http://test.com", auth.e.URL)
+				assert.Equal(t, http.MethodPatch, auth.e.Method)
+				ces, ok := auth.ads.(extractors.CompositeExtractStrategy)
+				assert.True(t, ok)
+				assert.Len(t, ces, 1)
+				assert.Contains(t, ces, &extractors.CookieValueExtractStrategy{Name: "foo-cookie"})
+				assert.Equal(t, &SubjectInfo{IDFrom: "some_template"}, auth.sf)
+				assert.Nil(t, auth.ttl)
+				assert.False(t, auth.IsFallbackOnErrorAllowed())
+				assert.NotNil(t, auth.sessionLifespanConf)
+				assert.Equal(t, "foo", auth.sessionLifespanConf.ActiveField)
+				assert.Equal(t, "bar", auth.sessionLifespanConf.IssuedAtField)
+				assert.Equal(t, "baz", auth.sessionLifespanConf.NotBeforeField)
+				assert.Equal(t, "zab", auth.sessionLifespanConf.NotAfterField)
+				assert.Equal(t, "foo bar", auth.sessionLifespanConf.TimeFormat)
+				assert.Equal(t, 2*time.Second, auth.sessionLifespanConf.ValidityLeeway)
 			},
 		},
 	} {
