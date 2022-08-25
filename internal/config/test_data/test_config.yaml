@@ -117,6 +117,7 @@ pipeline:
           attributes: "@this"
           id: "identity.id"
         allow_fallback_on_error: true
+        cache_ttl: 10m
         session_lifespan:
           active: active
           issued_at: issued_at
