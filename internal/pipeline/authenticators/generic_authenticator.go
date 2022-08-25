@@ -141,6 +141,7 @@ func (a *genericAuthenticator) WithConfig(config map[string]any) (Authenticator,
 		allowFallbackOnError: x.IfThenElseExec(conf.AllowFallbackOnError != nil,
 			func() bool { return *conf.AllowFallbackOnError },
 			func() bool { return a.allowFallbackOnError }),
+		sessionLifespanConf: a.sessionLifespanConf,
 	}, nil
 }
 
