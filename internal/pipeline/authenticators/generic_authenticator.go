@@ -21,8 +21,6 @@ import (
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
-const defaultGenericAuthenticatorTTL = 10 * time.Minute
-
 // by intention. Used only during application bootstrap
 // nolint
 func init() {
