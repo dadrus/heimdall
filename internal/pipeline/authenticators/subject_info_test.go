@@ -11,6 +11,8 @@ import (
 )
 
 func TestSubjectInfoValidate(t *testing.T) {
+	t.Parallel()
+
 	for _, tc := range []struct {
 		uc        string
 		configure func(t *testing.T, s *SubjectInfo)
@@ -52,6 +54,8 @@ func TestSubjectInfoValidate(t *testing.T) {
 }
 
 func TestSubjectInfoCreateSubject(t *testing.T) {
+	t.Parallel()
+
 	type Nested struct {
 		Val bool `json:"val"`
 	}
