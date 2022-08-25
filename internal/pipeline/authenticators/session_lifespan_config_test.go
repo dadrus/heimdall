@@ -8,22 +8,22 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestSessionConfigCreateSession(t *testing.T) {
+func TestSessionLifespanConfigCreateSession(t *testing.T) {
 	t.Parallel()
 
 	for _, tc := range []struct {
 		uc        string
 		data      []byte
-		configure func(t *testing.T, conf *SessionConfig)
-		assert    func(t *testing.T, session *Session, err error)
+		configure func(t *testing.T, conf *SessionLifespanConfig)
+		assert    func(t *testing.T, session *SessionLifespan, err error)
 	}{
 		{
 			uc:   "empty session config",
 			data: []byte(`{"foo":"bar"}`),
-			configure: func(t *testing.T, _ *SessionConfig) {
+			configure: func(t *testing.T, _ *SessionLifespanConfig) {
 				t.Helper()
 			},
-			assert: func(t *testing.T, session *Session, err error) {
+			assert: func(t *testing.T, session *SessionLifespan, err error) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -38,12 +38,12 @@ func TestSessionConfigCreateSession(t *testing.T) {
 		{
 			uc:   "only active field is defined in session config",
 			data: []byte(`{"foo":"false"}`),
-			configure: func(t *testing.T, conf *SessionConfig) {
+			configure: func(t *testing.T, conf *SessionLifespanConfig) {
 				t.Helper()
 
 				conf.ActiveField = "foo"
 			},
-			assert: func(t *testing.T, session *Session, err error) {
+			assert: func(t *testing.T, session *SessionLifespan, err error) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -58,12 +58,12 @@ func TestSessionConfigCreateSession(t *testing.T) {
 		{
 			uc:   "only issued at field is defined in session config",
 			data: []byte(`{"data": { "val": 1661408890 } }`),
-			configure: func(t *testing.T, conf *SessionConfig) {
+			configure: func(t *testing.T, conf *SessionLifespanConfig) {
 				t.Helper()
 
 				conf.IssuedAtField = "data.val"
 			},
-			assert: func(t *testing.T, session *Session, err error) {
+			assert: func(t *testing.T, session *SessionLifespan, err error) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -78,13 +78,13 @@ func TestSessionConfigCreateSession(t *testing.T) {
 		{
 			uc:   "issued at and time format fields are defined in session config",
 			data: []byte(`{"data": { "val": "Tue 25 Aug 2022 07:30:15 CET" } }`),
-			configure: func(t *testing.T, conf *SessionConfig) {
+			configure: func(t *testing.T, conf *SessionLifespanConfig) {
 				t.Helper()
 
 				conf.IssuedAtField = "data.val"
 				conf.TimeFormat = "Mon 02 Jan 2006 15:04:05 MST"
 			},
-			assert: func(t *testing.T, session *Session, err error) {
+			assert: func(t *testing.T, session *SessionLifespan, err error) {
 				t.Helper()
 
 				timeVal, err2 := time.Parse("Mon 02 Jan 2006 15:04:05 MST", "Tue 25 Aug 2022 07:30:15 CET")
@@ -102,30 +102,30 @@ func TestSessionConfigCreateSession(t *testing.T) {
 		{
 			uc:   "issued at and time format fields are defined in session config, with bad time format",
 			data: []byte(`{"data": { "val": "Tue 25 Aug 2022 07:30:15 CET" } }`),
-			configure: func(t *testing.T, conf *SessionConfig) {
+			configure: func(t *testing.T, conf *SessionLifespanConfig) {
 				t.Helper()
 
 				conf.IssuedAtField = "data.val"
 				conf.TimeFormat = "Fri 02 Jan 2022 15:04:05 MST"
 			},
-			assert: func(t *testing.T, session *Session, err error) {
+			assert: func(t *testing.T, session *SessionLifespan, err error) {
 				t.Helper()
 
 				require.Nil(t, session)
 				require.Error(t, err)
-				assert.ErrorIs(t, err, ErrSessionParseError)
+				assert.ErrorIs(t, err, ErrSessionLifespanParseError)
 				assert.Contains(t, err.Error(), "issued_at")
 			},
 		},
 		{
 			uc:   "only not before field is defined in session config",
 			data: []byte(`{"data": { "val": 1661408890 } }`),
-			configure: func(t *testing.T, conf *SessionConfig) {
+			configure: func(t *testing.T, conf *SessionLifespanConfig) {
 				t.Helper()
 
 				conf.NotBeforeField = "data.val"
 			},
-			assert: func(t *testing.T, session *Session, err error) {
+			assert: func(t *testing.T, session *SessionLifespan, err error) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -140,13 +140,13 @@ func TestSessionConfigCreateSession(t *testing.T) {
 		{
 			uc:   "not before and time format fields are defined in session config",
 			data: []byte(`{"data": { "val": "Tue 25 Aug 2022 07:30:15 CET" } }`),
-			configure: func(t *testing.T, conf *SessionConfig) {
+			configure: func(t *testing.T, conf *SessionLifespanConfig) {
 				t.Helper()
 
 				conf.NotBeforeField = "data.val"
 				conf.TimeFormat = "Mon 02 Jan 2006 15:04:05 MST"
 			},
-			assert: func(t *testing.T, session *Session, err error) {
+			assert: func(t *testing.T, session *SessionLifespan, err error) {
 				t.Helper()
 
 				timeVal, err2 := time.Parse("Mon 02 Jan 2006 15:04:05 MST", "Tue 25 Aug 2022 07:30:15 CET")
@@ -164,30 +164,30 @@ func TestSessionConfigCreateSession(t *testing.T) {
 		{
 			uc:   "not before and time format fields are defined in session config, with bad time format",
 			data: []byte(`{"data": { "val": "Tue 25 Aug 2022 07:30:15 CET" } }`),
-			configure: func(t *testing.T, conf *SessionConfig) {
+			configure: func(t *testing.T, conf *SessionLifespanConfig) {
 				t.Helper()
 
 				conf.NotBeforeField = "data.val"
 				conf.TimeFormat = "Fri 02 Jan 2022 15:04:05 MST"
 			},
-			assert: func(t *testing.T, session *Session, err error) {
+			assert: func(t *testing.T, session *SessionLifespan, err error) {
 				t.Helper()
 
 				require.Nil(t, session)
 				require.Error(t, err)
-				assert.ErrorIs(t, err, ErrSessionParseError)
+				assert.ErrorIs(t, err, ErrSessionLifespanParseError)
 				assert.Contains(t, err.Error(), "not_before")
 			},
 		},
 		{
 			uc:   "only not after field is defined in session config",
 			data: []byte(`{"data": { "val": 1661408890 } }`),
-			configure: func(t *testing.T, conf *SessionConfig) {
+			configure: func(t *testing.T, conf *SessionLifespanConfig) {
 				t.Helper()
 
 				conf.NotAfterField = "data.val"
 			},
-			assert: func(t *testing.T, session *Session, err error) {
+			assert: func(t *testing.T, session *SessionLifespan, err error) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -202,13 +202,13 @@ func TestSessionConfigCreateSession(t *testing.T) {
 		{
 			uc:   "not after and time format fields are defined in session config",
 			data: []byte(`{"data": { "val": "Tue 25 Aug 2022 07:30:15 CET" } }`),
-			configure: func(t *testing.T, conf *SessionConfig) {
+			configure: func(t *testing.T, conf *SessionLifespanConfig) {
 				t.Helper()
 
 				conf.NotAfterField = "data.val"
 				conf.TimeFormat = "Mon 02 Jan 2006 15:04:05 MST"
 			},
-			assert: func(t *testing.T, session *Session, err error) {
+			assert: func(t *testing.T, session *SessionLifespan, err error) {
 				t.Helper()
 
 				timeVal, err2 := time.Parse("Mon 02 Jan 2006 15:04:05 MST", "Tue 25 Aug 2022 07:30:15 CET")
@@ -226,29 +226,29 @@ func TestSessionConfigCreateSession(t *testing.T) {
 		{
 			uc:   "not after and time format fields are defined in session config, with bad time format",
 			data: []byte(`{"data": { "val": "Tue 25 Aug 2022 07:30:15 CET" } }`),
-			configure: func(t *testing.T, conf *SessionConfig) {
+			configure: func(t *testing.T, conf *SessionLifespanConfig) {
 				t.Helper()
 
 				conf.NotAfterField = "data.val"
 				conf.TimeFormat = "Fri 02 Jan 2022 15:04:05 MST"
 			},
-			assert: func(t *testing.T, session *Session, err error) {
+			assert: func(t *testing.T, session *SessionLifespan, err error) {
 				t.Helper()
 
 				require.Nil(t, session)
 				require.Error(t, err)
-				assert.ErrorIs(t, err, ErrSessionParseError)
+				assert.ErrorIs(t, err, ErrSessionLifespanParseError)
 				assert.Contains(t, err.Error(), "not_after")
 			},
 		},
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
 			// GIVEN
-			s := SessionConfig{}
+			s := SessionLifespanConfig{}
 			tc.configure(t, &s)
 
 			// WHEN
-			session, err := s.CreateSession(tc.data)
+			session, err := s.CreateSessionLifespan(tc.data)
 
 			// THEN
 			tc.assert(t, session, err)
