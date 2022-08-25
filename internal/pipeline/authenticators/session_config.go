@@ -1,6 +1,7 @@
 package authenticators
 
 import (
+	"strconv"
 	"time"
 
 	"github.com/tidwall/gjson"
@@ -24,12 +25,10 @@ func (vc *SessionConfig) CreateSession(rawData []byte) (*Session, error) {
 	notBeforeValue := gjson.GetBytes(rawData, vc.NotBeforeField)
 	notAfterValue := gjson.GetBytes(rawData, vc.NotAfterField)
 
-	parseTime := TimeParser(vc.TimeFormat)
-
 	isActive := x.IfThenElseExec(activeValue.Exists(), activeValue.Bool, func() bool { return true })
 
 	issuedAt, err := x.IfThenElseExecErr(issuedAtValue.Exists(),
-		func() (time.Time, error) { return parseTime(issuedAtValue.String()) },
+		func() (time.Time, error) { return vc.parseTime(issuedAtValue.String()) },
 		func() (time.Time, error) { return time.Time{}, nil })
 	if err != nil {
 		return nil, errorchain.NewWithMessage(ErrSessionValidity,
@@ -37,7 +36,7 @@ func (vc *SessionConfig) CreateSession(rawData []byte) (*Session, error) {
 	}
 
 	notBefore, err := x.IfThenElseExecErr(notBeforeValue.Exists(),
-		func() (time.Time, error) { return parseTime(notBeforeValue.String()) },
+		func() (time.Time, error) { return vc.parseTime(notBeforeValue.String()) },
 		func() (time.Time, error) { return time.Time{}, nil })
 	if err != nil {
 		return nil, errorchain.NewWithMessage(ErrSessionValidity,
@@ -45,7 +44,7 @@ func (vc *SessionConfig) CreateSession(rawData []byte) (*Session, error) {
 	}
 
 	notAfter, err := x.IfThenElseExecErr(notAfterValue.Exists(),
-		func() (time.Time, error) { return parseTime(notAfterValue.String()) },
+		func() (time.Time, error) { return vc.parseTime(notAfterValue.String()) },
 		func() (time.Time, error) { return time.Time{}, nil })
 	if err != nil {
 		return nil, errorchain.NewWithMessage(ErrSessionValidity,
@@ -59,4 +58,23 @@ func (vc *SessionConfig) CreateSession(rawData []byte) (*Session, error) {
 		naf:    notAfter,
 		leeway: vc.ValidityLeeway,
 	}, nil
+}
+
+func (vc *SessionConfig) parseTime(value string) (time.Time, error) {
+	const (
+		base10    = 10
+		bitSize64 = 64
+	)
+
+	// if time format is not set, unix epoch time stamp is assumed
+	if len(vc.TimeFormat) == 0 {
+		intVal, err := strconv.ParseInt(value, base10, bitSize64)
+		if err != nil {
+			return time.Time{}, err
+		}
+
+		return time.Unix(intVal, 0), nil
+	}
+
+	return time.Parse(vc.TimeFormat, value)
 }
