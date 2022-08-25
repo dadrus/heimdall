@@ -190,10 +190,10 @@ authentication_data_source:
 subject:
   id: some_template
 session_lifespan:
-  active_from: foo
-  issued_at_from: bar
-  not_before_from: baz
-  not_after_from: zab
+  active: foo
+  issued_at: bar
+  not_before: baz
+  not_after: zab
   time_format: foo bar
   validity_leeway: 2s`),
 			assertError: func(t *testing.T, err error, auth *genericAuthenticator) {
@@ -386,10 +386,10 @@ subject:
   id: some_template
 cache_ttl: 5s
 session_lifespan:
-  active_from: foo
-  issued_at_from: bar
-  not_before_from: baz
-  not_after_from: zab
+  active: foo
+  issued_at: bar
+  not_before: baz
+  not_after: zab
   time_format: foo bar
   validity_leeway: 2s`),
 			assert: func(t *testing.T, err error, prototype *genericAuthenticator,
@@ -498,7 +498,7 @@ subject:
   id: some_template`),
 			config: []byte(`
 session_lifespan:
-  active_from: foo
+  active: foo
 `),
 			assert: func(t *testing.T, err error, prototype *genericAuthenticator,
 				configured *genericAuthenticator,
