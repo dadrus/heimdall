@@ -565,6 +565,8 @@ A https://github.com/tidwall/gjson/blob/master/SYNTAX.md[GJSON Path] pointing to
 +
 Since different authentication system use different representations for time strings, this property allows the definition of the https://pkg.go.dev/time#pkg-constants[time format/layout] used by the authentication system. Defaults to Unix Epoch time stamp.
 
+NOTE: You can use the following https://go.dev/play/p/VjtvWMmp-Ua[Go Playground] link to test your time format settings.
+
 * *`validity_leeway`: link:{{< relref "#_duration" >}}[Duration] (optional)
 +
 Enables definition of an allowed time drift between the authentication system and heimdall for the validation of the session validity. Defaults to 0.
