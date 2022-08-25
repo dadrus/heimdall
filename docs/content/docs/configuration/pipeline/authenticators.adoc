@@ -128,7 +128,7 @@ How long to cache the response. If not set, response caching if disabled. The ca
 +
 If set to `true`, allows the pipeline to fall back to the next authenticator in the pipeline if this one fails to verify the credentials. Defaults to `false`.
 
-* *`session_lifespan`*: _link:{{< relref "configuration_types.adoc#_session_lifespan" >}}[Session Lifespan]_ (optional)
+* *`session_lifespan`*: _link:{{< relref "configuration_types.adoc#_session_lifespan" >}}[Session Lifespan]_ (optional, not overridable)
 +
 Where to extract the session validity information form the identity info endpoint response. If the `not_after` property is specified, the corresponding value from the response is also used for cache ttl calculation to prevent usage of not anymore valid session objects and overwrites the value configured for `cache_ttl` if the usage of that value would exceed the lifespan of the session object.
 +
