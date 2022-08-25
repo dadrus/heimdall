@@ -234,7 +234,7 @@ session_lifespan:
 	}
 }
 
-func TestCreateGenericAuthenticatorFromPrototype(t *testing.T) {
+func TestCreateGenericAuthenticatorFromPrototype(t *testing.T) { // nolint: maintidx
 	t.Parallel()
 
 	fiveSecondsTTL := 5 * time.Second
