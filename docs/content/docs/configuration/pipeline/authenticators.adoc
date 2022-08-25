@@ -128,9 +128,11 @@ How long to cache the response. If not set, response caching if disabled. The ca
 +
 If set to `true`, allows the pipeline to fall back to the next authenticator in the pipeline if this one fails to verify the credentials. Defaults to `false`.
 
-* *`session_lifespan`*: _link:{{< relref "configuration_types.adoc#_duration" >}}[Session Lifespan]_ (optional)
+* *`session_lifespan`*: _link:{{< relref "configuration_types.adoc#_session_lifespan" >}}[Session Lifespan]_ (optional)
 +
-Where to extract the session validity information form the identity info endpoint response. Usable on JSON responses only. If the `not_after` property is specified, the corresponding value from the response is also used for cache ttl calculation to prevent usage of not anymore valid session objects and overwrites the value configured for `cache_ttl` if the usage of that value would exceed the lifespan of the session object.
+Where to extract the session validity information form the identity info endpoint response. If the `not_after` property is specified, the corresponding value from the response is also used for cache ttl calculation to prevent usage of not anymore valid session objects and overwrites the value configured for `cache_ttl` if the usage of that value would exceed the lifespan of the session object.
++
+NOTE: If you're configuring the `cache_ttl` property it is highly recommended to configure `session_lifespan` as well to ensure outdated session objects are not used for subsequent requests to heimdall. Usage of `session_lifespan` is recommended anyway to enable time based validation of the response from the identity info endpoint.
 
 .Configuration of Generic authenticator to work with session cookies
 ====

@@ -564,9 +564,72 @@ A https://github.com/tidwall/gjson/blob/master/SYNTAX.md[GJSON Path] pointing to
 * *`time_format`*: _string_ (optional)
 +
 Since different authentication system use different representations for time strings, this property allows the definition of the https://pkg.go.dev/time#pkg-constants[time format/layout] used by the authentication system. Defaults to Unix Epoch time stamp.
-
++
 NOTE: You can use the following https://go.dev/play/p/VjtvWMmp-Ua[Go Playground] link to test your time format settings.
 
-* *`validity_leeway`: link:{{< relref "#_duration" >}}[Duration] (optional)
+* *`validity_leeway`*: link:{{< relref "#_duration" >}}[Duration] (optional)
 +
 Enables definition of an allowed time drift between the authentication system and heimdall for the validation of the session validity. Defaults to 0.
+
+.Making use of session information received from Ory's Kratos
+====
+A typical response from Kratos' `whoami` endpoint looks like follows (stripped to the most interesting parts):
+
+[source, json]
+----
+{
+  "id": "1338410d-c473-4503-a96a-53efa06e2531",
+  "active": true,
+  "expires_at": "2021-10-15T15:58:57.683338Z",
+  "authenticated_at": "2021-10-14T15:58:57.683338Z",
+  "issued_at": "2021-10-14T15:58:57.683338Z",
+  "identity": {
+    "id": "9496bbd5-f426-473f-b087-c7df853f274a",
+    ...
+  }
+}
+----
+
+To enable usage of these properties in Heimdall, you can configure the Session Lifespan as follows:
+
+[source, yaml]
+----
+active: active
+issued_at: issued_at
+not_before: authenticated_at
+not_after: expires_at
+time_format: "2006-01-02T15:04:05.999999Z07"
+validity_leeway: 10s
+----
+====
+
+.Making use of session information received from a compliant OAuth2 authorization service
+====
+A typical response from a `token introspection` endpoint looks like follows:
+
+[source, json]
+----
+{
+  "active": true,
+  "client_id": "l238j323ds-23ij4",
+  "username": "jdoe",
+  "scope": "read write dolphin",
+  "sub": "Z5O3upPC88QrAjx00dis",
+  "aud": "https://protected.example.net/resource",
+  "iss": "https://server.example.com/",
+  "exp": 1419356238,
+  "iat": 1419350238,
+  "extension_field": "twenty-seven"
+ }
+----
+
+To enable usage of these properties in Heimdall, you can configure the Session Lifespan as follows:
+
+[source, yaml]
+----
+active: active
+issued_at: iat
+not_after: exp
+validity_leeway: 10s
+----
+====
