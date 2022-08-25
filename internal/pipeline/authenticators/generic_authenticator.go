@@ -270,9 +270,9 @@ func (a *genericAuthenticator) getCacheTTL(sessionValidity *SessionLifespan) tim
 
 			return x.IfThenElse(expiresIn > 0, time.Duration(expiresIn)*time.Second, 0)
 		},
-		func() time.Duration { return 0 })
+		func() time.Duration { return -1 })
 
-	if sessionTTL <= 0 {
+	if sessionTTL == -1 {
 		return *a.ttl
 	}
 
