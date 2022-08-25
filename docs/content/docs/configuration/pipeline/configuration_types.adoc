@@ -563,7 +563,7 @@ A https://github.com/tidwall/gjson/blob/master/SYNTAX.md[GJSON Path] pointing to
 
 * *`time_format`*: _string_ (optional)
 +
-Since different authentication system use different representations for time strings, this property allows the definition of the format used by the authentication system. Defaults to Unix Epoch time stamp.
+Since different authentication system use different representations for time strings, this property allows the definition of the https://pkg.go.dev/time#pkg-constants[time format/layout] used by the authentication system. Defaults to Unix Epoch time stamp.
 
 * *`validity_leeway`: link:{{< relref "#_duration" >}}[Duration] (optional)
 +

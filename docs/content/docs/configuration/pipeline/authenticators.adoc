@@ -154,7 +154,7 @@ config:
     issued_at: issued_at
     not_before: authenticated_at
     not_after: expires_at
-    time_format: "2006-01-02T15:04:05.999999Z0700"
+    time_format: "2006-01-02T15:04:05.999999Z07"
     validity_leeway: 10s
 ----
 ====
