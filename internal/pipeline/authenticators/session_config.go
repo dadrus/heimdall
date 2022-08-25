@@ -1,6 +1,7 @@
 package authenticators
 
 import (
+	"errors"
 	"strconv"
 	"time"
 
@@ -9,6 +10,8 @@ import (
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
+
+var ErrSessionParseError = errors.New("session parse error")
 
 type SessionConfig struct {
 	ActiveField    string        `mapstructure:"active"`
@@ -31,7 +34,7 @@ func (vc *SessionConfig) CreateSession(rawData []byte) (*Session, error) {
 		func() (time.Time, error) { return vc.parseTime(issuedAtValue.String()) },
 		func() (time.Time, error) { return time.Time{}, nil })
 	if err != nil {
-		return nil, errorchain.NewWithMessage(ErrSessionValidity,
+		return nil, errorchain.NewWithMessage(ErrSessionParseError,
 			"failed parsing issued_at field").CausedBy(err)
 	}
 
@@ -39,7 +42,7 @@ func (vc *SessionConfig) CreateSession(rawData []byte) (*Session, error) {
 		func() (time.Time, error) { return vc.parseTime(notBeforeValue.String()) },
 		func() (time.Time, error) { return time.Time{}, nil })
 	if err != nil {
-		return nil, errorchain.NewWithMessage(ErrSessionValidity,
+		return nil, errorchain.NewWithMessage(ErrSessionParseError,
 			"failed parsing not_before field").CausedBy(err)
 	}
 
@@ -47,7 +50,7 @@ func (vc *SessionConfig) CreateSession(rawData []byte) (*Session, error) {
 		func() (time.Time, error) { return vc.parseTime(notAfterValue.String()) },
 		func() (time.Time, error) { return time.Time{}, nil })
 	if err != nil {
-		return nil, errorchain.NewWithMessage(ErrSessionValidity,
+		return nil, errorchain.NewWithMessage(ErrSessionParseError,
 			"failed parsing not_after field").CausedBy(err)
 	}
 
