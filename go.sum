@@ -54,6 +54,8 @@ github.com/ansrivas/fiberprometheus/v2 v2.3.0 h1:WTZmj7jWI9YvuN+dhdN5VCJwzCt7Tvh
 github.com/ansrivas/fiberprometheus/v2 v2.3.0/go.mod h1:lArdP4S+TlsxQw1vgO8ZkteUVQ9fYyKgXVdycuu0L3g=
 github.com/ansrivas/fiberprometheus/v2 v2.4.0 h1:oUCcrLFaoXgbWOqdg7GoKESO9aDwbkdGBHVtGEhraTo=
 github.com/ansrivas/fiberprometheus/v2 v2.4.0/go.mod h1:lArdP4S+TlsxQw1vgO8ZkteUVQ9fYyKgXVdycuu0L3g=
+github.com/ansrivas/fiberprometheus/v2 v2.4.1 h1:V87ahTcU/I4c8tD6GKiuyyB0Z82dw2VVqLDgBtUcUgc=
+github.com/ansrivas/fiberprometheus/v2 v2.4.1/go.mod h1:ATJ3l0sufyoZBz+TEohAyQJqbgUSQaPwCHNL/L67Wnw=
 github.com/antihax/optional v1.0.0/go.mod h1:uupD/76wgC+ih3iEmQUL+0Ugr19nfwCT1kdvxnR2qWY=
 github.com/armon/circbuf v0.0.0-20150827004946-bbbad097214e/go.mod h1:3U/XgcO3hCbHZ8TKRvWD2dDTCfh9M9ya+I9JpbB7O8o=
 github.com/armon/go-metrics v0.0.0-20180917152333-f0300d1749da/go.mod h1:Q73ZrmVTwzkszR9V5SSuryQ31EELlFMUz1kKyl939pY=
@@ -150,6 +152,8 @@ github.com/goccy/go-json v0.9.11/go.mod h1:6MelG93GURQebXPDq3khkgXZkazVtN9CRI+MG
 github.com/godbus/dbus/v5 v5.0.4/go.mod h1:xhWf0FNVPg57R7Z0UbKHbJfkEywrmjJnf7w5xrFpKfA=
 github.com/gofiber/adaptor/v2 v2.1.23 h1:VG0yAPnB2EJZjxy4Ul+Ra9e92PnqwXE97SUVuPGuoAA=
 github.com/gofiber/adaptor/v2 v2.1.23/go.mod h1:hnYEQBPF2x1JaBHygutJJF5d0+J2eYnKKsUMCSsfxKk=
+github.com/gofiber/adaptor/v2 v2.1.25 h1:K2Ef2a7mUsCfL/oJdzbjyMXchGYuUUwIVXrYVm+P+xs=
+github.com/gofiber/adaptor/v2 v2.1.25/go.mod h1:gOxtwMVqUStB5goAYtKd+hSvGupdd+aRIafZHPLNaUk=
 github.com/gofiber/fiber/v2 v2.32.0/go.mod h1:CMy5ZLiXkn6qwthrl03YMyW1NLfj0rhxz2LKl4t7ZTY=
 github.com/gofiber/fiber/v2 v2.33.0/go.mod h1:CMy5ZLiXkn6qwthrl03YMyW1NLfj0rhxz2LKl4t7ZTY=
 github.com/gofiber/fiber/v2 v2.36.0 h1:1qLMe5rhXFLPa2SjK10Wz7WFgLwYi4TYg7XrjztJHqA=
