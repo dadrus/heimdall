@@ -14,10 +14,10 @@ import (
 var ErrSessionLifespanParseError = errors.New("session lifespan parse error")
 
 type SessionLifespanConfig struct {
-	ActiveField    string        `mapstructure:"active"`
-	IssuedAtField  string        `mapstructure:"issued_at"`
-	NotBeforeField string        `mapstructure:"not_before"`
-	NotAfterField  string        `mapstructure:"not_after"`
+	ActiveField    string        `mapstructure:"active_from"`
+	IssuedAtField  string        `mapstructure:"issued_at_from"`
+	NotBeforeField string        `mapstructure:"not_before_from"`
+	NotAfterField  string        `mapstructure:"not_after_from"`
 	TimeFormat     string        `mapstructure:"time_format"`
 	ValidityLeeway time.Duration `mapstructure:"validity_leeway"`
 }
