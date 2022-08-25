@@ -314,6 +314,7 @@ subject:
 				assert.NotEqual(t, prototype.ttl, configured.ttl)
 				assert.Equal(t, &fiveSecondsTTL, configured.ttl)
 				assert.Equal(t, prototype.IsFallbackOnErrorAllowed(), configured.IsFallbackOnErrorAllowed())
+				assert.Equal(t, prototype.sessionLifespanConf, configured.sessionLifespanConf)
 			},
 		},
 		{
@@ -340,6 +341,7 @@ subject:
 				assert.Equal(t, prototype.ttl, configured.ttl)
 				assert.NotEqual(t, prototype.IsFallbackOnErrorAllowed(), configured.IsFallbackOnErrorAllowed())
 				assert.True(t, configured.IsFallbackOnErrorAllowed())
+				assert.Equal(t, prototype.sessionLifespanConf, configured.sessionLifespanConf)
 			},
 		},
 		{
@@ -369,6 +371,143 @@ cache_ttl: 15s`),
 				assert.Equal(t, &fifteenSecondsTTL, configured.ttl)
 				assert.Equal(t, &fiveSecondsTTL, prototype.ttl)
 				assert.Equal(t, prototype.IsFallbackOnErrorAllowed(), configured.IsFallbackOnErrorAllowed())
+				assert.Equal(t, prototype.sessionLifespanConf, configured.sessionLifespanConf)
+			},
+		},
+		{
+			uc: "prototype with session lifespan config and empty target config",
+			prototypeConfig: []byte(`
+identity_info_endpoint:
+  url: http://test.com
+  method: POST
+authentication_data_source:
+  - header: foo-header
+subject:
+  id: some_template
+cache_ttl: 5s
+session_lifespan:
+  active_from: foo
+  issued_at_from: bar
+  not_before_from: baz
+  not_after_from: zab
+  time_format: foo bar
+  validity_leeway: 2s`),
+			assert: func(t *testing.T, err error, prototype *genericAuthenticator,
+				configured *genericAuthenticator,
+			) {
+				t.Helper()
+
+				require.NoError(t, err)
+
+				assert.Equal(t, prototype.e, configured.e)
+				assert.Equal(t, prototype.ads, configured.ads)
+				assert.Equal(t, prototype.sf, configured.sf)
+				assert.Equal(t, prototype.ttl, configured.ttl)
+				assert.Equal(t, prototype.IsFallbackOnErrorAllowed(), configured.IsFallbackOnErrorAllowed())
+				assert.Equal(t, prototype.sessionLifespanConf, configured.sessionLifespanConf)
+				assert.NotNil(t, configured.sessionLifespanConf)
+				assert.Equal(t, "foo", configured.sessionLifespanConf.ActiveField)
+				assert.Equal(t, "bar", configured.sessionLifespanConf.IssuedAtField)
+				assert.Equal(t, "baz", configured.sessionLifespanConf.NotBeforeField)
+				assert.Equal(t, "zab", configured.sessionLifespanConf.NotAfterField)
+				assert.Equal(t, "foo bar", configured.sessionLifespanConf.TimeFormat)
+				assert.Equal(t, 2*time.Second, configured.sessionLifespanConf.ValidityLeeway)
+			},
+		},
+		{
+			uc: "reconfiguration of identity_info_endpoint not possible",
+			prototypeConfig: []byte(`
+identity_info_endpoint:
+  url: http://test.com
+  method: POST
+authentication_data_source:
+  - header: foo-header
+subject:
+  id: some_template`),
+			config: []byte(`
+identity_info_endpoint:
+  url: http://foo.bar
+`),
+			assert: func(t *testing.T, err error, prototype *genericAuthenticator,
+				configured *genericAuthenticator,
+			) {
+				t.Helper()
+
+				require.Error(t, err)
+				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				assert.Contains(t, err.Error(), "failed to parse")
+			},
+		},
+		{
+			uc: "reconfiguration of authentication_data_source not possible",
+			prototypeConfig: []byte(`
+identity_info_endpoint:
+  url: http://test.com
+  method: POST
+authentication_data_source:
+  - header: foo-header
+subject:
+  id: some_template`),
+			config: []byte(`
+authentication_data_source:
+  - header: bar-header
+`),
+			assert: func(t *testing.T, err error, prototype *genericAuthenticator,
+				configured *genericAuthenticator,
+			) {
+				t.Helper()
+
+				require.Error(t, err)
+				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				assert.Contains(t, err.Error(), "failed to parse")
+			},
+		},
+		{
+			uc: "reconfiguration of subject not possible",
+			prototypeConfig: []byte(`
+identity_info_endpoint:
+  url: http://test.com
+  method: POST
+authentication_data_source:
+  - header: foo-header
+subject:
+  id: some_template`),
+			config: []byte(`
+subject:
+  id: new_template
+`),
+			assert: func(t *testing.T, err error, prototype *genericAuthenticator,
+				configured *genericAuthenticator,
+			) {
+				t.Helper()
+
+				require.Error(t, err)
+				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				assert.Contains(t, err.Error(), "failed to parse")
+			},
+		},
+		{
+			uc: "reconfiguration of session_lifespan not possible",
+			prototypeConfig: []byte(`
+identity_info_endpoint:
+  url: http://test.com
+  method: POST
+authentication_data_source:
+  - header: foo-header
+subject:
+  id: some_template`),
+			config: []byte(`
+session_lifespan:
+  active_from: foo
+`),
+			assert: func(t *testing.T, err error, prototype *genericAuthenticator,
+				configured *genericAuthenticator,
+			) {
+				t.Helper()
+
+				require.Error(t, err)
+				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				assert.Contains(t, err.Error(), "failed to parse")
 			},
 		},
 	} {
