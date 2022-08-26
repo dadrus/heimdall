@@ -42,7 +42,7 @@ const (
 )
 
 // nolint: maintidx
-func TestCreateJwtAuthenticator(t *testing.T) {
+func TestJwtAuthenticatorCreate(t *testing.T) {
 	t.Parallel()
 
 	// ROOT CAs
@@ -325,7 +325,7 @@ trust_store: ` + trustStorePath),
 }
 
 // nolint: maintidx
-func TestCreateJwtAuthenticatorFromPrototype(t *testing.T) {
+func TestJwtAuthenticatorWithConfig(t *testing.T) {
 	t.Parallel()
 
 	// ROOT CAs
@@ -1828,7 +1828,7 @@ func createJWT(t *testing.T, keyEntry *keystore.Entry, subject, issuer, audience
 	return rawJwt
 }
 
-func TestGetCacheTTL(t *testing.T) {
+func TestJwtAuthenticatorGetCacheTTL(t *testing.T) {
 	t.Parallel()
 
 	disabledTTL := -1 * time.Second
@@ -1868,7 +1868,7 @@ func TestGetCacheTTL(t *testing.T) {
 			assert: func(t *testing.T, ttl time.Duration) {
 				t.Helper()
 
-				assert.Equal(t, defaultTTL, ttl)
+				assert.Equal(t, defaultJWTAuthenticatorTTL, ttl)
 			},
 		},
 		{
@@ -1908,7 +1908,7 @@ func TestGetCacheTTL(t *testing.T) {
 			assert: func(t *testing.T, ttl time.Duration) {
 				t.Helper()
 
-				assert.Equal(t, defaultTTL, ttl)
+				assert.Equal(t, defaultJWTAuthenticatorTTL, ttl)
 			},
 		},
 		{

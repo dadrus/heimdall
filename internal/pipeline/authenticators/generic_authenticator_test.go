@@ -22,7 +22,7 @@ import (
 	"github.com/dadrus/heimdall/internal/x"
 )
 
-func TestCreateGenericAuthenticator(t *testing.T) {
+func TestGenericAuthenticatorCreate(t *testing.T) {
 	t.Parallel()
 
 	for _, tc := range []struct {
@@ -116,6 +116,7 @@ subject:
 				assert.Equal(t, &SubjectInfo{IDFrom: "some_template"}, auth.sf)
 				assert.Equal(t, time.Duration(0), auth.ttl)
 				assert.False(t, auth.IsFallbackOnErrorAllowed())
+				assert.Nil(t, auth.sessionLifespanConf)
 			},
 		},
 		{
@@ -144,6 +145,7 @@ cache_ttl: 5s`),
 				assert.Equal(t, &SubjectInfo{IDFrom: "some_template"}, auth.sf)
 				assert.Equal(t, 5*time.Second, auth.ttl)
 				assert.False(t, auth.IsFallbackOnErrorAllowed())
+				assert.Nil(t, auth.sessionLifespanConf)
 			},
 		},
 		{
@@ -172,6 +174,48 @@ allow_fallback_on_error: true`),
 				assert.Equal(t, &SubjectInfo{IDFrom: "some_template"}, auth.sf)
 				assert.Equal(t, time.Duration(0), auth.ttl)
 				assert.True(t, auth.IsFallbackOnErrorAllowed())
+				assert.Nil(t, auth.sessionLifespanConf)
+			},
+		},
+		{
+			uc: "with session lifespan config",
+			config: []byte(`
+identity_info_endpoint:
+  url: http://test.com
+  method: PATCH
+authentication_data_source:
+  - cookie: foo-cookie
+subject:
+  id: some_template
+session_lifespan:
+  active: foo
+  issued_at: bar
+  not_before: baz
+  not_after: zab
+  time_format: foo bar
+  validity_leeway: 2s`),
+			assertError: func(t *testing.T, err error, auth *genericAuthenticator) {
+				t.Helper()
+
+				require.NoError(t, err)
+
+				require.NotNil(t, auth)
+				assert.Equal(t, "http://test.com", auth.e.URL)
+				assert.Equal(t, http.MethodPatch, auth.e.Method)
+				ces, ok := auth.ads.(extractors.CompositeExtractStrategy)
+				assert.True(t, ok)
+				assert.Len(t, ces, 1)
+				assert.Contains(t, ces, &extractors.CookieValueExtractStrategy{Name: "foo-cookie"})
+				assert.Equal(t, &SubjectInfo{IDFrom: "some_template"}, auth.sf)
+				assert.Equal(t, time.Duration(0), auth.ttl)
+				assert.False(t, auth.IsFallbackOnErrorAllowed())
+				assert.NotNil(t, auth.sessionLifespanConf)
+				assert.Equal(t, "foo", auth.sessionLifespanConf.ActiveField)
+				assert.Equal(t, "bar", auth.sessionLifespanConf.IssuedAtField)
+				assert.Equal(t, "baz", auth.sessionLifespanConf.NotBeforeField)
+				assert.Equal(t, "zab", auth.sessionLifespanConf.NotAfterField)
+				assert.Equal(t, "foo bar", auth.sessionLifespanConf.TimeFormat)
+				assert.Equal(t, 2*time.Second, auth.sessionLifespanConf.ValidityLeeway)
 			},
 		},
 	} {
@@ -188,7 +232,7 @@ allow_fallback_on_error: true`),
 	}
 }
 
-func TestCreateGenericAuthenticatorFromPrototype(t *testing.T) {
+func TestGenericAuthenticatorWithConfig(t *testing.T) { // nolint: maintidx
 	t.Parallel()
 
 	for _, tc := range []struct {
@@ -265,6 +309,7 @@ subject:
 				assert.NotEqual(t, prototype.ttl, configured.ttl)
 				assert.Equal(t, 5*time.Second, configured.ttl)
 				assert.Equal(t, prototype.IsFallbackOnErrorAllowed(), configured.IsFallbackOnErrorAllowed())
+				assert.Equal(t, prototype.sessionLifespanConf, configured.sessionLifespanConf)
 			},
 		},
 		{
@@ -291,6 +336,7 @@ subject:
 				assert.Equal(t, prototype.ttl, configured.ttl)
 				assert.NotEqual(t, prototype.IsFallbackOnErrorAllowed(), configured.IsFallbackOnErrorAllowed())
 				assert.True(t, configured.IsFallbackOnErrorAllowed())
+				assert.Equal(t, prototype.sessionLifespanConf, configured.sessionLifespanConf)
 			},
 		},
 		{
@@ -320,6 +366,143 @@ cache_ttl: 15s`),
 				assert.Equal(t, 15*time.Second, configured.ttl)
 				assert.Equal(t, 5*time.Second, prototype.ttl)
 				assert.Equal(t, prototype.IsFallbackOnErrorAllowed(), configured.IsFallbackOnErrorAllowed())
+				assert.Equal(t, prototype.sessionLifespanConf, configured.sessionLifespanConf)
+			},
+		},
+		{
+			uc: "prototype with session lifespan config and empty target config",
+			prototypeConfig: []byte(`
+identity_info_endpoint:
+  url: http://test.com
+  method: POST
+authentication_data_source:
+  - header: foo-header
+subject:
+  id: some_template
+cache_ttl: 5s
+session_lifespan:
+  active: foo
+  issued_at: bar
+  not_before: baz
+  not_after: zab
+  time_format: foo bar
+  validity_leeway: 2s`),
+			assert: func(t *testing.T, err error, prototype *genericAuthenticator,
+				configured *genericAuthenticator,
+			) {
+				t.Helper()
+
+				require.NoError(t, err)
+
+				assert.Equal(t, prototype.e, configured.e)
+				assert.Equal(t, prototype.ads, configured.ads)
+				assert.Equal(t, prototype.sf, configured.sf)
+				assert.Equal(t, prototype.ttl, configured.ttl)
+				assert.Equal(t, prototype.IsFallbackOnErrorAllowed(), configured.IsFallbackOnErrorAllowed())
+				assert.Equal(t, prototype.sessionLifespanConf, configured.sessionLifespanConf)
+				assert.NotNil(t, configured.sessionLifespanConf)
+				assert.Equal(t, "foo", configured.sessionLifespanConf.ActiveField)
+				assert.Equal(t, "bar", configured.sessionLifespanConf.IssuedAtField)
+				assert.Equal(t, "baz", configured.sessionLifespanConf.NotBeforeField)
+				assert.Equal(t, "zab", configured.sessionLifespanConf.NotAfterField)
+				assert.Equal(t, "foo bar", configured.sessionLifespanConf.TimeFormat)
+				assert.Equal(t, 2*time.Second, configured.sessionLifespanConf.ValidityLeeway)
+			},
+		},
+		{
+			uc: "reconfiguration of identity_info_endpoint not possible",
+			prototypeConfig: []byte(`
+identity_info_endpoint:
+  url: http://test.com
+  method: POST
+authentication_data_source:
+  - header: foo-header
+subject:
+  id: some_template`),
+			config: []byte(`
+identity_info_endpoint:
+  url: http://foo.bar
+`),
+			assert: func(t *testing.T, err error, prototype *genericAuthenticator,
+				configured *genericAuthenticator,
+			) {
+				t.Helper()
+
+				require.Error(t, err)
+				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				assert.Contains(t, err.Error(), "failed to parse")
+			},
+		},
+		{
+			uc: "reconfiguration of authentication_data_source not possible",
+			prototypeConfig: []byte(`
+identity_info_endpoint:
+  url: http://test.com
+  method: POST
+authentication_data_source:
+  - header: foo-header
+subject:
+  id: some_template`),
+			config: []byte(`
+authentication_data_source:
+  - header: bar-header
+`),
+			assert: func(t *testing.T, err error, prototype *genericAuthenticator,
+				configured *genericAuthenticator,
+			) {
+				t.Helper()
+
+				require.Error(t, err)
+				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				assert.Contains(t, err.Error(), "failed to parse")
+			},
+		},
+		{
+			uc: "reconfiguration of subject not possible",
+			prototypeConfig: []byte(`
+identity_info_endpoint:
+  url: http://test.com
+  method: POST
+authentication_data_source:
+  - header: foo-header
+subject:
+  id: some_template`),
+			config: []byte(`
+subject:
+  id: new_template
+`),
+			assert: func(t *testing.T, err error, prototype *genericAuthenticator,
+				configured *genericAuthenticator,
+			) {
+				t.Helper()
+
+				require.Error(t, err)
+				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				assert.Contains(t, err.Error(), "failed to parse")
+			},
+		},
+		{
+			uc: "reconfiguration of session_lifespan not possible",
+			prototypeConfig: []byte(`
+identity_info_endpoint:
+  url: http://test.com
+  method: POST
+authentication_data_source:
+  - header: foo-header
+subject:
+  id: some_template`),
+			config: []byte(`
+session_lifespan:
+  active: foo
+`),
+			assert: func(t *testing.T, err error, prototype *genericAuthenticator,
+				configured *genericAuthenticator,
+			) {
+				t.Helper()
+
+				require.Error(t, err)
+				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				assert.Contains(t, err.Error(), "failed to parse")
 			},
 		},
 	} {
@@ -718,6 +901,168 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				assert.Len(t, sub.Attributes, 1)
 			},
 		},
+		{
+			uc: "execution with not active session",
+			authenticator: &genericAuthenticator{
+				e: endpoint.Endpoint{
+					URL:    srv.URL,
+					Method: http.MethodGet,
+					Headers: map[string]string{
+						"Accept": "application/json",
+					},
+				},
+				sf:                  &SubjectInfo{IDFrom: "user_id"},
+				ttl:                 5 * time.Second,
+				sessionLifespanConf: &SessionLifespanConfig{ActiveField: "active"},
+			},
+			configureMocks: func(t *testing.T,
+				ctx *heimdallmocks.MockContext,
+				cch *mocks.MockCache,
+				ads *mockAuthDataGetter,
+				auth *genericAuthenticator,
+			) {
+				t.Helper()
+
+				cacheKey := auth.calculateCacheKey("session_token")
+
+				ads.On("GetAuthData", ctx).Return(dummyAuthData{Val: "session_token"}, nil)
+				cch.On("Get", cacheKey).Return(nil)
+			},
+			instructServer: func(t *testing.T) {
+				t.Helper()
+
+				checkRequest = func(req *http.Request) {
+					t.Helper()
+
+					assert.Equal(t, http.MethodGet, req.Method)
+					assert.Equal(t, "application/json", req.Header.Get("Accept"))
+					assert.Equal(t, "session_token", req.Header.Get("Dummy"))
+				}
+
+				responseCode = http.StatusOK
+				responseContent = []byte(`{ "user_id": "barbar", "active": false }`)
+				responseContentType = "application/json"
+			},
+			assert: func(t *testing.T, err error, sub *subject.Subject) {
+				t.Helper()
+
+				assert.True(t, endpointCalled)
+
+				require.Error(t, err)
+				assert.ErrorIs(t, err, heimdall.ErrAuthentication)
+				assert.Contains(t, err.Error(), "not active")
+			},
+		},
+		{
+			uc: "execution with error while parsing session lifespan",
+			authenticator: &genericAuthenticator{
+				e: endpoint.Endpoint{
+					URL:    srv.URL,
+					Method: http.MethodGet,
+					Headers: map[string]string{
+						"Accept": "application/json",
+					},
+				},
+				sf:                  &SubjectInfo{IDFrom: "user_id"},
+				ttl:                 5 * time.Second,
+				sessionLifespanConf: &SessionLifespanConfig{IssuedAtField: "iat"},
+			},
+			configureMocks: func(t *testing.T,
+				ctx *heimdallmocks.MockContext,
+				cch *mocks.MockCache,
+				ads *mockAuthDataGetter,
+				auth *genericAuthenticator,
+			) {
+				t.Helper()
+
+				cacheKey := auth.calculateCacheKey("session_token")
+
+				ads.On("GetAuthData", ctx).Return(dummyAuthData{Val: "session_token"}, nil)
+				cch.On("Get", cacheKey).Return(nil)
+			},
+			instructServer: func(t *testing.T) {
+				t.Helper()
+
+				checkRequest = func(req *http.Request) {
+					t.Helper()
+
+					assert.Equal(t, http.MethodGet, req.Method)
+					assert.Equal(t, "application/json", req.Header.Get("Accept"))
+					assert.Equal(t, "session_token", req.Header.Get("Dummy"))
+				}
+
+				responseCode = http.StatusOK
+				responseContent = []byte(`{ "user_id": "barbar", "iat": "2006-01-02T15:04:05.999999Z07" }`)
+				responseContentType = "application/json"
+			},
+			assert: func(t *testing.T, err error, sub *subject.Subject) {
+				t.Helper()
+
+				assert.True(t, endpointCalled)
+
+				require.Error(t, err)
+				assert.ErrorIs(t, err, heimdall.ErrInternal)
+				assert.Contains(t, err.Error(), "failed parsing issued_at")
+			},
+		},
+		{
+			uc: "execution with session lifespan ttl limiting the configured ttl",
+			authenticator: &genericAuthenticator{
+				e: endpoint.Endpoint{
+					URL:    srv.URL,
+					Method: http.MethodGet,
+					Headers: map[string]string{
+						"Accept": "application/json",
+					},
+				},
+				sf:                  &SubjectInfo{IDFrom: "user_id"},
+				ttl:                 30 * time.Second,
+				sessionLifespanConf: &SessionLifespanConfig{NotAfterField: "exp"},
+			},
+			configureMocks: func(t *testing.T,
+				ctx *heimdallmocks.MockContext,
+				cch *mocks.MockCache,
+				ads *mockAuthDataGetter,
+				auth *genericAuthenticator,
+			) {
+				t.Helper()
+
+				exp := strconv.FormatInt(time.Now().Add(15*time.Second).Unix(), 10)
+				cacheKey := auth.calculateCacheKey("session_token")
+
+				ads.On("GetAuthData", ctx).Return(dummyAuthData{Val: "session_token"}, nil)
+				cch.On("Get", cacheKey).Return(nil)
+				cch.On("Set", cacheKey, []byte(`{ "user_id": "barbar", "exp": `+exp+` }`), 5*time.Second)
+			},
+			instructServer: func(t *testing.T) {
+				t.Helper()
+
+				exp := strconv.FormatInt(time.Now().Add(15*time.Second).Unix(), 10)
+
+				checkRequest = func(req *http.Request) {
+					t.Helper()
+
+					assert.Equal(t, http.MethodGet, req.Method)
+					assert.Equal(t, "application/json", req.Header.Get("Accept"))
+					assert.Equal(t, "session_token", req.Header.Get("Dummy"))
+				}
+
+				responseCode = http.StatusOK
+				responseContent = []byte(`{ "user_id": "barbar", "exp": ` + exp + ` }`)
+				responseContentType = "application/json"
+			},
+			assert: func(t *testing.T, err error, sub *subject.Subject) {
+				t.Helper()
+
+				assert.True(t, endpointCalled)
+
+				require.NoError(t, err)
+
+				require.NotNil(t, sub)
+				assert.Equal(t, "barbar", sub.ID)
+				assert.Len(t, sub.Attributes, 2)
+			},
+		},
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
 			// GIVEN
@@ -763,6 +1108,86 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 			ctx.AssertExpectations(t)
 			cch.AssertExpectations(t)
 			ads.AssertExpectations(t)
+		})
+	}
+}
+
+func TestGenericAuthenticatorGetCacheTTL(t *testing.T) {
+	t.Parallel()
+
+	for _, tc := range []struct {
+		uc              string
+		authenticator   *genericAuthenticator
+		sessionLifespan *SessionLifespan
+		assert          func(t *testing.T, ttl time.Duration)
+	}{
+		{
+			uc:            "cache disabled",
+			authenticator: &genericAuthenticator{},
+			assert: func(t *testing.T, ttl time.Duration) {
+				t.Helper()
+
+				assert.Equal(t, time.Duration(0), ttl)
+			},
+		},
+		{
+			uc:            "cache enabled, session lifespan not available",
+			authenticator: &genericAuthenticator{ttl: 5 * time.Minute},
+			assert: func(t *testing.T, ttl time.Duration) {
+				t.Helper()
+
+				assert.Equal(t, 5*time.Minute, ttl)
+			},
+		},
+		{
+			uc:              "cache enabled, session lifespan available, but not_after is not available",
+			authenticator:   &genericAuthenticator{ttl: 5 * time.Minute},
+			sessionLifespan: &SessionLifespan{},
+			assert: func(t *testing.T, ttl time.Duration) {
+				t.Helper()
+
+				assert.Equal(t, 5*time.Minute, ttl)
+			},
+		},
+		{
+			uc: "cache enabled, session lifespan available with not_after set to a future date exceeding configured" +
+				" ttl",
+			authenticator:   &genericAuthenticator{ttl: 5 * time.Minute},
+			sessionLifespan: &SessionLifespan{exp: time.Now().Add(24 * time.Hour)},
+			assert: func(t *testing.T, ttl time.Duration) {
+				t.Helper()
+
+				assert.Equal(t, 5*time.Minute, ttl)
+			},
+		},
+		{
+			uc: "cache enabled, session lifespan available with not_after set to a date so that the configured ttl " +
+				"would exceed the lifespan",
+			authenticator:   &genericAuthenticator{ttl: 5 * time.Minute},
+			sessionLifespan: &SessionLifespan{exp: time.Now().Add(30 * time.Second)},
+			assert: func(t *testing.T, ttl time.Duration) {
+				t.Helper()
+
+				assert.Equal(t, 20*time.Second, ttl) // leeway of 10 sec considered
+			},
+		},
+		{
+			uc:              "cache enabled, session lifespan available with not_after set to a date which disables ttl",
+			authenticator:   &genericAuthenticator{ttl: 5 * time.Minute},
+			sessionLifespan: &SessionLifespan{exp: time.Now().Add(5 * time.Second)},
+			assert: func(t *testing.T, ttl time.Duration) {
+				t.Helper()
+
+				assert.Equal(t, 0*time.Second, ttl)
+			},
+		},
+	} {
+		t.Run("case="+tc.uc, func(t *testing.T) {
+			// WHEN
+			ttl := tc.authenticator.getCacheTTL(tc.sessionLifespan)
+
+			// THEN
+			tc.assert(t, ttl)
 		})
 	}
 }

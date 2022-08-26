@@ -41,16 +41,18 @@ type genericAuthenticator struct {
 	sf                   SubjectFactory
 	ads                  extractors.AuthDataExtractStrategy
 	ttl                  time.Duration
+	sessionLifespanConf  *SessionLifespanConfig
 	allowFallbackOnError bool
 }
 
 func newGenericAuthenticator(rawConfig map[string]any) (*genericAuthenticator, error) {
 	type Config struct {
-		Endpoint             endpoint.Endpoint                   `mapstructure:"identity_info_endpoint"`
-		AuthDataSource       extractors.CompositeExtractStrategy `mapstructure:"authentication_data_source"`
-		SubjectInfo          SubjectInfo                         `mapstructure:"subject"`
-		CacheTTL             *time.Duration                      `mapstructure:"cache_ttl"`
-		AllowFallbackOnError bool                                `mapstructure:"allow_fallback_on_error"`
+		Endpoint              endpoint.Endpoint                   `mapstructure:"identity_info_endpoint"`
+		AuthDataSource        extractors.CompositeExtractStrategy `mapstructure:"authentication_data_source"`
+		SubjectInfo           SubjectInfo                         `mapstructure:"subject"`
+		SessionLifespanConfig *SessionLifespanConfig              `mapstructure:"session_lifespan"`
+		CacheTTL              *time.Duration                      `mapstructure:"cache_ttl"`
+		AllowFallbackOnError  bool                                `mapstructure:"allow_fallback_on_error"`
 	}
 
 	var conf Config
@@ -86,6 +88,7 @@ func newGenericAuthenticator(rawConfig map[string]any) (*genericAuthenticator, e
 			func() time.Duration { return *conf.CacheTTL },
 			func() time.Duration { return 0 }),
 		allowFallbackOnError: conf.AllowFallbackOnError,
+		sessionLifespanConf:  conf.SessionLifespanConfig,
 	}, nil
 }
 
@@ -142,6 +145,7 @@ func (a *genericAuthenticator) WithConfig(config map[string]any) (Authenticator,
 		allowFallbackOnError: x.IfThenElseExec(conf.AllowFallbackOnError != nil,
 			func() bool { return *conf.AllowFallbackOnError },
 			func() bool { return a.allowFallbackOnError }),
+		sessionLifespanConf: a.sessionLifespanConf,
 	}, nil
 }
 
@@ -160,6 +164,7 @@ func (a *genericAuthenticator) getSubjectInformation(ctx heimdall.Context,
 		cacheEntry     any
 		cachedResponse []byte
 		ok             bool
+		session        *SessionLifespan
 	)
 
 	if a.ttl > 0 {
@@ -183,8 +188,21 @@ func (a *genericAuthenticator) getSubjectInformation(ctx heimdall.Context,
 		return nil, err
 	}
 
-	if a.ttl > 0 {
-		cch.Set(cacheKey, payload, a.ttl)
+	if a.sessionLifespanConf != nil {
+		session, err = a.sessionLifespanConf.CreateSessionLifespan(payload)
+		if err != nil {
+			return nil, errorchain.New(heimdall.ErrInternal).CausedBy(err)
+		}
+
+		if session != nil {
+			if err = session.Assert(); err != nil {
+				return nil, errorchain.New(heimdall.ErrAuthentication).CausedBy(err)
+			}
+		}
+	}
+
+	if cacheTTL := a.getCacheTTL(session); cacheTTL > 0 {
+		cch.Set(cacheKey, payload, cacheTTL)
 	}
 
 	return payload, nil
@@ -231,6 +249,28 @@ func (*genericAuthenticator) readResponse(resp *http.Response) ([]byte, error) {
 	}
 
 	return rawData, nil
+}
+
+func (a *genericAuthenticator) getCacheTTL(sessionLifespan *SessionLifespan) time.Duration {
+	// timeLeeway defines the default time deviation to ensure the session is still valid
+	// when used from cache
+	const timeLeeway = 10
+
+	if a.ttl <= 0 {
+		return 0
+	}
+
+	// we cache using the settings in the configured ttl.
+	// It is however ensured, that this ttl does not exceed the ttl of the session itself
+	// (if this information is available)
+	if sessionLifespan != nil && !sessionLifespan.exp.Equal(time.Time{}) {
+		expiresIn := sessionLifespan.exp.Unix() - time.Now().Unix() - timeLeeway
+		expirationTTL := x.IfThenElse(expiresIn > 0, time.Duration(expiresIn)*time.Second, 0)
+
+		return x.IfThenElse(a.ttl < expirationTTL, a.ttl, expirationTTL)
+	}
+
+	return a.ttl
 }
 
 func (a *genericAuthenticator) calculateCacheKey(reference string) string {

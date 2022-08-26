@@ -128,10 +128,16 @@ How long to cache the response. If not set, response caching if disabled. The ca
 +
 If set to `true`, allows the pipeline to fall back to the next authenticator in the pipeline if this one fails to verify the credentials. Defaults to `false`.
 
+* *`session_lifespan`*: _link:{{< relref "configuration_types.adoc#_session_lifespan" >}}[Session Lifespan]_ (optional, not overridable)
++
+Where to extract the session validity information form the identity info endpoint response. If the `not_after` property is specified, the corresponding value from the response is also used for cache ttl calculation to prevent usage of not anymore valid session objects and overwrites the value configured for `cache_ttl` if the usage of that value would exceed the lifespan of the session object.
++
+NOTE: If you're configuring the `cache_ttl` property it is highly recommended to configure `session_lifespan` as well to ensure outdated session objects are not used for subsequent requests to heimdall. Usage of `session_lifespan` is recommended anyway to enable time based validation of the response from the identity info endpoint.
+
 .Configuration of Generic authenticator to work with session cookies
 ====
 
-This example shows how to configure this authenticator to work with an authentication system, which issues a cookie upon successful user authentication to maintain the authentication state. To reduce the communication overhead, it also makes use of `cache_ttl` to cache the response for 5 minutes.
+This example shows how to configure this authenticator to work with an authentication system, which issues a cookie upon successful user authentication to maintain the authentication state. To reduce the communication overhead, it also makes use of `cache_ttl` to cache the response for 5 minutes if that time frame does not exceed the actual validity of the session represented by the cookie.
 
 [source, yaml]
 ----
@@ -145,13 +151,20 @@ config:
   subject:
     id: "identity.id"
   cache_ttl: 5m
+  session_lifespan:
+    active: active
+    issued_at: issued_at
+    not_before: authenticated_at
+    not_after: expires_at
+    time_format: "2006-01-02T15:04:05.999999Z07"
+    validity_leeway: 10s
 ----
 ====
 
 .Configuration of Generic authenticator to work with a Bearer token
 ====
 
-This example shows how to configure this authenticator to work with an authentication system, which issues a Bearer token upon successful user authentication to maintain the authentication state. To reduce the communication overhead, it also makes use of `cache_ttl` to cache the response for 5 minutes. In this example we configure the handler to use the `GET` method instead of the default `POST` for sending the bearer token to the authentication system for verification purposes and also to authenticate using HTTP basic auth schema. According to the below configuration, the Bearer token is located in the `X-Custom-Bearer-Token` header, which as also used as is while calling the `\http://my-auth.system/introspect` endpoint.
+This example shows how to configure this authenticator to work with an authentication system, which issues a Bearer token upon successful user authentication to maintain the authentication state. To reduce the communication overhead, it also makes use of `cache_ttl` to cache the response for 5 minutes if it does not exceed the validity of the information present in the response from the used endpoint. In this example we configure the handler to use the `GET` method instead of the default `POST` for sending the bearer token to the authentication system for verification purposes and also to authenticate using HTTP basic auth schema. According to the below configuration, the Bearer token is located in the `X-Custom-Bearer-Token` header, which as also used as is while calling the `\http://my-auth.system/introspect` endpoint.
 
 [source, yaml]
 ----
@@ -172,6 +185,12 @@ config:
   subject:
     id: "sub"
   cache_ttl: 5m
+  session_lifespan:
+    active: active
+    issued_at: iat
+    not_before: nbf
+    not_after: exp
+    validity_leeway: 10s
 ----
 
 Usually, Bearer tokens are issued by an OAuth2 auth provider and there is a need to verify not only the validity of such, but also a couple of claims. This can be achieved by a link:{{< relref "/docs/configuration/pipeline/authorizers.adoc#_local" >}}[Local Authorizer], but there is also a special purpose link:{{< relref "#_oauth2_introspection">}}[OAuth2 Introspection] authenticator type, which supports asserting all security relevant claims in just one place.
