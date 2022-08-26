@@ -58,7 +58,7 @@ func (s *SessionLifespanConfig) CreateSessionLifespan(rawData []byte) (*SessionL
 		active: isActive,
 		iat:    issuedAt,
 		nbf:    notBefore,
-		naf:    notAfter,
+		exp:    notAfter,
 		leeway: s.ValidityLeeway,
 	}, nil
 }

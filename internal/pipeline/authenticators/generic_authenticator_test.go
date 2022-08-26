@@ -25,8 +25,6 @@ import (
 func TestCreateGenericAuthenticator(t *testing.T) {
 	t.Parallel()
 
-	fiveSecondsTTL := 5 * time.Second
-
 	for _, tc := range []struct {
 		uc          string
 		config      []byte
@@ -116,7 +114,7 @@ subject:
 				assert.Len(t, ces, 1)
 				assert.Contains(t, ces, &extractors.HeaderValueExtractStrategy{Name: "foo-header"})
 				assert.Equal(t, &SubjectInfo{IDFrom: "some_template"}, auth.sf)
-				assert.Nil(t, auth.ttl)
+				assert.Equal(t, time.Duration(0), auth.ttl)
 				assert.False(t, auth.IsFallbackOnErrorAllowed())
 				assert.Nil(t, auth.sessionLifespanConf)
 			},
@@ -145,7 +143,7 @@ cache_ttl: 5s`),
 				assert.Len(t, ces, 1)
 				assert.Contains(t, ces, &extractors.CookieValueExtractStrategy{Name: "foo-cookie"})
 				assert.Equal(t, &SubjectInfo{IDFrom: "some_template"}, auth.sf)
-				assert.Equal(t, &fiveSecondsTTL, auth.ttl)
+				assert.Equal(t, 5*time.Second, auth.ttl)
 				assert.False(t, auth.IsFallbackOnErrorAllowed())
 				assert.Nil(t, auth.sessionLifespanConf)
 			},
@@ -174,7 +172,7 @@ allow_fallback_on_error: true`),
 				assert.Len(t, ces, 1)
 				assert.Contains(t, ces, &extractors.CookieValueExtractStrategy{Name: "foo-cookie"})
 				assert.Equal(t, &SubjectInfo{IDFrom: "some_template"}, auth.sf)
-				assert.Nil(t, auth.ttl)
+				assert.Equal(t, time.Duration(0), auth.ttl)
 				assert.True(t, auth.IsFallbackOnErrorAllowed())
 				assert.Nil(t, auth.sessionLifespanConf)
 			},
@@ -209,7 +207,7 @@ session_lifespan:
 				assert.Len(t, ces, 1)
 				assert.Contains(t, ces, &extractors.CookieValueExtractStrategy{Name: "foo-cookie"})
 				assert.Equal(t, &SubjectInfo{IDFrom: "some_template"}, auth.sf)
-				assert.Nil(t, auth.ttl)
+				assert.Equal(t, time.Duration(0), auth.ttl)
 				assert.False(t, auth.IsFallbackOnErrorAllowed())
 				assert.NotNil(t, auth.sessionLifespanConf)
 				assert.Equal(t, "foo", auth.sessionLifespanConf.ActiveField)
@@ -236,9 +234,6 @@ session_lifespan:
 
 func TestCreateGenericAuthenticatorFromPrototype(t *testing.T) { // nolint: maintidx
 	t.Parallel()
-
-	fiveSecondsTTL := 5 * time.Second
-	fifteenSecondsTTL := 15 * time.Second
 
 	for _, tc := range []struct {
 		uc              string
@@ -310,9 +305,9 @@ subject:
 				assert.Equal(t, prototype.e, configured.e)
 				assert.Equal(t, prototype.ads, configured.ads)
 				assert.Equal(t, prototype.sf, configured.sf)
-				assert.Nil(t, prototype.ttl)
+				assert.Equal(t, time.Duration(0), prototype.ttl)
 				assert.NotEqual(t, prototype.ttl, configured.ttl)
-				assert.Equal(t, &fiveSecondsTTL, configured.ttl)
+				assert.Equal(t, 5*time.Second, configured.ttl)
 				assert.Equal(t, prototype.IsFallbackOnErrorAllowed(), configured.IsFallbackOnErrorAllowed())
 				assert.Equal(t, prototype.sessionLifespanConf, configured.sessionLifespanConf)
 			},
@@ -368,8 +363,8 @@ cache_ttl: 15s`),
 				assert.Equal(t, prototype.ads, configured.ads)
 				assert.Equal(t, prototype.sf, configured.sf)
 				assert.NotEqual(t, prototype.ttl, configured.ttl)
-				assert.Equal(t, &fifteenSecondsTTL, configured.ttl)
-				assert.Equal(t, &fiveSecondsTTL, prototype.ttl)
+				assert.Equal(t, 15*time.Second, configured.ttl)
+				assert.Equal(t, 5*time.Second, prototype.ttl)
 				assert.Equal(t, prototype.IsFallbackOnErrorAllowed(), configured.IsFallbackOnErrorAllowed())
 				assert.Equal(t, prototype.sessionLifespanConf, configured.sessionLifespanConf)
 			},
@@ -553,8 +548,6 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 		responseContent     []byte
 		responseCode        int
 	)
-
-	fiveSecondsTTL := 5 * time.Second
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		endpointCalled = true
@@ -772,7 +765,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 					},
 				},
 				sf:  &SubjectInfo{IDFrom: "user_id"},
-				ttl: &fiveSecondsTTL,
+				ttl: 5 * time.Second,
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.MockContext,
@@ -787,7 +780,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				ads.On("GetAuthData", ctx).Return(dummyAuthData{Val: "session_token"}, nil)
 				cch.On("Get", cacheKey).Return(time.Duration(10))
 				cch.On("Delete", cacheKey)
-				cch.On("Set", cacheKey, []byte(`{ "user_id": "barbar" }`), *auth.ttl)
+				cch.On("Set", cacheKey, []byte(`{ "user_id": "barbar" }`), auth.ttl)
 			},
 			instructServer: func(t *testing.T) {
 				t.Helper()
@@ -827,7 +820,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 					},
 				},
 				sf:  &SubjectInfo{IDFrom: "user_id"},
-				ttl: &fiveSecondsTTL,
+				ttl: 5 * time.Second,
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.MockContext,
@@ -865,7 +858,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 					},
 				},
 				sf:  &SubjectInfo{IDFrom: "user_id"},
-				ttl: &fiveSecondsTTL,
+				ttl: 5 * time.Second,
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.MockContext,
@@ -879,7 +872,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 
 				ads.On("GetAuthData", ctx).Return(dummyAuthData{Val: "session_token"}, nil)
 				cch.On("Get", cacheKey).Return(nil)
-				cch.On("Set", cacheKey, []byte(`{ "user_id": "barbar" }`), *auth.ttl)
+				cch.On("Set", cacheKey, []byte(`{ "user_id": "barbar" }`), auth.ttl)
 			},
 			instructServer: func(t *testing.T) {
 				t.Helper()
@@ -953,6 +946,86 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 			ctx.AssertExpectations(t)
 			cch.AssertExpectations(t)
 			ads.AssertExpectations(t)
+		})
+	}
+}
+
+func TestGenericAuthenticatorGetCacheTTL(t *testing.T) {
+	t.Parallel()
+
+	for _, tc := range []struct {
+		uc              string
+		authenticator   *genericAuthenticator
+		sessionLifespan *SessionLifespan
+		assert          func(t *testing.T, ttl time.Duration)
+	}{
+		{
+			uc:            "cache disabled",
+			authenticator: &genericAuthenticator{},
+			assert: func(t *testing.T, ttl time.Duration) {
+				t.Helper()
+
+				assert.Equal(t, time.Duration(0), ttl)
+			},
+		},
+		{
+			uc:            "cache enabled, session lifespan not available",
+			authenticator: &genericAuthenticator{ttl: 5 * time.Minute},
+			assert: func(t *testing.T, ttl time.Duration) {
+				t.Helper()
+
+				assert.Equal(t, 5*time.Minute, ttl)
+			},
+		},
+		{
+			uc:              "cache enabled, session lifespan available, but not_after is not available",
+			authenticator:   &genericAuthenticator{ttl: 5 * time.Minute},
+			sessionLifespan: &SessionLifespan{},
+			assert: func(t *testing.T, ttl time.Duration) {
+				t.Helper()
+
+				assert.Equal(t, 5*time.Minute, ttl)
+			},
+		},
+		{
+			uc: "cache enabled, session lifespan available with not_after set to a future date exceeding configured" +
+				" ttl",
+			authenticator:   &genericAuthenticator{ttl: 5 * time.Minute},
+			sessionLifespan: &SessionLifespan{exp: time.Now().Add(24 * time.Hour)},
+			assert: func(t *testing.T, ttl time.Duration) {
+				t.Helper()
+
+				assert.Equal(t, 5*time.Minute, ttl)
+			},
+		},
+		{
+			uc: "cache enabled, session lifespan available with not_after set to a date so that the configured ttl " +
+				"would exceed the lifespan",
+			authenticator:   &genericAuthenticator{ttl: 5 * time.Minute},
+			sessionLifespan: &SessionLifespan{exp: time.Now().Add(30 * time.Second)},
+			assert: func(t *testing.T, ttl time.Duration) {
+				t.Helper()
+
+				assert.Equal(t, 20*time.Second, ttl) // leeway of 10 sec considered
+			},
+		},
+		{
+			uc:              "cache enabled, session lifespan available with not_after set to a date which disables ttl",
+			authenticator:   &genericAuthenticator{ttl: 5 * time.Minute},
+			sessionLifespan: &SessionLifespan{exp: time.Now().Add(5 * time.Second)},
+			assert: func(t *testing.T, ttl time.Duration) {
+				t.Helper()
+
+				assert.Equal(t, 0*time.Second, ttl)
+			},
+		},
+	} {
+		t.Run("case="+tc.uc, func(t *testing.T) {
+			// WHEN
+			ttl := tc.authenticator.getCacheTTL(tc.sessionLifespan)
+
+			// THEN
+			tc.assert(t, ttl)
 		})
 	}
 }

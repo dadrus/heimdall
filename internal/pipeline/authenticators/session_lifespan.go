@@ -16,7 +16,7 @@ type SessionLifespan struct {
 	active bool
 	iat    time.Time
 	nbf    time.Time
-	naf    time.Time
+	exp    time.Time
 	leeway time.Duration
 }
 
@@ -36,7 +36,7 @@ func (s *SessionLifespan) assertValidity() error {
 	leeway := int64(x.IfThenElse(s.leeway != 0, s.leeway, defaultLeeway).Seconds())
 	now := time.Now().Unix()
 	nbf := s.nbf.Unix()
-	exp := s.naf.Unix()
+	exp := s.exp.Unix()
 
 	if nbf > 0 && now+leeway < nbf {
 		return errorchain.NewWithMessage(ErrSessionValidity, "not yet valid")

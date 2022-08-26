@@ -40,7 +40,7 @@ type genericAuthenticator struct {
 	e                    endpoint.Endpoint
 	sf                   SubjectFactory
 	ads                  extractors.AuthDataExtractStrategy
-	ttl                  *time.Duration
+	ttl                  time.Duration
 	sessionLifespanConf  *SessionLifespanConfig
 	allowFallbackOnError bool
 }
@@ -81,10 +81,12 @@ func newGenericAuthenticator(rawConfig map[string]any) (*genericAuthenticator, e
 	}
 
 	return &genericAuthenticator{
-		e:                    conf.Endpoint,
-		ads:                  conf.AuthDataSource,
-		sf:                   &conf.SubjectInfo,
-		ttl:                  conf.CacheTTL,
+		e:   conf.Endpoint,
+		ads: conf.AuthDataSource,
+		sf:  &conf.SubjectInfo,
+		ttl: x.IfThenElseExec(conf.CacheTTL != nil,
+			func() time.Duration { return *conf.CacheTTL },
+			func() time.Duration { return 0 }),
 		allowFallbackOnError: conf.AllowFallbackOnError,
 		sessionLifespanConf:  conf.SessionLifespanConfig,
 	}, nil
@@ -137,7 +139,9 @@ func (a *genericAuthenticator) WithConfig(config map[string]any) (Authenticator,
 		e:   a.e,
 		sf:  a.sf,
 		ads: a.ads,
-		ttl: x.IfThenElse(conf.CacheTTL != nil, conf.CacheTTL, a.ttl),
+		ttl: x.IfThenElseExec(conf.CacheTTL != nil,
+			func() time.Duration { return *conf.CacheTTL },
+			func() time.Duration { return a.ttl }),
 		allowFallbackOnError: x.IfThenElseExec(conf.AllowFallbackOnError != nil,
 			func() bool { return *conf.AllowFallbackOnError },
 			func() bool { return a.allowFallbackOnError }),
@@ -163,7 +167,7 @@ func (a *genericAuthenticator) getSubjectInformation(ctx heimdall.Context,
 		session        *SessionLifespan
 	)
 
-	if a.isCacheEnabled() {
+	if a.ttl > 0 {
 		cacheKey = a.calculateCacheKey(authData.Value())
 		cacheEntry = cch.Get(cacheKey)
 	}
@@ -247,36 +251,26 @@ func (*genericAuthenticator) readResponse(resp *http.Response) ([]byte, error) {
 	return rawData, nil
 }
 
-func (a *genericAuthenticator) isCacheEnabled() bool {
-	// cache is enabled if ttl is configured and is > 0
-	return a.ttl != nil && *a.ttl > 0
-}
-
-func (a *genericAuthenticator) getCacheTTL(sessionValidity *SessionLifespan) time.Duration {
+func (a *genericAuthenticator) getCacheTTL(sessionLifespan *SessionLifespan) time.Duration {
 	// timeLeeway defines the default time deviation to ensure the session is still valid
 	// when used from cache
 	const timeLeeway = 10
 
-	if !a.isCacheEnabled() {
+	if a.ttl <= 0 {
 		return 0
 	}
 
 	// we cache using the settings in the configured ttl.
 	// It is however ensured, that this ttl does not exceed the ttl of the session itself
 	// (if this information is available)
-	sessionTTL := x.IfThenElseExec(sessionValidity != nil && sessionValidity.naf != time.Time{},
-		func() time.Duration {
-			expiresIn := sessionValidity.naf.Unix() - time.Now().Unix() - timeLeeway
+	if sessionLifespan != nil && !sessionLifespan.exp.Equal(time.Time{}) {
+		expiresIn := sessionLifespan.exp.Unix() - time.Now().Unix() - timeLeeway
+		expirationTTL := x.IfThenElse(expiresIn > 0, time.Duration(expiresIn)*time.Second, 0)
 
-			return x.IfThenElse(expiresIn > 0, time.Duration(expiresIn)*time.Second, 0)
-		},
-		func() time.Duration { return -1 })
-
-	if sessionTTL == -1 {
-		return *a.ttl
+		return x.IfThenElse(a.ttl < expirationTTL, a.ttl, expirationTTL)
 	}
 
-	return x.IfThenElse(*a.ttl < sessionTTL, *a.ttl, sessionTTL)
+	return a.ttl
 }
 
 func (a *genericAuthenticator) calculateCacheKey(reference string) string {

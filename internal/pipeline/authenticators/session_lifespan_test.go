@@ -92,7 +92,7 @@ func TestSessionLifespanAssert(t *testing.T) {
 			uc: "active session with only not after set to the past",
 			lifespan: &SessionLifespan{
 				active: true,
-				naf:    time.Now().Add(-1 * time.Hour),
+				exp:    time.Now().Add(-1 * time.Hour),
 			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
@@ -106,7 +106,7 @@ func TestSessionLifespanAssert(t *testing.T) {
 			uc: "active session with only not after set to the past",
 			lifespan: &SessionLifespan{
 				active: true,
-				naf:    time.Now().Add(1 * time.Hour),
+				exp:    time.Now().Add(1 * time.Hour),
 			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
