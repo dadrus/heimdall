@@ -42,7 +42,7 @@ const (
 )
 
 // nolint: maintidx
-func TestCreateJwtAuthenticator(t *testing.T) {
+func TestJwtAuthenticatorCreate(t *testing.T) {
 	t.Parallel()
 
 	// ROOT CAs
@@ -325,7 +325,7 @@ trust_store: ` + trustStorePath),
 }
 
 // nolint: maintidx
-func TestCreateJwtAuthenticatorFromPrototype(t *testing.T) {
+func TestJwtAuthenticatorWithConfig(t *testing.T) {
 	t.Parallel()
 
 	// ROOT CAs
