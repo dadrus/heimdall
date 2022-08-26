@@ -901,6 +901,168 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				assert.Len(t, sub.Attributes, 1)
 			},
 		},
+		{
+			uc: "execution with not active session",
+			authenticator: &genericAuthenticator{
+				e: endpoint.Endpoint{
+					URL:    srv.URL,
+					Method: http.MethodGet,
+					Headers: map[string]string{
+						"Accept": "application/json",
+					},
+				},
+				sf:                  &SubjectInfo{IDFrom: "user_id"},
+				ttl:                 5 * time.Second,
+				sessionLifespanConf: &SessionLifespanConfig{ActiveField: "active"},
+			},
+			configureMocks: func(t *testing.T,
+				ctx *heimdallmocks.MockContext,
+				cch *mocks.MockCache,
+				ads *mockAuthDataGetter,
+				auth *genericAuthenticator,
+			) {
+				t.Helper()
+
+				cacheKey := auth.calculateCacheKey("session_token")
+
+				ads.On("GetAuthData", ctx).Return(dummyAuthData{Val: "session_token"}, nil)
+				cch.On("Get", cacheKey).Return(nil)
+			},
+			instructServer: func(t *testing.T) {
+				t.Helper()
+
+				checkRequest = func(req *http.Request) {
+					t.Helper()
+
+					assert.Equal(t, http.MethodGet, req.Method)
+					assert.Equal(t, "application/json", req.Header.Get("Accept"))
+					assert.Equal(t, "session_token", req.Header.Get("Dummy"))
+				}
+
+				responseCode = http.StatusOK
+				responseContent = []byte(`{ "user_id": "barbar", "active": false }`)
+				responseContentType = "application/json"
+			},
+			assert: func(t *testing.T, err error, sub *subject.Subject) {
+				t.Helper()
+
+				assert.True(t, endpointCalled)
+
+				require.Error(t, err)
+				assert.ErrorIs(t, err, heimdall.ErrAuthentication)
+				assert.Contains(t, err.Error(), "not active")
+			},
+		},
+		{
+			uc: "execution with error while parsing session lifespan",
+			authenticator: &genericAuthenticator{
+				e: endpoint.Endpoint{
+					URL:    srv.URL,
+					Method: http.MethodGet,
+					Headers: map[string]string{
+						"Accept": "application/json",
+					},
+				},
+				sf:                  &SubjectInfo{IDFrom: "user_id"},
+				ttl:                 5 * time.Second,
+				sessionLifespanConf: &SessionLifespanConfig{IssuedAtField: "iat"},
+			},
+			configureMocks: func(t *testing.T,
+				ctx *heimdallmocks.MockContext,
+				cch *mocks.MockCache,
+				ads *mockAuthDataGetter,
+				auth *genericAuthenticator,
+			) {
+				t.Helper()
+
+				cacheKey := auth.calculateCacheKey("session_token")
+
+				ads.On("GetAuthData", ctx).Return(dummyAuthData{Val: "session_token"}, nil)
+				cch.On("Get", cacheKey).Return(nil)
+			},
+			instructServer: func(t *testing.T) {
+				t.Helper()
+
+				checkRequest = func(req *http.Request) {
+					t.Helper()
+
+					assert.Equal(t, http.MethodGet, req.Method)
+					assert.Equal(t, "application/json", req.Header.Get("Accept"))
+					assert.Equal(t, "session_token", req.Header.Get("Dummy"))
+				}
+
+				responseCode = http.StatusOK
+				responseContent = []byte(`{ "user_id": "barbar", "iat": "2006-01-02T15:04:05.999999Z07" }`)
+				responseContentType = "application/json"
+			},
+			assert: func(t *testing.T, err error, sub *subject.Subject) {
+				t.Helper()
+
+				assert.True(t, endpointCalled)
+
+				require.Error(t, err)
+				assert.ErrorIs(t, err, heimdall.ErrInternal)
+				assert.Contains(t, err.Error(), "failed parsing issued_at")
+			},
+		},
+		{
+			uc: "execution with session lifespan ttl limiting the configured ttl",
+			authenticator: &genericAuthenticator{
+				e: endpoint.Endpoint{
+					URL:    srv.URL,
+					Method: http.MethodGet,
+					Headers: map[string]string{
+						"Accept": "application/json",
+					},
+				},
+				sf:                  &SubjectInfo{IDFrom: "user_id"},
+				ttl:                 30 * time.Second,
+				sessionLifespanConf: &SessionLifespanConfig{NotAfterField: "exp"},
+			},
+			configureMocks: func(t *testing.T,
+				ctx *heimdallmocks.MockContext,
+				cch *mocks.MockCache,
+				ads *mockAuthDataGetter,
+				auth *genericAuthenticator,
+			) {
+				t.Helper()
+
+				exp := strconv.FormatInt(time.Now().Add(15*time.Second).Unix(), 10)
+				cacheKey := auth.calculateCacheKey("session_token")
+
+				ads.On("GetAuthData", ctx).Return(dummyAuthData{Val: "session_token"}, nil)
+				cch.On("Get", cacheKey).Return(nil)
+				cch.On("Set", cacheKey, []byte(`{ "user_id": "barbar", "exp": `+exp+` }`), 5*time.Second)
+			},
+			instructServer: func(t *testing.T) {
+				t.Helper()
+
+				exp := strconv.FormatInt(time.Now().Add(15*time.Second).Unix(), 10)
+
+				checkRequest = func(req *http.Request) {
+					t.Helper()
+
+					assert.Equal(t, http.MethodGet, req.Method)
+					assert.Equal(t, "application/json", req.Header.Get("Accept"))
+					assert.Equal(t, "session_token", req.Header.Get("Dummy"))
+				}
+
+				responseCode = http.StatusOK
+				responseContent = []byte(`{ "user_id": "barbar", "exp": ` + exp + ` }`)
+				responseContentType = "application/json"
+			},
+			assert: func(t *testing.T, err error, sub *subject.Subject) {
+				t.Helper()
+
+				assert.True(t, endpointCalled)
+
+				require.NoError(t, err)
+
+				require.NotNil(t, sub)
+				assert.Equal(t, "barbar", sub.ID)
+				assert.Len(t, sub.Attributes, 2)
+			},
+		},
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
 			// GIVEN
