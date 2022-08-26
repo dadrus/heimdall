@@ -44,7 +44,7 @@ menu:
       url: docs/api/
       weight: 200
     - identifier: get_started
-      title: Getting Started
+      title: Get Started
       weight: 300
 
 frontmatter:
