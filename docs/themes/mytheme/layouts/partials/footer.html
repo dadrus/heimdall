@@ -15,15 +15,25 @@
       <div class="col-6 col-lg-2 offset-lg-1 mb-3">
         <h5>Links</h5>
         <ul class="list-unstyled">
-          <li class="mb-2"><a href="/">Home</a></li>
-          <li class="mb-2"><a href="/">Docs</a></li>
+          <li class="mb-2"><a href="{{ .Site.Home.RelPermalink }}">Home</a></li>
+          {{- range .Site.Menus.main.ByWeight -}}
+          {{- if not .HasChildren }}
+          <li class="mb-2"><a href="{{ relURL .URL }}">{{ .Title }}</a></li>
+          {{- else }}
+            {{ $currentPage := . }}
+            {{- range first 1 .Children }}
+          <li class="mb-2"><a href="{{ relURL .URL }}">{{ $currentPage.Title }}</a></li>
+            {{- end }}
+          {{- end }}
+          {{- end }}
         </ul>
       </div>
       <div class="col-6 col-lg-2 mb-2">
         <h5>Guides</h5>
         <ul class="list-unstyled">
-          <li class="mb-2"><a href="/">Install</a></li>
-          <li class="mb-2"><a href="/">Getting Started</a></li>
+          {{- range .Site.Menus.guides.ByWeight -}}
+          <li class="mb-2"><a href="{{ relURL .URL }}">{{ .Title }}</a></li>
+          {{- end }}
         </ul>
       </div>
       {{ if (isset .Site.Params "github") }}

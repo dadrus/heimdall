@@ -8,6 +8,8 @@ menu:
     weight: 10
     identifier: install
     parent: "Operations"
+  guides:
+    weight: 5
 ---
 
 Heimdall is shipped in multiple formats and architectures as to suit a variety of deployment patterns. Available installation options are:

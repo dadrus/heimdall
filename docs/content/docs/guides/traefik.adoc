@@ -6,6 +6,8 @@ weight: 25
 menu:
   docs:
     parent: "Guides"
+  guides:
+    weight: 15
 ---
 
 https://doc.traefik.io/traefik/[Traefik Proxy] is a modern HTTP proxy and load balancer for microservices, heimdall can be integrated with via the https://doc.traefik.io/traefik/middlewares/http/forwardauth/[ForwardAuth Middleware] by making use of the link:{{< relref "/docs/getting_started/concepts.adoc#_decision_api_mode" >}}[Decision API]. In such setup, traefik delegates authentication and authorization to heimdall. If heimdall answers with a 2XX code, traefik grants access and forwards the original request to the upstream service. Otherwise, the response  from heimdall is returned to the client.
