@@ -1828,7 +1828,7 @@ func createJWT(t *testing.T, keyEntry *keystore.Entry, subject, issuer, audience
 	return rawJwt
 }
 
-func TestGetCacheTTL(t *testing.T) {
+func TestJwtAuthenticatorGetCacheTTL(t *testing.T) {
 	t.Parallel()
 
 	disabledTTL := -1 * time.Second
