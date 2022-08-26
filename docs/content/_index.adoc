@@ -4,4 +4,4 @@ date: 2022-06-05T20:03:18+02:00
 draft: false
 ---
 
-This page will provide an overview about heimdall. For now head over to "Docs" to get started. The contents of those pages are addressed now.
+This page will provide an overview about heimdall in the future. For now head over to link:{{< relref "/docs/welcome.adoc" >}}[Docs] or other areas of this page linked in the header above or the footer below to get started.
