@@ -39,10 +39,7 @@ menu:
       title: Docs
       url: docs/welcome
       weight: 100
-    - identifier: api
-      title: API
-      url: docs/api/
-      weight: 200
+
     - identifier: get_started
       title: Get Started
       weight: 300
@@ -72,6 +69,8 @@ params:
 module:
   mounts:
     - source: versions
+      target: static
+    - source: openapi
       target: static
     - source: node_modules/bootstrap/dist/js/bootstrap.bundle.js
       target: assets/js/bootstrap.bundle.js
