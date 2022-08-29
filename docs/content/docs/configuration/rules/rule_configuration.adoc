@@ -31,9 +31,9 @@ Which strategy to use for matching of the value, provided in the `url` property.
 +
 Which HTTP methods (`GET`, `POST`, `PATCH`, etc) are allowed for the matched URL. If not specified, every request to that URL will result in `405 Method Not Allowed` response from Heimdall.
 
-* *`upstream`*: _string_ (optional)
+* *`upstream`*: _string_ (mandatory in Proxy operation mode)
 +
-Defines where to forward the proxied request to. Used only when Heimdall is operated in the Proxy operation mode and when Heimdall's client does not send `X-Forwarded-Host` header, respectively Heimdall ignores it due to not satisfied trust conditions. Only the URL schema and the host parts are used if this property is specified.
+Defines where to forward the proxied request to. Used only when Heimdall is operated in the Proxy operation mode. Only the URL schema and the host parts are used if this property is specified.
 
 * *`execute`*: _link:{{< relref "#_regular_pipeline" >}}[Regular Pipeline]_ (mandatory)
 +
@@ -131,7 +131,7 @@ In all cases, parts of the used pipeline type configurations can be overridden i
   # ... any further required mutators
 ----
 
-This example uses 
+This example uses
 
 * two authenticators, with authenticator named `bar` being the fallback for the authenticator named `foo`. This fallback authenticator is obviously of type link:{{< relref "/docs/configuration/pipeline/authenticators.adoc#_anonymous" >}}[anonymous] as it reconfigures the referenced prototype to use `anon` for subject id.
 * multiple hydrators and authorizers, with first hydrator having its cache disabled (`cache_ttl` set to 0s) and the last authorizer being of type link:{{< relref "/docs/configuration/pipeline/authorizers.adoc#_local" >}}[local] as it reconfigures the referenced prototype to use a different authorization script.
