@@ -17,7 +17,28 @@ tags:
   - name: Well-Known
     description: |
       Operations/resources which fall under the `.well-known` (see [RFC 8615](https://www.rfc-editor.org/rfc/rfc8615))
-      category, like health endpoints, etc. This functionality is only available on heimdall's **management port**.
+      category, like health endpoints, etc. 
+      
+      This functionality is only available on heimdall's **management port**.
+  - name: Decision API
+    description: |
+      Decision API is an operation mode of heimdall, in which heimdall can be integrated with most probably all modern
+      API gateways and reverse proxies as a so-called "authentication middleware". Here the reverse proxy, respectively
+      API gateway, will forward requests to heimdall by making use of its decisions service endpoint for authentication
+      and authorization purposes. Upon reception, heimdall will check if these requests satisfy the conditions defined
+      in pipeline definition rules. If not, heimdall returns an error (here to API gateway/reverse proxy). Otherwise,
+      the response to the API gateway/reverse proxy may contain additional headers, set by the used pipeline, which
+      should then be forwarded to the upstream service.
+      
+      This functionality is only available on heimdall's **decision port**.
+  - name: Proxy
+    description: |
+      Proxy is an operation mode of heimdall, in which heimdall forwards requests to the upstream service, if these
+      satisfy the conditions defined in pipeline definition rules. Otherwise, heimdall returns an error to the client.
+      If the pipeline execution was successful, it also forwards additional headers, specified in the used pipeline 
+      to the upstream service.
+      
+      This functionality is only available on heimdall's **proxy port**.
 
 x-tagGroups:
   - name: Management
@@ -176,133 +197,9 @@ paths:
 
         The contents served by this endpoint directly depend on the configuration for heimdall's key store. So, if
         nothing has been configured, the response will contain the JWKS with a single JWK for the key material heimdall
-        generated on start up. Otherwise, the response will contain the JWKS with as many JWK entries, as you've
-        specified via the afore said key store. If certificates have been configured together with the keys, 
+        generated on start up. Otherwise, the response will contain the JWKS with as many JWK entries, as
+        specified via the aforesaid key store. If certificates have been configured together with the keys, 
         the corresponding `x5c` entries will be present as well.
-        
-        So if you configure the key store with a PEM file with the following contents
-        
-        ```
-        -----BEGIN EC PRIVATE KEY-----
-        X-Key-ID: foo
-          
-        MIGkAgEBBDDo3RMhffhf9OlmyGkDItJt2Xl+CI+mnwxOm0Rxo6P2Dk2vNOIMHNpH
-        aznjXi8GqnqgBwYFK4EEACKhZANiAAQAFUfJwN3gJT3kEbIKghNlFAsZHsv3bsF5
-        G8aRPOyINEmmejg6g5wHYGScuiTUrHGOqTMQCl8TX/3zffoSTvUIChSPHGZRYeeZ
-        ch2aVQopCqdFFcWHBoxHLHK89jo4uS0=
-        -----END EC PRIVATE KEY-----
-        -----BEGIN EC PRIVATE KEY-----
-        X-Key-ID: bar
-        
-        MIGkAgEBBDA5iBXfURi1mnOpxLTEOHz4+5Cy1qW+nsymnPvwi9GgLiu+zNyKvoKo
-        6f1oKq7nF72gBwYFK4EEACKhZANiAASaOh9MIwDLqLl924EothJnz7N19U472vCe
-        PfcAOUzCmxQiLmjw6DlW6/aR+xeR1OrWEhQbgJf7nRO6HA+UzhySKJallR+14tKw
-        VfeP3/aHHtBxo019d0RzUOXm4N4F97c=
-        -----END EC PRIVATE KEY-----
-        -----BEGIN CERTIFICATE-----
-        MIIBwjCCAUmgAwIBAgIBATAKBggqhkjOPQQDAzA0MQswCQYDVQQGEwJFVTENMAsG
-        A1UEChMEVGVzdDEWMBQGA1UEAxMNVGVzdCBJbnQgQ0EgMTAeFw0yMjA4MTUxMzI2
-        NTVaFw0yMjA4MTYxMzI2NTVaMDAxCzAJBgNVBAYTAkVVMQ0wCwYDVQQKEwRUZXN0
-        MRIwEAYDVQQDEwlUZXN0IEVFIDEwdjAQBgcqhkjOPQIBBgUrgQQAIgNiAAQAFUfJ
-        wN3gJT3kEbIKghNlFAsZHsv3bsF5G8aRPOyINEmmejg6g5wHYGScuiTUrHGOqTMQ
-        Cl8TX/3zffoSTvUIChSPHGZRYeeZch2aVQopCqdFFcWHBoxHLHK89jo4uS2jMzAx
-        MA4GA1UdDwEB/wQEAwIHgDAfBgNVHSMEGDAWgBTVe7ko0R5OcFCHjnlch8D7FuUy
-        2TAKBggqhkjOPQQDAwNnADBkAjAv1RMkVae8yjgFAYEwXlkt2fJLd+2e1huNPKTQ
-        klVpaEzG90pOml4I/GY4WdkA+aQCMGRJO4NcHore6gW8O/q3UH+sNKI7ajrPir/X
-        mifLlRo8WqHqtwdr7PPAdaWJk2Z3rA==
-        -----END CERTIFICATE-----
-        -----BEGIN CERTIFICATE-----
-        MIIB9zCCAX6gAwIBAgIBATAKBggqhkjOPQQDAzA1MQswCQYDVQQGEwJFVTENMAsG
-        A1UEChMEVGVzdDEXMBUGA1UEAxMOVGVzdCBSb290IENBIDEwHhcNMjIwODE1MTMy
-        NjU1WhcNMjIwODE2MTMyNjU1WjA0MQswCQYDVQQGEwJFVTENMAsGA1UEChMEVGVz
-        dDEWMBQGA1UEAxMNVGVzdCBJbnQgQ0EgMTB2MBAGByqGSM49AgEGBSuBBAAiA2IA
-        BDMJBSK7YohCKPo5DPiUnf9l5rmap/1LeodMPQYaNUCuIlHbeM+04BKYyIhK9hGj
-        dNqNcH+072V7ACGA0ws5T2gDFP91xtahjL2wez5+CTTrM3Dv7wn79YX9yg7fRmg9
-        d6NjMGEwDgYDVR0PAQH/BAQDAgEGMA8GA1UdEwEB/wQFMAMBAf8wHQYDVR0OBBYE
-        FNV7uSjRHk5wUIeOeVyHwPsW5TLZMB8GA1UdIwQYMBaAFEoIzc7CBkrctksa5pCT
-        I3Np8B/6MAoGCCqGSM49BAMDA2cAMGQCMCNss/k8OaTnMzl3+OF0H+hZlylFm8vs
-        dwyERJ+eTU7zH3VOog1ylmkwedj+BnEJ8wIwSTu6IBJt4Db1V7ZJN2rIfbrPlIfs
-        V7IK5SdVJT3a5Ta6lxdxTtZABlYPHEV7GaUB
-        -----END CERTIFICATE-----
-        -----BEGIN CERTIFICATE-----
-        MIIB2TCCAV6gAwIBAgIBATAKBggqhkjOPQQDAzA1MQswCQYDVQQGEwJFVTENMAsG
-        A1UEChMEVGVzdDEXMBUGA1UEAxMOVGVzdCBSb290IENBIDEwHhcNMjIwODE1MTMy
-        NjU1WhcNMjIwODE2MTMyNjU1WjA1MQswCQYDVQQGEwJFVTENMAsGA1UEChMEVGVz
-        dDEXMBUGA1UEAxMOVGVzdCBSb290IENBIDEwdjAQBgcqhkjOPQIBBgUrgQQAIgNi
-        AAR60dYKMyR7IJGOkJUCfBnft32DoFtpeIEQwYUkZDBzDIy5l8pqlX6OdsnRBtwa
-        yjFuOQtqjgtb71nrcQSjI6aVTJqBnwsC5tPtqD0cdzICSK/WGokrMnUVF/MYHdhb
-        wyejQjBAMA4GA1UdDwEB/wQEAwIBBjAPBgNVHRMBAf8EBTADAQH/MB0GA1UdDgQW
-        BBRKCM3OwgZK3LZLGuaQkyNzafAf+jAKBggqhkjOPQQDAwNpADBmAjEA41BYFNhv
-        gDbE3LOyOWwk6Es/Yatjy7482q/PxfcElvyhX9/h1p6eoLkIILsFXjnnAjEAnHns
-        KGAWrW03rnntkKBgkv1vO/Hn8dkKYqPGzgN1kmrXM0qvE6K8lXD0dnVAF6mx
-        -----END CERTIFICATE-----
-        ```
-
-        The response would look, like
-        
-        ```
-        HTTP/1.1 200 OK
-        Date: Mon, 15 Aug 2022 13:26:55 GMT
-        Content-Type: application/json
-        Content-Length: 2361
-        Etag: "2361-623541857"
-          
-        {
-          "keys": [
-            {
-              "use": "sig",
-              "kty": "EC",
-              "kid": "foo",
-              "crv": "P-384",
-              "alg": "ES384",
-              "x": "ABVHycDd4CU95BGyCoITZRQLGR7L927BeRvGkTzsiDRJpno4OoOcB2BknLok1Kxx",
-              "y": "jqkzEApfE1_98336Ek71CAoUjxxmUWHnmXIdmlUKKQqnRRXFhwaMRyxyvPY6OLkt",
-              "x5c": [
-        "MIIBwjCCAUmgAwIBAgIBATAKBggqhkjOPQQDAzA0MQswCQYDVQQGEwJFVTENMAs
-        GA1UEChMEVGVzdDEWMBQGA1UEAxMNVGVzdCBJbnQgQ0EgMTAeFw0yMjA4MTUxMzI
-        2NTVaFw0yMjA4MTYxMzI2NTVaMDAxCzAJBgNVBAYTAkVVMQ0wCwYDVQQKEwRUZXN
-        0MRIwEAYDVQQDEwlUZXN0IEVFIDEwdjAQBgcqhkjOPQIBBgUrgQQAIgNiAAQAFUf
-        JwN3gJT3kEbIKghNlFAsZHsv3bsF5G8aRPOyINEmmejg6g5wHYGScuiTUrHGOqTM
-        QCl8TX/3zffoSTvUIChSPHGZRYeeZch2aVQopCqdFFcWHBoxHLHK89jo4uS2jMzA
-        xMA4GA1UdDwEB/wQEAwIHgDAfBgNVHSMEGDAWgBTVe7ko0R5OcFCHjnlch8D7FuU
-        y2TAKBggqhkjOPQQDAwNnADBkAjAv1RMkVae8yjgFAYEwXlkt2fJLd+2e1huNPKT
-        QklVpaEzG90pOml4I/GY4WdkA+aQCMGRJO4NcHore6gW8O/q3UH+sNKI7ajrPir/
-        XmifLlRo8WqHqtwdr7PPAdaWJk2Z3rA==",
-        "MIIB9zCCAX6gAwIBAgIBATAKBggqhkjOPQQDAzA1MQswCQYDVQQGEwJFVTENMAs
-        GA1UEChMEVGVzdDEXMBUGA1UEAxMOVGVzdCBSb290IENBIDEwHhcNMjIwODE1MTM
-        yNjU1WhcNMjIwODE2MTMyNjU1WjA0MQswCQYDVQQGEwJFVTENMAsGA1UEChMEVGV
-        zdDEWMBQGA1UEAxMNVGVzdCBJbnQgQ0EgMTB2MBAGByqGSM49AgEGBSuBBAAiA2I
-        ABDMJBSK7YohCKPo5DPiUnf9l5rmap/1LeodMPQYaNUCuIlHbeM+04BKYyIhK9hG
-        jdNqNcH+072V7ACGA0ws5T2gDFP91xtahjL2wez5+CTTrM3Dv7wn79YX9yg7fRmg
-        9d6NjMGEwDgYDVR0PAQH/BAQDAgEGMA8GA1UdEwEB/wQFMAMBAf8wHQYDVR0OBBY
-        EFNV7uSjRHk5wUIeOeVyHwPsW5TLZMB8GA1UdIwQYMBaAFEoIzc7CBkrctksa5pC
-        TI3Np8B/6MAoGCCqGSM49BAMDA2cAMGQCMCNss/k8OaTnMzl3+OF0H+hZlylFm8v
-        sdwyERJ+eTU7zH3VOog1ylmkwedj+BnEJ8wIwSTu6IBJt4Db1V7ZJN2rIfbrPlIf
-        sV7IK5SdVJT3a5Ta6lxdxTtZABlYPHEV7GaUB",
-        "MIIB2TCCAV6gAwIBAgIBATAKBggqhkjOPQQDAzA1MQswCQYDVQQGEwJFVTENMAs
-        GA1UEChMEVGVzdDEXMBUGA1UEAxMOVGVzdCBSb290IENBIDEwHhcNMjIwODE1MTM
-        yNjU1WhcNMjIwODE2MTMyNjU1WjA1MQswCQYDVQQGEwJFVTENMAsGA1UEChMEVGV
-        zdDEXMBUGA1UEAxMOVGVzdCBSb290IENBIDEwdjAQBgcqhkjOPQIBBgUrgQQAIgN
-        iAAR60dYKMyR7IJGOkJUCfBnft32DoFtpeIEQwYUkZDBzDIy5l8pqlX6OdsnRBtw
-        ayjFuOQtqjgtb71nrcQSjI6aVTJqBnwsC5tPtqD0cdzICSK/WGokrMnUVF/MYHdh
-        bwyejQjBAMA4GA1UdDwEB/wQEAwIBBjAPBgNVHRMBAf8EBTADAQH/MB0GA1UdDgQ
-        WBBRKCM3OwgZK3LZLGuaQkyNzafAf+jAKBggqhkjOPQQDAwNpADBmAjEA41BYFNh
-        vgDbE3LOyOWwk6Es/Yatjy7482q/PxfcElvyhX9/h1p6eoLkIILsFXjnnAjEAnHn
-        sKGAWrW03rnntkKBgkv1vO/Hn8dkKYqPGzgN1kmrXM0qvE6K8lXD0dnVAF6mx"
-              ]
-            },
-            {
-              "use": "sig",
-              "kty": "EC",
-              "kid": "bar",
-              "crv": "P-384",
-              "alg": "ES384",
-              "x": "mjofTCMAy6i5fduBKLYSZ8-zdfVOO9rwnj33ADlMwpsUIi5o8Og5Vuv2kfsXkdTq",
-              "y": "1hIUG4CX-50TuhwPlM4ckiiWpZUfteLSsFX3j9_2hx7QcaNNfXdEc1Dl5uDeBfe3"
-            }
-          ]
-        }
-        ```
       tags:
         - Well-Known
       summary: Get JWT verification keys (aka JWKS endpoint)
@@ -349,22 +246,20 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
 
-  /{*}:
+  /{decision_path_and_query_params}:
     servers:
       - url: http://heimdall.decision.local
         description: Decision Service
-    description: foo bar
-    summary: bar foo
     get:
       summary: Decision endpoint
-      description: Decision API 3
+      description: This endpoint accepts any subpaths, headers, cookies, etc. Also, all methods can be used as well.
       tags:
         - Decision API
       operationId: get_decision_api
       parameters:
-        - name: Path
+        - name: decision_path_and_query_params
           in: path
-          description: The path & query parameters to check the access to
+          description: The path and query parameter to match a rule and to work on.
           schema:
             type: string
         - name: X-Forwarded-Method
@@ -379,12 +274,12 @@ paths:
             type: string
         - name: X-Forwarded-Host
           in: header
-          description: Host to use to build the url to verify access to
+          description: Host to use to build the url to verify access to.
           schema:
             type: string
         - name: X-Forwarded-Path
           in: header
-          description: Path to use to build the url to verify access to. If not present the `Path` parameter is used
+          description: Path to use to build the url to verify access to. If not present the `Path` of the request is used.
           schema:
             type: string
         - name: X-Forwarded-Uri
@@ -414,7 +309,7 @@ paths:
             type: string
       responses:
         '202':
-          description: Request has been accepted
+          description: Request has been accepted and is allowed to be forwarded to the upstream service.
           headers:
             <Application Specific>:
               description: |
@@ -431,38 +326,90 @@ paths:
           description: Not Found. Returned if there was no rule found, which could be used to verify the request.
         '405':
           description: Method not allowed. Returned if the patched rule doesn't allow the usage of a particular HTTP method.
+        '500':
+          $ref: '#/components/responses/InternalServerError'
         '502':
           description: |
             Bad Gateway. Returned if the communication with any of the systems, the handlers in a matching rule are 
             using, failed due to DNS, timeout etc. errors.
-    post:
-      summary: Decision endpoint
-      description: Decision API 3
-      tags:
-        - Decision API
-      operationId: post_decision_api
-      responses:
-        '202':
-          description: Request has been accepted
-          headers:
-            Authorization:
-              description: Foo bar
-              schema:
-                type: string
-            '<user defined>':
-              description: bar foo
-              schema:
-                type: string
-        '400':
-          description: Bad request
-        '401':
-          description: Unauthorized
-        '403':
-          description: Forbidden
-        '404':
-          description: Not Found
-        '405':
-          description: Method not allowed
-        '502':
-          description: Bad Gateway
 
+  /{proxy_path_and_query_params}:
+    servers:
+      - url: http://heimdall.proxy.local
+        description: Decision Service
+    get:
+      summary: Proxy endpoint
+      description: This endpoint accepts any subpaths, headers, cookies, etc. Also, all methods can be used as well.
+      tags:
+        - Proxy
+      operationId: get_proxy
+      parameters:
+        - name: proxy_path_and_query_params
+          in: path
+          description: The path and query parameter to match a rule and to work on.
+          schema:
+            type: string
+        - name: X-Forwarded-Method
+          in: header
+          description: The HTTP method to use to for the url to verify access to. If not present defaults to the method used for sending the request to heimdall.
+          schema:
+            type: string
+        - name: X-Forwarded-Proto
+          in: header
+          description: Schema to use to build the url to verify access to. If not present defaults to the schema used to operate heimdall.
+          schema:
+            type: string
+        - name: X-Forwarded-Host
+          in: header
+          description: Host to use to build the url to verify access to.
+          schema:
+            type: string
+        - name: X-Forwarded-Path
+          in: header
+          description: Path to use to build the url to verify access to. If not present the `Path` of the request is used.
+          schema:
+            type: string
+        - name: X-Forwarded-Uri
+          in: header
+          description: The Uri to use to build the url to verify access to.
+          schema:
+            type: string
+        - name: X-Forwarded-For
+          in: header
+          description: A list with IPs of the clients (from heimdall perspective), the request has been passed through.
+          schema:
+            type: string
+        - name: Forwarded
+          in: header
+          description: A list with IPs of the clients (from heimdall perspective), the request has been passed through.
+          schema:
+            type: string
+        - name: <Application Specific>
+          in: header
+          description: Placeholder for other headers, the defined rules make use of.
+          schema:
+            type: string
+        - name: <Application Specific>
+          in: cookie
+          description: Placeholder for cookies, the defined rules make use of.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: |
+            If the request has been accepted, it will be forwarded to the upstream service. In that case the
+            response comes from the upstream service.
+        '401':
+          description: Unauthorized. Returned if a matching rule could not verify the authentication status of the subject related to the request.
+        '403':
+          description: Forbidden. Returned if a matching rule could not verify the authorization status of the subject related to the request.
+        '404':
+          description: Not Found. Returned if there was no rule found, which could be used to verify the request.
+        '405':
+          description: Method not allowed. Returned if the patched rule doesn't allow the usage of a particular HTTP method.
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        '502':
+          description: |
+            Bad Gateway. Returned if the communication with any of the systems, the handlers in a matching rule are 
+            using, failed due to DNS, timeout etc. errors.
