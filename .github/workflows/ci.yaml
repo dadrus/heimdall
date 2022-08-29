@@ -15,7 +15,7 @@ env:
 
 jobs:
   lint-code:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
     - name: Set up Go
       uses: actions/setup-go@v3
@@ -29,8 +29,22 @@ jobs:
         version: ${{ env.GOLANGCI_LINT_VERSION }}
         args: --timeout 4m
 
+  lint-api:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      - name: Setup Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 17.7
+      - name: Install Redocly CLI
+        run: npm i -g @redocly/cli@1.0.0-beta.108
+      - name: Run Redocly Lint
+        run: redocly lint
+
   lint-dockerfiles:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
     - name: Checkout repository
       uses: actions/checkout@v3
@@ -44,7 +58,7 @@ jobs:
         dockerfile: docker/debug.Dockerfile
 
   test:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
     - name: Set up Go
       uses: actions/setup-go@v3
@@ -61,7 +75,7 @@ jobs:
         verbose: true
 
   prepare-release:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     if: github.ref == 'refs/heads/main'
     outputs:
       release_created: ${{ steps.release_prepare.outputs.release_created }}
@@ -75,7 +89,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
 
   build-binaries:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     needs:
       - test
       - prepare-release
@@ -109,7 +123,7 @@ jobs:
           retention-days: 30
 
   release-binaries:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     needs:
       - prepare-release
     if: needs.prepare-release.outputs.release_created
@@ -145,7 +159,7 @@ jobs:
 
   # this job is here only for the verification purpose of the docker images build
   build-docker-images:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     needs:
       - test
       - prepare-release
@@ -169,7 +183,7 @@ jobs:
 
   release-docker-images:
     if: needs.prepare-release.outputs.release_created
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     needs:
       - prepare-release
     steps:
@@ -217,7 +231,7 @@ jobs:
           readme-filepath: ./DockerHub-README.md
 
   documentation:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     needs:
       - prepare-release
     if: always()

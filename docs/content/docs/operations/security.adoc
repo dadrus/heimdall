@@ -36,7 +36,7 @@ In a typical production scenario, there is a need for proper key and certificate
 
 * you can and should configure not only the private key for signature creation purposes, but also the corresponding certificate chain. This way your upstream services are able not only to verify the signatures of the signed objects for cryptographic validity, but also perform verification of the revocation status of used certificates and also their time validity. All of that is crucial for secure communication.
 +
-The cryptographic material for the above said verification purposes is available via the link:{{< relref "/docs/api/_index.adoc#_jwks" >}}[JWKS endpoint] for the upstream services.
+The cryptographic material for the above said verification purposes is available via the link:{{< relref "/openapi/#tag/Well-Known/operation/well_known_jwks" >}}[JWKS endpoint] for the upstream services.
 * you can configure multiple keys in heimdall's `key_store` and specify the `key_id` of the key to use. The easiest way to let heimdall use the key id, you need, is to set `X-Key-ID` header in the PEM block of the corresponding private key. With that in place you can perform key roll over without down-times by first updating the key stores of all heimdall instances to include the new key and certificates, and when this is done, by updating the key id to reference the new key material instance by instance. This way all upstream services can verify the signatures of the objects issued by heimdall, regardless of the used key material, as all heimdall instances, are able to serve the new and the old cryptographic material.
 
 
