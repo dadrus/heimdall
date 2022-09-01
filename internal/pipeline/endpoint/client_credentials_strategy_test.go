@@ -88,7 +88,7 @@ func TestApplyClientCredentialsStrategy(t *testing.T) {
 
 			return
 		}
-		rawResp, err := json.Marshal(&resp)
+		rawResp, err := json.MarshalContext(r.Context(), &resp)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 

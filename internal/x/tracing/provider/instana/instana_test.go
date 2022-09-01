@@ -82,7 +82,7 @@ func TestInstanaTracer(t *testing.T) {
 				Pid:    1,
 				HostID: "1",
 			}
-			resp, err := json.Marshal(&agentResponse)
+			resp, err := json.MarshalContext(r.Context(), &agentResponse)
 			assert.NoError(t, err)
 
 			w.Header().Set("Server", "Instana Agent")
