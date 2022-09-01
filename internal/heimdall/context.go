@@ -5,7 +5,7 @@ import (
 	"net/url"
 )
 
-type Context interface {
+type Context interface { // nolint: interfacebloat
 	RequestMethod() string
 	RequestHeaders() map[string]string
 	RequestHeader(key string) string
