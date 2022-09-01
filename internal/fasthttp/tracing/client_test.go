@@ -58,7 +58,7 @@ func TestWrappedClientDoTimeout(t *testing.T) {
 			uc:                 "with tracer and error while communicating with the server",
 			tracer:             mocktracer.New(),
 			serverResponseCode: http.StatusOK,
-			timeout:            0 * time.Second,
+			timeout:            1 * time.Nanosecond,
 			assert: func(t *testing.T, err error, req *fasthttp.Request, resp *fasthttp.Response,
 				spans []*mocktracer.MockSpan,
 			) {
