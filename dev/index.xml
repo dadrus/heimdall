@@ -17,7 +17,7 @@ Binary
 Docker Image
 Source Code You can always build a copy of Heimdall by following the following instructions for your OS/environment.
 Prerequisites git
-The Go programming language &amp;gt;= 1.18
+The Go programming language &amp;gt;= 1.19
 Download Retrieve the latest copy of heimdall source code by cloning the git repository
 $ git clone git@github.com:dadrus/heimdall.git Build with go Build using a single line with go build</description></item><item><title>CLI</title><link>https://dadrus.github.io/docs/operations/cli/</link><pubDate>Thu, 09 Jun 2022 18:57:50 +0200</pubDate><guid>https://dadrus.github.io/docs/operations/cli/</guid><description>Heimdall’s Command Line Interface
 General heimdall [command] [flags] [arguments] Use heimdall help to get overview about available commands, respectively heimdall [command] help for help on any command.
