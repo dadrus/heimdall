@@ -260,6 +260,8 @@ github.com/inconshreveable/mousetrap v1.0.0 h1:Z8tu5sraLXCXIcARxBp/8cbvlwVa7Z1NH
 github.com/inconshreveable/mousetrap v1.0.0/go.mod h1:PxqpIevigyE2G7u3NXJIT2ANytuPF1OarO4DADm73n8=
 github.com/instana/go-sensor v1.43.4 h1:z0EGXEP/J71CVUBw4f5sTvvzL+bG0s9wa39urHm1FyA=
 github.com/instana/go-sensor v1.43.4/go.mod h1:E42MelHWFz11qqaLwvgt0j98v2s2O/bq22UDkGaG0Gg=
+github.com/instana/go-sensor v1.43.5 h1:Rap7b054p1BVoXKN8E20hRe6GeyBvVXsLi+I6o3Fc9Q=
+github.com/instana/go-sensor v1.43.5/go.mod h1:E42MelHWFz11qqaLwvgt0j98v2s2O/bq22UDkGaG0Gg=
 github.com/instana/testify v1.6.2-0.20200721153833-94b1851f4d65/go.mod h1:nYhEREG/B7HUY7P+LKOrqy53TpIqmJ9JyUShcaEKtGw=
 github.com/jellydator/ttlcache/v3 v3.0.0 h1:zmFhqrB/4sKiEiJHhtseJsNRE32IMVmJSs4++4gaQO4=
 github.com/jellydator/ttlcache/v3 v3.0.0/go.mod h1:WwTaEmcXQ3MTjOm4bsZoDFiCu/hMvNWLO1w67RXz6h4=

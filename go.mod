@@ -13,7 +13,7 @@ require (
 	github.com/gofiber/fiber/v2 v2.36.0
 	github.com/google/uuid v1.3.0
 	github.com/iancoleman/strcase v0.2.0
-	github.com/instana/go-sensor v1.43.4
+	github.com/instana/go-sensor v1.43.5
 	github.com/jellydator/ttlcache/v3 v3.0.0
 	github.com/knadh/koanf v1.4.3
 	github.com/mitchellh/mapstructure v1.5.0
