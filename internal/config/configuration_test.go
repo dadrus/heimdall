@@ -9,7 +9,7 @@ import (
 
 func TestNewConfigurationFromStructWithDefaultsOnly(t *testing.T) {
 	// WHEN
-	config, err := NewConfiguration("")
+	config, err := NewConfiguration("HEIMDALLCFG_", "")
 
 	// THEN
 	require.NoError(t, err)
@@ -18,7 +18,7 @@ func TestNewConfigurationFromStructWithDefaultsOnly(t *testing.T) {
 
 func TestNewConfigurationWithConfigFile(t *testing.T) {
 	// WHEN
-	config, err := NewConfiguration("./test_data/test_config.yaml")
+	config, err := NewConfiguration("HEIMDALLCFG_", "./test_data/test_config.yaml")
 
 	// THEN
 	require.NoError(t, err)

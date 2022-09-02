@@ -1,6 +1,7 @@
 package serve
 
 import (
+	"github.com/dadrus/heimdall/internal/config"
 	"github.com/spf13/cobra"
 	"go.uber.org/fx"
 
@@ -16,10 +17,13 @@ func NewProxyCommand() *cobra.Command {
 		Example: "heimdall serve proxy",
 		Run: func(cmd *cobra.Command, args []string) {
 			configPath, _ := cmd.Flags().GetString("config")
+			envPrefix, _ := cmd.Flags().GetString("env-config-prefix")
 
 			app := fx.New(
 				fx.NopLogger,
-				fx.Supply(configPath),
+				fx.Supply(
+					config.ConfigPath(configPath),
+					config.EnvPrefix(envPrefix)),
 				internal.Module,
 				proxy.Module,
 			)

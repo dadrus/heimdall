@@ -19,6 +19,7 @@ var validateCmd = &cobra.Command{
 func init() {
 	RootCmd.AddCommand(validateCmd)
 
-	validateCmd.PersistentFlags().StringP("config", "c", "", "Config file")
+	validateCmd.PersistentFlags().StringP("config", "c", "",
+		"Path to heimdall's configuration file")
 	validateCmd.AddCommand(validate.NewValidateConfigCommand())
 }
