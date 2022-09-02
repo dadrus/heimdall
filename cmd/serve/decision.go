@@ -5,6 +5,7 @@ import (
 	"go.uber.org/fx"
 
 	"github.com/dadrus/heimdall/internal"
+	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/handler/decision"
 )
 
@@ -16,10 +17,13 @@ func NewDecisionCommand() *cobra.Command {
 		Example: "heimdall serve decision",
 		Run: func(cmd *cobra.Command, args []string) {
 			configPath, _ := cmd.Flags().GetString("config")
+			envPrefix, _ := cmd.Flags().GetString("env-config-prefix")
 
 			app := fx.New(
 				fx.NopLogger,
-				fx.Supply(configPath),
+				fx.Supply(
+					config.ConfigurationPath(configPath),
+					config.EnvVarPrefix(envPrefix)),
 				internal.Module,
 				decision.Module,
 			)

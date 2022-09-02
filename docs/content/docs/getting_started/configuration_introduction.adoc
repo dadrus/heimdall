@@ -78,7 +78,9 @@ rules:
 
 Every configuration property, which can be defined in a link:{{< relref "#_configuration_file" >}}[configuration file] can also be defined as environment variable. Following rules apply:
 
-* All variables start with `HEIMDALL_` prefix.
+* If not specified while starting heimdall, all variables start with `HEIMDALLCFG_` prefix.
++
+CAUTION: If for whatever reason, your environment configuration contains variables starting with `HEIMDALLCFG_`, which do not define heimdall specific configuration, heimdall will refuse starting if such configuration variable clashes (has an unexpected type) with heimdall's configuration properties (even for environment variables, the configuration is type safe). You can overcome such situation, by ether renaming such variables, or, if this is not possible, make use of the `--env-config-prefix` flag with heimdall's `serve` command.
 
 * Properties in a hierarchy are separated by `_`
 +
@@ -94,7 +96,7 @@ and using an environment variable with
 +
 [source, bash]
 ----
-HEIMDALL_LOG_LEVEL=info
+HEIMDALLCFG_LOG_LEVEL=info
 ----
 
 
@@ -115,8 +117,8 @@ and using environment variables with
 +
 [source, bash]
 ----
-HEIMDALL_RULES_DEFAULT_METHODS_0=GET
-HEIMDALL_RULES_DEFAULT_METHODS_1=POST
+HEIMDALLCFG_RULES_DEFAULT_METHODS_0=GET
+HEIMDALLCFG_RULES_DEFAULT_METHODS_1=POST
 ----
 +
 For structured configuration, like the definition of the authenticators in the example above
@@ -133,8 +135,8 @@ The corresponding environment variables would be
 +
 [source, bash]
 ----
-HEIMDALL_PIPELINE_AUTHENTICATORS_0_ID=anonymous_authenticator
-HEIMDALL_PIPELINE_AUTHENTICATORS_0_TYPE=anonymous
+HEIMDALLCFG_PIPELINE_AUTHENTICATORS_0_ID=anonymous_authenticator
+HEIMDALLCFG_PIPELINE_AUTHENTICATORS_0_TYPE=anonymous
 ----
 
 * If a name of a property has `\_` it must be escaped with an additional `_`.
@@ -151,6 +153,6 @@ and using the environment variables with
 +
 [source, bash]
 ----
-HEIMDALL_TRACING_SERVICE__NAME=foobar
+HEIMDALLCFG_TRACING_SERVICE__NAME=foobar
 ----
 

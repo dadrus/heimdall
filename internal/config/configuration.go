@@ -20,7 +20,7 @@ type Configuration struct {
 	Rules    RulesConfig    `koanf:"rules,omitempty"`
 }
 
-func NewConfiguration(configFile string) (Configuration, error) {
+func NewConfiguration(envPrefix EnvVarPrefix, configFile ConfigurationPath) (Configuration, error) {
 	// copy defaults
 	result := defaultConfig
 
@@ -29,9 +29,9 @@ func NewConfiguration(configFile string) (Configuration, error) {
 		parser.WithDecodeHookFunc(mapstructure.StringToSliceHookFunc(",")),
 		parser.WithDecodeHookFunc(logLevelDecodeHookFunc),
 		parser.WithDecodeHookFunc(logFormatDecodeHookFunc),
-		parser.WithEnvPrefix("HEIMDALL_"),
+		parser.WithEnvPrefix(string(envPrefix)),
 		parser.WithDefaultConfigFilename("heimdall.yaml"),
-		parser.WithConfigFile(configFile),
+		parser.WithConfigFile(string(configFile)),
 		parser.WithConfigValidator(ValidateConfig),
 	}
 
