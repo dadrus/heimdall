@@ -4,8 +4,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/dadrus/heimdall/internal/config/parser"
 	"github.com/mitchellh/mapstructure"
+
+	"github.com/dadrus/heimdall/internal/config/parser"
 )
 
 type Configuration struct {
@@ -19,7 +20,7 @@ type Configuration struct {
 	Rules    RulesConfig    `koanf:"rules,omitempty"`
 }
 
-func NewConfiguration(envPrefix EnvPrefix, configFile ConfigPath) (Configuration, error) {
+func NewConfiguration(envPrefix EnvVarPrefix, configFile ConfigurationPath) (Configuration, error) {
 	// copy defaults
 	result := defaultConfig
 

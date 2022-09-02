@@ -1,11 +1,11 @@
 package serve
 
 import (
-	"github.com/dadrus/heimdall/internal/config"
 	"github.com/spf13/cobra"
 	"go.uber.org/fx"
 
 	"github.com/dadrus/heimdall/internal"
+	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/handler/decision"
 )
 
@@ -22,8 +22,8 @@ func NewDecisionCommand() *cobra.Command {
 			app := fx.New(
 				fx.NopLogger,
 				fx.Supply(
-					config.ConfigPath(configPath),
-					config.EnvPrefix(envPrefix)),
+					config.ConfigurationPath(configPath),
+					config.EnvVarPrefix(envPrefix)),
 				internal.Module,
 				decision.Module,
 			)

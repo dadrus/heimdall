@@ -1,5 +1,6 @@
 package config
 
-type ConfigPath string
-
-type EnvPrefix string
+type (
+	ConfigurationPath string
+	EnvVarPrefix      string
+)
