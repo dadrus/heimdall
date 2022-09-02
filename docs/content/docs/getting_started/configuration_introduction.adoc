@@ -80,7 +80,7 @@ Every configuration property, which can be defined in a link:{{< relref "#_confi
 
 * If not specified while starting heimdall, all variables start with `HEIMDALLCFG_` prefix.
 +
-NOTE: If for whatever reason, your environment configuration contains variables starting with `HEIMDALLCFG_`, which do not define heimdall specific configuration, heimdall will refuse starting if such configuration variable clashes (has an unexpected type) with heimdall's configuration properties (even for environment variables, the configuration is type safe). You can overcome such situation, by ether renaming such variables, or, if this is not possible, make use of the `--env-config-prefix` flag with heimdall's `serve` command.
+CAUTION: If for whatever reason, your environment configuration contains variables starting with `HEIMDALLCFG_`, which do not define heimdall specific configuration, heimdall will refuse starting if such configuration variable clashes (has an unexpected type) with heimdall's configuration properties (even for environment variables, the configuration is type safe). You can overcome such situation, by ether renaming such variables, or, if this is not possible, make use of the `--env-config-prefix` flag with heimdall's `serve` command.
 
 * Properties in a hierarchy are separated by `_`
 +
