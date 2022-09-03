@@ -10,16 +10,26 @@ linters:
     - ireturn
     - exhaustruct
     - exhaustivestruct
-    - maligned
-    - scopelint
-    - golint
-    - ifshort
     - interfacer
     - testpackage
-    - funlen
     - paralleltest
     - nolintlint
     - tparallel
+    # deprecated
+    - varcheck
+    - deadcode
+    - nosnakecase
+    - structcheck
+    - maligned
+    - scopelint
+    - ifshort
+    - golint
+
+issues:
+  exclude-rules:
+    - path: '(.+)_test\.go'
+      linters:
+        - funlen
 
 linters-settings:
   exhaustive:
@@ -45,11 +55,6 @@ linters-settings:
     ignore-chan-recv-ok: true
     ignore-names:
       - err
-    # Optional list of variable declarations that should be ignored completely. (defaults to empty list)
-    # Entries must be in one of the following forms (see below for examples):
-    # - for variables, parameters, named return values, method receivers, or type parameters:
-    #   <name> <type>  (<type> can also be a pointer/slice/map/chan/...)
-    # - for constants: const <name>
     ignore-decls:
       - c *fiber.Ctx
       - t testing.T
@@ -60,14 +65,7 @@ linters-settings:
       - r *http.Request
   goconst:
     ignore-tests: true
-#  revive:
-#    max-open-files: 2048
-#    severity: error
-#    enable-all-rules: true
-#    rules:
-#      - name: unexported-return
-#        severity: warning
-#        disabled: true
   cyclop:
-    # The maximal code complexity to report.
     max-complexity: 11
+  funlen:
+    lines: 80
