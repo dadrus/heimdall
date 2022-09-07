@@ -10,6 +10,7 @@
   "license": "Apache 2.0",
   "dependencies": {
     "bootstrap": "^5.2.0",
-    "bootstrap-icons": "^1.8.3"
+    "bootstrap-icons": "^1.8.3",
+    "hugo-flexsearch": "1.0.2"
   }
 }
