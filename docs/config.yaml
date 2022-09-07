@@ -32,6 +32,19 @@ markup:
       rouge-style: monokai.sublime
       icons: font
 
+outputs:
+  home:
+    - html
+    - rss
+    - json
+  page:
+    - html
+    - rss
+    - json
+  section:
+    - html
+    - rss
+    - json
 
 menu:
   main:
@@ -73,6 +86,6 @@ module:
     - source: openapi
       target: static
     - source: node_modules/bootstrap/dist/js/bootstrap.bundle.js
-      target: assets/js/bootstrap.bundle.js
+      target: assets/js/bootstrap.js
     - source: node_modules/bootstrap-icons/font/fonts
       target: static/css/fonts
