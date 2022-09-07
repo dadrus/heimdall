@@ -1,23 +1,62 @@
 import HugoFlexSearch from "hugo-flexsearch";
 import * as bs from "bootstrap";
 
-export const search = new HugoFlexSearch({
-    indexUrl: "/index.json",
-    indexedFields: [
-        "title",
-        "content",
-        "url",
-    ],
-    limit: 10,
-    suggestions: true,
-    searchLogic: "and",
-    resultTemplate: (post) => {
-        const searchValue = searchInput.value
-        let results = []
+class DocSearch extends HTMLElement {
+    async connectedCallback() {
+        new HugoFlexSearch({
+            indexUrl: this.indexFile,
+            indexedFields: [ "title", "content", "url" ],
+            limit: 10,
+            suggestions: true,
+            searchLogic: "and",
+            resultTemplate: this.resultTemplate,
+            emptyTemplate: this.emptyTemplate,
+        });
+
+        const searchForm = document.getElementById("docs-search");
+        const searchSuggestions = bs.Collapse.getOrCreateInstance(
+            document.getElementById("search-suggestions"));
+
+        searchForm.addEventListener("keydown", (ev) => {
+            if (["Esc", "Escape"].includes(ev.key)) {
+                searchSuggestions.hide();
+            }
+        });
+
+        function checkFocus(ev) {
+            if (searchForm.contains(ev.relatedTarget)) {
+                return; // Special case for tab key
+            }
+
+            if (searchForm.contains(document.activeElement)) {
+                searchSuggestions.show();
+            } else {
+                searchSuggestions.hide();
+            }
+        }
+
+        window.addEventListener("blur", checkFocus, true);
+        window.addEventListener("focus", checkFocus, true);
+    }
+
+    get indexFile() {
+        const indexFile = this.hasAttribute('index-file') ? this.getAttribute('index-file') : null
+
+        if (!indexFile) {
+            throw new Error('No index info data provided! Please add the attribute "index-file"!')
+        }
+
+        return indexFile
+    }
+
+    resultTemplate(post) {
+        const searchValue = document.getElementById("search").value
 
         let result = `<div class="mb-2 p-1"><a href="${post.url}"><h4>${post.title}</h4></a>`
 
         if (searchValue.length > 2) {
+            let results = []
+
             let idx = -1
             do {
                 idx = post.content.toLowerCase().indexOf(searchValue.toLowerCase(), idx + 1)
@@ -30,6 +69,8 @@ export const search = new HugoFlexSearch({
                 }
             } while (idx > -1)
 
+            console.log(results)
+
             result += `<p class="text-muted">`
             results.filter((val, idx, arr) => idx < 5).forEach(res => result += `${res}<br>`)
             result += `</p>`
@@ -38,32 +79,11 @@ export const search = new HugoFlexSearch({
         result += `</div><hr class="mb-2" />`
 
         return result
-    },
-    emptyTemplate: () => { return `<div class="p-3"><p>No results found.</p></div>` },
-});
-
-const searchForm = document.getElementById("docs-search");
-const searchInput = document.getElementById("search");
-const suggestionsEl = document.getElementById("search-suggestions");
-const searchSuggestions = bs.Collapse.getOrCreateInstance(suggestionsEl);
-
-function checkFocus(ev) {
-    if (searchForm.contains(ev.relatedTarget)) {
-        return; // Special case for tab key
     }
 
-    if (searchForm.contains(document.activeElement)) {
-        searchSuggestions.show();
-    } else {
-        searchSuggestions.hide();
+    emptyTemplate() {
+        return `<div class="p-3"><p>No results found.</p></div>`
     }
 }
 
-window.addEventListener("blur", checkFocus, true);
-window.addEventListener("focus", checkFocus, true);
-
-searchForm.addEventListener("keydown", (ev) => {
-    if (["Esc", "Escape"].includes(ev.key)) {
-        searchSuggestions.hide();
-    }
-});
+customElements.define('doc-search', DocSearch)
