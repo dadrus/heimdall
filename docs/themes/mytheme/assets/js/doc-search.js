@@ -5,9 +5,6 @@ export const search = new HugoFlexSearch({
     indexUrl: "/index.json",
     indexedFields: [
         "title",
-        "description",
-        "tags",
-        "categories",
         "content",
         "url",
     ],
@@ -18,7 +15,7 @@ export const search = new HugoFlexSearch({
         const searchValue = searchInput.value
         let results = []
 
-        let result = `<div class="mb-2 p-1"><a href="${post.url}"><h4>${post.title}</h4></a>`;
+        let result = `<div class="mb-2 p-1"><a href="${post.url}"><h4>${post.title}</h4></a>`
 
         if (searchValue.length > 2) {
             let idx = -1
@@ -38,13 +35,11 @@ export const search = new HugoFlexSearch({
             result += `</p>`
         }
 
-        result += `</div><hr class="mb-2" />`;
-        return result;
+        result += `</div><hr class="mb-2" />`
+
+        return result
     },
-    emptyTemplate: () => {
-        let result = `<div class="p-3"><p>No results found.</p></div>`;
-        return result;
-    },
+    emptyTemplate: () => { return `<div class="p-3"><p>No results found.</p></div>` },
 });
 
 const searchForm = document.getElementById("docs-search");

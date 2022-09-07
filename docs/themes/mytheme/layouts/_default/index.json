@@ -1,23 +1,7 @@
 {{- $.Scratch.Add "index" slice -}}
 {{- range .Site.RegularPages -}}
-  {{- $section := slice -}}
-  {{- $next := .Parent -}}
-  {{ if and $next (not (eq $next.Title "Docs")) (not $next.IsHome) }}
-    {{- $section = slice $next.Title | append $section -}}
-    {{- $next := $next.Parent -}}
-    {{ if and $next (not (eq $next.Title "Docs")) (not $next.IsHome) }}
-      {{- $section = slice $next.Title | append $section -}}
-    {{- end -}}
-  {{- end -}}
-  {{- $sectionName := delimit ($section) " / " -}}
-
   {{- $.Scratch.Add "index" (dict
-      "section" $sectionName
       "title" .Title
-      "tags" .Params.tags
-      "description" .Description
-      "tags" .Params.tags
-      "categories" .Params.categories
       "content" .Plain
       "url" .Permalink
     ) -}}
