@@ -1,10 +1,10 @@
 [
   {
     "version": "dev",
-    "path": "/heimdall/dev/"
+    "path": "/heimdall/dev"
   },
   {
     "version": "v0.2.0-alpha",
-    "path": "/heimdall/v0.2.0-alpha/"
+    "path": "/heimdall/v0.2.0-alpha"
   }
 ]
