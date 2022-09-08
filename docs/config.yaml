@@ -78,8 +78,8 @@ params:
   github:
     user: dadrus
     project: heimdall
-  version_file: /data.json
-  search_index_file: /index.json
+  version_file: /heimdall/data.json
+  search_index_file: /heimdall/x-current-version/index.json
 
 module:
   mounts:
