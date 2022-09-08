@@ -49,12 +49,14 @@
       {{ end }}
     </div>
   </div>
-
-  <!-- JavaScript and dependencies -->
-  {{- $bootstrap := resources.Get "js/bootstrap.bundle.js" -}}
-  {{- $js := slice $bootstrap | resources.Concat "js/bundle.js" | resources.Minify -}}
-
-  <script src="{{$js.RelPermalink}}" defer></script>
-  <script src="/js/doc-version-select.js" defer></script>
-  <script src="https://cdn.redoc.ly/redoc/latest/bundles/redoc.standalone.js"> </script>
 </footer>
+
+<!-- JavaScript and dependencies -->
+{{- $bootstrap := resources.Get "js/bootstrap.bundle.js" -}}
+{{- $docVersionSelect := resources.Get "js/doc-version-select.js" | js.Build (dict "minify" true) -}}
+{{- $flexsearch := resources.Get "js/doc-search.js" | js.Build (dict "minify" true)  -}}
+
+<script src="{{ $bootstrap.RelPermalink }}" defer></script>
+<script src="{{ $docVersionSelect.RelPermalink }}" defer></script>
+<script src="{{ $flexsearch.RelPermalink }}" defer></script>
+<!--<script src="https://cdn.redoc.ly/redoc/latest/bundles/redoc.standalone.js"> </script>-->

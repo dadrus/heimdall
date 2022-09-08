@@ -1,0 +1,26 @@
+{{- $.Scratch.Add "index" slice -}}
+{{- range .Site.RegularPages -}}
+  {{- $section := slice -}}
+  {{- $next := .Parent -}}
+  {{ if and $next (not (eq $next.Title "Docs")) (not $next.IsHome) }}
+    {{- $section = slice $next.Title | append $section -}}
+    {{- $next := $next.Parent -}}
+    {{ if and $next (not (eq $next.Title "Docs")) (not $next.IsHome) }}
+      {{- $section = slice $next.Title | append $section -}}
+    {{- end -}}
+  {{- end -}}
+
+  {{- $.Scratch.Add "index" (dict
+      "sections" $section
+      "title" .Title
+      "tags" .Params.tags
+      "description" .Description
+      "tags" .Params.tags
+      "categories" .Params.categories
+      "content" .Plain
+      "html_content" .Content
+      "url" .Permalink
+    ) -}}
+{{- end -}}
+{{- $.Scratch.Get "index" | jsonify -}}
+

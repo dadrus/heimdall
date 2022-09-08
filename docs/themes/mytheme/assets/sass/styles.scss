@@ -211,3 +211,15 @@ doc-version-select {
     }
   }
 }
+
+#search-suggestions {
+  position: absolute;
+  left: 0;
+  width: auto;
+  white-space: nowrap;
+  padding: $spacer $spacer 0;
+}
+
+.search-result:last-of-type {
+  border-bottom: 0;
+}
