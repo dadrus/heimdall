@@ -42,8 +42,8 @@ class DocSearch extends HTMLElement {
             limit: 10,
             suggestions: true,
             searchLogic: "and",
-            resultTemplate: this.resultTemplate,
-            emptyTemplate: this.emptyTemplate,
+            resultTemplate: this.resultTemplate.bind(this),
+            emptyTemplate: this.emptyTemplate.bind(this),
         });
 
         const searchForm = document.getElementById("docs-search");
