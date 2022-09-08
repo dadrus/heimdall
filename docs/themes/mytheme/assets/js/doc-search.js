@@ -12,7 +12,7 @@ class SingleResult {
         return `
         <a class="list-group-item list-group-item-action" href="${this.url}">
             <div class="text-muted">${this.snippet}</div>
-            <h3 class="h6 mb-0 text-primary">${this.title}</h3>
+            <div class="fw-bold mb-0 text-primary">${this.title}</div>
         </a>`
     }
 }

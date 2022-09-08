@@ -217,8 +217,7 @@ doc-version-select {
   left: 0;
   width: auto;
   white-space: nowrap;
-  padding: $spacer;
-  padding-bottom: 0;
+  padding: $spacer $spacer 0;
 }
 
 .search-result:last-of-type {
