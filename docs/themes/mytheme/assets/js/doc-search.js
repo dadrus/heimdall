@@ -1,6 +1,39 @@
 import HugoFlexSearch from "hugo-flexsearch";
 import * as bs from "bootstrap";
 
+class SingleResult {
+    constructor(args) {
+        this.title = args.title
+        this.url = args.url
+        this.snippet = args.snippet
+    }
+
+    render() {
+        return `
+        <a class="list-group-item list-group-item-action" href="${this.url}">
+            <div class="text-muted">${this.snippet}</div>
+            <h3 class="h6 mb-0 text-primary">${this.title}</h3>
+        </a>`
+    }
+}
+
+class SearchResult {
+    constructor(args) {
+        this.title = args.title
+        this.url = args.url
+        this.sections = args.sections
+        this.items = args.items
+    }
+
+    render() {
+        return `
+        <div class="mb-4">
+          <div class="mb-1 fw-bold" >${this.sections.join(" / ")} / ${this.title}</div>
+          <div class="list-group">${this.items.reduce((prev, cur) => prev + cur.render(), "")}</div>
+        </div>`
+    }
+}
+
 class DocSearch extends HTMLElement {
     async connectedCallback() {
         new HugoFlexSearch({
@@ -74,7 +107,7 @@ class DocSearch extends HTMLElement {
             return ""
         }
 
-        const results = matches.map(el => {
+        const items = matches.map(el => {
             const section = el.querySelector(headingSelector)
             const idx = el.textContent.toLowerCase().indexOf(searchValue.toLowerCase())
             let snippet = el.textContent.substring(idx - 10, idx + 40)
@@ -82,28 +115,21 @@ class DocSearch extends HTMLElement {
             const start = snippet.toLowerCase().indexOf(searchValue.toLowerCase())
             const beforeVal = snippet.substring(0, start)
             const afterVal = snippet.substring(start + searchValue.length)
-            snippet = '... ' + beforeVal + '<span class="text-primary">' + searchValue + '</span>' + afterVal + ' ...'
+            snippet = '... ' + beforeVal + '<mark>' + searchValue + '</mark>' + afterVal + ' ...'
 
-            return {
+            return new SingleResult({
                 "title": section.textContent,
                 "url": post.url + "#" + section.attributes.id.value,
-                "snippet": snippet
-            }
+                "snippet": snippet,
+            })
         })
 
-        console.log(results)
-
-        let result = `<div class="mb-2 p-1"><p>${post.section} - ${post.title}</p>`
-
-        result += `<p class="text-muted">`
-        results.forEach(res => {
-            result +=  `<a href="${res.url}"><h4>${res.title}</h4></a>`
-            result += `<p class="text-muted">${res.snippet}</p>`
-        })
-
-        result += `</div><hr class="mb-2" />`
-
-        return result
+        return new SearchResult({
+            "title": post.title,
+            "url": post.url,
+            "sections": post.sections,
+            "items": items
+        }).render()
     }
 
     emptyTemplate() {
