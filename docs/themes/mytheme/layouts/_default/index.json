@@ -19,7 +19,7 @@
       "categories" .Params.categories
       "content" .Plain
       "html_content" .Content
-      "url" .Permalink
+      "url" .RelPermalink
     ) -}}
 {{- end -}}
 {{- $.Scratch.Get "index" | jsonify -}}
