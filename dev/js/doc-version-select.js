@@ -1,9 +1,0 @@
-(()=>{function l(t){let[e,n]=t.split("+"),[r,i]=e.split("-").map(s=>String(s).split(".").map(o=>isNaN(o)?o:parseInt(o,10)));return{core:r,pre:i,build:n}}function u(t,e){for(let n=0;n<3;n++){if(t[n]<e[n])return-1;if(t[n]>e[n])return 1}return 0}function a(t,e){if(t&&!e)return-1;if(!t&&e)return 1;{let n=t.length>e.length?t.length:e.length;for(let r=0;r<n;r++){if(typeof t[r]>"u"&&typeof e[r]<"u")return-1;if(typeof t[r]<"u"&&typeof e[r]>"u")return 1;if(typeof t[r]=="number"&&typeof e[r]=="string")return-1;if(typeof t[r]=="string"&&typeof e[r]=="number")return 1;if(t[r]<e[r])return-1;if(t[r]>e[r])return 1}}}var d=(t,e)=>{let n=l(t),r=l(e),i=u(n.core,r.core);if(i)return i;let s=a(n.pre,r.pre);return s||0},p=t=>new DOMParser().parseFromString(t,"text/html").body.firstChild,f=(t,e)=>n=>`
-<li><a class="dropdown-item ${t===n.version?"current":""}" href="${n.path}${e}">${n.version}</a></li>`,h=(t=[],e,n)=>{let r=f(e,n);return p(`
-    <ul class="dropdown-menu">
-      ${r(t[0])}
-      <li><hr class="dropdown-divider"></li>
-      ${t.slice(1).map(r).sort(d).reverse().join(`
-`)}
-    </ul>
-  `)},g=async t=>{let e=await fetch(t,{headers:{Accept:"application/json"},credentials:"same-origin",method:"GET",mode:"same-origin",redirect:"follow"});if(!e.ok)throw new Error(`Data could not be loaded: ${e.status}`);return e.json()},c=class extends HTMLElement{async connectedCallback(){let e=await g(this.versionsFile);this.appendChild(h(e,this.currentVersion,this.currentPage))}get currentPage(){return(this.hasAttribute("current-page")?this.getAttribute("current-page"):null)||"/"}get versionsFile(){let e=this.hasAttribute("version-file")?this.getAttribute("version-file"):null;if(!e)throw new Error('No version info data provided! Please add the attribute "version-file"!');return e}get currentVersion(){return(this.hasAttribute("current-version")?this.getAttribute("current-version"):null)||"unknown"}};customElements.define("doc-version-select",c);})();
