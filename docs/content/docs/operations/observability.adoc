@@ -14,7 +14,7 @@ Hemdall implements different observability to support easier operation and integ
 
 == Logging in Heimdall
 
-Heimdall's implementation uses https://github.com/rs/zerolog[zorolog] - Zero Allocation JSON Logger, which can however also log in plain text.
+Heimdall's implementation uses https://github.com/rs/zerolog[zerolog] - Zero Allocation JSON Logger, which can however also log in plain text.
 
 Available Logging configuration options are described in link:{{< relref "/docs/configuration/observability/logging.adoc" >}}[Logging Configuration].
 
