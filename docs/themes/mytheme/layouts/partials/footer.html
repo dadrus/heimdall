@@ -52,9 +52,9 @@
 </footer>
 
 <!-- JavaScript and dependencies -->
-{{- $bootstrap := resources.Get "js/bootstrap.js" -}}
+{{- $bootstrap := resources.Get "js/bootstrap.bundle.js" -}}
 {{- $docVersionSelect := resources.Get "js/doc-version-select.js" | js.Build (dict "minify" true) -}}
-{{- $flexsearch := resources.Get "js/doc-search.js" | js.Build (dict "minify" true) -}}
+{{- $flexsearch := resources.Get "js/doc-search.js" | js.Build (dict "minify" true)  -}}
 
 <script src="{{ $bootstrap.RelPermalink }}" defer></script>
 <script src="{{ $docVersionSelect.RelPermalink }}" defer></script>

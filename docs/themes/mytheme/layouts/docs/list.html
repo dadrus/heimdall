@@ -1,11 +1,14 @@
 {{- define "main" -}}
 <nav class="navbar navbar-expand-lg bg-light" aria-label="Docs menu">
   <div class="container-xxl">
-    <form id="docs-search" tabindex="1" class="doks-search position-relative me-auto">
-      <input id="search" class="form-control search-bar" type="search"
-             placeholder="Search docs..." aria-label="Search docs..." autocomplete="off" onfocusout/>
-      <div id="search-suggestions" class="shadow bg-white rounded collapse search-results"  style="position: absolute"></div>
-    </form>
+    <doc-search index-file="{{ .Site.Params.search_index_file }}">
+      <form id="docs-search" tabindex="1" class="doks-search position-relative me-auto">
+        <input id="search" class="form-control search-bar" type="search"
+               placeholder="Search docs..." aria-label="Search docs..." autocomplete="off" onfocusout/>
+        <div id="search-suggestions" class="shadow bg-white rounded collapse search-results"
+             style="position: absolute"></div>
+      </form>
+    </doc-search>
     <button class="navbar-toggler" type="button"
             data-bs-toggle="collapse" data-bs-target="#docsMenuContent"
             aria-controls="docsMenuContent" aria-expanded="false" aria-label="Open docs menu">
