@@ -292,7 +292,7 @@ jobs:
         id: update-version-json
         if: needs.prepare-release.outputs.release_created
         run: |
-          cat ./docs/versions/data.json | jq '. + [{ "version": "${{ needs.prepare-release.outputs.tag_name }}", "path": "/heimdall/${{ needs.prepare-release.outputs.tag_name }}/" }]' | tee ./docs/versions/data.json
+          cat ./docs/versions/data.json | jq '. + [{ "version": "${{ needs.prepare-release.outputs.tag_name }}", "path": "/heimdall/${{ needs.prepare-release.outputs.tag_name }}" }]' | tee ./docs/versions/data.json
       - name: Deploy dev documentation
         if: github.ref == 'refs/heads/main' && needs.prepare-release.outputs.release_created == false
         uses: peaceiris/actions-gh-pages@v3
