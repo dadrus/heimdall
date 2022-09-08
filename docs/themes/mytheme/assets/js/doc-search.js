@@ -82,8 +82,13 @@ class DocSearch extends HTMLElement {
         return indexFile
     }
 
+    get pathPrefix() {
+        return this.hasAttribute('path-prefix') ? this.getAttribute('path-prefix') : ""
+    }
+
     resultTemplate(post) {
         const searchValue = document.getElementById("search").value
+        const pathPrefix = this.pathPrefix
 
         if (searchValue.length < 3) {
             return ""
@@ -119,14 +124,14 @@ class DocSearch extends HTMLElement {
 
             return new SingleResult({
                 "title": section.textContent,
-                "url": post.url + "#" + section.attributes.id.value,
+                "url": pathPrefix + post.url + "#" + section.attributes.id.value,
                 "snippet": snippet,
             })
         })
 
         return new SearchResult({
             "title": post.title,
-            "url": post.url,
+            "url": pathPrefix + post.url,
             "sections": post.sections,
             "items": items
         }).render()

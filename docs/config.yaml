@@ -80,6 +80,7 @@ params:
     project: heimdall
   version_file: /heimdall/data.json
   search_index_file: /heimdall/x-current-version/index.json
+  path_prefix: /heimdall/x-current-version
 
 module:
   mounts:
