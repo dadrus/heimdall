@@ -53,10 +53,10 @@
 
 <!-- JavaScript and dependencies -->
 {{- $bootstrap := resources.Get "js/bootstrap.bundle.js" -}}
-{{- $docVersionSelect := resources.Get "js/doc-version-select.js" | js.Build (dict "minify" true) -}}
-{{- $flexsearch := resources.Get "js/doc-search.js" | js.Build (dict "minify" true)  -}}
-
+{{- $bundle := slice
+    (resources.Get "js/doc-version-select.js")
+    (resources.Get "js/doc-search.js") |
+    resources.Concat "js/main.js" |
+    js.Build (dict "minify" true) -}}
 <script src="{{ $bootstrap.RelPermalink }}" defer></script>
-<script src="{{ $docVersionSelect.RelPermalink }}" defer></script>
-<script src="{{ $flexsearch.RelPermalink }}" defer></script>
-<!--<script src="https://cdn.redoc.ly/redoc/latest/bundles/redoc.standalone.js"> </script>-->
+<script src="{{ $bundle.RelPermalink }}" defer></script>
