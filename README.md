@@ -29,4 +29,4 @@ Heimdall's main focus points beyond its functionality are:
 
 The current implementation is an alpha version. That means it does not solve all the problems heimdall aims to solve. With other words a lot of functionality is missing. In addition, alpha version means, there will be breaking changes. Nevertheless, the code base is stable and pretty good tested. Functionality already supported can be found in [Release descriptions](https://github.com/dadrus/heimdall/releases). Planned features can be found in the defined [Milestones](https://github.com/dadrus/heimdall/milestones).
 
-If you like to give it a try, checkout out the [documentation](https://dadrus.github.io/heimdall/v0.2.0-alpha/docs/welcome/).
+If you like to give it a try, checkout out the [documentation](https://dadrus.github.io/heimdall/).
