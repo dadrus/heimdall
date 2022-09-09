@@ -1,5 +1,33 @@
 # Changelog
 
+## [0.3.0-alpha](https://github.com/dadrus/heimdall/compare/v0.2.0-alpha...v0.3.0-alpha) (2022-09-09)
+
+
+### ⚠ BREAKING CHANGES
+
+* Prefix for considered environment variables renamed from `HEIMDALL_` to `HEIMDALLCFG_` and made this prefix configurable via a `--env-config-prefix` flag (#220)
+* `session` property used by some authenticators renamed (incl. its properties) to `subject` to better reflect its meaning (#200)
+* `jwt_from` property of the `jwt_authenticator` renamed to `jwt_source` to comply with naming in other authenticators (#199)
+
+### Features
+
+* `generic` authenticator updated to consider ttl of the session object received from the `identity_info_endpoint` and to enable session validation ([#201](https://github.com/dadrus/heimdall/issues/201)) ([42b4e6c](https://github.com/dadrus/heimdall/commit/42b4e6c4852fa3d46009241e08310c413de5437f))
+* `jwt_authenticator` updated to support X.509 certificates (incl validation) in JWKs used for JWT signature verification ([#172](https://github.com/dadrus/heimdall/issues/172)) ([19ef20d](https://github.com/dadrus/heimdall/commit/19ef20daa1964e82389db05b6aae2cf56b3321ca))
+* `oauth2_authenticator` updated to optionally support token source selection, like specific header, schema, etc ([#198](https://github.com/dadrus/heimdall/issues/198)) ([e7ad797](https://github.com/dadrus/heimdall/commit/e7ad797c83cca5b9b58b1fddb88b62a94ed9cfda))
+* If no `kid` is present in the JWT, the `jwt_authenticator` can now iterate over the received JWKS and try to verify the signature until one of the keys matches ([#196](https://github.com/dadrus/heimdall/issues/196)) ([488e46f](https://github.com/dadrus/heimdall/commit/488e46f67c1b0231e3c8127e0bd560f52d8eb2a8))
+* x509 certificate support in keystore ([#166](https://github.com/dadrus/heimdall/issues/166)) ([2d9af4c](https://github.com/dadrus/heimdall/commit/2d9af4c00e258cc696cceb2c6e184086c0744d3e))
+
+
+### Bug Fixes
+
+* Prefix for considered environment variables renamed from `HEIMDALL_` to `HEIMDALLCFG_` and made this prefix configurable via a `--env-config-prefix` flag ([#220](https://github.com/dadrus/heimdall/issues/220)) ([3bfeff1](https://github.com/dadrus/heimdall/commit/3bfeff159a58896c4c6785e3889e986879866a9b))
+
+
+### Code Refactoring
+
+* `jwt_from` property of the `jwt_authenticator` renamed to `jwt_source` to comply with naming in other authenticators ([#199](https://github.com/dadrus/heimdall/issues/199)) ([29d6bcb](https://github.com/dadrus/heimdall/commit/29d6bcb5959b21713564492d6f144dec1eed99f6))
+* `session` property used by some authenticators renamed (incl. its properties) to `subject` to better reflect its meaning ([#200](https://github.com/dadrus/heimdall/issues/200)) ([869d8ae](https://github.com/dadrus/heimdall/commit/869d8ae327e94dca87202541f044882054a9ea2b))
+
 ## [0.2.0-alpha](https://github.com/dadrus/heimdall/compare/v0.1.0-alpha...v0.2.0-alpha) (2022-08-12)
 
 
