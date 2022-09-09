@@ -327,7 +327,7 @@ jobs:
           git config --local user.email "{{ github.sha }}+github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           git add ./docs/versions/data.json
-          git commit -m "chore({{ github.ref_name }}): Preparing for next iteration"
+          git commit -m "chore(${{ github.ref_name }}): Preparing for next iteration"
       - name: Push changes
         if: needs.prepare-release.outputs.release_created
         uses: ad-m/github-push-action@master
