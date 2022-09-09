@@ -2,7 +2,7 @@ openapi: 3.1.0
 
 info:
   title: Heimdall
-  version: 0.2.0-alpha
+  version: 0.3.0-alpha
   description: The API of heimdall
   license:
     name: Apache 2.0
