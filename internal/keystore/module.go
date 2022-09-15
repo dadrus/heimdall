@@ -1,8 +1,9 @@
 package keystore
 
 import (
+	"crypto/ecdsa"
+	"crypto/elliptic"
 	"crypto/rand"
-	"crypto/rsa"
 
 	"github.com/rs/zerolog"
 	"go.uber.org/fx"
@@ -12,28 +13,26 @@ import (
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
-// nolint
-var Module = fx.Options(
+var Module = fx.Options( //nolint:gochecknoglobals
 	fx.Provide(NewKeyStore),
 )
 
 func NewKeyStore(conf config.Configuration, logger zerolog.Logger) (KeyStore, error) {
-	const rsa2048 = 2048
-
 	var (
 		ks  KeyStore
 		err error
 	)
 
 	if len(conf.Signer.KeyStore) == 0 {
-		logger.Warn().Msg("Key store is not configured. NEVER DO IT IN PRODUCTION!!!! Generating an RSA key pair.")
+		logger.Warn().Msg("Key store is not configured. NEVER DO IT IN PRODUCTION!!!! " +
+			"Generating an ECDSA P-384 key pair.")
 
-		var privateKey *rsa.PrivateKey
+		var privateKey *ecdsa.PrivateKey
 
-		privateKey, err = rsa.GenerateKey(rand.Reader, rsa2048)
+		privateKey, err = ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
 		if err != nil {
 			return nil, errorchain.NewWithMessage(heimdall.ErrInternal,
-				"failed to generate RSA-2048 key pair").CausedBy(err)
+				"failed to generate ECDSA P-384 key pair").CausedBy(err)
 		}
 
 		ks, err = NewKeyStoreFromKey(privateKey)

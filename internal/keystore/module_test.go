@@ -2,6 +2,8 @@ package keystore_test
 
 import (
 	"bytes"
+	"crypto/ecdsa"
+	"crypto/rsa"
 	"os"
 	"testing"
 
@@ -41,6 +43,10 @@ func TestNewKeyStore(t *testing.T) {
 				require.NoError(t, err)
 				require.NotNil(t, ks)
 				assert.Len(t, ks.Entries(), 1)
+				entry := ks.Entries()[0]
+				assert.IsType(t, &ecdsa.PrivateKey{}, entry.PrivateKey)
+				assert.Equal(t, 384, entry.KeySize)
+				assert.Equal(t, "ECDSA", entry.Alg)
 			},
 		},
 		{
@@ -54,6 +60,14 @@ func TestNewKeyStore(t *testing.T) {
 				require.NoError(t, err)
 				require.NotNil(t, ks)
 				assert.Len(t, ks.Entries(), 2)
+				entry1 := ks.Entries()[0]
+				assert.IsType(t, &ecdsa.PrivateKey{}, entry1.PrivateKey)
+				assert.Equal(t, 256, entry1.KeySize)
+				assert.Equal(t, "ECDSA", entry1.Alg)
+				entry2 := ks.Entries()[1]
+				assert.IsType(t, &rsa.PrivateKey{}, entry2.PrivateKey)
+				assert.Equal(t, 2048, entry2.KeySize)
+				assert.Equal(t, "RSA", entry2.Alg)
 			},
 		},
 	} {
