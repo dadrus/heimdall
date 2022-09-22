@@ -13,18 +13,18 @@ import (
 // nolint
 func init() {
 	registerAuthenticatorTypeFactory(
-		func(_ string, typ config.PipelineObjectType, conf map[string]any) (bool, Authenticator, error) {
+		func(id string, typ config.PipelineObjectType, conf map[string]any) (bool, Authenticator, error) {
 			if typ != config.POTAnonymous {
 				return false, nil, nil
 			}
 
-			auth, err := newAnonymousAuthenticator(conf)
+			auth, err := newAnonymousAuthenticator(id, conf)
 
 			return true, auth, err
 		})
 }
 
-func newAnonymousAuthenticator(rawConfig map[string]any) (*anonymousAuthenticator, error) {
+func newAnonymousAuthenticator(id string, rawConfig map[string]any) (*anonymousAuthenticator, error) {
 	var auth anonymousAuthenticator
 
 	if err := decodeConfig(rawConfig, &auth); err != nil {
@@ -37,10 +37,13 @@ func newAnonymousAuthenticator(rawConfig map[string]any) (*anonymousAuthenticato
 		auth.Subject = "anonymous"
 	}
 
+	auth.id = id
+
 	return &auth, nil
 }
 
 type anonymousAuthenticator struct {
+	id      string
 	Subject string `mapstructure:"subject"`
 }
 
@@ -57,10 +60,14 @@ func (a *anonymousAuthenticator) WithConfig(config map[string]any) (Authenticato
 		return a, nil
 	}
 
-	return newAnonymousAuthenticator(config)
+	return newAnonymousAuthenticator(a.id, config)
 }
 
 func (a *anonymousAuthenticator) IsFallbackOnErrorAllowed() bool {
 	// not allowed, as no error can happen when this authenticator is executed
 	return false
+}
+
+func (a *anonymousAuthenticator) HandlerID() string {
+	return a.id
 }
