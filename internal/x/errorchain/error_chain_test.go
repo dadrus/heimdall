@@ -23,13 +23,13 @@ func (e *errCtx) Foo() string {
 	return "foo"
 }
 
-type errTest3 struct{}
+type testError struct{}
 
-func (e *errTest3) Error() string {
+func (e *testError) Error() string {
 	return "test error 3"
 }
 
-func (e *errTest3) Bar() string {
+func (e *testError) Bar() string {
 	return "bar"
 }
 
@@ -124,7 +124,7 @@ func TestErrorChainNewWithCauseAndContextAttachedToError(t *testing.T) {
 
 	var barer Barer
 
-	errTest := &errTest3{}
+	errTest := &testError{}
 
 	// WHEN
 	err := errorchain.NewWithMessage(errTest, "foo").

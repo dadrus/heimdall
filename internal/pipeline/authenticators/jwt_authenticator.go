@@ -57,7 +57,7 @@ type jwtAuthenticator struct {
 	validateJWKCert      bool
 }
 
-func newJwtAuthenticator(id string, rawConfig map[string]any) (*jwtAuthenticator, error) {
+func newJwtAuthenticator(id string, rawConfig map[string]any) (*jwtAuthenticator, error) { // nolint: funlen
 	type Config struct {
 		Endpoint             endpoint.Endpoint                   `mapstructure:"jwks_endpoint"`
 		AuthDataSource       extractors.CompositeExtractStrategy `mapstructure:"jwt_source"`

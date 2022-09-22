@@ -553,7 +553,6 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				var identifier HandlerIdentifier
 				require.True(t, errors.As(err, &identifier))
 				assert.Equal(t, "auth3", identifier.HandlerID())
-
 			},
 		},
 		{
