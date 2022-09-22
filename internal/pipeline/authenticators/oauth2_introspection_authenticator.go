@@ -28,18 +28,19 @@ import (
 // nolint
 func init() {
 	registerAuthenticatorTypeFactory(
-		func(_ string, typ config.PipelineObjectType, conf map[string]any) (bool, Authenticator, error) {
+		func(id string, typ config.PipelineObjectType, conf map[string]any) (bool, Authenticator, error) {
 			if typ != config.POTOAuth2Introspection {
 				return false, nil, nil
 			}
 
-			auth, err := newOAuth2IntrospectionAuthenticator(conf)
+			auth, err := newOAuth2IntrospectionAuthenticator(id, conf)
 
 			return true, auth, err
 		})
 }
 
 type oauth2IntrospectionAuthenticator struct {
+	id                   string
 	e                    endpoint.Endpoint
 	a                    oauth2.Expectation
 	sf                   SubjectFactory
@@ -48,7 +49,10 @@ type oauth2IntrospectionAuthenticator struct {
 	allowFallbackOnError bool
 }
 
-func newOAuth2IntrospectionAuthenticator(rawConfig map[string]any) (*oauth2IntrospectionAuthenticator, error) {
+func newOAuth2IntrospectionAuthenticator(id string, rawConfig map[string]any) (
+	*oauth2IntrospectionAuthenticator,
+	error,
+) {
 	type Config struct {
 		Endpoint             endpoint.Endpoint                   `mapstructure:"introspection_endpoint"`
 		AuthDataSource       extractors.CompositeExtractStrategy `mapstructure:"token_source"`
@@ -60,17 +64,21 @@ func newOAuth2IntrospectionAuthenticator(rawConfig map[string]any) (*oauth2Intro
 
 	var conf Config
 	if err := decodeConfig(rawConfig, &conf); err != nil {
-		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
-			"failed to unmarshal oauth2 introspection authenticator config").CausedBy(err)
+		return nil, errorchain.
+			NewWithMessage(heimdall.ErrConfiguration,
+				"failed to unmarshal oauth2 introspection authenticator config").
+			CausedBy(err)
 	}
 
 	if err := conf.Endpoint.Validate(); err != nil {
-		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
-			"failed to validate endpoint configuration").CausedBy(err)
+		return nil, errorchain.
+			NewWithMessage(heimdall.ErrConfiguration, "failed to validate endpoint configuration").
+			CausedBy(err)
 	}
 
 	if len(conf.Assertions.TrustedIssuers) == 0 {
-		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration, "no trusted issuers configured")
+		return nil, errorchain.
+			NewWithMessage(heimdall.ErrConfiguration, "no trusted issuers configured")
 	}
 
 	if len(conf.SubjectInfo.IDFrom) == 0 {
@@ -113,6 +121,7 @@ func newOAuth2IntrospectionAuthenticator(rawConfig map[string]any) (*oauth2Intro
 	)
 
 	return &oauth2IntrospectionAuthenticator{
+		id:                   id,
 		ads:                  ads,
 		e:                    conf.Endpoint,
 		a:                    conf.Assertions,
@@ -128,8 +137,10 @@ func (a *oauth2IntrospectionAuthenticator) Execute(ctx heimdall.Context) (*subje
 
 	accessToken, err := a.ads.GetAuthData(ctx)
 	if err != nil {
-		return nil, errorchain.NewWithMessage(heimdall.ErrAuthentication,
-			"no access token present").CausedBy(err)
+		return nil, errorchain.
+			NewWithMessage(heimdall.ErrAuthentication, "no access token present").
+			WithErrorContext(a).
+			CausedBy(err)
 	}
 
 	rawResp, err := a.getSubjectInformation(ctx, accessToken.Value())
@@ -139,8 +150,11 @@ func (a *oauth2IntrospectionAuthenticator) Execute(ctx heimdall.Context) (*subje
 
 	sub, err := a.sf.CreateSubject(rawResp)
 	if err != nil {
-		return nil, errorchain.NewWithMessage(heimdall.ErrInternal,
-			"failed to extract subject information from introspection response").CausedBy(err)
+		return nil, errorchain.
+			NewWithMessage(heimdall.ErrInternal,
+				"failed to extract subject information from introspection response").
+			WithErrorContext(a).
+			CausedBy(err)
 	}
 
 	return sub, nil
@@ -160,11 +174,13 @@ func (a *oauth2IntrospectionAuthenticator) WithConfig(rawConfig map[string]any) 
 
 	var conf Config
 	if err := decodeConfig(rawConfig, &conf); err != nil {
-		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
-			"failed to unmarshal configuration").CausedBy(err)
+		return nil, errorchain.
+			NewWithMessage(heimdall.ErrConfiguration, "failed to unmarshal configuration").
+			CausedBy(err)
 	}
 
 	return &oauth2IntrospectionAuthenticator{
+		id:  a.id,
 		e:   a.e,
 		a:   conf.Assertions.Merge(&a.a),
 		sf:  a.sf,
@@ -178,6 +194,10 @@ func (a *oauth2IntrospectionAuthenticator) WithConfig(rawConfig map[string]any) 
 
 func (a *oauth2IntrospectionAuthenticator) IsFallbackOnErrorAllowed() bool {
 	return a.allowFallbackOnError
+}
+
+func (a *oauth2IntrospectionAuthenticator) HandlerID() string {
+	return a.id
 }
 
 func (a *oauth2IntrospectionAuthenticator) getSubjectInformation(ctx heimdall.Context, token string) ([]byte, error) {
@@ -213,8 +233,10 @@ func (a *oauth2IntrospectionAuthenticator) getSubjectInformation(ctx heimdall.Co
 	}
 
 	if err = introspectResp.Validate(a.a); err != nil {
-		return nil, errorchain.NewWithMessage(heimdall.ErrAuthentication,
-			"access token does not satisfy assertion conditions").CausedBy(err)
+		return nil, errorchain.
+			NewWithMessage(heimdall.ErrAuthentication, "access token does not satisfy assertion conditions").
+			WithErrorContext(a).
+			CausedBy(err)
 	}
 
 	if cacheTTL := a.getCacheTTL(introspectResp); cacheTTL > 0 {
@@ -237,19 +259,27 @@ func (a *oauth2IntrospectionAuthenticator) fetchTokenIntrospectionResponse(
 			"token_type_hint": []string{"access_token"},
 		}.Encode()), nil)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, errorchain.
+			NewWithMessage(heimdall.ErrInternal, "failed creating request").
+			WithErrorContext(a).
+			CausedBy(err)
 	}
 
 	resp, err := a.e.CreateClient(req.URL.Hostname()).Do(req)
 	if err != nil {
 		var clientErr *url.Error
 		if errors.As(err, &clientErr) && clientErr.Timeout() {
-			return nil, nil, errorchain.NewWithMessage(heimdall.ErrCommunicationTimeout,
-				"request to the introspection endpoint timed out").CausedBy(err)
+			return nil, nil, errorchain.
+				NewWithMessage(heimdall.ErrCommunicationTimeout,
+					"request to the introspection endpoint timed out").
+				WithErrorContext(a).
+				CausedBy(err)
 		}
 
-		return nil, nil, errorchain.NewWithMessage(heimdall.ErrCommunication,
-			"request to the introspection endpoint failed").CausedBy(err)
+		return nil, nil, errorchain.
+			NewWithMessage(heimdall.ErrCommunication, "request to the introspection endpoint failed").
+			WithErrorContext(a).
+			CausedBy(err)
 	}
 
 	defer resp.Body.Close()
@@ -261,20 +291,25 @@ func (a *oauth2IntrospectionAuthenticator) readIntrospectionResponse(
 	resp *http.Response,
 ) (*oauth2.IntrospectionResponse, []byte, error) {
 	if !(resp.StatusCode >= http.StatusOK && resp.StatusCode < http.StatusMultipleChoices) {
-		return nil, nil, errorchain.NewWithMessagef(heimdall.ErrCommunication,
-			"unexpected response code: %v", resp.StatusCode)
+		return nil, nil, errorchain.
+			NewWithMessagef(heimdall.ErrCommunication, "unexpected response code: %v", resp.StatusCode).
+			WithErrorContext(a)
 	}
 
 	rawData, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, nil, errorchain.NewWithMessage(heimdall.ErrInternal,
-			"failed to read response").CausedBy(err)
+		return nil, nil, errorchain.
+			NewWithMessage(heimdall.ErrInternal, "failed to read response").
+			WithErrorContext(a).
+			CausedBy(err)
 	}
 
 	var introspectionResponse oauth2.IntrospectionResponse
 	if err = json.Unmarshal(rawData, &introspectionResponse); err != nil {
-		return nil, nil, errorchain.NewWithMessage(heimdall.ErrInternal,
-			"failed to unmarshal received introspection response").CausedBy(err)
+		return nil, nil, errorchain.
+			NewWithMessage(heimdall.ErrInternal, "failed to unmarshal received introspection response").
+			WithErrorContext(a).
+			CausedBy(err)
 	}
 
 	return &introspectionResponse, rawData, nil
