@@ -13,26 +13,30 @@ import (
 // nolint
 func init() {
 	registerAuthenticatorTypeFactory(
-		func(_ string, typ config.PipelineObjectType, conf map[string]any) (bool, Authenticator, error) {
+		func(id string, typ config.PipelineObjectType, conf map[string]any) (bool, Authenticator, error) {
 			if typ != config.POTUnauthorized {
 				return false, nil, nil
 			}
 
-			return true, newUnauthorizedAuthenticator(), nil
+			return true, newUnauthorizedAuthenticator(id), nil
 		})
 }
 
-type unauthorizedAuthenticator struct{}
+type unauthorizedAuthenticator struct {
+	id string
+}
 
-func newUnauthorizedAuthenticator() *unauthorizedAuthenticator {
-	return &unauthorizedAuthenticator{}
+func newUnauthorizedAuthenticator(id string) *unauthorizedAuthenticator {
+	return &unauthorizedAuthenticator{id: id}
 }
 
 func (a *unauthorizedAuthenticator) Execute(ctx heimdall.Context) (*subject.Subject, error) {
 	logger := zerolog.Ctx(ctx.AppContext())
 	logger.Debug().Msg("Authenticating using unauthorized authenticator")
 
-	return nil, errorchain.NewWithMessage(heimdall.ErrAuthentication, "denied by authenticator")
+	return nil, errorchain.
+		NewWithMessage(heimdall.ErrAuthentication, "denied by authenticator").
+		WithErrorContext(a)
 }
 
 func (a *unauthorizedAuthenticator) WithConfig(_ map[string]any) (Authenticator, error) {
@@ -43,4 +47,8 @@ func (a *unauthorizedAuthenticator) WithConfig(_ map[string]any) (Authenticator,
 func (a *unauthorizedAuthenticator) IsFallbackOnErrorAllowed() bool {
 	// not allowed, as this authenticator fails always
 	return false
+}
+
+func (a *unauthorizedAuthenticator) HandlerID() string {
+	return a.id
 }
