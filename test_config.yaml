@@ -151,8 +151,8 @@ pipeline:
         return_to_query_parameter: return_to
         when:
           - error:
-            - authentication_error
-            - authorization_error
+            - type: authentication_error
+              raised_by: kratos_session_authenticator
             request_headers:
               Accept:
               - '*/*'
