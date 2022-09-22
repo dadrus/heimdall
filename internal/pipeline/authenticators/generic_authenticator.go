@@ -25,18 +25,19 @@ import (
 // nolint
 func init() {
 	registerAuthenticatorTypeFactory(
-		func(_ string, typ config.PipelineObjectType, conf map[string]any) (bool, Authenticator, error) {
+		func(id string, typ config.PipelineObjectType, conf map[string]any) (bool, Authenticator, error) {
 			if typ != config.POTGeneric {
 				return false, nil, nil
 			}
 
-			auth, err := newGenericAuthenticator(conf)
+			auth, err := newGenericAuthenticator(id, conf)
 
 			return true, auth, err
 		})
 }
 
 type genericAuthenticator struct {
+	id                   string
 	e                    endpoint.Endpoint
 	sf                   SubjectFactory
 	ads                  extractors.AuthDataExtractStrategy
@@ -45,7 +46,7 @@ type genericAuthenticator struct {
 	allowFallbackOnError bool
 }
 
-func newGenericAuthenticator(rawConfig map[string]any) (*genericAuthenticator, error) {
+func newGenericAuthenticator(id string, rawConfig map[string]any) (*genericAuthenticator, error) {
 	type Config struct {
 		Endpoint              endpoint.Endpoint                   `mapstructure:"identity_info_endpoint"`
 		AuthDataSource        extractors.CompositeExtractStrategy `mapstructure:"authentication_data_source"`
@@ -81,6 +82,7 @@ func newGenericAuthenticator(rawConfig map[string]any) (*genericAuthenticator, e
 	}
 
 	return &genericAuthenticator{
+		id:  id,
 		e:   conf.Endpoint,
 		ads: conf.AuthDataSource,
 		sf:  &conf.SubjectInfo,
@@ -98,8 +100,10 @@ func (a *genericAuthenticator) Execute(ctx heimdall.Context) (*subject.Subject, 
 
 	authData, err := a.ads.GetAuthData(ctx)
 	if err != nil {
-		return nil, errorchain.NewWithMessage(heimdall.ErrAuthentication,
-			"failed to get authentication data from request").CausedBy(err)
+		return nil, errorchain.
+			NewWithMessage(heimdall.ErrAuthentication, "failed to get authentication data from request").
+			WithErrorContext(a).
+			CausedBy(err)
 	}
 
 	payload, err := a.getSubjectInformation(ctx, authData)
@@ -111,6 +115,7 @@ func (a *genericAuthenticator) Execute(ctx heimdall.Context) (*subject.Subject, 
 	if err != nil {
 		return nil, errorchain.
 			NewWithMessage(heimdall.ErrInternal, "failed to extract subject information from response").
+			WithErrorContext(a).
 			CausedBy(err)
 	}
 
@@ -136,6 +141,7 @@ func (a *genericAuthenticator) WithConfig(config map[string]any) (Authenticator,
 	}
 
 	return &genericAuthenticator{
+		id:  a.id,
 		e:   a.e,
 		sf:  a.sf,
 		ads: a.ads,
@@ -151,6 +157,10 @@ func (a *genericAuthenticator) WithConfig(config map[string]any) (Authenticator,
 
 func (a *genericAuthenticator) IsFallbackOnErrorAllowed() bool {
 	return a.allowFallbackOnError
+}
+
+func (a *genericAuthenticator) HandlerID() string {
+	return a.id
 }
 
 func (a *genericAuthenticator) getSubjectInformation(ctx heimdall.Context,
@@ -191,12 +201,12 @@ func (a *genericAuthenticator) getSubjectInformation(ctx heimdall.Context,
 	if a.sessionLifespanConf != nil {
 		session, err = a.sessionLifespanConf.CreateSessionLifespan(payload)
 		if err != nil {
-			return nil, errorchain.New(heimdall.ErrInternal).CausedBy(err)
+			return nil, errorchain.New(heimdall.ErrInternal).WithErrorContext(a).CausedBy(err)
 		}
 
 		if session != nil {
 			if err = session.Assert(); err != nil {
-				return nil, errorchain.New(heimdall.ErrAuthentication).CausedBy(err)
+				return nil, errorchain.New(heimdall.ErrAuthentication).WithErrorContext(a).CausedBy(err)
 			}
 		}
 	}
@@ -213,7 +223,10 @@ func (a *genericAuthenticator) fetchSubjectInformation(ctx heimdall.Context,
 ) ([]byte, error) {
 	req, err := a.e.CreateRequest(ctx.AppContext(), nil, nil)
 	if err != nil {
-		return nil, err
+		return nil, errorchain.
+			NewWithMessage(heimdall.ErrInternal, "failed creating request").
+			WithErrorContext(a).
+			CausedBy(err)
 	}
 
 	authData.ApplyTo(req)
@@ -222,12 +235,18 @@ func (a *genericAuthenticator) fetchSubjectInformation(ctx heimdall.Context,
 	if err != nil {
 		var clientErr *url.Error
 		if errors.As(err, &clientErr) && clientErr.Timeout() {
-			return nil, errorchain.NewWithMessage(heimdall.ErrCommunicationTimeout,
-				"request to the endpoint to get information about the user timed out").CausedBy(err)
+			return nil, errorchain.
+				NewWithMessage(heimdall.ErrCommunicationTimeout,
+					"request to the endpoint to get information about the user timed out").
+				WithErrorContext(a).
+				CausedBy(err)
 		}
 
-		return nil, errorchain.NewWithMessage(heimdall.ErrCommunication,
-			"request to the endpoint to get information about the user failed").CausedBy(err)
+		return nil, errorchain.
+			NewWithMessage(heimdall.ErrCommunication,
+				"request to the endpoint to get information about the user failed").
+			WithErrorContext(a).
+			CausedBy(err)
 	}
 
 	defer resp.Body.Close()
@@ -235,16 +254,17 @@ func (a *genericAuthenticator) fetchSubjectInformation(ctx heimdall.Context,
 	return a.readResponse(resp)
 }
 
-func (*genericAuthenticator) readResponse(resp *http.Response) ([]byte, error) {
+func (a *genericAuthenticator) readResponse(resp *http.Response) ([]byte, error) {
 	if !(resp.StatusCode >= http.StatusOK && resp.StatusCode < http.StatusMultipleChoices) {
-		return nil, errorchain.
-			NewWithMessagef(heimdall.ErrCommunication, "unexpected response code: %v", resp.StatusCode)
+		return nil, errorchain.NewWithMessagef(heimdall.ErrCommunication,
+			"unexpected response code: %v", resp.StatusCode).WithErrorContext(a)
 	}
 
 	rawData, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, errorchain.
 			NewWithMessage(heimdall.ErrInternal, "failed to read response").
+			WithErrorContext(a).
 			CausedBy(err)
 	}
 
