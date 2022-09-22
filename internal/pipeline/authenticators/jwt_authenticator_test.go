@@ -8,6 +8,7 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -64,6 +65,7 @@ func TestJwtAuthenticatorCreate(t *testing.T) {
 
 	for _, tc := range []struct {
 		uc     string
+		id     string
 		config []byte
 		assert func(t *testing.T, err error, a *jwtAuthenticator)
 	}{
@@ -120,6 +122,7 @@ subject:
 		},
 		{
 			uc: "valid configuration with defaults, without cache",
+			id: "auth1",
 			config: []byte(`
 jwks_endpoint:
   url: http://test.com
@@ -173,10 +176,14 @@ assertions:
 				// jwk validation settings
 				assert.True(t, auth.validateJWKCert)
 				assert.Empty(t, auth.trustStore)
+
+				// handler id
+				assert.Equal(t, "auth1", auth.HandlerID())
 			},
 		},
 		{
 			uc: "valid configuration with defaults and cache",
+			id: "auth1",
 			config: []byte(`
 jwks_endpoint:
   url: http://test.com
@@ -232,10 +239,14 @@ cache_ttl: 5s`),
 				// jwk validation settings
 				assert.True(t, auth.validateJWKCert)
 				assert.Empty(t, auth.trustStore)
+
+				// handler id
+				assert.Equal(t, "auth1", auth.HandlerID())
 			},
 		},
 		{
 			uc: "valid configuration with overwrites, without cache",
+			id: "auth1",
 			config: []byte(`
 jwks_endpoint:
   url: http://test.com
@@ -308,6 +319,9 @@ trust_store: ` + trustStorePath),
 				// jwk validation settings
 				assert.False(t, auth.validateJWKCert)
 				assert.Contains(t, auth.trustStore, rootCA1.Certificate)
+
+				// handler id
+				assert.Equal(t, "auth1", auth.HandlerID())
 			},
 		},
 	} {
@@ -316,7 +330,7 @@ trust_store: ` + trustStorePath),
 			require.NoError(t, err)
 
 			// WHEN
-			a, err := newJwtAuthenticator(conf)
+			a, err := newJwtAuthenticator(tc.id, conf)
 
 			// THEN
 			tc.assert(t, err, a)
@@ -347,12 +361,14 @@ func TestJwtAuthenticatorWithConfig(t *testing.T) {
 
 	for _, tc := range []struct {
 		uc              string
+		id              string
 		prototypeConfig []byte
 		config          []byte
 		assert          func(t *testing.T, err error, prototype *jwtAuthenticator, configured *jwtAuthenticator)
 	}{
 		{
 			uc: "using empty target config",
+			id: "auth2",
 			prototypeConfig: []byte(`
 jwks_endpoint:
   url: http://test.com
@@ -367,6 +383,7 @@ cache_ttl: 5s`),
 				require.NoError(t, err)
 
 				assert.Equal(t, prototype, configured)
+				assert.Equal(t, "auth2", configured.HandlerID())
 			},
 		},
 		{
@@ -390,6 +407,7 @@ cache_ttl: 5s`),
 		},
 		{
 			uc: "prototype config without cache, target config with overwrites, but without cache",
+			id: "auth2",
 			prototypeConfig: []byte(`
 jwks_endpoint:
   url: http://test.com
@@ -422,10 +440,13 @@ assertions:
 				assert.Equal(t, prototype.IsFallbackOnErrorAllowed(), configured.IsFallbackOnErrorAllowed())
 				assert.Equal(t, prototype.validateJWKCert, configured.validateJWKCert)
 				assert.Equal(t, prototype.trustStore, configured.trustStore)
+
+				assert.Equal(t, "auth2", configured.HandlerID())
 			},
 		},
 		{
 			uc: "prototype config without cache, config with overwrites incl cache",
+			id: "auth2",
 			prototypeConfig: []byte(`
 jwks_endpoint:
   url: http://test.com
@@ -460,10 +481,13 @@ cache_ttl: 5s`),
 				assert.Equal(t, prototype.IsFallbackOnErrorAllowed(), configured.IsFallbackOnErrorAllowed())
 				assert.Equal(t, prototype.validateJWKCert, configured.validateJWKCert)
 				assert.Equal(t, prototype.trustStore, configured.trustStore)
+
+				assert.Equal(t, "auth2", configured.HandlerID())
 			},
 		},
 		{
 			uc: "prototype config with cache, config without",
+			id: "auth2",
 			prototypeConfig: []byte(`
 jwks_endpoint:
   url: http://test.com
@@ -498,10 +522,13 @@ assertions:
 				assert.Equal(t, prototype.IsFallbackOnErrorAllowed(), configured.IsFallbackOnErrorAllowed())
 				assert.Equal(t, prototype.validateJWKCert, configured.validateJWKCert)
 				assert.Equal(t, prototype.trustStore, configured.trustStore)
+
+				assert.Equal(t, "auth2", configured.HandlerID())
 			},
 		},
 		{
 			uc: "prototype config with cache, target config with cache only",
+			id: "auth2",
 			prototypeConfig: []byte(`
 jwks_endpoint:
   url: http://test.com
@@ -526,10 +553,13 @@ cache_ttl: 5s`),
 				assert.Equal(t, prototype.IsFallbackOnErrorAllowed(), configured.IsFallbackOnErrorAllowed())
 				assert.Equal(t, prototype.validateJWKCert, configured.validateJWKCert)
 				assert.Equal(t, prototype.trustStore, configured.trustStore)
+
+				assert.Equal(t, "auth2", configured.HandlerID())
 			},
 		},
 		{
 			uc: "prototype without scopes configured, created authenticator configures them and merges other fields",
+			id: "auth2",
 			prototypeConfig: []byte(`
 jwks_endpoint:
   url: http://test.com
@@ -565,10 +595,13 @@ assertions:
 				assert.Equal(t, prototype.IsFallbackOnErrorAllowed(), configured.IsFallbackOnErrorAllowed())
 				assert.Equal(t, prototype.validateJWKCert, configured.validateJWKCert)
 				assert.Equal(t, prototype.trustStore, configured.trustStore)
+
+				assert.Equal(t, "auth2", configured.HandlerID())
 			},
 		},
 		{
 			uc: "prototype with defaults, configured allows fallback on errors",
+			id: "auth2",
 			prototypeConfig: []byte(`
 jwks_endpoint:
   url: http://test.com
@@ -594,6 +627,8 @@ allow_fallback_on_error: true
 				assert.True(t, configured.IsFallbackOnErrorAllowed())
 				assert.Equal(t, prototype.validateJWKCert, configured.validateJWKCert)
 				assert.Equal(t, prototype.trustStore, configured.trustStore)
+
+				assert.Equal(t, "auth2", configured.HandlerID())
 			},
 		},
 		{
@@ -640,7 +675,7 @@ cache_ttl: 5s`),
 			conf, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
 
-			prototype, err := newJwtAuthenticator(pc)
+			prototype, err := newJwtAuthenticator(tc.id, pc)
 			require.NoError(t, err)
 
 			// WHEN
@@ -665,6 +700,10 @@ cache_ttl: 5s`),
 // nolint: maintidx
 func TestJwtAuthenticatorExecute(t *testing.T) {
 	t.Parallel()
+
+	type HandlerIdentifier interface {
+		HandlerID() string
+	}
 
 	var (
 		endpointCalled bool
@@ -748,7 +787,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 	}{
 		{
 			uc:            "with failing auth data source",
-			authenticator: &jwtAuthenticator{},
+			authenticator: &jwtAuthenticator{id: "auth3"},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.MockContext,
 				cch *mocks.MockCache,
@@ -768,11 +807,15 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				assert.ErrorIs(t, err, heimdall.ErrAuthentication)
 				assert.NotErrorIs(t, err, heimdall.ErrArgument)
 				assert.Contains(t, err.Error(), "no JWT")
+
+				var identifier HandlerIdentifier
+				require.True(t, errors.As(err, &identifier))
+				assert.Equal(t, "auth3", identifier.HandlerID())
 			},
 		},
 		{
 			uc:            "with unsupported JWT format",
-			authenticator: &jwtAuthenticator{},
+			authenticator: &jwtAuthenticator{id: "auth3"},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.MockContext,
 				cch *mocks.MockCache,
@@ -792,11 +835,15 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				assert.ErrorIs(t, err, heimdall.ErrAuthentication)
 				assert.ErrorIs(t, err, heimdall.ErrArgument)
 				assert.Contains(t, err.Error(), "JWS format must have three parts")
+
+				var identifier HandlerIdentifier
+				require.True(t, errors.As(err, &identifier))
+				assert.Equal(t, "auth3", identifier.HandlerID())
 			},
 		},
 		{
 			uc:            "with JWT parsing error",
-			authenticator: &jwtAuthenticator{},
+			authenticator: &jwtAuthenticator{id: "auth3"},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.MockContext,
 				cch *mocks.MockCache,
@@ -816,11 +863,16 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				assert.ErrorIs(t, err, heimdall.ErrAuthentication)
 				assert.ErrorIs(t, err, heimdall.ErrArgument)
 				assert.Contains(t, err.Error(), "parse JWT")
+
+				var identifier HandlerIdentifier
+				require.True(t, errors.As(err, &identifier))
+				assert.Equal(t, "auth3", identifier.HandlerID())
 			},
 		},
 		{
 			uc: "with jwks endpoint communication error (dns)",
 			authenticator: &jwtAuthenticator{
+				id:  "auth3",
 				e:   endpoint.Endpoint{URL: "http://heimdall.test.local"},
 				ttl: &disabledTTL,
 			},
@@ -843,11 +895,16 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				assert.ErrorIs(t, err, heimdall.ErrCommunication)
 				assert.NotErrorIs(t, err, heimdall.ErrArgument)
 				assert.Contains(t, err.Error(), "JWKS endpoint failed")
+
+				var identifier HandlerIdentifier
+				require.True(t, errors.As(err, &identifier))
+				assert.Equal(t, "auth3", identifier.HandlerID())
 			},
 		},
 		{
 			uc: "with unexpected response code from server",
 			authenticator: &jwtAuthenticator{
+				id:  "auth3",
 				e:   endpoint.Endpoint{URL: srv.URL},
 				ttl: &disabledTTL,
 			},
@@ -875,11 +932,16 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				assert.ErrorIs(t, err, heimdall.ErrCommunication)
 				assert.NotErrorIs(t, err, heimdall.ErrArgument)
 				assert.Contains(t, err.Error(), "unexpected response")
+
+				var identifier HandlerIdentifier
+				require.True(t, errors.As(err, &identifier))
+				assert.Equal(t, "auth3", identifier.HandlerID())
 			},
 		},
 		{
 			uc: "with jwks unmarshalling error",
 			authenticator: &jwtAuthenticator{
+				id: "auth3",
 				e: endpoint.Endpoint{
 					URL:     srv.URL,
 					Headers: map[string]string{"Accept": "application/json"},
@@ -916,11 +978,16 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				assert.ErrorIs(t, err, heimdall.ErrInternal)
 				assert.NotErrorIs(t, err, heimdall.ErrArgument)
 				assert.Contains(t, err.Error(), "failed to unmarshal")
+
+				var identifier HandlerIdentifier
+				require.True(t, errors.As(err, &identifier))
+				assert.Equal(t, "auth3", identifier.HandlerID())
 			},
 		},
 		{
 			uc: "without unique key id",
 			authenticator: &jwtAuthenticator{
+				id: "auth3",
 				e: endpoint.Endpoint{
 					URL:     srv.URL,
 					Headers: map[string]string{"Accept": "application/json"},
@@ -957,11 +1024,16 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				assert.ErrorIs(t, err, heimdall.ErrAuthentication)
 				assert.NotErrorIs(t, err, heimdall.ErrArgument)
 				assert.Contains(t, err.Error(), "no (unique) key found")
+
+				var identifier HandlerIdentifier
+				require.True(t, errors.As(err, &identifier))
+				assert.Equal(t, "auth3", identifier.HandlerID())
 			},
 		},
 		{
 			uc: "with positive cache hit, but unsupported algorithm",
 			authenticator: &jwtAuthenticator{
+				id: "auth3",
 				e: endpoint.Endpoint{
 					URL:     srv.URL,
 					Headers: map[string]string{"Accept": "application/json"},
@@ -997,11 +1069,16 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				assert.ErrorIs(t, err, heimdall.ErrAuthentication)
 				assert.NotErrorIs(t, err, heimdall.ErrArgument)
 				assert.Contains(t, err.Error(), "algorithm is not allowed")
+
+				var identifier HandlerIdentifier
+				require.True(t, errors.As(err, &identifier))
+				assert.Equal(t, "auth3", identifier.HandlerID())
 			},
 		},
 		{
 			uc: "with positive cache hit, but signature verification error",
 			authenticator: &jwtAuthenticator{
+				id: "auth3",
 				e: endpoint.Endpoint{
 					URL:     srv.URL,
 					Headers: map[string]string{"Accept": "application/json"},
@@ -1037,11 +1114,16 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				assert.ErrorIs(t, err, heimdall.ErrAuthentication)
 				assert.NotErrorIs(t, err, heimdall.ErrArgument)
 				assert.Contains(t, err.Error(), "JWT signature")
+
+				var identifier HandlerIdentifier
+				require.True(t, errors.As(err, &identifier))
+				assert.Equal(t, "auth3", identifier.HandlerID())
 			},
 		},
 		{
 			uc: "with positive cache hit, but claims verification error",
 			authenticator: &jwtAuthenticator{
+				id: "auth3",
 				e: endpoint.Endpoint{
 					URL:     srv.URL,
 					Headers: map[string]string{"Accept": "application/json"},
@@ -1077,11 +1159,16 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				assert.ErrorIs(t, err, heimdall.ErrAuthentication)
 				assert.NotErrorIs(t, err, heimdall.ErrArgument)
 				assert.Contains(t, err.Error(), "assertion conditions")
+
+				var identifier HandlerIdentifier
+				require.True(t, errors.As(err, &identifier))
+				assert.Equal(t, "auth3", identifier.HandlerID())
 			},
 		},
 		{
 			uc: "with positive cache hit, but subject creation error",
 			authenticator: &jwtAuthenticator{
+				id: "auth3",
 				e: endpoint.Endpoint{
 					URL:     srv.URL,
 					Headers: map[string]string{"Accept": "application/json"},
@@ -1122,6 +1209,10 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				assert.ErrorIs(t, err, heimdall.ErrInternal)
 				assert.NotErrorIs(t, err, heimdall.ErrArgument)
 				assert.Contains(t, err.Error(), "failed to extract subject")
+
+				var identifier HandlerIdentifier
+				require.True(t, errors.As(err, &identifier))
+				assert.Equal(t, "auth3", identifier.HandlerID())
 			},
 		},
 		{
@@ -1316,6 +1407,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 		{
 			uc: "successful without cache hit using key & cert with enabled jwk validation using system trust store",
 			authenticator: &jwtAuthenticator{
+				id: "auth3",
 				e: endpoint.Endpoint{
 					URL:     srv.URL,
 					Headers: map[string]string{"Accept": "application/json"},
@@ -1366,6 +1458,10 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				assert.ErrorIs(t, err, heimdall.ErrAuthentication)
 				assert.Contains(t, err.Error(), "JWK")
 				assert.Contains(t, err.Error(), "invalid")
+
+				var identifier HandlerIdentifier
+				require.True(t, errors.As(err, &identifier))
+				assert.Equal(t, "auth3", identifier.HandlerID())
 			},
 		},
 		{
@@ -1567,6 +1663,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 		{
 			uc: "validation of token without kid fails because of jwks response unmarshalling error",
 			authenticator: &jwtAuthenticator{
+				id: "auth3",
 				e: endpoint.Endpoint{
 					URL:     srv.URL,
 					Headers: map[string]string{"Accept": "application/json"},
@@ -1601,11 +1698,16 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrInternal)
 				assert.Contains(t, err.Error(), "failed to unmarshal")
+
+				var identifier HandlerIdentifier
+				require.True(t, errors.As(err, &identifier))
+				assert.Equal(t, "auth3", identifier.HandlerID())
 			},
 		},
 		{
 			uc: "validation of token without kid fails as available keys don't have matching algorithms",
 			authenticator: &jwtAuthenticator{
+				id: "auth3",
 				e: endpoint.Endpoint{
 					URL:     srv.URL,
 					Headers: map[string]string{"Accept": "application/json"},
@@ -1641,11 +1743,16 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrAuthentication)
 				assert.Contains(t, err.Error(), "None of the keys")
+
+				var identifier HandlerIdentifier
+				require.True(t, errors.As(err, &identifier))
+				assert.Equal(t, "auth3", identifier.HandlerID())
 			},
 		},
 		{
 			uc: "validation of token without kid fails as available keys could not be verified",
 			authenticator: &jwtAuthenticator{
+				id: "auth3",
 				e: endpoint.Endpoint{
 					URL:     srv.URL,
 					Headers: map[string]string{"Accept": "application/json"},
@@ -1682,6 +1789,10 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrAuthentication)
 				assert.Contains(t, err.Error(), "None of the keys")
+
+				var identifier HandlerIdentifier
+				require.True(t, errors.As(err, &identifier))
+				assert.Equal(t, "auth3", identifier.HandlerID())
 			},
 		},
 	} {

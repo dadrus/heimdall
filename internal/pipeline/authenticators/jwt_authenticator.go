@@ -34,18 +34,19 @@ const defaultJWTAuthenticatorTTL = 10 * time.Minute
 // nolint
 func init() {
 	registerAuthenticatorTypeFactory(
-		func(_ string, typ config.PipelineObjectType, conf map[string]any) (bool, Authenticator, error) {
+		func(id string, typ config.PipelineObjectType, conf map[string]any) (bool, Authenticator, error) {
 			if typ != config.POTJwt {
 				return false, nil, nil
 			}
 
-			auth, err := newJwtAuthenticator(conf)
+			auth, err := newJwtAuthenticator(id, conf)
 
 			return true, auth, err
 		})
 }
 
 type jwtAuthenticator struct {
+	id                   string
 	e                    endpoint.Endpoint
 	a                    oauth2.Expectation
 	ttl                  *time.Duration
@@ -56,7 +57,7 @@ type jwtAuthenticator struct {
 	validateJWKCert      bool
 }
 
-func newJwtAuthenticator(rawConfig map[string]any) (*jwtAuthenticator, error) {
+func newJwtAuthenticator(id string, rawConfig map[string]any) (*jwtAuthenticator, error) {
 	type Config struct {
 		Endpoint             endpoint.Endpoint                   `mapstructure:"jwks_endpoint"`
 		AuthDataSource       extractors.CompositeExtractStrategy `mapstructure:"jwt_source"`
@@ -74,17 +75,20 @@ func newJwtAuthenticator(rawConfig map[string]any) (*jwtAuthenticator, error) {
 	)
 
 	if err = decodeConfig(rawConfig, &conf); err != nil {
-		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
-			"failed to unmarshal jwt authenticator config").CausedBy(err)
+		return nil, errorchain.
+			NewWithMessage(heimdall.ErrConfiguration, "failed to unmarshal jwt authenticator config").
+			CausedBy(err)
 	}
 
 	if err = conf.Endpoint.Validate(); err != nil {
-		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
-			"failed to validate endpoint configuration").CausedBy(err)
+		return nil, errorchain.
+			NewWithMessage(heimdall.ErrConfiguration, "failed to validate endpoint configuration").
+			CausedBy(err)
 	}
 
 	if len(conf.Assertions.TrustedIssuers) == 0 {
-		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration, "no trusted issuers configured")
+		return nil, errorchain.
+			NewWithMessage(heimdall.ErrConfiguration, "no trusted issuers configured")
 	}
 
 	if conf.Endpoint.Headers == nil {
@@ -127,6 +131,7 @@ func newJwtAuthenticator(rawConfig map[string]any) (*jwtAuthenticator, error) {
 	)
 
 	return &jwtAuthenticator{
+		id:                   id,
 		e:                    conf.Endpoint,
 		a:                    conf.Assertions,
 		ttl:                  conf.CacheTTL,
@@ -144,13 +149,19 @@ func (a *jwtAuthenticator) Execute(ctx heimdall.Context) (*subject.Subject, erro
 
 	jwtAd, err := a.ads.GetAuthData(ctx)
 	if err != nil {
-		return nil, errorchain.NewWithMessage(heimdall.ErrAuthentication, "no JWT present").CausedBy(err)
+		return nil, errorchain.
+			NewWithMessage(heimdall.ErrAuthentication, "no JWT present").
+			WithErrorContext(a).
+			CausedBy(err)
 	}
 
 	token, err := jwt.ParseSigned(jwtAd.Value())
 	if err != nil {
-		return nil, errorchain.NewWithMessage(heimdall.ErrAuthentication,
-			"failed to parse JWT").CausedBy(err).CausedBy(heimdall.ErrArgument)
+		return nil, errorchain.
+			NewWithMessage(heimdall.ErrAuthentication, "failed to parse JWT").
+			WithErrorContext(a).
+			CausedBy(heimdall.ErrArgument).
+			CausedBy(err)
 	}
 
 	rawClaims, err := a.verifyToken(ctx, token)
@@ -160,8 +171,10 @@ func (a *jwtAuthenticator) Execute(ctx heimdall.Context) (*subject.Subject, erro
 
 	sub, err := a.sf.CreateSubject(rawClaims)
 	if err != nil {
-		return nil, errorchain.NewWithMessage(heimdall.ErrInternal,
-			"failed to extract subject information from jwt").CausedBy(err)
+		return nil, errorchain.
+			NewWithMessage(heimdall.ErrInternal, "failed to extract subject information from jwt").
+			WithErrorContext(a).
+			CausedBy(err)
 	}
 
 	return sub, nil
@@ -181,11 +194,13 @@ func (a *jwtAuthenticator) WithConfig(config map[string]any) (Authenticator, err
 
 	var conf Config
 	if err := decodeConfig(config, &conf); err != nil {
-		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
-			"failed to unmarshal jwt authenticator config").CausedBy(err)
+		return nil, errorchain.
+			NewWithMessage(heimdall.ErrConfiguration, "failed to unmarshal jwt authenticator config").
+			CausedBy(err)
 	}
 
 	return &jwtAuthenticator{
+		id:  a.id,
 		e:   a.e,
 		a:   conf.Assertions.Merge(&a.a),
 		ttl: x.IfThenElse(conf.CacheTTL != nil, conf.CacheTTL, a.ttl),
@@ -201,6 +216,10 @@ func (a *jwtAuthenticator) WithConfig(config map[string]any) (Authenticator, err
 
 func (a *jwtAuthenticator) IsFallbackOnErrorAllowed() bool {
 	return a.allowFallbackOnError
+}
+
+func (a *jwtAuthenticator) HandlerID() string {
+	return a.id
 }
 
 func (a *jwtAuthenticator) isCacheEnabled() bool {
@@ -289,8 +308,10 @@ func (a *jwtAuthenticator) verifyTokenWithoutKID(ctx heimdall.Context, token *jw
 	}
 
 	if len(rawClaims) == 0 {
-		return nil, errorchain.NewWithMessage(heimdall.ErrAuthentication,
-			"None of the keys received from the JWKS endpoint could be used to verify the JWT")
+		return nil, errorchain.
+			NewWithMessage(heimdall.ErrAuthentication,
+				"None of the keys received from the JWKS endpoint could be used to verify the JWT").
+			WithErrorContext(a)
 	}
 
 	return rawClaims, nil
@@ -334,14 +355,18 @@ func (a *jwtAuthenticator) getKey(ctx heimdall.Context, keyID string) (*jose.JSO
 
 	keys := jwks.Key(keyID)
 	if len(keys) != 1 {
-		return nil, errorchain.NewWithMessagef(heimdall.ErrAuthentication,
-			"no (unique) key found for the keyID='%s' referenced in the JWT", keyID)
+		return nil, errorchain.
+			NewWithMessagef(heimdall.ErrAuthentication,
+				"no (unique) key found for the keyID='%s' referenced in the JWT", keyID).
+			WithErrorContext(a)
 	}
 
 	jwk = &keys[0]
 	if err = a.validateJWK(jwk); err != nil {
-		return nil, errorchain.NewWithMessagef(heimdall.ErrAuthentication,
-			"JWK for keyID=%s is invalid", keyID).CausedBy(err)
+		return nil, errorchain.
+			NewWithMessagef(heimdall.ErrAuthentication, "JWK for keyID=%s is invalid", keyID).
+			WithErrorContext(a).
+			CausedBy(err)
 	}
 
 	if cacheTTL := a.getCacheTTL(jwk); cacheTTL > 0 {
@@ -358,19 +383,26 @@ func (a *jwtAuthenticator) fetchJWKS(ctx heimdall.Context) (*jose.JSONWebKeySet,
 
 	req, err := a.e.CreateRequest(ctx.AppContext(), nil, nil)
 	if err != nil {
-		return nil, err
+		return nil, errorchain.
+			NewWithMessage(heimdall.ErrInternal, "failed creating request").
+			WithErrorContext(a).
+			CausedBy(err)
 	}
 
 	resp, err := a.e.CreateClient(req.URL.Hostname()).Do(req)
 	if err != nil {
 		var clientErr *url.Error
 		if errors.As(err, &clientErr) && clientErr.Timeout() {
-			return nil, errorchain.NewWithMessage(heimdall.ErrCommunicationTimeout,
-				"request to JWKS endpoint timed out").CausedBy(err)
+			return nil, errorchain.
+				NewWithMessage(heimdall.ErrCommunicationTimeout, "request to JWKS endpoint timed out").
+				WithErrorContext(a).
+				CausedBy(err)
 		}
 
-		return nil, errorchain.NewWithMessage(heimdall.ErrCommunication,
-			"request to JWKS endpoint failed").CausedBy(err)
+		return nil, errorchain.
+			NewWithMessage(heimdall.ErrCommunication, "request to JWKS endpoint failed").
+			WithErrorContext(a).
+			CausedBy(err)
 	}
 
 	defer resp.Body.Close()
@@ -381,13 +413,15 @@ func (a *jwtAuthenticator) fetchJWKS(ctx heimdall.Context) (*jose.JSONWebKeySet,
 func (a *jwtAuthenticator) readJWKS(resp *http.Response) (*jose.JSONWebKeySet, error) {
 	if !(resp.StatusCode >= http.StatusOK && resp.StatusCode < http.StatusMultipleChoices) {
 		return nil, errorchain.
-			NewWithMessagef(heimdall.ErrCommunication, "unexpected response. code: %v", resp.StatusCode)
+			NewWithMessagef(heimdall.ErrCommunication, "unexpected response. code: %v", resp.StatusCode).
+			WithErrorContext(a)
 	}
 
 	rawData, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, errorchain.
 			NewWithMessage(heimdall.ErrInternal, "failed to read response").
+			WithErrorContext(a).
 			CausedBy(err)
 	}
 
@@ -396,6 +430,7 @@ func (a *jwtAuthenticator) readJWKS(resp *http.Response) (*jose.JSONWebKeySet, e
 	if err := json.Unmarshal(rawData, &jwks); err != nil {
 		return nil, errorchain.
 			NewWithMessage(heimdall.ErrInternal, "failed to unmarshal received jwks").
+			WithErrorContext(a).
 			CausedBy(err)
 	}
 
@@ -408,12 +443,15 @@ func (a *jwtAuthenticator) verifyTokenWithKey(token *jwt.JSONWebToken, key *jose
 	if len(header.Algorithm) != 0 && key.Algorithm != header.Algorithm {
 		return nil, errorchain.
 			NewWithMessage(heimdall.ErrAuthentication,
-				"algorithm in the JWT header does not match the algorithm referenced in the key")
+				"algorithm in the JWT header does not match the algorithm referenced in the key").
+			WithErrorContext(a)
 	}
 
 	if err := a.a.AssertAlgorithm(key.Algorithm); err != nil {
-		return nil, errorchain.NewWithMessagef(heimdall.ErrAuthentication,
-			"%s algorithm is not allowed", key.Algorithm).CausedBy(err)
+		return nil, errorchain.
+			NewWithMessagef(heimdall.ErrAuthentication, "%s algorithm is not allowed", key.Algorithm).
+			WithErrorContext(a).
+			CausedBy(err)
 	}
 
 	var (
@@ -424,12 +462,14 @@ func (a *jwtAuthenticator) verifyTokenWithKey(token *jwt.JSONWebToken, key *jose
 	if err := token.Claims(key, &mapClaims, &claims); err != nil {
 		return nil, errorchain.
 			NewWithMessage(heimdall.ErrAuthentication, "failed to verify JWT signature").
+			WithErrorContext(a).
 			CausedBy(err)
 	}
 
 	if err := claims.Validate(a.a); err != nil {
 		return nil, errorchain.
 			NewWithMessage(heimdall.ErrAuthentication, "access token does not satisfy assertion conditions").
+			WithErrorContext(a).
 			CausedBy(err)
 	}
 
@@ -437,6 +477,7 @@ func (a *jwtAuthenticator) verifyTokenWithKey(token *jwt.JSONWebToken, key *jose
 	if err != nil {
 		return nil, errorchain.
 			NewWithMessage(heimdall.ErrInternal, "failed to marshal jwt payload").
+			WithErrorContext(a).
 			CausedBy(err)
 	}
 
