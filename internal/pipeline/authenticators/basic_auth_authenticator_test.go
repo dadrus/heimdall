@@ -80,7 +80,6 @@ allow_fallback_on_error: true
 		},
 		{
 			uc: "without user_id",
-			id: "auth1",
 			config: []byte(`
 password: bar`),
 			assert: func(t *testing.T, err error, auth *basicAuthAuthenticator) {
@@ -94,7 +93,6 @@ password: bar`),
 		},
 		{
 			uc: "without password",
-			id: "auth1",
 			config: []byte(`
 user_id: foo`),
 			assert: func(t *testing.T, err error, auth *basicAuthAuthenticator) {
@@ -108,7 +106,6 @@ user_id: foo`),
 		},
 		{
 			uc: "with unexpected config attribute",
-			id: "auth1",
 			config: []byte(`
 user_id: foo
 password: bar
