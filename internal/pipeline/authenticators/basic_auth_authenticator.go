@@ -24,24 +24,25 @@ const (
 // nolint
 func init() {
 	registerAuthenticatorTypeFactory(
-		func(_ string, typ config.PipelineObjectType, conf map[string]any) (bool, Authenticator, error) {
+		func(id string, typ config.PipelineObjectType, conf map[string]any) (bool, Authenticator, error) {
 			if typ != config.POTBasicAuth {
 				return false, nil, nil
 			}
 
-			auth, err := newBasicAuthAuthenticator(conf)
+			auth, err := newBasicAuthAuthenticator(id, conf)
 
 			return true, auth, err
 		})
 }
 
 type basicAuthAuthenticator struct {
+	id                   string
 	userID               string
 	password             string
 	allowFallbackOnError bool
 }
 
-func newBasicAuthAuthenticator(rawConfig map[string]any) (*basicAuthAuthenticator, error) {
+func newBasicAuthAuthenticator(id string, rawConfig map[string]any) (*basicAuthAuthenticator, error) {
 	type Config struct {
 		UserID               string `mapstructure:"user_id"`
 		Password             string `mapstructure:"password"`
@@ -66,7 +67,10 @@ func newBasicAuthAuthenticator(rawConfig map[string]any) (*basicAuthAuthenticato
 			NewWithMessagef(heimdall.ErrConfiguration, "basic_auth authenticator requires password to be set")
 	}
 
-	auth := basicAuthAuthenticator{allowFallbackOnError: conf.AllowFallbackOnError}
+	auth := basicAuthAuthenticator{
+		id:                   id,
+		allowFallbackOnError: conf.AllowFallbackOnError,
+	}
 
 	// rewrite user id and password as hashes to mitigate potential side-channel attacks
 	// during credentials check
@@ -89,20 +93,24 @@ func (a *basicAuthAuthenticator) Execute(ctx heimdall.Context) (*subject.Subject
 
 	authData, err := strategy.GetAuthData(ctx)
 	if err != nil {
-		return nil, errorchain.NewWithMessage(heimdall.ErrAuthentication,
-			"expected header not present in request").CausedBy(err)
+		return nil, errorchain.
+			NewWithMessage(heimdall.ErrAuthentication, "expected header not present in request").
+			WithErrorContext(a).
+			CausedBy(err)
 	}
 
 	res, err := base64.StdEncoding.DecodeString(authData.Value())
 	if err != nil {
 		return nil, errorchain.
-			NewWithMessage(heimdall.ErrAuthentication, "failed to decode received credentials value")
+			NewWithMessage(heimdall.ErrAuthentication, "failed to decode received credentials value").
+			WithErrorContext(a)
 	}
 
 	userIDAndPassword := strings.Split(string(res), ":")
 	if len(userIDAndPassword) != basicAuthSchemeCredentialsElements {
 		return nil, errorchain.
-			NewWithMessage(heimdall.ErrAuthentication, "malformed user-id - password scheme")
+			NewWithMessage(heimdall.ErrAuthentication, "malformed user-id - password scheme").
+			WithErrorContext(a)
 	}
 
 	md := sha256.New()
@@ -118,7 +126,8 @@ func (a *basicAuthAuthenticator) Execute(ctx heimdall.Context) (*subject.Subject
 
 	if !(userIDOK && passwordOK) {
 		return nil, errorchain.
-			NewWithMessage(heimdall.ErrAuthentication, "invalid user credentials")
+			NewWithMessage(heimdall.ErrAuthentication, "invalid user credentials").
+			WithErrorContext(a)
 	}
 
 	return &subject.Subject{ID: userIDAndPassword[0], Attributes: make(map[string]any)}, nil
@@ -145,6 +154,7 @@ func (a *basicAuthAuthenticator) WithConfig(rawConfig map[string]any) (Authentic
 	}
 
 	return &basicAuthAuthenticator{
+		id: a.id,
 		userID: x.IfThenElseExec(len(conf.UserID) != 0,
 			func() string {
 				md := sha256.New()
@@ -171,4 +181,8 @@ func (a *basicAuthAuthenticator) WithConfig(rawConfig map[string]any) (Authentic
 
 func (a *basicAuthAuthenticator) IsFallbackOnErrorAllowed() bool {
 	return a.allowFallbackOnError
+}
+
+func (a *basicAuthAuthenticator) HandlerID() string {
+	return a.id
 }
