@@ -17,6 +17,22 @@ var (
 	errTest2 = errors.New("test error 2")
 )
 
+type errCtx struct{}
+
+func (e *errCtx) Foo() string {
+	return "foo"
+}
+
+type errTest3 struct{}
+
+func (e *errTest3) Error() string {
+	return "test error 3"
+}
+
+func (e *errTest3) Bar() string {
+	return "bar"
+}
+
 func TestErrorChainNew(t *testing.T) {
 	t.Parallel()
 
@@ -53,8 +69,13 @@ func TestErrorChainNewWithFormattedMessage(t *testing.T) {
 	assert.Equal(t, err.Error(), errTest1.Error()+": foobar")
 }
 
-func TestCreateErrorWithCause(t *testing.T) {
+func TestErrorChainNewWithCause(t *testing.T) {
 	t.Parallel()
+
+	// GIVEN
+	type Fooer interface{ Foo() string }
+
+	var fooer Fooer
 
 	// WHEN
 	err := errorchain.NewWithMessage(errTest1, "foo").CausedBy(errTest2)
@@ -67,6 +88,59 @@ func TestCreateErrorWithCause(t *testing.T) {
 
 	errs := err.Errors()
 	assert.ElementsMatch(t, errs, []error{errTest1, errTest2})
+
+	require.False(t, errors.As(err, &fooer))
+}
+
+func TestErrorChainNewWithCauseAndContextDetachedFromError(t *testing.T) {
+	t.Parallel()
+	// GIVEN
+	type Fooer interface{ Foo() string }
+
+	var fooer Fooer
+
+	// WHEN
+	err := errorchain.NewWithMessage(errTest1, "foo").
+		WithErrorContext(&errCtx{}).
+		CausedBy(errTest2)
+
+	// THEN
+	require.Error(t, err)
+	assert.ErrorIs(t, err, errTest1)
+	assert.ErrorIs(t, err, errTest2)
+	assert.Equal(t, err.Error(), errTest1.Error()+": foo: "+errTest2.Error())
+
+	errs := err.Errors()
+	assert.ElementsMatch(t, errs, []error{errTest1, errTest2})
+
+	require.True(t, errors.As(err, &fooer))
+	assert.Equal(t, "foo", fooer.Foo())
+}
+
+func TestErrorChainNewWithCauseAndContextAttachedToError(t *testing.T) {
+	t.Parallel()
+	// GIVEN
+	type Barer interface{ Bar() string }
+
+	var barer Barer
+
+	errTest := &errTest3{}
+
+	// WHEN
+	err := errorchain.NewWithMessage(errTest, "foo").
+		CausedBy(errTest2)
+
+	// THEN
+	require.Error(t, err)
+	assert.ErrorIs(t, err, errTest)
+	assert.ErrorIs(t, err, errTest2)
+	assert.Equal(t, err.Error(), errTest.Error()+": foo: "+errTest2.Error())
+
+	errs := err.Errors()
+	assert.ElementsMatch(t, errs, []error{errTest, errTest2})
+
+	require.True(t, errors.As(err, &barer))
+	assert.Equal(t, "bar", barer.Bar())
 }
 
 func TestErrorChainJSONMarshal(t *testing.T) {

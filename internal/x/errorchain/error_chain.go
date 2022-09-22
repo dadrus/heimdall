@@ -4,6 +4,7 @@ import (
 	"encoding/xml"
 	"errors"
 	"fmt"
+	"reflect"
 	"strings"
 
 	"github.com/goccy/go-json"
@@ -18,8 +19,9 @@ type element struct {
 
 // nolint
 type ErrorChain struct {
-	head *element
-	tail *element
+	head    *element
+	tail    *element
+	context any
 }
 
 func New(err error) *ErrorChain {
@@ -74,14 +76,21 @@ func (ec *ErrorChain) CausedBy(err error) *ErrorChain {
 	return ec.causedBy(err, "")
 }
 
+func (ec *ErrorChain) WithErrorContext(context any) *ErrorChain {
+	ec.context = context
+
+	return ec
+}
+
 func (ec *ErrorChain) Unwrap() error {
 	if ec.head == nil || ec.head.next == nil {
 		return nil
 	}
 
 	return &ErrorChain{
-		head: ec.head.next,
-		tail: ec.tail,
+		head:    ec.head.next,
+		tail:    ec.tail,
+		context: ec.context,
 	}
 }
 
@@ -91,6 +100,35 @@ func (ec *ErrorChain) Is(target error) bool {
 	}
 
 	return errors.Is(ec.head.err, target)
+}
+
+func (ec *ErrorChain) As(target any) bool {
+	if ec.head == nil {
+		return false
+	}
+
+	ok := errors.As(ec.head.err, target)
+
+	if !ok && ec.context != nil {
+		val := reflect.ValueOf(target)
+		targetType := val.Type().Elem()
+
+		if targetType.Kind() != reflect.Interface {
+			return false
+		}
+
+		if reflect.TypeOf(ec.context).AssignableTo(targetType) {
+			val.Elem().Set(reflect.ValueOf(ec.context))
+
+			return true
+		}
+	}
+
+	return ok
+}
+
+func (ec *ErrorChain) ErrorContext() any {
+	return ec.context
 }
 
 func (ec *ErrorChain) Errors() []error {
