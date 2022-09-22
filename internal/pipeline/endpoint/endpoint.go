@@ -84,7 +84,7 @@ func (e Endpoint) CreateRequest(ctx context.Context, body io.Reader, rndr render
 	req, err := http.NewRequestWithContext(ctx, method, endpointURL, body)
 	if err != nil {
 		return nil, errorchain.
-			NewWithMessage(heimdall.ErrInternal, "failed to create request").
+			NewWithMessage(heimdall.ErrInternal, "failed to create a request instance").
 			CausedBy(err)
 	}
 
