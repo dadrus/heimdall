@@ -14,22 +14,23 @@ import (
 // nolint
 func init() {
 	registerMutatorTypeFactory(
-		func(_ string, typ config.PipelineObjectType, conf map[string]any) (bool, Mutator, error) {
+		func(id string, typ config.PipelineObjectType, conf map[string]any) (bool, Mutator, error) {
 			if typ != config.POTCookie {
 				return false, nil, nil
 			}
 
-			mut, err := newCookieMutator(conf)
+			mut, err := newCookieMutator(id, conf)
 
 			return true, mut, err
 		})
 }
 
 type cookieMutator struct {
+	id      string
 	cookies map[string]template.Template
 }
 
-func newCookieMutator(rawConfig map[string]any) (*cookieMutator, error) {
+func newCookieMutator(id string, rawConfig map[string]any) (*cookieMutator, error) {
 	type Config struct {
 		Cookies map[string]template.Template `mapstructure:"cookies"`
 	}
@@ -47,6 +48,7 @@ func newCookieMutator(rawConfig map[string]any) (*cookieMutator, error) {
 	}
 
 	return &cookieMutator{
+		id:      id,
 		cookies: conf.Cookies,
 	}, nil
 }
@@ -56,15 +58,18 @@ func (m *cookieMutator) Execute(ctx heimdall.Context, sub *subject.Subject) erro
 	logger.Debug().Msg("Mutating using cookie mutator")
 
 	if sub == nil {
-		return errorchain.NewWithMessage(heimdall.ErrInternal,
-			"failed to execute cookie mutator due to 'nil' subject")
+		return errorchain.
+			NewWithMessage(heimdall.ErrInternal, "failed to execute cookie mutator due to 'nil' subject").
+			WithErrorContext(m)
 	}
 
 	for name, tmpl := range m.cookies {
 		value, err := tmpl.Render(nil, sub)
 		if err != nil {
-			return errorchain.NewWithMessagef(heimdall.ErrInternal,
-				"failed to render value for '%s' cookie", name).CausedBy(err)
+			return errorchain.
+				NewWithMessagef(heimdall.ErrInternal, "failed to render value for '%s' cookie", name).
+				WithErrorContext(m).
+				CausedBy(err)
 		}
 
 		ctx.AddCookieForUpstream(name, value)
@@ -78,5 +83,9 @@ func (m *cookieMutator) WithConfig(config map[string]any) (Mutator, error) {
 		return m, nil
 	}
 
-	return newCookieMutator(config)
+	return newCookieMutator(m.id, config)
+}
+
+func (m *cookieMutator) HandlerID() string {
+	return m.id
 }
