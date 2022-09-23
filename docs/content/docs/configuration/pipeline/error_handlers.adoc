@@ -59,7 +59,7 @@ Conditions, which must hold true for this error handler to execute. The defined 
 .Redirect error handler configuration
 ====
 
-The redirect error handler below is configured to kick in if either 
+The redirect error handler below is configured to kick in if either
 * a first error condition evaluates to true. This condition is for web requests (HTTP `Accept` header contains `text/html`) if an `authentication_error` error occurred (an error raised by authenticators). In this case, it will redirect the client (for web requests, usually a browser) to `\http://127.0.0.1:4433/self-service/login/browser` and also add the `return_to` query parameter with the current url to the redirect url.
 * Or if a second condition evaluates to true. The only difference to the previous one is the error type, which is `authorization_error` in this case.
 
@@ -74,12 +74,12 @@ config:
   return_to_query_parameter: return_to
   when:
     - error:
-        - authentication_error
+        - type: authentication_error
       request_headers:
         Accept:
           - text/html
     - error:
-        - authorization_error
+        - type: authorization_error
       request_headers:
         Accept:
           - text/html
@@ -96,8 +96,8 @@ config:
   return_to_query_parameter: return_to
   when:
     - error:
-        - authentication_error
-        - authorization_error
+        - type: authentication_error
+        - type: authorization_error
       request_headers:
         Accept:
           - text/html
@@ -125,7 +125,7 @@ Conditions, which must hold true for this error handler to execute. The defined 
 .Configuration of WWW-Authenticate error handler
 ====
 
-The www authenticate error handler below is configured to kick in for web requests (HTTP `Accept` header contains `text/html`) if an `authentication_error` error occurred (an error raised by authenticators). In this case, it will respond with HTTP `401 Unauthorized` and a `WWW-Authenticate` header set to `Basic realm="My fancy app"`.
+The www authenticate error handler below is configured to kick in for web requests (HTTP `Accept` header contains `text/html`) if an `authentication_error` error occurred (an error raised by authenticators) and has been raised by an authenticator with id equal to `basic_auth_authenticator`. In this case, it will respond with HTTP `401 Unauthorized` and a `WWW-Authenticate` header set to `Basic realm="My fancy app"`.
 
 [source, yaml]
 ----
@@ -135,7 +135,8 @@ config:
   realm: "My fancy app"
   when:
     - error:
-        - authentication_error
+        - type: authentication_error
+          raised_by: basic_auth_authenticator
       request_headers:
         Accept:
           - text/html

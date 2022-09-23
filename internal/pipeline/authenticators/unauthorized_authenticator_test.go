@@ -2,6 +2,7 @@ package authenticators
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -14,10 +15,12 @@ import (
 func TestUnauthorizedAuthenticatorExecution(t *testing.T) {
 	t.Parallel()
 	// GIVEN
+	var identifier interface{ HandlerID() string }
+
 	ctx := &mocks.MockContext{}
 	ctx.On("AppContext").Return(context.Background())
 
-	auth := newUnauthorizedAuthenticator()
+	auth := newUnauthorizedAuthenticator("unauth")
 
 	// WHEN
 	sub, err := auth.Execute(ctx)
@@ -26,12 +29,15 @@ func TestUnauthorizedAuthenticatorExecution(t *testing.T) {
 	assert.ErrorIs(t, err, heimdall.ErrAuthentication)
 	assert.ErrorContains(t, err, "denied by authenticator")
 	assert.Nil(t, sub)
+
+	require.True(t, errors.As(err, &identifier))
+	assert.Equal(t, "unauth", identifier.HandlerID())
 }
 
 func TestCreateUnauthorizedAuthenticatorFromPrototype(t *testing.T) {
 	t.Parallel()
 	// GIVEN
-	prototype := newUnauthorizedAuthenticator()
+	prototype := newUnauthorizedAuthenticator("unauth")
 
 	// WHEN
 	auth, err := prototype.WithConfig(nil)
@@ -39,19 +45,24 @@ func TestCreateUnauthorizedAuthenticatorFromPrototype(t *testing.T) {
 	// THEN
 	assert.NoError(t, err)
 
+	uaa, ok := auth.(*unauthorizedAuthenticator)
+	require.True(t, ok)
+
 	// prototype and "created" authenticator are same
-	assert.Equal(t, prototype, auth)
+	assert.Equal(t, prototype, uaa)
+	assert.Equal(t, "unauth", uaa.HandlerID())
 }
 
 func TestUnauthorizedAuthenticatorIsFallbackOnErrorAllowed(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
-	auth := newUnauthorizedAuthenticator()
+	auth := newUnauthorizedAuthenticator("unauth")
 
 	// WHEN
 	isAllowed := auth.IsFallbackOnErrorAllowed()
 
 	// THEN
 	require.False(t, isAllowed)
+	require.Equal(t, "unauth", auth.HandlerID())
 }

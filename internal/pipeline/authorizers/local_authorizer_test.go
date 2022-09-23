@@ -2,6 +2,7 @@ package authorizers
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -18,6 +19,7 @@ func TestCreateLocalAuthorizer(t *testing.T) {
 
 	for _, tc := range []struct {
 		uc     string
+		id     string
 		config []byte
 		assert func(t *testing.T, err error, auth *localAuthorizer)
 	}{
@@ -69,12 +71,14 @@ foo: bar
 		},
 		{
 			uc:     "with valid script",
+			id:     "authz",
 			config: []byte(`script: "console.log('Executing JS Code')"`),
 			assert: func(t *testing.T, err error, auth *localAuthorizer) {
 				t.Helper()
 
 				require.NoError(t, err)
 				assert.NotNil(t, auth.s)
+				assert.Equal(t, "authz", auth.HandlerID())
 			},
 		},
 	} {
@@ -83,7 +87,7 @@ foo: bar
 			require.NoError(t, err)
 
 			// WHEN
-			a, err := newLocalAuthorizer(conf)
+			a, err := newLocalAuthorizer(tc.id, conf)
 
 			// THEN
 			tc.assert(t, err, a)
@@ -96,6 +100,7 @@ func TestCreateLocalAuthorizerFromPrototype(t *testing.T) {
 
 	for _, tc := range []struct {
 		uc              string
+		id              string
 		prototypeConfig []byte
 		config          []byte
 		assert          func(t *testing.T, err error, prototype *localAuthorizer, configured *localAuthorizer)
@@ -123,6 +128,7 @@ func TestCreateLocalAuthorizerFromPrototype(t *testing.T) {
 		},
 		{
 			uc:              "new script provided",
+			id:              "authz",
 			prototypeConfig: []byte(`script: "console.log('Executing JS Code')"`),
 			config:          []byte(`script: "console.log('New JS script')"`),
 			assert: func(t *testing.T, err error, prototype *localAuthorizer, configured *localAuthorizer) {
@@ -132,6 +138,7 @@ func TestCreateLocalAuthorizerFromPrototype(t *testing.T) {
 				assert.NotEqual(t, prototype, configured)
 				require.NotNil(t, configured)
 				assert.NotEqual(t, prototype.s, configured.s)
+				assert.Equal(t, "authz", configured.HandlerID())
 			},
 		},
 	} {
@@ -142,7 +149,7 @@ func TestCreateLocalAuthorizerFromPrototype(t *testing.T) {
 			conf, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
 
-			prototype, err := newLocalAuthorizer(pc)
+			prototype, err := newLocalAuthorizer(tc.id, pc)
 			require.NoError(t, err)
 
 			// WHEN
@@ -162,12 +169,14 @@ func TestLocalAuthorizerExecute(t *testing.T) {
 
 	for _, tc := range []struct {
 		uc                         string
+		id                         string
 		config                     []byte
 		configureContextAndSubject func(t *testing.T, ctx *mocks.MockContext, sub *subject.Subject)
 		assert                     func(t *testing.T, err error)
 	}{
 		{
-			uc:     "denied by script",
+			uc:     "denied by script using throw",
+			id:     "authz1",
 			config: []byte(`script: "throw('denied by script')"`),
 			configureContextAndSubject: func(t *testing.T, ctx *mocks.MockContext, sub *subject.Subject) {
 				// nothing is required here
@@ -179,10 +188,35 @@ func TestLocalAuthorizerExecute(t *testing.T) {
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrAuthorization)
 				assert.Contains(t, err.Error(), "denied by script")
+
+				var identifier interface{ HandlerID() string }
+				require.True(t, errors.As(err, &identifier))
+				assert.Equal(t, "authz1", identifier.HandlerID())
+			},
+		},
+		{
+			uc:     "denied by script using boolean value",
+			id:     "authz1",
+			config: []byte(`script: "false"`),
+			configureContextAndSubject: func(t *testing.T, ctx *mocks.MockContext, sub *subject.Subject) {
+				// nothing is required here
+				t.Helper()
+			},
+			assert: func(t *testing.T, err error) {
+				t.Helper()
+
+				require.Error(t, err)
+				assert.ErrorIs(t, err, heimdall.ErrAuthorization)
+				assert.Contains(t, err.Error(), "script returned false")
+
+				var identifier interface{ HandlerID() string }
+				require.True(t, errors.As(err, &identifier))
+				assert.Equal(t, "authz1", identifier.HandlerID())
 			},
 		},
 		{
 			uc:     "script can use subject and context",
+			id:     "authz2",
 			config: []byte(`script: "throw(heimdall.RequestHeader(heimdall.Subject.ID))"`),
 			configureContextAndSubject: func(t *testing.T, ctx *mocks.MockContext, sub *subject.Subject) {
 				t.Helper()
@@ -196,6 +230,10 @@ func TestLocalAuthorizerExecute(t *testing.T) {
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrAuthorization)
 				assert.Contains(t, err.Error(), "barfoo")
+
+				var identifier interface{ HandlerID() string }
+				require.True(t, errors.As(err, &identifier))
+				assert.Equal(t, "authz2", identifier.HandlerID())
 			},
 		},
 		{
@@ -224,7 +262,7 @@ func TestLocalAuthorizerExecute(t *testing.T) {
 
 			tc.configureContextAndSubject(t, mctx, sub)
 
-			auth, err := newLocalAuthorizer(conf)
+			auth, err := newLocalAuthorizer(tc.id, conf)
 			require.NoError(t, err)
 
 			// WHEN

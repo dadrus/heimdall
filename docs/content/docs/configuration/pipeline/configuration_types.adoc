@@ -319,7 +319,7 @@ endpoint:
 
 This type supports definition of conditions, under which an error handler should execute its logic. Such conditions are required for all error handlers, but the default one. All condition elements are evaluated using boolean `and`. Following conditions are possible:
 
-* *`error`*: _link:{{< relref "#_error_type" >}}[Error Type] array_ (mandatory)
+* *`error`*: _link:{{< relref "#_error_descriptor" >}}[Error Descriptor] array_ (mandatory)
 +
 A list with error types to match. Configured entries are evaluated using a boolean `or` logic.
 
@@ -339,9 +339,9 @@ This example shows in principle all possible combinations. The actual values and
 [source, yaml]
 ----
 error:
-  - precondition_error
+  - type: precondition_error
   # OR
-  - authorization_error
+  - type: authorization_error
 # AND
 request_cidr:
   - 192.168.0.0/16
@@ -372,15 +372,42 @@ This example is a very simple one, showing just the usage of the `error` attribu
 [source, yaml]
 ----
 error:
-  - authentication_error
+  - type: authentication_error
 ----
 
-This condition evaluate to true, if the encountered error was `authentication_error`.
+This condition evaluates to true, if the encountered error was `authentication_error` raised by any of the  configured authenticators.
+====
+
+== Error Descriptor
+
+Describes an error to match in link:{{< relref "#_error_condition" >}}[Error Conditions].
+
+Following configuration properties are available:
+
+* *`type`*: _link:{{< relref "#_error_type" >}}[Error Type]_ (mandatory)
++
+An error type to match.
+
+* *`raised_by`*: _string_ (optional)
++
+The identifier of the pipeline handler, which raised this error.
+
+CAUTION: Heimdall does not verify the integrity of the pipeline handler identifier configured using `raised_by` on start or while loading rules. Thus, if there is no pipeline handler with the given identifier, the error will not match.
+
+.Error Descriptor configuration
+====
+[source, yaml]
+----
+type: authentication_error
+raised_by: my_oauth2_authenticator
+----
+
+Here the descriptor says, the expected error is of type `authentication_error` and should have been raise d by a pipeline handler with the id `my_oauth2_authenticator`.
 ====
 
 == Error Type
 
-Heimdall defines a couple of error types, which it uses to signal errors. Some of them are available for configuring your link:{{< relref "#_error_condition" >}}[Error Conditions].
+Heimdall defines a couple of error types, which it uses to signal errors. Some of them are available for configuring your link:{{< relref "#_error_condition" >}}[Error Conditions] via link:{{< relref "#_error_descriptor" >}}[Error Descriptors].
 
 Following types are available:
 

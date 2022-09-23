@@ -2,6 +2,7 @@ package authenticators
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
@@ -31,6 +32,7 @@ func TestCreateOAuth2IntrospectionAuthenticator(t *testing.T) {
 
 	testCases := []struct {
 		uc     string
+		id     string
 		config []byte
 		assert func(t *testing.T, err error, a *oauth2IntrospectionAuthenticator)
 	}{
@@ -87,6 +89,7 @@ subject:
 		},
 		{
 			uc: "with missing subject config",
+			id: "auth1",
 			config: []byte(`
 introspection_endpoint:
   url: foobar.local
@@ -103,10 +106,13 @@ assertions:
 				sess, ok := auth.sf.(*SubjectInfo)
 				assert.True(t, ok)
 				assert.Equal(t, "sub", sess.IDFrom)
+
+				assert.Equal(t, "auth1", auth.HandlerID())
 			},
 		},
 		{
 			uc: "with valid config with defaults",
+			id: "auth1",
 			config: []byte(`
 introspection_endpoint:
   url: foobar.local
@@ -155,10 +161,13 @@ subject:
 				assert.NotNil(t, auth.sf)
 
 				assert.False(t, auth.IsFallbackOnErrorAllowed())
+
+				assert.Equal(t, "auth1", auth.HandlerID())
 			},
 		},
 		{
 			uc: "with valid config with overwrites",
+			id: "auth1",
 			config: []byte(`
 introspection_endpoint:
   url: http://test.com
@@ -223,6 +232,8 @@ allow_fallback_on_error: true
 				assert.NotNil(t, auth.sf)
 
 				assert.True(t, auth.IsFallbackOnErrorAllowed())
+
+				assert.Equal(t, "auth1", auth.HandlerID())
 			},
 		},
 	}
@@ -234,7 +245,7 @@ allow_fallback_on_error: true
 			require.NoError(t, err)
 
 			// WHEN
-			a, err := newOAuth2IntrospectionAuthenticator(conf)
+			a, err := newOAuth2IntrospectionAuthenticator(tc.id, conf)
 
 			// THEN
 			tc.assert(t, err, a)
@@ -247,6 +258,7 @@ func TestCreateOAuth2IntrospectionAuthenticatorFromPrototype(t *testing.T) {
 
 	for _, tc := range []struct {
 		uc              string
+		id              string
 		prototypeConfig []byte
 		config          []byte
 		assert          func(t *testing.T, err error, prototype *oauth2IntrospectionAuthenticator,
@@ -254,6 +266,7 @@ func TestCreateOAuth2IntrospectionAuthenticatorFromPrototype(t *testing.T) {
 	}{
 		{
 			uc: "without target config",
+			id: "auth2",
 			prototypeConfig: []byte(`
 introspection_endpoint:
   url: foobar.local
@@ -270,6 +283,7 @@ subject:
 				require.NoError(t, err)
 
 				assert.Equal(t, prototype, configured)
+				assert.Equal(t, "auth2", configured.HandlerID())
 			},
 		},
 		{
@@ -295,6 +309,7 @@ subject:
 		},
 		{
 			uc: "with overwrites without cache",
+			id: "auth2",
 			prototypeConfig: []byte(`
 introspection_endpoint:
   url: foobar.local
@@ -332,10 +347,12 @@ assertions:
 				assert.Nil(t, prototype.ttl)
 				assert.Equal(t, prototype.ttl, configured.ttl)
 				assert.Equal(t, prototype.IsFallbackOnErrorAllowed(), configured.IsFallbackOnErrorAllowed())
+				assert.Equal(t, "auth2", configured.HandlerID())
 			},
 		},
 		{
 			uc: "prototype config without cache, target config with cache overwrite",
+			id: "auth2",
 			prototypeConfig: []byte(`
 introspection_endpoint:
   url: foobar.local
@@ -360,10 +377,12 @@ subject:
 				assert.Nil(t, prototype.ttl)
 				assert.Equal(t, 5*time.Second, *configured.ttl)
 				assert.Equal(t, prototype.IsFallbackOnErrorAllowed(), configured.IsFallbackOnErrorAllowed())
+				assert.Equal(t, "auth2", configured.HandlerID())
 			},
 		},
 		{
 			uc: "prototype config with cache, target config with overwrites including cache",
+			id: "auth2",
 			prototypeConfig: []byte(`
 introspection_endpoint:
   url: foobar.local
@@ -395,10 +414,12 @@ cache_ttl: 15s
 				assert.Equal(t, 5*time.Second, *prototype.ttl)
 				assert.Equal(t, 15*time.Second, *configured.ttl)
 				assert.Equal(t, prototype.IsFallbackOnErrorAllowed(), configured.IsFallbackOnErrorAllowed())
+				assert.Equal(t, "auth2", configured.HandlerID())
 			},
 		},
 		{
 			uc: "prototype config with defaults, target config with fallback on error enabled",
+			id: "auth2",
 			prototypeConfig: []byte(`
 introspection_endpoint:
   url: foobar.local
@@ -423,6 +444,7 @@ subject:
 				assert.Equal(t, prototype.ttl, configured.ttl)
 				assert.NotEqual(t, prototype.IsFallbackOnErrorAllowed(), configured.IsFallbackOnErrorAllowed())
 				assert.True(t, configured.IsFallbackOnErrorAllowed())
+				assert.Equal(t, "auth2", configured.HandlerID())
 			},
 		},
 	} {
@@ -433,7 +455,7 @@ subject:
 			conf, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
 
-			prototype, err := newOAuth2IntrospectionAuthenticator(pc)
+			prototype, err := newOAuth2IntrospectionAuthenticator(tc.id, pc)
 			require.NoError(t, err)
 
 			// WHEN
@@ -458,6 +480,10 @@ subject:
 // nolint: maintidx
 func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 	t.Parallel()
+
+	type HandlerIdentifier interface {
+		HandlerID() string
+	}
 
 	var (
 		endpointCalled bool
@@ -504,7 +530,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 	}{
 		{
 			uc:            "with failing auth data source",
-			authenticator: &oauth2IntrospectionAuthenticator{},
+			authenticator: &oauth2IntrospectionAuthenticator{id: "auth3"},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.MockContext,
 				cch *mocks.MockCache,
@@ -523,11 +549,16 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrAuthentication)
 				assert.Contains(t, err.Error(), "no access token")
+
+				var identifier HandlerIdentifier
+				require.True(t, errors.As(err, &identifier))
+				assert.Equal(t, "auth3", identifier.HandlerID())
 			},
 		},
 		{
 			uc: "with disabled cache and endpoint communication error (dns)",
 			authenticator: &oauth2IntrospectionAuthenticator{
+				id:  "auth3",
 				e:   endpoint.Endpoint{URL: "http://heimdall.test.local"},
 				ttl: &zeroTTL,
 			},
@@ -549,11 +580,16 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrCommunication)
 				assert.Contains(t, err.Error(), "introspection endpoint failed")
+
+				var identifier HandlerIdentifier
+				require.True(t, errors.As(err, &identifier))
+				assert.Equal(t, "auth3", identifier.HandlerID())
 			},
 		},
 		{
 			uc: "with disabled cache and unexpected response code from the endpoint",
 			authenticator: &oauth2IntrospectionAuthenticator{
+				id:  "auth3",
 				e:   endpoint.Endpoint{URL: srv.URL},
 				ttl: &zeroTTL,
 			},
@@ -580,11 +616,16 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrCommunication)
 				assert.Contains(t, err.Error(), "unexpected response code")
+
+				var identifier HandlerIdentifier
+				require.True(t, errors.As(err, &identifier))
+				assert.Equal(t, "auth3", identifier.HandlerID())
 			},
 		},
 		{
 			uc: "with disabled cache and failing unmarshalling of the service response",
 			authenticator: &oauth2IntrospectionAuthenticator{
+				id: "auth3",
 				e: endpoint.Endpoint{
 					URL:    srv.URL,
 					Method: http.MethodPost,
@@ -633,11 +674,16 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrInternal)
 				assert.Contains(t, err.Error(), "received introspection response")
+
+				var identifier HandlerIdentifier
+				require.True(t, errors.As(err, &identifier))
+				assert.Equal(t, "auth3", identifier.HandlerID())
 			},
 		},
 		{
 			uc: "with disabled cache and failing response validation (token not active)",
 			authenticator: &oauth2IntrospectionAuthenticator{
+				id: "auth3",
 				e: endpoint.Endpoint{
 					URL:    srv.URL,
 					Method: http.MethodPost,
@@ -690,11 +736,16 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrAuthentication)
 				assert.Contains(t, err.Error(), "assertion conditions")
+
+				var identifier HandlerIdentifier
+				require.True(t, errors.As(err, &identifier))
+				assert.Equal(t, "auth3", identifier.HandlerID())
 			},
 		},
 		{
 			uc: "with disabled cache and failing response validation (issuer not trusted)",
 			authenticator: &oauth2IntrospectionAuthenticator{
+				id: "auth3",
 				e: endpoint.Endpoint{
 					URL:    srv.URL,
 					Method: http.MethodPost,
@@ -758,6 +809,10 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrAuthentication)
 				assert.Contains(t, err.Error(), "assertion conditions")
+
+				var identifier HandlerIdentifier
+				require.True(t, errors.As(err, &identifier))
+				assert.Equal(t, "auth3", identifier.HandlerID())
 			},
 		},
 		{

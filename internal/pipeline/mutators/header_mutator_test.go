@@ -2,6 +2,7 @@ package mutators
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -19,6 +20,7 @@ func TestCreateHeaderMutator(t *testing.T) {
 
 	for _, tc := range []struct {
 		uc     string
+		id     string
 		config []byte
 		assert func(t *testing.T, err error, mut *headerMutator)
 	}{
@@ -74,6 +76,7 @@ headers:
 		},
 		{
 			uc: "with valid config",
+			id: "hmut",
 			config: []byte(`
 headers:
   foo: bar
@@ -83,6 +86,7 @@ headers:
 
 				require.NoError(t, err)
 				assert.Len(t, mut.headers, 2)
+				assert.Equal(t, "hmut", mut.HandlerID())
 
 				val, err := mut.headers["foo"].Render(nil, nil)
 				require.NoError(t, err)
@@ -99,7 +103,7 @@ headers:
 			require.NoError(t, err)
 
 			// WHEN
-			mutator, err := newHeaderMutator(conf)
+			mutator, err := newHeaderMutator(tc.id, conf)
 
 			// THEN
 			tc.assert(t, err, mutator)
@@ -112,12 +116,14 @@ func TestCreateHeaderMutatorFromPrototype(t *testing.T) {
 
 	for _, tc := range []struct {
 		uc              string
+		id              string
 		prototypeConfig []byte
 		config          []byte
 		assert          func(t *testing.T, err error, prototype *headerMutator, configured *headerMutator)
 	}{
 		{
 			uc: "no new configuration provided",
+			id: "hmut1",
 			prototypeConfig: []byte(`
 headers:
   foo: bar
@@ -127,10 +133,12 @@ headers:
 
 				require.NoError(t, err)
 				assert.Equal(t, prototype, configured)
+				assert.Equal(t, "hmut1", configured.HandlerID())
 			},
 		},
 		{
 			uc: "configuration without headers provided",
+			id: "hmut2",
 			prototypeConfig: []byte(`
 headers:
   foo: bar
@@ -141,10 +149,12 @@ headers:
 
 				require.NoError(t, err)
 				assert.Equal(t, prototype, configured)
+				assert.Equal(t, "hmut2", configured.HandlerID())
 			},
 		},
 		{
 			uc: "new headers provided",
+			id: "hmut3",
 			prototypeConfig: []byte(`
 headers:
   foo: bar
@@ -160,6 +170,7 @@ headers:
 				assert.NotEqual(t, prototype, configured)
 				require.NotNil(t, configured)
 				assert.NotEmpty(t, configured.headers)
+				assert.Equal(t, "hmut3", configured.HandlerID())
 
 				val, err := configured.headers["bar"].Render(nil, nil)
 				require.NoError(t, err)
@@ -174,7 +185,7 @@ headers:
 			conf, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
 
-			prototype, err := newHeaderMutator(pc)
+			prototype, err := newHeaderMutator(tc.id, pc)
 			require.NoError(t, err)
 
 			// WHEN
@@ -194,6 +205,7 @@ func TestHeaderMutatorExecute(t *testing.T) {
 
 	for _, tc := range []struct {
 		uc               string
+		id               string
 		config           []byte
 		configureContext func(t *testing.T, ctx *mocks.MockContext)
 		createSubject    func(t *testing.T) *subject.Subject
@@ -201,6 +213,7 @@ func TestHeaderMutatorExecute(t *testing.T) {
 	}{
 		{
 			uc: "with nil subject",
+			id: "hmut1",
 			config: []byte(`
 headers:
   foo: bar
@@ -212,6 +225,10 @@ headers:
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrInternal)
 				assert.Contains(t, err.Error(), "'nil' subject")
+
+				var identifier interface{ HandlerID() string }
+				require.True(t, errors.As(err, &identifier))
+				assert.Equal(t, "hmut1", identifier.HandlerID())
 			},
 		},
 		{
@@ -265,7 +282,7 @@ headers:
 
 			configureContext(t, mctx)
 
-			mutator, err := newHeaderMutator(conf)
+			mutator, err := newHeaderMutator(tc.id, conf)
 			require.NoError(t, err)
 
 			// WHEN

@@ -2,6 +2,7 @@ package mutators
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -19,6 +20,7 @@ func TestCreateCookieMutator(t *testing.T) {
 
 	for _, tc := range []struct {
 		uc     string
+		id     string
 		config []byte
 		assert func(t *testing.T, err error, mut *cookieMutator)
 	}{
@@ -75,6 +77,7 @@ cookies:
 		},
 		{
 			uc: "with valid config",
+			id: "cmut",
 			config: []byte(`
 cookies:
   foo: bar
@@ -84,6 +87,7 @@ cookies:
 
 				require.NoError(t, err)
 				assert.Len(t, mut.cookies, 2)
+				assert.Equal(t, "cmut", mut.HandlerID())
 
 				val, err := mut.cookies["foo"].Render(nil, nil)
 				require.NoError(t, err)
@@ -100,7 +104,7 @@ cookies:
 			require.NoError(t, err)
 
 			// WHEN
-			mutator, err := newCookieMutator(conf)
+			mutator, err := newCookieMutator(tc.id, conf)
 
 			// THEN
 			tc.assert(t, err, mutator)
@@ -113,12 +117,14 @@ func TestCreateCookieMutatorFromPrototype(t *testing.T) {
 
 	for _, tc := range []struct {
 		uc              string
+		id              string
 		prototypeConfig []byte
 		config          []byte
 		assert          func(t *testing.T, err error, prototype *cookieMutator, configured *cookieMutator)
 	}{
 		{
 			uc: "no new configuration provided",
+			id: "cmut1",
 			prototypeConfig: []byte(`
 cookies:
   foo: bar
@@ -128,10 +134,12 @@ cookies:
 
 				require.NoError(t, err)
 				assert.Equal(t, prototype, configured)
+				assert.Equal(t, "cmut1", configured.HandlerID())
 			},
 		},
 		{
 			uc: "configuration without cookies provided",
+			id: "cmut2",
 			prototypeConfig: []byte(`
 cookies:
   foo: bar
@@ -142,10 +150,12 @@ cookies:
 
 				require.NoError(t, err)
 				assert.Equal(t, prototype, configured)
+				assert.Equal(t, "cmut2", configured.HandlerID())
 			},
 		},
 		{
 			uc: "new cookies provided",
+			id: "cmut3",
 			prototypeConfig: []byte(`
 cookies:
   foo: bar
@@ -161,6 +171,7 @@ cookies:
 				assert.NotEqual(t, prototype, configured)
 				require.NotNil(t, configured)
 				assert.NotEmpty(t, configured.cookies)
+				assert.Equal(t, "cmut3", configured.HandlerID())
 
 				val, err := configured.cookies["bar"].Render(nil, nil)
 				require.NoError(t, err)
@@ -175,7 +186,7 @@ cookies:
 			conf, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
 
-			prototype, err := newCookieMutator(pc)
+			prototype, err := newCookieMutator(tc.id, pc)
 			require.NoError(t, err)
 
 			// WHEN
@@ -195,6 +206,7 @@ func TestCookieMutatorExecute(t *testing.T) {
 
 	for _, tc := range []struct {
 		uc               string
+		id               string
 		config           []byte
 		configureContext func(t *testing.T, ctx *mocks.MockContext)
 		createSubject    func(t *testing.T) *subject.Subject
@@ -202,6 +214,7 @@ func TestCookieMutatorExecute(t *testing.T) {
 	}{
 		{
 			uc: "with nil subject",
+			id: "cmut1",
 			config: []byte(`
 cookies:
   foo: bar
@@ -213,6 +226,10 @@ cookies:
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrInternal)
 				assert.Contains(t, err.Error(), "'nil' subject")
+
+				var identifier interface{ HandlerID() string }
+				require.True(t, errors.As(err, &identifier))
+				assert.Equal(t, "cmut1", identifier.HandlerID())
 			},
 		},
 		{
@@ -266,7 +283,7 @@ cookies:
 
 			configureContext(t, mctx)
 
-			mutator, err := newCookieMutator(conf)
+			mutator, err := newCookieMutator(tc.id, conf)
 			require.NoError(t, err)
 
 			// WHEN

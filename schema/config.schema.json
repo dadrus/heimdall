@@ -1164,6 +1164,31 @@
         }
       }
     },
+    "errorType": {
+      "description": "Error type",
+      "type": "string",
+      "enum": [
+        "authentication_error",
+        "authorization_error",
+        "internal_error",
+        "precondition_error"
+      ]
+    },
+    "errorDescriptor": {
+      "description": "Describes the error, an error handler should be responsible for",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type"],
+      "properties": {
+        "type": {
+          "$ref": "#/definitions/errorType"
+        },
+        "raised_by": {
+          "description": "Identifier of the pipeline handler, which raised this error",
+          "type": "string"
+        }
+      }
+    },
     "errorsWhen": {
       "description": "Conditions under which circumstances an error handler should be responsible for handling the request. If no conditions are given, the error handler will be responsible for all errors. Sections error and request are combined using AND.",
       "type": "array",
@@ -1173,17 +1198,11 @@
         "additionalProperties": false,
         "properties": {
           "error": {
-            "description": "Defines which error this error handler should be responsible for. The list uses OR (e.g. when the error is not_found OR unauthorized). If left empty, all errors will be handled by this error handler.",
+            "description": "Defines which error this error handler should be responsible for. The list uses OR (e.g. when the error is authentication_error OR precondition_error). If left empty, all errors will be handled by this error handler.",
             "type": "array",
             "additionalItems": false,
             "items": {
-              "type": "string",
-              "enum": [
-                "authentication_error",
-                "authorization_error",
-                "internal_error",
-                "precondition_error"
-              ]
+              "$ref": "#/definitions/errorDescriptor"
             }
           },
           "request_cidr": {

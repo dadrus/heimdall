@@ -2,6 +2,7 @@ package authenticators
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
@@ -27,6 +28,7 @@ func TestGenericAuthenticatorCreate(t *testing.T) {
 
 	for _, tc := range []struct {
 		uc          string
+		id          string
 		config      []byte
 		assertError func(t *testing.T, err error, auth *genericAuthenticator)
 	}{
@@ -93,6 +95,7 @@ subject:
 		},
 		{
 			uc: "with valid configuration but disabled cache",
+			id: "auth1",
 			config: []byte(`
 identity_info_endpoint:
   url: http://test.com
@@ -117,10 +120,12 @@ subject:
 				assert.Equal(t, time.Duration(0), auth.ttl)
 				assert.False(t, auth.IsFallbackOnErrorAllowed())
 				assert.Nil(t, auth.sessionLifespanConf)
+				assert.Equal(t, "auth1", auth.HandlerID())
 			},
 		},
 		{
 			uc: "with valid configuration and enabled cache",
+			id: "auth1",
 			config: []byte(`
 identity_info_endpoint:
   url: http://test.com
@@ -146,10 +151,12 @@ cache_ttl: 5s`),
 				assert.Equal(t, 5*time.Second, auth.ttl)
 				assert.False(t, auth.IsFallbackOnErrorAllowed())
 				assert.Nil(t, auth.sessionLifespanConf)
+				assert.Equal(t, "auth1", auth.HandlerID())
 			},
 		},
 		{
 			uc: "with valid configuration enabling fallback on errors",
+			id: "auth1",
 			config: []byte(`
 identity_info_endpoint:
   url: http://test.com
@@ -175,10 +182,12 @@ allow_fallback_on_error: true`),
 				assert.Equal(t, time.Duration(0), auth.ttl)
 				assert.True(t, auth.IsFallbackOnErrorAllowed())
 				assert.Nil(t, auth.sessionLifespanConf)
+				assert.Equal(t, "auth1", auth.HandlerID())
 			},
 		},
 		{
 			uc: "with session lifespan config",
+			id: "auth1",
 			config: []byte(`
 identity_info_endpoint:
   url: http://test.com
@@ -216,6 +225,7 @@ session_lifespan:
 				assert.Equal(t, "zab", auth.sessionLifespanConf.NotAfterField)
 				assert.Equal(t, "foo bar", auth.sessionLifespanConf.TimeFormat)
 				assert.Equal(t, 2*time.Second, auth.sessionLifespanConf.ValidityLeeway)
+				assert.Equal(t, "auth1", auth.HandlerID())
 			},
 		},
 	} {
@@ -224,7 +234,7 @@ session_lifespan:
 			require.NoError(t, err)
 
 			// WHEN
-			auth, err := newGenericAuthenticator(conf)
+			auth, err := newGenericAuthenticator(tc.id, conf)
 
 			// THEN
 			tc.assertError(t, err, auth)
@@ -237,6 +247,7 @@ func TestGenericAuthenticatorWithConfig(t *testing.T) { // nolint: maintidx
 
 	for _, tc := range []struct {
 		uc              string
+		id              string
 		prototypeConfig []byte
 		config          []byte
 		assert          func(t *testing.T, err error, prototype *genericAuthenticator,
@@ -244,6 +255,7 @@ func TestGenericAuthenticatorWithConfig(t *testing.T) { // nolint: maintidx
 	}{
 		{
 			uc: "prototype config without cache configured and empty target config",
+			id: "auth2",
 			prototypeConfig: []byte(`
 identity_info_endpoint:
   url: http://test.com
@@ -261,6 +273,7 @@ allow_fallback_on_error: true`),
 				require.NoError(t, err)
 
 				assert.Equal(t, prototype, configured)
+				assert.Equal(t, "auth2", configured.HandlerID())
 			},
 		},
 		{
@@ -286,6 +299,7 @@ subject:
 		},
 		{
 			uc: "prototype config without cache, config with cache",
+			id: "auth2",
 			prototypeConfig: []byte(`
 identity_info_endpoint:
   url: http://test.com
@@ -310,10 +324,12 @@ subject:
 				assert.Equal(t, 5*time.Second, configured.ttl)
 				assert.Equal(t, prototype.IsFallbackOnErrorAllowed(), configured.IsFallbackOnErrorAllowed())
 				assert.Equal(t, prototype.sessionLifespanConf, configured.sessionLifespanConf)
+				assert.Equal(t, "auth2", configured.HandlerID())
 			},
 		},
 		{
 			uc: "prototype config with disabled fallback on error, config with enabled fallback on error",
+			id: "auth2",
 			prototypeConfig: []byte(`
 identity_info_endpoint:
   url: http://test.com
@@ -337,10 +353,12 @@ subject:
 				assert.NotEqual(t, prototype.IsFallbackOnErrorAllowed(), configured.IsFallbackOnErrorAllowed())
 				assert.True(t, configured.IsFallbackOnErrorAllowed())
 				assert.Equal(t, prototype.sessionLifespanConf, configured.sessionLifespanConf)
+				assert.Equal(t, "auth2", configured.HandlerID())
 			},
 		},
 		{
 			uc: "prototype config with cache ttl, config with cache tll",
+			id: "auth2",
 			prototypeConfig: []byte(`
 identity_info_endpoint:
   url: http://test.com
@@ -367,10 +385,12 @@ cache_ttl: 15s`),
 				assert.Equal(t, 5*time.Second, prototype.ttl)
 				assert.Equal(t, prototype.IsFallbackOnErrorAllowed(), configured.IsFallbackOnErrorAllowed())
 				assert.Equal(t, prototype.sessionLifespanConf, configured.sessionLifespanConf)
+				assert.Equal(t, "auth2", configured.HandlerID())
 			},
 		},
 		{
 			uc: "prototype with session lifespan config and empty target config",
+			id: "auth2",
 			prototypeConfig: []byte(`
 identity_info_endpoint:
   url: http://test.com
@@ -407,6 +427,7 @@ session_lifespan:
 				assert.Equal(t, "zab", configured.sessionLifespanConf.NotAfterField)
 				assert.Equal(t, "foo bar", configured.sessionLifespanConf.TimeFormat)
 				assert.Equal(t, 2*time.Second, configured.sessionLifespanConf.ValidityLeeway)
+				assert.Equal(t, "auth2", configured.HandlerID())
 			},
 		},
 		{
@@ -513,7 +534,7 @@ session_lifespan:
 			conf, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
 
-			prototype, err := newGenericAuthenticator(pc)
+			prototype, err := newGenericAuthenticator(tc.id, pc)
 			require.NoError(t, err)
 
 			// WHEN
@@ -538,6 +559,10 @@ session_lifespan:
 // nolint: maintidx
 func TestGenericAuthenticatorExecute(t *testing.T) {
 	t.Parallel()
+
+	type HandlerIdentifier interface {
+		HandlerID() string
+	}
 
 	var (
 		endpointCalled bool
@@ -582,7 +607,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 	}{
 		{
 			uc:            "with failing auth data source",
-			authenticator: &genericAuthenticator{},
+			authenticator: &genericAuthenticator{id: "auth3"},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.MockContext,
 				cch *mocks.MockCache,
@@ -601,12 +626,17 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrAuthentication)
 				assert.Contains(t, err.Error(), "failed to get authentication data")
+
+				var identifier HandlerIdentifier
+				require.True(t, errors.As(err, &identifier))
+				assert.Equal(t, "auth3", identifier.HandlerID())
 			},
 		},
 		{
 			uc: "with endpoint communication error (dns)",
 			authenticator: &genericAuthenticator{
-				e: endpoint.Endpoint{URL: "http://heimdall.test.local"},
+				id: "auth3",
+				e:  endpoint.Endpoint{URL: "http://heimdall.test.local"},
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.MockContext,
@@ -626,12 +656,17 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrCommunication)
 				assert.Contains(t, err.Error(), "request to the endpoint")
+
+				var identifier HandlerIdentifier
+				require.True(t, errors.As(err, &identifier))
+				assert.Equal(t, "auth3", identifier.HandlerID())
 			},
 		},
 		{
 			uc: "with unexpected response code from server",
 			authenticator: &genericAuthenticator{
-				e: endpoint.Endpoint{URL: srv.URL},
+				id: "auth3",
+				e:  endpoint.Endpoint{URL: srv.URL},
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.MockContext,
@@ -656,11 +691,16 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrCommunication)
 				assert.Contains(t, err.Error(), "unexpected response code")
+
+				var identifier HandlerIdentifier
+				require.True(t, errors.As(err, &identifier))
+				assert.Equal(t, "auth3", identifier.HandlerID())
 			},
 		},
 		{
 			uc: "with error while extracting subject information",
 			authenticator: &genericAuthenticator{
+				id: "auth3",
 				e: endpoint.Endpoint{
 					URL:    srv.URL,
 					Method: http.MethodGet,
@@ -703,6 +743,10 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrInternal)
 				assert.Contains(t, err.Error(), "failed to extract subject")
+
+				var identifier HandlerIdentifier
+				require.True(t, errors.As(err, &identifier))
+				assert.Equal(t, "auth3", identifier.HandlerID())
 			},
 		},
 		{
@@ -904,6 +948,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 		{
 			uc: "execution with not active session",
 			authenticator: &genericAuthenticator{
+				id: "auth3",
 				e: endpoint.Endpoint{
 					URL:    srv.URL,
 					Method: http.MethodGet,
@@ -951,11 +996,16 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrAuthentication)
 				assert.Contains(t, err.Error(), "not active")
+
+				var identifier HandlerIdentifier
+				require.True(t, errors.As(err, &identifier))
+				assert.Equal(t, "auth3", identifier.HandlerID())
 			},
 		},
 		{
 			uc: "execution with error while parsing session lifespan",
 			authenticator: &genericAuthenticator{
+				id: "auth3",
 				e: endpoint.Endpoint{
 					URL:    srv.URL,
 					Method: http.MethodGet,
@@ -1003,6 +1053,10 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrInternal)
 				assert.Contains(t, err.Error(), "failed parsing issued_at")
+
+				var identifier HandlerIdentifier
+				require.True(t, errors.As(err, &identifier))
+				assert.Equal(t, "auth3", identifier.HandlerID())
 			},
 		},
 		{

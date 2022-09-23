@@ -36,9 +36,9 @@ func DecodeCIDRMatcherHookFunc() mapstructure.DecodeHookFunc {
 
 func DecodeErrorTypeMatcherHookFunc() mapstructure.DecodeHookFunc {
 	return func(from reflect.Type, to reflect.Type, data any) (any, error) {
-		var matcher ErrorTypeMatcher
+		var matcher ErrorDescriptor
 
-		if from.Kind() != reflect.Slice {
+		if from.Kind() != reflect.Map {
 			return data, nil
 		}
 
@@ -47,21 +47,27 @@ func DecodeErrorTypeMatcherHookFunc() mapstructure.DecodeHookFunc {
 			return data, nil
 		}
 
+		// already checked above
 		// nolint: forcetypeassert
-		for _, val := range data.([]any) {
-			switch val {
-			case "authentication_error":
-				matcher = append(matcher, heimdall.ErrAuthentication)
-			case "authorization_error":
-				matcher = append(matcher, heimdall.ErrAuthorization)
-			case "internal_error":
-				matcher = append(matcher, heimdall.ErrInternal)
-				matcher = append(matcher, heimdall.ErrConfiguration)
-			case "precondition_error":
-				matcher = append(matcher, heimdall.ErrArgument)
-			default:
-				return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
-					"unsupported error type: %s", val)
+		conf := data.(map[string]any)
+		switch conf["type"] {
+		case "authentication_error":
+			matcher.Errors = []error{heimdall.ErrAuthentication}
+		case "authorization_error":
+			matcher.Errors = []error{heimdall.ErrAuthorization}
+		case "internal_error":
+			matcher.Errors = []error{heimdall.ErrInternal, heimdall.ErrConfiguration}
+		case "precondition_error":
+			matcher.Errors = []error{heimdall.ErrArgument}
+		default:
+			return ErrorDescriptor{}, errorchain.
+				NewWithMessagef(heimdall.ErrConfiguration, "unsupported error type: %s", conf["type"])
+		}
+
+		if src, ok := conf["raised_by"]; ok {
+			if matcher.HandlerID, ok = src.(string); !ok {
+				return ErrorDescriptor{}, errorchain.
+					NewWithMessage(heimdall.ErrConfiguration, "raised_by must be a string")
 			}
 		}
 

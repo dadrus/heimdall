@@ -14,22 +14,23 @@ import (
 // nolint
 func init() {
 	registerMutatorTypeFactory(
-		func(_ string, typ config.PipelineObjectType, conf map[string]any) (bool, Mutator, error) {
+		func(id string, typ config.PipelineObjectType, conf map[string]any) (bool, Mutator, error) {
 			if typ != config.POTHeader {
 				return false, nil, nil
 			}
 
-			mut, err := newHeaderMutator(conf)
+			mut, err := newHeaderMutator(id, conf)
 
 			return true, mut, err
 		})
 }
 
 type headerMutator struct {
+	id      string
 	headers map[string]template.Template
 }
 
-func newHeaderMutator(rawConfig map[string]any) (*headerMutator, error) {
+func newHeaderMutator(id string, rawConfig map[string]any) (*headerMutator, error) {
 	type Config struct {
 		Headers map[string]template.Template `mapstructure:"headers"`
 	}
@@ -47,6 +48,7 @@ func newHeaderMutator(rawConfig map[string]any) (*headerMutator, error) {
 	}
 
 	return &headerMutator{
+		id:      id,
 		headers: conf.Headers,
 	}, nil
 }
@@ -56,15 +58,18 @@ func (m *headerMutator) Execute(ctx heimdall.Context, sub *subject.Subject) erro
 	logger.Debug().Msg("Mutating using header mutator")
 
 	if sub == nil {
-		return errorchain.NewWithMessage(heimdall.ErrInternal,
-			"failed to execute header mutator due to 'nil' subject")
+		return errorchain.
+			NewWithMessage(heimdall.ErrInternal, "failed to execute header mutator due to 'nil' subject").
+			WithErrorContext(m)
 	}
 
 	for name, tmpl := range m.headers {
 		value, err := tmpl.Render(nil, sub)
 		if err != nil {
-			return errorchain.NewWithMessagef(heimdall.ErrInternal,
-				"failed to render value for '%s' cookie", name).CausedBy(err)
+			return errorchain.
+				NewWithMessagef(heimdall.ErrInternal, "failed to render value for '%s' cookie", name).
+				WithErrorContext(m).
+				CausedBy(err)
 		}
 
 		ctx.AddHeaderForUpstream(name, value)
@@ -78,5 +83,9 @@ func (m *headerMutator) WithConfig(config map[string]any) (Mutator, error) {
 		return m, nil
 	}
 
-	return newHeaderMutator(config)
+	return newHeaderMutator(m.id, config)
+}
+
+func (m *headerMutator) HandlerID() string {
+	return m.id
 }
