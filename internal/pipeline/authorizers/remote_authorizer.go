@@ -365,7 +365,7 @@ func (a *remoteAuthorizer) verify(ctx heimdall.Context, result any) error {
 
 	if !res.ToBoolean() {
 		return errorchain.
-			NewWithMessage(heimdall.ErrAuthorization, "script failed").
+			NewWithMessage(heimdall.ErrAuthorization, "script returned false").
 			WithErrorContext(a)
 	}
 

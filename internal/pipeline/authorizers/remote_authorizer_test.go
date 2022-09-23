@@ -849,7 +849,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 			},
 		},
 		{
-			uc: "with script, which fails",
+			uc: "with script, which fails throwing error",
 			authorizer: &remoteAuthorizer{
 				id: "authz",
 				e: endpoint.Endpoint{
@@ -916,6 +916,80 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrAuthorization)
 				assert.Contains(t, err.Error(), "test")
+
+				var identifier interface{ HandlerID() string }
+				require.True(t, errors.As(err, &identifier))
+				assert.Equal(t, "authz", identifier.HandlerID())
+			},
+		},
+		{
+			uc: "with script, which returns false",
+			authorizer: &remoteAuthorizer{
+				id: "authz",
+				e: endpoint.Endpoint{
+					URL: srv.URL,
+					Headers: map[string]string{
+						"Content-Type": "application/json",
+						"Accept":       "application/json",
+					},
+				},
+				payload: func() template.Template {
+					tpl, _ := template.New(`{ "user_id": {{ quote .Subject.ID }} }`)
+
+					return tpl
+				}(),
+				script: func() script.Script {
+					ecma := &mockScript{}
+					ecma.On("ExecuteOnPayload", mock.Anything, mock.Anything).
+						Return(boolValue(false), nil)
+
+					return ecma
+				}(),
+			},
+			subject: &subject.Subject{
+				ID:         "my-id",
+				Attributes: map[string]any{},
+			},
+			instructServer: func(t *testing.T) {
+				t.Helper()
+
+				checkRequest = func(req *http.Request) {
+					t.Helper()
+
+					assert.Equal(t, "POST", req.Method)
+					assert.Equal(t, "application/json", req.Header.Get("Content-Type"))
+					assert.Equal(t, "application/json", req.Header.Get("Accept"))
+
+					data, err := io.ReadAll(req.Body)
+					assert.NoError(t, err)
+
+					var mapData map[string]string
+
+					err = json.Unmarshal(data, &mapData)
+					require.NoError(t, err)
+
+					assert.Len(t, mapData, 1)
+					assert.Equal(t, "my-id", mapData["user_id"])
+				}
+
+				responseCode = http.StatusOK
+				rawData, err := json.Marshal(map[string]any{
+					"access_granted": true,
+					"permissions":    []string{"read_foo", "write_foo"},
+					"groups":         []string{"Foo-Users"},
+				})
+				require.NoError(t, err)
+				responseContent = rawData
+				responseContentType = "application/json"
+			},
+			assert: func(t *testing.T, err error, sub *subject.Subject) {
+				t.Helper()
+
+				assert.True(t, authorizationEndpointCalled)
+
+				require.Error(t, err)
+				assert.ErrorIs(t, err, heimdall.ErrAuthorization)
+				assert.Contains(t, err.Error(), "script returned false")
 
 				var identifier interface{ HandlerID() string }
 				require.True(t, errors.As(err, &identifier))

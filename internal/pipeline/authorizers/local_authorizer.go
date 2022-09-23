@@ -64,7 +64,7 @@ func (a *localAuthorizer) Execute(ctx heimdall.Context, sub *subject.Subject) er
 
 	if !res.ToBoolean() {
 		return errorchain.
-			NewWithMessage(heimdall.ErrAuthorization, "script failed").
+			NewWithMessage(heimdall.ErrAuthorization, "script returned false").
 			WithErrorContext(a)
 	}
 

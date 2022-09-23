@@ -175,7 +175,7 @@ func TestLocalAuthorizerExecute(t *testing.T) {
 		assert                     func(t *testing.T, err error)
 	}{
 		{
-			uc:     "denied by script",
+			uc:     "denied by script using throw",
 			id:     "authz1",
 			config: []byte(`script: "throw('denied by script')"`),
 			configureContextAndSubject: func(t *testing.T, ctx *mocks.MockContext, sub *subject.Subject) {
@@ -188,6 +188,26 @@ func TestLocalAuthorizerExecute(t *testing.T) {
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrAuthorization)
 				assert.Contains(t, err.Error(), "denied by script")
+
+				var identifier interface{ HandlerID() string }
+				require.True(t, errors.As(err, &identifier))
+				assert.Equal(t, "authz1", identifier.HandlerID())
+			},
+		},
+		{
+			uc:     "denied by script using boolean value",
+			id:     "authz1",
+			config: []byte(`script: "false"`),
+			configureContextAndSubject: func(t *testing.T, ctx *mocks.MockContext, sub *subject.Subject) {
+				// nothing is required here
+				t.Helper()
+			},
+			assert: func(t *testing.T, err error) {
+				t.Helper()
+
+				require.Error(t, err)
+				assert.ErrorIs(t, err, heimdall.ErrAuthorization)
+				assert.Contains(t, err.Error(), "script returned false")
 
 				var identifier interface{ HandlerID() string }
 				require.True(t, errors.As(err, &identifier))
