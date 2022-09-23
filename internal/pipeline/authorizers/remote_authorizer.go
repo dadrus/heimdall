@@ -43,8 +43,8 @@ func init() {
 }
 
 type remoteAuthorizer struct {
+	id                 string
 	e                  endpoint.Endpoint
-	name               string
 	payload            template.Template
 	script             script.Script
 	headersForUpstream []string
@@ -71,7 +71,7 @@ func (ai *authorizationInformation) addAttributesTo(key string, sub *subject.Sub
 	}
 }
 
-func newRemoteAuthorizer(name string, rawConfig map[string]any) (*remoteAuthorizer, error) {
+func newRemoteAuthorizer(id string, rawConfig map[string]any) (*remoteAuthorizer, error) {
 	type Config struct {
 		Endpoint                 endpoint.Endpoint `mapstructure:"endpoint"`
 		Payload                  template.Template `mapstructure:"payload"`
@@ -82,23 +82,26 @@ func newRemoteAuthorizer(name string, rawConfig map[string]any) (*remoteAuthoriz
 
 	var conf Config
 	if err := decodeConfig(rawConfig, &conf); err != nil {
-		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
-			"failed to unmarshal remote authorizer config").CausedBy(err)
+		return nil, errorchain.
+			NewWithMessage(heimdall.ErrConfiguration, "failed to unmarshal remote authorizer config").
+			CausedBy(err)
 	}
 
 	if err := conf.Endpoint.Validate(); err != nil {
-		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
-			"failed to validate endpoint configuration").CausedBy(err)
+		return nil, errorchain.
+			NewWithMessage(heimdall.ErrConfiguration, "failed to validate endpoint configuration").
+			CausedBy(err)
 	}
 
 	if len(conf.Endpoint.Headers) == 0 && conf.Payload == nil {
-		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
-			"either a payload or at least one endpoint header must be configured for remote authorizer")
+		return nil, errorchain.
+			NewWithMessage(heimdall.ErrConfiguration,
+				"either a payload or at least one endpoint header must be configured for remote authorizer")
 	}
 
 	return &remoteAuthorizer{
 		e:                  conf.Endpoint,
-		name:               name,
+		id:                 id,
 		payload:            conf.Payload,
 		script:             conf.Script,
 		headersForUpstream: conf.ResponseHeadersToForward,
@@ -111,8 +114,9 @@ func (a *remoteAuthorizer) Execute(ctx heimdall.Context, sub *subject.Subject) e
 	logger.Debug().Msg("Authorizing using remote authorizer")
 
 	if sub == nil {
-		return errorchain.NewWithMessage(heimdall.ErrInternal,
-			"failed to execute remote authorizer due to 'nil' subject")
+		return errorchain.
+			NewWithMessage(heimdall.ErrInternal, "failed to execute remote authorizer due to 'nil' subject").
+			WithErrorContext(a)
 	}
 
 	cch := cache.Ctx(ctx.AppContext())
@@ -155,9 +159,43 @@ func (a *remoteAuthorizer) Execute(ctx heimdall.Context, sub *subject.Subject) e
 	}
 
 	authInfo.addHeadersTo(a.headersForUpstream, ctx)
-	authInfo.addAttributesTo(a.name, sub)
+	authInfo.addAttributesTo(a.id, sub)
 
 	return nil
+}
+
+func (a *remoteAuthorizer) WithConfig(rawConfig map[string]any) (Authorizer, error) {
+	if len(rawConfig) == 0 {
+		return a, nil
+	}
+
+	type Config struct {
+		Payload                  template.Template `mapstructure:"payload"`
+		Script                   script.Script     `mapstructure:"script"`
+		ResponseHeadersToForward []string          `mapstructure:"forward_response_headers_to_upstream"`
+		CacheTTL                 time.Duration     `mapstructure:"cache_ttl"`
+	}
+
+	var conf Config
+	if err := decodeConfig(rawConfig, &conf); err != nil {
+		return nil, errorchain.
+			NewWithMessage(heimdall.ErrConfiguration, "failed to unmarshal remote authorizer config").
+			CausedBy(err)
+	}
+
+	return &remoteAuthorizer{
+		id:      a.id,
+		e:       a.e,
+		payload: x.IfThenElse(conf.Payload != nil, conf.Payload, a.payload),
+		script:  x.IfThenElse(conf.Script != nil, conf.Script, a.script),
+		headersForUpstream: x.IfThenElse(len(conf.ResponseHeadersToForward) != 0,
+			conf.ResponseHeadersToForward, a.headersForUpstream),
+		ttl: x.IfThenElse(conf.CacheTTL > 0, conf.CacheTTL, a.ttl),
+	}, nil
+}
+
+func (a *remoteAuthorizer) HandlerID() string {
+	return a.id
 }
 
 func (a *remoteAuthorizer) doAuthorize(ctx heimdall.Context, sub *subject.Subject) (*authorizationInformation, error) {
@@ -173,12 +211,17 @@ func (a *remoteAuthorizer) doAuthorize(ctx heimdall.Context, sub *subject.Subjec
 	if err != nil {
 		var clientErr *url.Error
 		if errors.As(err, &clientErr) && clientErr.Timeout() {
-			return nil, errorchain.NewWithMessage(heimdall.ErrCommunicationTimeout,
-				"request to the authorization endpoint timed out").CausedBy(err)
+			return nil, errorchain.
+				NewWithMessage(heimdall.ErrCommunicationTimeout,
+					"request to the authorization endpoint timed out").
+				WithErrorContext(a).
+				CausedBy(err)
 		}
 
-		return nil, errorchain.NewWithMessage(heimdall.ErrCommunication,
-			"request to the authorization endpoint failed").CausedBy(err)
+		return nil, errorchain.
+			NewWithMessage(heimdall.ErrCommunication, "request to the authorization endpoint failed").
+			WithErrorContext(a).
+			CausedBy(err)
 	}
 
 	defer resp.Body.Close()
@@ -202,8 +245,10 @@ func (a *remoteAuthorizer) createRequest(ctx heimdall.Context, sub *subject.Subj
 	if a.payload != nil {
 		bodyContents, err := a.payload.Render(ctx, sub)
 		if err != nil {
-			return nil, errorchain.NewWithMessage(heimdall.ErrInternal,
-				"failed to render payload for the authorization endpoint").CausedBy(err)
+			return nil, errorchain.
+				NewWithMessage(heimdall.ErrInternal, "failed to render payload for the authorization endpoint").
+				WithErrorContext(a).
+				CausedBy(err)
 		}
 
 		body = strings.NewReader(bodyContents)
@@ -213,13 +258,19 @@ func (a *remoteAuthorizer) createRequest(ctx heimdall.Context, sub *subject.Subj
 		renderer.RenderFunc(func(value string) (string, error) {
 			tpl, err := template.New(value)
 			if err != nil {
-				return "", err
+				return "", errorchain.
+					NewWithMessage(heimdall.ErrInternal, "failed to create template").
+					WithErrorContext(a).
+					CausedBy(err)
 			}
 
 			return tpl.Render(nil, sub)
 		}))
 	if err != nil {
-		return nil, err
+		return nil, errorchain.
+			NewWithMessage(heimdall.ErrInternal, "failed creating request").
+			WithErrorContext(a).
+			CausedBy(err)
 	}
 
 	return req, nil
@@ -231,7 +282,8 @@ func (a *remoteAuthorizer) readResponse(ctx heimdall.Context, resp *http.Respons
 	if !(resp.StatusCode >= http.StatusOK && resp.StatusCode < http.StatusMultipleChoices) {
 		return nil, errorchain.
 			NewWithMessagef(heimdall.ErrAuthorization,
-				"authorization failed based on received response code: %v", resp.StatusCode)
+				"authorization failed based on received response code: %v", resp.StatusCode).
+			WithErrorContext(a)
 	}
 
 	if resp.ContentLength == 0 {
@@ -242,7 +294,10 @@ func (a *remoteAuthorizer) readResponse(ctx heimdall.Context, resp *http.Respons
 
 	rawData, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, errorchain.NewWithMessage(heimdall.ErrInternal, "failed to read response").CausedBy(err)
+		return nil, errorchain.
+			NewWithMessage(heimdall.ErrInternal, "failed to read response").
+			WithErrorContext(a).
+			CausedBy(err)
 	}
 
 	contentType := resp.Header.Get("Content-Type")
@@ -256,40 +311,13 @@ func (a *remoteAuthorizer) readResponse(ctx heimdall.Context, resp *http.Respons
 
 	result, err := decoder.Decode(rawData)
 	if err != nil {
-		return nil, errorchain.NewWithMessage(heimdall.ErrInternal,
-			"failed to unmarshal response").CausedBy(err)
+		return nil, errorchain.
+			NewWithMessage(heimdall.ErrInternal, "failed to unmarshal response").
+			WithErrorContext(a).
+			CausedBy(err)
 	}
 
 	return result, nil
-}
-
-func (a *remoteAuthorizer) WithConfig(rawConfig map[string]any) (Authorizer, error) {
-	if len(rawConfig) == 0 {
-		return a, nil
-	}
-
-	type Config struct {
-		Payload                  template.Template `mapstructure:"payload"`
-		Script                   script.Script     `mapstructure:"script"`
-		ResponseHeadersToForward []string          `mapstructure:"forward_response_headers_to_upstream"`
-		CacheTTL                 time.Duration     `mapstructure:"cache_ttl"`
-	}
-
-	var conf Config
-	if err := decodeConfig(rawConfig, &conf); err != nil {
-		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
-			"failed to unmarshal remote authorizer config").CausedBy(err)
-	}
-
-	return &remoteAuthorizer{
-		e:       a.e,
-		name:    a.name,
-		payload: x.IfThenElse(conf.Payload != nil, conf.Payload, a.payload),
-		script:  x.IfThenElse(conf.Script != nil, conf.Script, a.script),
-		headersForUpstream: x.IfThenElse(len(conf.ResponseHeadersToForward) != 0,
-			conf.ResponseHeadersToForward, a.headersForUpstream),
-		ttl: x.IfThenElse(conf.CacheTTL > 0, conf.CacheTTL, a.ttl),
-	}, nil
 }
 
 func (a *remoteAuthorizer) calculateCacheKey(sub *subject.Subject) (string, error) {
@@ -297,8 +325,10 @@ func (a *remoteAuthorizer) calculateCacheKey(sub *subject.Subject) (string, erro
 
 	rawSub, err := json.Marshal(sub)
 	if err != nil {
-		return "", errorchain.NewWithMessage(heimdall.ErrInternal,
-			"failed to marshal subject data").CausedBy(err)
+		return "", errorchain.
+			NewWithMessage(heimdall.ErrInternal, "failed to marshal subject data").
+			WithErrorContext(a).
+			CausedBy(err)
 	}
 
 	ttlBytes := make([]byte, int64BytesCount)
@@ -306,7 +336,7 @@ func (a *remoteAuthorizer) calculateCacheKey(sub *subject.Subject) (string, erro
 
 	hash := sha256.New()
 	hash.Write([]byte(a.e.Hash()))
-	hash.Write([]byte(a.name))
+	hash.Write([]byte(a.id))
 	hash.Write([]byte(strings.Join(a.headersForUpstream, ",")))
 	hash.Write(x.IfThenElseExec(a.payload != nil,
 		func() []byte { return []byte(a.payload.Hash()) },
@@ -327,11 +357,16 @@ func (a *remoteAuthorizer) verify(ctx heimdall.Context, result any) error {
 
 	res, err := a.script.ExecuteOnPayload(ctx, result)
 	if err != nil {
-		return errorchain.New(heimdall.ErrAuthorization).CausedBy(err)
+		return errorchain.
+			New(heimdall.ErrAuthorization).
+			WithErrorContext(a).
+			CausedBy(err)
 	}
 
 	if !res.ToBoolean() {
-		return errorchain.NewWithMessage(heimdall.ErrAuthorization, "script failed")
+		return errorchain.
+			NewWithMessage(heimdall.ErrAuthorization, "script failed").
+			WithErrorContext(a)
 	}
 
 	return nil

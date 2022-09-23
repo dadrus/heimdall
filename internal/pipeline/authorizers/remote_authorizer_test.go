@@ -2,6 +2,7 @@ package authorizers
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -36,6 +37,7 @@ func TestCreateRemoteAuthorizer(t *testing.T) {
 
 	for _, tc := range []struct {
 		uc     string
+		id     string
 		config []byte
 		assert func(t *testing.T, err error, auth *remoteAuthorizer)
 	}{
@@ -85,6 +87,7 @@ endpoint:
 		},
 		{
 			uc: "configuration with endpoint and payload",
+			id: "authz",
 			config: []byte(`
 endpoint:
   url: http://foo.bar
@@ -102,10 +105,13 @@ payload: "{{ .Subject.ID }}"
 				assert.Equal(t, "bar", val)
 				assert.Empty(t, auth.headersForUpstream)
 				assert.Zero(t, auth.ttl)
+
+				assert.Equal(t, "authz", auth.HandlerID())
 			},
 		},
 		{
 			uc: "full configuration",
+			id: "authz",
 			config: []byte(`
 endpoint:
   url: http://foo.bar
@@ -138,6 +144,8 @@ cache_ttl: 5s
 				assert.Contains(t, auth.headersForUpstream, "Bar")
 				assert.NotNil(t, auth.ttl)
 				assert.Equal(t, 5*time.Second, auth.ttl)
+
+				assert.Equal(t, "authz", auth.HandlerID())
 			},
 		},
 	} {
@@ -146,13 +154,9 @@ cache_ttl: 5s
 			require.NoError(t, err)
 
 			// WHEN
-			auth, err := newRemoteAuthorizer(tc.uc, conf)
+			auth, err := newRemoteAuthorizer(tc.id, conf)
 
 			// THEN
-			if err == nil {
-				assert.Equal(t, tc.uc, auth.name)
-			}
-
 			tc.assert(t, err, auth)
 		})
 	}
@@ -163,12 +167,14 @@ func TestCreateRemoteAuthorizerFromPrototype(t *testing.T) {
 
 	for _, tc := range []struct {
 		uc              string
+		id              string
 		prototypeConfig []byte
 		config          []byte
 		assert          func(t *testing.T, err error, prototype *remoteAuthorizer, configured *remoteAuthorizer)
 	}{
 		{
 			uc: "without new configuration",
+			id: "authz1",
 			prototypeConfig: []byte(`
 endpoint:
   url: http://foo.bar
@@ -180,10 +186,12 @@ payload: bar
 				require.NoError(t, err)
 
 				assert.Equal(t, prototype, configured)
+				assert.Equal(t, "authz1", configured.HandlerID())
 			},
 		},
 		{
 			uc: "with empty configuration",
+			id: "authz2",
 			prototypeConfig: []byte(`
 endpoint:
   url: http://foo.bar
@@ -196,6 +204,7 @@ payload: bar
 				require.NoError(t, err)
 
 				assert.Equal(t, prototype, configured)
+				assert.Equal(t, "authz2", configured.HandlerID())
 			},
 		},
 		{
@@ -218,6 +227,7 @@ foo: bar
 		},
 		{
 			uc: "with overridden empty payload",
+			id: "authz3",
 			prototypeConfig: []byte(`
 endpoint:
   url: http://foo.bar
@@ -235,15 +245,17 @@ cache_ttl: 1s
 				assert.NotEqual(t, prototype, configured)
 				assert.NotNil(t, configured)
 				assert.Equal(t, prototype.e, configured.e)
-				assert.Equal(t, prototype.name, configured.name)
+				assert.Equal(t, prototype.id, configured.id)
 				assert.Equal(t, prototype.payload, configured.payload)
 				assert.Equal(t, prototype.script, configured.script)
 				assert.Empty(t, configured.headersForUpstream)
 				assert.NotNil(t, configured.ttl)
+				assert.Equal(t, "authz3", configured.HandlerID())
 			},
 		},
 		{
 			uc: "with everything possible reconfigured",
+			id: "authz4",
 			prototypeConfig: []byte(`
 endpoint:
   url: http://foo.bar
@@ -269,7 +281,7 @@ cache_ttl: 15s
 				assert.NotEqual(t, prototype, configured)
 				assert.NotNil(t, configured)
 				assert.Equal(t, prototype.e, configured.e)
-				assert.Equal(t, prototype.name, configured.name)
+				assert.Equal(t, prototype.id, configured.id)
 				require.NotNil(t, configured.payload)
 				val, err := configured.payload.Render(nil, nil)
 				require.NoError(t, err)
@@ -287,6 +299,7 @@ cache_ttl: 15s
 				assert.NotEqual(t, prototype.ttl, configured.ttl)
 				assert.NotEqual(t, prototype.headersForUpstream, configured.headersForUpstream)
 				assert.NotEqual(t, prototype.payload, configured.payload)
+				assert.Equal(t, "authz4", configured.HandlerID())
 			},
 		},
 	} {
@@ -297,7 +310,7 @@ cache_ttl: 15s
 			conf, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
 
-			prototype, err := newRemoteAuthorizer(tc.uc, pc)
+			prototype, err := newRemoteAuthorizer(tc.id, pc)
 			require.NoError(t, err)
 
 			// WHEN
@@ -413,7 +426,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 			uc: "successful with json payload and with header, with json payload from server and with header" +
 				" forwarding and with disabled cache",
 			authorizer: &remoteAuthorizer{
-				name: "authorizer",
+				id: "authorizer",
 				e: endpoint.Endpoint{
 					URL: srv.URL,
 					Headers: map[string]string{
@@ -498,7 +511,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 			uc: "successful with www-form-urlencoded payload and without header, without payload from server " +
 				"and with header forwarding and with failing cache hit",
 			authorizer: &remoteAuthorizer{
-				name: "authorizer",
+				id: "authorizer",
 				e: endpoint.Endpoint{
 					URL: srv.URL,
 					Headers: map[string]string{
@@ -572,7 +585,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 		{
 			uc: "successful without headers and payload and with cache",
 			authorizer: &remoteAuthorizer{
-				name: "authorizer",
+				id: "authorizer",
 				e: endpoint.Endpoint{
 					URL:     fmt.Sprintf("%s/{{ .Subject.ID }}", srv.URL),
 					Headers: map[string]string{"Accept": "application/x-www-form-urlencoded"},
@@ -620,7 +633,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 		{
 			uc: "successfully reuse cache",
 			authorizer: &remoteAuthorizer{
-				name: "authorizer",
+				id: "authorizer",
 				e: endpoint.Endpoint{
 					URL: srv.URL,
 					Headers: map[string]string{
@@ -677,7 +690,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 		{
 			uc: "cache with bad object in cache",
 			authorizer: &remoteAuthorizer{
-				name: "authorizer",
+				id: "authorizer",
 				e: endpoint.Endpoint{
 					URL: srv.URL,
 					Headers: map[string]string{
@@ -737,7 +750,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 		{
 			uc: "with failed authorization",
 			authorizer: &remoteAuthorizer{
-				name: "authorizer",
+				id: "authz",
 				e: endpoint.Endpoint{
 					URL:     srv.URL,
 					Headers: map[string]string{"X-User-ID": "{{ .Subject.ID }}"},
@@ -760,12 +773,16 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 
 				assert.ErrorIs(t, err, heimdall.ErrAuthorization)
 				assert.Contains(t, err.Error(), "authorization failed")
+
+				var identifier interface{ HandlerID() string }
+				require.True(t, errors.As(err, &identifier))
+				assert.Equal(t, "authz", identifier.HandlerID())
 			},
 		},
 		{
 			uc: "with unsupported response content type",
 			authorizer: &remoteAuthorizer{
-				name: "foo",
+				id: "foo",
 				e: endpoint.Endpoint{
 					URL:     srv.URL,
 					Headers: map[string]string{"X-User-ID": "{{ .Subject.ID }}"},
@@ -791,8 +808,8 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 		{
 			uc: "with communication error (dns)",
 			authorizer: &remoteAuthorizer{
-				name: "authorizer",
-				e:    endpoint.Endpoint{URL: "http://heimdall.test.local"},
+				id: "authz",
+				e:  endpoint.Endpoint{URL: "http://heimdall.test.local"},
 				payload: func() template.Template {
 					tpl, _ := template.New("bar")
 
@@ -808,11 +825,15 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 				assert.Contains(t, err.Error(), "endpoint failed")
 
 				assert.False(t, authorizationEndpointCalled)
+
+				var identifier interface{ HandlerID() string }
+				require.True(t, errors.As(err, &identifier))
+				assert.Equal(t, "authz", identifier.HandlerID())
 			},
 		},
 		{
 			uc:         "with error due to nil subject",
-			authorizer: &remoteAuthorizer{},
+			authorizer: &remoteAuthorizer{id: "authz"},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
 
@@ -821,12 +842,16 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrInternal)
 				assert.Contains(t, err.Error(), "due to 'nil' subject")
+
+				var identifier interface{ HandlerID() string }
+				require.True(t, errors.As(err, &identifier))
+				assert.Equal(t, "authz", identifier.HandlerID())
 			},
 		},
 		{
 			uc: "with script, which fails",
 			authorizer: &remoteAuthorizer{
-				name: "authorizer",
+				id: "authz",
 				e: endpoint.Endpoint{
 					URL: srv.URL,
 					Headers: map[string]string{
@@ -891,12 +916,16 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrAuthorization)
 				assert.Contains(t, err.Error(), "test")
+
+				var identifier interface{ HandlerID() string }
+				require.True(t, errors.As(err, &identifier))
+				assert.Equal(t, "authz", identifier.HandlerID())
 			},
 		},
 		{
 			uc: "with script, which succeeds",
 			authorizer: &remoteAuthorizer{
-				name: "authorizer",
+				id: "authorizer",
 				e: endpoint.Endpoint{
 					URL: srv.URL,
 					Headers: map[string]string{
