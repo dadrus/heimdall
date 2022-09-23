@@ -3,10 +3,10 @@ package matcher
 import (
 	"testing"
 
-	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
 type TestError struct {
