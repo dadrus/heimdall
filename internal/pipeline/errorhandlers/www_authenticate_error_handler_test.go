@@ -61,7 +61,7 @@ func TestCreateWWWAuthenticateErrorHandler(t *testing.T) {
 realm: FooBar
 when:
   - error:
-      - authentication_error
+      - type: authentication_error
 foo: bar
 `),
 			assert: func(t *testing.T, err error, errorHandler *wwwAuthenticateErrorHandler) {
@@ -77,7 +77,7 @@ foo: bar
 			config: []byte(`
 when:
   - error:
-      - authentication_error
+      - type: authentication_error
 `),
 			assert: func(t *testing.T, err error, errorHandler *wwwAuthenticateErrorHandler) {
 				t.Helper()
@@ -89,9 +89,11 @@ when:
 				assert.Nil(t, errorHandler.m[0].CIDR)
 				assert.Nil(t, errorHandler.m[0].Headers)
 				require.NotNil(t, errorHandler.m[0].Error)
-				matchingErrors := *errorHandler.m[0].Error
+				errorDescriptors := *errorHandler.m[0].Error
+				assert.Len(t, errorDescriptors, 1)
+				matchingErrors := errorDescriptors[0].Errors
 				assert.Len(t, matchingErrors, 1)
-				assert.Equal(t, matchingErrors[0], heimdall.ErrAuthentication)
+				assert.Equal(t, heimdall.ErrAuthentication, matchingErrors[0])
 			},
 		},
 		{
@@ -100,7 +102,7 @@ when:
 realm: "What is your password"
 when:
   - error:
-      - precondition_error
+      - type: precondition_error
 `),
 			assert: func(t *testing.T, err error, errorHandler *wwwAuthenticateErrorHandler) {
 				t.Helper()
@@ -112,9 +114,11 @@ when:
 				assert.Nil(t, errorHandler.m[0].CIDR)
 				assert.Nil(t, errorHandler.m[0].Headers)
 				require.NotNil(t, errorHandler.m[0].Error)
-				matchingErrors := *errorHandler.m[0].Error
+				errorDescriptors := *errorHandler.m[0].Error
+				assert.Len(t, errorDescriptors, 1)
+				matchingErrors := errorDescriptors[0].Errors
 				assert.Len(t, matchingErrors, 1)
-				assert.Equal(t, matchingErrors[0], heimdall.ErrArgument)
+				assert.Equal(t, heimdall.ErrArgument, matchingErrors[0])
 			},
 		},
 	} {
@@ -146,7 +150,7 @@ func TestCreateWWWAuthenticateErrorHandlerFromPrototype(t *testing.T) {
 			prototypeConfig: []byte(`
 when:
   - error:
-      - authentication_error
+      - type: authentication_error
 `),
 			assert: func(t *testing.T, err error, prototype *wwwAuthenticateErrorHandler,
 				configured *wwwAuthenticateErrorHandler,
@@ -162,7 +166,7 @@ when:
 			prototypeConfig: []byte(`
 when:
   - error:
-      - authentication_error
+      - type: authentication_error
 `),
 			config: []byte(``),
 			assert: func(t *testing.T, err error, prototype *wwwAuthenticateErrorHandler,
@@ -179,7 +183,7 @@ when:
 			prototypeConfig: []byte(`
 when:
   - error:
-      - authentication_error
+      - type: authentication_error
 `),
 			config: []byte(`to: http://foo.bar`),
 			assert: func(t *testing.T, err error, prototype *wwwAuthenticateErrorHandler,
@@ -197,13 +201,13 @@ when:
 			prototypeConfig: []byte(`
 when:
   - error:
-      - authentication_error
-      - authorization_error
+      - type: authentication_error
+      - type: authorization_error
 `),
 			config: []byte(`
 when:
   - error:
-      - precondition_error
+      - type: precondition_error
 `),
 			assert: func(t *testing.T, err error, prototype *wwwAuthenticateErrorHandler,
 				configured *wwwAuthenticateErrorHandler,
@@ -221,9 +225,11 @@ when:
 				assert.Nil(t, configured.m[0].Headers)
 				assert.NotNil(t, configured.m[0].Error)
 
-				matchingErrors := *configured.m[0].Error
+				errorDescriptors := *configured.m[0].Error
+				assert.Len(t, errorDescriptors, 1)
+				matchingErrors := errorDescriptors[0].Errors
 				assert.Len(t, matchingErrors, 1)
-				assert.Equal(t, matchingErrors[0], heimdall.ErrArgument)
+				assert.Equal(t, heimdall.ErrArgument, matchingErrors[0])
 			},
 		},
 		{
@@ -231,7 +237,7 @@ when:
 			prototypeConfig: []byte(`
 when:
   - error:
-      - authentication_error
+      - type: authentication_error
 `),
 			config: []byte(`realm: "You password please"`),
 			assert: func(t *testing.T, err error, prototype *wwwAuthenticateErrorHandler,
@@ -292,7 +298,7 @@ func TestWWWAuthenticateErrorHandlerExecute(t *testing.T) {
 			config: []byte(`
 when:
   - error:
-      - authentication_error
+      - type: authentication_error
 `),
 			error: heimdall.ErrInternal,
 			assert: func(t *testing.T, wasResponsible bool, err error) {
@@ -307,7 +313,7 @@ when:
 			config: []byte(`
 when:
   - error:
-      - authentication_error
+      - type: authentication_error
 `),
 			error: heimdall.ErrAuthentication,
 			configureContext: func(t *testing.T, ctx *mocks.MockContext) {
@@ -336,7 +342,7 @@ when:
 realm: "Your password please"
 when:
   - error:
-      - authentication_error
+      - type: authentication_error
 `),
 			error: heimdall.ErrAuthentication,
 			configureContext: func(t *testing.T, ctx *mocks.MockContext) {
