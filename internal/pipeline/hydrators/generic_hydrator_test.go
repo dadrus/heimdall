@@ -2,6 +2,7 @@ package hydrators
 
 import (
 	"context"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -29,6 +30,7 @@ func TestCreateGenericHydrator(t *testing.T) {
 
 	for _, tc := range []struct {
 		uc     string
+		id     string
 		config []byte
 		assert func(t *testing.T, err error, hydrator *genericHydrator)
 	}{
@@ -64,6 +66,7 @@ payload: bar
 		},
 		{
 			uc: "with default cache",
+			id: "hydrator",
 			config: []byte(`
 endpoint:
   url: http://foo.bar
@@ -83,10 +86,13 @@ payload: bar
 				assert.Empty(t, hydrator.fwdCookies)
 				assert.Empty(t, hydrator.fwdHeaders)
 				assert.Equal(t, defaultTTL, hydrator.ttl)
+
+				assert.Equal(t, "hydrator", hydrator.HandlerID())
 			},
 		},
 		{
 			uc: "with all fields configured",
+			id: "hydrator",
 			config: []byte(`
 endpoint:
   url: http://bar.foo
@@ -115,6 +121,8 @@ cache_ttl: 5s
 				assert.Contains(t, hydrator.fwdHeaders, "X-User-ID")
 				assert.Contains(t, hydrator.fwdHeaders, "X-Foo-Bar")
 				assert.Equal(t, 5*time.Second, hydrator.ttl)
+
+				assert.Equal(t, "hydrator", hydrator.HandlerID())
 			},
 		},
 	} {
@@ -123,13 +131,9 @@ cache_ttl: 5s
 			require.NoError(t, err)
 
 			// WHEN
-			hydrator, err := newGenericHydrator(tc.uc, conf)
+			hydrator, err := newGenericHydrator(tc.id, conf)
 
 			// THEN
-			if err == nil {
-				assert.Equal(t, tc.uc, hydrator.name)
-			}
-
 			tc.assert(t, err, hydrator)
 		})
 	}
@@ -140,12 +144,14 @@ func TestCreateGenericHydratorFromPrototype(t *testing.T) {
 
 	for _, tc := range []struct {
 		uc              string
+		id              string
 		prototypeConfig []byte
 		config          []byte
 		assert          func(t *testing.T, err error, prototype *genericHydrator, configured *genericHydrator)
 	}{
 		{
 			uc: "with empty config",
+			id: "hydrator1",
 			prototypeConfig: []byte(`
 endpoint:
   url: http://foo.bar
@@ -157,6 +163,7 @@ payload: bar
 				require.NoError(t, err)
 
 				assert.Equal(t, prototype, configured)
+				assert.Equal(t, "hydrator1", configured.HandlerID())
 			},
 		},
 		{
@@ -177,6 +184,7 @@ payload: bar
 		},
 		{
 			uc: "with only payload reconfigured",
+			id: "hydrator2",
 			prototypeConfig: []byte(`
 endpoint:
   url: http://foo.bar
@@ -198,7 +206,7 @@ payload: foo
 
 				assert.NotEqual(t, prototype, configured)
 				assert.Equal(t, prototype.e, configured.e)
-				assert.Equal(t, prototype.name, configured.name)
+				assert.Equal(t, prototype.id, configured.id)
 				assert.NotEqual(t, prototype.payload, configured.payload)
 				require.NotNil(t, configured.payload)
 				val, err := configured.payload.Render(nil, &subject.Subject{ID: "baz"})
@@ -207,10 +215,12 @@ payload: foo
 				assert.Equal(t, prototype.fwdHeaders, configured.fwdHeaders)
 				assert.Equal(t, prototype.fwdCookies, configured.fwdCookies)
 				assert.Equal(t, prototype.ttl, configured.ttl)
+				assert.Equal(t, "hydrator2", configured.HandlerID())
 			},
 		},
 		{
 			uc: "with payload and forward_headers reconfigured",
+			id: "hydrator3",
 			prototypeConfig: []byte(`
 endpoint:
   url: http://foo.bar
@@ -234,7 +244,7 @@ forward_headers:
 
 				assert.NotEqual(t, prototype, configured)
 				assert.Equal(t, prototype.e, configured.e)
-				assert.Equal(t, prototype.name, configured.name)
+				assert.Equal(t, prototype.id, configured.id)
 				assert.NotEqual(t, prototype.payload, configured.payload)
 				require.NotNil(t, configured.payload)
 				val, err := configured.payload.Render(nil, &subject.Subject{ID: "baz"})
@@ -245,10 +255,12 @@ forward_headers:
 				assert.Contains(t, configured.fwdHeaders, "Foo-Bar")
 				assert.Equal(t, prototype.fwdCookies, configured.fwdCookies)
 				assert.Equal(t, prototype.ttl, configured.ttl)
+				assert.Equal(t, "hydrator3", configured.HandlerID())
 			},
 		},
 		{
 			uc: "with payload, forward_headers and forward_cookies reconfigured",
+			id: "hydrator4",
 			prototypeConfig: []byte(`
 endpoint:
   url: http://foo.bar
@@ -274,7 +286,7 @@ forward_cookies:
 
 				assert.NotEqual(t, prototype, configured)
 				assert.Equal(t, prototype.e, configured.e)
-				assert.Equal(t, prototype.name, configured.name)
+				assert.Equal(t, prototype.id, configured.id)
 				assert.NotEqual(t, prototype.payload, configured.payload)
 				require.NotNil(t, configured.payload)
 				val, err := configured.payload.Render(nil, &subject.Subject{ID: "baz"})
@@ -287,10 +299,12 @@ forward_cookies:
 				assert.Len(t, configured.fwdCookies, 1)
 				assert.Contains(t, configured.fwdCookies, "Foo-Session")
 				assert.Equal(t, prototype.ttl, configured.ttl)
+				assert.Equal(t, "hydrator4", configured.HandlerID())
 			},
 		},
 		{
 			uc: "with everything reconfigured",
+			id: "hydrator5",
 			prototypeConfig: []byte(`
 endpoint:
   url: http://foo.bar
@@ -317,7 +331,7 @@ cache_ttl: 15s
 
 				assert.NotEqual(t, prototype, configured)
 				assert.Equal(t, prototype.e, configured.e)
-				assert.Equal(t, prototype.name, configured.name)
+				assert.Equal(t, prototype.id, configured.id)
 				assert.NotEqual(t, prototype.payload, configured.payload)
 				require.NotNil(t, configured.payload)
 				val, err := configured.payload.Render(nil, &subject.Subject{ID: "baz"})
@@ -331,6 +345,7 @@ cache_ttl: 15s
 				assert.Contains(t, configured.fwdCookies, "Foo-Session")
 				assert.NotEqual(t, prototype.ttl, configured.ttl)
 				assert.Equal(t, 15*time.Second, configured.ttl)
+				assert.Equal(t, "hydrator5", configured.HandlerID())
 			},
 		},
 	} {
@@ -341,7 +356,7 @@ cache_ttl: 15s
 			conf, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
 
-			prototype, err := newGenericHydrator(tc.uc, pc)
+			prototype, err := newGenericHydrator(tc.id, pc)
 			require.NoError(t, err)
 
 			// WHEN
@@ -403,7 +418,7 @@ func TestGenericHydratorExecute(t *testing.T) {
 	}{
 		{
 			uc:       "fails due to nil subject",
-			hydrator: &genericHydrator{e: endpoint.Endpoint{URL: srv.URL}},
+			hydrator: &genericHydrator{id: "hydrator", e: endpoint.Endpoint{URL: srv.URL}},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
 
@@ -412,14 +427,18 @@ func TestGenericHydratorExecute(t *testing.T) {
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrInternal)
 				assert.Contains(t, err.Error(), "'nil' subject")
+
+				var identifier interface{ HandlerID() string }
+				require.True(t, errors.As(err, &identifier))
+				assert.Equal(t, "hydrator", identifier.HandlerID())
 			},
 		},
 		{
 			uc: "with successful cache hit",
 			hydrator: &genericHydrator{
-				name: "hydrator",
-				e:    endpoint.Endpoint{URL: srv.URL},
-				ttl:  5 * time.Second,
+				id:  "hydrator",
+				e:   endpoint.Endpoint{URL: srv.URL},
+				ttl: 5 * time.Second,
 				payload: func() template.Template {
 					tpl, _ := template.New("foo")
 
@@ -448,9 +467,9 @@ func TestGenericHydratorExecute(t *testing.T) {
 		{
 			uc: "with wrong object type in cache",
 			hydrator: &genericHydrator{
-				name: "hydrator",
-				e:    endpoint.Endpoint{URL: srv.URL},
-				ttl:  5 * time.Second,
+				id:  "hydrator",
+				e:   endpoint.Endpoint{URL: srv.URL},
+				ttl: 5 * time.Second,
 				payload: func() template.Template {
 					tpl, _ := template.New("foo")
 
@@ -490,8 +509,8 @@ func TestGenericHydratorExecute(t *testing.T) {
 		{
 			uc: "with error in payload rendering",
 			hydrator: &genericHydrator{
-				name: "hydrator",
-				e:    endpoint.Endpoint{URL: srv.URL},
+				id: "hydrator1",
+				e:  endpoint.Endpoint{URL: srv.URL},
 				payload: func() template.Template {
 					tpl, _ := template.New("{{ .foo }}")
 
@@ -507,13 +526,17 @@ func TestGenericHydratorExecute(t *testing.T) {
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrInternal)
 				assert.Contains(t, err.Error(), "failed to render payload")
+
+				var identifier interface{ HandlerID() string }
+				require.True(t, errors.As(err, &identifier))
+				assert.Equal(t, "hydrator1", identifier.HandlerID())
 			},
 		},
 		{
 			uc: "with communication error (dns)",
 			hydrator: &genericHydrator{
-				name: "hydrator",
-				e:    endpoint.Endpoint{URL: "http://heimdall.test.local"},
+				id: "hydrator2",
+				e:  endpoint.Endpoint{URL: "http://heimdall.test.local"},
 			},
 			subject: &subject.Subject{ID: "Foo", Attributes: map[string]any{"bar": "baz"}},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
@@ -524,13 +547,17 @@ func TestGenericHydratorExecute(t *testing.T) {
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrCommunication)
 				assert.Contains(t, err.Error(), "hydration endpoint failed")
+
+				var identifier interface{ HandlerID() string }
+				require.True(t, errors.As(err, &identifier))
+				assert.Equal(t, "hydrator2", identifier.HandlerID())
 			},
 		},
 		{
 			uc: "with unexpected response code from server",
 			hydrator: &genericHydrator{
-				name: "hydrator",
-				e:    endpoint.Endpoint{URL: srv.URL},
+				id: "hydrator3",
+				e:  endpoint.Endpoint{URL: srv.URL},
 			},
 			subject: &subject.Subject{ID: "Foo", Attributes: map[string]any{"bar": "baz"}},
 			instructServer: func(t *testing.T) {
@@ -546,13 +573,17 @@ func TestGenericHydratorExecute(t *testing.T) {
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrCommunication)
 				assert.Contains(t, err.Error(), "unexpected response code")
+
+				var identifier interface{ HandlerID() string }
+				require.True(t, errors.As(err, &identifier))
+				assert.Equal(t, "hydrator3", identifier.HandlerID())
 			},
 		},
 		{
 			uc: "without payload",
 			hydrator: &genericHydrator{
-				name: "test-hydrator",
-				e:    endpoint.Endpoint{URL: srv.URL + "/{{ .Subject.ID }}"},
+				id: "test-hydrator",
+				e:  endpoint.Endpoint{URL: srv.URL + "/{{ .Subject.ID }}"},
 			},
 			subject: &subject.Subject{ID: "Foo", Attributes: map[string]any{"bar": "baz"}},
 			instructServer: func(t *testing.T) {
@@ -579,9 +610,9 @@ func TestGenericHydratorExecute(t *testing.T) {
 		{
 			uc: "without payload, but with cache",
 			hydrator: &genericHydrator{
-				name: "test-hydrator",
-				e:    endpoint.Endpoint{URL: srv.URL + "/{{ .Subject.ID }}"},
-				ttl:  10 * time.Second,
+				id:  "test-hydrator",
+				e:   endpoint.Endpoint{URL: srv.URL + "/{{ .Subject.ID }}"},
+				ttl: 10 * time.Second,
 			},
 			subject: &subject.Subject{ID: "Foo", Attributes: map[string]any{"bar": "baz"}},
 			configureCache: func(t *testing.T, cch *mocks.MockCache, hydrator *genericHydrator, sub *subject.Subject) {
@@ -621,7 +652,7 @@ func TestGenericHydratorExecute(t *testing.T) {
 		{
 			uc: "with rendered payload and headers, as well as forwarded headers and cookies",
 			hydrator: &genericHydrator{
-				name: "test-hydrator",
+				id: "test-hydrator",
 				e: endpoint.Endpoint{
 					URL: srv.URL + "/{{ .Subject.ID }}",
 					Headers: map[string]string{
