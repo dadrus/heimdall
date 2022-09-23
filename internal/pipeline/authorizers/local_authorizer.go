@@ -56,7 +56,8 @@ func (a *localAuthorizer) Execute(ctx heimdall.Context, sub *subject.Subject) er
 
 	res, err := a.s.ExecuteOnSubject(ctx, sub)
 	if err != nil {
-		return errorchain.NewWithMessage(heimdall.ErrAuthorization, "script failed").
+		return errorchain.
+			NewWithMessage(heimdall.ErrAuthorization, "script failed").
 			WithErrorContext(a).
 			CausedBy(err)
 	}
