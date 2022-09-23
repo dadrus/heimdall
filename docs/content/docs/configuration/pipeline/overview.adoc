@@ -137,8 +137,8 @@ pipeline:
         return_to_query_parameter: return_to
         when:
           - error:
-              - unauthorized
-              - forbidden
+              - type: authentication_error
+              - type: authorization_error
             request_headers:
               Accept:
                 - text/html

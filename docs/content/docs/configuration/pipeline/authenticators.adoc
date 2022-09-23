@@ -70,7 +70,9 @@ config:
 
 === Basic Auth
 
-This authenticator verifies the provided credentials according to the HTTP "Basic" authentication scheme, described in https://datatracker.ietf.org/doc/html/rfc7617[RFC 7617]. This authenticator does not challenge the authentication, it only verifies the provided credentials and sets the subject id to the configured value if the authentications succeeds. Otherwise, it raises an error, which results in the execution of the configured error handlers. The "WWW Authenticate" error handler can then for example be used if the corresponding challenge is required.
+This authenticator verifies the provided credentials according to the HTTP "Basic" authentication scheme, described in https://datatracker.ietf.org/doc/html/rfc7617[RFC 7617]. This authenticator does not challenge the authentication, it only verifies the provided credentials and sets the subject id to the configured value if the authentications succeeds. Otherwise, it raises an error, which results in the execution of the configured error handlers. The link:{{< relref "error_handlers.adoc#_www-authenticate" >}}["WWW Authenticate"] error handler can then for example be used if the corresponding challenge is required.
+
+NOTE: If you want the "WWW Authenticate" error handler to kick in only if a basic auth authenticator raised an error, you must reference its `id` in the definition of the error handler (See the example provided in the link:{{< relref "error_handlers.adoc#_www-authenticate" >}}["WWW Authenticate"] error handler description).
 
 To enable the usage of this authenticator, you have to set the `type` property to `basic_auth`.
 
