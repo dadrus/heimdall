@@ -122,17 +122,13 @@ func (ec *ErrorChain) asTarget(target any) bool {
 	val := reflect.ValueOf(target)
 	targetType := val.Type().Elem()
 
-	if targetType.Kind() != reflect.Interface {
+	if targetType.Kind() != reflect.Interface || !reflect.TypeOf(ec.context).AssignableTo(targetType) {
 		return false
 	}
 
-	if reflect.TypeOf(ec.context).AssignableTo(targetType) {
-		val.Elem().Set(reflect.ValueOf(ec.context))
+	val.Elem().Set(reflect.ValueOf(ec.context))
 
-		return true
-	}
-
-	return false
+	return true
 }
 
 func (ec *ErrorChain) ErrorContext() any {
