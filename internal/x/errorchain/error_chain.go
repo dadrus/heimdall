@@ -107,24 +107,32 @@ func (ec *ErrorChain) As(target any) bool {
 		return false
 	}
 
-	ok := errors.As(ec.head.err, target)
-
-	if !ok && ec.context != nil {
-		val := reflect.ValueOf(target)
-		targetType := val.Type().Elem()
-
-		if targetType.Kind() != reflect.Interface {
-			return false
-		}
-
-		if reflect.TypeOf(ec.context).AssignableTo(targetType) {
-			val.Elem().Set(reflect.ValueOf(ec.context))
-
-			return true
-		}
+	if ec.asTarget(target) {
+		return true
 	}
 
-	return ok
+	return errors.As(ec.head.err, target)
+}
+
+func (ec *ErrorChain) asTarget(target any) bool {
+	if ec.context == nil {
+		return false
+	}
+
+	val := reflect.ValueOf(target)
+	targetType := val.Type().Elem()
+
+	if targetType.Kind() != reflect.Interface {
+		return false
+	}
+
+	if reflect.TypeOf(ec.context).AssignableTo(targetType) {
+		val.Elem().Set(reflect.ValueOf(ec.context))
+
+		return true
+	}
+
+	return false
 }
 
 func (ec *ErrorChain) ErrorContext() any {
