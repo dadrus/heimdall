@@ -26,31 +26,50 @@ func TestErrorTypeMatcher(t *testing.T) {
 
 	for _, tc := range []struct {
 		uc       string
-		em       ErrorDescriptor
+		em       []ErrorDescriptor
 		err      error
 		matching bool
 	}{
 		{
-			uc: "match error",
-			em: ErrorDescriptor{
-				Errors:    []error{heimdall.ErrInternal, heimdall.ErrConfiguration},
-				HandlerID: "foobar",
+			uc: "matches single error",
+			em: []ErrorDescriptor{
+				{
+					Errors:    []error{heimdall.ErrInternal, heimdall.ErrConfiguration},
+					HandlerID: "foobar",
+				},
 			},
 			err:      errorchain.New(&TestError{ID: "foobar"}).CausedBy(heimdall.ErrConfiguration),
 			matching: true,
 		},
 		{
-			uc: "don't match error",
-			em: ErrorDescriptor{
-				Errors:    []error{heimdall.ErrInternal, heimdall.ErrConfiguration},
-				HandlerID: "barfoo",
+			uc: "doesn't match single error",
+			em: []ErrorDescriptor{
+				{
+					Errors:    []error{heimdall.ErrInternal, heimdall.ErrConfiguration},
+					HandlerID: "barfoo",
+				},
 			},
 			err:      errorchain.New(heimdall.ErrArgument).CausedBy(&TestError{ID: "barfoo"}),
 			matching: false,
 		},
+		{
+			uc: "matches at least one error",
+			em: []ErrorDescriptor{
+				{
+					Errors:    []error{heimdall.ErrInternal, heimdall.ErrConfiguration},
+					HandlerID: "barfoo",
+				},
+				{
+					Errors:    []error{heimdall.ErrInternal, heimdall.ErrConfiguration},
+					HandlerID: "foobar",
+				},
+			},
+			err:      errorchain.New(&TestError{ID: "foobar"}).CausedBy(heimdall.ErrConfiguration),
+			matching: true,
+		},
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
-			matcher := ErrorMatcher([]ErrorDescriptor{tc.em})
+			matcher := ErrorMatcher(tc.em)
 
 			// WHEN
 			matched := matcher.Match(tc.err)
