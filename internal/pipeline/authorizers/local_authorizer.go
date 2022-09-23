@@ -14,22 +14,23 @@ import (
 // nolint
 func init() {
 	registerAuthorizerTypeFactory(
-		func(_ string, typ config.PipelineObjectType, conf map[string]any) (bool, Authorizer, error) {
+		func(id string, typ config.PipelineObjectType, conf map[string]any) (bool, Authorizer, error) {
 			if typ != config.POTLocal {
 				return false, nil, nil
 			}
 
-			auth, err := newLocalAuthorizer(conf)
+			auth, err := newLocalAuthorizer(id, conf)
 
 			return true, auth, err
 		})
 }
 
 type localAuthorizer struct {
-	s script.Script
+	id string
+	s  script.Script
 }
 
-func newLocalAuthorizer(rawConfig map[string]any) (*localAuthorizer, error) {
+func newLocalAuthorizer(id string, rawConfig map[string]any) (*localAuthorizer, error) {
 	type Config struct {
 		Script script.Script `mapstructure:"script"`
 	}
@@ -46,7 +47,7 @@ func newLocalAuthorizer(rawConfig map[string]any) (*localAuthorizer, error) {
 			NewWithMessage(heimdall.ErrConfiguration, "no script provided for local authorizer")
 	}
 
-	return &localAuthorizer{s: conf.Script}, nil
+	return &localAuthorizer{id: id, s: conf.Script}, nil
 }
 
 func (a *localAuthorizer) Execute(ctx heimdall.Context, sub *subject.Subject) error {
@@ -55,11 +56,15 @@ func (a *localAuthorizer) Execute(ctx heimdall.Context, sub *subject.Subject) er
 
 	res, err := a.s.ExecuteOnSubject(ctx, sub)
 	if err != nil {
-		return errorchain.New(heimdall.ErrAuthorization).CausedBy(err)
+		return errorchain.NewWithMessage(heimdall.ErrAuthorization, "script failed").
+			WithErrorContext(a).
+			CausedBy(err)
 	}
 
 	if !res.ToBoolean() {
-		return errorchain.NewWithMessage(heimdall.ErrAuthorization, "script failed")
+		return errorchain.
+			NewWithMessage(heimdall.ErrAuthorization, "script failed").
+			WithErrorContext(a)
 	}
 
 	return nil
@@ -70,5 +75,9 @@ func (a *localAuthorizer) WithConfig(rawConfig map[string]any) (Authorizer, erro
 		return a, nil
 	}
 
-	return newLocalAuthorizer(rawConfig)
+	return newLocalAuthorizer(a.id, rawConfig)
+}
+
+func (a *localAuthorizer) HandlerID() string {
+	return a.id
 }
