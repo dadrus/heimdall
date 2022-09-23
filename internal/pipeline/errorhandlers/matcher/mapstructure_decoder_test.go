@@ -50,15 +50,17 @@ func TestDecodeErrorTypeMatcherHookFunc(t *testing.T) {
 	t.Parallel()
 
 	type Type struct {
-		Matcher ErrorTypeMatcher `mapstructure:"error"`
+		Matcher ErrorMatcher `mapstructure:"error"`
 	}
 
 	rawConfig := []byte(`
 error:
-  - authentication_error
-  - authorization_error
-  - internal_error
-  - precondition_error
+  - type: authentication_error
+    raised_by: foo
+  - type: authorization_error
+    raised_by: bar
+  - type: internal_error
+  - type: precondition_error
 `)
 
 	var typ Type
@@ -79,8 +81,15 @@ error:
 	err = dec.Decode(mapConfig)
 	require.NoError(t, err)
 
-	assert.True(t, typ.Matcher.Match(heimdall.ErrConfiguration))
-	assert.False(t, typ.Matcher.Match(heimdall.ErrCommunication))
+	require.Len(t, typ.Matcher, 4)
+	assert.ElementsMatch(t, typ.Matcher[0].Errors, []error{heimdall.ErrAuthentication})
+	assert.Equal(t, "foo", typ.Matcher[0].HandlerID)
+	assert.ElementsMatch(t, typ.Matcher[1].Errors, []error{heimdall.ErrAuthorization})
+	assert.Equal(t, "bar", typ.Matcher[1].HandlerID)
+	assert.ElementsMatch(t, typ.Matcher[2].Errors, []error{heimdall.ErrInternal, heimdall.ErrConfiguration})
+	assert.Empty(t, typ.Matcher[2].HandlerID)
+	assert.ElementsMatch(t, typ.Matcher[3].Errors, []error{heimdall.ErrArgument})
+	assert.Empty(t, typ.Matcher[3].HandlerID)
 }
 
 func TestStringToURLHookFunc(t *testing.T) {
