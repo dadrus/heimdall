@@ -89,7 +89,7 @@ to: http://foo.bar
 bar: foo
 when:
   - error:
-    - authentication_error
+    - type: authentication_error
 `),
 			assert: func(t *testing.T, err error, redEH *redirectErrorHandler) {
 				t.Helper()
@@ -105,7 +105,7 @@ when:
 to: http://foo.bar
 when:
   - error:
-    - authentication_error
+    - type: authentication_error
 `),
 			assert: func(t *testing.T, err error, redEH *redirectErrorHandler) {
 				t.Helper()
@@ -123,9 +123,11 @@ when:
 				assert.Nil(t, redEH.m[0].CIDR)
 				assert.Nil(t, redEH.m[0].Headers)
 				require.NotNil(t, redEH.m[0].Error)
-				matchingErrors := *redEH.m[0].Error
+				matchingErrorDescriptors := *redEH.m[0].Error
+				assert.Len(t, matchingErrorDescriptors, 1)
+				matchingErrors := matchingErrorDescriptors[0].Errors
 				assert.Len(t, matchingErrors, 1)
-				assert.Equal(t, matchingErrors[0], heimdall.ErrAuthentication)
+				assert.Equal(t, heimdall.ErrAuthentication, matchingErrors[0])
 			},
 		},
 		{
@@ -136,15 +138,15 @@ code: 301
 return_to_query_parameter: foobar
 when:
   - error:
-      - authentication_error
-      - authorization_error
+      - type: authentication_error
+      - type: authorization_error
     request_headers:
       Accept:
         - text/html
     request_cidr:
       - 192.168.10.0/24
   - error:
-      - internal_error
+      - type: internal_error
     request_headers:
       Accept:
         - '*/*'
@@ -176,10 +178,14 @@ when:
 				require.Len(t, *condition1.Headers, 1)
 				assert.Equal(t, []string{"text/html"}, (*condition1.Headers)["Accept"])
 				require.NotNil(t, condition1.Error)
-				matchingErrors1 := *condition1.Error
-				assert.Len(t, matchingErrors1, 2)
-				assert.Equal(t, matchingErrors1[0], heimdall.ErrAuthentication)
-				assert.Equal(t, matchingErrors1[1], heimdall.ErrAuthorization)
+				matchingErrorDescriptors := *condition1.Error
+				assert.Len(t, matchingErrorDescriptors, 2)
+				matchingErrors1 := matchingErrorDescriptors[0].Errors
+				assert.Len(t, matchingErrors1, 1)
+				matchingErrors2 := matchingErrorDescriptors[1].Errors
+				assert.Len(t, matchingErrors2, 1)
+				assert.Equal(t, heimdall.ErrAuthentication, matchingErrors1[0])
+				assert.Equal(t, heimdall.ErrAuthorization, matchingErrors2[0])
 
 				condition2 := redEH.m[1]
 				require.NotNil(t, condition2.CIDR)
@@ -189,10 +195,12 @@ when:
 				assert.Equal(t, []string{"*/*", "application/json"}, (*condition2.Headers)["Accept"])
 				assert.Equal(t, []string{"application/json"}, (*condition2.Headers)["Content-Type"])
 				require.NotNil(t, condition2.Error)
-				matchingErrors2 := *condition2.Error
-				assert.Len(t, matchingErrors2, 2)
-				assert.Equal(t, matchingErrors2[0], heimdall.ErrInternal)
-				assert.Equal(t, matchingErrors2[1], heimdall.ErrConfiguration)
+				matchingErrorDescriptors = *condition2.Error
+				assert.Len(t, matchingErrorDescriptors, 1)
+				matchingErrors1 = matchingErrorDescriptors[0].Errors
+				assert.Len(t, matchingErrors1, 2)
+				assert.Equal(t, heimdall.ErrInternal, matchingErrors1[0])
+				assert.Equal(t, heimdall.ErrConfiguration, matchingErrors1[1])
 			},
 		},
 	} {
@@ -224,7 +232,7 @@ func TestCreateRedirectErrorHandlerFromPrototype(t *testing.T) {
 to: http://foo.bar
 when:
   - error:
-      - authentication_error
+      - type: authentication_error
 `),
 			assert: func(t *testing.T, err error, prototype *redirectErrorHandler, configured *redirectErrorHandler) {
 				t.Helper()
@@ -239,7 +247,7 @@ when:
 to: http://foo.bar
 when:
   - error:
-      - authentication_error
+      - type: authentication_error
 `),
 			config: []byte(``),
 			assert: func(t *testing.T, err error, prototype *redirectErrorHandler, configured *redirectErrorHandler) {
@@ -255,7 +263,7 @@ when:
 to: http://foo.bar
 when:
   - error:
-      - authentication_error
+      - type: authentication_error
 `),
 			config: []byte(`to: http://foo.bar`),
 			assert: func(t *testing.T, err error, prototype *redirectErrorHandler, configured *redirectErrorHandler) {
@@ -274,13 +282,13 @@ code: 301
 return_to_query_parameter: foobar
 when:
   - error:
-      - authentication_error
-      - authorization_error
+      - type: authentication_error
+      - type: authorization_error
 `),
 			config: []byte(`
 when:
   - error:
-      - precondition_error
+      - type: precondition_error
 `),
 			assert: func(t *testing.T, err error, prototype *redirectErrorHandler, configured *redirectErrorHandler) {
 				t.Helper()
@@ -297,9 +305,11 @@ when:
 				assert.Nil(t, configured.m[0].Headers)
 				assert.NotNil(t, configured.m[0].Error)
 
-				matchingErrors := *configured.m[0].Error
+				errorDescriptors := *configured.m[0].Error
+				assert.Len(t, errorDescriptors, 1)
+				matchingErrors := errorDescriptors[0].Errors
 				assert.Len(t, matchingErrors, 1)
-				assert.Equal(t, matchingErrors[0], heimdall.ErrArgument)
+				assert.Equal(t, heimdall.ErrArgument, matchingErrors[0])
 			},
 		},
 	} {
@@ -348,7 +358,7 @@ func TestRedirectErrorHandlerExecute(t *testing.T) {
 to: http://foo.bar
 when:
   - error:
-      - authentication_error
+      - type: authentication_error
 `),
 			error: heimdall.ErrInternal,
 			assert: func(t *testing.T, wasResponsible bool, err error) {
@@ -364,7 +374,7 @@ when:
 to: http://foo.bar
 when:
   - error:
-      - authentication_error
+      - type: authentication_error
 `),
 			error: heimdall.ErrAuthentication,
 			configureContext: func(t *testing.T, ctx *mocks.MockContext) {
@@ -398,7 +408,7 @@ code: 300
 return_to_query_parameter: foobar
 when:
   - error:
-      - authentication_error
+      - type: authentication_error
 `),
 			error: heimdall.ErrAuthentication,
 			configureContext: func(t *testing.T, ctx *mocks.MockContext) {
