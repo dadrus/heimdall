@@ -390,7 +390,9 @@ An error type to match.
 
 * *`raised_by`*: _string_ (optional)
 +
-+ The identifier of the pipeline handler, which raised this error.
+The identifier of the pipeline handler, which raised this error.
+
+CAUTION: Heimdall does not verify the integrity of the pipeline handler identifier configured using `raised_by` on start or while loading rules. Thus, if there is no pipeline handler with the given identifier, the error will not match.
 
 .Error Descriptor configuration
 ====

@@ -125,7 +125,7 @@ Conditions, which must hold true for this error handler to execute. The defined 
 .Configuration of WWW-Authenticate error handler
 ====
 
-The www authenticate error handler below is configured to kick in for web requests (HTTP `Accept` header contains `text/html`) if an `authentication_error` error occurred (an error raised by authenticators). In this case, it will respond with HTTP `401 Unauthorized` and a `WWW-Authenticate` header set to `Basic realm="My fancy app"`.
+The www authenticate error handler below is configured to kick in for web requests (HTTP `Accept` header contains `text/html`) if an `authentication_error` error occurred (an error raised by authenticators) and has been raised by an authenticator with id equal to `basic_auth_authenticator`. In this case, it will respond with HTTP `401 Unauthorized` and a `WWW-Authenticate` header set to `Basic realm="My fancy app"`.
 
 [source, yaml]
 ----
