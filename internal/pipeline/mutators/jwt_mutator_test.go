@@ -2,6 +2,7 @@ package mutators
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -25,11 +26,13 @@ func TestCreateJWTMutator(t *testing.T) {
 
 	for _, tc := range []struct {
 		uc     string
+		id     string
 		config []byte
 		assert func(t *testing.T, err error, mut *jwtMutator)
 	}{
 		{
 			uc: "without config",
+			id: "jmut",
 			assert: func(t *testing.T, err error, mut *jwtMutator) {
 				t.Helper()
 
@@ -38,10 +41,12 @@ func TestCreateJWTMutator(t *testing.T) {
 				require.NotNil(t, mut)
 				assert.Equal(t, defaultJWTTTL, mut.ttl)
 				assert.Nil(t, mut.claims)
+				assert.Equal(t, "jmut", mut.HandlerID())
 			},
 		},
 		{
 			uc:     "with empty config",
+			id:     "jmut",
 			config: []byte(``),
 			assert: func(t *testing.T, err error, mut *jwtMutator) {
 				t.Helper()
@@ -51,10 +56,12 @@ func TestCreateJWTMutator(t *testing.T) {
 				require.NotNil(t, mut)
 				assert.Equal(t, defaultJWTTTL, mut.ttl)
 				assert.Nil(t, mut.claims)
+				assert.Equal(t, "jmut", mut.HandlerID())
 			},
 		},
 		{
 			uc:     "with ttl only",
+			id:     "jmut",
 			config: []byte(`ttl: 5s`),
 			assert: func(t *testing.T, err error, mut *jwtMutator) {
 				t.Helper()
@@ -64,6 +71,7 @@ func TestCreateJWTMutator(t *testing.T) {
 				require.NotNil(t, mut)
 				assert.Equal(t, expectedTTL, mut.ttl)
 				assert.Nil(t, mut.claims)
+				assert.Equal(t, "jmut", mut.HandlerID())
 			},
 		},
 		{
@@ -79,6 +87,7 @@ func TestCreateJWTMutator(t *testing.T) {
 		},
 		{
 			uc: "with claims only",
+			id: "jmut",
 			config: []byte(`
 claims: 
   '{ "sub": {{ quote .Subject.ID }} }'
@@ -94,10 +103,12 @@ claims:
 				val, err := mut.claims.Render(nil, &subject.Subject{ID: "bar"})
 				require.NoError(t, err)
 				assert.Equal(t, `{ "sub": "bar" }`, val)
+				assert.Equal(t, "jmut", mut.HandlerID())
 			},
 		},
 		{
 			uc: "with claims and ttl",
+			id: "jmut",
 			config: []byte(`
 ttl: 5s
 claims: 
@@ -114,6 +125,7 @@ claims:
 				val, err := mut.claims.Render(nil, &subject.Subject{ID: "bar"})
 				require.NoError(t, err)
 				assert.Equal(t, `{ "sub": "bar" }`, val)
+				assert.Equal(t, "jmut", mut.HandlerID())
 			},
 		},
 		{
@@ -136,7 +148,7 @@ foo: bar"
 			require.NoError(t, err)
 
 			// WHEN
-			mutator, err := newJWTMutator(conf)
+			mutator, err := newJWTMutator(tc.id, conf)
 
 			// THEN
 			tc.assert(t, err, mutator)
@@ -153,30 +165,36 @@ func TestCreateJWTMutatorFromPrototype(t *testing.T) {
 
 	for _, tc := range []struct {
 		uc     string
+		id     string
 		config []byte
 		assert func(t *testing.T, err error, prototype *jwtMutator, configured *jwtMutator)
 	}{
 		{
 			uc: "no new configuration provided",
+			id: "jmut1",
 			assert: func(t *testing.T, err error, prototype *jwtMutator, configured *jwtMutator) {
 				t.Helper()
 
 				require.NoError(t, err)
 				assert.Equal(t, prototype, configured)
+				assert.Equal(t, "jmut1", configured.HandlerID())
 			},
 		},
 		{
 			uc:     "empty configuration provided",
+			id:     "jmut2",
 			config: []byte(``),
 			assert: func(t *testing.T, err error, prototype *jwtMutator, configured *jwtMutator) {
 				t.Helper()
 
 				require.NoError(t, err)
 				assert.Equal(t, prototype, configured)
+				assert.Equal(t, "jmut2", configured.HandlerID())
 			},
 		},
 		{
 			uc:     "configuration with ttl only provided",
+			id:     "jmut3",
 			config: []byte(`ttl: 5s`),
 			assert: func(t *testing.T, err error, prototype *jwtMutator, configured *jwtMutator) {
 				t.Helper()
@@ -186,6 +204,7 @@ func TestCreateJWTMutatorFromPrototype(t *testing.T) {
 				assert.Equal(t, prototype.claims, configured.claims)
 				assert.NotEqual(t, prototype.ttl, configured.ttl)
 				assert.Equal(t, expectedTTL, configured.ttl)
+				assert.Equal(t, "jmut3", configured.HandlerID())
 			},
 		},
 		{
@@ -201,6 +220,7 @@ func TestCreateJWTMutatorFromPrototype(t *testing.T) {
 		},
 		{
 			uc: "configuration with claims only provided",
+			id: "jmut4",
 			config: []byte(`
 claims:
   '{ "sub": {{ quote .Subject.ID }} }'
@@ -216,10 +236,12 @@ claims:
 				val, err := configured.claims.Render(nil, &subject.Subject{ID: "bar"})
 				require.NoError(t, err)
 				assert.Equal(t, `{ "sub": "bar" }`, val)
+				assert.Equal(t, "jmut4", configured.HandlerID())
 			},
 		},
 		{
 			uc: "configuration with both ttl and claims provided",
+			id: "jmut5",
 			config: []byte(`
 ttl: 5s
 claims:
@@ -237,6 +259,7 @@ claims:
 				val, err := configured.claims.Render(nil, &subject.Subject{ID: "bar"})
 				require.NoError(t, err)
 				assert.Equal(t, `{ "sub": "bar" }`, val)
+				assert.Equal(t, "jmut5", configured.HandlerID())
 			},
 		},
 		{
@@ -258,7 +281,7 @@ foo: bar
 			conf, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
 
-			prototype, err := newJWTMutator(nil)
+			prototype, err := newJWTMutator(tc.id, nil)
 			require.NoError(t, err)
 
 			// WHEN
@@ -287,6 +310,7 @@ func TestJWTMutatorExecute(t *testing.T) {
 
 	for _, tc := range []struct {
 		uc             string
+		id             string
 		config         []byte
 		subject        *subject.Subject
 		configureMocks func(t *testing.T,
@@ -298,12 +322,17 @@ func TestJWTMutatorExecute(t *testing.T) {
 	}{
 		{
 			uc: "with 'nil' subject",
+			id: "jmut1",
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrInternal)
 				assert.Contains(t, err.Error(), "'nil' subject")
+
+				var identifier interface{ HandlerID() string }
+				require.True(t, errors.As(err, &identifier))
+				assert.Equal(t, "jmut1", identifier.HandlerID())
 			},
 		},
 		{
@@ -422,6 +451,7 @@ claims: '{
 		},
 		{
 			uc:      "with custom claims template, which does not result in a JSON object",
+			id:      "jmut2",
 			config:  []byte(`claims: "foo: bar"`),
 			subject: &subject.Subject{ID: "foo", Attributes: map[string]any{"baz": "bar"}},
 			configureMocks: func(t *testing.T, ctx *heimdallmocks.MockContext, signer *heimdallmocks.MockJWTSigner,
@@ -440,10 +470,15 @@ claims: '{
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrInternal)
 				assert.Contains(t, err.Error(), "failed to unmarshal claims")
+
+				var identifier interface{ HandlerID() string }
+				require.True(t, errors.As(err, &identifier))
+				assert.Equal(t, "jmut2", identifier.HandlerID())
 			},
 		},
 		{
 			uc:      "with custom claims template, which fails during rendering",
+			id:      "jmut3",
 			config:  []byte(`claims: "{{ .foobar }}"`),
 			subject: &subject.Subject{ID: "foo", Attributes: map[string]any{"baz": "bar"}},
 			configureMocks: func(t *testing.T, ctx *heimdallmocks.MockContext, signer *heimdallmocks.MockJWTSigner,
@@ -462,6 +497,10 @@ claims: '{
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrInternal)
 				assert.Contains(t, err.Error(), "failed to render")
+
+				var identifier interface{ HandlerID() string }
+				require.True(t, errors.As(err, &identifier))
+				assert.Equal(t, "jmut3", identifier.HandlerID())
 			},
 		},
 	} {
@@ -485,7 +524,7 @@ claims: '{
 			mctx.On("AppContext").Return(cache.WithContext(context.Background(), cch))
 			configureMocks(t, mctx, signer, cch, tc.subject)
 
-			mutator, err := newJWTMutator(conf)
+			mutator, err := newJWTMutator(tc.id, conf)
 			require.NoError(t, err)
 
 			// WHEN
