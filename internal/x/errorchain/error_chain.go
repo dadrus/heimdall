@@ -17,32 +17,31 @@ type element struct {
 	next *element
 }
 
-// nolint
-type ErrorChain struct {
+type errorChain struct { // nolint: errname
 	head    *element
 	tail    *element
 	context any
 }
 
-func New(err error) *ErrorChain {
-	chain := &ErrorChain{}
+func New(err error) *errorChain {
+	chain := &errorChain{}
 
 	return chain.causedBy(err, "")
 }
 
-func NewWithMessage(err error, message string) *ErrorChain {
-	chain := &ErrorChain{}
+func NewWithMessage(err error, message string) *errorChain {
+	chain := &errorChain{}
 
 	return chain.causedBy(err, message)
 }
 
-func NewWithMessagef(err error, format string, a ...any) *ErrorChain {
-	chain := &ErrorChain{}
+func NewWithMessagef(err error, format string, a ...any) *errorChain {
+	chain := &errorChain{}
 
 	return chain.causedBy(err, fmt.Sprintf(format, a...))
 }
 
-func (ec *ErrorChain) Error() string {
+func (ec *errorChain) Error() string {
 	var errs []string
 
 	for c := ec.head; c != nil; c = c.next {
@@ -56,7 +55,7 @@ func (ec *ErrorChain) Error() string {
 	return strings.Join(errs, ": ")
 }
 
-func (ec *ErrorChain) causedBy(err error, msg string) *ErrorChain {
+func (ec *errorChain) causedBy(err error, msg string) *errorChain {
 	wrappedError := &element{err: err, msg: msg}
 
 	if ec.head == nil {
@@ -72,29 +71,29 @@ func (ec *ErrorChain) causedBy(err error, msg string) *ErrorChain {
 	return ec
 }
 
-func (ec *ErrorChain) CausedBy(err error) *ErrorChain {
+func (ec *errorChain) CausedBy(err error) *errorChain {
 	return ec.causedBy(err, "")
 }
 
-func (ec *ErrorChain) WithErrorContext(context any) *ErrorChain {
+func (ec *errorChain) WithErrorContext(context any) *errorChain {
 	ec.context = context
 
 	return ec
 }
 
-func (ec *ErrorChain) Unwrap() error {
+func (ec *errorChain) Unwrap() error {
 	if ec.head == nil || ec.head.next == nil {
 		return nil
 	}
 
-	return &ErrorChain{
+	return &errorChain{
 		head:    ec.head.next,
 		tail:    ec.tail,
 		context: ec.context,
 	}
 }
 
-func (ec *ErrorChain) Is(target error) bool {
+func (ec *errorChain) Is(target error) bool {
 	if ec.head == nil {
 		return false
 	}
@@ -102,7 +101,7 @@ func (ec *ErrorChain) Is(target error) bool {
 	return errors.Is(ec.head.err, target)
 }
 
-func (ec *ErrorChain) As(target any) bool {
+func (ec *errorChain) As(target any) bool {
 	if ec.head == nil {
 		return false
 	}
@@ -114,7 +113,7 @@ func (ec *ErrorChain) As(target any) bool {
 	return errors.As(ec.head.err, target)
 }
 
-func (ec *ErrorChain) asTarget(target any) bool {
+func (ec *errorChain) asTarget(target any) bool {
 	if ec.context == nil {
 		return false
 	}
@@ -131,11 +130,11 @@ func (ec *ErrorChain) asTarget(target any) bool {
 	return true
 }
 
-func (ec *ErrorChain) ErrorContext() any {
+func (ec *errorChain) ErrorContext() any {
 	return ec.context
 }
 
-func (ec *ErrorChain) Errors() []error {
+func (ec *errorChain) Errors() []error {
 	var errs []error
 
 	for c := ec.head; c != nil; c = c.next {
@@ -145,7 +144,7 @@ func (ec *ErrorChain) Errors() []error {
 	return errs
 }
 
-func (ec *ErrorChain) MarshalJSON() ([]byte, error) {
+func (ec *errorChain) MarshalJSON() ([]byte, error) {
 	return json.Marshal(
 		message{
 			Code:    strcase.ToLowerCamel(ec.head.err.Error()),
@@ -153,7 +152,7 @@ func (ec *ErrorChain) MarshalJSON() ([]byte, error) {
 		})
 }
 
-func (ec *ErrorChain) MarshalXML(encoder *xml.Encoder, start xml.StartElement) error {
+func (ec *errorChain) MarshalXML(encoder *xml.Encoder, start xml.StartElement) error {
 	return encoder.Encode(
 		message{
 			XMLName: xml.Name{Local: "error"},

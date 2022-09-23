@@ -43,6 +43,7 @@ func TestErrorChainNew(t *testing.T) {
 	require.Error(t, err)
 	assert.ErrorIs(t, err, errTest1)
 	assert.Equal(t, err.Error(), errTest1.Error())
+	assert.Nil(t, err.ErrorContext())
 }
 
 func TestErrorChainNewWithMessage(t *testing.T) {
@@ -55,6 +56,7 @@ func TestErrorChainNewWithMessage(t *testing.T) {
 	require.Error(t, err)
 	assert.ErrorIs(t, err, errTest1)
 	assert.Equal(t, err.Error(), errTest1.Error()+": foobar")
+	assert.Nil(t, err.ErrorContext())
 }
 
 func TestErrorChainNewWithFormattedMessage(t *testing.T) {
@@ -67,6 +69,7 @@ func TestErrorChainNewWithFormattedMessage(t *testing.T) {
 	require.Error(t, err)
 	assert.ErrorIs(t, err, errTest1)
 	assert.Equal(t, err.Error(), errTest1.Error()+": foobar")
+	assert.Nil(t, err.ErrorContext())
 }
 
 func TestErrorChainNewWithCause(t *testing.T) {
@@ -85,6 +88,7 @@ func TestErrorChainNewWithCause(t *testing.T) {
 	assert.ErrorIs(t, err, errTest1)
 	assert.ErrorIs(t, err, errTest2)
 	assert.Equal(t, err.Error(), errTest1.Error()+": foo: "+errTest2.Error())
+	assert.Nil(t, err.ErrorContext())
 
 	errs := err.Errors()
 	assert.ElementsMatch(t, errs, []error{errTest1, errTest2})
@@ -109,6 +113,7 @@ func TestErrorChainNewWithCauseAndContextDetachedFromError(t *testing.T) {
 	assert.ErrorIs(t, err, errTest1)
 	assert.ErrorIs(t, err, errTest2)
 	assert.Equal(t, err.Error(), errTest1.Error()+": foo: "+errTest2.Error())
+	assert.Equal(t, &errCtx{}, err.ErrorContext())
 
 	errs := err.Errors()
 	assert.ElementsMatch(t, errs, []error{errTest1, errTest2})
@@ -135,12 +140,54 @@ func TestErrorChainNewWithCauseAndContextAttachedToError(t *testing.T) {
 	assert.ErrorIs(t, err, errTest)
 	assert.ErrorIs(t, err, errTest2)
 	assert.Equal(t, err.Error(), errTest.Error()+": foo: "+errTest2.Error())
+	assert.Nil(t, err.ErrorContext())
 
 	errs := err.Errors()
 	assert.ElementsMatch(t, errs, []error{errTest, errTest2})
 
 	require.True(t, errors.As(err, &barer))
 	assert.Equal(t, "bar", barer.Bar())
+}
+
+func TestErrorChainAsUsedWithConcreteType(t *testing.T) {
+	t.Parallel()
+	// GIVEN
+	type Barer struct{}
+
+	var barer Barer
+
+	errTest := &testError{}
+
+	err := errorchain.NewWithMessage(errTest, "foo").
+		WithErrorContext(errTest2)
+
+	// nolint: errcheck
+	defer func() { recover() }()
+
+	// WHEN
+	err.As(&barer)
+
+	// THEN
+	t.Errorf("should have panicked")
+}
+
+func TestErrorChainAsUsedWithNotAssignableInterface(t *testing.T) {
+	t.Parallel()
+	// GIVEN
+	type Barer interface{ Foo() string }
+
+	var barer Barer
+
+	errTest := &testError{}
+
+	err := errorchain.NewWithMessage(errTest, "foo").
+		WithErrorContext(errTest2)
+
+	// WHEN
+	res := err.As(&barer)
+
+	// THEN
+	assert.False(t, res)
 }
 
 func TestErrorChainJSONMarshal(t *testing.T) {
