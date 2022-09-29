@@ -3,12 +3,16 @@ package tracing
 import (
 	"context"
 
-	"github.com/opentracing/opentracing-go"
 	"github.com/rs/zerolog"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/sdk/resource"
+	"go.opentelemetry.io/otel/sdk/trace"
+	semconv "go.opentelemetry.io/otel/semconv/v1.12.0"
 	"go.uber.org/fx"
 
 	"github.com/dadrus/heimdall/internal/config"
-	"github.com/dadrus/heimdall/internal/x/tracing/provider"
+	"github.com/dadrus/heimdall/internal/x/opentelemetry/exporters"
+	"github.com/dadrus/heimdall/internal/x/opentelemetry/propagators"
 )
 
 // Module is used on app bootstrap.
@@ -17,31 +21,42 @@ var Module = fx.Options(
 	fx.Invoke(registerTracer),
 )
 
-func registerTracer(lifecycle fx.Lifecycle, conf config.Configuration, logger zerolog.Logger) {
+func registerTracer(lifecycle fx.Lifecycle, conf config.Configuration, logger zerolog.Logger) error {
 	if len(conf.Tracing.Provider) == 0 {
-		logger.Info().Msg("No opentracing provider configured. Tracing will be disabled.")
+		logger.Info().Msg("Opentelemetry tracing disabled.")
 
-		return
+		return nil
 	}
 
-	tracer, closer, err := provider.New(conf.Tracing.Provider, conf.Tracing.ServiceName, logger)
+	res, err := resource.Merge(
+		resource.Default(),
+		resource.NewWithAttributes(
+			semconv.SchemaURL,
+			semconv.ServiceNameKey.String(conf.Tracing.ServiceName),
+			semconv.ServiceVersionKey.String("1.1.1")))
 	if err != nil {
-		logger.Warn().Err(err).Msg("Could not initialize opentracing tracer. Tracing will be disabled.")
-
-		return
+		return err
 	}
 
-	opentracing.InitGlobalTracer(tracer)
+	xprts, err := exporters.New(context.Background())
+	if err != nil {
+		return err
+	}
 
-	logger.Info().Msg("Opentracing tracer initialized.")
+	opts := []trace.TracerProviderOption{trace.WithResource(res)}
+	for _, exporter := range xprts {
+		opts = append(opts, trace.WithBatcher(exporter))
+	}
 
-	lifecycle.Append(
-		fx.Hook{
-			OnStop: func(ctx context.Context) error {
-				closer.Close()
+	provider := trace.NewTracerProvider(opts...)
 
-				return nil
-			},
-		},
-	)
+	otel.SetTracerProvider(provider)
+	otel.SetTextMapPropagator(propagators.New())
+	otel.SetErrorHandler(otel.ErrorHandlerFunc(func(err error) { logger.Error().Err(err).Msg("OTEL Error") }))
+
+	logger.Info().Msg("Opentelemetry tracing initialized.")
+
+	lifecycle.Append(fx.Hook{OnStop: func(ctx context.Context) error { return provider.Shutdown(ctx) }})
+
+	return nil
 }
