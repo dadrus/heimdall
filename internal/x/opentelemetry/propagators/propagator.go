@@ -7,6 +7,7 @@ import (
 	"go.opentelemetry.io/otel/propagation"
 )
 
+//nolint:gochecknoinits
 func init() {
 	autoprop.RegisterTextMapPropagator("datadog", datadog.Propagator{})
 }
