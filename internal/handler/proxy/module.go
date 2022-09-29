@@ -4,7 +4,6 @@ import (
 	"context"
 	"strings"
 
-	tracingmiddleware "github.com/dadrus/heimdall/internal/fiber/middleware/opentelemetry"
 	"github.com/goccy/go-json"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
@@ -19,6 +18,7 @@ import (
 	cachemiddleware "github.com/dadrus/heimdall/internal/fiber/middleware/cache"
 	errorhandlermiddleware "github.com/dadrus/heimdall/internal/fiber/middleware/errorhandler"
 	loggermiddlerware "github.com/dadrus/heimdall/internal/fiber/middleware/logger"
+	tracingmiddleware "github.com/dadrus/heimdall/internal/fiber/middleware/opentelemetry"
 	fiberproxy "github.com/dadrus/heimdall/internal/fiber/middleware/proxyheader"
 	"github.com/dadrus/heimdall/internal/x"
 )

@@ -28,10 +28,8 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-//nolint:revive // ignoring missing comments for unexported global variables in an internal package.
+//nolint:gochecknoglobals
 var (
-	ComponentKey     = attribute.Key("component")
-	ServiceKey       = attribute.Key("service")
 	StatusCodeKey    = attribute.Key("status.code")
 	StatusMessageKey = attribute.Key("status.message")
 	ErrorKey         = attribute.Key("error")
@@ -65,7 +63,7 @@ func NewMockTracer() *MockTracer {
 		SpareSpanIDs:          nil,
 		SpareContextKeyValues: nil,
 
-		rand: rand.New(rand.NewSource(time.Now().Unix())),
+		rand: rand.New(rand.NewSource(time.Now().Unix())), //nolint:gosec
 	}
 }
 
@@ -129,6 +127,7 @@ func (t *MockTracer) getTraceID(ctx context.Context, config *trace.SpanConfig) t
 	if len(t.SpareTraceIDs) > 0 {
 		traceID := t.SpareTraceIDs[0]
 		t.SpareTraceIDs = t.SpareTraceIDs[1:]
+
 		if len(t.SpareTraceIDs) == 0 {
 			t.SpareTraceIDs = nil
 		}
@@ -255,6 +254,7 @@ func (s *MockSpan) applyUpdate(update []attribute.KeyValue) {
 	}
 
 	seen := make(map[attribute.Key]struct{})
+
 	for i, kv := range s.Attributes {
 		if v, ok := updateM[kv.Key]; ok {
 			s.Attributes[i].Value = v
@@ -266,6 +266,7 @@ func (s *MockSpan) applyUpdate(update []attribute.KeyValue) {
 		if _, ok := seen[k]; ok {
 			continue
 		}
+
 		s.Attributes = append(s.Attributes, attribute.KeyValue{Key: k, Value: v})
 	}
 }
@@ -274,11 +275,14 @@ func (s *MockSpan) End(options ...trace.SpanEndOption) {
 	if !s.EndTime.IsZero() {
 		return // already finished
 	}
+
 	config := trace.NewSpanEndConfig(options...)
 	endTime := config.Timestamp()
+
 	if endTime.IsZero() {
 		endTime = time.Now()
 	}
+
 	s.EndTime = endTime
 	s.mockTracer.FinishedSpans = append(s.mockTracer.FinishedSpans, s)
 }
@@ -306,6 +310,7 @@ func (s *MockSpan) Tracer() trace.Tracer {
 
 func (s *MockSpan) AddEvent(name string, o ...trace.EventOption) {
 	c := trace.NewEventConfig(o...)
+
 	s.Events = append(s.Events, MockEvent{
 		Timestamp:  c.Timestamp(),
 		Name:       name,
