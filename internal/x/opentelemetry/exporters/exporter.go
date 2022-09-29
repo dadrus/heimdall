@@ -18,7 +18,10 @@ const otelTracesExportersEnvKey = "OTEL_TRACES_EXPORTER"
 // SpanExporter will be returned if "none" is defined anywhere in the
 // environment variable.
 func New(ctx context.Context) ([]trace.SpanExporter, error) {
-	exporterNames, _ := os.LookupEnv(otelTracesExportersEnvKey)
+	exporterNames, ok := os.LookupEnv(otelTracesExportersEnvKey)
+	if !ok {
+		return spanExporters(ctx)
+	}
 
 	return spanExporters(ctx, strings.Split(exporterNames, ",")...)
 }

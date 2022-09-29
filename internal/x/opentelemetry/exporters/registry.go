@@ -101,10 +101,6 @@ func spanExporters(ctx context.Context, names ...string) ([]trace.SpanExporter, 
 	var exps []trace.SpanExporter //nolint:prealloc
 
 	for _, name := range names {
-		if len(name) == 0 {
-			continue
-		}
-
 		if name == "none" {
 			return []trace.SpanExporter{noopExporter{}}, nil
 		}
