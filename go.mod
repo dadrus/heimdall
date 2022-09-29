@@ -30,7 +30,7 @@ require (
 	github.com/ybbus/httpretry v1.0.1
 	github.com/yl2chen/cidranger v1.0.2
 	github.com/youmark/pkcs8 v0.0.0-20201027041543-1326539a0a0a
-	go.uber.org/fx v1.18.1
+	go.uber.org/fx v1.18.2
 	golang.org/x/exp v0.0.0-20220927162542-c76eaa363f9d
 	gopkg.in/square/go-jose.v2 v2.6.0
 	gopkg.in/yaml.v3 v3.0.1
