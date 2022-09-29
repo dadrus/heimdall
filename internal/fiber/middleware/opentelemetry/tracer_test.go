@@ -1,4 +1,4 @@
-package opentel
+package opentelemetry
 
 import (
 	"context"

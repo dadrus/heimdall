@@ -1,4 +1,4 @@
-package opentel
+package opentelemetry
 
 import (
 	"errors"
@@ -10,13 +10,38 @@ import (
 	"go.opentelemetry.io/otel/propagation"
 	semconv "go.opentelemetry.io/otel/semconv/v1.12.0"
 	"go.opentelemetry.io/otel/trace"
-	"golang.org/x/net/context"
 )
 
 var ErrNoParentSpan = errors.New("no parent span available")
 
 type tracer struct {
-	c opts
+	c *tracerConfig
+}
+
+type tracerConfig struct {
+	tracer                 trace.Tracer
+	propagator             propagation.TextMapPropagator
+	spanObserver           SpanObserver
+	operationName          OperationNameProvider
+	filterOperation        OperationFilter
+	skipSpansWithoutParent bool
+}
+
+func newTracerConfig(opts ...Option) *tracerConfig {
+	options := defaultOptions
+
+	for _, opt := range opts {
+		opt(&options)
+	}
+
+	return &tracerConfig{
+		tracer:                 options.tracer,
+		propagator:             propagation.NewCompositeTextMapPropagator(options.propagators...),
+		spanObserver:           options.spanObserver,
+		operationName:          options.operationName,
+		filterOperation:        options.filterOperation,
+		skipSpansWithoutParent: options.skipSpansWithoutParent,
+	}
 }
 
 func (t *tracer) manageSpans(ctx *fiber.Ctx) error {
@@ -36,15 +61,6 @@ func (t *tracer) manageSpans(ctx *fiber.Ctx) error {
 	return ctx.Next()
 }
 
-func (t *tracer) spanContext(ctx *fiber.Ctx, req *http.Request) context.Context {
-	propagator := propagation.NewCompositeTextMapPropagator(
-		propagation.TraceContext{},
-		propagation.Baggage{},
-	)
-
-	return propagator.Extract(ctx.UserContext(), propagation.HeaderCarrier(req.Header))
-}
-
 func (t *tracer) startSpan(ctx *fiber.Ctx, time time.Time) (trace.Span, error) {
 	req := &http.Request{}
 
@@ -53,7 +69,7 @@ func (t *tracer) startSpan(ctx *fiber.Ctx, time time.Time) (trace.Span, error) {
 		return nil, err
 	}
 
-	spanCtx := t.spanContext(ctx, req)
+	spanCtx := t.c.propagator.Extract(ctx.UserContext(), propagation.HeaderCarrier(req.Header))
 
 	var spanOpts []trace.SpanStartOption
 
@@ -93,11 +109,7 @@ func (t *tracer) endSpan(ctx *fiber.Ctx, span trace.Span) {
 }
 
 func New(opts ...Option) fiber.Handler {
-	trc := &tracer{c: defaultOptions}
-
-	for _, opt := range opts {
-		opt(&trc.c)
-	}
+	trc := &tracer{c: newTracerConfig(opts...)}
 
 	return trc.manageSpans
 }
