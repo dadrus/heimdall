@@ -3,8 +3,6 @@ package tracing
 import (
 	"context"
 
-	"github.com/dadrus/heimdall/internal/x"
-	"github.com/dadrus/heimdall/version"
 	"github.com/rs/zerolog"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -13,8 +11,10 @@ import (
 	"go.uber.org/fx"
 
 	"github.com/dadrus/heimdall/internal/config"
+	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/opentelemetry/exporters"
 	"github.com/dadrus/heimdall/internal/x/opentelemetry/propagators"
+	"github.com/dadrus/heimdall/version"
 )
 
 // Module is used on app bootstrap.

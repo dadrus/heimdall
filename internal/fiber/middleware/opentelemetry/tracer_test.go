@@ -13,13 +13,13 @@ import (
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
 
-	"github.com/dadrus/heimdall/internal/x/opentelemetry/mock"
+	"github.com/dadrus/heimdall/internal/x/opentelemetry/mocks"
 )
 
 func TestTracerSpanManagementWithoutSkippingOnMissingParentSpan(t *testing.T) {
 	t.Parallel()
 
-	mtracer := mock.NewMockTracer()
+	mtracer := mocks.NewMockTracer()
 	parentSpanContext := trace.NewSpanContext(trace.SpanContextConfig{
 		TraceID:    trace.TraceID{1},
 		SpanID:     trace.SpanID{2},
@@ -46,12 +46,12 @@ func TestTracerSpanManagementWithoutSkippingOnMissingParentSpan(t *testing.T) {
 	for _, tc := range []struct {
 		uc      string
 		request *http.Request
-		assert  func(t *testing.T, mtracer *mock.MockTracer)
+		assert  func(t *testing.T, mtracer *mocks.MockTracer)
 	}{
 		{
 			uc:      "request without parent span, resulting in http 200",
 			request: httptest.NewRequest(http.MethodGet, "/test", nil),
-			assert: func(t *testing.T, mtracer *mock.MockTracer) {
+			assert: func(t *testing.T, mtracer *mocks.MockTracer) {
 				t.Helper()
 
 				spans := mtracer.FinishedSpans
@@ -81,7 +81,7 @@ func TestTracerSpanManagementWithoutSkippingOnMissingParentSpan(t *testing.T) {
 		{
 			uc:      "request without parent span, resulting in http 500",
 			request: httptest.NewRequest(http.MethodPost, "/test", nil),
-			assert: func(t *testing.T, mtracer *mock.MockTracer) {
+			assert: func(t *testing.T, mtracer *mocks.MockTracer) {
 				t.Helper()
 
 				spans := mtracer.FinishedSpans
@@ -115,7 +115,7 @@ func TestTracerSpanManagementWithoutSkippingOnMissingParentSpan(t *testing.T) {
 
 				return req
 			}(),
-			assert: func(t *testing.T, mtracer *mock.MockTracer) {
+			assert: func(t *testing.T, mtracer *mocks.MockTracer) {
 				t.Helper()
 
 				spans := mtracer.FinishedSpans
@@ -145,7 +145,7 @@ func TestTracerSpanManagementWithoutSkippingOnMissingParentSpan(t *testing.T) {
 		{
 			uc:      "filtered request",
 			request: httptest.NewRequest(http.MethodGet, "/filtered", nil),
-			assert: func(t *testing.T, mtracer *mock.MockTracer) {
+			assert: func(t *testing.T, mtracer *mocks.MockTracer) {
 				t.Helper()
 
 				require.Len(t, mtracer.FinishedSpans, 0)
@@ -170,7 +170,7 @@ func TestTracerSpanManagementWithoutSkippingOnMissingParentSpan(t *testing.T) {
 func TestTracerSpanManagementWithSkippingOnMissingParentSpan(t *testing.T) {
 	t.Parallel()
 
-	mtracer := mock.NewMockTracer()
+	mtracer := mocks.NewMockTracer()
 	parentSpanContext := trace.NewSpanContext(trace.SpanContextConfig{
 		TraceID: trace.TraceID{1},
 		SpanID:  trace.SpanID{2},
@@ -190,12 +190,12 @@ func TestTracerSpanManagementWithSkippingOnMissingParentSpan(t *testing.T) {
 	for _, tc := range []struct {
 		uc      string
 		request *http.Request
-		assert  func(t *testing.T, mtracer *mock.MockTracer)
+		assert  func(t *testing.T, mtracer *mocks.MockTracer)
 	}{
 		{
 			uc:      "request without parent span",
 			request: httptest.NewRequest(http.MethodGet, "/test", nil),
-			assert: func(t *testing.T, mtracer *mock.MockTracer) {
+			assert: func(t *testing.T, mtracer *mocks.MockTracer) {
 				t.Helper()
 
 				require.Len(t, mtracer.FinishedSpans, 0)
@@ -209,7 +209,7 @@ func TestTracerSpanManagementWithSkippingOnMissingParentSpan(t *testing.T) {
 
 				return req
 			}(),
-			assert: func(t *testing.T, mtracer *mock.MockTracer) {
+			assert: func(t *testing.T, mtracer *mocks.MockTracer) {
 				t.Helper()
 
 				spans := mtracer.FinishedSpans
@@ -256,7 +256,7 @@ func TestSpanIsSetToContextToEnablePropagationToUpstreamServices(t *testing.T) {
 
 	// GIVEN
 	app := fiber.New()
-	app.Use(New(WithTracer(mock.NewMockTracer())))
+	app.Use(New(WithTracer(mocks.NewMockTracer())))
 
 	var ctx context.Context
 
@@ -278,7 +278,7 @@ func TestSpanIsSetToContextToEnablePropagationToUpstreamServices(t *testing.T) {
 	span := trace.SpanFromContext(ctx)
 	require.NotNil(t, span)
 
-	impl, ok := span.(*mock.MockSpan)
+	impl, ok := span.(*mocks.MockSpan)
 	require.True(t, ok)
 
 	assert.Equal(t, "HTTP GET URL: /test", impl.Name)

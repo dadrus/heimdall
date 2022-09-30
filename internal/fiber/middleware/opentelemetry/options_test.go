@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/otel/trace"
 
-	"github.com/dadrus/heimdall/internal/x/opentelemetry/mock"
+	"github.com/dadrus/heimdall/internal/x/opentelemetry/mocks"
 )
 
 func TestOptionsWithTracer(t *testing.T) {
@@ -33,11 +33,11 @@ func TestOptionsWithTracer(t *testing.T) {
 		{
 			uc:     "not nil tracer",
 			opt:    defaultOptions,
-			tracer: mock.NewMockTracer(),
+			tracer: mocks.NewMockTracer(),
 			assert: func(t *testing.T, opt *opts) {
 				t.Helper()
 
-				assert.IsType(t, &mock.MockTracer{}, opt.tracer)
+				assert.IsType(t, &mocks.MockTracer{}, opt.tracer)
 			},
 		},
 	} {

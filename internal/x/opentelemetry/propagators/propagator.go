@@ -1,7 +1,7 @@
 package propagators
 
 import (
-	"github.com/tonglil/opentelemetry-go-datadog-propagator"
+	datadog "github.com/tonglil/opentelemetry-go-datadog-propagator"
 	"go.opentelemetry.io/contrib/propagators/autoprop"
 	"go.opentelemetry.io/otel/propagation"
 )

@@ -16,7 +16,7 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.12.0"
 	"go.opentelemetry.io/otel/trace"
 
-	otelmock "github.com/dadrus/heimdall/internal/x/opentelemetry/mock"
+	otelmock "github.com/dadrus/heimdall/internal/x/opentelemetry/mocks"
 )
 
 func TestWrappedClientDoTimeout(t *testing.T) {

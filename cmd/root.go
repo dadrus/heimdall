@@ -3,8 +3,9 @@ package cmd
 import (
 	"os"
 
-	"github.com/dadrus/heimdall/version"
 	"github.com/spf13/cobra"
+
+	"github.com/dadrus/heimdall/version"
 )
 
 // nolint: gochecknoglobals
