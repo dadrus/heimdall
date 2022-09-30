@@ -8,6 +8,8 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/otel/trace"
+
+	"github.com/dadrus/heimdall/internal/x/opentelemetry/mock"
 )
 
 func TestOptionsWithTracer(t *testing.T) {
@@ -31,11 +33,11 @@ func TestOptionsWithTracer(t *testing.T) {
 		{
 			uc:     "not nil tracer",
 			opt:    defaultOptions,
-			tracer: NewMockTracer(),
+			tracer: mock.NewMockTracer(),
 			assert: func(t *testing.T, opt *opts) {
 				t.Helper()
 
-				assert.IsType(t, &MockTracer{}, opt.tracer)
+				assert.IsType(t, &mock.MockTracer{}, opt.tracer)
 			},
 		},
 	} {

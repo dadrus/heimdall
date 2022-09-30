@@ -12,12 +12,14 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
+
+	"github.com/dadrus/heimdall/internal/x/opentelemetry/mock"
 )
 
 func TestTracerSpanManagementWithoutSkippingOnMissingParentSpan(t *testing.T) {
 	t.Parallel()
 
-	mtracer := NewMockTracer()
+	mtracer := mock.NewMockTracer()
 	parentSpanContext := trace.NewSpanContext(trace.SpanContextConfig{
 		TraceID:    trace.TraceID{1},
 		SpanID:     trace.SpanID{2},
@@ -38,18 +40,18 @@ func TestTracerSpanManagementWithoutSkippingOnMissingParentSpan(t *testing.T) {
 	app.Get("test", func(ctx *fiber.Ctx) error { return nil })
 	app.Get("filtered", func(ctx *fiber.Ctx) error { return nil })
 	app.Post("test", func(ctx *fiber.Ctx) error { return ctx.SendStatus(500) })
-	// nolint: errcheck
-	defer app.Shutdown()
+
+	defer app.Shutdown() // nolint: errcheck
 
 	for _, tc := range []struct {
 		uc      string
 		request *http.Request
-		assert  func(t *testing.T, mtracer *MockTracer)
+		assert  func(t *testing.T, mtracer *mock.MockTracer)
 	}{
 		{
 			uc:      "request without parent span, resulting in http 200",
 			request: httptest.NewRequest(http.MethodGet, "/test", nil),
-			assert: func(t *testing.T, mtracer *MockTracer) {
+			assert: func(t *testing.T, mtracer *mock.MockTracer) {
 				t.Helper()
 
 				spans := mtracer.FinishedSpans
@@ -79,7 +81,7 @@ func TestTracerSpanManagementWithoutSkippingOnMissingParentSpan(t *testing.T) {
 		{
 			uc:      "request without parent span, resulting in http 500",
 			request: httptest.NewRequest(http.MethodPost, "/test", nil),
-			assert: func(t *testing.T, mtracer *MockTracer) {
+			assert: func(t *testing.T, mtracer *mock.MockTracer) {
 				t.Helper()
 
 				spans := mtracer.FinishedSpans
@@ -113,7 +115,7 @@ func TestTracerSpanManagementWithoutSkippingOnMissingParentSpan(t *testing.T) {
 
 				return req
 			}(),
-			assert: func(t *testing.T, mtracer *MockTracer) {
+			assert: func(t *testing.T, mtracer *mock.MockTracer) {
 				t.Helper()
 
 				spans := mtracer.FinishedSpans
@@ -143,7 +145,7 @@ func TestTracerSpanManagementWithoutSkippingOnMissingParentSpan(t *testing.T) {
 		{
 			uc:      "filtered request",
 			request: httptest.NewRequest(http.MethodGet, "/filtered", nil),
-			assert: func(t *testing.T, mtracer *MockTracer) {
+			assert: func(t *testing.T, mtracer *mock.MockTracer) {
 				t.Helper()
 
 				require.Len(t, mtracer.FinishedSpans, 0)
@@ -168,7 +170,7 @@ func TestTracerSpanManagementWithoutSkippingOnMissingParentSpan(t *testing.T) {
 func TestTracerSpanManagementWithSkippingOnMissingParentSpan(t *testing.T) {
 	t.Parallel()
 
-	mtracer := NewMockTracer()
+	mtracer := mock.NewMockTracer()
 	parentSpanContext := trace.NewSpanContext(trace.SpanContextConfig{
 		TraceID: trace.TraceID{1},
 		SpanID:  trace.SpanID{2},
@@ -188,12 +190,12 @@ func TestTracerSpanManagementWithSkippingOnMissingParentSpan(t *testing.T) {
 	for _, tc := range []struct {
 		uc      string
 		request *http.Request
-		assert  func(t *testing.T, mtracer *MockTracer)
+		assert  func(t *testing.T, mtracer *mock.MockTracer)
 	}{
 		{
 			uc:      "request without parent span",
 			request: httptest.NewRequest(http.MethodGet, "/test", nil),
-			assert: func(t *testing.T, mtracer *MockTracer) {
+			assert: func(t *testing.T, mtracer *mock.MockTracer) {
 				t.Helper()
 
 				require.Len(t, mtracer.FinishedSpans, 0)
@@ -207,7 +209,7 @@ func TestTracerSpanManagementWithSkippingOnMissingParentSpan(t *testing.T) {
 
 				return req
 			}(),
-			assert: func(t *testing.T, mtracer *MockTracer) {
+			assert: func(t *testing.T, mtracer *mock.MockTracer) {
 				t.Helper()
 
 				spans := mtracer.FinishedSpans
@@ -254,7 +256,7 @@ func TestSpanIsSetToContextToEnablePropagationToUpstreamServices(t *testing.T) {
 
 	// GIVEN
 	app := fiber.New()
-	app.Use(New(WithTracer(NewMockTracer())))
+	app.Use(New(WithTracer(mock.NewMockTracer())))
 
 	var ctx context.Context
 
@@ -276,7 +278,7 @@ func TestSpanIsSetToContextToEnablePropagationToUpstreamServices(t *testing.T) {
 	span := trace.SpanFromContext(ctx)
 	require.NotNil(t, span)
 
-	impl, ok := span.(*MockSpan)
+	impl, ok := span.(*mock.MockSpan)
 	require.True(t, ok)
 
 	assert.Equal(t, "HTTP GET URL: /test", impl.Name)
