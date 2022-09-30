@@ -3,6 +3,8 @@ package tracing
 import (
 	"context"
 
+	"github.com/dadrus/heimdall/internal/x"
+	"github.com/dadrus/heimdall/version"
 	"github.com/rs/zerolog"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -22,7 +24,7 @@ var Module = fx.Options(
 )
 
 func registerTracer(lifecycle fx.Lifecycle, conf config.Configuration, logger zerolog.Logger) error {
-	if len(conf.Tracing.Provider) == 0 {
+	if conf.Tracing == nil {
 		logger.Info().Msg("Opentelemetry tracing disabled.")
 
 		return nil
@@ -32,8 +34,8 @@ func registerTracer(lifecycle fx.Lifecycle, conf config.Configuration, logger ze
 		resource.Default(),
 		resource.NewWithAttributes(
 			semconv.SchemaURL,
-			semconv.ServiceNameKey.String(conf.Tracing.ServiceName),
-			semconv.ServiceVersionKey.String("1.1.1")))
+			semconv.ServiceNameKey.String("heimdall"),
+			semconv.ServiceVersionKey.String(version.Version)))
 	if err != nil {
 		return err
 	}
@@ -43,9 +45,13 @@ func registerTracer(lifecycle fx.Lifecycle, conf config.Configuration, logger ze
 		return err
 	}
 
+	processorOption := x.IfThenElse(conf.Tracing.Processor == "simple",
+		trace.WithSyncer,
+		func(exporter trace.SpanExporter) trace.TracerProviderOption { return trace.WithBatcher(exporter) })
+
 	opts := []trace.TracerProviderOption{trace.WithResource(res)}
 	for _, exporter := range xprts {
-		opts = append(opts, trace.WithBatcher(exporter))
+		opts = append(opts, processorOption(exporter))
 	}
 
 	provider := trace.NewTracerProvider(opts...)
