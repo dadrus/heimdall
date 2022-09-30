@@ -7,6 +7,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/valyala/fasthttp/fasthttpadaptor"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/propagation"
 	semconv "go.opentelemetry.io/otel/semconv/v1.12.0"
 	"go.opentelemetry.io/otel/trace"
@@ -20,7 +21,6 @@ type tracer struct {
 
 type tracerConfig struct {
 	tracer                 trace.Tracer
-	propagator             propagation.TextMapPropagator
 	spanObserver           SpanObserver
 	operationName          OperationNameProvider
 	filterOperation        OperationFilter
@@ -36,7 +36,6 @@ func newTracerConfig(opts ...Option) *tracerConfig {
 
 	return &tracerConfig{
 		tracer:                 options.tracer,
-		propagator:             propagation.NewCompositeTextMapPropagator(options.propagators...),
 		spanObserver:           options.spanObserver,
 		operationName:          options.operationName,
 		filterOperation:        options.filterOperation,
@@ -69,7 +68,7 @@ func (t *tracer) startSpan(ctx *fiber.Ctx, time time.Time) (trace.Span, error) {
 		return nil, err
 	}
 
-	spanCtx := t.c.propagator.Extract(ctx.UserContext(), propagation.HeaderCarrier(req.Header))
+	spanCtx := otel.GetTextMapPropagator().Extract(ctx.UserContext(), propagation.HeaderCarrier(req.Header))
 
 	var spanOpts []trace.SpanStartOption
 

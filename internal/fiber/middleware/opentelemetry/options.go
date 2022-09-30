@@ -2,7 +2,6 @@ package opentelemetry
 
 import (
 	"github.com/gofiber/fiber/v2"
-	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -14,7 +13,6 @@ type (
 
 type opts struct {
 	tracer                 trace.Tracer
-	propagators            []propagation.TextMapPropagator
 	spanObserver           SpanObserver
 	operationName          OperationNameProvider
 	filterOperation        OperationFilter
@@ -58,13 +56,5 @@ func WithOperationFilter(filter OperationFilter) Option {
 func WithSkipSpanWithoutParent(flag bool) Option {
 	return func(o *opts) {
 		o.skipSpansWithoutParent = flag
-	}
-}
-
-func WithPropagator(propagator propagation.TextMapPropagator) Option {
-	return func(o *opts) {
-		if propagator != nil {
-			o.propagators = append(o.propagators, propagator)
-		}
 	}
 }
