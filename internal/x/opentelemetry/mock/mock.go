@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package opentelemetry // import "go.opentelemetry.io/otel/bridge/opentracing/internal"
+package mock // import "go.opentelemetry.io/otel/bridge/opentracing/internal"
 
 import (
 	"context"
@@ -39,6 +39,14 @@ var (
 type MockContextKeyValue struct {
 	Key   interface{}
 	Value interface{}
+}
+
+type MockTracerProvider struct {
+	tracer *MockTracer
+}
+
+func (m *MockTracerProvider) Tracer(_ string, _ ...trace.TracerOption) trace.Tracer {
+	return m.tracer
 }
 
 type MockTracer struct {
@@ -322,4 +330,6 @@ func (s *MockSpan) OverrideTracer(tracer trace.Tracer) {
 	s.officialTracer = tracer
 }
 
-func (s *MockSpan) TracerProvider() trace.TracerProvider { return trace.NewNoopTracerProvider() }
+func (s *MockSpan) TracerProvider() trace.TracerProvider {
+	return &MockTracerProvider{tracer: s.mockTracer}
+}
