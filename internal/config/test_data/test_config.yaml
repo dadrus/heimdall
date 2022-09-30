@@ -86,8 +86,7 @@ metrics:
     metrics_path: /metrics
 
 tracing:
-  service_name: heimdall
-  provider: jaeger
+  processor: batch
 
 signer:
   name: foobar
