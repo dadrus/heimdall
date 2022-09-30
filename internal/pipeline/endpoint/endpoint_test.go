@@ -10,14 +10,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/opentracing-contrib/go-stdlib/nethttp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/ybbus/httpretry"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/x"
-	"github.com/dadrus/heimdall/internal/x/tracing"
 )
 
 func TestEndpointValidate(t *testing.T) {
@@ -72,11 +71,8 @@ func TestEndpointCreateClient(t *testing.T) {
 			assert: func(t *testing.T, client *http.Client) {
 				t.Helper()
 
-				rt, ok := client.Transport.(*tracing.RoundTripper)
+				_, ok := client.Transport.(*otelhttp.Transport)
 				require.True(t, ok)
-
-				assert.Equal(t, peerName, rt.TargetName)
-				assert.IsType(t, &nethttp.Transport{}, rt.Next)
 			},
 		},
 		{
@@ -94,10 +90,8 @@ func TestEndpointCreateClient(t *testing.T) {
 				assert.NotNil(t, rrt.ShouldRetry)
 				assert.NotNil(t, rrt.CalculateBackoff)
 
-				rt, ok := rrt.Next.(*tracing.RoundTripper)
+				_, ok = rrt.Next.(*otelhttp.Transport)
 				require.True(t, ok)
-				assert.Equal(t, peerName, rt.TargetName)
-				assert.IsType(t, &nethttp.Transport{}, rt.Next)
 			},
 		},
 	} {
