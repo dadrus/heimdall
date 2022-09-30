@@ -49,9 +49,6 @@ var defaultConfig = Configuration{
 		Level:  zerolog.ErrorLevel,
 		Format: LogTextFormat,
 	},
-	Tracing: TracingConfig{
-		ServiceName: "heimdall",
-	},
 	Metrics: MetricsConfig{
 		Prometheus: PrometheusConfig{
 			Port:        defaultPrometheusServicePort,
