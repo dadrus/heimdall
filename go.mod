@@ -6,11 +6,11 @@ require (
 	github.com/Masterminds/sprig/v3 v3.2.2
 	github.com/ansrivas/fiberprometheus/v2 v2.4.1
 	github.com/dlclark/regexp2 v1.7.0
-	github.com/dop251/goja v0.0.0-20220915101355-d79e1b125a30
+	github.com/dop251/goja v0.0.0-20220927172339-ea66e911853d
 	github.com/fsnotify/fsnotify v1.5.4
 	github.com/gobwas/glob v0.2.3
 	github.com/goccy/go-json v0.9.11
-	github.com/gofiber/fiber/v2 v2.37.1
+	github.com/gofiber/fiber/v2 v2.38.1
 	github.com/google/uuid v1.3.0
 	github.com/iancoleman/strcase v0.2.0
 	github.com/instana/go-otel-exporter v0.0.0-20220908102301-52c5d8dbfd86
@@ -38,8 +38,8 @@ require (
 	go.opentelemetry.io/otel/exporters/zipkin v1.10.0
 	go.opentelemetry.io/otel/sdk v1.10.0
 	go.opentelemetry.io/otel/trace v1.10.0
-	go.uber.org/fx v1.18.1
-	golang.org/x/exp v0.0.0-20220921164117-439092de6870
+	go.uber.org/fx v1.18.2
+	golang.org/x/exp v0.0.0-20220929160808-de9c53c655b9
 	gopkg.in/square/go-jose.v2 v2.6.0
 	gopkg.in/yaml.v3 v3.0.1
 )
