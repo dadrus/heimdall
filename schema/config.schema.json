@@ -1419,21 +1419,18 @@
       }
     },
     "tracing": {
-      "description": "Configures tracing options",
+      "description": "Configures opentelemetry tracing options",
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "provider"
-      ],
       "properties": {
-        "service_name": {
-          "description": "The name, which would appear for heimdall in the tracing system",
+        "processor": {
+          "description": "The type of the processor to use",
           "type": "string",
-          "default": "heimdall"
-        },
-        "provider": {
-          "description": "Tracing provider to use. Currently only 'jaeger' and 'instana' are supported.",
-          "type": "string"
+          "default": "batch",
+          "enum": [
+            "simple",
+            "batch"
+          ]
         }
       }
     },
