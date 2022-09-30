@@ -49,6 +49,9 @@ var defaultConfig = Configuration{
 		Level:  zerolog.ErrorLevel,
 		Format: LogTextFormat,
 	},
+	Tracing: TracingConfig{
+		Enabled: true,
+	},
 	Metrics: MetricsConfig{
 		Prometheus: PrometheusConfig{
 			Port:        defaultPrometheusServicePort,

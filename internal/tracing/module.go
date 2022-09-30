@@ -24,7 +24,7 @@ var Module = fx.Options(
 )
 
 func registerTracer(lifecycle fx.Lifecycle, conf config.Configuration, logger zerolog.Logger) error {
-	if conf.Tracing == nil {
+	if !conf.Tracing.Enabled {
 		logger.Info().Msg("Opentelemetry tracing disabled.")
 
 		return nil

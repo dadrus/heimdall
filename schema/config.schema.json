@@ -1423,6 +1423,11 @@
       "type": "object",
       "additionalProperties": false,
       "properties": {
+        "enabled": {
+          "description": "Whether tracing is enabled or not",
+          "type": "boolean",
+          "default": true
+        },
         "processor": {
           "description": "The type of the processor to use",
           "type": "string",
