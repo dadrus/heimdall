@@ -9,6 +9,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
@@ -18,6 +19,11 @@ import (
 
 func TestTracerSpanManagementWithoutSkippingOnMissingParentSpan(t *testing.T) {
 	t.Parallel()
+
+	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(
+		propagation.TraceContext{},
+		propagation.Baggage{},
+	))
 
 	mtracer := mocks.NewMockTracer()
 	parentSpanContext := trace.NewSpanContext(trace.SpanContextConfig{
