@@ -171,7 +171,9 @@ Since not every service in a multi-service system may set or understand the abov
 
 All of these are supported by heimdall. In addition, following propagators can be configured as well:
 
-* `datadog` - https://www.datadoghq.com/product/apm/[Datadog APM Trace Header] propagator.
+* `datadog` - https://www.datadoghq.com/product/apm/[Datadog APM Trace Header] propagator.footnote:[Datadog supports the OTLP protokoll. For that reason, there is no exporter available.]
+
+Configured propagators are used for inbound, as well as for outbound traffic.
 
 === Span Exporters
 
@@ -184,7 +186,7 @@ Span Exporter handle the delivery of spans to external receivers (collectors, or
 
 All of these are supported by heimdall. In addition, following exporters can be configured as well:
 
-* `instana` - https://www.instana.com/[Instana] exporter to export spans in Instana data model.
+* `instana` - https://www.instana.com/[Instana] exporter to export spans in Instana data model.footnote:[Instana supports the W3C header used by OTEL. For that reason, there is no propagator available.]
 
 === Example Configuration
 
@@ -198,7 +200,7 @@ OTEL_EXPORTER_OTLP_TRACES_PROTOCOL=grpc
 OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=http://collector:4317
 ----
 
-If your environment supports Opentelemetry and usage of defaults is ok, most probably, the only required environment variable to be set might be the `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT`.
+If your environment supports OpenTelemetry and usage of defaults is ok, most probably, the only required environment variable to be set might be the `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT`.
 
 == Metrics in Heimdall
 
