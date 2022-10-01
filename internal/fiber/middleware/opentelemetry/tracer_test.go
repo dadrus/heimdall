@@ -176,6 +176,11 @@ func TestTracerSpanManagementWithoutSkippingOnMissingParentSpan(t *testing.T) {
 func TestTracerSpanManagementWithSkippingOnMissingParentSpan(t *testing.T) {
 	t.Parallel()
 
+	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(
+		propagation.TraceContext{},
+		propagation.Baggage{},
+	))
+
 	mtracer := mocks.NewMockTracer()
 	parentSpanContext := trace.NewSpanContext(trace.SpanContextConfig{
 		TraceID: trace.TraceID{1},
@@ -259,6 +264,11 @@ func TestTracerSpanManagementWithSkippingOnMissingParentSpan(t *testing.T) {
 
 func TestSpanIsSetToContextToEnablePropagationToUpstreamServices(t *testing.T) {
 	t.Parallel()
+
+	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(
+		propagation.TraceContext{},
+		propagation.Baggage{},
+	))
 
 	// GIVEN
 	app := fiber.New()
