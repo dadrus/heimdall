@@ -95,8 +95,8 @@ log:
   format: text
 
 tracing:
-  service_name: heimdall
-  provider: jaeger
+  enabled: true
+  processor: batch
 
 metrics:
   prometheus:

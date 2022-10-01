@@ -148,7 +148,57 @@ Otherwise, if you configure it to use `gelf` format, the output will look as fol
 
 == Tracing in Heimdall
 
-See link:{{< relref "/docs/configuration/observability/tracing.adoc" >}}[Tracing Configuration].
+Heimdall makes use of https://opentelemetry.io/[OpenTelemetry] for distributed tracing to support recording of paths taken by requests and supports all environment variables including the defined values according to https://opentelemetry.io/docs/reference/specification/sdk-environment-variables/[OpenTelemetry Environment Variable Specification]. In addition to these environment variables, heimdall defines its own tracing options, which are described in link:{{< relref "/docs/configuration/observability/tracing.adoc" >}}[Tracing Configuration] and can be used to tune the behaviour.
+
+NOTE: Tracing is enabled by default.
+
+On one hand, this chapter serves the purpose of a quick introduction to distributed tracing with heimdall and on the other hand to list the options that go beyond the standard OTEL definitions.
+
+=== Tracing Context Propagation
+
+When a request arrives at heimdall, it will create a trace context object based on the received headers, which according to OTEL are the `traceparent` and `tracestate` HTTP headers, defined in https://www.w3.org/TR/trace-context/[W3C Trace Context] as well as `baggage` HTTP header, defined in https://www.w3.org/TR/baggage/[W3C Baggage]. The creation of that context, as well as the transformation of it into new HTTP headers, set by heimdall while communicating with further services is named propagation and the components responsible for the creation of such context object are named propagators.
+
+Since not every service in a multi-service system may set or understand the above OTEL specific HTTP headers (as these might still be using tracing vendor specific headers), interoperability can be achieved by configuring the required propagators by making use of the `OTEL_PROPAGATORS` environment variable. OTEL defines the following values for this variable:
+
+* `tracecontext` - https://www.w3.org/TR/trace-context/[W3C Trace Context] propagator. Enabled by default, if `OTEL_PROPAGATORS` is not set.
+* `baggage` - https://www.w3.org/TR/baggage/[W3C Baggage] propagator. Enabled by default if `OTEL_PROPAGATORS` is not set.
+* `b3` - https://github.com/openzipkin/b3-propagation#single-header[Zipkin B3 Single Header] propagator.
+* `b3multi` - https://github.com/openzipkin/b3-propagation#multiple-headers[Zipkin B3 Multiple Header] propagator.
+* `jaeger` - https://www.jaegertracing.io/docs/1.38/client-libraries/#propagation-format[Jaeger Header] propagator.
+* `xray` - https://docs.aws.amazon.com/xray/latest/devguide/xray-concepts.html#xray-concepts-tracingheader[AWS X-Ray Header] propagator.
+* `ottrace` - https://github.com/opentracing?q=basic&type=&language=[OT Trace Header] propagator.
+* `none` - No automatically configured propagator.
+
+All of these are supported by heimdall. In addition, following propagators can be configured as well:
+
+* `datadog` - https://www.datadoghq.com/product/apm/[Datadog APM Trace Header] propagator.
+
+=== Span Exporters
+
+Span Exporter handle the delivery of spans to external receivers (collectors, or agents). This is the final component in the trace export pipeline and typically provided by the APM vendor, like Jaeger, Zipkin, Instana, etc. Since not every multi-service system may have an up to day telemetry receiver, which supports protocols defined by OTEL, interoperability can be achieved by configuring the required exporters by making use of the `OTEL_TRACES_EXPORTER` environment variable. OTEL defines the following values for this variable:
+
+* `otlp` - https://opentelemetry.io/docs/reference/specification/protocol/otlp/[OTLP] exporter. Enabled by default if `OTEL_TRACES_EXPORTER` is not set.
+* `jaeger` - https://github.com/jaegertracing/jaeger-idl/blob/main/thrift/jaeger.thrift[Jaeger Thrift] exporter to export spans in Jaeger data model.
+* `zipkin` - https://zipkin.io/zipkin-api/[Zipkin] exporter to export spans in Zipkin data model.
+* `none` - No automatically configured exporter for traces.
+
+All of these are supported by heimdall. In addition, following exporters can be configured as well:
+
+* `instana` - https://www.instana.com/[Instana] exporter to export spans in Instana data model.
+
+=== Example Configuration
+
+The environment variables set below configure heimdall to use Jaeger propagator and to export the spans via OTLP over grpc to the collector available under `\http://collector:4317`.
+
+[source,text]
+----
+OTEL_PROPAGATORS=jaeger
+OTEL_TRACES_EXPORTER=otlp
+OTEL_EXPORTER_OTLP_TRACES_PROTOCOL=grpc
+OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=http://collector:4317
+----
+
+If your environment supports Opentelemetry and usage of defaults is ok, most probably, the only required environment variable to be set might be the `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT`.
 
 == Metrics in Heimdall
 
