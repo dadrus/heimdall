@@ -20,7 +20,7 @@ var (
 	ErrFailedCreatingInstanaExporter = errors.New("failed creating instana exporter")
 	ErrUnsupportedExporterType       = errors.New("unsupported exporter type")
 	ErrUnsupportedOTLPProtocol       = errors.New("unsupported OTLP protocol")
-	ErrDuplicateRegistration         = errors.New("duplicate registration")
+	ErrDuplicateRegistration         = errors.New("duplicate exporter registration")
 	ErrFailedCreatingExporter        = errors.New("failed creating exporter")
 )
 
@@ -31,13 +31,15 @@ type SpanExporterFactory func(ctx context.Context) (trace.SpanExporter, error)
 var exporters = &registry{ //nolint:gochecknoglobals
 	names: map[string]SpanExporterFactory{
 		"otlp": func(ctx context.Context) (trace.SpanExporter, error) {
-			switch envOr(otelExporterOtlpTracesProtocolEnvKey, "http/protobuf") {
+			val := envOr(otelExporterOtlpTracesProtocolEnvKey, "http/protobuf")
+
+			switch val {
 			case "grpc":
 				return otlptracegrpc.New(ctx)
 			case "http/protobuf":
 				return otlptracehttp.New(ctx)
 			default:
-				return nil, ErrUnsupportedOTLPProtocol
+				return nil, errorchain.NewWithMessage(ErrUnsupportedOTLPProtocol, val)
 			}
 		},
 		"zipkin": func(ctx context.Context) (trace.SpanExporter, error) {
@@ -46,21 +48,16 @@ var exporters = &registry{ //nolint:gochecknoglobals
 		"jaeger": func(ctx context.Context) (trace.SpanExporter, error) {
 			return jaeger.New(jaeger.WithAgentEndpoint())
 		},
-		"instana": func(ctx context.Context) (trace.SpanExporter, error) {
-			var (
-				err error
-				ok  bool
-			)
-
+		"instana": func(ctx context.Context) (exp trace.SpanExporter, err error) { //nolint:nonamedreturns
 			defer func() {
 				if r := recover(); r != nil {
-					if err, ok = r.(error); !ok {
-						err = errorchain.NewWithMessage(ErrFailedCreatingInstanaExporter, fmt.Sprintf("%v", r))
-					}
+					err = errorchain.NewWithMessage(ErrFailedCreatingInstanaExporter, fmt.Sprintf("%s", r))
 				}
 			}()
 
-			return instana.New(), err
+			exp = instana.New()
+
+			return exp, err
 		},
 	},
 }
@@ -82,6 +79,12 @@ func (r *registry) store(key string, value SpanExporterFactory) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
+	if r.names == nil {
+		r.names = map[string]SpanExporterFactory{key: value}
+
+		return nil
+	}
+
 	if _, ok := r.names[key]; ok {
 		return errorchain.NewWithMessage(ErrDuplicateRegistration, key)
 	}
@@ -91,13 +94,19 @@ func (r *registry) store(key string, value SpanExporterFactory) error {
 	return nil
 }
 
+func (r *registry) remove(key string) {
+	r.mu.Lock()
+	delete(r.names, key)
+	r.mu.Unlock()
+}
+
 func RegisterSpanExporterFactory(name string, factory SpanExporterFactory) {
 	if err := exporters.store(name, factory); err != nil {
 		panic(err)
 	}
 }
 
-func spanExporters(ctx context.Context, names ...string) ([]trace.SpanExporter, error) {
+func createSpanExporters(ctx context.Context, names ...string) ([]trace.SpanExporter, error) {
 	var exps []trace.SpanExporter //nolint:prealloc
 
 	for _, name := range names {

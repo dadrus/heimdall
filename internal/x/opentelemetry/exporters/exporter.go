@@ -20,8 +20,8 @@ const otelTracesExportersEnvKey = "OTEL_TRACES_EXPORTER"
 func New(ctx context.Context) ([]trace.SpanExporter, error) {
 	exporterNames, ok := os.LookupEnv(otelTracesExportersEnvKey)
 	if !ok {
-		return spanExporters(ctx)
+		return createSpanExporters(ctx)
 	}
 
-	return spanExporters(ctx, strings.Split(exporterNames, ",")...)
+	return createSpanExporters(ctx, strings.Split(exporterNames, ",")...)
 }
