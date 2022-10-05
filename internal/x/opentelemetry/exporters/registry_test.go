@@ -97,7 +97,6 @@ func TestRegistryExistentLoad(t *testing.T) {
 }
 
 func TestRegisterSpanExporterFactory(t *testing.T) {
-	t.Parallel()
 	t.Cleanup(func() { exporters.remove("custom") })
 
 	// WHEN
@@ -113,8 +112,6 @@ func TestRegisterSpanExporterFactory(t *testing.T) {
 }
 
 func TestDuplicateRegisterSpanExporterFactoryPanics(t *testing.T) {
-	t.Parallel()
-
 	// GIVEN
 	name := "custom"
 	factory := func(ctx context.Context) (trace.SpanExporter, error) { return nil, ErrTest }
@@ -132,8 +129,6 @@ func TestDuplicateRegisterSpanExporterFactoryPanics(t *testing.T) {
 }
 
 func TestCreateSpanExporters(t *testing.T) {
-	t.Parallel()
-
 	for _, tc := range []struct {
 		uc     string
 		names  []string
