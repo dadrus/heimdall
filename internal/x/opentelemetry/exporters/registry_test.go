@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/dadrus/heimdall/internal/x"
 	instana "github.com/instana/go-otel-exporter"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -14,6 +13,8 @@ import (
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
 	"go.opentelemetry.io/otel/exporters/zipkin"
 	"go.opentelemetry.io/otel/sdk/trace"
+
+	"github.com/dadrus/heimdall/internal/x"
 )
 
 var ErrTest = errors.New("for test purpose")
@@ -85,13 +86,13 @@ func TestRegistryExistentLoad(t *testing.T) {
 		func(ctx context.Context) (trace.SpanExporter, error) { return nil, ErrTest }))
 
 	// WHEN
-	v, ok := reg.load("existent")
+	value, ok := reg.load("existent")
 
 	// THEN
 	assert.True(t, ok, "registry should hold expected factory")
-	assert.NotNil(t, v)
+	assert.NotNil(t, value)
 
-	_, err := v(context.Background())
+	_, err := value(context.Background())
 	assert.Equal(t, ErrTest, err)
 }
 
