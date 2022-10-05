@@ -43,7 +43,14 @@ func TestAvailablePropagators(t *testing.T) {
 		},
 	} {
 		t.Run(tc.uc, func(t *testing.T) {
+			// GIVEN
+			tc.setup(t)
 
+			// WHEN
+			prop := New()
+
+			// THEN
+			tc.assert(t, prop)
 		})
 	}
 }
