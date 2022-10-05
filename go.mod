@@ -6,7 +6,7 @@ require (
 	github.com/Masterminds/sprig/v3 v3.2.2
 	github.com/ansrivas/fiberprometheus/v2 v2.4.1
 	github.com/dlclark/regexp2 v1.7.0
-	github.com/dop251/goja v0.0.0-20220927172339-ea66e911853d
+	github.com/dop251/goja v0.0.0-20221003171542-5ea1285e6c91
 	github.com/fsnotify/fsnotify v1.5.4
 	github.com/gobwas/glob v0.2.3
 	github.com/goccy/go-json v0.9.11
@@ -39,7 +39,7 @@ require (
 	go.opentelemetry.io/otel/sdk v1.10.0
 	go.opentelemetry.io/otel/trace v1.10.0
 	go.uber.org/fx v1.18.2
-	golang.org/x/exp v0.0.0-20221002003631-540bb7301a08
+	golang.org/x/exp v0.0.0-20221004215720-b9f4876ce741
 	gopkg.in/square/go-jose.v2 v2.6.0
 	gopkg.in/yaml.v3 v3.0.1
 )
