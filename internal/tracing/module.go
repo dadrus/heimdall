@@ -20,10 +20,10 @@ import (
 // Module is used on app bootstrap.
 // nolint: gochecknoglobals
 var Module = fx.Options(
-	fx.Invoke(registerTracer),
+	fx.Invoke(initializeOTEL),
 )
 
-func registerTracer(lifecycle fx.Lifecycle, conf config.Configuration, logger zerolog.Logger) error {
+func initializeOTEL(lifecycle fx.Lifecycle, conf config.Configuration, logger zerolog.Logger) error {
 	if !conf.Tracing.Enabled {
 		logger.Info().Msg("Opentelemetry tracing disabled.")
 
@@ -60,9 +60,13 @@ func registerTracer(lifecycle fx.Lifecycle, conf config.Configuration, logger ze
 	otel.SetTextMapPropagator(propagators.New())
 	otel.SetErrorHandler(otel.ErrorHandlerFunc(func(err error) { logger.Error().Err(err).Msg("OTEL Error") }))
 
-	logger.Info().Msg("Opentelemetry tracing initialized.")
+	lifecycle.Append(fx.Hook{OnStop: func(ctx context.Context) error {
+		logger.Info().Msg("Tearing down Opentelemetry provider")
 
-	lifecycle.Append(fx.Hook{OnStop: func(ctx context.Context) error { return provider.Shutdown(ctx) }})
+		return provider.Shutdown(ctx)
+	}})
+
+	logger.Info().Msg("Opentelemetry tracing initialized.")
 
 	return nil
 }
