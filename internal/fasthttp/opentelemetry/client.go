@@ -86,7 +86,11 @@ func (c *WrappedClient) startSpan(ctx context.Context, req *fasthttp.Request) sp
 		return dummyFinisher{}
 	}
 
-	operationName := fmt.Sprintf("%s %s", string(req.Host()), string(req.URI().Path()))
+	operationName := fmt.Sprintf("%s %s %s @%s",
+		string(req.Header.Protocol()),
+		string(req.Header.Method()),
+		string(req.URI().Path()),
+		string(req.Host()))
 	ctx, span := tracer.Start(ctx, operationName,
 		trace.WithSpanKind(trace.SpanKindClient),
 		trace.WithAttributes(semconv.HTTPClientAttributesFromHTTPRequest(httpReq)...))
