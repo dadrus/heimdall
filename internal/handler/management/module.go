@@ -44,7 +44,7 @@ func newFiberApp(conf config.Configuration, logger zerolog.Logger) *fiber.App {
 	app.Use(accesslogmiddleware.New(logger))
 	app.Use(loggermiddlerware.New(logger))
 	app.Use(tracingmiddleware.New(
-		tracingmiddleware.WithTracer(otel.GetTracerProvider().Tracer("github.com/dadrus/heimdall/decision")),
+		tracingmiddleware.WithTracer(otel.GetTracerProvider().Tracer("github.com/dadrus/heimdall/management")),
 		tracingmiddleware.WithOperationFilter(func(ctx *fiber.Ctx) bool { return ctx.Path() == EndpointHealth })))
 
 	if service.CORS != nil {
