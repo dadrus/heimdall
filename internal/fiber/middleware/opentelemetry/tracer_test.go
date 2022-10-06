@@ -65,7 +65,7 @@ func TestTracerSpanManagementWithoutSkippingOnMissingParentSpan(t *testing.T) {
 				assert.NotEqual(t, parentSpanContext.SpanID(), spans[0].SpanContext().SpanID())
 				assert.NotEqual(t, parentSpanContext.TraceID(), spans[0].SpanContext().TraceID())
 
-				assert.Equal(t, "HTTP GET URL: /test", spans[0].Name)
+				assert.Equal(t, "EntryPoint http 0.0.0.0:0/test", spans[0].Name)
 				assert.Equal(t, trace.SpanKindServer, spans[0].SpanKind)
 
 				attributes := spans[0].Attributes
@@ -95,7 +95,7 @@ func TestTracerSpanManagementWithoutSkippingOnMissingParentSpan(t *testing.T) {
 				assert.NotEqual(t, parentSpanContext.SpanID(), spans[0].SpanContext().SpanID())
 				assert.NotEqual(t, parentSpanContext.TraceID(), spans[0].SpanContext().TraceID())
 
-				assert.Equal(t, "HTTP POST URL: /test", spans[0].Name)
+				assert.Equal(t, "EntryPoint http 0.0.0.0:0/test", spans[0].Name)
 				assert.Equal(t, trace.SpanKindServer, spans[0].SpanKind)
 
 				attributes := spans[0].Attributes
@@ -129,7 +129,7 @@ func TestTracerSpanManagementWithoutSkippingOnMissingParentSpan(t *testing.T) {
 				assert.Equal(t, parentSpanContext.SpanID(), spans[0].ParentSpanID)
 				assert.Equal(t, parentSpanContext.TraceID(), spans[0].SpanContext().TraceID())
 
-				assert.Equal(t, "HTTP GET URL: /test", spans[0].Name)
+				assert.Equal(t, "EntryPoint http 0.0.0.0:0/test", spans[0].Name)
 				assert.Equal(t, trace.SpanKindServer, spans[0].SpanKind)
 
 				attributes := spans[0].Attributes
@@ -228,7 +228,7 @@ func TestTracerSpanManagementWithSkippingOnMissingParentSpan(t *testing.T) {
 				assert.Equal(t, parentSpanContext.SpanID(), spans[0].ParentSpanID)
 				assert.Equal(t, parentSpanContext.TraceID(), spans[0].SpanContext().TraceID())
 
-				assert.Equal(t, "HTTP GET URL: /test", spans[0].Name)
+				assert.Equal(t, "EntryPoint http 0.0.0.0:0/test", spans[0].Name)
 				assert.Equal(t, trace.SpanKindServer, spans[0].SpanKind)
 
 				attributes := spans[0].Attributes
@@ -297,7 +297,7 @@ func TestSpanIsSetToContextToEnablePropagationToUpstreamServices(t *testing.T) {
 	impl, ok := span.(*mocks.MockSpan)
 	require.True(t, ok)
 
-	assert.Equal(t, "HTTP GET URL: /test", impl.Name)
+	assert.Equal(t, "EntryPoint http 0.0.0.0:0/test", impl.Name)
 	assert.Equal(t, trace.SpanKindServer, impl.SpanKind)
 
 	attributes := impl.Attributes

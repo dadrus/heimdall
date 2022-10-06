@@ -7,6 +7,7 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -53,7 +54,7 @@ func (e Endpoint) CreateClient(peerName string) *http.Client {
 		Transport: otelhttp.NewTransport(
 			http.DefaultTransport,
 			otelhttp.WithSpanNameFormatter(func(_ string, r *http.Request) string {
-				return peerName + " " + r.URL.Path
+				return fmt.Sprintf("%s %s %s @%s", r.Proto, r.Method, r.URL.Path, peerName)
 			})),
 	}
 
