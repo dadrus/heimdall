@@ -48,10 +48,10 @@ func newFiberApp(conf config.Configuration, cache cache.Cache, logger zerolog.Lo
 		JSONEncoder: json.Marshal,
 	})
 	app.Use(recover.New(recover.Config{EnableStackTrace: true}))
-	app.Use(accesslogmiddleware.New(logger))
-	app.Use(loggermiddlerware.New(logger))
 	app.Use(tracingmiddleware.New(
 		tracingmiddleware.WithTracer(otel.GetTracerProvider().Tracer("github.com/dadrus/heimdall/proxy"))))
+	app.Use(accesslogmiddleware.New(logger))
+	app.Use(loggermiddlerware.New(logger))
 
 	if service.CORS != nil {
 		app.Use(cors.New(cors.Config{
