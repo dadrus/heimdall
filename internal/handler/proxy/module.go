@@ -8,9 +8,8 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/recover"
-	"github.com/opentracing/opentracing-go"
-	"github.com/opentracing/opentracing-go/ext"
 	"github.com/rs/zerolog"
+	"go.opentelemetry.io/otel"
 	"go.uber.org/fx"
 
 	"github.com/dadrus/heimdall/internal/cache"
@@ -19,8 +18,8 @@ import (
 	cachemiddleware "github.com/dadrus/heimdall/internal/fiber/middleware/cache"
 	errorhandlermiddleware "github.com/dadrus/heimdall/internal/fiber/middleware/errorhandler"
 	loggermiddlerware "github.com/dadrus/heimdall/internal/fiber/middleware/logger"
+	tracingmiddleware "github.com/dadrus/heimdall/internal/fiber/middleware/opentelemetry"
 	fiberproxy "github.com/dadrus/heimdall/internal/fiber/middleware/proxyheader"
-	fibertracing "github.com/dadrus/heimdall/internal/fiber/middleware/tracing"
 	"github.com/dadrus/heimdall/internal/x"
 )
 
@@ -51,11 +50,8 @@ func newFiberApp(conf config.Configuration, cache cache.Cache, logger zerolog.Lo
 	app.Use(recover.New(recover.Config{EnableStackTrace: true}))
 	app.Use(accesslogmiddleware.New(logger))
 	app.Use(loggermiddlerware.New(logger))
-	app.Use(fibertracing.New(
-		fibertracing.WithTracer(opentracing.GlobalTracer()),
-		fibertracing.WithSpanObserver(func(span opentracing.Span, ctx *fiber.Ctx) {
-			ext.Component.Set(span, "heimdall")
-		})))
+	app.Use(tracingmiddleware.New(
+		tracingmiddleware.WithTracer(otel.GetTracerProvider().Tracer("github.com/dadrus/heimdall/proxy"))))
 
 	if service.CORS != nil {
 		app.Use(cors.New(cors.Config{

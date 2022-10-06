@@ -1,6 +1,11 @@
 package config
 
+const (
+	SpanProcessorSimple = "simple"
+	SpanProcessorBatch  = "batch"
+)
+
 type TracingConfig struct {
-	ServiceName string `koanf:"service_name"`
-	Provider    string `koanf:"provider"`
+	Enabled           bool   `koanf:"enabled"`
+	SpanProcessorType string `koanf:"span_processor"`
 }

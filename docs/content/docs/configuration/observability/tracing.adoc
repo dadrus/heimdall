@@ -9,50 +9,43 @@ menu:
     parent: "Observability"
 ---
 
-Heimdall allows visualization of call flows in your infrastructure. It does this by using https://opentracing.io/[OpenTracing], an open standard designed for distributed tracing.
-
-Following tracing backends are currently supported:
-
-* https://www.jaegertracing.io/[Jaeger]
-* https://www.instana.com/[Instana]
+Heimdall makes use of https://opentelemetry.io/[OpenTelemetry] for distributed tracing to support recording of paths taken by requests as they propagate through multi-service architectures and supports all environment variables including the defined values according to https://opentelemetry.io/docs/reference/specification/sdk-environment-variables/[OpenTelemetry Environment Variable Specification].
 
 == Configuration
 
-By default, tracing is disabled, but can be configured in the `tracing` property of heimdall's configuration and supports following properties.
+By default, tracing is enabled and can be disabled and slightly tuned in the `tracing` property of heimdall's configuration, which has the following properties.
 
-* *`provider`*: _string_ (mandatory)
+* *`enabled`*: _boolean_ (optional)
 +
-By making use of this property, you can configure heimdall to enable tracing and use one of the supported tracing providers:
+By making use of this property, you can configure heimdall to enable or disable tracing. Defaults to `true` (tracing enabled).
 +
---
-** `jaeger` - to use https://www.jaegertracing.io/[Jaeger]
-** `instana` - to use https://www.instana.com/[Instana]
---
-+
-Further configuration of the tracer happens with tracer specific environment variables. If you don't do this, Heimdall makes use of tracer specific defaults. Head over to the configuration documentation of the supported tracing system, you want to use, for more details.
-+
-.Enabling tracing with Jaeger.
+.Disabling tracing.
 ====
 [source, yaml]
 ----
 tracing:
-  provider: jaeger
+  enabled: false
 ----
-
-By default, Jaeger client assumes the agent is running on the same host. You can however, as mentioned above, change it by making use of `JAEGER_AGENT_HOST` environment variable.
 ====
 
-* *`service_name`*: _string_ (optional)
+* *`span_processor`*: _string_ (optional)
 +
-By setting this property, you can adjust the service name, appearing for Heimdall for your tracing backend. Defaults to `heimdall`. You can also override this value by making use of tracer specific configuration via environment variables.
+With `simple` and `batch` being the available options. By setting this property, you can define how heimdall shall process the created spans. Defaults to `batch`. This property is only there, as there is no corresponding setting option via OTEL tracing environment variables available.
 +
-.Setting the service name, appearing for Heimdall in your tracing backend to `foobar`.
+.Setting the span processor to export completed spans in batches.
 ====
 [source, yaml]
 ----
 tracing:
-  service_name: foobar
+  span_processor: batch
 ----
 ====
++
+Description of the options:
++
+** `simple` - Configures heimdall to synchronously export the created spans via configured exporters. This is not recommended for production use as it is slow and has a high computation resource usage overhead. It might be however good for testing, debugging, or showing examples of other features.
+** `batch` - Configures heimdall to send completed span batches to the exporter. Recommended setting for production use.
+
+Further configuration of the tracing system happens via https://opentelemetry.io/docs/reference/specification/sdk-environment-variables/[OpenTelemetry Environment Variables]. Head over to link:{{< relref "/docs/operations/observability.adoc#_tracing_in_heimdall" >}}[Observability] section and the referenced OTEL documentation for more details.
 
 

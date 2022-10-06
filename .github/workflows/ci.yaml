@@ -10,7 +10,7 @@ on:
 
 env:
   GO_VERSION: 1.19
-  GOLANGCI_LINT_VERSION: v1.49.0
+  GOLANGCI_LINT_VERSION: v1.50.0
   DOCUMENTATION_URL: https://dadrus.github.io/heimdall/
 
 jobs:
@@ -114,7 +114,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
       - name: Build
-        run: CGO_ENABLED=0 GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -trimpath -ldflags="-buildid= -w -s -X github.com/dadrus/heimdall/cmd.Version=${{ github.sha }}" -o ./build/
+        run: CGO_ENABLED=0 GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -trimpath -ldflags="-buildid= -w -s -X github.com/dadrus/heimdall/version.Version=${{ github.sha }}" -o ./build/
       - uses: actions/upload-artifact@v3
         if: github.event_name != 'pull_request'
         with:
@@ -151,7 +151,7 @@ jobs:
           goversion: ${{ env.GO_VERSION }}
           goos: ${{ matrix.goos }}
           goarch: ${{ matrix.goarch }}
-          ldflags: "-buildid= -w -s -X main.Version=${{ needs.prepare-release.outputs.tag_name }}"
+          ldflags: "-buildid= -w -s -X github.com/dadrus/heimdall/version.Version=${{ needs.prepare-release.outputs.tag_name }}"
           build_flags: -trimpath
           sha256sum: true
           md5sum: false

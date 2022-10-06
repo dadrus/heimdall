@@ -1,4 +1,4 @@
-package tracing
+package opentelemetry
 
 import (
 	"reflect"
@@ -6,9 +6,10 @@ import (
 	"testing"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/opentracing/opentracing-go"
-	"github.com/opentracing/opentracing-go/mocktracer"
 	"github.com/stretchr/testify/assert"
+	"go.opentelemetry.io/otel/trace"
+
+	"github.com/dadrus/heimdall/internal/x/opentelemetry/mocks"
 )
 
 func TestOptionsWithTracer(t *testing.T) {
@@ -17,7 +18,7 @@ func TestOptionsWithTracer(t *testing.T) {
 	for _, tc := range []struct {
 		uc     string
 		opt    opts
-		tracer opentracing.Tracer
+		tracer trace.Tracer
 		assert func(t *testing.T, opt *opts)
 	}{
 		{
@@ -32,11 +33,11 @@ func TestOptionsWithTracer(t *testing.T) {
 		{
 			uc:     "not nil tracer",
 			opt:    defaultOptions,
-			tracer: &mocktracer.MockTracer{},
+			tracer: mocks.NewMockTracer(),
 			assert: func(t *testing.T, opt *opts) {
 				t.Helper()
 
-				assert.IsType(t, &mocktracer.MockTracer{}, opt.tracer)
+				assert.IsType(t, &mocks.MockTracer{}, opt.tracer)
 			},
 		},
 	} {
@@ -77,7 +78,7 @@ func TestOptionsWithSpanObserver(t *testing.T) {
 		{
 			uc:       "not nil span observer",
 			opt:      defaultOptions,
-			observer: func(span opentracing.Span, _ *fiber.Ctx) {},
+			observer: func(_ *fiber.Ctx, span trace.Span) {},
 			assert: func(t *testing.T, opt *opts) {
 				t.Helper()
 

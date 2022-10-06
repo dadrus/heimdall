@@ -8,16 +8,15 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/recover"
-	"github.com/opentracing/opentracing-go"
-	"github.com/opentracing/opentracing-go/ext"
 	"github.com/rs/zerolog"
+	"go.opentelemetry.io/otel"
 	"go.uber.org/fx"
 
 	"github.com/dadrus/heimdall/internal/config"
 	accesslogmiddleware "github.com/dadrus/heimdall/internal/fiber/middleware/accesslog"
 	errorhandlermiddleware "github.com/dadrus/heimdall/internal/fiber/middleware/errorhandler"
 	loggermiddlerware "github.com/dadrus/heimdall/internal/fiber/middleware/logger"
-	fibertracing "github.com/dadrus/heimdall/internal/fiber/middleware/tracing"
+	tracingmiddleware "github.com/dadrus/heimdall/internal/fiber/middleware/opentelemetry"
 )
 
 var Module = fx.Options( // nolint: gochecknoglobals
@@ -44,12 +43,9 @@ func newFiberApp(conf config.Configuration, logger zerolog.Logger) *fiber.App {
 	app.Use(recover.New(recover.Config{EnableStackTrace: true}))
 	app.Use(accesslogmiddleware.New(logger))
 	app.Use(loggermiddlerware.New(logger))
-	app.Use(fibertracing.New(
-		fibertracing.WithTracer(opentracing.GlobalTracer()),
-		fibertracing.WithOperationFilter(func(ctx *fiber.Ctx) bool { return ctx.Path() == EndpointHealth }),
-		fibertracing.WithSpanObserver(func(span opentracing.Span, ctx *fiber.Ctx) {
-			ext.Component.Set(span, "heimdall")
-		})))
+	app.Use(tracingmiddleware.New(
+		tracingmiddleware.WithTracer(otel.GetTracerProvider().Tracer("github.com/dadrus/heimdall/management")),
+		tracingmiddleware.WithOperationFilter(func(ctx *fiber.Ctx) bool { return ctx.Path() == EndpointHealth })))
 
 	if service.CORS != nil {
 		app.Use(cors.New(cors.Config{

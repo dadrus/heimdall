@@ -7,20 +7,20 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"net/url"
 	"time"
 
-	"github.com/opentracing-contrib/go-stdlib/nethttp"
 	"github.com/rs/zerolog"
 	"github.com/ybbus/httpretry"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/pipeline/renderer"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
-	"github.com/dadrus/heimdall/internal/x/tracing"
 )
 
 type Endpoint struct {
@@ -51,7 +51,11 @@ func (e Endpoint) Validate() error {
 
 func (e Endpoint) CreateClient(peerName string) *http.Client {
 	client := &http.Client{
-		Transport: &tracing.RoundTripper{Next: &nethttp.Transport{}, TargetName: peerName},
+		Transport: otelhttp.NewTransport(
+			http.DefaultTransport,
+			otelhttp.WithSpanNameFormatter(func(_ string, r *http.Request) string {
+				return fmt.Sprintf("%s %s %s @%s", r.Proto, r.Method, r.URL.Path, peerName)
+			})),
 	}
 
 	if e.Retry != nil {
@@ -128,12 +132,12 @@ func (e Endpoint) SendRequest(ctx context.Context, body io.Reader, renderer rend
 		return nil, errorchain.New(heimdall.ErrCommunication).CausedBy(err)
 	}
 
+	defer resp.Body.Close()
+
 	return e.readResponse(resp)
 }
 
 func (e Endpoint) readResponse(resp *http.Response) ([]byte, error) {
-	defer resp.Body.Close()
-
 	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
 		rawData, err := io.ReadAll(resp.Body)
 		if err != nil {

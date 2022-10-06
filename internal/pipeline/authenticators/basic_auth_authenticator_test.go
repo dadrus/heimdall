@@ -329,7 +329,7 @@ password: bar`))
 		assert           func(t *testing.T, err error, sub *subject.Subject)
 	}{
 		{
-			uc: "no no required header present",
+			uc: "no required header present",
 			id: "auth3",
 			configureContext: func(t *testing.T, ctx *mocks.MockContext) {
 				t.Helper()

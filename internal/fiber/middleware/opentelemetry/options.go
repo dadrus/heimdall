@@ -1,18 +1,18 @@
-package tracing
+package opentelemetry
 
 import (
 	"github.com/gofiber/fiber/v2"
-	"github.com/opentracing/opentracing-go"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type (
-	SpanObserver          func(opentracing.Span, *fiber.Ctx)
+	SpanObserver          func(*fiber.Ctx, trace.Span)
 	OperationNameProvider func(*fiber.Ctx) string
 	OperationFilter       func(*fiber.Ctx) bool
 )
 
 type opts struct {
-	tracer                 opentracing.Tracer
+	tracer                 trace.Tracer
 	spanObserver           SpanObserver
 	operationName          OperationNameProvider
 	filterOperation        OperationFilter
@@ -21,7 +21,7 @@ type opts struct {
 
 type Option func(*opts)
 
-func WithTracer(tracer opentracing.Tracer) Option {
+func WithTracer(tracer trace.Tracer) Option {
 	return func(o *opts) {
 		if tracer != nil {
 			o.tracer = tracer

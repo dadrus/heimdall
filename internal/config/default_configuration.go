@@ -50,7 +50,8 @@ var defaultConfig = Configuration{
 		Format: LogTextFormat,
 	},
 	Tracing: TracingConfig{
-		ServiceName: "heimdall",
+		Enabled:           true,
+		SpanProcessorType: SpanProcessorBatch,
 	},
 	Metrics: MetricsConfig{
 		Prometheus: PrometheusConfig{

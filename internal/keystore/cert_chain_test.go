@@ -232,7 +232,7 @@ func (suite *CertChainTestSuite) TestFindChain() {
 			},
 		},
 		{
-			uc:     "can find chain, but is is incomplete due to missing intermediate CA",
+			uc:     "can find chain, but is incomplete due to missing intermediate CA",
 			eeCert: suite.ee1.Certificate,
 			certPool: []*x509.Certificate{
 				suite.intCA2.Certificate, suite.rootCA1.Certificate,

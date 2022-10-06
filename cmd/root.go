@@ -4,17 +4,17 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
+
+	"github.com/dadrus/heimdall/version"
 )
 
 // nolint: gochecknoglobals
 var (
-	Version = "master"
-
 	// RootCmd represents the base command when called without any subcommands.
 	RootCmd = &cobra.Command{
 		Use:     "heimdall",
 		Short:   "A cloud native Access and Identity Proxy",
-		Version: Version,
+		Version: version.Version,
 	}
 )
 

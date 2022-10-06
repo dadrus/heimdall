@@ -10,7 +10,7 @@ import (
 	"github.com/dadrus/heimdall/internal/config"
 )
 
-func redirStdout(exec func()) ([]byte, error) {
+func redirectStdout(exec func()) ([]byte, error) {
 	tempFile, err := os.CreateTemp("", "logconfig-test")
 	if err != nil {
 		return nil, err
@@ -35,7 +35,7 @@ func redirStdout(exec func()) ([]byte, error) {
 
 func TestNewTextLogger(t *testing.T) {
 	// WHEN
-	data, err := redirStdout(func() {
+	data, err := redirectStdout(func() {
 		logger := NewLogger(config.LoggingConfig{Format: config.LogTextFormat})
 
 		logger.Info().Msg("Hello Heimdall")
@@ -49,7 +49,7 @@ func TestNewTextLogger(t *testing.T) {
 
 func TestNewGelfLogger(t *testing.T) {
 	// WHEN
-	data, err := redirStdout(func() {
+	data, err := redirectStdout(func() {
 		logger := NewLogger(config.LoggingConfig{Format: config.LogGelfFormat})
 
 		logger.Info().Msg("Hello Heimdall")
