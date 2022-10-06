@@ -9,10 +9,10 @@ type HeaderMatcher map[string][]string
 func (hm HeaderMatcher) Match(headers map[string]string) bool {
 	for name, valueList := range hm {
 		headerVal, found := headers[name]
-		if !found || !slices.Contains(valueList, headerVal) {
-			return false
+		if found && slices.Contains(valueList, headerVal) {
+			return true
 		}
 	}
 
-	return true
+	return false
 }
