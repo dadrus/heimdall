@@ -114,14 +114,7 @@ func toHTTPRequest(req *fasthttp.Request) (*http.Request, error) {
 	r.Host = string(req.URI().Host())
 	r.Body = io.NopCloser(bytes.NewReader(body))
 	r.URL = rURL
-
-	if r.Header == nil {
-		r.Header = make(http.Header)
-	} else if len(r.Header) > 0 {
-		for k := range r.Header {
-			delete(r.Header, k)
-		}
-	}
+	r.Header = make(http.Header)
 
 	req.Header.VisitAll(func(k, v []byte) {
 		sk := string(k)
