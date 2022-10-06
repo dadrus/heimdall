@@ -12,7 +12,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/valyala/fasthttp"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/propagation"
 	semconv "go.opentelemetry.io/otel/semconv/v1.12.0"
 	"go.opentelemetry.io/otel/trace"
 
@@ -21,6 +23,11 @@ import (
 
 func TestWrappedClientDoTimeout(t *testing.T) {
 	t.Parallel()
+
+	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(
+		propagation.TraceContext{},
+		propagation.Baggage{},
+	))
 
 	mtracer := otelmock.NewMockTracer()
 	parentSpanContext := trace.NewSpanContext(trace.SpanContextConfig{
@@ -106,6 +113,8 @@ func TestWrappedClientDoTimeout(t *testing.T) {
 				assert.Contains(t, attributes, semconv.HTTPStatusCodeKey.Int64(200))
 				assert.Contains(t, attributes, attribute.Int64("status.code", 0))
 				assert.Contains(t, attributes, attribute.String("status.message", ""))
+
+				assert.NotEmpty(t, req.Header.Peek("Traceparent"))
 			},
 		},
 		{
@@ -143,6 +152,8 @@ func TestWrappedClientDoTimeout(t *testing.T) {
 				assert.Contains(t, attributes, semconv.HTTPMethodKey.String("GET"))
 				assert.Contains(t, attributes, attribute.Int64("status.code", 1))
 				assert.Contains(t, attributes, attribute.String("status.message", "timeout"))
+
+				assert.NotEmpty(t, req.Header.Peek("Traceparent"))
 			},
 		},
 		{
@@ -182,6 +193,8 @@ func TestWrappedClientDoTimeout(t *testing.T) {
 				assert.Contains(t, attributes, semconv.HTTPStatusCodeKey.Int64(500))
 				assert.Contains(t, attributes, attribute.Int64("status.code", 1))
 				assert.Contains(t, attributes, attribute.String("status.message", ""))
+
+				assert.NotEmpty(t, req.Header.Peek("Traceparent"))
 			},
 		},
 	} {

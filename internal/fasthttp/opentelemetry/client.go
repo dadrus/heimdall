@@ -12,7 +12,6 @@ import (
 	"github.com/valyala/fasthttp"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/codes"
-	"go.opentelemetry.io/otel/propagation"
 	semconv "go.opentelemetry.io/otel/semconv/v1.12.0"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -21,6 +20,24 @@ const (
 	tracerName    = "github.com/dadrus/heimdall/internal/fasthttp/middleware/opentelemetry"
 	tracerVersion = "semver:0.1.0"
 )
+
+type fasthttpHeaderCarrier struct {
+	header *fasthttp.RequestHeader
+}
+
+func (c *fasthttpHeaderCarrier) Get(key string) string { return string(c.header.Peek(key)) }
+
+func (c *fasthttpHeaderCarrier) Set(key string, value string) { c.header.Set(key, value) }
+
+func (c *fasthttpHeaderCarrier) Keys() []string {
+	var headerNames []string
+
+	c.header.VisitAll(func(key, value []byte) {
+		headerNames = append(headerNames, string(key))
+	})
+
+	return headerNames
+}
 
 func newTracer(tp trace.TracerProvider) trace.Tracer {
 	return tp.Tracer(tracerName, trace.WithInstrumentationVersion(tracerVersion))
@@ -94,7 +111,8 @@ func (c *WrappedClient) startSpan(ctx context.Context, req *fasthttp.Request) sp
 	ctx, span := tracer.Start(ctx, operationName,
 		trace.WithSpanKind(trace.SpanKindClient),
 		trace.WithAttributes(semconv.HTTPClientAttributesFromHTTPRequest(httpReq)...))
-	otel.GetTextMapPropagator().Inject(ctx, propagation.HeaderCarrier(httpReq.Header))
+
+	otel.GetTextMapPropagator().Inject(ctx, &fasthttpHeaderCarrier{header: &req.Header})
 
 	return spanFinisherImpl{
 		span: span,
