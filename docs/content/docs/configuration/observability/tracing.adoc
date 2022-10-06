@@ -28,16 +28,16 @@ tracing:
 ----
 ====
 
-* *`processor`*: _string_ (optional)
+* *`span_processor`*: _string_ (optional)
 +
 With `simple` and `batch` being the available options. By setting this property, you can define how heimdall shall process the created spans. Defaults to `batch`. This property is only there, as there is no corresponding setting option via OTEL tracing environment variables available.
 +
-.Setting the processor to export completed spans in batches.
+.Setting the span processor to export completed spans in batches.
 ====
 [source, yaml]
 ----
 tracing:
-  processor: batch
+  span_processor: batch
 ----
 ====
 +

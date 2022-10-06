@@ -1428,8 +1428,8 @@
           "type": "boolean",
           "default": true
         },
-        "processor": {
-          "description": "The type of the processor to use",
+        "span_processor": {
+          "description": "The type of the span processor to use",
           "type": "string",
           "default": "batch",
           "enum": [

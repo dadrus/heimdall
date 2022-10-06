@@ -96,7 +96,7 @@ log:
 
 tracing:
   enabled: true
-  processor: batch
+  span_processor: batch
 
 metrics:
   prometheus:

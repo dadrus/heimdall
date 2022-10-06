@@ -50,8 +50,8 @@ var defaultConfig = Configuration{
 		Format: LogTextFormat,
 	},
 	Tracing: TracingConfig{
-		Enabled:   true,
-		Processor: "batch",
+		Enabled:           true,
+		SpanProcessorType: SpanProcessorBatch,
 	},
 	Metrics: MetricsConfig{
 		Prometheus: PrometheusConfig{

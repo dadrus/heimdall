@@ -45,7 +45,7 @@ func initializeOTEL(lifecycle fx.Lifecycle, conf config.Configuration, logger ze
 		return err
 	}
 
-	processorOption := x.IfThenElse(conf.Tracing.Processor == "simple",
+	processorOption := x.IfThenElse(conf.Tracing.SpanProcessorType == config.SpanProcessorSimple,
 		trace.WithSyncer,
 		func(exporter trace.SpanExporter) trace.TracerProviderOption { return trace.WithBatcher(exporter) })
 

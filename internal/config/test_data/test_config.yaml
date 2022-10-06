@@ -86,7 +86,7 @@ metrics:
     metrics_path: /metrics
 
 tracing:
-  processor: batch
+  span_processor: batch
 
 signer:
   name: foobar

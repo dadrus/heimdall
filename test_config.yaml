@@ -18,7 +18,7 @@ metrics:
     port: 9000
 
 tracing:
-  processor: simple
+  span_processor: simple
 
 pipeline:
   authenticators:
