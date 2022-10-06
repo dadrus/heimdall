@@ -86,7 +86,13 @@ func TestWrappedClientDoTimeout(t *testing.T) {
 				assert.NotEqual(t, parentSpanContext.SpanID(), spans[0].SpanContext().SpanID())
 				assert.Equal(t, parentSpanContext.TraceID(), spans[0].SpanContext().TraceID())
 
-				assert.Equal(t, fmt.Sprintf("%s /foobar", srvURL.Host), spans[0].Name)
+				operationName := fmt.Sprintf("%s %s %s @%s",
+					string(req.Header.Protocol()),
+					string(req.Header.Method()),
+					string(req.URI().Path()),
+					string(req.Host()))
+
+				assert.Equal(t, operationName, spans[0].Name)
 				assert.Equal(t, trace.SpanKindClient, spans[0].SpanKind)
 
 				attributes := spans[0].Attributes
@@ -118,7 +124,13 @@ func TestWrappedClientDoTimeout(t *testing.T) {
 				assert.NotEqual(t, parentSpanContext.SpanID(), spans[0].SpanContext().SpanID())
 				assert.Equal(t, parentSpanContext.TraceID(), spans[0].SpanContext().TraceID())
 
-				assert.Equal(t, fmt.Sprintf("%s /foobar", srvURL.Host), spans[0].Name)
+				operationName := fmt.Sprintf("%s %s %s @%s",
+					string(req.Header.Protocol()),
+					string(req.Header.Method()),
+					string(req.URI().Path()),
+					string(req.Host()))
+
+				assert.Equal(t, operationName, spans[0].Name)
 				assert.Equal(t, trace.SpanKindClient, spans[0].SpanKind)
 
 				attributes := spans[0].Attributes
@@ -150,7 +162,13 @@ func TestWrappedClientDoTimeout(t *testing.T) {
 				assert.NotEqual(t, parentSpanContext.SpanID(), spans[0].SpanContext().SpanID())
 				assert.Equal(t, parentSpanContext.TraceID(), spans[0].SpanContext().TraceID())
 
-				assert.Equal(t, fmt.Sprintf("%s /foobar", srvURL.Host), spans[0].Name)
+				operationName := fmt.Sprintf("%s %s %s @%s",
+					string(req.Header.Protocol()),
+					string(req.Header.Method()),
+					string(req.URI().Path()),
+					string(req.Host()))
+
+				assert.Equal(t, operationName, spans[0].Name)
 				assert.Equal(t, trace.SpanKindClient, spans[0].SpanKind)
 
 				attributes := spans[0].Attributes
