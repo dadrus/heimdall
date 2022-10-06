@@ -6,6 +6,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/rs/zerolog"
+	"go.opentelemetry.io/otel/trace"
 )
 
 func New(logger zerolog.Logger) fiber.Handler {
@@ -27,14 +28,25 @@ func New(logger zerolog.Logger) fiber.Handler {
 }
 
 func createAccessLogger(c *fiber.Ctx, logger zerolog.Logger, start time.Time) zerolog.Logger {
+	startTime := start.Unix()
+	spanCtx := trace.SpanContextFromContext(c.UserContext())
+
 	logContext := logger.Level(zerolog.InfoLevel).With().
-		Int64("_tx_start", start.Unix()).
+		Int64("_tx_start", startTime).
 		Str("_client_ip", c.IP()).
 		Str("_http_method", c.Method()).
 		Str("_http_path", c.Path()).
 		Str("_http_user_agent", c.Get("User-Agent")).
 		Str("_http_host", string(c.Request().URI().Host())).
 		Str("_http_scheme", string(c.Request().URI().Scheme()))
+
+	if spanCtx.TraceID().IsValid() {
+		logContext = logContext.Str("_trace_id", spanCtx.TraceID().String())
+	}
+
+	if spanCtx.SpanID().IsValid() {
+		logContext = logContext.Str("_span_id", spanCtx.SpanID().String())
+	}
 
 	if c.IsProxyTrusted() { // nolint: nestif
 		if headerValue := c.Get("X-Forwarded-Proto"); len(headerValue) != 0 {
@@ -70,11 +82,20 @@ func createAccessLogFinalizationEvent(c *fiber.Ctx, accessLogger zerolog.Logger,
 ) *zerolog.Event {
 	end := time.Now()
 	duration := end.Sub(start)
+	spanCtx := trace.SpanContextFromContext(c.UserContext())
 
 	event := accessLogger.Info().
 		Int("_body_bytes_sent", len(c.Response().Body())).
 		Int("_http_status_code", c.Response().StatusCode()).
 		Int64("_tx_duration_ms", duration.Milliseconds())
+
+	if spanCtx.TraceID().IsValid() {
+		event = event.Str("_trace_id", spanCtx.TraceID().String())
+	}
+
+	if spanCtx.SpanID().IsValid() {
+		event = event.Str("_span_id", spanCtx.SpanID().String())
+	}
 
 	switch {
 	case err != nil:
