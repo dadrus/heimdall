@@ -28,7 +28,6 @@ func TestLoggerHandler(t *testing.T) {
 	parentCtx := trace.NewSpanContext(trace.SpanContextConfig{
 		TraceID: trace.TraceID{1}, SpanID: trace.SpanID{2}, TraceFlags: trace.FlagsSampled,
 	})
-	ctx := trace.ContextWithRemoteSpanContext(context.Background(), parentCtx)
 
 	for _, tc := range []struct {
 		uc        string
@@ -57,7 +56,10 @@ func TestLoggerHandler(t *testing.T) {
 			setHeader: func(t *testing.T, req *http.Request) {
 				t.Helper()
 
-				otel.GetTextMapPropagator().Inject(ctx, propagation.HeaderCarrier(req.Header))
+				// nolint: contextcheck
+				otel.GetTextMapPropagator().Inject(
+					trace.ContextWithRemoteSpanContext(context.Background(), parentCtx),
+					propagation.HeaderCarrier(req.Header))
 			},
 			assert: func(t *testing.T, logstring string) {
 				t.Helper()
@@ -98,7 +100,7 @@ func TestLoggerHandler(t *testing.T) {
 
 			// THEN
 			require.NoError(t, err)
-			resp.Body.Close()
+			require.NoError(t, resp.Body.Close())
 			tc.assert(t, tb.CollectedLog())
 		})
 	}
