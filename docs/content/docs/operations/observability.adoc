@@ -14,17 +14,17 @@ Hemdall implements different observability to support easier operation and integ
 
 == Logging in Heimdall
 
-Heimdall's implementation uses https://github.com/rs/zerolog[zerolog] - Zero Allocation JSON Logger, which can however also log in plain text.
+Heimdall's implementation uses https://github.com/rs/zerolog[zerolog] - Zero Allocation JSON Logger, which can however also log in plain text. All emitted log statements include information related to distributed tracing (if tracing is enabled) so that not only log statements can be correlated to traces, but also all log statements belonging to single request/transaction can be correlated as well.
 
 Available Logging configuration options are described in link:{{< relref "/docs/configuration/observability/logging.adoc" >}}[Logging Configuration].
 
 === Regular Log Events
 
-If you configure Heimdall to log in `text` format, you can expect output as shown below:
+If you configure Heimdall to log in `text` format, you can expect output similar to the one shown below:
 
 [source, log]
 ----
-2022-08-03T12:51:48+02:00 INF Opentracing tracer initialized.
+2022-08-03T12:51:48+02:00 INF Opentelemetry tracing initialized.
 2022-08-03T12:51:48+02:00 INF Instantiating in memory cache
 2022-08-03T12:51:48+02:00 DBG Creating rule set event queue.
 2022-08-03T12:51:48+02:00 INF Loading pipeline definitions
@@ -39,6 +39,8 @@ If you configure Heimdall to log in `text` format, you can expect output as show
 2022-08-03T12:51:52+02:00 DBG Generating new JWT
 2022-08-03T12:51:52+02:00 DBG Finalizing request
 ----
+
+WARNING: Usage of this format is not recommended for production deployments as it requires more computational resources and is hence slow.
 
 Otherwise, if you configure it to use `gelf` (see https://docs.graylog.org/v1/docs/gelf[GELF] for format details) format, the output will look as follows:
 
@@ -64,18 +66,30 @@ Otherwise, if you configure it to use `gelf` (see https://docs.graylog.org/v1/do
 ...
 
 {"_level_name": "DEBUG", "version": "1.1", "host": "unknown", "timestamp": 1659523295,
- "level": 7, "short_message": "Decision endpoint called"}
+ "level": 7, "_parent_id": "3449bda63ed70206", "_span_id": "f57c007257fee0ed",
+ "_trace_id": "00000000000000000a5af97bffe6a8a2", "short_message": "Decision endpoint called"}
 {"_level_name": "DEBUG", "version": "1.1", "host": "unknown", "timestamp":1659523295,
- "level": 7, "short_message": "Executing default rule"}
+ "level": 7, "_parent_id": "3449bda63ed70206", "_span_id": "f57c007257fee0ed",
+ "_trace_id": "00000000000000000a5af97bffe6a8a2", "short_message": "Executing default rule"}
 {"_level_name": "DEBUG", "version":"1.1", "host": "unknown", "timestamp":1659523295,
- "level": 7, "short_message": "Authenticating using anonymous authenticator"}
+ "level": 7, "_parent_id": "3449bda63ed70206", "_span_id": "f57c007257fee0ed",
+ "_trace_id": "00000000000000000a5af97bffe6a8a2", "short_message": "Authenticating using anonymous authenticator"}
 {"_level_name": "DEBUG", "version": "1.1", "host": "unknown", "timestamp": 1659523295,
- "level": 7, "short_message": "Mutating using JWT mutator"}
+ "level": 7, "_parent_id": "3449bda63ed70206", "_span_id": "f57c007257fee0ed",
+ "_trace_id": "00000000000000000a5af97bffe6a8a2", "short_message": "Mutating using JWT mutator"}
 {"_level_name": "DEBUG", "version": "1.1", "host": "unknown", "timestamp": 1659523295,
- "level": 7, "short_message": "Generating new JWT"}
+ "level": 7, "_parent_id": "3449bda63ed70206", "_span_id": "f57c007257fee0ed",
+ "_trace_id": "00000000000000000a5af97bffe6a8a2", "short_message": "Generating new JWT"}
 {"_level_name": "DEBUG", "version": "1.1", "host": "unknown", "timestamp": 1659523295,
- "level": 7, "short_message": "Finalizing request"}
+ "level": 7, "_parent_id": "3449bda63ed70206", "_span_id": "f57c007257fee0ed",
+ "_trace_id": "00000000000000000a5af97bffe6a8a2", "short_message": "Finalizing request"}
 ----
+
+Each log statement does also include the following fields in both log formats for incoming requests if tracing is enabled:
+
+* `_trace_id` - The trace id as defined by OpenTelemetry.
+* `_span_id` - The span id as defined by OpenTelemetry of the current transaction.
+* `_parent_id` - The span id of the callee, which started the given transaction. Only present if the callee set the corresponding tracing header.
 
 === Access Log Events
 
@@ -114,18 +128,26 @@ Following are the fields, which are set in the transaction finalization event in
 * `_subject` - The subject identifier if the access was granted.
 * `error` - The information about an error, which e.g. led to the denial of the request.
 
+Following are the fields, which are set if tracing is enabled:
+
+* `_trace_id` - The trace id as defined by OpenTelemetry.
+* `_span_id` - The span id as defined by OpenTelemetry of the current transaction.
+* `_parent_id` - The span id of the callee, which started the given transaction. Only present if the callee set the corresponding tracing header.
+
 If you configure Heimdall to log in `text` format, you can expect output as shown below:
 
 [source, text]
 ----
 2022-08-03T12:40:16+02:00 INF TX started _client_ip=127.0.0.1 _http_host=127.0.0.1:4468 _http_method=GET
- _http_path=/foo _http_scheme=http _http_user_agent=curl/7.74.0 _tx_start=1659523216
+ _http_path=/foo _http_scheme=http _http_user_agent=curl/7.74.0 _parent_id=3449bda63ed70206
+ _span_id=f57c007257fee0ed _trace_id=00000000000000000a5af97bffe6a8a2 _tx_start=1659523216
 
 ....
 
 2022-08-03T12:40:16+02:00 INF TX finished _access_granted=true _body_bytes_sent=0 _client_ip=127.0.0.1
  _http_host=127.0.0.1:4468 _http_method=GET _http_path=/foo _http_scheme=http _http_status_code=202
- _http_user_agent=curl/7.74.0 _subject=anonymous _tx_duration_ms=0 _tx_start=1659523216
+ _http_user_agent=curl/7.74.0 _subject=anonymous _parent_id=3449bda63ed70206 _span_id=f57c007257fee0ed
+ _trace_id=00000000000000000a5af97bffe6a8a2 _tx_duration_ms=0 _tx_start=1659523216
 ----
 
 Otherwise, if you configure it to use `gelf` format, the output will look as follows:
@@ -135,7 +157,9 @@ Otherwise, if you configure it to use `gelf` format, the output will look as fol
 {"_level_name": "INFO", "version":"1.1", "host":"unknown", "_tx_start":1659523295,
  "_client_ip": "127.0.0.1", "_http_method": "GET", "_http_path":"/foo",
  "_http_user_agent": "curl/7.74.0", "_http_host": "127.0.0.1:4468", "_http_scheme": "http",
- "timestamp": 1659523295, "level": 6,"short_message": "TX started"}
+ "timestamp": 1659523295, "level": 6, "_parent_id": "3449bda63ed70206",
+ "_span_id": "f57c007257fee0ed", "_trace_id": "00000000000000000a5af97bffe6a8a2",
+ "short_message": "TX started"}
 
 ....
 
@@ -143,7 +167,9 @@ Otherwise, if you configure it to use `gelf` format, the output will look as fol
  "_client_ip": "127.0.0.1", "_http_method": "GET", "_http_path": "/foo",
  "_http_user_agent": "curl/7.74.0", "_http_host": "127.0.0.1:4468", "_http_scheme": "http",
  "_body_bytes_sent": 0, "_http_status_code":202, "_tx_duration_ms":0, "_subject": "anonymous",
- "_access_granted": true, "timestamp":1659523295, "level": 6, "short_message": "TX finished"}
+ "_access_granted": true, "timestamp":1659523295, "level": 6, "_parent_id": "3449bda63ed70206",
+ "_span_id": "f57c007257fee0ed", "_trace_id": "00000000000000000a5af97bffe6a8a2",
+ "short_message": "TX finished"}
 ----
 
 == Tracing in Heimdall
