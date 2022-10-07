@@ -1,9 +1,10 @@
 package logger
 
 import (
-	"github.com/dadrus/heimdall/internal/x/opentelemetry/tracecontext"
 	"github.com/gofiber/fiber/v2"
 	"github.com/rs/zerolog"
+
+	"github.com/dadrus/heimdall/internal/x/opentelemetry/tracecontext"
 )
 
 func New(logger zerolog.Logger) fiber.Handler {
