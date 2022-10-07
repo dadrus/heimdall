@@ -6,32 +6,38 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/rs/zerolog"
-	"go.opentelemetry.io/otel/trace"
+
+	"github.com/dadrus/heimdall/internal/x/opentelemetry/tracecontext"
 )
 
 func New(logger zerolog.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		start := time.Now()
-
+		traceCtx := tracecontext.Extract(c.UserContext())
 		alc := &accessContext{}
+
 		c.SetUserContext(context.WithValue(c.UserContext(), ctxKey{}, alc))
 
-		accLog := createAccessLogger(c, logger, start)
+		accLog := createAccessLogger(c, logger, start, traceCtx)
 		accLog.Info().Msg("TX started")
 
 		err := c.Next()
 
-		createAccessLogFinalizationEvent(c, accLog, err, start, alc).Msg("TX finished")
+		createAccessLogFinalizationEvent(c, accLog, err, start, alc, traceCtx).Msg("TX finished")
 
 		return err
 	}
 }
 
-func createAccessLogger(c *fiber.Ctx, logger zerolog.Logger, start time.Time) zerolog.Logger {
+func createAccessLogger(
+	c *fiber.Ctx,
+	logger zerolog.Logger,
+	start time.Time,
+	traceCtx *tracecontext.TraceContext,
+) zerolog.Logger {
 	startTime := start.Unix()
-	spanCtx := trace.SpanContextFromContext(c.UserContext())
 
-	logContext := logger.Level(zerolog.InfoLevel).With().
+	logCtx := logger.Level(zerolog.InfoLevel).With().
 		Int64("_tx_start", startTime).
 		Str("_client_ip", c.IP()).
 		Str("_http_method", c.Method()).
@@ -40,61 +46,69 @@ func createAccessLogger(c *fiber.Ctx, logger zerolog.Logger, start time.Time) ze
 		Str("_http_host", string(c.Request().URI().Host())).
 		Str("_http_scheme", string(c.Request().URI().Scheme()))
 
-	if spanCtx.TraceID().IsValid() {
-		logContext = logContext.Str("_trace_id", spanCtx.TraceID().String())
-	}
+	if traceCtx != nil {
+		logCtx = logCtx.
+			Str("_trace_id", traceCtx.TraceID).
+			Str("_span_id", traceCtx.SpanID)
 
-	if spanCtx.SpanID().IsValid() {
-		logContext = logContext.Str("_span_id", spanCtx.SpanID().String())
+		if len(traceCtx.ParentID) != 0 {
+			logCtx = logCtx.Str("_parent_id", traceCtx.ParentID)
+		}
 	}
 
 	if c.IsProxyTrusted() { // nolint: nestif
 		if headerValue := c.Get("X-Forwarded-Proto"); len(headerValue) != 0 {
-			logContext = logContext.Str("_http_x_forwarded_proto", headerValue)
+			logCtx = logCtx.Str("_http_x_forwarded_proto", headerValue)
 		}
 
 		if headerValue := c.Get("X-Forwarded-Host"); len(headerValue) != 0 {
-			logContext = logContext.Str("_http_x_forwarded_host", headerValue)
+			logCtx = logCtx.Str("_http_x_forwarded_host", headerValue)
 		}
 
 		if headerValue := c.Get("X-Forwarded-Path"); len(headerValue) != 0 {
-			logContext = logContext.Str("_http_x_forwarded_path", headerValue)
+			logCtx = logCtx.Str("_http_x_forwarded_path", headerValue)
 		}
 
 		if headerValue := c.Get("X-Forwarded-Uri"); len(headerValue) != 0 {
-			logContext = logContext.Str("_http_x_forwarded_uri", headerValue)
+			logCtx = logCtx.Str("_http_x_forwarded_uri", headerValue)
 		}
 
 		if headerValue := c.Get("X-Forwarded-For"); len(headerValue) != 0 {
-			logContext = logContext.Str("_http_x_forwarded_for", headerValue)
+			logCtx = logCtx.Str("_http_x_forwarded_for", headerValue)
 		}
 
 		if headerValue := c.Get("Forwarded"); len(headerValue) != 0 {
-			logContext = logContext.Str("_http_forwarded", headerValue)
+			logCtx = logCtx.Str("_http_forwarded", headerValue)
 		}
 	}
 
-	return logContext.Logger()
+	return logCtx.Logger()
 }
 
-func createAccessLogFinalizationEvent(c *fiber.Ctx, accessLogger zerolog.Logger, err error,
-	start time.Time, alc *accessContext,
+func createAccessLogFinalizationEvent(
+	c *fiber.Ctx,
+	accessLogger zerolog.Logger,
+	err error,
+	start time.Time,
+	alc *accessContext,
+	traceCtx *tracecontext.TraceContext,
 ) *zerolog.Event {
 	end := time.Now()
 	duration := end.Sub(start)
-	spanCtx := trace.SpanContextFromContext(c.UserContext())
 
 	event := accessLogger.Info().
 		Int("_body_bytes_sent", len(c.Response().Body())).
 		Int("_http_status_code", c.Response().StatusCode()).
 		Int64("_tx_duration_ms", duration.Milliseconds())
 
-	if spanCtx.TraceID().IsValid() {
-		event = event.Str("_trace_id", spanCtx.TraceID().String())
-	}
+	if traceCtx != nil {
+		event = event.
+			Str("_trace_id", traceCtx.TraceID).
+			Str("_span_id", traceCtx.SpanID)
 
-	if spanCtx.SpanID().IsValid() {
-		event = event.Str("_span_id", spanCtx.SpanID().String())
+		if len(traceCtx.ParentID) != 0 {
+			event = event.Str("_parent_id", traceCtx.ParentID)
+		}
 	}
 
 	switch {

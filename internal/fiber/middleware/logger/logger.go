@@ -1,22 +1,24 @@
 package logger
 
 import (
+	"github.com/dadrus/heimdall/internal/x/opentelemetry/tracecontext"
 	"github.com/gofiber/fiber/v2"
 	"github.com/rs/zerolog"
-	"go.opentelemetry.io/otel/trace"
 )
 
 func New(logger zerolog.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		spanCtx := trace.SpanContextFromContext(c.UserContext())
 		logCtx := logger.With()
+		traceCtx := tracecontext.Extract(c.UserContext())
 
-		if spanCtx.TraceID().IsValid() {
-			logCtx = logCtx.Str("_trace_id", spanCtx.TraceID().String())
-		}
+		if traceCtx != nil {
+			logCtx = logCtx.
+				Str("_trace_id", traceCtx.TraceID).
+				Str("_span_id", traceCtx.SpanID)
 
-		if spanCtx.SpanID().IsValid() {
-			logCtx = logCtx.Str("_span_id", spanCtx.SpanID().String())
+			if len(traceCtx.ParentID) != 0 {
+				logCtx = logCtx.Str("_parent_id", traceCtx.ParentID)
+			}
 		}
 
 		c.SetUserContext(logCtx.Logger().WithContext(c.UserContext()))
