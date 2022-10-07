@@ -1,7 +1,6 @@
 package tracing
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"testing"
@@ -15,26 +14,10 @@ import (
 	"go.uber.org/fx"
 
 	"github.com/dadrus/heimdall/internal/config"
+	"github.com/dadrus/heimdall/internal/testsupport"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/opentelemetry/exporters"
 )
-
-type testingLog struct {
-	testing.TB
-	buf bytes.Buffer
-}
-
-func (t *testingLog) Log(args ...interface{}) {
-	if _, err := t.buf.WriteString(fmt.Sprint(args...)); err != nil {
-		t.Error(err)
-	}
-}
-
-func (t *testingLog) Logf(format string, args ...interface{}) {
-	if _, err := t.buf.WriteString(fmt.Sprintf(format, args...)); err != nil {
-		t.Error(err)
-	}
-}
 
 type mockLifecycle struct{ mock.Mock }
 
@@ -109,7 +92,7 @@ func TestInitializeOTEL(t *testing.T) {
 				tc.setupMocks,
 				func(t *testing.T, _ *mockLifecycle) { t.Helper() })
 			mock := &mockLifecycle{}
-			tb := &testingLog{TB: t} // Capture TB log buffer.
+			tb := &testsupport.TestingLog{TB: t} // Capture TB log buffer.
 			logger := zerolog.New(zerolog.TestWriter{T: tb})
 
 			setupMocks(t, mock)
@@ -120,7 +103,7 @@ func TestInitializeOTEL(t *testing.T) {
 			propagator := otel.GetTextMapPropagator()
 
 			// THEN
-			tc.assert(t, err, propagator, tb.buf.String())
+			tc.assert(t, err, propagator, tb.CollectedLog())
 			mock.AssertExpectations(t)
 		})
 	}

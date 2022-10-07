@@ -10,7 +10,8 @@ import (
 func New(logger zerolog.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		logCtx := logger.With()
-		traceCtx := tracecontext.Extract(c.UserContext())
+		ctx := c.UserContext()
+		traceCtx := tracecontext.Extract(ctx)
 
 		if traceCtx != nil {
 			logCtx = logCtx.
@@ -22,7 +23,7 @@ func New(logger zerolog.Logger) fiber.Handler {
 			}
 		}
 
-		c.SetUserContext(logCtx.Logger().WithContext(c.UserContext()))
+		c.SetUserContext(logCtx.Logger().WithContext(ctx))
 
 		return c.Next()
 	}
