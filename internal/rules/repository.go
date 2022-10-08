@@ -129,11 +129,11 @@ func (r *repository) addRule(rule rule.Rule) {
 
 	r.rules = append(r.rules, rule)
 
-	r.logger.Debug().Str("src", rule.SrcID()).Str("id", rule.ID()).Msg("Rule added")
+	r.logger.Debug().Str("_src", rule.SrcID()).Str("_id", rule.ID()).Msg("Rule added")
 }
 
 func (r *repository) removeRules(srcID string) {
-	r.logger.Info().Str("src", srcID).Msg("Removing rules")
+	r.logger.Info().Str("_src", srcID).Msg("Removing rules")
 
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
@@ -145,7 +145,7 @@ func (r *repository) removeRules(srcID string) {
 		if rule.SrcID() == srcID {
 			idxs = append(idxs, idx)
 
-			r.logger.Debug().Str("id", rule.ID()).Msg("Removing rule")
+			r.logger.Debug().Str("_id", rule.ID()).Msg("Removing rule")
 		}
 	}
 
@@ -174,11 +174,11 @@ func (r *repository) removeRules(srcID string) {
 
 func (r *repository) onRuleSetCreated(srcID string, definition []byte) {
 	// create rules
-	r.logger.Info().Str("src", srcID).Msg("Loading rule set")
+	r.logger.Info().Str("_src", srcID).Msg("Loading rule set")
 
 	rules, err := r.loadRules(srcID, definition)
 	if err != nil {
-		r.logger.Error().Err(err).Str("src", srcID).Msg("Failed loading rule set")
+		r.logger.Error().Err(err).Str("_src", srcID).Msg("Failed loading rule set")
 	}
 
 	// add them

@@ -87,7 +87,7 @@ func createPipelineObjects[T any](
 	objects := make(map[string]T)
 
 	for _, pe := range pObjects {
-		logger.Debug().Str("id", pe.ID).Str("type", string(pe.Type)).Msg("Loading pipeline definition")
+		logger.Debug().Str("_id", pe.ID).Str("_type", string(pe.Type)).Msg("Loading pipeline definition")
 
 		if r, err := create(pe.ID, pe.Type, pe.Config); err == nil {
 			objects[pe.ID] = r

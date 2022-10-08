@@ -304,7 +304,8 @@ func (a *remoteAuthorizer) readResponse(ctx heimdall.Context, resp *http.Respons
 
 	decoder, err := contenttype.NewDecoder(contentType)
 	if err != nil {
-		logger.Warn().Msgf("%s content type is not supported. Treating it as string", contentType)
+		logger.Warn().Str("_content_type", contentType).
+			Msg("Content type is not supported. Treating it as string")
 
 		return string(rawData), nil // nolint: nilerr
 	}

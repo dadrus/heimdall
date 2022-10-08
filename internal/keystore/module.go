@@ -24,8 +24,8 @@ func NewKeyStore(conf config.Configuration, logger zerolog.Logger) (KeyStore, er
 	)
 
 	if len(conf.Signer.KeyStore) == 0 {
-		logger.Warn().Msg("Key store is not configured. NEVER DO IT IN PRODUCTION!!!! " +
-			"Generating an ECDSA P-384 key pair.")
+		logger.Warn().
+			Msg("Key store is not configured. NEVER DO IT IN PRODUCTION!!!! Generating an ECDSA P-384 key pair.")
 
 		var privateKey *ecdsa.PrivateKey
 
@@ -47,7 +47,11 @@ func NewKeyStore(conf config.Configuration, logger zerolog.Logger) (KeyStore, er
 	logger.Info().Msg("Key store contains following entries")
 
 	for _, entry := range ks.Entries() {
-		logger.Info().Msgf("key_id: %s, algorithm: %s, size: %d", entry.KeyID, entry.Alg, entry.KeySize)
+		logger.Info().
+			Str("_key_id", entry.KeyID).
+			Str("_algorithm", entry.Alg).
+			Int("_size", entry.KeySize).
+			Msg("Entry info")
 	}
 
 	return ks, nil

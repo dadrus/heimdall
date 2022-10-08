@@ -78,7 +78,7 @@ func registerHooks(lifecycle fx.Lifecycle, logger zerolog.Logger, app fiberApp, 
 				go func() {
 					// service connections
 					addr := service.Address()
-					logger.Info().Str("address", addr).Msg("Management service starts listening")
+					logger.Info().Str("_address", addr).Msg("Management service starts listening")
 					if service.TLS != nil {
 						if err := app.App.ListenTLS(addr, service.TLS.Cert, service.TLS.Key); err != nil {
 							logger.Fatal().Err(err).Msg("Could not start Management service")

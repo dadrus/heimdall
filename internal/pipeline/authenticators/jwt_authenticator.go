@@ -294,7 +294,7 @@ func (a *jwtAuthenticator) verifyTokenWithoutKID(ctx heimdall.Context, token *jw
 	for idx := range jwks.Keys {
 		sigKey := jwks.Keys[idx]
 		if err = a.validateJWK(&sigKey); err != nil {
-			logger.Info().Err(err).Msgf("JWK for keyID=%s is invalid", sigKey.KeyID)
+			logger.Info().Err(err).Str("_key_id", sigKey.KeyID).Msg("JWK is invalid")
 
 			continue
 		}
@@ -303,7 +303,7 @@ func (a *jwtAuthenticator) verifyTokenWithoutKID(ctx heimdall.Context, token *jw
 		if err == nil {
 			break
 		} else {
-			logger.Info().Err(err).Msgf("Failed to verify JWT using key with kid=%s", sigKey.KeyID)
+			logger.Info().Err(err).Str("_key_id", sigKey.KeyID).Msg("Failed to verify JWT")
 		}
 	}
 
