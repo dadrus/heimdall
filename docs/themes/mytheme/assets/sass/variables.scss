@@ -549,7 +549,7 @@
 //// $font-size-root affects the value of `rem`, which is used for as well font sizes, paddings, and margins
 //// $font-size-base affects the font size of the body text
 //$font-size-root:              null !default;
-//$font-size-base:              1rem !default; // Assumes the browser default, typically `16px`
+$font-size-base:              1rem !default; // Assumes the browser default, typically `16px`
 //$font-size-sm:                $font-size-base * .875 !default;
 //$font-size-lg:                $font-size-base * 1.25 !default;
 //
@@ -566,23 +566,25 @@
 //$line-height-sm:              1.25 !default;
 //$line-height-lg:              2 !default;
 //
-//$h1-font-size:                $font-size-base * 2.5 !default;
-//$h2-font-size:                $font-size-base * 2 !default;
-//$h3-font-size:                $font-size-base * 1.75 !default;
-//$h4-font-size:                $font-size-base * 1.5 !default;
-//$h5-font-size:                $font-size-base * 1.25 !default;
-//$h6-font-size:                $font-size-base !default;
+$h1-font-size:                $font-size-base * 2.5 !default;
+$h2-font-size:                $font-size-base * 2 !default;
+$h3-font-size:                $font-size-base * 1.75 !default;
+$h4-font-size:                $font-size-base * 1.5 !default;
+$h5-font-size:                $font-size-base * 1.25 !default;
+$h6-font-size:                $font-size-base !default;
+$h7-font-size:                $font-size-base * 0.8 !default;
 //// scss-docs-end font-variables
 //
 //// scss-docs-start font-sizes
-//$font-sizes: (
-//        1: $h1-font-size,
-//        2: $h2-font-size,
-//        3: $h3-font-size,
-//        4: $h4-font-size,
-//        5: $h5-font-size,
-//        6: $h6-font-size
-//) !default;
+$font-sizes: (
+        1: $h1-font-size,
+        2: $h2-font-size,
+        3: $h3-font-size,
+        4: $h4-font-size,
+        5: $h5-font-size,
+        6: $h6-font-size,
+        7: $h7-font-size
+);
 //// scss-docs-end font-sizes
 //
 //// scss-docs-start headings-variables
