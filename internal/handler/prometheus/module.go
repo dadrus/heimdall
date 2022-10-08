@@ -56,7 +56,7 @@ func registerHooks(lifecycle fx.Lifecycle, logger zerolog.Logger, app fiberApp, 
 				go func() {
 					// service connections
 					addr := conf.Metrics.Prometheus.Address()
-					logger.Info().Str("address", addr).Msg("Prometheus service starts listening")
+					logger.Info().Str("_address", addr).Msg("Prometheus service starts listening")
 					if err := app.Prometheus.Listen(addr); err != nil {
 						logger.Fatal().Err(err).Msg("Could not start Prometheus service")
 					}

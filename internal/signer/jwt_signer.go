@@ -36,7 +36,7 @@ func NewJWTSigner(ks keystore.KeyStore, conf config.SignerConfig, logger zerolog
 		return nil, err
 	}
 
-	logger.Info().Msgf("Signer configured to use entry with key_id=%s", kse.KeyID)
+	logger.Info().Str("_key_id", kse.KeyID).Msg("Signer configured")
 
 	return &jwtSigner{
 		iss: conf.Name,

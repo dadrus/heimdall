@@ -83,7 +83,7 @@ func (e Endpoint) CreateRequest(ctx context.Context, body io.Reader, rndr render
 			"failed to render URL for the endpoint").CausedBy(err)
 	}
 
-	logger.Debug().Msgf("Creating request for %s", endpointURL)
+	logger.Debug().Str("_endpoint", endpointURL).Msg("Creating request")
 
 	req, err := http.NewRequestWithContext(ctx, method, endpointURL, body)
 	if err != nil {
@@ -93,7 +93,7 @@ func (e Endpoint) CreateRequest(ctx context.Context, body io.Reader, rndr render
 	}
 
 	if e.AuthStrategy != nil {
-		logger.Debug().Msgf("Authenticating request for %s", e.URL)
+		logger.Debug().Msg("Authenticating request")
 
 		err = e.AuthStrategy.Apply(ctx, req)
 		if err != nil {

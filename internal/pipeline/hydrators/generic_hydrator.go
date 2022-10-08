@@ -260,7 +260,7 @@ func (h *genericHydrator) createRequest(ctx heimdall.Context, sub *subject.Subje
 	for _, headerName := range h.fwdHeaders {
 		headerValue := ctx.RequestHeader(headerName)
 		if len(headerValue) == 0 {
-			logger.Warn().Str("header", headerName).
+			logger.Warn().Str("_header", headerName).
 				Msg("Header not present in the request but configured to be forwarded")
 		}
 
@@ -270,7 +270,7 @@ func (h *genericHydrator) createRequest(ctx heimdall.Context, sub *subject.Subje
 	for _, cookieName := range h.fwdCookies {
 		cookieValue := ctx.RequestCookie(cookieName)
 		if len(cookieValue) == 0 {
-			logger.Warn().Str("cookie", cookieName).
+			logger.Warn().Str("_cookie", cookieName).
 				Msg("Cookie not present in the request but configured to be forwarded")
 		}
 
@@ -305,11 +305,12 @@ func (h *genericHydrator) readResponse(ctx heimdall.Context, resp *http.Response
 
 	contentType := resp.Header.Get("Content-Type")
 
-	logger.Debug().Msgf("Received response of %s content type", contentType)
+	logger.Debug().Str("_content_type", contentType).Msg("Response received")
 
 	decoder, err := contenttype.NewDecoder(contentType)
 	if err != nil {
-		logger.Warn().Msgf("%s content type is not supported. Treating it as string", contentType)
+		logger.Warn().Str("_content_type", contentType).
+			Msg("Content type is not supported. Treating it as string")
 
 		return string(rawData), nil // nolint: nilerr
 	}

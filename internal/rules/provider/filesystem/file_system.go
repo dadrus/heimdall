@@ -37,7 +37,8 @@ func registerFileSystemProvider(
 
 	provider, err := newFileSystemProvider(conf.Rules.Providers.File, queue, logger)
 	if err != nil {
-		logger.Error().Err(err).Str("type", "file_system").Msg("Failed to load rule definitions provider.")
+		logger.Error().Err(err).
+			Str("_type", "file_system").Msg("Failed to load rule definitions provider.")
 
 		return err
 	}
@@ -92,20 +93,22 @@ func newFileSystemProvider(
 }
 
 func (p *fileSystemProvider) Start() error {
-	p.logger.Info().Str("type", "file_system").Msg("Starting rule definitions provider")
+	p.logger.Info().Str("_type", "file_system").Msg("Starting rule definitions provider")
 
 	if err := p.loadInitialRuleSet(); err != nil {
 		return err
 	}
 
 	if p.watcher == nil {
-		p.logger.Warn().Msg("Watcher for file_system provider is not configured. Updates to rules will have no effects.")
+		p.logger.Warn().
+			Msg("Watcher for file_system provider is not configured. Updates to rules will have no effects.")
 
 		return nil
 	}
 
 	if err := p.watcher.Add(p.src); err != nil {
-		p.logger.Error().Err(err).Str("type", "file_system").Msg("Failed to start rule definitions provider")
+		p.logger.Error().Err(err).Str("_type", "file_system").
+			Msg("Failed to start rule definitions provider")
 
 		return err
 	}
@@ -128,8 +131,8 @@ func (p *fileSystemProvider) watchFiles() {
 			}
 
 			p.logger.Debug().
-				Str("event", event.String()).
-				Str("src", event.Name).
+				Str("_event", event.String()).
+				Str("_src", event.Name).
 				Msg("Rule update event received")
 
 			switch {
@@ -165,13 +168,13 @@ func (p *fileSystemProvider) notifyRuleSetCreated(evt fsnotify.Event) {
 
 	data, err := os.ReadFile(file)
 	if err != nil {
-		p.logger.Error().Err(err).Str("file", file).Msg("Failed reading")
+		p.logger.Error().Err(err).Str("_file", file).Msg("Failed reading")
 
 		return
 	}
 
 	if len(data) == 0 {
-		p.logger.Warn().Msgf("%s is empty", file)
+		p.logger.Warn().Str("_file", file).Msg("File is empty")
 
 		return
 	}
@@ -213,7 +216,7 @@ func (p *fileSystemProvider) loadInitialRuleSet() error {
 			path := filepath.Join(p.src, entry.Name())
 
 			if entry.IsDir() {
-				p.logger.Warn().Msgf("Ignoring directory: %s", path)
+				p.logger.Warn().Str("_path", path).Msg("Ignoring directory")
 
 				continue
 			}
@@ -233,7 +236,7 @@ func (p *fileSystemProvider) loadInitialRuleSet() error {
 		}
 
 		if len(data) == 0 {
-			p.logger.Warn().Msgf("%s is empty", src)
+			p.logger.Warn().Str("_file", src).Msg("File is empty")
 
 			continue
 		}
@@ -249,6 +252,6 @@ func (p *fileSystemProvider) loadInitialRuleSet() error {
 }
 
 func (p *fileSystemProvider) ruleSetChanged(evt event.RuleSetChangedEvent) {
-	p.logger.Info().Str("src", evt.Src).Str("type", evt.ChangeType.String()).Msg("Rule set changed")
+	p.logger.Info().Str("_src", evt.Src).Str("_type", evt.ChangeType.String()).Msg("Rule set changed")
 	p.queue <- evt
 }

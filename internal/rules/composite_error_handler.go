@@ -20,8 +20,8 @@ func (eh compositeErrorHandler) Execute(ctx heimdall.Context, exErr error) (bool
 	for _, eh := range eh {
 		ok, err = eh.Execute(ctx, exErr)
 		if err != nil {
-			logger.Error().Err(err).Msg(
-				"Failed to execute error handler. Falling back to the next or the default one")
+			logger.Error().Err(err).
+				Msg("Failed to execute error handler. Falling back to the next or the default one")
 		}
 
 		if ok {

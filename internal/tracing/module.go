@@ -58,7 +58,7 @@ func initializeOTEL(lifecycle fx.Lifecycle, conf config.Configuration, logger ze
 
 	otel.SetTracerProvider(provider)
 	otel.SetTextMapPropagator(propagators.New())
-	otel.SetErrorHandler(otel.ErrorHandlerFunc(func(err error) { logger.Error().Err(err).Msg("OTEL Error") }))
+	otel.SetErrorHandler(otel.ErrorHandlerFunc(func(err error) { logger.Warn().Err(err).Msg("OTEL Error") }))
 
 	lifecycle.Append(fx.Hook{OnStop: func(ctx context.Context) error {
 		logger.Info().Msg("Tearing down Opentelemetry provider")

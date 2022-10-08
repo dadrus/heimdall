@@ -325,7 +325,7 @@ func (r *ruleImpl) Execute(ctx heimdall.Context) (*url.URL, error) {
 	if r.isDefault {
 		logger.Debug().Msg("Executing default rule")
 	} else {
-		logger.Debug().Msgf("Executing rule id=%s, from src=%s", r.id, r.srcID)
+		logger.Debug().Str("_src", r.srcID).Str("_id", r.id).Msg("Executing rule")
 	}
 
 	// authenticators
