@@ -241,6 +241,11 @@ jobs:
         with:
           submodules: true  # Fetch Hugo themes (true OR recursive)
           fetch-depth: 0    # Fetch all history for .GitInfo and .Lastmod
+      - name: Calculate diff of the docs
+        uses: technote-space/get-diff-action@v6
+        with:
+          PATTERNS: |
+            docs/**
       - name: Setup Hugo
         uses: peaceiris/actions-hugo@v2
         with:
@@ -270,7 +275,7 @@ jobs:
           regex: false
           include: docs/**
       - name: Update version string to dev version
-        if: github.ref == 'refs/heads/main' && needs.prepare-release.outputs.release_created == false
+        if: github.ref == 'refs/heads/main' && needs.prepare-release.outputs.release_created == false && env.GIT_DIFF
         uses: jacobtomlinson/gha-find-replace@v2
         with:
           find: "x-current-version"
@@ -294,7 +299,7 @@ jobs:
         run: |
           cat ./docs/versions/data.json | jq '. + [{ "version": "${{ needs.prepare-release.outputs.tag_name }}", "path": "/heimdall/${{ needs.prepare-release.outputs.tag_name }}" }]' | tee ./docs/versions/data.json
       - name: Deploy dev documentation
-        if: github.ref == 'refs/heads/main' && needs.prepare-release.outputs.release_created == false
+        if: github.ref == 'refs/heads/main' && needs.prepare-release.outputs.release_created == false && env.GIT_DIFF
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
