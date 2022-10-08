@@ -25,7 +25,7 @@ func NewLogger(conf config.LoggingConfig) zerolog.Logger {
 		return strings.ToUpper(l.String())
 	}
 	zerolog.MessageFieldName = "short_message"
-	zerolog.ErrorFieldName = "full_message" // nolint: reassign
+	zerolog.ErrorFieldName = "_error" // nolint: reassign
 	zerolog.CallerFieldName = "_caller"
 	hostname, err := os.Hostname()
 
