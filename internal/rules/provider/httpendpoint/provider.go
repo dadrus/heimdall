@@ -9,7 +9,7 @@ import (
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
-type httpEndpointProvider struct {
+type provider struct {
 	endpoint     endpoint.Endpoint
 	watchChanges bool
 	queue        event.RuleSetChangedEventQueue
@@ -21,7 +21,7 @@ func newProvider(
 	watchChanges bool,
 	queue event.RuleSetChangedEventQueue,
 	logger zerolog.Logger,
-) (*httpEndpointProvider, error) {
+) (*provider, error) {
 	if err := endpoint.Validate(); err != nil {
 		return nil, errorchain.
 			NewWithMessage(heimdall.ErrConfiguration,
@@ -29,7 +29,7 @@ func newProvider(
 			CausedBy(err)
 	}
 
-	return &httpEndpointProvider{
+	return &provider{
 		endpoint:     endpoint,
 		watchChanges: watchChanges,
 		queue:        queue,
@@ -37,10 +37,10 @@ func newProvider(
 	}, nil
 }
 
-func (p *httpEndpointProvider) Start() error {
+func (p *provider) Start() error {
 	return nil
 }
 
-func (p *httpEndpointProvider) Stop() error {
+func (p *provider) Stop() error {
 	return nil
 }
