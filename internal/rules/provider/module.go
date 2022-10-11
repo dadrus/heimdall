@@ -1,12 +1,12 @@
 package provider
 
 import (
-	"github.com/dadrus/heimdall/internal/rules/provider/httpendpoint"
 	"github.com/rs/zerolog"
 	"go.uber.org/fx"
 
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/rules/provider/filesystem"
+	"github.com/dadrus/heimdall/internal/rules/provider/httpendpoint"
 )
 
 // Module is used on app bootstrap.
@@ -17,13 +17,13 @@ var Module = fx.Options(
 	httpendpoint.Module,
 )
 
-func checkRuleProvider(logger zerolog.Logger, c config.Configuration) {
+func checkRuleProvider(logger zerolog.Logger, conf config.Configuration) {
 	var ruleProviderConfigured bool
 
 	switch {
-	case c.Rules.Providers.FileSystem != nil:
+	case conf.Rules.Providers.FileSystem != nil:
 		ruleProviderConfigured = true
-	case c.Rules.Providers.HTTPEndpoint != nil:
+	case conf.Rules.Providers.HTTPEndpoint != nil:
 		ruleProviderConfigured = true
 	}
 

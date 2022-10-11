@@ -213,6 +213,7 @@ func TestRepositoryRuleSetLifecycleManagement(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
+
 	queue := make(event.RuleSetChangedEventQueue, 10)
 	defer close(queue)
 

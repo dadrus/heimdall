@@ -6,12 +6,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dadrus/heimdall/internal/config"
-	"github.com/dadrus/heimdall/internal/rules/event"
-	"github.com/dadrus/heimdall/internal/x"
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/dadrus/heimdall/internal/config"
+	"github.com/dadrus/heimdall/internal/rules/event"
+	"github.com/dadrus/heimdall/internal/x"
 )
 
 // nolint: maintidx
