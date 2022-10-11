@@ -2,10 +2,11 @@ package filesystem
 
 import (
 	"context"
-	"errors"
 	"os"
 	"path/filepath"
 
+	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/fsnotify/fsnotify"
 	"github.com/rs/zerolog"
 	"go.uber.org/fx"
@@ -13,8 +14,6 @@ import (
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/rules/event"
 )
-
-var ErrInvalidProviderConfiguration = errors.New("invalid provider configuration")
 
 type fileSystemProvider struct {
 	src     string
@@ -36,11 +35,8 @@ func registerProvider(args registrationArguments, logger zerolog.Logger) error {
 		return nil
 	}
 
-	provider, err := newFileSystemProvider(args.Config.Rules.Providers.FileSystem, args.Queue, logger)
+	provider, err := newProvider(args.Config.Rules.Providers.FileSystem, args.Queue, logger)
 	if err != nil {
-		logger.Error().Err(err).
-			Str("_type", "file_system").Msg("Failed to load rule definitions provider.")
-
 		return err
 	}
 
@@ -60,30 +56,38 @@ func registerProvider(args registrationArguments, logger zerolog.Logger) error {
 	return nil
 }
 
-func newFileSystemProvider(
+func newProvider(
 	conf *config.FileBasedRuleProviderConfig,
 	queue event.RuleSetChangedEventQueue,
 	logger zerolog.Logger,
 ) (*fileSystemProvider, error) {
 	if len(conf.Src) == 0 {
-		return nil, ErrInvalidProviderConfiguration
+		return nil, errorchain.
+			NewWithMessage(heimdall.ErrConfiguration, "no src configured for file_system rule provider")
 	}
 
 	absPath, err := filepath.Abs(conf.Src)
 	if err != nil {
-		return nil, err
+		return nil, errorchain.
+			NewWithMessage(heimdall.ErrInternal, "failed to get the absolute path for the configured src").
+			CausedBy(err)
 	}
 
 	_, err = os.Stat(absPath)
 	if err != nil {
-		return nil, err
+		return nil, errorchain.
+			NewWithMessage(heimdall.ErrInternal,
+				"failed to get information about configured src form the file system").
+			CausedBy(err)
 	}
 
 	var watcher *fsnotify.Watcher
 	if conf.Watch {
 		watcher, err = fsnotify.NewWatcher()
 		if err != nil {
-			return nil, err
+			return nil, errorchain.
+				NewWithMessage(heimdall.ErrInternal, "failed to instantiating new file watcher").
+				CausedBy(err)
 		}
 	}
 

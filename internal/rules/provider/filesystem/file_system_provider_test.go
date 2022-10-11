@@ -12,6 +12,7 @@ import (
 	"go.uber.org/fx"
 
 	"github.com/dadrus/heimdall/internal/config"
+	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/event"
 	"github.com/dadrus/heimdall/internal/x"
 )
@@ -55,7 +56,7 @@ func TestRegisterFileSystemProvider(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, ErrInvalidProviderConfiguration)
+				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
 			},
 		},
 		{
@@ -321,7 +322,7 @@ func TestStartFileSystemProvider(t *testing.T) {
 			createProvider: func(t *testing.T, file *os.File, dir string) *fileSystemProvider {
 				t.Helper()
 
-				provider, err := newFileSystemProvider(
+				provider, err := newProvider(
 					&config.FileBasedRuleProviderConfig{Src: dir, Watch: true},
 					make(event.RuleSetChangedEventQueue, 10),
 					log.Logger)
@@ -376,7 +377,7 @@ func TestStartFileSystemProvider(t *testing.T) {
 			createProvider: func(t *testing.T, file *os.File, dir string) *fileSystemProvider {
 				t.Helper()
 
-				provider, err := newFileSystemProvider(
+				provider, err := newProvider(
 					&config.FileBasedRuleProviderConfig{Src: file.Name(), Watch: true},
 					make(event.RuleSetChangedEventQueue, 10),
 					log.Logger)
