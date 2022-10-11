@@ -1,66 +1,30 @@
 package filesystem
 
 import (
-	"context"
 	"os"
 	"path/filepath"
 
-	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/fsnotify/fsnotify"
 	"github.com/rs/zerolog"
-	"go.uber.org/fx"
 
 	"github.com/dadrus/heimdall/internal/config"
+	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/event"
+	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
-type fileSystemProvider struct {
+type provider struct {
 	src     string
 	watcher *fsnotify.Watcher
 	queue   event.RuleSetChangedEventQueue
 	logger  zerolog.Logger
 }
 
-type registrationArguments struct {
-	fx.In
-
-	Lifecycle fx.Lifecycle
-	Config    config.Configuration
-	Queue     event.RuleSetChangedEventQueue
-}
-
-func registerProvider(args registrationArguments, logger zerolog.Logger) error {
-	if args.Config.Rules.Providers.FileSystem == nil {
-		return nil
-	}
-
-	provider, err := newProvider(args.Config.Rules.Providers.FileSystem, args.Queue, logger)
-	if err != nil {
-		return err
-	}
-
-	args.Lifecycle.Append(
-		fx.Hook{
-			OnStart: func(ctx context.Context) error {
-				return provider.Start()
-			},
-			OnStop: func(ctx context.Context) error {
-				return provider.Stop()
-			},
-		},
-	)
-
-	logger.Info().Str("_rule_provider_type", "file_system").Msg("Rule provider configured.")
-
-	return nil
-}
-
 func newProvider(
 	conf *config.FileBasedRuleProviderConfig,
 	queue event.RuleSetChangedEventQueue,
 	logger zerolog.Logger,
-) (*fileSystemProvider, error) {
+) (*provider, error) {
 	if len(conf.Src) == 0 {
 		return nil, errorchain.
 			NewWithMessage(heimdall.ErrConfiguration, "no src configured for file_system rule provider")
@@ -91,7 +55,7 @@ func newProvider(
 		}
 	}
 
-	return &fileSystemProvider{
+	return &provider{
 		src:     absPath,
 		watcher: watcher,
 		queue:   queue,
@@ -99,7 +63,7 @@ func newProvider(
 	}, nil
 }
 
-func (p *fileSystemProvider) Start() error {
+func (p *provider) Start() error {
 	p.logger.Info().Str("_type", "file_system").Msg("Starting rule definitions provider")
 
 	if err := p.loadInitialRuleSet(); err != nil {
@@ -125,7 +89,7 @@ func (p *fileSystemProvider) Start() error {
 	return nil
 }
 
-func (p *fileSystemProvider) watchFiles() {
+func (p *provider) watchFiles() {
 	p.logger.Debug().Msg("Watching rule files for changes")
 
 	for {
@@ -163,14 +127,14 @@ func (p *fileSystemProvider) watchFiles() {
 	}
 }
 
-func (p *fileSystemProvider) notifyRuleSetDeleted(evt fsnotify.Event) {
+func (p *provider) notifyRuleSetDeleted(evt fsnotify.Event) {
 	p.ruleSetChanged(event.RuleSetChangedEvent{
 		Src:        "file_system:" + evt.Name,
 		ChangeType: event.Remove,
 	})
 }
 
-func (p *fileSystemProvider) notifyRuleSetCreated(evt fsnotify.Event) {
+func (p *provider) notifyRuleSetCreated(evt fsnotify.Event) {
 	file := evt.Name
 
 	data, err := os.ReadFile(file)
@@ -193,7 +157,7 @@ func (p *fileSystemProvider) notifyRuleSetCreated(evt fsnotify.Event) {
 	})
 }
 
-func (p *fileSystemProvider) Stop() error {
+func (p *provider) Stop() error {
 	p.logger.Info().Msg("Tearing down rule definitions provider: file_system")
 
 	if p.watcher != nil {
@@ -203,7 +167,7 @@ func (p *fileSystemProvider) Stop() error {
 	return nil
 }
 
-func (p *fileSystemProvider) loadInitialRuleSet() error {
+func (p *provider) loadInitialRuleSet() error {
 	p.logger.Info().Msg("Loading initial rule set")
 
 	var sources []string
@@ -258,7 +222,7 @@ func (p *fileSystemProvider) loadInitialRuleSet() error {
 	return nil
 }
 
-func (p *fileSystemProvider) ruleSetChanged(evt event.RuleSetChangedEvent) {
+func (p *provider) ruleSetChanged(evt event.RuleSetChangedEvent) {
 	p.logger.Info().Str("_src", evt.Src).Str("_type", evt.ChangeType.String()).Msg("Rule set changed")
 	p.queue <- evt
 }
