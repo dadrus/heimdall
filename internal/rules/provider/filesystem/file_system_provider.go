@@ -23,17 +23,20 @@ type fileSystemProvider struct {
 	logger  zerolog.Logger
 }
 
-func registerFileSystemProvider(
-	lifecycle fx.Lifecycle,
-	logger zerolog.Logger,
-	conf config.Configuration,
-	queue event.RuleSetChangedEventQueue,
-) error {
-	if conf.Rules.Providers.FileSystem == nil {
+type registrationArguments struct {
+	fx.In
+
+	Lifecycle fx.Lifecycle
+	Config    config.Configuration
+	Queue     event.RuleSetChangedEventQueue
+}
+
+func registerProvider(args registrationArguments, logger zerolog.Logger) error {
+	if args.Config.Rules.Providers.FileSystem == nil {
 		return nil
 	}
 
-	provider, err := newFileSystemProvider(conf.Rules.Providers.FileSystem, queue, logger)
+	provider, err := newFileSystemProvider(args.Config.Rules.Providers.FileSystem, args.Queue, logger)
 	if err != nil {
 		logger.Error().Err(err).
 			Str("_type", "file_system").Msg("Failed to load rule definitions provider.")
@@ -41,7 +44,7 @@ func registerFileSystemProvider(
 		return err
 	}
 
-	lifecycle.Append(
+	args.Lifecycle.Append(
 		fx.Hook{
 			OnStart: func(ctx context.Context) error {
 				return provider.Start()

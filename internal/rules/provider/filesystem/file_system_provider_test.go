@@ -126,7 +126,7 @@ func TestRegisterFileSystemProvider(t *testing.T) {
 			setupMocks(t, mlc)
 
 			// WHEN
-			err := registerFileSystemProvider(mlc, log.Logger, tc.conf, queue)
+			err := registerProvider(registrationArguments{Lifecycle: mlc, Config: tc.conf, Queue: queue}, log.Logger)
 
 			// THEN
 			tc.assert(t, err)
