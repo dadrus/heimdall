@@ -38,9 +38,17 @@ func newProvider(
 }
 
 func (p *provider) Start() error {
+	p.logger.Info().
+		Str("_rule_provider_type", "http_endpoint").
+		Msg("Rule provider configured.")
+
 	return nil
 }
 
 func (p *provider) Stop() error {
+	p.logger.Info().
+		Str("_rule_provider_type", "http_endpoint").
+		Msg("Tearing down rule provider.")
+
 	return nil
 }

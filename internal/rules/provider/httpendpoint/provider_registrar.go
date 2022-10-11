@@ -55,7 +55,9 @@ func registerProvider(args registrationArguments, logger zerolog.Logger) error {
 		},
 	)
 
-	logger.Info().Str("_rule_provider_type", "http_endpoint").Msg("Rule provider configured.")
+	logger.Info().
+		Str("_rule_provider_type", "http_endpoint").
+		Msg("Rule provider configured.")
 
 	return nil
 }
