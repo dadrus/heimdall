@@ -94,6 +94,18 @@ func (p *provider) Start(_ context.Context) error {
 	return nil
 }
 
+func (p *provider) Stop(_ context.Context) error {
+	p.l.Info().
+		Str("_rule_provider_type", "file_system").
+		Msg("Tearing down rule provider")
+
+	if p.w != nil {
+		return p.w.Close()
+	}
+
+	return nil
+}
+
 func (p *provider) watchFiles() {
 	p.l.Debug().
 		Str("_rule_provider_type", "file_system").
@@ -175,18 +187,6 @@ func (p *provider) notifyRuleSetCreated(evt fsnotify.Event) {
 		Definition: data,
 		ChangeType: event.Create,
 	})
-}
-
-func (p *provider) Stop(_ context.Context) error {
-	p.l.Info().
-		Str("_rule_provider_type", "file_system").
-		Msg("Tearing down rule provider")
-
-	if p.w != nil {
-		return p.w.Close()
-	}
-
-	return nil
 }
 
 func (p *provider) loadInitialRuleSet() error {
