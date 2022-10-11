@@ -3,6 +3,7 @@ package httpendpoint
 import (
 	"context"
 
+	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/rs/zerolog"
 	"go.uber.org/fx"
 
@@ -19,6 +20,7 @@ type registrationArguments struct {
 	Lifecycle fx.Lifecycle
 	Config    config.Configuration
 	Queue     event.RuleSetChangedEventQueue
+	Cache     cache.Cache
 }
 
 func registerProvider(args registrationArguments, logger zerolog.Logger) error {
@@ -50,7 +52,7 @@ func registerProvider(args registrationArguments, logger zerolog.Logger) error {
 
 	args.Lifecycle.Append(
 		fx.Hook{
-			OnStart: func(ctx context.Context) error { return provider.Start(ctx) },
+			OnStart: func(ctx context.Context) error { return provider.Start(cache.WithContext(ctx, args.Cache)) },
 			OnStop:  func(ctx context.Context) error { return provider.Stop(ctx) },
 		},
 	)
