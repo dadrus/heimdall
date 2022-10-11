@@ -3,10 +3,10 @@ package httpendpoint
 import (
 	"context"
 
-	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/rs/zerolog"
 	"go.uber.org/fx"
 
+	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/endpoint"
 	"github.com/dadrus/heimdall/internal/heimdall"
