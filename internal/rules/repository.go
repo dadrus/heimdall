@@ -2,6 +2,7 @@ package rules
 
 import (
 	"bytes"
+	"context"
 	"net/url"
 	"sync"
 
@@ -64,7 +65,7 @@ func (r *repository) FindRule(requestURL *url.URL) (rule.Rule, error) {
 		"no applicable rule found for %s", requestURL.String())
 }
 
-func (r *repository) Start() error {
+func (r *repository) Start(_ context.Context) error {
 	r.logger.Info().Msg("Starting rule definition loader")
 
 	go r.watchRuleSetChanges()
@@ -72,7 +73,7 @@ func (r *repository) Start() error {
 	return nil
 }
 
-func (r *repository) Stop() error {
+func (r *repository) Stop(_ context.Context) error {
 	r.logger.Info().Msg("Tearing down rule definition loader")
 
 	r.quit <- true

@@ -212,6 +212,7 @@ func TestRepositoryAddAndRemoveRulesFromDifferentRuleSets(t *testing.T) {
 func TestRepositoryRuleSetLifecycleManagement(t *testing.T) {
 	t.Parallel()
 
+	ctx := context.Background()
 	queue := make(event.RuleSetChangedEventQueue, 10)
 	defer close(queue)
 
@@ -221,10 +222,10 @@ func TestRepositoryRuleSetLifecycleManagement(t *testing.T) {
 	impl, ok := repo.(*repository)
 	require.True(t, ok)
 
-	require.NoError(t, impl.Start())
+	require.NoError(t, impl.Start(ctx))
 
 	// nolint: errcheck
-	defer impl.Stop()
+	defer impl.Stop(ctx)
 
 	for _, tc := range []struct {
 		uc             string
