@@ -52,7 +52,7 @@ func registerFileSystemProvider(
 		},
 	)
 
-	logger.Info().Msg("Filesystem rule provider configured.")
+	logger.Info().Str("_rule_provider_type", "file_system").Msg("Rule provider configured.")
 
 	return nil
 }
