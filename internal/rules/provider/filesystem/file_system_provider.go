@@ -30,8 +30,6 @@ func registerFileSystemProvider(
 	queue event.RuleSetChangedEventQueue,
 ) error {
 	if conf.Rules.Providers.FileSystem == nil {
-		logger.Debug().Msg("File based rule provider not configured. Skipping it.")
-
 		return nil
 	}
 
@@ -53,6 +51,8 @@ func registerFileSystemProvider(
 			},
 		},
 	)
+
+	logger.Info().Msg("Filesystem rule provider configured.")
 
 	return nil
 }
