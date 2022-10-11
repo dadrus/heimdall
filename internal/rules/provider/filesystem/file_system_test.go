@@ -47,7 +47,7 @@ func TestRegisterFileSystemProvider(t *testing.T) {
 			conf: config.Configuration{
 				Rules: config.RulesConfig{
 					Providers: config.RuleProviders{
-						File: &config.FileBasedRuleProviderConfig{},
+						FileSystem: &config.FileBasedRuleProviderConfig{},
 					},
 				},
 			},
@@ -63,7 +63,7 @@ func TestRegisterFileSystemProvider(t *testing.T) {
 			conf: config.Configuration{
 				Rules: config.RulesConfig{
 					Providers: config.RuleProviders{
-						File: &config.FileBasedRuleProviderConfig{Src: "foo.bar"},
+						FileSystem: &config.FileBasedRuleProviderConfig{Src: "foo.bar"},
 					},
 				},
 			},
@@ -79,7 +79,7 @@ func TestRegisterFileSystemProvider(t *testing.T) {
 			conf: config.Configuration{
 				Rules: config.RulesConfig{
 					Providers: config.RuleProviders{
-						File: &config.FileBasedRuleProviderConfig{Src: tmpFile.Name()},
+						FileSystem: &config.FileBasedRuleProviderConfig{Src: tmpFile.Name()},
 					},
 				},
 			},
@@ -99,7 +99,7 @@ func TestRegisterFileSystemProvider(t *testing.T) {
 			conf: config.Configuration{
 				Rules: config.RulesConfig{
 					Providers: config.RuleProviders{
-						File: &config.FileBasedRuleProviderConfig{Src: tmpFile.Name(), Watch: true},
+						FileSystem: &config.FileBasedRuleProviderConfig{Src: tmpFile.Name(), Watch: true},
 					},
 				},
 			},
