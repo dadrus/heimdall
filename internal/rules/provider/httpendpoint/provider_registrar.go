@@ -44,20 +44,16 @@ func registerProvider(args registrationArguments, logger zerolog.Logger) error {
 		return err
 	}
 
-	args.Lifecycle.Append(
-		fx.Hook{
-			OnStart: func(ctx context.Context) error {
-				return provider.Start()
-			},
-			OnStop: func(ctx context.Context) error {
-				return provider.Stop()
-			},
-		},
-	)
-
 	logger.Info().
 		Str("_rule_provider_type", "http_endpoint").
 		Msg("Rule provider configured.")
+
+	args.Lifecycle.Append(
+		fx.Hook{
+			OnStart: func(ctx context.Context) error { return provider.Start(ctx) },
+			OnStop:  func(ctx context.Context) error { return provider.Stop(ctx) },
+		},
+	)
 
 	return nil
 }
