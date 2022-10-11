@@ -15,10 +15,10 @@ import (
 )
 
 type provider struct {
-	src     string
-	watcher *fsnotify.Watcher
-	queue   event.RuleSetChangedEventQueue
-	logger  zerolog.Logger
+	src string
+	w   *fsnotify.Watcher
+	q   event.RuleSetChangedEventQueue
+	l   zerolog.Logger
 }
 
 func newProvider(
@@ -57,15 +57,15 @@ func newProvider(
 	}
 
 	return &provider{
-		src:     absPath,
-		watcher: watcher,
-		queue:   queue,
-		logger:  logger,
+		src: absPath,
+		w:   watcher,
+		q:   queue,
+		l:   logger,
 	}, nil
 }
 
-func (p *provider) Start(ctx context.Context) error {
-	p.logger.Info().
+func (p *provider) Start(_ context.Context) error {
+	p.l.Info().
 		Str("_rule_provider_type", "file_system").
 		Msg("Starting rule definitions provider")
 
@@ -73,16 +73,16 @@ func (p *provider) Start(ctx context.Context) error {
 		return err
 	}
 
-	if p.watcher == nil {
-		p.logger.Warn().
+	if p.w == nil {
+		p.l.Warn().
 			Str("_rule_provider_type", "file_system").
 			Msg("Watcher for file_system provider is not configured. Updates to rules will have no effects.")
 
 		return nil
 	}
 
-	if err := p.watcher.Add(p.src); err != nil {
-		p.logger.Error().Err(err).
+	if err := p.w.Add(p.src); err != nil {
+		p.l.Error().Err(err).
 			Str("_rule_provider_type", "file_system").
 			Msg("Failed to start rule definitions provider")
 
@@ -95,46 +95,46 @@ func (p *provider) Start(ctx context.Context) error {
 }
 
 func (p *provider) watchFiles() {
-	p.logger.Debug().
+	p.l.Debug().
 		Str("_rule_provider_type", "file_system").
 		Msg("Watching rule files for changes")
 
 	for {
 		select {
-		case event, ok := <-p.watcher.Events:
+		case evt, ok := <-p.w.Events:
 			if !ok {
-				p.logger.Debug().
+				p.l.Debug().
 					Str("_rule_provider_type", "file_system").
 					Msg("Watcher events channel closed")
 
 				return
 			}
 
-			p.logger.Debug().
+			p.l.Debug().
 				Str("_rule_provider_type", "file_system").
-				Str("_event", event.String()).
-				Str("_src", event.Name).
+				Str("_event", evt.String()).
+				Str("_src", evt.Name).
 				Msg("Rule update event received")
 
 			switch {
-			case event.Op&fsnotify.Create == fsnotify.Create:
-				p.notifyRuleSetCreated(event)
-			case event.Op&fsnotify.Remove == fsnotify.Remove:
-				p.notifyRuleSetDeleted(event)
-			case event.Op&fsnotify.Write == fsnotify.Write:
-				p.notifyRuleSetDeleted(event)
-				p.notifyRuleSetCreated(event)
+			case evt.Op&fsnotify.Create == fsnotify.Create:
+				p.notifyRuleSetCreated(evt)
+			case evt.Op&fsnotify.Remove == fsnotify.Remove:
+				p.notifyRuleSetDeleted(evt)
+			case evt.Op&fsnotify.Write == fsnotify.Write:
+				p.notifyRuleSetDeleted(evt)
+				p.notifyRuleSetCreated(evt)
 			}
-		case err, ok := <-p.watcher.Errors:
+		case err, ok := <-p.w.Errors:
 			if !ok {
-				p.logger.Debug().
+				p.l.Debug().
 					Str("_rule_provider_type", "file_system").
 					Msg("Watcher error channel closed")
 
 				return
 			}
 
-			p.logger.Warn().Err(err).
+			p.l.Warn().Err(err).
 				Str("_rule_provider_type", "file_system").
 				Msg("Watcher error received")
 		}
@@ -153,7 +153,7 @@ func (p *provider) notifyRuleSetCreated(evt fsnotify.Event) {
 
 	data, err := os.ReadFile(file)
 	if err != nil {
-		p.logger.Error().Err(err).
+		p.l.Error().Err(err).
 			Str("_rule_provider_type", "file_system").
 			Str("_file", file).
 			Msg("Failed reading")
@@ -162,7 +162,7 @@ func (p *provider) notifyRuleSetCreated(evt fsnotify.Event) {
 	}
 
 	if len(data) == 0 {
-		p.logger.Warn().
+		p.l.Warn().
 			Str("_rule_provider_type", "file_system").
 			Str("_file", file).
 			Msg("File is empty")
@@ -177,20 +177,20 @@ func (p *provider) notifyRuleSetCreated(evt fsnotify.Event) {
 	})
 }
 
-func (p *provider) Stop(ctx context.Context) error {
-	p.logger.Info().
+func (p *provider) Stop(_ context.Context) error {
+	p.l.Info().
 		Str("_rule_provider_type", "file_system").
 		Msg("Tearing down rule provider")
 
-	if p.watcher != nil {
-		return p.watcher.Close()
+	if p.w != nil {
+		return p.w.Close()
 	}
 
 	return nil
 }
 
 func (p *provider) loadInitialRuleSet() error {
-	p.logger.Info().
+	p.l.Info().
 		Str("_rule_provider_type", "file_system").
 		Msg("Loading initial rule set")
 
@@ -211,7 +211,7 @@ func (p *provider) loadInitialRuleSet() error {
 			path := filepath.Join(p.src, entry.Name())
 
 			if entry.IsDir() {
-				p.logger.Warn().
+				p.l.Warn().
 					Str("_rule_provider_type", "file_system").
 					Str("_path", path).
 					Msg("Ignoring directory")
@@ -228,7 +228,7 @@ func (p *provider) loadInitialRuleSet() error {
 	for _, src := range sources {
 		data, err := os.ReadFile(src)
 		if err != nil {
-			p.logger.Error().Err(err).
+			p.l.Error().Err(err).
 				Str("_rule_provider_type", "file_system").
 				Msg("Failed loading initial rule set")
 
@@ -236,7 +236,7 @@ func (p *provider) loadInitialRuleSet() error {
 		}
 
 		if len(data) == 0 {
-			p.logger.Warn().
+			p.l.Warn().
 				Str("_rule_provider_type", "file_system").
 				Str("_file", src).
 				Msg("File is empty")
@@ -255,10 +255,10 @@ func (p *provider) loadInitialRuleSet() error {
 }
 
 func (p *provider) ruleSetChanged(evt event.RuleSetChangedEvent) {
-	p.logger.Info().
+	p.l.Info().
 		Str("_rule_provider_type", "file_system").
 		Str("_src", evt.Src).
 		Str("_type", evt.ChangeType.String()).
 		Msg("Rule set changed")
-	p.queue <- evt
+	p.q <- evt
 }

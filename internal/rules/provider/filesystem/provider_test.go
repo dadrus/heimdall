@@ -38,8 +38,8 @@ func TestStartProvider(t *testing.T) {
 				t.Helper()
 
 				return &provider{
-					src:    "foo.bar",
-					logger: log.Logger,
+					src: "foo.bar",
+					l:   log.Logger,
 				}
 			},
 			assert: func(t *testing.T, err error, provider *provider) {
@@ -57,8 +57,8 @@ func TestStartProvider(t *testing.T) {
 				require.NoError(t, file.Chmod(0o200))
 
 				return &provider{
-					src:    file.Name(),
-					logger: log.Logger,
+					src: file.Name(),
+					l:   log.Logger,
 				}
 			},
 			assert: func(t *testing.T, err error, provider *provider) {
@@ -74,9 +74,9 @@ func TestStartProvider(t *testing.T) {
 				t.Helper()
 
 				return &provider{
-					src:    file.Name(),
-					logger: log.Logger,
-					queue:  make(event.RuleSetChangedEventQueue, 10),
+					src: file.Name(),
+					l:   log.Logger,
+					q:   make(event.RuleSetChangedEventQueue, 10),
 				}
 			},
 			assert: func(t *testing.T, err error, provider *provider) {
@@ -84,7 +84,7 @@ func TestStartProvider(t *testing.T) {
 
 				require.NoError(t, err)
 
-				assert.Len(t, provider.queue, 0)
+				assert.Len(t, provider.q, 0)
 			},
 		},
 		{
@@ -96,9 +96,9 @@ func TestStartProvider(t *testing.T) {
 				require.NoError(t, err)
 
 				return &provider{
-					src:    file.Name(),
-					logger: log.Logger,
-					queue:  make(event.RuleSetChangedEventQueue, 10),
+					src: file.Name(),
+					l:   log.Logger,
+					q:   make(event.RuleSetChangedEventQueue, 10),
 				}
 			},
 			assert: func(t *testing.T, err error, provider *provider) {
@@ -106,9 +106,9 @@ func TestStartProvider(t *testing.T) {
 
 				require.NoError(t, err)
 
-				assert.Len(t, provider.queue, 1)
+				assert.Len(t, provider.q, 1)
 
-				evt := <-provider.queue
+				evt := <-provider.q
 
 				assert.Contains(t, evt.Src, "file_system:")
 				assert.Equal(t, []byte(`Hi Bar`), evt.Definition)
@@ -121,9 +121,9 @@ func TestStartProvider(t *testing.T) {
 				t.Helper()
 
 				return &provider{
-					src:    dir,
-					logger: log.Logger,
-					queue:  make(event.RuleSetChangedEventQueue, 10),
+					src: dir,
+					l:   log.Logger,
+					q:   make(event.RuleSetChangedEventQueue, 10),
 				}
 			},
 			assert: func(t *testing.T, err error, provider *provider) {
@@ -131,7 +131,7 @@ func TestStartProvider(t *testing.T) {
 
 				require.NoError(t, err)
 
-				assert.Len(t, provider.queue, 0)
+				assert.Len(t, provider.q, 0)
 			},
 		},
 		{
@@ -146,9 +146,9 @@ func TestStartProvider(t *testing.T) {
 				require.NoError(t, err)
 
 				return &provider{
-					src:    dir,
-					logger: log.Logger,
-					queue:  make(event.RuleSetChangedEventQueue, 10),
+					src: dir,
+					l:   log.Logger,
+					q:   make(event.RuleSetChangedEventQueue, 10),
 				}
 			},
 			assert: func(t *testing.T, err error, provider *provider) {
@@ -156,9 +156,9 @@ func TestStartProvider(t *testing.T) {
 
 				require.NoError(t, err)
 
-				assert.Len(t, provider.queue, 1)
+				assert.Len(t, provider.q, 1)
 
-				evt := <-provider.queue
+				evt := <-provider.q
 
 				assert.Contains(t, evt.Src, "file_system:")
 				assert.Equal(t, []byte(`Hi Foo`), evt.Definition)
@@ -180,9 +180,9 @@ func TestStartProvider(t *testing.T) {
 				require.NoError(t, err)
 
 				return &provider{
-					src:    dir,
-					logger: log.Logger,
-					queue:  make(event.RuleSetChangedEventQueue, 10),
+					src: dir,
+					l:   log.Logger,
+					q:   make(event.RuleSetChangedEventQueue, 10),
 				}
 			},
 			assert: func(t *testing.T, err error, provider *provider) {
@@ -190,7 +190,7 @@ func TestStartProvider(t *testing.T) {
 
 				require.NoError(t, err)
 
-				assert.Len(t, provider.queue, 0)
+				assert.Len(t, provider.q, 0)
 			},
 		},
 		{
@@ -230,19 +230,19 @@ func TestStartProvider(t *testing.T) {
 
 				require.NoError(t, err)
 
-				require.Len(t, provider.queue, 3)
+				require.Len(t, provider.q, 3)
 
-				evt := <-provider.queue
+				evt := <-provider.q
 				assert.Contains(t, evt.Src, "file_system:"+provider.src)
 				assert.Equal(t, []byte(nil), evt.Definition)
 				assert.Equal(t, event.Remove, evt.ChangeType)
 
-				evt = <-provider.queue
+				evt = <-provider.q
 				assert.Contains(t, evt.Src, "file_system:"+provider.src)
 				assert.Equal(t, []byte(`Hi Foo`), evt.Definition)
 				assert.Equal(t, event.Create, evt.ChangeType)
 
-				evt = <-provider.queue
+				evt = <-provider.q
 				assert.Contains(t, evt.Src, "file_system:"+provider.src)
 				assert.Equal(t, []byte(nil), evt.Definition)
 				assert.Equal(t, event.Remove, evt.ChangeType)
@@ -280,14 +280,14 @@ func TestStartProvider(t *testing.T) {
 
 				require.NoError(t, err)
 
-				require.Len(t, provider.queue, 2)
+				require.Len(t, provider.q, 2)
 
-				evt := <-provider.queue
+				evt := <-provider.q
 				assert.Contains(t, evt.Src, "file_system:"+provider.src)
 				assert.Equal(t, []byte(nil), evt.Definition)
 				assert.Equal(t, event.Remove, evt.ChangeType)
 
-				evt = <-provider.queue
+				evt = <-provider.q
 				assert.Contains(t, evt.Src, "file_system:"+provider.src)
 				assert.Equal(t, []byte(`Hi Foo`), evt.Definition)
 				assert.Equal(t, event.Create, evt.ChangeType)
