@@ -20,7 +20,7 @@ require (
 	github.com/ory/ladon v1.2.0
 	github.com/rs/zerolog v1.28.0
 	github.com/santhosh-tekuri/jsonschema/v5 v5.0.1
-	github.com/spf13/cobra v1.5.0
+	github.com/spf13/cobra v1.6.0
 	github.com/stretchr/testify v1.8.0
 	github.com/tidwall/gjson v1.14.3
 	github.com/tonglil/opentelemetry-go-datadog-propagator v0.1.0
@@ -63,7 +63,7 @@ require (
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.7.0 // indirect
 	github.com/huandu/xstrings v1.3.2 // indirect
 	github.com/imdario/mergo v0.3.12 // indirect
-	github.com/inconshreveable/mousetrap v1.0.0 // indirect
+	github.com/inconshreveable/mousetrap v1.0.1 // indirect
 	github.com/klauspost/compress v1.15.0 // indirect
 	github.com/mattn/go-colorable v0.1.12 // indirect
 	github.com/mattn/go-isatty v0.0.14 // indirect
