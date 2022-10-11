@@ -3,8 +3,8 @@ package authenticators
 import (
 	"github.com/mitchellh/mapstructure"
 
+	"github.com/dadrus/heimdall/internal/endpoint"
 	"github.com/dadrus/heimdall/internal/pipeline/authenticators/extractors"
-	"github.com/dadrus/heimdall/internal/pipeline/endpoint"
 	"github.com/dadrus/heimdall/internal/pipeline/oauth2"
 	"github.com/dadrus/heimdall/internal/truststore"
 )
