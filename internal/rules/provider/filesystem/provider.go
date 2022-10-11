@@ -1,6 +1,7 @@
 package filesystem
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 
@@ -63,7 +64,7 @@ func newProvider(
 	}, nil
 }
 
-func (p *provider) Start() error {
+func (p *provider) Start(ctx context.Context) error {
 	p.logger.Info().
 		Str("_rule_provider_type", "file_system").
 		Msg("Starting rule definitions provider")
@@ -176,7 +177,7 @@ func (p *provider) notifyRuleSetCreated(evt fsnotify.Event) {
 	})
 }
 
-func (p *provider) Stop() error {
+func (p *provider) Stop(ctx context.Context) error {
 	p.logger.Info().
 		Str("_rule_provider_type", "file_system").
 		Msg("Tearing down rule provider")

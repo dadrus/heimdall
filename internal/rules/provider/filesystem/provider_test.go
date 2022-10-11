@@ -1,6 +1,7 @@
 package filesystem
 
 import (
+	"context"
 	"os"
 	"testing"
 	"time"
@@ -294,6 +295,7 @@ func TestStartProvider(t *testing.T) {
 		},
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
+			ctx := context.Background()
 			tmpFile, err := os.CreateTemp(os.TempDir(), "test-dir-")
 			require.NoError(t, err)
 
@@ -313,11 +315,11 @@ func TestStartProvider(t *testing.T) {
 			provider := tc.createProvider(t, tmpFile, tmpDir)
 
 			// WHEN
-			err = provider.Start()
+			err = provider.Start(ctx)
 			writeContents(t, tmpFile, tmpDir)
 
 			// nolint: errcheck
-			tearDownFuncs = append(tearDownFuncs, func() { provider.Stop() })
+			tearDownFuncs = append(tearDownFuncs, func() { provider.Stop(ctx) })
 
 			// THEN
 			tc.assert(t, err, provider)

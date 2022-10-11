@@ -28,18 +28,16 @@ func registerProvider(args registrationArguments, logger zerolog.Logger) error {
 		return err
 	}
 
+	logger.Info().
+		Str("_rule_provider_type", "file_system").
+		Msg("Rule provider configured.")
+
 	args.Lifecycle.Append(
 		fx.Hook{
-			OnStart: func(ctx context.Context) error {
-				return provider.Start()
-			},
-			OnStop: func(ctx context.Context) error {
-				return provider.Stop()
-			},
+			OnStart: func(ctx context.Context) error { return provider.Start(ctx) },
+			OnStop:  func(ctx context.Context) error { return provider.Stop(ctx) },
 		},
 	)
-
-	logger.Info().Str("_rule_provider_type", "file_system").Msg("Rule provider configured.")
 
 	return nil
 }
