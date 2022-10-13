@@ -169,7 +169,12 @@ rules:
       - error_handler: authenticate_with_kratos
 
   providers:
-    file:
+    file_system:
       src: test_rules.yaml
       watch: true
+
+    http_endpoint:
+      endpoint:
+        url: http://foo.bar/rules.yaml
+      watch_interval: 5m
 
