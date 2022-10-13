@@ -71,7 +71,7 @@ func (e Endpoint) CreateRequest(ctx context.Context, body io.Reader, rndr Render
 	logger := zerolog.Ctx(ctx)
 	tpl := x.IfThenElse[Renderer](rndr != nil, rndr, noopRenderer{})
 
-	method := "POST"
+	method := http.MethodPost
 	if len(e.Method) != 0 {
 		method = e.Method
 	}
