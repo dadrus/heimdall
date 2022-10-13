@@ -8,12 +8,12 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/dadrus/heimdall/internal/x"
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/endpoint"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/event"
+	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
