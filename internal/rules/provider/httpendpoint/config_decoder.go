@@ -11,6 +11,7 @@ func decodeConfig(input any, output any) error {
 		&mapstructure.DecoderConfig{
 			DecodeHook: mapstructure.ComposeDecodeHookFunc(
 				endpoint.DecodeAuthenticationStrategyHookFunc(),
+				mapstructure.StringToTimeDurationHookFunc(),
 			),
 			Result:      output,
 			ErrorUnused: true,

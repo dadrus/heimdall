@@ -2,6 +2,7 @@ package httpendpoint
 
 import (
 	"context"
+	"time"
 
 	"github.com/rs/zerolog"
 	"go.uber.org/fx"
@@ -29,8 +30,8 @@ func registerProvider(args registrationArguments, logger zerolog.Logger) error {
 	}
 
 	type Config struct {
-		Endpoint endpoint.Endpoint `mapstructure:"endpoint"`
-		Watch    bool              `mapstructure:"watch"`
+		Endpoint      endpoint.Endpoint `mapstructure:"endpoint"`
+		WatchInterval *time.Duration    `mapstructure:"watch_interval"`
 	}
 
 	var conf Config
@@ -40,7 +41,7 @@ func registerProvider(args registrationArguments, logger zerolog.Logger) error {
 			CausedBy(err)
 	}
 
-	provider, err := newProvider(conf.Endpoint, conf.Watch, args.Queue, logger)
+	provider, err := newProvider(conf.Endpoint, conf.WatchInterval, args.Queue, logger)
 	if err != nil {
 		return err
 	}

@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"time"
 
 	"github.com/rs/zerolog"
 
@@ -16,15 +17,15 @@ import (
 )
 
 type provider struct {
-	e endpoint.Endpoint
-	w bool
-	q event.RuleSetChangedEventQueue
-	l zerolog.Logger
+	e  endpoint.Endpoint
+	wi *time.Duration
+	q  event.RuleSetChangedEventQueue
+	l  zerolog.Logger
 }
 
 func newProvider(
 	endpoint endpoint.Endpoint,
-	watchChanges bool,
+	watchInterval *time.Duration,
 	queue event.RuleSetChangedEventQueue,
 	logger zerolog.Logger,
 ) (*provider, error) {
@@ -36,10 +37,10 @@ func newProvider(
 	}
 
 	return &provider{
-		e: endpoint,
-		w: watchChanges,
-		q: queue,
-		l: logger,
+		e:  endpoint,
+		wi: watchInterval,
+		q:  queue,
+		l:  logger,
 	}, nil
 }
 
