@@ -7,7 +7,7 @@ require (
 	github.com/ansrivas/fiberprometheus/v2 v2.4.1
 	github.com/dlclark/regexp2 v1.7.0
 	github.com/dop251/goja v0.0.0-20221003171542-5ea1285e6c91
-	github.com/fsnotify/fsnotify v1.5.4
+	github.com/fsnotify/fsnotify v1.6.0
 	github.com/gobwas/glob v0.2.3
 	github.com/goccy/go-json v0.9.11
 	github.com/gofiber/fiber/v2 v2.38.1
