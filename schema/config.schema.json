@@ -1610,6 +1610,7 @@
         "providers": {
           "description": "Where to load rules from",
           "type": "object",
+          "additionalProperties": false,
           "properties": {
             "file_system": {
               "$ref": "#/definitions/fileSystemProvider"
