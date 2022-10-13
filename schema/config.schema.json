@@ -1178,7 +1178,9 @@
       "description": "Describes the error, an error handler should be responsible for",
       "type": "object",
       "additionalProperties": false,
-      "required": ["type"],
+      "required": [
+        "type"
+      ],
       "properties": {
         "type": {
           "$ref": "#/definitions/errorType"
@@ -1334,7 +1336,7 @@
         }
       }
     },
-    "fileProvider": {
+    "fileSystemProvider": {
       "description": "Enables file backend to load rules from",
       "type": "object",
       "additionalProperties": false,
@@ -1350,6 +1352,30 @@
         "src": {
           "description": "Load rules from one or more rule files. Can be a directory containing ruleset files or a single ruleset file",
           "type": "string"
+        }
+      }
+    },
+    "httpEndpointProvider": {
+      "description": "Enables http(s) backend to load rules from",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "endpoint"
+      ],
+      "properties": {
+        "endpoint": {
+          "$ref": "#/definitions/endpointConfiguration"
+        },
+        "watch_interval": {
+          "type": "string",
+          "description": "How often to poll the endpoint for rule updates. Polling is disabled by default.",
+          "pattern": "^[0-9]+(ns|us|ms|s|m|h)$",
+          "default": "0",
+          "examples": [
+            "1h",
+            "1m",
+            "30s"
+          ]
         }
       }
     }
@@ -1585,8 +1611,11 @@
           "description": "Where to load rules from",
           "type": "object",
           "properties": {
-            "file": {
-              "$ref": "#/definitions/fileProvider"
+            "file_system": {
+              "$ref": "#/definitions/fileSystemProvider"
+            },
+            "http_endpoint": {
+              "$ref": "#/definitions/httpEndpointProvider"
             }
           }
         },
