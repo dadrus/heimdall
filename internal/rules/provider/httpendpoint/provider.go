@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"time"
 
+	"github.com/dadrus/heimdall/internal/x"
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/endpoint"
@@ -18,7 +19,7 @@ import (
 
 type provider struct {
 	e  endpoint.Endpoint
-	wi *time.Duration
+	wi time.Duration
 	q  event.RuleSetChangedEventQueue
 	l  zerolog.Logger
 }
@@ -36,11 +37,23 @@ func newProvider(
 			CausedBy(err)
 	}
 
+	if len(endpoint.Method) != 0 {
+		if endpoint.Method != http.MethodGet {
+			return nil, errorchain.
+				NewWithMessage(heimdall.ErrConfiguration,
+					"only GET is supported for the endpoint configuration of the http_endpoint provider")
+		}
+	} else {
+		endpoint.Method = http.MethodGet
+	}
+
 	return &provider{
-		e:  endpoint,
-		wi: watchInterval,
-		q:  queue,
-		l:  logger,
+		e: endpoint,
+		wi: x.IfThenElseExec(watchInterval != nil && *watchInterval > 0,
+			func() time.Duration { return *watchInterval },
+			func() time.Duration { return 0 * time.Second }),
+		q: queue,
+		l: logger,
 	}, nil
 }
 
