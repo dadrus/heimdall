@@ -2,17 +2,13 @@ package httpendpoint
 
 import (
 	"context"
-	"time"
 
 	"github.com/rs/zerolog"
 	"go.uber.org/fx"
 
 	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/dadrus/heimdall/internal/config"
-	"github.com/dadrus/heimdall/internal/endpoint"
-	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/event"
-	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
 type registrationArguments struct {
@@ -29,19 +25,7 @@ func registerProvider(args registrationArguments, logger zerolog.Logger) error {
 		return nil
 	}
 
-	type Config struct {
-		Endpoint      endpoint.Endpoint `mapstructure:"endpoint"`
-		WatchInterval *time.Duration    `mapstructure:"watch_interval"`
-	}
-
-	var conf Config
-	if err := decodeConfig(args.Config.Rules.Providers.HTTPEndpoint, &conf); err != nil {
-		return errorchain.
-			NewWithMessage(heimdall.ErrConfiguration, "failed to decode http_endpoint rule provider config").
-			CausedBy(err)
-	}
-
-	provider, err := newProvider(conf.Endpoint, conf.WatchInterval, args.Queue, logger)
+	provider, err := newProvider(args.Config.Rules.Providers.HTTPEndpoint, args.Queue, logger)
 	if err != nil {
 		return err
 	}

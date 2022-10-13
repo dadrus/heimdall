@@ -50,71 +50,7 @@ func TestRegisterProvider(t *testing.T) {
 			},
 		},
 		{
-			uc: "with endpoint without url configured",
-			conf: []byte(`
-endpoint:
-  method: POST
-`),
-			assert: func(t *testing.T, err error) {
-				t.Helper()
-
-				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "failed to validate http_endpoint")
-			},
-		},
-		{
-			uc: "with unsupported endpoint method configured",
-			conf: []byte(`
-endpoint:
-  url: https://foo.bar
-  method: POST
-`),
-			assert: func(t *testing.T, err error) {
-				t.Helper()
-
-				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "only GET is supported")
-			},
-		},
-		{
-			uc: "with only endpoint and its url configured",
-			conf: []byte(`
-endpoint:
-  url: https://foo.bar
-`),
-			setupMocks: func(t *testing.T, mockLC *mockLifecycle) {
-				t.Helper()
-
-				mockLC.On("Append", mock.AnythingOfType("fx.Hook"))
-			},
-			assert: func(t *testing.T, err error) {
-				t.Helper()
-
-				require.NoError(t, err)
-			},
-		},
-		{
-			uc: "with only endpoint, its url and supported method configured",
-			conf: []byte(`
-endpoint:
-  url: https://foo.bar
-  method: GET
-`),
-			setupMocks: func(t *testing.T, mockLC *mockLifecycle) {
-				t.Helper()
-
-				mockLC.On("Append", mock.AnythingOfType("fx.Hook"))
-			},
-			assert: func(t *testing.T, err error) {
-				t.Helper()
-
-				require.NoError(t, err)
-			},
-		},
-		{
-			uc: "with endpoint and watch interval configured",
+			uc: "with valid configuration",
 			conf: []byte(`
 endpoint:
   url: https://foo.bar

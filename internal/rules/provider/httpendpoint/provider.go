@@ -25,32 +25,43 @@ type provider struct {
 }
 
 func newProvider(
-	endpoint endpoint.Endpoint,
-	watchInterval *time.Duration,
+	rawConf map[string]any,
 	queue event.RuleSetChangedEventQueue,
 	logger zerolog.Logger,
 ) (*provider, error) {
-	if err := endpoint.Validate(); err != nil {
+	type Config struct {
+		Endpoint      endpoint.Endpoint `mapstructure:"endpoint"`
+		WatchInterval *time.Duration    `mapstructure:"watch_interval"`
+	}
+
+	var conf Config
+	if err := decodeConfig(rawConf, &conf); err != nil {
+		return nil, errorchain.
+			NewWithMessage(heimdall.ErrConfiguration, "failed to decode http_endpoint rule provider config").
+			CausedBy(err)
+	}
+
+	if err := conf.Endpoint.Validate(); err != nil {
 		return nil, errorchain.
 			NewWithMessage(heimdall.ErrConfiguration,
 				"failed to validate http_endpoint rule provider endpoint configuration").
 			CausedBy(err)
 	}
 
-	if len(endpoint.Method) != 0 {
-		if endpoint.Method != http.MethodGet {
+	if len(conf.Endpoint.Method) != 0 {
+		if conf.Endpoint.Method != http.MethodGet {
 			return nil, errorchain.
 				NewWithMessage(heimdall.ErrConfiguration,
 					"only GET is supported for the endpoint configuration of the http_endpoint provider")
 		}
 	} else {
-		endpoint.Method = http.MethodGet
+		conf.Endpoint.Method = http.MethodGet
 	}
 
 	return &provider{
-		e: endpoint,
-		wi: x.IfThenElseExec(watchInterval != nil && *watchInterval > 0,
-			func() time.Duration { return *watchInterval },
+		e: conf.Endpoint,
+		wi: x.IfThenElseExec(conf.WatchInterval != nil && *conf.WatchInterval > 0,
+			func() time.Duration { return *conf.WatchInterval },
 			func() time.Duration { return 0 * time.Second }),
 		q: queue,
 		l: logger,
