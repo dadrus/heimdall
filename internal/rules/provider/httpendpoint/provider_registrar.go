@@ -34,7 +34,6 @@ func registerProvider(args registrationArguments, logger zerolog.Logger) error {
 	}
 
 	var conf Config
-
 	if err := decodeConfig(args.Config.Rules.Providers.HTTPEndpoint, &conf); err != nil {
 		return errorchain.
 			NewWithMessage(heimdall.ErrConfiguration, "failed to decode http_endpoint rule provider config").
