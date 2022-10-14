@@ -27,6 +27,10 @@ func registerProvider(args registrationArguments, logger zerolog.Logger) error {
 
 	provider, err := newProvider(args.Config.Rules.Providers.HTTPEndpoint, args.Queue, logger)
 	if err != nil {
+		logger.Error().Err(err).
+			Str("_rule_provider_type", "http_endpoint").
+			Msg("Failed to create provider.")
+
 		return err
 	}
 

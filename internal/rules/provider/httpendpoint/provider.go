@@ -74,6 +74,10 @@ func (p *provider) Start(ctx context.Context) error {
 		Msg("Starting rule definitions provider")
 
 	if err := p.loadInitialRuleSet(ctx); err != nil {
+		p.l.Error().Err(err).
+			Str("_rule_provider_type", "http_endpoint").
+			Msg("Failed loading initial rule sets")
+
 		return err
 	}
 
