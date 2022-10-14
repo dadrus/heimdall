@@ -1612,7 +1612,7 @@
           "type": "object",
           "additionalProperties": false,
           "properties": {
-            "file_system": {
+            "file": {
               "$ref": "#/definitions/fileSystemProvider"
             },
             "http_endpoint": {

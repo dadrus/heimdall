@@ -267,7 +267,7 @@ rules:
       - error_handler: authenticate_with_kratos
 
   providers:
-    file_system:
+    file:
       src: test_rules.yaml
       watch: true
 
