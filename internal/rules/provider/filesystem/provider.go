@@ -70,6 +70,10 @@ func (p *provider) Start(_ context.Context) error {
 		Msg("Starting rule definitions provider")
 
 	if err := p.loadInitialRuleSet(); err != nil {
+		p.l.Error().Err(err).
+			Str("_rule_provider_type", "file_system").
+			Msg("Failed loading initial rule sets")
+
 		return err
 	}
 
