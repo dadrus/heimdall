@@ -25,7 +25,7 @@ func registerProvider(args registrationArguments, logger zerolog.Logger) error {
 		return nil
 	}
 
-	provider, err := newProvider(args.Config.Rules.Providers.HTTPEndpoint, args.Queue, logger)
+	provider, err := newProvider(args.Config.Rules.Providers.HTTPEndpoint, args.Cache, args.Queue, logger)
 	if err != nil {
 		logger.Error().Err(err).
 			Str("_rule_provider_type", "http_endpoint").
@@ -40,7 +40,7 @@ func registerProvider(args registrationArguments, logger zerolog.Logger) error {
 
 	args.Lifecycle.Append(
 		fx.Hook{
-			OnStart: func(ctx context.Context) error { return provider.Start(cache.WithContext(ctx, args.Cache)) },
+			OnStart: func(ctx context.Context) error { return provider.Start(ctx) },
 			OnStop:  func(ctx context.Context) error { return provider.Stop(ctx) },
 		},
 	)

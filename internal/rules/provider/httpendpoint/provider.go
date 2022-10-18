@@ -10,6 +10,7 @@ import (
 
 	"github.com/rs/zerolog"
 
+	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/dadrus/heimdall/internal/endpoint"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/event"
@@ -18,14 +19,18 @@ import (
 )
 
 type provider struct {
-	e  endpoint.Endpoint
-	wi time.Duration
-	q  event.RuleSetChangedEventQueue
-	l  zerolog.Logger
+	e         endpoint.Endpoint
+	c         cache.Cache
+	wi        time.Duration
+	q         event.RuleSetChangedEventQueue
+	l         zerolog.Logger
+	done      chan struct{} // Channel for sending a "quit message" to the watcher goroutine
+	doneWatch chan struct{} // Channel to respond to the "quite message"
 }
 
 func newProvider(
 	rawConf map[string]any,
+	cch cache.Cache,
 	queue event.RuleSetChangedEventQueue,
 	logger zerolog.Logger,
 ) (*provider, error) {
@@ -60,11 +65,14 @@ func newProvider(
 
 	return &provider{
 		e: conf.Endpoint,
+		c: cch,
 		wi: x.IfThenElseExec(conf.WatchInterval != nil && *conf.WatchInterval > 0,
 			func() time.Duration { return *conf.WatchInterval },
 			func() time.Duration { return 0 * time.Second }),
-		q: queue,
-		l: logger,
+		q:         queue,
+		l:         logger,
+		done:      make(chan struct{}),
+		doneWatch: make(chan struct{}),
 	}, nil
 }
 
@@ -73,13 +81,19 @@ func (p *provider) Start(ctx context.Context) error {
 		Str("_rule_provider_type", "http_endpoint").
 		Msg("Starting rule definitions provider")
 
-	if err := p.loadInitialRuleSet(ctx); err != nil {
+	cchCtx := cache.WithContext(ctx, p.c)
+
+	if err := p.loadRuleSet(cchCtx); err != nil {
 		p.l.Error().Err(err).
 			Str("_rule_provider_type", "http_endpoint").
 			Msg("Failed loading initial rule sets")
 
+		close(p.done)
+
 		return err
 	}
+
+	go p.watchEndpoint(cchCtx)
 
 	return nil
 }
@@ -89,10 +103,22 @@ func (p *provider) Stop(ctx context.Context) error {
 		Str("_rule_provider_type", "http_endpoint").
 		Msg("Tearing down rule provider.")
 
+	select {
+	case <-p.done:
+		// already closed
+		return nil
+	default:
+		// Send 'close' signal to goroutine.
+		close(p.done)
+	}
+
+	// Wait for goroutine to close
+	<-p.doneWatch
+
 	return nil
 }
 
-func (p *provider) loadInitialRuleSet(ctx context.Context) error {
+func (p *provider) loadRuleSet(ctx context.Context) error {
 	data, err := p.fetchRuleSet(ctx)
 	if err != nil {
 		return err
@@ -170,4 +196,37 @@ func (p *provider) readRuleSet(resp *http.Response) ([]byte, error) {
 	}
 
 	return rawData, nil
+}
+
+func (p *provider) watchEndpoint(ctx context.Context) {
+	defer func() {
+		close(p.doneWatch)
+	}()
+
+	if p.wi <= 0 {
+		p.l.Warn().
+			Str("_rule_provider_type", "http_endpoint").
+			Msg("Watcher for file_system provider is not configured. Updates to rules will have no effects.")
+
+		return
+	}
+
+	ticker := time.NewTicker(p.wi)
+
+	for {
+		select {
+		case <-ticker.C:
+			if err := p.loadRuleSet(ctx); err != nil {
+				p.l.Error().Err(err).
+					Str("_rule_provider_type", "http_endpoint").
+					Msg("Failed loading rule sets")
+			}
+		case <-p.done:
+			p.l.Debug().
+				Str("_rule_provider_type", "http_endpoint").
+				Msg("Watcher events channel closed")
+
+			return
+		}
+	}
 }
