@@ -30,15 +30,15 @@ require (
 	github.com/youmark/pkcs8 v0.0.0-20201027041543-1326539a0a0a
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.36.3
 	go.opentelemetry.io/contrib/propagators/autoprop v0.36.3
-	go.opentelemetry.io/otel v1.11.0
-	go.opentelemetry.io/otel/bridge/opentracing v1.11.0
-	go.opentelemetry.io/otel/exporters/jaeger v1.11.0
-	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.11.0
-	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.11.0
-	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.11.0
-	go.opentelemetry.io/otel/exporters/zipkin v1.11.0
-	go.opentelemetry.io/otel/sdk v1.11.0
-	go.opentelemetry.io/otel/trace v1.11.0
+	go.opentelemetry.io/otel v1.11.1
+	go.opentelemetry.io/otel/bridge/opentracing v1.11.1
+	go.opentelemetry.io/otel/exporters/jaeger v1.11.1
+	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.11.1
+	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.11.1
+	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.11.1
+	go.opentelemetry.io/otel/exporters/zipkin v1.11.1
+	go.opentelemetry.io/otel/sdk v1.11.1
+	go.opentelemetry.io/otel/trace v1.11.1
 	go.uber.org/fx v1.18.2
 	golang.org/x/exp v0.0.0-20221018221608-02f3b879a704
 	gopkg.in/square/go-jose.v2 v2.6.0
@@ -64,13 +64,13 @@ require (
 	github.com/huandu/xstrings v1.3.2 // indirect
 	github.com/imdario/mergo v0.3.12 // indirect
 	github.com/inconshreveable/mousetrap v1.0.1 // indirect
-	github.com/klauspost/compress v1.15.0 // indirect
+	github.com/klauspost/compress v1.15.11 // indirect
 	github.com/mattn/go-colorable v0.1.12 // indirect
 	github.com/mattn/go-isatty v0.0.14 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.1 // indirect
 	github.com/mitchellh/copystructure v1.2.0 // indirect
 	github.com/mitchellh/reflectwalk v1.0.2 // indirect
-	github.com/openzipkin/zipkin-go v0.4.0 // indirect
+	github.com/openzipkin/zipkin-go v0.4.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/prometheus/client_golang v1.12.2 // indirect
 	github.com/prometheus/client_model v0.2.0 // indirect
@@ -88,21 +88,21 @@ require (
 	go.opentelemetry.io/contrib/propagators/b3 v1.11.0 // indirect
 	go.opentelemetry.io/contrib/propagators/jaeger v1.11.0 // indirect
 	go.opentelemetry.io/contrib/propagators/ot v1.11.0 // indirect
-	go.opentelemetry.io/otel/exporters/otlp/internal/retry v1.11.0 // indirect
+	go.opentelemetry.io/otel/exporters/otlp/internal/retry v1.11.1 // indirect
 	go.opentelemetry.io/otel/metric v0.32.3 // indirect
 	go.opentelemetry.io/proto/otlp v0.19.0 // indirect
 	go.uber.org/atomic v1.7.0 // indirect
 	go.uber.org/dig v1.15.0 // indirect
 	go.uber.org/multierr v1.8.0 // indirect
 	go.uber.org/zap v1.17.0 // indirect
-	golang.org/x/crypto v0.0.0-20220315160706-3147a52a75dd // indirect
-	golang.org/x/net v0.0.0-20220722155237-a158d28d115b // indirect
+	golang.org/x/crypto v0.0.0-20221010152910-d6f0a8c073c2 // indirect
+	golang.org/x/net v0.0.0-20221004154528-8021a29435af // indirect
 	golang.org/x/sync v0.0.0-20220722155255-886fb9371eb4 // indirect
-	golang.org/x/sys v0.0.0-20220919091848-fb04ddd9f9c8 // indirect
-	golang.org/x/text v0.3.7 // indirect
-	google.golang.org/genproto v0.0.0-20211118181313-81c1377c94b1 // indirect
-	google.golang.org/grpc v1.46.2 // indirect
-	google.golang.org/protobuf v1.28.0 // indirect
+	golang.org/x/sys v0.0.0-20221010170243-090e33056c14 // indirect
+	golang.org/x/text v0.3.8 // indirect
+	google.golang.org/genproto v0.0.0-20221010155953-15ba04fc1c0e // indirect
+	google.golang.org/grpc v1.50.1 // indirect
+	google.golang.org/protobuf v1.28.1 // indirect
 )
 
 replace (
