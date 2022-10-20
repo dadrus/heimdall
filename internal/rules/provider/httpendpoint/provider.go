@@ -9,17 +9,11 @@ import (
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/cache"
-	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/event"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
-
-type ruleSetFetcher interface {
-	fetchRuleSet(ctx context.Context) ([]config.RuleConfig, error)
-	url() string
-}
 
 type provider struct {
 	q      event.RuleSetChangedEventQueue
@@ -117,13 +111,13 @@ func (p *provider) Stop(_ context.Context) error {
 	return nil
 }
 
-func (p *provider) watchChanges(ctx context.Context, rsf ruleSetFetcher) error {
+func (p *provider) watchChanges(ctx context.Context, rsf RuleSetFetcher) error {
 	p.l.Debug().
 		Str("_rule_provider_type", "http_endpoint").
-		Str("_endpoint", rsf.url()).
+		Str("_endpoint", rsf.ID()).
 		Msg("Retrieving rule set")
 
-	ruleSet, err := rsf.fetchRuleSet(ctx)
+	ruleSet, err := rsf.FetchRuleSet(ctx)
 	if err != nil {
 		p.l.Warn().
 			Err(err).
@@ -136,7 +130,7 @@ func (p *provider) watchChanges(ctx context.Context, rsf ruleSetFetcher) error {
 	}
 
 	evt := event.RuleSetChangedEvent{
-		Src:        "http_endpoint:" + rsf.url(),
+		Src:        "http_endpoint:" + rsf.ID(),
 		ChangeType: x.IfThenElse(len(ruleSet) == 0, event.Remove, event.Create),
 		RuleSet:    ruleSet,
 	}

@@ -20,20 +20,9 @@ type ruleSetEndpoint struct {
 	ExpectedPathPrefix string `mapstructure:"expected_path_prefix"`
 }
 
-func (e *ruleSetEndpoint) init() error {
-	if err := e.Validate(); err != nil {
-		return errorchain.NewWithMessage(heimdall.ErrConfiguration, "validation of a ruleset endpoint failed").
-			CausedBy(err)
-	}
+func (e *ruleSetEndpoint) ID() string { return e.URL }
 
-	e.Method = http.MethodGet
-
-	return nil
-}
-
-func (e *ruleSetEndpoint) url() string { return e.URL }
-
-func (e *ruleSetEndpoint) fetchRuleSet(ctx context.Context) ([]config.RuleConfig, error) {
+func (e *ruleSetEndpoint) FetchRuleSet(ctx context.Context) ([]config.RuleConfig, error) {
 	req, err := e.CreateRequest(ctx, nil, nil)
 	if err != nil {
 		return nil, errorchain.
@@ -83,4 +72,15 @@ func (e *ruleSetEndpoint) readContents(contentType string, reader io.Reader) ([]
 		return nil, errorchain.NewWithMessagef(heimdall.ErrInternal,
 			"unsupported %s content type", contentType)
 	}
+}
+
+func (e *ruleSetEndpoint) init() error {
+	if err := e.Validate(); err != nil {
+		return errorchain.NewWithMessage(heimdall.ErrConfiguration, "validation of a ruleset endpoint failed").
+			CausedBy(err)
+	}
+
+	e.Method = http.MethodGet
+
+	return nil
 }
