@@ -117,9 +117,10 @@ func (p *provider) watchChanges(ctx context.Context, rsf RuleSetFetcher) error {
 		p.l.Warn().
 			Err(err).
 			Str("_rule_provider_type", "http_endpoint").
+			Str("_endpoint", rsf.ID()).
 			Msg("Failed to fetch rule set")
 
-		if errors.Is(err, heimdall.ErrInternal) {
+		if errors.Is(err, heimdall.ErrInternal) || errors.Is(err, heimdall.ErrConfiguration) {
 			return err
 		}
 	}

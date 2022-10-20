@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strings"
 
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/endpoint"
@@ -59,6 +60,10 @@ func (e *ruleSetEndpoint) FetchRuleSet(ctx context.Context) ([]config.RuleConfig
 			CausedBy(err)
 	}
 
+	if err = e.verifyPathPrefix(contents); err != nil {
+		return nil, err
+	}
+
 	return contents, nil
 }
 
@@ -88,6 +93,26 @@ func (e *ruleSetEndpoint) init() error {
 	}
 
 	e.Method = http.MethodGet
+
+	return nil
+}
+
+func (e *ruleSetEndpoint) verifyPathPrefix(ruleSet []config.RuleConfig) error {
+	if len(e.ExpectedPathPrefix) == 0 {
+		return nil
+	}
+
+	for _, ruleConfig := range ruleSet {
+		if strings.HasPrefix(ruleConfig.URL, "/") &&
+			// only path is specified
+			!strings.HasPrefix(ruleConfig.URL, e.ExpectedPathPrefix) ||
+			// patterns are specified before the path
+			// There should be a better way to check it
+			!strings.Contains(ruleConfig.URL, e.ExpectedPathPrefix) {
+			return errorchain.NewWithMessage(heimdall.ErrConfiguration,
+				"path prefix validation failed for rule ID=%s")
+		}
+	}
 
 	return nil
 }
