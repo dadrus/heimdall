@@ -9,7 +9,7 @@ menu:
     parent: "Rules"
 ---
 
-Providers define the sources to load the rule sets from. These make Heimdall's behavior dynamic. All providers, you want to enable for a Heimdall instance must be configured by within the `providers` section of Heimdall's `rules` configuration.
+Providers define the sources to load the link:{{< relref "rule_configuration.adoc#_rule_set" >}}[Rule Sets] from. These make Heimdall's behavior dynamic. All providers, you want to enable for a Heimdall instance must be configured within the `providers` section of Heimdall's `rules` configuration.
 
 Supported providers, including the corresponding configuration options are described below
 
@@ -52,12 +52,12 @@ providers:
 
 == HTTP Endpoint
 
-This provider allows loading of link:{{< relref "rule_configuration.adoc#_rule_set" >}}[Rule Sets] from any remote endpoint accessible via HTTP(s) and supports rule sets in YAML, as well as in JSON format. The differentiation happens based on the `Content-Type` set in the response from the endpoint. If `application/yaml` or `application/json` is set, the body of the response is read using a yaml, respectively a json parser, otherwise an error is logged and the response from the endpoint is ignored.
+This provider allows loading of link:{{< relref "rule_configuration.adoc#_rule_set" >}}[Rule Sets] from any remote endpoint accessible via HTTP(s) and supports rule sets in YAML, as well as in JSON format. The differentiation happens based on the `Content-Type` set in the response from the endpoint, wich must be either `application/yaml` or `application/json`, otherwise an error is logged and the response from the endpoint is ignored.
 
 The loading and removal of rules happens as follows:
 
 * if the response status code is an HTTP 200 OK and contains a link:{{< relref "rule_configuration.adoc#_rule_set" >}}[Rule Sets] in a known format (see above), the corresponding rules are loaded (if the definitions are valid)
-* in any other case related to network communication (like, not 200 status code, empty response body, unsupported format, network issues, etc.), the corresponding rules are removed if these were previously loaded.
+* in any other case related to network communication (e.g. not 200 status code, empty response body, unsupported format, network issues, etc.), the corresponding rules are removed if these were previously loaded.
 
 The configuration of this provider goes into the `http_endpoint` property. In contrast to the link:{{< relref "#_filesystem" >}}[Filesystem] provider it can be configured with as many endpoints to load rules from as required for the particular use case.
 
@@ -69,7 +69,7 @@ Whether the configured `endpoints` should be polled for updates. Defaults to `0s
 
 * *`endpoints`*: _RuleSetEndpoint array_ (mandatory)
 +
-Each entry of that array supports all the properties defined by link:{{< relref "/docs/configuration/reference/configuration_types.adoc#_endpoint" >}}[Endpoint], except `method`. As with the link:{{< relref "/docs/configuration/reference/configuration_types.adoc#_endpoint" >}}[Endpoint] type, at least the `url` must be defined. Following properties are defined in addition:
+Each entry of that array supports all the properties defined by link:{{< relref "/docs/configuration/reference/configuration_types.adoc#_endpoint" >}}[Endpoint], except `method`, which is always `GET`. As with the link:{{< relref "/docs/configuration/reference/configuration_types.adoc#_endpoint" >}}[Endpoint] type, at least the `url` must be defined. Following properties are defined in addition:
 +
 ** *`expected_path_prefix`*: _string_ (optional)
 +
