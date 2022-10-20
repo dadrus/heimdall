@@ -12,7 +12,6 @@ import (
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/event"
-	"github.com/dadrus/heimdall/internal/rules/provider/ruleset"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
@@ -188,7 +187,7 @@ func (p *provider) notifyRuleSetCreated(evt fsnotify.Event) {
 		return
 	}
 
-	ruleSet, err := ruleset.ParseYAML(bytes.NewBuffer(data))
+	ruleSet, err := rulesetparser.ParseYAML(bytes.NewBuffer(data))
 	if err != nil {
 		p.l.Warn().
 			Err(err).
@@ -261,7 +260,7 @@ func (p *provider) loadInitialRuleSet() error {
 			return err
 		}
 
-		ruleSet, err := ruleset.ParseYAML(bytes.NewBuffer(data))
+		ruleSet, err := rulesetparser.ParseYAML(bytes.NewBuffer(data))
 		if err != nil {
 			p.l.Warn().
 				Err(err).

@@ -10,7 +10,6 @@ import (
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/endpoint"
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/rules/provider/ruleset"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
@@ -65,9 +64,9 @@ func (e *ruleSetEndpoint) FetchRuleSet(ctx context.Context) ([]config.RuleConfig
 func (e *ruleSetEndpoint) readContents(contentType string, reader io.Reader) ([]config.RuleConfig, error) {
 	switch contentType {
 	case "application/yaml":
-		return ruleset.ParseYAML(reader)
+		return rulesetparser.ParseYAML(reader)
 	case "application/json":
-		return ruleset.ParseJSON(reader)
+		return rulesetparser.ParseJSON(reader)
 	default:
 		// check if the contents are empty. in that case nothing needs to be decoded anyway
 		b := make([]byte, 1)
