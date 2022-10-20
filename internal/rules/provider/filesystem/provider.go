@@ -6,13 +6,13 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/dadrus/heimdall/internal/rules/provider/ruleset"
 	"github.com/fsnotify/fsnotify"
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/event"
+	"github.com/dadrus/heimdall/internal/rules/provider/ruleset"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 

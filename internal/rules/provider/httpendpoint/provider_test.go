@@ -206,7 +206,6 @@ endpoints:
 				assert.Contains(t, evt.Src, "http_endpoint:"+srv.URL)
 				assert.Empty(t, evt.RuleSet)
 				assert.Equal(t, event.Remove, evt.ChangeType)
-
 			},
 		},
 		{
@@ -326,6 +325,7 @@ endpoints:
 			defer prov.Stop(ctx) //nolint:errcheck
 
 			// THEN
+			require.NoError(t, err)
 			tc.assert(t, logs, queue)
 		})
 	}

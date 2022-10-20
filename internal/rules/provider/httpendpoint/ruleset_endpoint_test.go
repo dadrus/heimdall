@@ -6,7 +6,6 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	otelmock "github.com/dadrus/heimdall/internal/x/opentelemetry/mocks"
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -19,6 +18,7 @@ import (
 	"github.com/dadrus/heimdall/internal/endpoint"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/x"
+	otelmock "github.com/dadrus/heimdall/internal/x/opentelemetry/mocks"
 )
 
 func TestRuleSetEndpointInit(t *testing.T) {

@@ -5,9 +5,9 @@ import (
 	"net/url"
 	"sync"
 
-	"github.com/dadrus/heimdall/internal/config"
 	"github.com/rs/zerolog"
 
+	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/event"
 	"github.com/dadrus/heimdall/internal/rules/rule"
