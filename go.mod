@@ -40,7 +40,7 @@ require (
 	go.opentelemetry.io/otel/sdk v1.11.1
 	go.opentelemetry.io/otel/trace v1.11.1
 	go.uber.org/fx v1.18.2
-	golang.org/x/exp v0.0.0-20221018221608-02f3b879a704
+	golang.org/x/exp v0.0.0-20221019170559-20944726eadf
 	gopkg.in/square/go-jose.v2 v2.6.0
 	gopkg.in/yaml.v3 v3.0.1
 )
