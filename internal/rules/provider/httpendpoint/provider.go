@@ -72,15 +72,10 @@ func newProvider(
 	}
 
 	for idx, ep := range conf.Endpoints {
-		var err error
-
-		if conf.WatchInterval != nil && *conf.WatchInterval > 0 {
-			_, err = scheduler.Every(*conf.WatchInterval).Do(prov.watchChanges, ctx, ep)
-		} else {
-			_, err = scheduler.Every(1*time.Second).LimitRunsTo(1).Do(prov.watchChanges, ctx, ep)
-		}
-
-		if err != nil {
+		if _, err := x.IfThenElseExec(conf.WatchInterval != nil && *conf.WatchInterval > 0,
+			func() *gocron.Scheduler { return prov.s.Every(*conf.WatchInterval) },
+			func() *gocron.Scheduler { return prov.s.Every(1 * time.Second).LimitRunsTo(1) }).
+			Do(prov.watchChanges, ctx, ep); err != nil {
 			return nil, errorchain.NewWithMessagef(heimdall.ErrInternal,
 				"failed to create a rule provider worker to fetch rules sets from #%d http_endpoint", idx).
 				CausedBy(err)
