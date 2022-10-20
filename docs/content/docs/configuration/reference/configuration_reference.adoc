@@ -1,11 +1,11 @@
 ---
-title: "Static Configuration"
+title: "Static Configuration Reference"
 date: 2022-06-09T18:57:50+02:00
 draft: false
 weight: 140
 menu:
   docs:
-    weight: 10
+    weight: 20
     parent: "Reference"
 ---
 
@@ -283,5 +283,23 @@ rules:
     file:
       src: test_rules.yaml
       watch: true
+
+    http_endpoint:
+      watch_interval: 5m
+      endpoints:
+        - url: http://foo.bar/ruleset1
+          expected_path_prefix: /foo/bar
+        - url: http://foo.bar/ruleset2
+          retry:
+            give_up_after: 5s
+            max_delay: 250ms
+          auth:
+            type: api_key
+            config:
+              name: X-Api-Key
+              value: super-secret
+              in: header
+          header:
+            X-Customer-Header: Some Value
 ----
 

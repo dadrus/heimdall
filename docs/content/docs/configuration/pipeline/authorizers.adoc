@@ -83,7 +83,7 @@ To enable the usage of this authorizer, you have to set the `type` property to `
 
 Configuration using the `config` property is mandatory. Following properties are available:
 
-* *`endpoint`*: _link:{{< relref "configuration_types.adoc#_endpoint">}}[Endpoint]_ (mandatory, not overridable)
+* *`endpoint`*: _link:{{< relref "/docs/configuration/reference/configuration_types.adoc#_endpoint">}}[Endpoint]_ (mandatory, not overridable)
 +
 The API endpoint of your authorization system. At least the `url` must be configured. This handler allows templating of the url and makes the `Subject` object available to it. By default, this authorizer will use HTTP `POST` to send the rendered payload to this endpoint. You can override this behavior by configuring `method` as well. Depending on the API requirements of your authorization system, you might need to configure further properties, like headers, etc.
 
@@ -99,7 +99,7 @@ ECMAScript wich executed further authorization logic on the given response from 
 +
 Enables forwarding of any headers from the authorization endpoint response to the upstream service.
 
-* *`cache_ttl`*: _link:{{< relref "configuration_types.adoc#_duration" >}}[Duration]_ (optional, overridable)
+* *`cache_ttl`*: _link:{{< relref "/docs/configuration/reference/configuration_types.adoc#_duration" >}}[Duration]_ (optional, overridable)
 +
 Allows caching of the authorization endpoint responses. Defaults to 0s, which means no caching. The cache key is calculated from the entire configuration of the authorizer instance and the available information about the current subject.
 

@@ -1,12 +1,12 @@
 ---
-title: "Configuration Types"
+title: "General Configuration Types"
 date: 2022-06-09T18:56:56+02:00
 draft: false
-weight: 95
+weight: 139
 menu:
   docs:
-    weight: 60
-    parent: "Pipeline Handler"
+    weight: 10
+    parent: "Reference"
 ---
 
 == Assertions

@@ -15,7 +15,7 @@ Supported providers, including the corresponding configuration options are descr
 
 == Filesystem
 
-The filesystem provider allows loading of rule sets from a file system. The configuration of this provider goes into the `file` property. This provider is handy for e.g. starting playing around with Heimdall, e.g. locally, or using Docker, as well as if your deployment strategy considers deploying a Heimdall instance as a Side-Car for each of your services. 
+The filesystem provider allows loading of rule sets from a file system. The configuration of this provider goes into the `file` property. This provider is handy for e.g. starting playing around with Heimdall, e.g. locally, or using Docker, as well as if your deployment strategy considers deploying a Heimdall instance as a Side-Car for each of your services.
 
 Following configuration options are supported:
 
@@ -48,4 +48,59 @@ providers:
   file:
     src: /path/to/rules.yaml
 ----
+====
+
+== HTTP Endpoint
+
+This provider allows loading of link:{{< relref "rule_configuration.adoc#_rule_set" >}}[Rule Sets] from any remote endpoint accessible via HTTP(s) and supports rule sets in YAML, as well as in JSON format. The differentiation happens based on the `Content-Type` set in the response from the endpoint. If `application/yaml` or `application/json` is set, the body of the response is read using a yaml, respectively a json parser, otherwise an error is logged and the response from the endpoint is ignored.
+
+The loading and removal of rules happens as follows:
+
+* if the response status code is an HTTP 200 OK and contains a link:{{< relref "rule_configuration.adoc#_rule_set" >}}[Rule Sets] in a known format (see above), the corresponding rules are loaded (if the definitions are valid)
+* in any other case related to network communication (like, not 200 status code, empty response body, unsupported format, network issues, etc.), the corresponding rules are removed if these were previously loaded.
+
+The configuration of this provider goes into the `http_endpoint` property. In contrast to the link:{{< relref "#_filesystem" >}}[Filesystem] provider it can be configured with as many endpoints to load rules from as required for the particular use case.
+
+Following configuration options are supported:
+
+* *`watch_interval`*: _link:{{< relref "/docs/configuration/reference/configuration_types.adoc#_duration" >}}[Duration]_ (optional)
++
+Whether the configured `endpoints` should be polled for updates. Defaults to `0s` (polling disabled).
+
+* *`endpoints`*: _RuleSetEndpoint array_ (mandatory)
++
+Each entry of that array supports all the properties defined by link:{{< relref "/docs/configuration/reference/configuration_types.adoc#_endpoint" >}}[Endpoint], except `method`. As with the link:{{< relref "/docs/configuration/reference/configuration_types.adoc#_endpoint" >}}[Endpoint] type, at least the `url` must be defined. Following properties are defined in addition:
++
+** *`expected_path_prefix`*: _string_ (optional)
++
+This property can be used to create kind of a namespace for the rule sets retrieved from the different endpoints. If set, the provider checks whether the urls specified in all rules retrieved from the referenced endpoint have the defined path prefix. If not, a warning is emitted and the rule set is ignored. This can be used to ensure a rule retrieved from one endpoint does not collide with a rule from another endpoint.
+
+This provider doesn't need any additional configuration for a rule set. So the contents of files can be just a list of rules as described in link:{{< relref "rule_configuration.adoc#_rule_set" >}}[Rule Sets].
+
+.Load rule sets from remote endpoints and watch for changes.
+====
+[source, yaml]
+----
+providers:
+  http_endpoint:
+    watch_interval: 5m
+    endpoints:
+      - url: http://foo.bar/ruleset1
+        expected_path_prefix: /foo/bar
+      - url: http://foo.bar/ruleset2
+        retry:
+          give_up_after: 5s
+          max_delay: 250ms
+        auth:
+          type: api_key
+          config:
+            name: X-Api-Key
+            value: super-secret
+            in: header
+----
+
+Here, the configuration for the first endpoint instructs heimdall to ensure all urls defined in the rules coming from that endpoint must match the defined path prefix.
+
+The configuration for the second endpoint does not define the `expected_path_prefix`, but it defines a couple of other properties. One to ensure the communication to that endpoint is more resilient by setting the `retry` options and since this endpoint is protected by an API key, it defines the corresponding options as well.
+
 ====

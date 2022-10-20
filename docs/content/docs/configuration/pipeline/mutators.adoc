@@ -32,7 +32,7 @@ type: noop
 
 === Header
 
-This mutator enables transformation of a subject into HTTP headers. 
+This mutator enables transformation of a subject into HTTP headers.
 
 To enable the usage of this mutator, you have to set the `type` property to `header`.
 
@@ -92,7 +92,7 @@ Configuration using the `config` property is optional. Following properties are 
 +
 Your template with custom claims, you would like to add to the JWT (See also link:{{< relref "overview.adoc#_templating" >}}[Templating]). Only `Subject` object is available in the template, not the `Request*` functions.
 
-* *`ttl`*: _link:{{< relref "configuration_types.adoc#_duration" >}}[Duration]_ (optional, overridable)
+* *`ttl`*: _link:{{< relref "/docs/configuration/reference/configuration_types.adoc#_duration" >}}[Duration]_ (optional, overridable)
 +
 Defines how long the JWT should be valid. Defaults to 5 minutes. Heimdall sets the `iat` and the `nbf` claims to the current system time. The value of the `exp` claim is then influenced by the `ttl` property.
 
