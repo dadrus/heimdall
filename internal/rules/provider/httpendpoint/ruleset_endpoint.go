@@ -10,7 +10,7 @@ import (
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/endpoint"
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/rules/ruleset"
+	"github.com/dadrus/heimdall/internal/rules/provider/ruleset"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 

@@ -6,7 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/dadrus/heimdall/internal/rules/ruleset"
+	"github.com/dadrus/heimdall/internal/rules/provider/ruleset"
 	"github.com/fsnotify/fsnotify"
 	"github.com/rs/zerolog"
 
