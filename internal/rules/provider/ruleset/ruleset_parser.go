@@ -1,6 +1,7 @@
 package ruleset
 
 import (
+	"errors"
 	"io"
 
 	"github.com/goccy/go-json"
@@ -16,6 +17,10 @@ func ParseYAML(reader io.Reader) ([]config.RuleConfig, error) {
 	dec.KnownFields(true)
 
 	if err := dec.Decode(&rcs); err != nil {
+		if errors.Is(err, io.EOF) {
+			return rcs, nil
+		}
+
 		return nil, err
 	}
 
@@ -29,6 +34,10 @@ func ParseJSON(reader io.Reader) ([]config.RuleConfig, error) {
 	dec.DisallowUnknownFields()
 
 	if err := dec.Decode(&rcs); err != nil {
+		if errors.Is(err, io.EOF) {
+			return rcs, nil
+		}
+
 		return nil, err
 	}
 
