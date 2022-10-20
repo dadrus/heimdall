@@ -128,7 +128,29 @@ func TestRuleSetEndpointFetchRuleSet(t *testing.T) {
 			},
 		},
 		{
-			uc: "rule set loading error due to not set Content-Type",
+			uc: "rule set loading error due to not set Content-Type for a not empty body",
+			ep: &ruleSetEndpoint{
+				Endpoint: endpoint.Endpoint{
+					URL:    srv.URL,
+					Method: http.MethodGet,
+				},
+			},
+			writeResponse: func(t *testing.T, w http.ResponseWriter) {
+				t.Helper()
+
+				_, err := w.Write([]byte("foobar"))
+				require.NoError(t, err)
+			},
+			assert: func(t *testing.T, err error, ruleSet []config.RuleConfig) {
+				t.Helper()
+
+				require.Error(t, err)
+				assert.ErrorIs(t, err, heimdall.ErrInternal)
+				assert.Contains(t, err.Error(), "content type")
+			},
+		},
+		{
+			uc: "empty rule set is returned on response with empty body",
 			ep: &ruleSetEndpoint{
 				Endpoint: endpoint.Endpoint{
 					URL:    srv.URL,
@@ -143,9 +165,8 @@ func TestRuleSetEndpointFetchRuleSet(t *testing.T) {
 			assert: func(t *testing.T, err error, ruleSet []config.RuleConfig) {
 				t.Helper()
 
-				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrInternal)
-				assert.Contains(t, err.Error(), "unsupported  content type")
+				require.NoError(t, err)
+				require.Empty(t, ruleSet)
 			},
 		},
 		{

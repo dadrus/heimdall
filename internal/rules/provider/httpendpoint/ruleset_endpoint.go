@@ -48,7 +48,7 @@ func (e *ruleSetEndpoint) FetchRuleSet(ctx context.Context) ([]config.RuleConfig
 
 	defer resp.Body.Close()
 
-	if !(resp.StatusCode >= http.StatusOK && resp.StatusCode < http.StatusMultipleChoices) {
+	if resp.StatusCode != http.StatusOK {
 		return nil, errorchain.NewWithMessagef(heimdall.ErrCommunication,
 			"unexpected response code: %v", resp.StatusCode)
 	}
@@ -69,8 +69,15 @@ func (e *ruleSetEndpoint) readContents(contentType string, reader io.Reader) ([]
 	case "application/json":
 		return ruleset.ParseJSON(reader)
 	default:
+		// check if the contents are empty. in that case nothing needs to be decoded anyway
+		b := make([]byte, 1)
+		if _, err := reader.Read(b); err != nil && errors.Is(err, io.EOF) {
+			return []config.RuleConfig{}, nil
+		}
+
+		// otherwise
 		return nil, errorchain.NewWithMessagef(heimdall.ErrInternal,
-			"unsupported %s content type", contentType)
+			"unsupported '%s' content type", contentType)
 	}
 }
 

@@ -225,9 +225,12 @@ endpoints:
 
 				time.Sleep(250 * time.Millisecond)
 
-				messages := logs.String()
-				assert.Contains(t, messages, "content type")
-				assert.Len(t, queue, 0)
+				assert.Len(t, queue, 1)
+
+				evt := <-queue
+				assert.Contains(t, evt.Src, "http_endpoint:"+srv.URL)
+				assert.Empty(t, evt.RuleSet)
+				assert.Equal(t, event.Remove, evt.ChangeType)
 			},
 		},
 		{
