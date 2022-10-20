@@ -170,7 +170,7 @@ func TestRuleSetEndpointFetchRuleSet(t *testing.T) {
 			},
 		},
 		{
-			uc: "valid rule set from yaml",
+			uc: "valid rule set without path prefix from yaml",
 			ep: &ruleSetEndpoint{
 				Endpoint: endpoint.Endpoint{
 					URL:    srv.URL,
@@ -194,7 +194,7 @@ func TestRuleSetEndpointFetchRuleSet(t *testing.T) {
 			},
 		},
 		{
-			uc: "valid rule set from json",
+			uc: "valid rule set without path prefix from json",
 			ep: &ruleSetEndpoint{
 				Endpoint: endpoint.Endpoint{
 					URL:    srv.URL,
@@ -206,6 +206,79 @@ func TestRuleSetEndpointFetchRuleSet(t *testing.T) {
 
 				w.Header().Set("Content-Type", "application/json")
 				_, err := w.Write([]byte(`[{"id":"foo"}]`))
+				require.NoError(t, err)
+			},
+			assert: func(t *testing.T, err error, ruleSet []config.RuleConfig) {
+				t.Helper()
+
+				require.NoError(t, err)
+
+				assert.Len(t, ruleSet, 1)
+				assert.Equal(t, "foo", ruleSet[0].ID)
+			},
+		},
+		{
+			uc: "valid rule set with path only url glob with path prefix violation",
+			ep: &ruleSetEndpoint{
+				Endpoint: endpoint.Endpoint{
+					URL:    srv.URL,
+					Method: http.MethodGet,
+				},
+				ExpectedPathPrefix: "/foo/bar",
+			},
+			writeResponse: func(t *testing.T, w http.ResponseWriter) {
+				t.Helper()
+
+				w.Header().Set("Content-Type", "application/json")
+				_, err := w.Write([]byte(`[{"id":"foo", "url":"/bar/foo/<**>"}]`))
+				require.NoError(t, err)
+			},
+			assert: func(t *testing.T, err error, ruleSet []config.RuleConfig) {
+				t.Helper()
+
+				require.Error(t, err)
+				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				assert.Contains(t, err.Error(), "path prefix validation")
+			},
+		},
+		{
+			uc: "valid rule set with full url glob with path prefix violation",
+			ep: &ruleSetEndpoint{
+				Endpoint: endpoint.Endpoint{
+					URL:    srv.URL,
+					Method: http.MethodGet,
+				},
+				ExpectedPathPrefix: "/foo/bar",
+			},
+			writeResponse: func(t *testing.T, w http.ResponseWriter) {
+				t.Helper()
+
+				w.Header().Set("Content-Type", "application/json")
+				_, err := w.Write([]byte(`[{"id":"foo", "url":"<**>://moobar.local:9090/bar/foo/<**>"}]`))
+				require.NoError(t, err)
+			},
+			assert: func(t *testing.T, err error, ruleSet []config.RuleConfig) {
+				t.Helper()
+
+				require.Error(t, err)
+				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				assert.Contains(t, err.Error(), "path prefix validation")
+			},
+		},
+		{
+			uc: "valid rule set with full url glob without path prefix violation",
+			ep: &ruleSetEndpoint{
+				Endpoint: endpoint.Endpoint{
+					URL:    srv.URL,
+					Method: http.MethodGet,
+				},
+				ExpectedPathPrefix: "/foo/bar",
+			},
+			writeResponse: func(t *testing.T, w http.ResponseWriter) {
+				t.Helper()
+
+				w.Header().Set("Content-Type", "application/json")
+				_, err := w.Write([]byte(`[{"id":"foo", "url":"<**>://moobar.local:9090/foo/bar/<**>"}]`))
 				require.NoError(t, err)
 			},
 			assert: func(t *testing.T, err error, ruleSet []config.RuleConfig) {
