@@ -6,9 +6,12 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	otelmock "github.com/dadrus/heimdall/internal/x/opentelemetry/mocks"
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/propagation"
 
 	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/dadrus/heimdall/internal/cache/mocks"
@@ -62,11 +65,20 @@ func TestRuleSetEndpointInit(t *testing.T) {
 func TestRuleSetEndpointFetchRuleSet(t *testing.T) {
 	t.Parallel()
 
+	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(
+		propagation.TraceContext{},
+		propagation.Baggage{},
+	))
+
+	otel.SetTracerProvider(otelmock.NewMockTraceProvider())
+
 	type ResponseWriter func(t *testing.T, w http.ResponseWriter)
 
 	var writeResponse ResponseWriter
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.NotEmpty(t, r.Header.Get("Traceparent"))
+
 		writeResponse(t, w)
 	}))
 
