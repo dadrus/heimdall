@@ -93,7 +93,7 @@ func TestStartProvider(t *testing.T) {
 			createProvider: func(t *testing.T, file *os.File, dir string) *provider {
 				t.Helper()
 
-				_, err := file.Write([]byte(`Hi Bar`))
+				_, err := file.Write([]byte(`- id: foo`))
 				require.NoError(t, err)
 
 				return &provider{
@@ -112,7 +112,8 @@ func TestStartProvider(t *testing.T) {
 				evt := <-provider.q
 
 				assert.Contains(t, evt.Src, "file_system:")
-				assert.Equal(t, []byte(`Hi Bar`), evt.Definition)
+				assert.Len(t, evt.RuleSet, 1)
+				assert.Equal(t, "foo", evt.RuleSet[0].ID)
 				assert.Equal(t, event.Create, evt.ChangeType)
 			},
 		},
@@ -143,7 +144,7 @@ func TestStartProvider(t *testing.T) {
 				tmpFile, err := os.CreateTemp(dir, "test-rule-")
 				require.NoError(t, err)
 
-				_, err = tmpFile.Write([]byte(`Hi Foo`))
+				_, err = tmpFile.Write([]byte(`- id: foo`))
 				require.NoError(t, err)
 
 				return &provider{
@@ -162,7 +163,8 @@ func TestStartProvider(t *testing.T) {
 				evt := <-provider.q
 
 				assert.Contains(t, evt.Src, "file_system:")
-				assert.Equal(t, []byte(`Hi Foo`), evt.Definition)
+				assert.Len(t, evt.RuleSet, 1)
+				assert.Equal(t, "foo", evt.RuleSet[0].ID)
 				assert.Equal(t, event.Create, evt.ChangeType)
 			},
 		},
@@ -177,7 +179,7 @@ func TestStartProvider(t *testing.T) {
 				tmpFile, err := os.CreateTemp(tmpDir, "test-rule-")
 				require.NoError(t, err)
 
-				_, err = tmpFile.Write([]byte(`Hi Foo`))
+				_, err = tmpFile.Write([]byte(`- id: foo`))
 				require.NoError(t, err)
 
 				return &provider{
@@ -216,7 +218,7 @@ func TestStartProvider(t *testing.T) {
 
 				time.Sleep(200 * time.Millisecond)
 
-				_, err = tmpFile.Write([]byte(`Hi Foo`))
+				_, err = tmpFile.Write([]byte(`- id: foo`))
 				require.NoError(t, err)
 
 				time.Sleep(200 * time.Millisecond)
@@ -235,17 +237,18 @@ func TestStartProvider(t *testing.T) {
 
 				evt := <-provider.q
 				assert.Contains(t, evt.Src, "file_system:"+provider.src)
-				assert.Equal(t, []byte(nil), evt.Definition)
+				assert.Empty(t, evt.RuleSet)
 				assert.Equal(t, event.Remove, evt.ChangeType)
 
 				evt = <-provider.q
 				assert.Contains(t, evt.Src, "file_system:"+provider.src)
-				assert.Equal(t, []byte(`Hi Foo`), evt.Definition)
+				assert.Len(t, evt.RuleSet, 1)
+				assert.Equal(t, "foo", evt.RuleSet[0].ID)
 				assert.Equal(t, event.Create, evt.ChangeType)
 
 				evt = <-provider.q
 				assert.Contains(t, evt.Src, "file_system:"+provider.src)
-				assert.Equal(t, []byte(nil), evt.Definition)
+				assert.Empty(t, evt.RuleSet)
 				assert.Equal(t, event.Remove, evt.ChangeType)
 			},
 		},
@@ -266,7 +269,7 @@ func TestStartProvider(t *testing.T) {
 			writeContents: func(t *testing.T, file *os.File, dir string) {
 				t.Helper()
 
-				_, err := file.Write([]byte(`Hi Foo`))
+				_, err := file.Write([]byte(`- id: foo`))
 				require.NoError(t, err)
 
 				time.Sleep(200 * time.Millisecond)
@@ -285,12 +288,13 @@ func TestStartProvider(t *testing.T) {
 
 				evt := <-provider.q
 				assert.Contains(t, evt.Src, "file_system:"+provider.src)
-				assert.Equal(t, []byte(nil), evt.Definition)
+				assert.Empty(t, evt.RuleSet)
 				assert.Equal(t, event.Remove, evt.ChangeType)
 
 				evt = <-provider.q
 				assert.Contains(t, evt.Src, "file_system:"+provider.src)
-				assert.Equal(t, []byte(`Hi Foo`), evt.Definition)
+				assert.Len(t, evt.RuleSet, 1)
+				assert.Equal(t, "foo", evt.RuleSet[0].ID)
 				assert.Equal(t, event.Create, evt.ChangeType)
 			},
 		},

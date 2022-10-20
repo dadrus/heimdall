@@ -52,8 +52,8 @@ func TestRegisterProvider(t *testing.T) {
 		{
 			uc: "with valid configuration",
 			conf: []byte(`
-endpoint:
-  url: https://foo.bar
+endpoints:
+  - url: https://foo.bar
 watch_interval: 5m
 `),
 			setupMocks: func(t *testing.T, mockLC *mockLifecycle) {

@@ -1,10 +1,12 @@
 package filesystem
 
 import (
+	"bytes"
 	"context"
 	"os"
 	"path/filepath"
 
+	"github.com/dadrus/heimdall/internal/rules/ruleset"
 	"github.com/fsnotify/fsnotify"
 	"github.com/rs/zerolog"
 
@@ -186,9 +188,20 @@ func (p *provider) notifyRuleSetCreated(evt fsnotify.Event) {
 		return
 	}
 
+	ruleSet, err := ruleset.ParseYAML(bytes.NewBuffer(data))
+	if err != nil {
+		p.l.Warn().
+			Err(err).
+			Str("_rule_provider_type", "file_system").
+			Str("_file", file).
+			Msg("Failed to parse rule set definition")
+
+		return
+	}
+
 	p.ruleSetChanged(event.RuleSetChangedEvent{
 		Src:        "file_system:" + file,
-		Definition: data,
+		RuleSet:    ruleSet,
 		ChangeType: event.Create,
 	})
 }
@@ -245,12 +258,23 @@ func (p *provider) loadInitialRuleSet() error {
 				Str("_file", src).
 				Msg("File is empty")
 
-			continue
+			return err
+		}
+
+		ruleSet, err := ruleset.ParseYAML(bytes.NewBuffer(data))
+		if err != nil {
+			p.l.Warn().
+				Err(err).
+				Str("_rule_provider_type", "file_system").
+				Str("_file", src).
+				Msg("Failed to parse rule set definition")
+
+			return err
 		}
 
 		p.ruleSetChanged(event.RuleSetChangedEvent{
 			Src:        "file_system:" + src,
-			Definition: data,
+			RuleSet:    ruleSet,
 			ChangeType: event.Create,
 		})
 	}
