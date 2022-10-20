@@ -283,6 +283,75 @@
         }
       }
     },
+    "ruleSetEndpointConfiguration": {
+      "description": "Endpoint to load rule sets from",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "url"
+      ],
+      "properties": {
+        "url": {
+          "description": "The URL to communicate to.",
+          "type": "string",
+          "format": "uri",
+          "examples": [
+            "https://session-store-host"
+          ]
+        },
+        "headers": {
+          "description": "The HTTP headers to be send to the endpoint",
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "minLength": 0,
+          "uniqueItems": true,
+          "default": []
+        },
+        "retry": {
+          "description": "How the implementation should behave when trying to access the configured endpoint",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "give_up_after": {
+              "description": "When the implementation should finally give up, if the endpoint is not answering.",
+              "type": "string",
+              "default": "1s",
+              "pattern": "^[0-9]+(ns|us|ms|s|m|h)$"
+            },
+            "max_delay": {
+              "description": "How long the implementation should wait between the attempts",
+              "type": "string",
+              "pattern": "^[0-9]+(ns|us|ms|s|m|h)$",
+              "default": "100ms"
+            }
+          }
+        },
+        "auth": {
+          "description": "How to authenticate against the endpoint",
+          "type": "object",
+          "oneOf": [
+            {
+              "$ref": "#/definitions/endpointAuthApiKeyProperties"
+            },
+            {
+              "$ref": "#/definitions/endpointAuthBasicAuthProperties"
+            },
+            {
+              "$ref": "#/definitions/endpointAuthClientCredentialsProperties"
+            }
+          ]
+        },
+        "expected_path_prefix": {
+          "description": "The path prefix to be checked in each rule retrieved from the endpoint",
+          "type": "string",
+          "examples": [
+            "/foo/bar"
+          ]
+        }
+      }
+    },
     "endpointConfiguration": {
       "description": "Endpoint to to communicate to",
       "type": "object",
@@ -1360,15 +1429,19 @@
       "type": "object",
       "additionalProperties": false,
       "required": [
-        "endpoint"
+        "endpoints"
       ],
       "properties": {
-        "endpoint": {
-          "$ref": "#/definitions/endpointConfiguration"
+        "endpoints": {
+          "type": "array",
+          "additionalItems": false,
+          "items": {
+            "$ref": "#/definitions/ruleSetEndpointConfiguration"
+          }
         },
         "watch_interval": {
           "type": "string",
-          "description": "How often to poll the endpoint for rule updates. Polling is disabled by default.",
+          "description": "How often to poll the endpoint for rule set updates. Polling is disabled by default.",
           "pattern": "^[0-9]+(ns|us|ms|s|m|h)$",
           "default": "0",
           "examples": [
