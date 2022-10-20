@@ -28,8 +28,8 @@ require (
 	github.com/ybbus/httpretry v1.0.1
 	github.com/yl2chen/cidranger v1.0.2
 	github.com/youmark/pkcs8 v0.0.0-20201027041543-1326539a0a0a
-	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.36.3
-	go.opentelemetry.io/contrib/propagators/autoprop v0.36.3
+	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.36.4
+	go.opentelemetry.io/contrib/propagators/autoprop v0.36.4
 	go.opentelemetry.io/otel v1.11.1
 	go.opentelemetry.io/otel/bridge/opentracing v1.11.1
 	go.opentelemetry.io/otel/exporters/jaeger v1.11.1
@@ -84,12 +84,12 @@ require (
 	github.com/tidwall/pretty v1.2.0 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/valyala/tcplisten v1.0.0 // indirect
-	go.opentelemetry.io/contrib/propagators/aws v1.11.0 // indirect
-	go.opentelemetry.io/contrib/propagators/b3 v1.11.0 // indirect
-	go.opentelemetry.io/contrib/propagators/jaeger v1.11.0 // indirect
-	go.opentelemetry.io/contrib/propagators/ot v1.11.0 // indirect
+	go.opentelemetry.io/contrib/propagators/aws v1.11.1 // indirect
+	go.opentelemetry.io/contrib/propagators/b3 v1.11.1 // indirect
+	go.opentelemetry.io/contrib/propagators/jaeger v1.11.1 // indirect
+	go.opentelemetry.io/contrib/propagators/ot v1.11.1 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/internal/retry v1.11.1 // indirect
-	go.opentelemetry.io/otel/metric v0.32.3 // indirect
+	go.opentelemetry.io/otel/metric v0.33.0 // indirect
 	go.opentelemetry.io/proto/otlp v0.19.0 // indirect
 	go.uber.org/atomic v1.7.0 // indirect
 	go.uber.org/dig v1.15.0 // indirect
