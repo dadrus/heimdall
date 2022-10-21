@@ -51,12 +51,8 @@ func registerRuleDefinitionHandler(lifecycle fx.Lifecycle, logger zerolog.Logger
 
 	lifecycle.Append(
 		fx.Hook{
-			OnStart: func(ctx context.Context) error {
-				return rdf.Start()
-			},
-			OnStop: func(ctx context.Context) error {
-				return rdf.Stop()
-			},
+			OnStart: func(ctx context.Context) error { return rdf.Start(ctx) },
+			OnStop:  func(ctx context.Context) error { return rdf.Stop(ctx) },
 		},
 	)
 }

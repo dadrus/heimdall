@@ -1,11 +1,9 @@
 package rules
 
 import (
-	"errors"
 	"net/url"
 
 	"github.com/rs/zerolog"
-	"golang.org/x/exp/slices"
 
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
@@ -15,8 +13,6 @@ import (
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
-
-var ErrUnsupportedPipelineObject = errors.New("unsupported pipeline object")
 
 type RuleFactory interface {
 	CreateRule(srcID string, ruleConfig config.RuleConfig) (rule.Rule, error)
@@ -305,60 +301,3 @@ func (f *ruleFactory) initWithDefaultRule(ruleConfig *config.DefaultRuleConfig, 
 
 	return nil
 }
-
-type ruleImpl struct {
-	id          string
-	urlMatcher  patternmatcher.PatternMatcher
-	upstreamURL *url.URL
-	methods     []string
-	srcID       string
-	isDefault   bool
-	sc          compositeSubjectCreator
-	sh          compositeSubjectHandler
-	m           compositeSubjectHandler
-	eh          compositeErrorHandler
-}
-
-func (r *ruleImpl) Execute(ctx heimdall.Context) (*url.URL, error) {
-	logger := zerolog.Ctx(ctx.AppContext())
-
-	if r.isDefault {
-		logger.Debug().Msg("Executing default rule")
-	} else {
-		logger.Debug().Str("_src", r.srcID).Str("_id", r.id).Msg("Executing rule")
-	}
-
-	// authenticators
-	sub, err := r.sc.Execute(ctx)
-	if err != nil {
-		_, err := r.eh.Execute(ctx, err)
-
-		return nil, err
-	}
-
-	// authorizers & hydrators
-	if err := r.sh.Execute(ctx, sub); err != nil {
-		_, err := r.eh.Execute(ctx, err)
-
-		return nil, err
-	}
-
-	// mutators
-	if err := r.m.Execute(ctx, sub); err != nil {
-		_, err := r.eh.Execute(ctx, err)
-
-		return nil, err
-	}
-
-	return r.upstreamURL, nil
-}
-
-func (r *ruleImpl) MatchesURL(requestURL *url.URL) bool {
-	return r.urlMatcher.Match(requestURL.String())
-}
-
-func (r *ruleImpl) MatchesMethod(method string) bool { return slices.Contains(r.methods, method) }
-
-func (r *ruleImpl) ID() string { return r.id }
-
-func (r *ruleImpl) SrcID() string { return r.srcID }

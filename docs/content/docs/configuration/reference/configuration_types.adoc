@@ -1,12 +1,12 @@
 ---
-title: "Configuration Types"
+title: "General Configuration Types"
 date: 2022-06-09T18:56:56+02:00
 draft: false
-weight: 95
+weight: 139
 menu:
   docs:
-    weight: 60
-    parent: "Pipeline Handler"
+    weight: 10
+    parent: "Reference"
 ---
 
 == Assertions
@@ -296,21 +296,20 @@ CAUTION: These headers are not analyzed by heimdall and are just forwarded to th
 
 [source, yaml]
 ----
-endpoint:
-  url: http://foo.bar
-  method: GET
-  retry:
-    give_up_after: 5s
-    max_delay: 1s
-  auth:
-    type: api_key
-    config:
-      name: foo
-      value: bar
-      in: cookie
-  headers:
-    X-My-First-Header: foobar
-    X-My-Second-Header: barfoo
+url: http://foo.bar
+method: GET
+retry:
+  give_up_after: 5s
+  max_delay: 1s
+auth:
+  type: api_key
+  config:
+    name: foo
+    value: bar
+    in: cookie
+headers:
+  X-My-First-Header: foobar
+  X-My-Second-Header: barfoo
 ----
 
 ====
@@ -434,9 +433,8 @@ In this example the backoff will be 1, 2, 4, 8, 16, 32, 60, ...
 
 [source, yaml]
 ----
-retry:
-    give_up_after: 60s
-    max_delay: 1s
+give_up_after: 60s
+max_delay: 1s
 ----
 ====
 

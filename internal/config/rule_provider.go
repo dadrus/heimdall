@@ -1,7 +1,8 @@
 package config
 
 type RuleProviders struct {
-	File *FileBasedRuleProviderConfig `koanf:"file,omitempty"`
+	FileSystem   *FileBasedRuleProviderConfig `koanf:"file,omitempty"`
+	HTTPEndpoint map[string]any               `koanf:"http_endpoint,omitempty"`
 }
 
 type FileBasedRuleProviderConfig struct {

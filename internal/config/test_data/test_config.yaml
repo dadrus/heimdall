@@ -271,3 +271,21 @@ rules:
       src: test_rules.yaml
       watch: true
 
+    http_endpoint:
+      watch_interval: 5m
+      endpoints:
+        - url: http://foo.bar/rules.yaml
+          expected_path_prefix: /foo
+        - url: http://bar.foo/rules.yaml
+          headers:
+            bla: bla
+          retry:
+            give_up_after: 5s
+            max_delay: 250ms
+          auth:
+            type: api_key
+            config:
+              name: foo
+              value: bar
+              in: header
+

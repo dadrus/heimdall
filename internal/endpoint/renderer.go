@@ -1,4 +1,4 @@
-package renderer
+package endpoint
 
 type Renderer interface {
 	Render(value string) (string, error)

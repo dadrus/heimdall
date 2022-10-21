@@ -1,4 +1,4 @@
-package filesystem
+package httpendpoint
 
 import "go.uber.org/fx"
 

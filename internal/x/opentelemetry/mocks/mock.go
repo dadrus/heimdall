@@ -75,6 +75,10 @@ func NewMockTracer() *MockTracer {
 	}
 }
 
+func NewMockTraceProvider() *MockTracerProvider {
+	return &MockTracerProvider{tracer: NewMockTracer()}
+}
+
 func (t *MockTracer) Start(ctx context.Context, name string, opts ...trace.SpanStartOption) (
 	context.Context, trace.Span,
 ) {

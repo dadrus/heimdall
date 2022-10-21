@@ -1,5 +1,7 @@
 package event
 
+import "github.com/dadrus/heimdall/internal/config"
+
 type ChangeType uint32
 
 // These are the generalized file operations that can trigger a notification.
@@ -18,6 +20,6 @@ func (t ChangeType) String() string {
 
 type RuleSetChangedEvent struct {
 	Src        string
-	Definition []byte
+	RuleSet    []config.RuleConfig
 	ChangeType ChangeType
 }

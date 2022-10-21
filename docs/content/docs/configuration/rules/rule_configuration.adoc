@@ -160,7 +160,7 @@ This example uses two error handlers, named `foo` and `bar`. `bar` will only be 
 
 == Rule Set
 
-A rule set is just a list of rules, typically defined in a format specified by a particular link:({{< relref "providers.adoc" >}}[provider]. In its simplest case, a rule set does not require further configuration options and can look like shown below:
+A rule set is just a list of rules, typically defined in a format specified by a particular link:{{< relref "providers.adoc" >}}[provider]. In its simplest case, a rule set does not require further configuration options and can look like shown below:
 
 .Rule set with two rules
 ====

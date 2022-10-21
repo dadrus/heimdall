@@ -212,6 +212,8 @@ func TestRepositoryAddAndRemoveRulesFromDifferentRuleSets(t *testing.T) {
 func TestRepositoryRuleSetLifecycleManagement(t *testing.T) {
 	t.Parallel()
 
+	ctx := context.Background()
+
 	queue := make(event.RuleSetChangedEventQueue, 10)
 	defer close(queue)
 
@@ -221,10 +223,10 @@ func TestRepositoryRuleSetLifecycleManagement(t *testing.T) {
 	impl, ok := repo.(*repository)
 	require.True(t, ok)
 
-	require.NoError(t, impl.Start())
+	require.NoError(t, impl.Start(ctx))
 
 	// nolint: errcheck
-	defer impl.Stop()
+	defer impl.Stop(ctx)
 
 	for _, tc := range []struct {
 		uc             string
@@ -247,20 +249,23 @@ func TestRepositoryRuleSetLifecycleManagement(t *testing.T) {
 				{
 					Src:        "test",
 					ChangeType: event.Create,
-					Definition: []byte(`
-- id: rule:foo
-  url: http://foo.bar/<**>
-  methods:
-   - PATCH
-  matching_strategy: regex
-  execute:
-    - authenticator: unauthorized_authenticator
-    - hydrator: subscription_hydrator
-    - authorizer: allow_all_authorizer
-    - mutator: jwt
-  on_error:
-    - error_handler: default
-`),
+					RuleSet: []config.RuleConfig{
+						{
+							ID:               "rule:foo",
+							URL:              "http://foo.bar/<**>",
+							MatchingStrategy: "regex",
+							Methods:          []string{"PATCH"},
+							Execute: []map[string]any{
+								{"authenticator": "unauthorized_authenticator"},
+								{"hydrator": "subscription_hydrator"},
+								{"authorizer": "allow_all_authorizer"},
+								{"mutator": "jwt"},
+							},
+							ErrorHandler: []map[string]any{
+								{"error_handler": "default"},
+							},
+						},
+					},
 				},
 			},
 			configureMocks: func(t *testing.T, factory *mocks.MockRuleFactory) {
@@ -306,22 +311,24 @@ func TestRepositoryRuleSetLifecycleManagement(t *testing.T) {
 				{
 					Src:        "test1",
 					ChangeType: event.Create,
-					Definition: []byte(`
-- id: rule:bar
-  url: http://bar.foo/<**>
-  methods:
-   - GET
-`),
+					RuleSet: []config.RuleConfig{
+						{
+							ID:      "rule:bar",
+							URL:     "http://bar.foo/<**>",
+							Methods: []string{"GET"},
+						},
+					},
 				},
 				{
 					Src:        "test2",
 					ChangeType: event.Create,
-					Definition: []byte(`
-- id: rule:foo
-  url: http://foo.bar/<**>
-  methods:
-   - POST
-`),
+					RuleSet: []config.RuleConfig{
+						{
+							ID:      "rule:foo",
+							URL:     "http://foo.bar/<**>",
+							Methods: []string{"POST"},
+						},
+					},
 				},
 			},
 			configureMocks: func(t *testing.T, factory *mocks.MockRuleFactory) {
@@ -347,22 +354,24 @@ func TestRepositoryRuleSetLifecycleManagement(t *testing.T) {
 				{
 					Src:        "test1",
 					ChangeType: event.Create,
-					Definition: []byte(`
-- id: rule:bar
-  url: http://bar.foo/<**>
-  methods:
-   - GET
-`),
+					RuleSet: []config.RuleConfig{
+						{
+							ID:      "rule:bar",
+							URL:     "http://bar.foo/<**>",
+							Methods: []string{"GET"},
+						},
+					},
 				},
 				{
 					Src:        "test2",
 					ChangeType: event.Create,
-					Definition: []byte(`
-- id: rule:foo
-  url: http://foo.bar/<**>
-  methods:
-   - POST
-`),
+					RuleSet: []config.RuleConfig{
+						{
+							ID:      "rule:foo",
+							URL:     "http://foo.bar/<**>",
+							Methods: []string{"POST"},
+						},
+					},
 				},
 				{
 					Src:        "test2",
@@ -391,12 +400,13 @@ func TestRepositoryRuleSetLifecycleManagement(t *testing.T) {
 				{
 					Src:        "test",
 					ChangeType: event.Create,
-					Definition: []byte(`
-- id: rule:bar
-  url: http://bar.foo/<**>
-  methods:
-   - GET
-`),
+					RuleSet: []config.RuleConfig{
+						{
+							ID:      "rule:bar",
+							URL:     "http://bar.foo/<**>",
+							Methods: []string{"GET"},
+						},
+					},
 				},
 			},
 			configureMocks: func(t *testing.T, factory *mocks.MockRuleFactory) {

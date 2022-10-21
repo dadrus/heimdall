@@ -8,6 +8,7 @@ require (
 	github.com/dlclark/regexp2 v1.7.0
 	github.com/dop251/goja v0.0.0-20221019153710-09250e0eba20
 	github.com/fsnotify/fsnotify v1.6.0
+	github.com/go-co-op/gocron v1.17.1
 	github.com/gobwas/glob v0.2.3
 	github.com/goccy/go-json v0.9.11
 	github.com/gofiber/fiber/v2 v2.38.1
@@ -76,6 +77,7 @@ require (
 	github.com/prometheus/client_model v0.2.0 // indirect
 	github.com/prometheus/common v0.32.1 // indirect
 	github.com/prometheus/procfs v0.7.3 // indirect
+	github.com/robfig/cron/v3 v3.0.1 // indirect
 	github.com/shopspring/decimal v1.2.0 // indirect
 	github.com/spf13/cast v1.3.1 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect

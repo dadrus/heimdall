@@ -1,12 +1,11 @@
 package rules
 
 import (
-	"bytes"
+	"context"
 	"net/url"
 	"sync"
 
 	"github.com/rs/zerolog"
-	"gopkg.in/yaml.v3"
 
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
@@ -50,9 +49,9 @@ func (r *repository) FindRule(requestURL *url.URL) (rule.Rule, error) {
 	r.mutex.RLock()
 	defer r.mutex.RUnlock()
 
-	for _, rule := range r.rules {
-		if rule.MatchesURL(requestURL) {
-			return rule, nil
+	for _, rul := range r.rules {
+		if rul.MatchesURL(requestURL) {
+			return rul, nil
 		}
 	}
 
@@ -64,7 +63,7 @@ func (r *repository) FindRule(requestURL *url.URL) (rule.Rule, error) {
 		"no applicable rule found for %s", requestURL.String())
 }
 
-func (r *repository) Start() error {
+func (r *repository) Start(_ context.Context) error {
 	r.logger.Info().Msg("Starting rule definition loader")
 
 	go r.watchRuleSetChanges()
@@ -72,7 +71,7 @@ func (r *repository) Start() error {
 	return nil
 }
 
-func (r *repository) Stop() error {
+func (r *repository) Stop(_ context.Context) error {
 	r.logger.Info().Msg("Tearing down rule definition loader")
 
 	r.quit <- true
@@ -91,7 +90,7 @@ func (r *repository) watchRuleSetChanges() {
 			}
 
 			if evt.ChangeType == event.Create {
-				r.onRuleSetCreated(evt.Src, evt.Definition)
+				r.onRuleSetCreated(evt.Src, evt.RuleSet)
 			} else if evt.ChangeType == event.Remove {
 				r.onRuleSetDeleted(evt.Src)
 			}
@@ -103,21 +102,16 @@ func (r *repository) watchRuleSetChanges() {
 	}
 }
 
-func (r *repository) loadRules(srcID string, definition []byte) ([]rule.Rule, error) {
-	rcs, err := parseRuleSet(definition)
-	if err != nil {
-		return nil, err
-	}
+func (r *repository) loadRules(srcID string, ruleSet []config.RuleConfig) ([]rule.Rule, error) {
+	rules := make([]rule.Rule, len(ruleSet))
 
-	rules := make([]rule.Rule, len(rcs))
-
-	for idx, rc := range rcs {
-		rule, err := r.rf.CreateRule(srcID, rc)
+	for idx, rc := range ruleSet {
+		rul, err := r.rf.CreateRule(srcID, rc)
 		if err != nil {
 			return nil, errorchain.NewWithMessage(heimdall.ErrInternal, "failed loading rule").CausedBy(err)
 		}
 
-		rules[idx] = rule
+		rules[idx] = rul
 	}
 
 	return rules, nil
@@ -141,11 +135,11 @@ func (r *repository) removeRules(srcID string) {
 	// find all indexes for affected rules
 	var idxs []int
 
-	for idx, rule := range r.rules {
-		if rule.SrcID() == srcID {
+	for idx, rul := range r.rules {
+		if rul.SrcID() == srcID {
 			idxs = append(idxs, idx)
 
-			r.logger.Debug().Str("_id", rule.ID()).Msg("Removing rule")
+			r.logger.Debug().Str("_id", rul.ID()).Msg("Removing rule")
 		}
 	}
 
@@ -172,34 +166,21 @@ func (r *repository) removeRules(srcID string) {
 	r.rules = r.rules[:len(r.rules)-len(idxs)]
 }
 
-func (r *repository) onRuleSetCreated(srcID string, definition []byte) {
+func (r *repository) onRuleSetCreated(srcID string, ruleSet []config.RuleConfig) {
 	// create rules
 	r.logger.Info().Str("_src", srcID).Msg("Loading rule set")
 
-	rules, err := r.loadRules(srcID, definition)
+	rules, err := r.loadRules(srcID, ruleSet)
 	if err != nil {
 		r.logger.Error().Err(err).Str("_src", srcID).Msg("Failed loading rule set")
 	}
 
 	// add them
-	for _, rule := range rules {
-		r.addRule(rule)
+	for _, rul := range rules {
+		r.addRule(rul)
 	}
 }
 
 func (r *repository) onRuleSetDeleted(src string) {
 	r.removeRules(src)
-}
-
-func parseRuleSet(data []byte) ([]config.RuleConfig, error) {
-	var rcs []config.RuleConfig
-
-	dec := yaml.NewDecoder(bytes.NewReader(data))
-	dec.KnownFields(true)
-
-	if err := dec.Decode(&rcs); err != nil {
-		return nil, err
-	}
-
-	return rcs, nil
 }

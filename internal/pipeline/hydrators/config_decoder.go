@@ -3,7 +3,7 @@ package hydrators
 import (
 	"github.com/mitchellh/mapstructure"
 
-	"github.com/dadrus/heimdall/internal/pipeline/endpoint"
+	"github.com/dadrus/heimdall/internal/endpoint"
 	"github.com/dadrus/heimdall/internal/pipeline/template"
 )
 

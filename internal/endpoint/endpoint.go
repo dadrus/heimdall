@@ -18,7 +18,6 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/pipeline/renderer"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
@@ -68,11 +67,11 @@ func (e Endpoint) CreateClient(peerName string) *http.Client {
 	return client
 }
 
-func (e Endpoint) CreateRequest(ctx context.Context, body io.Reader, rndr renderer.Renderer) (*http.Request, error) {
+func (e Endpoint) CreateRequest(ctx context.Context, body io.Reader, rndr Renderer) (*http.Request, error) {
 	logger := zerolog.Ctx(ctx)
-	tpl := x.IfThenElse[renderer.Renderer](rndr != nil, rndr, noopRenderer{})
+	tpl := x.IfThenElse[Renderer](rndr != nil, rndr, noopRenderer{})
 
-	method := "POST"
+	method := http.MethodPost
 	if len(e.Method) != 0 {
 		method = e.Method
 	}
@@ -116,7 +115,7 @@ func (e Endpoint) CreateRequest(ctx context.Context, body io.Reader, rndr render
 	return req, nil
 }
 
-func (e Endpoint) SendRequest(ctx context.Context, body io.Reader, renderer renderer.Renderer) ([]byte, error) {
+func (e Endpoint) SendRequest(ctx context.Context, body io.Reader, renderer Renderer) ([]byte, error) {
 	req, err := e.CreateRequest(ctx, body, renderer)
 	if err != nil {
 		return nil, err
