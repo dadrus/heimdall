@@ -1685,7 +1685,7 @@
           "type": "object",
           "additionalProperties": false,
           "properties": {
-            "file": {
+            "file_system": {
               "$ref": "#/definitions/fileSystemProvider"
             },
             "http_endpoint": {
