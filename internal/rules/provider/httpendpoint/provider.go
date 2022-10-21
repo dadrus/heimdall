@@ -142,7 +142,8 @@ func (p *provider) watchChanges(ctx context.Context, rsf RuleSetFetcher) error {
 		func() []config.RuleConfig { return nil },
 		func() []config.RuleConfig { return ruleSet.Rules })
 
-	if !p.checkAndUpdateState(changeType, rsf.ID(), hash) {
+	stateUpdated, removeOld := p.checkAndUpdateState(changeType, rsf.ID(), hash)
+	if !stateUpdated {
 		p.l.Debug().
 			Str("_rule_provider_type", "http_endpoint").
 			Str("_endpoint", rsf.ID()).
@@ -151,43 +152,56 @@ func (p *provider) watchChanges(ctx context.Context, rsf RuleSetFetcher) error {
 		return nil
 	}
 
-	p.l.Info().
-		Str("_rule_provider_type", "http_endpoint").
-		Str("_src", rsf.ID()).
-		Str("_type", changeType.String()).
-		Msg("Rule set changed")
+	if removeOld {
+		p.ruleSetChanged(event.RuleSetChangedEvent{
+			Src:        "http_endpoint:" + rsf.ID(),
+			ChangeType: event.Remove,
+		})
+	}
 
-	p.q <- event.RuleSetChangedEvent{
+	p.ruleSetChanged(event.RuleSetChangedEvent{
 		Src:        "http_endpoint:" + rsf.ID(),
 		ChangeType: changeType,
 		RuleSet:    rules,
-	}
+	})
 
 	return nil
 }
 
-func (p *provider) checkAndUpdateState(changeType event.ChangeType, stateID string, newValue []byte) bool {
+func (p *provider) checkAndUpdateState(changeType event.ChangeType, stateID string, newValue []byte) (bool, bool) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
+	removeOld := false
 	oldValue, known := p.state[stateID]
 
 	switch changeType {
 	case event.Remove:
 		if !known {
 			// nothing needs to be done, this rule set is not known
-			return false
+			return false, false
 		}
 
 		delete(p.state, stateID)
 	case event.Create:
 		if known && bytes.Equal(oldValue, newValue) {
 			// nothing needs to be done, this rule set is already known
-			return false
+			return false, false
+		} else if known {
+			removeOld = true
 		}
 
 		p.state[stateID] = newValue
 	}
 
-	return true
+	return true, removeOld
+}
+
+func (p *provider) ruleSetChanged(evt event.RuleSetChangedEvent) {
+	p.l.Info().
+		Str("_rule_provider_type", "http_endpoint").
+		Str("_src", evt.Src).
+		Str("_type", evt.ChangeType.String()).
+		Msg("Rule set changed")
+	p.q <- evt
 }

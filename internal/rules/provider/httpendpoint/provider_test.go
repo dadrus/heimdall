@@ -140,7 +140,7 @@ endpoints:
 	}
 }
 
-func TestProviderLifecycle(t *testing.T) {
+func TestProviderLifecycle(t *testing.T) { //nolint:maintidx
 	t.Parallel()
 
 	type ResponseWriter func(t *testing.T, w http.ResponseWriter)
@@ -277,6 +277,146 @@ endpoints:
 				assert.Contains(t, evt.Src, "http_endpoint:"+srv.URL)
 				assert.Len(t, evt.RuleSet, 1)
 				assert.Equal(t, "bar", evt.RuleSet[0].ID)
+				assert.Equal(t, event.Create, evt.ChangeType)
+			},
+		},
+		{
+			uc: "first request successful, second request with 500, successive requests successful without changes",
+			conf: []byte(`
+watch_interval: 250ms
+endpoints:
+  - url: ` + srv.URL + `
+`),
+			writeResponse: func() ResponseWriter {
+				callIdx := 1
+
+				return func(t *testing.T, w http.ResponseWriter) {
+					t.Helper()
+
+					switch callIdx {
+					case 1:
+						w.Header().Set("Content-Type", "application/yaml")
+						_, err := w.Write([]byte("- id: bar"))
+						require.NoError(t, err)
+					case 2:
+						w.WriteHeader(http.StatusInternalServerError)
+					default:
+						w.Header().Set("Content-Type", "application/yaml")
+						_, err := w.Write([]byte("- id: bar"))
+						require.NoError(t, err)
+					}
+
+					callIdx++
+				}
+			}(),
+			assert: func(t *testing.T, logs fmt.Stringer, queue event.RuleSetChangedEventQueue) {
+				t.Helper()
+
+				time.Sleep(1000 * time.Millisecond)
+
+				assert.Contains(t, logs.String(), "No updates received")
+
+				require.Len(t, queue, 3)
+
+				evt := <-queue
+				assert.Contains(t, evt.Src, "http_endpoint:"+srv.URL)
+				assert.Len(t, evt.RuleSet, 1)
+				assert.Equal(t, "bar", evt.RuleSet[0].ID)
+				assert.Equal(t, event.Create, evt.ChangeType)
+
+				evt = <-queue
+				assert.Contains(t, evt.Src, "http_endpoint:"+srv.URL)
+				assert.Len(t, evt.RuleSet, 0)
+				assert.Equal(t, event.Remove, evt.ChangeType)
+
+				evt = <-queue
+				assert.Contains(t, evt.Src, "http_endpoint:"+srv.URL)
+				assert.Len(t, evt.RuleSet, 1)
+				assert.Equal(t, "bar", evt.RuleSet[0].ID)
+				assert.Equal(t, event.Create, evt.ChangeType)
+			},
+		},
+		{
+			uc: "successive changes to the rule set in each retrieval",
+			conf: []byte(`
+watch_interval: 250ms
+endpoints:
+  - url: ` + srv.URL + `
+`),
+			writeResponse: func() ResponseWriter {
+				callIdx := 1
+
+				return func(t *testing.T, w http.ResponseWriter) {
+					t.Helper()
+
+					switch callIdx {
+					case 1:
+						w.Header().Set("Content-Type", "application/yaml")
+						_, err := w.Write([]byte("- id: bar"))
+						require.NoError(t, err)
+					case 2:
+						w.Header().Set("Content-Type", "application/yaml")
+						_, err := w.Write([]byte("- id: baz"))
+						require.NoError(t, err)
+					case 3:
+						w.Header().Set("Content-Type", "application/yaml")
+						_, err := w.Write([]byte("- id: foo"))
+						require.NoError(t, err)
+					default:
+						w.Header().Set("Content-Type", "application/yaml")
+						_, err := w.Write([]byte("- id: foz"))
+						require.NoError(t, err)
+					}
+
+					callIdx++
+				}
+			}(),
+			assert: func(t *testing.T, logs fmt.Stringer, queue event.RuleSetChangedEventQueue) {
+				t.Helper()
+
+				time.Sleep(1000 * time.Millisecond)
+
+				assert.NotContains(t, logs.String(), "No updates received")
+
+				require.Len(t, queue, 7)
+
+				evt := <-queue
+				assert.Contains(t, evt.Src, "http_endpoint:"+srv.URL)
+				assert.Len(t, evt.RuleSet, 1)
+				assert.Equal(t, "bar", evt.RuleSet[0].ID)
+				assert.Equal(t, event.Create, evt.ChangeType)
+
+				evt = <-queue
+				assert.Contains(t, evt.Src, "http_endpoint:"+srv.URL)
+				assert.Len(t, evt.RuleSet, 0)
+				assert.Equal(t, event.Remove, evt.ChangeType)
+
+				evt = <-queue
+				assert.Contains(t, evt.Src, "http_endpoint:"+srv.URL)
+				assert.Len(t, evt.RuleSet, 1)
+				assert.Equal(t, "baz", evt.RuleSet[0].ID)
+				assert.Equal(t, event.Create, evt.ChangeType)
+
+				evt = <-queue
+				assert.Contains(t, evt.Src, "http_endpoint:"+srv.URL)
+				assert.Len(t, evt.RuleSet, 0)
+				assert.Equal(t, event.Remove, evt.ChangeType)
+
+				evt = <-queue
+				assert.Contains(t, evt.Src, "http_endpoint:"+srv.URL)
+				assert.Len(t, evt.RuleSet, 1)
+				assert.Equal(t, "foo", evt.RuleSet[0].ID)
+				assert.Equal(t, event.Create, evt.ChangeType)
+
+				evt = <-queue
+				assert.Contains(t, evt.Src, "http_endpoint:"+srv.URL)
+				assert.Len(t, evt.RuleSet, 0)
+				assert.Equal(t, event.Remove, evt.ChangeType)
+
+				evt = <-queue
+				assert.Contains(t, evt.Src, "http_endpoint:"+srv.URL)
+				assert.Len(t, evt.RuleSet, 1)
+				assert.Equal(t, "foz", evt.RuleSet[0].ID)
 				assert.Equal(t, event.Create, evt.ChangeType)
 			},
 		},
