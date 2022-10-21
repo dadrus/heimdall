@@ -33,10 +33,9 @@ This provider doesn't need any additional configuration for a rule set. So the c
 ====
 [source, yaml]
 ----
-providers:
-  file:
-    src: /path/to/rules/dir
-    watch: true
+file:
+  src: /path/to/rules/dir
+  watch: true
 ----
 ====
 
@@ -44,9 +43,8 @@ providers:
 ====
 [source, yaml]
 ----
-providers:
-  file:
-    src: /path/to/rules.yaml
+file:
+  src: /path/to/rules.yaml
 ----
 ====
 
@@ -83,10 +81,9 @@ Here the provider is configured to load a rule set from one endpoint without pol
 
 [source, yaml]
 ----
-providers:
-  http_endpoint:
-    endpoints:
-      - url: http://foo.bar/ruleset1
+http_endpoint:
+  endpoints:
+    - url: http://foo.bar/ruleset1
 ----
 ====
 
@@ -101,24 +98,21 @@ The configuration for the second endpoint defines the `expected_path_prefix` as 
 
 [source, yaml]
 ----
-providers:
-  http_endpoint:
-    watch_interval: 5m
-    endpoints:
-      - url: http://foo.bar/ruleset1
-        expected_path_prefix: /foo/bar
-      - url: http://foo.bar/ruleset2
-        expected_path_prefix: /bar/foo
-        retry:
-          give_up_after: 5s
-          max_delay: 250ms
-        auth:
-          type: api_key
-          config:
-            name: X-Api-Key
-            value: super-secret
-            in: header
+http_endpoint:
+  watch_interval: 5m
+  endpoints:
+    - url: http://foo.bar/ruleset1
+      expected_path_prefix: /foo/bar
+    - url: http://foo.bar/ruleset2
+      expected_path_prefix: /bar/foo
+      retry:
+        give_up_after: 5s
+        max_delay: 250ms
+      auth:
+        type: api_key
+        config:
+          name: X-Api-Key
+          value: super-secret
+          in: header
 ----
 ====
-
-
