@@ -77,34 +77,6 @@ This property can be used to create kind of a namespace for the rule sets retrie
 
 This provider doesn't need any additional configuration for a rule set. So the contents of files can be just a list of rules as described in link:{{< relref "rule_configuration.adoc#_rule_set" >}}[Rule Sets].
 
-.Load rule sets from remote endpoints and watch for changes.
-====
-[source, yaml]
-----
-providers:
-  http_endpoint:
-    watch_interval: 5m
-    endpoints:
-      - url: http://foo.bar/ruleset1
-        expected_path_prefix: /foo/bar
-      - url: http://foo.bar/ruleset2
-        retry:
-          give_up_after: 5s
-          max_delay: 250ms
-        auth:
-          type: api_key
-          config:
-            name: X-Api-Key
-            value: super-secret
-            in: header
-----
-
-Here, the configuration for the first endpoint instructs heimdall to ensure all urls defined in the rules coming from that endpoint must match the defined path prefix.
-
-The configuration for the second endpoint does not define the `expected_path_prefix`, but it defines a couple of other properties. One to ensure the communication to that endpoint is more resilient by setting the `retry` options and since this endpoint is protected by an API key, it defines the corresponding options as well.
-
-====
-
 .Minimal possible configuration
 ====
 Here the provider is configured to load a rule set from one endpoint without polling it for changes.
@@ -117,4 +89,36 @@ providers:
       - url: http://foo.bar/ruleset1
 ----
 ====
+
+.Load rule sets from remote endpoints and watch for changes.
+====
+
+Here, the provider is configured to poll the two defined rule set endpoints for changes every 5 minutes.
+
+The configuration for the first endpoint instructs heimdall to ensure all urls defined in the rules coming from that endpoint must match the defined path prefix.
+
+The configuration for the second endpoint defines the `expected_path_prefix` as well. It also defines a couple of other properties. One to ensure the communication to that endpoint is more resilient by setting the `retry` options and since this endpoint is protected by an API key, it defines the corresponding options as well.
+
+[source, yaml]
+----
+providers:
+  http_endpoint:
+    watch_interval: 5m
+    endpoints:
+      - url: http://foo.bar/ruleset1
+        expected_path_prefix: /foo/bar
+      - url: http://foo.bar/ruleset2
+        expected_path_prefix: /bar/foo
+        retry:
+          give_up_after: 5s
+          max_delay: 250ms
+        auth:
+          type: api_key
+          config:
+            name: X-Api-Key
+            value: super-secret
+            in: header
+----
+====
+
 
