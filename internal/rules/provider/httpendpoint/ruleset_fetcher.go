@@ -5,6 +5,6 @@ import (
 )
 
 type RuleSetFetcher interface {
-	FetchRuleSet(ctx context.Context) (*RuleSet, error)
+	FetchRuleSet(ctx context.Context) (RuleSet, error)
 	ID() string
 }

@@ -319,7 +319,7 @@ func TestRuleSetEndpointFetchRuleSet(t *testing.T) { //nolint:maintidx
 			ruleSet, err := tc.ep.FetchRuleSet(ctx)
 
 			// THEN
-			tc.assert(t, err, ruleSet)
+			tc.assert(t, err, &ruleSet)
 		})
 	}
 }

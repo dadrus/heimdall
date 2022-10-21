@@ -11,7 +11,6 @@ import (
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/cache"
-	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/event"
 	"github.com/dadrus/heimdall/internal/x"
@@ -132,17 +131,9 @@ func (p *provider) watchChanges(ctx context.Context, rsf RuleSetFetcher) error {
 		}
 	}
 
-	changeType := x.IfThenElse(ruleSet == nil || len(ruleSet.Rules) == 0,
-		event.Remove,
-		event.Create)
-	hash := x.IfThenElseExec(ruleSet == nil,
-		func() []byte { return nil },
-		func() []byte { return ruleSet.Hash })
-	rules := x.IfThenElseExec(ruleSet == nil,
-		func() []config.RuleConfig { return nil },
-		func() []config.RuleConfig { return ruleSet.Rules })
+	changeType := x.IfThenElse(len(ruleSet.Rules) == 0, event.Remove, event.Create)
 
-	stateUpdated, removeOld := p.checkAndUpdateState(changeType, rsf.ID(), hash)
+	stateUpdated, removeOld := p.checkAndUpdateState(changeType, rsf.ID(), ruleSet.Hash)
 	if !stateUpdated {
 		p.l.Debug().
 			Str("_rule_provider_type", "http_endpoint").
@@ -162,7 +153,7 @@ func (p *provider) watchChanges(ctx context.Context, rsf RuleSetFetcher) error {
 	p.ruleSetChanged(event.RuleSetChangedEvent{
 		Src:        "http_endpoint:" + rsf.ID(),
 		ChangeType: changeType,
-		RuleSet:    rules,
+		RuleSet:    ruleSet.Rules,
 	})
 
 	return nil

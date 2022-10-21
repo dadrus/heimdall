@@ -24,10 +24,10 @@ type ruleSetEndpoint struct {
 
 func (e *ruleSetEndpoint) ID() string { return e.URL }
 
-func (e *ruleSetEndpoint) FetchRuleSet(ctx context.Context) (*RuleSet, error) {
+func (e *ruleSetEndpoint) FetchRuleSet(ctx context.Context) (RuleSet, error) {
 	req, err := e.CreateRequest(ctx, nil, nil)
 	if err != nil {
-		return nil, errorchain.
+		return RuleSet{}, errorchain.
 			NewWithMessage(heimdall.ErrInternal, "failed creating request").
 			CausedBy(err)
 	}
@@ -38,12 +38,12 @@ func (e *ruleSetEndpoint) FetchRuleSet(ctx context.Context) (*RuleSet, error) {
 	if err != nil {
 		var clientErr *url.Error
 		if errors.As(err, &clientErr) && clientErr.Timeout() {
-			return nil, errorchain.
+			return RuleSet{}, errorchain.
 				NewWithMessage(heimdall.ErrCommunicationTimeout, "request to rule set endpoint timed out").
 				CausedBy(err)
 		}
 
-		return nil, errorchain.
+		return RuleSet{}, errorchain.
 			NewWithMessage(heimdall.ErrCommunication, "request to rule set endpoint failed").
 			CausedBy(err)
 	}
@@ -51,7 +51,7 @@ func (e *ruleSetEndpoint) FetchRuleSet(ctx context.Context) (*RuleSet, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, errorchain.NewWithMessagef(heimdall.ErrCommunication,
+		return RuleSet{}, errorchain.NewWithMessagef(heimdall.ErrCommunication,
 			"unexpected response code: %v", resp.StatusCode)
 	}
 
@@ -59,15 +59,15 @@ func (e *ruleSetEndpoint) FetchRuleSet(ctx context.Context) (*RuleSet, error) {
 
 	contents, err := e.readContents(resp.Header.Get("Content-Type"), io.TeeReader(resp.Body, md))
 	if err != nil {
-		return nil, errorchain.NewWithMessage(heimdall.ErrInternal, "failed to decode received rule set").
+		return RuleSet{}, errorchain.NewWithMessage(heimdall.ErrInternal, "failed to decode received rule set").
 			CausedBy(err)
 	}
 
 	if err = e.verifyPathPrefix(contents); err != nil {
-		return nil, err
+		return RuleSet{}, err
 	}
 
-	return &RuleSet{
+	return RuleSet{
 		Rules: contents,
 		Hash:  md.Sum(nil),
 	}, nil
