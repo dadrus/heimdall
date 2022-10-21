@@ -5,10 +5,4 @@ The following section describes the available authorizer types in more detail.</
 The following section describes the available mutator types in more detail.
 Mutator Types Noop As the name implies, this mutator does nothing. As mutators are the last step in Heimdall’s pipeline and transform available subject information into an object required by the upstream service, the usage of this mutator makes only sense in combination with the Noop Authenticator for public APIs.</description></item><item><title>Error Handlers</title><link>https://dadrus.github.io/docs/configuration/pipeline/error_handlers/</link><pubDate>Thu, 09 Jun 2022 18:57:29 +0200</pubDate><guid>https://dadrus.github.io/docs/configuration/pipeline/error_handlers/</guid><description>Error Handlers are responsible for execution of logic if any of the handlers authenticators, authorizers, hydrators or mutators fail. The error handlers range from a simple error response to the client which sent the request to sophisticated handlers supporting complex logic and redirects.
 The following section describes the available error handler types in more detail.
-Error Handler Types Default This error handler is always there and is executed if no other error handler is responsible for the handling of an error.</description></item><item><title>Configuration Types</title><link>https://dadrus.github.io/docs/configuration/pipeline/configuration_types/</link><pubDate>Thu, 09 Jun 2022 18:56:56 +0200</pubDate><guid>https://dadrus.github.io/docs/configuration/pipeline/configuration_types/</guid><description>Assertions This type enables configuration of required token and claim assertions. Depending on the object type (JWT or introspection response), the assertions apply to different parts of such objects.
-scopes: Scopes Matcher (optional)
-Required scopes given to the client.
-audience: string array (optional)
-Required entries in the aud claim. Both cases, either as whitespace separated string, or a JSON array are considered.
-issuers: string array (mandatory)
-Issuers to trust. At least one issuer must be configured.</description></item></channel></rss>
+Error Handler Types Default This error handler is always there and is executed if no other error handler is responsible for the handling of an error.</description></item></channel></rss>
