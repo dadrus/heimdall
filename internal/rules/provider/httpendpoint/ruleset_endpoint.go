@@ -2,6 +2,7 @@ package httpendpoint
 
 import (
 	"context"
+	"crypto/sha256"
 	"errors"
 	"io"
 	"net/http"
@@ -23,7 +24,7 @@ type ruleSetEndpoint struct {
 
 func (e *ruleSetEndpoint) ID() string { return e.URL }
 
-func (e *ruleSetEndpoint) FetchRuleSet(ctx context.Context) ([]config.RuleConfig, error) {
+func (e *ruleSetEndpoint) FetchRuleSet(ctx context.Context) (*RuleSet, error) {
 	req, err := e.CreateRequest(ctx, nil, nil)
 	if err != nil {
 		return nil, errorchain.
@@ -54,7 +55,9 @@ func (e *ruleSetEndpoint) FetchRuleSet(ctx context.Context) ([]config.RuleConfig
 			"unexpected response code: %v", resp.StatusCode)
 	}
 
-	contents, err := e.readContents(resp.Header.Get("Content-Type"), resp.Body)
+	md := sha256.New()
+
+	contents, err := e.readContents(resp.Header.Get("Content-Type"), io.TeeReader(resp.Body, md))
 	if err != nil {
 		return nil, errorchain.NewWithMessage(heimdall.ErrInternal, "failed to decode received rule set").
 			CausedBy(err)
@@ -64,7 +67,10 @@ func (e *ruleSetEndpoint) FetchRuleSet(ctx context.Context) ([]config.RuleConfig
 		return nil, err
 	}
 
-	return contents, nil
+	return &RuleSet{
+		Rules: contents,
+		Hash:  md.Sum(nil),
+	}, nil
 }
 
 func (e *ruleSetEndpoint) readContents(contentType string, reader io.Reader) ([]config.RuleConfig, error) {

@@ -1,14 +1,17 @@
 package httpendpoint
 
 import (
+	"bytes"
 	"context"
 	"errors"
+	"sync"
 	"time"
 
 	"github.com/go-co-op/gocron"
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/cache"
+	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/event"
 	"github.com/dadrus/heimdall/internal/x"
@@ -20,6 +23,9 @@ type provider struct {
 	l      zerolog.Logger
 	s      *gocron.Scheduler
 	cancel context.CancelFunc
+
+	mu    sync.Mutex
+	state map[string][]byte
 }
 
 func newProvider(
@@ -69,6 +75,7 @@ func newProvider(
 		l:      logger,
 		s:      scheduler,
 		cancel: cancel,
+		state:  make(map[string][]byte),
 	}
 
 	for idx, ep := range conf.Endpoints {
@@ -125,19 +132,62 @@ func (p *provider) watchChanges(ctx context.Context, rsf RuleSetFetcher) error {
 		}
 	}
 
-	evt := event.RuleSetChangedEvent{
-		Src:        "http_endpoint:" + rsf.ID(),
-		ChangeType: x.IfThenElse(len(ruleSet) == 0, event.Remove, event.Create),
-		RuleSet:    ruleSet,
+	changeType := x.IfThenElse(ruleSet == nil || len(ruleSet.Rules) == 0,
+		event.Remove,
+		event.Create)
+	hash := x.IfThenElseExec(ruleSet == nil,
+		func() []byte { return nil },
+		func() []byte { return ruleSet.Hash })
+	rules := x.IfThenElseExec(ruleSet == nil,
+		func() []config.RuleConfig { return nil },
+		func() []config.RuleConfig { return ruleSet.Rules })
+
+	if !p.checkAndUpdateState(changeType, rsf.ID(), hash) {
+		p.l.Debug().
+			Str("_rule_provider_type", "http_endpoint").
+			Str("_endpoint", rsf.ID()).
+			Msg("No updates received")
+
+		return nil
 	}
 
 	p.l.Info().
 		Str("_rule_provider_type", "http_endpoint").
-		Str("_src", evt.Src).
-		Str("_type", evt.ChangeType.String()).
+		Str("_src", rsf.ID()).
+		Str("_type", changeType.String()).
 		Msg("Rule set changed")
 
-	p.q <- evt
+	p.q <- event.RuleSetChangedEvent{
+		Src:        "http_endpoint:" + rsf.ID(),
+		ChangeType: changeType,
+		RuleSet:    rules,
+	}
 
 	return nil
+}
+
+func (p *provider) checkAndUpdateState(changeType event.ChangeType, stateID string, newValue []byte) bool {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	oldValue, known := p.state[stateID]
+
+	switch changeType {
+	case event.Remove:
+		if !known {
+			// nothing needs to be done, this rule set is not known
+			return false
+		}
+
+		delete(p.state, stateID)
+	case event.Create:
+		if known && bytes.Equal(oldValue, newValue) {
+			// nothing needs to be done, this rule set is already known
+			return false
+		}
+
+		p.state[stateID] = newValue
+	}
+
+	return true
 }

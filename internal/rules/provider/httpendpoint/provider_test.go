@@ -172,13 +172,9 @@ endpoints:
 
 				messages := logs.String()
 				assert.Contains(t, messages, "name resolution")
+				assert.Contains(t, messages, "No updates received")
 
-				assert.Len(t, queue, 1)
-
-				evt := <-queue
-				assert.Contains(t, evt.Src, "http_endpoint:https://foo.bar.local/rules.yaml")
-				assert.Empty(t, evt.RuleSet)
-				assert.Equal(t, event.Remove, evt.ChangeType)
+				require.Len(t, queue, 0)
 			},
 		},
 		{
@@ -199,13 +195,9 @@ endpoints:
 
 				messages := logs.String()
 				assert.Contains(t, messages, "response code: 400")
+				assert.Contains(t, messages, "No updates received")
 
-				assert.Len(t, queue, 1)
-
-				evt := <-queue
-				assert.Contains(t, evt.Src, "http_endpoint:"+srv.URL)
-				assert.Empty(t, evt.RuleSet)
-				assert.Equal(t, event.Remove, evt.ChangeType)
+				require.Len(t, queue, 0)
 			},
 		},
 		{
@@ -224,12 +216,9 @@ endpoints:
 
 				time.Sleep(250 * time.Millisecond)
 
-				assert.Len(t, queue, 1)
+				assert.Contains(t, logs.String(), "No updates received")
 
-				evt := <-queue
-				assert.Contains(t, evt.Src, "http_endpoint:"+srv.URL)
-				assert.Empty(t, evt.RuleSet)
-				assert.Equal(t, event.Remove, evt.ChangeType)
+				require.Len(t, queue, 0)
 			},
 		},
 		{
@@ -248,9 +237,11 @@ endpoints:
 			assert: func(t *testing.T, logs fmt.Stringer, queue event.RuleSetChangedEventQueue) {
 				t.Helper()
 
-				time.Sleep(1100 * time.Millisecond)
+				time.Sleep(600 * time.Millisecond)
 
-				assert.Len(t, queue, 1)
+				assert.NotContains(t, logs.String(), "No updates received")
+
+				require.Len(t, queue, 1)
 
 				evt := <-queue
 				assert.Contains(t, evt.Src, "http_endpoint:"+srv.URL)
@@ -276,23 +267,17 @@ endpoints:
 			assert: func(t *testing.T, logs fmt.Stringer, queue event.RuleSetChangedEventQueue) {
 				t.Helper()
 
-				time.Sleep(1100 * time.Millisecond)
+				time.Sleep(600 * time.Millisecond)
 
-				assert.Len(t, queue, 5)
+				assert.Contains(t, logs.String(), "No updates received")
 
-				evt1 := <-queue
-				evt2 := <-queue
-				evt3 := <-queue
-				evt4 := <-queue
-				evt5 := <-queue
-				assert.Contains(t, evt1.Src, "http_endpoint:"+srv.URL)
-				assert.Len(t, evt1.RuleSet, 1)
-				assert.Equal(t, "bar", evt1.RuleSet[0].ID)
-				assert.Equal(t, event.Create, evt1.ChangeType)
-				assert.Equal(t, evt1, evt2)
-				assert.Equal(t, evt1, evt3)
-				assert.Equal(t, evt1, evt4)
-				assert.Equal(t, evt1, evt5)
+				require.Len(t, queue, 1)
+
+				evt := <-queue
+				assert.Contains(t, evt.Src, "http_endpoint:"+srv.URL)
+				assert.Len(t, evt.RuleSet, 1)
+				assert.Equal(t, "bar", evt.RuleSet[0].ID)
+				assert.Equal(t, event.Create, evt.ChangeType)
 			},
 		},
 	} {

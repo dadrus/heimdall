@@ -14,7 +14,6 @@ import (
 
 	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/dadrus/heimdall/internal/cache/mocks"
-	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/endpoint"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/x"
@@ -62,7 +61,7 @@ func TestRuleSetEndpointInit(t *testing.T) {
 	}
 }
 
-func TestRuleSetEndpointFetchRuleSet(t *testing.T) {
+func TestRuleSetEndpointFetchRuleSet(t *testing.T) { //nolint:maintidx
 	t.Parallel()
 
 	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(
@@ -88,7 +87,7 @@ func TestRuleSetEndpointFetchRuleSet(t *testing.T) {
 		uc            string
 		ep            *ruleSetEndpoint
 		writeResponse ResponseWriter
-		assert        func(t *testing.T, err error, ruleSet []config.RuleConfig)
+		assert        func(t *testing.T, err error, ruleSet *RuleSet)
 	}{
 		{
 			uc: "rule set loading error due to DNS error",
@@ -98,7 +97,7 @@ func TestRuleSetEndpointFetchRuleSet(t *testing.T) {
 					Method: http.MethodGet,
 				},
 			},
-			assert: func(t *testing.T, err error, ruleSet []config.RuleConfig) {
+			assert: func(t *testing.T, err error, _ *RuleSet) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -119,7 +118,7 @@ func TestRuleSetEndpointFetchRuleSet(t *testing.T) {
 
 				w.WriteHeader(http.StatusBadRequest)
 			},
-			assert: func(t *testing.T, err error, ruleSet []config.RuleConfig) {
+			assert: func(t *testing.T, err error, _ *RuleSet) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -141,7 +140,7 @@ func TestRuleSetEndpointFetchRuleSet(t *testing.T) {
 				_, err := w.Write([]byte("foobar"))
 				require.NoError(t, err)
 			},
-			assert: func(t *testing.T, err error, ruleSet []config.RuleConfig) {
+			assert: func(t *testing.T, err error, _ *RuleSet) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -162,11 +161,14 @@ func TestRuleSetEndpointFetchRuleSet(t *testing.T) {
 
 				w.WriteHeader(http.StatusOK)
 			},
-			assert: func(t *testing.T, err error, ruleSet []config.RuleConfig) {
+			assert: func(t *testing.T, err error, ruleSet *RuleSet) {
 				t.Helper()
 
 				require.NoError(t, err)
-				require.Empty(t, ruleSet)
+
+				require.NotNil(t, ruleSet)
+				require.Empty(t, ruleSet.Rules)
+				require.NotEmpty(t, ruleSet.Hash)
 			},
 		},
 		{
@@ -184,13 +186,15 @@ func TestRuleSetEndpointFetchRuleSet(t *testing.T) {
 				_, err := w.Write([]byte("- id: foo"))
 				require.NoError(t, err)
 			},
-			assert: func(t *testing.T, err error, ruleSet []config.RuleConfig) {
+			assert: func(t *testing.T, err error, ruleSet *RuleSet) {
 				t.Helper()
 
 				require.NoError(t, err)
 
-				assert.Len(t, ruleSet, 1)
-				assert.Equal(t, "foo", ruleSet[0].ID)
+				require.NotNil(t, ruleSet)
+				assert.Len(t, ruleSet.Rules, 1)
+				assert.Equal(t, "foo", ruleSet.Rules[0].ID)
+				require.NotEmpty(t, ruleSet.Hash)
 			},
 		},
 		{
@@ -208,13 +212,15 @@ func TestRuleSetEndpointFetchRuleSet(t *testing.T) {
 				_, err := w.Write([]byte(`[{"id":"foo"}]`))
 				require.NoError(t, err)
 			},
-			assert: func(t *testing.T, err error, ruleSet []config.RuleConfig) {
+			assert: func(t *testing.T, err error, ruleSet *RuleSet) {
 				t.Helper()
 
 				require.NoError(t, err)
 
-				assert.Len(t, ruleSet, 1)
-				assert.Equal(t, "foo", ruleSet[0].ID)
+				require.NotNil(t, ruleSet)
+				assert.Len(t, ruleSet.Rules, 1)
+				assert.Equal(t, "foo", ruleSet.Rules[0].ID)
+				require.NotEmpty(t, ruleSet.Hash)
 			},
 		},
 		{
@@ -233,7 +239,7 @@ func TestRuleSetEndpointFetchRuleSet(t *testing.T) {
 				_, err := w.Write([]byte(`[{"id":"foo", "url":"/bar/foo/<**>"}]`))
 				require.NoError(t, err)
 			},
-			assert: func(t *testing.T, err error, ruleSet []config.RuleConfig) {
+			assert: func(t *testing.T, err error, _ *RuleSet) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -257,7 +263,7 @@ func TestRuleSetEndpointFetchRuleSet(t *testing.T) {
 				_, err := w.Write([]byte(`[{"id":"foo", "url":"<**>://moobar.local:9090/bar/foo/<**>"}]`))
 				require.NoError(t, err)
 			},
-			assert: func(t *testing.T, err error, ruleSet []config.RuleConfig) {
+			assert: func(t *testing.T, err error, _ *RuleSet) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -281,13 +287,15 @@ func TestRuleSetEndpointFetchRuleSet(t *testing.T) {
 				_, err := w.Write([]byte(`[{"id":"foo", "url":"<**>://moobar.local:9090/foo/bar/<**>"}]`))
 				require.NoError(t, err)
 			},
-			assert: func(t *testing.T, err error, ruleSet []config.RuleConfig) {
+			assert: func(t *testing.T, err error, ruleSet *RuleSet) {
 				t.Helper()
 
 				require.NoError(t, err)
 
-				assert.Len(t, ruleSet, 1)
-				assert.Equal(t, "foo", ruleSet[0].ID)
+				require.NotNil(t, ruleSet)
+				assert.Len(t, ruleSet.Rules, 1)
+				assert.Equal(t, "foo", ruleSet.Rules[0].ID)
+				require.NotEmpty(t, ruleSet.Hash)
 			},
 		},
 	} {
