@@ -230,7 +230,7 @@ func TestRuleSetEndpointFetchRuleSet(t *testing.T) { //nolint:maintidx
 					URL:    srv.URL,
 					Method: http.MethodGet,
 				},
-				ExpectedPathPrefix: "/foo/bar",
+				RulesPathPrefix: "/foo/bar",
 			},
 			writeResponse: func(t *testing.T, w http.ResponseWriter) {
 				t.Helper()
@@ -254,7 +254,7 @@ func TestRuleSetEndpointFetchRuleSet(t *testing.T) { //nolint:maintidx
 					URL:    srv.URL,
 					Method: http.MethodGet,
 				},
-				ExpectedPathPrefix: "/foo/bar",
+				RulesPathPrefix: "/foo/bar",
 			},
 			writeResponse: func(t *testing.T, w http.ResponseWriter) {
 				t.Helper()
@@ -278,7 +278,7 @@ func TestRuleSetEndpointFetchRuleSet(t *testing.T) { //nolint:maintidx
 					URL:    srv.URL,
 					Method: http.MethodGet,
 				},
-				ExpectedPathPrefix: "/foo/bar",
+				RulesPathPrefix: "/foo/bar",
 			},
 			writeResponse: func(t *testing.T, w http.ResponseWriter) {
 				t.Helper()

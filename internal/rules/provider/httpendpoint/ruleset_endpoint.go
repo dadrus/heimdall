@@ -7,11 +7,10 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"strings"
 
-	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/endpoint"
 	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/rules/provider/pathprefix"
 	"github.com/dadrus/heimdall/internal/rules/provider/rulesetparser"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
@@ -19,7 +18,7 @@ import (
 type ruleSetEndpoint struct {
 	endpoint.Endpoint `mapstructure:",squash"`
 
-	ExpectedPathPrefix string `mapstructure:"expected_path_prefix"`
+	RulesPathPrefix pathprefix.PathPrefix `mapstructure:"expected_path_prefix"`
 }
 
 func (e *ruleSetEndpoint) ID() string { return e.URL }
@@ -57,13 +56,13 @@ func (e *ruleSetEndpoint) FetchRuleSet(ctx context.Context) (RuleSet, error) {
 
 	md := sha256.New()
 
-	contents, err := e.readContents(resp.Header.Get("Content-Type"), io.TeeReader(resp.Body, md))
+	contents, err := rulesetparser.ParseRules(resp.Header.Get("Content-Type"), io.TeeReader(resp.Body, md))
 	if err != nil {
 		return RuleSet{}, errorchain.NewWithMessage(heimdall.ErrInternal, "failed to decode received rule set").
 			CausedBy(err)
 	}
 
-	if err = e.verifyPathPrefix(contents); err != nil {
+	if err = e.RulesPathPrefix.Verify(contents); err != nil {
 		return RuleSet{}, err
 	}
 
@@ -73,25 +72,6 @@ func (e *ruleSetEndpoint) FetchRuleSet(ctx context.Context) (RuleSet, error) {
 	}, nil
 }
 
-func (e *ruleSetEndpoint) readContents(contentType string, reader io.Reader) ([]config.RuleConfig, error) {
-	switch contentType {
-	case "application/yaml":
-		return rulesetparser.ParseYAML(reader)
-	case "application/json":
-		return rulesetparser.ParseJSON(reader)
-	default:
-		// check if the contents are empty. in that case nothing needs to be decoded anyway
-		b := make([]byte, 1)
-		if _, err := reader.Read(b); err != nil && errors.Is(err, io.EOF) {
-			return []config.RuleConfig{}, nil
-		}
-
-		// otherwise
-		return nil, errorchain.NewWithMessagef(heimdall.ErrInternal,
-			"unsupported '%s' content type", contentType)
-	}
-}
-
 func (e *ruleSetEndpoint) init() error {
 	if err := e.Validate(); err != nil {
 		return errorchain.NewWithMessage(heimdall.ErrConfiguration, "validation of a ruleset endpoint failed").
@@ -99,26 +79,6 @@ func (e *ruleSetEndpoint) init() error {
 	}
 
 	e.Method = http.MethodGet
-
-	return nil
-}
-
-func (e *ruleSetEndpoint) verifyPathPrefix(ruleSet []config.RuleConfig) error {
-	if len(e.ExpectedPathPrefix) == 0 {
-		return nil
-	}
-
-	for _, ruleConfig := range ruleSet {
-		if strings.HasPrefix(ruleConfig.URL, "/") &&
-			// only path is specified
-			!strings.HasPrefix(ruleConfig.URL, e.ExpectedPathPrefix) ||
-			// patterns are specified before the path
-			// There should be a better way to check it
-			!strings.Contains(ruleConfig.URL, e.ExpectedPathPrefix) {
-			return errorchain.NewWithMessage(heimdall.ErrConfiguration,
-				"path prefix validation failed for rule ID=%s")
-		}
-	}
 
 	return nil
 }
