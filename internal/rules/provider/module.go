@@ -1,6 +1,7 @@
 package provider
 
 import (
+	"github.com/dadrus/heimdall/internal/rules/provider/cloudblob"
 	"github.com/rs/zerolog"
 	"go.uber.org/fx"
 
@@ -15,6 +16,7 @@ var Module = fx.Options(
 	fx.Invoke(checkRuleProvider),
 	filesystem.Module,
 	httpendpoint.Module,
+	cloudblob.Module,
 )
 
 func checkRuleProvider(logger zerolog.Logger, conf config.Configuration) {
@@ -24,6 +26,8 @@ func checkRuleProvider(logger zerolog.Logger, conf config.Configuration) {
 	case conf.Rules.Providers.FileSystem != nil:
 		ruleProviderConfigured = true
 	case conf.Rules.Providers.HTTPEndpoint != nil:
+		ruleProviderConfigured = true
+	case conf.Rules.Providers.CloudBlob != nil:
 		ruleProviderConfigured = true
 	}
 
