@@ -22,7 +22,7 @@ require (
 	github.com/rs/zerolog v1.28.0
 	github.com/santhosh-tekuri/jsonschema/v5 v5.0.1
 	github.com/spf13/cobra v1.6.0
-	github.com/stretchr/testify v1.8.0
+	github.com/stretchr/testify v1.8.1
 	github.com/tidwall/gjson v1.14.3
 	github.com/tonglil/opentelemetry-go-datadog-propagator v0.1.0
 	github.com/valyala/fasthttp v1.40.0
@@ -81,7 +81,7 @@ require (
 	github.com/shopspring/decimal v1.2.0 // indirect
 	github.com/spf13/cast v1.3.1 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
-	github.com/stretchr/objx v0.4.0 // indirect
+	github.com/stretchr/objx v0.5.0 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.0 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
