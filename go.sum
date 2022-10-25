@@ -109,6 +109,8 @@ github.com/dop251/goja v0.0.0-20221003171542-5ea1285e6c91 h1:1PfaQuGdeJVnHHQ0tg0
 github.com/dop251/goja v0.0.0-20221003171542-5ea1285e6c91/go.mod h1:yRkwfj0CBpOGre+TwBsqPV0IH0Pk73e4PXJOeNDboGs=
 github.com/dop251/goja v0.0.0-20221019153710-09250e0eba20 h1:AxWn8phZA9tjgDGKyDRbHtI6nCBkDu8UH17FCpSHRPA=
 github.com/dop251/goja v0.0.0-20221019153710-09250e0eba20/go.mod h1:yRkwfj0CBpOGre+TwBsqPV0IH0Pk73e4PXJOeNDboGs=
+github.com/dop251/goja v0.0.0-20221025165401-cb5011b539fe h1:eJUWWwcoq0m/pD0HdB2TwMixgnoWiey69IfYIpIb3YA=
+github.com/dop251/goja v0.0.0-20221025165401-cb5011b539fe/go.mod h1:yRkwfj0CBpOGre+TwBsqPV0IH0Pk73e4PXJOeNDboGs=
 github.com/dop251/goja_nodejs v0.0.0-20210225215109-d91c329300e7/go.mod h1:hn7BA7c8pLvoGndExHudxTDKZ84Pyvv+90pbBjbTz0Y=
 github.com/dop251/goja_nodejs v0.0.0-20211022123610-8dd9abb0616d/go.mod h1:DngW8aVqWbuLRMHItjPUyqdj+HWPvnQe8V8y1nDpIbM=
 github.com/dustin/go-humanize v1.0.0/go.mod h1:HtrtbFcZ19U5GC7JDqmcUSB87Iq5E25KnS6fMYU6eOk=
