@@ -151,8 +151,3 @@ require (
 	google.golang.org/grpc v1.50.1 // indirect
 	google.golang.org/protobuf v1.28.1 // indirect
 )
-
-replace (
-	golang.org/x/net v0.0.0-20220722155237-a158d28d115b => golang.org/x/net v0.0.0-20221004154528-8021a29435af
-	golang.org/x/text v0.3.7 => golang.org/x/text v0.3.8
-)
