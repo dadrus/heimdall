@@ -9,6 +9,7 @@ func decodeConfig(input any, output any) error {
 		&mapstructure.DecoderConfig{
 			DecodeHook: mapstructure.ComposeDecodeHookFunc(
 				mapstructure.StringToTimeDurationHookFunc(),
+				urlDecodeHookFunc(),
 			),
 			Result:      output,
 			ErrorUnused: true,
