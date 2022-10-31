@@ -19,6 +19,7 @@ import (
 
 func TestFetchRuleSets(t *testing.T) { //nolint:maintidx
 	t.Setenv("AWS_ACCESS_KEY_ID", "test")
+	t.Setenv("AWS_SECRET_ACCESS_KEY", "test")
 
 	bucketName := "new_bucket"
 	backend := s3mem.New()
