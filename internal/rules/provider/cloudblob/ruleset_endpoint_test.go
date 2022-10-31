@@ -29,11 +29,22 @@ func TestFetchRuleSets(t *testing.T) { //nolint:maintidx
 
 	require.NoError(t, backend.CreateBucket(bucketName))
 
+	clearBucket := func(t *testing.T) {
+		t.Helper()
+
+		objList, err := backend.ListBucket(bucketName, nil, gofakes3.ListBucketPage{})
+		require.NoError(t, err)
+
+		for _, obj := range objList.Contents {
+			_, err := backend.DeleteObject(bucketName, obj.Key)
+			require.NoError(t, err)
+		}
+	}
+
 	for _, tc := range []struct {
 		uc       string
 		endpoint ruleSetEndpoint
 		setup    func(t *testing.T)
-		tearDown func(t *testing.T)
 		assert   func(t *testing.T, err error, ruleSets []RuleSet)
 	}{
 		{
@@ -89,12 +100,6 @@ func TestFetchRuleSets(t *testing.T) { //nolint:maintidx
 					strings.NewReader(data), int64(len(data)))
 				require.NoError(t, err)
 			},
-			tearDown: func(t *testing.T) {
-				t.Helper()
-
-				_, err := backend.DeleteObject(bucketName, "test-rule")
-				require.NoError(t, err)
-			},
 			assert: func(t *testing.T, err error, ruleSets []RuleSet) {
 				t.Helper()
 
@@ -146,12 +151,6 @@ func TestFetchRuleSets(t *testing.T) { //nolint:maintidx
 					strings.NewReader(data), int64(len(data)))
 				require.NoError(t, err)
 			},
-			tearDown: func(t *testing.T) {
-				t.Helper()
-
-				_, err := backend.DeleteObject(bucketName, "test-rule")
-				require.NoError(t, err)
-			},
 			assert: func(t *testing.T, err error, ruleSets []RuleSet) {
 				t.Helper()
 
@@ -200,15 +199,6 @@ func TestFetchRuleSets(t *testing.T) { //nolint:maintidx
 				_, err = backend.PutObject(bucketName, "test-rule2",
 					map[string]string{"Content-Type": "application/yaml"},
 					strings.NewReader(ruleSet2), int64(len(ruleSet2)))
-				require.NoError(t, err)
-			},
-			tearDown: func(t *testing.T) {
-				t.Helper()
-
-				_, err := backend.DeleteObject(bucketName, "test-rule1")
-				require.NoError(t, err)
-
-				_, err = backend.DeleteObject(bucketName, "test-rule2")
 				require.NoError(t, err)
 			},
 			assert: func(t *testing.T, err error, ruleSets []RuleSet) {
@@ -272,15 +262,6 @@ func TestFetchRuleSets(t *testing.T) { //nolint:maintidx
 					strings.NewReader(ruleSet2), int64(len(ruleSet2)))
 				require.NoError(t, err)
 			},
-			tearDown: func(t *testing.T) {
-				t.Helper()
-
-				_, err := backend.DeleteObject(bucketName, "api-rule")
-				require.NoError(t, err)
-
-				_, err = backend.DeleteObject(bucketName, "test-rule")
-				require.NoError(t, err)
-			},
 			assert: func(t *testing.T, err error, ruleSets []RuleSet) {
 				t.Helper()
 
@@ -342,12 +323,6 @@ func TestFetchRuleSets(t *testing.T) { //nolint:maintidx
 					strings.NewReader(ruleSet1), int64(len(ruleSet1)))
 				require.NoError(t, err)
 			},
-			tearDown: func(t *testing.T) {
-				t.Helper()
-
-				_, err := backend.DeleteObject(bucketName, "ruleset")
-				require.NoError(t, err)
-			},
 			assert: func(t *testing.T, err error, ruleSets []RuleSet) {
 				t.Helper()
 
@@ -364,11 +339,10 @@ func TestFetchRuleSets(t *testing.T) { //nolint:maintidx
 	} {
 		t.Run(tc.uc, func(t *testing.T) {
 			// GIVEN
-			setup := x.IfThenElse(tc.setup != nil, tc.setup, func(t *testing.T) { t.Helper() })
-			tearDown := x.IfThenElse(tc.tearDown != nil, tc.tearDown, func(t *testing.T) { t.Helper() })
+			clearBucket(t)
 
+			setup := x.IfThenElse(tc.setup != nil, tc.setup, func(t *testing.T) { t.Helper() })
 			setup(t)
-			defer tearDown(t)
 
 			// WHEN
 			rs, err := tc.endpoint.FetchRuleSets(context.Background())
