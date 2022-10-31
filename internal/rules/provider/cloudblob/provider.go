@@ -68,6 +68,11 @@ func newProvider(
 	}
 
 	for idx, bucket := range conf.Buckets {
+		if bucket.URL == nil {
+			return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+				"missing url for %d bucket config in cloud_blob rule provider configuration", idx)
+		}
+
 		if _, err := x.IfThenElseExec(conf.WatchInterval != nil && *conf.WatchInterval > 0,
 			func() *gocron.Scheduler { return prov.s.Every(*conf.WatchInterval) },
 			func() *gocron.Scheduler { return prov.s.Every(1 * time.Second).LimitRunsTo(1) }).
