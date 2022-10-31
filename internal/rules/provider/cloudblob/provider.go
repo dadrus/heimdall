@@ -47,7 +47,7 @@ func newProvider(
 
 	if len(conf.Buckets) == 0 {
 		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
-			"no endpoints configured for cloud_blob rule provider")
+			"no buckets configured for cloud_blob rule provider")
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -70,7 +70,7 @@ func newProvider(
 	for idx, bucket := range conf.Buckets {
 		if bucket.URL == nil {
 			return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
-				"missing url for %d bucket config in cloud_blob rule provider configuration", idx)
+				"missing url for #%d bucket in cloud_blob rule provider configuration", idx)
 		}
 
 		if _, err := x.IfThenElseExec(conf.WatchInterval != nil && *conf.WatchInterval > 0,
