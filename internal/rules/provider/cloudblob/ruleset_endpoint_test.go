@@ -53,7 +53,7 @@ func TestFetchRuleSets(t *testing.T) { //nolint:maintidx
 				URL: &url.URL{
 					Scheme:   "s3",
 					Host:     "foo",
-					RawQuery: "endpoint=does-not-exist.local&foo=bar",
+					RawQuery: "endpoint=does-not-exist.local&foo=bar&region=eu-central-1",
 				},
 			},
 			assert: func(t *testing.T, err error, ruleSets []RuleSet) {
@@ -70,7 +70,7 @@ func TestFetchRuleSets(t *testing.T) { //nolint:maintidx
 				URL: &url.URL{
 					Scheme:   "s3",
 					Host:     "foo",
-					RawQuery: fmt.Sprintf("endpoint=%s&disableSSL=true&s3ForcePathStyle=true", srv.URL),
+					RawQuery: fmt.Sprintf("endpoint=%s&disableSSL=true&s3ForcePathStyle=true&region=eu-central-1", srv.URL),
 				},
 			},
 			assert: func(t *testing.T, err error, ruleSets []RuleSet) {
@@ -87,7 +87,7 @@ func TestFetchRuleSets(t *testing.T) { //nolint:maintidx
 				URL: &url.URL{
 					Scheme:   "s3",
 					Host:     bucketName,
-					RawQuery: fmt.Sprintf("endpoint=%s&disableSSL=true&s3ForcePathStyle=true", srv.URL),
+					RawQuery: fmt.Sprintf("endpoint=%s&disableSSL=true&s3ForcePathStyle=true&region=eu-central-1", srv.URL),
 				},
 			},
 			setup: func(t *testing.T) {
@@ -114,7 +114,7 @@ func TestFetchRuleSets(t *testing.T) { //nolint:maintidx
 				URL: &url.URL{
 					Scheme:   "s3",
 					Host:     bucketName,
-					RawQuery: fmt.Sprintf("endpoint=%s&disableSSL=true&s3ForcePathStyle=true", srv.URL),
+					RawQuery: fmt.Sprintf("endpoint=%s&disableSSL=true&s3ForcePathStyle=true&region=eu-central-1", srv.URL),
 				},
 			},
 			assert: func(t *testing.T, err error, ruleSets []RuleSet) {
@@ -130,7 +130,7 @@ func TestFetchRuleSets(t *testing.T) { //nolint:maintidx
 				URL: &url.URL{
 					Scheme:   "s3",
 					Host:     bucketName,
-					RawQuery: fmt.Sprintf("endpoint=%s&disableSSL=true&s3ForcePathStyle=true", srv.URL),
+					RawQuery: fmt.Sprintf("endpoint=%s&disableSSL=true&s3ForcePathStyle=true&region=eu-central-1", srv.URL),
 				},
 				RulesPathPrefix: "foo/bar",
 			},
@@ -165,7 +165,7 @@ func TestFetchRuleSets(t *testing.T) { //nolint:maintidx
 				URL: &url.URL{
 					Scheme:   "s3",
 					Host:     bucketName,
-					RawQuery: fmt.Sprintf("endpoint=%s&disableSSL=true&s3ForcePathStyle=true", srv.URL),
+					RawQuery: fmt.Sprintf("endpoint=%s&disableSSL=true&s3ForcePathStyle=true&region=eu-central-1", srv.URL),
 				},
 				RulesPathPrefix: "foo/bar",
 			},
@@ -225,7 +225,7 @@ func TestFetchRuleSets(t *testing.T) { //nolint:maintidx
 				URL: &url.URL{
 					Scheme:   "s3",
 					Host:     bucketName,
-					RawQuery: fmt.Sprintf("endpoint=%s&disableSSL=true&s3ForcePathStyle=true", srv.URL),
+					RawQuery: fmt.Sprintf("endpoint=%s&disableSSL=true&s3ForcePathStyle=true&region=eu-central-1", srv.URL),
 				},
 				Prefix: "api",
 			},
@@ -282,7 +282,7 @@ func TestFetchRuleSets(t *testing.T) { //nolint:maintidx
 					Scheme:   "s3",
 					Host:     bucketName,
 					Path:     "ruleset",
-					RawQuery: fmt.Sprintf("endpoint=%s&disableSSL=true&s3ForcePathStyle=true", srv.URL),
+					RawQuery: fmt.Sprintf("endpoint=%s&disableSSL=true&s3ForcePathStyle=true&region=eu-central-1", srv.URL),
 				},
 				Prefix: "api",
 			},
@@ -301,7 +301,7 @@ func TestFetchRuleSets(t *testing.T) { //nolint:maintidx
 					Scheme:   "s3",
 					Host:     bucketName,
 					Path:     "ruleset",
-					RawQuery: fmt.Sprintf("endpoint=%s&disableSSL=true&s3ForcePathStyle=true", srv.URL),
+					RawQuery: fmt.Sprintf("endpoint=%s&disableSSL=true&s3ForcePathStyle=true&region=eu-central-1", srv.URL),
 				},
 				Prefix: "api",
 			},
