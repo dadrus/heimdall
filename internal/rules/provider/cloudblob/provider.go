@@ -1,7 +1,10 @@
 package cloudblob
 
 import (
+	"bytes"
 	"context"
+	"errors"
+	"sync"
 	"time"
 
 	"github.com/go-co-op/gocron"
@@ -20,6 +23,7 @@ type provider struct {
 	s      *gocron.Scheduler
 	cancel context.CancelFunc
 
+	mu    sync.Mutex
 	state map[string][]byte
 }
 
@@ -98,10 +102,98 @@ func (p *provider) Stop(_ context.Context) error {
 	return nil
 }
 
-func (p *provider) watchChanges(ctx context.Context, fetcher RuleSetFetcher) error {
+func (p *provider) watchChanges(ctx context.Context, rsf RuleSetFetcher) error {
 	p.l.Debug().
 		Str("_rule_provider_type", "cloud_blob").
 		Msg("Retrieving rule set")
 
+	ruleSets, err := rsf.FetchRuleSets(ctx)
+	if err != nil {
+		p.l.Warn().
+			Err(err).
+			Str("_rule_provider_type", "cloud_blob").
+			Str("_endpoint", rsf.ID()).
+			Msg("Failed to fetch rule set")
+
+		if errors.Is(err, heimdall.ErrInternal) || errors.Is(err, heimdall.ErrConfiguration) {
+			return err
+		}
+	}
+
+	if len(ruleSets) == 0 {
+		p.l.Debug().
+			Str("_rule_provider_type", "cloud_blob").
+			Str("_endpoint", rsf.ID()).
+			Msg("No updates received")
+
+		return nil
+	}
+
+	for _, ruleSet := range ruleSets {
+		changeType := x.IfThenElse(len(ruleSet.Rules) == 0, event.Remove, event.Create)
+
+		stateUpdated, removeOld := p.checkAndUpdateState(changeType, rsf.ID(), ruleSet.Hash)
+		if !stateUpdated {
+			p.l.Debug().
+				Str("_rule_provider_type", "cloud_blob").
+				Str("_endpoint", rsf.ID()).
+				Str("_rule_set", ruleSet.Key).
+				Msg("No updates received")
+
+			continue
+		}
+
+		if removeOld {
+			p.ruleSetChanged(event.RuleSetChangedEvent{
+				Src:        "http_endpoint:" + rsf.ID(),
+				ChangeType: event.Remove,
+			})
+		}
+
+		p.ruleSetChanged(event.RuleSetChangedEvent{
+			Src:        "http_endpoint:" + rsf.ID(),
+			ChangeType: changeType,
+			RuleSet:    ruleSet.Rules,
+		})
+	}
+
 	return nil
+}
+
+func (p *provider) checkAndUpdateState(changeType event.ChangeType, stateID string, newValue []byte) (bool, bool) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	removeOld := false
+	oldValue, known := p.state[stateID]
+
+	switch changeType {
+	case event.Remove:
+		if !known {
+			// nothing needs to be done, this rule set is not known
+			return false, false
+		}
+
+		delete(p.state, stateID)
+	case event.Create:
+		if known && bytes.Equal(oldValue, newValue) {
+			// nothing needs to be done, this rule set is already known
+			return false, false
+		} else if known {
+			removeOld = true
+		}
+
+		p.state[stateID] = newValue
+	}
+
+	return true, removeOld
+}
+
+func (p *provider) ruleSetChanged(evt event.RuleSetChangedEvent) {
+	p.l.Info().
+		Str("_rule_provider_type", "cloud_blob").
+		Str("_src", evt.Src).
+		Str("_type", evt.ChangeType.String()).
+		Msg("Rule set changed")
+	p.q <- evt
 }
