@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"testing"
 
@@ -16,7 +17,7 @@ import (
 	"github.com/dadrus/heimdall/internal/x"
 )
 
-func TestFetchRuleSets(t *testing.T) {
+func TestFetchRuleSets(t *testing.T) { //nolint:maintidx
 	t.Parallel()
 
 	bucketName := "new_bucket"
@@ -36,8 +37,14 @@ func TestFetchRuleSets(t *testing.T) {
 		assert   func(t *testing.T, err error, ruleSets []RuleSet)
 	}{
 		{
-			uc:       "failed to open bucket",
-			endpoint: ruleSetEndpoint{URL: "s3://foo?endpoint=does-not-exist.local&foo=bar"},
+			uc: "failed to open bucket",
+			endpoint: ruleSetEndpoint{
+				URL: &url.URL{
+					Scheme:   "s3",
+					Host:     "foo",
+					RawQuery: "endpoint=does-not-exist.local&foo=bar",
+				},
+			},
 			assert: func(t *testing.T, err error, ruleSets []RuleSet) {
 				t.Helper()
 
@@ -49,7 +56,11 @@ func TestFetchRuleSets(t *testing.T) {
 		{
 			uc: "iterate not existing bucket",
 			endpoint: ruleSetEndpoint{
-				URL: fmt.Sprintf("s3://foo?endpoint=%s&disableSSL=true&s3ForcePathStyle=true", srv.URL),
+				URL: &url.URL{
+					Scheme:   "s3",
+					Host:     "foo",
+					RawQuery: fmt.Sprintf("endpoint=%s&disableSSL=true&s3ForcePathStyle=true", srv.URL),
+				},
 			},
 			assert: func(t *testing.T, err error, ruleSets []RuleSet) {
 				t.Helper()
@@ -62,7 +73,11 @@ func TestFetchRuleSets(t *testing.T) {
 		{
 			uc: "invalid rule set",
 			endpoint: ruleSetEndpoint{
-				URL: fmt.Sprintf("s3://%s?endpoint=%s&disableSSL=true&s3ForcePathStyle=true", bucketName, srv.URL),
+				URL: &url.URL{
+					Scheme:   "s3",
+					Host:     bucketName,
+					RawQuery: fmt.Sprintf("endpoint=%s&disableSSL=true&s3ForcePathStyle=true", srv.URL),
+				},
 			},
 			setup: func(t *testing.T) {
 				t.Helper()
@@ -91,7 +106,11 @@ func TestFetchRuleSets(t *testing.T) {
 		{
 			uc: "empty bucket",
 			endpoint: ruleSetEndpoint{
-				URL: fmt.Sprintf("s3://%s?endpoint=%s&disableSSL=true&s3ForcePathStyle=true", bucketName, srv.URL),
+				URL: &url.URL{
+					Scheme:   "s3",
+					Host:     bucketName,
+					RawQuery: fmt.Sprintf("endpoint=%s&disableSSL=true&s3ForcePathStyle=true", srv.URL),
+				},
 			},
 			assert: func(t *testing.T, err error, ruleSets []RuleSet) {
 				t.Helper()
@@ -103,7 +122,11 @@ func TestFetchRuleSets(t *testing.T) {
 		{
 			uc: "rule set with path prefix validation error",
 			endpoint: ruleSetEndpoint{
-				URL:             fmt.Sprintf("s3://%s?endpoint=%s&disableSSL=true&s3ForcePathStyle=true", bucketName, srv.URL),
+				URL: &url.URL{
+					Scheme:   "s3",
+					Host:     bucketName,
+					RawQuery: fmt.Sprintf("endpoint=%s&disableSSL=true&s3ForcePathStyle=true", srv.URL),
+				},
 				RulesPathPrefix: "foo/bar",
 			},
 			setup: func(t *testing.T) {
@@ -140,7 +163,11 @@ func TestFetchRuleSets(t *testing.T) {
 		{
 			uc: "multiple valid rule sets in yaml and json formats",
 			endpoint: ruleSetEndpoint{
-				URL:             fmt.Sprintf("s3://%s?endpoint=%s&disableSSL=true&s3ForcePathStyle=true", bucketName, srv.URL),
+				URL: &url.URL{
+					Scheme:   "s3",
+					Host:     bucketName,
+					RawQuery: fmt.Sprintf("endpoint=%s&disableSSL=true&s3ForcePathStyle=true", srv.URL),
+				},
 				RulesPathPrefix: "foo/bar",
 			},
 			setup: func(t *testing.T) {
@@ -205,7 +232,11 @@ func TestFetchRuleSets(t *testing.T) {
 		{
 			uc: "only one rule set adhering to the required prefix",
 			endpoint: ruleSetEndpoint{
-				URL:    fmt.Sprintf("s3://%s?endpoint=%s&disableSSL=true&s3ForcePathStyle=true", bucketName, srv.URL),
+				URL: &url.URL{
+					Scheme:   "s3",
+					Host:     bucketName,
+					RawQuery: fmt.Sprintf("endpoint=%s&disableSSL=true&s3ForcePathStyle=true", srv.URL),
+				},
 				Prefix: "api",
 			},
 			setup: func(t *testing.T) {
@@ -258,6 +289,73 @@ func TestFetchRuleSets(t *testing.T) {
 				require.Len(t, ruleSets, 1)
 
 				assert.Contains(t, ruleSets[0].Key, "api-rule")
+				assert.NotEmpty(t, ruleSets[0].Hash)
+				assert.Len(t, ruleSets[0].Rules, 1)
+				assert.Equal(t, "foobar", ruleSets[0].Rules[0].ID)
+			},
+		},
+		{
+			uc: "not existing rule set specified in the path",
+			endpoint: ruleSetEndpoint{
+				URL: &url.URL{
+					Scheme:   "s3",
+					Host:     bucketName,
+					Path:     "ruleset",
+					RawQuery: fmt.Sprintf("endpoint=%s&disableSSL=true&s3ForcePathStyle=true", srv.URL),
+				},
+				Prefix: "api",
+			},
+			assert: func(t *testing.T, err error, ruleSets []RuleSet) {
+				t.Helper()
+
+				require.Error(t, err)
+				assert.ErrorIs(t, err, heimdall.ErrInternal)
+				assert.Contains(t, err.Error(), "attributes")
+			},
+		},
+		{
+			uc: "existing rule set specified in the path",
+			endpoint: ruleSetEndpoint{
+				URL: &url.URL{
+					Scheme:   "s3",
+					Host:     bucketName,
+					Path:     "ruleset",
+					RawQuery: fmt.Sprintf("endpoint=%s&disableSSL=true&s3ForcePathStyle=true", srv.URL),
+				},
+				Prefix: "api",
+			},
+			setup: func(t *testing.T) {
+				t.Helper()
+
+				ruleSet1 := `[
+				{
+					"id": "foobar",
+					"url": "http://<**>/foo/bar/api1",
+					"methods": ["GET", "POST"],
+					"execute": [
+						{ "authenticator": "foobar" }
+					]
+				}]`
+
+				_, err := backend.PutObject(bucketName, "ruleset",
+					map[string]string{"Content-Type": "application/json"},
+					strings.NewReader(ruleSet1), int64(len(ruleSet1)))
+				require.NoError(t, err)
+			},
+			tearDown: func(t *testing.T) {
+				t.Helper()
+
+				_, err := backend.DeleteObject(bucketName, "ruleset")
+				require.NoError(t, err)
+			},
+			assert: func(t *testing.T, err error, ruleSets []RuleSet) {
+				t.Helper()
+
+				require.NoError(t, err)
+
+				require.Len(t, ruleSets, 1)
+
+				assert.Contains(t, ruleSets[0].Key, "ruleset")
 				assert.NotEmpty(t, ruleSets[0].Hash)
 				assert.Len(t, ruleSets[0].Rules, 1)
 				assert.Equal(t, "foobar", ruleSets[0].Rules[0].ID)
