@@ -53,13 +53,13 @@ func (e *ruleSetEndpoint) FetchRuleSets(ctx context.Context) ([]RuleSet, error) 
 
 		attrs, err := bucket.Attributes(ctx, obj.Key)
 		if err != nil {
-			return nil, errorchain.NewWithMessage(heimdall.ErrInternal, "failed blob attributes").
+			return nil, errorchain.NewWithMessage(heimdall.ErrInternal, "failed to get blob attributes").
 				CausedBy(err)
 		}
 
 		reader, err := bucket.NewReader(ctx, obj.Key, nil)
 		if err != nil {
-			return nil, errorchain.NewWithMessage(heimdall.ErrInternal, "failed read blob").
+			return nil, errorchain.NewWithMessage(heimdall.ErrInternal, "failed reading blob contents").
 				CausedBy(err)
 		}
 
@@ -76,7 +76,7 @@ func (e *ruleSetEndpoint) FetchRuleSets(ctx context.Context) ([]RuleSet, error) 
 		ruleSets = append(ruleSets, RuleSet{
 			Rules:   contents,
 			Hash:    obj.MD5,
-			Key:     fmt.Sprintf("%s/%s", e.ID(), obj.Key),
+			Key:     fmt.Sprintf("%s@%s", obj.Key, e.ID()),
 			ModTime: obj.ModTime,
 		})
 	}
