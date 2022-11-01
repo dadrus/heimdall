@@ -18,6 +18,9 @@ import (
 )
 
 func TestFetchRuleSets(t *testing.T) { //nolint:maintidx
+	// aws is not used, but an aws s3 compatible implementation
+	// however, since the aws sdk is used to talk to it,
+	// it expects credentials, even these are not used at the end
 	t.Setenv("AWS_ACCESS_KEY_ID", "test")
 	t.Setenv("AWS_SECRET_ACCESS_KEY", "test")
 
