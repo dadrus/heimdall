@@ -1451,6 +1451,63 @@
           ]
         }
       }
+    },
+    "cloudBlobProvider": {
+      "description": "Enables cloud blob backend to load rules from cloud buckets",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "buckets"
+      ],
+      "properties": {
+        "buckets": {
+          "type": "array",
+          "additionalItems": false,
+          "items": {
+            "type": "object",
+            "required": ["url"],
+            "additionalProperties": false,
+            "properties": {
+              "url": {
+                "title": "The URL to the bucket or a single blob in the bucket",
+                "description": "If only a bucket is specified, all available blobs are loaded, optionally filtered by the prefix",
+                "type": "string",
+                "format": "uri",
+                "examples": [
+                  "s3://my-bucket",
+                  "s3://my-bucket?region=us-west-1",
+                  "s3://my-bucket/rule_set",
+                  "gs://my-bucket",
+                  "gs://my-bucket/rule_set",
+                  "azblob://my-bucket/rule_set"
+                ]
+              },
+              "prefix": {
+                "description": "Indicates that only blobs with a key starting with this prefix should be retrieved",
+                "type": "string"
+              },
+              "rules_path_prefix": {
+                "description": "The path prefix to be checked in each rule retrieved from the bucket",
+                "type": "string",
+                "examples": [
+                  "/foo/bar"
+                ]
+              }
+            }
+          }
+        },
+        "watch_interval": {
+          "type": "string",
+          "description": "How often to poll the endpoint for rule set updates. Polling is disabled by default.",
+          "pattern": "^[0-9]+(ns|us|ms|s|m|h)$",
+          "default": "0",
+          "examples": [
+            "1h",
+            "1m",
+            "30s"
+          ]
+        }
+      }
     }
   },
   "properties": {
@@ -1690,6 +1747,9 @@
             },
             "http_endpoint": {
               "$ref": "#/definitions/httpEndpointProvider"
+            },
+            "cloud_blob": {
+              "$ref": "#/definitions/cloudBlobProvider"
             }
           }
         },
