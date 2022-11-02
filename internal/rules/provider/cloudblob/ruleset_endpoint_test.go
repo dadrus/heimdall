@@ -129,6 +129,30 @@ func TestFetchRuleSets(t *testing.T) { //nolint:maintidx
 			},
 		},
 		{
+			uc: "bucket with an empty blob",
+			endpoint: ruleSetEndpoint{
+				URL: &url.URL{
+					Scheme:   "s3",
+					Host:     bucketName,
+					RawQuery: fmt.Sprintf("endpoint=%s&disableSSL=true&s3ForcePathStyle=true&region=eu-central-1", srv.URL),
+				},
+			},
+			setup: func(t *testing.T) {
+				t.Helper()
+
+				_, err := backend.PutObject(bucketName, "test-rule",
+					map[string]string{"Content-Type": "application/json"},
+					strings.NewReader(""), 0)
+				require.NoError(t, err)
+			},
+			assert: func(t *testing.T, err error, ruleSets []RuleSet) {
+				t.Helper()
+
+				require.NoError(t, err)
+				require.Empty(t, ruleSets)
+			},
+		},
+		{
 			uc: "rule set with path prefix validation error",
 			endpoint: ruleSetEndpoint{
 				URL: &url.URL{
@@ -296,6 +320,32 @@ func TestFetchRuleSets(t *testing.T) { //nolint:maintidx
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrInternal)
 				assert.Contains(t, err.Error(), "attributes")
+			},
+		},
+		{
+			uc: "empty blob specified in the path",
+			endpoint: ruleSetEndpoint{
+				URL: &url.URL{
+					Scheme:   "s3",
+					Host:     bucketName,
+					Path:     "ruleset",
+					RawQuery: fmt.Sprintf("endpoint=%s&disableSSL=true&s3ForcePathStyle=true&region=eu-central-1", srv.URL),
+				},
+				Prefix: "api",
+			},
+			setup: func(t *testing.T) {
+				t.Helper()
+
+				_, err := backend.PutObject(bucketName, "ruleset",
+					map[string]string{"Content-Type": "application/json"},
+					strings.NewReader(""), 0)
+				require.NoError(t, err)
+			},
+			assert: func(t *testing.T, err error, ruleSets []RuleSet) {
+				t.Helper()
+
+				require.NoError(t, err)
+				assert.Empty(t, ruleSets)
 			},
 		},
 		{

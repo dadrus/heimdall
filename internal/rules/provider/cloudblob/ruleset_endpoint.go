@@ -19,6 +19,8 @@ import (
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
+var errEmptyRuleSet = errors.New("empty rule set")
+
 type ruleSetEndpoint struct {
 	URL             *url.URL              `mapstructure:"url"`
 	Prefix          string                `mapstructure:"prefix"`
@@ -62,12 +64,14 @@ func (e *ruleSetEndpoint) readAllBlobs(ctx context.Context, bucket *blob.Bucket)
 
 		ruleSet, err := e.readRuleSet(ctx, bucket, obj.Key)
 		if err != nil {
+			if errors.Is(err, errEmptyRuleSet) {
+				continue
+			}
+
 			return nil, err
 		}
 
-		if len(ruleSet.Rules) != 0 {
-			ruleSets = append(ruleSets, ruleSet)
-		}
+		ruleSets = append(ruleSets, ruleSet)
 	}
 
 	return ruleSets, nil
@@ -76,11 +80,11 @@ func (e *ruleSetEndpoint) readAllBlobs(ctx context.Context, bucket *blob.Bucket)
 func (e *ruleSetEndpoint) readSingleBlob(ctx context.Context, bucket *blob.Bucket) ([]RuleSet, error) {
 	ruleSet, err := e.readRuleSet(ctx, bucket, e.URL.Path)
 	if err != nil {
-		return nil, err
-	}
+		if errors.Is(err, errEmptyRuleSet) {
+			return []RuleSet{}, nil
+		}
 
-	if len(ruleSet.Rules) == 0 {
-		return []RuleSet{}, nil
+		return nil, err
 	}
 
 	return []RuleSet{ruleSet}, nil
@@ -104,7 +108,7 @@ func (e *ruleSetEndpoint) readRuleSet(ctx context.Context, bucket *blob.Bucket, 
 	}
 
 	if len(contents) == 0 {
-		return RuleSet{}, nil
+		return RuleSet{}, errEmptyRuleSet
 	}
 
 	if err = e.RulesPathPrefix.Verify(contents); err != nil {
