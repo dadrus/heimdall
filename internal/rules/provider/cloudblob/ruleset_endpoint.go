@@ -11,6 +11,7 @@ import (
 	_ "gocloud.dev/blob/azureblob" // to support azure blobs
 	_ "gocloud.dev/blob/gcsblob"   // to support gc storage blobs
 	_ "gocloud.dev/blob/s3blob"    // to support aws s3 blobs
+	"gocloud.dev/gcerrors"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/provider/pathprefix"
@@ -56,8 +57,7 @@ func (e *ruleSetEndpoint) readAllBlobs(ctx context.Context, bucket *blob.Bucket)
 				break
 			}
 
-			return nil, errorchain.NewWithMessage(heimdall.ErrInternal, "failed iterate blobs").
-				CausedBy(err)
+			return nil, mapError(err, "failed iterate blobs")
 		}
 
 		ruleSet, err := e.readRuleSet(ctx, bucket, obj.Key)
@@ -65,7 +65,9 @@ func (e *ruleSetEndpoint) readAllBlobs(ctx context.Context, bucket *blob.Bucket)
 			return nil, err
 		}
 
-		ruleSets = append(ruleSets, ruleSet)
+		if len(ruleSet.Rules) != 0 {
+			ruleSets = append(ruleSets, ruleSet)
+		}
 	}
 
 	return ruleSets, nil
@@ -77,26 +79,32 @@ func (e *ruleSetEndpoint) readSingleBlob(ctx context.Context, bucket *blob.Bucke
 		return nil, err
 	}
 
+	if len(ruleSet.Rules) == 0 {
+		return []RuleSet{}, nil
+	}
+
 	return []RuleSet{ruleSet}, nil
 }
 
 func (e *ruleSetEndpoint) readRuleSet(ctx context.Context, bucket *blob.Bucket, key string) (RuleSet, error) {
 	attrs, err := bucket.Attributes(ctx, key)
 	if err != nil {
-		return RuleSet{}, errorchain.NewWithMessage(heimdall.ErrInternal, "failed to get blob attributes").
-			CausedBy(err)
+		return RuleSet{}, mapError(err, "failed to get blob attributes")
 	}
 
 	reader, err := bucket.NewReader(ctx, key, nil)
 	if err != nil {
-		return RuleSet{}, errorchain.NewWithMessage(heimdall.ErrInternal, "failed reading blob contents").
-			CausedBy(err)
+		return RuleSet{}, mapError(err, "failed reading blob contents")
 	}
 
 	contents, err := rulesetparser.ParseRules(attrs.ContentType, reader)
 	if err != nil {
 		return RuleSet{}, errorchain.NewWithMessage(heimdall.ErrInternal, "failed to decode received rule set").
 			CausedBy(err)
+	}
+
+	if len(contents) == 0 {
+		return RuleSet{}, nil
 	}
 
 	if err = e.RulesPathPrefix.Verify(contents); err != nil {
@@ -109,4 +117,19 @@ func (e *ruleSetEndpoint) readRuleSet(ctx context.Context, bucket *blob.Bucket, 
 		Key:     fmt.Sprintf("%s@%s", key, e.ID()),
 		ModTime: attrs.ModTime,
 	}, nil
+}
+
+func mapError(err error, message string) error {
+	// unfortunately some cloud provider SDKs don't implement error Is and/or As functions,
+	// so it is impossible to properly check for the actual underlying error.
+	switch gcerrors.Code(err) {
+	case gcerrors.Unknown:
+		fallthrough
+	case gcerrors.Canceled:
+		return errorchain.NewWithMessage(heimdall.ErrCommunication, message).CausedBy(err)
+	case gcerrors.DeadlineExceeded:
+		return errorchain.NewWithMessage(heimdall.ErrCommunicationTimeout, message).CausedBy(err)
+	default:
+		return errorchain.NewWithMessage(heimdall.ErrInternal, message).CausedBy(err)
+	}
 }
