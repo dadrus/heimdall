@@ -353,6 +353,92 @@ buckets:
 				assert.Equal(t, event.Create, evt.ChangeType)
 			},
 		},
+		{
+			uc: "rule set change",
+			conf: []byte(`
+watch_interval: 250ms
+buckets:
+- url: s3://` + bucketName + `?endpoint=` + srv.URL + `&disableSSL=true&s3ForcePathStyle=true&region=eu-central-1
+`),
+			setupBucket: func() func(t *testing.T) {
+				callIdx := 1
+
+				return func(t *testing.T) {
+					t.Helper()
+
+					switch callIdx {
+					case 1:
+						data := "- id: foo"
+
+						_, err := backend.PutObject(bucketName, "test-rule",
+							map[string]string{"Content-Type": "application/yaml"},
+							strings.NewReader(data), int64(len(data)))
+						require.NoError(t, err)
+					case 2:
+						data := "- id: bar"
+
+						_, err := backend.PutObject(bucketName, "test-rule",
+							map[string]string{"Content-Type": "application/yaml"},
+							strings.NewReader(data), int64(len(data)))
+						require.NoError(t, err)
+					default:
+						data := "- id: baz"
+
+						_, err := backend.PutObject(bucketName, "test-rule",
+							map[string]string{"Content-Type": "application/yaml"},
+							strings.NewReader(data), int64(len(data)))
+						require.NoError(t, err)
+					}
+
+					callIdx++
+				}
+			}(),
+			assert: func(t *testing.T, tc testCase, logs fmt.Stringer, queue event.RuleSetChangedEventQueue) {
+				t.Helper()
+
+				time.Sleep(150 * time.Millisecond)
+				tc.setupBucket(t)
+				time.Sleep(250 * time.Millisecond)
+				tc.setupBucket(t)
+				time.Sleep(250 * time.Millisecond)
+				tc.setupBucket(t)
+				time.Sleep(250 * time.Millisecond)
+				tc.setupBucket(t)
+				time.Sleep(250 * time.Millisecond)
+
+				assert.Contains(t, logs.String(), "No updates received")
+
+				require.Len(t, queue, 5)
+
+				evt := <-queue
+				assert.Contains(t, evt.Src, "blob:test-rule@s3")
+				assert.Len(t, evt.RuleSet, 1)
+				assert.Equal(t, "foo", evt.RuleSet[0].ID)
+				assert.Equal(t, event.Create, evt.ChangeType)
+
+				evt = <-queue
+				assert.Contains(t, evt.Src, "blob:test-rule@s3")
+				assert.Len(t, evt.RuleSet, 0)
+				assert.Equal(t, event.Remove, evt.ChangeType)
+
+				evt = <-queue
+				assert.Contains(t, evt.Src, "blob:test-rule@s3")
+				assert.Len(t, evt.RuleSet, 1)
+				assert.Equal(t, "bar", evt.RuleSet[0].ID)
+				assert.Equal(t, event.Create, evt.ChangeType)
+
+				evt = <-queue
+				assert.Contains(t, evt.Src, "blob:test-rule@s3")
+				assert.Len(t, evt.RuleSet, 0)
+				assert.Equal(t, event.Remove, evt.ChangeType)
+
+				evt = <-queue
+				assert.Contains(t, evt.Src, "blob:test-rule@s3")
+				assert.Len(t, evt.RuleSet, 1)
+				assert.Equal(t, "baz", evt.RuleSet[0].ID)
+				assert.Equal(t, event.Create, evt.ChangeType)
+			},
+		},
 	} {
 		t.Run(tc.uc, func(t *testing.T) {
 			// GIVEN
