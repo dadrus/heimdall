@@ -101,6 +101,8 @@ func (e *ruleSetEndpoint) readRuleSet(ctx context.Context, bucket *blob.Bucket, 
 		return RuleSet{}, mapError(err, "failed reading blob contents")
 	}
 
+	defer reader.Close()
+
 	contents, err := rulesetparser.ParseRules(attrs.ContentType, reader)
 	if err != nil {
 		return RuleSet{}, errorchain.NewWithMessage(heimdall.ErrInternal, "failed to decode received rule set").
