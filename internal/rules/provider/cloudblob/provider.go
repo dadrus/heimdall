@@ -9,13 +9,17 @@ import (
 
 	"github.com/go-co-op/gocron"
 	"github.com/rs/zerolog"
+	"golang.org/x/exp/maps"
+	"golang.org/x/exp/slices"
 
-	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/event"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
+	"github.com/dadrus/heimdall/internal/x/slicex"
 )
+
+type BucketState map[string][]byte
 
 type provider struct {
 	q      event.RuleSetChangedEventQueue
@@ -23,13 +27,12 @@ type provider struct {
 	s      *gocron.Scheduler
 	cancel context.CancelFunc
 
-	mu    sync.Mutex
-	state map[string][]byte
+	mu     sync.Mutex
+	states map[string]BucketState
 }
 
 func newProvider(
 	rawConf map[string]any,
-	cch cache.Cache,
 	queue event.RuleSetChangedEventQueue,
 	logger zerolog.Logger,
 ) (*provider, error) {
@@ -54,7 +57,7 @@ func newProvider(
 	ctx = logger.With().
 		Str("_rule_provider_type", "cloud_blob").
 		Logger().
-		WithContext(cache.WithContext(ctx, cch))
+		WithContext(ctx)
 
 	scheduler := gocron.NewScheduler(time.UTC)
 	scheduler.SingletonModeAll()
@@ -64,7 +67,7 @@ func newProvider(
 		l:      logger,
 		s:      scheduler,
 		cancel: cancel,
-		state:  make(map[string][]byte),
+		states: make(map[string]BucketState),
 	}
 
 	for idx, bucket := range conf.Buckets {
@@ -125,7 +128,10 @@ func (p *provider) watchChanges(ctx context.Context, rsf RuleSetFetcher) error {
 		}
 	}
 
-	if len(ruleSets) == 0 {
+	state := p.getBucketState(rsf.ID())
+
+	// if no rule sets are available and no rule sets were known from the past
+	if len(ruleSets) == 0 && len(state) == 0 {
 		p.l.Debug().
 			Str("_rule_provider_type", "cloud_blob").
 			Str("_endpoint", rsf.ID()).
@@ -134,64 +140,82 @@ func (p *provider) watchChanges(ctx context.Context, rsf RuleSetFetcher) error {
 		return nil
 	}
 
-	for _, ruleSet := range ruleSets {
-		changeType := x.IfThenElse(len(ruleSet.Rules) == 0, event.Remove, event.Create)
+	p.ruleSetsUpdated(ruleSets, state, rsf.ID())
 
-		stateUpdated, removeOld := p.checkAndUpdateState(changeType, rsf.ID(), ruleSet.Hash)
-		if !stateUpdated {
+	return nil
+}
+
+func (p *provider) ruleSetsUpdated(ruleSets []RuleSet, state BucketState, buketID string) {
+	// check which were present in the past and are not present now
+	// and which are new
+	currentIDs := toRuleSetIDs(ruleSets)
+	oldIDs := maps.Keys(state)
+
+	removedIDs := slicex.Subtract(oldIDs, currentIDs)
+	newIDs := slicex.Subtract(currentIDs, oldIDs)
+
+	for _, ID := range removedIDs {
+		delete(state, ID)
+
+		p.ruleSetChanged(event.RuleSetChangedEvent{
+			Src:        "blob:" + ID,
+			ChangeType: event.Remove,
+		})
+	}
+
+	// check which rule sets are new and which are modified
+	for _, ruleSet := range ruleSets {
+		isNew := slices.Contains(newIDs, ruleSet.Key)
+		hasChanged := !isNew && !bytes.Equal(state[ruleSet.Key], ruleSet.Hash)
+
+		state[ruleSet.Key] = ruleSet.Hash
+
+		if !isNew && !hasChanged {
 			p.l.Debug().
 				Str("_rule_provider_type", "cloud_blob").
-				Str("_endpoint", rsf.ID()).
+				Str("_bucket", buketID).
 				Str("_rule_set", ruleSet.Key).
 				Msg("No updates received")
 
 			continue
 		}
 
-		if removeOld {
+		if hasChanged {
 			p.ruleSetChanged(event.RuleSetChangedEvent{
-				Src:        "http_endpoint:" + rsf.ID(),
+				Src:        "blob:" + ruleSet.Key,
 				ChangeType: event.Remove,
 			})
 		}
 
 		p.ruleSetChanged(event.RuleSetChangedEvent{
-			Src:        "http_endpoint:" + rsf.ID(),
-			ChangeType: changeType,
+			Src:        "blob:" + ruleSet.Key,
+			ChangeType: event.Create,
 			RuleSet:    ruleSet.Rules,
 		})
 	}
-
-	return nil
 }
 
-func (p *provider) checkAndUpdateState(changeType event.ChangeType, stateID string, newValue []byte) (bool, bool) {
+func (p *provider) getBucketState(key string) BucketState {
 	p.mu.Lock()
-	defer p.mu.Unlock()
+	state, present := p.states[key]
 
-	removeOld := false
-	oldValue, known := p.state[stateID]
+	if !present {
+		state = make(BucketState)
+		p.states[key] = state
+	}
+	p.mu.Unlock()
 
-	switch changeType {
-	case event.Remove:
-		if !known {
-			// nothing needs to be done, this rule set is not known
-			return false, false
-		}
+	return state
+}
 
-		delete(p.state, stateID)
-	case event.Create:
-		if known && bytes.Equal(oldValue, newValue) {
-			// nothing needs to be done, this rule set is already known
-			return false, false
-		} else if known {
-			removeOld = true
-		}
+func toRuleSetIDs(ruleSets []RuleSet) []string {
+	currentIDs := make([]string, len(ruleSets))
 
-		p.state[stateID] = newValue
+	for idx, ruleSet := range ruleSets {
+		currentIDs[idx] = ruleSet.Key
 	}
 
-	return true, removeOld
+	return currentIDs
 }
 
 func (p *provider) ruleSetChanged(evt event.RuleSetChangedEvent) {
