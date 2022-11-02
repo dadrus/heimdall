@@ -9,7 +9,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/fx"
 
-	"github.com/dadrus/heimdall/internal/cache/mocks"
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/event"
@@ -79,7 +78,6 @@ buckets:
 			}
 			queue := make(event.RuleSetChangedEventQueue, 10)
 			mlc := &mockLifecycle{}
-			cch := &mocks.MockCache{}
 
 			setupMocks := x.IfThenElse(tc.setupMocks != nil,
 				tc.setupMocks,
@@ -87,7 +85,7 @@ buckets:
 
 			setupMocks(t, mlc)
 
-			args := registrationArguments{Lifecycle: mlc, Config: conf, Queue: queue, Cache: cch}
+			args := registrationArguments{Lifecycle: mlc, Config: conf, Queue: queue}
 
 			// WHEN
 			err = registerProvider(args, log.Logger)

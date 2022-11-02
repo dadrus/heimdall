@@ -6,7 +6,6 @@ import (
 	"github.com/rs/zerolog"
 	"go.uber.org/fx"
 
-	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/rules/event"
 )
@@ -17,7 +16,6 @@ type registrationArguments struct {
 	Lifecycle fx.Lifecycle
 	Config    config.Configuration
 	Queue     event.RuleSetChangedEventQueue
-	Cache     cache.Cache
 }
 
 func registerProvider(args registrationArguments, logger zerolog.Logger) error {
@@ -25,7 +23,7 @@ func registerProvider(args registrationArguments, logger zerolog.Logger) error {
 		return nil
 	}
 
-	provider, err := newProvider(args.Config.Rules.Providers.CloudBlob, args.Cache, args.Queue, logger)
+	provider, err := newProvider(args.Config.Rules.Providers.CloudBlob, args.Queue, logger)
 	if err != nil {
 		logger.Error().Err(err).
 			Str("_rule_provider_type", "cloud_blob").
