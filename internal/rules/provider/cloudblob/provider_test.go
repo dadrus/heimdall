@@ -1,13 +1,21 @@
 package cloudblob
 
 import (
+	"context"
+	"fmt"
+	"github.com/dadrus/heimdall/internal/x"
+	"github.com/johannesboyne/gofakes3"
+	"github.com/johannesboyne/gofakes3/backend/s3mem"
+	"github.com/rs/zerolog"
+	"net/http/httptest"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/dadrus/heimdall/internal/cache/mocks"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/event"
 	"github.com/dadrus/heimdall/internal/testsupport"
@@ -105,14 +113,203 @@ buckets:
 			providerConf, err := testsupport.DecodeTestConfig(tc.conf)
 			require.NoError(t, err)
 
-			cch := &mocks.MockCache{}
 			queue := make(event.RuleSetChangedEventQueue, 10)
 
 			// WHEN
-			prov, err := newProvider(providerConf, cch, queue, log.Logger)
+			prov, err := newProvider(providerConf, queue, log.Logger)
 
 			// THEN
 			tc.assert(t, err, prov)
+		})
+	}
+}
+
+func TestProviderLifecycle(t *testing.T) {
+	// aws is not used, but an aws s3 compatible implementation
+	// however, since the aws sdk is used to talk to it,
+	// it expects credentials, even these are not used at the end
+	t.Setenv("AWS_ACCESS_KEY_ID", "test")
+	t.Setenv("AWS_SECRET_ACCESS_KEY", "test")
+
+	bucketName := "new_bucket"
+	backend := s3mem.New()
+	s3 := gofakes3.New(backend)
+	srv := httptest.NewServer(s3.Server())
+
+	defer srv.Close()
+
+	require.NoError(t, backend.CreateBucket(bucketName))
+
+	clearBucket := func(t *testing.T) {
+		t.Helper()
+
+		objList, err := backend.ListBucket(bucketName, nil, gofakes3.ListBucketPage{})
+		require.NoError(t, err)
+
+		for _, obj := range objList.Contents {
+			_, err := backend.DeleteObject(bucketName, obj.Key)
+			require.NoError(t, err)
+		}
+	}
+
+	for _, tc := range []struct {
+		uc          string
+		conf        []byte
+		setupBucket func(t *testing.T)
+		assert      func(t *testing.T, logs fmt.Stringer, queue event.RuleSetChangedEventQueue)
+	}{
+		{
+			uc: "with rule set loading error due to DNS error",
+			conf: []byte(`
+buckets:
+- url: s3://foo?endpoint=does-not-exist.local&region=eu-central-1
+`),
+			assert: func(t *testing.T, logs fmt.Stringer, queue event.RuleSetChangedEventQueue) {
+				t.Helper()
+
+				time.Sleep(500 * time.Millisecond)
+
+				messages := logs.String()
+				assert.Contains(t, messages, "communication error")
+				assert.Contains(t, messages, "Failed to fetch rule set")
+				assert.Contains(t, messages, "name resolution")
+				assert.Contains(t, messages, "No updates received")
+			},
+		},
+		{
+			uc: "with no blobs in the bucket",
+			conf: []byte(`
+buckets:
+- url: s3://` + bucketName + `?endpoint=` + srv.URL + `&disableSSL=true&s3ForcePathStyle=true&region=eu-central-1
+`),
+			assert: func(t *testing.T, logs fmt.Stringer, queue event.RuleSetChangedEventQueue) {
+				t.Helper()
+
+				time.Sleep(250 * time.Millisecond)
+
+				messages := logs.String()
+				assert.NotContains(t, messages, "error")
+				assert.Contains(t, messages, "No updates received")
+			},
+		},
+		{
+			uc: "with an empty blob in the bucket",
+			conf: []byte(`
+buckets:
+- url: s3://` + bucketName + `?endpoint=` + srv.URL + `&disableSSL=true&s3ForcePathStyle=true&region=eu-central-1
+`),
+			setupBucket: func(t *testing.T) {
+				t.Helper()
+
+				_, err := backend.PutObject(bucketName, "test-rule",
+					map[string]string{"Content-Type": "application/json"},
+					strings.NewReader(``), 0)
+				require.NoError(t, err)
+			},
+			assert: func(t *testing.T, logs fmt.Stringer, queue event.RuleSetChangedEventQueue) {
+				t.Helper()
+
+				time.Sleep(250 * time.Millisecond)
+
+				messages := logs.String()
+				assert.NotContains(t, messages, "error")
+				assert.Contains(t, messages, "No updates received")
+			},
+		},
+		{
+			uc: "with not empty blob and without watch interval",
+			conf: []byte(`
+buckets:
+- url: s3://` + bucketName + `?endpoint=` + srv.URL + `&disableSSL=true&s3ForcePathStyle=true&region=eu-central-1
+`),
+			setupBucket: func(t *testing.T) {
+				t.Helper()
+
+				data := "- id: foo"
+
+				_, err := backend.PutObject(bucketName, "test-rule",
+					map[string]string{"Content-Type": "application/yaml"},
+					strings.NewReader(data), int64(len(data)))
+				require.NoError(t, err)
+			},
+			assert: func(t *testing.T, logs fmt.Stringer, queue event.RuleSetChangedEventQueue) {
+				t.Helper()
+
+				time.Sleep(600 * time.Millisecond)
+
+				assert.NotContains(t, logs.String(), "No updates received")
+
+				require.Len(t, queue, 1)
+
+				evt := <-queue
+				assert.Contains(t, evt.Src, "blob:test-rule@s3")
+				assert.Len(t, evt.RuleSet, 1)
+				assert.Equal(t, "foo", evt.RuleSet[0].ID)
+				assert.Equal(t, event.Create, evt.ChangeType)
+			},
+		},
+		{
+			uc: "with not empty server response and with watch interval",
+			conf: []byte(`
+watch_interval: 250ms
+buckets:
+- url: s3://` + bucketName + `?endpoint=` + srv.URL + `&disableSSL=true&s3ForcePathStyle=true&region=eu-central-1
+`),
+			setupBucket: func(t *testing.T) {
+				t.Helper()
+
+				data := "- id: foo"
+
+				_, err := backend.PutObject(bucketName, "test-rule",
+					map[string]string{"Content-Type": "application/yaml"},
+					strings.NewReader(data), int64(len(data)))
+				require.NoError(t, err)
+			},
+			assert: func(t *testing.T, logs fmt.Stringer, queue event.RuleSetChangedEventQueue) {
+				t.Helper()
+
+				time.Sleep(600 * time.Millisecond)
+
+				assert.Contains(t, logs.String(), "No updates received")
+
+				require.Len(t, queue, 1)
+
+				evt := <-queue
+				assert.Contains(t, evt.Src, "blob:test-rule@s3")
+				assert.Len(t, evt.RuleSet, 1)
+				assert.Equal(t, "foo", evt.RuleSet[0].ID)
+				assert.Equal(t, event.Create, evt.ChangeType)
+			},
+		},
+	} {
+		t.Run(tc.uc, func(t *testing.T) {
+			// GIVEN
+			clearBucket(t)
+
+			setupBucket := x.IfThenElse(tc.setupBucket != nil, tc.setupBucket, func(t *testing.T) { t.Helper() })
+
+			providerConf, err := testsupport.DecodeTestConfig(tc.conf)
+			require.NoError(t, err)
+
+			queue := make(event.RuleSetChangedEventQueue, 10)
+			defer close(queue)
+
+			logs := &strings.Builder{}
+			prov, err := newProvider(providerConf, queue, zerolog.New(logs))
+			require.NoError(t, err)
+
+			ctx := context.Background()
+
+			setupBucket(t)
+
+			// WHEN
+			err = prov.Start(ctx)
+
+			defer prov.Stop(ctx) //nolint:errcheck
+
+			// THEN
+			require.NoError(t, err)
+			tc.assert(t, logs, queue)
 		})
 	}
 }
