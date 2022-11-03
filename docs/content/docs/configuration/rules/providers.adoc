@@ -152,11 +152,13 @@ Creates kind of a namespace for the rule sets retrieved from the blobs. If set, 
 
 The differentiation which storage is used is based on the URL scheme. These are:
 
-* `s3` for AWS S3 buckets
-* `gc` for Google Cloud Storage and
-* `azblob` for Microsoft Azure blobs
+* `s3` for https://aws.amazon.com/s3/[AWS S3] buckets
+* `gs` for https://cloud.google.com/storage/[Google Cloud Storage] and
+* `azblob` for https://azure.microsoft.com/en-us/services/storage/blobs/[Azure Blob Storage]
 
-Other, API compatible storage services, like https://www.minio.io/[Minio], https://ceph.com/[Ceph], https://github.com/chrislusf/seaweedfs[SeaweedFS], etc. can be used as well. The corresponding and other options can be found in the https://gocloud.dev/howto/blob/[Go CDK Blob] documentation, the implementation of this provider is based on.
+Other API compatible storage services, like https://www.minio.io/[Minio], https://ceph.com/[Ceph], https://github.com/chrislusf/seaweedfs[SeaweedFS], etc. can be used as well. The corresponding and other options can be found in the https://gocloud.dev/howto/blob/[Go CDK Blob] documentation, the implementation of this provider is based on.
+
+NOTE: The communication to the storage services requires an active session to the corresponding cloud provider. The session information is taken from the vendor specific environment variables, respectively configuration. See https://docs.aws.amazon.com/sdk-for-go/api/aws/session/[AWS Session], https://cloud.google.com/docs/authentication/application-default-credentials[GC Application Default Credentials] and https://learn.microsoft.com/en-us/azure/storage/common/authorize-data-access?toc=%2Fazure%2Fstorage%2Fblobs%2Ftoc.json[Azure Storage Access] for more information.
 
 .Minimal possible configuration
 ====
@@ -166,7 +168,7 @@ Here the provider is configured to load rule sets from all blobs stored on the G
 ----
 cloud_blob:
   buckets:
-    - url: gc://my-bucket
+    - url: gs://my-bucket
 ----
 ====
 
@@ -178,13 +180,13 @@ cloud_blob:
 cloud_blob:
   watch_interval: 2m
   buckets:
-    - url: gc://my-bucket
+    - url: gs://my-bucket
       prefix: service1
       rules_path_prefix: /service1
-    - url: gc://my-bucket
-      prefix: service2on the
+    - url: gs://my-bucket
+      prefix: service2
       rules_path_prefix: /service2
-    - url: s3://my-bucket/my-rule-set
+    - url: s3://my-bucket/my-rule-set?region=us-west-1
 ----
 
 Here, the provider is configured to poll multiple buckets with rule sets for changes every 2 minutes.
@@ -192,6 +194,6 @@ Here, the provider is configured to poll multiple buckets with rule sets for cha
 The first two bucket reference configurations reference actually the same bucket on Google Cloud Storage, but different blobs based on the configured blob prefix. The first one will let heimdall loading only those blobs, which start with `service1`, the second only those, which start with `service2`.
 As `rules_path_prefix` are defined for both as well, heimdall will ensure, that rule sets loaded from the corresponding blobs will not overlap in their url matching definitions.
 
-The last one instructs heimdall to load rule set from a specific blob, namely a blob named `my-rule-set`, which resides on the `my-bucket` AWS S3 bucket.
+The last one instructs heimdall to load rule set from a specific blob, namely a blob named `my-rule-set`, which resides on the `my-bucket` AWS S3 bucket, which is located in the `us-west-1` AWS region.
 
 ====
