@@ -55,6 +55,7 @@ This provider allows loading of link:{{< relref "rule_configuration.adoc#_rule_s
 The loading and removal of rules happens as follows:
 
 * if the response status code is an HTTP 200 OK and contains a link:{{< relref "rule_configuration.adoc#_rule_set" >}}[Rule Sets] in a known format (see above), the corresponding rules are loaded (if the definitions are valid)
+* in case of network issues, like dns errors, timeouts and alike, the rule sets previously received from the corresponding endpoints are preserved.
 * in any other case related to network communication (e.g. not 200 status code, empty response body, unsupported format, network issues, etc.), the corresponding rules are removed if these were previously loaded.
 
 The configuration of this provider goes into the `http_endpoint` property. In contrast to the link:{{< relref "#_filesystem" >}}[Filesystem] provider it can be configured with as many endpoints to load rules from as required for the particular use case.
