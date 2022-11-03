@@ -70,7 +70,7 @@ Whether the configured `endpoints` should be polled for updates. Defaults to `0s
 +
 Each entry of that array supports all the properties defined by link:{{< relref "/docs/configuration/reference/configuration_types.adoc#_endpoint" >}}[Endpoint], except `method`, which is always `GET`. As with the link:{{< relref "/docs/configuration/reference/configuration_types.adoc#_endpoint" >}}[Endpoint] type, at least the `url` must be defined. Following properties are defined in addition:
 +
-** *`expected_path_prefix`*: _string_ (optional)
+** *`rule_path_match_prefix`*: _string_ (optional)
 +
 This property can be used to create kind of a namespace for the rule sets retrieved from the different endpoints. If set, the provider checks whether the urls specified in all rules retrieved from the referenced endpoint have the defined path prefix. If not, a warning is emitted and the rule set is ignored. This can be used to ensure a rule retrieved from one endpoint does not collide with a rule from another endpoint.
 
@@ -95,7 +95,7 @@ Here, the provider is configured to poll the two defined rule set endpoints for 
 
 The configuration for the first endpoint instructs heimdall to ensure all urls defined in the rules coming from that endpoint must match the defined path prefix.
 
-The configuration for the second endpoint defines the `expected_path_prefix` as well. It also defines a couple of other properties. One to ensure the communication to that endpoint is more resilient by setting the `retry` options and since this endpoint is protected by an API key, it defines the corresponding options as well.
+The configuration for the second endpoint defines the `rule_path_match_prefix` as well. It also defines a couple of other properties. One to ensure the communication to that endpoint is more resilient by setting the `retry` options and since this endpoint is protected by an API key, it defines the corresponding options as well.
 
 [source, yaml]
 ----
@@ -103,9 +103,9 @@ http_endpoint:
   watch_interval: 5m
   endpoints:
     - url: http://foo.bar/ruleset1
-      expected_path_prefix: /foo/bar
+      rule_path_match_prefix: /foo/bar
     - url: http://foo.bar/ruleset2
-      expected_path_prefix: /bar/foo
+      rule_path_match_prefix: /bar/foo
       retry:
         give_up_after: 5s
         max_delay: 250ms

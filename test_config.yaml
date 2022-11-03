@@ -177,7 +177,7 @@ rules:
       watch_interval: 5m
       endpoints:
         - url: http://foo.bar/rules.yaml
-          expected_path_prefix: /foo
+          rule_path_match_prefix: /foo
         - url: http://bar.foo/rules.yaml
           headers:
             bla: bla

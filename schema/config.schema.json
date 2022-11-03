@@ -343,7 +343,7 @@
             }
           ]
         },
-        "expected_path_prefix": {
+        "rule_path_match_prefix": {
           "description": "The path prefix to be checked in each rule retrieved from the endpoint",
           "type": "string",
           "examples": [
