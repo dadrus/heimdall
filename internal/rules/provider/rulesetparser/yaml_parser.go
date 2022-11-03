@@ -9,7 +9,7 @@ import (
 	"github.com/dadrus/heimdall/internal/config"
 )
 
-func ParseYAML(reader io.Reader) ([]config.RuleConfig, error) {
+func parseYAML(reader io.Reader) ([]config.RuleConfig, error) {
 	var rcs []config.RuleConfig
 
 	dec := yaml.NewDecoder(reader)

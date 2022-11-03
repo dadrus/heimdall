@@ -9,7 +9,7 @@ import (
 	"github.com/dadrus/heimdall/internal/config"
 )
 
-func ParseJSON(reader io.Reader) ([]config.RuleConfig, error) {
+func parseJSON(reader io.Reader) ([]config.RuleConfig, error) {
 	var rcs []config.RuleConfig
 
 	dec := json.NewDecoder(reader)

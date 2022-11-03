@@ -275,7 +275,7 @@ rules:
       watch_interval: 5m
       endpoints:
         - url: http://foo.bar/rules.yaml
-          expected_path_prefix: /foo
+          rule_path_match_prefix: /foo
         - url: http://bar.foo/rules.yaml
           headers:
             bla: bla
@@ -288,4 +288,15 @@ rules:
               name: foo
               value: bar
               in: header
+
+    cloud_blob:
+      watch_interval: 2m
+      buckets:
+        - url: gs://my-bucket
+          prefix: service1
+          rule_path_match_prefix: /service1
+        - url: gs://my-bucket
+          prefix: service2
+          rule_path_match_prefix: /service2
+        - url: s3://my-bucket/my-rule-set
 

@@ -50,7 +50,7 @@ func TestParseYAML(t *testing.T) {
 	} {
 		t.Run(tc.uc, func(t *testing.T) {
 			// WHEN
-			ruleSet, err := ParseYAML(bytes.NewBuffer(tc.conf))
+			ruleSet, err := parseYAML(bytes.NewBuffer(tc.conf))
 
 			// THEN
 			tc.assert(t, err, ruleSet)

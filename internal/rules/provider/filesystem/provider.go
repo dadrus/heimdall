@@ -188,7 +188,7 @@ func (p *provider) notifyRuleSetCreated(evt fsnotify.Event) {
 		return
 	}
 
-	ruleSet, err := rulesetparser.ParseYAML(bytes.NewBuffer(data))
+	ruleSet, err := rulesetparser.ParseRules("application/yaml", bytes.NewBuffer(data))
 	if err != nil {
 		p.l.Warn().
 			Err(err).
@@ -261,7 +261,7 @@ func (p *provider) loadInitialRuleSet() error {
 			return err
 		}
 
-		ruleSet, err := rulesetparser.ParseYAML(bytes.NewBuffer(data))
+		ruleSet, err := rulesetparser.ParseRules("application/yaml", bytes.NewBuffer(data))
 		if err != nil {
 			p.l.Warn().
 				Err(err).

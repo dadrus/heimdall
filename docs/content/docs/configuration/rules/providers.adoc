@@ -50,11 +50,12 @@ file_system:
 
 == HTTP Endpoint
 
-This provider allows loading of link:{{< relref "rule_configuration.adoc#_rule_set" >}}[Rule Sets] from any remote endpoint accessible via HTTP(s) and supports rule sets in YAML, as well as in JSON format. The differentiation happens based on the `Content-Type` set in the response from the endpoint, wich must be either `application/yaml` or `application/json`, otherwise an error is logged and the response from the endpoint is ignored.
+This provider allows loading of link:{{< relref "rule_configuration.adoc#_rule_set" >}}[Rule Sets] from any remote endpoint accessible via HTTP(s) and supports rule sets in YAML, as well as in JSON format. The differentiation happens based on the `Content-Type` set in the response from the endpoint, which must be either `application/yaml` or `application/json`, otherwise an error is logged and the response from the endpoint is ignored.
 
 The loading and removal of rules happens as follows:
 
 * if the response status code is an HTTP 200 OK and contains a link:{{< relref "rule_configuration.adoc#_rule_set" >}}[Rule Sets] in a known format (see above), the corresponding rules are loaded (if the definitions are valid)
+* in case of network issues, like dns errors, timeouts and alike, the rule sets previously received from the corresponding endpoints are preserved.
 * in any other case related to network communication (e.g. not 200 status code, empty response body, unsupported format, network issues, etc.), the corresponding rules are removed if these were previously loaded.
 
 The configuration of this provider goes into the `http_endpoint` property. In contrast to the link:{{< relref "#_filesystem" >}}[Filesystem] provider it can be configured with as many endpoints to load rules from as required for the particular use case.
@@ -69,7 +70,7 @@ Whether the configured `endpoints` should be polled for updates. Defaults to `0s
 +
 Each entry of that array supports all the properties defined by link:{{< relref "/docs/configuration/reference/configuration_types.adoc#_endpoint" >}}[Endpoint], except `method`, which is always `GET`. As with the link:{{< relref "/docs/configuration/reference/configuration_types.adoc#_endpoint" >}}[Endpoint] type, at least the `url` must be defined. Following properties are defined in addition:
 +
-** *`expected_path_prefix`*: _string_ (optional)
+** *`rule_path_match_prefix`*: _string_ (optional)
 +
 This property can be used to create kind of a namespace for the rule sets retrieved from the different endpoints. If set, the provider checks whether the urls specified in all rules retrieved from the referenced endpoint have the defined path prefix. If not, a warning is emitted and the rule set is ignored. This can be used to ensure a rule retrieved from one endpoint does not collide with a rule from another endpoint.
 
@@ -94,7 +95,7 @@ Here, the provider is configured to poll the two defined rule set endpoints for 
 
 The configuration for the first endpoint instructs heimdall to ensure all urls defined in the rules coming from that endpoint must match the defined path prefix.
 
-The configuration for the second endpoint defines the `expected_path_prefix` as well. It also defines a couple of other properties. One to ensure the communication to that endpoint is more resilient by setting the `retry` options and since this endpoint is protected by an API key, it defines the corresponding options as well.
+The configuration for the second endpoint defines the `rule_path_match_prefix` as well. It also defines a couple of other properties. One to ensure the communication to that endpoint is more resilient by setting the `retry` options and since this endpoint is protected by an API key, it defines the corresponding options as well.
 
 [source, yaml]
 ----
@@ -102,9 +103,9 @@ http_endpoint:
   watch_interval: 5m
   endpoints:
     - url: http://foo.bar/ruleset1
-      expected_path_prefix: /foo/bar
+      rule_path_match_prefix: /foo/bar
     - url: http://foo.bar/ruleset2
-      expected_path_prefix: /bar/foo
+      rule_path_match_prefix: /bar/foo
       retry:
         give_up_after: 5s
         max_delay: 250ms
@@ -115,4 +116,85 @@ http_endpoint:
           value: super-secret
           in: header
 ----
+====
+
+== Cloud Blob
+
+This provider allows loading of link:{{< relref "rule_configuration.adoc#_rule_set" >}}[Rule Sets] from cloud blobs, like AWS S3 buckets, Google Cloud Storage, Azure Blobs, or other API compatible implementations and supports rule sets in YAML, as well as in JSON format. The differentiation happens based on the `Content-Type` set in the metadata of the loaded blob, which must be either `application/yaml` or `application/json`, otherwise an error is logged and the blob is ignored.
+
+The loading and removal of rules happens as follows:
+
+* if the response status code is an HTTP 200 OK and contains a rule set in a known format (see above), the corresponding rules are loaded (if the definitions are valid)
+* in case of network issues, like dns errors, timeouts and alike, the rule sets previously received from the corresponding buckets are preserved.
+* in any other case related to network communication (like, not 200 status code, empty response body, unsupported format, etc.), the corresponding rules are removed if these were previously loaded.
+
+The configuration of this provider goes into the `cloud_blob` property. As with link:{{< relref "#_http_endpoint" >}}[HTTP Endpoint] provider, it can be configured with as many buckets/blobs to load rule sets from as required for the particular use case.
+
+Following configuration options are supported:
+
+* *`watch_interval`*: _link:{{< relref "/docs/configuration/reference/configuration_types.adoc#_duration" >}}[Duration]_ (optional)
++
+Whether the configured `buckets` should be polled for updates. Defaults to `0s` (polling disabled).
+
+* *`buckets`*: _BlobReference array_ (mandatory)
++
+Each _BlobReference_ entry in that array supports the following properties:
++
+** *`url`*: _string_ (mandatory)
++
+The actual url to the bucket or to a specific blob in the bucket.
+** *`prefix`*: _string_ (optional)
++
+Indicates that only blobs with a key starting with this prefix should be retrieved
++
+** *`rule_path_match_prefix`*: _string_ (optional)
++
+Creates kind of a namespace for the rule sets retrieved from the blobs. If set, the provider checks whether the urls patterns specified in all rules retrieved from the referenced bucket have the defined path prefix. If that rule is violated, a warning is emitted and the rule set is ignored. This can be used to ensure a rule retrieved from one endpoint does not override a rule from another endpoint.
+
+The differentiation which storage is used is based on the URL scheme. These are:
+
+* `s3` for https://aws.amazon.com/s3/[AWS S3] buckets
+* `gs` for https://cloud.google.com/storage/[Google Cloud Storage] and
+* `azblob` for https://azure.microsoft.com/en-us/services/storage/blobs/[Azure Blob Storage]
+
+Other API compatible storage services, like https://www.minio.io/[Minio], https://ceph.com/[Ceph], https://github.com/chrislusf/seaweedfs[SeaweedFS], etc. can be used as well. The corresponding and other options can be found in the https://gocloud.dev/howto/blob/[Go CDK Blob] documentation, the implementation of this provider is based on.
+
+NOTE: The communication to the storage services requires an active session to the corresponding cloud provider. The session information is taken from the vendor specific environment variables, respectively configuration. See https://docs.aws.amazon.com/sdk-for-go/api/aws/session/[AWS Session], https://cloud.google.com/docs/authentication/application-default-credentials[GC Application Default Credentials] and https://learn.microsoft.com/en-us/azure/storage/common/authorize-data-access?toc=%2Fazure%2Fstorage%2Fblobs%2Ftoc.json[Azure Storage Access] for more information.
+
+.Minimal possible configuration
+====
+Here the provider is configured to load rule sets from all blobs stored on the Google Cloud Storage bucket named "my-bucket" without polling for changes.
+
+[source, yaml]
+----
+cloud_blob:
+  buckets:
+    - url: gs://my-bucket
+----
+====
+
+.Load rule sets from AWS S3 buckets and watch for changes.
+====
+
+[source, yaml]
+----
+cloud_blob:
+  watch_interval: 2m
+  buckets:
+    - url: gs://my-bucket
+      prefix: service1
+      rule_path_match_prefix: /service1
+    - url: gs://my-bucket
+      prefix: service2
+      rule_path_match_prefix: /service2
+    - url: s3://my-bucket/my-rule-set?region=us-west-1
+----
+
+Here, the provider is configured to poll multiple buckets with rule sets for changes every 2 minutes.
+
+The first two bucket reference configurations reference actually the same bucket on Google Cloud Storage, but different blobs based on the configured blob prefix. The first one will let heimdall loading only those blobs, which start with `service1`, the second only those, which start with `service2`.
+As `rule_path_match_prefix` are defined for both as well, heimdall will ensure, that rule sets loaded from the corresponding blobs will not overlap in their url matching definitions.
+
+The last one instructs heimdall to load rule set from a specific blob, namely a blob named `my-rule-set`, which resides on the `my-bucket` AWS S3 bucket, which is located in the `us-west-1` AWS region.
+
 ====

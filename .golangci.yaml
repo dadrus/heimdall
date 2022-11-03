@@ -34,6 +34,7 @@ issues:
 linters-settings:
   exhaustive:
     ignore-enum-members: "POT.+"
+    default-signifies-exhaustive: true
   tagliatelle:
     # Check the struck tag name case.
     case:
