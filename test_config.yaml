@@ -194,10 +194,10 @@ rules:
     cloud_blob:
       watch_interval: 2m
       buckets:
-        - url: gc://my-bucket
+        - url: gs://my-bucket
           prefix: service1
           rules_path_prefix: /service1
-        - url: gc://my-bucket
+        - url: gs://my-bucket
           prefix: service2
           rules_path_prefix: /service2
         - url: s3://my-bucket/my-rule-set
