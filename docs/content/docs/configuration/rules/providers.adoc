@@ -147,9 +147,9 @@ The actual url to the bucket or to a specific blob in the bucket.
 +
 Indicates that only blobs with a key starting with this prefix should be retrieved
 +
-** *`rules_path_prefix`*: _string_ (optional)
+** *`rule_path_match_prefix`*: _string_ (optional)
 +
-Creates kind of a namespace for the rule sets retrieved from the blobs. If set, the provider checks whether the urls specified in all rules retrieved from the referenced bucket have the defined path prefix. If that rule is violated, a warning is emitted and the rule set is ignored. This can be used to ensure a rule retrieved from one endpoint does not override a rule from another endpoint.
+Creates kind of a namespace for the rule sets retrieved from the blobs. If set, the provider checks whether the urls patterns specified in all rules retrieved from the referenced bucket have the defined path prefix. If that rule is violated, a warning is emitted and the rule set is ignored. This can be used to ensure a rule retrieved from one endpoint does not override a rule from another endpoint.
 
 The differentiation which storage is used is based on the URL scheme. These are:
 
@@ -183,17 +183,17 @@ cloud_blob:
   buckets:
     - url: gs://my-bucket
       prefix: service1
-      rules_path_prefix: /service1
+      rule_path_match_prefix: /service1
     - url: gs://my-bucket
       prefix: service2
-      rules_path_prefix: /service2
+      rule_path_match_prefix: /service2
     - url: s3://my-bucket/my-rule-set?region=us-west-1
 ----
 
 Here, the provider is configured to poll multiple buckets with rule sets for changes every 2 minutes.
 
 The first two bucket reference configurations reference actually the same bucket on Google Cloud Storage, but different blobs based on the configured blob prefix. The first one will let heimdall loading only those blobs, which start with `service1`, the second only those, which start with `service2`.
-As `rules_path_prefix` are defined for both as well, heimdall will ensure, that rule sets loaded from the corresponding blobs will not overlap in their url matching definitions.
+As `rule_path_match_prefix` are defined for both as well, heimdall will ensure, that rule sets loaded from the corresponding blobs will not overlap in their url matching definitions.
 
 The last one instructs heimdall to load rule set from a specific blob, namely a blob named `my-rule-set`, which resides on the `my-bucket` AWS S3 bucket, which is located in the `us-west-1` AWS region.
 

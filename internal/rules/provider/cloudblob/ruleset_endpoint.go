@@ -24,7 +24,7 @@ var errEmptyRuleSet = errors.New("empty rule set")
 type ruleSetEndpoint struct {
 	URL             *url.URL              `mapstructure:"url"`
 	Prefix          string                `mapstructure:"prefix"`
-	RulesPathPrefix pathprefix.PathPrefix `mapstructure:"rules_path_prefix"`
+	RulesPathPrefix pathprefix.PathPrefix `mapstructure:"rule_path_match_prefix"`
 }
 
 func (e *ruleSetEndpoint) ID() string {

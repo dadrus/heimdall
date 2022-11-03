@@ -294,9 +294,9 @@ rules:
       buckets:
         - url: gs://my-bucket
           prefix: service1
-          rules_path_prefix: /service1
+          rule_path_match_prefix: /service1
         - url: gs://my-bucket
           prefix: service2
-          rules_path_prefix: /service2
+          rule_path_match_prefix: /service2
         - url: s3://my-bucket/my-rule-set
 

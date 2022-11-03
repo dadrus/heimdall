@@ -1486,8 +1486,8 @@
                 "description": "Indicates that only blobs with a key starting with this prefix should be retrieved",
                 "type": "string"
               },
-              "rules_path_prefix": {
-                "description": "The path prefix to be checked in each rule retrieved from the bucket",
+              "rule_path_match_prefix": {
+                "description": "The path prefix to be checked in each url pattern of each rule retrieved from the bucket",
                 "type": "string",
                 "examples": [
                   "/foo/bar"
