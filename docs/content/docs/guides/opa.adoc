@@ -14,6 +14,7 @@ https://www.openpolicyagent.org/[Open Policy Agent], or OPA, is an open source, 
 
 Here some examples demonstrating different possible application requirements and how these can be solved with heimdall:
 
+[[_sharing_service_example]]
 .Sharing Service
 ====
 Imagine you have a sharing service, e.g. to let friends share all their photos with each other and the API looks roughly as follows:
@@ -42,19 +43,21 @@ It expects two pieces of information in the payload to the OPA instance:
 * the actual user, making the request and
 * the path to witch the request is made
 
-So something like this: `{ "input": { "user": "alice", "path": "bob/photos" } }`. Since the rego policy defined above returns just `true` or `false` the corresponding response from the OPA endpoint whould be `{ "result": true }` or `{ "result": false }`. Given this and assuming the above policy can be used by making requests to `\https://opa.local/v1/data/share_photos/policy/allow` the configuration of the link:{{< relref "/docs/configuration/pipeline/authorizers.adoc#_remote" >}}[Remote Authorizer] would look like follows:
+So something like this: `{ "input": { "user": "alice", "path": "bob/photos" } }`. Since the Rego policy defined above returns just `true` or `false` the corresponding response from the OPA endpoint whould be `{ "result": true }` or `{ "result": false }`. Given this and assuming the above policy can be used by making requests to `\https://opa.local/v1/data/share_photos/policy/allow` the configuration of the link:{{< relref "/docs/configuration/pipeline/authorizers.adoc#_remote" >}}[Remote Authorizer] would look like follows:
 
 [source, yaml]
 ----
-id: photos_access
-type: remote
-config:
-  endpoint:
-    url: https://opa.local/v1/data/share_photos/policy/allow
-  payload: |
-    { "input": { "user": {{ quote .Subject.ID }}, "path": {{ quote .RequestURL.Path }} } }
-  script: |
-    heimdall.Payload.result === true
+pipeline:
+  authorizers:
+   - id: photos_access
+     type: remote
+     config:
+       endpoint:
+         url: https://opa.local/v1/data/share_photos/policy/allow
+       payload: |
+         { "input": { "user": {{ quote .Subject.ID }}, "path": {{ quote .RequestURL.Path }} } }
+       script: |
+         heimdall.Payload.result === true
 ----
 
 Here the entire authorization happens within heimdall and is completely outsourced from the business logic of our sharing service.
@@ -67,7 +70,7 @@ Imagine you have a billing service, which requires information about the members
 
 * `POST /create_invoice` to invoice the identified user.
 
-You could perform the required query to OPA entirely in your service and use the retrieved group memberships then. Alternatively, you could outsource the communication to OPA to heimdall and deal only with the group membership information in your service. To achieve this, we would need something like the following https://www.openpolicyagent.org/docs/latest/policy-language/[Rego] policy:
+You could perform the required query to OPA entirely in your service and use the retrieved group memberships then. Alternatively, you could outsource the communication to OPA to heimdall and deal only with the group membership information in your service. Compared to the link:{{< relref "#_sharing_service_example" >}}[Sharing Service] example, this time heimdall would not perform any authorization, but rather enrich the subject information with further information. This way, we're not going to use a link:{{< relref "/docs/configuration/pipeline/authorizers.adoc" >}}[Authorizer], but a link:{{< relref "/docs/configuration/pipeline/hydrators.adoc#_generic" >}}[Generic Hydrator] instead. As with link:{{< relref "#_sharing_service_example" >}}[Sharing Service] example, there is a need for a https://www.openpolicyagent.org/docs/latest/policy-language/[Rego] policy, which could look like this:
 
 [source, rego]
 ----
@@ -87,25 +90,27 @@ groups {
 }
 ----
 
-It expects just one piece of information, namely the actual user, making the request. So something like this: `{ "input": { "user": "alice" } }`. Since the rego policy defined above returns a list of groups, the corresponding response from the OPA endpoint would be `{ "result": ["group1", "group2"] }`. Given this and assuming the above policy can be used by making requests to `\https://opa.local/v1/data/invoice/policy/groups` and the authentication to that endpoint requires basic authentication, the configuration of the link:{{< relref "/docs/configuration/pipeline/authorizers.adoc#_remote" >}}[Remote Authorizer] would look like follows:
+It expects just one piece of information, namely the actual user, making the request. So something like this: `{ "input": { "user": "alice" } }`. Since the Rego policy defined above returns a list of groups, the corresponding response from the OPA endpoint would be `{ "result": ["group1", "group2"] }`. Given this and assuming the above policy can be used by making requests to `\https://opa.local/v1/data/invoice/policy/groups` and the authentication to that endpoint requires basic authentication, the configuration of the link:{{< relref "/docs/configuration/pipeline/hydrators.adoc#_generic" >}}[Generic Hydrator] would look like follows:
 
 [source, yaml]
 ----
-id: billing_authz
-type: remote
-config:
-  endpoint:
-    url: https://opa.local/v1/data/invoice/policy/groups
-    auth:
-      type: basic_auth
-      config:
-        user: MyOpaUser
-        password: SuperSecretPassword
-  payload: |
-    { "input": { "user": {{ quote .Subject.ID }} } }
+pipeline:
+  hydrators:
+   - id: billing_hydrator
+     type: generic
+     config:
+       endpoint:
+         url: https://opa.local/v1/data/invoice/policy/groups
+         auth:
+           type: basic_auth
+           config:
+             user: MyOpaUser
+             password: SuperSecretPassword
+       payload: |
+         { "input": { "user": {{ quote .Subject.ID }} } }
 ----
 
-Upon successful execution of the corresponding request, the response from the OPA endpoint will be stored in the `.Subject.Attributes["billing_authz"]` field. That way, you can use that information in a link:{{< relref "/docs/configuration/pipeline/mutators.adoc" >}}[Mutator] to forward the group membership to the billing service API.
+Upon successful execution of the corresponding request, the response from the OPA endpoint will be stored in the `.Subject.Attributes["billing_hydrator"]` field. That way, you can use that information in a link:{{< relref "/docs/configuration/pipeline/mutators.adoc" >}}[Mutator] to forward the group membership to the billing service API.
 
 ====
 
