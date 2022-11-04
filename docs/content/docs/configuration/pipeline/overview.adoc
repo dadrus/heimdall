@@ -162,7 +162,7 @@ type Subject struct {
 }
 ----
 * `RequestMethod` - function, providing access to the used HTTP method for the given request. Returns a `string`.
-* `RequestURL` - function, providing access to the matched URL of the given request. Returns a `string`.
+* `RequestURL` - function, providing access to the matched URL of the given request. Returns a URL object as defined by https://pkg.go.dev/net/url#URL[Golang net.url.URL]. This way access to properties, like `Scheme`, `Host`, `Path` and other URL properties is easily possible. If used as is it is converted to a `string`.
 * `RequestClientIPs` - function, providing information about the client IPs known about the request. Returns a `string array`.
 * `RequestHeader` - function, expecting the name of a header as input. Returns the value of the header as `string` if present in the HTTP request. If not present an empty string (`""`) is returned.
 * `RequestCookie` - function, expecting the name of a cookie as input. Returns the value of the cookie as `string` if present in the HTTP request. If not present an empty string (`""`) is returned.
