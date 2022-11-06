@@ -29,17 +29,16 @@ func newTLSListener(conf config.ServiceConfig, listener net.Listener) (net.Liste
 	}
 
 	tlsHandler := &fiber.TLSHandler{}
-	tlsVersion := conf.TLS.MinVersion.OrDefault()
 
 	// nolint:gosec
 	// configuration ensures, TLS versions below 1.2 are not possible
 	cfg := &tls.Config{
 		Certificates:   []tls.Certificate{cert},
-		MinVersion:     tlsVersion,
+		MinVersion:     conf.TLS.MinVersion.OrDefault(),
 		GetCertificate: tlsHandler.GetClientInfo,
 	}
 
-	if tlsVersion < tls.VersionTLS13 {
+	if cfg.MinVersion < tls.VersionTLS13 {
 		cfg.CipherSuites = conf.TLS.CipherSuites.OrDefault()
 	}
 
