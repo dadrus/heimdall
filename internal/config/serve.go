@@ -42,7 +42,7 @@ type TLSMinVersion uint16
 
 func (v TLSMinVersion) OrDefault() uint16 {
 	if v == 0 {
-		return tls.VersionTLS12
+		return tls.VersionTLS13
 	}
 
 	return uint16(v)
