@@ -23,6 +23,42 @@
           "examples": [
             "/path/to/cert.pem"
           ]
+        },
+        "min_version": {
+          "title": "minimum TLS version to support",
+          "description": "Only TLS 1.2 and TLS 1.3 are supported",
+          "type": "string",
+          "enum": [
+            "TLS1.2",
+            "TLS1.3"
+          ],
+          "default": "TLS1.3"
+        },
+        "cipher_suites": {
+          "description": "TLS cipher suites to support. Are only used if TLS v1.2 is configured as minimum version",
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256",
+              "TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256",
+              "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
+              "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256",
+              "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384",
+              "TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384",
+              "TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256",
+              "TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256"
+            ]
+          },
+          "uniqueItems": true,
+          "default": [
+            "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
+            "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256",
+            "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384",
+            "TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384",
+            "TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256",
+            "TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256"
+          ]
         }
       }
     },
