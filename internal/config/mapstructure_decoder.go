@@ -58,12 +58,7 @@ func logFormatDecodeHookFunc(from reflect.Type, to reflect.Type, val any) (any, 
 func decodeTLSCipherSuiteHookFunc(from reflect.Type, to reflect.Type, data any) (any, error) {
 	var suites TLSCipherSuites
 
-	if from.Kind() != reflect.Slice {
-		return data, nil
-	}
-
-	dect := reflect.ValueOf(&suites).Elem().Type()
-	if !dect.AssignableTo(to) {
+	if from.Kind() != reflect.Slice || to != reflect.TypeOf(TLSCipherSuites{}) {
 		return data, nil
 	}
 
@@ -101,14 +96,7 @@ func decodeTLSCipherSuiteHookFunc(from reflect.Type, to reflect.Type, data any) 
 }
 
 func decodeTLSMinVersionHookFunc(from reflect.Type, to reflect.Type, data any) (any, error) {
-	var minVersion TLSMinVersion
-
-	if from.Kind() != reflect.String {
-		return data, nil
-	}
-
-	dect := reflect.ValueOf(&minVersion).Elem().Type()
-	if !dect.AssignableTo(to) {
+	if from.Kind() != reflect.String || to != reflect.TypeOf(TLSMinVersion(0)) {
 		return data, nil
 	}
 
@@ -118,6 +106,6 @@ func decodeTLSMinVersionHookFunc(from reflect.Type, to reflect.Type, data any) (
 	case "TLS1.3":
 		return tls.VersionTLS13, nil
 	default:
-		return 0, errorchain.NewWithMessagef(heimdall.ErrConfiguration, "TLS version %s is unsupported", data)
+		return data, errorchain.NewWithMessagef(heimdall.ErrConfiguration, "TLS version %s is unsupported", data)
 	}
 }
