@@ -29,6 +29,8 @@ func NewConfiguration(envPrefix EnvVarPrefix, configFile ConfigurationPath) (Con
 		parser.WithDecodeHookFunc(mapstructure.StringToSliceHookFunc(",")),
 		parser.WithDecodeHookFunc(logLevelDecodeHookFunc),
 		parser.WithDecodeHookFunc(logFormatDecodeHookFunc),
+		parser.WithDecodeHookFunc(decodeTLSCipherSuiteHookFunc),
+		parser.WithDecodeHookFunc(decodeTLSMinVersionHookFunc),
 		parser.WithEnvPrefix(string(envPrefix)),
 		parser.WithDefaultConfigFilename("heimdall.yaml"),
 		parser.WithConfigFile(string(configFile)),
