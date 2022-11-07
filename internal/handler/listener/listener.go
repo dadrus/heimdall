@@ -2,13 +2,13 @@ package listener
 
 import (
 	"crypto/tls"
-	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"net"
 
 	"github.com/gofiber/fiber/v2"
 
 	"github.com/dadrus/heimdall/internal/config"
+	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
 func New(network string, conf config.ServiceConfig) (net.Listener, error) {
