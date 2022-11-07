@@ -84,7 +84,7 @@ max_age: 10s
 ====
 
 == TLS
-As of today, the available configuration options are however limited to setting up the private key, as well as the corresponding certificate. TLSv1.2 and TLSv1.3 can however be used by the clients, with TLSv1.2 cipher spec usage limited to what the Go Language supports.
+Following are the supported TLS configuration options:
 
 * *`key`*: _string_ (mandatory)
 +
@@ -93,3 +93,23 @@ Path to the private key in PEM format. PKCS#1, as well as PKCS#8 formats are sup
 * *`cert`*: _string_ (mandatory)
 +
 Path to the certificate in PEM format. The certificate file may contain intermediate certificates following the leaf certificate to form a certificate chain
+
+* *`min_version`*: _string_ (optional)
++
+The minimal TLS version to support. Can be either `TLS1.2` or `TLS1.3`. Defaults to `TLS1.3`.
+
+* *`cipher_suites`*: _string array_ (optional)
++
+Can be configured if `min_version` is set to `TLS1.2`. If `min_version` is set to `TLS1.3` the configured values are ignored. Only the following PFS cipher suites are supported:
+
+** `TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256`
+** `TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256`
+** `TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256`
+** `TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256`
+** `TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384`
+** `TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384`
+** `TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256`
+** `TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256`
+
++
+Defaults to the last six cipher suites if `min_version` is set to `TLS1.2` and `cipher_suites` is not configured.
