@@ -2,6 +2,8 @@ package listener
 
 import (
 	"crypto/tls"
+	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"net"
 
 	"github.com/gofiber/fiber/v2"
@@ -12,7 +14,8 @@ import (
 func New(network string, conf config.ServiceConfig) (net.Listener, error) {
 	listener, err := net.Listen(network, conf.Address())
 	if err != nil {
-		return nil, err
+		return nil, errorchain.NewWithMessage(heimdall.ErrInternal, "failed creating listener").
+			CausedBy(err)
 	}
 
 	if conf.TLS != nil {
@@ -25,7 +28,8 @@ func New(network string, conf config.ServiceConfig) (net.Listener, error) {
 func newTLSListener(conf config.ServiceConfig, listener net.Listener) (net.Listener, error) {
 	cert, err := tls.LoadX509KeyPair(conf.TLS.Cert, conf.TLS.Key)
 	if err != nil {
-		return nil, err
+		return nil, errorchain.NewWithMessage(heimdall.ErrInternal, "failed loading key and certificate").
+			CausedBy(err)
 	}
 
 	tlsHandler := &fiber.TLSHandler{}
