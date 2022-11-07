@@ -6,6 +6,15 @@ serve:
       - 0.0.0.0/0
   proxy:
     port: 4469
+    tls:
+      key: /path/to/key/file.pem
+      cert: /path/to/cert/file.pem
+      min_version: TLS1.2
+      cipher_suites:
+        - TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
+        - TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384
+        - TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256
+        - TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256
     trusted_proxies:
       - 0.0.0.0/0
 
