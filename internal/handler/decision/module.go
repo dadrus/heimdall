@@ -19,6 +19,7 @@ import (
 	errorhandlermiddleware "github.com/dadrus/heimdall/internal/fiber/middleware/errorhandler"
 	loggermiddlerware "github.com/dadrus/heimdall/internal/fiber/middleware/logger"
 	tracingmiddleware "github.com/dadrus/heimdall/internal/fiber/middleware/opentelemetry"
+	"github.com/dadrus/heimdall/internal/handler/listener"
 	"github.com/dadrus/heimdall/internal/x"
 )
 
@@ -77,23 +78,21 @@ type fiberApp struct {
 }
 
 func registerHooks(lifecycle fx.Lifecycle, logger zerolog.Logger, app fiberApp, conf config.Configuration) {
-	service := conf.Serve.Decision
+	ln, err := listener.New(app.App.Config().Network, conf.Serve.Decision)
+	if err != nil {
+		logger.Fatal().Err(err).Msg("Could not create listener for the Decision service")
+
+		return
+	}
 
 	lifecycle.Append(
 		fx.Hook{
 			OnStart: func(ctx context.Context) error {
 				go func() {
-					// service connections
-					addr := service.Address()
-					logger.Info().Str("_address", addr).Msg("Decision service starts listening")
-					if service.TLS != nil {
-						if err := app.App.ListenTLS(addr, service.TLS.Cert, service.TLS.Key); err != nil {
-							logger.Fatal().Err(err).Msg("Could not start Decision service")
-						}
-					} else {
-						if err := app.App.Listen(addr); err != nil {
-							logger.Fatal().Err(err).Msg("Could not start Decision service")
-						}
+					logger.Info().Str("_address", ln.Addr().String()).Msg("Decision service starts listening")
+
+					if err = app.App.Listener(ln); err != nil {
+						logger.Fatal().Err(err).Msg("Could not start Decision service")
 					}
 				}()
 

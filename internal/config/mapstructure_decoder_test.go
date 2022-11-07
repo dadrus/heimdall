@@ -1,6 +1,7 @@
 package config
 
 import (
+	"crypto/tls"
 	"testing"
 
 	"github.com/mitchellh/mapstructure"
@@ -197,6 +198,150 @@ func TestDecodeLogFormat(t *testing.T) {
 
 			// THEN
 			tc.assert(t, err, typ.Format)
+		})
+	}
+}
+
+func TestDecodeTLSCipherSuite(t *testing.T) {
+	t.Parallel()
+
+	type Type struct {
+		CipherSuites TLSCipherSuites `mapstructure:"cipher_suites"`
+	}
+
+	for _, tc := range []struct {
+		uc     string
+		config []byte
+		assert func(t *testing.T, err error, suites TLSCipherSuites)
+	}{
+		{
+			uc: "unsupported cipher suite",
+			config: []byte(`
+cipher_suites:
+- foo
+`),
+			assert: func(t *testing.T, err error, suites TLSCipherSuites) {
+				t.Helper()
+
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), "unsupported")
+			},
+		},
+		{
+			uc: "all supported cipher suites",
+			config: []byte(`
+cipher_suites:
+- TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256
+- TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256
+- TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256
+- TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256
+- TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
+- TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384
+- TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256
+- TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256
+`),
+			assert: func(t *testing.T, err error, suites TLSCipherSuites) {
+				t.Helper()
+
+				require.NoError(t, err)
+				require.NotNil(t, suites)
+				require.Len(t, suites, 8)
+				assert.ElementsMatch(t, suites, []uint16{
+					tls.TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256,
+					tls.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256,
+					tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
+					tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
+					tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
+					tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
+					tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256,
+					tls.TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256,
+				})
+			},
+		},
+	} {
+		t.Run(tc.uc, func(t *testing.T) {
+			// GIVEN
+			var typ Type
+
+			dec, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
+				DecodeHook: decodeTLSCipherSuiteHookFunc,
+				Result:     &typ,
+			})
+			require.NoError(t, err)
+
+			conf, err := testsupport.DecodeTestConfig(tc.config)
+			require.NoError(t, err)
+
+			// WHEN
+			err = dec.Decode(conf)
+
+			// THEN
+			tc.assert(t, err, typ.CipherSuites)
+		})
+	}
+}
+
+func TestDecodeTLSMinVersion(t *testing.T) {
+	t.Parallel()
+
+	type Type struct {
+		MinVersion TLSMinVersion `mapstructure:"min_version"`
+	}
+
+	for _, tc := range []struct {
+		uc     string
+		config []byte
+		assert func(t *testing.T, err error, minVersion TLSMinVersion)
+	}{
+		{
+			uc:     "unsupported version",
+			config: []byte(`min_version: foo`),
+			assert: func(t *testing.T, err error, minVersion TLSMinVersion) {
+				t.Helper()
+
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), "unsupported")
+			},
+		},
+		{
+			uc:     "TLS v1.2 version",
+			config: []byte(`min_version: TLS1.2`),
+			assert: func(t *testing.T, err error, minVersion TLSMinVersion) {
+				t.Helper()
+
+				require.NoError(t, err)
+				assert.Equal(t, TLSMinVersion(tls.VersionTLS12), minVersion)
+			},
+		},
+		{
+			uc:     "TLS v1.3 version",
+			config: []byte(`min_version: TLS1.3`),
+			assert: func(t *testing.T, err error, minVersion TLSMinVersion) {
+				t.Helper()
+
+				require.NoError(t, err)
+				assert.Equal(t, TLSMinVersion(tls.VersionTLS13), minVersion)
+			},
+		},
+	} {
+		t.Run(tc.uc, func(t *testing.T) {
+			// GIVEN
+			var typ Type
+
+			dec, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
+				DecodeHook: decodeTLSMinVersionHookFunc,
+				Result:     &typ,
+			})
+			require.NoError(t, err)
+
+			conf, err := testsupport.DecodeTestConfig(tc.config)
+			require.NoError(t, err)
+
+			// WHEN
+			err = dec.Decode(conf)
+
+			// THEN
+			tc.assert(t, err, typ.MinVersion)
 		})
 	}
 }
