@@ -42,7 +42,7 @@ func newTLSListener(conf config.ServiceConfig, listener net.Listener) (net.Liste
 		GetCertificate: tlsHandler.GetClientInfo,
 	}
 
-	if cfg.MinVersion < tls.VersionTLS13 {
+	if cfg.MinVersion != tls.VersionTLS13 {
 		cfg.CipherSuites = conf.TLS.CipherSuites.OrDefault()
 	}
 

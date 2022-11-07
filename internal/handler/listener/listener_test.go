@@ -4,6 +4,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
+	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"math/big"
@@ -125,7 +126,7 @@ func TestCreateNewListener(t *testing.T) {
 			uc:      "listener with TLS",
 			network: "tcp",
 			serviceConf: config.ServiceConfig{
-				TLS: &config.TLS{Key: keyFile.Name(), Cert: certFile.Name()},
+				TLS: &config.TLS{Key: keyFile.Name(), Cert: certFile.Name(), MinVersion: tls.VersionTLS12},
 			},
 			assert: func(t *testing.T, err error, ln net.Listener, port string) {
 				t.Helper()
