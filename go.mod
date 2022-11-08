@@ -20,6 +20,7 @@ require (
 	github.com/knadh/koanf v1.4.4
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/ory/ladon v1.2.0
+	github.com/pquerna/cachecontrol v0.0.0-20171018203845-0dec1b30a021
 	github.com/rs/zerolog v1.28.0
 	github.com/santhosh-tekuri/jsonschema/v5 v5.0.2
 	github.com/spf13/cobra v1.6.1
