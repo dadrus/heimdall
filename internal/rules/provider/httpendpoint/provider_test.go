@@ -12,6 +12,7 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/cache/mocks"
@@ -145,9 +146,13 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx
 
 	type ResponseWriter func(t *testing.T, w http.ResponseWriter)
 
-	var writeResponse ResponseWriter
+	var (
+		writeResponse ResponseWriter
+		requestCount  int
+	)
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requestCount++
 		writeResponse(t, w)
 	}))
 
@@ -156,6 +161,7 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx
 	for _, tc := range []struct {
 		uc            string
 		conf          []byte
+		setupMocks    func(t *testing.T, cch *mocks.MockCache)
 		writeResponse ResponseWriter
 		assert        func(t *testing.T, logs fmt.Stringer, queue event.RuleSetChangedEventQueue)
 	}{
@@ -165,6 +171,11 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx
 endpoints:
 - url: https://foo.bar.local/rules.yaml
 `),
+			setupMocks: func(t *testing.T, cch *mocks.MockCache) {
+				t.Helper()
+
+				cch.On("Get", mock.Anything).Return(nil)
+			},
 			assert: func(t *testing.T, logs fmt.Stringer, queue event.RuleSetChangedEventQueue) {
 				t.Helper()
 
@@ -187,6 +198,11 @@ endpoints:
 				t.Helper()
 
 				w.WriteHeader(http.StatusBadRequest)
+			},
+			setupMocks: func(t *testing.T, cch *mocks.MockCache) {
+				t.Helper()
+
+				cch.On("Get", mock.Anything).Return(nil)
 			},
 			assert: func(t *testing.T, logs fmt.Stringer, queue event.RuleSetChangedEventQueue) {
 				t.Helper()
@@ -211,6 +227,11 @@ endpoints:
 
 				w.WriteHeader(http.StatusOK)
 			},
+			setupMocks: func(t *testing.T, cch *mocks.MockCache) {
+				t.Helper()
+
+				cch.On("Get", mock.Anything).Return(nil)
+			},
 			assert: func(t *testing.T, logs fmt.Stringer, queue event.RuleSetChangedEventQueue) {
 				t.Helper()
 
@@ -233,6 +254,11 @@ endpoints:
 				w.Header().Set("Content-Type", "application/yaml")
 				_, err := w.Write([]byte("- id: foo"))
 				require.NoError(t, err)
+			},
+			setupMocks: func(t *testing.T, cch *mocks.MockCache) {
+				t.Helper()
+
+				cch.On("Get", mock.Anything).Return(nil)
 			},
 			assert: func(t *testing.T, logs fmt.Stringer, queue event.RuleSetChangedEventQueue) {
 				t.Helper()
@@ -263,6 +289,11 @@ endpoints:
 				w.Header().Set("Content-Type", "application/yaml")
 				_, err := w.Write([]byte("- id: bar"))
 				require.NoError(t, err)
+			},
+			setupMocks: func(t *testing.T, cch *mocks.MockCache) {
+				t.Helper()
+
+				cch.On("Get", mock.Anything).Return(nil)
 			},
 			assert: func(t *testing.T, logs fmt.Stringer, queue event.RuleSetChangedEventQueue) {
 				t.Helper()
@@ -309,6 +340,11 @@ endpoints:
 					callIdx++
 				}
 			}(),
+			setupMocks: func(t *testing.T, cch *mocks.MockCache) {
+				t.Helper()
+
+				cch.On("Get", mock.Anything).Return(nil)
+			},
 			assert: func(t *testing.T, logs fmt.Stringer, queue event.RuleSetChangedEventQueue) {
 				t.Helper()
 
@@ -371,6 +407,11 @@ endpoints:
 					callIdx++
 				}
 			}(),
+			setupMocks: func(t *testing.T, cch *mocks.MockCache) {
+				t.Helper()
+
+				cch.On("Get", mock.Anything).Return(nil)
+			},
 			assert: func(t *testing.T, logs fmt.Stringer, queue event.RuleSetChangedEventQueue) {
 				t.Helper()
 
@@ -420,9 +461,53 @@ endpoints:
 				assert.Equal(t, event.Create, evt.ChangeType)
 			},
 		},
+		{
+			uc: "response is cached",
+			conf: []byte(`
+watch_interval: 250ms
+endpoints:
+  - url: ` + srv.URL + `
+`),
+			writeResponse: func(t *testing.T, w http.ResponseWriter) {
+				t.Helper()
+
+				w.Header().Set("Expires", time.Now().Add(20*time.Second).UTC().Format(http.TimeFormat))
+				w.Header().Set("Content-Type", "application/yaml")
+				_, err := w.Write([]byte("- id: bar"))
+				require.NoError(t, err)
+			},
+			setupMocks: func(t *testing.T, cch *mocks.MockCache) {
+				t.Helper()
+
+				cch.On("Get", mock.Anything).Return(nil)
+				cch.On("Set", mock.Anything, mock.Anything, mock.MatchedBy(func(dur time.Duration) bool {
+					return dur > 19*time.Second && dur < 20*time.Second
+				}))
+			},
+			assert: func(t *testing.T, logs fmt.Stringer, queue event.RuleSetChangedEventQueue) {
+				t.Helper()
+
+				time.Sleep(1000 * time.Millisecond)
+
+				assert.Equal(t, requestCount, 4)
+
+				noUpdatesCount := strings.Count(logs.String(), "No updates received")
+				assert.Equal(t, noUpdatesCount, 3)
+
+				require.Len(t, queue, 1)
+
+				evt := <-queue
+				assert.Contains(t, evt.Src, "http_endpoint:"+srv.URL)
+				assert.Len(t, evt.RuleSet, 1)
+				assert.Equal(t, "bar", evt.RuleSet[0].ID)
+				assert.Equal(t, event.Create, evt.ChangeType)
+			},
+		},
 	} {
 		t.Run(tc.uc, func(t *testing.T) {
 			// GIVEN
+			requestCount = 0
+
 			providerConf, err := testsupport.DecodeTestConfig(tc.conf)
 			require.NoError(t, err)
 
@@ -444,6 +529,11 @@ endpoints:
 					w.WriteHeader(http.StatusOK)
 				})
 
+			setupMocks := x.IfThenElse(tc.setupMocks != nil,
+				tc.setupMocks,
+				func(t *testing.T, cch *mocks.MockCache) { t.Helper() })
+			setupMocks(t, cch)
+
 			// WHEN
 			err = prov.Start(ctx)
 
@@ -452,6 +542,7 @@ endpoints:
 			// THEN
 			require.NoError(t, err)
 			tc.assert(t, logs, queue)
+			cch.AssertExpectations(t)
 		})
 	}
 }
