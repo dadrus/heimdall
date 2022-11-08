@@ -3,6 +3,7 @@ package endpoint
 import (
 	"bytes"
 	"context"
+	"github.com/dadrus/heimdall/internal/httpcache"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -60,13 +61,15 @@ func TestEndpointCreateClient(t *testing.T) {
 
 	peerName := "foobar"
 
+	tBool := true
+
 	for _, tc := range []struct {
 		uc       string
 		endpoint Endpoint
 		assert   func(t *testing.T, client *http.Client)
 	}{
 		{
-			uc:       "for endpoint without configured retry policy",
+			uc:       "for endpoint without configured retry policy and without http cache",
 			endpoint: Endpoint{URL: "http://foo.bar"},
 			assert: func(t *testing.T, client *http.Client) {
 				t.Helper()
@@ -76,7 +79,20 @@ func TestEndpointCreateClient(t *testing.T) {
 			},
 		},
 		{
-			uc: "for endpoint with configured retry policy",
+			uc:       "for endpoint without configured retry policy, but with http cache",
+			endpoint: Endpoint{URL: "http://foo.bar", HTTPCacheEnabled: &tBool},
+			assert: func(t *testing.T, client *http.Client) {
+				t.Helper()
+
+				cacheTransport, ok := client.Transport.(*httpcache.RoundTripper)
+				require.True(t, ok)
+
+				_, ok = cacheTransport.Transport.(*otelhttp.Transport)
+				require.True(t, ok)
+			},
+		},
+		{
+			uc: "for endpoint with configured retry policy and without http cache",
 			endpoint: Endpoint{
 				URL:   "http://foo.bar",
 				Retry: &Retry{GiveUpAfter: 2 * time.Second, MaxDelay: 10 * time.Second},
@@ -85,6 +101,29 @@ func TestEndpointCreateClient(t *testing.T) {
 				t.Helper()
 
 				rrt, ok := client.Transport.(*httpretry.RetryRoundtripper)
+				require.True(t, ok)
+				assert.NotZero(t, rrt.MaxRetryCount)
+				assert.NotNil(t, rrt.ShouldRetry)
+				assert.NotNil(t, rrt.CalculateBackoff)
+
+				_, ok = rrt.Next.(*otelhttp.Transport)
+				require.True(t, ok)
+			},
+		},
+		{
+			uc: "for endpoint with configured retry policy and with http cache",
+			endpoint: Endpoint{
+				URL:              "http://foo.bar",
+				Retry:            &Retry{GiveUpAfter: 2 * time.Second, MaxDelay: 10 * time.Second},
+				HTTPCacheEnabled: &tBool,
+			},
+			assert: func(t *testing.T, client *http.Client) {
+				t.Helper()
+
+				cacheTransport, ok := client.Transport.(*httpcache.RoundTripper)
+				require.True(t, ok)
+
+				rrt, ok := cacheTransport.Transport.(*httpretry.RetryRoundtripper)
 				require.True(t, ok)
 				assert.NotZero(t, rrt.MaxRetryCount)
 				assert.NotNil(t, rrt.ShouldRetry)
