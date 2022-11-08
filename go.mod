@@ -8,7 +8,7 @@ require (
 	github.com/dlclark/regexp2 v1.7.0
 	github.com/dop251/goja v0.0.0-20221106173738-3b8a68ca89b4
 	github.com/fsnotify/fsnotify v1.6.0
-	github.com/go-co-op/gocron v1.17.1
+	github.com/go-co-op/gocron v1.18.0
 	github.com/gobwas/glob v0.2.3
 	github.com/goccy/go-json v0.9.11
 	github.com/gofiber/fiber/v2 v2.39.0
