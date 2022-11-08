@@ -449,10 +449,7 @@ endpoints:
 				time.Sleep(1 * time.Second)
 
 				assert.Equal(t, 1, requestCount)
-
-				noUpdatesCount := strings.Count(logs.String(), "No updates received")
-				assert.Equal(t, noUpdatesCount, 3)
-
+				assert.Equal(t, 3, strings.Count(logs.String(), "No updates received"))
 				require.Len(t, queue, 1)
 
 				evt := <-queue
