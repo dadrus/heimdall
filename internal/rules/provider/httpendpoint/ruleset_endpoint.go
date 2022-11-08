@@ -80,5 +80,10 @@ func (e *ruleSetEndpoint) init() error {
 
 	e.Method = http.MethodGet
 
+	if e.HTTPCacheEnabled == nil {
+		cacheEnabled := true
+		e.HTTPCacheEnabled = &cacheEnabled
+	}
+
 	return nil
 }
