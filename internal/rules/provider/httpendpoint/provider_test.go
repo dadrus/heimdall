@@ -219,6 +219,7 @@ endpoints:
 
 				time.Sleep(250 * time.Millisecond)
 
+				assert.Equal(t, 1, requestCount)
 				assert.Contains(t, logs.String(), "No updates received")
 
 				require.Len(t, queue, 0)
@@ -242,6 +243,7 @@ endpoints:
 
 				time.Sleep(600 * time.Millisecond)
 
+				assert.Equal(t, 1, requestCount)
 				assert.NotContains(t, logs.String(), "No updates received")
 
 				require.Len(t, queue, 1)
@@ -272,6 +274,7 @@ endpoints:
 
 				time.Sleep(600 * time.Millisecond)
 
+				assert.Equal(t, 3, requestCount)
 				assert.Contains(t, logs.String(), "No updates received")
 
 				require.Len(t, queue, 1)
@@ -317,6 +320,7 @@ endpoints:
 
 				time.Sleep(1000 * time.Millisecond)
 
+				assert.Equal(t, 4, requestCount)
 				assert.Contains(t, logs.String(), "No updates received")
 
 				require.Len(t, queue, 3)
@@ -379,6 +383,7 @@ endpoints:
 
 				time.Sleep(1000 * time.Millisecond)
 
+				assert.Equal(t, 4, requestCount)
 				assert.NotContains(t, logs.String(), "No updates received")
 
 				require.Len(t, queue, 7)
