@@ -291,6 +291,10 @@ HTTP headers to be sent to the endpoint.
 +
 CAUTION: These headers are not analyzed by heimdall and are just forwarded to the endpoint. E.g. if you configure the `Content-Encoding` to something like `gzip`, the service behind the used endpoint might fail to answer, as it would expect the body to be compressed.
 
+* *`enable_http_cache`* _bool_ (optional)
++
+Whether HTTP caching according to [RFC 7234](https://www.rfc-editor.org/rfc/rfc7234) should be used. Defaults to `false` if not otherwise stated in the description of the configuration type, making use of the `endpoint` property. If set to `true` heimdall will strictly follow the requirements from RFC 7234, cache the responses if possible and reuse these if still valid.
+
 .Endpoint configuration
 ====
 
@@ -310,6 +314,7 @@ auth:
 headers:
   X-My-First-Header: foobar
   X-My-Second-Header: barfoo
+enable_http_cache: true
 ----
 
 ====
