@@ -58,8 +58,10 @@ func (rt *RoundTripper) cachedResponse(req *http.Request) (*http.Response, error
 }
 
 func (rt *RoundTripper) cacheResponse(req *http.Request, resp *http.Response) {
+	defaultExpirationTime := time.Time{}
+
 	reasons, expires, err := cachecontrol.CachableResponse(req, resp, cachecontrol.Options{PrivateCache: true})
-	if err != nil || len(reasons) != 0 {
+	if err != nil || len(reasons) != 0 || expires == defaultExpirationTime {
 		return
 	}
 
