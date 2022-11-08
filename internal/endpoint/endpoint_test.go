@@ -3,7 +3,6 @@ package endpoint
 import (
 	"bytes"
 	"context"
-	"github.com/dadrus/heimdall/internal/httpcache"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -17,6 +16,7 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/httpcache"
 	"github.com/dadrus/heimdall/internal/x"
 )
 
