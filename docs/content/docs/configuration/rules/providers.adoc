@@ -74,7 +74,7 @@ Each entry of that array supports all the properties defined by link:{{< relref 
 +
 This property can be used to create kind of a namespace for the rule sets retrieved from the different endpoints. If set, the provider checks whether the urls specified in all rules retrieved from the referenced endpoint have the defined path prefix. If not, a warning is emitted and the rule set is ignored. This can be used to ensure a rule retrieved from one endpoint does not collide with a rule from another endpoint.
 
-NOTE: HTTP caching according to [RFC 7234](https://www.rfc-editor.org/rfc/rfc7234) is enabled by default. It can be disabled by setting `enable_http_cache` to `false`.
+NOTE: HTTP caching according to https://www.rfc-editor.org/rfc/rfc7234[RFC 7234] is enabled by default. It can be disabled by setting `enable_http_cache` to `false`.
 
 This provider doesn't need any additional configuration for a rule set. So the contents of files can be just a list of rules as described in link:{{< relref "rule_configuration.adoc#_rule_set" >}}[Rule Sets].
 
