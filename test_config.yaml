@@ -80,6 +80,7 @@ pipeline:
         jwks_endpoint:
           url: http://foo/token
           method: GET
+          enable_http_cache: true
         jwt_source:
           - header: Authorization
             schema: Bearer
@@ -187,6 +188,7 @@ rules:
       endpoints:
         - url: http://foo.bar/rules.yaml
           rule_path_match_prefix: /foo
+          enable_http_cache: false
         - url: http://bar.foo/rules.yaml
           headers:
             bla: bla
