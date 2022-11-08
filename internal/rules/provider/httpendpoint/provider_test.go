@@ -3,7 +3,6 @@ package httpendpoint
 import (
 	"context"
 	"fmt"
-	"github.com/dadrus/heimdall/internal/cache/memory"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -15,7 +14,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/dadrus/heimdall/internal/cache/mocks"
+	"github.com/dadrus/heimdall/internal/cache/memory"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/event"
 	"github.com/dadrus/heimdall/internal/testsupport"
@@ -129,11 +128,10 @@ endpoints:
 			providerConf, err := testsupport.DecodeTestConfig(tc.conf)
 			require.NoError(t, err)
 
-			cch := &mocks.MockCache{}
 			queue := make(event.RuleSetChangedEventQueue, 10)
 
 			// WHEN
-			prov, err := newProvider(providerConf, cch, queue, log.Logger)
+			prov, err := newProvider(providerConf, memory.New(), queue, log.Logger)
 
 			// THEN
 			tc.assert(t, err, prov)
