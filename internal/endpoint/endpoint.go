@@ -18,16 +18,18 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/httpcache"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
 type Endpoint struct {
-	URL          string                 `mapstructure:"url"`
-	Method       string                 `mapstructure:"method"`
-	Retry        *Retry                 `mapstructure:"retry"`
-	AuthStrategy AuthenticationStrategy `mapstructure:"auth"`
-	Headers      map[string]string      `mapstructure:"headers"`
+	URL              string                 `mapstructure:"url"`
+	Method           string                 `mapstructure:"method"`
+	Retry            *Retry                 `mapstructure:"retry"`
+	AuthStrategy     AuthenticationStrategy `mapstructure:"auth"`
+	Headers          map[string]string      `mapstructure:"headers"`
+	HTTPCacheEnabled *bool                  `mapstructure:"enable_http_cache"`
 }
 
 type Retry struct {
@@ -62,6 +64,10 @@ func (e Endpoint) CreateClient(peerName string) *http.Client {
 			client,
 			httpretry.WithBackoffPolicy(
 				httpretry.ExponentialBackoff(e.Retry.MaxDelay, e.Retry.GiveUpAfter, 0)))
+	}
+
+	if e.HTTPCacheEnabled != nil && *e.HTTPCacheEnabled {
+		client.Transport = &httpcache.RoundTripper{Transport: client.Transport}
 	}
 
 	return client
