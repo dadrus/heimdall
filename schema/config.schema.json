@@ -385,6 +385,11 @@
           "examples": [
             "/foo/bar"
           ]
+        },
+        "enable_http_cache": {
+          "description": "Enables or disables http cache usage according to RFC 7234",
+          "type": "boolean",
+          "default": true
         }
       }
     },
@@ -456,6 +461,11 @@
               "$ref": "#/definitions/endpointAuthClientCredentialsProperties"
             }
           ]
+        },
+        "enable_http_cache": {
+          "description": "Enables or disables http cache usage according to RFC 7234",
+          "type": "boolean",
+          "default": false
         }
       }
     },

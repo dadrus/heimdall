@@ -48,6 +48,8 @@ func TestRuleSetEndpointInit(t *testing.T) {
 				require.NoError(t, err)
 				assert.Equal(t, "http://foo.bar", ep.URL)
 				assert.Equal(t, http.MethodGet, ep.Method)
+				require.NotNil(t, ep.HTTPCacheEnabled)
+				assert.True(t, *ep.HTTPCacheEnabled)
 			},
 		},
 	} {

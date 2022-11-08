@@ -14,7 +14,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/dadrus/heimdall/internal/cache/mocks"
+	"github.com/dadrus/heimdall/internal/cache/memory"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/event"
 	"github.com/dadrus/heimdall/internal/testsupport"
@@ -128,11 +128,10 @@ endpoints:
 			providerConf, err := testsupport.DecodeTestConfig(tc.conf)
 			require.NoError(t, err)
 
-			cch := &mocks.MockCache{}
 			queue := make(event.RuleSetChangedEventQueue, 10)
 
 			// WHEN
-			prov, err := newProvider(providerConf, cch, queue, log.Logger)
+			prov, err := newProvider(providerConf, memory.New(), queue, log.Logger)
 
 			// THEN
 			tc.assert(t, err, prov)
@@ -145,9 +144,13 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx
 
 	type ResponseWriter func(t *testing.T, w http.ResponseWriter)
 
-	var writeResponse ResponseWriter
+	var (
+		writeResponse ResponseWriter
+		requestCount  int
+	)
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requestCount++
 		writeResponse(t, w)
 	}))
 
@@ -216,6 +219,7 @@ endpoints:
 
 				time.Sleep(250 * time.Millisecond)
 
+				assert.Equal(t, 1, requestCount)
 				assert.Contains(t, logs.String(), "No updates received")
 
 				require.Len(t, queue, 0)
@@ -239,6 +243,7 @@ endpoints:
 
 				time.Sleep(600 * time.Millisecond)
 
+				assert.Equal(t, 1, requestCount)
 				assert.NotContains(t, logs.String(), "No updates received")
 
 				require.Len(t, queue, 1)
@@ -269,6 +274,7 @@ endpoints:
 
 				time.Sleep(600 * time.Millisecond)
 
+				assert.Equal(t, 3, requestCount)
 				assert.Contains(t, logs.String(), "No updates received")
 
 				require.Len(t, queue, 1)
@@ -314,6 +320,7 @@ endpoints:
 
 				time.Sleep(1000 * time.Millisecond)
 
+				assert.Equal(t, 4, requestCount)
 				assert.Contains(t, logs.String(), "No updates received")
 
 				require.Len(t, queue, 3)
@@ -376,6 +383,7 @@ endpoints:
 
 				time.Sleep(1000 * time.Millisecond)
 
+				assert.Equal(t, 4, requestCount)
 				assert.NotContains(t, logs.String(), "No updates received")
 
 				require.Len(t, queue, 7)
@@ -420,18 +428,85 @@ endpoints:
 				assert.Equal(t, event.Create, evt.ChangeType)
 			},
 		},
+		{
+			uc: "response is cached",
+			conf: []byte(`
+watch_interval: 250ms
+endpoints:
+  - url: ` + srv.URL + `
+`),
+			writeResponse: func(t *testing.T, w http.ResponseWriter) {
+				t.Helper()
+
+				w.Header().Set("Expires", time.Now().Add(20*time.Second).UTC().Format(http.TimeFormat))
+				w.Header().Set("Content-Type", "application/yaml")
+				_, err := w.Write([]byte("- id: bar"))
+				require.NoError(t, err)
+			},
+			assert: func(t *testing.T, logs fmt.Stringer, queue event.RuleSetChangedEventQueue) {
+				t.Helper()
+
+				time.Sleep(1 * time.Second)
+
+				assert.Equal(t, 1, requestCount)
+				assert.Equal(t, 3, strings.Count(logs.String(), "No updates received"))
+				require.Len(t, queue, 1)
+
+				evt := <-queue
+				assert.Contains(t, evt.Src, "http_endpoint:"+srv.URL)
+				assert.Len(t, evt.RuleSet, 1)
+				assert.Equal(t, "bar", evt.RuleSet[0].ID)
+				assert.Equal(t, event.Create, evt.ChangeType)
+			},
+		},
+		{
+			uc: "response is not cached, as caching is disabled",
+			conf: []byte(`
+watch_interval: 250ms
+endpoints:
+  - url: ` + srv.URL + `
+    enable_http_cache: false
+`),
+			writeResponse: func(t *testing.T, w http.ResponseWriter) {
+				t.Helper()
+
+				w.Header().Set("Expires", time.Now().Add(20*time.Second).UTC().Format(http.TimeFormat))
+				w.Header().Set("Content-Type", "application/yaml")
+				_, err := w.Write([]byte("- id: bar"))
+				require.NoError(t, err)
+			},
+			assert: func(t *testing.T, logs fmt.Stringer, queue event.RuleSetChangedEventQueue) {
+				t.Helper()
+
+				time.Sleep(1 * time.Second)
+
+				assert.Equal(t, 4, requestCount)
+
+				noUpdatesCount := strings.Count(logs.String(), "No updates received")
+				assert.Equal(t, noUpdatesCount, 3)
+
+				require.Len(t, queue, 1)
+
+				evt := <-queue
+				assert.Contains(t, evt.Src, "http_endpoint:"+srv.URL)
+				assert.Len(t, evt.RuleSet, 1)
+				assert.Equal(t, "bar", evt.RuleSet[0].ID)
+				assert.Equal(t, event.Create, evt.ChangeType)
+			},
+		},
 	} {
 		t.Run(tc.uc, func(t *testing.T) {
 			// GIVEN
+			requestCount = 0
+
 			providerConf, err := testsupport.DecodeTestConfig(tc.conf)
 			require.NoError(t, err)
 
-			cch := &mocks.MockCache{}
 			queue := make(event.RuleSetChangedEventQueue, 10)
 			defer close(queue)
 
 			logs := &strings.Builder{}
-			prov, err := newProvider(providerConf, cch, queue, zerolog.New(logs))
+			prov, err := newProvider(providerConf, memory.New(), queue, zerolog.New(logs))
 			require.NoError(t, err)
 
 			ctx := context.Background()
