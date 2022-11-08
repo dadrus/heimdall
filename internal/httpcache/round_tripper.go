@@ -77,6 +77,7 @@ func (rt *RoundTripper) cacheResponse(req *http.Request, resp *http.Response) {
 func cacheKey(req *http.Request) string {
 	hash := sha256.New()
 
+	hash.Write([]byte("RFC 7234"))
 	hash.Write([]byte(req.URL.String()))
 	hash.Write([]byte(req.Method))
 

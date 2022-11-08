@@ -446,9 +446,9 @@ endpoints:
 			assert: func(t *testing.T, logs fmt.Stringer, queue event.RuleSetChangedEventQueue) {
 				t.Helper()
 
-				time.Sleep(1000 * time.Millisecond)
+				time.Sleep(1 * time.Second)
 
-				assert.Equal(t, requestCount, 1)
+				assert.Equal(t, 1, requestCount)
 
 				noUpdatesCount := strings.Count(logs.String(), "No updates received")
 				assert.Equal(t, noUpdatesCount, 3)
