@@ -462,6 +462,41 @@ endpoints:
 				assert.Equal(t, event.Create, evt.ChangeType)
 			},
 		},
+		{
+			uc: "response is not cached, as caching is disabled",
+			conf: []byte(`
+watch_interval: 250ms
+endpoints:
+  - url: ` + srv.URL + `
+    enable_http_cache: false
+`),
+			writeResponse: func(t *testing.T, w http.ResponseWriter) {
+				t.Helper()
+
+				w.Header().Set("Expires", time.Now().Add(20*time.Second).UTC().Format(http.TimeFormat))
+				w.Header().Set("Content-Type", "application/yaml")
+				_, err := w.Write([]byte("- id: bar"))
+				require.NoError(t, err)
+			},
+			assert: func(t *testing.T, logs fmt.Stringer, queue event.RuleSetChangedEventQueue) {
+				t.Helper()
+
+				time.Sleep(1 * time.Second)
+
+				assert.Equal(t, 4, requestCount)
+
+				noUpdatesCount := strings.Count(logs.String(), "No updates received")
+				assert.Equal(t, noUpdatesCount, 3)
+
+				require.Len(t, queue, 1)
+
+				evt := <-queue
+				assert.Contains(t, evt.Src, "http_endpoint:"+srv.URL)
+				assert.Len(t, evt.RuleSet, 1)
+				assert.Equal(t, "bar", evt.RuleSet[0].ID)
+				assert.Equal(t, event.Create, evt.ChangeType)
+			},
+		},
 	} {
 		t.Run(tc.uc, func(t *testing.T) {
 			// GIVEN
