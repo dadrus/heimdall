@@ -21,9 +21,21 @@ As documented in link:{{< relref "/docs/getting_started/concepts.adoc" >}}[Conce
 
 Both is required to enable heimdall building the certificate chain for TLS server certificate verification purpose. If heimdall fails doing so, the connection will be dropped.
 
+As written above, heimdall makes use of the OS wide trust store to build the certificate chain. The most common installation directory on a Linux system for that trust store is the `/etc/ssl/certs` directory. In addition to the separate root and intermediate CA certificates, it also contains a `ca-certificates.crt` file, containing all installed certificates as well. This file is used by heimdall for the aforesaid purpose.
+
 [NOTE]
 ====
-heimdall Docker image is shipped without any certificates by intention to ensure you take care about the up-to-date status of the trust store. This way, you have to mount the OS trust store into heimdall's container to enable its usage.
+heimdall Docker image is shipped without any certificates by intention to ensure you take care about the up-to-date status of the trust store. This way, you use heimdall in a Docker image, you have to mount the OS trust store into heimdall's container to enable its usage.
+
+E.g.
+[source, bash]
+----
+docker run -t -p 4456:4456 \
+  -v $PWD:/heimdall/conf \
+  -v /etc/ssl/certs/ca-certificates.crt:/etc/ssl/certs/ca-certificates.crt:ro \
+   dadrus/heimdall:latest serve decision \
+  -c /heimdall/conf/heimdall.yaml
+----
 ====
 
 The verification of TLS server certificates is not the single configuration option. You should also ensure heimdall's services, you're using, are configured to be available via TLS as well. See link:{{< relref "/docs/configuration/services/configuration_types.adoc#_tls" >}}[TLS Configuration] for all available options.
