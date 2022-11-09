@@ -46,6 +46,10 @@ Generates the autocompletion script for the specified shell.
 +
 Calls heimdall's healthcheck endpoint to verify the status of the deployment.
 
+* `help`
++
+Provides an overview about the available commands and their descriptions.
+
 * `serve`
 +
 Starts heimdall in the decision, or the reverse proxy operation mode.

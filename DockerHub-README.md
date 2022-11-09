@@ -42,7 +42,7 @@ Start heimdall:
 
 ```bash
 docker run -t -p 4456:4456 -v $PWD:/heimdall/conf \
-  dadrus/heimdall:latest serve api -c /heimdall/conf/heimdall.yaml
+  dadrus/heimdall:latest serve decision -c /heimdall/conf/heimdall.yaml
 ```
 
 Call the decision service endpoint to emulate behavior of an API-Gateway:
