@@ -293,7 +293,7 @@ jobs:
           replace: "${{ needs.prepare-release.outputs.tag_name }}"
           regex: false
           include: docs/**
-      - name: Update versions.json
+      - name: Update versions JSON document
         id: update-version-json
         if: needs.prepare-release.outputs.release_created
         run: |
