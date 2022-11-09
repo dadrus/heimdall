@@ -118,7 +118,7 @@ rules:
       - mutator: create_jwt
 
   providers:
-    file:
+    file_system:
       src: /heimdall/conf/rule.yaml
       watch: true
 ```

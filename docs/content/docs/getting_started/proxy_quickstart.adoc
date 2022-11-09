@@ -52,7 +52,7 @@ rules:
       - mutator: create_jwt
 
   providers:
-    file:                         // <7>
+    file_system:                  // <7>
       src: /heimdall/conf/rule.yaml
       watch: true
 ----
@@ -62,7 +62,7 @@ rules:
 <4> Configures the `allow` authorizer. It will be used in our rule to allow requests.
 <5> Configures the `jwt` mutator.
 <6> Configures the default rule.
-<7> Configures the `file` provider, which will allow loading of our rule from the file system.
+<7> Configures the `file_system` provider, which will allow loading of our rule from the file system.
 +
 Put together, this configuration will let Heimdall create a JSON Web Token (JWT) with `sub` claim set to `anonymous` for every request on every URL for the HTTP methods GET and POST. The JWT itself will be put into the `Authorization` header as a bearer token. Since the above default rule cannot be used to forward requests to the upstream service, the `deny` authenticator will reject the requests for us and enforce a configuration of an authorization mechanism in a specific rule, which we're going to define next.
 
