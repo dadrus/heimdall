@@ -1,5 +1,32 @@
 # Changelog
 
+## [0.4.0-alpha](https://github.com/dadrus/heimdall/compare/v0.3.0-alpha...v0.4.0-alpha) (2022-11-09)
+
+
+### ⚠ BREAKING CHANGES
+
+* file system provider rename (#281)
+* OpenTelemetry tracing support (#246)
+* Pipeline handler identifier are present in error context to support pipeline handler specific error handling strategies (#239)
+* ECDSA P-384 key is generated instead of RSA-2048 for JWT signing purposes on startup if no key store has been configured
+
+### Features
+
+* Configuration of minimal allowed TLS version and the required cipher suites ([#303](https://github.com/dadrus/heimdall/issues/303)) ([76c02bf](https://github.com/dadrus/heimdall/commit/76c02bfc69f807ec59e2add191e817790d195b8b))
+* HTTP caching according to RFC 7234 is supported by pipeline handlers and the httpendpoint provider ([#307](https://github.com/dadrus/heimdall/issues/307)) ([c5349c1](https://github.com/dadrus/heimdall/commit/c5349c1e41459e63242abe87b3305a0a73bc23c5))
+* Made all log statements adhering to GELF format ([#259](https://github.com/dadrus/heimdall/issues/259)) ([94bf2f1](https://github.com/dadrus/heimdall/commit/94bf2f14fca62b93de3f2096b15e3fb75e423c61))
+* OpenTelemetry tracing support ([#246](https://github.com/dadrus/heimdall/issues/246)) ([c3e81fd](https://github.com/dadrus/heimdall/commit/c3e81fd3d5ce2af1db24288275128d3f55c5f060))
+* Pipeline handler identifier are present in error context to support pipeline handler specific error handling strategies ([#239](https://github.com/dadrus/heimdall/issues/239)) ([8a73e86](https://github.com/dadrus/heimdall/commit/8a73e863fde79cc568ae7d77d8b9433a4c14b738))
+* Provider to load rule sets from cloud blobs ([#283](https://github.com/dadrus/heimdall/issues/283)) ([6eef3dc](https://github.com/dadrus/heimdall/commit/6eef3dc6857414a56d8e76999d8e518aca5a0867))
+* Provider to load rule sets from HTTP(s) endpoints ([#263](https://github.com/dadrus/heimdall/issues/263)) ([5ff495c](https://github.com/dadrus/heimdall/commit/5ff495cb4ad4a32314f44c92b7b8035a44212ecd))
+* Support for log, trace and request correlation ([#254](https://github.com/dadrus/heimdall/issues/254)) ([a543230](https://github.com/dadrus/heimdall/commit/a5432307b7eb842187277013bc7f3445923df37d))
+
+
+### Code Refactoring
+
+* ECDSA P-384 key is generated instead of RSA-2048 for JWT signing purposes on startup if no key store has been configured ([6b62b47](https://github.com/dadrus/heimdall/commit/6b62b4782c2c5e6fd26809e2e7baaad22325f005))
+* file system provider rename ([#281](https://github.com/dadrus/heimdall/issues/281)) ([04a33f2](https://github.com/dadrus/heimdall/commit/04a33f22efc97f22de0cf43b9ffe5a5976dd4e39))
+
 ## [0.3.0-alpha](https://github.com/dadrus/heimdall/compare/v0.2.0-alpha...v0.3.0-alpha) (2022-09-09)
 
 
