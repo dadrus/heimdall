@@ -16,7 +16,7 @@ require (
 	github.com/iancoleman/strcase v0.2.0
 	github.com/instana/go-otel-exporter v0.0.0-20220908102301-52c5d8dbfd86
 	github.com/jellydator/ttlcache/v3 v3.0.0
-	github.com/johannesboyne/gofakes3 v0.0.0-20220627085814-c3ac35da23b2
+	github.com/johannesboyne/gofakes3 v0.0.0-20221110173912-32fb85c5aed6
 	github.com/knadh/koanf v1.4.4
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/ory/ladon v1.2.0
