@@ -1,0 +1,30 @@
+apiVersion: v2
+name: heimdall
+description: A cloud native Identity Aware Proxy and Access Control Decision API
+version: 0.1.0
+appVersion: "0.4.1-alpha"
+type: application
+
+home: https://dadrus.github.io/heimdall/
+
+sources:
+  - https://github.com/dadrus/heimdall
+
+maintainers:
+  - name: Dimitrij Drus
+    email: dadrus@gmx.de
+
+keywords:
+  - zero-trust
+  - authentication
+  - authorization
+  - access-control
+  - access-management
+  - policy-enforcement
+  - oauth2
+  - openid-connect
+  - iap
+  - auth-proxy
+  - identity-aware-proxy
+  - decision-api
+  - auth-filter

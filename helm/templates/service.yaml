@@ -1,0 +1,84 @@
+{{- if .Values.service.proxy.enabled -}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "heimdall.fullname" . }}-proxy
+  {{- if .Release.Namespace }}
+  namespace: {{ .Release.Namespace }}
+  {{- end }}
+  labels:
+    foo: bar
+    app.kubernetes.io/component: {{ include "heimdall.name" . }}-proxy
+    {{- include "heimdall.proxySelectorLabels" . | nindent 4 }}
+  {{- with .Values.service.proxy.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ .Values.service.proxy.type }}
+  ports:
+    - port: {{ .Values.service.proxy.port }}
+      targetPort: http-proxy
+      protocol: TCP
+      name: {{ .Values.service.proxy.name }}
+  selector:
+    {{- include "heimdall.proxySelectorLabels" . | nindent 4 }}
+{{- end }}
+---
+{{- if .Values.service.management.enabled -}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "heimdall.fullname" . }}-management
+  {{- if .Release.Namespace }}
+  namespace: {{ .Release.Namespace }}
+  {{- end }}
+  labels:
+    app.kubernetes.io/component: {{ include "heimdall.name" . }}-management
+    {{- include "heimdall.labels" . | nindent 4 }}
+    {{- with .Values.service.management.labels -}}
+    {{- toYaml . | nindent 4 }}
+    {{- end -}}
+  {{- with .Values.service.management.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ .Values.service.management.type }}
+  ports:
+    - port: {{ .Values.service.management.port }}
+      targetPort: http-management
+      protocol: TCP
+      name: {{ .Values.service.management.name }}
+  selector:
+    {{- include "heimdall.selectorLabels" . | nindent 4 }}
+{{- end }}
+---
+{{- if .Values.service.metrics.enabled -}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "heimdall.fullname" . }}-metrics
+  {{- if .Release.Namespace }}
+  namespace: {{ .Release.Namespace }}
+  {{- end }}
+  labels:
+    app.kubernetes.io/component: {{ include "heimdall.name" . }}-metrics
+    {{- include "heimdall.labels" . | nindent 4 }}
+    {{- with .Values.service.metrics.labels -}}
+    {{- toYaml . | nindent 4 }}
+    {{- end -}}
+  {{- with .Values.service.metrics.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ .Values.service.metrics.type }}
+  ports:
+    - port: {{ .Values.service.metrics.port }}
+      targetPort: http-metrics
+      protocol: TCP
+      name: {{ .Values.service.metrics.name }}
+  selector:
+    {{- include "heimdall.selectorLabels" . | nindent 4 }}
+{{- end -}}
