@@ -150,3 +150,16 @@ deployment:
 
   affinity: {}
 
+heimdall:
+  config:
+    serve:
+      decision:
+        port: 9090
+      proxy:
+        port: 9090
+      management:
+        port: 9090
+    metrics:
+      prometheus:
+        port: 9090
+
