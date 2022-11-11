@@ -4,11 +4,14 @@
   "description": "Heimdall documentation",
   "main": "index.html",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "serve": "hugo serve -v -D --noHTTPCache --disableFastRender -d ./build",
+    "build": "hugo --minify -d ./public"
   },
   "author": "",
   "license": "Apache 2.0",
   "dependencies": {
+    "@mermaid-js/mermaid-cli": "^9.1.7",
     "bootstrap": "^5.2.0",
     "bootstrap-icons": "^1.8.3",
     "hugo-flexsearch": "1.0.2"
