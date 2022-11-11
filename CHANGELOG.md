@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.1-alpha](https://github.com/dadrus/heimdall/compare/v0.4.0-alpha...v0.4.1-alpha) (2022-11-11)
+
+
+### Bug Fixes
+
+* User for the heimdall process within the container fixed ([#323](https://github.com/dadrus/heimdall/issues/323)) ([77e36f9](https://github.com/dadrus/heimdall/commit/77e36f93009e82dae16f64c66fe905ed81162df9))
+
 ## [0.4.0-alpha](https://github.com/dadrus/heimdall/compare/v0.3.0-alpha...v0.4.0-alpha) (2022-11-09)
 
 
