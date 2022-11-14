@@ -1,6 +1,4 @@
 # Default values for heimdall.
-replicaCount: 2
-
 image:
   repository: dadrus/heimdall
   pullPolicy: IfNotPresent
@@ -136,6 +134,8 @@ deployment:
     # requests:
     #   cpu: 100m
     #   memory: 128Mi
+
+  replicaCount: 2
 
   autoscaling:
     enabled: true

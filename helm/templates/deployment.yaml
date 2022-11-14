@@ -9,7 +9,7 @@ metadata:
     {{- include "heimdall.labels" . | nindent 4 }}
 spec:
   {{- if not .Values.deployment.autoscaling.enabled }}
-  replicas: {{ .Values.replicaCount }}
+  replicas: {{ .Values.deployment.replicaCount }}
   {{- end }}
   selector:
     matchLabels:
@@ -32,6 +32,10 @@ spec:
         {{- toYaml .Values.deployment.pod.securityContext | nindent 8 }}
       # https://github.com/kubernetes/kubernetes/issues/57601
       automountServiceAccountToken: false
+      volumes:
+        - name: {{ include "heimdall.name" . }}-config-volume
+          configMap:
+            name: {{ include "heimdall.fullname" . }}-configmap
       containers:
         - name: {{ .Chart.Name }}
           securityContext:
