@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -147,10 +148,14 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx
 	var (
 		writeResponse ResponseWriter
 		requestCount  int
+		rcm           sync.Mutex
 	)
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		rcm.Lock()
 		requestCount++
+		rcm.Unlock()
+
 		writeResponse(t, w)
 	}))
 
