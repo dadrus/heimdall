@@ -325,7 +325,7 @@ endpoints:
 
 				time.Sleep(1000 * time.Millisecond)
 
-				assert.Equal(t, 4, requestCount)
+				assert.True(t, requestCount >= 4)
 				assert.Contains(t, logs.String(), "No updates received")
 
 				require.Len(t, queue, 3)
@@ -351,7 +351,7 @@ endpoints:
 		{
 			uc: "successive changes to the rule set in each retrieval",
 			conf: []byte(`
-watch_interval: 250ms
+watch_interval: 200ms
 endpoints:
   - url: ` + srv.URL + `
 `),
@@ -386,10 +386,10 @@ endpoints:
 			assert: func(t *testing.T, logs fmt.Stringer, queue event.RuleSetChangedEventQueue) {
 				t.Helper()
 
-				time.Sleep(1000 * time.Millisecond)
+				time.Sleep(1200 * time.Millisecond)
 
-				assert.Equal(t, 4, requestCount)
-				assert.NotContains(t, logs.String(), "No updates received")
+				assert.True(t, requestCount >= 4)
+				assert.Contains(t, logs.String(), "No updates received")
 
 				require.Len(t, queue, 7)
 
