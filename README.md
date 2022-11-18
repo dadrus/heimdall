@@ -5,6 +5,7 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/dadrus/heimdall)](https://goreportcard.com/report/github.com/dadrus/heimdall) 
 [![License](https://img.shields.io/github/license/dadrus/heimdall)](https://github.com/dadrus/heimdall/blob/master/LICENSE)
 [![Docker](https://img.shields.io/docker/v/dadrus/heimdall?color=lightblue&label=docker)](https://hub.docker.com/r/dadrus/heimdall)
+[![Downloads](https://img.shields.io/github/downloads/dadrus/heimdall/total.svg)](https://github.com/dadrus/heimdall/releases)
 
 ## Background
 
