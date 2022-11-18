@@ -31,15 +31,30 @@ Create chart name and version as used by the chart label.
 {{- end }}
 
 {{/*
+Create namesapce.
+*/}}
+{{- define "heimdall.namespace" -}}
+{{- if .Release.Namespace -}}
+namespace: {{ .Release.Namespace }}
+{{- end -}}
+{{- end }}
+
+{{/*
 Common labels
 */}}
 {{- define "heimdall.labels" -}}
 helm.sh/chart: {{ include "heimdall.chart" . }}
 {{ include "heimdall.selectorLabels" . }}
-{{- if .Chart.AppVersion }}
+  {{- if .Chart.AppVersion }}
 app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
-{{- end }}
+  {{- end }}
 app.kubernetes.io/managed-by: {{ .Release.Service }}
+  {{- if .Component -}}
+    {{- $component := get .Values .Component -}}
+    {{- with $component.labels }}
+{{ toYaml . }}
+    {{- end -}}
+  {{- end -}}
 {{- end }}
 
 {{/*
@@ -50,23 +65,4 @@ app.kubernetes.io/name: {{ include "heimdall.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
-{{/*
-Proxy labels
-*/}}
-{{- define "heimdall.proxySelectorLabels" -}}
-{{ include "heimdall.selectorLabels" . }}
-{{- with .Values.service.proxy.labels -}}
-{{- toYaml . }}
-{{- end -}}
-{{- end }}
 
-{{/*
-Create the name of the service account to use
-*/}}
-{{- define "heimdall.serviceAccountName" -}}
-{{- if .Values.serviceAccount.create }}
-{{- default (include "heimdall.fullname" .) .Values.serviceAccount.name }}
-{{- else }}
-{{- default "default" .Values.serviceAccount.name }}
-{{- end }}
-{{- end }}

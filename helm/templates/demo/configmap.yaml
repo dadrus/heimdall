@@ -1,0 +1,71 @@
+{{- if .Values.demoSetup }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "heimdall.fullname" . }}-config
+  {{- include "heimdall.namespace" . | nindent 2 }}
+  labels:
+{{ include "heimdall.labels" . | indent 4 }}
+data:
+{{- if eq .Values.operationMode "decision" }}
+  heimdall.yaml: |
+    log:
+      level: info
+
+    pipeline:
+      authenticators:
+        - id: anonymous_authenticator
+          type: anonymous
+      mutators:
+        - id: create_jwt
+          type: jwt
+
+    rules:
+      default:
+        methods:
+          - GET
+          - POST
+        execute:
+          - authenticator: anonymous_authenticator
+          - mutator: create_jwt
+{{- else }}
+    heimdall.yaml: |
+      log:
+        level: info
+
+      pipeline:
+        authenticators:
+          - id: anonymous_authenticator
+            type: anonymous
+        authorizers:
+          - id: deny_all_requests
+            type: deny
+          - id: allow_all_requests
+            type: allow
+        mutators:
+          - id: create_jwt
+            type: jwt
+
+      rules:
+        default:
+          methods:
+            - GET
+            - POST
+          execute:
+            - authenticator: anonymous_authenticator
+            - authorizer: deny_all_requests
+            - mutator: create_jwt
+
+        providers:
+          file_system:
+            src: /etc/heimdall/rule.yaml
+            watch: false
+
+    rule.yaml: |
+      - id: test-rule
+        url: http://<**>/<**>
+        upstream: http://{{ include "heimdall.demo.fullname" . }}
+        execute:
+          - authorizer: allow_all_requests
+{{- end }}
+{{- end }}

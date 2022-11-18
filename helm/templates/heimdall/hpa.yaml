@@ -3,9 +3,7 @@ apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
   name: {{ include "heimdall.fullname" . }}
-  {{- if .Release.Namespace }}
-  namespace: {{ .Release.Namespace }}
-  {{- end }}
+  {{- include "heimdall.namespace" . | nindent 2 }}
   labels:
     {{- include "heimdall.labels" . | nindent 4 }}
 spec:

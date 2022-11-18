@@ -1,6 +1,6 @@
-{{- if .Values.ingress.enabled -}}
-{{- $fullName := include "heimdall.fullname" . -}}
-{{- $svcPort := .Values.service.port -}}
+{{- if .Values.demoSetup -}}
+{{- $fullName := include "heimdall.demo.fullname" . -}}
+{{- $svcPort := 8080 -}}
 {{- if and .Values.ingress.className (not (semverCompare ">=1.18-0" .Capabilities.KubeVersion.GitVersion)) }}
   {{- if not (hasKey .Values.ingress.annotations "kubernetes.io/ingress.class") }}
   {{- $_ := set .Values.ingress.annotations "kubernetes.io/ingress.class" .Values.ingress.className}}
@@ -16,35 +16,25 @@ apiVersion: extensions/v1beta1
 kind: Ingress
 metadata:
   name: {{ $fullName }}
+  {{- include "heimdall.namespace" . | nindent 2 }}
   labels:
-    {{- include "heimdall.labels" . | nindent 4 }}
-  {{- with .Values.ingress.annotations }}
+    {{- include "heimdall.demo.labels" . | nindent 4 }}
+  {{- if eq .Values.operationMode "decision" }}
   annotations:
-    {{- toYaml . | nindent 4 }}
+    nginx.ingress.kubernetes.io/auth-url: "http://{{ include "heimdall.fullname" . }}.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.service.decision.port }}/$request_uri"
+    nginx.ingress.kubernetes.io/auth-response-headers: Authorization
   {{- end }}
 spec:
   {{- if and .Values.ingress.className (semverCompare ">=1.18-0" .Capabilities.KubeVersion.GitVersion) }}
   ingressClassName: {{ .Values.ingress.className }}
   {{- end }}
-  {{- if .Values.ingress.tls }}
-  tls:
-    {{- range .Values.ingress.tls }}
-    - hosts:
-        {{- range .hosts }}
-        - {{ . | quote }}
-        {{- end }}
-      secretName: {{ .secretName }}
-    {{- end }}
-  {{- end }}
   rules:
-    {{- range .Values.ingress.hosts }}
-    - host: {{ .host | quote }}
+    - host: {{ include "heimdall.demo.fullname" . | quote }}
       http:
         paths:
-          {{- range .paths }}
-          - path: {{ .path }}
-            {{- if and .pathType (semverCompare ">=1.18-0" $.Capabilities.KubeVersion.GitVersion) }}
-            pathType: {{ .pathType }}
+          - path: "/"
+            {{- if semverCompare ">=1.18-0" $.Capabilities.KubeVersion.GitVersion }}
+            pathType: ImplementationSpecific
             {{- end }}
             backend:
               {{- if semverCompare ">=1.19-0" $.Capabilities.KubeVersion.GitVersion }}
@@ -56,6 +46,4 @@ spec:
               serviceName: {{ $fullName }}
               servicePort: {{ $svcPort }}
               {{- end }}
-          {{- end }}
-    {{- end }}
 {{- end }}
