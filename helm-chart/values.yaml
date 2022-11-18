@@ -1,0 +1,110 @@
+# Select the operation mode. Can be decision, or proxy
+# It must be selected
+operationMode: "" # decision or proxy
+
+# If set to true, a demo deployment with exemplary rules, as these can be found in the documentation,
+# will be done
+demoSetup: false
+
+# Default values for heimdall.
+image:
+  repository: dadrus/heimdall
+  pullPolicy: IfNotPresent
+  tag: "0.4.1-alpha"
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+# Deployment configuration
+deployment:
+  # Remove the curly braces after 'annotations:' if you want to specify annotations
+  annotations: {}
+  # Remove the curly braces after 'labels:' if you do want to specify additional labels
+  labels: {}
+
+  # This configuration is applied directly to the pods and not higher objects
+  pod:
+    securityContext: {}
+      # E.g.:
+      # fsGroup: 2000
+
+    # Remove the curly braces after 'annotations:' if you want to specify annotations
+    annotations: {}
+
+  securityContext:
+    capabilities:
+      drop:
+        - ALL
+    readOnlyRootFilesystem: true
+    runAsNonRoot: true
+    runAsUser: 1000
+
+  # Remove the curly braces after 'resources:' if you want to specify resources
+  resources: {}
+    # E.g.:
+    # limits:
+    #   cpu: 100m
+    #   memory: 128Mi
+    # requests:
+    #   cpu: 100m
+    #   memory: 128Mi
+
+  # Only used if autoscaling is disabled (see below)
+  replicaCount: 2
+
+  # Configures HorizontalPodAutoscaler
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 80
+    targetMemoryUtilizationPercentage: 80
+
+  # Remove the curly braces after 'nodeSelector:' if you want to specify nodeSelector
+  nodeSelector: {}
+
+  tolerations: []
+
+  affinity: {}
+
+# Configures k8s services (decision, proxy, management)
+service:
+  # Remove the curly braces after 'labels:' if you do want to specify additional labels
+  labels: {}
+  # Remove the curly braces after 'annotations:' if you want to specify annotations
+  annotations: {}
+
+  # Only used if "operationMode" is set to "decision"
+  decision:
+    # Service port
+    port: 4456
+    # Service port name
+    name: decision
+  # Only used if "operationMode" is set to "proxy"
+  proxy:
+    # Service port
+    port: 4455
+    # Service port name
+    name: proxy
+  management:
+    # Service port
+    port: 4457
+    # Service port name
+    name: management
+
+# heimdall config defaults
+# DO NOT OVERRIDE the values here. Use heimdall config yaml file instead!
+# If you create your own values.yaml file, copy the below contents to it as well.
+serve:
+  decision:
+    port: 4456
+  proxy:
+    port: 4455
+  management:
+    port: 4457
+metrics:
+  prometheus:
+    port: 10250
+    metrics_path: "/metrics"
+

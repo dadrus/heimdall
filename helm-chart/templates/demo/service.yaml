@@ -1,0 +1,18 @@
+{{- if .Values.demoSetup }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "heimdall.demo.fullname" . }}
+  {{- include "heimdall.namespace" . | nindent 2 }}
+  labels:
+    {{- include "heimdall.demo.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8080
+      targetPort: http-demo
+      protocol: TCP
+      name: demo-port
+  selector:
+    {{- include "heimdall.demo.selectorLabels" . | nindent 4 }}
+{{- end }}

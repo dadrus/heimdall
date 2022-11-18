@@ -5,6 +5,7 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/dadrus/heimdall)](https://goreportcard.com/report/github.com/dadrus/heimdall) 
 [![License](https://img.shields.io/github/license/dadrus/heimdall)](https://github.com/dadrus/heimdall/blob/master/LICENSE)
 [![Docker](https://img.shields.io/docker/v/dadrus/heimdall?color=lightblue&label=docker)](https://hub.docker.com/r/dadrus/heimdall)
+[![Downloads](https://img.shields.io/github/downloads/dadrus/heimdall/total.svg)](https://github.com/dadrus/heimdall/releases)
 
 ## Background
 
@@ -41,6 +42,7 @@ Heimdall's main focus points beyond its functionality are:
 
 The current implementation is an alpha version. That means it does not solve all the problems heimdall aims to solve. With other words a lot of functionality is missing. In addition, alpha version means, there will be breaking changes. Nevertheless, the code base is stable and pretty good tested. Functionality already supported can be found in [Release descriptions](https://github.com/dadrus/heimdall/releases). Planned features can be found in the defined [Milestones](https://github.com/dadrus/heimdall/milestones).
 
-If you like the project - please give it a :star:. \
-If you miss something, or found a bug, you're very welcome to contribute. \
+## If you ...
+If you like the project - please give it a :star: \
+If you miss something, or found a bug, you're very welcome to contribute \
 If you would like to support, reach out to me :wink:.
