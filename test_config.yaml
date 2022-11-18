@@ -24,7 +24,7 @@ log:
 
 metrics:
   prometheus:
-    port: 9000
+    port: 10250
 
 tracing:
   span_processor: simple
