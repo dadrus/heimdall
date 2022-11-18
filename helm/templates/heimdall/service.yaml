@@ -1,3 +1,7 @@
+{{- $opMode := required "operationMode is not set! Call helm with --set operationMode=<decision or proxy>" .Values.operationMode -}}
+{{- if not (or (eq $opMode "decision") (eq $opMode "proxy")) -}}
+{{- required "A valid operationMode is required! Call helm with --set operationMode=<decision or proxy>" .Values.operationMode -}}
+{{- end -}}
 {{- $data := dict "Release" .Release "Values" .Values "Chart" .Chart "Component" "service" -}}
 apiVersion: v1
 kind: Service
@@ -15,18 +19,16 @@ spec:
       targetPort: http-management
       protocol: TCP
       name: {{ .Values.service.management.name }}
-      {{- if eq .Values.operationMode "decision" }}
+      {{- if eq $opMode "decision" }}
     - port: {{ .Values.service.decision.port }}
       targetPort: http-decision
       protocol: TCP
       name: {{ .Values.service.decision.name }}
-      {{- else if eq .Values.operationMode "proxy" }}
+      {{- else }}
     - port: {{ .Values.service.proxy.port }}
       targetPort: http-proxy
       protocol: TCP
       name: {{ .Values.service.proxy.name }}
-      {{- else }}
-      {{- required "A valid operationMode is required!" .Values.operationMode -}}
       {{- end }}
   selector:
     {{- include "heimdall.selectorLabels" $data | nindent 4 }}

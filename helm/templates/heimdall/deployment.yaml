@@ -1,3 +1,7 @@
+{{- $opMode := required "operationMode is not set! Call helm with --set operationMode=<decision or proxy>" .Values.operationMode -}}
+{{- if not (or (eq $opMode "decision") (eq $opMode "proxy")) -}}
+{{- required "A valid operationMode is required! Call helm with --set operationMode=<decision or proxy>" .Values.operationMode -}}
+{{- end -}}
 {{- $data := dict "Release" .Release "Values" .Values "Chart" .Chart "Component" "deployment" -}}
 apiVersion: apps/v1
 kind: Deployment
@@ -24,7 +28,7 @@ spec:
         prometheus.io/path: "{{ .Values.metrics.prometheus.metrics_path }}"
         prometheus.io/port: "{{ .Values.metrics.prometheus.port }}"
         {{- with .Values.deployment.pod.annotations }}
-        {{ toYaml . | nindent 8 }}
+        {{- toYaml . | nindent 8 }}
         {{- end }}
     spec:
       imagePullSecrets:
@@ -43,24 +47,20 @@ spec:
             {{- toYaml .Values.deployment.securityContext | nindent 12 }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
-          {{- if eq .Values.operationMode "decision" }}
+          {{- if eq $opMode "decision" }}
           args: [ "serve", "decision" ]
-          {{- else if eq .Values.operationMode "proxy" }}
+          {{- else }}
           args: [ "serve", "proxy" ]
-          {{- else -}}
-          {{- required "A valid operationMode is required!" .Values.operationMode -}}
           {{- end }}
           ports:
-            {{- if eq .Values.operationMode "decision" }}
+            {{- if eq $opMode "decision" }}
             - name: http-decision
               containerPort: {{ .Values.serve.decision.port }}
               protocol: TCP
-            {{- else if eq .Values.operationMode "proxy" }}
+            {{- else }}
             - name: http-proxy
               containerPort: {{ .Values.serve.proxy.port }}
               protocol: TCP
-            {{- else -}}
-            {{- required "A valid operationMode is required!" .Values.operationMode -}}
             {{- end }}
             - name: http-management
               protocol: TCP

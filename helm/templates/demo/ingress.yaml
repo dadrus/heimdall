@@ -1,10 +1,15 @@
 {{- if .Values.demoSetup -}}
-{{- $fullName := include "heimdall.demo.fullname" . -}}
-{{- $svcPort := 8080 -}}
-{{- if and .Values.ingress.className (not (semverCompare ">=1.18-0" .Capabilities.KubeVersion.GitVersion)) }}
-  {{- if not (hasKey .Values.ingress.annotations "kubernetes.io/ingress.class") }}
-  {{- $_ := set .Values.ingress.annotations "kubernetes.io/ingress.class" .Values.ingress.className}}
-  {{- end }}
+{{- $host := "unset" -}}
+{{- $service := "unset" -}}
+{{- $port := "unset" -}}
+{{- if eq .Values.operationMode "decision" -}}
+    {{- $host = "demo-app" -}}
+    {{- $service = include "heimdall.demo.fullname" . -}}
+    {{- $port = 8080 -}}
+{{- else -}}
+    {{- $host = "heimdall-proxy" -}}
+    {{- $service = include "heimdall.fullname" . -}}
+    {{- $port = .Values.service.proxy.port -}}
 {{- end }}
 {{- if semverCompare ">=1.19-0" .Capabilities.KubeVersion.GitVersion -}}
 apiVersion: networking.k8s.io/v1
@@ -15,7 +20,7 @@ apiVersion: extensions/v1beta1
 {{- end }}
 kind: Ingress
 metadata:
-  name: {{ $fullName }}
+  name: {{ include "heimdall.demo.fullname" . }}
   {{- include "heimdall.namespace" . | nindent 2 }}
   labels:
     {{- include "heimdall.demo.labels" . | nindent 4 }}
@@ -25,11 +30,8 @@ metadata:
     nginx.ingress.kubernetes.io/auth-response-headers: Authorization
   {{- end }}
 spec:
-  {{- if and .Values.ingress.className (semverCompare ">=1.18-0" .Capabilities.KubeVersion.GitVersion) }}
-  ingressClassName: {{ .Values.ingress.className }}
-  {{- end }}
   rules:
-    - host: {{ include "heimdall.demo.fullname" . | quote }}
+    - host: {{ $host }}
       http:
         paths:
           - path: "/"
@@ -39,11 +41,11 @@ spec:
             backend:
               {{- if semverCompare ">=1.19-0" $.Capabilities.KubeVersion.GitVersion }}
               service:
-                name: {{ $fullName }}
+                name: {{ $service }}
                 port:
-                  number: {{ $svcPort }}
+                  number: {{ $port }}
               {{- else }}
-              serviceName: {{ $fullName }}
-              servicePort: {{ $svcPort }}
+              serviceName: {{ $service }}
+              servicePort: {{ $port }}
               {{- end }}
 {{- end }}

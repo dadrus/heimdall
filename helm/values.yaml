@@ -1,3 +1,11 @@
+# Select the operation mode. Can be decision, or proxy
+# It must be selected
+operationMode: "" # decision or proxy
+
+# If set to true, a demo deployment with exemplary rules, as these can be found in the documentation,
+# will be done
+demoSetup: false
+
 # Default values for heimdall.
 image:
   repository: dadrus/heimdall
@@ -8,75 +16,17 @@ imagePullSecrets: []
 nameOverride: ""
 fullnameOverride: ""
 
-# If set to true, a demo deployment with exemplary rules, as these can be found in the documentation,
-# will be done
-demoSetup: false
-
-# Select the operation mode. Can be decision, or proxy
-operationMode: decision # or proxy
-
-# Configures k8s services (decision, proxy, management, metrics)
-service:
-  # Remove the curly braces after 'labels:' if you do want to specify additional labels
-  labels: {}
-  # Remove the curly braces after 'annotations:' if you want to specify annotations
-  annotations: { }
-
-  # Only used if "operationMode" is set to "decision"
-  decision:
-    # Service port
-    port: 4456
-    # Service port name
-    name: decision
-  # Only used if "operationMode" is set to "proxy"
-  proxy:
-    # Service port
-    port: 4455
-    # Service port name
-    name: proxy
-  management:
-    # Service port
-    port: 4457
-    # Service port name
-    name: management
-
-
-# Ingress configuration is only used if heimdall is operated in proxy operation mode.
-# Consult the documentation on how to integrate with your ingress controller when running in
-# decision mode of operation
-ingress:
-  enabled: true
-  className: ""
-
-  # Remove the curly braces after 'labels:' if you do want to specify additional labels
-  labels: {}
-
-  # Remove the curly braces after 'annotations:' if you want to specify annotations
-  annotations: {}
-    # kubernetes.io/ingress.class: nginx
-    # kubernetes.io/tls-acme: "true"
-  hosts:
-    - host: proxy.heimdall.local
-      paths:
-        - path: /
-          pathType: ImplementationSpecific
-  tls: []
-  #  - secretName: chart-example-tls
-  #    hosts:
-  #      - chart-example.local
-
 # Deployment configuration
 deployment:
   # Remove the curly braces after 'annotations:' if you want to specify annotations
   annotations: {}
   # Remove the curly braces after 'labels:' if you do want to specify additional labels
-  labels:
-    foo: bar
-    bar: foo
+  labels: {}
 
   # This configuration is applied directly to the pods and not higher objects
   pod:
     securityContext: {}
+      # E.g.:
       # fsGroup: 2000
 
     # Remove the curly braces after 'annotations:' if you want to specify annotations
@@ -92,10 +42,7 @@ deployment:
 
   # Remove the curly braces after 'resources:' if you want to specify resources
   resources: {}
-    # We usually recommend not to specify default resources and to leave this as a conscious
-    # choice for the user. This also increases chances charts run on environments with little
-    # resources, such as Minikube. If you do want to specify resources, uncomment the following
-    # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+    # E.g.:
     # limits:
     #   cpu: 100m
     #   memory: 128Mi
@@ -121,8 +68,34 @@ deployment:
 
   affinity: {}
 
+# Configures k8s services (decision, proxy, management)
+service:
+  # Remove the curly braces after 'labels:' if you do want to specify additional labels
+  labels: {}
+  # Remove the curly braces after 'annotations:' if you want to specify annotations
+  annotations: {}
+
+  # Only used if "operationMode" is set to "decision"
+  decision:
+    # Service port
+    port: 4456
+    # Service port name
+    name: decision
+  # Only used if "operationMode" is set to "proxy"
+  proxy:
+    # Service port
+    port: 4455
+    # Service port name
+    name: proxy
+  management:
+    # Service port
+    port: 4457
+    # Service port name
+    name: management
+
 # heimdall config defaults
-# Do not override the values here. Use heimdall config yaml file instead!
+# DO NOT OVERRIDE the values here. Use heimdall config yaml file instead!
+# If you create your own values.yaml file, copy the below contents to it as well.
 serve:
   decision:
     port: 4456

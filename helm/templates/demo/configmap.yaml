@@ -64,7 +64,7 @@ data:
     rule.yaml: |
       - id: test-rule
         url: http://<**>/<**>
-        upstream: http://{{ include "heimdall.demo.fullname" . }}
+        upstream: http://{{ include "heimdall.demo.fullname" . }}:8080
         execute:
           - authorizer: allow_all_requests
 {{- end }}
