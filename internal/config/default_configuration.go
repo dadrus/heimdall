@@ -14,7 +14,7 @@ const (
 	defaultProxyServicePort      = 4455
 	defaultDecisionServicePort   = 4456
 	defaultManagementServicePort = 4457
-	defaultPrometheusServicePort = 9000
+	defaultPrometheusServicePort = 10250
 )
 
 // nolint: gochecknoglobals
