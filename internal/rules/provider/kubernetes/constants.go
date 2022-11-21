@@ -1,3 +1,6 @@
 package kubernetes
 
-const ProviderType = "kubernetes"
+const (
+	DefaultClass = "default"
+	ProviderType = "kubernetes"
+)

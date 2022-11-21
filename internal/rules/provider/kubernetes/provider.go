@@ -15,16 +15,17 @@ import (
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/event"
 	"github.com/dadrus/heimdall/internal/rules/provider/kubernetes/api/v1alpha1"
+	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
 type provider struct {
-	q          event.RuleSetChangedEventQueue
-	l          zerolog.Logger
-	cl         v1alpha1.Client
-	namespaces []string
-	cancel     context.CancelFunc
-	wg         sync.WaitGroup
+	q      event.RuleSetChangedEventQueue
+	l      zerolog.Logger
+	cl     v1alpha1.Client
+	cancel context.CancelFunc
+	wg     sync.WaitGroup
+	ac     string
 }
 
 func newProvider(
@@ -34,8 +35,7 @@ func newProvider(
 	logger zerolog.Logger,
 ) (*provider, error) {
 	type Config struct {
-		Namespaces []string          `mapstructure:"namespaces"`
-		Labels     map[string]string `mapstructure:"labels"`
+		AuthClass string `mapstructure:"auth_class"`
 	}
 
 	client, err := v1alpha1.NewClient(k8sConf)
@@ -53,10 +53,10 @@ func newProvider(
 	}
 
 	prov := &provider{
-		q:          queue,
-		l:          logger,
-		cl:         client,
-		namespaces: conf.Namespaces,
+		q:  queue,
+		l:  logger,
+		cl: client,
+		ac: x.IfThenElse(len(conf.AuthClass) != 0, conf.AuthClass, DefaultClass),
 	}
 
 	return prov, nil
@@ -66,9 +66,13 @@ func (p *provider) newController(ctx context.Context, namespace string) cache.Co
 	_, controller := cache.NewInformer(
 		&cache.ListWatch{
 			ListFunc: func(opts metav1.ListOptions) (runtime.Object, error) {
+				opts.FieldSelector = fmt.Sprintf("spec.authClass=%s", p.ac)
+
 				return p.cl.RuleSetRepository(namespace).List(ctx, opts)
 			},
 			WatchFunc: func(opts metav1.ListOptions) (watch.Interface, error) {
+				opts.FieldSelector = fmt.Sprintf("spec.authClass=%s", p.ac)
+
 				return p.cl.RuleSetRepository(namespace).Watch(ctx, opts)
 			},
 		},
@@ -100,35 +104,16 @@ func (p *provider) Start(_ context.Context) error {
 	// contextcheck disabled as the context object passed to Start
 	// will time out. We need however a fresh context here, which can be
 	// canceled
-	p.startController(ctx) //nolint:contextcheck
+	controller := p.newController(ctx, "") //nolint:contextcheck
+
+	p.wg.Add(1)
+
+	go func() {
+		controller.Run(ctx.Done())
+		p.wg.Done()
+	}()
 
 	return nil
-}
-
-func (p *provider) startController(ctx context.Context) {
-	if len(p.namespaces) == 0 {
-		controller := p.newController(ctx, "")
-
-		p.wg.Add(1)
-
-		go func() {
-			controller.Run(ctx.Done())
-			p.wg.Done()
-		}()
-
-		return
-	}
-
-	for _, namespace := range p.namespaces {
-		controller := p.newController(ctx, namespace)
-
-		p.wg.Add(1)
-
-		go func() {
-			controller.Run(ctx.Done())
-			p.wg.Done()
-		}()
-	}
 }
 
 func (p *provider) Stop(ctx context.Context) error {
@@ -166,7 +151,7 @@ func (p *provider) addRuleSet(obj any) {
 	p.ruleSetChanged(event.RuleSetChangedEvent{
 		Src:        fmt.Sprintf("%s:%s:%s", ProviderType, rs.Namespace, rs.Name),
 		ChangeType: event.Create,
-		RuleSet:    rs.Spec,
+		RuleSet:    rs.Spec.Rules,
 	})
 }
 
@@ -189,7 +174,7 @@ func (p *provider) updateRuleSet(oldObj, newObj any) {
 	p.ruleSetChanged(event.RuleSetChangedEvent{
 		Src:        fmt.Sprintf("%s:%s:%s", ProviderType, newRs.Namespace, newRs.Name),
 		ChangeType: event.Create,
-		RuleSet:    newRs.Spec,
+		RuleSet:    newRs.Spec.Rules,
 	})
 }
 

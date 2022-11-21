@@ -10,11 +10,17 @@ import (
 )
 
 // +kubebuilder:object:generate=true
+type RuleSetSpec struct {
+	AuthClass string              `json:"authClass"`
+	Rules     []config.RuleConfig `json:"rules"`
+}
+
+// +kubebuilder:object:generate=true
 type RuleSet struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec []config.RuleConfig `json:"spec"`
+	Spec RuleSetSpec `json:"spec"`
 }
 
 func (in *RuleSet) DeepCopyObject() runtime.Object { return in.DeepCopy() }
