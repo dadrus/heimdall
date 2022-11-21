@@ -11,7 +11,7 @@ import (
 
 // +kubebuilder:object:generate=true
 type RuleSetSpec struct {
-	AuthClassName string              `json:"authClassName"`
+	AuthClassName string              `json:"authClassName"` //nolint:tagliatelle
 	Rules         []config.RuleConfig `json:"rules"`
 }
 
