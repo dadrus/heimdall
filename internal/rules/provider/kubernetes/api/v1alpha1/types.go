@@ -11,8 +11,8 @@ import (
 
 // +kubebuilder:object:generate=true
 type RuleSetSpec struct {
-	AuthClass string              `json:"authClass"`
-	Rules     []config.RuleConfig `json:"rules"`
+	AuthClassName string              `json:"authClassName"`
+	Rules         []config.RuleConfig `json:"rules"`
 }
 
 // +kubebuilder:object:generate=true
