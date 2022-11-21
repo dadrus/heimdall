@@ -2,28 +2,38 @@ package kubernetes
 
 import (
 	"context"
-	"fmt"
 	"path/filepath"
 	"testing"
+	"time"
 
+	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/require"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/util/homedir"
 
-	"github.com/dadrus/heimdall/internal/rules/provider/kubernetes/api/v1alpha1"
+	"github.com/dadrus/heimdall/internal/rules/event"
 )
 
 func TestFoo(t *testing.T) {
+	t.SkipNow()
+
 	config, err := clientcmd.BuildConfigFromFlags("", filepath.Join(homedir.HomeDir(), ".kube", "config"))
 	require.NoError(t, err)
 
-	client, err := v1alpha1.NewClient(config)
+	queue := make(event.RuleSetChangedEventQueue, 10)
+	defer close(queue)
+
+	prov, err := newProvider(map[string]any{"auth_class": "foobar"}, config, queue, log.Logger)
 	require.NoError(t, err)
 
-	repo := client.RuleSetRepository("")
-	rsl, err := repo.List(context.TODO(), metav1.ListOptions{})
+	err = prov.Start(context.Background())
 	require.NoError(t, err)
 
-	fmt.Printf("rule sets found: %+v\n", rsl)
+	time.Sleep(15 * time.Second)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	err = prov.Stop(ctx)
+	require.NoError(t, err)
 }
