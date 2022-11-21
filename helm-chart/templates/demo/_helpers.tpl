@@ -29,8 +29,12 @@ If release name contains chart name it will be used as a full name.
 Common demo labels
 */}}
 {{- define "heimdall.demo.labels" -}}
-{{ include "heimdall.labels" . }}
 {{ include "heimdall.demo.selectorLabels" . }}
+helm.sh/chart: {{ include "heimdall.chart" . }}
+{{- if .Chart.AppVersion }}
+app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
+{{- end }}
+app.kubernetes.io/managed-by: {{ .Release.Service }}
 app.kubernetes.io/part-of: {{ include "heimdall.name" . }}
 {{- end }}
 
@@ -38,8 +42,8 @@ app.kubernetes.io/part-of: {{ include "heimdall.name" . }}
 Selector labels
 */}}
 {{- define "heimdall.demo.selectorLabels" -}}
-{{ include "heimdall.selectorLabels" . }}
-heimdall: demo
+app.kubernetes.io/name: {{ include "heimdall.name" . }}-demo-app
+app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
 
