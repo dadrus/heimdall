@@ -1554,6 +1554,18 @@
           ]
         }
       }
+    },
+    "kubernetesProvider": {
+      "description": "Enables kubernetes controller to load rules deployed as CRD",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "auth_class": {
+          "type": "string",
+          "description": "The class of this heimdall instance in the cluster. Used to filter for CRDs. Only CRDs with the same auth class will be considered and loaded",
+          "default": "default"
+        }
+      }
     }
   },
   "properties": {
@@ -1796,6 +1808,9 @@
             },
             "cloud_blob": {
               "$ref": "#/definitions/cloudBlobProvider"
+            },
+            "kubernetes": {
+              "$ref": "#/definitions/kubernetesProvider"
             }
           }
         },
