@@ -18,7 +18,7 @@ var (
 	mutatorTypeFactoriesMu sync.RWMutex
 )
 
-type MutatorTypeFactory func(id string, t config.PipelineObjectType, c map[string]any) (bool, Mutator, error)
+type MutatorTypeFactory func(id string, t config.PipelineHandlerType, c map[string]any) (bool, Mutator, error)
 
 func registerMutatorTypeFactory(factory MutatorTypeFactory) {
 	mutatorTypeFactoriesMu.Lock()
@@ -31,7 +31,7 @@ func registerMutatorTypeFactory(factory MutatorTypeFactory) {
 	mutatorTypeFactories = append(mutatorTypeFactories, factory)
 }
 
-func CreateMutatorPrototype(id string, typ config.PipelineObjectType, mConfig map[string]any) (Mutator, error) {
+func CreateMutatorPrototype(id string, typ config.PipelineHandlerType, mConfig map[string]any) (Mutator, error) {
 	mutatorTypeFactoriesMu.RLock()
 	defer mutatorTypeFactoriesMu.RUnlock()
 

@@ -15,7 +15,7 @@ var (
 	errorHandlerTypeFactoriesMu sync.RWMutex
 )
 
-type ErrorHandlerTypeFactory func(id string, t config.PipelineObjectType, c map[string]any) (bool, ErrorHandler, error)
+type ErrorHandlerTypeFactory func(id string, t config.PipelineHandlerType, c map[string]any) (bool, ErrorHandler, error)
 
 func registerErrorHandlerTypeFactory(factory ErrorHandlerTypeFactory) {
 	errorHandlerTypeFactoriesMu.Lock()
@@ -30,7 +30,7 @@ func registerErrorHandlerTypeFactory(factory ErrorHandlerTypeFactory) {
 
 func CreateErrorHandlerPrototype(
 	id string,
-	typ config.PipelineObjectType,
+	typ config.PipelineHandlerType,
 	config map[string]any,
 ) (ErrorHandler, error) {
 	errorHandlerTypeFactoriesMu.RLock()

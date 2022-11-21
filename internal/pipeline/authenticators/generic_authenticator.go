@@ -25,7 +25,7 @@ import (
 // nolint
 func init() {
 	registerAuthenticatorTypeFactory(
-		func(id string, typ config.PipelineObjectType, conf map[string]any) (bool, Authenticator, error) {
+		func(id string, typ config.PipelineHandlerType, conf map[string]any) (bool, Authenticator, error) {
 			if typ != config.POTGeneric {
 				return false, nil, nil
 			}

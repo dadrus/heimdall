@@ -12,7 +12,7 @@ import (
 // nolint
 func init() {
 	registerAuthorizerTypeFactory(
-		func(_ string, typ config.PipelineObjectType, conf map[string]any) (bool, Authorizer, error) {
+		func(_ string, typ config.PipelineHandlerType, conf map[string]any) (bool, Authorizer, error) {
 			if typ != config.POTAllow {
 				return false, nil, nil
 			}

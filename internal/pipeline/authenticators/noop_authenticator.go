@@ -12,7 +12,7 @@ import (
 // nolint
 func init() {
 	registerAuthenticatorTypeFactory(
-		func(_ string, typ config.PipelineObjectType, conf map[string]any) (bool, Authenticator, error) {
+		func(_ string, typ config.PipelineHandlerType, conf map[string]any) (bool, Authenticator, error) {
 			if typ != config.POTNoop {
 				return false, nil, nil
 			}

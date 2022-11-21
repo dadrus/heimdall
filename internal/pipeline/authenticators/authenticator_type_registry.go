@@ -20,7 +20,7 @@ var (
 
 type AuthenticatorTypeFactory func(
 	id string,
-	typ config.PipelineObjectType,
+	typ config.PipelineHandlerType,
 	config map[string]any,
 ) (bool, Authenticator, error)
 
@@ -37,7 +37,7 @@ func registerAuthenticatorTypeFactory(factory AuthenticatorTypeFactory) {
 
 func CreateAuthenticatorPrototype(
 	id string,
-	typ config.PipelineObjectType,
+	typ config.PipelineHandlerType,
 	config map[string]any,
 ) (Authenticator, error) {
 	authenticatorTypeFactoriesMu.RLock()

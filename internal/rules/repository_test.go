@@ -255,13 +255,13 @@ func TestRepositoryRuleSetLifecycleManagement(t *testing.T) {
 							URL:              "http://foo.bar/<**>",
 							MatchingStrategy: "regex",
 							Methods:          []string{"PATCH"},
-							Execute: []map[string]any{
+							Execute: []config.PipelineConfig{
 								{"authenticator": "unauthorized_authenticator"},
 								{"hydrator": "subscription_hydrator"},
 								{"authorizer": "allow_all_authorizer"},
 								{"mutator": "jwt"},
 							},
-							ErrorHandler: []map[string]any{
+							ErrorHandler: []config.PipelineConfig{
 								{"error_handler": "default"},
 							},
 						},

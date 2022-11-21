@@ -11,7 +11,7 @@ import (
 // nolint
 func init() {
 	registerErrorHandlerTypeFactory(
-		func(_ string, typ config.PipelineObjectType, conf map[string]any) (bool, ErrorHandler, error) {
+		func(_ string, typ config.PipelineHandlerType, conf map[string]any) (bool, ErrorHandler, error) {
 			if typ != config.POTDefault {
 				return false, nil, nil
 			}

@@ -494,7 +494,7 @@ func TestCreateHandlerFactory(t *testing.T) {
 	}{
 		{
 			uc:   "successful",
-			conf: config.Configuration{Pipeline: config.PipelineConfig{}},
+			conf: config.Configuration{Pipeline: config.PipelineHandlersConfig{}},
 			assert: func(t *testing.T, err error, factory *handlerFactory) {
 				t.Helper()
 
@@ -510,8 +510,8 @@ func TestCreateHandlerFactory(t *testing.T) {
 		},
 		{
 			uc: "fails",
-			conf: config.Configuration{Pipeline: config.PipelineConfig{
-				Authenticators: []config.PipelineObject{
+			conf: config.Configuration{Pipeline: config.PipelineHandlersConfig{
+				Authenticators: []config.PipelineHandler{
 					{
 						ID:   "foo",
 						Type: config.POTWWWAuthenticate,

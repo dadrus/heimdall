@@ -30,7 +30,7 @@ import (
 // nolint
 func init() {
 	registerAuthorizerTypeFactory(
-		func(id string, typ config.PipelineObjectType, conf map[string]any) (bool, Authorizer, error) {
+		func(id string, typ config.PipelineHandlerType, conf map[string]any) (bool, Authorizer, error) {
 			if typ != config.POTRemote {
 				return false, nil, nil
 			}

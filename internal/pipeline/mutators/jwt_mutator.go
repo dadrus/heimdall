@@ -28,7 +28,7 @@ const (
 // nolint
 func init() {
 	registerMutatorTypeFactory(
-		func(id string, typ config.PipelineObjectType, conf map[string]any) (bool, Mutator, error) {
+		func(id string, typ config.PipelineHandlerType, conf map[string]any) (bool, Mutator, error) {
 			if typ != config.POTJwt {
 				return false, nil, nil
 			}

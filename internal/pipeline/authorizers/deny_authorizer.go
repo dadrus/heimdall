@@ -13,7 +13,7 @@ import (
 // nolint
 func init() {
 	registerAuthorizerTypeFactory(
-		func(id string, typ config.PipelineObjectType, _ map[string]any) (bool, Authorizer, error) {
+		func(id string, typ config.PipelineHandlerType, _ map[string]any) (bool, Authorizer, error) {
 			if typ != config.POTDeny {
 				return false, nil, nil
 			}

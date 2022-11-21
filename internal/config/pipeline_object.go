@@ -1,30 +1,30 @@
 package config
 
-type PipelineObjectType string
+type PipelineHandlerType string
 
 const (
-	POTNoop                PipelineObjectType = "noop"
-	POTBasicAuth           PipelineObjectType = "basic_auth"
-	POTAnonymous           PipelineObjectType = "anonymous"
-	POTUnauthorized        PipelineObjectType = "unauthorized"
-	POTOAuth2Introspection PipelineObjectType = "oauth2_introspection"
-	POTJwt                 PipelineObjectType = "jwt"
-	POTAllow               PipelineObjectType = "allow"
-	POTDeny                PipelineObjectType = "deny"
-	POTLocal               PipelineObjectType = "local"
-	POTRemote              PipelineObjectType = "remote"
-	POTDefault             PipelineObjectType = "default"
-	POTGeneric             PipelineObjectType = "generic"
-	POTHeader              PipelineObjectType = "header"
-	POTCookie              PipelineObjectType = "cookie"
-	POTRedirect            PipelineObjectType = "redirect"
-	POTWWWAuthenticate     PipelineObjectType = "www_authenticate"
+	POTNoop                PipelineHandlerType = "noop"
+	POTBasicAuth           PipelineHandlerType = "basic_auth"
+	POTAnonymous           PipelineHandlerType = "anonymous"
+	POTUnauthorized        PipelineHandlerType = "unauthorized"
+	POTOAuth2Introspection PipelineHandlerType = "oauth2_introspection"
+	POTJwt                 PipelineHandlerType = "jwt"
+	POTAllow               PipelineHandlerType = "allow"
+	POTDeny                PipelineHandlerType = "deny"
+	POTLocal               PipelineHandlerType = "local"
+	POTRemote              PipelineHandlerType = "remote"
+	POTDefault             PipelineHandlerType = "default"
+	POTGeneric             PipelineHandlerType = "generic"
+	POTHeader              PipelineHandlerType = "header"
+	POTCookie              PipelineHandlerType = "cookie"
+	POTRedirect            PipelineHandlerType = "redirect"
+	POTWWWAuthenticate     PipelineHandlerType = "www_authenticate"
 )
 
-func (p PipelineObjectType) String() string { return string(p) }
+func (p PipelineHandlerType) String() string { return string(p) }
 
-type PipelineObject struct {
-	ID     string             `koanf:"id"`
-	Type   PipelineObjectType `koanf:"type,string"`
-	Config map[string]any     `koanf:"config"`
+type PipelineHandler struct {
+	ID     string              `koanf:"id"`
+	Type   PipelineHandlerType `koanf:"type,string"`
+	Config map[string]any      `koanf:"config"`
 }

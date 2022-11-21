@@ -33,7 +33,7 @@ const (
 // nolint
 func init() {
 	registerHydratorTypeFactory(
-		func(id string, typ config.PipelineObjectType, conf map[string]any) (bool, Hydrator, error) {
+		func(id string, typ config.PipelineHandlerType, conf map[string]any) (bool, Hydrator, error) {
 			if typ != config.POTGeneric {
 				return false, nil, nil
 			}

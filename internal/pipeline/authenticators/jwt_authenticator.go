@@ -34,7 +34,7 @@ const defaultJWTAuthenticatorTTL = 10 * time.Minute
 // nolint
 func init() {
 	registerAuthenticatorTypeFactory(
-		func(id string, typ config.PipelineObjectType, conf map[string]any) (bool, Authenticator, error) {
+		func(id string, typ config.PipelineHandlerType, conf map[string]any) (bool, Authenticator, error) {
 			if typ != config.POTJwt {
 				return false, nil, nil
 			}

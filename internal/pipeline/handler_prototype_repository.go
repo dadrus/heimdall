@@ -80,9 +80,9 @@ func newHandlerPrototypeRepository(
 }
 
 func createPipelineObjects[T any](
-	pObjects []config.PipelineObject,
+	pObjects []config.PipelineHandler,
 	logger zerolog.Logger,
-	create func(id string, t config.PipelineObjectType, c map[string]any) (T, error),
+	create func(id string, t config.PipelineHandlerType, c map[string]any) (T, error),
 ) (map[string]T, error) {
 	objects := make(map[string]T)
 

@@ -17,7 +17,7 @@ func TestCreateErrorHandlerPrototypePrototype(t *testing.T) {
 
 	for _, tc := range []struct {
 		uc     string
-		typ    config.PipelineObjectType
+		typ    config.PipelineHandlerType
 		assert func(t *testing.T, err error, errorHandler ErrorHandler)
 	}{
 		{
