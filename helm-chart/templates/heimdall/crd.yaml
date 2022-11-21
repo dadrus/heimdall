@@ -19,52 +19,58 @@ spec:
           type: object
           properties:
             spec:
-              type: array
-              items:
-                type: object
-                properties:
-                  id:
-                    description: The identifier of the rule
-                    type: string
-                  url:
-                    description: The url to match
-                    type: string
-                  matching_strategy:
-                    description: Strategy to match the url. Can either be regex or glob. defaults to glob
-                    type: string
-                    default: glob
-                    enum:
-                      - regex
-                      - glob
-                  upstream:
-                    description: Schema, host and port of the upstream service to forward the request to. Required only if heimdall is used in proxy operation mode.
-                    type: string
-                  methods:
-                    description: The allowed HTTP methods
-                    type: array
-                    items:
-                      type: string
-                      enum:
-                        - ALL
-                        - CONNECT
-                        - DELETE
-                        - GET
-                        - HEAD
-                        - OPTIONS
-                        - PATCH
-                        - POST
-                        - PUT
-                        - TRACE
-                  execute:
-                    description: The pipeline mechanisms to execute
-                    type: array
-                    items:
-                      type: object
-                  on_error:
-                    description: The error pipeline mechanisms.
-                    type: array
-                    items:
-                      type: object
+              type: object
+              properties:
+                authClass:
+                  type: string
+                  default: default
+                rules:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      id:
+                        description: The identifier of the rule
+                        type: string
+                      url:
+                        description: The url to match
+                        type: string
+                      matching_strategy:
+                        description: Strategy to match the url. Can either be regex or glob. defaults to glob
+                        type: string
+                        default: glob
+                        enum:
+                          - regex
+                          - glob
+                      upstream:
+                        description: Schema, host and port of the upstream service to forward the request to. Required only if heimdall is used in proxy operation mode.
+                        type: string
+                      methods:
+                        description: The allowed HTTP methods
+                        type: array
+                        items:
+                          type: string
+                          enum:
+                            - ALL
+                            - CONNECT
+                            - DELETE
+                            - GET
+                            - HEAD
+                            - OPTIONS
+                            - PATCH
+                            - POST
+                            - PUT
+                            - TRACE
+                      execute:
+                        description: The pipeline mechanisms to execute
+                        type: array
+                        items:
+                          type: object
+                      on_error:
+                        description: The error pipeline mechanisms.
+                        type: array
+                        items:
+                          type: object
 
 
 
