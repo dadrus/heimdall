@@ -2,21 +2,30 @@ package kubernetes
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 
+	"github.com/go-logr/zerologr"
 	"github.com/rs/zerolog"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
+	"k8s.io/klog/v2"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/event"
 	"github.com/dadrus/heimdall/internal/rules/provider/kubernetes/api/v1alpha1"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
+)
+
+var (
+	ErrNilRuleSet   = errors.New("nil RuleSet")
+	ErrNotARuleSet  = errors.New("not a RuleSet")
+	ErrBadAuthClass = errors.New("bad authClass in a RuleSet")
 )
 
 type provider struct {
@@ -63,16 +72,12 @@ func newProvider(
 }
 
 func (p *provider) newController(ctx context.Context, namespace string) cache.Controller {
-	_, controller := cache.NewInformer(
+	_, controller := cache.NewTransformingInformer(
 		&cache.ListWatch{
 			ListFunc: func(opts metav1.ListOptions) (runtime.Object, error) {
-				opts.FieldSelector = fmt.Sprintf("spec.authClass=%s", p.ac)
-
 				return p.cl.RuleSetRepository(namespace).List(ctx, opts)
 			},
 			WatchFunc: func(opts metav1.ListOptions) (watch.Interface, error) {
-				opts.FieldSelector = fmt.Sprintf("spec.authClass=%s", p.ac)
-
 				return p.cl.RuleSetRepository(namespace).Watch(ctx, opts)
 			},
 		},
@@ -83,12 +88,37 @@ func (p *provider) newController(ctx context.Context, namespace string) cache.Co
 			DeleteFunc: p.deleteRuleSet,
 			UpdateFunc: p.updateRuleSet,
 		},
+		p.filterAuthClass,
 	)
 
 	return controller
 }
 
+func (p *provider) filterAuthClass(input any) (any, error) {
+	if input == nil {
+		return nil, ErrNilRuleSet
+	}
+
+	rs, ok := input.(*v1alpha1.RuleSet)
+	if !ok {
+		return nil, ErrNotARuleSet
+	}
+
+	if rs.Spec.AuthClassName != p.ac {
+		p.l.Info().
+			Str("_rule_provider_type", ProviderType).
+			Msgf("Ignoring ruleset due to authClassName mismatch (namespace=%s, name=%s, uid=%s)",
+				rs.Namespace, rs.Name, rs.UID)
+
+		return nil, ErrBadAuthClass
+	}
+
+	return input, nil
+}
+
 func (p *provider) Start(_ context.Context) error {
+	klog.SetLogger(zerologr.New(&p.l))
+
 	p.l.Info().
 		Str("_rule_provider_type", ProviderType).
 		Msg("Starting rule definitions provider")
@@ -143,49 +173,41 @@ func (p *provider) Stop(ctx context.Context) error {
 }
 
 func (p *provider) addRuleSet(obj any) {
-	rs, ok := obj.(v1alpha1.RuleSet)
+	rs, ok := obj.(*v1alpha1.RuleSet)
 	if !ok {
 		return
 	}
 
 	p.ruleSetChanged(event.RuleSetChangedEvent{
-		Src:        fmt.Sprintf("%s:%s:%s", ProviderType, rs.Namespace, rs.Name),
+		Src:        fmt.Sprintf("%s:%s:%s:%s", ProviderType, rs.Namespace, rs.Name, rs.UID),
 		ChangeType: event.Create,
 		RuleSet:    rs.Spec.Rules,
 	})
 }
 
 func (p *provider) updateRuleSet(oldObj, newObj any) {
-	oldRs, ok := oldObj.(v1alpha1.RuleSet)
+	oldRs, ok := oldObj.(*v1alpha1.RuleSet)
 	if !ok {
 		return
 	}
 
-	newRs, ok := newObj.(v1alpha1.RuleSet)
+	newRs, ok := newObj.(*v1alpha1.RuleSet)
 	if !ok {
 		return
 	}
 
-	p.ruleSetChanged(event.RuleSetChangedEvent{
-		Src:        fmt.Sprintf("%s:%s:%s", ProviderType, oldRs.Namespace, oldRs.Name),
-		ChangeType: event.Remove,
-	})
-
-	p.ruleSetChanged(event.RuleSetChangedEvent{
-		Src:        fmt.Sprintf("%s:%s:%s", ProviderType, newRs.Namespace, newRs.Name),
-		ChangeType: event.Create,
-		RuleSet:    newRs.Spec.Rules,
-	})
+	p.deleteRuleSet(oldRs)
+	p.addRuleSet(newRs)
 }
 
 func (p *provider) deleteRuleSet(obj any) {
-	rs, ok := obj.(v1alpha1.RuleSet)
+	rs, ok := obj.(*v1alpha1.RuleSet)
 	if !ok {
 		return
 	}
 
 	p.ruleSetChanged(event.RuleSetChangedEvent{
-		Src:        fmt.Sprintf("%s:%s:%s", ProviderType, rs.Namespace, rs.Name),
+		Src:        fmt.Sprintf("%s:%s:%s:%s", ProviderType, rs.Namespace, rs.Name, rs.UID),
 		ChangeType: event.Remove,
 	})
 }
