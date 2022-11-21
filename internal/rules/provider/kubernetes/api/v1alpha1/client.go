@@ -85,6 +85,8 @@ func (r *repository) List(ctx context.Context, opts metav1.ListOptions) (*RuleSe
 }
 
 func (r *repository) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+	opts.Watch = true
+
 	return r.cl.Get().
 		Namespace(r.ns).
 		Resource("rulesets").
