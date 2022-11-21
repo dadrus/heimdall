@@ -8,6 +8,7 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/provider/cloudblob"
 	"github.com/dadrus/heimdall/internal/rules/provider/filesystem"
 	"github.com/dadrus/heimdall/internal/rules/provider/httpendpoint"
+	"github.com/dadrus/heimdall/internal/rules/provider/kubernetes"
 )
 
 // Module is used on app bootstrap.
@@ -17,6 +18,7 @@ var Module = fx.Options(
 	filesystem.Module,
 	httpendpoint.Module,
 	cloudblob.Module,
+	kubernetes.Module,
 )
 
 func checkRuleProvider(logger zerolog.Logger, conf config.Configuration) {
@@ -28,6 +30,8 @@ func checkRuleProvider(logger zerolog.Logger, conf config.Configuration) {
 	case conf.Rules.Providers.HTTPEndpoint != nil:
 		ruleProviderConfigured = true
 	case conf.Rules.Providers.CloudBlob != nil:
+		ruleProviderConfigured = true
+	case conf.Rules.Providers.Kubernetes != nil:
 		ruleProviderConfigured = true
 	}
 
