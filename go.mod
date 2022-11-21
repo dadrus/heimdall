@@ -9,6 +9,7 @@ require (
 	github.com/dop251/goja v0.0.0-20221118162653-d4bf6fde1b86
 	github.com/fsnotify/fsnotify v1.6.0
 	github.com/go-co-op/gocron v1.18.0
+	github.com/go-logr/zerologr v1.2.2
 	github.com/gobwas/glob v0.2.3
 	github.com/goccy/go-json v0.9.11
 	github.com/gofiber/fiber/v2 v2.40.0
@@ -49,6 +50,7 @@ require (
 	gopkg.in/yaml.v3 v3.0.1
 	k8s.io/apimachinery v0.25.0
 	k8s.io/client-go v0.25.0
+	k8s.io/klog/v2 v2.70.1
 )
 
 require (
@@ -169,7 +171,6 @@ require (
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	k8s.io/api v0.25.0 // indirect
-	k8s.io/klog/v2 v2.70.1 // indirect
 	k8s.io/utils v0.0.0-20220728103510-ee6ede2d64ed // indirect
 	sigs.k8s.io/json v0.0.0-20220713155537-f223a00ba0e2 // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.3 // indirect
