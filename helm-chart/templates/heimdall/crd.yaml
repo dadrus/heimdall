@@ -21,12 +21,15 @@ spec:
             spec:
               type: object
               properties:
-                authClass:
+                authClassName:
+                  description: Defines which heimdall setup should use the resource
                   type: string
                   default: default
                 rules:
+                  description: The actual rule set with rules defining the required pipeline mechanisms
                   type: array
                   items:
+                    description: A himedall rule defining the pipeline mechanisms
                     type: object
                     properties:
                       id:
@@ -66,11 +69,12 @@ spec:
                         type: array
                         items:
                           type: object
+                          x-kubernetes-preserve-unknown-fields: true
                       on_error:
                         description: The error pipeline mechanisms.
                         type: array
                         items:
                           type: object
-
+                          x-kubernetes-preserve-unknown-fields: true
 
 
