@@ -214,9 +214,7 @@ rules:
         - url: s3://my-bucket/my-rule-set
 
     kubernetes:
-      namespaces: []
-      className: foo
-      labels: {}
+      auth_class: foo
 
 
 
