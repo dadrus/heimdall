@@ -25,7 +25,7 @@ require (
 	github.com/santhosh-tekuri/jsonschema/v5 v5.1.0
 	github.com/spf13/cobra v1.6.1
 	github.com/stretchr/testify v1.8.1
-	github.com/tidwall/gjson v1.14.3
+	github.com/tidwall/gjson v1.14.4
 	github.com/tonglil/opentelemetry-go-datadog-propagator v0.1.0
 	github.com/valyala/fasthttp v1.41.0
 	github.com/ybbus/httpretry v1.0.1
