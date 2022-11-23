@@ -22,7 +22,7 @@ require (
 	github.com/ory/ladon v1.2.0
 	github.com/pquerna/cachecontrol v0.1.0
 	github.com/rs/zerolog v1.28.0
-	github.com/santhosh-tekuri/jsonschema/v5 v5.1.0
+	github.com/santhosh-tekuri/jsonschema/v5 v5.1.1
 	github.com/spf13/cobra v1.6.1
 	github.com/stretchr/testify v1.8.1
 	github.com/tidwall/gjson v1.14.4
