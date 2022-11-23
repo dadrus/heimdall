@@ -688,6 +688,8 @@ github.com/gofiber/fiber/v2 v2.39.0 h1:uhWpYQ6EHN8J7FOPYbI2hrdBD/KNZBC5CjbuOd4QU
 github.com/gofiber/fiber/v2 v2.39.0/go.mod h1:Cmuu+elPYGqlvQvdKyjtYsjGMi69PDp8a1AY2I5B2gM=
 github.com/gofiber/fiber/v2 v2.40.0 h1:fdU7w5hT6PLL7jiWIhtQ+S/k5WEFYoUZidptlPu8GBo=
 github.com/gofiber/fiber/v2 v2.40.0/go.mod h1:Gko04sLksnHbzLSRBFWPFdzM9Ws9pRxvvIaohJK1dsk=
+github.com/gofiber/fiber/v2 v2.40.1 h1:pc7n9VVpGIqNsvg9IPLQhyFEMJL8gCs1kneH5D1pIl4=
+github.com/gofiber/fiber/v2 v2.40.1/go.mod h1:Gko04sLksnHbzLSRBFWPFdzM9Ws9pRxvvIaohJK1dsk=
 github.com/gofrs/uuid v3.3.0+incompatible/go.mod h1:b2aQJv3Z4Fp6yNu3cdSllBxTCLRxnplIgP/c0N/04lM=
 github.com/gofrs/uuid v4.0.0+incompatible/go.mod h1:b2aQJv3Z4Fp6yNu3cdSllBxTCLRxnplIgP/c0N/04lM=
 github.com/gofrs/uuid v4.2.0+incompatible/go.mod h1:b2aQJv3Z4Fp6yNu3cdSllBxTCLRxnplIgP/c0N/04lM=
