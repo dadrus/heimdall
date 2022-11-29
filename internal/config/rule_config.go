@@ -24,13 +24,13 @@ type DefaultRuleConfig struct {
 }
 
 type RuleConfig struct {
-	ID               string           `yaml:"id"`
-	URL              string           `yaml:"url"`
-	Upstream         string           `yaml:"upstream"`
-	MatchingStrategy string           `yaml:"matching_strategy"`
-	Methods          []string         `yaml:"methods"`
-	Execute          []PipelineConfig `yaml:"execute"`
-	ErrorHandler     []PipelineConfig `yaml:"on_error"`
+	ID               string           `json:"id" yaml:"id"`
+	URL              string           `json:"url" yaml:"url"`
+	Upstream         string           `json:"upstream" yaml:"upstream"`
+	MatchingStrategy string           `json:"matching_strategy" yaml:"matching_strategy"`
+	Methods          []string         `json:"methods" yaml:"methods"`
+	Execute          []PipelineConfig `json:"execute" yaml:"execute"`
+	ErrorHandler     []PipelineConfig `json:"on_error" yaml:"on_error"`
 }
 
 func (in *RuleConfig) DeepCopyInto(out *RuleConfig) {
