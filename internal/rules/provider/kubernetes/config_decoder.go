@@ -7,9 +7,6 @@ import (
 func decodeConfig(input any, output any) error {
 	dec, err := mapstructure.NewDecoder(
 		&mapstructure.DecoderConfig{
-			DecodeHook: mapstructure.ComposeDecodeHookFunc(
-				mapstructure.StringToTimeDurationHookFunc(),
-			),
 			Result:      output,
 			ErrorUnused: true,
 		})
