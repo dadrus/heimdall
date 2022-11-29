@@ -21,8 +21,8 @@ spec:
             spec:
               type: object
               x-kubernetes-validations:
-                  - rule: "size(self.rules) > 0"
-                    message: "at least one rule definition must be provided"
+                - rule: "has(self.rules) && size(self.rules) > 0"
+                  message: "at least one rule definition must be provided"
               properties:
                 authClassName:
                   description: Defines which heimdall setup should use the resource
