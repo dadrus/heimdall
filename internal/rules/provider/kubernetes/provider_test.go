@@ -19,8 +19,10 @@ import (
 )
 
 func TestNewProvider(t *testing.T) {
-	t.Parallel()
-
+	// provider creates a client which registers its scheme
+	// the corresponding k8s api is not threat safe.
+	// So, to avoid concurrent map writes, this test is not configured
+	// to run parallel
 	for _, tc := range []struct {
 		uc     string
 		conf   []byte
