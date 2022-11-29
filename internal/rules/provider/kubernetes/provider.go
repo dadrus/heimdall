@@ -72,22 +72,15 @@ func newProvider(
 }
 
 func (p *provider) newController(ctx context.Context, namespace string) cache.Controller {
+	repository := p.cl.RuleSetRepository(namespace)
 	_, controller := cache.NewTransformingInformer(
 		&cache.ListWatch{
-			ListFunc: func(opts metav1.ListOptions) (runtime.Object, error) {
-				return p.cl.RuleSetRepository(namespace).List(ctx, opts)
-			},
-			WatchFunc: func(opts metav1.ListOptions) (watch.Interface, error) {
-				return p.cl.RuleSetRepository(namespace).Watch(ctx, opts)
-			},
+			ListFunc:  func(opts metav1.ListOptions) (runtime.Object, error) { return repository.List(ctx, opts) },
+			WatchFunc: func(opts metav1.ListOptions) (watch.Interface, error) { return repository.Watch(ctx, opts) },
 		},
 		&v1alpha1.RuleSet{},
 		0,
-		cache.ResourceEventHandlerFuncs{
-			AddFunc:    p.addRuleSet,
-			DeleteFunc: p.deleteRuleSet,
-			UpdateFunc: p.updateRuleSet,
-		},
+		cache.ResourceEventHandlerFuncs{AddFunc: p.addRuleSet, DeleteFunc: p.deleteRuleSet, UpdateFunc: p.updateRuleSet},
 		p.filterAuthClass,
 	)
 
