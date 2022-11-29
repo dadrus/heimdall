@@ -14,18 +14,18 @@ import (
 type registrationArguments struct {
 	fx.In
 
-	Lifecycle      fx.Lifecycle
-	HeimdallConfig config.Configuration
-	K8sConfig      *rest.Config
-	Queue          event.RuleSetChangedEventQueue
+	Lifecycle fx.Lifecycle
+	Config    config.Configuration
+	K8sConfig *rest.Config
+	Queue     event.RuleSetChangedEventQueue
 }
 
 func registerProvider(args registrationArguments, logger zerolog.Logger) error {
-	if args.HeimdallConfig.Rules.Providers.Kubernetes == nil {
+	if args.Config.Rules.Providers.Kubernetes == nil {
 		return nil
 	}
 
-	provider, err := newProvider(args.HeimdallConfig.Rules.Providers.Kubernetes, args.K8sConfig, args.Queue, logger)
+	provider, err := newProvider(args.Config.Rules.Providers.Kubernetes, args.K8sConfig, args.Queue, logger)
 	if err != nil {
 		logger.Error().Err(err).
 			Str("_rule_provider_type", ProviderType).
