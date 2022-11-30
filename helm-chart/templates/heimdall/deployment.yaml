@@ -33,8 +33,8 @@ spec:
     spec:
       imagePullSecrets:
         {{- toYaml .Values.imagePullSecrets | nindent 8 }}
-      # https://github.com/kubernetes/kubernetes/issues/57601
-      automountServiceAccountToken: false
+      automountServiceAccountToken: true
+      serviceAccountName: {{ include "heimdall.fullname" . }}
       securityContext:
         {{- toYaml .Values.deployment.pod.securityContext | nindent 8 }}
       volumes:
