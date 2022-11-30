@@ -3,7 +3,7 @@ module github.com/dadrus/heimdall
 go 1.19
 
 require (
-	github.com/Masterminds/sprig/v3 v3.2.2
+	github.com/Masterminds/sprig/v3 v3.2.3
 	github.com/ansrivas/fiberprometheus/v2 v2.4.1
 	github.com/dlclark/regexp2 v1.7.0
 	github.com/dop251/goja v0.0.0-20221118162653-d4bf6fde1b86
@@ -11,24 +11,24 @@ require (
 	github.com/go-co-op/gocron v1.18.0
 	github.com/go-logr/zerologr v1.2.2
 	github.com/gobwas/glob v0.2.3
-	github.com/goccy/go-json v0.9.11
-	github.com/gofiber/fiber/v2 v2.40.0
+	github.com/goccy/go-json v0.10.0
+	github.com/gofiber/fiber/v2 v2.40.1
 	github.com/google/uuid v1.3.0
 	github.com/iancoleman/strcase v0.2.0
 	github.com/instana/go-otel-exporter v0.0.0-20220908102301-52c5d8dbfd86
 	github.com/jellydator/ttlcache/v3 v3.0.0
-	github.com/johannesboyne/gofakes3 v0.0.0-20221110173912-32fb85c5aed6
+	github.com/johannesboyne/gofakes3 v0.0.0-20221128113635-c2f5cc6b5294
 	github.com/knadh/koanf v1.4.4
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/ory/ladon v1.2.0
 	github.com/pquerna/cachecontrol v0.1.0
 	github.com/rs/zerolog v1.28.0
-	github.com/santhosh-tekuri/jsonschema/v5 v5.1.0
+	github.com/santhosh-tekuri/jsonschema/v5 v5.1.1
 	github.com/spf13/cobra v1.6.1
 	github.com/stretchr/testify v1.8.1
-	github.com/tidwall/gjson v1.14.3
+	github.com/tidwall/gjson v1.14.4
 	github.com/tonglil/opentelemetry-go-datadog-propagator v0.1.0
-	github.com/valyala/fasthttp v1.41.0
+	github.com/valyala/fasthttp v1.43.0
 	github.com/ybbus/httpretry v1.0.1
 	github.com/yl2chen/cidranger v1.0.2
 	github.com/youmark/pkcs8 v0.0.0-20201027041543-1326539a0a0a
@@ -45,7 +45,7 @@ require (
 	go.opentelemetry.io/otel/trace v1.11.1
 	go.uber.org/fx v1.18.2
 	gocloud.dev v0.27.0
-	golang.org/x/exp v0.0.0-20221114191408-850992195362
+	golang.org/x/exp v0.0.0-20221126150942-6ab00d035af9
 	gopkg.in/square/go-jose.v2 v2.6.0
 	gopkg.in/yaml.v3 v3.0.1
 	k8s.io/apimachinery v0.25.0
@@ -66,7 +66,7 @@ require (
 	github.com/Azure/go-autorest/autorest/to v0.4.0 // indirect
 	github.com/AzureAD/microsoft-authentication-library-for-go v0.4.0 // indirect
 	github.com/Masterminds/goutils v1.1.1 // indirect
-	github.com/Masterminds/semver/v3 v3.1.1 // indirect
+	github.com/Masterminds/semver/v3 v3.2.0 // indirect
 	github.com/andybalholm/brotli v1.0.4 // indirect
 	github.com/aws/aws-sdk-go v1.44.68 // indirect
 	github.com/aws/aws-sdk-go-v2 v1.16.8 // indirect
@@ -107,7 +107,7 @@ require (
 	github.com/googleapis/enterprise-certificate-proxy v0.1.0 // indirect
 	github.com/googleapis/gax-go/v2 v2.4.0 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.10.2 // indirect
-	github.com/huandu/xstrings v1.3.2 // indirect
+	github.com/huandu/xstrings v1.3.3 // indirect
 	github.com/imdario/mergo v0.3.12 // indirect
 	github.com/inconshreveable/mousetrap v1.0.1 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
@@ -153,12 +153,12 @@ require (
 	go.uber.org/dig v1.15.0 // indirect
 	go.uber.org/multierr v1.8.0 // indirect
 	go.uber.org/zap v1.21.0 // indirect
-	golang.org/x/crypto v0.1.0 // indirect
-	golang.org/x/net v0.1.0 // indirect
+	golang.org/x/crypto v0.3.0 // indirect
+	golang.org/x/net v0.2.0 // indirect
 	golang.org/x/oauth2 v0.0.0-20220722155238-128564f6959c // indirect
 	golang.org/x/sync v0.0.0-20220722155255-886fb9371eb4 // indirect
-	golang.org/x/sys v0.1.0 // indirect
-	golang.org/x/term v0.1.0 // indirect
+	golang.org/x/sys v0.2.0 // indirect
+	golang.org/x/term v0.2.0 // indirect
 	golang.org/x/text v0.4.0 // indirect
 	golang.org/x/time v0.0.0-20220722155302-e5dcc9cfc0b9 // indirect
 	golang.org/x/tools v0.2.0 // indirect
