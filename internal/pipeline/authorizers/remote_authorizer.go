@@ -15,7 +15,6 @@ import (
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/cache"
-	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/endpoint"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/pipeline/contenttype"
@@ -30,8 +29,8 @@ import (
 // nolint
 func init() {
 	registerAuthorizerTypeFactory(
-		func(id string, typ config.PipelineHandlerType, conf map[string]any) (bool, Authorizer, error) {
-			if typ != config.POTRemote {
+		func(id string, typ string, conf map[string]any) (bool, Authorizer, error) {
+			if typ != AuthorizerRemote {
 				return false, nil, nil
 			}
 

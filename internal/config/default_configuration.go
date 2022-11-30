@@ -62,11 +62,11 @@ var defaultConfig = Configuration{
 	Signer: SignerConfig{
 		Name: "heimdall",
 	},
-	Pipeline: PipelineHandlersConfig{
-		Authenticators: []PipelineHandler{},
-		Authorizers:    []PipelineHandler{},
-		Hydrators:      []PipelineHandler{},
-		Mutators:       []PipelineHandler{},
-		ErrorHandlers:  []PipelineHandler{},
+	Prototypes: MechanismPrototypes{
+		Authenticators: []Mechanism{},
+		Authorizers:    []Mechanism{},
+		Hydrators:      []Mechanism{},
+		Mutators:       []Mechanism{},
+		ErrorHandlers:  []Mechanism{},
 	},
 }

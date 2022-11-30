@@ -15,7 +15,6 @@ import (
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/cache"
-	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/endpoint"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/pipeline/contenttype"
@@ -33,8 +32,8 @@ const (
 // nolint
 func init() {
 	registerHydratorTypeFactory(
-		func(id string, typ config.PipelineHandlerType, conf map[string]any) (bool, Hydrator, error) {
-			if typ != config.POTGeneric {
+		func(id string, typ string, conf map[string]any) (bool, Hydrator, error) {
+			if typ != HydratorGeneric {
 				return false, nil, nil
 			}
 

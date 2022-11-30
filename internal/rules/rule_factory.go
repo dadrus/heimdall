@@ -43,7 +43,7 @@ type ruleFactory struct {
 
 // nolint: gocognit, cyclop
 func (f *ruleFactory) createExecutePipeline(
-	pipeline []config.PipelineConfig,
+	pipeline []config.MechanismConfig,
 ) (compositeSubjectCreator, compositeSubjectHandler, compositeSubjectHandler, error) {
 	var (
 		authenticators  compositeSubjectCreator
@@ -232,7 +232,7 @@ func (f *ruleFactory) CreateRule(srcID string, ruleConfig config.RuleConfig) (ru
 	}, nil
 }
 
-func (f *ruleFactory) createOnErrorPipeline(ehConfigs []config.PipelineConfig) (compositeErrorHandler, error) {
+func (f *ruleFactory) createOnErrorPipeline(ehConfigs []config.MechanismConfig) (compositeErrorHandler, error) {
 	var errorHandlers compositeErrorHandler
 
 	for _, ehStep := range ehConfigs {

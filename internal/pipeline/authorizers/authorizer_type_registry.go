@@ -4,7 +4,6 @@ import (
 	"errors"
 	"sync"
 
-	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
@@ -18,11 +17,7 @@ var (
 	authorizerTypeFactoriesMu sync.RWMutex
 )
 
-type AuthorizerTypeFactory func(
-	id string,
-	typ config.PipelineHandlerType,
-	config map[string]any,
-) (bool, Authorizer, error)
+type AuthorizerTypeFactory func(id string, typ string, config map[string]any) (bool, Authorizer, error)
 
 func registerAuthorizerTypeFactory(factory AuthorizerTypeFactory) {
 	authorizerTypeFactoriesMu.Lock()
@@ -35,7 +30,7 @@ func registerAuthorizerTypeFactory(factory AuthorizerTypeFactory) {
 	authorizerTypeFactories = append(authorizerTypeFactories, factory)
 }
 
-func CreateAuthorizerPrototype(id string, typ config.PipelineHandlerType, config map[string]any) (Authorizer, error) {
+func CreateAuthorizerPrototype(id string, typ string, config map[string]any) (Authorizer, error) {
 	authorizerTypeFactoriesMu.RLock()
 	defer authorizerTypeFactoriesMu.RUnlock()
 

@@ -146,7 +146,7 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 											Upstream:         "http://bar",
 											MatchingStrategy: "glob",
 											Methods:          []string{http.MethodGet},
-											Execute: []config.PipelineConfig{
+											Execute: []config.MechanismConfig{
 												{"authenticator": "authn"},
 												{"authorizer": "authz"},
 											},
@@ -250,7 +250,7 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 											Upstream:         "http://bar",
 											MatchingStrategy: "glob",
 											Methods:          []string{http.MethodGet},
-											Execute: []config.PipelineConfig{
+											Execute: []config.MechanismConfig{
 												{"authenticator": "authn"},
 												{"authorizer": "authz"},
 											},
@@ -367,7 +367,7 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 											Upstream:         "http://bar",
 											MatchingStrategy: "glob",
 											Methods:          []string{http.MethodGet},
-											Execute: []config.PipelineConfig{
+											Execute: []config.MechanismConfig{
 												{"authenticator": "authn"},
 												{"authorizer": "authz"},
 											},
@@ -497,7 +497,7 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 											Upstream:         "http://bar",
 											MatchingStrategy: "glob",
 											Methods:          []string{http.MethodGet},
-											Execute: []config.PipelineConfig{
+											Execute: []config.MechanismConfig{
 												{"authenticator": "authn"},
 												{"authorizer": "authz"},
 											},
@@ -535,7 +535,7 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 										Upstream:         "http://bar",
 										MatchingStrategy: "glob",
 										Methods:          []string{http.MethodGet},
-										Execute: []config.PipelineConfig{
+										Execute: []config.MechanismConfig{
 											{"authenticator": "test_authn"},
 											{"authorizer": "test_authz"},
 										},

@@ -8,6 +8,8 @@ import (
 )
 
 func TestNewConfigurationFromStructWithDefaultsOnly(t *testing.T) {
+	t.Parallel()
+
 	// WHEN
 	config, err := NewConfiguration("HEIMDALLCFG_", "")
 
@@ -17,6 +19,8 @@ func TestNewConfigurationFromStructWithDefaultsOnly(t *testing.T) {
 }
 
 func TestNewConfigurationWithConfigFile(t *testing.T) {
+	t.Parallel()
+
 	// WHEN
 	config, err := NewConfiguration("HEIMDALLCFG_", "./test_data/test_config.yaml")
 

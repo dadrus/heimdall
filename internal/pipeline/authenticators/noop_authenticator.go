@@ -3,7 +3,6 @@ package authenticators
 import (
 	"github.com/rs/zerolog"
 
-	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/pipeline/subject"
 )
@@ -12,8 +11,8 @@ import (
 // nolint
 func init() {
 	registerAuthenticatorTypeFactory(
-		func(_ string, typ config.PipelineHandlerType, conf map[string]any) (bool, Authenticator, error) {
-			if typ != config.POTNoop {
+		func(_ string, typ string, conf map[string]any) (bool, Authenticator, error) {
+			if typ != AuthenticatorNoop {
 				return false, nil, nil
 			}
 

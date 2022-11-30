@@ -10,14 +10,14 @@ import (
 )
 
 type Configuration struct {
-	Serve    ServeConfig            `koanf:"serve"`
-	Log      LoggingConfig          `koanf:"log"`
-	Tracing  TracingConfig          `koanf:"tracing"`
-	Metrics  MetricsConfig          `koanf:"metrics"`
-	Signer   SignerConfig           `koanf:"signer"`
-	Cache    CacheConfig            `koanf:"cache"`
-	Pipeline PipelineHandlersConfig `koanf:"pipeline"`
-	Rules    RulesConfig            `koanf:"rules,omitempty"`
+	Serve      ServeConfig         `koanf:"serve"`
+	Log        LoggingConfig       `koanf:"log"`
+	Tracing    TracingConfig       `koanf:"tracing"`
+	Metrics    MetricsConfig       `koanf:"metrics"`
+	Signer     SignerConfig        `koanf:"signer"`
+	Cache      CacheConfig         `koanf:"cache"`
+	Prototypes MechanismPrototypes `koanf:"pipeline"`
+	Rules      RulesConfig         `koanf:"rules,omitempty"`
 }
 
 func NewConfiguration(envPrefix EnvVarPrefix, configFile ConfigurationPath) (Configuration, error) {

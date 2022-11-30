@@ -16,7 +16,6 @@ import (
 	"gopkg.in/square/go-jose.v2/jwt"
 
 	"github.com/dadrus/heimdall/internal/cache"
-	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/endpoint"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/pipeline/authenticators/extractors"
@@ -34,8 +33,8 @@ const defaultJWTAuthenticatorTTL = 10 * time.Minute
 // nolint
 func init() {
 	registerAuthenticatorTypeFactory(
-		func(id string, typ config.PipelineHandlerType, conf map[string]any) (bool, Authenticator, error) {
-			if typ != config.POTJwt {
+		func(id string, typ string, conf map[string]any) (bool, Authenticator, error) {
+			if typ != AuthenticatorJwt {
 				return false, nil, nil
 			}
 

@@ -6,7 +6,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
 )
 
@@ -18,12 +17,12 @@ func TestCreateHydratorPrototype(t *testing.T) {
 
 	for _, tc := range []struct {
 		uc     string
-		typ    config.PipelineHandlerType
+		typ    string
 		assert func(t *testing.T, err error, hydrator Hydrator)
 	}{
 		{
 			uc:  "using known type",
-			typ: config.POTGeneric,
+			typ: HydratorGeneric,
 			assert: func(t *testing.T, err error, hydrator Hydrator) {
 				t.Helper()
 
@@ -33,7 +32,7 @@ func TestCreateHydratorPrototype(t *testing.T) {
 		},
 		{
 			uc:  "using unknown type",
-			typ: config.POTDeny,
+			typ: "foo",
 			assert: func(t *testing.T, err error, hydrator Hydrator) {
 				t.Helper()
 

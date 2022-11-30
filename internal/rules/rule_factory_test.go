@@ -43,7 +43,7 @@ func TestRuleFactoryNew(t *testing.T) {
 			uc: "new factory with default rule with unsupported object in execute definition",
 			config: config.Configuration{Rules: config.RulesConfig{
 				Default: &config.DefaultRuleConfig{
-					Execute: []config.PipelineConfig{
+					Execute: []config.MechanismConfig{
 						{"foo": "bar"},
 					},
 				},
@@ -60,7 +60,7 @@ func TestRuleFactoryNew(t *testing.T) {
 			uc: "new factory with default rule with unsupported object in error handler definition",
 			config: config.Configuration{Rules: config.RulesConfig{
 				Default: &config.DefaultRuleConfig{
-					ErrorHandler: []config.PipelineConfig{
+					ErrorHandler: []config.MechanismConfig{
 						{"foo": "bar"},
 					},
 				},
@@ -77,7 +77,7 @@ func TestRuleFactoryNew(t *testing.T) {
 			uc: "new factory with malformed default rule, where authenticator loading happens after subject handlers",
 			config: config.Configuration{Rules: config.RulesConfig{
 				Default: &config.DefaultRuleConfig{
-					Execute: []config.PipelineConfig{
+					Execute: []config.MechanismConfig{
 						{"hydrator": "bar"},
 						{"authenticator": "foo"},
 					},
@@ -101,7 +101,7 @@ func TestRuleFactoryNew(t *testing.T) {
 			uc: "new factory with malformed default rule, where authenticator loading happens after mutator handlers",
 			config: config.Configuration{Rules: config.RulesConfig{
 				Default: &config.DefaultRuleConfig{
-					Execute: []config.PipelineConfig{
+					Execute: []config.MechanismConfig{
 						{"mutator": "bar"},
 						{"authenticator": "foo"},
 					},
@@ -125,7 +125,7 @@ func TestRuleFactoryNew(t *testing.T) {
 			uc: "new factory with default rule, where authenticator loading results in an error",
 			config: config.Configuration{Rules: config.RulesConfig{
 				Default: &config.DefaultRuleConfig{
-					Execute: []config.PipelineConfig{{"authenticator": "foo"}},
+					Execute: []config.MechanismConfig{{"authenticator": "foo"}},
 				},
 			}},
 			configureMocks: func(t *testing.T, mhf *mocks.MockHandlerFactory) {
@@ -145,7 +145,7 @@ func TestRuleFactoryNew(t *testing.T) {
 			uc: "new factory with malformed default rule, where authorizer loading happens after mutator handlers",
 			config: config.Configuration{Rules: config.RulesConfig{
 				Default: &config.DefaultRuleConfig{
-					Execute: []config.PipelineConfig{
+					Execute: []config.MechanismConfig{
 						{"mutator": "bar"},
 						{"authorizer": "foo"},
 					},
@@ -169,7 +169,7 @@ func TestRuleFactoryNew(t *testing.T) {
 			uc: "new factory with default rule, where authorizer loading results in an error",
 			config: config.Configuration{Rules: config.RulesConfig{
 				Default: &config.DefaultRuleConfig{
-					Execute: []config.PipelineConfig{{"authorizer": "foo"}},
+					Execute: []config.MechanismConfig{{"authorizer": "foo"}},
 				},
 			}},
 			configureMocks: func(t *testing.T, mhf *mocks.MockHandlerFactory) {
@@ -189,7 +189,7 @@ func TestRuleFactoryNew(t *testing.T) {
 			uc: "new factory with malformed default rule, where hydrator loading happens after mutator handlers",
 			config: config.Configuration{Rules: config.RulesConfig{
 				Default: &config.DefaultRuleConfig{
-					Execute: []config.PipelineConfig{
+					Execute: []config.MechanismConfig{
 						{"mutator": "bar"},
 						{"hydrator": "foo"},
 					},
@@ -213,7 +213,7 @@ func TestRuleFactoryNew(t *testing.T) {
 			uc: "new factory with default rule, where hydrator loading results in an error",
 			config: config.Configuration{Rules: config.RulesConfig{
 				Default: &config.DefaultRuleConfig{
-					Execute: []config.PipelineConfig{{"hydrator": "foo"}},
+					Execute: []config.MechanismConfig{{"hydrator": "foo"}},
 				},
 			}},
 			configureMocks: func(t *testing.T, mhf *mocks.MockHandlerFactory) {
@@ -233,7 +233,7 @@ func TestRuleFactoryNew(t *testing.T) {
 			uc: "new factory with default rule, where mutator loading results in an error",
 			config: config.Configuration{Rules: config.RulesConfig{
 				Default: &config.DefaultRuleConfig{
-					Execute: []config.PipelineConfig{{"mutator": "foo"}},
+					Execute: []config.MechanismConfig{{"mutator": "foo"}},
 				},
 			}},
 			configureMocks: func(t *testing.T, mhf *mocks.MockHandlerFactory) {
@@ -253,7 +253,7 @@ func TestRuleFactoryNew(t *testing.T) {
 			uc: "new factory with default rule, where error_handler loading results in an error",
 			config: config.Configuration{Rules: config.RulesConfig{
 				Default: &config.DefaultRuleConfig{
-					ErrorHandler: []config.PipelineConfig{{"error_handler": "foo"}},
+					ErrorHandler: []config.MechanismConfig{{"error_handler": "foo"}},
 				},
 			}},
 			configureMocks: func(t *testing.T, mhf *mocks.MockHandlerFactory) {
@@ -273,7 +273,7 @@ func TestRuleFactoryNew(t *testing.T) {
 			uc: "new factory with empty default rule",
 			config: config.Configuration{Rules: config.RulesConfig{
 				Default: &config.DefaultRuleConfig{
-					Execute: []config.PipelineConfig{},
+					Execute: []config.MechanismConfig{},
 				},
 			}},
 			assert: func(t *testing.T, err error, ruleFactory *ruleFactory) {
@@ -288,7 +288,7 @@ func TestRuleFactoryNew(t *testing.T) {
 			uc: "new factory with default rule, consisting of authenticator only",
 			config: config.Configuration{Rules: config.RulesConfig{
 				Default: &config.DefaultRuleConfig{
-					Execute: []config.PipelineConfig{
+					Execute: []config.MechanismConfig{
 						{"authenticator": "bar"},
 					},
 				},
@@ -311,7 +311,7 @@ func TestRuleFactoryNew(t *testing.T) {
 			uc: "new factory with default rule, consisting of authorizer and hydrator",
 			config: config.Configuration{Rules: config.RulesConfig{
 				Default: &config.DefaultRuleConfig{
-					Execute: []config.PipelineConfig{
+					Execute: []config.MechanismConfig{
 						{"authenticator": "bar"},
 						{"hydrator": "baz"},
 					},
@@ -337,7 +337,7 @@ func TestRuleFactoryNew(t *testing.T) {
 			uc: "new factory with default rule, consisting of authorizer, hydrator and authorizer",
 			config: config.Configuration{Rules: config.RulesConfig{
 				Default: &config.DefaultRuleConfig{
-					Execute: []config.PipelineConfig{
+					Execute: []config.MechanismConfig{
 						{"authenticator": "bar"},
 						{"hydrator": "baz"},
 						{"authorizer": "zab"},
@@ -366,7 +366,7 @@ func TestRuleFactoryNew(t *testing.T) {
 			uc: "new factory with default rule, consisting of authorizer and mutator without methods defined",
 			config: config.Configuration{Rules: config.RulesConfig{
 				Default: &config.DefaultRuleConfig{
-					Execute: []config.PipelineConfig{
+					Execute: []config.MechanismConfig{
 						{"authenticator": "bar"},
 						{"mutator": "baz"},
 					},
@@ -392,7 +392,7 @@ func TestRuleFactoryNew(t *testing.T) {
 			uc: "new factory with default rule, configured with all required elements",
 			config: config.Configuration{Rules: config.RulesConfig{
 				Default: &config.DefaultRuleConfig{
-					Execute: []config.PipelineConfig{
+					Execute: []config.MechanismConfig{
 						{"authenticator": "bar"},
 						{"mutator": "baz"},
 					},
@@ -431,13 +431,13 @@ func TestRuleFactoryNew(t *testing.T) {
 			uc: "new factory with default rule, configured with all possible elements",
 			config: config.Configuration{Rules: config.RulesConfig{
 				Default: &config.DefaultRuleConfig{
-					Execute: []config.PipelineConfig{
+					Execute: []config.MechanismConfig{
 						{"authenticator": "bar"},
 						{"hydrator": "foo"},
 						{"authorizer": "zab"},
 						{"mutator": "baz"},
 					},
-					ErrorHandler: []config.PipelineConfig{
+					ErrorHandler: []config.MechanismConfig{
 						{"error_handler": "foobar"},
 						{"error_handler": "barfoo"},
 					},
@@ -571,7 +571,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 			config: config.RuleConfig{
 				ID:      "foobar",
 				URL:     "http://foo.bar",
-				Execute: []config.PipelineConfig{{"authenticator": "foo"}},
+				Execute: []config.MechanismConfig{{"authenticator": "foo"}},
 			},
 			configureMocks: func(t *testing.T, mhf *mocks.MockHandlerFactory) {
 				t.Helper()
@@ -591,7 +591,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 			config: config.RuleConfig{
 				ID:           "foobar",
 				URL:          "http://foo.bar",
-				ErrorHandler: []config.PipelineConfig{{"error_handler": "foo"}},
+				ErrorHandler: []config.MechanismConfig{{"error_handler": "foo"}},
 			},
 			configureMocks: func(t *testing.T, mhf *mocks.MockHandlerFactory) {
 				t.Helper()
@@ -625,7 +625,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 			config: config.RuleConfig{
 				ID:      "foobar",
 				URL:     "http://foo.bar",
-				Execute: []config.PipelineConfig{{"authenticator": "foo"}},
+				Execute: []config.MechanismConfig{{"authenticator": "foo"}},
 			},
 			configureMocks: func(t *testing.T, mhf *mocks.MockHandlerFactory) {
 				t.Helper()
@@ -646,7 +646,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 			config: config.RuleConfig{
 				ID:  "foobar",
 				URL: "http://foo.bar",
-				Execute: []config.PipelineConfig{
+				Execute: []config.MechanismConfig{
 					{"authenticator": "foo"},
 					{"hydrator": "bar"},
 				},
@@ -672,7 +672,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 			config: config.RuleConfig{
 				ID:  "foobar",
 				URL: "http://foo.bar",
-				Execute: []config.PipelineConfig{
+				Execute: []config.MechanismConfig{
 					{"authenticator": "foo"},
 					{"hydrator": "bar"},
 					{"authorizer": "baz"},
@@ -701,7 +701,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 			config: config.RuleConfig{
 				ID:  "foobar",
 				URL: "http://foo.bar",
-				Execute: []config.PipelineConfig{
+				Execute: []config.MechanismConfig{
 					{"authenticator": "foo"},
 					{"mutator": "bar"},
 				},
@@ -727,7 +727,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 			config: config.RuleConfig{
 				ID:  "foobar",
 				URL: "http://foo.bar",
-				Execute: []config.PipelineConfig{
+				Execute: []config.MechanismConfig{
 					{"authenticator": "foo"},
 					{"mutator": "bar"},
 				},
@@ -794,13 +794,13 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				ID:       "foobar",
 				URL:      "http://foo.bar",
 				Upstream: "http://bar.foo",
-				Execute: []config.PipelineConfig{
+				Execute: []config.MechanismConfig{
 					{"authenticator": "foo"},
 					{"hydrator": "bar"},
 					{"authorizer": "zab"},
 					{"mutator": "baz"},
 				},
-				ErrorHandler: []config.PipelineConfig{
+				ErrorHandler: []config.MechanismConfig{
 					{"error_handler": "foo"},
 				},
 				Methods: []string{"BAR", "BAZ"},

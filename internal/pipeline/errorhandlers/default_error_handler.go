@@ -3,7 +3,6 @@ package errorhandlers
 import (
 	"github.com/rs/zerolog"
 
-	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
 )
 
@@ -11,8 +10,8 @@ import (
 // nolint
 func init() {
 	registerErrorHandlerTypeFactory(
-		func(_ string, typ config.PipelineHandlerType, conf map[string]any) (bool, ErrorHandler, error) {
-			if typ != config.POTDefault {
+		func(_ string, typ string, conf map[string]any) (bool, ErrorHandler, error) {
+			if typ != ErrorHandlerDefault {
 				return false, nil, nil
 			}
 

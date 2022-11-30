@@ -14,7 +14,6 @@ import (
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/cache"
-	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/endpoint"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/pipeline/authenticators/extractors"
@@ -28,8 +27,8 @@ import (
 // nolint
 func init() {
 	registerAuthenticatorTypeFactory(
-		func(id string, typ config.PipelineHandlerType, conf map[string]any) (bool, Authenticator, error) {
-			if typ != config.POTOAuth2Introspection {
+		func(id string, typ string, conf map[string]any) (bool, Authenticator, error) {
+			if typ != AuthenticatorOAuth2Introspection {
 				return false, nil, nil
 			}
 
