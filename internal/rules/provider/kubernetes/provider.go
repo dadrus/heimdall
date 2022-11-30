@@ -88,14 +88,8 @@ func (p *provider) newController(ctx context.Context, namespace string) cache.Co
 }
 
 func (p *provider) filterAuthClass(input any) (any, error) {
-	if input == nil {
-		return nil, ErrNilRuleSet
-	}
-
-	rs, ok := input.(*v1alpha1.RuleSet)
-	if !ok {
-		return nil, ErrNotARuleSet
-	}
+	// should never be of a different type. ok if panics
+	rs := input.(*v1alpha1.RuleSet) // nolint: forcetypeassert
 
 	if rs.Spec.AuthClassName != p.ac {
 		p.l.Info().
@@ -165,11 +159,18 @@ func (p *provider) Stop(ctx context.Context) error {
 	}
 }
 
+func (p *provider) updateRuleSet(oldObj, newObj any) {
+	// should never be of a different type. ok if panics
+	oldRs := oldObj.(*v1alpha1.RuleSet) // nolint: forcetypeassert
+	newRs := newObj.(*v1alpha1.RuleSet) // nolint: forcetypeassert
+
+	p.deleteRuleSet(oldRs)
+	p.addRuleSet(newRs)
+}
+
 func (p *provider) addRuleSet(obj any) {
-	rs, ok := obj.(*v1alpha1.RuleSet)
-	if !ok {
-		return
-	}
+	// should never be of a different type. ok if panics
+	rs := obj.(*v1alpha1.RuleSet) // nolint: forcetypeassert
 
 	p.ruleSetChanged(event.RuleSetChangedEvent{
 		Src:        fmt.Sprintf("%s:%s:%s:%s", ProviderType, rs.Namespace, rs.Name, rs.UID),
@@ -178,26 +179,9 @@ func (p *provider) addRuleSet(obj any) {
 	})
 }
 
-func (p *provider) updateRuleSet(oldObj, newObj any) {
-	oldRs, ok := oldObj.(*v1alpha1.RuleSet)
-	if !ok {
-		return
-	}
-
-	newRs, ok := newObj.(*v1alpha1.RuleSet)
-	if !ok {
-		return
-	}
-
-	p.deleteRuleSet(oldRs)
-	p.addRuleSet(newRs)
-}
-
 func (p *provider) deleteRuleSet(obj any) {
-	rs, ok := obj.(*v1alpha1.RuleSet)
-	if !ok {
-		return
-	}
+	// should never be of a different type. ok if panics
+	rs := obj.(*v1alpha1.RuleSet) // nolint: forcetypeassert
 
 	p.ruleSetChanged(event.RuleSetChangedEvent{
 		Src:        fmt.Sprintf("%s:%s:%s:%s", ProviderType, rs.Namespace, rs.Name, rs.UID),
