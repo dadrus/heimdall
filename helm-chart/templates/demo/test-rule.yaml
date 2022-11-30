@@ -3,6 +3,8 @@ kind: RuleSet
 metadata:
   name: {{ include "heimdall.demo.fullname" . }}-test-rule
   namespace: heimdall-demo
+  labels:
+    {{- include "heimdall.demo.labels" . | nindent 4 }}
 spec:
   rules:
     - id: public-access
