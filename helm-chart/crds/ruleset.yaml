@@ -62,7 +62,6 @@ spec:
                         items:
                           type: string
                           enum:
-                            - ALL
                             - CONNECT
                             - DELETE
                             - GET
