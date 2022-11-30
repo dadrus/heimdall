@@ -35,7 +35,7 @@ Create namesapce.
 */}}
 {{- define "heimdall.namespace" -}}
 {{- if .Release.Namespace -}}
-namespace: {{ .Release.Namespace }}
+  {{ default .Release.Namespace "default" }}
 {{- end -}}
 {{- end }}
 

@@ -21,7 +21,7 @@ apiVersion: extensions/v1beta1
 kind: Ingress
 metadata:
   name: {{ include "heimdall.demo.fullname" . }}
-  {{- include "heimdall.namespace" . | nindent 2 }}
+  namespace: heimdall-demo
   labels:
     {{- include "heimdall.demo.labels" . | nindent 4 }}
   {{- if eq .Values.operationMode "decision" }}

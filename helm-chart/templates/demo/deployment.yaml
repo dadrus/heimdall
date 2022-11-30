@@ -3,7 +3,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: {{ include "heimdall.demo.fullname" . }}
-  {{- include "heimdall.namespace" . | nindent 2 }}
+  namespace: heimdall-demo
   labels:
     {{- include "heimdall.demo.labels" . | nindent 4 }}
 spec:
@@ -22,7 +22,7 @@ spec:
       securityContext:
         {{- toYaml .Values.deployment.pod.securityContext | nindent 8 }}
       containers:
-        - name: {{ .Chart.Name }}
+        - name: {{ .Chart.Name }}-test-service
           securityContext:
             {{- toYaml .Values.deployment.securityContext | nindent 12 }}
           image: "containous/whoami:latest"

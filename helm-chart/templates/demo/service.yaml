@@ -3,7 +3,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: {{ include "heimdall.demo.fullname" . }}
-  {{- include "heimdall.namespace" . | nindent 2 }}
+  namespace: heimdall-demo
   labels:
     {{- include "heimdall.demo.labels" . | nindent 4 }}
 spec:
