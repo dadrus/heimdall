@@ -1,6 +1,7 @@
 package rules
 
 import (
+	"fmt"
 	"net/url"
 
 	"github.com/rs/zerolog"
@@ -122,23 +123,15 @@ func (f *ruleFactory) createExecutePipeline(
 	return authenticators, subjectHandlers, mutators, nil
 }
 
-func (f *ruleFactory) getConfig(conf any) map[string]any {
-	var mapConf map[string]any
+func (f *ruleFactory) getConfig(conf any) config.MechanismConfig {
+	var mapConf config.MechanismConfig
 
 	if conf != nil {
-		if m, ok := conf.(map[any]any); ok {
-			mapConf = make(map[string]any, len(m))
-
-			for k, v := range m {
-				// nolint: forcetypeassert
-				// ok if panics
-				mapConf[k.(string)] = v
-			}
-		} else if m, ok := conf.(map[string]any); ok {
-			mapConf = m
-		} else {
-			panic("unexpected type for config")
+		if m, ok := conf.(config.MechanismConfig); ok {
+			return m
 		}
+
+		panic(fmt.Sprintf("unexpected type for config %T", conf))
 	}
 
 	return mapConf

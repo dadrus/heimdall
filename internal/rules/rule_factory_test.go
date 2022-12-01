@@ -908,7 +908,7 @@ func TestRuleFactoryConfigExtraction(t *testing.T) {
 		},
 		{
 			uc:     "map[any]any",
-			config: map[any]any{"foo": "bar", "baz": []string{"zab"}},
+			config: config.MechanismConfig{"foo": "bar", "baz": []string{"zab"}},
 			assert: func(t *testing.T, conf map[string]any) {
 				t.Helper()
 
@@ -919,7 +919,7 @@ func TestRuleFactoryConfigExtraction(t *testing.T) {
 		},
 		{
 			uc:     "map[string]any",
-			config: map[string]any{"foo": "bar", "baz": []string{"zab"}},
+			config: config.MechanismConfig{"foo": "bar", "baz": []string{"zab"}},
 			assert: func(t *testing.T, conf map[string]any) {
 				t.Helper()
 

@@ -23,11 +23,11 @@ var (
 )
 
 type HandlerFactory interface {
-	CreateAuthenticator(id string, conf map[string]any) (authenticators.Authenticator, error)
-	CreateAuthorizer(id string, conf map[string]any) (authorizers.Authorizer, error)
-	CreateHydrator(id string, conf map[string]any) (hydrators.Hydrator, error)
-	CreateMutator(id string, conf map[string]any) (mutators.Mutator, error)
-	CreateErrorHandler(id string, conf map[string]any) (errorhandlers.ErrorHandler, error)
+	CreateAuthenticator(id string, conf config.MechanismConfig) (authenticators.Authenticator, error)
+	CreateAuthorizer(id string, conf config.MechanismConfig) (authorizers.Authorizer, error)
+	CreateHydrator(id string, conf config.MechanismConfig) (hydrators.Hydrator, error)
+	CreateMutator(id string, conf config.MechanismConfig) (mutators.Mutator, error)
+	CreateErrorHandler(id string, conf config.MechanismConfig) (errorhandlers.ErrorHandler, error)
 }
 
 func NewHandlerFactory(conf config.Configuration, logger zerolog.Logger) (HandlerFactory, error) {
@@ -47,7 +47,9 @@ type handlerFactory struct {
 	r *handlerPrototypeRepository
 }
 
-func (hf *handlerFactory) CreateAuthenticator(id string, conf map[string]any) (authenticators.Authenticator, error) {
+func (hf *handlerFactory) CreateAuthenticator(id string, conf config.MechanismConfig) (
+	authenticators.Authenticator, error,
+) {
 	prototype, err := hf.r.Authenticator(id)
 	if err != nil {
 		return nil, errorchain.New(ErrAuthenticatorCreation).CausedBy(err)
@@ -65,7 +67,9 @@ func (hf *handlerFactory) CreateAuthenticator(id string, conf map[string]any) (a
 	return prototype, nil
 }
 
-func (hf *handlerFactory) CreateAuthorizer(id string, conf map[string]any) (authorizers.Authorizer, error) {
+func (hf *handlerFactory) CreateAuthorizer(id string, conf config.MechanismConfig) (
+	authorizers.Authorizer, error,
+) {
 	prototype, err := hf.r.Authorizer(id)
 	if err != nil {
 		return nil, errorchain.New(ErrAuthorizerCreation).CausedBy(err)
@@ -83,7 +87,9 @@ func (hf *handlerFactory) CreateAuthorizer(id string, conf map[string]any) (auth
 	return prototype, nil
 }
 
-func (hf *handlerFactory) CreateHydrator(id string, conf map[string]any) (hydrators.Hydrator, error) {
+func (hf *handlerFactory) CreateHydrator(id string, conf config.MechanismConfig) (
+	hydrators.Hydrator, error,
+) {
 	prototype, err := hf.r.Hydrator(id)
 	if err != nil {
 		return nil, errorchain.New(ErrHydratorCreation).CausedBy(err)
@@ -101,7 +107,9 @@ func (hf *handlerFactory) CreateHydrator(id string, conf map[string]any) (hydrat
 	return prototype, nil
 }
 
-func (hf *handlerFactory) CreateMutator(id string, conf map[string]any) (mutators.Mutator, error) {
+func (hf *handlerFactory) CreateMutator(id string, conf config.MechanismConfig) (
+	mutators.Mutator, error,
+) {
 	prototype, err := hf.r.Mutator(id)
 	if err != nil {
 		return nil, errorchain.New(ErrMutatorCreation).CausedBy(err)
@@ -119,7 +127,9 @@ func (hf *handlerFactory) CreateMutator(id string, conf map[string]any) (mutator
 	return prototype, nil
 }
 
-func (hf *handlerFactory) CreateErrorHandler(id string, conf map[string]any) (errorhandlers.ErrorHandler, error) {
+func (hf *handlerFactory) CreateErrorHandler(id string, conf config.MechanismConfig) (
+	errorhandlers.ErrorHandler, error,
+) {
 	prototype, err := hf.r.ErrorHandler(id)
 	if err != nil {
 		return nil, errorchain.New(ErrErrorHandlerCreation).CausedBy(err)
