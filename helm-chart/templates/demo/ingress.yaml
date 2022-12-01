@@ -34,7 +34,7 @@ spec:
     - host: {{ $host }}
       http:
         paths:
-          - path: "/"
+          - path: "/heimdall-demo"
             {{- if semverCompare ">=1.18-0" $.Capabilities.KubeVersion.GitVersion }}
             pathType: ImplementationSpecific
             {{- end }}
