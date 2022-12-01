@@ -2,6 +2,8 @@ package kubernetes
 
 import (
 	"context"
+	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/x/errorchain"
 
 	"github.com/rs/zerolog"
 	"go.uber.org/fx"
@@ -29,20 +31,14 @@ func registerProvider(args registrationArguments, logger zerolog.Logger) error {
 
 	k8sConf, err := args.K8sConfig()
 	if err != nil {
-		logger.Error().Err(err).
-			Str("_rule_provider_type", ProviderType).
-			Msg("Failed to create provider.")
-
-		return err
+		return errorchain.NewWithMessage(heimdall.ErrInternal, "failed to create kubernetes provider").
+			CausedBy(err)
 	}
 
 	provider, err := newProvider(args.Config.Rules.Providers.Kubernetes, k8sConf, args.Queue, logger)
 	if err != nil {
-		logger.Error().Err(err).
-			Str("_rule_provider_type", ProviderType).
-			Msg("Failed to create provider.")
-
-		return err
+		return errorchain.NewWithMessage(heimdall.ErrInternal, "failed to create kubernetes provider").
+			CausedBy(err)
 	}
 
 	logger.Info().

@@ -2,6 +2,8 @@ package filesystem
 
 import (
 	"context"
+	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/x/errorchain"
 
 	"github.com/rs/zerolog"
 	"go.uber.org/fx"
@@ -25,11 +27,8 @@ func registerProvider(args registrationArguments, logger zerolog.Logger) error {
 
 	provider, err := newProvider(args.Config.Rules.Providers.FileSystem, args.Queue, logger)
 	if err != nil {
-		logger.Error().Err(err).
-			Str("_rule_provider_type", "file_system").
-			Msg("Failed to create provider.")
-
-		return err
+		return errorchain.NewWithMessage(heimdall.ErrInternal, "failed to create file_system provider").
+			CausedBy(err)
 	}
 
 	logger.Info().
