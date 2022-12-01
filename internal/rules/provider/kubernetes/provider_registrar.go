@@ -11,12 +11,14 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/event"
 )
 
+type ConfigFactory func() (*rest.Config, error)
+
 type registrationArguments struct {
 	fx.In
 
 	Lifecycle fx.Lifecycle
 	Config    config.Configuration
-	K8sConfig *rest.Config
+	K8sConfig ConfigFactory
 	Queue     event.RuleSetChangedEventQueue
 }
 
@@ -25,7 +27,16 @@ func registerProvider(args registrationArguments, logger zerolog.Logger) error {
 		return nil
 	}
 
-	provider, err := newProvider(args.Config.Rules.Providers.Kubernetes, args.K8sConfig, args.Queue, logger)
+	k8sConf, err := args.K8sConfig()
+	if err != nil {
+		logger.Error().Err(err).
+			Str("_rule_provider_type", ProviderType).
+			Msg("Failed to create provider.")
+
+		return err
+	}
+
+	provider, err := newProvider(args.Config.Rules.Providers.Kubernetes, k8sConf, args.Queue, logger)
 	if err != nil {
 		logger.Error().Err(err).
 			Str("_rule_provider_type", ProviderType).

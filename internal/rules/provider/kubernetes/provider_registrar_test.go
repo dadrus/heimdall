@@ -103,7 +103,9 @@ func TestRegisterProvider(t *testing.T) {
 				Lifecycle: mlc,
 				Config:    conf,
 				Queue:     queue,
-				K8sConfig: &rest.Config{Host: "http://localhost:80001"},
+				K8sConfig: func() (*rest.Config, error) {
+					return &rest.Config{Host: "http://localhost:80001"}, nil
+				},
 			}
 
 			// WHEN

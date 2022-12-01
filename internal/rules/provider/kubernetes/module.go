@@ -8,6 +8,6 @@ import (
 // Module is used on app bootstrap.
 // nolint: gochecknoglobals
 var Module = fx.Options(
-	fx.Provide(rest.InClusterConfig),
+	fx.Provide(func() ConfigFactory { return rest.InClusterConfig }),
 	fx.Invoke(registerProvider),
 )
