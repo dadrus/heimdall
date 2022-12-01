@@ -16,10 +16,12 @@ spec:
       storage: true
       schema:
         openAPIV3Schema:
+          description: RuleSet is the Schema for heimdall's rule definitions
           type: object
           properties:
             spec:
               type: object
+              description: Defines the actual rules and the authClassName these rules should be used by
               x-kubernetes-validations:
                 - rule: "has(self.rules) && size(self.rules) > 0"
                   message: "at least one rule definition must be provided"
