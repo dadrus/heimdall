@@ -17,6 +17,7 @@ spec:
     {{- include "heimdall.demo.selectorLabels" . | nindent 4 }}
 
 ---
+{{- if eq .Values.operationMode "proxy" -}}
 {{- $heimdallService := include "heimdall.fullname" . -}}
 {{- $heimdallService = print $heimdallService "." .Release.Namespace ".svc.cluster.local" }}
 apiVersion: v1
@@ -33,4 +34,5 @@ spec:
     - port: {{ .Values.service.proxy.port }}
   selector:
     {{- include "heimdall.demo.selectorLabels" . | nindent 4 }}
+{{- end }}
 {{- end }}
