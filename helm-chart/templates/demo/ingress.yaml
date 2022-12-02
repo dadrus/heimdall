@@ -1,14 +1,14 @@
-{{- if .Values.demoSetup -}}
+{{- if .Values.demo.enable -}}
 {{- $host := "unset" -}}
 {{- $service := "unset" -}}
 {{- $port := "unset" -}}
+{{- $heimdallService := include "heimdall.fullname" . -}}
+{{- $heimdallService = print "http://" $heimdallService "." .Release.Namespace ".svc.cluster.local:" .Values.service.decision.port }}
 {{- if eq .Values.operationMode "decision" -}}
-    {{- $host = "demo-app" -}}
     {{- $service = include "heimdall.demo.fullname" . -}}
     {{- $port = 8080 -}}
 {{- else -}}
-    {{- $host = "heimdall-proxy" -}}
-    {{- $service = include "heimdall.fullname" . -}}
+    {{- $service = "heimdall-proxy" -}}
     {{- $port = .Values.service.proxy.port -}}
 {{- end }}
 {{- if semverCompare ">=1.19-0" .Capabilities.KubeVersion.GitVersion -}}
@@ -26,12 +26,12 @@ metadata:
     {{- include "heimdall.demo.labels" . | nindent 4 }}
   {{- if eq .Values.operationMode "decision" }}
   annotations:
-    nginx.ingress.kubernetes.io/auth-url: "http://{{ include "heimdall.fullname" . }}.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.service.decision.port }}/$request_uri"
-    nginx.ingress.kubernetes.io/auth-response-headers: Authorization
+    {{ .Values.demo.forwardAuthMiddlewareAnnotation }}: "{{ $heimdallService }}/$request_uri"
+    {{ .Values.demo.forwardAuthMiddlewareResponseAnnotation }}: Authorization
   {{- end }}
 spec:
   rules:
-    - host: {{ $host }}
+    - host: "demo-app"
       http:
         paths:
           - path: "/heimdall-demo"

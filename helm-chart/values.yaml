@@ -1,10 +1,19 @@
 # Select the operation mode. Can be decision, or proxy
-# It must be selected
-operationMode: "" # decision or proxy
+# Defaults to "decision" as operating in proxy mode makes most probably only sense
+# if heimdall is installed as a side card either in the Ingress Controller itself,
+# or in each pod before the actual business service.
+operationMode: "decision" # decision or proxy
 
 # If set to true, a demo deployment with exemplary rules, as these can be found in the documentation,
 # will be done
-demoSetup: false
+demo:
+  enable: false
+
+  # the demo setup assumes nginx ingress controller and will use the
+  # following values to configure the ingress rule
+  # change the values to what is required for your ingress controller
+  forwardAuthMiddlewareAnnotation: nginx.ingress.kubernetes.io/auth-url
+  forwardAuthMiddlewareResponseAnnotation: nginx.ingress.kubernetes.io/auth-response-headers
 
 # Default values for heimdall.
 image:
