@@ -1,9 +1,6 @@
 {{- if .Values.demo.enable -}}
-{{- $host := "unset" -}}
 {{- $service := "unset" -}}
 {{- $port := "unset" -}}
-{{- $heimdallService := include "heimdall.fullname" . -}}
-{{- $heimdallService = print "http://" $heimdallService "." .Release.Namespace ".svc.cluster.local:" .Values.service.decision.port }}
 {{- if eq .Values.operationMode "decision" -}}
     {{- $service = include "heimdall.demo.fullname" . -}}
     {{- $port = 8080 -}}
@@ -26,7 +23,7 @@ metadata:
     {{- include "heimdall.demo.labels" . | nindent 4 }}
   {{- if eq .Values.operationMode "decision" }}
   annotations:
-    {{ .Values.demo.forwardAuthMiddlewareAnnotation }}: "{{ $heimdallService }}/$request_uri"
+    {{ .Values.demo.forwardAuthMiddlewareAnnotation }}: "http://{{ include "heimdall.fullname" . }}.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.service.decision.port }}/$request_uri"
     {{ .Values.demo.forwardAuthMiddlewareResponseAnnotation }}: Authorization
   {{- end }}
 spec:
