@@ -41,6 +41,8 @@ spec:
                         message: "a rule must have an id defined"
                       - rule: "has(self.url)"
                         message: "a rule must have a url set to match incoming requests"
+                      - rule: "has(self.execute) && size(self.execute) > 0"
+                        message: "execute pipeline is not allowed to be empty"
                     properties:
                       id:
                         description: The identifier of the rule
