@@ -1,5 +1,5 @@
 apiVersion: v2
-name: heimdall
+name: dadrus/heimdall
 description: A cloud native Identity Aware Proxy and Access Control Decision API
 version: 0.1.0
 appVersion: "0.4.1-alpha"
