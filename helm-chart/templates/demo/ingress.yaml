@@ -8,13 +8,7 @@
     {{- $service = "heimdall-proxy" -}}
     {{- $port = .Values.service.proxy.port -}}
 {{- end }}
-{{- if semverCompare ">=1.19-0" .Capabilities.KubeVersion.GitVersion -}}
 apiVersion: networking.k8s.io/v1
-{{- else if semverCompare ">=1.14-0" .Capabilities.KubeVersion.GitVersion -}}
-apiVersion: networking.k8s.io/v1beta1
-{{- else -}}
-apiVersion: extensions/v1beta1
-{{- end }}
 kind: Ingress
 metadata:
   name: {{ include "heimdall.demo.fullname" . }}
@@ -23,7 +17,7 @@ metadata:
     {{- include "heimdall.demo.labels" . | nindent 4 }}
   {{- if eq .Values.operationMode "decision" }}
   annotations:
-    {{ .Values.demo.forwardAuthMiddlewareAnnotation }}: "http://{{ include "heimdall.fullname" . }}.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.service.decision.port }}/$request_uri"
+    {{ .Values.demo.forwardAuthMiddlewareAnnotation }}: "http://{{ include "heimdall.fullname" . }}.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.service.decision.port }}{{ .Values.demo.forwardAuthMiddlewareRequestUri }}"
     {{ .Values.demo.forwardAuthMiddlewareResponseAnnotation }}: Authorization
   {{- end }}
 spec:
@@ -32,17 +26,10 @@ spec:
       http:
         paths:
           - path: "/heimdall-demo"
-            {{- if semverCompare ">=1.18-0" $.Capabilities.KubeVersion.GitVersion }}
             pathType: ImplementationSpecific
-            {{- end }}
             backend:
-              {{- if semverCompare ">=1.19-0" $.Capabilities.KubeVersion.GitVersion }}
               service:
                 name: {{ $service }}
                 port:
                   number: {{ $port }}
-              {{- else }}
-              serviceName: {{ $service }}
-              servicePort: {{ $port }}
-              {{- end }}
 {{- end }}
