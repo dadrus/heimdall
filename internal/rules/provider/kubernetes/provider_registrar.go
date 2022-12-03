@@ -2,15 +2,15 @@ package kubernetes
 
 import (
 	"context"
-	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/x/errorchain"
 
 	"github.com/rs/zerolog"
 	"go.uber.org/fx"
 	"k8s.io/client-go/rest"
 
 	"github.com/dadrus/heimdall/internal/config"
+	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/event"
+	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
 type ConfigFactory func() (*rest.Config, error)

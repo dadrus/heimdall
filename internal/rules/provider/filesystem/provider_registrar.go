@@ -2,14 +2,14 @@ package filesystem
 
 import (
 	"context"
-	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/x/errorchain"
 
 	"github.com/rs/zerolog"
 	"go.uber.org/fx"
 
 	"github.com/dadrus/heimdall/internal/config"
+	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/event"
+	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
 type registrationArguments struct {
