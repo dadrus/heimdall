@@ -14,14 +14,15 @@ demo:
   # change the values to what is required for your ingress controller
   forwardAuthMiddlewareAnnotation: nginx.ingress.kubernetes.io/auth-url
   forwardAuthMiddlewareResponseAnnotation: nginx.ingress.kubernetes.io/auth-response-headers
+  forwardAuthMiddlewareRequestUri: /$request_uri
 
 # Default values for heimdall.
 image:
   repository: dadrus/heimdall
   pullPolicy: IfNotPresent
-  tag: "0.4.1-alpha"
+  tag: "0.5.0-alpha"
+  pullSecrets: []
 
-imagePullSecrets: []
 nameOverride: ""
 fullnameOverride: ""
 
