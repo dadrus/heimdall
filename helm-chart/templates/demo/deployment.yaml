@@ -16,7 +16,7 @@ spec:
         {{- include "heimdall.demo.selectorLabels" . | nindent 8 }}
     spec:
       imagePullSecrets:
-        {{- toYaml .Values.imagePullSecrets | nindent 8 }}
+        {{- toYaml .Values.image.pullSecrets | nindent 8 }}
       # https://github.com/kubernetes/kubernetes/issues/57601
       automountServiceAccountToken: false
       securityContext:

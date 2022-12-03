@@ -32,7 +32,7 @@ spec:
         {{- end }}
     spec:
       imagePullSecrets:
-        {{- toYaml .Values.imagePullSecrets | nindent 8 }}
+        {{- toYaml .Values.image.pullSecrets | nindent 8 }}
       automountServiceAccountToken: true
       serviceAccountName: {{ include "heimdall.fullname" . }}
       securityContext:

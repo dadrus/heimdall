@@ -1,13 +1,13 @@
 {{- if .Values.demo.enable -}}
 {{- $service := "unset" -}}
 {{- $port := "unset" -}}
-{{- if eq .Values.operationMode "decision" -}}
+  {{- if eq .Values.operationMode "decision" -}}
     {{- $service = include "heimdall.demo.fullname" . -}}
     {{- $port = 8080 -}}
-{{- else -}}
+  {{- else -}}
     {{- $service = "heimdall-proxy" -}}
     {{- $port = .Values.service.proxy.port -}}
-{{- end }}
+  {{- end }}
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:

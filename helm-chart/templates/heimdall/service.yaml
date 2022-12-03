@@ -1,6 +1,6 @@
 {{- $opMode := required "operationMode is not set! Call helm with --set operationMode=<decision or proxy>" .Values.operationMode -}}
 {{- if not (or (eq $opMode "decision") (eq $opMode "proxy")) -}}
-{{- required "A valid operationMode is required! Call helm with --set operationMode=<decision or proxy>" .Values.operationMode -}}
+  {{- required "A valid operationMode is required! Call helm with --set operationMode=<decision or proxy>" .Values.operationMode -}}
 {{- end -}}
 {{- $data := dict "Release" .Release "Values" .Values "Chart" .Chart "Component" "service" -}}
 apiVersion: v1
