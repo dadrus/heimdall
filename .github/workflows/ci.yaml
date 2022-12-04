@@ -257,6 +257,28 @@ jobs:
           short-description: ${{ github.event.repository.description }}
           readme-filepath: ./DockerHub-README.md
 
+  release-helm-chart:
+    runs-on: ubuntu-22.04
+    needs:
+      - prepare-release
+    if: needs.prepare-release.outputs.release_created
+    steps:
+      - name: Prepare image version
+        id: image-version
+        run: |
+          export version=$(echo ${{ needs.prepare-release.outputs.tag_name }} |  sed 's/v//g')
+          echo ::set-output name=result::$version
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      - name: Publish Helm Chart
+        if: steps.chart-diff.outputs.diff
+        uses: stefanprodan/helm-gh-pages@v1.7.0
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          target_dir: charts
+          linting: off
+          app_version: ${{ steps.image-version.outputs.result }}
+
   documentation:
     runs-on: ubuntu-22.04
     needs:
