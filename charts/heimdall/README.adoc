@@ -36,7 +36,7 @@ This step is required if you're installing the chart via the helm repository.
 
 [source,bash]
 ----
-$ helm repo add heimdall https://dadrus.github.io/heimdall/chart
+$ helm repo add dadrus https://dadrus.github.io/heimdall/charts
 $ helm repo update
 ----
 
@@ -98,14 +98,14 @@ To install the chart with the release name "my-release" ("my-release" is the nam
 
 [source,bash]
 ----
-$ helm install my-release -f heimdall.yaml ./helm-chart
+$ helm install my-release -f heimdall.yaml ./charts/heimdall
 ----
 
 If you need proxy mode, install it with:
 
 [source,bash]
 ----
-$ helm install my-release -f heimdall.yaml --set operationMode=proxy ./helm-chart
+$ helm install my-release -f heimdall.yaml --set operationMode=proxy ./charts/heimdall
 ----
 
 In both cases you have to integrate it with your ingress controller. For decision mode that means setting corresponding annotations on Ingress resources to let the traffic first be verified by heimdall before it is forwarded to the upstream services by the Ingress Controller.
@@ -118,7 +118,7 @@ Helm does not upgrade the CRDs during a release upgrade. Before you upgrade a re
 
 [source,bash]
 ----
-$ kubectl apply -f ./helm-chart/crds/
+$ kubectl apply -f ./charts/heimdall/crds/
 ----
 
 === Upgrading the Release
@@ -127,7 +127,7 @@ To upgrade the release "my-release" using Chart Sources:
 
 [source,bash]
 ----
-$ helm upgrade my-release ./helm-chart
+$ helm upgrade my-release ./charts/heimdall
 ----
 
 To upgrade the release "my-release" using Helm Repository:
@@ -155,7 +155,7 @@ Uninstalling the release does not remove the CRDs. To remove the CRDs, run:
 
 [source,bash]
 ----
-$ kubectl delete -f ./helm-chart/crds/
+$ kubectl delete -f ./charts/heimdall/crds/
 ----
 
 == Configuration
