@@ -11,6 +11,9 @@ on:
 env:
   GO_VERSION: 1.19
   GOLANGCI_LINT_VERSION: v1.50.1
+  HELM_VERSION: 3.10.0
+  KUBECONFORM_VERSION: 0.5.0
+  KUBERNETES_API_VERSION: 1.23.0
   DOCUMENTATION_URL: https://dadrus.github.io/heimdall/
 
 jobs:
@@ -56,6 +59,30 @@ jobs:
       uses: hadolint/hadolint-action@v3.0.0
       with:
         dockerfile: docker/debug.Dockerfile
+
+  lint-helm-chart:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      - name: Setup k8s tools
+        uses: yokawasa/action-setup-kube-tools@v0.9.2
+        with:
+          setup-tools: |
+            helm
+            kubeconform
+          helm: '{{ env.HELM_VERSION }}'
+          kubeconform: '{{ env.KUBECONFORM_VERSION }}'
+      - name: Helm Lint
+        run: helm lint ./helm-chart
+      - name: Kubeconform decision mode deployment
+        run: |
+          helm template --set demo.enable=true helm-chart > decision-demo.yaml
+          kubeconform -kubernetes-version {{ env.KUBERNETES_API_VERSION }} decision-demo.yaml
+      - name: Kubeconform proxy mode deployment
+        run: |
+          helm template --set operationMode=proxy --set demo.enable=true helm-chart > proxy-demo.yaml
+          kubeconform -kubernetes-version {{ env.KUBERNETES_API_VERSION }} decision-demo.yaml
 
   test:
     runs-on: ubuntu-22.04
