@@ -78,11 +78,11 @@ jobs:
       - name: Kubeconform decision mode deployment
         run: |
           helm template --set demo.enable=true helm-chart > decision-demo.yaml
-          kubeconform -kubernetes-version ${{ env.KUBERNETES_API_VERSION }} decision-demo.yaml
+          kubeconform --skip RuleSet -kubernetes-version ${{ env.KUBERNETES_API_VERSION }} decision-demo.yaml
       - name: Kubeconform proxy mode deployment
         run: |
           helm template --set operationMode=proxy --set demo.enable=true helm-chart > proxy-demo.yaml
-          kubeconform -kubernetes-version ${{ env.KUBERNETES_API_VERSION }} decision-demo.yaml
+          kubeconform --skip RuleSet -kubernetes-version ${{ env.KUBERNETES_API_VERSION }} decision-demo.yaml
 
   test:
     runs-on: ubuntu-22.04
