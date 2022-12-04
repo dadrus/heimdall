@@ -71,18 +71,18 @@ jobs:
           setup-tools: |
             helm
             kubeconform
-          helm: '{{ env.HELM_VERSION }}'
-          kubeconform: '{{ env.KUBECONFORM_VERSION }}'
+          helm: '${{ env.HELM_VERSION }}'
+          kubeconform: '${{ env.KUBECONFORM_VERSION }}'
       - name: Helm Lint
         run: helm lint ./helm-chart
       - name: Kubeconform decision mode deployment
         run: |
           helm template --set demo.enable=true helm-chart > decision-demo.yaml
-          kubeconform -kubernetes-version {{ env.KUBERNETES_API_VERSION }} decision-demo.yaml
+          kubeconform -kubernetes-version ${{ env.KUBERNETES_API_VERSION }} decision-demo.yaml
       - name: Kubeconform proxy mode deployment
         run: |
           helm template --set operationMode=proxy --set demo.enable=true helm-chart > proxy-demo.yaml
-          kubeconform -kubernetes-version {{ env.KUBERNETES_API_VERSION }} decision-demo.yaml
+          kubeconform -kubernetes-version ${{ env.KUBERNETES_API_VERSION }} decision-demo.yaml
 
   test:
     runs-on: ubuntu-22.04
