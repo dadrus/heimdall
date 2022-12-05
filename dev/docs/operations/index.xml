@@ -1,12 +1,13 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Operations on Heimdall</title><link>https://dadrus.github.io/docs/operations/</link><description>Recent content in Operations on Heimdall</description><generator>Hugo -- gohugo.io</generator><language>en-us</language><lastBuildDate>Sat, 25 Jun 2022 14:39:36 +0200</lastBuildDate><atom:link href="https://dadrus.github.io/docs/operations/index.xml" rel="self" type="application/rss+xml"/><item><title>Install</title><link>https://dadrus.github.io/docs/operations/install/</link><pubDate>Mon, 25 Jul 2022 18:22:50 +0200</pubDate><guid>https://dadrus.github.io/docs/operations/install/</guid><description>Heimdall is shipped in multiple formats and architectures as to suit a variety of deployment patterns. Available installation options are:
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Operations on Heimdall</title><link>https://dadrus.github.io/docs/operations/</link><description>Recent content in Operations on Heimdall</description><generator>Hugo -- gohugo.io</generator><language>en-us</language><lastBuildDate>Sat, 25 Jun 2022 14:39:36 +0200</lastBuildDate><atom:link href="https://dadrus.github.io/docs/operations/index.xml" rel="self" type="application/rss+xml"/><item><title>Install</title><link>https://dadrus.github.io/docs/operations/install/</link><pubDate>Mon, 25 Jul 2022 18:22:50 +0200</pubDate><guid>https://dadrus.github.io/docs/operations/install/</guid><description>Heimdall is shipped in multiple formats and architectures to suit a variety of deployment patterns. Available installation options are:
 Source code
 Binary
 Docker Image
+Helm Chart
 Source Code You can always build a copy of Heimdall by following the following instructions for your OS/environment.
 Prerequisites git
 The Go programming language &amp;gt;= 1.19
 Download Retrieve the latest copy of heimdall source code by cloning the git repository
-$ git clone git@github.com:dadrus/heimdall.git Build with go Build using a single line with go build</description></item><item><title>CLI</title><link>https://dadrus.github.io/docs/operations/cli/</link><pubDate>Thu, 09 Jun 2022 18:57:50 +0200</pubDate><guid>https://dadrus.github.io/docs/operations/cli/</guid><description>Heimdall’s Command Line Interface
+$ git clone git@github.</description></item><item><title>CLI</title><link>https://dadrus.github.io/docs/operations/cli/</link><pubDate>Thu, 09 Jun 2022 18:57:50 +0200</pubDate><guid>https://dadrus.github.io/docs/operations/cli/</guid><description>Heimdall’s Command Line Interface
 General heimdall [command] [flags] [arguments] Use heimdall help to get overview about available commands, respectively heimdall [command] help for help on any command.
 Flag’s usage:
 # set flag_argument to flag(s) heimdall [--flag=flag_argument] [-f [flag_argument]] E.g.
