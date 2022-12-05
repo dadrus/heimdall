@@ -240,7 +240,7 @@ If you have used the link:{{< relref "/docs/operations/install.adoc#_helm_chart"
 
 [source, bash]
 ----
-$ kubectl apply -f https://github.com/dadrus/heimdall/blob/master/charts/heimdall/crds/ruleset.yaml
+$ kubectl apply -f https://raw.githubusercontent.com/dadrus/heimdall/main/charts/heimdall/crds/ruleset.yaml
 ----
 ====
 
