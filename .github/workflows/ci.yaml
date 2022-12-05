@@ -74,14 +74,14 @@ jobs:
           helm: '${{ env.HELM_VERSION }}'
           kubeconform: '${{ env.KUBECONFORM_VERSION }}'
       - name: Helm Lint
-        run: helm lint ./helm-chart
+        run: helm lint ./charts/heimdall
       - name: Kubeconform decision mode deployment
         run: |
-          helm template --set demo.enable=true helm-chart > decision-demo.yaml
+          helm template --set demo.enable=true ./charts/heimdall > decision-demo.yaml
           kubeconform --skip RuleSet -kubernetes-version ${{ env.KUBERNETES_API_VERSION }} decision-demo.yaml
       - name: Kubeconform proxy mode deployment
         run: |
-          helm template --set operationMode=proxy --set demo.enable=true helm-chart > proxy-demo.yaml
+          helm template --set operationMode=proxy --set demo.enable=true ./charts/heimdall > proxy-demo.yaml
           kubeconform --skip RuleSet -kubernetes-version ${{ env.KUBERNETES_API_VERSION }} decision-demo.yaml
 
   test:
