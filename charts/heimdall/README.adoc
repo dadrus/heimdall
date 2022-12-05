@@ -14,7 +14,7 @@ This chart helps you to deploy heimdall in your Kubernetes cluster using Helm.
 
 This step is required if you want installing the chart using its sources. Additionally, the step may also be required for managing the custom resource definitions (CRDs), which heimdall requires, or for upgrading/deleting the CRDs.
 
-To install the chart with the release name "my-release" ("my-release" is the name that you choose):
+To install the chart with the release name `my-release` (`my-release` is the name that you choose):
 
 1. Clone the heimdall repo:
 +
@@ -152,6 +152,13 @@ The command removes all the Kubernetes components associated with the release an
 === Uninstalling the CRDs
 
 Uninstalling the release does not remove the CRDs. To remove the CRDs, run:
+
+[source, bash]
+----
+$ kubectl delete rulesets.heimdall.dadrus.github.com
+----
+
+or if you have cloned the sources
 
 [source,bash]
 ----
