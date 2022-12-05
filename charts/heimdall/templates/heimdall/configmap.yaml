@@ -1,0 +1,48 @@
+{{- if not .Values.demo.enable }}
+  {{- if not (and .Values.pipeline .Values.rules) -}}
+    {{- required "No configuration file for heimdall provided! Specify it using -f as an additional values file" "" }}
+  {{- end }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "heimdall.fullname" . }}-config
+  namespace: {{ include "heimdall.namespace" . }}
+  labels:
+{{ include "heimdall.labels" . | indent 4 }}
+data:
+  heimdall.yaml: |
+    {{- with .Values.serve }}
+    serve:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
+
+    {{- with .Values.log }}
+    log:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
+
+    {{- with .Values.metrics }}
+    metrics:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
+
+    {{- with .Values.tracing }}
+    tracing:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
+
+    {{- with .Values.signer }}
+    signer:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
+
+    {{- with .Values.pipeline }}
+    pipeline:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
+
+    {{- with .Values.rules }}
+    rules:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
+{{- end }}

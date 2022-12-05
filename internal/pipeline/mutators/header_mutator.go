@@ -3,7 +3,6 @@ package mutators
 import (
 	"github.com/rs/zerolog"
 
-	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/pipeline/subject"
 	"github.com/dadrus/heimdall/internal/pipeline/template"
@@ -14,8 +13,8 @@ import (
 // nolint
 func init() {
 	registerMutatorTypeFactory(
-		func(id string, typ config.PipelineObjectType, conf map[string]any) (bool, Mutator, error) {
-			if typ != config.POTHeader {
+		func(id string, typ string, conf map[string]any) (bool, Mutator, error) {
+			if typ != MutatorHeader {
 				return false, nil, nil
 			}
 

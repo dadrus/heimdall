@@ -1,0 +1,90 @@
+{{- $opMode := required "operationMode is not set! Call helm with --set operationMode=<decision or proxy>" .Values.operationMode -}}
+{{- if not (or (eq $opMode "decision") (eq $opMode "proxy")) -}}
+{{- required "A valid operationMode is required! Call helm with --set operationMode=<decision or proxy>" .Values.operationMode -}}
+{{- end -}}
+{{- $data := dict "Release" .Release "Values" .Values "Chart" .Chart "Component" "deployment" -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "heimdall.fullname" $data }}
+  namespace: {{ include "heimdall.namespace" $data }}
+  labels:
+    {{- include "heimdall.labels" $data | nindent 4 }}
+  annotations:
+    {{- toYaml .Values.deployment.annotations | nindent 4 }}
+spec:
+  {{- if not .Values.deployment.autoscaling.enabled }}
+  replicas: {{ .Values.deployment.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "heimdall.selectorLabels" $data | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "heimdall.selectorLabels" $data | nindent 8 }}
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/path: "{{ .Values.metrics.prometheus.metrics_path }}"
+        prometheus.io/port: "{{ .Values.metrics.prometheus.port }}"
+        {{- with .Values.deployment.pod.annotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      imagePullSecrets:
+        {{- toYaml .Values.image.pullSecrets | nindent 8 }}
+      automountServiceAccountToken: true
+      serviceAccountName: {{ include "heimdall.fullname" . }}
+      securityContext:
+        {{- toYaml .Values.deployment.pod.securityContext | nindent 8 }}
+      volumes:
+        - name: {{ include "heimdall.name" $data }}-config-volume
+          configMap:
+            name: {{ include "heimdall.fullname" $data }}-config
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.deployment.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          {{- if eq $opMode "decision" }}
+          args: [ "serve", "decision" ]
+          {{- else }}
+          args: [ "serve", "proxy" ]
+          {{- end }}
+          ports:
+            {{- if eq $opMode "decision" }}
+            - name: http-decision
+              containerPort: {{ .Values.serve.decision.port }}
+              protocol: TCP
+            {{- else }}
+            - name: http-proxy
+              containerPort: {{ .Values.serve.proxy.port }}
+              protocol: TCP
+            {{- end }}
+            - name: http-management
+              protocol: TCP
+              containerPort: {{ .Values.serve.management.port }}
+            - name: http-metrics
+              protocol: TCP
+              containerPort: {{ .Values.metrics.prometheus.port }}
+          volumeMounts:
+            - name: {{ include "heimdall.name" . }}-config-volume
+              mountPath: /etc/heimdall
+              readOnly: true
+          livenessProbe:
+            httpGet:
+              path: /.well-known/health
+              port: http-management
+          readinessProbe:
+            httpGet:
+              path: /.well-known/health
+              port: http-management
+          resources:
+            {{- toYaml .Values.deployment.resources | nindent 12 }}
+      nodeSelector:
+        {{- toYaml .Values.deployment.nodeSelector | nindent 8 }}
+      affinity:
+        {{- toYaml .Values.deployment.affinity | nindent 8 }}
+      tolerations:
+        {{- toYaml .Values.deployment.tolerations | nindent 8 }}

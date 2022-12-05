@@ -3,7 +3,6 @@ package authorizers
 import (
 	"github.com/rs/zerolog"
 
-	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/pipeline/subject"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
@@ -13,8 +12,8 @@ import (
 // nolint
 func init() {
 	registerAuthorizerTypeFactory(
-		func(id string, typ config.PipelineObjectType, _ map[string]any) (bool, Authorizer, error) {
-			if typ != config.POTDeny {
+		func(id string, typ string, _ map[string]any) (bool, Authorizer, error) {
+			if typ != AuthorizerDeny {
 				return false, nil, nil
 			}
 

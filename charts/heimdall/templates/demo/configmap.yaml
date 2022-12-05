@@ -1,0 +1,43 @@
+{{- if .Values.demo.enable }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "heimdall.fullname" . }}-config
+  namespace: {{ include "heimdall.namespace" . }}
+  labels:
+{{ include "heimdall.labels" . | indent 4 }}
+data:
+  heimdall.yaml: |
+    log:
+      level: info
+
+    pipeline:
+      authenticators:
+        - id: anonymous_authenticator
+          type: anonymous
+        - id: noop_authenticator
+          type: noop
+      authorizers:
+        - id: deny_all_requests
+          type: deny
+        - id: allow_all_requests
+          type: allow
+      mutators:
+        - id: create_jwt
+          type: jwt
+        - id: noop_mutator
+          type: noop
+
+    rules:
+      default:
+        methods:
+          - GET
+          - POST
+        execute:
+          - authenticator: anonymous_authenticator
+          - authorizer: deny_all_requests
+          - mutator: create_jwt
+
+      providers:
+        kubernetes: {}
+{{- end }}

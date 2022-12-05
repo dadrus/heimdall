@@ -7,7 +7,9 @@ import (
 	"go.uber.org/fx"
 
 	"github.com/dadrus/heimdall/internal/config"
+	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/event"
+	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
 type registrationArguments struct {
@@ -25,11 +27,8 @@ func registerProvider(args registrationArguments, logger zerolog.Logger) error {
 
 	provider, err := newProvider(args.Config.Rules.Providers.CloudBlob, args.Queue, logger)
 	if err != nil {
-		logger.Error().Err(err).
-			Str("_rule_provider_type", "cloud_blob").
-			Msg("Failed to create provider.")
-
-		return err
+		return errorchain.NewWithMessage(heimdall.ErrInternal, "failed to create cloud_blob provider").
+			CausedBy(err)
 	}
 
 	logger.Info().

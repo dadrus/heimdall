@@ -5,8 +5,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	"github.com/dadrus/heimdall/internal/config"
 )
 
 func TestCreateErrorHandlerPrototypePrototype(t *testing.T) {
@@ -17,12 +15,12 @@ func TestCreateErrorHandlerPrototypePrototype(t *testing.T) {
 
 	for _, tc := range []struct {
 		uc     string
-		typ    config.PipelineObjectType
+		typ    string
 		assert func(t *testing.T, err error, errorHandler ErrorHandler)
 	}{
 		{
 			uc:  "using known type",
-			typ: config.POTDefault,
+			typ: ErrorHandlerDefault,
 			assert: func(t *testing.T, err error, errorHandler ErrorHandler) {
 				t.Helper()
 
@@ -32,7 +30,7 @@ func TestCreateErrorHandlerPrototypePrototype(t *testing.T) {
 		},
 		{
 			uc:  "using unknown type",
-			typ: config.POTDeny,
+			typ: "foo",
 			assert: func(t *testing.T, err error, errorHandler ErrorHandler) {
 				t.Helper()
 

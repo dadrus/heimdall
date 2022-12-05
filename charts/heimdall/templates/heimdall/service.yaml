@@ -1,0 +1,34 @@
+{{- $opMode := required "operationMode is not set! Call helm with --set operationMode=<decision or proxy>" .Values.operationMode -}}
+{{- if not (or (eq $opMode "decision") (eq $opMode "proxy")) -}}
+  {{- required "A valid operationMode is required! Call helm with --set operationMode=<decision or proxy>" .Values.operationMode -}}
+{{- end -}}
+{{- $data := dict "Release" .Release "Values" .Values "Chart" .Chart "Component" "service" -}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "heimdall.fullname" $data }}
+  namespace: {{ include "heimdall.namespace" $data }}
+  labels:
+    {{- include "heimdall.labels" $data | nindent 4 }}
+  annotations:
+    {{- toYaml .Values.service.annotations | nindent 4 }}
+spec:
+  type: ClusterIP
+  ports:
+    - port: {{ .Values.service.management.port }}
+      targetPort: http-management
+      protocol: TCP
+      name: {{ .Values.service.management.name }}
+      {{- if eq $opMode "decision" }}
+    - port: {{ .Values.service.decision.port }}
+      targetPort: http-decision
+      protocol: TCP
+      name: {{ .Values.service.decision.name }}
+      {{- else }}
+    - port: {{ .Values.service.proxy.port }}
+      targetPort: http-proxy
+      protocol: TCP
+      name: {{ .Values.service.proxy.name }}
+      {{- end }}
+  selector:
+    {{- include "heimdall.selectorLabels" $data | nindent 4 }}

@@ -4,7 +4,6 @@ import (
 	"errors"
 	"sync"
 
-	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
@@ -18,7 +17,7 @@ var (
 	mutatorTypeFactoriesMu sync.RWMutex
 )
 
-type MutatorTypeFactory func(id string, t config.PipelineObjectType, c map[string]any) (bool, Mutator, error)
+type MutatorTypeFactory func(id string, typ string, c map[string]any) (bool, Mutator, error)
 
 func registerMutatorTypeFactory(factory MutatorTypeFactory) {
 	mutatorTypeFactoriesMu.Lock()
@@ -31,7 +30,7 @@ func registerMutatorTypeFactory(factory MutatorTypeFactory) {
 	mutatorTypeFactories = append(mutatorTypeFactories, factory)
 }
 
-func CreateMutatorPrototype(id string, typ config.PipelineObjectType, mConfig map[string]any) (Mutator, error) {
+func CreateMutatorPrototype(id string, typ string, mConfig map[string]any) (Mutator, error) {
 	mutatorTypeFactoriesMu.RLock()
 	defer mutatorTypeFactoriesMu.RUnlock()
 

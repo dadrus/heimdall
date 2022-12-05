@@ -7,6 +7,8 @@ import (
 )
 
 func TestLogFormatToString(t *testing.T) {
+	t.Parallel()
+
 	assert.Equal(t, "text", LogTextFormat.String())
 	assert.Equal(t, "gelf", LogGelfFormat.String())
 }

@@ -3,6 +3,7 @@ package mocks
 import (
 	"github.com/stretchr/testify/mock"
 
+	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/pipeline/authenticators"
 	"github.com/dadrus/heimdall/internal/pipeline/authorizers"
 	"github.com/dadrus/heimdall/internal/pipeline/errorhandlers"
@@ -14,7 +15,9 @@ type MockHandlerFactory struct {
 	mock.Mock
 }
 
-func (m *MockHandlerFactory) CreateAuthenticator(id string, conf map[string]any) (authenticators.Authenticator, error) {
+func (m *MockHandlerFactory) CreateAuthenticator(id string, conf config.MechanismConfig) (
+	authenticators.Authenticator, error,
+) {
 	args := m.Called(id, conf)
 
 	if val := args.Get(0); val != nil {
@@ -25,7 +28,9 @@ func (m *MockHandlerFactory) CreateAuthenticator(id string, conf map[string]any)
 	return nil, args.Error(1)
 }
 
-func (m *MockHandlerFactory) CreateAuthorizer(id string, conf map[string]any) (authorizers.Authorizer, error) {
+func (m *MockHandlerFactory) CreateAuthorizer(id string, conf config.MechanismConfig) (
+	authorizers.Authorizer, error,
+) {
 	args := m.Called(id, conf)
 
 	if val := args.Get(0); val != nil {
@@ -36,7 +41,9 @@ func (m *MockHandlerFactory) CreateAuthorizer(id string, conf map[string]any) (a
 	return nil, args.Error(1)
 }
 
-func (m *MockHandlerFactory) CreateHydrator(id string, conf map[string]any) (hydrators.Hydrator, error) {
+func (m *MockHandlerFactory) CreateHydrator(id string, conf config.MechanismConfig) (
+	hydrators.Hydrator, error,
+) {
 	args := m.Called(id, conf)
 
 	if val := args.Get(0); val != nil {
@@ -47,7 +54,9 @@ func (m *MockHandlerFactory) CreateHydrator(id string, conf map[string]any) (hyd
 	return nil, args.Error(1)
 }
 
-func (m *MockHandlerFactory) CreateMutator(id string, conf map[string]any) (mutators.Mutator, error) {
+func (m *MockHandlerFactory) CreateMutator(id string, conf config.MechanismConfig) (
+	mutators.Mutator, error,
+) {
 	args := m.Called(id, conf)
 
 	if val := args.Get(0); val != nil {
@@ -58,7 +67,9 @@ func (m *MockHandlerFactory) CreateMutator(id string, conf map[string]any) (muta
 	return nil, args.Error(1)
 }
 
-func (m *MockHandlerFactory) CreateErrorHandler(id string, conf map[string]any) (errorhandlers.ErrorHandler, error) {
+func (m *MockHandlerFactory) CreateErrorHandler(id string, conf config.MechanismConfig) (
+	errorhandlers.ErrorHandler, error,
+) {
 	args := m.Called(id, conf)
 
 	if val := args.Get(0); val != nil {

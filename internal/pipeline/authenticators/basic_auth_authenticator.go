@@ -8,7 +8,6 @@ import (
 
 	"github.com/rs/zerolog"
 
-	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/pipeline/authenticators/extractors"
 	"github.com/dadrus/heimdall/internal/pipeline/subject"
@@ -24,8 +23,8 @@ const (
 // nolint
 func init() {
 	registerAuthenticatorTypeFactory(
-		func(id string, typ config.PipelineObjectType, conf map[string]any) (bool, Authenticator, error) {
-			if typ != config.POTBasicAuth {
+		func(id string, typ string, conf map[string]any) (bool, Authenticator, error) {
+			if typ != AuthenticatorBasicAuth {
 				return false, nil, nil
 			}
 

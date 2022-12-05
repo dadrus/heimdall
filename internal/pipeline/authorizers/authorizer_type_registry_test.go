@@ -5,8 +5,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	"github.com/dadrus/heimdall/internal/config"
 )
 
 func TestCreateAuthorizerPrototypeUsingKnowType(t *testing.T) {
@@ -17,12 +15,12 @@ func TestCreateAuthorizerPrototypeUsingKnowType(t *testing.T) {
 
 	for _, tc := range []struct {
 		uc     string
-		typ    config.PipelineObjectType
+		typ    string
 		assert func(t *testing.T, err error, auth Authorizer)
 	}{
 		{
 			uc:  "using known type",
-			typ: config.POTAllow,
+			typ: AuthorizerAllow,
 			assert: func(t *testing.T, err error, auth Authorizer) {
 				t.Helper()
 
@@ -32,7 +30,7 @@ func TestCreateAuthorizerPrototypeUsingKnowType(t *testing.T) {
 		},
 		{
 			uc:  "using unknown type",
-			typ: config.POTJwt,
+			typ: "foo",
 			assert: func(t *testing.T, err error, auth Authorizer) {
 				t.Helper()
 

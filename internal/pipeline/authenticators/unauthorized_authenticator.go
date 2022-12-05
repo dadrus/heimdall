@@ -3,7 +3,6 @@ package authenticators
 import (
 	"github.com/rs/zerolog"
 
-	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/pipeline/subject"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
@@ -13,8 +12,8 @@ import (
 // nolint
 func init() {
 	registerAuthenticatorTypeFactory(
-		func(id string, typ config.PipelineObjectType, conf map[string]any) (bool, Authenticator, error) {
-			if typ != config.POTUnauthorized {
+		func(id string, typ string, conf map[string]any) (bool, Authenticator, error) {
+			if typ != AuthenticatorUnauthorized {
 				return false, nil, nil
 			}
 

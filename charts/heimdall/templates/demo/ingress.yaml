@@ -1,0 +1,35 @@
+{{- if .Values.demo.enable -}}
+{{- $service := "unset" -}}
+{{- $port := "unset" -}}
+  {{- if eq .Values.operationMode "decision" -}}
+    {{- $service = include "heimdall.demo.fullname" . -}}
+    {{- $port = 8080 -}}
+  {{- else -}}
+    {{- $service = "heimdall-proxy" -}}
+    {{- $port = .Values.service.proxy.port -}}
+  {{- end }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "heimdall.demo.fullname" . }}
+  namespace: heimdall-demo
+  labels:
+    {{- include "heimdall.demo.labels" . | nindent 4 }}
+  {{- if eq .Values.operationMode "decision" }}
+  annotations:
+    {{ .Values.demo.forwardAuthMiddlewareAnnotation }}: "http://{{ include "heimdall.fullname" . }}.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.service.decision.port }}{{ .Values.demo.forwardAuthMiddlewareRequestUri }}"
+    {{ .Values.demo.forwardAuthMiddlewareResponseAnnotation }}: Authorization
+  {{- end }}
+spec:
+  rules:
+    - host: "demo-app"
+      http:
+        paths:
+          - path: "/heimdall-demo"
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: {{ $service }}
+                port:
+                  number: {{ $port }}
+{{- end }}

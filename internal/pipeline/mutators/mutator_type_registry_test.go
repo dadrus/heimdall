@@ -5,8 +5,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	"github.com/dadrus/heimdall/internal/config"
 )
 
 func TestCreateMutatorPrototype(t *testing.T) {
@@ -17,12 +15,12 @@ func TestCreateMutatorPrototype(t *testing.T) {
 
 	for _, tc := range []struct {
 		uc     string
-		typ    config.PipelineObjectType
+		typ    string
 		assert func(t *testing.T, err error, mutator Mutator)
 	}{
 		{
 			uc:  "using known type",
-			typ: config.POTNoop,
+			typ: MutatorNoop,
 			assert: func(t *testing.T, err error, mutator Mutator) {
 				t.Helper()
 
@@ -32,7 +30,7 @@ func TestCreateMutatorPrototype(t *testing.T) {
 		},
 		{
 			uc:  "using unknown type",
-			typ: config.POTDeny,
+			typ: "foo",
 			assert: func(t *testing.T, err error, mutator Mutator) {
 				t.Helper()
 

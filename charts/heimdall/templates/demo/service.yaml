@@ -1,0 +1,38 @@
+{{- if .Values.demo.enable }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "heimdall.demo.fullname" . }}
+  namespace: heimdall-demo
+  labels:
+    {{- include "heimdall.demo.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8080
+      targetPort: http-demo
+      protocol: TCP
+      name: demo-port
+  selector:
+    {{- include "heimdall.demo.selectorLabels" . | nindent 4 }}
+
+  {{- if eq .Values.operationMode "proxy" -}}
+    {{- $heimdallService := include "heimdall.fullname" . -}}
+    {{- $heimdallService = print $heimdallService "." .Release.Namespace ".svc.cluster.local" }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: heimdall-proxy
+  namespace: heimdall-demo
+  labels:
+    {{- include "heimdall.demo.labels" . | nindent 4 }}
+spec:
+  type: ExternalName
+  externalName: {{ $heimdallService }}
+  ports:
+    - port: {{ .Values.service.proxy.port }}
+  selector:
+    {{- include "heimdall.demo.selectorLabels" . | nindent 4 }}
+  {{- end }}
+{{- end }}

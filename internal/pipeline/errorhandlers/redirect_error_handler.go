@@ -6,7 +6,6 @@ import (
 
 	"github.com/rs/zerolog"
 
-	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/pipeline/errorhandlers/matcher"
 	"github.com/dadrus/heimdall/internal/x"
@@ -17,8 +16,8 @@ import (
 // nolint
 func init() {
 	registerErrorHandlerTypeFactory(
-		func(_ string, typ config.PipelineObjectType, conf map[string]any) (bool, ErrorHandler, error) {
-			if typ != config.POTRedirect {
+		func(_ string, typ string, conf map[string]any) (bool, ErrorHandler, error) {
+			if typ != ErrorHandlerRedirect {
 				return false, nil, nil
 			}
 

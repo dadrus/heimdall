@@ -1,0 +1,91 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: rulesets.heimdall.dadrus.github.com
+spec:
+  group: heimdall.dadrus.github.com
+  scope: Namespaced
+  names:
+    kind: RuleSet
+    plural: rulesets
+    singular: ruleset
+    listKind: RuleSetList
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          description: RuleSet is the Schema for heimdall's rule definitions
+          type: object
+          properties:
+            spec:
+              type: object
+              description: Defines the actual rules and the authClassName these rules should be used by
+              x-kubernetes-validations:
+                - rule: "has(self.rules) && size(self.rules) > 0"
+                  message: "at least one rule definition must be provided"
+              properties:
+                authClassName:
+                  description: Defines which heimdall setup should use the resource
+                  type: string
+                  default: default
+                rules:
+                  description: The actual rule set with rules defining the required pipeline mechanisms
+                  type: array
+                  items:
+                    description: A himedall rule defining the pipeline mechanisms
+                    type: object
+                    x-kubernetes-validations:
+                      - rule: "has(self.id)"
+                        message: "a rule must have an id defined"
+                      - rule: "has(self.url)"
+                        message: "a rule must have a url set to match incoming requests"
+                      - rule: "has(self.execute) && size(self.execute) > 0"
+                        message: "execute pipeline is not allowed to be empty"
+                    properties:
+                      id:
+                        description: The identifier of the rule
+                        type: string
+                      url:
+                        description: The url to match
+                        type: string
+                      matching_strategy:
+                        description: Strategy to match the url. Can either be regex or glob. defaults to glob
+                        type: string
+                        default: glob
+                        enum:
+                          - regex
+                          - glob
+                      upstream:
+                        description: Schema, host and port of the upstream service to forward the request to. Required only if heimdall is used in proxy operation mode.
+                        type: string
+                      methods:
+                        description: The allowed HTTP methods
+                        type: array
+                        items:
+                          type: string
+                          enum:
+                            - CONNECT
+                            - DELETE
+                            - GET
+                            - HEAD
+                            - OPTIONS
+                            - PATCH
+                            - POST
+                            - PUT
+                            - TRACE
+                      execute:
+                        description: The pipeline mechanisms to execute
+                        type: array
+                        items:
+                          type: object
+                          x-kubernetes-preserve-unknown-fields: true
+                      on_error:
+                        description: The error pipeline mechanisms.
+                        type: array
+                        items:
+                          type: object
+                          x-kubernetes-preserve-unknown-fields: true
+
+

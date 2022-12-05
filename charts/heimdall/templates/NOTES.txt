@@ -1,0 +1,35 @@
+{{- if eq .Values.operationMode "decision" }}
+Heimdall is installed and configured to operate in decision mode.
+
+To integrate heimdall with your Ingress Controller, you have to annotate the corresponding
+Ingress resources to use it as authentication middleware and forward the requests to
+
+"http://{{ include "heimdall.fullname" . }}.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.service.decision.port }}".
+
+as well as forward the HTTP headers and/or cookies from heimdall responses to the upstream
+services. Consult the Ingress Controller documentation of your choice on how to achieve this.
+
+{{- else }}
+Heimdall is installed and configured to operate in proxy mode.
+
+  {{- if not .Values.demo.enable }}
+
+The actual integration depends pretty much on your requirements and setup.
+  {{- end }}
+{{- end }}
+
+{{- if .Values.demo.enable }}
+
+The setup includes a demo app and a rule set. To query the running demo app, which just
+echoes the request, and see heimdall in actions, just do
+
+> curl -v -H "Host: demo-app" <you cluster ip and port>/heimdall-demo/public
+This endpoint is not protected. so heimdall will just allow the request
+
+> curl -v -H "Host: demo-app" <you cluster ip and port>/heimdall-demo/anonymous
+This endpoint is configured to accept anonymous requests. So heimdall will allow the request,
+but create a JWT with "sub" claim set to anonymous.
+
+Requests to any other endpoints will be answered with HTTP 403. E.g.
+curl -v -H "Host: demo-app" <you cluster ip and port>/heimdall-demo/foo
+  {{- end }}

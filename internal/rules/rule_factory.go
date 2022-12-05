@@ -1,6 +1,7 @@
 package rules
 
 import (
+	"fmt"
 	"net/url"
 
 	"github.com/rs/zerolog"
@@ -43,7 +44,7 @@ type ruleFactory struct {
 
 // nolint: gocognit, cyclop
 func (f *ruleFactory) createExecutePipeline(
-	pipeline []map[string]any,
+	pipeline []config.MechanismConfig,
 ) (compositeSubjectCreator, compositeSubjectHandler, compositeSubjectHandler, error) {
 	var (
 		authenticators  compositeSubjectCreator
@@ -122,23 +123,15 @@ func (f *ruleFactory) createExecutePipeline(
 	return authenticators, subjectHandlers, mutators, nil
 }
 
-func (f *ruleFactory) getConfig(conf any) map[string]any {
-	var mapConf map[string]any
+func (f *ruleFactory) getConfig(conf any) config.MechanismConfig {
+	var mapConf config.MechanismConfig
 
 	if conf != nil {
-		if m, ok := conf.(map[any]any); ok {
-			mapConf = make(map[string]any, len(m))
-
-			for k, v := range m {
-				// nolint: forcetypeassert
-				// ok if panics
-				mapConf[k.(string)] = v
-			}
-		} else if m, ok := conf.(map[string]any); ok {
-			mapConf = m
-		} else {
-			panic("unexpected type for config")
+		if m, ok := conf.(config.MechanismConfig); ok {
+			return m
 		}
+
+		panic(fmt.Sprintf("unexpected type for config %T", conf))
 	}
 
 	return mapConf
@@ -232,7 +225,7 @@ func (f *ruleFactory) CreateRule(srcID string, ruleConfig config.RuleConfig) (ru
 	}, nil
 }
 
-func (f *ruleFactory) createOnErrorPipeline(ehConfigs []map[string]any) (compositeErrorHandler, error) {
+func (f *ruleFactory) createOnErrorPipeline(ehConfigs []config.MechanismConfig) (compositeErrorHandler, error) {
 	var errorHandlers compositeErrorHandler
 
 	for _, ehStep := range ehConfigs {

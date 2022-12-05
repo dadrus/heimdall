@@ -22,7 +22,7 @@ func newHandlerPrototypeRepository(
 ) (*handlerPrototypeRepository, error) {
 	logger.Debug().Msg("Loading definitions for authenticators")
 
-	authenticatorMap, err := createPipelineObjects(conf.Pipeline.Authenticators, logger,
+	authenticatorMap, err := createPipelineObjects(conf.Prototypes.Authenticators, logger,
 		authenticators.CreateAuthenticatorPrototype)
 	if err != nil {
 		logger.Error().Err(err).Msg("Failed loading authenticators definitions")
@@ -32,7 +32,7 @@ func newHandlerPrototypeRepository(
 
 	logger.Debug().Msg("Loading definitions for authorizers")
 
-	authorizerMap, err := createPipelineObjects(conf.Pipeline.Authorizers, logger,
+	authorizerMap, err := createPipelineObjects(conf.Prototypes.Authorizers, logger,
 		authorizers.CreateAuthorizerPrototype)
 	if err != nil {
 		logger.Error().Err(err).Msg("Failed loading authorizers definitions")
@@ -42,7 +42,7 @@ func newHandlerPrototypeRepository(
 
 	logger.Debug().Msg("Loading definitions for hydrators")
 
-	hydratorMap, err := createPipelineObjects(conf.Pipeline.Hydrators, logger,
+	hydratorMap, err := createPipelineObjects(conf.Prototypes.Hydrators, logger,
 		hydrators.CreateHydratorPrototype)
 	if err != nil {
 		logger.Error().Err(err).Msg("Failed loading hydrators definitions")
@@ -52,7 +52,7 @@ func newHandlerPrototypeRepository(
 
 	logger.Debug().Msg("Loading definitions for mutators")
 
-	mutatorMap, err := createPipelineObjects(conf.Pipeline.Mutators, logger,
+	mutatorMap, err := createPipelineObjects(conf.Prototypes.Mutators, logger,
 		mutators.CreateMutatorPrototype)
 	if err != nil {
 		logger.Error().Err(err).Msg("Failed loading mutators definitions")
@@ -62,7 +62,7 @@ func newHandlerPrototypeRepository(
 
 	logger.Debug().Msg("Loading definitions for error handler")
 
-	ehMap, err := createPipelineObjects(conf.Pipeline.ErrorHandlers, logger,
+	ehMap, err := createPipelineObjects(conf.Prototypes.ErrorHandlers, logger,
 		errorhandlers.CreateErrorHandlerPrototype)
 	if err != nil {
 		logger.Error().Err(err).Msg("Failed loading error handler definitions")
@@ -80,14 +80,14 @@ func newHandlerPrototypeRepository(
 }
 
 func createPipelineObjects[T any](
-	pObjects []config.PipelineObject,
+	pObjects []config.Mechanism,
 	logger zerolog.Logger,
-	create func(id string, t config.PipelineObjectType, c map[string]any) (T, error),
+	create func(id string, typ string, c map[string]any) (T, error),
 ) (map[string]T, error) {
 	objects := make(map[string]T)
 
 	for _, pe := range pObjects {
-		logger.Debug().Str("_id", pe.ID).Str("_type", string(pe.Type)).Msg("Loading pipeline definition")
+		logger.Debug().Str("_id", pe.ID).Str("_type", pe.Type).Msg("Loading pipeline definition")
 
 		if r, err := create(pe.ID, pe.Type, pe.Config); err == nil {
 			objects[pe.ID] = r

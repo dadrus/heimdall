@@ -1,0 +1,24 @@
+{{- if .Values.demo.enable }}
+apiVersion: heimdall.dadrus.github.com/v1alpha1
+kind: RuleSet
+metadata:
+  name: {{ include "heimdall.demo.fullname" . }}-test-rule
+  namespace: heimdall-demo
+  labels:
+    {{- include "heimdall.demo.labels" . | nindent 4 }}
+spec:
+  rules:
+    - id: public-access
+      url: http://<**>/public
+      upstream: http://{{ include "heimdall.demo.fullname" . }}.heimdall-demo.svc.cluster.local:8080
+      execute:
+        - authenticator: noop_authenticator
+        - authorizer: allow_all_requests
+        - mutator: noop_mutator
+    - id: anonymous-access
+      url: http://<**>/anonymous
+      upstream: http://{{ include "heimdall.demo.fullname" . }}.heimdall-demo.svc.cluster.local:8080
+      execute:
+        - authorizer: allow_all_requests
+
+{{- end }}

@@ -4,7 +4,6 @@ import (
 	"errors"
 	"sync"
 
-	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
@@ -15,7 +14,7 @@ var (
 	errorHandlerTypeFactoriesMu sync.RWMutex
 )
 
-type ErrorHandlerTypeFactory func(id string, t config.PipelineObjectType, c map[string]any) (bool, ErrorHandler, error)
+type ErrorHandlerTypeFactory func(id string, typ string, c map[string]any) (bool, ErrorHandler, error)
 
 func registerErrorHandlerTypeFactory(factory ErrorHandlerTypeFactory) {
 	errorHandlerTypeFactoriesMu.Lock()
@@ -28,11 +27,7 @@ func registerErrorHandlerTypeFactory(factory ErrorHandlerTypeFactory) {
 	errorHandlerTypeFactories = append(errorHandlerTypeFactories, factory)
 }
 
-func CreateErrorHandlerPrototype(
-	id string,
-	typ config.PipelineObjectType,
-	config map[string]any,
-) (ErrorHandler, error) {
+func CreateErrorHandlerPrototype(id string, typ string, config map[string]any) (ErrorHandler, error) {
 	errorHandlerTypeFactoriesMu.RLock()
 	defer errorHandlerTypeFactoriesMu.RUnlock()
 
