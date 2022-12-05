@@ -12,11 +12,12 @@ menu:
     weight: 5
 ---
 
-Heimdall is shipped in multiple formats and architectures as to suit a variety of deployment patterns. Available installation options are:
+Heimdall is shipped in multiple formats and architectures to suit a variety of deployment patterns. Available installation options are:
 
-* Source code
-* Binary
-* Docker Image
+* link:{{< relref #_source_code >}}[Source code]
+* link:{{< relref #_binary >}}[Binary]
+* link:{{< relref #_docker_image >}}[Docker Image]
+* link:{{< relref #_helm_chart >}}[Helm Chart]
 
 == Source Code
 
@@ -92,8 +93,8 @@ Following tag patterns exist:
 +
 [source, bash]
 ----
-$ docker pull dadrus/heimdall:0.1.0-alpha && docker run dadrus/heimdall:0.1.0-alpha --version
-heimdall version v0.1.0-alpha
+$ docker pull dadrus/heimdall:0.4.1-alpha && docker run dadrus/heimdall:0.4.1-alpha --version
+heimdall version v0.4.1-alpha
 ----
 
 * `latest` - will pull the most recent tagged release.
@@ -101,5 +102,51 @@ heimdall version v0.1.0-alpha
 [source, bash]
 ----
 $ docker pull dadrus/heimdall:latest && docker run dadrus/heimdall:latest --version
-heimdall version v0.1.0-alpha
+heimdall version v0.4.1-alpha
 ----
+
+== Helm Chart
+
+Heimdall can be installed via a Helm chart with a few simple steps, depending on if you are deploying for the first time, or upgrading from an existing installation.
+
+=== Prerequisites
+
+* A Kubernetes version >= 1.19 or >= 1.23 if you would like to use HPA
+* https://helm.sh/docs/intro/install/[Helm] 3.0+
+
+=== Adding the Helm Repository
+
+The heimdall Helm Chart is published at `\https://dadrus.github.io/heimdall/charts`. You can add this repo with the following command:
+
+[source,bash]
+----
+$ helm repo add dadrus https://dadrus.github.io/heimdall/charts
+$ helm repo update
+----
+
+=== Installing the Chart
+
+This chart expects a link:{{< relref /docs/getting_started/configuration_introduction.adoc#_configuration_file >}}[heimdall configuration file] with authentication, authorization and so on mechanisms, required for your particular setup, which can be passed by using the `-f heimdall.yaml` flag during the installation.
+
+If you need to override the name of the heimdall resources such as the deployment or services, the traditional `nameOverride` and `fullnameOverride` properties are supported.
+
+By default, heimdall requires custom resource definitions (CRDs) installed in the cluster. The Helm client will install it for you.
+
+To install the chart with the release name `my-release` (`my-release` is the name that you choose) and configure heimdall to operate in decision mode:
+
+[source,bash]
+----
+$ helm install my-release -f heimdall.yaml dadrus/heimdall
+----
+
+If you need proxy mode, install it with:
+
+[source,bash]
+----
+$ helm install my-release -f heimdall.yaml --set operationMode=proxy dadrus/heimdall
+----
+
+In both cases you have to integrate it with your ingress controller. For decision mode that means setting corresponding annotations on Ingress resources to let the traffic first be verified by heimdall before it is forwarded to the upstream services by the Ingress Controller.
+
+For more advanced configuration and details about helm values, https://github.com/dadrus/heimdall/tree/main/charts/heimdall[please see the helm chart].
+
