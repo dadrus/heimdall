@@ -20,7 +20,7 @@ demo:
 image:
   repository: dadrus/heimdall
   pullPolicy: IfNotPresent
-  tag: "0.5.0-alpha"
+  tag: ""
   pullSecrets: []
 
 nameOverride: ""
