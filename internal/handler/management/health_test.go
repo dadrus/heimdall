@@ -3,13 +3,13 @@ package management
 import (
 	"crypto/rand"
 	"crypto/rsa"
-	"github.com/ansrivas/fiberprometheus/v2"
-	prometheus2 "github.com/prometheus/client_golang/prometheus"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
+	"github.com/ansrivas/fiberprometheus/v2"
+	prometheus2 "github.com/prometheus/client_golang/prometheus"
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

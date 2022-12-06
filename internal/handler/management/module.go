@@ -2,9 +2,9 @@ package management
 
 import (
 	"context"
-	"github.com/ansrivas/fiberprometheus/v2"
 	"strings"
 
+	"github.com/ansrivas/fiberprometheus/v2"
 	"github.com/goccy/go-json"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
