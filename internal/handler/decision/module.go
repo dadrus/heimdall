@@ -2,6 +2,7 @@ package decision
 
 import (
 	"context"
+	"github.com/ansrivas/fiberprometheus/v2"
 	"strings"
 
 	"github.com/goccy/go-json"
@@ -31,7 +32,12 @@ var Module = fx.Options( // nolint: gochecknoglobals
 	),
 )
 
-func newFiberApp(conf config.Configuration, cache cache.Cache, logger zerolog.Logger) *fiber.App {
+func newFiberApp(
+	conf config.Configuration,
+	prometheus *fiberprometheus.FiberPrometheus,
+	cache cache.Cache,
+	logger zerolog.Logger,
+) *fiber.App {
 	service := conf.Serve.Decision
 
 	app := fiber.New(fiber.Config{
@@ -49,6 +55,7 @@ func newFiberApp(conf config.Configuration, cache cache.Cache, logger zerolog.Lo
 	})
 
 	app.Use(recover.New(recover.Config{EnableStackTrace: true}))
+	app.Use(prometheus.Middleware)
 	app.Use(tracingmiddleware.New(
 		tracingmiddleware.WithTracer(otel.GetTracerProvider().Tracer("github.com/dadrus/heimdall/decision"))))
 	app.Use(accesslogmiddleware.New(logger))

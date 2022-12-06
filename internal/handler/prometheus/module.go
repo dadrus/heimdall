@@ -12,43 +12,22 @@ import (
 )
 
 var Module = fx.Options( // nolint: gochecknoglobals
-	fx.Provide(fx.Annotated{Name: "prometheus", Target: newFiberApp}),
-	fx.Invoke(
-		registerHooks,
-	),
+	fx.Provide(func() *fiberprometheus.FiberPrometheus { return fiberprometheus.New("heimdall") }),
+	fx.Invoke(registerHooks),
 )
 
-func newFiberApp(conf config.Configuration) *fiber.App {
-	return fiber.New(fiber.Config{
+func registerHooks(
+	lifecycle fx.Lifecycle,
+	logger zerolog.Logger,
+	prometheus *fiberprometheus.FiberPrometheus,
+	conf config.Configuration,
+) {
+	app := fiber.New(fiber.Config{
 		AppName:               "Heimdall's Prometheus endpoint",
 		DisableStartupMessage: true,
 	})
-}
 
-type fiberApp struct {
-	fx.In
-
-	Proxy      *fiber.App `name:"proxy" optional:"true"`
-	Decision   *fiber.App `name:"decision" optional:"true"`
-	Management *fiber.App `name:"management"`
-	Prometheus *fiber.App `name:"prometheus"`
-}
-
-func registerHooks(lifecycle fx.Lifecycle, logger zerolog.Logger, app fiberApp, conf config.Configuration) {
-	prometheus := fiberprometheus.New("heimdall")
-	prometheus.RegisterAt(app.Prometheus, conf.Metrics.Prometheus.MetricsPath)
-
-	if app.Decision != nil {
-		app.Decision.Use(prometheus.Middleware)
-	}
-
-	if app.Proxy != nil {
-		app.Proxy.Use(prometheus.Middleware)
-	}
-
-	if app.Proxy != nil {
-		app.Management.Use(prometheus.Middleware)
-	}
+	prometheus.RegisterAt(app, conf.Metrics.Prometheus.MetricsPath)
 
 	lifecycle.Append(
 		fx.Hook{
@@ -57,7 +36,7 @@ func registerHooks(lifecycle fx.Lifecycle, logger zerolog.Logger, app fiberApp, 
 					// service connections
 					addr := conf.Metrics.Prometheus.Address()
 					logger.Info().Str("_address", addr).Msg("Prometheus service starts listening")
-					if err := app.Prometheus.Listen(addr); err != nil {
+					if err := app.Listen(addr); err != nil {
 						logger.Fatal().Err(err).Msg("Could not start Prometheus service")
 					}
 				}()
@@ -67,7 +46,7 @@ func registerHooks(lifecycle fx.Lifecycle, logger zerolog.Logger, app fiberApp, 
 			OnStop: func(ctx context.Context) error {
 				logger.Info().Msg("Tearing down Prometheus service")
 
-				return app.Prometheus.Server().Shutdown()
+				return app.Server().Shutdown()
 			},
 		},
 	)

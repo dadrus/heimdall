@@ -2,6 +2,7 @@ package management
 
 import (
 	"context"
+	"github.com/ansrivas/fiberprometheus/v2"
 	"strings"
 
 	"github.com/goccy/go-json"
@@ -28,7 +29,11 @@ var Module = fx.Options( // nolint: gochecknoglobals
 	),
 )
 
-func newFiberApp(conf config.Configuration, logger zerolog.Logger) *fiber.App {
+func newFiberApp(
+	conf config.Configuration,
+	prometheus *fiberprometheus.FiberPrometheus,
+	logger zerolog.Logger,
+) *fiber.App {
 	service := conf.Serve.Management
 
 	app := fiber.New(fiber.Config{
@@ -41,7 +46,9 @@ func newFiberApp(conf config.Configuration, logger zerolog.Logger) *fiber.App {
 		JSONDecoder:             json.Unmarshal,
 		JSONEncoder:             json.Marshal,
 	})
+
 	app.Use(recover.New(recover.Config{EnableStackTrace: true}))
+	app.Use(prometheus.Middleware)
 	app.Use(tracingmiddleware.New(
 		tracingmiddleware.WithTracer(otel.GetTracerProvider().Tracer("github.com/dadrus/heimdall/management")),
 		tracingmiddleware.WithOperationFilter(func(ctx *fiber.Ctx) bool { return ctx.Path() == EndpointHealth })))
