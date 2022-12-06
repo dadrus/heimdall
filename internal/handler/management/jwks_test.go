@@ -6,6 +6,8 @@ import (
 	"crypto/rand"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"github.com/ansrivas/fiberprometheus/v2"
+	prometheus2 "github.com/prometheus/client_golang/prometheus"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -88,9 +90,19 @@ func (suite *JWKSTestSuite) SetupSuite() {
 	suite.ks, err = keystore.NewKeyStoreFromPEMBytes(pemBytes, "")
 	suite.NoError(err)
 
+	prometheus := fiberprometheus.NewWithRegistry(
+		prometheus2.NewRegistry(),
+		"heimdall",
+		"",
+		"http",
+		nil,
+	)
+
 	suite.app = newFiberApp(
 		config.Configuration{Serve: config.ServeConfig{Management: config.ServiceConfig{}}},
-		log.Logger)
+		prometheus,
+		log.Logger,
+	)
 	_, err = newHandler(handlerParams{
 		App:      suite.app,
 		Logger:   log.Logger,

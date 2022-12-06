@@ -3,6 +3,8 @@ package decision
 import (
 	"crypto/rand"
 	"crypto/rsa"
+	"github.com/ansrivas/fiberprometheus/v2"
+	prometheus2 "github.com/prometheus/client_golang/prometheus"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -484,10 +486,17 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 			repo := &mocks2.MockRepository{}
 			rule := &mocks4.MockRule{}
 			logger := log.Logger
+			prometheus := fiberprometheus.NewWithRegistry(
+				prometheus2.NewRegistry(),
+				"heimdall",
+				"",
+				"http",
+				nil,
+			)
 
 			tc.configureMocks(t, repo, rule)
 
-			app := newFiberApp(conf, cch, log.Logger)
+			app := newFiberApp(conf, prometheus, cch, log.Logger)
 			defer app.Shutdown() // nolint: errcheck
 
 			_, err := newHandler(handlerParams{

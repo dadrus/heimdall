@@ -3,6 +3,8 @@ package management
 import (
 	"crypto/rand"
 	"crypto/rsa"
+	"github.com/ansrivas/fiberprometheus/v2"
+	prometheus2 "github.com/prometheus/client_golang/prometheus"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -17,6 +19,8 @@ import (
 )
 
 func TestHealthRequest(t *testing.T) {
+	t.Parallel()
+
 	// GIVEN
 	const rsa2048 = 2048
 
@@ -26,8 +30,17 @@ func TestHealthRequest(t *testing.T) {
 	ks, err := keystore.NewKeyStoreFromKey(privateKey)
 	require.NoError(t, err)
 
+	prometheus := fiberprometheus.NewWithRegistry(
+		prometheus2.NewRegistry(),
+		"heimdall",
+		"",
+		"http",
+		nil,
+	)
+
 	app := newFiberApp(
 		config.Configuration{Serve: config.ServeConfig{Management: config.ServiceConfig{}}},
+		prometheus,
 		log.Logger,
 	)
 	_, err = newHandler(handlerParams{
