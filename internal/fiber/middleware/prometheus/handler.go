@@ -84,9 +84,10 @@ func New(opts ...Option) fiber.Handler {
 	}, []string{"method"})
 
 	handler := &metricsHandler{
-		reqCounter:   counter,
-		reqHistogram: histogram,
-		reqInFlight:  gauge,
+		reqCounter:      counter,
+		reqHistogram:    histogram,
+		reqInFlight:     gauge,
+		filterOperation: options.filterOperation,
 	}
 
 	return handler.observeRequest
