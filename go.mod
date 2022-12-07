@@ -4,7 +4,6 @@ go 1.19
 
 require (
 	github.com/Masterminds/sprig/v3 v3.2.3
-	github.com/ansrivas/fiberprometheus/v2 v2.4.1
 	github.com/dlclark/regexp2 v1.7.0
 	github.com/dop251/goja v0.0.0-20221118162653-d4bf6fde1b86
 	github.com/fsnotify/fsnotify v1.6.0
@@ -22,6 +21,7 @@ require (
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/ory/ladon v1.2.0
 	github.com/pquerna/cachecontrol v0.1.0
+	github.com/prometheus/client_golang v1.12.2
 	github.com/rs/zerolog v1.28.0
 	github.com/santhosh-tekuri/jsonschema/v5 v5.1.1
 	github.com/spf13/cobra v1.6.1
@@ -96,7 +96,6 @@ require (
 	github.com/go-logr/logr v1.2.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-sourcemap/sourcemap v2.1.3+incompatible // indirect
-	github.com/gofiber/adaptor/v2 v2.1.25 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang-jwt/jwt v3.2.1+incompatible // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
@@ -125,7 +124,6 @@ require (
 	github.com/openzipkin/zipkin-go v0.4.1 // indirect
 	github.com/pkg/browser v0.0.0-20210115035449-ce105d075bb4 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
-	github.com/prometheus/client_golang v1.12.2 // indirect
 	github.com/prometheus/client_model v0.2.0 // indirect
 	github.com/prometheus/common v0.37.0 // indirect
 	github.com/prometheus/procfs v0.7.3 // indirect

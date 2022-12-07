@@ -9,8 +9,7 @@ import (
 	"net/url"
 	"testing"
 
-	"github.com/ansrivas/fiberprometheus/v2"
-	prometheus2 "github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -486,17 +485,10 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 			repo := &mocks2.MockRepository{}
 			rule := &mocks4.MockRule{}
 			logger := log.Logger
-			prometheus := fiberprometheus.NewWithRegistry(
-				prometheus2.NewRegistry(),
-				"heimdall",
-				"",
-				"http",
-				nil,
-			)
 
 			tc.configureMocks(t, repo, rule)
 
-			app := newFiberApp(conf, prometheus, cch, log.Logger)
+			app := newFiberApp(conf, prometheus.NewRegistry(), cch, log.Logger)
 			defer app.Shutdown() // nolint: errcheck
 
 			_, err := newHandler(handlerParams{

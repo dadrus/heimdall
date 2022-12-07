@@ -4,11 +4,11 @@ import (
 	"context"
 	"strings"
 
-	"github.com/ansrivas/fiberprometheus/v2"
 	"github.com/goccy/go-json"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/recover"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/rs/zerolog"
 	"go.opentelemetry.io/otel"
 	"go.uber.org/fx"
@@ -20,6 +20,7 @@ import (
 	errorhandlermiddleware "github.com/dadrus/heimdall/internal/fiber/middleware/errorhandler"
 	loggermiddlerware "github.com/dadrus/heimdall/internal/fiber/middleware/logger"
 	tracingmiddleware "github.com/dadrus/heimdall/internal/fiber/middleware/opentelemetry"
+	fiberprom "github.com/dadrus/heimdall/internal/fiber/middleware/prometheus"
 	"github.com/dadrus/heimdall/internal/handler/listener"
 	"github.com/dadrus/heimdall/internal/x"
 )
@@ -34,7 +35,7 @@ var Module = fx.Options( // nolint: gochecknoglobals
 
 func newFiberApp(
 	conf config.Configuration,
-	prometheus *fiberprometheus.FiberPrometheus,
+	registrer prometheus.Registerer,
 	cache cache.Cache,
 	logger zerolog.Logger,
 ) *fiber.App {
@@ -55,7 +56,10 @@ func newFiberApp(
 	})
 
 	app.Use(recover.New(recover.Config{EnableStackTrace: true}))
-	app.Use(prometheus.Middleware)
+	app.Use(fiberprom.New(
+		fiberprom.WithServiceName("decision"),
+		fiberprom.WithRegisterer(registrer),
+	))
 	app.Use(tracingmiddleware.New(
 		tracingmiddleware.WithTracer(otel.GetTracerProvider().Tracer("github.com/dadrus/heimdall/decision"))))
 	app.Use(accesslogmiddleware.New(logger))

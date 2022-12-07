@@ -4,11 +4,11 @@ import (
 	"context"
 	"strings"
 
-	"github.com/ansrivas/fiberprometheus/v2"
 	"github.com/goccy/go-json"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/recover"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/rs/zerolog"
 	"go.opentelemetry.io/otel"
 	"go.uber.org/fx"
@@ -18,6 +18,7 @@ import (
 	errorhandlermiddleware "github.com/dadrus/heimdall/internal/fiber/middleware/errorhandler"
 	loggermiddlerware "github.com/dadrus/heimdall/internal/fiber/middleware/logger"
 	tracingmiddleware "github.com/dadrus/heimdall/internal/fiber/middleware/opentelemetry"
+	fiberprom "github.com/dadrus/heimdall/internal/fiber/middleware/prometheus"
 	"github.com/dadrus/heimdall/internal/handler/listener"
 )
 
@@ -31,10 +32,12 @@ var Module = fx.Options( // nolint: gochecknoglobals
 
 func newFiberApp(
 	conf config.Configuration,
-	prometheus *fiberprometheus.FiberPrometheus,
+	registrer prometheus.Registerer,
 	logger zerolog.Logger,
 ) *fiber.App {
 	service := conf.Serve.Management
+
+	filterHealthEndpoint := func(ctx *fiber.Ctx) bool { return ctx.Path() == EndpointHealth }
 
 	app := fiber.New(fiber.Config{
 		AppName:                 "Heimdall Management Service",
@@ -48,10 +51,14 @@ func newFiberApp(
 	})
 
 	app.Use(recover.New(recover.Config{EnableStackTrace: true}))
-	app.Use(prometheus.Middleware)
+	app.Use(fiberprom.New(
+		fiberprom.WithServiceName("management"),
+		fiberprom.WithRegisterer(registrer),
+		fiberprom.WithOperationFilter(filterHealthEndpoint),
+	))
 	app.Use(tracingmiddleware.New(
 		tracingmiddleware.WithTracer(otel.GetTracerProvider().Tracer("github.com/dadrus/heimdall/management")),
-		tracingmiddleware.WithOperationFilter(func(ctx *fiber.Ctx) bool { return ctx.Path() == EndpointHealth })))
+		tracingmiddleware.WithOperationFilter(filterHealthEndpoint)))
 	app.Use(accesslogmiddleware.New(logger))
 	app.Use(loggermiddlerware.New(logger))
 

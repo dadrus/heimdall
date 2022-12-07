@@ -8,8 +8,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/ansrivas/fiberprometheus/v2"
-	prometheus2 "github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -30,17 +29,9 @@ func TestHealthRequest(t *testing.T) {
 	ks, err := keystore.NewKeyStoreFromKey(privateKey)
 	require.NoError(t, err)
 
-	prometheus := fiberprometheus.NewWithRegistry(
-		prometheus2.NewRegistry(),
-		"heimdall",
-		"",
-		"http",
-		nil,
-	)
-
 	app := newFiberApp(
 		config.Configuration{Serve: config.ServeConfig{Management: config.ServiceConfig{}}},
-		prometheus,
+		prometheus.NewRegistry(),
 		log.Logger,
 	)
 	_, err = newHandler(handlerParams{

@@ -11,10 +11,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ansrivas/fiberprometheus/v2"
 	"github.com/goccy/go-json"
 	"github.com/gofiber/fiber/v2"
-	prometheus2 "github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -90,17 +89,9 @@ func (suite *JWKSTestSuite) SetupSuite() {
 	suite.ks, err = keystore.NewKeyStoreFromPEMBytes(pemBytes, "")
 	suite.NoError(err)
 
-	prometheus := fiberprometheus.NewWithRegistry(
-		prometheus2.NewRegistry(),
-		"heimdall",
-		"",
-		"http",
-		nil,
-	)
-
 	suite.app = newFiberApp(
 		config.Configuration{Serve: config.ServeConfig{Management: config.ServiceConfig{}}},
-		prometheus,
+		prometheus.NewRegistry(),
 		log.Logger,
 	)
 	_, err = newHandler(handlerParams{
