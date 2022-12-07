@@ -389,15 +389,15 @@ NOTE: More details about Prometheus metric types can be found https://prometheus
 
 | `http_request_duration_seconds`
 | Histogram
-| Duration of all HTTP requests by status code, method and path.
+| Duration of all requests by status code, method and path.
 
 | `http_requests_in_progress_total`
 | Gauge
-| All the requests in progress.
+| Current number of requests in progress.
 
 | `http_requests_total`
 | Counter
-| Counts all http requests by status code, method and path.
+| Total number of requests by status code, method and path.
 
 3+| _Metrics endpoint statistics_
 
