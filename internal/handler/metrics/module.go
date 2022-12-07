@@ -2,9 +2,8 @@ package metrics
 
 import (
 	"context"
-	"net/http"
-	"time"
 
+	"github.com/gofiber/fiber/v2"
 	"github.com/rs/zerolog"
 	"go.uber.org/fx"
 
@@ -12,9 +11,19 @@ import (
 )
 
 var Module = fx.Options( // nolint: gochecknoglobals
-	fx.Provide(fx.Annotated{Name: "metrics", Target: newHandler}),
-	fx.Invoke(registerHooks),
+	fx.Provide(fx.Annotated{Name: "metrics", Target: newFiberApp}),
+	fx.Invoke(
+		newHandler,
+		registerHooks,
+	),
 )
+
+func newFiberApp() *fiber.App {
+	return fiber.New(fiber.Config{
+		AppName:               "Heimdall's Prometheus endpoint",
+		DisableStartupMessage: true,
+	})
+}
 
 type hooksArgs struct {
 	fx.In
@@ -22,16 +31,11 @@ type hooksArgs struct {
 	Lifecycle fx.Lifecycle
 	Config    config.Configuration
 	Logger    zerolog.Logger
-	Handler   http.Handler `name:"metrics"`
+	App       *fiber.App `name:"metrics"`
 }
 
 func registerHooks(args hooksArgs) {
 	addr := args.Config.Metrics.Prometheus.Address()
-	server := &http.Server{
-		Addr:              addr,
-		Handler:           args.Handler,
-		ReadHeaderTimeout: 5 * time.Second, //nolint:gomnd
-	}
 
 	args.Lifecycle.Append(
 		fx.Hook{
@@ -39,7 +43,7 @@ func registerHooks(args hooksArgs) {
 				go func() {
 					// service connections
 					args.Logger.Info().Str("_address", addr).Msg("Prometheus service starts listening")
-					if err := server.ListenAndServe(); err != nil {
+					if err := args.App.Listen(addr); err != nil {
 						args.Logger.Fatal().Err(err).Msg("Could not start Prometheus service")
 					}
 				}()
@@ -49,7 +53,7 @@ func registerHooks(args hooksArgs) {
 			OnStop: func(ctx context.Context) error {
 				args.Logger.Info().Msg("Tearing down Prometheus service")
 
-				return server.Shutdown(ctx)
+				return args.App.Shutdown()
 			},
 		},
 	)
