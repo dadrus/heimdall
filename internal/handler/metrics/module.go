@@ -35,13 +35,11 @@ type hooksArgs struct {
 }
 
 func registerHooks(args hooksArgs) {
-	addr := args.Config.Metrics.Prometheus.Address()
-
 	args.Lifecycle.Append(
 		fx.Hook{
 			OnStart: func(ctx context.Context) error {
 				go func() {
-					// service connections
+					addr := args.Config.Metrics.Prometheus.Address()
 					args.Logger.Info().Str("_address", addr).Msg("Prometheus service starts listening")
 					if err := args.App.Listen(addr); err != nil {
 						args.Logger.Fatal().Err(err).Msg("Could not start Prometheus service")

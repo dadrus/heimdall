@@ -14,7 +14,7 @@ import (
 	"github.com/dadrus/heimdall/internal/config"
 )
 
-// ErrLoggerFun is an adapter for promhttp ErrorLogger.
+// ErrLoggerFun is an adapter for promhttp Logger to log errors.
 type ErrLoggerFun func(v ...interface{})
 
 func (l ErrLoggerFun) Println(v ...interface{}) { l(v) }
@@ -38,9 +38,7 @@ func newHandler(args handlerArgs) (*Handler, error) {
 			args.Gatherer,
 			promhttp.HandlerOpts{
 				Registry: args.Registrer,
-				ErrorLog: ErrLoggerFun(func(v ...interface{}) {
-					args.Logger.Error().Msg(fmt.Sprint(v))
-				}),
+				ErrorLog: ErrLoggerFun(func(v ...interface{}) { args.Logger.Error().Msg(fmt.Sprint(v...)) }),
 			},
 		),
 	)
