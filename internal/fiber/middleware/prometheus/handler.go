@@ -97,12 +97,12 @@ func (h *metricsHandler) observeRequest(ctx *fiber.Ctx) error {
 	const magicNumber = 1e9
 
 	start := time.Now()
-	method := ctx.Route().Method
-	path := ctx.Route().Path
 
 	if h.filterOperation(ctx) {
 		return ctx.Next()
 	}
+
+	method := ctx.Route().Method
 
 	h.reqInFlight.WithLabelValues(method).Inc()
 
@@ -124,6 +124,7 @@ func (h *metricsHandler) observeRequest(ctx *fiber.Ctx) error {
 		status = ctx.Response().StatusCode()
 	}
 
+	path := ctx.Route().Path
 	statusCode := strconv.Itoa(status)
 	h.reqCounter.WithLabelValues(statusCode, method, path).Inc()
 
