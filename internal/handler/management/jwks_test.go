@@ -89,12 +89,13 @@ func (suite *JWKSTestSuite) SetupSuite() {
 	suite.ks, err = keystore.NewKeyStoreFromPEMBytes(pemBytes, "")
 	suite.NoError(err)
 
-	suite.app = newFiberApp(
-		config.Configuration{Serve: config.ServeConfig{Management: config.ServiceConfig{}}},
-		prometheus.NewRegistry(),
-		log.Logger,
-	)
-	_, err = newHandler(handlerParams{
+	suite.app = newApp(appArgs{
+		Config:     config.Configuration{Serve: config.ServeConfig{Management: config.ServiceConfig{}}},
+		Registerer: prometheus.NewRegistry(),
+		Logger:     log.Logger,
+	})
+
+	_, err = newHandler(handlerArgs{
 		App:      suite.app,
 		Logger:   log.Logger,
 		KeyStore: suite.ks,

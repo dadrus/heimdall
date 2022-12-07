@@ -488,10 +488,16 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 
 			tc.configureMocks(t, repo, rule)
 
-			app := newFiberApp(conf, prometheus.NewRegistry(), cch, log.Logger)
+			app := newApp(appArgs{
+				Config:     conf,
+				Registerer: prometheus.NewRegistry(),
+				Cache:      cch,
+				Logger:     log.Logger,
+			})
+
 			defer app.Shutdown() // nolint: errcheck
 
-			_, err := newHandler(handlerParams{
+			_, err := newHandler(handlerArgs{
 				App:             app,
 				RulesRepository: repo,
 				Logger:          logger,

@@ -2,113 +2,57 @@ package management
 
 import (
 	"context"
-	"strings"
 
-	"github.com/goccy/go-json"
 	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/middleware/cors"
-	"github.com/gofiber/fiber/v2/middleware/recover"
-	"github.com/prometheus/client_golang/prometheus"
 	"github.com/rs/zerolog"
-	"go.opentelemetry.io/otel"
 	"go.uber.org/fx"
 
 	"github.com/dadrus/heimdall/internal/config"
-	accesslogmiddleware "github.com/dadrus/heimdall/internal/fiber/middleware/accesslog"
-	errorhandlermiddleware "github.com/dadrus/heimdall/internal/fiber/middleware/errorhandler"
-	loggermiddlerware "github.com/dadrus/heimdall/internal/fiber/middleware/logger"
-	tracingmiddleware "github.com/dadrus/heimdall/internal/fiber/middleware/opentelemetry"
-	fiberprom "github.com/dadrus/heimdall/internal/fiber/middleware/prometheus"
 	"github.com/dadrus/heimdall/internal/handler/listener"
 )
 
 var Module = fx.Options( // nolint: gochecknoglobals
-	fx.Provide(fx.Annotated{Name: "management", Target: newFiberApp}),
+	fx.Provide(fx.Annotated{Name: "management", Target: newApp}),
 	fx.Invoke(
 		newHandler,
 		registerHooks,
 	),
 )
 
-func newFiberApp(
-	conf config.Configuration,
-	registrer prometheus.Registerer,
-	logger zerolog.Logger,
-) *fiber.App {
-	service := conf.Serve.Management
-
-	filterHealthEndpoint := func(ctx *fiber.Ctx) bool { return ctx.Path() == EndpointHealth }
-
-	app := fiber.New(fiber.Config{
-		AppName:                 "Heimdall Management Service",
-		ReadTimeout:             service.Timeout.Read,
-		WriteTimeout:            service.Timeout.Write,
-		IdleTimeout:             service.Timeout.Idle,
-		DisableStartupMessage:   true,
-		EnableTrustedProxyCheck: true,
-		JSONDecoder:             json.Unmarshal,
-		JSONEncoder:             json.Marshal,
-	})
-
-	app.Use(recover.New(recover.Config{EnableStackTrace: true}))
-	app.Use(fiberprom.New(
-		fiberprom.WithServiceName("management"),
-		fiberprom.WithRegisterer(registrer),
-		fiberprom.WithOperationFilter(filterHealthEndpoint),
-	))
-	app.Use(tracingmiddleware.New(
-		tracingmiddleware.WithTracer(otel.GetTracerProvider().Tracer("github.com/dadrus/heimdall/management")),
-		tracingmiddleware.WithOperationFilter(filterHealthEndpoint)))
-	app.Use(accesslogmiddleware.New(logger))
-	app.Use(loggermiddlerware.New(logger))
-
-	if service.CORS != nil {
-		app.Use(cors.New(cors.Config{
-			AllowOrigins:     strings.Join(service.CORS.AllowedOrigins, ","),
-			AllowMethods:     strings.Join(service.CORS.AllowedMethods, ","),
-			AllowHeaders:     strings.Join(service.CORS.AllowedHeaders, ","),
-			AllowCredentials: service.CORS.AllowCredentials,
-			ExposeHeaders:    strings.Join(service.CORS.ExposedHeaders, ","),
-			MaxAge:           int(service.CORS.MaxAge.Seconds()),
-		}))
-	}
-
-	app.Use(errorhandlermiddleware.New(service.VerboseErrors))
-
-	return app
-}
-
-type fiberApp struct {
+type hooksArgs struct {
 	fx.In
 
-	App *fiber.App `name:"management"`
+	Lifecycle fx.Lifecycle
+	Config    config.Configuration
+	Logger    zerolog.Logger
+	App       *fiber.App `name:"management"`
 }
 
-func registerHooks(lifecycle fx.Lifecycle, logger zerolog.Logger, app fiberApp, conf config.Configuration) {
-	ln, err := listener.New(app.App.Config().Network, conf.Serve.Management)
+func registerHooks(args hooksArgs) {
+	ln, err := listener.New(args.App.Config().Network, args.Config.Serve.Management)
 	if err != nil {
-		logger.Fatal().Err(err).Msg("Could not create listener for the Management service")
+		args.Logger.Fatal().Err(err).Msg("Could not create listener for the Management service")
 
 		return
 	}
 
-	lifecycle.Append(
+	args.Lifecycle.Append(
 		fx.Hook{
 			OnStart: func(ctx context.Context) error {
 				go func() {
-					logger.Info().Str("_address", ln.Addr().String()).Msg("Management service starts listening")
+					args.Logger.Info().Str("_address", ln.Addr().String()).Msg("Management service starts listening")
 
-					if err = app.App.Listener(ln); err != nil {
-						logger.Fatal().Err(err).Msg("Could not start Management service")
+					if err = args.App.Listener(ln); err != nil {
+						args.Logger.Fatal().Err(err).Msg("Could not start Management service")
 					}
 				}()
 
 				return nil
 			},
 			OnStop: func(ctx context.Context) error {
-				logger.Info().Msg("Tearing down Management service")
+				args.Logger.Info().Msg("Tearing down Management service")
 
-				return app.App.Shutdown()
+				return args.App.Shutdown()
 			},
 		},
 	)

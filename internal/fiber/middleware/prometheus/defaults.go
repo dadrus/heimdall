@@ -7,7 +7,7 @@ import (
 
 // nolint: gochecknoglobals
 var defaultOptions = opts{
-	registrer:       prometheus.DefaultRegisterer,
+	registerer:      prometheus.DefaultRegisterer,
 	namespace:       "http",
 	labels:          make(prometheus.Labels),
 	filterOperation: func(ctx *fiber.Ctx) bool { return false },

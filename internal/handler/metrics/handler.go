@@ -32,23 +32,21 @@ type handlerArgs struct {
 }
 
 func newHandler(args handlerArgs) (*Handler, error) {
-	metricsHandler := promhttp.InstrumentMetricHandler(
-		args.Registrer,
-		promhttp.HandlerFor(
-			args.Gatherer,
-			promhttp.HandlerOpts{
-				Registry: args.Registrer,
-				ErrorLog: ErrLoggerFun(func(v ...interface{}) { args.Logger.Error().Msg(fmt.Sprint(v...)) }),
-			},
-		),
-	)
-
 	handler := &Handler{}
 
 	handler.registerRoutes(
 		args.App.Group(args.Config.Metrics.Prometheus.MetricsPath),
 		args.Logger,
-		metricsHandler,
+		promhttp.InstrumentMetricHandler(
+			args.Registrer,
+			promhttp.HandlerFor(
+				args.Gatherer,
+				promhttp.HandlerOpts{
+					Registry: args.Registrer,
+					ErrorLog: ErrLoggerFun(func(v ...interface{}) { args.Logger.Error().Msg(fmt.Sprint(v...)) }),
+				},
+			),
+		),
 	)
 
 	return handler, nil

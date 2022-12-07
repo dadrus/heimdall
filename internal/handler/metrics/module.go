@@ -11,19 +11,12 @@ import (
 )
 
 var Module = fx.Options( // nolint: gochecknoglobals
-	fx.Provide(fx.Annotated{Name: "metrics", Target: newFiberApp}),
+	fx.Provide(fx.Annotated{Name: "metrics", Target: newApp}),
 	fx.Invoke(
 		newHandler,
 		registerHooks,
 	),
 )
-
-func newFiberApp() *fiber.App {
-	return fiber.New(fiber.Config{
-		AppName:               "Heimdall's Prometheus endpoint",
-		DisableStartupMessage: true,
-	})
-}
 
 type hooksArgs struct {
 	fx.In

@@ -8,7 +8,7 @@ import (
 type OperationFilter func(*fiber.Ctx) bool
 
 type opts struct {
-	registrer       prometheus.Registerer
+	registerer      prometheus.Registerer
 	labels          prometheus.Labels
 	namespace       string
 	subsystem       string
@@ -17,10 +17,10 @@ type opts struct {
 
 type Option func(*opts)
 
-func WithRegisterer(registrer prometheus.Registerer) Option {
+func WithRegisterer(registerer prometheus.Registerer) Option {
 	return func(o *opts) {
-		if registrer != nil {
-			o.registrer = registrer
+		if registerer != nil {
+			o.registerer = registerer
 		}
 	}
 }

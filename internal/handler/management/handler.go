@@ -11,7 +11,7 @@ import (
 
 type Handler struct{}
 
-type handlerParams struct {
+type handlerArgs struct {
 	fx.In
 
 	App      *fiber.App `name:"management"`
@@ -19,10 +19,10 @@ type handlerParams struct {
 	Logger   zerolog.Logger
 }
 
-func newHandler(params handlerParams) (*Handler, error) {
+func newHandler(args handlerArgs) (*Handler, error) {
 	handler := &Handler{}
 
-	handler.registerRoutes(params.App.Group("/"), params.Logger, params.KeyStore)
+	handler.registerRoutes(args.App.Group("/"), args.Logger, args.KeyStore)
 
 	return handler, nil
 }
