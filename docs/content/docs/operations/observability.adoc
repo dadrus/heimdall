@@ -10,7 +10,7 @@ menu:
     parent: "Operations"
 ---
 
-Hemdall implements different observability to support easier operation and integration in different APM products. The following sections provide insights about what can be expected.
+Hemdall implements different observability mechanisms to support easier operation and integration in different APM products. The following sections provide insights about what can be expected.
 
 == Logging in Heimdall
 
