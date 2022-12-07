@@ -237,7 +237,9 @@ By default, heimdall exposes a `/metrics` HTTP endpoint on port `10250` (See als
 * Information about the metrics endpoint itself, including the number of internal errors encountered while gathering the metrics, number of current inflight and overall scrapes done.
 * Information about the decision and proxy requests handled, including the total amount and duration of http requests by status code, method and path, as well as information about requests in progress.
 
-The following table provide detailed information about these.
+The following table provide detailed information about these
+
+NOTE: More details about Prometheus metric types can be found https://prometheus.io/docs/concepts/metric_types/[here].
 
 [cols="2,1,5"]
 |===
@@ -394,8 +396,8 @@ The following table provide detailed information about these.
 | All the requests in progress.
 
 | `http_requests_total`
-| Gauge
-| Count all http requests by status code, method and path.
+| Counter
+| Counts all http requests by status code, method and path.
 
 3+| _Metrics endpoint statistics_
 
