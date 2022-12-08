@@ -32,7 +32,7 @@ func containsLabel(labels []*dto.LabelPair, name, value string) bool {
 	return false
 }
 
-func TestHandlerNew(t *testing.T) {
+func TestHandlerObserveRequests(t *testing.T) {
 	t.Parallel()
 
 	for _, tc := range []struct {
