@@ -2,13 +2,13 @@ package prometheus
 
 import (
 	"errors"
-	trace2 "go.opentelemetry.io/otel/sdk/trace"
 	"strconv"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	trace2 "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
 )
 
