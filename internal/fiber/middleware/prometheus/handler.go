@@ -8,6 +8,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type metricsHandler struct {
@@ -46,7 +47,7 @@ func New(opts ...Option) fiber.Handler {
 			1.0, 2.0, 5.0, 10.0, 15.0, // 1, 2, 5, 10, 20s
 		},
 	},
-		[]string{"status_code", "method", "path"},
+		[]string{"status_code", "method", "path", "trace_id", "span_id"},
 	)
 
 	gauge := promauto.With(options.registerer).NewGaugeVec(prometheus.GaugeOpts{
@@ -100,8 +101,18 @@ func (h *metricsHandler) observeRequest(ctx *fiber.Ctx) error {
 	statusCode := strconv.Itoa(status)
 	h.reqCounter.WithLabelValues(statusCode, method, path).Inc()
 
+	span := trace.SpanFromContext(ctx.UserContext())
+	spanCtx := span.SpanContext()
+	traceID := "none"
+	spanID := "none"
+
+	if spanCtx.IsValid() {
+		traceID = spanCtx.TraceID().String()
+		spanID = spanCtx.SpanID().String()
+	}
+
 	elapsed := float64(time.Since(start).Nanoseconds()) / magicNumber
-	h.reqHistogram.WithLabelValues(statusCode, method, path).Observe(elapsed)
+	h.reqHistogram.WithLabelValues(statusCode, method, path, traceID, spanID).Observe(elapsed)
 
 	return err
 }
