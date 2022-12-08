@@ -1,0 +1,241 @@
+package prometheus
+
+import (
+	"context"
+	"net/http"
+	"net/http/httptest"
+	"testing"
+
+	"github.com/gofiber/fiber/v2"
+	"github.com/prometheus/client_golang/prometheus"
+	dto "github.com/prometheus/client_model/go"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/propagation"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/trace"
+
+	"github.com/dadrus/heimdall/internal/fiber/middleware/opentelemetry"
+)
+
+func metricForType(metrics []*dto.MetricFamily, metricType *dto.MetricType) *dto.MetricFamily {
+	for _, m := range metrics {
+		if *m.Type == *metricType {
+			return m
+		}
+	}
+
+	return nil
+}
+
+func getLabel(labels []*dto.LabelPair, name string) string {
+	for _, label := range labels {
+		if label.GetName() == name {
+			return label.GetValue()
+		}
+	}
+
+	return ""
+}
+
+func TestHandlerObserveRequests(t *testing.T) { //nolint:maintidx
+	t.Parallel()
+
+	otel.SetTracerProvider(sdktrace.NewTracerProvider())
+	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(propagation.TraceContext{}))
+
+	parentCtx := trace.NewSpanContext(trace.SpanContextConfig{
+		TraceID: trace.TraceID{1}, SpanID: trace.SpanID{2}, TraceFlags: trace.FlagsSampled,
+	})
+
+	for _, tc := range []struct {
+		uc     string
+		req    *http.Request
+		assert func(t *testing.T, metrics []*dto.MetricFamily)
+	}{
+		{
+			uc:  "metrics for filtered request",
+			req: httptest.NewRequest(http.MethodGet, "/filtered", nil),
+			assert: func(t *testing.T, metrics []*dto.MetricFamily) {
+				t.Helper()
+
+				assert.Empty(t, metrics)
+			},
+		},
+		{
+			uc:  "metrics for successful request",
+			req: httptest.NewRequest(http.MethodGet, "/test", nil),
+			assert: func(t *testing.T, metrics []*dto.MetricFamily) {
+				t.Helper()
+
+				assert.Len(t, metrics, 3)
+
+				histMetric := metricForType(metrics, dto.MetricType_HISTOGRAM.Enum())
+				assert.Equal(t, "foo_bar_request_duration_seconds", histMetric.GetName())
+				assert.Equal(t, "Duration of all HTTP requests by status code, method and path.",
+					histMetric.GetHelp())
+				require.Len(t, histMetric.Metric, 1)
+				assert.Equal(t, "zab", getLabel(histMetric.Metric[0].Label, "baz"))
+				assert.Equal(t, "GET", getLabel(histMetric.Metric[0].Label, "method"))
+				assert.Equal(t, "/test", getLabel(histMetric.Metric[0].Label, "path"))
+				assert.Equal(t, "foobar", getLabel(histMetric.Metric[0].Label, "service"))
+				assert.Equal(t, "200", getLabel(histMetric.Metric[0].Label, "status_code"))
+				assert.Equal(t, "0200000000000000", getLabel(histMetric.Metric[0].Label, "parent_id"))
+				assert.NotEqual(t, "none", getLabel(histMetric.Metric[0].Label, "span_id"))
+				assert.NotEqual(t, "none", getLabel(histMetric.Metric[0].Label, "trace_id"))
+				require.Len(t, histMetric.Metric[0].Histogram.Bucket, 22)
+
+				gaugeMetric := metricForType(metrics, dto.MetricType_GAUGE.Enum())
+				assert.Equal(t, "foo_bar_requests_in_progress_total", gaugeMetric.GetName())
+				assert.Equal(t, "All the requests in progress", gaugeMetric.GetHelp())
+				require.Len(t, gaugeMetric.Metric, 1)
+				assert.Equal(t, "zab", getLabel(gaugeMetric.Metric[0].Label, "baz"))
+				assert.Equal(t, "GET", getLabel(gaugeMetric.Metric[0].Label, "method"))
+				assert.Equal(t, "foobar", getLabel(gaugeMetric.Metric[0].Label, "service"))
+				require.Equal(t, 0.0, gaugeMetric.Metric[0].Gauge.GetValue())
+
+				counterMetric := metricForType(metrics, dto.MetricType_COUNTER.Enum())
+				assert.Equal(t, "foo_bar_requests_total", counterMetric.GetName())
+				assert.Equal(t, "Count all http requests by status code, method and path.",
+					counterMetric.GetHelp())
+				require.Len(t, counterMetric.Metric, 1)
+				assert.Equal(t, "zab", getLabel(counterMetric.Metric[0].Label, "baz"))
+				assert.Equal(t, "GET", getLabel(counterMetric.Metric[0].Label, "method"))
+				assert.Equal(t, "/test", getLabel(counterMetric.Metric[0].Label, "path"))
+				assert.Equal(t, "foobar", getLabel(counterMetric.Metric[0].Label, "service"))
+				assert.Equal(t, "200", getLabel(counterMetric.Metric[0].Label, "status_code"))
+				require.Equal(t, 1.0, counterMetric.Metric[0].Counter.GetValue())
+			},
+		},
+		{
+			uc:  "metrics for request which failed with 500",
+			req: httptest.NewRequest(http.MethodPost, "/test", nil),
+			assert: func(t *testing.T, metrics []*dto.MetricFamily) {
+				t.Helper()
+
+				assert.Len(t, metrics, 3)
+
+				histMetric := metricForType(metrics, dto.MetricType_HISTOGRAM.Enum())
+				assert.Equal(t, "foo_bar_request_duration_seconds", histMetric.GetName())
+				assert.Equal(t, "Duration of all HTTP requests by status code, method and path.",
+					histMetric.GetHelp())
+				require.Len(t, histMetric.Metric, 1)
+				assert.Equal(t, "zab", getLabel(histMetric.Metric[0].Label, "baz"))
+				assert.Equal(t, "POST", getLabel(histMetric.Metric[0].Label, "method"))
+				assert.Equal(t, "/test", getLabel(histMetric.Metric[0].Label, "path"))
+				assert.Equal(t, "foobar", getLabel(histMetric.Metric[0].Label, "service"))
+				assert.Equal(t, "500", getLabel(histMetric.Metric[0].Label, "status_code"))
+				assert.Equal(t, "0200000000000000", getLabel(histMetric.Metric[0].Label, "parent_id"))
+				assert.NotEqual(t, "none", getLabel(histMetric.Metric[0].Label, "span_id"))
+				assert.NotEqual(t, "none", getLabel(histMetric.Metric[0].Label, "trace_id"))
+				require.Len(t, histMetric.Metric[0].Histogram.Bucket, 22)
+
+				gaugeMetric := metricForType(metrics, dto.MetricType_GAUGE.Enum())
+				assert.Equal(t, "foo_bar_requests_in_progress_total", gaugeMetric.GetName())
+				assert.Equal(t, "All the requests in progress", gaugeMetric.GetHelp())
+				require.Len(t, gaugeMetric.Metric, 1)
+				assert.Equal(t, "zab", getLabel(gaugeMetric.Metric[0].Label, "baz"))
+				assert.Equal(t, "POST", getLabel(gaugeMetric.Metric[0].Label, "method"))
+				assert.Equal(t, "foobar", getLabel(gaugeMetric.Metric[0].Label, "service"))
+				require.Equal(t, 0.0, gaugeMetric.Metric[0].Gauge.GetValue())
+
+				counterMetric := metricForType(metrics, dto.MetricType_COUNTER.Enum())
+				assert.Equal(t, "foo_bar_requests_total", counterMetric.GetName())
+				assert.Equal(t, "Count all http requests by status code, method and path.",
+					counterMetric.GetHelp())
+				require.Len(t, counterMetric.Metric, 1)
+				assert.Equal(t, "zab", getLabel(counterMetric.Metric[0].Label, "baz"))
+				assert.Equal(t, "POST", getLabel(counterMetric.Metric[0].Label, "method"))
+				assert.Equal(t, "/test", getLabel(counterMetric.Metric[0].Label, "path"))
+				assert.Equal(t, "foobar", getLabel(counterMetric.Metric[0].Label, "service"))
+				assert.Equal(t, "500", getLabel(counterMetric.Metric[0].Label, "status_code"))
+				require.Equal(t, 1.0, counterMetric.Metric[0].Counter.GetValue())
+			},
+		},
+		{
+			uc:  "metrics for request which server raising an error",
+			req: httptest.NewRequest(http.MethodPatch, "/error", nil),
+			assert: func(t *testing.T, metrics []*dto.MetricFamily) {
+				t.Helper()
+
+				assert.Len(t, metrics, 3)
+
+				histMetric := metricForType(metrics, dto.MetricType_HISTOGRAM.Enum())
+				assert.Equal(t, "foo_bar_request_duration_seconds", histMetric.GetName())
+				assert.Equal(t, "Duration of all HTTP requests by status code, method and path.",
+					histMetric.GetHelp())
+				require.Len(t, histMetric.Metric, 1)
+				assert.Equal(t, "zab", getLabel(histMetric.Metric[0].Label, "baz"))
+				assert.Equal(t, "PATCH", getLabel(histMetric.Metric[0].Label, "method"))
+				assert.Equal(t, "/error", getLabel(histMetric.Metric[0].Label, "path"))
+				assert.Equal(t, "foobar", getLabel(histMetric.Metric[0].Label, "service"))
+				assert.Equal(t, "410", getLabel(histMetric.Metric[0].Label, "status_code"))
+				assert.Equal(t, "0200000000000000", getLabel(histMetric.Metric[0].Label, "parent_id"))
+				assert.NotEqual(t, "none", getLabel(histMetric.Metric[0].Label, "span_id"))
+				assert.NotEqual(t, "none", getLabel(histMetric.Metric[0].Label, "trace_id"))
+				require.Len(t, histMetric.Metric[0].Histogram.Bucket, 22)
+
+				gaugeMetric := metricForType(metrics, dto.MetricType_GAUGE.Enum())
+				assert.Equal(t, "foo_bar_requests_in_progress_total", gaugeMetric.GetName())
+				assert.Equal(t, "All the requests in progress", gaugeMetric.GetHelp())
+				require.Len(t, gaugeMetric.Metric, 1)
+				assert.Equal(t, "zab", getLabel(gaugeMetric.Metric[0].Label, "baz"))
+				assert.Equal(t, "PATCH", getLabel(gaugeMetric.Metric[0].Label, "method"))
+				assert.Equal(t, "foobar", getLabel(gaugeMetric.Metric[0].Label, "service"))
+				require.Equal(t, 0.0, gaugeMetric.Metric[0].Gauge.GetValue())
+
+				counterMetric := metricForType(metrics, dto.MetricType_COUNTER.Enum())
+				assert.Equal(t, "foo_bar_requests_total", counterMetric.GetName())
+				assert.Equal(t, "Count all http requests by status code, method and path.",
+					counterMetric.GetHelp())
+				require.Len(t, counterMetric.Metric, 1)
+				assert.Equal(t, "zab", getLabel(counterMetric.Metric[0].Label, "baz"))
+				assert.Equal(t, "PATCH", getLabel(counterMetric.Metric[0].Label, "method"))
+				assert.Equal(t, "/error", getLabel(counterMetric.Metric[0].Label, "path"))
+				assert.Equal(t, "foobar", getLabel(counterMetric.Metric[0].Label, "service"))
+				assert.Equal(t, "410", getLabel(counterMetric.Metric[0].Label, "status_code"))
+				require.Equal(t, 1.0, counterMetric.Metric[0].Counter.GetValue())
+			},
+		},
+	} {
+		t.Run(tc.uc, func(t *testing.T) {
+			// GIVEN
+			registry := prometheus.NewRegistry()
+
+			app := fiber.New()
+			app.Use(opentelemetry.New())
+			app.Use(New(
+				WithRegisterer(registry),
+				WithNamespace("foo"),
+				WithSubsystem("bar"),
+				WithLabel("baz", "zab"),
+				WithServiceName("foobar"),
+				WithOperationFilter(func(ctx *fiber.Ctx) bool { return ctx.Path() == "/filtered" }),
+			))
+
+			app.Get("test", func(ctx *fiber.Ctx) error { return nil })
+			app.Get("filtered", func(ctx *fiber.Ctx) error { return nil })
+			app.Post("test", func(ctx *fiber.Ctx) error { return ctx.SendStatus(500) })
+			app.Patch("error", func(ctx *fiber.Ctx) error { return fiber.ErrGone })
+
+			defer app.Shutdown() // nolint: errcheck
+
+			otel.GetTextMapPropagator().Inject(
+				trace.ContextWithRemoteSpanContext(context.Background(), parentCtx),
+				propagation.HeaderCarrier(tc.req.Header))
+
+			// WHEN
+			resp, err := app.Test(tc.req, -1)
+			require.NoError(t, err)
+
+			defer resp.Body.Close()
+
+			metrics, err := registry.Gather()
+			require.NoError(t, err)
+
+			// THEN
+			tc.assert(t, metrics)
+		})
+	}
+}

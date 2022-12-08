@@ -13,6 +13,7 @@ import (
 
 	"github.com/goccy/go-json"
 	"github.com/gofiber/fiber/v2"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -88,10 +89,13 @@ func (suite *JWKSTestSuite) SetupSuite() {
 	suite.ks, err = keystore.NewKeyStoreFromPEMBytes(pemBytes, "")
 	suite.NoError(err)
 
-	suite.app = newFiberApp(
-		config.Configuration{Serve: config.ServeConfig{Management: config.ServiceConfig{}}},
-		log.Logger)
-	_, err = newHandler(handlerParams{
+	suite.app = newApp(appArgs{
+		Config:     config.Configuration{Serve: config.ServeConfig{Management: config.ServiceConfig{}}},
+		Registerer: prometheus.NewRegistry(),
+		Logger:     log.Logger,
+	})
+
+	_, err = newHandler(handlerArgs{
 		App:      suite.app,
 		Logger:   log.Logger,
 		KeyStore: suite.ks,

@@ -17,10 +17,12 @@ lint-helmchart:
   rm /tmp/decision-demo.yaml
   rm /tmp/proxy-demo.yaml
 
-lint-all: lint-code lint-dockerfile lint-helmchart
+lint: lint-code lint-dockerfile lint-helmchart
 
 test:
   go test -v -coverprofile=coverage.cov -coverpkg=./... ./...
+
+coverage: test
   go tool cover -html coverage.cov
 
 build:

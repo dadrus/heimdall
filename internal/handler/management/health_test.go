@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -17,6 +18,8 @@ import (
 )
 
 func TestHealthRequest(t *testing.T) {
+	t.Parallel()
+
 	// GIVEN
 	const rsa2048 = 2048
 
@@ -26,11 +29,13 @@ func TestHealthRequest(t *testing.T) {
 	ks, err := keystore.NewKeyStoreFromKey(privateKey)
 	require.NoError(t, err)
 
-	app := newFiberApp(
-		config.Configuration{Serve: config.ServeConfig{Management: config.ServiceConfig{}}},
-		log.Logger,
-	)
-	_, err = newHandler(handlerParams{
+	app := newApp(appArgs{
+		Config:     config.Configuration{Serve: config.ServeConfig{Management: config.ServiceConfig{}}},
+		Registerer: prometheus.NewRegistry(),
+		Logger:     log.Logger,
+	})
+
+	_, err = newHandler(handlerArgs{
 		App:      app,
 		Logger:   log.Logger,
 		KeyStore: ks,

@@ -9,7 +9,7 @@ menu:
     parent: "Observability"
 ---
 
-As of today, heimdall only supports https://grafana.com/oss/prometheus/[Prometheus] as metrics backend, which is also enabled by default by exposing available metrics on `0.0.0.0:9000/metrics` endpoint.
+As of today, heimdall only supports https://grafana.com/oss/prometheus/[Prometheus] as metrics backend, which is also enabled by default by exposing available metrics on `0.0.0.0:10250/metrics` endpoint.
 
 == Prometheus
 
@@ -31,7 +31,7 @@ metrics:
 
 * *`port`*: _integer_ (optional)
 +
-By making use of this property, you can specify the TCP port the heimdall should listen on. Defaults to `9000`.
+By making use of this property, you can specify the TCP port the heimdall should listen on. Defaults to `10250`.
 +
 .Configure heimdall to listen on port `9999` for metrics requests.
 ====

@@ -23,7 +23,7 @@ type Handler struct {
 	t time.Duration
 }
 
-type handlerParams struct {
+type handlerArgs struct {
 	fx.In
 
 	App             *fiber.App `name:"proxy"`
@@ -33,21 +33,19 @@ type handlerParams struct {
 	Logger          zerolog.Logger
 }
 
-func newHandler(params handlerParams) (*Handler, error) {
-	jwtSigner, err := signer.NewJWTSigner(params.KeyStore, params.Config.Signer, params.Logger)
+func newHandler(args handlerArgs) (*Handler, error) {
+	jwtSigner, err := signer.NewJWTSigner(args.KeyStore, args.Config.Signer, args.Logger)
 	if err != nil {
 		return nil, err
 	}
 
 	handler := &Handler{
-		r: params.RulesRepository,
+		r: args.RulesRepository,
 		s: jwtSigner,
-		t: params.Config.Serve.Proxy.Timeout.Read,
+		t: args.Config.Serve.Proxy.Timeout.Read,
 	}
 
-	router := params.App.Group("/")
-
-	handler.registerRoutes(router, params.Logger)
+	handler.registerRoutes(args.App.Group("/"), args.Logger)
 
 	return handler, nil
 }
