@@ -50,12 +50,12 @@ func newApp(args appArgs) *fiber.App {
 	})
 
 	app.Use(recover.New(recover.Config{EnableStackTrace: true}))
+	app.Use(tracingmiddleware.New(
+		tracingmiddleware.WithTracer(otel.GetTracerProvider().Tracer("github.com/dadrus/heimdall/decision"))))
 	app.Use(fiberprom.New(
 		fiberprom.WithServiceName("decision"),
 		fiberprom.WithRegisterer(args.Registerer),
 	))
-	app.Use(tracingmiddleware.New(
-		tracingmiddleware.WithTracer(otel.GetTracerProvider().Tracer("github.com/dadrus/heimdall/decision"))))
 	app.Use(accesslogmiddleware.New(args.Logger))
 	app.Use(loggermiddlerware.New(args.Logger))
 
