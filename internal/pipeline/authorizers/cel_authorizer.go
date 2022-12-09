@@ -34,7 +34,7 @@ func init() {
 type celAuthorizer struct {
 	id    string
 	env   *cel.Env
-	rules []*validationRule
+	rules []*celRule
 }
 
 type Rule struct {
@@ -68,7 +68,7 @@ func newCELAuthorizer(id string, rawConfig map[string]any) (*celAuthorizer, erro
 			"failed creating CEL environment").CausedBy(err)
 	}
 
-	rules := make([]*validationRule, len(conf.Rules))
+	rules := make([]*celRule, len(conf.Rules))
 
 	for i, rule := range conf.Rules {
 		ast, err := compile(env, rule.Value)
@@ -83,7 +83,7 @@ func newCELAuthorizer(id string, rawConfig map[string]any) (*celAuthorizer, erro
 				"failed creating program for authorization rule %d (%s)", i+1, rule.Value).CausedBy(err)
 		}
 
-		rules[i] = &validationRule{
+		rules[i] = &celRule{
 			m: x.IfThenElse(len(rule.Message) != 0, rule.Message, fmt.Sprintf("rule %d failed", i+1)),
 			p: prg,
 		}
@@ -110,7 +110,7 @@ func compile(env *cel.Env, expr string) (*cel.Ast, error) {
 	return ast, nil
 }
 
-type validationRule struct {
+type celRule struct {
 	m string
 	p cel.Program
 }
@@ -121,26 +121,26 @@ func (a *celAuthorizer) Execute(ctx heimdall.Context, sub *subject.Subject) erro
 
 	reqURL := ctx.RequestURL()
 
-	for _, rule := range a.rules {
-		out, _, err := rule.p.Eval(
-			map[string]any{
-				"subject": map[string]any{
-					"id":         sub.ID,
-					"attributes": sub.Attributes,
-				},
-				"request": map[string]any{
-					"method": ctx.RequestMethod(),
-					"url": map[string]any{
-						"scheme": reqURL.Scheme,
-						"host":   reqURL.Host,
-						"path":   reqURL.Path,
-						"query":  reqURL.Query(),
-					},
-					"client_ips": ctx.RequestClientIPs(),
-					"headers":    ctx.RequestHeaders(),
-				},
+	obj := map[string]any{
+		"subject": map[string]any{
+			"id":         sub.ID,
+			"attributes": sub.Attributes,
+		},
+		"request": map[string]any{
+			"method": ctx.RequestMethod(),
+			"url": map[string]any{
+				"scheme": reqURL.Scheme,
+				"host":   reqURL.Host,
+				"path":   reqURL.Path,
+				"query":  reqURL.Query(),
 			},
-		)
+			"client_ips": ctx.RequestClientIPs(),
+			"headers":    ctx.RequestHeaders(),
+		},
+	}
+
+	for _, rule := range a.rules {
+		out, _, err := rule.p.Eval(obj)
 		if err != nil {
 			return errorchain.NewWithMessage(heimdall.ErrInternal, "failed evaluating rule").
 				WithErrorContext(a).
