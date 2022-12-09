@@ -99,13 +99,13 @@ The usage of this type of configuration makes sense in a pipeline, which combine
 
 === Local (CEL)
 
-This authorizer allows definition of authorization requirements based on information available about the authenticated subject, as well as the actual request by using https://github.com/google/cel-spec[CEL] based authorization expressions (rules). Each expression is expected to return `false` if authorization fails. In such cases this authorizer denies the request. So, the successful execution of the pipeline stops, resulting in the execution of the error handlers. Otherwise, the authorization was successful.
+This authorizer allows definition of authorization requirements based on information available about the authenticated subject, as well as the actual request by using https://github.com/google/cel-spec[CEL] based authorization expressions. Each expression is expected to return `false` if authorization fails. In such cases this authorizer denies the request. So, the successful execution of the pipeline stops, resulting in the execution of the error handlers. Otherwise, the authorization was successful.
 
 To enable the usage of this authorizer, you have to set the `type` property to `cel`.
 
 Configuration using the `config` property is mandatory. Following properties are available:
 
-* *`rules`*: _link:{{< relref "/docs/configuration/reference/configuration_types.adoc#_authorization_expression">}}[Authorization Expression] array_ (mandatory, overridable)
+* *`expressions`*: _link:{{< relref "/docs/configuration/reference/configuration_types.adoc#_authorization_expression">}}[Authorization Expression] array_ (mandatory, overridable)
 +
 List of authorization expressions which define the actual authorization logic. Each expression has access to the following link:{{< relref "overview.adoc#_evaluation_objects" >}}[Evaluation Objects]:
 
@@ -122,8 +122,8 @@ In this example the subject is checked to be member of the "admin" group.
 id: user_is_admin
 type: cel
 config:
-  rules:
-    - rule: |
+  expressions:
+    - expression: |
         has(subject.attributes.groups) &&
         subject.attributes.groups.exists(g, g == "admin")
       message: User is not admin
@@ -131,7 +131,7 @@ config:
 
 The first line of the expressions verifies that the property group exists. The second line checks, whether `groups` contains an entry named `admin`.
 
-This example specifies also a message, which is logged, if the rule fails.
+This example specifies also a message, which is logged, if the expression fails.
 
 ====
 
@@ -145,8 +145,8 @@ In this example the authorizer is configured to ensure anonymous access to a res
 id: no_modification_allowed_by_anonymous
 type: cel
 config:
-  rules:
-    - rule: |
+  expressions:
+    - expression: |
         request.method in ["GET", "HEAD", "OPTIONS"] || subject.id != "anonymous"
       message: Anonymous non-read access is forbidden
 ----
