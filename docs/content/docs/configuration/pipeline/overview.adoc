@@ -144,6 +144,137 @@ pipeline:
                 - text/html
 ----
 
+== Evaluation Objects
+
+Some pipeline handlers support, respectively require access to different types of objects, they work on, e.g. to render a header with specific values, or to check whether some expectations apply. Following objects are available and have the following structure:
+
+=== Subject
+
+This object contains the information about the authenticated subject. If available, it has the following attributes:
+
+* *`id`*: _string_
++
+The identifier of the subject. This value is set by the authenticator, which was able to authenticate the subject.
+
+* *`attributes`*: _map_
++
+Contains all attributes, which are known about the subject. The content is initially set by the authenticator, which was able to authenticate the subject. Handlers which receive the subject can update it, but do never override any entries.
+
+Each object of this type can be thought as a JSON object and is also accessible as such to the corresponding handlers. Here some examples:
+
+.Subject object created by an AnonymousAuthenticator
+====
+[source, json]
+----
+{
+  "id": "anonymous",
+  "attributes": {}
+}
+----
+====
+
+.Possible Subject object created by an OAuth2Authenticator
+====
+[source, json]
+----
+{
+  "id": "foobar",
+  "attributes": {
+    "sub": "foobar",
+    "exp": "1670600805",
+	"jti": "7b91ed8a-0251-4e02-8d51-9792785851e8",
+	"iat": "1670600305",
+	"iss": "http://testauthserver.local",
+	"nbf": "1670600305"
+  }
+}
+----
+====
+
+=== Request
+
+This object contains information about the request being authenticated and has the following attributes:
+
+* *`method`*: _string_
++
+The HTTP method used, like `GET`, `POST`, etc.
+
+* *`url`*: _URL_
++
+The URL of the matched request. This object has the following properties:
+
+** *`scheme`*: _string_
++
+The HTTP scheme part of the url
+** *`host`*: _string_
++
+The host part of the url
+** *`path`*: _string_
++
+The path part of the url
+** *`query`*: _map_
++
+The query part of the url with each key-value pair being a string to array of strings mapping.
+
+* *`client_ips`*: _string array_
++
+The list of IP addresses the request passed through with the first entry being the ultimative client of the request. Only available if heimdall is configured to trust the client, sending this information, e.g. in the `X-Forwarded-From` header (see e.g. Decision Service link:{{< relref "/docs/configuration/services/decision_api.adoc#_trusted_proxies" >}}[trusted_proxies] configuration for more details).
+
+* *`headers`*: _map_
++
+The headers available in the request with each key-value pair being a string to array of strings mapping.
+
+Here is an example:
+
+.Example request object
+====
+[source, json]
+----
+{
+  "method": "GET",
+  "url": {
+    "scheme": "https",
+    "host": "localhost",
+    "path": "/test",
+    "query": {
+      "baz":["zab", "bar"],
+      "foo":["bar"]
+    }
+  },
+  "client_ips": ["127.0.0.1", "10.10.10.10"],
+  "headers": {
+    "X-Bar":["foo"],
+    "X-Foo":["bar","baz"]
+  }
+}
+----
+
+This example shows also the aforesaid mapping for `query` and `headers` attributes.
+
+====
+
+=== Payload
+
+This object represents the contents of a payload, like the request body or a response body. The contents depend on the MIME-Type of the payload. For `json`, `yaml` or `x-www-form-urlencoded` encoded payload, the object is structured as JSON object. Otherwise, it is just a string.
+
+Here some examples:
+
+.Structured payload (response from OPA)
+====
+[source, json]
+----
+{ "result": true }
+----
+====
+
+.Unstructured payload (response from OPA)
+====
+[source, text]
+----
+SomeStringValue
+----
+====
+
 == Templating
 
 Some pipeline handlers support templating using https://golang.org/pkg/text/template/[Golang Text Templates]. To ease the usage, all http://masterminds.github.io/sprig/[sprig] functions as well as a `urlenc` function are available. Latter is handy if you need to generate request body or query parameters e.g. for communication with further systems. In addition to the above said functions, heimdall makes the following objects and functions available to the template:
