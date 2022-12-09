@@ -32,19 +32,19 @@ func init() {
 }
 
 type celAuthorizer struct {
-	id    string
-	env   *cel.Env
-	rules []*celRule
+	id          string
+	env         *cel.Env
+	expressions []*celExpression
 }
 
-type Rule struct {
-	Value   string `mapstructure:"rule"`
+type Expression struct {
+	Value   string `mapstructure:"expression"`
 	Message string `mapstructure:"message"`
 }
 
 func newCELAuthorizer(id string, rawConfig map[string]any) (*celAuthorizer, error) {
 	type Config struct {
-		Rules []Rule `mapstructure:"rules"`
+		Expressions []Expression `mapstructure:"expressions"`
 	}
 
 	var conf Config
@@ -54,9 +54,9 @@ func newCELAuthorizer(id string, rawConfig map[string]any) (*celAuthorizer, erro
 			CausedBy(err)
 	}
 
-	if len(conf.Rules) == 0 {
+	if len(conf.Expressions) == 0 {
 		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration, "no rules provided for CEL authorizer")
+			NewWithMessage(heimdall.ErrConfiguration, "no expressions provided for CEL authorizer")
 	}
 
 	env, err := cel.NewEnv(
@@ -68,28 +68,28 @@ func newCELAuthorizer(id string, rawConfig map[string]any) (*celAuthorizer, erro
 			"failed creating CEL environment").CausedBy(err)
 	}
 
-	rules := make([]*celRule, len(conf.Rules))
+	expressions := make([]*celExpression, len(conf.Expressions))
 
-	for i, rule := range conf.Rules {
-		ast, err := compile(env, rule.Value)
+	for i, expression := range conf.Expressions {
+		ast, err := compile(env, expression.Value)
 		if err != nil {
 			return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
-				"failed to compile authorization rule %d (%s)", i+1, rule.Value).CausedBy(err)
+				"failed to compile expression %d (%s)", i+1, expression.Value).CausedBy(err)
 		}
 
 		prg, err := env.Program(ast, cel.EvalOptions(cel.OptOptimize))
 		if err != nil {
 			return nil, errorchain.NewWithMessagef(heimdall.ErrInternal,
-				"failed creating program for authorization rule %d (%s)", i+1, rule.Value).CausedBy(err)
+				"failed creating program for expression %d (%s)", i+1, expression.Value).CausedBy(err)
 		}
 
-		rules[i] = &celRule{
-			m: x.IfThenElse(len(rule.Message) != 0, rule.Message, fmt.Sprintf("rule %d failed", i+1)),
+		expressions[i] = &celExpression{
+			m: x.IfThenElse(len(expression.Message) != 0, expression.Message, fmt.Sprintf("expression %d failed", i+1)),
 			p: prg,
 		}
 	}
 
-	return &celAuthorizer{id: id, env: env, rules: rules}, nil
+	return &celAuthorizer{id: id, env: env, expressions: expressions}, nil
 }
 
 func compile(env *cel.Env, expr string) (*cel.Ast, error) {
@@ -110,7 +110,7 @@ func compile(env *cel.Env, expr string) (*cel.Ast, error) {
 	return ast, nil
 }
 
-type celRule struct {
+type celExpression struct {
 	m string
 	p cel.Program
 }
@@ -139,16 +139,16 @@ func (a *celAuthorizer) Execute(ctx heimdall.Context, sub *subject.Subject) erro
 		},
 	}
 
-	for _, rule := range a.rules {
-		out, _, err := rule.p.Eval(obj)
+	for i, expression := range a.expressions {
+		out, _, err := expression.p.Eval(obj)
 		if err != nil {
-			return errorchain.NewWithMessage(heimdall.ErrInternal, "failed evaluating rule").
+			return errorchain.NewWithMessagef(heimdall.ErrInternal, "failed evaluating expression %d", i+1).
 				WithErrorContext(a).
 				CausedBy(err)
 		}
 
 		if out.Value() != true {
-			return errorchain.NewWithMessage(heimdall.ErrAuthorization, rule.m).
+			return errorchain.NewWithMessage(heimdall.ErrAuthorization, expression.m).
 				WithErrorContext(a)
 		}
 	}

@@ -32,7 +32,7 @@ func TestCreateCELAuthorizer(t *testing.T) {
 
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "no rules provided")
+				assert.Contains(t, err.Error(), "no expressions provided")
 			},
 		},
 		{
@@ -43,14 +43,14 @@ func TestCreateCELAuthorizer(t *testing.T) {
 
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "no rules provided")
+				assert.Contains(t, err.Error(), "no expressions provided")
 			},
 		},
 		{
-			uc: "with malformed rule",
+			uc: "with malformed expressions",
 			config: []byte(`
-rules: 
-  - rule: "foo()"
+expressions: 
+  - expression: "foo()"
 `),
 			assert: func(t *testing.T, err error, auth *celAuthorizer) {
 				t.Helper()
@@ -61,10 +61,10 @@ rules:
 			},
 		},
 		{
-			uc: "with rule, which doesn't return bool value",
+			uc: "with expression, which doesn't return bool value",
 			config: []byte(`
-rules: 
-  - rule: "size(subject.id)"
+expressions: 
+  - expression: "size(subject.id)"
 `),
 			assert: func(t *testing.T, err error, auth *celAuthorizer) {
 				t.Helper()
@@ -77,8 +77,8 @@ rules:
 		{
 			uc: "with unsupported attributes",
 			config: []byte(`
-rules:
-  - rule: "has(subject.id)"
+expressions:
+  - expression: "has(subject.id)"
     message: bar
 foo: bar
 `),
@@ -91,11 +91,11 @@ foo: bar
 			},
 		},
 		{
-			uc: "with valid rule",
+			uc: "with valid expression",
 			id: "authz",
 			config: []byte(`
-rules:
-  - rule: "has(subject.id)"
+expressions:
+  - expression: "has(subject.id)"
     message: Subject ID is not present
 `),
 			assert: func(t *testing.T, err error, auth *celAuthorizer) {
@@ -104,7 +104,7 @@ rules:
 				require.NoError(t, err)
 				assert.Equal(t, "authz", auth.HandlerID())
 				assert.NotNil(t, auth.env)
-				assert.NotEmpty(t, auth.rules)
+				assert.NotEmpty(t, auth.expressions)
 			},
 		},
 	} {
@@ -134,8 +134,8 @@ func TestCreateCELAuthorizerFromPrototype(t *testing.T) {
 		{
 			uc: "no new configuration provided",
 			prototypeConfig: []byte(`
-rules: 
-  - rule: "request.scheme == 'http'"
+expressions: 
+  - expression: "request.scheme == 'http'"
 `),
 			assert: func(t *testing.T, err error, prototype *celAuthorizer, configured *celAuthorizer) {
 				t.Helper()
@@ -145,10 +145,10 @@ rules:
 			},
 		},
 		{
-			uc: "configuration without rules provided",
+			uc: "configuration without expressions provided",
 			prototypeConfig: []byte(`
-rules: 
-  - rule: "request.scheme == 'http'"
+expressions: 
+  - expression: "request.scheme == 'http'"
 `),
 			config: []byte(``),
 			assert: func(t *testing.T, err error, prototype *celAuthorizer, configured *celAuthorizer) {
@@ -159,15 +159,15 @@ rules:
 			},
 		},
 		{
-			uc: "new rules provided",
+			uc: "new expressions provided",
 			id: "authz",
 			prototypeConfig: []byte(`
-rules: 
-  - rule: "request.scheme == 'http'"
+expressions: 
+  - expression: "request.scheme == 'http'"
 `),
 			config: []byte(`
-rules: 
-  - rule: "request.headers['X-Foo-Bar'] == 'Baz'"
+expressions: 
+  - expression: "request.headers['X-Foo-Bar'] == 'Baz'"
 `),
 			assert: func(t *testing.T, err error, prototype *celAuthorizer, configured *celAuthorizer) {
 				t.Helper()
@@ -175,7 +175,7 @@ rules:
 				require.NoError(t, err)
 				assert.NotEqual(t, prototype, configured)
 				require.NotNil(t, configured)
-				assert.NotEqual(t, prototype.rules, configured.rules)
+				assert.NotEqual(t, prototype.expressions, configured.expressions)
 				assert.Equal(t, "authz", configured.HandlerID())
 			},
 		},
@@ -213,11 +213,11 @@ func TestCELAuthorizerExecute(t *testing.T) {
 		assert                     func(t *testing.T, err error)
 	}{
 		{
-			uc: "denied by rule without access to subject and request",
+			uc: "denied by expression without access to subject and request",
 			id: "authz1",
 			config: []byte(`
-rules:
-  - rule: "true == false"
+expressions:
+  - expression: "true == false"
 `),
 			configureContextAndSubject: func(t *testing.T, ctx *mocks.MockContext, sub *subject.Subject) {
 				// nothing is required here
@@ -233,7 +233,7 @@ rules:
 
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrAuthorization)
-				assert.Contains(t, err.Error(), "rule 1 failed")
+				assert.Contains(t, err.Error(), "expression 1 failed")
 
 				var identifier interface{ HandlerID() string }
 				require.True(t, errors.As(err, &identifier))
@@ -241,23 +241,23 @@ rules:
 			},
 		},
 		{
-			uc: "rules can use subject and request properties",
+			uc: "expressions can use subject and request properties",
 			id: "authz2",
 			config: []byte(`
-rules:
-  - rule: |
+expressions:
+  - expression: |
       subject.attributes.exists(c, c.startsWith('group'))
         && subject.attributes
           .filter(c, c.startsWith('group'))
           .all(c, subject.attributes[c]
           .all(g, g.endsWith('@acme.co')))
-  - rule: request.method == 'GET'
-  - rule: request.url.scheme == 'http'
-  - rule: request.url.host == 'localhost'
-  - rule: request.url.path == '/test'
-  - rule: size(request.url.query) == 2
-  - rule: request.headers['X-Custom-Header'] == "foobar"
-  - rule: request.client_ips.exists_one(v, v == '127.0.0.1')
+  - expression: request.method == 'GET'
+  - expression: request.url.scheme == 'http'
+  - expression: request.url.host == 'localhost'
+  - expression: request.url.path == '/test'
+  - expression: size(request.url.query) == 2
+  - expression: request.headers['X-Custom-Header'] == "foobar"
+  - expression: request.client_ips.exists_one(v, v == '127.0.0.1')
 `),
 			configureContextAndSubject: func(t *testing.T, ctx *mocks.MockContext, sub *subject.Subject) {
 				t.Helper()
