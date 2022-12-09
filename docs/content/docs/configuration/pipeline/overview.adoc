@@ -255,12 +255,15 @@ This example shows also the aforesaid mapping for `query` and `headers` attribut
 
 === Payload
 
-This object represents the contents of a payload, like the request body or a response body. The contents depend on the MIME-Type of the payload. For `json`, `yaml` or `x-www-form-urlencoded` encoded payload, the object is structured as JSON object. Otherwise, it is just a string.
+This object represents the contents of a payload, like the request body or a response body. The contents depend on the MIME-Type of the payload. For `json`, `yaml` or `x-www-form-urlencoded` encoded payload, the object is transformed to a JSON object. Otherwise, it is just a string.
 
 Here some examples:
 
-.Structured payload (response from OPA)
+.Structured payload
 ====
+
+The following JSON object is a typical response from OPA.
+
 [source, json]
 ----
 { "result": true }
