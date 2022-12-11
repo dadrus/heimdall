@@ -2,13 +2,13 @@ package rules
 
 import (
 	"context"
-	"github.com/dadrus/heimdall/internal/rules/pipeline/subject"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/heimdall/mocks"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
 	rulemocks "github.com/dadrus/heimdall/internal/rules/mocks"
 	"github.com/dadrus/heimdall/internal/testsupport"
 )

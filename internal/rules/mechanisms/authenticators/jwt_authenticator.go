@@ -5,9 +5,6 @@ import (
 	"crypto/x509"
 	"encoding/hex"
 	"errors"
-	extractors2 "github.com/dadrus/heimdall/internal/rules/pipeline/authenticators/extractors"
-	oauth22 "github.com/dadrus/heimdall/internal/rules/pipeline/oauth2"
-	"github.com/dadrus/heimdall/internal/rules/pipeline/subject"
 	"io"
 	"net/http"
 	"net/url"
@@ -21,6 +18,9 @@ import (
 	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/dadrus/heimdall/internal/endpoint"
 	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/extractors"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/oauth2"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
 	"github.com/dadrus/heimdall/internal/truststore"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
@@ -47,10 +47,10 @@ func init() {
 type jwtAuthenticator struct {
 	id                   string
 	e                    endpoint.Endpoint
-	a                    oauth22.Expectation
+	a                    oauth2.Expectation
 	ttl                  *time.Duration
 	sf                   SubjectFactory
-	ads                  extractors2.AuthDataExtractStrategy
+	ads                  extractors.AuthDataExtractStrategy
 	allowFallbackOnError bool
 	trustStore           truststore.TrustStore
 	validateJWKCert      bool
@@ -58,14 +58,14 @@ type jwtAuthenticator struct {
 
 func newJwtAuthenticator(id string, rawConfig map[string]any) (*jwtAuthenticator, error) { // nolint: funlen
 	type Config struct {
-		Endpoint             endpoint.Endpoint                    `mapstructure:"jwks_endpoint"`
-		AuthDataSource       extractors2.CompositeExtractStrategy `mapstructure:"jwt_source"`
-		Assertions           oauth22.Expectation                  `mapstructure:"assertions"`
-		SubjectInfo          SubjectInfo                          `mapstructure:"subject"`
-		CacheTTL             *time.Duration                       `mapstructure:"cache_ttl"`
-		AllowFallbackOnError bool                                 `mapstructure:"allow_fallback_on_error"`
-		ValidateJWK          *bool                                `mapstructure:"validate_jwk"`
-		TrustStore           truststore.TrustStore                `mapstructure:"trust_store"`
+		Endpoint             endpoint.Endpoint                   `mapstructure:"jwks_endpoint"`
+		AuthDataSource       extractors.CompositeExtractStrategy `mapstructure:"jwt_source"`
+		Assertions           oauth2.Expectation                  `mapstructure:"assertions"`
+		SubjectInfo          SubjectInfo                         `mapstructure:"subject"`
+		CacheTTL             *time.Duration                      `mapstructure:"cache_ttl"`
+		AllowFallbackOnError bool                                `mapstructure:"allow_fallback_on_error"`
+		ValidateJWK          *bool                               `mapstructure:"validate_jwk"`
+		TrustStore           truststore.TrustStore               `mapstructure:"trust_store"`
 	}
 
 	var (
@@ -107,7 +107,7 @@ func newJwtAuthenticator(id string, rawConfig map[string]any) (*jwtAuthenticator
 	}
 
 	if conf.Assertions.ScopesMatcher == nil {
-		conf.Assertions.ScopesMatcher = oauth22.NoopMatcher{}
+		conf.Assertions.ScopesMatcher = oauth2.NoopMatcher{}
 	}
 
 	if len(conf.SubjectInfo.IDFrom) == 0 {
@@ -119,14 +119,14 @@ func newJwtAuthenticator(id string, rawConfig map[string]any) (*jwtAuthenticator
 		func() bool { return true })
 
 	ads := x.IfThenElseExec(conf.AuthDataSource == nil,
-		func() extractors2.CompositeExtractStrategy {
-			return extractors2.CompositeExtractStrategy{
-				extractors2.HeaderValueExtractStrategy{Name: "Authorization", Schema: "Bearer"},
-				extractors2.QueryParameterExtractStrategy{Name: "access_token"},
-				extractors2.BodyParameterExtractStrategy{Name: "access_token"},
+		func() extractors.CompositeExtractStrategy {
+			return extractors.CompositeExtractStrategy{
+				extractors.HeaderValueExtractStrategy{Name: "Authorization", Schema: "Bearer"},
+				extractors.QueryParameterExtractStrategy{Name: "access_token"},
+				extractors.BodyParameterExtractStrategy{Name: "access_token"},
 			}
 		},
-		func() extractors2.CompositeExtractStrategy { return conf.AuthDataSource },
+		func() extractors.CompositeExtractStrategy { return conf.AuthDataSource },
 	)
 
 	return &jwtAuthenticator{
@@ -186,9 +186,9 @@ func (a *jwtAuthenticator) WithConfig(config map[string]any) (Authenticator, err
 	}
 
 	type Config struct {
-		Assertions           *oauth22.Expectation `mapstructure:"assertions"`
-		CacheTTL             *time.Duration       `mapstructure:"cache_ttl"`
-		AllowFallbackOnError *bool                `mapstructure:"allow_fallback_on_error"`
+		Assertions           *oauth2.Expectation `mapstructure:"assertions"`
+		CacheTTL             *time.Duration      `mapstructure:"cache_ttl"`
+		AllowFallbackOnError *bool               `mapstructure:"allow_fallback_on_error"`
 	}
 
 	var conf Config
@@ -455,7 +455,7 @@ func (a *jwtAuthenticator) verifyTokenWithKey(token *jwt.JSONWebToken, key *jose
 
 	var (
 		mapClaims map[string]interface{}
-		claims    oauth22.Claims
+		claims    oauth2.Claims
 	)
 
 	if err := token.Claims(key, &mapClaims, &claims); err != nil {

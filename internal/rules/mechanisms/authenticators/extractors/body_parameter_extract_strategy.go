@@ -1,11 +1,11 @@
 package extractors
 
 import (
-	"github.com/dadrus/heimdall/internal/rules/pipeline/contenttype"
 	"net/http"
 	"strings"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/contenttype"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 

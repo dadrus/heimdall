@@ -1,12 +1,13 @@
 package authenticators
 
 import (
-	"github.com/dadrus/heimdall/internal/rules/pipeline/subject"
 	"testing"
 
 	"github.com/goccy/go-json"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
 )
 
 func TestSubjectInfoValidate(t *testing.T) {

@@ -1,11 +1,11 @@
 package mutators
 
 import (
-	"github.com/dadrus/heimdall/internal/rules/pipeline/subject"
-	"github.com/dadrus/heimdall/internal/rules/pipeline/template"
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 

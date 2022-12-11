@@ -9,9 +9,6 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"errors"
-	extractors2 "github.com/dadrus/heimdall/internal/rules/pipeline/authenticators/extractors"
-	oauth22 "github.com/dadrus/heimdall/internal/rules/pipeline/oauth2"
-	"github.com/dadrus/heimdall/internal/rules/pipeline/subject"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -31,6 +28,9 @@ import (
 	"github.com/dadrus/heimdall/internal/heimdall"
 	heimdallmocks "github.com/dadrus/heimdall/internal/heimdall/mocks"
 	"github.com/dadrus/heimdall/internal/keystore"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/extractors"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/oauth2"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
 	"github.com/dadrus/heimdall/internal/testsupport"
 	"github.com/dadrus/heimdall/internal/truststore"
 	"github.com/dadrus/heimdall/internal/x"
@@ -142,11 +142,11 @@ assertions:
 				assert.Equal(t, auth.e.Headers["Accept-Type"], "application/json")
 
 				// token extractor settings
-				assert.IsType(t, extractors2.CompositeExtractStrategy{}, auth.ads)
+				assert.IsType(t, extractors.CompositeExtractStrategy{}, auth.ads)
 				assert.Len(t, auth.ads, 3)
-				assert.Contains(t, auth.ads, extractors2.HeaderValueExtractStrategy{Name: "Authorization", Schema: "Bearer"})
-				assert.Contains(t, auth.ads, extractors2.QueryParameterExtractStrategy{Name: "access_token"})
-				assert.Contains(t, auth.ads, extractors2.BodyParameterExtractStrategy{Name: "access_token"})
+				assert.Contains(t, auth.ads, extractors.HeaderValueExtractStrategy{Name: "Authorization", Schema: "Bearer"})
+				assert.Contains(t, auth.ads, extractors.QueryParameterExtractStrategy{Name: "access_token"})
+				assert.Contains(t, auth.ads, extractors.BodyParameterExtractStrategy{Name: "access_token"})
 
 				// assertions settings
 				assert.NoError(t, auth.a.ScopesMatcher.Match([]string{}))
@@ -204,11 +204,11 @@ cache_ttl: 5s`),
 				assert.Equal(t, auth.e.Headers["Accept-Type"], "application/json")
 
 				// token extractor settings
-				assert.IsType(t, extractors2.CompositeExtractStrategy{}, auth.ads)
+				assert.IsType(t, extractors.CompositeExtractStrategy{}, auth.ads)
 				assert.Len(t, auth.ads, 3)
-				assert.Contains(t, auth.ads, extractors2.HeaderValueExtractStrategy{Name: "Authorization", Schema: "Bearer"})
-				assert.Contains(t, auth.ads, extractors2.QueryParameterExtractStrategy{Name: "access_token"})
-				assert.Contains(t, auth.ads, extractors2.BodyParameterExtractStrategy{Name: "access_token"})
+				assert.Contains(t, auth.ads, extractors.HeaderValueExtractStrategy{Name: "Authorization", Schema: "Bearer"})
+				assert.Contains(t, auth.ads, extractors.QueryParameterExtractStrategy{Name: "access_token"})
+				assert.Contains(t, auth.ads, extractors.BodyParameterExtractStrategy{Name: "access_token"})
 
 				// assertions settings
 				assert.NoError(t, auth.a.ScopesMatcher.Match([]string{}))
@@ -285,13 +285,13 @@ trust_store: ` + trustStorePath),
 				assert.Equal(t, auth.e.Headers["Accept-Type"], "application/foobar")
 
 				// token extractor settings
-				assert.IsType(t, extractors2.CompositeExtractStrategy{}, auth.ads)
+				assert.IsType(t, extractors.CompositeExtractStrategy{}, auth.ads)
 				assert.Len(t, auth.ads, 3)
-				assert.Contains(t, auth.ads, &extractors2.HeaderValueExtractStrategy{
+				assert.Contains(t, auth.ads, &extractors.HeaderValueExtractStrategy{
 					Name: "foo-header", Schema: "foo",
 				})
-				assert.Contains(t, auth.ads, &extractors2.QueryParameterExtractStrategy{Name: "foo_query_param"})
-				assert.Contains(t, auth.ads, &extractors2.BodyParameterExtractStrategy{Name: "foo_body_param"})
+				assert.Contains(t, auth.ads, &extractors.QueryParameterExtractStrategy{Name: "foo_query_param"})
+				assert.Contains(t, auth.ads, &extractors.BodyParameterExtractStrategy{Name: "foo_body_param"})
 
 				// assertions settings
 				assert.NotNil(t, auth.a.ScopesMatcher)
@@ -1038,7 +1038,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 					URL:     srv.URL,
 					Headers: map[string]string{"Accept": "application/json"},
 				},
-				a:   oauth22.Expectation{AllowedAlgorithms: []string{"foo"}},
+				a:   oauth2.Expectation{AllowedAlgorithms: []string{"foo"}},
 				ttl: &tenSecondsTTL,
 			},
 			configureMocks: func(t *testing.T,
@@ -1083,7 +1083,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 					URL:     srv.URL,
 					Headers: map[string]string{"Accept": "application/json"},
 				},
-				a:   oauth22.Expectation{AllowedAlgorithms: []string{"ES384"}},
+				a:   oauth2.Expectation{AllowedAlgorithms: []string{"ES384"}},
 				ttl: &tenSecondsTTL,
 			},
 			configureMocks: func(t *testing.T,
@@ -1128,7 +1128,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 					URL:     srv.URL,
 					Headers: map[string]string{"Accept": "application/json"},
 				},
-				a:   oauth22.Expectation{AllowedAlgorithms: []string{"ES384"}, TrustedIssuers: []string{"untrusted"}},
+				a:   oauth2.Expectation{AllowedAlgorithms: []string{"ES384"}, TrustedIssuers: []string{"untrusted"}},
 				ttl: &tenSecondsTTL,
 			},
 			configureMocks: func(t *testing.T,
@@ -1173,10 +1173,10 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 					URL:     srv.URL,
 					Headers: map[string]string{"Accept": "application/json"},
 				},
-				a: oauth22.Expectation{
+				a: oauth2.Expectation{
 					AllowedAlgorithms: []string{"ES384"},
 					TrustedIssuers:    []string{issuer},
-					ScopesMatcher:     oauth22.ExactScopeStrategyMatcher{},
+					ScopesMatcher:     oauth2.ExactScopeStrategyMatcher{},
 				},
 				sf:  &SubjectInfo{IDFrom: "foobar"},
 				ttl: &tenSecondsTTL,
@@ -1222,10 +1222,10 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 					URL:     srv.URL,
 					Headers: map[string]string{"Accept": "application/json"},
 				},
-				a: oauth22.Expectation{
+				a: oauth2.Expectation{
 					AllowedAlgorithms: []string{"ES384"},
 					TrustedIssuers:    []string{issuer},
-					ScopesMatcher:     oauth22.ExactScopeStrategyMatcher{},
+					ScopesMatcher:     oauth2.ExactScopeStrategyMatcher{},
 				},
 				sf:  &SubjectInfo{IDFrom: "sub"},
 				ttl: &tenSecondsTTL,
@@ -1277,10 +1277,10 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 					URL:     srv.URL,
 					Headers: map[string]string{"Accept": "application/json"},
 				},
-				a: oauth22.Expectation{
+				a: oauth2.Expectation{
 					AllowedAlgorithms: []string{"ES384"},
 					TrustedIssuers:    []string{issuer},
-					ScopesMatcher:     oauth22.ExactScopeStrategyMatcher{},
+					ScopesMatcher:     oauth2.ExactScopeStrategyMatcher{},
 				},
 				sf:  &SubjectInfo{IDFrom: "sub"},
 				ttl: &tenSecondsTTL,
@@ -1344,10 +1344,10 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 					URL:     srv.URL,
 					Headers: map[string]string{"Accept": "application/json"},
 				},
-				a: oauth22.Expectation{
+				a: oauth2.Expectation{
 					AllowedAlgorithms: []string{"ES384"},
 					TrustedIssuers:    []string{issuer},
-					ScopesMatcher:     oauth22.ExactScopeStrategyMatcher{},
+					ScopesMatcher:     oauth2.ExactScopeStrategyMatcher{},
 				},
 				sf:  &SubjectInfo{IDFrom: "sub"},
 				ttl: &tenSecondsTTL,
@@ -1412,10 +1412,10 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 					URL:     srv.URL,
 					Headers: map[string]string{"Accept": "application/json"},
 				},
-				a: oauth22.Expectation{
+				a: oauth2.Expectation{
 					AllowedAlgorithms: []string{"ES384"},
 					TrustedIssuers:    []string{issuer},
-					ScopesMatcher:     oauth22.ExactScopeStrategyMatcher{},
+					ScopesMatcher:     oauth2.ExactScopeStrategyMatcher{},
 				},
 				sf:              &SubjectInfo{IDFrom: "sub"},
 				ttl:             &tenSecondsTTL,
@@ -1471,10 +1471,10 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 					URL:     srv.URL,
 					Headers: map[string]string{"Accept": "application/json"},
 				},
-				a: oauth22.Expectation{
+				a: oauth2.Expectation{
 					AllowedAlgorithms: []string{"ES384"},
 					TrustedIssuers:    []string{issuer},
-					ScopesMatcher:     oauth22.ExactScopeStrategyMatcher{},
+					ScopesMatcher:     oauth2.ExactScopeStrategyMatcher{},
 				},
 				sf:              &SubjectInfo{IDFrom: "sub"},
 				ttl:             &tenSecondsTTL,
@@ -1540,10 +1540,10 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 					URL:     srv.URL,
 					Headers: map[string]string{"Accept": "application/json"},
 				},
-				a: oauth22.Expectation{
+				a: oauth2.Expectation{
 					AllowedAlgorithms: []string{"ES384"},
 					TrustedIssuers:    []string{issuer},
-					ScopesMatcher:     oauth22.ExactScopeStrategyMatcher{},
+					ScopesMatcher:     oauth2.ExactScopeStrategyMatcher{},
 				},
 				sf:  &SubjectInfo{IDFrom: "sub"},
 				ttl: &tenSecondsTTL,
@@ -1608,10 +1608,10 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 					URL:     srv.URL,
 					Headers: map[string]string{"Accept": "application/json"},
 				},
-				a: oauth22.Expectation{
+				a: oauth2.Expectation{
 					AllowedAlgorithms: []string{"ES384"},
 					TrustedIssuers:    []string{issuer},
-					ScopesMatcher:     oauth22.ExactScopeStrategyMatcher{},
+					ScopesMatcher:     oauth2.ExactScopeStrategyMatcher{},
 				},
 				sf:              &SubjectInfo{IDFrom: "sub"},
 				validateJWKCert: true,

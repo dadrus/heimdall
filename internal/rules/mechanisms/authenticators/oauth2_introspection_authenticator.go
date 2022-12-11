@@ -4,9 +4,6 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
-	extractors2 "github.com/dadrus/heimdall/internal/rules/pipeline/authenticators/extractors"
-	oauth22 "github.com/dadrus/heimdall/internal/rules/pipeline/oauth2"
-	"github.com/dadrus/heimdall/internal/rules/pipeline/subject"
 	"io"
 	"net/http"
 	"net/url"
@@ -19,6 +16,9 @@ import (
 	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/dadrus/heimdall/internal/endpoint"
 	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/extractors"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/oauth2"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
@@ -41,9 +41,9 @@ func init() {
 type oauth2IntrospectionAuthenticator struct {
 	id                   string
 	e                    endpoint.Endpoint
-	a                    oauth22.Expectation
+	a                    oauth2.Expectation
 	sf                   SubjectFactory
-	ads                  extractors2.AuthDataExtractStrategy
+	ads                  extractors.AuthDataExtractStrategy
 	ttl                  *time.Duration
 	allowFallbackOnError bool
 }
@@ -53,12 +53,12 @@ func newOAuth2IntrospectionAuthenticator(id string, rawConfig map[string]any) (
 	error,
 ) {
 	type Config struct {
-		Endpoint             endpoint.Endpoint                    `mapstructure:"introspection_endpoint"`
-		AuthDataSource       extractors2.CompositeExtractStrategy `mapstructure:"token_source"`
-		Assertions           oauth22.Expectation                  `mapstructure:"assertions"`
-		SubjectInfo          SubjectInfo                          `mapstructure:"subject"`
-		CacheTTL             *time.Duration                       `mapstructure:"cache_ttl"`
-		AllowFallbackOnError bool                                 `mapstructure:"allow_fallback_on_error"`
+		Endpoint             endpoint.Endpoint                   `mapstructure:"introspection_endpoint"`
+		AuthDataSource       extractors.CompositeExtractStrategy `mapstructure:"token_source"`
+		Assertions           oauth2.Expectation                  `mapstructure:"assertions"`
+		SubjectInfo          SubjectInfo                         `mapstructure:"subject"`
+		CacheTTL             *time.Duration                      `mapstructure:"cache_ttl"`
+		AllowFallbackOnError bool                                `mapstructure:"allow_fallback_on_error"`
 	}
 
 	var conf Config
@@ -105,18 +105,18 @@ func newOAuth2IntrospectionAuthenticator(id string, rawConfig map[string]any) (
 	}
 
 	if conf.Assertions.ScopesMatcher == nil {
-		conf.Assertions.ScopesMatcher = oauth22.NoopMatcher{}
+		conf.Assertions.ScopesMatcher = oauth2.NoopMatcher{}
 	}
 
 	ads := x.IfThenElseExec(conf.AuthDataSource == nil,
-		func() extractors2.CompositeExtractStrategy {
-			return extractors2.CompositeExtractStrategy{
-				extractors2.HeaderValueExtractStrategy{Name: "Authorization", Schema: "Bearer"},
-				extractors2.QueryParameterExtractStrategy{Name: "access_token"},
-				extractors2.BodyParameterExtractStrategy{Name: "access_token"},
+		func() extractors.CompositeExtractStrategy {
+			return extractors.CompositeExtractStrategy{
+				extractors.HeaderValueExtractStrategy{Name: "Authorization", Schema: "Bearer"},
+				extractors.QueryParameterExtractStrategy{Name: "access_token"},
+				extractors.BodyParameterExtractStrategy{Name: "access_token"},
 			}
 		},
-		func() extractors2.CompositeExtractStrategy { return conf.AuthDataSource },
+		func() extractors.CompositeExtractStrategy { return conf.AuthDataSource },
 	)
 
 	return &oauth2IntrospectionAuthenticator{
@@ -166,9 +166,9 @@ func (a *oauth2IntrospectionAuthenticator) WithConfig(rawConfig map[string]any) 
 	}
 
 	type Config struct {
-		Assertions           *oauth22.Expectation `mapstructure:"assertions"`
-		CacheTTL             *time.Duration       `mapstructure:"cache_ttl"`
-		AllowFallbackOnError *bool                `mapstructure:"allow_fallback_on_error"`
+		Assertions           *oauth2.Expectation `mapstructure:"assertions"`
+		CacheTTL             *time.Duration      `mapstructure:"cache_ttl"`
+		AllowFallbackOnError *bool               `mapstructure:"allow_fallback_on_error"`
 	}
 
 	var conf Config
@@ -247,7 +247,7 @@ func (a *oauth2IntrospectionAuthenticator) getSubjectInformation(ctx heimdall.Co
 
 func (a *oauth2IntrospectionAuthenticator) fetchTokenIntrospectionResponse(
 	ctx heimdall.Context, token string,
-) (*oauth22.IntrospectionResponse, []byte, error) {
+) (*oauth2.IntrospectionResponse, []byte, error) {
 	logger := zerolog.Ctx(ctx.AppContext())
 
 	logger.Debug().Msg("Retrieving information about the access token from the introspection endpoint")
@@ -288,7 +288,7 @@ func (a *oauth2IntrospectionAuthenticator) fetchTokenIntrospectionResponse(
 
 func (a *oauth2IntrospectionAuthenticator) readIntrospectionResponse(
 	resp *http.Response,
-) (*oauth22.IntrospectionResponse, []byte, error) {
+) (*oauth2.IntrospectionResponse, []byte, error) {
 	if !(resp.StatusCode >= http.StatusOK && resp.StatusCode < http.StatusMultipleChoices) {
 		return nil, nil, errorchain.
 			NewWithMessagef(heimdall.ErrCommunication, "unexpected response code: %v", resp.StatusCode).
@@ -303,7 +303,7 @@ func (a *oauth2IntrospectionAuthenticator) readIntrospectionResponse(
 			CausedBy(err)
 	}
 
-	var introspectionResponse oauth22.IntrospectionResponse
+	var introspectionResponse oauth2.IntrospectionResponse
 	if err = json.Unmarshal(rawData, &introspectionResponse); err != nil {
 		return nil, nil, errorchain.
 			NewWithMessage(heimdall.ErrInternal, "failed to unmarshal received introspection response").
@@ -320,7 +320,7 @@ func (a *oauth2IntrospectionAuthenticator) isCacheEnabled() bool {
 	return a.ttl == nil || (a.ttl != nil && *a.ttl > 0)
 }
 
-func (a *oauth2IntrospectionAuthenticator) getCacheTTL(introspectResp *oauth22.IntrospectionResponse) time.Duration {
+func (a *oauth2IntrospectionAuthenticator) getCacheTTL(introspectResp *oauth2.IntrospectionResponse) time.Duration {
 	// timeLeeway defines the default time deviation to ensure the token is still valid
 	// when used from cache
 	const timeLeeway = 10

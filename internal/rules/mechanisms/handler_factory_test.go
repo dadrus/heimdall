@@ -1,12 +1,6 @@
 package mechanisms
 
 import (
-	authenticators2 "github.com/dadrus/heimdall/internal/rules/pipeline/authenticators"
-	"github.com/dadrus/heimdall/internal/rules/pipeline/authorizers"
-	errorhandlers2 "github.com/dadrus/heimdall/internal/rules/pipeline/errorhandlers"
-	"github.com/dadrus/heimdall/internal/rules/pipeline/hydrators"
-	mocks2 "github.com/dadrus/heimdall/internal/rules/pipeline/mocks"
-	"github.com/dadrus/heimdall/internal/rules/pipeline/mutators"
 	"testing"
 
 	"github.com/rs/zerolog/log"
@@ -16,6 +10,12 @@ import (
 
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/authorizers"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/errorhandlers"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/hydrators"
+	mocks2 "github.com/dadrus/heimdall/internal/rules/mechanisms/mocks"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/mutators"
 	"github.com/dadrus/heimdall/internal/x"
 )
 
@@ -29,12 +29,12 @@ func TestHandlerFactoryCreateAuthenticator(t *testing.T) {
 		id            string
 		conf          map[string]any
 		configureMock func(t *testing.T, mAuth *mocks2.MockAuthenticator)
-		assert        func(t *testing.T, err error, auth authenticators2.Authenticator)
+		assert        func(t *testing.T, err error, auth authenticators.Authenticator)
 	}{
 		{
 			uc: "no authenticator for given id",
 			id: "bar",
-			assert: func(t *testing.T, err error, auth authenticators2.Authenticator) {
+			assert: func(t *testing.T, err error, auth authenticators.Authenticator) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -50,7 +50,7 @@ func TestHandlerFactoryCreateAuthenticator(t *testing.T) {
 
 				mAuth.On("WithConfig", mock.Anything).Return(nil, heimdall.ErrArgument)
 			},
-			assert: func(t *testing.T, err error, auth authenticators2.Authenticator) {
+			assert: func(t *testing.T, err error, auth authenticators.Authenticator) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -66,7 +66,7 @@ func TestHandlerFactoryCreateAuthenticator(t *testing.T) {
 
 				mAuth.On("WithConfig", mock.Anything).Return(mAuth, nil)
 			},
-			assert: func(t *testing.T, err error, auth authenticators2.Authenticator) {
+			assert: func(t *testing.T, err error, auth authenticators.Authenticator) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -75,7 +75,7 @@ func TestHandlerFactoryCreateAuthenticator(t *testing.T) {
 		},
 		{
 			uc: "successful creation with empty config",
-			assert: func(t *testing.T, err error, auth authenticators2.Authenticator) {
+			assert: func(t *testing.T, err error, auth authenticators.Authenticator) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -94,7 +94,7 @@ func TestHandlerFactoryCreateAuthenticator(t *testing.T) {
 
 			factory := &handlerFactory{
 				r: &handlerPrototypeRepository{
-					authenticators: map[string]authenticators2.Authenticator{
+					authenticators: map[string]authenticators.Authenticator{
 						ID: mAuth,
 					},
 				},
@@ -401,12 +401,12 @@ func TestHandlerFactoryCreateErrorHandler(t *testing.T) {
 		id            string
 		conf          map[string]any
 		configureMock func(t *testing.T, mEH *mocks2.MockErrorHandler)
-		assert        func(t *testing.T, err error, errorHandler errorhandlers2.ErrorHandler)
+		assert        func(t *testing.T, err error, errorHandler errorhandlers.ErrorHandler)
 	}{
 		{
 			uc: "no error handler for given id",
 			id: "bar",
-			assert: func(t *testing.T, err error, errorHandler errorhandlers2.ErrorHandler) {
+			assert: func(t *testing.T, err error, errorHandler errorhandlers.ErrorHandler) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -422,7 +422,7 @@ func TestHandlerFactoryCreateErrorHandler(t *testing.T) {
 
 				mEH.On("WithConfig", mock.Anything).Return(nil, heimdall.ErrArgument)
 			},
-			assert: func(t *testing.T, err error, errorHandler errorhandlers2.ErrorHandler) {
+			assert: func(t *testing.T, err error, errorHandler errorhandlers.ErrorHandler) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -438,7 +438,7 @@ func TestHandlerFactoryCreateErrorHandler(t *testing.T) {
 
 				mEH.On("WithConfig", mock.Anything).Return(mEH, nil)
 			},
-			assert: func(t *testing.T, err error, errorHandler errorhandlers2.ErrorHandler) {
+			assert: func(t *testing.T, err error, errorHandler errorhandlers.ErrorHandler) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -447,7 +447,7 @@ func TestHandlerFactoryCreateErrorHandler(t *testing.T) {
 		},
 		{
 			uc: "successful creation with empty config",
-			assert: func(t *testing.T, err error, errorHandler errorhandlers2.ErrorHandler) {
+			assert: func(t *testing.T, err error, errorHandler errorhandlers.ErrorHandler) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -466,7 +466,7 @@ func TestHandlerFactoryCreateErrorHandler(t *testing.T) {
 
 			factory := &handlerFactory{
 				r: &handlerPrototypeRepository{
-					errorHandlers: map[string]errorhandlers2.ErrorHandler{
+					errorHandlers: map[string]errorhandlers.ErrorHandler{
 						ID: mEH,
 					},
 				},
@@ -516,7 +516,7 @@ func TestCreateHandlerFactory(t *testing.T) {
 						Authenticators: []config.Mechanism{
 							{
 								ID:   "foo",
-								Type: errorhandlers2.ErrorHandlerWWWAuthenticate,
+								Type: errorhandlers.ErrorHandlerWWWAuthenticate,
 							},
 						},
 					},
@@ -526,7 +526,7 @@ func TestCreateHandlerFactory(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, authenticators2.ErrUnsupportedAuthenticatorType)
+				assert.ErrorIs(t, err, authenticators.ErrUnsupportedAuthenticatorType)
 			},
 		},
 	} {

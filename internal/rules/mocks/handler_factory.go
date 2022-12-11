@@ -1,14 +1,14 @@
 package mocks
 
 import (
-	"github.com/dadrus/heimdall/internal/rules/pipeline/authenticators"
-	"github.com/dadrus/heimdall/internal/rules/pipeline/authorizers"
-	"github.com/dadrus/heimdall/internal/rules/pipeline/errorhandlers"
-	"github.com/dadrus/heimdall/internal/rules/pipeline/hydrators"
-	"github.com/dadrus/heimdall/internal/rules/pipeline/mutators"
 	"github.com/stretchr/testify/mock"
 
 	"github.com/dadrus/heimdall/internal/config"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/authorizers"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/errorhandlers"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/hydrators"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/mutators"
 )
 
 type MockHandlerFactory struct {

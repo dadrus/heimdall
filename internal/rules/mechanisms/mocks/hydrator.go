@@ -1,11 +1,11 @@
 package mocks
 
 import (
-	"github.com/dadrus/heimdall/internal/rules/pipeline/hydrators"
-	"github.com/dadrus/heimdall/internal/rules/pipeline/subject"
 	"github.com/stretchr/testify/mock"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/hydrators"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
 )
 
 type MockHydrator struct {

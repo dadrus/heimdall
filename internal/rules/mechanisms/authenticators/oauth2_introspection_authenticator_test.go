@@ -3,9 +3,6 @@ package authenticators
 import (
 	"context"
 	"errors"
-	extractors2 "github.com/dadrus/heimdall/internal/rules/pipeline/authenticators/extractors"
-	oauth22 "github.com/dadrus/heimdall/internal/rules/pipeline/oauth2"
-	"github.com/dadrus/heimdall/internal/rules/pipeline/subject"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
@@ -23,6 +20,9 @@ import (
 	"github.com/dadrus/heimdall/internal/endpoint"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	heimdallmocks "github.com/dadrus/heimdall/internal/heimdall/mocks"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/extractors"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/oauth2"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
 	"github.com/dadrus/heimdall/internal/testsupport"
 	"github.com/dadrus/heimdall/internal/x"
 )
@@ -151,11 +151,11 @@ subject:
 				assert.Nil(t, auth.ttl)
 
 				// assert token extractor settings
-				assert.IsType(t, extractors2.CompositeExtractStrategy{}, auth.ads)
+				assert.IsType(t, extractors.CompositeExtractStrategy{}, auth.ads)
 				assert.Len(t, auth.ads, 3)
-				assert.Contains(t, auth.ads, extractors2.HeaderValueExtractStrategy{Name: "Authorization", Schema: "Bearer"})
-				assert.Contains(t, auth.ads, extractors2.QueryParameterExtractStrategy{Name: "access_token"})
-				assert.Contains(t, auth.ads, extractors2.BodyParameterExtractStrategy{Name: "access_token"})
+				assert.Contains(t, auth.ads, extractors.HeaderValueExtractStrategy{Name: "Authorization", Schema: "Bearer"})
+				assert.Contains(t, auth.ads, extractors.QueryParameterExtractStrategy{Name: "access_token"})
+				assert.Contains(t, auth.ads, extractors.BodyParameterExtractStrategy{Name: "access_token"})
 
 				// assert subject factory
 				assert.NotNil(t, auth.sf)
@@ -222,11 +222,11 @@ allow_fallback_on_error: true
 				assert.Equal(t, 5*time.Second, *auth.ttl)
 
 				// assert token extractor settings
-				assert.IsType(t, extractors2.CompositeExtractStrategy{}, auth.ads)
+				assert.IsType(t, extractors.CompositeExtractStrategy{}, auth.ads)
 				assert.Len(t, auth.ads, 3)
-				assert.Contains(t, auth.ads, &extractors2.HeaderValueExtractStrategy{Name: "foo-header", Schema: "foo"})
-				assert.Contains(t, auth.ads, &extractors2.QueryParameterExtractStrategy{Name: "foo_query_param"})
-				assert.Contains(t, auth.ads, &extractors2.BodyParameterExtractStrategy{Name: "foo_body_param"})
+				assert.Contains(t, auth.ads, &extractors.HeaderValueExtractStrategy{Name: "foo-header", Schema: "foo"})
+				assert.Contains(t, auth.ads, &extractors.QueryParameterExtractStrategy{Name: "foo_query_param"})
+				assert.Contains(t, auth.ads, &extractors.BodyParameterExtractStrategy{Name: "foo_body_param"})
 
 				// assert subject factory
 				assert.NotNil(t, auth.sf)
@@ -692,7 +692,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 						"Accept":       "application/json",
 					},
 				},
-				a:   oauth22.Expectation{TrustedIssuers: []string{"foobar"}},
+				a:   oauth2.Expectation{TrustedIssuers: []string{"foobar"}},
 				ttl: &zeroTTL,
 			},
 			configureMocks: func(t *testing.T,
@@ -754,7 +754,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 						"Accept":       "application/json",
 					},
 				},
-				a:   oauth22.Expectation{TrustedIssuers: []string{"barfoo"}},
+				a:   oauth2.Expectation{TrustedIssuers: []string{"barfoo"}},
 				ttl: &zeroTTL,
 			},
 			configureMocks: func(t *testing.T,
@@ -826,9 +826,9 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 						"Accept":       "application/json",
 					},
 				},
-				a: oauth22.Expectation{
+				a: oauth2.Expectation{
 					TrustedIssuers: []string{"foobar"},
-					ScopesMatcher:  oauth22.ExactScopeStrategyMatcher{},
+					ScopesMatcher:  oauth2.ExactScopeStrategyMatcher{},
 				},
 				sf:  &SubjectInfo{IDFrom: "sub"},
 				ttl: &zeroTTL,
@@ -909,9 +909,9 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 						"Accept":       "application/json",
 					},
 				},
-				a: oauth22.Expectation{
+				a: oauth2.Expectation{
 					TrustedIssuers: []string{"foobar"},
-					ScopesMatcher:  oauth22.ExactScopeStrategyMatcher{},
+					ScopesMatcher:  oauth2.ExactScopeStrategyMatcher{},
 				},
 				sf: &SubjectInfo{IDFrom: "sub"},
 			},
@@ -993,9 +993,9 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 						"Accept":       "application/json",
 					},
 				},
-				a: oauth22.Expectation{
+				a: oauth2.Expectation{
 					TrustedIssuers: []string{"foobar"},
-					ScopesMatcher:  oauth22.ExactScopeStrategyMatcher{},
+					ScopesMatcher:  oauth2.ExactScopeStrategyMatcher{},
 				},
 				sf: &SubjectInfo{IDFrom: "sub"},
 			},
@@ -1078,9 +1078,9 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 						"Accept":       "application/json",
 					},
 				},
-				a: oauth22.Expectation{
+				a: oauth2.Expectation{
 					TrustedIssuers: []string{"foobar"},
-					ScopesMatcher:  oauth22.ExactScopeStrategyMatcher{},
+					ScopesMatcher:  oauth2.ExactScopeStrategyMatcher{},
 				},
 				sf: &SubjectInfo{IDFrom: "sub"},
 			},
@@ -1191,13 +1191,13 @@ func TestCacheTTLCalculation(t *testing.T) {
 	for _, tc := range []struct {
 		uc            string
 		authenticator *oauth2IntrospectionAuthenticator
-		response      func() *oauth22.IntrospectionResponse
+		response      func() *oauth2.IntrospectionResponse
 		assert        func(t *testing.T, ttl time.Duration)
 	}{
 		{
 			uc:            "default (nil) ttl settings and no exp in response",
 			authenticator: &oauth2IntrospectionAuthenticator{},
-			response:      func() *oauth22.IntrospectionResponse { return &oauth22.IntrospectionResponse{} },
+			response:      func() *oauth2.IntrospectionResponse { return &oauth2.IntrospectionResponse{} },
 			assert: func(t *testing.T, ttl time.Duration) {
 				t.Helper()
 
@@ -1207,9 +1207,9 @@ func TestCacheTTLCalculation(t *testing.T) {
 		{
 			uc:            "default (nil) ttl settings and exp in response which would result in negative ttl with 10s leeway",
 			authenticator: &oauth2IntrospectionAuthenticator{},
-			response: func() *oauth22.IntrospectionResponse {
-				expiry := oauth22.NumericDate(time.Now().Add(8 * time.Second).Unix())
-				resp := &oauth22.IntrospectionResponse{}
+			response: func() *oauth2.IntrospectionResponse {
+				expiry := oauth2.NumericDate(time.Now().Add(8 * time.Second).Unix())
+				resp := &oauth2.IntrospectionResponse{}
 				resp.Expiry = &expiry
 
 				return resp
@@ -1223,9 +1223,9 @@ func TestCacheTTLCalculation(t *testing.T) {
 		{
 			uc:            "default (nil) ttl settings and exp in response which would result in 0 ttl with 10s leeway",
 			authenticator: &oauth2IntrospectionAuthenticator{},
-			response: func() *oauth22.IntrospectionResponse {
-				expiry := oauth22.NumericDate(time.Now().Add(10 * time.Second).Unix())
-				resp := &oauth22.IntrospectionResponse{}
+			response: func() *oauth2.IntrospectionResponse {
+				expiry := oauth2.NumericDate(time.Now().Add(10 * time.Second).Unix())
+				resp := &oauth2.IntrospectionResponse{}
 				resp.Expiry = &expiry
 
 				return resp
@@ -1239,9 +1239,9 @@ func TestCacheTTLCalculation(t *testing.T) {
 		{
 			uc:            "default (nil) ttl settings and exp in response which would result in positive ttl with 10s leeway",
 			authenticator: &oauth2IntrospectionAuthenticator{},
-			response: func() *oauth22.IntrospectionResponse {
-				expiry := oauth22.NumericDate(time.Now().Add(12 * time.Second).Unix())
-				resp := &oauth22.IntrospectionResponse{}
+			response: func() *oauth2.IntrospectionResponse {
+				expiry := oauth2.NumericDate(time.Now().Add(12 * time.Second).Unix())
+				resp := &oauth2.IntrospectionResponse{}
 				resp.Expiry = &expiry
 
 				return resp
@@ -1255,7 +1255,7 @@ func TestCacheTTLCalculation(t *testing.T) {
 		{
 			uc:            "negative ttl settings and exp not set in response",
 			authenticator: &oauth2IntrospectionAuthenticator{ttl: &negativeTTL},
-			response:      func() *oauth22.IntrospectionResponse { return &oauth22.IntrospectionResponse{} },
+			response:      func() *oauth2.IntrospectionResponse { return &oauth2.IntrospectionResponse{} },
 			assert: func(t *testing.T, ttl time.Duration) {
 				t.Helper()
 
@@ -1265,7 +1265,7 @@ func TestCacheTTLCalculation(t *testing.T) {
 		{
 			uc:            "zero ttl settings and exp not set in response",
 			authenticator: &oauth2IntrospectionAuthenticator{ttl: &zeroTTL},
-			response:      func() *oauth22.IntrospectionResponse { return &oauth22.IntrospectionResponse{} },
+			response:      func() *oauth2.IntrospectionResponse { return &oauth2.IntrospectionResponse{} },
 			assert: func(t *testing.T, ttl time.Duration) {
 				t.Helper()
 
@@ -1275,7 +1275,7 @@ func TestCacheTTLCalculation(t *testing.T) {
 		{
 			uc:            "positive ttl settings and exp not set in response",
 			authenticator: &oauth2IntrospectionAuthenticator{ttl: &positiveSmallTTL},
-			response:      func() *oauth22.IntrospectionResponse { return &oauth22.IntrospectionResponse{} },
+			response:      func() *oauth2.IntrospectionResponse { return &oauth2.IntrospectionResponse{} },
 			assert: func(t *testing.T, ttl time.Duration) {
 				t.Helper()
 
@@ -1286,9 +1286,9 @@ func TestCacheTTLCalculation(t *testing.T) {
 			// nolint: lll
 			uc:            "negative ttl settings and exp set to a value response, which would result in positive ttl with 10s leeway",
 			authenticator: &oauth2IntrospectionAuthenticator{ttl: &negativeTTL},
-			response: func() *oauth22.IntrospectionResponse {
-				expiry := oauth22.NumericDate(time.Now().Add(15 * time.Second).Unix())
-				resp := &oauth22.IntrospectionResponse{}
+			response: func() *oauth2.IntrospectionResponse {
+				expiry := oauth2.NumericDate(time.Now().Add(15 * time.Second).Unix())
+				resp := &oauth2.IntrospectionResponse{}
 				resp.Expiry = &expiry
 
 				return resp
@@ -1302,9 +1302,9 @@ func TestCacheTTLCalculation(t *testing.T) {
 		{
 			uc:            "zero ttl settings and exp set to a value response, which would result in 0s ttl with 10s leeway",
 			authenticator: &oauth2IntrospectionAuthenticator{ttl: &negativeTTL},
-			response: func() *oauth22.IntrospectionResponse {
-				expiry := oauth22.NumericDate(time.Now().Add(10 * time.Second).Unix())
-				resp := &oauth22.IntrospectionResponse{}
+			response: func() *oauth2.IntrospectionResponse {
+				expiry := oauth2.NumericDate(time.Now().Add(10 * time.Second).Unix())
+				resp := &oauth2.IntrospectionResponse{}
 				resp.Expiry = &expiry
 
 				return resp
@@ -1319,9 +1319,9 @@ func TestCacheTTLCalculation(t *testing.T) {
 			// nolint: lll
 			uc:            "zero ttl settings and exp set to a value response, which would result in positive ttl with 10s leeway",
 			authenticator: &oauth2IntrospectionAuthenticator{ttl: &negativeTTL},
-			response: func() *oauth22.IntrospectionResponse {
-				expiry := oauth22.NumericDate(time.Now().Add(12 * time.Second).Unix())
-				resp := &oauth22.IntrospectionResponse{}
+			response: func() *oauth2.IntrospectionResponse {
+				expiry := oauth2.NumericDate(time.Now().Add(12 * time.Second).Unix())
+				resp := &oauth2.IntrospectionResponse{}
 				resp.Expiry = &expiry
 
 				return resp
@@ -1335,9 +1335,9 @@ func TestCacheTTLCalculation(t *testing.T) {
 		{
 			uc:            "ttl settings smaller compared to ttl calculation on exp set in response",
 			authenticator: &oauth2IntrospectionAuthenticator{ttl: &positiveSmallTTL},
-			response: func() *oauth22.IntrospectionResponse {
-				expiry := oauth22.NumericDate(time.Now().Add(12 * time.Minute).Unix())
-				resp := &oauth22.IntrospectionResponse{}
+			response: func() *oauth2.IntrospectionResponse {
+				expiry := oauth2.NumericDate(time.Now().Add(12 * time.Minute).Unix())
+				resp := &oauth2.IntrospectionResponse{}
 				resp.Expiry = &expiry
 
 				return resp
@@ -1351,9 +1351,9 @@ func TestCacheTTLCalculation(t *testing.T) {
 		{
 			uc:            "ttl settings bigger compared to ttl calculation on exp set in response",
 			authenticator: &oauth2IntrospectionAuthenticator{ttl: &positiveBigTTL},
-			response: func() *oauth22.IntrospectionResponse {
-				expiry := oauth22.NumericDate(time.Now().Add(15 * time.Second).Unix())
-				resp := &oauth22.IntrospectionResponse{}
+			response: func() *oauth2.IntrospectionResponse {
+				expiry := oauth2.NumericDate(time.Now().Add(15 * time.Second).Unix())
+				resp := &oauth2.IntrospectionResponse{}
 				resp.Expiry = &expiry
 
 				return resp

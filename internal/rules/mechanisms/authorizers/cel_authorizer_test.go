@@ -3,7 +3,6 @@ package authorizers
 import (
 	"context"
 	"errors"
-	"github.com/dadrus/heimdall/internal/rules/pipeline/subject"
 	"net/http"
 	"net/url"
 	"testing"
@@ -13,6 +12,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/heimdall/mocks"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
 	"github.com/dadrus/heimdall/internal/testsupport"
 )
 

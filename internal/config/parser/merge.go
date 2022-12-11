@@ -1,7 +1,7 @@
 package parser
 
 import (
-	"github.com/mitchellh/mapstructure"
+	"fmt"
 	"reflect"
 )
 
@@ -15,10 +15,7 @@ func merge(dest, src any) any {
 
 	if vSrc.Type() != vDst.Type() {
 		// try decode
-		if err := mapstructure.Decode(vSrc, &vDst); err != nil {
-			panic(err.Error())
-		}
-		//panic(fmt.Sprintf("Cannot merge %s and %s. Types are different: %s - %s", dest, src, vDst.Type(), vSrc.Type()))
+		panic(fmt.Sprintf("Cannot merge %s and %s. Types are different: %s - %s", dest, src, vDst.Type(), vSrc.Type()))
 	}
 
 	// nolint: exhaustive

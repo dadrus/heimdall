@@ -1,10 +1,10 @@
 package mocks
 
 import (
-	"github.com/dadrus/heimdall/internal/rules/pipeline/subject"
 	"github.com/stretchr/testify/mock"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
 )
 
 type MockSubjectHandler struct {

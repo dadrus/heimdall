@@ -1,12 +1,12 @@
 package authenticators
 
 import (
-	"github.com/dadrus/heimdall/internal/rules/pipeline/authenticators/extractors"
 	"net/http"
 
 	"github.com/stretchr/testify/mock"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/extractors"
 )
 
 type dummyAuthData struct {

@@ -1,8 +1,6 @@
 package template_test
 
 import (
-	"github.com/dadrus/heimdall/internal/rules/pipeline/subject"
-	"github.com/dadrus/heimdall/internal/rules/pipeline/template"
 	"net/url"
 	"testing"
 
@@ -10,6 +8,8 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/heimdall/mocks"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
 )
 
 func TestTemplateRender(t *testing.T) {

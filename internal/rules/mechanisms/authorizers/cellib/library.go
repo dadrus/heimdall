@@ -1,11 +1,12 @@
 package cellib
 
 import (
-	"github.com/dadrus/heimdall/internal/rules/pipeline/subject"
 	"reflect"
 
 	"github.com/google/cel-go/cel"
 	"github.com/google/cel-go/ext"
+
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
 )
 
 type heimdallLibrary struct{}

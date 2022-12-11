@@ -2,15 +2,15 @@ package mechanisms
 
 import (
 	"errors"
-	"github.com/dadrus/heimdall/internal/rules/pipeline/authenticators"
-	"github.com/dadrus/heimdall/internal/rules/pipeline/authorizers"
-	"github.com/dadrus/heimdall/internal/rules/pipeline/errorhandlers"
-	"github.com/dadrus/heimdall/internal/rules/pipeline/hydrators"
-	"github.com/dadrus/heimdall/internal/rules/pipeline/mutators"
 
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/config"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/authorizers"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/errorhandlers"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/hydrators"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/mutators"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 

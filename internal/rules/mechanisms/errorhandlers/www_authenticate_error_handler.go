@@ -2,11 +2,11 @@ package errorhandlers
 
 import (
 	"fmt"
-	"github.com/dadrus/heimdall/internal/rules/pipeline/errorhandlers/matcher"
 
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/errorhandlers/matcher"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )

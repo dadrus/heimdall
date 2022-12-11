@@ -5,13 +5,13 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
-	"github.com/dadrus/heimdall/internal/rules/pipeline/subject"
 	"net/url"
 	"text/template"
 
 	"github.com/Masterminds/sprig/v3"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 

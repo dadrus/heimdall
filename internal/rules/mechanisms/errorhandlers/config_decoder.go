@@ -1,8 +1,9 @@
 package errorhandlers
 
 import (
-	"github.com/dadrus/heimdall/internal/rules/pipeline/errorhandlers/matcher"
 	"github.com/mitchellh/mapstructure"
+
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/errorhandlers/matcher"
 )
 
 func decodeConfig(input any, output any) error {

@@ -1,10 +1,10 @@
 package authenticators
 
 import (
-	"github.com/dadrus/heimdall/internal/rules/pipeline/subject"
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
 )
 
 // by intention. Used only during application bootstrap

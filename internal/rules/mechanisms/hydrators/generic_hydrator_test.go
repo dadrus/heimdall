@@ -3,8 +3,6 @@ package hydrators
 import (
 	"context"
 	"errors"
-	"github.com/dadrus/heimdall/internal/rules/pipeline/subject"
-	"github.com/dadrus/heimdall/internal/rules/pipeline/template"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -21,6 +19,8 @@ import (
 	"github.com/dadrus/heimdall/internal/endpoint"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	heimdallmocks "github.com/dadrus/heimdall/internal/heimdall/mocks"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
 	"github.com/dadrus/heimdall/internal/testsupport"
 	"github.com/dadrus/heimdall/internal/x"
 )

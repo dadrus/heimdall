@@ -2,7 +2,7 @@ package hydrators
 
 import (
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/rules/pipeline/subject"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
 )
 
 type Hydrator interface {

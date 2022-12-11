@@ -3,8 +3,6 @@ package authenticators
 import (
 	"context"
 	"errors"
-	extractors2 "github.com/dadrus/heimdall/internal/rules/pipeline/authenticators/extractors"
-	"github.com/dadrus/heimdall/internal/rules/pipeline/subject"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
@@ -19,6 +17,8 @@ import (
 	"github.com/dadrus/heimdall/internal/endpoint"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	heimdallmocks "github.com/dadrus/heimdall/internal/heimdall/mocks"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/extractors"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
 	"github.com/dadrus/heimdall/internal/testsupport"
 	"github.com/dadrus/heimdall/internal/x"
 )
@@ -112,10 +112,10 @@ subject:
 				require.NotNil(t, auth)
 				assert.Equal(t, "http://test.com", auth.e.URL)
 				assert.Equal(t, http.MethodGet, auth.e.Method)
-				ces, ok := auth.ads.(extractors2.CompositeExtractStrategy)
+				ces, ok := auth.ads.(extractors.CompositeExtractStrategy)
 				assert.True(t, ok)
 				assert.Len(t, ces, 1)
-				assert.Contains(t, ces, &extractors2.HeaderValueExtractStrategy{Name: "foo-header"})
+				assert.Contains(t, ces, &extractors.HeaderValueExtractStrategy{Name: "foo-header"})
 				assert.Equal(t, &SubjectInfo{IDFrom: "some_template"}, auth.sf)
 				assert.Equal(t, time.Duration(0), auth.ttl)
 				assert.False(t, auth.IsFallbackOnErrorAllowed())
@@ -143,10 +143,10 @@ cache_ttl: 5s`),
 				require.NotNil(t, auth)
 				assert.Equal(t, "http://test.com", auth.e.URL)
 				assert.Equal(t, http.MethodPost, auth.e.Method)
-				ces, ok := auth.ads.(extractors2.CompositeExtractStrategy)
+				ces, ok := auth.ads.(extractors.CompositeExtractStrategy)
 				assert.True(t, ok)
 				assert.Len(t, ces, 1)
-				assert.Contains(t, ces, &extractors2.CookieValueExtractStrategy{Name: "foo-cookie"})
+				assert.Contains(t, ces, &extractors.CookieValueExtractStrategy{Name: "foo-cookie"})
 				assert.Equal(t, &SubjectInfo{IDFrom: "some_template"}, auth.sf)
 				assert.Equal(t, 5*time.Second, auth.ttl)
 				assert.False(t, auth.IsFallbackOnErrorAllowed())
@@ -174,10 +174,10 @@ allow_fallback_on_error: true`),
 				require.NotNil(t, auth)
 				assert.Equal(t, "http://test.com", auth.e.URL)
 				assert.Equal(t, http.MethodPost, auth.e.Method)
-				ces, ok := auth.ads.(extractors2.CompositeExtractStrategy)
+				ces, ok := auth.ads.(extractors.CompositeExtractStrategy)
 				assert.True(t, ok)
 				assert.Len(t, ces, 1)
-				assert.Contains(t, ces, &extractors2.CookieValueExtractStrategy{Name: "foo-cookie"})
+				assert.Contains(t, ces, &extractors.CookieValueExtractStrategy{Name: "foo-cookie"})
 				assert.Equal(t, &SubjectInfo{IDFrom: "some_template"}, auth.sf)
 				assert.Equal(t, time.Duration(0), auth.ttl)
 				assert.True(t, auth.IsFallbackOnErrorAllowed())
@@ -211,10 +211,10 @@ session_lifespan:
 				require.NotNil(t, auth)
 				assert.Equal(t, "http://test.com", auth.e.URL)
 				assert.Equal(t, http.MethodPatch, auth.e.Method)
-				ces, ok := auth.ads.(extractors2.CompositeExtractStrategy)
+				ces, ok := auth.ads.(extractors.CompositeExtractStrategy)
 				assert.True(t, ok)
 				assert.Len(t, ces, 1)
-				assert.Contains(t, ces, &extractors2.CookieValueExtractStrategy{Name: "foo-cookie"})
+				assert.Contains(t, ces, &extractors.CookieValueExtractStrategy{Name: "foo-cookie"})
 				assert.Equal(t, &SubjectInfo{IDFrom: "some_template"}, auth.sf)
 				assert.Equal(t, time.Duration(0), auth.ttl)
 				assert.False(t, auth.IsFallbackOnErrorAllowed())

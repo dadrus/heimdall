@@ -1,11 +1,11 @@
 package authenticators
 
 import (
-	"github.com/dadrus/heimdall/internal/rules/pipeline/authenticators/extractors"
-	"github.com/dadrus/heimdall/internal/rules/pipeline/oauth2"
 	"github.com/mitchellh/mapstructure"
 
 	"github.com/dadrus/heimdall/internal/endpoint"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/extractors"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/oauth2"
 	"github.com/dadrus/heimdall/internal/truststore"
 )
 

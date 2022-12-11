@@ -1,8 +1,9 @@
 package authorizers
 
 import (
-	"github.com/dadrus/heimdall/internal/rules/pipeline/template"
 	"github.com/mitchellh/mapstructure"
+
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
 )
 
 func decodeConfig(input any, output any) error {

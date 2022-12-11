@@ -4,8 +4,6 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
-	extractors2 "github.com/dadrus/heimdall/internal/rules/pipeline/authenticators/extractors"
-	"github.com/dadrus/heimdall/internal/rules/pipeline/subject"
 	"io"
 	"net/http"
 	"net/url"
@@ -16,6 +14,8 @@ import (
 	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/dadrus/heimdall/internal/endpoint"
 	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/extractors"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
@@ -39,7 +39,7 @@ type genericAuthenticator struct {
 	id                   string
 	e                    endpoint.Endpoint
 	sf                   SubjectFactory
-	ads                  extractors2.AuthDataExtractStrategy
+	ads                  extractors.AuthDataExtractStrategy
 	ttl                  time.Duration
 	sessionLifespanConf  *SessionLifespanConfig
 	allowFallbackOnError bool
@@ -47,12 +47,12 @@ type genericAuthenticator struct {
 
 func newGenericAuthenticator(id string, rawConfig map[string]any) (*genericAuthenticator, error) {
 	type Config struct {
-		Endpoint              endpoint.Endpoint                    `mapstructure:"identity_info_endpoint"`
-		AuthDataSource        extractors2.CompositeExtractStrategy `mapstructure:"authentication_data_source"`
-		SubjectInfo           SubjectInfo                          `mapstructure:"subject"`
-		SessionLifespanConfig *SessionLifespanConfig               `mapstructure:"session_lifespan"`
-		CacheTTL              *time.Duration                       `mapstructure:"cache_ttl"`
-		AllowFallbackOnError  bool                                 `mapstructure:"allow_fallback_on_error"`
+		Endpoint              endpoint.Endpoint                   `mapstructure:"identity_info_endpoint"`
+		AuthDataSource        extractors.CompositeExtractStrategy `mapstructure:"authentication_data_source"`
+		SubjectInfo           SubjectInfo                         `mapstructure:"subject"`
+		SessionLifespanConfig *SessionLifespanConfig              `mapstructure:"session_lifespan"`
+		CacheTTL              *time.Duration                      `mapstructure:"cache_ttl"`
+		AllowFallbackOnError  bool                                `mapstructure:"allow_fallback_on_error"`
 	}
 
 	var conf Config
@@ -163,7 +163,7 @@ func (a *genericAuthenticator) HandlerID() string {
 }
 
 func (a *genericAuthenticator) getSubjectInformation(ctx heimdall.Context,
-	authData extractors2.AuthData,
+	authData extractors.AuthData,
 ) ([]byte, error) {
 	logger := zerolog.Ctx(ctx.AppContext())
 	cch := cache.Ctx(ctx.AppContext())
@@ -218,7 +218,7 @@ func (a *genericAuthenticator) getSubjectInformation(ctx heimdall.Context,
 }
 
 func (a *genericAuthenticator) fetchSubjectInformation(ctx heimdall.Context,
-	authData extractors2.AuthData,
+	authData extractors.AuthData,
 ) ([]byte, error) {
 	req, err := a.e.CreateRequest(ctx.AppContext(), nil, nil)
 	if err != nil {

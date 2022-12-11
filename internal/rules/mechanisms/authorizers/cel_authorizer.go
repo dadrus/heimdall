@@ -2,13 +2,13 @@ package authorizers
 
 import (
 	"fmt"
-	cellib2 "github.com/dadrus/heimdall/internal/rules/pipeline/authorizers/cellib"
-	"github.com/dadrus/heimdall/internal/rules/pipeline/subject"
 
 	"github.com/google/cel-go/cel"
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/authorizers/cellib"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
@@ -50,7 +50,7 @@ func newCELAuthorizer(id string, rawConfig map[string]any) (*celAuthorizer, erro
 			NewWithMessage(heimdall.ErrConfiguration, "no expressions provided for CEL authorizer")
 	}
 
-	env, err := cel.NewEnv(cellib2.Library())
+	env, err := cel.NewEnv(cellib.Library())
 	if err != nil {
 		return nil, errorchain.NewWithMessage(heimdall.ErrInternal,
 			"failed creating CEL environment").CausedBy(err)
@@ -73,7 +73,7 @@ func (a *celAuthorizer) Execute(ctx heimdall.Context, sub *subject.Subject) erro
 
 	obj := map[string]any{
 		"Subject": sub,
-		"Request": cellib2.WrapRequest(ctx),
+		"Request": cellib.WrapRequest(ctx),
 	}
 
 	for i, expression := range a.expressions {
