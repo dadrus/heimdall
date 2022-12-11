@@ -152,11 +152,11 @@ Some pipeline handlers support, respectively require access to different types o
 
 This object contains the information about the authenticated subject. If available, it has the following attributes:
 
-* *`id`*: _string_
+* *`ID`*: _string_
 +
 The identifier of the subject. This value is set by the authenticator, which was able to authenticate the subject.
 
-* *`attributes`*: _map_
+* *`Attributes`*: _map_
 +
 Contains all attributes, which are known about the subject. The content is initially set by the authenticator, which was able to authenticate the subject. Handlers which receive the subject can update it, but do never override any entries.
 
@@ -164,28 +164,31 @@ Each object of this type can be thought as a JSON object and is also accessible 
 
 .Subject object created by an AnonymousAuthenticator
 ====
-[source, json]
+[source, javascript]
 ----
-{
-  "id": "anonymous",
-  "attributes": {}
+Subject = {
+  ID: "anonymous",
+  Attributes: {}
 }
 ----
 ====
 
 .Possible Subject object created by an OAuth2Authenticator
 ====
-[source, json]
+[source, javascript]
 ----
-{
-  "id": "foobar",
-  "attributes": {
+Subject = {
+  ID: "foobar",
+  Attributes: {
     "sub": "foobar",
     "exp": "1670600805",
-	"jti": "7b91ed8a-0251-4e02-8d51-9792785851e8",
-	"iat": "1670600305",
-	"iss": "http://testauthserver.local",
-	"nbf": "1670600305"
+    "jti": "7b91ed8a-0251-4e02-8d51-9792785851e8",
+    "iat": "1670600305",
+    "iss": "http://testauthserver.local",
+    "nbf": "1670600305",
+    "extra": {
+        "foo": ["bar", "baz"]
+    }
   }
 }
 ----
@@ -193,59 +196,63 @@ Each object of this type can be thought as a JSON object and is also accessible 
 
 === Request
 
-This object contains information about the request being authenticated and has the following attributes:
+This object contains information about the request being authenticated and has the following attributes and methods:
 
-* *`method`*: _string_
+* *`Method`*: _string_
 +
 The HTTP method used, like `GET`, `POST`, etc.
 
-* *`url`*: _URL_
+* *`URL`*: _URL_
 +
-The URL of the matched request. This object has the following properties:
+The URL of the matched request. This object has the following properties and methods:
 
-** *`scheme`*: _string_
+** *`Scheme`*: _string_
 +
 The HTTP scheme part of the url
-** *`host`*: _string_
+** *`Host`*: _string_
 +
 The host part of the url
-** *`path`*: _string_
+** *`Path`*: _string_
 +
 The path part of the url
-** *`query`*: _map_
+** *`RawQuery`*: _string_
 +
-The query part of the url with each key-value pair being a string to array of strings mapping.
+The raw query part of the url.
+** *`String()`*: _method_
++
+This method returns the URL as valid URL string of a form `scheme:host/path?query`.
+** *`Query()`*: _method_
++
+The parsed query with each key-value pair being a string to array of strings mapping.
 
-* *`client_ips`*: _string array_
+* *`ClientIP`*: _string array_
 +
 The list of IP addresses the request passed through with the first entry being the ultimative client of the request. Only available if heimdall is configured to trust the client, sending this information, e.g. in the `X-Forwarded-From` header (see e.g. Decision Service link:{{< relref "/docs/configuration/services/decision_api.adoc#_trusted_proxies" >}}[trusted_proxies] configuration for more details).
 
-* *`headers`*: _map_
+* *`Header(name)`*: _method_,
 +
-The headers available in the request with each key-value pair being a string to array of strings mapping.
+This method expects the name of a header as input and returns the value of the header as `string` if present in the HTTP request. If not present an empty string (`""`) is returned.
++
+
+* *`Cookie(name)`*: _method_,
++
+This method expects the name of a cookie as input and returns the value of it as `string` if present in the HTTP request. If not present an empty string (`""`) is returned.
 
 Here is an example:
 
 .Example request object
 ====
-[source, json]
+[source, javascript]
 ----
-{
-  "method": "GET",
-  "url": {
-    "scheme": "https",
-    "host": "localhost",
-    "path": "/test",
-    "query": {
-      "baz":["zab", "bar"],
-      "foo":["bar"]
-    }
+Request = {
+  Method: "GET",
+  Url: {
+    Scheme: "https",
+    Host: "localhost",
+    Path: "/test",
+    RawQuery: "baz=zab&baz=bar&foo=bar"
   },
-  "client_ips": ["127.0.0.1", "10.10.10.10"],
-  "headers": {
-    "X-Bar":["foo"],
-    "X-Foo":["bar","baz"]
-  }
+  ClientIP: ["127.0.0.1", "10.10.10.10"]
 }
 ----
 
@@ -264,17 +271,17 @@ Here some examples:
 
 The following JSON object is a typical response from OPA.
 
-[source, json]
+[source, javascript]
 ----
-{ "result": true }
+Payload = { "result": true }
 ----
 ====
 
-.Unstructured payload (response from OPA)
+.Unstructured payload
 ====
-[source, text]
+[source, javascript]
 ----
-SomeStringValue
+Payload = "SomeStringValue"
 ----
 ====
 

@@ -109,8 +109,8 @@ Configuration using the `config` property is mandatory. Following properties are
 +
 List of authorization expressions which define the actual authorization logic. Each expression has access to the following link:{{< relref "overview.adoc#_evaluation_objects" >}}[Evaluation Objects]:
 
-** `subject` of type link:{{< relref "overview.adoc#_subject" >}}[Subject].
-** `request` of type link:{{< relref "overview.adoc#_request" >}}[Request]
+** `Subject` of type link:{{< relref "overview.adoc#_subject" >}}[Subject].
+** `Request` of type link:{{< relref "overview.adoc#_request" >}}[Request]
 
 .Authorization based on subject properties
 ====
@@ -124,8 +124,8 @@ type: cel
 config:
   expressions:
     - expression: |
-        has(subject.attributes.groups) &&
-        subject.attributes.groups.exists(g, g == "admin")
+        has(Subject.Attributes.groups) &&
+        Subject.Attributes.groups.exists(g, g == "admin")
       message: User is not admin
 ----
 
@@ -147,7 +147,7 @@ type: cel
 config:
   expressions:
     - expression: |
-        request.method in ["GET", "HEAD", "OPTIONS"] || subject.id != "anonymous"
+        Request.Method in ["GET", "HEAD", "OPTIONS"] || Subject.ID != "anonymous"
       message: Anonymous non-read access is forbidden
 ----
 
