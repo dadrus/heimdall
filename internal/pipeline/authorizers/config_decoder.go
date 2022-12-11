@@ -3,7 +3,6 @@ package authorizers
 import (
 	"github.com/mitchellh/mapstructure"
 
-	"github.com/dadrus/heimdall/internal/pipeline/script"
 	"github.com/dadrus/heimdall/internal/pipeline/template"
 )
 
@@ -12,7 +11,6 @@ func decodeConfig(input any, output any) error {
 		&mapstructure.DecoderConfig{
 			DecodeHook: mapstructure.ComposeDecodeHookFunc(
 				mapstructure.StringToTimeDurationHookFunc(),
-				script.DecodeScriptHookFunc(),
 				template.DecodeTemplateHookFunc(),
 			),
 			Result:      output,
