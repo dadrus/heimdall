@@ -75,13 +75,6 @@ func (r *Request) ConvertToNative(_ reflect.Type) (any, error) {
 }
 
 func (r *Request) ConvertToType(_ ref.Type) ref.Val { return types.NewErr("no such overload") }
-
-func (r *Request) Equal(other ref.Val) ref.Val { return types.Bool(r == other.Value()) }
-
-func (r *Request) Type() ref.Type { return requestType }
-
-func (r *Request) Value() any { return r }
-
-func (r *Request) HasTrait(trait int) bool { return r.Type().HasTrait(trait) }
-
-func (r *Request) TypeName() string { return r.Type().TypeName() }
+func (r *Request) Equal(other ref.Val) ref.Val      { return types.Bool(r == other.Value()) }
+func (r *Request) Type() ref.Type                   { return requestType }
+func (r *Request) Value() any                       { return r }
