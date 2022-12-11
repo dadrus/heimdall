@@ -16,8 +16,8 @@ import (
 var (
 	errTypeConversion = errors.New("type conversion error")
 
-	requestType = types.NewTypeValue("cellib.Request", traits.ReceiverType)   //nolint:gochecknoglobals
-	urlType     = types.NewTypeValue("cellib.SimpleURL", traits.ReceiverType) //nolint:gochecknoglobals
+	requestType = types.NewTypeValue("cellib.Request", traits.ReceiverType) //nolint:gochecknoglobals
+	urlType     = types.NewTypeValue("cellib.URL", traits.ReceiverType)     //nolint:gochecknoglobals
 )
 
 type URL struct {
