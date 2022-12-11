@@ -54,8 +54,9 @@ pipeline:
          url: https://opa.local/v1/data/share_photos/policy/allow
        payload: |
          { "input": { "user": {{ quote .Subject.ID }}, "path": {{ quote .RequestURL.Path }} } }
-       script: |
-         heimdall.Payload.result === true
+       expressions:
+         - expression: |
+             Payload.result == true
 ----
 
 Here the entire authorization happens within heimdall and is completely outsourced from the business logic of our sharing service.
