@@ -14,14 +14,16 @@ https://nginx.org/[NGINX] is an HTTP and reverse proxy server which became famou
 
 NOTE: If there is no matching rule on heimdall side, heimdall responds with `404 Not Found`, which, as said above will be treated by NGINX as error. To avoid such situations, you can define a link:{{< relref "/docs/configuration/rules/default_rule.adoc" >}}[default rule], which is anyway recommended to have secure defaults, which, depending on the configuration, would then respond either with 401 or 403.
 
+TODO: Check response code 404
+
 Since NGINX is highly configurable and heimdall supports different integration options, you can use any of the configuration examples given below. All of these enable heimdall to build the URL of the protected backend server for rule matching purposes.
 
-In most cases you must configure heimdall to trust your NGINX instances by setting link:{{< relref "/docs/configuration/services/decision_api.adoc#_trusted_proxies" >}}[`trusted_proxies`] for the Decision service. Exceptions are described in the sections below.
+In most cases you must configure heimdall to trust your NGINX instances by setting link:{{< relref "/docs/configuration/services/decision_api.adoc#_trusted_proxies" >}}[`trusted_proxies`] for the Decision, respectively Proxy service. Exceptions are described in the sections below.
 
 [#_first_option]
 == Forward only the host information in the header
 
-With this method you set the `X-Forwarded-Host` to let heimdall know the backend host. All other URL parts (schema, path and query parameter) as well as the HTTP method are then inferred from the URL heimdall receives the request on.
+With this method you set the `X-Forwarded-Host` to let heimdall know the host, respectively dome the request was sent to. All other URL parts (schema, path and query parameter) as well as the HTTP method are then inferred from the URL and the request heimdall receives.
 
 Instead of using `X-Forwarded-Host` you could also make use of the `Host` header. In that case, there is no need to configure the `trusted_proxies`.
 
@@ -33,10 +35,10 @@ Instead of using `X-Forwarded-Host` you could also make use of the `Host` header
 ...
 
 location / {
-  auth_request            /_auth;                                    <1>
-  auth_request_set        $auth_cookie $upstream_http_set_cookie;    <2>
+  auth_request            /_auth;  <1>
+  auth_request_set        $auth_cookie $upstream_http_set_cookie;  <2>
   add_header              Set-Cookie $auth_cookie;
-  auth_request_set        $authHeader0 $upstream_http_authorization; <3>
+  auth_request_set        $authHeader0 $upstream_http_authorization;  <3>
   proxy_set_header        'Authorization' $authHeader0;
   # mitigate HTTPoxy Vulnerability
   # https://www.nginx.com/blog/mitigating-the-httpoxy-vulnerability-with-nginx/
@@ -44,29 +46,29 @@ location / {
   ...
 }
 
-location = /_auth {                                          <4>
+location = /_auth {  <4>
   internal;
   proxy_pass               http://heimdall:4456$request_uri; <5>
-  proxy_pass_request_body  off;                              <6>
+  proxy_pass_request_body  off;  <6>
   proxy_set_header         Content-Length   "";
-  proxy_set_header         X-Forwarded-Host $http_host;      <7>
-  proxy_set_header         X-Forwarded-For  $remote_addr;    <8>
+  proxy_set_header         X-Forwarded-Host $http_host;  <7>
+  proxy_set_header         X-Forwarded-For  $remote_addr;  <8>
 }
 ----
 <1> Configures NGINX to forward every request to the internal `/_auth` endpoint (this is where the actual heimdall integration happens - see below).
-<2> When the request to heimdall returns, this and the next line set the Cookies set by heimdall in the response (whether you need this depends on your link:{{< relref "/docs/configuration/pipeline/hydrators.adoc" >}}[Hydrators] and link:{{< relref "/docs/configuration/pipeline/mutators.adoc" >}}[Mutators] configuration)
-<3> When the request to heimdall returns, this and the next line set the `Authorization` header set by heimdall in the response (which header to set depends again on your link:{{< relref "/docs/configuration/pipeline/hydrators.adoc" >}}[Hydrators] and link:{{< relref "/docs/configuration/pipeline/mutators.adoc" >}}[Mutators] configuration)
+<2> When the response from heimdall returns, this and the next line set the Cookies set by heimdall in the response (whether you need this depends on your link:{{< relref "/docs/configuration/pipeline/hydrators.adoc" >}}[Hydrators] and link:{{< relref "/docs/configuration/pipeline/mutators.adoc" >}}[Mutators] configuration)
+<3> When the response from heimdall returns, this and the next line set the `Authorization` header set by heimdall in the response (which header to set depends again on your link:{{< relref "/docs/configuration/pipeline/hydrators.adoc" >}}[Hydrators] and link:{{< relref "/docs/configuration/pipeline/mutators.adoc" >}}[Mutators] configuration)
 <4> This is where the "magic" happens
 <5> Configures NGINX to pass the request to heimdall and sets the request path and queries from the original request
 <6> Disables sending of the request body. If your heimdall rules make use of the body, you should set this to `on` and remove the next line.
 <7> This is where you forward the host information to heimdall
-<8> Not really required, but makes the remote address available to heimdall and thus to the rules. Requires `trusted_proxies` to be configured.
+<8> Not really required, but makes the remote address available to heimdall and thus to the mechanisms used in by the rules. Requires `trusted_proxies` to be configured.
 ====
 
 [#_second_option]
 == Forward all information in `X-Forwarded-*` headers
 
-With this method you set the `X-Forwarded-Method`, `X-Forwarded-Proto`, `X-Forwarded-Host` and `X-Forwarded-Path` to let heimdall know the backend url and the required HTTP method.
+With this method you set the `X-Forwarded-Method`, `X-Forwarded-Proto`, `X-Forwarded-Host` and `X-Forwarded-Path` to let heimdall know the host, respectively domain url and the used HTTP method.
 
 Compared to the link:{{< relref "#_first_option" >}}[previous integration] option, the configuration only differs in the definition of the internal `/_auth` endpoint. So, the example configuration is limited to that part only.
 
@@ -79,13 +81,13 @@ Compared to the link:{{< relref "#_first_option" >}}[previous integration] optio
 
 location = /_auth {
   internal;
-  proxy_pass               http://heimdall:4456;                    <1>
+  proxy_pass               http://heimdall:4456;  <1>
   proxy_pass_request_body  off;
   proxy_set_header         Content-Length         "";
   proxy_set_header         X-Forwarded-Method     $request_method;  <2>
-  proxy_set_header         X-Forwarded-Proto      $scheme;          <3>
-  proxy_set_header         X-Forwarded-Host       $http_host;       <4>
-  proxy_set_header         X-Forwarded-Path       $request_uri;     <5>
+  proxy_set_header         X-Forwarded-Proto      $scheme;  <3>
+  proxy_set_header         X-Forwarded-Host       $http_host;  <4>
+  proxy_set_header         X-Forwarded-Path       $request_uri;  <5>
   proxy_set_header         X-Forwarded-For        $remote_addr;
 }
 ----
@@ -99,7 +101,7 @@ location = /_auth {
 [#_third_option]
 == Forward all information in `X-Forwarded-Uri` and `X-Forwarded-Method` headers
 
-This method is a simplified alternative to the link:{{< relref "#_second_option" >}}[previous] one in which heimdall receives everything required to know the backend url and the HTTP method in HTTP headers.
+This method is a simplified alternative to the link:{{< relref "#_second_option" >}}[previous] one in which heimdall receives everything required to know the host url and the HTTP method in HTTP headers.
 
 The difference is again in the definition of the internal `/_auth` endpoint. So, the example configuration is limited to that part.
 
@@ -112,11 +114,11 @@ The difference is again in the definition of the internal `/_auth` endpoint. So,
 
 location = /_auth {
   internal;
-  proxy_pass               http://heimdall:4456;                                    <1>
+  proxy_pass               http://heimdall:4456;  <1>
   proxy_pass_request_body  off;
   proxy_set_header         Content-Length         "";
-  proxy_set_header         X-Forwarded-Method     $request_method;                  <2>
-  proxy_set_header         X-Forwarded-Uri        $scheme://$http_host$request_uri; <3>
+  proxy_set_header         X-Forwarded-Method     $request_method;  <2>
+  proxy_set_header         X-Forwarded-Uri        $scheme://$http_host$request_uri;  <3>
   proxy_set_header         X-Forwarded-For        $remote_addr;
 }
 ----
@@ -127,7 +129,7 @@ location = /_auth {
 
 == Integration with NGINX Ingress Controller.
 
-The integration option, described in the link:{{< relref "#_second_option" >}}[Forward all information in `X-Forwarded-*` headers] section corresponds more or less to the way how the `ngnix.conf` file is generated by the https://github.com/kubernetes/ingress-nginx/blob/3c8817f700a4ab1713e3369fc6e5f500b008d989/rootfs/etc/nginx/template/nginx.tmpl#L977[default nginx-ingress template] used by the https://kubernetes.github.io/ingress-nginx/[NGINX Ingress Controller]. The only missing things are the request path and the query parameter. So you can easily integrate heimdall by adding the following annotations to your ingress configuration.
+The integration option, described in the link:{{< relref "#_second_option" >}}[Forward all information in `X-Forwarded-*` headers] section corresponds more or less to the way how the `ngnix.conf` file is generated by the https://github.com/kubernetes/ingress-nginx/blob/3c8817f700a4ab1713e3369fc6e5f500b008d989/rootfs/etc/nginx/template/nginx.tmpl#L977[default nginx-ingress template] used by the https://kubernetes.github.io/ingress-nginx/[NGINX Ingress Controller]. The only missing parts are the request path and the query parameter. So you can easily integrate heimdall by adding the following annotations to your ingress configuration.
 
 .Possible Configuration
 ====

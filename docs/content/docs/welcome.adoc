@@ -60,11 +60,11 @@ All this pretty often leads to the fact that up to 60% of the implementation eff
 
 == Heimdall's Promise
 
-Heimdall addresses the aforesaid challenges companies and developers face, especially with a distributed or microservices architecture. Whether you're building from scratch or migrating existing applications, Heimdall can help and allows you to transparently add security capabilities related to authentication and authorization without adding them to your own code, but nevertheless, by completely retaining control. It can do so standalone, but also integrated into available infrastructure.
+Heimdall addresses the aforesaid challenges companies and developers face, especially with a distributed or microservices architecture. Whether you're building from scratch or migrating existing applications, heimdall can help and allows you to transparently add security capabilities related to authentication and authorization without adding them to your own code, but nevertheless, by completely retaining control. It can do so standalone, but also integrated into available infrastructure.
 
 == How It Works
 
-Heimdall intercepts all your application related network traffic, allowing a broad set of application aware authentication and authorization features based on the rules you specify. This is done by routing each request through a pipeline as depicted in link:{{< relref "#_fig_heimdall_request_pipeline" >}}[Request Pipeline] below.
+Heimdall intercepts all your application related network traffic, allowing a broad set of application aware authentication and authorization features based on the rules you define. This is done by routing each request through a rule specific pipeline as depicted in link:{{< relref "#_fig_heimdall_request_pipeline" >}}[Request Pipeline] below.
 
 [[_fig_heimdall_request_pipeline]]
 .Request Pipeline

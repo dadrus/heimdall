@@ -1,5 +1,5 @@
 ---
-title: "Decision API Quickstart"
+title: "Decision Service Quickstart"
 date: 2022-06-08T20:43:27+02:00
 draft: false
 weight: 15
@@ -11,7 +11,7 @@ menu:
     parent: get_started
 ---
 
-This document describes a very simple use case in which you'll see Heimdall's Decision API in action.
+This document describes a very simple use case in which you'll see heimdall's Decision service in action.
 
 == Prerequisites
 
@@ -24,18 +24,18 @@ heimdall can be configured via environment variables, as well as using a configu
 [source, yaml]
 ----
 log:
-  level: info                     // <1>
-
-pipeline:
-  authenticators:
-    - id: anonymous_authenticator // <2>
-      type: anonymous
-  mutators:
-    - id: create_jwt              // <3>
-      type: jwt
+  level: info  # <1>
 
 rules:
-  default:                        // <4>
+  mechanisms:
+    authenticators:
+    - id: anonymous_authenticator  # <2>
+      type: anonymous
+    mutators:
+    - id: create_jwt  # <3>
+      type: jwt
+
+  default:  # <4>
     methods:
       - GET
       - POST
@@ -43,12 +43,12 @@ rules:
       - authenticator: anonymous_authenticator
       - mutator: create_jwt
 ----
-<1> Here we are setting the log level to `info` to be able to see any log output. By default, Heimdall logs on `error` log level.
+<1> Here we are setting the log level to `info` to be able to see any log output. By default, heimdall logs on `error` log level.
 <2> Configures the `anonymous` authenticator.
 <3> Configured the `jwt` mutator.
 <4> Configures the default rule.
 
-Put together, this configuration will let Heimdall create a JSON Web Token (JWT) with `sub` claim set to `anonymous` for every request on every URL for the HTTP methods GET and POST. The JWT itself will be put into the `Authorization` header as a bearer token.
+Put together, this configuration will let heimdall create a JSON Web Token (JWT) with `sub` claim set to `anonymous` for every request on every URL for the HTTP methods GET and POST. The JWT itself will be put into the `Authorization` header as a bearer token.
 
 == Run in Decision operation mode
 Run heimdall specifying the configuration file from above
@@ -92,7 +92,7 @@ Ignore the warnings. They are expected as we've neither configured a rule provid
 
 == Use
 
-Sent some request to heimdall's decision service endpoint:
+Send some request to heimdall's decision service endpoint:
 
 [source, bash]
 ----
@@ -129,7 +129,7 @@ u55QVVjduv_b2ykRnqh7Im9lSivokuVMEuSE8bN2qnqg
 * Connection #0 to host 127.0.0.1 left intact
 ----
 
-You should also be able to see similar output as below from the heimdall instance
+You should also be able to see similar output as below from the heimdall's instance
 
 [source, bash]
 ----
