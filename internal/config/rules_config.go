@@ -1,6 +1,7 @@
 package config
 
 type RulesConfig struct {
-	Default   *DefaultRuleConfig `koanf:"default,omitempty"`
-	Providers RuleProviders      `koanf:"providers"`
+	Prototypes *MechanismPrototypes `koanf:"mechanisms,omitempty"`
+	Default    *DefaultRuleConfig   `koanf:"default,omitempty"`
+	Providers  *RuleProviders       `koanf:"providers,omitempty"`
 }

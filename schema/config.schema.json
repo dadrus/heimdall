@@ -1588,6 +1588,119 @@
           "default": "default"
         }
       }
+    },
+    "mechanismDefinitions": {
+      "description": "Individual pipeline mechanisms used by rules",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "authenticators",
+        "mutators"
+      ],
+      "properties": {
+        "error_handlers": {
+          "description": "Individual error handler configurations",
+          "type": "array",
+          "additionalItems": false,
+          "items": {
+            "anyOf": [
+              {
+                "$ref": "#/definitions/errorHandlerWWWAuthenticate"
+              },
+              {
+                "$ref": "#/definitions/errorsHandlerRedirect"
+              },
+              {
+                "$ref": "#/definitions/errorsHandlerDefault"
+              }
+            ]
+          }
+        },
+        "authenticators": {
+          "description": "Authenticators",
+          "type": "array",
+          "additionalItems": false,
+          "uniqueItems": true,
+          "items": {
+            "anyOf": [
+              {
+                "$ref": "#/definitions/authenticatorAnonymous"
+              },
+              {
+                "$ref": "#/definitions/authenticatorNoop"
+              },
+              {
+                "$ref": "#/definitions/authenticatorUnauthorized"
+              },
+              {
+                "$ref": "#/definitions/authenticatorGeneric"
+              },
+              {
+                "$ref": "#/definitions/authenticatorOAuth2Introspection"
+              },
+              {
+                "$ref": "#/definitions/authenticatorJwt"
+              },
+              {
+                "$ref": "#/definitions/authenticatorBasicAuth"
+              }
+            ]
+          }
+        },
+        "authorizers": {
+          "description": "Authorizers",
+          "type": "array",
+          "additionalItems": false,
+          "uniqueItems": true,
+          "items": {
+            "anyOf": [
+              {
+                "$ref": "#/definitions/authorizerAllow"
+              },
+              {
+                "$ref": "#/definitions/authorizerDeny"
+              },
+              {
+                "$ref": "#/definitions/authorizerRemote"
+              },
+              {
+                "$ref": "#/definitions/authorizerLocalCEL"
+              }
+            ]
+          }
+        },
+        "hydrators": {
+          "description": "Hydrators",
+          "type": "array",
+          "additionalItems": false,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/definitions/hydratorGeneric"
+          }
+        },
+        "mutators": {
+          "description": "Mutators",
+          "type": "array",
+          "additionalItems": false,
+          "uniqueItems": true,
+          "items": {
+            "anyOf": [
+              {
+                "$ref": "#/definitions/mutatorNoop"
+              },
+              {
+                "$ref": "#/definitions/mutatorJwt"
+              },
+              {
+                "$ref": "#/definitions/mutatorHeader"
+              },
+              {
+                "$ref": "#/definitions/mutatorCookie"
+              }
+            ]
+          }
+        }
+      }
     }
   },
   "properties": {
@@ -1699,124 +1812,15 @@
         }
       }
     },
-    "pipeline": {
-      "description": "Individual pipeline handlers used by rules",
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "authenticators",
-        "mutators"
-      ],
-      "properties": {
-        "error_handlers": {
-          "description": "Individual error handler configurations",
-          "type": "array",
-          "additionalItems": false,
-          "items": {
-            "anyOf": [
-              {
-                "$ref": "#/definitions/errorHandlerWWWAuthenticate"
-              },
-              {
-                "$ref": "#/definitions/errorsHandlerRedirect"
-              },
-              {
-                "$ref": "#/definitions/errorsHandlerDefault"
-              }
-            ]
-          }
-        },
-        "authenticators": {
-          "description": "Authenticators",
-          "type": "array",
-          "additionalItems": false,
-          "uniqueItems": true,
-          "items": {
-            "anyOf": [
-              {
-                "$ref": "#/definitions/authenticatorAnonymous"
-              },
-              {
-                "$ref": "#/definitions/authenticatorNoop"
-              },
-              {
-                "$ref": "#/definitions/authenticatorUnauthorized"
-              },
-              {
-                "$ref": "#/definitions/authenticatorGeneric"
-              },
-              {
-                "$ref": "#/definitions/authenticatorOAuth2Introspection"
-              },
-              {
-                "$ref": "#/definitions/authenticatorJwt"
-              },
-              {
-                "$ref": "#/definitions/authenticatorBasicAuth"
-              }
-            ]
-          }
-        },
-        "authorizers": {
-          "description": "Authorizers",
-          "type": "array",
-          "additionalItems": false,
-          "uniqueItems": true,
-          "items": {
-            "anyOf": [
-              {
-                "$ref": "#/definitions/authorizerAllow"
-              },
-              {
-                "$ref": "#/definitions/authorizerDeny"
-              },
-              {
-                "$ref": "#/definitions/authorizerRemote"
-              },
-              {
-                "$ref": "#/definitions/authorizerLocalCEL"
-              }
-            ]
-          }
-        },
-        "hydrators": {
-          "description": "Hydrators",
-          "type": "array",
-          "additionalItems": false,
-          "uniqueItems": true,
-          "items": {
-            "$ref": "#/definitions/hydratorGeneric"
-          }
-        },
-        "mutators": {
-          "description": "Mutators",
-          "type": "array",
-          "additionalItems": false,
-          "uniqueItems": true,
-          "items": {
-            "anyOf": [
-              {
-                "$ref": "#/definitions/mutatorNoop"
-              },
-              {
-                "$ref": "#/definitions/mutatorJwt"
-              },
-              {
-                "$ref": "#/definitions/mutatorHeader"
-              },
-              {
-                "$ref": "#/definitions/mutatorCookie"
-              }
-            ]
-          }
-        }
-      }
-    },
+
     "rules": {
       "description": "Rules to use",
       "type": "object",
       "additionalProperties": false,
       "properties": {
+        "mechanisms": {
+          "$ref": "#/definitions/mechanismDefinitions"
+        },
         "providers": {
           "description": "Where to load rules from",
           "type": "object",

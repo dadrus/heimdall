@@ -9,7 +9,6 @@ import (
 	"github.com/fsnotify/fsnotify"
 	"github.com/rs/zerolog"
 
-	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/event"
 	"github.com/dadrus/heimdall/internal/rules/provider/rulesetparser"
@@ -24,10 +23,22 @@ type provider struct {
 }
 
 func newProvider(
-	conf *config.FileBasedRuleProviderConfig,
+	rawConf map[string]any,
 	queue event.RuleSetChangedEventQueue,
 	logger zerolog.Logger,
 ) (*provider, error) {
+	type Config struct {
+		Src   string `koanf:"src"`
+		Watch bool   `koanf:"watch"`
+	}
+
+	var conf Config
+	if err := decodeConfig(rawConf, &conf); err != nil {
+		return nil, errorchain.
+			NewWithMessage(heimdall.ErrConfiguration, "failed to decode file_system rule provider config").
+			CausedBy(err)
+	}
+
 	if len(conf.Src) == 0 {
 		return nil, errorchain.
 			NewWithMessage(heimdall.ErrConfiguration, "no src configured for file_system rule provider")

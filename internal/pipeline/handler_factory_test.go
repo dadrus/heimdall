@@ -494,7 +494,7 @@ func TestCreateHandlerFactory(t *testing.T) {
 	}{
 		{
 			uc:   "successful",
-			conf: config.Configuration{Prototypes: config.MechanismPrototypes{}},
+			conf: config.Configuration{Rules: config.RulesConfig{Prototypes: &config.MechanismPrototypes{}}},
 			assert: func(t *testing.T, err error, factory *handlerFactory) {
 				t.Helper()
 
@@ -510,14 +510,18 @@ func TestCreateHandlerFactory(t *testing.T) {
 		},
 		{
 			uc: "fails",
-			conf: config.Configuration{Prototypes: config.MechanismPrototypes{
-				Authenticators: []config.Mechanism{
-					{
-						ID:   "foo",
-						Type: errorhandlers.ErrorHandlerWWWAuthenticate,
+			conf: config.Configuration{
+				Rules: config.RulesConfig{
+					Prototypes: &config.MechanismPrototypes{
+						Authenticators: []config.Mechanism{
+							{
+								ID:   "foo",
+								Type: errorhandlers.ErrorHandlerWWWAuthenticate,
+							},
+						},
 					},
 				},
-			}},
+			},
 			assert: func(t *testing.T, err error, factory *handlerFactory) {
 				t.Helper()
 

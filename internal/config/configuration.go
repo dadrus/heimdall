@@ -10,17 +10,16 @@ import (
 )
 
 type Configuration struct {
-	Serve      ServeConfig         `koanf:"serve"`
-	Log        LoggingConfig       `koanf:"log"`
-	Tracing    TracingConfig       `koanf:"tracing"`
-	Metrics    MetricsConfig       `koanf:"metrics"`
-	Signer     SignerConfig        `koanf:"signer"`
-	Cache      CacheConfig         `koanf:"cache"`
-	Prototypes MechanismPrototypes `koanf:"pipeline"`
-	Rules      RulesConfig         `koanf:"rules,omitempty"`
+	Serve   ServeConfig   `koanf:"serve"`
+	Log     LoggingConfig `koanf:"log"`
+	Tracing TracingConfig `koanf:"tracing"`
+	Metrics MetricsConfig `koanf:"metrics"`
+	Signer  SignerConfig  `koanf:"signer"`
+	Cache   CacheConfig   `koanf:"cache"`
+	Rules   RulesConfig   `koanf:"rules,omitempty"`
 }
 
-func NewConfiguration(envPrefix EnvVarPrefix, configFile ConfigurationPath) (Configuration, error) {
+func NewConfiguration(envPrefix EnvVarPrefix, configFile ConfigurationPath) (*Configuration, error) {
 	// copy defaults
 	result := defaultConfig
 
@@ -56,5 +55,5 @@ func NewConfiguration(envPrefix EnvVarPrefix, configFile ConfigurationPath) (Con
 
 	err = parser.New(opts...).Load(&result)
 
-	return result, err
+	return &result, err
 }

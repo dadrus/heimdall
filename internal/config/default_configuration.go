@@ -62,11 +62,4 @@ var defaultConfig = Configuration{
 	Signer: SignerConfig{
 		Name: "heimdall",
 	},
-	Prototypes: MechanismPrototypes{
-		Authenticators: []Mechanism{},
-		Authorizers:    []Mechanism{},
-		Hydrators:      []Mechanism{},
-		Mutators:       []Mechanism{},
-		ErrorHandlers:  []Mechanism{},
-	},
 }

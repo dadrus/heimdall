@@ -13,6 +13,7 @@ import (
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/event"
+	"github.com/dadrus/heimdall/internal/testsupport"
 	"github.com/dadrus/heimdall/internal/x"
 )
 
@@ -30,7 +31,7 @@ func TestRegisterProvider(t *testing.T) {
 
 	for _, tc := range []struct {
 		uc         string
-		conf       config.Configuration
+		conf       []byte
 		setupMocks func(t *testing.T, mockLC *mockLifecycle)
 		assert     func(t *testing.T, err error)
 	}{
@@ -43,14 +44,8 @@ func TestRegisterProvider(t *testing.T) {
 			},
 		},
 		{
-			uc: "without provided rules file/directory",
-			conf: config.Configuration{
-				Rules: config.RulesConfig{
-					Providers: config.RuleProviders{
-						FileSystem: &config.FileBasedRuleProviderConfig{},
-					},
-				},
-			},
+			uc:   "without provided rules file/directory",
+			conf: []byte(`watch: true`),
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
@@ -59,14 +54,8 @@ func TestRegisterProvider(t *testing.T) {
 			},
 		},
 		{
-			uc: "with not existing referenced file",
-			conf: config.Configuration{
-				Rules: config.RulesConfig{
-					Providers: config.RuleProviders{
-						FileSystem: &config.FileBasedRuleProviderConfig{Src: "foo.bar"},
-					},
-				},
-			},
+			uc:   "with not existing referenced file",
+			conf: []byte(`src: foo.bar`),
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
@@ -75,14 +64,8 @@ func TestRegisterProvider(t *testing.T) {
 			},
 		},
 		{
-			uc: "with existing rules file",
-			conf: config.Configuration{
-				Rules: config.RulesConfig{
-					Providers: config.RuleProviders{
-						FileSystem: &config.FileBasedRuleProviderConfig{Src: tmpFile.Name()},
-					},
-				},
-			},
+			uc:   "with existing rules file",
+			conf: []byte(`src: ` + tmpFile.Name()),
 			setupMocks: func(t *testing.T, mockLC *mockLifecycle) {
 				t.Helper()
 
@@ -96,13 +79,9 @@ func TestRegisterProvider(t *testing.T) {
 		},
 		{
 			uc: "with existing rules file and enabled watcher",
-			conf: config.Configuration{
-				Rules: config.RulesConfig{
-					Providers: config.RuleProviders{
-						FileSystem: &config.FileBasedRuleProviderConfig{Src: tmpFile.Name(), Watch: true},
-					},
-				},
-			},
+			conf: []byte(`
+watch: true
+src: ` + tmpFile.Name()),
 			setupMocks: func(t *testing.T, mockLC *mockLifecycle) {
 				t.Helper()
 
@@ -117,6 +96,15 @@ func TestRegisterProvider(t *testing.T) {
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
 			// GIVEN
+			providerConf, err := testsupport.DecodeTestConfig(tc.conf)
+			require.NoError(t, err)
+
+			conf := config.Configuration{
+				Rules: config.RulesConfig{
+					Providers: &config.RuleProviders{FileSystem: providerConf},
+				},
+			}
+
 			mlc := &mockLifecycle{}
 			queue := make(event.RuleSetChangedEventQueue, 10)
 			setupMocks := x.IfThenElse(tc.setupMocks != nil,
@@ -126,7 +114,7 @@ func TestRegisterProvider(t *testing.T) {
 			setupMocks(t, mlc)
 
 			// WHEN
-			err := registerProvider(registrationArguments{Lifecycle: mlc, Config: tc.conf, Queue: queue}, log.Logger)
+			err = registerProvider(registrationArguments{Lifecycle: mlc, Config: conf, Queue: queue}, log.Logger)
 
 			// THEN
 			tc.assert(t, err)

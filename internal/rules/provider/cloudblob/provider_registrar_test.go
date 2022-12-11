@@ -73,7 +73,7 @@ buckets:
 
 			conf := config.Configuration{
 				Rules: config.RulesConfig{
-					Providers: config.RuleProviders{CloudBlob: providerConf},
+					Providers: &config.RuleProviders{CloudBlob: providerConf},
 				},
 			}
 			queue := make(event.RuleSetChangedEventQueue, 10)
