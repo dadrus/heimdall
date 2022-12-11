@@ -2,7 +2,6 @@ package rules
 
 import (
 	"fmt"
-	"github.com/dadrus/heimdall/internal/rules/pipeline"
 	"net/url"
 
 	"github.com/rs/zerolog"
@@ -21,7 +20,7 @@ type RuleFactory interface {
 	DefaultRule() rule.Rule
 }
 
-func NewRuleFactory(hf pipeline.HandlerFactory, conf config.Configuration, logger zerolog.Logger) (RuleFactory, error) {
+func NewRuleFactory(hf mechanisms.HandlerFactory, conf config.Configuration, logger zerolog.Logger) (RuleFactory, error) {
 	logger.Debug().Msg("Creating rule factory")
 
 	rf := &ruleFactory{hf: hf, hasDefaultRule: false, logger: logger}
@@ -36,7 +35,7 @@ func NewRuleFactory(hf pipeline.HandlerFactory, conf config.Configuration, logge
 }
 
 type ruleFactory struct {
-	hf             pipeline.HandlerFactory
+	hf             mechanisms.HandlerFactory
 	logger         zerolog.Logger
 	defaultRule    *ruleImpl
 	hasDefaultRule bool

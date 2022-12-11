@@ -1,4 +1,4 @@
-package pipeline
+package mechanisms
 
 import (
 	authenticators2 "github.com/dadrus/heimdall/internal/rules/pipeline/authenticators"

@@ -1,4 +1,4 @@
-package pipeline
+package mechanisms
 
 import (
 	"go.uber.org/fx"

@@ -1,7 +1,6 @@
 package internal
 
 import (
-	"github.com/dadrus/heimdall/internal/rules/pipeline"
 	"go.uber.org/fx"
 
 	"github.com/dadrus/heimdall/internal/cache"
@@ -22,7 +21,7 @@ var Module = fx.Options(
 	tracing.Module,
 	cache.Module,
 	keystore.Module,
-	pipeline.Module,
+	mechanisms.Module,
 	prometheus.Module,
 	rules.Module,
 	management.Module,
