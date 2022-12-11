@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"github.com/dadrus/heimdall/internal/rules/pipeline"
 	"go.uber.org/fx"
 
 	"github.com/dadrus/heimdall/internal/cache"
@@ -9,7 +10,6 @@ import (
 	"github.com/dadrus/heimdall/internal/handler/metrics"
 	"github.com/dadrus/heimdall/internal/keystore"
 	"github.com/dadrus/heimdall/internal/logging"
-	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/prometheus"
 	"github.com/dadrus/heimdall/internal/rules"
 	"github.com/dadrus/heimdall/internal/tracing"

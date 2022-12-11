@@ -1,6 +1,7 @@
 package rules
 
 import (
+	mocks3 "github.com/dadrus/heimdall/internal/rules/pipeline/mocks"
 	"testing"
 
 	"github.com/rs/zerolog/log"
@@ -10,7 +11,6 @@ import (
 
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
-	mocks2 "github.com/dadrus/heimdall/internal/pipeline/mocks"
 	"github.com/dadrus/heimdall/internal/rules/mocks"
 	"github.com/dadrus/heimdall/internal/testsupport"
 	"github.com/dadrus/heimdall/internal/x"
@@ -631,7 +631,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				t.Helper()
 
 				mhf.On("CreateAuthenticator", "foo", mock.Anything).
-					Return(&mocks2.MockAuthenticator{}, nil)
+					Return(&mocks3.MockAuthenticator{}, nil)
 			},
 			assert: func(t *testing.T, err error, rul *ruleImpl) {
 				t.Helper()
@@ -655,9 +655,9 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				t.Helper()
 
 				mhf.On("CreateAuthenticator", "foo", mock.Anything).
-					Return(&mocks2.MockAuthenticator{}, nil)
+					Return(&mocks3.MockAuthenticator{}, nil)
 				mhf.On("CreateHydrator", "bar", mock.Anything).
-					Return(&mocks2.MockHydrator{}, nil)
+					Return(&mocks3.MockHydrator{}, nil)
 			},
 			assert: func(t *testing.T, err error, rul *ruleImpl) {
 				t.Helper()
@@ -682,11 +682,11 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				t.Helper()
 
 				mhf.On("CreateAuthenticator", "foo", mock.Anything).
-					Return(&mocks2.MockAuthenticator{}, nil)
+					Return(&mocks3.MockAuthenticator{}, nil)
 				mhf.On("CreateHydrator", "bar", mock.Anything).
-					Return(&mocks2.MockHydrator{}, nil)
+					Return(&mocks3.MockHydrator{}, nil)
 				mhf.On("CreateAuthorizer", "baz", mock.Anything).
-					Return(&mocks2.MockAuthorizer{}, nil)
+					Return(&mocks3.MockAuthorizer{}, nil)
 			},
 			assert: func(t *testing.T, err error, rul *ruleImpl) {
 				t.Helper()
@@ -710,9 +710,9 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				t.Helper()
 
 				mhf.On("CreateAuthenticator", "foo", mock.Anything).
-					Return(&mocks2.MockAuthenticator{}, nil)
+					Return(&mocks3.MockAuthenticator{}, nil)
 				mhf.On("CreateMutator", "bar", mock.Anything).
-					Return(&mocks2.MockMutator{}, nil)
+					Return(&mocks3.MockMutator{}, nil)
 			},
 			assert: func(t *testing.T, err error, rul *ruleImpl) {
 				t.Helper()
@@ -737,9 +737,9 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				t.Helper()
 
 				mhf.On("CreateAuthenticator", "foo", mock.Anything).
-					Return(&mocks2.MockAuthenticator{}, nil)
+					Return(&mocks3.MockAuthenticator{}, nil)
 				mhf.On("CreateMutator", "bar", mock.Anything).
-					Return(&mocks2.MockMutator{}, nil)
+					Return(&mocks3.MockMutator{}, nil)
 			},
 			assert: func(t *testing.T, err error, rul *ruleImpl) {
 				t.Helper()
@@ -816,15 +816,15 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				t.Helper()
 
 				mhf.On("CreateAuthenticator", "foo", mock.Anything).
-					Return(&mocks2.MockAuthenticator{}, nil)
+					Return(&mocks3.MockAuthenticator{}, nil)
 				mhf.On("CreateHydrator", "bar", mock.Anything).
-					Return(&mocks2.MockHydrator{}, nil)
+					Return(&mocks3.MockHydrator{}, nil)
 				mhf.On("CreateAuthorizer", "zab", mock.Anything).
-					Return(&mocks2.MockAuthorizer{}, nil)
+					Return(&mocks3.MockAuthorizer{}, nil)
 				mhf.On("CreateMutator", "baz", mock.Anything).
-					Return(&mocks2.MockMutator{}, nil)
+					Return(&mocks3.MockMutator{}, nil)
 				mhf.On("CreateErrorHandler", "foo", mock.Anything).
-					Return(&mocks2.MockErrorHandler{}, nil)
+					Return(&mocks3.MockErrorHandler{}, nil)
 			},
 			assert: func(t *testing.T, err error, rul *ruleImpl) {
 				t.Helper()

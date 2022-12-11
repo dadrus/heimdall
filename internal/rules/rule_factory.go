@@ -2,13 +2,13 @@ package rules
 
 import (
 	"fmt"
+	"github.com/dadrus/heimdall/internal/rules/pipeline"
 	"net/url"
 
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/rules/patternmatcher"
 	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/x"

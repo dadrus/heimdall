@@ -2,6 +2,7 @@ package rules
 
 import (
 	"context"
+	"github.com/dadrus/heimdall/internal/rules/pipeline/subject"
 	"net/url"
 	"testing"
 
@@ -9,7 +10,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	heimdallmocks "github.com/dadrus/heimdall/internal/heimdall/mocks"
-	"github.com/dadrus/heimdall/internal/pipeline/subject"
 	"github.com/dadrus/heimdall/internal/rules/mocks"
 	"github.com/dadrus/heimdall/internal/rules/patternmatcher"
 	"github.com/dadrus/heimdall/internal/testsupport"

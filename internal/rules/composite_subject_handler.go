@@ -1,10 +1,10 @@
 package rules
 
 import (
+	"github.com/dadrus/heimdall/internal/rules/pipeline/subject"
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/pipeline/subject"
 )
 
 type compositeSubjectHandler []subjectHandler
