@@ -8,13 +8,13 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
-	"reflect"
 	"strconv"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/goccy/go-json"
+	"github.com/google/cel-go/cel"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -24,12 +24,11 @@ import (
 	"github.com/dadrus/heimdall/internal/endpoint"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	heimdallmocks "github.com/dadrus/heimdall/internal/heimdall/mocks"
-	"github.com/dadrus/heimdall/internal/pipeline/script"
+	"github.com/dadrus/heimdall/internal/pipeline/authorizers/cellib"
 	"github.com/dadrus/heimdall/internal/pipeline/subject"
 	"github.com/dadrus/heimdall/internal/pipeline/template"
 	"github.com/dadrus/heimdall/internal/testsupport"
 	"github.com/dadrus/heimdall/internal/x"
-	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
 func TestCreateRemoteAuthorizer(t *testing.T) {
@@ -110,13 +109,32 @@ payload: "{{ .Subject.ID }}"
 			},
 		},
 		{
+			uc: "configuration with invalid expression",
+			id: "authz",
+			config: []byte(`
+endpoint:
+  url: http://foo.bar
+payload: "{{ .Subject.ID }}"
+expressions:
+  - expression: "foo == 'bar'"
+`),
+			assert: func(t *testing.T, err error, auth *remoteAuthorizer) {
+				t.Helper()
+
+				require.Error(t, err)
+				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				assert.Contains(t, err.Error(), "failed to compile")
+			},
+		},
+		{
 			uc: "full configuration",
 			id: "authz",
 			config: []byte(`
 endpoint:
   url: http://foo.bar
 payload: "{{ .Subject.ID }}"
-script: "throw 'foobar'"
+expressions:
+  - expression: "Payload.foo == 'bar'"
 forward_response_headers_to_upstream:
   - Foo
   - Bar
@@ -134,10 +152,12 @@ cache_ttl: 5s
 				require.NotNil(t, auth.payload)
 				val, err := auth.payload.Render(nil, &subject.Subject{ID: "bar"})
 				require.NoError(t, err)
-				require.NotNil(t, auth.script)
-				_, err = auth.script.ExecuteOnPayload(ctx, nil)
-				assert.Error(t, err)
-				assert.Contains(t, err.Error(), "foobar")
+				require.NotEmpty(t, auth.expressions)
+				ok, err := auth.expressions[0].Eval(map[string]any{
+					"Payload": map[string]any{"foo": "bar"},
+				})
+				assert.NoError(t, err)
+				assert.True(t, ok)
 				assert.Equal(t, "bar", val)
 				assert.Len(t, auth.headersForUpstream, 2)
 				assert.Contains(t, auth.headersForUpstream, "Foo")
@@ -247,10 +267,30 @@ cache_ttl: 1s
 				assert.Equal(t, prototype.e, configured.e)
 				assert.Equal(t, prototype.id, configured.id)
 				assert.Equal(t, prototype.payload, configured.payload)
-				assert.Equal(t, prototype.script, configured.script)
+				assert.Equal(t, prototype.expressions, configured.expressions)
 				assert.Empty(t, configured.headersForUpstream)
 				assert.NotNil(t, configured.ttl)
 				assert.Equal(t, "authz3", configured.HandlerID())
+			},
+		},
+		{
+			uc: "configuration with invalid new expression",
+			id: "authz",
+			prototypeConfig: []byte(`
+endpoint:
+  url: http://foo.bar
+payload: bar
+`),
+			config: []byte(`
+expressions:
+  - expression: "foo == 'bar'"
+`),
+			assert: func(t *testing.T, err error, prototype *remoteAuthorizer, configured *remoteAuthorizer) {
+				t.Helper()
+
+				require.Error(t, err)
+				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				assert.Contains(t, err.Error(), "failed to compile")
 			},
 		},
 		{
@@ -267,7 +307,8 @@ payload: Baz
 forward_response_headers_to_upstream:
   - Bar
   - Foo
-script: "throw 'foobar'"
+expressions:
+  - expression: "Payload.foo == 'bar'"
 cache_ttl: 15s
 `),
 			assert: func(t *testing.T, err error, prototype *remoteAuthorizer, configured *remoteAuthorizer) {
@@ -285,11 +326,13 @@ cache_ttl: 15s
 				require.NotNil(t, configured.payload)
 				val, err := configured.payload.Render(nil, nil)
 				require.NoError(t, err)
-				assert.Nil(t, prototype.script)
-				require.NotNil(t, configured.script)
-				_, err = configured.script.ExecuteOnPayload(ctx, nil)
-				assert.Error(t, err)
-				assert.Contains(t, err.Error(), "foobar")
+				assert.Empty(t, prototype.expressions)
+				require.NotEmpty(t, configured.expressions)
+				ok, err := configured.expressions[0].Eval(map[string]any{
+					"Payload": map[string]any{"foo": "bar"},
+				})
+				assert.NoError(t, err)
+				assert.True(t, ok)
 				assert.Equal(t, "Baz", val)
 				assert.Len(t, configured.headersForUpstream, 2)
 				assert.Contains(t, configured.headersForUpstream, "Bar")
@@ -345,6 +388,9 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 		responseContent     []byte
 		responseCode        int
 	)
+
+	env, err := cel.NewEnv(cellib.Library())
+	require.NoError(t, err)
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		authorizationEndpointCalled = true
@@ -561,8 +607,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 			configureCache: func(t *testing.T, cch *mocks.MockCache, auth *remoteAuthorizer, sub *subject.Subject) {
 				t.Helper()
 
-				cacheKey, err := auth.calculateCacheKey(sub)
-				require.NoError(t, err)
+				cacheKey := auth.calculateCacheKey(sub)
 
 				cch.On("Get", cacheKey).Return(nil)
 				cch.On("Set", cacheKey,
@@ -612,8 +657,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 			configureCache: func(t *testing.T, cch *mocks.MockCache, auth *remoteAuthorizer, sub *subject.Subject) {
 				t.Helper()
 
-				cacheKey, err := auth.calculateCacheKey(sub)
-				require.NoError(t, err)
+				cacheKey := auth.calculateCacheKey(sub)
 
 				cch.On("Get", cacheKey).Return(nil)
 				cch.On("Set", cacheKey, mock.Anything, auth.ttl)
@@ -849,7 +893,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 			},
 		},
 		{
-			uc: "with script, which fails throwing error",
+			uc: "with expression, which returns false",
 			authorizer: &remoteAuthorizer{
 				id: "authz",
 				e: endpoint.Endpoint{
@@ -864,12 +908,13 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 
 					return tpl
 				}(),
-				script: func() script.Script {
-					ecma := &mockScript{}
-					ecma.On("ExecuteOnPayload", mock.Anything, mock.Anything).
-						Return(nil, errorchain.NewWithMessage(heimdall.ErrInternal, "test"))
+				expressions: func() []*Expression {
+					expr := &Expression{Value: "false == true"}
 
-					return ecma
+					err := expr.Compile(env)
+					require.NoError(t, err)
+
+					return []*Expression{expr}
 				}(),
 			},
 			subject: &subject.Subject{
@@ -915,7 +960,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrAuthorization)
-				assert.Contains(t, err.Error(), "test")
+				assert.Contains(t, err.Error(), "expression 1 failed")
 
 				var identifier interface{ HandlerID() string }
 				require.True(t, errors.As(err, &identifier))
@@ -923,81 +968,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 			},
 		},
 		{
-			uc: "with script, which returns false",
-			authorizer: &remoteAuthorizer{
-				id: "authz",
-				e: endpoint.Endpoint{
-					URL: srv.URL,
-					Headers: map[string]string{
-						"Content-Type": "application/json",
-						"Accept":       "application/json",
-					},
-				},
-				payload: func() template.Template {
-					tpl, _ := template.New(`{ "user_id": {{ quote .Subject.ID }} }`)
-
-					return tpl
-				}(),
-				script: func() script.Script {
-					ecma := &mockScript{}
-					ecma.On("ExecuteOnPayload", mock.Anything, mock.Anything).
-						Return(boolValue(false), nil)
-
-					return ecma
-				}(),
-			},
-			subject: &subject.Subject{
-				ID:         "my-id",
-				Attributes: map[string]any{},
-			},
-			instructServer: func(t *testing.T) {
-				t.Helper()
-
-				checkRequest = func(req *http.Request) {
-					t.Helper()
-
-					assert.Equal(t, "POST", req.Method)
-					assert.Equal(t, "application/json", req.Header.Get("Content-Type"))
-					assert.Equal(t, "application/json", req.Header.Get("Accept"))
-
-					data, err := io.ReadAll(req.Body)
-					assert.NoError(t, err)
-
-					var mapData map[string]string
-
-					err = json.Unmarshal(data, &mapData)
-					require.NoError(t, err)
-
-					assert.Len(t, mapData, 1)
-					assert.Equal(t, "my-id", mapData["user_id"])
-				}
-
-				responseCode = http.StatusOK
-				rawData, err := json.Marshal(map[string]any{
-					"access_granted": true,
-					"permissions":    []string{"read_foo", "write_foo"},
-					"groups":         []string{"Foo-Users"},
-				})
-				require.NoError(t, err)
-				responseContent = rawData
-				responseContentType = "application/json"
-			},
-			assert: func(t *testing.T, err error, sub *subject.Subject) {
-				t.Helper()
-
-				assert.True(t, authorizationEndpointCalled)
-
-				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrAuthorization)
-				assert.Contains(t, err.Error(), "script returned false")
-
-				var identifier interface{ HandlerID() string }
-				require.True(t, errors.As(err, &identifier))
-				assert.Equal(t, "authz", identifier.HandlerID())
-			},
-		},
-		{
-			uc: "with script, which succeeds",
+			uc: "with expression, which succeeds",
 			authorizer: &remoteAuthorizer{
 				id: "authorizer",
 				e: endpoint.Endpoint{
@@ -1012,13 +983,13 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 
 					return tpl
 				}(),
-				script: func() script.Script {
-					ecma := &mockScript{}
-					ecma.On("ExecuteOnPayload", mock.Anything, mock.MatchedBy(
-						func(data map[string]any) bool { return data["access_granted"] == true })).
-						Return(boolValue(true), nil)
+				expressions: func() []*Expression {
+					expr := &Expression{Value: "Payload.access_granted == true"}
 
-					return ecma
+					err := expr.Compile(env)
+					require.NoError(t, err)
+
+					return []*Expression{expr}
 				}(),
 			},
 			subject: &subject.Subject{
@@ -1121,39 +1092,4 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 			cch.AssertExpectations(t)
 		})
 	}
-}
-
-type boolValue bool
-
-func (v boolValue) ToInteger() int64         { return 1 }
-func (v boolValue) String() string           { return "bool" }
-func (v boolValue) ToFloat() float64         { return 1 }
-func (v boolValue) ToBoolean() bool          { return bool(v) }
-func (v boolValue) Export() interface{}      { return v }
-func (v boolValue) ExportType() reflect.Type { return nil }
-
-type mockScript struct {
-	mock.Mock
-}
-
-func (m *mockScript) ExecuteOnSubject(ctx heimdall.Context, sub *subject.Subject) (script.Result, error) {
-	args := m.Called(ctx, sub)
-
-	if val := args.Get(0); val != nil {
-		// nolint: forcetypeassert
-		return val.(script.Result), nil
-	}
-
-	return nil, args.Error(1)
-}
-
-func (m *mockScript) ExecuteOnPayload(ctx heimdall.Context, payload any) (script.Result, error) {
-	args := m.Called(ctx, payload)
-
-	if val := args.Get(0); val != nil {
-		// nolint: forcetypeassert
-		return val.(script.Result), nil
-	}
-
-	return nil, args.Error(1)
 }

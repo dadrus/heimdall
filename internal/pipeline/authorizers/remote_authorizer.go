@@ -5,20 +5,21 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"net/url"
 	"strings"
 	"time"
 
-	"github.com/goccy/go-json"
+	"github.com/google/cel-go/cel"
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/dadrus/heimdall/internal/endpoint"
 	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/pipeline/authorizers/cellib"
 	"github.com/dadrus/heimdall/internal/pipeline/contenttype"
-	"github.com/dadrus/heimdall/internal/pipeline/script"
 	"github.com/dadrus/heimdall/internal/pipeline/subject"
 	"github.com/dadrus/heimdall/internal/pipeline/template"
 	"github.com/dadrus/heimdall/internal/x"
@@ -44,9 +45,10 @@ type remoteAuthorizer struct {
 	id                 string
 	e                  endpoint.Endpoint
 	payload            template.Template
-	script             script.Script
+	expressions        []*Expression
 	headersForUpstream []string
 	ttl                time.Duration
+	celEnv             *cel.Env
 }
 
 type authorizationInformation struct {
@@ -73,7 +75,7 @@ func newRemoteAuthorizer(id string, rawConfig map[string]any) (*remoteAuthorizer
 	type Config struct {
 		Endpoint                 endpoint.Endpoint `mapstructure:"endpoint"`
 		Payload                  template.Template `mapstructure:"payload"`
-		Script                   script.Script     `mapstructure:"script"`
+		Expressions              []*Expression     `mapstructure:"expressions"`
 		ResponseHeadersToForward []string          `mapstructure:"forward_response_headers_to_upstream"`
 		CacheTTL                 time.Duration     `mapstructure:"cache_ttl"`
 	}
@@ -97,13 +99,28 @@ func newRemoteAuthorizer(id string, rawConfig map[string]any) (*remoteAuthorizer
 				"either a payload or at least one endpoint header must be configured for remote authorizer")
 	}
 
+	env, err := cel.NewEnv(cellib.Library())
+	if err != nil {
+		return nil, errorchain.NewWithMessage(heimdall.ErrInternal,
+			"failed creating CEL environment").CausedBy(err)
+	}
+
+	for i, expression := range conf.Expressions {
+		err = expression.Compile(env)
+		if err != nil {
+			return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+				"failed to compile expression %d (%s)", i+1, expression.Value).CausedBy(err)
+		}
+	}
+
 	return &remoteAuthorizer{
 		e:                  conf.Endpoint,
 		id:                 id,
 		payload:            conf.Payload,
-		script:             conf.Script,
+		expressions:        conf.Expressions,
 		headersForUpstream: conf.ResponseHeadersToForward,
 		ttl:                conf.CacheTTL,
+		celEnv:             env,
 	}, nil
 }
 
@@ -128,12 +145,8 @@ func (a *remoteAuthorizer) Execute(ctx heimdall.Context, sub *subject.Subject) e
 	)
 
 	if a.ttl > 0 {
-		cacheKey, err = a.calculateCacheKey(sub)
-		if err != nil {
-			logger.Error().Err(err).Msg("Failed to calculate cache key. Will not be able to use cache.")
-		} else {
-			cacheEntry = cch.Get(cacheKey)
-		}
+		cacheKey = a.calculateCacheKey(sub)
+		cacheEntry = cch.Get(cacheKey)
 	}
 
 	if cacheEntry != nil {
@@ -169,7 +182,7 @@ func (a *remoteAuthorizer) WithConfig(rawConfig map[string]any) (Authorizer, err
 
 	type Config struct {
 		Payload                  template.Template `mapstructure:"payload"`
-		Script                   script.Script     `mapstructure:"script"`
+		Expressions              []*Expression     `mapstructure:"expressions"`
 		ResponseHeadersToForward []string          `mapstructure:"forward_response_headers_to_upstream"`
 		CacheTTL                 time.Duration     `mapstructure:"cache_ttl"`
 	}
@@ -181,11 +194,20 @@ func (a *remoteAuthorizer) WithConfig(rawConfig map[string]any) (Authorizer, err
 			CausedBy(err)
 	}
 
+	for i, expression := range conf.Expressions {
+		err := expression.Compile(a.celEnv)
+		if err != nil {
+			return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+				"failed to compile expression %d (%s)", i+1, expression.Value).CausedBy(err)
+		}
+	}
+
 	return &remoteAuthorizer{
-		id:      a.id,
-		e:       a.e,
-		payload: x.IfThenElse(conf.Payload != nil, conf.Payload, a.payload),
-		script:  x.IfThenElse(conf.Script != nil, conf.Script, a.script),
+		id:          a.id,
+		e:           a.e,
+		payload:     x.IfThenElse(conf.Payload != nil, conf.Payload, a.payload),
+		celEnv:      a.celEnv,
+		expressions: x.IfThenElse(len(conf.Expressions) != 0, conf.Expressions, a.expressions),
 		headersForUpstream: x.IfThenElse(len(conf.ResponseHeadersToForward) != 0,
 			conf.ResponseHeadersToForward, a.headersForUpstream),
 		ttl: x.IfThenElse(conf.CacheTTL > 0, conf.CacheTTL, a.ttl),
@@ -319,16 +341,8 @@ func (a *remoteAuthorizer) readResponse(ctx heimdall.Context, resp *http.Respons
 	return result, nil
 }
 
-func (a *remoteAuthorizer) calculateCacheKey(sub *subject.Subject) (string, error) {
+func (a *remoteAuthorizer) calculateCacheKey(sub *subject.Subject) string {
 	const int64BytesCount = 8
-
-	rawSub, err := json.Marshal(sub)
-	if err != nil {
-		return "", errorchain.
-			NewWithMessage(heimdall.ErrInternal, "failed to marshal subject data").
-			WithErrorContext(a).
-			CausedBy(err)
-	}
 
 	ttlBytes := make([]byte, int64BytesCount)
 	binary.LittleEndian.PutUint64(ttlBytes, uint64(a.ttl))
@@ -341,31 +355,30 @@ func (a *remoteAuthorizer) calculateCacheKey(sub *subject.Subject) (string, erro
 		func() []byte { return []byte(a.payload.Hash()) },
 		func() []byte { return []byte("nil") }))
 	hash.Write(ttlBytes)
-	hash.Write(rawSub)
+	hash.Write(sub.Hash())
 
-	return hex.EncodeToString(hash.Sum(nil)), nil
+	return hex.EncodeToString(hash.Sum(nil))
 }
 
 func (a *remoteAuthorizer) verify(ctx heimdall.Context, result any) error {
-	if a.script == nil {
-		return nil
-	}
-
 	logger := zerolog.Ctx(ctx.AppContext())
-	logger.Debug().Msg("Verifying authorization response using script")
+	logger.Debug().Msg("Verifying authorization response")
 
-	res, err := a.script.ExecuteOnPayload(ctx, result)
-	if err != nil {
-		return errorchain.
-			New(heimdall.ErrAuthorization).
-			WithErrorContext(a).
-			CausedBy(err)
-	}
+	obj := map[string]any{"Payload": result}
 
-	if !res.ToBoolean() {
-		return errorchain.
-			NewWithMessage(heimdall.ErrAuthorization, "script returned false").
-			WithErrorContext(a)
+	for i, expression := range a.expressions {
+		ok, err := expression.Eval(obj)
+		if err != nil {
+			return errorchain.NewWithMessagef(heimdall.ErrInternal, "failed evaluating expression %d", i+1).
+				WithErrorContext(a).CausedBy(err)
+		}
+
+		if !ok {
+			return errorchain.NewWithMessage(heimdall.ErrAuthorization,
+				x.IfThenElse(len(expression.Message) != 0, expression.Message,
+					fmt.Sprintf("expression %d failed", i+1))).
+				WithErrorContext(a)
+		}
 	}
 
 	return nil

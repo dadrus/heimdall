@@ -207,22 +207,29 @@ pipeline:
       type: allow
     - id: deny_all_authorizer
       type: deny
-    - id: keto_authorizer
+    - id: remote_authorizer
       type: remote
       config:
         endpoint:
-          url: http://keto
+          url: http://my-authz-system
           method: POST
           headers:
             foo-bar: "{{ .Subject.ID }}"
         payload: "https://bla.bar"
-        script: "heimdall.Payload.response === true"
+        expressions:
+          - expression: |
+              Payload.response == true
         forward_response_headers_to_upstream:
           - bla-bar
     - id: attributes_based_authorizer
       type: local
       config:
         script: "console.log('New JS script')"
+    - id: user_is_admin_authz
+      type: cel
+      config:
+        expressions:
+          - expression: "'admin' in Subject.Attributes.groups"
 
   hydrators:
     - id: subscription_hydrator

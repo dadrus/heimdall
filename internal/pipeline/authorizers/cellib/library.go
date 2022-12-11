@@ -22,6 +22,7 @@ func (heimdallLibrary) CompileOptions() []cel.EnvOption {
 			reflect.TypeOf(&subject.Subject{}),
 			reflect.TypeOf(&Request{}),
 			reflect.TypeOf(&URL{})),
+		cel.Variable("Payload", cel.DynType),
 		cel.Variable("Subject", cel.DynType),
 		cel.Variable("Request", cel.ObjectType(requestType.TypeName())),
 		cel.Function("Header", cel.MemberOverload("Header",
