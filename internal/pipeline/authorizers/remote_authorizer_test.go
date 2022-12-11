@@ -109,6 +109,24 @@ payload: "{{ .Subject.ID }}"
 			},
 		},
 		{
+			uc: "configuration with invalid expression",
+			id: "authz",
+			config: []byte(`
+endpoint:
+  url: http://foo.bar
+payload: "{{ .Subject.ID }}"
+expressions:
+  - expression: "foo == 'bar'"
+`),
+			assert: func(t *testing.T, err error, auth *remoteAuthorizer) {
+				t.Helper()
+
+				require.Error(t, err)
+				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				assert.Contains(t, err.Error(), "failed to compile")
+			},
+		},
+		{
 			uc: "full configuration",
 			id: "authz",
 			config: []byte(`
@@ -253,6 +271,26 @@ cache_ttl: 1s
 				assert.Empty(t, configured.headersForUpstream)
 				assert.NotNil(t, configured.ttl)
 				assert.Equal(t, "authz3", configured.HandlerID())
+			},
+		},
+		{
+			uc: "configuration with invalid new expression",
+			id: "authz",
+			prototypeConfig: []byte(`
+endpoint:
+  url: http://foo.bar
+payload: bar
+`),
+			config: []byte(`
+expressions:
+  - expression: "foo == 'bar'"
+`),
+			assert: func(t *testing.T, err error, prototype *remoteAuthorizer, configured *remoteAuthorizer) {
+				t.Helper()
+
+				require.Error(t, err)
+				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				assert.Contains(t, err.Error(), "failed to compile")
 			},
 		},
 		{
