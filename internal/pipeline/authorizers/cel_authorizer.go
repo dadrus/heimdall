@@ -1,10 +1,7 @@
 package authorizers
 
 import (
-	"errors"
 	"fmt"
-	"reflect"
-
 	"github.com/google/cel-go/cel"
 	"github.com/rs/zerolog"
 
@@ -14,8 +11,6 @@ import (
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
-
-var errCELResultType = errors.New("result type error")
 
 // by intention. Used only during application bootstrap
 // nolint
@@ -34,18 +29,12 @@ func init() {
 
 type celAuthorizer struct {
 	id          string
-	env         *cel.Env
-	expressions []*celExpression
-}
-
-type Expression struct {
-	Value   string `mapstructure:"expression"`
-	Message string `mapstructure:"message"`
+	expressions []*Expression
 }
 
 func newCELAuthorizer(id string, rawConfig map[string]any) (*celAuthorizer, error) {
 	type Config struct {
-		Expressions []Expression `mapstructure:"expressions"`
+		Expressions []*Expression `mapstructure:"expressions"`
 	}
 
 	var conf Config
@@ -66,51 +55,15 @@ func newCELAuthorizer(id string, rawConfig map[string]any) (*celAuthorizer, erro
 			"failed creating CEL environment").CausedBy(err)
 	}
 
-	expressions := make([]*celExpression, len(conf.Expressions))
-
 	for i, expression := range conf.Expressions {
-		ast, err := compile(env, expression.Value)
+		err = expression.Compile(env)
 		if err != nil {
 			return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
 				"failed to compile expression %d (%s)", i+1, expression.Value).CausedBy(err)
 		}
-
-		prg, err := env.Program(ast, cel.EvalOptions(cel.OptOptimize))
-		if err != nil {
-			return nil, errorchain.NewWithMessagef(heimdall.ErrInternal,
-				"failed creating program for expression %d (%s)", i+1, expression.Value).CausedBy(err)
-		}
-
-		expressions[i] = &celExpression{
-			m: x.IfThenElse(len(expression.Message) != 0, expression.Message, fmt.Sprintf("expression %d failed", i+1)),
-			p: prg,
-		}
 	}
 
-	return &celAuthorizer{id: id, env: env, expressions: expressions}, nil
-}
-
-func compile(env *cel.Env, expr string) (*cel.Ast, error) {
-	ast, iss := env.Compile(expr)
-	if iss.Err() != nil {
-		return nil, iss.Err()
-	}
-
-	ast, iss = env.Check(ast)
-	if iss != nil && iss.Err() != nil {
-		return nil, iss.Err()
-	}
-
-	if !reflect.DeepEqual(ast.OutputType(), cel.BoolType) {
-		return nil, fmt.Errorf("%w: wanted bool, got %v", errCELResultType, ast.OutputType())
-	}
-
-	return ast, nil
-}
-
-type celExpression struct {
-	m string
-	p cel.Program
+	return &celAuthorizer{id: id, expressions: conf.Expressions}, nil
 }
 
 func (a *celAuthorizer) Execute(ctx heimdall.Context, sub *subject.Subject) error {
@@ -123,15 +76,17 @@ func (a *celAuthorizer) Execute(ctx heimdall.Context, sub *subject.Subject) erro
 	}
 
 	for i, expression := range a.expressions {
-		out, _, err := expression.p.Eval(obj)
+		ok, err := expression.Eval(obj)
 		if err != nil {
 			return errorchain.NewWithMessagef(heimdall.ErrInternal, "failed evaluating expression %d", i+1).
 				WithErrorContext(a).
 				CausedBy(err)
 		}
 
-		if out.Value() != true {
-			return errorchain.NewWithMessage(heimdall.ErrAuthorization, expression.m).
+		if !ok {
+			return errorchain.NewWithMessage(heimdall.ErrAuthorization,
+				x.IfThenElse(len(expression.Message) != 0, expression.Message,
+					fmt.Sprintf("expression %d failed", i+1))).
 				WithErrorContext(a)
 		}
 	}

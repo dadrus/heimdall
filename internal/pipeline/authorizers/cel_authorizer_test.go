@@ -103,7 +103,6 @@ expressions:
 
 				require.NoError(t, err)
 				assert.Equal(t, "authz", auth.HandlerID())
-				assert.NotNil(t, auth.env)
 				assert.NotEmpty(t, auth.expressions)
 			},
 		},
