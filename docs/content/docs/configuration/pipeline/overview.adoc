@@ -162,7 +162,7 @@ Contains all attributes, which are known about the subject. The content is initi
 
 Each object of this type can be thought as a JSON object and is also accessible as such to the corresponding handlers. Here some examples:
 
-.Subject object created by an AnonymousAuthenticator
+.Subject object created by an Anonymous Authenticator
 ====
 [source, javascript]
 ----
@@ -173,7 +173,7 @@ Subject = {
 ----
 ====
 
-.Possible Subject object created by an OAuth2Authenticator
+.Possible Subject object created by an OAuth2 Authenticator
 ====
 [source, javascript]
 ----
@@ -255,9 +255,6 @@ Request = {
   ClientIP: ["127.0.0.1", "10.10.10.10"]
 }
 ----
-
-This example shows also the aforesaid mapping for `query` and `headers` attributes.
-
 ====
 
 === Payload
