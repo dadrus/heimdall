@@ -21,15 +21,17 @@ func (heimdallLibrary) CompileOptions() []cel.EnvOption {
 		ext.NativeTypes(
 			reflect.TypeOf(&subject.Subject{}),
 			reflect.TypeOf(&Request{}),
-			reflect.TypeOf(SimpleURL{})),
+			reflect.TypeOf(&URL{})),
 		cel.Variable("Request", cel.ObjectType("cellib.Request")),
 		cel.Variable("Subject", cel.DynType),
 		cel.Function("Header", cel.MemberOverload("Header",
 			[]*cel.Type{cel.ObjectType("cellib.Request"), cel.StringType}, cel.StringType)),
 		cel.Function("Cookie", cel.MemberOverload("Cookie",
 			[]*cel.Type{cel.ObjectType("cellib.Request"), cel.StringType}, cel.StringType)),
-		cel.Function("ClientIPs", cel.MemberOverload("ClientIPs",
-			[]*cel.Type{cel.ObjectType("cellib.Request")}, cel.ListType(cel.StringType))),
+		cel.Function("String", cel.MemberOverload("String",
+			[]*cel.Type{cel.ObjectType("cellib.URL")}, cel.StringType)),
+		cel.Function("Query", cel.MemberOverload("Query",
+			[]*cel.Type{cel.ObjectType("cellib.URL")}, cel.DynType)),
 	}
 }
 

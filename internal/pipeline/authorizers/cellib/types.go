@@ -16,30 +16,39 @@ import (
 var (
 	errTypeConversion = errors.New("type conversion error")
 
-	requestType = types.NewTypeValue("Test", traits.ReceiverType) //nolint:gochecknoglobals
+	requestType = types.NewTypeValue("cellib.Request", traits.ReceiverType)   //nolint:gochecknoglobals
+	urlType     = types.NewTypeValue("cellib.SimpleURL", traits.ReceiverType) //nolint:gochecknoglobals
 )
 
-type SimpleURL struct {
-	Scheme string
-	Host   string
-	Path   string
-	Query  map[string][]string
+type URL struct {
+	url.URL
 }
 
-func newSimpleURL(url *url.URL) SimpleURL {
-	return SimpleURL{
-		Scheme: url.Scheme,
-		Host:   url.Host,
-		Path:   url.EscapedPath(),
-		Query:  url.Query(),
+func (u *URL) Receive(function string, _ string, args []ref.Val) ref.Val {
+	switch function {
+	case "String":
+		return types.String(u.String())
+	case "Query":
+		return types.NewDynamicMap(types.DefaultTypeAdapter, u.Query())
 	}
+
+	return types.NewErr("no such function - %s", function)
 }
+
+func (u *URL) ConvertToNative(_ reflect.Type) (any, error) {
+	return nil, fmt.Errorf("%w: Request", errTypeConversion)
+}
+
+func (u *URL) ConvertToType(_ ref.Type) ref.Val { return types.NewErr("no such overload") }
+func (u *URL) Equal(other ref.Val) ref.Val      { return types.Bool(u == other.Value()) }
+func (u *URL) Type() ref.Type                   { return urlType }
+func (u *URL) Value() any                       { return u }
 
 type Request struct {
 	ctx heimdall.Context
 
 	Method   string
-	URL      SimpleURL
+	URL      *URL
 	ClientIP []string
 }
 
@@ -47,7 +56,7 @@ func WrapRequest(ctx heimdall.Context) *Request {
 	return &Request{
 		ctx:      ctx,
 		Method:   ctx.RequestMethod(),
-		URL:      newSimpleURL(ctx.RequestURL()),
+		URL:      &URL{URL: *ctx.RequestURL()},
 		ClientIP: ctx.RequestClientIPs(),
 	}
 }

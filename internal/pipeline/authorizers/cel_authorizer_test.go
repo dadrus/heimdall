@@ -254,10 +254,11 @@ expressions:
   - expression: Request.URL.Scheme == 'http'
   - expression: Request.URL.Host == 'localhost'
   - expression: Request.URL.Path == '/test'
-  - expression: size(Request.URL.Query) == 2
+  - expression: size(Request.URL.Query()) == 2
   - expression: Request.Header('X-Custom-Header') == "foobar"
   - expression: Request.ClientIP.exists_one(v, v == '127.0.0.1')
   - expression: Request.Cookie("FooCookie") == "barfoo"
+  - expression: Request.URL.String() == "http://localhost/test?foo=bar&baz=zab"
 `),
 			configureContextAndSubject: func(t *testing.T, ctx *mocks.MockContext, sub *subject.Subject) {
 				t.Helper()

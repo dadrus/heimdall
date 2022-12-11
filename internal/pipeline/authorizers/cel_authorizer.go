@@ -3,13 +3,13 @@ package authorizers
 import (
 	"errors"
 	"fmt"
-	"github.com/dadrus/heimdall/internal/pipeline/authorizers/cellib"
 	"reflect"
 
 	"github.com/google/cel-go/cel"
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/pipeline/authorizers/cellib"
 	"github.com/dadrus/heimdall/internal/pipeline/subject"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
