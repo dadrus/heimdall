@@ -45,58 +45,6 @@ type: deny
 ----
 ====
 
-=== Local (ECMAScript)
-
-This authorizer allows definition of authorization requirements based on information available about the authenticated subject, as well as the actual request by using https://262.ecma-international.org/5.1/[ECMAScript 5.1(+)]. The script is expected to either return `false` or raise an error if authorization fails. In such cases this authorizer denies the request. So, the successful execution of the pipeline stops, resulting in the execution of the error handlers. Otherwise, the authorizer assumes, the script allowed the request.
-
-If the script makes use of `raise` the corresponding message will be logged as reason for the failed authorization, otherwise a generic "authorization failed" will be logged.
-
-To enable the usage of this authorizer, you have to set the `type` property to `local`.
-
-Configuration using the `config` property is mandatory. Following properties are available:
-
-* *`script`*: _string_ (mandatory, overridable)
-+
-ECMAScript which executes the actual authorization logic (see also link:{{< relref "overview.adoc#_scripting" >}}[Scripting]). Heimdall expects the script to return either `true`, if the authorization was successful, or otherwise `false`, or to raise an error. In latter case the message from the raised error will also be logged.
-
-.Authorization based on subject properties
-====
-
-In this example the subject is checked to be member of the "admin" group.
-
-[source, yaml]
-----
-id: user_is_admin
-type: local
-config:
-  script: |
-    if (heimdall.Subject.Attributes["group"] !== "admin") {
-      raise("user not in admin group")
-    }
-----
-====
-
-.Authorization based on subject and request properties
-====
-
-In this example the authorizer is configured to ensure anonymous access to a resource is possible for read-only requests only.
-
-[source, yaml]
-----
-id: no_modification_allowed_by_anonymous
-type: local
-config:
-  script: |
-    if (heimdall.RequestMethod() !== "GET" &&
-        heimdall.Subject.ID === "anonymous")
-      raise("anonymous access is not allowed")
-    }
-----
-
-The usage of this type of configuration makes sense in a pipeline, which combines multiple link:{{< relref "authenticators.adoc" >}}[Authenticators], allowing anonymous and authenticated access.
-
-====
-
 === Local (CEL)
 
 This authorizer allows definition of authorization requirements based on information available about the authenticated subject, as well as the actual request by using https://github.com/google/cel-spec[CEL] based authorization expressions. Each expression is expected to return `false` if authorization fails. In such cases this authorizer denies the request. So, the successful execution of the pipeline stops, resulting in the execution of the error handlers. Otherwise, the authorization was successful.
