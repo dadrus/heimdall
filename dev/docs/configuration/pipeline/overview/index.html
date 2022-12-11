@@ -62,12 +62,12 @@ Reference</button><div id=section-db1c784524e1b54011a95823026161f7c8517fe0 class
     <span style=color:#fff;background-color:#272822>-</span> <span style=color:#a6e22e>id</span><span style=color:#fff;background-color:#272822>:</span> <span style=color:#e6db74>deny_all_authz</span>
       <span style=color:#a6e22e>type</span><span style=color:#fff;background-color:#272822>:</span> <span style=color:#e6db74>deny</span>
     <span style=color:#fff;background-color:#272822>-</span> <span style=color:#a6e22e>id</span><span style=color:#fff;background-color:#272822>:</span> <span style=color:#e6db74>local_authz</span>
-      <span style=color:#a6e22e>type</span><span style=color:#fff;background-color:#272822>:</span> <span style=color:#e6db74>local</span>
+      <span style=color:#a6e22e>type</span><span style=color:#fff;background-color:#272822>:</span> <span style=color:#e6db74>cel</span>
       <span style=color:#a6e22e>config</span><span style=color:#fff;background-color:#272822>:</span>
-        <span style=color:#a6e22e>script</span><span style=color:#fff;background-color:#272822>:</span> <span style=color:#fff;background-color:#272822>|</span>
-          <span style=color:#e6db74>if (!heimdall.Subject.Attributes.group_manager.groups[&#34;foo&#34;]) {</span>
-            <span style=color:#e6db74>raise(&#34;user not in the expected group&#34;)</span>
-          <span style=color:#e6db74>}</span>
+        <span style=color:#a6e22e>expressions</span><span style=color:#fff;background-color:#272822>:</span>
+          <span style=color:#fff;background-color:#272822>-</span> <span style=color:#a6e22e>expression</span><span style=color:#fff;background-color:#272822>:</span> <span style=color:#fff;background-color:#272822>|</span>
+              <span style=color:#e6db74>&#34;foo&#34; in Subject.Attributes.group_manager.groups</span>
+            <span style=color:#a6e22e>message</span><span style=color:#fff;background-color:#272822>:</span> <span style=color:#e6db74>user is not in the expected group</span>
   <span style=color:#a6e22e>hydrators</span><span style=color:#fff;background-color:#272822>:</span>
     <span style=color:#fff;background-color:#272822>-</span> <span style=color:#a6e22e>id</span><span style=color:#fff;background-color:#272822>:</span> <span style=color:#e6db74>group_manager</span>
       <span style=color:#a6e22e>type</span><span style=color:#fff;background-color:#272822>:</span> <span style=color:#e6db74>generic</span>
