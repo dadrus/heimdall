@@ -213,10 +213,6 @@ pipeline:
           - bla-bar
         expressions:
           - expression: "Payload.foo == 'bar'"
-    - id: attributes_based_authorizer
-      type: local
-      config:
-        script: "console.log('New JS script')"
     - id: attributes_based_authorizer_2
       type: cel
       config:

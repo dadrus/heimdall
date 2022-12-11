@@ -1030,34 +1030,6 @@
         }
       }
     },
-    "authorizerLocal": {
-      "description": "Authorizer, which acts on subject attributes and the request context by using a JavaScript",
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "type": {
-          "const": "local"
-        },
-        "id": {
-          "description": "The unique id of the authorizer to be used in the rule definition",
-          "type": "string"
-        },
-        "config": {
-          "description": "Local Authorizer Configuration",
-          "type": "object",
-          "additionalProperties": false,
-          "required": [
-            "script"
-          ],
-          "properties": {
-            "script": {
-              "description": "JavaScript which defines the required logic",
-              "type": "string"
-            }
-          }
-        }
-      }
-    },
     "authorizerLocalCEL": {
       "description": "Authorizer, which acts on subject attributes and the request context by using a CEL",
       "type": "object",
@@ -1800,9 +1772,6 @@
               },
               {
                 "$ref": "#/definitions/authorizerRemote"
-              },
-              {
-                "$ref": "#/definitions/authorizerLocal"
               },
               {
                 "$ref": "#/definitions/authorizerLocalCEL"

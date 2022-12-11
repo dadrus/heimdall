@@ -93,12 +93,12 @@ pipeline:
     - id: deny_all_authz
       type: deny
     - id: local_authz
-      type: local
+      type: cel
       config:
-        script: |
-          if (!heimdall.Subject.Attributes.group_manager.groups["foo"]) {
-            raise("user not in the expected group")
-          }
+        expressions:
+          - expression: |
+              "foo" in Subject.Attributes.group_manager.groups
+            message: user is not in the expected group
   hydrators:
     - id: group_manager
       type: generic
