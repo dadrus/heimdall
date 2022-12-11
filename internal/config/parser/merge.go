@@ -14,7 +14,6 @@ func merge(dest, src any) any {
 	vSrc := reflect.ValueOf(src)
 
 	if vSrc.Type() != vDst.Type() {
-		// try decode
 		panic(fmt.Sprintf("Cannot merge %s and %s. Types are different: %s - %s", dest, src, vDst.Type(), vSrc.Type()))
 	}
 
