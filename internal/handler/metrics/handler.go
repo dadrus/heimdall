@@ -24,11 +24,11 @@ type Handler struct{}
 type handlerArgs struct {
 	fx.In
 
-	App       *fiber.App `name:"metrics"`
-	Registrer prometheus.Registerer
-	Gatherer  prometheus.Gatherer
-	Config    config.Configuration
-	Logger    zerolog.Logger
+	App        *fiber.App `name:"metrics"`
+	Registerer prometheus.Registerer
+	Gatherer   prometheus.Gatherer
+	Config     config.Configuration
+	Logger     zerolog.Logger
 }
 
 func newHandler(args handlerArgs) (*Handler, error) {
@@ -38,11 +38,11 @@ func newHandler(args handlerArgs) (*Handler, error) {
 		args.App.Group(args.Config.Metrics.Prometheus.MetricsPath),
 		args.Logger,
 		promhttp.InstrumentMetricHandler(
-			args.Registrer,
+			args.Registerer,
 			promhttp.HandlerFor(
 				args.Gatherer,
 				promhttp.HandlerOpts{
-					Registry: args.Registrer,
+					Registry: args.Registerer,
 					ErrorLog: ErrLoggerFun(func(v ...interface{}) { args.Logger.Error().Msg(fmt.Sprint(v...)) }),
 				},
 			),
