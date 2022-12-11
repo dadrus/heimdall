@@ -225,6 +225,11 @@ pipeline:
       type: local
       config:
         script: "console.log('New JS script')"
+    - id: user_is_admin_authz
+      type: cel
+      config:
+        expressions:
+          - expression: "'admin' in Subject.Attributes.groups"
 
   hydrators:
     - id: subscription_hydrator
