@@ -57,24 +57,14 @@ func (r *Request) Cookie(name string) string { return r.ctx.RequestCookie(name) 
 
 func (r *Request) Receive(function string, _ string, args []ref.Val) ref.Val {
 	switch function {
+	// CEL ensures, the function is called with the expected number of arguments
+	// and with expected type (string)
 	case "Header":
-		if len(args) == 0 {
-			return types.NewErr("no arguments provided")
-		}
-
-		name, ok := args[0].Value().(string)
-		if ok {
-			return types.String(r.Header(name))
-		}
+		// nolint: forcetypeassert
+		return types.String(r.Header(args[0].Value().(string)))
 	case "Cookie":
-		if len(args) == 0 {
-			return types.NewErr("no arguments provided")
-		}
-
-		name, ok := args[0].Value().(string)
-		if ok {
-			return types.String(r.Cookie(name))
-		}
+		// nolint: forcetypeassert
+		return types.String(r.Cookie(args[0].Value().(string)))
 	}
 
 	return types.NewErr("no such function - %s", function)
