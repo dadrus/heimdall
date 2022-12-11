@@ -11,11 +11,11 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/mutators"
 )
 
-type MockHandlerFactory struct {
+type MockFactory struct {
 	mock.Mock
 }
 
-func (m *MockHandlerFactory) CreateAuthenticator(id string, conf config.MechanismConfig) (
+func (m *MockFactory) CreateAuthenticator(id string, conf config.MechanismConfig) (
 	authenticators.Authenticator, error,
 ) {
 	args := m.Called(id, conf)
@@ -28,7 +28,7 @@ func (m *MockHandlerFactory) CreateAuthenticator(id string, conf config.Mechanis
 	return nil, args.Error(1)
 }
 
-func (m *MockHandlerFactory) CreateAuthorizer(id string, conf config.MechanismConfig) (
+func (m *MockFactory) CreateAuthorizer(id string, conf config.MechanismConfig) (
 	authorizers.Authorizer, error,
 ) {
 	args := m.Called(id, conf)
@@ -41,7 +41,7 @@ func (m *MockHandlerFactory) CreateAuthorizer(id string, conf config.MechanismCo
 	return nil, args.Error(1)
 }
 
-func (m *MockHandlerFactory) CreateHydrator(id string, conf config.MechanismConfig) (
+func (m *MockFactory) CreateHydrator(id string, conf config.MechanismConfig) (
 	hydrators.Hydrator, error,
 ) {
 	args := m.Called(id, conf)
@@ -54,7 +54,7 @@ func (m *MockHandlerFactory) CreateHydrator(id string, conf config.MechanismConf
 	return nil, args.Error(1)
 }
 
-func (m *MockHandlerFactory) CreateMutator(id string, conf config.MechanismConfig) (
+func (m *MockFactory) CreateMutator(id string, conf config.MechanismConfig) (
 	mutators.Mutator, error,
 ) {
 	args := m.Called(id, conf)
@@ -67,7 +67,7 @@ func (m *MockHandlerFactory) CreateMutator(id string, conf config.MechanismConfi
 	return nil, args.Error(1)
 }
 
-func (m *MockHandlerFactory) CreateErrorHandler(id string, conf config.MechanismConfig) (
+func (m *MockFactory) CreateErrorHandler(id string, conf config.MechanismConfig) (
 	errorhandlers.ErrorHandler, error,
 ) {
 	args := m.Called(id, conf)

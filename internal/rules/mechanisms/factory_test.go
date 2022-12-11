@@ -92,8 +92,8 @@ func TestHandlerFactoryCreateAuthenticator(t *testing.T) {
 			mAuth := &mocks2.MockAuthenticator{}
 			configureMock(t, mAuth)
 
-			factory := &handlerFactory{
-				r: &handlerPrototypeRepository{
+			factory := &mechanismsFactory{
+				r: &prototypeRepository{
 					authenticators: map[string]authenticators.Authenticator{
 						ID: mAuth,
 					},
@@ -185,8 +185,8 @@ func TestHandlerFactoryCreateAuthorizer(t *testing.T) {
 			mAuth := &mocks2.MockAuthorizer{}
 			configureMock(t, mAuth)
 
-			factory := &handlerFactory{
-				r: &handlerPrototypeRepository{
+			factory := &mechanismsFactory{
+				r: &prototypeRepository{
 					authorizers: map[string]authorizers.Authorizer{
 						ID: mAuth,
 					},
@@ -278,8 +278,8 @@ func TestHandlerFactoryCreateHydrator(t *testing.T) {
 			mHydr := &mocks2.MockHydrator{}
 			configureMock(t, mHydr)
 
-			factory := &handlerFactory{
-				r: &handlerPrototypeRepository{
+			factory := &mechanismsFactory{
+				r: &prototypeRepository{
 					hydrators: map[string]hydrators.Hydrator{
 						ID: mHydr,
 					},
@@ -371,8 +371,8 @@ func TestHandlerFactoryCreateMutator(t *testing.T) {
 			mMut := &mocks2.MockMutator{}
 			configureMock(t, mMut)
 
-			factory := &handlerFactory{
-				r: &handlerPrototypeRepository{
+			factory := &mechanismsFactory{
+				r: &prototypeRepository{
 					mutators: map[string]mutators.Mutator{
 						ID: mMut,
 					},
@@ -464,8 +464,8 @@ func TestHandlerFactoryCreateErrorHandler(t *testing.T) {
 			mEH := &mocks2.MockErrorHandler{}
 			configureMock(t, mEH)
 
-			factory := &handlerFactory{
-				r: &handlerPrototypeRepository{
+			factory := &mechanismsFactory{
+				r: &prototypeRepository{
 					errorHandlers: map[string]errorhandlers.ErrorHandler{
 						ID: mEH,
 					},
@@ -490,12 +490,12 @@ func TestCreateHandlerFactory(t *testing.T) {
 	for _, tc := range []struct {
 		uc     string
 		conf   config.Configuration
-		assert func(t *testing.T, err error, factory *handlerFactory)
+		assert func(t *testing.T, err error, factory *mechanismsFactory)
 	}{
 		{
 			uc:   "successful",
 			conf: config.Configuration{Rules: config.RulesConfig{Prototypes: &config.MechanismPrototypes{}}},
-			assert: func(t *testing.T, err error, factory *handlerFactory) {
+			assert: func(t *testing.T, err error, factory *mechanismsFactory) {
 				t.Helper()
 
 				assert.NoError(t, err)
@@ -522,7 +522,7 @@ func TestCreateHandlerFactory(t *testing.T) {
 					},
 				},
 			},
-			assert: func(t *testing.T, err error, factory *handlerFactory) {
+			assert: func(t *testing.T, err error, factory *mechanismsFactory) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -532,16 +532,16 @@ func TestCreateHandlerFactory(t *testing.T) {
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
 			var (
-				impl *handlerFactory
+				impl *mechanismsFactory
 				ok   bool
 			)
 
 			// WHEN
-			factory, err := NewHandlerFactory(tc.conf, log.Logger)
+			factory, err := NewFactory(tc.conf, log.Logger)
 
 			// THEN
 			if err == nil {
-				impl, ok = factory.(*handlerFactory)
+				impl, ok = factory.(*mechanismsFactory)
 				require.True(t, ok)
 			}
 

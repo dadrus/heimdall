@@ -22,7 +22,7 @@ var (
 	ErrErrorHandlerCreation  = errors.New("failed to create error handler")
 )
 
-type HandlerFactory interface {
+type Factory interface {
 	CreateAuthenticator(id string, conf config.MechanismConfig) (authenticators.Authenticator, error)
 	CreateAuthorizer(id string, conf config.MechanismConfig) (authorizers.Authorizer, error)
 	CreateHydrator(id string, conf config.MechanismConfig) (hydrators.Hydrator, error)
@@ -30,24 +30,24 @@ type HandlerFactory interface {
 	CreateErrorHandler(id string, conf config.MechanismConfig) (errorhandlers.ErrorHandler, error)
 }
 
-func NewHandlerFactory(conf config.Configuration, logger zerolog.Logger) (HandlerFactory, error) {
+func NewFactory(conf config.Configuration, logger zerolog.Logger) (Factory, error) {
 	logger.Info().Msg("Loading pipeline definitions")
 
-	repository, err := newHandlerPrototypeRepository(conf, logger)
+	repository, err := newPrototypeRepository(conf, logger)
 	if err != nil {
 		logger.Error().Err(err).Msg("Failed loading pipeline definitions")
 
 		return nil, err
 	}
 
-	return &handlerFactory{r: repository}, nil
+	return &mechanismsFactory{r: repository}, nil
 }
 
-type handlerFactory struct {
-	r *handlerPrototypeRepository
+type mechanismsFactory struct {
+	r *prototypeRepository
 }
 
-func (hf *handlerFactory) CreateAuthenticator(id string, conf config.MechanismConfig) (
+func (hf *mechanismsFactory) CreateAuthenticator(id string, conf config.MechanismConfig) (
 	authenticators.Authenticator, error,
 ) {
 	prototype, err := hf.r.Authenticator(id)
@@ -67,7 +67,7 @@ func (hf *handlerFactory) CreateAuthenticator(id string, conf config.MechanismCo
 	return prototype, nil
 }
 
-func (hf *handlerFactory) CreateAuthorizer(id string, conf config.MechanismConfig) (
+func (hf *mechanismsFactory) CreateAuthorizer(id string, conf config.MechanismConfig) (
 	authorizers.Authorizer, error,
 ) {
 	prototype, err := hf.r.Authorizer(id)
@@ -87,7 +87,7 @@ func (hf *handlerFactory) CreateAuthorizer(id string, conf config.MechanismConfi
 	return prototype, nil
 }
 
-func (hf *handlerFactory) CreateHydrator(id string, conf config.MechanismConfig) (
+func (hf *mechanismsFactory) CreateHydrator(id string, conf config.MechanismConfig) (
 	hydrators.Hydrator, error,
 ) {
 	prototype, err := hf.r.Hydrator(id)
@@ -107,7 +107,7 @@ func (hf *handlerFactory) CreateHydrator(id string, conf config.MechanismConfig)
 	return prototype, nil
 }
 
-func (hf *handlerFactory) CreateMutator(id string, conf config.MechanismConfig) (
+func (hf *mechanismsFactory) CreateMutator(id string, conf config.MechanismConfig) (
 	mutators.Mutator, error,
 ) {
 	prototype, err := hf.r.Mutator(id)
@@ -127,7 +127,7 @@ func (hf *handlerFactory) CreateMutator(id string, conf config.MechanismConfig) 
 	return prototype, nil
 }
 
-func (hf *handlerFactory) CreateErrorHandler(id string, conf config.MechanismConfig) (
+func (hf *mechanismsFactory) CreateErrorHandler(id string, conf config.MechanismConfig) (
 	errorhandlers.ErrorHandler, error,
 ) {
 	prototype, err := hf.r.ErrorHandler(id)

@@ -5,5 +5,5 @@ import (
 )
 
 var Module = fx.Options( //nolint:gochecknoglobals
-	fx.Provide(NewHandlerFactory),
+	fx.Provide(NewFactory),
 )
