@@ -257,6 +257,7 @@ expressions:
   - expression: size(Request.URL.Query) == 2
   - expression: Request.Header('X-Custom-Header') == "foobar"
   - expression: Request.ClientIP.exists_one(v, v == '127.0.0.1')
+  - expression: Request.Cookie("FooCookie") == "barfoo"
 `),
 			configureContextAndSubject: func(t *testing.T, ctx *mocks.MockContext, sub *subject.Subject) {
 				t.Helper()
@@ -276,6 +277,7 @@ expressions:
 				})
 				ctx.On("RequestMethod").Return(http.MethodGet)
 				ctx.On("RequestHeader", "X-Custom-Header").Return("foobar")
+				ctx.On("RequestCookie", "FooCookie").Return("barfoo")
 				ctx.On("RequestClientIPs").Return([]string{"127.0.0.1", "10.10.10.10"})
 			},
 			assert: func(t *testing.T, err error) {
