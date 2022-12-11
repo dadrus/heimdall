@@ -607,8 +607,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 			configureCache: func(t *testing.T, cch *mocks.MockCache, auth *remoteAuthorizer, sub *subject.Subject) {
 				t.Helper()
 
-				cacheKey, err := auth.calculateCacheKey(sub)
-				require.NoError(t, err)
+				cacheKey := auth.calculateCacheKey(sub)
 
 				cch.On("Get", cacheKey).Return(nil)
 				cch.On("Set", cacheKey,
@@ -658,8 +657,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 			configureCache: func(t *testing.T, cch *mocks.MockCache, auth *remoteAuthorizer, sub *subject.Subject) {
 				t.Helper()
 
-				cacheKey, err := auth.calculateCacheKey(sub)
-				require.NoError(t, err)
+				cacheKey := auth.calculateCacheKey(sub)
 
 				cch.On("Get", cacheKey).Return(nil)
 				cch.On("Set", cacheKey, mock.Anything, auth.ttl)

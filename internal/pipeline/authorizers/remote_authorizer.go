@@ -12,7 +12,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/goccy/go-json"
 	"github.com/google/cel-go/cel"
 	"github.com/rs/zerolog"
 
@@ -146,12 +145,8 @@ func (a *remoteAuthorizer) Execute(ctx heimdall.Context, sub *subject.Subject) e
 	)
 
 	if a.ttl > 0 {
-		cacheKey, err = a.calculateCacheKey(sub)
-		if err != nil {
-			logger.Error().Err(err).Msg("Failed to calculate cache key. Will not be able to use cache.")
-		} else {
-			cacheEntry = cch.Get(cacheKey)
-		}
+		cacheKey = a.calculateCacheKey(sub)
+		cacheEntry = cch.Get(cacheKey)
 	}
 
 	if cacheEntry != nil {
@@ -346,16 +341,8 @@ func (a *remoteAuthorizer) readResponse(ctx heimdall.Context, resp *http.Respons
 	return result, nil
 }
 
-func (a *remoteAuthorizer) calculateCacheKey(sub *subject.Subject) (string, error) {
+func (a *remoteAuthorizer) calculateCacheKey(sub *subject.Subject) string {
 	const int64BytesCount = 8
-
-	rawSub, err := json.Marshal(sub)
-	if err != nil {
-		return "", errorchain.
-			NewWithMessage(heimdall.ErrInternal, "failed to marshal subject data").
-			WithErrorContext(a).
-			CausedBy(err)
-	}
 
 	ttlBytes := make([]byte, int64BytesCount)
 	binary.LittleEndian.PutUint64(ttlBytes, uint64(a.ttl))
@@ -368,9 +355,9 @@ func (a *remoteAuthorizer) calculateCacheKey(sub *subject.Subject) (string, erro
 		func() []byte { return []byte(a.payload.Hash()) },
 		func() []byte { return []byte("nil") }))
 	hash.Write(ttlBytes)
-	hash.Write(rawSub)
+	hash.Write(sub.Hash())
 
-	return hex.EncodeToString(hash.Sum(nil)), nil
+	return hex.EncodeToString(hash.Sum(nil))
 }
 
 func (a *remoteAuthorizer) verify(ctx heimdall.Context, result any) error {
