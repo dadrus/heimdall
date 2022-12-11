@@ -10,8 +10,8 @@ import (
 func TestCreateAuthorizerPrototypeUsingKnowType(t *testing.T) {
 	t.Parallel()
 
-	// there are 3 authorizers implemented, which should have been registered
-	require.Len(t, authorizerTypeFactories, 4)
+	// there are 5 authorizers implemented, which should have been registered
+	require.Len(t, authorizerTypeFactories, 5)
 
 	for _, tc := range []struct {
 		uc     string

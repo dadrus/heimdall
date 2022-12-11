@@ -259,6 +259,45 @@ config:
 ----
 ====
 
+== Authorization Expression
+
+Authorization expressions define, as the name implies expressions for authorization purposes and have the following properties:
+
+* *`expression`* _string_ (mandatory)
++
+The expression to execute.
+
+* *`message`* _string_ (optional)
++
+The message to include into the error if the expression fails.
+
+.Example expression using https://github.com/google/cel-spec[CEL]
+====
+
+The expression below determine whether `attributes` property of a `subject` object (also shown below) has at least one key that starts with the `group` prefix, and ensure that all group-like keys have list values containing only strings that end with `@acme.co`.
+
+.subject
+[source, yaml,line-comment=#]
+----
+id: "foobar"
+attributes:
+  group1: ["admin@acme.co", "analyst@acme.co"]
+  labels: ["metadata", "prod", "pii"]
+  groupN: ["forever@acme.co"]
+----
+
+[source, yaml]
+----
+expression: |
+  subject.attributes.exists(c, c.startsWith('group')) &&
+  subject.attributes
+      .filter(c, c.startsWith('group'))
+      .all(c, subject.attributes[c]
+      .all(g, g.endsWith('@acme.co')))
+message: No groups ending with @acme.co present
+----
+====
+
 == Duration
 
 Duration is actually a string type, which adheres to the following pattern: `^[0-9]+(ns|us|ms|s|m|h)$`

@@ -144,6 +144,144 @@ pipeline:
                 - text/html
 ----
 
+== Evaluation Objects
+
+Some pipeline handlers support, respectively require access to different types of objects, they work on, e.g. to render a header with specific values, or to check whether some expectations apply. Following objects are available and have the following structure:
+
+=== Subject
+
+This object contains the information about the authenticated subject. If available, it has the following attributes:
+
+* *`ID`*: _string_
++
+The identifier of the subject. This value is set by the authenticator, which was able to authenticate the subject.
+
+* *`Attributes`*: _map_
++
+Contains all attributes, which are known about the subject. The content is initially set by the authenticator, which was able to authenticate the subject. Handlers which receive the subject can update it, but do never override any entries.
+
+Each object of this type can be thought as a JSON object and is also accessible as such to the corresponding handlers. Here some examples:
+
+.Subject object created by an Anonymous Authenticator
+====
+[source, javascript]
+----
+Subject = {
+  ID: "anonymous",
+  Attributes: {}
+}
+----
+====
+
+.Possible Subject object created by an OAuth2 Authenticator
+====
+[source, javascript]
+----
+Subject = {
+  ID: "foobar",
+  Attributes: {
+    "sub": "foobar",
+    "exp": "1670600805",
+    "jti": "7b91ed8a-0251-4e02-8d51-9792785851e8",
+    "iat": "1670600305",
+    "iss": "http://testauthserver.local",
+    "nbf": "1670600305",
+    "extra": {
+        "foo": ["bar", "baz"]
+    }
+  }
+}
+----
+====
+
+=== Request
+
+This object contains information about the request being authenticated and has the following attributes and methods:
+
+* *`Method`*: _string_
++
+The HTTP method used, like `GET`, `POST`, etc.
+
+* *`URL`*: _URL_
++
+The URL of the matched request. This object has the following properties and methods:
+
+** *`Scheme`*: _string_
++
+The HTTP scheme part of the url
+** *`Host`*: _string_
++
+The host part of the url
+** *`Path`*: _string_
++
+The path part of the url
+** *`RawQuery`*: _string_
++
+The raw query part of the url.
+** *`String()`*: _method_
++
+This method returns the URL as valid URL string of a form `scheme:host/path?query`.
+** *`Query()`*: _method_
++
+The parsed query with each key-value pair being a string to array of strings mapping.
+
+* *`ClientIP`*: _string array_
++
+The list of IP addresses the request passed through with the first entry being the ultimative client of the request. Only available if heimdall is configured to trust the client, sending this information, e.g. in the `X-Forwarded-From` header (see e.g. Decision Service link:{{< relref "/docs/configuration/services/decision_api.adoc#_trusted_proxies" >}}[trusted_proxies] configuration for more details).
+
+* *`Header(name)`*: _method_,
++
+This method expects the name of a header as input and returns the value of the header as `string` if present in the HTTP request. If not present an empty string (`""`) is returned.
++
+
+* *`Cookie(name)`*: _method_,
++
+This method expects the name of a cookie as input and returns the value of it as `string` if present in the HTTP request. If not present an empty string (`""`) is returned.
+
+Here is an example:
+
+.Example request object
+====
+[source, javascript]
+----
+Request = {
+  Method: "GET",
+  Url: {
+    Scheme: "https",
+    Host: "localhost",
+    Path: "/test",
+    RawQuery: "baz=zab&baz=bar&foo=bar"
+  },
+  ClientIP: ["127.0.0.1", "10.10.10.10"]
+}
+----
+====
+
+=== Payload
+
+This object represents the contents of a payload, like the request body or a response body. The contents depend on the MIME-Type of the payload. For `json`, `yaml` or `x-www-form-urlencoded` encoded payload, the object is transformed to a JSON object. Otherwise, it is just a string.
+
+Here some examples:
+
+.Structured payload
+====
+
+The following JSON object is a typical response from OPA.
+
+[source, javascript]
+----
+Payload = { "result": true }
+----
+====
+
+.Unstructured payload
+====
+[source, javascript]
+----
+Payload = "SomeStringValue"
+----
+====
+
 == Templating
 
 Some pipeline handlers support templating using https://golang.org/pkg/text/template/[Golang Text Templates]. To ease the usage, all http://masterminds.github.io/sprig/[sprig] functions as well as a `urlenc` function are available. Latter is handy if you need to generate request body or query parameters e.g. for communication with further systems. In addition to the above said functions, heimdall makes the following objects and functions available to the template:
