@@ -319,6 +319,30 @@
         }
       }
     },
+    "expressionList": {
+      "description": "A list of authorization expressions to evaluate",
+      "type": "array",
+      "uniqueItems": true,
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["expression"],
+        "properties": {
+          "expression": {
+            "description": "The actual expression",
+            "type": "string",
+            "examples": [
+              "Subject.ID == foo"
+            ]
+          },
+          "message": {
+            "description": "Message to log if the expression fails",
+            "type": "string"
+          }
+        }
+      }
+    },
     "ruleSetEndpointConfiguration": {
       "description": "Endpoint to load rule sets from",
       "type": "object",
@@ -1034,6 +1058,33 @@
         }
       }
     },
+    "authorizerLocalCEL": {
+      "description": "Authorizer, which acts on subject attributes and the request context by using a CEL",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "cel"
+        },
+        "id": {
+          "description": "The unique id of the authorizer to be used in the rule definition",
+          "type": "string"
+        },
+        "config": {
+          "description": "Local Authorizer Configuration",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "expressions"
+          ],
+          "properties": {
+            "expressions": {
+              "$ref": "#/definitions/expressionList"
+            }
+          }
+        }
+      }
+    },
     "authorizerRemote": {
       "description": "Remote Authorizer",
       "type": "object",
@@ -1061,9 +1112,8 @@
               "description": "The Go template with access to heimdall.Context and Subject used for request's HTTP body generation",
               "type": "string"
             },
-            "script": {
-              "description": "JavaScript which defines the required logic to verify the response from the endpoint",
-              "type": "string"
+            "expressions": {
+              "$ref": "#/definitions/expressionList"
             },
             "forward_response_headers_to_upstream": {
               "description": "A list of headers to forward to the upstream service.",
@@ -1753,6 +1803,9 @@
               },
               {
                 "$ref": "#/definitions/authorizerLocal"
+              },
+              {
+                "$ref": "#/definitions/authorizerLocalCEL"
               }
             ]
           }
