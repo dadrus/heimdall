@@ -64,7 +64,7 @@ expressions:
 			uc: "with expression, which doesn't return bool value",
 			config: []byte(`
 expressions: 
-  - expression: "size(subject.id)"
+  - expression: "size(Subject.ID)"
 `),
 			assert: func(t *testing.T, err error, auth *celAuthorizer) {
 				t.Helper()
@@ -78,7 +78,7 @@ expressions:
 			uc: "with unsupported attributes",
 			config: []byte(`
 expressions:
-  - expression: "has(subject.id)"
+  - expression: "has(Subject.ID)"
     message: bar
 foo: bar
 `),
@@ -95,7 +95,7 @@ foo: bar
 			id: "authz",
 			config: []byte(`
 expressions:
-  - expression: "has(subject.id)"
+  - expression: "has(Subject.ID)"
     message: Subject ID is not present
 `),
 			assert: func(t *testing.T, err error, auth *celAuthorizer) {
@@ -135,7 +135,7 @@ func TestCreateCELAuthorizerFromPrototype(t *testing.T) {
 			uc: "no new configuration provided",
 			prototypeConfig: []byte(`
 expressions: 
-  - expression: "request.scheme == 'http'"
+  - expression: "Request.URL.Scheme == 'http'"
 `),
 			assert: func(t *testing.T, err error, prototype *celAuthorizer, configured *celAuthorizer) {
 				t.Helper()
@@ -148,7 +148,7 @@ expressions:
 			uc: "configuration without expressions provided",
 			prototypeConfig: []byte(`
 expressions: 
-  - expression: "request.scheme == 'http'"
+  - expression: "Request.URL.Scheme == 'http'"
 `),
 			config: []byte(``),
 			assert: func(t *testing.T, err error, prototype *celAuthorizer, configured *celAuthorizer) {
@@ -163,11 +163,11 @@ expressions:
 			id: "authz",
 			prototypeConfig: []byte(`
 expressions: 
-  - expression: "request.scheme == 'http'"
+  - expression: "Request.URL.Scheme == 'http'"
 `),
 			config: []byte(`
 expressions: 
-  - expression: "request.headers['X-Foo-Bar'] == 'Baz'"
+  - expression: "Request.Header('X-Foo-Bar') == 'Baz'"
 `),
 			assert: func(t *testing.T, err error, prototype *celAuthorizer, configured *celAuthorizer) {
 				t.Helper()
@@ -225,7 +225,6 @@ expressions:
 
 				ctx.On("RequestURL").Return(&url.URL{Scheme: "http", Host: "localhost", Path: "/test"})
 				ctx.On("RequestMethod").Return(http.MethodGet)
-				ctx.On("RequestHeaders").Return(nil)
 				ctx.On("RequestClientIPs").Return(nil)
 			},
 			assert: func(t *testing.T, err error) {
@@ -246,18 +245,18 @@ expressions:
 			config: []byte(`
 expressions:
   - expression: |
-      subject.attributes.exists(c, c.startsWith('group'))
-        && subject.attributes
+      Subject.Attributes.exists(c, c.startsWith('group'))
+        && Subject.Attributes
           .filter(c, c.startsWith('group'))
-          .all(c, subject.attributes[c]
+          .all(c, Subject.Attributes[c]
           .all(g, g.endsWith('@acme.co')))
-  - expression: request.method == 'GET'
-  - expression: request.url.scheme == 'http'
-  - expression: request.url.host == 'localhost'
-  - expression: request.url.path == '/test'
-  - expression: size(request.url.query) == 2
-  - expression: request.headers['X-Custom-Header'] == "foobar"
-  - expression: request.client_ips.exists_one(v, v == '127.0.0.1')
+  - expression: Request.Method == 'GET'
+  - expression: Request.URL.Scheme == 'http'
+  - expression: Request.URL.Host == 'localhost'
+  - expression: Request.URL.Path == '/test'
+  - expression: size(Request.URL.Query) == 2
+  - expression: Request.Header('X-Custom-Header') == "foobar"
+  - expression: Request.ClientIP.exists_one(v, v == '127.0.0.1')
 `),
 			configureContextAndSubject: func(t *testing.T, ctx *mocks.MockContext, sub *subject.Subject) {
 				t.Helper()
@@ -276,9 +275,7 @@ expressions:
 					RawQuery: "foo=bar&baz=zab",
 				})
 				ctx.On("RequestMethod").Return(http.MethodGet)
-				ctx.On("RequestHeaders").Return(map[string]string{
-					"X-Custom-Header": "foobar",
-				})
+				ctx.On("RequestHeader", "X-Custom-Header").Return("foobar")
 				ctx.On("RequestClientIPs").Return([]string{"127.0.0.1", "10.10.10.10"})
 			},
 			assert: func(t *testing.T, err error) {

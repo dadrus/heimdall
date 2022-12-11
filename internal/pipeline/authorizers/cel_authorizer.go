@@ -3,6 +3,7 @@ package authorizers
 import (
 	"errors"
 	"fmt"
+	"github.com/dadrus/heimdall/internal/pipeline/authorizers/cellib"
 	"reflect"
 
 	"github.com/google/cel-go/cel"
@@ -59,10 +60,7 @@ func newCELAuthorizer(id string, rawConfig map[string]any) (*celAuthorizer, erro
 			NewWithMessage(heimdall.ErrConfiguration, "no expressions provided for CEL authorizer")
 	}
 
-	env, err := cel.NewEnv(
-		cel.Variable("subject", cel.MapType(cel.StringType, cel.DynType)),
-		cel.Variable("request", cel.MapType(cel.StringType, cel.DynType)),
-	)
+	env, err := cel.NewEnv(cellib.Library())
 	if err != nil {
 		return nil, errorchain.NewWithMessage(heimdall.ErrInternal,
 			"failed creating CEL environment").CausedBy(err)
@@ -119,24 +117,9 @@ func (a *celAuthorizer) Execute(ctx heimdall.Context, sub *subject.Subject) erro
 	logger := zerolog.Ctx(ctx.AppContext())
 	logger.Debug().Msg("Authorizing using CEL authorizer")
 
-	reqURL := ctx.RequestURL()
-
 	obj := map[string]any{
-		"subject": map[string]any{
-			"id":         sub.ID,
-			"attributes": sub.Attributes,
-		},
-		"request": map[string]any{
-			"method": ctx.RequestMethod(),
-			"url": map[string]any{
-				"scheme": reqURL.Scheme,
-				"host":   reqURL.Host,
-				"path":   reqURL.Path,
-				"query":  reqURL.Query(),
-			},
-			"client_ips": ctx.RequestClientIPs(),
-			"headers":    ctx.RequestHeaders(),
-		},
+		"Subject": sub,
+		"Request": cellib.WrapRequest(ctx),
 	}
 
 	for i, expression := range a.expressions {
