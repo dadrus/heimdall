@@ -18,7 +18,7 @@ All rule specific static configuration can be done by making use of Heimdall's `
 
 In general, following three aspects are important when dealing with rules:
 
-* link:{{< relref "rule_configuration.adoc" >}}[Rule Definition], which describes the configuration options of a single rule and how the link:{{< relref "./pipeline_mechanisms/overview.adoc" >}}[pipeline mechanisms] are used.
+* link:{{< relref "configuration.adoc" >}}[Rule Definition], which describes the configuration options of a single rule and how the link:{{< relref "./pipeline_mechanisms/overview.adoc" >}}[pipeline mechanisms] are used.
 * link:{{< relref "providers.adoc" >}}[Providers] which describes available options on how rules can be loaded.
-* link:{{< relref "default_rule.adoc" >}}[Default Rule], which describes, how the default rule can be configured and used.
+* link:{{< relref "default.adoc" >}}[Default Rule], which describes, how the default rule can be configured and used.
 

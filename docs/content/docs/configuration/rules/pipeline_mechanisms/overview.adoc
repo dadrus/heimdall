@@ -6,7 +6,7 @@ weight: 65
 menu:
   docs:
     weight: 5
-    parent: "Pipeline Handler"
+    parent: "Pipeline Mechanisms"
 ---
 
 This section explains the available pipeline handler and mechanisms in detail. Before diving onto the details of these, we recommend to make yourself familiar with the link:{{< relref "/docs/getting_started/concepts.adoc" >}}[concepts].
@@ -227,7 +227,7 @@ The parsed query with each key-value pair being a string to array of strings map
 
 * *`ClientIP`*: _string array_
 +
-The list of IP addresses the request passed through with the first entry being the ultimative client of the request. Only available if heimdall is configured to trust the client, sending this information, e.g. in the `X-Forwarded-From` header (see e.g. Decision Service link:{{< relref "/docs/configuration/services/decision_api.adoc#_trusted_proxies" >}}[trusted_proxies] configuration for more details).
+The list of IP addresses the request passed through with the first entry being the ultimative client of the request. Only available if heimdall is configured to trust the client, sending this information, e.g. in the `X-Forwarded-From` header (see e.g. Decision Service link:{{< relref "/docs/configuration/services/decision.adoc#_trusted_proxies" >}}[trusted_proxies] configuration for more details).
 
 * *`Header(name)`*: _method_,
 +

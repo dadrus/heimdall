@@ -6,7 +6,7 @@ weight: 85
 menu:
   docs:
     weight: 40
-    parent: "Pipeline Handler"
+    parent: "Pipeline Mechanisms"
 ---
 
 Mutators finalize the successful execution of the pipeline and transform the available information about the subject into a format expected, respectively required by the upstream service. This ranges from adding a query parameter, to a structured JWT in a specific header.
@@ -84,7 +84,7 @@ config:
 
 This mutator enables transformation of a subject into a bearer token in a https://www.rfc-editor.org/rfc/rfc7519[JWT] format, which is made available to your upstream service in the HTTP `Authorization` header . In addition to setting the JWT specific claims, it allows setting custom claims as well. Your upstream service can then verify the signature of the JWT by making use of Heimdall's JWKS endpoint to retrieve the required public keys/certificates from.
 
-To enable the usage of this mutator, you have to set the `type` property to `jwt`. The usage of this mutator type requires a configured link:{{< relref "/docs/configuration/signature_keys_and_certificates.adoc" >}}[Signer] as well. At least it is highly recommended in production environments.
+To enable the usage of this mutator, you have to set the `type` property to `jwt`. The usage of this mutator type requires a configured link:{{< relref "/docs/configuration/cryptographic_material.adoc" >}}[Signer] as well. At least it is highly recommended in production environments.
 
 Configuration using the `config` property is optional. Following properties are available:
 
@@ -92,7 +92,7 @@ Configuration using the `config` property is optional. Following properties are 
 +
 Your template with custom claims, you would like to add to the JWT (See also link:{{< relref "overview.adoc#_templating" >}}[Templating]). Only `Subject` object is available in the template, not the `Request*` functions.
 
-* *`ttl`*: _link:{{< relref "/docs/configuration/reference/configuration_types.adoc#_duration" >}}[Duration]_ (optional, overridable)
+* *`ttl`*: _link:{{< relref "/docs/configuration/reference/types.adoc#_duration" >}}[Duration]_ (optional, overridable)
 +
 Defines how long the JWT should be valid. Defaults to 5 minutes. Heimdall sets the `iat` and the `nbf` claims to the current system time. The value of the `exp` claim is then influenced by the `ttl` property.
 
