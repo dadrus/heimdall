@@ -502,6 +502,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				RulesRepository: repo,
 				Logger:          logger,
 				KeyStore:        ks,
+				Config:          conf,
 			})
 			require.NoError(t, err)
 

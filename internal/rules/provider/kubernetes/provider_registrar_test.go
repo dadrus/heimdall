@@ -87,7 +87,7 @@ func TestRegisterProvider(t *testing.T) {
 
 			conf := &config.Configuration{
 				Rules: config.RulesConfig{
-					Providers: &config.RuleProviders{Kubernetes: providerConf},
+					Providers: config.RuleProviders{Kubernetes: providerConf},
 				},
 			}
 			queue := make(event.RuleSetChangedEventQueue, 10)

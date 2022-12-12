@@ -26,7 +26,8 @@ func TestNewCache(t *testing.T) {
 		assert func(t *testing.T, cch Cache)
 	}{
 		{
-			uc: "in memory cache",
+			uc:   "in memory cache",
+			conf: &config.Configuration{},
 			assert: func(t *testing.T, cch Cache) {
 				t.Helper()
 

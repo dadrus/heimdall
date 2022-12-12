@@ -101,7 +101,7 @@ src: ` + tmpFile.Name()),
 
 			conf := &config.Configuration{
 				Rules: config.RulesConfig{
-					Providers: &config.RuleProviders{FileSystem: providerConf},
+					Providers: config.RuleProviders{FileSystem: providerConf},
 				},
 			}
 

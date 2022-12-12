@@ -64,6 +64,5 @@ var defaultConfig = Configuration{
 	},
 	Rules: RulesConfig{
 		Prototypes: &MechanismPrototypes{},
-		Providers:  &RuleProviders{},
 	},
 }

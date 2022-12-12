@@ -75,7 +75,7 @@ watch_interval: 5m
 
 			conf := &config.Configuration{
 				Rules: config.RulesConfig{
-					Providers: &config.RuleProviders{HTTPEndpoint: providerConf},
+					Providers: config.RuleProviders{HTTPEndpoint: providerConf},
 				},
 			}
 			queue := make(event.RuleSetChangedEventQueue, 10)

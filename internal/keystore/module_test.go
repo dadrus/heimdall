@@ -36,7 +36,8 @@ func TestNewKeyStore(t *testing.T) {
 		assert func(t *testing.T, ks keystore.KeyStore, err error)
 	}{
 		{
-			uc: "signer not configured",
+			uc:   "signer not configured",
+			conf: &config.Configuration{},
 			assert: func(t *testing.T, ks keystore.KeyStore, err error) {
 				t.Helper()
 
