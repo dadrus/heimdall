@@ -17,7 +17,7 @@ type registrationArguments struct {
 	fx.In
 
 	Lifecycle fx.Lifecycle
-	Config    config.Configuration
+	Config    *config.Configuration
 	Queue     event.RuleSetChangedEventQueue
 	Cache     cache.Cache
 }

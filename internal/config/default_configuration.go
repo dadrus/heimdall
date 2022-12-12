@@ -62,4 +62,8 @@ var defaultConfig = Configuration{
 	Signer: SignerConfig{
 		Name: "heimdall",
 	},
+	Rules: RulesConfig{
+		Prototypes: &MechanismPrototypes{},
+		Providers:  &RuleProviders{},
+	},
 }

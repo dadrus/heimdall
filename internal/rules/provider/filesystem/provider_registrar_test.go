@@ -99,7 +99,7 @@ src: ` + tmpFile.Name()),
 			providerConf, err := testsupport.DecodeTestConfig(tc.conf)
 			require.NoError(t, err)
 
-			conf := config.Configuration{
+			conf := &config.Configuration{
 				Rules: config.RulesConfig{
 					Providers: &config.RuleProviders{FileSystem: providerConf},
 				},

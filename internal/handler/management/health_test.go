@@ -30,7 +30,7 @@ func TestHealthRequest(t *testing.T) {
 	require.NoError(t, err)
 
 	app := newApp(appArgs{
-		Config:     config.Configuration{Serve: config.ServeConfig{Management: config.ServiceConfig{}}},
+		Config:     &config.Configuration{Serve: config.ServeConfig{Management: config.ServiceConfig{}}},
 		Registerer: prometheus.NewRegistry(),
 		Logger:     log.Logger,
 	})

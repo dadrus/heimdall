@@ -17,7 +17,7 @@ import (
 var ErrNoSuchPipelineObject = errors.New("pipeline object not found")
 
 func newPrototypeRepository(
-	conf config.Configuration,
+	conf *config.Configuration,
 	logger zerolog.Logger,
 ) (*prototypeRepository, error) {
 	logger.Debug().Msg("Loading definitions for authenticators")

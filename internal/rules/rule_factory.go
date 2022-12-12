@@ -21,7 +21,7 @@ type RuleFactory interface {
 	DefaultRule() rule.Rule
 }
 
-func NewRuleFactory(hf mechanisms.Factory, conf config.Configuration, logger zerolog.Logger) (
+func NewRuleFactory(hf mechanisms.Factory, conf *config.Configuration, logger zerolog.Logger) (
 	RuleFactory, error,
 ) {
 	logger.Debug().Msg("Creating rule factory")

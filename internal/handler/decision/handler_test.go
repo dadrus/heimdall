@@ -480,7 +480,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
 			// GIVEN
-			conf := config.Configuration{Serve: config.ServeConfig{Decision: tc.serviceConf}}
+			conf := &config.Configuration{Serve: config.ServeConfig{Decision: tc.serviceConf}}
 			cch := &mocks.MockCache{}
 			repo := &mocks2.MockRepository{}
 			rule := &mocks4.MockRule{}

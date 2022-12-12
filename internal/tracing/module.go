@@ -23,7 +23,7 @@ var Module = fx.Options(
 	fx.Invoke(initializeOTEL),
 )
 
-func initializeOTEL(lifecycle fx.Lifecycle, conf config.Configuration, logger zerolog.Logger) error {
+func initializeOTEL(lifecycle fx.Lifecycle, conf *config.Configuration, logger zerolog.Logger) error {
 	if !conf.Tracing.Enabled {
 		logger.Info().Msg("Opentelemetry tracing disabled.")
 

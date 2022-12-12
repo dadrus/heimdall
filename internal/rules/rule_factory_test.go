@@ -22,13 +22,13 @@ func TestRuleFactoryNew(t *testing.T) {
 
 	for _, tc := range []struct {
 		uc             string
-		config         config.Configuration
+		config         *config.Configuration
 		configureMocks func(t *testing.T, mhf *mocks.MockFactory)
 		assert         func(t *testing.T, err error, ruleFactory *ruleFactory)
 	}{
 		{
 			uc:     "new factory without default rule",
-			config: config.Configuration{Rules: config.RulesConfig{}},
+			config: &config.Configuration{Rules: config.RulesConfig{}},
 			assert: func(t *testing.T, err error, ruleFactory *ruleFactory) {
 				t.Helper()
 
@@ -41,7 +41,7 @@ func TestRuleFactoryNew(t *testing.T) {
 		},
 		{
 			uc: "new factory with default rule with unsupported object in execute definition",
-			config: config.Configuration{Rules: config.RulesConfig{
+			config: &config.Configuration{Rules: config.RulesConfig{
 				Default: &config.DefaultRuleConfig{
 					Execute: []config.MechanismConfig{
 						{"foo": "bar"},
@@ -58,7 +58,7 @@ func TestRuleFactoryNew(t *testing.T) {
 		},
 		{
 			uc: "new factory with default rule with unsupported object in error handler definition",
-			config: config.Configuration{Rules: config.RulesConfig{
+			config: &config.Configuration{Rules: config.RulesConfig{
 				Default: &config.DefaultRuleConfig{
 					ErrorHandler: []config.MechanismConfig{
 						{"foo": "bar"},
@@ -75,7 +75,7 @@ func TestRuleFactoryNew(t *testing.T) {
 		},
 		{
 			uc: "new factory with malformed default rule, where authenticator loading happens after subject handlers",
-			config: config.Configuration{Rules: config.RulesConfig{
+			config: &config.Configuration{Rules: config.RulesConfig{
 				Default: &config.DefaultRuleConfig{
 					Execute: []config.MechanismConfig{
 						{"hydrator": "bar"},
@@ -99,7 +99,7 @@ func TestRuleFactoryNew(t *testing.T) {
 		},
 		{
 			uc: "new factory with malformed default rule, where authenticator loading happens after mutator handlers",
-			config: config.Configuration{Rules: config.RulesConfig{
+			config: &config.Configuration{Rules: config.RulesConfig{
 				Default: &config.DefaultRuleConfig{
 					Execute: []config.MechanismConfig{
 						{"mutator": "bar"},
@@ -123,7 +123,7 @@ func TestRuleFactoryNew(t *testing.T) {
 		},
 		{
 			uc: "new factory with default rule, where authenticator loading results in an error",
-			config: config.Configuration{Rules: config.RulesConfig{
+			config: &config.Configuration{Rules: config.RulesConfig{
 				Default: &config.DefaultRuleConfig{
 					Execute: []config.MechanismConfig{{"authenticator": "foo"}},
 				},
@@ -143,7 +143,7 @@ func TestRuleFactoryNew(t *testing.T) {
 		},
 		{
 			uc: "new factory with malformed default rule, where authorizer loading happens after mutator handlers",
-			config: config.Configuration{Rules: config.RulesConfig{
+			config: &config.Configuration{Rules: config.RulesConfig{
 				Default: &config.DefaultRuleConfig{
 					Execute: []config.MechanismConfig{
 						{"mutator": "bar"},
@@ -167,7 +167,7 @@ func TestRuleFactoryNew(t *testing.T) {
 		},
 		{
 			uc: "new factory with default rule, where authorizer loading results in an error",
-			config: config.Configuration{Rules: config.RulesConfig{
+			config: &config.Configuration{Rules: config.RulesConfig{
 				Default: &config.DefaultRuleConfig{
 					Execute: []config.MechanismConfig{{"authorizer": "foo"}},
 				},
@@ -187,7 +187,7 @@ func TestRuleFactoryNew(t *testing.T) {
 		},
 		{
 			uc: "new factory with malformed default rule, where hydrator loading happens after mutator handlers",
-			config: config.Configuration{Rules: config.RulesConfig{
+			config: &config.Configuration{Rules: config.RulesConfig{
 				Default: &config.DefaultRuleConfig{
 					Execute: []config.MechanismConfig{
 						{"mutator": "bar"},
@@ -211,7 +211,7 @@ func TestRuleFactoryNew(t *testing.T) {
 		},
 		{
 			uc: "new factory with default rule, where hydrator loading results in an error",
-			config: config.Configuration{Rules: config.RulesConfig{
+			config: &config.Configuration{Rules: config.RulesConfig{
 				Default: &config.DefaultRuleConfig{
 					Execute: []config.MechanismConfig{{"hydrator": "foo"}},
 				},
@@ -231,7 +231,7 @@ func TestRuleFactoryNew(t *testing.T) {
 		},
 		{
 			uc: "new factory with default rule, where mutator loading results in an error",
-			config: config.Configuration{Rules: config.RulesConfig{
+			config: &config.Configuration{Rules: config.RulesConfig{
 				Default: &config.DefaultRuleConfig{
 					Execute: []config.MechanismConfig{{"mutator": "foo"}},
 				},
@@ -251,7 +251,7 @@ func TestRuleFactoryNew(t *testing.T) {
 		},
 		{
 			uc: "new factory with default rule, where error_handler loading results in an error",
-			config: config.Configuration{Rules: config.RulesConfig{
+			config: &config.Configuration{Rules: config.RulesConfig{
 				Default: &config.DefaultRuleConfig{
 					ErrorHandler: []config.MechanismConfig{{"error_handler": "foo"}},
 				},
@@ -271,7 +271,7 @@ func TestRuleFactoryNew(t *testing.T) {
 		},
 		{
 			uc: "new factory with empty default rule",
-			config: config.Configuration{Rules: config.RulesConfig{
+			config: &config.Configuration{Rules: config.RulesConfig{
 				Default: &config.DefaultRuleConfig{
 					Execute: []config.MechanismConfig{},
 				},
@@ -286,7 +286,7 @@ func TestRuleFactoryNew(t *testing.T) {
 		},
 		{
 			uc: "new factory with default rule, consisting of authenticator only",
-			config: config.Configuration{Rules: config.RulesConfig{
+			config: &config.Configuration{Rules: config.RulesConfig{
 				Default: &config.DefaultRuleConfig{
 					Execute: []config.MechanismConfig{
 						{"authenticator": "bar"},
@@ -309,7 +309,7 @@ func TestRuleFactoryNew(t *testing.T) {
 		},
 		{
 			uc: "new factory with default rule, consisting of authorizer and hydrator",
-			config: config.Configuration{Rules: config.RulesConfig{
+			config: &config.Configuration{Rules: config.RulesConfig{
 				Default: &config.DefaultRuleConfig{
 					Execute: []config.MechanismConfig{
 						{"authenticator": "bar"},
@@ -335,7 +335,7 @@ func TestRuleFactoryNew(t *testing.T) {
 		},
 		{
 			uc: "new factory with default rule, consisting of authorizer, hydrator and authorizer",
-			config: config.Configuration{Rules: config.RulesConfig{
+			config: &config.Configuration{Rules: config.RulesConfig{
 				Default: &config.DefaultRuleConfig{
 					Execute: []config.MechanismConfig{
 						{"authenticator": "bar"},
@@ -364,7 +364,7 @@ func TestRuleFactoryNew(t *testing.T) {
 		},
 		{
 			uc: "new factory with default rule, consisting of authorizer and mutator without methods defined",
-			config: config.Configuration{Rules: config.RulesConfig{
+			config: &config.Configuration{Rules: config.RulesConfig{
 				Default: &config.DefaultRuleConfig{
 					Execute: []config.MechanismConfig{
 						{"authenticator": "bar"},
@@ -390,7 +390,7 @@ func TestRuleFactoryNew(t *testing.T) {
 		},
 		{
 			uc: "new factory with default rule, configured with all required elements",
-			config: config.Configuration{Rules: config.RulesConfig{
+			config: &config.Configuration{Rules: config.RulesConfig{
 				Default: &config.DefaultRuleConfig{
 					Execute: []config.MechanismConfig{
 						{"authenticator": "bar"},
@@ -429,7 +429,7 @@ func TestRuleFactoryNew(t *testing.T) {
 		},
 		{
 			uc: "new factory with default rule, configured with all possible elements",
-			config: config.Configuration{Rules: config.RulesConfig{
+			config: &config.Configuration{Rules: config.RulesConfig{
 				Default: &config.DefaultRuleConfig{
 					Execute: []config.MechanismConfig{
 						{"authenticator": "bar"},

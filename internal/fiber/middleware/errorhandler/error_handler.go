@@ -44,6 +44,13 @@ func defaultErrorHandler(ctx *fiber.Ctx, err error) error {
 
 		return ctx.Redirect(redirectError.RedirectTo.String(), redirectError.Code)
 	default:
+		var ferr *fiber.Error
+		if errors.As(err, &ferr) {
+			ctx.Status(ferr.Code)
+
+			return nil
+		}
+
 		logger := zerolog.Ctx(ctx.UserContext())
 		logger.Error().Err(err).Msg("Error occurred")
 

@@ -30,7 +30,7 @@ type Factory interface {
 	CreateErrorHandler(id string, conf config.MechanismConfig) (errorhandlers.ErrorHandler, error)
 }
 
-func NewFactory(conf config.Configuration, logger zerolog.Logger) (Factory, error) {
+func NewFactory(conf *config.Configuration, logger zerolog.Logger) (Factory, error) {
 	logger.Info().Msg("Loading pipeline definitions")
 
 	repository, err := newPrototypeRepository(conf, logger)

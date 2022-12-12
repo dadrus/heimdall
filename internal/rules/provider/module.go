@@ -21,7 +21,7 @@ var Module = fx.Options(
 	kubernetes.Module,
 )
 
-func checkRuleProvider(logger zerolog.Logger, conf config.Configuration) {
+func checkRuleProvider(logger zerolog.Logger, conf *config.Configuration) {
 	var ruleProviderConfigured bool
 
 	switch {

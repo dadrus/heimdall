@@ -20,4 +20,4 @@ type LoggingConfig struct {
 	Level  zerolog.Level `koanf:"level,string"`
 }
 
-func LogConfiguration(configuration Configuration) LoggingConfig { return configuration.Log }
+func LogConfiguration(configuration *Configuration) LoggingConfig { return configuration.Log }
