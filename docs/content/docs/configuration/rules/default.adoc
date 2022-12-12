@@ -45,8 +45,6 @@ rules:
       - error_handler: authenticate_with_kratos_eh
 ----
 
-TODO: 405
-
 This example defines a default rule, which allows HTTP `GET` and `PATCH` requests on any URL (will respond with `405 Method Not Allowed` for any other HTTP method used by a client). The regular pipeline consists of two authenticators, with `session_cookie_from_kratos_authn` being the first and `oauth2_introspect_token_from_keycloak_authn` being the fallback (if the first one fails), a `deny_all_requests_authz` authorizer and the `jwt_mut` mutator. The error pipeline is configured to execute only the `authenticate_with_kratos_eh` error handler.
 
 Obviously, the regular pipeline (defined in the `execute` property) of this default rule will always result in an error due to `deny_all_requests_authz`. This way it is thought to provide secure defaults and let the upstream specific rules override at least the part dealing with authorization. Such an upstream specific rule could then look like follows:

@@ -128,8 +128,6 @@ Following are the fields, which are set in the transaction finalization event in
 * `_subject` - The subject identifier if the access was granted.
 * `_error` - The information about an error, which e.g. led to the denial of the request.
 
-TODO: change _error to long_message
-
 Following are the fields, which are set if tracing is enabled:
 
 * `_trace_id` - The trace id as defined by OpenTelemetry.
