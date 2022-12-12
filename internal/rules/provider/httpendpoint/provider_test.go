@@ -485,10 +485,10 @@ endpoints:
 
 				time.Sleep(1 * time.Second)
 
-				assert.Equal(t, 4, requestCount)
+				assert.GreaterOrEqual(t, requestCount, 4)
 
 				noUpdatesCount := strings.Count(logs.String(), "No updates received")
-				assert.Equal(t, noUpdatesCount, 3)
+				assert.GreaterOrEqual(t, noUpdatesCount, 3)
 
 				require.Len(t, queue, 1)
 
