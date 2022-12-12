@@ -93,7 +93,7 @@ Heimdall intercepts all your application related network traffic, allowing a bro
 This pipeline ensures that, according to the needs of the particular backend service endpoint,
 
 . each request is authenticated (so, you know who the subject of the request is),
-. the required contextual information about the subject is available (like e.g. current location based on IP), so that
+. the required contextual information about the subject is available (like e.g. current location based on IP, roles or groups membership information, etc.), so that
 . the subject can be and is authorized and
 . the information about the subject is transformed into a format, required by the backend service. So that irrespectively of the used authentication or authorization system, the subject information is always provided in the same stable representation.
 

@@ -6,10 +6,10 @@ weight: 70
 menu:
   docs:
     weight: 10
-    parent: "Pipeline Handler"
+    parent: "Pipeline Mechanisms"
 ---
 
-Authenticators inspect HTTP requests, like the presence of a specific cookie, which represents the authentication object of the subject with the service and execute logic required to verify the authentication status and obtain information about that subject. A subject, could be a user who tries to use particular functionality of the upstream service, a machine (if you have machine-2-machine interaction), or something different. Authenticators ensure the subject has already been authenticated and the information available about it is valid.
+Authenticators inspect HTTP requests for presence of authentication objects, like e.g. the presence of a specific cookie. If such objects exist authenticators verify the related authentication status and obtain information about the corresponding subject. A subject, could be a user who tries to use particular functionality of the upstream service, a machine (if you have machine-2-machine interaction), or something different. Authenticators ensure the subject is authenticated and the information available about it is valid.
 
 The following section describes the available authenticator types in more detail.
 
@@ -17,7 +17,7 @@ The following section describes the available authenticator types in more detail
 
 === Noop
 
-As the name implies, this authenticator does nothing. It tells Heimdall to bypass the authentication. This is the only one authenticator type, which does not create a subject object on a successful execution, which is required by the most others pipeline handlers. This authenticator type also doesn't have any configuration options.
+As the name implies, this authenticator does nothing. It tells heimdall to bypass the authentication. This is the only one authenticator type, which does not create a subject object on a successful execution, required by the most others pipeline mechanisms. This authenticator type also doesn't have any configuration options.
 
 To enable the usage of this authenticator, you have to set the `type` property to `noop`.
 
@@ -70,7 +70,7 @@ config:
 
 === Basic Auth
 
-This authenticator verifies the provided credentials according to the HTTP "Basic" authentication scheme, described in https://datatracker.ietf.org/doc/html/rfc7617[RFC 7617]. This authenticator does not challenge the authentication, it only verifies the provided credentials and sets the subject id to the configured value if the authentications succeeds. Otherwise, it raises an error, which results in the execution of the configured error handlers. The link:{{< relref "error_handlers.adoc#_www_authenticate" >}}["WWW Authenticate"] error handler can then for example be used if the corresponding challenge is required.
+This authenticator verifies the provided credentials according to the HTTP "Basic" authentication scheme, described in https://datatracker.ietf.org/doc/html/rfc7617[RFC 7617]. This authenticator does not challenge the authentication, it only verifies the provided credentials and sets the subject id to the configured value if the authentication succeeds. Otherwise, it raises an error, resulting in the execution of the configured error handlers. The link:{{< relref "error_handlers.adoc#_www_authenticate" >}}["WWW Authenticate"] error handler mechanism can then for example be used if the corresponding challenge is required.
 
 To enable the usage of this authenticator, you have to set the `type` property to `basic_auth`.
 
@@ -102,7 +102,7 @@ config:
 
 === Generic
 
-This authenticator is kind of a swiss knife and can do a lot depending on the given configuration. It verifies the authentication status of the subject by making use of values available in the cookies, headers, or query parameters of the HTTP request and communicating with the actual authentication system to perform the actual verification on the one hand and to get the information about subject on the other hand. There is however one limitation: it can only deal with JSON responses.
+This authenticator is kind of a Swiss knife and can do a lot depending on the given configuration. It verifies the authentication status of the subject by making use of values available in the cookies, headers, or query parameters of the HTTP request and communicating with the actual authentication system to perform the verification of the subject authentication status on the one hand and to get the information about the subject on the other hand. There is however one limitation: it can only deal with JSON responses.
 
 To enable the usage of this authenticator, you have to set the `type` property to `generic`.
 
@@ -110,7 +110,7 @@ Configuration using the `config` property is mandatory. Following properties are
 
 * *`identity_info_endpoint`*: _link:{{< relref "/docs/configuration/reference/configuration_types.adoc#_endpoint">}}[Endpoint]_ (mandatory, not overridable)
 +
-The endpoint to communicate to for the actual subject authentication status verification purpose. At least the `url` must be configured. If you don't configure `method`, HTTP `POST` will be used. The `Accept` header is set to `application/json` by default. You can overwrite these setting however if required. Don't forget - this authenticator supports only JSON responses.
+The endpoint to communicate to for the actual subject authentication status verification purpose. At least the `url` must be configured. If you don't configure `method`, HTTP `POST` will be used. The `Accept` header is set to `application/json` by default. You can overwrite these setting if required. Don't forget - this authenticator supports only JSON responses.
 
 * *`authentication_data_source`*: _link:{{< relref "/docs/configuration/reference/configuration_types.adoc#_authentication_data_source" >}}[Authentication Data Source]_ (mandatory, not overridable)
 +
@@ -132,7 +132,7 @@ If set to `true`, allows the pipeline to fall back to the next authenticator in 
 +
 Where to extract the session validity information form the identity info endpoint response. If the `not_after` property is specified, the corresponding value from the response is also used for cache ttl calculation to prevent usage of not anymore valid session objects and overwrites the value configured for `cache_ttl` if the usage of that value would exceed the lifespan of the session object.
 +
-NOTE: If you're configuring the `cache_ttl` property it is highly recommended to configure `session_lifespan` as well to ensure outdated session objects are not used for subsequent requests to heimdall. Usage of `session_lifespan` is recommended anyway to enable time based validation of the response from the identity info endpoint.
+NOTE: If you're configuring the `cache_ttl` property, it is highly recommended to configure `session_lifespan` as well to ensure outdated session objects are not used for subsequent requests to heimdall. Usage of `session_lifespan` is recommended anyway to enable time based validation of the response from the identity info endpoint.
 
 .Configuration of Generic authenticator to work with session cookies
 ====
@@ -193,7 +193,7 @@ config:
     validity_leeway: 10s
 ----
 
-Usually, Bearer tokens are issued by an OAuth2 auth provider and there is a need to verify not only the validity of such, but also a couple of claims. This can be achieved by a link:{{< relref "/docs/configuration/pipeline/authorizers.adoc#_local" >}}[Local Authorizer], but there is also a special purpose link:{{< relref "#_oauth2_introspection">}}[OAuth2 Introspection] authenticator type, which supports asserting all security relevant claims in just one place.
+Usually, Bearer tokens are issued by an OAuth2 auth provider and there is a need to verify not only the validity of such, but also a couple of claims. This can be achieved by a link:{{< relref "authorizers.adoc#_local_cel" >}}[Local Authorizer], but there is also a special purpose link:{{< relref "#_oauth2_introspection">}}[OAuth2 Introspection] authenticator type, which supports asserting all security relevant claims in just one place.
 ====
 
 === OAuth2 Introspection
@@ -269,7 +269,7 @@ Where to extract the subject id from the JWT, as well as which attributes to use
 
 * *`cache_ttl`*: _link:{{< relref "/docs/configuration/reference/configuration_types.adoc#_duration" >}}[Duration]_ (optional, overridable)
 +
-How long to cache the key from the JWKS response, which was used for signature verification purposes. If not set, Heimdall will cache this key for 10 minutes and not call JWKS endpoint again if the same `kid` is referenced in an JWT and same JWKS endpoint is used. The cache key is calculated from the `jwks_endpoint` configuration and the `kid` referenced in the JWT.
+How long to cache the key from the JWKS response, which was used for signature verification purposes. If not set, heimdall will cache this key for 10 minutes and not call JWKS endpoint again if the same `kid` is referenced in an JWT and same JWKS endpoint is used. The cache key is calculated from the `jwks_endpoint` configuration and the `kid` referenced in the JWT.
 
 * *`allow_fallback_on_error`*: _boolean_ (optional, overridable)
 +

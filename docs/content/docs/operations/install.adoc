@@ -21,7 +21,7 @@ Heimdall is shipped in multiple formats and architectures to suit a variety of d
 
 == Source Code
 
-You can always build a copy of Heimdall by following the following instructions for your OS/environment.
+You can always build a copy of heimdall by following the following instructions for your OS/environment.
 
 === Prerequisites
 
@@ -60,7 +60,7 @@ Prebuild binaries are available with every released version on https://github.co
 For Linux and Darwin the binaries are archived with tar.gz and for Windows with zip.
 
 === Download
-Retrieve the desired released of heimdall source binary for your operating system/architecture
+Retrieve the desired released version of heimdall binary for your operating system/architecture
 
 [source, bash]
 ----
@@ -73,13 +73,13 @@ curl -L https://github.com/dadrus/heimdall/releases/download/${VERSION}/heimdall
 
 == Docker Image
 
-Heimdall utilizes a minimal docker multi-arch image which you can find on https://hub.docker.com/r/dadrus/heimdall[DockerHub]. As with link:{{< relref "#_binary" >}}[Binary] releases, Heimdall can be pulled in several flavors. Here however currently limited to the Linux OS. Supported architectures are:
+Heimdall utilizes a minimal docker multi-arch image which you can find on https://hub.docker.com/r/dadrus/heimdall[DockerHub]. As with link:{{< relref "#_binary" >}}[Binary] releases, heimdall can be pulled in several flavors. These are however currently limited to the Linux OS. Supported architectures are:
 
 * `amd64`
 * `arm64`
 * `armv7`
 
-All docker images are rootless - so heimdall will always run as a non-root user. Since Heimdall does not have any dependencies, the images contain only the binary of Heimdall and the settings related to the OS user and group permissions, Heimdall is running with.
+All docker images are rootless - so heimdall will always run as a non-root user. Since Heimdall does not have any dependencies, the images contain only the binary of Heimdall and the settings related to the OS user and group permissions, heimdall is running with.
 
 === Prerequisites
 
