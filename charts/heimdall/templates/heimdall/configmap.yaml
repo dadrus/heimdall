@@ -36,11 +36,6 @@ data:
       {{- toYaml . | nindent 6 }}
     {{- end }}
 
-    {{- with .Values.pipeline }}
-    pipeline:
-      {{- toYaml . | nindent 6 }}
-    {{- end }}
-
     {{- with .Values.rules }}
     rules:
       {{- toYaml . | nindent 6 }}

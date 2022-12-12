@@ -18,9 +18,9 @@ demo:
 
 # Default values for heimdall.
 image:
-  repository: dadrus/heimdall
+  repository: heimdall
   pullPolicy: IfNotPresent
-  tag: ""
+  tag: "local"
   pullSecrets: []
 
 nameOverride: ""

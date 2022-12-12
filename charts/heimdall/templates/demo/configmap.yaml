@@ -11,24 +11,24 @@ data:
     log:
       level: info
 
-    pipeline:
-      authenticators:
+    rules:
+      mechanisms:
+        authenticators:
         - id: anonymous_authenticator
           type: anonymous
         - id: noop_authenticator
           type: noop
-      authorizers:
+        authorizers:
         - id: deny_all_requests
           type: deny
         - id: allow_all_requests
           type: allow
-      mutators:
+        mutators:
         - id: create_jwt
           type: jwt
         - id: noop_mutator
           type: noop
 
-    rules:
       default:
         methods:
           - GET
@@ -40,4 +40,4 @@ data:
 
       providers:
         kubernetes: {}
-{{- end }}
+    {{- end }}
