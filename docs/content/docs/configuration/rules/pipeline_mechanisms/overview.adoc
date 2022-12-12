@@ -9,19 +9,17 @@ menu:
     parent: "Pipeline Mechanisms"
 ---
 
-This section explains the available pipeline mechanisms in detail. Before diving onto the details of these, we recommend to make yourself familiar with the link:{{< relref "/docs/getting_started/concepts.adoc" >}}[concepts].
+All mechanisms supported by heimdall fall into following categories:
 
-The general pipeline mechanisms are:
-
-* link:{{< relref "authenticators.adoc">}}[Authenticators] inspect HTTP requests for presence of authentication objects, like e.g. the presence of a specific cookie. If such objects exist, authenticators verify the related authentication status and obtain information about the corresponding subject. A subject, could be a user who tries to use particular functionality of the upstream service, a machine (if you have machine-2-machine interaction), or something different. Authenticators ensure the subject is authenticated and the information available about it is valid.
-* link:{{< relref "authorizers.adoc">}}[Authorizers] ensure that the subject obtained via an authenticator has the required permissions to submit the given HTTP request and thus to execute the corresponding logic in the upstream service. E.g. a specific endpoint of the upstream service might only be accessible to a "user" from the "admin" group, or to an HTTP request if a specific HTTP header is set.
-* link:{{< relref "hydrators.adoc">}}[Hydrators] enrich the information about the subject obtained via an authenticator with further information, required either by the upstream service itself or an authorizer. This can be handy if the actual authentication system doesn't have all information about the subject (which is usually the case in microservice architectures), or if dynamic information about the subject, like the current location based on the IP address, is required.
-* link:{{< relref "mutators.adoc">}}[Mutators] finalize the successful execution of the pipeline and transform the available information about the subject into a format expected, respectively required by the upstream service. This ranges from adding a query parameter, to a structured JWT in a specific header.
-* link:{{< relref "error_handlers.adoc">}}[Error Handlers] are responsible for execution of logic if any of the mechanisms described above fail. These range from a simple error response to the client, which sent the request, to sophisticated ones, supporting complex logic and redirects.
+* link:{{< relref "authenticators.adoc">}}[Authenticators], which inspect HTTP requests for presence of authentication objects, like e.g. the presence of a specific cookie. If such objects exist, authenticators verify the related authentication status and obtain information about the corresponding subject. A subject, could be a user who tries to use particular functionality of the upstream service, a machine (if you have machine-2-machine interaction), or something different. Authenticators ensure the subject is authenticated and the information available about it is valid.
+* link:{{< relref "authorizers.adoc">}}[Authorizers], which ensure that the subject obtained via an authenticator has the required permissions to submit the given HTTP request and thus to execute the corresponding logic in the upstream service. E.g. a specific endpoint of the upstream service might only be accessible to a "user" from the "admin" group, or to an HTTP request if a specific HTTP header is set.
+* link:{{< relref "hydrators.adoc">}}[Hydrators], which enrich the information about the subject obtained via an authenticator with further information, required either by the upstream service itself or an authorizer. This can be handy if the actual authentication system doesn't have all information about the subject (which is usually the case in microservice architectures), or if dynamic information about the subject, like the current location based on the IP address, is required.
+* link:{{< relref "mutators.adoc">}}[Mutators], which finalize the successful execution of the pipeline and transform the available information about the subject into a format expected, respectively required by the upstream service. This ranges from adding a query parameter, to a structured JWT in a specific header.
+* link:{{< relref "error_handlers.adoc">}}[Error Handlers], which are responsible for execution of logic if any of the mechanisms described above fail. These range from a simple error response to the client, which sent the request, to sophisticated ones, supporting complex logic and redirects.
 
 == General Configuration
 
-All of the above said mechanisms must be configured in the `mechanisms` section of heimdall's `rules` configuration to enable the (re-)usage in the actual rule definitions. With other words only those mechanisms, which have been configured, can then be (re-)used by a rule.
+All of the above said mechanisms must be configured in the `mechanisms` section of heimdall's `rules` configuration property. Only those mechanisms, which have been configured, can then be (re-)used by rules.
 
 [source, yaml]
 ----
@@ -41,12 +39,14 @@ rules:
 
 Each mechanism configuration entry must contain at least the following properties:
 
-* `id` - The unique identifier of the mechanism. Identifiers are used to reference the required mechanism within a rule. You can choose whatever identifier, you want. It is just a name. It must however be unique across all defined mechanisms of a particular general type (like authenticator, authorizer, etc.).
+* `id` - The unique identifier of the mechanism. Identifiers are used to reference the required mechanism within a rule. You can choose whatever identifier, you want. It is just a name. It must however be unique across all defined mechanisms of a particular mechanism category (like authenticator, authorizer, etc.).
 * `type` - The specific type of the mechanism.
 
-Depending on a mechanism type, there can be an additional `config` property, as the name implies, for the definition of mechanism's specific configuration. Every mechanism type can be defined as many times as needed. However, for those, which don't have a configuration, it doesn't really make sense, as all of them would behave the same way.
+Depending on the mechanism type, there can be an additional `config` property, which then holds the mechanism's specific configuration.
 
-For e.g. your authenticator definitions could look like this:
+Every mechanism type can be configured as many times as needed. However, for those, which don't have a configuration, it doesn't really make sense, as all of them would behave the same way.
+
+For example, your authenticator definitions could look like this:
 
 [source, yaml]
 ----
@@ -67,9 +67,9 @@ rules:
         bar: bla
 ----
 
-The above pipeline configures two instances of an imaginary authenticator of a specific type `bar` available via ids `foo` and `zab`, as well as two instances of an imaginary authenticator of a specific type `bla` available via ids `baz` and `oof`. The `baz` and `oof` authenticators are different, as they are configured differently, but `foo` and `zab` authenticators do not have a configuration. So, they behave the same way and there is actually no need to define two instances of them.
+The above snippet configures two instances of an imaginary authenticator of a type `bar`, made available for usage in rules via ids `foo` and `zab`, as well as two instances of an imaginary authenticator of a type `bla`, made available for usage in rule via ids `baz` and `oof`. The `baz` and `oof` authenticators are different, as they are configured differently, but `foo` and `zab` authenticators do not have any configuration. So, they behave the same way and there is actually no need to define two instances of them.
 
-In simplest case a rule will just reuse a mechanism. In more complex cases a rule can reconfigure parts of it (More about rules configuration can be found link:{{< relref "../overview.adoc" >}}[here]). Which parts can be reconfigured are mechanism specific and described in the mechanism specific documentation.
+In simplest case a rule will just reuse mechanisms in its pipeline. In more complex cases a rule can reconfigure parts of it (More about rules configuration can be found link:{{< relref "../configuration.adoc" >}}[here]). Which parts can be reconfigured are mechanism specific and described in the mechanism specific documentation. Reconfiguration is always limited to the particular rule pipeline and does not affect other rules.
 
 Here is an example which configures a couple of mechanisms:
 
@@ -78,8 +78,6 @@ Here is an example which configures a couple of mechanisms:
 rules:
   mechanisms:
     authenticators:
-    - id: noop_authn
-      type: noop
     - id: anon_authn
       type: anonymous
     - id: opaque_auth_token_authn
@@ -91,16 +89,14 @@ rules:
         issuers:
           - http://127.0.0.1:4444/
     authorizers:
-    - id: allow_all_authz
-      type: allow
     - id: deny_all_authz
       type: deny
     - id: local_authz
       type: cel
       config:
         expressions:
-          - expression: |
-              "foo" in Subject.Attributes.group_manager.groups
+          - expression:
+              "manager" in Subject.Attributes.groups
             message: user is not in the expected group
     hydrators:
     - id: group_manager
@@ -113,8 +109,6 @@ rules:
           - Authorization
         cache_ttl: 1m
     mutators:
-    - id: noop_mut
-      type: noop
     - id: jwt_mut
       type: jwt
       config:
@@ -149,7 +143,7 @@ rules:
 
 == Evaluation Objects
 
-Some pipeline mechanisms support, respectively require access to different types of objects, they work on, e.g. to render a header with specific values, or to check whether some expectations apply. Following objects are available and have the following structure:
+Some mechanisms support, respectively require access to different types of objects they work on, e.g. to render a header with specific values, or to check whether some expectations apply. Following objects are available and have the following structure:
 
 === Subject
 
@@ -161,11 +155,11 @@ The identifier of the subject. This value is set by the authenticator, which was
 
 * *`Attributes`*: _map_
 +
-Contains all attributes, which are known about the subject. The content is initially set by the authenticator, which was able to authenticate the subject. Mechanisms which receive the subject can update it, but do never override any entries.
+Contains all attributes, which are known about the subject. The content is initially set by the authenticator, which was able to authenticate the subject. Mechanisms following the authenticator in a rule pipeline can update it, but cannot override any entries.
 
 Each object of this type can be thought as a JSON object. Here some examples:
 
-.Subject object created by an Anonymous Authenticator
+.Subject created by an Anonymous Authenticator
 ====
 [source, javascript]
 ----
@@ -176,7 +170,7 @@ Subject = {
 ----
 ====
 
-.Possible Subject object created by an OAuth2 Authenticator
+.Possible Subject created by an OAuth2 Authenticator
 ====
 [source, javascript]
 ----
@@ -286,7 +280,7 @@ Payload = "SomeStringValue"
 
 == Templating
 
-Some pipeline mechanisms support templating using https://golang.org/pkg/text/template/[Golang Text Templates]. To ease the usage, all http://masterminds.github.io/sprig/[sprig] functions as well as a `urlenc` function are available. Latter is handy if you need to generate request body or query parameters e.g. for communication with further systems. In addition to the link:{{< relref "#_subject" >}}[Subject] object described above following functions available to the template as well:
+Some pipeline mechanisms support templating using https://golang.org/pkg/text/template/[Golang Text Templates]. To ease the usage, all http://masterminds.github.io/sprig/[sprig] functions as well as a `urlenc` function are available. Latter is handy if you need to generate request body or query parameters e.g. for communication with further systems. In addition to the link:{{< relref "#_subject" >}}[Subject] object described above, following functions are available to a template as well:
 
 * `RequestMethod` - function, providing access to the used HTTP method for the given request. Returns a `string`.
 * `RequestURL` - function, providing access to the matched URL of the given request. Returns a URL object as defined by https://pkg.go.dev/net/url#URL[Golang net.url.URL]. This way access to properties, like `Scheme`, `Host`, `Path` and other URL properties is easily possible. If used as is it is converted to a `string`.
@@ -325,3 +319,36 @@ This will result in the following JSON object:
 ====
 
 You can find further examples as part of mechanism descriptions, supporting templating.
+
+== Expressions
+
+Expressions can be used to execute authorization logic. As of today only https://github.com/google/cel-spec[CEL] is supported as expression language. Which of the link:{{<  relref "#_evaluation_objects" >}}[evaluation objects] are available to the expression depends on the mechanism.
+
+Some examples:
+
+.Evaluate Payload object
+====
+
+Given the following Payload object
+
+[source, javascript]
+----
+Payload = { "result": true }
+----
+
+a CEL expression to check the `result` attribute is set to `true`, would look as follows:
+
+[source, cel]
+----
+Payload.result == true
+----
+====
+
+.Check whether the user is member of the admin group
+====
+[source, cel]
+----
+has(Subject.Attributes.groups) &&
+   Subject.Attributes.groups.exists(g, g == "admin")
+----
+====

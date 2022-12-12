@@ -9,13 +9,13 @@ menu:
     parent: "Rules"
 ---
 
-Providers define the sources to load the link:{{< relref "configuration.adoc#_rule_set" >}}[Rule Sets] from. These make Heimdall's behavior dynamic. All providers, you want to enable for a Heimdall instance must be configured within the `providers` section of Heimdall's `rules` configuration.
+Providers define the sources to load the link:{{< relref "configuration.adoc#_rule_set" >}}[Rule Sets] from. These make Heimdall's behavior dynamic. All providers, you want to enable for a Heimdall instance must be configured within the `providers` section of heimdall's `rules` configuration.
 
 Supported providers, including the corresponding configuration options are described below
 
 == Filesystem
 
-The filesystem provider allows loading of rule sets from a file system. The configuration of this provider goes into the `file_system` property. This provider is handy for e.g. starting playing around with Heimdall, e.g. locally, or using Docker, as well as if your deployment strategy considers deploying a Heimdall instance as a Side-Car for each of your services.
+The filesystem provider allows loading of rule sets from a file system. The configuration of this provider goes into the `file_system` property. This provider is handy for e.g. starting playing around with heimdall, e.g. locally, or using Docker, as well as if your deployment strategy considers deploying a heimdall instance as a Side-Car for each of your services.
 
 Following configuration options are supported:
 

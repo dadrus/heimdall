@@ -9,15 +9,15 @@ menu:
     parent: "Pipeline Mechanisms"
 ---
 
-Authenticators inspect HTTP requests for presence of authentication objects, like e.g. the presence of a specific cookie. If such objects exist, authenticators verify the related authentication status and obtain information about the corresponding subject. A subject, could be a user who tries to use particular functionality of the upstream service, a machine (if you have machine-2-machine interaction), or something different. Authenticators ensure the subject is authenticated and the information available about it is valid.
-
-The following section describes the available authenticator types in more detail.
+Authenticators inspect HTTP requests for presence of authentication objects, like e.g. the presence of a specific cookie. If such objects exist, authenticators verify the related authentication status and obtain information about the corresponding link:{{< relref "overview.adoc#_subject" >}}[subject]. A subject, could be a user, trying to use particular functionality of the upstream service, a machine (if you have machine-2-machine interaction), or something different. Authenticators ensure the subject is authenticated and the information available about it is valid.
 
 == Authenticator Types
 
+The following sections describe the available authenticator types in more detail.
+
 === Noop
 
-As the name implies, this authenticator does nothing. It tells heimdall to bypass the authentication. This is the only one authenticator type, which does not create a subject object on a successful execution, required by the most others pipeline mechanisms. This authenticator type also doesn't have any configuration options.
+As the name implies, this authenticator does nothing. It tells heimdall to bypass the authentication. This authenticator type does not create a subject object, which is required by the most other pipeline mechanisms. This authenticator type also doesn't have any configuration options.
 
 To enable the usage of this authenticator, you have to set the `type` property to `noop`.
 
@@ -47,7 +47,7 @@ type: unauthorized
 
 === Anonymous
 
-This authenticator just creates a subject object and sets its id to `anonymous` without doing anything else. You can overwrite the value of subject's id by using the optional `config` property.
+This authenticator just creates a link:{{< relref "overview.adoc#_subject" >}}[`Subject`] object and sets its `ID` to `anonymous` without doing anything else. You can overwrite the value of subject's id by using the optional `config` property.
 
 To enable the usage of this authenticator, you have to set the `type` property to `anonymous`.
 
@@ -55,7 +55,7 @@ Configuration using the `config` property is optional. Following properties are 
 
 * *`subject`*: _string_ (optional, overridable)
 +
-Enables setting the id of the created subject object to a custom value.
+Enables setting the `ID` of the created link:{{< relref "overview.adoc#_subject" >}}[`Subject`] object to a custom value.
 
 .Configuration of Anonymous authenticator
 ====
@@ -70,7 +70,7 @@ config:
 
 === Basic Auth
 
-This authenticator verifies the provided credentials according to the HTTP "Basic" authentication scheme, described in https://datatracker.ietf.org/doc/html/rfc7617[RFC 7617]. This authenticator does not challenge the authentication, it only verifies the provided credentials and sets the subject id to the configured value if the authentication succeeds. Otherwise, it raises an error, resulting in the execution of the configured error handlers. The link:{{< relref "error_handlers.adoc#_www_authenticate" >}}["WWW Authenticate"] error handler mechanism can then for example be used if the corresponding challenge is required.
+This authenticator verifies the provided credentials according to the HTTP "Basic" authentication scheme, described in https://datatracker.ietf.org/doc/html/rfc7617[RFC 7617]. It does however not challenge the authentication, it only verifies the provided credentials and sets the link:{{< relref "overview.adoc#_subject" >}}[`Subject`] `ID` to the configured user identifier if the authentication succeeds. Otherwise, it raises an error, resulting in the execution of the configured error handlers. The link:{{< relref "error_handlers.adoc#_www_authenticate" >}}["WWW Authenticate"] error handler mechanism can for example be used if the corresponding challenge is required.
 
 To enable the usage of this authenticator, you have to set the `type` property to `basic_auth`.
 
@@ -102,7 +102,7 @@ config:
 
 === Generic
 
-This authenticator is kind of a Swiss knife and can do a lot depending on the given configuration. It verifies the authentication status of the subject by making use of values available in the cookies, headers, or query parameters of the HTTP request and communicating with the actual authentication system to perform the verification of the subject authentication status on the one hand and to get the information about the subject on the other hand. There is however one limitation: it can only deal with JSON responses.
+This authenticator is kind of a Swiss knife and can do a lot depending on the given configuration. It verifies the authentication status of the subject by making use of values available in cookies, headers, or query parameters of the HTTP request and communicating with the actual authentication system to perform the verification of the subject authentication status on the one hand, and to get the information about the subject on the other hand. There is however one limitation: it can only deal with JSON responses.
 
 To enable the usage of this authenticator, you have to set the `type` property to `generic`.
 
@@ -118,7 +118,7 @@ Where to extract the authentication data from the request. This authenticator wi
 
 * *`subject`*: _link:{{< relref "/docs/configuration/reference/types.adoc#_subject" >}}[Subject]_ (mandatory, not overridable)
 +
-Where to extract the subject id from the identity info endpoint response, as well as which attributes to use.
+Where to extract the link:{{< relref "overview.adoc#_subject" >}}[`Subject`] information from the identity info endpoint response.
 
 * *`cache_ttl`*: _link:{{< relref "/docs/configuration/reference/types.adoc#_duration" >}}[Duration]_ (optional, overridable)
 +
@@ -220,7 +220,7 @@ Configures the required claim assertions. Overriding on rule level is possible e
 
 * *`subject`*: _link:{{< relref "/docs/configuration/reference/types.adoc#_subject" >}}[Subject]_ (optional, not overridable)
 +
-Where to extract the subject id from the introspection endpoint response, as well as which attributes to use. If not configured `sub` is used to extract the subject id and all attributes from the introspection endpoint response are made available as attributes of the subject.
+Where to extract the link:{{< relref "overview.adoc#_subject" >}}[`Subject`] information from the introspection endpoint response. If not configured `sub` is used to extract the subject `ID` and all attributes from the introspection endpoint response are made available as `Attributes`.
 
 * *`cache_ttl`*: _link:{{< relref "/docs/configuration/reference/types.adoc#_duration" >}}[Duration]_ (optional, overridable)
 +

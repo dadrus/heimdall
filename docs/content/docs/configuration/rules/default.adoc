@@ -21,11 +21,11 @@ Which HTTP methods (`GET`, `POST`, `PATCH`, etc) are allowed. Defaults to an emp
 
 * *`execute`*: _link:{{< relref "configuration.adoc#_regular_pipeline" >}}[Regular Pipeline]_ (mandatory)
 +
-Which mechanisms to use for authentication, authorization, hydration (enrich) and mutation of the request and the subject. At least one link:{{< relref "./pipeline_mechanisms/authenticators.adoc" >}}[authenticator] and one link:{{< relref "./pipeline_mechanisms/mutators.adoc" >}}[mutator] must be defined. A specific rule (see also link:{{< relref "configuration.adoc" >}}[Rule Definition]) can omit the definition of authenticators, if it wants to reuse the authenticators defined in the default rule. Same is true for other mechanisms. Exception are link:{{< relref "./pipeline_mechanisms/authorizers.adoc" >}}[authorizers] and link:{{< relref "./pipeline_mechanisms/hydrators.adoc" >}}[hydrators]. As soon, as a specific rule defines at least one authorizer or hydrator, those authorizers and hydrators (defined in the default rule) are not considered anymore.
+Which mechanisms to use for authentication, authorization, hydration (enrich) and mutation of the request and the subject. At least one link:{{< relref "./pipeline_mechanisms/authenticators.adoc" >}}[authenticator] and one link:{{< relref "./pipeline_mechanisms/mutators.adoc" >}}[mutator] must be defined. A specific rule (see also link:{{< relref "configuration.adoc" >}}[Rule]) can omit the definition of authenticators, if it wants to reuse the authenticators defined in the default rule. Same is true for other mechanisms. Exception are link:{{< relref "./pipeline_mechanisms/authorizers.adoc" >}}[authorizers] and link:{{< relref "./pipeline_mechanisms/hydrators.adoc" >}}[hydrators]. As soon, as a specific rule defines at least one authorizer or hydrator, those authorizers and hydrators (defined in the default rule) are not considered anymore.
 
 * *`on_error`*: _link:{{< relref "configuration.adoc#_error_handler_pipeline" >}}[Error Handler Pipeline]_ (mandatory)
 +
-Which error handler mechanisms to use if any of the mechanisms, defined in the `execute` property, fail. Allows omitting the definition of error handlers in specific rules. As soon as a specific rule defines at least one error handler mechanism, all error handler mechanisms, defined in the default rule are ignored.
+Which error handler mechanisms to use if any of the mechanisms, defined in the `execute` property fail. Allows omitting the definition of error handlers in specific rules. As soon as a specific rule defines at least one error handler mechanism, all error handler mechanisms, defined in the default rule are ignored.
 
 .Default rule configuration
 ====
