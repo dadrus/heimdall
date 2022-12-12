@@ -1,5 +1,5 @@
 ---
-title: "Decision API"
+title: "Decision"
 date: 2022-06-09T18:55:36+02:00
 draft: false
 weight: 35
@@ -9,7 +9,7 @@ menu:
     parent: "Services"
 ---
 
-Decision API is one of the operating modes supported by Heimdall, used if you start Heimdall with `heimdall serve decision`. By default, Heimdall listens on `0.0.0.0:4456/` endpoint for incoming requests in this mode of operation and also configures useful default timeouts. No other options are configured. You can, and should however adjust the configuration for your needs.
+Decision is one of the operating modes supported by Heimdall, used if you start Heimdall with `heimdall serve decision`. By default, Heimdall listens on `0.0.0.0:4456/` endpoint for incoming requests in this mode of operation and also configures useful default timeouts. No other options are configured. You can, and should however adjust the configuration for your needs.
 
 This service exposes only the Decision API endpoint.
 
@@ -47,7 +47,7 @@ decision:
 
 * *`verbose_errors`*: _boolean_ (optional)
 +
-By making use of this property you can instruct Heimdall's default error handler to preserve error information and provide it in the response body to the caller. Defaults to `false`.
+By making use of this property you can instruct heimdall's default error handler to preserve error information and provide it in the response body to the caller. Defaults to `false`.
 +
 Heimdall supports MIME type negotiation. So, if your reverse proxy/gateway sets the HTTP `Accept` header to e.g. `application/json`, and Heimdall run into an unhandled internal error condition, in addition to responding with `500 Internal Server Error`, it will render an error message, like shown below, if `verbose_errors` has been set to `true`.
 +

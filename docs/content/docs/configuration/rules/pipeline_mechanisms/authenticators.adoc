@@ -2,14 +2,14 @@
 title: "Authenticators"
 date: 2022-06-09T18:56:56+02:00
 draft: false
-weight: 70
+weight: 75
 menu:
   docs:
     weight: 10
     parent: "Pipeline Mechanisms"
 ---
 
-Authenticators inspect HTTP requests for presence of authentication objects, like e.g. the presence of a specific cookie. If such objects exist authenticators verify the related authentication status and obtain information about the corresponding subject. A subject, could be a user who tries to use particular functionality of the upstream service, a machine (if you have machine-2-machine interaction), or something different. Authenticators ensure the subject is authenticated and the information available about it is valid.
+Authenticators inspect HTTP requests for presence of authentication objects, like e.g. the presence of a specific cookie. If such objects exist, authenticators verify the related authentication status and obtain information about the corresponding subject. A subject, could be a user who tries to use particular functionality of the upstream service, a machine (if you have machine-2-machine interaction), or something different. Authenticators ensure the subject is authenticated and the information available about it is valid.
 
 The following section describes the available authenticator types in more detail.
 
@@ -164,7 +164,9 @@ config:
 .Configuration of Generic authenticator to work with a Bearer token
 ====
 
-This example shows how to configure this authenticator to work with an authentication system, which issues a Bearer token upon successful user authentication to maintain the authentication state. To reduce the communication overhead, it also makes use of `cache_ttl` to cache the response for 5 minutes if it does not exceed the validity of the information present in the response from the used endpoint. In this example we configure the handler to use the `GET` method instead of the default `POST` for sending the bearer token to the authentication system for verification purposes and also to authenticate using HTTP basic auth schema. According to the below configuration, the Bearer token is located in the `X-Custom-Bearer-Token` header, which as also used as is while calling the `\http://my-auth.system/introspect` endpoint.
+This example shows how to configure this authenticator to work with an authentication system, which issues a Bearer token upon successful user authentication. To reduce the communication overhead, it also makes use of `cache_ttl` to cache the response for 5 minutes if it does not exceed the validity of the information present in the response from the used endpoint.
+
+In this example we configure the Generic authenticator mechanism to use the `GET` method instead of the default `POST` for sending the bearer token to the authentication system for verification purposes and also to authenticate using HTTP basic auth schema. According to the below configuration, the Bearer token is located in the `X-Custom-Bearer-Token` header, which as also used as is while calling the `\http://my-auth.system/introspect` endpoint.
 
 [source, yaml]
 ----

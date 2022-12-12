@@ -117,8 +117,9 @@ signer:
   password: VeryInsecure!
   key_id: foo
 
-pipeline:
-  authenticators:
+rules:
+  mechanisms:
+    authenticators:
     - id: noop_authenticator
       type: noop
     - id: anonymous_authenticator
@@ -202,7 +203,7 @@ pipeline:
         cache_ttl: 5m
         allow_fallback_on_error: true
 
-  authorizers:
+    authorizers:
     - id: allow_all_authorizer
       type: allow
     - id: deny_all_authorizer
@@ -227,7 +228,7 @@ pipeline:
         expressions:
           - expression: "'admin' in Subject.Attributes.groups"
 
-  hydrators:
+    hydrators:
     - id: subscription_hydrator
       type: generic
       config:
@@ -245,7 +246,7 @@ pipeline:
           headers:
             foo: bar
 
-  mutators:
+    mutators:
     - id: jwt
       type: jwt
       config:
@@ -262,7 +263,7 @@ pipeline:
         cookies:
           foo-bar: '{{ .Subject.ID }}'
 
-  error_handlers:
+    error_handlers:
     - id: default
       type: default
     - id: authenticate_with_kratos
@@ -279,7 +280,6 @@ pipeline:
               Accept:
               - '*/*'
 
-rules:
   default:
     methods:
       - GET
@@ -324,5 +324,8 @@ rules:
           prefix: service2
           rule_path_match_prefix: /service2
         - url: s3://my-bucket/my-rule-set
+
+    kubernetes:
+      auth_class: foo
 ----
 

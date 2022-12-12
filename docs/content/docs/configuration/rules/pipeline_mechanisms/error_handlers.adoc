@@ -2,7 +2,7 @@
 title: "Error Handlers"
 date: 2022-06-09T18:57:29+02:00
 draft: false
-weight: 90
+weight: 95
 menu:
   docs:
     weight: 50
@@ -17,9 +17,9 @@ The following section describes the available error handler types in more detail
 
 === Default
 
-This error handler is always there and is executed if no other error handler is responsible for the handling of an error. Actually, there is no need to explicitly configure it. The only exception is to allow overriding the link:{{< relref "../overview.adoc#_default_rule" >}}[default rule]'s error handler chain in a rule for performance reasons (if configured error handlers in the default rule should not be considered). This error handler type doesn't have any configuration options.
+This mechanism is always there and is executed if no other error handler mechanism is responsible for the handling of the error. Actually, there is no need to explicitly configure it. The only exception is to allow overriding the link:{{< relref "../overview.adoc#_default_rule" >}}[default rule]'s error handler chain in a rule for performance reasons (if configured error handlers in the default rule should not be considered). This mechanism type doesn't have any configuration options.
 
-To enable the usage of this error handler, you have to set the `type` property to `default`.
+To enable the usage of this mechanism, you have to set the `type` property to `default`.
 
 .Configuring Default error handler to enable referencing it from rules
 ====
@@ -34,9 +34,9 @@ type: default
 
 === Redirect
 
-This error handler allows to redirect the client to another endpoint, e.g. to let the user authenticate. Technically this error handler returns e.g. a HTTP `302 Found` response code and sets the HTTP `Location` header.
+This error handler mechanism allows redirecting the client to another endpoint, e.g. to let the user authenticate. Technically this error handler returns e.g. a HTTP `302 Found` response code and sets the HTTP `Location` header.
 
-To enable the usage of this hydrator, you have to set the `type` property to `redirect`.
+To enable the usage of this mechanism, you have to set the `type` property to `redirect`.
 
 Configuration using the `config` property is mandatory. Following properties are available:
 
@@ -46,7 +46,7 @@ The url to redirect the client to. If no `return_to_query_parameter` is defined,
 
 * *`return_to_query_parameter`*: _string_ (optional, not overridable)
 +
-If you want to return the user back to the url, Heimdall was handling when this error handler kicked in and your authentication system supports this by considering a specific query parameter, you can configure it here.
+If you want to return the user back to the url, heimdall was handling when this error handler mechanism kicked in and your authentication system supports this by considering a specific query parameter, you can configure it here.
 
 * *`code`*: _int_ (optional, not overridable)
 +
@@ -85,7 +85,7 @@ config:
           - text/html
 ----
 
-In this case the error condition can actually be simplified, so the error handler configuration can look like this:
+In this case the error condition can actually be simplified, so the mechanism configuration can look like this:
 
 [source, yaml]
 ----
@@ -108,7 +108,7 @@ config:
 
 === WWW-Authenticate
 
-This error handler responds with HTTP `401 Unauthorized` and a `WWW-Authenticate` HTTP header set. As of now, this error handler is the only one error handler, which transforms Heimdall into an authentication system, a very simple one though ;). By configuring this error handler you can implement the https://datatracker.ietf.org/doc/html/rfc7617[Basic HTTP Authentication Scheme] by also making use of the link:{{< relref "authenticators.adoc#_basic_auth" >}}[Basic Auth] authenticator. Without that authenticator, the usage of this error handler does actually not make any sense.
+This error handler mechanism responds with HTTP `401 Unauthorized` and a `WWW-Authenticate` HTTP header set. As of now, this error handler is the only one error handler, which transforms Heimdall into an authentication system, a very simple one though ;). By configuring this error handler you can implement the https://datatracker.ietf.org/doc/html/rfc7617[Basic HTTP Authentication Scheme] by also making use of the link:{{< relref "authenticators.adoc#_basic_auth" >}}[Basic Auth] authenticator. Without that authenticator, the usage of this error handler does actually not make any sense.
 
 To enable the usage of this hydrator, you have to set the `type` property to `www_authenticate`.
 

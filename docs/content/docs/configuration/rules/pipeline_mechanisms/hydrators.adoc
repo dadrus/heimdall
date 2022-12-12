@@ -2,7 +2,7 @@
 title: "Hydrators"
 date: 2022-06-09T18:57:10+02:00
 draft: false
-weight: 80
+weight: 85
 menu:
   docs:
     weight: 30
@@ -19,7 +19,7 @@ As of today, there is just one hydrator, which is described below.
 
 === Generic
 
-This handler allows you to communicate to any API you want, to fetch further information about the subject. Typical scenarios is getting specific attributes for later authorization purposes which are not known to the authentication system and thus were not made available in `Subject` 's `Attributes` object. If the API responses with a 2xx HTTP response code, the payload made available in the `Attributes` property of the `Subject`. To avoid overwriting of existing attributes, this object is however not available on the top level, but under a key named by the `id` of the authorizer (See also the example below). If the `Content-Type` of the response is either ending with `json` or is `application/x-www-form-urlencoded`, the payload is decoded and made available as map, otherwise it is treated as string, but, as written above, is made available as well.
+This mechanism allows you to communicate to any API you want, to fetch further information about the subject. Typical scenarios is getting specific attributes for later authorization purposes which are not known to the authentication system and thus were not made available in `Subject` 's `Attributes` object. If the API responses with a 2xx HTTP response code, the payload made available in the `Attributes` property of the `Subject`. To avoid overwriting of existing attributes, this object is however not available on the top level, but under a key named by the `id` of the authorizer (See also the example below). If the `Content-Type` of the response is either ending with `json` or is `application/x-www-form-urlencoded`, the payload is decoded and made available as map, otherwise it is treated as string, but, as written above, is made available as well.
 
 To enable the usage of this hydrator, you have to set the `type` property to `generic`.
 
@@ -27,7 +27,7 @@ Configuration using the `config` property is mandatory. Following properties are
 
 * *`endpoint`*: _link:{{< relref "/docs/configuration/reference/types.adoc#_endpoint">}}[Endpoint]_ (mandatory, not overridable)
 +
-The API of the service providing additional attributes about the authenticated user. At least the `url` must be configured. This handler allows templating of the url and makes the `Subject` object available to it. By default, this authorizer will use HTTP `POST` to send the rendered payload to this endpoint. You can override this behavior by configuring `method`. Depending on the API requirements you might need to configure further properties, like headers, etc.
+The API of the service providing additional attributes about the authenticated user. At least the `url` must be configured. This mechanism allows templating of the url and makes the `Subject` object available to it. By default, this authorizer type uses HTTP `POST` to send the rendered payload to the endpoint. You can however override this behavior by configuring `method`. Depending on the API requirements you might need to configure further properties, like headers, etc as well.
 
 * *`forward_headers`*: _string array_ (optional, overridable)
 +

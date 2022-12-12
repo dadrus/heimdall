@@ -362,7 +362,7 @@ enable_http_cache: true
 
 == Error Condition
 
-This type supports definition of conditions, under which an error handler should execute its logic. Such conditions are required for all error handlers, but the default one. All condition elements are evaluated using boolean `and`. Following conditions are possible:
+This type supports definition of conditions, under which an error handler mechanism should execute its logic. Such conditions are required for all error handler mechanisms, but the default one. All condition elements are evaluated using boolean `and`. Following conditions are possible:
 
 * *`error`*: _link:{{< relref "#_error_descriptor" >}}[Error Descriptor] array_ (mandatory)
 +
@@ -435,9 +435,9 @@ An error type to match.
 
 * *`raised_by`*: _string_ (optional)
 +
-The identifier of the pipeline handler, which raised this error.
+The identifier of the pipeline mechanism, which raised this error.
 
-CAUTION: Heimdall does not verify the integrity of the pipeline handler identifier configured using `raised_by` on start or while loading rules. Thus, if there is no pipeline handler with the given identifier, the error will not match.
+CAUTION: heimdall does not verify the integrity of the pipeline mechanism identifier configured using `raised_by` on start or while loading rules. Thus, if there is no mechanism with the given identifier, the error will not match.
 
 .Error Descriptor configuration
 ====
@@ -447,7 +447,7 @@ type: authentication_error
 raised_by: my_oauth2_authenticator
 ----
 
-Here the descriptor says, the expected error is of type `authentication_error` and should have been raise d by a pipeline handler with the id `my_oauth2_authenticator`.
+Here the descriptor says, the expected error is of type `authentication_error` and should have been raised by a mechanism with the id `my_oauth2_authenticator`.
 ====
 
 == Error Type

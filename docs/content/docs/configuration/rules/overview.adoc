@@ -1,8 +1,8 @@
 ---
-title: "Rules Overview"
+title: "Overview"
 date: 2022-06-09T22:13:32+02:00
 draft: false
-weight: 100
+weight: 65
 menu:
   docs:
     weight: 5
@@ -16,8 +16,9 @@ Core aspects of Heimdall are rules. These let Heimdall execute logic required by
 
 All rule specific static configuration can be done by making use of Heimdall's `rules` option.
 
-In general, following three aspects are important when dealing with rules:
+In general, following aspects are important when dealing with rules:
 
+* link:{{< relref "pipeline_mechanisms/overview.adoc" >}}[Pipeline Mechanisms], which describes the available mechanisms for different purposes, like authentication, authorization, etc.
 * link:{{< relref "configuration.adoc" >}}[Rule Definition], which describes the configuration options of a single rule and how the link:{{< relref "./pipeline_mechanisms/overview.adoc" >}}[pipeline mechanisms] are used.
 * link:{{< relref "providers.adoc" >}}[Providers] which describes available options on how rules can be loaded.
 * link:{{< relref "default.adoc" >}}[Default Rule], which describes, how the default rule can be configured and used.

@@ -128,7 +128,7 @@ For structured configuration, like the definition of the authenticators in the e
 [source, yaml]
 ----
 rules:
-  pipeline:
+  mechanisms:
     authenticators:
     - id: anonymous_authenticator
       type: anonymous
