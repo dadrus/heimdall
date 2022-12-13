@@ -87,6 +87,7 @@ func (m *jwtUnifier) Execute(ctx heimdall.Context, sub *subject.Subject) error {
 		cacheEntry any
 		jwtToken   string
 		ok         bool
+		err        error
 	)
 
 	cacheKey := m.calculateCacheKey(sub, ctx.Signer())
@@ -104,7 +105,7 @@ func (m *jwtUnifier) Execute(ctx heimdall.Context, sub *subject.Subject) error {
 	if len(jwtToken) == 0 {
 		logger.Debug().Msg("Generating new JWT")
 
-		jwtToken, err := m.generateToken(ctx, sub)
+		jwtToken, err = m.generateToken(ctx, sub)
 		if err != nil {
 			return err
 		}
