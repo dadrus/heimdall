@@ -32,11 +32,12 @@ func TestNewKeyStore(t *testing.T) {
 
 	for _, tc := range []struct {
 		uc     string
-		conf   config.Configuration
+		conf   *config.Configuration
 		assert func(t *testing.T, ks keystore.KeyStore, err error)
 	}{
 		{
-			uc: "signer not configured",
+			uc:   "signer not configured",
+			conf: &config.Configuration{},
 			assert: func(t *testing.T, ks keystore.KeyStore, err error) {
 				t.Helper()
 
@@ -51,7 +52,7 @@ func TestNewKeyStore(t *testing.T) {
 		},
 		{
 			uc: "signer configured",
-			conf: config.Configuration{
+			conf: &config.Configuration{
 				Signer: config.SignerConfig{KeyStore: file.Name()},
 			},
 			assert: func(t *testing.T, ks keystore.KeyStore, err error) {

@@ -16,7 +16,7 @@ var Module = fx.Options(
 	fx.Invoke(registerCacheEviction),
 )
 
-func newCache(conf config.Configuration, logger zerolog.Logger) Cache {
+func newCache(conf *config.Configuration, logger zerolog.Logger) Cache {
 	if len(conf.Cache.Type) == 0 {
 		logger.Info().Msg("Instantiating in memory cache")
 

@@ -26,7 +26,7 @@ import (
 type appArgs struct {
 	fx.In
 
-	Config     config.Configuration
+	Config     *config.Configuration
 	Registerer prometheus.Registerer
 	Cache      cache.Cache
 	Logger     zerolog.Logger

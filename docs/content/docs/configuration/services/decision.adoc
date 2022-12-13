@@ -1,0 +1,152 @@
+---
+title: "Decision"
+date: 2022-06-09T18:55:36+02:00
+draft: false
+weight: 35
+menu: 
+  docs:
+    weight: 10
+    parent: "Services"
+---
+
+Decision is one of the operating modes supported by Heimdall, used if you start Heimdall with `heimdall serve decision`. By default, Heimdall listens on `0.0.0.0:4456/` endpoint for incoming requests in this mode of operation and also configures useful default timeouts. No other options are configured. You can, and should however adjust the configuration for your needs.
+
+This service exposes only the Decision API endpoint.
+
+== Configuration
+
+The configuration for the Decision service can be adjusted in the `decision` property, which lives in the `serve` property of heimdall's configuration and supports the following properties.
+
+* *`host`*: _string_ (optional)
++
+By making use of this property, you can specify the TCP/IP address on which heimdall should listen for connections from client applications. The entry `0.0.0.0` allows listening for all IPv4 addresses. `0.0.0.0` is also the default setting.
++
+.Configure heimdall to allow only local TCP/IP “loopback” connections to be made.
+====
+Makes actually only sense, if your reverse proxy/gateway, which communicates with Heimdall, runs on the same machine.
+
+[source, yaml]
+----
+decision:
+  host: 127.0.0.1
+----
+====
+
+* *`port`*: _integer_ (optional)
++
+By making use of this property, you can specify the TCP port the heimdall should listen on. Defaults to `4456`.
++
+.Configure heimdall to listen on port `4444` for Decision API requests.
+====
+[source, yaml]
+----
+decision:
+  port: 4444
+----
+====
+
+* *`verbose_errors`*: _boolean_ (optional)
++
+By making use of this property you can instruct heimdall's default error handler to preserve error information and provide it in the response body to the caller. Defaults to `false`.
++
+Heimdall supports MIME type negotiation. So, if your reverse proxy/gateway sets the HTTP `Accept` header to e.g. `application/json`, and Heimdall run into an unhandled internal error condition, in addition to responding with `500 Internal Server Error`, it will render an error message, like shown below, if `verbose_errors` has been set to `true`.
++
+[source, json]
+----
+{
+  "code": "internalServerError",
+  "message": "whatever led to the error"
+}
+----
++
+The `message` will however contain just high-level information, like "failed to parse something", but will not contain any stack traces.
++
+.Configure verbose errors
+====
+[source, yaml]
+----
+decision:
+  verbose_errors: true
+----
+====
+
+* *`timeout`*: _link:{{< relref "configuration_types.adoc#_timeout" >}}[Timeout]_ (optional)
++
+Like written in the introduction of this section, Heimdall configures useful timeout defaults. You can however override this by making use of the `timeout` option and specifying the timeouts, you need.
++
+.Setting the read timeout to 1 second, write timeout to 2 seconds and the idle timeout to 1 minute.
+====
+[source, yaml]
+----
+decision:
+  timeout:
+    read: 1s
+    write: 2s
+    idle: 1m
+----
+====
+
+* *`cors`*: _link:{{< relref "configuration_types.adoc#_cors" >}}[CORS]_ (optional)
++
+https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS[CORS] (Cross-Origin Resource Sharing) headers can be added and configured by making use of this option. This functionality allows for advanced security features to quickly be set. If CORS headers are set, then the Heimdall does not pass preflight requests to its decision pipeline, instead the response will be generated and sent back to the client directly.
++
+.Possible CORS configuration
+====
+[source, yaml]
+----
+decision:
+  cors:
+    allowed_origins:
+      - example.org
+    allowed_methods:
+      - HEAD
+      - PATCH
+    allow_credentials: true
+    max_age: 10s
+----
+====
+
+* *`tls`*: _link:{{< relref "configuration_types.adoc#_tls" >}}[TLS]_ (optional)
++
+By default, the Decision service accepts HTTP requests. Depending on your deployment scenario, you could require Heimdall to accept HTTPS requests only. You can do so by making use of this option.
++
+.TLS configuration
+====
+[source, yaml]
+----
+decision:
+  tls:
+    key: /path/to/private_key.pem
+    cert: /path/to/certificate.pem
+----
+====
+
+[#_trusted_proxies]
+* *`trusted_proxies`*: _string array_ (optional)
++
+The usage of the Decision API makes only sense, if operated behind some sort of proxy, like API Gateway, etc. In such cases certain header information may be sent to Heimdall using special `X-Forwarded-*` headers or the https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Forwarded[Forwarded] header. For example, the `Host` HTTP header is usually used to return the requested host. But when you’re behind a proxy, the actual host may be stored in an `X-Forwarded-Host` header, which could, however, also be spoofed.
++
+To prevent header spoofing and allowing such headers to be accepted from trusted proxies only (so the systems, you have configured to make use of Heimdall's Decision API), you should configure the `trusted_proxies` option and list the IPs, or IP ranges (CIDR notation) of your proxies, which make use of that service. If not configured, Heimdall will not accept those headers from any client.
++
+.Enable the usage of the above said headers for only those requests, which came from the IPs listed in the configuration.
+====
+[source, yaml]
+----
+decision:
+  trusted_proxies:
+    - 192.168.2.15
+    - 192.168.2.16 
+----
+====
++
+.Enable the usage of the above said headers for only those requests, which came from the network listed in the configuration.
+====
+[source, yaml]
+----
+decision:
+  trusted_proxies:
+    - 192.168.2.0/24
+----
+====
+
+

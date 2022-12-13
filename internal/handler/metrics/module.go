@@ -22,7 +22,7 @@ type hooksArgs struct {
 	fx.In
 
 	Lifecycle fx.Lifecycle
-	Config    config.Configuration
+	Config    *config.Configuration
 	Logger    zerolog.Logger
 	App       *fiber.App `name:"metrics"`
 }

@@ -27,7 +27,7 @@ type handlerArgs struct {
 	App        *fiber.App `name:"metrics"`
 	Registerer prometheus.Registerer
 	Gatherer   prometheus.Gatherer
-	Config     config.Configuration
+	Config     *config.Configuration
 	Logger     zerolog.Logger
 }
 

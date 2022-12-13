@@ -2,7 +2,7 @@
 title: "Rules Overview"
 date: 2022-06-09T22:13:32+02:00
 draft: false
-weight: 100
+weight: 65
 menu:
   docs:
     weight: 5
@@ -10,15 +10,16 @@ menu:
 ---
 
 
-This section explains how rules can be defined and used in detail. Before diving onto this topic, we recommend to make yourself familiar with the principal architecture and components.
+This section explains how rules can be defined and used in detail. Before diving onto this topic, we recommend to make yourself familiar with the principal link:{{< relref "/docs/getting_started/concepts.adoc" >}}[architecture and concepts].
 
-Core aspects of Heimdall are rules. These let Heimdall execute logic required by your upstream service to authenticate, authorize the incoming requests, enrich the information about the subject and mutate it according to the needs of the upstream service. However, to be able to define even a single rule, you must configure link:{{< relref "/docs/configuration/pipeline/overview.adoc" >}}[pipeline handlers], which you can then reference according to your, respectively the needs of your particular upstream service. Rules are dynamic by nature and can come and go together with the upstream service defining these.
+Core aspects of heimdall are rules. These let heimdall execute logic required by your upstream service to authenticate, authorize the incoming requests, enrich the information about the subject and transform it according your needs. However, to be able to define even a single rule, you must configure link:{{< relref "./pipeline_mechanisms/overview.adoc" >}}[pipeline mechanisms], which you can then use in any rules, you define. Rules are dynamic by nature and can come and go together with the upstream service defining these.
 
-All rule specific static configuration can be done by making use of Heimdall's `rules` option.
+All rule specific static configuration, including the definition of the aforesaid mechanisms can be done within heimdall's `rules` property.
 
-In general, following three aspects are important when dealing with rules:
+In general, following aspects are important when dealing with rules:
 
-* link:{{< relref "rule_configuration.adoc" >}}[Rule Definition], which describes the configuration options of a single rule and how the link:{{< relref "/docs/configuration/pipeline/overview.adoc" >}}[pipeline handlers] are used.
-* link:{{< relref "providers.adoc" >}}[Providers] which describes available options on how rules can be loaded.
-* link:{{< relref "default_rule.adoc" >}}[Default Rule], which describes, how the default rule can be configured and used.
+* link:{{< relref "pipeline_mechanisms/overview.adoc" >}}[Pipeline Mechanisms], which build the foundation of each and every possible pipeline defined by any single rule.
+* link:{{< relref "configuration.adoc" >}}[Rule], which assembles the individual pipeline by making use of previously defined link:{{< relref "pipeline_mechanisms/overview.adoc" >}}[mechanisms] and which is executed, when the rule matches the request. For the purpose of the latter, it also defines the url patterns.
+* link:{{< relref "default.adoc" >}}[Default Rule], which, if defined, is executed if no other rule matched the request.
+* link:{{< relref "providers.adoc" >}}[Rule Providers], which load the rules from different sources.
 

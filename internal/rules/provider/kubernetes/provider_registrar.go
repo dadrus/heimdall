@@ -19,7 +19,7 @@ type registrationArguments struct {
 	fx.In
 
 	Lifecycle fx.Lifecycle
-	Config    config.Configuration
+	Config    *config.Configuration
 	K8sConfig ConfigFactory
 	Queue     event.RuleSetChangedEventQueue
 }

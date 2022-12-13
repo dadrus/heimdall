@@ -20,7 +20,7 @@ Available Logging configuration options are described in link:{{< relref "/docs/
 
 === Regular Log Events
 
-If you configure Heimdall to log in `text` format, you can expect output similar to the one shown below:
+If you configure heimdall to log in `text` format, you can expect output similar to the one shown below:
 
 [source, log]
 ----
@@ -93,9 +93,9 @@ Each log statement does also include the following fields in both log formats fo
 
 === Access Log Events
 
-In addition to regular logs, Heimdall emits access logs. These events are always emitted regardless the configured log level and the log level of these events in the log output is always `INFO`.
+In addition to regular logs, heimdall emits access logs. These events are always emitted regardless the configured log level and the log level of these events in the log output is always `INFO`.
 
-Each request to any of Heimdall's endpoints will result in two access events:
+Each request to any of heimdall's endpoints will result in two access events:
 
 * event describing the start of the transaction, and an
 * event describing the finalization of the transaction.
@@ -110,7 +110,7 @@ Following are the fields, which are always set for both events:
 * `_http_host` - The host part of the URI, the client is using while communicating with Heimdall.
 * `_http_scheme` - The scheme part of the URI, the client is using while communicating with Heimdall.
 
-If the request comes from an intermediary, like e.g. an API Gateway and heimdall is configured to trust that "proxy" (see link:{{< relref "/docs/configuration/services/decision_api.adoc#_trusted_proxies" >}}[`trusted_proxies` configuration] of the Decision service, as well as the link:{{< relref "/docs/configuration/services/proxy.adoc#_trusted_proxies" >}}[`trusted_proxies` configuration] of the Proxy service), then following fields will be part of the events as well if the corresponding HTTP headers were sent.
+If the request comes from an intermediary, like e.g. an API Gateway and heimdall is configured to trust that "proxy" (see link:{{< relref "/docs/configuration/services/decision.adoc#_trusted_proxies" >}}[`trusted_proxies` configuration] of the Decision service, as well as the link:{{< relref "/docs/configuration/services/proxy.adoc#_trusted_proxies" >}}[`trusted_proxies` configuration] of the Proxy service), then following fields will be part of the events as well if the corresponding HTTP headers were sent.
 
 * `_http_x_forwarded_proto` - The value of the "X-Forwarded-Proto" header.
 * `_http_x_forwarded_host` - The value of the "X-Forwarded-Host" header.
@@ -126,7 +126,7 @@ Following are the fields, which are set in the transaction finalization event in
 * `_tx_duration_ms` - The duration of the transaction in milliseconds. If heimdall is operated in proxy mode, it will also include the time used to communicate with the upstream service.
 * `_access_granted` - Set either to `true` or `false`, indicating whether heimdall granted access or not.
 * `_subject` - The subject identifier if the access was granted.
-* `error` - The information about an error, which e.g. led to the denial of the request.
+* `_error` - The information about an error, which e.g. led to the denial of the request.
 
 Following are the fields, which are set if tracing is enabled:
 
@@ -134,7 +134,7 @@ Following are the fields, which are set if tracing is enabled:
 * `_span_id` - The span id as defined by OpenTelemetry of the current transaction.
 * `_parent_id` - The span id of the callee, which started the given transaction. Only present if the callee set the corresponding tracing header.
 
-If you configure Heimdall to log in `text` format, you can expect output as shown below:
+If you configure heimdall to log in `text` format, you can expect output as shown below:
 
 [source, text]
 ----
@@ -203,7 +203,7 @@ Configured propagators are used for inbound, as well as for outbound traffic.
 
 === Span Exporters
 
-Span Exporter handle the delivery of spans to external receivers (collectors, or agents). This is the final component in the trace export pipeline and typically provided by the APM vendor, like Jaeger, Zipkin, Instana, etc. Since not every multi-service system may have an up to day telemetry receiver, which supports protocols defined by OTEL, interoperability can be achieved by configuring the required exporters by making use of the `OTEL_TRACES_EXPORTER` environment variable. OTEL defines the following values for this variable:
+Span Exporter handle the delivery of spans to external receivers (collectors, or agents). This is the final component in the trace export pipeline and typically provided by the APM vendor, like Jaeger, Zipkin, Instana, etc. Since not every multi-service system may have an up to day telemetry receiver supporting protocols defined by OTEL, interoperability can be achieved by configuring the required exporters by making use of the `OTEL_TRACES_EXPORTER` environment variable. OTEL defines the following values for this variable:
 
 * `otlp` - https://opentelemetry.io/docs/reference/specification/protocol/otlp/[OTLP] exporter. Enabled by default if `OTEL_TRACES_EXPORTER` is not set.
 * `jaeger` - https://github.com/jaegertracing/jaeger-idl/blob/main/thrift/jaeger.thrift[Jaeger Thrift] exporter to export spans in Jaeger data model.

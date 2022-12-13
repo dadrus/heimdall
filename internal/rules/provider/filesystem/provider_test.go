@@ -10,7 +10,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/rules/event"
 	"github.com/dadrus/heimdall/internal/x"
 )
@@ -203,7 +202,7 @@ func TestStartProvider(t *testing.T) {
 				t.Helper()
 
 				provider, err := newProvider(
-					&config.FileBasedRuleProviderConfig{Src: dir, Watch: true},
+					map[string]any{"src": dir, "watch": true},
 					make(event.RuleSetChangedEventQueue, 10),
 					log.Logger)
 				require.NoError(t, err)
@@ -259,7 +258,7 @@ func TestStartProvider(t *testing.T) {
 				t.Helper()
 
 				provider, err := newProvider(
-					&config.FileBasedRuleProviderConfig{Src: file.Name(), Watch: true},
+					map[string]any{"src": file.Name(), "watch": true},
 					make(event.RuleSetChangedEventQueue, 10),
 					log.Logger)
 				require.NoError(t, err)

@@ -15,7 +15,7 @@ func TestNewConfigurationFromStructWithDefaultsOnly(t *testing.T) {
 
 	// THEN
 	require.NoError(t, err)
-	require.Equal(t, defaultConfig, config)
+	require.Equal(t, defaultConfig, *config)
 }
 
 func TestNewConfigurationWithConfigFile(t *testing.T) {

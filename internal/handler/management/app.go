@@ -23,7 +23,7 @@ import (
 type appArgs struct {
 	fx.In
 
-	Config     config.Configuration
+	Config     *config.Configuration
 	Registerer prometheus.Registerer
 	Logger     zerolog.Logger
 }

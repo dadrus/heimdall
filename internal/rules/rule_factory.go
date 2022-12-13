@@ -8,7 +8,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/pipeline"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms"
 	"github.com/dadrus/heimdall/internal/rules/patternmatcher"
 	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/x"
@@ -21,7 +21,9 @@ type RuleFactory interface {
 	DefaultRule() rule.Rule
 }
 
-func NewRuleFactory(hf pipeline.HandlerFactory, conf config.Configuration, logger zerolog.Logger) (RuleFactory, error) {
+func NewRuleFactory(hf mechanisms.Factory, conf *config.Configuration, logger zerolog.Logger) (
+	RuleFactory, error,
+) {
 	logger.Debug().Msg("Creating rule factory")
 
 	rf := &ruleFactory{hf: hf, hasDefaultRule: false, logger: logger}
@@ -36,7 +38,7 @@ func NewRuleFactory(hf pipeline.HandlerFactory, conf config.Configuration, logge
 }
 
 type ruleFactory struct {
-	hf             pipeline.HandlerFactory
+	hf             mechanisms.Factory
 	logger         zerolog.Logger
 	defaultRule    *ruleImpl
 	hasDefaultRule bool

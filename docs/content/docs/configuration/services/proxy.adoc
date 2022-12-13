@@ -47,7 +47,7 @@ proxy:
 
 * *`verbose_errors`*: _boolean_ (optional)
 +
-By making use of this property you can instruct Heimdall's default error handler to preserve error information and provide it in the response body to the caller. Defaults to `false`.
+By making use of this property you can instruct heimdall's default error handler to preserve error information and provide it in the response body to the caller. Defaults to `false`.
 +
 Heimdall supports MIME type negotiation. So, if the client sets the HTTP `Accept` header to e.g. `application/json`, and Heimdall run into an unhandled internal error condition, in addition to responding with `500 Internal Server Error`, it will render an error message, like shown below, if `verbose_errors` has been set to `true`.
 +

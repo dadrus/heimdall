@@ -1,5 +1,5 @@
 ---
-title: "Common Configuration Options"
+title: "Configuration Types"
 date: 2022-06-09T18:55:36+02:00
 draft: false
 weight: 47
@@ -11,7 +11,7 @@ menu:
 
 == Timeout
 
-Following configuration options are supported:
+Following configuration properties are supported:
 
 * *`read`*: _link:{{< relref "#_duration" >}}[Duration]_ (optional)
 +
@@ -43,7 +43,7 @@ So with `10s` you can define the duration of 10 seconds and with `2h` you can sa
 
 == CORS
 
-https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS[CORS] (Cross-Origin Resource Sharing) headers can be added and configured by making use of this option. This functionality allows for advanced security features to quickly be set. If CORS headers are set, then the Heimdall does not pass preflight requests to its decision pipeline, instead the response will be generated and sent back to the client directly. Following configuration options are supported:
+https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS[CORS] (Cross-Origin Resource Sharing) headers can be added and configured by making use of this type. This functionality allows for advanced security features to quickly be set. If CORS headers are set, then heimdall does not pass preflight requests to its decision pipeline, instead the response will be generated and sent back to the client directly. Following properties are supported:
 
 * *`allowed_origins`*: _string array_ (optional)
 +
@@ -84,7 +84,7 @@ max_age: 10s
 ====
 
 == TLS
-Following are the supported TLS configuration options:
+Following are the supported TLS configuration properties:
 
 * *`key`*: _string_ (mandatory)
 +

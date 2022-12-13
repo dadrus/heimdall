@@ -98,7 +98,7 @@ func TestInitializeOTEL(t *testing.T) {
 			setupMocks(t, mock)
 
 			// WHEN
-			err := initializeOTEL(mock, config.Configuration{Tracing: tc.conf}, logger)
+			err := initializeOTEL(mock, &config.Configuration{Tracing: tc.conf}, logger)
 			otel.Handle(fmt.Errorf("test error")) // nolint: goerr113
 			propagator := otel.GetTextMapPropagator()
 

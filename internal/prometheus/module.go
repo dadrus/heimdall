@@ -14,7 +14,7 @@ func initPrometheusRegistry() (prometheus.Registerer, prometheus.Gatherer) {
 	reg := prometheus.NewRegistry()
 
 	reg.MustRegister(collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}))
-	reg.MustRegister(collectors.NewGoCollector(collectors.WithGoCollections(collectors.GoRuntimeMetricsCollection)))
+	reg.MustRegister(collectors.NewGoCollector(collectors.WithGoCollectorRuntimeMetrics(collectors.MetricsAll)))
 
 	return reg, reg
 }

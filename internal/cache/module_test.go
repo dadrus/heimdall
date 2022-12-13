@@ -22,11 +22,12 @@ func TestNewCache(t *testing.T) {
 
 	for _, tc := range []struct {
 		uc     string
-		conf   config.Configuration
+		conf   *config.Configuration
 		assert func(t *testing.T, cch Cache)
 	}{
 		{
-			uc: "in memory cache",
+			uc:   "in memory cache",
+			conf: &config.Configuration{},
 			assert: func(t *testing.T, cch Cache) {
 				t.Helper()
 
@@ -35,7 +36,7 @@ func TestNewCache(t *testing.T) {
 		},
 		{
 			uc:   "disabled cache",
-			conf: config.Configuration{Cache: config.CacheConfig{Type: "foo"}},
+			conf: &config.Configuration{Cache: config.CacheConfig{Type: "foo"}},
 			assert: func(t *testing.T, cch Cache) {
 				t.Helper()
 

@@ -26,7 +26,7 @@ type handlerArgs struct {
 	App             *fiber.App `name:"decision"`
 	RulesRepository rules.Repository
 	KeyStore        keystore.KeyStore
-	Config          config.Configuration
+	Config          *config.Configuration
 	Logger          zerolog.Logger
 }
 

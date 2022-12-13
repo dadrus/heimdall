@@ -9,20 +9,20 @@ menu:
     weight: 40
 ---
 
-Configuration in Heimdall can refer to two different things:
+Configuration in heimdall can refer to two different things:
 
-* The fully dynamic link:{{< relref "/docs/configuration/rules/rule_configuration.adoc" >}}[configuration of rules] - the rule set
+* The fully dynamic link:{{< relref "/docs/configuration/rules/configuration.adoc" >}}[configuration of rules] - the rule set
 * The static startup configuration
 
-Elements in the static configuration set up the services, like link:{{< relref "/docs/configuration/services/decision_api.adoc" >}}[decision api], which basically define the entrypoints, Heimdall will listen to, the observability capabilities, like link:{{< relref "/docs/configuration/observability/logging.adoc" >}}[logging], the supported link:{{< relref "/docs/configuration/pipeline/overview.adoc" >}}[pipeline] mechanisms, the link:{{< relref "/docs/configuration/rules/default_rule.adoc" >}}[default rule], as well as the link:{{< relref "/docs/configuration/rules/providers.adoc" >}}[rule providers] (these elements are not expected to change often).
+Elements in the static configuration set up the services, like link:{{< relref "/docs/configuration/services/decision.adoc" >}}[decision api], which basically define the entry points, heimdall will listen to, the observability capabilities, like link:{{< relref "/docs/configuration/observability/logging.adoc" >}}[logging], the supported link:{{< relref "/docs/configuration/rules/pipeline_mechanisms/overview.adoc" >}}[pipeline mechanisms], the link:{{< relref "/docs/configuration/rules/default.adoc" >}}[default rule], as well as the link:{{< relref "/docs/configuration/rules/providers.adoc" >}}[rule providers] (these elements are not expected to change often).
 
-The rule set contains everything that defines how the requests are handled by Heimdall for your system. This configuration can change and is seamlessly hot-reloaded, without any request interruption or connection loss.
+The rule set contains everything that defines how the requests are handled by heimdall for your system. This configuration can change and is seamlessly hot-reloaded, without any request interruption or connection loss.
 
 == Rule Set Configuration
 
-Heimdall gets the rule sets from link:{{< relref "/docs/configuration/rules/providers.adoc" >}}[rule providers], which, depending on the provider, can load rules from a plain old configuration file, residing in the local file system, or even integrate with Kubernets to load rules from CRDs.
+Heimdall gets the rule sets from link:{{< relref "/docs/configuration/rules/providers.adoc" >}}[rule providers], which, depending on the provider, can load rules from a plain old configuration file, residing in the local file system, or even integrate with Kubernetes to load rules from custom resources.
 
-In all cases, a single rule definition adheres to the schema defined in link:{{< relref "/docs/configuration/rules/rule_configuration.adoc" >}}[rule configuration].
+In all cases, a single rule definition adheres to the schema defined in link:{{< relref "/docs/configuration/rules/configuration.adoc" >}}[rule configuration].
 
 == Static Configuration
 
@@ -33,11 +33,11 @@ There are two different, not mutually exclusive (you can combine them), ways to 
 
 The evaluation happens also in the order stated above. That also means, you can always overwrite configuration options defined in a configuration file with corresponding environment variables.
 
-If no configuration is provided, heimdall will set useful defaults. These are however not enough, as heimdall doesn't know your context - which mechanisms are required for the one or the other of your upstream endpoints. So, you'll not really be able to use heimdall as all requests will be answered with an HTTP `404 Not Found` response code.
+If no configuration is provided, heimdall will set useful defaults. These are however not enough, as heimdall doesn't know your context - which mechanisms are required for the one or the other of your upstream services. So, you'll not really be able to use heimdall as all requests will be answered with an HTTP `405 Method Not Allowed` response code.
 
 === Configuration File
 
-At start up, Heimdall searches for static configuration in a file named `heimdall.yaml` in
+At start up, heimdall searches for static configuration in a file named `heimdall.yaml` in
 
 * `/etc/heimdall`
 * `$HOME/.config`
@@ -48,22 +48,22 @@ You can also override this using the `config` argument: `heimdall --config <path
 .Possible minimal fully working configuration
 ====
 
-The configuration below defines a link:{{< relref "/docs/configuration/rules/default_rule.adoc" >}}[default rule] which lets Heimdall create a JSON Web Token (JWT) with `sub` claim set to `anonymous` for every request on every URL for the HTTP methods GET and POST. The JWT itself will be put into the `Authorization` header as a bearer token.
+The configuration below defines a link:{{< relref "/docs/configuration/rules/default.adoc" >}}[default rule] which lets heimdall create a JSON Web Token (JWT) with `sub` claim set to `anonymous` for every request on every URL for the HTTP methods GET and POST. The JWT itself will be put into the `Authorization` header as a bearer token.
 
 [source, yaml]
 ----
 log:
   level: info
 
-pipeline:
-  authenticators:
+rules:
+  mechanisms:
+    authenticators:
     - id: anonymous_authenticator
       type: anonymous
-  mutators:
+    mutators:
     - id: create_jwt
       type: jwt
 
-rules:
   default:
     methods:
       - GET
@@ -102,7 +102,7 @@ HEIMDALLCFG_LOG_LEVEL=info
 
 * Array entries must be defined using `\_<IDX>[_]`, with `IDX` being the index of the array starting with `0` and `_` in brackets being only required, if the value of the configured element has a structure/hierarchy.
 +
-E.g. the `methods` of the link:{{< relref "/docs/configuration/rules/default_rule.adoc" >}}[default rule] can be configured in a config file as
+E.g. the `methods` of the link:{{< relref "/docs/configuration/rules/default.adoc" >}}[default rule] can be configured in a config file as
 +
 [source, yaml]
 ----
@@ -125,8 +125,9 @@ For structured configuration, like the definition of the authenticators in the e
 +
 [source, yaml]
 ----
-pipeline:
-  authenticators:
+rules:
+  mechanisms:
+    authenticators:
     - id: anonymous_authenticator
       type: anonymous
 ----
@@ -135,13 +136,13 @@ The corresponding environment variables would be
 +
 [source, bash]
 ----
-HEIMDALLCFG_PIPELINE_AUTHENTICATORS_0_ID=anonymous_authenticator
-HEIMDALLCFG_PIPELINE_AUTHENTICATORS_0_TYPE=anonymous
+HEIMDALLCFG_RULES_MECHANISMS_AUTHENTICATORS_0_ID=anonymous_authenticator
+HEIMDALLCFG_RULES_MECHANISMS__AUTHENTICATORS_0_TYPE=anonymous
 ----
 
 * If a name of a property has `\_` it must be escaped with an additional `_`.
 +
-E.g. the service name, appearing for Heimdall for your tracing backend can be configured in a configuration file with
+E.g. the service name, appearing for heimdall for your tracing backend can be configured in a configuration file with
 +
 [source, yaml]
 ----

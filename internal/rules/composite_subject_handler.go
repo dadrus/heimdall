@@ -4,7 +4,7 @@ import (
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/pipeline/subject"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
 )
 
 type compositeSubjectHandler []subjectHandler

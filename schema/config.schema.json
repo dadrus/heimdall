@@ -679,7 +679,7 @@
         "scopes": {
           "oneOf": [
             {
-              "description": "An array of OAuth 2.0 scopes that are required when accessing an endpoint protected by this handler.\n If the token used in the Authorization header did not request that specific scope, the request is denied.",
+              "description": "An array of OAuth 2.0 scopes that are required when accessing an endpoint protected by this mechanism.\n If the token used in the Authorization header did not request that specific scope, the request is denied.",
               "type": "object",
               "properties": {
                 "matching_strategy": {
@@ -701,7 +701,7 @@
               }
             },
             {
-              "description": "An array of OAuth 2.0 scopes that are required when accessing an endpoint protected by this handler.\n If the token used in the Authorization header did not request that specific scope, the request is denied. When only the actual scopes are configured the matching strategy is 'exact'",
+              "description": "An array of OAuth 2.0 scopes that are required when accessing an endpoint protected by this mechanism.\n If the token used in the Authorization header did not request that specific scope, the request is denied. When only the actual scopes are configured the matching strategy is 'exact'",
               "type": "array",
               "items": {
                 "type": "string"
@@ -710,7 +710,7 @@
           ]
         },
         "audience": {
-          "description": "An array of audiences that are required when accessing an endpoint protected by this handler.",
+          "description": "An array of audiences that are required when accessing an endpoint protected by this mechanism.",
           "type": "array",
           "items": {
             "type": "string"
@@ -1323,7 +1323,7 @@
           "$ref": "#/definitions/errorType"
         },
         "raised_by": {
-          "description": "Identifier of the pipeline handler, which raised this error",
+          "description": "Identifier of the pipeline mechanism, which raised this error",
           "type": "string"
         }
       }
@@ -1353,7 +1353,7 @@
             }
           },
           "request_headers": {
-            "description": "Defines conditions the HTTP Request Headers must full fill for this handler to match the request. Subkeys are matched with AND. If, for example, content-type and accept-type are set, both requirements must be matched for the handler to be responsible.",
+            "description": "Defines conditions the HTTP Request Headers must fulfill for this mechanism to match the request. Subkeys are matched with AND. If, for example, content-type and accept-type are set, both requirements must be matched for the handler to be responsible.",
             "type": "object",
             "additionalProperties": {
               "type": "array"
@@ -1588,6 +1588,119 @@
           "default": "default"
         }
       }
+    },
+    "mechanismDefinitions": {
+      "description": "Individual pipeline mechanisms used by rules",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "authenticators",
+        "mutators"
+      ],
+      "properties": {
+        "error_handlers": {
+          "description": "Individual error handler configurations",
+          "type": "array",
+          "additionalItems": false,
+          "items": {
+            "anyOf": [
+              {
+                "$ref": "#/definitions/errorHandlerWWWAuthenticate"
+              },
+              {
+                "$ref": "#/definitions/errorsHandlerRedirect"
+              },
+              {
+                "$ref": "#/definitions/errorsHandlerDefault"
+              }
+            ]
+          }
+        },
+        "authenticators": {
+          "description": "Authenticators",
+          "type": "array",
+          "additionalItems": false,
+          "uniqueItems": true,
+          "items": {
+            "anyOf": [
+              {
+                "$ref": "#/definitions/authenticatorAnonymous"
+              },
+              {
+                "$ref": "#/definitions/authenticatorNoop"
+              },
+              {
+                "$ref": "#/definitions/authenticatorUnauthorized"
+              },
+              {
+                "$ref": "#/definitions/authenticatorGeneric"
+              },
+              {
+                "$ref": "#/definitions/authenticatorOAuth2Introspection"
+              },
+              {
+                "$ref": "#/definitions/authenticatorJwt"
+              },
+              {
+                "$ref": "#/definitions/authenticatorBasicAuth"
+              }
+            ]
+          }
+        },
+        "authorizers": {
+          "description": "Authorizers",
+          "type": "array",
+          "additionalItems": false,
+          "uniqueItems": true,
+          "items": {
+            "anyOf": [
+              {
+                "$ref": "#/definitions/authorizerAllow"
+              },
+              {
+                "$ref": "#/definitions/authorizerDeny"
+              },
+              {
+                "$ref": "#/definitions/authorizerRemote"
+              },
+              {
+                "$ref": "#/definitions/authorizerLocalCEL"
+              }
+            ]
+          }
+        },
+        "hydrators": {
+          "description": "Hydrators",
+          "type": "array",
+          "additionalItems": false,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/definitions/hydratorGeneric"
+          }
+        },
+        "mutators": {
+          "description": "Mutators",
+          "type": "array",
+          "additionalItems": false,
+          "uniqueItems": true,
+          "items": {
+            "anyOf": [
+              {
+                "$ref": "#/definitions/mutatorNoop"
+              },
+              {
+                "$ref": "#/definitions/mutatorJwt"
+              },
+              {
+                "$ref": "#/definitions/mutatorHeader"
+              },
+              {
+                "$ref": "#/definitions/mutatorCookie"
+              }
+            ]
+          }
+        }
+      }
     }
   },
   "properties": {
@@ -1699,124 +1812,15 @@
         }
       }
     },
-    "pipeline": {
-      "description": "Individual pipeline handlers used by rules",
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "authenticators",
-        "mutators"
-      ],
-      "properties": {
-        "error_handlers": {
-          "description": "Individual error handler configurations",
-          "type": "array",
-          "additionalItems": false,
-          "items": {
-            "anyOf": [
-              {
-                "$ref": "#/definitions/errorHandlerWWWAuthenticate"
-              },
-              {
-                "$ref": "#/definitions/errorsHandlerRedirect"
-              },
-              {
-                "$ref": "#/definitions/errorsHandlerDefault"
-              }
-            ]
-          }
-        },
-        "authenticators": {
-          "description": "Authenticators",
-          "type": "array",
-          "additionalItems": false,
-          "uniqueItems": true,
-          "items": {
-            "anyOf": [
-              {
-                "$ref": "#/definitions/authenticatorAnonymous"
-              },
-              {
-                "$ref": "#/definitions/authenticatorNoop"
-              },
-              {
-                "$ref": "#/definitions/authenticatorUnauthorized"
-              },
-              {
-                "$ref": "#/definitions/authenticatorGeneric"
-              },
-              {
-                "$ref": "#/definitions/authenticatorOAuth2Introspection"
-              },
-              {
-                "$ref": "#/definitions/authenticatorJwt"
-              },
-              {
-                "$ref": "#/definitions/authenticatorBasicAuth"
-              }
-            ]
-          }
-        },
-        "authorizers": {
-          "description": "Authorizers",
-          "type": "array",
-          "additionalItems": false,
-          "uniqueItems": true,
-          "items": {
-            "anyOf": [
-              {
-                "$ref": "#/definitions/authorizerAllow"
-              },
-              {
-                "$ref": "#/definitions/authorizerDeny"
-              },
-              {
-                "$ref": "#/definitions/authorizerRemote"
-              },
-              {
-                "$ref": "#/definitions/authorizerLocalCEL"
-              }
-            ]
-          }
-        },
-        "hydrators": {
-          "description": "Hydrators",
-          "type": "array",
-          "additionalItems": false,
-          "uniqueItems": true,
-          "items": {
-            "$ref": "#/definitions/hydratorGeneric"
-          }
-        },
-        "mutators": {
-          "description": "Mutators",
-          "type": "array",
-          "additionalItems": false,
-          "uniqueItems": true,
-          "items": {
-            "anyOf": [
-              {
-                "$ref": "#/definitions/mutatorNoop"
-              },
-              {
-                "$ref": "#/definitions/mutatorJwt"
-              },
-              {
-                "$ref": "#/definitions/mutatorHeader"
-              },
-              {
-                "$ref": "#/definitions/mutatorCookie"
-              }
-            ]
-          }
-        }
-      }
-    },
+
     "rules": {
       "description": "Rules to use",
       "type": "object",
       "additionalProperties": false,
       "properties": {
+        "mechanisms": {
+          "$ref": "#/definitions/mechanismDefinitions"
+        },
         "providers": {
           "description": "Where to load rules from",
           "type": "object",
@@ -1855,7 +1859,7 @@
               ]
             },
             "execute": {
-              "description": "The handlers to execute (authenticators, authorizers, etc)",
+              "description": "The mechanisms to execute (authenticators, authorizers, etc)",
               "type": "array",
               "additionalItems": false,
               "uniqueItems": true,
@@ -1864,7 +1868,7 @@
               }
             },
             "on_error": {
-              "description": "error handlers",
+              "description": "error handler mechanisms",
               "type": "array",
               "additionalItems": false,
               "uniqueItems": true,

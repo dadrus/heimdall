@@ -17,7 +17,7 @@ var Module = fx.Options( //nolint:gochecknoglobals
 	fx.Provide(NewKeyStore),
 )
 
-func NewKeyStore(conf config.Configuration, logger zerolog.Logger) (KeyStore, error) {
+func NewKeyStore(conf *config.Configuration, logger zerolog.Logger) (KeyStore, error) {
 	var (
 		ks  KeyStore
 		err error
