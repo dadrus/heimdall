@@ -1,4 +1,4 @@
-package mutators
+package unifiers
 
 import (
 	"github.com/rs/zerolog"
@@ -12,24 +12,24 @@ import (
 // by intention. Used only during application bootstrap
 // nolint
 func init() {
-	registerMutatorTypeFactory(
-		func(id string, typ string, conf map[string]any) (bool, Mutator, error) {
-			if typ != MutatorHeader {
+	registerUnifierTypeFactory(
+		func(id string, typ string, conf map[string]any) (bool, Unifier, error) {
+			if typ != UnifierHeader {
 				return false, nil, nil
 			}
 
-			mut, err := newHeaderMutator(id, conf)
+			unifier, err := newHeaderUnifier(id, conf)
 
-			return true, mut, err
+			return true, unifier, err
 		})
 }
 
-type headerMutator struct {
+type headerUnifier struct {
 	id      string
 	headers map[string]template.Template
 }
 
-func newHeaderMutator(id string, rawConfig map[string]any) (*headerMutator, error) {
+func newHeaderUnifier(id string, rawConfig map[string]any) (*headerUnifier, error) {
 	type Config struct {
 		Headers map[string]template.Template `mapstructure:"headers"`
 	}
@@ -37,7 +37,7 @@ func newHeaderMutator(id string, rawConfig map[string]any) (*headerMutator, erro
 	var conf Config
 	if err := decodeConfig(rawConfig, &conf); err != nil {
 		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration, "failed to unmarshal header mutator config").
+			NewWithMessage(heimdall.ErrConfiguration, "failed to unmarshal header unifier config").
 			CausedBy(err)
 	}
 
@@ -46,19 +46,19 @@ func newHeaderMutator(id string, rawConfig map[string]any) (*headerMutator, erro
 			NewWithMessage(heimdall.ErrConfiguration, "no headers definitions provided")
 	}
 
-	return &headerMutator{
+	return &headerUnifier{
 		id:      id,
 		headers: conf.Headers,
 	}, nil
 }
 
-func (m *headerMutator) Execute(ctx heimdall.Context, sub *subject.Subject) error {
+func (m *headerUnifier) Execute(ctx heimdall.Context, sub *subject.Subject) error {
 	logger := zerolog.Ctx(ctx.AppContext())
-	logger.Debug().Msg("Mutating using header mutator")
+	logger.Debug().Msg("Unifying using header unifier")
 
 	if sub == nil {
 		return errorchain.
-			NewWithMessage(heimdall.ErrInternal, "failed to execute header mutator due to 'nil' subject").
+			NewWithMessage(heimdall.ErrInternal, "failed to execute header unifier due to 'nil' subject").
 			WithErrorContext(m)
 	}
 
@@ -77,14 +77,14 @@ func (m *headerMutator) Execute(ctx heimdall.Context, sub *subject.Subject) erro
 	return nil
 }
 
-func (m *headerMutator) WithConfig(config map[string]any) (Mutator, error) {
+func (m *headerUnifier) WithConfig(config map[string]any) (Unifier, error) {
 	if len(config) == 0 {
 		return m, nil
 	}
 
-	return newHeaderMutator(m.id, config)
+	return newHeaderUnifier(m.id, config)
 }
 
-func (m *headerMutator) HandlerID() string {
+func (m *headerUnifier) HandlerID() string {
 	return m.id
 }

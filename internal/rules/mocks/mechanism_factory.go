@@ -8,7 +8,7 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/authorizers"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/contextualizers"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/errorhandlers"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/mutators"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/unifiers"
 )
 
 type MockFactory struct {
@@ -54,14 +54,14 @@ func (m *MockFactory) CreateContextualizer(id string, conf config.MechanismConfi
 	return nil, args.Error(1)
 }
 
-func (m *MockFactory) CreateMutator(id string, conf config.MechanismConfig) (
-	mutators.Mutator, error,
+func (m *MockFactory) CreateUnifier(id string, conf config.MechanismConfig) (
+	unifiers.Unifier, error,
 ) {
 	args := m.Called(id, conf)
 
 	if val := args.Get(0); val != nil {
 		// nolint: forcetypeassert
-		return val.(mutators.Mutator), nil
+		return val.(unifiers.Unifier), nil
 	}
 
 	return nil, args.Error(1)

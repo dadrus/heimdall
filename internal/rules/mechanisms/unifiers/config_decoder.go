@@ -1,4 +1,4 @@
-package mutators
+package unifiers
 
 import (
 	"github.com/mitchellh/mapstructure"

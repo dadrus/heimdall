@@ -4,6 +4,6 @@ type MechanismPrototypes struct {
 	Authenticators  []Mechanism `koanf:"authenticators"`
 	Authorizers     []Mechanism `koanf:"authorizers"`
 	Contextualizers []Mechanism `koanf:"contextualizers"`
-	Mutators        []Mechanism `koanf:"mutators"`
+	Unifiers        []Mechanism `koanf:"unifiers"`
 	ErrorHandlers   []Mechanism `koanf:"error_handlers"`
 }

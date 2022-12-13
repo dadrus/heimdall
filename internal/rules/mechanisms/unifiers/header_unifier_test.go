@@ -1,4 +1,4 @@
-package mutators
+package unifiers
 
 import (
 	"context"
@@ -15,44 +15,44 @@ import (
 	"github.com/dadrus/heimdall/internal/x"
 )
 
-func TestCreateCookieMutator(t *testing.T) {
+func TestCreateHeaderUnifier(t *testing.T) {
 	t.Parallel()
 
 	for _, tc := range []struct {
 		uc     string
 		id     string
 		config []byte
-		assert func(t *testing.T, err error, mut *cookieMutator)
+		assert func(t *testing.T, err error, unifier *headerUnifier)
 	}{
 		{
 			uc: "without configuration",
-			assert: func(t *testing.T, err error, mut *cookieMutator) {
+			assert: func(t *testing.T, err error, _ *headerUnifier) {
 				t.Helper()
 
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "no cookie")
+				assert.Contains(t, err.Error(), "no header")
 			},
 		},
 		{
-			uc:     "without cookie configuration",
+			uc:     "without header configuration",
 			config: []byte(``),
-			assert: func(t *testing.T, err error, mut *cookieMutator) {
+			assert: func(t *testing.T, err error, _ *headerUnifier) {
 				t.Helper()
 
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "no cookie")
+				assert.Contains(t, err.Error(), "no header")
 			},
 		},
 		{
 			uc: "with unsupported attributes",
 			config: []byte(`
-cookies:
+headers:
   foo: bar
 foo: bar
 `),
-			assert: func(t *testing.T, err error, mut *cookieMutator) {
+			assert: func(t *testing.T, err error, _ *headerUnifier) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -63,13 +63,12 @@ foo: bar
 		{
 			uc: "with bad template",
 			config: []byte(`
-cookies:
+headers:
   bar: "{{ .Subject.ID | foobar }}"
 `),
-			assert: func(t *testing.T, err error, mut *cookieMutator) {
+			assert: func(t *testing.T, err error, _ *headerUnifier) {
 				t.Helper()
 
-				require.Nil(t, mut)
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
 				assert.Contains(t, err.Error(), "failed to unmarshal")
@@ -77,23 +76,23 @@ cookies:
 		},
 		{
 			uc: "with valid config",
-			id: "cmut",
+			id: "hmut",
 			config: []byte(`
-cookies:
+headers:
   foo: bar
   bar: "{{ .Subject.ID }}"`),
-			assert: func(t *testing.T, err error, mut *cookieMutator) {
+			assert: func(t *testing.T, err error, unifier *headerUnifier) {
 				t.Helper()
 
 				require.NoError(t, err)
-				assert.Len(t, mut.cookies, 2)
-				assert.Equal(t, "cmut", mut.HandlerID())
+				assert.Len(t, unifier.headers, 2)
+				assert.Equal(t, "hmut", unifier.HandlerID())
 
-				val, err := mut.cookies["foo"].Render(nil, nil)
+				val, err := unifier.headers["foo"].Render(nil, nil)
 				require.NoError(t, err)
 				assert.Equal(t, "bar", val)
 
-				val, err = mut.cookies["bar"].Render(nil, &subject.Subject{ID: "baz"})
+				val, err = unifier.headers["bar"].Render(nil, &subject.Subject{ID: "baz"})
 				require.NoError(t, err)
 				assert.Equal(t, "baz", val)
 			},
@@ -104,15 +103,15 @@ cookies:
 			require.NoError(t, err)
 
 			// WHEN
-			mutator, err := newCookieMutator(tc.id, conf)
+			unifier, err := newHeaderUnifier(tc.id, conf)
 
 			// THEN
-			tc.assert(t, err, mutator)
+			tc.assert(t, err, unifier)
 		})
 	}
 }
 
-func TestCreateCookieMutatorFromPrototype(t *testing.T) {
+func TestCreateHeaderUnifierFromPrototype(t *testing.T) {
 	t.Parallel()
 
 	for _, tc := range []struct {
@@ -120,60 +119,60 @@ func TestCreateCookieMutatorFromPrototype(t *testing.T) {
 		id              string
 		prototypeConfig []byte
 		config          []byte
-		assert          func(t *testing.T, err error, prototype *cookieMutator, configured *cookieMutator)
+		assert          func(t *testing.T, err error, prototype *headerUnifier, configured *headerUnifier)
 	}{
 		{
 			uc: "no new configuration provided",
-			id: "cmut1",
+			id: "hun1",
 			prototypeConfig: []byte(`
-cookies:
+headers:
   foo: bar
 `),
-			assert: func(t *testing.T, err error, prototype *cookieMutator, configured *cookieMutator) {
+			assert: func(t *testing.T, err error, prototype *headerUnifier, configured *headerUnifier) {
 				t.Helper()
 
 				require.NoError(t, err)
 				assert.Equal(t, prototype, configured)
-				assert.Equal(t, "cmut1", configured.HandlerID())
+				assert.Equal(t, "hun1", configured.HandlerID())
 			},
 		},
 		{
-			uc: "configuration without cookies provided",
-			id: "cmut2",
+			uc: "configuration without headers provided",
+			id: "hun2",
 			prototypeConfig: []byte(`
-cookies:
+headers:
   foo: bar
 `),
 			config: []byte(``),
-			assert: func(t *testing.T, err error, prototype *cookieMutator, configured *cookieMutator) {
+			assert: func(t *testing.T, err error, prototype *headerUnifier, configured *headerUnifier) {
 				t.Helper()
 
 				require.NoError(t, err)
 				assert.Equal(t, prototype, configured)
-				assert.Equal(t, "cmut2", configured.HandlerID())
+				assert.Equal(t, "hun2", configured.HandlerID())
 			},
 		},
 		{
-			uc: "new cookies provided",
-			id: "cmut3",
+			uc: "new headers provided",
+			id: "hun3",
 			prototypeConfig: []byte(`
-cookies:
+headers:
   foo: bar
 `),
 			config: []byte(`
-cookies:
+headers:
   bar: foo
 `),
-			assert: func(t *testing.T, err error, prototype *cookieMutator, configured *cookieMutator) {
+			assert: func(t *testing.T, err error, prototype *headerUnifier, configured *headerUnifier) {
 				t.Helper()
 
 				require.NoError(t, err)
 				assert.NotEqual(t, prototype, configured)
 				require.NotNil(t, configured)
-				assert.NotEmpty(t, configured.cookies)
-				assert.Equal(t, "cmut3", configured.HandlerID())
+				assert.NotEmpty(t, configured.headers)
+				assert.Equal(t, "hun3", configured.HandlerID())
 
-				val, err := configured.cookies["bar"].Render(nil, nil)
+				val, err := configured.headers["bar"].Render(nil, nil)
 				require.NoError(t, err)
 				assert.Equal(t, "foo", val)
 			},
@@ -186,22 +185,22 @@ cookies:
 			conf, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
 
-			prototype, err := newCookieMutator(tc.id, pc)
+			prototype, err := newHeaderUnifier(tc.id, pc)
 			require.NoError(t, err)
 
 			// WHEN
-			mut, err := prototype.WithConfig(conf)
+			unifier, err := prototype.WithConfig(conf)
 
 			// THEN
-			cookieMut, ok := mut.(*cookieMutator)
+			headerUnifier, ok := unifier.(*headerUnifier)
 			require.True(t, ok)
 
-			tc.assert(t, err, prototype, cookieMut)
+			tc.assert(t, err, prototype, headerUnifier)
 		})
 	}
 }
 
-func TestCookieMutatorExecute(t *testing.T) {
+func TestHeaderUnifierExecute(t *testing.T) {
 	t.Parallel()
 
 	for _, tc := range []struct {
@@ -214,9 +213,9 @@ func TestCookieMutatorExecute(t *testing.T) {
 	}{
 		{
 			uc: "with nil subject",
-			id: "cmut1",
+			id: "hun1",
 			config: []byte(`
-cookies:
+headers:
   foo: bar
   bar: "{{ .Subject.ID }}"
 `),
@@ -229,13 +228,13 @@ cookies:
 
 				var identifier interface{ HandlerID() string }
 				require.True(t, errors.As(err, &identifier))
-				assert.Equal(t, "cmut1", identifier.HandlerID())
+				assert.Equal(t, "hun1", identifier.HandlerID())
 			},
 		},
 		{
 			uc: "with all preconditions satisfied",
 			config: []byte(`
-cookies:
+headers:
   foo: "{{ .Subject.Attributes.bar }}"
   bar: "{{ .Subject.ID }}"
   baz: bar
@@ -243,9 +242,9 @@ cookies:
 			configureContext: func(t *testing.T, ctx *mocks.MockContext) {
 				t.Helper()
 
-				ctx.On("AddCookieForUpstream", "foo", "baz")
-				ctx.On("AddCookieForUpstream", "bar", "FooBar")
-				ctx.On("AddCookieForUpstream", "baz", "bar")
+				ctx.On("AddHeaderForUpstream", "foo", "baz")
+				ctx.On("AddHeaderForUpstream", "bar", "FooBar")
+				ctx.On("AddHeaderForUpstream", "baz", "bar")
 			},
 			createSubject: func(t *testing.T) *subject.Subject {
 				t.Helper()
@@ -283,11 +282,11 @@ cookies:
 
 			configureContext(t, mctx)
 
-			mutator, err := newCookieMutator(tc.id, conf)
+			unifier, err := newHeaderUnifier(tc.id, conf)
 			require.NoError(t, err)
 
 			// WHEN
-			err = mutator.Execute(mctx, sub)
+			err = unifier.Execute(mctx, sub)
 
 			// THEN
 			tc.assert(t, err)

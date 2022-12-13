@@ -10,14 +10,14 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/authorizers"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/contextualizers"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/errorhandlers"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/mutators"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/unifiers"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
 var (
 	ErrAuthenticatorCreation  = errors.New("failed to create authenticator")
 	ErrAuthorizerCreation     = errors.New("failed to create authorizer")
-	ErrMutatorCreation        = errors.New("failed to create mutator")
+	ErrUnifierCreation        = errors.New("failed to create unifier")
 	ErrContextualizerCreation = errors.New("failed to create contextualizer")
 	ErrErrorHandlerCreation   = errors.New("failed to create error handler")
 )
@@ -26,7 +26,7 @@ type Factory interface {
 	CreateAuthenticator(id string, conf config.MechanismConfig) (authenticators.Authenticator, error)
 	CreateAuthorizer(id string, conf config.MechanismConfig) (authorizers.Authorizer, error)
 	CreateContextualizer(id string, conf config.MechanismConfig) (contextualizers.Contextualizer, error)
-	CreateMutator(id string, conf config.MechanismConfig) (mutators.Mutator, error)
+	CreateUnifier(id string, conf config.MechanismConfig) (unifiers.Unifier, error)
 	CreateErrorHandler(id string, conf config.MechanismConfig) (errorhandlers.ErrorHandler, error)
 }
 
@@ -107,21 +107,21 @@ func (hf *mechanismsFactory) CreateContextualizer(id string, conf config.Mechani
 	return prototype, nil
 }
 
-func (hf *mechanismsFactory) CreateMutator(id string, conf config.MechanismConfig) (
-	mutators.Mutator, error,
+func (hf *mechanismsFactory) CreateUnifier(id string, conf config.MechanismConfig) (
+	unifiers.Unifier, error,
 ) {
-	prototype, err := hf.r.Mutator(id)
+	prototype, err := hf.r.Unifier(id)
 	if err != nil {
-		return nil, errorchain.New(ErrMutatorCreation).CausedBy(err)
+		return nil, errorchain.New(ErrUnifierCreation).CausedBy(err)
 	}
 
 	if conf != nil {
-		mutator, err := prototype.WithConfig(conf)
+		unifier, err := prototype.WithConfig(conf)
 		if err != nil {
-			return nil, errorchain.New(ErrMutatorCreation).CausedBy(err)
+			return nil, errorchain.New(ErrUnifierCreation).CausedBy(err)
 		}
 
-		return mutator, nil
+		return unifier, nil
 	}
 
 	return prototype, nil

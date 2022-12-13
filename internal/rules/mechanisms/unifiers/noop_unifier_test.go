@@ -1,4 +1,4 @@
-package mutators
+package unifiers
 
 import (
 	"context"
@@ -10,27 +10,27 @@ import (
 	"github.com/dadrus/heimdall/internal/heimdall/mocks"
 )
 
-func TestNoopMutatorExecution(t *testing.T) {
+func TestNoopUnifierExecution(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
 	ctx := &mocks.MockContext{}
 	ctx.On("AppContext").Return(context.Background())
 
-	mutator := newNoopMutator()
+	unifier := newNoopUnifier()
 
 	// WHEN
-	err := mutator.Execute(ctx, nil)
+	err := unifier.Execute(ctx, nil)
 
 	// THEN
 	require.NoError(t, err)
 }
 
-func TestCreateNoopMutatorFromPrototype(t *testing.T) {
+func TestCreateNoopUnifierFromPrototype(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
-	prototype := newNoopMutator()
+	prototype := newNoopUnifier()
 
 	// WHEN
 	mut1, err1 := prototype.WithConfig(nil)

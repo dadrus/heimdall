@@ -19,7 +19,7 @@ type ruleImpl struct {
 	isDefault   bool
 	sc          compositeSubjectCreator
 	sh          compositeSubjectHandler
-	m           compositeSubjectHandler
+	un          compositeSubjectHandler
 	eh          compositeErrorHandler
 }
 
@@ -47,8 +47,8 @@ func (r *ruleImpl) Execute(ctx heimdall.Context) (*url.URL, error) {
 		return nil, err
 	}
 
-	// mutators
-	if err = r.m.Execute(ctx, sub); err != nil {
+	// unifiers
+	if err = r.un.Execute(ctx, sub); err != nil {
 		_, err := r.eh.Execute(ctx, err)
 
 		return nil, err
