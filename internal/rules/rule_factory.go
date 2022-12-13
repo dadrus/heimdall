@@ -89,19 +89,19 @@ func (f *ruleFactory) createExecutePipeline(
 			continue
 		}
 
-		id, found = pipelineStep["hydrator"]
+		id, found = pipelineStep["contextualizer"]
 		if found {
 			if len(mutators) != 0 {
 				return nil, nil, nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
-					"at least one mutator is defined before a hydrator")
+					"at least one mutator is defined before a contextualizer")
 			}
 
-			hydrator, err := f.hf.CreateHydrator(id.(string), f.getConfig(pipelineStep["config"]))
+			contextualizer, err := f.hf.CreateContextualizer(id.(string), f.getConfig(pipelineStep["config"]))
 			if err != nil {
 				return nil, nil, nil, err
 			}
 
-			subjectHandlers = append(subjectHandlers, hydrator)
+			subjectHandlers = append(subjectHandlers, contextualizer)
 
 			continue
 		}

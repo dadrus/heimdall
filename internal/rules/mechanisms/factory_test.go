@@ -12,8 +12,8 @@ import (
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/authorizers"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/contextualizers"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/errorhandlers"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/hydrators"
 	mocks2 "github.com/dadrus/heimdall/internal/rules/mechanisms/mocks"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/mutators"
 	"github.com/dadrus/heimdall/internal/x"
@@ -205,7 +205,7 @@ func TestHandlerFactoryCreateAuthorizer(t *testing.T) {
 	}
 }
 
-func TestHandlerFactoryCreateHydrator(t *testing.T) {
+func TestHandlerFactoryCreateContextualizer(t *testing.T) {
 	t.Parallel()
 
 	ID := "foo"
@@ -214,58 +214,59 @@ func TestHandlerFactoryCreateHydrator(t *testing.T) {
 		uc            string
 		id            string
 		conf          map[string]any
-		configureMock func(t *testing.T, mHydr *mocks2.MockHydrator)
-		assert        func(t *testing.T, err error, hydrator hydrators.Hydrator)
+		configureMock func(t *testing.T, mContextualizer *mocks2.MockContextualizer)
+		assert        func(t *testing.T, err error, contextualizer contextualizers.Contextualizer)
 	}{
 		{
-			uc: "no hydrator for given id",
+			uc: "no contextualizer for given id",
 			id: "bar",
-			assert: func(t *testing.T, err error, hydrator hydrators.Hydrator) {
+			assert: func(t *testing.T, err error, contextualizer contextualizers.Contextualizer) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, ErrHydratorCreation)
-				assert.Contains(t, err.Error(), "no hydrator prototype")
+				assert.ErrorIs(t, err, ErrContextualizerCreation)
+				assert.Contains(t, err.Error(), "no contextualizer prototype")
 			},
 		},
 		{
 			uc:   "with failing creation from prototype",
 			conf: map[string]any{"foo": "bar"},
-			configureMock: func(t *testing.T, mHydr *mocks2.MockHydrator) {
+			configureMock: func(t *testing.T, mContextualizer *mocks2.MockContextualizer) {
 				t.Helper()
 
-				mHydr.On("WithConfig", mock.Anything).Return(nil, heimdall.ErrArgument)
+				mContextualizer.On("WithConfig", mock.Anything).
+					Return(nil, heimdall.ErrArgument)
 			},
-			assert: func(t *testing.T, err error, hydrator hydrators.Hydrator) {
+			assert: func(t *testing.T, err error, contextualizer contextualizers.Contextualizer) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, ErrHydratorCreation)
+				assert.ErrorIs(t, err, ErrContextualizerCreation)
 				assert.Contains(t, err.Error(), heimdall.ErrArgument.Error())
 			},
 		},
 		{
 			uc:   "successful creation from prototype",
 			conf: map[string]any{"foo": "bar"},
-			configureMock: func(t *testing.T, mHydr *mocks2.MockHydrator) {
+			configureMock: func(t *testing.T, mContextualizer *mocks2.MockContextualizer) {
 				t.Helper()
 
-				mHydr.On("WithConfig", mock.Anything).Return(mHydr, nil)
+				mContextualizer.On("WithConfig", mock.Anything).Return(mContextualizer, nil)
 			},
-			assert: func(t *testing.T, err error, hydrator hydrators.Hydrator) {
+			assert: func(t *testing.T, err error, contextualizer contextualizers.Contextualizer) {
 				t.Helper()
 
 				require.NoError(t, err)
-				assert.NotNil(t, hydrator)
+				assert.NotNil(t, contextualizer)
 			},
 		},
 		{
 			uc: "successful creation with empty config",
-			assert: func(t *testing.T, err error, hydrator hydrators.Hydrator) {
+			assert: func(t *testing.T, err error, contextualizer contextualizers.Contextualizer) {
 				t.Helper()
 
 				require.NoError(t, err)
-				assert.NotNil(t, hydrator)
+				assert.NotNil(t, contextualizer)
 			},
 		},
 	} {
@@ -273,15 +274,15 @@ func TestHandlerFactoryCreateHydrator(t *testing.T) {
 			// GIVEN
 			configureMock := x.IfThenElse(tc.configureMock != nil,
 				tc.configureMock,
-				func(t *testing.T, mHydr *mocks2.MockHydrator) { t.Helper() })
+				func(t *testing.T, mHydr *mocks2.MockContextualizer) { t.Helper() })
 
-			mHydr := &mocks2.MockHydrator{}
-			configureMock(t, mHydr)
+			mContextualizer := &mocks2.MockContextualizer{}
+			configureMock(t, mContextualizer)
 
 			factory := &mechanismsFactory{
 				r: &prototypeRepository{
-					hydrators: map[string]hydrators.Hydrator{
-						ID: mHydr,
+					contextualizers: map[string]contextualizers.Contextualizer{
+						ID: mContextualizer,
 					},
 				},
 			}
@@ -289,11 +290,11 @@ func TestHandlerFactoryCreateHydrator(t *testing.T) {
 			id := x.IfThenElse(len(tc.id) != 0, tc.id, ID)
 
 			// WHEN
-			hydrator, err := factory.CreateHydrator(id, tc.conf)
+			contextualizer, err := factory.CreateContextualizer(id, tc.conf)
 
 			// THEN
-			tc.assert(t, err, hydrator)
-			mHydr.AssertExpectations(t)
+			tc.assert(t, err, contextualizer)
+			mContextualizer.AssertExpectations(t)
 		})
 	}
 }
@@ -502,7 +503,7 @@ func TestCreateHandlerFactory(t *testing.T) {
 				require.NotNil(t, factory)
 				require.NotNil(t, factory.r)
 				assert.Empty(t, factory.r.errorHandlers)
-				assert.Empty(t, factory.r.hydrators)
+				assert.Empty(t, factory.r.contextualizers)
 				assert.Empty(t, factory.r.mutators)
 				assert.Empty(t, factory.r.authenticators)
 				assert.Empty(t, factory.r.authorizers)

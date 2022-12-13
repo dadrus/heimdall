@@ -1,4 +1,4 @@
-package hydrators
+package contextualizers
 
 import (
 	"github.com/mitchellh/mapstructure"

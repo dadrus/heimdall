@@ -8,24 +8,24 @@ import (
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/authorizers"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/contextualizers"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/errorhandlers"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/hydrators"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/mutators"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
 var (
-	ErrAuthenticatorCreation = errors.New("failed to create authenticator")
-	ErrAuthorizerCreation    = errors.New("failed to create authorizer")
-	ErrMutatorCreation       = errors.New("failed to create mutator")
-	ErrHydratorCreation      = errors.New("failed to create hydrator")
-	ErrErrorHandlerCreation  = errors.New("failed to create error handler")
+	ErrAuthenticatorCreation  = errors.New("failed to create authenticator")
+	ErrAuthorizerCreation     = errors.New("failed to create authorizer")
+	ErrMutatorCreation        = errors.New("failed to create mutator")
+	ErrContextualizerCreation = errors.New("failed to create contextualizer")
+	ErrErrorHandlerCreation   = errors.New("failed to create error handler")
 )
 
 type Factory interface {
 	CreateAuthenticator(id string, conf config.MechanismConfig) (authenticators.Authenticator, error)
 	CreateAuthorizer(id string, conf config.MechanismConfig) (authorizers.Authorizer, error)
-	CreateHydrator(id string, conf config.MechanismConfig) (hydrators.Hydrator, error)
+	CreateContextualizer(id string, conf config.MechanismConfig) (contextualizers.Contextualizer, error)
 	CreateMutator(id string, conf config.MechanismConfig) (mutators.Mutator, error)
 	CreateErrorHandler(id string, conf config.MechanismConfig) (errorhandlers.ErrorHandler, error)
 }
@@ -87,21 +87,21 @@ func (hf *mechanismsFactory) CreateAuthorizer(id string, conf config.MechanismCo
 	return prototype, nil
 }
 
-func (hf *mechanismsFactory) CreateHydrator(id string, conf config.MechanismConfig) (
-	hydrators.Hydrator, error,
+func (hf *mechanismsFactory) CreateContextualizer(id string, conf config.MechanismConfig) (
+	contextualizers.Contextualizer, error,
 ) {
 	prototype, err := hf.r.Hydrator(id)
 	if err != nil {
-		return nil, errorchain.New(ErrHydratorCreation).CausedBy(err)
+		return nil, errorchain.New(ErrContextualizerCreation).CausedBy(err)
 	}
 
 	if conf != nil {
-		hydrator, err := prototype.WithConfig(conf)
+		contextualizer, err := prototype.WithConfig(conf)
 		if err != nil {
-			return nil, errorchain.New(ErrHydratorCreation).CausedBy(err)
+			return nil, errorchain.New(ErrContextualizerCreation).CausedBy(err)
 		}
 
-		return hydrator, nil
+		return contextualizer, nil
 	}
 
 	return prototype, nil

@@ -1,4 +1,4 @@
-package hydrators
+package contextualizers
 
 import (
 	"crypto/sha256"
@@ -11,7 +11,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/goccy/go-json"
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/cache"
@@ -31,23 +30,23 @@ const (
 // by intention. Used only during application bootstrap
 // nolint
 func init() {
-	registerHydratorTypeFactory(
-		func(id string, typ string, conf map[string]any) (bool, Hydrator, error) {
-			if typ != HydratorGeneric {
+	registerContextualizerTypeFactory(
+		func(id string, typ string, conf map[string]any) (bool, Contextualizer, error) {
+			if typ != ContextualizerGeneric {
 				return false, nil, nil
 			}
 
-			eh, err := newGenericHydrator(id, conf)
+			eh, err := newGenericContextualizer(id, conf)
 
 			return true, eh, err
 		})
 }
 
-type hydrationData struct {
+type contextualizerData struct {
 	payload any
 }
 
-type genericHydrator struct {
+type genericContextualizer struct {
 	id         string
 	e          endpoint.Endpoint
 	ttl        time.Duration
@@ -56,7 +55,7 @@ type genericHydrator struct {
 	fwdCookies []string
 }
 
-func newGenericHydrator(id string, rawConfig map[string]any) (*genericHydrator, error) {
+func newGenericContextualizer(id string, rawConfig map[string]any) (*genericContextualizer, error) {
 	type Config struct {
 		Endpoint       endpoint.Endpoint `mapstructure:"endpoint"`
 		ForwardHeaders []string          `mapstructure:"forward_headers"`
@@ -68,7 +67,7 @@ func newGenericHydrator(id string, rawConfig map[string]any) (*genericHydrator, 
 	var conf Config
 	if err := decodeConfig(rawConfig, &conf); err != nil {
 		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration, "failed to unmarshal generic hydrator config").
+			NewWithMessage(heimdall.ErrConfiguration, "failed to unmarshal generic contextualizer config").
 			CausedBy(err)
 	}
 
@@ -83,7 +82,7 @@ func newGenericHydrator(id string, rawConfig map[string]any) (*genericHydrator, 
 		ttl = *conf.CacheTTL
 	}
 
-	return &genericHydrator{
+	return &genericContextualizer{
 		id:         id,
 		e:          conf.Endpoint,
 		payload:    conf.Payload,
@@ -93,63 +92,59 @@ func newGenericHydrator(id string, rawConfig map[string]any) (*genericHydrator, 
 	}, nil
 }
 
-func (h *genericHydrator) Execute(ctx heimdall.Context, sub *subject.Subject) error {
+func (h *genericContextualizer) Execute(ctx heimdall.Context, sub *subject.Subject) error {
 	logger := zerolog.Ctx(ctx.AppContext())
-	logger.Debug().Msg("Hydrating using generic hydrator")
+	logger.Debug().Msg("Updating using generic contextualizer")
 
 	if sub == nil {
-		return errorchain.
-			NewWithMessage(heimdall.ErrInternal, "failed to execute generic hydrator due to 'nil' subject").
+		return errorchain.NewWithMessage(heimdall.ErrInternal,
+			"failed to execute generic contextualizer due to 'nil' subject").
 			WithErrorContext(h)
 	}
 
 	cch := cache.Ctx(ctx.AppContext())
 
 	var (
-		cacheKey          string
-		err               error
-		ok                bool
-		cacheEntry        any
-		hydrationResponse *hydrationData
+		cacheKey   string
+		err        error
+		ok         bool
+		cacheEntry any
+		response   *contextualizerData
 	)
 
 	if h.ttl > 0 {
-		cacheKey, err = h.calculateCacheKey(sub)
-		if err != nil {
-			logger.Error().Err(err).Msg("Failed to calculate cache key. Will not be able to use cache.")
-		} else {
-			cacheEntry = cch.Get(cacheKey)
-		}
+		cacheKey = h.calculateCacheKey(sub)
+		cacheEntry = cch.Get(cacheKey)
 	}
 
 	if cacheEntry != nil {
-		if hydrationResponse, ok = cacheEntry.(*hydrationData); !ok {
+		if response, ok = cacheEntry.(*contextualizerData); !ok {
 			logger.Warn().Msg("Wrong object type from cache")
 			cch.Delete(cacheKey)
 		} else {
-			logger.Debug().Msg("Reusing hydration response from cache")
+			logger.Debug().Msg("Reusing contextualizer response from cache")
 		}
 	}
 
-	if hydrationResponse == nil {
-		hydrationResponse, err = h.callHydrationEndpoint(ctx, sub)
+	if response == nil {
+		response, err = h.callEndpoint(ctx, sub)
 		if err != nil {
 			return err
 		}
 
 		if h.ttl > 0 && len(cacheKey) != 0 {
-			cch.Set(cacheKey, hydrationResponse, h.ttl)
+			cch.Set(cacheKey, response, h.ttl)
 		}
 	}
 
-	if hydrationResponse.payload != nil {
-		sub.Attributes[h.id] = hydrationResponse.payload
+	if response.payload != nil {
+		sub.Attributes[h.id] = response.payload
 	}
 
 	return nil
 }
 
-func (h *genericHydrator) WithConfig(rawConfig map[string]any) (Hydrator, error) {
+func (h *genericContextualizer) WithConfig(rawConfig map[string]any) (Contextualizer, error) {
 	if len(rawConfig) == 0 {
 		return h, nil
 	}
@@ -168,7 +163,7 @@ func (h *genericHydrator) WithConfig(rawConfig map[string]any) (Hydrator, error)
 			CausedBy(err)
 	}
 
-	return &genericHydrator{
+	return &genericContextualizer{
 		id:         h.id,
 		e:          h.e,
 		payload:    x.IfThenElse(conf.Payload != nil, conf.Payload, h.payload),
@@ -180,11 +175,11 @@ func (h *genericHydrator) WithConfig(rawConfig map[string]any) (Hydrator, error)
 	}, nil
 }
 
-func (h *genericHydrator) HandlerID() string {
+func (h *genericContextualizer) HandlerID() string {
 	return h.id
 }
 
-func (h *genericHydrator) callHydrationEndpoint(ctx heimdall.Context, sub *subject.Subject) (*hydrationData, error) {
+func (h *genericContextualizer) callEndpoint(ctx heimdall.Context, sub *subject.Subject) (*contextualizerData, error) {
 	logger := zerolog.Ctx(ctx.AppContext())
 	logger.Debug().Msg("Calling hydration endpoint")
 
@@ -197,16 +192,14 @@ func (h *genericHydrator) callHydrationEndpoint(ctx heimdall.Context, sub *subje
 	if err != nil {
 		var clientErr *url.Error
 		if errors.As(err, &clientErr) && clientErr.Timeout() {
-			return nil, errorchain.
-				NewWithMessage(heimdall.ErrCommunicationTimeout, "request to the hydration endpoint timed out").
-				WithErrorContext(h).
-				CausedBy(err)
+			return nil, errorchain.NewWithMessage(heimdall.ErrCommunicationTimeout,
+				"request to the contextualizer endpoint timed out").
+				WithErrorContext(h).CausedBy(err)
 		}
 
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrCommunication, "request to the hydration endpoint failed").
-			WithErrorContext(h).
-			CausedBy(err)
+		return nil, errorchain.NewWithMessage(heimdall.ErrCommunication,
+			"request to the contextualizer endpoint failed").
+			WithErrorContext(h).CausedBy(err)
 	}
 
 	defer resp.Body.Close()
@@ -216,10 +209,10 @@ func (h *genericHydrator) callHydrationEndpoint(ctx heimdall.Context, sub *subje
 		return nil, err
 	}
 
-	return &hydrationData{payload: data}, nil
+	return &contextualizerData{payload: data}, nil
 }
 
-func (h *genericHydrator) createRequest(ctx heimdall.Context, sub *subject.Subject) (*http.Request, error) {
+func (h *genericContextualizer) createRequest(ctx heimdall.Context, sub *subject.Subject) (*http.Request, error) {
 	logger := zerolog.Ctx(ctx.AppContext())
 
 	var body io.Reader
@@ -227,10 +220,9 @@ func (h *genericHydrator) createRequest(ctx heimdall.Context, sub *subject.Subje
 	if h.payload != nil {
 		value, err := h.payload.Render(ctx, sub)
 		if err != nil {
-			return nil, errorchain.
-				NewWithMessage(heimdall.ErrInternal, "failed to render payload for the hydration endpoint").
-				WithErrorContext(h).
-				CausedBy(err)
+			return nil, errorchain.NewWithMessage(heimdall.ErrInternal,
+				"failed to render payload for the contextualizer endpoint").
+				WithErrorContext(h).CausedBy(err)
 		}
 
 		body = strings.NewReader(value)
@@ -240,8 +232,7 @@ func (h *genericHydrator) createRequest(ctx heimdall.Context, sub *subject.Subje
 		endpoint.RenderFunc(func(value string) (string, error) {
 			tpl, err := template.New(value)
 			if err != nil {
-				return "", errorchain.
-					NewWithMessage(heimdall.ErrInternal, "failed to create template").
+				return "", errorchain.NewWithMessage(heimdall.ErrInternal, "failed to create template").
 					WithErrorContext(h).
 					CausedBy(err)
 			}
@@ -249,8 +240,7 @@ func (h *genericHydrator) createRequest(ctx heimdall.Context, sub *subject.Subje
 			return tpl.Render(nil, sub)
 		}))
 	if err != nil {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrInternal, "failed creating request").
+		return nil, errorchain.NewWithMessage(heimdall.ErrInternal, "failed creating request").
 			WithErrorContext(h).
 			CausedBy(err)
 	}
@@ -278,7 +268,7 @@ func (h *genericHydrator) createRequest(ctx heimdall.Context, sub *subject.Subje
 	return req, nil
 }
 
-func (h *genericHydrator) readResponse(ctx heimdall.Context, resp *http.Response) (any, error) {
+func (h *genericContextualizer) readResponse(ctx heimdall.Context, resp *http.Response) (any, error) {
 	logger := zerolog.Ctx(ctx.AppContext())
 
 	if !(resp.StatusCode >= http.StatusOK && resp.StatusCode < http.StatusMultipleChoices) {
@@ -288,15 +278,14 @@ func (h *genericHydrator) readResponse(ctx heimdall.Context, resp *http.Response
 	}
 
 	if resp.ContentLength == 0 {
-		logger.Warn().Msg("No data received from the hydration endpoint")
+		logger.Warn().Msg("No data received from the contextualization endpoint")
 
 		return nil, nil
 	}
 
 	rawData, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrInternal, "failed to read response").
+		return nil, errorchain.NewWithMessage(heimdall.ErrInternal, "failed to read response").
 			WithErrorContext(h).
 			CausedBy(err)
 	}
@@ -315,8 +304,7 @@ func (h *genericHydrator) readResponse(ctx heimdall.Context, resp *http.Response
 
 	result, err := decoder.Decode(rawData)
 	if err != nil {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrInternal, "failed to unmarshal response").
+		return nil, errorchain.NewWithMessage(heimdall.ErrInternal, "failed to unmarshal response").
 			WithErrorContext(h).
 			CausedBy(err)
 	}
@@ -324,16 +312,8 @@ func (h *genericHydrator) readResponse(ctx heimdall.Context, resp *http.Response
 	return result, nil
 }
 
-func (h *genericHydrator) calculateCacheKey(sub *subject.Subject) (string, error) {
+func (h *genericContextualizer) calculateCacheKey(sub *subject.Subject) string {
 	const int64BytesCount = 8
-
-	rawSub, err := json.Marshal(sub)
-	if err != nil {
-		return "", errorchain.
-			NewWithMessage(heimdall.ErrInternal, "failed to marshal subject data").
-			WithErrorContext(h).
-			CausedBy(err)
-	}
 
 	ttlBytes := make([]byte, int64BytesCount)
 	binary.LittleEndian.PutUint64(ttlBytes, uint64(h.ttl))
@@ -347,7 +327,7 @@ func (h *genericHydrator) calculateCacheKey(sub *subject.Subject) (string, error
 		func() []byte { return []byte("nil") }))
 	hash.Write([]byte(h.e.Hash()))
 	hash.Write(ttlBytes)
-	hash.Write(rawSub)
+	hash.Write(sub.Hash())
 
-	return hex.EncodeToString(hash.Sum(nil)), nil
+	return hex.EncodeToString(hash.Sum(nil))
 }

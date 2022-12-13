@@ -78,7 +78,7 @@ func TestRuleFactoryNew(t *testing.T) {
 			config: &config.Configuration{Rules: config.RulesConfig{
 				Default: &config.DefaultRuleConfig{
 					Execute: []config.MechanismConfig{
-						{"hydrator": "bar"},
+						{"contextualizer": "bar"},
 						{"authenticator": "foo"},
 					},
 				},
@@ -86,7 +86,7 @@ func TestRuleFactoryNew(t *testing.T) {
 			configureMocks: func(t *testing.T, mhf *mocks.MockFactory) {
 				t.Helper()
 
-				mhf.On("CreateHydrator", "bar", mock.Anything).
+				mhf.On("CreateContextualizer", "bar", mock.Anything).
 					Return(nil, nil)
 			},
 			assert: func(t *testing.T, err error, ruleFactory *ruleFactory) {
@@ -186,12 +186,12 @@ func TestRuleFactoryNew(t *testing.T) {
 			},
 		},
 		{
-			uc: "new factory with malformed default rule, where hydrator loading happens after mutator handlers",
+			uc: "new factory with malformed default rule, where contextualizer loading happens after mutator handlers",
 			config: &config.Configuration{Rules: config.RulesConfig{
 				Default: &config.DefaultRuleConfig{
 					Execute: []config.MechanismConfig{
 						{"mutator": "bar"},
-						{"hydrator": "foo"},
+						{"contextualizer": "foo"},
 					},
 				},
 			}},
@@ -206,20 +206,20 @@ func TestRuleFactoryNew(t *testing.T) {
 
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "before a hydrator")
+				assert.Contains(t, err.Error(), "before a contextualizer")
 			},
 		},
 		{
-			uc: "new factory with default rule, where hydrator loading results in an error",
+			uc: "new factory with default rule, where contextualizer loading results in an error",
 			config: &config.Configuration{Rules: config.RulesConfig{
 				Default: &config.DefaultRuleConfig{
-					Execute: []config.MechanismConfig{{"hydrator": "foo"}},
+					Execute: []config.MechanismConfig{{"contextualizer": "foo"}},
 				},
 			}},
 			configureMocks: func(t *testing.T, mhf *mocks.MockFactory) {
 				t.Helper()
 
-				mhf.On("CreateHydrator", "foo", mock.Anything).
+				mhf.On("CreateContextualizer", "foo", mock.Anything).
 					Return(nil, testsupport.ErrTestPurpose)
 			},
 			assert: func(t *testing.T, err error, ruleFactory *ruleFactory) {
@@ -308,12 +308,12 @@ func TestRuleFactoryNew(t *testing.T) {
 			},
 		},
 		{
-			uc: "new factory with default rule, consisting of authorizer and hydrator",
+			uc: "new factory with default rule, consisting of authorizer and contextualizer",
 			config: &config.Configuration{Rules: config.RulesConfig{
 				Default: &config.DefaultRuleConfig{
 					Execute: []config.MechanismConfig{
 						{"authenticator": "bar"},
-						{"hydrator": "baz"},
+						{"contextualizer": "baz"},
 					},
 				},
 			}},
@@ -322,7 +322,7 @@ func TestRuleFactoryNew(t *testing.T) {
 
 				mhf.On("CreateAuthenticator", "bar", mock.Anything).
 					Return(nil, nil)
-				mhf.On("CreateHydrator", "baz", mock.Anything).
+				mhf.On("CreateContextualizer", "baz", mock.Anything).
 					Return(nil, nil)
 			},
 			assert: func(t *testing.T, err error, ruleFactory *ruleFactory) {
@@ -334,12 +334,12 @@ func TestRuleFactoryNew(t *testing.T) {
 			},
 		},
 		{
-			uc: "new factory with default rule, consisting of authorizer, hydrator and authorizer",
+			uc: "new factory with default rule, consisting of authorizer, contextualizer and authorizer",
 			config: &config.Configuration{Rules: config.RulesConfig{
 				Default: &config.DefaultRuleConfig{
 					Execute: []config.MechanismConfig{
 						{"authenticator": "bar"},
-						{"hydrator": "baz"},
+						{"contextualizer": "baz"},
 						{"authorizer": "zab"},
 					},
 				},
@@ -349,7 +349,7 @@ func TestRuleFactoryNew(t *testing.T) {
 
 				mhf.On("CreateAuthenticator", "bar", mock.Anything).
 					Return(nil, nil)
-				mhf.On("CreateHydrator", "baz", mock.Anything).
+				mhf.On("CreateContextualizer", "baz", mock.Anything).
 					Return(nil, nil)
 				mhf.On("CreateAuthorizer", "zab", mock.Anything).
 					Return(nil, nil)
@@ -433,7 +433,7 @@ func TestRuleFactoryNew(t *testing.T) {
 				Default: &config.DefaultRuleConfig{
 					Execute: []config.MechanismConfig{
 						{"authenticator": "bar"},
-						{"hydrator": "foo"},
+						{"contextualizer": "foo"},
 						{"authorizer": "zab"},
 						{"mutator": "baz"},
 					},
@@ -453,7 +453,7 @@ func TestRuleFactoryNew(t *testing.T) {
 					Return(nil, nil)
 				mhf.On("CreateAuthorizer", "zab", mock.Anything).
 					Return(nil, nil)
-				mhf.On("CreateHydrator", "foo", mock.Anything).
+				mhf.On("CreateContextualizer", "foo", mock.Anything).
 					Return(nil, nil)
 				mhf.On("CreateErrorHandler", "foobar", mock.Anything).
 					Return(nil, nil)
@@ -642,13 +642,13 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 			},
 		},
 		{
-			uc: "without default rule and with only authenticator and hydrator configured",
+			uc: "without default rule and with only authenticator and contextualizer configured",
 			config: config.RuleConfig{
 				ID:  "foobar",
 				URL: "http://foo.bar",
 				Execute: []config.MechanismConfig{
 					{"authenticator": "foo"},
-					{"hydrator": "bar"},
+					{"contextualizer": "bar"},
 				},
 			},
 			configureMocks: func(t *testing.T, mhf *mocks.MockFactory) {
@@ -656,8 +656,8 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 
 				mhf.On("CreateAuthenticator", "foo", mock.Anything).
 					Return(&mocks3.MockAuthenticator{}, nil)
-				mhf.On("CreateHydrator", "bar", mock.Anything).
-					Return(&mocks3.MockHydrator{}, nil)
+				mhf.On("CreateContextualizer", "bar", mock.Anything).
+					Return(&mocks3.MockContextualizer{}, nil)
 			},
 			assert: func(t *testing.T, err error, rul *ruleImpl) {
 				t.Helper()
@@ -668,13 +668,13 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 			},
 		},
 		{
-			uc: "without default rule and with only authenticator, hydrator and authorizer configured",
+			uc: "without default rule and with only authenticator, contextualizer and authorizer configured",
 			config: config.RuleConfig{
 				ID:  "foobar",
 				URL: "http://foo.bar",
 				Execute: []config.MechanismConfig{
 					{"authenticator": "foo"},
-					{"hydrator": "bar"},
+					{"contextualizer": "bar"},
 					{"authorizer": "baz"},
 				},
 			},
@@ -683,8 +683,8 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 
 				mhf.On("CreateAuthenticator", "foo", mock.Anything).
 					Return(&mocks3.MockAuthenticator{}, nil)
-				mhf.On("CreateHydrator", "bar", mock.Anything).
-					Return(&mocks3.MockHydrator{}, nil)
+				mhf.On("CreateContextualizer", "bar", mock.Anything).
+					Return(&mocks3.MockContextualizer{}, nil)
 				mhf.On("CreateAuthorizer", "baz", mock.Anything).
 					Return(&mocks3.MockAuthorizer{}, nil)
 			},
@@ -796,7 +796,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				Upstream: "http://bar.foo",
 				Execute: []config.MechanismConfig{
 					{"authenticator": "foo"},
-					{"hydrator": "bar"},
+					{"contextualizer": "bar"},
 					{"authorizer": "zab"},
 					{"mutator": "baz"},
 				},
@@ -817,8 +817,8 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 
 				mhf.On("CreateAuthenticator", "foo", mock.Anything).
 					Return(&mocks3.MockAuthenticator{}, nil)
-				mhf.On("CreateHydrator", "bar", mock.Anything).
-					Return(&mocks3.MockHydrator{}, nil)
+				mhf.On("CreateContextualizer", "bar", mock.Anything).
+					Return(&mocks3.MockContextualizer{}, nil)
 				mhf.On("CreateAuthorizer", "zab", mock.Anything).
 					Return(&mocks3.MockAuthorizer{}, nil)
 				mhf.On("CreateMutator", "baz", mock.Anything).

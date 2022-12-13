@@ -1,4 +1,4 @@
-package hydrators
+package contextualizers
 
 import (
 	"context"
@@ -32,7 +32,7 @@ func TestCreateGenericHydrator(t *testing.T) {
 		uc     string
 		id     string
 		config []byte
-		assert func(t *testing.T, err error, hydrator *genericHydrator)
+		assert func(t *testing.T, err error, hydrator *genericContextualizer)
 	}{
 		{
 			uc: "with unsupported fields",
@@ -41,7 +41,7 @@ endpoint:
   url: http://foo.bar
 foo: bar
 `),
-			assert: func(t *testing.T, err error, hydrator *genericHydrator) {
+			assert: func(t *testing.T, err error, hydrator *genericContextualizer) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -56,7 +56,7 @@ endpoint:
   method: POST
 payload: bar
 `),
-			assert: func(t *testing.T, err error, hydrator *genericHydrator) {
+			assert: func(t *testing.T, err error, hydrator *genericContextualizer) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -72,7 +72,7 @@ endpoint:
   url: http://foo.bar
 payload: bar
 `),
-			assert: func(t *testing.T, err error, hydrator *genericHydrator) {
+			assert: func(t *testing.T, err error, hydrator *genericContextualizer) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -104,7 +104,7 @@ forward_cookies:
 payload: "{{ .Subject.ID }}"
 cache_ttl: 5s
 `),
-			assert: func(t *testing.T, err error, hydrator *genericHydrator) {
+			assert: func(t *testing.T, err error, hydrator *genericContextualizer) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -131,7 +131,7 @@ cache_ttl: 5s
 			require.NoError(t, err)
 
 			// WHEN
-			hydrator, err := newGenericHydrator(tc.id, conf)
+			hydrator, err := newGenericContextualizer(tc.id, conf)
 
 			// THEN
 			tc.assert(t, err, hydrator)
@@ -147,7 +147,7 @@ func TestCreateGenericHydratorFromPrototype(t *testing.T) {
 		id              string
 		prototypeConfig []byte
 		config          []byte
-		assert          func(t *testing.T, err error, prototype *genericHydrator, configured *genericHydrator)
+		assert          func(t *testing.T, err error, prototype *genericContextualizer, configured *genericContextualizer)
 	}{
 		{
 			uc: "with empty config",
@@ -157,7 +157,7 @@ endpoint:
   url: http://foo.bar
 payload: bar
 `),
-			assert: func(t *testing.T, err error, prototype *genericHydrator, configured *genericHydrator) {
+			assert: func(t *testing.T, err error, prototype *genericContextualizer, configured *genericContextualizer) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -174,7 +174,7 @@ endpoint:
 payload: bar
 `),
 			config: []byte(`foo: bar`),
-			assert: func(t *testing.T, err error, prototype *genericHydrator, configured *genericHydrator) {
+			assert: func(t *testing.T, err error, prototype *genericContextualizer, configured *genericContextualizer) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -199,7 +199,7 @@ cache_ttl: 5s
 			config: []byte(`
 payload: foo
 `),
-			assert: func(t *testing.T, err error, prototype *genericHydrator, configured *genericHydrator) {
+			assert: func(t *testing.T, err error, prototype *genericContextualizer, configured *genericContextualizer) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -237,7 +237,7 @@ payload: foo
 forward_headers:
   - Foo-Bar
 `),
-			assert: func(t *testing.T, err error, prototype *genericHydrator, configured *genericHydrator) {
+			assert: func(t *testing.T, err error, prototype *genericContextualizer, configured *genericContextualizer) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -279,7 +279,7 @@ forward_headers:
 forward_cookies:
   - Foo-Session
 `),
-			assert: func(t *testing.T, err error, prototype *genericHydrator, configured *genericHydrator) {
+			assert: func(t *testing.T, err error, prototype *genericContextualizer, configured *genericContextualizer) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -324,7 +324,7 @@ forward_cookies:
   - Foo-Session
 cache_ttl: 15s
 `),
-			assert: func(t *testing.T, err error, prototype *genericHydrator, configured *genericHydrator) {
+			assert: func(t *testing.T, err error, prototype *genericContextualizer, configured *genericContextualizer) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -356,7 +356,7 @@ cache_ttl: 15s
 			conf, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
 
-			prototype, err := newGenericHydrator(tc.id, pc)
+			prototype, err := newGenericContextualizer(tc.id, pc)
 			require.NoError(t, err)
 
 			// WHEN
@@ -364,12 +364,12 @@ cache_ttl: 15s
 
 			// THEN
 			var (
-				locAuth *genericHydrator
+				locAuth *genericContextualizer
 				ok      bool
 			)
 
 			if err == nil {
-				locAuth, ok = auth.(*genericHydrator)
+				locAuth, ok = auth.(*genericContextualizer)
 				require.True(t, ok)
 			}
 
@@ -409,16 +409,16 @@ func TestGenericHydratorExecute(t *testing.T) {
 
 	for _, tc := range []struct {
 		uc               string
-		hydrator         *genericHydrator
+		hydrator         *genericContextualizer
 		subject          *subject.Subject
 		instructServer   func(t *testing.T)
 		configureContext func(t *testing.T, ctx *heimdallmocks.MockContext)
-		configureCache   func(t *testing.T, cch *mocks.MockCache, hydrator *genericHydrator, sub *subject.Subject)
+		configureCache   func(t *testing.T, cch *mocks.MockCache, hydrator *genericContextualizer, sub *subject.Subject)
 		assert           func(t *testing.T, err error, sub *subject.Subject)
 	}{
 		{
 			uc:       "fails due to nil subject",
-			hydrator: &genericHydrator{id: "hydrator", e: endpoint.Endpoint{URL: srv.URL}},
+			hydrator: &genericContextualizer{id: "hydrator", e: endpoint.Endpoint{URL: srv.URL}},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
 
@@ -435,7 +435,7 @@ func TestGenericHydratorExecute(t *testing.T) {
 		},
 		{
 			uc: "with successful cache hit",
-			hydrator: &genericHydrator{
+			hydrator: &genericContextualizer{
 				id:  "hydrator",
 				e:   endpoint.Endpoint{URL: srv.URL},
 				ttl: 5 * time.Second,
@@ -446,13 +446,11 @@ func TestGenericHydratorExecute(t *testing.T) {
 				}(),
 			},
 			subject: &subject.Subject{ID: "Foo", Attributes: map[string]any{"bar": "baz"}},
-			configureCache: func(t *testing.T, cch *mocks.MockCache, hydrator *genericHydrator, sub *subject.Subject) {
+			configureCache: func(t *testing.T, cch *mocks.MockCache, hydrator *genericContextualizer, sub *subject.Subject) {
 				t.Helper()
 
-				key, err := hydrator.calculateCacheKey(sub)
-				require.NoError(t, err)
-
-				cch.On("Get", key).Return(&hydrationData{payload: "Hi Foo"})
+				key := hydrator.calculateCacheKey(sub)
+				cch.On("Get", key).Return(&contextualizerData{payload: "Hi Foo"})
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
@@ -466,7 +464,7 @@ func TestGenericHydratorExecute(t *testing.T) {
 		},
 		{
 			uc: "with wrong object type in cache",
-			hydrator: &genericHydrator{
+			hydrator: &genericContextualizer{
 				id:  "hydrator",
 				e:   endpoint.Endpoint{URL: srv.URL},
 				ttl: 5 * time.Second,
@@ -477,15 +475,13 @@ func TestGenericHydratorExecute(t *testing.T) {
 				}(),
 			},
 			subject: &subject.Subject{ID: "Foo", Attributes: map[string]any{"bar": "baz"}},
-			configureCache: func(t *testing.T, cch *mocks.MockCache, hydrator *genericHydrator, sub *subject.Subject) {
+			configureCache: func(t *testing.T, cch *mocks.MockCache, hydrator *genericContextualizer, sub *subject.Subject) {
 				t.Helper()
 
-				key, err := hydrator.calculateCacheKey(sub)
-				require.NoError(t, err)
-
+				key := hydrator.calculateCacheKey(sub)
 				cch.On("Get", key).Return("Hi Foo")
 				cch.On("Delete", key)
-				cch.On("Set", key, mock.MatchedBy(func(val *hydrationData) bool {
+				cch.On("Set", key, mock.MatchedBy(func(val *contextualizerData) bool {
 					return val != nil && val.payload == "Hi from endpoint"
 				}), 5*time.Second)
 			},
@@ -508,7 +504,7 @@ func TestGenericHydratorExecute(t *testing.T) {
 		},
 		{
 			uc: "with error in payload rendering",
-			hydrator: &genericHydrator{
+			hydrator: &genericContextualizer{
 				id: "hydrator1",
 				e:  endpoint.Endpoint{URL: srv.URL},
 				payload: func() template.Template {
@@ -534,7 +530,7 @@ func TestGenericHydratorExecute(t *testing.T) {
 		},
 		{
 			uc: "with communication error (dns)",
-			hydrator: &genericHydrator{
+			hydrator: &genericContextualizer{
 				id: "hydrator2",
 				e:  endpoint.Endpoint{URL: "http://heimdall.test.local"},
 			},
@@ -546,7 +542,7 @@ func TestGenericHydratorExecute(t *testing.T) {
 
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrCommunication)
-				assert.Contains(t, err.Error(), "hydration endpoint failed")
+				assert.Contains(t, err.Error(), "contextualizer endpoint failed")
 
 				var identifier interface{ HandlerID() string }
 				require.True(t, errors.As(err, &identifier))
@@ -555,7 +551,7 @@ func TestGenericHydratorExecute(t *testing.T) {
 		},
 		{
 			uc: "with unexpected response code from server",
-			hydrator: &genericHydrator{
+			hydrator: &genericContextualizer{
 				id: "hydrator3",
 				e:  endpoint.Endpoint{URL: srv.URL},
 			},
@@ -581,7 +577,7 @@ func TestGenericHydratorExecute(t *testing.T) {
 		},
 		{
 			uc: "without payload",
-			hydrator: &genericHydrator{
+			hydrator: &genericContextualizer{
 				id: "test-hydrator",
 				e:  endpoint.Endpoint{URL: srv.URL + "/{{ .Subject.ID }}"},
 			},
@@ -609,20 +605,18 @@ func TestGenericHydratorExecute(t *testing.T) {
 		},
 		{
 			uc: "without payload, but with cache",
-			hydrator: &genericHydrator{
+			hydrator: &genericContextualizer{
 				id:  "test-hydrator",
 				e:   endpoint.Endpoint{URL: srv.URL + "/{{ .Subject.ID }}"},
 				ttl: 10 * time.Second,
 			},
 			subject: &subject.Subject{ID: "Foo", Attributes: map[string]any{"bar": "baz"}},
-			configureCache: func(t *testing.T, cch *mocks.MockCache, hydrator *genericHydrator, sub *subject.Subject) {
+			configureCache: func(t *testing.T, cch *mocks.MockCache, hydrator *genericContextualizer, sub *subject.Subject) {
 				t.Helper()
 
-				key, err := hydrator.calculateCacheKey(sub)
-				require.NoError(t, err)
-
+				key := hydrator.calculateCacheKey(sub)
 				cch.On("Get", key).Return(nil)
-				cch.On("Set", key, mock.MatchedBy(func(val *hydrationData) bool {
+				cch.On("Set", key, mock.MatchedBy(func(val *contextualizerData) bool {
 					return val != nil && val.payload == "Hi from endpoint"
 				}), hydrator.ttl)
 			},
@@ -651,7 +645,7 @@ func TestGenericHydratorExecute(t *testing.T) {
 		},
 		{
 			uc: "with rendered payload and headers, as well as forwarded headers and cookies",
-			hydrator: &genericHydrator{
+			hydrator: &genericContextualizer{
 				id: "test-hydrator",
 				e: endpoint.Endpoint{
 					URL: srv.URL + "/{{ .Subject.ID }}",
@@ -735,7 +729,7 @@ func TestGenericHydratorExecute(t *testing.T) {
 
 			configureCache := x.IfThenElse(tc.configureCache != nil,
 				tc.configureCache,
-				func(t *testing.T, ctx *mocks.MockCache, auth *genericHydrator, sub *subject.Subject) {
+				func(t *testing.T, ctx *mocks.MockCache, auth *genericContextualizer, sub *subject.Subject) {
 					t.Helper()
 				})
 
