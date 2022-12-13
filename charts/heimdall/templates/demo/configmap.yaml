@@ -23,10 +23,10 @@ data:
           type: deny
         - id: allow_all_requests
           type: allow
-        mutators:
+        unifiers:
         - id: create_jwt
           type: jwt
-        - id: noop_mutator
+        - id: noop_unifier
           type: noop
 
       default:
@@ -36,7 +36,7 @@ data:
         execute:
           - authenticator: anonymous_authenticator
           - authorizer: deny_all_requests
-          - mutator: create_jwt
+          - unifier: create_jwt
 
       providers:
         kubernetes: {}
