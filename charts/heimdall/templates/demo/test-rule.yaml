@@ -14,7 +14,7 @@ spec:
       execute:
         - authenticator: noop_authenticator
         - authorizer: allow_all_requests
-        - mutator: noop_mutator
+        - unifier: noop_unifier
     - id: anonymous-access
       url: http://<**>/anonymous
       upstream: http://{{ include "heimdall.demo.fullname" . }}.heimdall-demo.svc.cluster.local:8080

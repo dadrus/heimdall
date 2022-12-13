@@ -1173,7 +1173,7 @@
         }
       }
     },
-    "mutatorJwt": {
+    "unifierJwt": {
       "description": "Creates a JWT Token from the given subject information",
       "type": "object",
       "additionalProperties": false,
@@ -1186,11 +1186,11 @@
           "const": "jwt"
         },
         "id": {
-          "description": "The unique id of the mutator to be used in the rule definition",
+          "description": "The unique id of the unifier to be used in the rule definition",
           "type": "string"
         },
         "config": {
-          "description": "JWT Mutator Configuration",
+          "description": "JWT unifier Configuration",
           "type": "object",
           "additionalProperties": false,
           "required": [
@@ -1215,7 +1215,7 @@
         }
       }
     },
-    "mutatorHeader": {
+    "unifierHeader": {
       "description": "Transforms the request, allowing passing the credentials to the upstream application via headers",
       "type": "object",
       "additionalProperties": false,
@@ -1229,7 +1229,7 @@
           "const": "header"
         },
         "id": {
-          "description": "The unique id of the mutator to be used in the rule definition",
+          "description": "The unique id of the unifier to be used in the rule definition",
           "type": "string"
         },
         "config": {
@@ -1251,7 +1251,7 @@
         }
       }
     },
-    "mutatorCookie": {
+    "unifierCookie": {
       "description": "Transforms the request, allowing passing the credentials to the upstream application via cookies",
       "type": "object",
       "additionalProperties": false,
@@ -1265,7 +1265,7 @@
           "const": "cookie"
         },
         "id": {
-          "description": "The unique id of the mutator to be used in the rule definition",
+          "description": "The unique id of the unifier to be used in the rule definition",
           "type": "string"
         },
         "config": {
@@ -1287,8 +1287,8 @@
         }
       }
     },
-    "mutatorNoop": {
-      "description": "Noop Mutator",
+    "unifierNoop": {
+      "description": "Noop Unifier",
       "type": "object",
       "additionalProperties": false,
       "properties": {
@@ -1296,7 +1296,7 @@
           "const": "noop"
         },
         "id": {
-          "description": "The unique id of the mutator to be used in the rule definition",
+          "description": "The unique id of the unifier to be used in the rule definition",
           "type": "string"
         }
       }
@@ -1595,7 +1595,7 @@
       "additionalProperties": false,
       "required": [
         "authenticators",
-        "mutators"
+        "unifiers"
       ],
       "properties": {
         "error_handlers": {
@@ -1678,24 +1678,24 @@
             "$ref": "#/definitions/contextualizerGeneric"
           }
         },
-        "mutators": {
-          "description": "Mutators",
+        "unifiers": {
+          "description": "Unifiers",
           "type": "array",
           "additionalItems": false,
           "uniqueItems": true,
           "items": {
             "anyOf": [
               {
-                "$ref": "#/definitions/mutatorNoop"
+                "$ref": "#/definitions/unifierNoop"
               },
               {
-                "$ref": "#/definitions/mutatorJwt"
+                "$ref": "#/definitions/unifierJwt"
               },
               {
-                "$ref": "#/definitions/mutatorHeader"
+                "$ref": "#/definitions/unifierHeader"
               },
               {
-                "$ref": "#/definitions/mutatorCookie"
+                "$ref": "#/definitions/unifierCookie"
               }
             ]
           }

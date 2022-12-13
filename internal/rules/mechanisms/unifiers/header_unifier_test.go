@@ -1,4 +1,4 @@
-package mutators
+package unifiers
 
 import (
 	"context"
@@ -15,18 +15,18 @@ import (
 	"github.com/dadrus/heimdall/internal/x"
 )
 
-func TestCreateHeaderMutator(t *testing.T) {
+func TestCreateHeaderUnifier(t *testing.T) {
 	t.Parallel()
 
 	for _, tc := range []struct {
 		uc     string
 		id     string
 		config []byte
-		assert func(t *testing.T, err error, mut *headerMutator)
+		assert func(t *testing.T, err error, unifier *headerUnifier)
 	}{
 		{
 			uc: "without configuration",
-			assert: func(t *testing.T, err error, mut *headerMutator) {
+			assert: func(t *testing.T, err error, _ *headerUnifier) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -37,7 +37,7 @@ func TestCreateHeaderMutator(t *testing.T) {
 		{
 			uc:     "without header configuration",
 			config: []byte(``),
-			assert: func(t *testing.T, err error, mut *headerMutator) {
+			assert: func(t *testing.T, err error, _ *headerUnifier) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -52,7 +52,7 @@ headers:
   foo: bar
 foo: bar
 `),
-			assert: func(t *testing.T, err error, mut *headerMutator) {
+			assert: func(t *testing.T, err error, _ *headerUnifier) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -66,7 +66,7 @@ foo: bar
 headers:
   bar: "{{ .Subject.ID | foobar }}"
 `),
-			assert: func(t *testing.T, err error, mut *headerMutator) {
+			assert: func(t *testing.T, err error, _ *headerUnifier) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -76,23 +76,23 @@ headers:
 		},
 		{
 			uc: "with valid config",
-			id: "hmut",
+			id: "hun",
 			config: []byte(`
 headers:
   foo: bar
   bar: "{{ .Subject.ID }}"`),
-			assert: func(t *testing.T, err error, mut *headerMutator) {
+			assert: func(t *testing.T, err error, unifier *headerUnifier) {
 				t.Helper()
 
 				require.NoError(t, err)
-				assert.Len(t, mut.headers, 2)
-				assert.Equal(t, "hmut", mut.HandlerID())
+				assert.Len(t, unifier.headers, 2)
+				assert.Equal(t, "hun", unifier.HandlerID())
 
-				val, err := mut.headers["foo"].Render(nil, nil)
+				val, err := unifier.headers["foo"].Render(nil, nil)
 				require.NoError(t, err)
 				assert.Equal(t, "bar", val)
 
-				val, err = mut.headers["bar"].Render(nil, &subject.Subject{ID: "baz"})
+				val, err = unifier.headers["bar"].Render(nil, &subject.Subject{ID: "baz"})
 				require.NoError(t, err)
 				assert.Equal(t, "baz", val)
 			},
@@ -103,15 +103,15 @@ headers:
 			require.NoError(t, err)
 
 			// WHEN
-			mutator, err := newHeaderMutator(tc.id, conf)
+			unifier, err := newHeaderUnifier(tc.id, conf)
 
 			// THEN
-			tc.assert(t, err, mutator)
+			tc.assert(t, err, unifier)
 		})
 	}
 }
 
-func TestCreateHeaderMutatorFromPrototype(t *testing.T) {
+func TestCreateHeaderUnifierFromPrototype(t *testing.T) {
 	t.Parallel()
 
 	for _, tc := range []struct {
@@ -119,42 +119,42 @@ func TestCreateHeaderMutatorFromPrototype(t *testing.T) {
 		id              string
 		prototypeConfig []byte
 		config          []byte
-		assert          func(t *testing.T, err error, prototype *headerMutator, configured *headerMutator)
+		assert          func(t *testing.T, err error, prototype *headerUnifier, configured *headerUnifier)
 	}{
 		{
 			uc: "no new configuration provided",
-			id: "hmut1",
+			id: "hun1",
 			prototypeConfig: []byte(`
 headers:
   foo: bar
 `),
-			assert: func(t *testing.T, err error, prototype *headerMutator, configured *headerMutator) {
+			assert: func(t *testing.T, err error, prototype *headerUnifier, configured *headerUnifier) {
 				t.Helper()
 
 				require.NoError(t, err)
 				assert.Equal(t, prototype, configured)
-				assert.Equal(t, "hmut1", configured.HandlerID())
+				assert.Equal(t, "hun1", configured.HandlerID())
 			},
 		},
 		{
 			uc: "configuration without headers provided",
-			id: "hmut2",
+			id: "hun2",
 			prototypeConfig: []byte(`
 headers:
   foo: bar
 `),
 			config: []byte(``),
-			assert: func(t *testing.T, err error, prototype *headerMutator, configured *headerMutator) {
+			assert: func(t *testing.T, err error, prototype *headerUnifier, configured *headerUnifier) {
 				t.Helper()
 
 				require.NoError(t, err)
 				assert.Equal(t, prototype, configured)
-				assert.Equal(t, "hmut2", configured.HandlerID())
+				assert.Equal(t, "hun2", configured.HandlerID())
 			},
 		},
 		{
 			uc: "new headers provided",
-			id: "hmut3",
+			id: "hun3",
 			prototypeConfig: []byte(`
 headers:
   foo: bar
@@ -163,14 +163,14 @@ headers:
 headers:
   bar: foo
 `),
-			assert: func(t *testing.T, err error, prototype *headerMutator, configured *headerMutator) {
+			assert: func(t *testing.T, err error, prototype *headerUnifier, configured *headerUnifier) {
 				t.Helper()
 
 				require.NoError(t, err)
 				assert.NotEqual(t, prototype, configured)
 				require.NotNil(t, configured)
 				assert.NotEmpty(t, configured.headers)
-				assert.Equal(t, "hmut3", configured.HandlerID())
+				assert.Equal(t, "hun3", configured.HandlerID())
 
 				val, err := configured.headers["bar"].Render(nil, nil)
 				require.NoError(t, err)
@@ -185,22 +185,22 @@ headers:
 			conf, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
 
-			prototype, err := newHeaderMutator(tc.id, pc)
+			prototype, err := newHeaderUnifier(tc.id, pc)
 			require.NoError(t, err)
 
 			// WHEN
-			mutator, err := prototype.WithConfig(conf)
+			unifier, err := prototype.WithConfig(conf)
 
 			// THEN
-			headerMut, ok := mutator.(*headerMutator)
+			headerUnifier, ok := unifier.(*headerUnifier)
 			require.True(t, ok)
 
-			tc.assert(t, err, prototype, headerMut)
+			tc.assert(t, err, prototype, headerUnifier)
 		})
 	}
 }
 
-func TestHeaderMutatorExecute(t *testing.T) {
+func TestHeaderUnifierExecute(t *testing.T) {
 	t.Parallel()
 
 	for _, tc := range []struct {
@@ -213,7 +213,7 @@ func TestHeaderMutatorExecute(t *testing.T) {
 	}{
 		{
 			uc: "with nil subject",
-			id: "hmut1",
+			id: "hun1",
 			config: []byte(`
 headers:
   foo: bar
@@ -228,7 +228,7 @@ headers:
 
 				var identifier interface{ HandlerID() string }
 				require.True(t, errors.As(err, &identifier))
-				assert.Equal(t, "hmut1", identifier.HandlerID())
+				assert.Equal(t, "hun1", identifier.HandlerID())
 			},
 		},
 		{
@@ -282,11 +282,11 @@ headers:
 
 			configureContext(t, mctx)
 
-			mutator, err := newHeaderMutator(tc.id, conf)
+			unifier, err := newHeaderUnifier(tc.id, conf)
 			require.NoError(t, err)
 
 			// WHEN
-			err = mutator.Execute(mctx, sub)
+			err = unifier.Execute(mctx, sub)
 
 			// THEN
 			tc.assert(t, err)

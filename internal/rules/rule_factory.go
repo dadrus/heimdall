@@ -51,13 +51,13 @@ func (f *ruleFactory) createExecutePipeline(
 	var (
 		authenticators  compositeSubjectCreator
 		subjectHandlers compositeSubjectHandler
-		mutators        compositeSubjectHandler
+		unifiers        compositeSubjectHandler
 	)
 
 	for _, pipelineStep := range pipeline {
 		id, found := pipelineStep["authenticator"]
 		if found {
-			if len(subjectHandlers) != 0 || len(mutators) != 0 {
+			if len(subjectHandlers) != 0 || len(unifiers) != 0 {
 				return nil, nil, nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
 					"an authenticator is defined after some other non authenticator type")
 			}
@@ -74,9 +74,9 @@ func (f *ruleFactory) createExecutePipeline(
 
 		id, found = pipelineStep["authorizer"]
 		if found {
-			if len(mutators) != 0 {
+			if len(unifiers) != 0 {
 				return nil, nil, nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
-					"at least one mutator is defined before an authorizer")
+					"at least one unifier is defined before an authorizer")
 			}
 
 			authorizer, err := f.hf.CreateAuthorizer(id.(string), f.getConfig(pipelineStep["config"]))
@@ -91,9 +91,9 @@ func (f *ruleFactory) createExecutePipeline(
 
 		id, found = pipelineStep["contextualizer"]
 		if found {
-			if len(mutators) != 0 {
+			if len(unifiers) != 0 {
 				return nil, nil, nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
-					"at least one mutator is defined before a contextualizer")
+					"at least one unifier is defined before a contextualizer")
 			}
 
 			contextualizer, err := f.hf.CreateContextualizer(id.(string), f.getConfig(pipelineStep["config"]))
@@ -106,14 +106,14 @@ func (f *ruleFactory) createExecutePipeline(
 			continue
 		}
 
-		id, found = pipelineStep["mutator"]
+		id, found = pipelineStep["unifier"]
 		if found {
-			mutator, err := f.hf.CreateMutator(id.(string), f.getConfig(pipelineStep["config"]))
+			unifier, err := f.hf.CreateUnifier(id.(string), f.getConfig(pipelineStep["config"]))
 			if err != nil {
 				return nil, nil, nil, err
 			}
 
-			mutators = append(mutators, mutator)
+			unifiers = append(unifiers, unifier)
 
 			continue
 		}
@@ -122,7 +122,7 @@ func (f *ruleFactory) createExecutePipeline(
 			"unsupported configuration in execute")
 	}
 
-	return authenticators, subjectHandlers, mutators, nil
+	return authenticators, subjectHandlers, unifiers, nil
 }
 
 func (f *ruleFactory) getConfig(conf any) config.MechanismConfig {
@@ -178,7 +178,7 @@ func (f *ruleFactory) CreateRule(srcID string, ruleConfig config.RuleConfig) (ru
 		}
 	}
 
-	authenticators, subHandlers, mutators, err := f.createExecutePipeline(ruleConfig.Execute)
+	authenticators, subHandlers, unifiers, err := f.createExecutePipeline(ruleConfig.Execute)
 	if err != nil {
 		return nil, err
 	}
@@ -193,7 +193,7 @@ func (f *ruleFactory) CreateRule(srcID string, ruleConfig config.RuleConfig) (ru
 	if f.defaultRule != nil {
 		authenticators = x.IfThenElse(len(authenticators) != 0, authenticators, f.defaultRule.sc)
 		subHandlers = x.IfThenElse(len(subHandlers) != 0, subHandlers, f.defaultRule.sh)
-		mutators = x.IfThenElse(len(mutators) != 0, mutators, f.defaultRule.m)
+		unifiers = x.IfThenElse(len(unifiers) != 0, unifiers, f.defaultRule.un)
 		errorHandlers = x.IfThenElse(len(errorHandlers) != 0, errorHandlers, f.defaultRule.eh)
 		methods = x.IfThenElse(len(methods) != 0, methods, f.defaultRule.methods)
 	}
@@ -203,9 +203,9 @@ func (f *ruleFactory) CreateRule(srcID string, ruleConfig config.RuleConfig) (ru
 			"no authenticator defined for rule ID=%s from %s", ruleConfig.ID, srcID)
 	}
 
-	if len(mutators) == 0 {
+	if len(unifiers) == 0 {
 		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
-			"no mutator defined for rule ID=%s from %s", ruleConfig.ID, srcID)
+			"no unifier defined for rule ID=%s from %s", ruleConfig.ID, srcID)
 	}
 
 	if len(methods) == 0 {
@@ -222,7 +222,7 @@ func (f *ruleFactory) CreateRule(srcID string, ruleConfig config.RuleConfig) (ru
 		isDefault:   false,
 		sc:          authenticators,
 		sh:          subHandlers,
-		m:           mutators,
+		un:          unifiers,
 		eh:          errorHandlers,
 	}, nil
 }
@@ -259,7 +259,7 @@ func (f *ruleFactory) initWithDefaultRule(ruleConfig *config.DefaultRuleConfig, 
 
 	logger.Debug().Msg("Loading default rule")
 
-	authenticators, subHandlers, mutators, err := f.createExecutePipeline(ruleConfig.Execute)
+	authenticators, subHandlers, unifiers, err := f.createExecutePipeline(ruleConfig.Execute)
 	if err != nil {
 		return err
 	}
@@ -273,8 +273,8 @@ func (f *ruleFactory) initWithDefaultRule(ruleConfig *config.DefaultRuleConfig, 
 		return errorchain.NewWithMessage(heimdall.ErrConfiguration, "no authenticator defined for default rule")
 	}
 
-	if len(mutators) == 0 {
-		return errorchain.NewWithMessagef(heimdall.ErrConfiguration, "no mutator defined for default rule")
+	if len(unifiers) == 0 {
+		return errorchain.NewWithMessagef(heimdall.ErrConfiguration, "no unifier defined for default rule")
 	}
 
 	if len(ruleConfig.Methods) == 0 {
@@ -288,7 +288,7 @@ func (f *ruleFactory) initWithDefaultRule(ruleConfig *config.DefaultRuleConfig, 
 		isDefault: true,
 		sc:        authenticators,
 		sh:        subHandlers,
-		m:         mutators,
+		un:        unifiers,
 		eh:        errorHandlers,
 	}
 

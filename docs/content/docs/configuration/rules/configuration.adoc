@@ -57,7 +57,7 @@ execute:
   - authenticator: foo
   - authorizer: bar
   - contextualizer: foo
-  - mutator: zab
+  - unifier: zab
 on_error:
   - error_handler: foobar
 ----
@@ -89,13 +89,13 @@ Heimdall uses https://github.com/dlclark/regexp2[dlclark/regexp2] and https://gi
 
 === Regular Pipeline
 
-As described in the link:{{< relref "/docs/getting_started/concepts.adoc" >}}[Concepts] section, heimdall's decision pipeline consists of multiple mechanisms - at least consisting of link:{{< relref "pipeline_mechanisms/authenticators.adoc" >}}[authenticators] and link:{{< relref "pipeline_mechanisms/mutators.adoc" >}}[mutators]. The definition of such a pipeline happens as a list of required mechanisms (previously link:{{< relref "pipeline_mechanisms/overview.adoc" >}}[configured]) with the corresponding ids in the following order:
+As described in the link:{{< relref "/docs/getting_started/concepts.adoc" >}}[Concepts] section, heimdall's decision pipeline consists of multiple mechanisms - at least consisting of link:{{< relref "pipeline_mechanisms/authenticators.adoc" >}}[authenticators] and link:{{< relref "pipeline_mechanisms/unifiers.adoc" >}}[unifiers]. The definition of such a pipeline happens as a list of required mechanisms (previously link:{{< relref "pipeline_mechanisms/overview.adoc" >}}[configured]) with the corresponding ids in the following order:
 
 * List of link:{{< relref "pipeline_mechanisms/authenticators.adoc" >}}[authenticators] using `authenticator` as key, followed by the required authenticator `id`. Authenticators following the first defined in the list are used by heimdall as fallback. That is, if first authenticator fails due to missing authentication data, second is executed, etc. By default, fallback is not used if an authenticator fails due to validation errors of the given authentication data. E.g. if an authenticator fails to validate the signature of a JWT token, the next authenticator in the list will not be executed. Instead, the entire pipeline will fail and lead to the execution of the link:{{< relref "#_error_handler_pipeline" >}}[error handler pipeline]. This list is mandatory if no link:{{< relref "default.adoc" >}}[default rule] is configured.
 +
 NOTE: Some authenticators use the same sources to get subject authentication object from. E.g. the `jwt` and the `oauth2_introspection` authenticators can retrieve tokens from the same places in the request. If such authenticators are used in the same pipeline, you should configure the more specific ones before the more general ones to have working default fallbacks. To stay with the above example, the `jwt` authenticator is more specific compared to `oauth2_introspection`, as it will be only executed, if the token is in a JWT format. In contrast to this, the `oauth2_introspection` authenticator is more general and does not care about the token format, thus will feel responsible for the request as soon as it finds a bearer token. You can however also make use of the `allow_fallback_on_error` configuration property and set it to `true`. This will allow a fallback even if the verification of the credentials fail.
 * List of link:({{< relref "pipeline_mechanisms/contextualizers.adoc" >}}[contextualizers] and link:({{< relref "pipeline_mechanisms/authorizers.adoc" >}}[authorizers] in any order (optional). Can also be mixed. As with authenticators, the list definition happens using either `contextualizer` or `authorizer` as key, followed by the required `id`. All mechanisms in this list are executed in the order, they are defined. If any of these fails, the entire pipeline fails, which leads to the execution of the link:{{< relref "#_error_handler_pipeline" >}}[error handler pipeline]. This list is optional.
-* List of link:{{< relref "pipeline_mechanisms/mutators.adoc" >}}[mutators] using `mutator` as key, followed by the required mutator `id`. All mutators in this list are executed in the order, they are defined. If any of these fails, the entire pipeline fails, which leads to the execution of the link:{{< relref "#_error_handler_pipeline" >}}[error handler pipeline]. This list is mandatory if no link:{{< relref "default.adoc" >}}[default rule] is configured.
+* List of link:{{< relref "pipeline_mechanisms/unifiers.adoc" >}}[unifiers] using `unifiers` as key, followed by the required unifier `id`. All unifiers in this list are executed in the order, they are defined. If any of these fails, the entire pipeline fails, which leads to the execution of the link:{{< relref "#_error_handler_pipeline" >}}[error handler pipeline]. This list is mandatory if no link:{{< relref "default.adoc" >}}[default rule] is configured.
 
 In all cases, the used mechanism can be partially reconfigured if supported by the corresponding type. These reconfigurations are always local to the given rule. With other words, you can adjust your rule specific pipeline as you want without any side effects.
 
@@ -124,20 +124,20 @@ In all cases, the used mechanism can be partially reconfigured if supported by t
           // some expression logic deviating from the
           // definition in the pipeline configuration.
   # ... any further required authorizer or contextualizer
-# list of mutators
-- mutator: foo
-- mutator: bar
+# list of unifiers
+- unifier: foo
+- unifier: bar
   config:
     headers:
     - X-User-ID: {{ quote .ID }}
-  # ... any further required mutators
+  # ... any further required unifiers
 ----
 
 This example uses
 
 * two authenticators, with authenticator named `bar` being the fallback for the authenticator named `foo`. This fallback authenticator is obviously of type link:{{< relref "pipeline_mechanisms/authenticators.adoc#_anonymous" >}}[anonymous] as it reconfigures the referenced prototype to use `anon` for subject id.
 * multiple contextualizers and authorizers, with first contextualizer having its cache disabled (`cache_ttl` set to 0s) and the last authorizer being of type link:{{< relref "pipeline_mechanisms/authorizers.adoc#_local_cel" >}}[cel] as it reconfigures the referenced prototype to use a different authorization script.
-* two mutators, with the second one being obviously of type link:{{< relref "pipeline_mechanisms/mutators.adoc#_header" >}}[header], as it defines a `X-User-ID` header set to the value of the subject id to be forwarded to the upstream service.
+* two unifiers, with the second one being obviously of type link:{{< relref "pipeline_mechanisms/unifiers.adoc#_header" >}}[header], as it defines a `X-User-ID` header set to the value of the subject id to be forwarded to the upstream service.
 ====
 
 === Error Handler Pipeline

@@ -15,7 +15,7 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/contextualizers"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/errorhandlers"
 	mocks2 "github.com/dadrus/heimdall/internal/rules/mechanisms/mocks"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/mutators"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/unifiers"
 	"github.com/dadrus/heimdall/internal/x"
 )
 
@@ -299,7 +299,7 @@ func TestHandlerFactoryCreateContextualizer(t *testing.T) {
 	}
 }
 
-func TestHandlerFactoryCreateMutator(t *testing.T) {
+func TestHandlerFactoryCreateUnifier(t *testing.T) {
 	t.Parallel()
 
 	ID := "foo"
@@ -308,58 +308,58 @@ func TestHandlerFactoryCreateMutator(t *testing.T) {
 		uc            string
 		id            string
 		conf          map[string]any
-		configureMock func(t *testing.T, mMut *mocks2.MockMutator)
-		assert        func(t *testing.T, err error, mutator mutators.Mutator)
+		configureMock func(t *testing.T, mUn *mocks2.MockUnifier)
+		assert        func(t *testing.T, err error, unifier unifiers.Unifier)
 	}{
 		{
-			uc: "no mutator for given id",
+			uc: "no unifier for given id",
 			id: "bar",
-			assert: func(t *testing.T, err error, mutator mutators.Mutator) {
+			assert: func(t *testing.T, err error, unifier unifiers.Unifier) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, ErrMutatorCreation)
-				assert.Contains(t, err.Error(), "no mutator prototype")
+				assert.ErrorIs(t, err, ErrUnifierCreation)
+				assert.Contains(t, err.Error(), "no unifier prototype")
 			},
 		},
 		{
 			uc:   "with failing creation from prototype",
 			conf: map[string]any{"foo": "bar"},
-			configureMock: func(t *testing.T, mMut *mocks2.MockMutator) {
+			configureMock: func(t *testing.T, mUn *mocks2.MockUnifier) {
 				t.Helper()
 
-				mMut.On("WithConfig", mock.Anything).Return(nil, heimdall.ErrArgument)
+				mUn.On("WithConfig", mock.Anything).Return(nil, heimdall.ErrArgument)
 			},
-			assert: func(t *testing.T, err error, mutator mutators.Mutator) {
+			assert: func(t *testing.T, err error, unifier unifiers.Unifier) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, ErrMutatorCreation)
+				assert.ErrorIs(t, err, ErrUnifierCreation)
 				assert.Contains(t, err.Error(), heimdall.ErrArgument.Error())
 			},
 		},
 		{
 			uc:   "successful creation from prototype",
 			conf: map[string]any{"foo": "bar"},
-			configureMock: func(t *testing.T, mMut *mocks2.MockMutator) {
+			configureMock: func(t *testing.T, mUn *mocks2.MockUnifier) {
 				t.Helper()
 
-				mMut.On("WithConfig", mock.Anything).Return(mMut, nil)
+				mUn.On("WithConfig", mock.Anything).Return(mUn, nil)
 			},
-			assert: func(t *testing.T, err error, mutator mutators.Mutator) {
+			assert: func(t *testing.T, err error, unifier unifiers.Unifier) {
 				t.Helper()
 
 				require.NoError(t, err)
-				assert.NotNil(t, mutator)
+				assert.NotNil(t, unifier)
 			},
 		},
 		{
 			uc: "successful creation with empty config",
-			assert: func(t *testing.T, err error, mutator mutators.Mutator) {
+			assert: func(t *testing.T, err error, unifier unifiers.Unifier) {
 				t.Helper()
 
 				require.NoError(t, err)
-				assert.NotNil(t, mutator)
+				assert.NotNil(t, unifier)
 			},
 		},
 	} {
@@ -367,15 +367,15 @@ func TestHandlerFactoryCreateMutator(t *testing.T) {
 			// GIVEN
 			configureMock := x.IfThenElse(tc.configureMock != nil,
 				tc.configureMock,
-				func(t *testing.T, mMut *mocks2.MockMutator) { t.Helper() })
+				func(t *testing.T, mUn *mocks2.MockUnifier) { t.Helper() })
 
-			mMut := &mocks2.MockMutator{}
-			configureMock(t, mMut)
+			mUn := &mocks2.MockUnifier{}
+			configureMock(t, mUn)
 
 			factory := &mechanismsFactory{
 				r: &prototypeRepository{
-					mutators: map[string]mutators.Mutator{
-						ID: mMut,
+					unifiers: map[string]unifiers.Unifier{
+						ID: mUn,
 					},
 				},
 			}
@@ -383,11 +383,11 @@ func TestHandlerFactoryCreateMutator(t *testing.T) {
 			id := x.IfThenElse(len(tc.id) != 0, tc.id, ID)
 
 			// WHEN
-			mutatos, err := factory.CreateMutator(id, tc.conf)
+			unifier, err := factory.CreateUnifier(id, tc.conf)
 
 			// THEN
-			tc.assert(t, err, mutatos)
-			mMut.AssertExpectations(t)
+			tc.assert(t, err, unifier)
+			mUn.AssertExpectations(t)
 		})
 	}
 }
@@ -504,7 +504,7 @@ func TestCreateHandlerFactory(t *testing.T) {
 				require.NotNil(t, factory.r)
 				assert.Empty(t, factory.r.errorHandlers)
 				assert.Empty(t, factory.r.contextualizers)
-				assert.Empty(t, factory.r.mutators)
+				assert.Empty(t, factory.r.unifiers)
 				assert.Empty(t, factory.r.authenticators)
 				assert.Empty(t, factory.r.authorizers)
 			},

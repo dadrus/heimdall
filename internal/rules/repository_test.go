@@ -259,7 +259,7 @@ func TestRepositoryRuleSetLifecycleManagement(t *testing.T) {
 								{"authenticator": "unauthorized_authenticator"},
 								{"contextualizer": "subscription_contextualizer"},
 								{"authorizer": "allow_all_authorizer"},
-								{"mutator": "jwt"},
+								{"unifier": "jwt"},
 							},
 							ErrorHandler: []config.MechanismConfig{
 								{"error_handler": "default"},
@@ -290,7 +290,7 @@ func TestRepositoryRuleSetLifecycleManagement(t *testing.T) {
 						assert.Equal(t, "allow_all_authorizer", conf.Execute[2]["authorizer"])
 
 						assert.Len(t, conf.Execute[3], 1)
-						assert.Equal(t, "jwt", conf.Execute[3]["mutator"])
+						assert.Equal(t, "jwt", conf.Execute[3]["unifier"])
 
 						assert.Len(t, conf.ErrorHandler[0], 1)
 						assert.Equal(t, "default", conf.ErrorHandler[0]["error_handler"])

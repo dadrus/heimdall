@@ -15,7 +15,7 @@ Everything you need to know.
 
 == Pipeline
 
-As described in the link:{{< relref "/docs/welcome.adoc" >}}[Welcome] section and also shown in the diagram below, heimdall authenticates and authorizes incoming HTTP requests, rejecting unauthenticated or unauthorized ones, as well as enriches the valid requests with further contextual information and transforms resulting subject information into a format, required by the upstream services. This is done in upstream service specific link:{{< relref "/docs/configuration/rules/overview.adoc" >}}[rules], which define the required individual link:{{< relref "/docs/configuration/rules/pipeline_mechanisms/overview.adoc" >}}[pipelines].
+As described in the link:{{< relref "/docs/welcome.adoc" >}}[Welcome] section and also shown in the diagram below, heimdall authenticates and authorizes incoming HTTP requests, rejecting unauthenticated or unauthorized ones, as well as enriches the valid requests with further contextual information and transforms resulting subject information into a format, required by the upstream services. This is done in upstream service specific link:{{< relref "/docs/configuration/rules/overview.adoc" >}}[rules], which assemble the required individual pipelines by making use of different link:{{< relref "/docs/configuration/rules/pipeline_mechanisms/overview.adoc" >}}[mechanisms].
 
 [[_fig_heimdall_request_pipeline]]
 .Request Pipeline
@@ -41,7 +41,7 @@ As described in the link:{{< relref "/docs/welcome.adoc" >}}[Welcome] section an
 +------------+                                                                                           +------------------+
 ....
 
-Each rule defines which mechanisms are required for that pipeline and executed in which order.
+Each rule defines which mechanisms are required for its pipeline and executed in which order.
 
 In general each rule contains
 
@@ -58,9 +58,9 @@ Here, heimdall communicates with other systems as well, either to get further in
 ** *authorization* mechanisms, so-called link:{{< relref "/docs/configuration/rules/pipeline_mechanisms/authorizers.adoc" >}}[Authorizers], to be executed (if multiple are defined, they are executed in the order of their definition; can be mixed with contextualization mechanisms) - step 3 in the figure above.
 +
 Here, heimdall performs authorization checks, either locally, or by communicating with yet again further systems, like Open Policy Agent, Ory Keto and alike.
-** *unification* mechanisms, so-called link:{{< relref "/docs/configuration/rules/pipeline_mechanisms/mutators.adoc" >}}[Mutators], to be executed (if multiple are defined, they are executed in the order of their definition) - step 4 in the figure above.
+** *unification* mechanisms, so-called link:{{< relref "/docs/configuration/rules/pipeline_mechanisms/unifiers.adoc" >}}[Unifiers], to be executed (if multiple are defined, they are executed in the order of their definition) - step 4 in the figure above.
 +
-This step transform the information collected so far abot the subject and the request into an object expected by the upstream service. That reaches from a simple custom header, carrying e.g. the id of the subject, to a JWT carried in the `Authorization` header.
+This step unifies the information collected so far about the subject and the request by transforming it into an object expected by the upstream service. That reaches from a simple custom header, carrying e.g. the id of the subject, to a JWT carried in the `Authorization` header.
 * an error pipeline, consisting of link:{{< relref "/docs/configuration/rules/pipeline_mechanisms/error_handlers.adoc" >}}[error handler] mechanisms (if multiple are defined, they are executed as fallbacks), which are executed if any of the regular pipeline mechanisms fail. These mechanisms range from a simple error response to the client (which sent the request), to sophisticated ones supporting complex logic and redirects.
 
 The diagram below sketches the related execution logic
@@ -98,17 +98,19 @@ To support different deployment scenarios, heimdall supports two operating modes
 .Proxy Deployment
 [ditaa, format=svg]
 ....
-                                                                          +------------------------+
-                                                                          |     Backend Service    |
-                                                                          |                        |
-+------------+                    +---------------------+                 |  +------------------+  |
-|            |                    |                     |                 |  |                  |  |
-|   Client   |                    |                     |                 |  |    Business      |  |
-|            |----- request ----->|      Heimdall       |---- request --->|  |                  |  |
-|            |                    |                     |     + header    |  |    Logic         |  |
-|            |                    |                     |                 |  |                  |  |
-+------------+                    +---------------------+                 |  +------------------+  |
-                                             :                            |                        |
+                                                                                -----------------------+
+                                                                             ------------------------+ |
+                                                                          +------------------------+ | |
+                                                                          |     Backend Services   | | |
+                                                                          |                        | | |
++------------+                    +---------------------+                 |  +------------------+  | | |
+|            |                    |                     |                 |  |                  |  | | |
+|   Client   |                    |                     |                 |  |    Business      |  | | |
+|            |----- request ----->|      Heimdall       |---- request --->|  |                  |  | | |
+|            |                    |                     |     + header    |  |    Logic         |  | | |
+|            |                    |                     |                 |  |                  |  | | |
++------------+                    +---------------------+                 |  +------------------+  | | +
+                                             :                            |                        | +
                                         uses |                            +------------------------+
                                              v                                         |
                                       -----------------+                               |
@@ -149,7 +151,7 @@ methods:
   - GET
 execute:
   - authenticator: anonymous-authn
-  - mutator: id-header
+  - unifier: id-header
 ----
 
 Then the request will be forwarded as follows:
@@ -171,17 +173,19 @@ Some payload
 .Decision Deployment
 [ditaa, format=svg]
 ....
-                                                                          +------------------------+
-                                                                          |     Backend Service    |
-                                                                          |                        |
-+------------+                    +---------------------+                 |  +------------------+  |
-|            |                    |                     |                 |  |                  |  |
-|   Client   |                    |                     |                 |  |    Business      |  |
-|            |----- request ----->|      API Gateway    |---- request --->|  |                  |  |
-|            |                    |                     |     + header    |  |    Logic         |  |
-|            |                    |                     |                 |  |                  |  |
-+------------+                    +---------------------+                 |  +------------------+  |
-                                         |       ^                        |                        |
+                                                                              -------------------------+
+                                                                            -------------------------+ |
+                                                                          +------------------------+ | |
+                                                                          |     Backend Services   | | |
+                                                                          |                        | | |
++------------+                    +---------------------+                 |  +------------------+  | | |
+|            |                    |                     |                 |  |                  |  | | |
+|   Client   |                    |                     |                 |  |    Business      |  | | |
+|            |----- request ----->|      API Gateway    |---- request --->|  |                  |  | | |
+|            |                    |                     |     + header    |  |    Logic         |  | | |
+|            |                    |                     |                 |  |                  |  | | |
++------------+                    +---------------------+                 |  +------------------+  | | +
+                                         |       ^                        |                        | +
                                          |       |                        +------------------------+
                            ok to forward |  ok / not ok                                |
                            request?      |   + header                                  |
@@ -234,7 +238,7 @@ methods:
   - GET
 execute:
   - authenticator: anonymous-authn
-  - mutator: id-header
+  - unifier: id-header
 ----
 
 Then heimdall will respond with:

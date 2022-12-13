@@ -1,4 +1,4 @@
-package mutators
+package unifiers
 
 import (
 	"crypto/sha256"
@@ -26,25 +26,25 @@ const (
 // by intention. Used only during application bootstrap
 // nolint
 func init() {
-	registerMutatorTypeFactory(
-		func(id string, typ string, conf map[string]any) (bool, Mutator, error) {
-			if typ != MutatorJwt {
+	registerUnifierTypeFactory(
+		func(id string, typ string, conf map[string]any) (bool, Unifier, error) {
+			if typ != UnifierJwt {
 				return false, nil, nil
 			}
 
-			mut, err := newJWTMutator(id, conf)
+			unifier, err := newJWTUnifier(id, conf)
 
-			return true, mut, err
+			return true, unifier, err
 		})
 }
 
-type jwtMutator struct {
+type jwtUnifier struct {
 	id     string
 	claims template.Template
 	ttl    time.Duration
 }
 
-func newJWTMutator(id string, rawConfig map[string]any) (*jwtMutator, error) {
+func newJWTUnifier(id string, rawConfig map[string]any) (*jwtUnifier, error) {
 	type Config struct {
 		Claims template.Template `mapstructure:"claims"`
 		TTL    *time.Duration    `mapstructure:"ttl"`
@@ -53,7 +53,7 @@ func newJWTMutator(id string, rawConfig map[string]any) (*jwtMutator, error) {
 	var conf Config
 	if err := decodeConfig(rawConfig, &conf); err != nil {
 		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration, "failed to unmarshal JWT mutator config").
+			NewWithMessage(heimdall.ErrConfiguration, "failed to unmarshal JWT unifier config").
 			CausedBy(err)
 	}
 
@@ -62,7 +62,7 @@ func newJWTMutator(id string, rawConfig map[string]any) (*jwtMutator, error) {
 			NewWithMessage(heimdall.ErrConfiguration, "configured JWT ttl is less than one second")
 	}
 
-	return &jwtMutator{
+	return &jwtUnifier{
 		id:     id,
 		claims: conf.Claims,
 		ttl: x.IfThenElseExec(conf.TTL != nil,
@@ -71,13 +71,13 @@ func newJWTMutator(id string, rawConfig map[string]any) (*jwtMutator, error) {
 	}, nil
 }
 
-func (m *jwtMutator) Execute(ctx heimdall.Context, sub *subject.Subject) error {
+func (m *jwtUnifier) Execute(ctx heimdall.Context, sub *subject.Subject) error {
 	logger := zerolog.Ctx(ctx.AppContext())
-	logger.Debug().Msg("Mutating using JWT mutator")
+	logger.Debug().Msg("Unifying using JWT unifier")
 
 	if sub == nil {
 		return errorchain.
-			NewWithMessage(heimdall.ErrInternal, "failed to execute jwt mutator due to 'nil' subject").
+			NewWithMessage(heimdall.ErrInternal, "failed to execute jwt unifier due to 'nil' subject").
 			WithErrorContext(m)
 	}
 
@@ -87,14 +87,11 @@ func (m *jwtMutator) Execute(ctx heimdall.Context, sub *subject.Subject) error {
 		cacheEntry any
 		jwtToken   string
 		ok         bool
+		err        error
 	)
 
-	cacheKey, err := m.calculateCacheKey(sub, ctx.Signer())
-	if err != nil {
-		logger.Error().Err(err).Msg("Failed to calculate cache key. Will not be able to cache token")
-	} else {
-		cacheEntry = cch.Get(cacheKey)
-	}
+	cacheKey := m.calculateCacheKey(sub, ctx.Signer())
+	cacheEntry = cch.Get(cacheKey)
 
 	if cacheEntry != nil {
 		if jwtToken, ok = cacheEntry.(string); !ok {
@@ -123,7 +120,7 @@ func (m *jwtMutator) Execute(ctx heimdall.Context, sub *subject.Subject) error {
 	return nil
 }
 
-func (m *jwtMutator) WithConfig(rawConfig map[string]any) (Mutator, error) {
+func (m *jwtUnifier) WithConfig(rawConfig map[string]any) (Unifier, error) {
 	if len(rawConfig) == 0 {
 		return m, nil
 	}
@@ -136,7 +133,7 @@ func (m *jwtMutator) WithConfig(rawConfig map[string]any) (Mutator, error) {
 	var conf Config
 	if err := decodeConfig(rawConfig, &conf); err != nil {
 		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration, "failed to unmarshal JWT mutator config").
+			NewWithMessage(heimdall.ErrConfiguration, "failed to unmarshal JWT unifier config").
 			CausedBy(err)
 	}
 
@@ -145,7 +142,7 @@ func (m *jwtMutator) WithConfig(rawConfig map[string]any) (Mutator, error) {
 			NewWithMessage(heimdall.ErrConfiguration, "configured JWT ttl is less than one second")
 	}
 
-	return &jwtMutator{
+	return &jwtUnifier{
 		id:     m.id,
 		claims: x.IfThenElse(conf.Claims != nil, conf.Claims, m.claims),
 		ttl: x.IfThenElseExec(conf.TTL != nil,
@@ -154,11 +151,11 @@ func (m *jwtMutator) WithConfig(rawConfig map[string]any) (Mutator, error) {
 	}, nil
 }
 
-func (m *jwtMutator) HandlerID() string {
+func (m *jwtUnifier) HandlerID() string {
 	return m.id
 }
 
-func (m *jwtMutator) generateToken(ctx heimdall.Context, sub *subject.Subject) (string, error) {
+func (m *jwtUnifier) generateToken(ctx heimdall.Context, sub *subject.Subject) (string, error) {
 	iss := ctx.Signer()
 
 	claims := map[string]any{}
@@ -190,16 +187,8 @@ func (m *jwtMutator) generateToken(ctx heimdall.Context, sub *subject.Subject) (
 	return token, nil
 }
 
-func (m *jwtMutator) calculateCacheKey(sub *subject.Subject, iss heimdall.JWTSigner) (string, error) {
+func (m *jwtUnifier) calculateCacheKey(sub *subject.Subject, iss heimdall.JWTSigner) string {
 	const int64BytesCount = 8
-
-	rawSub, err := json.Marshal(sub)
-	if err != nil {
-		return "", errorchain.
-			NewWithMessage(heimdall.ErrInternal, "failed to marshal subject data").
-			WithErrorContext(m).
-			CausedBy(err)
-	}
 
 	ttlBytes := make([]byte, int64BytesCount)
 	binary.LittleEndian.PutUint64(ttlBytes, uint64(m.ttl))
@@ -210,7 +199,7 @@ func (m *jwtMutator) calculateCacheKey(sub *subject.Subject, iss heimdall.JWTSig
 		func() string { return m.claims.Hash() },
 		func() string { return "null" })))
 	hash.Write(ttlBytes)
-	hash.Write(rawSub)
+	hash.Write(sub.Hash())
 
-	return hex.EncodeToString(hash.Sum(nil)), nil
+	return hex.EncodeToString(hash.Sum(nil))
 }

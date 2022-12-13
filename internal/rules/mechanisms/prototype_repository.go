@@ -10,7 +10,7 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/authorizers"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/contextualizers"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/errorhandlers"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/mutators"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/unifiers"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
@@ -50,12 +50,12 @@ func newPrototypeRepository(
 		return nil, err
 	}
 
-	logger.Debug().Msg("Loading definitions for mutators")
+	logger.Debug().Msg("Loading definitions for unifiers")
 
-	mutatorMap, err := createPipelineObjects(conf.Rules.Prototypes.Mutators, logger,
-		mutators.CreateMutatorPrototype)
+	unifierMap, err := createPipelineObjects(conf.Rules.Prototypes.Unifiers, logger,
+		unifiers.CreateUnifierPrototype)
 	if err != nil {
-		logger.Error().Err(err).Msg("Failed loading mutators definitions")
+		logger.Error().Err(err).Msg("Failed loading unifier definitions")
 
 		return nil, err
 	}
@@ -74,7 +74,7 @@ func newPrototypeRepository(
 		authenticators:  authenticatorMap,
 		authorizers:     authorizerMap,
 		contextualizers: contextualizerMap,
-		mutators:        mutatorMap,
+		unifiers:        unifierMap,
 		errorHandlers:   ehMap,
 	}, nil
 }
@@ -103,7 +103,7 @@ type prototypeRepository struct {
 	authenticators  map[string]authenticators.Authenticator
 	authorizers     map[string]authorizers.Authorizer
 	contextualizers map[string]contextualizers.Contextualizer
-	mutators        map[string]mutators.Mutator
+	unifiers        map[string]unifiers.Unifier
 	errorHandlers   map[string]errorhandlers.ErrorHandler
 }
 
@@ -137,14 +137,14 @@ func (r *prototypeRepository) Contextualizer(id string) (contextualizers.Context
 	return contextualizer, nil
 }
 
-func (r *prototypeRepository) Mutator(id string) (mutators.Mutator, error) {
-	mutator, ok := r.mutators[id]
+func (r *prototypeRepository) Unifier(id string) (unifiers.Unifier, error) {
+	unifier, ok := r.unifiers[id]
 	if !ok {
 		return nil, errorchain.NewWithMessagef(ErrNoSuchPipelineObject,
-			"no mutator prototype for id='%s' found", id)
+			"no unifier prototype for id='%s' found", id)
 	}
 
-	return mutator, nil
+	return unifier, nil
 }
 
 func (r *prototypeRepository) ErrorHandler(id string) (errorhandlers.ErrorHandler, error) {

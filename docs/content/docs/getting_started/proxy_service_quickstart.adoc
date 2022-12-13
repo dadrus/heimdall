@@ -39,7 +39,7 @@ rules:
       type: deny
     - id: allow_all_requests  # <4>
       type: allow
-    mutators:
+    unifiers:
     - id: create_jwt  # <5>
       type: jwt
 
@@ -50,7 +50,7 @@ rules:
     execute:
       - authenticator: anonymous_authenticator
       - authorizer: deny_all_requests
-      - mutator: create_jwt
+      - unifier: create_jwt
 
   providers:
     file_system:  # <7>
@@ -61,7 +61,7 @@ rules:
 <2> Configures the `anonymous` authenticator.
 <3> Configures the `deny` authorizer.
 <4> Configures the `allow` authorizer. It will be used in our rule to allow requests.
-<5> Configures the `jwt` mutator.
+<5> Configures the `jwt` unifier.
 <6> Configures the default rule.
 <7> Configures the `file_system` provider, which will allow loading of our rule from the file system.
 +
@@ -78,7 +78,7 @@ Put together, this configuration will let heimdall create a JSON Web Token (JWT)
     - authorizer: allow_all_requests
 ----
 +
-This rule will match any host and path and forward the request to our upstream service (which we're going to define next). In addition, it reuses the configuration from the default rule. Here, the methods, which are allowed, as well as the authorizers and mutators. So we don't need to define them here.
+This rule will match any host and path and forward the request to our upstream service (which we're going to define next). In addition, it reuses the configuration from the default rule. Here, the methods, which are allowed, as well as the authorizers and unifiers. So we don't need to define them here.
 
 . Create or copy the following `docker-compose.yaml` file and modify it to include the correct paths to your `config.yaml` and `rule.yaml` files:
 +

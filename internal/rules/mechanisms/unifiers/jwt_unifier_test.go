@@ -1,4 +1,4 @@
-package mutators
+package unifiers
 
 import (
 	"context"
@@ -19,7 +19,7 @@ import (
 	"github.com/dadrus/heimdall/internal/x"
 )
 
-func TestCreateJWTMutator(t *testing.T) {
+func TestCreateJWTUnifier(t *testing.T) {
 	t.Parallel()
 
 	const expectedTTL = 5 * time.Second
@@ -28,56 +28,56 @@ func TestCreateJWTMutator(t *testing.T) {
 		uc     string
 		id     string
 		config []byte
-		assert func(t *testing.T, err error, mut *jwtMutator)
+		assert func(t *testing.T, err error, unifier *jwtUnifier)
 	}{
 		{
 			uc: "without config",
-			id: "jmut",
-			assert: func(t *testing.T, err error, mut *jwtMutator) {
+			id: "jun",
+			assert: func(t *testing.T, err error, unifier *jwtUnifier) {
 				t.Helper()
 
 				require.NoError(t, err)
 
-				require.NotNil(t, mut)
-				assert.Equal(t, defaultJWTTTL, mut.ttl)
-				assert.Nil(t, mut.claims)
-				assert.Equal(t, "jmut", mut.HandlerID())
+				require.NotNil(t, unifier)
+				assert.Equal(t, defaultJWTTTL, unifier.ttl)
+				assert.Nil(t, unifier.claims)
+				assert.Equal(t, "jun", unifier.HandlerID())
 			},
 		},
 		{
 			uc:     "with empty config",
-			id:     "jmut",
+			id:     "jun",
 			config: []byte(``),
-			assert: func(t *testing.T, err error, mut *jwtMutator) {
+			assert: func(t *testing.T, err error, unifier *jwtUnifier) {
 				t.Helper()
 
 				require.NoError(t, err)
 
-				require.NotNil(t, mut)
-				assert.Equal(t, defaultJWTTTL, mut.ttl)
-				assert.Nil(t, mut.claims)
-				assert.Equal(t, "jmut", mut.HandlerID())
+				require.NotNil(t, unifier)
+				assert.Equal(t, defaultJWTTTL, unifier.ttl)
+				assert.Nil(t, unifier.claims)
+				assert.Equal(t, "jun", unifier.HandlerID())
 			},
 		},
 		{
 			uc:     "with ttl only",
-			id:     "jmut",
+			id:     "jun",
 			config: []byte(`ttl: 5s`),
-			assert: func(t *testing.T, err error, mut *jwtMutator) {
+			assert: func(t *testing.T, err error, unifier *jwtUnifier) {
 				t.Helper()
 
 				require.NoError(t, err)
 
-				require.NotNil(t, mut)
-				assert.Equal(t, expectedTTL, mut.ttl)
-				assert.Nil(t, mut.claims)
-				assert.Equal(t, "jmut", mut.HandlerID())
+				require.NotNil(t, unifier)
+				assert.Equal(t, expectedTTL, unifier.ttl)
+				assert.Nil(t, unifier.claims)
+				assert.Equal(t, "jun", unifier.HandlerID())
 			},
 		},
 		{
 			uc:     "with too short ttl",
 			config: []byte(`ttl: 5ms`),
-			assert: func(t *testing.T, err error, mut *jwtMutator) {
+			assert: func(t *testing.T, err error, _ *jwtUnifier) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -87,45 +87,45 @@ func TestCreateJWTMutator(t *testing.T) {
 		},
 		{
 			uc: "with claims only",
-			id: "jmut",
+			id: "jun",
 			config: []byte(`
 claims: 
   '{ "sub": {{ quote .Subject.ID }} }'
 `),
-			assert: func(t *testing.T, err error, mut *jwtMutator) {
+			assert: func(t *testing.T, err error, unifier *jwtUnifier) {
 				t.Helper()
 
 				require.NoError(t, err)
 
-				require.NotNil(t, mut)
-				assert.Equal(t, defaultJWTTTL, mut.ttl)
-				require.NotNil(t, mut.claims)
-				val, err := mut.claims.Render(nil, &subject.Subject{ID: "bar"})
+				require.NotNil(t, unifier)
+				assert.Equal(t, defaultJWTTTL, unifier.ttl)
+				require.NotNil(t, unifier.claims)
+				val, err := unifier.claims.Render(nil, &subject.Subject{ID: "bar"})
 				require.NoError(t, err)
 				assert.Equal(t, `{ "sub": "bar" }`, val)
-				assert.Equal(t, "jmut", mut.HandlerID())
+				assert.Equal(t, "jun", unifier.HandlerID())
 			},
 		},
 		{
 			uc: "with claims and ttl",
-			id: "jmut",
+			id: "jun",
 			config: []byte(`
 ttl: 5s
 claims: 
   '{ "sub": {{ quote .Subject.ID }} }'
 `),
-			assert: func(t *testing.T, err error, mut *jwtMutator) {
+			assert: func(t *testing.T, err error, unifier *jwtUnifier) {
 				t.Helper()
 
 				require.NoError(t, err)
 
-				require.NotNil(t, mut)
-				assert.Equal(t, expectedTTL, mut.ttl)
-				require.NotNil(t, mut.claims)
-				val, err := mut.claims.Render(nil, &subject.Subject{ID: "bar"})
+				require.NotNil(t, unifier)
+				assert.Equal(t, expectedTTL, unifier.ttl)
+				require.NotNil(t, unifier.claims)
+				val, err := unifier.claims.Render(nil, &subject.Subject{ID: "bar"})
 				require.NoError(t, err)
 				assert.Equal(t, `{ "sub": "bar" }`, val)
-				assert.Equal(t, "jmut", mut.HandlerID())
+				assert.Equal(t, "jun", unifier.HandlerID())
 			},
 		},
 		{
@@ -134,7 +134,7 @@ claims:
 ttl: 5s
 foo: bar"
 `),
-			assert: func(t *testing.T, err error, mut *jwtMutator) {
+			assert: func(t *testing.T, err error, _ *jwtUnifier) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -148,15 +148,15 @@ foo: bar"
 			require.NoError(t, err)
 
 			// WHEN
-			mutator, err := newJWTMutator(tc.id, conf)
+			unifier, err := newJWTUnifier(tc.id, conf)
 
 			// THEN
-			tc.assert(t, err, mutator)
+			tc.assert(t, err, unifier)
 		})
 	}
 }
 
-func TestCreateJWTMutatorFromPrototype(t *testing.T) {
+func TestCreateJWTUnifierFromPrototype(t *testing.T) {
 	t.Parallel()
 
 	const (
@@ -167,36 +167,36 @@ func TestCreateJWTMutatorFromPrototype(t *testing.T) {
 		uc     string
 		id     string
 		config []byte
-		assert func(t *testing.T, err error, prototype *jwtMutator, configured *jwtMutator)
+		assert func(t *testing.T, err error, prototype *jwtUnifier, configured *jwtUnifier)
 	}{
 		{
 			uc: "no new configuration provided",
-			id: "jmut1",
-			assert: func(t *testing.T, err error, prototype *jwtMutator, configured *jwtMutator) {
+			id: "jun1",
+			assert: func(t *testing.T, err error, prototype *jwtUnifier, configured *jwtUnifier) {
 				t.Helper()
 
 				require.NoError(t, err)
 				assert.Equal(t, prototype, configured)
-				assert.Equal(t, "jmut1", configured.HandlerID())
+				assert.Equal(t, "jun1", configured.HandlerID())
 			},
 		},
 		{
 			uc:     "empty configuration provided",
-			id:     "jmut2",
+			id:     "jun2",
 			config: []byte(``),
-			assert: func(t *testing.T, err error, prototype *jwtMutator, configured *jwtMutator) {
+			assert: func(t *testing.T, err error, prototype *jwtUnifier, configured *jwtUnifier) {
 				t.Helper()
 
 				require.NoError(t, err)
 				assert.Equal(t, prototype, configured)
-				assert.Equal(t, "jmut2", configured.HandlerID())
+				assert.Equal(t, "jun2", configured.HandlerID())
 			},
 		},
 		{
 			uc:     "configuration with ttl only provided",
-			id:     "jmut3",
+			id:     "jun3",
 			config: []byte(`ttl: 5s`),
-			assert: func(t *testing.T, err error, prototype *jwtMutator, configured *jwtMutator) {
+			assert: func(t *testing.T, err error, prototype *jwtUnifier, configured *jwtUnifier) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -204,13 +204,13 @@ func TestCreateJWTMutatorFromPrototype(t *testing.T) {
 				assert.Equal(t, prototype.claims, configured.claims)
 				assert.NotEqual(t, prototype.ttl, configured.ttl)
 				assert.Equal(t, expectedTTL, configured.ttl)
-				assert.Equal(t, "jmut3", configured.HandlerID())
+				assert.Equal(t, "jun3", configured.HandlerID())
 			},
 		},
 		{
 			uc:     "configuration with too short ttl",
 			config: []byte(`ttl: 5ms`),
-			assert: func(t *testing.T, err error, prototype *jwtMutator, configured *jwtMutator) {
+			assert: func(t *testing.T, err error, prototype *jwtUnifier, configured *jwtUnifier) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -220,12 +220,12 @@ func TestCreateJWTMutatorFromPrototype(t *testing.T) {
 		},
 		{
 			uc: "configuration with claims only provided",
-			id: "jmut4",
+			id: "jun4",
 			config: []byte(`
 claims:
   '{ "sub": {{ quote .Subject.ID }} }'
 `),
-			assert: func(t *testing.T, err error, prototype *jwtMutator, configured *jwtMutator) {
+			assert: func(t *testing.T, err error, prototype *jwtUnifier, configured *jwtUnifier) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -236,18 +236,18 @@ claims:
 				val, err := configured.claims.Render(nil, &subject.Subject{ID: "bar"})
 				require.NoError(t, err)
 				assert.Equal(t, `{ "sub": "bar" }`, val)
-				assert.Equal(t, "jmut4", configured.HandlerID())
+				assert.Equal(t, "jun4", configured.HandlerID())
 			},
 		},
 		{
 			uc: "configuration with both ttl and claims provided",
-			id: "jmut5",
+			id: "jun5",
 			config: []byte(`
 ttl: 5s
 claims:
   '{ "sub": {{ quote .Subject.ID }} }'
 `),
-			assert: func(t *testing.T, err error, prototype *jwtMutator, configured *jwtMutator) {
+			assert: func(t *testing.T, err error, prototype *jwtUnifier, configured *jwtUnifier) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -259,7 +259,7 @@ claims:
 				val, err := configured.claims.Render(nil, &subject.Subject{ID: "bar"})
 				require.NoError(t, err)
 				assert.Equal(t, `{ "sub": "bar" }`, val)
-				assert.Equal(t, "jmut5", configured.HandlerID())
+				assert.Equal(t, "jun5", configured.HandlerID())
 			},
 		},
 		{
@@ -268,7 +268,7 @@ claims:
 ttl: 5s
 foo: bar
 `),
-			assert: func(t *testing.T, err error, prototype *jwtMutator, configured *jwtMutator) {
+			assert: func(t *testing.T, err error, prototype *jwtUnifier, configured *jwtUnifier) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -281,29 +281,29 @@ foo: bar
 			conf, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
 
-			prototype, err := newJWTMutator(tc.id, nil)
+			prototype, err := newJWTUnifier(tc.id, nil)
 			require.NoError(t, err)
 
 			// WHEN
-			mutator, err := prototype.WithConfig(conf)
+			unifier, err := prototype.WithConfig(conf)
 
 			// THEN
 			var (
-				jwtMut *jwtMutator
-				ok     bool
+				jwtUn *jwtUnifier
+				ok    bool
 			)
 
 			if err == nil {
-				jwtMut, ok = mutator.(*jwtMutator)
+				jwtUn, ok = unifier.(*jwtUnifier)
 				require.True(t, ok)
 			}
 
-			tc.assert(t, err, prototype, jwtMut)
+			tc.assert(t, err, prototype, jwtUn)
 		})
 	}
 }
 
-func TestJWTMutatorExecute(t *testing.T) {
+func TestJWTUnifierExecute(t *testing.T) {
 	t.Parallel()
 
 	const configuredTTL = 1 * time.Minute
@@ -322,7 +322,7 @@ func TestJWTMutatorExecute(t *testing.T) {
 	}{
 		{
 			uc: "with 'nil' subject",
-			id: "jmut1",
+			id: "jun1",
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
@@ -332,7 +332,7 @@ func TestJWTMutatorExecute(t *testing.T) {
 
 				var identifier interface{ HandlerID() string }
 				require.True(t, errors.As(err, &identifier))
-				assert.Equal(t, "jmut1", identifier.HandlerID())
+				assert.Equal(t, "jun1", identifier.HandlerID())
 			},
 		},
 		{
@@ -348,11 +348,9 @@ func TestJWTMutatorExecute(t *testing.T) {
 				ctx.On("Signer").Return(signer)
 				ctx.On("AddHeaderForUpstream", "Authorization", "Bearer TestToken")
 
-				mut := jwtMutator{ttl: defaultJWTTTL}
+				unifier := jwtUnifier{ttl: defaultJWTTTL}
 
-				cacheKey, err := mut.calculateCacheKey(sub, signer)
-				require.NoError(t, err)
-
+				cacheKey := unifier.calculateCacheKey(sub, signer)
 				cch.On("Get", cacheKey).Return("TestToken")
 			},
 			assert: func(t *testing.T, err error) {
@@ -377,10 +375,8 @@ func TestJWTMutatorExecute(t *testing.T) {
 				ctx.On("Signer").Return(signer)
 				ctx.On("AddHeaderForUpstream", "Authorization", "Bearer barfoo")
 
-				mut := jwtMutator{ttl: configuredTTL}
-
-				cacheKey, err := mut.calculateCacheKey(sub, signer)
-				require.NoError(t, err)
+				unifier := jwtUnifier{ttl: configuredTTL}
+				cacheKey := unifier.calculateCacheKey(sub, signer)
 
 				cch.On("Get", cacheKey).Return(time.Second)
 				cch.On("Delete", cacheKey)
@@ -451,7 +447,7 @@ claims: '{
 		},
 		{
 			uc:      "with custom claims template, which does not result in a JSON object",
-			id:      "jmut2",
+			id:      "jun2",
 			config:  []byte(`claims: "foo: bar"`),
 			subject: &subject.Subject{ID: "foo", Attributes: map[string]any{"baz": "bar"}},
 			configureMocks: func(t *testing.T, ctx *heimdallmocks.MockContext, signer *heimdallmocks.MockJWTSigner,
@@ -473,12 +469,12 @@ claims: '{
 
 				var identifier interface{ HandlerID() string }
 				require.True(t, errors.As(err, &identifier))
-				assert.Equal(t, "jmut2", identifier.HandlerID())
+				assert.Equal(t, "jun2", identifier.HandlerID())
 			},
 		},
 		{
 			uc:      "with custom claims template, which fails during rendering",
-			id:      "jmut3",
+			id:      "jun3",
 			config:  []byte(`claims: "{{ .foobar }}"`),
 			subject: &subject.Subject{ID: "foo", Attributes: map[string]any{"baz": "bar"}},
 			configureMocks: func(t *testing.T, ctx *heimdallmocks.MockContext, signer *heimdallmocks.MockJWTSigner,
@@ -500,7 +496,7 @@ claims: '{
 
 				var identifier interface{ HandlerID() string }
 				require.True(t, errors.As(err, &identifier))
-				assert.Equal(t, "jmut3", identifier.HandlerID())
+				assert.Equal(t, "jun3", identifier.HandlerID())
 			},
 		},
 	} {
@@ -524,11 +520,11 @@ claims: '{
 			mctx.On("AppContext").Return(cache.WithContext(context.Background(), cch))
 			configureMocks(t, mctx, signer, cch, tc.subject)
 
-			mutator, err := newJWTMutator(tc.id, conf)
+			unifier, err := newJWTUnifier(tc.id, conf)
 			require.NoError(t, err)
 
 			// WHEN
-			err = mutator.Execute(mctx, tc.subject)
+			err = unifier.Execute(mctx, tc.subject)
 
 			// THEN
 			tc.assert(t, err)

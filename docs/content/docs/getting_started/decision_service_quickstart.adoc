@@ -31,7 +31,7 @@ rules:
     authenticators:
     - id: anonymous_authenticator  # <2>
       type: anonymous
-    mutators:
+    unifiers:
     - id: create_jwt  # <3>
       type: jwt
 
@@ -41,11 +41,11 @@ rules:
       - POST
     execute:
       - authenticator: anonymous_authenticator
-      - mutator: create_jwt
+      - unifier: create_jwt
 ----
 <1> Here we are setting the log level to `info` to be able to see any log output. By default, heimdall logs on `error` log level.
 <2> Configures the `anonymous` authenticator.
-<3> Configured the `jwt` mutator.
+<3> Configured the `jwt` unifier.
 <4> Configures the default rule.
 
 Put together, this configuration will let heimdall create a JSON Web Token (JWT) with `sub` claim set to `anonymous` for every request on every URL for the HTTP methods GET and POST. The JWT itself will be put into the `Authorization` header as a bearer token.

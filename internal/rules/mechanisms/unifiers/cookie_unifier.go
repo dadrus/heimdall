@@ -1,4 +1,4 @@
-package mutators
+package unifiers
 
 import (
 	"github.com/rs/zerolog"
@@ -12,24 +12,24 @@ import (
 // by intention. Used only during application bootstrap
 // nolint
 func init() {
-	registerMutatorTypeFactory(
-		func(id string, typ string, conf map[string]any) (bool, Mutator, error) {
-			if typ != MutatorCookie {
+	registerUnifierTypeFactory(
+		func(id string, typ string, conf map[string]any) (bool, Unifier, error) {
+			if typ != UnifierCookie {
 				return false, nil, nil
 			}
 
-			mut, err := newCookieMutator(id, conf)
+			unifier, err := newCookieUnifier(id, conf)
 
-			return true, mut, err
+			return true, unifier, err
 		})
 }
 
-type cookieMutator struct {
+type cookieUnifier struct {
 	id      string
 	cookies map[string]template.Template
 }
 
-func newCookieMutator(id string, rawConfig map[string]any) (*cookieMutator, error) {
+func newCookieUnifier(id string, rawConfig map[string]any) (*cookieUnifier, error) {
 	type Config struct {
 		Cookies map[string]template.Template `mapstructure:"cookies"`
 	}
@@ -37,7 +37,7 @@ func newCookieMutator(id string, rawConfig map[string]any) (*cookieMutator, erro
 	var conf Config
 	if err := decodeConfig(rawConfig, &conf); err != nil {
 		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration, "failed to unmarshal cookie mutator config").
+			NewWithMessage(heimdall.ErrConfiguration, "failed to unmarshal cookie unifier config").
 			CausedBy(err)
 	}
 
@@ -46,19 +46,19 @@ func newCookieMutator(id string, rawConfig map[string]any) (*cookieMutator, erro
 			NewWithMessage(heimdall.ErrConfiguration, "no cookie definitions provided")
 	}
 
-	return &cookieMutator{
+	return &cookieUnifier{
 		id:      id,
 		cookies: conf.Cookies,
 	}, nil
 }
 
-func (m *cookieMutator) Execute(ctx heimdall.Context, sub *subject.Subject) error {
+func (m *cookieUnifier) Execute(ctx heimdall.Context, sub *subject.Subject) error {
 	logger := zerolog.Ctx(ctx.AppContext())
-	logger.Debug().Msg("Mutating using cookie mutator")
+	logger.Debug().Msg("Unifying using cookie unifier")
 
 	if sub == nil {
 		return errorchain.
-			NewWithMessage(heimdall.ErrInternal, "failed to execute cookie mutator due to 'nil' subject").
+			NewWithMessage(heimdall.ErrInternal, "failed to execute cookie unifier due to 'nil' subject").
 			WithErrorContext(m)
 	}
 
@@ -77,14 +77,14 @@ func (m *cookieMutator) Execute(ctx heimdall.Context, sub *subject.Subject) erro
 	return nil
 }
 
-func (m *cookieMutator) WithConfig(config map[string]any) (Mutator, error) {
+func (m *cookieUnifier) WithConfig(config map[string]any) (Unifier, error) {
 	if len(config) == 0 {
 		return m, nil
 	}
 
-	return newCookieMutator(m.id, config)
+	return newCookieUnifier(m.id, config)
 }
 
-func (m *cookieMutator) HandlerID() string {
+func (m *cookieUnifier) HandlerID() string {
 	return m.id
 }

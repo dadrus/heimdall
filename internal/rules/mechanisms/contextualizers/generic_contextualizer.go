@@ -159,7 +159,7 @@ func (h *genericContextualizer) WithConfig(rawConfig map[string]any) (Contextual
 	var conf Config
 	if err := decodeConfig(rawConfig, &conf); err != nil {
 		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration, "failed to unmarshal JWT mutator config").
+			NewWithMessage(heimdall.ErrConfiguration, "failed to unmarshal JWT unifier config").
 			CausedBy(err)
 	}
 
