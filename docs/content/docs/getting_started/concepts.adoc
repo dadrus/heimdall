@@ -15,7 +15,7 @@ Everything you need to know.
 
 == Pipeline
 
-As described in the link:{{< relref "/docs/welcome.adoc" >}}[Welcome] section and also shown in the diagram below, heimdall authenticates and authorizes incoming HTTP requests, rejecting unauthenticated or unauthorized ones, as well as enriches the valid requests with further contextual information and transforms resulting subject information into a format, required by the upstream services. This is done in upstream service specific link:{{< relref "/docs/configuration/rules/overview.adoc" >}}[rules], which define the required individual link:{{< relref "/docs/configuration/rules/pipeline_mechanisms/overview.adoc" >}}[pipelines].
+As described in the link:{{< relref "/docs/welcome.adoc" >}}[Welcome] section and also shown in the diagram below, heimdall authenticates and authorizes incoming HTTP requests, rejecting unauthenticated or unauthorized ones, as well as enriches the valid requests with further contextual information and transforms resulting subject information into a format, required by the upstream services. This is done in upstream service specific link:{{< relref "/docs/configuration/rules/overview.adoc" >}}[rules], which define the required individual pipelines by making use of different link:{{< relref "/docs/configuration/rules/pipeline_mechanisms/overview.adoc" >}}[mechanisms].
 
 [[_fig_heimdall_request_pipeline]]
 .Request Pipeline
@@ -41,7 +41,7 @@ As described in the link:{{< relref "/docs/welcome.adoc" >}}[Welcome] section an
 +------------+                                                                                           +------------------+
 ....
 
-Each rule defines which mechanisms are required for that pipeline and executed in which order.
+Each rule defines which mechanisms are required for its pipeline and executed in which order.
 
 In general each rule contains
 
@@ -98,17 +98,19 @@ To support different deployment scenarios, heimdall supports two operating modes
 .Proxy Deployment
 [ditaa, format=svg]
 ....
-                                                                          +------------------------+
-                                                                          |     Backend Service    |
-                                                                          |                        |
-+------------+                    +---------------------+                 |  +------------------+  |
-|            |                    |                     |                 |  |                  |  |
-|   Client   |                    |                     |                 |  |    Business      |  |
-|            |----- request ----->|      Heimdall       |---- request --->|  |                  |  |
-|            |                    |                     |     + header    |  |    Logic         |  |
-|            |                    |                     |                 |  |                  |  |
-+------------+                    +---------------------+                 |  +------------------+  |
-                                             :                            |                        |
+                                                                                -----------------------+
+                                                                             ------------------------+ |
+                                                                          +------------------------+ | |
+                                                                          |     Backend Services   | | |
+                                                                          |                        | | |
++------------+                    +---------------------+                 |  +------------------+  | | |
+|            |                    |                     |                 |  |                  |  | | |
+|   Client   |                    |                     |                 |  |    Business      |  | | |
+|            |----- request ----->|      Heimdall       |---- request --->|  |                  |  | | |
+|            |                    |                     |     + header    |  |    Logic         |  | | |
+|            |                    |                     |                 |  |                  |  | | |
++------------+                    +---------------------+                 |  +------------------+  | | +
+                                             :                            |                        | +
                                         uses |                            +------------------------+
                                              v                                         |
                                       -----------------+                               |
@@ -171,17 +173,19 @@ Some payload
 .Decision Deployment
 [ditaa, format=svg]
 ....
-                                                                          +------------------------+
-                                                                          |     Backend Service    |
-                                                                          |                        |
-+------------+                    +---------------------+                 |  +------------------+  |
-|            |                    |                     |                 |  |                  |  |
-|   Client   |                    |                     |                 |  |    Business      |  |
-|            |----- request ----->|      API Gateway    |---- request --->|  |                  |  |
-|            |                    |                     |     + header    |  |    Logic         |  |
-|            |                    |                     |                 |  |                  |  |
-+------------+                    +---------------------+                 |  +------------------+  |
-                                         |       ^                        |                        |
+                                                                              -------------------------+
+                                                                            -------------------------+ |
+                                                                          +------------------------+ | |
+                                                                          |     Backend Services   | | |
+                                                                          |                        | | |
++------------+                    +---------------------+                 |  +------------------+  | | |
+|            |                    |                     |                 |  |                  |  | | |
+|   Client   |                    |                     |                 |  |    Business      |  | | |
+|            |----- request ----->|      API Gateway    |---- request --->|  |                  |  | | |
+|            |                    |                     |     + header    |  |    Logic         |  | | |
+|            |                    |                     |                 |  |                  |  | | |
++------------+                    +---------------------+                 |  +------------------+  | | +
+                                         |       ^                        |                        | +
                                          |       |                        +------------------------+
                            ok to forward |  ok / not ok                                |
                            request?      |   + header                                  |
