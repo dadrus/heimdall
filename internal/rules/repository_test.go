@@ -257,7 +257,7 @@ func TestRepositoryRuleSetLifecycleManagement(t *testing.T) {
 							Methods:          []string{"PATCH"},
 							Execute: []config.MechanismConfig{
 								{"authenticator": "unauthorized_authenticator"},
-								{"hydrator": "subscription_hydrator"},
+								{"contextualizer": "subscription_contextualizer"},
 								{"authorizer": "allow_all_authorizer"},
 								{"mutator": "jwt"},
 							},
@@ -284,7 +284,7 @@ func TestRepositoryRuleSetLifecycleManagement(t *testing.T) {
 						assert.Equal(t, "unauthorized_authenticator", conf.Execute[0]["authenticator"])
 
 						assert.Len(t, conf.Execute[1], 1)
-						assert.Equal(t, "subscription_hydrator", conf.Execute[1]["hydrator"])
+						assert.Equal(t, "subscription_contextualizer", conf.Execute[1]["contextualizer"])
 
 						assert.Len(t, conf.Execute[2], 1)
 						assert.Equal(t, "allow_all_authorizer", conf.Execute[2]["authorizer"])

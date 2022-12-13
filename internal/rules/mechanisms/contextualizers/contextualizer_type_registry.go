@@ -24,7 +24,7 @@ func registerContextualizerTypeFactory(factory ContextualizerTypeFactory) {
 	defer typeFactoriesMu.Unlock()
 
 	if factory == nil {
-		panic("RegisterHydratorType factory is nil")
+		panic("RegisterContextualizerType factory is nil")
 	}
 
 	typeFactories = append(typeFactories, factory)

@@ -90,7 +90,7 @@ func (hf *mechanismsFactory) CreateAuthorizer(id string, conf config.MechanismCo
 func (hf *mechanismsFactory) CreateContextualizer(id string, conf config.MechanismConfig) (
 	contextualizers.Contextualizer, error,
 ) {
-	prototype, err := hf.r.Hydrator(id)
+	prototype, err := hf.r.Contextualizer(id)
 	if err != nil {
 		return nil, errorchain.New(ErrContextualizerCreation).CausedBy(err)
 	}

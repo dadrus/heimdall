@@ -127,14 +127,14 @@ func (r *prototypeRepository) Authorizer(id string) (authorizers.Authorizer, err
 	return authorizer, nil
 }
 
-func (r *prototypeRepository) Hydrator(id string) (contextualizers.Contextualizer, error) {
-	hydrator, ok := r.contextualizers[id]
+func (r *prototypeRepository) Contextualizer(id string) (contextualizers.Contextualizer, error) {
+	contextualizer, ok := r.contextualizers[id]
 	if !ok {
 		return nil, errorchain.NewWithMessagef(ErrNoSuchPipelineObject,
 			"no contextualizer prototype for id='%s' found", id)
 	}
 
-	return hydrator, nil
+	return contextualizer, nil
 }
 
 func (r *prototypeRepository) Mutator(id string) (mutators.Mutator, error) {

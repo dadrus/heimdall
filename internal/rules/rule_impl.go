@@ -40,7 +40,7 @@ func (r *ruleImpl) Execute(ctx heimdall.Context) (*url.URL, error) {
 		return nil, err
 	}
 
-	// authorizers & hydrators
+	// authorizers & contextualizer
 	if err = r.sh.Execute(ctx, sub); err != nil {
 		_, err := r.eh.Execute(ctx, err)
 
