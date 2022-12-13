@@ -17,10 +17,6 @@ func DecodeEndpointHookFunc() mapstructure.DecodeHookFunc {
 			return data, nil
 		}
 
-		if to != reflect.TypeOf(Endpoint{}) {
-			return data, nil
-		}
-
 		dect := reflect.ValueOf(&ep).Elem().Type()
 		if !dect.AssignableTo(to) {
 			return data, nil
