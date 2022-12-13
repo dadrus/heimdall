@@ -76,7 +76,7 @@ headers:
 		},
 		{
 			uc: "with valid config",
-			id: "hmut",
+			id: "hun",
 			config: []byte(`
 headers:
   foo: bar
@@ -86,7 +86,7 @@ headers:
 
 				require.NoError(t, err)
 				assert.Len(t, unifier.headers, 2)
-				assert.Equal(t, "hmut", unifier.HandlerID())
+				assert.Equal(t, "hun", unifier.HandlerID())
 
 				val, err := unifier.headers["foo"].Render(nil, nil)
 				require.NoError(t, err)

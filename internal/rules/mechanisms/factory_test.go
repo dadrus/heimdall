@@ -308,7 +308,7 @@ func TestHandlerFactoryCreateUnifier(t *testing.T) {
 		uc            string
 		id            string
 		conf          map[string]any
-		configureMock func(t *testing.T, mMut *mocks2.MockUnifier)
+		configureMock func(t *testing.T, mUn *mocks2.MockUnifier)
 		assert        func(t *testing.T, err error, unifier unifiers.Unifier)
 	}{
 		{
@@ -325,10 +325,10 @@ func TestHandlerFactoryCreateUnifier(t *testing.T) {
 		{
 			uc:   "with failing creation from prototype",
 			conf: map[string]any{"foo": "bar"},
-			configureMock: func(t *testing.T, mMut *mocks2.MockUnifier) {
+			configureMock: func(t *testing.T, mUn *mocks2.MockUnifier) {
 				t.Helper()
 
-				mMut.On("WithConfig", mock.Anything).Return(nil, heimdall.ErrArgument)
+				mUn.On("WithConfig", mock.Anything).Return(nil, heimdall.ErrArgument)
 			},
 			assert: func(t *testing.T, err error, unifier unifiers.Unifier) {
 				t.Helper()
@@ -341,10 +341,10 @@ func TestHandlerFactoryCreateUnifier(t *testing.T) {
 		{
 			uc:   "successful creation from prototype",
 			conf: map[string]any{"foo": "bar"},
-			configureMock: func(t *testing.T, mMut *mocks2.MockUnifier) {
+			configureMock: func(t *testing.T, mUn *mocks2.MockUnifier) {
 				t.Helper()
 
-				mMut.On("WithConfig", mock.Anything).Return(mMut, nil)
+				mUn.On("WithConfig", mock.Anything).Return(mUn, nil)
 			},
 			assert: func(t *testing.T, err error, unifier unifiers.Unifier) {
 				t.Helper()
@@ -367,15 +367,15 @@ func TestHandlerFactoryCreateUnifier(t *testing.T) {
 			// GIVEN
 			configureMock := x.IfThenElse(tc.configureMock != nil,
 				tc.configureMock,
-				func(t *testing.T, mMut *mocks2.MockUnifier) { t.Helper() })
+				func(t *testing.T, mUn *mocks2.MockUnifier) { t.Helper() })
 
-			mMut := &mocks2.MockUnifier{}
-			configureMock(t, mMut)
+			mUn := &mocks2.MockUnifier{}
+			configureMock(t, mUn)
 
 			factory := &mechanismsFactory{
 				r: &prototypeRepository{
 					unifiers: map[string]unifiers.Unifier{
-						ID: mMut,
+						ID: mUn,
 					},
 				},
 			}
@@ -387,7 +387,7 @@ func TestHandlerFactoryCreateUnifier(t *testing.T) {
 
 			// THEN
 			tc.assert(t, err, unifier)
-			mMut.AssertExpectations(t)
+			mUn.AssertExpectations(t)
 		})
 	}
 }

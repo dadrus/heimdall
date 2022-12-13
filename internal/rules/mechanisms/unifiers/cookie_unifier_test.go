@@ -77,7 +77,7 @@ cookies:
 		},
 		{
 			uc: "with valid config",
-			id: "cmut",
+			id: "cun",
 			config: []byte(`
 cookies:
   foo: bar
@@ -87,7 +87,7 @@ cookies:
 
 				require.NoError(t, err)
 				assert.Len(t, unifier.cookies, 2)
-				assert.Equal(t, "cmut", unifier.HandlerID())
+				assert.Equal(t, "cun", unifier.HandlerID())
 
 				val, err := unifier.cookies["foo"].Render(nil, nil)
 				require.NoError(t, err)

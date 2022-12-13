@@ -33,13 +33,13 @@ func TestCreateNoopUnifierFromPrototype(t *testing.T) {
 	prototype := newNoopUnifier()
 
 	// WHEN
-	mut1, err1 := prototype.WithConfig(nil)
-	mut2, err2 := prototype.WithConfig(map[string]any{"foo": "bar"})
+	un1, err1 := prototype.WithConfig(nil)
+	un2, err2 := prototype.WithConfig(map[string]any{"foo": "bar"})
 
 	// THEN
 	assert.NoError(t, err1)
-	assert.Equal(t, prototype, mut1)
+	assert.Equal(t, prototype, un1)
 
 	assert.NoError(t, err2)
-	assert.Equal(t, prototype, mut2)
+	assert.Equal(t, prototype, un2)
 }
