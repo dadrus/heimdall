@@ -13,10 +13,11 @@ func decodeConfig(input any, output any) error {
 	dec, err := mapstructure.NewDecoder(
 		&mapstructure.DecoderConfig{
 			DecodeHook: mapstructure.ComposeDecodeHookFunc(
+				endpoint.DecodeAuthenticationStrategyHookFunc(),
+				endpoint.DecodeEndpointHookFunc(),
 				mapstructure.StringToTimeDurationHookFunc(),
 				extractors.DecodeCompositeExtractStrategyHookFunc(),
 				oauth2.DecodeScopesMatcherHookFunc(),
-				endpoint.DecodeAuthenticationStrategyHookFunc(),
 				truststore.DecodeTrustStoreHookFunc(),
 			),
 			Result:      output,
