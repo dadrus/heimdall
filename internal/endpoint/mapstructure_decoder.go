@@ -9,6 +9,29 @@ import (
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
+func DecodeEndpointHookFunc() mapstructure.DecodeHookFunc {
+	return func(from reflect.Type, to reflect.Type, data any) (any, error) {
+		var ep Endpoint
+
+		if from.Kind() != reflect.String {
+			return data, nil
+		}
+
+		if to != reflect.TypeOf(Endpoint{}) {
+			return data, nil
+		}
+
+		dect := reflect.ValueOf(&ep).Elem().Type()
+		if !dect.AssignableTo(to) {
+			return data, nil
+		}
+
+		// Already checked above
+		// nolint: forcetypeassert
+		return Endpoint{URL: data.(string)}, nil
+	}
+}
+
 func DecodeAuthenticationStrategyHookFunc() mapstructure.DecodeHookFunc {
 	return func(from reflect.Type, to reflect.Type, data any) (any, error) {
 		var as AuthenticationStrategy
