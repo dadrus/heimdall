@@ -4,24 +4,24 @@ import (
 	"github.com/stretchr/testify/mock"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/hydrators"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/contextualizers"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
 )
 
-type MockHydrator struct {
+type MockContextualizer struct {
 	mock.Mock
 }
 
-func (m *MockHydrator) Execute(ctx heimdall.Context, sub *subject.Subject) error {
+func (m *MockContextualizer) Execute(ctx heimdall.Context, sub *subject.Subject) error {
 	return m.Called(ctx, sub).Error(0)
 }
 
-func (m *MockHydrator) WithConfig(config map[string]any) (hydrators.Hydrator, error) {
+func (m *MockContextualizer) WithConfig(config map[string]any) (contextualizers.Contextualizer, error) {
 	args := m.Called(config)
 
 	if val := args.Get(0); val != nil {
 		// nolint: forcetypeassert
-		return val.(hydrators.Hydrator), nil
+		return val.(contextualizers.Contextualizer), nil
 	}
 
 	return nil, args.Error(1)

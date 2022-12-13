@@ -1,4 +1,4 @@
-package hydrators
+package contextualizers
 
 import (
 	"testing"
@@ -9,21 +9,21 @@ import (
 	"github.com/dadrus/heimdall/internal/heimdall"
 )
 
-func TestCreateHydratorPrototype(t *testing.T) {
+func TestCreateContextualzerPrototype(t *testing.T) {
 	t.Parallel()
 
 	// there are 3 error handlers implemented, which should have been registered
-	require.Len(t, hydratorTypeFactories, 1)
+	require.Len(t, typeFactories, 1)
 
 	for _, tc := range []struct {
 		uc     string
 		typ    string
-		assert func(t *testing.T, err error, hydrator Hydrator)
+		assert func(t *testing.T, err error, contextualizer Contextualizer)
 	}{
 		{
 			uc:  "using known type",
-			typ: HydratorGeneric,
-			assert: func(t *testing.T, err error, hydrator Hydrator) {
+			typ: ContextualizerGeneric,
+			assert: func(t *testing.T, err error, _ Contextualizer) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -33,17 +33,17 @@ func TestCreateHydratorPrototype(t *testing.T) {
 		{
 			uc:  "using unknown type",
 			typ: "foo",
-			assert: func(t *testing.T, err error, hydrator Hydrator) {
+			assert: func(t *testing.T, err error, _ Contextualizer) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, ErrUnsupportedHydratorType)
+				assert.ErrorIs(t, err, ErrUnsupportedContextualizerType)
 			},
 		},
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
 			// WHEN
-			errorHandler, err := CreateHydratorPrototype("foo", tc.typ, nil)
+			errorHandler, err := CreateContextualizerPrototype("foo", tc.typ, nil)
 
 			// THEN
 			tc.assert(t, err, errorHandler)

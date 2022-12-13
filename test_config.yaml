@@ -118,8 +118,8 @@ rules:
         type: local
         config:
           script: "console.log('New JS script')"
-    hydrators:
-      - id: subscription_hydrator
+    contextualizers:
+      - id: subscription_contextualizer
         type: generic
         config:
           endpoint:

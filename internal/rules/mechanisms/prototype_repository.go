@@ -8,8 +8,8 @@ import (
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/authorizers"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/contextualizers"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/errorhandlers"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/hydrators"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/mutators"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
@@ -40,12 +40,12 @@ func newPrototypeRepository(
 		return nil, err
 	}
 
-	logger.Debug().Msg("Loading definitions for hydrators")
+	logger.Debug().Msg("Loading definitions for contextualizer")
 
-	hydratorMap, err := createPipelineObjects(conf.Rules.Prototypes.Hydrators, logger,
-		hydrators.CreateHydratorPrototype)
+	contextualizerMap, err := createPipelineObjects(conf.Rules.Prototypes.Contextualizers, logger,
+		contextualizers.CreateContextualizerPrototype)
 	if err != nil {
-		logger.Error().Err(err).Msg("Failed loading hydrators definitions")
+		logger.Error().Err(err).Msg("Failed loading contextualizer definitions")
 
 		return nil, err
 	}
@@ -71,11 +71,11 @@ func newPrototypeRepository(
 	}
 
 	return &prototypeRepository{
-		authenticators: authenticatorMap,
-		authorizers:    authorizerMap,
-		hydrators:      hydratorMap,
-		mutators:       mutatorMap,
-		errorHandlers:  ehMap,
+		authenticators:  authenticatorMap,
+		authorizers:     authorizerMap,
+		contextualizers: contextualizerMap,
+		mutators:        mutatorMap,
+		errorHandlers:   ehMap,
 	}, nil
 }
 
@@ -100,17 +100,18 @@ func createPipelineObjects[T any](
 }
 
 type prototypeRepository struct {
-	authenticators map[string]authenticators.Authenticator
-	authorizers    map[string]authorizers.Authorizer
-	hydrators      map[string]hydrators.Hydrator
-	mutators       map[string]mutators.Mutator
-	errorHandlers  map[string]errorhandlers.ErrorHandler
+	authenticators  map[string]authenticators.Authenticator
+	authorizers     map[string]authorizers.Authorizer
+	contextualizers map[string]contextualizers.Contextualizer
+	mutators        map[string]mutators.Mutator
+	errorHandlers   map[string]errorhandlers.ErrorHandler
 }
 
 func (r *prototypeRepository) Authenticator(id string) (authenticators.Authenticator, error) {
 	authenticator, ok := r.authenticators[id]
 	if !ok {
-		return nil, errorchain.NewWithMessagef(ErrNoSuchPipelineObject, "no authenticator prototype for id='%s' found", id)
+		return nil, errorchain.NewWithMessagef(ErrNoSuchPipelineObject,
+			"no authenticator prototype for id='%s' found", id)
 	}
 
 	return authenticator, nil
@@ -119,25 +120,28 @@ func (r *prototypeRepository) Authenticator(id string) (authenticators.Authentic
 func (r *prototypeRepository) Authorizer(id string) (authorizers.Authorizer, error) {
 	authorizer, ok := r.authorizers[id]
 	if !ok {
-		return nil, errorchain.NewWithMessagef(ErrNoSuchPipelineObject, "no authorizer prototype for id='%s' found", id)
+		return nil, errorchain.NewWithMessagef(ErrNoSuchPipelineObject,
+			"no authorizer prototype for id='%s' found", id)
 	}
 
 	return authorizer, nil
 }
 
-func (r *prototypeRepository) Hydrator(id string) (hydrators.Hydrator, error) {
-	hydrator, ok := r.hydrators[id]
+func (r *prototypeRepository) Contextualizer(id string) (contextualizers.Contextualizer, error) {
+	contextualizer, ok := r.contextualizers[id]
 	if !ok {
-		return nil, errorchain.NewWithMessagef(ErrNoSuchPipelineObject, "no hydrator prototype for id='%s' found", id)
+		return nil, errorchain.NewWithMessagef(ErrNoSuchPipelineObject,
+			"no contextualizer prototype for id='%s' found", id)
 	}
 
-	return hydrator, nil
+	return contextualizer, nil
 }
 
 func (r *prototypeRepository) Mutator(id string) (mutators.Mutator, error) {
 	mutator, ok := r.mutators[id]
 	if !ok {
-		return nil, errorchain.NewWithMessagef(ErrNoSuchPipelineObject, "no mutator prototype for id='%s' found", id)
+		return nil, errorchain.NewWithMessagef(ErrNoSuchPipelineObject,
+			"no mutator prototype for id='%s' found", id)
 	}
 
 	return mutator, nil
@@ -146,7 +150,8 @@ func (r *prototypeRepository) Mutator(id string) (mutators.Mutator, error) {
 func (r *prototypeRepository) ErrorHandler(id string) (errorhandlers.ErrorHandler, error) {
 	errorHandler, ok := r.errorHandlers[id]
 	if !ok {
-		return nil, errorchain.NewWithMessagef(ErrNoSuchPipelineObject, "no error handler prototype for id='%s' found", id)
+		return nil, errorchain.NewWithMessagef(ErrNoSuchPipelineObject,
+			"no error handler prototype for id='%s' found", id)
 	}
 
 	return errorHandler, nil
