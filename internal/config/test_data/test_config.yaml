@@ -164,7 +164,7 @@ rules:
             attributes: "@this"
             id: sub
           allow_fallback_on_error: true
-      - id: jwt_authenticator
+      - id: jwt_authenticator1
         type: jwt
         config:
           jwks_endpoint:
@@ -190,6 +190,21 @@ rules:
           allow_fallback_on_error: true
           validate_jwk: true
           trust_store: /opt/heimdall/trust_store.pem
+      - id: jwt_authenticator2
+        type: jwt
+        config:
+          jwks_endpoint: http://bar/token
+          assertions:
+             audience:
+               - bla
+             scopes:
+               - foo
+             allowed_algorithms:
+               - RSA
+             issuers:
+               - bla
+          allow_fallback_on_error: true
+          validate_jwk: true
       - id: basic_auth_authenticator
         type: basic_auth
         config:
