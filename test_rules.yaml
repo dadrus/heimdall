@@ -18,13 +18,13 @@
     - authenticator: hydra_authenticator
     - contextualize: subscription_contextualizer
     - authorizer: allow_all_authorizer
-    - mutator: jwt
+    - unifier: jwt
       config:
         claims: |
           {"foo": "bar"}
-    - mutator: bla
+    - unifier: bla
       config:
         headers:
           foo-bar: bla
-    - mutator: blabla
+    - unifier: blabla
 # no on_error (reuses default)
