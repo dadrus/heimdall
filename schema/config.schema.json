@@ -1110,8 +1110,8 @@
         }
       }
     },
-    "hydratorGeneric": {
-      "description": "Generic Hydrator",
+    "contextualizerGeneric": {
+      "description": "Generic Contextualizer",
       "type": "object",
       "additionalProperties": false,
       "required": [
@@ -1124,11 +1124,11 @@
           "const": "generic"
         },
         "id": {
-          "description": "The unique id of the hydrator to be used in the rule definition",
+          "description": "The unique id of the contextualizers to be used in the rule definition",
           "type": "string"
         },
         "config": {
-          "description": "Generic Hydrator Configuration",
+          "description": "Generic Contextualizer Configuration",
           "type": "object",
           "additionalProperties": false,
           "required": [
@@ -1139,7 +1139,7 @@
               "$ref": "#/definitions/endpointConfiguration"
             },
             "forward_headers": {
-              "description": "The HTTP header names from the request to be send to the hydrator end point",
+              "description": "The HTTP header names from the request to be send to the contextualizer endpoint",
               "type": "array",
               "additionalItems": false,
               "items": {
@@ -1147,7 +1147,7 @@
               }
             },
             "forward_cookies": {
-              "description": "The HTTP cookie names from the request to be send to the hydrator end point",
+              "description": "The HTTP cookie names from the request to be send to the contextualizer endpoint",
               "type": "array",
               "additionalItems": false,
               "items": {
@@ -1155,12 +1155,12 @@
               }
             },
             "payload": {
-              "description": "The Go template with access to heimdall.Context and Subject used for request's HTTP body generation",
+              "description": "The Go template with access to heimdall. Request and Subject used for request's HTTP body generation",
               "type": "string"
             },
             "cache_ttl": {
               "type": "string",
-              "description": "How long to cache the response from the hydration endpoint.",
+              "description": "How long to cache the response from the contextualization endpoint.",
               "pattern": "^[0-9]+(ns|us|ms|s|m|h)$",
               "default": "15m",
               "examples": [
@@ -1669,13 +1669,13 @@
             ]
           }
         },
-        "hydrators": {
-          "description": "Hydrators",
+        "contextualizers": {
+          "description": "Contextualizer",
           "type": "array",
           "additionalItems": false,
           "uniqueItems": true,
           "items": {
-            "$ref": "#/definitions/hydratorGeneric"
+            "$ref": "#/definitions/contextualizerGeneric"
           }
         },
         "mutators": {
