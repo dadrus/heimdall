@@ -16,7 +16,7 @@ To achieve this,
 
 * Configure traefik
   * to make use of the aforesaid ForwardAuth middleware by setting the `address` property to the decision service endpoint and
-  * configure the `authResponseHeaders` to contain the required header name(s), heimdall sets in the HTTP responses (depends on your link:{{< relref "/docs/configuration/rules/pipeline_mechanisms/hydrators.adoc" >}}[Hydrators] and link:{{< relref "/docs/configuration/rules/pipeline_mechanisms/mutators.adoc" >}}[Mutators] configuration).
+  * configure the `authResponseHeaders` to contain the required header name(s), heimdall sets in the HTTP responses (depends on your link:{{< relref "/docs/configuration/rules/pipeline_mechanisms/contextualizers.adoc" >}}[Contextualizers] and link:{{< relref "/docs/configuration/rules/pipeline_mechanisms/mutators.adoc" >}}[Mutators] configuration).
 * Configure the route of your service to make use of this middleware.
 
 [CAUTION]

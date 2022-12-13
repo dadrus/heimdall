@@ -228,8 +228,8 @@ rules:
         expressions:
           - expression: "'admin' in Subject.Attributes.groups"
 
-    hydrators:
-    - id: subscription_hydrator
+    contextualizers:
+    - id: subscription_contextualizer
       type: generic
       config:
         endpoint:
@@ -238,7 +238,7 @@ rules:
           headers:
             bla: bla
         payload: http://foo
-    - id: profile_data_hydrator
+    - id: profile_data_contextualizer
       type: generic
       config:
         endpoint:

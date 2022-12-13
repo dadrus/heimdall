@@ -54,8 +54,8 @@ location = /_auth {  <4>
 }
 ----
 <1> Configures NGINX to forward every request to the internal `/_auth` endpoint (this is where the actual heimdall integration happens - see below).
-<2> When the response from heimdall returns, this and the next line set the Cookies set by heimdall in the response (whether you need this depends on your link:{{< relref "/docs/configuration/rules/pipeline_mechanisms/hydrators.adoc" >}}[Hydrators] and link:{{< relref "/docs/configuration/rules/pipeline_mechanisms/mutators.adoc" >}}[Mutators] configuration)
-<3> When the response from heimdall returns, this and the next line set the `Authorization` header set by heimdall in the response (which header to set depends again on your link:{{< relref "/docs/configuration/rules/pipeline_mechanisms/hydrators.adoc" >}}[Hydrators] and link:{{< relref "/docs/configuration/rules/pipeline_mechanisms/mutators.adoc" >}}[Mutators] configuration)
+<2> When the response from heimdall returns, this and the next line set the Cookies set by heimdall in the response (whether you need this depends on your link:{{< relref "/docs/configuration/rules/pipeline_mechanisms/contextualizers.adoc" >}}[Contextualizers] and link:{{< relref "/docs/configuration/rules/pipeline_mechanisms/mutators.adoc" >}}[Mutators] configuration)
+<3> When the response from heimdall returns, this and the next line set the `Authorization` header set by heimdall in the response (which header to set depends again on your link:{{< relref "/docs/configuration/rules/pipeline_mechanisms/contextualizers.adoc" >}}[Contextualizers] and link:{{< relref "/docs/configuration/rules/pipeline_mechanisms/mutators.adoc" >}}[Mutators] configuration)
 <4> This is where the "magic" happens
 <5> Configures NGINX to pass the request to heimdall and sets the request path and queries from the original request
 <6> Disables sending of the request body. If your heimdall rules make use of the body, you should set this to `on` and remove the next line.
@@ -139,6 +139,6 @@ nginx.ingress.kubernetes.io/auth-response-headers: Authorization <2>
 ----
 <1> Configures the controller to pass the request path and query parameters to heimdall's decision service endpoint with `<heimdall service name>`, `<namespace>` and `<decision port>` depending on your configuration.
 <2> Let NGINX forward the `Authorization` header set by heimdall to the upstream service. This configuration depends on
-your link:{{< relref "/docs/configuration/rules/pipeline_mechanisms/hydrators.adoc" >}}[Hydrators] and link:{{< relref "/docs/configuration/rules/pipeline_mechanisms/mutators.adoc" >}}[Mutators] configuration
+your link:{{< relref "/docs/configuration/rules/pipeline_mechanisms/contextualizers.adoc" >}}[Contextualizers] and link:{{< relref "/docs/configuration/rules/pipeline_mechanisms/mutators.adoc" >}}[Mutators] configuration
 ====
 
