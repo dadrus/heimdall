@@ -20,7 +20,7 @@ func TestHeaderMatcher(t *testing.T) {
 			headers: map[string][]string{
 				"foobar": {"foo", "bar"},
 			},
-			match:    map[string]string{"foobar": "bar"},
+			match:    map[string]string{"foobar": "bar,baz"},
 			matching: true,
 		},
 		{
@@ -30,8 +30,8 @@ func TestHeaderMatcher(t *testing.T) {
 				"some-header": {"value1", "value2"},
 			},
 			match: map[string]string{
-				"foobar":      "bar",
-				"some-header": "value1",
+				"foobar":      "bar,foo",
+				"some-header": "value1,val3",
 			},
 			matching: true,
 		},
