@@ -1,7 +1,7 @@
 package matcher
 
 import (
-	"golang.org/x/exp/slices"
+	"strings"
 )
 
 type HeaderMatcher map[string][]string
@@ -9,8 +9,12 @@ type HeaderMatcher map[string][]string
 func (hm HeaderMatcher) Match(headers map[string]string) bool {
 	for name, valueList := range hm {
 		headerVal, found := headers[name]
-		if found && slices.Contains(valueList, headerVal) {
-			return true
+		if found {
+			for _, val := range valueList {
+				if strings.Contains(headerVal, val) {
+					return true
+				}
+			}
 		}
 	}
 
