@@ -448,3 +448,68 @@ auth:
 	require.Error(t, err)
 	assert.ErrorContains(t, err, "unsupported authentication type")
 }
+
+func TestDecodeEndpointHookFunc(t *testing.T) {
+	t.Parallel()
+
+	type Type struct {
+		EP Endpoint `mapstructure:"endpoint"`
+	}
+
+	// GIVEN
+
+	for _, tc := range []struct {
+		uc     string
+		config []byte
+		assert func(t *testing.T, err error, ep Endpoint)
+	}{
+		{
+			uc:     "can decode from just url as string",
+			config: []byte(`endpoint: http://foo.bar`),
+			assert: func(t *testing.T, err error, ep Endpoint) {
+				t.Helper()
+
+				require.NoError(t, err)
+				assert.Equal(t, "http://foo.bar", ep.URL)
+			},
+		},
+		{
+			uc: "can still decode from structured definition",
+			config: []byte(`
+endpoint:
+  url: http://foo.bar
+  method: PATCH
+`),
+			assert: func(t *testing.T, err error, ep Endpoint) {
+				t.Helper()
+
+				require.NoError(t, err)
+				assert.Equal(t, "http://foo.bar", ep.URL)
+				assert.Equal(t, "PATCH", ep.Method)
+			},
+		},
+	} {
+		t.Run(tc.uc, func(t *testing.T) {
+			// GIVEN
+			conf, err := testsupport.DecodeTestConfig(tc.config)
+			require.NoError(t, err)
+
+			var typ Type
+
+			dec, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
+				DecodeHook: mapstructure.ComposeDecodeHookFunc(
+					DecodeEndpointHookFunc(),
+					DecodeAuthenticationStrategyHookFunc(),
+				),
+				Result: &typ,
+			})
+			require.NoError(t, err)
+
+			// WHEN
+			err = dec.Decode(conf)
+
+			// THEN
+			tc.assert(t, err, typ.EP)
+		})
+	}
+}

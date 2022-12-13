@@ -308,6 +308,8 @@ So with `10s` you can define the duration of 10 seconds and with `2h` you can sa
 
 The Endpoint type defines properties required for the communication with an endpoint.
 
+If only the URL is required to be set, you can specify it by using just a string. If more than the URL is required to be specified, following properties are available:
+
 * *`url`* _string_ (mandatory)
 +
 The actual url of the endpoint.
@@ -336,7 +338,15 @@ Whether HTTP caching according to https://www.rfc-editor.org/rfc/rfc7234[RFC 723
 +
 NOTE: If the endpoint referenced by the URL does not provide any explicit expiration time, no heuristic freshness lifetime is calculated. Heimdall treats such responses as not cacheable.
 
-.Endpoint configuration
+.Endpoint configuration as string
+====
+[source, text]
+----
+http://foo.bar
+----
+====
+
+.Structured Endpoint configuration
 ====
 
 [source, yaml]

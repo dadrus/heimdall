@@ -144,8 +144,7 @@ This example shows how to configure this authenticator to work with an authentic
 id: session_cookie
 type: generic
 config:
-  identity_info_endpoint:
-    url: http://my-auth.system/sessions/whoami
+  identity_info_endpoint: http://my-auth.system/sessions/whoami
   authentication_data_source:
     - cookie: my_session
   subject:
@@ -159,6 +158,9 @@ config:
     time_format: "2006-01-02T15:04:05.999999Z07"
     validity_leeway: 10s
 ----
+
+This example does also show how an endpoint can be configured by just specifying the URL as string, which is the simplest way for endpoint configuration.
+
 ====
 
 .Configuration of Generic authenticator to work with a Bearer token
