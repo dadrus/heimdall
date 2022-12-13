@@ -60,7 +60,7 @@ rules:
     authenticators:
     - id: anonymous_authenticator
       type: anonymous
-    mutators:
+    unifiers:
     - id: create_jwt
       type: jwt
 
@@ -70,7 +70,7 @@ rules:
       - POST
     execute:
       - authenticator: anonymous_authenticator
-      - mutator: create_jwt
+      - unifier: create_jwt
 ----
 ====
 

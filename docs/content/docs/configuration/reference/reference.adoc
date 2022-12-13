@@ -246,7 +246,7 @@ rules:
           headers:
             foo: bar
 
-    mutators:
+    unifiers:
     - id: jwt
       type: jwt
       config:
@@ -286,7 +286,7 @@ rules:
       - POST
     execute:
       - authenticator: anonymous_authenticator
-      - mutator: jwt
+      - unifier: jwt
     on_error:
       - error_handler: authenticate_with_kratos
 
