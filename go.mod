@@ -4,6 +4,7 @@ go 1.19
 
 require (
 	github.com/Masterminds/sprig/v3 v3.2.3
+	github.com/a8m/envsubst v1.3.0
 	github.com/dlclark/regexp2 v1.7.0
 	github.com/fsnotify/fsnotify v1.6.0
 	github.com/go-co-op/gocron v1.18.0
