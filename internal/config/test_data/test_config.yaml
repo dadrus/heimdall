@@ -147,8 +147,8 @@ rules:
             auth:
               type: basic_auth
               config:
-                user: foo
-                password: bar
+                user: ${INTROSPECT_EP_USER}
+                password: ${INTROSPECT_EP_PASSWORD}
           token_source:
             - header: Authorization
               schema: Bearer
