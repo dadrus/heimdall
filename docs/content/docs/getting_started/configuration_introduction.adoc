@@ -45,6 +45,28 @@ At start up, heimdall searches for static configuration in a file named `heimdal
 
 You can also override this using the `config` argument: `heimdall --config <path-to-your-config-file>`.
 
+The values in the configuration file can also make use of environment variables. Access to these happens using Bash syntax. Following expressions are supported:
+
+* `${VAR}`
++
+Evaluates to the value of the env variable named `VAR`.
+* `${VAR=$DEFAULT}`, or `${VAR-$DEFAULT}`
++
+If the env variable `VAR` is not set, evaluates the expression as `$DEFAULT` otherwise to the value of the env variable `VAR`.
+* `${VAR:=$DEFAULT}` or `${VAR:-$DEFAULT}`
++
+If the env variable `VAR` is not set or is empty, evaluates the expression as `$DEFAULT` otherwise to the value of the env variable `VAR`.
+* `${VAR=OTHER}`
++
+If the env variable `VAR` is not set, evaluates the expression to `OTHER` otherwise to the value of the env variable `VAR`.
+* `${VAR:=OTHER}`
++
+If if the env variable `VAR` is not set or is empty, evaluates the expression to `OTHER` otherwise to the value of the env variable `VAR`.
+
+* `${VAR+$OTHER}` or `${VAR:+$OTHER}`
++
+If the env variable `VAR` is set, evaluates the expression as `$OTHER` otherwise as empty string.
+
 .Possible minimal fully working configuration
 ====
 
@@ -71,6 +93,29 @@ rules:
     execute:
       - authenticator: anonymous_authenticator
       - unifier: create_jwt
+----
+====
+
+.Configuration with a mechanism defined using environment variables substitution
+====
+[source, yaml]
+----
+rules:
+  mechanisms:
+    authenticators:
+    - id: hydra_authenticator
+      type: oauth2_introspection
+      config:
+        introspection_endpoint:
+          url: http://hydra:4445/oauth2/introspect
+          auth:
+            type: basic_auth
+            config:
+              user: ${INTROSPECT_EP_USER}
+              password: ${INTROSPECT_EP_PASSWORD}
+    unifiers:
+    - id: create_jwt
+      type: jwt
 ----
 ====
 
@@ -156,4 +201,3 @@ and using the environment variables with
 ----
 HEIMDALLCFG_TRACING_SERVICE__NAME=foobar
 ----
-
