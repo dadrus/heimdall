@@ -18,7 +18,7 @@ func TestKoanfFromYaml(t *testing.T) {
 		assert func(t *testing.T, err error, kanf *koanf.Koanf)
 	}{
 		{
-			uc: "without env substitution",
+			uc: "valid content",
 			config: []byte(`
 some_string: foo
 someint: 3
@@ -42,47 +42,13 @@ nested_2:
 			},
 		},
 		{
-			uc: "with env substitution",
-			config: []byte(`
-some_string: ${FOO}
-someint: 3
-nested1:
-  somebool: true
-  some_string: bar
-nested_2:
-  - somebool: false
-    some_string: ${BAZ:=zab}
-`),
-			assert: func(t *testing.T, err error, konf *koanf.Koanf) {
-				t.Helper()
-
-				require.NoError(t, err)
-				assert.Equal(t, "BAR", konf.Get("some_string"))
-				assert.Equal(t, 3, konf.Get("someint"))
-				assert.Equal(t, "bar", konf.Get("nested1.some_string"))
-				assert.Equal(t, true, konf.Get("nested1.somebool"))
-				assert.Len(t, konf.Get("nested_2"), 1)
-				assert.Contains(t, konf.Get("nested_2"), map[string]any{"some_string": "zab", "somebool": false})
-			},
-		},
-		{
-			uc:     "with invalid yaml content",
+			uc:     "invalid content",
 			config: []byte("foobar"),
 			assert: func(t *testing.T, err error, kanf *koanf.Koanf) {
 				t.Helper()
 
 				require.Error(t, err)
 				assert.Contains(t, err.Error(), "failed to load")
-			},
-		},
-		{
-			uc:     "with invalid env substitution content",
-			config: []byte("${:}"),
-			assert: func(t *testing.T, err error, kanf *koanf.Koanf) {
-				t.Helper()
-
-				require.Error(t, err)
-				assert.Contains(t, err.Error(), "failed to read")
 			},
 		},
 	} {
