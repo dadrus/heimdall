@@ -55,7 +55,7 @@ func (s *RequestContext) RequestClientIPs() []string {
 	return x.IfThenElse(len(ips) != 0, ips, []string{s.c.IP()})
 }
 
-func (s *RequestContext) Finalize() error {
+func (s *RequestContext) Finalize(statusCode int) error {
 	if s.err != nil {
 		return s.err
 	}
@@ -68,7 +68,7 @@ func (s *RequestContext) Finalize() error {
 		s.c.Cookie(&fiber.Cookie{Name: k, Value: v})
 	}
 
-	s.c.Status(fiber.StatusAccepted)
+	s.c.Status(statusCode)
 
 	return nil
 }
