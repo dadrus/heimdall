@@ -1,9 +1,9 @@
 package errorhandler
 
 import (
+	"context"
 	"io"
 	"net/http"
-	"net/http/httptest"
 	"net/url"
 	"testing"
 
@@ -12,255 +12,209 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/x"
 )
 
-func TestDefaultErrorHandler(t *testing.T) {
+func TestHandlerHandle(t *testing.T) {
 	t.Parallel()
 
-	var appError error
-
-	app := fiber.New()
-	app.Use(New(false))
-	app.Get("test", func(ctx *fiber.Ctx) error { return appError })
-
 	for _, tc := range []struct {
-		uc             string
-		serverError    error
-		responseCode   int
-		assertResponse func(t *testing.T, response *http.Response)
+		uc      string
+		handler fiber.Handler
+		err     error
+		expCode int
+		expBody string
 	}{
 		{
-			uc:           "no error",
-			serverError:  nil,
-			responseCode: http.StatusOK,
+			uc:      "no error",
+			handler: New(),
+			expCode: http.StatusOK,
 		},
 		{
-			uc:           "authentication error",
-			serverError:  heimdall.ErrAuthentication,
-			responseCode: http.StatusUnauthorized,
+			uc:      "authentication error default",
+			handler: New(),
+			err:     heimdall.ErrAuthentication,
+			expCode: http.StatusUnauthorized,
 		},
 		{
-			uc:           "authorization error",
-			serverError:  heimdall.ErrAuthorization,
-			responseCode: http.StatusForbidden,
+			uc:      "authentication error overridden",
+			handler: New(WithAuthenticationErrorCode(http.StatusContinue)),
+			err:     heimdall.ErrAuthentication,
+			expCode: http.StatusContinue,
 		},
 		{
-			uc:           "communication timeout",
-			serverError:  heimdall.ErrCommunicationTimeout,
-			responseCode: http.StatusBadGateway,
+			uc:      "authentication error verbose",
+			handler: New(WithVerboseErrors(true)),
+			err:     heimdall.ErrAuthentication,
+			expCode: http.StatusUnauthorized,
+			expBody: "<p>authentication error</p>",
 		},
 		{
-			uc:           "communication error",
-			serverError:  heimdall.ErrCommunication,
-			responseCode: http.StatusBadGateway,
+			uc:      "authorization error default",
+			handler: New(),
+			err:     heimdall.ErrAuthorization,
+			expCode: http.StatusForbidden,
 		},
 		{
-			uc:           "argument error",
-			serverError:  heimdall.ErrArgument,
-			responseCode: http.StatusBadRequest,
+			uc:      "authorization error overridden",
+			handler: New(WithAuthorizationErrorCode(http.StatusContinue)),
+			err:     heimdall.ErrAuthorization,
+			expCode: http.StatusContinue,
 		},
 		{
-			uc:           "method not allowed error",
-			serverError:  heimdall.ErrMethodNotAllowed,
-			responseCode: http.StatusMethodNotAllowed,
+			uc:      "authorization error verbose",
+			handler: New(WithVerboseErrors(true)),
+			err:     heimdall.ErrAuthorization,
+			expCode: http.StatusForbidden,
+			expBody: "<p>authorization error</p>",
 		},
 		{
-			uc:           "no rule found error",
-			serverError:  heimdall.ErrNoRuleFound,
-			responseCode: http.StatusNotFound,
+			uc:      "communication timeout error default",
+			handler: New(),
+			err:     heimdall.ErrCommunicationTimeout,
+			expCode: http.StatusBadGateway,
 		},
 		{
-			uc:           "internal error",
-			serverError:  heimdall.ErrInternal,
-			responseCode: http.StatusInternalServerError,
+			uc:      "communication timeout error overridden",
+			handler: New(WithCommunicationTimeoutErrorCode(http.StatusContinue)),
+			err:     heimdall.ErrCommunicationTimeout,
+			expCode: http.StatusContinue,
 		},
 		{
-			uc: "redirect with see other",
-			serverError: &heimdall.RedirectError{
-				RedirectTo: &url.URL{Scheme: "http", Host: "foo.bar.local", Path: "foobar"},
-				Code:       http.StatusSeeOther,
-			},
-			assertResponse: func(t *testing.T, response *http.Response) {
-				t.Helper()
-
-				assert.Equal(t, http.StatusSeeOther, response.StatusCode)
-				assert.Equal(t, "http://foo.bar.local/foobar", response.Header.Get("Location"))
-			},
+			uc:      "communication timeout error verbose",
+			handler: New(WithVerboseErrors(true)),
+			err:     heimdall.ErrCommunicationTimeout,
+			expCode: http.StatusBadGateway,
+			expBody: "<p>communication timeout error</p>",
 		},
 		{
-			uc: "redirect with found",
-			serverError: &heimdall.RedirectError{
-				RedirectTo: &url.URL{Scheme: "http", Host: "foo.bar.local", Path: "foobar"},
-				Code:       http.StatusFound,
-			},
-			assertResponse: func(t *testing.T, response *http.Response) {
-				t.Helper()
-
-				assert.Equal(t, http.StatusFound, response.StatusCode)
-				assert.Equal(t, "http://foo.bar.local/foobar", response.Header.Get("Location"))
-			},
+			uc:      "communication error default",
+			handler: New(),
+			err:     heimdall.ErrCommunication,
+			expCode: http.StatusBadGateway,
+		},
+		{
+			uc:      "communication error overridden",
+			handler: New(WithCommunicationErrorCode(http.StatusContinue)),
+			err:     heimdall.ErrCommunication,
+			expCode: http.StatusContinue,
+		},
+		{
+			uc:      "communication error verbose",
+			handler: New(WithVerboseErrors(true)),
+			err:     heimdall.ErrCommunication,
+			expCode: http.StatusBadGateway,
+			expBody: "<p>communication error</p>",
+		},
+		{
+			uc:      "argument error default",
+			handler: New(),
+			err:     heimdall.ErrArgument,
+			expCode: http.StatusBadRequest,
+		},
+		{
+			uc:      "argument error overridden",
+			handler: New(WithArgumentErrorCode(http.StatusContinue)),
+			err:     heimdall.ErrArgument,
+			expCode: http.StatusContinue,
+		},
+		{
+			uc:      "argument error verbose",
+			handler: New(WithVerboseErrors(true)),
+			err:     heimdall.ErrArgument,
+			expCode: http.StatusBadRequest,
+			expBody: "<p>argument error</p>",
+		},
+		{
+			uc:      "method error default",
+			handler: New(),
+			err:     heimdall.ErrMethodNotAllowed,
+			expCode: http.StatusMethodNotAllowed,
+		},
+		{
+			uc:      "method error overridden",
+			handler: New(WithMethodErrorCode(http.StatusContinue)),
+			err:     heimdall.ErrMethodNotAllowed,
+			expCode: http.StatusContinue,
+		},
+		{
+			uc:      "method error verbose",
+			handler: New(WithVerboseErrors(true)),
+			err:     heimdall.ErrMethodNotAllowed,
+			expCode: http.StatusMethodNotAllowed,
+			expBody: "<p>method not allowed</p>",
+		},
+		{
+			uc:      "no rule error default",
+			handler: New(),
+			err:     heimdall.ErrNoRuleFound,
+			expCode: http.StatusNotFound,
+		},
+		{
+			uc:      "no rule error overridden",
+			handler: New(WithNoRuleErrorCode(http.StatusContinue)),
+			err:     heimdall.ErrNoRuleFound,
+			expCode: http.StatusContinue,
+		},
+		{
+			uc:      "no rule error verbose",
+			handler: New(WithVerboseErrors(true)),
+			err:     heimdall.ErrNoRuleFound,
+			expCode: http.StatusNotFound,
+			expBody: "<p>no rule found</p>",
+		},
+		{
+			uc:      "redirect error",
+			handler: New(),
+			err:     &heimdall.RedirectError{RedirectTo: &url.URL{}, Code: http.StatusFound},
+			expCode: http.StatusFound,
+		},
+		{
+			uc:      "redirect error verbose",
+			handler: New(WithVerboseErrors(true)),
+			err:     &heimdall.RedirectError{RedirectTo: &url.URL{}, Code: http.StatusFound},
+			expCode: http.StatusFound,
+		},
+		{
+			uc:      "internal error default",
+			handler: New(),
+			err:     heimdall.ErrInternal,
+			expCode: http.StatusInternalServerError,
+		},
+		{
+			uc:      "internal error overridden",
+			handler: New(WithInternalServerErrorCode(http.StatusContinue)),
+			err:     heimdall.ErrInternal,
+			expCode: http.StatusContinue,
+		},
+		{
+			uc:      "internal error verbose",
+			handler: New(WithVerboseErrors(true)),
+			err:     heimdall.ErrInternal,
+			expCode: http.StatusInternalServerError,
+			expBody: "<p>internal error</p>",
 		},
 	} {
-		t.Run("case="+tc.uc, func(t *testing.T) {
+		t.Run(tc.uc, func(t *testing.T) {
 			// GIVEN
-			appError = tc.serverError
+			app := fiber.New()
+			app.Use(tc.handler, func(c *fiber.Ctx) error { return tc.err })
 
-			// nolint: bodyclose
-			// false positive. closed below
-			assertResponse := x.IfThenElse(
-				tc.assertResponse != nil,
-				tc.assertResponse,
-				func(t *testing.T, response *http.Response) {
-					t.Helper()
-
-					assert.Equal(t, tc.responseCode, response.StatusCode)
-				})
+			req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, "/", nil)
+			require.NoError(t, err)
 
 			// WHEN
-			resp, err := app.Test(httptest.NewRequest(http.MethodGet, "/test", nil))
+			resp, err := app.Test(req, 1)
 
 			// THEN
 			require.NoError(t, err)
+
 			defer resp.Body.Close()
 
-			assertResponse(t, resp)
 			data, err := io.ReadAll(resp.Body)
 			require.NoError(t, err)
-			assert.Len(t, data, 0)
-		})
-	}
-}
 
-func TestVerboseErrorHandler(t *testing.T) {
-	t.Parallel()
-
-	var appError error
-
-	app := fiber.New()
-	app.Use(New(true))
-	app.Get("test", func(ctx *fiber.Ctx) error { return appError })
-
-	for _, tc := range []struct {
-		uc             string
-		serverError    error
-		responseCode   int
-		assertResponse func(t *testing.T, response *http.Response)
-	}{
-		{
-			uc:          "no error",
-			serverError: nil,
-			assertResponse: func(t *testing.T, response *http.Response) {
-				t.Helper()
-
-				assert.Equal(t, http.StatusOK, response.StatusCode)
-
-				data, err := io.ReadAll(response.Body)
-				require.NoError(t, err)
-				assert.Empty(t, data)
-			},
-		},
-		{
-			uc:           "authentication error",
-			serverError:  heimdall.ErrAuthentication,
-			responseCode: http.StatusUnauthorized,
-		},
-		{
-			uc:           "authorization error",
-			serverError:  heimdall.ErrAuthorization,
-			responseCode: http.StatusForbidden,
-		},
-		{
-			uc:           "communication timeout",
-			serverError:  heimdall.ErrCommunicationTimeout,
-			responseCode: http.StatusBadGateway,
-		},
-		{
-			uc:           "communication error",
-			serverError:  heimdall.ErrCommunication,
-			responseCode: http.StatusBadGateway,
-		},
-		{
-			uc:           "argument error",
-			serverError:  heimdall.ErrArgument,
-			responseCode: http.StatusBadRequest,
-		},
-		{
-			uc:           "method not allowed error",
-			serverError:  heimdall.ErrMethodNotAllowed,
-			responseCode: http.StatusMethodNotAllowed,
-		},
-		{
-			uc:           "no rule found error",
-			serverError:  heimdall.ErrNoRuleFound,
-			responseCode: http.StatusNotFound,
-		},
-		{
-			uc:           "internal error",
-			serverError:  heimdall.ErrInternal,
-			responseCode: http.StatusInternalServerError,
-		},
-		{
-			uc: "redirect with see other",
-			serverError: &heimdall.RedirectError{
-				RedirectTo: &url.URL{Scheme: "http", Host: "foo.bar.local", Path: "foobar"},
-				Code:       http.StatusSeeOther,
-			},
-			assertResponse: func(t *testing.T, response *http.Response) {
-				t.Helper()
-
-				assert.Equal(t, http.StatusSeeOther, response.StatusCode)
-				assert.Equal(t, "http://foo.bar.local/foobar", response.Header.Get("Location"))
-
-				data, err := io.ReadAll(response.Body)
-				require.NoError(t, err)
-				assert.Empty(t, data)
-			},
-		},
-		{
-			uc: "redirect with found",
-			serverError: &heimdall.RedirectError{
-				RedirectTo: &url.URL{Scheme: "http", Host: "foo.bar.local", Path: "foobar"},
-				Code:       http.StatusFound,
-			},
-			assertResponse: func(t *testing.T, response *http.Response) {
-				t.Helper()
-
-				assert.Equal(t, http.StatusFound, response.StatusCode)
-				assert.Equal(t, "http://foo.bar.local/foobar", response.Header.Get("Location"))
-
-				data, err := io.ReadAll(response.Body)
-				require.NoError(t, err)
-				assert.Empty(t, data)
-			},
-		},
-	} {
-		t.Run("case="+tc.uc, func(t *testing.T) {
-			// GIVEN
-			appError = tc.serverError
-
-			// nolint: bodyclose
-			// false positive. closed below
-			assertResponse := x.IfThenElse(
-				tc.assertResponse != nil,
-				tc.assertResponse,
-				func(t *testing.T, response *http.Response) {
-					t.Helper()
-
-					assert.Equal(t, tc.responseCode, response.StatusCode)
-					data, err := io.ReadAll(response.Body)
-					require.NoError(t, err)
-					assert.NotEmpty(t, data)
-				})
-
-			// WHEN
-			resp, err := app.Test(httptest.NewRequest(http.MethodGet, "/test", nil))
-
-			// THEN
-			require.NoError(t, err)
-			defer resp.Body.Close()
-
-			assertResponse(t, resp)
+			assert.Equal(t, tc.expCode, resp.StatusCode)
+			assert.Equal(t, tc.expBody, string(data))
 		})
 	}
 }
