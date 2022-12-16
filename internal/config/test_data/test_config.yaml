@@ -2,7 +2,6 @@ serve:
   decision:
     host: 127.0.0.1
     port: 4468
-    verbose_errors: true
     timeout:
       read: 2s
       write: 5s
@@ -25,11 +24,31 @@ serve:
       min_version: TLS1.3
     trusted_proxies:
       - 192.168.1.0/24
+    respond:
+      verbose: true
+      with:
+        accepted:
+          code: 200
+        argument_error:
+          code: 400
+        authentication_error:
+          code: 404
+        authorization_error:
+          code: 404
+        method_error:
+          code: 400
+        communication_timeout_error:
+          code: 502
+        communication_error:
+          code: 502
+        internal_error:
+          code: 500
+        no_rule_error:
+          code: 404
 
   proxy:
     host: 127.0.0.1
     port: 4469
-    verbose_errors: false
     timeout:
       read: 2s
       write: 5s
@@ -61,11 +80,16 @@ serve:
         - TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256
     trusted_proxies:
       - 192.168.1.0/24
+    respond:
+      with:
+        argument_error:
+          code: 400
+        authentication_error:
+          code: 404
 
   management:
     host: 127.0.0.1
     port: 4457
-    verbose_errors: false
     timeout:
       read: 2s
       write: 5s
