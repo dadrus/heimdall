@@ -2,7 +2,7 @@
 
 ## Background
 
-Heimdall is inspired by the ZeroTrust idea and also by [Ory's OAthkeeper](https://www.ory.sh/docs/oathkeeper). Some experience with the latter and my inability to update it to include the desired functionality and behavior was Heimdall's born hour.
+Heimdall is inspired by the ZeroTrust idea and tries to adopt it to some extent to web applications.
 
 ## Heimdall's Promise
 
@@ -10,7 +10,7 @@ Heimdall authenticates and authorizes incoming HTTP requests as well as enriches
 
 It is supposed to be used either as
 * a **Reverse Proxy** in front of your upstream API or web server that rejects unauthorized requests and forwards authorized ones to your end points, or as
-* a **Decision API**, which integrates with your API Gateway (Kong, NGNIX, Envoy, Traefik, etc) and then acts as a Policy Decision Point.
+* a **Decision Service**, which integrates with your API Gateway (Kong, NGNIX, Envoy, Traefik, etc.) and then acts as a Policy Decision Point.
 
 ## Run heimdall in Decision API operation mode
 
@@ -20,15 +20,15 @@ Create a configuration file named `heimdall.yaml`:
 log:
   level: info
 
-pipeline:
-  authenticators:
+rules:
+  mechanisms:
+    authenticators:
     - id: anonymous_authenticator
       type: anonymous
-  unifiers:
+    unifiers:
     - id: create_jwt
       type: jwt
 
-rules:
   default:
     methods:
       - GET
@@ -94,20 +94,20 @@ Create a config file (`config.yaml`) with the following content:
 log:
   level: info
 
-pipeline:
-  authenticators:
+rules:
+  mechanisms:
+    authenticators:
     - id: anonymous_authenticator
       type: anonymous
-  authorizers:
+    authorizers:
     - id: deny_all_requests
       type: deny
     - id: allow_all_requests
       type: allow
-  unifiers:
+    unifiers:
     - id: create_jwt
       type: jwt
-
-rules:
+      
   default:
     methods:
       - GET
