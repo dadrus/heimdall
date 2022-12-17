@@ -1,9 +1,18 @@
 serve:
   decision:
     port: 4468
-    verbose_errors: true
     trusted_proxies:
       - 0.0.0.0/0
+    respond:
+      verbose: true
+      with:
+        accepted:
+          code: 200
+        authorization_error:
+          code: 404
+        authentication_error:
+          code: 404
+
   proxy:
     port: 4469
     tls:
@@ -159,7 +168,7 @@ rules:
         type: redirect
         config:
           to: http://127.0.0.1:4433/self-service/login/browser
-          return_to_query_parameter: return_to
+          return_to_query_parameter: origin
           when:
             - error:
                 - type: authentication_error

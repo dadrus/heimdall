@@ -43,32 +43,7 @@ management:
 ----
 ====
 
-* *`verbose_errors`*: _boolean_ (optional)
-+
-By making use of this property you can instruct Heimdall to preserve error information and provide it in the response body to the caller. Defaults to `false`.
-+
-Heimdall supports MIME type negotiation. So, if the client sets the HTTP `Accept` header to e.g. `application/json`, and Heimdall run into an unhandled internal error condition, in addition to responding with `500 Internal Server Error`, it will render an error message, like shown below, if `verbose_errors` has been set to `true`.
-+
-[source, json]
-----
-{
-  "code": "internalServerError",
-  "message": "whatever led to the error"
-}
-----
-+
-The `message` will however contain just high-level information, like "failed to parse something", but will not contain any stack traces.
-+
-.Configure verbose errors
-====
-[source, yaml]
-----
-management:
-  verbose_errors: true
-----
-====
-
-* *`timeout`*: _link:{{< relref "configuration_types.adoc#_timeout" >}}[Timeout]_ (optional)
+* *`timeout`*: _link:{{< relref "/docs/configuration/reference/types.adoc#_timeout" >}}[Timeout]_ (optional)
 +
 Like written in the introduction of this section, Heimdall configures useful timeout defaults. You can however override this by making use of the `timeout` option and specifying the timeouts, you need.
 +
@@ -84,7 +59,7 @@ management:
 ----
 ====
 
-* *`cors`*: _link:{{< relref "configuration_types.adoc#_cors" >}}[CORS]_ (optional)
+* *`cors`*: _link:{{< relref "/docs/configuration/reference/types.adoc#_cors" >}}[CORS]_ (optional)
 +
 https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS[CORS] (Cross-Origin Resource Sharing) headers can be added and configured by making use of this option. This functionality allows for advanced security features to quickly be set.
 +
@@ -104,7 +79,7 @@ management:
 ----
 ====
 
-* *`tls`*: _link:{{< relref "configuration_types.adoc#_tls" >}}[TLS]_ (optional)
+* *`tls`*: _link:{{< relref "/docs/configuration/reference/types.adoc#_tls" >}}[TLS]_ (optional)
 +
 By default, the Management endpoint accepts HTTP requests. Depending on your deployment scenario, you could require Heimdall to accept HTTPS requests only. You can do so by making use of this option.
 +

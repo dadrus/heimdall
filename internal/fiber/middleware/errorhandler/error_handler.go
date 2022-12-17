@@ -8,35 +8,45 @@ import (
 
 	"github.com/dadrus/heimdall/internal/fiber/middleware/accesslog"
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/x"
 )
 
-func New(verbose bool) fiber.Handler {
-	return func(c *fiber.Ctx) error {
-		if err := c.Next(); err != nil {
-			accesslog.AddError(c.UserContext(), err)
+func New(opts ...Option) fiber.Handler {
+	options := defaultOptions
 
-			return x.IfThenElse(verbose, verboseErrorHandler, defaultErrorHandler)(c, err)
-		}
-
-		return nil
+	for _, opt := range opts {
+		opt(&options)
 	}
+
+	h := &handler{opts: options}
+
+	return h.handle
 }
 
-func defaultErrorHandler(ctx *fiber.Ctx, err error) error {
+type handler struct {
+	opts
+}
+
+func (h *handler) handle(ctx *fiber.Ctx) error { //nolint:cyclop
+	err := ctx.Next()
+	if err == nil {
+		return nil
+	}
+
+	accesslog.AddError(ctx.UserContext(), err)
+
 	switch {
 	case errors.Is(err, heimdall.ErrAuthentication):
-		ctx.Status(fiber.StatusUnauthorized)
+		h.onAuthenticationError(ctx)
 	case errors.Is(err, heimdall.ErrAuthorization):
-		ctx.Status(fiber.StatusForbidden)
+		h.onAuthorizationError(ctx)
 	case errors.Is(err, heimdall.ErrCommunicationTimeout) || errors.Is(err, heimdall.ErrCommunication):
-		ctx.Status(fiber.StatusBadGateway)
+		h.onCommunicationError(ctx)
 	case errors.Is(err, heimdall.ErrArgument):
-		ctx.Status(fiber.StatusBadRequest)
+		h.onPreconditionError(ctx)
 	case errors.Is(err, heimdall.ErrMethodNotAllowed):
-		ctx.Status(fiber.StatusMethodNotAllowed)
+		h.onBadMethodError(ctx)
 	case errors.Is(err, heimdall.ErrNoRuleFound):
-		ctx.Status(fiber.StatusNotFound)
+		h.onNoRuleError(ctx)
 	case errors.Is(err, &heimdall.RedirectError{}):
 		var redirectError *heimdall.RedirectError
 
@@ -44,46 +54,15 @@ func defaultErrorHandler(ctx *fiber.Ctx, err error) error {
 
 		return ctx.Redirect(redirectError.RedirectTo.String(), redirectError.Code)
 	default:
-		var ferr *fiber.Error
-		if errors.As(err, &ferr) {
-			ctx.Status(ferr.Code)
-
-			return nil
-		}
-
 		logger := zerolog.Ctx(ctx.UserContext())
-		logger.Error().Err(err).Msg("Error occurred")
+		logger.Error().Err(err).Msg("Internal error occurred")
 
-		ctx.Status(fiber.StatusInternalServerError)
+		h.onInternalError(ctx)
+	}
+
+	if h.verboseErrors {
+		return ctx.Format(err)
 	}
 
 	return nil
-}
-
-func verboseErrorHandler(ctx *fiber.Ctx, err error) error {
-	switch {
-	case errors.Is(err, heimdall.ErrAuthentication):
-		return ctx.Status(fiber.StatusUnauthorized).Format(err)
-	case errors.Is(err, heimdall.ErrAuthorization):
-		return ctx.Status(fiber.StatusForbidden).Format(err)
-	case errors.Is(err, heimdall.ErrCommunicationTimeout) || errors.Is(err, heimdall.ErrCommunication):
-		return ctx.Status(fiber.StatusBadGateway).Format(err)
-	case errors.Is(err, heimdall.ErrArgument):
-		return ctx.Status(fiber.StatusBadRequest).Format(err)
-	case errors.Is(err, heimdall.ErrMethodNotAllowed):
-		return ctx.Status(fiber.StatusMethodNotAllowed).Format(err)
-	case errors.Is(err, heimdall.ErrNoRuleFound):
-		return ctx.Status(fiber.StatusNotFound).Format(err)
-	case errors.Is(err, &heimdall.RedirectError{}):
-		var redirectError *heimdall.RedirectError
-
-		errors.As(err, &redirectError)
-
-		return ctx.Redirect(redirectError.RedirectTo.String(), redirectError.Code)
-	default:
-		logger := zerolog.Ctx(ctx.UserContext())
-		logger.Error().Err(err).Msg("Error occurred")
-
-		return ctx.Status(fiber.StatusInternalServerError).Format(err)
-	}
 }

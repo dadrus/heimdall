@@ -12,12 +12,14 @@ import (
 	"github.com/dadrus/heimdall/internal/keystore"
 	"github.com/dadrus/heimdall/internal/rules"
 	"github.com/dadrus/heimdall/internal/signer"
+	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
 type Handler struct {
-	r rules.Repository
-	s heimdall.JWTSigner
+	r    rules.Repository
+	s    heimdall.JWTSigner
+	code int
 }
 
 type handlerArgs struct {
@@ -36,9 +38,12 @@ func newHandler(args handlerArgs) (*Handler, error) {
 		return nil, err
 	}
 
+	acceptedCode := args.Config.Serve.Decision.Respond.With.Accepted.Code
+
 	handler := &Handler{
-		r: args.RulesRepository,
-		s: jwtSigner,
+		r:    args.RulesRepository,
+		s:    jwtSigner,
+		code: x.IfThenElse(acceptedCode != 0, acceptedCode, fiber.StatusAccepted),
 	}
 
 	handler.registerRoutes(args.App.Group("/"), args.Logger)
@@ -78,5 +83,5 @@ func (h *Handler) decisions(c *fiber.Ctx) error {
 
 	logger.Debug().Msg("Finalizing request")
 
-	return reqCtx.Finalize()
+	return reqCtx.Finalize(h.code)
 }

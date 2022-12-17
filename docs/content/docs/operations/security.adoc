@@ -38,7 +38,7 @@ docker run -t -p 4456:4456 \
 ----
 ====
 
-The verification of TLS server certificates is not the single configuration option. You should also ensure heimdall's services, you're using, are configured to be available via TLS as well. See link:{{< relref "/docs/configuration/services/configuration_types.adoc#_tls" >}}[TLS Configuration] for all available options.
+The verification of TLS server certificates is not the single configuration option. You should also ensure heimdall's services, you're using, are configured to be available via TLS as well. See link:{{< relref "/docs/configuration/reference/types.adoc#_tls" >}}[TLS Configuration] for all available options.
 
 == Signatures
 

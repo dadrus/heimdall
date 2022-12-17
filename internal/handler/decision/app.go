@@ -16,10 +16,10 @@ import (
 	"github.com/dadrus/heimdall/internal/config"
 	accesslogmiddleware "github.com/dadrus/heimdall/internal/fiber/middleware/accesslog"
 	cachemiddleware "github.com/dadrus/heimdall/internal/fiber/middleware/cache"
-	errorhandlermiddleware "github.com/dadrus/heimdall/internal/fiber/middleware/errorhandler"
+	errormiddleware "github.com/dadrus/heimdall/internal/fiber/middleware/errorhandler"
 	loggermiddlerware "github.com/dadrus/heimdall/internal/fiber/middleware/logger"
 	tracingmiddleware "github.com/dadrus/heimdall/internal/fiber/middleware/opentelemetry"
-	fiberprom "github.com/dadrus/heimdall/internal/fiber/middleware/prometheus"
+	prometheusmiddleware "github.com/dadrus/heimdall/internal/fiber/middleware/prometheus"
 	"github.com/dadrus/heimdall/internal/x"
 )
 
@@ -52,9 +52,9 @@ func newApp(args appArgs) *fiber.App {
 	app.Use(recover.New(recover.Config{EnableStackTrace: true}))
 	app.Use(tracingmiddleware.New(
 		tracingmiddleware.WithTracer(otel.GetTracerProvider().Tracer("github.com/dadrus/heimdall/decision"))))
-	app.Use(fiberprom.New(
-		fiberprom.WithServiceName("decision"),
-		fiberprom.WithRegisterer(args.Registerer),
+	app.Use(prometheusmiddleware.New(
+		prometheusmiddleware.WithServiceName("decision"),
+		prometheusmiddleware.WithRegisterer(args.Registerer),
 	))
 	app.Use(accesslogmiddleware.New(args.Logger))
 	app.Use(loggermiddlerware.New(args.Logger))
@@ -70,7 +70,16 @@ func newApp(args appArgs) *fiber.App {
 		}))
 	}
 
-	app.Use(errorhandlermiddleware.New(service.VerboseErrors))
+	app.Use(errormiddleware.New(
+		errormiddleware.WithVerboseErrors(service.Respond.Verbose),
+		errormiddleware.WithPreconditionErrorCode(service.Respond.With.ArgumentError.Code),
+		errormiddleware.WithAuthenticationErrorCode(service.Respond.With.AuthenticationError.Code),
+		errormiddleware.WithAuthorizationErrorCode(service.Respond.With.AuthorizationError.Code),
+		errormiddleware.WithCommunicationErrorCode(service.Respond.With.CommunicationError.Code),
+		errormiddleware.WithMethodErrorCode(service.Respond.With.BadMethodError.Code),
+		errormiddleware.WithNoRuleErrorCode(service.Respond.With.NoRuleError.Code),
+		errormiddleware.WithInternalServerErrorCode(service.Respond.With.InternalError.Code),
+	))
 	app.Use(cachemiddleware.New(args.Cache))
 
 	return app

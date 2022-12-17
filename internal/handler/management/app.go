@@ -14,7 +14,6 @@ import (
 
 	"github.com/dadrus/heimdall/internal/config"
 	accesslogmiddleware "github.com/dadrus/heimdall/internal/fiber/middleware/accesslog"
-	errorhandlermiddleware "github.com/dadrus/heimdall/internal/fiber/middleware/errorhandler"
 	loggermiddlerware "github.com/dadrus/heimdall/internal/fiber/middleware/logger"
 	tracingmiddleware "github.com/dadrus/heimdall/internal/fiber/middleware/opentelemetry"
 	fiberprom "github.com/dadrus/heimdall/internal/fiber/middleware/prometheus"
@@ -66,8 +65,6 @@ func newApp(args appArgs) *fiber.App {
 			MaxAge:           int(service.CORS.MaxAge.Seconds()),
 		}))
 	}
-
-	app.Use(errorhandlermiddleware.New(service.VerboseErrors))
 
 	return app
 }

@@ -56,13 +56,13 @@ type TLS struct {
 }
 
 type ServiceConfig struct {
-	Host           string    `koanf:"host"`
-	Port           int       `koanf:"port"`
-	VerboseErrors  bool      `koanf:"verbose_errors"`
-	Timeout        Timeout   `koanf:"timeout"`
-	CORS           *CORS     `koanf:"cors,omitempty"`
-	TLS            *TLS      `koanf:"tls,omitempty"`
-	TrustedProxies *[]string `koanf:"trusted_proxies,omitempty"`
+	Host           string        `koanf:"host"`
+	Port           int           `koanf:"port"`
+	Timeout        Timeout       `koanf:"timeout"`
+	CORS           *CORS         `koanf:"cors,omitempty"`
+	TLS            *TLS          `koanf:"tls,omitempty"`
+	TrustedProxies *[]string     `koanf:"trusted_proxies,omitempty"`
+	Respond        RespondConfig `koanf:"respond"`
 }
 
 func (c ServiceConfig) Address() string { return fmt.Sprintf("%s:%d", c.Host, c.Port) }
@@ -71,4 +71,22 @@ type ServeConfig struct {
 	Proxy      ServiceConfig `koanf:"proxy"`
 	Decision   ServiceConfig `koanf:"decision"`
 	Management ServiceConfig `koanf:"management"`
+}
+
+type ResponseOverride struct {
+	Code int `koanf:"code"`
+}
+
+type RespondConfig struct {
+	Verbose bool `koanf:"verbose"`
+	With    struct {
+		Accepted            ResponseOverride `koanf:"accepted"`
+		ArgumentError       ResponseOverride `koanf:"argument_error"`
+		AuthenticationError ResponseOverride `koanf:"authentication_error"`
+		AuthorizationError  ResponseOverride `koanf:"authorization_error"`
+		BadMethodError      ResponseOverride `koanf:"method_error"`
+		CommunicationError  ResponseOverride `koanf:"communication_error"`
+		InternalError       ResponseOverride `koanf:"internal_error"`
+		NoRuleError         ResponseOverride `koanf:"no_rule_error"`
+	} `koanf:"with"`
 }
