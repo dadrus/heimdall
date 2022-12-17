@@ -76,7 +76,6 @@ func newApp(args appArgs) *fiber.App {
 		errormiddleware.WithAuthenticationErrorCode(service.Respond.With.AuthenticationError.Code),
 		errormiddleware.WithAuthorizationErrorCode(service.Respond.With.AuthorizationError.Code),
 		errormiddleware.WithCommunicationErrorCode(service.Respond.With.CommunicationError.Code),
-		errormiddleware.WithCommunicationTimeoutErrorCode(service.Respond.With.CommunicationTimeoutError.Code),
 		errormiddleware.WithMethodErrorCode(service.Respond.With.BadMethodError.Code),
 		errormiddleware.WithNoRuleErrorCode(service.Respond.With.NoRuleError.Code),
 		errormiddleware.WithInternalServerErrorCode(service.Respond.With.InternalError.Code),

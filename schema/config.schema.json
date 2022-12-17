@@ -294,9 +294,6 @@
                 "method_error": {
                   "$ref": "#/definitions/responseOverride"
                 },
-                "communication_timeout_error": {
-                  "$ref": "#/definitions/responseOverride"
-                },
                 "communication_error": {
                   "$ref": "#/definitions/responseOverride"
                 },

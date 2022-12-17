@@ -5,7 +5,6 @@ import "github.com/gofiber/fiber/v2"
 var defaultOptions = opts{ //nolint:gochecknoglobals
 	onAuthenticationError:       func(ctx *fiber.Ctx) { ctx.Status(fiber.StatusUnauthorized) },
 	onAuthorizationError:        func(ctx *fiber.Ctx) { ctx.Status(fiber.StatusForbidden) },
-	onCommunicationTimeoutError: func(ctx *fiber.Ctx) { ctx.Status(fiber.StatusBadGateway) },
 	onCommunicationError:        func(ctx *fiber.Ctx) { ctx.Status(fiber.StatusBadGateway) },
 	onPreconditionError:         func(ctx *fiber.Ctx) { ctx.Status(fiber.StatusBadRequest) },
 	onBadMethodError:            func(ctx *fiber.Ctx) { ctx.Status(fiber.StatusMethodNotAllowed) },

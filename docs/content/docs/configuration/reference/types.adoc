@@ -298,6 +298,48 @@ message: No groups ending with @acme.co present
 ----
 ====
 
+== CORS
+
+https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS[CORS] (Cross-Origin Resource Sharing) headers can be added and configured by making use of this type. This functionality allows for advanced security features to quickly be set. If CORS headers are set, then heimdall does not pass preflight requests to its decision pipeline, instead the response will be generated and sent back to the client directly. Following properties are supported:
+
+* *`allowed_origins`*: _string array_ (optional)
++
+List of origins that may access the resource. Defaults to all, if not set, but any of the other CORS options are configured.
+
+* *`allowed_methods`*: _string array_ (optional)
++
+List of methods allowed when accessing the resource. This is used in response to a preflight request. Defaults to `GET`, `POST`, `HEAD`, `PUT`, `DELETE` and `PATCH` if not set, but any of the other CORS options are configured.
+
+* *`allowed_headers`*: _string array_ (optional)
++
+List of request headers that can be used when making the actual request.
+
+* *`exposed_headers`*: _string array_ (optional)
++
+"Allow-List" of headers that clients are allowed to access.
+
+* *`allow_credentials`*: _boolean_ (optional)
++
+Indicates whether the response to the request can be exposed when the credentials flag is true. When used as part of a response to a preflight request, this indicates whether the actual request can be made using credentials. Defaults to `false` if not set, but any of the other CORS options are configured.
+
+* *`max_age`*: _link:{{< relref "#_duration" >}}[Duration]_ (optional)
++
+Indicates how long the results of a preflight request can be cached. Defaults to 0 seconds if not set, but any of the other CORS options are configured.
+
+.Possible configuration
+====
+[source, yaml]
+----
+allowed_origins:
+  - example.org
+allowed_methods:
+  - HEAD
+  - PATCH
+allow_credentials: true
+max_age: 10s
+----
+====
+
 == Duration
 
 Duration is actually a string type, which adheres to the following pattern: `^[0-9]+(ns|us|ms|s|m|h)$`
@@ -439,7 +481,7 @@ Describes an error to match in link:{{< relref "#_error_condition" >}}[Error Con
 
 Following configuration properties are available:
 
-* *`type`*: _link:{{< relref "#_error_type" >}}[Error Type]_ (mandatory)
+* *`type`*: _link:{{< relref "#_errorstate_type" >}}[Error Type]_ (mandatory)
 +
 An error type to match.
 
@@ -460,16 +502,59 @@ raised_by: my_oauth2_authenticator
 Here the descriptor says, the expected error is of type `authentication_error` and should have been raised by a mechanism with the id `my_oauth2_authenticator`.
 ====
 
-== Error Type
+== Error/State Type
 
-Heimdall defines a couple of error types, which it uses to signal errors. Some of them are available for configuring your link:{{< relref "#_error_condition" >}}[Error Conditions] via link:{{< relref "#_error_descriptor" >}}[Error Descriptors].
+Heimdall defines a couple of error/state types, which it uses to signal errors. Those, which are marked with (*) are available for configuring link:{{< relref "#_error_condition" >}}[Error Conditions] via link:{{< relref "#_error_descriptor" >}}[Error Descriptors]. All can be used to define overrides for the HTTP response codes.
 
 Following types are available:
 
-* `authentication_error` - used if an authenticator failed to verify authentication data available in the request. E.g. an authenticator was configured to verify a JWT and the signature of it was invalid.
-* `authorization_error` - used if an authorizer failed to authorize the subject. E.g. an authorizer is configured to use a script to execute on the given subject and request context, but this script returned with an error.
-* `internal_error` - used if Heimdall run into an internal error condition while processing the request. E.g. something went wrong while unmarshalling a JSON object, or if there was a configuration error, which couldn't be raised while loading a rule, etc.
-* `precondition_error` - used if the request does not contain required/expected data. E.g. if an authenticator could not find a cookie configured.
+* `accepted` - this is the only state type in this list and is used to signal, the matched decision pipeline has been executed successfully, so the request can be forwarded to the upstream service. The response of that type results by default in a `202 Accepted` response.
+* `authentication_error` (*) - used if an authenticator failed to verify authentication data available in the request. E.g. an authenticator was configured to verify a JWT and the signature of it was invalid. If none of the authenticators used in a pipeline were able to authenticate the user, and the default error handler was used to handle such error, it will by default result in a `401 Unauthorized` response.
+* `authorization_error` (*) - used if an authorizer failed to authorize the subject. E.g. an authorizer is configured to use an expression on the given subject and request context, but that expression returned with an error. Error of this type results by default in `403 Forbidden` response if the default error handler was used to handle such error.
+* `communication_error` (*) - this error is used to signal a communication error while communicating to a remote system during the execution of the pipeline of the matched rule. Timeouts of DNSs errors result in such an error. Error of this type results by default in `502 Bad Gateway` HTTP code if handled by the default error handler.
+* `internal_error` - used if heimdall run into an internal error condition while processing the request. E.g. something went wrong while unmarshalling a JSON object, or if there was a configuration error, which couldn't be raised while loading a rule, etc. Results by default in `500 Internal Server Error` response to the caller.
+* `method_error` - this error is used to signal that a matched rule does not allow usage of the HTTP method used to submit the request. Error of this type results by default in `405 Method Not Allowed` HTTP code.
+* `no_rule_error` - this error is used to signal, there is no matching rule to handle the given request. Error of this type results by default in `404 Not Found` HTTP code.
+* `precondition_error` (*) - used if the request does not contain required/expected data. E.g. if an authenticator could not find a cookie configured. Error of this type results by default in `400 Bad Request` HTTP code if handled by the default error handler.
+
+== Respond
+
+This type enables instructing heimdall to preserve error information and provide it in the response body to the caller, as well as to use HTTP status codes deviating from those heimdall would usually use. The configuration, which can be done using this type affects only the behavior of the default error handler.
+
+Following properties are supported:
+
+* *`verbose`*: _boolean_ (optional)
++
+By making use of this property you can instruct heimdall to preserve error information and provide it in the response body to the caller. Defaults to `false`.
++
+Heimdall supports MIME type negotiation. So, if the client sets the HTTP `Accept` header to e.g. `application/json`, and Heimdall run into an unhandled internal error condition, in addition to responding with `500 Internal Server Error`, it will render an error message, like shown below, if `verbose` has been set to `true`.
++
+[source, json]
+----
+{
+  "code": "internal error",
+  "message": "whatever led to the error"
+}
+----
++
+The `message` will however contain just high-level information, like "failed to parse something", but will not contain any stack traces.
+
+* *`with`*: _ResponseOverride set_ (optional)
++
+This property enables mapping between response/error types used by heimdall and the corresponding HTTP status codes. Each entry must be from the list of the supported link:{{< relref "#_errorstate_type" >}}[Error/State Types] and contain exactly one property named `code`, which then defines the desired mapping.
++
+.Making error responses verbose and changing the HTTP codes for some errors
+====
+[source, yaml]
+----
+verbose: true
+with:
+  authentication_error:
+    code: 404
+  authorization_error:
+    code: 404
+----
+====
 
 == Retry
 
@@ -717,3 +802,60 @@ validity_leeway: 10s
 As you see, there is no need to define the time format as the times values appearing in the responses from an introspection endpoint are Unix Epoch time stamps.
 
 ====
+
+== Timeout
+
+Following configuration properties are supported:
+
+* *`read`*: _link:{{< relref "#_duration" >}}[Duration]_ (optional)
++
+The amount of time allowed to read the full request including body. Defaults to 5 seconds.
+
+* *`write`*: _link:{{< relref "#_duration" >}}[Duration]_ (optional)
++
+The maximum duration before timing out writes of the response. Defaults to 10 seconds.
+
+* *`idle`*: _link:{{< relref "#_duration" >}}[Duration]_ (optional)
++
+The maximum amount of time to wait for the next request when keep-alive is enabled. If `ìdle` is `0`, the value of `read` timeout is used. Defaults to 2 minutes.
+
+.Setting the read timeout to 1 second, write timeout to 2 seconds and the idle timeout to 1 minute.
+====
+[source, yaml]
+----
+read: 1s
+write: 2s
+idle: 1m
+----
+====
+
+== TLS
+Following are the supported TLS configuration properties:
+
+* *`key`*: _string_ (mandatory)
++
+Path to the private key in PEM format. PKCS#1, as well as PKCS#8 formats are supported.
+
+* *`cert`*: _string_ (mandatory)
++
+Path to the certificate in PEM format. The certificate file may contain intermediate certificates following the leaf certificate to form a certificate chain
+
+* *`min_version`*: _string_ (optional)
++
+The minimal TLS version to support. Can be either `TLS1.2` or `TLS1.3`. Defaults to `TLS1.3`.
+
+* *`cipher_suites`*: _string array_ (optional)
++
+Can be configured if `min_version` is set to `TLS1.2`. If `min_version` is set to `TLS1.3` the configured values are ignored. Only the following PFS cipher suites are supported:
+
+** `TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256`
+** `TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256`
+** `TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256`
+** `TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256`
+** `TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384`
+** `TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384`
+** `TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256`
+** `TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256`
+
++
+Defaults to the last six cipher suites if `min_version` is set to `TLS1.2` and `cipher_suites` is not configured.

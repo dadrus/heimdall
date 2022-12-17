@@ -80,14 +80,13 @@ type ResponseOverride struct {
 type RespondConfig struct {
 	Verbose bool `koanf:"verbose"`
 	With    struct {
-		Accepted                  ResponseOverride `koanf:"accepted"`
-		ArgumentError             ResponseOverride `koanf:"argument_error"`
-		AuthenticationError       ResponseOverride `koanf:"authentication_error"`
-		AuthorizationError        ResponseOverride `koanf:"authorization_error"`
-		BadMethodError            ResponseOverride `koanf:"method_error"`
-		CommunicationTimeoutError ResponseOverride `koanf:"communication_timeout_error"`
-		CommunicationError        ResponseOverride `koanf:"communication_error"`
-		InternalError             ResponseOverride `koanf:"internal_error"`
-		NoRuleError               ResponseOverride `koanf:"no_rule_error"`
+		Accepted            ResponseOverride `koanf:"accepted"`
+		ArgumentError       ResponseOverride `koanf:"argument_error"`
+		AuthenticationError ResponseOverride `koanf:"authentication_error"`
+		AuthorizationError  ResponseOverride `koanf:"authorization_error"`
+		BadMethodError      ResponseOverride `koanf:"method_error"`
+		CommunicationError  ResponseOverride `koanf:"communication_error"`
+		InternalError       ResponseOverride `koanf:"internal_error"`
+		NoRuleError         ResponseOverride `koanf:"no_rule_error"`
 	} `koanf:"with"`
 }

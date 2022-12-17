@@ -6,7 +6,6 @@ type opts struct {
 	verboseErrors               bool
 	onAuthenticationError       func(ctx *fiber.Ctx)
 	onAuthorizationError        func(ctx *fiber.Ctx)
-	onCommunicationTimeoutError func(ctx *fiber.Ctx)
 	onCommunicationError        func(ctx *fiber.Ctx)
 	onPreconditionError         func(ctx *fiber.Ctx)
 	onBadMethodError            func(ctx *fiber.Ctx)
@@ -36,14 +35,6 @@ func WithAuthorizationErrorCode(code int) Option {
 	return func(o *opts) {
 		if code != 0 {
 			o.onAuthorizationError = func(ctx *fiber.Ctx) { ctx.Status(code) }
-		}
-	}
-}
-
-func WithCommunicationTimeoutErrorCode(code int) Option {
-	return func(o *opts) {
-		if code != 0 {
-			o.onCommunicationTimeoutError = func(ctx *fiber.Ctx) { ctx.Status(code) }
 		}
 	}
 }

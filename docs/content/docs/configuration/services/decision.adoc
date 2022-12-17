@@ -9,7 +9,7 @@ menu:
     parent: "Services"
 ---
 
-Decision is one of the operating modes supported by Heimdall, used if you start Heimdall with `heimdall serve decision`. By default, Heimdall listens on `0.0.0.0:4456/` endpoint for incoming requests in this mode of operation and also configures useful default timeouts. No other options are configured. You can, and should however adjust the configuration for your needs.
+Decision is one of the operating modes supported by heimdall, used if you start heimdall with `heimdall serve decision`. By default, heimdall listens on `0.0.0.0:4456/` endpoint for incoming requests in this mode of operation and also configures useful default timeouts. No other options are configured. You can, and should however adjust the configuration for your needs.
 
 This service exposes only the Decision API endpoint.
 
@@ -45,7 +45,7 @@ decision:
 ----
 ====
 
-* *`timeout`*: _link:{{< relref "configuration_types.adoc#_timeout" >}}[Timeout]_ (optional)
+* *`timeout`*: _link:{{< relref "/docs/configuration/reference/types.adoc#_timeout" >}}[Timeout]_ (optional)
 +
 Like written in the introduction of this section, Heimdall configures useful timeout defaults. You can however override this by making use of the `timeout` option and specifying the timeouts, you need.
 +
@@ -61,7 +61,7 @@ decision:
 ----
 ====
 
-* *`cors`*: _link:{{< relref "configuration_types.adoc#_cors" >}}[CORS]_ (optional)
+* *`cors`*: _link:{{< relref "/docs/configuration/reference/types.adoc#_cors" >}}[CORS]_ (optional)
 +
 https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS[CORS] (Cross-Origin Resource Sharing) headers can be added and configured by making use of this option. This functionality allows for advanced security features to quickly be set. If CORS headers are set, then the Heimdall does not pass preflight requests to its decision pipeline, instead the response will be generated and sent back to the client directly.
 +
@@ -81,7 +81,7 @@ decision:
 ----
 ====
 
-* *`tls`*: _link:{{< relref "configuration_types.adoc#_tls" >}}[TLS]_ (optional)
+* *`tls`*: _link:{{< relref "/docs/configuration/reference/types.adoc#_tls" >}}[TLS]_ (optional)
 +
 By default, the Decision service accepts HTTP requests. Depending on your deployment scenario, you could require Heimdall to accept HTTPS requests only. You can do so by making use of this option.
 +
@@ -124,7 +124,7 @@ decision:
 ----
 ====
 
-* *`respond`*: _link:{{< relref "configuration_types.adoc#_respond" >}}[Respond]_ (optional)
+* *`respond`*: _link:{{< relref "/docs/configuration/reference/types.adoc#_respond" >}}[Respond]_ (optional)
 +
 By making use of this property you can instruct heimdall to preserve error information and provide it in the response body to the caller, as well as to use HTTP status codes deviating from those heimdall would usually use.
 +

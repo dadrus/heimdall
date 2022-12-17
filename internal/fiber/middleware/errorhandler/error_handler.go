@@ -39,9 +39,7 @@ func (h *handler) handle(ctx *fiber.Ctx) error { //nolint:cyclop
 		h.onAuthenticationError(ctx)
 	case errors.Is(err, heimdall.ErrAuthorization):
 		h.onAuthorizationError(ctx)
-	case errors.Is(err, heimdall.ErrCommunicationTimeout):
-		h.onCommunicationTimeoutError(ctx)
-	case errors.Is(err, heimdall.ErrCommunication):
+	case errors.Is(err, heimdall.ErrCommunicationTimeout) || errors.Is(err, heimdall.ErrCommunication):
 		h.onCommunicationError(ctx)
 	case errors.Is(err, heimdall.ErrArgument):
 		h.onPreconditionError(ctx)

@@ -75,7 +75,7 @@ func TestHandlerHandle(t *testing.T) {
 		},
 		{
 			uc:      "communication timeout error overridden",
-			handler: New(WithCommunicationTimeoutErrorCode(http.StatusContinue)),
+			handler: New(WithCommunicationErrorCode(http.StatusContinue)),
 			err:     heimdall.ErrCommunicationTimeout,
 			expCode: http.StatusContinue,
 		},
