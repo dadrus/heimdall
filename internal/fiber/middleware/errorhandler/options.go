@@ -3,14 +3,14 @@ package errorhandler
 import "github.com/gofiber/fiber/v2"
 
 type opts struct {
-	verboseErrors               bool
-	onAuthenticationError       func(ctx *fiber.Ctx)
-	onAuthorizationError        func(ctx *fiber.Ctx)
-	onCommunicationError        func(ctx *fiber.Ctx)
-	onPreconditionError         func(ctx *fiber.Ctx)
-	onBadMethodError            func(ctx *fiber.Ctx)
-	onNoRuleError               func(ctx *fiber.Ctx)
-	onInternalError             func(ctx *fiber.Ctx)
+	verboseErrors         bool
+	onAuthenticationError func(ctx *fiber.Ctx)
+	onAuthorizationError  func(ctx *fiber.Ctx)
+	onCommunicationError  func(ctx *fiber.Ctx)
+	onPreconditionError   func(ctx *fiber.Ctx)
+	onBadMethodError      func(ctx *fiber.Ctx)
+	onNoRuleError         func(ctx *fiber.Ctx)
+	onInternalError       func(ctx *fiber.Ctx)
 }
 
 type Option func(*opts)
