@@ -45,31 +45,6 @@ proxy:
 ----
 ====
 
-* *`verbose_errors`*: _boolean_ (optional)
-+
-By making use of this property you can instruct heimdall's default error handler to preserve error information and provide it in the response body to the caller. Defaults to `false`.
-+
-Heimdall supports MIME type negotiation. So, if the client sets the HTTP `Accept` header to e.g. `application/json`, and Heimdall run into an unhandled internal error condition, in addition to responding with `500 Internal Server Error`, it will render an error message, like shown below, if `verbose_errors` has been set to `true`.
-+
-[source, json]
-----
-{
-  "code": "internalServerError",
-  "message": "whatever led to the error"
-}
-----
-+
-The `message` will however contain just high-level information, like "failed to parse something", but will not contain any stack traces.
-+
-.Configure verbose errors
-====
-[source, yaml]
-----
-proxy:
-  verbose_errors: true
-----
-====
-
 * *`timeout`*: _link:{{< relref "configuration_types.adoc#_timeout" >}}[Timeout]_ (optional)
 +
 Like written in the introduction of this section, Heimdall configures useful timeout defaults. You can however override this by making use of the `timeout` option and specifying the timeouts, you need. The `read` timeout is also used while waiting for the responses from the upstream service. Setting it to `0` will make forwarding the requests to the upstream service impossible.
@@ -135,5 +110,35 @@ To prevent header spoofing and allowing such headers to be accepted from trusted
 proxy:
   trusted_proxies:
     - 192.168.1.0/24
+----
+====
+
+* *`respond`*: _link:{{< relref "configuration_types.adoc#_respond" >}}[Respond]_ (optional)
++
+By making use of this property you can instruct heimdall to preserve error information and provide it in the response body to the caller, as well as to use HTTP status codes deviating from those heimdall would usually use.
++
+NOTE: This mapping is only applicable if the HTTP status code is set by heimdall and not by the upstream service in the response to the proxied request. For that reason you cannot configure the mapping for the `accepted` response (it will be ignored).
++
+.Configure verbose errors
+====
+[source, yaml]
+----
+decision:
+  respond:
+    verbose: true
+----
+====
++
+.Use `404 Not Found` for authentication and authorization errors
+====
+[source, yaml]
+----
+decision:
+  respond:
+    with:
+      authentication_error:
+        code: 404
+      authorization_error:
+        code: 404
 ----
 ====

@@ -83,6 +83,56 @@ max_age: 10s
 ----
 ====
 
+== Respond
+
+This type enables instructing heimdall to preserve error information and provide it in the response body to the caller, as well as to use HTTP status codes deviating from those heimdall would usually use. The configuration, which can be done using this type affects only the behavior of the default error handler.
+
+Following properties are supported:
+
+* *`verbose`*: _boolean_ (optional)
++
+By making use of this property you can instruct heimdall to preserve error information and provide it in the response body to the caller. Defaults to `false`.
++
+Heimdall supports MIME type negotiation. So, if the client sets the HTTP `Accept` header to e.g. `application/json`, and Heimdall run into an unhandled internal error condition, in addition to responding with `500 Internal Server Error`, it will render an error message, like shown below, if `verbose` has been set to `true`.
++
+[source, json]
+----
+{
+  "code": "internal error",
+  "message": "whatever led to the error"
+}
+----
++
+The `message` will however contain just high-level information, like "failed to parse something", but will not contain any stack traces.
+
+* *`with`*: _ResponseOverride set_ (optional)
++
+This property enables mapping between response/error types used by heimdall and the corresponding HTTP status codes. Each entry must be from the list below and contain exactly one property named `code`, which then defines the desired mapping:
+
+** `accepted` - this type is used to signal, the matched decision pipeline has been executed successfuly, so the request can be forwarded to the upstream service. The response of that type results by default in `202 Accepted` HTTP code.
+** `precondition_error` - this error type is used to signal, that e.g. an argument expected by some mechanism was not present in the request. Error of this type results by default in `400 Bad Request` HTTP code.
+** `authentication_error` - this error is used to signal that none of the authenticators configured for the matched rule pipeline could authenticate the subject of the request. Error of this type results by default in `401 Unauthorized` HTTP code.
+** `authorization_error` - this error is used to signal authorization errors. Error of this type results by default in `403 Forbidden` HTTP code.
+** `method_error` - this error is used to signal that a matched rule does not allow usage of the HTTP method used to submit the request. Error of this type results by default in `405 Method Not Allowed` HTTP code.
+** `communication_timeout_error` - this error is used to signal a timeout while communicating to a remote system during the execution of the pipeline of the matched rule. Error of this type results by default in `502 Bad Gateway` HTTP code.
+** `communication_error` - this error is used to signal a communication error while communicating to a remote system during the execution of the pipeline of the matched rule. A DNS name resolution error would be e.g. such an error. Error of this type results by default in `502 Bad Gateway` HTTP code.
+** `internal_error` - this error is used to signal an internal error and results by default in `500 Internal Server Error`.
+** `no_rule_error` - this error is used to signal, there is no matching rule to handle the given request. Error of this type results by default in `404 Not Found` HTTP code.
+
++
+.Making error responses verbose and changing the HTTP codes for some errors
+====
+[source, yaml]
+----
+verbose: true
+with:
+  authentication_error:
+    code: 404
+  authorization_error:
+    code: 404
+----
+====
+
 == TLS
 Following are the supported TLS configuration properties:
 

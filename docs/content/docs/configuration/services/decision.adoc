@@ -45,31 +45,6 @@ decision:
 ----
 ====
 
-* *`verbose_errors`*: _boolean_ (optional)
-+
-By making use of this property you can instruct heimdall's default error handler to preserve error information and provide it in the response body to the caller. Defaults to `false`.
-+
-Heimdall supports MIME type negotiation. So, if your reverse proxy/gateway sets the HTTP `Accept` header to e.g. `application/json`, and Heimdall run into an unhandled internal error condition, in addition to responding with `500 Internal Server Error`, it will render an error message, like shown below, if `verbose_errors` has been set to `true`.
-+
-[source, json]
-----
-{
-  "code": "internalServerError",
-  "message": "whatever led to the error"
-}
-----
-+
-The `message` will however contain just high-level information, like "failed to parse something", but will not contain any stack traces.
-+
-.Configure verbose errors
-====
-[source, yaml]
-----
-decision:
-  verbose_errors: true
-----
-====
-
 * *`timeout`*: _link:{{< relref "configuration_types.adoc#_timeout" >}}[Timeout]_ (optional)
 +
 Like written in the introduction of this section, Heimdall configures useful timeout defaults. You can however override this by making use of the `timeout` option and specifying the timeouts, you need.
@@ -149,4 +124,30 @@ decision:
 ----
 ====
 
-
+* *`respond`*: _link:{{< relref "configuration_types.adoc#_respond" >}}[Respond]_ (optional)
++
+By making use of this property you can instruct heimdall to preserve error information and provide it in the response body to the caller, as well as to use HTTP status codes deviating from those heimdall would usually use.
++
+.Configure verbose errors
+====
+[source, yaml]
+----
+decision:
+  respond:
+    verbose: true
+----
+====
++
+.Use `404 Not Found` for authentication and authorization errors
+====
+[source, yaml]
+----
+decision:
+  respond:
+    with:
+      authentication_error:
+        code: 404
+      authorization_error:
+        code: 404
+----
+====
