@@ -282,7 +282,7 @@
                 "accepted": {
                   "$ref": "#/definitions/responseOverride"
                 },
-                "argument_error": {
+                "precondition_error": {
                   "$ref": "#/definitions/responseOverride"
                 },
                 "authentication_error": {
