@@ -44,7 +44,7 @@ func (h *handler) handle(ctx *fiber.Ctx) error { //nolint:cyclop
 	case errors.Is(err, heimdall.ErrCommunication):
 		h.onCommunicationError(ctx)
 	case errors.Is(err, heimdall.ErrArgument):
-		h.onArgumentError(ctx)
+		h.onPreconditionError(ctx)
 	case errors.Is(err, heimdall.ErrMethodNotAllowed):
 		h.onBadMethodError(ctx)
 	case errors.Is(err, heimdall.ErrNoRuleFound):

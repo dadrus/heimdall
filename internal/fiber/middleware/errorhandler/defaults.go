@@ -7,7 +7,7 @@ var defaultOptions = opts{ //nolint:gochecknoglobals
 	onAuthorizationError:        func(ctx *fiber.Ctx) { ctx.Status(fiber.StatusForbidden) },
 	onCommunicationTimeoutError: func(ctx *fiber.Ctx) { ctx.Status(fiber.StatusBadGateway) },
 	onCommunicationError:        func(ctx *fiber.Ctx) { ctx.Status(fiber.StatusBadGateway) },
-	onArgumentError:             func(ctx *fiber.Ctx) { ctx.Status(fiber.StatusBadRequest) },
+	onPreconditionError:         func(ctx *fiber.Ctx) { ctx.Status(fiber.StatusBadRequest) },
 	onBadMethodError:            func(ctx *fiber.Ctx) { ctx.Status(fiber.StatusMethodNotAllowed) },
 	onNoRuleError:               func(ctx *fiber.Ctx) { ctx.Status(fiber.StatusNotFound) },
 	onInternalError:             func(ctx *fiber.Ctx) { ctx.Status(fiber.StatusInternalServerError) },

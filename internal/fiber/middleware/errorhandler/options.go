@@ -8,7 +8,7 @@ type opts struct {
 	onAuthorizationError        func(ctx *fiber.Ctx)
 	onCommunicationTimeoutError func(ctx *fiber.Ctx)
 	onCommunicationError        func(ctx *fiber.Ctx)
-	onArgumentError             func(ctx *fiber.Ctx)
+	onPreconditionError         func(ctx *fiber.Ctx)
 	onBadMethodError            func(ctx *fiber.Ctx)
 	onNoRuleError               func(ctx *fiber.Ctx)
 	onInternalError             func(ctx *fiber.Ctx)
@@ -16,10 +16,10 @@ type opts struct {
 
 type Option func(*opts)
 
-func WithArgumentErrorCode(code int) Option {
+func WithPreconditionErrorCode(code int) Option {
 	return func(o *opts) {
 		if code != 0 {
-			o.onArgumentError = func(ctx *fiber.Ctx) { ctx.Status(code) }
+			o.onPreconditionError = func(ctx *fiber.Ctx) { ctx.Status(code) }
 		}
 	}
 }

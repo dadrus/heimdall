@@ -29,7 +29,7 @@ serve:
       with:
         accepted:
           code: 200
-        argument_error:
+        precondition_error:
           code: 400
         authentication_error:
           code: 404
@@ -82,7 +82,7 @@ serve:
       - 192.168.1.0/24
     respond:
       with:
-        argument_error:
+        precondition_error:
           code: 400
         authentication_error:
           code: 404

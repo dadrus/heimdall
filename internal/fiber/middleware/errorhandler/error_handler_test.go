@@ -106,19 +106,19 @@ func TestHandlerHandle(t *testing.T) {
 			expBody: "<p>communication error</p>",
 		},
 		{
-			uc:      "argument error default",
+			uc:      "precondition error default",
 			handler: New(),
 			err:     heimdall.ErrArgument,
 			expCode: http.StatusBadRequest,
 		},
 		{
-			uc:      "argument error overridden",
-			handler: New(WithArgumentErrorCode(http.StatusContinue)),
+			uc:      "precondition error overridden",
+			handler: New(WithPreconditionErrorCode(http.StatusContinue)),
 			err:     heimdall.ErrArgument,
 			expCode: http.StatusContinue,
 		},
 		{
-			uc:      "argument error verbose",
+			uc:      "precondition error verbose",
 			handler: New(WithVerboseErrors(true)),
 			err:     heimdall.ErrArgument,
 			expCode: http.StatusBadRequest,

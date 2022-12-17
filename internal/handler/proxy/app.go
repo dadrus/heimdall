@@ -73,7 +73,7 @@ func newApp(args appArgs) *fiber.App {
 
 	app.Use(errormiddleware.New(
 		errormiddleware.WithVerboseErrors(service.Respond.Verbose),
-		errormiddleware.WithArgumentErrorCode(service.Respond.With.ArgumentError.Code),
+		errormiddleware.WithPreconditionErrorCode(service.Respond.With.ArgumentError.Code),
 		errormiddleware.WithAuthenticationErrorCode(service.Respond.With.AuthenticationError.Code),
 		errormiddleware.WithAuthorizationErrorCode(service.Respond.With.AuthorizationError.Code),
 		errormiddleware.WithCommunicationErrorCode(service.Respond.With.CommunicationError.Code),
