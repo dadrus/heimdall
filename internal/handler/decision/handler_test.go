@@ -184,7 +184,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				t.Helper()
 
 				require.NoError(t, err)
-				assert.Equal(t, http.StatusAccepted, response.StatusCode)
+				assert.Equal(t, http.StatusOK, response.StatusCode)
 
 				data, err := io.ReadAll(response.Body)
 				require.NoError(t, err)
@@ -236,7 +236,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				t.Helper()
 
 				require.NoError(t, err)
-				assert.Equal(t, http.StatusAccepted, response.StatusCode)
+				assert.Equal(t, http.StatusOK, response.StatusCode)
 
 				data, err := io.ReadAll(response.Body)
 				require.NoError(t, err)
@@ -289,7 +289,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				t.Helper()
 
 				require.NoError(t, err)
-				assert.Equal(t, http.StatusAccepted, response.StatusCode)
+				assert.Equal(t, http.StatusOK, response.StatusCode)
 
 				data, err := io.ReadAll(response.Body)
 				require.NoError(t, err)
@@ -335,7 +335,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				t.Helper()
 
 				require.NoError(t, err)
-				assert.Equal(t, http.StatusAccepted, response.StatusCode)
+				assert.Equal(t, http.StatusOK, response.StatusCode)
 			},
 		},
 		{
@@ -369,7 +369,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				t.Helper()
 
 				require.NoError(t, err)
-				assert.Equal(t, http.StatusAccepted, response.StatusCode)
+				assert.Equal(t, http.StatusOK, response.StatusCode)
 			},
 		},
 		{
@@ -403,7 +403,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				t.Helper()
 
 				require.NoError(t, err)
-				assert.Equal(t, http.StatusAccepted, response.StatusCode)
+				assert.Equal(t, http.StatusOK, response.StatusCode)
 			},
 		},
 		{
@@ -437,7 +437,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				t.Helper()
 
 				require.NoError(t, err)
-				assert.Equal(t, http.StatusAccepted, response.StatusCode)
+				assert.Equal(t, http.StatusOK, response.StatusCode)
 			},
 		},
 		{
@@ -474,7 +474,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				t.Helper()
 
 				require.NoError(t, err)
-				assert.Equal(t, http.StatusAccepted, response.StatusCode)
+				assert.Equal(t, http.StatusOK, response.StatusCode)
 			},
 		},
 	} {

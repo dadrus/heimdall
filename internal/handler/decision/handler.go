@@ -43,7 +43,7 @@ func newHandler(args handlerArgs) (*Handler, error) {
 	handler := &Handler{
 		r:    args.RulesRepository,
 		s:    jwtSigner,
-		code: x.IfThenElse(acceptedCode != 0, acceptedCode, fiber.StatusAccepted),
+		code: x.IfThenElse(acceptedCode != 0, acceptedCode, fiber.StatusOK),
 	}
 
 	handler.registerRoutes(args.App.Group("/"), args.Logger)

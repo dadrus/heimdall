@@ -166,7 +166,7 @@ Otherwise, if you configure it to use `gelf` format, the output will look as fol
 {"_level_name": "INFO", "version": "1.1", "host": "unknown", "_tx_start": 1659523295,
  "_client_ip": "127.0.0.1", "_http_method": "GET", "_http_path": "/foo",
  "_http_user_agent": "curl/7.74.0", "_http_host": "127.0.0.1:4468", "_http_scheme": "http",
- "_body_bytes_sent": 0, "_http_status_code":202, "_tx_duration_ms":0, "_subject": "anonymous",
+ "_body_bytes_sent": 0, "_http_status_code":200, "_tx_duration_ms":0, "_subject": "anonymous",
  "_access_granted": true, "timestamp":1659523295, "level": 6, "_parent_id": "3449bda63ed70206",
  "_span_id": "f57c007257fee0ed", "_trace_id": "00000000000000000a5af97bffe6a8a2",
  "short_message": "TX finished"}

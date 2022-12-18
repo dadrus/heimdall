@@ -386,7 +386,7 @@ endpoints:
 			assert: func(t *testing.T, logs fmt.Stringer, queue event.RuleSetChangedEventQueue) {
 				t.Helper()
 
-				time.Sleep(1200 * time.Millisecond)
+				time.Sleep(2 * time.Second)
 
 				assert.True(t, requestCount >= 4)
 				assert.Contains(t, logs.String(), "No updates received")
