@@ -11,7 +11,7 @@ menu:
     parent: get_started
 ---
 
-This document describes a simple use case in which you'll see heimdall's Proxy service in action. Here, we'll create a minimal but complete environment for running heimdall with containers. Compared to the link:{{< relref "decision_service_quickstart.adco" >}}[Decision Service Quickstart], you'll also define a very simple rule without which heimdall won't know where to forward the requests to.
+This document describes a simple use case in which you'll see heimdall's Proxy service in action. Here, we'll create a minimal but complete environment for running heimdall with containers.
 
 == Prerequisites
 
@@ -34,6 +34,8 @@ rules:
     authenticators:
     - id: anonymous_authenticator  # <2>
       type: anonymous
+    - id: noop
+      type: noop
     authorizers:
     - id: deny_all_requests  # <3>
       type: deny
@@ -42,6 +44,8 @@ rules:
     unifiers:
     - id: create_jwt  # <5>
       type: jwt
+    - id: noop
+      type: noop
 
   default:  # <6>
     methods:
@@ -71,14 +75,23 @@ Put together, this configuration will let heimdall create a JSON Web Token (JWT)
 +
 [source, yaml]
 ----
-- id: test-rule
-  url: http://<**>/<**>
+- id: rule1  # <1>
+  url: http://<**>/anonymous
   upstream: http://upstream
   execute:
     - authorizer: allow_all_requests
+
+- id: rule2  # <2>
+  url: http://<**>/public
+  upstream: http://upstream
+  execute:
+    - authenticator: noop
+    - authorizer: allow_all_requests
+    - unifier: noop
 ----
 +
-This rule will match any host and path and forward the request to our upstream service (which we're going to define next). In addition, it reuses the configuration from the default rule. Here, the methods, which are allowed, as well as the authorizers and unifiers. So we don't need to define them here.
+<1> This rule matches any host and the `/anonymous` path and forwards the request to our upstream service (which we're going to define next). In addition, it reuses the configuration from the default rule. Here, the methods, which are allowed, as well as the authorizers and unifiers. So we don't need to define them here.
+<2> This rule matches any host and the `/public` path and forwards the request as the previous rule to our upstream service. This rule doesn't perform any kind of request verification or transformation.
 
 . Create or copy the following `docker-compose.yaml` file and modify it to include the correct paths to your `config.yaml` and `rule.yaml` files:
 +
@@ -151,7 +164,9 @@ Send a request to heimdall's proxy endpoint:
 $ curl -v 127.0.0.1:4455/foobar
 ----
 
-Here, heimdall will match our rule and forward the request to the `upstream` service. On completion, you should see the `Authorization` header in the proxied response from the `upstream` service, like in the output below:
+Here, heimdall will not match any of the defined rules, which will result in the execution of the default rule. Thus, you'll see `403 Forbidden` as answer.
+
+Try sending requests to the `/public` and the `/anonymous` endpoints and see what happens. In both cases, the response will be an HTTP `200 OK`. And the response from the `/anonymous` endpoint will also contain an `Authorization` header containing a JWT, e.g. as shown below.
 
 [source, bash]
 ----
@@ -201,5 +216,3 @@ You should also be able to see similar output as below from the docker-compose e
  _http_host=127.0.0.1:4455 _http_method=GET _http_path=/foobar _http_scheme=http _http_status_code=200
  _http_user_agent=curl/7.74.0 _subject=anonymous _tx_duration_ms=0 _tx_start=1659599621
 ----
-
-Try using another method, like e.g. DELETE to see, what will happen then. Or change the `rule.yaml` file (you don't need to restart the environment as the file provider will watch the `rule.yaml` file for changes) to let it match only on a specific path and send the request again using another path. You'll then see the `deny` authorizer in action.

@@ -37,7 +37,7 @@ clusters:
 ----
 * to include an https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/ext_authz/v3/ext_authz.proto.html?highlight=allowed_upstream_headers[External Authorization] HTTP filter in the definition of the HTTP connection manager, as well as to let that filter contain the required header name(s), heimdall sets in the HTTP responses (depends on your link:{{< relref "/docs/configuration/rules/pipeline_mechanisms/contextualizers.adoc" >}}[Contextualizers] and link:{{< relref "/docs/configuration/rules/pipeline_mechanisms/unifiers.adoc" >}}[Unifiers] configuration).
 +
-The following snipped shows, how an https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/ext_authz/v3/ext_authz.proto.html?highlight=allowed_upstream_headers[External Authorization] can be defined to let Envoy communicating with heimdall by making use of the previously defined `cluster` (see snippet from above) as well as to let it forward headers, set by heimdall in its responses (here `Authorization`) to the upstream services.
+The following snipped shows, how an https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/ext_authz/v3/ext_authz.proto.html?highlight=allowed_upstream_headers[External Authorization] can be defined to let Envoy communicating with heimdall by making use of the previously defined `cluster` (see snippet from above) as well as to let it forward headers, set by heimdall in its responses (here all headers) to the upstream services.
 +
 [source, yaml]
 ----
@@ -46,6 +46,7 @@ http_filters:
   - name: envoy.filters.http.ext_authz
     typed_config:
       "@type": type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthz
+      transport_api_version: V3
       http_service:
         server_uri:
           uri: heimdall:4456
@@ -53,21 +54,26 @@ http_filters:
           timeout: 0.25s
         authorization_response:
           allowed_upstream_headers:
-            patterns:
-              - exact: Authorization
+            allowed_upstream_headers:
+               patterns:
+                 - safe_regex:
+                     google_re2: {}
+                     regex: ".*"
   # other http filter
 ----
 
+NOTE: Envoy does not set `X-Forwarded-*` headers, as long as the `envoy.filters.http.dynamic_forward_proxy` is not configured. That means, matching of URLs happens based on those URLs, used by Envoy while communicating with heimdall. That means your rules should ignore the scheme and host parts, respectively use the values specific for heimdall and not of the domain.
+
 == Demo Setup
 
-The Envoy configuration file shown below can be used to create a fully working setup based on the link:{{< relref "/docs/getting_started/decision_service_quickstart.adoc" >}}[Decision Service Quickstart]. Just update the `docker-compose.yaml` file used in that guide and replace the entry for `edge-router` service, with the one shown below. You can also remove all `labels` configurations, as these will have no effect.
+The Envoy configuration file shown below can be used to create a fully working setup based on the link:{{< relref "/docs/getting_started/decision_service_quickstart.adoc" >}}[Decision Service Quickstart]. Just update the `docker-compose.yaml` file used in that guide and replace the entry for `proxy` service, with the one shown below. You can also remove all `labels` configurations, as these will have no effect.
 
 [source, yaml]
 ----
 # docker-compose.yaml
 
 services:
-  edge-router:
+  proxy:
     image: envoyproxy/envoy:v1.24.1
     volumes:
       - ./envoy.yaml:/envoy.yaml:ro
@@ -88,7 +94,7 @@ static_resources:
       address:
         socket_address:
           address: 0.0.0.0
-          port_value: 10000
+          port_value: 9090
       filter_chains:
         - filters:
           - name: envoy.filters.network.http_connection_manager
@@ -99,6 +105,7 @@ static_resources:
                 - name: envoy.filters.http.ext_authz
                   typed_config:
                     "@type": type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthz
+                    transport_api_version: V3
                     http_service:
                       server_uri:
                         uri: heimdall:4456
@@ -107,7 +114,9 @@ static_resources:
                       authorization_response:
                         allowed_upstream_headers:
                           patterns:
-                            - exact: Authorization
+                            - safe_regex:
+                                google_re2: {}
+                                regex: ".*"
                 - name: envoy.filters.http.router
                   typed_config:
                     "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
