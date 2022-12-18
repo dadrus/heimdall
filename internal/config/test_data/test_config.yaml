@@ -28,7 +28,7 @@ serve:
       verbose: true
       with:
         accepted:
-          code: 200
+          code: 202
         precondition_error:
           code: 400
         authentication_error:
