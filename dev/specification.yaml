@@ -308,7 +308,7 @@ paths:
           schema:
             type: string
       responses:
-        '202':
+        '200':
           description: Request has been accepted and is allowed to be forwarded to the upstream service.
           headers:
             <Application Specific>:
