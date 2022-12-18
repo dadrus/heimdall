@@ -54,11 +54,10 @@ http_filters:
           timeout: 0.25s
         authorization_response:
           allowed_upstream_headers:
-            allowed_upstream_headers:
-               patterns:
-                 - safe_regex:
-                     google_re2: {}
-                     regex: ".*"
+            patterns:
+              - safe_regex:
+                  google_re2: {}
+                  regex: ".*"
   # other http filter
 ----
 
