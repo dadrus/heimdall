@@ -10,13 +10,12 @@ menu:
     weight: 15
 ---
 
-https://doc.traefik.io/traefik/[Traefik Proxy] is a modern HTTP proxy and load balancer for microservices, heimdall can be integrated with via the https://doc.traefik.io/traefik/middlewares/http/forwardauth/[ForwardAuth Middleware] while operated in the link:{{< relref "/docs/getting_started/concepts.adoc#_decision_mode" >}}[Decision Operation Mode]. In such setup, traefik delegates authentication and authorization to heimdall. If heimdall answers with a 2XX code, traefik grants access and forwards the original request to the upstream service. Otherwise, the response  from heimdall is returned to the client.
+https://doc.traefik.io/traefik/[Traefik Proxy] is a modern HTTP proxy and load balancer for microservices, heimdall can be integrated with via the https://doc.traefik.io/traefik/middlewares/http/forwardauth/[ForwardAuth Middleware] while operated in the link:{{< relref "/docs/getting_started/concepts.adoc#_decision_mode" >}}[Decision Operation Mode]. In such setup, traefik delegates authentication and authorization to heimdall. If heimdall answers with a 2XX code, traefik grants access and forwards the original request to the upstream service. Otherwise, the response from heimdall is returned to the client.
 
-To achieve this,
+To achieve this, configure traefik
 
-* Configure traefik
-  * to make use of the aforesaid ForwardAuth middleware by setting the `address` property to the decision service endpoint and
-  * configure the `authResponseHeaders` to contain the required header name(s), heimdall sets in the HTTP responses (depends on your link:{{< relref "/docs/configuration/rules/pipeline_mechanisms/contextualizers.adoc" >}}[Contextualizers] and link:{{< relref "/docs/configuration/rules/pipeline_mechanisms/unifiers.adoc" >}}[Unifiers] configuration).
+* to make use of the aforesaid ForwardAuth middleware by setting the `address` property to the decision service endpoint and
+* configure the `authResponseHeaders` to contain the required header name(s), heimdall sets in the HTTP responses (depends on your link:{{< relref "/docs/configuration/rules/pipeline_mechanisms/contextualizers.adoc" >}}[Contextualizers] and link:{{< relref "/docs/configuration/rules/pipeline_mechanisms/unifiers.adoc" >}}[Unifiers] configuration).
 * Configure the route of your service to make use of this middleware.
 
 [CAUTION]
@@ -44,5 +43,7 @@ service:
     - traefik.http.routers.service.middlewares=heimdall
     # further labels
 ----
+
+A fully working example with Traefik is shown in the link:{{< relref "../getting_started/decision_service_quickstart.adoc#_run_integrated" >}}[Decision Service Quickstart].
 
 ====
