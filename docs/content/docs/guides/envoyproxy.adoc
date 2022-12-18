@@ -60,22 +60,22 @@ http_filters:
 
 == Demo Setup
 
-The Envoy configuration file shown below can be used to create a fully working setup based on the link:{{< relref "/docs/getting_started/decision_service_quickstart.adoc" >}}[Decision Service Quickstart]. Just update the `docker-compose.yaml` file used in that guide to include a new service for Envoy:
+The Envoy configuration file shown below can be used to create a fully working setup based on the link:{{< relref "/docs/getting_started/decision_service_quickstart.adoc" >}}[Decision Service Quickstart]. Just update the `docker-compose.yaml` file used in that guide and replace the entry for `edge-router` service, with the one shown below. You can also remove all `labels` configurations, as these will have no effect.
 
 [source, yaml]
 ----
 # docker-compose.yaml
 
 services:
-  # other services from the guide
-
-  envoy:
+  edge-router:
     image: envoyproxy/envoy:v1.24.1
     volumes:
       - ./envoy.yaml:/envoy.yaml:ro
     ports:
-      - 10000:10000
+      - 9090:10000
     command: -c /envoy.yaml
+
+  # other services from the guide
 ----
 
 [source, yaml]
@@ -148,5 +148,5 @@ static_resources:
                       port_value: 80
 ----
 
-After starting the docker compose environment, you can run the curl commands shown in the referenced guide. This time however against envoy by changing the port to 10000. E.g. `$ curl -v 127.0.0.1:4456/anonymous`
+After starting the docker compose environment, you can run the curl commands shown in the referenced guide. This time however against envoy by using port 9090. E.g. `$ curl -v 127.0.0.1:9090/anonymous`.
 
