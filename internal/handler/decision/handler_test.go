@@ -1,8 +1,6 @@
 package decision
 
 import (
-	"crypto/rand"
-	"crypto/rsa"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -19,7 +17,6 @@ import (
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/handler/requestcontext"
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/keystore"
 	mocks2 "github.com/dadrus/heimdall/internal/rules/mocks"
 	mocks4 "github.com/dadrus/heimdall/internal/rules/rule/mocks"
 )
@@ -27,14 +24,6 @@ import (
 // nolint: gocognit, cyclop, maintidx
 func TestHandleDecisionEndpointRequest(t *testing.T) {
 	t.Parallel()
-
-	const rsa2048 = 2048
-
-	privateKey, err := rsa.GenerateKey(rand.Reader, rsa2048)
-	require.NoError(t, err)
-
-	ks, err := keystore.NewKeyStoreFromKey(privateKey)
-	require.NoError(t, err)
 
 	for _, tc := range []struct {
 		uc             string
@@ -501,7 +490,6 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				App:             app,
 				RulesRepository: repo,
 				Logger:          logger,
-				KeyStore:        ks,
 				Config:          conf,
 			})
 			require.NoError(t, err)

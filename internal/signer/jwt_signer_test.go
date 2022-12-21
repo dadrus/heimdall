@@ -5,6 +5,8 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/rsa"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -18,15 +20,12 @@ import (
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/keystore"
-	"github.com/dadrus/heimdall/internal/keystore/mocks"
 	"github.com/dadrus/heimdall/internal/testsupport"
 )
 
 // nolint: maintidx
 func TestNewJWTSigner(t *testing.T) {
 	t.Parallel()
-
-	const bitsInByte = 8
 
 	rsaPrivKey1, err := rsa.GenerateKey(rand.Reader, 2048)
 	require.NoError(t, err)
@@ -46,27 +45,43 @@ func TestNewJWTSigner(t *testing.T) {
 	ecdsaPrivKey3, err := ecdsa.GenerateKey(elliptic.P521(), rand.Reader)
 	require.NoError(t, err)
 
+	testDir := t.TempDir()
+	keyFile, err := os.Create(filepath.Join(testDir, "keys.pem"))
+	require.NoError(t, err)
+
+	pemBytes, err := testsupport.BuildPEM(
+		testsupport.WithRSAPrivateKey(rsaPrivKey1, testsupport.WithPEMHeader("X-Key-ID", "key1")),
+		testsupport.WithRSAPrivateKey(rsaPrivKey2, testsupport.WithPEMHeader("X-Key-ID", "key2")),
+		testsupport.WithRSAPrivateKey(rsaPrivKey3, testsupport.WithPEMHeader("X-Key-ID", "key3")),
+		testsupport.WithECDSAPrivateKey(ecdsaPrivKey1, testsupport.WithPEMHeader("X-Key-ID", "key4")),
+		testsupport.WithECDSAPrivateKey(ecdsaPrivKey2, testsupport.WithPEMHeader("X-Key-ID", "key5")),
+		testsupport.WithECDSAPrivateKey(ecdsaPrivKey3, testsupport.WithPEMHeader("X-Key-ID", "key6")),
+	)
+	require.NoError(t, err)
+
+	_, err = keyFile.Write(pemBytes)
+	require.NoError(t, err)
+
 	for _, tc := range []struct {
-		uc             string
-		config         config.SignerConfig
-		configureMocks func(t *testing.T, mkf *mocks.MockKeyStore)
-		assert         func(t *testing.T, err error, signer *jwtSigner)
+		uc     string
+		config config.SignerConfig
+		assert func(t *testing.T, err error, signer *jwtSigner)
 	}{
 		{
-			uc:     "no key id configured",
-			config: config.SignerConfig{Name: "foo"},
-			configureMocks: func(t *testing.T, mkf *mocks.MockKeyStore) {
+			uc: "without configuration",
+			assert: func(t *testing.T, err error, signer *jwtSigner) {
 				t.Helper()
 
-				mkf.On("Entries").Return([]*keystore.Entry{
-					{
-						KeyID:      "bar",
-						PrivateKey: rsaPrivKey1,
-						Alg:        keystore.AlgRSA,
-						KeySize:    rsaPrivKey1.Size() * bitsInByte,
-					},
-				})
+				require.NoError(t, err)
+
+				assert.IsType(t, &ecdsa.PrivateKey{}, signer.key)
+				assert.NotEmpty(t, signer.jwk.KeyID)
+				assert.Equal(t, string(jose.ES384), signer.jwk.Algorithm)
 			},
+		},
+		{
+			uc:     "no key id configured",
+			config: config.SignerConfig{Name: "foo", KeyStore: keyFile.Name()},
 			assert: func(t *testing.T, err error, signer *jwtSigner) {
 				t.Helper()
 
@@ -74,23 +89,13 @@ func TestNewJWTSigner(t *testing.T) {
 
 				assert.Equal(t, "foo", signer.iss)
 				assert.Equal(t, rsaPrivKey1, signer.key)
-				assert.Equal(t, "bar", signer.jwk.KeyID)
+				assert.Equal(t, "key1", signer.jwk.KeyID)
 				assert.Equal(t, string(jose.PS256), signer.jwk.Algorithm)
 			},
 		},
 		{
 			uc:     "with key id configured",
-			config: config.SignerConfig{Name: "foo", KeyID: "baz"},
-			configureMocks: func(t *testing.T, mkf *mocks.MockKeyStore) {
-				t.Helper()
-
-				mkf.On("GetKey", "baz").Return(&keystore.Entry{
-					KeyID:      "baz",
-					PrivateKey: rsaPrivKey2,
-					Alg:        keystore.AlgRSA,
-					KeySize:    rsaPrivKey2.Size() * bitsInByte,
-				}, nil)
-			},
+			config: config.SignerConfig{Name: "foo", KeyStore: keyFile.Name(), KeyID: "key2"},
 			assert: func(t *testing.T, err error, signer *jwtSigner) {
 				t.Helper()
 
@@ -98,38 +103,23 @@ func TestNewJWTSigner(t *testing.T) {
 
 				assert.Equal(t, "foo", signer.iss)
 				assert.Equal(t, rsaPrivKey2, signer.key)
-				assert.Equal(t, "baz", signer.jwk.KeyID)
+				assert.Equal(t, "key2", signer.jwk.KeyID)
 				assert.Equal(t, string(jose.PS384), signer.jwk.Algorithm)
 			},
 		},
 		{
 			uc:     "with error while retrieving key from key store",
-			config: config.SignerConfig{Name: "foo", KeyID: "baz"},
-			configureMocks: func(t *testing.T, mkf *mocks.MockKeyStore) {
-				t.Helper()
-
-				mkf.On("GetKey", "baz").Return(nil, testsupport.ErrTestPurpose)
-			},
+			config: config.SignerConfig{Name: "foo", KeyStore: keyFile.Name(), KeyID: "baz"},
 			assert: func(t *testing.T, err error, signer *jwtSigner) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.Equal(t, testsupport.ErrTestPurpose, err)
+				assert.ErrorIs(t, err, keystore.ErrNoSuchKey)
 			},
 		},
 		{
 			uc:     "with rsa 2048 key",
-			config: config.SignerConfig{Name: "foo", KeyID: "baz"},
-			configureMocks: func(t *testing.T, mkf *mocks.MockKeyStore) {
-				t.Helper()
-
-				mkf.On("GetKey", "baz").Return(&keystore.Entry{
-					KeyID:      "baz",
-					PrivateKey: rsaPrivKey1,
-					Alg:        keystore.AlgRSA,
-					KeySize:    rsaPrivKey1.Size() * bitsInByte,
-				}, nil)
-			},
+			config: config.SignerConfig{Name: "foo", KeyStore: keyFile.Name(), KeyID: "key1"},
 			assert: func(t *testing.T, err error, signer *jwtSigner) {
 				t.Helper()
 
@@ -137,23 +127,13 @@ func TestNewJWTSigner(t *testing.T) {
 
 				assert.Equal(t, "foo", signer.iss)
 				assert.Equal(t, rsaPrivKey1, signer.key)
-				assert.Equal(t, "baz", signer.jwk.KeyID)
+				assert.Equal(t, "key1", signer.jwk.KeyID)
 				assert.Equal(t, string(jose.PS256), signer.jwk.Algorithm)
 			},
 		},
 		{
 			uc:     "with rsa 3072 key",
-			config: config.SignerConfig{Name: "foo", KeyID: "baz"},
-			configureMocks: func(t *testing.T, mkf *mocks.MockKeyStore) {
-				t.Helper()
-
-				mkf.On("GetKey", "baz").Return(&keystore.Entry{
-					KeyID:      "baz",
-					PrivateKey: rsaPrivKey2,
-					Alg:        keystore.AlgRSA,
-					KeySize:    rsaPrivKey2.Size() * bitsInByte,
-				}, nil)
-			},
+			config: config.SignerConfig{Name: "foo", KeyStore: keyFile.Name(), KeyID: "key2"},
 			assert: func(t *testing.T, err error, signer *jwtSigner) {
 				t.Helper()
 
@@ -161,23 +141,13 @@ func TestNewJWTSigner(t *testing.T) {
 
 				assert.Equal(t, "foo", signer.iss)
 				assert.Equal(t, rsaPrivKey2, signer.key)
-				assert.Equal(t, "baz", signer.jwk.KeyID)
+				assert.Equal(t, "key2", signer.jwk.KeyID)
 				assert.Equal(t, string(jose.PS384), signer.jwk.Algorithm)
 			},
 		},
 		{
 			uc:     "with rsa 4096 key",
-			config: config.SignerConfig{Name: "foo", KeyID: "baz"},
-			configureMocks: func(t *testing.T, mkf *mocks.MockKeyStore) {
-				t.Helper()
-
-				mkf.On("GetKey", "baz").Return(&keystore.Entry{
-					KeyID:      "baz",
-					PrivateKey: rsaPrivKey3,
-					Alg:        keystore.AlgRSA,
-					KeySize:    rsaPrivKey3.Size() * bitsInByte,
-				}, nil)
-			},
+			config: config.SignerConfig{Name: "foo", KeyStore: keyFile.Name(), KeyID: "key3"},
 			assert: func(t *testing.T, err error, signer *jwtSigner) {
 				t.Helper()
 
@@ -185,23 +155,13 @@ func TestNewJWTSigner(t *testing.T) {
 
 				assert.Equal(t, "foo", signer.iss)
 				assert.Equal(t, rsaPrivKey3, signer.key)
-				assert.Equal(t, "baz", signer.jwk.KeyID)
+				assert.Equal(t, "key3", signer.jwk.KeyID)
 				assert.Equal(t, string(jose.PS512), signer.jwk.Algorithm)
 			},
 		},
 		{
 			uc:     "with P256 ecdsa key",
-			config: config.SignerConfig{Name: "foo", KeyID: "baz"},
-			configureMocks: func(t *testing.T, mkf *mocks.MockKeyStore) {
-				t.Helper()
-
-				mkf.On("GetKey", "baz").Return(&keystore.Entry{
-					KeyID:      "baz",
-					PrivateKey: ecdsaPrivKey1,
-					Alg:        keystore.AlgECDSA,
-					KeySize:    ecdsaPrivKey1.Params().BitSize,
-				}, nil)
-			},
+			config: config.SignerConfig{Name: "foo", KeyStore: keyFile.Name(), KeyID: "key4"},
 			assert: func(t *testing.T, err error, signer *jwtSigner) {
 				t.Helper()
 
@@ -209,23 +169,13 @@ func TestNewJWTSigner(t *testing.T) {
 
 				assert.Equal(t, "foo", signer.iss)
 				assert.Equal(t, ecdsaPrivKey1, signer.key)
-				assert.Equal(t, "baz", signer.jwk.KeyID)
+				assert.Equal(t, "key4", signer.jwk.KeyID)
 				assert.Equal(t, string(jose.ES256), signer.jwk.Algorithm)
 			},
 		},
 		{
 			uc:     "with P384 ecdsa key",
-			config: config.SignerConfig{Name: "foo", KeyID: "baz"},
-			configureMocks: func(t *testing.T, mkf *mocks.MockKeyStore) {
-				t.Helper()
-
-				mkf.On("GetKey", "baz").Return(&keystore.Entry{
-					KeyID:      "baz",
-					PrivateKey: ecdsaPrivKey2,
-					Alg:        keystore.AlgECDSA,
-					KeySize:    ecdsaPrivKey2.Params().BitSize,
-				}, nil)
-			},
+			config: config.SignerConfig{Name: "foo", KeyStore: keyFile.Name(), KeyID: "key5"},
 			assert: func(t *testing.T, err error, signer *jwtSigner) {
 				t.Helper()
 
@@ -233,23 +183,13 @@ func TestNewJWTSigner(t *testing.T) {
 
 				assert.Equal(t, "foo", signer.iss)
 				assert.Equal(t, ecdsaPrivKey2, signer.key)
-				assert.Equal(t, "baz", signer.jwk.KeyID)
+				assert.Equal(t, "key5", signer.jwk.KeyID)
 				assert.Equal(t, string(jose.ES384), signer.jwk.Algorithm)
 			},
 		},
 		{
 			uc:     "with P512 ecdsa key",
-			config: config.SignerConfig{Name: "foo", KeyID: "baz"},
-			configureMocks: func(t *testing.T, mkf *mocks.MockKeyStore) {
-				t.Helper()
-
-				mkf.On("GetKey", "baz").Return(&keystore.Entry{
-					KeyID:      "baz",
-					PrivateKey: ecdsaPrivKey3,
-					Alg:        keystore.AlgECDSA,
-					KeySize:    ecdsaPrivKey3.Params().BitSize,
-				}, nil)
-			},
+			config: config.SignerConfig{Name: "foo", KeyStore: keyFile.Name(), KeyID: "key6"},
 			assert: func(t *testing.T, err error, signer *jwtSigner) {
 				t.Helper()
 
@@ -257,18 +197,14 @@ func TestNewJWTSigner(t *testing.T) {
 
 				assert.Equal(t, "foo", signer.iss)
 				assert.Equal(t, ecdsaPrivKey3, signer.key)
-				assert.Equal(t, "baz", signer.jwk.KeyID)
+				assert.Equal(t, "key6", signer.jwk.KeyID)
 				assert.Equal(t, string(jose.ES512), signer.jwk.Algorithm)
 			},
 		},
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
-			// GIVEN
-			ks := &mocks.MockKeyStore{}
-			tc.configureMocks(t, ks)
-
 			// WHEN
-			signer, err := NewJWTSigner(ks, tc.config, log.Logger)
+			signer, err := NewJWTSigner(&tc.config, log.Logger)
 
 			// THEN
 			var (

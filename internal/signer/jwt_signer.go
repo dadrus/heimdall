@@ -2,6 +2,9 @@ package signer
 
 import (
 	"crypto"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
 	"time"
@@ -18,11 +21,43 @@ import (
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
-func NewJWTSigner(ks keystore.KeyStore, conf config.SignerConfig, logger zerolog.Logger) (heimdall.JWTSigner, error) {
+func NewJWTSigner(conf *config.SignerConfig, logger zerolog.Logger) (heimdall.JWTSigner, error) {
 	var (
+		ks  keystore.KeyStore
 		kse *keystore.Entry
 		err error
 	)
+
+	if len(conf.KeyStore) == 0 {
+		logger.Warn().
+			Msg("Key store is not configured. NEVER DO IT IN PRODUCTION!!!! Generating an ECDSA P-384 key pair.")
+
+		var privateKey *ecdsa.PrivateKey
+
+		privateKey, err = ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
+		if err != nil {
+			return nil, errorchain.NewWithMessage(heimdall.ErrInternal,
+				"failed to generate ECDSA P-384 key pair").CausedBy(err)
+		}
+
+		ks, err = keystore.NewKeyStoreFromKey(privateKey)
+	} else {
+		ks, err = keystore.NewKeyStoreFromPEMFile(conf.KeyStore, conf.Password)
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	logger.Info().Msg("Key store contains following entries")
+
+	for _, entry := range ks.Entries() {
+		logger.Info().
+			Str("_key_id", entry.KeyID).
+			Str("_algorithm", entry.Alg).
+			Int("_size", entry.KeySize).
+			Msg("Entry info")
+	}
 
 	if len(conf.KeyID) == 0 {
 		logger.Warn().Msg("No key id for signer configured. Taking first entry from the key store")
