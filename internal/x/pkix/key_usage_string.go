@@ -2,27 +2,24 @@ package pkix
 
 import "crypto/x509"
 
-func KeyUsageToString(usage x509.KeyUsage) string {
-	switch usage {
-	case x509.KeyUsageDigitalSignature:
-		return "DigitalSignature"
-	case x509.KeyUsageContentCommitment:
-		return "ContentCommitment"
-	case x509.KeyUsageKeyEncipherment:
-		return "KeyEncipherment"
-	case x509.KeyUsageDataEncipherment:
-		return "DataEncipherment"
-	case x509.KeyUsageKeyAgreement:
-		return "KeyAgreement"
-	case x509.KeyUsageCertSign:
-		return "CertSign"
-	case x509.KeyUsageCRLSign:
-		return "CRLSign"
-	case x509.KeyUsageEncipherOnly:
-		return "EncipherOnly"
-	case x509.KeyUsageDecipherOnly:
-		return "DecipherOnly"
-	default:
-		return "Unknown"
+var keyUsages = map[KeyUsage]string{ //nolint:gochecknoglobals
+	KeyUsage(x509.KeyUsageDigitalSignature):  "DigitalSignature",
+	KeyUsage(x509.KeyUsageContentCommitment): "ContentCommitment",
+	KeyUsage(x509.KeyUsageKeyEncipherment):   "KeyEncipherment",
+	KeyUsage(x509.KeyUsageDataEncipherment):  "DataEncipherment",
+	KeyUsage(x509.KeyUsageKeyAgreement):      "KeyAgreement",
+	KeyUsage(x509.KeyUsageCertSign):          "CertSign",
+	KeyUsage(x509.KeyUsageCRLSign):           "CRLSign",
+	KeyUsage(x509.KeyUsageEncipherOnly):      "EncipherOnly",
+	KeyUsage(x509.KeyUsageDecipherOnly):      "DecipherOnly",
+}
+
+type KeyUsage x509.KeyUsage
+
+func (k KeyUsage) String() string {
+	if name, ok := keyUsages[k]; ok {
+		return name
 	}
+
+	return "Unknown"
 }

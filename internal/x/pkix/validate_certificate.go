@@ -84,7 +84,7 @@ func WithKeyUsage(usage x509.KeyUsage) ValidationOption {
 	return func(opts *options) error {
 		opts.keyUsageChecks = append(opts.keyUsageChecks, func(setUsage x509.KeyUsage) error {
 			if setUsage&usage != usage {
-				return errorchain.NewWithMessage(ErrMissingKeyUsage, KeyUsageToString(usage))
+				return errorchain.NewWithMessage(ErrMissingKeyUsage, KeyUsage(usage).String())
 			}
 
 			return nil
