@@ -1,4 +1,4 @@
-package pkix
+package testsupport
 
 import (
 	"crypto/rand"
@@ -71,6 +71,12 @@ func WithExtension(extension pkix.Extension) CertificateBuilderOption {
 func WithExtraExtension(extension pkix.Extension) CertificateBuilderOption {
 	return func(builder *CertificateBuilder) {
 		builder.tmpl.ExtraExtensions = append(builder.tmpl.ExtraExtensions, extension)
+	}
+}
+
+func WithExtendedKeyUsage(usage x509.ExtKeyUsage) CertificateBuilderOption {
+	return func(builder *CertificateBuilder) {
+		builder.tmpl.ExtKeyUsage = append(builder.tmpl.ExtKeyUsage, usage)
 	}
 }
 

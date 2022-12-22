@@ -22,7 +22,7 @@ import (
 	"github.com/dadrus/heimdall/internal/keystore"
 	pkix2 "github.com/dadrus/heimdall/internal/x/pkix"
 	"github.com/dadrus/heimdall/internal/x/pkix/pemx"
-	testsupport2 "github.com/dadrus/heimdall/internal/x/testsupport"
+	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
 // nolint: gochecknoglobals
@@ -447,20 +447,20 @@ xijD/4gPFRBfs2GsfVZzSL9kH7HH0chB9w==
 			pemContents: func(t *testing.T) []byte {
 				t.Helper()
 
-				ca, err := testsupport2.NewRootCA("Test CA", time.Hour*24)
+				ca, err := testsupport.NewRootCA("Test CA", time.Hour*24)
 				require.NoError(t, err)
 
 				privKey, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
 				require.NoError(t, err)
 				cert, err := ca.IssueCertificate(
-					testsupport2.WithSubject(pkix.Name{
+					testsupport.WithSubject(pkix.Name{
 						CommonName:   "Test EE",
 						Organization: []string{"Test"},
 						Country:      []string{"EU"},
 					}),
-					testsupport2.WithValidity(time.Now(), time.Hour*1),
-					testsupport2.WithSubjectPubKey(&privKey.PublicKey, x509.ECDSAWithSHA384),
-					testsupport2.WithKeyUsage(x509.KeyUsageDigitalSignature))
+					testsupport.WithValidity(time.Now(), time.Hour*1),
+					testsupport.WithSubjectPubKey(&privKey.PublicKey, x509.ECDSAWithSHA384),
+					testsupport.WithKeyUsage(x509.KeyUsageDigitalSignature))
 				require.NoError(t, err)
 
 				pemBytes, err := pemx.BuildPEM(
@@ -495,21 +495,21 @@ xijD/4gPFRBfs2GsfVZzSL9kH7HH0chB9w==
 			pemContents: func(t *testing.T) []byte {
 				t.Helper()
 
-				ca, err := testsupport2.NewRootCA("Test CA", time.Hour*24)
+				ca, err := testsupport.NewRootCA("Test CA", time.Hour*24)
 				require.NoError(t, err)
 
 				privKey, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
 				require.NoError(t, err)
 				cert, err := ca.IssueCertificate(
-					testsupport2.WithSubject(pkix.Name{
+					testsupport.WithSubject(pkix.Name{
 						CommonName:   "Test EE 1",
 						Organization: []string{"Test"},
 						Country:      []string{"EU"},
 					}),
-					testsupport2.WithValidity(time.Now(), time.Hour*1),
-					testsupport2.WithSubjectKeyID([]byte("bar")),
-					testsupport2.WithSubjectPubKey(&privKey.PublicKey, x509.ECDSAWithSHA384),
-					testsupport2.WithKeyUsage(x509.KeyUsageDigitalSignature))
+					testsupport.WithValidity(time.Now(), time.Hour*1),
+					testsupport.WithSubjectKeyID([]byte("bar")),
+					testsupport.WithSubjectPubKey(&privKey.PublicKey, x509.ECDSAWithSHA384),
+					testsupport.WithKeyUsage(x509.KeyUsageDigitalSignature))
 				require.NoError(t, err)
 
 				pemBytes, err := pemx.BuildPEM(
@@ -542,21 +542,21 @@ xijD/4gPFRBfs2GsfVZzSL9kH7HH0chB9w==
 			pemContents: func(t *testing.T) []byte {
 				t.Helper()
 
-				ca, err := testsupport2.NewRootCA("Test CA", time.Hour*24)
+				ca, err := testsupport.NewRootCA("Test CA", time.Hour*24)
 				require.NoError(t, err)
 
 				privKey, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
 				require.NoError(t, err)
 				cert, err := ca.IssueCertificate(
-					testsupport2.WithSubject(pkix.Name{
+					testsupport.WithSubject(pkix.Name{
 						CommonName:   "Test EE 1",
 						Organization: []string{"Test"},
 						Country:      []string{"EU"},
 					}),
-					testsupport2.WithValidity(time.Now(), time.Hour*1),
-					testsupport2.WithSubjectKeyID([]byte("bar")),
-					testsupport2.WithSubjectPubKey(&privKey.PublicKey, x509.ECDSAWithSHA384),
-					testsupport2.WithKeyUsage(x509.KeyUsageDigitalSignature))
+					testsupport.WithValidity(time.Now(), time.Hour*1),
+					testsupport.WithSubjectKeyID([]byte("bar")),
+					testsupport.WithSubjectPubKey(&privKey.PublicKey, x509.ECDSAWithSHA384),
+					testsupport.WithKeyUsage(x509.KeyUsageDigitalSignature))
 				require.NoError(t, err)
 
 				pemBytes, err := pemx.BuildPEM(

@@ -106,7 +106,6 @@ func ValidateCertificate(cert *x509.Certificate, opts ...ValidationOption) error
 	validationOpts := &options{
 		verifyOpts: x509.VerifyOptions{
 			Intermediates: x509.NewCertPool(),
-			KeyUsages:     []x509.ExtKeyUsage{x509.ExtKeyUsageAny},
 		},
 	}
 
@@ -116,6 +115,10 @@ func ValidateCertificate(cert *x509.Certificate, opts ...ValidationOption) error
 				"for certificate with DN='%s' and SN=%s", cert.Subject.String(), cert.SerialNumber.String()).
 				CausedBy(err)
 		}
+	}
+
+	if len(validationOpts.verifyOpts.KeyUsages) == 0 {
+		validationOpts.verifyOpts.KeyUsages = []x509.ExtKeyUsage{x509.ExtKeyUsageAny}
 	}
 
 	if validationOpts.verifyOpts.Roots == nil {

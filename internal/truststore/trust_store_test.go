@@ -13,27 +13,27 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/x/pkix/pemx"
-	testsupport2 "github.com/dadrus/heimdall/internal/x/testsupport"
+	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
 func TestNewKeyStoreFromPEMBytes(t *testing.T) {
 	// GIVEN
 	// ROOT CAs
-	rootCA1, err := testsupport2.NewRootCA("Test Root CA 1", time.Hour*24)
+	rootCA1, err := testsupport.NewRootCA("Test Root CA 1", time.Hour*24)
 	require.NoError(t, err)
 
 	// INT CA
 	intCA1PrivKey, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
 	require.NoError(t, err)
 	intCA1Cert, err := rootCA1.IssueCertificate(
-		testsupport2.WithSubject(pkix.Name{
+		testsupport.WithSubject(pkix.Name{
 			CommonName:   "Test Int CA 1",
 			Organization: []string{"Test"},
 			Country:      []string{"EU"},
 		}),
-		testsupport2.WithIsCA(),
-		testsupport2.WithValidity(time.Now(), time.Hour*24),
-		testsupport2.WithSubjectPubKey(&intCA1PrivKey.PublicKey, x509.ECDSAWithSHA384))
+		testsupport.WithIsCA(),
+		testsupport.WithValidity(time.Now(), time.Hour*24),
+		testsupport.WithSubjectPubKey(&intCA1PrivKey.PublicKey, x509.ECDSAWithSHA384))
 	require.NoError(t, err)
 
 	pemBytes, err := pemx.BuildPEM(
