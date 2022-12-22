@@ -584,44 +584,6 @@ xijD/4gPFRBfs2GsfVZzSL9kH7HH0chB9w==
 			},
 		},
 		{
-			uc: "pem contains key with invalid chain for signature purpose",
-			pemContents: func(t *testing.T) []byte {
-				t.Helper()
-
-				ca, err := testsupport.NewRootCA("Test CA", time.Hour*24)
-				require.NoError(t, err)
-
-				privKey1, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
-				require.NoError(t, err)
-				cert1, err := ca.IssueCertificate(
-					testsupport.WithSubject(pkix.Name{
-						CommonName:   "Test EE 1",
-						Organization: []string{"Test"},
-						Country:      []string{"EU"},
-					}),
-					testsupport.WithValidity(time.Now(), time.Hour*1),
-					testsupport.WithSubjectKeyID([]byte("bar")),
-					testsupport.WithSubjectPubKey(&privKey1.PublicKey, x509.ECDSAWithSHA384))
-				require.NoError(t, err)
-
-				pemBytes, err := testsupport.BuildPEM(
-					testsupport.WithECDSAPrivateKey(privKey1),
-					testsupport.WithX509Certificate(cert1),
-					testsupport.WithX509Certificate(ca.Certificate),
-				)
-				require.NoError(t, err)
-
-				return pemBytes
-			},
-			assert: func(t *testing.T, ks keystore.KeyStore, err error) {
-				t.Helper()
-
-				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "DigitalSignature")
-			},
-		},
-		{
 			uc: "duplicate key id entry",
 			pemContents: func(t *testing.T) []byte {
 				t.Helper()
