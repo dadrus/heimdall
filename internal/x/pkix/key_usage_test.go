@@ -21,6 +21,7 @@ func TestKeyUsageString(t *testing.T) {
 		{usage: x509.KeyUsageCRLSign, name: "CRLSign"},
 		{usage: x509.KeyUsageEncipherOnly, name: "EncipherOnly"},
 		{usage: x509.KeyUsageDecipherOnly, name: "DecipherOnly"},
+		{usage: 1000, name: "Unknown"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			assert.Equal(t, tc.name, KeyUsage(tc.usage).String())
