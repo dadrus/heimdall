@@ -6,6 +6,7 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/sha256"
+	"crypto/x509"
 	"encoding/hex"
 	"time"
 
@@ -19,6 +20,7 @@ import (
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/keystore"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
+	"github.com/dadrus/heimdall/internal/x/pkix"
 )
 
 func NewJWTSigner(conf *config.SignerConfig, logger zerolog.Logger) (heimdall.JWTSigner, error) {
@@ -69,6 +71,16 @@ func NewJWTSigner(conf *config.SignerConfig, logger zerolog.Logger) (heimdall.JW
 
 	if err != nil {
 		return nil, err
+	}
+
+	if len(kse.CertChain) != 0 {
+		if err = pkix.ValidateCertificate(kse.CertChain[0],
+			pkix.WithKeyUsage(x509.KeyUsageDigitalSignature),
+			pkix.WithCurrentTime(time.Now()),
+		); err != nil {
+			return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
+				"configured certificate cannot be used for JWT signing purposes").CausedBy(err)
+		}
 	}
 
 	logger.Info().Str("_key_id", kse.KeyID).Msg("Signer configured")
