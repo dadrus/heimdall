@@ -20,7 +20,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/testsupport"
+	testsupport2 "github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
 func freePort() (int, error) {
@@ -50,23 +50,23 @@ func TestNewListener(t *testing.T) {
 	privKey2, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
 	require.NoError(t, err)
 
-	cert, err := testsupport.NewCertificateBuilder(testsupport.WithValidity(time.Now(), 10*time.Hour),
-		testsupport.WithSerialNumber(big.NewInt(1)),
-		testsupport.WithSubject(pkix.Name{
+	cert, err := testsupport2.NewCertificateBuilder(testsupport2.WithValidity(time.Now(), 10*time.Hour),
+		testsupport2.WithSerialNumber(big.NewInt(1)),
+		testsupport2.WithSubject(pkix.Name{
 			CommonName:   "test cert",
 			Organization: []string{"Test"},
 			Country:      []string{"EU"},
 		}),
-		testsupport.WithSubjectPubKey(&privKey1.PublicKey, x509.ECDSAWithSHA384),
-		testsupport.WithSelfSigned(),
-		testsupport.WithSignaturePrivKey(privKey1)).
+		testsupport2.WithSubjectPubKey(&privKey1.PublicKey, x509.ECDSAWithSHA384),
+		testsupport2.WithSelfSigned(),
+		testsupport2.WithSignaturePrivKey(privKey1)).
 		Build()
 	require.NoError(t, err)
 
-	pemBytes, err := testsupport.BuildPEM(
-		testsupport.WithECDSAPrivateKey(privKey1, testsupport.WithPEMHeader("X-Key-ID", "key1")),
-		testsupport.WithX509Certificate(cert),
-		testsupport.WithECDSAPrivateKey(privKey2, testsupport.WithPEMHeader("X-Key-ID", "key2")),
+	pemBytes, err := testsupport2.BuildPEM(
+		testsupport2.WithECDSAPrivateKey(privKey1, testsupport2.WithPEMHeader("X-Key-ID", "key1")),
+		testsupport2.WithX509Certificate(cert),
+		testsupport2.WithECDSAPrivateKey(privKey2, testsupport2.WithPEMHeader("X-Key-ID", "key2")),
 	)
 	require.NoError(t, err)
 

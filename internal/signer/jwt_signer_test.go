@@ -23,7 +23,7 @@ import (
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/keystore"
-	"github.com/dadrus/heimdall/internal/testsupport"
+	testsupport2 "github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
 // nolint: maintidx
@@ -51,16 +51,16 @@ func TestNewJWTSigner(t *testing.T) {
 	ecdsaPrivKey4, err := ecdsa.GenerateKey(elliptic.P521(), rand.Reader)
 	require.NoError(t, err)
 
-	cert, err := testsupport.NewCertificateBuilder(testsupport.WithValidity(time.Now(), 10*time.Hour),
-		testsupport.WithSerialNumber(big.NewInt(1)),
-		testsupport.WithSubject(pkix.Name{
+	cert, err := testsupport2.NewCertificateBuilder(testsupport2.WithValidity(time.Now(), 10*time.Hour),
+		testsupport2.WithSerialNumber(big.NewInt(1)),
+		testsupport2.WithSubject(pkix.Name{
 			CommonName:   "test cert",
 			Organization: []string{"Test"},
 			Country:      []string{"EU"},
 		}),
-		testsupport.WithSubjectPubKey(&ecdsaPrivKey4.PublicKey, x509.ECDSAWithSHA512),
-		testsupport.WithSelfSigned(),
-		testsupport.WithSignaturePrivKey(ecdsaPrivKey4)).
+		testsupport2.WithSubjectPubKey(&ecdsaPrivKey4.PublicKey, x509.ECDSAWithSHA512),
+		testsupport2.WithSelfSigned(),
+		testsupport2.WithSignaturePrivKey(ecdsaPrivKey4)).
 		Build()
 	require.NoError(t, err)
 
@@ -68,15 +68,15 @@ func TestNewJWTSigner(t *testing.T) {
 	keyFile, err := os.Create(filepath.Join(testDir, "keys.pem"))
 	require.NoError(t, err)
 
-	pemBytes, err := testsupport.BuildPEM(
-		testsupport.WithRSAPrivateKey(rsaPrivKey1, testsupport.WithPEMHeader("X-Key-ID", "key1")),
-		testsupport.WithRSAPrivateKey(rsaPrivKey2, testsupport.WithPEMHeader("X-Key-ID", "key2")),
-		testsupport.WithRSAPrivateKey(rsaPrivKey3, testsupport.WithPEMHeader("X-Key-ID", "key3")),
-		testsupport.WithECDSAPrivateKey(ecdsaPrivKey1, testsupport.WithPEMHeader("X-Key-ID", "key4")),
-		testsupport.WithECDSAPrivateKey(ecdsaPrivKey2, testsupport.WithPEMHeader("X-Key-ID", "key5")),
-		testsupport.WithECDSAPrivateKey(ecdsaPrivKey3, testsupport.WithPEMHeader("X-Key-ID", "key6")),
-		testsupport.WithECDSAPrivateKey(ecdsaPrivKey4, testsupport.WithPEMHeader("X-Key-ID", "invalid")),
-		testsupport.WithX509Certificate(cert),
+	pemBytes, err := testsupport2.BuildPEM(
+		testsupport2.WithRSAPrivateKey(rsaPrivKey1, testsupport2.WithPEMHeader("X-Key-ID", "key1")),
+		testsupport2.WithRSAPrivateKey(rsaPrivKey2, testsupport2.WithPEMHeader("X-Key-ID", "key2")),
+		testsupport2.WithRSAPrivateKey(rsaPrivKey3, testsupport2.WithPEMHeader("X-Key-ID", "key3")),
+		testsupport2.WithECDSAPrivateKey(ecdsaPrivKey1, testsupport2.WithPEMHeader("X-Key-ID", "key4")),
+		testsupport2.WithECDSAPrivateKey(ecdsaPrivKey2, testsupport2.WithPEMHeader("X-Key-ID", "key5")),
+		testsupport2.WithECDSAPrivateKey(ecdsaPrivKey3, testsupport2.WithPEMHeader("X-Key-ID", "key6")),
+		testsupport2.WithECDSAPrivateKey(ecdsaPrivKey4, testsupport2.WithPEMHeader("X-Key-ID", "invalid")),
+		testsupport2.WithX509Certificate(cert),
 	)
 	require.NoError(t, err)
 

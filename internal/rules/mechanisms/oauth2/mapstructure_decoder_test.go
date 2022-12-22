@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/dadrus/heimdall/internal/testsupport"
+	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
 func TestDecodeScopesMatcherHookFunc(t *testing.T) {

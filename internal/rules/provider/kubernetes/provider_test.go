@@ -22,7 +22,7 @@ import (
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/event"
 	"github.com/dadrus/heimdall/internal/rules/provider/kubernetes/api/v1alpha1"
-	"github.com/dadrus/heimdall/internal/testsupport"
+	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
 func TestNewProvider(t *testing.T) {

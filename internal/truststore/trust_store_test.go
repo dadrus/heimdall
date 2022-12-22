@@ -12,32 +12,32 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/dadrus/heimdall/internal/testsupport"
+	testsupport2 "github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
 func TestNewKeyStoreFromPEMBytes(t *testing.T) {
 	// GIVEN
 	// ROOT CAs
-	rootCA1, err := testsupport.NewRootCA("Test Root CA 1", time.Hour*24)
+	rootCA1, err := testsupport2.NewRootCA("Test Root CA 1", time.Hour*24)
 	require.NoError(t, err)
 
 	// INT CA
 	intCA1PrivKey, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
 	require.NoError(t, err)
 	intCA1Cert, err := rootCA1.IssueCertificate(
-		testsupport.WithSubject(pkix.Name{
+		testsupport2.WithSubject(pkix.Name{
 			CommonName:   "Test Int CA 1",
 			Organization: []string{"Test"},
 			Country:      []string{"EU"},
 		}),
-		testsupport.WithIsCA(),
-		testsupport.WithValidity(time.Now(), time.Hour*24),
-		testsupport.WithSubjectPubKey(&intCA1PrivKey.PublicKey, x509.ECDSAWithSHA384))
+		testsupport2.WithIsCA(),
+		testsupport2.WithValidity(time.Now(), time.Hour*24),
+		testsupport2.WithSubjectPubKey(&intCA1PrivKey.PublicKey, x509.ECDSAWithSHA384))
 	require.NoError(t, err)
 
-	pemBytes, err := testsupport.BuildPEM(
-		testsupport.WithX509Certificate(intCA1Cert),
-		testsupport.WithX509Certificate(rootCA1.Certificate),
+	pemBytes, err := testsupport2.BuildPEM(
+		testsupport2.WithX509Certificate(intCA1Cert),
+		testsupport2.WithX509Certificate(rootCA1.Certificate),
 	)
 	require.NoError(t, err)
 

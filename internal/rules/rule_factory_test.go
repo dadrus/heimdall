@@ -12,8 +12,8 @@ import (
 	"github.com/dadrus/heimdall/internal/heimdall"
 	mocks3 "github.com/dadrus/heimdall/internal/rules/mechanisms/mocks"
 	"github.com/dadrus/heimdall/internal/rules/mocks"
-	"github.com/dadrus/heimdall/internal/testsupport"
 	"github.com/dadrus/heimdall/internal/x"
+	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
 // nolint: maintidx

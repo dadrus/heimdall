@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/testsupport"
+	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
 func TestDecodeCIDRMatcherHookFunc(t *testing.T) {

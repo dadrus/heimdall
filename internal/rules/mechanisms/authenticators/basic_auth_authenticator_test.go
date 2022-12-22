@@ -14,7 +14,7 @@ import (
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/heimdall/mocks"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
-	"github.com/dadrus/heimdall/internal/testsupport"
+	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
 func TestCreateBasicAuthAuthenticator(t *testing.T) {
