@@ -21,6 +21,7 @@ import (
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/keystore"
 	pkix2 "github.com/dadrus/heimdall/internal/x/pkix"
+	"github.com/dadrus/heimdall/internal/x/pkix/pem"
 	testsupport2 "github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
@@ -418,8 +419,8 @@ xijD/4gPFRBfs2GsfVZzSL9kH7HH0chB9w==
 				privKey1, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
 				require.NoError(t, err)
 
-				pemBytes, err := testsupport2.BuildPEM(
-					testsupport2.WithECDSAPrivateKey(privKey1, testsupport2.WithPEMHeader("X-Key-ID", "bar")),
+				pemBytes, err := pem.BuildPEM(
+					pem.WithECDSAPrivateKey(privKey1, pem.WithPEMHeader("X-Key-ID", "bar")),
 				)
 				require.NoError(t, err)
 
@@ -462,10 +463,10 @@ xijD/4gPFRBfs2GsfVZzSL9kH7HH0chB9w==
 					testsupport2.WithKeyUsage(x509.KeyUsageDigitalSignature))
 				require.NoError(t, err)
 
-				pemBytes, err := testsupport2.BuildPEM(
-					testsupport2.WithECDSAPrivateKey(privKey),
-					testsupport2.WithX509Certificate(cert),
-					testsupport2.WithX509Certificate(ca.Certificate),
+				pemBytes, err := pem.BuildPEM(
+					pem.WithECDSAPrivateKey(privKey),
+					pem.WithX509Certificate(cert),
+					pem.WithX509Certificate(ca.Certificate),
 				)
 				require.NoError(t, err)
 
@@ -511,10 +512,10 @@ xijD/4gPFRBfs2GsfVZzSL9kH7HH0chB9w==
 					testsupport2.WithKeyUsage(x509.KeyUsageDigitalSignature))
 				require.NoError(t, err)
 
-				pemBytes, err := testsupport2.BuildPEM(
-					testsupport2.WithECDSAPrivateKey(privKey),
-					testsupport2.WithX509Certificate(cert),
-					testsupport2.WithX509Certificate(ca.Certificate),
+				pemBytes, err := pem.BuildPEM(
+					pem.WithECDSAPrivateKey(privKey),
+					pem.WithX509Certificate(cert),
+					pem.WithX509Certificate(ca.Certificate),
 				)
 				require.NoError(t, err)
 
@@ -558,10 +559,10 @@ xijD/4gPFRBfs2GsfVZzSL9kH7HH0chB9w==
 					testsupport2.WithKeyUsage(x509.KeyUsageDigitalSignature))
 				require.NoError(t, err)
 
-				pemBytes, err := testsupport2.BuildPEM(
-					testsupport2.WithECDSAPrivateKey(privKey, testsupport2.WithPEMHeader("X-Key-ID", "foo")),
-					testsupport2.WithX509Certificate(cert),
-					testsupport2.WithX509Certificate(ca.Certificate),
+				pemBytes, err := pem.BuildPEM(
+					pem.WithECDSAPrivateKey(privKey, pem.WithPEMHeader("X-Key-ID", "foo")),
+					pem.WithX509Certificate(cert),
+					pem.WithX509Certificate(ca.Certificate),
 				)
 				require.NoError(t, err)
 
@@ -594,9 +595,9 @@ xijD/4gPFRBfs2GsfVZzSL9kH7HH0chB9w==
 				privKey2, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
 				require.NoError(t, err)
 
-				pemBytes, err := testsupport2.BuildPEM(
-					testsupport2.WithECDSAPrivateKey(privKey1, testsupport2.WithPEMHeader("X-Key-ID", "foo")),
-					testsupport2.WithECDSAPrivateKey(privKey2, testsupport2.WithPEMHeader("X-Key-ID", "foo")),
+				pemBytes, err := pem.BuildPEM(
+					pem.WithECDSAPrivateKey(privKey1, pem.WithPEMHeader("X-Key-ID", "foo")),
+					pem.WithECDSAPrivateKey(privKey2, pem.WithPEMHeader("X-Key-ID", "foo")),
 				)
 				require.NoError(t, err)
 

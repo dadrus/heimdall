@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/dadrus/heimdall/internal/x/pkix/pem"
 	testsupport2 "github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
@@ -35,9 +36,9 @@ func TestNewKeyStoreFromPEMBytes(t *testing.T) {
 		testsupport2.WithSubjectPubKey(&intCA1PrivKey.PublicKey, x509.ECDSAWithSHA384))
 	require.NoError(t, err)
 
-	pemBytes, err := testsupport2.BuildPEM(
-		testsupport2.WithX509Certificate(intCA1Cert),
-		testsupport2.WithX509Certificate(rootCA1.Certificate),
+	pemBytes, err := pem.BuildPEM(
+		pem.WithX509Certificate(intCA1Cert),
+		pem.WithX509Certificate(rootCA1.Certificate),
 	)
 	require.NoError(t, err)
 

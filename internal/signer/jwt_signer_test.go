@@ -23,6 +23,7 @@ import (
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/keystore"
+	"github.com/dadrus/heimdall/internal/x/pkix/pem"
 	testsupport2 "github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
@@ -68,15 +69,15 @@ func TestNewJWTSigner(t *testing.T) {
 	keyFile, err := os.Create(filepath.Join(testDir, "keys.pem"))
 	require.NoError(t, err)
 
-	pemBytes, err := testsupport2.BuildPEM(
-		testsupport2.WithRSAPrivateKey(rsaPrivKey1, testsupport2.WithPEMHeader("X-Key-ID", "key1")),
-		testsupport2.WithRSAPrivateKey(rsaPrivKey2, testsupport2.WithPEMHeader("X-Key-ID", "key2")),
-		testsupport2.WithRSAPrivateKey(rsaPrivKey3, testsupport2.WithPEMHeader("X-Key-ID", "key3")),
-		testsupport2.WithECDSAPrivateKey(ecdsaPrivKey1, testsupport2.WithPEMHeader("X-Key-ID", "key4")),
-		testsupport2.WithECDSAPrivateKey(ecdsaPrivKey2, testsupport2.WithPEMHeader("X-Key-ID", "key5")),
-		testsupport2.WithECDSAPrivateKey(ecdsaPrivKey3, testsupport2.WithPEMHeader("X-Key-ID", "key6")),
-		testsupport2.WithECDSAPrivateKey(ecdsaPrivKey4, testsupport2.WithPEMHeader("X-Key-ID", "invalid")),
-		testsupport2.WithX509Certificate(cert),
+	pemBytes, err := pem.BuildPEM(
+		pem.WithRSAPrivateKey(rsaPrivKey1, pem.WithPEMHeader("X-Key-ID", "key1")),
+		pem.WithRSAPrivateKey(rsaPrivKey2, pem.WithPEMHeader("X-Key-ID", "key2")),
+		pem.WithRSAPrivateKey(rsaPrivKey3, pem.WithPEMHeader("X-Key-ID", "key3")),
+		pem.WithECDSAPrivateKey(ecdsaPrivKey1, pem.WithPEMHeader("X-Key-ID", "key4")),
+		pem.WithECDSAPrivateKey(ecdsaPrivKey2, pem.WithPEMHeader("X-Key-ID", "key5")),
+		pem.WithECDSAPrivateKey(ecdsaPrivKey3, pem.WithPEMHeader("X-Key-ID", "key6")),
+		pem.WithECDSAPrivateKey(ecdsaPrivKey4, pem.WithPEMHeader("X-Key-ID", "invalid")),
+		pem.WithX509Certificate(cert),
 	)
 	require.NoError(t, err)
 

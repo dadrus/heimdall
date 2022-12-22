@@ -22,6 +22,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/keystore"
+	"github.com/dadrus/heimdall/internal/x/pkix/pem"
 	testsupport2 "github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
@@ -77,12 +78,12 @@ func (suite *JWKSTestSuite) SetupSuite() {
 	suite.NoError(err)
 	suite.ee2 = &testsupport2.EndEntity{PrivKey: ee2PrivKey}
 
-	pemBytes, err := testsupport2.BuildPEM(
-		testsupport2.WithECDSAPrivateKey(ee1PrivKey, testsupport2.WithPEMHeader("X-Key-ID", "foo")),
-		testsupport2.WithX509Certificate(ee1cert),
-		testsupport2.WithECDSAPrivateKey(ee2PrivKey, testsupport2.WithPEMHeader("X-Key-ID", "bar")),
-		testsupport2.WithX509Certificate(intCA1Cert),
-		testsupport2.WithX509Certificate(suite.rootCA1.Certificate),
+	pemBytes, err := pem.BuildPEM(
+		pem.WithECDSAPrivateKey(ee1PrivKey, pem.WithPEMHeader("X-Key-ID", "foo")),
+		pem.WithX509Certificate(ee1cert),
+		pem.WithECDSAPrivateKey(ee2PrivKey, pem.WithPEMHeader("X-Key-ID", "bar")),
+		pem.WithX509Certificate(intCA1Cert),
+		pem.WithX509Certificate(suite.rootCA1.Certificate),
 	)
 	suite.NoError(err)
 
