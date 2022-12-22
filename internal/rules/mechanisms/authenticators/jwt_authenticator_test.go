@@ -33,7 +33,7 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
 	"github.com/dadrus/heimdall/internal/truststore"
 	"github.com/dadrus/heimdall/internal/x"
-	"github.com/dadrus/heimdall/internal/x/pkix/pem"
+	"github.com/dadrus/heimdall/internal/x/pkix/pemx"
 	testsupport2 "github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
@@ -51,7 +51,7 @@ func TestJwtAuthenticatorCreate(t *testing.T) {
 	rootCA1, err := testsupport2.NewRootCA("Test Root CA 1", time.Hour*24)
 	require.NoError(t, err)
 
-	pemBytes, err := pem.BuildPEM(pem.WithX509Certificate(rootCA1.Certificate))
+	pemBytes, err := pemx.BuildPEM(pemx.WithX509Certificate(rootCA1.Certificate))
 	require.NoError(t, err)
 
 	file, err := os.CreateTemp("", "test-create-jwt-authenticator-*")
@@ -347,7 +347,7 @@ func TestJwtAuthenticatorWithConfig(t *testing.T) {
 	rootCA1, err := testsupport2.NewRootCA("Test Root CA 1", time.Hour*24)
 	require.NoError(t, err)
 
-	pemBytes, err := pem.BuildPEM(pem.WithX509Certificate(rootCA1.Certificate))
+	pemBytes, err := pemx.BuildPEM(pemx.WithX509Certificate(rootCA1.Certificate))
 	require.NoError(t, err)
 
 	file, err := os.CreateTemp("", "test-create-jwt-authenticator-from-prototype-*")
@@ -1888,13 +1888,13 @@ func createKS(t *testing.T) keystore.KeyStore {
 	ee3PrivKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	require.NoError(t, err)
 
-	pemBytes, err := pem.BuildPEM(
-		pem.WithECDSAPrivateKey(ee1PrivKey, pem.WithPEMHeader("X-Key-ID", kidKeyWithCert)),
-		pem.WithECDSAPrivateKey(ee2PrivKey, pem.WithPEMHeader("X-Key-ID", kidKeyWithoutCert)),
-		pem.WithRSAPrivateKey(ee3PrivKey, pem.WithPEMHeader("X-Key-ID", kidRSAKey)),
-		pem.WithX509Certificate(ee1cert),
-		pem.WithX509Certificate(intCA1Cert),
-		pem.WithX509Certificate(rootCA1.Certificate),
+	pemBytes, err := pemx.BuildPEM(
+		pemx.WithECDSAPrivateKey(ee1PrivKey, pemx.WithHeader("X-Key-ID", kidKeyWithCert)),
+		pemx.WithECDSAPrivateKey(ee2PrivKey, pemx.WithHeader("X-Key-ID", kidKeyWithoutCert)),
+		pemx.WithRSAPrivateKey(ee3PrivKey, pemx.WithHeader("X-Key-ID", kidRSAKey)),
+		pemx.WithX509Certificate(ee1cert),
+		pemx.WithX509Certificate(intCA1Cert),
+		pemx.WithX509Certificate(rootCA1.Certificate),
 	)
 	require.NoError(t, err)
 

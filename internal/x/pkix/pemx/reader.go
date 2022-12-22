@@ -1,4 +1,4 @@
-package pem
+package pemx
 
 import "encoding/pem"
 

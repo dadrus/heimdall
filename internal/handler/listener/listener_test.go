@@ -20,7 +20,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/x/pkix/pem"
+	"github.com/dadrus/heimdall/internal/x/pkix/pemx"
 	testsupport2 "github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
@@ -64,10 +64,10 @@ func TestNewListener(t *testing.T) {
 		Build()
 	require.NoError(t, err)
 
-	pemBytes, err := pem.BuildPEM(
-		pem.WithECDSAPrivateKey(privKey1, pem.WithPEMHeader("X-Key-ID", "key1")),
-		pem.WithX509Certificate(cert),
-		pem.WithECDSAPrivateKey(privKey2, pem.WithPEMHeader("X-Key-ID", "key2")),
+	pemBytes, err := pemx.BuildPEM(
+		pemx.WithECDSAPrivateKey(privKey1, pemx.WithHeader("X-Key-ID", "key1")),
+		pemx.WithX509Certificate(cert),
+		pemx.WithECDSAPrivateKey(privKey2, pemx.WithHeader("X-Key-ID", "key2")),
 	)
 	require.NoError(t, err)
 

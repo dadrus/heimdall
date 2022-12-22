@@ -23,7 +23,7 @@ import (
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/keystore"
-	"github.com/dadrus/heimdall/internal/x/pkix/pem"
+	"github.com/dadrus/heimdall/internal/x/pkix/pemx"
 	testsupport2 "github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
@@ -69,15 +69,15 @@ func TestNewJWTSigner(t *testing.T) {
 	keyFile, err := os.Create(filepath.Join(testDir, "keys.pem"))
 	require.NoError(t, err)
 
-	pemBytes, err := pem.BuildPEM(
-		pem.WithRSAPrivateKey(rsaPrivKey1, pem.WithPEMHeader("X-Key-ID", "key1")),
-		pem.WithRSAPrivateKey(rsaPrivKey2, pem.WithPEMHeader("X-Key-ID", "key2")),
-		pem.WithRSAPrivateKey(rsaPrivKey3, pem.WithPEMHeader("X-Key-ID", "key3")),
-		pem.WithECDSAPrivateKey(ecdsaPrivKey1, pem.WithPEMHeader("X-Key-ID", "key4")),
-		pem.WithECDSAPrivateKey(ecdsaPrivKey2, pem.WithPEMHeader("X-Key-ID", "key5")),
-		pem.WithECDSAPrivateKey(ecdsaPrivKey3, pem.WithPEMHeader("X-Key-ID", "key6")),
-		pem.WithECDSAPrivateKey(ecdsaPrivKey4, pem.WithPEMHeader("X-Key-ID", "invalid")),
-		pem.WithX509Certificate(cert),
+	pemBytes, err := pemx.BuildPEM(
+		pemx.WithRSAPrivateKey(rsaPrivKey1, pemx.WithHeader("X-Key-ID", "key1")),
+		pemx.WithRSAPrivateKey(rsaPrivKey2, pemx.WithHeader("X-Key-ID", "key2")),
+		pemx.WithRSAPrivateKey(rsaPrivKey3, pemx.WithHeader("X-Key-ID", "key3")),
+		pemx.WithECDSAPrivateKey(ecdsaPrivKey1, pemx.WithHeader("X-Key-ID", "key4")),
+		pemx.WithECDSAPrivateKey(ecdsaPrivKey2, pemx.WithHeader("X-Key-ID", "key5")),
+		pemx.WithECDSAPrivateKey(ecdsaPrivKey3, pemx.WithHeader("X-Key-ID", "key6")),
+		pemx.WithECDSAPrivateKey(ecdsaPrivKey4, pemx.WithHeader("X-Key-ID", "invalid")),
+		pemx.WithX509Certificate(cert),
 	)
 	require.NoError(t, err)
 

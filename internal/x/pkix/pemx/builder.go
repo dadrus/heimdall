@@ -1,4 +1,4 @@
-package pem
+package pemx
 
 import (
 	"bytes"
@@ -8,15 +8,18 @@ import (
 	"encoding/pem"
 )
 
-type PEMBlockOption func(*pem.Block)
+type (
+	BlockOption func(*pem.Block)
+	EntryOption func(*pem.Block) error
+)
 
-func WithPEMHeader(key, value string) PEMBlockOption {
+func WithHeader(key, value string) BlockOption {
 	return func(block *pem.Block) {
 		block.Headers[key] = value
 	}
 }
 
-func WithX509Certificate(cert *x509.Certificate, opts ...PEMBlockOption) PEMEntryOption {
+func WithX509Certificate(cert *x509.Certificate, opts ...BlockOption) EntryOption {
 	return func(block *pem.Block) error {
 		block.Type = "CERTIFICATE"
 		block.Bytes = cert.Raw
@@ -29,7 +32,7 @@ func WithX509Certificate(cert *x509.Certificate, opts ...PEMBlockOption) PEMEntr
 	}
 }
 
-func WithECDSAPublicKey(key *ecdsa.PublicKey, opts ...PEMBlockOption) PEMEntryOption {
+func WithECDSAPublicKey(key *ecdsa.PublicKey, opts ...BlockOption) EntryOption {
 	return func(block *pem.Block) error {
 		raw, err := x509.MarshalPKIXPublicKey(key)
 		if err != nil {
@@ -47,7 +50,7 @@ func WithECDSAPublicKey(key *ecdsa.PublicKey, opts ...PEMBlockOption) PEMEntryOp
 	}
 }
 
-func WithECDSAPrivateKey(key *ecdsa.PrivateKey, opts ...PEMBlockOption) PEMEntryOption {
+func WithECDSAPrivateKey(key *ecdsa.PrivateKey, opts ...BlockOption) EntryOption {
 	return func(block *pem.Block) error {
 		raw, err := x509.MarshalECPrivateKey(key)
 		if err != nil {
@@ -65,7 +68,7 @@ func WithECDSAPrivateKey(key *ecdsa.PrivateKey, opts ...PEMBlockOption) PEMEntry
 	}
 }
 
-func WithRSAPrivateKey(key *rsa.PrivateKey, opts ...PEMBlockOption) PEMEntryOption {
+func WithRSAPrivateKey(key *rsa.PrivateKey, opts ...BlockOption) EntryOption {
 	return func(block *pem.Block) error {
 		block.Type = "RSA PRIVATE KEY"
 		block.Bytes = x509.MarshalPKCS1PrivateKey(key)
@@ -78,9 +81,7 @@ func WithRSAPrivateKey(key *rsa.PrivateKey, opts ...PEMBlockOption) PEMEntryOpti
 	}
 }
 
-type PEMEntryOption func(*pem.Block) error
-
-func BuildPEM(opts ...PEMEntryOption) ([]byte, error) {
+func BuildPEM(opts ...EntryOption) ([]byte, error) {
 	buf := new(bytes.Buffer)
 
 	for _, opt := range opts {
