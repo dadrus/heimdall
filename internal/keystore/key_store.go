@@ -63,7 +63,8 @@ func NewKeyStoreFromKey(privateKey crypto.Signer) (KeyStore, error) {
 func NewKeyStoreFromPEMFile(pemFilePath, password string) (KeyStore, error) {
 	fInfo, err := os.Stat(pemFilePath)
 	if err != nil {
-		return nil, err
+		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+			"failed to get information about %s", pemFilePath).CausedBy(err)
 	}
 
 	if fInfo.IsDir() {
