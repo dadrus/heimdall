@@ -47,14 +47,6 @@ func TestCreateNewListener(t *testing.T) {
 	privKey, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
 	require.NoError(t, err)
 
-	privKeyPEMBytes, err := testsupport.BuildPEM(testsupport.WithECDSAPrivateKey(privKey))
-	require.NoError(t, err)
-
-	keyFile, err := os.Create(filepath.Join(testDir, "key.pem"))
-	require.NoError(t, err)
-	_, err = keyFile.Write(privKeyPEMBytes)
-	require.NoError(t, err)
-
 	cert, err := testsupport.NewCertificateBuilder(testsupport.WithValidity(time.Now(), 10*time.Hour),
 		testsupport.WithSerialNumber(big.NewInt(1)),
 		testsupport.WithSubject(pkix.Name{
@@ -68,12 +60,16 @@ func TestCreateNewListener(t *testing.T) {
 		Build()
 	require.NoError(t, err)
 
-	certPEMBytes, err := testsupport.BuildPEM(testsupport.WithX509Certificate(cert))
+	pemBytes, err := testsupport.BuildPEM(
+		testsupport.WithECDSAPrivateKey(privKey, testsupport.WithPEMHeader("X-Key-ID", "key1")),
+		testsupport.WithX509Certificate(cert),
+	)
 	require.NoError(t, err)
 
-	certFile, err := os.Create(filepath.Join(testDir, "cert.pem"))
+	pemFile, err := os.Create(filepath.Join(testDir, "keystore.pem"))
 	require.NoError(t, err)
-	_, err = certFile.Write(certPEMBytes)
+
+	_, err = pemFile.Write(pemBytes)
 	require.NoError(t, err)
 
 	for _, tc := range []struct {
@@ -112,7 +108,7 @@ func TestCreateNewListener(t *testing.T) {
 			uc:      "creation of listener with TLS fails",
 			network: "tcp",
 			serviceConf: config.ServiceConfig{
-				TLS: &config.TLS{Key: "/no/such/key", Cert: "/no/such/cert"},
+				TLS: &config.TLS{KeyStore: "/no/such/file"},
 			},
 			assert: func(t *testing.T, err error, ln net.Listener, port string) {
 				t.Helper()
@@ -126,7 +122,7 @@ func TestCreateNewListener(t *testing.T) {
 			uc:      "listener with TLS",
 			network: "tcp",
 			serviceConf: config.ServiceConfig{
-				TLS: &config.TLS{Key: keyFile.Name(), Cert: certFile.Name(), MinVersion: tls.VersionTLS12},
+				TLS: &config.TLS{KeyStore: pemFile.Name(), MinVersion: tls.VersionTLS12},
 			},
 			assert: func(t *testing.T, err error, ln net.Listener, port string) {
 				t.Helper()
