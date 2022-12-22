@@ -5,6 +5,9 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/rsa"
+	"crypto/x509"
+	"crypto/x509/pkix"
+	"math/big"
 	"os"
 	"path/filepath"
 	"strings"
@@ -45,6 +48,22 @@ func TestNewJWTSigner(t *testing.T) {
 	ecdsaPrivKey3, err := ecdsa.GenerateKey(elliptic.P521(), rand.Reader)
 	require.NoError(t, err)
 
+	ecdsaPrivKey4, err := ecdsa.GenerateKey(elliptic.P521(), rand.Reader)
+	require.NoError(t, err)
+
+	cert, err := testsupport.NewCertificateBuilder(testsupport.WithValidity(time.Now(), 10*time.Hour),
+		testsupport.WithSerialNumber(big.NewInt(1)),
+		testsupport.WithSubject(pkix.Name{
+			CommonName:   "test cert",
+			Organization: []string{"Test"},
+			Country:      []string{"EU"},
+		}),
+		testsupport.WithSubjectPubKey(&ecdsaPrivKey4.PublicKey, x509.ECDSAWithSHA512),
+		testsupport.WithSelfSigned(),
+		testsupport.WithSignaturePrivKey(ecdsaPrivKey4)).
+		Build()
+	require.NoError(t, err)
+
 	testDir := t.TempDir()
 	keyFile, err := os.Create(filepath.Join(testDir, "keys.pem"))
 	require.NoError(t, err)
@@ -56,6 +75,8 @@ func TestNewJWTSigner(t *testing.T) {
 		testsupport.WithECDSAPrivateKey(ecdsaPrivKey1, testsupport.WithPEMHeader("X-Key-ID", "key4")),
 		testsupport.WithECDSAPrivateKey(ecdsaPrivKey2, testsupport.WithPEMHeader("X-Key-ID", "key5")),
 		testsupport.WithECDSAPrivateKey(ecdsaPrivKey3, testsupport.WithPEMHeader("X-Key-ID", "key6")),
+		testsupport.WithECDSAPrivateKey(ecdsaPrivKey4, testsupport.WithPEMHeader("X-Key-ID", "invalid")),
+		testsupport.WithX509Certificate(cert),
 	)
 	require.NoError(t, err)
 
@@ -199,6 +220,28 @@ func TestNewJWTSigner(t *testing.T) {
 				assert.Equal(t, ecdsaPrivKey3, signer.key)
 				assert.Equal(t, "key6", signer.jwk.KeyID)
 				assert.Equal(t, string(jose.ES512), signer.jwk.Algorithm)
+			},
+		},
+		{
+			uc:     "with not existing key store",
+			config: config.SignerConfig{Name: "foo", KeyStore: "/does/not/exist"},
+			assert: func(t *testing.T, err error, signer *jwtSigner) {
+				t.Helper()
+
+				require.Error(t, err)
+				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				assert.Contains(t, err.Error(), "failed to get information about")
+			},
+		},
+		{
+			uc:     "with certificate, which cannot be used for signature",
+			config: config.SignerConfig{Name: "foo", KeyStore: keyFile.Name(), KeyID: "invalid"},
+			assert: func(t *testing.T, err error, signer *jwtSigner) {
+				t.Helper()
+
+				require.Error(t, err)
+				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				assert.Contains(t, err.Error(), "certificate cannot be used")
 			},
 		},
 	} {
