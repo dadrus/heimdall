@@ -67,7 +67,6 @@ func ValidateChain(chain []*x509.Certificate) error {
 	}
 
 	if err := pkix.ValidateCertificate(chain[0],
-		pkix.WithKeyUsage(x509.KeyUsageDigitalSignature),
 		pkix.WithRootCACertificates([]*x509.Certificate{chain[len(chain)-1]}),
 		pkix.WithIntermediateCACertificates(intermediatePool),
 	); err != nil {

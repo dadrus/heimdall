@@ -297,21 +297,6 @@ func (suite *CertChainTestSuite) TestValidateChain() {
 		assert   func(t *testing.T, err error)
 	}{
 		{
-			uc:     "chain is invalid due to missing required key usage",
-			eeCert: suite.ee1.Certificate,
-			certPool: []*x509.Certificate{
-				suite.intCA2.Certificate, suite.rootCA1.Certificate,
-				suite.intCA1.Certificate, suite.ee1.Certificate, suite.rootCA2.Certificate,
-			},
-			assert: func(t *testing.T, err error) {
-				t.Helper()
-
-				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "DigitalSignature")
-			},
-		},
-		{
 			uc:     "chain is invalid due timely invalid ee certificate",
 			eeCert: suite.ee2.Certificate,
 			certPool: []*x509.Certificate{
