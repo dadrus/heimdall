@@ -113,7 +113,8 @@ func ValidateCertificate(cert *x509.Certificate, opts ...ValidationOption) error
 	for _, opt := range opts {
 		if err := opt(validationOpts); err != nil {
 			return errorchain.NewWithMessagef(ErrCertificateValidation,
-				"for certificate (%s)", cert.Subject.String()).CausedBy(err)
+				"for certificate with DN='%s' and SN=%s", cert.Subject.String(), cert.SerialNumber.String()).
+				CausedBy(err)
 		}
 	}
 
@@ -127,12 +128,14 @@ func ValidateCertificate(cert *x509.Certificate, opts ...ValidationOption) error
 
 	if _, err := cert.Verify(validationOpts.verifyOpts); err != nil {
 		return errorchain.NewWithMessagef(ErrCertificateValidation,
-			"for certificate (%s)", cert.Subject.String()).CausedBy(err)
+			"for certificate with DN='%s' and SN=%s", cert.Subject.String(), cert.SerialNumber.String()).
+			CausedBy(err)
 	}
 
 	if err := validationOpts.checkKeyUsage(cert); err != nil {
 		return errorchain.NewWithMessagef(ErrCertificateValidation,
-			"for certificate (%s)", cert.Subject.String()).CausedBy(err)
+			"for certificate with DN='%s' and SN=%s", cert.Subject.String(), cert.SerialNumber.String()).
+			CausedBy(err)
 	}
 
 	return nil
