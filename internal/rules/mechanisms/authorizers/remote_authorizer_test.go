@@ -458,6 +458,13 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 					assert.Equal(t, "my-id", string(data))
 				}
 			},
+			configureContext: func(t *testing.T, ctx *heimdallmocks.MockContext) {
+				t.Helper()
+
+				ctx.On("RequestMethod").Return("POST")
+				ctx.On("RequestURL").Return(&url.URL{Scheme: "http", Host: "foobar.baz", Path: "zab"})
+				ctx.On("RequestClientIPs").Return(nil)
+			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
 
@@ -530,6 +537,9 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 				t.Helper()
 
 				ctx.On("AddHeaderForUpstream", "X-Foo-Bar", "HeyFoo")
+				ctx.On("RequestMethod").Return("POST")
+				ctx.On("RequestURL").Return(&url.URL{Scheme: "http", Host: "foobar.baz", Path: "zab"})
+				ctx.On("RequestClientIPs").Return(nil)
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
@@ -603,6 +613,9 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 				t.Helper()
 
 				ctx.On("AddHeaderForUpstream", "X-Foo-Bar", "HeyFoo")
+				ctx.On("RequestMethod").Return("POST")
+				ctx.On("RequestURL").Return(&url.URL{Scheme: "http", Host: "foobar.baz", Path: "zab"})
+				ctx.On("RequestClientIPs").Return(nil)
 			},
 			configureCache: func(t *testing.T, cch *mocks.MockCache, auth *remoteAuthorizer, sub *subject.Subject) {
 				t.Helper()
@@ -758,6 +771,9 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 				t.Helper()
 
 				ctx.On("AddHeaderForUpstream", "X-Foo-Bar", "HeyFoo")
+				ctx.On("RequestMethod").Return("POST")
+				ctx.On("RequestURL").Return(&url.URL{Scheme: "http", Host: "foobar.baz", Path: "zab"})
+				ctx.On("RequestClientIPs").Return(nil)
 			},
 			configureCache: func(t *testing.T, cch *mocks.MockCache, auth *remoteAuthorizer, sub *subject.Subject) {
 				t.Helper()
@@ -861,6 +877,13 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 				}(),
 			},
 			subject: &subject.Subject{ID: "foo"},
+			configureContext: func(t *testing.T, ctx *heimdallmocks.MockContext) {
+				t.Helper()
+
+				ctx.On("RequestMethod").Return("POST")
+				ctx.On("RequestURL").Return(&url.URL{Scheme: "http", Host: "foobar.baz", Path: "zab"})
+				ctx.On("RequestClientIPs").Return(nil)
+			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
 
@@ -953,6 +976,13 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 				responseContent = rawData
 				responseContentType = "application/json"
 			},
+			configureContext: func(t *testing.T, ctx *heimdallmocks.MockContext) {
+				t.Helper()
+
+				ctx.On("RequestMethod").Return("POST")
+				ctx.On("RequestURL").Return(&url.URL{Scheme: "http", Host: "foobar.baz", Path: "zab"})
+				ctx.On("RequestClientIPs").Return(nil)
+			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
 
@@ -1027,6 +1057,13 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 				require.NoError(t, err)
 				responseContent = rawData
 				responseContentType = "application/json"
+			},
+			configureContext: func(t *testing.T, ctx *heimdallmocks.MockContext) {
+				t.Helper()
+
+				ctx.On("RequestMethod").Return("POST")
+				ctx.On("RequestURL").Return(&url.URL{Scheme: "http", Host: "foobar.baz", Path: "zab"})
+				ctx.On("RequestClientIPs").Return(nil)
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
