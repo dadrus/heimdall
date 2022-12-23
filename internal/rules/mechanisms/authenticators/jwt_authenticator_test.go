@@ -34,7 +34,7 @@ import (
 	"github.com/dadrus/heimdall/internal/truststore"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/pkix/pemx"
-	testsupport2 "github.com/dadrus/heimdall/internal/x/testsupport"
+	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
 const (
@@ -48,7 +48,7 @@ func TestJwtAuthenticatorCreate(t *testing.T) {
 	t.Parallel()
 
 	// ROOT CAs
-	rootCA1, err := testsupport2.NewRootCA("Test Root CA 1", time.Hour*24)
+	rootCA1, err := testsupport.NewRootCA("Test Root CA 1", time.Hour*24)
 	require.NoError(t, err)
 
 	pemBytes, err := pemx.BuildPEM(pemx.WithX509Certificate(rootCA1.Certificate))
@@ -327,7 +327,7 @@ trust_store: ` + trustStorePath),
 		},
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
-			conf, err := testsupport2.DecodeTestConfig(tc.config)
+			conf, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
 
 			// WHEN
@@ -344,7 +344,7 @@ func TestJwtAuthenticatorWithConfig(t *testing.T) {
 	t.Parallel()
 
 	// ROOT CAs
-	rootCA1, err := testsupport2.NewRootCA("Test Root CA 1", time.Hour*24)
+	rootCA1, err := testsupport.NewRootCA("Test Root CA 1", time.Hour*24)
 	require.NoError(t, err)
 
 	pemBytes, err := pemx.BuildPEM(pemx.WithX509Certificate(rootCA1.Certificate))
@@ -670,10 +670,10 @@ cache_ttl: 5s`),
 		},
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
-			pc, err := testsupport2.DecodeTestConfig(tc.prototypeConfig)
+			pc, err := testsupport.DecodeTestConfig(tc.prototypeConfig)
 			require.NoError(t, err)
 
-			conf, err := testsupport2.DecodeTestConfig(tc.config)
+			conf, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
 
 			prototype, err := newJwtAuthenticator(tc.id, pc)
@@ -1849,37 +1849,37 @@ func createKS(t *testing.T) keystore.KeyStore {
 	t.Helper()
 
 	// ROOT CAs
-	rootCA1, err := testsupport2.NewRootCA("Test Root CA 1", time.Hour*24)
+	rootCA1, err := testsupport.NewRootCA("Test Root CA 1", time.Hour*24)
 	require.NoError(t, err)
 
 	// INT CA
 	intCA1PrivKey, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
 	require.NoError(t, err)
 	intCA1Cert, err := rootCA1.IssueCertificate(
-		testsupport2.WithSubject(pkix.Name{
+		testsupport.WithSubject(pkix.Name{
 			CommonName:   "Test Int CA 1",
 			Organization: []string{"Test"},
 			Country:      []string{"EU"},
 		}),
-		testsupport2.WithIsCA(),
-		testsupport2.WithValidity(time.Now(), time.Hour*24),
-		testsupport2.WithSubjectPubKey(&intCA1PrivKey.PublicKey, x509.ECDSAWithSHA384))
+		testsupport.WithIsCA(),
+		testsupport.WithValidity(time.Now(), time.Hour*24),
+		testsupport.WithSubjectPubKey(&intCA1PrivKey.PublicKey, x509.ECDSAWithSHA384))
 	require.NoError(t, err)
 
-	intCA1 := testsupport2.NewCA(intCA1PrivKey, intCA1Cert)
+	intCA1 := testsupport.NewCA(intCA1PrivKey, intCA1Cert)
 
 	// EE CERTS
 	ee1PrivKey, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
 	require.NoError(t, err)
 	ee1cert, err := intCA1.IssueCertificate(
-		testsupport2.WithSubject(pkix.Name{
+		testsupport.WithSubject(pkix.Name{
 			CommonName:   "Test EE 1",
 			Organization: []string{"Test"},
 			Country:      []string{"EU"},
 		}),
-		testsupport2.WithValidity(time.Now(), time.Hour*24),
-		testsupport2.WithSubjectPubKey(&ee1PrivKey.PublicKey, x509.ECDSAWithSHA384),
-		testsupport2.WithKeyUsage(x509.KeyUsageDigitalSignature))
+		testsupport.WithValidity(time.Now(), time.Hour*24),
+		testsupport.WithSubjectPubKey(&ee1PrivKey.PublicKey, x509.ECDSAWithSHA384),
+		testsupport.WithKeyUsage(x509.KeyUsageDigitalSignature))
 	require.NoError(t, err)
 
 	ee2PrivKey, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
@@ -1948,20 +1948,20 @@ func TestJwtAuthenticatorGetCacheTTL(t *testing.T) {
 	shortTTL := time.Hour * 2
 
 	// ROOT CAs
-	ca, err := testsupport2.NewRootCA("Test CA", time.Hour*24)
+	ca, err := testsupport.NewRootCA("Test CA", time.Hour*24)
 	require.NoError(t, err)
 
 	// EE cert 1
 	ee1PrivKey, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
 	require.NoError(t, err)
 	ee1cert, err := ca.IssueCertificate(
-		testsupport2.WithSubject(pkix.Name{
+		testsupport.WithSubject(pkix.Name{
 			CommonName:   "Test EE 1",
 			Organization: []string{"Test"},
 			Country:      []string{"EU"},
 		}),
-		testsupport2.WithValidity(time.Now(), time.Hour*24),
-		testsupport2.WithSubjectPubKey(&ee1PrivKey.PublicKey, x509.ECDSAWithSHA384))
+		testsupport.WithValidity(time.Now(), time.Hour*24),
+		testsupport.WithSubjectPubKey(&ee1PrivKey.PublicKey, x509.ECDSAWithSHA384))
 	require.NoError(t, err)
 
 	for _, tc := range []struct {

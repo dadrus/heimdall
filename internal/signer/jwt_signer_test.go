@@ -24,7 +24,7 @@ import (
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/keystore"
 	"github.com/dadrus/heimdall/internal/x/pkix/pemx"
-	testsupport2 "github.com/dadrus/heimdall/internal/x/testsupport"
+	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
 // nolint: maintidx
@@ -52,16 +52,16 @@ func TestNewJWTSigner(t *testing.T) {
 	ecdsaPrivKey4, err := ecdsa.GenerateKey(elliptic.P521(), rand.Reader)
 	require.NoError(t, err)
 
-	cert, err := testsupport2.NewCertificateBuilder(testsupport2.WithValidity(time.Now(), 10*time.Hour),
-		testsupport2.WithSerialNumber(big.NewInt(1)),
-		testsupport2.WithSubject(pkix.Name{
+	cert, err := testsupport.NewCertificateBuilder(testsupport.WithValidity(time.Now(), 10*time.Hour),
+		testsupport.WithSerialNumber(big.NewInt(1)),
+		testsupport.WithSubject(pkix.Name{
 			CommonName:   "test cert",
 			Organization: []string{"Test"},
 			Country:      []string{"EU"},
 		}),
-		testsupport2.WithSubjectPubKey(&ecdsaPrivKey4.PublicKey, x509.ECDSAWithSHA512),
-		testsupport2.WithSelfSigned(),
-		testsupport2.WithSignaturePrivKey(ecdsaPrivKey4)).
+		testsupport.WithSubjectPubKey(&ecdsaPrivKey4.PublicKey, x509.ECDSAWithSHA512),
+		testsupport.WithSelfSigned(),
+		testsupport.WithSignaturePrivKey(ecdsaPrivKey4)).
 		Build()
 	require.NoError(t, err)
 

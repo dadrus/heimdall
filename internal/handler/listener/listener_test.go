@@ -21,7 +21,7 @@ import (
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/x/pkix/pemx"
-	testsupport2 "github.com/dadrus/heimdall/internal/x/testsupport"
+	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
 func freePort() (int, error) {
@@ -51,16 +51,16 @@ func TestNewListener(t *testing.T) {
 	privKey2, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
 	require.NoError(t, err)
 
-	cert, err := testsupport2.NewCertificateBuilder(testsupport2.WithValidity(time.Now(), 10*time.Hour),
-		testsupport2.WithSerialNumber(big.NewInt(1)),
-		testsupport2.WithSubject(pkix.Name{
+	cert, err := testsupport.NewCertificateBuilder(testsupport.WithValidity(time.Now(), 10*time.Hour),
+		testsupport.WithSerialNumber(big.NewInt(1)),
+		testsupport.WithSubject(pkix.Name{
 			CommonName:   "test cert",
 			Organization: []string{"Test"},
 			Country:      []string{"EU"},
 		}),
-		testsupport2.WithSubjectPubKey(&privKey1.PublicKey, x509.ECDSAWithSHA384),
-		testsupport2.WithSelfSigned(),
-		testsupport2.WithSignaturePrivKey(privKey1)).
+		testsupport.WithSubjectPubKey(&privKey1.PublicKey, x509.ECDSAWithSHA384),
+		testsupport.WithSelfSigned(),
+		testsupport.WithSignaturePrivKey(privKey1)).
 		Build()
 	require.NoError(t, err)
 
