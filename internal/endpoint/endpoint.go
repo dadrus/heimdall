@@ -5,7 +5,6 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/binary"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
@@ -158,7 +157,7 @@ func (e Endpoint) readResponse(resp *http.Response) ([]byte, error) {
 		NewWithMessagef(heimdall.ErrCommunication, "unexpected response code: %v", resp.StatusCode)
 }
 
-func (e Endpoint) Hash() string {
+func (e Endpoint) Hash() []byte {
 	const int64BytesCount = 8
 
 	hash := sha256.New()
@@ -186,8 +185,8 @@ func (e Endpoint) Hash() string {
 	hash.Write(buf.Bytes())
 
 	if e.AuthStrategy != nil {
-		hash.Write([]byte(e.AuthStrategy.Hash()))
+		hash.Write(e.AuthStrategy.Hash())
 	}
 
-	return hex.EncodeToString(hash.Sum(nil))
+	return hash.Sum(nil)
 }

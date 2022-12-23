@@ -343,7 +343,7 @@ func TestJWTUnifierExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				signer.On("Hash").Return("foobar")
+				signer.On("Hash").Return([]byte("foobar"))
 
 				ctx.On("Signer").Return(signer)
 				ctx.On("AddHeaderForUpstream", "Authorization", "Bearer TestToken")
@@ -368,7 +368,7 @@ func TestJWTUnifierExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				signer.On("Hash").Return("foobar")
+				signer.On("Hash").Return([]byte("foobar"))
 				signer.On("Sign", sub.ID, configuredTTL, map[string]any{}).
 					Return("barfoo", nil)
 
@@ -397,7 +397,7 @@ func TestJWTUnifierExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				signer.On("Hash").Return("foobar")
+				signer.On("Hash").Return([]byte("foobar"))
 				signer.On("Sign", sub.ID, configuredTTL, map[string]any{}).
 					Return("barfoo", nil)
 
@@ -427,7 +427,7 @@ claims: '{
 			) {
 				t.Helper()
 
-				signer.On("Hash").Return("foobar")
+				signer.On("Hash").Return([]byte("foobar"))
 				signer.On("Sign", sub.ID, defaultJWTTTL, map[string]any{
 					"sub_id": "foo",
 					"bar":    "baz",
@@ -455,7 +455,7 @@ claims: '{
 			) {
 				t.Helper()
 
-				signer.On("Hash").Return("foobar")
+				signer.On("Hash").Return([]byte("foobar"))
 
 				ctx.On("Signer").Return(signer)
 				cch.On("Get", mock.Anything).Return(nil)
@@ -482,7 +482,7 @@ claims: '{
 			) {
 				t.Helper()
 
-				signer.On("Hash").Return("foobar")
+				signer.On("Hash").Return([]byte("foobar"))
 
 				ctx.On("Signer").Return(signer)
 				cch.On("Get", mock.Anything).Return(nil)

@@ -485,7 +485,7 @@ func (a *jwtAuthenticator) verifyTokenWithKey(token *jwt.JSONWebToken, key *jose
 
 func (a *jwtAuthenticator) calculateCacheKey(reference string) string {
 	digest := sha256.New()
-	digest.Write([]byte(a.e.Hash()))
+	digest.Write(a.e.Hash())
 	digest.Write([]byte(reference))
 
 	return hex.EncodeToString(digest.Sum(nil))

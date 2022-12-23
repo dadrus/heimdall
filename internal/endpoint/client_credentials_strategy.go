@@ -104,11 +104,11 @@ func (c *ClientCredentialsStrategy) getAccessToken(ctx context.Context) (*tokenE
 	return &ter, nil
 }
 
-func (c *ClientCredentialsStrategy) Hash() string {
+func (c *ClientCredentialsStrategy) Hash() []byte {
 	hash := sha256.New()
 
 	hash.Write([]byte(c.ClientID))
 	hash.Write([]byte(c.ClientSecret))
 
-	return hex.EncodeToString(hash.Sum(nil))
+	return hash.Sum(nil)
 }

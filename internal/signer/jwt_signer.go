@@ -7,7 +7,6 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"crypto/x509"
-	"encoding/hex"
 	"time"
 
 	"github.com/google/uuid"
@@ -98,13 +97,13 @@ type jwtSigner struct {
 	key crypto.Signer
 }
 
-func (s *jwtSigner) Hash() string {
+func (s *jwtSigner) Hash() []byte {
 	hash := sha256.New()
 	hash.Write([]byte(s.jwk.KeyID))
 	hash.Write([]byte(s.jwk.Algorithm))
 	hash.Write([]byte(s.iss))
 
-	return hex.EncodeToString(hash.Sum(nil))
+	return hash.Sum(nil)
 }
 
 func (s *jwtSigner) Sign(sub string, ttl time.Duration, custClaims map[string]any) (string, error) {

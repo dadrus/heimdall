@@ -3,7 +3,6 @@ package endpoint
 import (
 	"context"
 	"crypto/sha256"
-	"encoding/hex"
 	"net/http"
 )
 
@@ -18,11 +17,11 @@ func (c *BasicAuthStrategy) Apply(_ context.Context, req *http.Request) error {
 	return nil
 }
 
-func (c *BasicAuthStrategy) Hash() string {
+func (c *BasicAuthStrategy) Hash() []byte {
 	hash := sha256.New()
 
 	hash.Write([]byte(c.User))
 	hash.Write([]byte(c.Password))
 
-	return hex.EncodeToString(hash.Sum(nil))
+	return hash.Sum(nil)
 }

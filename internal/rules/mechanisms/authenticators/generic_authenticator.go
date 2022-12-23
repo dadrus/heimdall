@@ -294,7 +294,7 @@ func (a *genericAuthenticator) getCacheTTL(sessionLifespan *SessionLifespan) tim
 
 func (a *genericAuthenticator) calculateCacheKey(reference string) string {
 	digest := sha256.New()
-	digest.Write([]byte(a.e.Hash()))
+	digest.Write(a.e.Hash())
 	digest.Write([]byte(reference))
 
 	return hex.EncodeToString(digest.Sum(nil))

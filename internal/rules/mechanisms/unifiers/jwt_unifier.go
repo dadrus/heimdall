@@ -194,10 +194,10 @@ func (m *jwtUnifier) calculateCacheKey(sub *subject.Subject, iss heimdall.JWTSig
 	binary.LittleEndian.PutUint64(ttlBytes, uint64(m.ttl))
 
 	hash := sha256.New()
-	hash.Write([]byte(iss.Hash()))
-	hash.Write([]byte(x.IfThenElseExec(m.claims != nil,
-		func() string { return m.claims.Hash() },
-		func() string { return "null" })))
+	hash.Write(iss.Hash())
+	hash.Write(x.IfThenElseExec(m.claims != nil,
+		func() []byte { return m.claims.Hash() },
+		func() []byte { return []byte("nil") }))
 	hash.Write(ttlBytes)
 	hash.Write(sub.Hash())
 
