@@ -2,7 +2,9 @@ package testsupport
 
 import (
 	"crypto/rand"
-	"crypto/sha1" // nolint: gosec, used for subject key id generation
+	// used for subject key id generation
+	// nolint: gosec
+	"crypto/sha1"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"math/big"

@@ -3,7 +3,6 @@ package template
 import (
 	"bytes"
 	"crypto/sha256"
-	"encoding/hex"
 	"errors"
 	"net/url"
 	"text/template"
@@ -19,12 +18,12 @@ var ErrTemplateRender = errors.New("template error")
 
 type Template interface {
 	Render(ctx heimdall.Context, sub *subject.Subject) (string, error)
-	Hash() string
+	Hash() []byte
 }
 
 type templateImpl struct {
 	t    *template.Template
-	hash string
+	hash []byte
 }
 
 func New(val string) (Template, error) {
@@ -40,7 +39,7 @@ func New(val string) (Template, error) {
 	hash := sha256.New()
 	hash.Write([]byte(val))
 
-	return &templateImpl{t: tmpl, hash: hex.EncodeToString(hash.Sum(nil))}, nil
+	return &templateImpl{t: tmpl, hash: hash.Sum(nil)}, nil
 }
 
 func (t *templateImpl) Render(ctx heimdall.Context, sub *subject.Subject) (string, error) {
@@ -54,7 +53,7 @@ func (t *templateImpl) Render(ctx heimdall.Context, sub *subject.Subject) (strin
 	return buf.String(), nil
 }
 
-func (t *templateImpl) Hash() string { return t.hash }
+func (t *templateImpl) Hash() []byte { return t.hash }
 
 type data struct {
 	ctx     heimdall.Context

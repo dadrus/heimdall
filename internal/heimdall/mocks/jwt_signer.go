@@ -10,7 +10,7 @@ type MockJWTSigner struct {
 	mock.Mock
 }
 
-func (m *MockJWTSigner) Hash() string { return m.Called().String(0) }
+func (m *MockJWTSigner) Hash() []byte { return convertTo[[]byte](m.Called().Get(0)) }
 
 func (m *MockJWTSigner) Sign(subjectID string, ttl time.Duration, claims map[string]any) (string, error) {
 	args := m.Called(subjectID, ttl, claims)
