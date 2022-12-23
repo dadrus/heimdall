@@ -25,7 +25,7 @@ Configuration using the `config` property is mandatory. Following properties are
 
 * *`endpoint`*: _link:{{< relref "/docs/configuration/reference/types.adoc#_endpoint">}}[Endpoint]_ (mandatory, not overridable)
 +
-The API of the service providing additional attributes about the authenticated user. At least the `url` must be configured. This mechanism allows templating of the url and makes the `Subject` object available to it. By default, this authorizer type uses HTTP `POST` to send the rendered payload to the endpoint. You can however override this behavior by configuring `method`. Depending on the API requirements you might need to configure further properties, like headers, etc as well.
+The API of the service providing additional attributes about the authenticated user. At least the `url` must be configured. This mechanism allows templating of the url and makes the link:{{< relref "overview.adoc#_subject" >}}[`Subject`] object available to it. By default, this authorizer type uses HTTP `POST` to send the rendered payload to the endpoint. You can however override this behavior by configuring `method`. Depending on the API requirements you might need to configure further properties, like headers, etc as well.
 
 * *`forward_headers`*: _string array_ (optional, overridable)
 +
@@ -37,7 +37,7 @@ If the API requires any cookies from the request to heimdall, you can forward th
 
 * *`payload`*: _string_ (optional, overridable)
 +
-Your template with definitions required to communicate to the API. See also link:{{< relref "overview.adoc#_templating" >}}[Templating].
+Your link:{{< relref "overview.adoc#_templating" >}}[template] with definitions required to communicate to the endpoint. The template can make use of link:{{< relref "overview.adoc#_subject" >}}[`Subject`] and link:{{< relref "overview.adoc#_request" >}}[`Request`] objects.
 
 * *`cache_ttl`*: _link:{{< relref "/docs/configuration/reference/types.adoc#_duration" >}}[Duration]_ (optional, overridable)
 +

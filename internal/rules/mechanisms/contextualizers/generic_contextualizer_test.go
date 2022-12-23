@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strconv"
 	"testing"
 	"time"
@@ -490,6 +491,13 @@ func TestGenericContextualizerExecute(t *testing.T) {
 					return val != nil && val.payload == "Hi from endpoint"
 				}), 5*time.Second)
 			},
+			configureContext: func(t *testing.T, ctx *heimdallmocks.MockContext) {
+				t.Helper()
+
+				ctx.On("RequestMethod").Return("POST")
+				ctx.On("RequestURL").Return(&url.URL{Scheme: "http", Host: "foobar.baz", Path: "zab"})
+				ctx.On("RequestClientIPs").Return(nil)
+			},
 			instructServer: func(t *testing.T) {
 				t.Helper()
 
@@ -519,6 +527,13 @@ func TestGenericContextualizerExecute(t *testing.T) {
 				}(),
 			},
 			subject: &subject.Subject{ID: "Foo", Attributes: map[string]any{"bar": "baz"}},
+			configureContext: func(t *testing.T, ctx *heimdallmocks.MockContext) {
+				t.Helper()
+
+				ctx.On("RequestMethod").Return("POST")
+				ctx.On("RequestURL").Return(&url.URL{Scheme: "http", Host: "foobar.baz", Path: "zab"})
+				ctx.On("RequestClientIPs").Return(nil)
+			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
 
@@ -699,10 +714,12 @@ func TestGenericContextualizerExecute(t *testing.T) {
 			configureContext: func(t *testing.T, ctx *heimdallmocks.MockContext) {
 				t.Helper()
 
-				ctx.On("RequestHeader", "X-Bar-Foo").
-					Return("Hi Foo")
+				ctx.On("RequestHeader", "X-Bar-Foo").Return("Hi Foo")
 				ctx.On("RequestCookie", "X-Foo-Session").
 					Return("Foo-Session-Value")
+				ctx.On("RequestMethod").Return("POST")
+				ctx.On("RequestURL").Return(&url.URL{Scheme: "http", Host: "foobar.baz", Path: "zab"})
+				ctx.On("RequestClientIPs").Return(nil)
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
