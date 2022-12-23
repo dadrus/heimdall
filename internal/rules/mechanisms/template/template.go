@@ -27,8 +27,12 @@ type templateImpl struct {
 }
 
 func New(val string) (Template, error) {
+	funcMap := sprig.TxtFuncMap()
+	delete(funcMap, "env")
+	delete(funcMap, "expandenv")
+
 	tmpl, err := template.New("Heimdall").
-		Funcs(sprig.TxtFuncMap()).
+		Funcs(funcMap).
 		Funcs(template.FuncMap{"urlenc": url.QueryEscape}).
 		Parse(val)
 	if err != nil {
@@ -43,9 +47,16 @@ func New(val string) (Template, error) {
 }
 
 func (t *templateImpl) Render(ctx heimdall.Context, sub *subject.Subject) (string, error) {
-	var buf bytes.Buffer
+	var (
+		buf bytes.Buffer
+		req *Request
+	)
 
-	err := t.t.Execute(&buf, data{Subject: sub, ctx: ctx})
+	if ctx != nil {
+		req = WrapRequest(ctx)
+	}
+
+	err := t.t.Execute(&buf, data{Subject: sub, Request: req})
 	if err != nil {
 		return "", errorchain.New(ErrTemplateRender).CausedBy(err)
 	}
@@ -54,32 +65,3 @@ func (t *templateImpl) Render(ctx heimdall.Context, sub *subject.Subject) (strin
 }
 
 func (t *templateImpl) Hash() []byte { return t.hash }
-
-type data struct {
-	ctx     heimdall.Context
-	Subject *subject.Subject
-}
-
-func (t data) RequestMethod() string {
-	return t.ctx.RequestMethod()
-}
-
-func (t data) RequestURL() string {
-	return t.ctx.RequestURL().String()
-}
-
-func (t data) RequestClientIPs() []string {
-	return t.ctx.RequestClientIPs()
-}
-
-func (t data) RequestHeader(name string) string {
-	return t.ctx.RequestHeader(name)
-}
-
-func (t data) RequestCookie(name string) string {
-	return t.ctx.RequestCookie(name)
-}
-
-func (t data) RequestQueryParameter(name string) string {
-	return t.ctx.RequestQueryParameter(name)
-}
