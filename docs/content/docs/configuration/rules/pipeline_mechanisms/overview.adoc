@@ -280,14 +280,7 @@ Payload = "SomeStringValue"
 
 == Templating
 
-Some pipeline mechanisms support templating using https://golang.org/pkg/text/template/[Golang Text Templates]. To ease the usage, all http://masterminds.github.io/sprig/[sprig] functions as well as a `urlenc` function are available. Latter is handy if you need to generate request body or query parameters e.g. for communication with further systems. In addition to the link:{{< relref "#_subject" >}}[Subject] object described above, following functions are available to a template as well:
-
-* `RequestMethod` - function, providing access to the used HTTP method for the given request. Returns a `string`.
-* `RequestURL` - function, providing access to the matched URL of the given request. Returns a URL object as defined by https://pkg.go.dev/net/url#URL[Golang net.url.URL]. This way access to properties, like `Scheme`, `Host`, `Path` and other URL properties is easily possible. If used as is it is converted to a `string`.
-* `RequestClientIPs` - function, providing information about the client IPs known about the request. Returns a `string array`.
-* `RequestHeader` - function, expecting the name of a header as input. Returns the value of the header as `string` if present in the HTTP request. If not present an empty string (`""`) is returned.
-* `RequestCookie` - function, expecting the name of a cookie as input. Returns the value of the cookie as `string` if present in the HTTP request. If not present an empty string (`""`) is returned.
-* `RequestQueryParameter` - function, expecting the name of a query parameter as input. Returns the value of the query parameter as `string` if present in the HTTP request. If not present an empty string (`""`) is returned.
+Some pipeline mechanisms support templating using https://golang.org/pkg/text/template/[Golang Text Templates]. To ease the usage, all http://masterminds.github.io/sprig/[sprig] functions, except `env` and `expandenv`, as well as an `urlenc` function are available. Latter is handy if you need to generate request body or query parameters e.g. for communication with further systems. Templates can act on all the described objects (link:{{< relref "#_subject" >}}[Subject], link:{{< relref "#_request" >}}[Request] and link:{{< relref "#_payload" >}}[Payload]) described above. Which exactly are supported is mechanism specific.
 
 .Template, rendering a JSON object
 ====
@@ -298,9 +291,9 @@ Imagine, we have a `POST` request for the URL `\http://foobar.baz/zab`, with a h
 {
   "subject_id": {{ quote .Subject.ID }},
   "email": {{ quote .Subject.Attributes.email }},
-  "request_url": {{ quote .RequestURL }},
-  "request_method": {{ quote .RequestMethod }},
-  "x_foo_value": {{ .RequestHeader "X-Foo" | quote }}
+  "request_url": {{ quote .Request.URL }},
+  "request_method": {{ quote .Request.Method }},
+  "x_foo_value": {{ .Request.Header "X-Foo" | quote }}
 }
 ----
 
@@ -341,6 +334,13 @@ a CEL expression to check the `result` attribute is set to `true`, would look as
 [source, cel]
 ----
 Payload.result == true
+----
+
+or even simpler:
+
+[source, cel]
+----
+Payload.result
 ----
 ====
 
