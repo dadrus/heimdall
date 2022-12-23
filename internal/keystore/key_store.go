@@ -11,7 +11,6 @@ import (
 	"os"
 
 	"github.com/youmark/pkcs8"
-	"golang.org/x/exp/maps"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
@@ -36,19 +35,20 @@ type KeyStore interface {
 	Entries() []*Entry
 }
 
-type keyStore map[string]*Entry
+type keyStore []*Entry
 
 func (ks keyStore) GetKey(id string) (*Entry, error) {
-	entry, ok := ks[id]
-	if !ok {
-		return nil, errorchain.NewWithMessagef(ErrNoSuchKey, "%s", id)
+	for _, entry := range ks {
+		if entry.KeyID == id {
+			return entry, nil
+		}
 	}
 
-	return entry, nil
+	return nil, errorchain.NewWithMessagef(ErrNoSuchKey, "%s", id)
 }
 
 func (ks keyStore) Entries() []*Entry {
-	return maps.Values(ks)
+	return ks
 }
 
 func NewKeyStoreFromKey(privateKey crypto.Signer) (KeyStore, error) {
@@ -63,7 +63,8 @@ func NewKeyStoreFromKey(privateKey crypto.Signer) (KeyStore, error) {
 func NewKeyStoreFromPEMFile(pemFilePath, password string) (KeyStore, error) {
 	fInfo, err := os.Stat(pemFilePath)
 	if err != nil {
-		return nil, err
+		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+			"failed to get information about %s", pemFilePath).CausedBy(err)
 	}
 
 	if fInfo.IsDir() {
@@ -137,9 +138,9 @@ func createKeyStore(blocks []*pem.Block, password string) (keyStore, error) {
 }
 
 func verifyAndBuildKeyStore(entries []*Entry, certs []*x509.Certificate) (keyStore, error) {
-	ks := make(keyStore)
+	known := make(map[string]bool)
 
-	for _, entry := range entries {
+	for idx, entry := range entries {
 		chain := FindChain(entry.PrivateKey.Public(), certs)
 		if len(chain) != 0 {
 			if err := ValidateChain(chain); err != nil {
@@ -148,38 +149,49 @@ func verifyAndBuildKeyStore(entries []*Entry, certs []*x509.Certificate) (keySto
 		}
 
 		if len(entry.KeyID) == 0 {
-			var (
-				keyID []byte
-				err   error
-			)
-
-			if len(chain) != 0 {
-				// use subject key identifier from certificate (if present)
-				keyID = chain[0].SubjectKeyId
+			kid, err := generateKeyID(chain, entry)
+			if err != nil {
+				return nil, errorchain.NewWithMessagef(heimdall.ErrInternal,
+					"failed generating kid for %d entry", idx+1).CausedBy(err)
 			}
 
-			// if certificate did not have subject key identifier set
-			// calculate subject key identifier and use it
-			if len(keyID) == 0 {
-				keyID, err = pkix.SubjectKeyID(entry.PrivateKey.Public())
-				if err != nil {
-					return nil, err
-				}
-			}
-
-			entry.KeyID = hex.EncodeToString(keyID)
+			entry.KeyID = kid
 		}
 
-		if _, ok := ks[entry.KeyID]; ok {
+		if _, ok := known[entry.KeyID]; ok {
 			return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
 				"duplicate entry for key_id=%s found", entry.KeyID)
 		}
 
+		known[entry.KeyID] = true
+
 		entry.CertChain = chain
-		ks[entry.KeyID] = entry
 	}
 
-	return ks, nil
+	return entries, nil
+}
+
+func generateKeyID(chain []*x509.Certificate, entry *Entry) (string, error) {
+	var (
+		keyID []byte
+		err   error
+	)
+
+	if len(chain) != 0 {
+		// use subject key identifier from certificate (if present)
+		keyID = chain[0].SubjectKeyId
+	}
+
+	// if certificate did not have subject key identifier set
+	// calculate subject key identifier and use it
+	if len(keyID) == 0 {
+		keyID, err = pkix.SubjectKeyID(entry.PrivateKey.Public())
+		if err != nil {
+			return "", err
+		}
+	}
+
+	return hex.EncodeToString(keyID), nil
 }
 
 func readPEMContents(data []byte) []*pem.Block {

@@ -12,7 +12,7 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
 	"github.com/dadrus/heimdall/internal/rules/mocks"
 	"github.com/dadrus/heimdall/internal/rules/patternmatcher"
-	"github.com/dadrus/heimdall/internal/testsupport"
+	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
 func TestRuleMatchMethod(t *testing.T) {

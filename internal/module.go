@@ -7,7 +7,6 @@ import (
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/handler/management"
 	"github.com/dadrus/heimdall/internal/handler/metrics"
-	"github.com/dadrus/heimdall/internal/keystore"
 	"github.com/dadrus/heimdall/internal/logging"
 	"github.com/dadrus/heimdall/internal/prometheus"
 	"github.com/dadrus/heimdall/internal/rules"
@@ -21,7 +20,6 @@ var Module = fx.Options(
 	logging.Module,
 	tracing.Module,
 	cache.Module,
-	keystore.Module,
 	mechanisms.Module,
 	prometheus.Module,
 	rules.Module,

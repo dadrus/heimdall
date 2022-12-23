@@ -10,19 +10,17 @@
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "key": {
-          "description": "path to a PEM encoded private key",
-          "type": "string",
-          "examples": [
-            "/path/to/key.pem"
-          ]
+        "key_store": {
+          "description": "Path to a pem file containing the key material.",
+          "type": "string"
         },
-        "cert": {
-          "description": "path to a PEM encoded certificate",
-          "type": "string",
-          "examples": [
-            "/path/to/cert.pem"
-          ]
+        "password": {
+          "description": "Password for the key material in the key store if PKCS#8 encrypted format is used.",
+          "type": "string"
+        },
+        "key_id": {
+          "description": "The key id referencing the entry in the key store",
+          "type": "string"
         },
         "min_version": {
           "title": "minimum TLS version to support",
@@ -1905,7 +1903,7 @@
           "type": "string"
         },
         "key_id": {
-          "description": "The sha256 hash of the public key from the the store to use for JWT signing purposes.",
+          "description": "The key id referencing the entry in the key store.",
           "type": "string"
         }
       }

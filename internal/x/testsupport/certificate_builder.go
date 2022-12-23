@@ -2,13 +2,15 @@ package testsupport
 
 import (
 	"crypto/rand"
+	"crypto/sha1" // nolint: gosec, used for subject key id generation
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"math/big"
 	"time"
 
+	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/x"
-	pkix2 "github.com/dadrus/heimdall/internal/x/pkix"
+	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
 type CertificateBuilderOption func(*CertificateBuilder)
@@ -72,6 +74,12 @@ func WithExtraExtension(extension pkix.Extension) CertificateBuilderOption {
 	}
 }
 
+func WithExtendedKeyUsage(usage x509.ExtKeyUsage) CertificateBuilderOption {
+	return func(builder *CertificateBuilder) {
+		builder.tmpl.ExtKeyUsage = append(builder.tmpl.ExtKeyUsage, usage)
+	}
+}
+
 func WithIsCA() CertificateBuilderOption {
 	return func(builder *CertificateBuilder) {
 		builder.tmpl.IsCA = true
@@ -125,7 +133,7 @@ func (cb *CertificateBuilder) Build() (*x509.Certificate, error) {
 
 	// generate public key identifier
 	if cb.generateKeyIdentifier {
-		if cb.tmpl.SubjectKeyId, err = pkix2.SubjectKeyID(cb.subjectPubKey); err != nil {
+		if cb.tmpl.SubjectKeyId, err = subjectKeyID(cb.subjectPubKey); err != nil {
 			return nil, err
 		}
 	}
@@ -142,4 +150,18 @@ func (cb *CertificateBuilder) Build() (*x509.Certificate, error) {
 	}
 
 	return x509.ParseCertificate(raw)
+}
+
+func subjectKeyID(pubKey any) ([]byte, error) {
+	// Subject Key Identifier support
+	// https://www.ietf.org/rfc/rfc3280.txt (section 4.2.1.2)
+	marshaledKey, err := x509.MarshalPKIXPublicKey(pubKey)
+	if err != nil {
+		return nil, errorchain.NewWithMessage(heimdall.ErrInternal,
+			"failed to calculated subject public key id").CausedBy(err)
+	}
+
+	subjKeyID := sha1.Sum(marshaledKey) // nolint: gosec
+
+	return subjKeyID[:], nil
 }

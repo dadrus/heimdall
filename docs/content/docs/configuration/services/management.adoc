@@ -81,7 +81,7 @@ management:
 
 * *`tls`*: _link:{{< relref "/docs/configuration/reference/types.adoc#_tls" >}}[TLS]_ (optional)
 +
-By default, the Management endpoint accepts HTTP requests. Depending on your deployment scenario, you could require Heimdall to accept HTTPS requests only. You can do so by making use of this option.
+By default, the Management endpoint accepts HTTP requests. Depending on your deployment scenario, you could require Heimdall to accept HTTPs requests only (which is highly recommended). You can do so by making use of this option.
 +
 .TLS configuration
 ====
@@ -89,8 +89,8 @@ By default, the Management endpoint accepts HTTP requests. Depending on your dep
 ----
 management:
   tls:
-    key: /path/to/private_key.pem
-    cert: /path/to/certificate.pem
+    key_store: /path/to/keystore.pem
+    password: VerySecure!
 ----
 ====
 

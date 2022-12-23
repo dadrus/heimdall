@@ -8,7 +8,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/heimdall/mocks"
 	rulemocks "github.com/dadrus/heimdall/internal/rules/mocks"
-	"github.com/dadrus/heimdall/internal/testsupport"
+	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
 func TestCompositeErrorHandlerExecutionWithFallback(t *testing.T) {

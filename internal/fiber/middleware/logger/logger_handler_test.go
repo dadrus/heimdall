@@ -17,7 +17,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 
 	tracingmiddleware "github.com/dadrus/heimdall/internal/fiber/middleware/opentelemetry"
-	"github.com/dadrus/heimdall/internal/testsupport"
+	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
 func TestLoggerHandler(t *testing.T) {

@@ -6,7 +6,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
-	"github.com/dadrus/heimdall/internal/x/pkix"
+	"github.com/dadrus/heimdall/internal/x/pkix/pemx"
 )
 
 const pemBlockTypeCertificate = "CERTIFICATE"
@@ -59,7 +59,7 @@ func NewTrustStoreFromPEMFile(pemFilePath string) (TrustStore, error) {
 func NewTrustStoreFromPEMBytes(pemBytes []byte) (TrustStore, error) {
 	var certs TrustStore
 
-	err := pkix.ReadPEM(pemBytes, certs.addEntry)
+	err := pemx.ReadPEM(pemBytes, certs.addEntry)
 
 	return certs, err
 }

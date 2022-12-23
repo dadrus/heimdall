@@ -14,9 +14,9 @@ import (
 	"go.uber.org/fx"
 
 	"github.com/dadrus/heimdall/internal/config"
-	"github.com/dadrus/heimdall/internal/testsupport"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/opentelemetry/exporters"
+	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
 type mockLifecycle struct{ mock.Mock }

@@ -27,8 +27,8 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/authorizers/cellib"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
-	"github.com/dadrus/heimdall/internal/testsupport"
 	"github.com/dadrus/heimdall/internal/x"
+	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
 func TestCreateRemoteAuthorizer(t *testing.T) {

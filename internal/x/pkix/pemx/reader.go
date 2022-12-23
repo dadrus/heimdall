@@ -1,4 +1,4 @@
-package pkix
+package pemx
 
 import "encoding/pem"
 

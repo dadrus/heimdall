@@ -84,7 +84,7 @@ func WithKeyUsage(usage x509.KeyUsage) ValidationOption {
 	return func(opts *options) error {
 		opts.keyUsageChecks = append(opts.keyUsageChecks, func(setUsage x509.KeyUsage) error {
 			if setUsage&usage != usage {
-				return errorchain.NewWithMessage(ErrMissingKeyUsage, KeyUsageToString(usage))
+				return errorchain.NewWithMessage(ErrMissingKeyUsage, KeyUsage(usage).String())
 			}
 
 			return nil
@@ -106,15 +106,19 @@ func ValidateCertificate(cert *x509.Certificate, opts ...ValidationOption) error
 	validationOpts := &options{
 		verifyOpts: x509.VerifyOptions{
 			Intermediates: x509.NewCertPool(),
-			KeyUsages:     []x509.ExtKeyUsage{x509.ExtKeyUsageAny},
 		},
 	}
 
 	for _, opt := range opts {
 		if err := opt(validationOpts); err != nil {
 			return errorchain.NewWithMessagef(ErrCertificateValidation,
-				"for certificate (%s)", cert.Subject.String()).CausedBy(err)
+				"for certificate with DN='%s' and SN=%s", cert.Subject.String(), cert.SerialNumber.String()).
+				CausedBy(err)
 		}
+	}
+
+	if len(validationOpts.verifyOpts.KeyUsages) == 0 {
+		validationOpts.verifyOpts.KeyUsages = []x509.ExtKeyUsage{x509.ExtKeyUsageAny}
 	}
 
 	if validationOpts.verifyOpts.Roots == nil {
@@ -127,12 +131,14 @@ func ValidateCertificate(cert *x509.Certificate, opts ...ValidationOption) error
 
 	if _, err := cert.Verify(validationOpts.verifyOpts); err != nil {
 		return errorchain.NewWithMessagef(ErrCertificateValidation,
-			"for certificate (%s)", cert.Subject.String()).CausedBy(err)
+			"for certificate with DN='%s' and SN=%s", cert.Subject.String(), cert.SerialNumber.String()).
+			CausedBy(err)
 	}
 
 	if err := validationOpts.checkKeyUsage(cert); err != nil {
 		return errorchain.NewWithMessagef(ErrCertificateValidation,
-			"for certificate (%s)", cert.Subject.String()).CausedBy(err)
+			"for certificate with DN='%s' and SN=%s", cert.Subject.String(), cert.SerialNumber.String()).
+			CausedBy(err)
 	}
 
 	return nil

@@ -31,9 +31,10 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/extractors"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/oauth2"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
-	"github.com/dadrus/heimdall/internal/testsupport"
 	"github.com/dadrus/heimdall/internal/truststore"
 	"github.com/dadrus/heimdall/internal/x"
+	"github.com/dadrus/heimdall/internal/x/pkix/pemx"
+	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
 const (
@@ -50,7 +51,7 @@ func TestJwtAuthenticatorCreate(t *testing.T) {
 	rootCA1, err := testsupport.NewRootCA("Test Root CA 1", time.Hour*24)
 	require.NoError(t, err)
 
-	pemBytes, err := testsupport.BuildPEM(testsupport.WithX509Certificate(rootCA1.Certificate))
+	pemBytes, err := pemx.BuildPEM(pemx.WithX509Certificate(rootCA1.Certificate))
 	require.NoError(t, err)
 
 	file, err := os.CreateTemp("", "test-create-jwt-authenticator-*")
@@ -346,7 +347,7 @@ func TestJwtAuthenticatorWithConfig(t *testing.T) {
 	rootCA1, err := testsupport.NewRootCA("Test Root CA 1", time.Hour*24)
 	require.NoError(t, err)
 
-	pemBytes, err := testsupport.BuildPEM(testsupport.WithX509Certificate(rootCA1.Certificate))
+	pemBytes, err := pemx.BuildPEM(pemx.WithX509Certificate(rootCA1.Certificate))
 	require.NoError(t, err)
 
 	file, err := os.CreateTemp("", "test-create-jwt-authenticator-from-prototype-*")
@@ -1887,13 +1888,13 @@ func createKS(t *testing.T) keystore.KeyStore {
 	ee3PrivKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	require.NoError(t, err)
 
-	pemBytes, err := testsupport.BuildPEM(
-		testsupport.WithECDSAPrivateKey(ee1PrivKey, testsupport.WithPEMHeader("X-Key-ID", kidKeyWithCert)),
-		testsupport.WithECDSAPrivateKey(ee2PrivKey, testsupport.WithPEMHeader("X-Key-ID", kidKeyWithoutCert)),
-		testsupport.WithRSAPrivateKey(ee3PrivKey, testsupport.WithPEMHeader("X-Key-ID", kidRSAKey)),
-		testsupport.WithX509Certificate(ee1cert),
-		testsupport.WithX509Certificate(intCA1Cert),
-		testsupport.WithX509Certificate(rootCA1.Certificate),
+	pemBytes, err := pemx.BuildPEM(
+		pemx.WithECDSAPrivateKey(ee1PrivKey, pemx.WithHeader("X-Key-ID", kidKeyWithCert)),
+		pemx.WithECDSAPrivateKey(ee2PrivKey, pemx.WithHeader("X-Key-ID", kidKeyWithoutCert)),
+		pemx.WithRSAPrivateKey(ee3PrivKey, pemx.WithHeader("X-Key-ID", kidRSAKey)),
+		pemx.WithX509Certificate(ee1cert),
+		pemx.WithX509Certificate(intCA1Cert),
+		pemx.WithX509Certificate(rootCA1.Certificate),
 	)
 	require.NoError(t, err)
 

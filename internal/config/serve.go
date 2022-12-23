@@ -49,8 +49,9 @@ func (v TLSMinVersion) OrDefault() uint16 {
 }
 
 type TLS struct {
-	Key          string          `koanf:"key"`
-	Cert         string          `koanf:"cert"`
+	KeyStore     string          `koanf:"key_store"`
+	Password     string          `koanf:"password"`
+	KeyID        string          `koanf:"key_id"`
 	CipherSuites TLSCipherSuites `koanf:"cipher_suites"`
 	MinVersion   TLSMinVersion   `koanf:"min_version"`
 }

@@ -10,7 +10,7 @@ import (
 	"github.com/dadrus/heimdall/internal/heimdall/mocks"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
 	rulemocks "github.com/dadrus/heimdall/internal/rules/mocks"
-	"github.com/dadrus/heimdall/internal/testsupport"
+	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
 func TestCompositeAuthenticatorExecution(t *testing.T) {

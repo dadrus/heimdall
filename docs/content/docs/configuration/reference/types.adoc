@@ -832,13 +832,25 @@ idle: 1m
 == TLS
 Following are the supported TLS configuration properties:
 
-* *`key`*: _string_ (mandatory)
+* *`key_store`*: _string_ (mandatory)
 +
-Path to the private key in PEM format. PKCS#1, as well as PKCS#8 formats are supported.
+Path to a file in PEM format, containing the cryptographic material. At least one private key and the corresponding certificate must be present. If heimdall was not able to correlate the key to the certificate, or the chain is invalid, an error is raised and heimdall will refuse to start.
++
+PKCS#1, as well as PKCS#8 encodings are supported for private keys.
++
+NOTE: While loading cryptographic material from the given key store file, heimdall ensures uniqueness of key ids and rejects key store files which violate this condition (see also link:{{< relref "#_key_id_lookup" >}}[Key-Id Lookup]).
 
-* *`cert`*: _string_ (mandatory)
+* *`password`*: _string_ (optional)
 +
-Path to the certificate in PEM format. The certificate file may contain intermediate certificates following the leaf certificate to form a certificate chain
+If the key material is protected with a password, this property can be set to decipher it.
++
+NOTE: Password protection is only supported for PKCS#8 encoded keys.
++
+CAUTION: If the PEM file contains multiple keys and these keys are password protected, same password must be used for all of these.
+
+* *`key_id`*: _string_ (optional)
++
+If the `key_store` references a PEM file, containing multiple keys, this property can be used to specify the key to use (see also link:{{< relref "#_key_id_lookup" >}}[Key-Id Lookup]). If not specified, the first key is used. If specified, but there is no key for the given key id present, an error is raised and heimdall will refuse to start.
 
 * *`min_version`*: _string_ (optional)
 +
@@ -859,3 +871,11 @@ Can be configured if `min_version` is set to `TLS1.2`. If `min_version` is set t
 
 +
 Defaults to the last six cipher suites if `min_version` is set to `TLS1.2` and `cipher_suites` is not configured.
+
+== Key-Id Lookup
+
+When heimdall loads a key store, following algorithm is used to get the key id for the key:
+
+* if the PEM entry with the private key has `X-Key-ID` header specified, this value is used as key id
+* Otherwise, if an X.509 certificate is present for the private key, and it has the `Subject Key Identifier` extension set, the hex representation of it is used as key id.
+* Otherwise, heimdall calculates the value for the `Subject Key Identifier` according to https://www.ietf.org/rfc/rfc3280.html#section-4.2.1.2[RFC 3280, Section 4.2.1.2] and uses hex representation of it as key id.

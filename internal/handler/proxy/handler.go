@@ -11,7 +11,6 @@ import (
 	fiberxforwarded "github.com/dadrus/heimdall/internal/fiber/middleware/xfmphu"
 	"github.com/dadrus/heimdall/internal/handler/requestcontext"
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/keystore"
 	"github.com/dadrus/heimdall/internal/rules"
 	"github.com/dadrus/heimdall/internal/signer"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
@@ -28,13 +27,12 @@ type handlerArgs struct {
 
 	App             *fiber.App `name:"proxy"`
 	RulesRepository rules.Repository
-	KeyStore        keystore.KeyStore
 	Config          *config.Configuration
 	Logger          zerolog.Logger
 }
 
 func newHandler(args handlerArgs) (*Handler, error) {
-	jwtSigner, err := signer.NewJWTSigner(args.KeyStore, args.Config.Signer, args.Logger)
+	jwtSigner, err := signer.NewJWTSigner(&args.Config.Signer, args.Logger)
 	if err != nil {
 		return nil, err
 	}

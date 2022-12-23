@@ -1,8 +1,6 @@
 package proxy
 
 import (
-	"crypto/rand"
-	"crypto/rsa"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -22,7 +20,6 @@ import (
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/handler/requestcontext"
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/keystore"
 	mocks2 "github.com/dadrus/heimdall/internal/rules/mocks"
 	mocks4 "github.com/dadrus/heimdall/internal/rules/rule/mocks"
 	"github.com/dadrus/heimdall/internal/x"
@@ -31,14 +28,6 @@ import (
 // nolint: maintidx
 func TestHandleProxyEndpointRequest(t *testing.T) {
 	t.Parallel()
-
-	const rsa2048 = 2048
-
-	privateKey, err := rsa.GenerateKey(rand.Reader, rsa2048)
-	require.NoError(t, err)
-
-	ks, err := keystore.NewKeyStoreFromKey(privateKey)
-	require.NoError(t, err)
 
 	var (
 		upstreamCalled       bool
@@ -469,7 +458,6 @@ func TestHandleProxyEndpointRequest(t *testing.T) {
 			_, err := newHandler(handlerArgs{
 				App:             app,
 				RulesRepository: repo,
-				KeyStore:        ks,
 				Config:          conf,
 				Logger:          logger,
 			})

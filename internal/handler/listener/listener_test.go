@@ -20,7 +20,8 @@ import (
 
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/testsupport"
+	"github.com/dadrus/heimdall/internal/x/pkix/pemx"
+	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
 func freePort() (int, error) {
@@ -39,20 +40,15 @@ func freePort() (int, error) {
 	return ln.Addr().(*net.TCPAddr).Port, nil // nolint: forcetypeassert
 }
 
-func TestCreateNewListener(t *testing.T) {
+func TestNewListener(t *testing.T) {
 	t.Parallel()
 
 	testDir := t.TempDir()
 
-	privKey, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
+	privKey1, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
 	require.NoError(t, err)
 
-	privKeyPEMBytes, err := testsupport.BuildPEM(testsupport.WithECDSAPrivateKey(privKey))
-	require.NoError(t, err)
-
-	keyFile, err := os.Create(filepath.Join(testDir, "key.pem"))
-	require.NoError(t, err)
-	_, err = keyFile.Write(privKeyPEMBytes)
+	privKey2, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
 	require.NoError(t, err)
 
 	cert, err := testsupport.NewCertificateBuilder(testsupport.WithValidity(time.Now(), 10*time.Hour),
@@ -62,18 +58,23 @@ func TestCreateNewListener(t *testing.T) {
 			Organization: []string{"Test"},
 			Country:      []string{"EU"},
 		}),
-		testsupport.WithSubjectPubKey(&privKey.PublicKey, x509.ECDSAWithSHA384),
+		testsupport.WithSubjectPubKey(&privKey1.PublicKey, x509.ECDSAWithSHA384),
 		testsupport.WithSelfSigned(),
-		testsupport.WithSignaturePrivKey(privKey)).
+		testsupport.WithSignaturePrivKey(privKey1)).
 		Build()
 	require.NoError(t, err)
 
-	certPEMBytes, err := testsupport.BuildPEM(testsupport.WithX509Certificate(cert))
+	pemBytes, err := pemx.BuildPEM(
+		pemx.WithECDSAPrivateKey(privKey1, pemx.WithHeader("X-Key-ID", "key1")),
+		pemx.WithX509Certificate(cert),
+		pemx.WithECDSAPrivateKey(privKey2, pemx.WithHeader("X-Key-ID", "key2")),
+	)
 	require.NoError(t, err)
 
-	certFile, err := os.Create(filepath.Join(testDir, "cert.pem"))
+	pemFile, err := os.Create(filepath.Join(testDir, "keystore.pem"))
 	require.NoError(t, err)
-	_, err = certFile.Write(certPEMBytes)
+
+	_, err = pemFile.Write(pemBytes)
 	require.NoError(t, err)
 
 	for _, tc := range []struct {
@@ -95,7 +96,7 @@ func TestCreateNewListener(t *testing.T) {
 			},
 		},
 		{
-			uc:          "listener without TLS",
+			uc:          "without TLS",
 			network:     "tcp",
 			serviceConf: config.ServiceConfig{Host: "127.0.0.1"},
 			assert: func(t *testing.T, err error, ln net.Listener, port string) {
@@ -109,10 +110,10 @@ func TestCreateNewListener(t *testing.T) {
 			},
 		},
 		{
-			uc:      "creation of listener with TLS fails",
+			uc:      "fails due to not existent key store for TLS usage",
 			network: "tcp",
 			serviceConf: config.ServiceConfig{
-				TLS: &config.TLS{Key: "/no/such/key", Cert: "/no/such/cert"},
+				TLS: &config.TLS{KeyStore: "/no/such/file"},
 			},
 			assert: func(t *testing.T, err error, ln net.Listener, port string) {
 				t.Helper()
@@ -123,10 +124,53 @@ func TestCreateNewListener(t *testing.T) {
 			},
 		},
 		{
-			uc:      "listener with TLS",
+			uc:      "fails due to not existent key for the given key id for TLS usage",
 			network: "tcp",
 			serviceConf: config.ServiceConfig{
-				TLS: &config.TLS{Key: keyFile.Name(), Cert: certFile.Name(), MinVersion: tls.VersionTLS12},
+				TLS: &config.TLS{KeyStore: pemFile.Name(), KeyID: "foo", MinVersion: tls.VersionTLS12},
+			},
+			assert: func(t *testing.T, err error, ln net.Listener, port string) {
+				t.Helper()
+
+				require.Error(t, err)
+				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				assert.Contains(t, err.Error(), "no such key")
+			},
+		},
+		{
+			uc:      "fails due to not present certificates for the given key id",
+			network: "tcp",
+			serviceConf: config.ServiceConfig{
+				TLS: &config.TLS{KeyStore: pemFile.Name(), KeyID: "key2", MinVersion: tls.VersionTLS12},
+			},
+			assert: func(t *testing.T, err error, ln net.Listener, port string) {
+				t.Helper()
+
+				require.Error(t, err)
+				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				assert.Contains(t, err.Error(), "no certificate present")
+			},
+		},
+		{
+			uc:      "successful with default key",
+			network: "tcp",
+			serviceConf: config.ServiceConfig{
+				TLS: &config.TLS{KeyStore: pemFile.Name(), MinVersion: tls.VersionTLS12},
+			},
+			assert: func(t *testing.T, err error, ln net.Listener, port string) {
+				t.Helper()
+
+				require.NoError(t, err)
+				require.NotNil(t, ln)
+				assert.Equal(t, "tcp", ln.Addr().Network())
+				assert.Contains(t, ln.Addr().String(), port)
+			},
+		},
+		{
+			uc:      "successful with specified key id",
+			network: "tcp",
+			serviceConf: config.ServiceConfig{
+				TLS: &config.TLS{KeyStore: pemFile.Name(), KeyID: "key1", MinVersion: tls.VersionTLS12},
 			},
 			assert: func(t *testing.T, err error, ln net.Listener, port string) {
 				t.Helper()
