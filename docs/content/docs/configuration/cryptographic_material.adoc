@@ -27,17 +27,19 @@ If the PEM file contains X.509 certificates in addition to the keys, heimdall wi
 +
 PKCS#1, as well as PKCS#8 encodings are supported for private keys. If `key_store` is not specified, heimdall generates an RSA key on startup.
 +
-NOTE: While loading cryptographic material from the given key store file, heimdall ensures uniqueness of key ids and rejects key store files which violate this condition (see also link:{{< relref "#_key_id_lookup" >}}[Key-Id Lookup]).
+NOTE: While loading cryptographic material from the given key store file, heimdall ensures uniqueness of key ids and rejects key store files which violate this condition (see also link:{{< relref "./reference/types.adoc#_key_id_lookup" >}}[Key-Id Lookup]).
 
 * *`password`*: _string_ (optional)
 +
 If the key material is protected with a password, this property can be set to decipher it.
 +
+NOTE: Password protection is only supported for PKCS#8 encoded keys.
++
 CAUTION: If the PEM file contains multiple keys and these keys are password protected, same password must be used for all of these.
 
 * *`key_id`*: _string_ (optional)
 +
-If the `key_store` references a PEM file, containing multiple keys, this property can be used to specify the key to use (see also link:{{< relref "#_key_id_lookup" >}}[Key-Id Lookup]). If not specified, the first key is used. If specified, but there is no key for the given key id present, an error is raised.
+If the `key_store` references a PEM file, containing multiple keys, this property can be used to specify the key to use (see also link:{{< relref "./reference/types.adoc#_key_id_lookup" >}}[Key-Id Lookup]). If not specified, the first key is used. If specified, but there is no key for the given key id present, an error is raised.
 
 .Possible configuration
 ====
@@ -89,11 +91,3 @@ signer:
   key_id: foo
 ----
 ====
-
-== Key-Id Lookup
-
-When heimdall loads the `key_store` following algorithm is used to get the key id for the key:
-
-* if the PEM entry with the private key has `X-Key-ID` header specified, this value is used as key id
-* Otherwise, if an X.509 certificate is present for the private key, and it has the `Subject Key Identifier` extension set, the hex representation of it is used as key id.
-* Otherwise, heimdall calculates the value for the `Subject Key Identifier` according to https://www.ietf.org/rfc/rfc3280.html#section-4.2.1.2[RFC 3280, Section 4.2.1.2] and uses hex representation of it as key id.
