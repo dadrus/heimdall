@@ -55,10 +55,7 @@ Configuration using the `config` property is mandatory. Following properties are
 
 * *`expressions`*: _link:{{< relref "/docs/configuration/reference/types.adoc#_authorization_expression">}}[Authorization Expression] array_ (mandatory, overridable)
 +
-List of authorization expressions, which define the actual authorization logic. Each expression has access to the following link:{{< relref "overview.adoc#_evaluation_objects" >}}[Evaluation Objects]:
-
-** `Subject` of type link:{{< relref "overview.adoc#_subject" >}}[Subject].
-** `Request` of type link:{{< relref "overview.adoc#_request" >}}[Request]
+List of authorization expressions, which define the actual authorization logic. Each expression has access to the link:{{< relref "overview.adoc#_subject" >}}[`Subject`] and the link:{{< relref "overview.adoc#_request" >}}[`Request`] objects.
 
 .Authorization based on subject properties
 ====

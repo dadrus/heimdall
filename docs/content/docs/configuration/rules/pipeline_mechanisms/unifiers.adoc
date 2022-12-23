@@ -111,11 +111,7 @@ config:
       {{ $user_name := .Subject.Attributes.identity.user_name -}}
       "email": {{ quote .Subject.Attributes.identity.email }},
       "email_verified": {{ .Subject.Attributes.identity.email_verified }},
-      {{ if $user_name -}}
-        "name": {{ quote $user_name }}
-      {{ else -}}
-        "name": {{ quote $email }}
-      {{ end -}}
+      "name": {{ if $user_name }}{{ quote $user_name }}{{ else }}{{ quote $email }}{{ end }}
     }
 ----
 ====
