@@ -4,7 +4,6 @@ import (
 	"context"
 	"io"
 	"net/http"
-	"net/url"
 	"testing"
 
 	"github.com/gofiber/fiber/v2"
@@ -165,13 +164,13 @@ func TestHandlerHandle(t *testing.T) {
 		{
 			uc:      "redirect error",
 			handler: New(),
-			err:     &heimdall.RedirectError{RedirectTo: &url.URL{}, Code: http.StatusFound},
+			err:     &heimdall.RedirectError{RedirectTo: "http://foo.local", Code: http.StatusFound},
 			expCode: http.StatusFound,
 		},
 		{
 			uc:      "redirect error verbose",
 			handler: New(WithVerboseErrors(true)),
-			err:     &heimdall.RedirectError{RedirectTo: &url.URL{}, Code: http.StatusFound},
+			err:     &heimdall.RedirectError{RedirectTo: "http://foo.local", Code: http.StatusFound},
 			expCode: http.StatusFound,
 		},
 		{
