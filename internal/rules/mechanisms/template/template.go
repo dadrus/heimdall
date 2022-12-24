@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"errors"
+	"fmt"
 	"net/url"
 	"text/template"
 
@@ -33,7 +34,7 @@ func New(val string) (Template, error) {
 
 	tmpl, err := template.New("Heimdall").
 		Funcs(funcMap).
-		Funcs(template.FuncMap{"urlenc": url.QueryEscape}).
+		Funcs(template.FuncMap{"urlenc": urlEncode}).
 		Parse(val)
 	if err != nil {
 		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration, "failed to parse template").
@@ -65,3 +66,14 @@ func (t *templateImpl) Render(ctx heimdall.Context, sub *subject.Subject) (strin
 }
 
 func (t *templateImpl) Hash() []byte { return t.hash }
+
+func urlEncode(value any) string {
+	switch t := value.(type) {
+	case string:
+		return url.QueryEscape(t)
+	case fmt.Stringer:
+		return url.QueryEscape(t.String())
+	default:
+		return ""
+	}
+}
