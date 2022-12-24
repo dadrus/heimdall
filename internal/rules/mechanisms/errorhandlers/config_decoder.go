@@ -4,6 +4,7 @@ import (
 	"github.com/mitchellh/mapstructure"
 
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/errorhandlers/matcher"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
 )
 
 func decodeConfig(input any, output any) error {
@@ -12,7 +13,7 @@ func decodeConfig(input any, output any) error {
 			DecodeHook: mapstructure.ComposeDecodeHookFunc(
 				matcher.DecodeCIDRMatcherHookFunc(),
 				matcher.DecodeErrorTypeMatcherHookFunc(),
-				matcher.StringToURLHookFunc(),
+				template.DecodeTemplateHookFunc(),
 			),
 			Result:      output,
 			ErrorUnused: true,
