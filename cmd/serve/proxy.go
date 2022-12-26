@@ -15,20 +15,8 @@ func NewProxyCommand() *cobra.Command {
 		Use:     "proxy",
 		Short:   "Starts heimdall in Reverse Proxy operation mode",
 		Example: "heimdall serve proxy",
-		Run: func(cmd *cobra.Command, args []string) {
-			configPath, _ := cmd.Flags().GetString("config")
-			envPrefix, _ := cmd.Flags().GetString("env-config-prefix")
-
-			app := fx.New(
-				fx.NopLogger,
-				fx.Supply(
-					config.ConfigurationPath(configPath),
-					config.EnvVarPrefix(envPrefix)),
-				internal.Module,
-				proxy.Module,
-			)
-
-			err := app.Err()
+		Run: func(cmd *cobra.Command, _ []string) {
+			app, err := createProxyApp(cmd)
 			if err != nil {
 				cmd.PrintErrf("Failed to initialize proxy service: %v", err)
 				panic(err)
@@ -37,4 +25,20 @@ func NewProxyCommand() *cobra.Command {
 			app.Run()
 		},
 	}
+}
+
+func createProxyApp(cmd *cobra.Command) (*fx.App, error) {
+	configPath, _ := cmd.Flags().GetString("config")
+	envPrefix, _ := cmd.Flags().GetString("env-config-prefix")
+
+	app := fx.New(
+		fx.NopLogger,
+		fx.Supply(
+			config.ConfigurationPath(configPath),
+			config.EnvVarPrefix(envPrefix)),
+		internal.Module,
+		proxy.Module,
+	)
+
+	return app, app.Err()
 }
