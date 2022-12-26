@@ -21,6 +21,7 @@ import (
 	"gopkg.in/square/go-jose.v2"
 
 	"github.com/dadrus/heimdall/internal/config"
+	"github.com/dadrus/heimdall/internal/heimdall/mocks"
 	"github.com/dadrus/heimdall/internal/keystore"
 	"github.com/dadrus/heimdall/internal/x/pkix/pemx"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
@@ -96,10 +97,19 @@ func (suite *JWKSTestSuite) SetupSuite() {
 		Logger:     log.Logger,
 	})
 
+	keys := make([]jose.JSONWebKey, len(suite.ks.Entries()))
+
+	for idx, entry := range suite.ks.Entries() {
+		keys[idx] = entry.JWK()
+	}
+
+	signer := &mocks.MockJWTSigner{}
+	signer.On("Keys").Return(keys)
+
 	_, err = newHandler(handlerArgs{
-		App:      suite.app,
-		Logger:   log.Logger,
-		KeyStore: suite.ks,
+		App:    suite.app,
+		Logger: log.Logger,
+		Signer: signer,
 	})
 	suite.NoError(err)
 }
