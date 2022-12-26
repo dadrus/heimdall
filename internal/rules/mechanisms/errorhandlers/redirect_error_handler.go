@@ -2,12 +2,12 @@ package errorhandlers
 
 import (
 	"net/http"
-	"net/url"
 
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/errorhandlers/matcher"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
@@ -28,18 +28,16 @@ func init() {
 }
 
 type redirectErrorHandler struct {
-	to       *url.URL
-	returnTo string
-	code     int
-	m        []matcher.ErrorConditionMatcher
+	to   template.Template
+	code int
+	m    []matcher.ErrorConditionMatcher
 }
 
 func newRedirectErrorHandler(rawConfig map[string]any) (*redirectErrorHandler, error) {
 	type Config struct {
-		To       *url.URL                        `mapstructure:"to"`
-		Code     int                             `mapstructure:"code"`
-		ReturnTo string                          `mapstructure:"return_to_query_parameter"`
-		When     []matcher.ErrorConditionMatcher `mapstructure:"when"`
+		To   template.Template               `mapstructure:"to"`
+		Code int                             `mapstructure:"code"`
+		When []matcher.ErrorConditionMatcher `mapstructure:"when"`
 	}
 
 	var conf Config
@@ -62,10 +60,9 @@ func newRedirectErrorHandler(rawConfig map[string]any) (*redirectErrorHandler, e
 	}
 
 	return &redirectErrorHandler{
-		to:       conf.To,
-		returnTo: conf.ReturnTo,
-		code:     x.IfThenElse(conf.Code != 0, conf.Code, http.StatusFound),
-		m:        conf.When,
+		to:   conf.To,
+		code: x.IfThenElse(conf.Code != 0, conf.Code, http.StatusFound),
+		m:    conf.When,
 	}, nil
 }
 
@@ -80,18 +77,16 @@ func (eh *redirectErrorHandler) Execute(ctx heimdall.Context, err error) (bool, 
 
 	logger.Debug().Msg("Handling error using redirect error handler")
 
-	toURL := *eh.to
-	if len(eh.returnTo) != 0 {
-		toQuery := toURL.Query()
-
-		toQuery.Add(eh.returnTo, ctx.RequestURL().String())
-		toURL.RawQuery = toQuery.Encode()
+	toURL, err := eh.to.Render(ctx, nil)
+	if err != nil {
+		return true, errorchain.NewWithMessage(heimdall.ErrInternal, "failed to render 'to' url").
+			CausedBy(err)
 	}
 
 	ctx.SetPipelineError(&heimdall.RedirectError{
 		Message:    "redirect",
 		Code:       eh.code,
-		RedirectTo: &toURL,
+		RedirectTo: toURL,
 	})
 
 	return true, nil
@@ -120,9 +115,8 @@ func (eh *redirectErrorHandler) WithConfig(rawConfig map[string]any) (ErrorHandl
 	}
 
 	return &redirectErrorHandler{
-		to:       eh.to,
-		returnTo: eh.returnTo,
-		code:     eh.code,
-		m:        conf.When,
+		to:   eh.to,
+		code: eh.code,
+		m:    conf.When,
 	}, nil
 }

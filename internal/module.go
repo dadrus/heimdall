@@ -11,6 +11,7 @@ import (
 	"github.com/dadrus/heimdall/internal/prometheus"
 	"github.com/dadrus/heimdall/internal/rules"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms"
+	"github.com/dadrus/heimdall/internal/signer"
 	"github.com/dadrus/heimdall/internal/tracing"
 )
 
@@ -20,6 +21,7 @@ var Module = fx.Options(
 	logging.Module,
 	tracing.Module,
 	cache.Module,
+	signer.Module,
 	mechanisms.Module,
 	prometheus.Module,
 	rules.Module,

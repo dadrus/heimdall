@@ -1540,7 +1540,6 @@
             "to": {
               "description": "Set the redirect target. Can either be a http/https URL, or a relative URL.",
               "type": "string",
-              "format": "uri-reference",
               "examples": [
                 "http://my-app.com/dashboard",
                 "https://my-app.com/dashboard",
@@ -1555,12 +1554,6 @@
                 302
               ],
               "default": 302
-            },
-            "return_to_query_parameter": {
-              "description": "Adds the original URL the request tried to access to the query parameter.",
-              "type": "string",
-              "pattern": "^[A-Za-z0-9,._~-]*$",
-              "default": ""
             },
             "when": {
               "$ref": "#/definitions/errorsWhen"

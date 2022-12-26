@@ -42,11 +42,9 @@ Configuration using the `config` property is mandatory. Following properties are
 
 * *`to`*: _URL_ (mandatory, not overridable)
 +
-The url to redirect the client to. If no `return_to_query_parameter` is defined, the value of the HTTP `Location` hader is set to the configured value.
-
-* *`return_to_query_parameter`*: _string_ (optional, not overridable)
+The url to redirect the client to via the `Location` header. Can be templated and has access to the link:{{< relref "overview.adoc#_request" >}}[`Request`] object.
 +
-If you want to return the user back to the url, heimdall was handling when this error handler mechanism kicked in and your authentication system supports this by considering a specific query parameter, you can configure it here.
+NOTE: When creating query parameters by making use of templates, don't forget to encode the values using the `urlenc` function. See also examples below.
 
 * *`code`*: _int_ (optional, not overridable)
 +
@@ -63,7 +61,7 @@ Conditions, which must hold true for this error handler to execute. The defined 
 
 The redirect error handler below is configured to kick in if either
 
-* the first error condition evaluates to true. This condition is for web requests (HTTP `Accept` header contains `text/html`) if an `authentication_error` error occurred (an error raised by authenticators). In this case, it will redirect the client (for web requests, usually a browser) to `\http://127.0.0.1:4433/self-service/login/browser` and also add the `return_to` query parameter with the current url to the redirect url.
+* the first error condition evaluates to true. This condition is for web requests (HTTP `Accept` header contains `text/html`) if an `authentication_error` error occurred (an error raised by authenticators). In this case, it will redirect the client (for web requests, usually a browser) to `\http://127.0.0.1:4433/self-service/login/browser` and also add the `return_to` query parameter set to the URL encoded value of the current url.
 * Or, if the second condition evaluates to true. The only difference to the previous one is the error type, which is `authorization_error` in this case.
 
 So, e.g. if Heimdall was handling the request for `\http://my-service.local/foo` and run into an error like described above, the value of the HTTP `Location` header will be set to `\http://127.0.0.1:4433/self-service/login/browser?return_to=http%3A%2F%2Fmy-service.local%2Ffoo`
@@ -73,8 +71,7 @@ So, e.g. if Heimdall was handling the request for `\http://my-service.local/foo`
 id: authenticate_with_kratos
 type: redirect
 config:
-  to: http://127.0.0.1:4433/self-service/login/browser
-  return_to_query_parameter: return_to
+  to: http://127.0.0.1:4433/self-service/login/browser?return_to={{ .Request.URL | urlenc }}
   when:
     - error:
         - type: authentication_error
@@ -95,8 +92,7 @@ In this case the error condition can actually be simplified, so the mechanism co
 id: authenticate_with_kratos
 type: redirect
 config:
-  to: http://127.0.0.1:4433/self-service/login/browser
-  return_to_query_parameter: return_to
+  to: http://127.0.0.1:4433/self-service/login/browser?return_to={{ .Request.URL | urlenc }}
   when:
     - error:
         - type: authentication_error

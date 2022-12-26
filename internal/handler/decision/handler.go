@@ -10,7 +10,6 @@ import (
 	"github.com/dadrus/heimdall/internal/handler/requestcontext"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules"
-	"github.com/dadrus/heimdall/internal/signer"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
@@ -27,20 +26,16 @@ type handlerArgs struct {
 	App             *fiber.App `name:"decision"`
 	RulesRepository rules.Repository
 	Config          *config.Configuration
+	Signer          heimdall.JWTSigner
 	Logger          zerolog.Logger
 }
 
 func newHandler(args handlerArgs) (*Handler, error) {
-	jwtSigner, err := signer.NewJWTSigner(&args.Config.Signer, args.Logger)
-	if err != nil {
-		return nil, err
-	}
-
 	acceptedCode := args.Config.Serve.Decision.Respond.With.Accepted.Code
 
 	handler := &Handler{
 		r:    args.RulesRepository,
-		s:    jwtSigner,
+		s:    args.Signer,
 		code: x.IfThenElse(acceptedCode != 0, acceptedCode, fiber.StatusOK),
 	}
 

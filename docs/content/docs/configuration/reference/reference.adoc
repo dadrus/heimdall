@@ -35,8 +35,8 @@ serve:
       allow_credentials: true
       max_age: 1m
     tls:
-      key: /path/to/key/file.pem
-      cert: /path/to/cert/file.pem
+      key_store: /path/to/key/store.pem
+      password: VerySecure!
     trusted_proxies:
       - 192.168.1.0/24
 
@@ -61,8 +61,9 @@ serve:
       allow_credentials: true
       max_age: 1m
     tls:
-      key: /path/to/key/file.pem
-      cert: /path/to/cert/file.pem
+      key_store: /path/to/key/store.pem
+      password: VerySecure!
+      key_id: first_entry
       min_version: TLS1.2
       cipher_suites:
         - TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
@@ -93,8 +94,7 @@ serve:
       allow_credentials: true
       max_age: 1m
     tls:
-      key: /path/to/key/file.pem
-      cert: /path/to/cert/file.pem
+      key_store: /path/to/key/store.pem
       min_version: TLS1.2
 
 log:
@@ -269,8 +269,7 @@ rules:
     - id: authenticate_with_kratos
       type: redirect
       config:
-        to: http://127.0.0.1:4433/self-service/login/browser
-        return_to_query_parameter: return_to
+        to: http://127.0.0.1:4433/self-service/login/browser?return_to={{ .Request.URL | urlenc }}
         when:
           - error:
             - type: authentication_error

@@ -113,12 +113,11 @@ when:
 				require.NoError(t, err)
 				require.NotNil(t, redEH)
 
-				toURL, err := url.Parse("http://foo.bar")
+				toURL, err := redEH.to.Render(nil, nil)
 				require.NoError(t, err)
 
-				assert.Equal(t, toURL, redEH.to)
+				assert.Equal(t, "http://foo.bar", toURL)
 				assert.Equal(t, http.StatusFound, redEH.code)
-				assert.Len(t, redEH.returnTo, 0)
 				require.Len(t, redEH.m, 1)
 				assert.Nil(t, redEH.m[0].CIDR)
 				assert.Nil(t, redEH.m[0].Headers)
@@ -133,9 +132,8 @@ when:
 		{
 			uc: "with full complex valid configuration",
 			config: []byte(`
-to: http://foo.bar
+to: http://foo.bar?origin={{ .Request.URL | urlenc }}
 code: 301
-return_to_query_parameter: foobar
 when:
   - error:
       - type: authentication_error
@@ -163,12 +161,16 @@ when:
 				require.NoError(t, err)
 				require.NotNil(t, redEH)
 
-				toURL, err := url.Parse("http://foo.bar")
+				ctx := &mocks.MockContext{}
+				ctx.On("RequestMethod").Return("POST")
+				ctx.On("RequestURL").Return(&url.URL{Scheme: "http", Host: "foobar.baz", Path: "zab"})
+				ctx.On("RequestClientIPs").Return(nil)
+
+				toURL, err := redEH.to.Render(ctx, nil)
 				require.NoError(t, err)
 
-				assert.Equal(t, toURL, redEH.to)
+				assert.Equal(t, "http://foo.bar?origin=http%3A%2F%2Ffoobar.baz%2Fzab", toURL)
 				assert.Equal(t, http.StatusMovedPermanently, redEH.code)
-				assert.Equal(t, "foobar", redEH.returnTo)
 				require.Len(t, redEH.m, 2)
 
 				condition1 := redEH.m[0]
@@ -279,7 +281,6 @@ when:
 			prototypeConfig: []byte(`
 to: http://foo.bar
 code: 301
-return_to_query_parameter: foobar
 when:
   - error:
       - type: authentication_error
@@ -298,7 +299,6 @@ when:
 				assert.NotNil(t, configured)
 				assert.Equal(t, prototype.to, configured.to)
 				assert.Equal(t, prototype.code, configured.code)
-				assert.Equal(t, prototype.returnTo, configured.returnTo)
 				assert.NotEqual(t, prototype.m, configured.m)
 				assert.Len(t, configured.m, 1)
 				assert.Nil(t, configured.m[0].CIDR)
@@ -369,7 +369,32 @@ when:
 			},
 		},
 		{
-			uc: "responsible without return_to_query_parameter",
+			uc: "responsible for error but with template rendering error",
+			config: []byte(`
+to: http://foo.bar={{ .foobar }}
+when:
+  - error:
+      - type: authentication_error
+`),
+			error: heimdall.ErrAuthentication,
+			configureContext: func(t *testing.T, ctx *mocks.MockContext) {
+				t.Helper()
+
+				ctx.On("RequestMethod").Return("POST")
+				ctx.On("RequestURL").Return(&url.URL{Scheme: "http", Host: "foobar.baz", Path: "zab"})
+				ctx.On("RequestClientIPs").Return(nil)
+			},
+			assert: func(t *testing.T, wasResponsible bool, err error) {
+				t.Helper()
+
+				assert.Error(t, err)
+				assert.ErrorIs(t, err, heimdall.ErrInternal)
+				assert.Contains(t, err.Error(), "failed to render")
+				assert.True(t, wasResponsible)
+			},
+		},
+		{
+			uc: "responsible without return to url templating",
 			config: []byte(`
 to: http://foo.bar
 when:
@@ -380,13 +405,13 @@ when:
 			configureContext: func(t *testing.T, ctx *mocks.MockContext) {
 				t.Helper()
 
+				ctx.On("RequestMethod").Return("POST")
+				ctx.On("RequestURL").Return(&url.URL{Scheme: "http", Host: "foobar.baz", Path: "zab"})
+				ctx.On("RequestClientIPs").Return(nil)
 				ctx.On("SetPipelineError", mock.MatchedBy(func(redirErr *heimdall.RedirectError) bool {
 					t.Helper()
 
-					redirectURL, err := url.Parse("http://foo.bar")
-					require.NoError(t, err)
-
-					assert.Equal(t, redirectURL, redirErr.RedirectTo)
+					assert.Equal(t, "http://foo.bar", redirErr.RedirectTo)
 					assert.Equal(t, http.StatusFound, redirErr.Code)
 					assert.Equal(t, "redirect", redirErr.Message)
 
@@ -401,11 +426,10 @@ when:
 			},
 		},
 		{
-			uc: "responsible with return_to_query_parameter and code set",
+			uc: "responsible with template and code set",
 			config: []byte(`
-to: http://foo.bar
+to: http://foo.bar?origin={{ .Request.URL | urlenc }}
 code: 300
-return_to_query_parameter: foobar
 when:
   - error:
       - type: authentication_error
@@ -417,15 +441,20 @@ when:
 				requestURL, err := url.Parse("http://test.org")
 				require.NoError(t, err)
 
+				ctx.On("RequestMethod").Return("POST")
+				ctx.On("RequestClientIPs").Return(nil)
 				ctx.On("RequestURL").Return(requestURL)
 
 				ctx.On("SetPipelineError", mock.MatchedBy(func(redirErr *heimdall.RedirectError) bool {
 					t.Helper()
 
-					assert.Equal(t, "http", redirErr.RedirectTo.Scheme)
-					assert.Equal(t, "foo.bar", redirErr.RedirectTo.Host)
-					assert.Len(t, redirErr.RedirectTo.Query(), 1)
-					assert.Equal(t, "http://test.org", redirErr.RedirectTo.Query().Get("foobar"))
+					redirectURL, err := url.Parse(redirErr.RedirectTo)
+					require.NoError(t, err)
+
+					assert.Equal(t, "http", redirectURL.Scheme)
+					assert.Equal(t, "foo.bar", redirectURL.Host)
+					assert.Len(t, redirectURL.Query(), 1)
+					assert.Equal(t, "http://test.org", redirectURL.Query().Get("origin"))
 					assert.Equal(t, http.StatusMultipleChoices, redirErr.Code)
 					assert.Equal(t, "redirect", redirErr.Message)
 

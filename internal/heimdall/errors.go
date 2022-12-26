@@ -2,7 +2,6 @@ package heimdall
 
 import (
 	"errors"
-	"net/url"
 	"reflect"
 )
 
@@ -21,7 +20,7 @@ var (
 type RedirectError struct {
 	Message    string
 	Code       int
-	RedirectTo *url.URL
+	RedirectTo string
 }
 
 func (e *RedirectError) Error() string { return e.Message }

@@ -1,8 +1,6 @@
 package management
 
 import (
-	"crypto/rand"
-	"crypto/rsa"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -14,31 +12,21 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/config"
-	"github.com/dadrus/heimdall/internal/keystore"
 )
 
 func TestHealthRequest(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
-	const rsa2048 = 2048
-
-	privateKey, err := rsa.GenerateKey(rand.Reader, rsa2048)
-	require.NoError(t, err)
-
-	ks, err := keystore.NewKeyStoreFromKey(privateKey)
-	require.NoError(t, err)
-
 	app := newApp(appArgs{
 		Config:     &config.Configuration{Serve: config.ServeConfig{Management: config.ServiceConfig{}}},
 		Registerer: prometheus.NewRegistry(),
 		Logger:     log.Logger,
 	})
 
-	_, err = newHandler(handlerArgs{
-		App:      app,
-		Logger:   log.Logger,
-		KeyStore: ks,
+	_, err := newHandler(handlerArgs{
+		App:    app,
+		Logger: log.Logger,
 	})
 	require.NoError(t, err)
 

@@ -22,14 +22,14 @@ import (
 	"github.com/dadrus/heimdall/internal/x/pkix"
 )
 
-func NewJWTSigner(conf *config.SignerConfig, logger zerolog.Logger) (heimdall.JWTSigner, error) {
+func NewJWTSigner(conf *config.Configuration, logger zerolog.Logger) (heimdall.JWTSigner, error) {
 	var (
 		ks  keystore.KeyStore
 		kse *keystore.Entry
 		err error
 	)
 
-	if len(conf.KeyStore) == 0 {
+	if len(conf.Signer.KeyStore) == 0 {
 		logger.Warn().
 			Msg("Key store is not configured. NEVER DO IT IN PRODUCTION!!!! Generating an ECDSA P-384 key pair.")
 
@@ -43,7 +43,7 @@ func NewJWTSigner(conf *config.SignerConfig, logger zerolog.Logger) (heimdall.JW
 
 		ks, err = keystore.NewKeyStoreFromKey(privateKey)
 	} else {
-		ks, err = keystore.NewKeyStoreFromPEMFile(conf.KeyStore, conf.Password)
+		ks, err = keystore.NewKeyStoreFromPEMFile(conf.Signer.KeyStore, conf.Signer.Password)
 	}
 
 	if err != nil {
@@ -60,12 +60,12 @@ func NewJWTSigner(conf *config.SignerConfig, logger zerolog.Logger) (heimdall.JW
 			Msg("Entry info")
 	}
 
-	if len(conf.KeyID) == 0 {
+	if len(conf.Signer.KeyID) == 0 {
 		logger.Warn().Msg("No key id for signer configured. Taking first entry from the key store")
 
 		kse, err = ks.Entries()[0], nil
 	} else {
-		kse, err = ks.GetKey(conf.KeyID)
+		kse, err = ks.GetKey(conf.Signer.KeyID)
 	}
 
 	if err != nil {
@@ -85,9 +85,10 @@ func NewJWTSigner(conf *config.SignerConfig, logger zerolog.Logger) (heimdall.JW
 	logger.Info().Str("_key_id", kse.KeyID).Msg("Signer configured")
 
 	return &jwtSigner{
-		iss: conf.Name,
+		iss: conf.Signer.Name,
 		jwk: kse.JWK(),
 		key: kse.PrivateKey,
+		ks:  ks,
 	}, nil
 }
 
@@ -95,6 +96,7 @@ type jwtSigner struct {
 	iss string
 	jwk jose.JSONWebKey
 	key crypto.Signer
+	ks  keystore.KeyStore
 }
 
 func (s *jwtSigner) Hash() []byte {
@@ -140,4 +142,14 @@ func (s *jwtSigner) Sign(sub string, ttl time.Duration, custClaims map[string]an
 	}
 
 	return rawJwt, nil
+}
+
+func (s *jwtSigner) Keys() []jose.JSONWebKey {
+	keys := make([]jose.JSONWebKey, len(s.ks.Entries()))
+
+	for idx, entry := range s.ks.Entries() {
+		keys[idx] = entry.JWK()
+	}
+
+	return keys
 }

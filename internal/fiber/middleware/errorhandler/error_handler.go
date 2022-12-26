@@ -52,7 +52,7 @@ func (h *handler) handle(ctx *fiber.Ctx) error { //nolint:cyclop
 
 		errors.As(err, &redirectError)
 
-		return ctx.Redirect(redirectError.RedirectTo.String(), redirectError.Code)
+		return ctx.Redirect(redirectError.RedirectTo, redirectError.Code)
 	default:
 		logger := zerolog.Ctx(ctx.UserContext())
 		logger.Error().Err(err).Msg("Internal error occurred")
