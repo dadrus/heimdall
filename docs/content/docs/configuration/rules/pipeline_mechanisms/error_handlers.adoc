@@ -43,6 +43,8 @@ Configuration using the `config` property is mandatory. Following properties are
 * *`to`*: _URL_ (mandatory, not overridable)
 +
 The url to redirect the client to via the `Location` header. Can be templated and has access to the link:{{< relref "overview.adoc#_request" >}}[`Request`] object.
++
+NOTE: When creating query parameters by making use of templates, don't forget to encode the values using the `urlenc` function. See also examples below.
 
 * *`code`*: _int_ (optional, not overridable)
 +
