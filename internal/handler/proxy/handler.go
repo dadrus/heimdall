@@ -12,7 +12,6 @@ import (
 	"github.com/dadrus/heimdall/internal/handler/requestcontext"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules"
-	"github.com/dadrus/heimdall/internal/signer"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
@@ -28,18 +27,14 @@ type handlerArgs struct {
 	App             *fiber.App `name:"proxy"`
 	RulesRepository rules.Repository
 	Config          *config.Configuration
+	Signer          heimdall.JWTSigner
 	Logger          zerolog.Logger
 }
 
 func newHandler(args handlerArgs) (*Handler, error) {
-	jwtSigner, err := signer.NewJWTSigner(&args.Config.Signer, args.Logger)
-	if err != nil {
-		return nil, err
-	}
-
 	handler := &Handler{
 		r: args.RulesRepository,
-		s: jwtSigner,
+		s: args.Signer,
 		t: args.Config.Serve.Proxy.Timeout.Read,
 	}
 
