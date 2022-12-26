@@ -248,7 +248,7 @@ func TestNewJWTSigner(t *testing.T) {
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
 			// WHEN
-			signer, err := NewJWTSigner(&tc.config, log.Logger)
+			signer, err := NewJWTSigner(&config.Configuration{Signer: tc.config}, log.Logger)
 
 			// THEN
 			var (
