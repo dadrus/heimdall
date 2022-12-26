@@ -1,7 +1,6 @@
 package matcher
 
 import (
-	"net/url"
 	"reflect"
 
 	"github.com/mitchellh/mapstructure"
@@ -72,21 +71,5 @@ func DecodeErrorTypeMatcherHookFunc() mapstructure.DecodeHookFunc {
 		}
 
 		return matcher, nil
-	}
-}
-
-func StringToURLHookFunc() mapstructure.DecodeHookFunc {
-	return func(from reflect.Type, to reflect.Type, data any) (any, error) {
-		if from.Kind() != reflect.String {
-			return data, nil
-		}
-
-		if to != reflect.TypeOf(&url.URL{}) {
-			return data, nil
-		}
-
-		// Convert it by parsing (type check is already done above)
-		// nolint: forcetypeassert
-		return url.Parse(data.(string))
 	}
 }
