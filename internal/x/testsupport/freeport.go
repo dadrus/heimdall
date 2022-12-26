@@ -8,12 +8,13 @@ func GetFreePort() (int, error) {
 		return 0, err
 	}
 
-	l, err := net.ListenTCP("tcp", addr)
+	listener, err := net.ListenTCP("tcp", addr)
 	if err != nil {
 		return 0, err
 	}
 
-	defer l.Close()
+	defer listener.Close()
 
-	return l.Addr().(*net.TCPAddr).Port, nil
+	// nolint: forcetypeassert
+	return listener.Addr().(*net.TCPAddr).Port, nil
 }
