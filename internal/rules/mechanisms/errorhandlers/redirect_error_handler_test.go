@@ -369,6 +369,31 @@ when:
 			},
 		},
 		{
+			uc: "responsible for error but with template rendering error",
+			config: []byte(`
+to: http://foo.bar={{ .foobar }}
+when:
+  - error:
+      - type: authentication_error
+`),
+			error: heimdall.ErrAuthentication,
+			configureContext: func(t *testing.T, ctx *mocks.MockContext) {
+				t.Helper()
+
+				ctx.On("RequestMethod").Return("POST")
+				ctx.On("RequestURL").Return(&url.URL{Scheme: "http", Host: "foobar.baz", Path: "zab"})
+				ctx.On("RequestClientIPs").Return(nil)
+			},
+			assert: func(t *testing.T, wasResponsible bool, err error) {
+				t.Helper()
+
+				assert.Error(t, err)
+				assert.ErrorIs(t, err, heimdall.ErrInternal)
+				assert.Contains(t, err.Error(), "failed to render")
+				assert.True(t, wasResponsible)
+			},
+		},
+		{
 			uc: "responsible without return to url templating",
 			config: []byte(`
 to: http://foo.bar
