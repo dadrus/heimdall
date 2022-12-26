@@ -416,3 +416,42 @@ func TestJWTSignerHash(t *testing.T) {
 	assert.NotEmpty(t, hash1)
 	assert.Equal(t, hash1, hash2)
 }
+
+func TestJwtSignerKeys(t *testing.T) {
+	t.Parallel()
+
+	// GIVEN
+	privKey1, err := rsa.GenerateKey(rand.Reader, 2048)
+	require.NoError(t, err)
+
+	privKey2, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	require.NoError(t, err)
+
+	testDir := t.TempDir()
+	keyFile, err := os.Create(filepath.Join(testDir, "keys.pem"))
+	require.NoError(t, err)
+
+	pemBytes, err := pemx.BuildPEM(
+		pemx.WithRSAPrivateKey(privKey1, pemx.WithHeader("X-Key-ID", "key1")),
+		pemx.WithECDSAPrivateKey(privKey2, pemx.WithHeader("X-Key-ID", "key2")),
+	)
+	require.NoError(t, err)
+
+	_, err = keyFile.Write(pemBytes)
+	require.NoError(t, err)
+
+	signer, err := NewJWTSigner(
+		&config.Configuration{Signer: config.SignerConfig{KeyStore: keyFile.Name()}},
+		log.Logger,
+	)
+	require.NoError(t, err)
+
+	// WHEN
+	keys := signer.Keys()
+
+	// THEN
+	require.Len(t, keys, 2)
+
+	assert.Equal(t, "PS256", keys[0].Algorithm)
+	assert.Equal(t, "ES256", keys[1].Algorithm)
+}
