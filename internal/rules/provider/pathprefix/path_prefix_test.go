@@ -5,7 +5,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/dadrus/heimdall/internal/config"
+	event2 "github.com/dadrus/heimdall/internal/rules/rule"
 )
 
 func TestPathPrefixVerify(t *testing.T) {
@@ -24,7 +24,7 @@ func TestPathPrefixVerify(t *testing.T) {
 	} {
 		t.Run(tc.uc, func(t *testing.T) {
 			// WHEN
-			err := tc.prefix.Verify([]config.RuleConfig{{URL: tc.url}})
+			err := tc.prefix.Verify([]event2.Configuration{{RuleMatcher: event2.Matcher{URL: tc.url}}})
 
 			if tc.fail {
 				require.Error(t, err)

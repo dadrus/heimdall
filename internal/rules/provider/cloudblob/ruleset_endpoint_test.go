@@ -167,7 +167,7 @@ func TestFetchRuleSets(t *testing.T) { //nolint:maintidx
 
 				data := `[{
 					"id": "foobar",
-					"url": "http://<**>/bar/foo/api",
+					"match": "http://<**>/bar/foo/api",
 					"methods": ["GET", "POST"],
 					"execute": [
 						{ "authenticator": "foobar" }
@@ -203,7 +203,7 @@ func TestFetchRuleSets(t *testing.T) { //nolint:maintidx
 				ruleSet1 := `[
 {
 	"id": "foobar",
-	"url": "http://<**>/foo/bar/api1",
+	"match": "http://<**>/foo/bar/api1",
 	"methods": ["GET", "POST"],
 	"execute": [
 		{ "authenticator": "foobar" }
@@ -212,7 +212,7 @@ func TestFetchRuleSets(t *testing.T) { //nolint:maintidx
 
 				ruleSet2 := `
 - id: barfoo
-  url: http://<**>/foo/bar/api2
+  match: http://<**>/foo/bar/api2
   methods: 
   - GET
   - POST
@@ -263,7 +263,7 @@ func TestFetchRuleSets(t *testing.T) { //nolint:maintidx
 				ruleSet1 := `[
 				{
 					"id": "foobar",
-					"url": "http://<**>/foo/bar/api1",
+					"match": "http://<**>/foo/bar/api1",
 					"methods": ["GET", "POST"],
 					"execute": [
 						{ "authenticator": "foobar" }
@@ -365,7 +365,7 @@ func TestFetchRuleSets(t *testing.T) { //nolint:maintidx
 				ruleSet1 := `[
 				{
 					"id": "foobar",
-					"url": "http://<**>/foo/bar/api1",
+					"match": "http://<**>/foo/bar/api1",
 					"methods": ["GET", "POST"],
 					"execute": [
 						{ "authenticator": "foobar" }

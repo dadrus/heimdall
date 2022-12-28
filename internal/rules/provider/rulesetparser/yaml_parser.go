@@ -6,16 +6,17 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"github.com/dadrus/heimdall/internal/config"
+	"github.com/dadrus/heimdall/internal/rules/rule"
 )
 
-func parseYAML(reader io.Reader) ([]config.RuleConfig, error) {
-	var rcs []config.RuleConfig
+func parseYAML(reader io.Reader) ([]rule.Configuration, error) {
+	var (
+		rawConfig []map[string]any
+		rcs       []rule.Configuration
+	)
 
 	dec := yaml.NewDecoder(reader)
-	dec.KnownFields(true)
-
-	if err := dec.Decode(&rcs); err != nil {
+	if err := dec.Decode(&rawConfig); err != nil {
 		if errors.Is(err, io.EOF) {
 			return rcs, nil
 		}
@@ -23,5 +24,7 @@ func parseYAML(reader io.Reader) ([]config.RuleConfig, error) {
 		return nil, err
 	}
 
-	return rcs, nil
+	err := rule.DecodeConfig(rawConfig, &rcs)
+
+	return rcs, err
 }

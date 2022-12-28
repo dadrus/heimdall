@@ -1,6 +1,6 @@
 package event
 
-import "github.com/dadrus/heimdall/internal/config"
+import "github.com/dadrus/heimdall/internal/rules/rule"
 
 type ChangeType uint32
 
@@ -20,6 +20,6 @@ func (t ChangeType) String() string {
 
 type RuleSetChangedEvent struct {
 	Src        string
-	RuleSet    []config.RuleConfig
+	RuleSet    []rule.Configuration
 	ChangeType ChangeType
 }

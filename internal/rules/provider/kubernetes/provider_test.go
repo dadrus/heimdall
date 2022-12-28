@@ -22,6 +22,7 @@ import (
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/event"
 	"github.com/dadrus/heimdall/internal/rules/provider/kubernetes/api/v1alpha1"
+	event2 "github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
@@ -139,13 +140,15 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 								},
 								Spec: v1alpha1.RuleSetSpec{
 									AuthClassName: "bar",
-									Rules: []config.RuleConfig{
+									Rules: []event2.Configuration{
 										{
-											ID:               "test",
-											URL:              "http://foo.bar",
-											Upstream:         "http://bar",
-											MatchingStrategy: "glob",
-											Methods:          []string{http.MethodGet},
+											ID: "test",
+											RuleMatcher: event2.Matcher{
+												URL:      "http://foo.bar",
+												Strategy: "glob",
+											},
+											Upstream: "http://bar",
+											Methods:  []string{http.MethodGet},
 											Execute: []config.MechanismConfig{
 												{"authenticator": "authn"},
 												{"authorizer": "authz"},
@@ -243,13 +246,15 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 								},
 								Spec: v1alpha1.RuleSetSpec{
 									AuthClassName: "bar",
-									Rules: []config.RuleConfig{
+									Rules: []event2.Configuration{
 										{
-											ID:               "test",
-											URL:              "http://foo.bar",
-											Upstream:         "http://bar",
-											MatchingStrategy: "glob",
-											Methods:          []string{http.MethodGet},
+											ID: "test",
+											RuleMatcher: event2.Matcher{
+												URL:      "http://foo.bar",
+												Strategy: "glob",
+											},
+											Upstream: "http://bar",
+											Methods:  []string{http.MethodGet},
 											Execute: []config.MechanismConfig{
 												{"authenticator": "authn"},
 												{"authorizer": "authz"},
@@ -319,9 +324,9 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 				require.Len(t, evt.RuleSet, 1)
 				rule := evt.RuleSet[0]
 				assert.Equal(t, "test", rule.ID)
-				assert.Equal(t, "http://foo.bar", rule.URL)
+				assert.Equal(t, "http://foo.bar", rule.RuleMatcher.URL)
 				assert.Equal(t, "http://bar", rule.Upstream)
-				assert.Equal(t, "glob", rule.MatchingStrategy)
+				assert.Equal(t, "glob", rule.RuleMatcher.Strategy)
 				assert.Len(t, rule.Methods, 1)
 				assert.Contains(t, rule.Methods, http.MethodGet)
 				assert.Empty(t, rule.ErrorHandler)
@@ -360,13 +365,15 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 								},
 								Spec: v1alpha1.RuleSetSpec{
 									AuthClassName: "bar",
-									Rules: []config.RuleConfig{
+									Rules: []event2.Configuration{
 										{
-											ID:               "test",
-											URL:              "http://foo.bar",
-											Upstream:         "http://bar",
-											MatchingStrategy: "glob",
-											Methods:          []string{http.MethodGet},
+											ID: "test",
+											RuleMatcher: event2.Matcher{
+												URL:      "http://foo.bar",
+												Strategy: "glob",
+											},
+											Upstream: "http://bar",
+											Methods:  []string{http.MethodGet},
 											Execute: []config.MechanismConfig{
 												{"authenticator": "authn"},
 												{"authorizer": "authz"},
@@ -445,9 +452,9 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 				require.Len(t, evt.RuleSet, 1)
 				rule := evt.RuleSet[0]
 				assert.Equal(t, "test", rule.ID)
-				assert.Equal(t, "http://foo.bar", rule.URL)
+				assert.Equal(t, "http://foo.bar", rule.RuleMatcher.URL)
 				assert.Equal(t, "http://bar", rule.Upstream)
-				assert.Equal(t, "glob", rule.MatchingStrategy)
+				assert.Equal(t, "glob", rule.RuleMatcher.Strategy)
 				assert.Len(t, rule.Methods, 1)
 				assert.Contains(t, rule.Methods, http.MethodGet)
 				assert.Empty(t, rule.ErrorHandler)
@@ -490,13 +497,15 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 								},
 								Spec: v1alpha1.RuleSetSpec{
 									AuthClassName: "bar",
-									Rules: []config.RuleConfig{
+									Rules: []event2.Configuration{
 										{
-											ID:               "test",
-											URL:              "http://foo.bar",
-											Upstream:         "http://bar",
-											MatchingStrategy: "glob",
-											Methods:          []string{http.MethodGet},
+											ID: "test",
+											RuleMatcher: event2.Matcher{
+												URL:      "http://foo.bar",
+												Strategy: "glob",
+											},
+											Upstream: "http://bar",
+											Methods:  []string{http.MethodGet},
 											Execute: []config.MechanismConfig{
 												{"authenticator": "authn"},
 												{"authorizer": "authz"},
@@ -528,13 +537,15 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 							ruleSet := evt.Object.(*v1alpha1.RuleSet) // nolint:forcetypeassert
 							ruleSet.Spec = v1alpha1.RuleSetSpec{
 								AuthClassName: "bar",
-								Rules: []config.RuleConfig{
+								Rules: []event2.Configuration{
 									{
-										ID:               "test",
-										URL:              "http://foo.bar",
-										Upstream:         "http://bar",
-										MatchingStrategy: "glob",
-										Methods:          []string{http.MethodGet},
+										ID: "test",
+										RuleMatcher: event2.Matcher{
+											URL:      "http://foo.bar",
+											Strategy: "glob",
+										},
+										Upstream: "http://bar",
+										Methods:  []string{http.MethodGet},
 										Execute: []config.MechanismConfig{
 											{"authenticator": "test_authn"},
 											{"authorizer": "test_authz"},
@@ -592,9 +603,9 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 				require.Len(t, evt.RuleSet, 1)
 				rule := evt.RuleSet[0]
 				assert.Equal(t, "test", rule.ID)
-				assert.Equal(t, "http://foo.bar", rule.URL)
+				assert.Equal(t, "http://foo.bar", rule.RuleMatcher.URL)
 				assert.Equal(t, "http://bar", rule.Upstream)
-				assert.Equal(t, "glob", rule.MatchingStrategy)
+				assert.Equal(t, "glob", rule.RuleMatcher.Strategy)
 				assert.Len(t, rule.Methods, 1)
 				assert.Contains(t, rule.Methods, http.MethodGet)
 				assert.Empty(t, rule.ErrorHandler)
@@ -613,9 +624,9 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 				require.Len(t, evt.RuleSet, 1)
 				rule = evt.RuleSet[0]
 				assert.Equal(t, "test", rule.ID)
-				assert.Equal(t, "http://foo.bar", rule.URL)
+				assert.Equal(t, "http://foo.bar", rule.RuleMatcher.URL)
 				assert.Equal(t, "http://bar", rule.Upstream)
-				assert.Equal(t, "glob", rule.MatchingStrategy)
+				assert.Equal(t, "glob", rule.RuleMatcher.Strategy)
 				assert.Len(t, rule.Methods, 1)
 				assert.Contains(t, rule.Methods, http.MethodGet)
 				assert.Empty(t, rule.ErrorHandler)

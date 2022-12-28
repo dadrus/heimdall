@@ -74,7 +74,7 @@ watch_interval: 5m
 			require.NoError(t, err)
 
 			conf := &config.Configuration{
-				Rules: config.RulesConfig{
+				Rules: config.Rules{
 					Providers: config.RuleProviders{HTTPEndpoint: providerConf},
 				},
 			}

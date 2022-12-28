@@ -238,7 +238,7 @@ func TestRuleSetEndpointFetchRuleSet(t *testing.T) { //nolint:maintidx
 				t.Helper()
 
 				w.Header().Set("Content-Type", "application/json")
-				_, err := w.Write([]byte(`[{"id":"foo", "url":"/bar/foo/<**>"}]`))
+				_, err := w.Write([]byte(`[{"id":"foo", "match":"/bar/foo/<**>"}]`))
 				require.NoError(t, err)
 			},
 			assert: func(t *testing.T, err error, _ *RuleSet) {
@@ -262,7 +262,7 @@ func TestRuleSetEndpointFetchRuleSet(t *testing.T) { //nolint:maintidx
 				t.Helper()
 
 				w.Header().Set("Content-Type", "application/json")
-				_, err := w.Write([]byte(`[{"id":"foo", "url":"<**>://moobar.local:9090/bar/foo/<**>"}]`))
+				_, err := w.Write([]byte(`[{"id":"foo", "match":"<**>://moobar.local:9090/bar/foo/<**>"}]`))
 				require.NoError(t, err)
 			},
 			assert: func(t *testing.T, err error, _ *RuleSet) {
@@ -286,7 +286,7 @@ func TestRuleSetEndpointFetchRuleSet(t *testing.T) { //nolint:maintidx
 				t.Helper()
 
 				w.Header().Set("Content-Type", "application/json")
-				_, err := w.Write([]byte(`[{"id":"foo", "url":"<**>://moobar.local:9090/foo/bar/<**>"}]`))
+				_, err := w.Write([]byte(`[{"id":"foo", "match":"<**>://moobar.local:9090/foo/bar/<**>"}]`))
 				require.NoError(t, err)
 			},
 			assert: func(t *testing.T, err error, ruleSet *RuleSet) {
