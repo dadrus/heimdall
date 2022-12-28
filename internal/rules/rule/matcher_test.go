@@ -84,6 +84,5 @@ func TestMatcherUnmarshalJSON(t *testing.T) {
 			// THEN
 			tc.assert(t, err, &typ.Matcher)
 		})
-
 	}
 }
