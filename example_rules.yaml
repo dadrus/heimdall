@@ -1,5 +1,7 @@
 - id: rule:foo
-  url: http://foo.bar/<**>
+  match:
+    url: http://foo.bar/<**>
+    strategy: glob
   upstream: http://bar.foo
 #  methods: # reuses default
 #    - GET
