@@ -47,16 +47,23 @@ spec:
                       id:
                         description: The identifier of the rule
                         type: string
-                      url:
-                        description: The url to match
-                        type: string
-                      matching_strategy:
-                        description: Strategy to match the url. Can either be regex or glob. defaults to glob
-                        type: string
-                        default: glob
-                        enum:
-                          - regex
-                          - glob
+                      match:
+                        oneOf:
+                          - description: The url to match using glob strategy
+                            type: string
+                          - description: How to match the rule
+                            type: object
+                            properties:
+                              url:
+                                description: The url to match
+                                type: string
+                              strategy:
+                                description: Strategy to match the url. Can either be regex or glob. defaults to glob
+                                type: string
+                                default: glob
+                                enum:
+                                  - regex
+                                  - glob
                       upstream:
                         description: Schema, host and port of the upstream service to forward the request to. Required only if heimdall is used in proxy operation mode.
                         type: string
