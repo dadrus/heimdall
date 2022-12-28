@@ -2,15 +2,25 @@ package rule
 
 import (
 	"errors"
+	"fmt"
 	"reflect"
 
 	"github.com/dadrus/heimdall/internal/x"
 )
 
-var ErrURLMissing = errors.New("missing matching URL")
+var (
+	ErrURLMissing          = errors.New("url property not present")
+	ErrURLType             = errors.New("bad url type")
+	ErrStrategyType        = errors.New("bad strategy type")
+	ErrUnsupportedStrategy = errors.New("unsupported strategy")
+)
 
-func decodeRuleMatcher(from reflect.Type, to reflect.Type, data any) (any, error) {
+func decodeMatcher(from reflect.Type, to reflect.Type, data any) (any, error) {
 	if to != reflect.TypeOf(Matcher{}) {
+		return data, nil
+	}
+
+	if from.Kind() != reflect.String && from.Kind() != reflect.Map {
 		return data, nil
 	}
 
@@ -18,27 +28,38 @@ func decodeRuleMatcher(from reflect.Type, to reflect.Type, data any) (any, error
 		// nolint: forcetypeassert
 		// already checked above
 		return Matcher{URL: data.(string), Strategy: "glob"}, nil
-	} else if from.Kind() == reflect.Map {
-		// nolint: forcetypeassert
-		// already checked above
-		values := data.(map[string]any)
-
-		URL, urlPresent := values["url"]
-		strategy, strategyPresent := values["strategy"]
-
-		if !urlPresent {
-			return nil, ErrURLMissing
-		}
-
-		// nolint: forcetypeassert
-		// already checked above
-		return Matcher{
-			URL: URL.(string),
-			Strategy: x.IfThenElseExec(strategyPresent,
-				func() string { return strategy.(string) },
-				func() string { return "glob" }),
-		}, nil
 	}
 
-	return data, nil
+	// nolint: forcetypeassert
+	// already checked above
+	values := data.(map[string]any)
+
+	var strategyValue string
+
+	URL, urlPresent := values["url"]
+	if !urlPresent {
+		return nil, ErrURLMissing
+	}
+
+	urlValue, ok := URL.(string)
+	if !ok {
+		return nil, ErrURLType
+	}
+
+	strategy, strategyPresent := values["strategy"]
+	if strategyPresent {
+		strategyValue, ok = strategy.(string)
+		if !ok {
+			return nil, ErrStrategyType
+		}
+
+		if strategyValue != "glob" && strategyValue != "regex" {
+			return nil, fmt.Errorf("%w: %s", ErrUnsupportedStrategy, strategyValue)
+		}
+	}
+
+	return Matcher{
+		URL:      urlValue,
+		Strategy: x.IfThenElse(strategyPresent, strategyValue, "glob"),
+	}, nil
 }
