@@ -145,7 +145,7 @@ And there is a rule, which allows anonymous requests and sets a header with subj
 [source, yaml]
 ----
 id: rule:my-service:anonymous-api-access
-url: /my-service/api
+match: /my-service/api
 upstream: https://my-backend-service:8888
 methods:
   - GET
@@ -233,7 +233,7 @@ And there is a rule, which allows anonymous requests and sets a header with subj
 [source, yaml]
 ----
 id: rule:my-service:anonymous-api-access
-url: http:my-backend-service/my-service/api
+match: http:my-backend-service/my-service/api
 methods:
   - GET
 execute:

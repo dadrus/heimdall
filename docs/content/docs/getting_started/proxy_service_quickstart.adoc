@@ -76,13 +76,13 @@ Put together, this configuration will let heimdall create a JSON Web Token (JWT)
 [source, yaml]
 ----
 - id: rule1  # <1>
-  url: http://<**>/anonymous
+  match: http://<**>/anonymous
   upstream: http://upstream
   execute:
     - authorizer: allow_all_requests
 
 - id: rule2  # <2>
-  url: http://<**>/public
+  match: http://<**>/public
   upstream: http://upstream
   execute:
     - authenticator: noop
