@@ -39,7 +39,7 @@ spec:
                     x-kubernetes-validations:
                       - rule: "has(self.id)"
                         message: "a rule must have an id defined"
-                      - rule: "has(self.match)"
+                      - rule: "has(self.match) && has(self.match.url) && size(self.match.url) > 0"
                         message: "a rule must have a url set to match incoming requests"
                       - rule: "has(self.execute) && size(self.execute) > 0"
                         message: "execute pipeline is not allowed to be empty"
