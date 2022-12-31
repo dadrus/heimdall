@@ -9,7 +9,8 @@ metadata:
 spec:
   rules:
     - id: public-access
-      match: http://<**>/public
+      match:
+        url: http://<**>/public
       upstream: http://{{ include "heimdall.demo.fullname" . }}.heimdall-demo.svc.cluster.local:8080
       execute:
         - authenticator: noop_authenticator
