@@ -19,11 +19,15 @@ A single rule consists of the following properties:
 +
 The unique identifier of a rule. It must be unique across all rules loaded by the same link:{{< relref "providers.adoc" >}}[Rule Provider]. To ensure this, it is recommended to let the `id` include the name of your upstream service, as well as its purpose. E.g. `rule:my-service:public-api`.
 
-* *`url`*: _string_ (mandatory)
+* *`match`*: _RuleMatcher_ (mandatory)
++
+Defines how to match a rule and supports the following properties:
+
+** *`url`*: _string_ (mandatory)
 +
 Glob or Regex pattern of the endpoints of your upstream service, which this rule should apply to. Query parameters are ignored.
 
-* *`matching_strategy`*: _link:{{< relref "#_matching_strategy" >}}[Matching Strategy]_ (optional)
+** *`strategy`*: _link:{{< relref "#_matching_strategy" >}}[Matching Strategy]_ (optional)
 +
 Which strategy to use for matching of the value, provided in the `url` property. Can be `glob` or `regex`. Defaults to `glob`.
 
@@ -48,7 +52,9 @@ Which error handler mechanisms to use if any of the mechanisms, defined in the `
 [source, yaml]
 ----
 id: rule:foo:bar
-url: http://my-service.local/<**>
+match:
+  url: http://my-service.local/<**>
+  strategy: glob
 upstream: http://backend-a:8080
 methods:
   - GET
@@ -169,12 +175,14 @@ A rule set is just a list of rules, typically defined in a format specified by a
 [source, yaml]
 ----
 - id: rule:1
-  url: https://my-service1.local/<**>
+  match:
+    url: https://my-service1.local/<**>
   methods: [ "GET" ]
   execute:
     - authorizer: foobar
 - id: rule:2
-  url: https://my-service2.local/<**>
+  match:
+    url: https://my-service2.local/<**>
   methods: [ "GET" ]
   execute:
     - authorizer: barfoo

@@ -40,7 +40,7 @@ const response = `{
             ],
             "id": "test:rule",
             "matching_strategy": "glob",
-            "url": "http://127.0.0.1:9090/foobar/<{foos*}>",
+            "match": "http://127.0.0.1:9090/foobar/<{foos*}>",
             "upstream": "http://foobar"
           }
         ]
@@ -107,8 +107,8 @@ func verifyRuleSetList(t *testing.T, rls *RuleSetList) {
 
 	rule := ruleSet.Spec.Rules[0]
 	assert.Equal(t, "test:rule", rule.ID)
-	assert.Equal(t, "glob", rule.MatchingStrategy)
-	assert.Equal(t, "http://127.0.0.1:9090/foobar/<{foos*}>", rule.URL)
+	assert.Equal(t, "glob", rule.RuleMatcher.Strategy)
+	assert.Equal(t, "http://127.0.0.1:9090/foobar/<{foos*}>", rule.RuleMatcher.URL)
 	assert.Empty(t, rule.Methods)
 	assert.Empty(t, rule.ErrorHandler)
 	assert.Equal(t, "http://foobar", rule.Upstream)

@@ -16,7 +16,7 @@ type Configuration struct {
 	Metrics MetricsConfig `koanf:"metrics"`
 	Signer  SignerConfig  `koanf:"signer"`
 	Cache   CacheConfig   `koanf:"cache"`
-	Rules   RulesConfig   `koanf:"rules,omitempty"`
+	Rules   Rules         `koanf:"rules,omitempty"`
 }
 
 func NewConfiguration(envPrefix EnvVarPrefix, configFile ConfigurationPath) (*Configuration, error) {

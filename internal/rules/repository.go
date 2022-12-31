@@ -7,7 +7,6 @@ import (
 
 	"github.com/rs/zerolog"
 
-	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/event"
 	"github.com/dadrus/heimdall/internal/rules/rule"
@@ -102,7 +101,7 @@ func (r *repository) watchRuleSetChanges() {
 	}
 }
 
-func (r *repository) loadRules(srcID string, ruleSet []config.RuleConfig) ([]rule.Rule, error) {
+func (r *repository) loadRules(srcID string, ruleSet []rule.Configuration) ([]rule.Rule, error) {
 	rules := make([]rule.Rule, len(ruleSet))
 
 	for idx, rc := range ruleSet {
@@ -166,7 +165,7 @@ func (r *repository) removeRules(srcID string) {
 	r.rules = r.rules[:len(r.rules)-len(idxs)]
 }
 
-func (r *repository) onRuleSetCreated(srcID string, ruleSet []config.RuleConfig) {
+func (r *repository) onRuleSetCreated(srcID string, ruleSet []rule.Configuration) {
 	// create rules
 	r.logger.Info().Str("_src", srcID).Msg("Loading rule set")
 

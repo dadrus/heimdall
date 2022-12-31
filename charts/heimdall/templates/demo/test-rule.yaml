@@ -9,14 +9,16 @@ metadata:
 spec:
   rules:
     - id: public-access
-      url: http://<**>/public
+      match:
+        url: http://<**>/public
       upstream: http://{{ include "heimdall.demo.fullname" . }}.heimdall-demo.svc.cluster.local:8080
       execute:
         - authenticator: noop_authenticator
         - authorizer: allow_all_requests
         - unifier: noop_unifier
     - id: anonymous-access
-      url: http://<**>/anonymous
+      match:
+        url: http://<**>/anonymous
       upstream: http://{{ include "heimdall.demo.fullname" . }}.heimdall-demo.svc.cluster.local:8080
       execute:
         - authorizer: allow_all_requests

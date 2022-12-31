@@ -72,7 +72,7 @@ buckets:
 			require.NoError(t, err)
 
 			conf := &config.Configuration{
-				Rules: config.RulesConfig{
+				Rules: config.Rules{
 					Providers: config.RuleProviders{CloudBlob: providerConf},
 				},
 			}

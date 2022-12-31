@@ -74,13 +74,15 @@ With that configuration and without any additional rules, heimdall would reject 
 [source, yaml]
 ----
 - id: rule1  # <1>
-  url: http://<**>/public
+  match:
+    url: http://<**>/public
   execute:
     - authenticator: do_nothing
     - unifier: do_nothing
 
 - id: rule2  # <2>
-  url: http://<**>/anonymous
+  match:
+    url: http://<**>/anonymous
   execute:
     - authenticator: anon
 ----

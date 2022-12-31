@@ -7,8 +7,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/rules/rule"
 )
 
 func TestParseRules(t *testing.T) {
@@ -18,13 +18,13 @@ func TestParseRules(t *testing.T) {
 		uc          string
 		contentType string
 		content     []byte
-		assert      func(t *testing.T, err error, rules []config.RuleConfig)
+		assert      func(t *testing.T, err error, rules []rule.Configuration)
 	}{
 		{
 			uc:          "unsupported content type and not empty contents",
 			contentType: "foobar",
 			content:     []byte(`foo: bar`),
-			assert: func(t *testing.T, err error, rules []config.RuleConfig) {
+			assert: func(t *testing.T, err error, rules []rule.Configuration) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -35,7 +35,7 @@ func TestParseRules(t *testing.T) {
 		{
 			uc:          "unsupported content type and empty contents",
 			contentType: "foobar",
-			assert: func(t *testing.T, err error, rules []config.RuleConfig) {
+			assert: func(t *testing.T, err error, rules []rule.Configuration) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -46,7 +46,7 @@ func TestParseRules(t *testing.T) {
 			uc:          "JSON content and not empty contents",
 			contentType: "application/json",
 			content:     []byte(`[{"id": "bar"}]`),
-			assert: func(t *testing.T, err error, rules []config.RuleConfig) {
+			assert: func(t *testing.T, err error, rules []rule.Configuration) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -55,7 +55,7 @@ func TestParseRules(t *testing.T) {
 		{
 			uc:          "JSON content and empty contents",
 			contentType: "application/json",
-			assert: func(t *testing.T, err error, rules []config.RuleConfig) {
+			assert: func(t *testing.T, err error, rules []rule.Configuration) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -66,7 +66,7 @@ func TestParseRules(t *testing.T) {
 			uc:          "YAML content and not empty contents",
 			contentType: "application/yaml",
 			content:     []byte(`- id: bar`),
-			assert: func(t *testing.T, err error, rules []config.RuleConfig) {
+			assert: func(t *testing.T, err error, rules []rule.Configuration) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -75,7 +75,7 @@ func TestParseRules(t *testing.T) {
 		{
 			uc:          "YAML content and empty contents",
 			contentType: "application/yaml",
-			assert: func(t *testing.T, err error, rules []config.RuleConfig) {
+			assert: func(t *testing.T, err error, rules []rule.Configuration) {
 				t.Helper()
 
 				require.NoError(t, err)

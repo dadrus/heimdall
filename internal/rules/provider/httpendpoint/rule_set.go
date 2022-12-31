@@ -1,8 +1,8 @@
 package httpendpoint
 
-import "github.com/dadrus/heimdall/internal/config"
+import "github.com/dadrus/heimdall/internal/rules/rule"
 
 type RuleSet struct {
-	Rules []config.RuleConfig
+	Rules []rule.Configuration
 	Hash  []byte
 }

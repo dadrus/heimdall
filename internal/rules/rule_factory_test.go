@@ -12,6 +12,7 @@ import (
 	"github.com/dadrus/heimdall/internal/heimdall"
 	mocks3 "github.com/dadrus/heimdall/internal/rules/mechanisms/mocks"
 	"github.com/dadrus/heimdall/internal/rules/mocks"
+	event2 "github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
@@ -28,7 +29,7 @@ func TestRuleFactoryNew(t *testing.T) {
 	}{
 		{
 			uc:     "new factory without default rule",
-			config: &config.Configuration{Rules: config.RulesConfig{}},
+			config: &config.Configuration{Rules: config.Rules{}},
 			assert: func(t *testing.T, err error, ruleFactory *ruleFactory) {
 				t.Helper()
 
@@ -41,8 +42,8 @@ func TestRuleFactoryNew(t *testing.T) {
 		},
 		{
 			uc: "new factory with default rule with unsupported object in execute definition",
-			config: &config.Configuration{Rules: config.RulesConfig{
-				Default: &config.DefaultRuleConfig{
+			config: &config.Configuration{Rules: config.Rules{
+				Default: &config.DefaultRule{
 					Execute: []config.MechanismConfig{
 						{"foo": "bar"},
 					},
@@ -58,8 +59,8 @@ func TestRuleFactoryNew(t *testing.T) {
 		},
 		{
 			uc: "new factory with default rule with unsupported object in error handler definition",
-			config: &config.Configuration{Rules: config.RulesConfig{
-				Default: &config.DefaultRuleConfig{
+			config: &config.Configuration{Rules: config.Rules{
+				Default: &config.DefaultRule{
 					ErrorHandler: []config.MechanismConfig{
 						{"foo": "bar"},
 					},
@@ -75,8 +76,8 @@ func TestRuleFactoryNew(t *testing.T) {
 		},
 		{
 			uc: "new factory with malformed default rule, where authenticator loading happens after subject handlers",
-			config: &config.Configuration{Rules: config.RulesConfig{
-				Default: &config.DefaultRuleConfig{
+			config: &config.Configuration{Rules: config.Rules{
+				Default: &config.DefaultRule{
 					Execute: []config.MechanismConfig{
 						{"contextualizer": "bar"},
 						{"authenticator": "foo"},
@@ -99,8 +100,8 @@ func TestRuleFactoryNew(t *testing.T) {
 		},
 		{
 			uc: "new factory with malformed default rule, where authenticator loading happens after unifier handlers",
-			config: &config.Configuration{Rules: config.RulesConfig{
-				Default: &config.DefaultRuleConfig{
+			config: &config.Configuration{Rules: config.Rules{
+				Default: &config.DefaultRule{
 					Execute: []config.MechanismConfig{
 						{"unifier": "bar"},
 						{"authenticator": "foo"},
@@ -123,8 +124,8 @@ func TestRuleFactoryNew(t *testing.T) {
 		},
 		{
 			uc: "new factory with default rule, where authenticator loading results in an error",
-			config: &config.Configuration{Rules: config.RulesConfig{
-				Default: &config.DefaultRuleConfig{
+			config: &config.Configuration{Rules: config.Rules{
+				Default: &config.DefaultRule{
 					Execute: []config.MechanismConfig{{"authenticator": "foo"}},
 				},
 			}},
@@ -143,8 +144,8 @@ func TestRuleFactoryNew(t *testing.T) {
 		},
 		{
 			uc: "new factory with malformed default rule, where authorizer loading happens after unifier handlers",
-			config: &config.Configuration{Rules: config.RulesConfig{
-				Default: &config.DefaultRuleConfig{
+			config: &config.Configuration{Rules: config.Rules{
+				Default: &config.DefaultRule{
 					Execute: []config.MechanismConfig{
 						{"unifier": "bar"},
 						{"authorizer": "foo"},
@@ -167,8 +168,8 @@ func TestRuleFactoryNew(t *testing.T) {
 		},
 		{
 			uc: "new factory with default rule, where authorizer loading results in an error",
-			config: &config.Configuration{Rules: config.RulesConfig{
-				Default: &config.DefaultRuleConfig{
+			config: &config.Configuration{Rules: config.Rules{
+				Default: &config.DefaultRule{
 					Execute: []config.MechanismConfig{{"authorizer": "foo"}},
 				},
 			}},
@@ -187,8 +188,8 @@ func TestRuleFactoryNew(t *testing.T) {
 		},
 		{
 			uc: "new factory with malformed default rule, where contextualizer loading happens after unifier handlers",
-			config: &config.Configuration{Rules: config.RulesConfig{
-				Default: &config.DefaultRuleConfig{
+			config: &config.Configuration{Rules: config.Rules{
+				Default: &config.DefaultRule{
 					Execute: []config.MechanismConfig{
 						{"unifier": "bar"},
 						{"contextualizer": "foo"},
@@ -211,8 +212,8 @@ func TestRuleFactoryNew(t *testing.T) {
 		},
 		{
 			uc: "new factory with default rule, where contextualizer loading results in an error",
-			config: &config.Configuration{Rules: config.RulesConfig{
-				Default: &config.DefaultRuleConfig{
+			config: &config.Configuration{Rules: config.Rules{
+				Default: &config.DefaultRule{
 					Execute: []config.MechanismConfig{{"contextualizer": "foo"}},
 				},
 			}},
@@ -231,8 +232,8 @@ func TestRuleFactoryNew(t *testing.T) {
 		},
 		{
 			uc: "new factory with default rule, where unifier loading results in an error",
-			config: &config.Configuration{Rules: config.RulesConfig{
-				Default: &config.DefaultRuleConfig{
+			config: &config.Configuration{Rules: config.Rules{
+				Default: &config.DefaultRule{
 					Execute: []config.MechanismConfig{{"unifier": "foo"}},
 				},
 			}},
@@ -251,8 +252,8 @@ func TestRuleFactoryNew(t *testing.T) {
 		},
 		{
 			uc: "new factory with default rule, where error_handler loading results in an error",
-			config: &config.Configuration{Rules: config.RulesConfig{
-				Default: &config.DefaultRuleConfig{
+			config: &config.Configuration{Rules: config.Rules{
+				Default: &config.DefaultRule{
 					ErrorHandler: []config.MechanismConfig{{"error_handler": "foo"}},
 				},
 			}},
@@ -271,8 +272,8 @@ func TestRuleFactoryNew(t *testing.T) {
 		},
 		{
 			uc: "new factory with empty default rule",
-			config: &config.Configuration{Rules: config.RulesConfig{
-				Default: &config.DefaultRuleConfig{
+			config: &config.Configuration{Rules: config.Rules{
+				Default: &config.DefaultRule{
 					Execute: []config.MechanismConfig{},
 				},
 			}},
@@ -286,8 +287,8 @@ func TestRuleFactoryNew(t *testing.T) {
 		},
 		{
 			uc: "new factory with default rule, consisting of authenticator only",
-			config: &config.Configuration{Rules: config.RulesConfig{
-				Default: &config.DefaultRuleConfig{
+			config: &config.Configuration{Rules: config.Rules{
+				Default: &config.DefaultRule{
 					Execute: []config.MechanismConfig{
 						{"authenticator": "bar"},
 					},
@@ -309,8 +310,8 @@ func TestRuleFactoryNew(t *testing.T) {
 		},
 		{
 			uc: "new factory with default rule, consisting of authorizer and contextualizer",
-			config: &config.Configuration{Rules: config.RulesConfig{
-				Default: &config.DefaultRuleConfig{
+			config: &config.Configuration{Rules: config.Rules{
+				Default: &config.DefaultRule{
 					Execute: []config.MechanismConfig{
 						{"authenticator": "bar"},
 						{"contextualizer": "baz"},
@@ -335,8 +336,8 @@ func TestRuleFactoryNew(t *testing.T) {
 		},
 		{
 			uc: "new factory with default rule, consisting of authorizer, contextualizer and authorizer",
-			config: &config.Configuration{Rules: config.RulesConfig{
-				Default: &config.DefaultRuleConfig{
+			config: &config.Configuration{Rules: config.Rules{
+				Default: &config.DefaultRule{
 					Execute: []config.MechanismConfig{
 						{"authenticator": "bar"},
 						{"contextualizer": "baz"},
@@ -364,8 +365,8 @@ func TestRuleFactoryNew(t *testing.T) {
 		},
 		{
 			uc: "new factory with default rule, consisting of authorizer and unifier without methods defined",
-			config: &config.Configuration{Rules: config.RulesConfig{
-				Default: &config.DefaultRuleConfig{
+			config: &config.Configuration{Rules: config.Rules{
+				Default: &config.DefaultRule{
 					Execute: []config.MechanismConfig{
 						{"authenticator": "bar"},
 						{"unifier": "baz"},
@@ -390,8 +391,8 @@ func TestRuleFactoryNew(t *testing.T) {
 		},
 		{
 			uc: "new factory with default rule, configured with all required elements",
-			config: &config.Configuration{Rules: config.RulesConfig{
-				Default: &config.DefaultRuleConfig{
+			config: &config.Configuration{Rules: config.Rules{
+				Default: &config.DefaultRule{
 					Execute: []config.MechanismConfig{
 						{"authenticator": "bar"},
 						{"unifier": "baz"},
@@ -429,8 +430,8 @@ func TestRuleFactoryNew(t *testing.T) {
 		},
 		{
 			uc: "new factory with default rule, configured with all possible elements",
-			config: &config.Configuration{Rules: config.RulesConfig{
-				Default: &config.DefaultRuleConfig{
+			config: &config.Configuration{Rules: config.Rules{
+				Default: &config.DefaultRule{
 					Execute: []config.MechanismConfig{
 						{"authenticator": "bar"},
 						{"contextualizer": "foo"},
@@ -517,14 +518,14 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 
 	for _, tc := range []struct {
 		uc             string
-		config         config.RuleConfig
+		config         event2.Configuration
 		defaultRule    *ruleImpl
 		configureMocks func(t *testing.T, mhf *mocks.MockFactory)
 		assert         func(t *testing.T, err error, rul *ruleImpl)
 	}{
 		{
 			uc:     "without default rule and with missing id",
-			config: config.RuleConfig{},
+			config: event2.Configuration{},
 			assert: func(t *testing.T, err error, rul *ruleImpl) {
 				t.Helper()
 
@@ -535,7 +536,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 		},
 		{
 			uc:     "without default rule, with id, but without url",
-			config: config.RuleConfig{ID: "foobar"},
+			config: event2.Configuration{ID: "foobar"},
 			assert: func(t *testing.T, err error, rul *ruleImpl) {
 				t.Helper()
 
@@ -546,7 +547,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 		},
 		{
 			uc:     "without default rule, with id, but bad url pattern",
-			config: config.RuleConfig{ID: "foobar", URL: "?>?<*??"},
+			config: event2.Configuration{ID: "foobar", RuleMatcher: event2.Matcher{URL: "?>?<*??"}},
 			assert: func(t *testing.T, err error, rul *ruleImpl) {
 				t.Helper()
 
@@ -556,8 +557,12 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 			},
 		},
 		{
-			uc:     "without default rule and error in upstream url",
-			config: config.RuleConfig{ID: "foobar", URL: "http://foo.bar", Upstream: "http://[::1]:namedport"},
+			uc: "without default rule and error in upstream url",
+			config: event2.Configuration{
+				ID:          "foobar",
+				RuleMatcher: event2.Matcher{URL: "http://foo.bar", Strategy: "glob"},
+				Upstream:    "http://[::1]:namedport",
+			},
 			assert: func(t *testing.T, err error, rul *ruleImpl) {
 				t.Helper()
 
@@ -568,10 +573,10 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 		},
 		{
 			uc: "with error while creating execute pipeline",
-			config: config.RuleConfig{
-				ID:      "foobar",
-				URL:     "http://foo.bar",
-				Execute: []config.MechanismConfig{{"authenticator": "foo"}},
+			config: event2.Configuration{
+				ID:          "foobar",
+				RuleMatcher: event2.Matcher{URL: "http://foo.bar", Strategy: "regex"},
+				Execute:     []config.MechanismConfig{{"authenticator": "foo"}},
 			},
 			configureMocks: func(t *testing.T, mhf *mocks.MockFactory) {
 				t.Helper()
@@ -588,9 +593,9 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 		},
 		{
 			uc: "with error while creating on_error pipeline",
-			config: config.RuleConfig{
+			config: event2.Configuration{
 				ID:           "foobar",
-				URL:          "http://foo.bar",
+				RuleMatcher:  event2.Matcher{URL: "http://foo.bar", Strategy: "glob"},
 				ErrorHandler: []config.MechanismConfig{{"error_handler": "foo"}},
 			},
 			configureMocks: func(t *testing.T, mhf *mocks.MockFactory) {
@@ -608,9 +613,9 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 		},
 		{
 			uc: "without default rule and without any execute configuration",
-			config: config.RuleConfig{
-				ID:  "foobar",
-				URL: "http://foo.bar",
+			config: event2.Configuration{
+				ID:          "foobar",
+				RuleMatcher: event2.Matcher{URL: "http://foo.bar", Strategy: "regex"},
 			},
 			assert: func(t *testing.T, err error, rul *ruleImpl) {
 				t.Helper()
@@ -622,10 +627,10 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 		},
 		{
 			uc: "without default rule and with only authenticator configured",
-			config: config.RuleConfig{
-				ID:      "foobar",
-				URL:     "http://foo.bar",
-				Execute: []config.MechanismConfig{{"authenticator": "foo"}},
+			config: event2.Configuration{
+				ID:          "foobar",
+				RuleMatcher: event2.Matcher{URL: "http://foo.bar", Strategy: "glob"},
+				Execute:     []config.MechanismConfig{{"authenticator": "foo"}},
 			},
 			configureMocks: func(t *testing.T, mhf *mocks.MockFactory) {
 				t.Helper()
@@ -643,9 +648,9 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 		},
 		{
 			uc: "without default rule and with only authenticator and contextualizer configured",
-			config: config.RuleConfig{
-				ID:  "foobar",
-				URL: "http://foo.bar",
+			config: event2.Configuration{
+				ID:          "foobar",
+				RuleMatcher: event2.Matcher{URL: "http://foo.bar", Strategy: "glob"},
 				Execute: []config.MechanismConfig{
 					{"authenticator": "foo"},
 					{"contextualizer": "bar"},
@@ -669,9 +674,9 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 		},
 		{
 			uc: "without default rule and with only authenticator, contextualizer and authorizer configured",
-			config: config.RuleConfig{
-				ID:  "foobar",
-				URL: "http://foo.bar",
+			config: event2.Configuration{
+				ID:          "foobar",
+				RuleMatcher: event2.Matcher{URL: "http://foo.bar", Strategy: "regex"},
 				Execute: []config.MechanismConfig{
 					{"authenticator": "foo"},
 					{"contextualizer": "bar"},
@@ -698,9 +703,9 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 		},
 		{
 			uc: "without default rule and with authenticator and unifier configured, but without methods",
-			config: config.RuleConfig{
-				ID:  "foobar",
-				URL: "http://foo.bar",
+			config: event2.Configuration{
+				ID:          "foobar",
+				RuleMatcher: event2.Matcher{URL: "http://foo.bar", Strategy: "glob"},
 				Execute: []config.MechanismConfig{
 					{"authenticator": "foo"},
 					{"unifier": "bar"},
@@ -724,9 +729,9 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 		},
 		{
 			uc: "without default rule but with minimum required configuration",
-			config: config.RuleConfig{
-				ID:  "foobar",
-				URL: "http://foo.bar",
+			config: event2.Configuration{
+				ID:          "foobar",
+				RuleMatcher: event2.Matcher{URL: "http://foo.bar", Strategy: "glob"},
 				Execute: []config.MechanismConfig{
 					{"authenticator": "foo"},
 					{"unifier": "bar"},
@@ -760,9 +765,9 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 		},
 		{
 			uc: "with default rule and with id and url only",
-			config: config.RuleConfig{
-				ID:  "foobar",
-				URL: "http://foo.bar",
+			config: event2.Configuration{
+				ID:          "foobar",
+				RuleMatcher: event2.Matcher{URL: "http://foo.bar", Strategy: "glob"},
 			},
 			defaultRule: &ruleImpl{
 				methods: []string{"FOO"},
@@ -790,10 +795,10 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 		},
 		{
 			uc: "with default rule and with all attributes defined by the rule itself",
-			config: config.RuleConfig{
-				ID:       "foobar",
-				URL:      "http://foo.bar",
-				Upstream: "http://bar.foo",
+			config: event2.Configuration{
+				ID:          "foobar",
+				RuleMatcher: event2.Matcher{URL: "http://foo.bar", Strategy: "glob"},
+				Upstream:    "http://bar.foo",
 				Execute: []config.MechanismConfig{
 					{"authenticator": "foo"},
 					{"contextualizer": "bar"},

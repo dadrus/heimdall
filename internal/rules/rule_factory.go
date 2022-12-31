@@ -16,7 +16,7 @@ import (
 )
 
 type RuleFactory interface {
-	CreateRule(srcID string, ruleConfig config.RuleConfig) (rule.Rule, error)
+	CreateRule(srcID string, ruleConfig rule.Configuration) (rule.Rule, error)
 	HasDefaultRule() bool
 	DefaultRule() rule.Rule
 }
@@ -147,23 +147,26 @@ func (f *ruleFactory) HasDefaultRule() bool {
 	return f.hasDefaultRule
 }
 
-func (f *ruleFactory) CreateRule(srcID string, ruleConfig config.RuleConfig) (rule.Rule, error) { // nolint: cyclop
+func (f *ruleFactory) CreateRule(srcID string, ruleConfig rule.Configuration) ( // nolint: cyclop
+	rule.Rule, error,
+) {
 	if len(ruleConfig.ID) == 0 {
 		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
 			"no ID defined for rule ID=%s from %s", ruleConfig.ID, srcID)
 	}
 
-	if len(ruleConfig.URL) == 0 {
+	if len(ruleConfig.RuleMatcher.URL) == 0 {
 		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
 			"no URL defined for rule ID=%s from %s", ruleConfig.ID, srcID)
 	}
 
-	strategy := x.IfThenElse(len(ruleConfig.MatchingStrategy) == 0, "glob", ruleConfig.MatchingStrategy)
-
-	matcher, err := patternmatcher.NewPatternMatcher(strategy, ruleConfig.URL)
+	matcher, err := patternmatcher.NewPatternMatcher(
+		ruleConfig.RuleMatcher.Strategy, ruleConfig.RuleMatcher.URL,
+	)
 	if err != nil {
 		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
-			"bad URL pattern for %s strategy defined for rule ID=%s from %s", strategy, ruleConfig.ID, srcID).
+			"bad URL pattern for %s strategy defined for rule ID=%s from %s",
+			ruleConfig.RuleMatcher.Strategy, ruleConfig.ID, srcID).
 			CausedBy(err)
 	}
 
@@ -248,7 +251,7 @@ func (f *ruleFactory) createOnErrorPipeline(ehConfigs []config.MechanismConfig) 
 	return errorHandlers, nil
 }
 
-func (f *ruleFactory) initWithDefaultRule(ruleConfig *config.DefaultRuleConfig, logger zerolog.Logger) error {
+func (f *ruleFactory) initWithDefaultRule(ruleConfig *config.DefaultRule, logger zerolog.Logger) error {
 	if ruleConfig == nil {
 		logger.Info().Msg("No default rule configured")
 

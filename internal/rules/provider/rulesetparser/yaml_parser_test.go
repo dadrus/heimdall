@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/dadrus/heimdall/internal/config"
+	"github.com/dadrus/heimdall/internal/rules/rule"
 )
 
 func TestParseYAML(t *testing.T) {
@@ -16,11 +16,11 @@ func TestParseYAML(t *testing.T) {
 	for _, tc := range []struct {
 		uc     string
 		conf   []byte
-		assert func(t *testing.T, err error, ruleSet []config.RuleConfig)
+		assert func(t *testing.T, err error, ruleSet []rule.Configuration)
 	}{
 		{
 			uc: "empty rule set spec",
-			assert: func(t *testing.T, err error, ruleSet []config.RuleConfig) {
+			assert: func(t *testing.T, err error, ruleSet []rule.Configuration) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -30,7 +30,7 @@ func TestParseYAML(t *testing.T) {
 		{
 			uc:   "invalid rule set spec",
 			conf: []byte(`- foo: bar`),
-			assert: func(t *testing.T, err error, ruleSet []config.RuleConfig) {
+			assert: func(t *testing.T, err error, ruleSet []rule.Configuration) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -39,7 +39,7 @@ func TestParseYAML(t *testing.T) {
 		{
 			uc:   "valid rule set spec",
 			conf: []byte(`- id: bar`),
-			assert: func(t *testing.T, err error, ruleSet []config.RuleConfig) {
+			assert: func(t *testing.T, err error, ruleSet []rule.Configuration) {
 				t.Helper()
 
 				require.NoError(t, err)

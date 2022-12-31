@@ -86,7 +86,7 @@ func TestRegisterProvider(t *testing.T) {
 			require.NoError(t, err)
 
 			conf := &config.Configuration{
-				Rules: config.RulesConfig{
+				Rules: config.Rules{
 					Providers: config.RuleProviders{Kubernetes: providerConf},
 				},
 			}
