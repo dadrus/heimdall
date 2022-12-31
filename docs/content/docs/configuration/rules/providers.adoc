@@ -274,7 +274,8 @@ spec:
   authClassName: "<optional auth_class reference (see above)> "
   rules:
     - id: "<identifier of a rule 1>"
-      match: http://127.0.0.1:9090/foo/<**>
+      match:
+        url: http://127.0.0.1:9090/foo/<**>
       execute:
         - authenticator: foo
         - authorizer: bar

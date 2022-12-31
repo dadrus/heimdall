@@ -52,7 +52,8 @@ Obviously, the regular pipeline (defined in the `execute` property) of this defa
 [source, yaml]
 ----
 id: rule:my-service:protected-api
-match: http://my-service.local/foo
+match:
+  url: http://my-service.local/foo
 execute:
   - authorizer: allow_all_requests_authz
 ----

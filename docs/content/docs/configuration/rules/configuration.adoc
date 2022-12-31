@@ -21,7 +21,7 @@ The unique identifier of a rule. It must be unique across all rules loaded by th
 
 * *`match`*: _RuleMatcher_ (mandatory)
 +
-Defines how to match a rule. Can be a URL to match as glob pattern, or if the matching strategy is required to be set, is then based on the following properties:
+Defines how to match a rule and supports the following properties:
 
 ** *`url`*: _string_ (mandatory)
 +
@@ -52,7 +52,9 @@ Which error handler mechanisms to use if any of the mechanisms, defined in the `
 [source, yaml]
 ----
 id: rule:foo:bar
-match: http://my-service.local/<**>
+match:
+  url: http://my-service.local/<**>
+  strategy: glob
 upstream: http://backend-a:8080
 methods:
   - GET
@@ -64,15 +66,6 @@ execute:
   - unifier: zab
 on_error:
   - error_handler: foobar
-----
-
-The `match` property above is a short form for:
-
-[source, yaml]
-----
-match:
-  url: http://my-service.local/<**>
-  strategy: glob
 ----
 ====
 
@@ -182,12 +175,14 @@ A rule set is just a list of rules, typically defined in a format specified by a
 [source, yaml]
 ----
 - id: rule:1
-  match: https://my-service1.local/<**>
+  match:
+    url: https://my-service1.local/<**>
   methods: [ "GET" ]
   execute:
     - authorizer: foobar
 - id: rule:2
-  match: https://my-service2.local/<**>
+  match:
+    url: https://my-service2.local/<**>
   methods: [ "GET" ]
   execute:
     - authorizer: barfoo
