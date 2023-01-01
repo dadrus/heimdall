@@ -270,6 +270,13 @@ jobs:
           echo ::set-output name=result::$version
       - name: Checkout repository
         uses: actions/checkout@v3
+      - name: Update version to new released version
+        uses: jacobtomlinson/gha-find-replace@v2
+        with:
+          find: "x-current-version"
+          replace: "${{ needs.prepare-release.outputs.tag_name }}"
+          regex: false
+          include: charts/heimdall/**
       - name: Publish Helm Chart
         if: steps.chart-diff.outputs.diff
         uses: stefanprodan/helm-gh-pages@v1.7.0
