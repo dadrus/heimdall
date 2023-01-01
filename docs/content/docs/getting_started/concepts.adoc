@@ -216,7 +216,7 @@ In this mode heimdall can be integrated with most probably all modern API gatewa
 
 Starting heimdall in this mode happens via the `serve decision` command. Head over to the description of link:{{< relref "/docs/operations/cli.adoc" >}}[CLI] as well as to link:{{< relref "/docs/configuration/services/decision.adoc" >}}[Configuration] options for more details.
 
-.Decision API Example
+.Decision Service Example
 ====
 Imagine following request hits heimdall (sent to it by an API gateway)
 

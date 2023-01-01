@@ -11,7 +11,7 @@ menu:
 
 Decision is one of the operating modes supported by heimdall, used if you start heimdall with `heimdall serve decision`. By default, heimdall listens on `0.0.0.0:4456/` endpoint for incoming requests in this mode of operation and also configures useful default timeouts. No other options are configured. You can, and should however adjust the configuration for your needs.
 
-This service exposes only the Decision API endpoint.
+This service exposes only the Decision service endpoint.
 
 == Configuration
 
@@ -36,7 +36,7 @@ decision:
 +
 By making use of this property, you can specify the TCP port the heimdall should listen on. Defaults to `4456`.
 +
-.Configure heimdall to listen on port `4444` for Decision API requests.
+.Configure heimdall's decision service to listen on port `4444` for incoming requests.
 ====
 [source, yaml]
 ----
@@ -99,9 +99,9 @@ decision:
 [#_trusted_proxies]
 * *`trusted_proxies`*: _string array_ (optional)
 +
-The usage of the Decision API makes only sense, if operated behind some sort of proxy, like API Gateway, etc. In such cases certain header information may be sent to Heimdall using special `X-Forwarded-*` headers or the https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Forwarded[Forwarded] header. For example, the `Host` HTTP header is usually used to return the requested host. But when you’re behind a proxy, the actual host may be stored in an `X-Forwarded-Host` header, which could, however, also be spoofed.
+The usage of the Decision service makes only sense, if operated behind some sort of proxy, like API Gateway, etc. In such cases certain header information may be sent to Heimdall using special `X-Forwarded-*` headers or the https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Forwarded[Forwarded] header. For example, the `Host` HTTP header is usually used to return the requested host. But when you’re behind a proxy, the actual host may be stored in an `X-Forwarded-Host` header, which could, however, also be spoofed.
 +
-To prevent header spoofing and allowing such headers to be accepted from trusted proxies only (so the systems, you have configured to make use of Heimdall's Decision API), you should configure the `trusted_proxies` option and list the IPs, or IP ranges (CIDR notation) of your proxies, which make use of that service. If not configured, Heimdall will not accept those headers from any client.
+To prevent header spoofing and allowing such headers to be accepted from trusted proxies only (so the systems, you have configured to make use of Heimdall's Decision service), you should configure the `trusted_proxies` option and list the IPs, or IP ranges (CIDR notation) of your proxies, which make use of that service. If not configured, Heimdall will not accept those headers from any client.
 +
 .Enable the usage of the above said headers for only those requests, which came from the IPs listed in the configuration.
 ====
