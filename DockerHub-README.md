@@ -127,7 +127,8 @@ Create a rule file (`rule.yaml`) with the following contents:
 
 ```yaml
 - id: test-rule
-  match: http://<**>/<**>
+  match: 
+    url: http://<**>/<**>
   upstream: http://upstream
   execute:
     - authorizer: allow_all_requests
