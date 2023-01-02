@@ -20,9 +20,9 @@ tags:
       category, like health endpoints, etc. 
       
       This functionality is only available on heimdall's **management port**.
-  - name: Decision API
+  - name: Decision Service
     description: |
-      Decision API is an operation mode of heimdall, in which heimdall can be integrated with most probably all modern
+      Decision Service is an operation mode of heimdall, in which heimdall can be integrated with most probably all modern
       API gateways and reverse proxies as a so-called "authentication middleware". Here the reverse proxy, respectively
       API gateway, will forward requests to heimdall by making use of its decisions service endpoint for authentication
       and authorization purposes. Upon reception, heimdall will check if these requests satisfy the conditions defined
@@ -46,7 +46,7 @@ x-tagGroups:
       - Well-Known
   - name: Decision
     tags:
-      - Decision API
+      - Decision Service
   - name: Proxy
     tags:
       - Proxy
@@ -254,8 +254,8 @@ paths:
       summary: Decision endpoint
       description: This endpoint accepts any subpaths, headers, cookies, etc. Also, all methods can be used as well.
       tags:
-        - Decision API
-      operationId: get_decision_api
+        - Decision Service
+      operationId: get_decision_service
       parameters:
         - name: decision_path_and_query_params
           in: path
