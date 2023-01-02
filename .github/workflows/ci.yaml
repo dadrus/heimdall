@@ -271,7 +271,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
       - name: Publish Helm Chart
-        if: steps.chart-diff.outputs.diff
         uses: stefanprodan/helm-gh-pages@v1.7.0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
