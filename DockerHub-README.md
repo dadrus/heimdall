@@ -12,7 +12,7 @@ It is supposed to be used either as
 * a **Reverse Proxy** in front of your upstream API or web server that rejects unauthorized requests and forwards authorized ones to your end points, or as
 * a **Decision Service**, which integrates with your API Gateway (Kong, NGNIX, Envoy, Traefik, etc.) and then acts as a Policy Decision Point.
 
-## Run heimdall in Decision API operation mode
+## Run heimdall in Decision operation mode
 
 Create a configuration file named `heimdall.yaml`:
 
@@ -127,7 +127,8 @@ Create a rule file (`rule.yaml`) with the following contents:
 
 ```yaml
 - id: test-rule
-  match: http://<**>/<**>
+  match: 
+    url: http://<**>/<**>
   upstream: http://upstream
   execute:
     - authorizer: allow_all_requests

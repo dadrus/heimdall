@@ -20,8 +20,7 @@ The actual integration depends pretty much on your requirements and setup.
 
 {{- if .Values.demo.enable }}
 
-The setup includes a demo app and a rule set. To query the running demo app, which just
-echoes the request, and see heimdall in actions, just do
+The setup includes a demo app (which just echoes the request) and a rule set. If you're using NGINX as Ingress Controller, the abovesaid annotations are already added to the demo app ingress rule. So, to see heimdall in actions, just do.
 
 > curl -v -H "Host: demo-app" <you cluster ip and port>/heimdall-demo/public
 This endpoint is not protected. so heimdall will just allow the request
@@ -32,4 +31,4 @@ but create a JWT with "sub" claim set to anonymous.
 
 Requests to any other endpoints will be answered with HTTP 403. E.g.
 curl -v -H "Host: demo-app" <you cluster ip and port>/heimdall-demo/foo
-  {{- end }}
+{{- end }}

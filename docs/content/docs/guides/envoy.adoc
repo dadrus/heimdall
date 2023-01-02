@@ -37,7 +37,7 @@ clusters:
 ----
 * to include an https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/ext_authz/v3/ext_authz.proto.html?highlight=allowed_upstream_headers[External Authorization] HTTP filter in the definition of the HTTP connection manager, as well as to let that filter contain the required header name(s), heimdall sets in the HTTP responses (depends on your link:{{< relref "/docs/configuration/rules/pipeline_mechanisms/contextualizers.adoc" >}}[Contextualizers] and link:{{< relref "/docs/configuration/rules/pipeline_mechanisms/unifiers.adoc" >}}[Unifiers] configuration).
 +
-The following snipped shows, how an https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/ext_authz/v3/ext_authz.proto.html?highlight=allowed_upstream_headers[External Authorization] can be defined to let Envoy communicating with heimdall by making use of the previously defined `cluster` (see snippet from above) as well as to let it forward headers, set by heimdall in its responses (here all headers) to the upstream services.
+The following snipped shows, how an https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/ext_authz/v3/ext_authz.proto.html?highlight=allowed_upstream_headers[External Authorization] can be defined to let Envoy communicating with heimdall by making use of the previously defined `cluster` (see snippet from above) as well as forwarding all request headers to heimdall and to let it forward headers, set by heimdall in its responses (here the `Authorization` header) to the upstream services.
 +
 [source, yaml]
 ----
@@ -52,12 +52,16 @@ http_filters:
           uri: heimdall:4456
           cluster: ext-authz
           timeout: 0.25s
-        authorization_response:
-          allowed_upstream_headers:
+        authorization_request:
+          allowed_headers:
             patterns:
               - safe_regex:
                   google_re2: {}
                   regex: ".*"
+        authorization_response:
+          allowed_upstream_headers:
+            patterns:
+              - exact: authorization
   # other http filter
 ----
 
@@ -110,12 +114,16 @@ static_resources:
                         uri: heimdall:4456
                         cluster: ext-authz
                         timeout: 0.25s
-                      authorization_response:
-                        allowed_upstream_headers:
+                      authorization_request:
+                        allowed_headers:
                           patterns:
                             - safe_regex:
                                 google_re2: {}
                                 regex: ".*"
+                      authorization_response:
+                        allowed_upstream_headers:
+                          patterns:
+                            - exact: authorization
                 - name: envoy.filters.http.router
                   typed_config:
                     "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
