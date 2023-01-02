@@ -912,19 +912,8 @@ func TestRuleFactoryConfigExtraction(t *testing.T) {
 			},
 		},
 		{
-			uc:     "map[any]any",
-			config: config.MechanismConfig{"foo": "bar", "baz": []string{"zab"}},
-			assert: func(t *testing.T, conf map[string]any) {
-				t.Helper()
-
-				require.NotEmpty(t, conf)
-				assert.Equal(t, "bar", conf["foo"])
-				assert.Equal(t, []string{"zab"}, conf["baz"])
-			},
-		},
-		{
 			uc:     "map[string]any",
-			config: config.MechanismConfig{"foo": "bar", "baz": []string{"zab"}},
+			config: map[string]any{"foo": "bar", "baz": []string{"zab"}},
 			assert: func(t *testing.T, conf map[string]any) {
 				t.Helper()
 

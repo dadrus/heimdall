@@ -129,7 +129,7 @@ func (f *ruleFactory) getConfig(conf any) config.MechanismConfig {
 	var mapConf config.MechanismConfig
 
 	if conf != nil {
-		if m, ok := conf.(config.MechanismConfig); ok {
+		if m, ok := conf.(map[string]any); ok {
 			return m
 		}
 
