@@ -123,9 +123,10 @@ rules:
           forward_response_headers_to_upstream:
             - bla-bar
       - id: attributes_based_authorizer
-        type: local
+        type: cel
         config:
-          script: "console.log('New JS script')"
+          expressions:
+            - expression: "true"
     contextualizers:
       - id: subscription_contextualizer
         type: generic
@@ -187,7 +188,7 @@ rules:
 
   providers:
     file_system:
-      src: test_rules.yaml
+      src: example_rules.yaml
       watch: true
 
     http_endpoint:
