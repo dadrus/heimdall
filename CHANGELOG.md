@@ -1,5 +1,53 @@
 # Changelog
 
+## [0.5.0-alpha](https://github.com/dadrus/heimdall/compare/v0.4.1-alpha...v0.5.0-alpha) (2023-01-02)
+
+
+### ⚠ BREAKING CHANGES
+
+* Rule properties related to url matching moved to an own structure ([#402](https://github.com/dadrus/heimdall/issues/402))
+* Templating support in redirect error handler mechanism ([#395](https://github.com/dadrus/heimdall/issues/395))
+* Objects and functions available in templates and CEL expressions harmonized ([#394](https://github.com/dadrus/heimdall/issues/394))
+* Configuration for keys & certificates harmonized ([#392](https://github.com/dadrus/heimdall/issues/392))
+* Decision service returns `200 OK` instead of `202 Accepted` on success. ([#385](https://github.com/dadrus/heimdall/issues/385))
+* Used HTTP status codes can be configured ([#383](https://github.com/dadrus/heimdall/issues/383))
+* `mutator` renamed to `unifier` ([#375](https://github.com/dadrus/heimdall/issues/375))
+* `hydrator` renamed to `contextualizer` ([#374](https://github.com/dadrus/heimdall/issues/374))
+* `pipeline` config property renamed and moved into `rules` ([#370](https://github.com/dadrus/heimdall/issues/370))
+* Local ECMAScript based authorizer is not supported any more ([#369](https://github.com/dadrus/heimdall/issues/369))
+* Remote authorizer uses CEL instead of ECMAScript for response verification purposes ([#367](https://github.com/dadrus/heimdall/issues/367))
+
+### Features
+
+* Key material used for TLS can be password protected ([#392](https://github.com/dadrus/heimdall/issues/392)) ([e40c0a2](https://github.com/dadrus/heimdall/commit/e40c0a2e98fbf851759d268d1da1fa311c879847))
+* New "local" authorizer which uses CEL expressions ([#364](https://github.com/dadrus/heimdall/issues/364)) ([d8988a8](https://github.com/dadrus/heimdall/commit/d8988a825112a4a962ddbd4f9a2c2f5e7a3d6929))
+* Provider to load rule sets deployed in Kubernetes environments (incl. Helm Chart update) ([#336](https://github.com/dadrus/heimdall/issues/336)) ([dee229f](https://github.com/dadrus/heimdall/commit/dee229fc942ed05521221dbe390c23b090f4e7eb))
+* Simple helm chart ([#325](https://github.com/dadrus/heimdall/issues/325)) ([23b4d5d](https://github.com/dadrus/heimdall/commit/23b4d5d93255229c95e22d38d2016e40be25ce94))
+* Simpler endpoint configuration ([#376](https://github.com/dadrus/heimdall/issues/376)) ([248f483](https://github.com/dadrus/heimdall/commit/248f4835296fe95a30f7f36fe25513c822c225b9))
+* Support for environment variables substitution in config file ([#381](https://github.com/dadrus/heimdall/issues/381)) ([5a6ec65](https://github.com/dadrus/heimdall/commit/5a6ec65a86af2809a83def265453332c0b6afaa7))
+* Support for tracing and metrics correlation, as well as more metrics for go runtime information  ([#359](https://github.com/dadrus/heimdall/issues/359)) ([f34998a](https://github.com/dadrus/heimdall/commit/f34998a573c85170b3b74788af34bf7eb488862d))
+* Templating support in redirect error handler mechanism ([#395](https://github.com/dadrus/heimdall/issues/395)) ([7a0eff3](https://github.com/dadrus/heimdall/commit/7a0eff39aa435c8e893e54a5b01de1328f6d24d7))
+* Used HTTP status codes can be configured ([#383](https://github.com/dadrus/heimdall/issues/383)) ([5d46322](https://github.com/dadrus/heimdall/commit/5d4632246853895447a6363464afe431c0263e59))
+
+
+### Bug Fixes
+
+* `request_headers` error condition implementation fixed ([#373](https://github.com/dadrus/heimdall/issues/373)) ([a2d3045](https://github.com/dadrus/heimdall/commit/a2d3045da7ceb600268d5634459d98f2e3cd0626))
+* Signer implementation fixed to take the first key from the key store if no key id was specified ([#392](https://github.com/dadrus/heimdall/issues/392)) ([e40c0a2](https://github.com/dadrus/heimdall/commit/e40c0a2e98fbf851759d268d1da1fa311c879847))
+
+
+### Code Refactoring
+
+* `hydrator` renamed to `contextualizer` ([#374](https://github.com/dadrus/heimdall/issues/374)) ([f20bc37](https://github.com/dadrus/heimdall/commit/f20bc37ceeda12b05b862f8190b3cba0e29e3577))
+* `mutator` renamed to `unifier` ([#375](https://github.com/dadrus/heimdall/issues/375)) ([785b956](https://github.com/dadrus/heimdall/commit/785b9563b44667856d13b793edfcea55fb5e40ba))
+* `pipeline` config property renamed and moved into `rules` ([#370](https://github.com/dadrus/heimdall/issues/370)) ([4234e54](https://github.com/dadrus/heimdall/commit/4234e5497512ba23300a740c9490d69c332b4b1b))
+* Configuration for keys & certificates harmonized ([#392](https://github.com/dadrus/heimdall/issues/392)) ([e40c0a2](https://github.com/dadrus/heimdall/commit/e40c0a2e98fbf851759d268d1da1fa311c879847))
+* Decision service returns `200 OK` instead of `202 Accepted` on success. ([#385](https://github.com/dadrus/heimdall/issues/385)) ([3460191](https://github.com/dadrus/heimdall/commit/346019162b0d938c689710885c1d8547e23e5dbf))
+* Local ECMAScript based authorizer is not supported any more ([#369](https://github.com/dadrus/heimdall/issues/369)) ([db7febe](https://github.com/dadrus/heimdall/commit/db7febe8725b8c8bada4aebd2e4781a124f25dec))
+* Objects and functions available in templates and CEL expressions harmonized ([#394](https://github.com/dadrus/heimdall/issues/394)) ([4ca9a9d](https://github.com/dadrus/heimdall/commit/4ca9a9d3ddb2f5cf723cbc1b729c8017622b3524))
+* Remote authorizer uses CEL instead of ECMAScript for response verification purposes ([#367](https://github.com/dadrus/heimdall/issues/367)) ([92e1ffa](https://github.com/dadrus/heimdall/commit/92e1ffafec255d03bb3ec03b4eb66b37dd6d91c1))
+* Rule properties related to url matching moved to an own structure ([#402](https://github.com/dadrus/heimdall/issues/402)) ([f3bd105](https://github.com/dadrus/heimdall/commit/f3bd105f65107f7864a843cc8d37be60fdeb57ae))
+
 ## [0.4.1-alpha](https://github.com/dadrus/heimdall/compare/v0.4.0-alpha...v0.4.1-alpha) (2022-11-11)
 
 
