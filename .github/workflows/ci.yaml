@@ -259,24 +259,17 @@ jobs:
 
   release-helm-chart:
     runs-on: ubuntu-22.04
-    needs:
-      - prepare-release
-    if: needs.prepare-release.outputs.release_created
+    #needs:
+    #  - prepare-release
+    #if: needs.prepare-release.outputs.release_created
     steps:
-      - name: Prepare image version
-        id: image-version
-        run: |
-          export version=$(echo ${{ needs.prepare-release.outputs.tag_name }} |  sed 's/v//g')
-          echo ::set-output name=result::$version
+    #  - name: Prepare image version
+    #    id: image-version
+    #    run: |
+    #      export version=$(echo ${{ needs.prepare-release.outputs.tag_name }} |  sed 's/v//g')
+    #      echo ::set-output name=result::$version
       - name: Checkout repository
         uses: actions/checkout@v3
-      - name: Update version to new released version
-        uses: jacobtomlinson/gha-find-replace@v2
-        with:
-          find: "x-current-version"
-          replace: "${{ needs.prepare-release.outputs.tag_name }}"
-          regex: false
-          include: charts/heimdall/**
       - name: Publish Helm Chart
         if: steps.chart-diff.outputs.diff
         uses: stefanprodan/helm-gh-pages@v1.7.0
@@ -284,7 +277,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           target_dir: charts
           linting: off
-          app_version: ${{ steps.image-version.outputs.result }}
+          app_version: 0.5.0-alpha #${{ steps.image-version.outputs.result }}
 
   documentation:
     runs-on: ubuntu-22.04
