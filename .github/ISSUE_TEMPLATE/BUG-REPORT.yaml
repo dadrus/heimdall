@@ -13,9 +13,11 @@ body:
     attributes:
       label: Preflight checklist
       options:
-        - label: |
-            I could not find a solution in the existing issues, docs, nor
-            discussions.
+        - label: I agree to follow this project's [Code of Conduct](https://github.com/dadrus/heimdall/blob/main/CODE_OF_CONDUCT.md).
+          required: true
+        - label: I have read and am following this repository's [Contribution Guidelines](https://github.com/dadrus/heimdall/blob/main/CONTRIBUTING.md)."
+          required: true
+        - label: I could not find a solution in the existing issues, docs, nor discussions.
           required: true
 
   - id: what-happened
