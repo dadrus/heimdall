@@ -1,6 +1,9 @@
 default:
   @just --list
 
+check-licenses:
+  go-licenses check --include_tests --disallowed_types=forbidden,restricted,reciprocal,permissive,unknown --ignore=github.com/instana/go-otel-exporter .
+
 lint-code:
   golangci-lint run
 
@@ -17,7 +20,7 @@ lint-helmchart:
   rm /tmp/decision-demo.yaml
   rm /tmp/proxy-demo.yaml
 
-lint: lint-code lint-dockerfile lint-helmchart
+lint: check-licenses lint-code lint-dockerfile lint-helmchart
 
 dependencies:
   go mod tidy
