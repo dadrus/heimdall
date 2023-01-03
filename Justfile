@@ -19,13 +19,18 @@ lint-helmchart:
 
 lint: lint-code lint-dockerfile lint-helmchart
 
-test:
+dependencies:
+  go mod tidy
+  go mod download
+  go mod verify
+
+test: dependencies
   go test -v -coverprofile=coverage.cov -coverpkg=./... ./...
 
 coverage: test
   go tool cover -html coverage.cov
 
-build:
+build: dependencies
   #!/usr/bin/env bash
   git_ref=$(git rev-parse --short HEAD)
   CGO_ENABLED=0 go build -trimpath -ldflags="-buildid= -w -s -X github.com/dadrus/heimdall/cmd.Version=${git_ref}"

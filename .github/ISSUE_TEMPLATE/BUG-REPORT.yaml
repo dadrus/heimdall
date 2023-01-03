@@ -1,0 +1,105 @@
+name: Bug Report
+description: File a bug report
+labels: [bug]
+body:
+  - id: thanks
+    type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to fill out this bug report!
+
+  - id: checklist
+    type: checkboxes
+    attributes:
+      label: Preflight checklist
+      options:
+        - label: I agree to follow this project's [Code of Conduct](https://github.com/dadrus/heimdall/blob/main/CODE_OF_CONDUCT.md).
+          required: true
+        - label: I have read and am following this repository's [Contribution Guidelines](https://github.com/dadrus/heimdall/blob/main/CONTRIBUTING.md)."
+          required: true
+        - label: I could not find a solution in the existing issues, docs, nor discussions.
+          required: true
+
+  - id: what-happened
+    type: textarea
+    attributes:
+      label: Describe the bug
+      description: A clear and concise description of what the bug is. Also tell us, what did you expect to happen?
+      placeholder: Tell us what you see!
+    validations:
+      required: true
+
+  - id: reproduce-bug
+    type: textarea
+    attributes:
+      label: How can the bug be reproduced
+      description: Clear, formatted, and easy to follow steps to reproduce the bug
+      placeholder: |
+        Steps to reproduce the behavior:
+        1. Run `docker run ....`
+        2. Make API Request to with `curl ...`
+        3. Request fails with response: `{"some": "error"}`
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant log output
+      description: |
+        Please copy and paste any relevant log output. This will be automatically formatted
+        into code, so no need for backticks. Please redact any sensitive information
+      render: shell
+      placeholder: log=error ....
+
+  - type: textarea
+    id: config
+    attributes:
+      label: Relevant configuration
+      description: |
+        Please copy and paste any relevant configuration. This will be automatically formatted
+        into code, so no need for backticks. Please redact any sensitive information!
+      render: yml
+      placeholder: |
+        serve:
+          decision:
+            port: 1234
+
+  - id: version
+    type: input
+    attributes:
+      label: Version
+      description: | 
+        What version of heimdall are you running? Please provide the output from `heimdall --version`.
+    validations:
+      required: true
+
+  - id: operating-system
+    type: dropdown
+    attributes:
+      label: On which operating system are you observing this issue?
+      options:
+        - macOS
+        - Linux
+        - Windows
+        - FreeBSD
+        - Other
+
+  - id: deployment
+    type: dropdown
+    attributes:
+      label: In which environment are you deploying?
+      options:
+        - Docker
+        - Docker Compose
+        - Kubernetes with Helm
+        - Kubernetes
+        - Binary
+        - Other
+
+  - id: additional
+    type: textarea
+    attributes:
+      label: Additional Context
+      description: Add any other context or screenshots about the issue here.
+
