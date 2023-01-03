@@ -19,13 +19,13 @@ E.g.: "feat: Some cool feature".
 
 If this PR introduces a breaking change, please put a "!" after the "tag" and before the colon.
 
-E.g.: "feat!: Some cool feature with breaking change"
+E.g.: "feat!: Some cool feature"
 
 When you create PRs which are not yet complete in sense of the implementation/changes, please use the "wip" tag
 to inform the maintainers, you're not ready with your work, and you're not expecting a review.
 
 As of today only PRs tagged with "feat" and "fix", as well as all breaking change PRs (those with a "!" after the tag)
-are included into the change list of a release. This may change in the future.
+are included into the change list of a release. This may change in the future. All contributors are referenced in the release, despite whether the actual PR is listed ot not.
 
 If your PR addresses multiple changes, you can represent these by adding additional semantic commit messages at the
 end of the Description section (See below)
@@ -39,7 +39,7 @@ If this pull request
 1. is a fix for a known bug, link the issue where the bug was reported in the format of `#1234`;
 2. is a fix for a previously unknown bug, please create a new issue first, which describes the bug;
 3. implements a new feature, link the issue describing the idea in the format of `#1234`;
-4. improves documentation, updates dependencies, implements new tests, etc, no issue reference is required.
+4. improves documentation, updates dependencies, implements new tests, etc, no issue reference is required. Please delete this section in such case.
 
 You can discuss changes with maintainers in the Github Discussions in this repository.
 -->
@@ -63,9 +63,12 @@ Describe your changes here to communicate
 
 1. why your PR should be accepted, why you chose the solution you did and what alternatives you considered, etc...
 2. which changes/updates it introduces. If your change includes breaking changes please add a code block documenting the breaking change
+-->
 
+## Changelist
+<!--
 If your PR addresses multiple changes, you can represent these by adding additional semantic commit messages at the
-end of this section. 
+end of this section. Otherwise, if the name of this PR is enough, delete this section.
 
 E.g.
 Other changes done by this PR:
