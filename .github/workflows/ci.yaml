@@ -17,6 +17,20 @@ env:
   DOCUMENTATION_URL: https://dadrus.github.io/heimdall/
 
 jobs:
+  check-licenses:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Set up Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: ${{ env.GO_VERSION }}
+      - name: Get google/go-licenses package
+        run: go install github.com/google/go-licenses@latest
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      - name: Check the licenses
+        run: go-licenses check --include_tests --disallowed_types=forbidden,restricted,reciprocal,permissive,unknown --ignore=github.com/instana/go-otel-exporter .
+
   lint-code:
     runs-on: ubuntu-22.04
     steps:
