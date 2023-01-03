@@ -51,8 +51,9 @@ Remove the boxes, which are not applicable and put an `x` in the boxes that appl
 You can also fill these out after creating the PR.
 -->
 
-- [ ] I have read the [contributing guidelines](../blob/master/CONTRIBUTING.md).
-- [ ] I have read the [security policy](../security/policy).
+- [ ] I have read and agree with the [code of conduct](../CODE_OF_CONDUCT.md).
+- [ ] I have read the [contributing guidelines](../CONTRIBUTING.md).
+- [ ] I have read the [security policy](../SECURITY.md).
 - [ ] I have referenced an issue describing the bug/feature request.
 - [ ] I have added tests that prove the correctness of my implementation.
 - [ ] I have updated the documentation.
