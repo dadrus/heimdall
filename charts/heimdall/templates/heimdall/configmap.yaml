@@ -15,9 +15,6 @@
 # SPDX-License-Identifier: Apache-2.0
 
 {{- if not .Values.demo.enable }}
-  {{- if not (and .Values.pipeline .Values.rules) -}}
-    {{- required "No configuration file for heimdall provided! Specify it using -f as an additional values file" "" }}
-  {{- end }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
