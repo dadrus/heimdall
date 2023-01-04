@@ -4,10 +4,10 @@ This directory contains examples described in the getting started section of the
 
 # Decision Mode with NGINX Ingress Controller
 
-In that setup heimdall is integrated with NGINX Ingress Controller. All incoming requests are sent to NGINX, which then contacts heimdall as external authorization middleware and dependeing on the response from heimdall either forwards the request to the upstream service, or directly responses with an error from heimdall.
+In that setup heimdall is integrated with NGINX Ingress Controller. All incoming requests are sent to NGINX, which then contacts heimdall as external authorization middleware and depending on the response from heimdall either forwards the request to the upstream service, or directly responses with an error from heimdall.
 
 Prerequisite: 
-* You need a runnig Kubernetes cluster in which you can install heimdall including CRDs, service account, etc.
+* You need a running Kubernetes cluster in which you can install heimdall including CRDs, service account, etc.
 * The default ingress class is configured
 
 If you don't have one, you can easily create it using kind. Checkout the `examples/kind` directory. You'll find a config and a description on how to create a cluster. It also sets the default ingress class.

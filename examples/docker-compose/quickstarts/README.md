@@ -24,7 +24,7 @@ In that setup heimdall is not integrated with any other reverse proxy.
 
 # Decision Mode with Traefik
 
-In that setup heimdall is integrated with Traefik. All requests are sent to traefik, which then contacts heimdall as external authorization middleware and dependeing on the response from heimdall either forwards the request to the upstream service, or directly responses with an error from heimdall.
+In that setup heimdall is integrated with Traefik. All requests are sent to traefik, which then contacts heimdall as external authorization middleware and depending on the response from heimdall either forwards the request to the upstream service, or directly responses with an error from heimdall.
 
 1. Start the environment with
 
@@ -44,7 +44,7 @@ In that setup heimdall is integrated with Traefik. All requests are sent to trae
 
 # Decision Mode with Envoy
 
-In that setup heimdall is integrated with Envoy Proxy. All requests are sent to envoy, which then contacts heimdall as external authorization middleware and dependeing on the response from heimdall either forwards the request to the upstream service, or directly responses with an error from heimdall.
+In that setup heimdall is integrated with Envoy Proxy. All requests are sent to envoy, which then contacts heimdall as external authorization middleware and depending on the response from heimdall either forwards the request to the upstream service, or directly responses with an error from heimdall.
 
 1. Start the environment with
 
