@@ -1,0 +1,23 @@
+apiVersion: heimdall.dadrus.github.com/v1alpha1
+kind: RuleSet
+metadata:
+  name: echo-app-rules
+  namespace: quickstarts
+  labels:
+    app.kubernetes.io/name: echo-app
+spec:
+  rules:
+    - id: public-access
+      match:
+        url: http://<**>/public
+      upstream: http://echo-app.quickstarts.svc.cluster.local:8080
+      execute:
+        - authenticator: noop_authenticator
+        - authorizer: allow_all_requests
+        - unifier: noop_unifier
+    - id: anonymous-access
+      match:
+        url: http://<**>/anonymous
+      upstream: http://echo-app.quickstarts.svc.cluster.local:8080
+      execute:
+        - authorizer: allow_all_requests

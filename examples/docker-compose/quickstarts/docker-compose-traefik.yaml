@@ -1,0 +1,20 @@
+version: '3.7'
+
+services:
+  proxy:
+    image: traefik:2.9.1
+    ports:
+      - 9090:9090
+    command: >
+      --providers.docker=true 
+      --providers.docker.exposedbydefault=false 
+      --entryPoints.http.address=":9090" 
+      --accesslog --api=true --api.insecure=true
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.traefik_http.service=api@internal
+      - traefik.http.routers.traefik_http.entrypoints=http
+      - traefik.http.middlewares.heimdall.forwardauth.address=http://heimdall:4456
+      - traefik.http.middlewares.heimdall.forwardauth.authResponseHeaders=Authorization

@@ -1,0 +1,18 @@
+version: '3.7'
+
+services:
+  heimdall:
+    image: dadrus/heimdall:0.5.0-alpha
+    volumes:
+      - ./heimdall-config.yaml:/heimdall/conf/heimdall.yaml:ro
+      - ./upstream-rules.yaml:/heimdall/conf/rules.yaml:ro
+    command: -c /heimdall/conf/heimdall.yaml serve decision
+
+  upstream:
+    image: containous/whoami:latest
+    labels:
+      - traefik.enable=true
+      - traefik.http.services.whoami.loadbalancer.server.port=80
+      - traefik.http.routers.whoami.rule=PathPrefix("/")
+      - traefik.http.routers.whoami.middlewares=heimdall
+
