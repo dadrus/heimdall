@@ -187,3 +187,5 @@ spec:
 
 The definition of the `PodMonitor` above assumes, you've installed heimdall in the default namespace as shown in the link:{{< relref "#_installing_the_chart" >}}[Installing the Chart] section. If this is not the case, you need to adjust the `metadata` property by adding the corresponding `namespace` information, as well as the `namespaceSelector`.
 
+If your Prometheus deployment is not done through the operator, you don't need to do anything, as the chart already sets the relevant annotations: `prometheus.io/scrape`, `prometheus.io/path` and `prometheus.io/port`.
+
