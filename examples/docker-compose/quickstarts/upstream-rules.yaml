@@ -1,0 +1,13 @@
+- id: rule1
+  match:
+    url: http://<**>/public
+  execute:
+    - authenticator: do_nothing
+    - unifier: do_nothing
+
+- id: rule2
+  match:
+    url: http://<**>/anonymous
+  execute:
+    - authenticator: anon
+

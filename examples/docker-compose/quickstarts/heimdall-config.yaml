@@ -1,0 +1,36 @@
+log:
+  level: info
+
+serve:
+  decision:
+    trusted_proxies:
+      - 0.0.0.0/0
+
+rules:
+  mechanisms:
+    authenticators:
+      - id: do_nothing
+        type: noop
+      - id: anon
+        type: anonymous
+      - id: reject_requests
+        type: unauthorized
+    unifiers:
+      - id: do_nothing
+        type: noop
+      - id: create_jwt
+        type: jwt
+
+  default:
+    methods:
+      - GET
+      - POST
+    execute:
+      - authenticator: reject_requests
+      - unifier: create_jwt
+
+  providers:
+    file_system:
+      src: /heimdall/conf/rules.yaml
+      watch: true
+
