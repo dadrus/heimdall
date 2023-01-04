@@ -108,7 +108,46 @@ If you need proxy mode, install it with:
 $ helm install my-release -f heimdall.yaml --set operationMode=proxy ./charts/heimdall
 ----
 
-In both cases you have to integrate it with your ingress controller. For decision mode that means setting corresponding annotations on Ingress resources to let the traffic first be verified by heimdall before it is forwarded to the upstream services by the Ingress Controller.
+=== Post-Install Steps
+
+==== Integration with Ingress
+
+After having installed heimdall, you have to integrate it with your ingress controller. For decision mode that means setting corresponding annotations on Ingress resources to let the traffic first be verified by heimdall before it is forwarded to the upstream services by the Ingress Controller.
+
+==== Metrics Collection
+
+Since heimdall exposes a comprehensive set of Prometheus style metrics on its metrics endpoint, you can, assuming you are running a https://github.com/prometheus-operator/prometheus-operator[Prometheus Operator] in your cluster, create the following `PodMonitor` resource to enable metrics collection.
+
+[source, yaml]
+----
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: heimdall-pod-monitor
+  labels:
+    release: prometheus
+    app.kubernetes.io/instance: my-release
+    app.kubernetes.io/name: heimdall
+    app.kubernetes.io/part-of: heimdall
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: my-release
+      app.kubernetes.io/name: heimdall
+  podMetricsEndpoints:
+    - path: /metrics
+      port: http-metrics
+      scheme: http
+      interval: 30s
+  jobLabel: heimdall-pod-monitor
+  namespaceSelector:
+    matchNames:
+      - default
+----
+
+The definition of the `PodMonitor` above assumes, you've installed heimdall in the default namespace as shown in the above. If this is not the case, you need to adjust the `metadata` property by adding the corresponding `namespace` information, as well as the `namespaceSelector`.
+
+If your Prometheus deployment is not done through the operator, you don't need to do anything, as the chart already sets the relevant annotations: `prometheus.io/scrape`, `prometheus.io/path` and `prometheus.io/port`.
 
 == Upgrading the Chart
 
