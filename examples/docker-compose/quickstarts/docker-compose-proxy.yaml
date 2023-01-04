@@ -1,0 +1,7 @@
+version: '3.7'
+
+services:
+  heimdall:
+    ports:
+      - 9090:4455
+    command: -c /heimdall/conf/heimdall.yaml serve proxy

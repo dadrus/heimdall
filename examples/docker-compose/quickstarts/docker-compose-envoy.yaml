@@ -1,3 +1,5 @@
+version: '3.7'
+
 services:
   edge-router:
     image: envoyproxy/envoy:v1.24.1
