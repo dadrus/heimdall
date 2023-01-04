@@ -1,0 +1,37 @@
+log:
+  level: info
+
+serve:
+  decision:
+    trusted_proxies:
+      - 0.0.0.0/0
+
+rules:
+  mechanisms:
+    authenticators:
+      - id: anonymous_authenticator
+        type: anonymous
+      - id: noop_authenticator
+        type: noop
+    authorizers:
+      - id: deny_all_requests
+        type: deny
+      - id: allow_all_requests
+        type: allow
+    unifiers:
+      - id: create_jwt
+        type: jwt
+      - id: noop_unifier
+        type: noop
+
+  default:
+    methods:
+      - GET
+      - POST
+    execute:
+      - authenticator: anonymous_authenticator
+      - authorizer: deny_all_requests
+      - unifier: create_jwt
+
+  providers:
+    kubernetes: {}
