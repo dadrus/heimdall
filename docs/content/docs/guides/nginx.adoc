@@ -142,3 +142,4 @@ nginx.ingress.kubernetes.io/auth-response-headers: Authorization <2>
 your link:{{< relref "/docs/configuration/rules/pipeline_mechanisms/contextualizers.adoc" >}}[Contextualizers] and link:{{< relref "/docs/configuration/rules/pipeline_mechanisms/unifiers.adoc" >}}[Unifiers] configuration
 ====
 
+Checkout the Kubernetes quickstarts on https://github.com/dadrus/heimdall/tree/main/examples/kubernetes/quickstarts[GitHub] for a working demo.
