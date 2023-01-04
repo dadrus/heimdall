@@ -36,7 +36,7 @@ coverage: test
 build: dependencies
   #!/usr/bin/env bash
   git_ref=$(git rev-parse --short HEAD)
-  CGO_ENABLED=0 go build -trimpath -ldflags="-buildid= -w -s -X github.com/dadrus/heimdall/cmd.Version=${git_ref}"
+  CGO_ENABLED=0 go build -trimpath -ldflags="-buildid= -w -s -X github.com/dadrus/heimdall/version.Version=${git_ref}"
 
 build-image:
   #!/usr/bin/env bash
