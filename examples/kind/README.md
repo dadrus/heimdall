@@ -6,7 +6,7 @@ This directory contains a simple kind config file, which creates a Kubernetes cl
 
 1. Create the actual cluster
    ```bash
-   kind create cluster --config kind/kind.yaml --name demo
+   kind create cluster --config kind.yaml --name demo
    ```
 
 2. Deploy and Ingress Controller
