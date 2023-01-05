@@ -45,7 +45,7 @@ func NewJWTSigner(conf *config.Configuration, logger zerolog.Logger) (heimdall.J
 		err error
 	)
 
-	if len(conf.Signer.KeyStore) == 0 {
+	if len(conf.Signer.KeyStore.Path) == 0 {
 		logger.Warn().
 			Msg("Key store is not configured. NEVER DO IT IN PRODUCTION!!!! Generating an ECDSA P-384 key pair.")
 
@@ -59,7 +59,7 @@ func NewJWTSigner(conf *config.Configuration, logger zerolog.Logger) (heimdall.J
 
 		ks, err = keystore.NewKeyStoreFromKey(privateKey)
 	} else {
-		ks, err = keystore.NewKeyStoreFromPEMFile(conf.Signer.KeyStore, conf.Signer.Password)
+		ks, err = keystore.NewKeyStoreFromPEMFile(conf.Signer.KeyStore.Path, conf.Signer.KeyStore.Password)
 	}
 
 	if err != nil {
