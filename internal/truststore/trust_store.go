@@ -29,31 +29,31 @@ const pemBlockTypeCertificate = "CERTIFICATE"
 
 type TrustStore []*x509.Certificate
 
-func (ts *TrustStore) addEntry(idx int, blockType string, _ map[string]string, content []byte) error {
-	var (
-		cert *x509.Certificate
-		err  error
-	)
+func (ts *TrustStore) addEntry(strict bool) pemx.PEMBlockCallback {
+	return func(idx int, blockType string, _ map[string]string, content []byte) error {
+		var (
+			cert *x509.Certificate
+			err  error
+		)
 
-	switch blockType {
-	case pemBlockTypeCertificate:
-		cert, err = x509.ParseCertificate(content)
-	default:
-		return errorchain.NewWithMessagef(heimdall.ErrInternal,
-			"unsupported entry '%s' entry in the pem file", blockType)
+		if blockType == pemBlockTypeCertificate {
+			cert, err = x509.ParseCertificate(content)
+			if err != nil {
+				return errorchain.NewWithMessagef(heimdall.ErrInternal,
+					"failed to parse %d entry in the pem file", idx).CausedBy(err)
+			}
+
+			*ts = append(*ts, cert)
+		} else if strict {
+			return errorchain.NewWithMessagef(heimdall.ErrInternal,
+				"unsupported entry '%s' entry in the pem file", blockType)
+		}
+
+		return nil
 	}
-
-	if err != nil {
-		return errorchain.NewWithMessagef(heimdall.ErrInternal,
-			"failed to parse %d entry in the pem file", idx).CausedBy(err)
-	}
-
-	*ts = append(*ts, cert)
-
-	return nil
 }
 
-func NewTrustStoreFromPEMFile(pemFilePath string) (TrustStore, error) {
+func NewTrustStoreFromPEMFile(pemFilePath string, strict bool) (TrustStore, error) {
 	fInfo, err := os.Stat(pemFilePath)
 	if err != nil {
 		return nil, err
@@ -69,13 +69,13 @@ func NewTrustStoreFromPEMFile(pemFilePath string) (TrustStore, error) {
 			"failed to read %s", pemFilePath).CausedBy(err)
 	}
 
-	return NewTrustStoreFromPEMBytes(contents)
+	return NewTrustStoreFromPEMBytes(contents, strict)
 }
 
-func NewTrustStoreFromPEMBytes(pemBytes []byte) (TrustStore, error) {
+func NewTrustStoreFromPEMBytes(pemBytes []byte, strict bool) (TrustStore, error) {
 	var certs TrustStore
 
-	err := pemx.ReadPEM(pemBytes, certs.addEntry)
+	err := pemx.ReadPEM(pemBytes, certs.addEntry(strict))
 
 	return certs, err
 }

@@ -37,6 +37,6 @@ func DecodeTrustStoreHookFunc() mapstructure.DecodeHookFunc {
 
 		// nolint: forcetypeassert
 		// already checked above
-		return NewTrustStoreFromPEMFile(data.(string))
+		return NewTrustStoreFromPEMFile(data.(string), true)
 	}
 }
