@@ -22,7 +22,7 @@ import (
 	"go.uber.org/fx"
 
 	"github.com/dadrus/heimdall/internal/config"
-	"github.com/dadrus/heimdall/internal/truststore"
+	"github.com/dadrus/heimdall/internal/keystore"
 )
 
 var Module = fx.Options( //nolint:gochecknoglobals
@@ -36,27 +36,53 @@ func initPrometheusRegistry(conf *config.Configuration) (prometheus.Registerer, 
 	reg.MustRegister(collectors.NewGoCollector(collectors.WithGoCollectorRuntimeMetrics(collectors.MetricsAll)))
 
 	if conf.Serve.Decision.TLS != nil {
-		registerCertificates(reg, "decision", conf.Serve.Decision.TLS.KeyStore)
+		registerCertificate(reg,
+			"decision", conf.Serve.Decision.TLS.KeyStore, conf.Serve.Decision.TLS.KeyID)
 	}
 
 	if conf.Serve.Proxy.TLS != nil {
-		registerCertificates(reg, "proxy", conf.Serve.Proxy.TLS.KeyStore)
+		registerCertificate(reg,
+			"proxy", conf.Serve.Proxy.TLS.KeyStore, conf.Serve.Proxy.TLS.KeyID)
 	}
 
 	if conf.Serve.Management.TLS != nil {
-		registerCertificates(reg, "management", conf.Serve.Management.TLS.KeyStore)
+		registerCertificate(reg,
+			"management", conf.Serve.Management.TLS.KeyStore, conf.Serve.Management.TLS.KeyID)
 	}
 
-	registerCertificates(reg, "signer", conf.Signer.KeyStore)
+	registerCertificate(reg,
+		"signer", conf.Signer.KeyStore, conf.Signer.KeyID)
 
 	return reg, reg
 }
 
-func registerCertificates(registerer prometheus.Registerer, service string, certSore string) {
-	// Errors are ignored by intention. If these happen, heimdall won't start anyway
-	certs, _ := truststore.NewTrustStoreFromPEMFile(certSore, false)
+func registerCertificate(reg prometheus.Registerer, service string, keyStore config.KeyStore, keyID string) {
+	// Note: Errors are ignored by intention. If these happen, heimdall won't start anyway
+	if len(keyStore.Path) == 0 {
+		// given key store is not configured
+		return
+	}
 
-	for _, cert := range certs {
-		registerer.MustRegister(NewCertificateExpirationCollector(service, cert))
+	ks, err := keystore.NewKeyStoreFromPEMFile(keyStore.Path, keyStore.Password)
+	if err != nil {
+		return
+	}
+
+	var entry *keystore.Entry
+
+	if len(keyID) != 0 {
+		entry, _ = ks.GetKey(keyID)
+	} else {
+		entries := ks.Entries()
+
+		if len(entries) != 0 {
+			entry = ks.Entries()[0]
+		}
+	}
+
+	if entry != nil && len(entry.CertChain) != 0 {
+		for _, cert := range entry.CertChain {
+			reg.MustRegister(NewCertificateExpirationCollector(service, cert))
+		}
 	}
 }
