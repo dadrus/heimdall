@@ -19,27 +19,15 @@ The configuration related to the issuance of signed objects can be done using th
 +
 The name used to specify the issuer. E.g. if a JWT is generated, this value is used to set the `iss` claim. If not set, the value `heimdall` is used.
 
-* *`key_store`*: _string_ (optional)
+* *`key_store`*: _link:{{< relref "/docs/configuration/reference/types.adoc#_key_store" >}}[Key Store]_ (optional)
 +
-Path to a file in PEM format, containing the cryptographic material for signature creation purposes. If this file is specified, at least one private key must be present.
+The key store containing the cryptographic material. If configured, at least one private key and the corresponding certificate must be present. If not configured, heimdall generates an ECDSA P-384 key pair on start up and uses it then.
 +
-If the PEM file contains X.509 certificates in addition to the keys, heimdall will try to identify a certificate (incl its chain) for each private key (the order of the certificates doesn't matter). If heimdall was able to identify the certificate chain, the chain is validated, which includes cryptographic validity, time validity, as well as whther the certificate attributes the private key for creation of digital signatures.
-+
-PKCS#1, as well as PKCS#8 encodings are supported for private keys. If `key_store` is not specified, heimdall generates an RSA key on startup.
-+
-NOTE: While loading cryptographic material from the given key store file, heimdall ensures uniqueness of key ids and rejects key store files which violate this condition (see also link:{{< relref "./reference/types.adoc#_key_id_lookup" >}}[Key-Id Lookup]).
-
-* *`password`*: _string_ (optional)
-+
-If the key material is protected with a password, this property can be set to decipher it.
-+
-NOTE: Password protection is only supported for PKCS#8 encoded keys.
-+
-CAUTION: If the PEM file contains multiple keys and these keys are password protected, same password must be used for all of these.
+WARNING: You should always configure a valid key store for production use!
 
 * *`key_id`*: _string_ (optional)
 +
-If the `key_store` references a PEM file, containing multiple keys, this property can be used to specify the key to use (see also link:{{< relref "./reference/types.adoc#_key_id_lookup" >}}[Key-Id Lookup]). If not specified, the first key is used. If specified, but there is no key for the given key id present, an error is raised.
+If the `key_store` contains multiple keys, this property can be used to specify the key to use (see also link:{{< relref "#_key_id_lookup" >}}[Key-Id Lookup]). If not specified, the first key is used. If specified, but there is no key for the given key id present, an error is raised and heimdall will refuse to start.
 
 .Possible configuration
 ====
@@ -87,7 +75,8 @@ Then you can configure heimdall to use it like follows:
 ----
 signer:
   name: foobar
-  key_store: /opt/heimdall/keystore.pem
+  key_store:
+    path: /opt/heimdall/keystore.pem
   key_id: foo
 ----
 ====
