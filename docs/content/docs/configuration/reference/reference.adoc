@@ -35,8 +35,9 @@ serve:
       allow_credentials: true
       max_age: 1m
     tls:
-      key_store: /path/to/key/store.pem
-      password: VerySecure!
+      key_store:
+        path: /path/to/key/store.pem
+        password: VerySecure!
     trusted_proxies:
       - 192.168.1.0/24
 
@@ -61,8 +62,9 @@ serve:
       allow_credentials: true
       max_age: 1m
     tls:
-      key_store: /path/to/key/store.pem
-      password: VerySecure!
+      key_store:
+        path: /path/to/key/store.pem
+        password: VerySecure!
       key_id: first_entry
       min_version: TLS1.2
       cipher_suites:
@@ -94,7 +96,8 @@ serve:
       allow_credentials: true
       max_age: 1m
     tls:
-      key_store: /path/to/key/store.pem
+      key_store:
+        path: /path/to/key/store.pem
       min_version: TLS1.2
 
 log:
@@ -113,8 +116,9 @@ metrics:
 
 signer:
   name: foobar
-  key_store: /opt/heimdall/keystore.pem
-  password: VeryInsecure!
+  key_store:
+    path: /opt/heimdall/keystore.pem
+    password: VeryInsecure!
   key_id: foo
 
 rules:

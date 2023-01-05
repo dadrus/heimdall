@@ -119,7 +119,7 @@ func TestNewJWTSigner(t *testing.T) {
 		},
 		{
 			uc:     "no key id configured",
-			config: config.SignerConfig{Name: "foo", KeyStore: keyFile.Name()},
+			config: config.SignerConfig{Name: "foo", KeyStore: config.KeyStore{Path: keyFile.Name()}},
 			assert: func(t *testing.T, err error, signer *jwtSigner) {
 				t.Helper()
 
@@ -133,7 +133,7 @@ func TestNewJWTSigner(t *testing.T) {
 		},
 		{
 			uc:     "with key id configured",
-			config: config.SignerConfig{Name: "foo", KeyStore: keyFile.Name(), KeyID: "key2"},
+			config: config.SignerConfig{Name: "foo", KeyStore: config.KeyStore{Path: keyFile.Name()}, KeyID: "key2"},
 			assert: func(t *testing.T, err error, signer *jwtSigner) {
 				t.Helper()
 
@@ -147,7 +147,7 @@ func TestNewJWTSigner(t *testing.T) {
 		},
 		{
 			uc:     "with error while retrieving key from key store",
-			config: config.SignerConfig{Name: "foo", KeyStore: keyFile.Name(), KeyID: "baz"},
+			config: config.SignerConfig{Name: "foo", KeyStore: config.KeyStore{Path: keyFile.Name()}, KeyID: "baz"},
 			assert: func(t *testing.T, err error, signer *jwtSigner) {
 				t.Helper()
 
@@ -157,7 +157,7 @@ func TestNewJWTSigner(t *testing.T) {
 		},
 		{
 			uc:     "with rsa 2048 key",
-			config: config.SignerConfig{Name: "foo", KeyStore: keyFile.Name(), KeyID: "key1"},
+			config: config.SignerConfig{Name: "foo", KeyStore: config.KeyStore{Path: keyFile.Name()}, KeyID: "key1"},
 			assert: func(t *testing.T, err error, signer *jwtSigner) {
 				t.Helper()
 
@@ -171,7 +171,7 @@ func TestNewJWTSigner(t *testing.T) {
 		},
 		{
 			uc:     "with rsa 3072 key",
-			config: config.SignerConfig{Name: "foo", KeyStore: keyFile.Name(), KeyID: "key2"},
+			config: config.SignerConfig{Name: "foo", KeyStore: config.KeyStore{Path: keyFile.Name()}, KeyID: "key2"},
 			assert: func(t *testing.T, err error, signer *jwtSigner) {
 				t.Helper()
 
@@ -185,7 +185,7 @@ func TestNewJWTSigner(t *testing.T) {
 		},
 		{
 			uc:     "with rsa 4096 key",
-			config: config.SignerConfig{Name: "foo", KeyStore: keyFile.Name(), KeyID: "key3"},
+			config: config.SignerConfig{Name: "foo", KeyStore: config.KeyStore{Path: keyFile.Name()}, KeyID: "key3"},
 			assert: func(t *testing.T, err error, signer *jwtSigner) {
 				t.Helper()
 
@@ -199,7 +199,7 @@ func TestNewJWTSigner(t *testing.T) {
 		},
 		{
 			uc:     "with P256 ecdsa key",
-			config: config.SignerConfig{Name: "foo", KeyStore: keyFile.Name(), KeyID: "key4"},
+			config: config.SignerConfig{Name: "foo", KeyStore: config.KeyStore{Path: keyFile.Name()}, KeyID: "key4"},
 			assert: func(t *testing.T, err error, signer *jwtSigner) {
 				t.Helper()
 
@@ -213,7 +213,7 @@ func TestNewJWTSigner(t *testing.T) {
 		},
 		{
 			uc:     "with P384 ecdsa key",
-			config: config.SignerConfig{Name: "foo", KeyStore: keyFile.Name(), KeyID: "key5"},
+			config: config.SignerConfig{Name: "foo", KeyStore: config.KeyStore{Path: keyFile.Name()}, KeyID: "key5"},
 			assert: func(t *testing.T, err error, signer *jwtSigner) {
 				t.Helper()
 
@@ -227,7 +227,7 @@ func TestNewJWTSigner(t *testing.T) {
 		},
 		{
 			uc:     "with P512 ecdsa key",
-			config: config.SignerConfig{Name: "foo", KeyStore: keyFile.Name(), KeyID: "key6"},
+			config: config.SignerConfig{Name: "foo", KeyStore: config.KeyStore{Path: keyFile.Name()}, KeyID: "key6"},
 			assert: func(t *testing.T, err error, signer *jwtSigner) {
 				t.Helper()
 
@@ -241,7 +241,7 @@ func TestNewJWTSigner(t *testing.T) {
 		},
 		{
 			uc:     "with not existing key store",
-			config: config.SignerConfig{Name: "foo", KeyStore: "/does/not/exist"},
+			config: config.SignerConfig{Name: "foo", KeyStore: config.KeyStore{Path: "/does/not/exist"}},
 			assert: func(t *testing.T, err error, signer *jwtSigner) {
 				t.Helper()
 
@@ -252,7 +252,7 @@ func TestNewJWTSigner(t *testing.T) {
 		},
 		{
 			uc:     "with certificate, which cannot be used for signature",
-			config: config.SignerConfig{Name: "foo", KeyStore: keyFile.Name(), KeyID: "invalid"},
+			config: config.SignerConfig{Name: "foo", KeyStore: config.KeyStore{Path: keyFile.Name()}, KeyID: "invalid"},
 			assert: func(t *testing.T, err error, signer *jwtSigner) {
 				t.Helper()
 
@@ -457,7 +457,7 @@ func TestJwtSignerKeys(t *testing.T) {
 	require.NoError(t, err)
 
 	signer, err := NewJWTSigner(
-		&config.Configuration{Signer: config.SignerConfig{KeyStore: keyFile.Name()}},
+		&config.Configuration{Signer: config.SignerConfig{KeyStore: config.KeyStore{Path: keyFile.Name()}}},
 		log.Logger,
 	)
 	require.NoError(t, err)

@@ -5,18 +5,29 @@
   "type": "object",
   "additionalProperties": false,
   "definitions": {
+    "keyStore": {
+      "description": "Key store holding the keys and certificates",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path"],
+      "properties": {
+        "path": {
+          "description": "The path to the key store in PEM format",
+          "type": "string"
+        },
+        "password": {
+          "description": "Password for the key material in the key store if PKCS#8 encrypted format is used.",
+          "type": "string"
+        }
+      }
+    },
     "tlsConfig": {
       "description": "TLS Configuration",
       "type": "object",
       "additionalProperties": false,
       "properties": {
         "key_store": {
-          "description": "Path to a pem file containing the key material.",
-          "type": "string"
-        },
-        "password": {
-          "description": "Password for the key material in the key store if PKCS#8 encrypted format is used.",
-          "type": "string"
+          "$ref": "#/definitions/keyStore"
         },
         "key_id": {
           "description": "The key id referencing the entry in the key store",
@@ -1888,12 +1899,7 @@
           "default": "heimdall"
         },
         "key_store": {
-          "description": "Path to a pem file containing the key material.",
-          "type": "string"
-        },
-        "password": {
-          "description": "Password for the key material in the key store if PKCS#8 encrypted format is used.",
-          "type": "string"
+          "$ref": "#/definitions/keyStore"
         },
         "key_id": {
           "description": "The key id referencing the entry in the key store.",

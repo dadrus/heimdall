@@ -517,6 +517,38 @@ Following types are available:
 * `no_rule_error` - this error is used to signal, there is no matching rule to handle the given request. Error of this type results by default in `404 Not Found` HTTP code.
 * `precondition_error` (*) - used if the request does not contain required/expected data. E.g. if an authenticator could not find a cookie configured. Error of this type results by default in `400 Bad Request` HTTP code if handled by the default error handler.
 
+== Key Store
+
+This type configures a key store holding keys and corresponding certificate chains. PKCS#1, as well as PKCS#8 encodings are supported for private keys.
+
+While loading a key store following verifications are done:
+
+. Uniqueness of key ids and rejection of key stores which violate this condition (see also link:{{< relref "#_key_id_lookup" >}}[Key-Id Lookup])
+. Correlation of keys and certificates to build a valid certificate chain for every given key if certificates are present. If the correlation fails, an error is raised and heimdall will refuse to start.
+. Certificate chain validation. If the chain is invalid, an error is raised and heimdall will refuse to start.
+
+Following configuration properties are available:
+
+* *`path`*: _string_ (mandatory)
++
+The path to the PEM file with the cryptographic material.
+
+* *`password`*: _string_ (optional)
++
+If the key material is protected with a password, this property can be set to decipher it. Password protection is only supported for PKCS#8 encoded keys
++
+CAUTION: If the key store contains multiple keys and these keys are password protected, same password must be used for all of these.
+
+
+.Example configuration
+====
+[source, yaml]
+----
+path: /path/to/keystore.pem
+password: VeryInsecure!
+----
+====
+
 == Respond
 
 This type enables instructing heimdall to preserve error information and provide it in the response body to the caller, as well as to use HTTP status codes deviating from those heimdall would usually use. The configuration, which can be done using this type affects only the behavior of the default error handler.
@@ -832,25 +864,13 @@ idle: 1m
 == TLS
 Following are the supported TLS configuration properties:
 
-* *`key_store`*: _string_ (mandatory)
+* *`key_store`*: _link:{{< relref "#_key_store" >}}[Key Store]_ (mandatory)
 +
-Path to a file in PEM format, containing the cryptographic material. At least one private key and the corresponding certificate must be present. If heimdall was not able to correlate the key to the certificate, or the chain is invalid, an error is raised and heimdall will refuse to start.
-+
-PKCS#1, as well as PKCS#8 encodings are supported for private keys.
-+
-NOTE: While loading cryptographic material from the given key store file, heimdall ensures uniqueness of key ids and rejects key store files which violate this condition (see also link:{{< relref "#_key_id_lookup" >}}[Key-Id Lookup]).
-
-* *`password`*: _string_ (optional)
-+
-If the key material is protected with a password, this property can be set to decipher it.
-+
-NOTE: Password protection is only supported for PKCS#8 encoded keys.
-+
-CAUTION: If the PEM file contains multiple keys and these keys are password protected, same password must be used for all of these.
+The key store containing the cryptographic material. At least one private key and the corresponding certificate must be present.
 
 * *`key_id`*: _string_ (optional)
 +
-If the `key_store` references a PEM file, containing multiple keys, this property can be used to specify the key to use (see also link:{{< relref "#_key_id_lookup" >}}[Key-Id Lookup]). If not specified, the first key is used. If specified, but there is no key for the given key id present, an error is raised and heimdall will refuse to start.
+If the `key_store` contains multiple keys, this property can be used to specify the key to use (see also link:{{< relref "#_key_id_lookup" >}}[Key-Id Lookup]). If not specified, the first key is used. If specified, but there is no key for the given key id present, an error is raised and heimdall will refuse to start.
 
 * *`min_version`*: _string_ (optional)
 +
@@ -871,6 +891,21 @@ Can be configured if `min_version` is set to `TLS1.2`. If `min_version` is set t
 
 +
 Defaults to the last six cipher suites if `min_version` is set to `TLS1.2` and `cipher_suites` is not configured.
+
+.Example configuration
+====
+[source, yaml]
+----
+key_store:
+  path: /path/to/keystore.pem
+  password: VeryInsecure!
+key_id: foobar
+min_version: TLS1.2
+cipher_suites:
+  - TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
+  - TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384
+----
+====
 
 == Key-Id Lookup
 
