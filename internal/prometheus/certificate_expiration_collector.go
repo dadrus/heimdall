@@ -1,4 +1,4 @@
-package certmon
+package prometheus
 
 import (
 	"crypto/x509"

@@ -20,17 +20,43 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/collectors"
 	"go.uber.org/fx"
+
+	"github.com/dadrus/heimdall/internal/config"
+	"github.com/dadrus/heimdall/internal/truststore"
 )
 
 var Module = fx.Options( //nolint:gochecknoglobals
 	fx.Provide(initPrometheusRegistry),
 )
 
-func initPrometheusRegistry() (prometheus.Registerer, prometheus.Gatherer) {
+func initPrometheusRegistry(conf *config.Configuration) (prometheus.Registerer, prometheus.Gatherer) {
 	reg := prometheus.NewRegistry()
 
 	reg.MustRegister(collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}))
 	reg.MustRegister(collectors.NewGoCollector(collectors.WithGoCollectorRuntimeMetrics(collectors.MetricsAll)))
 
+	if conf.Serve.Decision.TLS != nil {
+		registerCertificates(reg, "decision", conf.Serve.Decision.TLS.KeyStore)
+	}
+
+	if conf.Serve.Proxy.TLS != nil {
+		registerCertificates(reg, "proxy", conf.Serve.Proxy.TLS.KeyStore)
+	}
+
+	if conf.Serve.Management.TLS != nil {
+		registerCertificates(reg, "management", conf.Serve.Management.TLS.KeyStore)
+	}
+
+	registerCertificates(reg, "signer", conf.Signer.KeyStore)
+
 	return reg, reg
+}
+
+func registerCertificates(registerer prometheus.Registerer, service string, certSore string) {
+	// Errors are ignored by intention. If these happen, heimdall won't start anyway
+	certs, _ := truststore.NewTrustStoreFromPEMFile(certSore, false)
+
+	for _, cert := range certs {
+		registerer.MustRegister(NewCertificateExpirationCollector(service, cert))
+	}
 }

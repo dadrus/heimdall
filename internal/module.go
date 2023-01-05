@@ -20,7 +20,6 @@ import (
 	"go.uber.org/fx"
 
 	"github.com/dadrus/heimdall/internal/cache"
-	"github.com/dadrus/heimdall/internal/certmon"
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/handler/management"
 	"github.com/dadrus/heimdall/internal/handler/metrics"
@@ -32,8 +31,7 @@ import (
 	"github.com/dadrus/heimdall/internal/tracing"
 )
 
-// nolint
-var Module = fx.Options(
+var Module = fx.Options( //nolint:gochecknoglobals
 	config.Module,
 	logging.Module,
 	tracing.Module,
@@ -44,5 +42,4 @@ var Module = fx.Options(
 	rules.Module,
 	management.Module,
 	metrics.Module,
-	certmon.Module,
 )
