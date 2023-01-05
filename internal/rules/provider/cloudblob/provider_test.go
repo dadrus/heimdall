@@ -180,12 +180,12 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx
 			uc: "with rule set loading error due to DNS error",
 			conf: []byte(`
 buckets:
-- url: s3://foo?endpoint=does-not-exist.local&region=eu-central-1
+- url: s3://does-not-exist-for-heimdall?endpoint=does-not-exist.local&region=eu-central-1
 `),
 			assert: func(t *testing.T, tc testCase, logs fmt.Stringer, queue event.RuleSetChangedEventQueue) {
 				t.Helper()
 
-				time.Sleep(500 * time.Millisecond)
+				time.Sleep(1 * time.Second)
 
 				messages := logs.String()
 				assert.Contains(t, messages, "communication error")

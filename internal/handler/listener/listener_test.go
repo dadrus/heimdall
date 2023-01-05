@@ -129,7 +129,7 @@ func TestNewListener(t *testing.T) {
 			uc:      "fails due to not existent key store for TLS usage",
 			network: "tcp",
 			serviceConf: config.ServiceConfig{
-				TLS: &config.TLS{KeyStore: "/no/such/file"},
+				TLS: &config.TLS{KeyStore: config.KeyStore{Path: "/no/such/file"}},
 			},
 			assert: func(t *testing.T, err error, ln net.Listener, port string) {
 				t.Helper()
@@ -143,7 +143,11 @@ func TestNewListener(t *testing.T) {
 			uc:      "fails due to not existent key for the given key id for TLS usage",
 			network: "tcp",
 			serviceConf: config.ServiceConfig{
-				TLS: &config.TLS{KeyStore: pemFile.Name(), KeyID: "foo", MinVersion: tls.VersionTLS12},
+				TLS: &config.TLS{
+					KeyStore:   config.KeyStore{Path: pemFile.Name()},
+					KeyID:      "foo",
+					MinVersion: tls.VersionTLS12,
+				},
 			},
 			assert: func(t *testing.T, err error, ln net.Listener, port string) {
 				t.Helper()
@@ -157,7 +161,11 @@ func TestNewListener(t *testing.T) {
 			uc:      "fails due to not present certificates for the given key id",
 			network: "tcp",
 			serviceConf: config.ServiceConfig{
-				TLS: &config.TLS{KeyStore: pemFile.Name(), KeyID: "key2", MinVersion: tls.VersionTLS12},
+				TLS: &config.TLS{
+					KeyStore:   config.KeyStore{Path: pemFile.Name()},
+					KeyID:      "key2",
+					MinVersion: tls.VersionTLS12,
+				},
 			},
 			assert: func(t *testing.T, err error, ln net.Listener, port string) {
 				t.Helper()
@@ -171,7 +179,10 @@ func TestNewListener(t *testing.T) {
 			uc:      "successful with default key",
 			network: "tcp",
 			serviceConf: config.ServiceConfig{
-				TLS: &config.TLS{KeyStore: pemFile.Name(), MinVersion: tls.VersionTLS12},
+				TLS: &config.TLS{
+					KeyStore:   config.KeyStore{Path: pemFile.Name()},
+					MinVersion: tls.VersionTLS12,
+				},
 			},
 			assert: func(t *testing.T, err error, ln net.Listener, port string) {
 				t.Helper()
@@ -186,7 +197,11 @@ func TestNewListener(t *testing.T) {
 			uc:      "successful with specified key id",
 			network: "tcp",
 			serviceConf: config.ServiceConfig{
-				TLS: &config.TLS{KeyStore: pemFile.Name(), KeyID: "key1", MinVersion: tls.VersionTLS12},
+				TLS: &config.TLS{
+					KeyStore:   config.KeyStore{Path: pemFile.Name()},
+					KeyID:      "key1",
+					MinVersion: tls.VersionTLS12,
+				},
 			},
 			assert: func(t *testing.T, err error, ln net.Listener, port string) {
 				t.Helper()

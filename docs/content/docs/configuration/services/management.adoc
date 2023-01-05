@@ -89,8 +89,9 @@ By default, the Management endpoint accepts HTTP requests. Depending on your dep
 ----
 management:
   tls:
-    key_store: /path/to/keystore.pem
-    password: VerySecure!
+    key_store:
+      path: /path/to/keystore.pem
+      password: VerySecure!
 ----
 ====
 
