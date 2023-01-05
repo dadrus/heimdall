@@ -80,7 +80,7 @@ func registerCertificate(reg prometheus.Registerer, service string, keyStore con
 		}
 	}
 
-	if entry != nil && len(entry.CertChain) != 0 {
+	if entry != nil {
 		for _, cert := range entry.CertChain {
 			reg.MustRegister(NewCertificateExpirationCollector(service, cert))
 		}
