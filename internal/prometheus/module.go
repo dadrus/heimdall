@@ -23,6 +23,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/keystore"
+	"github.com/dadrus/heimdall/internal/x"
 )
 
 var Module = fx.Options( //nolint:gochecknoglobals
@@ -35,54 +36,62 @@ func initPrometheusRegistry(conf *config.Configuration) (prometheus.Registerer, 
 	reg.MustRegister(collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}))
 	reg.MustRegister(collectors.NewGoCollector(collectors.WithGoCollectorRuntimeMetrics(collectors.MetricsAll)))
 
+	var (
+		decisionSrvKS   keystore.KeyStore
+		proxySrvKS      keystore.KeyStore
+		managementSrvKS keystore.KeyStore
+		signerKS        keystore.KeyStore
+
+		decisionSrvKeyID   string
+		proxySrvKeyID      string
+		managementSrvKeyID string
+		signerKeyID        string
+	)
+
 	if conf.Serve.Decision.TLS != nil {
-		registerCertificate(reg,
-			"decision", conf.Serve.Decision.TLS.KeyStore, conf.Serve.Decision.TLS.KeyID)
+		decisionSrvKS, _ = keystore.NewKeyStoreFromPEMFile(
+			conf.Serve.Decision.TLS.KeyStore.Path,
+			conf.Serve.Decision.TLS.KeyStore.Password,
+		)
+
+		decisionSrvKeyID = conf.Serve.Decision.TLS.KeyID
 	}
 
 	if conf.Serve.Proxy.TLS != nil {
-		registerCertificate(reg,
-			"proxy", conf.Serve.Proxy.TLS.KeyStore, conf.Serve.Proxy.TLS.KeyID)
+		proxySrvKS, _ = keystore.NewKeyStoreFromPEMFile(
+			conf.Serve.Proxy.TLS.KeyStore.Path,
+			conf.Serve.Proxy.TLS.KeyStore.Password,
+		)
+
+		proxySrvKeyID = conf.Serve.Proxy.TLS.KeyID
 	}
 
 	if conf.Serve.Management.TLS != nil {
-		registerCertificate(reg,
-			"management", conf.Serve.Management.TLS.KeyStore, conf.Serve.Management.TLS.KeyID)
+		managementSrvKS, _ = keystore.NewKeyStoreFromPEMFile(
+			conf.Serve.Management.TLS.KeyStore.Path,
+			conf.Serve.Management.TLS.KeyStore.Password,
+		)
+
+		managementSrvKeyID = conf.Serve.Management.TLS.KeyID
 	}
 
-	registerCertificate(reg,
-		"signer", conf.Signer.KeyStore, conf.Signer.KeyID)
+	signerKS, _ = keystore.NewKeyStoreFromPEMFile(
+		conf.Signer.KeyStore.Path,
+		conf.Signer.KeyStore.Password,
+	)
+	signerKeyID = conf.Signer.KeyID
+
+	reg.MustRegister(NewCertificateExpirationCollector(
+		WithServiceKeyStore("decision", decisionSrvKS,
+			x.IfThenElse(len(decisionSrvKeyID) != 0, WithKeyID(decisionSrvKeyID), WithFirstEntry())),
+		WithServiceKeyStore("proxy", proxySrvKS,
+			x.IfThenElse(len(proxySrvKeyID) != 0, WithKeyID(proxySrvKeyID), WithFirstEntry())),
+		WithServiceKeyStore("management", managementSrvKS,
+			x.IfThenElse(len(managementSrvKeyID) != 0, WithKeyID(managementSrvKeyID), WithFirstEntry())),
+		WithServiceKeyStore("signer", signerKS,
+			x.IfThenElse(len(signerKeyID) != 0, WithKeyID(signerKeyID), WithFirstEntry())),
+		WithEndEntityMonitoringOnly(false),
+	))
 
 	return reg, reg
-}
-
-func registerCertificate(reg prometheus.Registerer, service string, keyStore config.KeyStore, keyID string) {
-	// Note: Errors are ignored by intention. If these happen, heimdall won't start anyway
-	if len(keyStore.Path) == 0 {
-		// given key store is not configured
-		return
-	}
-
-	ks, err := keystore.NewKeyStoreFromPEMFile(keyStore.Path, keyStore.Password)
-	if err != nil {
-		return
-	}
-
-	var entry *keystore.Entry
-
-	if len(keyID) != 0 {
-		entry, _ = ks.GetKey(keyID)
-	} else {
-		entries := ks.Entries()
-
-		if len(entries) != 0 {
-			entry = ks.Entries()[0]
-		}
-	}
-
-	if entry != nil {
-		for _, cert := range entry.CertChain {
-			reg.MustRegister(NewCertificateExpirationCollector(service, cert))
-		}
-	}
 }
