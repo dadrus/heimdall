@@ -36,26 +36,26 @@ func New(network string, conf config.ServiceConfig) (net.Listener, error) {
 	}
 
 	if conf.TLS != nil {
-		return newTLSListener(conf, listener)
+		return newTLSListener(conf.TLS, listener)
 	}
 
 	return listener, nil
 }
 
-func newTLSListener(conf config.ServiceConfig, listener net.Listener) (net.Listener, error) {
+func newTLSListener(tlsConf *config.TLS, listener net.Listener) (net.Listener, error) {
 	var (
 		entry *keystore.Entry
 		err   error
 	)
 
-	ks, err := keystore.NewKeyStoreFromPEMFile(conf.TLS.KeyStore, conf.TLS.Password)
+	ks, err := keystore.NewKeyStoreFromPEMFile(tlsConf.KeyStore.Path, tlsConf.KeyStore.Password)
 	if err != nil {
 		return nil, errorchain.NewWithMessage(heimdall.ErrInternal, "failed loading keystore").
 			CausedBy(err)
 	}
 
-	if len(conf.TLS.KeyID) != 0 {
-		if entry, err = ks.GetKey(conf.TLS.KeyID); err != nil {
+	if len(tlsConf.KeyID) != 0 {
+		if entry, err = ks.GetKey(tlsConf.KeyID); err != nil {
 			return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
 				"failed retrieving key from key store").CausedBy(err)
 		}
@@ -75,12 +75,12 @@ func newTLSListener(conf config.ServiceConfig, listener net.Listener) (net.Liste
 	// configuration ensures, TLS versions below 1.2 are not possible
 	cfg := &tls.Config{
 		Certificates:   []tls.Certificate{cert},
-		MinVersion:     conf.TLS.MinVersion.OrDefault(),
+		MinVersion:     tlsConf.MinVersion.OrDefault(),
 		GetCertificate: tlsHandler.GetClientInfo,
 	}
 
 	if cfg.MinVersion != tls.VersionTLS13 {
-		cfg.CipherSuites = conf.TLS.CipherSuites.OrDefault()
+		cfg.CipherSuites = tlsConf.CipherSuites.OrDefault()
 	}
 
 	return tls.NewListener(listener, cfg), nil
