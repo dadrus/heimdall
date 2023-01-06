@@ -36,6 +36,12 @@ func initPrometheusRegistry(conf *config.Configuration) (prometheus.Registerer, 
 	reg.MustRegister(collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}))
 	reg.MustRegister(collectors.NewGoCollector(collectors.WithGoCollectorRuntimeMetrics(collectors.MetricsAll)))
 
+	registerCertificateExpiryCollector(conf, reg)
+
+	return reg, reg
+}
+
+func registerCertificateExpiryCollector(conf *config.Configuration, reg *prometheus.Registry) {
 	var (
 		decisionSrvKS   keystore.KeyStore
 		proxySrvKS      keystore.KeyStore
@@ -92,6 +98,4 @@ func initPrometheusRegistry(conf *config.Configuration) (prometheus.Registerer, 
 			x.IfThenElse(len(signerKeyID) != 0, WithKeyID(signerKeyID), WithFirstEntry())),
 		WithEndEntityMonitoringOnly(false),
 	))
-
-	return reg, reg
 }
