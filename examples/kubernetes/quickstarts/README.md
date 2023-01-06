@@ -24,7 +24,7 @@ If you don't have one, you can easily create it using kind. Checkout the `exampl
    Otherwise, just install heimdall
 
    ```bash
-   helm install heimdall -f heimdall.yaml --namespace heimdall --create-namespace dadrus/heimdall
+   helm install heimdall -f heimdall.yaml -n heimdall --create-namespace dadrus/heimdall
    ```
    
    The above command with install heimdall into a namespace `heimdall` (it will create the namespace as well). The name of the chart installation is `heimdall` as well.
@@ -38,9 +38,9 @@ If you don't have one, you can easily create it using kind. Checkout the `exampl
 3. Play with it
 
    ```bash
-   curl -v http://127.0.0.1/anonymous
-   curl -v http://127.0.0.1/public
-   curl -v http://127.0.0.1/foo
+   curl -v -H "Host: echo-app.local" http://127.0.0.1/anonymous
+   curl -v -H "Host: echo-app.local" http://127.0.0.1/public
+   curl -v -H "Host: echo-app.local" http://127.0.0.1/foo
    ```
 
    Check the responses
@@ -54,5 +54,5 @@ If you don't have one, you can easily create it using kind. Checkout the `exampl
 5. Uninstall heimdall
 
    ```bash
-   helm uninstall heimdall
+   helm uninstall -n heimdall heimdall
    ```
