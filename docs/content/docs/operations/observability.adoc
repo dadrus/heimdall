@@ -236,6 +236,7 @@ By default, heimdall exposes a `/metrics` HTTP endpoint on port `10250` (See als
 * Go runtime information, including details about GC, number of goroutines and OS threats
 * Information about the metrics endpoint itself, including the number of internal errors encountered while gathering the metrics, number of current inflight and overall scrapes done.
 * Information about the decision and proxy requests handled, including the total amount and duration of http requests by status code, method and path, as well as information about requests in progress. If tracing information is available, labels about `parent_id`, `trace_id` and `span_id` are set for histogram metrics.
+* Information about expiry for configured certificates.
 
 The following table provide detailed information about these
 
@@ -444,6 +445,12 @@ The following table provide detailed information about these
 | `http_requests_total`
 | Counter
 | Count all http requests by service (decision, proxy, management), status code, method and path.
+
+3+| _Certificate expiry information_
+
+| `certificate_expiry_seconds`
+| Gauge
+| Number of seconds until a certificate used by a particular service (decision, proxy, management), as well as signer expires. Contains certificate identification information as well.
 
 3+| _Metrics endpoint statistics_
 

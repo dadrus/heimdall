@@ -53,13 +53,14 @@ func TestNewKeyStoreFromPEMBytes(t *testing.T) {
 	require.NoError(t, err)
 
 	pemBytes, err := pemx.BuildPEM(
+		pemx.WithECDSAPrivateKey(intCA1PrivKey),
 		pemx.WithX509Certificate(intCA1Cert),
 		pemx.WithX509Certificate(rootCA1.Certificate),
 	)
 	require.NoError(t, err)
 
 	// WHEN
-	ts, err := NewTrustStoreFromPEMBytes(pemBytes)
+	ts, err := NewTrustStoreFromPEMBytes(pemBytes, false)
 
 	// THEN
 	require.NoError(t, err)

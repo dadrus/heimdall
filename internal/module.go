@@ -31,8 +31,7 @@ import (
 	"github.com/dadrus/heimdall/internal/tracing"
 )
 
-// nolint
-var Module = fx.Options(
+var Module = fx.Options( //nolint:gochecknoglobals
 	config.Module,
 	logging.Module,
 	tracing.Module,

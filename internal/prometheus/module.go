@@ -20,17 +20,82 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/collectors"
 	"go.uber.org/fx"
+
+	"github.com/dadrus/heimdall/internal/config"
+	"github.com/dadrus/heimdall/internal/keystore"
+	"github.com/dadrus/heimdall/internal/x"
 )
 
 var Module = fx.Options( //nolint:gochecknoglobals
 	fx.Provide(initPrometheusRegistry),
 )
 
-func initPrometheusRegistry() (prometheus.Registerer, prometheus.Gatherer) {
+func initPrometheusRegistry(conf *config.Configuration) (prometheus.Registerer, prometheus.Gatherer) {
 	reg := prometheus.NewRegistry()
 
 	reg.MustRegister(collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}))
 	reg.MustRegister(collectors.NewGoCollector(collectors.WithGoCollectorRuntimeMetrics(collectors.MetricsAll)))
 
+	registerCertificateExpiryCollector(conf, reg)
+
 	return reg, reg
+}
+
+func registerCertificateExpiryCollector(conf *config.Configuration, reg *prometheus.Registry) {
+	var (
+		decisionSrvKS   keystore.KeyStore
+		proxySrvKS      keystore.KeyStore
+		managementSrvKS keystore.KeyStore
+		signerKS        keystore.KeyStore
+
+		decisionSrvKeyID   string
+		proxySrvKeyID      string
+		managementSrvKeyID string
+		signerKeyID        string
+	)
+
+	if conf.Serve.Decision.TLS != nil {
+		decisionSrvKS, _ = keystore.NewKeyStoreFromPEMFile(
+			conf.Serve.Decision.TLS.KeyStore.Path,
+			conf.Serve.Decision.TLS.KeyStore.Password,
+		)
+
+		decisionSrvKeyID = conf.Serve.Decision.TLS.KeyID
+	}
+
+	if conf.Serve.Proxy.TLS != nil {
+		proxySrvKS, _ = keystore.NewKeyStoreFromPEMFile(
+			conf.Serve.Proxy.TLS.KeyStore.Path,
+			conf.Serve.Proxy.TLS.KeyStore.Password,
+		)
+
+		proxySrvKeyID = conf.Serve.Proxy.TLS.KeyID
+	}
+
+	if conf.Serve.Management.TLS != nil {
+		managementSrvKS, _ = keystore.NewKeyStoreFromPEMFile(
+			conf.Serve.Management.TLS.KeyStore.Path,
+			conf.Serve.Management.TLS.KeyStore.Password,
+		)
+
+		managementSrvKeyID = conf.Serve.Management.TLS.KeyID
+	}
+
+	signerKS, _ = keystore.NewKeyStoreFromPEMFile(
+		conf.Signer.KeyStore.Path,
+		conf.Signer.KeyStore.Password,
+	)
+	signerKeyID = conf.Signer.KeyID
+
+	reg.MustRegister(NewCertificateExpirationCollector(
+		WithServiceKeyStore("decision", decisionSrvKS,
+			x.IfThenElse(len(decisionSrvKeyID) != 0, WithKeyID(decisionSrvKeyID), WithFirstEntry())),
+		WithServiceKeyStore("proxy", proxySrvKS,
+			x.IfThenElse(len(proxySrvKeyID) != 0, WithKeyID(proxySrvKeyID), WithFirstEntry())),
+		WithServiceKeyStore("management", managementSrvKS,
+			x.IfThenElse(len(managementSrvKeyID) != 0, WithKeyID(managementSrvKeyID), WithFirstEntry())),
+		WithServiceKeyStore("signer", signerKS,
+			x.IfThenElse(len(signerKeyID) != 0, WithKeyID(signerKeyID), WithFirstEntry())),
+		WithEndEntityMonitoringOnly(false),
+	))
 }
