@@ -6,6 +6,7 @@ import (
 	"crypto/rand"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"strings"
 	"testing"
 	"time"
 
@@ -19,7 +20,24 @@ import (
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
-func TestCertificateExpirationCollector(t *testing.T) { //nolint:maintidx
+func checkMetric(t *testing.T, metric *io_prometheus_client.Metric, service string, cert *x509.Certificate) {
+	assert.LessOrEqual(t, metric.GetGauge().GetValue()-time.Until(cert.NotAfter).Seconds(), 1.0)
+
+	labels := metric.GetLabel()
+	require.Len(t, labels, 5)
+	assert.Equal(t, "dns_names", labels[0].GetName())
+	assert.Equal(t, strings.Join(cert.DNSNames, ","), labels[0].GetValue())
+	assert.Equal(t, "issuer", labels[1].GetName())
+	assert.Equal(t, cert.Issuer.String(), labels[1].GetValue())
+	assert.Equal(t, "serial_nr", labels[2].GetName())
+	assert.Equal(t, cert.SerialNumber.String(), labels[2].GetValue())
+	assert.Equal(t, "service", labels[3].GetName())
+	assert.Equal(t, service, labels[3].GetValue())
+	assert.Equal(t, "subject", labels[4].GetName())
+	assert.Equal(t, cert.Subject.String(), labels[4].GetValue())
+}
+
+func TestCertificateExpirationCollector(t *testing.T) {
 	t.Parallel()
 
 	// Root CA
@@ -129,20 +147,8 @@ func TestCertificateExpirationCollector(t *testing.T) { //nolint:maintidx
 
 				values := metric.GetMetric()
 				require.Len(t, values, 1)
-				assert.LessOrEqual(t, 86400.0-values[0].GetGauge().GetValue(), 1.0)
 
-				labels := values[0].GetLabel()
-				require.Len(t, labels, 5)
-				assert.Equal(t, "dns_names", labels[0].GetName())
-				assert.Empty(t, labels[0].GetValue())
-				assert.Equal(t, "issuer", labels[1].GetName())
-				assert.Equal(t, "CN=Test Root CA 1,O=Test,C=EU", labels[1].GetValue())
-				assert.Equal(t, "serial_nr", labels[2].GetName())
-				assert.Equal(t, "1", labels[2].GetValue())
-				assert.Equal(t, "service", labels[3].GetName())
-				assert.Equal(t, "foo", labels[3].GetValue())
-				assert.Equal(t, "subject", labels[4].GetName())
-				assert.Equal(t, "CN=Test Root CA 1,O=Test,C=EU", labels[4].GetValue())
+				checkMetric(t, values[0], "foo", rootCA1.Certificate)
 			},
 		},
 		{
@@ -165,55 +171,11 @@ func TestCertificateExpirationCollector(t *testing.T) { //nolint:maintidx
 				require.Len(t, values, 3)
 
 				// first certificate in the chain
-				value := values[0]
-				assert.LessOrEqual(t, 3600.0-value.GetGauge().GetValue(), 1.0)
-
-				labels := value.GetLabel()
-				require.Len(t, labels, 5)
-				assert.Equal(t, "dns_names", labels[0].GetName())
-				assert.Empty(t, labels[0].GetValue())
-				assert.Equal(t, "issuer", labels[1].GetName())
-				assert.Equal(t, "CN=Test Int CA 1,O=Test,C=EU", labels[1].GetValue())
-				assert.Equal(t, "serial_nr", labels[2].GetName())
-				assert.Equal(t, "1", labels[2].GetValue())
-				assert.Equal(t, "service", labels[3].GetName())
-				assert.Equal(t, "foo", labels[3].GetValue())
-				assert.Equal(t, "subject", labels[4].GetName())
-				assert.Equal(t, "CN=Test EE 1,O=Test,C=EU", labels[4].GetValue())
-
+				checkMetric(t, values[0], "foo", ee1cert)
 				// second certificate in the chain
-				value = values[1]
-				assert.LessOrEqual(t, 43200.0-value.GetGauge().GetValue(), 1.0)
-
-				labels = value.GetLabel()
-				require.Len(t, labels, 5)
-				assert.Equal(t, "dns_names", labels[0].GetName())
-				assert.Empty(t, labels[0].GetValue())
-				assert.Equal(t, "issuer", labels[1].GetName())
-				assert.Equal(t, "CN=Test Root CA 1,O=Test,C=EU", labels[1].GetValue())
-				assert.Equal(t, "serial_nr", labels[2].GetName())
-				assert.Equal(t, "1", labels[2].GetValue())
-				assert.Equal(t, "service", labels[3].GetName())
-				assert.Equal(t, "foo", labels[3].GetValue())
-				assert.Equal(t, "subject", labels[4].GetName())
-				assert.Equal(t, "CN=Test Int CA 1,O=Test,C=EU", labels[4].GetValue())
-
+				checkMetric(t, values[1], "foo", intCA1Cert)
 				// third certificate in the chain
-				value = values[2]
-				assert.LessOrEqual(t, 86400.0-value.GetGauge().GetValue(), 1.0)
-
-				labels = value.GetLabel()
-				require.Len(t, labels, 5)
-				assert.Equal(t, "dns_names", labels[0].GetName())
-				assert.Empty(t, labels[0].GetValue())
-				assert.Equal(t, "issuer", labels[1].GetName())
-				assert.Equal(t, "CN=Test Root CA 1,O=Test,C=EU", labels[1].GetValue())
-				assert.Equal(t, "serial_nr", labels[2].GetName())
-				assert.Equal(t, "1", labels[2].GetValue())
-				assert.Equal(t, "service", labels[3].GetName())
-				assert.Equal(t, "foo", labels[3].GetValue())
-				assert.Equal(t, "subject", labels[4].GetName())
-				assert.Equal(t, "CN=Test Root CA 1,O=Test,C=EU", labels[4].GetValue())
+				checkMetric(t, values[2], "foo", rootCA1.Certificate)
 			},
 		},
 		{
@@ -236,55 +198,11 @@ func TestCertificateExpirationCollector(t *testing.T) { //nolint:maintidx
 				require.Len(t, values, 3)
 
 				// first certificate in the chain
-				value := values[0]
-				assert.LessOrEqual(t, 3600.0-value.GetGauge().GetValue(), 1.0)
-
-				labels := value.GetLabel()
-				require.Len(t, labels, 5)
-				assert.Equal(t, "dns_names", labels[0].GetName())
-				assert.Empty(t, labels[0].GetValue())
-				assert.Equal(t, "issuer", labels[1].GetName())
-				assert.Equal(t, "CN=Test Int CA 1,O=Test,C=EU", labels[1].GetValue())
-				assert.Equal(t, "serial_nr", labels[2].GetName())
-				assert.Equal(t, "2", labels[2].GetValue())
-				assert.Equal(t, "service", labels[3].GetName())
-				assert.Equal(t, "foo", labels[3].GetValue())
-				assert.Equal(t, "subject", labels[4].GetName())
-				assert.Equal(t, "CN=Test EE 2,O=Test,C=EU", labels[4].GetValue())
-
+				checkMetric(t, values[0], "foo", ee2cert)
 				// second certificate in the chain
-				value = values[1]
-				assert.LessOrEqual(t, 43200.0-value.GetGauge().GetValue(), 1.0)
-
-				labels = value.GetLabel()
-				require.Len(t, labels, 5)
-				assert.Equal(t, "dns_names", labels[0].GetName())
-				assert.Empty(t, labels[0].GetValue())
-				assert.Equal(t, "issuer", labels[1].GetName())
-				assert.Equal(t, "CN=Test Root CA 1,O=Test,C=EU", labels[1].GetValue())
-				assert.Equal(t, "serial_nr", labels[2].GetName())
-				assert.Equal(t, "1", labels[2].GetValue())
-				assert.Equal(t, "service", labels[3].GetName())
-				assert.Equal(t, "foo", labels[3].GetValue())
-				assert.Equal(t, "subject", labels[4].GetName())
-				assert.Equal(t, "CN=Test Int CA 1,O=Test,C=EU", labels[4].GetValue())
-
+				checkMetric(t, values[1], "foo", intCA1Cert)
 				// third certificate in the chain
-				value = values[2]
-				assert.LessOrEqual(t, 86400.0-value.GetGauge().GetValue(), 1.0)
-
-				labels = value.GetLabel()
-				require.Len(t, labels, 5)
-				assert.Equal(t, "dns_names", labels[0].GetName())
-				assert.Empty(t, labels[0].GetValue())
-				assert.Equal(t, "issuer", labels[1].GetName())
-				assert.Equal(t, "CN=Test Root CA 1,O=Test,C=EU", labels[1].GetValue())
-				assert.Equal(t, "serial_nr", labels[2].GetName())
-				assert.Equal(t, "1", labels[2].GetValue())
-				assert.Equal(t, "service", labels[3].GetName())
-				assert.Equal(t, "foo", labels[3].GetValue())
-				assert.Equal(t, "subject", labels[4].GetName())
-				assert.Equal(t, "CN=Test Root CA 1,O=Test,C=EU", labels[4].GetValue())
+				checkMetric(t, values[2], "foo", rootCA1.Certificate)
 			},
 		},
 		{
@@ -307,21 +225,7 @@ func TestCertificateExpirationCollector(t *testing.T) { //nolint:maintidx
 				require.Len(t, values, 1)
 
 				// first certificate in the chain
-				value := values[0]
-				assert.LessOrEqual(t, 3600.0-value.GetGauge().GetValue(), 1.0)
-
-				labels := value.GetLabel()
-				require.Len(t, labels, 5)
-				assert.Equal(t, "dns_names", labels[0].GetName())
-				assert.Empty(t, labels[0].GetValue())
-				assert.Equal(t, "issuer", labels[1].GetName())
-				assert.Equal(t, "CN=Test Int CA 1,O=Test,C=EU", labels[1].GetValue())
-				assert.Equal(t, "serial_nr", labels[2].GetName())
-				assert.Equal(t, "1", labels[2].GetValue())
-				assert.Equal(t, "service", labels[3].GetName())
-				assert.Equal(t, "foo", labels[3].GetValue())
-				assert.Equal(t, "subject", labels[4].GetName())
-				assert.Equal(t, "CN=Test EE 1,O=Test,C=EU", labels[4].GetValue())
+				checkMetric(t, values[0], "foo", ee1cert)
 			},
 		},
 		{
@@ -345,38 +249,9 @@ func TestCertificateExpirationCollector(t *testing.T) { //nolint:maintidx
 				require.Len(t, values, 2)
 
 				// service 1
-				value := values[0]
-				assert.LessOrEqual(t, 3600.0-value.GetGauge().GetValue(), 1.0)
-
-				labels := value.GetLabel()
-				require.Len(t, labels, 5)
-				assert.Equal(t, "dns_names", labels[0].GetName())
-				assert.Empty(t, labels[0].GetValue())
-				assert.Equal(t, "issuer", labels[1].GetName())
-				assert.Equal(t, "CN=Test Int CA 1,O=Test,C=EU", labels[1].GetValue())
-				assert.Equal(t, "serial_nr", labels[2].GetName())
-				assert.Equal(t, "1", labels[2].GetValue())
-				assert.Equal(t, "service", labels[3].GetName())
-				assert.Equal(t, "foo", labels[3].GetValue())
-				assert.Equal(t, "subject", labels[4].GetName())
-				assert.Equal(t, "CN=Test EE 1,O=Test,C=EU", labels[4].GetValue())
-
+				checkMetric(t, values[0], "foo", ee1cert)
 				// service 2
-				value = values[1]
-				assert.LessOrEqual(t, 3600.0-value.GetGauge().GetValue(), 1.0)
-
-				labels = value.GetLabel()
-				require.Len(t, labels, 5)
-				assert.Equal(t, "dns_names", labels[0].GetName())
-				assert.Empty(t, labels[0].GetValue())
-				assert.Equal(t, "issuer", labels[1].GetName())
-				assert.Equal(t, "CN=Test Int CA 1,O=Test,C=EU", labels[1].GetValue())
-				assert.Equal(t, "serial_nr", labels[2].GetName())
-				assert.Equal(t, "2", labels[2].GetValue())
-				assert.Equal(t, "service", labels[3].GetName())
-				assert.Equal(t, "bar", labels[3].GetValue())
-				assert.Equal(t, "subject", labels[4].GetName())
-				assert.Equal(t, "CN=Test EE 2,O=Test,C=EU", labels[4].GetValue())
+				checkMetric(t, values[1], "bar", ee2cert)
 			},
 		},
 		{
