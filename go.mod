@@ -46,7 +46,7 @@ require (
 	go.opentelemetry.io/otel/exporters/zipkin v1.11.2
 	go.opentelemetry.io/otel/sdk v1.11.2
 	go.opentelemetry.io/otel/trace v1.11.2
-	go.uber.org/fx v1.19.0
+	go.uber.org/fx v1.19.1
 	gocloud.dev v0.28.0
 	golang.org/x/exp v0.0.0-20221230185412-738e83a70c30
 	gopkg.in/square/go-jose.v2 v2.6.0
