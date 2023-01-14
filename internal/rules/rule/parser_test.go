@@ -14,7 +14,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package rulesetparser
+package rule
 
 import (
 	"bytes"
@@ -24,7 +24,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/rules/rule"
 )
 
 func TestParseRules(t *testing.T) {
@@ -34,13 +33,13 @@ func TestParseRules(t *testing.T) {
 		uc          string
 		contentType string
 		content     []byte
-		assert      func(t *testing.T, err error, rules []rule.Configuration)
+		assert      func(t *testing.T, err error, rules []Configuration)
 	}{
 		{
 			uc:          "unsupported content type and not empty contents",
 			contentType: "foobar",
 			content:     []byte(`foo: bar`),
-			assert: func(t *testing.T, err error, rules []rule.Configuration) {
+			assert: func(t *testing.T, err error, rules []Configuration) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -51,7 +50,7 @@ func TestParseRules(t *testing.T) {
 		{
 			uc:          "unsupported content type and empty contents",
 			contentType: "foobar",
-			assert: func(t *testing.T, err error, rules []rule.Configuration) {
+			assert: func(t *testing.T, err error, rules []Configuration) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -62,7 +61,7 @@ func TestParseRules(t *testing.T) {
 			uc:          "JSON content and not empty contents",
 			contentType: "application/json",
 			content:     []byte(`[{"id": "bar"}]`),
-			assert: func(t *testing.T, err error, rules []rule.Configuration) {
+			assert: func(t *testing.T, err error, rules []Configuration) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -71,7 +70,7 @@ func TestParseRules(t *testing.T) {
 		{
 			uc:          "JSON content and empty contents",
 			contentType: "application/json",
-			assert: func(t *testing.T, err error, rules []rule.Configuration) {
+			assert: func(t *testing.T, err error, rules []Configuration) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -82,7 +81,7 @@ func TestParseRules(t *testing.T) {
 			uc:          "YAML content and not empty contents",
 			contentType: "application/yaml",
 			content:     []byte(`- id: bar`),
-			assert: func(t *testing.T, err error, rules []rule.Configuration) {
+			assert: func(t *testing.T, err error, rules []Configuration) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -91,7 +90,7 @@ func TestParseRules(t *testing.T) {
 		{
 			uc:          "YAML content and empty contents",
 			contentType: "application/yaml",
-			assert: func(t *testing.T, err error, rules []rule.Configuration) {
+			assert: func(t *testing.T, err error, rules []Configuration) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -105,6 +104,54 @@ func TestParseRules(t *testing.T) {
 
 			// THEN
 			tc.assert(t, err, rules)
+		})
+	}
+}
+
+func TestParseYAML(t *testing.T) {
+	t.Parallel()
+
+	for _, tc := range []struct {
+		uc     string
+		conf   []byte
+		assert func(t *testing.T, err error, ruleSet []Configuration)
+	}{
+		{
+			uc: "empty rule set spec",
+			assert: func(t *testing.T, err error, ruleSet []Configuration) {
+				t.Helper()
+
+				require.NoError(t, err)
+				require.Empty(t, ruleSet)
+			},
+		},
+		{
+			uc:   "invalid rule set spec",
+			conf: []byte(`- foo: bar`),
+			assert: func(t *testing.T, err error, ruleSet []Configuration) {
+				t.Helper()
+
+				require.Error(t, err)
+			},
+		},
+		{
+			uc:   "valid rule set spec",
+			conf: []byte(`- id: bar`),
+			assert: func(t *testing.T, err error, ruleSet []Configuration) {
+				t.Helper()
+
+				require.NoError(t, err)
+				require.Len(t, ruleSet, 1)
+				assert.Equal(t, "bar", ruleSet[0].ID)
+			},
+		},
+	} {
+		t.Run(tc.uc, func(t *testing.T) {
+			// WHEN
+			ruleSet, err := parseYAML(bytes.NewBuffer(tc.conf))
+
+			// THEN
+			tc.assert(t, err, ruleSet)
 		})
 	}
 }

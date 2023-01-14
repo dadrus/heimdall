@@ -27,7 +27,7 @@ import (
 	"github.com/dadrus/heimdall/internal/endpoint"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/provider/pathprefix"
-	"github.com/dadrus/heimdall/internal/rules/provider/rulesetparser"
+	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
@@ -72,7 +72,7 @@ func (e *ruleSetEndpoint) FetchRuleSet(ctx context.Context) (RuleSet, error) {
 
 	md := sha256.New()
 
-	contents, err := rulesetparser.ParseRules(resp.Header.Get("Content-Type"), io.TeeReader(resp.Body, md))
+	contents, err := rule.ParseRules(resp.Header.Get("Content-Type"), io.TeeReader(resp.Body, md))
 	if err != nil {
 		return RuleSet{}, errorchain.NewWithMessage(heimdall.ErrInternal, "failed to decode received rule set").
 			CausedBy(err)

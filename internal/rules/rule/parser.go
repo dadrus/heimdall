@@ -14,7 +14,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package rulesetparser
+package rule
 
 import (
 	"errors"
@@ -22,13 +22,33 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"github.com/dadrus/heimdall/internal/rules/rule"
+	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
-func parseYAML(reader io.Reader) ([]rule.Configuration, error) {
+func ParseRules(contentType string, reader io.Reader) ([]Configuration, error) {
+	switch contentType {
+	case "application/json":
+		fallthrough
+	case "application/yaml":
+		return parseYAML(reader)
+	default:
+		// check if the contents are empty. in that case nothing needs to be decoded anyway
+		b := make([]byte, 1)
+		if _, err := reader.Read(b); err != nil && errors.Is(err, io.EOF) {
+			return []Configuration{}, nil
+		}
+
+		// otherwise
+		return nil, errorchain.NewWithMessagef(heimdall.ErrInternal,
+			"unsupported '%s' content type", contentType)
+	}
+}
+
+func parseYAML(reader io.Reader) ([]Configuration, error) {
 	var (
 		rawConfig []map[string]any
-		rcs       []rule.Configuration
+		rcs       []Configuration
 	)
 
 	dec := yaml.NewDecoder(reader)
@@ -40,7 +60,7 @@ func parseYAML(reader io.Reader) ([]rule.Configuration, error) {
 		return nil, err
 	}
 
-	err := rule.DecodeConfig(rawConfig, &rcs)
+	err := DecodeConfig(rawConfig, &rcs)
 
 	return rcs, err
 }

@@ -31,7 +31,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/provider/pathprefix"
-	"github.com/dadrus/heimdall/internal/rules/provider/rulesetparser"
+	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
@@ -119,7 +119,7 @@ func (e *ruleSetEndpoint) readRuleSet(ctx context.Context, bucket *blob.Bucket, 
 
 	defer reader.Close()
 
-	contents, err := rulesetparser.ParseRules(attrs.ContentType, reader)
+	contents, err := rule.ParseRules(attrs.ContentType, reader)
 	if err != nil {
 		return RuleSet{}, errorchain.NewWithMessage(heimdall.ErrInternal, "failed to decode received rule set").
 			CausedBy(err)
