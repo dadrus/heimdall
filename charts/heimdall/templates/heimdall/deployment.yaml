@@ -88,6 +88,13 @@ spec:
             - name: {{ include "heimdall.name" . }}-config-volume
               mountPath: /etc/heimdall
               readOnly: true
+          {{- if .Values.env }}
+          env:
+            {{- range $key, $val := .Values.env }}
+              - name: {{ $key }}
+                value: {{ $val }}
+            {{- end }}
+          {{- end }}
           livenessProbe:
             httpGet:
               path: /.well-known/health

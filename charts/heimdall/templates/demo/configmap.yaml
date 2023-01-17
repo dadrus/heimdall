@@ -25,6 +25,7 @@ metadata:
 data:
   heimdall.yaml: |
     log:
+      format: gelf
       level: info
 
     rules:
