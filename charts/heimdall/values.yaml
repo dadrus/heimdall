@@ -118,11 +118,6 @@ service:
     port: 4457
     # Service port name
     name: management
-  profiling:
-    # Service port
-    port: 4458
-    # Service port name
-    name: profiling
 
 # Configures arbitrary environment variables for the deployment
 env: {}
