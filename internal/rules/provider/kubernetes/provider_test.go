@@ -156,7 +156,7 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 								},
 								Spec: v1alpha1.RuleSetSpec{
 									AuthClassName: "bar",
-									Rules: []event2.Configuration{
+									Rules: []event2.RuleConfiguration{
 										{
 											ID: "test",
 											RuleMatcher: event2.Matcher{
@@ -262,7 +262,7 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 								},
 								Spec: v1alpha1.RuleSetSpec{
 									AuthClassName: "bar",
-									Rules: []event2.Configuration{
+									Rules: []event2.RuleConfiguration{
 										{
 											ID: "test",
 											RuleMatcher: event2.Matcher{
@@ -381,7 +381,7 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 								},
 								Spec: v1alpha1.RuleSetSpec{
 									AuthClassName: "bar",
-									Rules: []event2.Configuration{
+									Rules: []event2.RuleConfiguration{
 										{
 											ID: "test",
 											RuleMatcher: event2.Matcher{
@@ -513,7 +513,7 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 								},
 								Spec: v1alpha1.RuleSetSpec{
 									AuthClassName: "bar",
-									Rules: []event2.Configuration{
+									Rules: []event2.RuleConfiguration{
 										{
 											ID: "test",
 											RuleMatcher: event2.Matcher{
@@ -553,7 +553,7 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 							ruleSet := evt.Object.(*v1alpha1.RuleSet) // nolint:forcetypeassert
 							ruleSet.Spec = v1alpha1.RuleSetSpec{
 								AuthClassName: "bar",
-								Rules: []event2.Configuration{
+								Rules: []event2.RuleConfiguration{
 									{
 										ID: "test",
 										RuleMatcher: event2.Matcher{

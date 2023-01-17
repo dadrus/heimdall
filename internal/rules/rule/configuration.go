@@ -16,9 +16,37 @@
 
 package rule
 
-import "github.com/dadrus/heimdall/internal/config"
+import (
+	"strings"
 
-type Configuration struct {
+	"github.com/dadrus/heimdall/internal/config"
+	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/x/errorchain"
+)
+
+type RuleSetConfiguration struct {
+	Version string              `json:"version" yaml:"version"`
+	Name    string              `json:"name" yaml:"name"`
+	Rules   []RuleConfiguration `json:"rules" yaml:"rules"`
+}
+
+func (rs RuleSetConfiguration) VerifyPathPrefix(prefix string) error {
+	for _, rule := range rs.Rules {
+		if strings.HasPrefix(rule.RuleMatcher.URL, "/") &&
+			// only path is specified
+			!strings.HasPrefix(rule.RuleMatcher.URL, prefix) ||
+			// patterns are specified before the path
+			// There should be a better way to check it
+			!strings.Contains(rule.RuleMatcher.URL, prefix) {
+			return errorchain.NewWithMessage(heimdall.ErrConfiguration,
+				"path prefix validation failed for rule ID=%s")
+		}
+	}
+
+	return nil
+}
+
+type RuleConfiguration struct {
 	ID           string                   `json:"id" yaml:"id"`
 	RuleMatcher  Matcher                  `json:"match" yaml:"match"`
 	Upstream     string                   `json:"upstream" yaml:"upstream"`
@@ -27,7 +55,7 @@ type Configuration struct {
 	ErrorHandler []config.MechanismConfig `json:"on_error" yaml:"on_error"`
 }
 
-func (in *Configuration) DeepCopyInto(out *Configuration) {
+func (in *RuleConfiguration) DeepCopyInto(out *RuleConfiguration) {
 	*out = *in
 	out.RuleMatcher = in.RuleMatcher
 
@@ -57,12 +85,12 @@ func (in *Configuration) DeepCopyInto(out *Configuration) {
 	}
 }
 
-func (in *Configuration) DeepCopy() *Configuration {
+func (in *RuleConfiguration) DeepCopy() *RuleConfiguration {
 	if in == nil {
 		return nil
 	}
 
-	out := new(Configuration)
+	out := new(RuleConfiguration)
 	in.DeepCopyInto(out)
 
 	return out

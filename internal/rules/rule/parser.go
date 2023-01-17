@@ -26,7 +26,9 @@ import (
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
-func ParseRules(contentType string, reader io.Reader) ([]Configuration, error) {
+var ErrEmptyRuleSet = errors.New("empty rule set")
+
+func ParseRules(contentType string, reader io.Reader) (*RuleSetConfiguration, error) {
 	switch contentType {
 	case "application/json":
 		fallthrough
@@ -36,7 +38,7 @@ func ParseRules(contentType string, reader io.Reader) ([]Configuration, error) {
 		// check if the contents are empty. in that case nothing needs to be decoded anyway
 		b := make([]byte, 1)
 		if _, err := reader.Read(b); err != nil && errors.Is(err, io.EOF) {
-			return []Configuration{}, nil
+			return nil, ErrEmptyRuleSet
 		}
 
 		// otherwise
@@ -45,22 +47,22 @@ func ParseRules(contentType string, reader io.Reader) ([]Configuration, error) {
 	}
 }
 
-func parseYAML(reader io.Reader) ([]Configuration, error) {
+func parseYAML(reader io.Reader) (*RuleSetConfiguration, error) {
 	var (
-		rawConfig []map[string]any
-		rcs       []Configuration
+		rawConfig map[string]any
+		ruleSet   RuleSetConfiguration
 	)
 
 	dec := yaml.NewDecoder(reader)
 	if err := dec.Decode(&rawConfig); err != nil {
 		if errors.Is(err, io.EOF) {
-			return rcs, nil
+			return nil, ErrEmptyRuleSet
 		}
 
 		return nil, err
 	}
 
-	err := DecodeConfig(rawConfig, &rcs)
+	err := DecodeConfig(rawConfig, &ruleSet)
 
-	return rcs, err
+	return &ruleSet, err
 }

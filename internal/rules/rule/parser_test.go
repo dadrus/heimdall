@@ -33,13 +33,13 @@ func TestParseRules(t *testing.T) {
 		uc          string
 		contentType string
 		content     []byte
-		assert      func(t *testing.T, err error, rules []Configuration)
+		assert      func(t *testing.T, err error, ruleSet *RuleSetConfiguration)
 	}{
 		{
 			uc:          "unsupported content type and not empty contents",
 			contentType: "foobar",
 			content:     []byte(`foo: bar`),
-			assert: func(t *testing.T, err error, rules []Configuration) {
+			assert: func(t *testing.T, err error, ruleSet *RuleSetConfiguration) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -50,51 +50,68 @@ func TestParseRules(t *testing.T) {
 		{
 			uc:          "unsupported content type and empty contents",
 			contentType: "foobar",
-			assert: func(t *testing.T, err error, rules []Configuration) {
+			assert: func(t *testing.T, err error, ruleSet *RuleSetConfiguration) {
 				t.Helper()
 
-				require.NoError(t, err)
-				require.Empty(t, rules)
+				require.ErrorIs(t, err, ErrEmptyRuleSet)
+				require.Nil(t, ruleSet)
 			},
 		},
 		{
-			uc:          "JSON content and not empty contents",
+			uc:          "JSON content type and not empty contents",
 			contentType: "application/json",
-			content:     []byte(`[{"id": "bar"}]`),
-			assert: func(t *testing.T, err error, rules []Configuration) {
+			content: []byte(`{
+"version": "1",
+"name": "foo",
+"rules": [{"id": "bar"}]
+}`),
+			assert: func(t *testing.T, err error, ruleSet *RuleSetConfiguration) {
 				t.Helper()
 
 				require.NoError(t, err)
+				require.NotNil(t, ruleSet)
+				assert.Equal(t, "1", ruleSet.Version)
+				assert.Equal(t, "foo", ruleSet.Name)
+				assert.Len(t, ruleSet.Rules, 1)
 			},
 		},
 		{
-			uc:          "JSON content and empty contents",
+			uc:          "JSON content type and empty contents",
 			contentType: "application/json",
-			assert: func(t *testing.T, err error, rules []Configuration) {
+			assert: func(t *testing.T, err error, ruleSet *RuleSetConfiguration) {
 				t.Helper()
 
-				require.NoError(t, err)
-				require.Empty(t, rules)
+				require.ErrorIs(t, err, ErrEmptyRuleSet)
+				require.Nil(t, ruleSet)
 			},
 		},
 		{
-			uc:          "YAML content and not empty contents",
+			uc:          "YAML content type and not empty contents",
 			contentType: "application/yaml",
-			content:     []byte(`- id: bar`),
-			assert: func(t *testing.T, err error, rules []Configuration) {
+			content: []byte(`
+version: "1"
+name: foo
+rules:
+- id: bar
+`),
+			assert: func(t *testing.T, err error, ruleSet *RuleSetConfiguration) {
 				t.Helper()
 
 				require.NoError(t, err)
+				require.NotNil(t, ruleSet)
+				assert.Equal(t, "1", ruleSet.Version)
+				assert.Equal(t, "foo", ruleSet.Name)
+				assert.Len(t, ruleSet.Rules, 1)
 			},
 		},
 		{
 			uc:          "YAML content and empty contents",
 			contentType: "application/yaml",
-			assert: func(t *testing.T, err error, rules []Configuration) {
+			assert: func(t *testing.T, err error, ruleSet *RuleSetConfiguration) {
 				t.Helper()
 
-				require.NoError(t, err)
-				require.Empty(t, rules)
+				require.ErrorIs(t, err, ErrEmptyRuleSet)
+				require.Nil(t, ruleSet)
 			},
 		},
 	} {
@@ -114,35 +131,42 @@ func TestParseYAML(t *testing.T) {
 	for _, tc := range []struct {
 		uc     string
 		conf   []byte
-		assert func(t *testing.T, err error, ruleSet []Configuration)
+		assert func(t *testing.T, err error, ruleSet *RuleSetConfiguration)
 	}{
 		{
 			uc: "empty rule set spec",
-			assert: func(t *testing.T, err error, ruleSet []Configuration) {
+			assert: func(t *testing.T, err error, ruleSet *RuleSetConfiguration) {
 				t.Helper()
 
-				require.NoError(t, err)
-				require.Empty(t, ruleSet)
+				require.ErrorIs(t, err, ErrEmptyRuleSet)
 			},
 		},
 		{
 			uc:   "invalid rule set spec",
-			conf: []byte(`- foo: bar`),
-			assert: func(t *testing.T, err error, ruleSet []Configuration) {
+			conf: []byte(`foo: bar`),
+			assert: func(t *testing.T, err error, ruleSet *RuleSetConfiguration) {
 				t.Helper()
 
 				require.Error(t, err)
 			},
 		},
 		{
-			uc:   "valid rule set spec",
-			conf: []byte(`- id: bar`),
-			assert: func(t *testing.T, err error, ruleSet []Configuration) {
+			uc: "valid rule set spec",
+			conf: []byte(`
+version: "1"
+name: foo
+rules:
+- id: bar
+`),
+			assert: func(t *testing.T, err error, ruleSet *RuleSetConfiguration) {
 				t.Helper()
 
 				require.NoError(t, err)
-				require.Len(t, ruleSet, 1)
-				assert.Equal(t, "bar", ruleSet[0].ID)
+				require.NotNil(t, ruleSet)
+				assert.Equal(t, "1", ruleSet.Version)
+				assert.Equal(t, "foo", ruleSet.Name)
+				assert.Len(t, ruleSet.Rules, 1)
+				assert.Equal(t, ruleSet.Rules[0].ID, "bar")
 			},
 		},
 	} {

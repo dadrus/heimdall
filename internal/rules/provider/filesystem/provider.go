@@ -19,6 +19,7 @@ package filesystem
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 
@@ -227,8 +228,8 @@ func (p *provider) notifyRuleSetCreated(evt fsnotify.Event) {
 	}
 
 	p.ruleSetChanged(event.RuleSetChangedEvent{
-		Src:        "file_system:" + file,
-		RuleSet:    ruleSet,
+		Src:        fmt.Sprintf("%s:%s:%s", "file_system", file, ruleSet.Name),
+		RuleSet:    ruleSet.Rules,
 		ChangeType: event.Create,
 	})
 }
@@ -300,8 +301,8 @@ func (p *provider) loadInitialRuleSet() error {
 		}
 
 		p.ruleSetChanged(event.RuleSetChangedEvent{
-			Src:        "file_system:" + src,
-			RuleSet:    ruleSet,
+			Src:        fmt.Sprintf("%s:%s:%s", "file_system", src, ruleSet.Name),
+			RuleSet:    ruleSet.Rules,
 			ChangeType: event.Create,
 		})
 	}

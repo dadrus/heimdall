@@ -30,7 +30,6 @@ import (
 	"gocloud.dev/gcerrors"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/rules/provider/pathprefix"
 	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
@@ -38,9 +37,9 @@ import (
 var errEmptyRuleSet = errors.New("empty rule set")
 
 type ruleSetEndpoint struct {
-	URL             *url.URL              `mapstructure:"url"`
-	Prefix          string                `mapstructure:"prefix"`
-	RulesPathPrefix pathprefix.PathPrefix `mapstructure:"rule_path_match_prefix"`
+	URL             *url.URL `mapstructure:"url"`
+	Prefix          string   `mapstructure:"prefix"`
+	RulesPathPrefix string   `mapstructure:"rule_path_match_prefix"`
 }
 
 func (e *ruleSetEndpoint) ID() string {
@@ -125,16 +124,12 @@ func (e *ruleSetEndpoint) readRuleSet(ctx context.Context, bucket *blob.Bucket, 
 			CausedBy(err)
 	}
 
-	if len(contents) == 0 {
-		return RuleSet{}, errEmptyRuleSet
-	}
-
-	if err = e.RulesPathPrefix.Verify(contents); err != nil {
+	if err = contents.VerifyPathPrefix(e.RulesPathPrefix); err != nil {
 		return RuleSet{}, err
 	}
 
 	return RuleSet{
-		Rules:   contents,
+		Rules:   contents.Rules,
 		Hash:    attrs.MD5,
 		Key:     fmt.Sprintf("%s@%s", key, e.ID()),
 		ModTime: attrs.ModTime,

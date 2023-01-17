@@ -265,7 +265,7 @@ func TestRepositoryRuleSetLifecycleManagement(t *testing.T) {
 				{
 					Src:        "test",
 					ChangeType: event.Create,
-					RuleSet: []rule.Configuration{
+					RuleSet: []rule.RuleConfiguration{
 						{
 							ID: "rule:foo",
 							RuleMatcher: rule.Matcher{
@@ -290,7 +290,7 @@ func TestRepositoryRuleSetLifecycleManagement(t *testing.T) {
 				t.Helper()
 
 				factory.On("CreateRule", "test", mock.MatchedBy(
-					func(conf rule.Configuration) bool {
+					func(conf rule.RuleConfiguration) bool {
 						assert.Equal(t, "rule:foo", conf.ID)
 						assert.Equal(t, "http://foo.bar/<**>", conf.RuleMatcher.URL)
 						assert.Equal(t, "regex", conf.RuleMatcher.Strategy)
@@ -329,7 +329,7 @@ func TestRepositoryRuleSetLifecycleManagement(t *testing.T) {
 				{
 					Src:        "test1",
 					ChangeType: event.Create,
-					RuleSet: []rule.Configuration{
+					RuleSet: []rule.RuleConfiguration{
 						{
 							ID:          "rule:bar",
 							RuleMatcher: rule.Matcher{URL: "http://bar.foo/<**>"},
@@ -340,7 +340,7 @@ func TestRepositoryRuleSetLifecycleManagement(t *testing.T) {
 				{
 					Src:        "test2",
 					ChangeType: event.Create,
-					RuleSet: []rule.Configuration{
+					RuleSet: []rule.RuleConfiguration{
 						{
 							ID:          "rule:foo",
 							RuleMatcher: rule.Matcher{URL: "http://foo.bar/<**>"},
@@ -372,7 +372,7 @@ func TestRepositoryRuleSetLifecycleManagement(t *testing.T) {
 				{
 					Src:        "test1",
 					ChangeType: event.Create,
-					RuleSet: []rule.Configuration{
+					RuleSet: []rule.RuleConfiguration{
 						{
 							ID:          "rule:bar",
 							RuleMatcher: rule.Matcher{URL: "http://bar.foo/<**>"},
@@ -383,7 +383,7 @@ func TestRepositoryRuleSetLifecycleManagement(t *testing.T) {
 				{
 					Src:        "test2",
 					ChangeType: event.Create,
-					RuleSet: []rule.Configuration{
+					RuleSet: []rule.RuleConfiguration{
 						{
 							ID:          "rule:foo",
 							RuleMatcher: rule.Matcher{URL: "http://foo.bar/<**>"},
@@ -418,7 +418,7 @@ func TestRepositoryRuleSetLifecycleManagement(t *testing.T) {
 				{
 					Src:        "test",
 					ChangeType: event.Create,
-					RuleSet: []rule.Configuration{
+					RuleSet: []rule.RuleConfiguration{
 						{
 							ID:          "rule:bar",
 							RuleMatcher: rule.Matcher{URL: "http://bar.foo/<**>"},

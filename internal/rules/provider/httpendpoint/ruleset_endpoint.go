@@ -26,7 +26,6 @@ import (
 
 	"github.com/dadrus/heimdall/internal/endpoint"
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/rules/provider/pathprefix"
 	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
@@ -34,7 +33,7 @@ import (
 type ruleSetEndpoint struct {
 	endpoint.Endpoint `mapstructure:",squash"`
 
-	RulesPathPrefix pathprefix.PathPrefix `mapstructure:"rule_path_match_prefix"`
+	RulesPathPrefix string `mapstructure:"rule_path_match_prefix"`
 }
 
 func (e *ruleSetEndpoint) ID() string { return e.URL }
@@ -78,12 +77,12 @@ func (e *ruleSetEndpoint) FetchRuleSet(ctx context.Context) (RuleSet, error) {
 			CausedBy(err)
 	}
 
-	if err = e.RulesPathPrefix.Verify(contents); err != nil {
+	if err = contents.VerifyPathPrefix(e.RulesPathPrefix); err != nil {
 		return RuleSet{}, err
 	}
 
 	return RuleSet{
-		Rules: contents,
+		Rules: contents.Rules,
 		Hash:  md.Sum(nil),
 	}, nil
 }

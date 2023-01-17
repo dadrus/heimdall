@@ -108,7 +108,11 @@ func TestStartProvider(t *testing.T) {
 			createProvider: func(t *testing.T, file *os.File, dir string) *provider {
 				t.Helper()
 
-				_, err := file.Write([]byte(`- id: foo`))
+				_, err := file.Write([]byte(`
+version: 0.5.0-alpha
+rules:
+- id: foo
+`))
 				require.NoError(t, err)
 
 				return &provider{
@@ -159,7 +163,11 @@ func TestStartProvider(t *testing.T) {
 				tmpFile, err := os.CreateTemp(dir, "test-rule-")
 				require.NoError(t, err)
 
-				_, err = tmpFile.Write([]byte(`- id: foo`))
+				_, err = tmpFile.Write([]byte(`
+version: 0.5.0-alpha
+rules:
+- id: foo
+`))
 				require.NoError(t, err)
 
 				return &provider{
@@ -233,7 +241,11 @@ func TestStartProvider(t *testing.T) {
 
 				time.Sleep(200 * time.Millisecond)
 
-				_, err = tmpFile.Write([]byte(`- id: foo`))
+				_, err = tmpFile.Write([]byte(`
+version: 0.5.0-alpha
+rules:
+- id: foo
+`))
 				require.NoError(t, err)
 
 				time.Sleep(200 * time.Millisecond)
@@ -284,7 +296,11 @@ func TestStartProvider(t *testing.T) {
 			writeContents: func(t *testing.T, file *os.File, dir string) {
 				t.Helper()
 
-				_, err := file.Write([]byte(`- id: foo`))
+				_, err := file.Write([]byte(`
+version: 0.5.0-alpha
+rules:
+- id: foo
+`))
 				require.NoError(t, err)
 
 				time.Sleep(200 * time.Millisecond)

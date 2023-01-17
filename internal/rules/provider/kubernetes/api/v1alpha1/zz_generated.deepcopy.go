@@ -56,7 +56,7 @@ func (in *RuleSetSpec) DeepCopyInto(out *RuleSetSpec) {
 	*out = *in
 	if in.Rules != nil {
 		in, out := &in.Rules, &out.Rules
-		*out = make([]rule.Configuration, len(*in))
+		*out = make([]rule.RuleConfiguration, len(*in))
 		for i := range *in {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}

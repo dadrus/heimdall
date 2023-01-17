@@ -23,7 +23,7 @@ import (
 )
 
 type RuleSet struct {
-	Rules   []rule.Configuration
+	Rules   []rule.RuleConfiguration
 	Hash    []byte
 	Key     string
 	ModTime time.Time
