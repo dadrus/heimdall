@@ -119,6 +119,9 @@ service:
     # Service port name
     name: management
 
+# Configures arbitrary environment variables for the deployment
+env: {}
+
 # heimdall config defaults
 # DO NOT OVERRIDE the values here. Use heimdall config yaml file instead!
 # If you create your own values.yaml file, copy the below contents to it as well.
