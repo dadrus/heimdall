@@ -42,7 +42,7 @@ $ helm repo update
 
 == Installing the Chart
 
-This chart expects a https://dadrus.github.io/heimdall/dev/docs/configuration/reference/configuration_reference/[heimdall configuration file] with authentication, authorization and so on mechanisms, required for your particular setup. This file can be passed by using the `-f heimdall.yaml` flag during the installation.
+This chart supports setting of any environment variables for the deployment, e.g. to provide OTEL configuration. All environment variables must be configured under an `env` key. E.g. `helm install my-release --set env.MY_ENV=env-value dadrus/heimdall`
 
 If you need to override the name of the heimdall resources such as the deployment or services, the traditional `nameOverride` and `fullnameOverride` properties are supported.
 
@@ -390,4 +390,16 @@ a| `service.management.name`
 
 The name of the port exposed by the k8s Service created for heimdall's management endpoint.
 a| `management`
+
+a| `env`
+
+Environment variables, which should be made available to the heimdall deployment. E.g.
+
+```.yaml
+env:
+  OTEL_EXPORTER_OTLP_TRACES_PROTOCOL=grpc
+  OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=http://tempo.tempo.svc.cluster.local:4317
+```
+
+a| `{}` (empty map)
 |===
