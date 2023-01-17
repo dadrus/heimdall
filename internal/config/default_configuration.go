@@ -30,6 +30,7 @@ const (
 	defaultProxyServicePort      = 4455
 	defaultDecisionServicePort   = 4456
 	defaultManagementServicePort = 4457
+	defaultProfilingServicePort  = 4458
 	defaultPrometheusServicePort = 10250
 )
 
@@ -74,6 +75,10 @@ var defaultConfig = Configuration{
 			Port:        defaultPrometheusServicePort,
 			MetricsPath: "/metrics",
 		},
+	},
+	Profiling: ProfilingConfig{
+		Enabled: false,
+		Port:    defaultProfilingServicePort,
 	},
 	Signer: SignerConfig{
 		Name: "heimdall",
