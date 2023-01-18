@@ -9,7 +9,9 @@ menu:
     parent: "Observability"
 ---
 
-As of today, heimdall supports https://grafana.com/oss/prometheus/[Prometheus] style metrics retrieval via a dedicated service, which is enabled by default and provides available metrics on `127.0.0.1:10250/metrics` endpoint.
+Heimdall exposes https://grafana.com/oss/prometheus/[Prometheus] style metrics on `127.0.0.1:10250/metrics` endpoint for analysis and visualization purposes.
+
+== Configuration
 
 Configuration for this service can be adjusted in the `metrics` property of heimdall's configuration by making use of the following properties.
 
