@@ -24,8 +24,6 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-	trace2 "go.opentelemetry.io/otel/sdk/trace"
-	"go.opentelemetry.io/otel/trace"
 )
 
 type metricsHandler struct {
@@ -64,7 +62,7 @@ func New(opts ...Option) fiber.Handler {
 			1.0, 2.0, 5.0, 10.0, 15.0, // 1, 2, 5, 10, 20s
 		},
 	},
-		[]string{"status_code", "method", "path", "parent_id", "trace_id", "span_id"},
+		[]string{"status_code", "method", "path"},
 	)
 
 	gauge := promauto.With(options.registerer).NewGaugeVec(prometheus.GaugeOpts{
@@ -84,10 +82,7 @@ func New(opts ...Option) fiber.Handler {
 }
 
 func (h *metricsHandler) observeRequest(ctx *fiber.Ctx) error {
-	const (
-		MagicNumber = 1e9
-		NoValue     = "none"
-	)
+	const MagicNumber = 1e9
 
 	start := time.Now()
 
@@ -121,24 +116,8 @@ func (h *metricsHandler) observeRequest(ctx *fiber.Ctx) error {
 	statusCode := strconv.Itoa(status)
 	h.reqCounter.WithLabelValues(statusCode, method, path).Inc()
 
-	span := trace.SpanFromContext(ctx.UserContext())
-	spanCtx := span.SpanContext()
-
-	traceID := NoValue
-	spanID := NoValue
-	parentID := NoValue
-
-	if spanCtx.IsValid() {
-		if roSpan, ok := span.(trace2.ReadOnlySpan); ok && roSpan.Parent().IsValid() {
-			parentID = roSpan.Parent().SpanID().String()
-		}
-
-		traceID = spanCtx.TraceID().String()
-		spanID = spanCtx.SpanID().String()
-	}
-
 	elapsed := float64(time.Since(start).Nanoseconds()) / MagicNumber
-	h.reqHistogram.WithLabelValues(statusCode, method, path, parentID, traceID, spanID).Observe(elapsed)
+	h.reqHistogram.WithLabelValues(statusCode, method, path).Observe(elapsed)
 
 	return err
 }
