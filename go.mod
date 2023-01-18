@@ -22,7 +22,7 @@ require (
 	github.com/knadh/koanf v1.4.5
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/ory/ladon v1.2.0
-	github.com/pkg/profile v1.2.1
+	github.com/pkg/profile v1.7.0
 	github.com/pquerna/cachecontrol v0.1.0
 	github.com/prometheus/client_golang v1.14.0
 	github.com/prometheus/client_model v0.3.0
