@@ -32,6 +32,8 @@ const (
 	defaultManagementServicePort = 4457
 	defaultProfilingServicePort  = 4458
 	defaultPrometheusServicePort = 10250
+
+	loopbackIP = "127.0.0.1"
 )
 
 // nolint: gochecknoglobals
@@ -79,6 +81,7 @@ var defaultConfig = Configuration{
 	Profiling: ProfilingConfig{
 		Enabled: false,
 		Port:    defaultProfilingServicePort,
+		Host:    loopbackIP,
 	},
 	Signer: SignerConfig{
 		Name: "heimdall",
