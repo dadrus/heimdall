@@ -40,6 +40,12 @@ tags:
       
       This functionality is only available on heimdall's **proxy port**.
 
+  - name: Profiling
+    description: |
+      Provides runtime profiling information, like CPU profile, memory usage, program counter, etc.
+      
+      This information is only available on heimdall's **profiling port**.
+
 x-tagGroups:
   - name: Management
     tags:
@@ -50,6 +56,9 @@ x-tagGroups:
   - name: Proxy
     tags:
       - Proxy
+  - name: Profiling
+    tags:
+      - Profiling
 
 components:
   schemas:
@@ -161,6 +170,111 @@ components:
       description: Internal Server Error. Returned if the service run in a bad condition and cannot serve the request.
 
 paths:
+  /debug/pprof:
+    servers:
+      - url: http://profiling.heimdall.local
+        description: Profiling Service
+    get:
+      summary: Get available profiles
+      description: Lists the available profiles.
+      tags:
+        - Profiling
+      operationId: pprof_list
+      responses:
+        '200':
+          description: List of available profiles
+          content:
+            text/html:
+              schema:
+                type: string
+
+  /debug/pprof/{profile_name}:
+    servers:
+      - url: http://profiling.heimdall.local
+        description: Profiling Service
+    get:
+      summary: Get profiling samples for a specific profile.
+      description: Exposes requested profiling information.
+      tags:
+        - Profiling
+      operationId: pprof_get
+      parameters:
+        - name: profile_name
+          summary: Denotes the required profiling information.
+          description: |
+            Defines the profiling information to retrieve. Following profiles are available:
+            
+            * `allocs` - A sampling of all past memory allocations.
+            * `block` - Stack traces that led to blocking on synchronization primitives.
+            * `cmdline` - The command line invocation of the current program, with arguments separated by NUL bytes.
+            * `goroutine` - Stack traces of all current goroutines.
+            * `heap` - A sampling of memory allocations of live objects.
+            * `mutex` - Stack traces of holders of contended mutexes.
+            * `profile` - CPU profile. Profiling lasts for duration specified in `seconds` parameter, or for 30 seconds if not specified
+            * `symbol` - Looks up the program counters listed in the request, responding with a table mapping program counters to function names.
+            * `threadcreate` - Stack traces that led to the creation of new OS threads.
+            * `trace` - Execution trace in binary form. Tracing lasts for duration specified in `seconds` parameter, or for 1 second if not specified.
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: seconds
+          summary: Sampling duration in seconds.profile duration exceeds
+          description: |
+            Specifies the duration of sampling. Ignored, if the profile does not support sampling.
+            
+            If `profile` profile is used and this parameter is not specified, defaults to 30s.
+            
+            If `trace` profile is used and this parameter is not specified, defaults to 1s.
+          in: query
+          required: false
+          schema:
+            type: int
+        - name: gc
+          summary: Whether GC should be invoked for the `heap` profile.
+          description: |
+            Specifies for the `heap` profile whether the GC should be invoked before the sampling should be done.
+            Any value > 0 means GC should be invoked.
+          in: query
+          required: false
+          schema:
+            type: int
+        - name: debug
+          summary: Render profile data as text.
+          description: |
+            Specifies whether the profile information should be rendered as text and not in the `profile.proto` format.
+            Any value > 0 means profile information should be rendered as text.
+          in: query
+          required: false
+          schema:
+            type: intprofile duration exceeds
+      responses:
+        '200':
+          description: |
+            The requested profiling information. If the `debug` query parameter was set to a value > 0 the 
+            MIME type of the response is `text/html`, otherwise it is `application/octet-stream`
+          headers:
+            X-Content-Type-Options:
+              description: Set to `nosniff` value.
+              schema:
+                type: string
+            Content-Disposition:
+              description: |
+                Set to `attachment; filename="<used profile name>"`
+              schema:
+                type: string
+          content:
+            text/html:
+              schema:
+                type: string
+            application/octet-stream:
+              schema:
+                type: string
+        '400':
+          description: Bad Request. Returned if the `seconds` parameter would exceed the server's write timeout.
+        '404':
+          description: Not Found. Returned if requested profile is not supported/known.
+
   /.well-known/health:
     servers:
       - url: http://heimdall.management.local
