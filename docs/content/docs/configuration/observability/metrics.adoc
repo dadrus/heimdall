@@ -32,6 +32,8 @@ metrics:
 +
 By making use of this property, you can specify the TCP/IP address on which heimdall should listen for connections from client applications. The entry `0.0.0.0` allows listening for all IPv4 addresses. Defaults to `127.0.0.1` - the loopback interface to avoid unwanted exposure of metrics.
 +
+NOTE: If you operate heimdall in a container, you should set this property to a value, which would allow your APM system to scrape this information.
++
 .Configure heimdall to allow listening on any TCP/IP interfaces.
 ====
 [source, yaml]
