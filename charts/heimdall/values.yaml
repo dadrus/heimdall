@@ -51,9 +51,11 @@ deployment:
 
   # This configuration is applied directly to the pods and not higher objects
   pod:
-    securityContext: {}
-      # E.g.:
-      # fsGroup: 2000
+    securityContext:
+      fsGroup: 10001
+      runAsUser: 10001
+      runAsGroup: 10001
+      runAsNonRoot: true
 
     # Remove the curly braces after 'annotations:' if you want to specify annotations
     annotations: {}
@@ -63,8 +65,7 @@ deployment:
       drop:
         - ALL
     readOnlyRootFilesystem: true
-    runAsNonRoot: true
-    runAsUser: 1000
+    allowPrivilegeEscalation: false
 
   # Remove the curly braces after 'resources:' if you want to specify resources
   resources: {}
@@ -125,8 +126,6 @@ env: {}
 # heimdall config defaults
 # DO NOT OVERRIDE the values here. Use heimdall config yaml file instead!
 # If you create your own values.yaml file, copy the below contents to it as well.
-log:
-  format: gelf
 serve:
   decision:
     port: 4456
