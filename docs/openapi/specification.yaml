@@ -186,13 +186,14 @@ components:
 
 paths:
   /metrics:
-    description: Provides metrics
     servers:
       - url: http://metrics.heimdall.local
         description: Metrics Service
     get:
       summary: Get available Prometheus style metrics
-      description: Lists the available metrics.
+      description: |
+        Lists the available metrics. Please note that the `/metrics` path is configurable and may differ 
+        depending on the setup
       tags:
         - Metrics
       operationId: metrics_get
