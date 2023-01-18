@@ -18,6 +18,9 @@ package profiling
 
 import (
 	"context"
+	"net/http"
+	_ "net/http/pprof" //nolint:gosec
+	"time"
 
 	"github.com/rs/zerolog"
 	"go.uber.org/fx"
@@ -42,15 +45,17 @@ func registerHooks(args hooksArgs) {
 		return
 	}
 
-	app := newApp()
+	server := &http.Server{
+		Addr:              args.Config.Profiling.Address(),
+		ReadHeaderTimeout: 5 * time.Second, //nolint:gomnd
+	}
 
 	args.Lifecycle.Append(
 		fx.Hook{
 			OnStart: func(ctx context.Context) error {
 				go func() {
-					addr := args.Config.Profiling.Address()
-					args.Logger.Info().Str("_address", addr).Msg("Profiling service starts listening")
-					if err := app.Listen(addr); err != nil {
+					args.Logger.Info().Str("_address", server.Addr).Msg("Profiling service starts listening")
+					if err := server.ListenAndServe(); err != nil {
 						args.Logger.Fatal().Err(err).Msg("Could not start Profiling service")
 					}
 				}()
@@ -60,7 +65,7 @@ func registerHooks(args hooksArgs) {
 			OnStop: func(ctx context.Context) error {
 				args.Logger.Info().Msg("Tearing down Profiling service")
 
-				return app.Shutdown()
+				return server.Shutdown(ctx)
 			},
 		},
 	)
