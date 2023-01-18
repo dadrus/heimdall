@@ -51,7 +51,7 @@ func newHandler(args handlerArgs) (*Handler, error) {
 	handler := &Handler{}
 
 	handler.registerRoutes(
-		args.App.Group(args.Config.Metrics.Prometheus.MetricsPath),
+		args.App.Group(args.Config.Metrics.MetricsPath),
 		args.Logger,
 		promhttp.InstrumentMetricHandler(
 			args.Registerer,

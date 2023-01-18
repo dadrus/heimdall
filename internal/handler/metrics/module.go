@@ -44,21 +44,27 @@ type hooksArgs struct {
 }
 
 func registerHooks(args hooksArgs) {
+	if !args.Config.Metrics.Enabled {
+		args.Logger.Info().Msg("Metrics service disabled")
+
+		return
+	}
+
 	args.Lifecycle.Append(
 		fx.Hook{
 			OnStart: func(ctx context.Context) error {
 				go func() {
-					addr := args.Config.Metrics.Prometheus.Address()
-					args.Logger.Info().Str("_address", addr).Msg("Prometheus service starts listening")
+					addr := args.Config.Metrics.Address()
+					args.Logger.Info().Str("_address", addr).Msg("Metrics service starts listening")
 					if err := args.App.Listen(addr); err != nil {
-						args.Logger.Fatal().Err(err).Msg("Could not start Prometheus service")
+						args.Logger.Fatal().Err(err).Msg("Could not start Metrics service")
 					}
 				}()
 
 				return nil
 			},
 			OnStop: func(ctx context.Context) error {
-				args.Logger.Info().Msg("Tearing down Prometheus service")
+				args.Logger.Info().Msg("Tearing down Metrics service")
 
 				return args.App.Shutdown()
 			},
