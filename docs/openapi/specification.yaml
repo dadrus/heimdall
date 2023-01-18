@@ -200,7 +200,6 @@ paths:
       operationId: pprof_get
       parameters:
         - name: profile_name
-          summary: Denotes the required profiling information.
           description: |
             Defines the profiling information to retrieve. Following profiles are available:
             
@@ -219,7 +218,6 @@ paths:
           schema:
             type: string
         - name: seconds
-          summary: Sampling duration in seconds.profile duration exceeds
           description: |
             Specifies the duration of sampling. Ignored, if the profile does not support sampling.
             
@@ -229,25 +227,23 @@ paths:
           in: query
           required: false
           schema:
-            type: int
+            type: integer
         - name: gc
-          summary: Whether GC should be invoked for the `heap` profile.
           description: |
             Specifies for the `heap` profile whether the GC should be invoked before the sampling should be done.
             Any value > 0 means GC should be invoked.
           in: query
           required: false
           schema:
-            type: int
+            type: integer
         - name: debug
-          summary: Render profile data as text.
           description: |
             Specifies whether the profile information should be rendered as text and not in the `profile.proto` format.
             Any value > 0 means profile information should be rendered as text.
           in: query
           required: false
           schema:
-            type: intprofile duration exceeds
+            type: integer
       responses:
         '200':
           description: |
