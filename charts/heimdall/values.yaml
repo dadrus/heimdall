@@ -138,7 +138,6 @@ metrics:
     port: 10250
     metrics_path: "/metrics"
 profiling:
-  enabled: false
   port: 4458
 
 
