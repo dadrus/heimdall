@@ -44,6 +44,11 @@ data:
       {{- toYaml . | nindent 6 }}
     {{- end }}
 
+    {{- with .Values.profiling }}
+    profiling:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
+
     {{- with .Values.signer }}
     signer:
       {{- toYaml . | nindent 6 }}

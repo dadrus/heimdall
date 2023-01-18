@@ -24,9 +24,39 @@ metadata:
 {{ include "heimdall.labels" . | indent 4 }}
 data:
   heimdall.yaml: |
+    {{- with .Values.serve }}
+    serve:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
+
+    {{- with .Values.log }}
     log:
-      format: gelf
+      {{- toYaml . | nindent 6 }}
+    {{- else }}
+    log:
       level: info
+      format: gelf
+    {{- end }}
+
+    {{- with .Values.metrics }}
+    metrics:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
+
+    {{- with .Values.tracing }}
+    tracing:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
+
+    {{- with .Values.profiling }}
+    profiling:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
+
+    {{- with .Values.signer }}
+    signer:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
 
     rules:
       mechanisms:
