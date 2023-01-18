@@ -469,3 +469,21 @@ The following table provide detailed information about these
 |===
 
 NOTE: More details about Prometheus metric types can be found https://prometheus.io/docs/concepts/metric_types/[here].
+
+== Runtime Profiling in Heimdall
+
+If enabled, heimdall exposes a `/debug/pprof` HTTP endpoint on port `4458` (See also link:{{< relref "/docs/configuration/observability/profiling.adoc" >}}[Runtime Profiling Configuration]) on which runtime profiling data in the `profile.proto` format (also known as `pprof` format) can be consumed by APM tools, like https://github.com/google/pprof[Google's pprof], https://grafana.com/oss/phlare/[Grafana Phlare], https://pyroscope.io/[Pyroscope] and many more for visualization purposes. Following information is available:
+
+
+* `allocs` - A sampling of all past memory allocations.
+* `block` - Stack traces that led to blocking on synchronization primitives.
+* `cmdline` - The command line invocation of the current program, with arguments separated by NUL bytes.
+* `goroutine` - Stack traces of all current goroutines.
+* `heap` - A sampling of memory allocations of live objects.
+* `mutex` - Stack traces of holders of contended mutexes.
+* `profile` - Cpu profile. Profiling lasts for duration specified in `seconds` parameter, or for 30 seconds if not specified
+* `symbol` - Looks up the program counters listed in the request, responding with a table mapping program counters to function names.
+* `threadcreate` - Stack traces that led to the creation of new OS threads.
+* `trace` - Execution trace in binary form. Tracing lasts for duration specified in `seconds` parameter, or for 1 second if not specified.
+
+See also the link:{{< relref "/openapi/_index.adoc#tag/Profiling" >}}[API] documentation for the documentation of the actual API.

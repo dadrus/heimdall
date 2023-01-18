@@ -23,6 +23,7 @@ import (
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/handler/management"
 	"github.com/dadrus/heimdall/internal/handler/metrics"
+	"github.com/dadrus/heimdall/internal/handler/profiling"
 	"github.com/dadrus/heimdall/internal/logging"
 	"github.com/dadrus/heimdall/internal/prometheus"
 	"github.com/dadrus/heimdall/internal/rules"
@@ -42,4 +43,5 @@ var Module = fx.Options( //nolint:gochecknoglobals
 	rules.Module,
 	management.Module,
 	metrics.Module,
+	profiling.Module,
 )

@@ -43,6 +43,10 @@ spec:
         prometheus.io/scrape: "true"
         prometheus.io/path: "{{ .Values.metrics.prometheus.metrics_path }}"
         prometheus.io/port: "{{ .Values.metrics.prometheus.port }}"
+        {{- if .Values.profiling.enabled }}
+        phlare.grafana.com/scrape: "true"
+        phlare.grafana.com/port: "{{ .Values.profiling.port }}"
+        {{- end }}
         {{- with .Values.deployment.pod.annotations }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
@@ -84,6 +88,11 @@ spec:
             - name: http-metrics
               protocol: TCP
               containerPort: {{ .Values.metrics.prometheus.port }}
+            {{- if .Values.profiling.enabled }}
+            - name: http-profiling
+              protocol: TCP
+              containerPort: {{ .Values.profiling.port }}
+            {{- end }}
           volumeMounts:
             - name: {{ include "heimdall.name" . }}-config-volume
               mountPath: /etc/heimdall

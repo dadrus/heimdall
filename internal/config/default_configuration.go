@@ -30,7 +30,10 @@ const (
 	defaultProxyServicePort      = 4455
 	defaultDecisionServicePort   = 4456
 	defaultManagementServicePort = 4457
+	defaultProfilingServicePort  = 4458
 	defaultPrometheusServicePort = 10250
+
+	loopbackIP = "127.0.0.1"
 )
 
 // nolint: gochecknoglobals
@@ -74,6 +77,11 @@ var defaultConfig = Configuration{
 			Port:        defaultPrometheusServicePort,
 			MetricsPath: "/metrics",
 		},
+	},
+	Profiling: ProfilingConfig{
+		Enabled: false,
+		Port:    defaultProfilingServicePort,
+		Host:    loopbackIP,
 	},
 	Signer: SignerConfig{
 		Name: "heimdall",

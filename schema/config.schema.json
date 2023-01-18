@@ -1888,6 +1888,32 @@
         }
       }
     },
+    "profiling": {
+      "description": "Configures CPU & memory profiling options",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "description": "Whether profiling is enabled or not",
+          "type": "boolean",
+          "default": false
+        },
+        "port": {
+          "description": "The port to listen on.",
+          "type": "integer",
+          "default": 4458
+        },
+        "host": {
+          "description": "The network interface to listen on. Leave empty to listen on all interfaces.",
+          "type": "string",
+          "default": "",
+          "examples": [
+            "localhost",
+            "127.0.0.1"
+          ]
+        }
+      }
+    },
     "signer": {
       "description": "Configures signer options for issued JWTs.",
       "type": "object",

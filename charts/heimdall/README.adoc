@@ -46,6 +46,8 @@ This chart supports setting of any environment variables for the deployment, e.g
 
 If you need to override the name of the heimdall resources such as the deployment or services, the traditional `nameOverride` and `fullnameOverride` properties are supported.
 
+If you want to have detailed CPU & memory profiling information, you can enable the profiling service and let your APM scrape the corresponding pprof data. For [Phlare](https://grafana.com/docs/phlare), the corresponding annotations are set if the profiling service is enabled.
+
 This chart does also support a demo installation, which can be enabled by using the `--set demo.enabled=true` flag during the installation. For the demo installation there is no need to provide a configuration file (actually, you shall not provide it, as it will break the demo setup), as some simple mechanisms are already part of that installation. In addition, a demo rule set, as well as a simple echo service will be installed. If you're using an NGINX Ingress Controller, the chart will do the required integration, so you can directly see heimdall in action, by e.g. using curl:
 
 * Send requests to a "public" (unprotected) endpoint
@@ -68,7 +70,6 @@ $ curl -v -H "Host: demo-app" <you cluster ip and port>/heimdall-demo/anonymous
 ----
 $ curl -v -H "Host: demo-app" <you cluster ip and port>/heimdall-demo/foo
 ----
-
 
 === Installing the CRD
 

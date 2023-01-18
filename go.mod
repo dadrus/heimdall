@@ -22,6 +22,7 @@ require (
 	github.com/knadh/koanf v1.4.5
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/ory/ladon v1.2.0
+	github.com/pkg/profile v1.2.1
 	github.com/pquerna/cachecontrol v0.1.0
 	github.com/prometheus/client_golang v1.14.0
 	github.com/prometheus/client_model v0.3.0
@@ -102,7 +103,6 @@ require (
 	github.com/go-logr/logr v1.2.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
-	github.com/golang-jwt/jwt v3.2.2+incompatible // indirect
 	github.com/golang-jwt/jwt/v4 v4.4.3 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/protobuf v1.5.2 // indirect

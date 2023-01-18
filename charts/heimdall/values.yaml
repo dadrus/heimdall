@@ -51,9 +51,11 @@ deployment:
 
   # This configuration is applied directly to the pods and not higher objects
   pod:
-    securityContext: {}
-      # E.g.:
-      # fsGroup: 2000
+    securityContext:
+      fsGroup: 10001
+      runAsUser: 10001
+      runAsGroup: 10001
+      runAsNonRoot: true
 
     # Remove the curly braces after 'annotations:' if you want to specify annotations
     annotations: {}
@@ -63,8 +65,7 @@ deployment:
       drop:
         - ALL
     readOnlyRootFilesystem: true
-    runAsNonRoot: true
-    runAsUser: 1000
+    allowPrivilegeEscalation: false
 
   # Remove the curly braces after 'resources:' if you want to specify resources
   resources: {}
@@ -136,4 +137,9 @@ metrics:
   prometheus:
     port: 10250
     metrics_path: "/metrics"
+profiling:
+  port: 4458
+  host: 0.0.0.0 # to enable scraping of profiling information by other services.
+
+
 
