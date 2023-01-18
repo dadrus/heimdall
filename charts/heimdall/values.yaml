@@ -139,6 +139,7 @@ metrics:
     metrics_path: "/metrics"
 profiling:
   port: 4458
+  host: 0.0.0.0 # to enable scraping of profiling information by other services.
 
 
 
