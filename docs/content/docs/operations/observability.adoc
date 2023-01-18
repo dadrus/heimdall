@@ -485,3 +485,5 @@ If enabled, heimdall exposes a `/debug/pprof` HTTP endpoint on port `4458` (See 
 * `symbol` - Looks up the program counters listed in the request, responding with a table mapping program counters to function names.
 * `threadcreate` - Stack traces that led to the creation of new OS threads.
 * `trace` - Execution trace in binary form. Tracing lasts for duration specified in `seconds` parameter, or for 1 second if not specified.
+
+See also the link:{{< relref "/openapi/_index.adoc#tag/Profiling" >}}[API] documentation for the documentation of the actual API.
