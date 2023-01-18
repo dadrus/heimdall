@@ -230,7 +230,7 @@ If your environment supports OpenTelemetry and usage of defaults is ok, most pro
 
 == Metrics in Heimdall
 
-By default, heimdall exposes a `/metrics` HTTP endpoint on port `10250` (See also link:{{< relref "/docs/configuration/observability/metrics.adoc" >}}[Metrics Configuration]) for usage with https://grafana.com/oss/prometheus/[Prometheus], which provides following metrics:
+By default, heimdall exposes https://grafana.com/oss/prometheus/[Prometheus] style metrics on the `/metrics` HTTP endpoint on port `10250` (See also link:{{< relref "/docs/configuration/observability/metrics.adoc" >}}[Metrics Configuration]) which comprise the following information:
 
 * Process information, like CPU, memory, file descriptor usage and start time
 * Go runtime information, including details about GC, number of goroutines and OS threats
