@@ -73,10 +73,10 @@ var defaultConfig = Configuration{
 		SpanProcessorType: SpanProcessorBatch,
 	},
 	Metrics: MetricsConfig{
-		Prometheus: PrometheusConfig{
-			Port:        defaultPrometheusServicePort,
-			MetricsPath: "/metrics",
-		},
+		Enabled:     true,
+		Port:        defaultPrometheusServicePort,
+		Host:        loopbackIP,
+		MetricsPath: "/metrics",
 	},
 	Profiling: ProfilingConfig{
 		Enabled: false,
