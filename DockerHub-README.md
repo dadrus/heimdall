@@ -62,7 +62,7 @@ You should now see similar output to the following snippet:
 > Accept: */*
 >
 * Mark bundle as not supporting multiuse
-< HTTP/1.1 202 Accepted
+< HTTP/1.1 200 OK
 < Server: Heimdall Decision API
 < Date: Sat, 25 Jun 2022 14:10:16 GMT
 < Content-Length: 0
@@ -83,7 +83,7 @@ What did you actually do? ;)
 * You've created a very simple configuration with a default rule, which instructs heimdall to create a JSON Web Token (JWT) with the 'sub' claim set to 'anonymous' for every request on every URL for the HTTP methods GET and POST. You've seen the resulting JWT in the snipped above.
 * You've started heimdall in the decision operation mode
 * And sent an HTTP GET request to an imaginary `foobar` endpoint. This is also what an API-Gateway will do before forwarding the received request to an upstream's `foobar` endpoint.
-* Heimdall answered with an HTTP `202 Accepted` response and set the expected `Authorization` header, which the API-Gateway would forward to the upstream service together with the original request.
+* Heimdall answered with an HTTP `200 OK` response and set the expected `Authorization` header, which the API-Gateway would forward to the upstream service together with the original request.
 
 ## Run heimdall in Proxy operation mode
 

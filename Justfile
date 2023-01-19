@@ -4,6 +4,9 @@ default:
 check-licenses:
   go-licenses check --include_tests --disallowed_types=forbidden,restricted,reciprocal,permissive,unknown --ignore=github.com/instana/go-otel-exporter .
 
+lint-api:
+  redocly lint
+
 lint-code:
   golangci-lint run
 
@@ -13,14 +16,14 @@ lint-dockerfile:
 
 lint-helmchart:
   helm lint ./charts/heimdall
-  helm template --set demo.enable=true ./charts/heimdall > /tmp/decision-demo.yaml
-  helm template --set operationMode=proxy --set demo.enable=true ./charts/heimdall > /tmp/proxy-demo.yaml
+  helm template --set demo.enabled=true ./charts/heimdall > /tmp/decision-demo.yaml
+  helm template --set operationMode=proxy --set demo.enabled=true ./charts/heimdall > /tmp/proxy-demo.yaml
   kubeconform --skip RuleSet -kubernetes-version 1.23.0 /tmp/decision-demo.yaml
   kubeconform --skip RuleSet -kubernetes-version 1.23.0 /tmp/proxy-demo.yaml
   rm /tmp/decision-demo.yaml
   rm /tmp/proxy-demo.yaml
 
-lint: check-licenses lint-code lint-dockerfile lint-helmchart
+lint: check-licenses lint-api lint-code lint-dockerfile lint-helmchart
 
 dependencies:
   go mod tidy

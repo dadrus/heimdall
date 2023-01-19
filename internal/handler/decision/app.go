@@ -1,4 +1,4 @@
-// Copyright 2022 Dimitrij Drus <dadrus@gmx.de>
+// Copyright 2023 Dimitrij Drus <dadrus@gmx.de>
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -68,10 +68,14 @@ func newApp(args appArgs) *fiber.App {
 	app.Use(recover.New(recover.Config{EnableStackTrace: true}))
 	app.Use(tracingmiddleware.New(
 		tracingmiddleware.WithTracer(otel.GetTracerProvider().Tracer("github.com/dadrus/heimdall/decision"))))
-	app.Use(prometheusmiddleware.New(
-		prometheusmiddleware.WithServiceName("decision"),
-		prometheusmiddleware.WithRegisterer(args.Registerer),
-	))
+
+	if args.Config.Metrics.Enabled {
+		app.Use(prometheusmiddleware.New(
+			prometheusmiddleware.WithServiceName("decision"),
+			prometheusmiddleware.WithRegisterer(args.Registerer),
+		))
+	}
+
 	app.Use(accesslogmiddleware.New(args.Logger))
 	app.Use(loggermiddlerware.New(args.Logger))
 

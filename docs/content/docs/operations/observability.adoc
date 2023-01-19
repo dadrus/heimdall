@@ -230,12 +230,12 @@ If your environment supports OpenTelemetry and usage of defaults is ok, most pro
 
 == Metrics in Heimdall
 
-By default, heimdall exposes a `/metrics` HTTP endpoint on port `10250` (See also link:{{< relref "/docs/configuration/observability/metrics.adoc" >}}[Metrics Configuration]) for usage with https://grafana.com/oss/prometheus/[Prometheus], which provides following metrics:
+By default, heimdall exposes https://grafana.com/oss/prometheus/[Prometheus] style metrics on the `127.0.0.1:10250/metrics` HTTP endpoint (See also link:{{< relref "/docs/configuration/observability/metrics.adoc" >}}[Metrics Configuration]) which comprise the following information:
 
 * Process information, like CPU, memory, file descriptor usage and start time
 * Go runtime information, including details about GC, number of goroutines and OS threats
 * Information about the metrics endpoint itself, including the number of internal errors encountered while gathering the metrics, number of current inflight and overall scrapes done.
-* Information about the decision and proxy requests handled, including the total amount and duration of http requests by status code, method and path, as well as information about requests in progress. If tracing information is available, labels about `parent_id`, `trace_id` and `span_id` are set for histogram metrics.
+* Information about the decision and proxy requests handled, including the total amount and duration of http requests by status code, method and path, as well as information about requests in progress.
 * Information about expiry for configured certificates.
 
 The following table provide detailed information about these
@@ -469,3 +469,21 @@ The following table provide detailed information about these
 |===
 
 NOTE: More details about Prometheus metric types can be found https://prometheus.io/docs/concepts/metric_types/[here].
+
+== Runtime Profiling in Heimdall
+
+If enabled, heimdall exposes a `/debug/pprof` HTTP endpoint on port `10251` (See also link:{{< relref "/docs/configuration/observability/profiling.adoc" >}}[Runtime Profiling Configuration]) on which runtime profiling data in the `profile.proto` format (also known as `pprof` format) can be consumed by APM tools, like https://github.com/google/pprof[Google's pprof], https://grafana.com/oss/phlare/[Grafana Phlare], https://pyroscope.io/[Pyroscope] and many more for visualization purposes. Following information is available:
+
+
+* `allocs` - A sampling of all past memory allocations.
+* `block` - Stack traces that led to blocking on synchronization primitives.
+* `cmdline` - The command line invocation of the current program, with arguments separated by NUL bytes.
+* `goroutine` - Stack traces of all current goroutines.
+* `heap` - A sampling of memory allocations of live objects.
+* `mutex` - Stack traces of holders of contended mutexes.
+* `profile` - Cpu profile. Profiling lasts for duration specified in `seconds` parameter, or for 30 seconds if not specified
+* `symbol` - Looks up the program counters listed in the request, responding with a table mapping program counters to function names.
+* `threadcreate` - Stack traces that led to the creation of new OS threads.
+* `trace` - Execution trace in binary form. Tracing lasts for duration specified in `seconds` parameter, or for 1 second if not specified.
+
+See also the link:{{< relref "/openapi/_index.adoc#tag/Profiling" >}}[API] documentation for the documentation of the actual API.

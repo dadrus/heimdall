@@ -9,23 +9,37 @@ menu:
     parent: "Observability"
 ---
 
-As of today, heimdall only supports https://grafana.com/oss/prometheus/[Prometheus] as metrics backend, which is also enabled by default by exposing available metrics on `0.0.0.0:10250/metrics` endpoint.
+Heimdall exposes https://grafana.com/oss/prometheus/[Prometheus] style metrics on `127.0.0.1:10250/metrics` endpoint for analysis and visualization purposes.
 
-== Prometheus
+== Configuration
 
-Configuration for Prometheus can be adjusted in the `prometheus` property, which lives in the `metrics` property of heimdall's configuration and supports following properties.
+Configuration for this service can be adjusted in the `metrics` property of heimdall's configuration by making use of the following properties.
 
-* *`host`*: _string_ (optional)
+* *`enabled`*: _boolean_ (optional)
 +
-By making use of this property, you can specify the TCP/IP address on which heimdall should listen for connections from client applications. The entry `0.0.0.0` allows listening for all IPv4 addresses. `0.0.0.0` is also the default setting.
+By making use of this property, you can configure heimdall to enable or disable the metrics service. Defaults to `true` (metrics exposure is enabled).
 +
-.Configure heimdall to allow only local TCP/IP “loopback” connections to be made.
+.Disabling metrics.
 ====
 [source, yaml]
 ----
 metrics:
-  prometheus:
-    host: 127.0.0.1
+  enabled: false
+----
+====
+
+* *`host`*: _string_ (optional)
++
+By making use of this property, you can specify the TCP/IP address on which heimdall should listen for connections from client applications. The entry `0.0.0.0` allows listening for all IPv4 addresses. Defaults to `127.0.0.1` - the loopback interface to avoid unwanted exposure of metrics.
++
+NOTE: If you operate heimdall in a container, you should set this property to a value, which would allow your APM system to scrape this information.
++
+.Configure heimdall to allow listening on any TCP/IP interfaces.
+====
+[source, yaml]
+----
+metrics:
+  host: 0.0.0.0
 ----
 ====
 
@@ -38,8 +52,7 @@ By making use of this property, you can specify the TCP port the heimdall should
 [source, yaml]
 ----
 metrics:
-  prometheus:
-    port: 9999
+  port: 9999
 ----
 ====
 
@@ -52,7 +65,6 @@ By making use of this property, you can specify the path under which prometheus 
 [source, yaml]
 ----
 metrics:
-  prometheus:
-    metrics_path: /prometheus
+  metrics_path: /prometheus
 ----
 ====

@@ -9,7 +9,9 @@
       "description": "Key store holding the keys and certificates",
       "type": "object",
       "additionalProperties": false,
-      "required": ["path"],
+      "required": [
+        "path"
+      ],
       "properties": {
         "path": {
           "description": "The path to the key store in PEM format",
@@ -329,37 +331,6 @@
         }
       }
     },
-    "prometheusConfig": {
-      "title": "Prometheus scraping endpoint",
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "port": {
-          "description": "The port to listen on.",
-          "type": "integer",
-          "default": 9000
-        },
-        "host": {
-          "description": "The network interface to listen on. Leave empty to listen on all interfaces.",
-          "type": "string",
-          "default": "",
-          "examples": [
-            "localhost",
-            "127.0.0.1"
-          ]
-        },
-        "metrics_path": {
-          "description": "The path to provide metrics on",
-          "type": "string",
-          "default": "/metrics"
-        },
-        "collapse_request_paths": {
-          "description": "When set to true the request label will include just the first segment of the request path",
-          "type": "boolean",
-          "default": true
-        }
-      }
-    },
     "subjectConfiguration": {
       "description": "Configuration of where to get subject information/attributes from",
       "type": "object",
@@ -422,7 +393,9 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["expression"],
+        "required": [
+          "expression"
+        ],
         "properties": {
           "expression": {
             "description": "The actual expression",
@@ -1633,7 +1606,9 @@
           "additionalItems": false,
           "items": {
             "type": "object",
-            "required": ["url"],
+            "required": [
+              "url"
+            ],
             "additionalProperties": false,
             "properties": {
               "url": {
@@ -1855,15 +1830,33 @@
       }
     },
     "metrics": {
-      "description": "Configures metrics options",
+      "description": "Configures the metrics endpoint",
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "prometheus"
-      ],
       "properties": {
-        "prometheus": {
-          "$ref": "#/definitions/prometheusConfig"
+        "enabled": {
+          "description": "Whether exposure of metrics is enabled or not",
+          "type": "boolean",
+          "default": true
+        },
+        "port": {
+          "description": "The port to listen on.",
+          "type": "integer",
+          "default": 10250
+        },
+        "host": {
+          "description": "The network interface to listen on. Leave empty to listen on all interfaces. Defaults to the 'loopback' interface",
+          "type": "string",
+          "default": "127.0.0.1",
+          "examples": [
+            "localhost",
+            "0.0.0.0"
+          ]
+        },
+        "metrics_path": {
+          "description": "The path to provide metrics on",
+          "type": "string",
+          "default": "/metrics"
         }
       }
     },
@@ -1888,6 +1881,32 @@
         }
       }
     },
+    "profiling": {
+      "description": "Configures CPU & memory profiling options",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "description": "Whether profiling is enabled or not",
+          "type": "boolean",
+          "default": false
+        },
+        "port": {
+          "description": "The port to listen on.",
+          "type": "integer",
+          "default": 10251
+        },
+        "host": {
+          "description": "The network interface to listen on. Leave empty to listen on all interfaces.",
+          "type": "string",
+          "default": "",
+          "examples": [
+            "localhost",
+            "127.0.0.1"
+          ]
+        }
+      }
+    },
     "signer": {
       "description": "Configures signer options for issued JWTs.",
       "type": "object",
@@ -1907,7 +1926,6 @@
         }
       }
     },
-
     "rules": {
       "description": "Rules to use",
       "type": "object",

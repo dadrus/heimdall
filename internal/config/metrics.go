@@ -16,6 +16,13 @@
 
 package config
 
+import "fmt"
+
 type MetricsConfig struct {
-	Prometheus PrometheusConfig `koanf:"prometheus"`
+	Enabled     bool   `koanf:"enabled"`
+	Host        string `koanf:"host"`
+	Port        int    `koanf:"port"`
+	MetricsPath string `koanf:"metrics_path"`
 }
+
+func (c MetricsConfig) Address() string { return fmt.Sprintf("%s:%d", c.Host, c.Port) }

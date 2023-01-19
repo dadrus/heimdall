@@ -1,4 +1,4 @@
-// Copyright 2022 Dimitrij Drus <dadrus@gmx.de>
+// Copyright 2023 Dimitrij Drus <dadrus@gmx.de>
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,14 +16,12 @@
 
 package config
 
-import (
-	"fmt"
-)
+import "fmt"
 
-type PrometheusConfig struct {
-	Host        string `koanf:"host"`
-	Port        int    `koanf:"port"`
-	MetricsPath string `koanf:"metrics_path"`
+type ProfilingConfig struct {
+	Enabled bool   `koanf:"enabled"`
+	Host    string `koanf:"host"`
+	Port    int    `koanf:"port"`
 }
 
-func (c PrometheusConfig) Address() string { return fmt.Sprintf("%s:%d", c.Host, c.Port) }
+func (c ProfilingConfig) Address() string { return fmt.Sprintf("%s:%d", c.Host, c.Port) }
