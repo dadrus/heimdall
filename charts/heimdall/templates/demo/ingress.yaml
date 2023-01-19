@@ -14,7 +14,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-{{ if .Values.demo.enable -}}
+{{ if .Values.demo.enabled -}}
 {{- $service := "unset" -}}
 {{- $port := "unset" -}}
   {{- if eq .Values.operationMode "decision" -}}
