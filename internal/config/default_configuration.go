@@ -1,4 +1,4 @@
-// Copyright 2022 Dimitrij Drus <dadrus@gmx.de>
+// Copyright 2023 Dimitrij Drus <dadrus@gmx.de>
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -31,7 +31,7 @@ const (
 	defaultDecisionServicePort   = 4456
 	defaultManagementServicePort = 4457
 	defaultProfilingServicePort  = 4458
-	defaultPrometheusServicePort = 10250
+	defaultMetricsServicePort    = 10250
 
 	loopbackIP = "127.0.0.1"
 )
@@ -74,7 +74,7 @@ var defaultConfig = Configuration{
 	},
 	Metrics: MetricsConfig{
 		Enabled:     true,
-		Port:        defaultPrometheusServicePort,
+		Port:        defaultMetricsServicePort,
 		Host:        loopbackIP,
 		MetricsPath: "/metrics",
 	},
