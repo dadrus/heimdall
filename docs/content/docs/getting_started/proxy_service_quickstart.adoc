@@ -150,7 +150,7 @@ heimdall_1  | 2022-08-04T07:50:08+02:00 INF Loading initial rule set
 heimdall_1  | 2022-08-04T07:50:08+02:00 INF Rule set changed src=file_system:/heimdall/conf/rule.yaml
                                         type=Create
 heimdall_1  | 2022-08-04T07:50:08+02:00 INF Loading rule set src=file_system:/heimdall/conf/rule.yaml
-heimdall_1  | 2022-08-04T07:50:08+02:00 INF Prometheus service starts listening on: :9000
+heimdall_1  | 2022-08-04T07:50:08+02:00 INF Metrics service starts listening on: :9000
 heimdall_1  | 2022-08-04T07:50:08+02:00 INF Proxy service starts listening on: :4455
 heimdall_1  | 2022-08-04T07:50:08+02:00 INF Management service starts listening on: :4457
 ----
