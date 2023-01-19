@@ -275,6 +275,7 @@ jobs:
     runs-on: ubuntu-22.04
     needs:
       - prepare-release
+      - release-docker-images
     if: needs.prepare-release.outputs.release_created
     steps:
       - name: Prepare image version
