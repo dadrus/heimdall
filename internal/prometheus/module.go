@@ -33,10 +33,11 @@ var Module = fx.Options( //nolint:gochecknoglobals
 func initPrometheusRegistry(conf *config.Configuration) (prometheus.Registerer, prometheus.Gatherer) {
 	reg := prometheus.NewRegistry()
 
-	reg.MustRegister(collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}))
-	reg.MustRegister(collectors.NewGoCollector(collectors.WithGoCollectorRuntimeMetrics(collectors.MetricsAll)))
-
-	registerCertificateExpiryCollector(conf, reg)
+	if conf.Metrics.Enabled {
+		reg.MustRegister(collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}))
+		reg.MustRegister(collectors.NewGoCollector(collectors.WithGoCollectorRuntimeMetrics(collectors.MetricsAll)))
+		registerCertificateExpiryCollector(conf, reg)
+	}
 
 	return reg, reg
 }

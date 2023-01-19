@@ -230,7 +230,7 @@ If your environment supports OpenTelemetry and usage of defaults is ok, most pro
 
 == Metrics in Heimdall
 
-By default, heimdall exposes a `/metrics` HTTP endpoint on port `10250` (See also link:{{< relref "/docs/configuration/observability/metrics.adoc" >}}[Metrics Configuration]) for usage with https://grafana.com/oss/prometheus/[Prometheus], which provides following metrics:
+By default, heimdall exposes https://grafana.com/oss/prometheus/[Prometheus] style metrics on the `127.0.0.1:10250/metrics` HTTP endpoint (See also link:{{< relref "/docs/configuration/observability/metrics.adoc" >}}[Metrics Configuration]) which comprise the following information:
 
 * Process information, like CPU, memory, file descriptor usage and start time
 * Go runtime information, including details about GC, number of goroutines and OS threats
@@ -472,7 +472,7 @@ NOTE: More details about Prometheus metric types can be found https://prometheus
 
 == Runtime Profiling in Heimdall
 
-If enabled, heimdall exposes a `/debug/pprof` HTTP endpoint on port `4458` (See also link:{{< relref "/docs/configuration/observability/profiling.adoc" >}}[Runtime Profiling Configuration]) on which runtime profiling data in the `profile.proto` format (also known as `pprof` format) can be consumed by APM tools, like https://github.com/google/pprof[Google's pprof], https://grafana.com/oss/phlare/[Grafana Phlare], https://pyroscope.io/[Pyroscope] and many more for visualization purposes. Following information is available:
+If enabled, heimdall exposes a `/debug/pprof` HTTP endpoint on port `10251` (See also link:{{< relref "/docs/configuration/observability/profiling.adoc" >}}[Runtime Profiling Configuration]) on which runtime profiling data in the `profile.proto` format (also known as `pprof` format) can be consumed by APM tools, like https://github.com/google/pprof[Google's pprof], https://grafana.com/oss/phlare/[Grafana Phlare], https://pyroscope.io/[Pyroscope] and many more for visualization purposes. Following information is available:
 
 
 * `allocs` - A sampling of all past memory allocations.

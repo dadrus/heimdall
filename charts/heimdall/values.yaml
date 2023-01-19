@@ -37,7 +37,7 @@ image:
   repository: dadrus/heimdall
   pullPolicy: IfNotPresent
   tag: ""
-  pullSecrets: []
+  pullSecrets: [ ]
 
 nameOverride: ""
 fullnameOverride: ""
@@ -45,9 +45,9 @@ fullnameOverride: ""
 # Deployment configuration
 deployment:
   # Remove the curly braces after 'annotations:' if you want to specify annotations
-  annotations: {}
+  annotations: { }
   # Remove the curly braces after 'labels:' if you do want to specify additional labels
-  labels: {}
+  labels: { }
 
   # This configuration is applied directly to the pods and not higher objects
   pod:
@@ -58,7 +58,7 @@ deployment:
       runAsNonRoot: true
 
     # Remove the curly braces after 'annotations:' if you want to specify annotations
-    annotations: {}
+    annotations: { }
 
   securityContext:
     capabilities:
@@ -68,14 +68,14 @@ deployment:
     allowPrivilegeEscalation: false
 
   # Remove the curly braces after 'resources:' if you want to specify resources
-  resources: {}
+  resources: { }
     # E.g.:
     # limits:
     #   cpu: 100m
     #   memory: 128Mi
     # requests:
     #   cpu: 100m
-    #   memory: 128Mi
+  #   memory: 128Mi
 
   # Only used if autoscaling is disabled (see below)
   replicaCount: 2
@@ -89,18 +89,18 @@ deployment:
     targetMemoryUtilizationPercentage: 80
 
   # Remove the curly braces after 'nodeSelector:' if you want to specify nodeSelector
-  nodeSelector: {}
+  nodeSelector: { }
 
-  tolerations: []
+  tolerations: [ ]
 
-  affinity: {}
+  affinity: { }
 
 # Configures k8s services (decision, proxy, management)
 service:
   # Remove the curly braces after 'labels:' if you do want to specify additional labels
-  labels: {}
+  labels: { }
   # Remove the curly braces after 'annotations:' if you want to specify annotations
-  annotations: {}
+  annotations: { }
 
   # Only used if "operationMode" is set to "decision"
   decision:
@@ -121,11 +121,10 @@ service:
     name: management
 
 # Configures arbitrary environment variables for the deployment
-env: {}
+env: { }
 
 # heimdall config defaults
 # DO NOT OVERRIDE the values here. Use heimdall config yaml file instead!
-# If you create your own values.yaml file, copy the below contents to it as well.
 serve:
   decision:
     port: 4456
@@ -134,12 +133,14 @@ serve:
   management:
     port: 4457
 metrics:
-  prometheus:
-    port: 10250
-    metrics_path: "/metrics"
+  enabled: true
+  port: 10250
+  host: 0.0.0.0 # to enable scraping of metrics information by corresponding agents.
+  metrics_path: "/metrics"
 profiling:
-  port: 4458
-  host: 0.0.0.0 # to enable scraping of profiling information by other services.
+  enabled: false
+  port: 10251
+  host: 0.0.0.0 # to enable scraping of profiling information by corresponding agents.
 
 
 

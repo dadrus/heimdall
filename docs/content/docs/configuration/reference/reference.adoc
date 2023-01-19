@@ -109,10 +109,15 @@ tracing:
   span_processor: batch
 
 metrics:
-  prometheus:
-    host: 0.0.0.0
-    port: 9000
-    metrics_path: /metrics
+  enabled: true
+  host: 0.0.0.0
+  port: 9000
+  metrics_path: /metrics
+
+profiling:
+  enabled: false
+  host: 0.0.0.0
+  port: 9000
 
 signer:
   name: foobar

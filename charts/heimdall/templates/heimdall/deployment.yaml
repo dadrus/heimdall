@@ -41,8 +41,8 @@ spec:
         {{- include "heimdall.selectorLabels" $data | nindent 8 }}
       annotations:
         prometheus.io/scrape: "true"
-        prometheus.io/path: "{{ .Values.metrics.prometheus.metrics_path }}"
-        prometheus.io/port: "{{ .Values.metrics.prometheus.port }}"
+        prometheus.io/path: "{{ .Values.metrics.metrics_path }}"
+        prometheus.io/port: "{{ .Values.metrics.port }}"
         {{- if .Values.profiling.enabled }}
         phlare.grafana.com/scrape: "true"
         phlare.grafana.com/port: "{{ .Values.profiling.port }}"
@@ -85,9 +85,11 @@ spec:
             - name: http-management
               protocol: TCP
               containerPort: {{ .Values.serve.management.port }}
+            {{- if .Values.metrics.enabled }}
             - name: http-metrics
               protocol: TCP
-              containerPort: {{ .Values.metrics.prometheus.port }}
+              containerPort: {{ .Values.metrics.port }}
+            {{- end }}
             {{- if .Values.profiling.enabled }}
             - name: http-profiling
               protocol: TCP

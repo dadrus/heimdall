@@ -46,6 +46,18 @@ tags:
       
       This information is only available on heimdall's **profiling port**.
 
+  - name: Metrics
+    description: |
+      Provides available Prometheus style metrics like:
+      
+      * Process information, like CPU, memory, file descriptor usage and start time
+      * Go runtime information, including details about GC, number of goroutines and OS threats
+      * Information about the metrics endpoint itself, including the number of internal errors encountered while gathering the metrics, number of current inflight and overall scrapes done.
+      * Information about the decision and proxy requests handled, including the total amount and duration of http requests by status code, method and path, as well as information about requests in progress.
+      * Information about expiry for configured certificates.
+      
+      This information is only available on heimdall's **metrics port**.
+
 x-tagGroups:
   - name: Management
     tags:
@@ -59,6 +71,9 @@ x-tagGroups:
   - name: Profiling
     tags:
       - Profiling
+  - name: Metrics
+    tags:
+      - Metrics
 
 components:
   schemas:
@@ -170,6 +185,26 @@ components:
       description: Internal Server Error. Returned if the service run in a bad condition and cannot serve the request.
 
 paths:
+  /metrics:
+    servers:
+      - url: http://metrics.heimdall.local
+        description: Metrics Service
+    get:
+      summary: Get available Prometheus style metrics
+      description: |
+        Lists the available metrics. Please note that the `/metrics` path is configurable and may differ 
+        depending on the setup
+      tags:
+        - Metrics
+      operationId: metrics_get
+      responses:
+        '200':
+          description: List of available metrics
+          content:
+            text/html:
+              schema:
+                type: string
+
   /debug/pprof:
     servers:
       - url: http://profiling.heimdall.local

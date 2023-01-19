@@ -126,7 +126,7 @@ In both cases, you'll see similar output to
 2022-08-04T07:40:12+02:00 INF Starting cache evictor
 2022-08-04T07:40:12+02:00 INF Starting rule definition loader
 2022-08-04T07:40:12+02:00 INF Management service starts listening on: :4457
-2022-08-04T07:40:12+02:00 INF Prometheus service starts listening on: :9000
+2022-08-04T07:40:12+02:00 INF Metrics service starts listening on: :9000
 2022-08-04T07:40:12+02:00 INF Decision service starts listening on: :4456
 ----
 

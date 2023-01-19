@@ -32,8 +32,11 @@ log:
   format: text
 
 metrics:
-  prometheus:
-    port: 10250
+  host: 0.0.0.0
+
+profiling:
+  enabled: true
+  host: 0.0.0.0
 
 tracing:
   span_processor: simple

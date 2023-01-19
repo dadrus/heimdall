@@ -42,6 +42,8 @@ type hooksArgs struct {
 
 func registerHooks(args hooksArgs) {
 	if !args.Config.Profiling.Enabled {
+		args.Logger.Info().Msg("Profiling service disabled")
+
 		return
 	}
 
