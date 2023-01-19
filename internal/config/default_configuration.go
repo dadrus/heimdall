@@ -17,76 +17,76 @@
 package config
 
 import (
-    "time"
+	"time"
 
-    "github.com/rs/zerolog"
+	"github.com/rs/zerolog"
 )
 
 const (
-    defaultReadTimeout  = time.Second * 5
-    defaultWriteTimeout = time.Second * 10
-    defaultIdleTimeout  = time.Second * 120
+	defaultReadTimeout  = time.Second * 5
+	defaultWriteTimeout = time.Second * 10
+	defaultIdleTimeout  = time.Second * 120
 
-    defaultProxyServicePort      = 4455
-    defaultDecisionServicePort   = 4456
-    defaultManagementServicePort = 4457
-    defaultMetricsServicePort    = 10250
-    defaultProfilingServicePort  = 10251
+	defaultProxyServicePort      = 4455
+	defaultDecisionServicePort   = 4456
+	defaultManagementServicePort = 4457
+	defaultMetricsServicePort    = 10250
+	defaultProfilingServicePort  = 10251
 
-    loopbackIP = "127.0.0.1"
+	loopbackIP = "127.0.0.1"
 )
 
 // nolint: gochecknoglobals
 var defaultConfig = Configuration{
-    Serve: ServeConfig{
-        Proxy: ServiceConfig{
-            Port: defaultProxyServicePort,
-            Timeout: Timeout{
-                Read:  defaultReadTimeout,
-                Write: defaultWriteTimeout,
-                Idle:  defaultIdleTimeout,
-            },
-        },
-        Decision: ServiceConfig{
-            Port: defaultDecisionServicePort,
-            Timeout: Timeout{
-                Read:  defaultReadTimeout,
-                Write: defaultWriteTimeout,
-                Idle:  defaultIdleTimeout,
-            },
-        },
-        Management: ServiceConfig{
-            Port: defaultManagementServicePort,
-            Timeout: Timeout{
-                Read:  defaultReadTimeout,
-                Write: defaultWriteTimeout,
-                Idle:  defaultIdleTimeout,
-            },
-        },
-    },
-    Log: LoggingConfig{
-        Level:  zerolog.ErrorLevel,
-        Format: LogTextFormat,
-    },
-    Tracing: TracingConfig{
-        Enabled:           true,
-        SpanProcessorType: SpanProcessorBatch,
-    },
-    Metrics: MetricsConfig{
-        Enabled:     true,
-        Port:        defaultMetricsServicePort,
-        Host:        loopbackIP,
-        MetricsPath: "/metrics",
-    },
-    Profiling: ProfilingConfig{
-        Enabled: false,
-        Port:    defaultProfilingServicePort,
-        Host:    loopbackIP,
-    },
-    Signer: SignerConfig{
-        Name: "heimdall",
-    },
-    Rules: Rules{
-        Prototypes: &MechanismPrototypes{},
-    },
+	Serve: ServeConfig{
+		Proxy: ServiceConfig{
+			Port: defaultProxyServicePort,
+			Timeout: Timeout{
+				Read:  defaultReadTimeout,
+				Write: defaultWriteTimeout,
+				Idle:  defaultIdleTimeout,
+			},
+		},
+		Decision: ServiceConfig{
+			Port: defaultDecisionServicePort,
+			Timeout: Timeout{
+				Read:  defaultReadTimeout,
+				Write: defaultWriteTimeout,
+				Idle:  defaultIdleTimeout,
+			},
+		},
+		Management: ServiceConfig{
+			Port: defaultManagementServicePort,
+			Timeout: Timeout{
+				Read:  defaultReadTimeout,
+				Write: defaultWriteTimeout,
+				Idle:  defaultIdleTimeout,
+			},
+		},
+	},
+	Log: LoggingConfig{
+		Level:  zerolog.ErrorLevel,
+		Format: LogTextFormat,
+	},
+	Tracing: TracingConfig{
+		Enabled:           true,
+		SpanProcessorType: SpanProcessorBatch,
+	},
+	Metrics: MetricsConfig{
+		Enabled:     true,
+		Port:        defaultMetricsServicePort,
+		Host:        loopbackIP,
+		MetricsPath: "/metrics",
+	},
+	Profiling: ProfilingConfig{
+		Enabled: false,
+		Port:    defaultProfilingServicePort,
+		Host:    loopbackIP,
+	},
+	Signer: SignerConfig{
+		Name: "heimdall",
+	},
+	Rules: Rules{
+		Prototypes: &MechanismPrototypes{},
+	},
 }
