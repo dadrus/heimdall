@@ -58,7 +58,7 @@ func registerHooks(args hooksArgs) {
 	}
 
 	app := fiber.New(fiber.Config{
-		AppName:               "Heimdall's Prometheus endpoint",
+		AppName:               "Heimdall's Metrics endpoint",
 		DisableStartupMessage: true,
 	})
 
