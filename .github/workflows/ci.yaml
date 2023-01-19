@@ -184,7 +184,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
       - name: Build release binaries and upload them to the release
-        uses: wangyoucao577/go-release-action@v1.34
+        uses: wangyoucao577/go-release-action@v1.35
         with:
           release_tag: ${{ needs.prepare-release.outputs.tag_name }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
