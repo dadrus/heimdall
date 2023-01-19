@@ -14,7 +14,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-{{- if .Values.demo.enable }}
+{{- if .Values.demo.enabled }}
 kind: Namespace
 apiVersion: v1
 metadata:
