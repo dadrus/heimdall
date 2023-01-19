@@ -139,7 +139,7 @@ metrics:
   metrics_path: "/metrics"
 profiling:
   enabled: false
-  port: 4458
+  port: 10251
   host: 0.0.0.0 # to enable scraping of profiling information by corresponding agents.
 
 

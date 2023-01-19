@@ -1894,7 +1894,7 @@
         "port": {
           "description": "The port to listen on.",
           "type": "integer",
-          "default": 4458
+          "default": 10251
         },
         "host": {
           "description": "The network interface to listen on. Leave empty to listen on all interfaces.",

@@ -45,7 +45,7 @@ profiling:
 
 * *`port`*: _integer_ (optional)
 +
-By making use of this property, you can specify the TCP port the heimdall should listen on. Defaults to `4458`.
+By making use of this property, you can specify the TCP port the heimdall should listen on. Defaults to `10251`.
 +
 .Configure heimdall to listen on port `9999` for runtime profiling requests.
 ====
