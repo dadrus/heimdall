@@ -23,7 +23,7 @@ operationMode: "decision" # decision or proxy
 # If set to true, a demo deployment with exemplary rules, as these can be found in the documentation,
 # will be done
 demo:
-  enable: false
+  enabled: false
 
   # the demo setup assumes nginx ingress controller and will use the
   # following values to configure the ingress rule
