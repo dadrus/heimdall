@@ -1,5 +1,33 @@
 # Changelog
 
+## [0.6.0-alpha](https://github.com/dadrus/heimdall/compare/v0.5.0-alpha...v0.6.0-alpha) (2023-01-19)
+
+
+### ⚠ BREAKING CHANGES
+
+* `demo.enable` in helm chart renamed to `demo.enabled` ([#457](https://github.com/dadrus/heimdall/issues/457))
+* Metrics service configuration changed ([#452](https://github.com/dadrus/heimdall/issues/452))
+* New type for key store configuration introduced ([#434](https://github.com/dadrus/heimdall/issues/434))
+
+### Features
+
+* Helm chart supports setting of arbitrary environment variables ([#444](https://github.com/dadrus/heimdall/issues/444)) ([80de2ee](https://github.com/dadrus/heimdall/commit/80de2ee074a9a347a8da971cf9cfe924f281d3fa))
+* New service exposing CPU, memory, etc profiling information ([#446](https://github.com/dadrus/heimdall/issues/446)) ([2175273](https://github.com/dadrus/heimdall/commit/217527307f6f45252a985a7b593214864f659143))
+* Remaining validity of configured certificates exposed as metric ([#432](https://github.com/dadrus/heimdall/issues/432)) ([95b24f0](https://github.com/dadrus/heimdall/commit/95b24f0d2f0e61e5900d304f670d0b61d7075784))
+
+
+### Bug Fixes
+
+* Helm Chart fixed and does neither expect a heimdall config file, nor check for not existing property anymore ([#420](https://github.com/dadrus/heimdall/issues/420)) ([8a0c299](https://github.com/dadrus/heimdall/commit/8a0c29964752a8fbc88bccd3f55a669c037d91d9))
+* Memory leak introduced by correlation between metrics & traces fixed ([#449](https://github.com/dadrus/heimdall/issues/449)) ([f00e0ec](https://github.com/dadrus/heimdall/commit/f00e0ec0a8d923fdd797a3b5b4d79d5ad59f4449))
+
+
+### Code Refactoring
+
+* `demo.enable` in helm chart renamed to `demo.enabled` ([#457](https://github.com/dadrus/heimdall/issues/457)) ([eb9c32e](https://github.com/dadrus/heimdall/commit/eb9c32eb5f4851775f9054b14ae951067044e9a7))
+* Metrics service configuration changed ([#452](https://github.com/dadrus/heimdall/issues/452)) ([1b3a36e](https://github.com/dadrus/heimdall/commit/1b3a36e0eae3260aea75d8efef9112337edf1ba8))
+* New type for key store configuration introduced ([#434](https://github.com/dadrus/heimdall/issues/434)) ([b2a9e58](https://github.com/dadrus/heimdall/commit/b2a9e581249373e7bdfb5dcab4dc942658143ab3))
+
 ## [0.5.0-alpha](https://github.com/dadrus/heimdall/compare/v0.4.1-alpha...v0.5.0-alpha) (2023-01-02)
 
 
