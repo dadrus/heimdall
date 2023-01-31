@@ -19,9 +19,9 @@ package prometheus
 import (
     "context"
     "strconv"
-    "strings"
     "time"
 
+    envoy_auth "github.com/envoyproxy/go-control-plane/envoy/service/auth/v3"
     "github.com/prometheus/client_golang/prometheus"
     "github.com/prometheus/client_golang/prometheus/promauto"
     "google.golang.org/grpc"
@@ -45,15 +45,15 @@ func New(opts ...Option) grpc.UnaryServerInterceptor {
     counter := promauto.With(options.registerer).NewCounterVec(
         prometheus.CounterOpts{
             Name:        prometheus.BuildFQName(options.namespace, options.subsystem, "requests_total"),
-            Help:        "Count all grpc requests by status code, service and method.",
+            Help:        "Count all requests by status code, service and method.",
             ConstLabels: options.labels,
         },
-        []string{"grpc_code", "grpc_service", "grpc_method"},
+        []string{"status_code", "method", "path"},
     )
 
     histogram := promauto.With(options.registerer).NewHistogramVec(prometheus.HistogramOpts{
         Name:        prometheus.BuildFQName(options.namespace, options.subsystem, "request_duration_seconds"),
-        Help:        "Duration of all grpc requests by code, service and method.",
+        Help:        "Duration of all requests by code, service and method.",
         ConstLabels: options.labels,
         Buckets: []float64{
             0.00001, 0.000025, 0.00005, 0.000075, // 10, 25, 50, 75µs
@@ -64,14 +64,14 @@ func New(opts ...Option) grpc.UnaryServerInterceptor {
             1.0, 2.0, // 1, 2s
         },
     },
-        []string{"grpc_code", "grpc_service", "grpc_method"},
+        []string{"status_code", "method", "path"},
     )
 
     gauge := promauto.With(options.registerer).NewGaugeVec(prometheus.GaugeOpts{
         Name:        prometheus.BuildFQName(options.namespace, options.subsystem, "requests_in_progress_total"),
         Help:        "All the requests in progress",
         ConstLabels: options.labels,
-    }, []string{"grpc_service", "grpc_method"})
+    }, []string{"method"})
 
     handler := &metricsHandler{
         reqCounter:   counter,
@@ -88,38 +88,35 @@ func (h *metricsHandler) observeRequest(
     const MagicNumber = 1e9
 
     start := time.Now()
-    serviceName, methodName := splitMethodName(info.FullMethod)
+    method := "GRPC"
+    path := info.FullMethod
+    code := int(codes.OK)
 
-    h.reqInFlight.WithLabelValues(serviceName, methodName).Inc()
+    if cr, ok := req.(*envoy_auth.CheckRequest); ok {
+        method = cr.Attributes.Request.Http.Method
+        path = cr.Attributes.Request.Http.Path
+    }
+
+    h.reqInFlight.WithLabelValues(method).Inc()
 
     defer func() {
-        h.reqInFlight.WithLabelValues(serviceName, methodName).Dec()
+        h.reqInFlight.WithLabelValues(method).Dec()
     }()
 
     resp, err := handler(ctx, req)
-    // initialize with default error code
-    code := codes.Internal
 
     if err != nil {
         s, _ := status.FromError(err)
-        code = s.Code()
-    } else {
-        code = codes.OK
+        code = int(s.Code())
+    } else if cr, ok := req.(*envoy_auth.CheckResponse); ok {
+        code = int(cr.Status.Code)
     }
 
-    statusCode := strconv.Itoa(int(code))
-    h.reqCounter.WithLabelValues(statusCode, serviceName, methodName).Inc()
+    statusCode := strconv.Itoa(code)
+    h.reqCounter.WithLabelValues(statusCode, method, path).Inc()
 
     elapsed := float64(time.Since(start).Nanoseconds()) / MagicNumber
-    h.reqHistogram.WithLabelValues(statusCode, serviceName, methodName).Observe(elapsed)
+    h.reqHistogram.WithLabelValues(statusCode, method, path).Observe(elapsed)
 
     return resp, err
-}
-
-func splitMethodName(fullMethodName string) (string, string) {
-    fullMethodName = strings.TrimPrefix(fullMethodName, "/") // remove leading slash
-    if i := strings.Index(fullMethodName, "/"); i >= 0 {
-        return fullMethodName[:i], fullMethodName[i+1:]
-    }
-    return "unknown", "unknown"
 }

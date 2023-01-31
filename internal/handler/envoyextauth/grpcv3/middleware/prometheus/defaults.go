@@ -23,6 +23,6 @@ import (
 // nolint: gochecknoglobals
 var defaultOptions = opts{
     registerer: prometheus.DefaultRegisterer,
-    namespace:  "grpc",
+    namespace:  "http",
     labels:     make(prometheus.Labels),
 }
