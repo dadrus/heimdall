@@ -28,14 +28,13 @@ import (
 )
 
 type Handler struct {
-    r    rules.Repository
-    s    heimdall.JWTSigner
-    code int
+    r rules.Repository
+    s heimdall.JWTSigner
 }
 
 func (h *Handler) Check(ctx context.Context, req *envoy_auth.CheckRequest) (*envoy_auth.CheckResponse, error) {
     logger := zerolog.Ctx(ctx)
-    logger.Debug().Msg("Decision Envoy ExtAuthZ endpoint called")
+    logger.Debug().Msg("Decision Envoy ExtAuth endpoint called")
 
     reqCtx := NewRequestContext(ctx, req, h.s)
 
@@ -56,5 +55,5 @@ func (h *Handler) Check(ctx context.Context, req *envoy_auth.CheckRequest) (*env
 
     logger.Debug().Msg("Finalizing request")
 
-    return reqCtx.Finalize(h.code)
+    return reqCtx.Finalize()
 }

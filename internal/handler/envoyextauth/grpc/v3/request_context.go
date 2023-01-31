@@ -25,6 +25,7 @@ import (
 
     envoy_core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
     envoy_auth "github.com/envoyproxy/go-control-plane/envoy/service/auth/v3"
+    envoy_type "github.com/envoyproxy/go-control-plane/envoy/type/v3"
     "google.golang.org/genproto/googleapis/rpc/status"
 
     "github.com/dadrus/heimdall/internal/heimdall"
@@ -64,7 +65,21 @@ func (s *RequestContext) RequestHeaders() map[string]string {
 func (s *RequestContext) RequestHeader(name string) string {
     return s.req.Attributes.Request.Http.Headers[name]
 }
-func (s *RequestContext) RequestCookie(name string) string { return "" }
+func (s *RequestContext) RequestCookie(name string) string {
+    values, ok := s.req.Attributes.Request.Http.Headers["cookie"]
+    if !ok {
+        return ""
+    }
+
+    for _, cookie := range strings.Split(values, ";") {
+        if cookieName, cookieValue, ok := strings.Cut(cookie, "=");
+            ok && strings.TrimSpace(cookieName) == name {
+            return strings.TrimSpace(cookieValue)
+        }
+    }
+
+    return ""
+}
 func (s *RequestContext) RequestQueryParameter(name string) string {
     return s.reqURL.Query().Get(name)
 }
@@ -89,7 +104,7 @@ func (s *RequestContext) Signer() heimdall.JWTSigner              { return s.jwt
 func (s *RequestContext) RequestURL() *url.URL                    { return s.reqURL }
 func (s *RequestContext) RequestClientIPs() []string              { return nil }
 
-func (s *RequestContext) Finalize(statusCode int) (*envoy_auth.CheckResponse, error) {
+func (s *RequestContext) Finalize() (*envoy_auth.CheckResponse, error) {
     if s.err != nil {
         return nil, s.err
     }
@@ -121,7 +136,7 @@ func (s *RequestContext) Finalize(statusCode int) (*envoy_auth.CheckResponse, er
     }
 
     return &envoy_auth.CheckResponse{
-        Status: &status.Status{Code: int32(statusCode)},
+        Status: &status.Status{Code: int32(envoy_type.StatusCode_OK)},
         HttpResponse: &envoy_auth.CheckResponse_OkResponse{
             OkResponse: &envoy_auth.OkHttpResponse{Headers: headers},
         },

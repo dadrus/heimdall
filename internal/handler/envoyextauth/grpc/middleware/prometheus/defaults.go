@@ -14,4 +14,15 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package v3
+package prometheus
+
+import (
+    "github.com/prometheus/client_golang/prometheus"
+)
+
+// nolint: gochecknoglobals
+var defaultOptions = opts{
+    registerer: prometheus.DefaultRegisterer,
+    namespace:  "grpc",
+    labels:     make(prometheus.Labels),
+}
