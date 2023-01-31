@@ -1,4 +1,4 @@
-package v3
+package grpcv3
 
 import (
     envoy_auth "github.com/envoyproxy/go-control-plane/envoy/service/auth/v3"
@@ -10,11 +10,11 @@ import (
 
     "github.com/dadrus/heimdall/internal/cache"
     "github.com/dadrus/heimdall/internal/config"
-    accesslogmiddleware "github.com/dadrus/heimdall/internal/handler/envoyextauth/grpc/middleware/accesslog"
-    cachemiddleware "github.com/dadrus/heimdall/internal/handler/envoyextauth/grpc/middleware/cache"
-    errormiddleware "github.com/dadrus/heimdall/internal/handler/envoyextauth/grpc/middleware/errorhandler"
-    loggermiddleware "github.com/dadrus/heimdall/internal/handler/envoyextauth/grpc/middleware/logger"
-    prometheus2 "github.com/dadrus/heimdall/internal/handler/envoyextauth/grpc/middleware/prometheus"
+    accesslogmiddleware "github.com/dadrus/heimdall/internal/handler/envoyextauth/grpcv3/middleware/accesslog"
+    cachemiddleware "github.com/dadrus/heimdall/internal/handler/envoyextauth/grpcv3/middleware/cache"
+    errormiddleware "github.com/dadrus/heimdall/internal/handler/envoyextauth/grpcv3/middleware/errorhandler"
+    loggermiddleware "github.com/dadrus/heimdall/internal/handler/envoyextauth/grpcv3/middleware/logger"
+    prometheusmiddleware "github.com/dadrus/heimdall/internal/handler/envoyextauth/grpcv3/middleware/prometheus"
     "github.com/dadrus/heimdall/internal/heimdall"
     "github.com/dadrus/heimdall/internal/rules"
 )
@@ -36,16 +36,14 @@ func newService(
 
     if conf.Metrics.Enabled {
         interceptors = append(interceptors,
-            prometheus2.New(
-                prometheus2.WithServiceName("decision"),
-                prometheus2.WithRegisterer(registrer),
+            prometheusmiddleware.New(
+                prometheusmiddleware.WithServiceName("decision"),
+                prometheusmiddleware.WithRegisterer(registrer),
             ),
         )
     }
 
     interceptors = append(interceptors,
-        accesslogmiddleware.New(logger),
-        loggermiddleware.New(logger),
         errormiddleware.New(
             errormiddleware.WithVerboseErrors(service.Respond.Verbose),
             errormiddleware.WithPreconditionErrorCode(service.Respond.With.ArgumentError.Code),
@@ -56,6 +54,8 @@ func newService(
             errormiddleware.WithNoRuleErrorCode(service.Respond.With.NoRuleError.Code),
             errormiddleware.WithInternalServerErrorCode(service.Respond.With.InternalError.Code),
         ),
+        accesslogmiddleware.New(logger),
+        loggermiddleware.New(logger),
         cachemiddleware.New(cch),
     )
 

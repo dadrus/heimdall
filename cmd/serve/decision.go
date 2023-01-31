@@ -23,7 +23,7 @@ import (
     "github.com/dadrus/heimdall/internal"
     "github.com/dadrus/heimdall/internal/config"
     "github.com/dadrus/heimdall/internal/handler/decision"
-    envoy_extauth "github.com/dadrus/heimdall/internal/handler/envoyextauth/grpc/v3"
+    envoy_extauth "github.com/dadrus/heimdall/internal/handler/envoyextauth/grpcv3"
 )
 
 // NewDecisionCommand represents the "serve decision" command.

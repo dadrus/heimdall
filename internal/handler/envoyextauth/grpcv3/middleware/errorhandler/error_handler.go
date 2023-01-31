@@ -56,17 +56,17 @@ func (h *handler) handle(ctx context.Context, req any, info *grpc.UnaryServerInf
 
     switch {
     case errors.Is(err, heimdall.ErrAuthentication):
-        err = h.authenticationError(err, h.verboseErrors)
+        return h.authenticationError(err, h.verboseErrors)
     case errors.Is(err, heimdall.ErrAuthorization):
-        err = h.authorizationError(err, h.verboseErrors)
+        return h.authorizationError(err, h.verboseErrors)
     case errors.Is(err, heimdall.ErrCommunicationTimeout) || errors.Is(err, heimdall.ErrCommunication):
-        err = h.communicationError(err, h.verboseErrors)
+        return h.communicationError(err, h.verboseErrors)
     case errors.Is(err, heimdall.ErrArgument):
-        err = h.preconditionError(err, h.verboseErrors)
+        return h.preconditionError(err, h.verboseErrors)
     case errors.Is(err, heimdall.ErrMethodNotAllowed):
-        err = h.badMethodError(err, h.verboseErrors)
+        return h.badMethodError(err, h.verboseErrors)
     case errors.Is(err, heimdall.ErrNoRuleFound):
-        err = h.noRuleError(err, h.verboseErrors)
+        return h.noRuleError(err, h.verboseErrors)
     case errors.Is(err, &heimdall.RedirectError{}):
         var redirectError *heimdall.RedirectError
 
@@ -74,8 +74,8 @@ func (h *handler) handle(ctx context.Context, req any, info *grpc.UnaryServerInf
 
         return &envoy_auth.CheckResponse{
             Status: &status.Status{Code: int32(redirectError.Code)},
-            HttpResponse: &envoy_auth.CheckResponse_OkResponse{
-                OkResponse: &envoy_auth.OkHttpResponse{Headers: []*envoy_core.HeaderValueOption{
+            HttpResponse: &envoy_auth.CheckResponse_DeniedResponse{
+                DeniedResponse: &envoy_auth.DeniedHttpResponse{Headers: []*envoy_core.HeaderValueOption{
                     {
                         Header: &envoy_core.HeaderValue{
                             Key:   "Location",
@@ -90,8 +90,6 @@ func (h *handler) handle(ctx context.Context, req any, info *grpc.UnaryServerInf
         logger := zerolog.Ctx(ctx)
         logger.Error().Err(err).Msg("Internal error occurred")
 
-        err = h.internalError(err, h.verboseErrors)
+        return h.internalError(err, h.verboseErrors)
     }
-
-    return req, err
 }

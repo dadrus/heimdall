@@ -14,7 +14,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package v3
+package grpcv3
 
 import (
     "context"
