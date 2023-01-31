@@ -38,7 +38,7 @@ func newService(
         interceptors = append(interceptors,
             prometheusmiddleware.New(
                 prometheusmiddleware.WithServiceName("decision"),
-                prometheusmiddleware.WithLabel("type", "envoy-grpc-extauth"),
+                prometheusmiddleware.WithLabel("type", "envoy-grpc-extauth-v3"),
                 prometheusmiddleware.WithRegisterer(registrer),
             ),
         )
