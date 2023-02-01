@@ -75,7 +75,7 @@ func TestHandlerObserveRequests(t *testing.T) { //nolint:maintidx
 
 				histMetric := metricForType(metrics, dto.MetricType_HISTOGRAM.Enum())
 				assert.Equal(t, "foo_bar_request_duration_seconds", histMetric.GetName())
-				assert.Equal(t, "Duration of all HTTP requests by status code, method and path.",
+				assert.Equal(t, "Duration of all requests by status code, method and path.",
 					histMetric.GetHelp())
 				require.Len(t, histMetric.Metric, 1)
 				assert.Equal(t, "zab", getLabel(histMetric.Metric[0].Label, "baz"))
@@ -96,7 +96,7 @@ func TestHandlerObserveRequests(t *testing.T) { //nolint:maintidx
 
 				counterMetric := metricForType(metrics, dto.MetricType_COUNTER.Enum())
 				assert.Equal(t, "foo_bar_requests_total", counterMetric.GetName())
-				assert.Equal(t, "Count all http requests by status code, method and path.",
+				assert.Equal(t, "Count all requests by status code, method and path.",
 					counterMetric.GetHelp())
 				require.Len(t, counterMetric.Metric, 1)
 				assert.Equal(t, "zab", getLabel(counterMetric.Metric[0].Label, "baz"))
@@ -117,7 +117,7 @@ func TestHandlerObserveRequests(t *testing.T) { //nolint:maintidx
 
 				histMetric := metricForType(metrics, dto.MetricType_HISTOGRAM.Enum())
 				assert.Equal(t, "foo_bar_request_duration_seconds", histMetric.GetName())
-				assert.Equal(t, "Duration of all HTTP requests by status code, method and path.",
+				assert.Equal(t, "Duration of all requests by status code, method and path.",
 					histMetric.GetHelp())
 				require.Len(t, histMetric.Metric, 1)
 				assert.Equal(t, "zab", getLabel(histMetric.Metric[0].Label, "baz"))
@@ -138,7 +138,7 @@ func TestHandlerObserveRequests(t *testing.T) { //nolint:maintidx
 
 				counterMetric := metricForType(metrics, dto.MetricType_COUNTER.Enum())
 				assert.Equal(t, "foo_bar_requests_total", counterMetric.GetName())
-				assert.Equal(t, "Count all http requests by status code, method and path.",
+				assert.Equal(t, "Count all requests by status code, method and path.",
 					counterMetric.GetHelp())
 				require.Len(t, counterMetric.Metric, 1)
 				assert.Equal(t, "zab", getLabel(counterMetric.Metric[0].Label, "baz"))
@@ -159,7 +159,7 @@ func TestHandlerObserveRequests(t *testing.T) { //nolint:maintidx
 
 				histMetric := metricForType(metrics, dto.MetricType_HISTOGRAM.Enum())
 				assert.Equal(t, "foo_bar_request_duration_seconds", histMetric.GetName())
-				assert.Equal(t, "Duration of all HTTP requests by status code, method and path.",
+				assert.Equal(t, "Duration of all requests by status code, method and path.",
 					histMetric.GetHelp())
 				require.Len(t, histMetric.Metric, 1)
 				assert.Equal(t, "zab", getLabel(histMetric.Metric[0].Label, "baz"))
@@ -180,7 +180,7 @@ func TestHandlerObserveRequests(t *testing.T) { //nolint:maintidx
 
 				counterMetric := metricForType(metrics, dto.MetricType_COUNTER.Enum())
 				assert.Equal(t, "foo_bar_requests_total", counterMetric.GetName())
-				assert.Equal(t, "Count all http requests by status code, method and path.",
+				assert.Equal(t, "Count all requests by status code, method and path.",
 					counterMetric.GetHelp())
 				require.Len(t, counterMetric.Metric, 1)
 				assert.Equal(t, "zab", getLabel(counterMetric.Metric[0].Label, "baz"))
