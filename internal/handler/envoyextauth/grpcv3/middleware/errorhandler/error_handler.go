@@ -17,79 +17,81 @@
 package errorhandler
 
 import (
-    "context"
-    "errors"
+	"context"
+	"errors"
 
-    envoy_core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
-    envoy_auth "github.com/envoyproxy/go-control-plane/envoy/service/auth/v3"
-    "github.com/rs/zerolog"
-    "google.golang.org/genproto/googleapis/rpc/status"
-    "google.golang.org/grpc"
+	envoy_core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
+	envoy_auth "github.com/envoyproxy/go-control-plane/envoy/service/auth/v3"
+	"github.com/rs/zerolog"
+	"google.golang.org/genproto/googleapis/rpc/status"
+	"google.golang.org/grpc"
 
-    "github.com/dadrus/heimdall/internal/accesscontext"
-    "github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/accesscontext"
+	"github.com/dadrus/heimdall/internal/heimdall"
 )
 
 func New(opts ...Option) grpc.UnaryServerInterceptor {
-    options := defaultOptions
+	options := defaultOptions
 
-    for _, opt := range opts {
-        opt(&options)
-    }
+	for _, opt := range opts {
+		opt(&options)
+	}
 
-    h := &handler{opts: options}
+	h := &handler{opts: options}
 
-    return h.handle
+	return h.handle
 }
 
 type handler struct {
-    opts
+	opts
 }
 
-func (h *handler) handle(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) { //nolint:cyclop
-    res, err := handler(ctx, req)
-    if err == nil {
-        return res, nil
-    }
+func (h *handler) handle(
+	ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler,
+) (any, error) { //nolint:cyclop
+	res, err := handler(ctx, req)
+	if err == nil {
+		return res, nil
+	}
 
-    accesscontext.SetError(ctx, err)
+	accesscontext.SetError(ctx, err)
 
-    switch {
-    case errors.Is(err, heimdall.ErrAuthentication):
-        return h.authenticationError(err, h.verboseErrors)
-    case errors.Is(err, heimdall.ErrAuthorization):
-        return h.authorizationError(err, h.verboseErrors)
-    case errors.Is(err, heimdall.ErrCommunicationTimeout) || errors.Is(err, heimdall.ErrCommunication):
-        return h.communicationError(err, h.verboseErrors)
-    case errors.Is(err, heimdall.ErrArgument):
-        return h.preconditionError(err, h.verboseErrors)
-    case errors.Is(err, heimdall.ErrMethodNotAllowed):
-        return h.badMethodError(err, h.verboseErrors)
-    case errors.Is(err, heimdall.ErrNoRuleFound):
-        return h.noRuleError(err, h.verboseErrors)
-    case errors.Is(err, &heimdall.RedirectError{}):
-        var redirectError *heimdall.RedirectError
+	switch {
+	case errors.Is(err, heimdall.ErrAuthentication):
+		return h.authenticationError(err, h.verboseErrors)
+	case errors.Is(err, heimdall.ErrAuthorization):
+		return h.authorizationError(err, h.verboseErrors)
+	case errors.Is(err, heimdall.ErrCommunicationTimeout) || errors.Is(err, heimdall.ErrCommunication):
+		return h.communicationError(err, h.verboseErrors)
+	case errors.Is(err, heimdall.ErrArgument):
+		return h.preconditionError(err, h.verboseErrors)
+	case errors.Is(err, heimdall.ErrMethodNotAllowed):
+		return h.badMethodError(err, h.verboseErrors)
+	case errors.Is(err, heimdall.ErrNoRuleFound):
+		return h.noRuleError(err, h.verboseErrors)
+	case errors.Is(err, &heimdall.RedirectError{}):
+		var redirectError *heimdall.RedirectError
 
-        errors.As(err, &redirectError)
+		errors.As(err, &redirectError)
 
-        return &envoy_auth.CheckResponse{
-            Status: &status.Status{Code: int32(redirectError.Code)},
-            HttpResponse: &envoy_auth.CheckResponse_DeniedResponse{
-                DeniedResponse: &envoy_auth.DeniedHttpResponse{Headers: []*envoy_core.HeaderValueOption{
-                    {
-                        Header: &envoy_core.HeaderValue{
-                            Key:   "Location",
-                            Value: redirectError.RedirectTo,
-                        },
-                    },
-                }},
-            },
-        }, nil
+		return &envoy_auth.CheckResponse{
+			Status: &status.Status{Code: int32(redirectError.Code)},
+			HttpResponse: &envoy_auth.CheckResponse_DeniedResponse{
+				DeniedResponse: &envoy_auth.DeniedHttpResponse{Headers: []*envoy_core.HeaderValueOption{
+					{
+						Header: &envoy_core.HeaderValue{
+							Key:   "Location",
+							Value: redirectError.RedirectTo,
+						},
+					},
+				}},
+			},
+		}, nil
 
-    default:
-        logger := zerolog.Ctx(ctx)
-        logger.Error().Err(err).Msg("Internal error occurred")
+	default:
+		logger := zerolog.Ctx(ctx)
+		logger.Error().Err(err).Msg("Internal error occurred")
 
-        return h.internalError(err, h.verboseErrors)
-    }
+		return h.internalError(err, h.verboseErrors)
+	}
 }

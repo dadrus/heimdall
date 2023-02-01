@@ -17,84 +17,90 @@
 package grpcv3
 
 import (
-    "context"
-    "fmt"
-    "net/http"
-    "net/url"
-    "strings"
+	"context"
+	"fmt"
+	"net/http"
+	"net/url"
+	"strings"
 
-    envoy_core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
-    envoy_auth "github.com/envoyproxy/go-control-plane/envoy/service/auth/v3"
-    envoy_type "github.com/envoyproxy/go-control-plane/envoy/type/v3"
-    "google.golang.org/genproto/googleapis/rpc/status"
+	envoy_core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
+	envoy_auth "github.com/envoyproxy/go-control-plane/envoy/service/auth/v3"
+	envoy_type "github.com/envoyproxy/go-control-plane/envoy/type/v3"
+	"google.golang.org/genproto/googleapis/rpc/status"
 
-    "github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/x"
 )
 
 type RequestContext struct {
-    ctx             context.Context
-    req             *envoy_auth.CheckRequest
-    reqURL          *url.URL
-    upstreamHeaders http.Header
-    upstreamCookies map[string]string
-    jwtSigner       heimdall.JWTSigner
-    err             error
+	ctx             context.Context // nolint: containedctx
+	req             *envoy_auth.CheckRequest
+	reqURL          *url.URL
+	upstreamHeaders http.Header
+	upstreamCookies map[string]string
+	jwtSigner       heimdall.JWTSigner
+	err             error
 }
 
 func NewRequestContext(ctx context.Context, req *envoy_auth.CheckRequest, signer heimdall.JWTSigner) *RequestContext {
-    return &RequestContext{
-        ctx: ctx,
-        req: req,
-        reqURL: &url.URL{
-            Scheme:   req.Attributes.Request.Http.Scheme,
-            Host:     req.Attributes.Request.Http.Host,
-            Path:     req.Attributes.Request.Http.Path,
-            RawQuery: req.Attributes.Request.Http.Query,
-            Fragment: req.Attributes.Request.Http.Fragment,
-        },
-        jwtSigner:       signer,
-        upstreamHeaders: make(http.Header),
-        upstreamCookies: make(map[string]string),
-    }
+	return &RequestContext{
+		ctx: ctx,
+		req: req,
+		reqURL: &url.URL{
+			Scheme:   req.Attributes.Request.Http.Scheme,
+			Host:     req.Attributes.Request.Http.Host,
+			Path:     req.Attributes.Request.Http.Path,
+			RawQuery: req.Attributes.Request.Http.Query,
+			Fragment: req.Attributes.Request.Http.Fragment,
+		},
+		jwtSigner:       signer,
+		upstreamHeaders: make(http.Header),
+		upstreamCookies: make(map[string]string),
+	}
 }
 
 func (s *RequestContext) RequestMethod() string { return s.req.Attributes.Request.Http.Method }
+
 func (s *RequestContext) RequestHeaders() map[string]string {
-    return s.req.Attributes.Request.Http.Headers
+	return s.req.Attributes.Request.Http.Headers
 }
+
 func (s *RequestContext) RequestHeader(name string) string {
-    return s.req.Attributes.Request.Http.Headers[name]
+	return s.req.Attributes.Request.Http.Headers[name]
 }
+
 func (s *RequestContext) RequestCookie(name string) string {
-    values, ok := s.req.Attributes.Request.Http.Headers["cookie"]
-    if !ok {
-        return ""
-    }
+	values, ok := s.req.Attributes.Request.Http.Headers["cookie"]
+	if !ok {
+		return ""
+	}
 
-    for _, cookie := range strings.Split(values, ";") {
-        if cookieName, cookieValue, ok := strings.Cut(cookie, "=");
-            ok && strings.TrimSpace(cookieName) == name {
-            return strings.TrimSpace(cookieValue)
-        }
-    }
+	for _, cookie := range strings.Split(values, ";") {
+		if cookieName, cookieValue, ok := strings.Cut(cookie, "="); ok && strings.TrimSpace(cookieName) == name {
+			return strings.TrimSpace(cookieValue)
+		}
+	}
 
-    return ""
+	return ""
 }
+
 func (s *RequestContext) RequestQueryParameter(name string) string {
-    return s.reqURL.Query().Get(name)
+	return s.reqURL.Query().Get(name)
 }
+
 func (s *RequestContext) RequestFormParameter(name string) string {
-    if s.req.Attributes.Request.Http.Headers["content-type"] != "application/x-www-form-urlencoded" {
-        return ""
-    }
+	if s.req.Attributes.Request.Http.Headers["content-type"] != "application/x-www-form-urlencoded" {
+		return ""
+	}
 
-    values, err := url.ParseQuery(s.req.Attributes.Request.Http.Body)
-    if err != nil {
-        return ""
-    }
+	values, err := url.ParseQuery(s.req.Attributes.Request.Http.Body)
+	if err != nil {
+		return ""
+	}
 
-    return values.Get(name)
+	return values.Get(name)
 }
+
 func (s *RequestContext) RequestBody() []byte                     { return s.req.Attributes.Request.Http.RawBody }
 func (s *RequestContext) AppContext() context.Context             { return s.ctx }
 func (s *RequestContext) SetPipelineError(err error)              { s.err = err }
@@ -105,40 +111,46 @@ func (s *RequestContext) RequestURL() *url.URL                    { return s.req
 func (s *RequestContext) RequestClientIPs() []string              { return nil }
 
 func (s *RequestContext) Finalize() (*envoy_auth.CheckResponse, error) {
-    if s.err != nil {
-        return nil, s.err
-    }
+	if s.err != nil {
+		return nil, s.err
+	}
 
-    var headers []*envoy_core.HeaderValueOption
+	headers := make([]*envoy_core.HeaderValueOption,
+		len(s.upstreamHeaders)+x.IfThenElse(len(s.upstreamCookies) == 0, 0, 1))
+	hidx := 0
 
-    for k := range s.upstreamHeaders {
-        headers = append(headers, &envoy_core.HeaderValueOption{
-            Header: &envoy_core.HeaderValue{
-                Key:   k,
-                Value: strings.Join(s.upstreamHeaders.Values(k), ","),
-            },
-        })
-    }
+	for k := range s.upstreamHeaders {
+		headers[hidx] = &envoy_core.HeaderValueOption{
+			Header: &envoy_core.HeaderValue{
+				Key:   k,
+				Value: strings.Join(s.upstreamHeaders.Values(k), ","),
+			},
+		}
 
-    if len(s.upstreamCookies) != 0 {
-        var cookies []string
+		hidx++
+	}
 
-        for k, v := range s.upstreamCookies {
-            cookies = append(cookies, fmt.Sprintf("%s=%s", k, v))
-        }
+	if len(s.upstreamCookies) != 0 {
+		cookies := make([]string, len(s.upstreamCookies))
+		cidx := 0
 
-        headers = append(headers, &envoy_core.HeaderValueOption{
-            Header: &envoy_core.HeaderValue{
-                Key:   "Cookie",
-                Value: strings.Join(cookies, ";"),
-            },
-        })
-    }
+		for k, v := range s.upstreamCookies {
+			cookies[cidx] = fmt.Sprintf("%s=%s", k, v)
+			cidx++
+		}
 
-    return &envoy_auth.CheckResponse{
-        Status: &status.Status{Code: int32(envoy_type.StatusCode_OK)},
-        HttpResponse: &envoy_auth.CheckResponse_OkResponse{
-            OkResponse: &envoy_auth.OkHttpResponse{Headers: headers},
-        },
-    }, nil
+		headers[hidx] = &envoy_core.HeaderValueOption{
+			Header: &envoy_core.HeaderValue{
+				Key:   "Cookie",
+				Value: strings.Join(cookies, ";"),
+			},
+		}
+	}
+
+	return &envoy_auth.CheckResponse{
+		Status: &status.Status{Code: int32(envoy_type.StatusCode_OK)},
+		HttpResponse: &envoy_auth.CheckResponse_OkResponse{
+			OkResponse: &envoy_auth.OkHttpResponse{Headers: headers},
+		},
+	}, nil
 }

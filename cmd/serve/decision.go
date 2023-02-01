@@ -17,58 +17,58 @@
 package serve
 
 import (
-    "github.com/spf13/cobra"
-    "go.uber.org/fx"
+	"github.com/spf13/cobra"
+	"go.uber.org/fx"
 
-    "github.com/dadrus/heimdall/internal"
-    "github.com/dadrus/heimdall/internal/config"
-    "github.com/dadrus/heimdall/internal/handler/decision"
-    envoy_extauth "github.com/dadrus/heimdall/internal/handler/envoyextauth/grpcv3"
+	"github.com/dadrus/heimdall/internal"
+	"github.com/dadrus/heimdall/internal/config"
+	"github.com/dadrus/heimdall/internal/handler/decision"
+	envoy_extauth "github.com/dadrus/heimdall/internal/handler/envoyextauth/grpcv3"
 )
 
 // NewDecisionCommand represents the "serve decision" command.
 func NewDecisionCommand() *cobra.Command {
-    cmd := &cobra.Command{
-        Use:     "decision",
-        Short:   "Starts heimdall in Decision operation mode",
-        Example: "heimdall serve decision",
-        Run: func(cmd *cobra.Command, _ []string) {
-            app, err := createDecisionApp(cmd)
-            if err != nil {
-                cmd.PrintErrf("Failed to initialize decision service: %v", err)
-                panic(err)
-            }
+	cmd := &cobra.Command{
+		Use:     "decision",
+		Short:   "Starts heimdall in Decision operation mode",
+		Example: "heimdall serve decision",
+		Run: func(cmd *cobra.Command, _ []string) {
+			app, err := createDecisionApp(cmd)
+			if err != nil {
+				cmd.PrintErrf("Failed to initialize decision service: %v", err)
+				panic(err)
+			}
 
-            app.Run()
-        },
-    }
+			app.Run()
+		},
+	}
 
-    cmd.PersistentFlags().Bool("envoy-extauth", false,
-        "Whether to start the decision mode for integration with envoy extauth gRPC service")
+	cmd.PersistentFlags().Bool("envoy-extauth", false,
+		"Whether to start the decision mode for integration with envoy extauth gRPC service")
 
-    return cmd
+	return cmd
 }
 
 func createDecisionApp(cmd *cobra.Command) (*fx.App, error) {
-    configPath, _ := cmd.Flags().GetString("config")
-    envPrefix, _ := cmd.Flags().GetString("env-config-prefix")
-    useEnvoyExtAuth, _ := cmd.Flags().GetBool("envoy-extauth")
+	configPath, _ := cmd.Flags().GetString("config")
+	envPrefix, _ := cmd.Flags().GetString("env-config-prefix")
+	useEnvoyExtAuth, _ := cmd.Flags().GetBool("envoy-extauth")
 
-    opts := []fx.Option{
-        fx.NopLogger,
-        fx.Supply(
-            config.ConfigurationPath(configPath),
-            config.EnvVarPrefix(envPrefix)),
-        internal.Module,
-    }
+	opts := []fx.Option{
+		fx.NopLogger,
+		fx.Supply(
+			config.ConfigurationPath(configPath),
+			config.EnvVarPrefix(envPrefix)),
+		internal.Module,
+	}
 
-    if useEnvoyExtAuth {
-        opts = append(opts, envoy_extauth.Module)
-    } else {
-        opts = append(opts, decision.Module)
-    }
+	if useEnvoyExtAuth {
+		opts = append(opts, envoy_extauth.Module)
+	} else {
+		opts = append(opts, decision.Module)
+	}
 
-    app := fx.New(opts...)
+	app := fx.New(opts...)
 
-    return app, app.Err()
+	return app, app.Err()
 }

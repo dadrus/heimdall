@@ -17,77 +17,77 @@
 package grpcv3
 
 import (
-    "context"
+	"context"
 
-    "github.com/prometheus/client_golang/prometheus"
-    "github.com/rs/zerolog"
-    "go.uber.org/fx"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/rs/zerolog"
+	"go.uber.org/fx"
 
-    "github.com/dadrus/heimdall/internal/cache"
-    "github.com/dadrus/heimdall/internal/config"
-    "github.com/dadrus/heimdall/internal/handler/listener"
-    "github.com/dadrus/heimdall/internal/heimdall"
-    "github.com/dadrus/heimdall/internal/rules"
+	"github.com/dadrus/heimdall/internal/cache"
+	"github.com/dadrus/heimdall/internal/config"
+	"github.com/dadrus/heimdall/internal/handler/listener"
+	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/rules"
 )
 
 var Module = fx.Options( // nolint: gochecknoglobals
-    fx.Invoke(registerHooks),
+	fx.Invoke(registerHooks),
 )
 
 type hooksArgs struct {
-    fx.In
+	fx.In
 
-    Lifecycle  fx.Lifecycle
-    Config     *config.Configuration
-    Logger     zerolog.Logger
-    Repository rules.Repository
-    Signer     heimdall.JWTSigner
-    Registerer prometheus.Registerer
-    Cache      cache.Cache
+	Lifecycle  fx.Lifecycle
+	Config     *config.Configuration
+	Logger     zerolog.Logger
+	Repository rules.Repository
+	Signer     heimdall.JWTSigner
+	Registerer prometheus.Registerer
+	Cache      cache.Cache
 }
 
 func registerHooks(args hooksArgs) {
-    ln, err := listener.New("tcp4", args.Config.Serve.Decision)
-    if err != nil {
-        args.Logger.Fatal().Err(err).Msg("Could not create listener for the Decision Envoy ExtAuth service")
+	ln, err := listener.New("tcp4", args.Config.Serve.Decision)
+	if err != nil {
+		args.Logger.Fatal().Err(err).Msg("Could not create listener for the Decision Envoy ExtAuth service")
 
-        return
-    }
+		return
+	}
 
-    service := newService(args.Config, args.Registerer, args.Cache, args.Logger, args.Repository, args.Signer)
+	service := newService(args.Config, args.Registerer, args.Cache, args.Logger, args.Repository, args.Signer)
 
-    args.Lifecycle.Append(
-        fx.Hook{
-            OnStart: func(ctx context.Context) error {
-                go func() {
-                    args.Logger.Info().Str("_address", ln.Addr().String()).
-                        Msg("Decision Envoy ExtAuth service starts listening")
+	args.Lifecycle.Append(
+		fx.Hook{
+			OnStart: func(ctx context.Context) error {
+				go func() {
+					args.Logger.Info().Str("_address", ln.Addr().String()).
+						Msg("Decision Envoy ExtAuth service starts listening")
 
-                    if err = service.Serve(ln); err != nil {
-                        args.Logger.Fatal().Err(err).Msg("Could not start Decision Envoy ExtAuth service")
-                    }
-                }()
+					if err = service.Serve(ln); err != nil {
+						args.Logger.Fatal().Err(err).Msg("Could not start Decision Envoy ExtAuth service")
+					}
+				}()
 
-                return nil
-            },
-            OnStop: func(ctx context.Context) error {
-                args.Logger.Info().Msg("Tearing down Decision Envoy ExtAuth service")
+				return nil
+			},
+			OnStop: func(ctx context.Context) error {
+				args.Logger.Info().Msg("Tearing down Decision Envoy ExtAuth service")
 
-                done := make(chan struct{})
+				done := make(chan struct{})
 
-                go func() {
-                    service.GracefulStop()
-                    close(done)
-                }()
+				go func() {
+					service.GracefulStop()
+					close(done)
+				}()
 
-                select {
-                case <-done:
-                case <-ctx.Done():
-                    service.Stop()
-                }
+				select {
+				case <-done:
+				case <-ctx.Done():
+					service.Stop()
+				}
 
-                return nil
-            },
-        },
-    )
+				return nil
+			},
+		},
+	)
 }

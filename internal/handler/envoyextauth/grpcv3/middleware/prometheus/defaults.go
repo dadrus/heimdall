@@ -17,12 +17,12 @@
 package prometheus
 
 import (
-    "github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 // nolint: gochecknoglobals
 var defaultOptions = opts{
-    registerer: prometheus.DefaultRegisterer,
-    namespace:  "http",
-    labels:     make(prometheus.Labels),
+	registerer: prometheus.DefaultRegisterer,
+	namespace:  "http",
+	labels:     make(prometheus.Labels),
 }

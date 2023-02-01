@@ -17,43 +17,43 @@
 package grpcv3
 
 import (
-    "context"
+	"context"
 
-    envoy_auth "github.com/envoyproxy/go-control-plane/envoy/service/auth/v3"
-    "github.com/rs/zerolog"
+	envoy_auth "github.com/envoyproxy/go-control-plane/envoy/service/auth/v3"
+	"github.com/rs/zerolog"
 
-    "github.com/dadrus/heimdall/internal/heimdall"
-    "github.com/dadrus/heimdall/internal/rules"
-    "github.com/dadrus/heimdall/internal/x/errorchain"
+	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/rules"
+	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
 type Handler struct {
-    r rules.Repository
-    s heimdall.JWTSigner
+	r rules.Repository
+	s heimdall.JWTSigner
 }
 
 func (h *Handler) Check(ctx context.Context, req *envoy_auth.CheckRequest) (*envoy_auth.CheckResponse, error) {
-    logger := zerolog.Ctx(ctx)
-    logger.Debug().Msg("Decision Envoy ExtAuth endpoint called")
+	logger := zerolog.Ctx(ctx)
+	logger.Debug().Msg("Decision Envoy ExtAuth endpoint called")
 
-    reqCtx := NewRequestContext(ctx, req, h.s)
+	reqCtx := NewRequestContext(ctx, req, h.s)
 
-    rule, err := h.r.FindRule(reqCtx.RequestURL())
-    if err != nil {
-        return nil, err
-    }
+	rule, err := h.r.FindRule(reqCtx.RequestURL())
+	if err != nil {
+		return nil, err
+	}
 
-    if !rule.MatchesMethod(reqCtx.RequestMethod()) {
-        return nil, errorchain.NewWithMessagef(heimdall.ErrMethodNotAllowed,
-            "rule doesn't match %s method", reqCtx.RequestMethod())
-    }
+	if !rule.MatchesMethod(reqCtx.RequestMethod()) {
+		return nil, errorchain.NewWithMessagef(heimdall.ErrMethodNotAllowed,
+			"rule doesn't match %s method", reqCtx.RequestMethod())
+	}
 
-    _, err = rule.Execute(reqCtx)
-    if err != nil {
-        return nil, err
-    }
+	_, err = rule.Execute(reqCtx)
+	if err != nil {
+		return nil, err
+	}
 
-    logger.Debug().Msg("Finalizing request")
+	logger.Debug().Msg("Finalizing request")
 
-    return reqCtx.Finalize()
+	return reqCtx.Finalize()
 }

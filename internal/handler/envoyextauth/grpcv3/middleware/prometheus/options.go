@@ -17,64 +17,64 @@
 package prometheus
 
 import (
-    "github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 type opts struct {
-    registerer prometheus.Registerer
-    labels     prometheus.Labels
-    namespace  string
-    subsystem  string
+	registerer prometheus.Registerer
+	labels     prometheus.Labels
+	namespace  string
+	subsystem  string
 }
 
 type Option func(*opts)
 
 func WithRegisterer(registerer prometheus.Registerer) Option {
-    return func(o *opts) {
-        if registerer != nil {
-            o.registerer = registerer
-        }
-    }
+	return func(o *opts) {
+		if registerer != nil {
+			o.registerer = registerer
+		}
+	}
 }
 
 func WithServiceName(name string) Option {
-    return func(o *opts) {
-        if len(name) != 0 {
-            o.labels["service"] = name
-        }
-    }
+	return func(o *opts) {
+		if len(name) != 0 {
+			o.labels["service"] = name
+		}
+	}
 }
 
 func WithNamespace(name string) Option {
-    return func(o *opts) {
-        if len(name) != 0 {
-            o.namespace = name
-        }
-    }
+	return func(o *opts) {
+		if len(name) != 0 {
+			o.namespace = name
+		}
+	}
 }
 
 func WithSubsystem(name string) Option {
-    return func(o *opts) {
-        if len(name) != 0 {
-            o.subsystem = name
-        }
-    }
+	return func(o *opts) {
+		if len(name) != 0 {
+			o.subsystem = name
+		}
+	}
 }
 
 func WithLabel(label, value string) Option {
-    return func(o *opts) {
-        if len(label) != 0 && len(value) != 0 {
-            o.labels[label] = value
-        }
-    }
+	return func(o *opts) {
+		if len(label) != 0 && len(value) != 0 {
+			o.labels[label] = value
+		}
+	}
 }
 
 func WithLabels(labels map[string]string) Option {
-    return func(o *opts) {
-        for label, value := range labels {
-            if len(label) != 0 && len(value) != 0 {
-                o.labels[label] = value
-            }
-        }
-    }
+	return func(o *opts) {
+		for label, value := range labels {
+			if len(label) != 0 && len(value) != 0 {
+				o.labels[label] = value
+			}
+		}
+	}
 }

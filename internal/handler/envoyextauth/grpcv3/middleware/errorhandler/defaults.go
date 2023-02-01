@@ -17,29 +17,21 @@
 package errorhandler
 
 import (
-    "net/http"
+	"net/http"
 )
 
 var defaultOptions = opts{ //nolint:gochecknoglobals
-    authenticationError: func(err error, verbose bool) (any, error) {
-        return createDeniedResponse(http.StatusUnauthorized, err, verbose), nil
-    },
-    authorizationError: func(err error, verbose bool) (any, error) {
-        return createDeniedResponse(http.StatusForbidden, err, verbose), nil
-    },
-    communicationError: func(err error, verbose bool) (any, error) {
-        return createDeniedResponse(http.StatusBadGateway, err, verbose), nil
-    },
-    preconditionError: func(err error, verbose bool) (any, error) {
-        return createDeniedResponse(http.StatusBadRequest, err, verbose), nil
-    },
-    badMethodError: func(err error, verbose bool) (any, error) {
-        return createDeniedResponse(http.StatusMethodNotAllowed, err, verbose), nil
-    },
-    noRuleError: func(err error, verbose bool) (any, error) {
-        return createDeniedResponse(http.StatusNotFound, err, verbose), nil
-    },
-    internalError: func(err error, verbose bool) (any, error) {
-        return createDeniedResponse(http.StatusInternalServerError, err, verbose), nil
-    },
+	authenticationError: responseWith(http.StatusUnauthorized),
+	authorizationError:  responseWith(http.StatusForbidden),
+	communicationError:  responseWith(http.StatusBadGateway),
+	preconditionError:   responseWith(http.StatusBadRequest),
+	badMethodError:      responseWith(http.StatusMethodNotAllowed),
+	noRuleError:         responseWith(http.StatusNotFound),
+	internalError:       responseWith(http.StatusInternalServerError),
+}
+
+func responseWith(code int) func(err error, verbose bool) (any, error) {
+	return func(err error, verbose bool) (any, error) {
+		return createDeniedResponse(code, err, verbose), nil
+	}
 }

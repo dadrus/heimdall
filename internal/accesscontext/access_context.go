@@ -16,43 +16,45 @@
 
 package accesscontext
 
-import "context"
+import (
+	"context"
+)
 
 type ctxKey struct{}
 
 type accessContext struct {
-    err     error
-    subject string
+	err     error
+	subject string
 }
 
 func New(ctx context.Context) context.Context {
-    return context.WithValue(ctx, ctxKey{}, &accessContext{})
+	return context.WithValue(ctx, ctxKey{}, &accessContext{})
 }
 
 func Error(ctx context.Context) error {
-    if c, ok := ctx.Value(ctxKey{}).(*accessContext); ok {
-        return c.err
-    }
+	if c, ok := ctx.Value(ctxKey{}).(*accessContext); ok {
+		return c.err
+	}
 
-    return nil
+	return nil
 }
 
 func SetError(ctx context.Context, err error) {
-    if c, ok := ctx.Value(ctxKey{}).(*accessContext); ok {
-        c.err = err
-    }
+	if c, ok := ctx.Value(ctxKey{}).(*accessContext); ok {
+		c.err = err
+	}
 }
 
 func Subject(ctx context.Context) string {
-    if c, ok := ctx.Value(ctxKey{}).(*accessContext); ok {
-        return c.subject
-    }
+	if c, ok := ctx.Value(ctxKey{}).(*accessContext); ok {
+		return c.subject
+	}
 
-    return ""
+	return ""
 }
 
 func SetSubject(ctx context.Context, subject string) {
-    if c, ok := ctx.Value(ctxKey{}).(*accessContext); ok {
-        c.subject = subject
-    }
+	if c, ok := ctx.Value(ctxKey{}).(*accessContext); ok {
+		c.subject = subject
+	}
 }

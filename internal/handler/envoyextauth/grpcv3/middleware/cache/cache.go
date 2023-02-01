@@ -17,15 +17,15 @@
 package cache
 
 import (
-    "context"
+	"context"
 
-    "google.golang.org/grpc"
+	"google.golang.org/grpc"
 
-    "github.com/dadrus/heimdall/internal/cache"
+	"github.com/dadrus/heimdall/internal/cache"
 )
 
 func New(cch cache.Cache) grpc.UnaryServerInterceptor {
-    return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
-        return handler(cache.WithContext(ctx, cch), req)
-    }
+	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
+		return handler(cache.WithContext(ctx, cch), req)
+	}
 }
