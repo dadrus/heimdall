@@ -72,7 +72,6 @@ func newApp(args appArgs) *fiber.App {
 	if args.Config.Metrics.Enabled {
 		app.Use(prometheusmiddleware.New(
 			prometheusmiddleware.WithServiceName("decision"),
-			prometheusmiddleware.WithLabel("type", "http"),
 			prometheusmiddleware.WithRegisterer(args.Registerer),
 		))
 	}
