@@ -27,19 +27,20 @@ import (
 
 func New(logger zerolog.Logger) grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
-		logCtx := logger.With()
-		traceCtx := tracecontext.Extract(ctx)
-
-		if traceCtx != nil {
-			logCtx = logCtx.
-				Str("_trace_id", traceCtx.TraceID).
-				Str("_span_id", traceCtx.SpanID)
-
-			if len(traceCtx.ParentID) != 0 {
-				logCtx = logCtx.Str("_parent_id", traceCtx.ParentID)
-			}
-		}
-
-		return handler(logCtx.Logger().WithContext(ctx), req)
+		return handler(withTraceData(ctx, logger.With()).Logger().WithContext(ctx), req)
 	}
+}
+
+func withTraceData(ctx context.Context, logCtx zerolog.Context) zerolog.Context {
+	if traceCtx := tracecontext.Extract(ctx); traceCtx != nil {
+		logCtx = logCtx.
+			Str("_trace_id", traceCtx.TraceID).
+			Str("_span_id", traceCtx.SpanID)
+
+		if len(traceCtx.ParentID) != 0 {
+			logCtx = logCtx.Str("_parent_id", traceCtx.ParentID)
+		}
+	}
+
+	return logCtx
 }

@@ -1,4 +1,4 @@
-// Copyright 2022 Dimitrij Drus <dadrus@gmx.de>
+// Copyright 2023 Dimitrij Drus <dadrus@gmx.de>
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,6 +17,8 @@
 package logger
 
 import (
+	"context"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/rs/zerolog"
 
@@ -25,22 +27,24 @@ import (
 
 func New(logger zerolog.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		logCtx := logger.With()
 		ctx := c.UserContext()
-		traceCtx := tracecontext.Extract(ctx)
 
-		if traceCtx != nil {
-			logCtx = logCtx.
-				Str("_trace_id", traceCtx.TraceID).
-				Str("_span_id", traceCtx.SpanID)
-
-			if len(traceCtx.ParentID) != 0 {
-				logCtx = logCtx.Str("_parent_id", traceCtx.ParentID)
-			}
-		}
-
-		c.SetUserContext(logCtx.Logger().WithContext(ctx))
+		c.SetUserContext(withTraceData(ctx, logger.With()).Logger().WithContext(ctx))
 
 		return c.Next()
 	}
+}
+
+func withTraceData(ctx context.Context, logCtx zerolog.Context) zerolog.Context {
+	if traceCtx := tracecontext.Extract(ctx); traceCtx != nil {
+		logCtx = logCtx.
+			Str("_trace_id", traceCtx.TraceID).
+			Str("_span_id", traceCtx.SpanID)
+
+		if len(traceCtx.ParentID) != 0 {
+			logCtx = logCtx.Str("_parent_id", traceCtx.ParentID)
+		}
+	}
+
+	return logCtx
 }
