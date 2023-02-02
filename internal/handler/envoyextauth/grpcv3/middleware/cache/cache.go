@@ -25,7 +25,7 @@ import (
 )
 
 func New(cch cache.Cache) grpc.UnaryServerInterceptor {
-	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
+	return func(ctx context.Context, req any, _ *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
 		return handler(cache.WithContext(ctx, cch), req)
 	}
 }
