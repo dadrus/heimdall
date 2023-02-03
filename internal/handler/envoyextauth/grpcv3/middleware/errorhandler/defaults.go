@@ -30,8 +30,8 @@ var defaultOptions = opts{ //nolint:gochecknoglobals
 	internalError:       responseWith(http.StatusInternalServerError),
 }
 
-func responseWith(code int) func(err error, verbose bool) (any, error) {
-	return func(err error, verbose bool) (any, error) {
-		return createDeniedResponse(code, err, verbose), nil
+func responseWith(code int) func(err error, verbose bool, mimeType string) (any, error) {
+	return func(err error, verbose bool, mimeType string) (any, error) {
+		return errorResponse(code, err, verbose, mimeType), nil
 	}
 }

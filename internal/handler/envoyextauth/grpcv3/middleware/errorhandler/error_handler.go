@@ -22,6 +22,7 @@ import (
 
 	envoy_core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	envoy_auth "github.com/envoyproxy/go-control-plane/envoy/service/auth/v3"
+	envoy_type "github.com/envoyproxy/go-control-plane/envoy/type/v3"
 	"github.com/rs/zerolog"
 	"google.golang.org/genproto/googleapis/rpc/status"
 	"google.golang.org/grpc"
@@ -47,7 +48,7 @@ type handler struct {
 }
 
 func (h *handler) handle(
-	ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler,
+	ctx context.Context, req any, _ *grpc.UnaryServerInfo, handler grpc.UnaryHandler,
 ) (any, error) { //nolint:cyclop
 	res, err := handler(ctx, req)
 	if err == nil {
@@ -58,17 +59,17 @@ func (h *handler) handle(
 
 	switch {
 	case errors.Is(err, heimdall.ErrAuthentication):
-		return h.authenticationError(err, h.verboseErrors)
+		return h.authenticationError(err, h.verboseErrors, acceptType(req))
 	case errors.Is(err, heimdall.ErrAuthorization):
-		return h.authorizationError(err, h.verboseErrors)
+		return h.authorizationError(err, h.verboseErrors, acceptType(req))
 	case errors.Is(err, heimdall.ErrCommunicationTimeout) || errors.Is(err, heimdall.ErrCommunication):
-		return h.communicationError(err, h.verboseErrors)
+		return h.communicationError(err, h.verboseErrors, acceptType(req))
 	case errors.Is(err, heimdall.ErrArgument):
-		return h.preconditionError(err, h.verboseErrors)
+		return h.preconditionError(err, h.verboseErrors, acceptType(req))
 	case errors.Is(err, heimdall.ErrMethodNotAllowed):
-		return h.badMethodError(err, h.verboseErrors)
+		return h.badMethodError(err, h.verboseErrors, acceptType(req))
 	case errors.Is(err, heimdall.ErrNoRuleFound):
-		return h.noRuleError(err, h.verboseErrors)
+		return h.noRuleError(err, h.verboseErrors, acceptType(req))
 	case errors.Is(err, &heimdall.RedirectError{}):
 		var redirectError *heimdall.RedirectError
 
@@ -77,14 +78,17 @@ func (h *handler) handle(
 		return &envoy_auth.CheckResponse{
 			Status: &status.Status{Code: int32(redirectError.Code)},
 			HttpResponse: &envoy_auth.CheckResponse_DeniedResponse{
-				DeniedResponse: &envoy_auth.DeniedHttpResponse{Headers: []*envoy_core.HeaderValueOption{
-					{
-						Header: &envoy_core.HeaderValue{
-							Key:   "Location",
-							Value: redirectError.RedirectTo,
+				DeniedResponse: &envoy_auth.DeniedHttpResponse{
+					Status: &envoy_type.HttpStatus{Code: envoy_type.StatusCode(redirectError.Code)},
+					Headers: []*envoy_core.HeaderValueOption{
+						{
+							Header: &envoy_core.HeaderValue{
+								Key:   "Location",
+								Value: redirectError.RedirectTo,
+							},
 						},
 					},
-				}},
+				},
 			},
 		}, nil
 
@@ -92,6 +96,14 @@ func (h *handler) handle(
 		logger := zerolog.Ctx(ctx)
 		logger.Error().Err(err).Msg("Internal error occurred")
 
-		return h.internalError(err, h.verboseErrors)
+		return h.internalError(err, h.verboseErrors, acceptType(req))
 	}
+}
+
+func acceptType(req any) string {
+	if req, ok := req.(*envoy_auth.CheckRequest); ok {
+		return req.Attributes.Request.Http.Headers["accept"]
+	}
+
+	return ""
 }
