@@ -9,12 +9,12 @@ on:
       - main
 
 env:
-  GO_VERSION: 1.19
-  GOLANGCI_LINT_VERSION: v1.51.0
-  HELM_VERSION: 3.10.0
-  KUBECONFORM_VERSION: 0.5.0
-  KUBERNETES_API_VERSION: 1.23.0
-  DOCUMENTATION_URL: https://dadrus.github.io/heimdall/
+  GO_VERSION: "1.20"
+  GOLANGCI_LINT_VERSION: "v1.51.0"
+  HELM_VERSION: "3.10.0"
+  KUBECONFORM_VERSION: "0.5.0"
+  KUBERNETES_API_VERSION: "1.23.0"
+  DOCUMENTATION_URL: "https://dadrus.github.io/heimdall/"
 
 jobs:
   check-licenses:
@@ -23,7 +23,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v3
         with:
-          go-version: ${{ env.GO_VERSION }}
+          go-version: "${{ env.GO_VERSION }}"
       - name: Get google/go-licenses package
         run: go install github.com/google/go-licenses@latest
       - name: Checkout repository
@@ -37,7 +37,7 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v3
       with:
-        go-version: ${{ env.GO_VERSION }}
+        go-version: "${{ env.GO_VERSION }}"
     - name: Checkout repository
       uses: actions/checkout@v3
     - name: golangci-lint
@@ -104,7 +104,7 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v3
       with:
-        go-version: ${{ env.GO_VERSION }}
+        go-version: "${{ env.GO_VERSION }}"
     - name: Checkout repository
       uses: actions/checkout@v3
     - name: Test
@@ -151,7 +151,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v3
         with:
-          go-version: ${{ env.GO_VERSION }}
+          go-version: "${{ env.GO_VERSION }}"
       - name: Checkout repository
         uses: actions/checkout@v3
       - name: Build
@@ -189,7 +189,7 @@ jobs:
           release_tag: ${{ needs.prepare-release.outputs.tag_name }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
           pre_command: export CGO_ENABLED=0
-          goversion: ${{ env.GO_VERSION }}
+          goversion: "${{ env.GO_VERSION }}"
           goos: ${{ matrix.goos }}
           goarch: ${{ matrix.goarch }}
           ldflags: "-buildid= -w -s -X github.com/dadrus/heimdall/version.Version=${{ needs.prepare-release.outputs.tag_name }}"
