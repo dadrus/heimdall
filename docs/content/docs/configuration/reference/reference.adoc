@@ -17,7 +17,15 @@ serve:
   decision:
     host: 127.0.0.1
     port: 4468
-    verbose_errors: true
+    respond:
+      verbose: true
+      with:
+        accepted:
+          code: 201
+        authorization_error:
+          code: 404
+        authentication_error:
+          code: 404
     timeout:
       read: 2s
       write: 5s
@@ -44,7 +52,13 @@ serve:
   proxy:
     host: 127.0.0.1
     port: 4469
-    verbose_errors: false
+    respond:
+      verbose: true
+      with:
+        authorization_error:
+          code: 404
+        authentication_error:
+          code: 404
     timeout:
       read: 2s
       write: 5s
