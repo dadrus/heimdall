@@ -181,7 +181,7 @@ func (ec *ErrorChain) String() string {
 	return fmt.Sprintf("%s: %s", ec.head.err.Error(), ec.head.msg)
 }
 
-type message struct {
+type message struct { //nolint:musttag
 	XMLName xml.Name `json:"-"`
 	Code    string   `xml:"code" json:"code"`
 	Message string   `xml:"message,omitempty" json:"message,omitempty"`
