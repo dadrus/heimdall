@@ -1002,6 +1002,8 @@ github.com/godbus/dbus/v5 v5.0.4/go.mod h1:xhWf0FNVPg57R7Z0UbKHbJfkEywrmjJnf7w5x
 github.com/godbus/dbus/v5 v5.0.6/go.mod h1:xhWf0FNVPg57R7Z0UbKHbJfkEywrmjJnf7w5xrFpKfA=
 github.com/gofiber/adaptor/v2 v2.1.31 h1:E7LJre4uBc+RDsQfHCE+LKVkFcciSMYu4KhzbvoWgKU=
 github.com/gofiber/adaptor/v2 v2.1.31/go.mod h1:vdSG9JhOhOLYjE4j14fx6sJvLJNFVf9o6rSyB5GkU4s=
+github.com/gofiber/adaptor/v2 v2.1.32 h1:94cL79U4ekq78TmqfXPrulMWkpfPxqzHimUc/B+jmkY=
+github.com/gofiber/adaptor/v2 v2.1.32/go.mod h1:aX4qfSo+1AJYIWnLL1Mx3EQ6znC6WW46MqFQruUQE6c=
 github.com/gofiber/fiber/v2 v2.41.0 h1:YhNoUS/OTjEz+/WLYuQ01xI7RXgKEFnGBKMagAu5f0M=
 github.com/gofiber/fiber/v2 v2.41.0/go.mod h1:RdebcCuCRFp4W6hr3968/XxwJVg0K+jr9/Ae0PFzZ0Q=
 github.com/gofiber/fiber/v2 v2.42.0 h1:Fnp7ybWvS+sjNQsFvkhf4G8OhXswvB6Vee8hM/LyS+8=
