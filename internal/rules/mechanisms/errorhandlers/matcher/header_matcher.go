@@ -17,6 +17,7 @@
 package matcher
 
 import (
+	"net/textproto"
 	"strings"
 )
 
@@ -24,7 +25,8 @@ type HeaderMatcher map[string][]string
 
 func (hm HeaderMatcher) Match(headers map[string]string) bool {
 	for name, valueList := range hm {
-		if headerVal, found := headers[name]; found {
+		key := textproto.CanonicalMIMEHeaderKey(name)
+		if headerVal, found := headers[key]; found {
 			for _, val := range valueList {
 				if strings.Contains(headerVal, val) {
 					return true

@@ -69,6 +69,18 @@ func TestHeaderMatcher(t *testing.T) {
 			match:    map[string]string{"foobar": "value1"},
 			matching: false,
 		},
+		{
+			uc: "match header case-insensitivity",
+			headers: map[string][]string{
+				"x-foo-bar": {"bar"},
+				"X-Bar-foo": {"foo"},
+			},
+			match: map[string]string{
+				"X-Foo-Bar": "bar",
+				"X-Bar-Foo": "foo",
+			},
+			matching: true,
+		},
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
 			matcher := HeaderMatcher(tc.headers)
