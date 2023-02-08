@@ -205,121 +205,7 @@
         }
       }
     },
-    "serviceConfig": {
-      "description": "Service Configuration",
-      "additionalProperties": false,
-      "type": "object",
-      "properties": {
-        "port": {
-          "description": "The port to listen on.",
-          "type": "integer"
-        },
-        "host": {
-          "description": "The network interface to listen on.",
-          "type": "string",
-          "default": "",
-          "examples": [
-            "localhost",
-            "127.0.0.1"
-          ]
-        },
-        "timeout": {
-          "$ref": "#/definitions/timeoutConfig"
-        },
-        "cors": {
-          "$ref": "#/definitions/corsConfig"
-        },
-        "tls": {
-          "$ref": "#/definitions/tlsConfig"
-        },
-        "trusted_proxies": {
-          "description": "The list IPs or CIDRs heimdall should trust and thus make use of headers, like X-Forwarded-*, Forwarded, etc",
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    "ruleExecutorServiceConfig": {
-      "description": "Service Configuration for Proxy and Decision services",
-      "additionalProperties": false,
-      "type": "object",
-      "properties": {
-        "port": {
-          "description": "The port to listen on.",
-          "type": "integer"
-        },
-        "host": {
-          "description": "The network interface to listen on.",
-          "type": "string",
-          "default": "",
-          "examples": [
-            "localhost",
-            "127.0.0.1"
-          ]
-        },
-        "timeout": {
-          "$ref": "#/definitions/timeoutConfig"
-        },
-        "cors": {
-          "$ref": "#/definitions/corsConfig"
-        },
-        "tls": {
-          "$ref": "#/definitions/tlsConfig"
-        },
-        "trusted_proxies": {
-          "description": "The list IPs or CIDRs heimdall should trust and thus make use of headers, like X-Forwarded-*, Forwarded, etc",
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "respond": {
-          "type": "object",
-          "description": "How the service should response",
-          "additionalProperties": false,
-          "properties": {
-            "verbose": {
-              "type": "boolean",
-              "description": "Whether the response should be verbose in error cases",
-              "default": false
-            },
-            "with": {
-              "type": "object",
-              "description": "Overrides for the status codes",
-              "additionalProperties": false,
-              "properties": {
-                "accepted": {
-                  "$ref": "#/definitions/responseOverride"
-                },
-                "precondition_error": {
-                  "$ref": "#/definitions/responseOverride"
-                },
-                "authentication_error": {
-                  "$ref": "#/definitions/responseOverride"
-                },
-                "authorization_error": {
-                  "$ref": "#/definitions/responseOverride"
-                },
-                "method_error": {
-                  "$ref": "#/definitions/responseOverride"
-                },
-                "communication_error": {
-                  "$ref": "#/definitions/responseOverride"
-                },
-                "internal_error": {
-                  "$ref": "#/definitions/responseOverride"
-                },
-                "no_rule_error": {
-                  "$ref": "#/definitions/responseOverride"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
+
     "responseOverride": {
       "type": "object",
       "description": "Overrides the defaults for responses",
@@ -328,6 +214,49 @@
         "code": {
           "type": "integer",
           "description": "The HTTP status code"
+        }
+      }
+    },
+    "respondWithConfig": {
+      "type": "object",
+      "description": "How the service should response",
+      "additionalProperties": false,
+      "properties": {
+        "verbose": {
+          "type": "boolean",
+          "description": "Whether the response should be verbose in error cases",
+          "default": false
+        },
+        "with": {
+          "type": "object",
+          "description": "Overrides for the status codes",
+          "additionalProperties": false,
+          "properties": {
+            "accepted": {
+              "$ref": "#/definitions/responseOverride"
+            },
+            "precondition_error": {
+              "$ref": "#/definitions/responseOverride"
+            },
+            "authentication_error": {
+              "$ref": "#/definitions/responseOverride"
+            },
+            "authorization_error": {
+              "$ref": "#/definitions/responseOverride"
+            },
+            "method_error": {
+              "$ref": "#/definitions/responseOverride"
+            },
+            "communication_error": {
+              "$ref": "#/definitions/responseOverride"
+            },
+            "internal_error": {
+              "$ref": "#/definitions/responseOverride"
+            },
+            "no_rule_error": {
+              "$ref": "#/definitions/responseOverride"
+            }
+          }
         }
       }
     },
@@ -1790,13 +1719,115 @@
       "type": "object",
       "properties": {
         "decision": {
-          "$ref": "#/definitions/ruleExecutorServiceConfig"
+          "description": "Decision service Configuration",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "port": {
+              "description": "The port to listen on.",
+              "type": "integer"
+            },
+            "host": {
+              "description": "The network interface to listen on.",
+              "type": "string",
+              "default": "",
+              "examples": [
+                "localhost",
+                "127.0.0.1"
+              ]
+            },
+            "timeout": {
+              "$ref": "#/definitions/timeoutConfig"
+            },
+            "tls": {
+              "$ref": "#/definitions/tlsConfig"
+            },
+            "trusted_proxies": {
+              "description": "The list IPs or CIDRs heimdall should trust and thus make use of headers, like X-Forwarded-*, Forwarded, etc",
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "respond": {
+              "$ref": "#/definitions/respondWithConfig"
+            }
+          }
         },
         "proxy": {
-          "$ref": "#/definitions/ruleExecutorServiceConfig"
+          "description": "Proxy service configuration",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "port": {
+              "description": "The port to listen on.",
+              "type": "integer"
+            },
+            "host": {
+              "description": "The network interface to listen on.",
+              "type": "string",
+              "default": "",
+              "examples": [
+                "localhost",
+                "127.0.0.1"
+              ]
+            },
+            "timeout": {
+              "$ref": "#/definitions/timeoutConfig"
+            },
+            "cors": {
+              "$ref": "#/definitions/corsConfig"
+            },
+            "tls": {
+              "$ref": "#/definitions/tlsConfig"
+            },
+            "trusted_proxies": {
+              "description": "The list IPs or CIDRs heimdall should trust and thus make use of headers, like X-Forwarded-*, Forwarded, etc",
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "respond": {
+              "$ref": "#/definitions/respondWithConfig"
+            }
+          }
         },
         "management": {
-          "$ref": "#/definitions/serviceConfig"
+          "description": "Management service configuration",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "port": {
+              "description": "The port to listen on.",
+              "type": "integer"
+            },
+            "host": {
+              "description": "The network interface to listen on.",
+              "type": "string",
+              "default": "",
+              "examples": [
+                "localhost",
+                "127.0.0.1"
+              ]
+            },
+            "timeout": {
+              "$ref": "#/definitions/timeoutConfig"
+            },
+            "cors": {
+              "$ref": "#/definitions/corsConfig"
+            },
+            "tls": {
+              "$ref": "#/definitions/tlsConfig"
+            },
+            "trusted_proxies": {
+              "description": "The list IPs or CIDRs heimdall should trust and thus make use of headers, like X-Forwarded-*, Forwarded, etc",
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
         }
       }
     },
