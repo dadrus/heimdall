@@ -23,6 +23,7 @@ import (
 	"github.com/rs/zerolog"
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/keepalive"
 
 	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/dadrus/heimdall/internal/config"
@@ -75,7 +76,10 @@ func newService(
 		cachemiddleware.New(cch),
 	)
 
-	srv := grpc.NewServer(grpc.ChainUnaryInterceptor(interceptors...))
+	srv := grpc.NewServer(
+		grpc.KeepaliveParams(keepalive.ServerParameters{Timeout: service.Timeout.Idle}),
+		grpc.ChainUnaryInterceptor(interceptors...),
+	)
 
 	envoy_auth.RegisterAuthorizationServer(srv, &Handler{r: repository, s: signer})
 
