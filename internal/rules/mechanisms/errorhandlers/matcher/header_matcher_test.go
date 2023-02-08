@@ -42,12 +42,14 @@ func TestHeaderMatcher(t *testing.T) {
 		{
 			uc: "match multiple header",
 			headers: map[string][]string{
-				"foobar":      {"foo", "bar"},
-				"some-header": {"value1", "value2"},
+				"foobar":               {"foo", "bar"},
+				"some-header":          {"value1", "value2"},
+				"x-yet-another-header": {"application/json"},
 			},
 			match: map[string]string{
-				"Foobar":      "bar,foo",
-				"Some-Header": "value1,val3",
+				"Foobar":               "bar,foo",
+				"Some-Header":          "value1,val3",
+				"X-Yet-Another-Header": "application/xml;q=0.8, application/json;v=1.2",
 			},
 			matching: true,
 		},
@@ -78,6 +80,116 @@ func TestHeaderMatcher(t *testing.T) {
 			match: map[string]string{
 				"X-Foo-Bar": "bar",
 				"X-Bar-Foo": "foo",
+			},
+			matching: true,
+		},
+		{
+			uc: "match simple header value using *",
+			headers: map[string][]string{
+				"x-foo-bar": {"*"},
+			},
+			match: map[string]string{
+				"X-Foo-Bar": "bar",
+			},
+			matching: true,
+		},
+		{
+			uc: "match structured header value using *",
+			headers: map[string][]string{
+				"x-foo-bar": {"*"},
+			},
+			match: map[string]string{
+				"X-Foo-Bar": "bar/foo;q=0.1;v=1,foo/bar",
+			},
+			matching: true,
+		},
+		{
+			uc: "do not match simple header value using */*",
+			headers: map[string][]string{
+				"x-foo-bar": {"*/*"},
+			},
+			match: map[string]string{
+				"X-Foo-Bar": "bar",
+			},
+			matching: false,
+		},
+		{
+			uc: "match structured header value using */*",
+			headers: map[string][]string{
+				"x-foo-bar": {"*/*"},
+			},
+			match: map[string]string{
+				"X-Foo-Bar": "bar/foo;q=0.1;v=1,foo/bar",
+			},
+			matching: true,
+		},
+		{
+			uc: "match structured wildcard header value using */*",
+			headers: map[string][]string{
+				"x-foo-bar": {"*/*"},
+			},
+			match: map[string]string{
+				"X-Foo-Bar": "bar/foo;q=0.1;v=1,*/*",
+			},
+			matching: true,
+		},
+		{
+			uc: "do not match structured header value using text/*",
+			headers: map[string][]string{
+				"x-foo-bar": {"text/*"},
+			},
+			match: map[string]string{
+				"X-Foo-Bar": "bar/foo;q=0.1;v=1,foo/bar",
+			},
+			matching: false,
+		},
+		{
+			uc: "do not match structured wildcard header value using text/*",
+			headers: map[string][]string{
+				"x-foo-bar": {"text/*"},
+			},
+			match: map[string]string{
+				"X-Foo-Bar": "bar/foo;q=0.1;v=1,*/*",
+			},
+			matching: false,
+		},
+		{
+			uc: "do not match structured wildcard header value using */plain",
+			headers: map[string][]string{
+				"x-foo-bar": {"*/plain"},
+			},
+			match: map[string]string{
+				"X-Foo-Bar": "bar/foo;q=0.1;v=1,*/*",
+			},
+			matching: false,
+		},
+		{
+			uc: "match structured header value using text/*",
+			headers: map[string][]string{
+				"x-foo-bar": {"text/*"},
+			},
+			match: map[string]string{
+				"X-Foo-Bar": "bar/foo;q=0.1;v=1,text/*",
+			},
+			matching: true,
+		},
+		{
+			uc: "do not match structured header value using application/*",
+			headers: map[string][]string{
+				"x-foo-bar": {"application/*"},
+			},
+			match: map[string]string{
+				"X-Foo-Bar": "bar/foo;q=0.1;v=1,text/*",
+			},
+			matching: false,
+		},
+		{
+			uc: "match structured header value using text/*",
+			headers: map[string][]string{
+				"x-foo-bar": {"text/*"},
+			},
+			match: map[string]string{
+				"X-Foo-Bar": "bar/foo;q=0.1;v=1,text/plain",
 			},
 			matching: true,
 		},
