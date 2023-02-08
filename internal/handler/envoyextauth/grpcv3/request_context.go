@@ -34,8 +34,11 @@ import (
 
 type RequestContext struct {
 	ctx             context.Context // nolint: containedctx
-	req             *envoy_auth.CheckRequest
+	reqMethod       string
+	reqHeaders      map[string]string
 	reqURL          *url.URL
+	reqBody         string
+	reqRawBody      []byte
 	upstreamHeaders http.Header
 	upstreamCookies map[string]string
 	jwtSigner       heimdall.JWTSigner
@@ -44,8 +47,9 @@ type RequestContext struct {
 
 func NewRequestContext(ctx context.Context, req *envoy_auth.CheckRequest, signer heimdall.JWTSigner) *RequestContext {
 	return &RequestContext{
-		ctx: ctx,
-		req: req,
+		ctx:        ctx,
+		reqMethod:  req.Attributes.Request.Http.Method,
+		reqHeaders: canonicalizeHeaders(req.Attributes.Request.Http.Headers),
 		reqURL: &url.URL{
 			Scheme:   req.Attributes.Request.Http.Scheme,
 			Host:     req.Attributes.Request.Http.Host,
@@ -53,24 +57,30 @@ func NewRequestContext(ctx context.Context, req *envoy_auth.CheckRequest, signer
 			RawQuery: req.Attributes.Request.Http.Query,
 			Fragment: req.Attributes.Request.Http.Fragment,
 		},
+		reqBody:         req.Attributes.Request.Http.Body,
+		reqRawBody:      req.Attributes.Request.Http.RawBody,
 		jwtSigner:       signer,
 		upstreamHeaders: make(http.Header),
 		upstreamCookies: make(map[string]string),
 	}
 }
 
-func (s *RequestContext) RequestMethod() string { return s.req.Attributes.Request.Http.Method }
+func canonicalizeHeaders(headers map[string]string) map[string]string {
+	result := make(map[string]string, len(headers))
 
-func (s *RequestContext) RequestHeaders() map[string]string {
-	return s.req.Attributes.Request.Http.Headers
+	for key, value := range headers {
+		result[http.CanonicalHeaderKey(key)] = value
+	}
+
+	return result
 }
 
-func (s *RequestContext) RequestHeader(name string) string {
-	return s.req.Attributes.Request.Http.Headers[name]
-}
+func (s *RequestContext) RequestMethod() string             { return s.reqMethod }
+func (s *RequestContext) RequestHeaders() map[string]string { return s.reqHeaders }
+func (s *RequestContext) RequestHeader(name string) string  { return s.reqHeaders[name] }
 
 func (s *RequestContext) RequestCookie(name string) string {
-	values, ok := s.req.Attributes.Request.Http.Headers["cookie"]
+	values, ok := s.reqHeaders["Cookie"]
 	if !ok {
 		return ""
 	}
@@ -89,11 +99,11 @@ func (s *RequestContext) RequestQueryParameter(name string) string {
 }
 
 func (s *RequestContext) RequestFormParameter(name string) string {
-	if s.req.Attributes.Request.Http.Headers["content-type"] != "application/x-www-form-urlencoded" {
+	if s.reqHeaders["Content-Type"] != "application/x-www-form-urlencoded" {
 		return ""
 	}
 
-	values, err := url.ParseQuery(s.req.Attributes.Request.Http.Body)
+	values, err := url.ParseQuery(s.reqBody)
 	if err != nil {
 		return ""
 	}
@@ -101,7 +111,7 @@ func (s *RequestContext) RequestFormParameter(name string) string {
 	return values.Get(name)
 }
 
-func (s *RequestContext) RequestBody() []byte                     { return s.req.Attributes.Request.Http.RawBody }
+func (s *RequestContext) RequestBody() []byte                     { return s.reqRawBody }
 func (s *RequestContext) AppContext() context.Context             { return s.ctx }
 func (s *RequestContext) SetPipelineError(err error)              { s.err = err }
 func (s *RequestContext) AddHeaderForUpstream(name, value string) { s.upstreamHeaders.Add(name, value) }
