@@ -36,7 +36,7 @@ func TestHeaderMatcher(t *testing.T) {
 			headers: map[string][]string{
 				"foobar": {"foo", "bar"},
 			},
-			match:    map[string]string{"foobar": "bar,baz"},
+			match:    map[string]string{"Foobar": "bar,baz"},
 			matching: true,
 		},
 		{
@@ -46,8 +46,8 @@ func TestHeaderMatcher(t *testing.T) {
 				"some-header": {"value1", "value2"},
 			},
 			match: map[string]string{
-				"foobar":      "bar,foo",
-				"some-header": "value1,val3",
+				"Foobar":      "bar,foo",
+				"Some-Header": "value1,val3",
 			},
 			matching: true,
 		},
@@ -57,7 +57,7 @@ func TestHeaderMatcher(t *testing.T) {
 				"foobar":      {"foo", "bar"},
 				"some-header": {"value1", "value2"},
 			},
-			match:    map[string]string{"barfoo": "bar"},
+			match:    map[string]string{"Barfoo": "bar"},
 			matching: false,
 		},
 		{
@@ -66,8 +66,20 @@ func TestHeaderMatcher(t *testing.T) {
 				"foobar":      {"foo", "bar"},
 				"some-header": {"value1", "value2"},
 			},
-			match:    map[string]string{"foobar": "value1"},
+			match:    map[string]string{"Foobar": "value1"},
 			matching: false,
+		},
+		{
+			uc: "match header case-insensitivity",
+			headers: map[string][]string{
+				"x-foo-bar": {"bar"},
+				"X-Bar-foo": {"foo"},
+			},
+			match: map[string]string{
+				"X-Foo-Bar": "bar",
+				"X-Bar-Foo": "foo",
+			},
+			matching: true,
 		},
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
