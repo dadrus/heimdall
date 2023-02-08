@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.6.1-alpha](https://github.com/dadrus/heimdall/compare/v0.6.0-alpha...v0.6.1-alpha) (2023-02-08)
+
+
+### Bug Fixes
+
+* Header matching case-sensitivity fixed ([#483](https://github.com/dadrus/heimdall/issues/483)) ([6d31d01](https://github.com/dadrus/heimdall/commit/6d31d011825dbc07dfad859f89903ddae159a2f6))
+* Header value matching using wildcards fixed ([#485](https://github.com/dadrus/heimdall/issues/485)) ([cf3ed57](https://github.com/dadrus/heimdall/commit/cf3ed5774a109082723d8ab9c247ae7cc6c5a2b3))
+
 ## [0.6.0-alpha](https://github.com/dadrus/heimdall/compare/v0.5.0-alpha...v0.6.0-alpha) (2023-01-19)
 
 
