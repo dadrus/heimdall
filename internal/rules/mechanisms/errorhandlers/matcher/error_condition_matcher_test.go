@@ -160,7 +160,7 @@ func TestErrorConditionMatcherMatch(t *testing.T) {
 				t.Helper()
 
 				ctx.On("RequestHeaders").Return(map[string]string{
-					"foobar": "bar",
+					"Foobar": "bar",
 				})
 				ctx.On("RequestClientIPs").Return([]string{
 					"192.168.1.2",
@@ -195,7 +195,7 @@ func TestErrorConditionMatcherMatch(t *testing.T) {
 				t.Helper()
 
 				ctx.On("RequestHeaders").Return(map[string]string{
-					"foobar": "bar",
+					"Foobar": "bar",
 				})
 			},
 			err:      heimdall.ErrArgument,
