@@ -426,7 +426,9 @@ A list with CIDR entries to match. Configured entries are evaluated using a bool
 
 * *`request_headers`*: _string array map_ (optional)
 +
-A map with header names and the corresponding values to match. Configured entries are evaluated using a boolean `or` logic. This holds also true for the header values.
+A map with header names and the corresponding values to match. Configured entries are evaluated using a boolean `or` logic. This holds also true for the header values. Wildcards like `\*` or `*/\*` can be used as well, where `*` matches any value and `\*/*` matches only those value, which consist of a type and a subtype. E.g `\*/*` would match `application/json` and `text/plain`, but not `text`. The actual matching happens always case-insensitive.
++
+NOTE: Some HTTP headers, like `Accept` or `Content-Type` hold not only the actual MIME type, but may also contain optional parameters. These parameters are ignored while matching the values.
 
 .Complex Error Condition configuration
 ====
@@ -446,10 +448,10 @@ request_cidr:
   - 10.0.0.0/8
 # AND
 request_headers:
-  Accept:
+  accept:
     - text/html
     # OR
-    - "*/*"
+    - text/plain
   # OR
   Content-Type:
     - application/json
