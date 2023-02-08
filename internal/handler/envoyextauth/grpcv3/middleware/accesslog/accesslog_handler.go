@@ -41,8 +41,8 @@ func New(logger zerolog.Logger) grpc.UnaryServerInterceptor {
 			Str("_request", info.FullMethod)
 
 		logCtx = logTraceData(ctx, logCtx)
-		logCtx = md(logCtx, requestMetadata, "x-forwarded-for", "_x_forwarded_for")
-		logCtx = md(logCtx, requestMetadata, "forwarded", "_forwarded")
+		logCtx = logMetaData(logCtx, requestMetadata, "x-forwarded-for", "_x_forwarded_for")
+		logCtx = logMetaData(logCtx, requestMetadata, "forwarded", "_forwarded")
 
 		accLog := logCtx.Logger()
 		accLog.Info().Msg("TX started")
@@ -96,7 +96,7 @@ func logTraceData(ctx context.Context, logCtx zerolog.Context) zerolog.Context {
 	return logCtx
 }
 
-func md(logCtx zerolog.Context, rmd metadata.MD, mdKey, logKey string) zerolog.Context {
+func logMetaData(logCtx zerolog.Context, rmd metadata.MD, mdKey, logKey string) zerolog.Context {
 	if headerValue := rmd.Get(mdKey); len(headerValue) != 0 {
 		logCtx = logCtx.Str(logKey, strings.Join(headerValue, ","))
 	}
