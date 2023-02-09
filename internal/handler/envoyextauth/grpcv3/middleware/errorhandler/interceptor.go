@@ -105,5 +105,6 @@ func acceptType(req any) string {
 		return req.Attributes.Request.Http.Headers["accept"]
 	}
 
+	// This should never happen as the API is typed
 	return ""
 }
