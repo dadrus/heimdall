@@ -49,7 +49,7 @@ type interceptor struct {
 
 func (h *interceptor) intercept(
 	ctx context.Context, req any, _ *grpc.UnaryServerInfo, handler grpc.UnaryHandler,
-) (any, error) { //nolint:cyclop
+) (any, error) {
 	res, err := handler(ctx, req)
 	if err == nil {
 		return res, nil
