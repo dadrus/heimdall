@@ -329,7 +329,7 @@ jobs:
         run: npm install
       - name: Update version string to new released version
         if: needs.prepare-release.outputs.release_created
-        uses: jacobtomlinson/gha-find-replace@v2
+        uses: jacobtomlinson/gha-find-replace@v3
         with:
           find: "x-current-version"
           replace: "${{ needs.prepare-release.outputs.tag_name }}"
@@ -337,7 +337,7 @@ jobs:
           include: docs/**
       - name: Update version string to dev version
         if: github.ref == 'refs/heads/main' && needs.prepare-release.outputs.release_created == false && env.GIT_DIFF
-        uses: jacobtomlinson/gha-find-replace@v2
+        uses: jacobtomlinson/gha-find-replace@v3
         with:
           find: "x-current-version"
           replace: "dev"
@@ -348,7 +348,7 @@ jobs:
         run: npm run build
       - name: Update uri for redirecting to new version
         if: needs.prepare-release.outputs.release_created
-        uses: jacobtomlinson/gha-find-replace@v2
+        uses: jacobtomlinson/gha-find-replace@v3
         with:
           find: "x-released-version"
           replace: "${{ needs.prepare-release.outputs.tag_name }}"
