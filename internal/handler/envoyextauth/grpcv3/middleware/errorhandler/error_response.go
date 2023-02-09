@@ -12,33 +12,29 @@ import (
 	"google.golang.org/genproto/googleapis/rpc/status"
 )
 
+func responseWith(code int) func(err error, verbose bool, mimeType string) (any, error) {
+	return func(err error, verbose bool, mimeType string) (any, error) {
+		return errorResponse(code, err, verbose, mimeType), nil
+	}
+}
+
 func errorResponse(code int, err error, verbose bool, mimeType string) *envoy_auth.CheckResponse {
+	deniedResponse := &envoy_auth.DeniedHttpResponse{
+		Status: &envoy_type.HttpStatus{Code: envoy_type.StatusCode(code)},
+	}
+
 	if verbose {
 		body, responseType, _ := format(mimeType, err)
 
-		return &envoy_auth.CheckResponse{
-			Status: &status.Status{Code: int32(code)},
-			HttpResponse: &envoy_auth.CheckResponse_DeniedResponse{
-				DeniedResponse: &envoy_auth.DeniedHttpResponse{
-					Status: &envoy_type.HttpStatus{Code: envoy_type.StatusCode(code)},
-					Headers: []*envoy_core.HeaderValueOption{
-						{
-							Header: &envoy_core.HeaderValue{Key: "Content-Type", Value: responseType},
-						},
-					},
-					Body: body,
-				},
-			},
+		deniedResponse.Headers = []*envoy_core.HeaderValueOption{
+			{Header: &envoy_core.HeaderValue{Key: "Content-Type", Value: responseType}},
 		}
+		deniedResponse.Body = body
 	}
 
 	return &envoy_auth.CheckResponse{
-		Status: &status.Status{Code: int32(code)},
-		HttpResponse: &envoy_auth.CheckResponse_DeniedResponse{
-			DeniedResponse: &envoy_auth.DeniedHttpResponse{
-				Status: &envoy_type.HttpStatus{Code: envoy_type.StatusCode(code)},
-			},
-		},
+		Status:       &status.Status{Code: int32(code)},
+		HttpResponse: &envoy_auth.CheckResponse_DeniedResponse{DeniedResponse: deniedResponse},
 	}
 }
 

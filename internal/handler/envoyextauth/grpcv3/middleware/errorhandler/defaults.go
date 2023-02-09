@@ -29,9 +29,3 @@ var defaultOptions = opts{ //nolint:gochecknoglobals
 	noRuleError:         responseWith(http.StatusNotFound),
 	internalError:       responseWith(http.StatusInternalServerError),
 }
-
-func responseWith(code int) func(err error, verbose bool, mimeType string) (any, error) {
-	return func(err error, verbose bool, mimeType string) (any, error) {
-		return errorResponse(code, err, verbose, mimeType), nil
-	}
-}

@@ -31,70 +31,56 @@ type Option func(*opts)
 
 func WithPreconditionErrorCode(code int) Option {
 	return func(o *opts) {
-		if code != 0 {
-			o.preconditionError = func(err error, verbose bool, mimeType string) (any, error) {
-				return errorResponse(code, err, verbose, mimeType), nil
-			}
+		if code > 0 {
+			o.preconditionError = responseWith(code)
 		}
 	}
 }
 
 func WithAuthenticationErrorCode(code int) Option {
 	return func(o *opts) {
-		if code != 0 {
-			o.authenticationError = func(err error, verbose bool, mimeType string) (any, error) {
-				return errorResponse(code, err, verbose, mimeType), nil
-			}
+		if code > 0 {
+			o.authenticationError = responseWith(code)
 		}
 	}
 }
 
 func WithAuthorizationErrorCode(code int) Option {
 	return func(o *opts) {
-		if code != 0 {
-			o.authorizationError = func(err error, verbose bool, mimeType string) (any, error) {
-				return errorResponse(code, err, verbose, mimeType), nil
-			}
+		if code > 0 {
+			o.authorizationError = responseWith(code)
 		}
 	}
 }
 
 func WithCommunicationErrorCode(code int) Option {
 	return func(o *opts) {
-		if code != 0 {
-			o.communicationError = func(err error, verbose bool, mimeType string) (any, error) {
-				return errorResponse(code, err, verbose, mimeType), nil
-			}
+		if code > 0 {
+			o.communicationError = responseWith(code)
 		}
 	}
 }
 
 func WithInternalServerErrorCode(code int) Option {
 	return func(o *opts) {
-		if code != 0 {
-			o.internalError = func(err error, verbose bool, mimeType string) (any, error) {
-				return errorResponse(code, err, verbose, mimeType), nil
-			}
+		if code > 0 {
+			o.internalError = responseWith(code)
 		}
 	}
 }
 
 func WithMethodErrorCode(code int) Option {
 	return func(o *opts) {
-		if code != 0 {
-			o.badMethodError = func(err error, verbose bool, mimeType string) (any, error) {
-				return errorResponse(code, err, verbose, mimeType), nil
-			}
+		if code > 0 {
+			o.badMethodError = responseWith(code)
 		}
 	}
 }
 
 func WithNoRuleErrorCode(code int) Option {
 	return func(o *opts) {
-		if code != 0 {
-			o.noRuleError = func(err error, verbose bool, mimeType string) (any, error) {
-				return errorResponse(code, err, verbose, mimeType), nil
-			}
+		if code > 0 {
+			o.noRuleError = responseWith(code)
 		}
 	}
 }
