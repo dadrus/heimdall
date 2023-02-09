@@ -147,6 +147,7 @@ func TestLoggerInterceptor(t *testing.T) {
 			client := envoy_auth.NewAuthorizationClient(conn)
 
 			// WHEN
+			// nolint: errcheck
 			client.Check(tc.outgoingContext(t), &envoy_auth.CheckRequest{
 				Attributes: &envoy_auth.AttributeContext{
 					Request: &envoy_auth.AttributeContext_Request{
