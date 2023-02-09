@@ -27,23 +27,9 @@ import (
 	"google.golang.org/grpc/test/bufconn"
 
 	"github.com/dadrus/heimdall/internal/accesscontext"
+	"github.com/dadrus/heimdall/internal/handler/envoyextauth/grpcv3/mocks"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
-
-type mockHandler struct {
-	mock.Mock
-}
-
-func (m *mockHandler) Check(ctx context.Context, req *envoy_auth.CheckRequest) (*envoy_auth.CheckResponse, error) {
-	args := m.Called(ctx, req)
-
-	if val := args.Get(0); val != nil {
-		// nolint: forcetypeassert
-		return val.(*envoy_auth.CheckResponse), nil
-	}
-
-	return nil, args.Error(1)
-}
 
 func TestAccessLogInterceptor(t *testing.T) {
 	otel.SetTracerProvider(sdktrace.NewTracerProvider())
@@ -56,7 +42,7 @@ func TestAccessLogInterceptor(t *testing.T) {
 	for _, tc := range []struct {
 		uc              string
 		outgoingContext func(t *testing.T) context.Context
-		configureMock   func(t *testing.T, m *mockHandler)
+		configureMock   func(t *testing.T, m *mocks.MockHandler)
 		assert          func(t *testing.T, logEvent1, logEvent2 map[string]any)
 	}{
 		{
@@ -66,7 +52,7 @@ func TestAccessLogInterceptor(t *testing.T) {
 
 				return context.Background()
 			},
-			configureMock: func(t *testing.T, m *mockHandler) {
+			configureMock: func(t *testing.T, m *mocks.MockHandler) {
 				t.Helper()
 
 				m.On("Check",
@@ -128,7 +114,7 @@ func TestAccessLogInterceptor(t *testing.T) {
 
 				return metadata.NewOutgoingContext(context.Background(), metadata.New(md))
 			},
-			configureMock: func(t *testing.T, m *mockHandler) {
+			configureMock: func(t *testing.T, m *mocks.MockHandler) {
 				t.Helper()
 
 				m.On("Check", mock.Anything, mock.Anything).
@@ -172,7 +158,7 @@ func TestAccessLogInterceptor(t *testing.T) {
 
 				return context.Background()
 			},
-			configureMock: func(t *testing.T, m *mockHandler) {
+			configureMock: func(t *testing.T, m *mocks.MockHandler) {
 				t.Helper()
 
 				m.On("Check",
@@ -230,7 +216,7 @@ func TestAccessLogInterceptor(t *testing.T) {
 			lis := bufconn.Listen(1024 * 1024)
 			tb := &testsupport.TestingLog{TB: t}
 			logger := zerolog.New(zerolog.TestWriter{T: tb})
-			handler := &mockHandler{}
+			handler := &mocks.MockHandler{}
 			bufDialer := func(context.Context, string) (net.Conn, error) {
 				return lis.Dial()
 			}
