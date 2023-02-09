@@ -38,16 +38,16 @@ func New(opts ...Option) grpc.UnaryServerInterceptor {
 		opt(&options)
 	}
 
-	h := &handler{opts: options}
+	h := &interceptor{opts: options}
 
-	return h.handle
+	return h.intercept
 }
 
-type handler struct {
+type interceptor struct {
 	opts
 }
 
-func (h *handler) handle(
+func (h *interceptor) intercept(
 	ctx context.Context, req any, _ *grpc.UnaryServerInfo, handler grpc.UnaryHandler,
 ) (any, error) { //nolint:cyclop
 	res, err := handler(ctx, req)
