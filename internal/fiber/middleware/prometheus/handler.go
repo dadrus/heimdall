@@ -46,7 +46,7 @@ func New(opts ...Option) fiber.Handler {
 			Help:        "Count all requests by status code, method and path.",
 			ConstLabels: options.labels,
 		},
-		[]string{"status_code", "method", "path"},
+		[]string{"http_code", "http_method", "http_path"},
 	)
 
 	histogram := promauto.With(options.registerer).NewHistogramVec(prometheus.HistogramOpts{
@@ -58,18 +58,18 @@ func New(opts ...Option) fiber.Handler {
 			0.0001, 0.00025, 0.0005, 0.00075, // 100, 250, 500, 750µs
 			0.001, 0.0025, 0.005, 0.0075, // 1, 2.5, 5, 7.5ms
 			0.01, 0.025, 0.05, 0.075, // 10, 25, 50, 75ms
-			0.1, 0.25, 0.5, // 100, 250, 500 ms
-			1.0, 2.0, 5.0, 10.0, 15.0, // 1, 2, 5, 10, 20s
+			0.1, 0.25, 0.5, 0.75, // 100, 250, 500 750 ms
+			1.0, 2.0, 5.0, // 1, 2, 5
 		},
 	},
-		[]string{"status_code", "method", "path"},
+		[]string{"http_code", "http_method", "http_path"},
 	)
 
 	gauge := promauto.With(options.registerer).NewGaugeVec(prometheus.GaugeOpts{
 		Name:        prometheus.BuildFQName(options.namespace, options.subsystem, "requests_in_progress_total"),
 		Help:        "All the requests in progress",
 		ConstLabels: options.labels,
-	}, []string{"method"})
+	}, []string{"http_method"})
 
 	handler := &metricsHandler{
 		reqCounter:      counter,
