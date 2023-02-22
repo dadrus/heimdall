@@ -19,6 +19,12 @@ require (
 	github.com/instana/go-otel-exporter v0.0.0-20220908102301-52c5d8dbfd86
 	github.com/jellydator/ttlcache/v3 v3.0.1
 	github.com/johannesboyne/gofakes3 v0.0.0-20230129080941-f6a8a9ae6fd3
+	github.com/knadh/koanf/maps v0.1.1
+	github.com/knadh/koanf/parsers/yaml v0.1.0
+	github.com/knadh/koanf/providers/confmap v0.1.0
+	github.com/knadh/koanf/providers/env v0.1.0
+	github.com/knadh/koanf/providers/rawbytes v0.1.0
+	github.com/knadh/koanf/providers/structs v0.1.0
 	github.com/knadh/koanf/v2 v2.0.0
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/ory/ladon v1.2.0

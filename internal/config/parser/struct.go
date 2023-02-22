@@ -19,8 +19,8 @@ package parser
 import (
 	"unicode"
 
-	"github.com/knadh/koanf"
 	"github.com/knadh/koanf/providers/structs"
+	"github.com/knadh/koanf/v2"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
