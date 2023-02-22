@@ -20,8 +20,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/knadh/koanf"
 	"github.com/knadh/koanf/providers/confmap"
+	"github.com/knadh/koanf/v2"
 	"github.com/mitchellh/mapstructure"
 )
 

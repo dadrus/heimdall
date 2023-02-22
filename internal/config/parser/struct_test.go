@@ -19,7 +19,7 @@ package parser
 import (
 	"testing"
 
-	"github.com/knadh/koanf"
+	"github.com/knadh/koanf/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 

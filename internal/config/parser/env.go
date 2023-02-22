@@ -24,8 +24,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/knadh/koanf"
 	"github.com/knadh/koanf/providers/env"
+	"github.com/knadh/koanf/v2"
 	"gopkg.in/yaml.v3"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
