@@ -173,6 +173,18 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				assert.Empty(t, okResponse.Headers)
 			},
 		},
+		{
+			uc: "server panics and error does not contain traces",
+			configureMocks: func(t *testing.T, repository *mocks2.MockRepository, rule *mocks4.MockRule) {
+				t.Helper()
+			},
+			assertResponse: func(t *testing.T, err error, response *envoy_auth.CheckResponse) {
+				t.Helper()
+
+				require.Error(t, err)
+				assert.Equal(t, "rpc error: code = Internal desc = internal error", err.Error())
+			},
+		},
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
 			// GIVEN
@@ -213,7 +225,6 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 			})
 
 			// THEN
-			require.NoError(t, err)
 			tc.assertResponse(t, err, resp)
 			repo.AssertExpectations(t)
 			rule.AssertExpectations(t)
