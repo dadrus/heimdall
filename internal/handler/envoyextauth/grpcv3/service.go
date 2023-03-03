@@ -48,14 +48,17 @@ func newService(
 ) *grpc.Server {
 	service := conf.Serve.Decision
 	accessLogger := accesslogmiddleware.New(logger)
+	recoveryHandler := grpc_recovery.WithRecoveryHandler(func(any) error {
+		return status.Error(codes.Internal, "internal error")
+	})
 
 	streamInterceptors := []grpc.StreamServerInterceptor{
-		grpc_recovery.StreamServerInterceptor(),
+		grpc_recovery.StreamServerInterceptor(recoveryHandler),
 		otelgrpc.StreamServerInterceptor(),
 	}
 
 	unaryInterceptors := []grpc.UnaryServerInterceptor{
-		grpc_recovery.UnaryServerInterceptor(),
+		grpc_recovery.UnaryServerInterceptor(recoveryHandler),
 		otelgrpc.UnaryServerInterceptor(),
 	}
 
