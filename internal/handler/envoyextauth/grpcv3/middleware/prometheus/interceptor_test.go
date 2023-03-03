@@ -251,9 +251,8 @@ func TestHandlerObserveKnownRequests(t *testing.T) { //nolint:maintidx
 			registry := prometheus.NewRegistry()
 			lis := bufconn.Listen(1024 * 1024)
 			handler := &mocks.MockHandler{}
-			bufDialer := func(context.Context, string) (net.Conn, error) { return lis.Dial() }
 			conn, err := grpc.DialContext(context.Background(), "bufnet",
-				grpc.WithContextDialer(bufDialer),
+				grpc.WithContextDialer(func(context.Context, string) (net.Conn, error) { return lis.Dial() }),
 				grpc.WithTransportCredentials(insecure.NewCredentials()))
 			require.NoError(t, err)
 
@@ -309,9 +308,8 @@ func TestHandlerObserveUnknownRequests(t *testing.T) {
 	registry := prometheus.NewRegistry()
 	lis := bufconn.Listen(1024 * 1024)
 	handler := &mocks.MockHandler{}
-	bufDialer := func(context.Context, string) (net.Conn, error) { return lis.Dial() }
 	conn, err := grpc.DialContext(context.Background(), "bufnet",
-		grpc.WithContextDialer(bufDialer),
+		grpc.WithContextDialer(func(context.Context, string) (net.Conn, error) { return lis.Dial() }),
 		grpc.WithTransportCredentials(insecure.NewCredentials()))
 	require.NoError(t, err)
 
