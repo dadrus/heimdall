@@ -206,6 +206,19 @@ func TestErrorChainAsUsedWithNotAssignableInterface(t *testing.T) {
 	assert.False(t, res)
 }
 
+func TestErrorChainString(t *testing.T) {
+	t.Parallel()
+
+	// GIVEN
+	testErr := errorchain.NewWithMessage(errTest1, "foo").CausedBy(errTest2)
+
+	// WHEN
+	value := testErr.String()
+
+	// THEN
+	assert.Equal(t, "test error 1: foo", value)
+}
+
 func TestErrorChainJSONMarshal(t *testing.T) {
 	t.Parallel()
 
