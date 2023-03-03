@@ -36,18 +36,21 @@ import (
 	"go.opentelemetry.io/otel/propagation"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
-	"google.golang.org/genproto/googleapis/rpc/status"
+	rpc_status "google.golang.org/genproto/googleapis/rpc/status"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 	"google.golang.org/grpc/test/bufconn"
 
 	"github.com/dadrus/heimdall/internal/accesscontext"
-	"github.com/dadrus/heimdall/internal/handler/envoyextauth/grpcv3/mocks"
+	grpc_mocks "github.com/dadrus/heimdall/internal/handler/envoyextauth/grpcv3/middleware/mocks"
+	service_mocks "github.com/dadrus/heimdall/internal/handler/envoyextauth/grpcv3/mocks"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
-func TestAccessLogInterceptor(t *testing.T) {
+func TestAccessLogInterceptorForKnownService(t *testing.T) {
 	otel.SetTracerProvider(sdktrace.NewTracerProvider())
 	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(propagation.TraceContext{}))
 
@@ -58,7 +61,7 @@ func TestAccessLogInterceptor(t *testing.T) {
 	for _, tc := range []struct {
 		uc              string
 		outgoingContext func(t *testing.T) context.Context
-		configureMock   func(t *testing.T, m *mocks.MockHandler)
+		configureMock   func(t *testing.T, m *service_mocks.MockHandler)
 		assert          func(t *testing.T, logEvent1, logEvent2 map[string]any)
 	}{
 		{
@@ -68,7 +71,7 @@ func TestAccessLogInterceptor(t *testing.T) {
 
 				return context.Background()
 			},
-			configureMock: func(t *testing.T, m *mocks.MockHandler) {
+			configureMock: func(t *testing.T, m *service_mocks.MockHandler) {
 				t.Helper()
 
 				m.On("Check",
@@ -81,7 +84,7 @@ func TestAccessLogInterceptor(t *testing.T) {
 					),
 					mock.Anything,
 				).Return(
-					&envoy_auth.CheckResponse{Status: &status.Status{Code: int32(envoy_type.StatusCode_OK)}},
+					&envoy_auth.CheckResponse{Status: &rpc_status.Status{Code: int32(envoy_type.StatusCode_OK)}},
 					nil,
 				)
 			},
@@ -130,7 +133,7 @@ func TestAccessLogInterceptor(t *testing.T) {
 
 				return metadata.NewOutgoingContext(context.Background(), metadata.New(md))
 			},
-			configureMock: func(t *testing.T, m *mocks.MockHandler) {
+			configureMock: func(t *testing.T, m *service_mocks.MockHandler) {
 				t.Helper()
 
 				m.On("Check", mock.Anything, mock.Anything).
@@ -174,7 +177,7 @@ func TestAccessLogInterceptor(t *testing.T) {
 
 				return context.Background()
 			},
-			configureMock: func(t *testing.T, m *mocks.MockHandler) {
+			configureMock: func(t *testing.T, m *service_mocks.MockHandler) {
 				t.Helper()
 
 				m.On("Check",
@@ -188,7 +191,7 @@ func TestAccessLogInterceptor(t *testing.T) {
 					),
 					mock.Anything,
 				).Return(
-					&envoy_auth.CheckResponse{Status: &status.Status{Code: int32(envoy_type.StatusCode_Forbidden)}},
+					&envoy_auth.CheckResponse{Status: &rpc_status.Status{Code: int32(envoy_type.StatusCode_Forbidden)}},
 					nil,
 				)
 			},
@@ -232,7 +235,7 @@ func TestAccessLogInterceptor(t *testing.T) {
 			lis := bufconn.Listen(1024 * 1024)
 			tb := &testsupport.TestingLog{TB: t}
 			logger := zerolog.New(zerolog.TestWriter{T: tb})
-			handler := &mocks.MockHandler{}
+			handler := &service_mocks.MockHandler{}
 			bufDialer := func(context.Context, string) (net.Conn, error) {
 				return lis.Dial()
 			}
@@ -248,7 +251,7 @@ func TestAccessLogInterceptor(t *testing.T) {
 			srv := grpc.NewServer(
 				grpc.ChainUnaryInterceptor(
 					otelgrpc.UnaryServerInterceptor(),
-					New(logger),
+					New(logger).Unary(),
 				),
 			)
 			envoy_auth.RegisterAuthorizationServer(srv, handler)
@@ -287,4 +290,84 @@ func TestAccessLogInterceptor(t *testing.T) {
 			handler.AssertExpectations(t)
 		})
 	}
+}
+
+func TestAccessLogInterceptorForUnknownService(t *testing.T) {
+	otel.SetTracerProvider(sdktrace.NewTracerProvider())
+	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(propagation.TraceContext{}))
+
+	var (
+		logEvent1 map[string]any
+		logEvent2 map[string]any
+	)
+
+	lis := bufconn.Listen(1024 * 1024)
+	tb := &testsupport.TestingLog{TB: t}
+	logger := zerolog.New(zerolog.TestWriter{T: tb})
+	handler := &service_mocks.MockHandler{}
+	bufDialer := func(context.Context, string) (net.Conn, error) {
+		return lis.Dial()
+	}
+	conn, err := grpc.DialContext(context.Background(), "bufnet",
+		grpc.WithContextDialer(bufDialer),
+		grpc.WithTransportCredentials(insecure.NewCredentials()))
+	require.NoError(t, err)
+
+	defer conn.Close()
+
+	srv := grpc.NewServer(
+		grpc.UnknownServiceHandler(func(srv interface{}, stream grpc.ServerStream) error {
+			return status.Error(codes.Unknown, "unknown service or method")
+		}),
+		grpc.ChainStreamInterceptor(
+			otelgrpc.StreamServerInterceptor(),
+			New(logger).Stream(),
+		),
+	)
+	envoy_auth.RegisterAuthorizationServer(srv, handler)
+
+	go func() {
+		err = srv.Serve(lis)
+		require.NoError(t, err)
+	}()
+
+	client := grpc_mocks.NewTestClient(conn)
+
+	// WHEN
+	// nolint: errcheck
+	_, err = client.Test(context.Background(), &grpc_mocks.TestRequest{})
+
+	// THEN
+	require.Error(t, err)
+	srv.Stop()
+	handler.AssertExpectations(t)
+
+	events := strings.Split(tb.CollectedLog(), "}")
+	require.Len(t, events, 3)
+
+	require.NoError(t, json.Unmarshal([]byte(events[0]+"}"), &logEvent1))
+	require.NoError(t, json.Unmarshal([]byte(events[1]+"}"), &logEvent2))
+
+	require.Len(t, logEvent1, 7)
+	assert.Equal(t, "info", logEvent1["level"])
+	assert.Contains(t, logEvent1, "_tx_start")
+	assert.Contains(t, logEvent1, "_peer")
+	assert.Equal(t, "/test.Test/Test", logEvent1["_request"])
+	assert.Contains(t, logEvent1, "_trace_id")
+	assert.Contains(t, logEvent1, "_trace_id")
+	assert.Equal(t, "TX started", logEvent1["message"])
+
+	require.Len(t, logEvent2, 10)
+	assert.Equal(t, "info", logEvent2["level"])
+	assert.Contains(t, logEvent2, "_tx_start")
+	assert.Contains(t, logEvent2, "_tx_duration_ms")
+	assert.Contains(t, logEvent2, "_peer")
+	assert.Equal(t, logEvent1["_request"], logEvent2["_request"])
+	assert.Contains(t, logEvent2, "_trace_id")
+	assert.Contains(t, logEvent2, "_trace_id")
+	assert.Equal(t, logEvent2["_trace_id"], logEvent2["_trace_id"])
+	assert.Equal(t, logEvent2["_parent_id"], logEvent2["_parent_id"])
+	assert.Equal(t, false, logEvent2["_access_granted"])
+	assert.Contains(t, logEvent2["error"], "unknown service or method")
+	assert.Equal(t, "TX finished", logEvent2["message"])
 }

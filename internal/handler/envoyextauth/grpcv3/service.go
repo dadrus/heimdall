@@ -23,7 +23,9 @@ import (
 	"github.com/rs/zerolog"
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/keepalive"
+	"google.golang.org/grpc/status"
 
 	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/dadrus/heimdall/internal/config"
@@ -45,22 +47,28 @@ func newService(
 	signer heimdall.JWTSigner,
 ) *grpc.Server {
 	service := conf.Serve.Decision
+	accessLogger := accesslogmiddleware.New(logger)
 
-	interceptors := []grpc.UnaryServerInterceptor{
+	streamInterceptors := []grpc.StreamServerInterceptor{
+		grpc_recovery.StreamServerInterceptor(),
+		otelgrpc.StreamServerInterceptor(),
+	}
+
+	unaryInterceptors := []grpc.UnaryServerInterceptor{
 		grpc_recovery.UnaryServerInterceptor(),
 		otelgrpc.UnaryServerInterceptor(),
 	}
 
 	if conf.Metrics.Enabled {
-		interceptors = append(interceptors,
-			prometheusmiddleware.New(
-				prometheusmiddleware.WithServiceName("decision"),
-				prometheusmiddleware.WithRegisterer(registerer),
-			),
+		metrics := prometheusmiddleware.New(
+			prometheusmiddleware.WithServiceName("decision"),
+			prometheusmiddleware.WithRegisterer(registerer),
 		)
+		unaryInterceptors = append(unaryInterceptors, metrics.Unary())
+		streamInterceptors = append(streamInterceptors, metrics.Stream())
 	}
 
-	interceptors = append(interceptors,
+	unaryInterceptors = append(unaryInterceptors,
 		errormiddleware.New(
 			errormiddleware.WithVerboseErrors(service.Respond.Verbose),
 			errormiddleware.WithPreconditionErrorCode(service.Respond.With.ArgumentError.Code),
@@ -71,14 +79,20 @@ func newService(
 			errormiddleware.WithNoRuleErrorCode(service.Respond.With.NoRuleError.Code),
 			errormiddleware.WithInternalServerErrorCode(service.Respond.With.InternalError.Code),
 		),
-		accesslogmiddleware.New(logger),
+		accessLogger.Unary(),
 		loggermiddleware.New(logger),
 		cachemiddleware.New(cch),
 	)
 
+	streamInterceptors = append(streamInterceptors, accessLogger.Stream())
+
 	srv := grpc.NewServer(
 		grpc.KeepaliveParams(keepalive.ServerParameters{Timeout: service.Timeout.Idle}),
-		grpc.ChainUnaryInterceptor(interceptors...),
+		grpc.UnknownServiceHandler(func(srv interface{}, stream grpc.ServerStream) error {
+			return status.Error(codes.Unknown, "unknown service or method")
+		}),
+		grpc.ChainUnaryInterceptor(unaryInterceptors...),
+		grpc.ChainStreamInterceptor(streamInterceptors...),
 	)
 
 	envoy_auth.RegisterAuthorizationServer(srv, &Handler{r: repository, s: signer})

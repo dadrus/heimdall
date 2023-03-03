@@ -30,32 +30,73 @@ import (
 	"github.com/dadrus/heimdall/internal/x/opentelemetry/tracecontext"
 )
 
-func New(logger zerolog.Logger) grpc.UnaryServerInterceptor {
+type ServerInterceptor interface {
+	Unary() grpc.UnaryServerInterceptor
+	Stream() grpc.StreamServerInterceptor
+}
+
+func New(logger zerolog.Logger) ServerInterceptor {
+	return &accessLogInterceptor{l: logger}
+}
+
+type accessLogInterceptor struct {
+	l zerolog.Logger
+}
+
+func (i *accessLogInterceptor) Unary() grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
-		start := time.Now()
-		requestMetadata, _ := metadata.FromIncomingContext(ctx)
-
-		logCtx := logger.Level(zerolog.InfoLevel).With().
-			Int64("_tx_start", start.Unix()).
-			Str("_peer", peerFromCtx(ctx)).
-			Str("_request", info.FullMethod)
-
-		logCtx = logTraceData(ctx, logCtx)
-		logCtx = logMetaData(logCtx, requestMetadata, "x-forwarded-for", "_x_forwarded_for")
-		logCtx = logMetaData(logCtx, requestMetadata, "forwarded", "_forwarded")
-
-		accLog := logCtx.Logger()
-		accLog.Info().Msg("TX started")
+		start, accLog := i.startTransaction(ctx, info.FullMethod)
 
 		ctx = accesscontext.New(ctx)
 		res, err := handler(ctx, req)
 
-		logAccessStatus(ctx, accLog.Info(), err).
-			Int64("_tx_duration_ms", time.Until(start).Milliseconds()).
-			Msg("TX finished")
+		i.finalizeTransaction(ctx, accLog, start, err)
 
 		return res, err
 	}
+}
+
+func (i *accessLogInterceptor) Stream() grpc.StreamServerInterceptor {
+	return func(
+		srv any, stream grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler,
+	) error {
+		ctx := stream.Context()
+		start, accLog := i.startTransaction(ctx, info.FullMethod)
+
+		ctx = accesscontext.New(ctx)
+		err := handler(srv, stream)
+
+		i.finalizeTransaction(ctx, accLog, start, err)
+
+		return err
+	}
+}
+
+func (i *accessLogInterceptor) startTransaction(ctx context.Context, fullMethod string) (time.Time, zerolog.Logger) {
+	start := time.Now()
+	requestMetadata, _ := metadata.FromIncomingContext(ctx)
+
+	logCtx := i.l.Level(zerolog.InfoLevel).With().
+		Int64("_tx_start", start.Unix()).
+		Str("_peer", peerFromCtx(ctx)).
+		Str("_request", fullMethod)
+
+	logCtx = logTraceData(ctx, logCtx)
+	logCtx = logMetaData(logCtx, requestMetadata, "x-forwarded-for", "_x_forwarded_for")
+	logCtx = logMetaData(logCtx, requestMetadata, "forwarded", "_forwarded")
+
+	accLog := logCtx.Logger()
+	accLog.Info().Msg("TX started")
+
+	return start, accLog
+}
+
+func (i *accessLogInterceptor) finalizeTransaction(
+	ctx context.Context, accLog zerolog.Logger, start time.Time, err error,
+) {
+	logAccessStatus(ctx, accLog.Info(), err).
+		Int64("_tx_duration_ms", time.Until(start).Milliseconds()).
+		Msg("TX finished")
 }
 
 func logAccessStatus(ctx context.Context, event *zerolog.Event, err error) *zerolog.Event {

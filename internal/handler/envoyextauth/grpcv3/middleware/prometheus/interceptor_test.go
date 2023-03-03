@@ -36,6 +36,7 @@ import (
 	"google.golang.org/grpc/status"
 	"google.golang.org/grpc/test/bufconn"
 
+	testservice2 "github.com/dadrus/heimdall/internal/handler/envoyextauth/grpcv3/middleware/mocks"
 	"github.com/dadrus/heimdall/internal/handler/envoyextauth/grpcv3/mocks"
 )
 
@@ -59,9 +60,7 @@ func getLabel(labels []*dto.LabelPair, name string) string {
 	return ""
 }
 
-func TestHandlerObserveRequests(t *testing.T) { //nolint:maintidx
-	t.Parallel()
-
+func TestHandlerObserveKnownRequests(t *testing.T) { //nolint:maintidx
 	for _, tc := range []struct {
 		uc            string
 		configureMock func(t *testing.T, srv *mocks.MockHandler)
@@ -268,7 +267,7 @@ func TestHandlerObserveRequests(t *testing.T) { //nolint:maintidx
 				WithSubsystem("bar"),
 				WithLabel("baz", "zab"),
 				WithServiceName("foobar"),
-			)))
+			).Unary()))
 			envoy_auth.RegisterAuthorizationServer(srv, handler)
 
 			go func() {
@@ -303,4 +302,96 @@ func TestHandlerObserveRequests(t *testing.T) { //nolint:maintidx
 			handler.AssertExpectations(t)
 		})
 	}
+}
+
+func TestHandlerObserveUnknownRequests(t *testing.T) {
+	// GIVEN
+	registry := prometheus.NewRegistry()
+	lis := bufconn.Listen(1024 * 1024)
+	handler := &mocks.MockHandler{}
+	bufDialer := func(context.Context, string) (net.Conn, error) { return lis.Dial() }
+	conn, err := grpc.DialContext(context.Background(), "bufnet",
+		grpc.WithContextDialer(bufDialer),
+		grpc.WithTransportCredentials(insecure.NewCredentials()))
+	require.NoError(t, err)
+
+	defer conn.Close()
+
+	metricsIntercepter := New(
+		WithRegisterer(registry),
+		WithNamespace("foo"),
+		WithSubsystem("bar"),
+		WithLabel("baz", "zab"),
+		WithServiceName("foobar"),
+	)
+	srv := grpc.NewServer(
+		grpc.UnknownServiceHandler(func(srv interface{}, stream grpc.ServerStream) error {
+			return status.Error(codes.Unknown, "unknown service or method")
+		}),
+		grpc.StreamInterceptor(metricsIntercepter.Stream()))
+
+	envoy_auth.RegisterAuthorizationServer(srv, handler)
+
+	go func() {
+		err = srv.Serve(lis)
+		require.NoError(t, err)
+	}()
+
+	client := testservice2.NewTestClient(conn)
+
+	// WHEN
+	// we're not interested in the response and the error
+	// nolint: errcheck
+	_, err = client.Test(context.Background(), &testservice2.TestRequest{})
+
+	// THEN
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "unknown service or method")
+	srv.Stop()
+
+	metrics, err := registry.Gather()
+	require.NoError(t, err)
+	handler.AssertExpectations(t)
+
+	assert.Len(t, metrics, 3)
+	histMetric := metricForType(metrics, dto.MetricType_HISTOGRAM.Enum())
+	assert.Equal(t, "foo_bar_request_duration_seconds", histMetric.GetName())
+	assert.Equal(t, "Duration of all requests by tunneled HTTP status code, service and method, "+
+		"as well as by GRPC method and status code.", histMetric.GetHelp())
+	require.Len(t, histMetric.Metric, 1)
+	assert.Equal(t, "zab", getLabel(histMetric.Metric[0].Label, "baz"))
+	assert.Equal(t, "foobar", getLabel(histMetric.Metric[0].Label, "service"))
+	assert.Equal(t, "2", getLabel(histMetric.Metric[0].Label, "grpc_code"))
+	assert.Equal(t, "/test.Test/Test",
+		getLabel(histMetric.Metric[0].Label, "grpc_method"))
+	assert.Equal(t, "unknown", getLabel(histMetric.Metric[0].Label, "http_method"))
+	assert.Equal(t, "unknown", getLabel(histMetric.Metric[0].Label, "http_path"))
+	assert.Equal(t, "unknown", getLabel(histMetric.Metric[0].Label, "http_code"))
+	require.Len(t, histMetric.Metric[0].Histogram.Bucket, 21)
+
+	gaugeMetric := metricForType(metrics, dto.MetricType_GAUGE.Enum())
+	assert.Equal(t, "foo_bar_requests_in_progress_total", gaugeMetric.GetName())
+	assert.Equal(t, "All the requests in progress by tunneled HTTP method, "+
+		"as well as by GRPC method.", gaugeMetric.GetHelp())
+	assert.Equal(t, "zab", getLabel(gaugeMetric.Metric[0].Label, "baz"))
+	assert.Equal(t, "/test.Test/Test",
+		getLabel(histMetric.Metric[0].Label, "grpc_method"))
+	assert.Equal(t, "unknown", getLabel(gaugeMetric.Metric[0].Label, "http_method"))
+	assert.Equal(t, "foobar", getLabel(gaugeMetric.Metric[0].Label, "service"))
+	require.Equal(t, 0.0, gaugeMetric.Metric[0].Gauge.GetValue())
+
+	counterMetric := metricForType(metrics, dto.MetricType_COUNTER.Enum())
+	assert.Equal(t, "foo_bar_requests_total", counterMetric.GetName())
+	assert.Equal(t, "Count all requests by tunneled HTTP status code, service and method, "+
+		"as well as by GRPC method and status code.", counterMetric.GetHelp())
+	require.Len(t, counterMetric.Metric, 1)
+	assert.Equal(t, "zab", getLabel(counterMetric.Metric[0].Label, "baz"))
+	assert.Equal(t, "foobar", getLabel(counterMetric.Metric[0].Label, "service"))
+	assert.Equal(t, "2", getLabel(histMetric.Metric[0].Label, "grpc_code"))
+	assert.Equal(t, "/test.Test/Test",
+		getLabel(histMetric.Metric[0].Label, "grpc_method"))
+	assert.Equal(t, "unknown", getLabel(counterMetric.Metric[0].Label, "http_method"))
+	assert.Equal(t, "unknown", getLabel(counterMetric.Metric[0].Label, "http_path"))
+	assert.Equal(t, "unknown", getLabel(counterMetric.Metric[0].Label, "http_code"))
+	require.Equal(t, 1.0, counterMetric.Metric[0].Counter.GetValue())
 }

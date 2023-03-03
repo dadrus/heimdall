@@ -28,13 +28,21 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+type ServerInterceptor interface {
+	Unary() grpc.UnaryServerInterceptor
+	Stream() grpc.StreamServerInterceptor
+}
+
 type metricsHandler struct {
 	reqCounter   *prometheus.CounterVec
 	reqHistogram *prometheus.HistogramVec
 	reqInFlight  *prometheus.GaugeVec
 }
 
-func New(opts ...Option) grpc.UnaryServerInterceptor {
+func (h *metricsHandler) Unary() grpc.UnaryServerInterceptor   { return h.observeUnaryRequest }
+func (h *metricsHandler) Stream() grpc.StreamServerInterceptor { return h.observeStreamRequest }
+
+func New(opts ...Option) ServerInterceptor {
 	options := defaultOptions
 
 	for _, opt := range opts {
@@ -80,10 +88,10 @@ func New(opts ...Option) grpc.UnaryServerInterceptor {
 		reqInFlight:  gauge,
 	}
 
-	return handler.observeRequest
+	return handler
 }
 
-func (h *metricsHandler) observeRequest(
+func (h *metricsHandler) observeUnaryRequest(
 	ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler,
 ) (any, error) {
 	const (
@@ -124,4 +132,40 @@ func (h *metricsHandler) observeRequest(
 	h.reqHistogram.WithLabelValues(httpCode, httpMethod, httpPath, grpcMethod, grpcCode).Observe(elapsed)
 
 	return resp, err
+}
+
+func (h *metricsHandler) observeStreamRequest(
+	srv any, stream grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler,
+) error {
+	const (
+		MagicNumber = 1e9
+		Unknown     = "unknown"
+	)
+
+	start := time.Now()
+	grpcMethod := info.FullMethod
+	grpcCode := "0"
+	httpMethod := Unknown
+	httpPath := Unknown
+	httpCode := Unknown
+
+	h.reqInFlight.WithLabelValues(httpMethod, grpcMethod).Inc()
+
+	defer func() {
+		h.reqInFlight.WithLabelValues(httpMethod, grpcMethod).Dec()
+	}()
+
+	err := handler(srv, stream)
+
+	if err != nil {
+		s, _ := status.FromError(err)
+		grpcCode = strconv.Itoa(int(s.Code()))
+	}
+
+	h.reqCounter.WithLabelValues(httpCode, httpMethod, httpPath, grpcMethod, grpcCode).Inc()
+
+	elapsed := float64(time.Since(start).Nanoseconds()) / MagicNumber
+	h.reqHistogram.WithLabelValues(httpCode, httpMethod, httpPath, grpcMethod, grpcCode).Observe(elapsed)
+
+	return err
 }
