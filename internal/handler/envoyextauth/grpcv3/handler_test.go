@@ -27,7 +27,6 @@ import (
 func TestHandleDecisionEndpointRequest(t *testing.T) {
 	for _, tc := range []struct {
 		uc             string
-		serviceConf    config.ServiceConfig
 		configureMocks func(t *testing.T, repository *mocks2.MockRepository, rule *mocks4.MockRule)
 		assertResponse func(t *testing.T, err error, response *envoy_auth.CheckResponse)
 	}{
@@ -193,7 +192,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				grpc.WithContextDialer(func(context.Context, string) (net.Conn, error) { return lis.Dial() }),
 				grpc.WithTransportCredentials(insecure.NewCredentials()))
 			require.NoError(t, err)
-			conf := &config.Configuration{Serve: config.ServeConfig{Decision: tc.serviceConf}}
+			conf := &config.Configuration{Metrics: config.MetricsConfig{Enabled: true}}
 			cch := &mocks.MockCache{}
 			repo := &mocks2.MockRepository{}
 			rule := &mocks4.MockRule{}
