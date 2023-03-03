@@ -34,6 +34,7 @@ import (
 
 type RequestContext struct {
 	ctx             context.Context // nolint: containedctx
+	address         string
 	reqMethod       string
 	reqHeaders      map[string]string
 	reqURL          *url.URL
@@ -48,6 +49,7 @@ type RequestContext struct {
 func NewRequestContext(ctx context.Context, req *envoy_auth.CheckRequest, signer heimdall.JWTSigner) *RequestContext {
 	return &RequestContext{
 		ctx:        ctx,
+		address:    req.Attributes.Source.GetAddress().GetSocketAddress().GetAddress(),
 		reqMethod:  req.Attributes.Request.Http.Method,
 		reqHeaders: canonicalizeHeaders(req.Attributes.Request.Http.Headers),
 		reqURL: &url.URL{
@@ -118,7 +120,7 @@ func (s *RequestContext) AddHeaderForUpstream(name, value string) { s.upstreamHe
 func (s *RequestContext) AddCookieForUpstream(name, value string) { s.upstreamCookies[name] = value }
 func (s *RequestContext) Signer() heimdall.JWTSigner              { return s.jwtSigner }
 func (s *RequestContext) RequestURL() *url.URL                    { return s.reqURL }
-func (s *RequestContext) RequestClientIPs() []string              { return nil }
+func (s *RequestContext) RequestClientIPs() []string              { return []string{s.address} }
 
 func (s *RequestContext) Finalize() (*envoy_auth.CheckResponse, error) {
 	if s.err != nil {
