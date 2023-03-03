@@ -156,7 +156,6 @@ func (h *metricsHandler) observeStreamRequest(
 	}()
 
 	err := handler(srv, stream)
-
 	if err != nil {
 		s, _ := status.FromError(err)
 		grpcCode = strconv.Itoa(int(s.Code()))
