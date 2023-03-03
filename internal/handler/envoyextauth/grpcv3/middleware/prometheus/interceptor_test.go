@@ -36,8 +36,7 @@ import (
 	"google.golang.org/grpc/status"
 	"google.golang.org/grpc/test/bufconn"
 
-	testservice2 "github.com/dadrus/heimdall/internal/handler/envoyextauth/grpcv3/middleware/mocks"
-	"github.com/dadrus/heimdall/internal/handler/envoyextauth/grpcv3/mocks"
+	"github.com/dadrus/heimdall/internal/handler/envoyextauth/grpcv3/middleware/mocks"
 )
 
 func metricForType(metrics []*dto.MetricFamily, metricType *dto.MetricType) *dto.MetricFamily {
@@ -335,12 +334,12 @@ func TestHandlerObserveUnknownRequests(t *testing.T) {
 		require.NoError(t, err)
 	}()
 
-	client := testservice2.NewTestClient(conn)
+	client := mocks.NewTestClient(conn)
 
 	// WHEN
 	// we're not interested in the response and the error
 	// nolint: errcheck
-	_, err = client.Test(context.Background(), &testservice2.TestRequest{})
+	_, err = client.Test(context.Background(), &mocks.TestRequest{})
 
 	// THEN
 	assert.Error(t, err)

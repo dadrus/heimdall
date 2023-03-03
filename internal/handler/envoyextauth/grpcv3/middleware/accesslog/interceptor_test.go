@@ -45,8 +45,7 @@ import (
 	"google.golang.org/grpc/test/bufconn"
 
 	"github.com/dadrus/heimdall/internal/accesscontext"
-	grpc_mocks "github.com/dadrus/heimdall/internal/handler/envoyextauth/grpcv3/middleware/mocks"
-	service_mocks "github.com/dadrus/heimdall/internal/handler/envoyextauth/grpcv3/mocks"
+	"github.com/dadrus/heimdall/internal/handler/envoyextauth/grpcv3/middleware/mocks"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
@@ -61,7 +60,7 @@ func TestAccessLogInterceptorForKnownService(t *testing.T) {
 	for _, tc := range []struct {
 		uc              string
 		outgoingContext func(t *testing.T) context.Context
-		configureMock   func(t *testing.T, m *service_mocks.MockHandler)
+		configureMock   func(t *testing.T, m *mocks.MockHandler)
 		assert          func(t *testing.T, logEvent1, logEvent2 map[string]any)
 	}{
 		{
@@ -71,7 +70,7 @@ func TestAccessLogInterceptorForKnownService(t *testing.T) {
 
 				return context.Background()
 			},
-			configureMock: func(t *testing.T, m *service_mocks.MockHandler) {
+			configureMock: func(t *testing.T, m *mocks.MockHandler) {
 				t.Helper()
 
 				m.On("Check",
@@ -133,7 +132,7 @@ func TestAccessLogInterceptorForKnownService(t *testing.T) {
 
 				return metadata.NewOutgoingContext(context.Background(), metadata.New(md))
 			},
-			configureMock: func(t *testing.T, m *service_mocks.MockHandler) {
+			configureMock: func(t *testing.T, m *mocks.MockHandler) {
 				t.Helper()
 
 				m.On("Check", mock.Anything, mock.Anything).
@@ -177,7 +176,7 @@ func TestAccessLogInterceptorForKnownService(t *testing.T) {
 
 				return context.Background()
 			},
-			configureMock: func(t *testing.T, m *service_mocks.MockHandler) {
+			configureMock: func(t *testing.T, m *mocks.MockHandler) {
 				t.Helper()
 
 				m.On("Check",
@@ -235,7 +234,7 @@ func TestAccessLogInterceptorForKnownService(t *testing.T) {
 			lis := bufconn.Listen(1024 * 1024)
 			tb := &testsupport.TestingLog{TB: t}
 			logger := zerolog.New(zerolog.TestWriter{T: tb})
-			handler := &service_mocks.MockHandler{}
+			handler := &mocks.MockHandler{}
 			conn, err := grpc.DialContext(context.Background(), "bufnet",
 				grpc.WithContextDialer(func(context.Context, string) (net.Conn, error) { return lis.Dial() }),
 				grpc.WithTransportCredentials(insecure.NewCredentials()))
@@ -301,7 +300,7 @@ func TestAccessLogInterceptorForUnknownService(t *testing.T) {
 	lis := bufconn.Listen(1024 * 1024)
 	tb := &testsupport.TestingLog{TB: t}
 	logger := zerolog.New(zerolog.TestWriter{T: tb})
-	handler := &service_mocks.MockHandler{}
+	handler := &mocks.MockHandler{}
 	bufDialer := func(context.Context, string) (net.Conn, error) {
 		return lis.Dial()
 	}
@@ -328,11 +327,11 @@ func TestAccessLogInterceptorForUnknownService(t *testing.T) {
 		require.NoError(t, err)
 	}()
 
-	client := grpc_mocks.NewTestClient(conn)
+	client := mocks.NewTestClient(conn)
 
 	// WHEN
 	// nolint: errcheck
-	_, err = client.Test(context.Background(), &grpc_mocks.TestRequest{})
+	_, err = client.Test(context.Background(), &mocks.TestRequest{})
 
 	// THEN
 	require.Error(t, err)
