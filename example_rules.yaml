@@ -18,7 +18,7 @@
           scopes:
             - profile
     - authenticator: hydra_authenticator
-    - contextualize: subscription_contextualizer
+    - contextualizer: subscription_contextualizer
     - authorizer: allow_all_authorizer
     - unifier: jwt
       config:
