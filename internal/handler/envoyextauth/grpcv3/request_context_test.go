@@ -11,6 +11,7 @@ import (
 	envoy_auth "github.com/envoyproxy/go-control-plane/envoy/service/auth/v3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/grpc/metadata"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/heimdall/mocks"
@@ -37,21 +38,22 @@ func TestNewRequestContext(t *testing.T) {
 	}
 	checkReq := &envoy_auth.CheckRequest{
 		Attributes: &envoy_auth.AttributeContext{
-			Source: &envoy_auth.AttributeContext_Peer{
-				Address: &corev3.Address{
-					Address: &corev3.Address_SocketAddress{
-						SocketAddress: &corev3.SocketAddress{
-							Address: "0.0.0.0",
-						},
-					},
-				},
-			},
 			Request: &envoy_auth.AttributeContext_Request{
 				Http: httpReq,
 			},
 		},
 	}
-	ctx := NewRequestContext(context.Background(), checkReq, &mocks.MockJWTSigner{})
+	md := metadata.New(nil)
+	md.Set("x-forwarded-for", "127.0.0.1", "192.168.1.1")
+
+	ctx := NewRequestContext(
+		metadata.NewIncomingContext(
+			context.Background(),
+			md,
+		),
+		checkReq,
+		&mocks.MockJWTSigner{},
+	)
 
 	// THEN
 	require.Equal(t, httpReq.Method, ctx.RequestMethod())
@@ -71,8 +73,7 @@ func TestNewRequestContext(t *testing.T) {
 	require.Empty(t, ctx.RequestCookie("baz"))
 	require.NotNil(t, ctx.AppContext())
 	require.NotNil(t, ctx.Signer())
-	require.Len(t, ctx.RequestClientIPs(), 1)
-	assert.Contains(t, ctx.RequestClientIPs(), "0.0.0.0")
+	assert.Equal(t, ctx.RequestClientIPs(), []string{"127.0.0.1", "192.168.1.1"})
 }
 
 func TestFinalizeRequestContext(t *testing.T) {

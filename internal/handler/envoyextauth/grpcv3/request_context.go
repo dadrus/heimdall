@@ -27,6 +27,7 @@ import (
 	envoy_auth "github.com/envoyproxy/go-control-plane/envoy/service/auth/v3"
 	envoy_type "github.com/envoyproxy/go-control-plane/envoy/type/v3"
 	"google.golang.org/genproto/googleapis/rpc/status"
+	"google.golang.org/grpc/metadata"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/x"
@@ -34,7 +35,7 @@ import (
 
 type RequestContext struct {
 	ctx             context.Context // nolint: containedctx
-	address         string
+	ips             []string
 	reqMethod       string
 	reqHeaders      map[string]string
 	reqURL          *url.URL
@@ -47,9 +48,18 @@ type RequestContext struct {
 }
 
 func NewRequestContext(ctx context.Context, req *envoy_auth.CheckRequest, signer heimdall.JWTSigner) *RequestContext {
+	var clientIPs []string
+
+	if rmd, ok := metadata.FromIncomingContext(ctx); ok {
+		// this header is used by envoyproxy to forward the ip addresses of the hops
+		if headerValue := rmd.Get("x-forwarded-for"); len(headerValue) != 0 {
+			clientIPs = headerValue
+		}
+	}
+
 	return &RequestContext{
 		ctx:        ctx,
-		address:    req.Attributes.Source.GetAddress().GetSocketAddress().GetAddress(),
+		ips:        clientIPs,
 		reqMethod:  req.Attributes.Request.Http.Method,
 		reqHeaders: canonicalizeHeaders(req.Attributes.Request.Http.Headers),
 		reqURL: &url.URL{
@@ -120,7 +130,7 @@ func (s *RequestContext) AddHeaderForUpstream(name, value string) { s.upstreamHe
 func (s *RequestContext) AddCookieForUpstream(name, value string) { s.upstreamCookies[name] = value }
 func (s *RequestContext) Signer() heimdall.JWTSigner              { return s.jwtSigner }
 func (s *RequestContext) RequestURL() *url.URL                    { return s.reqURL }
-func (s *RequestContext) RequestClientIPs() []string              { return []string{s.address} }
+func (s *RequestContext) RequestClientIPs() []string              { return s.ips }
 
 func (s *RequestContext) Finalize() (*envoy_auth.CheckResponse, error) {
 	if s.err != nil {
