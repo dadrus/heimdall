@@ -2,7 +2,7 @@ version: '3.7'
 
 services:
   edge-router:
-    image: envoyproxy/envoy:v1.24.1
+    image: envoyproxy/envoy:v1.25.1
     volumes:
       - ./envoy-config.yaml:/envoy.yaml:ro
     ports:
