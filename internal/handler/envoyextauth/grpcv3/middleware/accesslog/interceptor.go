@@ -18,6 +18,7 @@ package accesslog
 
 import (
 	"context"
+	"net"
 	"strings"
 	"time"
 
@@ -78,8 +79,8 @@ func (i *accessLogInterceptor) startTransaction(ctx context.Context, fullMethod 
 
 	logCtx := i.l.Level(zerolog.InfoLevel).With().
 		Int64("_tx_start", start.Unix()).
-		Str("_peer", peerFromCtx(ctx)).
-		Str("_request", fullMethod)
+		Str("_client_ip", peerFromCtx(ctx)).
+		Str("_grpc_method", fullMethod)
 
 	logCtx = logTraceData(ctx, logCtx)
 	logCtx = logMetaData(logCtx, requestMetadata, "x-forwarded-for", "_x_forwarded_for")
@@ -149,6 +150,10 @@ func peerFromCtx(ctx context.Context) string {
 	p, ok := peer.FromContext(ctx)
 	if !ok {
 		return ""
+	}
+
+	if tcpAddr, ok := p.Addr.(*net.TCPAddr); ok {
+		return tcpAddr.IP.String()
 	}
 
 	return p.Addr.String()
