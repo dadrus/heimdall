@@ -139,6 +139,10 @@ func logTraceData(ctx context.Context, logCtx zerolog.Context) zerolog.Context {
 }
 
 func logMetaData(logCtx zerolog.Context, rmd metadata.MD, mdKey, logKey string) zerolog.Context {
+	if len(rmd) == 0 {
+		return logCtx
+	}
+
 	if headerValue := rmd.Get(mdKey); len(headerValue) != 0 {
 		logCtx = logCtx.Str(logKey, strings.Join(headerValue, ","))
 	}
