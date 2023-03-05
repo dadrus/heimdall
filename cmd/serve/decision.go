@@ -44,7 +44,7 @@ func NewDecisionCommand() *cobra.Command {
 	}
 
 	cmd.PersistentFlags().Bool("envoy-extauth", false,
-		"Whether to start the decision mode for integration with envoy extauth gRPC service")
+		"If specified, decision mode is started for integration with envoy extauth gRPC service")
 
 	return cmd
 }
