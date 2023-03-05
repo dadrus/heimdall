@@ -82,6 +82,10 @@ func newService(
 			errormiddleware.WithNoRuleErrorCode(service.Respond.With.NoRuleError.Code),
 			errormiddleware.WithInternalServerErrorCode(service.Respond.With.InternalError.Code),
 		),
+		// the accesslogger is used here to have access to the error object
+		// as it will be replaced by a CheckResponse object returned to envoy
+		// and will not contain all the details, typically required to enable
+		// error traceback
 		accessLogger.Unary(),
 		loggermiddleware.New(logger),
 		cachemiddleware.New(cch),
