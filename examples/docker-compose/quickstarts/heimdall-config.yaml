@@ -1,5 +1,5 @@
 log:
-  level: info
+  level: debug
 
 serve:
   decision:
@@ -20,6 +20,20 @@ rules:
         type: noop
       - id: create_jwt
         type: jwt
+    error_handlers:
+      - id: default
+        type: default
+      - id: redirect_to_login
+        type: redirect
+        config:
+          to: http://127.0.0.1:8080/login?origin={{ .Request.URL | urlenc }}
+          when:
+            - error:
+                - type: authentication_error
+                  raised_by: reject_requests
+              request_headers:
+                Accept:
+                  - Bar
 
   default:
     methods:
@@ -28,6 +42,8 @@ rules:
     execute:
       - authenticator: reject_requests
       - unifier: create_jwt
+    on_error:
+      - error_handler: redirect_to_login
 
   providers:
     file_system:

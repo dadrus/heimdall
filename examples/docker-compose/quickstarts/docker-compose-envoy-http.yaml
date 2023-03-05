@@ -4,7 +4,7 @@ services:
   edge-router:
     image: envoyproxy/envoy:v1.25.1
     volumes:
-      - ./envoy-config.yaml:/envoy.yaml:ro
+      - ./envoy-config-http.yaml:/envoy.yaml:ro
     ports:
       - 9090:9090
-    command: -c /envoy.yaml
+    command: -c /envoy.yaml -l debug
