@@ -26,6 +26,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/peer"
+	"google.golang.org/grpc/status"
 
 	"github.com/dadrus/heimdall/internal/accesscontext"
 	"github.com/dadrus/heimdall/internal/x/opentelemetry/tracecontext"
@@ -49,11 +50,11 @@ func (i *accessLogInterceptor) Unary() grpc.UnaryServerInterceptor {
 		start, accLog := i.startTransaction(ctx, info.FullMethod)
 
 		ctx = accesscontext.New(ctx)
-		res, err := handler(ctx, req)
+		resp, err := handler(ctx, req)
 
 		i.finalizeTransaction(ctx, accLog, start, err)
 
-		return res, err
+		return resp, err
 	}
 }
 
@@ -95,7 +96,13 @@ func (i *accessLogInterceptor) startTransaction(ctx context.Context, fullMethod 
 func (i *accessLogInterceptor) finalizeTransaction(
 	ctx context.Context, accLog zerolog.Logger, start time.Time, err error,
 ) {
+	// grpc errors are only used to signal unusual conditions
+	// in all other cases the error is anyway embedded into the envoy CheckResponse object
+	// so that on the grpc level no error is returned
+	grpcStatus, _ := status.FromError(err)
+
 	logAccessStatus(ctx, accLog.Info(), err).
+		Uint32("_grpc_status_code", uint32(grpcStatus.Code())).
 		Int64("_tx_duration_ms", time.Until(start).Milliseconds()).
 		Msg("TX finished")
 }

@@ -101,7 +101,7 @@ func TestAccessLogInterceptorForKnownService(t *testing.T) {
 				assert.NotEqual(t, parentCtx.SpanID().String(), logEvent1["_parent_id"])
 				assert.Equal(t, "TX started", logEvent1["message"])
 
-				require.Len(t, logEvent2, 10)
+				require.Len(t, logEvent2, 11)
 				assert.Equal(t, "info", logEvent2["level"])
 				assert.Contains(t, logEvent2, "_tx_start")
 				assert.Contains(t, logEvent2, "_tx_duration_ms")
@@ -113,6 +113,7 @@ func TestAccessLogInterceptorForKnownService(t *testing.T) {
 				assert.Equal(t, logEvent2["_parent_id"], logEvent2["_parent_id"])
 				assert.Equal(t, true, logEvent2["_access_granted"])
 				assert.Equal(t, "foo", logEvent2["_subject"])
+				assert.Equal(t, float64(codes.OK), logEvent2["_grpc_status_code"])
 				assert.Equal(t, "TX finished", logEvent2["message"])
 			},
 		},
@@ -153,7 +154,7 @@ func TestAccessLogInterceptorForKnownService(t *testing.T) {
 				assert.Equal(t, "127.0.0.1", logEvent1["_x_forwarded_for"])
 				assert.Equal(t, "TX started", logEvent1["message"])
 
-				require.Len(t, logEvent2, 13)
+				require.Len(t, logEvent2, 14)
 				assert.Equal(t, "info", logEvent2["level"])
 				assert.Contains(t, logEvent2, "_tx_start")
 				assert.Contains(t, logEvent2, "_tx_duration_ms")
@@ -166,6 +167,7 @@ func TestAccessLogInterceptorForKnownService(t *testing.T) {
 				assert.Equal(t, "test error", logEvent2["error"])
 				assert.Equal(t, "for=127.0.0.1", logEvent1["_forwarded"])
 				assert.Equal(t, "127.0.0.1", logEvent1["_x_forwarded_for"])
+				assert.Equal(t, float64(codes.Unknown), logEvent2["_grpc_status_code"])
 				assert.Equal(t, "TX finished", logEvent2["message"])
 			},
 		},
@@ -208,7 +210,7 @@ func TestAccessLogInterceptorForKnownService(t *testing.T) {
 				assert.NotEqual(t, parentCtx.SpanID().String(), logEvent1["_parent_id"])
 				assert.Equal(t, "TX started", logEvent1["message"])
 
-				require.Len(t, logEvent2, 11)
+				require.Len(t, logEvent2, 12)
 				assert.Equal(t, "info", logEvent2["level"])
 				assert.Contains(t, logEvent2, "_tx_start")
 				assert.Contains(t, logEvent2, "_tx_duration_ms")
@@ -221,6 +223,7 @@ func TestAccessLogInterceptorForKnownService(t *testing.T) {
 				assert.Equal(t, false, logEvent2["_access_granted"])
 				assert.Equal(t, "bar", logEvent2["_subject"])
 				assert.Equal(t, "test error", logEvent2["error"])
+				assert.Equal(t, float64(codes.OK), logEvent2["_grpc_status_code"])
 				assert.Equal(t, "TX finished", logEvent2["message"])
 			},
 		},
@@ -353,7 +356,7 @@ func TestAccessLogInterceptorForUnknownService(t *testing.T) {
 	assert.Contains(t, logEvent1, "_trace_id")
 	assert.Equal(t, "TX started", logEvent1["message"])
 
-	require.Len(t, logEvent2, 10)
+	require.Len(t, logEvent2, 11)
 	assert.Equal(t, "info", logEvent2["level"])
 	assert.Contains(t, logEvent2, "_tx_start")
 	assert.Contains(t, logEvent2, "_tx_duration_ms")
@@ -365,5 +368,6 @@ func TestAccessLogInterceptorForUnknownService(t *testing.T) {
 	assert.Equal(t, logEvent2["_parent_id"], logEvent2["_parent_id"])
 	assert.Equal(t, false, logEvent2["_access_granted"])
 	assert.Contains(t, logEvent2["error"], "unknown service or method")
+	assert.Equal(t, float64(codes.Unknown), logEvent2["_grpc_status_code"])
 	assert.Equal(t, "TX finished", logEvent2["message"])
 }
