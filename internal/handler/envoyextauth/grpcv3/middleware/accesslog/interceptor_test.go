@@ -49,7 +49,7 @@ import (
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
-func TestAccessLogInterceptorForKnownService(t *testing.T) {
+func TestAccessLogInterceptorForKnownService(t *testing.T) { //nolint:maintidx
 	otel.SetTracerProvider(sdktrace.NewTracerProvider())
 	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(propagation.TraceContext{}))
 
