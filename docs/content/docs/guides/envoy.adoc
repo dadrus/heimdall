@@ -10,7 +10,7 @@ menu:
     weight: 20
 ---
 
-https://www.envoyproxy.io/[Envoy] is a high performance distributed proxy designed for single services and applications, as well as a communication bus and “universal data plane” designed for large microservice “service mesh” architectures. When operating heimdall in link:{{< relref "/docs/getting_started/concepts.adoc#_decision_mode" >}}[Decision Operation Mode], integration with Envoy can be achieved by making use of an https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/ext_authz/v3/ext_authz.proto.html?highlight=allowed_upstream_headers[External Authorization] filter. In such setup, Envoy delegates authentication and authorization to heimdall. If heimdall answers with a `200 OK` HTTP code, Envoy grants access and forwards the original request to the upstream service. Otherwise, the response from heimdall is treated as an error and is returned to the client.
+https://www.envoyproxy.io/[Envoy] is a high performance distributed proxy designed for single services and applications, as well as a communication bus and “universal data plane” designed for large microservice “service mesh” architectures. When operating heimdall in link:{{< relref "/docs/getting_started/concepts.adoc#_decision_mode" >}}[Decision Operation Mode], integration with Envoy can be achieved by making use of an https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/ext_authz/v3/ext_authz.proto.html[External Authorization] filter (both, `grpc_service`, as well as `http_service` are supported). In such setup, Envoy delegates authentication and authorization to heimdall. If heimdall answers with a `200 OK` HTTP code, Envoy grants access and forwards the original request to the upstream service. Otherwise, the response from heimdall is treated as an error and is returned to the client.
 
 To achieve this, configure Envoy
 
@@ -35,9 +35,34 @@ clusters:
                     port_value: 4456
   # other cluster entries
 ----
-* to include an https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/ext_authz/v3/ext_authz.proto.html?highlight=allowed_upstream_headers[External Authorization] HTTP filter in the definition of the HTTP connection manager, as well as to let that filter contain the required header name(s), heimdall sets in the HTTP responses (depends on your link:{{< relref "/docs/configuration/rules/pipeline_mechanisms/contextualizers.adoc" >}}[Contextualizers] and link:{{< relref "/docs/configuration/rules/pipeline_mechanisms/unifiers.adoc" >}}[Unifiers] configuration).
 +
-The following snipped shows, how an https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/ext_authz/v3/ext_authz.proto.html?highlight=allowed_upstream_headers[External Authorization] can be defined to let Envoy communicating with heimdall by making use of the previously defined `cluster` (see snippet from above) as well as forwarding all request headers to heimdall and to let it forward headers, set by heimdall in its responses (here the `Authorization` header) to the upstream services.
+If you want to integrate via Envoys `grpc_service` (see below), the cluster entry from above must have `http2_protocol_options` configured, as otherwise envoy will use HTTP 1 for GRPC communication, which is actually not allowed by GRPC (only HTTP 2 is supported). Here an updated snipped:
++
+[source, yaml]
+----
+clusters:
+  # other cluster entries
+  - name: ext-authz
+    type: strict_dns
+    typed_extension_protocol_options:
+      envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
+        "@type": type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
+        explicit_http_config:
+          http2_protocol_options: {}
+    load_assignment:
+      cluster_name: ext-authz
+      endpoints:
+        - lb_endpoints:
+            - endpoint:
+                address:
+                  socket_address:
+                    address: heimdall
+                    port_value: 4456
+  # other cluster entries
+----
+* to include an https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/ext_authz/v3/ext_authz.proto.html[External Authorization] HTTP filter in the definition of the HTTP connection manager and depending on the used configuration, either configure the `http_service` and let it contain the required header name(s), heimdall sets in the HTTP responses (depends on your link:{{< relref "/docs/configuration/rules/pipeline_mechanisms/contextualizers.adoc" >}}[Contextualizers] and link:{{< relref "/docs/configuration/rules/pipeline_mechanisms/unifiers.adoc" >}}[Unifiers] configuration), or configure the `grpc_service`.
++
+The following snipped shows, how an https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/ext_authz/v3/ext_authz.proto.html[External Authorization] can be defined using `http_service` to let Envoy communicating with heimdall by making use of the previously defined `cluster` (see snippet from above) as well as forwarding all request headers to heimdall and to let it forward headers, set by heimdall in its responses (here the `Authorization` header) to the upstream services.
 +
 [source, yaml]
 ----
@@ -62,6 +87,22 @@ http_filters:
           allowed_upstream_headers:
             patterns:
               - exact: authorization
+  # other http filter
+----
++
+The following snipped shows, how an https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/ext_authz/v3/ext_authz.proto.html[External Authorization] can be defined using `grpc_service` to let Envoy communicating with heimdall by making use of the previously defined `cluster` (see snippet from above). In that configuration envoy by default forwards all request header to heimdall and also forwards headers, set by heimdall in its responses to the upstream services.
++
+[source, yaml]
+----
+http_filters:
+  # other http filter
+  - name: envoy.filters.http.ext_authz
+    typed_config:
+      "@type": type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthz
+      transport_api_version: V3
+      grpc_service:
+        envoy_grpc:
+          cluster_name: ext-authz
   # other http filter
 ----
 
