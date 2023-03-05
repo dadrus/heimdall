@@ -54,7 +54,7 @@ func TestCreateDecisionAppForEnvoyGRPCRequests(t *testing.T) {
 	t.Setenv("SERVE_MANAGEMENT_PORT", strconv.Itoa(port2))
 
 	cmd := NewDecisionCommand()
-	err = cmd.ParseFlags([]string{"--envoy-extauth=true"})
+	err = cmd.ParseFlags([]string{"--envoy-grpc"})
 	require.NoError(t, err)
 
 	_, err = createDecisionApp(cmd)

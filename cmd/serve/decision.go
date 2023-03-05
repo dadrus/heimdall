@@ -43,7 +43,7 @@ func NewDecisionCommand() *cobra.Command {
 		},
 	}
 
-	cmd.PersistentFlags().Bool("envoy-extauth", false,
+	cmd.PersistentFlags().Bool("envoy-grpc", false,
 		"If specified, decision mode is started for integration with envoy extauth gRPC service")
 
 	return cmd
@@ -52,7 +52,7 @@ func NewDecisionCommand() *cobra.Command {
 func createDecisionApp(cmd *cobra.Command) (*fx.App, error) {
 	configPath, _ := cmd.Flags().GetString("config")
 	envPrefix, _ := cmd.Flags().GetString("env-config-prefix")
-	useEnvoyExtAuth, _ := cmd.Flags().GetBool("envoy-extauth")
+	useEnvoyExtAuth, _ := cmd.Flags().GetBool("envoy-grpc")
 
 	opts := []fx.Option{
 		fx.NopLogger,
