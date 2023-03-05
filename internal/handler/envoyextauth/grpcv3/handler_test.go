@@ -8,13 +8,13 @@ import (
 
 	envoy_auth "github.com/envoyproxy/go-control-plane/envoy/service/auth/v3"
 	typev3 "github.com/envoyproxy/go-control-plane/envoy/type/v3"
-	"github.com/gogo/googleapis/google/rpc"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/test/bufconn"
 
@@ -166,7 +166,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				t.Helper()
 
 				require.NoError(t, err)
-				assert.Equal(t, int32(rpc.OK), response.Status.Code)
+				assert.Equal(t, int32(codes.OK), response.Status.Code)
 
 				okResponse := response.GetOkResponse()
 				require.NotNil(t, okResponse)

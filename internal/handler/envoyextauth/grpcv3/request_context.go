@@ -25,8 +25,8 @@ import (
 
 	envoy_core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	envoy_auth "github.com/envoyproxy/go-control-plane/envoy/service/auth/v3"
-	"github.com/gogo/googleapis/google/rpc"
 	"google.golang.org/genproto/googleapis/rpc/status"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
@@ -170,7 +170,7 @@ func (s *RequestContext) Finalize() (*envoy_auth.CheckResponse, error) {
 	}
 
 	return &envoy_auth.CheckResponse{
-		Status: &status.Status{Code: int32(rpc.OK)},
+		Status: &status.Status{Code: int32(codes.OK)},
 		HttpResponse: &envoy_auth.CheckResponse_OkResponse{
 			OkResponse: &envoy_auth.OkHttpResponse{Headers: headers},
 		},
