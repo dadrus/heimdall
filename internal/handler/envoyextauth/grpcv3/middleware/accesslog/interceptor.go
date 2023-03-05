@@ -151,14 +151,14 @@ func logMetaData(logCtx zerolog.Context, rmd metadata.MD, mdKey, logKey string) 
 }
 
 func peerFromCtx(ctx context.Context) string {
-	p, ok := peer.FromContext(ctx)
+	peerInfo, ok := peer.FromContext(ctx)
 	if !ok {
 		return ""
 	}
 
-	if tcpAddr, ok := p.Addr.(*net.TCPAddr); ok {
+	if tcpAddr, ok := peerInfo.Addr.(*net.TCPAddr); ok {
 		return tcpAddr.IP.String()
 	}
 
-	return p.Addr.String()
+	return peerInfo.Addr.String()
 }
