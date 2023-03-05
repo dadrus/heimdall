@@ -37,211 +37,211 @@ import (
 	"github.com/dadrus/heimdall/internal/heimdall"
 )
 
-func TestErrorInterceptor(t *testing.T) {
+func TestErrorInterceptor(t *testing.T) { //nolint:maintidx
 	t.Parallel()
 
 	for _, tc := range []struct {
 		uc          string
 		interceptor grpc.UnaryServerInterceptor
 		err         error
-		expGrpcCode codes.Code
-		expHttpCode envoy_type.StatusCode
+		expGRPCCode codes.Code
+		expHTTPCode envoy_type.StatusCode
 		expBody     string
 	}{
 		{
 			uc:          "no error",
 			interceptor: New(),
-			expGrpcCode: codes.OK,
-			expHttpCode: http.StatusOK,
+			expGRPCCode: codes.OK,
+			expHTTPCode: http.StatusOK,
 		},
 		{
 			uc:          "authentication error default",
 			interceptor: New(),
 			err:         heimdall.ErrAuthentication,
-			expGrpcCode: codes.Unauthenticated,
-			expHttpCode: http.StatusUnauthorized,
+			expGRPCCode: codes.Unauthenticated,
+			expHTTPCode: http.StatusUnauthorized,
 		},
 		{
 			uc:          "authentication error overridden",
 			interceptor: New(WithAuthenticationErrorCode(http.StatusContinue)),
 			err:         heimdall.ErrAuthentication,
-			expGrpcCode: codes.Unauthenticated,
-			expHttpCode: http.StatusContinue,
+			expGRPCCode: codes.Unauthenticated,
+			expHTTPCode: http.StatusContinue,
 		},
 		{
 			uc:          "authentication error verbose",
 			interceptor: New(WithVerboseErrors(true)),
 			err:         heimdall.ErrAuthentication,
-			expGrpcCode: codes.Unauthenticated,
-			expHttpCode: http.StatusUnauthorized,
+			expGRPCCode: codes.Unauthenticated,
+			expHTTPCode: http.StatusUnauthorized,
 			expBody:     "<p>authentication error</p>",
 		},
 		{
 			uc:          "authorization error default",
 			interceptor: New(),
 			err:         heimdall.ErrAuthorization,
-			expGrpcCode: codes.PermissionDenied,
-			expHttpCode: http.StatusForbidden,
+			expGRPCCode: codes.PermissionDenied,
+			expHTTPCode: http.StatusForbidden,
 		},
 		{
 			uc:          "authorization error overridden",
 			interceptor: New(WithAuthorizationErrorCode(http.StatusContinue)),
 			err:         heimdall.ErrAuthorization,
-			expGrpcCode: codes.PermissionDenied,
-			expHttpCode: http.StatusContinue,
+			expGRPCCode: codes.PermissionDenied,
+			expHTTPCode: http.StatusContinue,
 		},
 		{
 			uc:          "authorization error verbose",
 			interceptor: New(WithVerboseErrors(true)),
 			err:         heimdall.ErrAuthorization,
-			expGrpcCode: codes.PermissionDenied,
-			expHttpCode: http.StatusForbidden,
+			expGRPCCode: codes.PermissionDenied,
+			expHTTPCode: http.StatusForbidden,
 			expBody:     "<p>authorization error</p>",
 		},
 		{
 			uc:          "communication timeout error default",
 			interceptor: New(),
 			err:         heimdall.ErrCommunicationTimeout,
-			expGrpcCode: codes.DeadlineExceeded,
-			expHttpCode: http.StatusBadGateway,
+			expGRPCCode: codes.DeadlineExceeded,
+			expHTTPCode: http.StatusBadGateway,
 		},
 		{
 			uc:          "communication timeout error overridden",
 			interceptor: New(WithCommunicationErrorCode(http.StatusContinue)),
 			err:         heimdall.ErrCommunicationTimeout,
-			expGrpcCode: codes.DeadlineExceeded,
-			expHttpCode: http.StatusContinue,
+			expGRPCCode: codes.DeadlineExceeded,
+			expHTTPCode: http.StatusContinue,
 		},
 		{
 			uc:          "communication timeout error verbose",
 			interceptor: New(WithVerboseErrors(true)),
 			err:         heimdall.ErrCommunicationTimeout,
-			expGrpcCode: codes.DeadlineExceeded,
-			expHttpCode: http.StatusBadGateway,
+			expGRPCCode: codes.DeadlineExceeded,
+			expHTTPCode: http.StatusBadGateway,
 			expBody:     "<p>communication timeout error</p>",
 		},
 		{
 			uc:          "communication error default",
 			interceptor: New(),
 			err:         heimdall.ErrCommunication,
-			expGrpcCode: codes.DeadlineExceeded,
-			expHttpCode: http.StatusBadGateway,
+			expGRPCCode: codes.DeadlineExceeded,
+			expHTTPCode: http.StatusBadGateway,
 		},
 		{
 			uc:          "communication error overridden",
 			interceptor: New(WithCommunicationErrorCode(http.StatusContinue)),
 			err:         heimdall.ErrCommunication,
-			expGrpcCode: codes.DeadlineExceeded,
-			expHttpCode: http.StatusContinue,
+			expGRPCCode: codes.DeadlineExceeded,
+			expHTTPCode: http.StatusContinue,
 		},
 		{
 			uc:          "communication error verbose",
 			interceptor: New(WithVerboseErrors(true)),
 			err:         heimdall.ErrCommunication,
-			expGrpcCode: codes.DeadlineExceeded,
-			expHttpCode: http.StatusBadGateway,
+			expGRPCCode: codes.DeadlineExceeded,
+			expHTTPCode: http.StatusBadGateway,
 			expBody:     "<p>communication error</p>",
 		},
 		{
 			uc:          "precondition error default",
 			interceptor: New(),
 			err:         heimdall.ErrArgument,
-			expGrpcCode: codes.InvalidArgument,
-			expHttpCode: http.StatusBadRequest,
+			expGRPCCode: codes.InvalidArgument,
+			expHTTPCode: http.StatusBadRequest,
 		},
 		{
 			uc:          "precondition error overridden",
 			interceptor: New(WithPreconditionErrorCode(http.StatusContinue)),
 			err:         heimdall.ErrArgument,
-			expGrpcCode: codes.InvalidArgument,
-			expHttpCode: http.StatusContinue,
+			expGRPCCode: codes.InvalidArgument,
+			expHTTPCode: http.StatusContinue,
 		},
 		{
 			uc:          "precondition error verbose",
 			interceptor: New(WithVerboseErrors(true)),
 			err:         heimdall.ErrArgument,
-			expGrpcCode: codes.InvalidArgument,
-			expHttpCode: http.StatusBadRequest,
+			expGRPCCode: codes.InvalidArgument,
+			expHTTPCode: http.StatusBadRequest,
 			expBody:     "<p>argument error</p>",
 		},
 		{
 			uc:          "method error default",
 			interceptor: New(),
 			err:         heimdall.ErrMethodNotAllowed,
-			expGrpcCode: codes.InvalidArgument,
-			expHttpCode: http.StatusMethodNotAllowed,
+			expGRPCCode: codes.InvalidArgument,
+			expHTTPCode: http.StatusMethodNotAllowed,
 		},
 		{
 			uc:          "method error overridden",
 			interceptor: New(WithMethodErrorCode(http.StatusContinue)),
 			err:         heimdall.ErrMethodNotAllowed,
-			expGrpcCode: codes.InvalidArgument,
-			expHttpCode: http.StatusContinue,
+			expGRPCCode: codes.InvalidArgument,
+			expHTTPCode: http.StatusContinue,
 		},
 		{
 			uc:          "method error verbose",
 			interceptor: New(WithVerboseErrors(true)),
 			err:         heimdall.ErrMethodNotAllowed,
-			expGrpcCode: codes.InvalidArgument,
-			expHttpCode: http.StatusMethodNotAllowed,
+			expGRPCCode: codes.InvalidArgument,
+			expHTTPCode: http.StatusMethodNotAllowed,
 			expBody:     "<p>method not allowed</p>",
 		},
 		{
 			uc:          "no rule error default",
 			interceptor: New(),
 			err:         heimdall.ErrNoRuleFound,
-			expGrpcCode: codes.NotFound,
-			expHttpCode: http.StatusNotFound,
+			expGRPCCode: codes.NotFound,
+			expHTTPCode: http.StatusNotFound,
 		},
 		{
 			uc:          "no rule error overridden",
 			interceptor: New(WithNoRuleErrorCode(http.StatusContinue)),
 			err:         heimdall.ErrNoRuleFound,
-			expGrpcCode: codes.NotFound,
-			expHttpCode: http.StatusContinue,
+			expGRPCCode: codes.NotFound,
+			expHTTPCode: http.StatusContinue,
 		},
 		{
 			uc:          "no rule error verbose",
 			interceptor: New(WithVerboseErrors(true)),
 			err:         heimdall.ErrNoRuleFound,
-			expGrpcCode: codes.NotFound,
-			expHttpCode: http.StatusNotFound,
+			expGRPCCode: codes.NotFound,
+			expHTTPCode: http.StatusNotFound,
 			expBody:     "<p>no rule found</p>",
 		},
 		{
 			uc:          "redirect error",
 			interceptor: New(),
 			err:         &heimdall.RedirectError{RedirectTo: "http://foo.local", Code: http.StatusFound},
-			expGrpcCode: codes.FailedPrecondition,
-			expHttpCode: http.StatusFound,
+			expGRPCCode: codes.FailedPrecondition,
+			expHTTPCode: http.StatusFound,
 		},
 		{
 			uc:          "redirect error verbose",
 			interceptor: New(WithVerboseErrors(true)),
 			err:         &heimdall.RedirectError{RedirectTo: "http://foo.local", Code: http.StatusFound},
-			expGrpcCode: codes.FailedPrecondition,
-			expHttpCode: http.StatusFound,
+			expGRPCCode: codes.FailedPrecondition,
+			expHTTPCode: http.StatusFound,
 		},
 		{
 			uc:          "internal error default",
 			interceptor: New(),
 			err:         heimdall.ErrInternal,
-			expGrpcCode: codes.Internal,
-			expHttpCode: http.StatusInternalServerError,
+			expGRPCCode: codes.Internal,
+			expHTTPCode: http.StatusInternalServerError,
 		},
 		{
 			uc:          "internal error overridden",
 			interceptor: New(WithInternalServerErrorCode(http.StatusContinue)),
 			err:         heimdall.ErrInternal,
-			expGrpcCode: codes.Internal,
-			expHttpCode: http.StatusContinue,
+			expGRPCCode: codes.Internal,
+			expHTTPCode: http.StatusContinue,
 		},
 		{
 			uc:          "internal error verbose",
 			interceptor: New(WithVerboseErrors(true)),
 			err:         heimdall.ErrInternal,
-			expGrpcCode: codes.Internal,
-			expHttpCode: http.StatusInternalServerError,
+			expGRPCCode: codes.Internal,
+			expHTTPCode: http.StatusInternalServerError,
 			expBody:     "<p>internal error</p>",
 		},
 	} {
@@ -261,7 +261,7 @@ func TestErrorInterceptor(t *testing.T) {
 				handler.On("Check", mock.Anything, mock.Anything).Return(nil, tc.err)
 			} else {
 				handler.On("Check", mock.Anything, mock.Anything).Return(&envoy_auth.CheckResponse{
-					Status: &status.Status{Code: int32(tc.expGrpcCode)},
+					Status: &status.Status{Code: int32(tc.expGRPCCode)},
 					HttpResponse: &envoy_auth.CheckResponse_OkResponse{
 						OkResponse: &envoy_auth.OkHttpResponse{},
 					},
@@ -296,12 +296,12 @@ func TestErrorInterceptor(t *testing.T) {
 			srv.Stop()
 			require.NoError(t, err)
 
-			assert.Equal(t, int32(tc.expGrpcCode), resp.Status.Code)
+			assert.Equal(t, int32(tc.expGRPCCode), resp.Status.Code)
 
 			if tc.err != nil {
 				deniedResp := resp.GetDeniedResponse()
 				require.NotNil(t, deniedResp)
-				assert.Equal(t, tc.expHttpCode, deniedResp.Status.Code)
+				assert.Equal(t, tc.expHTTPCode, deniedResp.Status.Code)
 				assert.Equal(t, tc.expBody, deniedResp.Body)
 			}
 		})
