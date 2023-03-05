@@ -26,6 +26,7 @@ import (
 	"github.com/rs/zerolog"
 	"google.golang.org/genproto/googleapis/rpc/status"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 
 	"github.com/dadrus/heimdall/internal/accesscontext"
 	"github.com/dadrus/heimdall/internal/heimdall"
@@ -76,7 +77,7 @@ func (h *interceptor) intercept(
 		errors.As(err, &redirectError)
 
 		return &envoy_auth.CheckResponse{
-			Status: &status.Status{Code: int32(redirectError.Code)},
+			Status: &status.Status{Code: int32(codes.FailedPrecondition)},
 			HttpResponse: &envoy_auth.CheckResponse_DeniedResponse{
 				DeniedResponse: &envoy_auth.DeniedHttpResponse{
 					Status: &envoy_type.HttpStatus{Code: envoy_type.StatusCode(redirectError.Code)},

@@ -42,7 +42,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				t.Helper()
 
 				require.NoError(t, err)
-				assert.Equal(t, int32(http.StatusNotFound), response.Status.Code)
+				assert.Equal(t, int32(codes.NotFound), response.Status.Code)
 
 				deniedResponse := response.GetDeniedResponse()
 				require.NotNil(t, deniedResponse)
@@ -64,7 +64,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				t.Helper()
 
 				require.NoError(t, err)
-				assert.Equal(t, int32(http.StatusMethodNotAllowed), response.Status.Code)
+				assert.Equal(t, int32(codes.InvalidArgument), response.Status.Code)
 
 				deniedResponse := response.GetDeniedResponse()
 				require.NotNil(t, deniedResponse)
@@ -87,7 +87,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				t.Helper()
 
 				require.NoError(t, err)
-				assert.Equal(t, int32(http.StatusUnauthorized), response.Status.Code)
+				assert.Equal(t, int32(codes.Unauthenticated), response.Status.Code)
 
 				deniedResponse := response.GetDeniedResponse()
 				require.NotNil(t, deniedResponse)
@@ -114,7 +114,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				t.Helper()
 
 				require.NoError(t, err)
-				assert.Equal(t, int32(http.StatusForbidden), response.Status.Code)
+				assert.Equal(t, int32(codes.PermissionDenied), response.Status.Code)
 
 				deniedResponse := response.GetDeniedResponse()
 				require.NotNil(t, deniedResponse)
@@ -141,7 +141,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				t.Helper()
 
 				require.NoError(t, err)
-				assert.Equal(t, int32(http.StatusFound), response.Status.Code)
+				assert.Equal(t, int32(codes.FailedPrecondition), response.Status.Code)
 
 				deniedResponse := response.GetDeniedResponse()
 				require.NotNil(t, deniedResponse)

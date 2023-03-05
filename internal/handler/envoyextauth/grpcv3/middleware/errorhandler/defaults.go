@@ -18,14 +18,16 @@ package errorhandler
 
 import (
 	"net/http"
+
+	"google.golang.org/grpc/codes"
 )
 
 var defaultOptions = opts{ //nolint:gochecknoglobals
-	authenticationError: responseWith(http.StatusUnauthorized),
-	authorizationError:  responseWith(http.StatusForbidden),
-	communicationError:  responseWith(http.StatusBadGateway),
-	preconditionError:   responseWith(http.StatusBadRequest),
-	badMethodError:      responseWith(http.StatusMethodNotAllowed),
-	noRuleError:         responseWith(http.StatusNotFound),
-	internalError:       responseWith(http.StatusInternalServerError),
+	authenticationError: responseWith(codes.Unauthenticated, http.StatusUnauthorized),
+	authorizationError:  responseWith(codes.PermissionDenied, http.StatusForbidden),
+	communicationError:  responseWith(codes.DeadlineExceeded, http.StatusBadGateway),
+	preconditionError:   responseWith(codes.InvalidArgument, http.StatusBadRequest),
+	badMethodError:      responseWith(codes.InvalidArgument, http.StatusMethodNotAllowed),
+	noRuleError:         responseWith(codes.NotFound, http.StatusNotFound),
+	internalError:       responseWith(codes.Internal, http.StatusInternalServerError),
 }

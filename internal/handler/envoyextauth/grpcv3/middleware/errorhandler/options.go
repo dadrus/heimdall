@@ -16,6 +16,8 @@
 
 package errorhandler
 
+import "google.golang.org/grpc/codes"
+
 type opts struct {
 	verboseErrors       bool
 	authenticationError func(err error, verbose bool, mimeType string) (any, error)
@@ -32,7 +34,7 @@ type Option func(*opts)
 func WithPreconditionErrorCode(code int) Option {
 	return func(o *opts) {
 		if code > 0 {
-			o.preconditionError = responseWith(code)
+			o.preconditionError = responseWith(codes.InvalidArgument, code)
 		}
 	}
 }
@@ -40,7 +42,7 @@ func WithPreconditionErrorCode(code int) Option {
 func WithAuthenticationErrorCode(code int) Option {
 	return func(o *opts) {
 		if code > 0 {
-			o.authenticationError = responseWith(code)
+			o.authenticationError = responseWith(codes.Unauthenticated, code)
 		}
 	}
 }
@@ -48,7 +50,7 @@ func WithAuthenticationErrorCode(code int) Option {
 func WithAuthorizationErrorCode(code int) Option {
 	return func(o *opts) {
 		if code > 0 {
-			o.authorizationError = responseWith(code)
+			o.authorizationError = responseWith(codes.PermissionDenied, code)
 		}
 	}
 }
@@ -56,7 +58,7 @@ func WithAuthorizationErrorCode(code int) Option {
 func WithCommunicationErrorCode(code int) Option {
 	return func(o *opts) {
 		if code > 0 {
-			o.communicationError = responseWith(code)
+			o.communicationError = responseWith(codes.DeadlineExceeded, code)
 		}
 	}
 }
@@ -64,7 +66,7 @@ func WithCommunicationErrorCode(code int) Option {
 func WithInternalServerErrorCode(code int) Option {
 	return func(o *opts) {
 		if code > 0 {
-			o.internalError = responseWith(code)
+			o.internalError = responseWith(codes.Internal, code)
 		}
 	}
 }
@@ -72,7 +74,7 @@ func WithInternalServerErrorCode(code int) Option {
 func WithMethodErrorCode(code int) Option {
 	return func(o *opts) {
 		if code > 0 {
-			o.badMethodError = responseWith(code)
+			o.badMethodError = responseWith(codes.InvalidArgument, code)
 		}
 	}
 }
@@ -80,7 +82,7 @@ func WithMethodErrorCode(code int) Option {
 func WithNoRuleErrorCode(code int) Option {
 	return func(o *opts) {
 		if code > 0 {
-			o.noRuleError = responseWith(code)
+			o.noRuleError = responseWith(codes.NotFound, code)
 		}
 	}
 }
