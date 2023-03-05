@@ -9,6 +9,7 @@ import (
 
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	envoy_auth "github.com/envoyproxy/go-control-plane/envoy/service/auth/v3"
+	"github.com/gogo/googleapis/google/rpc"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/metadata"
@@ -109,7 +110,7 @@ func TestFinalizeRequestContext(t *testing.T) {
 				require.NoError(t, err)
 				require.NotNil(t, response)
 
-				assert.Equal(t, int32(http.StatusOK), response.Status.Code)
+				assert.Equal(t, int32(rpc.OK), response.Status.Code)
 
 				okResponse := response.GetOkResponse()
 				require.NotNil(t, okResponse)
@@ -138,7 +139,7 @@ func TestFinalizeRequestContext(t *testing.T) {
 				require.NoError(t, err)
 				require.NotNil(t, response)
 
-				assert.Equal(t, int32(http.StatusOK), response.Status.Code)
+				assert.Equal(t, int32(rpc.OK), response.Status.Code)
 
 				okResponse := response.GetOkResponse()
 				require.NotNil(t, okResponse)
@@ -165,7 +166,7 @@ func TestFinalizeRequestContext(t *testing.T) {
 				require.NoError(t, err)
 				require.NotNil(t, response)
 
-				assert.Equal(t, int32(http.StatusOK), response.Status.Code)
+				assert.Equal(t, int32(rpc.OK), response.Status.Code)
 
 				okResponse := response.GetOkResponse()
 				require.NotNil(t, okResponse)
