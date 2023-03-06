@@ -2,7 +2,7 @@ version: '3.7'
 
 services:
   heimdall:
-    image: heimdall:local
+    image: dadrus/heimdall:latest
     volumes:
       - ./heimdall-config.yaml:/heimdall/conf/heimdall.yaml:ro
       - ./upstream-rules.yaml:/heimdall/conf/rules.yaml:ro

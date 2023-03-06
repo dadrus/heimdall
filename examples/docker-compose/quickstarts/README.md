@@ -61,7 +61,7 @@ In that setup heimdall is integrated with Envoy Proxy. All requests are sent to 
    docker-compose -f docker-compose.yaml -f docker-compose-envoy-grpc.yaml up
    ```
 
-   to see integration using the envoy GRPC extauthz decision service in action.
+   to see integration using the envoy GRPC extauthz decision service in action (not available before v0.7.0-alpha).
 
 2. Play with it
 
