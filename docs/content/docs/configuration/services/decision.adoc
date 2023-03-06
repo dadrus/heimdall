@@ -9,7 +9,7 @@ menu:
     parent: "Services"
 ---
 
-Decision is one of the operating modes supported by heimdall, used if you start heimdall with `heimdall serve decision`. By default, heimdall listens on `0.0.0.0:4456/` endpoint for incoming requests in this mode of operation and also configures useful default timeouts. No other options are configured. You can, and should however adjust the configuration for your needs.
+Decision is one of the operating modes supported by heimdall, used if you start heimdall with `heimdall serve decision` or `heimdall serve decision --envoy-grpc`. By default, heimdall listens on `0.0.0.0:4456/` endpoint for incoming requests in this mode of operation and also configures useful default timeouts. No other options are configured. You can, and should however adjust the configuration for your needs.
 
 This service exposes only the Decision service endpoint.
 
@@ -58,26 +58,6 @@ decision:
     read: 1s
     write: 2s
     idle: 1m
-----
-====
-
-* *`cors`*: _link:{{< relref "/docs/configuration/reference/types.adoc#_cors" >}}[CORS]_ (optional)
-+
-https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS[CORS] (Cross-Origin Resource Sharing) headers can be added and configured by making use of this option. This functionality allows for advanced security features to quickly be set. If CORS headers are set, then the Heimdall does not pass preflight requests to its decision pipeline, instead the response will be generated and sent back to the client directly.
-+
-.Possible CORS configuration
-====
-[source, yaml]
-----
-decision:
-  cors:
-    allowed_origins:
-      - example.org
-    allowed_methods:
-      - HEAD
-      - PATCH
-    allow_credentials: true
-    max_age: 10s
 ----
 ====
 

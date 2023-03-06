@@ -17,21 +17,82 @@
 package matcher
 
 import (
+	"net/http"
 	"strings"
 )
 
 type HeaderMatcher map[string][]string
 
 func (hm HeaderMatcher) Match(headers map[string]string) bool {
-	for name, valueList := range hm {
-		if headerVal, found := headers[name]; found {
-			for _, val := range valueList {
-				if strings.Contains(headerVal, val) {
-					return true
-				}
+	for name, patterns := range hm {
+		key := http.CanonicalHeaderKey(name)
+		if value, found := headers[key]; found && hm.matchesAnyPattern(value, patterns) {
+			return true
+		}
+	}
+
+	return false
+}
+
+func (hm HeaderMatcher) matchesAnyPattern(value string, patterns []string) bool {
+	for _, headerValue := range hm.headerValuesFrom(value) {
+		for _, pattern := range patterns {
+			if headerValue.match(pattern) {
+				return true
 			}
 		}
 	}
 
 	return false
+}
+
+func (hm HeaderMatcher) headerValuesFrom(received string) []*headerValue {
+	values := strings.Split(strings.ToLower(received), ",")
+	headerValues := make([]*headerValue, len(values))
+
+	for idx, value := range values {
+		headerValues[idx] = newHeaderValue(strings.TrimSpace(value))
+	}
+
+	return headerValues
+}
+
+type headerValue struct {
+	Type    string
+	Subtype string
+}
+
+func newHeaderValue(val string) *headerValue {
+	if paramsIdx := strings.IndexRune(val, ';'); paramsIdx != -1 {
+		val = val[:paramsIdx]
+	}
+
+	typeSubtype := strings.Split(val, "/")
+	mediaType := typeSubtype[0]
+	mediaSubtype := ""
+
+	if len(typeSubtype) > 1 {
+		mediaSubtype = typeSubtype[1]
+	}
+
+	return &headerValue{
+		Type:    mediaType,
+		Subtype: mediaSubtype,
+	}
+}
+
+func (h *headerValue) match(pattern string) bool {
+	if pattern == "*" {
+		return true
+	}
+
+	pattern = strings.ToLower(pattern)
+	typeSubtype := strings.Split(pattern, "/")
+
+	typeMatched := typeSubtype[0] == "*" || h.Type == typeSubtype[0]
+
+	subtypeMatched := (len(h.Subtype) == 0 && len(typeSubtype) == 1) ||
+		(len(h.Subtype) != 0 && len(typeSubtype) != 1 && (typeSubtype[1] == "*" || h.Subtype == typeSubtype[1]))
+
+	return typeMatched && subtypeMatched
 }

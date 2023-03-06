@@ -26,8 +26,8 @@ import (
 var (
 	ErrUnsupportedErrorHandlerType = errors.New("error handler type unsupported")
 
-	errorHandlerTypeFactories   []ErrorHandlerTypeFactory
-	errorHandlerTypeFactoriesMu sync.RWMutex
+	errorHandlerTypeFactories   []ErrorHandlerTypeFactory // nolint: gochecknoglobals
+	errorHandlerTypeFactoriesMu sync.RWMutex              // nolint: gochecknoglobals
 )
 
 type ErrorHandlerTypeFactory func(id string, typ string, c map[string]any) (bool, ErrorHandler, error)

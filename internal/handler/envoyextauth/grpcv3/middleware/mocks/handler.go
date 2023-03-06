@@ -1,4 +1,4 @@
-// Copyright 2022 Dimitrij Drus <dadrus@gmx.de>
+// Copyright 2023 Dimitrij Drus <dadrus@gmx.de>
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,25 +14,26 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package accesslog
+package mocks
 
-import "context"
+import (
+	"context"
 
-type ctxKey struct{}
+	envoy_auth "github.com/envoyproxy/go-control-plane/envoy/service/auth/v3"
+	"github.com/stretchr/testify/mock"
+)
 
-type accessContext struct {
-	err     error
-	subject string
+type MockHandler struct {
+	mock.Mock
 }
 
-func AddError(ctx context.Context, err error) {
-	if c, ok := ctx.Value(ctxKey{}).(*accessContext); ok {
-		c.err = err
-	}
-}
+func (m *MockHandler) Check(ctx context.Context, req *envoy_auth.CheckRequest) (*envoy_auth.CheckResponse, error) {
+	args := m.Called(ctx, req)
 
-func AddSubject(ctx context.Context, subject string) {
-	if c, ok := ctx.Value(ctxKey{}).(*accessContext); ok {
-		c.subject = subject
+	if val := args.Get(0); val != nil {
+		// nolint: forcetypeassert
+		return val.(*envoy_auth.CheckResponse), nil
 	}
+
+	return nil, args.Error(1)
 }

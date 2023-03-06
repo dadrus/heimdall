@@ -75,35 +75,35 @@ func TestHandlerObserveRequests(t *testing.T) { //nolint:maintidx
 
 				histMetric := metricForType(metrics, dto.MetricType_HISTOGRAM.Enum())
 				assert.Equal(t, "foo_bar_request_duration_seconds", histMetric.GetName())
-				assert.Equal(t, "Duration of all HTTP requests by status code, method and path.",
+				assert.Equal(t, "Duration of all requests by status code, method and path.",
 					histMetric.GetHelp())
 				require.Len(t, histMetric.Metric, 1)
 				assert.Equal(t, "zab", getLabel(histMetric.Metric[0].Label, "baz"))
-				assert.Equal(t, "GET", getLabel(histMetric.Metric[0].Label, "method"))
-				assert.Equal(t, "/test", getLabel(histMetric.Metric[0].Label, "path"))
+				assert.Equal(t, "GET", getLabel(histMetric.Metric[0].Label, "http_method"))
+				assert.Equal(t, "/test", getLabel(histMetric.Metric[0].Label, "http_path"))
 				assert.Equal(t, "foobar", getLabel(histMetric.Metric[0].Label, "service"))
-				assert.Equal(t, "200", getLabel(histMetric.Metric[0].Label, "status_code"))
-				require.Len(t, histMetric.Metric[0].Histogram.Bucket, 22)
+				assert.Equal(t, "200", getLabel(histMetric.Metric[0].Label, "http_code"))
+				require.Len(t, histMetric.Metric[0].Histogram.Bucket, 21)
 
 				gaugeMetric := metricForType(metrics, dto.MetricType_GAUGE.Enum())
 				assert.Equal(t, "foo_bar_requests_in_progress_total", gaugeMetric.GetName())
 				assert.Equal(t, "All the requests in progress", gaugeMetric.GetHelp())
 				require.Len(t, gaugeMetric.Metric, 1)
 				assert.Equal(t, "zab", getLabel(gaugeMetric.Metric[0].Label, "baz"))
-				assert.Equal(t, "GET", getLabel(gaugeMetric.Metric[0].Label, "method"))
+				assert.Equal(t, "GET", getLabel(gaugeMetric.Metric[0].Label, "http_method"))
 				assert.Equal(t, "foobar", getLabel(gaugeMetric.Metric[0].Label, "service"))
 				require.Equal(t, 0.0, gaugeMetric.Metric[0].Gauge.GetValue())
 
 				counterMetric := metricForType(metrics, dto.MetricType_COUNTER.Enum())
 				assert.Equal(t, "foo_bar_requests_total", counterMetric.GetName())
-				assert.Equal(t, "Count all http requests by status code, method and path.",
+				assert.Equal(t, "Count all requests by status code, method and path.",
 					counterMetric.GetHelp())
 				require.Len(t, counterMetric.Metric, 1)
 				assert.Equal(t, "zab", getLabel(counterMetric.Metric[0].Label, "baz"))
-				assert.Equal(t, "GET", getLabel(counterMetric.Metric[0].Label, "method"))
-				assert.Equal(t, "/test", getLabel(counterMetric.Metric[0].Label, "path"))
+				assert.Equal(t, "GET", getLabel(counterMetric.Metric[0].Label, "http_method"))
+				assert.Equal(t, "/test", getLabel(counterMetric.Metric[0].Label, "http_path"))
 				assert.Equal(t, "foobar", getLabel(counterMetric.Metric[0].Label, "service"))
-				assert.Equal(t, "200", getLabel(counterMetric.Metric[0].Label, "status_code"))
+				assert.Equal(t, "200", getLabel(counterMetric.Metric[0].Label, "http_code"))
 				require.Equal(t, 1.0, counterMetric.Metric[0].Counter.GetValue())
 			},
 		},
@@ -117,40 +117,40 @@ func TestHandlerObserveRequests(t *testing.T) { //nolint:maintidx
 
 				histMetric := metricForType(metrics, dto.MetricType_HISTOGRAM.Enum())
 				assert.Equal(t, "foo_bar_request_duration_seconds", histMetric.GetName())
-				assert.Equal(t, "Duration of all HTTP requests by status code, method and path.",
+				assert.Equal(t, "Duration of all requests by status code, method and path.",
 					histMetric.GetHelp())
 				require.Len(t, histMetric.Metric, 1)
 				assert.Equal(t, "zab", getLabel(histMetric.Metric[0].Label, "baz"))
-				assert.Equal(t, "POST", getLabel(histMetric.Metric[0].Label, "method"))
-				assert.Equal(t, "/test", getLabel(histMetric.Metric[0].Label, "path"))
+				assert.Equal(t, "POST", getLabel(histMetric.Metric[0].Label, "http_method"))
+				assert.Equal(t, "/test", getLabel(histMetric.Metric[0].Label, "http_path"))
 				assert.Equal(t, "foobar", getLabel(histMetric.Metric[0].Label, "service"))
-				assert.Equal(t, "500", getLabel(histMetric.Metric[0].Label, "status_code"))
-				require.Len(t, histMetric.Metric[0].Histogram.Bucket, 22)
+				assert.Equal(t, "500", getLabel(histMetric.Metric[0].Label, "http_code"))
+				require.Len(t, histMetric.Metric[0].Histogram.Bucket, 21)
 
 				gaugeMetric := metricForType(metrics, dto.MetricType_GAUGE.Enum())
 				assert.Equal(t, "foo_bar_requests_in_progress_total", gaugeMetric.GetName())
 				assert.Equal(t, "All the requests in progress", gaugeMetric.GetHelp())
 				require.Len(t, gaugeMetric.Metric, 1)
 				assert.Equal(t, "zab", getLabel(gaugeMetric.Metric[0].Label, "baz"))
-				assert.Equal(t, "POST", getLabel(gaugeMetric.Metric[0].Label, "method"))
+				assert.Equal(t, "POST", getLabel(gaugeMetric.Metric[0].Label, "http_method"))
 				assert.Equal(t, "foobar", getLabel(gaugeMetric.Metric[0].Label, "service"))
 				require.Equal(t, 0.0, gaugeMetric.Metric[0].Gauge.GetValue())
 
 				counterMetric := metricForType(metrics, dto.MetricType_COUNTER.Enum())
 				assert.Equal(t, "foo_bar_requests_total", counterMetric.GetName())
-				assert.Equal(t, "Count all http requests by status code, method and path.",
+				assert.Equal(t, "Count all requests by status code, method and path.",
 					counterMetric.GetHelp())
 				require.Len(t, counterMetric.Metric, 1)
 				assert.Equal(t, "zab", getLabel(counterMetric.Metric[0].Label, "baz"))
-				assert.Equal(t, "POST", getLabel(counterMetric.Metric[0].Label, "method"))
-				assert.Equal(t, "/test", getLabel(counterMetric.Metric[0].Label, "path"))
+				assert.Equal(t, "POST", getLabel(counterMetric.Metric[0].Label, "http_method"))
+				assert.Equal(t, "/test", getLabel(counterMetric.Metric[0].Label, "http_path"))
 				assert.Equal(t, "foobar", getLabel(counterMetric.Metric[0].Label, "service"))
-				assert.Equal(t, "500", getLabel(counterMetric.Metric[0].Label, "status_code"))
+				assert.Equal(t, "500", getLabel(counterMetric.Metric[0].Label, "http_code"))
 				require.Equal(t, 1.0, counterMetric.Metric[0].Counter.GetValue())
 			},
 		},
 		{
-			uc:  "metrics for request which server raising an error",
+			uc:  "metrics for request with server raising an error",
 			req: httptest.NewRequest(http.MethodPatch, "/error", nil),
 			assert: func(t *testing.T, metrics []*dto.MetricFamily) {
 				t.Helper()
@@ -159,35 +159,35 @@ func TestHandlerObserveRequests(t *testing.T) { //nolint:maintidx
 
 				histMetric := metricForType(metrics, dto.MetricType_HISTOGRAM.Enum())
 				assert.Equal(t, "foo_bar_request_duration_seconds", histMetric.GetName())
-				assert.Equal(t, "Duration of all HTTP requests by status code, method and path.",
+				assert.Equal(t, "Duration of all requests by status code, method and path.",
 					histMetric.GetHelp())
 				require.Len(t, histMetric.Metric, 1)
 				assert.Equal(t, "zab", getLabel(histMetric.Metric[0].Label, "baz"))
-				assert.Equal(t, "PATCH", getLabel(histMetric.Metric[0].Label, "method"))
-				assert.Equal(t, "/error", getLabel(histMetric.Metric[0].Label, "path"))
+				assert.Equal(t, "PATCH", getLabel(histMetric.Metric[0].Label, "http_method"))
+				assert.Equal(t, "/error", getLabel(histMetric.Metric[0].Label, "http_path"))
 				assert.Equal(t, "foobar", getLabel(histMetric.Metric[0].Label, "service"))
-				assert.Equal(t, "410", getLabel(histMetric.Metric[0].Label, "status_code"))
-				require.Len(t, histMetric.Metric[0].Histogram.Bucket, 22)
+				assert.Equal(t, "410", getLabel(histMetric.Metric[0].Label, "http_code"))
+				require.Len(t, histMetric.Metric[0].Histogram.Bucket, 21)
 
 				gaugeMetric := metricForType(metrics, dto.MetricType_GAUGE.Enum())
 				assert.Equal(t, "foo_bar_requests_in_progress_total", gaugeMetric.GetName())
 				assert.Equal(t, "All the requests in progress", gaugeMetric.GetHelp())
 				require.Len(t, gaugeMetric.Metric, 1)
 				assert.Equal(t, "zab", getLabel(gaugeMetric.Metric[0].Label, "baz"))
-				assert.Equal(t, "PATCH", getLabel(gaugeMetric.Metric[0].Label, "method"))
+				assert.Equal(t, "PATCH", getLabel(gaugeMetric.Metric[0].Label, "http_method"))
 				assert.Equal(t, "foobar", getLabel(gaugeMetric.Metric[0].Label, "service"))
 				require.Equal(t, 0.0, gaugeMetric.Metric[0].Gauge.GetValue())
 
 				counterMetric := metricForType(metrics, dto.MetricType_COUNTER.Enum())
 				assert.Equal(t, "foo_bar_requests_total", counterMetric.GetName())
-				assert.Equal(t, "Count all http requests by status code, method and path.",
+				assert.Equal(t, "Count all requests by status code, method and path.",
 					counterMetric.GetHelp())
 				require.Len(t, counterMetric.Metric, 1)
 				assert.Equal(t, "zab", getLabel(counterMetric.Metric[0].Label, "baz"))
-				assert.Equal(t, "PATCH", getLabel(counterMetric.Metric[0].Label, "method"))
-				assert.Equal(t, "/error", getLabel(counterMetric.Metric[0].Label, "path"))
+				assert.Equal(t, "PATCH", getLabel(counterMetric.Metric[0].Label, "http_method"))
+				assert.Equal(t, "/error", getLabel(counterMetric.Metric[0].Label, "http_path"))
 				assert.Equal(t, "foobar", getLabel(counterMetric.Metric[0].Label, "service"))
-				assert.Equal(t, "410", getLabel(counterMetric.Metric[0].Label, "status_code"))
+				assert.Equal(t, "410", getLabel(counterMetric.Metric[0].Label, "http_code"))
 				require.Equal(t, 1.0, counterMetric.Metric[0].Counter.GetValue())
 			},
 		},

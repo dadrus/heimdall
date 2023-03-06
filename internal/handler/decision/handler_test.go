@@ -31,7 +31,6 @@ import (
 
 	"github.com/dadrus/heimdall/internal/cache/mocks"
 	"github.com/dadrus/heimdall/internal/config"
-	"github.com/dadrus/heimdall/internal/handler/requestcontext"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	mocks2 "github.com/dadrus/heimdall/internal/rules/mocks"
 	mocks4 "github.com/dadrus/heimdall/internal/rules/rule/mocks"
@@ -123,7 +122,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 			},
 		},
 		{
-			uc: "rule execution fails with pipeline authorization error",
+			uc: "rule execution fails with authorization error",
 			createRequest: func(t *testing.T) *http.Request {
 				t.Helper()
 
@@ -133,7 +132,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				t.Helper()
 
 				rule.On("MatchesMethod", http.MethodPost).Return(true)
-				rule.On("Execute", mock.MatchedBy(func(ctx *requestcontext.RequestContext) bool {
+				rule.On("Execute", mock.MatchedBy(func(ctx heimdall.Context) bool {
 					ctx.SetPipelineError(heimdall.ErrAuthorization)
 
 					return true
@@ -174,7 +173,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				t.Helper()
 
 				rule.On("MatchesMethod", http.MethodPost).Return(true)
-				rule.On("Execute", mock.MatchedBy(func(ctx *requestcontext.RequestContext) bool {
+				rule.On("Execute", mock.MatchedBy(func(ctx heimdall.Context) bool {
 					ctx.AddHeaderForUpstream("X-Foo-Bar", "baz")
 					ctx.AddCookieForUpstream("X-Bar-Foo", "zab")
 
@@ -226,7 +225,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				t.Helper()
 
 				rule.On("MatchesMethod", http.MethodPost).Return(true)
-				rule.On("Execute", mock.MatchedBy(func(ctx *requestcontext.RequestContext) bool {
+				rule.On("Execute", mock.MatchedBy(func(ctx heimdall.Context) bool {
 					ctx.AddHeaderForUpstream("X-Foo-Bar", "baz")
 					ctx.AddCookieForUpstream("X-Bar-Foo", "zab")
 
@@ -279,7 +278,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				t.Helper()
 
 				rule.On("MatchesMethod", http.MethodPost).Return(true)
-				rule.On("Execute", mock.MatchedBy(func(ctx *requestcontext.RequestContext) bool {
+				rule.On("Execute", mock.MatchedBy(func(ctx heimdall.Context) bool {
 					ctx.AddHeaderForUpstream("X-Foo-Bar", "baz")
 					ctx.AddCookieForUpstream("X-Bar-Foo", "zab")
 

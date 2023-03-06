@@ -20,13 +20,12 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
-func TestCreateDecisionApp(t *testing.T) {
+func TestCreateDecisionAppForHTTPRequests(t *testing.T) {
 	// this test verifies that all dependencies are resolved
 	// and nothing has been forgotten
 	port1, err := testsupport.GetFreePort()
@@ -38,6 +37,26 @@ func TestCreateDecisionApp(t *testing.T) {
 	t.Setenv("SERVE_DECISION_PORT", strconv.Itoa(port1))
 	t.Setenv("SERVE_MANAGEMENT_PORT", strconv.Itoa(port2))
 
-	_, err = createDecisionApp(&cobra.Command{})
+	_, err = createDecisionApp(NewDecisionCommand())
+	require.NoError(t, err)
+}
+
+func TestCreateDecisionAppForEnvoyGRPCRequests(t *testing.T) {
+	// this test verifies that all dependencies are resolved
+	// and nothing has been forgotten
+	port1, err := testsupport.GetFreePort()
+	require.NoError(t, err)
+
+	port2, err := testsupport.GetFreePort()
+	require.NoError(t, err)
+
+	t.Setenv("SERVE_DECISION_PORT", strconv.Itoa(port1))
+	t.Setenv("SERVE_MANAGEMENT_PORT", strconv.Itoa(port2))
+
+	cmd := NewDecisionCommand()
+	err = cmd.ParseFlags([]string{"--envoy-grpc"})
+	require.NoError(t, err)
+
+	_, err = createDecisionApp(cmd)
 	require.NoError(t, err)
 }

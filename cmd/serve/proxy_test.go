@@ -20,7 +20,6 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/x/testsupport"
@@ -38,6 +37,6 @@ func TestCreateProxyApp(t *testing.T) {
 	t.Setenv("SERVE_PROXY_PORT", strconv.Itoa(port1))
 	t.Setenv("SERVE_MANAGEMENT_PORT", strconv.Itoa(port2))
 
-	_, err = createProxyApp(&cobra.Command{})
+	_, err = createProxyApp(NewProxyCommand())
 	require.NoError(t, err)
 }
