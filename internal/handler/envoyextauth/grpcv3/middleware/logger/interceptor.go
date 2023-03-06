@@ -19,19 +19,15 @@ package logger
 import (
 	"context"
 
-	"github.com/gofiber/fiber/v2"
 	"github.com/rs/zerolog"
+	"google.golang.org/grpc"
 
 	"github.com/dadrus/heimdall/internal/x/opentelemetry/tracecontext"
 )
 
-func New(logger zerolog.Logger) fiber.Handler {
-	return func(c *fiber.Ctx) error {
-		ctx := c.UserContext()
-
-		c.SetUserContext(withTraceData(ctx, logger.With()).Logger().WithContext(ctx))
-
-		return c.Next()
+func New(logger zerolog.Logger) grpc.UnaryServerInterceptor {
+	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
+		return handler(withTraceData(ctx, logger.With()).Logger().WithContext(ctx), req)
 	}
 }
 

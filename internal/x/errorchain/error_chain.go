@@ -177,6 +177,10 @@ func (ec *ErrorChain) MarshalXML(encoder *xml.Encoder, start xml.StartElement) e
 		})
 }
 
+func (ec *ErrorChain) String() string {
+	return fmt.Sprintf("%s: %s", ec.head.err.Error(), ec.head.msg)
+}
+
 type message struct { //nolint:musttag
 	XMLName xml.Name `json:"-"`
 	Code    string   `xml:"code" json:"code"`

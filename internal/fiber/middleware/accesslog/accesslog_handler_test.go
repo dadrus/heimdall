@@ -34,6 +34,7 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
 
+	"github.com/dadrus/heimdall/internal/accesscontext"
 	tracingmiddleware "github.com/dadrus/heimdall/internal/fiber/middleware/opentelemetry"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
@@ -59,7 +60,7 @@ func TestLoggerHandler(t *testing.T) {
 			configureHandler: func(t *testing.T, ctx *fiber.Ctx) error {
 				t.Helper()
 
-				AddSubject(ctx.UserContext(), "foo")
+				accesscontext.SetSubject(ctx.UserContext(), "foo")
 
 				return nil
 			},
@@ -179,8 +180,8 @@ func TestLoggerHandler(t *testing.T) {
 			configureHandler: func(t *testing.T, ctx *fiber.Ctx) error {
 				t.Helper()
 
-				AddSubject(ctx.UserContext(), "bar")
-				AddError(ctx.UserContext(), fmt.Errorf("test error")) // nolint: goerr113
+				accesscontext.SetSubject(ctx.UserContext(), "bar")
+				accesscontext.SetError(ctx.UserContext(), fmt.Errorf("test error")) // nolint: goerr113
 
 				return nil
 			},

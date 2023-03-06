@@ -23,11 +23,12 @@ import (
 	"github.com/dadrus/heimdall/internal"
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/handler/decision"
+	envoy_extauth "github.com/dadrus/heimdall/internal/handler/envoyextauth/grpcv3"
 )
 
 // NewDecisionCommand represents the "serve decision" command.
 func NewDecisionCommand() *cobra.Command {
-	return &cobra.Command{
+	cmd := &cobra.Command{
 		Use:     "decision",
 		Short:   "Starts heimdall in Decision operation mode",
 		Example: "heimdall serve decision",
@@ -41,20 +42,33 @@ func NewDecisionCommand() *cobra.Command {
 			app.Run()
 		},
 	}
+
+	cmd.PersistentFlags().Bool("envoy-grpc", false,
+		"If specified, decision mode is started for integration with envoy extauth gRPC service")
+
+	return cmd
 }
 
 func createDecisionApp(cmd *cobra.Command) (*fx.App, error) {
 	configPath, _ := cmd.Flags().GetString("config")
 	envPrefix, _ := cmd.Flags().GetString("env-config-prefix")
+	useEnvoyExtAuth, _ := cmd.Flags().GetBool("envoy-grpc")
 
-	app := fx.New(
+	opts := []fx.Option{
 		fx.NopLogger,
 		fx.Supply(
 			config.ConfigurationPath(configPath),
 			config.EnvVarPrefix(envPrefix)),
 		internal.Module,
-		decision.Module,
-	)
+	}
+
+	if useEnvoyExtAuth {
+		opts = append(opts, envoy_extauth.Module)
+	} else {
+		opts = append(opts, decision.Module)
+	}
+
+	app := fx.New(opts...)
 
 	return app, app.Err()
 }

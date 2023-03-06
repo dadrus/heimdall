@@ -22,7 +22,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/rs/zerolog"
 
-	"github.com/dadrus/heimdall/internal/fiber/middleware/accesslog"
+	"github.com/dadrus/heimdall/internal/accesscontext"
 	"github.com/dadrus/heimdall/internal/heimdall"
 )
 
@@ -48,7 +48,7 @@ func (h *handler) handle(ctx *fiber.Ctx) error { //nolint:cyclop
 		return nil
 	}
 
-	accesslog.AddError(ctx.UserContext(), err)
+	accesscontext.SetError(ctx.UserContext(), err)
 
 	switch {
 	case errors.Is(err, heimdall.ErrAuthentication):
