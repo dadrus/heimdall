@@ -6,7 +6,7 @@ require (
 	github.com/Masterminds/sprig/v3 v3.2.3
 	github.com/dlclark/regexp2 v1.8.1
 	github.com/drone/envsubst/v2 v2.0.0-20210730161058-179042472c46
-	github.com/elnormous/contenttype v1.0.3
+	github.com/elnormous/contenttype v1.0.4
 	github.com/envoyproxy/go-control-plane v0.10.3
 	github.com/fsnotify/fsnotify v1.6.0
 	github.com/go-co-op/gocron v1.18.1
@@ -59,7 +59,7 @@ require (
 	go.uber.org/fx v1.19.2
 	gocloud.dev v0.29.0
 	golang.org/x/exp v0.0.0-20230213192124-5e25df0256eb
-	google.golang.org/genproto v0.0.0-20230209215440-0dfe4f8abfcc
+	google.golang.org/genproto v0.0.0-20230303212802-e74f57abe488
 	google.golang.org/grpc v1.53.0
 	google.golang.org/protobuf v1.28.1
 	gopkg.in/square/go-jose.v2 v2.6.0
@@ -70,10 +70,10 @@ require (
 )
 
 require (
-	cloud.google.com/go v0.109.0 // indirect
+	cloud.google.com/go v0.110.0 // indirect
 	cloud.google.com/go/compute v1.18.0 // indirect
 	cloud.google.com/go/compute/metadata v0.2.3 // indirect
-	cloud.google.com/go/iam v0.10.0 // indirect
+	cloud.google.com/go/iam v0.12.0 // indirect
 	cloud.google.com/go/storage v1.29.0 // indirect
 	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.3.1 // indirect
 	github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.2.1 // indirect
