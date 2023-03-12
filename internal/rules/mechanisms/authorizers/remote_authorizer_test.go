@@ -40,7 +40,7 @@ import (
 	"github.com/dadrus/heimdall/internal/endpoint"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	heimdallmocks "github.com/dadrus/heimdall/internal/heimdall/mocks"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/authorizers/cellib"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/cellib"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
 	"github.com/dadrus/heimdall/internal/x"
@@ -947,13 +947,13 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 
 					return tpl
 				}(),
-				expressions: func() []*Expression {
-					expr := &Expression{Value: "false == true"}
+				expressions: func() []*cellib.Expression {
+					expr := &cellib.Expression{Value: "false == true"}
 
 					err := expr.Compile(env)
 					require.NoError(t, err)
 
-					return []*Expression{expr}
+					return []*cellib.Expression{expr}
 				}(),
 			},
 			subject: &subject.Subject{
@@ -1029,13 +1029,13 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 
 					return tpl
 				}(),
-				expressions: func() []*Expression {
-					expr := &Expression{Value: "Payload.access_granted == true"}
+				expressions: func() []*cellib.Expression {
+					expr := &cellib.Expression{Value: "Payload.access_granted == true"}
 
 					err := expr.Compile(env)
 					require.NoError(t, err)
 
-					return []*Expression{expr}
+					return []*cellib.Expression{expr}
 				}(),
 			},
 			subject: &subject.Subject{

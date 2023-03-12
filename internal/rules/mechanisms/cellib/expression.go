@@ -14,7 +14,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package authorizers
+package cellib
 
 import (
 	"errors"

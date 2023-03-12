@@ -23,7 +23,7 @@ import (
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/authorizers/cellib"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/cellib"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
@@ -46,12 +46,12 @@ func init() {
 
 type celAuthorizer struct {
 	id          string
-	expressions []*Expression
+	expressions []*cellib.Expression
 }
 
 func newCELAuthorizer(id string, rawConfig map[string]any) (*celAuthorizer, error) {
 	type Config struct {
-		Expressions []*Expression `mapstructure:"expressions"`
+		Expressions []*cellib.Expression `mapstructure:"expressions"`
 	}
 
 	var conf Config
