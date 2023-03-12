@@ -63,21 +63,23 @@ type contextualizerData struct {
 }
 
 type genericContextualizer struct {
-	id         string
-	e          endpoint.Endpoint
-	ttl        time.Duration
-	payload    template.Template
-	fwdHeaders []string
-	fwdCookies []string
+	id              string
+	e               endpoint.Endpoint
+	ttl             time.Duration
+	payload         template.Template
+	fwdHeaders      []string
+	fwdCookies      []string
+	continueOnError bool
 }
 
 func newGenericContextualizer(id string, rawConfig map[string]any) (*genericContextualizer, error) {
 	type Config struct {
-		Endpoint       endpoint.Endpoint `mapstructure:"endpoint"`
-		ForwardHeaders []string          `mapstructure:"forward_headers"`
-		ForwardCookies []string          `mapstructure:"forward_cookies"`
-		Payload        template.Template `mapstructure:"payload"`
-		CacheTTL       *time.Duration    `mapstructure:"cache_ttl"`
+		Endpoint        endpoint.Endpoint `mapstructure:"endpoint"`
+		ForwardHeaders  []string          `mapstructure:"forward_headers"`
+		ForwardCookies  []string          `mapstructure:"forward_cookies"`
+		Payload         template.Template `mapstructure:"payload"`
+		CacheTTL        *time.Duration    `mapstructure:"cache_ttl"`
+		ContinueOnError bool              `mapstructure:"continue_on_error"`
 	}
 
 	var conf Config
@@ -99,12 +101,13 @@ func newGenericContextualizer(id string, rawConfig map[string]any) (*genericCont
 	}
 
 	return &genericContextualizer{
-		id:         id,
-		e:          conf.Endpoint,
-		payload:    conf.Payload,
-		fwdHeaders: conf.ForwardHeaders,
-		fwdCookies: conf.ForwardCookies,
-		ttl:        ttl,
+		id:              id,
+		e:               conf.Endpoint,
+		payload:         conf.Payload,
+		fwdHeaders:      conf.ForwardHeaders,
+		fwdCookies:      conf.ForwardCookies,
+		ttl:             ttl,
+		continueOnError: conf.ContinueOnError,
 	}, nil
 }
 
@@ -145,6 +148,12 @@ func (h *genericContextualizer) Execute(ctx heimdall.Context, sub *subject.Subje
 	if response == nil {
 		response, err = h.callEndpoint(ctx, sub)
 		if err != nil {
+			if h.continueOnError {
+				logger.Warn().Err(err).Msg("Error while communicating with the contextualizer endpoint")
+
+				return nil
+			}
+
 			return err
 		}
 
@@ -166,10 +175,11 @@ func (h *genericContextualizer) WithConfig(rawConfig map[string]any) (Contextual
 	}
 
 	type Config struct {
-		ForwardHeaders []string          `mapstructure:"forward_headers"`
-		ForwardCookies []string          `mapstructure:"forward_cookies"`
-		Payload        template.Template `mapstructure:"payload"`
-		CacheTTL       *time.Duration    `mapstructure:"cache_ttl"`
+		ForwardHeaders  []string          `mapstructure:"forward_headers"`
+		ForwardCookies  []string          `mapstructure:"forward_cookies"`
+		Payload         template.Template `mapstructure:"payload"`
+		CacheTTL        *time.Duration    `mapstructure:"cache_ttl"`
+		ContinueOnError *bool             `mapstructure:"continue_on_error"`
 	}
 
 	var conf Config
@@ -188,6 +198,9 @@ func (h *genericContextualizer) WithConfig(rawConfig map[string]any) (Contextual
 		ttl: x.IfThenElseExec(conf.CacheTTL != nil,
 			func() time.Duration { return *conf.CacheTTL },
 			func() time.Duration { return h.ttl }),
+		continueOnError: x.IfThenElseExec(conf.ContinueOnError != nil,
+			func() bool { return *conf.ContinueOnError },
+			func() bool { return h.continueOnError }),
 	}, nil
 }
 
@@ -197,7 +210,7 @@ func (h *genericContextualizer) HandlerID() string {
 
 func (h *genericContextualizer) callEndpoint(ctx heimdall.Context, sub *subject.Subject) (*contextualizerData, error) {
 	logger := zerolog.Ctx(ctx.AppContext())
-	logger.Debug().Msg("Calling hydration endpoint")
+	logger.Debug().Msg("Calling contextualizer endpoint")
 
 	req, err := h.createRequest(ctx, sub)
 	if err != nil {
