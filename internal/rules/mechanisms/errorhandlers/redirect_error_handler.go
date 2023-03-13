@@ -32,24 +32,25 @@ import (
 // nolint
 func init() {
 	registerErrorHandlerTypeFactory(
-		func(_ string, typ string, conf map[string]any) (bool, ErrorHandler, error) {
+		func(id string, typ string, conf map[string]any) (bool, ErrorHandler, error) {
 			if typ != ErrorHandlerRedirect {
 				return false, nil, nil
 			}
 
-			eh, err := newRedirectErrorHandler(conf)
+			eh, err := newRedirectErrorHandler(id, conf)
 
 			return true, eh, err
 		})
 }
 
 type redirectErrorHandler struct {
+	id   string
 	to   template.Template
 	code int
 	m    []matcher.ErrorConditionMatcher
 }
 
-func newRedirectErrorHandler(rawConfig map[string]any) (*redirectErrorHandler, error) {
+func newRedirectErrorHandler(id string, rawConfig map[string]any) (*redirectErrorHandler, error) {
 	type Config struct {
 		To   template.Template               `mapstructure:"to"`
 		Code int                             `mapstructure:"code"`
@@ -76,6 +77,7 @@ func newRedirectErrorHandler(rawConfig map[string]any) (*redirectErrorHandler, e
 	}
 
 	return &redirectErrorHandler{
+		id:   id,
 		to:   conf.To,
 		code: x.IfThenElse(conf.Code != 0, conf.Code, http.StatusFound),
 		m:    conf.When,
@@ -131,8 +133,11 @@ func (eh *redirectErrorHandler) WithConfig(rawConfig map[string]any) (ErrorHandl
 	}
 
 	return &redirectErrorHandler{
+		id:   eh.id,
 		to:   eh.to,
 		code: eh.code,
 		m:    conf.When,
 	}, nil
 }
+
+func (eh *redirectErrorHandler) HandlerID() string { return eh.id }

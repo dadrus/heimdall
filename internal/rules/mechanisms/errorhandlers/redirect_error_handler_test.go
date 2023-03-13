@@ -227,7 +227,7 @@ when:
 			require.NoError(t, err)
 
 			// WHEN
-			errorHandler, err := newRedirectErrorHandler(conf)
+			errorHandler, err := newRedirectErrorHandler("foo", conf)
 
 			// THEN
 			tc.assert(t, err, errorHandler)
@@ -336,7 +336,7 @@ when:
 			conf, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
 
-			prototype, err := newRedirectErrorHandler(pc)
+			prototype, err := newRedirectErrorHandler("foo", pc)
 			require.NoError(t, err)
 
 			// WHEN
@@ -499,7 +499,7 @@ when:
 
 			configureContext(t, mctx)
 
-			errorHandler, err := newRedirectErrorHandler(conf)
+			errorHandler, err := newRedirectErrorHandler("foo", conf)
 			require.NoError(t, err)
 
 			// WHEN

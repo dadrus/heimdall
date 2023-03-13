@@ -35,7 +35,7 @@ func TestDefaultErrorHandlerExecution(t *testing.T) {
 	ctx.On("AppContext").Return(context.Background())
 	ctx.On("SetPipelineError", heimdall.ErrConfiguration)
 
-	errorHandler, err := newDefaultErrorHandler()
+	errorHandler, err := newDefaultErrorHandler("foo")
 	require.NoError(t, err)
 
 	// WHEN
@@ -50,7 +50,7 @@ func TestDefaultErrorHandlerPrototype(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
-	prototype, err := newDefaultErrorHandler()
+	prototype, err := newDefaultErrorHandler("foo")
 	require.NoError(t, err)
 
 	// WHEN

@@ -31,23 +31,24 @@ import (
 // nolint
 func init() {
 	registerErrorHandlerTypeFactory(
-		func(_ string, typ string, conf map[string]any) (bool, ErrorHandler, error) {
+		func(id string, typ string, conf map[string]any) (bool, ErrorHandler, error) {
 			if typ != ErrorHandlerWWWAuthenticate {
 				return false, nil, nil
 			}
 
-			eh, err := newWWWAuthenticateErrorHandler(conf)
+			eh, err := newWWWAuthenticateErrorHandler(id, conf)
 
 			return true, eh, err
 		})
 }
 
 type wwwAuthenticateErrorHandler struct {
+	id    string
 	realm string
 	m     []matcher.ErrorConditionMatcher
 }
 
-func newWWWAuthenticateErrorHandler(rawConfig map[string]any) (*wwwAuthenticateErrorHandler, error) {
+func newWWWAuthenticateErrorHandler(id string, rawConfig map[string]any) (*wwwAuthenticateErrorHandler, error) {
 	type Config struct {
 		Realm string                          `mapstructure:"realm"`
 		When  []matcher.ErrorConditionMatcher `mapstructure:"when"`
@@ -67,6 +68,7 @@ func newWWWAuthenticateErrorHandler(rawConfig map[string]any) (*wwwAuthenticateE
 	}
 
 	return &wwwAuthenticateErrorHandler{
+		id:    id,
 		realm: x.IfThenElse(len(conf.Realm) != 0, conf.Realm, "Please authenticate"),
 		m:     conf.When,
 	}, nil
@@ -108,6 +110,7 @@ func (eh *wwwAuthenticateErrorHandler) WithConfig(rawConfig map[string]any) (Err
 	}
 
 	return &wwwAuthenticateErrorHandler{
+		id: eh.id,
 		realm: x.IfThenElseExec(conf.Realm != nil,
 			func() string { return *conf.Realm },
 			func() string { return eh.realm }),
@@ -117,3 +120,5 @@ func (eh *wwwAuthenticateErrorHandler) WithConfig(rawConfig map[string]any) (Err
 		),
 	}, nil
 }
+
+func (eh *wwwAuthenticateErrorHandler) HandlerID() string { return eh.id }

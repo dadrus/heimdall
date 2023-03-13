@@ -26,21 +26,23 @@ import (
 // nolint
 func init() {
 	registerErrorHandlerTypeFactory(
-		func(_ string, typ string, conf map[string]any) (bool, ErrorHandler, error) {
+		func(id string, typ string, conf map[string]any) (bool, ErrorHandler, error) {
 			if typ != ErrorHandlerDefault {
 				return false, nil, nil
 			}
 
-			eh, err := newDefaultErrorHandler()
+			eh, err := newDefaultErrorHandler(id)
 
 			return true, eh, err
 		})
 }
 
-type defaultErrorHandler struct{}
+type defaultErrorHandler struct {
+	id string
+}
 
-func newDefaultErrorHandler() (*defaultErrorHandler, error) {
-	return &defaultErrorHandler{}, nil
+func newDefaultErrorHandler(id string) (*defaultErrorHandler, error) {
+	return &defaultErrorHandler{id: id}, nil
 }
 
 func (eh *defaultErrorHandler) Execute(ctx heimdall.Context, err error) (bool, error) {
@@ -52,6 +54,6 @@ func (eh *defaultErrorHandler) Execute(ctx heimdall.Context, err error) (bool, e
 	return true, nil
 }
 
-func (eh *defaultErrorHandler) WithConfig(_ map[string]any) (ErrorHandler, error) {
-	return eh, nil
-}
+func (eh *defaultErrorHandler) WithConfig(_ map[string]any) (ErrorHandler, error) { return eh, nil }
+
+func (eh *defaultErrorHandler) HandlerID() string { return eh.id }
