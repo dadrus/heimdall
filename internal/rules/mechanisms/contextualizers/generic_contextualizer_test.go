@@ -103,6 +103,7 @@ payload: bar
 				assert.Empty(t, contextualizer.fwdCookies)
 				assert.Empty(t, contextualizer.fwdHeaders)
 				assert.Equal(t, defaultTTL, contextualizer.ttl)
+				assert.False(t, contextualizer.ContinueOnError())
 
 				assert.Equal(t, "contextualizer", contextualizer.HandlerID())
 			},
@@ -120,6 +121,7 @@ forward_cookies:
   - My-Foo-Session
 payload: "{{ .Subject.ID }}"
 cache_ttl: 5s
+continue_on_error: true
 `),
 			assert: func(t *testing.T, err error, contextualizer *genericContextualizer) {
 				t.Helper()
@@ -140,6 +142,7 @@ cache_ttl: 5s
 				assert.Equal(t, 5*time.Second, contextualizer.ttl)
 
 				assert.Equal(t, "contextualizer", contextualizer.HandlerID())
+				assert.True(t, contextualizer.ContinueOnError())
 			},
 		},
 	} {
