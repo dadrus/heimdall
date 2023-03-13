@@ -31,9 +31,7 @@ func init() {
 				return false, nil, nil
 			}
 
-			eh, err := newDefaultErrorHandler(id)
-
-			return true, eh, err
+			return true, newDefaultErrorHandler(id), nil
 		})
 }
 
@@ -41,8 +39,8 @@ type defaultErrorHandler struct {
 	id string
 }
 
-func newDefaultErrorHandler(id string) (*defaultErrorHandler, error) {
-	return &defaultErrorHandler{id: id}, nil
+func newDefaultErrorHandler(id string) *defaultErrorHandler {
+	return &defaultErrorHandler{id: id}
 }
 
 func (eh *defaultErrorHandler) Execute(ctx heimdall.Context, err error) (bool, error) {

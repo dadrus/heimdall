@@ -21,7 +21,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/heimdall/mocks"
@@ -35,8 +34,7 @@ func TestDefaultErrorHandlerExecution(t *testing.T) {
 	ctx.On("AppContext").Return(context.Background())
 	ctx.On("SetPipelineError", heimdall.ErrConfiguration)
 
-	errorHandler, err := newDefaultErrorHandler("foo")
-	require.NoError(t, err)
+	errorHandler := newDefaultErrorHandler("foo")
 
 	// WHEN
 	wasHandled, err := errorHandler.Execute(ctx, heimdall.ErrConfiguration)
@@ -50,8 +48,7 @@ func TestDefaultErrorHandlerPrototype(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
-	prototype, err := newDefaultErrorHandler("foo")
-	require.NoError(t, err)
+	prototype := newDefaultErrorHandler("foo")
 
 	// WHEN
 	eh1, err1 := prototype.WithConfig(nil)
