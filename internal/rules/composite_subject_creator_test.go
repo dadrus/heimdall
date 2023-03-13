@@ -29,7 +29,7 @@ import (
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
-func TestCompositeAuthenticatorExecution(t *testing.T) {
+func TestCompositeSubjectCreatorExecution(t *testing.T) {
 	t.Parallel()
 
 	for _, tc := range []struct {

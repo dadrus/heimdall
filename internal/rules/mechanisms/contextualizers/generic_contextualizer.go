@@ -148,12 +148,6 @@ func (h *genericContextualizer) Execute(ctx heimdall.Context, sub *subject.Subje
 	if response == nil {
 		response, err = h.callEndpoint(ctx, sub)
 		if err != nil {
-			if h.continueOnError {
-				logger.Warn().Err(err).Msg("Error while communicating with the contextualizer endpoint")
-
-				return nil
-			}
-
 			return err
 		}
 
@@ -204,9 +198,9 @@ func (h *genericContextualizer) WithConfig(rawConfig map[string]any) (Contextual
 	}, nil
 }
 
-func (h *genericContextualizer) HandlerID() string {
-	return h.id
-}
+func (h *genericContextualizer) HandlerID() string { return h.id }
+
+func (h *genericContextualizer) ContinueOnError() bool { return h.continueOnError }
 
 func (h *genericContextualizer) callEndpoint(ctx heimdall.Context, sub *subject.Subject) (*contextualizerData, error) {
 	logger := zerolog.Ctx(ctx.AppContext())

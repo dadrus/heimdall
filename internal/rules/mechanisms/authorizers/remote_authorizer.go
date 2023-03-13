@@ -230,9 +230,9 @@ func (a *remoteAuthorizer) WithConfig(rawConfig map[string]any) (Authorizer, err
 	}, nil
 }
 
-func (a *remoteAuthorizer) HandlerID() string {
-	return a.id
-}
+func (a *remoteAuthorizer) HandlerID() string { return a.id }
+
+func (a *remoteAuthorizer) ContinueOnError() bool { return false }
 
 func (a *remoteAuthorizer) doAuthorize(ctx heimdall.Context, sub *subject.Subject) (*authorizationInformation, error) {
 	logger := zerolog.Ctx(ctx.AppContext())

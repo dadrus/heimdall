@@ -28,7 +28,7 @@ import (
 
 func TestCreateAllowAuthorizerFromPrototype(t *testing.T) {
 	// GIVEN
-	prototype := newAllowAuthorizer()
+	prototype := newAllowAuthorizer("baz")
 
 	// WHEN
 	conf1, err1 := prototype.WithConfig(nil)
@@ -47,7 +47,7 @@ func TestAllowAuthorizerExecute(t *testing.T) {
 	ctx := &mocks.MockContext{}
 	ctx.On("AppContext").Return(context.Background())
 
-	auth := newAllowAuthorizer()
+	auth := newAllowAuthorizer("baz")
 
 	// WHEN
 	err := auth.Execute(ctx, nil)

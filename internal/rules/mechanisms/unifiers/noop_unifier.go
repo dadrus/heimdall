@@ -27,18 +27,20 @@ import (
 // nolint
 func init() {
 	registerUnifierTypeFactory(
-		func(_ string, typ string, conf map[string]any) (bool, Unifier, error) {
+		func(id string, typ string, conf map[string]any) (bool, Unifier, error) {
 			if typ != UnifierNoop {
 				return false, nil, nil
 			}
 
-			return true, newNoopUnifier(), nil
+			return true, newNoopUnifier(id), nil
 		})
 }
 
-func newNoopUnifier() *noopUnifier { return &noopUnifier{} }
+func newNoopUnifier(id string) *noopUnifier { return &noopUnifier{id: id} }
 
-type noopUnifier struct{}
+type noopUnifier struct {
+	id string
+}
 
 func (m *noopUnifier) Execute(ctx heimdall.Context, sub *subject.Subject) error {
 	logger := zerolog.Ctx(ctx.AppContext())
@@ -48,3 +50,7 @@ func (m *noopUnifier) Execute(ctx heimdall.Context, sub *subject.Subject) error 
 }
 
 func (m *noopUnifier) WithConfig(map[string]any) (Unifier, error) { return m, nil }
+
+func (m *noopUnifier) HandlerID() string { return m.id }
+
+func (m *noopUnifier) ContinueOnError() bool { return false }

@@ -33,7 +33,7 @@ func TestNoopUnifierExecution(t *testing.T) {
 	ctx := &mocks.MockContext{}
 	ctx.On("AppContext").Return(context.Background())
 
-	unifier := newNoopUnifier()
+	unifier := newNoopUnifier("foo")
 
 	// WHEN
 	err := unifier.Execute(ctx, nil)
@@ -46,7 +46,7 @@ func TestCreateNoopUnifierFromPrototype(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
-	prototype := newNoopUnifier()
+	prototype := newNoopUnifier("baz")
 
 	// WHEN
 	un1, err1 := prototype.WithConfig(nil)

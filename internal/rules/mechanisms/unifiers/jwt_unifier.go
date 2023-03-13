@@ -167,9 +167,9 @@ func (m *jwtUnifier) WithConfig(rawConfig map[string]any) (Unifier, error) {
 	}, nil
 }
 
-func (m *jwtUnifier) HandlerID() string {
-	return m.id
-}
+func (m *jwtUnifier) HandlerID() string { return m.id }
+
+func (m *jwtUnifier) ContinueOnError() bool { return false }
 
 func (m *jwtUnifier) generateToken(ctx heimdall.Context, sub *subject.Subject) (string, error) {
 	iss := ctx.Signer()
