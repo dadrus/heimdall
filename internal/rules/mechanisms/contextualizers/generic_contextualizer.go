@@ -79,7 +79,7 @@ func newGenericContextualizer(id string, rawConfig map[string]any) (*genericCont
 		ForwardCookies  []string          `mapstructure:"forward_cookies"`
 		Payload         template.Template `mapstructure:"payload"`
 		CacheTTL        *time.Duration    `mapstructure:"cache_ttl"`
-		ContinueOnError bool              `mapstructure:"continue_on_error"`
+		ContinueOnError bool              `mapstructure:"continue_pipeline_on_error"`
 	}
 
 	var conf Config

@@ -48,6 +48,9 @@ func TestCreateDenyAuthorizerFromPrototype(t *testing.T) {
 
 	// nolint: forcetypeassert
 	assert.Equal(t, "foo", conf1.(*denyAuthorizer).HandlerID())
+	assert.False(t, conf1.ContinueOnError())
+	assert.False(t, conf2.ContinueOnError())
+	assert.False(t, prototype.ContinueOnError())
 }
 
 func TestDenyAuthorizerExecute(t *testing.T) {

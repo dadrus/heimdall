@@ -106,6 +106,7 @@ payload: bar
 				assert.False(t, contextualizer.ContinueOnError())
 
 				assert.Equal(t, "contextualizer", contextualizer.HandlerID())
+				assert.False(t, contextualizer.ContinueOnError())
 			},
 		},
 		{
@@ -121,7 +122,7 @@ forward_cookies:
   - My-Foo-Session
 payload: "{{ .Subject.ID }}"
 cache_ttl: 5s
-continue_on_error: true
+continue_pipeline_on_error: true
 `),
 			assert: func(t *testing.T, err error, contextualizer *genericContextualizer) {
 				t.Helper()
@@ -236,6 +237,8 @@ payload: foo
 				assert.Equal(t, prototype.fwdCookies, configured.fwdCookies)
 				assert.Equal(t, prototype.ttl, configured.ttl)
 				assert.Equal(t, "contextualizer2", configured.HandlerID())
+				assert.False(t, prototype.ContinueOnError())
+				assert.False(t, configured.ContinueOnError())
 			},
 		},
 		{
@@ -276,6 +279,8 @@ forward_headers:
 				assert.Equal(t, prototype.fwdCookies, configured.fwdCookies)
 				assert.Equal(t, prototype.ttl, configured.ttl)
 				assert.Equal(t, "contextualizer3", configured.HandlerID())
+				assert.False(t, prototype.ContinueOnError())
+				assert.False(t, configured.ContinueOnError())
 			},
 		},
 		{
@@ -320,6 +325,8 @@ forward_cookies:
 				assert.Contains(t, configured.fwdCookies, "Foo-Session")
 				assert.Equal(t, prototype.ttl, configured.ttl)
 				assert.Equal(t, "contextualizer4", configured.HandlerID())
+				assert.False(t, prototype.ContinueOnError())
+				assert.False(t, configured.ContinueOnError())
 			},
 		},
 		{
@@ -335,6 +342,7 @@ forward_headers:
 forward_cookies:
   - My-Foo-Session
 cache_ttl: 5s
+continue_pipeline_on_error: true
 `),
 			config: []byte(`
 payload: foo
@@ -366,6 +374,8 @@ cache_ttl: 15s
 				assert.NotEqual(t, prototype.ttl, configured.ttl)
 				assert.Equal(t, 15*time.Second, configured.ttl)
 				assert.Equal(t, "contextualizer5", configured.HandlerID())
+				assert.True(t, prototype.ContinueOnError())
+				assert.True(t, configured.ContinueOnError())
 			},
 		},
 	} {

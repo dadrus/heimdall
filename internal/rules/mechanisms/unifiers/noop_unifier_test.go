@@ -40,6 +40,8 @@ func TestNoopUnifierExecution(t *testing.T) {
 
 	// THEN
 	require.NoError(t, err)
+	assert.Equal(t, "foo", unifier.HandlerID())
+	assert.False(t, unifier.ContinueOnError())
 }
 
 func TestCreateNoopUnifierFromPrototype(t *testing.T) {

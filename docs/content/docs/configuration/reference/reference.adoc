@@ -256,6 +256,7 @@ rules:
           url: http://profile
           headers:
             foo: bar
+        continue_pipeline_on_error: true
 
     unifiers:
     - id: jwt

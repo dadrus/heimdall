@@ -1178,7 +1178,7 @@
                 "30s"
               ]
             },
-            "continue_on_error": {
+            "continue_pipeline_on_error": {
               "type": "boolean",
               "description": "Continue the pipeline execution even if this contextualizer fails",
               "default": false

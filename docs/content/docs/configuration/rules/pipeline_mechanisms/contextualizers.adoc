@@ -43,7 +43,7 @@ Your link:{{< relref "overview.adoc#_templating" >}}[template] with definitions 
 +
 Allows caching of the API responses. Defaults to 10 seconds. The cache key is calculated from the entire configuration of the contextualizer instance and the available information about the current subject.
 
-* *`continue_on_error`*: _boolean_ (optional, overridable)
+* *`continue_pipeline_on_error`*: _boolean_ (optional, overridable)
 +
 If set to `true`, allows the pipeline to continue with the execution of the next mechanisms. So the error, if thrown, is ignored. Defaults to `false`, which means the execution of the regular pipeline is stopped and the execution of the error pipeline is started.
 

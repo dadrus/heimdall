@@ -42,7 +42,7 @@ type noopUnifier struct {
 	id string
 }
 
-func (m *noopUnifier) Execute(ctx heimdall.Context, sub *subject.Subject) error {
+func (m *noopUnifier) Execute(ctx heimdall.Context, _ *subject.Subject) error {
 	logger := zerolog.Ctx(ctx.AppContext())
 	logger.Debug().Msg("Unifying using noop unifier")
 

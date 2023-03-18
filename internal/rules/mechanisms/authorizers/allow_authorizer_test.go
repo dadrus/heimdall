@@ -40,6 +40,11 @@ func TestCreateAllowAuthorizerFromPrototype(t *testing.T) {
 
 	assert.Equal(t, prototype, conf1)
 	assert.Equal(t, prototype, conf2)
+
+	assert.Equal(t, "baz", prototype.HandlerID())
+	assert.False(t, conf1.ContinueOnError())
+	assert.False(t, conf2.ContinueOnError())
+	assert.False(t, prototype.ContinueOnError())
 }
 
 func TestAllowAuthorizerExecute(t *testing.T) {
