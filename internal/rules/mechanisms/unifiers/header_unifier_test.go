@@ -111,6 +111,8 @@ headers:
 				val, err = unifier.headers["bar"].Render(nil, &subject.Subject{ID: "baz"})
 				require.NoError(t, err)
 				assert.Equal(t, "baz", val)
+
+				assert.False(t, unifier.ContinueOnError())
 			},
 		},
 	} {
@@ -187,10 +189,14 @@ headers:
 				require.NotNil(t, configured)
 				assert.NotEmpty(t, configured.headers)
 				assert.Equal(t, "hun3", configured.HandlerID())
+				assert.Equal(t, prototype.HandlerID(), configured.HandlerID())
 
 				val, err := configured.headers["bar"].Render(nil, nil)
 				require.NoError(t, err)
 				assert.Equal(t, "foo", val)
+
+				assert.False(t, prototype.ContinueOnError())
+				assert.False(t, configured.ContinueOnError())
 			},
 		},
 	} {

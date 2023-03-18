@@ -42,13 +42,13 @@ func (heimdallLibrary) CompileOptions() []cel.EnvOption {
 		cel.Variable("Subject", cel.DynType),
 		cel.Variable("Request", cel.ObjectType(requestType.TypeName())),
 		cel.Function("Header", cel.MemberOverload("Header",
-			[]*cel.Type{cel.ObjectType("cellib.Request"), cel.StringType}, cel.StringType)),
+			[]*cel.Type{cel.ObjectType(requestType.TypeName()), cel.StringType}, cel.StringType)),
 		cel.Function("Cookie", cel.MemberOverload("Cookie",
-			[]*cel.Type{cel.ObjectType("cellib.Request"), cel.StringType}, cel.StringType)),
+			[]*cel.Type{cel.ObjectType(requestType.TypeName()), cel.StringType}, cel.StringType)),
 		cel.Function("String", cel.MemberOverload("String",
-			[]*cel.Type{cel.ObjectType("cellib.URL")}, cel.StringType)),
+			[]*cel.Type{cel.ObjectType(urlType.TypeName())}, cel.StringType)),
 		cel.Function("Query", cel.MemberOverload("Query",
-			[]*cel.Type{cel.ObjectType("cellib.URL")}, cel.DynType)),
+			[]*cel.Type{cel.ObjectType(urlType.TypeName())}, cel.DynType)),
 	}
 }
 

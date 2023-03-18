@@ -112,6 +112,8 @@ cookies:
 				val, err = unifier.cookies["bar"].Render(nil, &subject.Subject{ID: "baz"})
 				require.NoError(t, err)
 				assert.Equal(t, "baz", val)
+
+				assert.False(t, unifier.ContinueOnError())
 			},
 		},
 	} {
@@ -188,10 +190,14 @@ cookies:
 				require.NotNil(t, configured)
 				assert.NotEmpty(t, configured.cookies)
 				assert.Equal(t, "cun3", configured.HandlerID())
+				assert.Equal(t, prototype.HandlerID(), configured.HandlerID())
 
 				val, err := configured.cookies["bar"].Render(nil, nil)
 				require.NoError(t, err)
 				assert.Equal(t, "foo", val)
+
+				assert.False(t, prototype.ContinueOnError())
+				assert.False(t, configured.ContinueOnError())
 			},
 		},
 	} {

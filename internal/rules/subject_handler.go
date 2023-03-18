@@ -23,4 +23,5 @@ import (
 
 type subjectHandler interface {
 	Execute(heimdall.Context, *subject.Subject) error
+	ContinueOnError() bool
 }

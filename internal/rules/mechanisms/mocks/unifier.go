@@ -42,3 +42,7 @@ func (m *MockUnifier) WithConfig(config map[string]any) (unifiers.Unifier, error
 
 	return nil, args.Error(1)
 }
+
+func (m *MockUnifier) ContinueOnError() bool {
+	return m.Called().Bool(0)
+}

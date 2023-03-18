@@ -31,9 +31,13 @@ func (cm compositeSubjectHandler) Execute(ctx heimdall.Context, sub *subject.Sub
 	for _, m := range cm {
 		err := m.Execute(ctx, sub)
 		if err != nil {
-			logger.Debug().Err(err).Msg("Pipeline step execution failed")
+			logger.Info().Err(err).Msg("Pipeline step execution failed")
 
-			return err
+			if m.ContinueOnError() {
+				logger.Info().Msg("Error ignored. Continuing pipeline execution")
+			} else {
+				return err
+			}
 		}
 	}
 

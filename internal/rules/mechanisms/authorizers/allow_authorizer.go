@@ -27,19 +27,21 @@ import (
 // nolint
 func init() {
 	registerAuthorizerTypeFactory(
-		func(_ string, typ string, conf map[string]any) (bool, Authorizer, error) {
+		func(id string, typ string, conf map[string]any) (bool, Authorizer, error) {
 			if typ != AuthorizerAllow {
 				return false, nil, nil
 			}
 
-			return true, newAllowAuthorizer(), nil
+			return true, newAllowAuthorizer(id), nil
 		})
 }
 
-type allowAuthorizer struct{}
+type allowAuthorizer struct {
+	id string
+}
 
-func newAllowAuthorizer() *allowAuthorizer {
-	return &allowAuthorizer{}
+func newAllowAuthorizer(id string) *allowAuthorizer {
+	return &allowAuthorizer{id: id}
 }
 
 func (*allowAuthorizer) Execute(ctx heimdall.Context, _ *subject.Subject) error {
@@ -52,3 +54,7 @@ func (*allowAuthorizer) Execute(ctx heimdall.Context, _ *subject.Subject) error 
 func (a *allowAuthorizer) WithConfig(map[string]any) (Authorizer, error) {
 	return a, nil
 }
+
+func (a *allowAuthorizer) HandlerID() string { return a.id }
+
+func (a *allowAuthorizer) ContinueOnError() bool { return false }
