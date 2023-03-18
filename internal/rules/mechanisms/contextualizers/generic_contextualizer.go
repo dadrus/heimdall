@@ -173,13 +173,13 @@ func (h *genericContextualizer) WithConfig(rawConfig map[string]any) (Contextual
 		ForwardCookies  []string          `mapstructure:"forward_cookies"`
 		Payload         template.Template `mapstructure:"payload"`
 		CacheTTL        *time.Duration    `mapstructure:"cache_ttl"`
-		ContinueOnError *bool             `mapstructure:"continue_on_error"`
+		ContinueOnError *bool             `mapstructure:"continue_pipeline_on_error"`
 	}
 
 	var conf Config
 	if err := decodeConfig(rawConfig, &conf); err != nil {
 		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration, "failed to unmarshal JWT unifier config").
+			NewWithMessage(heimdall.ErrConfiguration, "failed to unmarshal generic contextualizer config").
 			CausedBy(err)
 	}
 

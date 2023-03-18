@@ -122,6 +122,7 @@ payload: "{{ .Subject.ID }}"
 				assert.Zero(t, auth.ttl)
 
 				assert.Equal(t, "authz", auth.HandlerID())
+				assert.False(t, auth.ContinueOnError())
 			},
 		},
 		{
@@ -182,6 +183,7 @@ cache_ttl: 5s
 				assert.Equal(t, 5*time.Second, auth.ttl)
 
 				assert.Equal(t, "authz", auth.HandlerID())
+				assert.False(t, auth.ContinueOnError())
 			},
 		},
 	} {
@@ -223,6 +225,7 @@ payload: bar
 
 				assert.Equal(t, prototype, configured)
 				assert.Equal(t, "authz1", configured.HandlerID())
+				assert.False(t, configured.ContinueOnError())
 			},
 		},
 		{
@@ -241,6 +244,7 @@ payload: bar
 
 				assert.Equal(t, prototype, configured)
 				assert.Equal(t, "authz2", configured.HandlerID())
+				assert.False(t, configured.ContinueOnError())
 			},
 		},
 		{
@@ -287,6 +291,7 @@ cache_ttl: 1s
 				assert.Empty(t, configured.headersForUpstream)
 				assert.NotNil(t, configured.ttl)
 				assert.Equal(t, "authz3", configured.HandlerID())
+				assert.False(t, configured.ContinueOnError())
 			},
 		},
 		{
@@ -359,6 +364,7 @@ cache_ttl: 15s
 				assert.NotEqual(t, prototype.headersForUpstream, configured.headersForUpstream)
 				assert.NotEqual(t, prototype.payload, configured.payload)
 				assert.Equal(t, "authz4", configured.HandlerID())
+				assert.False(t, configured.ContinueOnError())
 			},
 		},
 	} {

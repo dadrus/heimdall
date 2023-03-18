@@ -296,6 +296,7 @@ forward_headers:
 forward_cookies:
   - My-Foo-Session
 cache_ttl: 5s
+continue_pipeline_on_error: true
 `),
 			config: []byte(`
 payload: foo
@@ -325,8 +326,8 @@ forward_cookies:
 				assert.Contains(t, configured.fwdCookies, "Foo-Session")
 				assert.Equal(t, prototype.ttl, configured.ttl)
 				assert.Equal(t, "contextualizer4", configured.HandlerID())
-				assert.False(t, prototype.ContinueOnError())
-				assert.False(t, configured.ContinueOnError())
+				assert.True(t, prototype.ContinueOnError())
+				assert.True(t, configured.ContinueOnError())
 			},
 		},
 		{
@@ -351,6 +352,7 @@ forward_headers:
 forward_cookies:
   - Foo-Session
 cache_ttl: 15s
+continue_pipeline_on_error: false
 `),
 			assert: func(t *testing.T, err error, prototype *genericContextualizer, configured *genericContextualizer) {
 				t.Helper()
@@ -375,7 +377,7 @@ cache_ttl: 15s
 				assert.Equal(t, 15*time.Second, configured.ttl)
 				assert.Equal(t, "contextualizer5", configured.HandlerID())
 				assert.True(t, prototype.ContinueOnError())
-				assert.True(t, configured.ContinueOnError())
+				assert.False(t, configured.ContinueOnError())
 			},
 		},
 	} {
