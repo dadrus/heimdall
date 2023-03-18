@@ -1177,6 +1177,11 @@
                 "1m",
                 "30s"
               ]
+            },
+            "continue_pipeline_on_error": {
+              "type": "boolean",
+              "description": "Continue the pipeline execution even if this contextualizer fails",
+              "default": false
             }
           }
         }

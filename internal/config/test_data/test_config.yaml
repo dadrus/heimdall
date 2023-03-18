@@ -263,6 +263,7 @@ rules:
             headers:
               bla: bla
           payload: http://foo
+          continue_pipeline_on_error: true
       - id: profile_data_contextualizer
         type: generic
         config:

@@ -100,6 +100,7 @@ when:
 
 				require.NoError(t, err)
 				require.NotNil(t, errorHandler)
+				assert.Equal(t, "with minimum required configuration", errorHandler.HandlerID())
 				assert.Equal(t, "Please authenticate", errorHandler.realm)
 				require.Len(t, errorHandler.m, 1)
 				assert.Nil(t, errorHandler.m[0].CIDR)
@@ -125,6 +126,7 @@ when:
 
 				require.NoError(t, err)
 				require.NotNil(t, errorHandler)
+				assert.Equal(t, "with all possible attributes", errorHandler.HandlerID())
 				assert.Equal(t, "What is your password", errorHandler.realm)
 				require.Len(t, errorHandler.m, 1)
 				assert.Nil(t, errorHandler.m[0].CIDR)
@@ -143,7 +145,7 @@ when:
 			require.NoError(t, err)
 
 			// WHEN
-			errorHandler, err := newWWWAuthenticateErrorHandler(conf)
+			errorHandler, err := newWWWAuthenticateErrorHandler(tc.uc, conf)
 
 			// THEN
 			tc.assert(t, err, errorHandler)
@@ -175,6 +177,7 @@ when:
 
 				require.NoError(t, err)
 				assert.Equal(t, prototype, configured)
+				assert.Equal(t, "no new configuration provided", configured.HandlerID())
 			},
 		},
 		{
@@ -192,6 +195,7 @@ when:
 
 				require.NoError(t, err)
 				assert.Equal(t, prototype, configured)
+				assert.Equal(t, "empty configuration provided", configured.HandlerID())
 			},
 		},
 		{
@@ -233,6 +237,7 @@ when:
 				require.NoError(t, err)
 				assert.NotEqual(t, prototype, configured)
 				assert.NotNil(t, configured)
+				assert.Equal(t, "with 'when' reconfigured", configured.HandlerID())
 				assert.Equal(t, "Please authenticate", prototype.realm)
 				assert.Equal(t, prototype.realm, configured.realm)
 				assert.NotEqual(t, prototype.m, configured.m)
@@ -264,6 +269,7 @@ when:
 				require.NoError(t, err)
 				assert.NotEqual(t, prototype, configured)
 				assert.NotNil(t, configured)
+				assert.Equal(t, "with 'realm' reconfigured", configured.HandlerID())
 				assert.NotEqual(t, prototype.realm, configured.realm)
 				assert.Equal(t, "You password please", configured.realm)
 				assert.Equal(t, prototype.m, configured.m)
@@ -277,7 +283,7 @@ when:
 			conf, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
 
-			prototype, err := newWWWAuthenticateErrorHandler(pc)
+			prototype, err := newWWWAuthenticateErrorHandler(tc.uc, pc)
 			require.NoError(t, err)
 
 			// WHEN
@@ -396,7 +402,7 @@ when:
 
 			configureContext(t, mctx)
 
-			errorHandler, err := newWWWAuthenticateErrorHandler(conf)
+			errorHandler, err := newWWWAuthenticateErrorHandler("foo", conf)
 			require.NoError(t, err)
 
 			// WHEN

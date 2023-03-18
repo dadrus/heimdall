@@ -128,6 +128,7 @@ when:
 
 				require.NoError(t, err)
 				require.NotNil(t, redEH)
+				assert.Equal(t, "with minimal valid configuration", redEH.HandlerID())
 
 				toURL, err := redEH.to.Render(nil, nil)
 				require.NoError(t, err)
@@ -176,6 +177,7 @@ when:
 
 				require.NoError(t, err)
 				require.NotNil(t, redEH)
+				assert.Equal(t, "with full complex valid configuration", redEH.HandlerID())
 
 				ctx := &mocks.MockContext{}
 				ctx.On("RequestMethod").Return("POST")
@@ -227,7 +229,7 @@ when:
 			require.NoError(t, err)
 
 			// WHEN
-			errorHandler, err := newRedirectErrorHandler(conf)
+			errorHandler, err := newRedirectErrorHandler(tc.uc, conf)
 
 			// THEN
 			tc.assert(t, err, errorHandler)
@@ -257,6 +259,7 @@ when:
 
 				require.NoError(t, err)
 				assert.Equal(t, prototype, configured)
+				assert.Equal(t, "no new configuration provided", configured.HandlerID())
 			},
 		},
 		{
@@ -273,6 +276,7 @@ when:
 
 				require.NoError(t, err)
 				assert.Equal(t, prototype, configured)
+				assert.Equal(t, "empty configuration provided", configured.HandlerID())
 			},
 		},
 		{
@@ -313,6 +317,7 @@ when:
 				require.NoError(t, err)
 				assert.NotEqual(t, prototype, configured)
 				assert.NotNil(t, configured)
+				assert.Equal(t, "required 'when' field provided", configured.HandlerID())
 				assert.Equal(t, prototype.to, configured.to)
 				assert.Equal(t, prototype.code, configured.code)
 				assert.NotEqual(t, prototype.m, configured.m)
@@ -336,7 +341,7 @@ when:
 			conf, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
 
-			prototype, err := newRedirectErrorHandler(pc)
+			prototype, err := newRedirectErrorHandler(tc.uc, pc)
 			require.NoError(t, err)
 
 			// WHEN
@@ -499,7 +504,7 @@ when:
 
 			configureContext(t, mctx)
 
-			errorHandler, err := newRedirectErrorHandler(conf)
+			errorHandler, err := newRedirectErrorHandler("foo", conf)
 			require.NoError(t, err)
 
 			// WHEN

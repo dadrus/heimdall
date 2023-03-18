@@ -42,3 +42,7 @@ func (m *MockContextualizer) WithConfig(config map[string]any) (contextualizers.
 
 	return nil, args.Error(1)
 }
+
+func (m *MockContextualizer) ContinueOnError() bool {
+	return m.Called().Bool(0)
+}

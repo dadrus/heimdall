@@ -203,6 +203,7 @@ func TestRuleExecute(t *testing.T) {
 
 				authenticator.On("Execute", ctx).Return(sub, nil)
 				authorizer.On("Execute", ctx, sub).Return(testsupport.ErrTestPurpose)
+				authorizer.On("ContinueOnError").Return(false)
 				errHandler.On("Execute", ctx, testsupport.ErrTestPurpose).
 					Return(true, nil)
 			},
@@ -214,7 +215,7 @@ func TestRuleExecute(t *testing.T) {
 			},
 		},
 		{
-			uc:          "authenticator succeeds, authorizer fails, but error handler fails",
+			uc:          "authenticator succeeds, authorizer fails and error handler fails",
 			upstreamURL: &url.URL{Scheme: "http", Host: "test.local", Path: "foo"},
 			configureMocks: func(t *testing.T, ctx *heimdallmocks.MockContext, authenticator *mocks.MockSubjectCreator,
 				authorizer *mocks.MockSubjectHandler, unifier *mocks.MockSubjectHandler,
@@ -226,6 +227,7 @@ func TestRuleExecute(t *testing.T) {
 
 				authenticator.On("Execute", ctx).Return(sub, nil)
 				authorizer.On("Execute", ctx, sub).Return(testsupport.ErrTestPurpose)
+				authorizer.On("ContinueOnError").Return(false)
 				errHandler.On("Execute", ctx, testsupport.ErrTestPurpose).
 					Return(true, testsupport.ErrTestPurpose2)
 			},
@@ -251,6 +253,7 @@ func TestRuleExecute(t *testing.T) {
 				authenticator.On("Execute", ctx).Return(sub, nil)
 				authorizer.On("Execute", ctx, sub).Return(nil)
 				unifier.On("Execute", ctx, sub).Return(testsupport.ErrTestPurpose)
+				unifier.On("ContinueOnError").Return(false)
 				errHandler.On("Execute", ctx, testsupport.ErrTestPurpose).
 					Return(true, nil)
 			},
@@ -262,7 +265,7 @@ func TestRuleExecute(t *testing.T) {
 			},
 		},
 		{
-			uc:          "authenticator succeeds, authorizer succeeds, unifier fails, but error handler fails",
+			uc:          "authenticator succeeds, authorizer succeeds, unifier fails and error handler fails",
 			upstreamURL: &url.URL{Scheme: "http", Host: "test.local", Path: "foo"},
 			configureMocks: func(t *testing.T, ctx *heimdallmocks.MockContext, authenticator *mocks.MockSubjectCreator,
 				authorizer *mocks.MockSubjectHandler, unifier *mocks.MockSubjectHandler,
@@ -275,6 +278,7 @@ func TestRuleExecute(t *testing.T) {
 				authenticator.On("Execute", ctx).Return(sub, nil)
 				authorizer.On("Execute", ctx, sub).Return(nil)
 				unifier.On("Execute", ctx, sub).Return(testsupport.ErrTestPurpose)
+				unifier.On("ContinueOnError").Return(false)
 				errHandler.On("Execute", ctx, testsupport.ErrTestPurpose).
 					Return(true, testsupport.ErrTestPurpose2)
 			},

@@ -120,6 +120,7 @@ claims:
 				require.NoError(t, err)
 				assert.Equal(t, `{ "sub": "bar" }`, val)
 				assert.Equal(t, "jun", unifier.HandlerID())
+				assert.False(t, unifier.ContinueOnError())
 			},
 		},
 		{
@@ -142,6 +143,7 @@ claims:
 				require.NoError(t, err)
 				assert.Equal(t, `{ "sub": "bar" }`, val)
 				assert.Equal(t, "jun", unifier.HandlerID())
+				assert.False(t, unifier.ContinueOnError())
 			},
 		},
 		{
@@ -194,6 +196,7 @@ func TestCreateJWTUnifierFromPrototype(t *testing.T) {
 				require.NoError(t, err)
 				assert.Equal(t, prototype, configured)
 				assert.Equal(t, "jun1", configured.HandlerID())
+				assert.False(t, configured.ContinueOnError())
 			},
 		},
 		{
@@ -206,6 +209,7 @@ func TestCreateJWTUnifierFromPrototype(t *testing.T) {
 				require.NoError(t, err)
 				assert.Equal(t, prototype, configured)
 				assert.Equal(t, "jun2", configured.HandlerID())
+				assert.False(t, configured.ContinueOnError())
 			},
 		},
 		{
@@ -221,6 +225,8 @@ func TestCreateJWTUnifierFromPrototype(t *testing.T) {
 				assert.NotEqual(t, prototype.ttl, configured.ttl)
 				assert.Equal(t, expectedTTL, configured.ttl)
 				assert.Equal(t, "jun3", configured.HandlerID())
+				assert.False(t, prototype.ContinueOnError())
+				assert.False(t, configured.ContinueOnError())
 			},
 		},
 		{
@@ -253,6 +259,8 @@ claims:
 				require.NoError(t, err)
 				assert.Equal(t, `{ "sub": "bar" }`, val)
 				assert.Equal(t, "jun4", configured.HandlerID())
+				assert.False(t, prototype.ContinueOnError())
+				assert.False(t, configured.ContinueOnError())
 			},
 		},
 		{
@@ -276,6 +284,8 @@ claims:
 				require.NoError(t, err)
 				assert.Equal(t, `{ "sub": "bar" }`, val)
 				assert.Equal(t, "jun5", configured.HandlerID())
+				assert.False(t, prototype.ContinueOnError())
+				assert.False(t, configured.ContinueOnError())
 			},
 		},
 		{

@@ -34,7 +34,7 @@ import (
 	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/dadrus/heimdall/internal/endpoint"
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/authorizers/cellib"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/cellib"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/contenttype"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
@@ -61,7 +61,7 @@ type remoteAuthorizer struct {
 	id                 string
 	e                  endpoint.Endpoint
 	payload            template.Template
-	expressions        []*Expression
+	expressions        []*cellib.Expression
 	headersForUpstream []string
 	ttl                time.Duration
 	celEnv             *cel.Env
@@ -89,11 +89,11 @@ func (ai *authorizationInformation) addAttributesTo(key string, sub *subject.Sub
 
 func newRemoteAuthorizer(id string, rawConfig map[string]any) (*remoteAuthorizer, error) {
 	type Config struct {
-		Endpoint                 endpoint.Endpoint `mapstructure:"endpoint"`
-		Payload                  template.Template `mapstructure:"payload"`
-		Expressions              []*Expression     `mapstructure:"expressions"`
-		ResponseHeadersToForward []string          `mapstructure:"forward_response_headers_to_upstream"`
-		CacheTTL                 time.Duration     `mapstructure:"cache_ttl"`
+		Endpoint                 endpoint.Endpoint    `mapstructure:"endpoint"`
+		Payload                  template.Template    `mapstructure:"payload"`
+		Expressions              []*cellib.Expression `mapstructure:"expressions"`
+		ResponseHeadersToForward []string             `mapstructure:"forward_response_headers_to_upstream"`
+		CacheTTL                 time.Duration        `mapstructure:"cache_ttl"`
 	}
 
 	var conf Config
@@ -197,10 +197,10 @@ func (a *remoteAuthorizer) WithConfig(rawConfig map[string]any) (Authorizer, err
 	}
 
 	type Config struct {
-		Payload                  template.Template `mapstructure:"payload"`
-		Expressions              []*Expression     `mapstructure:"expressions"`
-		ResponseHeadersToForward []string          `mapstructure:"forward_response_headers_to_upstream"`
-		CacheTTL                 time.Duration     `mapstructure:"cache_ttl"`
+		Payload                  template.Template    `mapstructure:"payload"`
+		Expressions              []*cellib.Expression `mapstructure:"expressions"`
+		ResponseHeadersToForward []string             `mapstructure:"forward_response_headers_to_upstream"`
+		CacheTTL                 time.Duration        `mapstructure:"cache_ttl"`
 	}
 
 	var conf Config
@@ -230,9 +230,9 @@ func (a *remoteAuthorizer) WithConfig(rawConfig map[string]any) (Authorizer, err
 	}, nil
 }
 
-func (a *remoteAuthorizer) HandlerID() string {
-	return a.id
-}
+func (a *remoteAuthorizer) HandlerID() string { return a.id }
+
+func (a *remoteAuthorizer) ContinueOnError() bool { return false }
 
 func (a *remoteAuthorizer) doAuthorize(ctx heimdall.Context, sub *subject.Subject) (*authorizationInformation, error) {
 	logger := zerolog.Ctx(ctx.AppContext())

@@ -120,6 +120,7 @@ expressions:
 				require.NoError(t, err)
 				assert.Equal(t, "authz", auth.HandlerID())
 				assert.NotEmpty(t, auth.expressions)
+				assert.False(t, auth.ContinueOnError())
 			},
 		},
 	} {
@@ -192,6 +193,8 @@ expressions:
 				require.NotNil(t, configured)
 				assert.NotEqual(t, prototype.expressions, configured.expressions)
 				assert.Equal(t, "authz", configured.HandlerID())
+				assert.False(t, prototype.ContinueOnError())
+				assert.False(t, configured.ContinueOnError())
 			},
 		},
 	} {

@@ -24,4 +24,5 @@ import (
 type Contextualizer interface {
 	Execute(heimdall.Context, *subject.Subject) error
 	WithConfig(config map[string]any) (Contextualizer, error)
+	ContinueOnError() bool
 }

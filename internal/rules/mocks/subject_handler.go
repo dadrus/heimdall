@@ -27,6 +27,10 @@ type MockSubjectHandler struct {
 	mock.Mock
 }
 
-func (a *MockSubjectHandler) Execute(ctx heimdall.Context, sub *subject.Subject) error {
-	return a.Called(ctx, sub).Error(0)
+func (m *MockSubjectHandler) Execute(ctx heimdall.Context, sub *subject.Subject) error {
+	return m.Called(ctx, sub).Error(0)
+}
+
+func (m *MockSubjectHandler) ContinueOnError() bool {
+	return m.Called().Bool(0)
 }

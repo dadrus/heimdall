@@ -28,7 +28,7 @@ import (
 
 func TestCreateAllowAuthorizerFromPrototype(t *testing.T) {
 	// GIVEN
-	prototype := newAllowAuthorizer()
+	prototype := newAllowAuthorizer("baz")
 
 	// WHEN
 	conf1, err1 := prototype.WithConfig(nil)
@@ -40,6 +40,11 @@ func TestCreateAllowAuthorizerFromPrototype(t *testing.T) {
 
 	assert.Equal(t, prototype, conf1)
 	assert.Equal(t, prototype, conf2)
+
+	assert.Equal(t, "baz", prototype.HandlerID())
+	assert.False(t, conf1.ContinueOnError())
+	assert.False(t, conf2.ContinueOnError())
+	assert.False(t, prototype.ContinueOnError())
 }
 
 func TestAllowAuthorizerExecute(t *testing.T) {
@@ -47,7 +52,7 @@ func TestAllowAuthorizerExecute(t *testing.T) {
 	ctx := &mocks.MockContext{}
 	ctx.On("AppContext").Return(context.Background())
 
-	auth := newAllowAuthorizer()
+	auth := newAllowAuthorizer("baz")
 
 	// WHEN
 	err := auth.Execute(ctx, nil)

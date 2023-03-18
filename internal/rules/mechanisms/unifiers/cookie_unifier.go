@@ -101,6 +101,6 @@ func (m *cookieUnifier) WithConfig(config map[string]any) (Unifier, error) {
 	return newCookieUnifier(m.id, config)
 }
 
-func (m *cookieUnifier) HandlerID() string {
-	return m.id
-}
+func (m *cookieUnifier) HandlerID() string { return m.id }
+
+func (m *cookieUnifier) ContinueOnError() bool { return false }

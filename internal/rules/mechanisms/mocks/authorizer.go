@@ -42,3 +42,7 @@ func (m *MockAuthorizer) WithConfig(config map[string]any) (authorizers.Authoriz
 
 	return nil, args.Error(1)
 }
+
+func (m *MockAuthorizer) ContinueOnError() bool {
+	return m.Called().Bool(0)
+}

@@ -101,6 +101,6 @@ func (m *headerUnifier) WithConfig(config map[string]any) (Unifier, error) {
 	return newHeaderUnifier(m.id, config)
 }
 
-func (m *headerUnifier) HandlerID() string {
-	return m.id
-}
+func (m *headerUnifier) HandlerID() string { return m.id }
+
+func (m *headerUnifier) ContinueOnError() bool { return false }
