@@ -40,7 +40,7 @@ type URL struct {
 	url.URL
 }
 
-func (u *URL) Receive(function string, _ string, args []ref.Val) ref.Val {
+func (u *URL) Receive(function string, _ string, _ []ref.Val) ref.Val {
 	switch function {
 	case "String":
 		return types.String(u.String())

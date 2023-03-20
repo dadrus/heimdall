@@ -32,7 +32,7 @@ import (
 )
 
 type RuleFactory interface {
-	CreateRule(srcID string, ruleConfig rule.RuleConfiguration) (rule.Rule, error)
+	CreateRule(srcID string, ruleConfig rule.Configuration) (rule.Rule, error)
 	HasDefaultRule() bool
 	DefaultRule() rule.Rule
 }
@@ -163,7 +163,7 @@ func (f *ruleFactory) HasDefaultRule() bool {
 	return f.hasDefaultRule
 }
 
-func (f *ruleFactory) CreateRule(srcID string, ruleConfig rule.RuleConfiguration) ( // nolint: cyclop
+func (f *ruleFactory) CreateRule(srcID string, ruleConfig rule.Configuration) ( // nolint: cyclop
 	rule.Rule, error,
 ) {
 	if len(ruleConfig.ID) == 0 {

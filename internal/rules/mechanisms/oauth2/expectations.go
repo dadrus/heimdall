@@ -107,10 +107,4 @@ func (e *Expectation) AssertIssuanceTime(issuedAt time.Time) error {
 	return nil
 }
 
-func (e *Expectation) AssertScopes(scopes []string) error {
-	if err := e.ScopesMatcher.Match(scopes); err != nil {
-		return err
-	}
-
-	return nil
-}
+func (e *Expectation) AssertScopes(scopes []string) error { return e.ScopesMatcher.Match(scopes) }

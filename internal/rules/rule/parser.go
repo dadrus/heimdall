@@ -28,7 +28,7 @@ import (
 
 var ErrEmptyRuleSet = errors.New("empty rule set")
 
-func ParseRules(contentType string, reader io.Reader) (*RuleSetConfiguration, error) {
+func ParseRules(contentType string, reader io.Reader) (*SetConfiguration, error) {
 	switch contentType {
 	case "application/json":
 		fallthrough
@@ -47,10 +47,10 @@ func ParseRules(contentType string, reader io.Reader) (*RuleSetConfiguration, er
 	}
 }
 
-func parseYAML(reader io.Reader) (*RuleSetConfiguration, error) {
+func parseYAML(reader io.Reader) (*SetConfiguration, error) {
 	var (
 		rawConfig map[string]any
-		ruleSet   RuleSetConfiguration
+		ruleSet   SetConfiguration
 	)
 
 	dec := yaml.NewDecoder(reader)

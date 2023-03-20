@@ -168,7 +168,7 @@ func (ec *ErrorChain) MarshalJSON() ([]byte, error) {
 		})
 }
 
-func (ec *ErrorChain) MarshalXML(encoder *xml.Encoder, start xml.StartElement) error {
+func (ec *ErrorChain) MarshalXML(encoder *xml.Encoder, _ xml.StartElement) error {
 	return encoder.Encode(
 		message{
 			XMLName: xml.Name{Local: "error"},

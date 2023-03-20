@@ -534,14 +534,14 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 
 	for _, tc := range []struct {
 		uc             string
-		config         event2.RuleConfiguration
+		config         event2.Configuration
 		defaultRule    *ruleImpl
 		configureMocks func(t *testing.T, mhf *mocks.MockFactory)
 		assert         func(t *testing.T, err error, rul *ruleImpl)
 	}{
 		{
 			uc:     "without default rule and with missing id",
-			config: event2.RuleConfiguration{},
+			config: event2.Configuration{},
 			assert: func(t *testing.T, err error, rul *ruleImpl) {
 				t.Helper()
 
@@ -552,7 +552,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 		},
 		{
 			uc:     "without default rule, with id, but without url",
-			config: event2.RuleConfiguration{ID: "foobar"},
+			config: event2.Configuration{ID: "foobar"},
 			assert: func(t *testing.T, err error, rul *ruleImpl) {
 				t.Helper()
 
@@ -563,7 +563,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 		},
 		{
 			uc:     "without default rule, with id, but bad url pattern",
-			config: event2.RuleConfiguration{ID: "foobar", RuleMatcher: event2.Matcher{URL: "?>?<*??"}},
+			config: event2.Configuration{ID: "foobar", RuleMatcher: event2.Matcher{URL: "?>?<*??"}},
 			assert: func(t *testing.T, err error, rul *ruleImpl) {
 				t.Helper()
 
@@ -574,7 +574,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 		},
 		{
 			uc: "without default rule and error in upstream url",
-			config: event2.RuleConfiguration{
+			config: event2.Configuration{
 				ID:          "foobar",
 				RuleMatcher: event2.Matcher{URL: "http://foo.bar", Strategy: "glob"},
 				Upstream:    "http://[::1]:namedport",
@@ -589,7 +589,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 		},
 		{
 			uc: "with error while creating execute pipeline",
-			config: event2.RuleConfiguration{
+			config: event2.Configuration{
 				ID:          "foobar",
 				RuleMatcher: event2.Matcher{URL: "http://foo.bar", Strategy: "regex"},
 				Execute:     []config.MechanismConfig{{"authenticator": "foo"}},
@@ -609,7 +609,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 		},
 		{
 			uc: "with error while creating on_error pipeline",
-			config: event2.RuleConfiguration{
+			config: event2.Configuration{
 				ID:           "foobar",
 				RuleMatcher:  event2.Matcher{URL: "http://foo.bar", Strategy: "glob"},
 				ErrorHandler: []config.MechanismConfig{{"error_handler": "foo"}},
@@ -629,7 +629,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 		},
 		{
 			uc: "without default rule and without any execute configuration",
-			config: event2.RuleConfiguration{
+			config: event2.Configuration{
 				ID:          "foobar",
 				RuleMatcher: event2.Matcher{URL: "http://foo.bar", Strategy: "regex"},
 			},
@@ -643,7 +643,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 		},
 		{
 			uc: "without default rule and with only authenticator configured",
-			config: event2.RuleConfiguration{
+			config: event2.Configuration{
 				ID:          "foobar",
 				RuleMatcher: event2.Matcher{URL: "http://foo.bar", Strategy: "glob"},
 				Execute:     []config.MechanismConfig{{"authenticator": "foo"}},
@@ -664,7 +664,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 		},
 		{
 			uc: "without default rule and with only authenticator and contextualizer configured",
-			config: event2.RuleConfiguration{
+			config: event2.Configuration{
 				ID:          "foobar",
 				RuleMatcher: event2.Matcher{URL: "http://foo.bar", Strategy: "glob"},
 				Execute: []config.MechanismConfig{
@@ -690,7 +690,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 		},
 		{
 			uc: "without default rule and with only authenticator, contextualizer and authorizer configured",
-			config: event2.RuleConfiguration{
+			config: event2.Configuration{
 				ID:          "foobar",
 				RuleMatcher: event2.Matcher{URL: "http://foo.bar", Strategy: "regex"},
 				Execute: []config.MechanismConfig{
@@ -719,7 +719,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 		},
 		{
 			uc: "without default rule and with authenticator and unifier configured, but without methods",
-			config: event2.RuleConfiguration{
+			config: event2.Configuration{
 				ID:          "foobar",
 				RuleMatcher: event2.Matcher{URL: "http://foo.bar", Strategy: "glob"},
 				Execute: []config.MechanismConfig{
@@ -745,7 +745,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 		},
 		{
 			uc: "without default rule but with minimum required configuration",
-			config: event2.RuleConfiguration{
+			config: event2.Configuration{
 				ID:          "foobar",
 				RuleMatcher: event2.Matcher{URL: "http://foo.bar", Strategy: "glob"},
 				Execute: []config.MechanismConfig{
@@ -781,7 +781,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 		},
 		{
 			uc: "with default rule and with id and url only",
-			config: event2.RuleConfiguration{
+			config: event2.Configuration{
 				ID:          "foobar",
 				RuleMatcher: event2.Matcher{URL: "http://foo.bar", Strategy: "glob"},
 			},
@@ -811,7 +811,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 		},
 		{
 			uc: "with default rule and with all attributes defined by the rule itself",
-			config: event2.RuleConfiguration{
+			config: event2.Configuration{
 				ID:          "foobar",
 				RuleMatcher: event2.Matcher{URL: "http://foo.bar", Strategy: "glob"},
 				Upstream:    "http://bar.foo",

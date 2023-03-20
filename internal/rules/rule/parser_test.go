@@ -33,13 +33,13 @@ func TestParseRules(t *testing.T) {
 		uc          string
 		contentType string
 		content     []byte
-		assert      func(t *testing.T, err error, ruleSet *RuleSetConfiguration)
+		assert      func(t *testing.T, err error, ruleSet *SetConfiguration)
 	}{
 		{
 			uc:          "unsupported content type and not empty contents",
 			contentType: "foobar",
 			content:     []byte(`foo: bar`),
-			assert: func(t *testing.T, err error, ruleSet *RuleSetConfiguration) {
+			assert: func(t *testing.T, err error, ruleSet *SetConfiguration) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -50,7 +50,7 @@ func TestParseRules(t *testing.T) {
 		{
 			uc:          "unsupported content type and empty contents",
 			contentType: "foobar",
-			assert: func(t *testing.T, err error, ruleSet *RuleSetConfiguration) {
+			assert: func(t *testing.T, err error, ruleSet *SetConfiguration) {
 				t.Helper()
 
 				require.ErrorIs(t, err, ErrEmptyRuleSet)
@@ -65,7 +65,7 @@ func TestParseRules(t *testing.T) {
 "name": "foo",
 "rules": [{"id": "bar"}]
 }`),
-			assert: func(t *testing.T, err error, ruleSet *RuleSetConfiguration) {
+			assert: func(t *testing.T, err error, ruleSet *SetConfiguration) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -78,7 +78,7 @@ func TestParseRules(t *testing.T) {
 		{
 			uc:          "JSON content type and empty contents",
 			contentType: "application/json",
-			assert: func(t *testing.T, err error, ruleSet *RuleSetConfiguration) {
+			assert: func(t *testing.T, err error, ruleSet *SetConfiguration) {
 				t.Helper()
 
 				require.ErrorIs(t, err, ErrEmptyRuleSet)
@@ -94,7 +94,7 @@ name: foo
 rules:
 - id: bar
 `),
-			assert: func(t *testing.T, err error, ruleSet *RuleSetConfiguration) {
+			assert: func(t *testing.T, err error, ruleSet *SetConfiguration) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -107,7 +107,7 @@ rules:
 		{
 			uc:          "YAML content and empty contents",
 			contentType: "application/yaml",
-			assert: func(t *testing.T, err error, ruleSet *RuleSetConfiguration) {
+			assert: func(t *testing.T, err error, ruleSet *SetConfiguration) {
 				t.Helper()
 
 				require.ErrorIs(t, err, ErrEmptyRuleSet)
@@ -131,11 +131,11 @@ func TestParseYAML(t *testing.T) {
 	for _, tc := range []struct {
 		uc     string
 		conf   []byte
-		assert func(t *testing.T, err error, ruleSet *RuleSetConfiguration)
+		assert func(t *testing.T, err error, ruleSet *SetConfiguration)
 	}{
 		{
 			uc: "empty rule set spec",
-			assert: func(t *testing.T, err error, ruleSet *RuleSetConfiguration) {
+			assert: func(t *testing.T, err error, ruleSet *SetConfiguration) {
 				t.Helper()
 
 				require.ErrorIs(t, err, ErrEmptyRuleSet)
@@ -144,7 +144,7 @@ func TestParseYAML(t *testing.T) {
 		{
 			uc:   "invalid rule set spec",
 			conf: []byte(`foo: bar`),
-			assert: func(t *testing.T, err error, ruleSet *RuleSetConfiguration) {
+			assert: func(t *testing.T, err error, ruleSet *SetConfiguration) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -158,7 +158,7 @@ name: foo
 rules:
 - id: bar
 `),
-			assert: func(t *testing.T, err error, ruleSet *RuleSetConfiguration) {
+			assert: func(t *testing.T, err error, ruleSet *SetConfiguration) {
 				t.Helper()
 
 				require.NoError(t, err)

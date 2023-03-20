@@ -26,7 +26,7 @@ type MockRuleFactory struct {
 	mock.Mock
 }
 
-func (m *MockRuleFactory) CreateRule(srcID string, ruleConfig rule.RuleConfiguration) (rule.Rule, error) {
+func (m *MockRuleFactory) CreateRule(srcID string, ruleConfig rule.Configuration) (rule.Rule, error) {
 	args := m.Called(srcID, ruleConfig)
 
 	if val := args.Get(0); val != nil {

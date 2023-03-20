@@ -50,9 +50,5 @@ func (c Claims) Validate(exp Expectation) error {
 		return err
 	}
 
-	if err := exp.AssertScopes(x.IfThenElse(len(c.Scp) != 0, c.Scp, c.Scope)); err != nil {
-		return err
-	}
-
-	return nil
+	return exp.AssertScopes(x.IfThenElse(len(c.Scp) != 0, c.Scp, c.Scope))
 }

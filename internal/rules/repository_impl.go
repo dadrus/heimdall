@@ -97,7 +97,7 @@ func (r *repository) watchRuleSetChanges() {
 	}
 }
 
-func (r *repository) loadRules(srcID string, ruleSet []rule.RuleConfiguration) ([]rule.Rule, error) {
+func (r *repository) loadRules(srcID string, ruleSet []rule.Configuration) ([]rule.Rule, error) {
 	rules := make([]rule.Rule, len(ruleSet))
 
 	for idx, rc := range ruleSet {
@@ -161,7 +161,7 @@ func (r *repository) removeRules(srcID string) {
 	r.rules = r.rules[:len(r.rules)-len(idxs)]
 }
 
-func (r *repository) onRuleSetCreated(srcID string, ruleSet []rule.RuleConfiguration) {
+func (r *repository) onRuleSetCreated(srcID string, ruleSet []rule.Configuration) {
 	// create rules
 	r.logger.Info().Str("_src", srcID).Msg("Loading rule set")
 

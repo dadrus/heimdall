@@ -36,6 +36,6 @@ func (t ChangeType) String() string {
 
 type RuleSetChangedEvent struct {
 	Src        string
-	RuleSet    []rule.RuleConfiguration
+	RuleSet    []rule.Configuration
 	ChangeType ChangeType
 }

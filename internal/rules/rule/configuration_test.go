@@ -41,8 +41,8 @@ func TestRuleSetConfigurationVerifyPathPrefixPathPrefixVerify(t *testing.T) {
 	} {
 		t.Run(tc.uc, func(t *testing.T) {
 			// GIVEN
-			rs := RuleSetConfiguration{
-				Rules: []RuleConfiguration{{RuleMatcher: Matcher{URL: tc.url}}},
+			rs := SetConfiguration{
+				Rules: []Configuration{{RuleMatcher: Matcher{URL: tc.url}}},
 			}
 
 			// WHEN
@@ -61,9 +61,9 @@ func TestRuleConfigDeepCopyInto(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
-	var out RuleConfiguration
+	var out Configuration
 
-	in := RuleConfiguration{
+	in := Configuration{
 		ID: "foo",
 		RuleMatcher: Matcher{
 			URL:      "bar",
@@ -92,7 +92,7 @@ func TestRuleConfigDeepCopy(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
-	in := RuleConfiguration{
+	in := Configuration{
 		ID: "foo",
 		RuleMatcher: Matcher{
 			URL:      "bar",
