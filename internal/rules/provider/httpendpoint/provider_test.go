@@ -256,7 +256,12 @@ endpoints:
 				t.Helper()
 
 				w.Header().Set("Content-Type", "application/yaml")
-				_, err := w.Write([]byte("- id: foo"))
+				_, err := w.Write([]byte(`
+version: "1"
+name: test
+rules:
+- id: foo
+`))
 				require.NoError(t, err)
 			},
 			assert: func(t *testing.T, logs fmt.Stringer, queue event.RuleSetChangedEventQueue) {
@@ -287,7 +292,12 @@ endpoints:
 				t.Helper()
 
 				w.Header().Set("Content-Type", "application/yaml")
-				_, err := w.Write([]byte("- id: bar"))
+				_, err := w.Write([]byte(`
+version: "1"
+name: test
+rules:
+- id: bar
+`))
 				require.NoError(t, err)
 			},
 			assert: func(t *testing.T, logs fmt.Stringer, queue event.RuleSetChangedEventQueue) {
@@ -323,13 +333,23 @@ endpoints:
 					switch callIdx {
 					case 1:
 						w.Header().Set("Content-Type", "application/yaml")
-						_, err := w.Write([]byte("- id: bar"))
+						_, err := w.Write([]byte(`
+version: "1"
+name: test
+rules:
+- id: bar
+`))
 						require.NoError(t, err)
 					case 2:
 						w.WriteHeader(http.StatusInternalServerError)
 					default:
 						w.Header().Set("Content-Type", "application/yaml")
-						_, err := w.Write([]byte("- id: bar"))
+						_, err := w.Write([]byte(`
+version: "1"
+name: test
+rules:
+- id: bar
+`))
 						require.NoError(t, err)
 					}
 
@@ -380,19 +400,39 @@ endpoints:
 					switch callIdx {
 					case 1:
 						w.Header().Set("Content-Type", "application/yaml")
-						_, err := w.Write([]byte("- id: bar"))
+						_, err := w.Write([]byte(`
+version: "1"
+name: test
+rules:
+- id: bar
+`))
 						require.NoError(t, err)
 					case 2:
 						w.Header().Set("Content-Type", "application/yaml")
-						_, err := w.Write([]byte("- id: baz"))
+						_, err := w.Write([]byte(`
+version: "1"
+name: test
+rules:
+- id: baz
+`))
 						require.NoError(t, err)
 					case 3:
 						w.Header().Set("Content-Type", "application/yaml")
-						_, err := w.Write([]byte("- id: foo"))
+						_, err := w.Write([]byte(`
+version: "1"
+name: test
+rules:
+- id: foo
+`))
 						require.NoError(t, err)
 					default:
 						w.Header().Set("Content-Type", "application/yaml")
-						_, err := w.Write([]byte("- id: foz"))
+						_, err := w.Write([]byte(`
+version: "1"
+name: test
+rules:
+- id: foz
+`))
 						require.NoError(t, err)
 					}
 
@@ -461,7 +501,12 @@ endpoints:
 
 				w.Header().Set("Expires", time.Now().Add(20*time.Second).UTC().Format(http.TimeFormat))
 				w.Header().Set("Content-Type", "application/yaml")
-				_, err := w.Write([]byte("- id: bar"))
+				_, err := w.Write([]byte(`
+version: "1"
+name: test
+rules:
+- id: bar
+`))
 				require.NoError(t, err)
 			},
 			assert: func(t *testing.T, logs fmt.Stringer, queue event.RuleSetChangedEventQueue) {
@@ -493,7 +538,12 @@ endpoints:
 
 				w.Header().Set("Expires", time.Now().Add(20*time.Second).UTC().Format(http.TimeFormat))
 				w.Header().Set("Content-Type", "application/yaml")
-				_, err := w.Write([]byte("- id: bar"))
+				_, err := w.Write([]byte(`
+version: "1"
+name: test
+rules:
+- id: bar
+`))
 				require.NoError(t, err)
 			},
 			assert: func(t *testing.T, logs fmt.Stringer, queue event.RuleSetChangedEventQueue) {
