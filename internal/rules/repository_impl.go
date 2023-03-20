@@ -176,6 +176,6 @@ func (r *repository) onRuleSetCreated(srcID string, ruleSet []rule.Configuration
 	}
 }
 
-func (r *repository) onRuleSetDeleted(src string) {
-	r.removeRules(src)
+func (r *repository) onRuleSetDeleted(srcID string) {
+	r.removeRules(srcID)
 }
