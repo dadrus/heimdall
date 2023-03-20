@@ -181,14 +181,19 @@ func TestFetchRuleSets(t *testing.T) { //nolint:maintidx
 			setup: func(t *testing.T) {
 				t.Helper()
 
-				data := `[{
-					"id": "foobar",
-					"match": "http://<**>/bar/foo/api",
-					"methods": ["GET", "POST"],
-					"execute": [
-						{ "authenticator": "foobar" }
-					]
-				}]`
+				data := `
+{
+	"version": "1",
+	"name": "test",
+	"rules": [{
+		"id": "foobar",
+		"match": "http://<**>/bar/foo/api",
+		"methods": ["GET", "POST"],
+		"execute": [
+			{ "authenticator": "foobar" }
+		]
+	}]
+}`
 
 				_, err := backend.PutObject(bucketName, "test-rule",
 					map[string]string{"Content-Type": "application/json"},
@@ -216,17 +221,24 @@ func TestFetchRuleSets(t *testing.T) { //nolint:maintidx
 			setup: func(t *testing.T) {
 				t.Helper()
 
-				ruleSet1 := `[
+				ruleSet1 := `
 {
-	"id": "foobar",
-	"match": "http://<**>/foo/bar/api1",
-	"methods": ["GET", "POST"],
-	"execute": [
-		{ "authenticator": "foobar" }
-	]
-}]`
+	"version": "1",
+	"name": "test",
+	"rules": [{
+		"id": "foobar",
+		"match": "http://<**>/foo/bar/api1",
+		"methods": ["GET", "POST"],
+		"execute": [
+			{ "authenticator": "foobar" }
+		]
+	}]
+}`
 
 				ruleSet2 := `
+version: "1"
+name: test2
+rules:
 - id: barfoo
   match: http://<**>/foo/bar/api2
   methods: 
@@ -276,25 +288,29 @@ func TestFetchRuleSets(t *testing.T) { //nolint:maintidx
 			setup: func(t *testing.T) {
 				t.Helper()
 
-				ruleSet1 := `[
-				{
+				ruleSet1 := `{
+				"version": "1",
+				"name": "test1",
+				"rules": [{
 					"id": "foobar",
 					"match": "http://<**>/foo/bar/api1",
 					"methods": ["GET", "POST"],
 					"execute": [
 						{ "authenticator": "foobar" }
 					]
-				}]`
+				}]}`
 
-				ruleSet2 := `[
-				{
+				ruleSet2 := `{
+				"version": "1",
+				"name": "test2",
+				"rules": [{
 					"id": "barfoo",
 					"url": "http://<**>/foo/bar/api2",
 					"methods": ["GET", "POST"],
 					"execute": [
 						{ "authenticator": "barfoo" }
 					]
-				}]`
+				}]}`
 
 				_, err := backend.PutObject(bucketName, "api-rule",
 					map[string]string{"Content-Type": "application/json"},
@@ -378,15 +394,17 @@ func TestFetchRuleSets(t *testing.T) { //nolint:maintidx
 			setup: func(t *testing.T) {
 				t.Helper()
 
-				ruleSet1 := `[
-				{
+				ruleSet1 := `{
+				"version": "1",
+				"name": "test",
+				"rules": [{
 					"id": "foobar",
 					"match": "http://<**>/foo/bar/api1",
 					"methods": ["GET", "POST"],
 					"execute": [
 						{ "authenticator": "foobar" }
 					]
-				}]`
+				}]}`
 
 				_, err := backend.PutObject(bucketName, "ruleset",
 					map[string]string{"Content-Type": "application/json"},

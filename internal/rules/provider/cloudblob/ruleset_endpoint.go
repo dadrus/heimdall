@@ -34,8 +34,6 @@ import (
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
-var errEmptyRuleSet = errors.New("empty rule set")
-
 type ruleSetEndpoint struct {
 	URL             *url.URL `mapstructure:"url"`
 	Prefix          string   `mapstructure:"prefix"`
@@ -79,7 +77,7 @@ func (e *ruleSetEndpoint) readAllBlobs(ctx context.Context, bucket *blob.Bucket)
 
 		ruleSet, err := e.readRuleSet(ctx, bucket, obj.Key)
 		if err != nil {
-			if errors.Is(err, errEmptyRuleSet) {
+			if errors.Is(err, rule.ErrEmptyRuleSet) {
 				continue
 			}
 
@@ -95,7 +93,7 @@ func (e *ruleSetEndpoint) readAllBlobs(ctx context.Context, bucket *blob.Bucket)
 func (e *ruleSetEndpoint) readSingleBlob(ctx context.Context, bucket *blob.Bucket) ([]RuleSet, error) {
 	ruleSet, err := e.readRuleSet(ctx, bucket, e.URL.Path)
 	if err != nil {
-		if errors.Is(err, errEmptyRuleSet) {
+		if errors.Is(err, rule.ErrEmptyRuleSet) {
 			return []RuleSet{}, nil
 		}
 

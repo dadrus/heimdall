@@ -243,7 +243,12 @@ buckets:
 			setupBucket: func(t *testing.T) {
 				t.Helper()
 
-				data := "- id: foo"
+				data := `
+version: "1"
+name: test
+rules:
+- id: foo
+`
 
 				_, err := backend.PutObject(bucketName, "test-rule",
 					map[string]string{"Content-Type": "application/yaml"},
@@ -276,7 +281,12 @@ buckets:
 			setupBucket: func(t *testing.T) {
 				t.Helper()
 
-				data := "- id: foo"
+				data := `
+version: "1"
+name: test
+rules:
+- id: foo
+`
 
 				_, err := backend.PutObject(bucketName, "test-rule",
 					map[string]string{"Content-Type": "application/yaml"},
@@ -314,7 +324,12 @@ buckets:
 
 					switch callIdx {
 					case 1:
-						data := "- id: foo"
+						data := `
+version: "1"
+name: test
+rules:
+- id: foo
+`
 
 						_, err := backend.PutObject(bucketName, "test-rule1",
 							map[string]string{"Content-Type": "application/yaml"},
@@ -323,7 +338,12 @@ buckets:
 					case 2:
 						clearBucket(t)
 					default:
-						data := "- id: bar"
+						data := `
+version: "1"
+name: test
+rules:
+- id: bar
+`
 
 						_, err := backend.PutObject(bucketName, "test-rule2",
 							map[string]string{"Content-Type": "application/yaml"},
@@ -384,21 +404,36 @@ buckets:
 
 					switch callIdx {
 					case 1:
-						data := "- id: foo"
+						data := `
+version: "1"
+name: test
+rules:
+- id: foo
+`
 
 						_, err := backend.PutObject(bucketName, "test-rule",
 							map[string]string{"Content-Type": "application/yaml"},
 							strings.NewReader(data), int64(len(data)))
 						require.NoError(t, err)
 					case 2:
-						data := "- id: bar"
+						data := `
+version: "1"
+name: test
+rules:
+- id: bar
+`
 
 						_, err := backend.PutObject(bucketName, "test-rule",
 							map[string]string{"Content-Type": "application/yaml"},
 							strings.NewReader(data), int64(len(data)))
 						require.NoError(t, err)
 					default:
-						data := "- id: baz"
+						data := `
+version: "1"
+name: test
+rules:
+- id: baz
+`
 
 						_, err := backend.PutObject(bucketName, "test-rule",
 							map[string]string{"Content-Type": "application/yaml"},

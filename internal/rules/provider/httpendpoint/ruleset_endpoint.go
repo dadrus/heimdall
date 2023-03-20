@@ -74,7 +74,7 @@ func (e *ruleSetEndpoint) FetchRuleSet(ctx context.Context) (RuleSet, error) {
 	contents, err := rule.ParseRules(resp.Header.Get("Content-Type"), io.TeeReader(resp.Body, md))
 	if err != nil {
 		if errors.Is(err, rule.ErrEmptyRuleSet) {
-			return RuleSet{Hash: md.Sum(nil)}, nil
+			return RuleSet{}, nil
 		}
 
 		return RuleSet{}, errorchain.NewWithMessage(heimdall.ErrInternal, "failed to parse received rule set").

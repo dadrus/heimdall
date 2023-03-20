@@ -191,7 +191,7 @@ rules:
 
 				require.NotNil(t, ruleSet)
 				require.Empty(t, ruleSet.Rules)
-				require.NotEmpty(t, ruleSet.Hash)
+				require.Empty(t, ruleSet.Hash)
 			},
 		},
 		{
