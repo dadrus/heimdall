@@ -42,11 +42,7 @@ func TestRepositoryAddAndRemoveRulesFromSameRuleSet(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
-	r, err := NewRepository(nil, nil, *zerolog.Ctx(context.Background()))
-	require.NoError(t, err)
-
-	repo, ok := r.(*repository)
-	require.True(t, ok)
+	repo := newRepository(nil, nil, *zerolog.Ctx(context.Background()))
 
 	// WHEN
 	repo.addRule(&ruleImpl{id: "1", srcID: "bar"})
@@ -160,11 +156,7 @@ func TestRepositoryFindRule(t *testing.T) {
 			factory := &mocks.MockRuleFactory{}
 			configureMocks(t, factory)
 
-			r, err := NewRepository(nil, factory, *zerolog.Ctx(context.Background()))
-			require.NoError(t, err)
-
-			repo, ok := r.(*repository)
-			require.True(t, ok)
+			repo := newRepository(nil, factory, *zerolog.Ctx(context.Background()))
 
 			addRules(t, repo)
 
@@ -182,11 +174,7 @@ func TestRepositoryAddAndRemoveRulesFromDifferentRuleSets(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
-	r, err := NewRepository(nil, nil, *zerolog.Ctx(context.Background()))
-	require.NoError(t, err)
-
-	repo, ok := r.(*repository)
-	require.True(t, ok)
+	repo := newRepository(nil, nil, *zerolog.Ctx(context.Background()))
 
 	// WHEN
 	repo.addRule(&ruleImpl{id: "1", srcID: "bar"})
@@ -233,16 +221,12 @@ func TestRepositoryRuleSetLifecycleManagement(t *testing.T) {
 	queue := make(event.RuleSetChangedEventQueue, 10)
 	defer close(queue)
 
-	repo, err := NewRepository(queue, nil, log.Logger)
-	require.NoError(t, err)
+	repo := newRepository(queue, nil, log.Logger)
 
-	impl, ok := repo.(*repository)
-	require.True(t, ok)
-
-	require.NoError(t, impl.Start(ctx))
+	require.NoError(t, repo.Start(ctx))
 
 	// nolint: errcheck
-	defer impl.Stop(ctx)
+	defer repo.Stop(ctx)
 
 	for _, tc := range []struct {
 		uc             string
@@ -442,7 +426,7 @@ func TestRepositoryRuleSetLifecycleManagement(t *testing.T) {
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
 			// GIVEN
-			impl.rules = make([]rule.Rule, defaultRuleListSize)
+			repo.rules = make([]rule.Rule, defaultRuleListSize)
 
 			configureMocks := x.IfThenElse(tc.configureMocks != nil,
 				tc.configureMocks,
@@ -451,7 +435,7 @@ func TestRepositoryRuleSetLifecycleManagement(t *testing.T) {
 			factory := &mocks.MockRuleFactory{}
 			configureMocks(t, factory)
 
-			impl.rf = factory
+			repo.rf = factory
 
 			// WHEN
 			for _, evt := range tc.events {
@@ -461,7 +445,7 @@ func TestRepositoryRuleSetLifecycleManagement(t *testing.T) {
 			time.Sleep(100 * time.Millisecond)
 
 			// THEN
-			tc.assert(t, impl)
+			tc.assert(t, repo)
 			factory.AssertExpectations(t)
 		})
 	}

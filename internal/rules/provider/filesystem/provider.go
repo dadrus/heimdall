@@ -228,7 +228,7 @@ func (p *provider) notifyRuleSetCreated(evt fsnotify.Event) {
 	}
 
 	p.ruleSetChanged(event.RuleSetChangedEvent{
-		Src:        fmt.Sprintf("%s:%s:%s", "file_system", file, ruleSet.Name),
+		Src:        fmt.Sprintf("file_system:%s:%s", file, ruleSet.Name),
 		RuleSet:    ruleSet.Rules,
 		ChangeType: event.Create,
 	})

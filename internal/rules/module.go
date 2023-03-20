@@ -36,8 +36,21 @@ var Module = fx.Options(
 
 		return make(event.RuleSetChangedEventQueue, defaultQueueSize)
 	}),
-	fx.Provide(NewRepository, NewRuleFactory),
-	fx.Invoke(registerRuleDefinitionHandler, registerRuleSetChangedEventQueueCloser),
+	fx.Provide(
+		func(queue event.RuleSetChangedEventQueue,
+			ruleFactory RuleFactory,
+			logger zerolog.Logger,
+		) (Repository, RuleSetObserver) {
+			repo := newRepository(queue, ruleFactory, logger)
+
+			return repo, repo
+		},
+		NewRuleFactory,
+	),
+	fx.Invoke(
+		registerRuleSetObserver,
+		registerRuleSetChangedEventQueueCloser,
+	),
 	provider.Module,
 )
 
@@ -57,18 +70,11 @@ func registerRuleSetChangedEventQueueCloser(
 	})
 }
 
-func registerRuleDefinitionHandler(lifecycle fx.Lifecycle, logger zerolog.Logger, r Repository) {
-	rdf, ok := r.(ruleSetDefinitionLoader)
-	if !ok {
-		logger.Fatal().Msg("No rule set definition loader available")
-
-		return
-	}
-
+func registerRuleSetObserver(lifecycle fx.Lifecycle, observer RuleSetObserver) {
 	lifecycle.Append(
 		fx.Hook{
-			OnStart: func(ctx context.Context) error { return rdf.Start(ctx) },
-			OnStop:  func(ctx context.Context) error { return rdf.Stop(ctx) },
+			OnStart: func(ctx context.Context) error { return observer.Start(ctx) },
+			OnStop:  func(ctx context.Context) error { return observer.Stop(ctx) },
 		},
 	)
 }
