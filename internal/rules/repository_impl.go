@@ -17,7 +17,7 @@ const defaultRuleListSize = 0
 
 func newRepository(
 	queue event.RuleSetChangedEventQueue,
-	ruleFactory RuleFactory,
+	ruleFactory rule.Factory,
 	logger zerolog.Logger,
 ) *repository {
 	return &repository{
@@ -30,7 +30,7 @@ func newRepository(
 }
 
 type repository struct {
-	rf     RuleFactory
+	rf     rule.Factory
 	logger zerolog.Logger
 
 	rules []rule.Rule
