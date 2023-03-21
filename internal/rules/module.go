@@ -51,10 +51,10 @@ var Module = fx.Options(
 		NewRuleFactory,
 		fx.Annotate(
 			newRepository,
-			fx.OnStart(func(ctx context.Context, o RuleSetObserver) error { return o.Start(ctx) }),
-			fx.OnStop(func(ctx context.Context, o RuleSetObserver) error { return o.Stop(ctx) }),
-			fx.As(new(Repository), new(RuleSetObserver)),
+			fx.OnStart(func(ctx context.Context, o *repository) error { return o.Start(ctx) }),
+			fx.OnStop(func(ctx context.Context, o *repository) error { return o.Stop(ctx) }),
 		),
+		func(r *repository) Repository { return r },
 	),
 	provider.Module,
 )
