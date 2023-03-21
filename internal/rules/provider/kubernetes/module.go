@@ -26,7 +26,7 @@ import (
 // Module is used on app bootstrap.
 // nolint: gochecknoglobals
 var Module = fx.Options(
-	fx.Provide(func() ConfigFactory { return rest.InClusterConfig }),
+	fx.Provide(func() ConfigFactory { return rest.InClusterConfig }, fx.Private),
 	fx.Invoke(
 		fx.Annotate(
 			newProvider,
