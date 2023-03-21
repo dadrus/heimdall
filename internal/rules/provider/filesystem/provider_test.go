@@ -26,6 +26,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/rules/event"
 	"github.com/dadrus/heimdall/internal/x"
 )
@@ -54,8 +55,9 @@ func TestStartProvider(t *testing.T) {
 				t.Helper()
 
 				return &provider{
-					src: "foo.bar",
-					l:   log.Logger,
+					src:        "foo.bar",
+					l:          log.Logger,
+					configured: true,
 				}
 			},
 			assert: func(t *testing.T, err error, provider *provider) {
@@ -73,8 +75,9 @@ func TestStartProvider(t *testing.T) {
 				require.NoError(t, file.Chmod(0o200))
 
 				return &provider{
-					src: file.Name(),
-					l:   log.Logger,
+					src:        file.Name(),
+					l:          log.Logger,
+					configured: true,
 				}
 			},
 			assert: func(t *testing.T, err error, provider *provider) {
@@ -90,9 +93,10 @@ func TestStartProvider(t *testing.T) {
 				t.Helper()
 
 				return &provider{
-					src: file.Name(),
-					l:   log.Logger,
-					q:   make(event.RuleSetChangedEventQueue, 10),
+					src:        file.Name(),
+					l:          log.Logger,
+					q:          make(event.RuleSetChangedEventQueue, 10),
+					configured: true,
 				}
 			},
 			assert: func(t *testing.T, err error, provider *provider) {
@@ -109,16 +113,17 @@ func TestStartProvider(t *testing.T) {
 				t.Helper()
 
 				_, err := file.Write([]byte(`
-version: 0.5.0-alpha
+version: "1"
 rules:
 - id: foo
 `))
 				require.NoError(t, err)
 
 				return &provider{
-					src: file.Name(),
-					l:   log.Logger,
-					q:   make(event.RuleSetChangedEventQueue, 10),
+					src:        file.Name(),
+					l:          log.Logger,
+					q:          make(event.RuleSetChangedEventQueue, 10),
+					configured: true,
 				}
 			},
 			assert: func(t *testing.T, err error, provider *provider) {
@@ -142,9 +147,10 @@ rules:
 				t.Helper()
 
 				return &provider{
-					src: dir,
-					l:   log.Logger,
-					q:   make(event.RuleSetChangedEventQueue, 10),
+					src:        dir,
+					l:          log.Logger,
+					q:          make(event.RuleSetChangedEventQueue, 10),
+					configured: true,
 				}
 			},
 			assert: func(t *testing.T, err error, provider *provider) {
@@ -164,16 +170,17 @@ rules:
 				require.NoError(t, err)
 
 				_, err = tmpFile.Write([]byte(`
-version: 0.5.0-alpha
+version: "1"
 rules:
 - id: foo
 `))
 				require.NoError(t, err)
 
 				return &provider{
-					src: dir,
-					l:   log.Logger,
-					q:   make(event.RuleSetChangedEventQueue, 10),
+					src:        dir,
+					l:          log.Logger,
+					q:          make(event.RuleSetChangedEventQueue, 10),
+					configured: true,
 				}
 			},
 			assert: func(t *testing.T, err error, provider *provider) {
@@ -202,13 +209,18 @@ rules:
 				tmpFile, err := os.CreateTemp(tmpDir, "test-rule-")
 				require.NoError(t, err)
 
-				_, err = tmpFile.Write([]byte(`- id: foo`))
+				_, err = tmpFile.Write([]byte(`
+version: "1"
+rules:
+- id: foo
+`))
 				require.NoError(t, err)
 
 				return &provider{
-					src: dir,
-					l:   log.Logger,
-					q:   make(event.RuleSetChangedEventQueue, 10),
+					src:        dir,
+					l:          log.Logger,
+					q:          make(event.RuleSetChangedEventQueue, 10),
+					configured: true,
 				}
 			},
 			assert: func(t *testing.T, err error, provider *provider) {
@@ -225,8 +237,14 @@ rules:
 			createProvider: func(t *testing.T, file *os.File, dir string) *provider {
 				t.Helper()
 
+				conf := &config.Configuration{
+					Rules: config.Rules{
+						Providers: config.RuleProviders{FileSystem: map[string]any{"src": dir, "watch": true}},
+					},
+				}
+
 				provider, err := newProvider(
-					map[string]any{"src": dir, "watch": true},
+					conf,
 					make(event.RuleSetChangedEventQueue, 10),
 					log.Logger)
 				require.NoError(t, err)
@@ -242,7 +260,7 @@ rules:
 				time.Sleep(200 * time.Millisecond)
 
 				_, err = tmpFile.Write([]byte(`
-version: 0.5.0-alpha
+version: "1"
 rules:
 - id: foo
 `))
@@ -285,8 +303,14 @@ rules:
 			createProvider: func(t *testing.T, file *os.File, dir string) *provider {
 				t.Helper()
 
+				conf := &config.Configuration{
+					Rules: config.Rules{
+						Providers: config.RuleProviders{FileSystem: map[string]any{"src": file.Name(), "watch": true}},
+					},
+				}
+
 				provider, err := newProvider(
-					map[string]any{"src": file.Name(), "watch": true},
+					conf,
 					make(event.RuleSetChangedEventQueue, 10),
 					log.Logger)
 				require.NoError(t, err)
@@ -297,7 +321,7 @@ rules:
 				t.Helper()
 
 				_, err := file.Write([]byte(`
-version: 0.5.0-alpha
+version: "1"
 rules:
 - id: foo
 `))

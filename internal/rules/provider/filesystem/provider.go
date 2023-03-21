@@ -19,13 +19,13 @@ package filesystem
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"os"
 	"path/filepath"
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/rs/zerolog"
 
+	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/event"
 	"github.com/dadrus/heimdall/internal/rules/rule"
@@ -33,35 +33,42 @@ import (
 )
 
 type provider struct {
-	src string
-	w   *fsnotify.Watcher
-	q   event.RuleSetChangedEventQueue
-	l   zerolog.Logger
+	src        string
+	w          *fsnotify.Watcher
+	q          event.RuleSetChangedEventQueue
+	l          zerolog.Logger
+	configured bool
 }
 
 func newProvider(
-	rawConf map[string]any,
+	conf *config.Configuration,
 	queue event.RuleSetChangedEventQueue,
 	logger zerolog.Logger,
 ) (*provider, error) {
+	rawConf := conf.Rules.Providers.FileSystem
+
+	if conf.Rules.Providers.FileSystem == nil {
+		return &provider{}, nil
+	}
+
 	type Config struct {
 		Src   string `koanf:"src"`
 		Watch bool   `koanf:"watch"`
 	}
 
-	var conf Config
-	if err := decodeConfig(rawConf, &conf); err != nil {
+	var providerConf Config
+	if err := decodeConfig(rawConf, &providerConf); err != nil {
 		return nil, errorchain.
 			NewWithMessage(heimdall.ErrConfiguration, "failed to decode file_system rule provider config").
 			CausedBy(err)
 	}
 
-	if len(conf.Src) == 0 {
+	if len(providerConf.Src) == 0 {
 		return nil, errorchain.
 			NewWithMessage(heimdall.ErrConfiguration, "no src configured for file_system rule provider")
 	}
 
-	absPath, err := filepath.Abs(conf.Src)
+	absPath, err := filepath.Abs(providerConf.Src)
 	if err != nil {
 		return nil, errorchain.
 			NewWithMessage(heimdall.ErrInternal, "failed to get the absolute path for the configured src").
@@ -77,7 +84,7 @@ func newProvider(
 	}
 
 	var watcher *fsnotify.Watcher
-	if conf.Watch {
+	if providerConf.Watch {
 		watcher, err = fsnotify.NewWatcher()
 		if err != nil {
 			return nil, errorchain.
@@ -86,15 +93,23 @@ func newProvider(
 		}
 	}
 
+	logger = logger.With().Str("_provider_type", "file_system").Logger()
+	logger.Info().Msg("Rule provider configured.")
+
 	return &provider{
-		src: absPath,
-		w:   watcher,
-		q:   queue,
-		l:   logger,
+		src:        absPath,
+		w:          watcher,
+		q:          queue,
+		l:          logger,
+		configured: true,
 	}, nil
 }
 
 func (p *provider) Start(_ context.Context) error {
+	if !p.configured {
+		return nil
+	}
+
 	p.l.Info().
 		Str("_rule_provider_type", "file_system").
 		Msg("Starting rule definitions provider")
@@ -129,6 +144,10 @@ func (p *provider) Start(_ context.Context) error {
 }
 
 func (p *provider) Stop(_ context.Context) error {
+	if !p.configured {
+		return nil
+	}
+
 	p.l.Info().
 		Str("_rule_provider_type", "file_system").
 		Msg("Tearing down rule provider")
@@ -228,7 +247,7 @@ func (p *provider) notifyRuleSetCreated(evt fsnotify.Event) {
 	}
 
 	p.ruleSetChanged(event.RuleSetChangedEvent{
-		Src:        fmt.Sprintf("file_system:%s:%s", file, ruleSet.Name),
+		Src:        "file_system:" + file,
 		RuleSet:    ruleSet.Rules,
 		ChangeType: event.Create,
 	})
@@ -301,7 +320,7 @@ func (p *provider) loadInitialRuleSet() error {
 		}
 
 		p.ruleSetChanged(event.RuleSetChangedEvent{
-			Src:        fmt.Sprintf("%s:%s:%s", "file_system", src, ruleSet.Name),
+			Src:        "file_system:" + src,
 			RuleSet:    ruleSet.Rules,
 			ChangeType: event.Create,
 		})
