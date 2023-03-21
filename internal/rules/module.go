@@ -31,50 +31,30 @@ const defaultQueueSize = 20
 // Module is invoked on app bootstrapping.
 // nolint: gochecknoglobals
 var Module = fx.Options(
-	fx.Provide(func(logger zerolog.Logger) event.RuleSetChangedEventQueue {
-		logger.Debug().Msg("Creating rule set event queue.")
-
-		return make(event.RuleSetChangedEventQueue, defaultQueueSize)
-	}),
 	fx.Provide(
-		func(queue event.RuleSetChangedEventQueue,
-			ruleFactory RuleFactory,
-			logger zerolog.Logger,
-		) (Repository, RuleSetObserver) {
-			repo := newRepository(queue, ruleFactory, logger)
+		fx.Annotate(
+			func(logger zerolog.Logger) event.RuleSetChangedEventQueue {
+				logger.Debug().Msg("Creating rule set event queue.")
 
-			return repo, repo
-		},
-		NewRuleFactory,
+				return make(event.RuleSetChangedEventQueue, defaultQueueSize)
+			},
+			fx.OnStop(
+				func(queue event.RuleSetChangedEventQueue, logger zerolog.Logger) {
+					logger.Debug().Msg("Closing rule set event queue")
+
+					close(queue)
+				},
+			),
+		),
 	),
-	fx.Invoke(
-		registerRuleSetObserver,
-		registerRuleSetChangedEventQueueCloser,
+	fx.Provide(
+		NewRuleFactory,
+		fx.Annotate(
+			newRepository,
+			fx.OnStart(func(ctx context.Context, o RuleSetObserver) error { return o.Start(ctx) }),
+			fx.OnStop(func(ctx context.Context, o RuleSetObserver) error { return o.Stop(ctx) }),
+			fx.As(new(Repository), new(RuleSetObserver)),
+		),
 	),
 	provider.Module,
 )
-
-func registerRuleSetChangedEventQueueCloser(
-	lifecycle fx.Lifecycle,
-	queue event.RuleSetChangedEventQueue,
-	logger zerolog.Logger,
-) {
-	lifecycle.Append(fx.Hook{
-		OnStop: func(ctx context.Context) error {
-			logger.Debug().Msg("Closing rule set event queue")
-
-			close(queue)
-
-			return nil
-		},
-	})
-}
-
-func registerRuleSetObserver(lifecycle fx.Lifecycle, observer RuleSetObserver) {
-	lifecycle.Append(
-		fx.Hook{
-			OnStart: func(ctx context.Context) error { return observer.Start(ctx) },
-			OnStop:  func(ctx context.Context) error { return observer.Stop(ctx) },
-		},
-	)
-}
