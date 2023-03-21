@@ -209,7 +209,7 @@ func (p *provider) addRuleSet(obj any) {
 	p.ruleSetChanged(event.RuleSetChangedEvent{
 		Src:        fmt.Sprintf("%s:%s:%s:%s", ProviderType, rs.Namespace, rs.Name, rs.UID),
 		ChangeType: event.Create,
-		RuleSet:    rs.Spec.Rules,
+		Rules:      rs.Spec.Rules,
 	})
 }
 

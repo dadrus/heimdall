@@ -24,18 +24,26 @@ type ChangeType uint32
 const (
 	Create ChangeType = 1 << iota
 	Remove
+	Update
 )
 
 func (t ChangeType) String() string {
-	if t == Create {
+	switch t {
+	case Create:
 		return "Create"
+	case Remove:
+		return "Remove"
+	case Update:
+		return "Update"
+	default:
+		return "Unknown"
 	}
-
-	return "Remove"
 }
 
 type RuleSetChangedEvent struct {
 	Src        string
-	RuleSet    []rule.Configuration
+	Name       string
+	Hash       []byte
+	Rules      []rule.Configuration
 	ChangeType ChangeType
 }

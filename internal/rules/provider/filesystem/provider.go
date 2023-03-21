@@ -248,7 +248,7 @@ func (p *provider) notifyRuleSetCreated(evt fsnotify.Event) {
 
 	p.ruleSetChanged(event.RuleSetChangedEvent{
 		Src:        "file_system:" + file,
-		RuleSet:    ruleSet.Rules,
+		Rules:      ruleSet.Rules,
 		ChangeType: event.Create,
 	})
 }
@@ -321,7 +321,7 @@ func (p *provider) loadInitialRuleSet() error {
 
 		p.ruleSetChanged(event.RuleSetChangedEvent{
 			Src:        "file_system:" + src,
-			RuleSet:    ruleSet.Rules,
+			Rules:      ruleSet.Rules,
 			ChangeType: event.Create,
 		})
 	}

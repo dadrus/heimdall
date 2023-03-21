@@ -272,8 +272,8 @@ rules:
 
 				evt := <-queue
 				assert.Contains(t, evt.Src, "blob:test-rule@s3")
-				assert.Len(t, evt.RuleSet, 1)
-				assert.Equal(t, "foo", evt.RuleSet[0].ID)
+				assert.Len(t, evt.Rules, 1)
+				assert.Equal(t, "foo", evt.Rules[0].ID)
 				assert.Equal(t, event.Create, evt.ChangeType)
 			},
 		},
@@ -310,8 +310,8 @@ rules:
 
 				evt := <-queue
 				assert.Contains(t, evt.Src, "blob:test-rule@s3")
-				assert.Len(t, evt.RuleSet, 1)
-				assert.Equal(t, "foo", evt.RuleSet[0].ID)
+				assert.Len(t, evt.Rules, 1)
+				assert.Equal(t, "foo", evt.Rules[0].ID)
 				assert.Equal(t, event.Create, evt.ChangeType)
 			},
 		},
@@ -379,19 +379,19 @@ rules:
 
 				evt := <-queue
 				assert.Contains(t, evt.Src, "blob:test-rule1@s3")
-				assert.Len(t, evt.RuleSet, 1)
-				assert.Equal(t, "foo", evt.RuleSet[0].ID)
+				assert.Len(t, evt.Rules, 1)
+				assert.Equal(t, "foo", evt.Rules[0].ID)
 				assert.Equal(t, event.Create, evt.ChangeType)
 
 				evt = <-queue
 				assert.Contains(t, evt.Src, "blob:test-rule1@s3")
-				assert.Len(t, evt.RuleSet, 0)
+				assert.Len(t, evt.Rules, 0)
 				assert.Equal(t, event.Remove, evt.ChangeType)
 
 				evt = <-queue
 				assert.Contains(t, evt.Src, "blob:test-rule2@s3")
-				assert.Len(t, evt.RuleSet, 1)
-				assert.Equal(t, "bar", evt.RuleSet[0].ID)
+				assert.Len(t, evt.Rules, 1)
+				assert.Equal(t, "bar", evt.Rules[0].ID)
 				assert.Equal(t, event.Create, evt.ChangeType)
 			},
 		},
@@ -469,30 +469,30 @@ rules:
 
 				evt := <-queue
 				assert.Contains(t, evt.Src, "blob:test-rule@s3")
-				assert.Len(t, evt.RuleSet, 1)
-				assert.Equal(t, "foo", evt.RuleSet[0].ID)
+				assert.Len(t, evt.Rules, 1)
+				assert.Equal(t, "foo", evt.Rules[0].ID)
 				assert.Equal(t, event.Create, evt.ChangeType)
 
 				evt = <-queue
 				assert.Contains(t, evt.Src, "blob:test-rule@s3")
-				assert.Len(t, evt.RuleSet, 0)
+				assert.Len(t, evt.Rules, 0)
 				assert.Equal(t, event.Remove, evt.ChangeType)
 
 				evt = <-queue
 				assert.Contains(t, evt.Src, "blob:test-rule@s3")
-				assert.Len(t, evt.RuleSet, 1)
-				assert.Equal(t, "bar", evt.RuleSet[0].ID)
+				assert.Len(t, evt.Rules, 1)
+				assert.Equal(t, "bar", evt.Rules[0].ID)
 				assert.Equal(t, event.Create, evt.ChangeType)
 
 				evt = <-queue
 				assert.Contains(t, evt.Src, "blob:test-rule@s3")
-				assert.Len(t, evt.RuleSet, 0)
+				assert.Len(t, evt.Rules, 0)
 				assert.Equal(t, event.Remove, evt.ChangeType)
 
 				evt = <-queue
 				assert.Contains(t, evt.Src, "blob:test-rule@s3")
-				assert.Len(t, evt.RuleSet, 1)
-				assert.Equal(t, "baz", evt.RuleSet[0].ID)
+				assert.Len(t, evt.Rules, 1)
+				assert.Equal(t, "baz", evt.Rules[0].ID)
 				assert.Equal(t, event.Create, evt.ChangeType)
 			},
 		},

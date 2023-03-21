@@ -183,7 +183,7 @@ func (p *provider) watchChanges(ctx context.Context, rsf RuleSetFetcher) error {
 	p.ruleSetChanged(event.RuleSetChangedEvent{
 		Src:        "http_endpoint:" + rsf.ID(),
 		ChangeType: changeType,
-		RuleSet:    ruleSet.Rules,
+		Rules:      ruleSet.Rules,
 	})
 
 	return nil

@@ -85,7 +85,7 @@ func (r *repository) watchRuleSetChanges() {
 			}
 
 			if evt.ChangeType == event.Create {
-				r.onRuleSetCreated(evt.Src, evt.RuleSet)
+				r.onRuleSetCreated(evt.Src, evt.Rules)
 			} else if evt.ChangeType == event.Remove {
 				r.onRuleSetDeleted(evt.Src)
 			}

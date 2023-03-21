@@ -343,8 +343,8 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 				assert.Equal(t, "kubernetes:foo:test-rule:dfb2a2f1-1ad2-4d8c-8456-516fc94abb86", evt.Src)
 				assert.Equal(t, event.Create, evt.ChangeType)
 
-				require.Len(t, evt.RuleSet, 1)
-				rule := evt.RuleSet[0]
+				require.Len(t, evt.Rules, 1)
+				rule := evt.Rules[0]
 				assert.Equal(t, "test", rule.ID)
 				assert.Equal(t, "http://foo.bar", rule.RuleMatcher.URL)
 				assert.Equal(t, "http://bar", rule.Upstream)
@@ -471,8 +471,8 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 				assert.Equal(t, "kubernetes:foo:test-rule:dfb2a2f1-1ad2-4d8c-8456-516fc94abb86", evt.Src)
 				assert.Equal(t, event.Create, evt.ChangeType)
 
-				require.Len(t, evt.RuleSet, 1)
-				rule := evt.RuleSet[0]
+				require.Len(t, evt.Rules, 1)
+				rule := evt.Rules[0]
 				assert.Equal(t, "test", rule.ID)
 				assert.Equal(t, "http://foo.bar", rule.RuleMatcher.URL)
 				assert.Equal(t, "http://bar", rule.Upstream)
@@ -622,8 +622,8 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 				assert.Equal(t, "kubernetes:foo:test-rule:dfb2a2f1-1ad2-4d8c-8456-516fc94abb86", evt.Src)
 				assert.Equal(t, event.Create, evt.ChangeType)
 
-				require.Len(t, evt.RuleSet, 1)
-				rule := evt.RuleSet[0]
+				require.Len(t, evt.Rules, 1)
+				rule := evt.Rules[0]
 				assert.Equal(t, "test", rule.ID)
 				assert.Equal(t, "http://foo.bar", rule.RuleMatcher.URL)
 				assert.Equal(t, "http://bar", rule.Upstream)
@@ -643,8 +643,8 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 				assert.Equal(t, "kubernetes:foo:test-rule:dfb2a2f1-1ad2-4d8c-8456-516fc94abb86", evt.Src)
 				assert.Equal(t, event.Create, evt.ChangeType)
 
-				require.Len(t, evt.RuleSet, 1)
-				rule = evt.RuleSet[0]
+				require.Len(t, evt.Rules, 1)
+				rule = evt.Rules[0]
 				assert.Equal(t, "test", rule.ID)
 				assert.Equal(t, "http://foo.bar", rule.RuleMatcher.URL)
 				assert.Equal(t, "http://bar", rule.Upstream)

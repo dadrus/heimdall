@@ -136,8 +136,8 @@ rules:
 				evt := <-provider.q
 
 				assert.Contains(t, evt.Src, "file_system:")
-				assert.Len(t, evt.RuleSet, 1)
-				assert.Equal(t, "foo", evt.RuleSet[0].ID)
+				assert.Len(t, evt.Rules, 1)
+				assert.Equal(t, "foo", evt.Rules[0].ID)
 				assert.Equal(t, event.Create, evt.ChangeType)
 			},
 		},
@@ -193,8 +193,8 @@ rules:
 				evt := <-provider.q
 
 				assert.Contains(t, evt.Src, "file_system:")
-				assert.Len(t, evt.RuleSet, 1)
-				assert.Equal(t, "foo", evt.RuleSet[0].ID)
+				assert.Len(t, evt.Rules, 1)
+				assert.Equal(t, "foo", evt.Rules[0].ID)
 				assert.Equal(t, event.Create, evt.ChangeType)
 			},
 		},
@@ -282,18 +282,18 @@ rules:
 
 				evt := <-provider.q
 				assert.Contains(t, evt.Src, "file_system:"+provider.src)
-				assert.Empty(t, evt.RuleSet)
+				assert.Empty(t, evt.Rules)
 				assert.Equal(t, event.Remove, evt.ChangeType)
 
 				evt = <-provider.q
 				assert.Contains(t, evt.Src, "file_system:"+provider.src)
-				assert.Len(t, evt.RuleSet, 1)
-				assert.Equal(t, "foo", evt.RuleSet[0].ID)
+				assert.Len(t, evt.Rules, 1)
+				assert.Equal(t, "foo", evt.Rules[0].ID)
 				assert.Equal(t, event.Create, evt.ChangeType)
 
 				evt = <-provider.q
 				assert.Contains(t, evt.Src, "file_system:"+provider.src)
-				assert.Empty(t, evt.RuleSet)
+				assert.Empty(t, evt.Rules)
 				assert.Equal(t, event.Remove, evt.ChangeType)
 			},
 		},
@@ -343,13 +343,13 @@ rules:
 
 				evt := <-provider.q
 				assert.Contains(t, evt.Src, "file_system:"+provider.src)
-				assert.Empty(t, evt.RuleSet)
+				assert.Empty(t, evt.Rules)
 				assert.Equal(t, event.Remove, evt.ChangeType)
 
 				evt = <-provider.q
 				assert.Contains(t, evt.Src, "file_system:"+provider.src)
-				assert.Len(t, evt.RuleSet, 1)
-				assert.Equal(t, "foo", evt.RuleSet[0].ID)
+				assert.Len(t, evt.Rules, 1)
+				assert.Equal(t, "foo", evt.Rules[0].ID)
 				assert.Equal(t, event.Create, evt.ChangeType)
 			},
 		},
