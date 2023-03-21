@@ -182,11 +182,11 @@ func (p *provider) watchFiles() {
 				Msg("Rule update event received")
 
 			switch {
-			case evt.Op&fsnotify.Create == fsnotify.Create:
+			case evt.Has(fsnotify.Create):
 				p.notifyRuleSetCreated(evt)
-			case evt.Op&fsnotify.Remove == fsnotify.Remove:
+			case evt.Has(fsnotify.Remove):
 				p.notifyRuleSetDeleted(evt)
-			case evt.Op&fsnotify.Write == fsnotify.Write:
+			case evt.Has(fsnotify.Write):
 				p.notifyRuleSetDeleted(evt)
 				p.notifyRuleSetCreated(evt)
 			}
