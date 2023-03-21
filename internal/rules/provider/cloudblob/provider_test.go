@@ -31,6 +31,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/event"
 	"github.com/dadrus/heimdall/internal/x"
@@ -130,9 +131,14 @@ buckets:
 			require.NoError(t, err)
 
 			queue := make(event.RuleSetChangedEventQueue, 10)
+			conf := &config.Configuration{
+				Rules: config.Rules{
+					Providers: config.RuleProviders{CloudBlob: providerConf},
+				},
+			}
 
 			// WHEN
-			prov, err := newProvider(providerConf, queue, log.Logger)
+			prov, err := newProvider(conf, queue, log.Logger)
 
 			// THEN
 			tc.assert(t, err, prov)
@@ -503,8 +509,14 @@ rules:
 			queue := make(event.RuleSetChangedEventQueue, 10)
 			defer close(queue)
 
+			conf := &config.Configuration{
+				Rules: config.Rules{
+					Providers: config.RuleProviders{CloudBlob: providerConf},
+				},
+			}
+
 			logs := &strings.Builder{}
-			prov, err := newProvider(providerConf, queue, zerolog.New(logs))
+			prov, err := newProvider(conf, queue, zerolog.New(logs))
 			require.NoError(t, err)
 
 			ctx := context.Background()

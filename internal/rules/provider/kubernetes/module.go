@@ -17,6 +17,8 @@
 package kubernetes
 
 import (
+	"context"
+
 	"go.uber.org/fx"
 	"k8s.io/client-go/rest"
 )
@@ -25,5 +27,11 @@ import (
 // nolint: gochecknoglobals
 var Module = fx.Options(
 	fx.Provide(func() ConfigFactory { return rest.InClusterConfig }),
-	fx.Invoke(registerProvider),
+	fx.Invoke(
+		fx.Annotate(
+			newProvider,
+			fx.OnStart(func(ctx context.Context, p *provider) error { return p.Start(ctx) }),
+			fx.OnStop(func(ctx context.Context, p *provider) error { return p.Stop(ctx) }),
+		),
+	),
 )

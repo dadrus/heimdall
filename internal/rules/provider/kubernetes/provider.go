@@ -31,6 +31,7 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/klog/v2"
 
+	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/event"
 	"github.com/dadrus/heimdall/internal/rules/provider/kubernetes/api/v1alpha1"
@@ -44,21 +45,37 @@ var (
 	ErrBadAuthClass = errors.New("bad authClass in a RuleSet")
 )
 
+type ConfigFactory func() (*rest.Config, error)
+
 type provider struct {
-	q      event.RuleSetChangedEventQueue
-	l      zerolog.Logger
-	cl     v1alpha1.Client
-	cancel context.CancelFunc
-	wg     sync.WaitGroup
-	ac     string
+	q          event.RuleSetChangedEventQueue
+	l          zerolog.Logger
+	cl         v1alpha1.Client
+	cancel     context.CancelFunc
+	configured bool
+	wg         sync.WaitGroup
+	ac         string
 }
 
 func newProvider(
-	rawConf map[string]any,
-	k8sConf *rest.Config,
+	conf *config.Configuration,
+	k8sCF ConfigFactory,
 	queue event.RuleSetChangedEventQueue,
 	logger zerolog.Logger,
 ) (*provider, error) {
+	rawConf := conf.Rules.Providers.Kubernetes
+
+	if rawConf == nil {
+		return &provider{}, nil
+	}
+
+	k8sConf, err := k8sCF()
+	if err != nil {
+		return nil, errorchain.NewWithMessage(heimdall.ErrInternal,
+			"failed to create kubernetes provider").
+			CausedBy(err)
+	}
+
 	type Config struct {
 		AuthClass string `mapstructure:"auth_class"`
 	}
@@ -70,21 +87,24 @@ func newProvider(
 			CausedBy(err)
 	}
 
-	var conf Config
-	if err = decodeConfig(rawConf, &conf); err != nil {
+	var providerConf Config
+	if err = decodeConfig(rawConf, &providerConf); err != nil {
 		return nil, errorchain.
 			NewWithMessage(heimdall.ErrConfiguration, "failed to decode kubernetes rule provider config").
 			CausedBy(err)
 	}
 
-	prov := &provider{
-		q:  queue,
-		l:  logger,
-		cl: client,
-		ac: x.IfThenElse(len(conf.AuthClass) != 0, conf.AuthClass, DefaultClass),
-	}
+	logger = logger.With().Str("_provider_type", ProviderType).Logger()
 
-	return prov, nil
+	logger.Info().Msg("Rule provider configured.")
+
+	return &provider{
+		q:          queue,
+		l:          logger,
+		cl:         client,
+		ac:         x.IfThenElse(len(providerConf.AuthClass) != 0, providerConf.AuthClass, DefaultClass),
+		configured: true,
+	}, nil
 }
 
 func (p *provider) newController(ctx context.Context, namespace string) cache.Controller {
@@ -109,7 +129,6 @@ func (p *provider) filterAuthClass(input any) (any, error) {
 
 	if rs.Spec.AuthClassName != p.ac {
 		p.l.Info().
-			Str("_rule_provider_type", ProviderType).
 			Msgf("Ignoring ruleset due to authClassName mismatch (namespace=%s, name=%s, uid=%s)",
 				rs.Namespace, rs.Name, rs.UID)
 
@@ -120,17 +139,16 @@ func (p *provider) filterAuthClass(input any) (any, error) {
 }
 
 func (p *provider) Start(_ context.Context) error {
+	if !p.configured {
+		return nil
+	}
+
 	klog.SetLogger(zerologr.New(&p.l))
 
-	p.l.Info().
-		Str("_rule_provider_type", ProviderType).
-		Msg("Starting rule definitions provider")
+	p.l.Info().Msg("Starting rule definitions provider")
 
 	ctx, cancel := context.WithCancel(context.Background())
-	ctx = p.l.With().
-		Str("_rule_provider_type", ProviderType).
-		Logger().
-		WithContext(ctx)
+	ctx = p.l.With().Logger().WithContext(ctx)
 
 	p.cancel = cancel
 
@@ -150,9 +168,11 @@ func (p *provider) Start(_ context.Context) error {
 }
 
 func (p *provider) Stop(ctx context.Context) error {
-	p.l.Info().
-		Str("_rule_provider_type", ProviderType).
-		Msg("Tearing down rule provider.")
+	if !p.configured {
+		return nil
+	}
+
+	p.l.Info().Msg("Tearing down rule provider.")
 
 	p.cancel()
 
@@ -167,9 +187,7 @@ func (p *provider) Stop(ctx context.Context) error {
 	case <-done:
 		return nil
 	case <-ctx.Done():
-		p.l.Warn().
-			Str("_rule_provider_type", ProviderType).
-			Msg("Graceful tearing down aborted (timed out).")
+		p.l.Warn().Msg("Graceful tearing down aborted (timed out).")
 
 		return nil
 	}
@@ -207,7 +225,6 @@ func (p *provider) deleteRuleSet(obj any) {
 
 func (p *provider) ruleSetChanged(evt event.RuleSetChangedEvent) {
 	p.l.Info().
-		Str("_rule_provider_type", ProviderType).
 		Str("_src", evt.Src).
 		Str("_type", evt.ChangeType.String()).
 		Msg("Rule set changed")

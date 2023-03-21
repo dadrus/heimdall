@@ -96,9 +96,15 @@ func TestNewProvider(t *testing.T) {
 			require.NoError(t, err)
 
 			queue := make(event.RuleSetChangedEventQueue, 10)
+			conf := &config.Configuration{
+				Rules: config.Rules{
+					Providers: config.RuleProviders{Kubernetes: providerConf},
+				},
+			}
+			k8sCF := func() (*rest.Config, error) { return &rest.Config{Host: "http://localhost:80001"}, nil }
 
 			// WHEN
-			prov, err := newProvider(providerConf, &rest.Config{Host: "http://localhost:80001"}, queue, log.Logger)
+			prov, err := newProvider(conf, k8sCF, queue, log.Logger)
 
 			// THEN
 			tc.assert(t, err, prov)
@@ -660,8 +666,15 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 			queue := make(event.RuleSetChangedEventQueue, 10)
 			defer close(queue)
 
+			conf := &config.Configuration{
+				Rules: config.Rules{
+					Providers: config.RuleProviders{Kubernetes: providerConf},
+				},
+			}
+			k8sCF := func() (*rest.Config, error) { return &rest.Config{Host: srv.URL}, nil }
+
 			logs := &strings.Builder{}
-			prov, err := newProvider(providerConf, &rest.Config{Host: srv.URL}, queue, zerolog.New(logs))
+			prov, err := newProvider(conf, k8sCF, queue, zerolog.New(logs))
 			require.NoError(t, err)
 
 			ctx := context.Background()

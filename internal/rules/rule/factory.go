@@ -14,14 +14,10 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package rules
+package rule
 
-import (
-	"github.com/dadrus/heimdall/internal/rules/rule"
-)
-
-type RuleFactory interface {
-	CreateRule(srcID string, ruleConfig rule.Configuration) (rule.Rule, error)
+type Factory interface {
+	CreateRule(srcID string, ruleConfig Configuration) (Rule, error)
 	HasDefaultRule() bool
-	DefaultRule() rule.Rule
+	DefaultRule() Rule
 }

@@ -32,6 +32,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/cache/memory"
+	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/event"
 	"github.com/dadrus/heimdall/internal/x"
@@ -146,9 +147,14 @@ endpoints:
 			require.NoError(t, err)
 
 			queue := make(event.RuleSetChangedEventQueue, 10)
+			conf := &config.Configuration{
+				Rules: config.Rules{
+					Providers: config.RuleProviders{HTTPEndpoint: providerConf},
+				},
+			}
 
 			// WHEN
-			prov, err := newProvider(providerConf, memory.New(), queue, log.Logger)
+			prov, err := newProvider(conf, memory.New(), queue, log.Logger)
 
 			// THEN
 			tc.assert(t, err, prov)
@@ -576,8 +582,14 @@ rules:
 			queue := make(event.RuleSetChangedEventQueue, 10)
 			defer close(queue)
 
+			conf := &config.Configuration{
+				Rules: config.Rules{
+					Providers: config.RuleProviders{HTTPEndpoint: providerConf},
+				},
+			}
+
 			logs := &strings.Builder{}
-			prov, err := newProvider(providerConf, memory.New(), queue, zerolog.New(logs))
+			prov, err := newProvider(conf, memory.New(), queue, zerolog.New(logs))
 			require.NoError(t, err)
 
 			ctx := context.Background()
