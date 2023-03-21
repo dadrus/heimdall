@@ -15,9 +15,7 @@ import (
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
-func NewRuleFactory(hf mechanisms.Factory, conf *config.Configuration, logger zerolog.Logger) (
-	RuleFactory, error,
-) {
+func NewRuleFactory(hf mechanisms.Factory, conf *config.Configuration, logger zerolog.Logger) (rule.Factory, error) {
 	logger.Debug().Msg("Creating rule factory")
 
 	rf := &ruleFactory{hf: hf, hasDefaultRule: false, logger: logger}
