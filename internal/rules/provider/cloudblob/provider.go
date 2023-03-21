@@ -205,18 +205,24 @@ func (p *provider) ruleSetsUpdated(ruleSets []RuleSet, state BucketState, buketI
 			continue
 		}
 
-		if hasChanged {
+		if isNew {
+			p.ruleSetChanged(event.RuleSetChangedEvent{
+				Src:        "blob:" + ruleSet.Key,
+				ChangeType: event.Create,
+				RuleSet:    ruleSet.Rules,
+			})
+		} else if hasChanged {
 			p.ruleSetChanged(event.RuleSetChangedEvent{
 				Src:        "blob:" + ruleSet.Key,
 				ChangeType: event.Remove,
 			})
-		}
 
-		p.ruleSetChanged(event.RuleSetChangedEvent{
-			Src:        "blob:" + ruleSet.Key,
-			ChangeType: event.Create,
-			RuleSet:    ruleSet.Rules,
-		})
+			p.ruleSetChanged(event.RuleSetChangedEvent{
+				Src:        "blob:" + ruleSet.Key,
+				ChangeType: event.Create,
+				RuleSet:    ruleSet.Rules,
+			})
+		}
 	}
 }
 
