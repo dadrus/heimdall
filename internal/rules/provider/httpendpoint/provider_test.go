@@ -29,14 +29,16 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/cache/memory"
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/rules/event"
+	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/rules/rule/mocks"
 	"github.com/dadrus/heimdall/internal/x"
+	mock2 "github.com/dadrus/heimdall/internal/x/mock"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
@@ -184,10 +186,11 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx
 	defer srv.Close()
 
 	for _, tc := range []struct {
-		uc            string
-		conf          []byte
-		writeResponse ResponseWriter
-		assert        func(t *testing.T, logs fmt.Stringer, queue event.RuleSetChangedEventQueue)
+		uc             string
+		conf           []byte
+		setupProcessor func(t *testing.T, processor *mocks.RuleSetProcessorMock)
+		writeResponse  ResponseWriter
+		assert         func(t *testing.T, logs fmt.Stringer, processor *mocks.RuleSetProcessorMock)
 	}{
 		{
 			uc: "with rule set loading error due to DNS error",
@@ -195,7 +198,7 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx
 endpoints:
 - url: https://foo.bar.local/rules.yaml
 `),
-			assert: func(t *testing.T, logs fmt.Stringer, queue event.RuleSetChangedEventQueue) {
+			assert: func(t *testing.T, logs fmt.Stringer, processor *mocks.RuleSetProcessorMock) {
 				t.Helper()
 
 				time.Sleep(250 * time.Millisecond)
@@ -203,8 +206,6 @@ endpoints:
 				messages := logs.String()
 				assert.Contains(t, messages, "name resolution")
 				assert.Contains(t, messages, "No updates received")
-
-				require.Len(t, queue, 0)
 			},
 		},
 		{
@@ -218,7 +219,7 @@ endpoints:
 
 				w.WriteHeader(http.StatusBadRequest)
 			},
-			assert: func(t *testing.T, logs fmt.Stringer, queue event.RuleSetChangedEventQueue) {
+			assert: func(t *testing.T, logs fmt.Stringer, processor *mocks.RuleSetProcessorMock) {
 				t.Helper()
 
 				time.Sleep(250 * time.Millisecond)
@@ -226,8 +227,6 @@ endpoints:
 				messages := logs.String()
 				assert.Contains(t, messages, "response code: 400")
 				assert.Contains(t, messages, "No updates received")
-
-				require.Len(t, queue, 0)
 			},
 		},
 		{
@@ -241,15 +240,13 @@ endpoints:
 
 				w.WriteHeader(http.StatusOK)
 			},
-			assert: func(t *testing.T, logs fmt.Stringer, queue event.RuleSetChangedEventQueue) {
+			assert: func(t *testing.T, logs fmt.Stringer, processor *mocks.RuleSetProcessorMock) {
 				t.Helper()
 
 				time.Sleep(250 * time.Millisecond)
 
 				assert.Equal(t, 1, requestCount)
 				assert.Contains(t, logs.String(), "No updates received")
-
-				require.Len(t, queue, 0)
 			},
 		},
 		{
@@ -270,7 +267,14 @@ rules:
 `))
 				require.NoError(t, err)
 			},
-			assert: func(t *testing.T, logs fmt.Stringer, queue event.RuleSetChangedEventQueue) {
+			setupProcessor: func(t *testing.T, processor *mocks.RuleSetProcessorMock) {
+				t.Helper()
+
+				processor.EXPECT().OnCreated(mock.Anything).
+					Run(mock2.NewArgumentCaptor[*rule.SetConfiguration](&processor.Mock, "captor1").Capture).
+					Return().Once()
+			},
+			assert: func(t *testing.T, logs fmt.Stringer, processor *mocks.RuleSetProcessorMock) {
 				t.Helper()
 
 				time.Sleep(600 * time.Millisecond)
@@ -278,13 +282,11 @@ rules:
 				assert.Equal(t, 1, requestCount)
 				assert.NotContains(t, logs.String(), "No updates received")
 
-				require.Len(t, queue, 1)
-
-				evt := <-queue
-				assert.Contains(t, evt.Src, "http_endpoint:"+srv.URL)
-				assert.Len(t, evt.Rules, 1)
-				assert.Equal(t, "foo", evt.Rules[0].ID)
-				assert.Equal(t, event.Create, evt.ChangeType)
+				ruleSet := mock2.ArgumentCaptorFrom[*rule.SetConfiguration](&processor.Mock, "captor1").Value()
+				assert.Contains(t, ruleSet.Source, "http_endpoint:"+srv.URL)
+				assert.Equal(t, "test", ruleSet.Name)
+				assert.Len(t, ruleSet.Rules, 1)
+				assert.Equal(t, "foo", ruleSet.Rules[0].ID)
 			},
 		},
 		{
@@ -306,7 +308,14 @@ rules:
 `))
 				require.NoError(t, err)
 			},
-			assert: func(t *testing.T, logs fmt.Stringer, queue event.RuleSetChangedEventQueue) {
+			setupProcessor: func(t *testing.T, processor *mocks.RuleSetProcessorMock) {
+				t.Helper()
+
+				processor.EXPECT().OnCreated(mock.Anything).
+					Run(mock2.NewArgumentCaptor[*rule.SetConfiguration](&processor.Mock, "captor1").Capture).
+					Return().Once()
+			},
+			assert: func(t *testing.T, logs fmt.Stringer, processor *mocks.RuleSetProcessorMock) {
 				t.Helper()
 
 				time.Sleep(600 * time.Millisecond)
@@ -314,13 +323,11 @@ rules:
 				assert.Equal(t, 3, requestCount)
 				assert.Contains(t, logs.String(), "No updates received")
 
-				require.Len(t, queue, 1)
-
-				evt := <-queue
-				assert.Contains(t, evt.Src, "http_endpoint:"+srv.URL)
-				assert.Len(t, evt.Rules, 1)
-				assert.Equal(t, "bar", evt.Rules[0].ID)
-				assert.Equal(t, event.Create, evt.ChangeType)
+				ruleSet := mock2.ArgumentCaptorFrom[*rule.SetConfiguration](&processor.Mock, "captor1").Value()
+				assert.Contains(t, ruleSet.Source, "http_endpoint:"+srv.URL)
+				assert.Equal(t, "test", ruleSet.Name)
+				assert.Len(t, ruleSet.Rules, 1)
+				assert.Equal(t, "bar", ruleSet.Rules[0].ID)
 			},
 		},
 		{
@@ -343,7 +350,7 @@ endpoints:
 version: "1"
 name: test
 rules:
-- id: bar
+- id: foo
 `))
 						require.NoError(t, err)
 					case 2:
@@ -362,7 +369,18 @@ rules:
 					callIdx++
 				}
 			}(),
-			assert: func(t *testing.T, logs fmt.Stringer, queue event.RuleSetChangedEventQueue) {
+			setupProcessor: func(t *testing.T, processor *mocks.RuleSetProcessorMock) {
+				t.Helper()
+
+				processor.EXPECT().OnCreated(mock.Anything).
+					Run(mock2.NewArgumentCaptor[*rule.SetConfiguration](&processor.Mock, "captor1").Capture).
+					Return().Twice()
+
+				processor.EXPECT().OnDeleted(mock.Anything).
+					Run(mock2.NewArgumentCaptor[*rule.SetConfiguration](&processor.Mock, "captor2").Capture).
+					Return().Once()
+			},
+			assert: func(t *testing.T, logs fmt.Stringer, processor *mocks.RuleSetProcessorMock) {
 				t.Helper()
 
 				time.Sleep(1000 * time.Millisecond)
@@ -370,24 +388,20 @@ rules:
 				assert.True(t, requestCount >= 4)
 				assert.Contains(t, logs.String(), "No updates received")
 
-				require.Len(t, queue, 3)
+				ruleSets := mock2.ArgumentCaptorFrom[*rule.SetConfiguration](&processor.Mock, "captor1").Values()
+				assert.Contains(t, ruleSets[0].Source, "http_endpoint:"+srv.URL)
+				assert.Equal(t, "test", ruleSets[0].Name)
+				assert.Len(t, ruleSets[0].Rules, 1)
+				assert.Equal(t, "foo", ruleSets[0].Rules[0].ID)
 
-				evt := <-queue
-				assert.Contains(t, evt.Src, "http_endpoint:"+srv.URL)
-				assert.Len(t, evt.Rules, 1)
-				assert.Equal(t, "bar", evt.Rules[0].ID)
-				assert.Equal(t, event.Create, evt.ChangeType)
+				assert.Contains(t, ruleSets[1].Source, "http_endpoint:"+srv.URL)
+				assert.Equal(t, "test", ruleSets[1].Name)
+				assert.Len(t, ruleSets[1].Rules, 1)
+				assert.Equal(t, "bar", ruleSets[1].Rules[0].ID)
 
-				evt = <-queue
-				assert.Contains(t, evt.Src, "http_endpoint:"+srv.URL)
-				assert.Len(t, evt.Rules, 0)
-				assert.Equal(t, event.Remove, evt.ChangeType)
-
-				evt = <-queue
-				assert.Contains(t, evt.Src, "http_endpoint:"+srv.URL)
-				assert.Len(t, evt.Rules, 1)
-				assert.Equal(t, "bar", evt.Rules[0].ID)
-				assert.Equal(t, event.Create, evt.ChangeType)
+				ruleSet := mock2.ArgumentCaptorFrom[*rule.SetConfiguration](&processor.Mock, "captor2").Value()
+				assert.Contains(t, ruleSet.Source, "http_endpoint:"+srv.URL)
+				assert.Empty(t, ruleSet.Rules)
 			},
 		},
 		{
@@ -445,7 +459,18 @@ rules:
 					callIdx++
 				}
 			}(),
-			assert: func(t *testing.T, logs fmt.Stringer, queue event.RuleSetChangedEventQueue) {
+			setupProcessor: func(t *testing.T, processor *mocks.RuleSetProcessorMock) {
+				t.Helper()
+
+				processor.EXPECT().OnCreated(mock.Anything).
+					Run(mock2.NewArgumentCaptor[*rule.SetConfiguration](&processor.Mock, "captor1").Capture).
+					Return().Once()
+
+				processor.EXPECT().OnUpdated(mock.Anything).
+					Run(mock2.NewArgumentCaptor[*rule.SetConfiguration](&processor.Mock, "captor2").Capture).
+					Return().Times(3)
+			},
+			assert: func(t *testing.T, logs fmt.Stringer, processor *mocks.RuleSetProcessorMock) {
 				t.Helper()
 
 				time.Sleep(2 * time.Second)
@@ -453,46 +478,27 @@ rules:
 				assert.True(t, requestCount >= 4)
 				assert.Contains(t, logs.String(), "No updates received")
 
-				require.Len(t, queue, 7)
+				ruleSet := mock2.ArgumentCaptorFrom[*rule.SetConfiguration](&processor.Mock, "captor1").Value()
+				assert.Contains(t, ruleSet.Source, "http_endpoint:"+srv.URL)
+				assert.Equal(t, "test", ruleSet.Name)
+				assert.Len(t, ruleSet.Rules, 1)
+				assert.Equal(t, "bar", ruleSet.Rules[0].ID)
 
-				evt := <-queue
-				assert.Contains(t, evt.Src, "http_endpoint:"+srv.URL)
-				assert.Len(t, evt.Rules, 1)
-				assert.Equal(t, "bar", evt.Rules[0].ID)
-				assert.Equal(t, event.Create, evt.ChangeType)
+				ruleSets := mock2.ArgumentCaptorFrom[*rule.SetConfiguration](&processor.Mock, "captor2").Values()
+				assert.Contains(t, ruleSets[0].Source, "http_endpoint:"+srv.URL)
+				assert.Equal(t, "test", ruleSets[0].Name)
+				assert.Len(t, ruleSets[0].Rules, 1)
+				assert.Equal(t, "baz", ruleSets[0].Rules[0].ID)
 
-				evt = <-queue
-				assert.Contains(t, evt.Src, "http_endpoint:"+srv.URL)
-				assert.Len(t, evt.Rules, 0)
-				assert.Equal(t, event.Remove, evt.ChangeType)
+				assert.Contains(t, ruleSets[1].Source, "http_endpoint:"+srv.URL)
+				assert.Equal(t, "test", ruleSets[1].Name)
+				assert.Len(t, ruleSets[1].Rules, 1)
+				assert.Equal(t, "foo", ruleSets[1].Rules[0].ID)
 
-				evt = <-queue
-				assert.Contains(t, evt.Src, "http_endpoint:"+srv.URL)
-				assert.Len(t, evt.Rules, 1)
-				assert.Equal(t, "baz", evt.Rules[0].ID)
-				assert.Equal(t, event.Create, evt.ChangeType)
-
-				evt = <-queue
-				assert.Contains(t, evt.Src, "http_endpoint:"+srv.URL)
-				assert.Len(t, evt.Rules, 0)
-				assert.Equal(t, event.Remove, evt.ChangeType)
-
-				evt = <-queue
-				assert.Contains(t, evt.Src, "http_endpoint:"+srv.URL)
-				assert.Len(t, evt.Rules, 1)
-				assert.Equal(t, "foo", evt.Rules[0].ID)
-				assert.Equal(t, event.Create, evt.ChangeType)
-
-				evt = <-queue
-				assert.Contains(t, evt.Src, "http_endpoint:"+srv.URL)
-				assert.Len(t, evt.Rules, 0)
-				assert.Equal(t, event.Remove, evt.ChangeType)
-
-				evt = <-queue
-				assert.Contains(t, evt.Src, "http_endpoint:"+srv.URL)
-				assert.Len(t, evt.Rules, 1)
-				assert.Equal(t, "foz", evt.Rules[0].ID)
-				assert.Equal(t, event.Create, evt.ChangeType)
+				assert.Contains(t, ruleSets[2].Source, "http_endpoint:"+srv.URL)
+				assert.Equal(t, "test", ruleSets[2].Name)
+				assert.Len(t, ruleSets[2].Rules, 1)
+				assert.Equal(t, "foz", ruleSets[2].Rules[0].ID)
 			},
 		},
 		{
@@ -515,20 +521,26 @@ rules:
 `))
 				require.NoError(t, err)
 			},
-			assert: func(t *testing.T, logs fmt.Stringer, queue event.RuleSetChangedEventQueue) {
+			setupProcessor: func(t *testing.T, processor *mocks.RuleSetProcessorMock) {
+				t.Helper()
+
+				processor.EXPECT().OnCreated(mock.Anything).
+					Run(mock2.NewArgumentCaptor[*rule.SetConfiguration](&processor.Mock, "captor1").Capture).
+					Return().Once()
+			},
+			assert: func(t *testing.T, logs fmt.Stringer, processor *mocks.RuleSetProcessorMock) {
 				t.Helper()
 
 				time.Sleep(1 * time.Second)
 
 				assert.Equal(t, 1, requestCount)
 				assert.GreaterOrEqual(t, strings.Count(logs.String(), "No updates received"), 3)
-				require.Len(t, queue, 1)
 
-				evt := <-queue
-				assert.Contains(t, evt.Src, "http_endpoint:"+srv.URL)
-				assert.Len(t, evt.Rules, 1)
-				assert.Equal(t, "bar", evt.Rules[0].ID)
-				assert.Equal(t, event.Create, evt.ChangeType)
+				ruleSet := mock2.ArgumentCaptorFrom[*rule.SetConfiguration](&processor.Mock, "captor1").Value()
+				assert.Contains(t, ruleSet.Source, "http_endpoint:"+srv.URL)
+				assert.Equal(t, "test", ruleSet.Name)
+				assert.Len(t, ruleSet.Rules, 1)
+				assert.Equal(t, "bar", ruleSet.Rules[0].ID)
 			},
 		},
 		{
@@ -552,7 +564,14 @@ rules:
 `))
 				require.NoError(t, err)
 			},
-			assert: func(t *testing.T, logs fmt.Stringer, queue event.RuleSetChangedEventQueue) {
+			setupProcessor: func(t *testing.T, processor *mocks.RuleSetProcessorMock) {
+				t.Helper()
+
+				processor.EXPECT().OnCreated(mock.Anything).
+					Run(mock2.NewArgumentCaptor[*rule.SetConfiguration](&processor.Mock, "captor1").Capture).
+					Return().Once()
+			},
+			assert: func(t *testing.T, logs fmt.Stringer, processor *mocks.RuleSetProcessorMock) {
 				t.Helper()
 
 				time.Sleep(1 * time.Second)
@@ -562,19 +581,21 @@ rules:
 				noUpdatesCount := strings.Count(logs.String(), "No updates received")
 				assert.GreaterOrEqual(t, noUpdatesCount, 3)
 
-				require.Len(t, queue, 1)
-
-				evt := <-queue
-				assert.Contains(t, evt.Src, "http_endpoint:"+srv.URL)
-				assert.Len(t, evt.Rules, 1)
-				assert.Equal(t, "bar", evt.Rules[0].ID)
-				assert.Equal(t, event.Create, evt.ChangeType)
+				ruleSet := mock2.ArgumentCaptorFrom[*rule.SetConfiguration](&processor.Mock, "captor1").Value()
+				assert.Contains(t, ruleSet.Source, "http_endpoint:"+srv.URL)
+				assert.Equal(t, "test", ruleSet.Name)
+				assert.Len(t, ruleSet.Rules, 1)
+				assert.Equal(t, "bar", ruleSet.Rules[0].ID)
 			},
 		},
 	} {
 		t.Run(tc.uc, func(t *testing.T) {
 			// GIVEN
 			requestCount = 0
+
+			setupProcessor := x.IfThenElse(tc.setupProcessor != nil,
+				tc.setupProcessor,
+				func(t *testing.T, processor *mocks.RuleSetProcessorMock) { t.Helper() })
 
 			providerConf, err := testsupport.DecodeTestConfig(tc.conf)
 			require.NoError(t, err)
@@ -585,8 +606,11 @@ rules:
 				},
 			}
 
+			processor := mocks.NewRuleSetProcessorMock(t)
+			setupProcessor(t, processor)
+
 			logs := &strings.Builder{}
-			prov, err := newProvider(conf, memory.New(), nil, zerolog.New(logs))
+			prov, err := newProvider(conf, memory.New(), processor, zerolog.New(logs))
 			require.NoError(t, err)
 
 			ctx := context.Background()
@@ -606,7 +630,7 @@ rules:
 
 			// THEN
 			require.NoError(t, err)
-			tc.assert(t, logs, nil)
+			tc.assert(t, logs, processor)
 		})
 	}
 }

@@ -188,11 +188,8 @@ rules:
 			assert: func(t *testing.T, err error, ruleSet *rule.SetConfiguration) {
 				t.Helper()
 
-				require.NoError(t, err)
-
-				require.NotNil(t, ruleSet)
-				require.Empty(t, ruleSet.Rules)
-				require.NotEmpty(t, ruleSet.Hash)
+				require.Error(t, err)
+				assert.ErrorIs(t, err, rule.ErrEmptyRuleSet)
 			},
 		},
 		{

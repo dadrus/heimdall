@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"sync"
 	"time"
 
@@ -145,13 +146,24 @@ func (p *provider) watchChanges(ctx context.Context, rsf RuleSetFetcher) error {
 
 	ruleSet, err := rsf.FetchRuleSet(ctx)
 	if err != nil {
+		if errors.Is(err, context.Canceled) {
+			return nil
+		}
+
 		p.l.Warn().
 			Err(err).
 			Str("_endpoint", rsf.ID()).
 			Msg("Failed to fetch rule set")
 
-		if errors.Is(err, heimdall.ErrInternal) || errors.Is(err, heimdall.ErrConfiguration) {
+		if !errors.Is(err, rule.ErrEmptyRuleSet) &&
+			(errors.Is(err, heimdall.ErrInternal) || errors.Is(err, heimdall.ErrConfiguration)) {
 			return err
+		}
+
+		ruleSet = &rule.SetConfiguration{
+			SetMeta: rule.SetMeta{
+				Source: fmt.Sprintf("http_endpoint:%s", rsf.ID()),
+			},
 		}
 	}
 
@@ -184,8 +196,8 @@ func (p *provider) ruleSetsUpdated(ruleSet *rule.SetConfiguration, stateID strin
 			return
 		}
 	} else {
-		// previously unknown rule set
 		if len(ruleSet.Rules) != 0 {
+			// previously unknown rule set
 			p.states.Store(stateID, ruleSet.Hash)
 			p.p.OnCreated(ruleSet)
 

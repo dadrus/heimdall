@@ -20,6 +20,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -73,10 +74,6 @@ func (e *ruleSetEndpoint) FetchRuleSet(ctx context.Context) (*rule.SetConfigurat
 
 	ruleSet, err := rule.ParseRules(resp.Header.Get("Content-Type"), io.TeeReader(resp.Body, md))
 	if err != nil {
-		if errors.Is(err, rule.ErrEmptyRuleSet) {
-			return &rule.SetConfiguration{SetMeta: rule.SetMeta{Source: "", Hash: md.Sum(nil)}}, nil
-		}
-
 		return nil, errorchain.NewWithMessage(heimdall.ErrInternal, "failed to parse received rule set").
 			CausedBy(err)
 	}
@@ -86,7 +83,7 @@ func (e *ruleSetEndpoint) FetchRuleSet(ctx context.Context) (*rule.SetConfigurat
 	}
 
 	ruleSet.Hash = md.Sum(nil)
-	ruleSet.Source = ""
+	ruleSet.Source = fmt.Sprintf("http_endpoint:%s", e.ID())
 
 	return ruleSet, nil
 }
