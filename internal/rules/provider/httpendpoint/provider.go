@@ -34,43 +34,12 @@ import (
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
-type stateMap struct {
-	mu    sync.Mutex
-	state map[string][]byte
-}
-
-func (m *stateMap) get(key string) []byte {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	return m.state[key]
-}
-
-func (m *stateMap) set(key string, state []byte) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	m.state[key] = state
-}
-
-func (m *stateMap) remove(key string) []byte {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	old := m.state[key]
-
-	delete(m.state, key)
-
-	return old
-}
-
 type provider struct {
-	stateMap
-
 	q          event.RuleSetChangedEventQueue
 	l          zerolog.Logger
 	s          *gocron.Scheduler
 	cancel     context.CancelFunc
+	states     sync.Map
 	configured bool
 }
 
@@ -131,8 +100,6 @@ func newProvider(
 		cancel:     cancel,
 		configured: true,
 	}
-
-	prov.state = make(map[string][]byte)
 
 	for idx, ep := range providerConf.Endpoints {
 		if _, err := x.IfThenElseExec(providerConf.WatchInterval != nil && *providerConf.WatchInterval > 0,
@@ -198,13 +165,18 @@ func (p *provider) watchChanges(ctx context.Context, rsf RuleSetFetcher) error {
 }
 
 func (p *provider) ruleSetsUpdated(ruleSet RuleSet, stateID string) {
-	hash := p.get(stateID)
+	var hash []byte
+
+	value, ok := p.states.Load(stateID)
+	if ok {
+		hash = value.([]byte) // nolint: forcetypeassert
+	}
 
 	if len(hash) != 0 {
 		// rule set was known
 		if len(ruleSet.Rules) == 0 {
 			// rule set removed
-			p.remove(stateID)
+			p.states.Delete(stateID)
 			p.ruleSetChanged(event.RuleSetChangedEvent{
 				Src:        "http_endpoint:" + stateID,
 				ChangeType: event.Remove,
@@ -213,7 +185,7 @@ func (p *provider) ruleSetsUpdated(ruleSet RuleSet, stateID string) {
 			return
 		} else if !bytes.Equal(hash, ruleSet.Hash) {
 			// rule set updated
-			p.set(stateID, ruleSet.Hash)
+			p.states.Store(stateID, ruleSet.Hash)
 			p.ruleSetChanged(event.RuleSetChangedEvent{
 				Src:        "http_endpoint:" + stateID,
 				ChangeType: event.Remove,
@@ -229,7 +201,7 @@ func (p *provider) ruleSetsUpdated(ruleSet RuleSet, stateID string) {
 	} else {
 		// previously unknown rule set
 		if len(ruleSet.Rules) != 0 {
-			p.set(stateID, ruleSet.Hash)
+			p.states.Store(stateID, ruleSet.Hash)
 			p.ruleSetChanged(event.RuleSetChangedEvent{
 				Src:        "http_endpoint:" + stateID,
 				ChangeType: event.Create,
