@@ -30,6 +30,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/x"
 )
 
@@ -65,7 +66,7 @@ func TestFetchRuleSets(t *testing.T) { //nolint:maintidx
 		uc       string
 		endpoint ruleSetEndpoint
 		setup    func(t *testing.T)
-		assert   func(t *testing.T, err error, ruleSets []RuleSet)
+		assert   func(t *testing.T, err error, ruleSets []*rule.SetConfiguration)
 	}{
 		{
 			uc: "failed to open bucket",
@@ -76,7 +77,7 @@ func TestFetchRuleSets(t *testing.T) { //nolint:maintidx
 					RawQuery: "endpoint=does-not-exist.local&foo=bar&region=eu-central-1",
 				},
 			},
-			assert: func(t *testing.T, err error, ruleSets []RuleSet) {
+			assert: func(t *testing.T, err error, ruleSets []*rule.SetConfiguration) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -93,7 +94,7 @@ func TestFetchRuleSets(t *testing.T) { //nolint:maintidx
 					RawQuery: fmt.Sprintf("endpoint=%s&disableSSL=true&s3ForcePathStyle=true&region=eu-central-1", srv.URL),
 				},
 			},
-			assert: func(t *testing.T, err error, ruleSets []RuleSet) {
+			assert: func(t *testing.T, err error, ruleSets []*rule.SetConfiguration) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -120,7 +121,7 @@ func TestFetchRuleSets(t *testing.T) { //nolint:maintidx
 					strings.NewReader(data), int64(len(data)))
 				require.NoError(t, err)
 			},
-			assert: func(t *testing.T, err error, ruleSets []RuleSet) {
+			assert: func(t *testing.T, err error, ruleSets []*rule.SetConfiguration) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -137,7 +138,7 @@ func TestFetchRuleSets(t *testing.T) { //nolint:maintidx
 					RawQuery: fmt.Sprintf("endpoint=%s&disableSSL=true&s3ForcePathStyle=true&region=eu-central-1", srv.URL),
 				},
 			},
-			assert: func(t *testing.T, err error, ruleSets []RuleSet) {
+			assert: func(t *testing.T, err error, ruleSets []*rule.SetConfiguration) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -161,7 +162,7 @@ func TestFetchRuleSets(t *testing.T) { //nolint:maintidx
 					strings.NewReader(""), 0)
 				require.NoError(t, err)
 			},
-			assert: func(t *testing.T, err error, ruleSets []RuleSet) {
+			assert: func(t *testing.T, err error, ruleSets []*rule.SetConfiguration) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -200,7 +201,7 @@ func TestFetchRuleSets(t *testing.T) { //nolint:maintidx
 					strings.NewReader(data), int64(len(data)))
 				require.NoError(t, err)
 			},
-			assert: func(t *testing.T, err error, ruleSets []RuleSet) {
+			assert: func(t *testing.T, err error, ruleSets []*rule.SetConfiguration) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -257,19 +258,19 @@ rules:
 					strings.NewReader(ruleSet2), int64(len(ruleSet2)))
 				require.NoError(t, err)
 			},
-			assert: func(t *testing.T, err error, ruleSets []RuleSet) {
+			assert: func(t *testing.T, err error, ruleSets []*rule.SetConfiguration) {
 				t.Helper()
 
 				require.NoError(t, err)
 
 				require.Len(t, ruleSets, 2)
 
-				assert.Contains(t, ruleSets[0].Key, "test-rule1")
+				assert.Contains(t, ruleSets[0].Source, "test-rule1")
 				assert.NotEmpty(t, ruleSets[0].Hash)
 				assert.Len(t, ruleSets[0].Rules, 1)
 				assert.Equal(t, "foobar", ruleSets[0].Rules[0].ID)
 
-				assert.Contains(t, ruleSets[1].Key, "test-rule2")
+				assert.Contains(t, ruleSets[1].Source, "test-rule2")
 				assert.NotEmpty(t, ruleSets[1].Hash)
 				assert.Len(t, ruleSets[1].Rules, 1)
 				assert.Equal(t, "barfoo", ruleSets[1].Rules[0].ID)
@@ -322,14 +323,14 @@ rules:
 					strings.NewReader(ruleSet2), int64(len(ruleSet2)))
 				require.NoError(t, err)
 			},
-			assert: func(t *testing.T, err error, ruleSets []RuleSet) {
+			assert: func(t *testing.T, err error, ruleSets []*rule.SetConfiguration) {
 				t.Helper()
 
 				require.NoError(t, err)
 
 				require.Len(t, ruleSets, 1)
 
-				assert.Contains(t, ruleSets[0].Key, "api-rule")
+				assert.Contains(t, ruleSets[0].Source, "api-rule")
 				assert.NotEmpty(t, ruleSets[0].Hash)
 				assert.Len(t, ruleSets[0].Rules, 1)
 				assert.Equal(t, "foobar", ruleSets[0].Rules[0].ID)
@@ -346,7 +347,7 @@ rules:
 				},
 				Prefix: "api",
 			},
-			assert: func(t *testing.T, err error, ruleSets []RuleSet) {
+			assert: func(t *testing.T, err error, ruleSets []*rule.SetConfiguration) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -373,7 +374,7 @@ rules:
 					strings.NewReader(""), 0)
 				require.NoError(t, err)
 			},
-			assert: func(t *testing.T, err error, ruleSets []RuleSet) {
+			assert: func(t *testing.T, err error, ruleSets []*rule.SetConfiguration) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -411,14 +412,14 @@ rules:
 					strings.NewReader(ruleSet1), int64(len(ruleSet1)))
 				require.NoError(t, err)
 			},
-			assert: func(t *testing.T, err error, ruleSets []RuleSet) {
+			assert: func(t *testing.T, err error, ruleSets []*rule.SetConfiguration) {
 				t.Helper()
 
 				require.NoError(t, err)
 
 				require.Len(t, ruleSets, 1)
 
-				assert.Contains(t, ruleSets[0].Key, "ruleset")
+				assert.Contains(t, ruleSets[0].Source, "ruleset")
 				assert.NotEmpty(t, ruleSets[0].Hash)
 				assert.Len(t, ruleSets[0].Rules, 1)
 				assert.Equal(t, "foobar", ruleSets[0].Rules[0].ID)

@@ -30,7 +30,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/rules/event"
+	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/slicex"
@@ -39,7 +39,7 @@ import (
 type BucketState map[string][]byte
 
 type provider struct {
-	q          event.RuleSetChangedEventQueue
+	p          rule.SetProcessor
 	l          zerolog.Logger
 	s          *gocron.Scheduler
 	cancel     context.CancelFunc
@@ -51,7 +51,7 @@ type provider struct {
 
 func newProvider(
 	conf *config.Configuration,
-	queue event.RuleSetChangedEventQueue,
+	processor rule.SetProcessor,
 	logger zerolog.Logger,
 ) (*provider, error) {
 	rawConf := conf.Rules.Providers.CloudBlob
@@ -86,7 +86,7 @@ func newProvider(
 	scheduler.SingletonModeAll()
 
 	prov := &provider{
-		q:          queue,
+		p:          processor,
 		l:          logger,
 		s:          scheduler,
 		cancel:     cancel,
@@ -171,7 +171,7 @@ func (p *provider) watchChanges(ctx context.Context, rsf RuleSetFetcher) error {
 	return nil
 }
 
-func (p *provider) ruleSetsUpdated(ruleSets []RuleSet, state BucketState, buketID string) {
+func (p *provider) ruleSetsUpdated(ruleSets []*rule.SetConfiguration, state BucketState, buketID string) {
 	// check which were present in the past and are not present now
 	// and which are new
 	currentIDs := toRuleSetIDs(ruleSets)
@@ -183,45 +183,29 @@ func (p *provider) ruleSetsUpdated(ruleSets []RuleSet, state BucketState, buketI
 	for _, ID := range removedIDs {
 		delete(state, ID)
 
-		p.ruleSetChanged(event.RuleSetChangedEvent{
-			Src:        "blob:" + ID,
-			ChangeType: event.Remove,
-		})
+		p.p.OnDeleted(&rule.SetConfiguration{SetMeta: rule.SetMeta{Source: ID}})
 	}
 
 	// check which rule sets are new and which are modified
 	for _, ruleSet := range ruleSets {
-		isNew := slices.Contains(newIDs, ruleSet.Key)
-		hasChanged := !isNew && !bytes.Equal(state[ruleSet.Key], ruleSet.Hash)
+		isNew := slices.Contains(newIDs, ruleSet.Source)
+		hasChanged := !isNew && !bytes.Equal(state[ruleSet.Source], ruleSet.Hash)
 
-		state[ruleSet.Key] = ruleSet.Hash
+		state[ruleSet.Source] = ruleSet.Hash
 
 		if !isNew && !hasChanged {
 			p.l.Debug().
 				Str("_bucket", buketID).
-				Str("_rule_set", ruleSet.Key).
+				Str("_rule_set", ruleSet.Source).
 				Msg("No updates received")
 
 			continue
 		}
 
 		if isNew {
-			p.ruleSetChanged(event.RuleSetChangedEvent{
-				Src:        "blob:" + ruleSet.Key,
-				ChangeType: event.Create,
-				Rules:      ruleSet.Rules,
-			})
+			p.p.OnCreated(ruleSet)
 		} else if hasChanged {
-			p.ruleSetChanged(event.RuleSetChangedEvent{
-				Src:        "blob:" + ruleSet.Key,
-				ChangeType: event.Remove,
-			})
-
-			p.ruleSetChanged(event.RuleSetChangedEvent{
-				Src:        "blob:" + ruleSet.Key,
-				ChangeType: event.Create,
-				Rules:      ruleSet.Rules,
-			})
+			p.p.OnUpdated(ruleSet)
 		}
 	}
 }
@@ -239,20 +223,12 @@ func (p *provider) getBucketState(key string) BucketState {
 	return state
 }
 
-func toRuleSetIDs(ruleSets []RuleSet) []string {
+func toRuleSetIDs(ruleSets []*rule.SetConfiguration) []string {
 	currentIDs := make([]string, len(ruleSets))
 
 	for idx, ruleSet := range ruleSets {
-		currentIDs[idx] = ruleSet.Key
+		currentIDs[idx] = ruleSet.Source
 	}
 
 	return currentIDs
-}
-
-func (p *provider) ruleSetChanged(evt event.RuleSetChangedEvent) {
-	p.l.Info().
-		Str("_src", evt.Src).
-		Str("_type", evt.ChangeType.String()).
-		Msg("Rule set changed")
-	p.q <- evt
 }

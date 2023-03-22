@@ -29,12 +29,15 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/rules/event"
+	"github.com/dadrus/heimdall/internal/rules/rule"
+	"github.com/dadrus/heimdall/internal/rules/rule/mocks"
 	"github.com/dadrus/heimdall/internal/x"
+	mock2 "github.com/dadrus/heimdall/internal/x/mock"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
@@ -116,7 +119,7 @@ buckets:
 
 				require.NotNil(t, prov)
 				assert.NotNil(t, prov.s)
-				assert.NotNil(t, prov.q)
+				assert.NotNil(t, prov.p)
 				assert.NotNil(t, prov.cancel)
 				assert.False(t, prov.s.IsRunning())
 				assert.Len(t, prov.s.Jobs(), 2)
@@ -130,7 +133,6 @@ buckets:
 			providerConf, err := testsupport.DecodeTestConfig(tc.conf)
 			require.NoError(t, err)
 
-			queue := make(event.RuleSetChangedEventQueue, 10)
 			conf := &config.Configuration{
 				Rules: config.Rules{
 					Providers: config.RuleProviders{CloudBlob: providerConf},
@@ -138,7 +140,7 @@ buckets:
 			}
 
 			// WHEN
-			prov, err := newProvider(conf, queue, log.Logger)
+			prov, err := newProvider(conf, mocks.NewRuleSetProcessorMock(t), log.Logger)
 
 			// THEN
 			tc.assert(t, err, prov)
@@ -175,10 +177,11 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx
 	}
 
 	type testCase struct {
-		uc          string
-		conf        []byte
-		setupBucket func(t *testing.T)
-		assert      func(t *testing.T, tc testCase, logs fmt.Stringer, queue event.RuleSetChangedEventQueue)
+		uc             string
+		conf           []byte
+		setupBucket    func(t *testing.T)
+		setupProcessor func(t *testing.T, processor *mocks.RuleSetProcessorMock)
+		assert         func(t *testing.T, tc testCase, logs fmt.Stringer, processor *mocks.RuleSetProcessorMock)
 	}
 
 	for _, tc := range []testCase{
@@ -188,7 +191,7 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx
 buckets:
 - url: s3://does-not-exist-for-heimdall?endpoint=does-not-exist.local&region=eu-central-1
 `),
-			assert: func(t *testing.T, tc testCase, logs fmt.Stringer, queue event.RuleSetChangedEventQueue) {
+			assert: func(t *testing.T, tc testCase, logs fmt.Stringer, processor *mocks.RuleSetProcessorMock) {
 				t.Helper()
 
 				time.Sleep(1 * time.Second)
@@ -206,7 +209,7 @@ buckets:
 buckets:
 - url: s3://` + bucketName + `?endpoint=` + srv.URL + `&disableSSL=true&s3ForcePathStyle=true&region=eu-central-1
 `),
-			assert: func(t *testing.T, tc testCase, logs fmt.Stringer, queue event.RuleSetChangedEventQueue) {
+			assert: func(t *testing.T, tc testCase, logs fmt.Stringer, processor *mocks.RuleSetProcessorMock) {
 				t.Helper()
 
 				time.Sleep(250 * time.Millisecond)
@@ -230,7 +233,7 @@ buckets:
 					strings.NewReader(``), 0)
 				require.NoError(t, err)
 			},
-			assert: func(t *testing.T, tc testCase, logs fmt.Stringer, queue event.RuleSetChangedEventQueue) {
+			assert: func(t *testing.T, tc testCase, logs fmt.Stringer, processor *mocks.RuleSetProcessorMock) {
 				t.Helper()
 
 				time.Sleep(250 * time.Millisecond)
@@ -261,20 +264,24 @@ rules:
 					strings.NewReader(data), int64(len(data)))
 				require.NoError(t, err)
 			},
-			assert: func(t *testing.T, tc testCase, logs fmt.Stringer, queue event.RuleSetChangedEventQueue) {
+			setupProcessor: func(t *testing.T, processor *mocks.RuleSetProcessorMock) {
+				t.Helper()
+
+				processor.EXPECT().OnCreated(mock.Anything).
+					Run(mock2.NewArgumentCaptor[*rule.SetConfiguration](&processor.Mock, "captor1").Capture).
+					Return().Once()
+			},
+			assert: func(t *testing.T, tc testCase, logs fmt.Stringer, processor *mocks.RuleSetProcessorMock) {
 				t.Helper()
 
 				time.Sleep(600 * time.Millisecond)
 
 				assert.NotContains(t, logs.String(), "No updates received")
 
-				require.Len(t, queue, 1)
-
-				evt := <-queue
-				assert.Contains(t, evt.Src, "blob:test-rule@s3")
-				assert.Len(t, evt.Rules, 1)
-				assert.Equal(t, "foo", evt.Rules[0].ID)
-				assert.Equal(t, event.Create, evt.ChangeType)
+				ruleSet := mock2.ArgumentCaptorFrom[*rule.SetConfiguration](&processor.Mock, "captor1").Value()
+				assert.Len(t, ruleSet.Rules, 1)
+				assert.Equal(t, "foo", ruleSet.Rules[0].ID)
+				assert.Contains(t, ruleSet.Source, "test-rule@s3")
 			},
 		},
 		{
@@ -299,20 +306,24 @@ rules:
 					strings.NewReader(data), int64(len(data)))
 				require.NoError(t, err)
 			},
-			assert: func(t *testing.T, tc testCase, logs fmt.Stringer, queue event.RuleSetChangedEventQueue) {
+			setupProcessor: func(t *testing.T, processor *mocks.RuleSetProcessorMock) {
+				t.Helper()
+
+				processor.EXPECT().OnCreated(mock.Anything).
+					Run(mock2.NewArgumentCaptor[*rule.SetConfiguration](&processor.Mock, "captor1").Capture).
+					Return().Once()
+			},
+			assert: func(t *testing.T, tc testCase, logs fmt.Stringer, processor *mocks.RuleSetProcessorMock) {
 				t.Helper()
 
 				time.Sleep(600 * time.Millisecond)
 
 				assert.Contains(t, logs.String(), "No updates received")
 
-				require.Len(t, queue, 1)
-
-				evt := <-queue
-				assert.Contains(t, evt.Src, "blob:test-rule@s3")
-				assert.Len(t, evt.Rules, 1)
-				assert.Equal(t, "foo", evt.Rules[0].ID)
-				assert.Equal(t, event.Create, evt.ChangeType)
+				ruleSet := mock2.ArgumentCaptorFrom[*rule.SetConfiguration](&processor.Mock, "captor1").Value()
+				assert.Len(t, ruleSet.Rules, 1)
+				assert.Equal(t, "foo", ruleSet.Rules[0].ID)
+				assert.Contains(t, ruleSet.Source, "test-rule@s3")
 			},
 		},
 		{
@@ -360,7 +371,18 @@ rules:
 					callIdx++
 				}
 			}(),
-			assert: func(t *testing.T, tc testCase, logs fmt.Stringer, queue event.RuleSetChangedEventQueue) {
+			setupProcessor: func(t *testing.T, processor *mocks.RuleSetProcessorMock) {
+				t.Helper()
+
+				processor.EXPECT().OnCreated(mock.Anything).
+					Run(mock2.NewArgumentCaptor[*rule.SetConfiguration](&processor.Mock, "captor1").Capture).
+					Return().Twice()
+
+				processor.EXPECT().OnDeleted(mock.Anything).
+					Run(mock2.NewArgumentCaptor[*rule.SetConfiguration](&processor.Mock, "captor2").Capture).
+					Return().Once()
+			},
+			assert: func(t *testing.T, tc testCase, logs fmt.Stringer, processor *mocks.RuleSetProcessorMock) {
 				t.Helper()
 
 				time.Sleep(150 * time.Millisecond)
@@ -375,24 +397,17 @@ rules:
 
 				assert.Contains(t, logs.String(), "No updates received")
 
-				require.Len(t, queue, 3)
+				ruleSets := mock2.ArgumentCaptorFrom[*rule.SetConfiguration](&processor.Mock, "captor1").Values()
+				require.Len(t, ruleSets, 2)
+				assert.Equal(t, "foo", ruleSets[0].Rules[0].ID)
+				assert.Contains(t, ruleSets[0].Source, "test-rule1@s3")
+				assert.Len(t, ruleSets[0].Rules, 1)
+				assert.Contains(t, ruleSets[1].Source, "test-rule2@s3")
+				assert.Len(t, ruleSets[1].Rules, 1)
+				assert.Equal(t, "bar", ruleSets[1].Rules[0].ID)
 
-				evt := <-queue
-				assert.Contains(t, evt.Src, "blob:test-rule1@s3")
-				assert.Len(t, evt.Rules, 1)
-				assert.Equal(t, "foo", evt.Rules[0].ID)
-				assert.Equal(t, event.Create, evt.ChangeType)
-
-				evt = <-queue
-				assert.Contains(t, evt.Src, "blob:test-rule1@s3")
-				assert.Len(t, evt.Rules, 0)
-				assert.Equal(t, event.Remove, evt.ChangeType)
-
-				evt = <-queue
-				assert.Contains(t, evt.Src, "blob:test-rule2@s3")
-				assert.Len(t, evt.Rules, 1)
-				assert.Equal(t, "bar", evt.Rules[0].ID)
-				assert.Equal(t, event.Create, evt.ChangeType)
+				ruleSet := mock2.ArgumentCaptorFrom[*rule.SetConfiguration](&processor.Mock, "captor2").Value()
+				assert.Contains(t, ruleSet.Source, "test-rule1@s3")
 			},
 		},
 		{
@@ -450,7 +465,17 @@ rules:
 					callIdx++
 				}
 			}(),
-			assert: func(t *testing.T, tc testCase, logs fmt.Stringer, queue event.RuleSetChangedEventQueue) {
+			setupProcessor: func(t *testing.T, processor *mocks.RuleSetProcessorMock) {
+				t.Helper()
+
+				processor.EXPECT().OnCreated(mock.Anything).
+					Run(mock2.NewArgumentCaptor[*rule.SetConfiguration](&processor.Mock, "captor1").Capture).
+					Return().Once()
+				processor.EXPECT().OnUpdated(mock.Anything).
+					Run(mock2.NewArgumentCaptor[*rule.SetConfiguration](&processor.Mock, "captor2").Capture).
+					Return().Twice()
+			},
+			assert: func(t *testing.T, tc testCase, logs fmt.Stringer, processor *mocks.RuleSetProcessorMock) {
 				t.Helper()
 
 				time.Sleep(150 * time.Millisecond)
@@ -465,35 +490,19 @@ rules:
 
 				assert.Contains(t, logs.String(), "No updates received")
 
-				require.Len(t, queue, 5)
+				ruleSet := mock2.ArgumentCaptorFrom[*rule.SetConfiguration](&processor.Mock, "captor1").Value()
+				assert.Equal(t, "foo", ruleSet.Rules[0].ID)
+				assert.Contains(t, ruleSet.Source, "test-rule@s3")
+				assert.Len(t, ruleSet.Rules, 1)
 
-				evt := <-queue
-				assert.Contains(t, evt.Src, "blob:test-rule@s3")
-				assert.Len(t, evt.Rules, 1)
-				assert.Equal(t, "foo", evt.Rules[0].ID)
-				assert.Equal(t, event.Create, evt.ChangeType)
-
-				evt = <-queue
-				assert.Contains(t, evt.Src, "blob:test-rule@s3")
-				assert.Len(t, evt.Rules, 0)
-				assert.Equal(t, event.Remove, evt.ChangeType)
-
-				evt = <-queue
-				assert.Contains(t, evt.Src, "blob:test-rule@s3")
-				assert.Len(t, evt.Rules, 1)
-				assert.Equal(t, "bar", evt.Rules[0].ID)
-				assert.Equal(t, event.Create, evt.ChangeType)
-
-				evt = <-queue
-				assert.Contains(t, evt.Src, "blob:test-rule@s3")
-				assert.Len(t, evt.Rules, 0)
-				assert.Equal(t, event.Remove, evt.ChangeType)
-
-				evt = <-queue
-				assert.Contains(t, evt.Src, "blob:test-rule@s3")
-				assert.Len(t, evt.Rules, 1)
-				assert.Equal(t, "baz", evt.Rules[0].ID)
-				assert.Equal(t, event.Create, evt.ChangeType)
+				ruleSets := mock2.ArgumentCaptorFrom[*rule.SetConfiguration](&processor.Mock, "captor2").Values()
+				assert.Len(t, ruleSets, 2)
+				assert.Contains(t, ruleSets[0].Source, "test-rule@s3")
+				assert.Len(t, ruleSets[0].Rules, 1)
+				assert.Equal(t, "bar", ruleSets[0].Rules[0].ID)
+				assert.Contains(t, ruleSets[1].Source, "test-rule@s3")
+				assert.Len(t, ruleSets[1].Rules, 1)
+				assert.Equal(t, "baz", ruleSets[1].Rules[0].ID)
 			},
 		},
 	} {
@@ -501,13 +510,22 @@ rules:
 			// GIVEN
 			clearBucket(t)
 
-			setupBucket := x.IfThenElse(tc.setupBucket != nil, tc.setupBucket, func(t *testing.T) { t.Helper() })
+			setupBucket := x.IfThenElse(
+				tc.setupBucket != nil,
+				tc.setupBucket,
+				func(t *testing.T) { t.Helper() },
+			)
+			setupProcessor := x.IfThenElse(
+				tc.setupProcessor != nil,
+				tc.setupProcessor,
+				func(t *testing.T, _ *mocks.RuleSetProcessorMock) { t.Helper() },
+			)
 
 			providerConf, err := testsupport.DecodeTestConfig(tc.conf)
 			require.NoError(t, err)
 
-			queue := make(event.RuleSetChangedEventQueue, 10)
-			defer close(queue)
+			mock := mocks.NewRuleSetProcessorMock(t)
+			setupProcessor(t, mock)
 
 			conf := &config.Configuration{
 				Rules: config.Rules{
@@ -516,7 +534,7 @@ rules:
 			}
 
 			logs := &strings.Builder{}
-			prov, err := newProvider(conf, queue, zerolog.New(logs))
+			prov, err := newProvider(conf, mock, zerolog.New(logs))
 			require.NoError(t, err)
 
 			ctx := context.Background()
@@ -530,7 +548,7 @@ rules:
 
 			// THEN
 			require.NoError(t, err)
-			tc.assert(t, tc, logs, queue)
+			tc.assert(t, tc, logs, mock)
 		})
 	}
 }
