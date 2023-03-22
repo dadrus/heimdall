@@ -131,8 +131,8 @@ func (p *provider) Stop(_ context.Context) error {
 
 	p.l.Info().Msg("Tearing down rule provider.")
 
-	p.cancel()
 	p.s.Stop()
+	p.cancel()
 
 	return nil
 }
