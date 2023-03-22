@@ -22,45 +22,36 @@ import (
 	"testing"
 	"time"
 
+	"github.com/fsnotify/fsnotify"
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
-	"github.com/dadrus/heimdall/internal/config"
-	"github.com/dadrus/heimdall/internal/rules/event"
+	"github.com/dadrus/heimdall/internal/rules/rule"
+	"github.com/dadrus/heimdall/internal/rules/rule/mocks"
 	"github.com/dadrus/heimdall/internal/x"
+	mock2 "github.com/dadrus/heimdall/internal/x/mock"
 )
 
 // nolint: maintidx
 func TestStartProvider(t *testing.T) {
-	t.Parallel()
-
-	var tearDownFuncs []func()
-
-	defer func() {
-		for _, f := range tearDownFuncs {
-			f()
-		}
-	}()
-
 	for _, tc := range []struct {
 		uc             string
-		createProvider func(t *testing.T, file *os.File, dir string) *provider
+		watch          bool
+		setupContents  func(t *testing.T, file *os.File, dir string) string
+		setupProcessor func(t *testing.T, processor *mocks.RuleSetProcessorMock)
 		writeContents  func(t *testing.T, file *os.File, dir string)
-		assert         func(t *testing.T, err error, provider *provider)
+		assert         func(t *testing.T, err error, provider *provider, processor *mocks.RuleSetProcessorMock)
 	}{
 		{
 			uc: "start provider using not existing file",
-			createProvider: func(t *testing.T, file *os.File, dir string) *provider {
+			setupContents: func(t *testing.T, file *os.File, dir string) string {
 				t.Helper()
 
-				return &provider{
-					src:        "foo.bar",
-					l:          log.Logger,
-					configured: true,
-				}
+				return "foo.bar"
 			},
-			assert: func(t *testing.T, err error, provider *provider) {
+			assert: func(t *testing.T, err error, provider *provider, processor *mocks.RuleSetProcessorMock) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -69,18 +60,14 @@ func TestStartProvider(t *testing.T) {
 		},
 		{
 			uc: "start provider using file without read permissions",
-			createProvider: func(t *testing.T, file *os.File, dir string) *provider {
+			setupContents: func(t *testing.T, file *os.File, dir string) string {
 				t.Helper()
 
 				require.NoError(t, file.Chmod(0o200))
 
-				return &provider{
-					src:        file.Name(),
-					l:          log.Logger,
-					configured: true,
-				}
+				return file.Name()
 			},
-			assert: func(t *testing.T, err error, provider *provider) {
+			assert: func(t *testing.T, err error, provider *provider, processor *mocks.RuleSetProcessorMock) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -89,27 +76,15 @@ func TestStartProvider(t *testing.T) {
 		},
 		{
 			uc: "successfully start provider without watcher using empty file",
-			createProvider: func(t *testing.T, file *os.File, dir string) *provider {
-				t.Helper()
-
-				return &provider{
-					src:        file.Name(),
-					l:          log.Logger,
-					q:          make(event.RuleSetChangedEventQueue, 10),
-					configured: true,
-				}
-			},
-			assert: func(t *testing.T, err error, provider *provider) {
+			assert: func(t *testing.T, err error, provider *provider, processor *mocks.RuleSetProcessorMock) {
 				t.Helper()
 
 				require.NoError(t, err)
-
-				assert.Len(t, provider.q, 0)
 			},
 		},
 		{
 			uc: "successfully start provider without watcher using not empty file",
-			createProvider: func(t *testing.T, file *os.File, dir string) *provider {
+			setupContents: func(t *testing.T, file *os.File, dir string) string {
 				t.Helper()
 
 				_, err := file.Write([]byte(`
@@ -119,51 +94,42 @@ rules:
 `))
 				require.NoError(t, err)
 
-				return &provider{
-					src:        file.Name(),
-					l:          log.Logger,
-					q:          make(event.RuleSetChangedEventQueue, 10),
-					configured: true,
-				}
+				return file.Name()
 			},
-			assert: func(t *testing.T, err error, provider *provider) {
+			setupProcessor: func(t *testing.T, processor *mocks.RuleSetProcessorMock) {
+				t.Helper()
+
+				processor.EXPECT().OnCreated(mock.Anything).
+					Run(mock2.NewArgumentCaptor[*rule.SetConfiguration](&processor.Mock, "captor1").Capture).
+					Return()
+			},
+			assert: func(t *testing.T, err error, provider *provider, processor *mocks.RuleSetProcessorMock) {
 				t.Helper()
 
 				require.NoError(t, err)
 
-				assert.Len(t, provider.q, 1)
-
-				evt := <-provider.q
-
-				assert.Contains(t, evt.Src, "file_system:")
-				assert.Len(t, evt.Rules, 1)
-				assert.Equal(t, "foo", evt.Rules[0].ID)
-				assert.Equal(t, event.Create, evt.ChangeType)
+				ruleSet := mock2.ArgumentCaptorFrom[*rule.SetConfiguration](&processor.Mock, "captor1").Value()
+				assert.Contains(t, ruleSet.Source, "file_system:")
+				assert.Len(t, ruleSet.Rules, 1)
+				assert.Equal(t, "foo", ruleSet.Rules[0].ID)
 			},
 		},
 		{
 			uc: "successfully start provider without watcher using empty dir",
-			createProvider: func(t *testing.T, file *os.File, dir string) *provider {
+			setupContents: func(t *testing.T, file *os.File, dir string) string {
 				t.Helper()
 
-				return &provider{
-					src:        dir,
-					l:          log.Logger,
-					q:          make(event.RuleSetChangedEventQueue, 10),
-					configured: true,
-				}
+				return dir
 			},
-			assert: func(t *testing.T, err error, provider *provider) {
+			assert: func(t *testing.T, err error, provider *provider, processor *mocks.RuleSetProcessorMock) {
 				t.Helper()
 
 				require.NoError(t, err)
-
-				assert.Len(t, provider.q, 0)
 			},
 		},
 		{
 			uc: "successfully start provider without watcher using dir with not empty file",
-			createProvider: func(t *testing.T, file *os.File, dir string) *provider {
+			setupContents: func(t *testing.T, file *os.File, dir string) string {
 				t.Helper()
 
 				tmpFile, err := os.CreateTemp(dir, "test-rule-")
@@ -176,31 +142,29 @@ rules:
 `))
 				require.NoError(t, err)
 
-				return &provider{
-					src:        dir,
-					l:          log.Logger,
-					q:          make(event.RuleSetChangedEventQueue, 10),
-					configured: true,
-				}
+				return dir
 			},
-			assert: func(t *testing.T, err error, provider *provider) {
+			setupProcessor: func(t *testing.T, processor *mocks.RuleSetProcessorMock) {
+				t.Helper()
+
+				processor.EXPECT().OnCreated(mock.Anything).
+					Run(mock2.NewArgumentCaptor[*rule.SetConfiguration](&processor.Mock, "captor1").Capture).
+					Return()
+			},
+			assert: func(t *testing.T, err error, provider *provider, processor *mocks.RuleSetProcessorMock) {
 				t.Helper()
 
 				require.NoError(t, err)
 
-				assert.Len(t, provider.q, 1)
-
-				evt := <-provider.q
-
-				assert.Contains(t, evt.Src, "file_system:")
-				assert.Len(t, evt.Rules, 1)
-				assert.Equal(t, "foo", evt.Rules[0].ID)
-				assert.Equal(t, event.Create, evt.ChangeType)
+				ruleSet := mock2.ArgumentCaptorFrom[*rule.SetConfiguration](&processor.Mock, "captor1").Value()
+				assert.Contains(t, ruleSet.Source, "file_system:")
+				assert.Len(t, ruleSet.Rules, 1)
+				assert.Equal(t, "foo", ruleSet.Rules[0].ID)
 			},
 		},
 		{
 			uc: "successfully start provider without watcher using dir with other directory with rule file",
-			createProvider: func(t *testing.T, file *os.File, dir string) *provider {
+			setupContents: func(t *testing.T, file *os.File, dir string) string {
 				t.Helper()
 
 				tmpDir, err := os.MkdirTemp(dir, "test-dir-")
@@ -216,40 +180,22 @@ rules:
 `))
 				require.NoError(t, err)
 
-				return &provider{
-					src:        dir,
-					l:          log.Logger,
-					q:          make(event.RuleSetChangedEventQueue, 10),
-					configured: true,
-				}
+				return dir
 			},
-			assert: func(t *testing.T, err error, provider *provider) {
+			assert: func(t *testing.T, err error, provider *provider, processor *mocks.RuleSetProcessorMock) {
 				t.Helper()
 
 				require.NoError(t, err)
-
-				assert.Len(t, provider.q, 0)
 			},
 		},
 		{
 			uc: "successfully start provider with watcher using initially empty dir and adding rule " +
 				"file and deleting it then",
-			createProvider: func(t *testing.T, file *os.File, dir string) *provider {
+			watch: true,
+			setupContents: func(t *testing.T, file *os.File, dir string) string {
 				t.Helper()
 
-				conf := &config.Configuration{
-					Rules: config.Rules{
-						Providers: config.RuleProviders{FileSystem: map[string]any{"src": dir, "watch": true}},
-					},
-				}
-
-				provider, err := newProvider(
-					conf,
-					make(event.RuleSetChangedEventQueue, 10),
-					log.Logger)
-				require.NoError(t, err)
-
-				return provider
+				return dir
 			},
 			writeContents: func(t *testing.T, file *os.File, dir string) {
 				t.Helper()
@@ -273,50 +219,35 @@ rules:
 
 				time.Sleep(200 * time.Millisecond)
 			},
-			assert: func(t *testing.T, err error, provider *provider) {
+			setupProcessor: func(t *testing.T, processor *mocks.RuleSetProcessorMock) {
+				t.Helper()
+
+				call1 := processor.EXPECT().OnCreated(mock.Anything).
+					Run(mock2.NewArgumentCaptor[*rule.SetConfiguration](&processor.Mock, "captor1").Capture).
+					Return().Once()
+
+				processor.EXPECT().OnDeleted(mock.Anything).
+					Run(mock2.NewArgumentCaptor[*rule.SetConfiguration](&processor.Mock, "captor2").Capture).
+					Return().Once().NotBefore(call1)
+			},
+			assert: func(t *testing.T, err error, provider *provider, processor *mocks.RuleSetProcessorMock) {
 				t.Helper()
 
 				require.NoError(t, err)
 
-				require.Len(t, provider.q, 3)
+				ruleSet := mock2.ArgumentCaptorFrom[*rule.SetConfiguration](&processor.Mock, "captor1").Value()
+				assert.Contains(t, ruleSet.Source, "file_system:")
+				assert.Len(t, ruleSet.Rules, 1)
+				assert.Equal(t, "foo", ruleSet.Rules[0].ID)
 
-				evt := <-provider.q
-				assert.Contains(t, evt.Src, "file_system:"+provider.src)
-				assert.Empty(t, evt.Rules)
-				assert.Equal(t, event.Remove, evt.ChangeType)
-
-				evt = <-provider.q
-				assert.Contains(t, evt.Src, "file_system:"+provider.src)
-				assert.Len(t, evt.Rules, 1)
-				assert.Equal(t, "foo", evt.Rules[0].ID)
-				assert.Equal(t, event.Create, evt.ChangeType)
-
-				evt = <-provider.q
-				assert.Contains(t, evt.Src, "file_system:"+provider.src)
-				assert.Empty(t, evt.Rules)
-				assert.Equal(t, event.Remove, evt.ChangeType)
+				ruleSet = mock2.ArgumentCaptorFrom[*rule.SetConfiguration](&processor.Mock, "captor2").Value()
+				assert.Contains(t, ruleSet.Source, "file_system:")
 			},
 		},
 		{
 			uc: "successfully start provider with watcher using initially empty file, " +
 				"updating it afterwards and deleting it then",
-			createProvider: func(t *testing.T, file *os.File, dir string) *provider {
-				t.Helper()
-
-				conf := &config.Configuration{
-					Rules: config.Rules{
-						Providers: config.RuleProviders{FileSystem: map[string]any{"src": file.Name(), "watch": true}},
-					},
-				}
-
-				provider, err := newProvider(
-					conf,
-					make(event.RuleSetChangedEventQueue, 10),
-					log.Logger)
-				require.NoError(t, err)
-
-				return provider
-			},
+			watch: true,
 			writeContents: func(t *testing.T, file *os.File, dir string) {
 				t.Helper()
 
@@ -334,23 +265,29 @@ rules:
 
 				time.Sleep(200 * time.Millisecond)
 			},
-			assert: func(t *testing.T, err error, provider *provider) {
+			setupProcessor: func(t *testing.T, processor *mocks.RuleSetProcessorMock) {
+				t.Helper()
+
+				call1 := processor.EXPECT().OnCreated(mock.Anything).
+					Run(mock2.NewArgumentCaptor[*rule.SetConfiguration](&processor.Mock, "captor1").Capture).
+					Return().Once()
+
+				processor.EXPECT().OnDeleted(mock.Anything).
+					Run(mock2.NewArgumentCaptor[*rule.SetConfiguration](&processor.Mock, "captor2").Capture).
+					Return().Once().NotBefore(call1)
+			},
+			assert: func(t *testing.T, err error, provider *provider, processor *mocks.RuleSetProcessorMock) {
 				t.Helper()
 
 				require.NoError(t, err)
 
-				require.Len(t, provider.q, 2)
+				ruleSet := mock2.ArgumentCaptorFrom[*rule.SetConfiguration](&processor.Mock, "captor1").Value()
+				assert.Contains(t, ruleSet.Source, "file_system:")
+				assert.Len(t, ruleSet.Rules, 1)
+				assert.Equal(t, "foo", ruleSet.Rules[0].ID)
 
-				evt := <-provider.q
-				assert.Contains(t, evt.Src, "file_system:"+provider.src)
-				assert.Empty(t, evt.Rules)
-				assert.Equal(t, event.Remove, evt.ChangeType)
-
-				evt = <-provider.q
-				assert.Contains(t, evt.Src, "file_system:"+provider.src)
-				assert.Len(t, evt.Rules, 1)
-				assert.Equal(t, "foo", evt.Rules[0].ID)
-				assert.Equal(t, event.Create, evt.ChangeType)
+				ruleSet = mock2.ArgumentCaptorFrom[*rule.SetConfiguration](&processor.Mock, "captor2").Value()
+				assert.Contains(t, ruleSet.Source, "file_system:")
 			},
 		},
 	} {
@@ -359,30 +296,59 @@ rules:
 			tmpFile, err := os.CreateTemp(os.TempDir(), "test-dir-")
 			require.NoError(t, err)
 
-			tearDownFuncs = append(tearDownFuncs, func() { os.Remove(tmpFile.Name()) })
+			defer os.Remove(tmpFile.Name())
 
 			tmpDir, err := os.MkdirTemp(os.TempDir(), "test-rule-")
 			require.NoError(t, err)
 
-			tearDownFuncs = append(tearDownFuncs, func() { os.Remove(tmpDir) })
+			defer os.Remove(tmpDir)
 
 			writeContents := x.IfThenElse(tc.writeContents != nil,
 				tc.writeContents,
 				func(t *testing.T, file *os.File, dir string) { t.Helper() },
 			)
 
+			setupContents := x.IfThenElse(tc.setupContents != nil,
+				tc.setupContents,
+				func(t *testing.T, file *os.File, dir string) string {
+					t.Helper()
+
+					return file.Name()
+				},
+			)
+
+			setupProcessor := x.IfThenElse(tc.setupProcessor != nil,
+				tc.setupProcessor,
+				func(t *testing.T, processor *mocks.RuleSetProcessorMock) { t.Helper() })
+
+			processor := mocks.NewRuleSetProcessorMock(t)
+			setupProcessor(t, processor)
+
+			var watcher *fsnotify.Watcher
+
+			if tc.watch {
+				watcher, err = fsnotify.NewWatcher()
+				require.NoError(t, err)
+			}
+
 			// GIVEN
-			provider := tc.createProvider(t, tmpFile, tmpDir)
+			prov := &provider{
+				src:        setupContents(t, tmpFile, tmpDir),
+				p:          processor,
+				l:          log.Logger,
+				w:          watcher,
+				configured: true,
+			}
 
 			// WHEN
-			err = provider.Start(ctx)
+			err = prov.Start(ctx)
+
+			defer prov.Stop(ctx) // nolint: errcheck
+
 			writeContents(t, tmpFile, tmpDir)
 
-			// nolint: errcheck
-			tearDownFuncs = append(tearDownFuncs, func() { provider.Stop(ctx) })
-
 			// THEN
-			tc.assert(t, err, provider)
+			tc.assert(t, err, prov, processor)
 		})
 	}
 }
