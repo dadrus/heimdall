@@ -43,10 +43,8 @@ type provider struct {
 	l          zerolog.Logger
 	s          *gocron.Scheduler
 	cancel     context.CancelFunc
+	states     sync.Map
 	configured bool
-
-	mu     sync.Mutex
-	states map[string]BucketState
 }
 
 func newProvider(
@@ -90,7 +88,6 @@ func newProvider(
 		l:          logger,
 		s:          scheduler,
 		cancel:     cancel,
-		states:     make(map[string]BucketState),
 		configured: true,
 	}
 
@@ -209,16 +206,9 @@ func (p *provider) ruleSetsUpdated(ruleSets []*rule.SetConfiguration, state Buck
 }
 
 func (p *provider) getBucketState(key string) BucketState {
-	p.mu.Lock()
-	state, present := p.states[key]
+	value, _ := p.states.LoadOrStore(key, make(BucketState))
 
-	if !present {
-		state = make(BucketState)
-		p.states[key] = state
-	}
-	p.mu.Unlock()
-
-	return state
+	return value.(BucketState) // nolint: forcetypeassert
 }
 
 func toRuleSetIDs(ruleSets []*rule.SetConfiguration) []string {
