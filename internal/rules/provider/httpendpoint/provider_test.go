@@ -35,6 +35,7 @@ import (
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/event"
+	"github.com/dadrus/heimdall/internal/rules/rule/mocks"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
@@ -110,7 +111,7 @@ endpoints:
 				require.NoError(t, err)
 				require.NotNil(t, prov)
 				assert.NotNil(t, prov.s)
-				assert.NotNil(t, prov.q)
+				assert.NotNil(t, prov.p)
 				assert.NotNil(t, prov.cancel)
 				assert.False(t, prov.s.IsRunning())
 				assert.Len(t, prov.s.Jobs(), 1)
@@ -132,7 +133,7 @@ endpoints:
 				require.NoError(t, err)
 				require.NotNil(t, prov)
 				assert.NotNil(t, prov.s)
-				assert.NotNil(t, prov.q)
+				assert.NotNil(t, prov.p)
 				assert.NotNil(t, prov.cancel)
 				assert.False(t, prov.s.IsRunning())
 				assert.Len(t, prov.s.Jobs(), 2)
@@ -146,7 +147,6 @@ endpoints:
 			providerConf, err := testsupport.DecodeTestConfig(tc.conf)
 			require.NoError(t, err)
 
-			queue := make(event.RuleSetChangedEventQueue, 10)
 			conf := &config.Configuration{
 				Rules: config.Rules{
 					Providers: config.RuleProviders{HTTPEndpoint: providerConf},
@@ -154,7 +154,7 @@ endpoints:
 			}
 
 			// WHEN
-			prov, err := newProvider(conf, memory.New(), queue, log.Logger)
+			prov, err := newProvider(conf, memory.New(), mocks.NewRuleSetProcessorMock(t), log.Logger)
 
 			// THEN
 			tc.assert(t, err, prov)
@@ -579,9 +579,6 @@ rules:
 			providerConf, err := testsupport.DecodeTestConfig(tc.conf)
 			require.NoError(t, err)
 
-			queue := make(event.RuleSetChangedEventQueue, 10)
-			defer close(queue)
-
 			conf := &config.Configuration{
 				Rules: config.Rules{
 					Providers: config.RuleProviders{HTTPEndpoint: providerConf},
@@ -589,7 +586,7 @@ rules:
 			}
 
 			logs := &strings.Builder{}
-			prov, err := newProvider(conf, memory.New(), queue, zerolog.New(logs))
+			prov, err := newProvider(conf, memory.New(), nil, zerolog.New(logs))
 			require.NoError(t, err)
 
 			ctx := context.Background()
@@ -609,7 +606,7 @@ rules:
 
 			// THEN
 			require.NoError(t, err)
-			tc.assert(t, logs, queue)
+			tc.assert(t, logs, nil)
 		})
 	}
 }

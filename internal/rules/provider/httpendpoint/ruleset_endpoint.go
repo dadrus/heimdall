@@ -38,10 +38,10 @@ type ruleSetEndpoint struct {
 
 func (e *ruleSetEndpoint) ID() string { return e.URL }
 
-func (e *ruleSetEndpoint) FetchRuleSet(ctx context.Context) (RuleSet, error) {
+func (e *ruleSetEndpoint) FetchRuleSet(ctx context.Context) (*rule.SetConfiguration, error) {
 	req, err := e.CreateRequest(ctx, nil, nil)
 	if err != nil {
-		return RuleSet{}, errorchain.
+		return nil, errorchain.
 			NewWithMessage(heimdall.ErrInternal, "failed creating request").
 			CausedBy(err)
 	}
@@ -52,12 +52,12 @@ func (e *ruleSetEndpoint) FetchRuleSet(ctx context.Context) (RuleSet, error) {
 	if err != nil {
 		var clientErr *url.Error
 		if errors.As(err, &clientErr) && clientErr.Timeout() {
-			return RuleSet{}, errorchain.
+			return nil, errorchain.
 				NewWithMessage(heimdall.ErrCommunicationTimeout, "request to rule set endpoint timed out").
 				CausedBy(err)
 		}
 
-		return RuleSet{}, errorchain.
+		return nil, errorchain.
 			NewWithMessage(heimdall.ErrCommunication, "request to rule set endpoint failed").
 			CausedBy(err)
 	}
@@ -65,30 +65,30 @@ func (e *ruleSetEndpoint) FetchRuleSet(ctx context.Context) (RuleSet, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return RuleSet{}, errorchain.NewWithMessagef(heimdall.ErrCommunication,
+		return nil, errorchain.NewWithMessagef(heimdall.ErrCommunication,
 			"unexpected response code: %v", resp.StatusCode)
 	}
 
 	md := sha256.New()
 
-	contents, err := rule.ParseRules(resp.Header.Get("Content-Type"), io.TeeReader(resp.Body, md))
+	ruleSet, err := rule.ParseRules(resp.Header.Get("Content-Type"), io.TeeReader(resp.Body, md))
 	if err != nil {
 		if errors.Is(err, rule.ErrEmptyRuleSet) {
-			return RuleSet{}, nil
+			return &rule.SetConfiguration{SetMeta: rule.SetMeta{Source: "", Hash: md.Sum(nil)}}, nil
 		}
 
-		return RuleSet{}, errorchain.NewWithMessage(heimdall.ErrInternal, "failed to parse received rule set").
+		return nil, errorchain.NewWithMessage(heimdall.ErrInternal, "failed to parse received rule set").
 			CausedBy(err)
 	}
 
-	if err = contents.VerifyPathPrefix(e.RulesPathPrefix); err != nil {
-		return RuleSet{}, err
+	if err = ruleSet.VerifyPathPrefix(e.RulesPathPrefix); err != nil {
+		return nil, err
 	}
 
-	return RuleSet{
-		Rules: contents.Rules,
-		Hash:  md.Sum(nil),
-	}, nil
+	ruleSet.Hash = md.Sum(nil)
+	ruleSet.Source = ""
+
+	return ruleSet, nil
 }
 
 func (e *ruleSetEndpoint) init() error {
