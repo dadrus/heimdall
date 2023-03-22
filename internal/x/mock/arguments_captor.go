@@ -27,5 +27,5 @@ func (c *ArgumentsCaptor) Values(call int) mock.Arguments {
 }
 
 func ArgumentsCaptorFrom(m *mock.Mock, name string) *ArgumentsCaptor {
-	return m.TestData().Get(name).Data().(*ArgumentsCaptor)
+	return m.TestData().Get(name).Data().(*ArgumentsCaptor) // nolint: forcetypeassert
 }

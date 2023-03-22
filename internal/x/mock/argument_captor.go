@@ -33,5 +33,5 @@ func (c *ArgumentCaptor[T]) Value() T {
 }
 
 func ArgumentCaptorFrom[T any](m *mock.Mock, name string) *ArgumentCaptor[T] {
-	return m.TestData().Get(name).Data().(*ArgumentCaptor[T])
+	return m.TestData().Get(name).Data().(*ArgumentCaptor[T]) // nolint: forcetypeassert
 }

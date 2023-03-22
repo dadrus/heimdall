@@ -46,14 +46,11 @@ func (m *stateMap) get(key string) []byte {
 	return m.state[key]
 }
 
-func (m *stateMap) set(key string, state []byte) []byte {
+func (m *stateMap) set(key string, state []byte) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	old := m.state[key]
 	m.state[key] = state
-
-	return old
 }
 
 func (m *stateMap) remove(key string) []byte {
