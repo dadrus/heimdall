@@ -46,8 +46,6 @@ var Module = fx.Options(
 				},
 			),
 		),
-	),
-	fx.Provide(
 		NewRuleFactory,
 		fx.Annotate(
 			newRepository,
@@ -55,6 +53,7 @@ var Module = fx.Options(
 			fx.OnStop(func(ctx context.Context, o *repository) error { return o.Stop(ctx) }),
 		),
 		func(r *repository) Repository { return r },
+		newRuleSetProcessor,
 	),
 	provider.Module,
 )
