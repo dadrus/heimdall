@@ -35,7 +35,7 @@ import (
 )
 
 // nolint: maintidx
-func TestStartProvider(t *testing.T) {
+func TestProviderLifecycle(t *testing.T) {
 	for _, tc := range []struct {
 		uc             string
 		watch          bool
@@ -260,6 +260,18 @@ rules:
 
 				time.Sleep(200 * time.Millisecond)
 
+				_, err = file.Seek(0, 0)
+				require.NoError(t, err)
+
+				_, err = file.Write([]byte(`
+version: "1"
+rules:
+- id: bar
+`))
+				require.NoError(t, err)
+
+				time.Sleep(200 * time.Millisecond)
+
 				err = os.Remove(file.Name())
 				require.NoError(t, err)
 
@@ -272,9 +284,13 @@ rules:
 					Run(mock2.NewArgumentCaptor[*rule.SetConfiguration](&processor.Mock, "captor1").Capture).
 					Return().Once()
 
-				processor.EXPECT().OnDeleted(mock.Anything).
+				call2 := processor.EXPECT().OnUpdated(mock.Anything).
 					Run(mock2.NewArgumentCaptor[*rule.SetConfiguration](&processor.Mock, "captor2").Capture).
 					Return().Once().NotBefore(call1)
+
+				processor.EXPECT().OnDeleted(mock.Anything).
+					Run(mock2.NewArgumentCaptor[*rule.SetConfiguration](&processor.Mock, "captor3").Capture).
+					Return().Once().NotBefore(call2)
 			},
 			assert: func(t *testing.T, err error, provider *provider, processor *mocks.RuleSetProcessorMock) {
 				t.Helper()
@@ -287,6 +303,11 @@ rules:
 				assert.Equal(t, "foo", ruleSet.Rules[0].ID)
 
 				ruleSet = mock2.ArgumentCaptorFrom[*rule.SetConfiguration](&processor.Mock, "captor2").Value()
+				assert.Contains(t, ruleSet.Source, "file_system:")
+				assert.Len(t, ruleSet.Rules, 1)
+				assert.Equal(t, "bar", ruleSet.Rules[0].ID)
+
+				ruleSet = mock2.ArgumentCaptorFrom[*rule.SetConfiguration](&processor.Mock, "captor3").Value()
 				assert.Contains(t, ruleSet.Source, "file_system:")
 			},
 		},

@@ -17,7 +17,6 @@
 package filesystem
 
 import (
-	"bytes"
 	"context"
 	"crypto/sha256"
 	"errors"
@@ -25,6 +24,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"sync"
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/rs/zerolog"
@@ -40,6 +40,7 @@ type provider struct {
 	w          *fsnotify.Watcher
 	p          rule.SetProcessor
 	l          zerolog.Logger
+	states     sync.Map
 	configured bool
 }
 
@@ -189,14 +190,20 @@ func (p *provider) ruleSetsChanged(evt fsnotify.Event) {
 			return
 		}
 
+		p.states.Store(evt.Name, ruleSet.Hash)
+
 		p.p.OnCreated(ruleSet)
 	case evt.Has(fsnotify.Remove):
-		p.p.OnDeleted(&rule.SetConfiguration{SetMeta: rule.SetMeta{Source: evt.Name}})
-	case evt.Has(fsnotify.Write):
+		p.states.Delete(evt.Name)
+		p.p.OnDeleted(
+			&rule.SetConfiguration{SetMeta: rule.SetMeta{Source: fmt.Sprintf("file_system:%s", evt.Name)}})
+	case evt.Has(fsnotify.Write) || evt.Has(fsnotify.Chmod):
 		ruleSet, err := p.loadRuleSet(evt.Name)
 		if err != nil {
-			if errors.Is(err, rule.ErrEmptyRuleSet) {
-				p.p.OnDeleted(&rule.SetConfiguration{SetMeta: rule.SetMeta{Source: evt.Name}})
+			if errors.Is(err, rule.ErrEmptyRuleSet) || errors.Is(err, os.ErrNotExist) {
+				p.states.Delete(evt.Name)
+				p.p.OnDeleted(
+					&rule.SetConfiguration{SetMeta: rule.SetMeta{Source: fmt.Sprintf("file_system:%s", evt.Name)}})
 
 				return
 			}
@@ -206,20 +213,33 @@ func (p *provider) ruleSetsChanged(evt fsnotify.Event) {
 			return
 		}
 
-		p.p.OnUpdated(ruleSet)
+		var hash []byte
+
+		value, ok := p.states.Load(evt.Name)
+		if ok {
+			hash = value.([]byte) // nolint: forcetypeassert
+		}
+
+		p.states.Store(evt.Name, ruleSet.Hash)
+
+		if len(hash) == 0 {
+			p.p.OnCreated(ruleSet)
+		} else {
+			p.p.OnUpdated(ruleSet)
+		}
 	}
 }
 
 func (p *provider) loadRuleSet(fileName string) (*rule.SetConfiguration, error) {
-	data, err := os.ReadFile(fileName)
+	file, err := os.Open(fileName)
 	if err != nil {
 		return nil, errorchain.NewWithMessagef(heimdall.ErrInternal,
-			"failed reading file %s", fileName).CausedBy(err)
+			"failed opening file %s", fileName).CausedBy(err)
 	}
 
 	md := sha256.New()
 
-	ruleSet, err := rule.ParseRules("application/yaml", io.TeeReader(bytes.NewBuffer(data), md))
+	ruleSet, err := rule.ParseRules("application/yaml", io.TeeReader(file, md))
 	if err != nil {
 		return nil, errorchain.NewWithMessage(heimdall.ErrInternal, "failed to parse received rule set").
 			CausedBy(err)
