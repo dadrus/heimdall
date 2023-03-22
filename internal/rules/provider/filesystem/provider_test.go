@@ -28,11 +28,107 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
+	"github.com/dadrus/heimdall/internal/config"
+	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/rules/rule/mocks"
 	"github.com/dadrus/heimdall/internal/x"
 	mock2 "github.com/dadrus/heimdall/internal/x/mock"
 )
+
+func TestNewProvider(t *testing.T) {
+	t.Parallel()
+
+	tmpFile, err := os.CreateTemp(os.TempDir(), "test-dir-")
+	require.NoError(t, err)
+
+	defer os.Remove(tmpFile.Name())
+
+	for _, tc := range []struct {
+		uc     string
+		conf   map[string]any
+		assert func(t *testing.T, err error, prov *provider)
+	}{
+		{
+			uc: "not configured provider",
+			assert: func(t *testing.T, err error, prov *provider) {
+				t.Helper()
+
+				require.NoError(t, err)
+				require.NotNil(t, prov)
+				assert.False(t, prov.configured)
+			},
+		},
+		{
+			uc:   "bad configuration",
+			conf: map[string]any{"foo": "bar"},
+			assert: func(t *testing.T, err error, prov *provider) {
+				t.Helper()
+
+				require.Error(t, err)
+				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				assert.Contains(t, err.Error(), "failed to decode")
+			},
+		},
+		{
+			uc:   "no src configured",
+			conf: map[string]any{"watch": true},
+			assert: func(t *testing.T, err error, prov *provider) {
+				t.Helper()
+
+				require.Error(t, err)
+				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				assert.Contains(t, err.Error(), "no src")
+			},
+		},
+		{
+			uc:   "configured src does not exist",
+			conf: map[string]any{"src": "foo.bar"},
+			assert: func(t *testing.T, err error, prov *provider) {
+				t.Helper()
+
+				require.Error(t, err)
+				assert.ErrorIs(t, err, heimdall.ErrInternal)
+				assert.Contains(t, err.Error(), "failed to get info")
+			},
+		},
+		{
+			uc:   "successfully created provider without watcher",
+			conf: map[string]any{"src": tmpFile.Name()},
+			assert: func(t *testing.T, err error, prov *provider) {
+				t.Helper()
+
+				require.NoError(t, err)
+				require.NotNil(t, prov)
+				assert.True(t, prov.configured)
+				assert.Equal(t, tmpFile.Name(), prov.src)
+				assert.Nil(t, prov.w)
+			},
+		},
+		{
+			uc:   "successfully created provider with watcher",
+			conf: map[string]any{"src": tmpFile.Name(), "watch": true},
+			assert: func(t *testing.T, err error, prov *provider) {
+				t.Helper()
+
+				require.NoError(t, err)
+				require.NotNil(t, prov)
+				assert.True(t, prov.configured)
+				assert.Equal(t, tmpFile.Name(), prov.src)
+				assert.NotNil(t, prov.w)
+			},
+		},
+	} {
+		t.Run(tc.uc, func(t *testing.T) {
+			// GIVEN
+			conf := &config.Configuration{Rules: config.Rules{Providers: config.RuleProviders{FileSystem: tc.conf}}}
+
+			prov, err := newProvider(conf, nil, log.Logger)
+
+			tc.assert(t, err, prov)
+		})
+	}
+}
 
 // nolint: maintidx
 func TestProviderLifecycle(t *testing.T) {
