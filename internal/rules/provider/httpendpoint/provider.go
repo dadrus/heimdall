@@ -82,16 +82,12 @@ func newProvider(
 		}
 	}
 
+	logger = logger.With().Str("_provider_type", "http_endpoint").Logger()
 	ctx, cancel := context.WithCancel(context.Background())
-	ctx = logger.With().
-		Str("_rule_provider_type", "http_endpoint").
-		Logger().
-		WithContext(cache.WithContext(ctx, cch))
+	ctx = logger.WithContext(cache.WithContext(ctx, cch))
 
 	scheduler := gocron.NewScheduler(time.UTC)
 	scheduler.SingletonModeAll()
-
-	logger = logger.With().Str("_provider_type", "http_endpoint").Logger()
 
 	prov := &provider{
 		q:          queue,
