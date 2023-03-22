@@ -159,9 +159,7 @@ func (p *provider) watchChanges(ctx context.Context, rsf RuleSetFetcher) error {
 
 	// if no rule sets are available and no rule sets were known from the past
 	if len(ruleSets) == 0 && len(state) == 0 {
-		p.l.Debug().
-			Str("_endpoint", rsf.ID()).
-			Msg("No updates received")
+		p.l.Debug().Str("_endpoint", rsf.ID()).Msg("No updates received")
 
 		return nil
 	}
