@@ -18,13 +18,22 @@ package rule
 
 import (
 	"strings"
+	"time"
 
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
+type SetMeta struct {
+	Hash    []byte    `json:"-" yaml:"-"`
+	Source  string    `json:"-" yaml:"-"`
+	ModTime time.Time `json:"-" yaml:"-"`
+}
+
 type SetConfiguration struct {
+	SetMeta
+
 	Version string          `json:"version" yaml:"version"`
 	Name    string          `json:"name" yaml:"name"`
 	Rules   []Configuration `json:"rules" yaml:"rules"`
