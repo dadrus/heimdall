@@ -157,7 +157,7 @@ func (p *provider) watchFiles() {
 		select {
 		case evt, ok := <-p.w.Events:
 			if !ok {
-				p.l.Debug().Msg("Watcher events channel closed")
+				p.l.Debug().Msg("Watcher closed")
 
 				return
 			}

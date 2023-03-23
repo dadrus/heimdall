@@ -147,6 +147,8 @@ func (p *provider) watchChanges(ctx context.Context, rsf RuleSetFetcher) error {
 	ruleSet, err := rsf.FetchRuleSet(ctx)
 	if err != nil {
 		if errors.Is(err, context.Canceled) {
+			p.l.Debug().Msg("Watcher closed")
+
 			return nil
 		}
 
