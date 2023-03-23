@@ -33,22 +33,18 @@ import (
 
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/rules/event"
 	"github.com/dadrus/heimdall/internal/rules/provider/kubernetes/api/v1alpha1"
+	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
-var (
-	ErrNilRuleSet   = errors.New("nil RuleSet")
-	ErrNotARuleSet  = errors.New("not a RuleSet")
-	ErrBadAuthClass = errors.New("bad authClass in a RuleSet")
-)
+var ErrBadAuthClass = errors.New("bad authClass in a RuleSet")
 
 type ConfigFactory func() (*rest.Config, error)
 
 type provider struct {
-	q          event.RuleSetChangedEventQueue
+	p          rule.SetProcessor
 	l          zerolog.Logger
 	cl         v1alpha1.Client
 	cancel     context.CancelFunc
@@ -60,7 +56,7 @@ type provider struct {
 func newProvider(
 	conf *config.Configuration,
 	k8sCF ConfigFactory,
-	queue event.RuleSetChangedEventQueue,
+	processor rule.SetProcessor,
 	logger zerolog.Logger,
 ) (*provider, error) {
 	rawConf := conf.Rules.Providers.Kubernetes
@@ -99,7 +95,7 @@ func newProvider(
 	logger.Info().Msg("Rule provider configured.")
 
 	return &provider{
-		q:          queue,
+		p:          processor,
 		l:          logger,
 		cl:         client,
 		ac:         x.IfThenElse(len(providerConf.AuthClass) != 0, providerConf.AuthClass, DefaultClass),
@@ -193,40 +189,55 @@ func (p *provider) Stop(ctx context.Context) error {
 	}
 }
 
-func (p *provider) updateRuleSet(oldObj, newObj any) {
+func (p *provider) updateRuleSet(_, newObj any) {
 	// should never be of a different type. ok if panics
-	oldRs := oldObj.(*v1alpha1.RuleSet) // nolint: forcetypeassert
 	newRs := newObj.(*v1alpha1.RuleSet) // nolint: forcetypeassert
 
-	p.deleteRuleSet(oldRs)
-	p.addRuleSet(newRs)
+	conf := &rule.SetConfiguration{
+		SetMeta: rule.SetMeta{
+			Source:  fmt.Sprintf("%s:%s:%s", ProviderType, newRs.Namespace, newRs.UID),
+			ModTime: newRs.CreationTimestamp.Time,
+		},
+		Version: newRs.APIVersion,
+		Name:    newRs.Name,
+		Rules:   newRs.Spec.Rules,
+	}
+
+	p.p.OnUpdated(conf)
+	p.l.Info().Str("_src", conf.Source).Msg("Rule set updated")
 }
 
 func (p *provider) addRuleSet(obj any) {
 	// should never be of a different type. ok if panics
 	rs := obj.(*v1alpha1.RuleSet) // nolint: forcetypeassert
 
-	p.ruleSetChanged(event.RuleSetChangedEvent{
-		Src:        fmt.Sprintf("%s:%s:%s:%s", ProviderType, rs.Namespace, rs.Name, rs.UID),
-		ChangeType: event.Create,
-		Rules:      rs.Spec.Rules,
-	})
+	conf := &rule.SetConfiguration{
+		SetMeta: rule.SetMeta{
+			Source:  fmt.Sprintf("%s:%s:%s", ProviderType, rs.Namespace, rs.UID),
+			ModTime: rs.CreationTimestamp.Time,
+		},
+		Version: rs.APIVersion,
+		Name:    rs.Name,
+		Rules:   rs.Spec.Rules,
+	}
+
+	p.p.OnCreated(conf)
+	p.l.Info().Str("_src", conf.Source).Msg("Rule set created")
 }
 
 func (p *provider) deleteRuleSet(obj any) {
 	// should never be of a different type. ok if panics
 	rs := obj.(*v1alpha1.RuleSet) // nolint: forcetypeassert
 
-	p.ruleSetChanged(event.RuleSetChangedEvent{
-		Src:        fmt.Sprintf("%s:%s:%s:%s", ProviderType, rs.Namespace, rs.Name, rs.UID),
-		ChangeType: event.Remove,
-	})
-}
+	conf := &rule.SetConfiguration{
+		SetMeta: rule.SetMeta{
+			Source:  fmt.Sprintf("%s:%s:%s", ProviderType, rs.Namespace, rs.UID),
+			ModTime: rs.CreationTimestamp.Time,
+		},
+		Version: rs.APIVersion,
+		Name:    rs.Name,
+	}
 
-func (p *provider) ruleSetChanged(evt event.RuleSetChangedEvent) {
-	p.l.Info().
-		Str("_src", evt.Src).
-		Str("_type", evt.ChangeType.String()).
-		Msg("Rule set changed")
-	p.q <- evt
+	p.p.OnDeleted(conf)
+	p.l.Info().Str("_src", conf.Source).Msg("Rule set deleted")
 }

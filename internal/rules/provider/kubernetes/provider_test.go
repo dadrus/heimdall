@@ -29,6 +29,7 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/watch"
@@ -36,9 +37,11 @@ import (
 
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/rules/event"
 	"github.com/dadrus/heimdall/internal/rules/provider/kubernetes/api/v1alpha1"
-	event2 "github.com/dadrus/heimdall/internal/rules/rule"
+	"github.com/dadrus/heimdall/internal/rules/rule"
+	"github.com/dadrus/heimdall/internal/rules/rule/mocks"
+	"github.com/dadrus/heimdall/internal/x"
+	mock2 "github.com/dadrus/heimdall/internal/x/mock"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
@@ -95,7 +98,6 @@ func TestNewProvider(t *testing.T) {
 			providerConf, err := testsupport.DecodeTestConfig(tc.conf)
 			require.NoError(t, err)
 
-			queue := make(event.RuleSetChangedEventQueue, 10)
 			conf := &config.Configuration{
 				Rules: config.Rules{
 					Providers: config.RuleProviders{Kubernetes: providerConf},
@@ -104,7 +106,7 @@ func TestNewProvider(t *testing.T) {
 			k8sCF := func() (*rest.Config, error) { return &rest.Config{Host: "http://localhost:80001"}, nil }
 
 			// WHEN
-			prov, err := newProvider(conf, k8sCF, queue, log.Logger)
+			prov, err := newProvider(conf, k8sCF, mocks.NewRuleSetProcessorMock(t), log.Logger)
 
 			// THEN
 			tc.assert(t, err, prov)
@@ -124,10 +126,11 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 	defer srv.Close()
 
 	for _, tc := range []struct {
-		uc            string
-		conf          []byte
-		writeResponse ResponseWriter
-		assert        func(t *testing.T, logs fmt.Stringer, queue event.RuleSetChangedEventQueue)
+		uc             string
+		conf           []byte
+		writeResponse  ResponseWriter
+		setupProcessor func(t *testing.T, processor *mocks.RuleSetProcessorMock)
+		assert         func(t *testing.T, logs fmt.Stringer, processor *mocks.RuleSetProcessorMock)
 	}{
 		{
 			uc:   "rule set filtered due to wrong auth class",
@@ -162,10 +165,10 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 								},
 								Spec: v1alpha1.RuleSetSpec{
 									AuthClassName: "bar",
-									Rules: []event2.Configuration{
+									Rules: []rule.Configuration{
 										{
 											ID: "test",
-											RuleMatcher: event2.Matcher{
+											RuleMatcher: rule.Matcher{
 												URL:      "http://foo.bar",
 												Strategy: "glob",
 											},
@@ -223,7 +226,7 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 					}
 				}
 			}(),
-			assert: func(t *testing.T, logs fmt.Stringer, queue event.RuleSetChangedEventQueue) {
+			assert: func(t *testing.T, logs fmt.Stringer, processor *mocks.RuleSetProcessorMock) {
 				t.Helper()
 
 				time.Sleep(250 * time.Millisecond)
@@ -231,8 +234,6 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 				messages := logs.String()
 				assert.Contains(t, messages, "Ignoring ruleset")
 				assert.NotContains(t, messages, "Rule set changed")
-
-				require.Empty(t, queue)
 			},
 		},
 		{
@@ -268,10 +269,10 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 								},
 								Spec: v1alpha1.RuleSetSpec{
 									AuthClassName: "bar",
-									Rules: []event2.Configuration{
+									Rules: []rule.Configuration{
 										{
 											ID: "test",
-											RuleMatcher: event2.Matcher{
+											RuleMatcher: rule.Matcher{
 												URL:      "http://foo.bar",
 												Strategy: "glob",
 											},
@@ -329,22 +330,27 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 					}
 				}
 			}(),
-			assert: func(t *testing.T, logs fmt.Stringer, queue event.RuleSetChangedEventQueue) {
+			setupProcessor: func(t *testing.T, processor *mocks.RuleSetProcessorMock) {
+				t.Helper()
+
+				processor.EXPECT().OnCreated(mock.Anything).
+					Run(mock2.NewArgumentCaptor[*rule.SetConfiguration](&processor.Mock, "captor1").Capture).
+					Return().Once()
+			},
+			assert: func(t *testing.T, logs fmt.Stringer, processor *mocks.RuleSetProcessorMock) {
 				t.Helper()
 
 				time.Sleep(250 * time.Millisecond)
 
 				messages := logs.String()
-				assert.Contains(t, messages, "Rule set changed")
+				assert.Contains(t, messages, "Rule set created")
 
-				require.Len(t, queue, 1)
+				ruleSet := mock2.ArgumentCaptorFrom[*rule.SetConfiguration](&processor.Mock, "captor1").Value()
+				assert.Contains(t, ruleSet.Source, "kubernetes:foo:dfb2a2f1-1ad2-4d8c-8456-516fc94abb86")
+				assert.Equal(t, "test-rule", ruleSet.Name)
+				assert.Len(t, ruleSet.Rules, 1)
 
-				evt := <-queue
-				assert.Equal(t, "kubernetes:foo:test-rule:dfb2a2f1-1ad2-4d8c-8456-516fc94abb86", evt.Src)
-				assert.Equal(t, event.Create, evt.ChangeType)
-
-				require.Len(t, evt.Rules, 1)
-				rule := evt.Rules[0]
+				rule := ruleSet.Rules[0]
 				assert.Equal(t, "test", rule.ID)
 				assert.Equal(t, "http://foo.bar", rule.RuleMatcher.URL)
 				assert.Equal(t, "http://bar", rule.Upstream)
@@ -387,10 +393,10 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 								},
 								Spec: v1alpha1.RuleSetSpec{
 									AuthClassName: "bar",
-									Rules: []event2.Configuration{
+									Rules: []rule.Configuration{
 										{
 											ID: "test",
-											RuleMatcher: event2.Matcher{
+											RuleMatcher: rule.Matcher{
 												URL:      "http://foo.bar",
 												Strategy: "glob",
 											},
@@ -457,36 +463,46 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 					}
 				}
 			}(),
-			assert: func(t *testing.T, logs fmt.Stringer, queue event.RuleSetChangedEventQueue) {
+			setupProcessor: func(t *testing.T, processor *mocks.RuleSetProcessorMock) {
+				t.Helper()
+
+				processor.EXPECT().OnCreated(mock.Anything).
+					Run(mock2.NewArgumentCaptor[*rule.SetConfiguration](&processor.Mock, "captor1").Capture).
+					Return().Once()
+
+				processor.EXPECT().OnDeleted(mock.Anything).
+					Run(mock2.NewArgumentCaptor[*rule.SetConfiguration](&processor.Mock, "captor2").Capture).
+					Return().Once()
+			},
+			assert: func(t *testing.T, logs fmt.Stringer, processor *mocks.RuleSetProcessorMock) {
 				t.Helper()
 
 				time.Sleep(250 * time.Millisecond)
 
 				messages := logs.String()
-				assert.Equal(t, 2, strings.Count(messages, "Rule set changed"))
+				assert.Contains(t, messages, "Rule set created")
+				assert.Contains(t, messages, "Rule set deleted")
 
-				require.Len(t, queue, 2)
+				ruleSet := mock2.ArgumentCaptorFrom[*rule.SetConfiguration](&processor.Mock, "captor1").Value()
+				assert.Equal(t, ruleSet.Source, "kubernetes:foo:dfb2a2f1-1ad2-4d8c-8456-516fc94abb86")
+				assert.Equal(t, "test-rule", ruleSet.Name)
+				assert.Len(t, ruleSet.Rules, 1)
 
-				evt := <-queue
-				assert.Equal(t, "kubernetes:foo:test-rule:dfb2a2f1-1ad2-4d8c-8456-516fc94abb86", evt.Src)
-				assert.Equal(t, event.Create, evt.ChangeType)
+				createdRule := ruleSet.Rules[0]
+				assert.Equal(t, "test", createdRule.ID)
+				assert.Equal(t, "http://foo.bar", createdRule.RuleMatcher.URL)
+				assert.Equal(t, "http://bar", createdRule.Upstream)
+				assert.Equal(t, "glob", createdRule.RuleMatcher.Strategy)
+				assert.Len(t, createdRule.Methods, 1)
+				assert.Contains(t, createdRule.Methods, http.MethodGet)
+				assert.Empty(t, createdRule.ErrorHandler)
+				assert.Len(t, createdRule.Execute, 2)
+				assert.Equal(t, "authn", createdRule.Execute[0]["authenticator"])
+				assert.Equal(t, "authz", createdRule.Execute[1]["authorizer"])
 
-				require.Len(t, evt.Rules, 1)
-				rule := evt.Rules[0]
-				assert.Equal(t, "test", rule.ID)
-				assert.Equal(t, "http://foo.bar", rule.RuleMatcher.URL)
-				assert.Equal(t, "http://bar", rule.Upstream)
-				assert.Equal(t, "glob", rule.RuleMatcher.Strategy)
-				assert.Len(t, rule.Methods, 1)
-				assert.Contains(t, rule.Methods, http.MethodGet)
-				assert.Empty(t, rule.ErrorHandler)
-				assert.Len(t, rule.Execute, 2)
-				assert.Equal(t, "authn", rule.Execute[0]["authenticator"])
-				assert.Equal(t, "authz", rule.Execute[1]["authorizer"])
-
-				evt = <-queue
-				assert.Equal(t, "kubernetes:foo:test-rule:dfb2a2f1-1ad2-4d8c-8456-516fc94abb86", evt.Src)
-				assert.Equal(t, event.Remove, evt.ChangeType)
+				ruleSet = mock2.ArgumentCaptorFrom[*rule.SetConfiguration](&processor.Mock, "captor2").Value()
+				assert.Equal(t, "kubernetes:foo:dfb2a2f1-1ad2-4d8c-8456-516fc94abb86", ruleSet.Source)
+				assert.Equal(t, "test-rule", ruleSet.Name)
 			},
 		},
 		{
@@ -519,10 +535,10 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 								},
 								Spec: v1alpha1.RuleSetSpec{
 									AuthClassName: "bar",
-									Rules: []event2.Configuration{
+									Rules: []rule.Configuration{
 										{
 											ID: "test",
-											RuleMatcher: event2.Matcher{
+											RuleMatcher: rule.Matcher{
 												URL:      "http://foo.bar",
 												Strategy: "glob",
 											},
@@ -559,10 +575,10 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 							ruleSet := evt.Object.(*v1alpha1.RuleSet) // nolint:forcetypeassert
 							ruleSet.Spec = v1alpha1.RuleSetSpec{
 								AuthClassName: "bar",
-								Rules: []event2.Configuration{
+								Rules: []rule.Configuration{
 									{
 										ID: "test",
-										RuleMatcher: event2.Matcher{
+										RuleMatcher: rule.Matcher{
 											URL:      "http://foo.bar",
 											Strategy: "glob",
 										},
@@ -608,53 +624,59 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 					}
 				}
 			}(),
-			assert: func(t *testing.T, logs fmt.Stringer, queue event.RuleSetChangedEventQueue) {
+			setupProcessor: func(t *testing.T, processor *mocks.RuleSetProcessorMock) {
+				t.Helper()
+
+				processor.EXPECT().OnCreated(mock.Anything).
+					Run(mock2.NewArgumentCaptor[*rule.SetConfiguration](&processor.Mock, "captor1").Capture).
+					Return().Once()
+
+				processor.EXPECT().OnUpdated(mock.Anything).
+					Run(mock2.NewArgumentCaptor[*rule.SetConfiguration](&processor.Mock, "captor2").Capture).
+					Return().Once()
+			},
+			assert: func(t *testing.T, logs fmt.Stringer, processor *mocks.RuleSetProcessorMock) {
 				t.Helper()
 
 				time.Sleep(250 * time.Millisecond)
 
 				messages := logs.String()
-				assert.Equal(t, 3, strings.Count(messages, "Rule set changed"))
+				assert.Contains(t, messages, "Rule set created")
+				assert.Contains(t, messages, "Rule set updated")
 
-				require.Len(t, queue, 3)
+				ruleSet := mock2.ArgumentCaptorFrom[*rule.SetConfiguration](&processor.Mock, "captor1").Value()
+				assert.Equal(t, ruleSet.Source, "kubernetes:foo:dfb2a2f1-1ad2-4d8c-8456-516fc94abb86")
+				assert.Equal(t, "test-rule", ruleSet.Name)
+				assert.Len(t, ruleSet.Rules, 1)
 
-				evt := <-queue
-				assert.Equal(t, "kubernetes:foo:test-rule:dfb2a2f1-1ad2-4d8c-8456-516fc94abb86", evt.Src)
-				assert.Equal(t, event.Create, evt.ChangeType)
+				createdRule := ruleSet.Rules[0]
+				assert.Equal(t, "test", createdRule.ID)
+				assert.Equal(t, "http://foo.bar", createdRule.RuleMatcher.URL)
+				assert.Equal(t, "http://bar", createdRule.Upstream)
+				assert.Equal(t, "glob", createdRule.RuleMatcher.Strategy)
+				assert.Len(t, createdRule.Methods, 1)
+				assert.Contains(t, createdRule.Methods, http.MethodGet)
+				assert.Empty(t, createdRule.ErrorHandler)
+				assert.Len(t, createdRule.Execute, 2)
+				assert.Equal(t, "authn", createdRule.Execute[0]["authenticator"])
+				assert.Equal(t, "authz", createdRule.Execute[1]["authorizer"])
 
-				require.Len(t, evt.Rules, 1)
-				rule := evt.Rules[0]
-				assert.Equal(t, "test", rule.ID)
-				assert.Equal(t, "http://foo.bar", rule.RuleMatcher.URL)
-				assert.Equal(t, "http://bar", rule.Upstream)
-				assert.Equal(t, "glob", rule.RuleMatcher.Strategy)
-				assert.Len(t, rule.Methods, 1)
-				assert.Contains(t, rule.Methods, http.MethodGet)
-				assert.Empty(t, rule.ErrorHandler)
-				assert.Len(t, rule.Execute, 2)
-				assert.Equal(t, "authn", rule.Execute[0]["authenticator"])
-				assert.Equal(t, "authz", rule.Execute[1]["authorizer"])
+				ruleSet = mock2.ArgumentCaptorFrom[*rule.SetConfiguration](&processor.Mock, "captor2").Value()
+				assert.Equal(t, ruleSet.Source, "kubernetes:foo:dfb2a2f1-1ad2-4d8c-8456-516fc94abb86")
+				assert.Equal(t, "test-rule", ruleSet.Name)
+				assert.Len(t, ruleSet.Rules, 1)
 
-				evt = <-queue
-				assert.Equal(t, "kubernetes:foo:test-rule:dfb2a2f1-1ad2-4d8c-8456-516fc94abb86", evt.Src)
-				assert.Equal(t, event.Remove, evt.ChangeType)
-
-				evt = <-queue
-				assert.Equal(t, "kubernetes:foo:test-rule:dfb2a2f1-1ad2-4d8c-8456-516fc94abb86", evt.Src)
-				assert.Equal(t, event.Create, evt.ChangeType)
-
-				require.Len(t, evt.Rules, 1)
-				rule = evt.Rules[0]
-				assert.Equal(t, "test", rule.ID)
-				assert.Equal(t, "http://foo.bar", rule.RuleMatcher.URL)
-				assert.Equal(t, "http://bar", rule.Upstream)
-				assert.Equal(t, "glob", rule.RuleMatcher.Strategy)
-				assert.Len(t, rule.Methods, 1)
-				assert.Contains(t, rule.Methods, http.MethodGet)
-				assert.Empty(t, rule.ErrorHandler)
-				assert.Len(t, rule.Execute, 2)
-				assert.Equal(t, "test_authn", rule.Execute[0]["authenticator"])
-				assert.Equal(t, "test_authz", rule.Execute[1]["authorizer"])
+				updatedRule := ruleSet.Rules[0]
+				assert.Equal(t, "test", updatedRule.ID)
+				assert.Equal(t, "http://foo.bar", updatedRule.RuleMatcher.URL)
+				assert.Equal(t, "http://bar", updatedRule.Upstream)
+				assert.Equal(t, "glob", updatedRule.RuleMatcher.Strategy)
+				assert.Len(t, updatedRule.Methods, 1)
+				assert.Contains(t, updatedRule.Methods, http.MethodGet)
+				assert.Empty(t, updatedRule.ErrorHandler)
+				assert.Len(t, updatedRule.Execute, 2)
+				assert.Equal(t, "test_authn", updatedRule.Execute[0]["authenticator"])
+				assert.Equal(t, "test_authz", updatedRule.Execute[1]["authorizer"])
 			},
 		},
 	} {
@@ -663,9 +685,6 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 			providerConf, err := testsupport.DecodeTestConfig(tc.conf)
 			require.NoError(t, err)
 
-			queue := make(event.RuleSetChangedEventQueue, 10)
-			defer close(queue)
-
 			conf := &config.Configuration{
 				Rules: config.Rules{
 					Providers: config.RuleProviders{Kubernetes: providerConf},
@@ -673,8 +692,15 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 			}
 			k8sCF := func() (*rest.Config, error) { return &rest.Config{Host: srv.URL}, nil }
 
+			setupProcessor := x.IfThenElse(tc.setupProcessor != nil,
+				tc.setupProcessor,
+				func(t *testing.T, _ *mocks.RuleSetProcessorMock) { t.Helper() })
+
+			processor := mocks.NewRuleSetProcessorMock(t)
+			setupProcessor(t, processor)
+
 			logs := &strings.Builder{}
-			prov, err := newProvider(conf, k8sCF, queue, zerolog.New(logs))
+			prov, err := newProvider(conf, k8sCF, processor, zerolog.New(logs))
 			require.NoError(t, err)
 
 			ctx := context.Background()
@@ -687,7 +713,7 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 
 			// THEN
 			require.NoError(t, err)
-			tc.assert(t, logs, queue)
+			tc.assert(t, logs, processor)
 		})
 	}
 }
