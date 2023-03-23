@@ -19,6 +19,7 @@ package mocks
 import (
 	"github.com/stretchr/testify/mock"
 
+	"github.com/dadrus/heimdall/internal/rules/config"
 	"github.com/dadrus/heimdall/internal/rules/rule"
 )
 
@@ -26,7 +27,7 @@ type MockRuleFactory struct {
 	mock.Mock
 }
 
-func (m *MockRuleFactory) CreateRule(srcID string, ruleConfig rule.Configuration) (rule.Rule, error) {
+func (m *MockRuleFactory) CreateRule(srcID string, ruleConfig config.Rule) (rule.Rule, error) {
 	args := m.Called(srcID, ruleConfig)
 
 	if val := args.Get(0); val != nil {

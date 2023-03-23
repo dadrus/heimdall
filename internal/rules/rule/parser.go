@@ -23,12 +23,13 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/rules/config"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
 var ErrEmptyRuleSet = errors.New("empty rule set")
 
-func ParseRules(contentType string, reader io.Reader) (*SetConfiguration, error) {
+func ParseRules(contentType string, reader io.Reader) (*config.RuleSet, error) {
 	switch contentType {
 	case "application/json":
 		fallthrough
@@ -47,10 +48,10 @@ func ParseRules(contentType string, reader io.Reader) (*SetConfiguration, error)
 	}
 }
 
-func parseYAML(reader io.Reader) (*SetConfiguration, error) {
+func parseYAML(reader io.Reader) (*config.RuleSet, error) {
 	var (
 		rawConfig map[string]any
-		ruleSet   SetConfiguration
+		ruleSet   config.RuleSet
 	)
 
 	dec := yaml.NewDecoder(reader)
@@ -62,7 +63,7 @@ func parseYAML(reader io.Reader) (*SetConfiguration, error) {
 		return nil, err
 	}
 
-	err := DecodeConfig(rawConfig, &ruleSet)
+	err := config.DecodeConfig(rawConfig, &ruleSet)
 
 	return &ruleSet, err
 }

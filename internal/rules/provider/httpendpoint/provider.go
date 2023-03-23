@@ -30,6 +30,7 @@ import (
 	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
+	config2 "github.com/dadrus/heimdall/internal/rules/config"
 	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
@@ -162,8 +163,8 @@ func (p *provider) watchChanges(ctx context.Context, rsf RuleSetFetcher) error {
 			return err
 		}
 
-		ruleSet = &rule.SetConfiguration{
-			SetMeta: rule.SetMeta{
+		ruleSet = &config2.RuleSet{
+			MetaData: config2.MetaData{
 				Source:  fmt.Sprintf("http_endpoint:%s", rsf.ID()),
 				ModTime: time.Now(),
 			},
@@ -175,7 +176,7 @@ func (p *provider) watchChanges(ctx context.Context, rsf RuleSetFetcher) error {
 	return nil
 }
 
-func (p *provider) ruleSetsUpdated(ruleSet *rule.SetConfiguration, stateID string) {
+func (p *provider) ruleSetsUpdated(ruleSet *config2.RuleSet, stateID string) {
 	var hash []byte
 
 	value, ok := p.states.Load(stateID)

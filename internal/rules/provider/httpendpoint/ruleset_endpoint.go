@@ -28,6 +28,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/endpoint"
 	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/rules/config"
 	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
@@ -40,7 +41,7 @@ type ruleSetEndpoint struct {
 
 func (e *ruleSetEndpoint) ID() string { return e.URL }
 
-func (e *ruleSetEndpoint) FetchRuleSet(ctx context.Context) (*rule.SetConfiguration, error) {
+func (e *ruleSetEndpoint) FetchRuleSet(ctx context.Context) (*config.RuleSet, error) {
 	req, err := e.CreateRequest(ctx, nil, nil)
 	if err != nil {
 		return nil, errorchain.

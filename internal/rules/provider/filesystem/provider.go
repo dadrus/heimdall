@@ -32,6 +32,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
+	config2 "github.com/dadrus/heimdall/internal/rules/config"
 	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
@@ -195,8 +196,8 @@ func (p *provider) ruleSetsChanged(evt fsnotify.Event) {
 
 		p.p.OnCreated(ruleSet)
 	case evt.Has(fsnotify.Remove):
-		conf := &rule.SetConfiguration{
-			SetMeta: rule.SetMeta{
+		conf := &config2.RuleSet{
+			MetaData: config2.MetaData{
 				Source:  fmt.Sprintf("file_system:%s", evt.Name),
 				ModTime: time.Now(),
 			},
@@ -208,8 +209,8 @@ func (p *provider) ruleSetsChanged(evt fsnotify.Event) {
 		ruleSet, err := p.loadRuleSet(evt.Name)
 		if err != nil {
 			if errors.Is(err, rule.ErrEmptyRuleSet) || errors.Is(err, os.ErrNotExist) {
-				conf := &rule.SetConfiguration{
-					SetMeta: rule.SetMeta{
+				conf := &config2.RuleSet{
+					MetaData: config2.MetaData{
 						Source:  fmt.Sprintf("file_system:%s", evt.Name),
 						ModTime: time.Now(),
 					},
@@ -243,7 +244,7 @@ func (p *provider) ruleSetsChanged(evt fsnotify.Event) {
 	}
 }
 
-func (p *provider) loadRuleSet(fileName string) (*rule.SetConfiguration, error) {
+func (p *provider) loadRuleSet(fileName string) (*config2.RuleSet, error) {
 	file, err := os.Open(fileName)
 	if err != nil {
 		return nil, errorchain.NewWithMessagef(heimdall.ErrInternal,

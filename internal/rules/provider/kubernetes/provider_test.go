@@ -37,8 +37,8 @@ import (
 
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
+	config2 "github.com/dadrus/heimdall/internal/rules/config"
 	"github.com/dadrus/heimdall/internal/rules/provider/kubernetes/api/v1alpha1"
-	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/rules/rule/mocks"
 	"github.com/dadrus/heimdall/internal/x"
 	mock2 "github.com/dadrus/heimdall/internal/x/mock"
@@ -165,10 +165,10 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 								},
 								Spec: v1alpha1.RuleSetSpec{
 									AuthClassName: "bar",
-									Rules: []rule.Configuration{
+									Rules: []config2.Rule{
 										{
 											ID: "test",
-											RuleMatcher: rule.Matcher{
+											RuleMatcher: config2.Matcher{
 												URL:      "http://foo.bar",
 												Strategy: "glob",
 											},
@@ -269,10 +269,10 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 								},
 								Spec: v1alpha1.RuleSetSpec{
 									AuthClassName: "bar",
-									Rules: []rule.Configuration{
+									Rules: []config2.Rule{
 										{
 											ID: "test",
-											RuleMatcher: rule.Matcher{
+											RuleMatcher: config2.Matcher{
 												URL:      "http://foo.bar",
 												Strategy: "glob",
 											},
@@ -334,7 +334,7 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 				t.Helper()
 
 				processor.EXPECT().OnCreated(mock.Anything).
-					Run(mock2.NewArgumentCaptor[*rule.SetConfiguration](&processor.Mock, "captor1").Capture).
+					Run(mock2.NewArgumentCaptor[*config2.RuleSet](&processor.Mock, "captor1").Capture).
 					Return().Once()
 			},
 			assert: func(t *testing.T, logs fmt.Stringer, processor *mocks.RuleSetProcessorMock) {
@@ -345,7 +345,7 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 				messages := logs.String()
 				assert.Contains(t, messages, "Rule set created")
 
-				ruleSet := mock2.ArgumentCaptorFrom[*rule.SetConfiguration](&processor.Mock, "captor1").Value()
+				ruleSet := mock2.ArgumentCaptorFrom[*config2.RuleSet](&processor.Mock, "captor1").Value()
 				assert.Contains(t, ruleSet.Source, "kubernetes:foo:dfb2a2f1-1ad2-4d8c-8456-516fc94abb86")
 				assert.Equal(t, "test-rule", ruleSet.Name)
 				assert.Len(t, ruleSet.Rules, 1)
@@ -393,10 +393,10 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 								},
 								Spec: v1alpha1.RuleSetSpec{
 									AuthClassName: "bar",
-									Rules: []rule.Configuration{
+									Rules: []config2.Rule{
 										{
 											ID: "test",
-											RuleMatcher: rule.Matcher{
+											RuleMatcher: config2.Matcher{
 												URL:      "http://foo.bar",
 												Strategy: "glob",
 											},
@@ -467,11 +467,11 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 				t.Helper()
 
 				processor.EXPECT().OnCreated(mock.Anything).
-					Run(mock2.NewArgumentCaptor[*rule.SetConfiguration](&processor.Mock, "captor1").Capture).
+					Run(mock2.NewArgumentCaptor[*config2.RuleSet](&processor.Mock, "captor1").Capture).
 					Return().Once()
 
 				processor.EXPECT().OnDeleted(mock.Anything).
-					Run(mock2.NewArgumentCaptor[*rule.SetConfiguration](&processor.Mock, "captor2").Capture).
+					Run(mock2.NewArgumentCaptor[*config2.RuleSet](&processor.Mock, "captor2").Capture).
 					Return().Once()
 			},
 			assert: func(t *testing.T, logs fmt.Stringer, processor *mocks.RuleSetProcessorMock) {
@@ -483,7 +483,7 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 				assert.Contains(t, messages, "Rule set created")
 				assert.Contains(t, messages, "Rule set deleted")
 
-				ruleSet := mock2.ArgumentCaptorFrom[*rule.SetConfiguration](&processor.Mock, "captor1").Value()
+				ruleSet := mock2.ArgumentCaptorFrom[*config2.RuleSet](&processor.Mock, "captor1").Value()
 				assert.Equal(t, ruleSet.Source, "kubernetes:foo:dfb2a2f1-1ad2-4d8c-8456-516fc94abb86")
 				assert.Equal(t, "test-rule", ruleSet.Name)
 				assert.Len(t, ruleSet.Rules, 1)
@@ -500,7 +500,7 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 				assert.Equal(t, "authn", createdRule.Execute[0]["authenticator"])
 				assert.Equal(t, "authz", createdRule.Execute[1]["authorizer"])
 
-				ruleSet = mock2.ArgumentCaptorFrom[*rule.SetConfiguration](&processor.Mock, "captor2").Value()
+				ruleSet = mock2.ArgumentCaptorFrom[*config2.RuleSet](&processor.Mock, "captor2").Value()
 				assert.Equal(t, "kubernetes:foo:dfb2a2f1-1ad2-4d8c-8456-516fc94abb86", ruleSet.Source)
 				assert.Equal(t, "test-rule", ruleSet.Name)
 			},
@@ -535,10 +535,10 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 								},
 								Spec: v1alpha1.RuleSetSpec{
 									AuthClassName: "bar",
-									Rules: []rule.Configuration{
+									Rules: []config2.Rule{
 										{
 											ID: "test",
-											RuleMatcher: rule.Matcher{
+											RuleMatcher: config2.Matcher{
 												URL:      "http://foo.bar",
 												Strategy: "glob",
 											},
@@ -575,10 +575,10 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 							ruleSet := evt.Object.(*v1alpha1.RuleSet) // nolint:forcetypeassert
 							ruleSet.Spec = v1alpha1.RuleSetSpec{
 								AuthClassName: "bar",
-								Rules: []rule.Configuration{
+								Rules: []config2.Rule{
 									{
 										ID: "test",
-										RuleMatcher: rule.Matcher{
+										RuleMatcher: config2.Matcher{
 											URL:      "http://foo.bar",
 											Strategy: "glob",
 										},
@@ -628,11 +628,11 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 				t.Helper()
 
 				processor.EXPECT().OnCreated(mock.Anything).
-					Run(mock2.NewArgumentCaptor[*rule.SetConfiguration](&processor.Mock, "captor1").Capture).
+					Run(mock2.NewArgumentCaptor[*config2.RuleSet](&processor.Mock, "captor1").Capture).
 					Return().Once()
 
 				processor.EXPECT().OnUpdated(mock.Anything).
-					Run(mock2.NewArgumentCaptor[*rule.SetConfiguration](&processor.Mock, "captor2").Capture).
+					Run(mock2.NewArgumentCaptor[*config2.RuleSet](&processor.Mock, "captor2").Capture).
 					Return().Once()
 			},
 			assert: func(t *testing.T, logs fmt.Stringer, processor *mocks.RuleSetProcessorMock) {
@@ -644,7 +644,7 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 				assert.Contains(t, messages, "Rule set created")
 				assert.Contains(t, messages, "Rule set updated")
 
-				ruleSet := mock2.ArgumentCaptorFrom[*rule.SetConfiguration](&processor.Mock, "captor1").Value()
+				ruleSet := mock2.ArgumentCaptorFrom[*config2.RuleSet](&processor.Mock, "captor1").Value()
 				assert.Equal(t, ruleSet.Source, "kubernetes:foo:dfb2a2f1-1ad2-4d8c-8456-516fc94abb86")
 				assert.Equal(t, "test-rule", ruleSet.Name)
 				assert.Len(t, ruleSet.Rules, 1)
@@ -661,7 +661,7 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 				assert.Equal(t, "authn", createdRule.Execute[0]["authenticator"])
 				assert.Equal(t, "authz", createdRule.Execute[1]["authorizer"])
 
-				ruleSet = mock2.ArgumentCaptorFrom[*rule.SetConfiguration](&processor.Mock, "captor2").Value()
+				ruleSet = mock2.ArgumentCaptorFrom[*config2.RuleSet](&processor.Mock, "captor2").Value()
 				assert.Equal(t, ruleSet.Source, "kubernetes:foo:dfb2a2f1-1ad2-4d8c-8456-516fc94abb86")
 				assert.Equal(t, "test-rule", ruleSet.Name)
 				assert.Len(t, ruleSet.Rules, 1)

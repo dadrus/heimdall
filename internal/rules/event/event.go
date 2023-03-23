@@ -16,7 +16,9 @@
 
 package event
 
-import "github.com/dadrus/heimdall/internal/rules/rule"
+import (
+	"github.com/dadrus/heimdall/internal/rules/config"
+)
 
 type ChangeType uint32
 
@@ -44,6 +46,6 @@ type RuleSetChangedEvent struct {
 	Src        string
 	Name       string
 	Hash       []byte
-	Rules      []rule.Configuration
+	Rules      []config.Rule
 	ChangeType ChangeType
 }

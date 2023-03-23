@@ -14,48 +14,13 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package rule
+package config
 
 import (
-	"strings"
-	"time"
-
 	"github.com/dadrus/heimdall/internal/config"
-	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
-type SetMeta struct {
-	Hash    []byte    `json:"-" yaml:"-"`
-	Source  string    `json:"-" yaml:"-"`
-	ModTime time.Time `json:"-" yaml:"-"`
-}
-
-type SetConfiguration struct {
-	SetMeta
-
-	Version string          `json:"version" yaml:"version"`
-	Name    string          `json:"name" yaml:"name"`
-	Rules   []Configuration `json:"rules" yaml:"rules"`
-}
-
-func (rs SetConfiguration) VerifyPathPrefix(prefix string) error {
-	for _, rule := range rs.Rules {
-		if strings.HasPrefix(rule.RuleMatcher.URL, "/") &&
-			// only path is specified
-			!strings.HasPrefix(rule.RuleMatcher.URL, prefix) ||
-			// patterns are specified before the path
-			// There should be a better way to check it
-			!strings.Contains(rule.RuleMatcher.URL, prefix) {
-			return errorchain.NewWithMessage(heimdall.ErrConfiguration,
-				"path prefix validation failed for rule ID=%s")
-		}
-	}
-
-	return nil
-}
-
-type Configuration struct {
+type Rule struct {
 	ID           string                   `json:"id" yaml:"id"`
 	RuleMatcher  Matcher                  `json:"match" yaml:"match"`
 	Upstream     string                   `json:"upstream" yaml:"upstream"`
@@ -64,7 +29,7 @@ type Configuration struct {
 	ErrorHandler []config.MechanismConfig `json:"on_error" yaml:"on_error"`
 }
 
-func (in *Configuration) DeepCopyInto(out *Configuration) {
+func (in *Rule) DeepCopyInto(out *Rule) {
 	*out = *in
 	out.RuleMatcher = in.RuleMatcher
 
@@ -94,12 +59,12 @@ func (in *Configuration) DeepCopyInto(out *Configuration) {
 	}
 }
 
-func (in *Configuration) DeepCopy() *Configuration {
+func (in *Rule) DeepCopy() *Rule {
 	if in == nil {
 		return nil
 	}
 
-	out := new(Configuration)
+	out := new(Rule)
 	in.DeepCopyInto(out)
 
 	return out

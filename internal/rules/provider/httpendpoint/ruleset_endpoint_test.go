@@ -32,6 +32,7 @@ import (
 	"github.com/dadrus/heimdall/internal/cache/mocks"
 	"github.com/dadrus/heimdall/internal/endpoint"
 	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/rules/config"
 	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/x"
 	otelmock "github.com/dadrus/heimdall/internal/x/opentelemetry/mocks"
@@ -106,7 +107,7 @@ func TestRuleSetEndpointFetchRuleSet(t *testing.T) { //nolint:maintidx
 		uc            string
 		ep            *ruleSetEndpoint
 		writeResponse ResponseWriter
-		assert        func(t *testing.T, err error, ruleSet *rule.SetConfiguration)
+		assert        func(t *testing.T, err error, ruleSet *config.RuleSet)
 	}{
 		{
 			uc: "rule set loading error due to DNS error",
@@ -116,7 +117,7 @@ func TestRuleSetEndpointFetchRuleSet(t *testing.T) { //nolint:maintidx
 					Method: http.MethodGet,
 				},
 			},
-			assert: func(t *testing.T, err error, _ *rule.SetConfiguration) {
+			assert: func(t *testing.T, err error, _ *config.RuleSet) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -137,7 +138,7 @@ func TestRuleSetEndpointFetchRuleSet(t *testing.T) { //nolint:maintidx
 
 				w.WriteHeader(http.StatusBadRequest)
 			},
-			assert: func(t *testing.T, err error, _ *rule.SetConfiguration) {
+			assert: func(t *testing.T, err error, _ *config.RuleSet) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -164,7 +165,7 @@ rules:
 `))
 				require.NoError(t, err)
 			},
-			assert: func(t *testing.T, err error, _ *rule.SetConfiguration) {
+			assert: func(t *testing.T, err error, _ *config.RuleSet) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -185,7 +186,7 @@ rules:
 
 				w.WriteHeader(http.StatusOK)
 			},
-			assert: func(t *testing.T, err error, ruleSet *rule.SetConfiguration) {
+			assert: func(t *testing.T, err error, ruleSet *config.RuleSet) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -212,7 +213,7 @@ rules:
 `))
 				require.NoError(t, err)
 			},
-			assert: func(t *testing.T, err error, ruleSet *rule.SetConfiguration) {
+			assert: func(t *testing.T, err error, ruleSet *config.RuleSet) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -244,7 +245,7 @@ rules:
 }`))
 				require.NoError(t, err)
 			},
-			assert: func(t *testing.T, err error, ruleSet *rule.SetConfiguration) {
+			assert: func(t *testing.T, err error, ruleSet *config.RuleSet) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -277,7 +278,7 @@ rules:
 }`))
 				require.NoError(t, err)
 			},
-			assert: func(t *testing.T, err error, _ *rule.SetConfiguration) {
+			assert: func(t *testing.T, err error, _ *config.RuleSet) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -307,7 +308,7 @@ rules:
 }`))
 				require.NoError(t, err)
 			},
-			assert: func(t *testing.T, err error, _ *rule.SetConfiguration) {
+			assert: func(t *testing.T, err error, _ *config.RuleSet) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -337,7 +338,7 @@ rules:
 }`))
 				require.NoError(t, err)
 			},
-			assert: func(t *testing.T, err error, ruleSet *rule.SetConfiguration) {
+			assert: func(t *testing.T, err error, ruleSet *config.RuleSet) {
 				t.Helper()
 
 				require.NoError(t, err)

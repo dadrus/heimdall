@@ -34,6 +34,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
+	config2 "github.com/dadrus/heimdall/internal/rules/config"
 	"github.com/dadrus/heimdall/internal/rules/provider/kubernetes/api/v1alpha1"
 	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/x"
@@ -194,8 +195,8 @@ func (p *provider) updateRuleSet(_, newObj any) {
 	// should never be of a different type. ok if panics
 	newRs := newObj.(*v1alpha1.RuleSet) // nolint: forcetypeassert
 
-	conf := &rule.SetConfiguration{
-		SetMeta: rule.SetMeta{
+	conf := &config2.RuleSet{
+		MetaData: config2.MetaData{
 			Source:  fmt.Sprintf("%s:%s:%s", ProviderType, newRs.Namespace, newRs.UID),
 			ModTime: newRs.CreationTimestamp.Time,
 		},
@@ -212,8 +213,8 @@ func (p *provider) addRuleSet(obj any) {
 	// should never be of a different type. ok if panics
 	rs := obj.(*v1alpha1.RuleSet) // nolint: forcetypeassert
 
-	conf := &rule.SetConfiguration{
-		SetMeta: rule.SetMeta{
+	conf := &config2.RuleSet{
+		MetaData: config2.MetaData{
 			Source:  fmt.Sprintf("%s:%s:%s", ProviderType, rs.Namespace, rs.UID),
 			ModTime: rs.CreationTimestamp.Time,
 		},
@@ -229,8 +230,8 @@ func (p *provider) deleteRuleSet(obj any) {
 	// should never be of a different type. ok if panics
 	rs := obj.(*v1alpha1.RuleSet) // nolint: forcetypeassert
 
-	conf := &rule.SetConfiguration{
-		SetMeta: rule.SetMeta{
+	conf := &config2.RuleSet{
+		MetaData: config2.MetaData{
 			Source:  fmt.Sprintf("%s:%s:%s", ProviderType, rs.Namespace, rs.UID),
 			ModTime: time.Now(),
 		},

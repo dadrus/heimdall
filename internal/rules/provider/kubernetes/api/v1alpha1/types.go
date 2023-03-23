@@ -22,13 +22,13 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 
-	"github.com/dadrus/heimdall/internal/rules/rule"
+	"github.com/dadrus/heimdall/internal/rules/config"
 )
 
 // +kubebuilder:object:generate=true
 type RuleSetSpec struct {
-	AuthClassName string               `json:"authClassName"` //nolint:tagliatelle
-	Rules         []rule.Configuration `json:"rules"`
+	AuthClassName string        `json:"authClassName"` //nolint:tagliatelle
+	Rules         []config.Rule `json:"rules"`
 }
 
 // +kubebuilder:object:generate=true

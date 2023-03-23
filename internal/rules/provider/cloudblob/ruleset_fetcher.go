@@ -19,10 +19,10 @@ package cloudblob
 import (
 	"context"
 
-	"github.com/dadrus/heimdall/internal/rules/rule"
+	"github.com/dadrus/heimdall/internal/rules/config"
 )
 
 type RuleSetFetcher interface {
-	FetchRuleSets(ctx context.Context) ([]*rule.SetConfiguration, error)
+	FetchRuleSets(ctx context.Context) ([]*config.RuleSet, error)
 	ID() string
 }

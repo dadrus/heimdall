@@ -30,6 +30,7 @@ import (
 	"gocloud.dev/gcerrors"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/rules/config"
 	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
@@ -44,7 +45,7 @@ func (e *ruleSetEndpoint) ID() string {
 	return fmt.Sprintf("%s/%s", e.URL, e.Prefix)
 }
 
-func (e *ruleSetEndpoint) FetchRuleSets(ctx context.Context) ([]*rule.SetConfiguration, error) {
+func (e *ruleSetEndpoint) FetchRuleSets(ctx context.Context) ([]*config.RuleSet, error) {
 	bucket, err := blob.OpenBucket(ctx, e.URL.String())
 	if err != nil {
 		return nil, errorchain.NewWithMessage(heimdall.ErrInternal, "failed to open bucket").
@@ -60,8 +61,8 @@ func (e *ruleSetEndpoint) FetchRuleSets(ctx context.Context) ([]*rule.SetConfigu
 	return e.readAllBlobs(ctx, bucket)
 }
 
-func (e *ruleSetEndpoint) readAllBlobs(ctx context.Context, bucket *blob.Bucket) ([]*rule.SetConfiguration, error) {
-	var ruleSets []*rule.SetConfiguration
+func (e *ruleSetEndpoint) readAllBlobs(ctx context.Context, bucket *blob.Bucket) ([]*config.RuleSet, error) {
+	var ruleSets []*config.RuleSet
 
 	it := bucket.List(&blob.ListOptions{Prefix: e.Prefix})
 
@@ -90,21 +91,21 @@ func (e *ruleSetEndpoint) readAllBlobs(ctx context.Context, bucket *blob.Bucket)
 	return ruleSets, nil
 }
 
-func (e *ruleSetEndpoint) readSingleBlob(ctx context.Context, bucket *blob.Bucket) ([]*rule.SetConfiguration, error) {
+func (e *ruleSetEndpoint) readSingleBlob(ctx context.Context, bucket *blob.Bucket) ([]*config.RuleSet, error) {
 	ruleSet, err := e.readRuleSet(ctx, bucket, e.URL.Path)
 	if err != nil {
 		if errors.Is(err, rule.ErrEmptyRuleSet) {
-			return []*rule.SetConfiguration{}, nil
+			return []*config.RuleSet{}, nil
 		}
 
 		return nil, err
 	}
 
-	return []*rule.SetConfiguration{ruleSet}, nil
+	return []*config.RuleSet{ruleSet}, nil
 }
 
 func (e *ruleSetEndpoint) readRuleSet(ctx context.Context, bucket *blob.Bucket, key string) (
-	*rule.SetConfiguration, error,
+	*config.RuleSet, error,
 ) {
 	attrs, err := bucket.Attributes(ctx, key)
 	if err != nil {

@@ -3,6 +3,7 @@ package rules
 import (
 	"github.com/rs/zerolog"
 
+	"github.com/dadrus/heimdall/internal/rules/config"
 	"github.com/dadrus/heimdall/internal/rules/event"
 	"github.com/dadrus/heimdall/internal/rules/rule"
 )
@@ -19,7 +20,7 @@ func newRuleSetProcessor(queue event.RuleSetChangedEventQueue, logger zerolog.Lo
 	}
 }
 
-func (p *ruleSetProcessor) OnCreated(ruleSet *rule.SetConfiguration) {
+func (p *ruleSetProcessor) OnCreated(ruleSet *config.RuleSet) {
 	p.sendEvent(event.RuleSetChangedEvent{
 		Src:        ruleSet.Source,
 		ChangeType: event.Create,
@@ -27,7 +28,7 @@ func (p *ruleSetProcessor) OnCreated(ruleSet *rule.SetConfiguration) {
 	})
 }
 
-func (p *ruleSetProcessor) OnUpdated(ruleSet *rule.SetConfiguration) {
+func (p *ruleSetProcessor) OnUpdated(ruleSet *config.RuleSet) {
 	p.sendEvent(event.RuleSetChangedEvent{
 		Src:        ruleSet.Source,
 		ChangeType: event.Remove,
@@ -40,7 +41,7 @@ func (p *ruleSetProcessor) OnUpdated(ruleSet *rule.SetConfiguration) {
 	})
 }
 
-func (p *ruleSetProcessor) OnDeleted(ruleSet *rule.SetConfiguration) {
+func (p *ruleSetProcessor) OnDeleted(ruleSet *config.RuleSet) {
 	p.sendEvent(event.RuleSetChangedEvent{
 		Src:        ruleSet.Source,
 		ChangeType: event.Remove,

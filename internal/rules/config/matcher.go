@@ -14,9 +14,11 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package rule
+package config
 
-import "github.com/goccy/go-json"
+import (
+	"github.com/goccy/go-json"
+)
 
 type Matcher struct {
 	URL      string `json:"url" yaml:"url"`

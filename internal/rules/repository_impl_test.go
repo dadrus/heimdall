@@ -30,6 +30,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
+	config2 "github.com/dadrus/heimdall/internal/rules/config"
 	"github.com/dadrus/heimdall/internal/rules/event"
 	"github.com/dadrus/heimdall/internal/rules/mocks"
 	"github.com/dadrus/heimdall/internal/rules/patternmatcher"
@@ -249,10 +250,10 @@ func TestRepositoryRuleSetLifecycleManagement(t *testing.T) {
 				{
 					Src:        "test",
 					ChangeType: event.Create,
-					Rules: []rule.Configuration{
+					Rules: []config2.Rule{
 						{
 							ID: "rule:foo",
-							RuleMatcher: rule.Matcher{
+							RuleMatcher: config2.Matcher{
 								URL:      "http://foo.bar/<**>",
 								Strategy: "regex",
 							},
@@ -274,7 +275,7 @@ func TestRepositoryRuleSetLifecycleManagement(t *testing.T) {
 				t.Helper()
 
 				factory.On("CreateRule", "test", mock.MatchedBy(
-					func(conf rule.Configuration) bool {
+					func(conf config2.Rule) bool {
 						assert.Equal(t, "rule:foo", conf.ID)
 						assert.Equal(t, "http://foo.bar/<**>", conf.RuleMatcher.URL)
 						assert.Equal(t, "regex", conf.RuleMatcher.Strategy)
@@ -313,10 +314,10 @@ func TestRepositoryRuleSetLifecycleManagement(t *testing.T) {
 				{
 					Src:        "test1",
 					ChangeType: event.Create,
-					Rules: []rule.Configuration{
+					Rules: []config2.Rule{
 						{
 							ID:          "rule:bar",
-							RuleMatcher: rule.Matcher{URL: "http://bar.foo/<**>"},
+							RuleMatcher: config2.Matcher{URL: "http://bar.foo/<**>"},
 							Methods:     []string{"GET"},
 						},
 					},
@@ -324,10 +325,10 @@ func TestRepositoryRuleSetLifecycleManagement(t *testing.T) {
 				{
 					Src:        "test2",
 					ChangeType: event.Create,
-					Rules: []rule.Configuration{
+					Rules: []config2.Rule{
 						{
 							ID:          "rule:foo",
-							RuleMatcher: rule.Matcher{URL: "http://foo.bar/<**>"},
+							RuleMatcher: config2.Matcher{URL: "http://foo.bar/<**>"},
 							Methods:     []string{"POST"},
 						},
 					},
@@ -356,10 +357,10 @@ func TestRepositoryRuleSetLifecycleManagement(t *testing.T) {
 				{
 					Src:        "test1",
 					ChangeType: event.Create,
-					Rules: []rule.Configuration{
+					Rules: []config2.Rule{
 						{
 							ID:          "rule:bar",
-							RuleMatcher: rule.Matcher{URL: "http://bar.foo/<**>"},
+							RuleMatcher: config2.Matcher{URL: "http://bar.foo/<**>"},
 							Methods:     []string{"GET"},
 						},
 					},
@@ -367,10 +368,10 @@ func TestRepositoryRuleSetLifecycleManagement(t *testing.T) {
 				{
 					Src:        "test2",
 					ChangeType: event.Create,
-					Rules: []rule.Configuration{
+					Rules: []config2.Rule{
 						{
 							ID:          "rule:foo",
-							RuleMatcher: rule.Matcher{URL: "http://foo.bar/<**>"},
+							RuleMatcher: config2.Matcher{URL: "http://foo.bar/<**>"},
 							Methods:     []string{"POST"},
 						},
 					},
@@ -402,10 +403,10 @@ func TestRepositoryRuleSetLifecycleManagement(t *testing.T) {
 				{
 					Src:        "test",
 					ChangeType: event.Create,
-					Rules: []rule.Configuration{
+					Rules: []config2.Rule{
 						{
 							ID:          "rule:bar",
-							RuleMatcher: rule.Matcher{URL: "http://bar.foo/<**>"},
+							RuleMatcher: config2.Matcher{URL: "http://bar.foo/<**>"},
 							Methods:     []string{"GET"},
 						},
 					},

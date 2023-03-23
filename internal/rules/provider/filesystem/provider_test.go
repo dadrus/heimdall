@@ -30,7 +30,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/rules/rule"
+	config2 "github.com/dadrus/heimdall/internal/rules/config"
 	"github.com/dadrus/heimdall/internal/rules/rule/mocks"
 	"github.com/dadrus/heimdall/internal/x"
 	mock2 "github.com/dadrus/heimdall/internal/x/mock"
@@ -196,7 +196,7 @@ rules:
 				t.Helper()
 
 				processor.EXPECT().OnCreated(mock.Anything).
-					Run(mock2.NewArgumentCaptor[*rule.SetConfiguration](&processor.Mock, "captor1").Capture).
+					Run(mock2.NewArgumentCaptor[*config2.RuleSet](&processor.Mock, "captor1").Capture).
 					Return()
 			},
 			assert: func(t *testing.T, err error, provider *provider, processor *mocks.RuleSetProcessorMock) {
@@ -204,7 +204,7 @@ rules:
 
 				require.NoError(t, err)
 
-				ruleSet := mock2.ArgumentCaptorFrom[*rule.SetConfiguration](&processor.Mock, "captor1").Value()
+				ruleSet := mock2.ArgumentCaptorFrom[*config2.RuleSet](&processor.Mock, "captor1").Value()
 				assert.Contains(t, ruleSet.Source, "file_system:")
 				assert.Len(t, ruleSet.Rules, 1)
 				assert.Equal(t, "foo", ruleSet.Rules[0].ID)
@@ -244,7 +244,7 @@ rules:
 				t.Helper()
 
 				processor.EXPECT().OnCreated(mock.Anything).
-					Run(mock2.NewArgumentCaptor[*rule.SetConfiguration](&processor.Mock, "captor1").Capture).
+					Run(mock2.NewArgumentCaptor[*config2.RuleSet](&processor.Mock, "captor1").Capture).
 					Return()
 			},
 			assert: func(t *testing.T, err error, provider *provider, processor *mocks.RuleSetProcessorMock) {
@@ -252,7 +252,7 @@ rules:
 
 				require.NoError(t, err)
 
-				ruleSet := mock2.ArgumentCaptorFrom[*rule.SetConfiguration](&processor.Mock, "captor1").Value()
+				ruleSet := mock2.ArgumentCaptorFrom[*config2.RuleSet](&processor.Mock, "captor1").Value()
 				assert.Contains(t, ruleSet.Source, "file_system:")
 				assert.Len(t, ruleSet.Rules, 1)
 				assert.Equal(t, "foo", ruleSet.Rules[0].ID)
@@ -319,11 +319,11 @@ rules:
 				t.Helper()
 
 				call1 := processor.EXPECT().OnCreated(mock.Anything).
-					Run(mock2.NewArgumentCaptor[*rule.SetConfiguration](&processor.Mock, "captor1").Capture).
+					Run(mock2.NewArgumentCaptor[*config2.RuleSet](&processor.Mock, "captor1").Capture).
 					Return().Once()
 
 				processor.EXPECT().OnDeleted(mock.Anything).
-					Run(mock2.NewArgumentCaptor[*rule.SetConfiguration](&processor.Mock, "captor2").Capture).
+					Run(mock2.NewArgumentCaptor[*config2.RuleSet](&processor.Mock, "captor2").Capture).
 					Return().Once().NotBefore(call1)
 			},
 			assert: func(t *testing.T, err error, provider *provider, processor *mocks.RuleSetProcessorMock) {
@@ -331,12 +331,12 @@ rules:
 
 				require.NoError(t, err)
 
-				ruleSet := mock2.ArgumentCaptorFrom[*rule.SetConfiguration](&processor.Mock, "captor1").Value()
+				ruleSet := mock2.ArgumentCaptorFrom[*config2.RuleSet](&processor.Mock, "captor1").Value()
 				assert.Contains(t, ruleSet.Source, "file_system:")
 				assert.Len(t, ruleSet.Rules, 1)
 				assert.Equal(t, "foo", ruleSet.Rules[0].ID)
 
-				ruleSet = mock2.ArgumentCaptorFrom[*rule.SetConfiguration](&processor.Mock, "captor2").Value()
+				ruleSet = mock2.ArgumentCaptorFrom[*config2.RuleSet](&processor.Mock, "captor2").Value()
 				assert.Contains(t, ruleSet.Source, "file_system:")
 			},
 		},
@@ -377,15 +377,15 @@ rules:
 				t.Helper()
 
 				call1 := processor.EXPECT().OnCreated(mock.Anything).
-					Run(mock2.NewArgumentCaptor[*rule.SetConfiguration](&processor.Mock, "captor1").Capture).
+					Run(mock2.NewArgumentCaptor[*config2.RuleSet](&processor.Mock, "captor1").Capture).
 					Return().Once()
 
 				call2 := processor.EXPECT().OnUpdated(mock.Anything).
-					Run(mock2.NewArgumentCaptor[*rule.SetConfiguration](&processor.Mock, "captor2").Capture).
+					Run(mock2.NewArgumentCaptor[*config2.RuleSet](&processor.Mock, "captor2").Capture).
 					Return().Once().NotBefore(call1)
 
 				processor.EXPECT().OnDeleted(mock.Anything).
-					Run(mock2.NewArgumentCaptor[*rule.SetConfiguration](&processor.Mock, "captor3").Capture).
+					Run(mock2.NewArgumentCaptor[*config2.RuleSet](&processor.Mock, "captor3").Capture).
 					Return().Once().NotBefore(call2)
 			},
 			assert: func(t *testing.T, err error, provider *provider, processor *mocks.RuleSetProcessorMock) {
@@ -393,17 +393,17 @@ rules:
 
 				require.NoError(t, err)
 
-				ruleSet := mock2.ArgumentCaptorFrom[*rule.SetConfiguration](&processor.Mock, "captor1").Value()
+				ruleSet := mock2.ArgumentCaptorFrom[*config2.RuleSet](&processor.Mock, "captor1").Value()
 				assert.Contains(t, ruleSet.Source, "file_system:")
 				assert.Len(t, ruleSet.Rules, 1)
 				assert.Equal(t, "foo", ruleSet.Rules[0].ID)
 
-				ruleSet = mock2.ArgumentCaptorFrom[*rule.SetConfiguration](&processor.Mock, "captor2").Value()
+				ruleSet = mock2.ArgumentCaptorFrom[*config2.RuleSet](&processor.Mock, "captor2").Value()
 				assert.Contains(t, ruleSet.Source, "file_system:")
 				assert.Len(t, ruleSet.Rules, 1)
 				assert.Equal(t, "bar", ruleSet.Rules[0].ID)
 
-				ruleSet = mock2.ArgumentCaptorFrom[*rule.SetConfiguration](&processor.Mock, "captor3").Value()
+				ruleSet = mock2.ArgumentCaptorFrom[*config2.RuleSet](&processor.Mock, "captor3").Value()
 				assert.Contains(t, ruleSet.Source, "file_system:")
 			},
 		},

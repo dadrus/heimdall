@@ -8,6 +8,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
+	config2 "github.com/dadrus/heimdall/internal/rules/config"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms"
 	"github.com/dadrus/heimdall/internal/rules/patternmatcher"
 	"github.com/dadrus/heimdall/internal/rules/rule"
@@ -139,7 +140,7 @@ func (f *ruleFactory) HasDefaultRule() bool {
 	return f.hasDefaultRule
 }
 
-func (f *ruleFactory) CreateRule(srcID string, ruleConfig rule.Configuration) ( // nolint: cyclop
+func (f *ruleFactory) CreateRule(srcID string, ruleConfig config2.Rule) ( // nolint: cyclop
 	rule.Rule, error,
 ) {
 	if len(ruleConfig.ID) == 0 {
