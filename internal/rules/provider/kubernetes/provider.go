@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/go-logr/zerologr"
 	"github.com/rs/zerolog"
@@ -198,7 +199,7 @@ func (p *provider) updateRuleSet(_, newObj any) {
 			Source:  fmt.Sprintf("%s:%s:%s", ProviderType, newRs.Namespace, newRs.UID),
 			ModTime: newRs.CreationTimestamp.Time,
 		},
-		Version: newRs.APIVersion,
+		Version: p.mapVersion(newRs.APIVersion),
 		Name:    newRs.Name,
 		Rules:   newRs.Spec.Rules,
 	}
@@ -216,9 +217,8 @@ func (p *provider) addRuleSet(obj any) {
 			Source:  fmt.Sprintf("%s:%s:%s", ProviderType, rs.Namespace, rs.UID),
 			ModTime: rs.CreationTimestamp.Time,
 		},
-		Version: rs.APIVersion,
-		Name:    rs.Name,
-		Rules:   rs.Spec.Rules,
+		Name:  rs.Name,
+		Rules: rs.Spec.Rules,
 	}
 
 	p.p.OnCreated(conf)
@@ -232,12 +232,16 @@ func (p *provider) deleteRuleSet(obj any) {
 	conf := &rule.SetConfiguration{
 		SetMeta: rule.SetMeta{
 			Source:  fmt.Sprintf("%s:%s:%s", ProviderType, rs.Namespace, rs.UID),
-			ModTime: rs.CreationTimestamp.Time,
+			ModTime: time.Now(),
 		},
-		Version: rs.APIVersion,
+		Version: p.mapVersion(rs.APIVersion),
 		Name:    rs.Name,
 	}
 
 	p.p.OnDeleted(conf)
 	p.l.Info().Str("_src", conf.Source).Msg("Rule set deleted")
+}
+
+func (p *provider) mapVersion(resourceVersion string) string {
+	return resourceVersion
 }

@@ -24,6 +24,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"time"
 
 	"github.com/dadrus/heimdall/internal/endpoint"
 	"github.com/dadrus/heimdall/internal/heimdall"
@@ -84,6 +85,7 @@ func (e *ruleSetEndpoint) FetchRuleSet(ctx context.Context) (*rule.SetConfigurat
 
 	ruleSet.Hash = md.Sum(nil)
 	ruleSet.Source = fmt.Sprintf("http_endpoint:%s", e.ID())
+	ruleSet.ModTime = time.Now()
 
 	return ruleSet, nil
 }

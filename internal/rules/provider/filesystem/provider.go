@@ -25,6 +25,7 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+	"time"
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/rs/zerolog"
@@ -194,16 +195,28 @@ func (p *provider) ruleSetsChanged(evt fsnotify.Event) {
 
 		p.p.OnCreated(ruleSet)
 	case evt.Has(fsnotify.Remove):
+		conf := &rule.SetConfiguration{
+			SetMeta: rule.SetMeta{
+				Source:  fmt.Sprintf("file_system:%s", evt.Name),
+				ModTime: time.Now(),
+			},
+		}
+
 		p.states.Delete(evt.Name)
-		p.p.OnDeleted(
-			&rule.SetConfiguration{SetMeta: rule.SetMeta{Source: fmt.Sprintf("file_system:%s", evt.Name)}})
+		p.p.OnDeleted(conf)
 	case evt.Has(fsnotify.Write) || evt.Has(fsnotify.Chmod):
 		ruleSet, err := p.loadRuleSet(evt.Name)
 		if err != nil {
 			if errors.Is(err, rule.ErrEmptyRuleSet) || errors.Is(err, os.ErrNotExist) {
+				conf := &rule.SetConfiguration{
+					SetMeta: rule.SetMeta{
+						Source:  fmt.Sprintf("file_system:%s", evt.Name),
+						ModTime: time.Now(),
+					},
+				}
+
 				p.states.Delete(evt.Name)
-				p.p.OnDeleted(
-					&rule.SetConfiguration{SetMeta: rule.SetMeta{Source: fmt.Sprintf("file_system:%s", evt.Name)}})
+				p.p.OnDeleted(conf)
 
 				return
 			}

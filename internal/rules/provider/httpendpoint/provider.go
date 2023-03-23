@@ -164,7 +164,8 @@ func (p *provider) watchChanges(ctx context.Context, rsf RuleSetFetcher) error {
 
 		ruleSet = &rule.SetConfiguration{
 			SetMeta: rule.SetMeta{
-				Source: fmt.Sprintf("http_endpoint:%s", rsf.ID()),
+				Source:  fmt.Sprintf("http_endpoint:%s", rsf.ID()),
+				ModTime: time.Now(),
 			},
 		}
 	}

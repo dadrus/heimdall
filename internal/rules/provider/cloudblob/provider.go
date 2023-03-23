@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"sync"
 	"time"
 
@@ -182,9 +183,16 @@ func (p *provider) ruleSetsUpdated(ruleSets []*rule.SetConfiguration, state Buck
 	newIDs := slicex.Subtract(currentIDs, oldIDs)
 
 	for _, ID := range removedIDs {
+		conf := &rule.SetConfiguration{
+			SetMeta: rule.SetMeta{
+				Source:  fmt.Sprintf("blob:%s", ID),
+				ModTime: time.Now(),
+			},
+		}
+
 		delete(state, ID)
 
-		p.p.OnDeleted(&rule.SetConfiguration{SetMeta: rule.SetMeta{Source: ID}})
+		p.p.OnDeleted(conf)
 	}
 
 	// check which rule sets are new and which are modified
