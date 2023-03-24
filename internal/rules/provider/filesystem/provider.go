@@ -17,6 +17,7 @@
 package filesystem
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha256"
 	"errors"
@@ -164,7 +165,9 @@ func (p *provider) watchFiles() {
 				return
 			}
 
-			p.ruleSetsChanged(evt)
+			if err := p.ruleSetsChanged(evt); err != nil {
+				p.l.Warn().Err(err).Str("_src", evt.Name).Msg("Failed to apply rule set changes")
+			}
 		case err, ok := <-p.w.Errors:
 			if !ok {
 				p.l.Debug().Msg("Watcher error channel closed")
@@ -177,71 +180,79 @@ func (p *provider) watchFiles() {
 	}
 }
 
-func (p *provider) ruleSetsChanged(evt fsnotify.Event) {
+func (p *provider) ruleSetsChanged(evt fsnotify.Event) error {
 	p.l.Debug().
 		Str("_event", evt.String()).
 		Str("_src", evt.Name).
 		Msg("Rule update event received")
 
+	var err error
+
 	switch {
-	case evt.Has(fsnotify.Create):
-		ruleSet, err := p.loadRuleSet(evt.Name)
-		if err != nil {
-			p.l.Warn().Err(err).Msg("Failed to load rule set")
-
-			return
-		}
-
-		p.states.Store(evt.Name, ruleSet.Hash)
-
-		p.p.OnCreated(ruleSet)
+	case evt.Has(fsnotify.Create) || evt.Has(fsnotify.Write) || evt.Has(fsnotify.Chmod):
+		err = p.ruleSetCreatedOrUpdated(evt.Name)
 	case evt.Has(fsnotify.Remove):
-		conf := &config2.RuleSet{
-			MetaData: config2.MetaData{
-				Source:  fmt.Sprintf("file_system:%s", evt.Name),
-				ModTime: time.Now(),
-			},
-		}
-
-		p.states.Delete(evt.Name)
-		p.p.OnDeleted(conf)
-	case evt.Has(fsnotify.Write) || evt.Has(fsnotify.Chmod):
-		ruleSet, err := p.loadRuleSet(evt.Name)
-		if err != nil {
-			if errors.Is(err, config2.ErrEmptyRuleSet) || errors.Is(err, os.ErrNotExist) {
-				conf := &config2.RuleSet{
-					MetaData: config2.MetaData{
-						Source:  fmt.Sprintf("file_system:%s", evt.Name),
-						ModTime: time.Now(),
-					},
-				}
-
-				p.states.Delete(evt.Name)
-				p.p.OnDeleted(conf)
-
-				return
-			}
-
-			p.l.Warn().Err(err).Msg("Failed to load rule set")
-
-			return
-		}
-
-		var hash []byte
-
-		value, ok := p.states.Load(evt.Name)
-		if ok {
-			hash = value.([]byte) // nolint: forcetypeassert
-		}
-
-		p.states.Store(evt.Name, ruleSet.Hash)
-
-		if len(hash) == 0 {
-			p.p.OnCreated(ruleSet)
-		} else {
-			p.p.OnUpdated(ruleSet)
-		}
+		err = p.ruleSetDeleted(evt.Name)
 	}
+
+	return err
+}
+
+func (p *provider) ruleSetCreatedOrUpdated(fileName string) error {
+	ruleSet, err := p.loadRuleSet(fileName)
+	if err != nil {
+		if errors.Is(err, config2.ErrEmptyRuleSet) || errors.Is(err, os.ErrNotExist) {
+			return p.ruleSetDeleted(fileName)
+		}
+
+		return err
+	}
+
+	var hash []byte
+
+	value, ok := p.states.Load(fileName)
+	if ok {
+		hash = value.([]byte) // nolint: forcetypeassert
+	}
+
+	if len(hash) == 0 {
+		err = p.p.OnCreated(ruleSet)
+	} else {
+		if bytes.Equal(hash, ruleSet.Hash) {
+			return nil
+		}
+
+		err = p.p.OnUpdated(ruleSet)
+	}
+
+	if err != nil {
+		return err
+	}
+
+	p.states.Store(fileName, ruleSet.Hash)
+
+	return nil
+}
+
+func (p *provider) ruleSetDeleted(fileName string) error {
+	if _, ok := p.states.Load(fileName); !ok {
+		return nil
+	}
+
+	conf := &config2.RuleSet{
+		MetaData: config2.MetaData{
+			Source:  fmt.Sprintf("file_system:%s", fileName),
+			ModTime: time.Now(),
+		},
+	}
+
+	if err := p.p.OnDeleted(conf); err != nil {
+		return err
+	}
+
+	p.states.Delete(fileName)
+
+	return nil
 }
 
 func (p *provider) loadRuleSet(fileName string) (*config2.RuleSet, error) {
@@ -271,17 +282,32 @@ func (p *provider) loadRuleSet(fileName string) (*config2.RuleSet, error) {
 func (p *provider) loadInitialRuleSet() error {
 	p.l.Info().Msg("Loading initial rule set")
 
+	sources, err := p.sources()
+	if err != nil {
+		return err
+	}
+
+	for _, src := range sources {
+		if err = p.ruleSetCreatedOrUpdated(src); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (p *provider) sources() ([]string, error) {
 	var sources []string
 
 	fInfo, err := os.Stat(p.src)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	if fInfo.IsDir() {
 		dirEntries, err := os.ReadDir(p.src)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		for _, entry := range dirEntries {
@@ -299,18 +325,5 @@ func (p *provider) loadInitialRuleSet() error {
 		sources = append(sources, p.src)
 	}
 
-	for _, src := range sources {
-		ruleSet, err := p.loadRuleSet(src)
-		if err != nil {
-			if errors.Is(err, config2.ErrEmptyRuleSet) {
-				continue
-			}
-
-			return err
-		}
-
-		p.p.OnCreated(ruleSet)
-	}
-
-	return nil
+	return sources, nil
 }

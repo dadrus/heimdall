@@ -205,8 +205,11 @@ func (p *provider) updateRuleSet(_, newObj any) {
 		Rules:   newRs.Spec.Rules,
 	}
 
-	p.p.OnUpdated(conf)
-	p.l.Info().Str("_src", conf.Source).Msg("Rule set updated")
+	if err := p.p.OnUpdated(conf); err != nil {
+		p.l.Warn().Err(err).Str("_src", conf.Source).Msg("Failed to apply rule set updates")
+	} else {
+		p.l.Info().Str("_src", conf.Source).Msg("Rule set updated")
+	}
 }
 
 func (p *provider) addRuleSet(obj any) {
@@ -222,8 +225,11 @@ func (p *provider) addRuleSet(obj any) {
 		Rules: rs.Spec.Rules,
 	}
 
-	p.p.OnCreated(conf)
-	p.l.Info().Str("_src", conf.Source).Msg("Rule set created")
+	if err := p.p.OnCreated(conf); err != nil {
+		p.l.Warn().Err(err).Str("_src", conf.Source).Msg("Failed creating rule set")
+	} else {
+		p.l.Info().Str("_src", conf.Source).Msg("Rule set created")
+	}
 }
 
 func (p *provider) deleteRuleSet(obj any) {
@@ -239,8 +245,11 @@ func (p *provider) deleteRuleSet(obj any) {
 		Name:    rs.Name,
 	}
 
-	p.p.OnDeleted(conf)
-	p.l.Info().Str("_src", conf.Source).Msg("Rule set deleted")
+	if err := p.p.OnDeleted(conf); err != nil {
+		p.l.Warn().Err(err).Str("_src", conf.Source).Msg("Failed deleting rule set")
+	} else {
+		p.l.Info().Str("_src", conf.Source).Msg("Rule set deleted")
+	}
 }
 
 func (p *provider) mapVersion(resourceVersion string) string {

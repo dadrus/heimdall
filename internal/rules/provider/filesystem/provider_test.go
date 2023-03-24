@@ -197,7 +197,7 @@ rules:
 
 				processor.EXPECT().OnCreated(mock.Anything).
 					Run(mock2.NewArgumentCaptor[*config2.RuleSet](&processor.Mock, "captor1").Capture).
-					Return()
+					Return(nil).Once()
 			},
 			assert: func(t *testing.T, err error, provider *provider, processor *mocks.RuleSetProcessorMock) {
 				t.Helper()
@@ -245,7 +245,7 @@ rules:
 
 				processor.EXPECT().OnCreated(mock.Anything).
 					Run(mock2.NewArgumentCaptor[*config2.RuleSet](&processor.Mock, "captor1").Capture).
-					Return()
+					Return(nil).Once()
 			},
 			assert: func(t *testing.T, err error, provider *provider, processor *mocks.RuleSetProcessorMock) {
 				t.Helper()
@@ -320,11 +320,11 @@ rules:
 
 				call1 := processor.EXPECT().OnCreated(mock.Anything).
 					Run(mock2.NewArgumentCaptor[*config2.RuleSet](&processor.Mock, "captor1").Capture).
-					Return().Once()
+					Return(nil).Once()
 
 				processor.EXPECT().OnDeleted(mock.Anything).
 					Run(mock2.NewArgumentCaptor[*config2.RuleSet](&processor.Mock, "captor2").Capture).
-					Return().Once().NotBefore(call1)
+					Return(nil).Once().NotBefore(call1)
 			},
 			assert: func(t *testing.T, err error, provider *provider, processor *mocks.RuleSetProcessorMock) {
 				t.Helper()
@@ -378,15 +378,15 @@ rules:
 
 				call1 := processor.EXPECT().OnCreated(mock.Anything).
 					Run(mock2.NewArgumentCaptor[*config2.RuleSet](&processor.Mock, "captor1").Capture).
-					Return().Once()
+					Return(nil).Once()
 
 				call2 := processor.EXPECT().OnUpdated(mock.Anything).
 					Run(mock2.NewArgumentCaptor[*config2.RuleSet](&processor.Mock, "captor2").Capture).
-					Return().Once().NotBefore(call1)
+					Return(nil).Once().NotBefore(call1)
 
 				processor.EXPECT().OnDeleted(mock.Anything).
 					Run(mock2.NewArgumentCaptor[*config2.RuleSet](&processor.Mock, "captor3").Capture).
-					Return().Once().NotBefore(call2)
+					Return(nil).Once().NotBefore(call2)
 			},
 			assert: func(t *testing.T, err error, provider *provider, processor *mocks.RuleSetProcessorMock) {
 				t.Helper()

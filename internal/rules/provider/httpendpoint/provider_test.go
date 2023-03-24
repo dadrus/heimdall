@@ -272,7 +272,7 @@ rules:
 
 				processor.EXPECT().OnCreated(mock.Anything).
 					Run(mock2.NewArgumentCaptor[*config2.RuleSet](&processor.Mock, "captor1").Capture).
-					Return().Once()
+					Return(nil).Once()
 			},
 			assert: func(t *testing.T, logs fmt.Stringer, processor *mocks.RuleSetProcessorMock) {
 				t.Helper()
@@ -313,7 +313,7 @@ rules:
 
 				processor.EXPECT().OnCreated(mock.Anything).
 					Run(mock2.NewArgumentCaptor[*config2.RuleSet](&processor.Mock, "captor1").Capture).
-					Return().Once()
+					Return(nil).Once()
 			},
 			assert: func(t *testing.T, logs fmt.Stringer, processor *mocks.RuleSetProcessorMock) {
 				t.Helper()
@@ -374,11 +374,11 @@ rules:
 
 				processor.EXPECT().OnCreated(mock.Anything).
 					Run(mock2.NewArgumentCaptor[*config2.RuleSet](&processor.Mock, "captor1").Capture).
-					Return().Twice()
+					Return(nil).Twice()
 
 				processor.EXPECT().OnDeleted(mock.Anything).
 					Run(mock2.NewArgumentCaptor[*config2.RuleSet](&processor.Mock, "captor2").Capture).
-					Return().Once()
+					Return(nil).Once()
 			},
 			assert: func(t *testing.T, logs fmt.Stringer, processor *mocks.RuleSetProcessorMock) {
 				t.Helper()
@@ -464,11 +464,11 @@ rules:
 
 				processor.EXPECT().OnCreated(mock.Anything).
 					Run(mock2.NewArgumentCaptor[*config2.RuleSet](&processor.Mock, "captor1").Capture).
-					Return().Once()
+					Return(nil).Once()
 
 				processor.EXPECT().OnUpdated(mock.Anything).
 					Run(mock2.NewArgumentCaptor[*config2.RuleSet](&processor.Mock, "captor2").Capture).
-					Return().Times(3)
+					Return(nil).Times(3)
 			},
 			assert: func(t *testing.T, logs fmt.Stringer, processor *mocks.RuleSetProcessorMock) {
 				t.Helper()
@@ -526,7 +526,7 @@ rules:
 
 				processor.EXPECT().OnCreated(mock.Anything).
 					Run(mock2.NewArgumentCaptor[*config2.RuleSet](&processor.Mock, "captor1").Capture).
-					Return().Once()
+					Return(nil).Once()
 			},
 			assert: func(t *testing.T, logs fmt.Stringer, processor *mocks.RuleSetProcessorMock) {
 				t.Helper()
@@ -569,7 +569,7 @@ rules:
 
 				processor.EXPECT().OnCreated(mock.Anything).
 					Run(mock2.NewArgumentCaptor[*config2.RuleSet](&processor.Mock, "captor1").Capture).
-					Return().Once()
+					Return(nil).Once()
 			},
 			assert: func(t *testing.T, logs fmt.Stringer, processor *mocks.RuleSetProcessorMock) {
 				t.Helper()
