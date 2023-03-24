@@ -25,7 +25,7 @@ import (
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
-func TestMapstructureDecodeMatcher(t *testing.T) {
+func TestMatcherDecodeHookFunc(t *testing.T) {
 	t.Parallel()
 
 	type Typ struct {

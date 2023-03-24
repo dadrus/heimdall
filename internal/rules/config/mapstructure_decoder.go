@@ -31,7 +31,7 @@ var (
 	ErrUnsupportedStrategy = errors.New("unsupported strategy")
 )
 
-func decodeMatcher(from reflect.Type, to reflect.Type, data any) (any, error) {
+func matcherDecodeHookFunc(from reflect.Type, to reflect.Type, data any) (any, error) {
 	if to != reflect.TypeOf(Matcher{}) {
 		return data, nil
 	}

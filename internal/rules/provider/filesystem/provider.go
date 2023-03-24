@@ -208,7 +208,7 @@ func (p *provider) ruleSetsChanged(evt fsnotify.Event) {
 	case evt.Has(fsnotify.Write) || evt.Has(fsnotify.Chmod):
 		ruleSet, err := p.loadRuleSet(evt.Name)
 		if err != nil {
-			if errors.Is(err, rule.ErrEmptyRuleSet) || errors.Is(err, os.ErrNotExist) {
+			if errors.Is(err, config2.ErrEmptyRuleSet) || errors.Is(err, os.ErrNotExist) {
 				conf := &config2.RuleSet{
 					MetaData: config2.MetaData{
 						Source:  fmt.Sprintf("file_system:%s", evt.Name),
@@ -253,7 +253,7 @@ func (p *provider) loadRuleSet(fileName string) (*config2.RuleSet, error) {
 
 	md := sha256.New()
 
-	ruleSet, err := rule.ParseRules("application/yaml", io.TeeReader(file, md))
+	ruleSet, err := config2.ParseRules("application/yaml", io.TeeReader(file, md))
 	if err != nil {
 		return nil, errorchain.NewWithMessage(heimdall.ErrInternal, "failed to parse received rule set").
 			CausedBy(err)
@@ -302,7 +302,7 @@ func (p *provider) loadInitialRuleSet() error {
 	for _, src := range sources {
 		ruleSet, err := p.loadRuleSet(src)
 		if err != nil {
-			if errors.Is(err, rule.ErrEmptyRuleSet) {
+			if errors.Is(err, config2.ErrEmptyRuleSet) {
 				continue
 			}
 

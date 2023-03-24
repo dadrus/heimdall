@@ -33,7 +33,6 @@ import (
 	"github.com/dadrus/heimdall/internal/endpoint"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/config"
-	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/x"
 	otelmock "github.com/dadrus/heimdall/internal/x/opentelemetry/mocks"
 )
@@ -190,7 +189,7 @@ rules:
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, rule.ErrEmptyRuleSet)
+				assert.ErrorIs(t, err, config.ErrEmptyRuleSet)
 			},
 		},
 		{

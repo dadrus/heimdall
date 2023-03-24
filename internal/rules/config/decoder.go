@@ -24,7 +24,7 @@ func DecodeConfig(input any, output any) error {
 	dec, err := mapstructure.NewDecoder(
 		&mapstructure.DecoderConfig{
 			DecodeHook: mapstructure.ComposeDecodeHookFunc(
-				decodeMatcher,
+				matcherDecodeHookFunc,
 			),
 			Result:      output,
 			ErrorUnused: true,

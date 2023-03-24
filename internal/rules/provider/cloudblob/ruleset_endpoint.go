@@ -31,7 +31,6 @@ import (
 
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/config"
-	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
@@ -78,7 +77,7 @@ func (e *ruleSetEndpoint) readAllBlobs(ctx context.Context, bucket *blob.Bucket)
 
 		ruleSet, err := e.readRuleSet(ctx, bucket, obj.Key)
 		if err != nil {
-			if errors.Is(err, rule.ErrEmptyRuleSet) {
+			if errors.Is(err, config.ErrEmptyRuleSet) {
 				continue
 			}
 
@@ -94,7 +93,7 @@ func (e *ruleSetEndpoint) readAllBlobs(ctx context.Context, bucket *blob.Bucket)
 func (e *ruleSetEndpoint) readSingleBlob(ctx context.Context, bucket *blob.Bucket) ([]*config.RuleSet, error) {
 	ruleSet, err := e.readRuleSet(ctx, bucket, e.URL.Path)
 	if err != nil {
-		if errors.Is(err, rule.ErrEmptyRuleSet) {
+		if errors.Is(err, config.ErrEmptyRuleSet) {
 			return []*config.RuleSet{}, nil
 		}
 
@@ -119,7 +118,7 @@ func (e *ruleSetEndpoint) readRuleSet(ctx context.Context, bucket *blob.Bucket, 
 
 	defer reader.Close()
 
-	contents, err := rule.ParseRules(attrs.ContentType, reader)
+	contents, err := config.ParseRules(attrs.ContentType, reader)
 	if err != nil {
 		return nil, errorchain.
 			NewWithMessage(heimdall.ErrInternal, "failed to decode received rule set").
