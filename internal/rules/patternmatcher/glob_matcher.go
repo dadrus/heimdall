@@ -23,7 +23,10 @@ import (
 	"github.com/gobwas/glob"
 )
 
-var ErrUnbalancedPattern = errors.New("unbalanced pattern")
+var (
+	ErrUnbalancedPattern    = errors.New("unbalanced pattern")
+	ErrNoGlobPatternDefined = errors.New("no glob pattern defined")
+)
 
 type globMatcher struct {
 	compiled glob.Glob
@@ -34,6 +37,10 @@ func (m *globMatcher) Match(value string) bool {
 }
 
 func newGlobMatcher(pattern string) (*globMatcher, error) {
+	if len(pattern) == 0 {
+		return nil, ErrNoGlobPatternDefined
+	}
+
 	compiled, err := compileGlob(pattern, '<', '>')
 	if err != nil {
 		return nil, err

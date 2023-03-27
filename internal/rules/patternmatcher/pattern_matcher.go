@@ -16,7 +16,9 @@
 
 package patternmatcher
 
-import "errors"
+import (
+	"errors"
+)
 
 var ErrUnsupportedPatternMatcher = errors.New("unsupported pattern matcher")
 
