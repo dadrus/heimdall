@@ -1,9 +1,11 @@
 package rules
 
 import (
+	"crypto"
 	"fmt"
 	"net/url"
 
+	"github.com/goccy/go-json"
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/config"
@@ -209,6 +211,15 @@ func (f *ruleFactory) CreateRule(srcID string, ruleConfig config2.Rule) ( // nol
 			"no methods defined for rule ID=%s from %s", ruleConfig.ID, srcID)
 	}
 
+	rawRuleConfig, err := json.Marshal(ruleConfig)
+	if err != nil {
+		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+			"failed to marshal rule ID=%s from %s", ruleConfig.ID, srcID)
+	}
+
+	md := crypto.SHA256.New()
+	md.Write(rawRuleConfig)
+
 	return &ruleImpl{
 		id:          ruleConfig.ID,
 		urlMatcher:  matcher,
@@ -216,6 +227,7 @@ func (f *ruleFactory) CreateRule(srcID string, ruleConfig config2.Rule) ( // nol
 		methods:     methods,
 		srcID:       srcID,
 		isDefault:   false,
+		hash:        md.Sum(nil),
 		sc:          authenticators,
 		sh:          subHandlers,
 		un:          unifiers,

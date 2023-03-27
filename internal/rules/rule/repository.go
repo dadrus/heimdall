@@ -14,14 +14,12 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package rules
+package rule
 
 import (
 	"net/url"
-
-	"github.com/dadrus/heimdall/internal/rules/rule"
 )
 
 type Repository interface {
-	FindRule(*url.URL) (rule.Rule, error)
+	FindRule(*url.URL) (Rule, error)
 }

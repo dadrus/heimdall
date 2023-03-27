@@ -25,37 +25,35 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
-	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
-	config2 "github.com/dadrus/heimdall/internal/rules/config"
 	"github.com/dadrus/heimdall/internal/rules/event"
-	"github.com/dadrus/heimdall/internal/rules/mocks"
 	"github.com/dadrus/heimdall/internal/rules/patternmatcher"
 	"github.com/dadrus/heimdall/internal/rules/rule"
+	"github.com/dadrus/heimdall/internal/rules/rule/mocks"
 	"github.com/dadrus/heimdall/internal/x"
-	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
 func TestRepositoryAddAndRemoveRulesFromSameRuleSet(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
-	repo := newRepository(nil, nil, *zerolog.Ctx(context.Background()))
+	repo := newRepository(nil, &ruleFactory{}, *zerolog.Ctx(context.Background()))
 
 	// WHEN
-	repo.addRule(&ruleImpl{id: "1", srcID: "bar"})
-	repo.addRule(&ruleImpl{id: "2", srcID: "bar"})
-	repo.addRule(&ruleImpl{id: "3", srcID: "bar"})
-	repo.addRule(&ruleImpl{id: "4", srcID: "bar"})
+	repo.addRuleSet("bar", []rule.Rule{
+		&ruleImpl{id: "1", srcID: "bar"},
+		&ruleImpl{id: "2", srcID: "bar"},
+		&ruleImpl{id: "3", srcID: "bar"},
+		&ruleImpl{id: "4", srcID: "bar"},
+	})
 
 	// THEN
 	assert.Len(t, repo.rules, 4)
 
 	// WHEN
-	repo.removeRules("bar")
+	repo.deleteRuleSet("bar")
 
 	// THEN
 	assert.Len(t, repo.rules, 0)
@@ -65,20 +63,15 @@ func TestRepositoryFindRule(t *testing.T) {
 	t.Parallel()
 
 	for _, tc := range []struct {
-		uc             string
-		requestURL     *url.URL
-		addRules       func(t *testing.T, repo *repository)
-		configureMocks func(t *testing.T, factory *mocks.MockRuleFactory)
-		assert         func(t *testing.T, err error, rul rule.Rule)
+		uc               string
+		requestURL       *url.URL
+		addRules         func(t *testing.T, repo *repository)
+		configureFactory func(t *testing.T, factory *mocks.FactoryMock)
+		assert           func(t *testing.T, err error, rul rule.Rule)
 	}{
 		{
 			uc:         "no matching rule without default rule",
 			requestURL: &url.URL{Scheme: "http", Host: "foo.bar", Path: "baz"},
-			configureMocks: func(t *testing.T, factory *mocks.MockRuleFactory) {
-				t.Helper()
-
-				factory.On("HasDefaultRule").Return(false)
-			},
 			assert: func(t *testing.T, err error, rul rule.Rule) {
 				t.Helper()
 
@@ -89,17 +82,16 @@ func TestRepositoryFindRule(t *testing.T) {
 		{
 			uc:         "no matching rule with default rule",
 			requestURL: &url.URL{Scheme: "http", Host: "foo.bar", Path: "baz"},
-			configureMocks: func(t *testing.T, factory *mocks.MockRuleFactory) {
+			configureFactory: func(t *testing.T, factory *mocks.FactoryMock) {
 				t.Helper()
 
-				factory.On("HasDefaultRule").Return(true)
-				factory.On("DefaultRule").Return(&ruleImpl{id: "test", srcID: "baz"})
+				factory.EXPECT().DefaultRule().Return(&ruleImpl{id: "test", isDefault: true})
 			},
 			assert: func(t *testing.T, err error, rul rule.Rule) {
 				t.Helper()
 
 				require.NoError(t, err)
-				require.Equal(t, &ruleImpl{id: "test", srcID: "baz"}, rul)
+				require.Equal(t, &ruleImpl{id: "test", isDefault: true}, rul)
 			},
 		},
 		{
@@ -146,15 +138,19 @@ func TestRepositoryFindRule(t *testing.T) {
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
 			// GIVEN
-			configureMocks := x.IfThenElse(tc.configureMocks != nil,
-				tc.configureMocks,
-				func(t *testing.T, _ *mocks.MockRuleFactory) { t.Helper() })
+			configureMocks := x.IfThenElse(tc.configureFactory != nil,
+				tc.configureFactory,
+				func(t *testing.T, factory *mocks.FactoryMock) {
+					t.Helper()
+
+					factory.EXPECT().DefaultRule().Return(nil)
+				})
 
 			addRules := x.IfThenElse(tc.addRules != nil,
 				tc.addRules,
 				func(t *testing.T, _ *repository) { t.Helper() })
 
-			factory := &mocks.MockRuleFactory{}
+			factory := mocks.NewFactoryMock(t)
 			configureMocks(t, factory)
 
 			repo := newRepository(nil, factory, *zerolog.Ctx(context.Background()))
@@ -175,19 +171,21 @@ func TestRepositoryAddAndRemoveRulesFromDifferentRuleSets(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
-	repo := newRepository(nil, nil, *zerolog.Ctx(context.Background()))
+	repo := newRepository(nil, &ruleFactory{}, *zerolog.Ctx(context.Background()))
 
 	// WHEN
-	repo.addRule(&ruleImpl{id: "1", srcID: "bar"})
-	repo.addRule(&ruleImpl{id: "2", srcID: "baz"})
-	repo.addRule(&ruleImpl{id: "3", srcID: "bar"})
-	repo.addRule(&ruleImpl{id: "4", srcID: "foo"})
+	repo.addRules([]rule.Rule{
+		&ruleImpl{id: "1", srcID: "bar"},
+		&ruleImpl{id: "2", srcID: "baz"},
+		&ruleImpl{id: "3", srcID: "bar"},
+		&ruleImpl{id: "4", srcID: "foo"},
+	})
 
 	// THEN
 	assert.Len(t, repo.rules, 4)
 
 	// WHEN
-	repo.removeRules("baz")
+	repo.deleteRuleSet("baz")
 
 	// THEN
 	assert.Len(t, repo.rules, 3)
@@ -198,7 +196,7 @@ func TestRepositoryAddAndRemoveRulesFromDifferentRuleSets(t *testing.T) {
 	})
 
 	// WHEN
-	repo.removeRules("foo")
+	repo.deleteRuleSet("foo")
 
 	// THEN
 	assert.Len(t, repo.rules, 2)
@@ -208,7 +206,7 @@ func TestRepositoryAddAndRemoveRulesFromDifferentRuleSets(t *testing.T) {
 	})
 
 	// WHEN
-	repo.removeRules("bar")
+	repo.deleteRuleSet("bar")
 
 	// THEN
 	assert.Len(t, repo.rules, 0)
@@ -217,27 +215,14 @@ func TestRepositoryAddAndRemoveRulesFromDifferentRuleSets(t *testing.T) {
 func TestRepositoryRuleSetLifecycleManagement(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
-
-	queue := make(event.RuleSetChangedEventQueue, 10)
-	defer close(queue)
-
-	repo := newRepository(queue, nil, log.Logger)
-
-	require.NoError(t, repo.Start(ctx))
-
-	// nolint: errcheck
-	defer repo.Stop(ctx)
-
 	for _, tc := range []struct {
-		uc             string
-		events         []event.RuleSetChangedEvent
-		configureMocks func(t *testing.T, factory *mocks.MockRuleFactory)
-		assert         func(t *testing.T, repo *repository)
+		uc     string
+		events []event.RuleSetChanged
+		assert func(t *testing.T, repo *repository)
 	}{
 		{
 			uc:     "empty rule set definition",
-			events: []event.RuleSetChangedEvent{{Src: "test", ChangeType: event.Create}},
+			events: []event.RuleSetChanged{{Source: "test", ChangeType: event.Create}},
 			assert: func(t *testing.T, repo *repository) {
 				t.Helper()
 
@@ -246,102 +231,33 @@ func TestRepositoryRuleSetLifecycleManagement(t *testing.T) {
 		},
 		{
 			uc: "rule set with one rule",
-			events: []event.RuleSetChangedEvent{
+			events: []event.RuleSetChanged{
 				{
-					Src:        "test",
+					Source:     "test",
 					ChangeType: event.Create,
-					Rules: []config2.Rule{
-						{
-							ID: "rule:foo",
-							RuleMatcher: config2.Matcher{
-								URL:      "http://foo.bar/<**>",
-								Strategy: "regex",
-							},
-							Methods: []string{"PATCH"},
-							Execute: []config.MechanismConfig{
-								{"authenticator": "unauthorized_authenticator"},
-								{"contextualizer": "subscription_contextualizer"},
-								{"authorizer": "allow_all_authorizer"},
-								{"unifier": "jwt"},
-							},
-							ErrorHandler: []config.MechanismConfig{
-								{"error_handler": "default"},
-							},
-						},
-					},
+					Rules:      []rule.Rule{&ruleImpl{id: "rule:foo", srcID: "test"}},
 				},
-			},
-			configureMocks: func(t *testing.T, factory *mocks.MockRuleFactory) {
-				t.Helper()
-
-				factory.On("CreateRule", "test", mock.MatchedBy(
-					func(conf config2.Rule) bool {
-						assert.Equal(t, "rule:foo", conf.ID)
-						assert.Equal(t, "http://foo.bar/<**>", conf.RuleMatcher.URL)
-						assert.Equal(t, "regex", conf.RuleMatcher.Strategy)
-						assert.ElementsMatch(t, conf.Methods, []string{"PATCH"})
-						require.Len(t, conf.Execute, 4)
-						require.Len(t, conf.ErrorHandler, 1)
-
-						assert.Len(t, conf.Execute[0], 1)
-						assert.Equal(t, "unauthorized_authenticator", conf.Execute[0]["authenticator"])
-
-						assert.Len(t, conf.Execute[1], 1)
-						assert.Equal(t, "subscription_contextualizer", conf.Execute[1]["contextualizer"])
-
-						assert.Len(t, conf.Execute[2], 1)
-						assert.Equal(t, "allow_all_authorizer", conf.Execute[2]["authorizer"])
-
-						assert.Len(t, conf.Execute[3], 1)
-						assert.Equal(t, "jwt", conf.Execute[3]["unifier"])
-
-						assert.Len(t, conf.ErrorHandler[0], 1)
-						assert.Equal(t, "default", conf.ErrorHandler[0]["error_handler"])
-
-						return true
-					})).Return(&ruleImpl{id: "test", srcID: "test"}, nil)
 			},
 			assert: func(t *testing.T, repo *repository) {
 				t.Helper()
 
 				assert.Len(t, repo.rules, 1)
-				assert.Equal(t, &ruleImpl{id: "test", srcID: "test"}, repo.rules[0])
+				assert.Equal(t, &ruleImpl{id: "rule:foo", srcID: "test"}, repo.rules[0])
 			},
 		},
 		{
 			uc: "multiple rule sets",
-			events: []event.RuleSetChangedEvent{
+			events: []event.RuleSetChanged{
 				{
-					Src:        "test1",
+					Source:     "test1",
 					ChangeType: event.Create,
-					Rules: []config2.Rule{
-						{
-							ID:          "rule:bar",
-							RuleMatcher: config2.Matcher{URL: "http://bar.foo/<**>"},
-							Methods:     []string{"GET"},
-						},
-					},
+					Rules:      []rule.Rule{&ruleImpl{id: "rule:bar", srcID: "test1"}},
 				},
 				{
-					Src:        "test2",
+					Source:     "test2",
 					ChangeType: event.Create,
-					Rules: []config2.Rule{
-						{
-							ID:          "rule:foo",
-							RuleMatcher: config2.Matcher{URL: "http://foo.bar/<**>"},
-							Methods:     []string{"POST"},
-						},
-					},
+					Rules:      []rule.Rule{&ruleImpl{id: "rule:foo", srcID: "test2"}},
 				},
-			},
-			configureMocks: func(t *testing.T, factory *mocks.MockRuleFactory) {
-				t.Helper()
-
-				factory.On("CreateRule", "test1", mock.Anything).
-					Return(&ruleImpl{id: "rule:bar", srcID: "test1"}, nil)
-
-				factory.On("CreateRule", "test2", mock.Anything).
-					Return(&ruleImpl{id: "rule:foo", srcID: "test2"}, nil)
 			},
 			assert: func(t *testing.T, repo *repository) {
 				t.Helper()
@@ -353,42 +269,21 @@ func TestRepositoryRuleSetLifecycleManagement(t *testing.T) {
 		},
 		{
 			uc: "multiple rule sets created and one of these deleted",
-			events: []event.RuleSetChangedEvent{
+			events: []event.RuleSetChanged{
 				{
-					Src:        "test1",
+					Source:     "test1",
 					ChangeType: event.Create,
-					Rules: []config2.Rule{
-						{
-							ID:          "rule:bar",
-							RuleMatcher: config2.Matcher{URL: "http://bar.foo/<**>"},
-							Methods:     []string{"GET"},
-						},
-					},
+					Rules:      []rule.Rule{&ruleImpl{id: "rule:bar", srcID: "test1"}},
 				},
 				{
-					Src:        "test2",
+					Source:     "test2",
 					ChangeType: event.Create,
-					Rules: []config2.Rule{
-						{
-							ID:          "rule:foo",
-							RuleMatcher: config2.Matcher{URL: "http://foo.bar/<**>"},
-							Methods:     []string{"POST"},
-						},
-					},
+					Rules:      []rule.Rule{&ruleImpl{id: "rule:foo", srcID: "test2"}},
 				},
 				{
-					Src:        "test2",
+					Source:     "test2",
 					ChangeType: event.Remove,
 				},
-			},
-			configureMocks: func(t *testing.T, factory *mocks.MockRuleFactory) {
-				t.Helper()
-
-				factory.On("CreateRule", "test1", mock.Anything).
-					Return(&ruleImpl{id: "rule:bar", srcID: "test1"}, nil)
-
-				factory.On("CreateRule", "test2", mock.Anything).
-					Return(&ruleImpl{id: "rule:foo", srcID: "test2"}, nil)
 			},
 			assert: func(t *testing.T, repo *repository) {
 				t.Helper()
@@ -398,45 +293,57 @@ func TestRepositoryRuleSetLifecycleManagement(t *testing.T) {
 			},
 		},
 		{
-			uc: "error while creating rule",
-			events: []event.RuleSetChangedEvent{
+			uc: "multiple rule sets created and one updated",
+			events: []event.RuleSetChanged{
 				{
-					Src:        "test",
+					Source:     "test1",
 					ChangeType: event.Create,
-					Rules: []config2.Rule{
-						{
-							ID:          "rule:bar",
-							RuleMatcher: config2.Matcher{URL: "http://bar.foo/<**>"},
-							Methods:     []string{"GET"},
-						},
+					Rules:      []rule.Rule{&ruleImpl{id: "rule:bar", srcID: "test1"}},
+				},
+				{
+					Source:     "test2",
+					ChangeType: event.Create,
+					Rules: []rule.Rule{
+						&ruleImpl{id: "rule:foo1", srcID: "test2", hash: []byte{1}},
+						&ruleImpl{id: "rule:foo2", srcID: "test2", hash: []byte{2}},
+						&ruleImpl{id: "rule:foo3", srcID: "test2", hash: []byte{3}},
+						&ruleImpl{id: "rule:foo4", srcID: "test2", hash: []byte{4}},
 					},
 				},
-			},
-			configureMocks: func(t *testing.T, factory *mocks.MockRuleFactory) {
-				t.Helper()
-
-				factory.On("CreateRule", "test", mock.Anything).
-					Return(nil, testsupport.ErrTestPurpose)
+				{
+					Source:     "test2",
+					ChangeType: event.Update,
+					Rules: []rule.Rule{
+						&ruleImpl{id: "rule:foo1", srcID: "test2", hash: []byte{5}}, // updated
+						&ruleImpl{id: "rule:foo2", srcID: "test2", hash: []byte{2}}, // as before
+						// &ruleImpl{id: "rule:foo3", srcID: "test2", hash: []byte{3}}, // deleted
+						&ruleImpl{id: "rule:foo4", srcID: "test2", hash: []byte{4}}, // as before
+					},
+				},
 			},
 			assert: func(t *testing.T, repo *repository) {
 				t.Helper()
 
-				assert.Len(t, repo.rules, 0)
+				require.Len(t, repo.rules, 4)
+				assert.Equal(t, &ruleImpl{id: "rule:bar", srcID: "test1"}, repo.rules[0])
+				assert.Equal(t, &ruleImpl{id: "rule:foo1", srcID: "test2", hash: []byte{5}}, repo.rules[1])
+				assert.Equal(t, &ruleImpl{id: "rule:foo2", srcID: "test2", hash: []byte{2}}, repo.rules[2])
+				assert.Equal(t, &ruleImpl{id: "rule:foo4", srcID: "test2", hash: []byte{4}}, repo.rules[3])
 			},
 		},
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
 			// GIVEN
-			repo.rules = make([]rule.Rule, defaultRuleListSize)
+			ctx := context.Background()
 
-			configureMocks := x.IfThenElse(tc.configureMocks != nil,
-				tc.configureMocks,
-				func(t *testing.T, factory *mocks.MockRuleFactory) { t.Helper() })
+			queue := make(event.RuleSetChangedEventQueue, 10)
+			defer close(queue)
 
-			factory := &mocks.MockRuleFactory{}
-			configureMocks(t, factory)
+			repo := newRepository(queue, &ruleFactory{}, log.Logger)
+			require.NoError(t, repo.Start(ctx))
 
-			repo.rf = factory
+			// nolint: errcheck
+			defer repo.Stop(ctx)
 
 			// WHEN
 			for _, evt := range tc.events {
@@ -447,7 +354,6 @@ func TestRepositoryRuleSetLifecycleManagement(t *testing.T) {
 
 			// THEN
 			tc.assert(t, repo)
-			factory.AssertExpectations(t)
 		})
 	}
 }

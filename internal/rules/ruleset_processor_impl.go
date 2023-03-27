@@ -54,11 +54,19 @@ func (p *ruleSetProcessor) OnCreated(ruleSet *config.RuleSet) error {
 		return ErrUnsupportedRuleSetVersion
 	}
 
-	p.sendEvent(event.RuleSetChangedEvent{
-		Src:        ruleSet.Source,
+	rules, err := p.loadRules(ruleSet)
+	if err != nil {
+		return err
+	}
+
+	evt := event.RuleSetChanged{
+		Source:     ruleSet.Source,
+		Name:       ruleSet.Name,
+		Rules:      rules,
 		ChangeType: event.Create,
-		Rules:      ruleSet.Rules,
-	})
+	}
+
+	p.sendEvent(evt)
 
 	return nil
 }
@@ -68,16 +76,19 @@ func (p *ruleSetProcessor) OnUpdated(ruleSet *config.RuleSet) error {
 		return ErrUnsupportedRuleSetVersion
 	}
 
-	p.sendEvent(event.RuleSetChangedEvent{
-		Src:        ruleSet.Source,
-		ChangeType: event.Remove,
-	})
+	rules, err := p.loadRules(ruleSet)
+	if err != nil {
+		return err
+	}
 
-	p.sendEvent(event.RuleSetChangedEvent{
-		Src:        ruleSet.Source,
-		ChangeType: event.Create,
-		Rules:      ruleSet.Rules,
-	})
+	evt := event.RuleSetChanged{
+		Source:     ruleSet.Source,
+		Name:       ruleSet.Name,
+		Rules:      rules,
+		ChangeType: event.Update,
+	}
+
+	p.sendEvent(evt)
 
 	return nil
 }
@@ -87,17 +98,20 @@ func (p *ruleSetProcessor) OnDeleted(ruleSet *config.RuleSet) error {
 		return ErrUnsupportedRuleSetVersion
 	}
 
-	p.sendEvent(event.RuleSetChangedEvent{
-		Src:        ruleSet.Source,
+	evt := event.RuleSetChanged{
+		Source:     ruleSet.Source,
+		Name:       ruleSet.Name,
 		ChangeType: event.Remove,
-	})
+	}
+
+	p.sendEvent(evt)
 
 	return nil
 }
 
-func (p *ruleSetProcessor) sendEvent(evt event.RuleSetChangedEvent) {
+func (p *ruleSetProcessor) sendEvent(evt event.RuleSetChanged) {
 	p.l.Info().
-		Str("_src", evt.Src).
+		Str("_src", evt.Source).
 		Str("_type", evt.ChangeType.String()).
 		Msg("Rule set changed")
 	p.q <- evt

@@ -1,6 +1,7 @@
 package rules
 
 import (
+	"bytes"
 	"context"
 	"net/url"
 	"sync"
@@ -8,13 +9,11 @@ import (
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/rules/config"
 	"github.com/dadrus/heimdall/internal/rules/event"
 	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
+	"github.com/dadrus/heimdall/internal/x/slicex"
 )
-
-const defaultRuleListSize = 0
 
 func newRepository(
 	queue event.RuleSetChangedEventQueue,
@@ -22,16 +21,15 @@ func newRepository(
 	logger zerolog.Logger,
 ) *repository {
 	return &repository{
-		rf:     ruleFactory,
+		dr:     ruleFactory.DefaultRule(),
 		logger: logger,
-		rules:  make([]rule.Rule, defaultRuleListSize),
 		queue:  queue,
 		quit:   make(chan bool),
 	}
 }
 
 type repository struct {
-	rf     rule.Factory
+	dr     rule.Rule
 	logger zerolog.Logger
 
 	rules []rule.Rule
@@ -51,8 +49,8 @@ func (r *repository) FindRule(requestURL *url.URL) (rule.Rule, error) {
 		}
 	}
 
-	if r.rf.HasDefaultRule() {
-		return r.rf.DefaultRule(), nil
+	if r.dr != nil {
+		return r.dr, nil
 	}
 
 	return nil, errorchain.NewWithMessagef(heimdall.ErrNoRuleFound,
@@ -85,10 +83,13 @@ func (r *repository) watchRuleSetChanges() {
 				r.logger.Debug().Msg("Rule set definition queue closed")
 			}
 
-			if evt.ChangeType == event.Create {
-				r.onRuleSetCreated(evt.Src, evt.Rules)
-			} else if evt.ChangeType == event.Remove {
-				r.onRuleSetDeleted(evt.Src)
+			switch evt.ChangeType {
+			case event.Create:
+				r.addRuleSet(evt.Source, evt.Rules)
+			case event.Update:
+				r.updateRuleSet(evt.Source, evt.Rules)
+			case event.Remove:
+				r.deleteRuleSet(evt.Source)
 			}
 		case <-r.quit:
 			r.logger.Info().Msg("Rule definition loader stopped")
@@ -98,50 +99,130 @@ func (r *repository) watchRuleSetChanges() {
 	}
 }
 
-func (r *repository) loadRules(srcID string, ruleSet []config.Rule) ([]rule.Rule, error) {
-	rules := make([]rule.Rule, len(ruleSet))
+func (r *repository) addRuleSet(srcID string, rules []rule.Rule) {
+	// create rules
+	r.logger.Info().Str("_src", srcID).Msg("Adding rule set")
 
-	for idx, rc := range ruleSet {
-		rul, err := r.rf.CreateRule(srcID, rc)
-		if err != nil {
-			return nil, errorchain.NewWithMessage(heimdall.ErrInternal, "failed loading rule").CausedBy(err)
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
+
+	// add them
+	r.addRules(rules)
+}
+
+func (r *repository) updateRuleSet(srcID string, rules []rule.Rule) {
+	// create rules
+	r.logger.Info().Str("_src", srcID).Msg("Updating rule set")
+
+	// find all rules for the given src id
+	applicable := func() []rule.Rule {
+		r.mutex.Lock()
+		defer r.mutex.Unlock()
+
+		return slicex.Filter(r.rules, func(r rule.Rule) bool { return r.SrcID() == srcID })
+	}()
+
+	// find new rules
+	newRules := slicex.Filter(rules, func(r rule.Rule) bool {
+		var known bool
+
+		for _, existing := range applicable {
+			if existing.ID() == r.ID() {
+				known = true
+
+				break
+			}
 		}
 
-		rules[idx] = rul
+		return !known
+	})
+
+	// find update rules
+	updatedRules := slicex.Filter(rules, func(r rule.Rule) bool {
+		loaded := r.(*ruleImpl)
+		var updated bool
+
+		for _, existing := range applicable {
+			known := existing.(*ruleImpl)
+
+			if known.id == loaded.id && !bytes.Equal(known.hash, loaded.hash) {
+				updated = true
+
+				break
+			}
+		}
+
+		return updated
+	})
+
+	// find deleted rules
+	deletedRules := slicex.Filter(applicable, func(r rule.Rule) bool {
+		var present bool
+
+		for _, loaded := range rules {
+			if loaded.ID() == r.ID() {
+				present = true
+
+				break
+			}
+		}
+
+		return !present
+	})
+
+	func() {
+		r.mutex.Lock()
+		defer r.mutex.Unlock()
+
+		// remove deleted rules
+		r.removeRules(deletedRules)
+
+		// replace updated rules
+		r.replaceRules(updatedRules)
+
+		// add new rules
+		r.addRules(newRules)
+	}()
+}
+
+func (r *repository) deleteRuleSet(srcID string) {
+	r.logger.Info().Str("_src", srcID).Msg("Deleting rule set")
+
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
+
+	// find all rules for the given src id
+	applicable := slicex.Filter(r.rules, func(r rule.Rule) bool { return r.SrcID() == srcID })
+
+	// remove them
+	r.removeRules(applicable)
+}
+
+func (r *repository) addRules(rules []rule.Rule) {
+	for _, rul := range rules {
+		r.rules = append(r.rules, rul)
+
+		r.logger.Debug().Str("_src", rul.SrcID()).Str("_id", rul.ID()).Msg("Rule added")
 	}
-
-	return rules, nil
 }
 
-func (r *repository) addRule(rule rule.Rule) {
-	r.mutex.Lock()
-	defer r.mutex.Unlock()
-
-	r.rules = append(r.rules, rule)
-
-	r.logger.Debug().Str("_src", rule.SrcID()).Str("_id", rule.ID()).Msg("Rule added")
-}
-
-func (r *repository) removeRules(srcID string) {
-	r.logger.Info().Str("_src", srcID).Msg("Removing rules")
-
-	r.mutex.Lock()
-	defer r.mutex.Unlock()
-
+func (r *repository) removeRules(rules []rule.Rule) {
 	// find all indexes for affected rules
 	var idxs []int
 
 	for idx, rul := range r.rules {
-		if rul.SrcID() == srcID {
-			idxs = append(idxs, idx)
+		for _, tbd := range rules {
+			if rul.ID() == tbd.ID() {
+				idxs = append(idxs, idx)
 
-			r.logger.Debug().Str("_id", rul.ID()).Msg("Removing rule")
+				r.logger.Debug().Str("_src", rul.SrcID()).Str("_id", rul.ID()).Msg("Rule removed")
+			}
 		}
 	}
 
 	// if all rules should be dropped, just create a new slice
 	if len(idxs) == len(r.rules) {
-		r.rules = make([]rule.Rule, defaultRuleListSize)
+		r.rules = nil
 
 		return
 	}
@@ -162,21 +243,19 @@ func (r *repository) removeRules(srcID string) {
 	r.rules = r.rules[:len(r.rules)-len(idxs)]
 }
 
-func (r *repository) onRuleSetCreated(srcID string, ruleSet []config.Rule) {
-	// create rules
-	r.logger.Info().Str("_src", srcID).Msg("Loading rule set")
+func (r *repository) replaceRules(rules []rule.Rule) {
+	for _, updated := range rules {
+		for idx, existing := range r.rules {
+			if existing.ID() == updated.ID() {
+				r.rules[idx] = updated
 
-	rules, err := r.loadRules(srcID, ruleSet)
-	if err != nil {
-		r.logger.Error().Err(err).Str("_src", srcID).Msg("Failed loading rule set")
+				r.logger.Debug().
+					Str("_src", existing.SrcID()).
+					Str("_id", existing.ID()).
+					Msg("Rule updated")
+
+				break
+			}
+		}
 	}
-
-	// add them
-	for _, rul := range rules {
-		r.addRule(rul)
-	}
-}
-
-func (r *repository) onRuleSetDeleted(srcID string) {
-	r.removeRules(srcID)
 }

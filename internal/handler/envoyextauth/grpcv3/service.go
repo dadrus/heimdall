@@ -35,7 +35,7 @@ import (
 	loggermiddleware "github.com/dadrus/heimdall/internal/handler/envoyextauth/grpcv3/middleware/logger"
 	prometheusmiddleware "github.com/dadrus/heimdall/internal/handler/envoyextauth/grpcv3/middleware/prometheus"
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/rules"
+	"github.com/dadrus/heimdall/internal/rules/rule"
 )
 
 func newService(
@@ -43,7 +43,7 @@ func newService(
 	registerer prometheus.Registerer,
 	cch cache.Cache,
 	logger zerolog.Logger,
-	repository rules.Repository,
+	repository rule.Repository,
 	signer heimdall.JWTSigner,
 ) *grpc.Server {
 	service := conf.Serve.Decision

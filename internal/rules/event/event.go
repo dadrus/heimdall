@@ -17,7 +17,6 @@
 package event
 
 import (
-	"github.com/dadrus/heimdall/internal/rules/config"
 	"github.com/dadrus/heimdall/internal/rules/rule"
 )
 
@@ -41,14 +40,6 @@ func (t ChangeType) String() string {
 	default:
 		return "Unknown"
 	}
-}
-
-type RuleSetChangedEvent struct {
-	Src        string
-	Name       string
-	Hash       []byte
-	Rules      []config.Rule
-	ChangeType ChangeType
 }
 
 type RuleSetChanged struct {

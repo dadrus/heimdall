@@ -24,6 +24,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/rules/event"
 	"github.com/dadrus/heimdall/internal/rules/provider"
+	"github.com/dadrus/heimdall/internal/rules/rule"
 )
 
 const defaultQueueSize = 20
@@ -52,7 +53,7 @@ var Module = fx.Options(
 			fx.OnStart(func(ctx context.Context, o *repository) error { return o.Start(ctx) }),
 			fx.OnStop(func(ctx context.Context, o *repository) error { return o.Stop(ctx) }),
 		),
-		func(r *repository) Repository { return r },
+		func(r *repository) rule.Repository { return r },
 		newRuleSetProcessor,
 	),
 	provider.Module,

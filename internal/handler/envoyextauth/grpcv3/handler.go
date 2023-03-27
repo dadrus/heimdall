@@ -23,12 +23,12 @@ import (
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/rules"
+	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
 type Handler struct {
-	r rules.Repository
+	r rule.Repository
 	s heimdall.JWTSigner
 }
 
@@ -38,17 +38,17 @@ func (h *Handler) Check(ctx context.Context, req *envoy_auth.CheckRequest) (*env
 
 	reqCtx := NewRequestContext(ctx, req, h.s)
 
-	rule, err := h.r.FindRule(reqCtx.RequestURL())
+	rul, err := h.r.FindRule(reqCtx.RequestURL())
 	if err != nil {
 		return nil, err
 	}
 
-	if !rule.MatchesMethod(reqCtx.RequestMethod()) {
+	if !rul.MatchesMethod(reqCtx.RequestMethod()) {
 		return nil, errorchain.NewWithMessagef(heimdall.ErrMethodNotAllowed,
 			"rule doesn't match %s method", reqCtx.RequestMethod())
 	}
 
-	_, err = rule.Execute(reqCtx)
+	_, err = rul.Execute(reqCtx)
 	if err != nil {
 		return nil, err
 	}
