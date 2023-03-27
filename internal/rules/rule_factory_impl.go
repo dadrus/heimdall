@@ -150,19 +150,13 @@ func (f *ruleFactory) CreateRule(srcID string, ruleConfig config2.Rule) ( // nol
 			"no ID defined for rule ID=%s from %s", ruleConfig.ID, srcID)
 	}
 
-	if len(ruleConfig.RuleMatcher.URL) == 0 {
-		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
-			"no URL defined for rule ID=%s from %s", ruleConfig.ID, srcID)
-	}
-
 	matcher, err := patternmatcher.NewPatternMatcher(
 		ruleConfig.RuleMatcher.Strategy, ruleConfig.RuleMatcher.URL,
 	)
 	if err != nil {
 		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
 			"bad URL pattern for %s strategy defined for rule ID=%s from %s",
-			ruleConfig.RuleMatcher.Strategy, ruleConfig.ID, srcID).
-			CausedBy(err)
+			ruleConfig.RuleMatcher.Strategy, ruleConfig.ID, srcID).CausedBy(err)
 	}
 
 	var upstreamURL *url.URL
@@ -171,8 +165,7 @@ func (f *ruleFactory) CreateRule(srcID string, ruleConfig config2.Rule) ( // nol
 		upstreamURL, err = url.Parse(ruleConfig.Upstream)
 		if err != nil {
 			return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
-				"bad upstream URL defined for rule ID=%s from %s", ruleConfig.ID, srcID).
-				CausedBy(err)
+				"bad upstream URL defined for rule ID=%s from %s", ruleConfig.ID, srcID).CausedBy(err)
 		}
 	}
 
@@ -211,14 +204,11 @@ func (f *ruleFactory) CreateRule(srcID string, ruleConfig config2.Rule) ( // nol
 			"no methods defined for rule ID=%s from %s", ruleConfig.ID, srcID)
 	}
 
-	rawRuleConfig, err := json.Marshal(ruleConfig)
+	hash, err := f.createHash(ruleConfig)
 	if err != nil {
 		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
-			"failed to marshal rule ID=%s from %s", ruleConfig.ID, srcID)
+			"failed to create hash for rule ID=%s from %s", ruleConfig.ID, srcID)
 	}
-
-	md := crypto.SHA256.New()
-	md.Write(rawRuleConfig)
 
 	return &ruleImpl{
 		id:          ruleConfig.ID,
@@ -227,12 +217,24 @@ func (f *ruleFactory) CreateRule(srcID string, ruleConfig config2.Rule) ( // nol
 		methods:     methods,
 		srcID:       srcID,
 		isDefault:   false,
-		hash:        md.Sum(nil),
+		hash:        hash,
 		sc:          authenticators,
 		sh:          subHandlers,
 		un:          unifiers,
 		eh:          errorHandlers,
 	}, nil
+}
+
+func (f *ruleFactory) createHash(ruleConfig config2.Rule) ([]byte, error) {
+	rawRuleConfig, err := json.Marshal(ruleConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	md := crypto.SHA256.New()
+	md.Write(rawRuleConfig)
+
+	return md.Sum(nil), nil
 }
 
 func (f *ruleFactory) createOnErrorPipeline(ehConfigs []config.MechanismConfig) (compositeErrorHandler, error) {

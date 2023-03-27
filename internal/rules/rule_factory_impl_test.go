@@ -558,7 +558,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "no URL defined")
+				assert.Contains(t, err.Error(), "bad URL pattern")
 			},
 		},
 		{
