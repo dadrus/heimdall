@@ -139,11 +139,11 @@ func (r *repository) updateRuleSet(srcID string, rules []rule.Rule) {
 
 	// find update rules
 	updatedRules := slicex.Filter(rules, func(r rule.Rule) bool {
-		loaded := r.(*ruleImpl)
+		loaded := r.(*ruleImpl) // nolint: forcetypeassert
 		var updated bool
 
 		for _, existing := range applicable {
-			known := existing.(*ruleImpl)
+			known := existing.(*ruleImpl) // nolint: forcetypeassert
 
 			if known.id == loaded.id && !bytes.Equal(known.hash, loaded.hash) {
 				updated = true

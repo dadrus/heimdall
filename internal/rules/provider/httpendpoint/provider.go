@@ -182,8 +182,7 @@ func (p *provider) watchChanges(ctx context.Context, rsf RuleSetFetcher) error {
 func (p *provider) ruleSetsUpdated(ruleSet *config2.RuleSet, stateID string) error {
 	var hash []byte
 
-	value, ok := p.states.Load(stateID)
-	if ok {
+	if value, ok := p.states.Load(stateID); ok { //nolint:nestif
 		hash = value.([]byte) // nolint: forcetypeassert
 
 		// rule set was known
