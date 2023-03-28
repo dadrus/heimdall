@@ -138,10 +138,6 @@ func (f *ruleFactory) DefaultRule() rule.Rule {
 	return f.defaultRule
 }
 
-func (f *ruleFactory) HasDefaultRule() bool {
-	return f.hasDefaultRule
-}
-
 func (f *ruleFactory) CreateRule(srcID string, ruleConfig config2.Rule) ( // nolint: cyclop
 	rule.Rule, error,
 ) {

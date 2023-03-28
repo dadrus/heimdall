@@ -52,7 +52,6 @@ func TestRuleFactoryNew(t *testing.T) {
 				require.NoError(t, err)
 
 				require.NotNil(t, ruleFactory)
-				assert.False(t, ruleFactory.HasDefaultRule())
 				assert.Nil(t, ruleFactory.DefaultRule())
 			},
 		},
@@ -429,7 +428,6 @@ func TestRuleFactoryNew(t *testing.T) {
 
 				require.NoError(t, err)
 				require.NotNil(t, ruleFactory)
-				assert.True(t, ruleFactory.HasDefaultRule())
 				assert.NotNil(t, ruleFactory.DefaultRule())
 				assert.Equal(t, ruleFactory.defaultRule, ruleFactory.DefaultRule())
 
@@ -482,7 +480,6 @@ func TestRuleFactoryNew(t *testing.T) {
 
 				require.NoError(t, err)
 				require.NotNil(t, ruleFactory)
-				assert.True(t, ruleFactory.HasDefaultRule())
 				assert.NotNil(t, ruleFactory.DefaultRule())
 				assert.Equal(t, ruleFactory.defaultRule, ruleFactory.DefaultRule())
 

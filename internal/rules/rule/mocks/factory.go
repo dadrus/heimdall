@@ -120,47 +120,6 @@ func (_c *FactoryMock_DefaultRule_Call) RunAndReturn(run func() rule.Rule) *Fact
 	return _c
 }
 
-// HasDefaultRule provides a mock function with given fields:
-func (_m *FactoryMock) HasDefaultRule() bool {
-	ret := _m.Called()
-
-	var r0 bool
-	if rf, ok := ret.Get(0).(func() bool); ok {
-		r0 = rf()
-	} else {
-		r0 = ret.Get(0).(bool)
-	}
-
-	return r0
-}
-
-// FactoryMock_HasDefaultRule_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'HasDefaultRule'
-type FactoryMock_HasDefaultRule_Call struct {
-	*mock.Call
-}
-
-// HasDefaultRule is a helper method to define mock.On call
-func (_e *FactoryMock_Expecter) HasDefaultRule() *FactoryMock_HasDefaultRule_Call {
-	return &FactoryMock_HasDefaultRule_Call{Call: _e.mock.On("HasDefaultRule")}
-}
-
-func (_c *FactoryMock_HasDefaultRule_Call) Run(run func()) *FactoryMock_HasDefaultRule_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run()
-	})
-	return _c
-}
-
-func (_c *FactoryMock_HasDefaultRule_Call) Return(_a0 bool) *FactoryMock_HasDefaultRule_Call {
-	_c.Call.Return(_a0)
-	return _c
-}
-
-func (_c *FactoryMock_HasDefaultRule_Call) RunAndReturn(run func() bool) *FactoryMock_HasDefaultRule_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
 type mockConstructorTestingTNewFactoryMock interface {
 	mock.TestingT
 	Cleanup(func())
