@@ -176,6 +176,8 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 			uc: "server panics and error does not contain traces",
 			configureMocks: func(t *testing.T, repository *mocks2.RepositoryMock, rule *mocks2.MockRule) {
 				t.Helper()
+
+				repository.EXPECT().FindRule(mock.Anything).Panic("wuff")
 			},
 			assertResponse: func(t *testing.T, err error, response *envoy_auth.CheckResponse) {
 				t.Helper()
