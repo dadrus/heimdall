@@ -32,7 +32,6 @@ import (
 	"github.com/dadrus/heimdall/internal/cache/mocks"
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
-	mocks2 "github.com/dadrus/heimdall/internal/rules/mocks"
 	mocks4 "github.com/dadrus/heimdall/internal/rules/rule/mocks"
 )
 
@@ -44,7 +43,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 		uc             string
 		serviceConf    config.ServiceConfig
 		createRequest  func(t *testing.T) *http.Request
-		configureMocks func(t *testing.T, repository *mocks2.MockRepository, rule *mocks4.MockRule)
+		configureMocks func(t *testing.T, repository *mocks4.RepositoryMock, rule *mocks4.MockRule)
 		assertResponse func(t *testing.T, err error, response *http.Response)
 	}{
 		{
@@ -54,10 +53,10 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 
 				return httptest.NewRequest(http.MethodGet, "/", nil)
 			},
-			configureMocks: func(t *testing.T, repository *mocks2.MockRepository, rule *mocks4.MockRule) {
+			configureMocks: func(t *testing.T, repository *mocks4.RepositoryMock, rule *mocks4.MockRule) {
 				t.Helper()
 
-				repository.On("FindRule", mock.Anything).Return(nil, heimdall.ErrNoRuleFound)
+				repository.EXPECT().FindRule(mock.Anything).Return(nil, heimdall.ErrNoRuleFound)
 			},
 			assertResponse: func(t *testing.T, err error, response *http.Response) {
 				t.Helper()
@@ -77,12 +76,12 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 
 				return httptest.NewRequest(http.MethodPost, "/", nil)
 			},
-			configureMocks: func(t *testing.T, repository *mocks2.MockRepository, rule *mocks4.MockRule) {
+			configureMocks: func(t *testing.T, repository *mocks4.RepositoryMock, rule *mocks4.MockRule) {
 				t.Helper()
 
 				rule.On("MatchesMethod", http.MethodPost).Return(false)
 
-				repository.On("FindRule", mock.Anything).Return(rule, nil)
+				repository.EXPECT().FindRule(mock.Anything).Return(rule, nil)
 			},
 			assertResponse: func(t *testing.T, err error, response *http.Response) {
 				t.Helper()
@@ -102,13 +101,13 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 
 				return httptest.NewRequest(http.MethodPost, "/", nil)
 			},
-			configureMocks: func(t *testing.T, repository *mocks2.MockRepository, rule *mocks4.MockRule) {
+			configureMocks: func(t *testing.T, repository *mocks4.RepositoryMock, rule *mocks4.MockRule) {
 				t.Helper()
 
 				rule.On("MatchesMethod", http.MethodPost).Return(true)
 				rule.On("Execute", mock.Anything).Return(nil, heimdall.ErrAuthentication)
 
-				repository.On("FindRule", mock.Anything).Return(rule, nil)
+				repository.EXPECT().FindRule(mock.Anything).Return(rule, nil)
 			},
 			assertResponse: func(t *testing.T, err error, response *http.Response) {
 				t.Helper()
@@ -128,7 +127,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 
 				return httptest.NewRequest(http.MethodPost, "/", nil)
 			},
-			configureMocks: func(t *testing.T, repository *mocks2.MockRepository, rule *mocks4.MockRule) {
+			configureMocks: func(t *testing.T, repository *mocks4.RepositoryMock, rule *mocks4.MockRule) {
 				t.Helper()
 
 				rule.On("MatchesMethod", http.MethodPost).Return(true)
@@ -138,7 +137,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 					return true
 				})).Return(nil, nil)
 
-				repository.On("FindRule", mock.Anything).Return(rule, nil)
+				repository.EXPECT().FindRule(mock.Anything).Return(rule, nil)
 			},
 			assertResponse: func(t *testing.T, err error, response *http.Response) {
 				t.Helper()
@@ -169,7 +168,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 
 				return req
 			},
-			configureMocks: func(t *testing.T, repository *mocks2.MockRepository, rule *mocks4.MockRule) {
+			configureMocks: func(t *testing.T, repository *mocks4.RepositoryMock, rule *mocks4.MockRule) {
 				t.Helper()
 
 				rule.On("MatchesMethod", http.MethodPost).Return(true)
@@ -180,7 +179,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 					return true
 				})).Return(&url.URL{Scheme: "http", Host: "heimdall.test.local", Path: "/foobar"}, nil)
 
-				repository.On("FindRule", mock.MatchedBy(func(reqURL *url.URL) bool {
+				repository.EXPECT().FindRule(mock.MatchedBy(func(reqURL *url.URL) bool {
 					return reqURL.Scheme == "http" && reqURL.Host == "heimdall.test.local" && reqURL.Path == "/foobar"
 				})).Return(rule, nil)
 			},
@@ -221,7 +220,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 
 				return req
 			},
-			configureMocks: func(t *testing.T, repository *mocks2.MockRepository, rule *mocks4.MockRule) {
+			configureMocks: func(t *testing.T, repository *mocks4.RepositoryMock, rule *mocks4.MockRule) {
 				t.Helper()
 
 				rule.On("MatchesMethod", http.MethodPost).Return(true)
@@ -232,7 +231,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 					return true
 				})).Return(&url.URL{Scheme: "https", Host: "test.com", Path: "/bar"}, nil)
 
-				repository.On("FindRule", mock.MatchedBy(func(reqURL *url.URL) bool {
+				repository.EXPECT().FindRule(mock.MatchedBy(func(reqURL *url.URL) bool {
 					return reqURL.Scheme == "http" && reqURL.Host == "heimdall.test.local" && reqURL.Path == "/foobar"
 				})).Return(rule, nil)
 			},
@@ -274,7 +273,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 
 				return req
 			},
-			configureMocks: func(t *testing.T, repository *mocks2.MockRepository, rule *mocks4.MockRule) {
+			configureMocks: func(t *testing.T, repository *mocks4.RepositoryMock, rule *mocks4.MockRule) {
 				t.Helper()
 
 				rule.On("MatchesMethod", http.MethodPost).Return(true)
@@ -285,7 +284,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 					return true
 				})).Return(&url.URL{Scheme: "http", Host: "heimdall.test.local", Path: "/foobar"}, nil)
 
-				repository.On("FindRule", mock.MatchedBy(func(reqURL *url.URL) bool {
+				repository.EXPECT().FindRule(mock.MatchedBy(func(reqURL *url.URL) bool {
 					return reqURL.Scheme == "http" && reqURL.Host == "heimdall.test.local" && reqURL.Path == "/foobar"
 				})).Return(rule, nil)
 			},
@@ -324,14 +323,14 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 
 				return req
 			},
-			configureMocks: func(t *testing.T, repository *mocks2.MockRepository, rule *mocks4.MockRule) {
+			configureMocks: func(t *testing.T, repository *mocks4.RepositoryMock, rule *mocks4.MockRule) {
 				t.Helper()
 
 				rule.On("MatchesMethod", http.MethodGet).Return(true)
 				rule.On("Execute", mock.Anything).
 					Return(&url.URL{Scheme: "http", Host: "heimdall.test.local", Path: "/foobar"}, nil)
 
-				repository.On("FindRule", mock.MatchedBy(func(reqURL *url.URL) bool {
+				repository.EXPECT().FindRule(mock.MatchedBy(func(reqURL *url.URL) bool {
 					return reqURL.Scheme == "http" && reqURL.Host == "heimdall.test.local" && reqURL.Path == "/foobar"
 				})).Return(rule, nil)
 			},
@@ -358,14 +357,14 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 
 				return req
 			},
-			configureMocks: func(t *testing.T, repository *mocks2.MockRepository, rule *mocks4.MockRule) {
+			configureMocks: func(t *testing.T, repository *mocks4.RepositoryMock, rule *mocks4.MockRule) {
 				t.Helper()
 
 				rule.On("MatchesMethod", http.MethodPost).Return(true)
 				rule.On("Execute", mock.Anything).
 					Return(&url.URL{Scheme: "http", Host: "test.com", Path: "/foobar"}, nil)
 
-				repository.On("FindRule", mock.MatchedBy(func(reqURL *url.URL) bool {
+				repository.EXPECT().FindRule(mock.MatchedBy(func(reqURL *url.URL) bool {
 					return reqURL.Scheme == "http" && reqURL.Host == "test.com" && reqURL.Path == "/foobar"
 				})).Return(rule, nil)
 			},
@@ -392,14 +391,14 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 
 				return req
 			},
-			configureMocks: func(t *testing.T, repository *mocks2.MockRepository, rule *mocks4.MockRule) {
+			configureMocks: func(t *testing.T, repository *mocks4.RepositoryMock, rule *mocks4.MockRule) {
 				t.Helper()
 
 				rule.On("MatchesMethod", http.MethodPost).Return(true)
 				rule.On("Execute", mock.Anything).
 					Return(&url.URL{Scheme: "http", Host: "heimdall.test.local", Path: "/bar"}, nil)
 
-				repository.On("FindRule", mock.MatchedBy(func(reqURL *url.URL) bool {
+				repository.EXPECT().FindRule(mock.MatchedBy(func(reqURL *url.URL) bool {
 					return reqURL.Scheme == "http" && reqURL.Host == "heimdall.test.local" && reqURL.Path == "bar"
 				})).Return(rule, nil)
 			},
@@ -426,14 +425,14 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 
 				return req
 			},
-			configureMocks: func(t *testing.T, repository *mocks2.MockRepository, rule *mocks4.MockRule) {
+			configureMocks: func(t *testing.T, repository *mocks4.RepositoryMock, rule *mocks4.MockRule) {
 				t.Helper()
 
 				rule.On("MatchesMethod", http.MethodPost).Return(true)
 				rule.On("Execute", mock.Anything).
 					Return(&url.URL{Scheme: "https", Host: "heimdall.test.local", Path: "/foobar"}, nil)
 
-				repository.On("FindRule", mock.MatchedBy(func(reqURL *url.URL) bool {
+				repository.EXPECT().FindRule(mock.MatchedBy(func(reqURL *url.URL) bool {
 					return reqURL.Scheme == "https" && reqURL.Host == "heimdall.test.local" && reqURL.Path == "/foobar"
 				})).Return(rule, nil)
 			},
@@ -463,14 +462,14 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 
 				return req
 			},
-			configureMocks: func(t *testing.T, repository *mocks2.MockRepository, rule *mocks4.MockRule) {
+			configureMocks: func(t *testing.T, repository *mocks4.RepositoryMock, rule *mocks4.MockRule) {
 				t.Helper()
 
 				rule.On("MatchesMethod", http.MethodPatch).Return(true)
 				rule.On("Execute", mock.Anything).
 					Return(&url.URL{Scheme: "https", Host: "test.com", Path: "/bar"}, nil)
 
-				repository.On("FindRule", mock.MatchedBy(func(reqURL *url.URL) bool {
+				repository.EXPECT().FindRule(mock.MatchedBy(func(reqURL *url.URL) bool {
 					return reqURL.Scheme == "https" && reqURL.Host == "test.com" && reqURL.Path == "bar"
 				})).Return(rule, nil)
 			},
@@ -486,7 +485,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 			// GIVEN
 			conf := &config.Configuration{Serve: config.ServeConfig{Decision: tc.serviceConf}}
 			cch := &mocks.MockCache{}
-			repo := &mocks2.MockRepository{}
+			repo := mocks4.NewRepositoryMock(t)
 			rule := &mocks4.MockRule{}
 			logger := log.Logger
 
@@ -518,7 +517,6 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 			}
 
 			tc.assertResponse(t, err, resp)
-			repo.AssertExpectations(t)
 			rule.AssertExpectations(t)
 		})
 	}
