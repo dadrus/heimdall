@@ -33,6 +33,7 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/contextualizers"
 	mocks4 "github.com/dadrus/heimdall/internal/rules/mechanisms/contextualizers/mocks"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/errorhandlers"
+	mocks5 "github.com/dadrus/heimdall/internal/rules/mechanisms/errorhandlers/mocks"
 	mocks2 "github.com/dadrus/heimdall/internal/rules/mechanisms/mocks"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/unifiers"
 	"github.com/dadrus/heimdall/internal/x"
@@ -417,7 +418,7 @@ func TestHandlerFactoryCreateErrorHandler(t *testing.T) {
 		uc            string
 		id            string
 		conf          map[string]any
-		configureMock func(t *testing.T, mEH *mocks2.MockErrorHandler)
+		configureMock func(t *testing.T, mEH *mocks5.ErrorHandlerMock)
 		assert        func(t *testing.T, err error, errorHandler errorhandlers.ErrorHandler)
 	}{
 		{
@@ -434,10 +435,10 @@ func TestHandlerFactoryCreateErrorHandler(t *testing.T) {
 		{
 			uc:   "with failing creation from prototype",
 			conf: map[string]any{"foo": "bar"},
-			configureMock: func(t *testing.T, mEH *mocks2.MockErrorHandler) {
+			configureMock: func(t *testing.T, mEH *mocks5.ErrorHandlerMock) {
 				t.Helper()
 
-				mEH.On("WithConfig", mock.Anything).Return(nil, heimdall.ErrArgument)
+				mEH.EXPECT().WithConfig(mock.Anything).Return(nil, heimdall.ErrArgument)
 			},
 			assert: func(t *testing.T, err error, errorHandler errorhandlers.ErrorHandler) {
 				t.Helper()
@@ -450,10 +451,10 @@ func TestHandlerFactoryCreateErrorHandler(t *testing.T) {
 		{
 			uc:   "successful creation from prototype",
 			conf: map[string]any{"foo": "bar"},
-			configureMock: func(t *testing.T, mEH *mocks2.MockErrorHandler) {
+			configureMock: func(t *testing.T, mEH *mocks5.ErrorHandlerMock) {
 				t.Helper()
 
-				mEH.On("WithConfig", mock.Anything).Return(mEH, nil)
+				mEH.EXPECT().WithConfig(mock.Anything).Return(mEH, nil)
 			},
 			assert: func(t *testing.T, err error, errorHandler errorhandlers.ErrorHandler) {
 				t.Helper()
@@ -476,9 +477,9 @@ func TestHandlerFactoryCreateErrorHandler(t *testing.T) {
 			// GIVEN
 			configureMock := x.IfThenElse(tc.configureMock != nil,
 				tc.configureMock,
-				func(t *testing.T, mEH *mocks2.MockErrorHandler) { t.Helper() })
+				func(t *testing.T, mEH *mocks5.ErrorHandlerMock) { t.Helper() })
 
-			mEH := &mocks2.MockErrorHandler{}
+			mEH := mocks5.NewErrorHandlerMock(t)
 			configureMock(t, mEH)
 
 			factory := &mechanismsFactory{
@@ -496,7 +497,6 @@ func TestHandlerFactoryCreateErrorHandler(t *testing.T) {
 
 			// THEN
 			tc.assert(t, err, errorHandler)
-			mEH.AssertExpectations(t)
 		})
 	}
 }

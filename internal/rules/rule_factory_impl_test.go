@@ -30,6 +30,7 @@ import (
 	mocks2 "github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/mocks"
 	mocks4 "github.com/dadrus/heimdall/internal/rules/mechanisms/authorizers/mocks"
 	mocks5 "github.com/dadrus/heimdall/internal/rules/mechanisms/contextualizers/mocks"
+	mocks6 "github.com/dadrus/heimdall/internal/rules/mechanisms/errorhandlers/mocks"
 	mocks3 "github.com/dadrus/heimdall/internal/rules/mechanisms/mocks"
 	"github.com/dadrus/heimdall/internal/rules/mocks"
 	"github.com/dadrus/heimdall/internal/x"
@@ -809,7 +810,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				mhf.EXPECT().CreateUnifier("baz", mock.Anything).
 					Return(&mocks3.MockUnifier{}, nil)
 				mhf.EXPECT().CreateErrorHandler("foo", mock.Anything).
-					Return(&mocks3.MockErrorHandler{}, nil)
+					Return(&mocks6.ErrorHandlerMock{}, nil)
 			},
 			assert: func(t *testing.T, err error, rul *ruleImpl) {
 				t.Helper()
