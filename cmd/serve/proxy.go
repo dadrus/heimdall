@@ -17,6 +17,8 @@
 package serve
 
 import (
+	"os"
+
 	"github.com/spf13/cobra"
 	"go.uber.org/fx"
 
@@ -35,7 +37,8 @@ func NewProxyCommand() *cobra.Command {
 			app, err := createProxyApp(cmd)
 			if err != nil {
 				cmd.PrintErrf("Failed to initialize proxy service: %v", err)
-				panic(err)
+
+				os.Exit(1)
 			}
 
 			app.Run()
