@@ -76,7 +76,7 @@ func TestHandleProxyEndpointRequest(t *testing.T) {
 		uc               string
 		serviceConf      config.ServiceConfig
 		createRequest    func(t *testing.T) *http.Request
-		configureMocks   func(t *testing.T, repository *mocks4.RepositoryMock, rule *mocks4.MockRule)
+		configureMocks   func(t *testing.T, repository *mocks4.RepositoryMock, rule *mocks4.RuleMock)
 		instructUpstream func(t *testing.T)
 		assertResponse   func(t *testing.T, err error, response *http.Response)
 	}{
@@ -87,7 +87,7 @@ func TestHandleProxyEndpointRequest(t *testing.T) {
 
 				return httptest.NewRequest(http.MethodGet, "http://heimdall.test.local/foobar", nil)
 			},
-			configureMocks: func(t *testing.T, repository *mocks4.RepositoryMock, rule *mocks4.MockRule) {
+			configureMocks: func(t *testing.T, repository *mocks4.RepositoryMock, rule *mocks4.RuleMock) {
 				t.Helper()
 
 				repository.EXPECT().FindRule(mock.Anything).Return(nil, heimdall.ErrNoRuleFound)
@@ -112,12 +112,12 @@ func TestHandleProxyEndpointRequest(t *testing.T) {
 
 				return httptest.NewRequest(http.MethodPost, "http://heimdall.test.local/foobar", nil)
 			},
-			configureMocks: func(t *testing.T, repository *mocks4.RepositoryMock, rule *mocks4.MockRule) {
+			configureMocks: func(t *testing.T, repository *mocks4.RepositoryMock, rule *mocks4.RuleMock) {
 				t.Helper()
 
-				rule.On("MatchesMethod", http.MethodPost).Return(false)
-				rule.On("ID").Return("test")
-				rule.On("SrcID").Return("test")
+				rule.EXPECT().MatchesMethod(http.MethodPost).Return(false)
+				rule.EXPECT().ID().Return("test")
+				rule.EXPECT().SrcID().Return("test")
 
 				repository.EXPECT().FindRule(mock.Anything).Return(rule, nil)
 			},
@@ -141,11 +141,11 @@ func TestHandleProxyEndpointRequest(t *testing.T) {
 
 				return httptest.NewRequest(http.MethodPost, "http://heimdall.test.local/foobar", nil)
 			},
-			configureMocks: func(t *testing.T, repository *mocks4.RepositoryMock, rule *mocks4.MockRule) {
+			configureMocks: func(t *testing.T, repository *mocks4.RepositoryMock, rule *mocks4.RuleMock) {
 				t.Helper()
 
-				rule.On("MatchesMethod", http.MethodPost).Return(true)
-				rule.On("Execute", mock.Anything, mock.Anything).Return(nil, nil)
+				rule.EXPECT().MatchesMethod(http.MethodPost).Return(true)
+				rule.EXPECT().Execute(mock.Anything).Return(nil, nil)
 
 				repository.EXPECT().FindRule(mock.Anything).Return(rule, nil)
 			},
@@ -169,11 +169,11 @@ func TestHandleProxyEndpointRequest(t *testing.T) {
 
 				return httptest.NewRequest(http.MethodPost, "http://heimdall.test.local/foobar", nil)
 			},
-			configureMocks: func(t *testing.T, repository *mocks4.RepositoryMock, rule *mocks4.MockRule) {
+			configureMocks: func(t *testing.T, repository *mocks4.RepositoryMock, rule *mocks4.RuleMock) {
 				t.Helper()
 
-				rule.On("MatchesMethod", http.MethodPost).Return(true)
-				rule.On("Execute", mock.Anything).Return(nil, heimdall.ErrAuthentication)
+				rule.EXPECT().MatchesMethod(http.MethodPost).Return(true)
+				rule.EXPECT().Execute(mock.Anything).Return(nil, heimdall.ErrAuthentication)
 
 				repository.EXPECT().FindRule(mock.Anything).Return(rule, nil)
 			},
@@ -197,11 +197,11 @@ func TestHandleProxyEndpointRequest(t *testing.T) {
 
 				return httptest.NewRequest(http.MethodPost, "http://heimdall.test.local/foobar", nil)
 			},
-			configureMocks: func(t *testing.T, repository *mocks4.RepositoryMock, rule *mocks4.MockRule) {
+			configureMocks: func(t *testing.T, repository *mocks4.RepositoryMock, rule *mocks4.RuleMock) {
 				t.Helper()
 
-				rule.On("MatchesMethod", "POST").Return(true)
-				rule.On("Execute", mock.MatchedBy(func(ctx *requestcontext.RequestContext) bool {
+				rule.EXPECT().MatchesMethod(http.MethodPost).Return(true)
+				rule.EXPECT().Execute(mock.MatchedBy(func(ctx *requestcontext.RequestContext) bool {
 					ctx.SetPipelineError(heimdall.ErrAuthorization)
 
 					return true
@@ -240,11 +240,11 @@ func TestHandleProxyEndpointRequest(t *testing.T) {
 
 				return req
 			},
-			configureMocks: func(t *testing.T, repository *mocks4.RepositoryMock, rule *mocks4.MockRule) {
+			configureMocks: func(t *testing.T, repository *mocks4.RepositoryMock, rule *mocks4.RuleMock) {
 				t.Helper()
 
-				rule.On("MatchesMethod", http.MethodPost).Return(true)
-				rule.On("Execute", mock.MatchedBy(func(ctx *requestcontext.RequestContext) bool {
+				rule.EXPECT().MatchesMethod(http.MethodPost).Return(true)
+				rule.EXPECT().Execute(mock.MatchedBy(func(ctx *requestcontext.RequestContext) bool {
 					ctx.AddHeaderForUpstream("X-Foo-Bar", "baz")
 					ctx.AddCookieForUpstream("X-Bar-Foo", "zab")
 
@@ -314,11 +314,11 @@ func TestHandleProxyEndpointRequest(t *testing.T) {
 
 				return req
 			},
-			configureMocks: func(t *testing.T, repository *mocks4.RepositoryMock, rule *mocks4.MockRule) {
+			configureMocks: func(t *testing.T, repository *mocks4.RepositoryMock, rule *mocks4.RuleMock) {
 				t.Helper()
 
-				rule.On("MatchesMethod", http.MethodGet).Return(true)
-				rule.On("Execute", mock.MatchedBy(func(ctx *requestcontext.RequestContext) bool {
+				rule.EXPECT().MatchesMethod(http.MethodGet).Return(true)
+				rule.EXPECT().Execute(mock.MatchedBy(func(ctx *requestcontext.RequestContext) bool {
 					ctx.AddHeaderForUpstream("X-Foo-Bar", "baz")
 					ctx.AddCookieForUpstream("X-Bar-Foo", "zab")
 
@@ -387,11 +387,11 @@ func TestHandleProxyEndpointRequest(t *testing.T) {
 
 				return req
 			},
-			configureMocks: func(t *testing.T, repository *mocks4.RepositoryMock, rule *mocks4.MockRule) {
+			configureMocks: func(t *testing.T, repository *mocks4.RepositoryMock, rule *mocks4.RuleMock) {
 				t.Helper()
 
-				rule.On("MatchesMethod", http.MethodPost).Return(true)
-				rule.On("Execute", mock.MatchedBy(func(ctx *requestcontext.RequestContext) bool {
+				rule.EXPECT().MatchesMethod(http.MethodPost).Return(true)
+				rule.EXPECT().Execute(mock.MatchedBy(func(ctx *requestcontext.RequestContext) bool {
 					ctx.AddHeaderForUpstream("X-Foo-Bar", "baz")
 					ctx.AddCookieForUpstream("X-Bar-Foo", "zab")
 
@@ -455,7 +455,7 @@ func TestHandleProxyEndpointRequest(t *testing.T) {
 			conf := &config.Configuration{Serve: config.ServeConfig{Proxy: tc.serviceConf}}
 			cch := &mocks.MockCache{}
 			repo := mocks4.NewRepositoryMock(t)
-			rule := &mocks4.MockRule{}
+			rule := mocks4.NewRuleMock(t)
 			logger := log.Logger
 
 			tc.configureMocks(t, repo, rule)
@@ -487,7 +487,6 @@ func TestHandleProxyEndpointRequest(t *testing.T) {
 			}
 
 			tc.assertResponse(t, err, resp)
-			rule.AssertExpectations(t)
 		})
 	}
 }

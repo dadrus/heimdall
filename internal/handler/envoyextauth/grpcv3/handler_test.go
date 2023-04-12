@@ -27,12 +27,12 @@ import (
 func TestHandleDecisionEndpointRequest(t *testing.T) {
 	for _, tc := range []struct {
 		uc             string
-		configureMocks func(t *testing.T, repository *mocks2.RepositoryMock, rule *mocks2.MockRule)
+		configureMocks func(t *testing.T, repository *mocks2.RepositoryMock, rule *mocks2.RuleMock)
 		assertResponse func(t *testing.T, err error, response *envoy_auth.CheckResponse)
 	}{
 		{
 			uc: "no rules configured",
-			configureMocks: func(t *testing.T, repository *mocks2.RepositoryMock, rule *mocks2.MockRule) {
+			configureMocks: func(t *testing.T, repository *mocks2.RepositoryMock, rule *mocks2.RuleMock) {
 				t.Helper()
 
 				repository.EXPECT().FindRule(mock.Anything).Return(nil, heimdall.ErrNoRuleFound)
@@ -52,10 +52,10 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 		},
 		{
 			uc: "rule doesn't match method",
-			configureMocks: func(t *testing.T, repository *mocks2.RepositoryMock, rule *mocks2.MockRule) {
+			configureMocks: func(t *testing.T, repository *mocks2.RepositoryMock, rule *mocks2.RuleMock) {
 				t.Helper()
 
-				rule.On("MatchesMethod", http.MethodPost).Return(false)
+				rule.EXPECT().MatchesMethod(http.MethodPost).Return(false)
 
 				repository.EXPECT().FindRule(mock.Anything).Return(rule, nil)
 			},
@@ -74,11 +74,11 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 		},
 		{
 			uc: "rule execution fails with authentication error",
-			configureMocks: func(t *testing.T, repository *mocks2.RepositoryMock, rule *mocks2.MockRule) {
+			configureMocks: func(t *testing.T, repository *mocks2.RepositoryMock, rule *mocks2.RuleMock) {
 				t.Helper()
 
-				rule.On("MatchesMethod", http.MethodPost).Return(true)
-				rule.On("Execute", mock.Anything).Return(nil, heimdall.ErrAuthentication)
+				rule.EXPECT().MatchesMethod(http.MethodPost).Return(true)
+				rule.EXPECT().Execute(mock.Anything).Return(nil, heimdall.ErrAuthentication)
 
 				repository.EXPECT().FindRule(mock.Anything).Return(rule, nil)
 			},
@@ -97,11 +97,11 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 		},
 		{
 			uc: "rule execution fails with authorization error",
-			configureMocks: func(t *testing.T, repository *mocks2.RepositoryMock, rule *mocks2.MockRule) {
+			configureMocks: func(t *testing.T, repository *mocks2.RepositoryMock, rule *mocks2.RuleMock) {
 				t.Helper()
 
-				rule.On("MatchesMethod", http.MethodPost).Return(true)
-				rule.On("Execute", mock.MatchedBy(func(ctx heimdall.Context) bool {
+				rule.EXPECT().MatchesMethod(http.MethodPost).Return(true)
+				rule.EXPECT().Execute(mock.MatchedBy(func(ctx heimdall.Context) bool {
 					ctx.SetPipelineError(heimdall.ErrAuthorization)
 
 					return true
@@ -124,11 +124,11 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 		},
 		{
 			uc: "rule execution fails with a redirect",
-			configureMocks: func(t *testing.T, repository *mocks2.RepositoryMock, rule *mocks2.MockRule) {
+			configureMocks: func(t *testing.T, repository *mocks2.RepositoryMock, rule *mocks2.RuleMock) {
 				t.Helper()
 
-				rule.On("MatchesMethod", http.MethodPost).Return(true)
-				rule.On("Execute", mock.Anything).Return(nil, &heimdall.RedirectError{
+				rule.EXPECT().MatchesMethod(http.MethodPost).Return(true)
+				rule.EXPECT().Execute(mock.Anything).Return(nil, &heimdall.RedirectError{
 					Message:    "test redirect",
 					Code:       http.StatusFound,
 					RedirectTo: "http://foo.bar",
@@ -153,11 +153,11 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 		},
 		{
 			uc: "rule execution succeeds",
-			configureMocks: func(t *testing.T, repository *mocks2.RepositoryMock, rule *mocks2.MockRule) {
+			configureMocks: func(t *testing.T, repository *mocks2.RepositoryMock, rule *mocks2.RuleMock) {
 				t.Helper()
 
-				rule.On("MatchesMethod", http.MethodPost).Return(true)
-				rule.On("Execute", mock.Anything).Return(nil, nil)
+				rule.EXPECT().MatchesMethod(http.MethodPost).Return(true)
+				rule.EXPECT().Execute(mock.Anything).Return(nil, nil)
 
 				repository.EXPECT().FindRule(mock.Anything).Return(rule, nil)
 			},
@@ -174,7 +174,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 		},
 		{
 			uc: "server panics and error does not contain traces",
-			configureMocks: func(t *testing.T, repository *mocks2.RepositoryMock, rule *mocks2.MockRule) {
+			configureMocks: func(t *testing.T, repository *mocks2.RepositoryMock, rule *mocks2.RuleMock) {
 				t.Helper()
 
 				repository.EXPECT().FindRule(mock.Anything).Panic("wuff")
@@ -197,7 +197,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 			conf := &config.Configuration{Metrics: config.MetricsConfig{Enabled: true}}
 			cch := &mocks.MockCache{}
 			repo := mocks2.NewRepositoryMock(t)
-			rule := &mocks2.MockRule{}
+			rule := mocks2.NewRuleMock(t)
 
 			tc.configureMocks(t, repo, rule)
 
@@ -227,7 +227,6 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 
 			// THEN
 			tc.assertResponse(t, err, resp)
-			rule.AssertExpectations(t)
 		})
 	}
 }
