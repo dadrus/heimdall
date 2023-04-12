@@ -32,6 +32,7 @@ import (
 	mocks5 "github.com/dadrus/heimdall/internal/rules/mechanisms/contextualizers/mocks"
 	mocks6 "github.com/dadrus/heimdall/internal/rules/mechanisms/errorhandlers/mocks"
 	mocks3 "github.com/dadrus/heimdall/internal/rules/mechanisms/mocks"
+	mocks7 "github.com/dadrus/heimdall/internal/rules/mechanisms/unifiers/mocks"
 	"github.com/dadrus/heimdall/internal/rules/mocks"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
@@ -700,7 +701,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				t.Helper()
 
 				mhf.EXPECT().CreateAuthenticator("foo", mock.Anything).Return(&mocks2.AuthenticatorMock{}, nil)
-				mhf.EXPECT().CreateUnifier("bar", mock.Anything).Return(&mocks3.MockUnifier{}, nil)
+				mhf.EXPECT().CreateUnifier("bar", mock.Anything).Return(&mocks7.UnifierMock{}, nil)
 			},
 			assert: func(t *testing.T, err error, rul *ruleImpl) {
 				t.Helper()
@@ -725,7 +726,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				t.Helper()
 
 				mhf.EXPECT().CreateAuthenticator("foo", mock.Anything).Return(&mocks2.AuthenticatorMock{}, nil)
-				mhf.EXPECT().CreateUnifier("bar", mock.Anything).Return(&mocks3.MockUnifier{}, nil)
+				mhf.EXPECT().CreateUnifier("bar", mock.Anything).Return(&mocks7.UnifierMock{}, nil)
 			},
 			assert: func(t *testing.T, err error, rul *ruleImpl) {
 				t.Helper()
@@ -808,7 +809,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				mhf.EXPECT().CreateAuthorizer("zab", mock.Anything).
 					Return(&mocks4.AuthorizerMock{}, nil)
 				mhf.EXPECT().CreateUnifier("baz", mock.Anything).
-					Return(&mocks3.MockUnifier{}, nil)
+					Return(&mocks7.UnifierMock{}, nil)
 				mhf.EXPECT().CreateErrorHandler("foo", mock.Anything).
 					Return(&mocks6.ErrorHandlerMock{}, nil)
 			},

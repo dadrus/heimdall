@@ -34,8 +34,8 @@ import (
 	mocks4 "github.com/dadrus/heimdall/internal/rules/mechanisms/contextualizers/mocks"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/errorhandlers"
 	mocks5 "github.com/dadrus/heimdall/internal/rules/mechanisms/errorhandlers/mocks"
-	mocks2 "github.com/dadrus/heimdall/internal/rules/mechanisms/mocks"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/unifiers"
+	mocks6 "github.com/dadrus/heimdall/internal/rules/mechanisms/unifiers/mocks"
 	"github.com/dadrus/heimdall/internal/x"
 )
 
@@ -325,7 +325,7 @@ func TestHandlerFactoryCreateUnifier(t *testing.T) {
 		uc            string
 		id            string
 		conf          map[string]any
-		configureMock func(t *testing.T, mUn *mocks2.MockUnifier)
+		configureMock func(t *testing.T, mUn *mocks6.UnifierMock)
 		assert        func(t *testing.T, err error, unifier unifiers.Unifier)
 	}{
 		{
@@ -342,10 +342,10 @@ func TestHandlerFactoryCreateUnifier(t *testing.T) {
 		{
 			uc:   "with failing creation from prototype",
 			conf: map[string]any{"foo": "bar"},
-			configureMock: func(t *testing.T, mUn *mocks2.MockUnifier) {
+			configureMock: func(t *testing.T, mUn *mocks6.UnifierMock) {
 				t.Helper()
 
-				mUn.On("WithConfig", mock.Anything).Return(nil, heimdall.ErrArgument)
+				mUn.EXPECT().WithConfig(mock.Anything).Return(nil, heimdall.ErrArgument)
 			},
 			assert: func(t *testing.T, err error, unifier unifiers.Unifier) {
 				t.Helper()
@@ -358,10 +358,10 @@ func TestHandlerFactoryCreateUnifier(t *testing.T) {
 		{
 			uc:   "successful creation from prototype",
 			conf: map[string]any{"foo": "bar"},
-			configureMock: func(t *testing.T, mUn *mocks2.MockUnifier) {
+			configureMock: func(t *testing.T, mUn *mocks6.UnifierMock) {
 				t.Helper()
 
-				mUn.On("WithConfig", mock.Anything).Return(mUn, nil)
+				mUn.EXPECT().WithConfig(mock.Anything).Return(mUn, nil)
 			},
 			assert: func(t *testing.T, err error, unifier unifiers.Unifier) {
 				t.Helper()
@@ -384,9 +384,9 @@ func TestHandlerFactoryCreateUnifier(t *testing.T) {
 			// GIVEN
 			configureMock := x.IfThenElse(tc.configureMock != nil,
 				tc.configureMock,
-				func(t *testing.T, mUn *mocks2.MockUnifier) { t.Helper() })
+				func(t *testing.T, mUn *mocks6.UnifierMock) { t.Helper() })
 
-			mUn := &mocks2.MockUnifier{}
+			mUn := mocks6.NewUnifierMock(t)
 			configureMock(t, mUn)
 
 			factory := &mechanismsFactory{
@@ -404,7 +404,6 @@ func TestHandlerFactoryCreateUnifier(t *testing.T) {
 
 			// THEN
 			tc.assert(t, err, unifier)
-			mUn.AssertExpectations(t)
 		})
 	}
 }
