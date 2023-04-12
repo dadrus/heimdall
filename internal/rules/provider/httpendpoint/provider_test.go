@@ -38,8 +38,8 @@ import (
 	config2 "github.com/dadrus/heimdall/internal/rules/config"
 	"github.com/dadrus/heimdall/internal/rules/rule/mocks"
 	"github.com/dadrus/heimdall/internal/x"
-	mock2 "github.com/dadrus/heimdall/internal/x/mock"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
+	mock2 "github.com/dadrus/heimdall/internal/x/testsupport/mock"
 )
 
 func TestNewProvider(t *testing.T) {

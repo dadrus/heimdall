@@ -41,8 +41,8 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/provider/kubernetes/api/v1alpha1"
 	"github.com/dadrus/heimdall/internal/rules/rule/mocks"
 	"github.com/dadrus/heimdall/internal/x"
-	mock2 "github.com/dadrus/heimdall/internal/x/mock"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
+	mock2 "github.com/dadrus/heimdall/internal/x/testsupport/mock"
 )
 
 func TestNewProvider(t *testing.T) {
