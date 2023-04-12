@@ -77,7 +77,6 @@ func TestRuleSetProcessorOnCreated(t *testing.T) {
 				assert.Equal(t, "foobar", evt.Name)
 
 				assert.Equal(t, &mocks.RuleMock{}, evt.Rules[0])
-
 			},
 		},
 	} {
@@ -165,7 +164,6 @@ func TestRuleSetProcessorOnUpdated(t *testing.T) {
 				assert.Equal(t, "foobar", evt.Name)
 
 				assert.Equal(t, &mocks.RuleMock{}, evt.Rules[0])
-
 			},
 		},
 	} {
@@ -226,7 +224,6 @@ func TestRuleSetProcessorOnDeleted(t *testing.T) {
 				assert.Equal(t, event.Remove, evt.ChangeType)
 				assert.Equal(t, "test", evt.Source)
 				assert.Equal(t, "foobar", evt.Name)
-
 			},
 		},
 	} {
