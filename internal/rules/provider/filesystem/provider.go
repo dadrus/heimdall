@@ -215,14 +215,13 @@ func (p *provider) ruleSetCreatedOrUpdated(fileName string) error {
 		hash = value.([]byte) // nolint: forcetypeassert
 	}
 
-	if len(hash) == 0 {
+	switch {
+	case len(hash) == 0:
 		err = p.p.OnCreated(ruleSet)
-	} else {
-		if bytes.Equal(hash, ruleSet.Hash) {
-			return nil
-		}
-
+	case !bytes.Equal(hash, ruleSet.Hash):
 		err = p.p.OnUpdated(ruleSet)
+	default:
+		return nil
 	}
 
 	if err != nil {

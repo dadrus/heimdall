@@ -342,12 +342,24 @@ rules:
 		},
 		{
 			uc: "successfully start provider with watcher using initially empty file, " +
-				"updating it afterwards and deleting it then",
+				"updating it with same content, then with different content and deleting it then",
 			watch: true,
 			writeContents: func(t *testing.T, file *os.File, dir string) {
 				t.Helper()
 
 				_, err := file.Write([]byte(`
+version: "1"
+rules:
+- id: foo
+`))
+				require.NoError(t, err)
+
+				time.Sleep(200 * time.Millisecond)
+
+				_, err = file.Seek(0, 0)
+				require.NoError(t, err)
+
+				_, err = file.Write([]byte(`
 version: "1"
 rules:
 - id: foo
