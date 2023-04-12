@@ -365,6 +365,113 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 			},
 		},
 		{
+			uc:   "adding rule set fails",
+			conf: []byte("auth_class: bar"),
+			writeResponse: func() ResponseWriter {
+				callIdx := 0
+
+				return func(t *testing.T, watchRequest bool, w http.ResponseWriter) {
+					t.Helper()
+
+					rls := v1alpha1.RuleSetList{
+						TypeMeta: metav1.TypeMeta{
+							APIVersion: fmt.Sprintf("%s/%s", v1alpha1.GroupName, v1alpha1.GroupVersion),
+							Kind:       "RuleSetList",
+						},
+						ListMeta: metav1.ListMeta{
+							ResourceVersion: "735820",
+						},
+						Items: []v1alpha1.RuleSet{
+							{
+								TypeMeta: metav1.TypeMeta{
+									APIVersion: fmt.Sprintf("%s/%s", v1alpha1.GroupName, v1alpha1.GroupVersion),
+									Kind:       "RuleSet",
+								},
+								ObjectMeta: metav1.ObjectMeta{
+									Name:              "test-rule",
+									Namespace:         "foo",
+									ResourceVersion:   "702666",
+									UID:               "dfb2a2f1-1ad2-4d8c-8456-516fc94abb86",
+									Generation:        1,
+									CreationTimestamp: metav1.NewTime(time.Now()),
+								},
+								Spec: v1alpha1.RuleSetSpec{
+									AuthClassName: "bar",
+									Rules: []config2.Rule{
+										{
+											ID: "test",
+											RuleMatcher: config2.Matcher{
+												URL:      "http://foo.bar",
+												Strategy: "glob",
+											},
+											Upstream: "http://bar",
+											Methods:  []string{http.MethodGet},
+											Execute: []config.MechanismConfig{
+												{"authenticator": "authn"},
+												{"authorizer": "authz"},
+											},
+										},
+									},
+								},
+							},
+						},
+					}
+
+					rawRls, err := json.Marshal(rls)
+					require.NoError(t, err)
+
+					var evt metav1.WatchEvent
+
+					err = metav1.Convert_watch_Event_To_v1_WatchEvent(
+						&watch.Event{
+							Type: watch.Bookmark,
+							Object: &v1alpha1.RuleSet{
+								TypeMeta: metav1.TypeMeta{
+									APIVersion: fmt.Sprintf("%s/%s", v1alpha1.GroupName, v1alpha1.GroupVersion),
+									Kind:       "RuleSet",
+								},
+								ObjectMeta: metav1.ObjectMeta{
+									ResourceVersion: "715382",
+								},
+							},
+						},
+						&evt, nil)
+					require.NoError(t, err)
+
+					rawEvt, err := json.Marshal(evt)
+					require.NoError(t, err)
+
+					w.Header().Set("Content-Type", "application/json")
+					if watchRequest {
+						if callIdx == 0 {
+							_, err := w.Write(rawEvt)
+							require.NoError(t, err)
+						} else {
+							time.Sleep(1 * time.Second)
+							w.WriteHeader(http.StatusInternalServerError)
+						}
+
+						callIdx++
+					} else {
+						_, err := w.Write(rawRls)
+						require.NoError(t, err)
+					}
+				}
+			}(),
+			setupProcessor: func(t *testing.T, processor *mocks.RuleSetProcessorMock) {
+				t.Helper()
+
+				processor.EXPECT().OnCreated(mock.Anything).Return(testsupport.ErrTestPurpose).Once()
+			},
+			assert: func(t *testing.T, logs fmt.Stringer, processor *mocks.RuleSetProcessorMock) {
+				t.Helper()
+
+				time.Sleep(250 * time.Millisecond)
+
+				assert.Contains(t, logs.String(), "Failed creating rule set")
+			},
+		},
+		{
 			uc:   "a ruleset is added and then removed",
 			conf: []byte("auth_class: bar"),
 			writeResponse: func() ResponseWriter {
@@ -506,6 +613,122 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 				assert.Equal(t, "kubernetes:foo:dfb2a2f1-1ad2-4d8c-8456-516fc94abb86", ruleSet.Source)
 				// assert.Equal(t, "v1alpha1", ruleSet.Version)
 				assert.Equal(t, "test-rule", ruleSet.Name)
+			},
+		},
+		{
+			uc:   "removing rule set fails",
+			conf: []byte("auth_class: bar"),
+			writeResponse: func() ResponseWriter {
+				callIdx := 0
+
+				return func(t *testing.T, watchRequest bool, w http.ResponseWriter) {
+					t.Helper()
+
+					w.Header().Set("Content-Type", "application/json")
+					if watchRequest {
+						callIdx++
+
+						evt := watch.Event{
+							Type: watch.Added,
+							Object: &v1alpha1.RuleSet{
+								TypeMeta: metav1.TypeMeta{
+									APIVersion: fmt.Sprintf("%s/%s", v1alpha1.GroupName, v1alpha1.GroupVersion),
+									Kind:       "RuleSet",
+								},
+								ObjectMeta: metav1.ObjectMeta{
+									ResourceVersion:   "715382",
+									Name:              "test-rule",
+									Namespace:         "foo",
+									UID:               "dfb2a2f1-1ad2-4d8c-8456-516fc94abb86",
+									Generation:        1,
+									CreationTimestamp: metav1.NewTime(time.Now()),
+								},
+								Spec: v1alpha1.RuleSetSpec{
+									AuthClassName: "bar",
+									Rules: []config2.Rule{
+										{
+											ID: "test",
+											RuleMatcher: config2.Matcher{
+												URL:      "http://foo.bar",
+												Strategy: "glob",
+											},
+											Upstream: "http://bar",
+											Methods:  []string{http.MethodGet},
+											Execute: []config.MechanismConfig{
+												{"authenticator": "authn"},
+												{"authorizer": "authz"},
+											},
+										},
+									},
+								},
+							},
+						}
+
+						switch callIdx {
+						case 1:
+							// add a rule set
+							var watchEvt metav1.WatchEvent
+
+							err := metav1.Convert_watch_Event_To_v1_WatchEvent(&evt, &watchEvt, nil)
+							require.NoError(t, err)
+
+							rawEvt, err := json.Marshal(watchEvt)
+							require.NoError(t, err)
+
+							_, err = w.Write(rawEvt)
+							require.NoError(t, err)
+						case 2:
+							// remove it
+							var watchEvt metav1.WatchEvent
+
+							evt.Type = watch.Deleted
+							err := metav1.Convert_watch_Event_To_v1_WatchEvent(&evt, &watchEvt, nil)
+							require.NoError(t, err)
+
+							rawEvt, err := json.Marshal(watchEvt)
+							require.NoError(t, err)
+
+							_, err = w.Write(rawEvt)
+							require.NoError(t, err)
+						default:
+							// no changes
+							time.Sleep(1 * time.Second)
+							w.WriteHeader(http.StatusInternalServerError)
+						}
+					} else {
+						// empty rule set initially
+						rls := v1alpha1.RuleSetList{
+							TypeMeta: metav1.TypeMeta{
+								APIVersion: fmt.Sprintf("%s/%s", v1alpha1.GroupName, v1alpha1.GroupVersion),
+								Kind:       "RuleSetList",
+							},
+							ListMeta: metav1.ListMeta{
+								ResourceVersion: "735820",
+							},
+						}
+
+						rawRls, err := json.Marshal(rls)
+						require.NoError(t, err)
+
+						_, err = w.Write(rawRls)
+						require.NoError(t, err)
+					}
+				}
+			}(),
+			setupProcessor: func(t *testing.T, processor *mocks.RuleSetProcessorMock) {
+				t.Helper()
+
+				processor.EXPECT().OnCreated(mock.Anything).Return(nil).Once()
+				processor.EXPECT().OnDeleted(mock.Anything).Return(testsupport.ErrTestPurpose).Once()
+			},
+			assert: func(t *testing.T, logs fmt.Stringer, processor *mocks.RuleSetProcessorMock) {
+				t.Helper()
+
+				time.Sleep(250 * time.Millisecond)
+
+				messages := logs.String()
+				assert.Contains(t, messages, "Rule set created")
+				assert.Contains(t, messages, "Failed deleting rule set")
 			},
 		},
 		{
@@ -682,6 +905,141 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 				assert.Len(t, updatedRule.Execute, 2)
 				assert.Equal(t, "test_authn", updatedRule.Execute[0]["authenticator"])
 				assert.Equal(t, "test_authz", updatedRule.Execute[1]["authorizer"])
+			},
+		},
+		{
+			uc:   "failed updating rule set",
+			conf: []byte("auth_class: bar"),
+			writeResponse: func() ResponseWriter {
+				callIdx := 0
+
+				return func(t *testing.T, watchRequest bool, w http.ResponseWriter) {
+					t.Helper()
+
+					w.Header().Set("Content-Type", "application/json")
+					if watchRequest {
+						callIdx++
+
+						evt := watch.Event{
+							Type: watch.Added,
+							Object: &v1alpha1.RuleSet{
+								TypeMeta: metav1.TypeMeta{
+									APIVersion: fmt.Sprintf("%s/%s", v1alpha1.GroupName, v1alpha1.GroupVersion),
+									Kind:       "RuleSet",
+								},
+								ObjectMeta: metav1.ObjectMeta{
+									ResourceVersion:   "715382",
+									Name:              "test-rule",
+									Namespace:         "foo",
+									UID:               "dfb2a2f1-1ad2-4d8c-8456-516fc94abb86",
+									Generation:        1,
+									CreationTimestamp: metav1.NewTime(time.Now()),
+								},
+								Spec: v1alpha1.RuleSetSpec{
+									AuthClassName: "bar",
+									Rules: []config2.Rule{
+										{
+											ID: "test",
+											RuleMatcher: config2.Matcher{
+												URL:      "http://foo.bar",
+												Strategy: "glob",
+											},
+											Upstream: "http://bar",
+											Methods:  []string{http.MethodGet},
+											Execute: []config.MechanismConfig{
+												{"authenticator": "authn"},
+												{"authorizer": "authz"},
+											},
+										},
+									},
+								},
+							},
+						}
+
+						switch callIdx {
+						case 1:
+							// add a rule set
+							var watchEvt metav1.WatchEvent
+
+							err := metav1.Convert_watch_Event_To_v1_WatchEvent(&evt, &watchEvt, nil)
+							require.NoError(t, err)
+
+							rawEvt, err := json.Marshal(watchEvt)
+							require.NoError(t, err)
+
+							_, err = w.Write(rawEvt)
+							require.NoError(t, err)
+						case 2:
+							// update it
+							var watchEvt metav1.WatchEvent
+
+							evt.Type = watch.Modified
+							ruleSet := evt.Object.(*v1alpha1.RuleSet) // nolint:forcetypeassert
+							ruleSet.Spec = v1alpha1.RuleSetSpec{
+								AuthClassName: "bar",
+								Rules: []config2.Rule{
+									{
+										ID: "test",
+										RuleMatcher: config2.Matcher{
+											URL:      "http://foo.bar",
+											Strategy: "glob",
+										},
+										Upstream: "http://bar",
+										Methods:  []string{http.MethodGet},
+										Execute: []config.MechanismConfig{
+											{"authenticator": "test_authn"},
+											{"authorizer": "test_authz"},
+										},
+									},
+								},
+							}
+							err := metav1.Convert_watch_Event_To_v1_WatchEvent(&evt, &watchEvt, nil)
+							require.NoError(t, err)
+
+							rawEvt, err := json.Marshal(watchEvt)
+							require.NoError(t, err)
+
+							_, err = w.Write(rawEvt)
+							require.NoError(t, err)
+						default:
+							// no changes
+							time.Sleep(1 * time.Second)
+							w.WriteHeader(http.StatusInternalServerError)
+						}
+					} else {
+						// empty rule set initially
+						rls := v1alpha1.RuleSetList{
+							TypeMeta: metav1.TypeMeta{
+								APIVersion: fmt.Sprintf("%s/%s", v1alpha1.GroupName, v1alpha1.GroupVersion),
+								Kind:       "RuleSetList",
+							},
+							ListMeta: metav1.ListMeta{
+								ResourceVersion: "735820",
+							},
+						}
+
+						rawRls, err := json.Marshal(rls)
+						require.NoError(t, err)
+
+						_, err = w.Write(rawRls)
+						require.NoError(t, err)
+					}
+				}
+			}(),
+			setupProcessor: func(t *testing.T, processor *mocks.RuleSetProcessorMock) {
+				t.Helper()
+
+				processor.EXPECT().OnCreated(mock.Anything).Return(nil).Once()
+				processor.EXPECT().OnUpdated(mock.Anything).Return(testsupport.ErrTestPurpose).Once()
+			},
+			assert: func(t *testing.T, logs fmt.Stringer, processor *mocks.RuleSetProcessorMock) {
+				t.Helper()
+
+				time.Sleep(250 * time.Millisecond)
+
+				messages := logs.String()
+				assert.Contains(t, messages, "Rule set created")
+				assert.Contains(t, messages, "Failed to apply rule set updates")
 			},
 		},
 	} {
