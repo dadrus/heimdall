@@ -751,7 +751,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				sc:      compositeSubjectCreator{&mocks.MockSubjectCreator{}},
 				sh:      compositeSubjectHandler{&mocks.MockSubjectHandler{}},
 				un:      compositeSubjectHandler{&mocks.MockSubjectHandler{}},
-				eh:      compositeErrorHandler{&mocks.MockErrorHandler{}},
+				eh:      compositeErrorHandler{&mocks.ErrorHandlerMock{}},
 			},
 			assert: func(t *testing.T, err error, rul *ruleImpl) {
 				t.Helper()
@@ -792,20 +792,20 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				sc:      compositeSubjectCreator{&mocks.MockSubjectCreator{}},
 				sh:      compositeSubjectHandler{&mocks.MockSubjectHandler{}},
 				un:      compositeSubjectHandler{&mocks.MockSubjectHandler{}},
-				eh:      compositeErrorHandler{&mocks.MockErrorHandler{}},
+				eh:      compositeErrorHandler{&mocks.ErrorHandlerMock{}},
 			},
 			configureMocks: func(t *testing.T, mhf *mocks3.FactoryMock) {
 				t.Helper()
 
-				mhf.On("CreateAuthenticator", "foo", mock.Anything).
+				mhf.EXPECT().CreateAuthenticator("foo", mock.Anything).
 					Return(&mocks3.MockAuthenticator{}, nil)
-				mhf.On("CreateContextualizer", "bar", mock.Anything).
+				mhf.EXPECT().CreateContextualizer("bar", mock.Anything).
 					Return(&mocks3.MockContextualizer{}, nil)
-				mhf.On("CreateAuthorizer", "zab", mock.Anything).
+				mhf.EXPECT().CreateAuthorizer("zab", mock.Anything).
 					Return(&mocks3.MockAuthorizer{}, nil)
-				mhf.On("CreateUnifier", "baz", mock.Anything).
+				mhf.EXPECT().CreateUnifier("baz", mock.Anything).
 					Return(&mocks3.MockUnifier{}, nil)
-				mhf.On("CreateErrorHandler", "foo", mock.Anything).
+				mhf.EXPECT().CreateErrorHandler("foo", mock.Anything).
 					Return(&mocks3.MockErrorHandler{}, nil)
 			},
 			assert: func(t *testing.T, err error, rul *ruleImpl) {

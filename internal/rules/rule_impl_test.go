@@ -143,7 +143,7 @@ func TestRuleExecute(t *testing.T) {
 			authenticator *mocks.MockSubjectCreator,
 			authorizer *mocks.MockSubjectHandler,
 			unifier *mocks.MockSubjectHandler,
-			errHandler *mocks.MockErrorHandler,
+			errHandler *mocks.ErrorHandlerMock,
 		)
 		assert func(t *testing.T, err error, upstreamURL *url.URL)
 	}{
@@ -152,14 +152,13 @@ func TestRuleExecute(t *testing.T) {
 			upstreamURL: &url.URL{Scheme: "http", Host: "test.local", Path: "foo"},
 			configureMocks: func(t *testing.T, ctx *heimdallmocks.MockContext, authenticator *mocks.MockSubjectCreator,
 				authorizer *mocks.MockSubjectHandler, unifier *mocks.MockSubjectHandler,
-				errHandler *mocks.MockErrorHandler,
+				errHandler *mocks.ErrorHandlerMock,
 			) {
 				t.Helper()
 
 				authenticator.On("Execute", ctx).Return(nil, testsupport.ErrTestPurpose)
 				authenticator.On("IsFallbackOnErrorAllowed").Return(false)
-				errHandler.On("Execute", ctx, testsupport.ErrTestPurpose).
-					Return(true, nil)
+				errHandler.EXPECT().Execute(ctx, testsupport.ErrTestPurpose).Return(true, nil)
 			},
 			assert: func(t *testing.T, err error, upstreamURL *url.URL) {
 				t.Helper()
@@ -173,14 +172,13 @@ func TestRuleExecute(t *testing.T) {
 			upstreamURL: &url.URL{Scheme: "http", Host: "test.local", Path: "foo"},
 			configureMocks: func(t *testing.T, ctx *heimdallmocks.MockContext, authenticator *mocks.MockSubjectCreator,
 				authorizer *mocks.MockSubjectHandler, unifier *mocks.MockSubjectHandler,
-				errHandler *mocks.MockErrorHandler,
+				errHandler *mocks.ErrorHandlerMock,
 			) {
 				t.Helper()
 
 				authenticator.On("Execute", ctx).Return(nil, testsupport.ErrTestPurpose)
 				authenticator.On("IsFallbackOnErrorAllowed").Return(false)
-				errHandler.On("Execute", ctx, testsupport.ErrTestPurpose).
-					Return(true, testsupport.ErrTestPurpose2)
+				errHandler.EXPECT().Execute(ctx, testsupport.ErrTestPurpose).Return(true, testsupport.ErrTestPurpose2)
 			},
 			assert: func(t *testing.T, err error, upstreamURL *url.URL) {
 				t.Helper()
@@ -195,7 +193,7 @@ func TestRuleExecute(t *testing.T) {
 			upstreamURL: &url.URL{Scheme: "http", Host: "test.local", Path: "foo"},
 			configureMocks: func(t *testing.T, ctx *heimdallmocks.MockContext, authenticator *mocks.MockSubjectCreator,
 				authorizer *mocks.MockSubjectHandler, unifier *mocks.MockSubjectHandler,
-				errHandler *mocks.MockErrorHandler,
+				errHandler *mocks.ErrorHandlerMock,
 			) {
 				t.Helper()
 
@@ -204,8 +202,7 @@ func TestRuleExecute(t *testing.T) {
 				authenticator.On("Execute", ctx).Return(sub, nil)
 				authorizer.On("Execute", ctx, sub).Return(testsupport.ErrTestPurpose)
 				authorizer.On("ContinueOnError").Return(false)
-				errHandler.On("Execute", ctx, testsupport.ErrTestPurpose).
-					Return(true, nil)
+				errHandler.EXPECT().Execute(ctx, testsupport.ErrTestPurpose).Return(true, nil)
 			},
 			assert: func(t *testing.T, err error, upstreamURL *url.URL) {
 				t.Helper()
@@ -219,7 +216,7 @@ func TestRuleExecute(t *testing.T) {
 			upstreamURL: &url.URL{Scheme: "http", Host: "test.local", Path: "foo"},
 			configureMocks: func(t *testing.T, ctx *heimdallmocks.MockContext, authenticator *mocks.MockSubjectCreator,
 				authorizer *mocks.MockSubjectHandler, unifier *mocks.MockSubjectHandler,
-				errHandler *mocks.MockErrorHandler,
+				errHandler *mocks.ErrorHandlerMock,
 			) {
 				t.Helper()
 
@@ -228,8 +225,7 @@ func TestRuleExecute(t *testing.T) {
 				authenticator.On("Execute", ctx).Return(sub, nil)
 				authorizer.On("Execute", ctx, sub).Return(testsupport.ErrTestPurpose)
 				authorizer.On("ContinueOnError").Return(false)
-				errHandler.On("Execute", ctx, testsupport.ErrTestPurpose).
-					Return(true, testsupport.ErrTestPurpose2)
+				errHandler.EXPECT().Execute(ctx, testsupport.ErrTestPurpose).Return(true, testsupport.ErrTestPurpose2)
 			},
 			assert: func(t *testing.T, err error, upstreamURL *url.URL) {
 				t.Helper()
@@ -244,7 +240,7 @@ func TestRuleExecute(t *testing.T) {
 			upstreamURL: &url.URL{Scheme: "http", Host: "test.local", Path: "foo"},
 			configureMocks: func(t *testing.T, ctx *heimdallmocks.MockContext, authenticator *mocks.MockSubjectCreator,
 				authorizer *mocks.MockSubjectHandler, unifier *mocks.MockSubjectHandler,
-				errHandler *mocks.MockErrorHandler,
+				errHandler *mocks.ErrorHandlerMock,
 			) {
 				t.Helper()
 
@@ -254,8 +250,7 @@ func TestRuleExecute(t *testing.T) {
 				authorizer.On("Execute", ctx, sub).Return(nil)
 				unifier.On("Execute", ctx, sub).Return(testsupport.ErrTestPurpose)
 				unifier.On("ContinueOnError").Return(false)
-				errHandler.On("Execute", ctx, testsupport.ErrTestPurpose).
-					Return(true, nil)
+				errHandler.EXPECT().Execute(ctx, testsupport.ErrTestPurpose).Return(true, nil)
 			},
 			assert: func(t *testing.T, err error, upstreamURL *url.URL) {
 				t.Helper()
@@ -269,7 +264,7 @@ func TestRuleExecute(t *testing.T) {
 			upstreamURL: &url.URL{Scheme: "http", Host: "test.local", Path: "foo"},
 			configureMocks: func(t *testing.T, ctx *heimdallmocks.MockContext, authenticator *mocks.MockSubjectCreator,
 				authorizer *mocks.MockSubjectHandler, unifier *mocks.MockSubjectHandler,
-				errHandler *mocks.MockErrorHandler,
+				errHandler *mocks.ErrorHandlerMock,
 			) {
 				t.Helper()
 
@@ -279,8 +274,7 @@ func TestRuleExecute(t *testing.T) {
 				authorizer.On("Execute", ctx, sub).Return(nil)
 				unifier.On("Execute", ctx, sub).Return(testsupport.ErrTestPurpose)
 				unifier.On("ContinueOnError").Return(false)
-				errHandler.On("Execute", ctx, testsupport.ErrTestPurpose).
-					Return(true, testsupport.ErrTestPurpose2)
+				errHandler.EXPECT().Execute(ctx, testsupport.ErrTestPurpose).Return(true, testsupport.ErrTestPurpose2)
 			},
 			assert: func(t *testing.T, err error, upstreamURL *url.URL) {
 				t.Helper()
@@ -295,7 +289,7 @@ func TestRuleExecute(t *testing.T) {
 			upstreamURL: &url.URL{Scheme: "http", Host: "test.local", Path: "foo"},
 			configureMocks: func(t *testing.T, ctx *heimdallmocks.MockContext, authenticator *mocks.MockSubjectCreator,
 				authorizer *mocks.MockSubjectHandler, unifier *mocks.MockSubjectHandler,
-				errHandler *mocks.MockErrorHandler,
+				_ *mocks.ErrorHandlerMock,
 			) {
 				t.Helper()
 
@@ -321,7 +315,7 @@ func TestRuleExecute(t *testing.T) {
 			authenticator := &mocks.MockSubjectCreator{}
 			authorizer := &mocks.MockSubjectHandler{}
 			unifier := &mocks.MockSubjectHandler{}
-			errHandler := &mocks.MockErrorHandler{}
+			errHandler := mocks.NewErrorHandlerMock(t)
 
 			rul := &ruleImpl{
 				upstreamURL: tc.upstreamURL,
@@ -341,7 +335,6 @@ func TestRuleExecute(t *testing.T) {
 			authenticator.AssertExpectations(t)
 			authorizer.AssertExpectations(t)
 			unifier.AssertExpectations(t)
-			errHandler.AssertExpectations(t)
 		})
 	}
 }

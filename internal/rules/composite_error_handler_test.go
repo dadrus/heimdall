@@ -34,11 +34,11 @@ func TestCompositeErrorHandlerExecutionWithFallback(t *testing.T) {
 	ctx := &mocks.MockContext{}
 	ctx.On("AppContext").Return(context.Background())
 
-	eh1 := &rulemocks.MockErrorHandler{}
-	eh1.On("Execute", ctx, testsupport.ErrTestPurpose).Return(false, nil)
+	eh1 := rulemocks.NewErrorHandlerMock(t)
+	eh1.EXPECT().Execute(ctx, testsupport.ErrTestPurpose).Return(false, nil)
 
-	eh2 := &rulemocks.MockErrorHandler{}
-	eh2.On("Execute", ctx, testsupport.ErrTestPurpose).Return(true, nil)
+	eh2 := rulemocks.NewErrorHandlerMock(t)
+	eh2.EXPECT().Execute(ctx, testsupport.ErrTestPurpose).Return(true, nil)
 
 	eh := compositeErrorHandler{eh1, eh2}
 
@@ -48,9 +48,6 @@ func TestCompositeErrorHandlerExecutionWithFallback(t *testing.T) {
 	// THEN
 	assert.NoError(t, err)
 	assert.True(t, ok)
-
-	eh1.AssertExpectations(t)
-	eh2.AssertExpectations(t)
 }
 
 func TestCompositeErrorHandlerExecutionWithoutFallback(t *testing.T) {
@@ -60,10 +57,10 @@ func TestCompositeErrorHandlerExecutionWithoutFallback(t *testing.T) {
 	ctx := &mocks.MockContext{}
 	ctx.On("AppContext").Return(context.Background())
 
-	eh1 := &rulemocks.MockErrorHandler{}
-	eh1.On("Execute", ctx, testsupport.ErrTestPurpose).Return(true, nil)
+	eh1 := rulemocks.NewErrorHandlerMock(t)
+	eh1.EXPECT().Execute(ctx, testsupport.ErrTestPurpose).Return(true, nil)
 
-	eh2 := &rulemocks.MockErrorHandler{}
+	eh2 := rulemocks.NewErrorHandlerMock(t)
 
 	eh := compositeErrorHandler{eh1, eh2}
 
@@ -73,9 +70,6 @@ func TestCompositeErrorHandlerExecutionWithoutFallback(t *testing.T) {
 	// THEN
 	assert.NoError(t, err)
 	assert.True(t, ok)
-
-	eh1.AssertExpectations(t)
-	eh2.AssertExpectations(t)
 }
 
 func TestCompositeErrorHandlerExecutionWithNoApplicableErrorHandler(t *testing.T) {
@@ -85,11 +79,11 @@ func TestCompositeErrorHandlerExecutionWithNoApplicableErrorHandler(t *testing.T
 	ctx := &mocks.MockContext{}
 	ctx.On("AppContext").Return(context.Background())
 
-	eh1 := &rulemocks.MockErrorHandler{}
-	eh1.On("Execute", ctx, testsupport.ErrTestPurpose).Return(false, nil)
+	eh1 := rulemocks.NewErrorHandlerMock(t)
+	eh1.EXPECT().Execute(ctx, testsupport.ErrTestPurpose).Return(false, nil)
 
-	eh2 := &rulemocks.MockErrorHandler{}
-	eh2.On("Execute", ctx, testsupport.ErrTestPurpose).Return(false, nil)
+	eh2 := rulemocks.NewErrorHandlerMock(t)
+	eh2.EXPECT().Execute(ctx, testsupport.ErrTestPurpose).Return(false, nil)
 
 	eh := compositeErrorHandler{eh1, eh2}
 
@@ -99,7 +93,4 @@ func TestCompositeErrorHandlerExecutionWithNoApplicableErrorHandler(t *testing.T
 	// THEN
 	assert.Error(t, err)
 	assert.False(t, ok)
-
-	eh1.AssertExpectations(t)
-	eh2.AssertExpectations(t)
 }
