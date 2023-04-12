@@ -38,6 +38,8 @@ var (
 	ErrErrorHandlerCreation   = errors.New("failed to create error handler")
 )
 
+//go:generate mockery --name Factory --structname FactoryMock
+
 type Factory interface {
 	CreateAuthenticator(id string, conf config.MechanismConfig) (authenticators.Authenticator, error)
 	CreateAuthorizer(id string, conf config.MechanismConfig) (authorizers.Authorizer, error)

@@ -20,6 +20,8 @@ import (
 	"github.com/dadrus/heimdall/internal/heimdall"
 )
 
+//go:generate mockery --name ErrorHandler --structname ErrorHandlerMock
+
 type ErrorHandler interface {
 	Execute(ctx heimdall.Context, err error) (bool, error)
 	WithConfig(config map[string]any) (ErrorHandler, error)
