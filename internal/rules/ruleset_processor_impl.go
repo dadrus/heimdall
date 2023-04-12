@@ -14,6 +14,8 @@ import (
 
 var ErrUnsupportedRuleSetVersion = errors.New("unsupported rule set version")
 
+const RuleSetVersion = "v1alpha1"
+
 type ruleSetProcessor struct {
 	q event.RuleSetChangedEventQueue
 	f rule.Factory
@@ -30,15 +32,15 @@ func newRuleSetProcessor(
 	}
 }
 
-func (p *ruleSetProcessor) isVersionSupported(_ string) bool {
-	return true
+func (p *ruleSetProcessor) isVersionSupported(version string) bool {
+	return version == RuleSetVersion
 }
 
 func (p *ruleSetProcessor) loadRules(ruleSet *config.RuleSet) ([]rule.Rule, error) {
 	rules := make([]rule.Rule, len(ruleSet.Rules))
 
 	for idx, rc := range ruleSet.Rules {
-		rul, err := p.f.CreateRule(ruleSet.Source, rc)
+		rul, err := p.f.CreateRule(ruleSet.Version, ruleSet.Source, rc)
 		if err != nil {
 			return nil, errorchain.NewWithMessage(heimdall.ErrInternal, "failed loading rule").CausedBy(err)
 		}

@@ -138,7 +138,7 @@ func (f *ruleFactory) DefaultRule() rule.Rule {
 	return f.defaultRule
 }
 
-func (f *ruleFactory) CreateRule(srcID string, ruleConfig config2.Rule) ( // nolint: cyclop
+func (f *ruleFactory) CreateRule(version, srcID string, ruleConfig config2.Rule) ( // nolint: cyclop
 	rule.Rule, error,
 ) {
 	if len(ruleConfig.ID) == 0 {
