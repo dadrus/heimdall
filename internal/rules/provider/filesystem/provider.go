@@ -47,7 +47,7 @@ type provider struct {
 	configured bool
 }
 
-func newProvider(conf *config.Configuration, processor rule.SetProcessor, logger zerolog.Logger) (*provider, error) {
+func NewProvider(conf *config.Configuration, processor rule.SetProcessor, logger zerolog.Logger) (*provider, error) {
 	rawConf := conf.Rules.Providers.FileSystem
 
 	if conf.Rules.Providers.FileSystem == nil {

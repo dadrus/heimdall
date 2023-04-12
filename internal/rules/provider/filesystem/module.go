@@ -27,7 +27,7 @@ import (
 var Module = fx.Options(
 	fx.Invoke(
 		fx.Annotate(
-			newProvider,
+			NewProvider,
 			fx.OnStart(func(ctx context.Context, p *provider) error { return p.Start(ctx) }),
 			fx.OnStop(func(ctx context.Context, p *provider) error { return p.Stop(ctx) }),
 		),

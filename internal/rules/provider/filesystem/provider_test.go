@@ -123,7 +123,7 @@ func TestNewProvider(t *testing.T) {
 			// GIVEN
 			conf := &config.Configuration{Rules: config.Rules{Providers: config.RuleProviders{FileSystem: tc.conf}}}
 
-			prov, err := newProvider(conf, nil, log.Logger)
+			prov, err := NewProvider(conf, nil, log.Logger)
 
 			tc.assert(t, err, prov)
 		})
