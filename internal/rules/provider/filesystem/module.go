@@ -28,8 +28,8 @@ var Module = fx.Options(
 	fx.Invoke(
 		fx.Annotate(
 			NewProvider,
-			fx.OnStart(func(ctx context.Context, p *provider) error { return p.Start(ctx) }),
-			fx.OnStop(func(ctx context.Context, p *provider) error { return p.Stop(ctx) }),
+			fx.OnStart(func(ctx context.Context, p *Provider) error { return p.Start(ctx) }),
+			fx.OnStop(func(ctx context.Context, p *Provider) error { return p.Stop(ctx) }),
 		),
 	),
 )

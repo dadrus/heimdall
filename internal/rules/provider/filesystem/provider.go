@@ -38,7 +38,7 @@ import (
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
-type provider struct {
+type Provider struct {
 	src        string
 	w          *fsnotify.Watcher
 	p          rule.SetProcessor
@@ -47,11 +47,11 @@ type provider struct {
 	configured bool
 }
 
-func NewProvider(conf *config.Configuration, processor rule.SetProcessor, logger zerolog.Logger) (*provider, error) {
+func NewProvider(conf *config.Configuration, processor rule.SetProcessor, logger zerolog.Logger) (*Provider, error) {
 	rawConf := conf.Rules.Providers.FileSystem
 
 	if conf.Rules.Providers.FileSystem == nil {
-		return &provider{}, nil
+		return &Provider{}, nil
 	}
 
 	type Config struct {
@@ -99,7 +99,7 @@ func NewProvider(conf *config.Configuration, processor rule.SetProcessor, logger
 	logger = logger.With().Str("_provider_type", "file_system").Logger()
 	logger.Info().Msg("Rule provider configured.")
 
-	return &provider{
+	return &Provider{
 		src:        absPath,
 		w:          watcher,
 		p:          processor,
@@ -108,7 +108,7 @@ func NewProvider(conf *config.Configuration, processor rule.SetProcessor, logger
 	}, nil
 }
 
-func (p *provider) Start(_ context.Context) error {
+func (p *Provider) Start(_ context.Context) error {
 	if !p.configured {
 		return nil
 	}
@@ -139,7 +139,7 @@ func (p *provider) Start(_ context.Context) error {
 	return nil
 }
 
-func (p *provider) Stop(_ context.Context) error {
+func (p *Provider) Stop(_ context.Context) error {
 	if !p.configured {
 		return nil
 	}
@@ -153,7 +153,7 @@ func (p *provider) Stop(_ context.Context) error {
 	return nil
 }
 
-func (p *provider) watchFiles() {
+func (p *Provider) watchFiles() {
 	p.l.Debug().Msg("Watching rule files for changes")
 
 	for {
@@ -180,7 +180,7 @@ func (p *provider) watchFiles() {
 	}
 }
 
-func (p *provider) ruleSetsChanged(evt fsnotify.Event) error {
+func (p *Provider) ruleSetsChanged(evt fsnotify.Event) error {
 	p.l.Debug().
 		Str("_event", evt.String()).
 		Str("_src", evt.Name).
@@ -198,7 +198,7 @@ func (p *provider) ruleSetsChanged(evt fsnotify.Event) error {
 	return err
 }
 
-func (p *provider) ruleSetCreatedOrUpdated(fileName string) error {
+func (p *Provider) ruleSetCreatedOrUpdated(fileName string) error {
 	ruleSet, err := p.loadRuleSet(fileName)
 	if err != nil {
 		if errors.Is(err, config2.ErrEmptyRuleSet) || errors.Is(err, os.ErrNotExist) {
@@ -233,7 +233,7 @@ func (p *provider) ruleSetCreatedOrUpdated(fileName string) error {
 	return nil
 }
 
-func (p *provider) ruleSetDeleted(fileName string) error {
+func (p *Provider) ruleSetDeleted(fileName string) error {
 	if _, ok := p.states.Load(fileName); !ok {
 		return nil
 	}
@@ -254,7 +254,7 @@ func (p *provider) ruleSetDeleted(fileName string) error {
 	return nil
 }
 
-func (p *provider) loadRuleSet(fileName string) (*config2.RuleSet, error) {
+func (p *Provider) loadRuleSet(fileName string) (*config2.RuleSet, error) {
 	file, err := os.Open(fileName)
 	if err != nil {
 		return nil, errorchain.NewWithMessagef(heimdall.ErrInternal,
@@ -278,7 +278,7 @@ func (p *provider) loadRuleSet(fileName string) (*config2.RuleSet, error) {
 	return ruleSet, nil
 }
 
-func (p *provider) loadInitialRuleSet() error {
+func (p *Provider) loadInitialRuleSet() error {
 	p.l.Info().Msg("Loading initial rule set")
 
 	sources, err := p.sources()
@@ -295,7 +295,7 @@ func (p *provider) loadInitialRuleSet() error {
 	return nil
 }
 
-func (p *provider) sources() ([]string, error) {
+func (p *Provider) sources() ([]string, error) {
 	var sources []string
 
 	fInfo, err := os.Stat(p.src)

@@ -48,9 +48,5 @@ func validateConfig(cmd *cobra.Command) error {
 		return ErrNoConfigFile
 	}
 
-	if err := config.ValidateConfig(configPath); err != nil {
-		return err
-	}
-
-	return nil
+	return config.ValidateConfig(configPath)
 }
