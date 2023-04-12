@@ -27,6 +27,7 @@ import (
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/mocks"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/authorizers"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/contextualizers"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/errorhandlers"
@@ -44,7 +45,7 @@ func TestHandlerFactoryCreateAuthenticator(t *testing.T) {
 		uc            string
 		id            string
 		conf          map[string]any
-		configureMock func(t *testing.T, mAuth *mocks2.MockAuthenticator)
+		configureMock func(t *testing.T, mAuth *mocks.AuthenticatorMock)
 		assert        func(t *testing.T, err error, auth authenticators.Authenticator)
 	}{
 		{
@@ -61,10 +62,10 @@ func TestHandlerFactoryCreateAuthenticator(t *testing.T) {
 		{
 			uc:   "with failing creation from prototype",
 			conf: map[string]any{"foo": "bar"},
-			configureMock: func(t *testing.T, mAuth *mocks2.MockAuthenticator) {
+			configureMock: func(t *testing.T, mAuth *mocks.AuthenticatorMock) {
 				t.Helper()
 
-				mAuth.On("WithConfig", mock.Anything).Return(nil, heimdall.ErrArgument)
+				mAuth.EXPECT().WithConfig(mock.Anything).Return(nil, heimdall.ErrArgument)
 			},
 			assert: func(t *testing.T, err error, auth authenticators.Authenticator) {
 				t.Helper()
@@ -77,10 +78,10 @@ func TestHandlerFactoryCreateAuthenticator(t *testing.T) {
 		{
 			uc:   "successful creation from prototype",
 			conf: map[string]any{"foo": "bar"},
-			configureMock: func(t *testing.T, mAuth *mocks2.MockAuthenticator) {
+			configureMock: func(t *testing.T, mAuth *mocks.AuthenticatorMock) {
 				t.Helper()
 
-				mAuth.On("WithConfig", mock.Anything).Return(mAuth, nil)
+				mAuth.EXPECT().WithConfig(mock.Anything).Return(mAuth, nil)
 			},
 			assert: func(t *testing.T, err error, auth authenticators.Authenticator) {
 				t.Helper()
@@ -103,9 +104,9 @@ func TestHandlerFactoryCreateAuthenticator(t *testing.T) {
 			// GIVEN
 			configureMock := x.IfThenElse(tc.configureMock != nil,
 				tc.configureMock,
-				func(t *testing.T, mAuth *mocks2.MockAuthenticator) { t.Helper() })
+				func(t *testing.T, mAuth *mocks.AuthenticatorMock) { t.Helper() })
 
-			mAuth := &mocks2.MockAuthenticator{}
+			mAuth := mocks.NewAuthenticatorMock(t)
 			configureMock(t, mAuth)
 
 			factory := &mechanismsFactory{
@@ -123,7 +124,6 @@ func TestHandlerFactoryCreateAuthenticator(t *testing.T) {
 
 			// THEN
 			tc.assert(t, err, auth)
-			mAuth.AssertExpectations(t)
 		})
 	}
 }

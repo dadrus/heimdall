@@ -27,6 +27,7 @@ import (
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	config2 "github.com/dadrus/heimdall/internal/rules/config"
+	mocks2 "github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/mocks"
 	mocks3 "github.com/dadrus/heimdall/internal/rules/mechanisms/mocks"
 	"github.com/dadrus/heimdall/internal/rules/mocks"
 	"github.com/dadrus/heimdall/internal/x"
@@ -622,7 +623,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 			configureMocks: func(t *testing.T, mhf *mocks3.FactoryMock) {
 				t.Helper()
 
-				mhf.EXPECT().CreateAuthenticator("foo", mock.Anything).Return(&mocks3.MockAuthenticator{}, nil)
+				mhf.EXPECT().CreateAuthenticator("foo", mock.Anything).Return(&mocks2.AuthenticatorMock{}, nil)
 			},
 			assert: func(t *testing.T, err error, rul *ruleImpl) {
 				t.Helper()
@@ -645,7 +646,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 			configureMocks: func(t *testing.T, mhf *mocks3.FactoryMock) {
 				t.Helper()
 
-				mhf.EXPECT().CreateAuthenticator("foo", mock.Anything).Return(&mocks3.MockAuthenticator{}, nil)
+				mhf.EXPECT().CreateAuthenticator("foo", mock.Anything).Return(&mocks2.AuthenticatorMock{}, nil)
 				mhf.EXPECT().CreateContextualizer("bar", mock.Anything).Return(&mocks3.MockContextualizer{}, nil)
 			},
 			assert: func(t *testing.T, err error, rul *ruleImpl) {
@@ -670,7 +671,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 			configureMocks: func(t *testing.T, mhf *mocks3.FactoryMock) {
 				t.Helper()
 
-				mhf.EXPECT().CreateAuthenticator("foo", mock.Anything).Return(&mocks3.MockAuthenticator{}, nil)
+				mhf.EXPECT().CreateAuthenticator("foo", mock.Anything).Return(&mocks2.AuthenticatorMock{}, nil)
 				mhf.EXPECT().CreateContextualizer("bar", mock.Anything).Return(&mocks3.MockContextualizer{}, nil)
 				mhf.EXPECT().CreateAuthorizer("baz", mock.Anything).Return(&mocks3.MockAuthorizer{}, nil)
 			},
@@ -695,7 +696,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 			configureMocks: func(t *testing.T, mhf *mocks3.FactoryMock) {
 				t.Helper()
 
-				mhf.EXPECT().CreateAuthenticator("foo", mock.Anything).Return(&mocks3.MockAuthenticator{}, nil)
+				mhf.EXPECT().CreateAuthenticator("foo", mock.Anything).Return(&mocks2.AuthenticatorMock{}, nil)
 				mhf.EXPECT().CreateUnifier("bar", mock.Anything).Return(&mocks3.MockUnifier{}, nil)
 			},
 			assert: func(t *testing.T, err error, rul *ruleImpl) {
@@ -720,7 +721,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 			configureMocks: func(t *testing.T, mhf *mocks3.FactoryMock) {
 				t.Helper()
 
-				mhf.EXPECT().CreateAuthenticator("foo", mock.Anything).Return(&mocks3.MockAuthenticator{}, nil)
+				mhf.EXPECT().CreateAuthenticator("foo", mock.Anything).Return(&mocks2.AuthenticatorMock{}, nil)
 				mhf.EXPECT().CreateUnifier("bar", mock.Anything).Return(&mocks3.MockUnifier{}, nil)
 			},
 			assert: func(t *testing.T, err error, rul *ruleImpl) {
@@ -798,7 +799,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				t.Helper()
 
 				mhf.EXPECT().CreateAuthenticator("foo", mock.Anything).
-					Return(&mocks3.MockAuthenticator{}, nil)
+					Return(&mocks2.AuthenticatorMock{}, nil)
 				mhf.EXPECT().CreateContextualizer("bar", mock.Anything).
 					Return(&mocks3.MockContextualizer{}, nil)
 				mhf.EXPECT().CreateAuthorizer("zab", mock.Anything).
