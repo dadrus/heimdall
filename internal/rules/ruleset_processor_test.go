@@ -91,7 +91,7 @@ func TestRuleSetProcessorOnCreated(t *testing.T) {
 			factory := mocks.NewFactoryMock(t)
 			configureFactory(t, factory)
 
-			processor := newRuleSetProcessor(queue, factory, log.Logger)
+			processor := NewRuleSetProcessor(queue, factory, log.Logger)
 
 			// WHEN
 			err := processor.OnCreated(tc.ruleset)
@@ -178,7 +178,7 @@ func TestRuleSetProcessorOnUpdated(t *testing.T) {
 			factory := mocks.NewFactoryMock(t)
 			configureFactory(t, factory)
 
-			processor := newRuleSetProcessor(queue, factory, log.Logger)
+			processor := NewRuleSetProcessor(queue, factory, log.Logger)
 
 			// WHEN
 			err := processor.OnUpdated(tc.ruleset)
@@ -230,7 +230,7 @@ func TestRuleSetProcessorOnDeleted(t *testing.T) {
 		t.Run(tc.uc, func(t *testing.T) {
 			// GIVEM
 			queue := make(event.RuleSetChangedEventQueue, 10)
-			processor := newRuleSetProcessor(queue, mocks.NewFactoryMock(t), log.Logger)
+			processor := NewRuleSetProcessor(queue, mocks.NewFactoryMock(t), log.Logger)
 
 			// WHEN
 			err := processor.OnDeleted(tc.ruleset)

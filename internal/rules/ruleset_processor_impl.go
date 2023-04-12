@@ -22,7 +22,7 @@ type ruleSetProcessor struct {
 	l zerolog.Logger
 }
 
-func newRuleSetProcessor(
+func NewRuleSetProcessor(
 	queue event.RuleSetChangedEventQueue, factory rule.Factory, logger zerolog.Logger,
 ) rule.SetProcessor {
 	return &ruleSetProcessor{
