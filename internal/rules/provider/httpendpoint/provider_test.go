@@ -356,7 +356,7 @@ rules:
 `))
 						require.NoError(t, err)
 					case 2:
-						w.WriteHeader(http.StatusInternalServerError)
+						w.WriteHeader(http.StatusNotFound)
 					default:
 						w.Header().Set("Content-Type", "application/yaml")
 						_, err := w.Write([]byte(`
@@ -596,6 +596,133 @@ rules:
 				assert.Equal(t, "test", ruleSet.Name)
 				assert.Len(t, ruleSet.Rules, 1)
 				assert.Equal(t, "bar", ruleSet.Rules[0].ID)
+			},
+		},
+		{
+			uc: "previously unknown rule set with error on creation",
+			conf: []byte(`
+endpoints:
+- url: ` + srv.URL + `
+`),
+			writeResponse: func(t *testing.T, w http.ResponseWriter) {
+				t.Helper()
+
+				w.Header().Set("Content-Type", "application/yaml")
+				_, err := w.Write([]byte(`
+version: "1"
+name: test
+rules:
+- id: foo
+`))
+				require.NoError(t, err)
+			},
+			setupProcessor: func(t *testing.T, processor *mocks.RuleSetProcessorMock) {
+				t.Helper()
+
+				processor.EXPECT().OnCreated(mock.Anything).Return(testsupport.ErrTestPurpose).Once()
+			},
+			assert: func(t *testing.T, logs fmt.Stringer, processor *mocks.RuleSetProcessorMock) {
+				t.Helper()
+
+				time.Sleep(200 * time.Millisecond)
+
+				assert.Equal(t, 1, requestCount)
+				assert.Contains(t, logs.String(), "Failed to apply rule set changes")
+			},
+		},
+		{
+			uc: "updated rule set with error on update",
+			conf: []byte(`
+watch_interval: 200ms
+endpoints:
+- url: ` + srv.URL + `
+`),
+			writeResponse: func() ResponseWriter {
+				callIdx := 1
+
+				return func(t *testing.T, w http.ResponseWriter) {
+					t.Helper()
+
+					if callIdx == 1 {
+						w.Header().Set("Content-Type", "application/yaml")
+						_, err := w.Write([]byte(`
+version: "1"
+name: test
+rules:
+- id: bar
+`))
+						require.NoError(t, err)
+					} else {
+						w.Header().Set("Content-Type", "application/yaml")
+						_, err := w.Write([]byte(`
+version: "1"
+name: test
+rules:
+- id: baz
+`))
+						require.NoError(t, err)
+					}
+
+					callIdx++
+				}
+			}(),
+			setupProcessor: func(t *testing.T, processor *mocks.RuleSetProcessorMock) {
+				t.Helper()
+
+				processor.EXPECT().OnCreated(mock.Anything).Return(nil).Once()
+				processor.EXPECT().OnUpdated(mock.Anything).Return(testsupport.ErrTestPurpose)
+			},
+			assert: func(t *testing.T, logs fmt.Stringer, processor *mocks.RuleSetProcessorMock) {
+				t.Helper()
+
+				time.Sleep(600 * time.Millisecond)
+
+				assert.GreaterOrEqual(t, requestCount, 2)
+				assert.Contains(t, logs.String(), "Failed to apply rule set changes")
+			},
+		},
+		{
+			uc: "deleted rule set with error on delete",
+			conf: []byte(`
+watch_interval: 200ms
+endpoints:
+- url: ` + srv.URL + `
+`),
+			writeResponse: func() ResponseWriter {
+				callIdx := 1
+
+				return func(t *testing.T, w http.ResponseWriter) {
+					t.Helper()
+
+					if callIdx == 1 {
+						w.Header().Set("Content-Type", "application/yaml")
+						_, err := w.Write([]byte(`
+version: "1"
+name: test
+rules:
+- id: bar
+`))
+						require.NoError(t, err)
+					} else {
+						w.WriteHeader(http.StatusNotFound)
+					}
+
+					callIdx++
+				}
+			}(),
+			setupProcessor: func(t *testing.T, processor *mocks.RuleSetProcessorMock) {
+				t.Helper()
+
+				call := processor.EXPECT().OnCreated(mock.Anything).Return(nil).Once()
+				processor.EXPECT().OnDeleted(mock.Anything).Return(testsupport.ErrTestPurpose).NotBefore(call)
+			},
+			assert: func(t *testing.T, logs fmt.Stringer, processor *mocks.RuleSetProcessorMock) {
+				t.Helper()
+
+				time.Sleep(600 * time.Millisecond)
+
+				assert.GreaterOrEqual(t, requestCount, 2)
+				assert.Contains(t, logs.String(), "Failed to apply rule set changes")
 			},
 		},
 	} {
