@@ -29,6 +29,7 @@ import (
 	config2 "github.com/dadrus/heimdall/internal/rules/config"
 	mocks2 "github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/mocks"
 	mocks4 "github.com/dadrus/heimdall/internal/rules/mechanisms/authorizers/mocks"
+	mocks5 "github.com/dadrus/heimdall/internal/rules/mechanisms/contextualizers/mocks"
 	mocks3 "github.com/dadrus/heimdall/internal/rules/mechanisms/mocks"
 	"github.com/dadrus/heimdall/internal/rules/mocks"
 	"github.com/dadrus/heimdall/internal/x"
@@ -648,7 +649,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				t.Helper()
 
 				mhf.EXPECT().CreateAuthenticator("foo", mock.Anything).Return(&mocks2.AuthenticatorMock{}, nil)
-				mhf.EXPECT().CreateContextualizer("bar", mock.Anything).Return(&mocks3.MockContextualizer{}, nil)
+				mhf.EXPECT().CreateContextualizer("bar", mock.Anything).Return(&mocks5.ContextualizerMock{}, nil)
 			},
 			assert: func(t *testing.T, err error, rul *ruleImpl) {
 				t.Helper()
@@ -673,7 +674,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				t.Helper()
 
 				mhf.EXPECT().CreateAuthenticator("foo", mock.Anything).Return(&mocks2.AuthenticatorMock{}, nil)
-				mhf.EXPECT().CreateContextualizer("bar", mock.Anything).Return(&mocks3.MockContextualizer{}, nil)
+				mhf.EXPECT().CreateContextualizer("bar", mock.Anything).Return(&mocks5.ContextualizerMock{}, nil)
 				mhf.EXPECT().CreateAuthorizer("baz", mock.Anything).Return(&mocks4.AuthorizerMock{}, nil)
 			},
 			assert: func(t *testing.T, err error, rul *ruleImpl) {
@@ -802,7 +803,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				mhf.EXPECT().CreateAuthenticator("foo", mock.Anything).
 					Return(&mocks2.AuthenticatorMock{}, nil)
 				mhf.EXPECT().CreateContextualizer("bar", mock.Anything).
-					Return(&mocks3.MockContextualizer{}, nil)
+					Return(&mocks5.ContextualizerMock{}, nil)
 				mhf.EXPECT().CreateAuthorizer("zab", mock.Anything).
 					Return(&mocks4.AuthorizerMock{}, nil)
 				mhf.EXPECT().CreateUnifier("baz", mock.Anything).

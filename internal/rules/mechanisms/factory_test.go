@@ -31,6 +31,7 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/authorizers"
 	mocks3 "github.com/dadrus/heimdall/internal/rules/mechanisms/authorizers/mocks"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/contextualizers"
+	mocks4 "github.com/dadrus/heimdall/internal/rules/mechanisms/contextualizers/mocks"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/errorhandlers"
 	mocks2 "github.com/dadrus/heimdall/internal/rules/mechanisms/mocks"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/unifiers"
@@ -230,7 +231,7 @@ func TestHandlerFactoryCreateContextualizer(t *testing.T) {
 		uc            string
 		id            string
 		conf          map[string]any
-		configureMock func(t *testing.T, mContextualizer *mocks2.MockContextualizer)
+		configureMock func(t *testing.T, mContextualizer *mocks4.ContextualizerMock)
 		assert        func(t *testing.T, err error, contextualizer contextualizers.Contextualizer)
 	}{
 		{
@@ -247,10 +248,10 @@ func TestHandlerFactoryCreateContextualizer(t *testing.T) {
 		{
 			uc:   "with failing creation from prototype",
 			conf: map[string]any{"foo": "bar"},
-			configureMock: func(t *testing.T, mContextualizer *mocks2.MockContextualizer) {
+			configureMock: func(t *testing.T, mContextualizer *mocks4.ContextualizerMock) {
 				t.Helper()
 
-				mContextualizer.On("WithConfig", mock.Anything).
+				mContextualizer.EXPECT().WithConfig(mock.Anything).
 					Return(nil, heimdall.ErrArgument)
 			},
 			assert: func(t *testing.T, err error, contextualizer contextualizers.Contextualizer) {
@@ -264,10 +265,10 @@ func TestHandlerFactoryCreateContextualizer(t *testing.T) {
 		{
 			uc:   "successful creation from prototype",
 			conf: map[string]any{"foo": "bar"},
-			configureMock: func(t *testing.T, mContextualizer *mocks2.MockContextualizer) {
+			configureMock: func(t *testing.T, mContextualizer *mocks4.ContextualizerMock) {
 				t.Helper()
 
-				mContextualizer.On("WithConfig", mock.Anything).Return(mContextualizer, nil)
+				mContextualizer.EXPECT().WithConfig(mock.Anything).Return(mContextualizer, nil)
 			},
 			assert: func(t *testing.T, err error, contextualizer contextualizers.Contextualizer) {
 				t.Helper()
@@ -290,9 +291,9 @@ func TestHandlerFactoryCreateContextualizer(t *testing.T) {
 			// GIVEN
 			configureMock := x.IfThenElse(tc.configureMock != nil,
 				tc.configureMock,
-				func(t *testing.T, mHydr *mocks2.MockContextualizer) { t.Helper() })
+				func(t *testing.T, mHydr *mocks4.ContextualizerMock) { t.Helper() })
 
-			mContextualizer := &mocks2.MockContextualizer{}
+			mContextualizer := mocks4.NewContextualizerMock(t)
 			configureMock(t, mContextualizer)
 
 			factory := &mechanismsFactory{
@@ -310,7 +311,6 @@ func TestHandlerFactoryCreateContextualizer(t *testing.T) {
 
 			// THEN
 			tc.assert(t, err, contextualizer)
-			mContextualizer.AssertExpectations(t)
 		})
 	}
 }
