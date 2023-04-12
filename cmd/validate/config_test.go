@@ -7,6 +7,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
 func TestValidateConfig(t *testing.T) {
@@ -45,7 +47,7 @@ func TestValidateConfig(t *testing.T) {
 	}
 }
 
-func TestRunValidateCommand(t *testing.T) {
+func TestRunValidateCommandUsingValidConfig(t *testing.T) {
 	t.Parallel()
 
 	for _, tc := range []struct {
@@ -58,6 +60,9 @@ func TestRunValidateCommand(t *testing.T) {
 	} {
 		t.Run(tc.uc, func(t *testing.T) {
 			// GIVEN
+			exit, err := testsupport.PatchOSExit(t, func(int) {})
+			require.NoError(t, err)
+
 			cmd := NewValidateConfigCommand()
 
 			buf := bytes.NewBuffer([]byte{})
@@ -77,6 +82,8 @@ func TestRunValidateCommand(t *testing.T) {
 			log := buf.String()
 			if len(tc.expError) != 0 {
 				assert.Contains(t, log, tc.expError)
+				assert.True(t, exit.Called)
+				assert.Equal(t, 1, exit.Code)
 			} else {
 				assert.Contains(t, log, "Configuration is valid")
 			}

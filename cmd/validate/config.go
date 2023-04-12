@@ -17,6 +17,8 @@
 package validate
 
 import (
+	"os"
+
 	"github.com/spf13/cobra"
 
 	"github.com/dadrus/heimdall/internal/config"
@@ -32,7 +34,7 @@ func NewValidateConfigCommand() *cobra.Command {
 			if err := validateConfig(cmd); err != nil {
 				cmd.PrintErrf("%v\n", err)
 
-				return
+				os.Exit(1)
 			}
 
 			cmd.Println("Configuration is valid")
