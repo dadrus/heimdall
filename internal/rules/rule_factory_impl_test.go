@@ -748,7 +748,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 			},
 			defaultRule: &ruleImpl{
 				methods: []string{"FOO"},
-				sc:      compositeSubjectCreator{&mocks.MockSubjectCreator{}},
+				sc:      compositeSubjectCreator{&mocks.SubjectCreatorMock{}},
 				sh:      compositeSubjectHandler{&mocks.MockSubjectHandler{}},
 				un:      compositeSubjectHandler{&mocks.MockSubjectHandler{}},
 				eh:      compositeErrorHandler{&mocks.ErrorHandlerMock{}},
@@ -789,7 +789,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 			},
 			defaultRule: &ruleImpl{
 				methods: []string{"FOO"},
-				sc:      compositeSubjectCreator{&mocks.MockSubjectCreator{}},
+				sc:      compositeSubjectCreator{&mocks.SubjectCreatorMock{}},
 				sh:      compositeSubjectHandler{&mocks.MockSubjectHandler{}},
 				un:      compositeSubjectHandler{&mocks.MockSubjectHandler{}},
 				eh:      compositeErrorHandler{&mocks.ErrorHandlerMock{}},
