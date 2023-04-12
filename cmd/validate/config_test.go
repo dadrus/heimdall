@@ -47,7 +47,7 @@ func TestValidateConfig(t *testing.T) {
 	}
 }
 
-func TestRunValidateCommandUsingValidConfig(t *testing.T) {
+func TestRunValidateCommand(t *testing.T) {
 	t.Parallel()
 
 	for _, tc := range []struct {
