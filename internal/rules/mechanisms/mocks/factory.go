@@ -30,25 +30,25 @@ func (_m *FactoryMock) EXPECT() *FactoryMock_Expecter {
 	return &FactoryMock_Expecter{mock: &_m.Mock}
 }
 
-// CreateAuthenticator provides a mock function with given fields: id, conf
-func (_m *FactoryMock) CreateAuthenticator(id string, conf config.MechanismConfig) (authenticators.Authenticator, error) {
-	ret := _m.Called(id, conf)
+// CreateAuthenticator provides a mock function with given fields: version, id, conf
+func (_m *FactoryMock) CreateAuthenticator(version string, id string, conf config.MechanismConfig) (authenticators.Authenticator, error) {
+	ret := _m.Called(version, id, conf)
 
 	var r0 authenticators.Authenticator
 	var r1 error
-	if rf, ok := ret.Get(0).(func(string, config.MechanismConfig) (authenticators.Authenticator, error)); ok {
-		return rf(id, conf)
+	if rf, ok := ret.Get(0).(func(string, string, config.MechanismConfig) (authenticators.Authenticator, error)); ok {
+		return rf(version, id, conf)
 	}
-	if rf, ok := ret.Get(0).(func(string, config.MechanismConfig) authenticators.Authenticator); ok {
-		r0 = rf(id, conf)
+	if rf, ok := ret.Get(0).(func(string, string, config.MechanismConfig) authenticators.Authenticator); ok {
+		r0 = rf(version, id, conf)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(authenticators.Authenticator)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(string, config.MechanismConfig) error); ok {
-		r1 = rf(id, conf)
+	if rf, ok := ret.Get(1).(func(string, string, config.MechanismConfig) error); ok {
+		r1 = rf(version, id, conf)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -62,15 +62,16 @@ type FactoryMock_CreateAuthenticator_Call struct {
 }
 
 // CreateAuthenticator is a helper method to define mock.On call
+//   - version string
 //   - id string
 //   - conf config.MechanismConfig
-func (_e *FactoryMock_Expecter) CreateAuthenticator(id interface{}, conf interface{}) *FactoryMock_CreateAuthenticator_Call {
-	return &FactoryMock_CreateAuthenticator_Call{Call: _e.mock.On("CreateAuthenticator", id, conf)}
+func (_e *FactoryMock_Expecter) CreateAuthenticator(version interface{}, id interface{}, conf interface{}) *FactoryMock_CreateAuthenticator_Call {
+	return &FactoryMock_CreateAuthenticator_Call{Call: _e.mock.On("CreateAuthenticator", version, id, conf)}
 }
 
-func (_c *FactoryMock_CreateAuthenticator_Call) Run(run func(id string, conf config.MechanismConfig)) *FactoryMock_CreateAuthenticator_Call {
+func (_c *FactoryMock_CreateAuthenticator_Call) Run(run func(version string, id string, conf config.MechanismConfig)) *FactoryMock_CreateAuthenticator_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(string), args[1].(config.MechanismConfig))
+		run(args[0].(string), args[1].(string), args[2].(config.MechanismConfig))
 	})
 	return _c
 }
@@ -80,30 +81,30 @@ func (_c *FactoryMock_CreateAuthenticator_Call) Return(_a0 authenticators.Authen
 	return _c
 }
 
-func (_c *FactoryMock_CreateAuthenticator_Call) RunAndReturn(run func(string, config.MechanismConfig) (authenticators.Authenticator, error)) *FactoryMock_CreateAuthenticator_Call {
+func (_c *FactoryMock_CreateAuthenticator_Call) RunAndReturn(run func(string, string, config.MechanismConfig) (authenticators.Authenticator, error)) *FactoryMock_CreateAuthenticator_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
-// CreateAuthorizer provides a mock function with given fields: id, conf
-func (_m *FactoryMock) CreateAuthorizer(id string, conf config.MechanismConfig) (authorizers.Authorizer, error) {
-	ret := _m.Called(id, conf)
+// CreateAuthorizer provides a mock function with given fields: version, id, conf
+func (_m *FactoryMock) CreateAuthorizer(version string, id string, conf config.MechanismConfig) (authorizers.Authorizer, error) {
+	ret := _m.Called(version, id, conf)
 
 	var r0 authorizers.Authorizer
 	var r1 error
-	if rf, ok := ret.Get(0).(func(string, config.MechanismConfig) (authorizers.Authorizer, error)); ok {
-		return rf(id, conf)
+	if rf, ok := ret.Get(0).(func(string, string, config.MechanismConfig) (authorizers.Authorizer, error)); ok {
+		return rf(version, id, conf)
 	}
-	if rf, ok := ret.Get(0).(func(string, config.MechanismConfig) authorizers.Authorizer); ok {
-		r0 = rf(id, conf)
+	if rf, ok := ret.Get(0).(func(string, string, config.MechanismConfig) authorizers.Authorizer); ok {
+		r0 = rf(version, id, conf)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(authorizers.Authorizer)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(string, config.MechanismConfig) error); ok {
-		r1 = rf(id, conf)
+	if rf, ok := ret.Get(1).(func(string, string, config.MechanismConfig) error); ok {
+		r1 = rf(version, id, conf)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -117,15 +118,16 @@ type FactoryMock_CreateAuthorizer_Call struct {
 }
 
 // CreateAuthorizer is a helper method to define mock.On call
+//   - version string
 //   - id string
 //   - conf config.MechanismConfig
-func (_e *FactoryMock_Expecter) CreateAuthorizer(id interface{}, conf interface{}) *FactoryMock_CreateAuthorizer_Call {
-	return &FactoryMock_CreateAuthorizer_Call{Call: _e.mock.On("CreateAuthorizer", id, conf)}
+func (_e *FactoryMock_Expecter) CreateAuthorizer(version interface{}, id interface{}, conf interface{}) *FactoryMock_CreateAuthorizer_Call {
+	return &FactoryMock_CreateAuthorizer_Call{Call: _e.mock.On("CreateAuthorizer", version, id, conf)}
 }
 
-func (_c *FactoryMock_CreateAuthorizer_Call) Run(run func(id string, conf config.MechanismConfig)) *FactoryMock_CreateAuthorizer_Call {
+func (_c *FactoryMock_CreateAuthorizer_Call) Run(run func(version string, id string, conf config.MechanismConfig)) *FactoryMock_CreateAuthorizer_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(string), args[1].(config.MechanismConfig))
+		run(args[0].(string), args[1].(string), args[2].(config.MechanismConfig))
 	})
 	return _c
 }
@@ -135,30 +137,30 @@ func (_c *FactoryMock_CreateAuthorizer_Call) Return(_a0 authorizers.Authorizer, 
 	return _c
 }
 
-func (_c *FactoryMock_CreateAuthorizer_Call) RunAndReturn(run func(string, config.MechanismConfig) (authorizers.Authorizer, error)) *FactoryMock_CreateAuthorizer_Call {
+func (_c *FactoryMock_CreateAuthorizer_Call) RunAndReturn(run func(string, string, config.MechanismConfig) (authorizers.Authorizer, error)) *FactoryMock_CreateAuthorizer_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
-// CreateContextualizer provides a mock function with given fields: id, conf
-func (_m *FactoryMock) CreateContextualizer(id string, conf config.MechanismConfig) (contextualizers.Contextualizer, error) {
-	ret := _m.Called(id, conf)
+// CreateContextualizer provides a mock function with given fields: version, id, conf
+func (_m *FactoryMock) CreateContextualizer(version string, id string, conf config.MechanismConfig) (contextualizers.Contextualizer, error) {
+	ret := _m.Called(version, id, conf)
 
 	var r0 contextualizers.Contextualizer
 	var r1 error
-	if rf, ok := ret.Get(0).(func(string, config.MechanismConfig) (contextualizers.Contextualizer, error)); ok {
-		return rf(id, conf)
+	if rf, ok := ret.Get(0).(func(string, string, config.MechanismConfig) (contextualizers.Contextualizer, error)); ok {
+		return rf(version, id, conf)
 	}
-	if rf, ok := ret.Get(0).(func(string, config.MechanismConfig) contextualizers.Contextualizer); ok {
-		r0 = rf(id, conf)
+	if rf, ok := ret.Get(0).(func(string, string, config.MechanismConfig) contextualizers.Contextualizer); ok {
+		r0 = rf(version, id, conf)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(contextualizers.Contextualizer)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(string, config.MechanismConfig) error); ok {
-		r1 = rf(id, conf)
+	if rf, ok := ret.Get(1).(func(string, string, config.MechanismConfig) error); ok {
+		r1 = rf(version, id, conf)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -172,15 +174,16 @@ type FactoryMock_CreateContextualizer_Call struct {
 }
 
 // CreateContextualizer is a helper method to define mock.On call
+//   - version string
 //   - id string
 //   - conf config.MechanismConfig
-func (_e *FactoryMock_Expecter) CreateContextualizer(id interface{}, conf interface{}) *FactoryMock_CreateContextualizer_Call {
-	return &FactoryMock_CreateContextualizer_Call{Call: _e.mock.On("CreateContextualizer", id, conf)}
+func (_e *FactoryMock_Expecter) CreateContextualizer(version interface{}, id interface{}, conf interface{}) *FactoryMock_CreateContextualizer_Call {
+	return &FactoryMock_CreateContextualizer_Call{Call: _e.mock.On("CreateContextualizer", version, id, conf)}
 }
 
-func (_c *FactoryMock_CreateContextualizer_Call) Run(run func(id string, conf config.MechanismConfig)) *FactoryMock_CreateContextualizer_Call {
+func (_c *FactoryMock_CreateContextualizer_Call) Run(run func(version string, id string, conf config.MechanismConfig)) *FactoryMock_CreateContextualizer_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(string), args[1].(config.MechanismConfig))
+		run(args[0].(string), args[1].(string), args[2].(config.MechanismConfig))
 	})
 	return _c
 }
@@ -190,30 +193,30 @@ func (_c *FactoryMock_CreateContextualizer_Call) Return(_a0 contextualizers.Cont
 	return _c
 }
 
-func (_c *FactoryMock_CreateContextualizer_Call) RunAndReturn(run func(string, config.MechanismConfig) (contextualizers.Contextualizer, error)) *FactoryMock_CreateContextualizer_Call {
+func (_c *FactoryMock_CreateContextualizer_Call) RunAndReturn(run func(string, string, config.MechanismConfig) (contextualizers.Contextualizer, error)) *FactoryMock_CreateContextualizer_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
-// CreateErrorHandler provides a mock function with given fields: id, conf
-func (_m *FactoryMock) CreateErrorHandler(id string, conf config.MechanismConfig) (errorhandlers.ErrorHandler, error) {
-	ret := _m.Called(id, conf)
+// CreateErrorHandler provides a mock function with given fields: version, id, conf
+func (_m *FactoryMock) CreateErrorHandler(version string, id string, conf config.MechanismConfig) (errorhandlers.ErrorHandler, error) {
+	ret := _m.Called(version, id, conf)
 
 	var r0 errorhandlers.ErrorHandler
 	var r1 error
-	if rf, ok := ret.Get(0).(func(string, config.MechanismConfig) (errorhandlers.ErrorHandler, error)); ok {
-		return rf(id, conf)
+	if rf, ok := ret.Get(0).(func(string, string, config.MechanismConfig) (errorhandlers.ErrorHandler, error)); ok {
+		return rf(version, id, conf)
 	}
-	if rf, ok := ret.Get(0).(func(string, config.MechanismConfig) errorhandlers.ErrorHandler); ok {
-		r0 = rf(id, conf)
+	if rf, ok := ret.Get(0).(func(string, string, config.MechanismConfig) errorhandlers.ErrorHandler); ok {
+		r0 = rf(version, id, conf)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(errorhandlers.ErrorHandler)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(string, config.MechanismConfig) error); ok {
-		r1 = rf(id, conf)
+	if rf, ok := ret.Get(1).(func(string, string, config.MechanismConfig) error); ok {
+		r1 = rf(version, id, conf)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -227,15 +230,16 @@ type FactoryMock_CreateErrorHandler_Call struct {
 }
 
 // CreateErrorHandler is a helper method to define mock.On call
+//   - version string
 //   - id string
 //   - conf config.MechanismConfig
-func (_e *FactoryMock_Expecter) CreateErrorHandler(id interface{}, conf interface{}) *FactoryMock_CreateErrorHandler_Call {
-	return &FactoryMock_CreateErrorHandler_Call{Call: _e.mock.On("CreateErrorHandler", id, conf)}
+func (_e *FactoryMock_Expecter) CreateErrorHandler(version interface{}, id interface{}, conf interface{}) *FactoryMock_CreateErrorHandler_Call {
+	return &FactoryMock_CreateErrorHandler_Call{Call: _e.mock.On("CreateErrorHandler", version, id, conf)}
 }
 
-func (_c *FactoryMock_CreateErrorHandler_Call) Run(run func(id string, conf config.MechanismConfig)) *FactoryMock_CreateErrorHandler_Call {
+func (_c *FactoryMock_CreateErrorHandler_Call) Run(run func(version string, id string, conf config.MechanismConfig)) *FactoryMock_CreateErrorHandler_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(string), args[1].(config.MechanismConfig))
+		run(args[0].(string), args[1].(string), args[2].(config.MechanismConfig))
 	})
 	return _c
 }
@@ -245,30 +249,30 @@ func (_c *FactoryMock_CreateErrorHandler_Call) Return(_a0 errorhandlers.ErrorHan
 	return _c
 }
 
-func (_c *FactoryMock_CreateErrorHandler_Call) RunAndReturn(run func(string, config.MechanismConfig) (errorhandlers.ErrorHandler, error)) *FactoryMock_CreateErrorHandler_Call {
+func (_c *FactoryMock_CreateErrorHandler_Call) RunAndReturn(run func(string, string, config.MechanismConfig) (errorhandlers.ErrorHandler, error)) *FactoryMock_CreateErrorHandler_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
-// CreateUnifier provides a mock function with given fields: id, conf
-func (_m *FactoryMock) CreateUnifier(id string, conf config.MechanismConfig) (unifiers.Unifier, error) {
-	ret := _m.Called(id, conf)
+// CreateUnifier provides a mock function with given fields: version, id, conf
+func (_m *FactoryMock) CreateUnifier(version string, id string, conf config.MechanismConfig) (unifiers.Unifier, error) {
+	ret := _m.Called(version, id, conf)
 
 	var r0 unifiers.Unifier
 	var r1 error
-	if rf, ok := ret.Get(0).(func(string, config.MechanismConfig) (unifiers.Unifier, error)); ok {
-		return rf(id, conf)
+	if rf, ok := ret.Get(0).(func(string, string, config.MechanismConfig) (unifiers.Unifier, error)); ok {
+		return rf(version, id, conf)
 	}
-	if rf, ok := ret.Get(0).(func(string, config.MechanismConfig) unifiers.Unifier); ok {
-		r0 = rf(id, conf)
+	if rf, ok := ret.Get(0).(func(string, string, config.MechanismConfig) unifiers.Unifier); ok {
+		r0 = rf(version, id, conf)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(unifiers.Unifier)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(string, config.MechanismConfig) error); ok {
-		r1 = rf(id, conf)
+	if rf, ok := ret.Get(1).(func(string, string, config.MechanismConfig) error); ok {
+		r1 = rf(version, id, conf)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -282,15 +286,16 @@ type FactoryMock_CreateUnifier_Call struct {
 }
 
 // CreateUnifier is a helper method to define mock.On call
+//   - version string
 //   - id string
 //   - conf config.MechanismConfig
-func (_e *FactoryMock_Expecter) CreateUnifier(id interface{}, conf interface{}) *FactoryMock_CreateUnifier_Call {
-	return &FactoryMock_CreateUnifier_Call{Call: _e.mock.On("CreateUnifier", id, conf)}
+func (_e *FactoryMock_Expecter) CreateUnifier(version interface{}, id interface{}, conf interface{}) *FactoryMock_CreateUnifier_Call {
+	return &FactoryMock_CreateUnifier_Call{Call: _e.mock.On("CreateUnifier", version, id, conf)}
 }
 
-func (_c *FactoryMock_CreateUnifier_Call) Run(run func(id string, conf config.MechanismConfig)) *FactoryMock_CreateUnifier_Call {
+func (_c *FactoryMock_CreateUnifier_Call) Run(run func(version string, id string, conf config.MechanismConfig)) *FactoryMock_CreateUnifier_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(string), args[1].(config.MechanismConfig))
+		run(args[0].(string), args[1].(string), args[2].(config.MechanismConfig))
 	})
 	return _c
 }
@@ -300,7 +305,7 @@ func (_c *FactoryMock_CreateUnifier_Call) Return(_a0 unifiers.Unifier, _a1 error
 	return _c
 }
 
-func (_c *FactoryMock_CreateUnifier_Call) RunAndReturn(run func(string, config.MechanismConfig) (unifiers.Unifier, error)) *FactoryMock_CreateUnifier_Call {
+func (_c *FactoryMock_CreateUnifier_Call) RunAndReturn(run func(string, string, config.MechanismConfig) (unifiers.Unifier, error)) *FactoryMock_CreateUnifier_Call {
 	_c.Call.Return(run)
 	return _c
 }

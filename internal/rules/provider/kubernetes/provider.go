@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -221,8 +222,9 @@ func (p *provider) addRuleSet(obj any) {
 			Source:  fmt.Sprintf("%s:%s:%s", ProviderType, rs.Namespace, rs.UID),
 			ModTime: rs.CreationTimestamp.Time,
 		},
-		Name:  rs.Name,
-		Rules: rs.Spec.Rules,
+		Version: p.mapVersion(rs.APIVersion),
+		Name:    rs.Name,
+		Rules:   rs.Spec.Rules,
 	}
 
 	if err := p.p.OnCreated(conf); err != nil {
@@ -253,5 +255,6 @@ func (p *provider) deleteRuleSet(obj any) {
 }
 
 func (p *provider) mapVersion(resourceVersion string) string {
-	return resourceVersion
+	// currently the CRD version is the same as the regular rule set version
+	return strings.TrimPrefix(resourceVersion, v1alpha1.GroupName+"/")
 }

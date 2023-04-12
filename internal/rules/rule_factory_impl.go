@@ -41,6 +41,7 @@ type ruleFactory struct {
 
 // nolint: gocognit, cyclop
 func (f *ruleFactory) createExecutePipeline(
+	version string,
 	pipeline []config.MechanismConfig,
 ) (compositeSubjectCreator, compositeSubjectHandler, compositeSubjectHandler, error) {
 	var (
@@ -57,7 +58,7 @@ func (f *ruleFactory) createExecutePipeline(
 					"an authenticator is defined after some other non authenticator type")
 			}
 
-			authenticator, err := f.hf.CreateAuthenticator(id.(string), f.getConfig(pipelineStep["config"]))
+			authenticator, err := f.hf.CreateAuthenticator(version, id.(string), f.getConfig(pipelineStep["config"]))
 			if err != nil {
 				return nil, nil, nil, err
 			}
@@ -74,7 +75,7 @@ func (f *ruleFactory) createExecutePipeline(
 					"at least one unifier is defined before an authorizer")
 			}
 
-			authorizer, err := f.hf.CreateAuthorizer(id.(string), f.getConfig(pipelineStep["config"]))
+			authorizer, err := f.hf.CreateAuthorizer(version, id.(string), f.getConfig(pipelineStep["config"]))
 			if err != nil {
 				return nil, nil, nil, err
 			}
@@ -91,7 +92,7 @@ func (f *ruleFactory) createExecutePipeline(
 					"at least one unifier is defined before a contextualizer")
 			}
 
-			contextualizer, err := f.hf.CreateContextualizer(id.(string), f.getConfig(pipelineStep["config"]))
+			contextualizer, err := f.hf.CreateContextualizer(version, id.(string), f.getConfig(pipelineStep["config"]))
 			if err != nil {
 				return nil, nil, nil, err
 			}
@@ -103,7 +104,7 @@ func (f *ruleFactory) createExecutePipeline(
 
 		id, found = pipelineStep["unifier"]
 		if found {
-			unifier, err := f.hf.CreateUnifier(id.(string), f.getConfig(pipelineStep["config"]))
+			unifier, err := f.hf.CreateUnifier(version, id.(string), f.getConfig(pipelineStep["config"]))
 			if err != nil {
 				return nil, nil, nil, err
 			}
@@ -165,12 +166,12 @@ func (f *ruleFactory) CreateRule(version, srcID string, ruleConfig config2.Rule)
 		}
 	}
 
-	authenticators, subHandlers, unifiers, err := f.createExecutePipeline(ruleConfig.Execute)
+	authenticators, subHandlers, unifiers, err := f.createExecutePipeline(version, ruleConfig.Execute)
 	if err != nil {
 		return nil, err
 	}
 
-	errorHandlers, err := f.createOnErrorPipeline(ruleConfig.ErrorHandler)
+	errorHandlers, err := f.createOnErrorPipeline(version, ruleConfig.ErrorHandler)
 	if err != nil {
 		return nil, err
 	}
@@ -233,13 +234,16 @@ func (f *ruleFactory) createHash(ruleConfig config2.Rule) ([]byte, error) {
 	return md.Sum(nil), nil
 }
 
-func (f *ruleFactory) createOnErrorPipeline(ehConfigs []config.MechanismConfig) (compositeErrorHandler, error) {
+func (f *ruleFactory) createOnErrorPipeline(
+	version string,
+	ehConfigs []config.MechanismConfig,
+) (compositeErrorHandler, error) {
 	var errorHandlers compositeErrorHandler
 
 	for _, ehStep := range ehConfigs {
 		id, found := ehStep["error_handler"]
 		if found {
-			eh, err := f.hf.CreateErrorHandler(id.(string), f.getConfig(ehStep["config"]))
+			eh, err := f.hf.CreateErrorHandler(version, id.(string), f.getConfig(ehStep["config"]))
 			if err != nil {
 				return nil, err
 			}
@@ -265,12 +269,12 @@ func (f *ruleFactory) initWithDefaultRule(ruleConfig *config.DefaultRule, logger
 
 	logger.Debug().Msg("Loading default rule")
 
-	authenticators, subHandlers, unifiers, err := f.createExecutePipeline(ruleConfig.Execute)
+	authenticators, subHandlers, unifiers, err := f.createExecutePipeline(CurrentRuleSetVersion, ruleConfig.Execute)
 	if err != nil {
 		return err
 	}
 
-	errorHandlers, err := f.createOnErrorPipeline(ruleConfig.ErrorHandler)
+	errorHandlers, err := f.createOnErrorPipeline(CurrentRuleSetVersion, ruleConfig.ErrorHandler)
 	if err != nil {
 		return err
 	}

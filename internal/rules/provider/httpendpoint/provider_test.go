@@ -284,6 +284,7 @@ rules:
 
 				ruleSet := mock2.ArgumentCaptorFrom[*config2.RuleSet](&processor.Mock, "captor1").Value()
 				assert.Contains(t, ruleSet.Source, "http_endpoint:"+srv.URL)
+				assert.Equal(t, "1", ruleSet.Version)
 				assert.Equal(t, "test", ruleSet.Name)
 				assert.Len(t, ruleSet.Rules, 1)
 				assert.Equal(t, "foo", ruleSet.Rules[0].ID)
@@ -325,6 +326,7 @@ rules:
 
 				ruleSet := mock2.ArgumentCaptorFrom[*config2.RuleSet](&processor.Mock, "captor1").Value()
 				assert.Contains(t, ruleSet.Source, "http_endpoint:"+srv.URL)
+				assert.Equal(t, "1", ruleSet.Version)
 				assert.Equal(t, "test", ruleSet.Name)
 				assert.Len(t, ruleSet.Rules, 1)
 				assert.Equal(t, "bar", ruleSet.Rules[0].ID)
@@ -358,7 +360,7 @@ rules:
 					default:
 						w.Header().Set("Content-Type", "application/yaml")
 						_, err := w.Write([]byte(`
-version: "1"
+version: "2"
 name: test
 rules:
 - id: bar
@@ -390,11 +392,13 @@ rules:
 
 				ruleSets := mock2.ArgumentCaptorFrom[*config2.RuleSet](&processor.Mock, "captor1").Values()
 				assert.Contains(t, ruleSets[0].Source, "http_endpoint:"+srv.URL)
+				assert.Equal(t, "1", ruleSets[0].Version)
 				assert.Equal(t, "test", ruleSets[0].Name)
 				assert.Len(t, ruleSets[0].Rules, 1)
 				assert.Equal(t, "foo", ruleSets[0].Rules[0].ID)
 
 				assert.Contains(t, ruleSets[1].Source, "http_endpoint:"+srv.URL)
+				assert.Equal(t, "2", ruleSets[1].Version)
 				assert.Equal(t, "test", ruleSets[1].Name)
 				assert.Len(t, ruleSets[1].Rules, 1)
 				assert.Equal(t, "bar", ruleSets[1].Rules[0].ID)
@@ -480,22 +484,26 @@ rules:
 
 				ruleSet := mock2.ArgumentCaptorFrom[*config2.RuleSet](&processor.Mock, "captor1").Value()
 				assert.Contains(t, ruleSet.Source, "http_endpoint:"+srv.URL)
+				assert.Equal(t, "1", ruleSet.Version)
 				assert.Equal(t, "test", ruleSet.Name)
 				assert.Len(t, ruleSet.Rules, 1)
 				assert.Equal(t, "bar", ruleSet.Rules[0].ID)
 
 				ruleSets := mock2.ArgumentCaptorFrom[*config2.RuleSet](&processor.Mock, "captor2").Values()
 				assert.Contains(t, ruleSets[0].Source, "http_endpoint:"+srv.URL)
+				assert.Equal(t, "1", ruleSets[0].Version)
 				assert.Equal(t, "test", ruleSets[0].Name)
 				assert.Len(t, ruleSets[0].Rules, 1)
 				assert.Equal(t, "baz", ruleSets[0].Rules[0].ID)
 
 				assert.Contains(t, ruleSets[1].Source, "http_endpoint:"+srv.URL)
+				assert.Equal(t, "1", ruleSets[1].Version)
 				assert.Equal(t, "test", ruleSets[1].Name)
 				assert.Len(t, ruleSets[1].Rules, 1)
 				assert.Equal(t, "foo", ruleSets[1].Rules[0].ID)
 
 				assert.Contains(t, ruleSets[2].Source, "http_endpoint:"+srv.URL)
+				assert.Equal(t, "1", ruleSets[2].Version)
 				assert.Equal(t, "test", ruleSets[2].Name)
 				assert.Len(t, ruleSets[2].Rules, 1)
 				assert.Equal(t, "foz", ruleSets[2].Rules[0].ID)
@@ -538,6 +546,7 @@ rules:
 
 				ruleSet := mock2.ArgumentCaptorFrom[*config2.RuleSet](&processor.Mock, "captor1").Value()
 				assert.Contains(t, ruleSet.Source, "http_endpoint:"+srv.URL)
+				assert.Equal(t, "1", ruleSet.Version)
 				assert.Equal(t, "test", ruleSet.Name)
 				assert.Len(t, ruleSet.Rules, 1)
 				assert.Equal(t, "bar", ruleSet.Rules[0].ID)
@@ -583,6 +592,7 @@ rules:
 
 				ruleSet := mock2.ArgumentCaptorFrom[*config2.RuleSet](&processor.Mock, "captor1").Value()
 				assert.Contains(t, ruleSet.Source, "http_endpoint:"+srv.URL)
+				assert.Equal(t, "1", ruleSet.Version)
 				assert.Equal(t, "test", ruleSet.Name)
 				assert.Len(t, ruleSet.Rules, 1)
 				assert.Equal(t, "bar", ruleSet.Rules[0].ID)

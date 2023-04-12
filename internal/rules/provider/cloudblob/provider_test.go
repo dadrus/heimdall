@@ -279,6 +279,8 @@ rules:
 				assert.NotContains(t, logs.String(), "No updates received")
 
 				ruleSet := mock2.ArgumentCaptorFrom[*config2.RuleSet](&processor.Mock, "captor1").Value()
+				assert.Contains(t, ruleSet.Source, "test-rule@s3://"+bucketName)
+				assert.Equal(t, "1", ruleSet.Version)
 				assert.Len(t, ruleSet.Rules, 1)
 				assert.Equal(t, "foo", ruleSet.Rules[0].ID)
 				assert.Contains(t, ruleSet.Source, "test-rule@s3")
@@ -321,6 +323,8 @@ rules:
 				assert.Contains(t, logs.String(), "No updates received")
 
 				ruleSet := mock2.ArgumentCaptorFrom[*config2.RuleSet](&processor.Mock, "captor1").Value()
+				assert.Contains(t, ruleSet.Source, "test-rule@s3://"+bucketName)
+				assert.Equal(t, "1", ruleSet.Version)
 				assert.Len(t, ruleSet.Rules, 1)
 				assert.Equal(t, "foo", ruleSet.Rules[0].ID)
 				assert.Contains(t, ruleSet.Source, "test-rule@s3")
@@ -401,8 +405,10 @@ rules:
 				require.Len(t, ruleSets, 2)
 				assert.Equal(t, "foo", ruleSets[0].Rules[0].ID)
 				assert.Contains(t, ruleSets[0].Source, "test-rule1@s3")
+				assert.Equal(t, "1", ruleSets[0].Version)
 				assert.Len(t, ruleSets[0].Rules, 1)
 				assert.Contains(t, ruleSets[1].Source, "test-rule2@s3")
+				assert.Equal(t, "1", ruleSets[1].Version)
 				assert.Len(t, ruleSets[1].Rules, 1)
 				assert.Equal(t, "bar", ruleSets[1].Rules[0].ID)
 
@@ -498,9 +504,11 @@ rules:
 				ruleSets := mock2.ArgumentCaptorFrom[*config2.RuleSet](&processor.Mock, "captor2").Values()
 				assert.Len(t, ruleSets, 2)
 				assert.Contains(t, ruleSets[0].Source, "test-rule@s3")
+				assert.Equal(t, "1", ruleSets[0].Version)
 				assert.Len(t, ruleSets[0].Rules, 1)
 				assert.Equal(t, "bar", ruleSets[0].Rules[0].ID)
 				assert.Contains(t, ruleSets[1].Source, "test-rule@s3")
+				assert.Equal(t, "1", ruleSets[1].Version)
 				assert.Len(t, ruleSets[1].Rules, 1)
 				assert.Equal(t, "baz", ruleSets[1].Rules[0].ID)
 			},

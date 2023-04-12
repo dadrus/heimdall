@@ -123,7 +123,7 @@ func TestHandlerFactoryCreateAuthenticator(t *testing.T) {
 			id := x.IfThenElse(len(tc.id) != 0, tc.id, ID)
 
 			// WHEN
-			auth, err := factory.CreateAuthenticator(id, tc.conf)
+			auth, err := factory.CreateAuthenticator("test", id, tc.conf)
 
 			// THEN
 			tc.assert(t, err, auth)
@@ -215,7 +215,7 @@ func TestHandlerFactoryCreateAuthorizer(t *testing.T) {
 			id := x.IfThenElse(len(tc.id) != 0, tc.id, ID)
 
 			// WHEN
-			auth, err := factory.CreateAuthorizer(id, tc.conf)
+			auth, err := factory.CreateAuthorizer("test", id, tc.conf)
 
 			// THEN
 			tc.assert(t, err, auth)
@@ -308,7 +308,7 @@ func TestHandlerFactoryCreateContextualizer(t *testing.T) {
 			id := x.IfThenElse(len(tc.id) != 0, tc.id, ID)
 
 			// WHEN
-			contextualizer, err := factory.CreateContextualizer(id, tc.conf)
+			contextualizer, err := factory.CreateContextualizer("test", id, tc.conf)
 
 			// THEN
 			tc.assert(t, err, contextualizer)
@@ -400,7 +400,7 @@ func TestHandlerFactoryCreateUnifier(t *testing.T) {
 			id := x.IfThenElse(len(tc.id) != 0, tc.id, ID)
 
 			// WHEN
-			unifier, err := factory.CreateUnifier(id, tc.conf)
+			unifier, err := factory.CreateUnifier("test", id, tc.conf)
 
 			// THEN
 			tc.assert(t, err, unifier)
@@ -492,7 +492,7 @@ func TestHandlerFactoryCreateErrorHandler(t *testing.T) {
 			id := x.IfThenElse(len(tc.id) != 0, tc.id, ID)
 
 			// WHEN
-			errorHandler, err := factory.CreateErrorHandler(id, tc.conf)
+			errorHandler, err := factory.CreateErrorHandler("test", id, tc.conf)
 
 			// THEN
 			tc.assert(t, err, errorHandler)
