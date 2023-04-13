@@ -25,7 +25,7 @@ import (
 	"github.com/dadrus/heimdall/internal/config/parser"
 )
 
-type Configuration struct {
+type Configuration struct { //nolint:musttag
 	Serve     ServeConfig     `koanf:"serve"`
 	Log       LoggingConfig   `koanf:"log"`
 	Tracing   TracingConfig   `koanf:"tracing"`
@@ -38,7 +38,7 @@ type Configuration struct {
 
 func NewConfiguration(envPrefix EnvVarPrefix, configFile ConfigurationPath) (*Configuration, error) {
 	// copy defaults
-	result := defaultConfig
+	result := defaultConfig()
 
 	opts := []parser.Option{
 		parser.WithDecodeHookFunc(mapstructure.StringToTimeDurationHookFunc()),

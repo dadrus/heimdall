@@ -11,21 +11,39 @@ import (
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
-func TestValidateConfig(t *testing.T) {
+func TestValidateRuleset(t *testing.T) {
 	t.Parallel()
 
 	for _, tc := range []struct {
-		uc       string
-		confFile string
-		expError error
+		uc        string
+		confFile  string
+		rulesFile string
+		expError  error
 	}{
-		{uc: "no config provided", expError: ErrNoConfigFile},
-		{uc: "invalid config", confFile: "doesnotexist.yaml", expError: os.ErrNotExist},
-		{uc: "valid config", confFile: "test_data/config.yaml"},
+		{
+			uc:       "no config provided",
+			expError: ErrNoConfigFile,
+		},
+		{
+			uc:       "invalid configconfig file",
+			confFile: "doesnotexist.yaml",
+			expError: os.ErrNotExist,
+		},
+		{
+			uc:        "invalid rule set file",
+			confFile:  "test_data/config.yaml",
+			rulesFile: "doesnotexist.yaml",
+			expError:  os.ErrNotExist,
+		},
+		{
+			uc:        "everything is valid",
+			confFile:  "test_data/config.yaml",
+			rulesFile: "test_data/ruleset.yaml",
+		},
 	} {
 		t.Run(tc.uc, func(t *testing.T) {
 			// GIVEN
-			cmd := NewValidateConfigCommand()
+			cmd := NewValidateRulesCommand()
 			cmd.Flags().StringP("config", "c", "", "Path to heimdall's configuration file.")
 
 			if len(tc.confFile) != 0 {
@@ -34,7 +52,7 @@ func TestValidateConfig(t *testing.T) {
 			}
 
 			// WHEN
-			err := validateConfig(cmd)
+			err := validateRuleSet(cmd, []string{tc.rulesFile})
 
 			// THEN
 			if tc.expError != nil {
@@ -47,21 +65,29 @@ func TestValidateConfig(t *testing.T) {
 	}
 }
 
-func TestRunValidateConfigCommand(t *testing.T) {
+func TestRunValidateRulesCommand(t *testing.T) {
 	for _, tc := range []struct {
-		uc       string
-		confFile string
-		expError string
+		uc        string
+		confFile  string
+		rulesFile string
+		expError  string
 	}{
-		{uc: "invalid config", confFile: "doesnotexist.yaml", expError: "no such file or dir"},
-		{uc: "valid config", confFile: "test_data/config.yaml"},
+		{
+			uc:       "validation fails",
+			expError: "no config file",
+		},
+		{
+			uc:        "everything is valid",
+			confFile:  "test_data/config.yaml",
+			rulesFile: "test_data/ruleset.yaml",
+		},
 	} {
 		t.Run(tc.uc, func(t *testing.T) {
 			// GIVEN
 			exit, err := testsupport.PatchOSExit(t, func(int) {})
 			require.NoError(t, err)
 
-			cmd := NewValidateConfigCommand()
+			cmd := NewValidateRulesCommand()
 
 			buf := bytes.NewBuffer([]byte{})
 			cmd.SetOut(buf)
@@ -75,7 +101,7 @@ func TestRunValidateConfigCommand(t *testing.T) {
 			}
 
 			// WHEN
-			cmd.Run(cmd, []string{})
+			cmd.Run(cmd, []string{tc.rulesFile})
 
 			log := buf.String()
 			if len(tc.expError) != 0 {
@@ -83,7 +109,7 @@ func TestRunValidateConfigCommand(t *testing.T) {
 				assert.True(t, exit.Called)
 				assert.Equal(t, 1, exit.Code)
 			} else {
-				assert.Contains(t, log, "Configuration is valid")
+				assert.Contains(t, log, "Rule set is valid")
 			}
 		})
 	}
