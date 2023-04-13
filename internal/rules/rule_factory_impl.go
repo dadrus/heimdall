@@ -269,12 +269,18 @@ func (f *ruleFactory) initWithDefaultRule(ruleConfig *config.DefaultRule, logger
 
 	logger.Debug().Msg("Loading default rule")
 
-	authenticators, subHandlers, unifiers, err := f.createExecutePipeline(CurrentRuleSetVersion, ruleConfig.Execute)
+	authenticators, subHandlers, unifiers, err := f.createExecutePipeline(
+		config2.CurrentRuleSetVersion,
+		ruleConfig.Execute,
+	)
 	if err != nil {
 		return err
 	}
 
-	errorHandlers, err := f.createOnErrorPipeline(CurrentRuleSetVersion, ruleConfig.ErrorHandler)
+	errorHandlers, err := f.createOnErrorPipeline(
+		config2.CurrentRuleSetVersion,
+		ruleConfig.ErrorHandler,
+	)
 	if err != nil {
 		return err
 	}

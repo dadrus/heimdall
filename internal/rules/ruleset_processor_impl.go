@@ -14,8 +14,6 @@ import (
 
 var ErrUnsupportedRuleSetVersion = errors.New("unsupported rule set version")
 
-const CurrentRuleSetVersion = "v1alpha1"
-
 type ruleSetProcessor struct {
 	q event.RuleSetChangedEventQueue
 	f rule.Factory
@@ -33,7 +31,7 @@ func NewRuleSetProcessor(
 }
 
 func (p *ruleSetProcessor) isVersionSupported(version string) bool {
-	return version == CurrentRuleSetVersion
+	return version == config.CurrentRuleSetVersion
 }
 
 func (p *ruleSetProcessor) loadRules(ruleSet *config.RuleSet) ([]rule.Rule, error) {

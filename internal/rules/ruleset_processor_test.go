@@ -36,7 +36,7 @@ func TestRuleSetProcessorOnCreated(t *testing.T) {
 		},
 		{
 			uc:      "error while loading rule set",
-			ruleset: &config.RuleSet{Version: CurrentRuleSetVersion, Rules: []config.Rule{{ID: "foo"}}},
+			ruleset: &config.RuleSet{Version: config.CurrentRuleSetVersion, Rules: []config.Rule{{ID: "foo"}}},
 			configureFactory: func(t *testing.T, mhf *mocks.FactoryMock) {
 				t.Helper()
 
@@ -55,14 +55,14 @@ func TestRuleSetProcessorOnCreated(t *testing.T) {
 			uc: "successful",
 			ruleset: &config.RuleSet{
 				MetaData: config.MetaData{Source: "test"},
-				Version:  CurrentRuleSetVersion,
+				Version:  config.CurrentRuleSetVersion,
 				Name:     "foobar",
 				Rules:    []config.Rule{{ID: "foo"}},
 			},
 			configureFactory: func(t *testing.T, mhf *mocks.FactoryMock) {
 				t.Helper()
 
-				mhf.EXPECT().CreateRule(CurrentRuleSetVersion, mock.Anything, mock.Anything).Return(&mocks.RuleMock{}, nil)
+				mhf.EXPECT().CreateRule(config.CurrentRuleSetVersion, mock.Anything, mock.Anything).Return(&mocks.RuleMock{}, nil)
 			},
 			assert: func(t *testing.T, err error, queue event.RuleSetChangedEventQueue) {
 				t.Helper()
@@ -123,7 +123,7 @@ func TestRuleSetProcessorOnUpdated(t *testing.T) {
 		},
 		{
 			uc:      "error while loading rule set",
-			ruleset: &config.RuleSet{Version: CurrentRuleSetVersion, Rules: []config.Rule{{ID: "foo"}}},
+			ruleset: &config.RuleSet{Version: config.CurrentRuleSetVersion, Rules: []config.Rule{{ID: "foo"}}},
 			configureFactory: func(t *testing.T, mhf *mocks.FactoryMock) {
 				t.Helper()
 
@@ -142,14 +142,15 @@ func TestRuleSetProcessorOnUpdated(t *testing.T) {
 			uc: "successful",
 			ruleset: &config.RuleSet{
 				MetaData: config.MetaData{Source: "test"},
-				Version:  CurrentRuleSetVersion,
+				Version:  config.CurrentRuleSetVersion,
 				Name:     "foobar",
 				Rules:    []config.Rule{{ID: "foo"}},
 			},
 			configureFactory: func(t *testing.T, mhf *mocks.FactoryMock) {
 				t.Helper()
 
-				mhf.EXPECT().CreateRule(CurrentRuleSetVersion, mock.Anything, mock.Anything).Return(&mocks.RuleMock{}, nil)
+				mhf.EXPECT().CreateRule(config.CurrentRuleSetVersion, mock.Anything, mock.Anything).
+					Return(&mocks.RuleMock{}, nil)
 			},
 			assert: func(t *testing.T, err error, queue event.RuleSetChangedEventQueue) {
 				t.Helper()
@@ -211,7 +212,7 @@ func TestRuleSetProcessorOnDeleted(t *testing.T) {
 			uc: "successful",
 			ruleset: &config.RuleSet{
 				MetaData: config.MetaData{Source: "test"},
-				Version:  CurrentRuleSetVersion,
+				Version:  config.CurrentRuleSetVersion,
 				Name:     "foobar",
 			},
 			assert: func(t *testing.T, err error, queue event.RuleSetChangedEventQueue) {
