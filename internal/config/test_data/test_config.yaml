@@ -227,7 +227,7 @@ rules:
       - id: basic_auth_authenticator
         type: basic_auth
         config:
-          client_id: foo
+          user_id: foo
           password: bar
           allow_fallback_on_error: false
     authorizers:
