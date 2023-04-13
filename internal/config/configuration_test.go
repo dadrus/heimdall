@@ -19,7 +19,6 @@ package config
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
 )
@@ -46,10 +45,18 @@ func TestNewConfigurationFromStructWithDefaultsOnly(t *testing.T) {
 func TestNewConfigurationWithConfigFile(t *testing.T) {
 	t.Parallel()
 
+	// GIVEN
+	rawExp, err := yaml.Marshal(defaultConfig())
+	require.NoError(t, err)
+
 	// WHEN
 	config, err := NewConfiguration("HEIMDALLCFG_", "./test_data/test_config.yaml")
 
 	// THEN
 	require.NoError(t, err)
-	assert.NotEqual(t, defaultConfig(), *config)
+
+	rawConf, err := yaml.Marshal(config)
+	require.NoError(t, err)
+
+	require.NotEqual(t, string(rawExp), string(rawConf))
 }
