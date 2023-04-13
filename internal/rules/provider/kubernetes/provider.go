@@ -20,7 +20,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 	"sync"
 	"time"
 
@@ -42,13 +41,7 @@ import (
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
-var (
-	ErrBadAuthClass = errors.New("bad authClass in a RuleSet")
-
-	versionMap = map[string]string{ //nolint:gochecknoglobals
-		v1alpha1.GroupVersion: config2.CurrentRuleSetVersion,
-	}
-)
+var ErrBadAuthClass = errors.New("bad authClass in a RuleSet")
 
 type ConfigFactory func() (*rest.Config, error)
 
@@ -200,17 +193,22 @@ func (p *provider) Stop(ctx context.Context) error {
 
 func (p *provider) updateRuleSet(_, newObj any) {
 	// should never be of a different type. ok if panics
-	newRs := newObj.(*v1alpha1.RuleSet) // nolint: forcetypeassert
+	rs := newObj.(*v1alpha1.RuleSet) // nolint: forcetypeassert
 
 	conf := &config2.RuleSet{
 		MetaData: config2.MetaData{
-			Source:  fmt.Sprintf("%s:%s:%s", ProviderType, newRs.Namespace, newRs.UID),
-			ModTime: newRs.CreationTimestamp.Time,
+			Source:  fmt.Sprintf("%s:%s:%s", ProviderType, rs.Namespace, rs.UID),
+			ModTime: rs.CreationTimestamp.Time,
 		},
-		Version: p.mapVersion(newRs.APIVersion),
-		Name:    newRs.Name,
-		Rules:   newRs.Spec.Rules,
+		Version: p.mapVersion(rs.APIVersion),
+		Name:    rs.Name,
+		Rules:   rs.Spec.Rules,
 	}
+
+	p.l.Info().Msg("Rule set update received")
+
+	p.l.Debug().Str("_src", conf.Source).
+		Msgf("Rule set resource version mapped from '%s' to '%s'", rs.APIVersion, conf.Version)
 
 	if err := p.p.OnUpdated(conf); err != nil {
 		p.l.Warn().Err(err).Str("_src", conf.Source).Msg("Failed to apply rule set updates")
@@ -233,6 +231,11 @@ func (p *provider) addRuleSet(obj any) {
 		Rules:   rs.Spec.Rules,
 	}
 
+	p.l.Info().Msg("New rule set received")
+
+	p.l.Debug().Str("_src", conf.Source).
+		Msgf("Rule set resource version mapped from '%s' to '%s'", rs.APIVersion, conf.Version)
+
 	if err := p.p.OnCreated(conf); err != nil {
 		p.l.Warn().Err(err).Str("_src", conf.Source).Msg("Failed creating rule set")
 	} else {
@@ -253,6 +256,11 @@ func (p *provider) deleteRuleSet(obj any) {
 		Name:    rs.Name,
 	}
 
+	p.l.Info().Msg("Rule set deletion received")
+
+	p.l.Debug().Str("_src", conf.Source).
+		Msgf("Rule set resource version mapped from '%s' to '%s'", rs.APIVersion, conf.Version)
+
 	if err := p.p.OnDeleted(conf); err != nil {
 		p.l.Warn().Err(err).Str("_src", conf.Source).Msg("Failed deleting rule set")
 	} else {
@@ -260,11 +268,7 @@ func (p *provider) deleteRuleSet(obj any) {
 	}
 }
 
-func (p *provider) mapVersion(resourceVersion string) string {
-	// currently the CRD version is the same as the regular rule set version
-	if version, ok := versionMap[strings.TrimPrefix(resourceVersion, v1alpha1.GroupName+"/")]; ok {
-		return version
-	}
-
-	return "unknown"
+func (p *provider) mapVersion(_ string) string {
+	// currently the only possible version is v1alpha1, which is mapped to the version "1" used internally
+	return "1"
 }

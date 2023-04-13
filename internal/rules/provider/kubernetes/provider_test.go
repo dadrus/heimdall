@@ -593,7 +593,7 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 
 				ruleSet := mock2.ArgumentCaptorFrom[*config2.RuleSet](&processor.Mock, "captor1").Value()
 				assert.Equal(t, ruleSet.Source, "kubernetes:foo:dfb2a2f1-1ad2-4d8c-8456-516fc94abb86")
-				// assert.Equal(t, "v1alpha1", ruleSet.Version)
+				assert.Equal(t, "1", ruleSet.Version)
 				assert.Equal(t, "test-rule", ruleSet.Name)
 				assert.Len(t, ruleSet.Rules, 1)
 
@@ -611,7 +611,7 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 
 				ruleSet = mock2.ArgumentCaptorFrom[*config2.RuleSet](&processor.Mock, "captor2").Value()
 				assert.Equal(t, "kubernetes:foo:dfb2a2f1-1ad2-4d8c-8456-516fc94abb86", ruleSet.Source)
-				// assert.Equal(t, "v1alpha1", ruleSet.Version)
+				assert.Equal(t, "1", ruleSet.Version)
 				assert.Equal(t, "test-rule", ruleSet.Name)
 			},
 		},
@@ -872,7 +872,7 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 
 				ruleSet := mock2.ArgumentCaptorFrom[*config2.RuleSet](&processor.Mock, "captor1").Value()
 				assert.Equal(t, ruleSet.Source, "kubernetes:foo:dfb2a2f1-1ad2-4d8c-8456-516fc94abb86")
-				// assert.Equal(t, "v1alpha1", ruleSet.Version)
+				assert.Equal(t, "1", ruleSet.Version)
 				assert.Equal(t, "test-rule", ruleSet.Name)
 				assert.Len(t, ruleSet.Rules, 1)
 
@@ -890,7 +890,7 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 
 				ruleSet = mock2.ArgumentCaptorFrom[*config2.RuleSet](&processor.Mock, "captor2").Value()
 				assert.Equal(t, ruleSet.Source, "kubernetes:foo:dfb2a2f1-1ad2-4d8c-8456-516fc94abb86")
-				// assert.Equal(t, "v1alpha1", ruleSet.Version)
+				assert.Equal(t, "1", ruleSet.Version)
 				assert.Equal(t, "test-rule", ruleSet.Name)
 				assert.Len(t, ruleSet.Rules, 1)
 
