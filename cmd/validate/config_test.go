@@ -21,7 +21,7 @@ func TestValidateConfig(t *testing.T) {
 	}{
 		{uc: "no config provided", expError: ErrNoConfigFile},
 		{uc: "invalid config", confFile: "doesnotexist.yaml", expError: os.ErrNotExist},
-		{uc: "valid config", confFile: "../../internal/config/test_data/test_config.yaml"},
+		{uc: "valid config", confFile: "test_data/config.yaml"},
 	} {
 		t.Run(tc.uc, func(t *testing.T) {
 			// GIVEN
@@ -56,7 +56,7 @@ func TestRunValidateCommand(t *testing.T) {
 		expError string
 	}{
 		{uc: "invalid config", confFile: "doesnotexist.yaml", expError: "no such file or dir"},
-		{uc: "valid config", confFile: "../../internal/config/test_data/test_config.yaml"},
+		{uc: "valid config", confFile: "test_data/config.yaml"},
 	} {
 		t.Run(tc.uc, func(t *testing.T) {
 			// GIVEN
