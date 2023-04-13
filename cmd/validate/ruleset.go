@@ -15,8 +15,8 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/provider/filesystem"
 )
 
-// NewValidateRuleSetCommand represents the "validate rules" command.
-func NewValidateRuleSetCommand() *cobra.Command {
+// NewValidateRulesCommand represents the "validate rules" command.
+func NewValidateRulesCommand() *cobra.Command {
 	return &cobra.Command{
 		Use:     "rules [path to ruleset]",
 		Short:   "Validates heimdall's ruleset",
