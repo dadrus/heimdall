@@ -17,6 +17,7 @@
 package internal
 
 import (
+	"github.com/rs/zerolog"
 	"go.uber.org/fx"
 
 	"github.com/dadrus/heimdall/internal/cache"
@@ -30,11 +31,15 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/mechanisms"
 	"github.com/dadrus/heimdall/internal/signer"
 	"github.com/dadrus/heimdall/internal/tracing"
+	"github.com/dadrus/heimdall/version"
 )
 
 var Module = fx.Options( //nolint:gochecknoglobals
 	config.Module,
 	logging.Module,
+	fx.Invoke(func(logger zerolog.Logger) {
+		logger.Info().Str("_version", version.Version).Msg("Starting heimdall")
+	}),
 	tracing.Module,
 	cache.Module,
 	signer.Module,
