@@ -990,12 +990,12 @@
           "type": "object",
           "additionalProperties": false,
           "required": [
-            "client_id",
+            "user_id",
             "password"
           ],
           "properties": {
-            "client_id": {
-              "description": "The client id, respectively the user name for the authentication schema",
+            "user_id": {
+              "description": "The user id, respectively the user name for the authentication schema",
               "type": "string"
             },
             "password": {
