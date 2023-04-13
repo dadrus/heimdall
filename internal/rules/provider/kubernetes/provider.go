@@ -42,7 +42,13 @@ import (
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
-var ErrBadAuthClass = errors.New("bad authClass in a RuleSet")
+var (
+	ErrBadAuthClass = errors.New("bad authClass in a RuleSet")
+
+	versionMap = map[string]string{ //nolint:gochecknoglobals
+		v1alpha1.GroupVersion: config2.CurrentRuleSetVersion,
+	}
+)
 
 type ConfigFactory func() (*rest.Config, error)
 
@@ -256,5 +262,9 @@ func (p *provider) deleteRuleSet(obj any) {
 
 func (p *provider) mapVersion(resourceVersion string) string {
 	// currently the CRD version is the same as the regular rule set version
-	return strings.TrimPrefix(resourceVersion, v1alpha1.GroupName+"/")
+	if version, ok := versionMap[strings.TrimPrefix(resourceVersion, v1alpha1.GroupName+"/")]; ok {
+		return version
+	}
+
+	return "unknown"
 }
