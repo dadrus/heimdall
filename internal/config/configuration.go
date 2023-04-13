@@ -38,7 +38,7 @@ type Configuration struct {
 
 func NewConfiguration(envPrefix EnvVarPrefix, configFile ConfigurationPath) (*Configuration, error) {
 	// copy defaults
-	result := defaultConfig
+	result := defaultConfig()
 
 	opts := []parser.Option{
 		parser.WithDecodeHookFunc(mapstructure.StringToTimeDurationHookFunc()),

@@ -36,57 +36,58 @@ const (
 	loopbackIP = "127.0.0.1"
 )
 
-// nolint: gochecknoglobals
-var defaultConfig = Configuration{
-	Serve: ServeConfig{
-		Proxy: ServiceConfig{
-			Port: defaultProxyServicePort,
-			Timeout: Timeout{
-				Read:  defaultReadTimeout,
-				Write: defaultWriteTimeout,
-				Idle:  defaultIdleTimeout,
+func defaultConfig() Configuration {
+	return Configuration{
+		Serve: ServeConfig{
+			Proxy: ServiceConfig{
+				Port: defaultProxyServicePort,
+				Timeout: Timeout{
+					Read:  defaultReadTimeout,
+					Write: defaultWriteTimeout,
+					Idle:  defaultIdleTimeout,
+				},
+			},
+			Decision: ServiceConfig{
+				Port: defaultDecisionServicePort,
+				Timeout: Timeout{
+					Read:  defaultReadTimeout,
+					Write: defaultWriteTimeout,
+					Idle:  defaultIdleTimeout,
+				},
+			},
+			Management: ServiceConfig{
+				Port: defaultManagementServicePort,
+				Timeout: Timeout{
+					Read:  defaultReadTimeout,
+					Write: defaultWriteTimeout,
+					Idle:  defaultIdleTimeout,
+				},
 			},
 		},
-		Decision: ServiceConfig{
-			Port: defaultDecisionServicePort,
-			Timeout: Timeout{
-				Read:  defaultReadTimeout,
-				Write: defaultWriteTimeout,
-				Idle:  defaultIdleTimeout,
-			},
+		Log: LoggingConfig{
+			Level:  zerolog.ErrorLevel,
+			Format: LogTextFormat,
 		},
-		Management: ServiceConfig{
-			Port: defaultManagementServicePort,
-			Timeout: Timeout{
-				Read:  defaultReadTimeout,
-				Write: defaultWriteTimeout,
-				Idle:  defaultIdleTimeout,
-			},
+		Tracing: TracingConfig{
+			Enabled:           true,
+			SpanProcessorType: SpanProcessorBatch,
 		},
-	},
-	Log: LoggingConfig{
-		Level:  zerolog.ErrorLevel,
-		Format: LogTextFormat,
-	},
-	Tracing: TracingConfig{
-		Enabled:           true,
-		SpanProcessorType: SpanProcessorBatch,
-	},
-	Metrics: MetricsConfig{
-		Enabled:     true,
-		Port:        defaultMetricsServicePort,
-		Host:        loopbackIP,
-		MetricsPath: "/metrics",
-	},
-	Profiling: ProfilingConfig{
-		Enabled: false,
-		Port:    defaultProfilingServicePort,
-		Host:    loopbackIP,
-	},
-	Signer: SignerConfig{
-		Name: "heimdall",
-	},
-	Rules: Rules{
-		Prototypes: &MechanismPrototypes{},
-	},
+		Metrics: MetricsConfig{
+			Enabled:     true,
+			Port:        defaultMetricsServicePort,
+			Host:        loopbackIP,
+			MetricsPath: "/metrics",
+		},
+		Profiling: ProfilingConfig{
+			Enabled: false,
+			Port:    defaultProfilingServicePort,
+			Host:    loopbackIP,
+		},
+		Signer: SignerConfig{
+			Name: "heimdall",
+		},
+		Rules: Rules{
+			Prototypes: &MechanismPrototypes{},
+		},
+	}
 }
