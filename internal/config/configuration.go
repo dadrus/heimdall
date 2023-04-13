@@ -25,7 +25,7 @@ import (
 	"github.com/dadrus/heimdall/internal/config/parser"
 )
 
-type Configuration struct {
+type Configuration struct { //nolint:musttag
 	Serve     ServeConfig     `koanf:"serve"`
 	Log       LoggingConfig   `koanf:"log"`
 	Tracing   TracingConfig   `koanf:"tracing"`
