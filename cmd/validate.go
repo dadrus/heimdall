@@ -36,6 +36,11 @@ func init() {
 	RootCmd.AddCommand(validateCmd)
 
 	validateCmd.PersistentFlags().StringP("config", "c", "",
-		"Path to heimdall's configuration file")
+		"Path to heimdall's configuration file.\n"+
+			"If not provided, the lookup sequence is:\n  1. $PWD\n  2. $HOME/.config\n  3. /etc/heimdall/")
+	validateCmd.PersistentFlags().String("env-config-prefix", "HEIMDALLCFG_",
+		"Prefix for the environment variables to consider for\nloading configuration from")
+
 	validateCmd.AddCommand(validate.NewValidateConfigCommand())
+	validateCmd.AddCommand(validate.NewValidateRuleSetCommand())
 }
