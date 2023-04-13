@@ -19,6 +19,9 @@ package v1alpha1
 //go:generate controller-gen object paths=$GOFILE
 
 import (
+	"fmt"
+	"strings"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 
@@ -31,12 +34,39 @@ type RuleSetSpec struct {
 	Rules         []config.Rule `json:"rules"`
 }
 
+func (in *RuleSetSpec) String() string {
+	if in == nil {
+		return "nil"
+	}
+
+	return strings.Join([]string{
+		`&RuleSetSpec{`,
+		fmt.Sprintf("AuthClassName: %v", in.AuthClassName) + `,`,
+		fmt.Sprintf("Rules: %v", in.Rules),
+		`}`,
+	}, "")
+}
+
 // +kubebuilder:object:generate=true
 type RuleSet struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
 	Spec RuleSetSpec `json:"spec"`
+}
+
+func (in *RuleSet) String() string {
+	if in == nil {
+		return "nil"
+	}
+
+	return strings.Join([]string{
+		`&RuleSet{`,
+		fmt.Sprintf("%v", in.TypeMeta.String()) + `,`,
+		fmt.Sprintf("%v", in.ObjectMeta.String()) + `,`,
+		fmt.Sprintf("%v", in.Spec.String()),
+		`}`,
+	}, "")
 }
 
 func (in *RuleSet) DeepCopyObject() runtime.Object { return in.DeepCopy() }
