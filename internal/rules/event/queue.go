@@ -16,4 +16,4 @@
 
 package event
 
-type RuleSetChangedEventQueue chan RuleSetChangedEvent
+type RuleSetChangedEventQueue chan RuleSetChanged

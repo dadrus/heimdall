@@ -24,6 +24,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/rules/event"
 	"github.com/dadrus/heimdall/internal/rules/provider"
+	"github.com/dadrus/heimdall/internal/rules/rule"
 )
 
 const defaultQueueSize = 20
@@ -31,44 +32,29 @@ const defaultQueueSize = 20
 // Module is invoked on app bootstrapping.
 // nolint: gochecknoglobals
 var Module = fx.Options(
-	fx.Provide(func(logger zerolog.Logger) event.RuleSetChangedEventQueue {
-		logger.Debug().Msg("Creating rule set event queue.")
+	fx.Provide(
+		fx.Annotate(
+			func(logger zerolog.Logger) event.RuleSetChangedEventQueue {
+				logger.Debug().Msg("Creating rule set event queue.")
 
-		return make(event.RuleSetChangedEventQueue, defaultQueueSize)
-	}),
-	fx.Provide(NewRepository, NewRuleFactory),
-	fx.Invoke(registerRuleDefinitionHandler, registerRuleSetChangedEventQueueCloser),
+				return make(event.RuleSetChangedEventQueue, defaultQueueSize)
+			},
+			fx.OnStop(
+				func(queue event.RuleSetChangedEventQueue, logger zerolog.Logger) {
+					logger.Debug().Msg("Closing rule set event queue")
+
+					close(queue)
+				},
+			),
+		),
+		NewRuleFactory,
+		fx.Annotate(
+			newRepository,
+			fx.OnStart(func(ctx context.Context, o *repository) error { return o.Start(ctx) }),
+			fx.OnStop(func(ctx context.Context, o *repository) error { return o.Stop(ctx) }),
+		),
+		func(r *repository) rule.Repository { return r },
+		NewRuleSetProcessor,
+	),
 	provider.Module,
 )
-
-func registerRuleSetChangedEventQueueCloser(
-	lifecycle fx.Lifecycle,
-	queue event.RuleSetChangedEventQueue,
-	logger zerolog.Logger,
-) {
-	lifecycle.Append(fx.Hook{
-		OnStop: func(ctx context.Context) error {
-			logger.Debug().Msg("Closing rule set event queue")
-
-			close(queue)
-
-			return nil
-		},
-	})
-}
-
-func registerRuleDefinitionHandler(lifecycle fx.Lifecycle, logger zerolog.Logger, r Repository) {
-	rdf, ok := r.(ruleSetDefinitionLoader)
-	if !ok {
-		logger.Fatal().Msg("No rule set definition loader available")
-
-		return
-	}
-
-	lifecycle.Append(
-		fx.Hook{
-			OnStart: func(ctx context.Context) error { return rdf.Start(ctx) },
-			OnStop:  func(ctx context.Context) error { return rdf.Stop(ctx) },
-		},
-	)
-}

@@ -18,9 +18,11 @@ package httpendpoint
 
 import (
 	"context"
+
+	"github.com/dadrus/heimdall/internal/rules/config"
 )
 
 type RuleSetFetcher interface {
-	FetchRuleSet(ctx context.Context) (RuleSet, error)
+	FetchRuleSet(ctx context.Context) (*config.RuleSet, error)
 	ID() string
 }

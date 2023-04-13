@@ -27,7 +27,7 @@ import (
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/handler/listener"
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/rules"
+	"github.com/dadrus/heimdall/internal/rules/rule"
 )
 
 var Module = fx.Options( // nolint: gochecknoglobals
@@ -40,7 +40,7 @@ type hooksArgs struct {
 	Lifecycle  fx.Lifecycle
 	Config     *config.Configuration
 	Logger     zerolog.Logger
-	Repository rules.Repository
+	Repository rule.Repository
 	Signer     heimdall.JWTSigner
 	Registerer prometheus.Registerer
 	Cache      cache.Cache

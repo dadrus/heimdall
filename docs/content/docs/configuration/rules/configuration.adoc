@@ -168,12 +168,27 @@ This example uses two error handlers, named `foo` and `bar`. `bar` will only be 
 
 == Rule Set
 
-A rule set is just a list of rules, typically defined in a format specified by a particular link:{{< relref "providers.adoc" >}}[provider]. In its simplest case a rule set does not require further configuration options and can look as shown below:
+In principle, a rule set is just a list of rules with some additional meta information. Each `RuleSet` definition has the following attributes if not stated otherwise by a particular link:{{< relref "providers.adoc" >}}[provider]:
+
+* *`version`*: _string_ (mandatory)
++
+The version schema of the `RuleSet`. The current version of heimdall supports only the version `1`.
+
+* *`name`*: _string_ (optional)
++
+The name of a rule set. Used only for logging purposes.
+
+* *`rules`*: _link:{{< relref "configuration.adoc#_rule_configuration" >}}[Rule Configuration] array_ (mandatory)
++
+List of the actual rules.
 
 .Rule set with two rules
 ====
 [source, yaml]
 ----
+version: "1"
+name: my-rule-set
+rules:
 - id: rule:1
   match:
     url: https://my-service1.local/<**>

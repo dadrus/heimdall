@@ -27,11 +27,15 @@ import (
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/mocks"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/authorizers"
+	mocks3 "github.com/dadrus/heimdall/internal/rules/mechanisms/authorizers/mocks"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/contextualizers"
+	mocks4 "github.com/dadrus/heimdall/internal/rules/mechanisms/contextualizers/mocks"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/errorhandlers"
-	mocks2 "github.com/dadrus/heimdall/internal/rules/mechanisms/mocks"
+	mocks5 "github.com/dadrus/heimdall/internal/rules/mechanisms/errorhandlers/mocks"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/unifiers"
+	mocks6 "github.com/dadrus/heimdall/internal/rules/mechanisms/unifiers/mocks"
 	"github.com/dadrus/heimdall/internal/x"
 )
 
@@ -44,7 +48,7 @@ func TestHandlerFactoryCreateAuthenticator(t *testing.T) {
 		uc            string
 		id            string
 		conf          map[string]any
-		configureMock func(t *testing.T, mAuth *mocks2.MockAuthenticator)
+		configureMock func(t *testing.T, mAuth *mocks.AuthenticatorMock)
 		assert        func(t *testing.T, err error, auth authenticators.Authenticator)
 	}{
 		{
@@ -61,10 +65,10 @@ func TestHandlerFactoryCreateAuthenticator(t *testing.T) {
 		{
 			uc:   "with failing creation from prototype",
 			conf: map[string]any{"foo": "bar"},
-			configureMock: func(t *testing.T, mAuth *mocks2.MockAuthenticator) {
+			configureMock: func(t *testing.T, mAuth *mocks.AuthenticatorMock) {
 				t.Helper()
 
-				mAuth.On("WithConfig", mock.Anything).Return(nil, heimdall.ErrArgument)
+				mAuth.EXPECT().WithConfig(mock.Anything).Return(nil, heimdall.ErrArgument)
 			},
 			assert: func(t *testing.T, err error, auth authenticators.Authenticator) {
 				t.Helper()
@@ -77,10 +81,10 @@ func TestHandlerFactoryCreateAuthenticator(t *testing.T) {
 		{
 			uc:   "successful creation from prototype",
 			conf: map[string]any{"foo": "bar"},
-			configureMock: func(t *testing.T, mAuth *mocks2.MockAuthenticator) {
+			configureMock: func(t *testing.T, mAuth *mocks.AuthenticatorMock) {
 				t.Helper()
 
-				mAuth.On("WithConfig", mock.Anything).Return(mAuth, nil)
+				mAuth.EXPECT().WithConfig(mock.Anything).Return(mAuth, nil)
 			},
 			assert: func(t *testing.T, err error, auth authenticators.Authenticator) {
 				t.Helper()
@@ -103,9 +107,9 @@ func TestHandlerFactoryCreateAuthenticator(t *testing.T) {
 			// GIVEN
 			configureMock := x.IfThenElse(tc.configureMock != nil,
 				tc.configureMock,
-				func(t *testing.T, mAuth *mocks2.MockAuthenticator) { t.Helper() })
+				func(t *testing.T, mAuth *mocks.AuthenticatorMock) { t.Helper() })
 
-			mAuth := &mocks2.MockAuthenticator{}
+			mAuth := mocks.NewAuthenticatorMock(t)
 			configureMock(t, mAuth)
 
 			factory := &mechanismsFactory{
@@ -119,11 +123,10 @@ func TestHandlerFactoryCreateAuthenticator(t *testing.T) {
 			id := x.IfThenElse(len(tc.id) != 0, tc.id, ID)
 
 			// WHEN
-			auth, err := factory.CreateAuthenticator(id, tc.conf)
+			auth, err := factory.CreateAuthenticator("test", id, tc.conf)
 
 			// THEN
 			tc.assert(t, err, auth)
-			mAuth.AssertExpectations(t)
 		})
 	}
 }
@@ -137,7 +140,7 @@ func TestHandlerFactoryCreateAuthorizer(t *testing.T) {
 		uc            string
 		id            string
 		conf          map[string]any
-		configureMock func(t *testing.T, mAuth *mocks2.MockAuthorizer)
+		configureMock func(t *testing.T, mAuth *mocks3.AuthorizerMock)
 		assert        func(t *testing.T, err error, auth authorizers.Authorizer)
 	}{
 		{
@@ -154,10 +157,10 @@ func TestHandlerFactoryCreateAuthorizer(t *testing.T) {
 		{
 			uc:   "with failing creation from prototype",
 			conf: map[string]any{"foo": "bar"},
-			configureMock: func(t *testing.T, mAuth *mocks2.MockAuthorizer) {
+			configureMock: func(t *testing.T, mAuth *mocks3.AuthorizerMock) {
 				t.Helper()
 
-				mAuth.On("WithConfig", mock.Anything).Return(nil, heimdall.ErrArgument)
+				mAuth.EXPECT().WithConfig(mock.Anything).Return(nil, heimdall.ErrArgument)
 			},
 			assert: func(t *testing.T, err error, auth authorizers.Authorizer) {
 				t.Helper()
@@ -170,10 +173,10 @@ func TestHandlerFactoryCreateAuthorizer(t *testing.T) {
 		{
 			uc:   "successful creation from prototype",
 			conf: map[string]any{"foo": "bar"},
-			configureMock: func(t *testing.T, mAuth *mocks2.MockAuthorizer) {
+			configureMock: func(t *testing.T, mAuth *mocks3.AuthorizerMock) {
 				t.Helper()
 
-				mAuth.On("WithConfig", mock.Anything).Return(mAuth, nil)
+				mAuth.EXPECT().WithConfig(mock.Anything).Return(mAuth, nil)
 			},
 			assert: func(t *testing.T, err error, auth authorizers.Authorizer) {
 				t.Helper()
@@ -196,9 +199,9 @@ func TestHandlerFactoryCreateAuthorizer(t *testing.T) {
 			// GIVEN
 			configureMock := x.IfThenElse(tc.configureMock != nil,
 				tc.configureMock,
-				func(t *testing.T, mAuth *mocks2.MockAuthorizer) { t.Helper() })
+				func(t *testing.T, mAuth *mocks3.AuthorizerMock) { t.Helper() })
 
-			mAuth := &mocks2.MockAuthorizer{}
+			mAuth := mocks3.NewAuthorizerMock(t)
 			configureMock(t, mAuth)
 
 			factory := &mechanismsFactory{
@@ -212,11 +215,10 @@ func TestHandlerFactoryCreateAuthorizer(t *testing.T) {
 			id := x.IfThenElse(len(tc.id) != 0, tc.id, ID)
 
 			// WHEN
-			auth, err := factory.CreateAuthorizer(id, tc.conf)
+			auth, err := factory.CreateAuthorizer("test", id, tc.conf)
 
 			// THEN
 			tc.assert(t, err, auth)
-			mAuth.AssertExpectations(t)
 		})
 	}
 }
@@ -230,7 +232,7 @@ func TestHandlerFactoryCreateContextualizer(t *testing.T) {
 		uc            string
 		id            string
 		conf          map[string]any
-		configureMock func(t *testing.T, mContextualizer *mocks2.MockContextualizer)
+		configureMock func(t *testing.T, mContextualizer *mocks4.ContextualizerMock)
 		assert        func(t *testing.T, err error, contextualizer contextualizers.Contextualizer)
 	}{
 		{
@@ -247,10 +249,10 @@ func TestHandlerFactoryCreateContextualizer(t *testing.T) {
 		{
 			uc:   "with failing creation from prototype",
 			conf: map[string]any{"foo": "bar"},
-			configureMock: func(t *testing.T, mContextualizer *mocks2.MockContextualizer) {
+			configureMock: func(t *testing.T, mContextualizer *mocks4.ContextualizerMock) {
 				t.Helper()
 
-				mContextualizer.On("WithConfig", mock.Anything).
+				mContextualizer.EXPECT().WithConfig(mock.Anything).
 					Return(nil, heimdall.ErrArgument)
 			},
 			assert: func(t *testing.T, err error, contextualizer contextualizers.Contextualizer) {
@@ -264,10 +266,10 @@ func TestHandlerFactoryCreateContextualizer(t *testing.T) {
 		{
 			uc:   "successful creation from prototype",
 			conf: map[string]any{"foo": "bar"},
-			configureMock: func(t *testing.T, mContextualizer *mocks2.MockContextualizer) {
+			configureMock: func(t *testing.T, mContextualizer *mocks4.ContextualizerMock) {
 				t.Helper()
 
-				mContextualizer.On("WithConfig", mock.Anything).Return(mContextualizer, nil)
+				mContextualizer.EXPECT().WithConfig(mock.Anything).Return(mContextualizer, nil)
 			},
 			assert: func(t *testing.T, err error, contextualizer contextualizers.Contextualizer) {
 				t.Helper()
@@ -290,9 +292,9 @@ func TestHandlerFactoryCreateContextualizer(t *testing.T) {
 			// GIVEN
 			configureMock := x.IfThenElse(tc.configureMock != nil,
 				tc.configureMock,
-				func(t *testing.T, mHydr *mocks2.MockContextualizer) { t.Helper() })
+				func(t *testing.T, mHydr *mocks4.ContextualizerMock) { t.Helper() })
 
-			mContextualizer := &mocks2.MockContextualizer{}
+			mContextualizer := mocks4.NewContextualizerMock(t)
 			configureMock(t, mContextualizer)
 
 			factory := &mechanismsFactory{
@@ -306,11 +308,10 @@ func TestHandlerFactoryCreateContextualizer(t *testing.T) {
 			id := x.IfThenElse(len(tc.id) != 0, tc.id, ID)
 
 			// WHEN
-			contextualizer, err := factory.CreateContextualizer(id, tc.conf)
+			contextualizer, err := factory.CreateContextualizer("test", id, tc.conf)
 
 			// THEN
 			tc.assert(t, err, contextualizer)
-			mContextualizer.AssertExpectations(t)
 		})
 	}
 }
@@ -324,7 +325,7 @@ func TestHandlerFactoryCreateUnifier(t *testing.T) {
 		uc            string
 		id            string
 		conf          map[string]any
-		configureMock func(t *testing.T, mUn *mocks2.MockUnifier)
+		configureMock func(t *testing.T, mUn *mocks6.UnifierMock)
 		assert        func(t *testing.T, err error, unifier unifiers.Unifier)
 	}{
 		{
@@ -341,10 +342,10 @@ func TestHandlerFactoryCreateUnifier(t *testing.T) {
 		{
 			uc:   "with failing creation from prototype",
 			conf: map[string]any{"foo": "bar"},
-			configureMock: func(t *testing.T, mUn *mocks2.MockUnifier) {
+			configureMock: func(t *testing.T, mUn *mocks6.UnifierMock) {
 				t.Helper()
 
-				mUn.On("WithConfig", mock.Anything).Return(nil, heimdall.ErrArgument)
+				mUn.EXPECT().WithConfig(mock.Anything).Return(nil, heimdall.ErrArgument)
 			},
 			assert: func(t *testing.T, err error, unifier unifiers.Unifier) {
 				t.Helper()
@@ -357,10 +358,10 @@ func TestHandlerFactoryCreateUnifier(t *testing.T) {
 		{
 			uc:   "successful creation from prototype",
 			conf: map[string]any{"foo": "bar"},
-			configureMock: func(t *testing.T, mUn *mocks2.MockUnifier) {
+			configureMock: func(t *testing.T, mUn *mocks6.UnifierMock) {
 				t.Helper()
 
-				mUn.On("WithConfig", mock.Anything).Return(mUn, nil)
+				mUn.EXPECT().WithConfig(mock.Anything).Return(mUn, nil)
 			},
 			assert: func(t *testing.T, err error, unifier unifiers.Unifier) {
 				t.Helper()
@@ -383,9 +384,9 @@ func TestHandlerFactoryCreateUnifier(t *testing.T) {
 			// GIVEN
 			configureMock := x.IfThenElse(tc.configureMock != nil,
 				tc.configureMock,
-				func(t *testing.T, mUn *mocks2.MockUnifier) { t.Helper() })
+				func(t *testing.T, mUn *mocks6.UnifierMock) { t.Helper() })
 
-			mUn := &mocks2.MockUnifier{}
+			mUn := mocks6.NewUnifierMock(t)
 			configureMock(t, mUn)
 
 			factory := &mechanismsFactory{
@@ -399,11 +400,10 @@ func TestHandlerFactoryCreateUnifier(t *testing.T) {
 			id := x.IfThenElse(len(tc.id) != 0, tc.id, ID)
 
 			// WHEN
-			unifier, err := factory.CreateUnifier(id, tc.conf)
+			unifier, err := factory.CreateUnifier("test", id, tc.conf)
 
 			// THEN
 			tc.assert(t, err, unifier)
-			mUn.AssertExpectations(t)
 		})
 	}
 }
@@ -417,7 +417,7 @@ func TestHandlerFactoryCreateErrorHandler(t *testing.T) {
 		uc            string
 		id            string
 		conf          map[string]any
-		configureMock func(t *testing.T, mEH *mocks2.MockErrorHandler)
+		configureMock func(t *testing.T, mEH *mocks5.ErrorHandlerMock)
 		assert        func(t *testing.T, err error, errorHandler errorhandlers.ErrorHandler)
 	}{
 		{
@@ -434,10 +434,10 @@ func TestHandlerFactoryCreateErrorHandler(t *testing.T) {
 		{
 			uc:   "with failing creation from prototype",
 			conf: map[string]any{"foo": "bar"},
-			configureMock: func(t *testing.T, mEH *mocks2.MockErrorHandler) {
+			configureMock: func(t *testing.T, mEH *mocks5.ErrorHandlerMock) {
 				t.Helper()
 
-				mEH.On("WithConfig", mock.Anything).Return(nil, heimdall.ErrArgument)
+				mEH.EXPECT().WithConfig(mock.Anything).Return(nil, heimdall.ErrArgument)
 			},
 			assert: func(t *testing.T, err error, errorHandler errorhandlers.ErrorHandler) {
 				t.Helper()
@@ -450,10 +450,10 @@ func TestHandlerFactoryCreateErrorHandler(t *testing.T) {
 		{
 			uc:   "successful creation from prototype",
 			conf: map[string]any{"foo": "bar"},
-			configureMock: func(t *testing.T, mEH *mocks2.MockErrorHandler) {
+			configureMock: func(t *testing.T, mEH *mocks5.ErrorHandlerMock) {
 				t.Helper()
 
-				mEH.On("WithConfig", mock.Anything).Return(mEH, nil)
+				mEH.EXPECT().WithConfig(mock.Anything).Return(mEH, nil)
 			},
 			assert: func(t *testing.T, err error, errorHandler errorhandlers.ErrorHandler) {
 				t.Helper()
@@ -476,9 +476,9 @@ func TestHandlerFactoryCreateErrorHandler(t *testing.T) {
 			// GIVEN
 			configureMock := x.IfThenElse(tc.configureMock != nil,
 				tc.configureMock,
-				func(t *testing.T, mEH *mocks2.MockErrorHandler) { t.Helper() })
+				func(t *testing.T, mEH *mocks5.ErrorHandlerMock) { t.Helper() })
 
-			mEH := &mocks2.MockErrorHandler{}
+			mEH := mocks5.NewErrorHandlerMock(t)
 			configureMock(t, mEH)
 
 			factory := &mechanismsFactory{
@@ -492,11 +492,10 @@ func TestHandlerFactoryCreateErrorHandler(t *testing.T) {
 			id := x.IfThenElse(len(tc.id) != 0, tc.id, ID)
 
 			// WHEN
-			errorHandler, err := factory.CreateErrorHandler(id, tc.conf)
+			errorHandler, err := factory.CreateErrorHandler("test", id, tc.conf)
 
 			// THEN
 			tc.assert(t, err, errorHandler)
-			mEH.AssertExpectations(t)
 		})
 	}
 }

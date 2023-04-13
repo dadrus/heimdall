@@ -30,6 +30,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/rules/config"
 	"github.com/dadrus/heimdall/internal/x"
 )
 
@@ -65,7 +66,7 @@ func TestFetchRuleSets(t *testing.T) { //nolint:maintidx
 		uc       string
 		endpoint ruleSetEndpoint
 		setup    func(t *testing.T)
-		assert   func(t *testing.T, err error, ruleSets []RuleSet)
+		assert   func(t *testing.T, err error, ruleSets []*config.RuleSet)
 	}{
 		{
 			uc: "failed to open bucket",
@@ -76,7 +77,7 @@ func TestFetchRuleSets(t *testing.T) { //nolint:maintidx
 					RawQuery: "endpoint=does-not-exist.local&foo=bar&region=eu-central-1",
 				},
 			},
-			assert: func(t *testing.T, err error, ruleSets []RuleSet) {
+			assert: func(t *testing.T, err error, ruleSets []*config.RuleSet) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -93,7 +94,7 @@ func TestFetchRuleSets(t *testing.T) { //nolint:maintidx
 					RawQuery: fmt.Sprintf("endpoint=%s&disableSSL=true&s3ForcePathStyle=true&region=eu-central-1", srv.URL),
 				},
 			},
-			assert: func(t *testing.T, err error, ruleSets []RuleSet) {
+			assert: func(t *testing.T, err error, ruleSets []*config.RuleSet) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -120,7 +121,7 @@ func TestFetchRuleSets(t *testing.T) { //nolint:maintidx
 					strings.NewReader(data), int64(len(data)))
 				require.NoError(t, err)
 			},
-			assert: func(t *testing.T, err error, ruleSets []RuleSet) {
+			assert: func(t *testing.T, err error, ruleSets []*config.RuleSet) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -137,7 +138,7 @@ func TestFetchRuleSets(t *testing.T) { //nolint:maintidx
 					RawQuery: fmt.Sprintf("endpoint=%s&disableSSL=true&s3ForcePathStyle=true&region=eu-central-1", srv.URL),
 				},
 			},
-			assert: func(t *testing.T, err error, ruleSets []RuleSet) {
+			assert: func(t *testing.T, err error, ruleSets []*config.RuleSet) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -161,7 +162,7 @@ func TestFetchRuleSets(t *testing.T) { //nolint:maintidx
 					strings.NewReader(""), 0)
 				require.NoError(t, err)
 			},
-			assert: func(t *testing.T, err error, ruleSets []RuleSet) {
+			assert: func(t *testing.T, err error, ruleSets []*config.RuleSet) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -181,21 +182,26 @@ func TestFetchRuleSets(t *testing.T) { //nolint:maintidx
 			setup: func(t *testing.T) {
 				t.Helper()
 
-				data := `[{
-					"id": "foobar",
-					"match": "http://<**>/bar/foo/api",
-					"methods": ["GET", "POST"],
-					"execute": [
-						{ "authenticator": "foobar" }
-					]
-				}]`
+				data := `
+{
+	"version": "1",
+	"name": "test",
+	"rules": [{
+		"id": "foobar",
+		"match": "http://<**>/bar/foo/api",
+		"methods": ["GET", "POST"],
+		"execute": [
+			{ "authenticator": "foobar" }
+		]
+	}]
+}`
 
 				_, err := backend.PutObject(bucketName, "test-rule",
 					map[string]string{"Content-Type": "application/json"},
 					strings.NewReader(data), int64(len(data)))
 				require.NoError(t, err)
 			},
-			assert: func(t *testing.T, err error, ruleSets []RuleSet) {
+			assert: func(t *testing.T, err error, ruleSets []*config.RuleSet) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -216,17 +222,24 @@ func TestFetchRuleSets(t *testing.T) { //nolint:maintidx
 			setup: func(t *testing.T) {
 				t.Helper()
 
-				ruleSet1 := `[
+				ruleSet1 := `
 {
-	"id": "foobar",
-	"match": "http://<**>/foo/bar/api1",
-	"methods": ["GET", "POST"],
-	"execute": [
-		{ "authenticator": "foobar" }
-	]
-}]`
+	"version": "1",
+	"name": "test",
+	"rules": [{
+		"id": "foobar",
+		"match": "http://<**>/foo/bar/api1",
+		"methods": ["GET", "POST"],
+		"execute": [
+			{ "authenticator": "foobar" }
+		]
+	}]
+}`
 
 				ruleSet2 := `
+version: "1"
+name: test2
+rules:
 - id: barfoo
   match: http://<**>/foo/bar/api2
   methods: 
@@ -245,19 +258,19 @@ func TestFetchRuleSets(t *testing.T) { //nolint:maintidx
 					strings.NewReader(ruleSet2), int64(len(ruleSet2)))
 				require.NoError(t, err)
 			},
-			assert: func(t *testing.T, err error, ruleSets []RuleSet) {
+			assert: func(t *testing.T, err error, ruleSets []*config.RuleSet) {
 				t.Helper()
 
 				require.NoError(t, err)
 
 				require.Len(t, ruleSets, 2)
 
-				assert.Contains(t, ruleSets[0].Key, "test-rule1")
+				assert.Contains(t, ruleSets[0].Source, "test-rule1")
 				assert.NotEmpty(t, ruleSets[0].Hash)
 				assert.Len(t, ruleSets[0].Rules, 1)
 				assert.Equal(t, "foobar", ruleSets[0].Rules[0].ID)
 
-				assert.Contains(t, ruleSets[1].Key, "test-rule2")
+				assert.Contains(t, ruleSets[1].Source, "test-rule2")
 				assert.NotEmpty(t, ruleSets[1].Hash)
 				assert.Len(t, ruleSets[1].Rules, 1)
 				assert.Equal(t, "barfoo", ruleSets[1].Rules[0].ID)
@@ -276,25 +289,29 @@ func TestFetchRuleSets(t *testing.T) { //nolint:maintidx
 			setup: func(t *testing.T) {
 				t.Helper()
 
-				ruleSet1 := `[
-				{
+				ruleSet1 := `{
+				"version": "1",
+				"name": "test1",
+				"rules": [{
 					"id": "foobar",
 					"match": "http://<**>/foo/bar/api1",
 					"methods": ["GET", "POST"],
 					"execute": [
 						{ "authenticator": "foobar" }
 					]
-				}]`
+				}]}`
 
-				ruleSet2 := `[
-				{
+				ruleSet2 := `{
+				"version": "1",
+				"name": "test2",
+				"rules": [{
 					"id": "barfoo",
 					"url": "http://<**>/foo/bar/api2",
 					"methods": ["GET", "POST"],
 					"execute": [
 						{ "authenticator": "barfoo" }
 					]
-				}]`
+				}]}`
 
 				_, err := backend.PutObject(bucketName, "api-rule",
 					map[string]string{"Content-Type": "application/json"},
@@ -306,14 +323,14 @@ func TestFetchRuleSets(t *testing.T) { //nolint:maintidx
 					strings.NewReader(ruleSet2), int64(len(ruleSet2)))
 				require.NoError(t, err)
 			},
-			assert: func(t *testing.T, err error, ruleSets []RuleSet) {
+			assert: func(t *testing.T, err error, ruleSets []*config.RuleSet) {
 				t.Helper()
 
 				require.NoError(t, err)
 
 				require.Len(t, ruleSets, 1)
 
-				assert.Contains(t, ruleSets[0].Key, "api-rule")
+				assert.Contains(t, ruleSets[0].Source, "api-rule")
 				assert.NotEmpty(t, ruleSets[0].Hash)
 				assert.Len(t, ruleSets[0].Rules, 1)
 				assert.Equal(t, "foobar", ruleSets[0].Rules[0].ID)
@@ -330,7 +347,7 @@ func TestFetchRuleSets(t *testing.T) { //nolint:maintidx
 				},
 				Prefix: "api",
 			},
-			assert: func(t *testing.T, err error, ruleSets []RuleSet) {
+			assert: func(t *testing.T, err error, ruleSets []*config.RuleSet) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -357,7 +374,7 @@ func TestFetchRuleSets(t *testing.T) { //nolint:maintidx
 					strings.NewReader(""), 0)
 				require.NoError(t, err)
 			},
-			assert: func(t *testing.T, err error, ruleSets []RuleSet) {
+			assert: func(t *testing.T, err error, ruleSets []*config.RuleSet) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -378,29 +395,31 @@ func TestFetchRuleSets(t *testing.T) { //nolint:maintidx
 			setup: func(t *testing.T) {
 				t.Helper()
 
-				ruleSet1 := `[
-				{
+				ruleSet1 := `{
+				"version": "1",
+				"name": "test",
+				"rules": [{
 					"id": "foobar",
 					"match": "http://<**>/foo/bar/api1",
 					"methods": ["GET", "POST"],
 					"execute": [
 						{ "authenticator": "foobar" }
 					]
-				}]`
+				}]}`
 
 				_, err := backend.PutObject(bucketName, "ruleset",
 					map[string]string{"Content-Type": "application/json"},
 					strings.NewReader(ruleSet1), int64(len(ruleSet1)))
 				require.NoError(t, err)
 			},
-			assert: func(t *testing.T, err error, ruleSets []RuleSet) {
+			assert: func(t *testing.T, err error, ruleSets []*config.RuleSet) {
 				t.Helper()
 
 				require.NoError(t, err)
 
 				require.Len(t, ruleSets, 1)
 
-				assert.Contains(t, ruleSets[0].Key, "ruleset")
+				assert.Contains(t, ruleSets[0].Source, "ruleset")
 				assert.NotEmpty(t, ruleSets[0].Hash)
 				assert.Len(t, ruleSets[0].Rules, 1)
 				assert.Equal(t, "foobar", ruleSets[0].Rules[0].ID)

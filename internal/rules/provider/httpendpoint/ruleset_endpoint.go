@@ -20,29 +20,30 @@ import (
 	"context"
 	"crypto/sha256"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"net/url"
+	"time"
 
 	"github.com/dadrus/heimdall/internal/endpoint"
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/rules/provider/pathprefix"
-	"github.com/dadrus/heimdall/internal/rules/provider/rulesetparser"
+	"github.com/dadrus/heimdall/internal/rules/config"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
 type ruleSetEndpoint struct {
 	endpoint.Endpoint `mapstructure:",squash"`
 
-	RulesPathPrefix pathprefix.PathPrefix `mapstructure:"rule_path_match_prefix"`
+	RulesPathPrefix string `mapstructure:"rule_path_match_prefix"`
 }
 
 func (e *ruleSetEndpoint) ID() string { return e.URL }
 
-func (e *ruleSetEndpoint) FetchRuleSet(ctx context.Context) (RuleSet, error) {
+func (e *ruleSetEndpoint) FetchRuleSet(ctx context.Context) (*config.RuleSet, error) {
 	req, err := e.CreateRequest(ctx, nil, nil)
 	if err != nil {
-		return RuleSet{}, errorchain.
+		return nil, errorchain.
 			NewWithMessage(heimdall.ErrInternal, "failed creating request").
 			CausedBy(err)
 	}
@@ -53,12 +54,12 @@ func (e *ruleSetEndpoint) FetchRuleSet(ctx context.Context) (RuleSet, error) {
 	if err != nil {
 		var clientErr *url.Error
 		if errors.As(err, &clientErr) && clientErr.Timeout() {
-			return RuleSet{}, errorchain.
+			return nil, errorchain.
 				NewWithMessage(heimdall.ErrCommunicationTimeout, "request to rule set endpoint timed out").
 				CausedBy(err)
 		}
 
-		return RuleSet{}, errorchain.
+		return nil, errorchain.
 			NewWithMessage(heimdall.ErrCommunication, "request to rule set endpoint failed").
 			CausedBy(err)
 	}
@@ -66,26 +67,27 @@ func (e *ruleSetEndpoint) FetchRuleSet(ctx context.Context) (RuleSet, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return RuleSet{}, errorchain.NewWithMessagef(heimdall.ErrCommunication,
+		return nil, errorchain.NewWithMessagef(heimdall.ErrCommunication,
 			"unexpected response code: %v", resp.StatusCode)
 	}
 
 	md := sha256.New()
 
-	contents, err := rulesetparser.ParseRules(resp.Header.Get("Content-Type"), io.TeeReader(resp.Body, md))
+	ruleSet, err := config.ParseRules(resp.Header.Get("Content-Type"), io.TeeReader(resp.Body, md))
 	if err != nil {
-		return RuleSet{}, errorchain.NewWithMessage(heimdall.ErrInternal, "failed to decode received rule set").
+		return nil, errorchain.NewWithMessage(heimdall.ErrInternal, "failed to parse received rule set").
 			CausedBy(err)
 	}
 
-	if err = e.RulesPathPrefix.Verify(contents); err != nil {
-		return RuleSet{}, err
+	if err = ruleSet.VerifyPathPrefix(e.RulesPathPrefix); err != nil {
+		return nil, err
 	}
 
-	return RuleSet{
-		Rules: contents,
-		Hash:  md.Sum(nil),
-	}, nil
+	ruleSet.Hash = md.Sum(nil)
+	ruleSet.Source = fmt.Sprintf("http_endpoint:%s", e.ID())
+	ruleSet.ModTime = time.Now()
+
+	return ruleSet, nil
 }
 
 func (e *ruleSetEndpoint) init() error {

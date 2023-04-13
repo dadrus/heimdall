@@ -21,6 +21,8 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
 )
 
+//go:generate mockery --name subjectHandler --structname SubjectHandlerMock
+
 type subjectHandler interface {
 	Execute(heimdall.Context, *subject.Subject) error
 	ContinueOnError() bool

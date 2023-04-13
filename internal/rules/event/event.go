@@ -16,7 +16,9 @@
 
 package event
 
-import "github.com/dadrus/heimdall/internal/rules/rule"
+import (
+	"github.com/dadrus/heimdall/internal/rules/rule"
+)
 
 type ChangeType uint32
 
@@ -24,18 +26,25 @@ type ChangeType uint32
 const (
 	Create ChangeType = 1 << iota
 	Remove
+	Update
 )
 
 func (t ChangeType) String() string {
-	if t == Create {
+	switch t {
+	case Create:
 		return "Create"
+	case Remove:
+		return "Remove"
+	case Update:
+		return "Update"
+	default:
+		return "Unknown"
 	}
-
-	return "Remove"
 }
 
-type RuleSetChangedEvent struct {
-	Src        string
-	RuleSet    []rule.Configuration
+type RuleSetChanged struct {
+	Source     string
+	Name       string
+	Rules      []rule.Rule
 	ChangeType ChangeType
 }

@@ -317,9 +317,9 @@ func (a *jwtAuthenticator) verifyTokenWithoutKID(ctx heimdall.Context, token *jw
 		rawClaims, err = a.verifyTokenWithKey(token, &sigKey)
 		if err == nil {
 			break
-		} else {
-			logger.Info().Err(err).Str("_key_id", sigKey.KeyID).Msg("Failed to verify JWT")
 		}
+
+		logger.Info().Err(err).Str("_key_id", sigKey.KeyID).Msg("Failed to verify JWT")
 	}
 
 	if len(rawClaims) == 0 {

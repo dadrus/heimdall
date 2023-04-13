@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"sync"
 	"time"
 
@@ -28,8 +29,10 @@ import (
 	"golang.org/x/exp/maps"
 	"golang.org/x/exp/slices"
 
+	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/rules/event"
+	rule_config "github.com/dadrus/heimdall/internal/rules/config"
+	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/slicex"
@@ -38,62 +41,66 @@ import (
 type BucketState map[string][]byte
 
 type provider struct {
-	q      event.RuleSetChangedEventQueue
-	l      zerolog.Logger
-	s      *gocron.Scheduler
-	cancel context.CancelFunc
-
-	mu     sync.Mutex
-	states map[string]BucketState
+	p          rule.SetProcessor
+	l          zerolog.Logger
+	s          *gocron.Scheduler
+	cancel     context.CancelFunc
+	states     sync.Map
+	configured bool
 }
 
 func newProvider(
-	rawConf map[string]any,
-	queue event.RuleSetChangedEventQueue,
+	conf *config.Configuration,
+	processor rule.SetProcessor,
 	logger zerolog.Logger,
 ) (*provider, error) {
+	rawConf := conf.Rules.Providers.CloudBlob
+
+	if rawConf == nil {
+		return &provider{}, nil
+	}
+
 	type Config struct {
 		Buckets       []*ruleSetEndpoint `mapstructure:"buckets"`
 		WatchInterval *time.Duration     `mapstructure:"watch_interval"`
 	}
 
-	var conf Config
-	if err := decodeConfig(rawConf, &conf); err != nil {
+	var providerConf Config
+	if err := decodeConfig(rawConf, &providerConf); err != nil {
 		return nil, errorchain.
 			NewWithMessage(heimdall.ErrConfiguration, "failed to decode cloud_blob rule provider config").
 			CausedBy(err)
 	}
 
-	if len(conf.Buckets) == 0 {
+	if len(providerConf.Buckets) == 0 {
 		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
 			"no buckets configured for cloud_blob rule provider")
 	}
 
+	logger = logger.With().Str("_provider_type", "cloud_blob").Logger()
+
 	ctx, cancel := context.WithCancel(context.Background())
-	ctx = logger.With().
-		Str("_rule_provider_type", "cloud_blob").
-		Logger().
-		WithContext(ctx)
+	ctx = logger.With().Logger().WithContext(ctx)
 
 	scheduler := gocron.NewScheduler(time.UTC)
 	scheduler.SingletonModeAll()
 
 	prov := &provider{
-		q:      queue,
-		l:      logger,
-		s:      scheduler,
-		cancel: cancel,
-		states: make(map[string]BucketState),
+		p:          processor,
+		l:          logger,
+		s:          scheduler,
+		cancel:     cancel,
+		configured: true,
 	}
 
-	for idx, bucket := range conf.Buckets {
+	for idx, bucket := range providerConf.Buckets {
 		if bucket.URL == nil {
 			return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
 				"missing url for #%d bucket in cloud_blob rule provider configuration", idx)
 		}
 
-		if _, err := x.IfThenElseExec(conf.WatchInterval != nil && *conf.WatchInterval > 0,
-			func() *gocron.Scheduler { return prov.s.Every(*conf.WatchInterval) },
+		if _, err := x.IfThenElseExec(providerConf.WatchInterval != nil && *providerConf.WatchInterval > 0,
+			func() *gocron.Scheduler { return prov.s.Every(*providerConf.WatchInterval) },
 			func() *gocron.Scheduler { return prov.s.Every(1 * time.Second).LimitRunsTo(1) }).
 			Do(prov.watchChanges, ctx, bucket); err != nil {
 			return nil, errorchain.NewWithMessagef(heimdall.ErrInternal,
@@ -102,13 +109,17 @@ func newProvider(
 		}
 	}
 
+	logger.Info().Msg("Rule provider configured.")
+
 	return prov, nil
 }
 
 func (p *provider) Start(_ context.Context) error {
-	p.l.Info().
-		Str("_rule_provider_type", "cloud_blob").
-		Msg("Starting rule definitions provider")
+	if !p.configured {
+		return nil
+	}
+
+	p.l.Info().Msg("Starting rule definitions provider")
 
 	p.s.StartAsync() //nolint:contextcheck
 
@@ -116,26 +127,31 @@ func (p *provider) Start(_ context.Context) error {
 }
 
 func (p *provider) Stop(_ context.Context) error {
-	p.l.Info().
-		Str("_rule_provider_type", "cloud_blob").
-		Msg("Tearing down rule provider.")
+	if !p.configured {
+		return nil
+	}
 
-	p.cancel()
+	p.l.Info().Msg("Tearing down rule provider.")
+
 	p.s.Stop()
+	p.cancel()
 
 	return nil
 }
 
 func (p *provider) watchChanges(ctx context.Context, rsf RuleSetFetcher) error {
-	p.l.Debug().
-		Str("_rule_provider_type", "cloud_blob").
-		Msg("Retrieving rule set")
+	p.l.Debug().Msg("Retrieving rule set")
 
 	ruleSets, err := rsf.FetchRuleSets(ctx)
 	if err != nil {
+		if errors.Is(err, context.Canceled) {
+			p.l.Debug().Msg("Watcher closed")
+
+			return nil
+		}
+
 		p.l.Warn().
 			Err(err).
-			Str("_rule_provider_type", "cloud_blob").
 			Str("_endpoint", rsf.ID()).
 			Msg("Failed to fetch rule set")
 
@@ -148,20 +164,19 @@ func (p *provider) watchChanges(ctx context.Context, rsf RuleSetFetcher) error {
 
 	// if no rule sets are available and no rule sets were known from the past
 	if len(ruleSets) == 0 && len(state) == 0 {
-		p.l.Debug().
-			Str("_rule_provider_type", "cloud_blob").
-			Str("_endpoint", rsf.ID()).
-			Msg("No updates received")
+		p.l.Debug().Str("_endpoint", rsf.ID()).Msg("No updates received")
 
 		return nil
 	}
 
-	p.ruleSetsUpdated(ruleSets, state, rsf.ID())
+	if err = p.ruleSetsUpdated(ruleSets, state, rsf.ID()); err != nil {
+		p.l.Warn().Err(err).Str("_endpoint", rsf.ID()).Msg("Failed to apply rule set changes")
+	}
 
 	return nil
 }
 
-func (p *provider) ruleSetsUpdated(ruleSets []RuleSet, state BucketState, buketID string) {
+func (p *provider) ruleSetsUpdated(ruleSets []*rule_config.RuleSet, state BucketState, buketID string) error {
 	// check which were present in the past and are not present now
 	// and which are new
 	currentIDs := toRuleSetIDs(ruleSets)
@@ -171,74 +186,64 @@ func (p *provider) ruleSetsUpdated(ruleSets []RuleSet, state BucketState, buketI
 	newIDs := slicex.Subtract(currentIDs, oldIDs)
 
 	for _, ID := range removedIDs {
-		delete(state, ID)
+		conf := &rule_config.RuleSet{
+			MetaData: rule_config.MetaData{
+				Source:  fmt.Sprintf("blob:%s", ID),
+				ModTime: time.Now(),
+			},
+		}
 
-		p.ruleSetChanged(event.RuleSetChangedEvent{
-			Src:        "blob:" + ID,
-			ChangeType: event.Remove,
-		})
+		if err := p.p.OnDeleted(conf); err != nil {
+			return err
+		}
+
+		delete(state, ID)
 	}
 
 	// check which rule sets are new and which are modified
 	for _, ruleSet := range ruleSets {
-		isNew := slices.Contains(newIDs, ruleSet.Key)
-		hasChanged := !isNew && !bytes.Equal(state[ruleSet.Key], ruleSet.Hash)
-
-		state[ruleSet.Key] = ruleSet.Hash
+		isNew := slices.Contains(newIDs, ruleSet.Source)
+		hasChanged := !isNew && !bytes.Equal(state[ruleSet.Source], ruleSet.Hash)
 
 		if !isNew && !hasChanged {
 			p.l.Debug().
-				Str("_rule_provider_type", "cloud_blob").
 				Str("_bucket", buketID).
-				Str("_rule_set", ruleSet.Key).
+				Str("_rule_set", ruleSet.Source).
 				Msg("No updates received")
 
 			continue
 		}
 
-		if hasChanged {
-			p.ruleSetChanged(event.RuleSetChangedEvent{
-				Src:        "blob:" + ruleSet.Key,
-				ChangeType: event.Remove,
-			})
+		var err error
+
+		if isNew {
+			err = p.p.OnCreated(ruleSet)
+		} else if hasChanged {
+			err = p.p.OnUpdated(ruleSet)
 		}
 
-		p.ruleSetChanged(event.RuleSetChangedEvent{
-			Src:        "blob:" + ruleSet.Key,
-			ChangeType: event.Create,
-			RuleSet:    ruleSet.Rules,
-		})
+		if err != nil {
+			return err
+		}
+
+		state[ruleSet.Source] = ruleSet.Hash
 	}
+
+	return nil
 }
 
 func (p *provider) getBucketState(key string) BucketState {
-	p.mu.Lock()
-	state, present := p.states[key]
+	value, _ := p.states.LoadOrStore(key, make(BucketState))
 
-	if !present {
-		state = make(BucketState)
-		p.states[key] = state
-	}
-	p.mu.Unlock()
-
-	return state
+	return value.(BucketState) // nolint: forcetypeassert
 }
 
-func toRuleSetIDs(ruleSets []RuleSet) []string {
+func toRuleSetIDs(ruleSets []*rule_config.RuleSet) []string {
 	currentIDs := make([]string, len(ruleSets))
 
 	for idx, ruleSet := range ruleSets {
-		currentIDs[idx] = ruleSet.Key
+		currentIDs[idx] = ruleSet.Source
 	}
 
 	return currentIDs
-}
-
-func (p *provider) ruleSetChanged(evt event.RuleSetChangedEvent) {
-	p.l.Info().
-		Str("_rule_provider_type", "cloud_blob").
-		Str("_src", evt.Src).
-		Str("_type", evt.ChangeType.String()).
-		Msg("Rule set changed")
-	p.q <- evt
 }

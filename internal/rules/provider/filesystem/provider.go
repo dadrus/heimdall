@@ -19,48 +19,59 @@ package filesystem
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
+	"errors"
+	"fmt"
+	"io"
 	"os"
 	"path/filepath"
+	"sync"
+	"time"
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/rs/zerolog"
 
+	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/rules/event"
-	"github.com/dadrus/heimdall/internal/rules/provider/rulesetparser"
+	config2 "github.com/dadrus/heimdall/internal/rules/config"
+	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
-type provider struct {
-	src string
-	w   *fsnotify.Watcher
-	q   event.RuleSetChangedEventQueue
-	l   zerolog.Logger
+type Provider struct {
+	src        string
+	w          *fsnotify.Watcher
+	p          rule.SetProcessor
+	l          zerolog.Logger
+	states     sync.Map
+	configured bool
 }
 
-func newProvider(
-	rawConf map[string]any,
-	queue event.RuleSetChangedEventQueue,
-	logger zerolog.Logger,
-) (*provider, error) {
+func NewProvider(conf *config.Configuration, processor rule.SetProcessor, logger zerolog.Logger) (*Provider, error) {
+	rawConf := conf.Rules.Providers.FileSystem
+
+	if conf.Rules.Providers.FileSystem == nil {
+		return &Provider{}, nil
+	}
+
 	type Config struct {
 		Src   string `koanf:"src"`
 		Watch bool   `koanf:"watch"`
 	}
 
-	var conf Config
-	if err := decodeConfig(rawConf, &conf); err != nil {
+	var providerConf Config
+	if err := decodeConfig(rawConf, &providerConf); err != nil {
 		return nil, errorchain.
 			NewWithMessage(heimdall.ErrConfiguration, "failed to decode file_system rule provider config").
 			CausedBy(err)
 	}
 
-	if len(conf.Src) == 0 {
+	if len(providerConf.Src) == 0 {
 		return nil, errorchain.
 			NewWithMessage(heimdall.ErrConfiguration, "no src configured for file_system rule provider")
 	}
 
-	absPath, err := filepath.Abs(conf.Src)
+	absPath, err := filepath.Abs(providerConf.Src)
 	if err != nil {
 		return nil, errorchain.
 			NewWithMessage(heimdall.ErrInternal, "failed to get the absolute path for the configured src").
@@ -76,7 +87,7 @@ func newProvider(
 	}
 
 	var watcher *fsnotify.Watcher
-	if conf.Watch {
+	if providerConf.Watch {
 		watcher, err = fsnotify.NewWatcher()
 		if err != nil {
 			return nil, errorchain.
@@ -85,39 +96,40 @@ func newProvider(
 		}
 	}
 
-	return &provider{
-		src: absPath,
-		w:   watcher,
-		q:   queue,
-		l:   logger,
+	logger = logger.With().Str("_provider_type", "file_system").Logger()
+	logger.Info().Msg("Rule provider configured.")
+
+	return &Provider{
+		src:        absPath,
+		w:          watcher,
+		p:          processor,
+		l:          logger,
+		configured: true,
 	}, nil
 }
 
-func (p *provider) Start(_ context.Context) error {
-	p.l.Info().
-		Str("_rule_provider_type", "file_system").
-		Msg("Starting rule definitions provider")
+func (p *Provider) Start(_ context.Context) error {
+	if !p.configured {
+		return nil
+	}
+
+	p.l.Info().Msg("Starting rule definitions provider")
 
 	if err := p.loadInitialRuleSet(); err != nil {
-		p.l.Error().Err(err).
-			Str("_rule_provider_type", "file_system").
-			Msg("Failed loading initial rule sets")
+		p.l.Error().Err(err).Msg("Failed loading initial rule sets")
 
 		return err
 	}
 
 	if p.w == nil {
 		p.l.Warn().
-			Str("_rule_provider_type", "file_system").
 			Msg("Watcher for file_system provider is not configured. Updates to rules will have no effects.")
 
 		return nil
 	}
 
 	if err := p.w.Add(p.src); err != nil {
-		p.l.Error().Err(err).
-			Str("_rule_provider_type", "file_system").
-			Msg("Failed to start rule definitions provider")
+		p.l.Error().Err(err).Msg("Failed to start rule definitions provider")
 
 		return err
 	}
@@ -127,10 +139,12 @@ func (p *provider) Start(_ context.Context) error {
 	return nil
 }
 
-func (p *provider) Stop(_ context.Context) error {
-	p.l.Info().
-		Str("_rule_provider_type", "file_system").
-		Msg("Tearing down rule provider")
+func (p *Provider) Stop(_ context.Context) error {
+	if !p.configured {
+		return nil
+	}
+
+	p.l.Info().Msg("Tearing down rule provider")
 
 	if p.w != nil {
 		return p.w.Close()
@@ -139,126 +153,167 @@ func (p *provider) Stop(_ context.Context) error {
 	return nil
 }
 
-func (p *provider) watchFiles() {
-	p.l.Debug().
-		Str("_rule_provider_type", "file_system").
-		Msg("Watching rule files for changes")
+func (p *Provider) watchFiles() {
+	p.l.Debug().Msg("Watching rule files for changes")
 
 	for {
 		select {
 		case evt, ok := <-p.w.Events:
 			if !ok {
-				p.l.Debug().
-					Str("_rule_provider_type", "file_system").
-					Msg("Watcher events channel closed")
+				p.l.Debug().Msg("Watcher closed")
 
 				return
 			}
 
-			p.l.Debug().
-				Str("_rule_provider_type", "file_system").
-				Str("_event", evt.String()).
-				Str("_src", evt.Name).
-				Msg("Rule update event received")
-
-			switch {
-			case evt.Op&fsnotify.Create == fsnotify.Create:
-				p.notifyRuleSetCreated(evt)
-			case evt.Op&fsnotify.Remove == fsnotify.Remove:
-				p.notifyRuleSetDeleted(evt)
-			case evt.Op&fsnotify.Write == fsnotify.Write:
-				p.notifyRuleSetDeleted(evt)
-				p.notifyRuleSetCreated(evt)
+			if err := p.ruleSetsChanged(evt); err != nil {
+				p.l.Warn().Err(err).Str("_src", evt.Name).Msg("Failed to apply rule set changes")
 			}
 		case err, ok := <-p.w.Errors:
 			if !ok {
-				p.l.Debug().
-					Str("_rule_provider_type", "file_system").
-					Msg("Watcher error channel closed")
+				p.l.Debug().Msg("Watcher error channel closed")
 
 				return
 			}
 
-			p.l.Warn().Err(err).
-				Str("_rule_provider_type", "file_system").
-				Msg("Watcher error received")
+			p.l.Warn().Err(err).Msg("Watcher error received")
 		}
 	}
 }
 
-func (p *provider) notifyRuleSetDeleted(evt fsnotify.Event) {
-	p.ruleSetChanged(event.RuleSetChangedEvent{
-		Src:        "file_system:" + evt.Name,
-		ChangeType: event.Remove,
-	})
+func (p *Provider) ruleSetsChanged(evt fsnotify.Event) error {
+	p.l.Debug().
+		Str("_event", evt.String()).
+		Str("_src", evt.Name).
+		Msg("Rule update event received")
+
+	var err error
+
+	switch {
+	case evt.Has(fsnotify.Create) || evt.Has(fsnotify.Write) || evt.Has(fsnotify.Chmod):
+		err = p.ruleSetCreatedOrUpdated(evt.Name)
+	case evt.Has(fsnotify.Remove):
+		err = p.ruleSetDeleted(evt.Name)
+	}
+
+	return err
 }
 
-func (p *provider) notifyRuleSetCreated(evt fsnotify.Event) {
-	file := evt.Name
-
-	data, err := os.ReadFile(file)
+func (p *Provider) ruleSetCreatedOrUpdated(fileName string) error {
+	ruleSet, err := p.loadRuleSet(fileName)
 	if err != nil {
-		p.l.Error().Err(err).
-			Str("_rule_provider_type", "file_system").
-			Str("_file", file).
-			Msg("Failed reading")
+		if errors.Is(err, config2.ErrEmptyRuleSet) || errors.Is(err, os.ErrNotExist) {
+			return p.ruleSetDeleted(fileName)
+		}
 
-		return
+		return err
 	}
 
-	if len(data) == 0 {
-		p.l.Warn().
-			Str("_rule_provider_type", "file_system").
-			Str("_file", file).
-			Msg("File is empty")
+	var hash []byte
 
-		return
+	value, ok := p.states.Load(fileName)
+	if ok {
+		hash = value.([]byte) // nolint: forcetypeassert
 	}
 
-	ruleSet, err := rulesetparser.ParseRules("application/yaml", bytes.NewBuffer(data))
+	switch {
+	case len(hash) == 0:
+		err = p.p.OnCreated(ruleSet)
+	case !bytes.Equal(hash, ruleSet.Hash):
+		err = p.p.OnUpdated(ruleSet)
+	default:
+		return nil
+	}
+
 	if err != nil {
-		p.l.Warn().
-			Err(err).
-			Str("_rule_provider_type", "file_system").
-			Str("_file", file).
-			Msg("Failed to parse rule set definition")
-
-		return
+		return err
 	}
 
-	p.ruleSetChanged(event.RuleSetChangedEvent{
-		Src:        "file_system:" + file,
-		RuleSet:    ruleSet,
-		ChangeType: event.Create,
-	})
+	p.states.Store(fileName, ruleSet.Hash)
+
+	return nil
 }
 
-func (p *provider) loadInitialRuleSet() error {
-	p.l.Info().
-		Str("_rule_provider_type", "file_system").
-		Msg("Loading initial rule set")
+func (p *Provider) ruleSetDeleted(fileName string) error {
+	if _, ok := p.states.Load(fileName); !ok {
+		return nil
+	}
 
+	conf := &config2.RuleSet{
+		MetaData: config2.MetaData{
+			Source:  fmt.Sprintf("file_system:%s", fileName),
+			ModTime: time.Now(),
+		},
+	}
+
+	if err := p.p.OnDeleted(conf); err != nil {
+		return err
+	}
+
+	p.states.Delete(fileName)
+
+	return nil
+}
+
+func (p *Provider) loadRuleSet(fileName string) (*config2.RuleSet, error) {
+	file, err := os.Open(fileName)
+	if err != nil {
+		return nil, errorchain.NewWithMessagef(heimdall.ErrInternal,
+			"failed opening file %s", fileName).CausedBy(err)
+	}
+
+	md := sha256.New()
+
+	ruleSet, err := config2.ParseRules("application/yaml", io.TeeReader(file, md))
+	if err != nil {
+		return nil, errorchain.NewWithMessage(heimdall.ErrInternal, "failed to parse received rule set").
+			CausedBy(err)
+	}
+
+	stat, _ := os.Stat(fileName)
+
+	ruleSet.Hash = md.Sum(nil)
+	ruleSet.Source = fmt.Sprintf("file_system:%s", fileName)
+	ruleSet.ModTime = stat.ModTime()
+
+	return ruleSet, nil
+}
+
+func (p *Provider) loadInitialRuleSet() error {
+	p.l.Info().Msg("Loading initial rule set")
+
+	sources, err := p.sources()
+	if err != nil {
+		return err
+	}
+
+	for _, src := range sources {
+		if err = p.ruleSetCreatedOrUpdated(src); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (p *Provider) sources() ([]string, error) {
 	var sources []string
 
 	fInfo, err := os.Stat(p.src)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	if fInfo.IsDir() {
 		dirEntries, err := os.ReadDir(p.src)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		for _, entry := range dirEntries {
 			path := filepath.Join(p.src, entry.Name())
 
 			if entry.IsDir() {
-				p.l.Warn().
-					Str("_rule_provider_type", "file_system").
-					Str("_path", path).
-					Msg("Ignoring directory")
+				p.l.Warn().Str("_path", path).Msg("Ignoring directory")
 
 				continue
 			}
@@ -269,51 +324,5 @@ func (p *provider) loadInitialRuleSet() error {
 		sources = append(sources, p.src)
 	}
 
-	for _, src := range sources {
-		data, err := os.ReadFile(src)
-		if err != nil {
-			p.l.Error().Err(err).
-				Str("_rule_provider_type", "file_system").
-				Msg("Failed loading initial rule set")
-
-			return err
-		}
-
-		if len(data) == 0 {
-			p.l.Warn().
-				Str("_rule_provider_type", "file_system").
-				Str("_file", src).
-				Msg("File is empty")
-
-			return err
-		}
-
-		ruleSet, err := rulesetparser.ParseRules("application/yaml", bytes.NewBuffer(data))
-		if err != nil {
-			p.l.Warn().
-				Err(err).
-				Str("_rule_provider_type", "file_system").
-				Str("_file", src).
-				Msg("Failed to parse rule set definition")
-
-			return err
-		}
-
-		p.ruleSetChanged(event.RuleSetChangedEvent{
-			Src:        "file_system:" + src,
-			RuleSet:    ruleSet,
-			ChangeType: event.Create,
-		})
-	}
-
-	return nil
-}
-
-func (p *provider) ruleSetChanged(evt event.RuleSetChangedEvent) {
-	p.l.Info().
-		Str("_rule_provider_type", "file_system").
-		Str("_src", evt.Src).
-		Str("_type", evt.ChangeType.String()).
-		Msg("Rule set changed")
-	p.q <- evt
+	return sources, nil
 }

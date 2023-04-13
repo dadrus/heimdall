@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"sync"
 	"time"
 
@@ -27,47 +28,54 @@ import (
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/cache"
+	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/rules/event"
+	config2 "github.com/dadrus/heimdall/internal/rules/config"
+	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
 type provider struct {
-	q      event.RuleSetChangedEventQueue
-	l      zerolog.Logger
-	s      *gocron.Scheduler
-	cancel context.CancelFunc
-
-	mu    sync.Mutex
-	state map[string][]byte
+	p          rule.SetProcessor
+	l          zerolog.Logger
+	s          *gocron.Scheduler
+	cancel     context.CancelFunc
+	states     sync.Map
+	configured bool
 }
 
 func newProvider(
-	rawConf map[string]any,
+	conf *config.Configuration,
 	cch cache.Cache,
-	queue event.RuleSetChangedEventQueue,
+	processor rule.SetProcessor,
 	logger zerolog.Logger,
 ) (*provider, error) {
+	rawConf := conf.Rules.Providers.HTTPEndpoint
+
+	if rawConf == nil {
+		return &provider{}, nil
+	}
+
 	type Config struct {
 		Endpoints     []*ruleSetEndpoint `mapstructure:"endpoints"`
 		WatchInterval *time.Duration     `mapstructure:"watch_interval"`
 	}
 
-	var conf Config
-	if err := decodeConfig(rawConf, &conf); err != nil {
+	var providerConf Config
+	if err := decodeConfig(rawConf, &providerConf); err != nil {
 		return nil, errorchain.
 			NewWithMessage(heimdall.ErrConfiguration, "failed to decode http_endpoint rule provider config").
 			CausedBy(err)
 	}
 
-	if len(conf.Endpoints) == 0 {
+	if len(providerConf.Endpoints) == 0 {
 		return nil, errorchain.
 			NewWithMessage(heimdall.ErrConfiguration,
 				"no endpoints configured for http_endpoint rule provider")
 	}
 
-	for idx, ep := range conf.Endpoints {
+	for idx, ep := range providerConf.Endpoints {
 		if err := ep.init(); err != nil {
 			return nil, errorchain.
 				NewWithMessagef(heimdall.ErrConfiguration,
@@ -76,41 +84,43 @@ func newProvider(
 		}
 	}
 
+	logger = logger.With().Str("_provider_type", "http_endpoint").Logger()
 	ctx, cancel := context.WithCancel(context.Background())
-	ctx = logger.With().
-		Str("_rule_provider_type", "http_endpoint").
-		Logger().
-		WithContext(cache.WithContext(ctx, cch))
+	ctx = logger.WithContext(cache.WithContext(ctx, cch))
 
 	scheduler := gocron.NewScheduler(time.UTC)
 	scheduler.SingletonModeAll()
 
 	prov := &provider{
-		q:      queue,
-		l:      logger,
-		s:      scheduler,
-		cancel: cancel,
-		state:  make(map[string][]byte),
+		p:          processor,
+		l:          logger,
+		s:          scheduler,
+		cancel:     cancel,
+		configured: true,
 	}
 
-	for idx, ep := range conf.Endpoints {
-		if _, err := x.IfThenElseExec(conf.WatchInterval != nil && *conf.WatchInterval > 0,
-			func() *gocron.Scheduler { return prov.s.Every(*conf.WatchInterval) },
-			func() *gocron.Scheduler { return prov.s.Every(1 * time.Second).LimitRunsTo(1) }).
-			Do(prov.watchChanges, ctx, ep); err != nil {
+	for idx, ep := range providerConf.Endpoints {
+		if _, err := x.IfThenElseExec(providerConf.WatchInterval != nil && *providerConf.WatchInterval > 0,
+			func() *gocron.Scheduler { return prov.s.Every(*providerConf.WatchInterval) },
+			func() *gocron.Scheduler { return prov.s.Every(1 * time.Second).LimitRunsTo(1) },
+		).Do(prov.watchChanges, ctx, ep); err != nil {
 			return nil, errorchain.NewWithMessagef(heimdall.ErrInternal,
 				"failed to create a rule provider worker to fetch rules sets from #%d http_endpoint", idx).
 				CausedBy(err)
 		}
 	}
 
+	logger.Info().Msg("Rule provider configured.")
+
 	return prov, nil
 }
 
 func (p *provider) Start(_ context.Context) error {
-	p.l.Info().
-		Str("_rule_provider_type", "http_endpoint").
-		Msg("Starting rule definitions provider")
+	if !p.configured {
+		return nil
+	}
+
+	p.l.Info().Msg("Starting rule definitions provider")
 
 	p.s.StartAsync() //nolint:contextcheck
 
@@ -118,97 +128,97 @@ func (p *provider) Start(_ context.Context) error {
 }
 
 func (p *provider) Stop(_ context.Context) error {
-	p.l.Info().
-		Str("_rule_provider_type", "http_endpoint").
-		Msg("Tearing down rule provider.")
+	if !p.configured {
+		return nil
+	}
 
-	p.cancel()
+	p.l.Info().Msg("Tearing down rule provider.")
+
 	p.s.Stop()
+	p.cancel()
 
 	return nil
 }
 
 func (p *provider) watchChanges(ctx context.Context, rsf RuleSetFetcher) error {
 	p.l.Debug().
-		Str("_rule_provider_type", "http_endpoint").
 		Str("_endpoint", rsf.ID()).
 		Msg("Retrieving rule set")
 
 	ruleSet, err := rsf.FetchRuleSet(ctx)
 	if err != nil {
-		p.l.Warn().
-			Err(err).
-			Str("_rule_provider_type", "http_endpoint").
+		if errors.Is(err, context.Canceled) {
+			p.l.Debug().Msg("Watcher closed")
+
+			return nil
+		}
+
+		p.l.Warn().Err(err).
 			Str("_endpoint", rsf.ID()).
 			Msg("Failed to fetch rule set")
 
-		if errors.Is(err, heimdall.ErrInternal) || errors.Is(err, heimdall.ErrConfiguration) {
+		if !errors.Is(err, config2.ErrEmptyRuleSet) &&
+			(errors.Is(err, heimdall.ErrInternal) || errors.Is(err, heimdall.ErrConfiguration)) {
 			return err
+		}
+
+		ruleSet = &config2.RuleSet{
+			MetaData: config2.MetaData{
+				Source:  fmt.Sprintf("http_endpoint:%s", rsf.ID()),
+				ModTime: time.Now(),
+			},
 		}
 	}
 
-	changeType := x.IfThenElse(len(ruleSet.Rules) == 0, event.Remove, event.Create)
-
-	stateUpdated, removeOld := p.checkAndUpdateState(changeType, rsf.ID(), ruleSet.Hash)
-	if !stateUpdated {
-		p.l.Debug().
-			Str("_rule_provider_type", "http_endpoint").
-			Str("_endpoint", rsf.ID()).
-			Msg("No updates received")
-
-		return nil
+	if err = p.ruleSetsUpdated(ruleSet, rsf.ID()); err != nil {
+		p.l.Warn().Err(err).
+			Str("_src", rsf.ID()).
+			Msg("Failed to apply rule set changes")
 	}
-
-	if removeOld {
-		p.ruleSetChanged(event.RuleSetChangedEvent{
-			Src:        "http_endpoint:" + rsf.ID(),
-			ChangeType: event.Remove,
-		})
-	}
-
-	p.ruleSetChanged(event.RuleSetChangedEvent{
-		Src:        "http_endpoint:" + rsf.ID(),
-		ChangeType: changeType,
-		RuleSet:    ruleSet.Rules,
-	})
 
 	return nil
 }
 
-func (p *provider) checkAndUpdateState(changeType event.ChangeType, stateID string, newValue []byte) (bool, bool) {
-	p.mu.Lock()
-	defer p.mu.Unlock()
+func (p *provider) ruleSetsUpdated(ruleSet *config2.RuleSet, stateID string) error {
+	var hash []byte
 
-	removeOld := false
-	oldValue, known := p.state[stateID]
+	if value, ok := p.states.Load(stateID); ok { //nolint:nestif
+		hash = value.([]byte) // nolint: forcetypeassert
 
-	switch changeType {
-	case event.Remove:
-		if !known {
-			// nothing needs to be done, this rule set is not known
-			return false, false
+		// rule set was known
+		if len(ruleSet.Rules) == 0 {
+			// rule set removed
+			if err := p.p.OnDeleted(ruleSet); err != nil {
+				return err
+			}
+
+			p.states.Delete(stateID)
+
+			return nil
+		} else if !bytes.Equal(hash, ruleSet.Hash) {
+			// rule set updated
+			if err := p.p.OnUpdated(ruleSet); err != nil {
+				return err
+			}
+
+			p.states.Store(stateID, ruleSet.Hash)
+
+			return nil
+		}
+	} else if len(ruleSet.Rules) != 0 {
+		// previously unknown rule set
+		if err := p.p.OnCreated(ruleSet); err != nil {
+			return err
 		}
 
-		delete(p.state, stateID)
-	case event.Create:
-		if known && bytes.Equal(oldValue, newValue) {
-			// nothing needs to be done, this rule set is already known
-			return false, false
-		} else if known {
-			removeOld = true
-		}
+		p.states.Store(stateID, ruleSet.Hash)
 
-		p.state[stateID] = newValue
+		return nil
 	}
 
-	return true, removeOld
-}
+	p.l.Debug().
+		Str("_endpoint", stateID).
+		Msg("No updates received")
 
-func (p *provider) ruleSetChanged(evt event.RuleSetChangedEvent) {
-	p.l.Info().
-		Str("_rule_provider_type", "http_endpoint").
-		Str("_src", evt.Src).
-		Str("_type", evt.ChangeType.String()).
-		Msg("Rule set changed")
-	p.q <- evt
+	return nil
 }

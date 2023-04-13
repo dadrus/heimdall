@@ -2,7 +2,7 @@ ignore:
 - "**/*generated.go"
 - "**/mocks"
 - "**/*_test.go"
-- "**/testsupport/*.go"
+- "**/testsupport/**"
 - "**/zz_generated.*"
 coverage:
   status:

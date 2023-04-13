@@ -29,13 +29,17 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/cache/memory"
+	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/rules/event"
+	config2 "github.com/dadrus/heimdall/internal/rules/config"
+	"github.com/dadrus/heimdall/internal/rules/rule/mocks"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
+	mock2 "github.com/dadrus/heimdall/internal/x/testsupport/mock"
 )
 
 func TestNewProvider(t *testing.T) {
@@ -109,7 +113,7 @@ endpoints:
 				require.NoError(t, err)
 				require.NotNil(t, prov)
 				assert.NotNil(t, prov.s)
-				assert.NotNil(t, prov.q)
+				assert.NotNil(t, prov.p)
 				assert.NotNil(t, prov.cancel)
 				assert.False(t, prov.s.IsRunning())
 				assert.Len(t, prov.s.Jobs(), 1)
@@ -131,7 +135,7 @@ endpoints:
 				require.NoError(t, err)
 				require.NotNil(t, prov)
 				assert.NotNil(t, prov.s)
-				assert.NotNil(t, prov.q)
+				assert.NotNil(t, prov.p)
 				assert.NotNil(t, prov.cancel)
 				assert.False(t, prov.s.IsRunning())
 				assert.Len(t, prov.s.Jobs(), 2)
@@ -145,10 +149,14 @@ endpoints:
 			providerConf, err := testsupport.DecodeTestConfig(tc.conf)
 			require.NoError(t, err)
 
-			queue := make(event.RuleSetChangedEventQueue, 10)
+			conf := &config.Configuration{
+				Rules: config.Rules{
+					Providers: config.RuleProviders{HTTPEndpoint: providerConf},
+				},
+			}
 
 			// WHEN
-			prov, err := newProvider(providerConf, memory.New(), queue, log.Logger)
+			prov, err := newProvider(conf, memory.New(), mocks.NewRuleSetProcessorMock(t), log.Logger)
 
 			// THEN
 			tc.assert(t, err, prov)
@@ -178,10 +186,11 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx
 	defer srv.Close()
 
 	for _, tc := range []struct {
-		uc            string
-		conf          []byte
-		writeResponse ResponseWriter
-		assert        func(t *testing.T, logs fmt.Stringer, queue event.RuleSetChangedEventQueue)
+		uc             string
+		conf           []byte
+		setupProcessor func(t *testing.T, processor *mocks.RuleSetProcessorMock)
+		writeResponse  ResponseWriter
+		assert         func(t *testing.T, logs fmt.Stringer, processor *mocks.RuleSetProcessorMock)
 	}{
 		{
 			uc: "with rule set loading error due to DNS error",
@@ -189,7 +198,7 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx
 endpoints:
 - url: https://foo.bar.local/rules.yaml
 `),
-			assert: func(t *testing.T, logs fmt.Stringer, queue event.RuleSetChangedEventQueue) {
+			assert: func(t *testing.T, logs fmt.Stringer, processor *mocks.RuleSetProcessorMock) {
 				t.Helper()
 
 				time.Sleep(250 * time.Millisecond)
@@ -197,8 +206,6 @@ endpoints:
 				messages := logs.String()
 				assert.Contains(t, messages, "name resolution")
 				assert.Contains(t, messages, "No updates received")
-
-				require.Len(t, queue, 0)
 			},
 		},
 		{
@@ -212,7 +219,7 @@ endpoints:
 
 				w.WriteHeader(http.StatusBadRequest)
 			},
-			assert: func(t *testing.T, logs fmt.Stringer, queue event.RuleSetChangedEventQueue) {
+			assert: func(t *testing.T, logs fmt.Stringer, processor *mocks.RuleSetProcessorMock) {
 				t.Helper()
 
 				time.Sleep(250 * time.Millisecond)
@@ -220,8 +227,6 @@ endpoints:
 				messages := logs.String()
 				assert.Contains(t, messages, "response code: 400")
 				assert.Contains(t, messages, "No updates received")
-
-				require.Len(t, queue, 0)
 			},
 		},
 		{
@@ -235,15 +240,13 @@ endpoints:
 
 				w.WriteHeader(http.StatusOK)
 			},
-			assert: func(t *testing.T, logs fmt.Stringer, queue event.RuleSetChangedEventQueue) {
+			assert: func(t *testing.T, logs fmt.Stringer, processor *mocks.RuleSetProcessorMock) {
 				t.Helper()
 
 				time.Sleep(250 * time.Millisecond)
 
 				assert.Equal(t, 1, requestCount)
 				assert.Contains(t, logs.String(), "No updates received")
-
-				require.Len(t, queue, 0)
 			},
 		},
 		{
@@ -256,10 +259,22 @@ endpoints:
 				t.Helper()
 
 				w.Header().Set("Content-Type", "application/yaml")
-				_, err := w.Write([]byte("- id: foo"))
+				_, err := w.Write([]byte(`
+version: "1"
+name: test
+rules:
+- id: foo
+`))
 				require.NoError(t, err)
 			},
-			assert: func(t *testing.T, logs fmt.Stringer, queue event.RuleSetChangedEventQueue) {
+			setupProcessor: func(t *testing.T, processor *mocks.RuleSetProcessorMock) {
+				t.Helper()
+
+				processor.EXPECT().OnCreated(mock.Anything).
+					Run(mock2.NewArgumentCaptor[*config2.RuleSet](&processor.Mock, "captor1").Capture).
+					Return(nil).Once()
+			},
+			assert: func(t *testing.T, logs fmt.Stringer, processor *mocks.RuleSetProcessorMock) {
 				t.Helper()
 
 				time.Sleep(600 * time.Millisecond)
@@ -267,13 +282,12 @@ endpoints:
 				assert.Equal(t, 1, requestCount)
 				assert.NotContains(t, logs.String(), "No updates received")
 
-				require.Len(t, queue, 1)
-
-				evt := <-queue
-				assert.Contains(t, evt.Src, "http_endpoint:"+srv.URL)
-				assert.Len(t, evt.RuleSet, 1)
-				assert.Equal(t, "foo", evt.RuleSet[0].ID)
-				assert.Equal(t, event.Create, evt.ChangeType)
+				ruleSet := mock2.ArgumentCaptorFrom[*config2.RuleSet](&processor.Mock, "captor1").Value()
+				assert.Contains(t, ruleSet.Source, "http_endpoint:"+srv.URL)
+				assert.Equal(t, "1", ruleSet.Version)
+				assert.Equal(t, "test", ruleSet.Name)
+				assert.Len(t, ruleSet.Rules, 1)
+				assert.Equal(t, "foo", ruleSet.Rules[0].ID)
 			},
 		},
 		{
@@ -287,10 +301,22 @@ endpoints:
 				t.Helper()
 
 				w.Header().Set("Content-Type", "application/yaml")
-				_, err := w.Write([]byte("- id: bar"))
+				_, err := w.Write([]byte(`
+version: "1"
+name: test
+rules:
+- id: bar
+`))
 				require.NoError(t, err)
 			},
-			assert: func(t *testing.T, logs fmt.Stringer, queue event.RuleSetChangedEventQueue) {
+			setupProcessor: func(t *testing.T, processor *mocks.RuleSetProcessorMock) {
+				t.Helper()
+
+				processor.EXPECT().OnCreated(mock.Anything).
+					Run(mock2.NewArgumentCaptor[*config2.RuleSet](&processor.Mock, "captor1").Capture).
+					Return(nil).Once()
+			},
+			assert: func(t *testing.T, logs fmt.Stringer, processor *mocks.RuleSetProcessorMock) {
 				t.Helper()
 
 				time.Sleep(600 * time.Millisecond)
@@ -298,13 +324,12 @@ endpoints:
 				assert.Equal(t, 3, requestCount)
 				assert.Contains(t, logs.String(), "No updates received")
 
-				require.Len(t, queue, 1)
-
-				evt := <-queue
-				assert.Contains(t, evt.Src, "http_endpoint:"+srv.URL)
-				assert.Len(t, evt.RuleSet, 1)
-				assert.Equal(t, "bar", evt.RuleSet[0].ID)
-				assert.Equal(t, event.Create, evt.ChangeType)
+				ruleSet := mock2.ArgumentCaptorFrom[*config2.RuleSet](&processor.Mock, "captor1").Value()
+				assert.Contains(t, ruleSet.Source, "http_endpoint:"+srv.URL)
+				assert.Equal(t, "1", ruleSet.Version)
+				assert.Equal(t, "test", ruleSet.Name)
+				assert.Len(t, ruleSet.Rules, 1)
+				assert.Equal(t, "bar", ruleSet.Rules[0].ID)
 			},
 		},
 		{
@@ -323,20 +348,41 @@ endpoints:
 					switch callIdx {
 					case 1:
 						w.Header().Set("Content-Type", "application/yaml")
-						_, err := w.Write([]byte("- id: bar"))
+						_, err := w.Write([]byte(`
+version: "1"
+name: test
+rules:
+- id: foo
+`))
 						require.NoError(t, err)
 					case 2:
-						w.WriteHeader(http.StatusInternalServerError)
+						w.WriteHeader(http.StatusNotFound)
 					default:
 						w.Header().Set("Content-Type", "application/yaml")
-						_, err := w.Write([]byte("- id: bar"))
+						_, err := w.Write([]byte(`
+version: "2"
+name: test
+rules:
+- id: bar
+`))
 						require.NoError(t, err)
 					}
 
 					callIdx++
 				}
 			}(),
-			assert: func(t *testing.T, logs fmt.Stringer, queue event.RuleSetChangedEventQueue) {
+			setupProcessor: func(t *testing.T, processor *mocks.RuleSetProcessorMock) {
+				t.Helper()
+
+				processor.EXPECT().OnCreated(mock.Anything).
+					Run(mock2.NewArgumentCaptor[*config2.RuleSet](&processor.Mock, "captor1").Capture).
+					Return(nil).Twice()
+
+				processor.EXPECT().OnDeleted(mock.Anything).
+					Run(mock2.NewArgumentCaptor[*config2.RuleSet](&processor.Mock, "captor2").Capture).
+					Return(nil).Once()
+			},
+			assert: func(t *testing.T, logs fmt.Stringer, processor *mocks.RuleSetProcessorMock) {
 				t.Helper()
 
 				time.Sleep(1000 * time.Millisecond)
@@ -344,24 +390,22 @@ endpoints:
 				assert.True(t, requestCount >= 4)
 				assert.Contains(t, logs.String(), "No updates received")
 
-				require.Len(t, queue, 3)
+				ruleSets := mock2.ArgumentCaptorFrom[*config2.RuleSet](&processor.Mock, "captor1").Values()
+				assert.Contains(t, ruleSets[0].Source, "http_endpoint:"+srv.URL)
+				assert.Equal(t, "1", ruleSets[0].Version)
+				assert.Equal(t, "test", ruleSets[0].Name)
+				assert.Len(t, ruleSets[0].Rules, 1)
+				assert.Equal(t, "foo", ruleSets[0].Rules[0].ID)
 
-				evt := <-queue
-				assert.Contains(t, evt.Src, "http_endpoint:"+srv.URL)
-				assert.Len(t, evt.RuleSet, 1)
-				assert.Equal(t, "bar", evt.RuleSet[0].ID)
-				assert.Equal(t, event.Create, evt.ChangeType)
+				assert.Contains(t, ruleSets[1].Source, "http_endpoint:"+srv.URL)
+				assert.Equal(t, "2", ruleSets[1].Version)
+				assert.Equal(t, "test", ruleSets[1].Name)
+				assert.Len(t, ruleSets[1].Rules, 1)
+				assert.Equal(t, "bar", ruleSets[1].Rules[0].ID)
 
-				evt = <-queue
-				assert.Contains(t, evt.Src, "http_endpoint:"+srv.URL)
-				assert.Len(t, evt.RuleSet, 0)
-				assert.Equal(t, event.Remove, evt.ChangeType)
-
-				evt = <-queue
-				assert.Contains(t, evt.Src, "http_endpoint:"+srv.URL)
-				assert.Len(t, evt.RuleSet, 1)
-				assert.Equal(t, "bar", evt.RuleSet[0].ID)
-				assert.Equal(t, event.Create, evt.ChangeType)
+				ruleSet := mock2.ArgumentCaptorFrom[*config2.RuleSet](&processor.Mock, "captor2").Value()
+				assert.Contains(t, ruleSet.Source, "http_endpoint:"+srv.URL)
+				assert.Empty(t, ruleSet.Rules)
 			},
 		},
 		{
@@ -380,26 +424,57 @@ endpoints:
 					switch callIdx {
 					case 1:
 						w.Header().Set("Content-Type", "application/yaml")
-						_, err := w.Write([]byte("- id: bar"))
+						_, err := w.Write([]byte(`
+version: "1"
+name: test
+rules:
+- id: bar
+`))
 						require.NoError(t, err)
 					case 2:
 						w.Header().Set("Content-Type", "application/yaml")
-						_, err := w.Write([]byte("- id: baz"))
+						_, err := w.Write([]byte(`
+version: "1"
+name: test
+rules:
+- id: baz
+`))
 						require.NoError(t, err)
 					case 3:
 						w.Header().Set("Content-Type", "application/yaml")
-						_, err := w.Write([]byte("- id: foo"))
+						_, err := w.Write([]byte(`
+version: "1"
+name: test
+rules:
+- id: foo
+`))
 						require.NoError(t, err)
 					default:
 						w.Header().Set("Content-Type", "application/yaml")
-						_, err := w.Write([]byte("- id: foz"))
+						_, err := w.Write([]byte(`
+version: "1"
+name: test
+rules:
+- id: foz
+`))
 						require.NoError(t, err)
 					}
 
 					callIdx++
 				}
 			}(),
-			assert: func(t *testing.T, logs fmt.Stringer, queue event.RuleSetChangedEventQueue) {
+			setupProcessor: func(t *testing.T, processor *mocks.RuleSetProcessorMock) {
+				t.Helper()
+
+				processor.EXPECT().OnCreated(mock.Anything).
+					Run(mock2.NewArgumentCaptor[*config2.RuleSet](&processor.Mock, "captor1").Capture).
+					Return(nil).Once()
+
+				processor.EXPECT().OnUpdated(mock.Anything).
+					Run(mock2.NewArgumentCaptor[*config2.RuleSet](&processor.Mock, "captor2").Capture).
+					Return(nil).Times(3)
+			},
+			assert: func(t *testing.T, logs fmt.Stringer, processor *mocks.RuleSetProcessorMock) {
 				t.Helper()
 
 				time.Sleep(2 * time.Second)
@@ -407,46 +482,31 @@ endpoints:
 				assert.True(t, requestCount >= 4)
 				assert.Contains(t, logs.String(), "No updates received")
 
-				require.Len(t, queue, 7)
+				ruleSet := mock2.ArgumentCaptorFrom[*config2.RuleSet](&processor.Mock, "captor1").Value()
+				assert.Contains(t, ruleSet.Source, "http_endpoint:"+srv.URL)
+				assert.Equal(t, "1", ruleSet.Version)
+				assert.Equal(t, "test", ruleSet.Name)
+				assert.Len(t, ruleSet.Rules, 1)
+				assert.Equal(t, "bar", ruleSet.Rules[0].ID)
 
-				evt := <-queue
-				assert.Contains(t, evt.Src, "http_endpoint:"+srv.URL)
-				assert.Len(t, evt.RuleSet, 1)
-				assert.Equal(t, "bar", evt.RuleSet[0].ID)
-				assert.Equal(t, event.Create, evt.ChangeType)
+				ruleSets := mock2.ArgumentCaptorFrom[*config2.RuleSet](&processor.Mock, "captor2").Values()
+				assert.Contains(t, ruleSets[0].Source, "http_endpoint:"+srv.URL)
+				assert.Equal(t, "1", ruleSets[0].Version)
+				assert.Equal(t, "test", ruleSets[0].Name)
+				assert.Len(t, ruleSets[0].Rules, 1)
+				assert.Equal(t, "baz", ruleSets[0].Rules[0].ID)
 
-				evt = <-queue
-				assert.Contains(t, evt.Src, "http_endpoint:"+srv.URL)
-				assert.Len(t, evt.RuleSet, 0)
-				assert.Equal(t, event.Remove, evt.ChangeType)
+				assert.Contains(t, ruleSets[1].Source, "http_endpoint:"+srv.URL)
+				assert.Equal(t, "1", ruleSets[1].Version)
+				assert.Equal(t, "test", ruleSets[1].Name)
+				assert.Len(t, ruleSets[1].Rules, 1)
+				assert.Equal(t, "foo", ruleSets[1].Rules[0].ID)
 
-				evt = <-queue
-				assert.Contains(t, evt.Src, "http_endpoint:"+srv.URL)
-				assert.Len(t, evt.RuleSet, 1)
-				assert.Equal(t, "baz", evt.RuleSet[0].ID)
-				assert.Equal(t, event.Create, evt.ChangeType)
-
-				evt = <-queue
-				assert.Contains(t, evt.Src, "http_endpoint:"+srv.URL)
-				assert.Len(t, evt.RuleSet, 0)
-				assert.Equal(t, event.Remove, evt.ChangeType)
-
-				evt = <-queue
-				assert.Contains(t, evt.Src, "http_endpoint:"+srv.URL)
-				assert.Len(t, evt.RuleSet, 1)
-				assert.Equal(t, "foo", evt.RuleSet[0].ID)
-				assert.Equal(t, event.Create, evt.ChangeType)
-
-				evt = <-queue
-				assert.Contains(t, evt.Src, "http_endpoint:"+srv.URL)
-				assert.Len(t, evt.RuleSet, 0)
-				assert.Equal(t, event.Remove, evt.ChangeType)
-
-				evt = <-queue
-				assert.Contains(t, evt.Src, "http_endpoint:"+srv.URL)
-				assert.Len(t, evt.RuleSet, 1)
-				assert.Equal(t, "foz", evt.RuleSet[0].ID)
-				assert.Equal(t, event.Create, evt.ChangeType)
+				assert.Contains(t, ruleSets[2].Source, "http_endpoint:"+srv.URL)
+				assert.Equal(t, "1", ruleSets[2].Version)
+				assert.Equal(t, "test", ruleSets[2].Name)
+				assert.Len(t, ruleSets[2].Rules, 1)
+				assert.Equal(t, "foz", ruleSets[2].Rules[0].ID)
 			},
 		},
 		{
@@ -461,23 +521,35 @@ endpoints:
 
 				w.Header().Set("Expires", time.Now().Add(20*time.Second).UTC().Format(http.TimeFormat))
 				w.Header().Set("Content-Type", "application/yaml")
-				_, err := w.Write([]byte("- id: bar"))
+				_, err := w.Write([]byte(`
+version: "1"
+name: test
+rules:
+- id: bar
+`))
 				require.NoError(t, err)
 			},
-			assert: func(t *testing.T, logs fmt.Stringer, queue event.RuleSetChangedEventQueue) {
+			setupProcessor: func(t *testing.T, processor *mocks.RuleSetProcessorMock) {
+				t.Helper()
+
+				processor.EXPECT().OnCreated(mock.Anything).
+					Run(mock2.NewArgumentCaptor[*config2.RuleSet](&processor.Mock, "captor1").Capture).
+					Return(nil).Once()
+			},
+			assert: func(t *testing.T, logs fmt.Stringer, processor *mocks.RuleSetProcessorMock) {
 				t.Helper()
 
 				time.Sleep(1 * time.Second)
 
 				assert.Equal(t, 1, requestCount)
 				assert.GreaterOrEqual(t, strings.Count(logs.String(), "No updates received"), 3)
-				require.Len(t, queue, 1)
 
-				evt := <-queue
-				assert.Contains(t, evt.Src, "http_endpoint:"+srv.URL)
-				assert.Len(t, evt.RuleSet, 1)
-				assert.Equal(t, "bar", evt.RuleSet[0].ID)
-				assert.Equal(t, event.Create, evt.ChangeType)
+				ruleSet := mock2.ArgumentCaptorFrom[*config2.RuleSet](&processor.Mock, "captor1").Value()
+				assert.Contains(t, ruleSet.Source, "http_endpoint:"+srv.URL)
+				assert.Equal(t, "1", ruleSet.Version)
+				assert.Equal(t, "test", ruleSet.Name)
+				assert.Len(t, ruleSet.Rules, 1)
+				assert.Equal(t, "bar", ruleSet.Rules[0].ID)
 			},
 		},
 		{
@@ -493,10 +565,22 @@ endpoints:
 
 				w.Header().Set("Expires", time.Now().Add(20*time.Second).UTC().Format(http.TimeFormat))
 				w.Header().Set("Content-Type", "application/yaml")
-				_, err := w.Write([]byte("- id: bar"))
+				_, err := w.Write([]byte(`
+version: "1"
+name: test
+rules:
+- id: bar
+`))
 				require.NoError(t, err)
 			},
-			assert: func(t *testing.T, logs fmt.Stringer, queue event.RuleSetChangedEventQueue) {
+			setupProcessor: func(t *testing.T, processor *mocks.RuleSetProcessorMock) {
+				t.Helper()
+
+				processor.EXPECT().OnCreated(mock.Anything).
+					Run(mock2.NewArgumentCaptor[*config2.RuleSet](&processor.Mock, "captor1").Capture).
+					Return(nil).Once()
+			},
+			assert: func(t *testing.T, logs fmt.Stringer, processor *mocks.RuleSetProcessorMock) {
 				t.Helper()
 
 				time.Sleep(1 * time.Second)
@@ -506,13 +590,139 @@ endpoints:
 				noUpdatesCount := strings.Count(logs.String(), "No updates received")
 				assert.GreaterOrEqual(t, noUpdatesCount, 3)
 
-				require.Len(t, queue, 1)
+				ruleSet := mock2.ArgumentCaptorFrom[*config2.RuleSet](&processor.Mock, "captor1").Value()
+				assert.Contains(t, ruleSet.Source, "http_endpoint:"+srv.URL)
+				assert.Equal(t, "1", ruleSet.Version)
+				assert.Equal(t, "test", ruleSet.Name)
+				assert.Len(t, ruleSet.Rules, 1)
+				assert.Equal(t, "bar", ruleSet.Rules[0].ID)
+			},
+		},
+		{
+			uc: "previously unknown rule set with error on creation",
+			conf: []byte(`
+endpoints:
+- url: ` + srv.URL + `
+`),
+			writeResponse: func(t *testing.T, w http.ResponseWriter) {
+				t.Helper()
 
-				evt := <-queue
-				assert.Contains(t, evt.Src, "http_endpoint:"+srv.URL)
-				assert.Len(t, evt.RuleSet, 1)
-				assert.Equal(t, "bar", evt.RuleSet[0].ID)
-				assert.Equal(t, event.Create, evt.ChangeType)
+				w.Header().Set("Content-Type", "application/yaml")
+				_, err := w.Write([]byte(`
+version: "1"
+name: test
+rules:
+- id: foo
+`))
+				require.NoError(t, err)
+			},
+			setupProcessor: func(t *testing.T, processor *mocks.RuleSetProcessorMock) {
+				t.Helper()
+
+				processor.EXPECT().OnCreated(mock.Anything).Return(testsupport.ErrTestPurpose).Once()
+			},
+			assert: func(t *testing.T, logs fmt.Stringer, processor *mocks.RuleSetProcessorMock) {
+				t.Helper()
+
+				time.Sleep(200 * time.Millisecond)
+
+				assert.Equal(t, 1, requestCount)
+				assert.Contains(t, logs.String(), "Failed to apply rule set changes")
+			},
+		},
+		{
+			uc: "updated rule set with error on update",
+			conf: []byte(`
+watch_interval: 200ms
+endpoints:
+- url: ` + srv.URL + `
+`),
+			writeResponse: func() ResponseWriter {
+				callIdx := 1
+
+				return func(t *testing.T, w http.ResponseWriter) {
+					t.Helper()
+
+					if callIdx == 1 {
+						w.Header().Set("Content-Type", "application/yaml")
+						_, err := w.Write([]byte(`
+version: "1"
+name: test
+rules:
+- id: bar
+`))
+						require.NoError(t, err)
+					} else {
+						w.Header().Set("Content-Type", "application/yaml")
+						_, err := w.Write([]byte(`
+version: "1"
+name: test
+rules:
+- id: baz
+`))
+						require.NoError(t, err)
+					}
+
+					callIdx++
+				}
+			}(),
+			setupProcessor: func(t *testing.T, processor *mocks.RuleSetProcessorMock) {
+				t.Helper()
+
+				processor.EXPECT().OnCreated(mock.Anything).Return(nil).Once()
+				processor.EXPECT().OnUpdated(mock.Anything).Return(testsupport.ErrTestPurpose)
+			},
+			assert: func(t *testing.T, logs fmt.Stringer, processor *mocks.RuleSetProcessorMock) {
+				t.Helper()
+
+				time.Sleep(600 * time.Millisecond)
+
+				assert.GreaterOrEqual(t, requestCount, 2)
+				assert.Contains(t, logs.String(), "Failed to apply rule set changes")
+			},
+		},
+		{
+			uc: "deleted rule set with error on delete",
+			conf: []byte(`
+watch_interval: 200ms
+endpoints:
+- url: ` + srv.URL + `
+`),
+			writeResponse: func() ResponseWriter {
+				callIdx := 1
+
+				return func(t *testing.T, w http.ResponseWriter) {
+					t.Helper()
+
+					if callIdx == 1 {
+						w.Header().Set("Content-Type", "application/yaml")
+						_, err := w.Write([]byte(`
+version: "1"
+name: test
+rules:
+- id: bar
+`))
+						require.NoError(t, err)
+					} else {
+						w.WriteHeader(http.StatusNotFound)
+					}
+
+					callIdx++
+				}
+			}(),
+			setupProcessor: func(t *testing.T, processor *mocks.RuleSetProcessorMock) {
+				t.Helper()
+
+				call := processor.EXPECT().OnCreated(mock.Anything).Return(nil).Once()
+				processor.EXPECT().OnDeleted(mock.Anything).Return(testsupport.ErrTestPurpose).NotBefore(call)
+			},
+			assert: func(t *testing.T, logs fmt.Stringer, processor *mocks.RuleSetProcessorMock) {
+				t.Helper()
+
+				time.Sleep(600 * time.Millisecond)
+
+				assert.GreaterOrEqual(t, requestCount, 2)
+				assert.Contains(t, logs.String(), "Failed to apply rule set changes")
 			},
 		},
 	} {
@@ -520,14 +730,24 @@ endpoints:
 			// GIVEN
 			requestCount = 0
 
+			setupProcessor := x.IfThenElse(tc.setupProcessor != nil,
+				tc.setupProcessor,
+				func(t *testing.T, processor *mocks.RuleSetProcessorMock) { t.Helper() })
+
 			providerConf, err := testsupport.DecodeTestConfig(tc.conf)
 			require.NoError(t, err)
 
-			queue := make(event.RuleSetChangedEventQueue, 10)
-			defer close(queue)
+			conf := &config.Configuration{
+				Rules: config.Rules{
+					Providers: config.RuleProviders{HTTPEndpoint: providerConf},
+				},
+			}
+
+			processor := mocks.NewRuleSetProcessorMock(t)
+			setupProcessor(t, processor)
 
 			logs := &strings.Builder{}
-			prov, err := newProvider(providerConf, memory.New(), queue, zerolog.New(logs))
+			prov, err := newProvider(conf, memory.New(), processor, zerolog.New(logs))
 			require.NoError(t, err)
 
 			ctx := context.Background()
@@ -547,7 +767,7 @@ endpoints:
 
 			// THEN
 			require.NoError(t, err)
-			tc.assert(t, logs, queue)
+			tc.assert(t, logs, processor)
 		})
 	}
 }

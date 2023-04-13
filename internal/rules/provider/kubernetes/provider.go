@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/go-logr/zerologr"
 	"github.com/rs/zerolog"
@@ -31,34 +32,48 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/klog/v2"
 
+	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/rules/event"
+	config2 "github.com/dadrus/heimdall/internal/rules/config"
 	"github.com/dadrus/heimdall/internal/rules/provider/kubernetes/api/v1alpha1"
+	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
-var (
-	ErrNilRuleSet   = errors.New("nil RuleSet")
-	ErrNotARuleSet  = errors.New("not a RuleSet")
-	ErrBadAuthClass = errors.New("bad authClass in a RuleSet")
-)
+var ErrBadAuthClass = errors.New("bad authClass in a RuleSet")
+
+type ConfigFactory func() (*rest.Config, error)
 
 type provider struct {
-	q      event.RuleSetChangedEventQueue
-	l      zerolog.Logger
-	cl     v1alpha1.Client
-	cancel context.CancelFunc
-	wg     sync.WaitGroup
-	ac     string
+	p          rule.SetProcessor
+	l          zerolog.Logger
+	cl         v1alpha1.Client
+	cancel     context.CancelFunc
+	configured bool
+	wg         sync.WaitGroup
+	ac         string
 }
 
 func newProvider(
-	rawConf map[string]any,
-	k8sConf *rest.Config,
-	queue event.RuleSetChangedEventQueue,
+	conf *config.Configuration,
+	k8sCF ConfigFactory,
+	processor rule.SetProcessor,
 	logger zerolog.Logger,
 ) (*provider, error) {
+	rawConf := conf.Rules.Providers.Kubernetes
+
+	if rawConf == nil {
+		return &provider{}, nil
+	}
+
+	k8sConf, err := k8sCF()
+	if err != nil {
+		return nil, errorchain.NewWithMessage(heimdall.ErrInternal,
+			"failed to create kubernetes provider").
+			CausedBy(err)
+	}
+
 	type Config struct {
 		AuthClass string `mapstructure:"auth_class"`
 	}
@@ -70,21 +85,24 @@ func newProvider(
 			CausedBy(err)
 	}
 
-	var conf Config
-	if err = decodeConfig(rawConf, &conf); err != nil {
+	var providerConf Config
+	if err = decodeConfig(rawConf, &providerConf); err != nil {
 		return nil, errorchain.
 			NewWithMessage(heimdall.ErrConfiguration, "failed to decode kubernetes rule provider config").
 			CausedBy(err)
 	}
 
-	prov := &provider{
-		q:  queue,
-		l:  logger,
-		cl: client,
-		ac: x.IfThenElse(len(conf.AuthClass) != 0, conf.AuthClass, DefaultClass),
-	}
+	logger = logger.With().Str("_provider_type", ProviderType).Logger()
 
-	return prov, nil
+	logger.Info().Msg("Rule provider configured.")
+
+	return &provider{
+		p:          processor,
+		l:          logger,
+		cl:         client,
+		ac:         x.IfThenElse(len(providerConf.AuthClass) != 0, providerConf.AuthClass, DefaultClass),
+		configured: true,
+	}, nil
 }
 
 func (p *provider) newController(ctx context.Context, namespace string) cache.Controller {
@@ -109,7 +127,6 @@ func (p *provider) filterAuthClass(input any) (any, error) {
 
 	if rs.Spec.AuthClassName != p.ac {
 		p.l.Info().
-			Str("_rule_provider_type", ProviderType).
 			Msgf("Ignoring ruleset due to authClassName mismatch (namespace=%s, name=%s, uid=%s)",
 				rs.Namespace, rs.Name, rs.UID)
 
@@ -120,17 +137,16 @@ func (p *provider) filterAuthClass(input any) (any, error) {
 }
 
 func (p *provider) Start(_ context.Context) error {
+	if !p.configured {
+		return nil
+	}
+
 	klog.SetLogger(zerologr.New(&p.l))
 
-	p.l.Info().
-		Str("_rule_provider_type", ProviderType).
-		Msg("Starting rule definitions provider")
+	p.l.Info().Msg("Starting rule definitions provider")
 
 	ctx, cancel := context.WithCancel(context.Background())
-	ctx = p.l.With().
-		Str("_rule_provider_type", ProviderType).
-		Logger().
-		WithContext(ctx)
+	ctx = p.l.With().Logger().WithContext(ctx)
 
 	p.cancel = cancel
 
@@ -150,9 +166,11 @@ func (p *provider) Start(_ context.Context) error {
 }
 
 func (p *provider) Stop(ctx context.Context) error {
-	p.l.Info().
-		Str("_rule_provider_type", ProviderType).
-		Msg("Tearing down rule provider.")
+	if !p.configured {
+		return nil
+	}
+
+	p.l.Info().Msg("Tearing down rule provider.")
 
 	p.cancel()
 
@@ -167,49 +185,90 @@ func (p *provider) Stop(ctx context.Context) error {
 	case <-done:
 		return nil
 	case <-ctx.Done():
-		p.l.Warn().
-			Str("_rule_provider_type", ProviderType).
-			Msg("Graceful tearing down aborted (timed out).")
+		p.l.Warn().Msg("Graceful tearing down aborted (timed out).")
 
 		return nil
 	}
 }
 
-func (p *provider) updateRuleSet(oldObj, newObj any) {
+func (p *provider) updateRuleSet(_, newObj any) {
 	// should never be of a different type. ok if panics
-	oldRs := oldObj.(*v1alpha1.RuleSet) // nolint: forcetypeassert
-	newRs := newObj.(*v1alpha1.RuleSet) // nolint: forcetypeassert
+	rs := newObj.(*v1alpha1.RuleSet) // nolint: forcetypeassert
 
-	p.deleteRuleSet(oldRs)
-	p.addRuleSet(newRs)
+	conf := &config2.RuleSet{
+		MetaData: config2.MetaData{
+			Source:  fmt.Sprintf("%s:%s:%s", ProviderType, rs.Namespace, rs.UID),
+			ModTime: rs.CreationTimestamp.Time,
+		},
+		Version: p.mapVersion(rs.APIVersion),
+		Name:    rs.Name,
+		Rules:   rs.Spec.Rules,
+	}
+
+	p.l.Info().Msg("Rule set update received")
+
+	p.l.Debug().Str("_src", conf.Source).
+		Msgf("Rule set resource version mapped from '%s' to '%s'", rs.APIVersion, conf.Version)
+
+	if err := p.p.OnUpdated(conf); err != nil {
+		p.l.Warn().Err(err).Str("_src", conf.Source).Msg("Failed to apply rule set updates")
+	} else {
+		p.l.Info().Str("_src", conf.Source).Msg("Rule set updated")
+	}
 }
 
 func (p *provider) addRuleSet(obj any) {
 	// should never be of a different type. ok if panics
 	rs := obj.(*v1alpha1.RuleSet) // nolint: forcetypeassert
 
-	p.ruleSetChanged(event.RuleSetChangedEvent{
-		Src:        fmt.Sprintf("%s:%s:%s:%s", ProviderType, rs.Namespace, rs.Name, rs.UID),
-		ChangeType: event.Create,
-		RuleSet:    rs.Spec.Rules,
-	})
+	conf := &config2.RuleSet{
+		MetaData: config2.MetaData{
+			Source:  fmt.Sprintf("%s:%s:%s", ProviderType, rs.Namespace, rs.UID),
+			ModTime: rs.CreationTimestamp.Time,
+		},
+		Version: p.mapVersion(rs.APIVersion),
+		Name:    rs.Name,
+		Rules:   rs.Spec.Rules,
+	}
+
+	p.l.Info().Msg("New rule set received")
+
+	p.l.Debug().Str("_src", conf.Source).
+		Msgf("Rule set resource version mapped from '%s' to '%s'", rs.APIVersion, conf.Version)
+
+	if err := p.p.OnCreated(conf); err != nil {
+		p.l.Warn().Err(err).Str("_src", conf.Source).Msg("Failed creating rule set")
+	} else {
+		p.l.Info().Str("_src", conf.Source).Msg("Rule set created")
+	}
 }
 
 func (p *provider) deleteRuleSet(obj any) {
 	// should never be of a different type. ok if panics
 	rs := obj.(*v1alpha1.RuleSet) // nolint: forcetypeassert
 
-	p.ruleSetChanged(event.RuleSetChangedEvent{
-		Src:        fmt.Sprintf("%s:%s:%s:%s", ProviderType, rs.Namespace, rs.Name, rs.UID),
-		ChangeType: event.Remove,
-	})
+	conf := &config2.RuleSet{
+		MetaData: config2.MetaData{
+			Source:  fmt.Sprintf("%s:%s:%s", ProviderType, rs.Namespace, rs.UID),
+			ModTime: time.Now(),
+		},
+		Version: p.mapVersion(rs.APIVersion),
+		Name:    rs.Name,
+	}
+
+	p.l.Info().Msg("Rule set deletion received")
+
+	p.l.Debug().Str("_src", conf.Source).
+		Msgf("Rule set resource version mapped from '%s' to '%s'", rs.APIVersion, conf.Version)
+
+	if err := p.p.OnDeleted(conf); err != nil {
+		p.l.Warn().Err(err).Str("_src", conf.Source).Msg("Failed deleting rule set")
+	} else {
+		p.l.Info().Str("_src", conf.Source).Msg("Rule set deleted")
+	}
 }
 
-func (p *provider) ruleSetChanged(evt event.RuleSetChangedEvent) {
-	p.l.Info().
-		Str("_rule_provider_type", ProviderType).
-		Str("_src", evt.Src).
-		Str("_type", evt.ChangeType.String()).
-		Msg("Rule set changed")
-	p.q <- evt
+func (p *provider) mapVersion(_ string) string {
+	// currently the only possible version is v1alpha1, which is mapped to the version "1" used internally
+	return "1"
 }

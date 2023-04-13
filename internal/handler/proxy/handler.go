@@ -27,12 +27,12 @@ import (
 	fiberxforwarded "github.com/dadrus/heimdall/internal/fiber/middleware/xfmphu"
 	"github.com/dadrus/heimdall/internal/handler/requestcontext"
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/rules"
+	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
 type Handler struct {
-	r rules.Repository
+	r rule.Repository
 	s heimdall.JWTSigner
 	t time.Duration
 }
@@ -41,7 +41,7 @@ type handlerArgs struct {
 	fx.In
 
 	App             *fiber.App `name:"proxy"`
-	RulesRepository rules.Repository
+	RulesRepository rule.Repository
 	Config          *config.Configuration
 	Signer          heimdall.JWTSigner
 	Logger          zerolog.Logger
@@ -72,19 +72,19 @@ func (h *Handler) proxy(c *fiber.Ctx) error {
 	reqURL := fiberxforwarded.RequestURL(c.UserContext())
 	method := fiberxforwarded.RequestMethod(c.UserContext())
 
-	rule, err := h.r.FindRule(reqURL)
+	rul, err := h.r.FindRule(reqURL)
 	if err != nil {
 		return err
 	}
 
-	if !rule.MatchesMethod(method) {
+	if !rul.MatchesMethod(method) {
 		return errorchain.NewWithMessagef(heimdall.ErrMethodNotAllowed,
-			"rule (id=%s, src=%s) doesn't match %s method", rule.ID(), rule.SrcID(), method)
+			"rule (id=%s, src=%s) doesn't match %s method", rul.ID(), rul.SrcID(), method)
 	}
 
 	reqCtx := requestcontext.New(c, method, reqURL, h.s)
 
-	upstreamURL, err := rule.Execute(reqCtx)
+	upstreamURL, err := rul.Execute(reqCtx)
 	if err != nil {
 		return err
 	}

@@ -86,7 +86,7 @@ type bodyParameterAuthData struct {
 	value string
 }
 
-func (c *bodyParameterAuthData) ApplyTo(req *http.Request) {
+func (c *bodyParameterAuthData) ApplyTo(_ *http.Request) {
 	panic("application of extracted body parameters to a request is not yet supported")
 }
 

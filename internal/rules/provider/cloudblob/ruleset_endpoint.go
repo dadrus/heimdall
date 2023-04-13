@@ -30,24 +30,21 @@ import (
 	"gocloud.dev/gcerrors"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/rules/provider/pathprefix"
-	"github.com/dadrus/heimdall/internal/rules/provider/rulesetparser"
+	"github.com/dadrus/heimdall/internal/rules/config"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
-var errEmptyRuleSet = errors.New("empty rule set")
-
 type ruleSetEndpoint struct {
-	URL             *url.URL              `mapstructure:"url"`
-	Prefix          string                `mapstructure:"prefix"`
-	RulesPathPrefix pathprefix.PathPrefix `mapstructure:"rule_path_match_prefix"`
+	URL             *url.URL `mapstructure:"url"`
+	Prefix          string   `mapstructure:"prefix"`
+	RulesPathPrefix string   `mapstructure:"rule_path_match_prefix"`
 }
 
 func (e *ruleSetEndpoint) ID() string {
 	return fmt.Sprintf("%s/%s", e.URL, e.Prefix)
 }
 
-func (e *ruleSetEndpoint) FetchRuleSets(ctx context.Context) ([]RuleSet, error) {
+func (e *ruleSetEndpoint) FetchRuleSets(ctx context.Context) ([]*config.RuleSet, error) {
 	bucket, err := blob.OpenBucket(ctx, e.URL.String())
 	if err != nil {
 		return nil, errorchain.NewWithMessage(heimdall.ErrInternal, "failed to open bucket").
@@ -63,8 +60,8 @@ func (e *ruleSetEndpoint) FetchRuleSets(ctx context.Context) ([]RuleSet, error) 
 	return e.readAllBlobs(ctx, bucket)
 }
 
-func (e *ruleSetEndpoint) readAllBlobs(ctx context.Context, bucket *blob.Bucket) ([]RuleSet, error) {
-	var ruleSets []RuleSet
+func (e *ruleSetEndpoint) readAllBlobs(ctx context.Context, bucket *blob.Bucket) ([]*config.RuleSet, error) {
+	var ruleSets []*config.RuleSet
 
 	it := bucket.List(&blob.ListOptions{Prefix: e.Prefix})
 
@@ -80,7 +77,7 @@ func (e *ruleSetEndpoint) readAllBlobs(ctx context.Context, bucket *blob.Bucket)
 
 		ruleSet, err := e.readRuleSet(ctx, bucket, obj.Key)
 		if err != nil {
-			if errors.Is(err, errEmptyRuleSet) {
+			if errors.Is(err, config.ErrEmptyRuleSet) {
 				continue
 			}
 
@@ -93,52 +90,50 @@ func (e *ruleSetEndpoint) readAllBlobs(ctx context.Context, bucket *blob.Bucket)
 	return ruleSets, nil
 }
 
-func (e *ruleSetEndpoint) readSingleBlob(ctx context.Context, bucket *blob.Bucket) ([]RuleSet, error) {
+func (e *ruleSetEndpoint) readSingleBlob(ctx context.Context, bucket *blob.Bucket) ([]*config.RuleSet, error) {
 	ruleSet, err := e.readRuleSet(ctx, bucket, e.URL.Path)
 	if err != nil {
-		if errors.Is(err, errEmptyRuleSet) {
-			return []RuleSet{}, nil
+		if errors.Is(err, config.ErrEmptyRuleSet) {
+			return []*config.RuleSet{}, nil
 		}
 
 		return nil, err
 	}
 
-	return []RuleSet{ruleSet}, nil
+	return []*config.RuleSet{ruleSet}, nil
 }
 
-func (e *ruleSetEndpoint) readRuleSet(ctx context.Context, bucket *blob.Bucket, key string) (RuleSet, error) {
+func (e *ruleSetEndpoint) readRuleSet(ctx context.Context, bucket *blob.Bucket, key string) (
+	*config.RuleSet, error,
+) {
 	attrs, err := bucket.Attributes(ctx, key)
 	if err != nil {
-		return RuleSet{}, mapError(err, "failed to get blob attributes")
+		return nil, mapError(err, "failed to get blob attributes")
 	}
 
 	reader, err := bucket.NewReader(ctx, key, nil)
 	if err != nil {
-		return RuleSet{}, mapError(err, "failed reading blob contents")
+		return nil, mapError(err, "failed reading blob contents")
 	}
 
 	defer reader.Close()
 
-	contents, err := rulesetparser.ParseRules(attrs.ContentType, reader)
+	contents, err := config.ParseRules(attrs.ContentType, reader)
 	if err != nil {
-		return RuleSet{}, errorchain.NewWithMessage(heimdall.ErrInternal, "failed to decode received rule set").
+		return nil, errorchain.
+			NewWithMessage(heimdall.ErrInternal, "failed to decode received rule set").
 			CausedBy(err)
 	}
 
-	if len(contents) == 0 {
-		return RuleSet{}, errEmptyRuleSet
+	if err = contents.VerifyPathPrefix(e.RulesPathPrefix); err != nil {
+		return nil, err
 	}
 
-	if err = e.RulesPathPrefix.Verify(contents); err != nil {
-		return RuleSet{}, err
-	}
+	contents.Hash = attrs.MD5
+	contents.Source = fmt.Sprintf("%s@%s", key, e.ID())
+	contents.ModTime = attrs.ModTime
 
-	return RuleSet{
-		Rules:   contents,
-		Hash:    attrs.MD5,
-		Key:     fmt.Sprintf("%s@%s", key, e.ID()),
-		ModTime: attrs.ModTime,
-	}, nil
+	return contents, nil
 }
 
 func mapError(err error, message string) error {

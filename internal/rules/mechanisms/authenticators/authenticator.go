@@ -21,6 +21,8 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
 )
 
+//go:generate mockery --name Authenticator --structname AuthenticatorMock
+
 type Authenticator interface {
 	Execute(heimdall.Context) (*subject.Subject, error)
 	WithConfig(config map[string]any) (Authenticator, error)

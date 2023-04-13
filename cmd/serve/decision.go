@@ -17,6 +17,8 @@
 package serve
 
 import (
+	"os"
+
 	"github.com/spf13/cobra"
 	"go.uber.org/fx"
 
@@ -36,7 +38,8 @@ func NewDecisionCommand() *cobra.Command {
 			app, err := createDecisionApp(cmd)
 			if err != nil {
 				cmd.PrintErrf("Failed to initialize decision service: %v", err)
-				panic(err)
+
+				os.Exit(1)
 			}
 
 			app.Run()

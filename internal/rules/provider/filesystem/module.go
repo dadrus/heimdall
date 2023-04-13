@@ -16,10 +16,20 @@
 
 package filesystem
 
-import "go.uber.org/fx"
+import (
+	"context"
+
+	"go.uber.org/fx"
+)
 
 // Module is used on app bootstrap.
 // nolint: gochecknoglobals
 var Module = fx.Options(
-	fx.Invoke(registerProvider),
+	fx.Invoke(
+		fx.Annotate(
+			NewProvider,
+			fx.OnStart(func(ctx context.Context, p *Provider) error { return p.Start(ctx) }),
+			fx.OnStop(func(ctx context.Context, p *Provider) error { return p.Stop(ctx) }),
+		),
+	),
 )

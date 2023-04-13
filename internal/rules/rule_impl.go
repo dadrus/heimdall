@@ -33,6 +33,7 @@ type ruleImpl struct {
 	methods     []string
 	srcID       string
 	isDefault   bool
+	hash        []byte
 	sc          compositeSubjectCreator
 	sh          compositeSubjectHandler
 	un          compositeSubjectHandler

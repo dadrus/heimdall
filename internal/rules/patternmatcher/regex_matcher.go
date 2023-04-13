@@ -17,15 +17,23 @@
 package patternmatcher
 
 import (
+	"errors"
+
 	"github.com/dlclark/regexp2"
 	"github.com/ory/ladon/compiler"
 )
+
+var ErrNoRegexPatternDefined = errors.New("no glob pattern defined")
 
 type regexpMatcher struct {
 	compiled *regexp2.Regexp
 }
 
 func newRegexMatcher(pattern string) (*regexpMatcher, error) {
+	if len(pattern) == 0 {
+		return nil, ErrNoRegexPatternDefined
+	}
+
 	compiled, err := compiler.CompileRegex(pattern, '<', '>')
 	if err != nil {
 		return nil, err

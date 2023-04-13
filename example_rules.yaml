@@ -1,3 +1,6 @@
+version: v1alpha1
+name: test-rule-set
+rules:
 - id: rule:foo
   match:
     url: http://foo.bar/<**>
