@@ -8,7 +8,6 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/dadrus/heimdall/internal/config"
-	"github.com/dadrus/heimdall/internal/logging"
 	"github.com/dadrus/heimdall/internal/rules"
 	"github.com/dadrus/heimdall/internal/rules/event"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms"
@@ -52,11 +51,9 @@ func validateRuleSet(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	conf.Log.Format = config.LogTextFormat
-	conf.Log.Level = zerolog.ErrorLevel
 	conf.Rules.Providers.FileSystem = map[string]any{"src": args[0]}
 
-	logger := logging.NewLogger(conf.Log)
+	logger := zerolog.Nop()
 
 	mFactory, err := mechanisms.NewFactory(conf, logger)
 	if err != nil {
