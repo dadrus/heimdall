@@ -199,16 +199,6 @@ func TestRuleSetProcessorOnDeleted(t *testing.T) {
 		assert  func(t *testing.T, err error, queue event.RuleSetChangedEventQueue)
 	}{
 		{
-			uc:      "unsupported version",
-			ruleset: &config.RuleSet{Version: "foo"},
-			assert: func(t *testing.T, err error, _ event.RuleSetChangedEventQueue) {
-				t.Helper()
-
-				require.Error(t, err)
-				assert.ErrorIs(t, err, ErrUnsupportedRuleSetVersion)
-			},
-		},
-		{
 			uc: "successful",
 			ruleset: &config.RuleSet{
 				MetaData: config.MetaData{Source: "test"},

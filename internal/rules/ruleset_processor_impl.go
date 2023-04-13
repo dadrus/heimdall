@@ -51,7 +51,7 @@ func (p *ruleSetProcessor) loadRules(ruleSet *config.RuleSet) ([]rule.Rule, erro
 
 func (p *ruleSetProcessor) OnCreated(ruleSet *config.RuleSet) error {
 	if !p.isVersionSupported(ruleSet.Version) {
-		return ErrUnsupportedRuleSetVersion
+		return errorchain.NewWithMessage(ErrUnsupportedRuleSetVersion, ruleSet.Version)
 	}
 
 	rules, err := p.loadRules(ruleSet)
@@ -73,7 +73,7 @@ func (p *ruleSetProcessor) OnCreated(ruleSet *config.RuleSet) error {
 
 func (p *ruleSetProcessor) OnUpdated(ruleSet *config.RuleSet) error {
 	if !p.isVersionSupported(ruleSet.Version) {
-		return ErrUnsupportedRuleSetVersion
+		return errorchain.NewWithMessage(ErrUnsupportedRuleSetVersion, ruleSet.Version)
 	}
 
 	rules, err := p.loadRules(ruleSet)
@@ -94,10 +94,6 @@ func (p *ruleSetProcessor) OnUpdated(ruleSet *config.RuleSet) error {
 }
 
 func (p *ruleSetProcessor) OnDeleted(ruleSet *config.RuleSet) error {
-	if !p.isVersionSupported(ruleSet.Version) {
-		return ErrUnsupportedRuleSetVersion
-	}
-
 	evt := event.RuleSetChanged{
 		Source:     ruleSet.Source,
 		Name:       ruleSet.Name,
