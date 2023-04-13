@@ -1,4 +1,4 @@
-version: 1
+version: "1"
 name: test-rule-set
 rules:
 - id: rule:foo
@@ -11,7 +11,7 @@ rules:
 #    - POST
   execute:
     - authenticator: unauthorized_authenticator
-    - authenticator: jwt_authenticator
+    - authenticator: jwt_authenticator1
       config:
         assertions:
           allowed_algorithms:
