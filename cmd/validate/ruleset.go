@@ -36,12 +36,13 @@ func NewValidateRulesCommand() *cobra.Command {
 func validateRuleSet(cmd *cobra.Command, args []string) error {
 	const queueSize = 50
 
+	envPrefix, _ := cmd.Flags().GetString("env-config-prefix")
+	logger := zerolog.Nop()
+
 	configPath, _ := cmd.Flags().GetString("config")
 	if len(configPath) == 0 {
 		return ErrNoConfigFile
 	}
-
-	envPrefix, _ := cmd.Flags().GetString("env-config-prefix")
 
 	conf, err := config.NewConfiguration(
 		config.EnvVarPrefix(envPrefix),
@@ -52,8 +53,6 @@ func validateRuleSet(cmd *cobra.Command, args []string) error {
 	}
 
 	conf.Rules.Providers.FileSystem = map[string]any{"src": args[0]}
-
-	logger := zerolog.Nop()
 
 	mFactory, err := mechanisms.NewFactory(conf, logger)
 	if err != nil {
