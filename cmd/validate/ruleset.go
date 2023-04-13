@@ -55,8 +55,6 @@ func validateRuleSet(cmd *cobra.Command, args []string) error {
 	conf.Log.Format = config.LogTextFormat
 	conf.Log.Level = zerolog.ErrorLevel
 	conf.Rules.Providers.FileSystem = map[string]any{"src": args[0]}
-	conf.Signer.KeyStore.Path = ""
-	conf.Signer.KeyStore.Password = ""
 
 	logger := logging.NewLogger(conf.Log)
 
