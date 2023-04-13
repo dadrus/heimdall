@@ -41,5 +41,5 @@ func init() {
 		"Prefix for the environment variables to consider for\nloading configuration from")
 
 	validateCmd.AddCommand(validate.NewValidateConfigCommand())
-	validateCmd.AddCommand(validate.NewValidateRuleSetCommand())
+	validateCmd.AddCommand(validate.NewValidateRulesCommand())
 }
