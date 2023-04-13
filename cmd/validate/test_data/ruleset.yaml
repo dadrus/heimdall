@@ -1,0 +1,35 @@
+version: 1
+name: test-rule-set
+rules:
+- id: rule:foo
+  match:
+    url: http://foo.bar/<**>
+    strategy: glob
+  upstream: http://bar.foo
+#  methods: # reuses default
+#    - GET
+#    - POST
+  execute:
+    - authenticator: unauthorized_authenticator
+    - authenticator: jwt_authenticator
+      config:
+        assertions:
+          allowed_algorithms:
+            - RS256
+          issuers:
+            - http://127.0.0.1:4444/
+          scopes:
+            - profile
+    - authenticator: hydra_authenticator
+    - contextualizer: subscription_contextualizer
+    - authorizer: allow_all_authorizer
+    - unifier: jwt
+      config:
+        claims: |
+          {"foo": "bar"}
+    - unifier: bla
+      config:
+        headers:
+          foo-bar: bla
+    - unifier: blabla
+# no on_error (reuses default)
