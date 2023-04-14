@@ -1,8 +1,6 @@
 package rules
 
 import (
-	"errors"
-	"fmt"
 	"reflect"
 
 	"github.com/google/cel-go/cel"
@@ -12,8 +10,6 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
-
-var errCELResultType = errors.New("result type error")
 
 type celExecutionCondition struct {
 	p cel.Program
@@ -47,7 +43,8 @@ func newCelExecutionCondition(expression string) (*celExecutionCondition, error)
 	}
 
 	if !reflect.DeepEqual(ast.OutputType(), cel.BoolType) {
-		return nil, fmt.Errorf("%w: wanted bool, got %v", errCELResultType, ast.OutputType())
+		return nil, errorchain.NewWithMessagef(heimdall.ErrInternal,
+			"result type error: wanted bool, got %v", ast.OutputType())
 	}
 
 	prg, err := env.Program(ast, cel.EvalOptions(cel.OptOptimize))
