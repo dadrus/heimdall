@@ -839,6 +839,120 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				assert.NotNil(t, rul.eh[0])
 			},
 		},
+		{
+			uc: "with conditional execution configuration type error",
+			config: config2.Rule{
+				ID:          "foobar",
+				RuleMatcher: config2.Matcher{URL: "http://foo.bar", Strategy: "glob"},
+				Execute: []config.MechanismConfig{
+					{"authenticator": "foo"},
+					{"unifier": "bar", "if": 1},
+				},
+				Methods: []string{"FOO"},
+			},
+			configureMocks: func(t *testing.T, mhf *mocks3.FactoryMock) {
+				t.Helper()
+
+				mhf.EXPECT().CreateAuthenticator("test", "foo", mock.Anything).Return(&mocks2.AuthenticatorMock{}, nil)
+			},
+			assert: func(t *testing.T, err error, rul *ruleImpl) {
+				t.Helper()
+
+				require.Error(t, err)
+				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				assert.Contains(t, err.Error(), "unexpected type")
+			},
+		},
+		{
+			uc: "with empty conditional execution configuration",
+			config: config2.Rule{
+				ID:          "foobar",
+				RuleMatcher: config2.Matcher{URL: "http://foo.bar", Strategy: "glob"},
+				Execute: []config.MechanismConfig{
+					{"authenticator": "foo"},
+					{"unifier": "bar", "if": ""},
+				},
+				Methods: []string{"FOO"},
+			},
+			configureMocks: func(t *testing.T, mhf *mocks3.FactoryMock) {
+				t.Helper()
+
+				mhf.EXPECT().CreateAuthenticator("test", "foo", mock.Anything).Return(&mocks2.AuthenticatorMock{}, nil)
+			},
+			assert: func(t *testing.T, err error, rul *ruleImpl) {
+				t.Helper()
+
+				require.Error(t, err)
+				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				assert.Contains(t, err.Error(), "empty execution condition")
+			},
+		},
+		{
+			uc: "with conditional execution for some mechanisms",
+			config: config2.Rule{
+				ID:          "foobar",
+				RuleMatcher: config2.Matcher{URL: "http://foo.bar", Strategy: "glob"},
+				Execute: []config.MechanismConfig{
+					{"authenticator": "foo"},
+					{"authorizer": "bar", "if": "false"},
+					{"contextualizer": "bar", "if": "true"},
+					{"authorizer": "baz"},
+					{"unifier": "bar", "if": "true"},
+				},
+				Methods: []string{"FOO"},
+			},
+			configureMocks: func(t *testing.T, mhf *mocks3.FactoryMock) {
+				t.Helper()
+
+				mhf.EXPECT().CreateAuthenticator("test", "foo", mock.Anything).
+					Return(&mocks2.AuthenticatorMock{}, nil)
+				mhf.EXPECT().CreateAuthorizer("test", mock.Anything, mock.Anything).
+					Return(&mocks4.AuthorizerMock{}, nil).Times(2)
+				mhf.EXPECT().CreateContextualizer("test", "bar", mock.Anything).
+					Return(&mocks5.ContextualizerMock{}, nil)
+				mhf.EXPECT().CreateUnifier("test", "bar", mock.Anything).
+					Return(&mocks7.UnifierMock{}, nil)
+			},
+			assert: func(t *testing.T, err error, rul *ruleImpl) {
+				t.Helper()
+
+				require.NoError(t, err)
+				require.NotNil(t, rul)
+
+				assert.Equal(t, "test", rul.srcID)
+				assert.False(t, rul.isDefault)
+				assert.Equal(t, "foobar", rul.id)
+				assert.NotNil(t, rul.urlMatcher)
+				assert.ElementsMatch(t, rul.methods, []string{"FOO"})
+
+				require.Len(t, rul.sc, 1)
+				assert.NotNil(t, rul.sc[0])
+
+				require.Len(t, rul.sh, 3)
+
+				assert.NotNil(t, rul.sh[0])
+				sh, ok := rul.sh[0].(*conditionalSubjectHandler)
+				require.True(t, ok)
+				assert.IsType(t, &celExecutionCondition{}, sh.c)
+
+				assert.NotNil(t, rul.sh[1])
+				sh, ok = rul.sh[1].(*conditionalSubjectHandler)
+				require.True(t, ok)
+				assert.IsType(t, &celExecutionCondition{}, sh.c)
+
+				assert.NotNil(t, rul.sh[2])
+				sh, ok = rul.sh[2].(*conditionalSubjectHandler)
+				require.True(t, ok)
+				assert.IsType(t, defaultExecutionCondition{}, sh.c)
+
+				require.Len(t, rul.un, 1)
+				un, ok := rul.un[0].(*conditionalSubjectHandler)
+				require.True(t, ok)
+				assert.IsType(t, &celExecutionCondition{}, un.c)
+
+				require.Empty(t, rul.eh)
+			},
+		},
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
 			// GIVEN
