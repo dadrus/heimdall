@@ -43,7 +43,7 @@ func newCelExecutionCondition(expression string) (*celExecutionCondition, error)
 	}
 
 	if !reflect.DeepEqual(ast.OutputType(), cel.BoolType) {
-		return nil, errorchain.NewWithMessagef(heimdall.ErrInternal,
+		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
 			"result type error: wanted bool, got %v", ast.OutputType())
 	}
 
