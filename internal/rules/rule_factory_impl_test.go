@@ -905,11 +905,8 @@ func TestRuleFactoryConfigExtraction(t *testing.T) {
 		},
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
-			// GIVEN
-			factory := &ruleFactory{logger: log.Logger}
-
 			// WHEN
-			conf := factory.getConfig(tc.config)
+			conf := getConfig(tc.config)
 
 			// THEN
 			tc.assert(t, conf)
