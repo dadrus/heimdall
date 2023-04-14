@@ -76,7 +76,6 @@ func TestConditionalSubjectHandlerExecute(t *testing.T) {
 			tc.assert(t, err)
 		})
 	}
-
 }
 
 func TestConditionalSubjectHandlerContinueOnError(t *testing.T) {
