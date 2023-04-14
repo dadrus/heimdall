@@ -38,7 +38,7 @@ func TestExtractExistingCookieValue(t *testing.T) {
 	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, "foobar.local", nil)
 	require.NoError(t, err)
 
-	ctx := &mocks.MockContext{}
+	ctx := &mocks.ContextMock{}
 	ctx.On("RequestCookie", cookieName).Return(cookieValue)
 
 	strategy := CookieValueExtractStrategy{Name: cookieName}
@@ -64,7 +64,7 @@ func TestExtractNotExistingCookieValue(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
-	ctx := &mocks.MockContext{}
+	ctx := &mocks.ContextMock{}
 	ctx.On("RequestCookie", mock.Anything).Return("")
 
 	strategy := CookieValueExtractStrategy{Name: "Test-Cookie"}

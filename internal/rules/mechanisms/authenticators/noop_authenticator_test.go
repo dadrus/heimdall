@@ -30,7 +30,7 @@ func TestNoopAuthenticatorExecution(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
-	ctx := &mocks.MockContext{}
+	ctx := &mocks.ContextMock{}
 	ctx.On("AppContext").Return(context.Background())
 
 	auth := newNoopAuthenticator()

@@ -31,7 +31,7 @@ func TestCompositeErrorHandlerExecutionWithFallback(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
-	ctx := &mocks.MockContext{}
+	ctx := &mocks.ContextMock{}
 	ctx.On("AppContext").Return(context.Background())
 
 	eh1 := rulemocks.NewErrorHandlerMock(t)
@@ -54,7 +54,7 @@ func TestCompositeErrorHandlerExecutionWithoutFallback(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
-	ctx := &mocks.MockContext{}
+	ctx := &mocks.ContextMock{}
 	ctx.On("AppContext").Return(context.Background())
 
 	eh1 := rulemocks.NewErrorHandlerMock(t)
@@ -76,7 +76,7 @@ func TestCompositeErrorHandlerExecutionWithNoApplicableErrorHandler(t *testing.T
 	t.Parallel()
 
 	// GIVEN
-	ctx := &mocks.MockContext{}
+	ctx := &mocks.ContextMock{}
 	ctx.On("AppContext").Return(context.Background())
 
 	eh1 := rulemocks.NewErrorHandlerMock(t)

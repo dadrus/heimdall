@@ -173,7 +173,7 @@ func TestAnonymousAuthenticatorExecute(t *testing.T) {
 	subjectID := "anon"
 	auth := anonymousAuthenticator{Subject: subjectID, id: "anon_auth"}
 
-	ctx := &mocks.MockContext{}
+	ctx := &mocks.ContextMock{}
 	ctx.On("AppContext").Return(context.Background())
 
 	// WHEN

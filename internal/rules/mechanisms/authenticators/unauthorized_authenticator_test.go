@@ -33,7 +33,7 @@ func TestUnauthorizedAuthenticatorExecution(t *testing.T) {
 	// GIVEN
 	var identifier interface{ HandlerID() string }
 
-	ctx := &mocks.MockContext{}
+	ctx := &mocks.ContextMock{}
 	ctx.On("AppContext").Return(context.Background())
 
 	auth := newUnauthorizedAuthenticator("unauth")

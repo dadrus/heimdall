@@ -32,7 +32,7 @@ func TestCompositeExtractCookieValueWithoutSchema(t *testing.T) {
 	cookieName := "Test-Cookie"
 	actualValue := "foo"
 
-	ctx := &mocks.MockContext{}
+	ctx := &mocks.ContextMock{}
 	ctx.On("RequestCookie", cookieName).Return(actualValue)
 	ctx.On("RequestHeader", headerName).Return("")
 
@@ -59,7 +59,7 @@ func TestCompositeExtractHeaderValueWithSchema(t *testing.T) {
 	headerSchema := "bar:"
 	actualValue := "foo"
 
-	ctx := &mocks.MockContext{}
+	ctx := &mocks.ContextMock{}
 	ctx.On("RequestHeader", headerName).Return(headerSchema + " " + actualValue)
 	ctx.On("RequestQueryParameter", queryParamName).Return("")
 
@@ -86,7 +86,7 @@ func TestCompositeExtractStrategyOrder(t *testing.T) {
 	headerSchema := "bar:"
 	actualValue := "foo"
 
-	ctx := &mocks.MockContext{}
+	ctx := &mocks.ContextMock{}
 	ctx.On("RequestHeader", headerName).Return(headerSchema + " " + actualValue)
 
 	strategy := CompositeExtractStrategy{

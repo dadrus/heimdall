@@ -34,13 +34,13 @@ func TestExtractHeaderValue(t *testing.T) {
 	for _, tc := range []struct {
 		uc             string
 		strategy       HeaderValueExtractStrategy
-		configureMocks func(t *testing.T, ctx *mocks.MockContext)
+		configureMocks func(t *testing.T, ctx *mocks.ContextMock)
 		assert         func(t *testing.T, err error, authData AuthData)
 	}{
 		{
 			uc:       "header is present, schema is irrelevant",
 			strategy: HeaderValueExtractStrategy{Name: "X-Test-Header"},
-			configureMocks: func(t *testing.T, ctx *mocks.MockContext) {
+			configureMocks: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
 				ctx.On("RequestHeader", "X-Test-Header").Return("TestValue")
@@ -55,7 +55,7 @@ func TestExtractHeaderValue(t *testing.T) {
 		{
 			uc:       "schema is required, header is present, but without any schema",
 			strategy: HeaderValueExtractStrategy{Name: "X-Test-Header", Schema: "Foo"},
-			configureMocks: func(t *testing.T, ctx *mocks.MockContext) {
+			configureMocks: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
 				ctx.On("RequestHeader", "X-Test-Header").Return("TestValue")
@@ -71,7 +71,7 @@ func TestExtractHeaderValue(t *testing.T) {
 		{
 			uc:       "schema is required, header is present, but with different schema",
 			strategy: HeaderValueExtractStrategy{Name: "X-Test-Header", Schema: "Foo"},
-			configureMocks: func(t *testing.T, ctx *mocks.MockContext) {
+			configureMocks: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
 				ctx.On("RequestHeader", "X-Test-Header").Return("Bar TestValue")
@@ -87,7 +87,7 @@ func TestExtractHeaderValue(t *testing.T) {
 		{
 			uc:       "header with required schema is present",
 			strategy: HeaderValueExtractStrategy{Name: "X-Test-Header", Schema: "Foo"},
-			configureMocks: func(t *testing.T, ctx *mocks.MockContext) {
+			configureMocks: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
 				ctx.On("RequestHeader", "X-Test-Header").Return("Foo TestValue")
@@ -102,7 +102,7 @@ func TestExtractHeaderValue(t *testing.T) {
 		{
 			uc:       "header is not present at all",
 			strategy: HeaderValueExtractStrategy{Name: "X-Test-Header", Schema: "Foo"},
-			configureMocks: func(t *testing.T, ctx *mocks.MockContext) {
+			configureMocks: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
 				ctx.On("RequestHeader", "X-Test-Header").Return("")
@@ -118,7 +118,7 @@ func TestExtractHeaderValue(t *testing.T) {
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
 			// GIVEN
-			ctx := &mocks.MockContext{}
+			ctx := &mocks.ContextMock{}
 			tc.configureMocks(t, ctx)
 
 			// WHEN

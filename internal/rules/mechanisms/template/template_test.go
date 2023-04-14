@@ -32,7 +32,7 @@ func TestTemplateRender(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
-	ctx := &mocks.MockContext{}
+	ctx := &mocks.ContextMock{}
 	ctx.On("RequestMethod").Return("PATCH")
 	ctx.On("RequestHeader", "X-My-Header").Return("my-value")
 	ctx.On("RequestCookie", "session_cookie").Return("session-value")

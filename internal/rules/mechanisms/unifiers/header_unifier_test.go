@@ -229,7 +229,7 @@ func TestHeaderUnifierExecute(t *testing.T) {
 		uc               string
 		id               string
 		config           []byte
-		configureContext func(t *testing.T, ctx *mocks.MockContext)
+		configureContext func(t *testing.T, ctx *mocks.ContextMock)
 		createSubject    func(t *testing.T) *subject.Subject
 		assert           func(t *testing.T, err error)
 	}{
@@ -261,7 +261,7 @@ headers:
   bar: "{{ .Subject.ID }}"
   baz: bar
 `),
-			configureContext: func(t *testing.T, ctx *mocks.MockContext) {
+			configureContext: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
 				ctx.On("AddHeaderForUpstream", "foo", "baz")
@@ -292,12 +292,12 @@ headers:
 
 			configureContext := x.IfThenElse(tc.configureContext != nil,
 				tc.configureContext,
-				func(t *testing.T, ctx *mocks.MockContext) { t.Helper() })
+				func(t *testing.T, ctx *mocks.ContextMock) { t.Helper() })
 
 			conf, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
 
-			mctx := &mocks.MockContext{}
+			mctx := &mocks.ContextMock{}
 			mctx.On("AppContext").Return(context.Background())
 
 			sub := createSubject(t)

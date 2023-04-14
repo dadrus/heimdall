@@ -110,7 +110,7 @@ func TestCompositeSubjectCreatorExecution(t *testing.T) {
 			// GIVEN
 			sub := &subject.Subject{ID: "foo"}
 
-			ctx := &mocks.MockContext{}
+			ctx := &mocks.ContextMock{}
 			ctx.On("AppContext").Return(context.Background())
 
 			auth1 := rulemocks.NewSubjectCreatorMock(t)

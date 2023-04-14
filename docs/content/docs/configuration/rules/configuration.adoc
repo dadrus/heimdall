@@ -103,7 +103,9 @@ NOTE: Some authenticators use the same sources to get subject authentication obj
 * List of link:({{< relref "pipeline_mechanisms/contextualizers.adoc" >}}[contextualizers] and link:({{< relref "pipeline_mechanisms/authorizers.adoc" >}}[authorizers] in any order (optional). Can also be mixed. As with authenticators, the list definition happens using either `contextualizer` or `authorizer` as key, followed by the required `id`. All mechanisms in this list are executed in the order, they are defined. If any of these fails, the entire pipeline fails, which leads to the execution of the link:{{< relref "#_error_handler_pipeline" >}}[error handler pipeline]. This list is optional.
 * List of link:{{< relref "pipeline_mechanisms/unifiers.adoc" >}}[unifiers] using `unifiers` as key, followed by the required unifier `id`. All unifiers in this list are executed in the order, they are defined. If any of these fails, the entire pipeline fails, which leads to the execution of the link:{{< relref "#_error_handler_pipeline" >}}[error handler pipeline]. This list is mandatory if no link:{{< relref "default.adoc" >}}[default rule] is configured.
 
-In all cases, the used mechanism can be partially reconfigured if supported by the corresponding type. These reconfigurations are always local to the given rule. With other words, you can adjust your rule specific pipeline as you want without any side effects.
+In all cases, the used mechanism can be partially reconfigured if supported by the corresponding type. Configuration goes into the `config` properties. These reconfigurations are always local to the given rule. With other words, you can adjust your rule specific pipeline as you want without any side effects.
+
+Execution of an `contextualizer`, `authorizer`, or `unifier` mechanisms can optionally happen conditionally by making use of a https://github.com/google/cel-spec[CEL] expression in an `if` clause, which has access to the link:{{< relref "overview.adoc#_subject" >}}[`Subject`] and the link:{{< relref "overview.adoc#_request" >}}[`Request`] objects. If the `if` clause is not present, the corresponding mechanism is always executed.
 
 .Complex pipeline
 ====
@@ -122,8 +124,10 @@ In all cases, the used mechanism can be partially reconfigured if supported by t
     cache_ttl: 0s
 - authorizer: zab
 - contextualizer: foo
+  if: Subject.ID != "anonymous"
 - contextualizer: bar
 - authorizer: foo
+  if: Request.Method == "POST"
   config:
     expressions:
       - expression: |
@@ -144,6 +148,8 @@ This example uses
 * two authenticators, with authenticator named `bar` being the fallback for the authenticator named `foo`. This fallback authenticator is obviously of type link:{{< relref "pipeline_mechanisms/authenticators.adoc#_anonymous" >}}[anonymous] as it reconfigures the referenced prototype to use `anon` for subject id.
 * multiple contextualizers and authorizers, with first contextualizer having its cache disabled (`cache_ttl` set to 0s) and the last authorizer being of type link:{{< relref "pipeline_mechanisms/authorizers.adoc#_local_cel" >}}[cel] as it reconfigures the referenced prototype to use a different authorization script.
 * two unifiers, with the second one being obviously of type link:{{< relref "pipeline_mechanisms/unifiers.adoc#_header" >}}[header], as it defines a `X-User-ID` header set to the value of the subject id to be forwarded to the upstream service.
+* contextualizer `foo` is only executed if the authenticated subject is not anonymous.
+* authorizer `foo` is only executed if the request method is HTTP POST.
 ====
 
 === Error Handler Pipeline

@@ -179,7 +179,7 @@ when:
 				require.NotNil(t, redEH)
 				assert.Equal(t, "with full complex valid configuration", redEH.HandlerID())
 
-				ctx := &mocks.MockContext{}
+				ctx := &mocks.ContextMock{}
 				ctx.On("RequestMethod").Return("POST")
 				ctx.On("RequestURL").Return(&url.URL{Scheme: "http", Host: "foobar.baz", Path: "zab"})
 				ctx.On("RequestClientIPs").Return(nil)
@@ -370,7 +370,7 @@ func TestRedirectErrorHandlerExecute(t *testing.T) {
 		uc               string
 		config           []byte
 		error            error
-		configureContext func(t *testing.T, ctx *mocks.MockContext)
+		configureContext func(t *testing.T, ctx *mocks.ContextMock)
 		assert           func(t *testing.T, wasResponsible bool, err error)
 	}{
 		{
@@ -398,7 +398,7 @@ when:
       - type: authentication_error
 `),
 			error: heimdall.ErrAuthentication,
-			configureContext: func(t *testing.T, ctx *mocks.MockContext) {
+			configureContext: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
 				ctx.On("RequestMethod").Return("POST")
@@ -423,7 +423,7 @@ when:
       - type: authentication_error
 `),
 			error: heimdall.ErrAuthentication,
-			configureContext: func(t *testing.T, ctx *mocks.MockContext) {
+			configureContext: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
 				ctx.On("RequestMethod").Return("POST")
@@ -456,7 +456,7 @@ when:
       - type: authentication_error
 `),
 			error: heimdall.ErrAuthentication,
-			configureContext: func(t *testing.T, ctx *mocks.MockContext) {
+			configureContext: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
 				requestURL, err := url.Parse("http://test.org")
@@ -494,12 +494,12 @@ when:
 			// GIVEN
 			configureContext := x.IfThenElse(tc.configureContext != nil,
 				tc.configureContext,
-				func(t *testing.T, ctx *mocks.MockContext) { t.Helper() })
+				func(t *testing.T, ctx *mocks.ContextMock) { t.Helper() })
 
 			conf, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
 
-			mctx := &mocks.MockContext{}
+			mctx := &mocks.ContextMock{}
 			mctx.On("AppContext").Return(context.Background())
 
 			configureContext(t, mctx)
