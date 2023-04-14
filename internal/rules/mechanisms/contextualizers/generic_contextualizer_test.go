@@ -444,7 +444,7 @@ func TestGenericContextualizerExecute(t *testing.T) {
 		contextualizer   *genericContextualizer
 		subject          *subject.Subject
 		instructServer   func(t *testing.T)
-		configureContext func(t *testing.T, ctx *heimdallmocks.MockContext)
+		configureContext func(t *testing.T, ctx *heimdallmocks.ContextMock)
 		configureCache   func(t *testing.T, cch *mocks.MockCache, contextualizer *genericContextualizer,
 			sub *subject.Subject)
 		assert func(t *testing.T, err error, sub *subject.Subject)
@@ -522,7 +522,7 @@ func TestGenericContextualizerExecute(t *testing.T) {
 					return val != nil && val.payload == "Hi from endpoint"
 				}), 5*time.Second)
 			},
-			configureContext: func(t *testing.T, ctx *heimdallmocks.MockContext) {
+			configureContext: func(t *testing.T, ctx *heimdallmocks.ContextMock) {
 				t.Helper()
 
 				ctx.On("RequestMethod").Return("POST")
@@ -558,7 +558,7 @@ func TestGenericContextualizerExecute(t *testing.T) {
 				}(),
 			},
 			subject: &subject.Subject{ID: "Foo", Attributes: map[string]any{"bar": "baz"}},
-			configureContext: func(t *testing.T, ctx *heimdallmocks.MockContext) {
+			configureContext: func(t *testing.T, ctx *heimdallmocks.ContextMock) {
 				t.Helper()
 
 				ctx.On("RequestMethod").Return("POST")
@@ -742,7 +742,7 @@ func TestGenericContextualizerExecute(t *testing.T) {
 				responseContent = []byte(`{ "baz": "foo" }`)
 				responseCode = http.StatusOK
 			},
-			configureContext: func(t *testing.T, ctx *heimdallmocks.MockContext) {
+			configureContext: func(t *testing.T, ctx *heimdallmocks.ContextMock) {
 				t.Helper()
 
 				ctx.On("RequestHeader", "X-Bar-Foo").Return("Hi Foo")
@@ -780,7 +780,7 @@ func TestGenericContextualizerExecute(t *testing.T) {
 
 			configureContext := x.IfThenElse(tc.configureContext != nil,
 				tc.configureContext,
-				func(t *testing.T, ctx *heimdallmocks.MockContext) { t.Helper() })
+				func(t *testing.T, ctx *heimdallmocks.ContextMock) { t.Helper() })
 
 			configureCache := x.IfThenElse(tc.configureCache != nil,
 				tc.configureCache,
@@ -790,7 +790,7 @@ func TestGenericContextualizerExecute(t *testing.T) {
 
 			cch := &mocks.MockCache{}
 
-			ctx := &heimdallmocks.MockContext{}
+			ctx := &heimdallmocks.ContextMock{}
 			ctx.On("AppContext").Return(cache.WithContext(context.Background(), cch))
 
 			configureContext(t, ctx)

@@ -312,7 +312,7 @@ func TestWWWAuthenticateErrorHandlerExecute(t *testing.T) {
 		uc               string
 		config           []byte
 		error            error
-		configureContext func(t *testing.T, ctx *mocks.MockContext)
+		configureContext func(t *testing.T, ctx *mocks.ContextMock)
 		assert           func(t *testing.T, wasResponsible bool, err error)
 	}{
 		{
@@ -338,7 +338,7 @@ when:
       - type: authentication_error
 `),
 			error: heimdall.ErrAuthentication,
-			configureContext: func(t *testing.T, ctx *mocks.MockContext) {
+			configureContext: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
 				ctx.On("SetPipelineError", heimdall.ErrAuthentication)
@@ -367,7 +367,7 @@ when:
       - type: authentication_error
 `),
 			error: heimdall.ErrAuthentication,
-			configureContext: func(t *testing.T, ctx *mocks.MockContext) {
+			configureContext: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
 				ctx.On("SetPipelineError", heimdall.ErrAuthentication)
@@ -392,12 +392,12 @@ when:
 			// GIVEN
 			configureContext := x.IfThenElse(tc.configureContext != nil,
 				tc.configureContext,
-				func(t *testing.T, ctx *mocks.MockContext) { t.Helper() })
+				func(t *testing.T, ctx *mocks.ContextMock) { t.Helper() })
 
 			conf, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
 
-			mctx := &mocks.MockContext{}
+			mctx := &mocks.ContextMock{}
 			mctx.On("AppContext").Return(context.Background())
 
 			configureContext(t, mctx)

@@ -21,6 +21,8 @@ import (
 	"net/url"
 )
 
+//go:generate mockery --name Context --structname ContextMock
+
 type Context interface { // nolint: interfacebloat
 	RequestMethod() string
 	RequestHeaders() map[string]string

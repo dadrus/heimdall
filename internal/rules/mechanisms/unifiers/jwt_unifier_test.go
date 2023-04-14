@@ -340,8 +340,8 @@ func TestJWTUnifierExecute(t *testing.T) {
 		config         []byte
 		subject        *subject.Subject
 		configureMocks func(t *testing.T,
-			ctx *heimdallmocks.MockContext,
-			signer *heimdallmocks.MockJWTSigner,
+			ctx *heimdallmocks.ContextMock,
+			signer *heimdallmocks.JWTSignerMock,
 			cch *mocks.MockCache,
 			sub *subject.Subject)
 		assert func(t *testing.T, err error)
@@ -364,7 +364,7 @@ func TestJWTUnifierExecute(t *testing.T) {
 		{
 			uc:      "with used prefilled cache",
 			subject: &subject.Subject{ID: "foo", Attributes: map[string]any{"baz": "bar"}},
-			configureMocks: func(t *testing.T, ctx *heimdallmocks.MockContext, signer *heimdallmocks.MockJWTSigner,
+			configureMocks: func(t *testing.T, ctx *heimdallmocks.ContextMock, signer *heimdallmocks.JWTSignerMock,
 				cch *mocks.MockCache, sub *subject.Subject,
 			) {
 				t.Helper()
@@ -389,7 +389,7 @@ func TestJWTUnifierExecute(t *testing.T) {
 			uc:      "with bad prefilled cache and without custom claims",
 			config:  []byte(`ttl: 1m`),
 			subject: &subject.Subject{ID: "foo", Attributes: map[string]any{"baz": "bar"}},
-			configureMocks: func(t *testing.T, ctx *heimdallmocks.MockContext, signer *heimdallmocks.MockJWTSigner,
+			configureMocks: func(t *testing.T, ctx *heimdallmocks.ContextMock, signer *heimdallmocks.JWTSignerMock,
 				cch *mocks.MockCache, sub *subject.Subject,
 			) {
 				t.Helper()
@@ -418,7 +418,7 @@ func TestJWTUnifierExecute(t *testing.T) {
 			uc:      "with no cache hit and without custom claims",
 			config:  []byte(`ttl: 1m`),
 			subject: &subject.Subject{ID: "foo", Attributes: map[string]any{"baz": "bar"}},
-			configureMocks: func(t *testing.T, ctx *heimdallmocks.MockContext, signer *heimdallmocks.MockJWTSigner,
+			configureMocks: func(t *testing.T, ctx *heimdallmocks.ContextMock, signer *heimdallmocks.JWTSignerMock,
 				cch *mocks.MockCache, sub *subject.Subject,
 			) {
 				t.Helper()
@@ -448,7 +448,7 @@ claims: '{
   {{ quote $val }}: "baz"
 }'`),
 			subject: &subject.Subject{ID: "foo", Attributes: map[string]any{"baz": "bar"}},
-			configureMocks: func(t *testing.T, ctx *heimdallmocks.MockContext, signer *heimdallmocks.MockJWTSigner,
+			configureMocks: func(t *testing.T, ctx *heimdallmocks.ContextMock, signer *heimdallmocks.JWTSignerMock,
 				cch *mocks.MockCache, sub *subject.Subject,
 			) {
 				t.Helper()
@@ -476,7 +476,7 @@ claims: '{
 			id:      "jun2",
 			config:  []byte(`claims: "foo: bar"`),
 			subject: &subject.Subject{ID: "foo", Attributes: map[string]any{"baz": "bar"}},
-			configureMocks: func(t *testing.T, ctx *heimdallmocks.MockContext, signer *heimdallmocks.MockJWTSigner,
+			configureMocks: func(t *testing.T, ctx *heimdallmocks.ContextMock, signer *heimdallmocks.JWTSignerMock,
 				cch *mocks.MockCache, sub *subject.Subject,
 			) {
 				t.Helper()
@@ -503,7 +503,7 @@ claims: '{
 			id:      "jun3",
 			config:  []byte(`claims: "{{ .foobar }}"`),
 			subject: &subject.Subject{ID: "foo", Attributes: map[string]any{"baz": "bar"}},
-			configureMocks: func(t *testing.T, ctx *heimdallmocks.MockContext, signer *heimdallmocks.MockJWTSigner,
+			configureMocks: func(t *testing.T, ctx *heimdallmocks.ContextMock, signer *heimdallmocks.JWTSignerMock,
 				cch *mocks.MockCache, sub *subject.Subject,
 			) {
 				t.Helper()
@@ -530,7 +530,7 @@ claims: '{
 			// GIVEN
 			configureMocks := x.IfThenElse(tc.configureMocks != nil,
 				tc.configureMocks,
-				func(t *testing.T, _ *heimdallmocks.MockContext, _ *heimdallmocks.MockJWTSigner,
+				func(t *testing.T, _ *heimdallmocks.ContextMock, _ *heimdallmocks.JWTSignerMock,
 					_ *mocks.MockCache, _ *subject.Subject,
 				) {
 					t.Helper()
@@ -540,8 +540,8 @@ claims: '{
 			require.NoError(t, err)
 
 			cch := &mocks.MockCache{}
-			mctx := &heimdallmocks.MockContext{}
-			signer := &heimdallmocks.MockJWTSigner{}
+			mctx := &heimdallmocks.ContextMock{}
+			signer := &heimdallmocks.JWTSignerMock{}
 
 			mctx.On("AppContext").Return(cache.WithContext(context.Background(), cch))
 			configureMocks(t, mctx, signer, cch, tc.subject)

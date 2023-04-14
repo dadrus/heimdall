@@ -38,7 +38,7 @@ func TestExtractQueryParameter(t *testing.T) {
 	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, "foobar.local", nil)
 	require.NoError(t, err)
 
-	ctx := &mocks.MockContext{}
+	ctx := &mocks.ContextMock{}
 	ctx.On("RequestQueryParameter", queryParam).Return(queryParamValue)
 
 	strategy := QueryParameterExtractStrategy{Name: queryParam}
@@ -60,7 +60,7 @@ func TestExtractNotExistingQueryParameterValue(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
-	ctx := &mocks.MockContext{}
+	ctx := &mocks.ContextMock{}
 	ctx.On("RequestQueryParameter", mock.Anything).Return("")
 
 	strategy := QueryParameterExtractStrategy{Name: "Test-Cookie"}

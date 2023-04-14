@@ -341,13 +341,13 @@ password: bar`))
 	for _, tc := range []struct {
 		uc               string
 		id               string
-		configureContext func(t *testing.T, ctx *mocks.MockContext)
+		configureContext func(t *testing.T, ctx *mocks.ContextMock)
 		assert           func(t *testing.T, err error, sub *subject.Subject)
 	}{
 		{
 			uc: "no required header present",
 			id: "auth3",
-			configureContext: func(t *testing.T, ctx *mocks.MockContext) {
+			configureContext: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
 				ctx.On("RequestHeader", "Authorization").Return("")
@@ -370,7 +370,7 @@ password: bar`))
 		{
 			uc: "base64 decoding error",
 			id: "auth3",
-			configureContext: func(t *testing.T, ctx *mocks.MockContext) {
+			configureContext: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
 				ctx.On("RequestHeader", "Authorization").Return("Basic bar")
@@ -393,7 +393,7 @@ password: bar`))
 		{
 			uc: "malformed encoding",
 			id: "auth3",
-			configureContext: func(t *testing.T, ctx *mocks.MockContext) {
+			configureContext: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
 				ctx.On("RequestHeader", "Authorization").
@@ -417,7 +417,7 @@ password: bar`))
 		{
 			uc: "invalid user id",
 			id: "auth3",
-			configureContext: func(t *testing.T, ctx *mocks.MockContext) {
+			configureContext: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
 				ctx.On("RequestHeader", "Authorization").
@@ -441,7 +441,7 @@ password: bar`))
 		{
 			uc: "invalid password",
 			id: "auth3",
-			configureContext: func(t *testing.T, ctx *mocks.MockContext) {
+			configureContext: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
 				ctx.On("RequestHeader", "Authorization").
@@ -465,7 +465,7 @@ password: bar`))
 		{
 			uc: "valid credentials",
 			id: "auth3",
-			configureContext: func(t *testing.T, ctx *mocks.MockContext) {
+			configureContext: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
 				ctx.On("RequestHeader", "Authorization").
@@ -487,7 +487,7 @@ password: bar`))
 			auth, err := newBasicAuthAuthenticator(tc.id, conf)
 			require.NoError(t, err)
 
-			ctx := &mocks.MockContext{}
+			ctx := &mocks.ContextMock{}
 			ctx.On("AppContext").Return(context.Background())
 			tc.configureContext(t, ctx)
 

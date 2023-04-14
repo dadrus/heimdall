@@ -227,7 +227,7 @@ func TestCELAuthorizerExecute(t *testing.T) {
 		uc                         string
 		id                         string
 		config                     []byte
-		configureContextAndSubject func(t *testing.T, ctx *mocks.MockContext, sub *subject.Subject)
+		configureContextAndSubject func(t *testing.T, ctx *mocks.ContextMock, sub *subject.Subject)
 		assert                     func(t *testing.T, err error)
 	}{
 		{
@@ -237,7 +237,7 @@ func TestCELAuthorizerExecute(t *testing.T) {
 expressions:
   - expression: "true == false"
 `),
-			configureContextAndSubject: func(t *testing.T, ctx *mocks.MockContext, sub *subject.Subject) {
+			configureContextAndSubject: func(t *testing.T, ctx *mocks.ContextMock, sub *subject.Subject) {
 				// nothing is required here
 				t.Helper()
 
@@ -278,7 +278,7 @@ expressions:
   - expression: Request.Cookie("FooCookie") == "barfoo"
   - expression: Request.URL.String() == "http://localhost/test?foo=bar&baz=zab"
 `),
-			configureContextAndSubject: func(t *testing.T, ctx *mocks.MockContext, sub *subject.Subject) {
+			configureContextAndSubject: func(t *testing.T, ctx *mocks.ContextMock, sub *subject.Subject) {
 				t.Helper()
 
 				sub.ID = "foobar"
@@ -311,7 +311,7 @@ expressions:
 			conf, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
 
-			mctx := &mocks.MockContext{}
+			mctx := &mocks.ContextMock{}
 			mctx.On("AppContext").Return(context.Background())
 
 			sub := &subject.Subject{}

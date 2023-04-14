@@ -35,7 +35,7 @@ func TestErrorConditionMatcherMatch(t *testing.T) {
 	for _, tc := range []struct {
 		uc       string
 		matcher  ErrorConditionMatcher
-		setupCtx func(ctx *mocks.MockContext)
+		setupCtx func(ctx *mocks.ContextMock)
 		err      error
 		matching bool
 	}{
@@ -52,7 +52,7 @@ func TestErrorConditionMatcherMatch(t *testing.T) {
 				CIDR:    cidrMatcher,
 				Headers: &HeaderMatcher{"foobar": {"bar", "foo"}},
 			},
-			setupCtx: func(ctx *mocks.MockContext) {
+			setupCtx: func(ctx *mocks.ContextMock) {
 				t.Helper()
 
 				ctx.On("RequestHeaders").Return(map[string]string{
@@ -78,7 +78,7 @@ func TestErrorConditionMatcherMatch(t *testing.T) {
 				CIDR:    cidrMatcher,
 				Headers: &HeaderMatcher{"foobar": {"bar", "foo"}},
 			},
-			setupCtx: func(ctx *mocks.MockContext) {
+			setupCtx: func(ctx *mocks.ContextMock) {
 				t.Helper()
 
 				ctx.On("RequestHeaders").Return(map[string]string{
@@ -104,7 +104,7 @@ func TestErrorConditionMatcherMatch(t *testing.T) {
 				CIDR:    cidrMatcher,
 				Headers: &HeaderMatcher{"foobar": {"bar", "foo"}},
 			},
-			setupCtx: func(ctx *mocks.MockContext) {
+			setupCtx: func(ctx *mocks.ContextMock) {
 				t.Helper()
 
 				ctx.On("RequestHeaders").Return(map[string]string{
@@ -130,7 +130,7 @@ func TestErrorConditionMatcherMatch(t *testing.T) {
 				CIDR:    cidrMatcher,
 				Headers: &HeaderMatcher{"foobar": {"bar", "foo"}},
 			},
-			setupCtx: func(ctx *mocks.MockContext) {
+			setupCtx: func(ctx *mocks.ContextMock) {
 				t.Helper()
 
 				ctx.On("RequestHeaders").Return(map[string]string{
@@ -156,7 +156,7 @@ func TestErrorConditionMatcherMatch(t *testing.T) {
 				CIDR:    cidrMatcher,
 				Headers: &HeaderMatcher{"foobar": {"bar", "foo"}},
 			},
-			setupCtx: func(ctx *mocks.MockContext) {
+			setupCtx: func(ctx *mocks.ContextMock) {
 				t.Helper()
 
 				ctx.On("RequestHeaders").Return(map[string]string{
@@ -180,7 +180,7 @@ func TestErrorConditionMatcherMatch(t *testing.T) {
 					return &errMatcher
 				}(),
 			},
-			setupCtx: func(ctx *mocks.MockContext) {
+			setupCtx: func(ctx *mocks.ContextMock) {
 				t.Helper()
 			},
 			err:      heimdall.ErrConfiguration,
@@ -191,7 +191,7 @@ func TestErrorConditionMatcherMatch(t *testing.T) {
 			matcher: ErrorConditionMatcher{
 				Headers: &HeaderMatcher{"foobar": {"bar", "foo"}},
 			},
-			setupCtx: func(ctx *mocks.MockContext) {
+			setupCtx: func(ctx *mocks.ContextMock) {
 				t.Helper()
 
 				ctx.On("RequestHeaders").Return(map[string]string{
@@ -206,7 +206,7 @@ func TestErrorConditionMatcherMatch(t *testing.T) {
 			matcher: ErrorConditionMatcher{
 				CIDR: cidrMatcher,
 			},
-			setupCtx: func(ctx *mocks.MockContext) {
+			setupCtx: func(ctx *mocks.ContextMock) {
 				t.Helper()
 
 				ctx.On("RequestClientIPs").Return([]string{
@@ -219,7 +219,7 @@ func TestErrorConditionMatcherMatch(t *testing.T) {
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
 			// GIVEN
-			ctx := &mocks.MockContext{}
+			ctx := &mocks.ContextMock{}
 			tc.setupCtx(ctx)
 
 			// WHEN

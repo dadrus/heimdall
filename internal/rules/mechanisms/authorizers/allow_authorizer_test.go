@@ -49,7 +49,7 @@ func TestCreateAllowAuthorizerFromPrototype(t *testing.T) {
 
 func TestAllowAuthorizerExecute(t *testing.T) {
 	// GIVEN
-	ctx := &mocks.MockContext{}
+	ctx := &mocks.ContextMock{}
 	ctx.On("AppContext").Return(context.Background())
 
 	auth := newAllowAuthorizer("baz")

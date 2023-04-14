@@ -32,13 +32,13 @@ func TestExtractBodyParameter(t *testing.T) {
 	for _, tc := range []struct {
 		uc             string
 		parameterName  string
-		configureMocks func(t *testing.T, ctx *mocks.MockContext)
+		configureMocks func(t *testing.T, ctx *mocks.ContextMock)
 		assert         func(t *testing.T, err error, authData AuthData)
 	}{
 		{
 			uc:            "unsupported content type",
 			parameterName: "foobar",
-			configureMocks: func(t *testing.T, ctx *mocks.MockContext) {
+			configureMocks: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
 				ctx.On("RequestHeader", "Content-Type").Return("FooBar")
@@ -54,7 +54,7 @@ func TestExtractBodyParameter(t *testing.T) {
 		{
 			uc:            "json body decoding error",
 			parameterName: "foobar",
-			configureMocks: func(t *testing.T, ctx *mocks.MockContext) {
+			configureMocks: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
 				ctx.On("RequestHeader", "Content-Type").Return("application/json")
@@ -71,7 +71,7 @@ func TestExtractBodyParameter(t *testing.T) {
 		{
 			uc:            "form url encoded body decoding error",
 			parameterName: "foobar",
-			configureMocks: func(t *testing.T, ctx *mocks.MockContext) {
+			configureMocks: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
 				ctx.On("RequestHeader", "Content-Type").
@@ -89,7 +89,7 @@ func TestExtractBodyParameter(t *testing.T) {
 		{
 			uc:            "json encoded body does not contain required parameter",
 			parameterName: "foobar",
-			configureMocks: func(t *testing.T, ctx *mocks.MockContext) {
+			configureMocks: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
 				ctx.On("RequestHeader", "Content-Type").
@@ -107,7 +107,7 @@ func TestExtractBodyParameter(t *testing.T) {
 		{
 			uc:            "form url encoded body does not contain required parameter",
 			parameterName: "foobar",
-			configureMocks: func(t *testing.T, ctx *mocks.MockContext) {
+			configureMocks: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
 				ctx.On("RequestHeader", "Content-Type").
@@ -125,7 +125,7 @@ func TestExtractBodyParameter(t *testing.T) {
 		{
 			uc:            "json encoded body contains required parameter multiple times",
 			parameterName: "foobar",
-			configureMocks: func(t *testing.T, ctx *mocks.MockContext) {
+			configureMocks: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
 				ctx.On("RequestHeader", "Content-Type").
@@ -143,7 +143,7 @@ func TestExtractBodyParameter(t *testing.T) {
 		{
 			uc:            "form url encoded body contains required parameter multiple times",
 			parameterName: "foobar",
-			configureMocks: func(t *testing.T, ctx *mocks.MockContext) {
+			configureMocks: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
 				ctx.On("RequestHeader", "Content-Type").
@@ -161,7 +161,7 @@ func TestExtractBodyParameter(t *testing.T) {
 		{
 			uc:            "json encoded body contains required parameter in wrong format #1",
 			parameterName: "foobar",
-			configureMocks: func(t *testing.T, ctx *mocks.MockContext) {
+			configureMocks: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
 				ctx.On("RequestHeader", "Content-Type").
@@ -179,7 +179,7 @@ func TestExtractBodyParameter(t *testing.T) {
 		{
 			uc:            "json encoded body contains required parameter in wrong format #2",
 			parameterName: "foobar",
-			configureMocks: func(t *testing.T, ctx *mocks.MockContext) {
+			configureMocks: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
 				ctx.On("RequestHeader", "Content-Type").
@@ -197,7 +197,7 @@ func TestExtractBodyParameter(t *testing.T) {
 		{
 			uc:            "json encoded body contains required parameter",
 			parameterName: "foobar",
-			configureMocks: func(t *testing.T, ctx *mocks.MockContext) {
+			configureMocks: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
 				ctx.On("RequestHeader", "Content-Type").
@@ -214,7 +214,7 @@ func TestExtractBodyParameter(t *testing.T) {
 		{
 			uc:            "form url encoded body contains required parameter",
 			parameterName: "foobar",
-			configureMocks: func(t *testing.T, ctx *mocks.MockContext) {
+			configureMocks: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
 				ctx.On("RequestHeader", "Content-Type").
@@ -231,7 +231,7 @@ func TestExtractBodyParameter(t *testing.T) {
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
 			// GIVEN
-			ctx := &mocks.MockContext{}
+			ctx := &mocks.ContextMock{}
 			tc.configureMocks(t, ctx)
 
 			strategy := BodyParameterExtractStrategy{Name: tc.parameterName}

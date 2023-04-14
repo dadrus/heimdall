@@ -139,7 +139,7 @@ func TestRuleExecute(t *testing.T) {
 		upstreamURL    *url.URL
 		configureMocks func(
 			t *testing.T,
-			ctx *heimdallmocks.MockContext,
+			ctx *heimdallmocks.ContextMock,
 			authenticator *mocks.SubjectCreatorMock,
 			authorizer *mocks.SubjectHandlerMock,
 			unifier *mocks.SubjectHandlerMock,
@@ -150,7 +150,7 @@ func TestRuleExecute(t *testing.T) {
 		{
 			uc:          "authenticator fails, but error handler succeeds",
 			upstreamURL: &url.URL{Scheme: "http", Host: "test.local", Path: "foo"},
-			configureMocks: func(t *testing.T, ctx *heimdallmocks.MockContext, authenticator *mocks.SubjectCreatorMock,
+			configureMocks: func(t *testing.T, ctx *heimdallmocks.ContextMock, authenticator *mocks.SubjectCreatorMock,
 				authorizer *mocks.SubjectHandlerMock, unifier *mocks.SubjectHandlerMock,
 				errHandler *mocks.ErrorHandlerMock,
 			) {
@@ -170,7 +170,7 @@ func TestRuleExecute(t *testing.T) {
 		{
 			uc:          "authenticator fails, and error handler fails",
 			upstreamURL: &url.URL{Scheme: "http", Host: "test.local", Path: "foo"},
-			configureMocks: func(t *testing.T, ctx *heimdallmocks.MockContext, authenticator *mocks.SubjectCreatorMock,
+			configureMocks: func(t *testing.T, ctx *heimdallmocks.ContextMock, authenticator *mocks.SubjectCreatorMock,
 				authorizer *mocks.SubjectHandlerMock, unifier *mocks.SubjectHandlerMock,
 				errHandler *mocks.ErrorHandlerMock,
 			) {
@@ -191,7 +191,7 @@ func TestRuleExecute(t *testing.T) {
 		{
 			uc:          "authenticator succeeds, authorizer fails, but error handler succeeds",
 			upstreamURL: &url.URL{Scheme: "http", Host: "test.local", Path: "foo"},
-			configureMocks: func(t *testing.T, ctx *heimdallmocks.MockContext, authenticator *mocks.SubjectCreatorMock,
+			configureMocks: func(t *testing.T, ctx *heimdallmocks.ContextMock, authenticator *mocks.SubjectCreatorMock,
 				authorizer *mocks.SubjectHandlerMock, unifier *mocks.SubjectHandlerMock,
 				errHandler *mocks.ErrorHandlerMock,
 			) {
@@ -214,7 +214,7 @@ func TestRuleExecute(t *testing.T) {
 		{
 			uc:          "authenticator succeeds, authorizer fails and error handler fails",
 			upstreamURL: &url.URL{Scheme: "http", Host: "test.local", Path: "foo"},
-			configureMocks: func(t *testing.T, ctx *heimdallmocks.MockContext, authenticator *mocks.SubjectCreatorMock,
+			configureMocks: func(t *testing.T, ctx *heimdallmocks.ContextMock, authenticator *mocks.SubjectCreatorMock,
 				authorizer *mocks.SubjectHandlerMock, unifier *mocks.SubjectHandlerMock,
 				errHandler *mocks.ErrorHandlerMock,
 			) {
@@ -238,7 +238,7 @@ func TestRuleExecute(t *testing.T) {
 		{
 			uc:          "authenticator succeeds, authorizer succeeds, unifier fails, but error handler succeeds",
 			upstreamURL: &url.URL{Scheme: "http", Host: "test.local", Path: "foo"},
-			configureMocks: func(t *testing.T, ctx *heimdallmocks.MockContext, authenticator *mocks.SubjectCreatorMock,
+			configureMocks: func(t *testing.T, ctx *heimdallmocks.ContextMock, authenticator *mocks.SubjectCreatorMock,
 				authorizer *mocks.SubjectHandlerMock, unifier *mocks.SubjectHandlerMock,
 				errHandler *mocks.ErrorHandlerMock,
 			) {
@@ -262,7 +262,7 @@ func TestRuleExecute(t *testing.T) {
 		{
 			uc:          "authenticator succeeds, authorizer succeeds, unifier fails and error handler fails",
 			upstreamURL: &url.URL{Scheme: "http", Host: "test.local", Path: "foo"},
-			configureMocks: func(t *testing.T, ctx *heimdallmocks.MockContext, authenticator *mocks.SubjectCreatorMock,
+			configureMocks: func(t *testing.T, ctx *heimdallmocks.ContextMock, authenticator *mocks.SubjectCreatorMock,
 				authorizer *mocks.SubjectHandlerMock, unifier *mocks.SubjectHandlerMock,
 				errHandler *mocks.ErrorHandlerMock,
 			) {
@@ -287,7 +287,7 @@ func TestRuleExecute(t *testing.T) {
 		{
 			uc:          "all handler succeed",
 			upstreamURL: &url.URL{Scheme: "http", Host: "test.local", Path: "foo"},
-			configureMocks: func(t *testing.T, ctx *heimdallmocks.MockContext, authenticator *mocks.SubjectCreatorMock,
+			configureMocks: func(t *testing.T, ctx *heimdallmocks.ContextMock, authenticator *mocks.SubjectCreatorMock,
 				authorizer *mocks.SubjectHandlerMock, unifier *mocks.SubjectHandlerMock,
 				errHandler *mocks.ErrorHandlerMock,
 			) {
@@ -309,7 +309,7 @@ func TestRuleExecute(t *testing.T) {
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
 			// GIVEN
-			ctx := &heimdallmocks.MockContext{}
+			ctx := &heimdallmocks.ContextMock{}
 			ctx.On("AppContext").Return(context.Background())
 
 			authenticator := mocks.NewSubjectCreatorMock(t)

@@ -22,6 +22,8 @@ import (
 	"gopkg.in/square/go-jose.v2"
 )
 
+//go:generate mockery --name JWTSigner --structname JWTSignerMock
+
 type JWTSigner interface {
 	Sign(sub string, ttl time.Duration, claims map[string]any) (string, error)
 	Hash() []byte

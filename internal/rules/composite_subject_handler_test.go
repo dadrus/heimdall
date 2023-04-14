@@ -112,7 +112,7 @@ func TestCompositeSubjectHandlerExecution(t *testing.T) {
 		t.Run(tc.uc, func(t *testing.T) {
 			// GIVEN
 			sub := &subject.Subject{ID: "foo"}
-			ctx := &mocks.MockContext{}
+			ctx := &mocks.ContextMock{}
 			ctx.On("AppContext").Return(context.Background())
 
 			handler1 := rulemocks.NewSubjectHandlerMock(t)
