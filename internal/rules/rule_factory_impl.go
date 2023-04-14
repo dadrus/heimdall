@@ -2,6 +2,7 @@ package rules
 
 import (
 	"crypto"
+	"errors"
 	"fmt"
 	"net/url"
 
@@ -39,7 +40,7 @@ type ruleFactory struct {
 	hasDefaultRule bool
 }
 
-// nolint: gocognit, cyclop
+//nolint:funlen,gocognit,cyclop
 func (f *ruleFactory) createExecutePipeline(
 	version string,
 	pipeline []config.MechanismConfig,
@@ -50,6 +51,26 @@ func (f *ruleFactory) createExecutePipeline(
 		unifiers        compositeSubjectHandler
 	)
 
+	contextualizersCheck := func() error {
+		if len(unifiers) != 0 {
+			return errorchain.NewWithMessage(heimdall.ErrConfiguration,
+				"at least one unifier is defined before a contextualizer")
+		}
+
+		return nil
+	}
+
+	authorizersCheck := func() error {
+		if len(unifiers) != 0 {
+			return errorchain.NewWithMessage(heimdall.ErrConfiguration,
+				"at least one unifier is defined before an authorizer")
+		}
+
+		return nil
+	}
+
+	unifiersCheck := func() error { return nil }
+
 	for _, pipelineStep := range pipeline {
 		id, found := pipelineStep["authenticator"]
 		if found {
@@ -58,7 +79,7 @@ func (f *ruleFactory) createExecutePipeline(
 					"an authenticator is defined after some other non authenticator type")
 			}
 
-			authenticator, err := f.hf.CreateAuthenticator(version, id.(string), f.getConfig(pipelineStep["config"]))
+			authenticator, err := f.hf.CreateAuthenticator(version, id.(string), getConfig(pipelineStep["config"]))
 			if err != nil {
 				return nil, nil, nil, err
 			}
@@ -68,48 +89,32 @@ func (f *ruleFactory) createExecutePipeline(
 			continue
 		}
 
-		id, found = pipelineStep["authorizer"]
-		if found {
-			if len(unifiers) != 0 {
-				return nil, nil, nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
-					"at least one unifier is defined before an authorizer")
-			}
-
-			authorizer, err := f.hf.CreateAuthorizer(version, id.(string), f.getConfig(pipelineStep["config"]))
-			if err != nil {
-				return nil, nil, nil, err
-			}
-
-			subjectHandlers = append(subjectHandlers, authorizer)
+		handler, err := createHandler(version, "authorizer", pipelineStep, authorizersCheck,
+			f.hf.CreateAuthorizer)
+		if err != nil && !errors.Is(err, errHandlerNotFound) {
+			return nil, nil, nil, err
+		} else if handler != nil {
+			subjectHandlers = append(subjectHandlers, handler)
 
 			continue
 		}
 
-		id, found = pipelineStep["contextualizer"]
-		if found {
-			if len(unifiers) != 0 {
-				return nil, nil, nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
-					"at least one unifier is defined before a contextualizer")
-			}
-
-			contextualizer, err := f.hf.CreateContextualizer(version, id.(string), f.getConfig(pipelineStep["config"]))
-			if err != nil {
-				return nil, nil, nil, err
-			}
-
-			subjectHandlers = append(subjectHandlers, contextualizer)
+		handler, err = createHandler(version, "contextualizer", pipelineStep, contextualizersCheck,
+			f.hf.CreateContextualizer)
+		if err != nil && !errors.Is(err, errHandlerNotFound) {
+			return nil, nil, nil, err
+		} else if handler != nil {
+			subjectHandlers = append(subjectHandlers, handler)
 
 			continue
 		}
 
-		id, found = pipelineStep["unifier"]
-		if found {
-			unifier, err := f.hf.CreateUnifier(version, id.(string), f.getConfig(pipelineStep["config"]))
-			if err != nil {
-				return nil, nil, nil, err
-			}
-
-			unifiers = append(unifiers, unifier)
+		handler, err = createHandler(version, "unifier", pipelineStep, unifiersCheck,
+			f.hf.CreateUnifier)
+		if err != nil && !errors.Is(err, errHandlerNotFound) {
+			return nil, nil, nil, err
+		} else if handler != nil {
+			unifiers = append(unifiers, handler)
 
 			continue
 		}
@@ -119,20 +124,6 @@ func (f *ruleFactory) createExecutePipeline(
 	}
 
 	return authenticators, subjectHandlers, unifiers, nil
-}
-
-func (f *ruleFactory) getConfig(conf any) config.MechanismConfig {
-	var mapConf config.MechanismConfig
-
-	if conf != nil {
-		if m, ok := conf.(map[string]any); ok {
-			return m
-		}
-
-		panic(fmt.Sprintf("unexpected type for config %T", conf))
-	}
-
-	return mapConf
 }
 
 func (f *ruleFactory) DefaultRule() rule.Rule {
@@ -243,7 +234,7 @@ func (f *ruleFactory) createOnErrorPipeline(
 	for _, ehStep := range ehConfigs {
 		id, found := ehStep["error_handler"]
 		if found {
-			eh, err := f.hf.CreateErrorHandler(version, id.(string), f.getConfig(ehStep["config"]))
+			eh, err := f.hf.CreateErrorHandler(version, id.(string), getConfig(ehStep["config"]))
 			if err != nil {
 				return nil, err
 			}
@@ -311,4 +302,68 @@ func (f *ruleFactory) initWithDefaultRule(ruleConfig *config.DefaultRule, logger
 	f.hasDefaultRule = true
 
 	return nil
+}
+
+type CheckFunc func() error
+
+var errHandlerNotFound = errors.New("handler not found")
+
+func createHandler[T subjectHandler](
+	version string,
+	handlerType string,
+	configMap map[string]any,
+	check CheckFunc,
+	creteHandler func(version, id string, conf config.MechanismConfig) (T, error),
+) (subjectHandler, error) {
+	id, found := configMap[handlerType]
+	if !found {
+		return nil, errHandlerNotFound
+	}
+
+	if err := check(); err != nil {
+		return nil, err
+	}
+
+	handler, err := creteHandler(version, id.(string), getConfig(configMap["config"]))
+	if err != nil {
+		return nil, err
+	}
+
+	condition, err := getExecutionCondition(configMap["if"])
+	if err != nil {
+		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
+			"failed creating execution condition")
+	}
+
+	return &conditionalSubjectHandler{h: handler, c: condition}, err
+}
+
+func getConfig(conf any) config.MechanismConfig {
+	if conf == nil {
+		return nil
+	}
+
+	if m, ok := conf.(map[string]any); ok {
+		return m
+	}
+
+	panic(fmt.Sprintf("unexpected type for config %T", conf))
+}
+
+func getExecutionCondition(conf any) (executionCondition, error) {
+	if conf == nil {
+		return defaultExecutionCondition{}, nil
+	}
+
+	expression, ok := conf.(string)
+	if !ok {
+		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+			"unexpected type for condition %T", conf)
+	}
+
+	if len(expression) == 0 {
+		return defaultExecutionCondition{}, nil
+	}
+
+	return newCelExecutionCondition(expression)
 }
