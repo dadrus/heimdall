@@ -923,6 +923,8 @@ github.com/go-co-op/gocron v1.20.1 h1:wCGabII3xf/NrrYeOzJ4voLBBtA5k7Rb99+7l/iiu+
 github.com/go-co-op/gocron v1.20.1/go.mod h1:UqVyvM90I1q/R1qGEX6cBORI6WArLuEgYlbncLMvzRM=
 github.com/go-co-op/gocron v1.21.1 h1:ZZcVA3fy6xgmzHjducl9/W5RBftLgIrN937dTsDQHo4=
 github.com/go-co-op/gocron v1.21.1/go.mod h1:UqVyvM90I1q/R1qGEX6cBORI6WArLuEgYlbncLMvzRM=
+github.com/go-co-op/gocron v1.22.0 h1:0JxvGtOfcOhR4wGqjsduO3erthrJsCn1zeQwzXz0nKg=
+github.com/go-co-op/gocron v1.22.0/go.mod h1:UqVyvM90I1q/R1qGEX6cBORI6WArLuEgYlbncLMvzRM=
 github.com/go-gl/glfw v0.0.0-20190409004039-e6da0acd62b1/go.mod h1:vR7hzQXu2zJy9AVAgeJqvqgH9Q5CA+iKCZ2gyEVpxRU=
 github.com/go-gl/glfw/v3.3/glfw v0.0.0-20191125211704-12ad95a8df72/go.mod h1:tQ2UAYgL5IevRw8kRxooKSPJfGvJ9fJQFa0TUsXzTg8=
 github.com/go-gl/glfw/v3.3/glfw v0.0.0-20200222043503-6f7a984d4dc4/go.mod h1:tQ2UAYgL5IevRw8kRxooKSPJfGvJ9fJQFa0TUsXzTg8=
