@@ -324,15 +324,14 @@ func createHandler[T subjectHandler](
 		return nil, err
 	}
 
-	handler, err := creteHandler(version, id.(string), getConfig(configMap["config"]))
+	condition, err := getExecutionCondition(configMap["if"])
 	if err != nil {
 		return nil, err
 	}
 
-	condition, err := getExecutionCondition(configMap["if"])
+	handler, err := creteHandler(version, id.(string), getConfig(configMap["config"]))
 	if err != nil {
-		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
-			"failed creating execution condition")
+		return nil, err
 	}
 
 	return &conditionalSubjectHandler{h: handler, c: condition}, err
@@ -358,11 +357,12 @@ func getExecutionCondition(conf any) (executionCondition, error) {
 	expression, ok := conf.(string)
 	if !ok {
 		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
-			"unexpected type for condition %T", conf)
+			"unexpected type '%T' for execution condition", conf)
 	}
 
 	if len(expression) == 0 {
-		return defaultExecutionCondition{}, nil
+		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
+			"empty execution condition")
 	}
 
 	return newCelExecutionCondition(expression)
