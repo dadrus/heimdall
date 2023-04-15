@@ -184,6 +184,7 @@ func TestAnonymousAuthenticatorExecute(t *testing.T) {
 	assert.NotNil(t, sub)
 	assert.Equal(t, subjectID, sub.ID)
 	assert.Empty(t, sub.Attributes)
+	assert.NotNil(t, sub.Attributes)
 	ctx.AssertExpectations(t)
 }
 

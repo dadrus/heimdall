@@ -66,7 +66,7 @@ func (a *anonymousAuthenticator) Execute(ctx heimdall.Context) (*subject.Subject
 	logger := zerolog.Ctx(ctx.AppContext())
 	logger.Debug().Msg("Authenticating using anonymous authenticator")
 
-	return &subject.Subject{ID: a.Subject}, nil
+	return &subject.Subject{ID: a.Subject, Attributes: make(map[string]any)}, nil
 }
 
 func (a *anonymousAuthenticator) WithConfig(config map[string]any) (Authenticator, error) {
