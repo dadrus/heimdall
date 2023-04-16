@@ -93,7 +93,7 @@ func (eh *redirectErrorHandler) Execute(ctx heimdall.Context, err error) (bool, 
 		}
 	}
 
-	logger.Debug().Msg("Handling error using redirect error handler")
+	logger.Debug().Str("_id", eh.id).Msg("Handling error using redirect error handler")
 
 	toURL, err := eh.to.Render(ctx, nil)
 	if err != nil {
