@@ -64,7 +64,7 @@ type anonymousAuthenticator struct {
 
 func (a *anonymousAuthenticator) Execute(ctx heimdall.Context) (*subject.Subject, error) {
 	logger := zerolog.Ctx(ctx.AppContext())
-	logger.Debug().Msg("Authenticating using anonymous authenticator")
+	logger.Debug().Str("_id", a.id).Msg("Authenticating using anonymous authenticator")
 
 	return &subject.Subject{ID: a.Subject, Attributes: make(map[string]any)}, nil
 }

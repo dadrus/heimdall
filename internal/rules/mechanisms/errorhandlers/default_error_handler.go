@@ -45,7 +45,7 @@ func newDefaultErrorHandler(id string) *defaultErrorHandler {
 
 func (eh *defaultErrorHandler) Execute(ctx heimdall.Context, err error) (bool, error) {
 	logger := zerolog.Ctx(ctx.AppContext())
-	logger.Debug().Msg("Handling error using default error handler")
+	logger.Debug().Str("_id", eh.id).Msg("Handling error using default error handler")
 
 	ctx.SetPipelineError(err)
 

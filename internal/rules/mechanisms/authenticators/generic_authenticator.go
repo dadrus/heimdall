@@ -111,7 +111,7 @@ func newGenericAuthenticator(id string, rawConfig map[string]any) (*genericAuthe
 
 func (a *genericAuthenticator) Execute(ctx heimdall.Context) (*subject.Subject, error) {
 	logger := zerolog.Ctx(ctx.AppContext())
-	logger.Debug().Msg("Authenticating using generic authenticator")
+	logger.Debug().Str("_id", a.id).Msg("Authenticating using generic authenticator")
 
 	authData, err := a.ads.GetAuthData(ctx)
 	if err != nil {

@@ -27,24 +27,26 @@ import (
 // nolint
 func init() {
 	registerAuthenticatorTypeFactory(
-		func(_ string, typ string, conf map[string]any) (bool, Authenticator, error) {
+		func(id string, typ string, conf map[string]any) (bool, Authenticator, error) {
 			if typ != AuthenticatorNoop {
 				return false, nil, nil
 			}
 
-			return true, newNoopAuthenticator(), nil
+			return true, newNoopAuthenticator(id), nil
 		})
 }
 
-type noopAuthenticator struct{}
-
-func newNoopAuthenticator() *noopAuthenticator {
-	return &noopAuthenticator{}
+type noopAuthenticator struct {
+	id string
 }
 
-func (*noopAuthenticator) Execute(ctx heimdall.Context) (*subject.Subject, error) {
+func newNoopAuthenticator(id string) *noopAuthenticator {
+	return &noopAuthenticator{id: id}
+}
+
+func (a *noopAuthenticator) Execute(ctx heimdall.Context) (*subject.Subject, error) {
 	logger := zerolog.Ctx(ctx.AppContext())
-	logger.Debug().Msg("Authenticating using noop authenticator")
+	logger.Debug().Str("_id", a.id).Msg("Authenticating using noop authenticator")
 
 	return &subject.Subject{}, nil
 }
