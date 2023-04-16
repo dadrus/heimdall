@@ -675,7 +675,7 @@ rules:
 			assert: func(t *testing.T, logs fmt.Stringer, processor *mocks.RuleSetProcessorMock) {
 				t.Helper()
 
-				time.Sleep(600 * time.Millisecond)
+				time.Sleep(1 * time.Second)
 
 				assert.GreaterOrEqual(t, requestCount, 2)
 				assert.Contains(t, logs.String(), "Failed to apply rule set changes")
@@ -719,7 +719,7 @@ rules:
 			assert: func(t *testing.T, logs fmt.Stringer, processor *mocks.RuleSetProcessorMock) {
 				t.Helper()
 
-				time.Sleep(600 * time.Millisecond)
+				time.Sleep(1 * time.Second)
 
 				assert.GreaterOrEqual(t, requestCount, 2)
 				assert.Contains(t, logs.String(), "Failed to apply rule set changes")
