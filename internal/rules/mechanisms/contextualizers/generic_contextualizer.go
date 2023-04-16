@@ -168,7 +168,12 @@ func (h *genericContextualizer) WithConfig(rawConfig map[string]any) (Contextual
 		return h, nil
 	}
 
+	type Endpoint struct {
+		Values endpoint.Values `mapstructure:"values"`
+	}
+
 	type Config struct {
+		Endpoint        Endpoint          `mapstructure:"endpoint"`
 		ForwardHeaders  []string          `mapstructure:"forward_headers"`
 		ForwardCookies  []string          `mapstructure:"forward_cookies"`
 		Payload         template.Template `mapstructure:"payload"`
@@ -183,9 +188,12 @@ func (h *genericContextualizer) WithConfig(rawConfig map[string]any) (Contextual
 			CausedBy(err)
 	}
 
+	ept := h.e
+	ept.Values = ept.Values.Merge(conf.Endpoint.Values)
+
 	return &genericContextualizer{
 		id:         h.id,
-		e:          h.e,
+		e:          ept,
 		payload:    x.IfThenElse(conf.Payload != nil, conf.Payload, h.payload),
 		fwdHeaders: x.IfThenElse(len(conf.ForwardHeaders) != 0, conf.ForwardHeaders, h.fwdHeaders),
 		fwdCookies: x.IfThenElse(len(conf.ForwardCookies) != 0, conf.ForwardCookies, h.fwdCookies),
@@ -241,7 +249,7 @@ func (h *genericContextualizer) createRequest(ctx heimdall.Context, sub *subject
 	var body io.Reader
 
 	if h.payload != nil {
-		value, err := h.payload.Render(ctx, sub)
+		value, err := h.payload.Render(ctx, sub, nil)
 		if err != nil {
 			return nil, errorchain.NewWithMessage(heimdall.ErrInternal,
 				"failed to render payload for the contextualizer endpoint").
@@ -252,7 +260,7 @@ func (h *genericContextualizer) createRequest(ctx heimdall.Context, sub *subject
 	}
 
 	req, err := h.e.CreateRequest(ctx.AppContext(), body,
-		endpoint.RenderFunc(func(value string) (string, error) {
+		endpoint.RenderFunc(func(value string, values map[string]string) (string, error) {
 			tpl, err := template.New(value)
 			if err != nil {
 				return "", errorchain.NewWithMessage(heimdall.ErrInternal, "failed to create template").
@@ -260,7 +268,7 @@ func (h *genericContextualizer) createRequest(ctx heimdall.Context, sub *subject
 					CausedBy(err)
 			}
 
-			return tpl.Render(nil, sub)
+			return tpl.Render(nil, sub, values)
 		}))
 	if err != nil {
 		return nil, errorchain.NewWithMessage(heimdall.ErrInternal, "failed creating request").
