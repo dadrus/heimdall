@@ -148,7 +148,7 @@ func newOAuth2IntrospectionAuthenticator(id string, rawConfig map[string]any) (
 
 func (a *oauth2IntrospectionAuthenticator) Execute(ctx heimdall.Context) (*subject.Subject, error) {
 	logger := zerolog.Ctx(ctx.AppContext())
-	logger.Debug().Msg("Authenticating using OAuth2 introspect authenticator")
+	logger.Debug().Str("_id", a.id).Msg("Authenticating using OAuth2 introspect authenticator")
 
 	accessToken, err := a.ads.GetAuthData(ctx)
 	if err != nil {
