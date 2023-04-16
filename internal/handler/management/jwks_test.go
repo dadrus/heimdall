@@ -119,8 +119,8 @@ func (suite *JWKSTestSuite) SetupSuite() {
 		keys[idx] = entry.JWK()
 	}
 
-	signer := &mocks.JWTSignerMock{}
-	signer.On("Keys").Return(keys)
+	signer := mocks.NewJWTSignerMock(suite.T())
+	signer.EXPECT().Keys().Return(keys)
 
 	_, err = newHandler(handlerArgs{
 		App:    suite.app,

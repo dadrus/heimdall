@@ -112,8 +112,9 @@ func TestCompositeSubjectHandlerExecution(t *testing.T) {
 		t.Run(tc.uc, func(t *testing.T) {
 			// GIVEN
 			sub := &subject.Subject{ID: "foo"}
-			ctx := &mocks.ContextMock{}
-			ctx.On("AppContext").Return(context.Background())
+
+			ctx := mocks.NewContextMock(t)
+			ctx.EXPECT().AppContext().Return(context.Background())
 
 			handler1 := rulemocks.NewSubjectHandlerMock(t)
 			handler2 := rulemocks.NewSubjectHandlerMock(t)
@@ -126,8 +127,6 @@ func TestCompositeSubjectHandlerExecution(t *testing.T) {
 
 			// THEN
 			tc.assert(t, err)
-
-			ctx.AssertExpectations(t)
 		})
 	}
 }

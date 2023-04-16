@@ -162,7 +162,6 @@ func TestRepositoryFindRule(t *testing.T) {
 
 			// THEN
 			tc.assert(t, err, rul)
-			factory.AssertExpectations(t)
 		})
 	}
 }

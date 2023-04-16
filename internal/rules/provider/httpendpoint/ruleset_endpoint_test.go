@@ -351,7 +351,7 @@ rules:
 	} {
 		t.Run(tc.uc, func(t *testing.T) {
 			// GIVEN
-			cch := &mocks.MockCache{}
+			cch := mocks.NewCacheMock(t)
 			ctx := log.Logger.With().
 				Str("_provider_type", "http_endpoint").
 				Logger().

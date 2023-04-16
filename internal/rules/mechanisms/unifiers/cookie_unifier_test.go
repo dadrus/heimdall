@@ -265,9 +265,9 @@ cookies:
 			configureContext: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
-				ctx.On("AddCookieForUpstream", "foo", "baz")
-				ctx.On("AddCookieForUpstream", "bar", "FooBar")
-				ctx.On("AddCookieForUpstream", "baz", "bar")
+				ctx.EXPECT().AddCookieForUpstream("foo", "baz")
+				ctx.EXPECT().AddCookieForUpstream("bar", "FooBar")
+				ctx.EXPECT().AddCookieForUpstream("baz", "bar")
 			},
 			createSubject: func(t *testing.T) *subject.Subject {
 				t.Helper()
@@ -298,8 +298,8 @@ cookies:
 			conf, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
 
-			mctx := &mocks.ContextMock{}
-			mctx.On("AppContext").Return(context.Background())
+			mctx := mocks.NewContextMock(t)
+			mctx.EXPECT().AppContext().Return(context.Background())
 
 			sub := createSubject(t)
 
@@ -313,8 +313,6 @@ cookies:
 
 			// THEN
 			tc.assert(t, err)
-
-			mctx.AssertExpectations(t)
 		})
 	}
 }

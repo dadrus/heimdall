@@ -41,7 +41,7 @@ func TestExtractBodyParameter(t *testing.T) {
 			configureMocks: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
-				ctx.On("RequestHeader", "Content-Type").Return("FooBar")
+				ctx.EXPECT().RequestHeader("Content-Type").Return("FooBar")
 			},
 			assert: func(t *testing.T, err error, authData AuthData) {
 				t.Helper()
@@ -57,8 +57,8 @@ func TestExtractBodyParameter(t *testing.T) {
 			configureMocks: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
-				ctx.On("RequestHeader", "Content-Type").Return("application/json")
-				ctx.On("RequestBody").Return([]byte("foo:?:bar"))
+				ctx.EXPECT().RequestHeader("Content-Type").Return("application/json")
+				ctx.EXPECT().RequestBody().Return([]byte("foo:?:bar"))
 			},
 			assert: func(t *testing.T, err error, authData AuthData) {
 				t.Helper()
@@ -74,9 +74,9 @@ func TestExtractBodyParameter(t *testing.T) {
 			configureMocks: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
-				ctx.On("RequestHeader", "Content-Type").
+				ctx.EXPECT().RequestHeader("Content-Type").
 					Return("application/x-www-form-urlencoded")
-				ctx.On("RequestBody").Return([]byte("foo;"))
+				ctx.EXPECT().RequestBody().Return([]byte("foo;"))
 			},
 			assert: func(t *testing.T, err error, authData AuthData) {
 				t.Helper()
@@ -92,9 +92,9 @@ func TestExtractBodyParameter(t *testing.T) {
 			configureMocks: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
-				ctx.On("RequestHeader", "Content-Type").
+				ctx.EXPECT().RequestHeader("Content-Type").
 					Return("application/json")
-				ctx.On("RequestBody").Return([]byte(`{"bar": "foo"}`))
+				ctx.EXPECT().RequestBody().Return([]byte(`{"bar": "foo"}`))
 			},
 			assert: func(t *testing.T, err error, authData AuthData) {
 				t.Helper()
@@ -110,9 +110,9 @@ func TestExtractBodyParameter(t *testing.T) {
 			configureMocks: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
-				ctx.On("RequestHeader", "Content-Type").
+				ctx.EXPECT().RequestHeader("Content-Type").
 					Return("application/x-www-form-urlencoded")
-				ctx.On("RequestBody").Return([]byte(`foo=bar`))
+				ctx.EXPECT().RequestBody().Return([]byte(`foo=bar`))
 			},
 			assert: func(t *testing.T, err error, authData AuthData) {
 				t.Helper()
@@ -128,9 +128,9 @@ func TestExtractBodyParameter(t *testing.T) {
 			configureMocks: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
-				ctx.On("RequestHeader", "Content-Type").
+				ctx.EXPECT().RequestHeader("Content-Type").
 					Return("application/json")
-				ctx.On("RequestBody").Return([]byte(`{"foobar": ["foo", "bar"]}`))
+				ctx.EXPECT().RequestBody().Return([]byte(`{"foobar": ["foo", "bar"]}`))
 			},
 			assert: func(t *testing.T, err error, authData AuthData) {
 				t.Helper()
@@ -146,9 +146,9 @@ func TestExtractBodyParameter(t *testing.T) {
 			configureMocks: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
-				ctx.On("RequestHeader", "Content-Type").
+				ctx.EXPECT().RequestHeader("Content-Type").
 					Return("application/x-www-form-urlencoded")
-				ctx.On("RequestBody").Return([]byte(`foobar=foo&foobar=bar`))
+				ctx.EXPECT().RequestBody().Return([]byte(`foobar=foo&foobar=bar`))
 			},
 			assert: func(t *testing.T, err error, authData AuthData) {
 				t.Helper()
@@ -164,9 +164,9 @@ func TestExtractBodyParameter(t *testing.T) {
 			configureMocks: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
-				ctx.On("RequestHeader", "Content-Type").
+				ctx.EXPECT().RequestHeader("Content-Type").
 					Return("application/json")
-				ctx.On("RequestBody").Return([]byte(`{"foobar": [1]}`))
+				ctx.EXPECT().RequestBody().Return([]byte(`{"foobar": [1]}`))
 			},
 			assert: func(t *testing.T, err error, authData AuthData) {
 				t.Helper()
@@ -182,9 +182,9 @@ func TestExtractBodyParameter(t *testing.T) {
 			configureMocks: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
-				ctx.On("RequestHeader", "Content-Type").
+				ctx.EXPECT().RequestHeader("Content-Type").
 					Return("application/json")
-				ctx.On("RequestBody").Return([]byte(`{"foobar": { "foo": "bar" }}`))
+				ctx.EXPECT().RequestBody().Return([]byte(`{"foobar": { "foo": "bar" }}`))
 			},
 			assert: func(t *testing.T, err error, authData AuthData) {
 				t.Helper()
@@ -200,9 +200,9 @@ func TestExtractBodyParameter(t *testing.T) {
 			configureMocks: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
-				ctx.On("RequestHeader", "Content-Type").
+				ctx.EXPECT().RequestHeader("Content-Type").
 					Return("application/json")
-				ctx.On("RequestBody").Return([]byte(`{"foobar": "foo"}`))
+				ctx.EXPECT().RequestBody().Return([]byte(`{"foobar": "foo"}`))
 			},
 			assert: func(t *testing.T, err error, authData AuthData) {
 				t.Helper()
@@ -217,9 +217,9 @@ func TestExtractBodyParameter(t *testing.T) {
 			configureMocks: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
-				ctx.On("RequestHeader", "Content-Type").
+				ctx.EXPECT().RequestHeader("Content-Type").
 					Return("application/x-www-form-urlencoded")
-				ctx.On("RequestBody").Return([]byte(`foobar=foo`))
+				ctx.EXPECT().RequestBody().Return([]byte(`foobar=foo`))
 			},
 			assert: func(t *testing.T, err error, authData AuthData) {
 				t.Helper()
@@ -231,7 +231,7 @@ func TestExtractBodyParameter(t *testing.T) {
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
 			// GIVEN
-			ctx := &mocks.ContextMock{}
+			ctx := mocks.NewContextMock(t)
 			tc.configureMocks(t, ctx)
 
 			strategy := BodyParameterExtractStrategy{Name: tc.parameterName}

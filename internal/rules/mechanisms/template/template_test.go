@@ -32,13 +32,13 @@ func TestTemplateRender(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
-	ctx := &mocks.ContextMock{}
-	ctx.On("RequestMethod").Return("PATCH")
-	ctx.On("RequestHeader", "X-My-Header").Return("my-value")
-	ctx.On("RequestCookie", "session_cookie").Return("session-value")
-	ctx.On("RequestURL").Return(
+	ctx := mocks.NewContextMock(t)
+	ctx.EXPECT().RequestMethod().Return("PATCH")
+	ctx.EXPECT().RequestHeader("X-My-Header").Return("my-value")
+	ctx.EXPECT().RequestCookie("session_cookie").Return("session-value")
+	ctx.EXPECT().RequestURL().Return(
 		&url.URL{Scheme: "http", Host: "foobar.baz", Path: "zab", RawQuery: "my_query_param=query_value"})
-	ctx.On("RequestClientIPs").Return([]string{"192.168.1.1"})
+	ctx.EXPECT().RequestClientIPs().Return([]string{"192.168.1.1"})
 
 	sub := &subject.Subject{
 		ID: "foo",

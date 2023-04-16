@@ -32,9 +32,9 @@ func TestCompositeExtractCookieValueWithoutSchema(t *testing.T) {
 	cookieName := "Test-Cookie"
 	actualValue := "foo"
 
-	ctx := &mocks.ContextMock{}
-	ctx.On("RequestCookie", cookieName).Return(actualValue)
-	ctx.On("RequestHeader", headerName).Return("")
+	ctx := mocks.NewContextMock(t)
+	ctx.EXPECT().RequestCookie(cookieName).Return(actualValue)
+	ctx.EXPECT().RequestHeader(headerName).Return("")
 
 	strategy := CompositeExtractStrategy{
 		HeaderValueExtractStrategy{Name: headerName},
@@ -47,7 +47,6 @@ func TestCompositeExtractCookieValueWithoutSchema(t *testing.T) {
 	// THEN
 	assert.NoError(t, err)
 	assert.Equal(t, actualValue, val.Value())
-	ctx.AssertExpectations(t)
 }
 
 func TestCompositeExtractHeaderValueWithSchema(t *testing.T) {
@@ -59,9 +58,9 @@ func TestCompositeExtractHeaderValueWithSchema(t *testing.T) {
 	headerSchema := "bar:"
 	actualValue := "foo"
 
-	ctx := &mocks.ContextMock{}
-	ctx.On("RequestHeader", headerName).Return(headerSchema + " " + actualValue)
-	ctx.On("RequestQueryParameter", queryParamName).Return("")
+	ctx := mocks.NewContextMock(t)
+	ctx.EXPECT().RequestHeader(headerName).Return(headerSchema + " " + actualValue)
+	ctx.EXPECT().RequestQueryParameter(queryParamName).Return("")
 
 	strategy := CompositeExtractStrategy{
 		QueryParameterExtractStrategy{Name: queryParamName},
@@ -74,7 +73,6 @@ func TestCompositeExtractHeaderValueWithSchema(t *testing.T) {
 	// THEN
 	assert.NoError(t, err)
 	assert.Equal(t, actualValue, val.Value())
-	ctx.AssertExpectations(t)
 }
 
 func TestCompositeExtractStrategyOrder(t *testing.T) {
@@ -86,8 +84,8 @@ func TestCompositeExtractStrategyOrder(t *testing.T) {
 	headerSchema := "bar:"
 	actualValue := "foo"
 
-	ctx := &mocks.ContextMock{}
-	ctx.On("RequestHeader", headerName).Return(headerSchema + " " + actualValue)
+	ctx := mocks.NewContextMock(t)
+	ctx.EXPECT().RequestHeader(headerName).Return(headerSchema + " " + actualValue)
 
 	strategy := CompositeExtractStrategy{
 		HeaderValueExtractStrategy{Name: headerName, Schema: headerSchema},
@@ -100,5 +98,4 @@ func TestCompositeExtractStrategyOrder(t *testing.T) {
 	// THEN
 	assert.NoError(t, err)
 	assert.Equal(t, actualValue, val.Value())
-	ctx.AssertExpectations(t)
 }

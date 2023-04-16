@@ -350,7 +350,7 @@ password: bar`))
 			configureContext: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
-				ctx.On("RequestHeader", "Authorization").Return("")
+				ctx.EXPECT().RequestHeader("Authorization").Return("")
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
@@ -373,7 +373,7 @@ password: bar`))
 			configureContext: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
-				ctx.On("RequestHeader", "Authorization").Return("Basic bar")
+				ctx.EXPECT().RequestHeader("Authorization").Return("Basic bar")
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
@@ -396,7 +396,7 @@ password: bar`))
 			configureContext: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
-				ctx.On("RequestHeader", "Authorization").
+				ctx.EXPECT().RequestHeader("Authorization").
 					Return("Basic " + base64.StdEncoding.EncodeToString([]byte("foo|bar")))
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
@@ -420,7 +420,7 @@ password: bar`))
 			configureContext: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
-				ctx.On("RequestHeader", "Authorization").
+				ctx.EXPECT().RequestHeader("Authorization").
 					Return("Basic " + base64.StdEncoding.EncodeToString([]byte("baz:bar")))
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
@@ -444,7 +444,7 @@ password: bar`))
 			configureContext: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
-				ctx.On("RequestHeader", "Authorization").
+				ctx.EXPECT().RequestHeader("Authorization").
 					Return("Basic " + base64.StdEncoding.EncodeToString([]byte("foo:baz")))
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
@@ -468,7 +468,7 @@ password: bar`))
 			configureContext: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
-				ctx.On("RequestHeader", "Authorization").
+				ctx.EXPECT().RequestHeader("Authorization").
 					Return("Basic " + base64.StdEncoding.EncodeToString([]byte("foo:bar")))
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
@@ -487,8 +487,8 @@ password: bar`))
 			auth, err := newBasicAuthAuthenticator(tc.id, conf)
 			require.NoError(t, err)
 
-			ctx := &mocks.ContextMock{}
-			ctx.On("AppContext").Return(context.Background())
+			ctx := mocks.NewContextMock(t)
+			ctx.EXPECT().AppContext().Return(context.Background())
 			tc.configureContext(t, ctx)
 
 			// WHEN
@@ -496,7 +496,6 @@ password: bar`))
 
 			// THEN
 			tc.assert(t, err, sub)
-			ctx.AssertExpectations(t)
 		})
 	}
 }

@@ -45,6 +45,7 @@ import (
 	heimdallmocks "github.com/dadrus/heimdall/internal/heimdall/mocks"
 	"github.com/dadrus/heimdall/internal/keystore"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/extractors"
+	mocks2 "github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/extractors/mocks"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/oauth2"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
 	"github.com/dadrus/heimdall/internal/truststore"
@@ -797,8 +798,8 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 		instructServer func(t *testing.T)
 		configureMocks func(t *testing.T,
 			ctx *heimdallmocks.ContextMock,
-			cch *mocks.MockCache,
-			ads *mockAuthDataGetter,
+			cch *mocks.CacheMock,
+			ads *mocks2.AuthDataExtractStrategyMock,
 			auth *jwtAuthenticator)
 		assert func(t *testing.T, err error, sub *subject.Subject)
 	}{
@@ -807,13 +808,13 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			authenticator: &jwtAuthenticator{id: "auth3"},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.ContextMock,
-				cch *mocks.MockCache,
-				ads *mockAuthDataGetter,
-				auth *jwtAuthenticator,
+				_ *mocks.CacheMock,
+				ads *mocks2.AuthDataExtractStrategyMock,
+				_ *jwtAuthenticator,
 			) {
 				t.Helper()
 
-				ads.On("GetAuthData", ctx).Return(nil, heimdall.ErrCommunicationTimeout)
+				ads.EXPECT().GetAuthData(ctx).Return(nil, heimdall.ErrCommunicationTimeout)
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
@@ -835,13 +836,13 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			authenticator: &jwtAuthenticator{id: "auth3"},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.ContextMock,
-				cch *mocks.MockCache,
-				ads *mockAuthDataGetter,
-				auth *jwtAuthenticator,
+				_ *mocks.CacheMock,
+				ads *mocks2.AuthDataExtractStrategyMock,
+				_ *jwtAuthenticator,
 			) {
 				t.Helper()
 
-				ads.On("GetAuthData", ctx).Return(dummyAuthData{Val: "foo.bar.baz.bam"}, nil)
+				ads.EXPECT().GetAuthData(ctx).Return(dummyAuthData{Val: "foo.bar.baz.bam"}, nil)
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
@@ -863,13 +864,13 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			authenticator: &jwtAuthenticator{id: "auth3"},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.ContextMock,
-				cch *mocks.MockCache,
-				ads *mockAuthDataGetter,
-				auth *jwtAuthenticator,
+				_ *mocks.CacheMock,
+				ads *mocks2.AuthDataExtractStrategyMock,
+				_ *jwtAuthenticator,
 			) {
 				t.Helper()
 
-				ads.On("GetAuthData", ctx).Return(dummyAuthData{Val: "foo.bar.baz"}, nil)
+				ads.EXPECT().GetAuthData(ctx).Return(dummyAuthData{Val: "foo.bar.baz"}, nil)
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
@@ -895,13 +896,13 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.ContextMock,
-				cch *mocks.MockCache,
-				ads *mockAuthDataGetter,
-				auth *jwtAuthenticator,
+				_ *mocks.CacheMock,
+				ads *mocks2.AuthDataExtractStrategyMock,
+				_ *jwtAuthenticator,
 			) {
 				t.Helper()
 
-				ads.On("GetAuthData", ctx).Return(dummyAuthData{Val: jwtSignedWithKeyOnlyJWK}, nil)
+				ads.EXPECT().GetAuthData(ctx).Return(dummyAuthData{Val: jwtSignedWithKeyOnlyJWK}, nil)
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
@@ -927,13 +928,13 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.ContextMock,
-				cch *mocks.MockCache,
-				ads *mockAuthDataGetter,
-				auth *jwtAuthenticator,
+				_ *mocks.CacheMock,
+				ads *mocks2.AuthDataExtractStrategyMock,
+				_ *jwtAuthenticator,
 			) {
 				t.Helper()
 
-				ads.On("GetAuthData", ctx).Return(dummyAuthData{Val: jwtSignedWithKeyOnlyJWK}, nil)
+				ads.EXPECT().GetAuthData(ctx).Return(dummyAuthData{Val: jwtSignedWithKeyOnlyJWK}, nil)
 			},
 			instructServer: func(t *testing.T) {
 				t.Helper()
@@ -967,13 +968,13 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.ContextMock,
-				cch *mocks.MockCache,
-				ads *mockAuthDataGetter,
-				auth *jwtAuthenticator,
+				_ *mocks.CacheMock,
+				ads *mocks2.AuthDataExtractStrategyMock,
+				_ *jwtAuthenticator,
 			) {
 				t.Helper()
 
-				ads.On("GetAuthData", ctx).Return(dummyAuthData{Val: jwtSignedWithKeyOnlyJWK}, nil)
+				ads.EXPECT().GetAuthData(ctx).Return(dummyAuthData{Val: jwtSignedWithKeyOnlyJWK}, nil)
 			},
 			instructServer: func(t *testing.T) {
 				t.Helper()
@@ -1013,13 +1014,13 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.ContextMock,
-				cch *mocks.MockCache,
-				ads *mockAuthDataGetter,
-				auth *jwtAuthenticator,
+				_ *mocks.CacheMock,
+				ads *mocks2.AuthDataExtractStrategyMock,
+				_ *jwtAuthenticator,
 			) {
 				t.Helper()
 
-				ads.On("GetAuthData", ctx).Return(dummyAuthData{Val: jwtSignedWithKeyOnlyJWK}, nil)
+				ads.EXPECT().GetAuthData(ctx).Return(dummyAuthData{Val: jwtSignedWithKeyOnlyJWK}, nil)
 			},
 			instructServer: func(t *testing.T) {
 				t.Helper()
@@ -1060,8 +1061,8 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.ContextMock,
-				cch *mocks.MockCache,
-				ads *mockAuthDataGetter,
+				cch *mocks.CacheMock,
+				ads *mocks2.AuthDataExtractStrategyMock,
 				auth *jwtAuthenticator,
 			) {
 				t.Helper()
@@ -1074,8 +1075,8 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 
 				keys := jwks.Key(kidKeyWithoutCert)
 
-				ads.On("GetAuthData", ctx).Return(dummyAuthData{Val: jwtSignedWithKeyOnlyJWK}, nil)
-				cch.On("Get", cacheKey).Return(&keys[0])
+				ads.EXPECT().GetAuthData(ctx).Return(dummyAuthData{Val: jwtSignedWithKeyOnlyJWK}, nil)
+				cch.EXPECT().Get(cacheKey).Return(&keys[0])
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
@@ -1105,8 +1106,8 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.ContextMock,
-				cch *mocks.MockCache,
-				ads *mockAuthDataGetter,
+				cch *mocks.CacheMock,
+				ads *mocks2.AuthDataExtractStrategyMock,
 				auth *jwtAuthenticator,
 			) {
 				t.Helper()
@@ -1119,8 +1120,8 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 
 				keys := jwks.Key(kidKeyWithoutCert)
 
-				ads.On("GetAuthData", ctx).Return(dummyAuthData{Val: jwtSignedWithKeyAndCertJWK}, nil)
-				cch.On("Get", cacheKey).Return(&keys[0])
+				ads.EXPECT().GetAuthData(ctx).Return(dummyAuthData{Val: jwtSignedWithKeyAndCertJWK}, nil)
+				cch.EXPECT().Get(cacheKey).Return(&keys[0])
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
@@ -1150,8 +1151,8 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.ContextMock,
-				cch *mocks.MockCache,
-				ads *mockAuthDataGetter,
+				cch *mocks.CacheMock,
+				ads *mocks2.AuthDataExtractStrategyMock,
 				auth *jwtAuthenticator,
 			) {
 				t.Helper()
@@ -1164,8 +1165,8 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 
 				keys := jwks.Key(kidKeyWithoutCert)
 
-				ads.On("GetAuthData", ctx).Return(dummyAuthData{Val: jwtSignedWithKeyOnlyJWK}, nil)
-				cch.On("Get", cacheKey).Return(&keys[0])
+				ads.EXPECT().GetAuthData(ctx).Return(dummyAuthData{Val: jwtSignedWithKeyOnlyJWK}, nil)
+				cch.EXPECT().Get(cacheKey).Return(&keys[0])
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
@@ -1200,8 +1201,8 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.ContextMock,
-				cch *mocks.MockCache,
-				ads *mockAuthDataGetter,
+				cch *mocks.CacheMock,
+				ads *mocks2.AuthDataExtractStrategyMock,
 				auth *jwtAuthenticator,
 			) {
 				t.Helper()
@@ -1214,8 +1215,8 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 
 				keys := jwks.Key(kidKeyWithoutCert)
 
-				ads.On("GetAuthData", ctx).Return(dummyAuthData{Val: jwtSignedWithKeyOnlyJWK}, nil)
-				cch.On("Get", cacheKey).Return(&keys[0])
+				ads.EXPECT().GetAuthData(ctx).Return(dummyAuthData{Val: jwtSignedWithKeyOnlyJWK}, nil)
+				cch.EXPECT().Get(cacheKey).Return(&keys[0])
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
@@ -1249,8 +1250,8 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.ContextMock,
-				cch *mocks.MockCache,
-				ads *mockAuthDataGetter,
+				cch *mocks.CacheMock,
+				ads *mocks2.AuthDataExtractStrategyMock,
 				auth *jwtAuthenticator,
 			) {
 				t.Helper()
@@ -1263,8 +1264,8 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 
 				keys := jwks.Key(kidKeyWithoutCert)
 
-				ads.On("GetAuthData", ctx).Return(dummyAuthData{Val: jwtSignedWithKeyOnlyJWK}, nil)
-				cch.On("Get", cacheKey).Return(&keys[0])
+				ads.EXPECT().GetAuthData(ctx).Return(dummyAuthData{Val: jwtSignedWithKeyOnlyJWK}, nil)
+				cch.EXPECT().Get(cacheKey).Return(&keys[0])
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
@@ -1304,8 +1305,8 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.ContextMock,
-				cch *mocks.MockCache,
-				ads *mockAuthDataGetter,
+				cch *mocks.CacheMock,
+				ads *mocks2.AuthDataExtractStrategyMock,
 				auth *jwtAuthenticator,
 			) {
 				t.Helper()
@@ -1318,9 +1319,9 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 
 				keys := jwks.Key(kidKeyWithoutCert)
 
-				ads.On("GetAuthData", ctx).Return(dummyAuthData{Val: jwtSignedWithKeyOnlyJWK}, nil)
-				cch.On("Get", cacheKey).Return(nil)
-				cch.On("Set", cacheKey, &keys[0], *auth.ttl)
+				ads.EXPECT().GetAuthData(ctx).Return(dummyAuthData{Val: jwtSignedWithKeyOnlyJWK}, nil)
+				cch.EXPECT().Get(cacheKey).Return(nil)
+				cch.EXPECT().Set(cacheKey, &keys[0], *auth.ttl)
 			},
 			instructServer: func(t *testing.T) {
 				t.Helper()
@@ -1371,8 +1372,8 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.ContextMock,
-				cch *mocks.MockCache,
-				ads *mockAuthDataGetter,
+				cch *mocks.CacheMock,
+				ads *mocks2.AuthDataExtractStrategyMock,
 				auth *jwtAuthenticator,
 			) {
 				t.Helper()
@@ -1385,9 +1386,9 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 
 				keys := jwks.Key(kidKeyWithCert)
 
-				ads.On("GetAuthData", ctx).Return(dummyAuthData{Val: jwtSignedWithKeyAndCertJWK}, nil)
-				cch.On("Get", cacheKey).Return(nil)
-				cch.On("Set", cacheKey, &keys[0], *auth.ttl)
+				ads.EXPECT().GetAuthData(ctx).Return(dummyAuthData{Val: jwtSignedWithKeyAndCertJWK}, nil)
+				cch.EXPECT().Get(cacheKey).Return(nil)
+				cch.EXPECT().Set(cacheKey, &keys[0], *auth.ttl)
 			},
 			instructServer: func(t *testing.T) {
 				t.Helper()
@@ -1440,8 +1441,8 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.ContextMock,
-				cch *mocks.MockCache,
-				ads *mockAuthDataGetter,
+				cch *mocks.CacheMock,
+				ads *mocks2.AuthDataExtractStrategyMock,
 				auth *jwtAuthenticator,
 			) {
 				t.Helper()
@@ -1452,8 +1453,8 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				err := json.Unmarshal(jwksWithOneEntryWithKeyOnlyAndOneWithCertificate, &jwks)
 				require.NoError(t, err)
 
-				ads.On("GetAuthData", ctx).Return(dummyAuthData{Val: jwtSignedWithKeyAndCertJWK}, nil)
-				cch.On("Get", cacheKey).Return(nil)
+				ads.EXPECT().GetAuthData(ctx).Return(dummyAuthData{Val: jwtSignedWithKeyAndCertJWK}, nil)
+				cch.EXPECT().Get(cacheKey).Return(nil)
 			},
 			instructServer: func(t *testing.T) {
 				t.Helper()
@@ -1500,8 +1501,8 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.ContextMock,
-				cch *mocks.MockCache,
-				ads *mockAuthDataGetter,
+				cch *mocks.CacheMock,
+				ads *mocks2.AuthDataExtractStrategyMock,
 				auth *jwtAuthenticator,
 			) {
 				t.Helper()
@@ -1514,9 +1515,9 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 
 				keys := jwks.Key(kidKeyWithCert)
 
-				ads.On("GetAuthData", ctx).Return(dummyAuthData{Val: jwtSignedWithKeyAndCertJWK}, nil)
-				cch.On("Get", cacheKey).Return(nil)
-				cch.On("Set", cacheKey, &keys[0], *auth.ttl)
+				ads.EXPECT().GetAuthData(ctx).Return(dummyAuthData{Val: jwtSignedWithKeyAndCertJWK}, nil)
+				cch.EXPECT().Get(cacheKey).Return(nil)
+				cch.EXPECT().Set(cacheKey, &keys[0], *auth.ttl)
 			},
 			instructServer: func(t *testing.T) {
 				t.Helper()
@@ -1567,8 +1568,8 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.ContextMock,
-				cch *mocks.MockCache,
-				ads *mockAuthDataGetter,
+				cch *mocks.CacheMock,
+				ads *mocks2.AuthDataExtractStrategyMock,
 				auth *jwtAuthenticator,
 			) {
 				t.Helper()
@@ -1581,10 +1582,10 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 
 				keys := jwks.Key(kidKeyWithoutCert)
 
-				ads.On("GetAuthData", ctx).Return(dummyAuthData{Val: jwtSignedWithKeyOnlyJWK}, nil)
-				cch.On("Get", cacheKey).Return("Hi Foo")
-				cch.On("Delete", cacheKey)
-				cch.On("Set", cacheKey, &keys[0], *auth.ttl)
+				ads.EXPECT().GetAuthData(ctx).Return(dummyAuthData{Val: jwtSignedWithKeyOnlyJWK}, nil)
+				cch.EXPECT().Get(cacheKey).Return("Hi Foo")
+				cch.EXPECT().Delete(cacheKey)
+				cch.EXPECT().Set(cacheKey, &keys[0], *auth.ttl)
 			},
 			instructServer: func(t *testing.T) {
 				t.Helper()
@@ -1636,13 +1637,13 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.ContextMock,
-				_ *mocks.MockCache,
-				ads *mockAuthDataGetter,
+				_ *mocks.CacheMock,
+				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *jwtAuthenticator,
 			) {
 				t.Helper()
 
-				ads.On("GetAuthData", ctx).Return(
+				ads.EXPECT().GetAuthData(ctx).Return(
 					dummyAuthData{Val: jwtWithoutKIDSignedWithKeyAndCertJWK}, nil)
 			},
 			instructServer: func(t *testing.T) {
@@ -1688,13 +1689,13 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.ContextMock,
-				_ *mocks.MockCache,
-				ads *mockAuthDataGetter,
+				_ *mocks.CacheMock,
+				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *jwtAuthenticator,
 			) {
 				t.Helper()
 
-				ads.On("GetAuthData", ctx).Return(dummyAuthData{Val: jwtWithoutKIDSignedWithKeyAndCertJWK}, nil)
+				ads.EXPECT().GetAuthData(ctx).Return(dummyAuthData{Val: jwtWithoutKIDSignedWithKeyAndCertJWK}, nil)
 			},
 			instructServer: func(t *testing.T) {
 				t.Helper()
@@ -1732,13 +1733,13 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.ContextMock,
-				_ *mocks.MockCache,
-				ads *mockAuthDataGetter,
+				_ *mocks.CacheMock,
+				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *jwtAuthenticator,
 			) {
 				t.Helper()
 
-				ads.On("GetAuthData", ctx).Return(
+				ads.EXPECT().GetAuthData(ctx).Return(
 					dummyAuthData{Val: jwtWithoutKIDSignedWithKeyAndCertJWK}, nil)
 			},
 			instructServer: func(t *testing.T) {
@@ -1778,13 +1779,13 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.ContextMock,
-				_ *mocks.MockCache,
-				ads *mockAuthDataGetter,
+				_ *mocks.CacheMock,
+				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *jwtAuthenticator,
 			) {
 				t.Helper()
 
-				ads.On("GetAuthData", ctx).Return(
+				ads.EXPECT().GetAuthData(ctx).Return(
 					dummyAuthData{Val: jwtWithoutKIDSignedWithKeyAndCertJWK}, nil)
 			},
 			instructServer: func(t *testing.T) {
@@ -1829,21 +1830,21 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			configureMocks := x.IfThenElse(tc.configureMocks != nil,
 				tc.configureMocks,
 				func(t *testing.T,
-					ctx *heimdallmocks.ContextMock,
-					cch *mocks.MockCache,
-					ads *mockAuthDataGetter,
-					auth *jwtAuthenticator,
+					_ *heimdallmocks.ContextMock,
+					_ *mocks.CacheMock,
+					_ *mocks2.AuthDataExtractStrategyMock,
+					_ *jwtAuthenticator,
 				) {
 					t.Helper()
 				})
 
-			ads := &mockAuthDataGetter{}
+			ads := mocks2.NewAuthDataExtractStrategyMock(t)
 			tc.authenticator.ads = ads
 
-			cch := &mocks.MockCache{}
+			cch := mocks.NewCacheMock(t)
 
-			ctx := &heimdallmocks.ContextMock{}
-			ctx.On("AppContext").Return(cache.WithContext(context.Background(), cch))
+			ctx := heimdallmocks.NewContextMock(t)
+			ctx.EXPECT().AppContext().Return(cache.WithContext(context.Background(), cch))
 
 			configureMocks(t, ctx, cch, ads, tc.authenticator)
 			instructServer(t)
@@ -1853,10 +1854,6 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 
 			// THEN
 			tc.assert(t, err, sub)
-
-			ctx.AssertExpectations(t)
-			cch.AssertExpectations(t)
-			ads.AssertExpectations(t)
 		})
 	}
 }

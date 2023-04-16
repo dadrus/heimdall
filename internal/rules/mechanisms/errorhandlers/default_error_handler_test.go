@@ -30,9 +30,9 @@ func TestDefaultErrorHandlerExecution(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
-	ctx := &mocks.ContextMock{}
-	ctx.On("AppContext").Return(context.Background())
-	ctx.On("SetPipelineError", heimdall.ErrConfiguration)
+	ctx := mocks.NewContextMock(t)
+	ctx.EXPECT().AppContext().Return(context.Background())
+	ctx.EXPECT().SetPipelineError(heimdall.ErrConfiguration)
 
 	errorHandler := newDefaultErrorHandler("foo")
 

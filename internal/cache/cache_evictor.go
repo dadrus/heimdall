@@ -16,7 +16,9 @@
 
 package cache
 
+import "context"
+
 type Evictor interface {
-	Start()
-	Stop()
+	Start(ctx context.Context) error
+	Stop(ctx context.Context) error
 }

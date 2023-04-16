@@ -173,8 +173,8 @@ func TestAnonymousAuthenticatorExecute(t *testing.T) {
 	subjectID := "anon"
 	auth := anonymousAuthenticator{Subject: subjectID, id: "anon_auth"}
 
-	ctx := &mocks.ContextMock{}
-	ctx.On("AppContext").Return(context.Background())
+	ctx := mocks.NewContextMock(t)
+	ctx.EXPECT().AppContext().Return(context.Background())
 
 	// WHEN
 	sub, err := auth.Execute(ctx)
@@ -185,7 +185,6 @@ func TestAnonymousAuthenticatorExecute(t *testing.T) {
 	assert.Equal(t, subjectID, sub.ID)
 	assert.Empty(t, sub.Attributes)
 	assert.NotNil(t, sub.Attributes)
-	ctx.AssertExpectations(t)
 }
 
 func TestAnonymousAuthenticatorIsFallbackOnErrorAllowed(t *testing.T) {
