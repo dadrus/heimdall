@@ -160,7 +160,7 @@ func newJwtAuthenticator(id string, rawConfig map[string]any) (*jwtAuthenticator
 
 func (a *jwtAuthenticator) Execute(ctx heimdall.Context) (*subject.Subject, error) {
 	logger := zerolog.Ctx(ctx.AppContext())
-	logger.Debug().Msg("Authenticating using JWT authenticator")
+	logger.Debug().Str("_id", a.id).Msg("Authenticating using JWT authenticator")
 
 	jwtAd, err := a.ads.GetAuthData(ctx)
 	if err != nil {
