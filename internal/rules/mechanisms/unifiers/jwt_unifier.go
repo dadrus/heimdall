@@ -87,14 +87,14 @@ func newJWTUnifier(id string, rawConfig map[string]any) (*jwtUnifier, error) {
 	}, nil
 }
 
-func (m *jwtUnifier) Execute(ctx heimdall.Context, sub *subject.Subject) error {
+func (u *jwtUnifier) Execute(ctx heimdall.Context, sub *subject.Subject) error {
 	logger := zerolog.Ctx(ctx.AppContext())
-	logger.Debug().Msg("Unifying using JWT unifier")
+	logger.Debug().Str("_id", u.id).Msg("Unifying using JWT unifier")
 
 	if sub == nil {
 		return errorchain.
 			NewWithMessage(heimdall.ErrInternal, "failed to execute jwt unifier due to 'nil' subject").
-			WithErrorContext(m)
+			WithErrorContext(u)
 	}
 
 	cch := cache.Ctx(ctx.AppContext())
@@ -106,7 +106,7 @@ func (m *jwtUnifier) Execute(ctx heimdall.Context, sub *subject.Subject) error {
 		err        error
 	)
 
-	cacheKey := m.calculateCacheKey(sub, ctx.Signer())
+	cacheKey := u.calculateCacheKey(sub, ctx.Signer())
 	cacheEntry = cch.Get(cacheKey)
 
 	if cacheEntry != nil {
@@ -121,13 +121,13 @@ func (m *jwtUnifier) Execute(ctx heimdall.Context, sub *subject.Subject) error {
 	if len(jwtToken) == 0 {
 		logger.Debug().Msg("Generating new JWT")
 
-		jwtToken, err = m.generateToken(ctx, sub)
+		jwtToken, err = u.generateToken(ctx, sub)
 		if err != nil {
 			return err
 		}
 
-		if len(cacheKey) != 0 && m.ttl > defaultCacheLeeway {
-			cch.Set(cacheKey, jwtToken, m.ttl-defaultCacheLeeway)
+		if len(cacheKey) != 0 && u.ttl > defaultCacheLeeway {
+			cch.Set(cacheKey, jwtToken, u.ttl-defaultCacheLeeway)
 		}
 	}
 
@@ -136,9 +136,9 @@ func (m *jwtUnifier) Execute(ctx heimdall.Context, sub *subject.Subject) error {
 	return nil
 }
 
-func (m *jwtUnifier) WithConfig(rawConfig map[string]any) (Unifier, error) {
+func (u *jwtUnifier) WithConfig(rawConfig map[string]any) (Unifier, error) {
 	if len(rawConfig) == 0 {
-		return m, nil
+		return u, nil
 	}
 
 	type Config struct {
@@ -159,60 +159,60 @@ func (m *jwtUnifier) WithConfig(rawConfig map[string]any) (Unifier, error) {
 	}
 
 	return &jwtUnifier{
-		id:     m.id,
-		claims: x.IfThenElse(conf.Claims != nil, conf.Claims, m.claims),
+		id:     u.id,
+		claims: x.IfThenElse(conf.Claims != nil, conf.Claims, u.claims),
 		ttl: x.IfThenElseExec(conf.TTL != nil,
 			func() time.Duration { return *conf.TTL },
-			func() time.Duration { return m.ttl }),
+			func() time.Duration { return u.ttl }),
 	}, nil
 }
 
-func (m *jwtUnifier) HandlerID() string { return m.id }
+func (u *jwtUnifier) HandlerID() string { return u.id }
 
-func (m *jwtUnifier) ContinueOnError() bool { return false }
+func (u *jwtUnifier) ContinueOnError() bool { return false }
 
-func (m *jwtUnifier) generateToken(ctx heimdall.Context, sub *subject.Subject) (string, error) {
+func (u *jwtUnifier) generateToken(ctx heimdall.Context, sub *subject.Subject) (string, error) {
 	iss := ctx.Signer()
 
 	claims := map[string]any{}
-	if m.claims != nil {
-		vals, err := m.claims.Render(nil, sub)
+	if u.claims != nil {
+		vals, err := u.claims.Render(nil, sub)
 		if err != nil {
 			return "", errorchain.
 				NewWithMessage(heimdall.ErrInternal, "failed to render claims").
-				WithErrorContext(m).
+				WithErrorContext(u).
 				CausedBy(err)
 		}
 
 		if err = json.Unmarshal([]byte(vals), &claims); err != nil {
 			return "", errorchain.
 				NewWithMessage(heimdall.ErrInternal, "failed to unmarshal claims rendered by template").
-				WithErrorContext(m).
+				WithErrorContext(u).
 				CausedBy(err)
 		}
 	}
 
-	token, err := iss.Sign(sub.ID, m.ttl, claims)
+	token, err := iss.Sign(sub.ID, u.ttl, claims)
 	if err != nil {
 		return "", errorchain.
 			NewWithMessage(heimdall.ErrInternal, "failed to sign token").
-			WithErrorContext(m).
+			WithErrorContext(u).
 			CausedBy(err)
 	}
 
 	return token, nil
 }
 
-func (m *jwtUnifier) calculateCacheKey(sub *subject.Subject, iss heimdall.JWTSigner) string {
+func (u *jwtUnifier) calculateCacheKey(sub *subject.Subject, iss heimdall.JWTSigner) string {
 	const int64BytesCount = 8
 
 	ttlBytes := make([]byte, int64BytesCount)
-	binary.LittleEndian.PutUint64(ttlBytes, uint64(m.ttl))
+	binary.LittleEndian.PutUint64(ttlBytes, uint64(u.ttl))
 
 	hash := sha256.New()
 	hash.Write(iss.Hash())
-	hash.Write(x.IfThenElseExec(m.claims != nil,
-		func() []byte { return m.claims.Hash() },
+	hash.Write(x.IfThenElseExec(u.claims != nil,
+		func() []byte { return u.claims.Hash() },
 		func() []byte { return []byte("nil") }))
 	hash.Write(ttlBytes)
 	hash.Write(sub.Hash())
