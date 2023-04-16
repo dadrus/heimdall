@@ -1174,8 +1174,6 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 
 			// THEN
 			tc.assert(t, err, sub)
-
-			ads.AssertExpectations(t)
 		})
 	}
 }

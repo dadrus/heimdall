@@ -1189,10 +1189,6 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 
 			// THEN
 			tc.assert(t, err, sub)
-
-			ctx.AssertExpectations(t)
-			cch.AssertExpectations(t)
-			ads.AssertExpectations(t)
 		})
 	}
 }

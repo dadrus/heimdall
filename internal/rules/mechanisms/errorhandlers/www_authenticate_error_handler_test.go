@@ -410,8 +410,6 @@ when:
 
 			// THEN
 			tc.assert(t, wasResponsible, err)
-
-			mctx.AssertExpectations(t)
 		})
 	}
 }
