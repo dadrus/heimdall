@@ -28,7 +28,6 @@ import (
 	"time"
 
 	"github.com/goccy/go-json"
-	"github.com/gofiber/fiber/v2"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
@@ -119,8 +118,8 @@ func (suite *JWKSTestSuite) SetupSuite() {
 		keys[idx] = entry.JWK()
 	}
 
-	signer := &mocks.JWTSignerMock{}
-	signer.On("Keys").Return(keys)
+	signer := mocks.NewJWTSignerMock(suite.T())
+	signer.EXPECT().Keys().Return(keys)
 
 	_, err = newHandler(handlerArgs{
 		App:    suite.app,

@@ -20,7 +20,11 @@ import (
 	"time"
 )
 
+//go:generate mockery --name Cache --structname CacheMock
+
 type Cache interface {
+	Evictor
+
 	Get(key string) any
 	Set(key string, value any, ttl time.Duration)
 	Delete(key string)

@@ -119,14 +119,14 @@ func TestApplyClientCredentialsStrategy(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	defaultCacheSetup := func(t *testing.T, cch *mocks.MockCache, key string) {
+	defaultCacheSetup := func(t *testing.T, cch *mocks.CacheMock, key string) {
 		t.Helper()
 
-		cch.On("Get", key).Return(nil)
+		cch.EXPECT().Get(key).Return(nil)
 
 		var resp *tokenEndpointResponse
 
-		cch.On("Set", key,
+		cch.EXPECT().Set(key,
 			mock.MatchedBy(func(val *tokenEndpointResponse) bool {
 				resp = val
 
@@ -143,7 +143,7 @@ func TestApplyClientCredentialsStrategy(t *testing.T) {
 	for _, tc := range []struct {
 		uc         string
 		strategy   ClientCredentialsStrategy
-		setupCache func(t *testing.T, cch *mocks.MockCache, key string)
+		setupCache func(t *testing.T, cch *mocks.CacheMock, key string)
 		assert     func(t *testing.T, err error, req *http.Request)
 	}{
 		{
@@ -184,14 +184,14 @@ func TestApplyClientCredentialsStrategy(t *testing.T) {
 				Scopes:       scopes,
 				TokenURL:     srv.URL,
 			},
-			setupCache: func(t *testing.T, cch *mocks.MockCache, key string) {
+			setupCache: func(t *testing.T, cch *mocks.CacheMock, key string) {
 				t.Helper()
 
 				var resp *tokenEndpointResponse
 
-				cch.On("Get", key).Return("foo")
-				cch.On("Delete", key)
-				cch.On("Set", key,
+				cch.EXPECT().Get(key).Return("foo")
+				cch.EXPECT().Delete(key)
+				cch.EXPECT().Set(key,
 					mock.MatchedBy(func(val *tokenEndpointResponse) bool {
 						resp = val
 
@@ -234,7 +234,7 @@ func TestApplyClientCredentialsStrategy(t *testing.T) {
 				Scopes:       scopes,
 				TokenURL:     srv.URL,
 			},
-			setupCache: func(t *testing.T, cch *mocks.MockCache, key string) {
+			setupCache: func(t *testing.T, cch *mocks.CacheMock, key string) {
 				t.Helper()
 
 				cached := &tokenEndpointResponse{
@@ -243,7 +243,7 @@ func TestApplyClientCredentialsStrategy(t *testing.T) {
 					TokenType:   "Baz",
 				}
 
-				cch.On("Get", key).Return(cached)
+				cch.EXPECT().Get(key).Return(cached)
 			},
 			assert: func(t *testing.T, err error, req *http.Request) {
 				t.Helper()
@@ -262,7 +262,7 @@ func TestApplyClientCredentialsStrategy(t *testing.T) {
 			setupCache := x.IfThenElse(tc.setupCache != nil, tc.setupCache, defaultCacheSetup)
 
 			cacheKey := tc.strategy.calculateCacheKey()
-			cch := &mocks.MockCache{}
+			cch := mocks.NewCacheMock(t)
 			setupCache(t, cch, cacheKey)
 
 			ctx := cache.WithContext(context.Background(), cch)
@@ -274,7 +274,6 @@ func TestApplyClientCredentialsStrategy(t *testing.T) {
 
 			// THEN
 			tc.assert(t, err, req)
-			cch.AssertExpectations(t)
 		})
 	}
 }

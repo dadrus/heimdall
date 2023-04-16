@@ -53,7 +53,7 @@ func TestNewRequestContext(t *testing.T) {
 			md,
 		),
 		checkReq,
-		&mocks.JWTSignerMock{},
+		mocks.NewJWTSignerMock(t),
 	)
 
 	// THEN

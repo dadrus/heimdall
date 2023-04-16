@@ -17,6 +17,7 @@
 package memory
 
 import (
+	"context"
 	"time"
 
 	"github.com/jellydator/ttlcache/v3"
@@ -30,9 +31,17 @@ func New() *InMemoryCache {
 	return &InMemoryCache{c: ttlcache.New[string, any]()}
 }
 
-func (c *InMemoryCache) Start() { c.c.Start() }
+func (c *InMemoryCache) Start(_ context.Context) error {
+	go c.c.Start()
 
-func (c *InMemoryCache) Stop() { c.c.Stop() }
+	return nil
+}
+
+func (c *InMemoryCache) Stop(_ context.Context) error {
+	c.c.Stop()
+
+	return nil
+}
 
 func (c *InMemoryCache) Get(key string) any {
 	item := c.c.Get(key)

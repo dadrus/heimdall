@@ -241,9 +241,9 @@ expressions:
 				// nothing is required here
 				t.Helper()
 
-				ctx.On("RequestURL").Return(&url.URL{Scheme: "http", Host: "localhost", Path: "/test"})
-				ctx.On("RequestMethod").Return(http.MethodGet)
-				ctx.On("RequestClientIPs").Return(nil)
+				ctx.EXPECT().RequestURL().Return(&url.URL{Scheme: "http", Host: "localhost", Path: "/test"})
+				ctx.EXPECT().RequestMethod().Return(http.MethodGet)
+				ctx.EXPECT().RequestClientIPs().Return(nil)
 			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
@@ -288,16 +288,16 @@ expressions:
 					"groupN": []string{"forever@acme.co"},
 				}
 
-				ctx.On("RequestURL").Return(&url.URL{
+				ctx.EXPECT().RequestURL().Return(&url.URL{
 					Scheme:   "http",
 					Host:     "localhost",
 					Path:     "/test",
 					RawQuery: "foo=bar&baz=zab",
 				})
-				ctx.On("RequestMethod").Return(http.MethodGet)
-				ctx.On("RequestHeader", "X-Custom-Header").Return("foobar")
-				ctx.On("RequestCookie", "FooCookie").Return("barfoo")
-				ctx.On("RequestClientIPs").Return([]string{"127.0.0.1", "10.10.10.10"})
+				ctx.EXPECT().RequestMethod().Return(http.MethodGet)
+				ctx.EXPECT().RequestHeader("X-Custom-Header").Return("foobar")
+				ctx.EXPECT().RequestCookie("FooCookie").Return("barfoo")
+				ctx.EXPECT().RequestClientIPs().Return([]string{"127.0.0.1", "10.10.10.10"})
 			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
@@ -311,23 +311,21 @@ expressions:
 			conf, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
 
-			mctx := &mocks.ContextMock{}
-			mctx.On("AppContext").Return(context.Background())
+			ctx := mocks.NewContextMock(t)
+			ctx.EXPECT().AppContext().Return(context.Background())
 
 			sub := &subject.Subject{}
 
-			tc.configureContextAndSubject(t, mctx, sub)
+			tc.configureContextAndSubject(t, ctx, sub)
 
 			auth, err := newCELAuthorizer(tc.id, conf)
 			require.NoError(t, err)
 
 			// WHEN
-			err = auth.Execute(mctx, sub)
+			err = auth.Execute(ctx, sub)
 
 			// THEN
 			tc.assert(t, err)
-
-			mctx.AssertExpectations(t)
 		})
 	}
 }

@@ -453,7 +453,7 @@ func TestHandleProxyEndpointRequest(t *testing.T) {
 				func(t *testing.T) { t.Helper() })
 
 			conf := &config.Configuration{Serve: config.ServeConfig{Proxy: tc.serviceConf}}
-			cch := &mocks.MockCache{}
+			cch := mocks.NewCacheMock(t)
 			repo := mocks4.NewRepositoryMock(t)
 			rule := mocks4.NewRuleMock(t)
 			logger := log.Logger

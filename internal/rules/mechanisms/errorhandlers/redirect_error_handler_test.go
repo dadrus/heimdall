@@ -179,10 +179,10 @@ when:
 				require.NotNil(t, redEH)
 				assert.Equal(t, "with full complex valid configuration", redEH.HandlerID())
 
-				ctx := &mocks.ContextMock{}
-				ctx.On("RequestMethod").Return("POST")
-				ctx.On("RequestURL").Return(&url.URL{Scheme: "http", Host: "foobar.baz", Path: "zab"})
-				ctx.On("RequestClientIPs").Return(nil)
+				ctx := mocks.NewContextMock(t)
+				ctx.EXPECT().RequestMethod().Return("POST")
+				ctx.EXPECT().RequestURL().Return(&url.URL{Scheme: "http", Host: "foobar.baz", Path: "zab"})
+				ctx.EXPECT().RequestClientIPs().Return(nil)
 
 				toURL, err := redEH.to.Render(ctx, nil)
 				require.NoError(t, err)
@@ -401,9 +401,9 @@ when:
 			configureContext: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
-				ctx.On("RequestMethod").Return("POST")
-				ctx.On("RequestURL").Return(&url.URL{Scheme: "http", Host: "foobar.baz", Path: "zab"})
-				ctx.On("RequestClientIPs").Return(nil)
+				ctx.EXPECT().RequestMethod().Return("POST")
+				ctx.EXPECT().RequestURL().Return(&url.URL{Scheme: "http", Host: "foobar.baz", Path: "zab"})
+				ctx.EXPECT().RequestClientIPs().Return(nil)
 			},
 			assert: func(t *testing.T, wasResponsible bool, err error) {
 				t.Helper()
@@ -426,10 +426,10 @@ when:
 			configureContext: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
-				ctx.On("RequestMethod").Return("POST")
-				ctx.On("RequestURL").Return(&url.URL{Scheme: "http", Host: "foobar.baz", Path: "zab"})
-				ctx.On("RequestClientIPs").Return(nil)
-				ctx.On("SetPipelineError", mock.MatchedBy(func(redirErr *heimdall.RedirectError) bool {
+				ctx.EXPECT().RequestMethod().Return("POST")
+				ctx.EXPECT().RequestURL().Return(&url.URL{Scheme: "http", Host: "foobar.baz", Path: "zab"})
+				ctx.EXPECT().RequestClientIPs().Return(nil)
+				ctx.EXPECT().SetPipelineError(mock.MatchedBy(func(redirErr *heimdall.RedirectError) bool {
 					t.Helper()
 
 					assert.Equal(t, "http://foo.bar", redirErr.RedirectTo)
@@ -462,11 +462,11 @@ when:
 				requestURL, err := url.Parse("http://test.org")
 				require.NoError(t, err)
 
-				ctx.On("RequestMethod").Return("POST")
-				ctx.On("RequestClientIPs").Return(nil)
-				ctx.On("RequestURL").Return(requestURL)
+				ctx.EXPECT().RequestMethod().Return("POST")
+				ctx.EXPECT().RequestClientIPs().Return(nil)
+				ctx.EXPECT().RequestURL().Return(requestURL)
 
-				ctx.On("SetPipelineError", mock.MatchedBy(func(redirErr *heimdall.RedirectError) bool {
+				ctx.EXPECT().SetPipelineError(mock.MatchedBy(func(redirErr *heimdall.RedirectError) bool {
 					t.Helper()
 
 					redirectURL, err := url.Parse(redirErr.RedirectTo)
@@ -499,8 +499,8 @@ when:
 			conf, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
 
-			mctx := &mocks.ContextMock{}
-			mctx.On("AppContext").Return(context.Background())
+			mctx := mocks.NewContextMock(t)
+			mctx.EXPECT().AppContext().Return(context.Background())
 
 			configureContext(t, mctx)
 
@@ -512,8 +512,6 @@ when:
 
 			// THEN
 			tc.assert(t, wasResponsible, err)
-
-			mctx.AssertExpectations(t)
 		})
 	}
 }

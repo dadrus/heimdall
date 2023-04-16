@@ -445,7 +445,7 @@ func TestGenericContextualizerExecute(t *testing.T) {
 		subject          *subject.Subject
 		instructServer   func(t *testing.T)
 		configureContext func(t *testing.T, ctx *heimdallmocks.ContextMock)
-		configureCache   func(t *testing.T, cch *mocks.MockCache, contextualizer *genericContextualizer,
+		configureCache   func(t *testing.T, cch *mocks.CacheMock, contextualizer *genericContextualizer,
 			sub *subject.Subject)
 		assert func(t *testing.T, err error, sub *subject.Subject)
 	}{
@@ -479,13 +479,13 @@ func TestGenericContextualizerExecute(t *testing.T) {
 				}(),
 			},
 			subject: &subject.Subject{ID: "Foo", Attributes: map[string]any{"bar": "baz"}},
-			configureCache: func(t *testing.T, cch *mocks.MockCache, contextualizer *genericContextualizer,
+			configureCache: func(t *testing.T, cch *mocks.CacheMock, contextualizer *genericContextualizer,
 				sub *subject.Subject,
 			) {
 				t.Helper()
 
 				key := contextualizer.calculateCacheKey(sub)
-				cch.On("Get", key).Return(&contextualizerData{payload: "Hi Foo"})
+				cch.EXPECT().Get(key).Return(&contextualizerData{payload: "Hi Foo"})
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
@@ -510,24 +510,24 @@ func TestGenericContextualizerExecute(t *testing.T) {
 				}(),
 			},
 			subject: &subject.Subject{ID: "Foo", Attributes: map[string]any{"bar": "baz"}},
-			configureCache: func(t *testing.T, cch *mocks.MockCache, contextualizer *genericContextualizer,
+			configureCache: func(t *testing.T, cch *mocks.CacheMock, contextualizer *genericContextualizer,
 				sub *subject.Subject,
 			) {
 				t.Helper()
 
 				key := contextualizer.calculateCacheKey(sub)
-				cch.On("Get", key).Return("Hi Foo")
-				cch.On("Delete", key)
-				cch.On("Set", key, mock.MatchedBy(func(val *contextualizerData) bool {
+				cch.EXPECT().Get(key).Return("Hi Foo")
+				cch.EXPECT().Delete(key)
+				cch.EXPECT().Set(key, mock.MatchedBy(func(val *contextualizerData) bool {
 					return val != nil && val.payload == "Hi from endpoint"
 				}), 5*time.Second)
 			},
 			configureContext: func(t *testing.T, ctx *heimdallmocks.ContextMock) {
 				t.Helper()
 
-				ctx.On("RequestMethod").Return("POST")
-				ctx.On("RequestURL").Return(&url.URL{Scheme: "http", Host: "foobar.baz", Path: "zab"})
-				ctx.On("RequestClientIPs").Return(nil)
+				ctx.EXPECT().RequestMethod().Return("POST")
+				ctx.EXPECT().RequestURL().Return(&url.URL{Scheme: "http", Host: "foobar.baz", Path: "zab"})
+				ctx.EXPECT().RequestClientIPs().Return(nil)
 			},
 			instructServer: func(t *testing.T) {
 				t.Helper()
@@ -561,9 +561,9 @@ func TestGenericContextualizerExecute(t *testing.T) {
 			configureContext: func(t *testing.T, ctx *heimdallmocks.ContextMock) {
 				t.Helper()
 
-				ctx.On("RequestMethod").Return("POST")
-				ctx.On("RequestURL").Return(&url.URL{Scheme: "http", Host: "foobar.baz", Path: "zab"})
-				ctx.On("RequestClientIPs").Return(nil)
+				ctx.EXPECT().RequestMethod().Return("POST")
+				ctx.EXPECT().RequestURL().Return(&url.URL{Scheme: "http", Host: "foobar.baz", Path: "zab"})
+				ctx.EXPECT().RequestClientIPs().Return(nil)
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
@@ -662,14 +662,14 @@ func TestGenericContextualizerExecute(t *testing.T) {
 				ttl: 10 * time.Second,
 			},
 			subject: &subject.Subject{ID: "Foo", Attributes: map[string]any{"bar": "baz"}},
-			configureCache: func(t *testing.T, cch *mocks.MockCache, contextualizer *genericContextualizer,
+			configureCache: func(t *testing.T, cch *mocks.CacheMock, contextualizer *genericContextualizer,
 				sub *subject.Subject,
 			) {
 				t.Helper()
 
 				key := contextualizer.calculateCacheKey(sub)
-				cch.On("Get", key).Return(nil)
-				cch.On("Set", key, mock.MatchedBy(func(val *contextualizerData) bool {
+				cch.EXPECT().Get(key).Return(nil)
+				cch.EXPECT().Set(key, mock.MatchedBy(func(val *contextualizerData) bool {
 					return val != nil && val.payload == "Hi from endpoint"
 				}), contextualizer.ttl)
 			},
@@ -745,12 +745,12 @@ func TestGenericContextualizerExecute(t *testing.T) {
 			configureContext: func(t *testing.T, ctx *heimdallmocks.ContextMock) {
 				t.Helper()
 
-				ctx.On("RequestHeader", "X-Bar-Foo").Return("Hi Foo")
-				ctx.On("RequestCookie", "X-Foo-Session").
+				ctx.EXPECT().RequestHeader("X-Bar-Foo").Return("Hi Foo")
+				ctx.EXPECT().RequestCookie("X-Foo-Session").
 					Return("Foo-Session-Value")
-				ctx.On("RequestMethod").Return("POST")
-				ctx.On("RequestURL").Return(&url.URL{Scheme: "http", Host: "foobar.baz", Path: "zab"})
-				ctx.On("RequestClientIPs").Return(nil)
+				ctx.EXPECT().RequestMethod().Return("POST")
+				ctx.EXPECT().RequestURL().Return(&url.URL{Scheme: "http", Host: "foobar.baz", Path: "zab"})
+				ctx.EXPECT().RequestClientIPs().Return(nil)
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
@@ -780,18 +780,18 @@ func TestGenericContextualizerExecute(t *testing.T) {
 
 			configureContext := x.IfThenElse(tc.configureContext != nil,
 				tc.configureContext,
-				func(t *testing.T, ctx *heimdallmocks.ContextMock) { t.Helper() })
+				func(t *testing.T, _ *heimdallmocks.ContextMock) { t.Helper() })
 
 			configureCache := x.IfThenElse(tc.configureCache != nil,
 				tc.configureCache,
-				func(t *testing.T, ctx *mocks.MockCache, auth *genericContextualizer, sub *subject.Subject) {
+				func(t *testing.T, _ *mocks.CacheMock, _ *genericContextualizer, _ *subject.Subject) {
 					t.Helper()
 				})
 
-			cch := &mocks.MockCache{}
+			cch := mocks.NewCacheMock(t)
 
-			ctx := &heimdallmocks.ContextMock{}
-			ctx.On("AppContext").Return(cache.WithContext(context.Background(), cch))
+			ctx := heimdallmocks.NewContextMock(t)
+			ctx.EXPECT().AppContext().Return(cache.WithContext(context.Background(), cch))
 
 			configureContext(t, ctx)
 			configureCache(t, cch, tc.contextualizer, tc.subject)
@@ -802,9 +802,6 @@ func TestGenericContextualizerExecute(t *testing.T) {
 
 			// THEN
 			tc.assert(t, err, tc.subject)
-
-			ctx.AssertExpectations(t)
-			cch.AssertExpectations(t)
 		})
 	}
 }

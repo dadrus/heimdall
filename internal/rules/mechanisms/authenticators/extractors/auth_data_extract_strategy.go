@@ -27,6 +27,8 @@ type AuthData interface {
 	Value() string
 }
 
+//go:generate mockery --name AuthDataExtractStrategy --structname AuthDataExtractStrategyMock
+
 type AuthDataExtractStrategy interface {
 	GetAuthData(ctx heimdall.Context) (AuthData, error)
 }

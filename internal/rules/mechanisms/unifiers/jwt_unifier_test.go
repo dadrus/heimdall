@@ -342,7 +342,7 @@ func TestJWTUnifierExecute(t *testing.T) {
 		configureMocks func(t *testing.T,
 			ctx *heimdallmocks.ContextMock,
 			signer *heimdallmocks.JWTSignerMock,
-			cch *mocks.MockCache,
+			cch *mocks.CacheMock,
 			sub *subject.Subject)
 		assert func(t *testing.T, err error)
 	}{
@@ -365,19 +365,19 @@ func TestJWTUnifierExecute(t *testing.T) {
 			uc:      "with used prefilled cache",
 			subject: &subject.Subject{ID: "foo", Attributes: map[string]any{"baz": "bar"}},
 			configureMocks: func(t *testing.T, ctx *heimdallmocks.ContextMock, signer *heimdallmocks.JWTSignerMock,
-				cch *mocks.MockCache, sub *subject.Subject,
+				cch *mocks.CacheMock, sub *subject.Subject,
 			) {
 				t.Helper()
 
-				signer.On("Hash").Return([]byte("foobar"))
+				signer.EXPECT().Hash().Return([]byte("foobar"))
 
-				ctx.On("Signer").Return(signer)
-				ctx.On("AddHeaderForUpstream", "Authorization", "Bearer TestToken")
+				ctx.EXPECT().Signer().Return(signer)
+				ctx.EXPECT().AddHeaderForUpstream("Authorization", "Bearer TestToken")
 
 				unifier := jwtUnifier{ttl: defaultJWTTTL}
 
 				cacheKey := unifier.calculateCacheKey(sub, signer)
-				cch.On("Get", cacheKey).Return("TestToken")
+				cch.EXPECT().Get(cacheKey).Return("TestToken")
 			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
@@ -390,23 +390,23 @@ func TestJWTUnifierExecute(t *testing.T) {
 			config:  []byte(`ttl: 1m`),
 			subject: &subject.Subject{ID: "foo", Attributes: map[string]any{"baz": "bar"}},
 			configureMocks: func(t *testing.T, ctx *heimdallmocks.ContextMock, signer *heimdallmocks.JWTSignerMock,
-				cch *mocks.MockCache, sub *subject.Subject,
+				cch *mocks.CacheMock, sub *subject.Subject,
 			) {
 				t.Helper()
 
-				signer.On("Hash").Return([]byte("foobar"))
-				signer.On("Sign", sub.ID, configuredTTL, map[string]any{}).
+				signer.EXPECT().Hash().Return([]byte("foobar"))
+				signer.EXPECT().Sign(sub.ID, configuredTTL, map[string]any{}).
 					Return("barfoo", nil)
 
-				ctx.On("Signer").Return(signer)
-				ctx.On("AddHeaderForUpstream", "Authorization", "Bearer barfoo")
+				ctx.EXPECT().Signer().Return(signer)
+				ctx.EXPECT().AddHeaderForUpstream("Authorization", "Bearer barfoo")
 
 				unifier := jwtUnifier{ttl: configuredTTL}
 				cacheKey := unifier.calculateCacheKey(sub, signer)
 
-				cch.On("Get", cacheKey).Return(time.Second)
-				cch.On("Delete", cacheKey)
-				cch.On("Set", cacheKey, "barfoo", configuredTTL-defaultCacheLeeway)
+				cch.EXPECT().Get(cacheKey).Return(time.Second)
+				cch.EXPECT().Delete(cacheKey)
+				cch.EXPECT().Set(cacheKey, "barfoo", configuredTTL-defaultCacheLeeway)
 			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
@@ -419,19 +419,19 @@ func TestJWTUnifierExecute(t *testing.T) {
 			config:  []byte(`ttl: 1m`),
 			subject: &subject.Subject{ID: "foo", Attributes: map[string]any{"baz": "bar"}},
 			configureMocks: func(t *testing.T, ctx *heimdallmocks.ContextMock, signer *heimdallmocks.JWTSignerMock,
-				cch *mocks.MockCache, sub *subject.Subject,
+				cch *mocks.CacheMock, sub *subject.Subject,
 			) {
 				t.Helper()
 
-				signer.On("Hash").Return([]byte("foobar"))
-				signer.On("Sign", sub.ID, configuredTTL, map[string]any{}).
+				signer.EXPECT().Hash().Return([]byte("foobar"))
+				signer.EXPECT().Sign(sub.ID, configuredTTL, map[string]any{}).
 					Return("barfoo", nil)
 
-				ctx.On("Signer").Return(signer)
-				ctx.On("AddHeaderForUpstream", "Authorization", "Bearer barfoo")
+				ctx.EXPECT().Signer().Return(signer)
+				ctx.EXPECT().AddHeaderForUpstream("Authorization", "Bearer barfoo")
 
-				cch.On("Get", mock.Anything).Return(nil)
-				cch.On("Set", mock.Anything, "barfoo", configuredTTL-defaultCacheLeeway)
+				cch.EXPECT().Get(mock.Anything).Return(nil)
+				cch.EXPECT().Set(mock.Anything, "barfoo", configuredTTL-defaultCacheLeeway)
 			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
@@ -449,21 +449,21 @@ claims: '{
 }'`),
 			subject: &subject.Subject{ID: "foo", Attributes: map[string]any{"baz": "bar"}},
 			configureMocks: func(t *testing.T, ctx *heimdallmocks.ContextMock, signer *heimdallmocks.JWTSignerMock,
-				cch *mocks.MockCache, sub *subject.Subject,
+				cch *mocks.CacheMock, sub *subject.Subject,
 			) {
 				t.Helper()
 
-				signer.On("Hash").Return([]byte("foobar"))
-				signer.On("Sign", sub.ID, defaultJWTTTL, map[string]any{
+				signer.EXPECT().Hash().Return([]byte("foobar"))
+				signer.EXPECT().Sign(sub.ID, defaultJWTTTL, map[string]any{
 					"sub_id": "foo",
 					"bar":    "baz",
 				}).Return("barfoo", nil)
 
-				ctx.On("Signer").Return(signer)
-				ctx.On("AddHeaderForUpstream", "Authorization", "Bearer barfoo")
+				ctx.EXPECT().Signer().Return(signer)
+				ctx.EXPECT().AddHeaderForUpstream("Authorization", "Bearer barfoo")
 
-				cch.On("Get", mock.Anything).Return(nil)
-				cch.On("Set", mock.Anything, "barfoo", defaultJWTTTL-defaultCacheLeeway)
+				cch.EXPECT().Get(mock.Anything).Return(nil)
+				cch.EXPECT().Set(mock.Anything, "barfoo", defaultJWTTTL-defaultCacheLeeway)
 			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
@@ -477,14 +477,14 @@ claims: '{
 			config:  []byte(`claims: "foo: bar"`),
 			subject: &subject.Subject{ID: "foo", Attributes: map[string]any{"baz": "bar"}},
 			configureMocks: func(t *testing.T, ctx *heimdallmocks.ContextMock, signer *heimdallmocks.JWTSignerMock,
-				cch *mocks.MockCache, sub *subject.Subject,
+				cch *mocks.CacheMock, sub *subject.Subject,
 			) {
 				t.Helper()
 
-				signer.On("Hash").Return([]byte("foobar"))
+				signer.EXPECT().Hash().Return([]byte("foobar"))
 
-				ctx.On("Signer").Return(signer)
-				cch.On("Get", mock.Anything).Return(nil)
+				ctx.EXPECT().Signer().Return(signer)
+				cch.EXPECT().Get(mock.Anything).Return(nil)
 			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
@@ -504,14 +504,14 @@ claims: '{
 			config:  []byte(`claims: "{{ .foobar }}"`),
 			subject: &subject.Subject{ID: "foo", Attributes: map[string]any{"baz": "bar"}},
 			configureMocks: func(t *testing.T, ctx *heimdallmocks.ContextMock, signer *heimdallmocks.JWTSignerMock,
-				cch *mocks.MockCache, sub *subject.Subject,
+				cch *mocks.CacheMock, sub *subject.Subject,
 			) {
 				t.Helper()
 
-				signer.On("Hash").Return([]byte("foobar"))
+				signer.EXPECT().Hash().Return([]byte("foobar"))
 
-				ctx.On("Signer").Return(signer)
-				cch.On("Get", mock.Anything).Return(nil)
+				ctx.EXPECT().Signer().Return(signer)
+				cch.EXPECT().Get(mock.Anything).Return(nil)
 			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
@@ -531,7 +531,7 @@ claims: '{
 			configureMocks := x.IfThenElse(tc.configureMocks != nil,
 				tc.configureMocks,
 				func(t *testing.T, _ *heimdallmocks.ContextMock, _ *heimdallmocks.JWTSignerMock,
-					_ *mocks.MockCache, _ *subject.Subject,
+					_ *mocks.CacheMock, _ *subject.Subject,
 				) {
 					t.Helper()
 				})
@@ -539,11 +539,11 @@ claims: '{
 			conf, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
 
-			cch := &mocks.MockCache{}
-			mctx := &heimdallmocks.ContextMock{}
-			signer := &heimdallmocks.JWTSignerMock{}
+			cch := mocks.NewCacheMock(t)
+			mctx := heimdallmocks.NewContextMock(t)
+			signer := heimdallmocks.NewJWTSignerMock(t)
 
-			mctx.On("AppContext").Return(cache.WithContext(context.Background(), cch))
+			mctx.EXPECT().AppContext().Return(cache.WithContext(context.Background(), cch))
 			configureMocks(t, mctx, signer, cch, tc.subject)
 
 			unifier, err := newJWTUnifier(tc.id, conf)
@@ -554,10 +554,6 @@ claims: '{
 
 			// THEN
 			tc.assert(t, err)
-
-			mctx.AssertExpectations(t)
-			cch.AssertExpectations(t)
-			signer.AssertExpectations(t)
 		})
 	}
 }

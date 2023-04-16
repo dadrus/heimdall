@@ -195,7 +195,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				grpc.WithTransportCredentials(insecure.NewCredentials()))
 			require.NoError(t, err)
 			conf := &config.Configuration{Metrics: config.MetricsConfig{Enabled: true}}
-			cch := &mocks.MockCache{}
+			cch := mocks.NewCacheMock(t)
 			repo := mocks2.NewRepositoryMock(t)
 			rule := mocks2.NewRuleMock(t)
 

@@ -55,10 +55,10 @@ func TestErrorConditionMatcherMatch(t *testing.T) {
 			setupCtx: func(ctx *mocks.ContextMock) {
 				t.Helper()
 
-				ctx.On("RequestHeaders").Return(map[string]string{
+				ctx.EXPECT().RequestHeaders().Return(map[string]string{
 					"foobar": "barfoo",
 				})
-				ctx.On("RequestClientIPs").Return([]string{
+				ctx.EXPECT().RequestClientIPs().Return([]string{
 					"192.168.10.2",
 				})
 			},
@@ -81,10 +81,10 @@ func TestErrorConditionMatcherMatch(t *testing.T) {
 			setupCtx: func(ctx *mocks.ContextMock) {
 				t.Helper()
 
-				ctx.On("RequestHeaders").Return(map[string]string{
+				ctx.EXPECT().RequestHeaders().Return(map[string]string{
 					"foobar": "barfoo",
 				})
-				ctx.On("RequestClientIPs").Return([]string{
+				ctx.EXPECT().RequestClientIPs().Return([]string{
 					"192.168.1.2",
 				})
 			},
@@ -107,10 +107,10 @@ func TestErrorConditionMatcherMatch(t *testing.T) {
 			setupCtx: func(ctx *mocks.ContextMock) {
 				t.Helper()
 
-				ctx.On("RequestHeaders").Return(map[string]string{
+				ctx.EXPECT().RequestHeaders().Return(map[string]string{
 					"foobar": "bar",
 				})
-				ctx.On("RequestClientIPs").Return([]string{
+				ctx.EXPECT().RequestClientIPs().Return([]string{
 					"192.168.10.2",
 				})
 			},
@@ -133,10 +133,10 @@ func TestErrorConditionMatcherMatch(t *testing.T) {
 			setupCtx: func(ctx *mocks.ContextMock) {
 				t.Helper()
 
-				ctx.On("RequestHeaders").Return(map[string]string{
+				ctx.EXPECT().RequestHeaders().Return(map[string]string{
 					"foobar": "barfoo",
 				})
-				ctx.On("RequestClientIPs").Return([]string{
+				ctx.EXPECT().RequestClientIPs().Return([]string{
 					"192.168.10.2",
 				})
 			},
@@ -159,10 +159,10 @@ func TestErrorConditionMatcherMatch(t *testing.T) {
 			setupCtx: func(ctx *mocks.ContextMock) {
 				t.Helper()
 
-				ctx.On("RequestHeaders").Return(map[string]string{
+				ctx.EXPECT().RequestHeaders().Return(map[string]string{
 					"Foobar": "bar",
 				})
-				ctx.On("RequestClientIPs").Return([]string{
+				ctx.EXPECT().RequestClientIPs().Return([]string{
 					"192.168.1.2",
 				})
 			},
@@ -194,7 +194,7 @@ func TestErrorConditionMatcherMatch(t *testing.T) {
 			setupCtx: func(ctx *mocks.ContextMock) {
 				t.Helper()
 
-				ctx.On("RequestHeaders").Return(map[string]string{
+				ctx.EXPECT().RequestHeaders().Return(map[string]string{
 					"Foobar": "bar",
 				})
 			},
@@ -209,7 +209,7 @@ func TestErrorConditionMatcherMatch(t *testing.T) {
 			setupCtx: func(ctx *mocks.ContextMock) {
 				t.Helper()
 
-				ctx.On("RequestClientIPs").Return([]string{
+				ctx.EXPECT().RequestClientIPs().Return([]string{
 					"192.168.1.2",
 				})
 			},
@@ -219,7 +219,7 @@ func TestErrorConditionMatcherMatch(t *testing.T) {
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
 			// GIVEN
-			ctx := &mocks.ContextMock{}
+			ctx := mocks.NewContextMock(t)
 			tc.setupCtx(ctx)
 
 			// WHEN
@@ -227,7 +227,6 @@ func TestErrorConditionMatcherMatch(t *testing.T) {
 
 			// THEN
 			assert.Equal(t, tc.matching, matched)
-			ctx.AssertExpectations(t)
 		})
 	}
 }

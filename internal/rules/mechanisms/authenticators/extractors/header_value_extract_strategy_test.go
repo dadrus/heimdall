@@ -43,7 +43,7 @@ func TestExtractHeaderValue(t *testing.T) {
 			configureMocks: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
-				ctx.On("RequestHeader", "X-Test-Header").Return("TestValue")
+				ctx.EXPECT().RequestHeader("X-Test-Header").Return("TestValue")
 			},
 			assert: func(t *testing.T, err error, authData AuthData) {
 				t.Helper()
@@ -58,7 +58,7 @@ func TestExtractHeaderValue(t *testing.T) {
 			configureMocks: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
-				ctx.On("RequestHeader", "X-Test-Header").Return("TestValue")
+				ctx.EXPECT().RequestHeader("X-Test-Header").Return("TestValue")
 			},
 			assert: func(t *testing.T, err error, authData AuthData) {
 				t.Helper()
@@ -74,7 +74,7 @@ func TestExtractHeaderValue(t *testing.T) {
 			configureMocks: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
-				ctx.On("RequestHeader", "X-Test-Header").Return("Bar TestValue")
+				ctx.EXPECT().RequestHeader("X-Test-Header").Return("Bar TestValue")
 			},
 			assert: func(t *testing.T, err error, authData AuthData) {
 				t.Helper()
@@ -90,7 +90,7 @@ func TestExtractHeaderValue(t *testing.T) {
 			configureMocks: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
-				ctx.On("RequestHeader", "X-Test-Header").Return("Foo TestValue")
+				ctx.EXPECT().RequestHeader("X-Test-Header").Return("Foo TestValue")
 			},
 			assert: func(t *testing.T, err error, authData AuthData) {
 				t.Helper()
@@ -105,7 +105,7 @@ func TestExtractHeaderValue(t *testing.T) {
 			configureMocks: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
-				ctx.On("RequestHeader", "X-Test-Header").Return("")
+				ctx.EXPECT().RequestHeader("X-Test-Header").Return("")
 			},
 			assert: func(t *testing.T, err error, authData AuthData) {
 				t.Helper()
@@ -118,7 +118,7 @@ func TestExtractHeaderValue(t *testing.T) {
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
 			// GIVEN
-			ctx := &mocks.ContextMock{}
+			ctx := mocks.NewContextMock(t)
 			tc.configureMocks(t, ctx)
 
 			// WHEN
@@ -126,7 +126,6 @@ func TestExtractHeaderValue(t *testing.T) {
 
 			// THEN
 			tc.assert(t, err, authData)
-			ctx.AssertExpectations(t)
 		})
 	}
 }

@@ -309,8 +309,8 @@ func TestRuleExecute(t *testing.T) {
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
 			// GIVEN
-			ctx := &heimdallmocks.ContextMock{}
-			ctx.On("AppContext").Return(context.Background())
+			ctx := heimdallmocks.NewContextMock(t)
+			ctx.EXPECT().AppContext().Return(context.Background())
 
 			authenticator := mocks.NewSubjectCreatorMock(t)
 			authorizer := mocks.NewSubjectHandlerMock(t)

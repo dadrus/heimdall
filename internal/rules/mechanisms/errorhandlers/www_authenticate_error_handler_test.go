@@ -341,8 +341,8 @@ when:
 			configureContext: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
-				ctx.On("SetPipelineError", heimdall.ErrAuthentication)
-				ctx.On("AddHeaderForUpstream", "WWW-Authenticate",
+				ctx.EXPECT().SetPipelineError(heimdall.ErrAuthentication)
+				ctx.EXPECT().AddHeaderForUpstream("WWW-Authenticate",
 					mock.MatchedBy(func(val string) bool {
 						assert.True(t, strings.HasPrefix(val, "Basic "))
 						realm := strings.TrimLeft(val, "Basic ")
@@ -370,8 +370,8 @@ when:
 			configureContext: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
-				ctx.On("SetPipelineError", heimdall.ErrAuthentication)
-				ctx.On("AddHeaderForUpstream", "WWW-Authenticate",
+				ctx.EXPECT().SetPipelineError(heimdall.ErrAuthentication)
+				ctx.EXPECT().AddHeaderForUpstream("WWW-Authenticate",
 					mock.MatchedBy(func(val string) bool {
 						assert.True(t, strings.HasPrefix(val, "Basic "))
 						realm := strings.TrimLeft(val, "Basic ")
@@ -397,8 +397,8 @@ when:
 			conf, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
 
-			mctx := &mocks.ContextMock{}
-			mctx.On("AppContext").Return(context.Background())
+			mctx := mocks.NewContextMock(t)
+			mctx.EXPECT().AppContext().Return(context.Background())
 
 			configureContext(t, mctx)
 

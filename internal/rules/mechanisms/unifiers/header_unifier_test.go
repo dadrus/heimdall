@@ -264,9 +264,9 @@ headers:
 			configureContext: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
-				ctx.On("AddHeaderForUpstream", "foo", "baz")
-				ctx.On("AddHeaderForUpstream", "bar", "FooBar")
-				ctx.On("AddHeaderForUpstream", "baz", "bar")
+				ctx.EXPECT().AddHeaderForUpstream("foo", "baz")
+				ctx.EXPECT().AddHeaderForUpstream("bar", "FooBar")
+				ctx.EXPECT().AddHeaderForUpstream("baz", "bar")
 			},
 			createSubject: func(t *testing.T) *subject.Subject {
 				t.Helper()
@@ -297,23 +297,21 @@ headers:
 			conf, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
 
-			mctx := &mocks.ContextMock{}
-			mctx.On("AppContext").Return(context.Background())
+			ctx := mocks.NewContextMock(t)
+			ctx.EXPECT().AppContext().Return(context.Background()).Maybe()
 
 			sub := createSubject(t)
 
-			configureContext(t, mctx)
+			configureContext(t, ctx)
 
 			unifier, err := newHeaderUnifier(tc.id, conf)
 			require.NoError(t, err)
 
 			// WHEN
-			err = unifier.Execute(mctx, sub)
+			err = unifier.Execute(ctx, sub)
 
 			// THEN
 			tc.assert(t, err)
-
-			mctx.AssertExpectations(t)
 		})
 	}
 }

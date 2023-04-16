@@ -110,8 +110,8 @@ func TestCompositeSubjectCreatorExecution(t *testing.T) {
 			// GIVEN
 			sub := &subject.Subject{ID: "foo"}
 
-			ctx := &mocks.ContextMock{}
-			ctx.On("AppContext").Return(context.Background())
+			ctx := mocks.NewContextMock(t)
+			ctx.EXPECT().AppContext().Return(context.Background())
 
 			auth1 := rulemocks.NewSubjectCreatorMock(t)
 			auth2 := rulemocks.NewSubjectCreatorMock(t)
@@ -128,8 +128,6 @@ func TestCompositeSubjectCreatorExecution(t *testing.T) {
 			if err == nil {
 				assert.Equal(t, sub, rSub)
 			}
-
-			ctx.AssertExpectations(t)
 		})
 	}
 }

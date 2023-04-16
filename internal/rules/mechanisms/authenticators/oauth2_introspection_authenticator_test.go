@@ -37,6 +37,7 @@ import (
 	"github.com/dadrus/heimdall/internal/heimdall"
 	heimdallmocks "github.com/dadrus/heimdall/internal/heimdall/mocks"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/extractors"
+	mocks2 "github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/extractors/mocks"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/oauth2"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
 	"github.com/dadrus/heimdall/internal/x"
@@ -539,8 +540,8 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 		instructServer func(t *testing.T)
 		configureMocks func(t *testing.T,
 			ctx *heimdallmocks.ContextMock,
-			cch *mocks.MockCache,
-			ads *mockAuthDataGetter,
+			cch *mocks.CacheMock,
+			ads *mocks2.AuthDataExtractStrategyMock,
 			auth *oauth2IntrospectionAuthenticator)
 		assert func(t *testing.T, err error, sub *subject.Subject)
 	}{
@@ -549,13 +550,13 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 			authenticator: &oauth2IntrospectionAuthenticator{id: "auth3"},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.ContextMock,
-				cch *mocks.MockCache,
-				ads *mockAuthDataGetter,
-				auth *oauth2IntrospectionAuthenticator,
+				_ *mocks.CacheMock,
+				ads *mocks2.AuthDataExtractStrategyMock,
+				_ *oauth2IntrospectionAuthenticator,
 			) {
 				t.Helper()
 
-				ads.On("GetAuthData", ctx).Return(nil, heimdall.ErrCommunicationTimeout)
+				ads.EXPECT().GetAuthData(ctx).Return(nil, heimdall.ErrCommunicationTimeout)
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
@@ -580,13 +581,13 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.ContextMock,
-				cch *mocks.MockCache,
-				ads *mockAuthDataGetter,
-				auth *oauth2IntrospectionAuthenticator,
+				_ *mocks.CacheMock,
+				ads *mocks2.AuthDataExtractStrategyMock,
+				_ *oauth2IntrospectionAuthenticator,
 			) {
 				t.Helper()
 
-				ads.On("GetAuthData", ctx).Return(dummyAuthData{Val: "test_access_token"}, nil)
+				ads.EXPECT().GetAuthData(ctx).Return(dummyAuthData{Val: "test_access_token"}, nil)
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
@@ -611,13 +612,13 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.ContextMock,
-				cch *mocks.MockCache,
-				ads *mockAuthDataGetter,
-				auth *oauth2IntrospectionAuthenticator,
+				_ *mocks.CacheMock,
+				ads *mocks2.AuthDataExtractStrategyMock,
+				_ *oauth2IntrospectionAuthenticator,
 			) {
 				t.Helper()
 
-				ads.On("GetAuthData", ctx).Return(dummyAuthData{Val: "test_access_token"}, nil)
+				ads.EXPECT().GetAuthData(ctx).Return(dummyAuthData{Val: "test_access_token"}, nil)
 			},
 			instructServer: func(t *testing.T) {
 				t.Helper()
@@ -654,13 +655,13 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.ContextMock,
-				cch *mocks.MockCache,
-				ads *mockAuthDataGetter,
-				auth *oauth2IntrospectionAuthenticator,
+				_ *mocks.CacheMock,
+				ads *mocks2.AuthDataExtractStrategyMock,
+				_ *oauth2IntrospectionAuthenticator,
 			) {
 				t.Helper()
 
-				ads.On("GetAuthData", ctx).Return(dummyAuthData{Val: "test_access_token"}, nil)
+				ads.EXPECT().GetAuthData(ctx).Return(dummyAuthData{Val: "test_access_token"}, nil)
 			},
 			instructServer: func(t *testing.T) {
 				t.Helper()
@@ -713,13 +714,13 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.ContextMock,
-				cch *mocks.MockCache,
-				ads *mockAuthDataGetter,
-				auth *oauth2IntrospectionAuthenticator,
+				_ *mocks.CacheMock,
+				ads *mocks2.AuthDataExtractStrategyMock,
+				_ *oauth2IntrospectionAuthenticator,
 			) {
 				t.Helper()
 
-				ads.On("GetAuthData", ctx).Return(dummyAuthData{Val: "test_access_token"}, nil)
+				ads.EXPECT().GetAuthData(ctx).Return(dummyAuthData{Val: "test_access_token"}, nil)
 			},
 			instructServer: func(t *testing.T) {
 				t.Helper()
@@ -775,13 +776,13 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.ContextMock,
-				cch *mocks.MockCache,
-				ads *mockAuthDataGetter,
-				auth *oauth2IntrospectionAuthenticator,
+				_ *mocks.CacheMock,
+				ads *mocks2.AuthDataExtractStrategyMock,
+				_ *oauth2IntrospectionAuthenticator,
 			) {
 				t.Helper()
 
-				ads.On("GetAuthData", ctx).Return(dummyAuthData{Val: "test_access_token"}, nil)
+				ads.EXPECT().GetAuthData(ctx).Return(dummyAuthData{Val: "test_access_token"}, nil)
 			},
 			instructServer: func(t *testing.T) {
 				t.Helper()
@@ -851,13 +852,13 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.ContextMock,
-				cch *mocks.MockCache,
-				ads *mockAuthDataGetter,
-				auth *oauth2IntrospectionAuthenticator,
+				_ *mocks.CacheMock,
+				ads *mocks2.AuthDataExtractStrategyMock,
+				_ *oauth2IntrospectionAuthenticator,
 			) {
 				t.Helper()
 
-				ads.On("GetAuthData", ctx).Return(dummyAuthData{Val: "test_access_token"}, nil)
+				ads.EXPECT().GetAuthData(ctx).Return(dummyAuthData{Val: "test_access_token"}, nil)
 			},
 			instructServer: func(t *testing.T) {
 				t.Helper()
@@ -933,15 +934,15 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.ContextMock,
-				cch *mocks.MockCache,
-				ads *mockAuthDataGetter,
+				cch *mocks.CacheMock,
+				ads *mocks2.AuthDataExtractStrategyMock,
 				auth *oauth2IntrospectionAuthenticator,
 			) {
 				t.Helper()
 
-				ads.On("GetAuthData", ctx).Return(dummyAuthData{Val: "test_access_token"}, nil)
-				cch.On("Get", mock.Anything).Return(nil)
-				cch.On("Set", mock.Anything, mock.Anything, mock.Anything)
+				ads.EXPECT().GetAuthData(ctx).Return(dummyAuthData{Val: "test_access_token"}, nil)
+				cch.EXPECT().Get(mock.Anything).Return(nil)
+				cch.EXPECT().Set(mock.Anything, mock.Anything, mock.Anything)
 			},
 			instructServer: func(t *testing.T) {
 				t.Helper()
@@ -1017,16 +1018,16 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.ContextMock,
-				cch *mocks.MockCache,
-				ads *mockAuthDataGetter,
+				cch *mocks.CacheMock,
+				ads *mocks2.AuthDataExtractStrategyMock,
 				auth *oauth2IntrospectionAuthenticator,
 			) {
 				t.Helper()
 
-				ads.On("GetAuthData", ctx).Return(dummyAuthData{Val: "test_access_token"}, nil)
-				cch.On("Get", mock.Anything).Return(zeroTTL)
-				cch.On("Delete", mock.Anything)
-				cch.On("Set", mock.Anything, mock.Anything, mock.Anything)
+				ads.EXPECT().GetAuthData(ctx).Return(dummyAuthData{Val: "test_access_token"}, nil)
+				cch.EXPECT().Get(mock.Anything).Return(zeroTTL)
+				cch.EXPECT().Delete(mock.Anything)
+				cch.EXPECT().Set(mock.Anything, mock.Anything, mock.Anything)
 			},
 			instructServer: func(t *testing.T) {
 				t.Helper()
@@ -1102,13 +1103,13 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.ContextMock,
-				cch *mocks.MockCache,
-				ads *mockAuthDataGetter,
+				cch *mocks.CacheMock,
+				ads *mocks2.AuthDataExtractStrategyMock,
 				auth *oauth2IntrospectionAuthenticator,
 			) {
 				t.Helper()
 
-				ads.On("GetAuthData", ctx).Return(dummyAuthData{Val: "test_access_token"}, nil)
+				ads.EXPECT().GetAuthData(ctx).Return(dummyAuthData{Val: "test_access_token"}, nil)
 
 				rawIntrospectResponse, err := json.Marshal(map[string]any{
 					"active":     true,
@@ -1124,7 +1125,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				})
 				require.NoError(t, err)
 
-				cch.On("Get", mock.Anything).Return(rawIntrospectResponse)
+				cch.EXPECT().Get(mock.Anything).Return(rawIntrospectResponse)
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
@@ -1164,21 +1165,21 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 			configureMocks := x.IfThenElse(tc.configureMocks != nil,
 				tc.configureMocks,
 				func(t *testing.T,
-					ctx *heimdallmocks.ContextMock,
-					cch *mocks.MockCache,
-					ads *mockAuthDataGetter,
-					auth *oauth2IntrospectionAuthenticator,
+					_ *heimdallmocks.ContextMock,
+					_ *mocks.CacheMock,
+					_ *mocks2.AuthDataExtractStrategyMock,
+					_ *oauth2IntrospectionAuthenticator,
 				) {
 					t.Helper()
 				})
 
-			ads := &mockAuthDataGetter{}
+			ads := mocks2.NewAuthDataExtractStrategyMock(t)
 			tc.authenticator.ads = ads
 
-			cch := &mocks.MockCache{}
+			cch := mocks.NewCacheMock(t)
 
-			ctx := &heimdallmocks.ContextMock{}
-			ctx.On("AppContext").Return(cache.WithContext(context.Background(), cch))
+			ctx := heimdallmocks.NewContextMock(t)
+			ctx.EXPECT().AppContext().Return(cache.WithContext(context.Background(), cch))
 
 			configureMocks(t, ctx, cch, ads, tc.authenticator)
 			instructServer(t)
