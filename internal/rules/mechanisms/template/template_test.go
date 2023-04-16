@@ -59,12 +59,13 @@ func TestTemplateRender(t *testing.T) {
 "my_header": {{ .Request.Header "X-My-Header" | quote }},
 "my_cookie": {{ .Request.Cookie "session_cookie" | quote }},
 "my_query_param": {{ index .Request.URL.Query.my_query_param 0 | quote }},
-"ips": "{{ range $i, $el := .Request.ClientIP -}}{{ if $i }} {{ end }}{{ $el }}{{ end }}"
+"ips": {{ range $i, $el := .Request.ClientIP -}}{{ if $i }} {{ end }}{{ quote $el }}{{ end }},
+"values": [{{ quote .Values.key1 }}, {{ quote .Values.key2 }}]
 }`)
 	require.NoError(t, err)
 
 	// WHEN
-	res, err := tpl.Render(ctx, sub)
+	res, err := tpl.Render(ctx, sub, map[string]string{"key1": "foo", "key2": "bar"})
 
 	// THEN
 	require.NoError(t, err)
@@ -79,6 +80,7 @@ func TestTemplateRender(t *testing.T) {
 "my_header": "my-value",
 "my_cookie": "session-value",
 "my_query_param": "query_value",
-"ips": "192.168.1.1"
+"ips": "192.168.1.1",
+"values": ["foo", "bar"]
 }`, res)
 }

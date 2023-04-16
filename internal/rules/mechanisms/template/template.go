@@ -34,7 +34,7 @@ import (
 var ErrTemplateRender = errors.New("template error")
 
 type Template interface {
-	Render(ctx heimdall.Context, sub *subject.Subject) (string, error)
+	Render(ctx heimdall.Context, sub *subject.Subject, values map[string]string) (string, error)
 	Hash() []byte
 }
 
@@ -63,17 +63,16 @@ func New(val string) (Template, error) {
 	return &templateImpl{t: tmpl, hash: hash.Sum(nil)}, nil
 }
 
-func (t *templateImpl) Render(ctx heimdall.Context, sub *subject.Subject) (string, error) {
-	var (
-		buf bytes.Buffer
-		req *Request
-	)
+func (t *templateImpl) Render(ctx heimdall.Context, sub *subject.Subject, values map[string]string) (string, error) {
+	var buf bytes.Buffer
+
+	tplData := data{Subject: sub, Values: values}
 
 	if ctx != nil {
-		req = WrapRequest(ctx)
+		tplData.Request = WrapRequest(ctx)
 	}
 
-	err := t.t.Execute(&buf, data{Subject: sub, Request: req})
+	err := t.t.Execute(&buf, tplData)
 	if err != nil {
 		return "", errorchain.New(ErrTemplateRender).CausedBy(err)
 	}
