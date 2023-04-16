@@ -142,7 +142,7 @@ func newRemoteAuthorizer(id string, rawConfig map[string]any) (*remoteAuthorizer
 
 func (a *remoteAuthorizer) Execute(ctx heimdall.Context, sub *subject.Subject) error {
 	logger := zerolog.Ctx(ctx.AppContext())
-	logger.Debug().Msg("Authorizing using remote authorizer")
+	logger.Debug().Str("_id", a.id).Msg("Authorizing using remote authorizer")
 
 	if sub == nil {
 		return errorchain.
