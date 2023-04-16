@@ -102,7 +102,7 @@ func newBasicAuthAuthenticator(id string, rawConfig map[string]any) (*basicAuthA
 
 func (a *basicAuthAuthenticator) Execute(ctx heimdall.Context) (*subject.Subject, error) {
 	logger := zerolog.Ctx(ctx.AppContext())
-	logger.Debug().Msg("Authenticating using basic_auth authenticator")
+	logger.Debug().Str("_id", a.id).Msg("Authenticating using basic_auth authenticator")
 
 	strategy := extractors.HeaderValueExtractStrategy{Name: "Authorization", Schema: "Basic"}
 
