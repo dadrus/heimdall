@@ -33,7 +33,7 @@ func TestNoopAuthenticatorExecution(t *testing.T) {
 	ctx := &mocks.ContextMock{}
 	ctx.On("AppContext").Return(context.Background())
 
-	auth := newNoopAuthenticator()
+	auth := newNoopAuthenticator("test")
 
 	// WHEN
 	sub, err := auth.Execute(ctx)
@@ -48,7 +48,7 @@ func TestCreateNoopAuthenticatorFromPrototype(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
-	prototype := newNoopAuthenticator()
+	prototype := newNoopAuthenticator("test")
 
 	// WHEN
 	auth1, err1 := prototype.WithConfig(nil)
@@ -66,7 +66,7 @@ func TestNoopAuthenticatorIsFallbackOnErrorAllowed(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
-	auth := newNoopAuthenticator()
+	auth := newNoopAuthenticator("test")
 
 	// WHEN
 	isAllowed := auth.IsFallbackOnErrorAllowed()
