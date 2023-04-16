@@ -45,16 +45,13 @@ type Endpoint struct {
 	AuthStrategy     AuthenticationStrategy `mapstructure:"auth"`
 	Headers          map[string]string      `mapstructure:"headers"`
 	HTTPCacheEnabled *bool                  `mapstructure:"enable_http_cache"`
+	Values           Values                 `mapstructure:"values"`
 }
 
 type Retry struct {
 	GiveUpAfter time.Duration `mapstructure:"give_up_after"`
 	MaxDelay    time.Duration `mapstructure:"max_delay"`
 }
-
-type noopRenderer struct{}
-
-func (noopRenderer) Render(value string) (string, error) { return value, nil }
 
 func (e Endpoint) Validate() error {
 	if len(e.URL) == 0 {
@@ -97,7 +94,7 @@ func (e Endpoint) CreateRequest(ctx context.Context, body io.Reader, rndr Render
 		method = e.Method
 	}
 
-	endpointURL, err := tpl.Render(e.URL)
+	endpointURL, err := tpl.Render(e.URL, e.Values)
 	if err != nil {
 		return nil, errorchain.NewWithMessage(heimdall.ErrInternal,
 			"failed to render URL for the endpoint").CausedBy(err)
@@ -124,7 +121,7 @@ func (e Endpoint) CreateRequest(ctx context.Context, body io.Reader, rndr Render
 	}
 
 	for headerName, valueTemplate := range e.Headers {
-		headerValue, err := tpl.Render(valueTemplate)
+		headerValue, err := tpl.Render(valueTemplate, e.Values)
 		if err != nil {
 			return nil, errorchain.NewWithMessagef(heimdall.ErrInternal,
 				"failed to render %s header value", headerName).CausedBy(err)

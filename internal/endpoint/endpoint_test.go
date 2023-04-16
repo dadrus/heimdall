@@ -22,8 +22,8 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
-	"net/url"
 	"testing"
+	"text/template"
 	"time"
 
 	"github.com/stretchr/testify/assert"
@@ -160,9 +160,26 @@ func TestEndpointCreateClient(t *testing.T) {
 func TestEndpointCreateRequest(t *testing.T) {
 	t.Parallel()
 
+	renderer := RenderFunc(func(tpl string, values map[string]string) (string, error) {
+		tmpl, err := template.New("test").Parse(tpl)
+		if err != nil {
+			return "", err
+		}
+
+		var buf bytes.Buffer
+
+		err = tmpl.Execute(&buf, map[string]any{"Values": values})
+		if err != nil {
+			return "", err
+		}
+
+		return buf.String(), nil
+	})
+
 	for _, tc := range []struct {
 		uc       string
 		endpoint Endpoint
+		renderer Renderer
 		body     []byte
 		assert   func(t *testing.T, request *http.Request, err error)
 	}{
@@ -174,11 +191,8 @@ func TestEndpointCreateRequest(t *testing.T) {
 
 				require.NoError(t, err)
 
-				reqURL, err := url.Parse("http://foo.bar")
-				require.NoError(t, err)
-
 				assert.Equal(t, "POST", request.Method)
-				assert.Equal(t, reqURL, request.URL)
+				assert.Equal(t, "http://foo.bar", request.URL.String())
 				assert.Nil(t, request.Body)
 				assert.Len(t, request.Header, 0)
 			},
@@ -191,11 +205,8 @@ func TestEndpointCreateRequest(t *testing.T) {
 
 				require.NoError(t, err)
 
-				reqURL, err := url.Parse("http://test.org")
-				require.NoError(t, err)
-
 				assert.Equal(t, "GET", request.Method)
-				assert.Equal(t, reqURL, request.URL)
+				assert.Equal(t, "http://test.org", request.URL.String())
 				assert.Nil(t, request.Body)
 				assert.Len(t, request.Header, 0)
 			},
@@ -220,11 +231,8 @@ func TestEndpointCreateRequest(t *testing.T) {
 
 				require.NoError(t, err)
 
-				reqURL, err := url.Parse("http://test.org")
-				require.NoError(t, err)
-
 				assert.Equal(t, "GET", request.Method)
-				assert.Equal(t, reqURL, request.URL)
+				assert.Equal(t, "http://test.org", request.URL.String())
 				assert.NotNil(t, request.Body)
 				assert.Len(t, request.Header, 0)
 			},
@@ -240,11 +248,8 @@ func TestEndpointCreateRequest(t *testing.T) {
 
 				require.NoError(t, err)
 
-				reqURL, err := url.Parse("http://test.org")
-				require.NoError(t, err)
-
 				assert.Equal(t, "POST", request.Method)
-				assert.Equal(t, reqURL, request.URL)
+				assert.Equal(t, "http://test.org", request.URL.String())
 				assert.Len(t, request.Header, 1)
 				assert.NotEmpty(t, request.Header.Get("Authorization"))
 				user, pass, _ := request.BasicAuth()
@@ -279,11 +284,8 @@ func TestEndpointCreateRequest(t *testing.T) {
 
 				require.NoError(t, err)
 
-				reqURL, err := url.Parse("http://test.org")
-				require.NoError(t, err)
-
 				assert.Equal(t, "PATCH", request.Method)
-				assert.Equal(t, reqURL, request.URL)
+				assert.Equal(t, "http://test.org", request.URL.String())
 
 				assert.Len(t, request.Header, 2)
 
@@ -295,6 +297,70 @@ func TestEndpointCreateRequest(t *testing.T) {
 				assert.Equal(t, "baz", request.Header.Get("Foo-Bar"))
 			},
 		},
+		{
+			uc: "with templated url",
+			endpoint: Endpoint{
+				URL:    "http://test.org/{{ .Values.key }}",
+				Values: map[string]string{"key": "foo"},
+			},
+			renderer: renderer,
+			assert: func(t *testing.T, request *http.Request, err error) {
+				t.Helper()
+
+				require.NoError(t, err)
+				assert.Equal(t, "http://test.org/foo", request.URL.String())
+			},
+		},
+		{
+			uc: "with error while rendering templated url",
+			endpoint: Endpoint{
+				URL: "http://test.org/{{ .Values.foo }",
+			},
+			renderer: renderer,
+			assert: func(t *testing.T, request *http.Request, err error) {
+				t.Helper()
+
+				require.Error(t, err)
+				assert.ErrorIs(t, err, heimdall.ErrInternal)
+				assert.Contains(t, err.Error(), "failed to render URL")
+			},
+		},
+		{
+			uc: "with templated header",
+			endpoint: Endpoint{
+				URL:    "http://test.org",
+				Values: map[string]string{"key": "foo"},
+				Headers: map[string]string{
+					"X-My-Header-1": "{{ .Values.key }}",
+					"X-My-Header-2": "bar",
+				},
+			},
+			renderer: renderer,
+			assert: func(t *testing.T, request *http.Request, err error) {
+				t.Helper()
+
+				require.NoError(t, err)
+				assert.Equal(t, "http://test.org", request.URL.String())
+				assert.Len(t, request.Header, 2)
+				assert.Equal(t, "foo", request.Header.Get("X-My-Header-1"))
+				assert.Equal(t, "bar", request.Header.Get("X-My-Header-2"))
+			},
+		},
+		{
+			uc: "with error while rendering templated header",
+			endpoint: Endpoint{
+				URL:     "http://test.org",
+				Headers: map[string]string{"X-My-Header-1": "{{ .Values.key }"},
+			},
+			renderer: renderer,
+			assert: func(t *testing.T, request *http.Request, err error) {
+				t.Helper()
+
+				require.Error(t, err)
+				assert.ErrorIs(t, err, heimdall.ErrInternal)
+				assert.Contains(t, err.Error(), "header value")
+			},
+		},
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
 			var body io.Reader
@@ -303,7 +369,7 @@ func TestEndpointCreateRequest(t *testing.T) {
 			}
 
 			// WHEN
-			req, err := tc.endpoint.CreateRequest(context.Background(), body, nil)
+			req, err := tc.endpoint.CreateRequest(context.Background(), body, renderer)
 
 			// THEN
 			tc.assert(t, req, err)
