@@ -42,15 +42,15 @@ type noopUnifier struct {
 	id string
 }
 
-func (m *noopUnifier) Execute(ctx heimdall.Context, _ *subject.Subject) error {
+func (u *noopUnifier) Execute(ctx heimdall.Context, _ *subject.Subject) error {
 	logger := zerolog.Ctx(ctx.AppContext())
-	logger.Debug().Msg("Unifying using noop unifier")
+	logger.Debug().Str("_id", u.id).Msg("Unifying using noop unifier")
 
 	return nil
 }
 
-func (m *noopUnifier) WithConfig(map[string]any) (Unifier, error) { return m, nil }
+func (u *noopUnifier) WithConfig(map[string]any) (Unifier, error) { return u, nil }
 
-func (m *noopUnifier) HandlerID() string { return m.id }
+func (u *noopUnifier) HandlerID() string { return u.id }
 
-func (m *noopUnifier) ContinueOnError() bool { return false }
+func (u *noopUnifier) ContinueOnError() bool { return false }
