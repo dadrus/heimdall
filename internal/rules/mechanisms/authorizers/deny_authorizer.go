@@ -47,7 +47,7 @@ func newDenyAuthorizer(id string) *denyAuthorizer {
 
 func (a *denyAuthorizer) Execute(ctx heimdall.Context, _ *subject.Subject) error {
 	logger := zerolog.Ctx(ctx.AppContext())
-	logger.Debug().Msg("Authorizing using deny authorizer")
+	logger.Debug().Str("_id", a.id).Msg("Authorizing using deny authorizer")
 
 	return errorchain.
 		NewWithMessage(heimdall.ErrAuthorization, "denied by authorizer").
