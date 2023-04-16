@@ -130,8 +130,8 @@ func newRemoteAuthorizer(id string, rawConfig map[string]any) (*remoteAuthorizer
 	}
 
 	return &remoteAuthorizer{
-		e:                  conf.Endpoint,
 		id:                 id,
+		e:                  conf.Endpoint,
 		payload:            conf.Payload,
 		expressions:        conf.Expressions,
 		headersForUpstream: conf.ResponseHeadersToForward,
@@ -196,7 +196,12 @@ func (a *remoteAuthorizer) WithConfig(rawConfig map[string]any) (Authorizer, err
 		return a, nil
 	}
 
+	type Endpoint struct {
+		Values endpoint.Values `mapstructure:"values"`
+	}
+
 	type Config struct {
+		Endpoint                 Endpoint             `mapstructure:"endpoint"`
 		Payload                  template.Template    `mapstructure:"payload"`
 		Expressions              []*cellib.Expression `mapstructure:"expressions"`
 		ResponseHeadersToForward []string             `mapstructure:"forward_response_headers_to_upstream"`
@@ -218,9 +223,12 @@ func (a *remoteAuthorizer) WithConfig(rawConfig map[string]any) (Authorizer, err
 		}
 	}
 
+	ept := a.e
+	ept.Values = ept.Values.Merge(conf.Endpoint.Values)
+
 	return &remoteAuthorizer{
 		id:          a.id,
-		e:           a.e,
+		e:           ept,
 		payload:     x.IfThenElse(conf.Payload != nil, conf.Payload, a.payload),
 		celEnv:      a.celEnv,
 		expressions: x.IfThenElse(len(conf.Expressions) != 0, conf.Expressions, a.expressions),
@@ -279,7 +287,7 @@ func (a *remoteAuthorizer) createRequest(ctx heimdall.Context, sub *subject.Subj
 	var body io.Reader
 
 	if a.payload != nil {
-		bodyContents, err := a.payload.Render(ctx, sub)
+		bodyContents, err := a.payload.Render(ctx, sub, nil)
 		if err != nil {
 			return nil, errorchain.
 				NewWithMessage(heimdall.ErrInternal, "failed to render payload for the authorization endpoint").
@@ -291,8 +299,8 @@ func (a *remoteAuthorizer) createRequest(ctx heimdall.Context, sub *subject.Subj
 	}
 
 	req, err := a.e.CreateRequest(ctx.AppContext(), body,
-		endpoint.RenderFunc(func(value string) (string, error) {
-			tpl, err := template.New(value)
+		endpoint.RenderFunc(func(tplString string, values map[string]string) (string, error) {
+			tpl, err := template.New(tplString)
 			if err != nil {
 				return "", errorchain.
 					NewWithMessage(heimdall.ErrInternal, "failed to create template").
@@ -300,7 +308,7 @@ func (a *remoteAuthorizer) createRequest(ctx heimdall.Context, sub *subject.Subj
 					CausedBy(err)
 			}
 
-			return tpl.Render(nil, sub)
+			return tpl.Render(nil, sub, values)
 		}))
 	if err != nil {
 		return nil, errorchain.
