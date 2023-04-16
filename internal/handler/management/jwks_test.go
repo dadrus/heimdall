@@ -28,6 +28,7 @@ import (
 	"time"
 
 	"github.com/goccy/go-json"
+	"github.com/gofiber/fiber/v2"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
