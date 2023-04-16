@@ -47,7 +47,7 @@ func newUnauthorizedAuthenticator(id string) *unauthorizedAuthenticator {
 
 func (a *unauthorizedAuthenticator) Execute(ctx heimdall.Context) (*subject.Subject, error) {
 	logger := zerolog.Ctx(ctx.AppContext())
-	logger.Debug().Msg("Authenticating using unauthorized authenticator")
+	logger.Debug().Str("_id", a.id).Msg("Authenticating using unauthorized authenticator")
 
 	return nil, errorchain.
 		NewWithMessage(heimdall.ErrAuthentication, "denied by authenticator").
