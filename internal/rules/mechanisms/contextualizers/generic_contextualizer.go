@@ -113,7 +113,7 @@ func newGenericContextualizer(id string, rawConfig map[string]any) (*genericCont
 
 func (h *genericContextualizer) Execute(ctx heimdall.Context, sub *subject.Subject) error {
 	logger := zerolog.Ctx(ctx.AppContext())
-	logger.Debug().Msg("Updating using generic contextualizer")
+	logger.Debug().Str("_id", h.id).Msg("Updating using generic contextualizer")
 
 	if sub == nil {
 		return errorchain.NewWithMessage(heimdall.ErrInternal,
