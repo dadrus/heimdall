@@ -68,22 +68,22 @@ func newCookieUnifier(id string, rawConfig map[string]any) (*cookieUnifier, erro
 	}, nil
 }
 
-func (m *cookieUnifier) Execute(ctx heimdall.Context, sub *subject.Subject) error {
+func (u *cookieUnifier) Execute(ctx heimdall.Context, sub *subject.Subject) error {
 	logger := zerolog.Ctx(ctx.AppContext())
-	logger.Debug().Msg("Unifying using cookie unifier")
+	logger.Debug().Str("_id", u.id).Msg("Unifying using cookie unifier")
 
 	if sub == nil {
 		return errorchain.
 			NewWithMessage(heimdall.ErrInternal, "failed to execute cookie unifier due to 'nil' subject").
-			WithErrorContext(m)
+			WithErrorContext(u)
 	}
 
-	for name, tmpl := range m.cookies {
+	for name, tmpl := range u.cookies {
 		value, err := tmpl.Render(nil, sub)
 		if err != nil {
 			return errorchain.
 				NewWithMessagef(heimdall.ErrInternal, "failed to render value for '%s' cookie", name).
-				WithErrorContext(m).
+				WithErrorContext(u).
 				CausedBy(err)
 		}
 
@@ -93,14 +93,14 @@ func (m *cookieUnifier) Execute(ctx heimdall.Context, sub *subject.Subject) erro
 	return nil
 }
 
-func (m *cookieUnifier) WithConfig(config map[string]any) (Unifier, error) {
+func (u *cookieUnifier) WithConfig(config map[string]any) (Unifier, error) {
 	if len(config) == 0 {
-		return m, nil
+		return u, nil
 	}
 
-	return newCookieUnifier(m.id, config)
+	return newCookieUnifier(u.id, config)
 }
 
-func (m *cookieUnifier) HandlerID() string { return m.id }
+func (u *cookieUnifier) HandlerID() string { return u.id }
 
-func (m *cookieUnifier) ContinueOnError() bool { return false }
+func (u *cookieUnifier) ContinueOnError() bool { return false }
