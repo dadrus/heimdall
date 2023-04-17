@@ -223,10 +223,12 @@ rules:
       type: remote
       config:
         endpoint:
-          url: http://my-authz-system
+          url: http://my-authz-system/{{ .Values.some-key }}
           method: POST
           headers:
             foo-bar: "{{ .Subject.ID }}"
+          values:
+            some-key: some-value
         payload: "https://bla.bar"
         expressions:
           - expression: |

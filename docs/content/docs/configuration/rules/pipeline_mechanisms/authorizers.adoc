@@ -13,7 +13,7 @@ Authorizers ensure that the link:{{< relref "overview.adoc#_subject" >}}[`Subjec
 
 == Authorizer Types
 
-The following sections describe the available authorizer types in more detail.
+The following sections describe the available authorizer types in more detail. Some of these may support or require additional configuration. The corresponding properties are annotated with `mandatory`, respectively `optional` to denote configuration requirement, as well as with `overridable`, `not overriddable` and `partially overridable` to indicate whether the property can be overridden in a rule pipeline.
 
 === Allow
 
@@ -110,9 +110,11 @@ To enable the usage of this authorizer, you have to set the `type` property to `
 
 Configuration using the `config` property is mandatory. Following properties are available:
 
-* *`endpoint`*: _link:{{< relref "/docs/configuration/reference/types.adoc#_endpoint">}}[Endpoint]_ (mandatory, not overridable)
+* *`endpoint`*: _link:{{< relref "/docs/configuration/reference/types.adoc#_endpoint">}}[Endpoint]_ (mandatory, partially overridable)
 +
-The API endpoint of your authorization system. At least the `url` must be configured. This mechanism allows templating of the url and makes the link:{{< relref "overview.adoc#_subject" >}}[`Subject`] object available to it. By default, this authorizer will use HTTP `POST` to send the rendered payload to this endpoint. You can override this behavior by configuring `method` as well. Depending on the API requirements of your authorization system, you might need to configure further properties, like headers, etc.
+The API endpoint of your authorization system. At least the `url` must be configured. This mechanism allows templating of the url and makes the link:{{< relref "overview.adoc#_subject" >}}[`Subject`] object, as well as the link:{{< relref "overview.adoc#_values" >}}[`Values`] (see also below) objects available to it. By default, this authorizer will use HTTP `POST` to send the rendered payload to this endpoint. You can override this behavior by configuring `method` as well. Depending on the API requirements of your authorization system, you might need to configure further properties, like headers, etc.
++
+The only overridable property on the rule level is the `values` property, which allows rule specific configuration of the URL.
 
 * *`payload`*: _string_ (optional, overridable)
 +
@@ -138,26 +140,54 @@ Here the remote authorizer is configured to communicate with OPA. Since OPA expe
 
 [source, yaml]
 ----
-id: user_can_write
+id: opa
 type: remote
 config:
   endpoint:
-    url: https://opa.local/v1/data/myapi/policy/allow
+    url: https://opa.local/v1/data/{{ .Values.namespace }}/{{ .Values.policy }}
     headers:
       Content-Type: json
       Accept: json
     auth:
       type: basic_auth
       config:
-        user: MyOpaUser
-        password: SuperSecretPassword
+        user: ${OPA_USER}
+        password: ${OPA_PASSWORD}
+    values:
+      namespace: myapi/policy
+      policy: allow_write
   payload: |
     { "input": { "user": {{ quote .Subject.ID }}, "access": "write" } }
   expressions:
     - expression: |
         Payload.result == true
-      message: User does not have write access
+      message: User does not have required permissions
 ----
 
 In this case, since an OPA response could look like `{ "result": true }` or `{ "result": false }`, heimdall makes the response also available under `Subject.Attributes["user_can_write"]` as a map, with `"user_can_write"` being the id of the authorizer in this example.
+
+A specific rule could then use this authorizer in the following ways:
+
+[source, yaml]
+----
+- id: rule1
+  # other rule properties
+  execute:
+  - # other mechanisms
+  - authorizer: opa # using defaults
+  - # other mechanisms
+
+- id: rule2
+  # other rule properties
+  execute:
+  - # other mechanisms
+  - authorizer: opa
+    config: # overriding with rule specifics
+      endpoint:
+        values: allow_read
+      payload: |
+        { "input": { "user": {{ quote .Subject.ID }}, "access": "write" } }
+  - # other mechanisms
+----
+
 ====

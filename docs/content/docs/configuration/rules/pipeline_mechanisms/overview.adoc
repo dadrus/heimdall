@@ -69,7 +69,7 @@ rules:
 
 The above snippet configures two instances of an imaginary authenticator of a type `bar`, made available for usage in rules via ids `foo` and `zab`, as well as two instances of an imaginary authenticator of a type `bla`, made available for usage in rule via ids `baz` and `oof`. The `baz` and `oof` authenticators are different, as they are configured differently, but `foo` and `zab` authenticators do not have any configuration. So, they behave the same way and there is actually no need to define two instances of them.
 
-In simplest case a rule will just reuse mechanisms in its pipeline. In more complex cases a rule can reconfigure parts of it (More about rules configuration can be found link:{{< relref "../configuration.adoc" >}}[here]). Which parts can be reconfigured are mechanism specific and described in the mechanism specific documentation. Reconfiguration is always limited to the particular rule pipeline and does not affect other rules.
+In simplest case a rule will just reuse mechanisms in its pipeline. In more complex cases a rule can reconfigure parts of it (More about rules configuration can be found link:{{< relref "../configuration.adoc" >}}[here]). Which parts can be reconfigured, respectively overridden are mechanism specific and described in the mechanism specific documentation. Reconfiguration is always limited to the particular rule pipeline and does not affect other rules.
 
 Here is an example which configures a couple of mechanisms:
 
@@ -277,9 +277,26 @@ Payload = "SomeStringValue"
 ----
 ====
 
+=== Values
+
+This object represents a key value map, with both, the key and the value being of string type. The contents depend on the configuration of the particular mechanism, respectively the corresponding override in a rule.
+
+Here is an example:
+
+.Example values object
+====
+[source, javascript]
+----
+Values = {
+  "some-key-1": "value-1",
+  "some-key-2": "value-2"
+}
+----
+====
+
 == Templating
 
-Some pipeline mechanisms support templating using https://golang.org/pkg/text/template/[Golang Text Templates]. To ease the usage, all http://masterminds.github.io/sprig/[sprig] functions, except `env` and `expandenv`, as well as an `urlenc` function are available. Latter is handy if you need to generate request body or query parameters e.g. for communication with further systems. Templates can act on all objects described above (link:{{< relref "#_subject" >}}[Subject], link:{{< relref "#_request" >}}[Request] and link:{{< relref "#_payload" >}}[Payload]). Which exactly are supported is mechanism specific.
+Some pipeline mechanisms support templating using https://golang.org/pkg/text/template/[Golang Text Templates]. To ease the usage, all http://masterminds.github.io/sprig/[sprig] functions, except `env` and `expandenv`, as well as an `urlenc` function are available. Latter is handy if you need to generate request body or query parameters e.g. for communication with further systems. Templates can act on all objects described above (link:{{< relref "#_subject" >}}[Subject], link:{{< relref "#_request" >}}[Request], link:{{< relref "#_payload" >}}[Payload] and link:{{< relref "#_values" >}}[Values]). Which exactly are supported is mechanism specific.
 
 .Template, rendering a JSON object
 ====

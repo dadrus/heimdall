@@ -13,7 +13,7 @@ Error Handlers are responsible for execution of logic if any of the link:{{< rel
 
 == Error Handler Types
 
-The following sections describe the available error handler types in more detail.
+The following sections describe the available error handler types in more detail. Some of these may support or require additional configuration. The corresponding properties are annotated with `mandatory`, respectively `optional` to denote configuration requirement, as well as with `overridable`, `not overriddable` and `partially overridable` to indicate whether the property can be overridden in a rule pipeline.
 
 === Default
 
