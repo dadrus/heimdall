@@ -157,14 +157,14 @@ config:
       namespace: myapi/policy
       policy: allow_write
   payload: |
-    { "input": { "user": {{ quote .Subject.ID }}, "access": "write" } }
+    { "input": { "user": {{ quote .Subject.ID }} } }
   expressions:
     - expression: |
         Payload.result == true
       message: User does not have required permissions
 ----
 
-In this case, since an OPA response could look like `{ "result": true }` or `{ "result": false }`, heimdall makes the response also available under `Subject.Attributes["user_can_write"]` as a map, with `"user_can_write"` being the id of the authorizer in this example.
+In this case, since an OPA response could look like `{ "result": true }` or `{ "result": false }`, heimdall makes the response also available under `Subject.Attributes["opa"]` as a map, with `"opa"` being the id of the authorizer in this example.
 
 A specific rule could then use this authorizer in the following ways:
 
@@ -184,9 +184,8 @@ A specific rule could then use this authorizer in the following ways:
   - authorizer: opa
     config: # overriding with rule specifics
       endpoint:
-        values: allow_read
-      payload: |
-        { "input": { "user": {{ quote .Subject.ID }}, "access": "write" } }
+        values:
+          policy: allow_read
   - # other mechanisms
 ----
 
