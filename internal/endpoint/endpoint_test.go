@@ -219,7 +219,7 @@ func TestEndpointCreateRequest(t *testing.T) {
 
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrInternal)
-				assert.Contains(t, err.Error(), "request instance")
+				assert.Contains(t, err.Error(), "failed to parse")
 			},
 		},
 		{
@@ -413,7 +413,7 @@ func TestEndpointSendRequest(t *testing.T) {
 
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrInternal)
-				assert.Contains(t, err.Error(), "request instance")
+				assert.Contains(t, err.Error(), "failed to parse")
 			},
 		},
 		{

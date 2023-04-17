@@ -94,6 +94,13 @@ func (e Endpoint) CreateRequest(ctx context.Context, body io.Reader, rndr Render
 		method = e.Method
 	}
 
+	// this ensures that user info, scheme and host cannot be templated
+	_, err := url.Parse(e.URL)
+	if err != nil {
+		return nil, errorchain.NewWithMessage(heimdall.ErrInternal,
+			"failed to parse endpoint URL").CausedBy(err)
+	}
+
 	endpointURL, err := tpl.Render(e.URL, e.Values)
 	if err != nil {
 		return nil, errorchain.NewWithMessage(heimdall.ErrInternal,
