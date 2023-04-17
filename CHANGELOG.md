@@ -1,5 +1,34 @@
 # Changelog
 
+## [0.7.0-alpha](https://github.com/dadrus/heimdall/compare/v0.6.1-alpha...v0.7.0-alpha) (2023-04-17)
+
+
+### ⚠ BREAKING CHANGES
+
+* Version schema for rule sets ([#436](https://github.com/dadrus/heimdall/issues/436))
+* CORS support for decision service removed ([#487](https://github.com/dadrus/heimdall/issues/487))
+
+### Features
+
+* Command for validation of rules ([#557](https://github.com/dadrus/heimdall/issues/557)) ([849ed25](https://github.com/dadrus/heimdall/commit/849ed256642f57f856793f47ca22ab8afc34f2b6))
+* Conditional execution of authorizers, contextualizers and unifiers in a rule ([#562](https://github.com/dadrus/heimdall/issues/562)) ([72db66e](https://github.com/dadrus/heimdall/commit/72db66e05246ad44916fa6d570996a178ed565da))
+* Contextualizer can be configured not to cancel the pipeline execution if it runs into an error ([#522](https://github.com/dadrus/heimdall/issues/522)) ([ad0d956](https://github.com/dadrus/heimdall/commit/ad0d956474bbac4037da6674fb42a0f687236e1b))
+* logging version information on start ([#555](https://github.com/dadrus/heimdall/issues/555)) ([92b6564](https://github.com/dadrus/heimdall/commit/92b65641a514df8adf3a348211e337d330d55b71))
+* Rule controlled endpoint templating ([#572](https://github.com/dadrus/heimdall/issues/572)) ([41adfb9](https://github.com/dadrus/heimdall/commit/41adfb9155e74f96067c05c3488a126aa207fe9d))
+* Support for envoy gRPC v3 external authorization API ([#469](https://github.com/dadrus/heimdall/issues/469)) ([666cd07](https://github.com/dadrus/heimdall/commit/666cd07453af7b7aa28d4c0c9ac383df516ef37f))
+* Version schema for rule sets ([#436](https://github.com/dadrus/heimdall/issues/436)) ([dba0a87](https://github.com/dadrus/heimdall/commit/dba0a8793bc510407e616960896a3665b15d391d))
+
+
+### Bug Fixes
+
+* Configuration of `basic_auth` authenticator fixed ([#556](https://github.com/dadrus/heimdall/issues/556)) ([8eb5f65](https://github.com/dadrus/heimdall/commit/8eb5f653acbc9670a6cb09cdc7743ac48ce84751))
+* Initialzation of `Subject.Attributes` by `anonymous` authenticator  ([#566](https://github.com/dadrus/heimdall/issues/566)) ([425acb8](https://github.com/dadrus/heimdall/commit/425acb8f2955a061e0782a09d631c97f859d98e4))
+
+
+### Code Refactoring
+
+* CORS support for decision service removed ([#487](https://github.com/dadrus/heimdall/issues/487)) ([1339721](https://github.com/dadrus/heimdall/commit/13397211a84b66bcae94dc8891c06c9c7deb1f31))
+
 ## [0.6.1-alpha](https://github.com/dadrus/heimdall/compare/v0.6.0-alpha...v0.6.1-alpha) (2023-02-08)
 
 
