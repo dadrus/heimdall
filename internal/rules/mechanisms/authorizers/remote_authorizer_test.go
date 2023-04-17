@@ -115,7 +115,7 @@ payload: "{{ .Subject.ID }}"
 
 				require.NotNil(t, auth)
 				require.NotNil(t, auth.payload)
-				val, err := auth.payload.Render(nil, &subject.Subject{ID: "bar"})
+				val, err := auth.payload.Render(nil, &subject.Subject{ID: "bar"}, nil)
 				require.NoError(t, err)
 				assert.Equal(t, "bar", val)
 				assert.Empty(t, auth.headersForUpstream)
@@ -167,7 +167,7 @@ cache_ttl: 5s
 
 				require.NotNil(t, auth)
 				require.NotNil(t, auth.payload)
-				val, err := auth.payload.Render(nil, &subject.Subject{ID: "bar"})
+				val, err := auth.payload.Render(nil, &subject.Subject{ID: "bar"}, nil)
 				require.NoError(t, err)
 				require.NotEmpty(t, auth.expressions)
 				ok, err := auth.expressions[0].Eval(map[string]any{
@@ -248,7 +248,7 @@ payload: bar
 			},
 		},
 		{
-			uc: "configuration with unknown properties",
+			uc: "with unknown properties",
 			prototypeConfig: []byte(`
 endpoint:
   url: http://foo.bar
@@ -295,7 +295,7 @@ cache_ttl: 1s
 			},
 		},
 		{
-			uc: "configuration with invalid new expression",
+			uc: "with invalid new expression",
 			id: "authz",
 			prototypeConfig: []byte(`
 endpoint:
@@ -315,13 +315,15 @@ expressions:
 			},
 		},
 		{
-			uc: "with everything possible reconfigured",
+			uc: "with everything possible, but endpoint values reconfigured",
 			id: "authz4",
 			prototypeConfig: []byte(`
 endpoint:
   url: http://foo.bar
   headers:
     Foo: Bar
+  values:
+    foo: bar
 `),
 			config: []byte(`
 payload: Baz
@@ -342,7 +344,66 @@ cache_ttl: 15s
 				assert.Equal(t, prototype.e, configured.e)
 				assert.Equal(t, prototype.id, configured.id)
 				require.NotNil(t, configured.payload)
-				val, err := configured.payload.Render(nil, nil)
+				val, err := configured.payload.Render(nil, nil, nil)
+				require.NoError(t, err)
+				assert.Empty(t, prototype.expressions)
+				require.NotEmpty(t, configured.expressions)
+				ok, err := configured.expressions[0].Eval(map[string]any{
+					"Payload": map[string]any{"foo": "bar"},
+				})
+				assert.NoError(t, err)
+				assert.True(t, ok)
+				assert.Equal(t, "Baz", val)
+				assert.Len(t, configured.headersForUpstream, 2)
+				assert.Contains(t, configured.headersForUpstream, "Bar")
+				assert.Contains(t, configured.headersForUpstream, "Foo")
+				assert.Equal(t, 15*time.Second, configured.ttl)
+
+				assert.NotEqual(t, prototype.ttl, configured.ttl)
+				assert.NotEqual(t, prototype.headersForUpstream, configured.headersForUpstream)
+				assert.NotEqual(t, prototype.payload, configured.payload)
+				assert.Equal(t, "authz4", configured.HandlerID())
+				assert.False(t, configured.ContinueOnError())
+			},
+		},
+		{
+			uc: "with everything possible",
+			id: "authz4",
+			prototypeConfig: []byte(`
+endpoint:
+  url: http://foo.bar
+  headers:
+    Foo: Bar
+  values:
+    foo: bar
+`),
+			config: []byte(`
+endpoint:
+  values:
+    bar: foo
+payload: Baz
+forward_response_headers_to_upstream:
+  - Bar
+  - Foo
+expressions:
+  - expression: "Payload.foo == 'bar'"
+cache_ttl: 15s
+`),
+			assert: func(t *testing.T, err error, prototype *remoteAuthorizer, configured *remoteAuthorizer) {
+				t.Helper()
+
+				require.NoError(t, err)
+
+				assert.NotEqual(t, prototype, configured)
+				assert.NotNil(t, configured)
+				assert.NotEqual(t, prototype.e, configured.e)
+				assert.Equal(t, prototype.e.URL, configured.e.URL)
+				assert.Equal(t, prototype.e.Headers, configured.e.Headers)
+				assert.NotEqual(t, prototype.e.Values, configured.e.Values)
+				assert.Equal(t, endpoint.Values{"bar": "foo", "foo": "bar"}, configured.e.Values)
+				assert.Equal(t, prototype.id, configured.id)
+				require.NotNil(t, configured.payload)
+				val, err := configured.payload.Render(nil, nil, nil)
 				require.NoError(t, err)
 				assert.Empty(t, prototype.expressions)
 				require.NotEmpty(t, configured.expressions)

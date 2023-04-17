@@ -239,10 +239,12 @@ rules:
         type: remote
         config:
           endpoint:
-            url: http://keto
+            url: http://keto/{{ .Values.key }}
             method: POST
             headers:
               foo-bar: "{{ .Subject.ID }}"
+            values:
+              key: value
           payload: https://bla.bar
           forward_response_headers_to_upstream:
             - bla-bar
@@ -268,9 +270,11 @@ rules:
         type: generic
         config:
           endpoint:
-            url: http://profile
+            url: http://profile/{{ .Subject.ID }}
             headers:
               foo: bar
+            values:
+              some-key: some-value
     unifiers:
       - id: jwt
         type: jwt

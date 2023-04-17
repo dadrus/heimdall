@@ -105,11 +105,11 @@ cookies:
 				assert.Len(t, unifier.cookies, 2)
 				assert.Equal(t, "cun", unifier.HandlerID())
 
-				val, err := unifier.cookies["foo"].Render(nil, nil)
+				val, err := unifier.cookies["foo"].Render(nil, nil, nil)
 				require.NoError(t, err)
 				assert.Equal(t, "bar", val)
 
-				val, err = unifier.cookies["bar"].Render(nil, &subject.Subject{ID: "baz"})
+				val, err = unifier.cookies["bar"].Render(nil, &subject.Subject{ID: "baz"}, nil)
 				require.NoError(t, err)
 				assert.Equal(t, "baz", val)
 
@@ -192,7 +192,7 @@ cookies:
 				assert.Equal(t, "cun3", configured.HandlerID())
 				assert.Equal(t, prototype.HandlerID(), configured.HandlerID())
 
-				val, err := configured.cookies["bar"].Render(nil, nil)
+				val, err := configured.cookies["bar"].Render(nil, nil, nil)
 				require.NoError(t, err)
 				assert.Equal(t, "foo", val)
 

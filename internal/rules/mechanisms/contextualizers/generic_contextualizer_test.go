@@ -97,7 +97,7 @@ payload: bar
 
 				assert.Equal(t, "http://foo.bar", contextualizer.e.URL)
 				require.NotNil(t, contextualizer.payload)
-				val, err := contextualizer.payload.Render(nil, &subject.Subject{ID: "baz"})
+				val, err := contextualizer.payload.Render(nil, &subject.Subject{ID: "baz"}, nil)
 				require.NoError(t, err)
 				assert.Equal(t, "bar", val)
 				assert.Empty(t, contextualizer.fwdCookies)
@@ -115,6 +115,8 @@ payload: bar
 			config: []byte(`
 endpoint:
   url: http://bar.foo
+  values:
+    foo: bar
 forward_headers:
   - X-User-ID
   - X-Foo-Bar
@@ -131,8 +133,9 @@ continue_pipeline_on_error: true
 				require.NotNil(t, contextualizer)
 
 				assert.Equal(t, "http://bar.foo", contextualizer.e.URL)
+				assert.Equal(t, endpoint.Values{"foo": "bar"}, contextualizer.e.Values)
 				require.NotNil(t, contextualizer.payload)
-				val, err := contextualizer.payload.Render(nil, &subject.Subject{ID: "baz"})
+				val, err := contextualizer.payload.Render(nil, &subject.Subject{ID: "baz"}, nil)
 				require.NoError(t, err)
 				assert.Equal(t, "baz", val)
 				assert.Len(t, contextualizer.fwdCookies, 1)
@@ -160,7 +163,7 @@ continue_pipeline_on_error: true
 	}
 }
 
-func TestCreateGenericContextualizerFromPrototype(t *testing.T) {
+func TestCreateGenericContextualizerFromPrototype(t *testing.T) { //nolint:maintidx
 	t.Parallel()
 
 	for _, tc := range []struct {
@@ -230,7 +233,7 @@ payload: foo
 				assert.Equal(t, prototype.id, configured.id)
 				assert.NotEqual(t, prototype.payload, configured.payload)
 				require.NotNil(t, configured.payload)
-				val, err := configured.payload.Render(nil, &subject.Subject{ID: "baz"})
+				val, err := configured.payload.Render(nil, &subject.Subject{ID: "baz"}, nil)
 				require.NoError(t, err)
 				assert.Equal(t, "foo", val)
 				assert.Equal(t, prototype.fwdHeaders, configured.fwdHeaders)
@@ -270,7 +273,7 @@ forward_headers:
 				assert.Equal(t, prototype.id, configured.id)
 				assert.NotEqual(t, prototype.payload, configured.payload)
 				require.NotNil(t, configured.payload)
-				val, err := configured.payload.Render(nil, &subject.Subject{ID: "baz"})
+				val, err := configured.payload.Render(nil, &subject.Subject{ID: "baz"}, nil)
 				require.NoError(t, err)
 				assert.Equal(t, "foo", val)
 				assert.NotEqual(t, prototype.fwdHeaders, configured.fwdHeaders)
@@ -315,7 +318,7 @@ forward_cookies:
 				assert.Equal(t, prototype.id, configured.id)
 				assert.NotEqual(t, prototype.payload, configured.payload)
 				require.NotNil(t, configured.payload)
-				val, err := configured.payload.Render(nil, &subject.Subject{ID: "baz"})
+				val, err := configured.payload.Render(nil, &subject.Subject{ID: "baz"}, nil)
 				require.NoError(t, err)
 				assert.Equal(t, "foo", val)
 				assert.NotEqual(t, prototype.fwdHeaders, configured.fwdHeaders)
@@ -331,11 +334,13 @@ forward_cookies:
 			},
 		},
 		{
-			uc: "with everything reconfigured",
+			uc: "with everything possible, but endpoint values reconfigured",
 			id: "contextualizer5",
 			prototypeConfig: []byte(`
 endpoint:
   url: http://foo.bar
+  values:
+    foo: bar
 payload: bar
 forward_headers:
   - X-User-ID
@@ -364,7 +369,65 @@ continue_pipeline_on_error: false
 				assert.Equal(t, prototype.id, configured.id)
 				assert.NotEqual(t, prototype.payload, configured.payload)
 				require.NotNil(t, configured.payload)
-				val, err := configured.payload.Render(nil, &subject.Subject{ID: "baz"})
+				val, err := configured.payload.Render(nil, &subject.Subject{ID: "baz"}, nil)
+				require.NoError(t, err)
+				assert.Equal(t, "foo", val)
+				assert.NotEqual(t, prototype.fwdHeaders, configured.fwdHeaders)
+				assert.Len(t, configured.fwdHeaders, 1)
+				assert.Contains(t, configured.fwdHeaders, "Foo-Bar")
+				assert.NotEqual(t, prototype.fwdCookies, configured.fwdCookies)
+				assert.Len(t, configured.fwdCookies, 1)
+				assert.Contains(t, configured.fwdCookies, "Foo-Session")
+				assert.NotEqual(t, prototype.ttl, configured.ttl)
+				assert.Equal(t, 15*time.Second, configured.ttl)
+				assert.Equal(t, "contextualizer5", configured.HandlerID())
+				assert.True(t, prototype.ContinueOnError())
+				assert.False(t, configured.ContinueOnError())
+			},
+		},
+		{
+			uc: "with everything possible reconfigured",
+			id: "contextualizer5",
+			prototypeConfig: []byte(`
+endpoint:
+  url: http://foo.bar
+  values:
+    foo: bar
+payload: bar
+forward_headers:
+  - X-User-ID
+  - X-Foo-Bar
+forward_cookies:
+  - My-Foo-Session
+cache_ttl: 5s
+continue_pipeline_on_error: true
+`),
+			config: []byte(`
+endpoint:
+  values:
+    bar: foo
+payload: foo
+forward_headers:
+  - Foo-Bar
+forward_cookies:
+  - Foo-Session
+cache_ttl: 15s
+continue_pipeline_on_error: false
+`),
+			assert: func(t *testing.T, err error, prototype *genericContextualizer, configured *genericContextualizer) {
+				t.Helper()
+
+				require.NoError(t, err)
+
+				assert.NotEqual(t, prototype, configured)
+				assert.NotEqual(t, prototype.e, configured.e)
+				assert.Equal(t, prototype.e.URL, configured.e.URL)
+				assert.NotEqual(t, prototype.e.Values, configured.e.Values)
+				assert.Equal(t, endpoint.Values{"bar": "foo", "foo": "bar"}, configured.e.Values)
+				assert.Equal(t, prototype.id, configured.id)
+				assert.NotEqual(t, prototype.payload, configured.payload)
+				require.NotNil(t, configured.payload)
+				val, err := configured.payload.Render(nil, &subject.Subject{ID: "baz"}, nil)
 				require.NoError(t, err)
 				assert.Equal(t, "foo", val)
 				assert.NotEqual(t, prototype.fwdHeaders, configured.fwdHeaders)

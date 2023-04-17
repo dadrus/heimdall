@@ -26,6 +26,7 @@ import (
 type data struct {
 	Request *Request
 	Subject *subject.Subject
+	Values  map[string]string
 }
 
 type Request struct {

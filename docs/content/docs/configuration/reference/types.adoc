@@ -354,7 +354,9 @@ If only the URL is required to be set, you can specify it by using just a string
 
 * *`url`* _string_ (mandatory)
 +
-The actual url of the endpoint.
+The actual url of the endpoint. Depending on the mechanism, a URL can be templated
++
+NOTE: If templating is used, user info, scheme and host parts of the URL cannot be templated. Attempts to do so will result in runtime errors.
 
 * *`method`* _string_ (optional)
 +
@@ -364,7 +366,7 @@ The HTTP method to use while communicating with the endpoint. If not set `POST` 
 +
 What to do if the communication fails. If not configured, no retry attempts are done.
 
-* *`auth`* _link:{{< relref "#_authentication_strategy" >}}:[Authentication Strategy]_ (optional)
+* *`auth`* _link:{{< relref "#_authentication_strategy" >}}[Authentication Strategy]_ (optional)
 +
 Authentication strategy to apply, if the endpoint requires authentication.
 
@@ -379,6 +381,10 @@ CAUTION: These headers are not analyzed by heimdall and are just forwarded to th
 Whether HTTP caching according to https://www.rfc-editor.org/rfc/rfc7234[RFC 7234] should be used. Defaults to `false` if not otherwise stated in the description of the configuration type, making use of the `endpoint` property. If set to `true` heimdall will strictly follow the requirements from RFC 7234 and cache the responses if possible and reuse these if still valid.
 +
 NOTE: If the endpoint referenced by the URL does not provide any explicit expiration time, no heuristic freshness lifetime is calculated. Heimdall treats such responses as not cacheable.
+
+* *`values`* _map of strings_ (optional)
++
+A key value map, which is made accessible to the template rendering engine as link:{{< relref "../rules/pipeline_mechanisms/overview.adoc#_values" >}}[`Values`] object, e.g. to render parts of the URL.
 
 .Endpoint configuration as string
 ====
@@ -594,11 +600,11 @@ with:
 
 Implements an exponential backoff strategy for endpoint communication. It increases the backoff exponentially by multiplying the `max_delay` with 2^(attempt count)
 
-* *`give_up_after`*: link:{{< relref "#_duration" >}}[Duration] (optional)
+* *`give_up_after`*: _link:{{< relref "#_duration" >}}[Duration]_ (optional)
 +
 Sets an upper bound on the maximum time to wait between two requests. Default to 0, which means no upper bound.
 
-* *`max_delay`*: _link:{{< relref "#_duration" >}}[Duration] (mandatory)
+* *`max_delay`*: _link:{{< relref "#_duration" >}}[Duration]_ (mandatory)
 +
 The initial backoff.
 

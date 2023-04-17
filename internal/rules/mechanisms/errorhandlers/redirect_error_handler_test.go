@@ -130,7 +130,7 @@ when:
 				require.NotNil(t, redEH)
 				assert.Equal(t, "with minimal valid configuration", redEH.HandlerID())
 
-				toURL, err := redEH.to.Render(nil, nil)
+				toURL, err := redEH.to.Render(nil, nil, nil)
 				require.NoError(t, err)
 
 				assert.Equal(t, "http://foo.bar", toURL)
@@ -184,7 +184,7 @@ when:
 				ctx.EXPECT().RequestURL().Return(&url.URL{Scheme: "http", Host: "foobar.baz", Path: "zab"})
 				ctx.EXPECT().RequestClientIPs().Return(nil)
 
-				toURL, err := redEH.to.Render(ctx, nil)
+				toURL, err := redEH.to.Render(ctx, nil, nil)
 				require.NoError(t, err)
 
 				assert.Equal(t, "http://foo.bar?origin=http%3A%2F%2Ffoobar.baz%2Fzab", toURL)

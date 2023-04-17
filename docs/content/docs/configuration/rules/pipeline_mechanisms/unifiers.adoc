@@ -13,7 +13,7 @@ Unifiers finalize the successful execution of the pipeline and unify the availab
 
 == Unifier Types
 
-The following sections describe the available unifier types in more detail.
+The following sections describe the available unifier types in more detail. Some of these may support or require additional configuration. The corresponding properties are annotated with `mandatory`, respectively `optional` to denote configuration requirement, as well as with `overridable`, `not overriddable` and `partially overridable` to indicate whether the property can be overridden in a rule pipeline.
 
 === Noop
 
