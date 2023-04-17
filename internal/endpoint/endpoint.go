@@ -59,6 +59,12 @@ func (e Endpoint) Validate() error {
 			NewWithMessage(heimdall.ErrConfiguration, "endpoint requires url to be set")
 	}
 
+	// this ensures that user info, scheme and host cannot be templated
+	if _, err := url.Parse(e.URL); err != nil {
+		return errorchain.NewWithMessage(heimdall.ErrConfiguration,
+			"failed to parse endpoint URL").CausedBy(err)
+	}
+
 	return nil
 }
 
@@ -92,13 +98,6 @@ func (e Endpoint) CreateRequest(ctx context.Context, body io.Reader, rndr Render
 	method := http.MethodPost
 	if len(e.Method) != 0 {
 		method = e.Method
-	}
-
-	// this ensures that user info, scheme and host cannot be templated
-	_, err := url.Parse(e.URL)
-	if err != nil {
-		return nil, errorchain.NewWithMessage(heimdall.ErrInternal,
-			"failed to parse endpoint URL").CausedBy(err)
 	}
 
 	endpointURL, err := tpl.Render(e.URL, e.Values)

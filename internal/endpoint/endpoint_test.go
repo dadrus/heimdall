@@ -56,6 +56,17 @@ func TestEndpointValidate(t *testing.T) {
 			},
 		},
 		{
+			uc:       "endpoint with malformed URL",
+			endpoint: Endpoint{URL: "{{ .Values.foo }}://foo.bar"},
+			assert: func(t *testing.T, err error) {
+				t.Helper()
+
+				require.Error(t, err)
+				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				assert.Contains(t, err.Error(), "failed to parse")
+			},
+		},
+		{
 			uc:       "endpoint with required URL attribute",
 			endpoint: Endpoint{URL: "http://foo.bar"},
 			assert: func(t *testing.T, err error) {
@@ -219,7 +230,7 @@ func TestEndpointCreateRequest(t *testing.T) {
 
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrInternal)
-				assert.Contains(t, err.Error(), "failed to parse")
+				assert.Contains(t, err.Error(), "failed to create a request")
 			},
 		},
 		{
@@ -413,7 +424,7 @@ func TestEndpointSendRequest(t *testing.T) {
 
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrInternal)
-				assert.Contains(t, err.Error(), "failed to parse")
+				assert.Contains(t, err.Error(), "failed to create a request")
 			},
 		},
 		{
