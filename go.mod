@@ -13,7 +13,7 @@ require (
 	github.com/go-logr/zerologr v1.2.3
 	github.com/gobwas/glob v0.2.3
 	github.com/goccy/go-json v0.10.2
-	github.com/gofiber/adaptor/v2 v2.2.0
+	github.com/gofiber/adaptor/v2 v2.2.1
 	github.com/gofiber/fiber/v2 v2.44.0
 	github.com/google/cel-go v0.14.0
 	github.com/google/uuid v1.3.0
