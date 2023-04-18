@@ -126,12 +126,14 @@ rules:
 Create a rule file (`rule.yaml`) with the following contents:
 
 ```yaml
-- id: test-rule
-  match: 
-    url: http://<**>/<**>
-  upstream: http://upstream
-  execute:
-    - authorizer: allow_all_requests
+version: "1"
+rules:
+  - id: test-rule
+    match: 
+      url: http://<**>/<**>
+    upstream: http://upstream
+    execute:
+      - authorizer: allow_all_requests
 ```
 
 Create a `docker-compose.yaml` file with the following contents and modify it to include the correct paths to your `config.yaml` and `rule.yaml` files:
