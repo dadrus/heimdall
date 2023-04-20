@@ -75,6 +75,8 @@ Put together, this configuration will let heimdall create a JSON Web Token (JWT)
 +
 [source, yaml]
 ----
+version: "1"
+rules:
 - id: rule1  # <1>
   match:
     url: http://<**>/anonymous
