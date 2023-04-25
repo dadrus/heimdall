@@ -167,7 +167,8 @@ func TestWrappedClientDoTimeout(t *testing.T) {
 				assert.Contains(t, attributes, semconv.HTTPFlavorHTTP11)
 				assert.Contains(t, attributes, semconv.HTTPMethodKey.String("GET"))
 				assert.Contains(t, attributes, attribute.Int64("status.code", 1))
-				assert.Contains(t, attributes, attribute.String("status.message", "timeout"))
+				assert.Contains(t, attributes,
+					attribute.String("status.message", "dialing to the given TCP address timed out"))
 
 				assert.NotEmpty(t, req.Header.Peek("Traceparent"))
 			},
