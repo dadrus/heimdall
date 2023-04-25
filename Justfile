@@ -18,8 +18,8 @@ lint-helmchart:
   helm lint ./charts/heimdall
   helm template --set demo.enabled=true ./charts/heimdall > /tmp/decision-demo.yaml
   helm template --set operationMode=proxy --set demo.enabled=true ./charts/heimdall > /tmp/proxy-demo.yaml
-  kubeconform --skip RuleSet -kubernetes-version 1.23.0 /tmp/decision-demo.yaml
-  kubeconform --skip RuleSet -kubernetes-version 1.23.0 /tmp/proxy-demo.yaml
+  kubeconform --skip RuleSet -kubernetes-version 1.27.0 /tmp/decision-demo.yaml
+  kubeconform --skip RuleSet -kubernetes-version 1.27.0 /tmp/proxy-demo.yaml
   rm /tmp/decision-demo.yaml
   rm /tmp/proxy-demo.yaml
 
