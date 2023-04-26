@@ -44,4 +44,5 @@ The current implementation is an alpha version. That means it does not solve all
 ## If you ...
 If you like the project - please give it a :star: \
 If you miss something, or found a bug, you're very welcome to contribute \
-If you would like to support, reach out to me :wink:.
+If you would like to support, reach out to me via [Discord](https://discord.gg/qQgg8xKuyb).
+If you need help, head over to [Discord](https://discord.gg/qQgg8xKuyb) as well.
