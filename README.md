@@ -44,6 +44,6 @@ The current implementation is an alpha version. That means it does not solve all
 ## If you ...
 
 * ... like the project - please give it a :star:
-* ... miss something, or found a bug, [file a ticket](https://github.com/dadrus/heimdall/issues). You are also very welcome to contribute. PRs are very welcome :wink: \
-* ... would like to support, reach out to me via [Discord](https://discord.gg/qQgg8xKuyb) \
+* ... miss something, or found a bug, [file a ticket](https://github.com/dadrus/heimdall/issues). You are also very welcome to contribute :wink:
+* ... would like to support, reach out to me via [Discord](https://discord.gg/qQgg8xKuyb)
 * ... need help, head over to [Discord](https://discord.gg/qQgg8xKuyb) as well
