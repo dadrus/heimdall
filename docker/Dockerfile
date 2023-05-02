@@ -2,7 +2,7 @@
 # Builder image to build the app
 ARG USER=heimdall
 
-FROM --platform=$BUILDPLATFORM golang:1.20.3-buster as builder
+FROM --platform=$BUILDPLATFORM golang:1.20.4-buster as builder
 ARG USER
 ARG TARGETARCH
 ARG VERSION="unknown"
