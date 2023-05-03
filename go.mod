@@ -33,7 +33,7 @@ require (
 	github.com/ory/ladon v1.2.0
 	github.com/pquerna/cachecontrol v0.1.0
 	github.com/prometheus/client_golang v1.15.1
-	github.com/prometheus/client_model v0.3.0
+	github.com/prometheus/client_model v0.4.0
 	github.com/rs/zerolog v1.29.1
 	github.com/santhosh-tekuri/jsonschema/v5 v5.3.0
 	github.com/spf13/cobra v1.7.0
