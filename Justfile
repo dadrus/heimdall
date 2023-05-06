@@ -2,10 +2,7 @@ default:
   @just --list
 
 check-licenses:
-  # github.com/hashicorp is ignored because they switched to MPL2.0, which is actually
-  # fine, but is included in the `reciprocal` set, which we actually do not want to use
-  go-licenses check --disallowed_types=forbidden,restricted,reciprocal,permissive,unknown \
-    --ignore=github.com/hashicorp .
+  go-licenses check --disallowed_types=forbidden,restricted,reciprocal,permissive,unknown .
 
 lint-api:
   redocly lint
