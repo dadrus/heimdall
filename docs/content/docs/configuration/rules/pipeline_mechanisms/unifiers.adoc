@@ -13,7 +13,7 @@ Unifiers finalize the successful execution of the pipeline and unify the availab
 
 == Unifier Types
 
-The following sections describe the available unifier types in more detail. Some of these may support or require additional configuration. The corresponding properties are annotated with `mandatory`, respectively `optional` to denote configuration requirement, as well as with `overridable`, `not overriddable` and `partially overridable` to indicate whether the property can be overridden in a rule pipeline.
+The following sections describe the available unifier types in more detail. Some of these may support or require additional configuration. The corresponding properties are annotated with `mandatory`, respectively `optional` to denote configuration requirement, as well as with `overridable`, `not overriddable` and `partially overridable` to indicate whether the property can be overridden in a rule pipeline. Those unifiers, which support creation of custom objects via templating, have only access to the `Subject` object in the template.
 
 === Noop
 
@@ -40,7 +40,7 @@ Configuration using the `config` property is mandatory. Following properties are
 
 * *`headers`*: _string map_ (mandatory, overridable)
 +
-Enables configuration of arbitrary headers with any values build from available subject information (See also link:{{< relref "overview.adoc#_templating" >}}[Templating]). Only `Subject` object is available in the template.
+Enables configuration of arbitrary headers with any values build from available subject information (See also link:{{< relref "overview.adoc#_templating" >}}[Templating]).
 
 .Header unifier configuration
 ====
@@ -50,8 +50,8 @@ id: foo
 type: header
 config:
   headers:
-    - X-User-ID: {{ quote .Subject.ID }}
-    - X-User-Email: {{ quote .Subject.Attributes["email"] }}
+    X-User-ID: '{{ quote .Subject.ID }}'
+    X-User-Email: '{{ quote .Subject.Attributes["email"] }}'
 ----
 ====
 
@@ -65,18 +65,18 @@ Configuration using the `config` property is mandatory. Following properties are
 
 * *`cookies`*: _string map_ (mandatory, overridable)
 +
-Enables configuration of arbitrary cookies with any values build from available subject information (See also link:{{< relref "overview.adoc#_templating" >}}[Templating]). Only `Subject` object is available in the template.
+Enables configuration of arbitrary cookies with any values build from available subject information (See also link:{{< relref "overview.adoc#_templating" >}}[Templating]).
 
 .Cookie unifier configuration
 ====
 [source, yaml]
 ----
 id: foo
-type: header
+type: cookies
 config:
   cookies:
-    - user_id_cookie: {{ quote .Subject.ID }}
-    - user_email_cookie: {{ quote .Subject.Attributes["email"] }}
+    user_id_cookie: '{{ quote .Subject.ID }}'
+    user_email_cookie: '{{ quote .Subject.Attributes["email"] }}'
 ----
 ====
 
@@ -90,7 +90,7 @@ Configuration using the `config` property is optional. Following properties are 
 
 * *`claims`*: _string_ (optional, overridable)
 +
-Your template with custom claims, you would like to add to the JWT (See also link:{{< relref "overview.adoc#_templating" >}}[Templating]). Only `Subject` object is available in the template.
+Your template with custom claims, you would like to add to the JWT (See also link:{{< relref "overview.adoc#_templating" >}}[Templating]).
 
 * *`ttl`*: _link:{{< relref "/docs/configuration/reference/types.adoc#_duration" >}}[Duration]_ (optional, overridable)
 +
