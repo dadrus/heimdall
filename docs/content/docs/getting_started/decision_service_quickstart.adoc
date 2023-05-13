@@ -111,7 +111,7 @@ Otherwise, if you've built a Docker image, run heimdall in the link:{{< relref "
 [source, bash]
 ----
 $ docker run -t -v $PWD:/heimdall/conf -p 4456:4456 \
-  dadrus/heimdal:latest serve decision -c /heimdall/conf/config.yaml
+  dadrus/heimdall:latest serve decision -c /heimdall/conf/config.yaml
 ----
 
 In both cases, you'll see similar output to
