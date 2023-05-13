@@ -19,6 +19,7 @@ package unifiers
 import (
 	"context"
 	"errors"
+	"net/url"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -260,6 +261,7 @@ headers:
   foo: "{{ .Subject.Attributes.bar }}"
   bar: "{{ .Subject.ID }}"
   baz: bar
+  X-Baz: '{{ .Request.Header "X-Foo" }}'
 `),
 			configureContext: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
@@ -267,6 +269,11 @@ headers:
 				ctx.EXPECT().AddHeaderForUpstream("foo", "baz")
 				ctx.EXPECT().AddHeaderForUpstream("bar", "FooBar")
 				ctx.EXPECT().AddHeaderForUpstream("baz", "bar")
+				ctx.EXPECT().AddHeaderForUpstream("X-Baz", "Bar")
+				ctx.EXPECT().RequestMethod().Return("POST")
+				ctx.EXPECT().RequestURL().Return(&url.URL{Scheme: "http", Host: "foo.bar", Path: "baz"})
+				ctx.EXPECT().RequestClientIPs().Return([]string{"127.0.0.1"})
+				ctx.EXPECT().RequestHeader("X-Foo").Return("Bar")
 			},
 			createSubject: func(t *testing.T) *subject.Subject {
 				t.Helper()
