@@ -19,6 +19,7 @@ package unifiers
 import (
 	"context"
 	"errors"
+	"net/url"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -261,6 +262,7 @@ cookies:
   foo: "{{ .Subject.Attributes.bar }}"
   bar: "{{ .Subject.ID }}"
   baz: bar
+  x_foo: '{{ .Request.Header "X-Foo" }}'
 `),
 			configureContext: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
@@ -268,6 +270,11 @@ cookies:
 				ctx.EXPECT().AddCookieForUpstream("foo", "baz")
 				ctx.EXPECT().AddCookieForUpstream("bar", "FooBar")
 				ctx.EXPECT().AddCookieForUpstream("baz", "bar")
+				ctx.EXPECT().AddCookieForUpstream("x_foo", "Bar")
+				ctx.EXPECT().RequestMethod().Return("POST")
+				ctx.EXPECT().RequestURL().Return(&url.URL{Scheme: "http", Host: "foo.bar", Path: "baz"})
+				ctx.EXPECT().RequestClientIPs().Return([]string{"127.0.0.1"})
+				ctx.EXPECT().RequestHeader("X-Foo").Return("Bar")
 			},
 			createSubject: func(t *testing.T) *subject.Subject {
 				t.Helper()
