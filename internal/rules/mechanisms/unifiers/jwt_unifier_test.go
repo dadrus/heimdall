@@ -19,6 +19,7 @@ package unifiers
 import (
 	"context"
 	"errors"
+	"net/url"
 	"testing"
 	"time"
 
@@ -445,7 +446,8 @@ func TestJWTUnifierExecute(t *testing.T) {
 claims: '{
   {{ $val := .Subject.Attributes.baz }}
   "sub_id": {{ quote .Subject.ID }}, 
-  {{ quote $val }}: "baz"
+  {{ quote $val }}: "baz",
+  "header_val": {{ .Request.Header "X-Foo" | quote }}
 }'`),
 			subject: &subject.Subject{ID: "foo", Attributes: map[string]any{"baz": "bar"}},
 			configureMocks: func(t *testing.T, ctx *heimdallmocks.ContextMock, signer *heimdallmocks.JWTSignerMock,
@@ -455,12 +457,17 @@ claims: '{
 
 				signer.EXPECT().Hash().Return([]byte("foobar"))
 				signer.EXPECT().Sign(sub.ID, defaultJWTTTL, map[string]any{
-					"sub_id": "foo",
-					"bar":    "baz",
+					"sub_id":     "foo",
+					"bar":        "baz",
+					"header_val": "Bar",
 				}).Return("barfoo", nil)
 
 				ctx.EXPECT().Signer().Return(signer)
 				ctx.EXPECT().AddHeaderForUpstream("Authorization", "Bearer barfoo")
+				ctx.EXPECT().RequestMethod().Return("POST")
+				ctx.EXPECT().RequestURL().Return(&url.URL{Scheme: "http", Host: "foo.bar", Path: "baz"})
+				ctx.EXPECT().RequestClientIPs().Return([]string{"127.0.0.1"})
+				ctx.EXPECT().RequestHeader("X-Foo").Return("Bar")
 
 				cch.EXPECT().Get(mock.Anything).Return(nil)
 				cch.EXPECT().Set(mock.Anything, "barfoo", defaultJWTTTL-defaultCacheLeeway)
@@ -484,6 +491,10 @@ claims: '{
 				signer.EXPECT().Hash().Return([]byte("foobar"))
 
 				ctx.EXPECT().Signer().Return(signer)
+				ctx.EXPECT().RequestMethod().Return("POST")
+				ctx.EXPECT().RequestURL().Return(&url.URL{Scheme: "http", Host: "foo.bar", Path: "baz"})
+				ctx.EXPECT().RequestClientIPs().Return([]string{"127.0.0.1"})
+
 				cch.EXPECT().Get(mock.Anything).Return(nil)
 			},
 			assert: func(t *testing.T, err error) {
@@ -511,6 +522,10 @@ claims: '{
 				signer.EXPECT().Hash().Return([]byte("foobar"))
 
 				ctx.EXPECT().Signer().Return(signer)
+				ctx.EXPECT().RequestMethod().Return("POST")
+				ctx.EXPECT().RequestURL().Return(&url.URL{Scheme: "http", Host: "foo.bar", Path: "baz"})
+				ctx.EXPECT().RequestClientIPs().Return([]string{"127.0.0.1"})
+
 				cch.EXPECT().Get(mock.Anything).Return(nil)
 			},
 			assert: func(t *testing.T, err error) {
