@@ -176,7 +176,7 @@ func (u *jwtUnifier) generateToken(ctx heimdall.Context, sub *subject.Subject) (
 
 	claims := map[string]any{}
 	if u.claims != nil {
-		vals, err := u.claims.Render(ctx, sub, nil)
+		vals, err := u.claims.Render(nil, sub, nil)
 		if err != nil {
 			return "", errorchain.
 				NewWithMessage(heimdall.ErrInternal, "failed to render claims").
