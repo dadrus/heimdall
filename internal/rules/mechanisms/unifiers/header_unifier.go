@@ -82,7 +82,7 @@ func (u *headerUnifier) Execute(ctx heimdall.Context, sub *subject.Subject) erro
 		value, err := tmpl.Render(ctx, sub, nil)
 		if err != nil {
 			return errorchain.
-				NewWithMessagef(heimdall.ErrInternal, "failed to render value for '%s' cookie", name).
+				NewWithMessagef(heimdall.ErrInternal, "failed to render value for '%s' header", name).
 				WithErrorContext(u).
 				CausedBy(err)
 		}
