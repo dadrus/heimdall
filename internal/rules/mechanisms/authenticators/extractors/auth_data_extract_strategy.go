@@ -22,6 +22,8 @@ import (
 	"github.com/dadrus/heimdall/internal/heimdall"
 )
 
+//go:generate mockery --name AuthData --structname AuthDataMock
+
 type AuthData interface {
 	ApplyTo(req *http.Request)
 	Value() string
