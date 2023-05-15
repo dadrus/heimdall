@@ -229,6 +229,12 @@ rules:
             foo-bar: "{{ .Subject.ID }}"
           values:
             some-key: some-value
+          auth:
+            type: api_key
+            config:
+              in: header
+              name: X-API-Key
+              value: super duper secret
         payload: "https://bla.bar"
         expressions:
           - expression: |
@@ -250,6 +256,12 @@ rules:
           method: GET
           headers:
             bla: bla
+          auth:
+            type: api_key
+            config:
+              in: query
+              name: key
+              value: super duper secret
         payload: http://foo
     - id: profile_data_contextualizer
       type: generic
@@ -321,9 +333,9 @@ rules:
           auth:
             type: api_key
             config:
-              name: X-Api-Key
+              name: api_key
               value: super-secret
-              in: header
+              in: cookie
           header:
             X-Customer-Header: Some Value
 

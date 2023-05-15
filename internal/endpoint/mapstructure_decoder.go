@@ -144,9 +144,9 @@ func decodeAPIKeyStrategy(config any) (AuthenticationStrategy, error) {
 			"api-key strategy requires 'in' property to be set")
 	}
 
-	if strategy.In != "header" && strategy.In != "cookie" {
+	if strategy.In != "header" && strategy.In != "cookie" && strategy.In != "query" {
 		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
-			"api-key strategy requires 'in' property to be set to either 'header' or 'cookie'")
+			"api-key strategy requires 'in' property to be set to either 'header', 'cookie', or 'query'")
 	}
 
 	return &strategy, nil

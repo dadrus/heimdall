@@ -183,6 +183,27 @@ auth:
 			},
 		},
 		{
+			uc: "api key with all required properties, with in=query",
+			config: []byte(`
+auth:
+  type: api_key
+  config:
+    name: foo
+    value: bar
+    in: query
+`),
+			assert: func(t *testing.T, err error, as AuthenticationStrategy) {
+				t.Helper()
+
+				assert.NoError(t, err)
+				assert.IsType(t, &APIKeyStrategy{}, as)
+				aks := as.(*APIKeyStrategy)
+				assert.Equal(t, "foo", aks.Name)
+				assert.Equal(t, "bar", aks.Value)
+				assert.Equal(t, "query", aks.In)
+			},
+		},
+		{
 			uc: "api key with all required properties, with in=foobar",
 			config: []byte(`
 auth:
@@ -196,7 +217,7 @@ auth:
 				t.Helper()
 
 				assert.Error(t, err)
-				assert.ErrorContains(t, err, "to either 'header' or 'cookie'")
+				assert.ErrorContains(t, err, "to either 'header', 'cookie', or 'query'")
 			},
 		},
 		{
