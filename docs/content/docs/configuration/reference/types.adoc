@@ -179,12 +179,12 @@ config:
   name: idToken
 ----
 
-Depending on the configured content type for the request the result might look like
+Depending on the configured "Content-Type" header for the request (see link:{{< relref "#_endpoint" >}}[`Endpoint`] `headers`) the result might look like
 [source, text]
 ----
 idToken=<whatever the token value is>
 ----
-if the content type was set to `application/x-www-form-urlencoded`, or
+if the "Content-Type" header was set to `application/x-www-form-urlencoded`, or
 
 [source, json]
 ----
