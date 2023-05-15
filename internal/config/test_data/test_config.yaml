@@ -275,6 +275,12 @@ rules:
               foo: bar
             values:
               some-key: some-value
+            auth:
+              type: api_key
+              config:
+                in: query
+                name: key
+                value: super duper secret
     unifiers:
       - id: jwt
         type: jwt
