@@ -87,6 +87,18 @@ func canonicalizeHeaders(headers map[string]string) map[string]string {
 	return result
 }
 
+func (s *RequestContext) Request() *heimdall.Request {
+	return &heimdall.Request{
+		RequestFunctions: s,
+		Method:           s.reqMethod,
+		URL:              s.reqURL,
+		ClientIP:         s.ips,
+	}
+}
+
+func (s *RequestContext) Header(name string) string { return s.reqHeaders[name] }
+func (s *RequestContext) Cookie(name string) string { return s.RequestCookie(name) }
+
 func (s *RequestContext) RequestMethod() string             { return s.reqMethod }
 func (s *RequestContext) RequestHeaders() map[string]string { return s.reqHeaders }
 func (s *RequestContext) RequestHeader(name string) string  { return s.reqHeaders[name] }

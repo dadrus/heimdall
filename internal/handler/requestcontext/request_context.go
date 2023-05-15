@@ -31,6 +31,13 @@ import (
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
+type request struct {
+	c *fiber.Ctx
+}
+
+func (r *request) Header(name string) string { return r.c.Get(name) }
+func (r *request) Cookie(name string) string { return r.c.Cookies(name) }
+
 type RequestContext struct {
 	c               *fiber.Ctx
 	reqMethod       string
@@ -49,6 +56,15 @@ func New(c *fiber.Ctx, method string, reqURL *url.URL, signer heimdall.JWTSigner
 		reqURL:          reqURL,
 		upstreamHeaders: make(http.Header),
 		upstreamCookies: make(map[string]string),
+	}
+}
+
+func (s *RequestContext) Request() *heimdall.Request {
+	return &heimdall.Request{
+		RequestFunctions: &request{c: s.c},
+		Method:           s.reqMethod,
+		URL:              s.reqURL,
+		ClientIP:         s.RequestClientIPs(),
 	}
 }
 

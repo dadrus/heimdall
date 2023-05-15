@@ -19,8 +19,6 @@ package unifiers
 import (
 	"context"
 	"errors"
-	"net/http"
-	"net/url"
 	"testing"
 	"time"
 
@@ -471,9 +469,7 @@ claims: '{
 
 				ctx.EXPECT().Signer().Return(signer)
 				ctx.EXPECT().AddHeaderForUpstream("Authorization", "Bearer barfoo")
-				ctx.EXPECT().RequestMethod().Return(http.MethodGet)
-				ctx.EXPECT().RequestURL().Return(&url.URL{Scheme: "http", Host: "test.com"})
-				ctx.EXPECT().RequestClientIPs().Return([]string{"127.0.0.1"})
+				ctx.EXPECT().Request().Return(&heimdall.Request{})
 
 				cch.EXPECT().Get(mock.Anything).Return(nil)
 				cch.EXPECT().Set(mock.Anything, "barfoo", defaultJWTTTL-defaultCacheLeeway)
@@ -497,9 +493,7 @@ claims: '{
 				signer.EXPECT().Hash().Return([]byte("foobar"))
 
 				ctx.EXPECT().Signer().Return(signer)
-				ctx.EXPECT().RequestMethod().Return(http.MethodGet)
-				ctx.EXPECT().RequestURL().Return(&url.URL{Scheme: "http", Host: "test.com"})
-				ctx.EXPECT().RequestClientIPs().Return([]string{"127.0.0.1"})
+				ctx.EXPECT().Request().Return(&heimdall.Request{})
 
 				cch.EXPECT().Get(mock.Anything).Return(nil)
 			},
@@ -528,9 +522,7 @@ claims: '{
 				signer.EXPECT().Hash().Return([]byte("foobar"))
 
 				ctx.EXPECT().Signer().Return(signer)
-				ctx.EXPECT().RequestMethod().Return(http.MethodGet)
-				ctx.EXPECT().RequestURL().Return(&url.URL{Scheme: "http", Host: "test.com"})
-				ctx.EXPECT().RequestClientIPs().Return([]string{"127.0.0.1"})
+				ctx.EXPECT().Request().Return(&heimdall.Request{})
 
 				cch.EXPECT().Get(mock.Anything).Return(nil)
 			},

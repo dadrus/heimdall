@@ -80,7 +80,7 @@ func (u *headerUnifier) Execute(ctx heimdall.Context, sub *subject.Subject) erro
 
 	for name, tmpl := range u.headers {
 		value, err := tmpl.Render(map[string]any{
-			"Request": template.WrapRequest(ctx),
+			"Request": ctx.Request(),
 			"Subject": sub,
 		})
 		if err != nil {

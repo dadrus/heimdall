@@ -135,6 +135,49 @@ func (_c *ContextMock_AppContext_Call) RunAndReturn(run func() context.Context) 
 	return _c
 }
 
+// Request provides a mock function with given fields:
+func (_m *ContextMock) Request() *heimdall.Request {
+	ret := _m.Called()
+
+	var r0 *heimdall.Request
+	if rf, ok := ret.Get(0).(func() *heimdall.Request); ok {
+		r0 = rf()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*heimdall.Request)
+		}
+	}
+
+	return r0
+}
+
+// ContextMock_Request_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Request'
+type ContextMock_Request_Call struct {
+	*mock.Call
+}
+
+// Request is a helper method to define mock.On call
+func (_e *ContextMock_Expecter) Request() *ContextMock_Request_Call {
+	return &ContextMock_Request_Call{Call: _e.mock.On("Request")}
+}
+
+func (_c *ContextMock_Request_Call) Run(run func()) *ContextMock_Request_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *ContextMock_Request_Call) Return(_a0 *heimdall.Request) *ContextMock_Request_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *ContextMock_Request_Call) RunAndReturn(run func() *heimdall.Request) *ContextMock_Request_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // RequestBody provides a mock function with given fields:
 func (_m *ContextMock) RequestBody() []byte {
 	ret := _m.Called()

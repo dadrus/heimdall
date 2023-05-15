@@ -19,7 +19,6 @@ package unifiers
 import (
 	"context"
 	"errors"
-	"net/url"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -268,14 +267,14 @@ headers:
 			configureContext: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
+				reqf := mocks.NewRequestFunctionsMock(t)
+				reqf.EXPECT().Header("X-Foo").Return("Bar")
+
 				ctx.EXPECT().AddHeaderForUpstream("foo", "baz")
 				ctx.EXPECT().AddHeaderForUpstream("bar", "FooBar")
 				ctx.EXPECT().AddHeaderForUpstream("baz", "bar")
 				ctx.EXPECT().AddHeaderForUpstream("X-Baz", "Bar")
-				ctx.EXPECT().RequestMethod().Return("POST")
-				ctx.EXPECT().RequestURL().Return(&url.URL{Scheme: "http", Host: "foo.bar", Path: "baz"})
-				ctx.EXPECT().RequestClientIPs().Return([]string{"127.0.0.1"})
-				ctx.EXPECT().RequestHeader("X-Foo").Return("Bar")
+				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: reqf})
 			},
 			createSubject: func(t *testing.T) *subject.Subject {
 				t.Helper()

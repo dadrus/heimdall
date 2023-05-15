@@ -17,12 +17,14 @@
 package template_test
 
 import (
+	"net/http"
 	"net/url"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/heimdall/mocks"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
@@ -32,13 +34,17 @@ func TestTemplateRender(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
+	reqf := mocks.NewRequestFunctionsMock(t)
+	reqf.EXPECT().Header("X-My-Header").Return("my-value")
+	reqf.EXPECT().Cookie("session_cookie").Return("session-value")
+
 	ctx := mocks.NewContextMock(t)
-	ctx.EXPECT().RequestMethod().Return("PATCH")
-	ctx.EXPECT().RequestHeader("X-My-Header").Return("my-value")
-	ctx.EXPECT().RequestCookie("session_cookie").Return("session-value")
-	ctx.EXPECT().RequestURL().Return(
-		&url.URL{Scheme: "http", Host: "foobar.baz", Path: "zab", RawQuery: "my_query_param=query_value"})
-	ctx.EXPECT().RequestClientIPs().Return([]string{"192.168.1.1"})
+	ctx.EXPECT().Request().Return(&heimdall.Request{
+		RequestFunctions: reqf,
+		Method:           http.MethodPatch,
+		URL:              &url.URL{Scheme: "http", Host: "foobar.baz", Path: "zab", RawQuery: "my_query_param=query_value"},
+		ClientIP:         []string{"192.168.1.1"},
+	})
 
 	sub := &subject.Subject{
 		ID: "foo",
@@ -66,7 +72,7 @@ func TestTemplateRender(t *testing.T) {
 
 	// WHEN
 	res, err := tpl.Render(map[string]any{
-		"Request": template.WrapRequest(ctx),
+		"Request": ctx.Request(),
 		"Subject": sub,
 		"Values":  map[string]string{"key1": "foo", "key2": "bar"},
 	})
