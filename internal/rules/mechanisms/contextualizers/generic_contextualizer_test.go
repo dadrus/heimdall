@@ -97,7 +97,9 @@ payload: bar
 
 				assert.Equal(t, "http://foo.bar", contextualizer.e.URL)
 				require.NotNil(t, contextualizer.payload)
-				val, err := contextualizer.payload.Render(nil, &subject.Subject{ID: "baz"}, nil)
+				val, err := contextualizer.payload.Render(map[string]any{
+					"Subject": &subject.Subject{ID: "baz"},
+				})
 				require.NoError(t, err)
 				assert.Equal(t, "bar", val)
 				assert.Empty(t, contextualizer.fwdCookies)
@@ -135,7 +137,9 @@ continue_pipeline_on_error: true
 				assert.Equal(t, "http://bar.foo", contextualizer.e.URL)
 				assert.Equal(t, endpoint.Values{"foo": "bar"}, contextualizer.e.Values)
 				require.NotNil(t, contextualizer.payload)
-				val, err := contextualizer.payload.Render(nil, &subject.Subject{ID: "baz"}, nil)
+				val, err := contextualizer.payload.Render(map[string]any{
+					"Subject": &subject.Subject{ID: "baz"},
+				})
 				require.NoError(t, err)
 				assert.Equal(t, "baz", val)
 				assert.Len(t, contextualizer.fwdCookies, 1)
@@ -233,7 +237,9 @@ payload: foo
 				assert.Equal(t, prototype.id, configured.id)
 				assert.NotEqual(t, prototype.payload, configured.payload)
 				require.NotNil(t, configured.payload)
-				val, err := configured.payload.Render(nil, &subject.Subject{ID: "baz"}, nil)
+				val, err := configured.payload.Render(map[string]any{
+					"Subject": &subject.Subject{ID: "baz"},
+				})
 				require.NoError(t, err)
 				assert.Equal(t, "foo", val)
 				assert.Equal(t, prototype.fwdHeaders, configured.fwdHeaders)
@@ -273,7 +279,9 @@ forward_headers:
 				assert.Equal(t, prototype.id, configured.id)
 				assert.NotEqual(t, prototype.payload, configured.payload)
 				require.NotNil(t, configured.payload)
-				val, err := configured.payload.Render(nil, &subject.Subject{ID: "baz"}, nil)
+				val, err := configured.payload.Render(map[string]any{
+					"Subject": &subject.Subject{ID: "baz"},
+				})
 				require.NoError(t, err)
 				assert.Equal(t, "foo", val)
 				assert.NotEqual(t, prototype.fwdHeaders, configured.fwdHeaders)
@@ -318,7 +326,9 @@ forward_cookies:
 				assert.Equal(t, prototype.id, configured.id)
 				assert.NotEqual(t, prototype.payload, configured.payload)
 				require.NotNil(t, configured.payload)
-				val, err := configured.payload.Render(nil, &subject.Subject{ID: "baz"}, nil)
+				val, err := configured.payload.Render(map[string]any{
+					"Subject": &subject.Subject{ID: "baz"},
+				})
 				require.NoError(t, err)
 				assert.Equal(t, "foo", val)
 				assert.NotEqual(t, prototype.fwdHeaders, configured.fwdHeaders)
@@ -369,7 +379,9 @@ continue_pipeline_on_error: false
 				assert.Equal(t, prototype.id, configured.id)
 				assert.NotEqual(t, prototype.payload, configured.payload)
 				require.NotNil(t, configured.payload)
-				val, err := configured.payload.Render(nil, &subject.Subject{ID: "baz"}, nil)
+				val, err := configured.payload.Render(map[string]any{
+					"Subject": &subject.Subject{ID: "baz"},
+				})
 				require.NoError(t, err)
 				assert.Equal(t, "foo", val)
 				assert.NotEqual(t, prototype.fwdHeaders, configured.fwdHeaders)
@@ -427,7 +439,9 @@ continue_pipeline_on_error: false
 				assert.Equal(t, prototype.id, configured.id)
 				assert.NotEqual(t, prototype.payload, configured.payload)
 				require.NotNil(t, configured.payload)
-				val, err := configured.payload.Render(nil, &subject.Subject{ID: "baz"}, nil)
+				val, err := configured.payload.Render(map[string]any{
+					"Subject": &subject.Subject{ID: "baz"},
+				})
 				require.NoError(t, err)
 				assert.Equal(t, "foo", val)
 				assert.NotEqual(t, prototype.fwdHeaders, configured.fwdHeaders)

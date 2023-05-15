@@ -95,7 +95,9 @@ func (eh *redirectErrorHandler) Execute(ctx heimdall.Context, err error) (bool, 
 
 	logger.Debug().Str("_id", eh.id).Msg("Handling error using redirect error handler")
 
-	toURL, err := eh.to.Render(ctx, nil, nil)
+	toURL, err := eh.to.Render(map[string]any{
+		"Request": template.WrapRequest(ctx),
+	})
 	if err != nil {
 		return true, errorchain.NewWithMessage(heimdall.ErrInternal, "failed to render 'to' url").
 			CausedBy(err)

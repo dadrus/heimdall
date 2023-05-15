@@ -249,7 +249,10 @@ func (h *genericContextualizer) createRequest(ctx heimdall.Context, sub *subject
 	var body io.Reader
 
 	if h.payload != nil {
-		value, err := h.payload.Render(ctx, sub, nil)
+		value, err := h.payload.Render(map[string]any{
+			"Request": template.WrapRequest(ctx),
+			"Subject": sub,
+		})
 		if err != nil {
 			return nil, errorchain.NewWithMessage(heimdall.ErrInternal,
 				"failed to render payload for the contextualizer endpoint").
@@ -268,7 +271,10 @@ func (h *genericContextualizer) createRequest(ctx heimdall.Context, sub *subject
 					CausedBy(err)
 			}
 
-			return tpl.Render(nil, sub, values)
+			return tpl.Render(map[string]any{
+				"Subject": sub,
+				"Values":  values,
+			})
 		}))
 	if err != nil {
 		return nil, errorchain.NewWithMessage(heimdall.ErrInternal, "failed creating request").

@@ -19,6 +19,8 @@ package unifiers
 import (
 	"context"
 	"errors"
+	"net/http"
+	"net/url"
 	"testing"
 	"time"
 
@@ -116,7 +118,9 @@ claims:
 				require.NotNil(t, unifier)
 				assert.Equal(t, defaultJWTTTL, unifier.ttl)
 				require.NotNil(t, unifier.claims)
-				val, err := unifier.claims.Render(nil, &subject.Subject{ID: "bar"}, nil)
+				val, err := unifier.claims.Render(map[string]any{
+					"Subject": &subject.Subject{ID: "bar"},
+				})
 				require.NoError(t, err)
 				assert.Equal(t, `{ "sub": "bar" }`, val)
 				assert.Equal(t, "jun", unifier.HandlerID())
@@ -139,7 +143,9 @@ claims:
 				require.NotNil(t, unifier)
 				assert.Equal(t, expectedTTL, unifier.ttl)
 				require.NotNil(t, unifier.claims)
-				val, err := unifier.claims.Render(nil, &subject.Subject{ID: "bar"}, nil)
+				val, err := unifier.claims.Render(map[string]any{
+					"Subject": &subject.Subject{ID: "bar"},
+				})
 				require.NoError(t, err)
 				assert.Equal(t, `{ "sub": "bar" }`, val)
 				assert.Equal(t, "jun", unifier.HandlerID())
@@ -255,7 +261,9 @@ claims:
 				assert.Equal(t, prototype.ttl, configured.ttl)
 				assert.NotEqual(t, prototype.claims, configured.claims)
 				require.NotNil(t, configured.claims)
-				val, err := configured.claims.Render(nil, &subject.Subject{ID: "bar"}, nil)
+				val, err := configured.claims.Render(map[string]any{
+					"Subject": &subject.Subject{ID: "bar"},
+				})
 				require.NoError(t, err)
 				assert.Equal(t, `{ "sub": "bar" }`, val)
 				assert.Equal(t, "jun4", configured.HandlerID())
@@ -280,7 +288,9 @@ claims:
 				assert.Equal(t, expectedTTL, configured.ttl)
 				assert.NotEqual(t, prototype.claims, configured.claims)
 				require.NotNil(t, configured.claims)
-				val, err := configured.claims.Render(nil, &subject.Subject{ID: "bar"}, nil)
+				val, err := configured.claims.Render(map[string]any{
+					"Subject": &subject.Subject{ID: "bar"},
+				})
 				require.NoError(t, err)
 				assert.Equal(t, `{ "sub": "bar" }`, val)
 				assert.Equal(t, "jun5", configured.HandlerID())
@@ -461,6 +471,9 @@ claims: '{
 
 				ctx.EXPECT().Signer().Return(signer)
 				ctx.EXPECT().AddHeaderForUpstream("Authorization", "Bearer barfoo")
+				ctx.EXPECT().RequestMethod().Return(http.MethodGet)
+				ctx.EXPECT().RequestURL().Return(&url.URL{Scheme: "http", Host: "test.com"})
+				ctx.EXPECT().RequestClientIPs().Return([]string{"127.0.0.1"})
 
 				cch.EXPECT().Get(mock.Anything).Return(nil)
 				cch.EXPECT().Set(mock.Anything, "barfoo", defaultJWTTTL-defaultCacheLeeway)
@@ -484,6 +497,10 @@ claims: '{
 				signer.EXPECT().Hash().Return([]byte("foobar"))
 
 				ctx.EXPECT().Signer().Return(signer)
+				ctx.EXPECT().RequestMethod().Return(http.MethodGet)
+				ctx.EXPECT().RequestURL().Return(&url.URL{Scheme: "http", Host: "test.com"})
+				ctx.EXPECT().RequestClientIPs().Return([]string{"127.0.0.1"})
+
 				cch.EXPECT().Get(mock.Anything).Return(nil)
 			},
 			assert: func(t *testing.T, err error) {
@@ -511,6 +528,10 @@ claims: '{
 				signer.EXPECT().Hash().Return([]byte("foobar"))
 
 				ctx.EXPECT().Signer().Return(signer)
+				ctx.EXPECT().RequestMethod().Return(http.MethodGet)
+				ctx.EXPECT().RequestURL().Return(&url.URL{Scheme: "http", Host: "test.com"})
+				ctx.EXPECT().RequestClientIPs().Return([]string{"127.0.0.1"})
+
 				cch.EXPECT().Get(mock.Anything).Return(nil)
 			},
 			assert: func(t *testing.T, err error) {

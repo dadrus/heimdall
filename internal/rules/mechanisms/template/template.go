@@ -27,14 +27,13 @@ import (
 	"github.com/Masterminds/sprig/v3"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
 var ErrTemplateRender = errors.New("template error")
 
 type Template interface {
-	Render(ctx heimdall.Context, sub *subject.Subject, values map[string]string) (string, error)
+	Render(values map[string]any) (string, error)
 	Hash() []byte
 }
 
@@ -51,6 +50,7 @@ func New(val string) (Template, error) {
 	tmpl, err := template.New("Heimdall").
 		Funcs(funcMap).
 		Funcs(template.FuncMap{"urlenc": urlEncode}).
+		Option("missingkey=error").
 		Parse(val)
 	if err != nil {
 		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration, "failed to parse template").
@@ -63,16 +63,10 @@ func New(val string) (Template, error) {
 	return &templateImpl{t: tmpl, hash: hash.Sum(nil)}, nil
 }
 
-func (t *templateImpl) Render(ctx heimdall.Context, sub *subject.Subject, values map[string]string) (string, error) {
+func (t *templateImpl) Render(values map[string]any) (string, error) {
 	var buf bytes.Buffer
 
-	tplData := data{Subject: sub, Values: values}
-
-	if ctx != nil {
-		tplData.Request = WrapRequest(ctx)
-	}
-
-	err := t.t.Execute(&buf, tplData)
+	err := t.t.Execute(&buf, values)
 	if err != nil {
 		return "", errorchain.New(ErrTemplateRender).CausedBy(err)
 	}

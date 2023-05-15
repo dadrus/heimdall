@@ -42,7 +42,7 @@ type RequestContext struct {
 }
 
 func New(c *fiber.Ctx, method string, reqURL *url.URL, signer heimdall.JWTSigner) *RequestContext {
-	return &RequestContext{ //nolint:exhaustruct
+	return &RequestContext{
 		c:               c,
 		jwtSigner:       signer,
 		reqMethod:       method,

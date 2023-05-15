@@ -65,7 +65,11 @@ func TestTemplateRender(t *testing.T) {
 	require.NoError(t, err)
 
 	// WHEN
-	res, err := tpl.Render(ctx, sub, map[string]string{"key1": "foo", "key2": "bar"})
+	res, err := tpl.Render(map[string]any{
+		"Request": template.WrapRequest(ctx),
+		"Subject": sub,
+		"Values":  map[string]string{"key1": "foo", "key2": "bar"},
+	})
 
 	// THEN
 	require.NoError(t, err)
