@@ -9,15 +9,15 @@ import (
 
 type HeaderForwardStrategy struct {
 	Name   string `mapstructure:"name"`
-	Schema string `mapstructure:"schema"`
+	Scheme string `mapstructure:"scheme"`
 }
 
 func (s *HeaderForwardStrategy) Apply(src extractors.AuthData, req *http.Request) {
 	var value string
-	if len(s.Schema) == 0 {
+	if len(s.Scheme) == 0 {
 		value = src.Value()
 	} else {
-		value = fmt.Sprintf("%s %s", s.Schema, src.Value())
+		value = fmt.Sprintf("%s %s", s.Scheme, src.Value())
 	}
 
 	req.Header.Add(s.Name, value)

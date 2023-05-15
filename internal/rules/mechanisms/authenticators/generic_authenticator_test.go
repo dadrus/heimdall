@@ -431,7 +431,7 @@ authentication_data_forward:
   type: header
   config:
     name: X-Foo
-    schema: Bar
+    scheme: Bar
 subject:
   id: some_template
 cache_ttl: 5s

@@ -21,7 +21,7 @@ func TestHeaderForwardStrategyApply(t *testing.T) {
 		assert   func(t *testing.T, header http.Header)
 	}{
 		{
-			uc:       "without schema",
+			uc:       "without scheme",
 			strategy: HeaderForwardStrategy{Name: "token"},
 			assert: func(t *testing.T, header http.Header) {
 				t.Helper()
@@ -30,8 +30,8 @@ func TestHeaderForwardStrategyApply(t *testing.T) {
 			},
 		},
 		{
-			uc:       "with schema",
-			strategy: HeaderForwardStrategy{Name: "token", Schema: "Bar"},
+			uc:       "with scheme",
+			strategy: HeaderForwardStrategy{Name: "token", Scheme: "Bar"},
 			assert: func(t *testing.T, header http.Header) {
 				t.Helper()
 

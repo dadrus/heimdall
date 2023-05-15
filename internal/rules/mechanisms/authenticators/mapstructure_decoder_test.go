@@ -72,7 +72,7 @@ strategy:
 				str, ok := strategy.(*HeaderForwardStrategy)
 				require.True(t, ok)
 				assert.Equal(t, "foo", str.Name)
-				assert.Equal(t, "Bar", str.Schema)
+				assert.Equal(t, "Bar", str.Scheme)
 			},
 		},
 		{
