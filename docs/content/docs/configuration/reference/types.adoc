@@ -149,6 +149,123 @@ Imagine you want Heimdall to verify an access token used to protect your upstrea
 ----
 ====
 
+== Authentication Data Forward Strategy
+
+Authentication data strategy defines the way how heimdall should forward the authentication data extracted from the request to the used identity management system.
+
+An Authentication Data Forward Strategy configuration entry must contain the following two properties:
+
+* `type` - The type of the strategy. Available types are described in the following sections.
+* `config` - The strategy specific configuration.
+
+=== Body Forward Strategy
+
+This strategy can be used to embed the extracted authentication data into a body parameter of the request to the identity management system.
+
+`type` must be set to `body`. `config` supports the following properties:
+
+* *`name`*: _string_ (mandatory)
++
+The name of the property for the authentication data.
+
+.Body strategy configuration
+====
+The following snippet shows how to configure this strategy to send e.g. a token in a property named "idToken".
+
+[source, yaml]
+----
+type: body
+config:
+  name: idToken
+----
+
+Depending on the configured content type for the request the result might look like
+[source, text]
+----
+idToken=<whatever the token value is>
+----
+if the content type was set to `application/x-www-form-urlencoded`, or
+
+[source, json]
+----
+{ "idToken": "<whatever the token value is>" }
+----
+otherwise
+====
+
+=== Cookie Forward Strategy
+
+This strategy can be used to embed the extracted authentication data into a cookie of the request to the identity management system.
+
+`type` must be set to `cookie`. `config` supports the following properties:
+
+* *`name`*: _string_ (mandatory)
++
+The name of the cookie for the authentication data.
+
+.Cookie strategy configuration
+====
+The following snippet shows how to configure this strategy to send e.g. a token in a cookie named "it_token".
+
+[source, yaml]
+----
+type: cookie
+config:
+  name: it_token
+----
+====
+
+=== Header Forward Strategy
+
+This strategy can be used to embed the extracted authentication data into a header of the request to the identity management system.
+
+`type` must be set to `header`. `config` supports the following properties:
+
+* *`name`*: _string_ (mandatory)
++
+The name of the header for the authentication data.
+
+* *`scheme`*: _string_ (optional)
++
+The scheme for the header added in front of the authentication data value.
+
+.Header strategy configuration
+====
+The following snippet shows how to configure this strategy to send e.g. a token in a header named "X-ID-Token" with schema "Bearer".
+
+[source, yaml]
+----
+type: header
+config:
+  name: X-ID-Token
+  scheme: Bearer
+----
+====
+
+=== Query Forward Strategy
+
+This strategy can be used to embed the extracted authentication data into a query parameter of the request to the identity management system.
+
+WARNING: Using this strategy is discouraged, as it will expose the authentication data to access logs, metrics and tracing.
+
+`type` must be set to `query`. `config` supports the following properties:
+
+* *`name`*: _string_ (mandatory)
++
+The name of the query parameter for the authentication data.
+
+.Query strategy configuration
+====
+The following snippet shows how to configure this strategy to send e.g. a token in a query named "token".
+
+[source, yaml]
+----
+type: query
+config:
+  name: token
+----
+====
+
 == Authentication Strategy
 
 Authentication strategy is kind of abstract type, so you have to define which specific type to use. Each type has its own configuration options.

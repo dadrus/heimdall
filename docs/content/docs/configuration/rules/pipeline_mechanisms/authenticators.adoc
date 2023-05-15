@@ -116,6 +116,10 @@ The endpoint to communicate to for the actual subject authentication status veri
 +
 Where to extract the authentication data from the request. This authenticator will use the matched authentication data source as is while sending it to the `identity_info_endpoint`.
 
+* *`authentication_data_forward`*: _link:{{< relref "/docs/configuration/reference/types.adoc#_authentication_data_forward_strategy" >}}[Authentication Data Forward Strategy]_ (optional, not overridable)
++
+How to forward the extracted authentication data to the `identity_info_endpoint`. Defaults to forwarding it using exact the same way it was present in the request to heimdall.
+
 * *`subject`*: _link:{{< relref "/docs/configuration/reference/types.adoc#_subject" >}}[Subject]_ (mandatory, not overridable)
 +
 Where to extract the link:{{< relref "overview.adoc#_subject" >}}[`Subject`] information from the identity info endpoint response.
@@ -137,7 +141,7 @@ NOTE: If you're configuring the `cache_ttl` property, it is highly recommended t
 .Configuration of Generic authenticator to work with session cookies
 ====
 
-This example shows how to configure this authenticator to work with an authentication system, which issues a cookie upon successful user authentication to maintain the authentication state. To reduce the communication overhead, it also makes use of `cache_ttl` to cache the response for 5 minutes if that time frame does not exceed the actual validity of the session represented by the cookie.
+This example shows how to configure this authenticator to work with an authentication system, which issues a cookie upon successful user authentication to maintain the authentication state. To reduce the communication overhead, it also makes use of `cache_ttl` to cache the response for 5 minutes if that time frame does not exceed the actual validity of the session represented by the cookie. Here, the authenticator will call the `http://my-auth.system/sessions/whoami` endpoint by also sending the `my_session` cookie to it.
 
 [source, yaml]
 ----
@@ -177,6 +181,8 @@ type: generic
 config:
   identity_info_endpoint:
     url: http://my-auth.system/introspect
+    headers:
+      Content-Type: application/x-www-form-urlencoded
     method: GET
     auth:
       type: basic_auth
@@ -184,8 +190,12 @@ config:
         user: Heimdall
         password: super-secure
   authentication_data_source:
-    - header: X-Custom-Bearer-Token
+    - header: Authorization
       schema: Bearer
+  authentication_data_forward:
+    type: body
+    config:
+      name: token
   subject:
     id: "sub"
   cache_ttl: 5m
@@ -198,6 +208,8 @@ config:
 ----
 
 Usually, Bearer tokens are issued by an OAuth2 auth provider and there is a need to verify not only the validity of such, but also a couple of claims. This can be achieved by a link:{{< relref "authorizers.adoc#_local_cel" >}}[Local Authorizer], but there is also a special purpose link:{{< relref "#_oauth2_introspection">}}[OAuth2 Introspection] authenticator type, which supports asserting all security relevant claims in just one place.
+
+In this configuration the authenticator extracts the token from the `Authorization` header and request the information about the corresponding user from the `http://my-auth.system/introspect` endpoint by sending the extracted token in the body of the request in a parameter named `token` application/x-www-form-urlencoded encoded.
 ====
 
 === OAuth2 Introspection
