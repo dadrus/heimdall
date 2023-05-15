@@ -689,6 +689,72 @@
         ]
       }
     },
+    "authenticationDataInBodyProperties": {
+      "properties": {
+        "type": {
+          "const": "body"
+        },
+        "name": {
+          "description": "The name of the property",
+          "type": "string"
+        }
+      }
+    },
+    "authenticationDataInCookieProperties": {
+      "properties": {
+        "type": {
+          "const": "cookie"
+        },
+        "name": {
+          "description": "The name of the cookie",
+          "type": "string"
+        }
+      }
+    },
+    "authenticationDataInHeaderProperties": {
+      "properties": {
+        "type": {
+          "const": "header"
+        },
+        "name": {
+          "description": "The name of the cookie",
+          "type": "string"
+        },
+        "scheme": {
+          "description": "The scheme to be added in front of the header value",
+          "type": "string"
+        }
+      }
+    },
+    "authenticationDataInQueryProperties": {
+      "properties": {
+        "type": {
+          "const": "query"
+        },
+        "name": {
+          "description": "The name of the query parameter",
+          "type": "string"
+        }
+      }
+    },
+    "authenticationDataForwardStrategy": {
+      "description": "Defines the way how heimdall should forward the authentication data extracted from the request to the used identity management system",
+      "type": "object",
+      "oneOf": [
+        {
+          "$ref": "#/definitions/authenticationDataInBodyProperties"
+        },
+        {
+          "$ref": "#/definitions/authenticationDataInCookieProperties"
+        },
+        {
+          "$ref": "#/definitions/authenticationDataInHeaderProperties"
+        },
+        {
+          "$ref": "#/definitions/authenticationDataInQueryProperties"
+        }
+      ]
+    },
     "assertionRequirements": {
       "description": "Defines verification requirements for the assertion, like the introspection response or a JWT token",
       "type": "object",
@@ -840,6 +906,9 @@
             },
             "authentication_data_source": {
               "$ref": "#/definitions/authenticationDataSource"
+            },
+            "authentication_data_forward": {
+              "$ref": "#/definitions/authenticationDataForwardStrategy"
             },
             "subject": {
               "$ref": "#/definitions/subjectConfiguration"
