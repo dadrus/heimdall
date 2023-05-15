@@ -63,7 +63,7 @@ strategy:
   type: header
   config:
     name: foo
-    schema: Bar
+    scheme: Bar
 `),
 			assert: func(t *testing.T, err error, strategy AuthDataForwardStrategy) {
 				t.Helper()
@@ -82,7 +82,7 @@ strategy:
   type: query
   config:
     name: foo
-    schema: Bar
+    scheme: Bar
 `),
 			assert: func(t *testing.T, err error, strategy AuthDataForwardStrategy) {
 				t.Helper()
