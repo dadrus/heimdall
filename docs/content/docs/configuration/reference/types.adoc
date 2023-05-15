@@ -162,13 +162,15 @@ Available strategies are described in the following sections.
 
 === API Key Strategy
 
-This strategy can be used if your endpoint expects a specific api key be send in a header or a cookie.
+This strategy can be used if your endpoint expects a specific api key be sent in a header, a cookie or query.
 
 `type` must be set to `api_key`. `config` supports the following properties:
 
 * *`in`*: _string_ (mandatory)
 +
-Where to put the api key. Can be either `header`, or `cookie`.
+Where to put the api key. Can be either `header`, `cookie`, or `query`.
++
+WARNING: Using `query` strategy will expose the api key to access logs and tracing.
 
 * *`name`*: _string_ (mandatory)
 +
