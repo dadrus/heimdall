@@ -37,6 +37,10 @@ func (c *APIKeyStrategy) Apply(_ context.Context, req *http.Request) error {
 		req.AddCookie(&http.Cookie{Name: c.Name, Value: c.Value})
 	case "header":
 		req.Header.Set(c.Name, c.Value)
+	case "query":
+		query := req.URL.Query()
+		query.Set(c.Name, c.Value)
+		req.URL.RawQuery = query.Encode()
 	default:
 		return errorchain.NewWithMessagef(heimdall.ErrConfiguration,
 			"unsupported in value (%s) in api key auth strategy", c.In)

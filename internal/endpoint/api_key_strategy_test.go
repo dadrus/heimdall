@@ -19,46 +19,88 @@ package endpoint
 import (
 	"context"
 	"net/http"
+	"net/url"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-func TestApplyApiKeyStrategyOnHeader(t *testing.T) {
+func TestApplyApiKeyStrategy(t *testing.T) {
 	t.Parallel()
 
-	// GIVEN
-	name := "Foo"
-	value := "Bar"
-	req := &http.Request{Header: http.Header{}}
-	s := APIKeyStrategy{Name: name, Value: value, In: "header"}
+	for _, tc := range []struct {
+		uc       string
+		strategy AuthenticationStrategy
+		assert   func(t *testing.T, err error, req *http.Request)
+	}{
+		{
+			uc:       "header strategy",
+			strategy: &APIKeyStrategy{In: "header", Name: "Foo", Value: "Bar"},
+			assert: func(t *testing.T, err error, req *http.Request) {
+				t.Helper()
 
-	// WHEN
-	err := s.Apply(context.Background(), req)
+				assert.NoError(t, err)
+				assert.Equal(t, "Bar", req.Header.Get("Foo"))
+			},
+		},
+		{
+			uc:       "cookie strategy",
+			strategy: &APIKeyStrategy{In: "cookie", Name: "Foo", Value: "Bar"},
+			assert: func(t *testing.T, err error, req *http.Request) {
+				t.Helper()
 
-	// THEN
-	assert.NoError(t, err)
-	assert.Equal(t, value, req.Header.Get(name))
-}
+				assert.NoError(t, err)
 
-func TestApplyApiKeyStrategyOnCookie(t *testing.T) {
-	t.Parallel()
+				cookie, err := req.Cookie("Foo")
+				assert.NoError(t, err)
+				assert.Equal(t, "Bar", cookie.Value)
+			},
+		},
+		{
+			uc:       "query strategy",
+			strategy: &APIKeyStrategy{In: "query", Name: "Foo", Value: "Bar"},
+			assert: func(t *testing.T, err error, req *http.Request) {
+				t.Helper()
 
-	// GIVEN
-	name := "Foo"
-	value := "Bar"
-	req := &http.Request{Header: http.Header{}}
-	s := APIKeyStrategy{Name: name, Value: value, In: "cookie"}
+				assert.NoError(t, err)
 
-	// WHEN
-	err := s.Apply(context.Background(), req)
+				query := req.URL.Query()
+				assert.Len(t, query, 2)
+				assert.Equal(t, "Bar", query.Get("Foo"))
+				assert.Equal(t, "foo", query.Get("bar"))
+			},
+		},
+		{
+			uc:       "invalid strategy",
+			strategy: &APIKeyStrategy{In: "foo", Name: "Foo", Value: "Bar"},
+			assert: func(t *testing.T, err error, req *http.Request) {
+				t.Helper()
 
-	// THEN
-	assert.NoError(t, err)
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), "unsupported")
+			},
+		},
+	} {
+		t.Run(tc.uc, func(t *testing.T) {
+			// GIVEN
+			req := &http.Request{
+				Header: http.Header{},
+				URL: &url.URL{
+					Scheme:   "http",
+					Host:     "foo.bar",
+					Path:     "test",
+					RawQuery: url.Values{"bar": []string{"foo"}}.Encode(),
+				},
+			}
 
-	cookie, err := req.Cookie(name)
-	assert.NoError(t, err)
-	assert.Equal(t, value, cookie.Value)
+			// WHEN
+			err := tc.strategy.Apply(context.Background(), req)
+
+			// THEN
+			tc.assert(t, err, req)
+		})
+	}
 }
 
 func TestAPIKeyStrategyHash(t *testing.T) {
