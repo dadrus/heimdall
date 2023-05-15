@@ -560,7 +560,8 @@
               "type": "string",
               "enum": [
                 "header",
-                "cookie"
+                "cookie",
+                "query"
               ]
             }
           },
