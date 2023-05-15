@@ -35,6 +35,7 @@ func decodeConfig(input any, output any) error {
 				extractors.DecodeCompositeExtractStrategyHookFunc(),
 				oauth2.DecodeScopesMatcherHookFunc(),
 				truststore.DecodeTrustStoreHookFunc(),
+				DecodeAuthenticationDataForwardStrategy(),
 			),
 			Result:      output,
 			ErrorUnused: true,
