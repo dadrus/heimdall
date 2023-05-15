@@ -56,6 +56,7 @@ type genericAuthenticator struct {
 	e                    endpoint.Endpoint
 	sf                   SubjectFactory
 	ads                  extractors.AuthDataExtractStrategy
+	adfs                 AuthDataForwardStrategy
 	ttl                  time.Duration
 	sessionLifespanConf  *SessionLifespanConfig
 	allowFallbackOnError bool
@@ -63,12 +64,13 @@ type genericAuthenticator struct {
 
 func newGenericAuthenticator(id string, rawConfig map[string]any) (*genericAuthenticator, error) {
 	type Config struct {
-		Endpoint              endpoint.Endpoint                   `mapstructure:"identity_info_endpoint"`
-		AuthDataSource        extractors.CompositeExtractStrategy `mapstructure:"authentication_data_source"`
-		SubjectInfo           SubjectInfo                         `mapstructure:"subject"`
-		SessionLifespanConfig *SessionLifespanConfig              `mapstructure:"session_lifespan"`
-		CacheTTL              *time.Duration                      `mapstructure:"cache_ttl"`
-		AllowFallbackOnError  bool                                `mapstructure:"allow_fallback_on_error"`
+		Endpoint                endpoint.Endpoint                   `mapstructure:"identity_info_endpoint"`
+		AuthDataSource          extractors.CompositeExtractStrategy `mapstructure:"authentication_data_source"`
+		AuthDataForwardStrategy AuthDataForwardStrategy             `mapstructure:"authentication_data_forward"`
+		SubjectInfo             SubjectInfo                         `mapstructure:"subject"`
+		SessionLifespanConfig   *SessionLifespanConfig              `mapstructure:"session_lifespan"`
+		CacheTTL                *time.Duration                      `mapstructure:"cache_ttl"`
+		AllowFallbackOnError    bool                                `mapstructure:"allow_fallback_on_error"`
 	}
 
 	var conf Config
@@ -100,7 +102,11 @@ func newGenericAuthenticator(id string, rawConfig map[string]any) (*genericAuthe
 		id:  id,
 		e:   conf.Endpoint,
 		ads: conf.AuthDataSource,
-		sf:  &conf.SubjectInfo,
+		adfs: x.IfThenElse[AuthDataForwardStrategy](
+			conf.AuthDataForwardStrategy != nil,
+			conf.AuthDataForwardStrategy,
+			DefaultForwardStrategy{}),
+		sf: &conf.SubjectInfo,
 		ttl: x.IfThenElseExec(conf.CacheTTL != nil,
 			func() time.Duration { return *conf.CacheTTL },
 			func() time.Duration { return 0 }),
@@ -156,10 +162,11 @@ func (a *genericAuthenticator) WithConfig(config map[string]any) (Authenticator,
 	}
 
 	return &genericAuthenticator{
-		id:  a.id,
-		e:   a.e,
-		sf:  a.sf,
-		ads: a.ads,
+		id:   a.id,
+		e:    a.e,
+		sf:   a.sf,
+		ads:  a.ads,
+		adfs: a.adfs,
 		ttl: x.IfThenElseExec(conf.CacheTTL != nil,
 			func() time.Duration { return *conf.CacheTTL },
 			func() time.Duration { return a.ttl }),
@@ -244,7 +251,7 @@ func (a *genericAuthenticator) fetchSubjectInformation(ctx heimdall.Context,
 			CausedBy(err)
 	}
 
-	authData.ApplyTo(req)
+	a.adfs.Apply(authData, req)
 
 	resp, err := a.e.CreateClient(req.URL.Hostname()).Do(req)
 	if err != nil {

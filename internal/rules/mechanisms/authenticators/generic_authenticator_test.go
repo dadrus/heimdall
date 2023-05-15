@@ -119,6 +119,10 @@ identity_info_endpoint:
   method: GET
 authentication_data_source:
   - header: foo-header
+authentication_data_forward:
+  type: body
+  config:
+    name: foo
 subject:
   id: some_template`),
 			assertError: func(t *testing.T, err error, auth *genericAuthenticator) {
@@ -133,6 +137,9 @@ subject:
 				assert.True(t, ok)
 				assert.Len(t, ces, 1)
 				assert.Contains(t, ces, &extractors.HeaderValueExtractStrategy{Name: "foo-header"})
+				bpfs, ok := auth.adfs.(*BodyParameterForwardStrategy)
+				assert.True(t, ok)
+				assert.Equal(t, "foo", bpfs.Name)
 				assert.Equal(t, &SubjectInfo{IDFrom: "some_template"}, auth.sf)
 				assert.Equal(t, time.Duration(0), auth.ttl)
 				assert.False(t, auth.IsFallbackOnErrorAllowed())
@@ -164,6 +171,7 @@ cache_ttl: 5s`),
 				assert.True(t, ok)
 				assert.Len(t, ces, 1)
 				assert.Contains(t, ces, &extractors.CookieValueExtractStrategy{Name: "foo-cookie"})
+				assert.IsType(t, auth.adfs, DefaultForwardStrategy{})
 				assert.Equal(t, &SubjectInfo{IDFrom: "some_template"}, auth.sf)
 				assert.Equal(t, 5*time.Second, auth.ttl)
 				assert.False(t, auth.IsFallbackOnErrorAllowed())
@@ -195,6 +203,7 @@ allow_fallback_on_error: true`),
 				assert.True(t, ok)
 				assert.Len(t, ces, 1)
 				assert.Contains(t, ces, &extractors.CookieValueExtractStrategy{Name: "foo-cookie"})
+				assert.IsType(t, auth.adfs, DefaultForwardStrategy{})
 				assert.Equal(t, &SubjectInfo{IDFrom: "some_template"}, auth.sf)
 				assert.Equal(t, time.Duration(0), auth.ttl)
 				assert.True(t, auth.IsFallbackOnErrorAllowed())
@@ -232,6 +241,7 @@ session_lifespan:
 				assert.True(t, ok)
 				assert.Len(t, ces, 1)
 				assert.Contains(t, ces, &extractors.CookieValueExtractStrategy{Name: "foo-cookie"})
+				assert.IsType(t, auth.adfs, DefaultForwardStrategy{})
 				assert.Equal(t, &SubjectInfo{IDFrom: "some_template"}, auth.sf)
 				assert.Equal(t, time.Duration(0), auth.ttl)
 				assert.False(t, auth.IsFallbackOnErrorAllowed())
@@ -335,6 +345,7 @@ subject:
 
 				assert.Equal(t, prototype.e, configured.e)
 				assert.Equal(t, prototype.ads, configured.ads)
+				assert.Equal(t, prototype.adfs, configured.adfs)
 				assert.Equal(t, prototype.sf, configured.sf)
 				assert.Equal(t, time.Duration(0), prototype.ttl)
 				assert.NotEqual(t, prototype.ttl, configured.ttl)
@@ -365,6 +376,7 @@ subject:
 
 				assert.Equal(t, prototype.e, configured.e)
 				assert.Equal(t, prototype.ads, configured.ads)
+				assert.Equal(t, prototype.adfs, configured.adfs)
 				assert.Equal(t, prototype.sf, configured.sf)
 				assert.Equal(t, prototype.ttl, configured.ttl)
 				assert.NotEqual(t, prototype.IsFallbackOnErrorAllowed(), configured.IsFallbackOnErrorAllowed())
@@ -396,6 +408,7 @@ cache_ttl: 15s`),
 
 				assert.Equal(t, prototype.e, configured.e)
 				assert.Equal(t, prototype.ads, configured.ads)
+				assert.Equal(t, prototype.adfs, configured.adfs)
 				assert.Equal(t, prototype.sf, configured.sf)
 				assert.NotEqual(t, prototype.ttl, configured.ttl)
 				assert.Equal(t, 15*time.Second, configured.ttl)
@@ -414,6 +427,11 @@ identity_info_endpoint:
   method: POST
 authentication_data_source:
   - header: foo-header
+authentication_data_forward:
+  type: header
+  config:
+    name: X-Foo
+    schema: Bar
 subject:
   id: some_template
 cache_ttl: 5s
@@ -433,6 +451,7 @@ session_lifespan:
 
 				assert.Equal(t, prototype.e, configured.e)
 				assert.Equal(t, prototype.ads, configured.ads)
+				assert.Equal(t, prototype.adfs, configured.adfs)
 				assert.Equal(t, prototype.sf, configured.sf)
 				assert.Equal(t, prototype.ttl, configured.ttl)
 				assert.Equal(t, prototype.IsFallbackOnErrorAllowed(), configured.IsFallbackOnErrorAllowed())
@@ -624,7 +643,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 	}{
 		{
 			uc:            "with failing auth data source",
-			authenticator: &genericAuthenticator{id: "auth3"},
+			authenticator: &genericAuthenticator{id: "auth3", adfs: DefaultForwardStrategy{}},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.ContextMock,
 				_ *mocks.CacheMock,
@@ -652,8 +671,9 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 		{
 			uc: "with endpoint communication error (dns)",
 			authenticator: &genericAuthenticator{
-				id: "auth3",
-				e:  endpoint.Endpoint{URL: "http://heimdall.test.local"},
+				id:   "auth3",
+				e:    endpoint.Endpoint{URL: "http://heimdall.test.local"},
+				adfs: DefaultForwardStrategy{},
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.ContextMock,
@@ -682,8 +702,9 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 		{
 			uc: "with unexpected response code from server",
 			authenticator: &genericAuthenticator{
-				id: "auth3",
-				e:  endpoint.Endpoint{URL: srv.URL},
+				id:   "auth3",
+				e:    endpoint.Endpoint{URL: srv.URL},
+				adfs: DefaultForwardStrategy{},
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.ContextMock,
@@ -725,7 +746,8 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 						"Accept": "application/json",
 					},
 				},
-				sf: &SubjectInfo{IDFrom: "barfoo"},
+				sf:   &SubjectInfo{IDFrom: "barfoo"},
+				adfs: DefaultForwardStrategy{},
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.ContextMock,
@@ -767,7 +789,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 			},
 		},
 		{
-			uc: "successful execution without cache usage",
+			uc: "successful execution without cache usage using default auth data forward strategy",
 			authenticator: &genericAuthenticator{
 				e: endpoint.Endpoint{
 					URL:    srv.URL,
@@ -776,7 +798,8 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 						"Accept": "application/json",
 					},
 				},
-				sf: &SubjectInfo{IDFrom: "user_id"},
+				sf:   &SubjectInfo{IDFrom: "user_id"},
+				adfs: DefaultForwardStrategy{},
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.ContextMock,
@@ -825,8 +848,9 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 						"Accept": "application/json",
 					},
 				},
-				sf:  &SubjectInfo{IDFrom: "user_id"},
-				ttl: 5 * time.Second,
+				sf:   &SubjectInfo{IDFrom: "user_id"},
+				adfs: DefaultForwardStrategy{},
+				ttl:  5 * time.Second,
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.ContextMock,
@@ -880,8 +904,9 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 						"Accept": "application/json",
 					},
 				},
-				sf:  &SubjectInfo{IDFrom: "user_id"},
-				ttl: 5 * time.Second,
+				sf:   &SubjectInfo{IDFrom: "user_id"},
+				adfs: DefaultForwardStrategy{},
+				ttl:  5 * time.Second,
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.ContextMock,
@@ -918,8 +943,9 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 						"Accept": "application/json",
 					},
 				},
-				sf:  &SubjectInfo{IDFrom: "user_id"},
-				ttl: 5 * time.Second,
+				sf:   &SubjectInfo{IDFrom: "user_id"},
+				adfs: DefaultForwardStrategy{},
+				ttl:  5 * time.Second,
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.ContextMock,
@@ -974,6 +1000,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 					},
 				},
 				sf:                  &SubjectInfo{IDFrom: "user_id"},
+				adfs:                DefaultForwardStrategy{},
 				ttl:                 5 * time.Second,
 				sessionLifespanConf: &SessionLifespanConfig{ActiveField: "active"},
 			},
@@ -1031,6 +1058,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 					},
 				},
 				sf:                  &SubjectInfo{IDFrom: "user_id"},
+				adfs:                DefaultForwardStrategy{},
 				ttl:                 5 * time.Second,
 				sessionLifespanConf: &SessionLifespanConfig{IssuedAtField: "iat"},
 			},
@@ -1087,6 +1115,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 					},
 				},
 				sf:                  &SubjectInfo{IDFrom: "user_id"},
+				adfs:                DefaultForwardStrategy{},
 				ttl:                 30 * time.Second,
 				sessionLifespanConf: &SessionLifespanConfig{NotAfterField: "exp"},
 			},
@@ -1189,7 +1218,7 @@ func TestGenericAuthenticatorGetCacheTTL(t *testing.T) {
 	}{
 		{
 			uc:            "cache disabled",
-			authenticator: &genericAuthenticator{},
+			authenticator: &genericAuthenticator{adfs: DefaultForwardStrategy{}},
 			assert: func(t *testing.T, ttl time.Duration) {
 				t.Helper()
 
@@ -1198,7 +1227,7 @@ func TestGenericAuthenticatorGetCacheTTL(t *testing.T) {
 		},
 		{
 			uc:            "cache enabled, session lifespan not available",
-			authenticator: &genericAuthenticator{ttl: 5 * time.Minute},
+			authenticator: &genericAuthenticator{ttl: 5 * time.Minute, adfs: DefaultForwardStrategy{}},
 			assert: func(t *testing.T, ttl time.Duration) {
 				t.Helper()
 
@@ -1207,7 +1236,7 @@ func TestGenericAuthenticatorGetCacheTTL(t *testing.T) {
 		},
 		{
 			uc:              "cache enabled, session lifespan available, but not_after is not available",
-			authenticator:   &genericAuthenticator{ttl: 5 * time.Minute},
+			authenticator:   &genericAuthenticator{ttl: 5 * time.Minute, adfs: DefaultForwardStrategy{}},
 			sessionLifespan: &SessionLifespan{},
 			assert: func(t *testing.T, ttl time.Duration) {
 				t.Helper()
@@ -1218,7 +1247,7 @@ func TestGenericAuthenticatorGetCacheTTL(t *testing.T) {
 		{
 			uc: "cache enabled, session lifespan available with not_after set to a future date exceeding configured" +
 				" ttl",
-			authenticator:   &genericAuthenticator{ttl: 5 * time.Minute},
+			authenticator:   &genericAuthenticator{ttl: 5 * time.Minute, adfs: DefaultForwardStrategy{}},
 			sessionLifespan: &SessionLifespan{exp: time.Now().Add(24 * time.Hour)},
 			assert: func(t *testing.T, ttl time.Duration) {
 				t.Helper()
@@ -1229,7 +1258,7 @@ func TestGenericAuthenticatorGetCacheTTL(t *testing.T) {
 		{
 			uc: "cache enabled, session lifespan available with not_after set to a date so that the configured ttl " +
 				"would exceed the lifespan",
-			authenticator:   &genericAuthenticator{ttl: 5 * time.Minute},
+			authenticator:   &genericAuthenticator{ttl: 5 * time.Minute, adfs: DefaultForwardStrategy{}},
 			sessionLifespan: &SessionLifespan{exp: time.Now().Add(30 * time.Second)},
 			assert: func(t *testing.T, ttl time.Duration) {
 				t.Helper()
@@ -1239,7 +1268,7 @@ func TestGenericAuthenticatorGetCacheTTL(t *testing.T) {
 		},
 		{
 			uc:              "cache enabled, session lifespan available with not_after set to a date which disables ttl",
-			authenticator:   &genericAuthenticator{ttl: 5 * time.Minute},
+			authenticator:   &genericAuthenticator{ttl: 5 * time.Minute, adfs: DefaultForwardStrategy{}},
 			sessionLifespan: &SessionLifespan{exp: time.Now().Add(5 * time.Second)},
 			assert: func(t *testing.T, ttl time.Duration) {
 				t.Helper()
