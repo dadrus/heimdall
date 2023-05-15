@@ -14,7 +14,7 @@ type HeaderForwardStrategy struct {
 
 func (s *HeaderForwardStrategy) Apply(src extractors.AuthData, req *http.Request) {
 	var value string
-	if len(s.Schema) != 0 {
+	if len(s.Schema) == 0 {
 		value = src.Value()
 	} else {
 		value = fmt.Sprintf("%s %s", s.Schema, src.Value())
