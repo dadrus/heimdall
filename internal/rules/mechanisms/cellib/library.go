@@ -57,8 +57,10 @@ func (heimdallLibrary) CompileOptions() []cel.EnvOption {
 			cel.MemberOverload("Header",
 				[]*cel.Type{cel.ObjectType(requestType.TypeName()), cel.StringType}, cel.StringType,
 				cel.BinaryBinding(func(lhs ref.Val, rhs ref.Val) ref.Val {
+					// nolint: forcetypeassert
 					req := lhs.Value().(*heimdall.Request)
 
+					// nolint: forcetypeassert
 					return types.String(req.Header(rhs.Value().(string)))
 				}),
 			),
@@ -67,8 +69,10 @@ func (heimdallLibrary) CompileOptions() []cel.EnvOption {
 			cel.MemberOverload("Cookie",
 				[]*cel.Type{cel.ObjectType(requestType.TypeName()), cel.StringType}, cel.StringType,
 				cel.BinaryBinding(func(lhs ref.Val, rhs ref.Val) ref.Val {
+					// nolint: forcetypeassert
 					req := lhs.Value().(*heimdall.Request)
 
+					// nolint: forcetypeassert
 					return types.String(req.Cookie(rhs.Value().(string)))
 				}),
 			),
@@ -77,6 +81,7 @@ func (heimdallLibrary) CompileOptions() []cel.EnvOption {
 			cel.MemberOverload("String",
 				[]*cel.Type{cel.ObjectType(urlType.TypeName())}, cel.StringType,
 				cel.UnaryBinding(func(value ref.Val) ref.Val {
+					// nolint: forcetypeassert
 					return types.String(value.Value().(*url.URL).String())
 				}),
 			),
@@ -85,6 +90,7 @@ func (heimdallLibrary) CompileOptions() []cel.EnvOption {
 			cel.MemberOverload("Query",
 				[]*cel.Type{cel.ObjectType(urlType.TypeName())}, cel.DynType,
 				cel.UnaryBinding(func(value ref.Val) ref.Val {
+					// nolint: forcetypeassert
 					return types.NewDynamicMap(types.DefaultTypeAdapter, value.Value().(*url.URL).Query())
 				}),
 			),

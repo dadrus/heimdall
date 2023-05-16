@@ -301,7 +301,6 @@ expressions:
 					},
 					ClientIP: []string{"127.0.0.1", "10.10.10.10"},
 				})
-
 			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
