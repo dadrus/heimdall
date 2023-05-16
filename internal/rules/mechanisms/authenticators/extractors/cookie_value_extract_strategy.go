@@ -29,7 +29,7 @@ type CookieValueExtractStrategy struct {
 }
 
 func (es CookieValueExtractStrategy) GetAuthData(s heimdall.Context) (AuthData, error) {
-	if val := s.RequestCookie(es.Name); len(val) != 0 {
+	if val := s.Request().Cookie(es.Name); len(val) != 0 {
 		return &cookieAuthData{
 			name:  es.Name,
 			value: strings.TrimSpace(val),

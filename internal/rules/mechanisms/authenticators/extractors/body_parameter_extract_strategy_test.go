@@ -41,7 +41,10 @@ func TestExtractBodyParameter(t *testing.T) {
 			configureMocks: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
-				ctx.EXPECT().RequestHeader("Content-Type").Return("FooBar")
+				fnt := mocks.NewRequestFunctionsMock(t)
+				fnt.EXPECT().Header("Content-Type").Return("FooBar")
+
+				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: fnt})
 			},
 			assert: func(t *testing.T, err error, authData AuthData) {
 				t.Helper()
@@ -57,8 +60,11 @@ func TestExtractBodyParameter(t *testing.T) {
 			configureMocks: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
-				ctx.EXPECT().RequestHeader("Content-Type").Return("application/json")
-				ctx.EXPECT().RequestBody().Return([]byte("foo:?:bar"))
+				fnt := mocks.NewRequestFunctionsMock(t)
+				fnt.EXPECT().Header("Content-Type").Return("application/json")
+				fnt.EXPECT().Body().Return([]byte("foo:?:bar"))
+
+				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: fnt})
 			},
 			assert: func(t *testing.T, err error, authData AuthData) {
 				t.Helper()
@@ -74,9 +80,11 @@ func TestExtractBodyParameter(t *testing.T) {
 			configureMocks: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
-				ctx.EXPECT().RequestHeader("Content-Type").
-					Return("application/x-www-form-urlencoded")
-				ctx.EXPECT().RequestBody().Return([]byte("foo;"))
+				fnt := mocks.NewRequestFunctionsMock(t)
+				fnt.EXPECT().Header("Content-Type").Return("application/x-www-form-urlencoded")
+				fnt.EXPECT().Body().Return([]byte("foo;"))
+
+				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: fnt})
 			},
 			assert: func(t *testing.T, err error, authData AuthData) {
 				t.Helper()
@@ -92,9 +100,11 @@ func TestExtractBodyParameter(t *testing.T) {
 			configureMocks: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
-				ctx.EXPECT().RequestHeader("Content-Type").
-					Return("application/json")
-				ctx.EXPECT().RequestBody().Return([]byte(`{"bar": "foo"}`))
+				fnt := mocks.NewRequestFunctionsMock(t)
+				fnt.EXPECT().Header("Content-Type").Return("application/json")
+				fnt.EXPECT().Body().Return([]byte(`{"bar": "foo"}`))
+
+				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: fnt})
 			},
 			assert: func(t *testing.T, err error, authData AuthData) {
 				t.Helper()
@@ -110,9 +120,11 @@ func TestExtractBodyParameter(t *testing.T) {
 			configureMocks: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
-				ctx.EXPECT().RequestHeader("Content-Type").
-					Return("application/x-www-form-urlencoded")
-				ctx.EXPECT().RequestBody().Return([]byte(`foo=bar`))
+				fnt := mocks.NewRequestFunctionsMock(t)
+				fnt.EXPECT().Header("Content-Type").Return("application/x-www-form-urlencoded")
+				fnt.EXPECT().Body().Return([]byte(`foo=bar`))
+
+				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: fnt})
 			},
 			assert: func(t *testing.T, err error, authData AuthData) {
 				t.Helper()
@@ -128,9 +140,11 @@ func TestExtractBodyParameter(t *testing.T) {
 			configureMocks: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
-				ctx.EXPECT().RequestHeader("Content-Type").
-					Return("application/json")
-				ctx.EXPECT().RequestBody().Return([]byte(`{"foobar": ["foo", "bar"]}`))
+				fnt := mocks.NewRequestFunctionsMock(t)
+				fnt.EXPECT().Header("Content-Type").Return("application/json")
+				fnt.EXPECT().Body().Return([]byte(`{"foobar": ["foo", "bar"]}`))
+
+				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: fnt})
 			},
 			assert: func(t *testing.T, err error, authData AuthData) {
 				t.Helper()
@@ -146,9 +160,11 @@ func TestExtractBodyParameter(t *testing.T) {
 			configureMocks: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
-				ctx.EXPECT().RequestHeader("Content-Type").
-					Return("application/x-www-form-urlencoded")
-				ctx.EXPECT().RequestBody().Return([]byte(`foobar=foo&foobar=bar`))
+				fnt := mocks.NewRequestFunctionsMock(t)
+				fnt.EXPECT().Header("Content-Type").Return("application/x-www-form-urlencoded")
+				fnt.EXPECT().Body().Return([]byte(`foobar=foo&foobar=bar`))
+
+				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: fnt})
 			},
 			assert: func(t *testing.T, err error, authData AuthData) {
 				t.Helper()
@@ -164,9 +180,11 @@ func TestExtractBodyParameter(t *testing.T) {
 			configureMocks: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
-				ctx.EXPECT().RequestHeader("Content-Type").
-					Return("application/json")
-				ctx.EXPECT().RequestBody().Return([]byte(`{"foobar": [1]}`))
+				fnt := mocks.NewRequestFunctionsMock(t)
+				fnt.EXPECT().Header("Content-Type").Return("application/json")
+				fnt.EXPECT().Body().Return([]byte(`{"foobar": [1]}`))
+
+				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: fnt})
 			},
 			assert: func(t *testing.T, err error, authData AuthData) {
 				t.Helper()
@@ -182,9 +200,11 @@ func TestExtractBodyParameter(t *testing.T) {
 			configureMocks: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
-				ctx.EXPECT().RequestHeader("Content-Type").
-					Return("application/json")
-				ctx.EXPECT().RequestBody().Return([]byte(`{"foobar": { "foo": "bar" }}`))
+				fnt := mocks.NewRequestFunctionsMock(t)
+				fnt.EXPECT().Header("Content-Type").Return("application/json")
+				fnt.EXPECT().Body().Return([]byte(`{"foobar": { "foo": "bar" }}`))
+
+				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: fnt})
 			},
 			assert: func(t *testing.T, err error, authData AuthData) {
 				t.Helper()
@@ -200,9 +220,11 @@ func TestExtractBodyParameter(t *testing.T) {
 			configureMocks: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
-				ctx.EXPECT().RequestHeader("Content-Type").
-					Return("application/json")
-				ctx.EXPECT().RequestBody().Return([]byte(`{"foobar": "foo"}`))
+				fnt := mocks.NewRequestFunctionsMock(t)
+				fnt.EXPECT().Header("Content-Type").Return("application/json")
+				fnt.EXPECT().Body().Return([]byte(`{"foobar": "foo"}`))
+
+				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: fnt})
 			},
 			assert: func(t *testing.T, err error, authData AuthData) {
 				t.Helper()
@@ -217,9 +239,11 @@ func TestExtractBodyParameter(t *testing.T) {
 			configureMocks: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
-				ctx.EXPECT().RequestHeader("Content-Type").
-					Return("application/x-www-form-urlencoded")
-				ctx.EXPECT().RequestBody().Return([]byte(`foobar=foo`))
+				fnt := mocks.NewRequestFunctionsMock(t)
+				fnt.EXPECT().Header("Content-Type").Return("application/x-www-form-urlencoded")
+				fnt.EXPECT().Body().Return([]byte(`foobar=foo`))
+
+				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: fnt})
 			},
 			assert: func(t *testing.T, err error, authData AuthData) {
 				t.Helper()

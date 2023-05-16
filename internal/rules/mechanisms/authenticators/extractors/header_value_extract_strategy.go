@@ -31,7 +31,7 @@ type HeaderValueExtractStrategy struct {
 }
 
 func (es HeaderValueExtractStrategy) GetAuthData(s heimdall.Context) (AuthData, error) {
-	if val := s.RequestHeader(es.Name); len(val) != 0 {
+	if val := s.Request().Header(es.Name); len(val) != 0 {
 		if len(es.Schema) != 0 && !strings.HasPrefix(val, fmt.Sprintf("%s ", es.Schema)) {
 			return nil, errorchain.NewWithMessagef(heimdall.ErrArgument,
 				"'%s' header present, but without required '%s' schema", es.Name, es.Schema)

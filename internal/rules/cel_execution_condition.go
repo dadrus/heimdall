@@ -18,7 +18,7 @@ type celExecutionCondition struct {
 func (c *celExecutionCondition) CanExecute(ctx heimdall.Context, sub *subject.Subject) (bool, error) {
 	obj := map[string]any{
 		"Subject": sub,
-		"Request": cellib.WrapRequest(ctx),
+		"Request": ctx.Request(),
 	}
 
 	out, _, err := c.p.Eval(obj)
