@@ -102,48 +102,6 @@ func (_c *RequestFunctionsMock_Cookie_Call) RunAndReturn(run func(string) string
 	return _c
 }
 
-// FormParameter provides a mock function with given fields: key
-func (_m *RequestFunctionsMock) FormParameter(key string) string {
-	ret := _m.Called(key)
-
-	var r0 string
-	if rf, ok := ret.Get(0).(func(string) string); ok {
-		r0 = rf(key)
-	} else {
-		r0 = ret.Get(0).(string)
-	}
-
-	return r0
-}
-
-// RequestFunctionsMock_FormParameter_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FormParameter'
-type RequestFunctionsMock_FormParameter_Call struct {
-	*mock.Call
-}
-
-// FormParameter is a helper method to define mock.On call
-//   - key string
-func (_e *RequestFunctionsMock_Expecter) FormParameter(key interface{}) *RequestFunctionsMock_FormParameter_Call {
-	return &RequestFunctionsMock_FormParameter_Call{Call: _e.mock.On("FormParameter", key)}
-}
-
-func (_c *RequestFunctionsMock_FormParameter_Call) Run(run func(key string)) *RequestFunctionsMock_FormParameter_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(string))
-	})
-	return _c
-}
-
-func (_c *RequestFunctionsMock_FormParameter_Call) Return(_a0 string) *RequestFunctionsMock_FormParameter_Call {
-	_c.Call.Return(_a0)
-	return _c
-}
-
-func (_c *RequestFunctionsMock_FormParameter_Call) RunAndReturn(run func(string) string) *RequestFunctionsMock_FormParameter_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
 // Header provides a mock function with given fields: name
 func (_m *RequestFunctionsMock) Header(name string) string {
 	ret := _m.Called(name)
@@ -225,48 +183,6 @@ func (_c *RequestFunctionsMock_Headers_Call) Return(_a0 map[string]string) *Requ
 }
 
 func (_c *RequestFunctionsMock_Headers_Call) RunAndReturn(run func() map[string]string) *RequestFunctionsMock_Headers_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// QueryParameter provides a mock function with given fields: key
-func (_m *RequestFunctionsMock) QueryParameter(key string) string {
-	ret := _m.Called(key)
-
-	var r0 string
-	if rf, ok := ret.Get(0).(func(string) string); ok {
-		r0 = rf(key)
-	} else {
-		r0 = ret.Get(0).(string)
-	}
-
-	return r0
-}
-
-// RequestFunctionsMock_QueryParameter_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'QueryParameter'
-type RequestFunctionsMock_QueryParameter_Call struct {
-	*mock.Call
-}
-
-// QueryParameter is a helper method to define mock.On call
-//   - key string
-func (_e *RequestFunctionsMock_Expecter) QueryParameter(key interface{}) *RequestFunctionsMock_QueryParameter_Call {
-	return &RequestFunctionsMock_QueryParameter_Call{Call: _e.mock.On("QueryParameter", key)}
-}
-
-func (_c *RequestFunctionsMock_QueryParameter_Call) Run(run func(key string)) *RequestFunctionsMock_QueryParameter_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(string))
-	})
-	return _c
-}
-
-func (_c *RequestFunctionsMock_QueryParameter_Call) Return(_a0 string) *RequestFunctionsMock_QueryParameter_Call {
-	_c.Call.Return(_a0)
-	return _c
-}
-
-func (_c *RequestFunctionsMock_QueryParameter_Call) RunAndReturn(run func(string) string) *RequestFunctionsMock_QueryParameter_Call {
 	_c.Call.Return(run)
 	return _c
 }

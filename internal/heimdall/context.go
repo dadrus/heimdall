@@ -42,8 +42,6 @@ type RequestFunctions interface {
 	Header(name string) string
 	Cookie(name string) string
 	Headers() map[string]string
-	QueryParameter(key string) string
-	FormParameter(key string) string
 	Body() []byte
 }
 

@@ -114,23 +114,6 @@ func (s *RequestContext) Cookie(name string) string {
 	return ""
 }
 
-func (s *RequestContext) QueryParameter(name string) string {
-	return s.reqURL.Query().Get(name)
-}
-
-func (s *RequestContext) FormParameter(name string) string {
-	if s.reqHeaders["Content-Type"] != "application/x-www-form-urlencoded" {
-		return ""
-	}
-
-	values, err := url.ParseQuery(s.reqBody)
-	if err != nil {
-		return ""
-	}
-
-	return values.Get(name)
-}
-
 func (s *RequestContext) Body() []byte                            { return s.reqRawBody }
 func (s *RequestContext) AppContext() context.Context             { return s.ctx }
 func (s *RequestContext) SetPipelineError(err error)              { s.err = err }

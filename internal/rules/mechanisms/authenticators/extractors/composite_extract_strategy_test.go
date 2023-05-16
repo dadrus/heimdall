@@ -17,6 +17,7 @@
 package extractors
 
 import (
+	"net/url"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -64,10 +65,12 @@ func TestCompositeExtractHeaderValueWithSchema(t *testing.T) {
 
 	fnt := mocks.NewRequestFunctionsMock(t)
 	fnt.EXPECT().Header(headerName).Return(headerSchema + " " + actualValue)
-	fnt.EXPECT().QueryParameter(queryParamName).Return("")
 
 	ctx := mocks.NewContextMock(t)
-	ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: fnt})
+	ctx.EXPECT().Request().Return(&heimdall.Request{
+		RequestFunctions: fnt,
+		URL:              &url.URL{},
+	})
 
 	strategy := CompositeExtractStrategy{
 		QueryParameterExtractStrategy{Name: queryParamName},
