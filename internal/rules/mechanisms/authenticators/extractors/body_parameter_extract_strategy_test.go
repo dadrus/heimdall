@@ -33,7 +33,7 @@ func TestExtractBodyParameter(t *testing.T) {
 		uc             string
 		parameterName  string
 		configureMocks func(t *testing.T, ctx *mocks.ContextMock)
-		assert         func(t *testing.T, err error, authData AuthData)
+		assert         func(t *testing.T, err error, authData string)
 	}{
 		{
 			uc:            "unsupported content type",
@@ -46,7 +46,7 @@ func TestExtractBodyParameter(t *testing.T) {
 
 				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: fnt})
 			},
-			assert: func(t *testing.T, err error, authData AuthData) {
+			assert: func(t *testing.T, err error, authData string) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -66,7 +66,7 @@ func TestExtractBodyParameter(t *testing.T) {
 
 				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: fnt})
 			},
-			assert: func(t *testing.T, err error, authData AuthData) {
+			assert: func(t *testing.T, err error, authData string) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -86,7 +86,7 @@ func TestExtractBodyParameter(t *testing.T) {
 
 				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: fnt})
 			},
-			assert: func(t *testing.T, err error, authData AuthData) {
+			assert: func(t *testing.T, err error, authData string) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -106,7 +106,7 @@ func TestExtractBodyParameter(t *testing.T) {
 
 				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: fnt})
 			},
-			assert: func(t *testing.T, err error, authData AuthData) {
+			assert: func(t *testing.T, err error, authData string) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -126,7 +126,7 @@ func TestExtractBodyParameter(t *testing.T) {
 
 				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: fnt})
 			},
-			assert: func(t *testing.T, err error, authData AuthData) {
+			assert: func(t *testing.T, err error, authData string) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -146,7 +146,7 @@ func TestExtractBodyParameter(t *testing.T) {
 
 				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: fnt})
 			},
-			assert: func(t *testing.T, err error, authData AuthData) {
+			assert: func(t *testing.T, err error, authData string) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -166,7 +166,7 @@ func TestExtractBodyParameter(t *testing.T) {
 
 				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: fnt})
 			},
-			assert: func(t *testing.T, err error, authData AuthData) {
+			assert: func(t *testing.T, err error, authData string) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -186,7 +186,7 @@ func TestExtractBodyParameter(t *testing.T) {
 
 				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: fnt})
 			},
-			assert: func(t *testing.T, err error, authData AuthData) {
+			assert: func(t *testing.T, err error, authData string) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -206,7 +206,7 @@ func TestExtractBodyParameter(t *testing.T) {
 
 				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: fnt})
 			},
-			assert: func(t *testing.T, err error, authData AuthData) {
+			assert: func(t *testing.T, err error, authData string) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -226,11 +226,11 @@ func TestExtractBodyParameter(t *testing.T) {
 
 				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: fnt})
 			},
-			assert: func(t *testing.T, err error, authData AuthData) {
+			assert: func(t *testing.T, err error, authData string) {
 				t.Helper()
 
 				require.NoError(t, err)
-				assert.Equal(t, "foo", authData.Value())
+				assert.Equal(t, "foo", authData)
 			},
 		},
 		{
@@ -245,11 +245,11 @@ func TestExtractBodyParameter(t *testing.T) {
 
 				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: fnt})
 			},
-			assert: func(t *testing.T, err error, authData AuthData) {
+			assert: func(t *testing.T, err error, authData string) {
 				t.Helper()
 
 				require.NoError(t, err)
-				assert.Equal(t, "foo", authData.Value())
+				assert.Equal(t, "foo", authData)
 			},
 		},
 	} {

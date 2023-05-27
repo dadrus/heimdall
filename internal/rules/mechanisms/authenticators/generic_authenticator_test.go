@@ -19,6 +19,7 @@ package authenticators
 import (
 	"context"
 	"errors"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
@@ -26,6 +27,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/cache"
@@ -36,6 +38,7 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/extractors"
 	mocks2 "github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/extractors/mocks"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
@@ -119,6 +122,8 @@ identity_info_endpoint:
   method: GET
 authentication_data_source:
   - header: foo-header
+payload: |
+  { "foo": {{ quote .AuthenticationData }} }
 subject:
   id: some_template`),
 			assertError: func(t *testing.T, err error, auth *genericAuthenticator) {
@@ -133,6 +138,9 @@ subject:
 				assert.True(t, ok)
 				assert.Len(t, ces, 1)
 				assert.Contains(t, ces, &extractors.HeaderValueExtractStrategy{Name: "foo-header"})
+				assert.NotNil(t, auth.payload)
+				assert.Empty(t, auth.fwdCookies)
+				assert.Empty(t, auth.fwdHeaders)
 				assert.Equal(t, &SubjectInfo{IDFrom: "some_template"}, auth.sf)
 				assert.Equal(t, time.Duration(0), auth.ttl)
 				assert.False(t, auth.IsFallbackOnErrorAllowed())
@@ -164,6 +172,9 @@ cache_ttl: 5s`),
 				assert.True(t, ok)
 				assert.Len(t, ces, 1)
 				assert.Contains(t, ces, &extractors.CookieValueExtractStrategy{Name: "foo-cookie"})
+				assert.Nil(t, auth.payload)
+				assert.Empty(t, auth.fwdCookies)
+				assert.Empty(t, auth.fwdHeaders)
 				assert.Equal(t, &SubjectInfo{IDFrom: "some_template"}, auth.sf)
 				assert.Equal(t, 5*time.Second, auth.ttl)
 				assert.False(t, auth.IsFallbackOnErrorAllowed())
@@ -172,7 +183,7 @@ cache_ttl: 5s`),
 			},
 		},
 		{
-			uc: "with valid configuration enabling fallback on errors",
+			uc: "with valid configuration enabling fallback on errors and header forwarding",
 			id: "auth1",
 			config: []byte(`
 identity_info_endpoint:
@@ -180,6 +191,8 @@ identity_info_endpoint:
   method: POST
 authentication_data_source:
   - cookie: foo-cookie
+forward_cookies:
+  - foo-cookie
 subject:
   id: some_template
 allow_fallback_on_error: true`),
@@ -195,6 +208,10 @@ allow_fallback_on_error: true`),
 				assert.True(t, ok)
 				assert.Len(t, ces, 1)
 				assert.Contains(t, ces, &extractors.CookieValueExtractStrategy{Name: "foo-cookie"})
+				assert.Nil(t, auth.payload)
+				assert.Len(t, auth.fwdCookies, 1)
+				assert.Contains(t, auth.fwdCookies, "foo-cookie")
+				assert.Empty(t, auth.fwdHeaders)
 				assert.Equal(t, &SubjectInfo{IDFrom: "some_template"}, auth.sf)
 				assert.Equal(t, time.Duration(0), auth.ttl)
 				assert.True(t, auth.IsFallbackOnErrorAllowed())
@@ -203,7 +220,7 @@ allow_fallback_on_error: true`),
 			},
 		},
 		{
-			uc: "with session lifespan config",
+			uc: "with session lifespan config and forward header",
 			id: "auth1",
 			config: []byte(`
 identity_info_endpoint:
@@ -211,6 +228,8 @@ identity_info_endpoint:
   method: PATCH
 authentication_data_source:
   - cookie: foo-cookie
+forward_headers:
+  - X-My-Header
 subject:
   id: some_template
 session_lifespan:
@@ -232,6 +251,10 @@ session_lifespan:
 				assert.True(t, ok)
 				assert.Len(t, ces, 1)
 				assert.Contains(t, ces, &extractors.CookieValueExtractStrategy{Name: "foo-cookie"})
+				assert.Nil(t, auth.payload)
+				assert.Len(t, auth.fwdHeaders, 1)
+				assert.Contains(t, auth.fwdHeaders, "X-My-Header")
+				assert.Empty(t, auth.fwdCookies)
 				assert.Equal(t, &SubjectInfo{IDFrom: "some_template"}, auth.sf)
 				assert.Equal(t, time.Duration(0), auth.ttl)
 				assert.False(t, auth.IsFallbackOnErrorAllowed())
@@ -279,6 +302,12 @@ identity_info_endpoint:
   method: POST
 authentication_data_source:
   - header: foo-header
+forward_headers:
+  - X-My-Header
+forward_cookies:
+  - foo-cookie
+payload: |
+  foo=bar
 subject:
   id: some_template
 allow_fallback_on_error: true`),
@@ -323,6 +352,12 @@ identity_info_endpoint:
   method: POST
 authentication_data_source:
   - header: foo-header
+forward_headers:
+  - X-My-Header
+forward_cookies:
+  - foo-cookie
+payload: |
+  foo=bar
 subject:
   id: some_template`),
 			config: []byte(`cache_ttl: 5s`),
@@ -335,6 +370,9 @@ subject:
 
 				assert.Equal(t, prototype.e, configured.e)
 				assert.Equal(t, prototype.ads, configured.ads)
+				assert.Equal(t, prototype.payload, configured.payload)
+				assert.Equal(t, prototype.fwdCookies, configured.fwdCookies)
+				assert.Equal(t, prototype.fwdHeaders, configured.fwdHeaders)
 				assert.Equal(t, prototype.sf, configured.sf)
 				assert.Equal(t, time.Duration(0), prototype.ttl)
 				assert.NotEqual(t, prototype.ttl, configured.ttl)
@@ -365,6 +403,9 @@ subject:
 
 				assert.Equal(t, prototype.e, configured.e)
 				assert.Equal(t, prototype.ads, configured.ads)
+				assert.Equal(t, prototype.payload, configured.payload)
+				assert.Equal(t, prototype.fwdCookies, configured.fwdCookies)
+				assert.Equal(t, prototype.fwdHeaders, configured.fwdHeaders)
 				assert.Equal(t, prototype.sf, configured.sf)
 				assert.Equal(t, prototype.ttl, configured.ttl)
 				assert.NotEqual(t, prototype.IsFallbackOnErrorAllowed(), configured.IsFallbackOnErrorAllowed())
@@ -382,6 +423,10 @@ identity_info_endpoint:
   method: POST
 authentication_data_source:
   - header: foo-header
+forward_headers:
+  - X-My-Header
+payload: |
+  foo=bar
 subject:
   id: some_template
 cache_ttl: 5s`),
@@ -396,6 +441,9 @@ cache_ttl: 15s`),
 
 				assert.Equal(t, prototype.e, configured.e)
 				assert.Equal(t, prototype.ads, configured.ads)
+				assert.Equal(t, prototype.payload, configured.payload)
+				assert.Equal(t, prototype.fwdCookies, configured.fwdCookies)
+				assert.Equal(t, prototype.fwdHeaders, configured.fwdHeaders)
 				assert.Equal(t, prototype.sf, configured.sf)
 				assert.NotEqual(t, prototype.ttl, configured.ttl)
 				assert.Equal(t, 15*time.Second, configured.ttl)
@@ -414,6 +462,10 @@ identity_info_endpoint:
   method: POST
 authentication_data_source:
   - header: foo-header
+forward_cookies:
+  - foo-cookie
+payload: |
+  foo=bar
 subject:
   id: some_template
 cache_ttl: 5s
@@ -433,6 +485,9 @@ session_lifespan:
 
 				assert.Equal(t, prototype.e, configured.e)
 				assert.Equal(t, prototype.ads, configured.ads)
+				assert.Equal(t, prototype.payload, configured.payload)
+				assert.Equal(t, prototype.fwdCookies, configured.fwdCookies)
+				assert.Equal(t, prototype.fwdHeaders, configured.fwdHeaders)
 				assert.Equal(t, prototype.sf, configured.sf)
 				assert.Equal(t, prototype.ttl, configured.ttl)
 				assert.Equal(t, prototype.IsFallbackOnErrorAllowed(), configured.IsFallbackOnErrorAllowed())
@@ -543,6 +598,78 @@ session_lifespan:
 				assert.Contains(t, err.Error(), "failed to parse")
 			},
 		},
+		{
+			uc: "reconfiguration of payload not possible",
+			prototypeConfig: []byte(`
+identity_info_endpoint:
+  url: http://test.com
+  method: POST
+authentication_data_source:
+  - header: foo-header
+subject:
+  id: some_template`),
+			config: []byte(`
+payload: |
+  foo=bar
+`),
+			assert: func(t *testing.T, err error, prototype *genericAuthenticator,
+				configured *genericAuthenticator,
+			) {
+				t.Helper()
+
+				require.Error(t, err)
+				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				assert.Contains(t, err.Error(), "failed to parse")
+			},
+		},
+		{
+			uc: "reconfiguration of header to be forwarded not possible",
+			prototypeConfig: []byte(`
+identity_info_endpoint:
+  url: http://test.com
+  method: POST
+authentication_data_source:
+  - header: foo-header
+subject:
+  id: some_template`),
+			config: []byte(`
+forward_headers:
+  - foo-bar
+`),
+			assert: func(t *testing.T, err error, prototype *genericAuthenticator,
+				configured *genericAuthenticator,
+			) {
+				t.Helper()
+
+				require.Error(t, err)
+				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				assert.Contains(t, err.Error(), "failed to parse")
+			},
+		},
+		{
+			uc: "reconfiguration of cookies to be forwarded not possible",
+			prototypeConfig: []byte(`
+identity_info_endpoint:
+  url: http://test.com
+  method: POST
+authentication_data_source:
+  - header: foo-header
+subject:
+  id: some_template`),
+			config: []byte(`
+forward_cookies:
+  - foo-bar
+`),
+			assert: func(t *testing.T, err error, prototype *genericAuthenticator,
+				configured *genericAuthenticator,
+			) {
+				t.Helper()
+
+				require.Error(t, err)
+				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				assert.Contains(t, err.Error(), "failed to parse")
+			},
+		},
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
 			pc, err := testsupport.DecodeTestConfig(tc.prototypeConfig)
@@ -633,7 +760,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				ads.EXPECT().GetAuthData(ctx).Return(nil, heimdall.ErrCommunicationTimeout)
+				ads.EXPECT().GetAuthData(ctx).Return("", heimdall.ErrCommunicationTimeout)
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
@@ -643,6 +770,72 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrAuthentication)
 				assert.Contains(t, err.Error(), "failed to get authentication data")
+
+				var identifier HandlerIdentifier
+				require.True(t, errors.As(err, &identifier))
+				assert.Equal(t, "auth3", identifier.HandlerID())
+			},
+		},
+		{
+			uc: "with error while rendering payload",
+			authenticator: &genericAuthenticator{
+				id: "auth3",
+				e:  endpoint.Endpoint{URL: srv.URL},
+				payload: func() template.Template {
+					tpl, err := template.New("foo={{ len .Foobar }}")
+					require.NoError(t, err)
+
+					return tpl
+				}(),
+			},
+			configureMocks: func(t *testing.T,
+				ctx *heimdallmocks.ContextMock,
+				_ *mocks.CacheMock,
+				ads *mocks2.AuthDataExtractStrategyMock,
+				_ *genericAuthenticator,
+			) {
+				t.Helper()
+
+				ads.EXPECT().GetAuthData(ctx).Return("test", nil)
+			},
+			assert: func(t *testing.T, err error, sub *subject.Subject) {
+				t.Helper()
+
+				assert.False(t, endpointCalled)
+
+				require.Error(t, err)
+				assert.ErrorIs(t, err, heimdall.ErrInternal)
+				assert.Contains(t, err.Error(), "failed to render payload")
+
+				var identifier HandlerIdentifier
+				require.True(t, errors.As(err, &identifier))
+				assert.Equal(t, "auth3", identifier.HandlerID())
+			},
+		},
+		{
+			uc: "with error while rendering query parameter",
+			authenticator: &genericAuthenticator{
+				id: "auth3",
+				e:  endpoint.Endpoint{URL: srv.URL + "?foo={{ urlenc foobar }}"},
+			},
+			configureMocks: func(t *testing.T,
+				ctx *heimdallmocks.ContextMock,
+				_ *mocks.CacheMock,
+				ads *mocks2.AuthDataExtractStrategyMock,
+				_ *genericAuthenticator,
+			) {
+				t.Helper()
+
+				ads.EXPECT().GetAuthData(ctx).Return("test", nil)
+			},
+			assert: func(t *testing.T, err error, sub *subject.Subject) {
+				t.Helper()
+
+				assert.False(t, endpointCalled)
+
+				require.Error(t, err)
+				assert.ErrorIs(t, err, heimdall.ErrInternal)
+				assert.Contains(t, err.Error(), "failed to render URL")
 
 				var identifier HandlerIdentifier
 				require.True(t, errors.As(err, &identifier))
@@ -663,7 +856,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				ads.EXPECT().GetAuthData(ctx).Return(dummyAuthData{Val: "session_token"}, nil)
+				ads.EXPECT().GetAuthData(ctx).Return("session_token", nil)
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
@@ -693,7 +886,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				ads.EXPECT().GetAuthData(ctx).Return(dummyAuthData{Val: "session_token"}, nil)
+				ads.EXPECT().GetAuthData(ctx).Return("session_token", nil)
 			},
 			instructServer: func(t *testing.T) {
 				t.Helper()
@@ -722,7 +915,8 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 					URL:    srv.URL,
 					Method: http.MethodGet,
 					Headers: map[string]string{
-						"Accept": "application/json",
+						"Accept":      "application/json",
+						"X-User-Data": "{{ .AuthenticationData }}",
 					},
 				},
 				sf: &SubjectInfo{IDFrom: "barfoo"},
@@ -735,7 +929,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				ads.EXPECT().GetAuthData(ctx).Return(dummyAuthData{Val: "session_token"}, nil)
+				ads.EXPECT().GetAuthData(ctx).Return("session_token", nil)
 			},
 			instructServer: func(t *testing.T) {
 				t.Helper()
@@ -745,7 +939,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 
 					assert.Equal(t, http.MethodGet, req.Method)
 					assert.Equal(t, "application/json", req.Header.Get("Accept"))
-					assert.Equal(t, "session_token", req.Header.Get("Dummy"))
+					assert.Equal(t, "session_token", req.Header.Get("X-User-Data"))
 				}
 
 				responseCode = http.StatusOK
@@ -767,16 +961,23 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 			},
 		},
 		{
-			uc: "successful execution without cache usage",
+			uc: "successful execution without cache usage, forwarding auth data in payload, header & query",
 			authenticator: &genericAuthenticator{
 				e: endpoint.Endpoint{
-					URL:    srv.URL,
+					URL:    srv.URL + "?foo={{ .AuthenticationData }}",
 					Method: http.MethodGet,
 					Headers: map[string]string{
-						"Accept": "application/json",
+						"Accept":      "application/json",
+						"X-Auth-Data": "{{ .AuthenticationData }}",
 					},
 				},
 				sf: &SubjectInfo{IDFrom: "user_id"},
+				payload: func() template.Template {
+					tpl, err := template.New("foo={{ .AuthenticationData }}")
+					require.NoError(t, err)
+
+					return tpl
+				}(),
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.ContextMock,
@@ -786,7 +987,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				ads.EXPECT().GetAuthData(ctx).Return(dummyAuthData{Val: "session_token"}, nil)
+				ads.EXPECT().GetAuthData(ctx).Return("session_token", nil)
 			},
 			instructServer: func(t *testing.T) {
 				t.Helper()
@@ -796,7 +997,13 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 
 					assert.Equal(t, http.MethodGet, req.Method)
 					assert.Equal(t, "application/json", req.Header.Get("Accept"))
-					assert.Equal(t, "session_token", req.Header.Get("Dummy"))
+					assert.Equal(t, "session_token", req.Header.Get("X-Auth-Data"))
+
+					assert.Equal(t, "session_token", req.URL.Query().Get("foo"))
+
+					res, err := io.ReadAll(req.Body)
+					require.NoError(t, err)
+					assert.Equal(t, "foo=session_token", string(res))
 				}
 
 				responseCode = http.StatusOK
@@ -822,7 +1029,8 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 					URL:    srv.URL,
 					Method: http.MethodGet,
 					Headers: map[string]string{
-						"Accept": "application/json",
+						"Accept":      "application/json",
+						"X-Auth-Data": "{{ .AuthenticationData }}",
 					},
 				},
 				sf:  &SubjectInfo{IDFrom: "user_id"},
@@ -838,7 +1046,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 
 				cacheKey := auth.calculateCacheKey("session_token")
 
-				ads.EXPECT().GetAuthData(ctx).Return(dummyAuthData{Val: "session_token"}, nil)
+				ads.EXPECT().GetAuthData(ctx).Return("session_token", nil)
 				cch.EXPECT().Get(cacheKey).Return(time.Duration(10))
 				cch.EXPECT().Delete(cacheKey)
 				cch.EXPECT().Set(cacheKey, []byte(`{ "user_id": "barbar" }`), auth.ttl)
@@ -851,7 +1059,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 
 					assert.Equal(t, http.MethodGet, req.Method)
 					assert.Equal(t, "application/json", req.Header.Get("Accept"))
-					assert.Equal(t, "session_token", req.Header.Get("Dummy"))
+					assert.Equal(t, "session_token", req.Header.Get("X-Auth-Data"))
 				}
 
 				responseCode = http.StatusOK
@@ -877,7 +1085,8 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 					URL:    srv.URL,
 					Method: http.MethodGet,
 					Headers: map[string]string{
-						"Accept": "application/json",
+						"Accept":      "application/json",
+						"X-Auth-Data": "{{ .AuthenticationData }}",
 					},
 				},
 				sf:  &SubjectInfo{IDFrom: "user_id"},
@@ -891,10 +1100,8 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				cacheKey := auth.calculateCacheKey("session_token")
-
-				ads.EXPECT().GetAuthData(ctx).Return(dummyAuthData{Val: "session_token"}, nil)
-				cch.EXPECT().Get(cacheKey).Return([]byte(`{ "user_id": "barbar" }`))
+				ads.EXPECT().GetAuthData(ctx).Return("session_token", nil)
+				cch.EXPECT().Get(mock.Anything).Return([]byte(`{ "user_id": "barbar" }`))
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
@@ -909,7 +1116,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 			},
 		},
 		{
-			uc: "successful execution with negative cache hit",
+			uc: "successful execution with negative cache hit and header forwarding",
 			authenticator: &genericAuthenticator{
 				e: endpoint.Endpoint{
 					URL:    srv.URL,
@@ -918,8 +1125,9 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 						"Accept": "application/json",
 					},
 				},
-				sf:  &SubjectInfo{IDFrom: "user_id"},
-				ttl: 5 * time.Second,
+				sf:         &SubjectInfo{IDFrom: "user_id"},
+				fwdHeaders: []string{"X-Original-Auth"},
+				ttl:        5 * time.Second,
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.ContextMock,
@@ -929,9 +1137,14 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 			) {
 				t.Helper()
 
+				reqFuns := heimdallmocks.NewRequestFunctionsMock(t)
+				reqFuns.EXPECT().Header("X-Original-Auth").Return("orig-auth")
+
+				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: reqFuns})
+
 				cacheKey := auth.calculateCacheKey("session_token")
 
-				ads.EXPECT().GetAuthData(ctx).Return(dummyAuthData{Val: "session_token"}, nil)
+				ads.EXPECT().GetAuthData(ctx).Return("session_token", nil)
 				cch.EXPECT().Get(cacheKey).Return(nil)
 				cch.EXPECT().Set(cacheKey, []byte(`{ "user_id": "barbar" }`), auth.ttl)
 			},
@@ -943,7 +1156,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 
 					assert.Equal(t, http.MethodGet, req.Method)
 					assert.Equal(t, "application/json", req.Header.Get("Accept"))
-					assert.Equal(t, "session_token", req.Header.Get("Dummy"))
+					assert.Equal(t, "orig-auth", req.Header.Get("X-Original-Auth"))
 				}
 
 				responseCode = http.StatusOK
@@ -963,7 +1176,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 			},
 		},
 		{
-			uc: "execution with not active session",
+			uc: "execution with not active session and cookie forwarding",
 			authenticator: &genericAuthenticator{
 				id: "auth3",
 				e: endpoint.Endpoint{
@@ -974,6 +1187,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 					},
 				},
 				sf:                  &SubjectInfo{IDFrom: "user_id"},
+				fwdCookies:          []string{"original-auth"},
 				ttl:                 5 * time.Second,
 				sessionLifespanConf: &SessionLifespanConfig{ActiveField: "active"},
 			},
@@ -985,9 +1199,14 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 			) {
 				t.Helper()
 
+				reqFuns := heimdallmocks.NewRequestFunctionsMock(t)
+				reqFuns.EXPECT().Cookie("original-auth").Return("orig-auth")
+
+				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: reqFuns})
+
 				cacheKey := auth.calculateCacheKey("session_token")
 
-				ads.EXPECT().GetAuthData(ctx).Return(dummyAuthData{Val: "session_token"}, nil)
+				ads.EXPECT().GetAuthData(ctx).Return("session_token", nil)
 				cch.EXPECT().Get(cacheKey).Return(nil)
 			},
 			instructServer: func(t *testing.T) {
@@ -998,7 +1217,10 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 
 					assert.Equal(t, http.MethodGet, req.Method)
 					assert.Equal(t, "application/json", req.Header.Get("Accept"))
-					assert.Equal(t, "session_token", req.Header.Get("Dummy"))
+
+					cookie, err := req.Cookie("original-auth")
+					require.NoError(t, err)
+					assert.Equal(t, "orig-auth", cookie.Value)
 				}
 
 				responseCode = http.StatusOK
@@ -1024,7 +1246,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 			authenticator: &genericAuthenticator{
 				id: "auth3",
 				e: endpoint.Endpoint{
-					URL:    srv.URL,
+					URL:    srv.URL + "?foo={{ .AuthenticationData }}",
 					Method: http.MethodGet,
 					Headers: map[string]string{
 						"Accept": "application/json",
@@ -1044,7 +1266,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 
 				cacheKey := auth.calculateCacheKey("session_token")
 
-				ads.EXPECT().GetAuthData(ctx).Return(dummyAuthData{Val: "session_token"}, nil)
+				ads.EXPECT().GetAuthData(ctx).Return("session_token", nil)
 				cch.EXPECT().Get(cacheKey).Return(nil)
 			},
 			instructServer: func(t *testing.T) {
@@ -1055,7 +1277,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 
 					assert.Equal(t, http.MethodGet, req.Method)
 					assert.Equal(t, "application/json", req.Header.Get("Accept"))
-					assert.Equal(t, "session_token", req.Header.Get("Dummy"))
+					assert.Equal(t, "session_token", req.URL.Query().Get("foo"))
 				}
 
 				responseCode = http.StatusOK
@@ -1086,6 +1308,12 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 						"Accept": "application/json",
 					},
 				},
+				payload: func() template.Template {
+					tpl, err := template.New("foo={{ .AuthenticationData }}")
+					require.NoError(t, err)
+
+					return tpl
+				}(),
 				sf:                  &SubjectInfo{IDFrom: "user_id"},
 				ttl:                 30 * time.Second,
 				sessionLifespanConf: &SessionLifespanConfig{NotAfterField: "exp"},
@@ -1101,7 +1329,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				exp := strconv.FormatInt(time.Now().Add(15*time.Second).Unix(), 10)
 				cacheKey := auth.calculateCacheKey("session_token")
 
-				ads.EXPECT().GetAuthData(ctx).Return(dummyAuthData{Val: "session_token"}, nil)
+				ads.EXPECT().GetAuthData(ctx).Return("session_token", nil)
 				cch.EXPECT().Get(cacheKey).Return(nil)
 				cch.EXPECT().Set(cacheKey, []byte(`{ "user_id": "barbar", "exp": `+exp+` }`), 5*time.Second)
 			},
@@ -1115,7 +1343,10 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 
 					assert.Equal(t, http.MethodGet, req.Method)
 					assert.Equal(t, "application/json", req.Header.Get("Accept"))
-					assert.Equal(t, "session_token", req.Header.Get("Dummy"))
+
+					res, err := io.ReadAll(req.Body)
+					require.NoError(t, err)
+					assert.Equal(t, "foo=session_token", string(res))
 				}
 
 				responseCode = http.StatusOK

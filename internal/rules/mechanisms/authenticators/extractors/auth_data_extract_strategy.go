@@ -17,18 +17,11 @@
 package extractors
 
 import (
-	"net/http"
-
 	"github.com/dadrus/heimdall/internal/heimdall"
 )
-
-type AuthData interface {
-	ApplyTo(req *http.Request)
-	Value() string
-}
 
 //go:generate mockery --name AuthDataExtractStrategy --structname AuthDataExtractStrategyMock
 
 type AuthDataExtractStrategy interface {
-	GetAuthData(ctx heimdall.Context) (AuthData, error)
+	GetAuthData(ctx heimdall.Context) (string, error)
 }

@@ -841,6 +841,26 @@
             "authentication_data_source": {
               "$ref": "#/definitions/authenticationDataSource"
             },
+            "forward_headers": {
+              "description": "The HTTP header names from the request to be send to the contextualizer endpoint",
+              "type": "array",
+              "additionalItems": false,
+              "items": {
+                "type": "string"
+              }
+            },
+            "forward_cookies": {
+              "description": "The HTTP cookie names from the request to be send to the contextualizer endpoint",
+              "type": "array",
+              "additionalItems": false,
+              "items": {
+                "type": "string"
+              }
+            },
+            "payload": {
+              "description": "The Go template with access to heimdall. Request and Subject used for request's HTTP body generation",
+              "type": "string"
+            },
             "subject": {
               "$ref": "#/definitions/subjectConfiguration"
             },

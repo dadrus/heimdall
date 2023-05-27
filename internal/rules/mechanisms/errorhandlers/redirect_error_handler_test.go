@@ -393,7 +393,7 @@ when:
 		{
 			uc: "responsible for error but with template rendering error",
 			config: []byte(`
-to: http://foo.bar={{ .foobar }}
+to: http://foo.bar={{ len .foobar }}
 when:
   - error:
       - type: authentication_error

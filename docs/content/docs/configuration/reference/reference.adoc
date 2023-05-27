@@ -153,6 +153,8 @@ rules:
             give_up_after: 2s
         authentication_data_source:
           - cookie: ory_kratos_session
+        forward_cookies:
+          - ory_kratos_session
         subject:
           attributes: "@this"
           id: "identity.id"
@@ -205,7 +207,7 @@ rules:
           scopes:
             - foo
           allowed_algorithms:
-            - RSA
+            - RS256
           issuers:
             - bla
         subject:

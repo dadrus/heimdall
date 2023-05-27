@@ -17,12 +17,9 @@
 package extractors
 
 import (
-	"context"
-	"net/http"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/heimdall/mocks"
@@ -35,7 +32,7 @@ func TestExtractHeaderValue(t *testing.T) {
 		uc             string
 		strategy       HeaderValueExtractStrategy
 		configureMocks func(t *testing.T, ctx *mocks.ContextMock)
-		assert         func(t *testing.T, err error, authData AuthData)
+		assert         func(t *testing.T, err error, authData string)
 	}{
 		{
 			uc:       "header is present, schema is irrelevant",
@@ -48,11 +45,11 @@ func TestExtractHeaderValue(t *testing.T) {
 
 				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: fnt})
 			},
-			assert: func(t *testing.T, err error, authData AuthData) {
+			assert: func(t *testing.T, err error, authData string) {
 				t.Helper()
 
 				assert.NoError(t, err)
-				assert.Equal(t, "TestValue", authData.Value())
+				assert.Equal(t, "TestValue", authData)
 			},
 		},
 		{
@@ -66,7 +63,7 @@ func TestExtractHeaderValue(t *testing.T) {
 
 				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: fnt})
 			},
-			assert: func(t *testing.T, err error, authData AuthData) {
+			assert: func(t *testing.T, err error, authData string) {
 				t.Helper()
 
 				assert.Error(t, err)
@@ -85,7 +82,7 @@ func TestExtractHeaderValue(t *testing.T) {
 
 				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: fnt})
 			},
-			assert: func(t *testing.T, err error, authData AuthData) {
+			assert: func(t *testing.T, err error, authData string) {
 				t.Helper()
 
 				assert.Error(t, err)
@@ -104,11 +101,11 @@ func TestExtractHeaderValue(t *testing.T) {
 
 				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: fnt})
 			},
-			assert: func(t *testing.T, err error, authData AuthData) {
+			assert: func(t *testing.T, err error, authData string) {
 				t.Helper()
 
 				assert.NoError(t, err)
-				assert.Equal(t, "TestValue", authData.Value())
+				assert.Equal(t, "TestValue", authData)
 			},
 		},
 		{
@@ -122,7 +119,7 @@ func TestExtractHeaderValue(t *testing.T) {
 
 				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: fnt})
 			},
-			assert: func(t *testing.T, err error, authData AuthData) {
+			assert: func(t *testing.T, err error, authData string) {
 				t.Helper()
 
 				assert.Error(t, err)
@@ -143,23 +140,4 @@ func TestExtractHeaderValue(t *testing.T) {
 			tc.assert(t, err, authData)
 		})
 	}
-}
-
-func TestApplyHeaderAuthDataToRequest(t *testing.T) {
-	t.Parallel()
-
-	// GIVEN
-	headerName := "X-Test-Header"
-	rawHeaderValue := "Foo Bar"
-	headerValueWithoutSchema := "Bar"
-	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, "foobar.local", nil)
-	require.NoError(t, err)
-
-	authData := &headerAuthData{name: headerName, rawValue: rawHeaderValue, value: headerValueWithoutSchema}
-
-	// WHEN
-	authData.ApplyTo(req)
-
-	// THEN
-	assert.Equal(t, rawHeaderValue, req.Header.Get(headerName))
 }

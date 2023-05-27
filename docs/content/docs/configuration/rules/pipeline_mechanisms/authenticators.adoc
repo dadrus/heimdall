@@ -110,11 +110,25 @@ Configuration using the `config` property is mandatory. Following properties are
 
 * *`identity_info_endpoint`*: _link:{{< relref "/docs/configuration/reference/types.adoc#_endpoint">}}[Endpoint]_ (mandatory, not overridable)
 +
-The endpoint to communicate to for the actual subject authentication status verification purpose. At least the `url` must be configured. If you don't configure `method`, HTTP `POST` will be used. The `Accept` header is set to `application/json` by default. You can overwrite these setting if required. Don't forget - this authenticator supports only JSON responses.
+The endpoint to communicate to for the actual subject authentication status verification purpose. At least the `url` must be configured. If you don't configure `method`, HTTP `POST` will be used. The `Accept` header is set to `application/json` by default. You can overwrite these setting if required. Query and header definitions can be templated and can make use of the `AuthenticationData` object (see below). Don't forget - this authenticator supports only JSON responses.
 
 * *`authentication_data_source`*: _link:{{< relref "/docs/configuration/reference/types.adoc#_authentication_data_source" >}}[Authentication Data Source]_ (mandatory, not overridable)
 +
-Where to extract the authentication data from the request. This authenticator will use the matched authentication data source as is while sending it to the `identity_info_endpoint`.
+Where to extract the authentication data from the request. The extracted value is made available as `AuthenticationData` for usage in templates defined as part of this authenticator configuration. So you can reference it in a body, header, etc.
++
+NOTE: The `AuthenticationData` object is available during the execution of this authenticator only and is not made available to other mechanisms.
+
+* *`forward_headers`*: _string array_ (optional, not overridable)
++
+If the `identity_info_endpoint` API requires any headers from the request to heimdall, you can forward these unchanged by making use of this property. This might be the header used to extract the authentication data from.
+
+* *`forward_cookies`*: _string array_ (optional, not overridable)
++
+If the `identity_info_endpoint` API requires any cookies from the request to heimdall, you can forward these unchanged by making use of this property. This might be the cookie used to extract the authentication data from.
+
+* *`payload`*: _string_ (optional, not overridable)
++
+Your link:{{< relref "overview.adoc#_templating" >}}[template] with definitions required to send the extracted authentication data. The template has access to the `AuthenticationData` object only.
 
 * *`subject`*: _link:{{< relref "/docs/configuration/reference/types.adoc#_subject" >}}[Subject]_ (mandatory, not overridable)
 +
@@ -134,19 +148,21 @@ Where to extract the session validity information form the identity info endpoin
 +
 NOTE: If you're configuring the `cache_ttl` property, it is highly recommended to configure `session_lifespan` as well to ensure outdated session objects are not used for subsequent requests to heimdall. Usage of `session_lifespan` is recommended anyway to enable time based validation of the response from the identity info endpoint.
 
-.Configuration of Generic authenticator to work with session cookies
+.Configuration to work with session cookies
 ====
 
-This example shows how to configure this authenticator to work with an authentication system, which issues a cookie upon successful user authentication to maintain the authentication state. To reduce the communication overhead, it also makes use of `cache_ttl` to cache the response for 5 minutes if that time frame does not exceed the actual validity of the session represented by the cookie.
+This example shows how to configure this authenticator to work with Ory Kratos, an authentication system, which issues a cookie upon successful user authentication to maintain the authentication state. To reduce the communication overhead, it also makes use of `cache_ttl` to cache the response for 5 minutes if that time frame does not exceed the actual validity of the session represented by the cookie.
 
 [source, yaml]
 ----
-id: session_cookie
+id: kratos_session_cookie
 type: generic
 config:
-  identity_info_endpoint: http://my-auth.system/sessions/whoami
+  identity_info_endpoint: https://kratos/sessions/whoami
   authentication_data_source:
-    - cookie: my_session
+    - cookie: ory_kratos_session
+  forward_cookies:
+    - ory_kratos_session
   subject:
     id: "identity.id"
   cache_ttl: 5m
@@ -159,35 +175,40 @@ config:
     validity_leeway: 10s
 ----
 
+As kratos requires the `ory_kratos_session` cookie as is, this configuration makes use of the `forward_cookies` property and does not use the `AuthenticationData` object.
+
 This example does also show how an endpoint can be configured by just specifying the URL as string, which is the simplest way for endpoint configuration.
 
 ====
 
-.Configuration of Generic authenticator to work with a Bearer token
+.Configuration to work with a Bearer token
 ====
 
-This example shows how to configure this authenticator to work with an authentication system, which issues a Bearer token upon successful user authentication. To reduce the communication overhead, it also makes use of `cache_ttl` to cache the response for 5 minutes if it does not exceed the validity of the information present in the response from the used endpoint.
+This example shows how to configure this authenticator to work with an OAuth2 authorization service, which issues a Bearer token upon successful user authentication. To reduce the communication overhead, it also makes use of `cache_ttl` to cache the response for 5 minutes if it does not exceed the validity of the information present in the response from the used endpoint.
 
-In this example we configure the Generic authenticator mechanism to use the `GET` method instead of the default `POST` for sending the bearer token to the authentication system for verification purposes and also to authenticate using HTTP basic auth schema. According to the below configuration, the Bearer token is located in the `X-Custom-Bearer-Token` header, which as also used as is while calling the `\http://my-auth.system/introspect` endpoint.
+In this example we configure the authenticator to use the introspection endpoint to get the information about the token.
 
 [source, yaml]
 ----
-id: bearer_token
+id: opaque_bearer_token
 type: generic
 config:
   identity_info_endpoint:
-    url: http://my-auth.system/introspect
-    method: GET
+    url: https://my-auth.system/introspect
+    headers:
+      Content-Type: application/x-www-form-urlencoded
     auth:
       type: basic_auth
       config:
         user: Heimdall
-        password: super-secure
+        password: ${INTROSPECTION_PASSWORD}
   authentication_data_source:
-    - header: X-Custom-Bearer-Token
-      schema: Bearer
+    - header: Authorization
+      scheme: Bearer
+  payload: |
+    token={{ urlenc .AuthenticationData }}&token_type_hint=access_token
   subject:
-    id: "sub"
+    id: sub
   cache_ttl: 5m
   session_lifespan:
     active: active
@@ -197,7 +218,37 @@ config:
     validity_leeway: 10s
 ----
 
-Usually, Bearer tokens are issued by an OAuth2 auth provider and there is a need to verify not only the validity of such, but also a couple of claims. This can be achieved by a link:{{< relref "authorizers.adoc#_local_cel" >}}[Local Authorizer], but there is also a special purpose link:{{< relref "#_oauth2_introspection">}}[OAuth2 Introspection] authenticator type, which supports asserting all security relevant claims in just one place.
+Usually, you would not only like to verify the validity of a token, but also a couple of claims. This can be achieved by a link:{{< relref "authorizers.adoc#_local_cel" >}}[CEL Authorizer]. However, there is also a special purpose link:{{< relref "#_oauth2_introspection">}}[OAuth2 Introspection] authenticator type, which supports asserting all security relevant claims in just one place and does not need so much configuration as shown above.
+
+In this configuration the authenticator extracts the token from the `Authorization` header and request the information about the corresponding user from the `http://my-auth.system/introspect` endpoint by sending the extracted token in the body of the request in a parameter named `token`.
+====
+
+.Configuration to work with Google's Firebase.
+====
+
+If you would like to integrate with Google's Firebase, you would configure something like this:
+
+Assumption: The token issued by firebase is located in the HTTP Authorization header using Bearer scheme
+
+[source, yaml]
+----
+id: firebase_token
+type: generic
+config:
+  identity_info_endpoint:
+    url: https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${YOUR_API_KEY}
+    headers:
+      Content-Type: application/json
+  authentication_data_source:
+    - header: Authorization
+      scheme: Bearer
+  payload: |
+   { "idToken": {{ quote .AuthenticationData }} }
+  subject:
+   id: users.0.localId
+   attributes: users.0
+  cache_ttl: 5m
+----
 ====
 
 === OAuth2 Introspection

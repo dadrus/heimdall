@@ -48,7 +48,6 @@ func New(val string) (Template, error) {
 	delete(funcMap, "expandenv")
 
 	tmpl, err := template.New("Heimdall").
-		Option("missingkey=error").
 		Funcs(funcMap).
 		Funcs(template.FuncMap{"urlenc": urlEncode}).
 		Parse(val)
