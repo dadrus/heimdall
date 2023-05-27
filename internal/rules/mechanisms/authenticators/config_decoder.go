@@ -22,6 +22,7 @@ import (
 	"github.com/dadrus/heimdall/internal/endpoint"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/extractors"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/oauth2"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
 	"github.com/dadrus/heimdall/internal/truststore"
 )
 
@@ -35,7 +36,7 @@ func decodeConfig(input any, output any) error {
 				extractors.DecodeCompositeExtractStrategyHookFunc(),
 				oauth2.DecodeScopesMatcherHookFunc(),
 				truststore.DecodeTrustStoreHookFunc(),
-				DecodeAuthenticationDataForwardStrategy(),
+				template.DecodeTemplateHookFunc(),
 			),
 			Result:      output,
 			ErrorUnused: true,

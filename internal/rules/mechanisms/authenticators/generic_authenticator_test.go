@@ -119,10 +119,8 @@ identity_info_endpoint:
   method: GET
 authentication_data_source:
   - header: foo-header
-authentication_data_forward:
-  type: body
-  config:
-    name: foo
+payload: |
+  { "foo": {{ quote .AuthenticationData }} }
 subject:
   id: some_template`),
 			assertError: func(t *testing.T, err error, auth *genericAuthenticator) {
@@ -137,9 +135,9 @@ subject:
 				assert.True(t, ok)
 				assert.Len(t, ces, 1)
 				assert.Contains(t, ces, &extractors.HeaderValueExtractStrategy{Name: "foo-header"})
-				bpfs, ok := auth.adfs.(*BodyParameterForwardStrategy)
-				assert.True(t, ok)
-				assert.Equal(t, "foo", bpfs.Name)
+				assert.NotNil(t, auth.payload)
+				assert.Empty(t, auth.fwdCookies)
+				assert.Empty(t, auth.fwdHeaders)
 				assert.Equal(t, &SubjectInfo{IDFrom: "some_template"}, auth.sf)
 				assert.Equal(t, time.Duration(0), auth.ttl)
 				assert.False(t, auth.IsFallbackOnErrorAllowed())
@@ -171,7 +169,9 @@ cache_ttl: 5s`),
 				assert.True(t, ok)
 				assert.Len(t, ces, 1)
 				assert.Contains(t, ces, &extractors.CookieValueExtractStrategy{Name: "foo-cookie"})
-				assert.IsType(t, auth.adfs, DefaultForwardStrategy{})
+				assert.Nil(t, auth.payload)
+				assert.Empty(t, auth.fwdCookies)
+				assert.Empty(t, auth.fwdHeaders)
 				assert.Equal(t, &SubjectInfo{IDFrom: "some_template"}, auth.sf)
 				assert.Equal(t, 5*time.Second, auth.ttl)
 				assert.False(t, auth.IsFallbackOnErrorAllowed())
@@ -180,7 +180,7 @@ cache_ttl: 5s`),
 			},
 		},
 		{
-			uc: "with valid configuration enabling fallback on errors",
+			uc: "with valid configuration enabling fallback on errors and header forwarding",
 			id: "auth1",
 			config: []byte(`
 identity_info_endpoint:
@@ -188,6 +188,8 @@ identity_info_endpoint:
   method: POST
 authentication_data_source:
   - cookie: foo-cookie
+forward_cookies:
+  - foo-cookie
 subject:
   id: some_template
 allow_fallback_on_error: true`),
@@ -203,7 +205,10 @@ allow_fallback_on_error: true`),
 				assert.True(t, ok)
 				assert.Len(t, ces, 1)
 				assert.Contains(t, ces, &extractors.CookieValueExtractStrategy{Name: "foo-cookie"})
-				assert.IsType(t, auth.adfs, DefaultForwardStrategy{})
+				assert.Nil(t, auth.payload)
+				assert.Len(t, auth.fwdCookies, 1)
+				assert.Contains(t, auth.fwdCookies, "foo-cookie")
+				assert.Empty(t, auth.fwdHeaders)
 				assert.Equal(t, &SubjectInfo{IDFrom: "some_template"}, auth.sf)
 				assert.Equal(t, time.Duration(0), auth.ttl)
 				assert.True(t, auth.IsFallbackOnErrorAllowed())
@@ -212,7 +217,7 @@ allow_fallback_on_error: true`),
 			},
 		},
 		{
-			uc: "with session lifespan config",
+			uc: "with session lifespan config and forward header",
 			id: "auth1",
 			config: []byte(`
 identity_info_endpoint:
@@ -220,6 +225,8 @@ identity_info_endpoint:
   method: PATCH
 authentication_data_source:
   - cookie: foo-cookie
+forward_header:
+  - X-My-Header
 subject:
   id: some_template
 session_lifespan:
@@ -241,7 +248,10 @@ session_lifespan:
 				assert.True(t, ok)
 				assert.Len(t, ces, 1)
 				assert.Contains(t, ces, &extractors.CookieValueExtractStrategy{Name: "foo-cookie"})
-				assert.IsType(t, auth.adfs, DefaultForwardStrategy{})
+				assert.Nil(t, auth.payload)
+				assert.Len(t, auth.fwdHeaders, 1)
+				assert.Contains(t, auth.fwdHeaders, "X-My-Header")
+				assert.Empty(t, auth.fwdCookies)
 				assert.Equal(t, &SubjectInfo{IDFrom: "some_template"}, auth.sf)
 				assert.Equal(t, time.Duration(0), auth.ttl)
 				assert.False(t, auth.IsFallbackOnErrorAllowed())
@@ -289,6 +299,12 @@ identity_info_endpoint:
   method: POST
 authentication_data_source:
   - header: foo-header
+forward_header:
+  - X-My-Header
+forward_cookies:
+  - foo-cookie
+payload: |
+  foo=bar
 subject:
   id: some_template
 allow_fallback_on_error: true`),
@@ -333,6 +349,12 @@ identity_info_endpoint:
   method: POST
 authentication_data_source:
   - header: foo-header
+forward_header:
+  - X-My-Header
+forward_cookies:
+  - foo-cookie
+payload: |
+  foo=bar
 subject:
   id: some_template`),
 			config: []byte(`cache_ttl: 5s`),
@@ -345,7 +367,9 @@ subject:
 
 				assert.Equal(t, prototype.e, configured.e)
 				assert.Equal(t, prototype.ads, configured.ads)
-				assert.Equal(t, prototype.adfs, configured.adfs)
+				assert.Equal(t, prototype.payload, configured.payload)
+				assert.Equal(t, prototype.fwdCookies, configured.fwdCookies)
+				assert.Equal(t, prototype.fwdHeaders, configured.fwdHeaders)
 				assert.Equal(t, prototype.sf, configured.sf)
 				assert.Equal(t, time.Duration(0), prototype.ttl)
 				assert.NotEqual(t, prototype.ttl, configured.ttl)
@@ -376,7 +400,9 @@ subject:
 
 				assert.Equal(t, prototype.e, configured.e)
 				assert.Equal(t, prototype.ads, configured.ads)
-				assert.Equal(t, prototype.adfs, configured.adfs)
+				assert.Equal(t, prototype.payload, configured.payload)
+				assert.Equal(t, prototype.fwdCookies, configured.fwdCookies)
+				assert.Equal(t, prototype.fwdHeaders, configured.fwdHeaders)
 				assert.Equal(t, prototype.sf, configured.sf)
 				assert.Equal(t, prototype.ttl, configured.ttl)
 				assert.NotEqual(t, prototype.IsFallbackOnErrorAllowed(), configured.IsFallbackOnErrorAllowed())
@@ -394,6 +420,10 @@ identity_info_endpoint:
   method: POST
 authentication_data_source:
   - header: foo-header
+forward_header:
+  - X-My-Header
+payload: |
+  foo=bar
 subject:
   id: some_template
 cache_ttl: 5s`),
@@ -408,7 +438,9 @@ cache_ttl: 15s`),
 
 				assert.Equal(t, prototype.e, configured.e)
 				assert.Equal(t, prototype.ads, configured.ads)
-				assert.Equal(t, prototype.adfs, configured.adfs)
+				assert.Equal(t, prototype.payload, configured.payload)
+				assert.Equal(t, prototype.fwdCookies, configured.fwdCookies)
+				assert.Equal(t, prototype.fwdHeaders, configured.fwdHeaders)
 				assert.Equal(t, prototype.sf, configured.sf)
 				assert.NotEqual(t, prototype.ttl, configured.ttl)
 				assert.Equal(t, 15*time.Second, configured.ttl)
@@ -432,6 +464,10 @@ authentication_data_forward:
   config:
     name: X-Foo
     scheme: Bar
+forward_cookies:
+  - foo-cookie
+payload: |
+  foo=bar
 subject:
   id: some_template
 cache_ttl: 5s
@@ -451,7 +487,9 @@ session_lifespan:
 
 				assert.Equal(t, prototype.e, configured.e)
 				assert.Equal(t, prototype.ads, configured.ads)
-				assert.Equal(t, prototype.adfs, configured.adfs)
+				assert.Equal(t, prototype.payload, configured.payload)
+				assert.Equal(t, prototype.fwdCookies, configured.fwdCookies)
+				assert.Equal(t, prototype.fwdHeaders, configured.fwdHeaders)
 				assert.Equal(t, prototype.sf, configured.sf)
 				assert.Equal(t, prototype.ttl, configured.ttl)
 				assert.Equal(t, prototype.IsFallbackOnErrorAllowed(), configured.IsFallbackOnErrorAllowed())
@@ -551,6 +589,78 @@ subject:
 			config: []byte(`
 session_lifespan:
   active: foo
+`),
+			assert: func(t *testing.T, err error, prototype *genericAuthenticator,
+				configured *genericAuthenticator,
+			) {
+				t.Helper()
+
+				require.Error(t, err)
+				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				assert.Contains(t, err.Error(), "failed to parse")
+			},
+		},
+		{
+			uc: "reconfiguration of payload not possible",
+			prototypeConfig: []byte(`
+identity_info_endpoint:
+  url: http://test.com
+  method: POST
+authentication_data_source:
+  - header: foo-header
+subject:
+  id: some_template`),
+			config: []byte(`
+payload: |
+  foo=bar
+`),
+			assert: func(t *testing.T, err error, prototype *genericAuthenticator,
+				configured *genericAuthenticator,
+			) {
+				t.Helper()
+
+				require.Error(t, err)
+				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				assert.Contains(t, err.Error(), "failed to parse")
+			},
+		},
+		{
+			uc: "reconfiguration of header to be forwarded not possible",
+			prototypeConfig: []byte(`
+identity_info_endpoint:
+  url: http://test.com
+  method: POST
+authentication_data_source:
+  - header: foo-header
+subject:
+  id: some_template`),
+			config: []byte(`
+forward_headers:
+  - foo-bar
+`),
+			assert: func(t *testing.T, err error, prototype *genericAuthenticator,
+				configured *genericAuthenticator,
+			) {
+				t.Helper()
+
+				require.Error(t, err)
+				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				assert.Contains(t, err.Error(), "failed to parse")
+			},
+		},
+		{
+			uc: "reconfiguration of cookies to be forwarded not possible",
+			prototypeConfig: []byte(`
+identity_info_endpoint:
+  url: http://test.com
+  method: POST
+authentication_data_source:
+  - header: foo-header
+subject:
+  id: some_template`),
+			config: []byte(`
+forward_cookies:
+  - foo-bar
 `),
 			assert: func(t *testing.T, err error, prototype *genericAuthenticator,
 				configured *genericAuthenticator,

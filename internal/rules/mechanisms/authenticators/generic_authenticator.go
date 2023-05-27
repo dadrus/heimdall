@@ -23,6 +23,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/rs/zerolog"
@@ -32,6 +33,7 @@ import (
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/extractors"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
@@ -54,9 +56,11 @@ func init() {
 type genericAuthenticator struct {
 	id                   string
 	e                    endpoint.Endpoint
-	sf                   SubjectFactory
 	ads                  extractors.AuthDataExtractStrategy
-	adfs                 AuthDataForwardStrategy
+	payload              template.Template
+	fwdHeaders           []string
+	fwdCookies           []string
+	sf                   SubjectFactory
 	ttl                  time.Duration
 	sessionLifespanConf  *SessionLifespanConfig
 	allowFallbackOnError bool
@@ -64,13 +68,15 @@ type genericAuthenticator struct {
 
 func newGenericAuthenticator(id string, rawConfig map[string]any) (*genericAuthenticator, error) {
 	type Config struct {
-		Endpoint                endpoint.Endpoint                   `mapstructure:"identity_info_endpoint"`
-		AuthDataSource          extractors.CompositeExtractStrategy `mapstructure:"authentication_data_source"`
-		AuthDataForwardStrategy AuthDataForwardStrategy             `mapstructure:"authentication_data_forward"`
-		SubjectInfo             SubjectInfo                         `mapstructure:"subject"`
-		SessionLifespanConfig   *SessionLifespanConfig              `mapstructure:"session_lifespan"`
-		CacheTTL                *time.Duration                      `mapstructure:"cache_ttl"`
-		AllowFallbackOnError    bool                                `mapstructure:"allow_fallback_on_error"`
+		Endpoint              endpoint.Endpoint                   `mapstructure:"identity_info_endpoint"`
+		AuthDataSource        extractors.CompositeExtractStrategy `mapstructure:"authentication_data_source"`
+		ForwardHeaders        []string                            `mapstructure:"forward_headers"`
+		ForwardCookies        []string                            `mapstructure:"forward_cookies"`
+		Payload               template.Template                   `mapstructure:"payload"`
+		SubjectInfo           SubjectInfo                         `mapstructure:"subject"`
+		SessionLifespanConfig *SessionLifespanConfig              `mapstructure:"session_lifespan"`
+		CacheTTL              *time.Duration                      `mapstructure:"cache_ttl"`
+		AllowFallbackOnError  bool                                `mapstructure:"allow_fallback_on_error"`
 	}
 
 	var conf Config
@@ -99,14 +105,13 @@ func newGenericAuthenticator(id string, rawConfig map[string]any) (*genericAuthe
 	}
 
 	return &genericAuthenticator{
-		id:  id,
-		e:   conf.Endpoint,
-		ads: conf.AuthDataSource,
-		adfs: x.IfThenElse[AuthDataForwardStrategy](
-			conf.AuthDataForwardStrategy != nil,
-			conf.AuthDataForwardStrategy,
-			DefaultForwardStrategy{}),
-		sf: &conf.SubjectInfo,
+		id:         id,
+		e:          conf.Endpoint,
+		ads:        conf.AuthDataSource,
+		payload:    conf.Payload,
+		fwdHeaders: conf.ForwardHeaders,
+		fwdCookies: conf.ForwardCookies,
+		sf:         &conf.SubjectInfo,
 		ttl: x.IfThenElseExec(conf.CacheTTL != nil,
 			func() time.Duration { return *conf.CacheTTL },
 			func() time.Duration { return 0 }),
@@ -162,11 +167,13 @@ func (a *genericAuthenticator) WithConfig(config map[string]any) (Authenticator,
 	}
 
 	return &genericAuthenticator{
-		id:   a.id,
-		e:    a.e,
-		sf:   a.sf,
-		ads:  a.ads,
-		adfs: a.adfs,
+		id:         a.id,
+		e:          a.e,
+		sf:         a.sf,
+		ads:        a.ads,
+		payload:    a.payload,
+		fwdHeaders: a.fwdHeaders,
+		fwdCookies: a.fwdCookies,
 		ttl: x.IfThenElseExec(conf.CacheTTL != nil,
 			func() time.Duration { return *conf.CacheTTL },
 			func() time.Duration { return a.ttl }),
@@ -243,15 +250,10 @@ func (a *genericAuthenticator) getSubjectInformation(ctx heimdall.Context,
 func (a *genericAuthenticator) fetchSubjectInformation(ctx heimdall.Context,
 	authData extractors.AuthData,
 ) ([]byte, error) {
-	req, err := a.e.CreateRequest(ctx.AppContext(), nil, nil)
+	req, err := a.createRequest(ctx, authData)
 	if err != nil {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrInternal, "failed creating request").
-			WithErrorContext(a).
-			CausedBy(err)
+		return nil, err
 	}
-
-	a.adfs.Apply(authData, req)
 
 	resp, err := a.e.CreateClient(req.URL.Hostname()).Do(req)
 	if err != nil {
@@ -274,6 +276,67 @@ func (a *genericAuthenticator) fetchSubjectInformation(ctx heimdall.Context,
 	defer resp.Body.Close()
 
 	return a.readResponse(resp)
+}
+
+func (a *genericAuthenticator) createRequest(ctx heimdall.Context, authData extractors.AuthData) (*http.Request, error) {
+	logger := zerolog.Ctx(ctx.AppContext())
+
+	var body io.Reader
+
+	templateData := map[string]any{
+		"AuthenticationData": authData.Value(),
+	}
+
+	if a.payload != nil {
+		value, err := a.payload.Render(templateData)
+		if err != nil {
+			return nil, errorchain.NewWithMessage(heimdall.ErrInternal,
+				"failed to render payload for the authenticator endpoint").
+				WithErrorContext(a).CausedBy(err)
+		}
+
+		body = strings.NewReader(value)
+	}
+
+	req, err := a.e.CreateRequest(ctx.AppContext(), body,
+		endpoint.RenderFunc(func(value string, values map[string]string) (string, error) {
+			tpl, err := template.New(value)
+			if err != nil {
+				return "", errorchain.NewWithMessage(heimdall.ErrInternal, "failed to create template").
+					WithErrorContext(a).
+					CausedBy(err)
+			}
+
+			return tpl.Render(templateData)
+		}))
+	if err != nil {
+		return nil, errorchain.
+			NewWithMessage(heimdall.ErrInternal, "failed creating request").
+			WithErrorContext(a).
+			CausedBy(err)
+	}
+
+	for _, headerName := range a.fwdHeaders {
+		headerValue := ctx.Request().Header(headerName)
+		if len(headerValue) == 0 {
+			logger.Warn().Str("_header", headerName).
+				Msg("Header not present in the request but configured to be forwarded")
+		}
+
+		req.Header.Add(headerName, headerValue)
+	}
+
+	for _, cookieName := range a.fwdCookies {
+		cookieValue := ctx.Request().Cookie(cookieName)
+		if len(cookieValue) == 0 {
+			logger.Warn().Str("_cookie", cookieName).
+				Msg("Cookie not present in the request but configured to be forwarded")
+		}
+
+		req.AddCookie(&http.Cookie{Name: cookieName, Value: cookieValue})
+	}
+
+	return req, nil
 }
 
 func (a *genericAuthenticator) readResponse(resp *http.Response) ([]byte, error) {
