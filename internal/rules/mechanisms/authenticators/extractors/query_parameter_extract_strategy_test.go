@@ -17,14 +17,11 @@
 package extractors
 
 import (
-	"context"
 	"fmt"
-	"net/http"
 	"net/url"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/heimdall/mocks"
@@ -36,8 +33,6 @@ func TestExtractQueryParameter(t *testing.T) {
 	// GIVEN
 	queryParam := "test_param"
 	queryParamValue := "foo"
-	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, "foobar.local", nil)
-	require.NoError(t, err)
 
 	fnt := mocks.NewRequestFunctionsMock(t)
 
@@ -54,10 +49,7 @@ func TestExtractQueryParameter(t *testing.T) {
 
 	// THEN
 	assert.NoError(t, err)
-	assert.Equal(t, queryParamValue, val.Value())
-
-	val.ApplyTo(req)
-	assert.Equal(t, queryParamValue, req.URL.Query().Get(queryParam))
+	assert.Equal(t, queryParamValue, val)
 }
 
 func TestExtractNotExistingQueryParameterValue(t *testing.T) {

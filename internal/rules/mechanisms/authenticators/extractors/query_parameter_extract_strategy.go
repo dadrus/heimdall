@@ -17,7 +17,6 @@
 package extractors
 
 import (
-	"net/http"
 	"strings"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
@@ -28,28 +27,10 @@ type QueryParameterExtractStrategy struct {
 	Name string
 }
 
-func (es QueryParameterExtractStrategy) GetAuthData(s heimdall.Context) (AuthData, error) {
+func (es QueryParameterExtractStrategy) GetAuthData(s heimdall.Context) (string, error) {
 	if val := s.Request().URL.Query().Get(es.Name); len(val) != 0 {
-		return &queryParameterAuthData{
-			name:  es.Name,
-			value: strings.TrimSpace(val),
-		}, nil
+		return strings.TrimSpace(val), nil
 	}
 
-	return nil, errorchain.NewWithMessagef(heimdall.ErrArgument, "no '%s' query parameter present", es.Name)
-}
-
-type queryParameterAuthData struct {
-	name  string
-	value string
-}
-
-func (c *queryParameterAuthData) ApplyTo(req *http.Request) {
-	query := req.URL.Query()
-	query.Add(c.name, c.value)
-	req.URL.RawQuery = query.Encode()
-}
-
-func (c *queryParameterAuthData) Value() string {
-	return c.value
+	return "", errorchain.NewWithMessagef(heimdall.ErrArgument, "no '%s' query parameter present", es.Name)
 }

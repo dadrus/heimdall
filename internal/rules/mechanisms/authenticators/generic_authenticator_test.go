@@ -27,6 +27,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/cache"
@@ -759,7 +760,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				ads.EXPECT().GetAuthData(ctx).Return(nil, heimdall.ErrCommunicationTimeout)
+				ads.EXPECT().GetAuthData(ctx).Return("", heimdall.ErrCommunicationTimeout)
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
@@ -789,7 +790,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				ads.EXPECT().GetAuthData(ctx).Return(dummyAuthData{Val: "session_token"}, nil)
+				ads.EXPECT().GetAuthData(ctx).Return("session_token", nil)
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
@@ -819,7 +820,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				ads.EXPECT().GetAuthData(ctx).Return(dummyAuthData{Val: "session_token"}, nil)
+				ads.EXPECT().GetAuthData(ctx).Return("session_token", nil)
 			},
 			instructServer: func(t *testing.T) {
 				t.Helper()
@@ -862,7 +863,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				ads.EXPECT().GetAuthData(ctx).Return(dummyAuthData{Val: "session_token"}, nil)
+				ads.EXPECT().GetAuthData(ctx).Return("session_token", nil)
 			},
 			instructServer: func(t *testing.T) {
 				t.Helper()
@@ -920,7 +921,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				ads.EXPECT().GetAuthData(ctx).Return(dummyAuthData{Val: "session_token"}, nil)
+				ads.EXPECT().GetAuthData(ctx).Return("session_token", nil)
 			},
 			instructServer: func(t *testing.T) {
 				t.Helper()
@@ -979,7 +980,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 
 				cacheKey := auth.calculateCacheKey("session_token")
 
-				ads.EXPECT().GetAuthData(ctx).Return(dummyAuthData{Val: "session_token"}, nil)
+				ads.EXPECT().GetAuthData(ctx).Return("session_token", nil)
 				cch.EXPECT().Get(cacheKey).Return(time.Duration(10))
 				cch.EXPECT().Delete(cacheKey)
 				cch.EXPECT().Set(cacheKey, []byte(`{ "user_id": "barbar" }`), auth.ttl)
@@ -1033,10 +1034,8 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				cacheKey := auth.calculateCacheKey("session_token")
-
-				ads.EXPECT().GetAuthData(ctx).Return(dummyAuthData{Val: "session_token"}, nil)
-				cch.EXPECT().Get(cacheKey).Return([]byte(`{ "user_id": "barbar" }`))
+				ads.EXPECT().GetAuthData(ctx).Return("session_token", nil)
+				cch.EXPECT().Get(mock.Anything).Return([]byte(`{ "user_id": "barbar" }`))
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
@@ -1079,7 +1078,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 
 				cacheKey := auth.calculateCacheKey("session_token")
 
-				ads.EXPECT().GetAuthData(ctx).Return(dummyAuthData{Val: "session_token"}, nil)
+				ads.EXPECT().GetAuthData(ctx).Return("session_token", nil)
 				cch.EXPECT().Get(cacheKey).Return(nil)
 				cch.EXPECT().Set(cacheKey, []byte(`{ "user_id": "barbar" }`), auth.ttl)
 			},
@@ -1141,7 +1140,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 
 				cacheKey := auth.calculateCacheKey("session_token")
 
-				ads.EXPECT().GetAuthData(ctx).Return(dummyAuthData{Val: "session_token"}, nil)
+				ads.EXPECT().GetAuthData(ctx).Return("session_token", nil)
 				cch.EXPECT().Get(cacheKey).Return(nil)
 			},
 			instructServer: func(t *testing.T) {
@@ -1201,7 +1200,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 
 				cacheKey := auth.calculateCacheKey("session_token")
 
-				ads.EXPECT().GetAuthData(ctx).Return(dummyAuthData{Val: "session_token"}, nil)
+				ads.EXPECT().GetAuthData(ctx).Return("session_token", nil)
 				cch.EXPECT().Get(cacheKey).Return(nil)
 			},
 			instructServer: func(t *testing.T) {
@@ -1264,7 +1263,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				exp := strconv.FormatInt(time.Now().Add(15*time.Second).Unix(), 10)
 				cacheKey := auth.calculateCacheKey("session_token")
 
-				ads.EXPECT().GetAuthData(ctx).Return(dummyAuthData{Val: "session_token"}, nil)
+				ads.EXPECT().GetAuthData(ctx).Return("session_token", nil)
 				cch.EXPECT().Get(cacheKey).Return(nil)
 				cch.EXPECT().Set(cacheKey, []byte(`{ "user_id": "barbar", "exp": `+exp+` }`), 5*time.Second)
 			},

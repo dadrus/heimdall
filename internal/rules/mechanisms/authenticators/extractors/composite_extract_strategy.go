@@ -23,7 +23,7 @@ import (
 
 type CompositeExtractStrategy []AuthDataExtractStrategy
 
-func (ce CompositeExtractStrategy) GetAuthData(ctx heimdall.Context) (AuthData, error) {
+func (ce CompositeExtractStrategy) GetAuthData(ctx heimdall.Context) (string, error) {
 	// nolint
 	// preallocation not possible
 	var errors []error
@@ -42,5 +42,5 @@ func (ce CompositeExtractStrategy) GetAuthData(ctx heimdall.Context) (AuthData, 
 		err = err.CausedBy(errors[i])
 	}
 
-	return nil, err
+	return "", err
 }

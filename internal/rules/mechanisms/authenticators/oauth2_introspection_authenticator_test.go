@@ -556,7 +556,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				ads.EXPECT().GetAuthData(ctx).Return(nil, heimdall.ErrCommunicationTimeout)
+				ads.EXPECT().GetAuthData(ctx).Return("", heimdall.ErrCommunicationTimeout)
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
@@ -587,7 +587,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				ads.EXPECT().GetAuthData(ctx).Return(dummyAuthData{Val: "test_access_token"}, nil)
+				ads.EXPECT().GetAuthData(ctx).Return("test_access_token", nil)
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
@@ -618,7 +618,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				ads.EXPECT().GetAuthData(ctx).Return(dummyAuthData{Val: "test_access_token"}, nil)
+				ads.EXPECT().GetAuthData(ctx).Return("test_access_token", nil)
 			},
 			instructServer: func(t *testing.T) {
 				t.Helper()
@@ -661,7 +661,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				ads.EXPECT().GetAuthData(ctx).Return(dummyAuthData{Val: "test_access_token"}, nil)
+				ads.EXPECT().GetAuthData(ctx).Return("test_access_token", nil)
 			},
 			instructServer: func(t *testing.T) {
 				t.Helper()
@@ -720,7 +720,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				ads.EXPECT().GetAuthData(ctx).Return(dummyAuthData{Val: "test_access_token"}, nil)
+				ads.EXPECT().GetAuthData(ctx).Return("test_access_token", nil)
 			},
 			instructServer: func(t *testing.T) {
 				t.Helper()
@@ -782,7 +782,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				ads.EXPECT().GetAuthData(ctx).Return(dummyAuthData{Val: "test_access_token"}, nil)
+				ads.EXPECT().GetAuthData(ctx).Return("test_access_token", nil)
 			},
 			instructServer: func(t *testing.T) {
 				t.Helper()
@@ -858,7 +858,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				ads.EXPECT().GetAuthData(ctx).Return(dummyAuthData{Val: "test_access_token"}, nil)
+				ads.EXPECT().GetAuthData(ctx).Return("test_access_token", nil)
 			},
 			instructServer: func(t *testing.T) {
 				t.Helper()
@@ -940,7 +940,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				ads.EXPECT().GetAuthData(ctx).Return(dummyAuthData{Val: "test_access_token"}, nil)
+				ads.EXPECT().GetAuthData(ctx).Return("test_access_token", nil)
 				cch.EXPECT().Get(mock.Anything).Return(nil)
 				cch.EXPECT().Set(mock.Anything, mock.Anything, mock.Anything)
 			},
@@ -1024,7 +1024,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				ads.EXPECT().GetAuthData(ctx).Return(dummyAuthData{Val: "test_access_token"}, nil)
+				ads.EXPECT().GetAuthData(ctx).Return("test_access_token", nil)
 				cch.EXPECT().Get(mock.Anything).Return(zeroTTL)
 				cch.EXPECT().Delete(mock.Anything)
 				cch.EXPECT().Set(mock.Anything, mock.Anything, mock.Anything)
@@ -1109,7 +1109,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				ads.EXPECT().GetAuthData(ctx).Return(dummyAuthData{Val: "test_access_token"}, nil)
+				ads.EXPECT().GetAuthData(ctx).Return("test_access_token", nil)
 
 				rawIntrospectResponse, err := json.Marshal(map[string]any{
 					"active":     true,

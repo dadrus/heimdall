@@ -114,7 +114,7 @@ func (a *basicAuthAuthenticator) Execute(ctx heimdall.Context) (*subject.Subject
 			CausedBy(err)
 	}
 
-	res, err := base64.StdEncoding.DecodeString(authData.Value())
+	res, err := base64.StdEncoding.DecodeString(authData)
 	if err != nil {
 		return nil, errorchain.
 			NewWithMessage(heimdall.ErrAuthentication, "failed to decode received credentials value").

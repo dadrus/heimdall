@@ -51,7 +51,7 @@ func TestCompositeExtractCookieValueWithoutSchema(t *testing.T) {
 
 	// THEN
 	assert.NoError(t, err)
-	assert.Equal(t, actualValue, val.Value())
+	assert.Equal(t, actualValue, val)
 }
 
 func TestCompositeExtractHeaderValueWithSchema(t *testing.T) {
@@ -82,7 +82,7 @@ func TestCompositeExtractHeaderValueWithSchema(t *testing.T) {
 
 	// THEN
 	assert.NoError(t, err)
-	assert.Equal(t, actualValue, val.Value())
+	assert.Equal(t, actualValue, val)
 }
 
 func TestCompositeExtractStrategyOrder(t *testing.T) {
@@ -110,5 +110,5 @@ func TestCompositeExtractStrategyOrder(t *testing.T) {
 
 	// THEN
 	assert.NoError(t, err)
-	assert.Equal(t, actualValue, val.Value())
+	assert.Equal(t, actualValue, val)
 }

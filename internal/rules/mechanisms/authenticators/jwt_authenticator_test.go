@@ -814,7 +814,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				ads.EXPECT().GetAuthData(ctx).Return(nil, heimdall.ErrCommunicationTimeout)
+				ads.EXPECT().GetAuthData(ctx).Return("", heimdall.ErrCommunicationTimeout)
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
@@ -842,7 +842,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				ads.EXPECT().GetAuthData(ctx).Return(dummyAuthData{Val: "foo.bar.baz.bam"}, nil)
+				ads.EXPECT().GetAuthData(ctx).Return("foo.bar.baz.bam", nil)
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
@@ -870,7 +870,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				ads.EXPECT().GetAuthData(ctx).Return(dummyAuthData{Val: "foo.bar.baz"}, nil)
+				ads.EXPECT().GetAuthData(ctx).Return("foo.bar.baz", nil)
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
@@ -902,7 +902,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				ads.EXPECT().GetAuthData(ctx).Return(dummyAuthData{Val: jwtSignedWithKeyOnlyJWK}, nil)
+				ads.EXPECT().GetAuthData(ctx).Return(jwtSignedWithKeyOnlyJWK, nil)
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
@@ -934,7 +934,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				ads.EXPECT().GetAuthData(ctx).Return(dummyAuthData{Val: jwtSignedWithKeyOnlyJWK}, nil)
+				ads.EXPECT().GetAuthData(ctx).Return(jwtSignedWithKeyOnlyJWK, nil)
 			},
 			instructServer: func(t *testing.T) {
 				t.Helper()
@@ -974,7 +974,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				ads.EXPECT().GetAuthData(ctx).Return(dummyAuthData{Val: jwtSignedWithKeyOnlyJWK}, nil)
+				ads.EXPECT().GetAuthData(ctx).Return(jwtSignedWithKeyOnlyJWK, nil)
 			},
 			instructServer: func(t *testing.T) {
 				t.Helper()
@@ -1020,7 +1020,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				ads.EXPECT().GetAuthData(ctx).Return(dummyAuthData{Val: jwtSignedWithKeyOnlyJWK}, nil)
+				ads.EXPECT().GetAuthData(ctx).Return(jwtSignedWithKeyOnlyJWK, nil)
 			},
 			instructServer: func(t *testing.T) {
 				t.Helper()
@@ -1075,7 +1075,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 
 				keys := jwks.Key(kidKeyWithoutCert)
 
-				ads.EXPECT().GetAuthData(ctx).Return(dummyAuthData{Val: jwtSignedWithKeyOnlyJWK}, nil)
+				ads.EXPECT().GetAuthData(ctx).Return(jwtSignedWithKeyOnlyJWK, nil)
 				cch.EXPECT().Get(cacheKey).Return(&keys[0])
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
@@ -1120,7 +1120,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 
 				keys := jwks.Key(kidKeyWithoutCert)
 
-				ads.EXPECT().GetAuthData(ctx).Return(dummyAuthData{Val: jwtSignedWithKeyAndCertJWK}, nil)
+				ads.EXPECT().GetAuthData(ctx).Return(jwtSignedWithKeyAndCertJWK, nil)
 				cch.EXPECT().Get(cacheKey).Return(&keys[0])
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
@@ -1165,7 +1165,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 
 				keys := jwks.Key(kidKeyWithoutCert)
 
-				ads.EXPECT().GetAuthData(ctx).Return(dummyAuthData{Val: jwtSignedWithKeyOnlyJWK}, nil)
+				ads.EXPECT().GetAuthData(ctx).Return(jwtSignedWithKeyOnlyJWK, nil)
 				cch.EXPECT().Get(cacheKey).Return(&keys[0])
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
@@ -1215,7 +1215,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 
 				keys := jwks.Key(kidKeyWithoutCert)
 
-				ads.EXPECT().GetAuthData(ctx).Return(dummyAuthData{Val: jwtSignedWithKeyOnlyJWK}, nil)
+				ads.EXPECT().GetAuthData(ctx).Return(jwtSignedWithKeyOnlyJWK, nil)
 				cch.EXPECT().Get(cacheKey).Return(&keys[0])
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
@@ -1264,7 +1264,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 
 				keys := jwks.Key(kidKeyWithoutCert)
 
-				ads.EXPECT().GetAuthData(ctx).Return(dummyAuthData{Val: jwtSignedWithKeyOnlyJWK}, nil)
+				ads.EXPECT().GetAuthData(ctx).Return(jwtSignedWithKeyOnlyJWK, nil)
 				cch.EXPECT().Get(cacheKey).Return(&keys[0])
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
@@ -1319,7 +1319,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 
 				keys := jwks.Key(kidKeyWithoutCert)
 
-				ads.EXPECT().GetAuthData(ctx).Return(dummyAuthData{Val: jwtSignedWithKeyOnlyJWK}, nil)
+				ads.EXPECT().GetAuthData(ctx).Return(jwtSignedWithKeyOnlyJWK, nil)
 				cch.EXPECT().Get(cacheKey).Return(nil)
 				cch.EXPECT().Set(cacheKey, &keys[0], *auth.ttl)
 			},
@@ -1386,7 +1386,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 
 				keys := jwks.Key(kidKeyWithCert)
 
-				ads.EXPECT().GetAuthData(ctx).Return(dummyAuthData{Val: jwtSignedWithKeyAndCertJWK}, nil)
+				ads.EXPECT().GetAuthData(ctx).Return(jwtSignedWithKeyAndCertJWK, nil)
 				cch.EXPECT().Get(cacheKey).Return(nil)
 				cch.EXPECT().Set(cacheKey, &keys[0], *auth.ttl)
 			},
@@ -1453,7 +1453,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				err := json.Unmarshal(jwksWithOneEntryWithKeyOnlyAndOneWithCertificate, &jwks)
 				require.NoError(t, err)
 
-				ads.EXPECT().GetAuthData(ctx).Return(dummyAuthData{Val: jwtSignedWithKeyAndCertJWK}, nil)
+				ads.EXPECT().GetAuthData(ctx).Return(jwtSignedWithKeyAndCertJWK, nil)
 				cch.EXPECT().Get(cacheKey).Return(nil)
 			},
 			instructServer: func(t *testing.T) {
@@ -1515,7 +1515,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 
 				keys := jwks.Key(kidKeyWithCert)
 
-				ads.EXPECT().GetAuthData(ctx).Return(dummyAuthData{Val: jwtSignedWithKeyAndCertJWK}, nil)
+				ads.EXPECT().GetAuthData(ctx).Return(jwtSignedWithKeyAndCertJWK, nil)
 				cch.EXPECT().Get(cacheKey).Return(nil)
 				cch.EXPECT().Set(cacheKey, &keys[0], *auth.ttl)
 			},
@@ -1582,7 +1582,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 
 				keys := jwks.Key(kidKeyWithoutCert)
 
-				ads.EXPECT().GetAuthData(ctx).Return(dummyAuthData{Val: jwtSignedWithKeyOnlyJWK}, nil)
+				ads.EXPECT().GetAuthData(ctx).Return(jwtSignedWithKeyOnlyJWK, nil)
 				cch.EXPECT().Get(cacheKey).Return("Hi Foo")
 				cch.EXPECT().Delete(cacheKey)
 				cch.EXPECT().Set(cacheKey, &keys[0], *auth.ttl)
@@ -1643,8 +1643,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				ads.EXPECT().GetAuthData(ctx).Return(
-					dummyAuthData{Val: jwtWithoutKIDSignedWithKeyAndCertJWK}, nil)
+				ads.EXPECT().GetAuthData(ctx).Return(jwtWithoutKIDSignedWithKeyAndCertJWK, nil)
 			},
 			instructServer: func(t *testing.T) {
 				t.Helper()
@@ -1695,7 +1694,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				ads.EXPECT().GetAuthData(ctx).Return(dummyAuthData{Val: jwtWithoutKIDSignedWithKeyAndCertJWK}, nil)
+				ads.EXPECT().GetAuthData(ctx).Return(jwtWithoutKIDSignedWithKeyAndCertJWK, nil)
 			},
 			instructServer: func(t *testing.T) {
 				t.Helper()
@@ -1739,8 +1738,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				ads.EXPECT().GetAuthData(ctx).Return(
-					dummyAuthData{Val: jwtWithoutKIDSignedWithKeyAndCertJWK}, nil)
+				ads.EXPECT().GetAuthData(ctx).Return(jwtWithoutKIDSignedWithKeyAndCertJWK, nil)
 			},
 			instructServer: func(t *testing.T) {
 				t.Helper()
@@ -1785,8 +1783,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				ads.EXPECT().GetAuthData(ctx).Return(
-					dummyAuthData{Val: jwtWithoutKIDSignedWithKeyAndCertJWK}, nil)
+				ads.EXPECT().GetAuthData(ctx).Return(jwtWithoutKIDSignedWithKeyAndCertJWK, nil)
 			},
 			instructServer: func(t *testing.T) {
 				t.Helper()

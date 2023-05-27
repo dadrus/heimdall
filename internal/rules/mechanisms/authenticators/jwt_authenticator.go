@@ -170,7 +170,7 @@ func (a *jwtAuthenticator) Execute(ctx heimdall.Context) (*subject.Subject, erro
 			CausedBy(err)
 	}
 
-	token, err := jwt.ParseSigned(jwtAd.Value())
+	token, err := jwt.ParseSigned(jwtAd)
 	if err != nil {
 		return nil, errorchain.
 			NewWithMessage(heimdall.ErrAuthentication, "failed to parse JWT").

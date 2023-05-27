@@ -4,8 +4,6 @@ package mocks
 
 import (
 	heimdall "github.com/dadrus/heimdall/internal/heimdall"
-	extractors "github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/extractors"
-
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -23,20 +21,18 @@ func (_m *AuthDataExtractStrategyMock) EXPECT() *AuthDataExtractStrategyMock_Exp
 }
 
 // GetAuthData provides a mock function with given fields: ctx
-func (_m *AuthDataExtractStrategyMock) GetAuthData(ctx heimdall.Context) (extractors.AuthData, error) {
+func (_m *AuthDataExtractStrategyMock) GetAuthData(ctx heimdall.Context) (string, error) {
 	ret := _m.Called(ctx)
 
-	var r0 extractors.AuthData
+	var r0 string
 	var r1 error
-	if rf, ok := ret.Get(0).(func(heimdall.Context) (extractors.AuthData, error)); ok {
+	if rf, ok := ret.Get(0).(func(heimdall.Context) (string, error)); ok {
 		return rf(ctx)
 	}
-	if rf, ok := ret.Get(0).(func(heimdall.Context) extractors.AuthData); ok {
+	if rf, ok := ret.Get(0).(func(heimdall.Context) string); ok {
 		r0 = rf(ctx)
 	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(extractors.AuthData)
-		}
+		r0 = ret.Get(0).(string)
 	}
 
 	if rf, ok := ret.Get(1).(func(heimdall.Context) error); ok {
@@ -66,12 +62,12 @@ func (_c *AuthDataExtractStrategyMock_GetAuthData_Call) Run(run func(ctx heimdal
 	return _c
 }
 
-func (_c *AuthDataExtractStrategyMock_GetAuthData_Call) Return(_a0 extractors.AuthData, _a1 error) *AuthDataExtractStrategyMock_GetAuthData_Call {
+func (_c *AuthDataExtractStrategyMock_GetAuthData_Call) Return(_a0 string, _a1 error) *AuthDataExtractStrategyMock_GetAuthData_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *AuthDataExtractStrategyMock_GetAuthData_Call) RunAndReturn(run func(heimdall.Context) (extractors.AuthData, error)) *AuthDataExtractStrategyMock_GetAuthData_Call {
+func (_c *AuthDataExtractStrategyMock_GetAuthData_Call) RunAndReturn(run func(heimdall.Context) (string, error)) *AuthDataExtractStrategyMock_GetAuthData_Call {
 	_c.Call.Return(run)
 	return _c
 }

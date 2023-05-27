@@ -158,7 +158,7 @@ func (a *oauth2IntrospectionAuthenticator) Execute(ctx heimdall.Context) (*subje
 			CausedBy(err)
 	}
 
-	rawResp, err := a.getSubjectInformation(ctx, accessToken.Value())
+	rawResp, err := a.getSubjectInformation(ctx, accessToken)
 	if err != nil {
 		return nil, err
 	}
