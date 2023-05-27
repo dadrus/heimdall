@@ -43,7 +43,10 @@ func TestExtractHeaderValue(t *testing.T) {
 			configureMocks: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
-				ctx.EXPECT().RequestHeader("X-Test-Header").Return("TestValue")
+				fnt := mocks.NewRequestFunctionsMock(t)
+				fnt.EXPECT().Header("X-Test-Header").Return("TestValue")
+
+				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: fnt})
 			},
 			assert: func(t *testing.T, err error, authData AuthData) {
 				t.Helper()
@@ -58,7 +61,10 @@ func TestExtractHeaderValue(t *testing.T) {
 			configureMocks: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
-				ctx.EXPECT().RequestHeader("X-Test-Header").Return("TestValue")
+				fnt := mocks.NewRequestFunctionsMock(t)
+				fnt.EXPECT().Header("X-Test-Header").Return("TestValue")
+
+				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: fnt})
 			},
 			assert: func(t *testing.T, err error, authData AuthData) {
 				t.Helper()
@@ -74,7 +80,10 @@ func TestExtractHeaderValue(t *testing.T) {
 			configureMocks: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
-				ctx.EXPECT().RequestHeader("X-Test-Header").Return("Bar TestValue")
+				fnt := mocks.NewRequestFunctionsMock(t)
+				fnt.EXPECT().Header("X-Test-Header").Return("Bar TestValue")
+
+				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: fnt})
 			},
 			assert: func(t *testing.T, err error, authData AuthData) {
 				t.Helper()
@@ -90,7 +99,10 @@ func TestExtractHeaderValue(t *testing.T) {
 			configureMocks: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
-				ctx.EXPECT().RequestHeader("X-Test-Header").Return("Foo TestValue")
+				fnt := mocks.NewRequestFunctionsMock(t)
+				fnt.EXPECT().Header("X-Test-Header").Return("Foo TestValue")
+
+				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: fnt})
 			},
 			assert: func(t *testing.T, err error, authData AuthData) {
 				t.Helper()
@@ -105,7 +117,10 @@ func TestExtractHeaderValue(t *testing.T) {
 			configureMocks: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
-				ctx.EXPECT().RequestHeader("X-Test-Header").Return("")
+				fnt := mocks.NewRequestFunctionsMock(t)
+				fnt.EXPECT().Header("X-Test-Header").Return("")
+
+				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: fnt})
 			},
 			assert: func(t *testing.T, err error, authData AuthData) {
 				t.Helper()

@@ -130,7 +130,7 @@ when:
 				require.NotNil(t, redEH)
 				assert.Equal(t, "with minimal valid configuration", redEH.HandlerID())
 
-				toURL, err := redEH.to.Render(nil, nil, nil)
+				toURL, err := redEH.to.Render(nil)
 				require.NoError(t, err)
 
 				assert.Equal(t, "http://foo.bar", toURL)
@@ -180,11 +180,12 @@ when:
 				assert.Equal(t, "with full complex valid configuration", redEH.HandlerID())
 
 				ctx := mocks.NewContextMock(t)
-				ctx.EXPECT().RequestMethod().Return("POST")
-				ctx.EXPECT().RequestURL().Return(&url.URL{Scheme: "http", Host: "foobar.baz", Path: "zab"})
-				ctx.EXPECT().RequestClientIPs().Return(nil)
+				ctx.EXPECT().Request().
+					Return(&heimdall.Request{URL: &url.URL{Scheme: "http", Host: "foobar.baz", Path: "zab"}})
 
-				toURL, err := redEH.to.Render(ctx, nil, nil)
+				toURL, err := redEH.to.Render(map[string]any{
+					"Request": ctx.Request(),
+				})
 				require.NoError(t, err)
 
 				assert.Equal(t, "http://foo.bar?origin=http%3A%2F%2Ffoobar.baz%2Fzab", toURL)
@@ -401,9 +402,7 @@ when:
 			configureContext: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
-				ctx.EXPECT().RequestMethod().Return("POST")
-				ctx.EXPECT().RequestURL().Return(&url.URL{Scheme: "http", Host: "foobar.baz", Path: "zab"})
-				ctx.EXPECT().RequestClientIPs().Return(nil)
+				ctx.EXPECT().Request().Return(nil)
 			},
 			assert: func(t *testing.T, wasResponsible bool, err error) {
 				t.Helper()
@@ -426,9 +425,7 @@ when:
 			configureContext: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
-				ctx.EXPECT().RequestMethod().Return("POST")
-				ctx.EXPECT().RequestURL().Return(&url.URL{Scheme: "http", Host: "foobar.baz", Path: "zab"})
-				ctx.EXPECT().RequestClientIPs().Return(nil)
+				ctx.EXPECT().Request().Return(nil)
 				ctx.EXPECT().SetPipelineError(mock.MatchedBy(func(redirErr *heimdall.RedirectError) bool {
 					t.Helper()
 
@@ -462,10 +459,7 @@ when:
 				requestURL, err := url.Parse("http://test.org")
 				require.NoError(t, err)
 
-				ctx.EXPECT().RequestMethod().Return("POST")
-				ctx.EXPECT().RequestClientIPs().Return(nil)
-				ctx.EXPECT().RequestURL().Return(requestURL)
-
+				ctx.EXPECT().Request().Return(&heimdall.Request{URL: requestURL})
 				ctx.EXPECT().SetPipelineError(mock.MatchedBy(func(redirErr *heimdall.RedirectError) bool {
 					t.Helper()
 

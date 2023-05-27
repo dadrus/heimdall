@@ -17,12 +17,24 @@
 package cellib
 
 import (
+	"net/url"
 	"reflect"
 
 	"github.com/google/cel-go/cel"
+	"github.com/google/cel-go/common/types"
+	"github.com/google/cel-go/common/types/ref"
+	"github.com/google/cel-go/common/types/traits"
 	"github.com/google/cel-go/ext"
 
+	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
+)
+
+var (
+	//nolint:gochecknoglobals
+	requestType = types.NewTypeValue(reflect.TypeOf(heimdall.Request{}).String(), traits.ReceiverType)
+	//nolint:gochecknoglobals
+	urlType = types.NewTypeValue(reflect.TypeOf(url.URL{}).String(), traits.ReceiverType)
 )
 
 type heimdallLibrary struct{}
@@ -36,19 +48,53 @@ func (heimdallLibrary) CompileOptions() []cel.EnvOption {
 		cel.DefaultUTCTimeZone(true),
 		ext.NativeTypes(
 			reflect.TypeOf(&subject.Subject{}),
-			reflect.TypeOf(&Request{}),
-			reflect.TypeOf(&URL{})),
+			reflect.TypeOf(&heimdall.Request{}),
+			reflect.TypeOf(&url.URL{})),
 		cel.Variable("Payload", cel.DynType),
 		cel.Variable("Subject", cel.DynType),
 		cel.Variable("Request", cel.ObjectType(requestType.TypeName())),
-		cel.Function("Header", cel.MemberOverload("Header",
-			[]*cel.Type{cel.ObjectType(requestType.TypeName()), cel.StringType}, cel.StringType)),
-		cel.Function("Cookie", cel.MemberOverload("Cookie",
-			[]*cel.Type{cel.ObjectType(requestType.TypeName()), cel.StringType}, cel.StringType)),
-		cel.Function("String", cel.MemberOverload("String",
-			[]*cel.Type{cel.ObjectType(urlType.TypeName())}, cel.StringType)),
-		cel.Function("Query", cel.MemberOverload("Query",
-			[]*cel.Type{cel.ObjectType(urlType.TypeName())}, cel.DynType)),
+		cel.Function("Header",
+			cel.MemberOverload("Header",
+				[]*cel.Type{cel.ObjectType(requestType.TypeName()), cel.StringType}, cel.StringType,
+				cel.BinaryBinding(func(lhs ref.Val, rhs ref.Val) ref.Val {
+					// nolint: forcetypeassert
+					req := lhs.Value().(*heimdall.Request)
+
+					// nolint: forcetypeassert
+					return types.String(req.Header(rhs.Value().(string)))
+				}),
+			),
+		),
+		cel.Function("Cookie",
+			cel.MemberOverload("Cookie",
+				[]*cel.Type{cel.ObjectType(requestType.TypeName()), cel.StringType}, cel.StringType,
+				cel.BinaryBinding(func(lhs ref.Val, rhs ref.Val) ref.Val {
+					// nolint: forcetypeassert
+					req := lhs.Value().(*heimdall.Request)
+
+					// nolint: forcetypeassert
+					return types.String(req.Cookie(rhs.Value().(string)))
+				}),
+			),
+		),
+		cel.Function("String",
+			cel.MemberOverload("String",
+				[]*cel.Type{cel.ObjectType(urlType.TypeName())}, cel.StringType,
+				cel.UnaryBinding(func(value ref.Val) ref.Val {
+					// nolint: forcetypeassert
+					return types.String(value.Value().(*url.URL).String())
+				}),
+			),
+		),
+		cel.Function("Query",
+			cel.MemberOverload("Query",
+				[]*cel.Type{cel.ObjectType(urlType.TypeName())}, cel.DynType,
+				cel.UnaryBinding(func(value ref.Val) ref.Val {
+					// nolint: forcetypeassert
+					return types.NewDynamicMap(types.DefaultTypeAdapter, value.Value().(*url.URL).Query())
+				}),
+			),
+		),
 	}
 }
 

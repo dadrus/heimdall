@@ -19,7 +19,6 @@ package unifiers
 import (
 	"context"
 	"errors"
-	"net/url"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -105,11 +104,13 @@ headers:
 				assert.Len(t, unifier.headers, 2)
 				assert.Equal(t, "hun", unifier.HandlerID())
 
-				val, err := unifier.headers["foo"].Render(nil, nil, nil)
+				val, err := unifier.headers["foo"].Render(nil)
 				require.NoError(t, err)
 				assert.Equal(t, "bar", val)
 
-				val, err = unifier.headers["bar"].Render(nil, &subject.Subject{ID: "baz"}, nil)
+				val, err = unifier.headers["bar"].Render(map[string]any{
+					"Subject": &subject.Subject{ID: "baz"},
+				})
 				require.NoError(t, err)
 				assert.Equal(t, "baz", val)
 
@@ -192,7 +193,7 @@ headers:
 				assert.Equal(t, "hun3", configured.HandlerID())
 				assert.Equal(t, prototype.HandlerID(), configured.HandlerID())
 
-				val, err := configured.headers["bar"].Render(nil, nil, nil)
+				val, err := configured.headers["bar"].Render(nil)
 				require.NoError(t, err)
 				assert.Equal(t, "foo", val)
 
@@ -266,14 +267,14 @@ headers:
 			configureContext: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
+				reqf := mocks.NewRequestFunctionsMock(t)
+				reqf.EXPECT().Header("X-Foo").Return("Bar")
+
 				ctx.EXPECT().AddHeaderForUpstream("foo", "baz")
 				ctx.EXPECT().AddHeaderForUpstream("bar", "FooBar")
 				ctx.EXPECT().AddHeaderForUpstream("baz", "bar")
 				ctx.EXPECT().AddHeaderForUpstream("X-Baz", "Bar")
-				ctx.EXPECT().RequestMethod().Return("POST")
-				ctx.EXPECT().RequestURL().Return(&url.URL{Scheme: "http", Host: "foo.bar", Path: "baz"})
-				ctx.EXPECT().RequestClientIPs().Return([]string{"127.0.0.1"})
-				ctx.EXPECT().RequestHeader("X-Foo").Return("Bar")
+				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: reqf})
 			},
 			createSubject: func(t *testing.T) *subject.Subject {
 				t.Helper()

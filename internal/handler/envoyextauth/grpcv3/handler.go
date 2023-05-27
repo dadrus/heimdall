@@ -32,20 +32,21 @@ type Handler struct {
 	s heimdall.JWTSigner
 }
 
-func (h *Handler) Check(ctx context.Context, req *envoy_auth.CheckRequest) (*envoy_auth.CheckResponse, error) {
+func (h *Handler) Check(ctx context.Context, creq *envoy_auth.CheckRequest) (*envoy_auth.CheckResponse, error) {
 	logger := zerolog.Ctx(ctx)
 	logger.Debug().Msg("Decision Envoy ExtAuth called")
 
-	reqCtx := NewRequestContext(ctx, req, h.s)
+	reqCtx := NewRequestContext(ctx, creq, h.s)
+	req := reqCtx.Request()
 
-	rul, err := h.r.FindRule(reqCtx.RequestURL())
+	rul, err := h.r.FindRule(req.URL)
 	if err != nil {
 		return nil, err
 	}
 
-	if !rul.MatchesMethod(reqCtx.RequestMethod()) {
+	if !rul.MatchesMethod(req.Method) {
 		return nil, errorchain.NewWithMessagef(heimdall.ErrMethodNotAllowed,
-			"rule doesn't match %s method", reqCtx.RequestMethod())
+			"rule doesn't match %s method", req.Method)
 	}
 
 	_, err = rul.Execute(reqCtx)

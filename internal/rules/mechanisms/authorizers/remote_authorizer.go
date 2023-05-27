@@ -287,7 +287,10 @@ func (a *remoteAuthorizer) createRequest(ctx heimdall.Context, sub *subject.Subj
 	var body io.Reader
 
 	if a.payload != nil {
-		bodyContents, err := a.payload.Render(ctx, sub, nil)
+		bodyContents, err := a.payload.Render(map[string]any{
+			"Request": ctx.Request(),
+			"Subject": sub,
+		})
 		if err != nil {
 			return nil, errorchain.
 				NewWithMessage(heimdall.ErrInternal, "failed to render payload for the authorization endpoint").
@@ -308,7 +311,10 @@ func (a *remoteAuthorizer) createRequest(ctx heimdall.Context, sub *subject.Subj
 					CausedBy(err)
 			}
 
-			return tpl.Render(nil, sub, values)
+			return tpl.Render(map[string]any{
+				"Subject": sub,
+				"Values":  values,
+			})
 		}))
 	if err != nil {
 		return nil, errorchain.

@@ -89,7 +89,7 @@ func (a *celAuthorizer) Execute(ctx heimdall.Context, sub *subject.Subject) erro
 
 	obj := map[string]any{
 		"Subject": sub,
-		"Request": cellib.WrapRequest(ctx),
+		"Request": ctx.Request(),
 	}
 
 	for i, expression := range a.expressions {

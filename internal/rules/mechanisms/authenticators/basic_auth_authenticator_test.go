@@ -350,7 +350,10 @@ password: bar`))
 			configureContext: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
-				ctx.EXPECT().RequestHeader("Authorization").Return("")
+				fnt := mocks.NewRequestFunctionsMock(t)
+				fnt.EXPECT().Header("Authorization").Return("")
+
+				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: fnt})
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
@@ -373,7 +376,10 @@ password: bar`))
 			configureContext: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
-				ctx.EXPECT().RequestHeader("Authorization").Return("Basic bar")
+				fnt := mocks.NewRequestFunctionsMock(t)
+				fnt.EXPECT().Header("Authorization").Return("Basic bar")
+
+				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: fnt})
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
@@ -396,8 +402,11 @@ password: bar`))
 			configureContext: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
-				ctx.EXPECT().RequestHeader("Authorization").
+				fnt := mocks.NewRequestFunctionsMock(t)
+				fnt.EXPECT().Header("Authorization").
 					Return("Basic " + base64.StdEncoding.EncodeToString([]byte("foo|bar")))
+
+				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: fnt})
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
@@ -420,8 +429,11 @@ password: bar`))
 			configureContext: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
-				ctx.EXPECT().RequestHeader("Authorization").
+				fnt := mocks.NewRequestFunctionsMock(t)
+				fnt.EXPECT().Header("Authorization").
 					Return("Basic " + base64.StdEncoding.EncodeToString([]byte("baz:bar")))
+
+				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: fnt})
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
@@ -444,8 +456,11 @@ password: bar`))
 			configureContext: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
-				ctx.EXPECT().RequestHeader("Authorization").
+				fnt := mocks.NewRequestFunctionsMock(t)
+				fnt.EXPECT().Header("Authorization").
 					Return("Basic " + base64.StdEncoding.EncodeToString([]byte("foo:baz")))
+
+				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: fnt})
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
@@ -468,8 +483,11 @@ password: bar`))
 			configureContext: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
-				ctx.EXPECT().RequestHeader("Authorization").
+				fnt := mocks.NewRequestFunctionsMock(t)
+				fnt.EXPECT().Header("Authorization").
 					Return("Basic " + base64.StdEncoding.EncodeToString([]byte("foo:bar")))
+
+				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: fnt})
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
