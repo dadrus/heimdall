@@ -848,7 +848,8 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 					URL:    srv.URL,
 					Method: http.MethodGet,
 					Headers: map[string]string{
-						"Accept": "application/json",
+						"Accept":      "application/json",
+						"X-User-Data": "{{ .AuthenticationData }}",
 					},
 				},
 				sf: &SubjectInfo{IDFrom: "barfoo"},
@@ -871,7 +872,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 
 					assert.Equal(t, http.MethodGet, req.Method)
 					assert.Equal(t, "application/json", req.Header.Get("Accept"))
-					assert.Equal(t, "session_token", req.Header.Get("Dummy"))
+					assert.Equal(t, "session_token", req.Header.Get("X-User-Data"))
 				}
 
 				responseCode = http.StatusOK
@@ -1071,6 +1072,11 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 			) {
 				t.Helper()
 
+				reqFuns := heimdallmocks.NewRequestFunctionsMock(t)
+				reqFuns.EXPECT().Header("X-Original-Auth").Return("orig-auth")
+
+				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: reqFuns})
+
 				cacheKey := auth.calculateCacheKey("session_token")
 
 				ads.EXPECT().GetAuthData(ctx).Return(dummyAuthData{Val: "session_token"}, nil)
@@ -1085,7 +1091,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 
 					assert.Equal(t, http.MethodGet, req.Method)
 					assert.Equal(t, "application/json", req.Header.Get("Accept"))
-					assert.Equal(t, "session_token", req.Header.Get("Dummy"))
+					assert.Equal(t, "orig-auth", req.Header.Get("X-Original-Auth"))
 				}
 
 				responseCode = http.StatusOK
@@ -1128,6 +1134,11 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 			) {
 				t.Helper()
 
+				reqFuns := heimdallmocks.NewRequestFunctionsMock(t)
+				reqFuns.EXPECT().Cookie("original-auth").Return("orig-auth")
+
+				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: reqFuns})
+
 				cacheKey := auth.calculateCacheKey("session_token")
 
 				ads.EXPECT().GetAuthData(ctx).Return(dummyAuthData{Val: "session_token"}, nil)
@@ -1141,7 +1152,10 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 
 					assert.Equal(t, http.MethodGet, req.Method)
 					assert.Equal(t, "application/json", req.Header.Get("Accept"))
-					assert.Equal(t, "session_token", req.Header.Get("Dummy"))
+
+					cookie, err := req.Cookie("original-auth")
+					require.NoError(t, err)
+					assert.Equal(t, "orig-auth", cookie.Value)
 				}
 
 				responseCode = http.StatusOK
@@ -1167,7 +1181,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 			authenticator: &genericAuthenticator{
 				id: "auth3",
 				e: endpoint.Endpoint{
-					URL:    srv.URL + "foo={{ .AuthenticationData }}",
+					URL:    srv.URL + "?foo={{ .AuthenticationData }}",
 					Method: http.MethodGet,
 					Headers: map[string]string{
 						"Accept": "application/json",
@@ -1198,7 +1212,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 
 					assert.Equal(t, http.MethodGet, req.Method)
 					assert.Equal(t, "application/json", req.Header.Get("Accept"))
-					assert.Equal(t, "session_token", req.Header.Get("Dummy"))
+					assert.Equal(t, "session_token", req.URL.Query().Get("foo"))
 				}
 
 				responseCode = http.StatusOK
@@ -1264,7 +1278,10 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 
 					assert.Equal(t, http.MethodGet, req.Method)
 					assert.Equal(t, "application/json", req.Header.Get("Accept"))
-					assert.Equal(t, "session_token", req.Header.Get("Dummy"))
+
+					res, err := io.ReadAll(req.Body)
+					require.NoError(t, err)
+					assert.Equal(t, "foo=session_token", string(res))
 				}
 
 				responseCode = http.StatusOK
