@@ -143,6 +143,8 @@ rules:
               give_up_after: 2s
           authentication_data_source:
             - cookie: ory_kratos_session
+          forward_cookies:
+            - ory_kratos_session
           subject:
             attributes: "@this"
             id: "identity.id"
@@ -155,63 +157,42 @@ rules:
             not_after: expires_at
             time_format: "2006-01-02T15:04:05.999999Z07"
             validity_leeway: 10s
-      - id: authenticator_with_body_auth_data_forward
+      - id: authenticator_with_body_payload
         type: generic
         config:
           identity_info_endpoint:
             url: http://127.0.0.1:4433/sessions/whoami
           authentication_data_source:
-            - cookie: ory_kratos_session
+            - header: X-My-Token
           subject:
             attributes: "@this"
             id: "identity.id"
-          authentication_data_forward:
-            type: body
-            config:
-              name: token
-      - id: authenticator_with_cookie_auth_data_forward
+          payload: |
+            token={{ .AuthenticationData | urlenc }}
+      - id: authenticator_with_header_forward
         type: generic
         config:
           identity_info_endpoint:
             url: http://127.0.0.1:4433/sessions/whoami
           authentication_data_source:
-            - cookie: ory_kratos_session
+            - header: X-My-Header
+          forward_headers:
+            - X-My-Header
           subject:
             attributes: "@this"
             id: "identity.id"
-          authentication_data_forward:
-            type: cookie
-            config:
-              name: token
-      - id: authenticator_with_header_auth_data_forward
+      - id: authenticator_with_query_and_header_template
         type: generic
         config:
           identity_info_endpoint:
-            url: http://127.0.0.1:4433/sessions/whoami
+            url: http://127.0.0.1:4433/identity?token={{ .AuthenticationData | urlenc }}
+            headers:
+              X-My-Token: "{{ .AuthenticationData }}"
           authentication_data_source:
             - cookie: ory_kratos_session
           subject:
             attributes: "@this"
             id: "identity.id"
-          authentication_data_forward:
-            type: header
-            config:
-              name: token
-              scheme: Foo
-      - id: authenticator_with_query_auth_data_forward
-        type: generic
-        config:
-          identity_info_endpoint:
-            url: http://127.0.0.1:4433/sessions/whoami
-          authentication_data_source:
-            - cookie: ory_kratos_session
-          subject:
-            attributes: "@this"
-            id: "identity.id"
-          authentication_data_forward:
-            type: query
-            config:
-              name: token
       - id: hydra_authenticator
         type: oauth2_introspection
         config:
