@@ -627,7 +627,8 @@ func TestGenericContextualizerExecute(t *testing.T) {
 				id: "contextualizer1",
 				e:  endpoint.Endpoint{URL: srv.URL},
 				payload: func() template.Template {
-					tpl, _ := template.New("{{ .foo }}")
+					tpl, err := template.New("{{ len .foo }}")
+					require.NoError(t, err)
 
 					return tpl
 				}(),

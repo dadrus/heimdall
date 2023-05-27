@@ -225,6 +225,8 @@ func (a *genericAuthenticator) getSubjectInformation(ctx heimdall.Context, authD
 		return nil, err
 	}
 
+	logger.Debug().Str("_payload", string(payload)).Msg("Raw subject information")
+
 	if a.sessionLifespanConf != nil {
 		session, err = a.sessionLifespanConf.CreateSessionLifespan(payload)
 		if err != nil {
@@ -290,6 +292,8 @@ func (a *genericAuthenticator) createRequest(ctx heimdall.Context, authData stri
 				"failed to render payload for the authenticator endpoint").
 				WithErrorContext(a).CausedBy(err)
 		}
+
+		logger.Debug().Str("_payload", value).Msg("Request payload")
 
 		body = strings.NewReader(value)
 	}

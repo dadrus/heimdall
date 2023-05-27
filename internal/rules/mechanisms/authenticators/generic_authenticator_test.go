@@ -782,7 +782,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				id: "auth3",
 				e:  endpoint.Endpoint{URL: srv.URL},
 				payload: func() template.Template {
-					tpl, err := template.New("foo={{ .Foobar }}")
+					tpl, err := template.New("foo={{ len .Foobar }}")
 					require.NoError(t, err)
 
 					return tpl

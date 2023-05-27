@@ -512,7 +512,7 @@ claims: '{
 		{
 			uc:      "with custom claims template, which fails during rendering",
 			id:      "jun3",
-			config:  []byte(`claims: "{{ .foobar }}"`),
+			config:  []byte(`claims: "{{ len .foobar }}"`),
 			subject: &subject.Subject{ID: "foo", Attributes: map[string]any{"baz": "bar"}},
 			configureMocks: func(t *testing.T, ctx *heimdallmocks.ContextMock, signer *heimdallmocks.JWTSignerMock,
 				cch *mocks.CacheMock, sub *subject.Subject,
