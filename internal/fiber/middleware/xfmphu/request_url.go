@@ -23,6 +23,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 
 	"github.com/dadrus/heimdall/internal/x"
+	"github.com/dadrus/heimdall/internal/x/stringx"
 )
 
 func requestURL(c *fiber.Ctx) *url.URL {
@@ -54,7 +55,7 @@ func requestURL(c *fiber.Ctx) *url.URL {
 
 	if len(query) == 0 {
 		origReqURL := *c.Request().URI()
-		query = string(origReqURL.QueryString())
+		query = stringx.ToString(origReqURL.QueryString())
 	}
 
 	return &url.URL{

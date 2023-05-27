@@ -28,6 +28,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
+	"github.com/dadrus/heimdall/internal/x/stringx"
 )
 
 var ErrTemplateRender = errors.New("template error")
@@ -57,7 +58,7 @@ func New(val string) (Template, error) {
 	}
 
 	hash := sha256.New()
-	hash.Write([]byte(val))
+	hash.Write(stringx.ToBytes(val))
 
 	return &templateImpl{t: tmpl, hash: hash.Sum(nil)}, nil
 }

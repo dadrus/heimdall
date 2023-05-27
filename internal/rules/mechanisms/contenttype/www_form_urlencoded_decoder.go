@@ -18,12 +18,14 @@ package contenttype
 
 import (
 	"net/url"
+
+	"github.com/dadrus/heimdall/internal/x/stringx"
 )
 
 type WWWFormUrlencodedDecoder struct{}
 
 func (WWWFormUrlencodedDecoder) Decode(rawData []byte) (map[string]any, error) {
-	values, err := url.ParseQuery(string(rawData))
+	values, err := url.ParseQuery(stringx.ToString(rawData))
 	if err != nil {
 		return nil, err
 	}

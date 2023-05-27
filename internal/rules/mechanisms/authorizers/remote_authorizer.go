@@ -40,6 +40,7 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
+	"github.com/dadrus/heimdall/internal/x/stringx"
 )
 
 // by intention. Used only during application bootstrap
@@ -357,7 +358,7 @@ func (a *remoteAuthorizer) readResponse(ctx heimdall.Context, resp *http.Respons
 		logger.Warn().Str("_content_type", contentType).
 			Msg("Content type is not supported. Treating it as string")
 
-		return string(rawData), nil // nolint: nilerr
+		return stringx.ToString(rawData), nil // nolint: nilerr
 	}
 
 	result, err := decoder.Decode(rawData)
@@ -379,11 +380,11 @@ func (a *remoteAuthorizer) calculateCacheKey(sub *subject.Subject) string {
 
 	hash := sha256.New()
 	hash.Write(a.e.Hash())
-	hash.Write([]byte(a.id))
-	hash.Write([]byte(strings.Join(a.headersForUpstream, ",")))
+	hash.Write(stringx.ToBytes(a.id))
+	hash.Write(stringx.ToBytes(strings.Join(a.headersForUpstream, ",")))
 	hash.Write(x.IfThenElseExec(a.payload != nil,
 		func() []byte { return a.payload.Hash() },
-		func() []byte { return []byte("nil") }))
+		func() []byte { return stringx.ToBytes("nil") }))
 	hash.Write(ttlBytes)
 	hash.Write(sub.Hash())
 

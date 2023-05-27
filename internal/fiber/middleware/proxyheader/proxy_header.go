@@ -22,6 +22,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 
 	"github.com/dadrus/heimdall/internal/x"
+	"github.com/dadrus/heimdall/internal/x/stringx"
 )
 
 const (
@@ -49,7 +50,7 @@ func New() fiber.Handler {
 		}
 
 		clientIP := c.IP()
-		proto := string(c.Request().URI().Scheme())
+		proto := stringx.ToString(c.Request().URI().Scheme())
 
 		// Set the X-Forwarded-For
 		c.Request().Header.Set(headerXForwardedFor,

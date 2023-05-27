@@ -18,6 +18,8 @@ package config
 
 import (
 	"github.com/goccy/go-json"
+
+	"github.com/dadrus/heimdall/internal/x/stringx"
 )
 
 type Matcher struct {
@@ -28,7 +30,7 @@ type Matcher struct {
 func (m *Matcher) UnmarshalJSON(data []byte) error {
 	if data[0] == '"' {
 		// data contains just the url matching value
-		m.URL = string(data[1 : len(data)-1])
+		m.URL = stringx.ToString(data[1 : len(data)-1])
 		m.Strategy = "glob"
 
 		return nil

@@ -23,6 +23,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
+	"github.com/dadrus/heimdall/internal/x/stringx"
 )
 
 type APIKeyStrategy struct {
@@ -52,9 +53,9 @@ func (c *APIKeyStrategy) Apply(_ context.Context, req *http.Request) error {
 func (c *APIKeyStrategy) Hash() []byte {
 	hash := sha256.New()
 
-	hash.Write([]byte(c.In))
-	hash.Write([]byte(c.Name))
-	hash.Write([]byte(c.Value))
+	hash.Write(stringx.ToBytes(c.In))
+	hash.Write(stringx.ToBytes(c.Name))
+	hash.Write(stringx.ToBytes(c.Value))
 
 	return hash.Sum(nil)
 }

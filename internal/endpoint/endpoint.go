@@ -36,6 +36,7 @@ import (
 	"github.com/dadrus/heimdall/internal/httpcache"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
+	"github.com/dadrus/heimdall/internal/x/stringx"
 )
 
 type Endpoint struct {
@@ -181,8 +182,8 @@ func (e Endpoint) Hash() []byte {
 
 	hash := sha256.New()
 
-	hash.Write([]byte(e.URL))
-	hash.Write([]byte(e.Method))
+	hash.Write(stringx.ToBytes(e.URL))
+	hash.Write(stringx.ToBytes(e.Method))
 
 	if e.Retry != nil {
 		maxDelayBytes := make([]byte, int64BytesCount)
@@ -197,8 +198,8 @@ func (e Endpoint) Hash() []byte {
 
 	buf := bytes.NewBufferString("")
 	for k, v := range e.Headers {
-		buf.Write([]byte(k))
-		buf.Write([]byte(v))
+		buf.Write(stringx.ToBytes(k))
+		buf.Write(stringx.ToBytes(v))
 	}
 
 	hash.Write(buf.Bytes())

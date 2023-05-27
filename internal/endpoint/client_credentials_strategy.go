@@ -31,6 +31,7 @@ import (
 	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
+	"github.com/dadrus/heimdall/internal/x/stringx"
 )
 
 const defaultCacheLeeway = 15
@@ -78,10 +79,10 @@ func (c *ClientCredentialsStrategy) Apply(ctx context.Context, req *http.Request
 
 func (c *ClientCredentialsStrategy) calculateCacheKey() string {
 	digest := sha256.New()
-	digest.Write([]byte(c.ClientID))
-	digest.Write([]byte(c.ClientSecret))
-	digest.Write([]byte(c.TokenURL))
-	digest.Write([]byte(strings.Join(c.Scopes, "")))
+	digest.Write(stringx.ToBytes(c.ClientID))
+	digest.Write(stringx.ToBytes(c.ClientSecret))
+	digest.Write(stringx.ToBytes(c.TokenURL))
+	digest.Write(stringx.ToBytes(strings.Join(c.Scopes, "")))
 
 	return hex.EncodeToString(digest.Sum(nil))
 }
@@ -123,8 +124,8 @@ func (c *ClientCredentialsStrategy) getAccessToken(ctx context.Context) (*tokenE
 func (c *ClientCredentialsStrategy) Hash() []byte {
 	hash := sha256.New()
 
-	hash.Write([]byte(c.ClientID))
-	hash.Write([]byte(c.ClientSecret))
+	hash.Write(stringx.ToBytes(c.ClientID))
+	hash.Write(stringx.ToBytes(c.ClientSecret))
 
 	return hash.Sum(nil)
 }

@@ -30,14 +30,15 @@ import (
 
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
+	"github.com/dadrus/heimdall/internal/x/stringx"
 )
 
 var isNumRegex = regexp.MustCompile(`^\d+$`)
 
 func messageDigest(val, hash string) string {
 	mds := sha256.New()
-	mds.Write([]byte(val))
-	mds.Write([]byte(hash))
+	mds.Write(stringx.ToBytes(val))
+	mds.Write(stringx.ToBytes(hash))
 
 	return hex.EncodeToString(mds.Sum(nil))
 }
@@ -47,7 +48,7 @@ func toRealType(val string) any {
 
 	// here we're using the ability of the yaml parser to "guess" the type and convert the given string to it.
 	// this is not the fastest way, but ok for now.
-	yaml.Unmarshal([]byte(fmt.Sprintf("val: %s", val)), &parsed) // nolint: errcheck
+	yaml.Unmarshal(stringx.ToBytes(fmt.Sprintf("val: %s", val)), &parsed) // nolint: errcheck
 
 	return parsed["val"]
 }

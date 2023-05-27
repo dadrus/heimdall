@@ -30,6 +30,8 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	semconv "go.opentelemetry.io/otel/semconv/v1.12.0"
 	"go.opentelemetry.io/otel/trace"
+
+	"github.com/dadrus/heimdall/internal/x/stringx"
 )
 
 const (
@@ -41,7 +43,7 @@ type fasthttpHeaderCarrier struct {
 	header *fasthttp.RequestHeader
 }
 
-func (c *fasthttpHeaderCarrier) Get(key string) string { return string(c.header.Peek(key)) }
+func (c *fasthttpHeaderCarrier) Get(key string) string { return stringx.ToString(c.header.Peek(key)) }
 
 func (c *fasthttpHeaderCarrier) Set(key string, value string) { c.header.Set(key, value) }
 
@@ -49,7 +51,7 @@ func (c *fasthttpHeaderCarrier) Keys() []string {
 	var headerNames []string
 
 	c.header.VisitAll(func(key, value []byte) {
-		headerNames = append(headerNames, string(key))
+		headerNames = append(headerNames, stringx.ToString(key))
 	})
 
 	return headerNames
@@ -120,10 +122,10 @@ func (c *WrappedClient) startSpan(ctx context.Context, req *fasthttp.Request) sp
 	}
 
 	operationName := fmt.Sprintf("%s %s %s @%s",
-		string(req.Header.Protocol()),
-		string(req.Header.Method()),
-		string(req.URI().Path()),
-		string(req.Host()))
+		stringx.ToString(req.Header.Protocol()),
+		stringx.ToString(req.Header.Method()),
+		stringx.ToString(req.URI().Path()),
+		stringx.ToString(req.Host()))
 	ctx, span := tracer.Start(ctx, operationName,
 		trace.WithSpanKind(trace.SpanKindClient),
 		trace.WithAttributes(semconv.HTTPClientAttributesFromHTTPRequest(httpReq)...))
@@ -136,7 +138,7 @@ func (c *WrappedClient) startSpan(ctx context.Context, req *fasthttp.Request) sp
 }
 
 func toHTTPRequest(req *fasthttp.Request) (*http.Request, error) {
-	rURL, err := url.ParseRequestURI(string(req.RequestURI()))
+	rURL, err := url.ParseRequestURI(stringx.ToString(req.RequestURI()))
 	if err != nil {
 		return nil, err
 	}
@@ -144,19 +146,19 @@ func toHTTPRequest(req *fasthttp.Request) (*http.Request, error) {
 	body := req.Body()
 	r := &http.Request{}
 
-	r.Method = string(req.Header.Method())
+	r.Method = stringx.ToString(req.Header.Method())
 	r.Proto = "HTTP/1.1"
 	r.ProtoMajor = 1
 	r.ProtoMinor = 1
 	r.ContentLength = int64(len(body))
-	r.Host = string(req.URI().Host())
+	r.Host = stringx.ToString(req.URI().Host())
 	r.Body = io.NopCloser(bytes.NewReader(body))
 	r.URL = rURL
 	r.Header = make(http.Header)
 
 	req.Header.VisitAll(func(k, v []byte) {
-		sk := string(k)
-		sv := string(v)
+		sk := stringx.ToString(k)
+		sv := stringx.ToString(v)
 
 		switch sk {
 		case "Transfer-Encoding":

@@ -29,6 +29,7 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
+	"github.com/dadrus/heimdall/internal/x/stringx"
 )
 
 const (
@@ -90,11 +91,11 @@ func newBasicAuthAuthenticator(id string, rawConfig map[string]any) (*basicAuthA
 	// rewrite user id and password as hashes to mitigate potential side-channel attacks
 	// during credentials check
 	md := sha256.New()
-	md.Write([]byte(conf.UserID))
+	md.Write(stringx.ToBytes(conf.UserID))
 	auth.userID = hex.EncodeToString(md.Sum(nil))
 
 	md.Reset()
-	md.Write([]byte(conf.Password))
+	md.Write(stringx.ToBytes(conf.Password))
 	auth.password = hex.EncodeToString(md.Sum(nil))
 
 	return &auth, nil
@@ -129,11 +130,11 @@ func (a *basicAuthAuthenticator) Execute(ctx heimdall.Context) (*subject.Subject
 	}
 
 	md := sha256.New()
-	md.Write([]byte(userIDAndPassword[0]))
+	md.Write(stringx.ToBytes(userIDAndPassword[0]))
 	userID := hex.EncodeToString(md.Sum(nil))
 
 	md.Reset()
-	md.Write([]byte(userIDAndPassword[1]))
+	md.Write(stringx.ToBytes(userIDAndPassword[1]))
 	password := hex.EncodeToString(md.Sum(nil))
 
 	userIDOK := userID == a.userID
@@ -173,7 +174,7 @@ func (a *basicAuthAuthenticator) WithConfig(rawConfig map[string]any) (Authentic
 		userID: x.IfThenElseExec(len(conf.UserID) != 0,
 			func() string {
 				md := sha256.New()
-				md.Write([]byte(conf.UserID))
+				md.Write(stringx.ToBytes(conf.UserID))
 
 				return hex.EncodeToString(md.Sum(nil))
 			}, func() string {
@@ -182,7 +183,7 @@ func (a *basicAuthAuthenticator) WithConfig(rawConfig map[string]any) (Authentic
 		password: x.IfThenElseExec(len(conf.Password) != 0,
 			func() string {
 				md := sha256.New()
-				md.Write([]byte(conf.Password))
+				md.Write(stringx.ToBytes(conf.Password))
 
 				return hex.EncodeToString(md.Sum(nil))
 			}, func() string {

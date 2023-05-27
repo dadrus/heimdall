@@ -37,6 +37,7 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
+	"github.com/dadrus/heimdall/internal/x/stringx"
 )
 
 // by intention. Used only during application bootstrap
@@ -375,7 +376,7 @@ func (a *oauth2IntrospectionAuthenticator) getCacheTTL(introspectResp *oauth2.In
 func (a *oauth2IntrospectionAuthenticator) calculateCacheKey(reference string) string {
 	digest := sha256.New()
 	digest.Write(a.e.Hash())
-	digest.Write([]byte(reference))
+	digest.Write(stringx.ToBytes(reference))
 
 	return hex.EncodeToString(digest.Sum(nil))
 }

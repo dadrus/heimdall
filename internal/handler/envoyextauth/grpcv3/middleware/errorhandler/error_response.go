@@ -27,6 +27,8 @@ import (
 	"github.com/goccy/go-json"
 	"google.golang.org/genproto/googleapis/rpc/status"
 	"google.golang.org/grpc/codes"
+
+	"github.com/dadrus/heimdall/internal/x/stringx"
 )
 
 func responseWith(
@@ -79,11 +81,11 @@ func format(mimeType string, body any) (string, error) {
 	case "application/json":
 		res, err := json.Marshal(body)
 
-		return string(res), err
+		return stringx.ToString(res), err
 	case "application/xml":
 		res, err := xml.Marshal(body)
 
-		return string(res), err
+		return stringx.ToString(res), err
 	case "test/plain":
 		fallthrough
 	default:
