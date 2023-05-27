@@ -151,7 +151,7 @@ NOTE: If you're configuring the `cache_ttl` property, it is highly recommended t
 .Configuration to work with session cookies
 ====
 
-This example shows how to configure this authenticator to work with Ory Kratos, an authentication system, which issues a cookie upon successful user authentication to maintain the authentication state. To reduce the communication overhead, it also makes use of `cache_ttl` to cache the response for 5 minutes if that time frame does not exceed the actual validity of the session represented by the cookie. Here, the authenticator will call the `http://my-auth.system/sessions/whoami` endpoint by also sending the `my_session` cookie to it.
+This example shows how to configure this authenticator to work with Ory Kratos, an authentication system, which issues a cookie upon successful user authentication to maintain the authentication state. To reduce the communication overhead, it also makes use of `cache_ttl` to cache the response for 5 minutes if that time frame does not exceed the actual validity of the session represented by the cookie.
 
 [source, yaml]
 ----
