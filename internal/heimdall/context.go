@@ -23,16 +23,8 @@ import (
 
 //go:generate mockery --name Context --structname ContextMock
 
-type Context interface { // nolint: interfacebloat
-	RequestMethod() string
-	RequestHeaders() map[string]string
-	RequestHeader(key string) string
-	RequestCookie(key string) string
-	RequestQueryParameter(key string) string
-	RequestFormParameter(key string) string
-	RequestBody() []byte
-	RequestURL() *url.URL
-	RequestClientIPs() []string
+type Context interface {
+	Request() *Request
 
 	AddHeaderForUpstream(name, value string)
 	AddCookieForUpstream(name, value string)
@@ -42,4 +34,21 @@ type Context interface { // nolint: interfacebloat
 	SetPipelineError(err error)
 
 	Signer() JWTSigner
+}
+
+//go:generate mockery --name RequestFunctions --structname RequestFunctionsMock
+
+type RequestFunctions interface {
+	Header(name string) string
+	Cookie(name string) string
+	Headers() map[string]string
+	Body() []byte
+}
+
+type Request struct {
+	RequestFunctions
+
+	Method   string
+	URL      *url.URL
+	ClientIP []string
 }

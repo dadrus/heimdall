@@ -42,7 +42,7 @@ type RequestContext struct {
 }
 
 func New(c *fiber.Ctx, method string, reqURL *url.URL, signer heimdall.JWTSigner) *RequestContext {
-	return &RequestContext{ //nolint:exhaustruct
+	return &RequestContext{
 		c:               c,
 		jwtSigner:       signer,
 		reqMethod:       method,
@@ -52,19 +52,24 @@ func New(c *fiber.Ctx, method string, reqURL *url.URL, signer heimdall.JWTSigner
 	}
 }
 
-func (s *RequestContext) RequestMethod() string                    { return s.reqMethod }
-func (s *RequestContext) RequestHeaders() map[string]string        { return s.c.GetReqHeaders() }
-func (s *RequestContext) RequestHeader(name string) string         { return s.c.Get(name) }
-func (s *RequestContext) RequestCookie(name string) string         { return s.c.Cookies(name) }
-func (s *RequestContext) RequestQueryParameter(name string) string { return s.c.Query(name) }
-func (s *RequestContext) RequestFormParameter(name string) string  { return s.c.FormValue(name) }
-func (s *RequestContext) RequestBody() []byte                      { return s.c.Body() }
-func (s *RequestContext) AppContext() context.Context              { return s.c.UserContext() }
-func (s *RequestContext) SetPipelineError(err error)               { s.err = err }
-func (s *RequestContext) AddHeaderForUpstream(name, value string)  { s.upstreamHeaders.Add(name, value) }
-func (s *RequestContext) AddCookieForUpstream(name, value string)  { s.upstreamCookies[name] = value }
-func (s *RequestContext) Signer() heimdall.JWTSigner               { return s.jwtSigner }
-func (s *RequestContext) RequestURL() *url.URL                     { return s.reqURL }
+func (s *RequestContext) Request() *heimdall.Request {
+	return &heimdall.Request{
+		RequestFunctions: s,
+		Method:           s.reqMethod,
+		URL:              s.reqURL,
+		ClientIP:         s.RequestClientIPs(),
+	}
+}
+
+func (s *RequestContext) Headers() map[string]string              { return s.c.GetReqHeaders() }
+func (s *RequestContext) Header(name string) string               { return s.c.Get(name) }
+func (s *RequestContext) Cookie(name string) string               { return s.c.Cookies(name) }
+func (s *RequestContext) Body() []byte                            { return s.c.Body() }
+func (s *RequestContext) AppContext() context.Context             { return s.c.UserContext() }
+func (s *RequestContext) SetPipelineError(err error)              { s.err = err }
+func (s *RequestContext) AddHeaderForUpstream(name, value string) { s.upstreamHeaders.Add(name, value) }
+func (s *RequestContext) AddCookieForUpstream(name, value string) { s.upstreamCookies[name] = value }
+func (s *RequestContext) Signer() heimdall.JWTSigner              { return s.jwtSigner }
 func (s *RequestContext) RequestClientIPs() []string {
 	ips := s.c.IPs()
 

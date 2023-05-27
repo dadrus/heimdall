@@ -241,9 +241,7 @@ expressions:
 				// nothing is required here
 				t.Helper()
 
-				ctx.EXPECT().RequestURL().Return(&url.URL{Scheme: "http", Host: "localhost", Path: "/test"})
-				ctx.EXPECT().RequestMethod().Return(http.MethodGet)
-				ctx.EXPECT().RequestClientIPs().Return(nil)
+				ctx.EXPECT().Request().Return(nil)
 			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
@@ -288,16 +286,21 @@ expressions:
 					"groupN": []string{"forever@acme.co"},
 				}
 
-				ctx.EXPECT().RequestURL().Return(&url.URL{
-					Scheme:   "http",
-					Host:     "localhost",
-					Path:     "/test",
-					RawQuery: "foo=bar&baz=zab",
+				reqf := mocks.NewRequestFunctionsMock(t)
+				reqf.EXPECT().Header("X-Custom-Header").Return("foobar")
+				reqf.EXPECT().Cookie("FooCookie").Return("barfoo")
+
+				ctx.EXPECT().Request().Return(&heimdall.Request{
+					RequestFunctions: reqf,
+					Method:           http.MethodGet,
+					URL: &url.URL{
+						Scheme:   "http",
+						Host:     "localhost",
+						Path:     "/test",
+						RawQuery: "foo=bar&baz=zab",
+					},
+					ClientIP: []string{"127.0.0.1", "10.10.10.10"},
 				})
-				ctx.EXPECT().RequestMethod().Return(http.MethodGet)
-				ctx.EXPECT().RequestHeader("X-Custom-Header").Return("foobar")
-				ctx.EXPECT().RequestCookie("FooCookie").Return("barfoo")
-				ctx.EXPECT().RequestClientIPs().Return([]string{"127.0.0.1", "10.10.10.10"})
 			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()

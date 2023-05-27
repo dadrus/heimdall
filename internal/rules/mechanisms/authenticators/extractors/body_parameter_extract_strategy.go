@@ -30,12 +30,12 @@ type BodyParameterExtractStrategy struct {
 }
 
 func (es BodyParameterExtractStrategy) GetAuthData(ctx heimdall.Context) (AuthData, error) {
-	decoder, err := contenttype.NewDecoder(ctx.RequestHeader("Content-Type"))
+	decoder, err := contenttype.NewDecoder(ctx.Request().Header("Content-Type"))
 	if err != nil {
 		return nil, errorchain.New(heimdall.ErrArgument).CausedBy(err)
 	}
 
-	data, err := decoder.Decode(ctx.RequestBody())
+	data, err := decoder.Decode(ctx.Request().Body())
 	if err != nil {
 		return nil, errorchain.NewWithMessage(heimdall.ErrArgument,
 			"failed to decode request body").CausedBy(err)

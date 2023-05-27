@@ -249,7 +249,10 @@ func (h *genericContextualizer) createRequest(ctx heimdall.Context, sub *subject
 	var body io.Reader
 
 	if h.payload != nil {
-		value, err := h.payload.Render(ctx, sub, nil)
+		value, err := h.payload.Render(map[string]any{
+			"Request": ctx.Request(),
+			"Subject": sub,
+		})
 		if err != nil {
 			return nil, errorchain.NewWithMessage(heimdall.ErrInternal,
 				"failed to render payload for the contextualizer endpoint").
@@ -268,7 +271,10 @@ func (h *genericContextualizer) createRequest(ctx heimdall.Context, sub *subject
 					CausedBy(err)
 			}
 
-			return tpl.Render(nil, sub, values)
+			return tpl.Render(map[string]any{
+				"Subject": sub,
+				"Values":  values,
+			})
 		}))
 	if err != nil {
 		return nil, errorchain.NewWithMessage(heimdall.ErrInternal, "failed creating request").
@@ -277,7 +283,7 @@ func (h *genericContextualizer) createRequest(ctx heimdall.Context, sub *subject
 	}
 
 	for _, headerName := range h.fwdHeaders {
-		headerValue := ctx.RequestHeader(headerName)
+		headerValue := ctx.Request().Header(headerName)
 		if len(headerValue) == 0 {
 			logger.Warn().Str("_header", headerName).
 				Msg("Header not present in the request but configured to be forwarded")
@@ -287,7 +293,7 @@ func (h *genericContextualizer) createRequest(ctx heimdall.Context, sub *subject
 	}
 
 	for _, cookieName := range h.fwdCookies {
-		cookieValue := ctx.RequestCookie(cookieName)
+		cookieValue := ctx.Request().Cookie(cookieName)
 		if len(cookieValue) == 0 {
 			logger.Warn().Str("_cookie", cookieName).
 				Msg("Cookie not present in the request but configured to be forwarded")

@@ -55,11 +55,14 @@ func TestErrorConditionMatcherMatch(t *testing.T) {
 			setupCtx: func(ctx *mocks.ContextMock) {
 				t.Helper()
 
-				ctx.EXPECT().RequestHeaders().Return(map[string]string{
+				fnt := mocks.NewRequestFunctionsMock(t)
+				fnt.EXPECT().Headers().Return(map[string]string{
 					"foobar": "barfoo",
 				})
-				ctx.EXPECT().RequestClientIPs().Return([]string{
-					"192.168.10.2",
+
+				ctx.EXPECT().Request().Return(&heimdall.Request{
+					RequestFunctions: fnt,
+					ClientIP:         []string{"192.168.10.2"},
 				})
 			},
 			err:      heimdall.ErrConfiguration,
@@ -81,11 +84,14 @@ func TestErrorConditionMatcherMatch(t *testing.T) {
 			setupCtx: func(ctx *mocks.ContextMock) {
 				t.Helper()
 
-				ctx.EXPECT().RequestHeaders().Return(map[string]string{
+				fnt := mocks.NewRequestFunctionsMock(t)
+				fnt.EXPECT().Headers().Return(map[string]string{
 					"foobar": "barfoo",
 				})
-				ctx.EXPECT().RequestClientIPs().Return([]string{
-					"192.168.1.2",
+
+				ctx.EXPECT().Request().Return(&heimdall.Request{
+					RequestFunctions: fnt,
+					ClientIP:         []string{"192.168.1.2"},
 				})
 			},
 			err:      heimdall.ErrArgument,
@@ -107,11 +113,14 @@ func TestErrorConditionMatcherMatch(t *testing.T) {
 			setupCtx: func(ctx *mocks.ContextMock) {
 				t.Helper()
 
-				ctx.EXPECT().RequestHeaders().Return(map[string]string{
+				fnt := mocks.NewRequestFunctionsMock(t)
+				fnt.EXPECT().Headers().Return(map[string]string{
 					"foobar": "bar",
 				})
-				ctx.EXPECT().RequestClientIPs().Return([]string{
-					"192.168.10.2",
+
+				ctx.EXPECT().Request().Return(&heimdall.Request{
+					RequestFunctions: fnt,
+					ClientIP:         []string{"192.168.10.2"},
 				})
 			},
 			err:      heimdall.ErrArgument,
@@ -133,11 +142,14 @@ func TestErrorConditionMatcherMatch(t *testing.T) {
 			setupCtx: func(ctx *mocks.ContextMock) {
 				t.Helper()
 
-				ctx.EXPECT().RequestHeaders().Return(map[string]string{
+				fnt := mocks.NewRequestFunctionsMock(t)
+				fnt.EXPECT().Headers().Return(map[string]string{
 					"foobar": "barfoo",
 				})
-				ctx.EXPECT().RequestClientIPs().Return([]string{
-					"192.168.10.2",
+
+				ctx.EXPECT().Request().Return(&heimdall.Request{
+					RequestFunctions: fnt,
+					ClientIP:         []string{"192.168.10.2"},
 				})
 			},
 			err:      heimdall.ErrArgument,
@@ -159,11 +171,14 @@ func TestErrorConditionMatcherMatch(t *testing.T) {
 			setupCtx: func(ctx *mocks.ContextMock) {
 				t.Helper()
 
-				ctx.EXPECT().RequestHeaders().Return(map[string]string{
+				fnt := mocks.NewRequestFunctionsMock(t)
+				fnt.EXPECT().Headers().Return(map[string]string{
 					"Foobar": "bar",
 				})
-				ctx.EXPECT().RequestClientIPs().Return([]string{
-					"192.168.1.2",
+
+				ctx.EXPECT().Request().Return(&heimdall.Request{
+					RequestFunctions: fnt,
+					ClientIP:         []string{"192.168.1.2"},
 				})
 			},
 			err:      heimdall.ErrConfiguration,
@@ -194,8 +209,13 @@ func TestErrorConditionMatcherMatch(t *testing.T) {
 			setupCtx: func(ctx *mocks.ContextMock) {
 				t.Helper()
 
-				ctx.EXPECT().RequestHeaders().Return(map[string]string{
+				fnt := mocks.NewRequestFunctionsMock(t)
+				fnt.EXPECT().Headers().Return(map[string]string{
 					"Foobar": "bar",
+				})
+
+				ctx.EXPECT().Request().Return(&heimdall.Request{
+					RequestFunctions: fnt,
 				})
 			},
 			err:      heimdall.ErrArgument,
@@ -209,8 +229,8 @@ func TestErrorConditionMatcherMatch(t *testing.T) {
 			setupCtx: func(ctx *mocks.ContextMock) {
 				t.Helper()
 
-				ctx.EXPECT().RequestClientIPs().Return([]string{
-					"192.168.1.2",
+				ctx.EXPECT().Request().Return(&heimdall.Request{
+					ClientIP: []string{"192.168.1.2"},
 				})
 			},
 			err:      heimdall.ErrConfiguration,

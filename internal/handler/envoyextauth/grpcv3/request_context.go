@@ -87,11 +87,19 @@ func canonicalizeHeaders(headers map[string]string) map[string]string {
 	return result
 }
 
-func (s *RequestContext) RequestMethod() string             { return s.reqMethod }
-func (s *RequestContext) RequestHeaders() map[string]string { return s.reqHeaders }
-func (s *RequestContext) RequestHeader(name string) string  { return s.reqHeaders[name] }
+func (s *RequestContext) Request() *heimdall.Request {
+	return &heimdall.Request{
+		RequestFunctions: s,
+		Method:           s.reqMethod,
+		URL:              s.reqURL,
+		ClientIP:         s.ips,
+	}
+}
 
-func (s *RequestContext) RequestCookie(name string) string {
+func (s *RequestContext) Headers() map[string]string { return s.reqHeaders }
+func (s *RequestContext) Header(name string) string  { return s.reqHeaders[name] }
+
+func (s *RequestContext) Cookie(name string) string {
 	values, ok := s.reqHeaders["Cookie"]
 	if !ok {
 		return ""
@@ -106,31 +114,12 @@ func (s *RequestContext) RequestCookie(name string) string {
 	return ""
 }
 
-func (s *RequestContext) RequestQueryParameter(name string) string {
-	return s.reqURL.Query().Get(name)
-}
-
-func (s *RequestContext) RequestFormParameter(name string) string {
-	if s.reqHeaders["Content-Type"] != "application/x-www-form-urlencoded" {
-		return ""
-	}
-
-	values, err := url.ParseQuery(s.reqBody)
-	if err != nil {
-		return ""
-	}
-
-	return values.Get(name)
-}
-
-func (s *RequestContext) RequestBody() []byte                     { return s.reqRawBody }
+func (s *RequestContext) Body() []byte                            { return s.reqRawBody }
 func (s *RequestContext) AppContext() context.Context             { return s.ctx }
 func (s *RequestContext) SetPipelineError(err error)              { s.err = err }
 func (s *RequestContext) AddHeaderForUpstream(name, value string) { s.upstreamHeaders.Add(name, value) }
 func (s *RequestContext) AddCookieForUpstream(name, value string) { s.upstreamCookies[name] = value }
 func (s *RequestContext) Signer() heimdall.JWTSigner              { return s.jwtSigner }
-func (s *RequestContext) RequestURL() *url.URL                    { return s.reqURL }
-func (s *RequestContext) RequestClientIPs() []string              { return s.ips }
 
 func (s *RequestContext) Finalize() (*envoy_auth.CheckResponse, error) {
 	if s.err != nil {

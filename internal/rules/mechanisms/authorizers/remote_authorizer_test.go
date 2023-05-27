@@ -115,7 +115,9 @@ payload: "{{ .Subject.ID }}"
 
 				require.NotNil(t, auth)
 				require.NotNil(t, auth.payload)
-				val, err := auth.payload.Render(nil, &subject.Subject{ID: "bar"}, nil)
+				val, err := auth.payload.Render(map[string]any{
+					"Subject": &subject.Subject{ID: "bar"},
+				})
 				require.NoError(t, err)
 				assert.Equal(t, "bar", val)
 				assert.Empty(t, auth.headersForUpstream)
@@ -167,7 +169,9 @@ cache_ttl: 5s
 
 				require.NotNil(t, auth)
 				require.NotNil(t, auth.payload)
-				val, err := auth.payload.Render(nil, &subject.Subject{ID: "bar"}, nil)
+				val, err := auth.payload.Render(map[string]any{
+					"Subject": &subject.Subject{ID: "bar"},
+				})
 				require.NoError(t, err)
 				require.NotEmpty(t, auth.expressions)
 				ok, err := auth.expressions[0].Eval(map[string]any{
@@ -344,7 +348,7 @@ cache_ttl: 15s
 				assert.Equal(t, prototype.e, configured.e)
 				assert.Equal(t, prototype.id, configured.id)
 				require.NotNil(t, configured.payload)
-				val, err := configured.payload.Render(nil, nil, nil)
+				val, err := configured.payload.Render(nil)
 				require.NoError(t, err)
 				assert.Empty(t, prototype.expressions)
 				require.NotEmpty(t, configured.expressions)
@@ -403,7 +407,7 @@ cache_ttl: 15s
 				assert.Equal(t, endpoint.Values{"bar": "foo", "foo": "bar"}, configured.e.Values)
 				assert.Equal(t, prototype.id, configured.id)
 				require.NotNil(t, configured.payload)
-				val, err := configured.payload.Render(nil, nil, nil)
+				val, err := configured.payload.Render(nil)
 				require.NoError(t, err)
 				assert.Empty(t, prototype.expressions)
 				require.NotEmpty(t, configured.expressions)
@@ -541,9 +545,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 			configureContext: func(t *testing.T, ctx *heimdallmocks.ContextMock) {
 				t.Helper()
 
-				ctx.EXPECT().RequestMethod().Return("POST")
-				ctx.EXPECT().RequestURL().Return(&url.URL{Scheme: "http", Host: "foobar.baz", Path: "zab"})
-				ctx.EXPECT().RequestClientIPs().Return(nil)
+				ctx.EXPECT().Request().Return(nil)
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
@@ -617,9 +619,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 				t.Helper()
 
 				ctx.EXPECT().AddHeaderForUpstream("X-Foo-Bar", "HeyFoo")
-				ctx.EXPECT().RequestMethod().Return("POST")
-				ctx.EXPECT().RequestURL().Return(&url.URL{Scheme: "http", Host: "foobar.baz", Path: "zab"})
-				ctx.EXPECT().RequestClientIPs().Return(nil)
+				ctx.EXPECT().Request().Return(nil)
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
@@ -693,9 +693,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 				t.Helper()
 
 				ctx.EXPECT().AddHeaderForUpstream("X-Foo-Bar", "HeyFoo")
-				ctx.EXPECT().RequestMethod().Return("POST")
-				ctx.EXPECT().RequestURL().Return(&url.URL{Scheme: "http", Host: "foobar.baz", Path: "zab"})
-				ctx.EXPECT().RequestClientIPs().Return(nil)
+				ctx.EXPECT().Request().Return(nil)
 			},
 			configureCache: func(t *testing.T, cch *mocks.CacheMock, auth *remoteAuthorizer, sub *subject.Subject) {
 				t.Helper()
@@ -851,9 +849,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 				t.Helper()
 
 				ctx.EXPECT().AddHeaderForUpstream("X-Foo-Bar", "HeyFoo")
-				ctx.EXPECT().RequestMethod().Return("POST")
-				ctx.EXPECT().RequestURL().Return(&url.URL{Scheme: "http", Host: "foobar.baz", Path: "zab"})
-				ctx.EXPECT().RequestClientIPs().Return(nil)
+				ctx.EXPECT().Request().Return(nil)
 			},
 			configureCache: func(t *testing.T, cch *mocks.CacheMock, auth *remoteAuthorizer, sub *subject.Subject) {
 				t.Helper()
@@ -960,9 +956,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 			configureContext: func(t *testing.T, ctx *heimdallmocks.ContextMock) {
 				t.Helper()
 
-				ctx.EXPECT().RequestMethod().Return("POST")
-				ctx.EXPECT().RequestURL().Return(&url.URL{Scheme: "http", Host: "foobar.baz", Path: "zab"})
-				ctx.EXPECT().RequestClientIPs().Return(nil)
+				ctx.EXPECT().Request().Return(nil)
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
@@ -1059,9 +1053,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 			configureContext: func(t *testing.T, ctx *heimdallmocks.ContextMock) {
 				t.Helper()
 
-				ctx.EXPECT().RequestMethod().Return("POST")
-				ctx.EXPECT().RequestURL().Return(&url.URL{Scheme: "http", Host: "foobar.baz", Path: "zab"})
-				ctx.EXPECT().RequestClientIPs().Return(nil)
+				ctx.EXPECT().Request().Return(nil)
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
@@ -1141,9 +1133,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 			configureContext: func(t *testing.T, ctx *heimdallmocks.ContextMock) {
 				t.Helper()
 
-				ctx.EXPECT().RequestMethod().Return("POST")
-				ctx.EXPECT().RequestURL().Return(&url.URL{Scheme: "http", Host: "foobar.baz", Path: "zab"})
-				ctx.EXPECT().RequestClientIPs().Return(nil)
+				ctx.EXPECT().Request().Return(nil)
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()

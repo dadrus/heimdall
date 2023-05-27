@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/heimdall/mocks"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
 )
@@ -80,14 +81,16 @@ func TestCelExecutionConditionCanExecute(t *testing.T) {
 			// GIVEN
 			ctx := mocks.NewContextMock(t)
 
-			ctx.EXPECT().RequestURL().Return(&url.URL{
-				Scheme:   "http",
-				Host:     "localhost",
-				Path:     "/test",
-				RawQuery: "foo=bar&baz=zab",
+			ctx.EXPECT().Request().Return(&heimdall.Request{
+				Method: http.MethodGet,
+				URL: &url.URL{
+					Scheme:   "http",
+					Host:     "localhost",
+					Path:     "/test",
+					RawQuery: "foo=bar&baz=zab",
+				},
+				ClientIP: []string{"127.0.0.1", "10.10.10.10"},
 			})
-			ctx.EXPECT().RequestMethod().Return(http.MethodGet)
-			ctx.EXPECT().RequestClientIPs().Return([]string{"127.0.0.1", "10.10.10.10"})
 
 			condition, err := newCelExecutionCondition(tc.expression)
 			require.NoError(t, err)

@@ -17,10 +17,12 @@
 package extractors
 
 import (
+	"net/url"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 
+	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/heimdall/mocks"
 )
 
@@ -32,9 +34,12 @@ func TestCompositeExtractCookieValueWithoutSchema(t *testing.T) {
 	cookieName := "Test-Cookie"
 	actualValue := "foo"
 
+	fnt := mocks.NewRequestFunctionsMock(t)
+	fnt.EXPECT().Cookie(cookieName).Return(actualValue)
+	fnt.EXPECT().Header(headerName).Return("")
+
 	ctx := mocks.NewContextMock(t)
-	ctx.EXPECT().RequestCookie(cookieName).Return(actualValue)
-	ctx.EXPECT().RequestHeader(headerName).Return("")
+	ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: fnt})
 
 	strategy := CompositeExtractStrategy{
 		HeaderValueExtractStrategy{Name: headerName},
@@ -58,9 +63,14 @@ func TestCompositeExtractHeaderValueWithSchema(t *testing.T) {
 	headerSchema := "bar:"
 	actualValue := "foo"
 
+	fnt := mocks.NewRequestFunctionsMock(t)
+	fnt.EXPECT().Header(headerName).Return(headerSchema + " " + actualValue)
+
 	ctx := mocks.NewContextMock(t)
-	ctx.EXPECT().RequestHeader(headerName).Return(headerSchema + " " + actualValue)
-	ctx.EXPECT().RequestQueryParameter(queryParamName).Return("")
+	ctx.EXPECT().Request().Return(&heimdall.Request{
+		RequestFunctions: fnt,
+		URL:              &url.URL{},
+	})
 
 	strategy := CompositeExtractStrategy{
 		QueryParameterExtractStrategy{Name: queryParamName},
@@ -84,8 +94,11 @@ func TestCompositeExtractStrategyOrder(t *testing.T) {
 	headerSchema := "bar:"
 	actualValue := "foo"
 
+	fnt := mocks.NewRequestFunctionsMock(t)
+	fnt.EXPECT().Header(headerName).Return(headerSchema + " " + actualValue)
+
 	ctx := mocks.NewContextMock(t)
-	ctx.EXPECT().RequestHeader(headerName).Return(headerSchema + " " + actualValue)
+	ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: fnt})
 
 	strategy := CompositeExtractStrategy{
 		HeaderValueExtractStrategy{Name: headerName, Schema: headerSchema},
