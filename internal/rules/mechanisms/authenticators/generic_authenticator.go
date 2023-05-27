@@ -323,9 +323,9 @@ func (a *genericAuthenticator) createRequest(ctx heimdall.Context, authData extr
 		if len(headerValue) == 0 {
 			logger.Warn().Str("_header", headerName).
 				Msg("Header not present in the request but configured to be forwarded")
+		} else {
+			req.Header.Add(headerName, headerValue)
 		}
-
-		req.Header.Add(headerName, headerValue)
 	}
 
 	for _, cookieName := range a.fwdCookies {
@@ -333,9 +333,9 @@ func (a *genericAuthenticator) createRequest(ctx heimdall.Context, authData extr
 		if len(cookieValue) == 0 {
 			logger.Warn().Str("_cookie", cookieName).
 				Msg("Cookie not present in the request but configured to be forwarded")
+		} else {
+			req.AddCookie(&http.Cookie{Name: cookieName, Value: cookieValue})
 		}
-
-		req.AddCookie(&http.Cookie{Name: cookieName, Value: cookieValue})
 	}
 
 	return req, nil
