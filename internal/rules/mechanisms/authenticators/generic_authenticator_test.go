@@ -777,6 +777,72 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 			},
 		},
 		{
+			uc: "with error while rendering payload",
+			authenticator: &genericAuthenticator{
+				id: "auth3",
+				e:  endpoint.Endpoint{URL: srv.URL},
+				payload: func() template.Template {
+					tpl, err := template.New("foo={{ .Foobar }}")
+					require.NoError(t, err)
+
+					return tpl
+				}(),
+			},
+			configureMocks: func(t *testing.T,
+				ctx *heimdallmocks.ContextMock,
+				_ *mocks.CacheMock,
+				ads *mocks2.AuthDataExtractStrategyMock,
+				_ *genericAuthenticator,
+			) {
+				t.Helper()
+
+				ads.EXPECT().GetAuthData(ctx).Return("test", nil)
+			},
+			assert: func(t *testing.T, err error, sub *subject.Subject) {
+				t.Helper()
+
+				assert.False(t, endpointCalled)
+
+				require.Error(t, err)
+				assert.ErrorIs(t, err, heimdall.ErrInternal)
+				assert.Contains(t, err.Error(), "failed to render payload")
+
+				var identifier HandlerIdentifier
+				require.True(t, errors.As(err, &identifier))
+				assert.Equal(t, "auth3", identifier.HandlerID())
+			},
+		},
+		{
+			uc: "with error while rendering query parameter",
+			authenticator: &genericAuthenticator{
+				id: "auth3",
+				e:  endpoint.Endpoint{URL: srv.URL + "?foo={{ urlenc foobar }}"},
+			},
+			configureMocks: func(t *testing.T,
+				ctx *heimdallmocks.ContextMock,
+				_ *mocks.CacheMock,
+				ads *mocks2.AuthDataExtractStrategyMock,
+				_ *genericAuthenticator,
+			) {
+				t.Helper()
+
+				ads.EXPECT().GetAuthData(ctx).Return("test", nil)
+			},
+			assert: func(t *testing.T, err error, sub *subject.Subject) {
+				t.Helper()
+
+				assert.False(t, endpointCalled)
+
+				require.Error(t, err)
+				assert.ErrorIs(t, err, heimdall.ErrInternal)
+				assert.Contains(t, err.Error(), "failed to render URL")
+
+				var identifier HandlerIdentifier
+				require.True(t, errors.As(err, &identifier))
+				assert.Equal(t, "auth3", identifier.HandlerID())
+			},
+		},
+		{
 			uc: "with endpoint communication error (dns)",
 			authenticator: &genericAuthenticator{
 				id: "auth3",

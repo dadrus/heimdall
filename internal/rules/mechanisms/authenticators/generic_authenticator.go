@@ -343,8 +343,7 @@ func (a *genericAuthenticator) readResponse(resp *http.Response) ([]byte, error)
 
 	rawData, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrInternal, "failed to read response").
+		return nil, errorchain.NewWithMessage(heimdall.ErrInternal, "failed to read response").
 			WithErrorContext(a).
 			CausedBy(err)
 	}
