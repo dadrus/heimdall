@@ -689,72 +689,6 @@
         ]
       }
     },
-    "authenticationDataInBodyProperties": {
-      "properties": {
-        "type": {
-          "const": "body"
-        },
-        "name": {
-          "description": "The name of the property",
-          "type": "string"
-        }
-      }
-    },
-    "authenticationDataInCookieProperties": {
-      "properties": {
-        "type": {
-          "const": "cookie"
-        },
-        "name": {
-          "description": "The name of the cookie",
-          "type": "string"
-        }
-      }
-    },
-    "authenticationDataInHeaderProperties": {
-      "properties": {
-        "type": {
-          "const": "header"
-        },
-        "name": {
-          "description": "The name of the cookie",
-          "type": "string"
-        },
-        "scheme": {
-          "description": "The scheme to be added in front of the header value",
-          "type": "string"
-        }
-      }
-    },
-    "authenticationDataInQueryProperties": {
-      "properties": {
-        "type": {
-          "const": "query"
-        },
-        "name": {
-          "description": "The name of the query parameter",
-          "type": "string"
-        }
-      }
-    },
-    "authenticationDataForwardStrategy": {
-      "description": "Defines the way how heimdall should forward the authentication data extracted from the request to the used identity management system",
-      "type": "object",
-      "oneOf": [
-        {
-          "$ref": "#/definitions/authenticationDataInBodyProperties"
-        },
-        {
-          "$ref": "#/definitions/authenticationDataInCookieProperties"
-        },
-        {
-          "$ref": "#/definitions/authenticationDataInHeaderProperties"
-        },
-        {
-          "$ref": "#/definitions/authenticationDataInQueryProperties"
-        }
-      ]
-    },
     "assertionRequirements": {
       "description": "Defines verification requirements for the assertion, like the introspection response or a JWT token",
       "type": "object",
@@ -907,8 +841,25 @@
             "authentication_data_source": {
               "$ref": "#/definitions/authenticationDataSource"
             },
-            "authentication_data_forward": {
-              "$ref": "#/definitions/authenticationDataForwardStrategy"
+            "forward_headers": {
+              "description": "The HTTP header names from the request to be send to the contextualizer endpoint",
+              "type": "array",
+              "additionalItems": false,
+              "items": {
+                "type": "string"
+              }
+            },
+            "forward_cookies": {
+              "description": "The HTTP cookie names from the request to be send to the contextualizer endpoint",
+              "type": "array",
+              "additionalItems": false,
+              "items": {
+                "type": "string"
+              }
+            },
+            "payload": {
+              "description": "The Go template with access to heimdall. Request and Subject used for request's HTTP body generation",
+              "type": "string"
             },
             "subject": {
               "$ref": "#/definitions/subjectConfiguration"
