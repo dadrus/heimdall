@@ -278,7 +278,9 @@ func (a *genericAuthenticator) fetchSubjectInformation(ctx heimdall.Context,
 	return a.readResponse(resp)
 }
 
-func (a *genericAuthenticator) createRequest(ctx heimdall.Context, authData extractors.AuthData) (*http.Request, error) {
+func (a *genericAuthenticator) createRequest(ctx heimdall.Context, authData extractors.AuthData) (
+	*http.Request, error,
+) {
 	logger := zerolog.Ctx(ctx.AppContext())
 
 	var body io.Reader
