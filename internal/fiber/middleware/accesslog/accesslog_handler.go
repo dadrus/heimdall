@@ -25,6 +25,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/accesscontext"
 	"github.com/dadrus/heimdall/internal/x/opentelemetry/tracecontext"
+	"github.com/dadrus/heimdall/internal/x/stringx"
 )
 
 func New(logger zerolog.Logger) fiber.Handler {
@@ -39,8 +40,8 @@ func New(logger zerolog.Logger) fiber.Handler {
 			Str("_http_method", c.Method()).
 			Str("_http_path", c.Path()).
 			Str("_http_user_agent", c.Get("User-Agent")).
-			Str("_http_host", string(c.Request().URI().Host())).
-			Str("_http_scheme", string(c.Request().URI().Scheme()))
+			Str("_http_host", stringx.ToString(c.Request().URI().Host())).
+			Str("_http_scheme", stringx.ToString(c.Request().URI().Scheme()))
 		logCtx = logTraceData(c.UserContext(), logCtx)
 
 		if c.IsProxyTrusted() {

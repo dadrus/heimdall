@@ -36,6 +36,7 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
+	"github.com/dadrus/heimdall/internal/x/stringx"
 )
 
 // by intention. Used only during application bootstrap
@@ -225,7 +226,7 @@ func (a *genericAuthenticator) getSubjectInformation(ctx heimdall.Context, authD
 		return nil, err
 	}
 
-	logger.Debug().Str("_payload", string(payload)).Msg("Raw subject information")
+	logger.Debug().Str("_payload", stringx.ToString(payload)).Msg("Raw subject information")
 
 	if a.sessionLifespanConf != nil {
 		session, err = a.sessionLifespanConf.CreateSessionLifespan(payload)
@@ -380,7 +381,7 @@ func (a *genericAuthenticator) getCacheTTL(sessionLifespan *SessionLifespan) tim
 func (a *genericAuthenticator) calculateCacheKey(reference string) string {
 	digest := sha256.New()
 	digest.Write(a.e.Hash())
-	digest.Write([]byte(reference))
+	digest.Write(stringx.ToBytes(reference))
 
 	return hex.EncodeToString(digest.Sum(nil))
 }

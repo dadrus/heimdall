@@ -36,6 +36,7 @@ import (
 	"github.com/dadrus/heimdall/internal/keystore"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/pkix"
+	"github.com/dadrus/heimdall/internal/x/stringx"
 )
 
 func NewJWTSigner(conf *config.Configuration, logger zerolog.Logger) (heimdall.JWTSigner, error) {
@@ -117,9 +118,9 @@ type jwtSigner struct {
 
 func (s *jwtSigner) Hash() []byte {
 	hash := sha256.New()
-	hash.Write([]byte(s.jwk.KeyID))
-	hash.Write([]byte(s.jwk.Algorithm))
-	hash.Write([]byte(s.iss))
+	hash.Write(stringx.ToBytes(s.jwk.KeyID))
+	hash.Write(stringx.ToBytes(s.jwk.Algorithm))
+	hash.Write(stringx.ToBytes(s.iss))
 
 	return hash.Sum(nil)
 }

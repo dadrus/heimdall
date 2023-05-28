@@ -31,6 +31,7 @@ import (
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/pkix"
+	"github.com/dadrus/heimdall/internal/x/stringx"
 )
 
 const (
@@ -116,7 +117,7 @@ func createKeyStore(blocks []*pem.Block, password string) (keyStore, error) {
 		switch block.Type {
 		case pemBlockTypeEncryptedPrivateKey:
 			// PKCS#8 (PKCS#5 (v2.0) algorithms)
-			key, err = pkcs8.ParsePKCS8PrivateKey(block.Bytes, []byte(password))
+			key, err = pkcs8.ParsePKCS8PrivateKey(block.Bytes, stringx.ToBytes(password))
 		case pemBlockTypePrivateKey:
 			// PKCS#8 - unencrypted
 			key, err = x509.ParsePKCS8PrivateKey(block.Bytes)

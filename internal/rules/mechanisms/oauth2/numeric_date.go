@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/dadrus/heimdall/internal/x/errorchain"
+	"github.com/dadrus/heimdall/internal/x/stringx"
 )
 
 // NumericDate represents date and time as the number of seconds since the
@@ -33,7 +34,7 @@ type NumericDate int64
 func (n *NumericDate) UnmarshalJSON(b []byte) error {
 	const floatPrecision = 64
 
-	f, err := strconv.ParseFloat(string(b), floatPrecision)
+	f, err := strconv.ParseFloat(stringx.ToString(b), floatPrecision)
 	if err != nil {
 		return errorchain.NewWithMessage(ErrConfiguration, "failed to parse date").CausedBy(err)
 	}

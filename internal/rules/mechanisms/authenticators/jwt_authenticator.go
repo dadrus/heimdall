@@ -41,6 +41,7 @@ import (
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/pkix"
+	"github.com/dadrus/heimdall/internal/x/stringx"
 )
 
 const defaultJWTAuthenticatorTTL = 10 * time.Minute
@@ -502,7 +503,7 @@ func (a *jwtAuthenticator) verifyTokenWithKey(token *jwt.JSONWebToken, key *jose
 func (a *jwtAuthenticator) calculateCacheKey(reference string) string {
 	digest := sha256.New()
 	digest.Write(a.e.Hash())
-	digest.Write([]byte(reference))
+	digest.Write(stringx.ToBytes(reference))
 
 	return hex.EncodeToString(digest.Sum(nil))
 }

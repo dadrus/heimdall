@@ -30,6 +30,7 @@ import (
 	"github.com/pquerna/cachecontrol"
 
 	"github.com/dadrus/heimdall/internal/cache"
+	"github.com/dadrus/heimdall/internal/x/stringx"
 )
 
 var (
@@ -93,13 +94,13 @@ func (rt *RoundTripper) cacheResponse(req *http.Request, resp *http.Response) {
 func cacheKey(req *http.Request) string {
 	hash := sha256.New()
 
-	hash.Write([]byte("RFC 7234"))
-	hash.Write([]byte(req.URL.String()))
-	hash.Write([]byte(req.Method))
+	hash.Write(stringx.ToBytes("RFC 7234"))
+	hash.Write(stringx.ToBytes(req.URL.String()))
+	hash.Write(stringx.ToBytes(req.Method))
 
 	value := req.Header.Get("Authorization")
 	if len(value) != 0 {
-		hash.Write([]byte(strings.TrimSpace(value)))
+		hash.Write(stringx.ToBytes(strings.TrimSpace(value)))
 	}
 
 	return hex.EncodeToString(hash.Sum(nil))

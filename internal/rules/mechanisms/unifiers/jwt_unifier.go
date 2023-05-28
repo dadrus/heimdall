@@ -32,6 +32,7 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
+	"github.com/dadrus/heimdall/internal/x/stringx"
 )
 
 const (
@@ -187,7 +188,7 @@ func (u *jwtUnifier) generateToken(ctx heimdall.Context, sub *subject.Subject) (
 				CausedBy(err)
 		}
 
-		if err = json.Unmarshal([]byte(vals), &claims); err != nil {
+		if err = json.Unmarshal(stringx.ToBytes(vals), &claims); err != nil {
 			return "", errorchain.
 				NewWithMessage(heimdall.ErrInternal, "failed to unmarshal claims rendered by template").
 				WithErrorContext(u).
@@ -216,7 +217,7 @@ func (u *jwtUnifier) calculateCacheKey(sub *subject.Subject, iss heimdall.JWTSig
 	hash.Write(iss.Hash())
 	hash.Write(x.IfThenElseExec(u.claims != nil,
 		func() []byte { return u.claims.Hash() },
-		func() []byte { return []byte("nil") }))
+		func() []byte { return stringx.ToBytes("nil") }))
 	hash.Write(ttlBytes)
 	hash.Write(sub.Hash())
 

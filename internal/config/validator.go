@@ -25,6 +25,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
+	"github.com/dadrus/heimdall/internal/x/stringx"
 	"github.com/dadrus/heimdall/schema"
 )
 
@@ -47,7 +48,7 @@ func ValidateConfig(configPath string) error {
 			"failed to parse config file").CausedBy(err)
 	}
 
-	schema, err := jsonschema.CompileString("config.schema.json", string(schema.ConfigSchema))
+	schema, err := jsonschema.CompileString("config.schema.json", stringx.ToString(schema.ConfigSchema))
 	if err != nil {
 		return errorchain.NewWithMessage(heimdall.ErrConfiguration,
 			"failed to compile JSON schema").CausedBy(err)

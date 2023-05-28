@@ -20,6 +20,8 @@ import (
 	"context"
 	"crypto/sha256"
 	"net/http"
+
+	"github.com/dadrus/heimdall/internal/x/stringx"
 )
 
 type BasicAuthStrategy struct {
@@ -36,8 +38,8 @@ func (c *BasicAuthStrategy) Apply(_ context.Context, req *http.Request) error {
 func (c *BasicAuthStrategy) Hash() []byte {
 	hash := sha256.New()
 
-	hash.Write([]byte(c.User))
-	hash.Write([]byte(c.Password))
+	hash.Write(stringx.ToBytes(c.User))
+	hash.Write(stringx.ToBytes(c.Password))
 
 	return hash.Sum(nil)
 }

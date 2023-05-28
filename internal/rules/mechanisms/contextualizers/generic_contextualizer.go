@@ -37,6 +37,7 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
+	"github.com/dadrus/heimdall/internal/x/stringx"
 )
 
 const (
@@ -336,7 +337,7 @@ func (h *genericContextualizer) readResponse(ctx heimdall.Context, resp *http.Re
 		logger.Warn().Str("_content_type", contentType).
 			Msg("Content type is not supported. Treating it as string")
 
-		return string(rawData), nil // nolint: nilerr
+		return stringx.ToString(rawData), nil // nolint: nilerr
 	}
 
 	result, err := decoder.Decode(rawData)
@@ -356,12 +357,12 @@ func (h *genericContextualizer) calculateCacheKey(sub *subject.Subject) string {
 	binary.LittleEndian.PutUint64(ttlBytes, uint64(h.ttl))
 
 	hash := sha256.New()
-	hash.Write([]byte(h.id))
-	hash.Write([]byte(strings.Join(h.fwdHeaders, ",")))
-	hash.Write([]byte(strings.Join(h.fwdCookies, ",")))
+	hash.Write(stringx.ToBytes(h.id))
+	hash.Write(stringx.ToBytes(strings.Join(h.fwdHeaders, ",")))
+	hash.Write(stringx.ToBytes(strings.Join(h.fwdCookies, ",")))
 	hash.Write(x.IfThenElseExec(h.payload != nil,
 		func() []byte { return h.payload.Hash() },
-		func() []byte { return []byte("nil") }))
+		func() []byte { return stringx.ToBytes("nil") }))
 	hash.Write(h.e.Hash())
 	hash.Write(ttlBytes)
 	hash.Write(sub.Hash())

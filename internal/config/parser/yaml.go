@@ -26,6 +26,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
+	"github.com/dadrus/heimdall/internal/x/stringx"
 )
 
 func koanfFromYaml(configFile string) (*koanf.Koanf, error) {
@@ -37,13 +38,13 @@ func koanfFromYaml(configFile string) (*koanf.Koanf, error) {
 			"failed to read yaml config from %s", configFile).CausedBy(err)
 	}
 
-	content, err := envsubst.EvalEnv(string(raw))
+	content, err := envsubst.EvalEnv(stringx.ToString(raw))
 	if err != nil {
 		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
 			"failed to parse yaml config from %s", configFile).CausedBy(err)
 	}
 
-	if err = parser.Load(rawbytes.Provider([]byte(content)), yaml.Parser()); err != nil {
+	if err = parser.Load(rawbytes.Provider(stringx.ToBytes(content)), yaml.Parser()); err != nil {
 		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
 			"failed to load yaml config from %s", configFile).CausedBy(err)
 	}

@@ -27,6 +27,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/dadrus/heimdall/internal/handler/management"
+	"github.com/dadrus/heimdall/internal/x/stringx"
 )
 
 // nolint: gochecknoglobals
@@ -65,14 +66,14 @@ var healthCmd = &cobra.Command{
 
 		switch outputFormat {
 		case "json":
-			cmd.Println(string(rawResp))
+			cmd.Println(stringx.ToString(rawResp))
 		case "yaml":
 			rawYaml, err := yaml.Marshal(structuredResponse)
 			if err != nil {
 				cmd.PrintErrf("Failed to convert response to yaml: %v", err)
 				os.Exit(-1)
 			}
-			cmd.Println(string(rawYaml))
+			cmd.Println(stringx.ToString(rawYaml))
 		default:
 			cmd.Println(structuredResponse["status"])
 		}
