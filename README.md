@@ -24,12 +24,13 @@ This decision and transformation process can be controlled by each and every ups
 That way, these rule sets can not only be managed centrally, but be deployed together with each particular upstream service as well without the need to restart or redeploy heimdall. Indeed, these rule sets are optional first class citizens of the upstream service and allow:
 
 * implementation of secure defaults. If no rule matches the incoming request, a default decision and transformation, if configured, is applied. This is the reason for "optional first class citizens" above.
-* configuration of as many authentication, authorization, contextualization and unification methods, supported by heimdall, as required for the particular system. So, if your system requires integration with multiple authentication providers, or you want to migrate from one to another - it is just a matter of configuring them in heimdall.
-* reuse and combination of these methods in as many rules, as  required for the particular system.
+* configuration of as many authentication, authorization, contextualization and unification mechanisms, supported by heimdall, as required for the particular system. So, if your system requires integration with multiple authentication providers, or you want to migrate from one to another - it is just a matter of configuring them in heimdall.
+* reuse and combination of these mechanisms in as many rules, as  required for the particular system.
 * partial reconfiguration of a particular mechanism in a rule if required by the upstream service.
-* authentication mechanism fall backs
+* authentication mechanism fallbacks
 * implementation of different decision process schemes by combining e.g. authentication mechanisms with error handlers to drive authentication mechanism specific error handling strategies.
-* execution of authorization and contextualization mechanisms in any order.
+* execution of authorization and contextualization mechanisms in any order; that way, if the information about your subject, available from the authentication system, is not sufficient to make proper authorization decisions, you can let heimdall call other services to retrieve that additional information.
+* conditional execution of authorization, contextualization and unification mechanisms is possible, e.g. if depending on the available information about the subject you would like heimdall to either block the request, or let the upstream return different representations of the requested resource.
 
 In sense of a deployment, heimdall is supposed to be used either as
 * a **Reverse Proxy** in front of your upstream service/API or web server that rejects unauthorized requests and forwards authorized ones to your end points, or as
