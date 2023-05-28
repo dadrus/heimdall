@@ -14,7 +14,14 @@ Heimdall is inspired by the ZeroTrust idea and also by [Promerium](https://www.p
 
 Heimdall authenticates and authorizes incoming HTTP requests as well as enriches these with further contextual information and finally transforms resulting subject information into a format, required by the upstream services.
 
-This decision and transformation process can be controlled by each and every upstream service individually via rules, respectively rule sets, which heimdall can load from different sources. That way, these rule sets can be deployed together with each particular upstream service without the need to restart or redeploy heimdall. Indeed, these rule sets are optional first class citizens of the upstream service and allow:
+This decision and transformation process can be controlled by each and every upstream service individually via rules, respectively rule sets, which heimdall can load from different sources, like
+
+* the local file system,
+* any HTTP endpoint,
+* cloud storages, like AWS S3, Google's GC, etc. and
+* `RuleSet` kubernetes resources (a corresponding CRD is shipped with the helm chart)
+
+That way, these rule sets can not only be managed centrally, but be deployed together with each particular upstream service as well without the need to restart or redeploy heimdall. Indeed, these rule sets are optional first class citizens of the upstream service and allow:
 
 * implementation of secure defaults. If no rule matches the incoming request, a default decision and transformation, if configured, is applied. This is the reason for "optional first class citizens" above.
 * configuration of as many authentication, authorization, contextualization and unification methods, supported by heimdall, as required for the particular system. So, if your system requires integration with multiple authentication providers, or you want to migrate from one to another - it is just a matter of configuring them in heimdall.
@@ -26,7 +33,7 @@ This decision and transformation process can be controlled by each and every ups
 
 In sense of a deployment, heimdall is supposed to be used either as
 * a **Reverse Proxy** in front of your upstream service/API or web server that rejects unauthorized requests and forwards authorized ones to your end points, or as
-* a **Decision Service**, which integrates with your Reverse Proxy or API Gateway (Kong, NGNIX, Envoy, Traefik, etc) and then acts as a Policy Decision Point.
+* a **Decision Service**, which integrates with your Reverse Proxy or API Gateway (Kong, NGNIX, Envoy, Traefik, etc) and then acts as a Policy Decision Point. This is also the preferred mode of operation.
 
 Head over to the [documentation](https://dadrus.github.io/heimdall/) for details or if you would like to give it a try.
 
