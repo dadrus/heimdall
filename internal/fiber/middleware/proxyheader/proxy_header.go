@@ -18,8 +18,11 @@ package proxyheader
 
 import (
 	"fmt"
+	"net/textproto"
+	"strings"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/valyala/fasthttp"
 
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/stringx"
@@ -32,6 +35,8 @@ const (
 
 func New() fiber.Handler {
 	return func(c *fiber.Ctx) error {
+		stripHopByHopHeader(&c.Request().Header)
+
 		// reuse already present headers only, if the source is trusted
 		// otherwise delete these to avoid sending them to the upstream service
 		// these headers shall not be set by the ultimate client
@@ -65,5 +70,45 @@ func New() fiber.Handler {
 				func() string { return fmt.Sprintf("%s, for=%s;proto=%s", forwardedHeaderValue, clientIP, proto) }))
 
 		return c.Next()
+	}
+}
+
+func stripHopByHopHeader(header *fasthttp.RequestHeader) {
+	// copying explicitly, as it will be removed by the removeHopByHopHeaders
+	// and if not copied, will be invalid
+	upgradeT := string(upgradeType(header))
+
+	removeHopByHopHeaders(header)
+
+	if len(upgradeT) != 0 {
+		header.Set("Connection", "upgrade")
+		header.Set("Upgrade", upgradeT)
+	}
+}
+
+func upgradeType(header *fasthttp.RequestHeader) []byte {
+	values := header.Peek("Connection")
+	if strings.Contains(strings.ToLower(stringx.ToString(values)), "upgrade") {
+		return header.Peek("Upgrade")
+	}
+
+	return nil
+}
+
+func removeHopByHopHeaders(header *fasthttp.RequestHeader) {
+	values := stringx.ToString(header.Peek("Connection"))
+
+	// RFC 7230, section 6.1: Remove headers listed in the "Connection" header.
+	for _, key := range strings.Split(values, ",") {
+		if key = textproto.TrimString(key); key != "" {
+			header.Del(key)
+		}
+	}
+
+	// RFC 2616, section 13.5.1: Remove a set of known hop-by-hop headers.
+	// This behavior is superseded by the RFC 7230 Connection header, but
+	// preserve it for backwards compatibility.
+	for _, f := range hopHeaders {
+		header.Del(f)
 	}
 }

@@ -31,8 +31,8 @@ func TestMiddlewareApplicationWithoutConfiguredTrustedProxy(t *testing.T) {
 	t.Parallel()
 
 	var (
-		valueXForwardedFor, valueForwarded string
-		testAppCalled                      bool
+		testAppCalled bool
+		headers       map[string]string
 	)
 
 	app := fiber.New(fiber.Config{
@@ -44,8 +44,10 @@ func TestMiddlewareApplicationWithoutConfiguredTrustedProxy(t *testing.T) {
 
 	app.Get("test", func(ctx *fiber.Ctx) error {
 		testAppCalled = true
-		valueXForwardedFor = ctx.Get(headerXForwardedFor)
-		valueForwarded = ctx.Get(headerForwarded)
+
+		ctx.Request().Header.VisitAll(func(key, value []byte) {
+			headers[string(key)] = string(value)
+		})
 
 		return nil
 	})
@@ -67,11 +69,11 @@ func TestMiddlewareApplicationWithoutConfiguredTrustedProxy(t *testing.T) {
 
 				assert.True(t, testAppCalled)
 
-				receivedValues := strings.Split(valueXForwardedFor, ",")
+				receivedValues := strings.Split(headers[headerXForwardedFor], ",")
 				require.Len(t, receivedValues, 1)
 				assert.Equal(t, strings.TrimSpace(receivedValues[0]), "0.0.0.0")
 
-				receivedValues = strings.Split(valueForwarded, ",")
+				receivedValues = strings.Split(headers[headerForwarded], ",")
 				require.Len(t, receivedValues, 1)
 				assert.Equal(t, strings.TrimSpace(receivedValues[0]), "for=0.0.0.0;proto=http")
 			},
@@ -88,11 +90,11 @@ func TestMiddlewareApplicationWithoutConfiguredTrustedProxy(t *testing.T) {
 
 				assert.True(t, testAppCalled)
 
-				receivedValues := strings.Split(valueXForwardedFor, ",")
+				receivedValues := strings.Split(headers[headerXForwardedFor], ",")
 				require.Len(t, receivedValues, 1)
 				assert.Equal(t, strings.TrimSpace(receivedValues[0]), "0.0.0.0")
 
-				receivedValues = strings.Split(valueForwarded, ",")
+				receivedValues = strings.Split(headers[headerForwarded], ",")
 				require.Len(t, receivedValues, 1)
 				assert.Equal(t, strings.TrimSpace(receivedValues[0]), "for=0.0.0.0;proto=http")
 			},
@@ -110,21 +112,42 @@ func TestMiddlewareApplicationWithoutConfiguredTrustedProxy(t *testing.T) {
 
 				assert.True(t, testAppCalled)
 
-				receivedValues := strings.Split(valueXForwardedFor, ",")
+				receivedValues := strings.Split(headers[headerXForwardedFor], ",")
 				require.Len(t, receivedValues, 1)
 				assert.Equal(t, strings.TrimSpace(receivedValues[0]), "0.0.0.0")
 
-				receivedValues = strings.Split(valueForwarded, ",")
+				receivedValues = strings.Split(headers[headerForwarded], ",")
 				require.Len(t, receivedValues, 1)
 				assert.Equal(t, strings.TrimSpace(receivedValues[0]), "for=0.0.0.0;proto=http")
+			},
+		},
+		{
+			uc: "hop by hope headers",
+			configureRequest: func(t *testing.T, req *http.Request) {
+				t.Helper()
+
+				req.Header.Set("TE", "deflate")
+				req.Header.Set("Foo", "Bar")
+				req.Header.Set("Connection", "keep-alive,foo,upgrade")
+				req.Header.Set("Upgrade", "foo/2")
+			},
+			assert: func(t *testing.T) {
+				t.Helper()
+
+				assert.True(t, testAppCalled)
+
+				assert.NotContains(t, headers, "Te")
+				assert.NotContains(t, headers, "Foo")
+				assert.Contains(t, headers, "Connection")
+				assert.Equal(t, "upgrade", headers["Connection"])
+				assert.Equal(t, "foo/2", headers["Upgrade"])
 			},
 		},
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
 			// GIVEN
 			testAppCalled = false
-			valueXForwardedFor = ""
-			valueForwarded = ""
+			headers = make(map[string]string)
 
 			req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, "/test", nil)
 			require.NoError(t, err)
