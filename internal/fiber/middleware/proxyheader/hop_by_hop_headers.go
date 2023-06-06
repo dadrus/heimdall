@@ -1,4 +1,4 @@
-package requestcontext
+package proxyheader
 
 import (
 	"net/textproto"

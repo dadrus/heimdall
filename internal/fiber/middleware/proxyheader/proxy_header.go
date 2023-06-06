@@ -32,6 +32,17 @@ const (
 
 func New() fiber.Handler {
 	return func(c *fiber.Ctx) error {
+		// copying explicitly, as it will be removed by the removeHopByHopHeaders
+		// and if not copied, will be invalid
+		upgradeT := string(upgradeType(&c.Request().Header))
+
+		removeHopByHopHeaders(&c.Request().Header)
+
+		if len(upgradeT) != 0 {
+			c.Request().Header.Set("Connection", "Upgrade")
+			c.Request().Header.Set("Upgrade", upgradeT)
+		}
+
 		// reuse already present headers only, if the source is trusted
 		// otherwise delete these to avoid sending them to the upstream service
 		// these headers shall not be set by the ultimate client

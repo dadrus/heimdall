@@ -105,17 +105,6 @@ func (s *RequestContext) FinalizeAndForward(upstreamURL *url.URL, timeout time.D
 			"cannot forward request due to missing upstream URL")
 	}
 
-	// copying explicitly, as it will be removed by the removeHopByHopHeaders
-	// and if not copied, will be invalid
-	upgradeT := string(upgradeType(&s.c.Request().Header))
-
-	removeHopByHopHeaders(&s.c.Request().Header)
-
-	if len(upgradeT) != 0 {
-		s.c.Request().Header.Set("Connection", "Upgrade")
-		s.c.Request().Header.Set("Upgrade", upgradeT)
-	}
-
 	for k := range s.upstreamHeaders {
 		s.c.Request().Header.Set(k, s.upstreamHeaders.Get(k))
 	}
