@@ -18,6 +18,8 @@ package proxyheader
 
 import (
 	"fmt"
+	"net/textproto"
+	"strings"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/valyala/fasthttp"
@@ -81,5 +83,34 @@ func stripHopByHopHeader(header *fasthttp.RequestHeader) {
 	if len(upgradeT) != 0 {
 		header.Set("Connection", "Upgrade")
 		header.Set("Upgrade", upgradeT)
+	}
+}
+
+func upgradeType(header *fasthttp.RequestHeader) []byte {
+	values := header.Peek("Connection")
+	if strings.Contains(stringx.ToString(values), "Upgrade") {
+		return header.Peek("Upgrade")
+	}
+
+	return nil
+}
+
+func removeHopByHopHeaders(header *fasthttp.RequestHeader) {
+	values := stringx.ToString(header.Peek("Connection"))
+
+	// RFC 7230, section 6.1: Remove headers listed in the "Connection" header.
+	for _, value := range strings.Split(values, ";") {
+		for _, sf := range strings.Split(value, ",") {
+			if sf = textproto.TrimString(sf); sf != "" {
+				header.Del(sf)
+			}
+		}
+	}
+
+	// RFC 2616, section 13.5.1: Remove a set of known hop-by-hop headers.
+	// This behavior is superseded by the RFC 7230 Connection header, but
+	// preserve it for backwards compatibility.
+	for _, f := range hopHeaders {
+		header.Del(f)
 	}
 }
