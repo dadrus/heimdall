@@ -20,6 +20,7 @@ import (
 	"fmt"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/valyala/fasthttp"
 
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/stringx"
@@ -32,16 +33,7 @@ const (
 
 func New() fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		// copying explicitly, as it will be removed by the removeHopByHopHeaders
-		// and if not copied, will be invalid
-		upgradeT := string(upgradeType(&c.Request().Header))
-
-		removeHopByHopHeaders(&c.Request().Header)
-
-		if len(upgradeT) != 0 {
-			c.Request().Header.Set("Connection", "Upgrade")
-			c.Request().Header.Set("Upgrade", upgradeT)
-		}
+		stripHopByHopHeader(&c.Request().Header)
 
 		// reuse already present headers only, if the source is trusted
 		// otherwise delete these to avoid sending them to the upstream service
@@ -76,5 +68,18 @@ func New() fiber.Handler {
 				func() string { return fmt.Sprintf("%s, for=%s;proto=%s", forwardedHeaderValue, clientIP, proto) }))
 
 		return c.Next()
+	}
+}
+
+func stripHopByHopHeader(header *fasthttp.RequestHeader) {
+	// copying explicitly, as it will be removed by the removeHopByHopHeaders
+	// and if not copied, will be invalid
+	upgradeT := string(upgradeType(header))
+
+	removeHopByHopHeaders(header)
+
+	if len(upgradeT) != 0 {
+		header.Set("Connection", "Upgrade")
+		header.Set("Upgrade", upgradeT)
 	}
 }
