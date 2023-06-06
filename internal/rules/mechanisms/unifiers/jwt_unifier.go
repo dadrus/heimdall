@@ -237,7 +237,7 @@ func (u *jwtUnifier) calculateCacheKey(sub *subject.Subject, iss heimdall.JWTSig
 	hash.Write(iss.Hash())
 	hash.Write(x.IfThenElseExec(u.claims != nil,
 		func() []byte { return u.claims.Hash() },
-		func() []byte { return stringx.ToBytes("nil") }))
+		func() []byte { return []byte{} }))
 	hash.Write(ttlBytes)
 	hash.Write(sub.Hash())
 

@@ -384,7 +384,7 @@ func (a *remoteAuthorizer) calculateCacheKey(sub *subject.Subject) string {
 	hash.Write(stringx.ToBytes(strings.Join(a.headersForUpstream, ",")))
 	hash.Write(x.IfThenElseExec(a.payload != nil,
 		func() []byte { return a.payload.Hash() },
-		func() []byte { return stringx.ToBytes("nil") }))
+		func() []byte { return []byte{} }))
 	hash.Write(ttlBytes)
 	hash.Write(sub.Hash())
 
