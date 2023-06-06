@@ -21,6 +21,7 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/goccy/go-json"
@@ -56,15 +57,23 @@ func init() {
 }
 
 type jwtUnifier struct {
-	id     string
-	claims template.Template
-	ttl    time.Duration
+	id           string
+	claims       template.Template
+	ttl          time.Duration
+	headerName   string
+	headerScheme string
 }
 
 func newJWTUnifier(id string, rawConfig map[string]any) (*jwtUnifier, error) {
+	type HeaderConfig struct {
+		Name   string `mapstructure:"name"`
+		Scheme string `mapstructure:"scheme"`
+	}
+
 	type Config struct {
 		Claims template.Template `mapstructure:"claims"`
 		TTL    *time.Duration    `mapstructure:"ttl"`
+		Header *HeaderConfig     `mapstructure:"header"`
 	}
 
 	var conf Config
@@ -79,12 +88,23 @@ func newJWTUnifier(id string, rawConfig map[string]any) (*jwtUnifier, error) {
 			NewWithMessage(heimdall.ErrConfiguration, "configured JWT ttl is less than one second")
 	}
 
+	if conf.Header != nil && len(strings.TrimSpace(conf.Header.Name)) == 0 {
+		return nil, errorchain.
+			NewWithMessage(heimdall.ErrConfiguration, "configured JWT header name is an empty string")
+	}
+
 	return &jwtUnifier{
 		id:     id,
 		claims: conf.Claims,
 		ttl: x.IfThenElseExec(conf.TTL != nil,
 			func() time.Duration { return *conf.TTL },
 			func() time.Duration { return defaultJWTTTL }),
+		headerName: x.IfThenElseExec(conf.Header != nil,
+			func() string { return conf.Header.Name },
+			func() string { return "Authorization" }),
+		headerScheme: x.IfThenElseExec(conf.Header != nil,
+			func() string { return conf.Header.Scheme },
+			func() string { return "Bearer" }),
 	}, nil
 }
 
@@ -132,7 +152,7 @@ func (u *jwtUnifier) Execute(ctx heimdall.Context, sub *subject.Subject) error {
 		}
 	}
 
-	ctx.AddHeaderForUpstream("Authorization", fmt.Sprintf("Bearer %s", jwtToken))
+	ctx.AddHeaderForUpstream(u.headerName, fmt.Sprintf("%s %s", u.headerScheme, jwtToken))
 
 	return nil
 }

@@ -279,6 +279,9 @@ rules:
       type: jwt
       config:
         ttl: 5m
+        header:
+          name: Foo
+          scheme: Bar
         claims: "{'user': {{ quote .Subject.ID }} }"
     - id: bla
       type: header

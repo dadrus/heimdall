@@ -1252,6 +1252,22 @@
                 "1m",
                 "30s"
               ]
+            },
+            "header": {
+              "description": "Header configuration",
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "name"
+              ],
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "scheme": {
+                  "type": "string"
+                }
+              }
             }
           }
         }
