@@ -81,14 +81,14 @@ func stripHopByHopHeader(header *fasthttp.RequestHeader) {
 	removeHopByHopHeaders(header)
 
 	if len(upgradeT) != 0 {
-		header.Set("Connection", "Upgrade")
+		header.Set("Connection", "upgrade")
 		header.Set("Upgrade", upgradeT)
 	}
 }
 
 func upgradeType(header *fasthttp.RequestHeader) []byte {
 	values := header.Peek("Connection")
-	if strings.Contains(stringx.ToString(values), "Upgrade") {
+	if strings.Contains(strings.ToLower(stringx.ToString(values)), "upgrade") {
 		return header.Peek("Upgrade")
 	}
 
@@ -99,11 +99,9 @@ func removeHopByHopHeaders(header *fasthttp.RequestHeader) {
 	values := stringx.ToString(header.Peek("Connection"))
 
 	// RFC 7230, section 6.1: Remove headers listed in the "Connection" header.
-	for _, value := range strings.Split(values, ";") {
-		for _, sf := range strings.Split(value, ",") {
-			if sf = textproto.TrimString(sf); sf != "" {
-				header.Del(sf)
-			}
+	for _, key := range strings.Split(values, ",") {
+		if key = textproto.TrimString(key); key != "" {
+			header.Del(key)
 		}
 	}
 
