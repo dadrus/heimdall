@@ -58,6 +58,8 @@ func TestCreateJWTUnifier(t *testing.T) {
 				assert.Equal(t, defaultJWTTTL, unifier.ttl)
 				assert.Nil(t, unifier.claims)
 				assert.Equal(t, "jun", unifier.HandlerID())
+				assert.Equal(t, "Authorization", unifier.headerName)
+				assert.Equal(t, "Bearer", unifier.headerScheme)
 			},
 		},
 		{
@@ -73,6 +75,8 @@ func TestCreateJWTUnifier(t *testing.T) {
 				assert.Equal(t, defaultJWTTTL, unifier.ttl)
 				assert.Nil(t, unifier.claims)
 				assert.Equal(t, "jun", unifier.HandlerID())
+				assert.Equal(t, "Authorization", unifier.headerName)
+				assert.Equal(t, "Bearer", unifier.headerScheme)
 			},
 		},
 		{
@@ -88,6 +92,8 @@ func TestCreateJWTUnifier(t *testing.T) {
 				assert.Equal(t, expectedTTL, unifier.ttl)
 				assert.Nil(t, unifier.claims)
 				assert.Equal(t, "jun", unifier.HandlerID())
+				assert.Equal(t, "Authorization", unifier.headerName)
+				assert.Equal(t, "Bearer", unifier.headerScheme)
 			},
 		},
 		{
@@ -122,6 +128,8 @@ claims:
 				require.NoError(t, err)
 				assert.Equal(t, `{ "sub": "bar" }`, val)
 				assert.Equal(t, "jun", unifier.HandlerID())
+				assert.Equal(t, "Authorization", unifier.headerName)
+				assert.Equal(t, "Bearer", unifier.headerScheme)
 				assert.False(t, unifier.ContinueOnError())
 			},
 		},
@@ -147,6 +155,8 @@ claims:
 				require.NoError(t, err)
 				assert.Equal(t, `{ "sub": "bar" }`, val)
 				assert.Equal(t, "jun", unifier.HandlerID())
+				assert.Equal(t, "Authorization", unifier.headerName)
+				assert.Equal(t, "Bearer", unifier.headerScheme)
 				assert.False(t, unifier.ContinueOnError())
 			},
 		},
@@ -162,6 +172,60 @@ foo: bar"
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
 				assert.Contains(t, err.Error(), "failed to unmarshal")
+			},
+		},
+		{
+			uc: "with bad header config",
+			id: "jun",
+			config: []byte(`
+header:
+  scheme: Foo
+`),
+			assert: func(t *testing.T, err error, unifier *jwtUnifier) {
+				t.Helper()
+
+				require.Error(t, err)
+				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				assert.Contains(t, err.Error(), "empty string")
+			},
+		},
+		{
+			uc: "with valid header config without scheme",
+			id: "jun",
+			config: []byte(`
+header:
+  name: Foo
+`),
+			assert: func(t *testing.T, err error, unifier *jwtUnifier) {
+				t.Helper()
+
+				require.NoError(t, err)
+				require.NotNil(t, unifier)
+				assert.Equal(t, defaultJWTTTL, unifier.ttl)
+				assert.Nil(t, unifier.claims)
+				assert.Equal(t, "jun", unifier.HandlerID())
+				assert.Equal(t, "Foo", unifier.headerName)
+				assert.Empty(t, unifier.headerScheme)
+			},
+		},
+		{
+			uc: "with valid header config with scheme",
+			id: "jun",
+			config: []byte(`
+header:
+  name: Foo
+  scheme: Bar
+`),
+			assert: func(t *testing.T, err error, unifier *jwtUnifier) {
+				t.Helper()
+
+				require.NoError(t, err)
+				require.NotNil(t, unifier)
+				assert.Equal(t, defaultJWTTTL, unifier.ttl)
+				assert.Nil(t, unifier.claims)
+				assert.Equal(t, "jun", unifier.HandlerID())
+				assert.Equal(t, "Foo", unifier.headerName)
+				assert.Equal(t, "Bar", unifier.headerScheme)
 			},
 		},
 	} {
@@ -448,8 +512,11 @@ func TestJWTUnifierExecute(t *testing.T) {
 			},
 		},
 		{
-			uc: "with no cache hit and with custom claims",
+			uc: "with no cache hit, with custom claims and custom header",
 			config: []byte(`
+header:
+  name: X-Token
+  scheme: Bar
 claims: '{
   {{ $val := .Subject.Attributes.baz }}
   "sub_id": {{ quote .Subject.ID }}, 
@@ -468,7 +535,7 @@ claims: '{
 				}).Return("barfoo", nil)
 
 				ctx.EXPECT().Signer().Return(signer)
-				ctx.EXPECT().AddHeaderForUpstream("Authorization", "Bearer barfoo")
+				ctx.EXPECT().AddHeaderForUpstream("X-Token", "Bar barfoo")
 				ctx.EXPECT().Request().Return(&heimdall.Request{})
 
 				cch.EXPECT().Get(mock.Anything).Return(nil)
