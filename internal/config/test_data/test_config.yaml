@@ -326,6 +326,15 @@ rules:
           ttl: 5m
           claims: |
             {"user": {{ quote .Subject.ID }} }
+      - id: jwt_with_custom_header
+        type: jwt
+        config:
+          ttl: 5m
+          header:
+            name: Foo
+            scheme: Bar
+          claims: |
+            {"user": {{ quote .Subject.ID }} }
       - id: bla
         type: header
         config:
