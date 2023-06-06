@@ -115,7 +115,7 @@ func (s *RequestContext) FinalizeAndForward(upstreamURL *url.URL, timeout time.D
 
 	// delete headers, which are useless for the upstream service, before forwarding the request
 	for _, name := range []string{
-		"X-Forwarded-Method", "X-Forwarded-Proto", "X-Forwarded-Host", "X-Forwarded-Uri", "X-Forwarded-Path",
+		"X-Forwarded-Method", "X-Forwarded-Uri", "X-Forwarded-Path",
 	} {
 		s.c.Request().Header.Del(name)
 	}
