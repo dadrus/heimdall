@@ -1,5 +1,29 @@
 # Changelog
 
+## [0.8.0-alpha](https://github.com/dadrus/heimdall/compare/v0.7.0-alpha...v0.8.0-alpha) (2023-06-07)
+
+
+### ⚠ BREAKING CHANGES
+
+* `generic` authenticator can forward authentication data to the `identity_info_endpoint` based on custom configuration ([#631](https://github.com/dadrus/heimdall/issues/631))
+
+### Features
+
+* `api_key` endpoint authentication strategy can add api keys to query parameters ([#630](https://github.com/dadrus/heimdall/issues/630)) ([634c9d9](https://github.com/dadrus/heimdall/commit/634c9d9f70cf24422023e1095d1f3c8f62290b05))
+* `generic` authenticator can forward authentication data to the `identity_info_endpoint` based on custom configuration ([#631](https://github.com/dadrus/heimdall/issues/631)) ([0e26596](https://github.com/dadrus/heimdall/commit/0e26596e9c610c02139e6883bec867ee3c101714))
+* `jwt` unifier supports definition of a custom header and scheme ([#666](https://github.com/dadrus/heimdall/issues/666)) ([9971faa](https://github.com/dadrus/heimdall/commit/9971faa5ae7ecdcdf61671946305fe41c7b518de))
+* Request object is available to `header` and `cookie` unifiers ([#627](https://github.com/dadrus/heimdall/issues/627)) ([71b1da5](https://github.com/dadrus/heimdall/commit/71b1da5c24839cb1b45f2db1a8bdd45aff172f6c))
+
+
+### Bug Fixes
+
+* Proper HTTP hop by hop header handling ([#665](https://github.com/dadrus/heimdall/issues/665)) ([3ef6185](https://github.com/dadrus/heimdall/commit/3ef61858301a0d7dfd4efa2b81bd1be92b67efd3))
+
+
+### Performance Improvements
+
+* converting byte slice to a string and vice versa without memory allocation ([#649](https://github.com/dadrus/heimdall/issues/649)) ([6a13428](https://github.com/dadrus/heimdall/commit/6a134287c3d7debfdaa857d8c422a240e7f897e9))
+
 ## [0.7.0-alpha](https://github.com/dadrus/heimdall/compare/v0.6.1-alpha...v0.7.0-alpha) (2023-04-17)
 
 
