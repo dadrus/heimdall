@@ -362,7 +362,7 @@ func (h *genericContextualizer) calculateCacheKey(sub *subject.Subject) string {
 	hash.Write(stringx.ToBytes(strings.Join(h.fwdCookies, ",")))
 	hash.Write(x.IfThenElseExec(h.payload != nil,
 		func() []byte { return h.payload.Hash() },
-		func() []byte { return stringx.ToBytes("nil") }))
+		func() []byte { return []byte{} }))
 	hash.Write(h.e.Hash())
 	hash.Write(ttlBytes)
 	hash.Write(sub.Hash())
