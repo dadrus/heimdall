@@ -137,6 +137,7 @@ func TestRuleExecute(t *testing.T) {
 	for _, tc := range []struct {
 		uc             string
 		upstreamURL    *url.URL
+		stripPrefix    string
 		configureMocks func(
 			t *testing.T,
 			ctx *heimdallmocks.ContextMock,
@@ -306,6 +307,29 @@ func TestRuleExecute(t *testing.T) {
 				assert.Equal(t, &url.URL{Scheme: "http", Host: "test.local", Path: "foo"}, upstreamURL)
 			},
 		},
+		{
+			uc:          "stripping path prefix",
+			upstreamURL: &url.URL{Scheme: "http", Host: "test.local", Path: "api/v1/foo"},
+			stripPrefix: "api/v1",
+			configureMocks: func(t *testing.T, ctx *heimdallmocks.ContextMock, authenticator *mocks.SubjectCreatorMock,
+				authorizer *mocks.SubjectHandlerMock, unifier *mocks.SubjectHandlerMock,
+				errHandler *mocks.ErrorHandlerMock,
+			) {
+				t.Helper()
+
+				sub := &subject.Subject{ID: "Foo"}
+
+				authenticator.EXPECT().Execute(ctx).Return(sub, nil)
+				authorizer.EXPECT().Execute(ctx, sub).Return(nil)
+				unifier.EXPECT().Execute(ctx, sub).Return(nil)
+			},
+			assert: func(t *testing.T, err error, upstreamURL *url.URL) {
+				t.Helper()
+
+				require.NoError(t, err)
+				assert.Equal(t, &url.URL{Scheme: "http", Host: "test.local", Path: "foo"}, upstreamURL)
+			},
+		},
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
 			// GIVEN
@@ -319,6 +343,7 @@ func TestRuleExecute(t *testing.T) {
 
 			rul := &ruleImpl{
 				upstreamURL: tc.upstreamURL,
+				stripPrefix: tc.stripPrefix,
 				sc:          compositeSubjectCreator{authenticator},
 				sh:          compositeSubjectHandler{authorizer},
 				un:          compositeSubjectHandler{unifier},
