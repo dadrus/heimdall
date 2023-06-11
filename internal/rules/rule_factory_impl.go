@@ -130,7 +130,8 @@ func (f *ruleFactory) DefaultRule() rule.Rule {
 	return f.defaultRule
 }
 
-func (f *ruleFactory) CreateRule(version, srcID string, ruleConfig config2.Rule) ( // nolint: cyclop
+//nolint:funlen, cyclop
+func (f *ruleFactory) CreateRule(version, srcID string, ruleConfig config2.Rule) (
 	rule.Rule, error,
 ) {
 	if len(ruleConfig.ID) == 0 {
