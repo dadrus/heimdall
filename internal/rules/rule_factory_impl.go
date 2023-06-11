@@ -202,6 +202,7 @@ func (f *ruleFactory) CreateRule(version, srcID string, ruleConfig config2.Rule)
 		id:          ruleConfig.ID,
 		urlMatcher:  matcher,
 		upstreamURL: upstreamURL,
+		stripPrefix: ruleConfig.StripPrefix,
 		methods:     methods,
 		srcID:       srcID,
 		isDefault:   false,

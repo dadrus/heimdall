@@ -24,6 +24,7 @@ type Rule struct {
 	ID           string                   `json:"id" yaml:"id"`
 	RuleMatcher  Matcher                  `json:"match" yaml:"match"`
 	Upstream     string                   `json:"upstream" yaml:"upstream"`
+	StripPrefix  string                   `json:"strip_prefix" yaml:"strip_prefix"`
 	Methods      []string                 `json:"methods" yaml:"methods"`
 	Execute      []config.MechanismConfig `json:"execute" yaml:"execute"`
 	ErrorHandler []config.MechanismConfig `json:"on_error" yaml:"on_error"`

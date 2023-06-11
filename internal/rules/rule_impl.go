@@ -18,6 +18,7 @@ package rules
 
 import (
 	"net/url"
+	"strings"
 
 	"github.com/rs/zerolog"
 	"golang.org/x/exp/slices"
@@ -30,6 +31,7 @@ type ruleImpl struct {
 	id          string
 	urlMatcher  patternmatcher.PatternMatcher
 	upstreamURL *url.URL
+	stripPrefix string
 	methods     []string
 	srcID       string
 	isDefault   bool
@@ -69,6 +71,13 @@ func (r *ruleImpl) Execute(ctx heimdall.Context) (*url.URL, error) {
 		_, err := r.eh.Execute(ctx, err)
 
 		return nil, err
+	}
+
+	if len(r.stripPrefix) != 0 {
+		modURL := *r.upstreamURL
+		modURL.Path = strings.TrimLeft(modURL.Path, r.stripPrefix)
+
+		return &modURL, nil
 	}
 
 	return r.upstreamURL, nil
