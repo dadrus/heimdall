@@ -137,7 +137,7 @@ func ValidateCertificate(cert *x509.Certificate, opts ...ValidationOption) error
 		validationOpts.verifyOpts.KeyUsages = []x509.ExtKeyUsage{x509.ExtKeyUsageAny}
 	}
 
-	if validationOpts.verifyOpts.Roots == nil {
+	if len(validationOpts.rootCAs) != 0 && validationOpts.verifyOpts.Roots == nil {
 		validationOpts.verifyOpts.Roots = x509.NewCertPool()
 	}
 
