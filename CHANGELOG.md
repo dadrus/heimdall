@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.1-alpha](https://github.com/dadrus/heimdall/compare/v0.8.0-alpha...v0.8.1-alpha) (2023-06-12)
+
+
+### Bug Fixes
+
+* Proper usage of system trust store for JWT signer certificate validation purposes ([#671](https://github.com/dadrus/heimdall/issues/671)) ([66835b6](https://github.com/dadrus/heimdall/commit/66835b6acd6f2601fb53e48e36b4fe2c6b908989))
+
 ## [0.8.0-alpha](https://github.com/dadrus/heimdall/compare/v0.7.0-alpha...v0.8.0-alpha) (2023-06-07)
 
 
