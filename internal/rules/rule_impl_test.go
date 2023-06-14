@@ -28,6 +28,7 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
 	"github.com/dadrus/heimdall/internal/rules/mocks"
 	"github.com/dadrus/heimdall/internal/rules/patternmatcher"
+	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
@@ -146,7 +147,7 @@ func TestRuleExecute(t *testing.T) {
 			unifier *mocks.SubjectHandlerMock,
 			errHandler *mocks.ErrorHandlerMock,
 		)
-		assert func(t *testing.T, err error, upstreamURL *url.URL)
+		assert func(t *testing.T, err error, mutator rule.URIMutator)
 	}{
 		{
 			uc:          "authenticator fails, but error handler succeeds",
@@ -161,11 +162,11 @@ func TestRuleExecute(t *testing.T) {
 				authenticator.EXPECT().IsFallbackOnErrorAllowed().Return(false)
 				errHandler.EXPECT().Execute(ctx, testsupport.ErrTestPurpose).Return(true, nil)
 			},
-			assert: func(t *testing.T, err error, upstreamURL *url.URL) {
+			assert: func(t *testing.T, err error, mutator rule.URIMutator) {
 				t.Helper()
 
 				require.NoError(t, err)
-				assert.Nil(t, upstreamURL)
+				assert.Nil(t, mutator)
 			},
 		},
 		{
@@ -181,12 +182,12 @@ func TestRuleExecute(t *testing.T) {
 				authenticator.EXPECT().IsFallbackOnErrorAllowed().Return(false)
 				errHandler.EXPECT().Execute(ctx, testsupport.ErrTestPurpose).Return(true, testsupport.ErrTestPurpose2)
 			},
-			assert: func(t *testing.T, err error, upstreamURL *url.URL) {
+			assert: func(t *testing.T, err error, mutator rule.URIMutator) {
 				t.Helper()
 
 				require.Error(t, err)
 				assert.ErrorIs(t, err, testsupport.ErrTestPurpose2)
-				assert.Nil(t, upstreamURL)
+				assert.Nil(t, mutator)
 			},
 		},
 		{
@@ -205,11 +206,11 @@ func TestRuleExecute(t *testing.T) {
 				authorizer.EXPECT().ContinueOnError().Return(false)
 				errHandler.EXPECT().Execute(ctx, testsupport.ErrTestPurpose).Return(true, nil)
 			},
-			assert: func(t *testing.T, err error, upstreamURL *url.URL) {
+			assert: func(t *testing.T, err error, mutator rule.URIMutator) {
 				t.Helper()
 
 				require.NoError(t, err)
-				assert.Nil(t, upstreamURL)
+				assert.Nil(t, mutator)
 			},
 		},
 		{
@@ -228,12 +229,12 @@ func TestRuleExecute(t *testing.T) {
 				authorizer.EXPECT().ContinueOnError().Return(false)
 				errHandler.EXPECT().Execute(ctx, testsupport.ErrTestPurpose).Return(true, testsupport.ErrTestPurpose2)
 			},
-			assert: func(t *testing.T, err error, upstreamURL *url.URL) {
+			assert: func(t *testing.T, err error, mutator rule.URIMutator) {
 				t.Helper()
 
 				require.Error(t, err)
 				assert.ErrorIs(t, err, testsupport.ErrTestPurpose2)
-				assert.Nil(t, upstreamURL)
+				assert.Nil(t, mutator)
 			},
 		},
 		{
@@ -253,11 +254,11 @@ func TestRuleExecute(t *testing.T) {
 				unifier.EXPECT().ContinueOnError().Return(false)
 				errHandler.EXPECT().Execute(ctx, testsupport.ErrTestPurpose).Return(true, nil)
 			},
-			assert: func(t *testing.T, err error, upstreamURL *url.URL) {
+			assert: func(t *testing.T, err error, mutator rule.URIMutator) {
 				t.Helper()
 
 				require.NoError(t, err)
-				assert.Nil(t, upstreamURL)
+				assert.Nil(t, mutator)
 			},
 		},
 		{
@@ -277,17 +278,17 @@ func TestRuleExecute(t *testing.T) {
 				unifier.EXPECT().ContinueOnError().Return(false)
 				errHandler.EXPECT().Execute(ctx, testsupport.ErrTestPurpose).Return(true, testsupport.ErrTestPurpose2)
 			},
-			assert: func(t *testing.T, err error, upstreamURL *url.URL) {
+			assert: func(t *testing.T, err error, mutator rule.URIMutator) {
 				t.Helper()
 
 				require.Error(t, err)
 				assert.ErrorIs(t, err, testsupport.ErrTestPurpose2)
-				assert.Nil(t, upstreamURL)
+				assert.Nil(t, mutator)
 			},
 		},
 		{
 			uc:          "all handler succeed",
-			upstreamURL: &url.URL{Scheme: "http", Host: "test.local", Path: "foo"},
+			upstreamURL: &url.URL{Scheme: "https", Host: "test.local"},
 			configureMocks: func(t *testing.T, ctx *heimdallmocks.ContextMock, authenticator *mocks.SubjectCreatorMock,
 				authorizer *mocks.SubjectHandlerMock, unifier *mocks.SubjectHandlerMock,
 				errHandler *mocks.ErrorHandlerMock,
@@ -300,16 +301,20 @@ func TestRuleExecute(t *testing.T) {
 				authorizer.EXPECT().Execute(ctx, sub).Return(nil)
 				unifier.EXPECT().Execute(ctx, sub).Return(nil)
 			},
-			assert: func(t *testing.T, err error, upstreamURL *url.URL) {
+			assert: func(t *testing.T, err error, mutator rule.URIMutator) {
 				t.Helper()
 
 				require.NoError(t, err)
-				assert.Equal(t, &url.URL{Scheme: "http", Host: "test.local", Path: "foo"}, upstreamURL)
+
+				upstreamURL, err := mutator.Mutate(&url.URL{Scheme: "http", Host: "foo.local", Path: "/foo"})
+				require.NoError(t, err)
+
+				assert.Equal(t, &url.URL{Scheme: "https", Host: "test.local", Path: "/foo"}, upstreamURL)
 			},
 		},
 		{
 			uc:          "stripping path prefix",
-			upstreamURL: &url.URL{Scheme: "http", Host: "test.local", Path: "api/v1/foo"},
+			upstreamURL: &url.URL{Scheme: "http", Host: "test.local"},
 			stripPrefix: "api/v1",
 			configureMocks: func(t *testing.T, ctx *heimdallmocks.ContextMock, authenticator *mocks.SubjectCreatorMock,
 				authorizer *mocks.SubjectHandlerMock, unifier *mocks.SubjectHandlerMock,
@@ -323,10 +328,14 @@ func TestRuleExecute(t *testing.T) {
 				authorizer.EXPECT().Execute(ctx, sub).Return(nil)
 				unifier.EXPECT().Execute(ctx, sub).Return(nil)
 			},
-			assert: func(t *testing.T, err error, upstreamURL *url.URL) {
+			assert: func(t *testing.T, err error, mutator rule.URIMutator) {
 				t.Helper()
 
 				require.NoError(t, err)
+
+				upstreamURL, err := mutator.Mutate(&url.URL{Scheme: "http", Host: "foo.local", Path: "api/v1/foo"})
+				require.NoError(t, err)
+
 				assert.Equal(t, &url.URL{Scheme: "http", Host: "test.local", Path: "foo"}, upstreamURL)
 			},
 		},
@@ -353,10 +362,10 @@ func TestRuleExecute(t *testing.T) {
 			tc.configureMocks(t, ctx, authenticator, authorizer, unifier, errHandler)
 
 			// WHEN
-			upstreamURL, err := rul.Execute(ctx)
+			urlMutator, err := rul.Execute(ctx)
 
 			// THEN
-			tc.assert(t, err, upstreamURL)
+			tc.assert(t, err, urlMutator)
 		})
 	}
 }

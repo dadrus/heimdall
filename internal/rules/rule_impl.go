@@ -25,6 +25,8 @@ import (
 
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/patternmatcher"
+	"github.com/dadrus/heimdall/internal/rules/rule"
+	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
 type ruleImpl struct {
@@ -42,7 +44,22 @@ type ruleImpl struct {
 	eh          compositeErrorHandler
 }
 
-func (r *ruleImpl) Execute(ctx heimdall.Context) (*url.URL, error) {
+func (r *ruleImpl) Mutate(uri *url.URL) (*url.URL, error) {
+	if r.upstreamURL == nil {
+		// happens only if default rule has been applied or if the rule does not have an upstream defined
+		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
+			"no upstream URL defined")
+	}
+
+	return &url.URL{
+		Scheme:   r.upstreamURL.Scheme,
+		Host:     r.upstreamURL.Host,
+		Path:     strings.TrimPrefix(uri.Path, r.stripPrefix),
+		RawQuery: uri.RawQuery,
+	}, nil
+}
+
+func (r *ruleImpl) Execute(ctx heimdall.Context) (rule.URIMutator, error) {
 	logger := zerolog.Ctx(ctx.AppContext())
 
 	if r.isDefault {
@@ -73,14 +90,7 @@ func (r *ruleImpl) Execute(ctx heimdall.Context) (*url.URL, error) {
 		return nil, err
 	}
 
-	if len(r.stripPrefix) != 0 {
-		modURL := *r.upstreamURL
-		modURL.Path = strings.TrimLeft(modURL.Path, r.stripPrefix)
-
-		return &modURL, nil
-	}
-
-	return r.upstreamURL, nil
+	return r, nil
 }
 
 func (r *ruleImpl) MatchesURL(requestURL *url.URL) bool {
