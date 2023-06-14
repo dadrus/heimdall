@@ -336,7 +336,7 @@ func TestRuleExecute(t *testing.T) {
 				upstreamURL, err := mutator.Mutate(&url.URL{Scheme: "http", Host: "foo.local", Path: "api/v1/foo"})
 				require.NoError(t, err)
 
-				assert.Equal(t, &url.URL{Scheme: "http", Host: "test.local", Path: "foo"}, upstreamURL)
+				assert.Equal(t, &url.URL{Scheme: "http", Host: "test.local", Path: "/foo"}, upstreamURL)
 			},
 		},
 	} {
