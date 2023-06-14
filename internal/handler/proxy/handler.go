@@ -84,12 +84,12 @@ func (h *Handler) proxy(c *fiber.Ctx) error {
 
 	reqCtx := requestcontext.New(c, method, reqURL, h.s)
 
-	upstreamURL, err := rul.Execute(reqCtx)
+	mutator, err := rul.Execute(reqCtx)
 	if err != nil {
 		return err
 	}
 
 	logger.Debug().Msg("Finalizing request")
 
-	return reqCtx.FinalizeAndForward(upstreamURL, h.t)
+	return reqCtx.FinalizeAndForward(mutator, h.t)
 }

@@ -28,7 +28,6 @@ import (
 	"github.com/dadrus/heimdall/internal/fasthttp/opentelemetry"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/x"
-	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
 type RequestContext struct {
@@ -94,15 +93,13 @@ func (s *RequestContext) Finalize(statusCode int) error {
 	return nil
 }
 
-func (s *RequestContext) FinalizeAndForward(upstreamURL *url.URL, timeout time.Duration) error {
+type URIMutator interface {
+	Mutate(uri *url.URL) (*url.URL, error)
+}
+
+func (s *RequestContext) FinalizeAndForward(mutator URIMutator, timeout time.Duration) error {
 	if s.err != nil {
 		return s.err
-	}
-
-	if upstreamURL == nil {
-		// happens only if default rule has been applied or if the rule does not have an upstream defined
-		return errorchain.NewWithMessage(heimdall.ErrConfiguration,
-			"cannot forward request due to missing upstream URL")
 	}
 
 	for k := range s.upstreamHeaders {
@@ -120,15 +117,13 @@ func (s *RequestContext) FinalizeAndForward(upstreamURL *url.URL, timeout time.D
 		s.c.Request().Header.Del(name)
 	}
 
-	URL := &url.URL{
-		Scheme:   upstreamURL.Scheme,
-		Host:     upstreamURL.Host,
-		Path:     s.reqURL.Path,
-		RawQuery: s.reqURL.RawQuery,
+	targetURL, err := mutator.Mutate(s.reqURL)
+	if err != nil {
+		return err
 	}
 
 	s.c.Request().Header.SetMethod(s.reqMethod)
-	s.c.Request().SetRequestURI(URL.String())
+	s.c.Request().SetRequestURI(targetURL.String())
 
 	return opentelemetry.NewClient(&fasthttp.Client{}).
 		DoTimeout(s.c.UserContext(), s.c.Request(), s.c.Response(), timeout)
