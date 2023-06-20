@@ -26,7 +26,7 @@ func TestNewRequestContext(t *testing.T) {
 		Method:   http.MethodPatch,
 		Scheme:   "https",
 		Host:     "foo.bar:8080",
-		Path:     "/test",
+		Path:     "/test/baz",
 		Query:    "bar=moo",
 		Fragment: "foobar",
 		Body:     "content=heimdall",
@@ -73,6 +73,7 @@ func TestNewRequestContext(t *testing.T) {
 	require.NotNil(t, ctx.AppContext())
 	require.NotNil(t, ctx.Signer())
 	assert.Equal(t, ctx.Request().ClientIP, []string{"127.0.0.1", "192.168.1.1"})
+	assert.Equal(t, "baz", ctx.Request().LastURLPathFragment())
 }
 
 func TestFinalizeRequestContext(t *testing.T) {
