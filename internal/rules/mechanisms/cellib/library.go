@@ -77,6 +77,18 @@ func (heimdallLibrary) CompileOptions() []cel.EnvOption {
 				}),
 			),
 		),
+		cel.Function("LastURLPathFragment",
+			cel.MemberOverload("LastURLPathFragment",
+				[]*cel.Type{cel.ObjectType(requestType.TypeName())}, cel.StringType,
+				cel.UnaryBinding(func(value ref.Val) ref.Val {
+					// nolint: forcetypeassert
+					req := value.Value().(*heimdall.Request)
+
+					// nolint: forcetypeassert
+					return types.String(req.LastURLPathFragment())
+				}),
+			),
+		),
 		cel.Function("String",
 			cel.MemberOverload("String",
 				[]*cel.Type{cel.ObjectType(urlType.TypeName())}, cel.StringType,
