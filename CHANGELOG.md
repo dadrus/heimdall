@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.8.2-alpha](https://github.com/dadrus/heimdall/compare/v0.8.1-alpha...v0.8.2-alpha) (2023-06-21)
+
+
+### Bug Fixes
+
+* fix for panic on request handling if no rules are available ([#699](https://github.com/dadrus/heimdall/issues/699)) ([241f8ae](https://github.com/dadrus/heimdall/commit/241f8ae244b926d75514a43b5aa35d2d3a74281e))
+* leading slash is not added to the URL path anymore during URL path extraction ([#695](https://github.com/dadrus/heimdall/issues/695)) ([33679a6](https://github.com/dadrus/heimdall/commit/33679a6a24b03a61d5bd62e040865301fee5a9a6))
+* nginx controller workaround ([#691](https://github.com/dadrus/heimdall/issues/691)) ([427751d](https://github.com/dadrus/heimdall/commit/427751df312eee8d15b8b5f37e5947d8208dfc3d))
+
 ## [0.8.1-alpha](https://github.com/dadrus/heimdall/compare/v0.8.0-alpha...v0.8.1-alpha) (2023-06-12)
 
 
