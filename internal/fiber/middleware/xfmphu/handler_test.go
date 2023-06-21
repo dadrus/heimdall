@@ -159,7 +159,7 @@ func TestMiddlewareApplicationWithoutConfiguredTrustedProxy(t *testing.T) {
 			configureRequest: func(t *testing.T, req *http.Request) {
 				t.Helper()
 
-				req.Header.Set(xSentFrom, "nginx-ingress-controller")
+				req.Header.Set(xSentFrom, nginxIngressAgent)
 				req.URL.RawQuery = url.Values{"foo": []string{"bar"}}.Encode()
 			},
 			assert: func(t *testing.T) {
@@ -179,7 +179,7 @@ func TestMiddlewareApplicationWithoutConfiguredTrustedProxy(t *testing.T) {
 			configureRequest: func(t *testing.T, req *http.Request) {
 				t.Helper()
 
-				req.Header.Set(xSentFrom, "nginx-ingress-controller")
+				req.Header.Set(xSentFrom, nginxIngressAgent)
 				req.URL.RawQuery = url.Values{"foo": []string{"bar"}}.Encode()
 			},
 			assert: func(t *testing.T) {

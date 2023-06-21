@@ -55,7 +55,7 @@ func requestURL(c *fiber.Ctx) *url.URL {
 
 		// there is a bug in the implementation of the nginx controller
 		// see: https://github.com/kubernetes/ingress-nginx/issues/10114
-		if c.Get(xSentFrom) == "nginx-ingress-controller" && strings.HasPrefix(path, "//") {
+		if c.Get(xSentFrom) == nginxIngressAgent && strings.HasPrefix(path, "//") {
 			path = strings.TrimPrefix(path, "/")
 		}
 	}
