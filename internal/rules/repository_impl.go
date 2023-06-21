@@ -22,7 +22,9 @@ func newRepository(
 	logger zerolog.Logger,
 ) *repository {
 	return &repository{
-		dr:     x.IfThenElse(ruleFactory.HasDefaultRule(), ruleFactory.DefaultRule(), nil),
+		dr: x.IfThenElseExec(ruleFactory.HasDefaultRule(),
+			func() rule.Rule { return ruleFactory.DefaultRule() },
+			func() rule.Rule { return nil }),
 		logger: logger,
 		queue:  queue,
 		quit:   make(chan bool),

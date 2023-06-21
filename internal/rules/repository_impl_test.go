@@ -72,6 +72,11 @@ func TestRepositoryFindRule(t *testing.T) {
 		{
 			uc:         "no matching rule without default rule",
 			requestURL: &url.URL{Scheme: "http", Host: "foo.bar", Path: "baz"},
+			configureFactory: func(t *testing.T, factory *mocks.FactoryMock) {
+				t.Helper()
+
+				factory.EXPECT().HasDefaultRule().Return(false)
+			},
 			assert: func(t *testing.T, err error, rul rule.Rule) {
 				t.Helper()
 
@@ -85,6 +90,7 @@ func TestRepositoryFindRule(t *testing.T) {
 			configureFactory: func(t *testing.T, factory *mocks.FactoryMock) {
 				t.Helper()
 
+				factory.EXPECT().HasDefaultRule().Return(true)
 				factory.EXPECT().DefaultRule().Return(&ruleImpl{id: "test", isDefault: true})
 			},
 			assert: func(t *testing.T, err error, rul rule.Rule) {
@@ -97,6 +103,11 @@ func TestRepositoryFindRule(t *testing.T) {
 		{
 			uc:         "matching rule",
 			requestURL: &url.URL{Scheme: "http", Host: "foo.bar", Path: "baz"},
+			configureFactory: func(t *testing.T, factory *mocks.FactoryMock) {
+				t.Helper()
+
+				factory.EXPECT().HasDefaultRule().Return(false)
+			},
 			addRules: func(t *testing.T, repo *repository) {
 				t.Helper()
 
@@ -138,20 +149,12 @@ func TestRepositoryFindRule(t *testing.T) {
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
 			// GIVEN
-			configureMocks := x.IfThenElse(tc.configureFactory != nil,
-				tc.configureFactory,
-				func(t *testing.T, factory *mocks.FactoryMock) {
-					t.Helper()
-
-					factory.EXPECT().DefaultRule().Return(nil)
-				})
-
 			addRules := x.IfThenElse(tc.addRules != nil,
 				tc.addRules,
 				func(t *testing.T, _ *repository) { t.Helper() })
 
 			factory := mocks.NewFactoryMock(t)
-			configureMocks(t, factory)
+			tc.configureFactory(t, factory)
 
 			repo := newRepository(nil, factory, *zerolog.Ctx(context.Background()))
 
