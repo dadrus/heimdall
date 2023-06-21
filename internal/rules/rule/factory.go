@@ -23,4 +23,5 @@ import "github.com/dadrus/heimdall/internal/rules/config"
 type Factory interface {
 	CreateRule(version, srcID string, ruleConfig config.Rule) (Rule, error)
 	DefaultRule() Rule
+	HasDefaultRule() bool
 }
