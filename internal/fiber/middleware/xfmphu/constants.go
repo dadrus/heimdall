@@ -21,4 +21,6 @@ const (
 	xForwardedURI    = "X-Forwarded-Uri"
 	xForwardedPath   = "X-Forwarded-Path"
 	xSentFrom        = "X-Sent-From"
+
+	nginxIngressAgent = "nginx-ingress-controller"
 )
