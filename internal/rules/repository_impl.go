@@ -11,6 +11,7 @@ import (
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/event"
 	"github.com/dadrus/heimdall/internal/rules/rule"
+	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/slicex"
 )
@@ -21,7 +22,9 @@ func newRepository(
 	logger zerolog.Logger,
 ) *repository {
 	return &repository{
-		dr:     ruleFactory.DefaultRule(),
+		dr: x.IfThenElseExec(ruleFactory.HasDefaultRule(),
+			func() rule.Rule { return ruleFactory.DefaultRule() },
+			func() rule.Rule { return nil }),
 		logger: logger,
 		queue:  queue,
 		quit:   make(chan bool),

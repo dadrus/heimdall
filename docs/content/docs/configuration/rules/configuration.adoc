@@ -105,7 +105,7 @@ NOTE: Some authenticators use the same sources to get subject authentication obj
 
 In all cases, the used mechanism can be partially reconfigured if supported by the corresponding type. Configuration goes into the `config` properties. These reconfigurations are always local to the given rule. With other words, you can adjust your rule specific pipeline as you want without any side effects.
 
-Execution of an `contextualizer`, `authorizer`, or `unifier` mechanisms can optionally happen conditionally by making use of a https://github.com/google/cel-spec[CEL] expression in an `if` clause, which has access to the link:{{< relref "overview.adoc#_subject" >}}[`Subject`] and the link:{{< relref "overview.adoc#_request" >}}[`Request`] objects. If the `if` clause is not present, the corresponding mechanism is always executed.
+Execution of an `contextualizer`, `authorizer`, or `unifier` mechanisms can optionally happen conditionally by making use of a https://github.com/google/cel-spec[CEL] expression in an `if` clause, which has access to the link:{{< relref "pipeline_mechanisms/overview.adoc#_subject" >}}[`Subject`] and the link:{{< relref "pipeline_mechanisms/overview.adoc#_request" >}}[`Request`] objects. If the `if` clause is not present, the corresponding mechanism is always executed.
 
 .Complex pipeline
 ====

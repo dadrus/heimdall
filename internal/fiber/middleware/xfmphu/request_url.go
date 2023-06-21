@@ -19,6 +19,7 @@ package xfmphu
 import (
 	"fmt"
 	"net/url"
+	"strings"
 
 	"github.com/gofiber/fiber/v2"
 
@@ -50,7 +51,16 @@ func requestURL(c *fiber.Ctx) *url.URL {
 	}
 
 	if len(path) == 0 {
-		path = fmt.Sprintf("/%s", c.Params("*"))
+		path = c.Params("*")
+		if len(path) != 0 {
+			path = fmt.Sprintf("/%s", path)
+		}
+
+		// there is a bug in the implementation of the nginx controller
+		// see: https://github.com/kubernetes/ingress-nginx/issues/10114
+		if c.Get(xSentFrom) == nginxIngressAgent && strings.HasPrefix(path, "//") {
+			path = strings.TrimPrefix(path, "/")
+		}
 	}
 
 	if len(query) == 0 {

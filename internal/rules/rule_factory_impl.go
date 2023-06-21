@@ -126,9 +126,8 @@ func (f *ruleFactory) createExecutePipeline(
 	return authenticators, subjectHandlers, unifiers, nil
 }
 
-func (f *ruleFactory) DefaultRule() rule.Rule {
-	return f.defaultRule
-}
+func (f *ruleFactory) DefaultRule() rule.Rule { return f.defaultRule }
+func (f *ruleFactory) HasDefaultRule() bool   { return f.hasDefaultRule }
 
 //nolint:funlen, cyclop
 func (f *ruleFactory) CreateRule(version, srcID string, ruleConfig config2.Rule) (
