@@ -154,6 +154,26 @@ func TestMiddlewareApplicationWithoutConfiguredTrustedProxy(t *testing.T) {
 			},
 		},
 		{
+			uc:  "Empty path",
+			URL: "http://heimdall.test.local",
+			configureRequest: func(t *testing.T, req *http.Request) {
+				t.Helper()
+
+				req.Header.Set(xSentFrom, nginxIngressAgent)
+				req.URL.RawQuery = url.Values{"foo": []string{"bar"}}.Encode()
+			},
+			assert: func(t *testing.T) {
+				t.Helper()
+
+				require.True(t, testAppCalled)
+				assert.Equal(t, "GET", extractedMethod)
+				assert.Equal(t, "http", extractedURL.Scheme)
+				assert.Equal(t, "heimdall.test.local", extractedURL.Host)
+				assert.Empty(t, extractedURL.Path)
+				assert.Equal(t, url.Values{"foo": []string{"bar"}}, extractedURL.Query())
+			},
+		},
+		{
 			uc:  "NGINX workaround test 1",
 			URL: "http://heimdall.test.local//test",
 			configureRequest: func(t *testing.T, req *http.Request) {
