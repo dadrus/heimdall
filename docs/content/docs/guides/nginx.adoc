@@ -21,7 +21,7 @@ In most cases you must configure heimdall to trust your NGINX instances by setti
 [#_first_option]
 == Forward only the host information in the header
 
-With this method you set the `X-Forwarded-Host` to let heimdall know the host, respectively dome the request was sent to. All other URL parts (schema, path and query parameter) as well as the HTTP method are then inferred from the URL and the request heimdall receives.
+With this method you set the `X-Forwarded-Host` to let heimdall know the host, respectively domain the request was sent to. All other URL parts (schema, path and query parameter) as well as the HTTP method are then inferred from the URL and the request heimdall receives.
 
 Instead of using `X-Forwarded-Host` you could also make use of the `Host` header. In that case, there is no need to configure the `trusted_proxies`.
 
@@ -153,30 +153,38 @@ With that additional slash however, all requests to heimdall will have a duplica
 Heimdall has an automatic workaround for that: if the call is done by the nginx ingress controller and there is `//` as suffix in the path, the first slash is removed. There is however no possibility to fix that for requests without the path part (see above). If this is an issue in your context, consider using the integration option described below.
 ====
 
-Alternatively, you can also use the `nginx.ingress.kubernetes.io/configuration-snippet` and `nginx.ingress.kubernetes.io/server-snippet` annotations and provide configuration as described in the link:{{< relref "#_first_option" >}}[first] integration option. With that integration option, there are no issues with slashes.
+Alternatively, you can also use the `nginx.ingress.kubernetes.io/configuration-snippet`, `nginx.ingress.kubernetes.io/server-snippet` and `nginx.ingress.kubernetes.io/auth-response-headers` annotations and provide configuration as described above for the vanilla nginx. There will be no issues with slashes then at all.
 
 .Possible Configuration
 ====
+
+This example makes use of the very link:{{< relref "#_first_option" >}}[first] integration option described above.
+
 [source, yaml]
 ----
-nginx.ingress.kubernetes.io/configuration-snippet: "auth_request /_auth;" <1>
+nginx.ingress.kubernetes.io/auth-response-headers: Authorization <1>
+nginx.ingress.kubernetes.io/configuration-snippet: "auth_request /_auth;" <2>
 nginx.ingress.kubernetes.io/server-snippet: |
-  location = /_auth { <2>
+  location = /_auth { <3>
     internal;
-    proxy_pass               http://<heimdall service name>.<namespace>.svc.cluster.local:<decision port>$request_uri; <3>
-    proxy_pass_request_body  off; <4>
+    proxy_pass               http://<heimdall service name>.<namespace>.svc.cluster.local:<decision port>$request_uri; <4>
+    proxy_pass_request_body  off; <5>
     proxy_set_header         Content-Length   "";
-    proxy_set_header         X-Forwarded-Host $http_host; <5>
-    proxy_set_header         X-Forwarded-For  $remote_addr; <6>
+    proxy_set_header         X-Forwarded-Host $http_host; <6>
+    proxy_set_header         X-Forwarded-For  $remote_addr; <7>
   }
 # other annotations required
 ----
-<1> Configures NGINX ingress controller to make use of an external auth service and pass incoming request to `/_auth` route.
-<2> The implementation of the _auth route.
-<3> Forwards the request to heimdall and sets the request path and queries from the original request (no slash this time)
-<4> Disables sending of the request body. If your heimdall rules make use of the body, you should set this to `on` and remove the next line.
-<5> This is where you forward the host information to heimdall
-<6> Not really required, but makes the remote address available to heimdall and thus to the mechanisms used in by the rules. Requires `trusted_proxies` to be configured.
+<1> Let NGINX forward the `Authorization` header set by heimdall to the upstream service. This configuration depends on
+your link:{{< relref "/docs/configuration/rules/pipeline_mechanisms/contextualizers.adoc" >}}[Contextualizers] and link:{{< relref "/docs/configuration/rules/pipeline_mechanisms/unifiers.adoc" >}}[Unifiers] configuration
+<2> Configures NGINX ingress controller to make use of an external auth service and pass incoming request to `/_auth` route.
+<3> The implementation of the _auth route.
+<4> Forwards the request to heimdall and sets the request path and queries from the original request (no slash this time)
+<5> Disables sending of the request body. If your heimdall rules make use of the body, you should set this to `on` and remove the next line.
+<6> This is where you forward the host information to heimdall
+<7> Not really required, but makes the remote address available to heimdall and thus to the mechanisms used in by the rules.
+
+NOTE: The above configuration requires `trusted_proxies` to be configured, otherwise heimdall will not make use of the `X-Forwarded-Host` and `X-Forwarded-For` headers. If you don't want to set the `trusted_proxies`, you can make use of the `Host` header instead of the `X-Forwarded-Host`, as also mentioned link:{{< relref "#_first_option" >}}[here].
 ====
 
 Checkout the Kubernetes quickstarts on https://github.com/dadrus/heimdall/tree/main/examples/kubernetes/quickstarts[GitHub] for a working demo.
