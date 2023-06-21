@@ -25,6 +25,8 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/dadrus/heimdall/internal/x"
 )
 
 func TestMiddlewareApplicationWithoutConfiguredTrustedProxy(t *testing.T) {
@@ -52,6 +54,7 @@ func TestMiddlewareApplicationWithoutConfiguredTrustedProxy(t *testing.T) {
 
 	for _, tc := range []struct {
 		uc               string
+		URL              string
 		configureRequest func(t *testing.T, req *http.Request)
 		assert           func(t *testing.T)
 	}{
@@ -150,15 +153,55 @@ func TestMiddlewareApplicationWithoutConfiguredTrustedProxy(t *testing.T) {
 				assert.Equal(t, url.Values{"foo": []string{"bar"}}, extractedURL.Query())
 			},
 		},
+		{
+			uc:  "NGINX workaround test 1",
+			URL: "http://heimdall.test.local//test",
+			configureRequest: func(t *testing.T, req *http.Request) {
+				t.Helper()
+
+				req.Header.Set(xSentFrom, "nginx-ingress-controller")
+				req.URL.RawQuery = url.Values{"foo": []string{"bar"}}.Encode()
+			},
+			assert: func(t *testing.T) {
+				t.Helper()
+
+				require.True(t, testAppCalled)
+				assert.Equal(t, "GET", extractedMethod)
+				assert.Equal(t, "http", extractedURL.Scheme)
+				assert.Equal(t, "heimdall.test.local", extractedURL.Host)
+				assert.Equal(t, "/test", extractedURL.Path)
+				assert.Equal(t, url.Values{"foo": []string{"bar"}}, extractedURL.Query())
+			},
+		},
+		{
+			uc:  "NGINX workaround test 2",
+			URL: "http://heimdall.test.local/test",
+			configureRequest: func(t *testing.T, req *http.Request) {
+				t.Helper()
+
+				req.Header.Set(xSentFrom, "nginx-ingress-controller")
+				req.URL.RawQuery = url.Values{"foo": []string{"bar"}}.Encode()
+			},
+			assert: func(t *testing.T) {
+				t.Helper()
+
+				require.True(t, testAppCalled)
+				assert.Equal(t, "GET", extractedMethod)
+				assert.Equal(t, "http", extractedURL.Scheme)
+				assert.Equal(t, "heimdall.test.local", extractedURL.Host)
+				assert.Equal(t, "/test", extractedURL.Path)
+				assert.Equal(t, url.Values{"foo": []string{"bar"}}, extractedURL.Query())
+			},
+		},
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
 			// GIVEN
+			reqURL := x.IfThenElse(len(tc.URL) != 0, tc.URL, "http://heimdall.test.local/test")
 			testAppCalled = false
 			extractedURL = nil
 			extractedMethod = ""
 
-			req, err := http.NewRequestWithContext(context.Background(), http.MethodGet,
-				"http://heimdall.test.local/test", nil)
+			req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, reqURL, nil)
 			require.NoError(t, err)
 
 			tc.configureRequest(t, req)
