@@ -5,7 +5,12 @@ rules:
   match:
     url: http://foo.bar/<**>
     strategy: glob
-  upstream: http://bar.foo
+  forward_to:
+    host: bar.foo
+    rewrite:
+      strip_path_prefix: /foo
+      add_path_prefix: /baz
+      strip_query_parameters: [boo]
 #  methods: # reuses default
 #    - GET
 #    - POST
