@@ -20,6 +20,7 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -57,7 +58,15 @@ const response = `{
             "id": "test:rule",
             "matching_strategy": "glob",
             "match": "http://127.0.0.1:9090/foobar/<{foos*}>",
-            "upstream": "http://foobar"
+            "forward_to": {
+				"host": "foo.bar",
+				"rewrite": {
+					"scheme": "https",
+					"strip_path_prefix": "/foo",
+					"add_path_prefix": "/baz",
+					"strip_query_parameters": ["boo"]
+				}
+			}
           }
         ]
       }
@@ -127,7 +136,12 @@ func verifyRuleSetList(t *testing.T, rls *RuleSetList) {
 	assert.Equal(t, "http://127.0.0.1:9090/foobar/<{foos*}>", rule.RuleMatcher.URL)
 	assert.Empty(t, rule.Methods)
 	assert.Empty(t, rule.ErrorHandler)
-	assert.Equal(t, "http://foobar", rule.Upstream)
+	assert.Equal(t, "https://foo.bar/baz/bar?foo=bar", rule.UpstreamURLFactory.CreateURL(&url.URL{
+		Scheme:   "http",
+		Host:     "bar.foo:8888",
+		Path:     "/foo/bar",
+		RawQuery: url.Values{"boo": []string{"foo"}, "foo": []string{"bar"}}.Encode(),
+	}).String())
 	assert.Len(t, rule.Execute, 2)
 	assert.Equal(t, "test_authn", rule.Execute[0]["authenticator"])
 	assert.Equal(t, "test_authz", rule.Execute[1]["authorizer"])

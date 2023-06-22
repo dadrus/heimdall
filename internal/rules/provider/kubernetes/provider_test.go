@@ -172,8 +172,16 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 												URL:      "http://foo.bar",
 												Strategy: "glob",
 											},
-											Upstream: "http://bar",
-											Methods:  []string{http.MethodGet},
+											UpstreamURLFactory: &config2.UpstreamURLFactory{
+												Host: "baz",
+												URLRewriter: &config2.URLRewriter{
+													Scheme:              "http",
+													PathPrefixToCut:     "/foo",
+													PathPrefixToAdd:     "/bar",
+													QueryParamsToRemove: []string{"baz"},
+												},
+											},
+											Methods: []string{http.MethodGet},
 											Execute: []config.MechanismConfig{
 												{"authenticator": "authn"},
 												{"authorizer": "authz"},
@@ -276,8 +284,16 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 												URL:      "http://foo.bar",
 												Strategy: "glob",
 											},
-											Upstream: "http://bar",
-											Methods:  []string{http.MethodGet},
+											UpstreamURLFactory: &config2.UpstreamURLFactory{
+												Host: "baz",
+												URLRewriter: &config2.URLRewriter{
+													Scheme:              "http",
+													PathPrefixToCut:     "/foo",
+													PathPrefixToAdd:     "/bar",
+													QueryParamsToRemove: []string{"baz"},
+												},
+											},
+											Methods: []string{http.MethodGet},
 											Execute: []config.MechanismConfig{
 												{"authenticator": "authn"},
 												{"authorizer": "authz"},
@@ -354,7 +370,7 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 				rule := ruleSet.Rules[0]
 				assert.Equal(t, "test", rule.ID)
 				assert.Equal(t, "http://foo.bar", rule.RuleMatcher.URL)
-				assert.Equal(t, "http://bar", rule.Upstream)
+				assert.Equal(t, "baz", rule.UpstreamURLFactory.Host)
 				assert.Equal(t, "glob", rule.RuleMatcher.Strategy)
 				assert.Len(t, rule.Methods, 1)
 				assert.Contains(t, rule.Methods, http.MethodGet)
@@ -404,8 +420,16 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 												URL:      "http://foo.bar",
 												Strategy: "glob",
 											},
-											Upstream: "http://bar",
-											Methods:  []string{http.MethodGet},
+											UpstreamURLFactory: &config2.UpstreamURLFactory{
+												Host: "bar",
+												URLRewriter: &config2.URLRewriter{
+													Scheme:              "http",
+													PathPrefixToCut:     "/foo",
+													PathPrefixToAdd:     "/bar",
+													QueryParamsToRemove: []string{"baz"},
+												},
+											},
+											Methods: []string{http.MethodGet},
 											Execute: []config.MechanismConfig{
 												{"authenticator": "authn"},
 												{"authorizer": "authz"},
@@ -508,8 +532,16 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 												URL:      "http://foo.bar",
 												Strategy: "glob",
 											},
-											Upstream: "http://bar",
-											Methods:  []string{http.MethodGet},
+											UpstreamURLFactory: &config2.UpstreamURLFactory{
+												Host: "bar",
+												URLRewriter: &config2.URLRewriter{
+													Scheme:              "http",
+													PathPrefixToCut:     "/foo",
+													PathPrefixToAdd:     "/bar",
+													QueryParamsToRemove: []string{"baz"},
+												},
+											},
+											Methods: []string{http.MethodGet},
 											Execute: []config.MechanismConfig{
 												{"authenticator": "authn"},
 												{"authorizer": "authz"},
@@ -600,7 +632,7 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 				createdRule := ruleSet.Rules[0]
 				assert.Equal(t, "test", createdRule.ID)
 				assert.Equal(t, "http://foo.bar", createdRule.RuleMatcher.URL)
-				assert.Equal(t, "http://bar", createdRule.Upstream)
+				assert.Equal(t, "bar", createdRule.UpstreamURLFactory.Host)
 				assert.Equal(t, "glob", createdRule.RuleMatcher.Strategy)
 				assert.Len(t, createdRule.Methods, 1)
 				assert.Contains(t, createdRule.Methods, http.MethodGet)
@@ -652,8 +684,16 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 												URL:      "http://foo.bar",
 												Strategy: "glob",
 											},
-											Upstream: "http://bar",
-											Methods:  []string{http.MethodGet},
+											UpstreamURLFactory: &config2.UpstreamURLFactory{
+												Host: "bar",
+												URLRewriter: &config2.URLRewriter{
+													Scheme:              "http",
+													PathPrefixToCut:     "/foo",
+													PathPrefixToAdd:     "/bar",
+													QueryParamsToRemove: []string{"baz"},
+												},
+											},
+											Methods: []string{http.MethodGet},
 											Execute: []config.MechanismConfig{
 												{"authenticator": "authn"},
 												{"authorizer": "authz"},
@@ -768,8 +808,16 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 												URL:      "http://foo.bar",
 												Strategy: "glob",
 											},
-											Upstream: "http://bar",
-											Methods:  []string{http.MethodGet},
+											UpstreamURLFactory: &config2.UpstreamURLFactory{
+												Host: "bar",
+												URLRewriter: &config2.URLRewriter{
+													Scheme:              "http",
+													PathPrefixToCut:     "/foo",
+													PathPrefixToAdd:     "/bar",
+													QueryParamsToRemove: []string{"baz"},
+												},
+											},
+											Methods: []string{http.MethodGet},
 											Execute: []config.MechanismConfig{
 												{"authenticator": "authn"},
 												{"authorizer": "authz"},
@@ -808,8 +856,16 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 											URL:      "http://foo.bar",
 											Strategy: "glob",
 										},
-										Upstream: "http://bar",
-										Methods:  []string{http.MethodGet},
+										UpstreamURLFactory: &config2.UpstreamURLFactory{
+											Host: "bar",
+											URLRewriter: &config2.URLRewriter{
+												Scheme:              "http",
+												PathPrefixToCut:     "/foo",
+												PathPrefixToAdd:     "/bar",
+												QueryParamsToRemove: []string{"baz"},
+											},
+										},
+										Methods: []string{http.MethodGet},
 										Execute: []config.MechanismConfig{
 											{"authenticator": "test_authn"},
 											{"authorizer": "test_authz"},
@@ -879,7 +935,7 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 				createdRule := ruleSet.Rules[0]
 				assert.Equal(t, "test", createdRule.ID)
 				assert.Equal(t, "http://foo.bar", createdRule.RuleMatcher.URL)
-				assert.Equal(t, "http://bar", createdRule.Upstream)
+				assert.Equal(t, "bar", createdRule.UpstreamURLFactory.Host)
 				assert.Equal(t, "glob", createdRule.RuleMatcher.Strategy)
 				assert.Len(t, createdRule.Methods, 1)
 				assert.Contains(t, createdRule.Methods, http.MethodGet)
@@ -897,7 +953,7 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 				updatedRule := ruleSet.Rules[0]
 				assert.Equal(t, "test", updatedRule.ID)
 				assert.Equal(t, "http://foo.bar", updatedRule.RuleMatcher.URL)
-				assert.Equal(t, "http://bar", updatedRule.Upstream)
+				assert.Equal(t, "bar", updatedRule.UpstreamURLFactory.Host)
 				assert.Equal(t, "glob", updatedRule.RuleMatcher.Strategy)
 				assert.Len(t, updatedRule.Methods, 1)
 				assert.Contains(t, updatedRule.Methods, http.MethodGet)
@@ -944,8 +1000,16 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 												URL:      "http://foo.bar",
 												Strategy: "glob",
 											},
-											Upstream: "http://bar",
-											Methods:  []string{http.MethodGet},
+											UpstreamURLFactory: &config2.UpstreamURLFactory{
+												Host: "bar",
+												URLRewriter: &config2.URLRewriter{
+													Scheme:              "http",
+													PathPrefixToCut:     "/foo",
+													PathPrefixToAdd:     "/bar",
+													QueryParamsToRemove: []string{"baz"},
+												},
+											},
+											Methods: []string{http.MethodGet},
 											Execute: []config.MechanismConfig{
 												{"authenticator": "authn"},
 												{"authorizer": "authz"},
@@ -984,8 +1048,16 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 											URL:      "http://foo.bar",
 											Strategy: "glob",
 										},
-										Upstream: "http://bar",
-										Methods:  []string{http.MethodGet},
+										UpstreamURLFactory: &config2.UpstreamURLFactory{
+											Host: "baz",
+											URLRewriter: &config2.URLRewriter{
+												Scheme:              "http",
+												PathPrefixToCut:     "/foo",
+												PathPrefixToAdd:     "/bar",
+												QueryParamsToRemove: []string{"baz"},
+											},
+										},
+										Methods: []string{http.MethodGet},
 										Execute: []config.MechanismConfig{
 											{"authenticator": "test_authn"},
 											{"authorizer": "test_authz"},
