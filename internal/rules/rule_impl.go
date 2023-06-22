@@ -18,7 +18,6 @@ package rules
 
 import (
 	"net/url"
-	"strings"
 
 	"github.com/rs/zerolog"
 	"golang.org/x/exp/slices"
@@ -29,34 +28,32 @@ import (
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
+type UpstreamURLFactory interface {
+	CreateURL(from *url.URL) *url.URL
+}
+
 type ruleImpl struct {
-	id          string
-	urlMatcher  patternmatcher.PatternMatcher
-	upstreamURL *url.URL
-	stripPrefix string
-	methods     []string
-	srcID       string
-	isDefault   bool
-	hash        []byte
-	sc          compositeSubjectCreator
-	sh          compositeSubjectHandler
-	un          compositeSubjectHandler
-	eh          compositeErrorHandler
+	id                 string
+	urlMatcher         patternmatcher.PatternMatcher
+	upstreamURLFactory UpstreamURLFactory
+	methods            []string
+	srcID              string
+	isDefault          bool
+	hash               []byte
+	sc                 compositeSubjectCreator
+	sh                 compositeSubjectHandler
+	un                 compositeSubjectHandler
+	eh                 compositeErrorHandler
 }
 
 func (r *ruleImpl) Mutate(uri *url.URL) (*url.URL, error) {
-	if r.upstreamURL == nil {
+	if r.upstreamURLFactory == nil {
 		// happens only if default rule has been applied or if the rule does not have an upstream defined
 		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
 			"no upstream URL defined")
 	}
 
-	return &url.URL{
-		Scheme:   r.upstreamURL.Scheme,
-		Host:     r.upstreamURL.Host,
-		Path:     strings.TrimPrefix(uri.Path, r.stripPrefix),
-		RawQuery: uri.RawQuery,
-	}, nil
+	return r.upstreamURLFactory.CreateURL(uri), nil
 }
 
 func (r *ruleImpl) Execute(ctx heimdall.Context) (rule.URIMutator, error) {

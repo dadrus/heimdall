@@ -37,7 +37,15 @@ func TestRuleConfigDeepCopyInto(t *testing.T) {
 			URL:      "bar",
 			Strategy: "glob",
 		},
-		Upstream:     "baz",
+		UpstreamURLFactory: &UpstreamURLFactory{
+			Host: "baz",
+			URLRewriter: &URLRewriter{
+				Scheme:              "http",
+				PathPrefixToCut:     "/foo",
+				PathPrefixToAdd:     "/bar",
+				QueryParamsToRemove: []string{"baz"},
+			},
+		},
 		Methods:      []string{"GET", "PATCH"},
 		Execute:      []config.MechanismConfig{{"foo": "bar"}},
 		ErrorHandler: []config.MechanismConfig{{"bar": "foo"}},
@@ -49,7 +57,7 @@ func TestRuleConfigDeepCopyInto(t *testing.T) {
 	// THEN
 	assert.Equal(t, in.ID, out.ID)
 	assert.Equal(t, in.RuleMatcher.URL, out.RuleMatcher.URL)
-	assert.Equal(t, in.Upstream, out.Upstream)
+	assert.Equal(t, in.UpstreamURLFactory, out.UpstreamURLFactory)
 	assert.Equal(t, in.RuleMatcher.Strategy, out.RuleMatcher.Strategy)
 	assert.Equal(t, in.Methods, out.Methods)
 	assert.Equal(t, in.Execute, out.Execute)
@@ -66,7 +74,15 @@ func TestRuleConfigDeepCopy(t *testing.T) {
 			URL:      "bar",
 			Strategy: "glob",
 		},
-		Upstream:     "baz",
+		UpstreamURLFactory: &UpstreamURLFactory{
+			Host: "baz",
+			URLRewriter: &URLRewriter{
+				Scheme:              "http",
+				PathPrefixToCut:     "/foo",
+				PathPrefixToAdd:     "/bar",
+				QueryParamsToRemove: []string{"baz"},
+			},
+		},
 		Methods:      []string{"GET", "PATCH"},
 		Execute:      []config.MechanismConfig{{"foo": "bar"}},
 		ErrorHandler: []config.MechanismConfig{{"bar": "foo"}},
@@ -82,7 +98,7 @@ func TestRuleConfigDeepCopy(t *testing.T) {
 	// but same contents
 	assert.Equal(t, in.ID, out.ID)
 	assert.Equal(t, in.RuleMatcher.URL, out.RuleMatcher.URL)
-	assert.Equal(t, in.Upstream, out.Upstream)
+	assert.Equal(t, in.UpstreamURLFactory, out.UpstreamURLFactory)
 	assert.Equal(t, in.RuleMatcher.Strategy, out.RuleMatcher.Strategy)
 	assert.Equal(t, in.Methods, out.Methods)
 	assert.Equal(t, in.Execute, out.Execute)
