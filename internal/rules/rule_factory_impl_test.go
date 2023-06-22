@@ -17,6 +17,7 @@
 package rules
 
 import (
+	"net/url"
 	"testing"
 
 	"github.com/rs/zerolog/log"
@@ -551,21 +552,6 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 			},
 		},
 		{
-			uc: "without default rule and error in upstream url",
-			config: config2.Rule{
-				ID:          "foobar",
-				RuleMatcher: config2.Matcher{URL: "http://foo.bar", Strategy: "glob"},
-				Upstream:    "http://[::1]:namedport",
-			},
-			assert: func(t *testing.T, err error, rul *ruleImpl) {
-				t.Helper()
-
-				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "bad upstream URL")
-			},
-		},
-		{
 			uc: "with error while creating execute pipeline",
 			config: config2.Rule{
 				ID:          "foobar",
@@ -780,7 +766,15 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 			config: config2.Rule{
 				ID:          "foobar",
 				RuleMatcher: config2.Matcher{URL: "http://foo.bar", Strategy: "glob"},
-				Upstream:    "http://bar.foo",
+				UpstreamURLFactory: &config2.UpstreamURLFactory{
+					Host: "bar.foo",
+					URLRewriter: &config2.URLRewriter{
+						Scheme:              "https",
+						PathPrefixToCut:     "/foo",
+						PathPrefixToAdd:     "/baz",
+						QueryParamsToRemove: []string{"bar"},
+					},
+				},
 				Execute: []config.MechanismConfig{
 					{"authenticator": "foo"},
 					{"contextualizer": "bar"},
@@ -824,7 +818,12 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				assert.Equal(t, "foobar", rul.id)
 				assert.NotNil(t, rul.urlMatcher)
 				assert.ElementsMatch(t, rul.methods, []string{"BAR", "BAZ"})
-				assert.Equal(t, "http://bar.foo", rul.upstreamURL.String())
+				assert.Equal(t, "https://bar.foo/baz/bar?foo=bar", rul.upstreamURLFactory.CreateURL(&url.URL{
+					Scheme:   "http",
+					Host:     "foo.bar:8888",
+					Path:     "/foo/bar",
+					RawQuery: url.Values{"bar": []string{"foo"}, "foo": []string{"bar"}}.Encode(),
+				}).String())
 
 				// nil checks above mean the responses from the mockHandlerFactory are used
 				// and not the values from the default rule

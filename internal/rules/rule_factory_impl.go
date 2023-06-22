@@ -4,7 +4,6 @@ import (
 	"crypto"
 	"errors"
 	"fmt"
-	"net/url"
 
 	"github.com/goccy/go-json"
 	"github.com/rs/zerolog"
@@ -129,7 +128,6 @@ func (f *ruleFactory) createExecutePipeline(
 func (f *ruleFactory) DefaultRule() rule.Rule { return f.defaultRule }
 func (f *ruleFactory) HasDefaultRule() bool   { return f.hasDefaultRule }
 
-//nolint:funlen, cyclop
 func (f *ruleFactory) CreateRule(version, srcID string, ruleConfig config2.Rule) (
 	rule.Rule, error,
 ) {
@@ -145,16 +143,6 @@ func (f *ruleFactory) CreateRule(version, srcID string, ruleConfig config2.Rule)
 		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
 			"bad URL pattern for %s strategy defined for rule ID=%s from %s",
 			ruleConfig.RuleMatcher.Strategy, ruleConfig.ID, srcID).CausedBy(err)
-	}
-
-	var upstreamURL *url.URL
-
-	if len(ruleConfig.Upstream) != 0 {
-		upstreamURL, err = url.Parse(ruleConfig.Upstream)
-		if err != nil {
-			return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
-				"bad upstream URL defined for rule ID=%s from %s", ruleConfig.ID, srcID).CausedBy(err)
-		}
 	}
 
 	authenticators, subHandlers, unifiers, err := f.createExecutePipeline(version, ruleConfig.Execute)
@@ -199,18 +187,17 @@ func (f *ruleFactory) CreateRule(version, srcID string, ruleConfig config2.Rule)
 	}
 
 	return &ruleImpl{
-		id:          ruleConfig.ID,
-		urlMatcher:  matcher,
-		upstreamURL: upstreamURL,
-		stripPrefix: ruleConfig.StripPrefix,
-		methods:     methods,
-		srcID:       srcID,
-		isDefault:   false,
-		hash:        hash,
-		sc:          authenticators,
-		sh:          subHandlers,
-		un:          unifiers,
-		eh:          errorHandlers,
+		id:                 ruleConfig.ID,
+		urlMatcher:         matcher,
+		upstreamURLFactory: ruleConfig.UpstreamURLFactory,
+		methods:            methods,
+		srcID:              srcID,
+		isDefault:          false,
+		hash:               hash,
+		sc:                 authenticators,
+		sh:                 subHandlers,
+		un:                 unifiers,
+		eh:                 errorHandlers,
 	}, nil
 }
 
