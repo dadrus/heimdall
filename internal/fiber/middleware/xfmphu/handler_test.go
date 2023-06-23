@@ -78,7 +78,7 @@ func TestMiddlewareApplicationWithoutConfiguredTrustedProxy(t *testing.T) {
 			},
 		},
 		{
-			uc: "X-Forwarded-Method set",
+			uc: "X-Original-Method set",
 			configureRequest: func(t *testing.T, req *http.Request) {
 				t.Helper()
 
@@ -305,7 +305,7 @@ func TestMiddlewareApplicationWithConfiguredTrustedProxy(t *testing.T) {
 			},
 		},
 		{
-			uc: "X-Forwarded-Method set",
+			uc: "X-Original-Method set",
 			configureRequest: func(t *testing.T, req *http.Request) {
 				t.Helper()
 
