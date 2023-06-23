@@ -6,6 +6,9 @@ serve:
       read: 2s
       write: 5s
       idle: 2m
+    buffer_limit:
+      read: 4KB
+      write: 4KB
     tls:
       key_store:
         path: /path/to/keystore/file.pem
@@ -41,6 +44,9 @@ serve:
       read: 2s
       write: 5s
       idle: 2m
+    buffer_limit:
+      read: 4KB
+      write: 4KB
     cors:
       allowed_origins:
         - example.org
@@ -82,6 +88,9 @@ serve:
       read: 2s
       write: 5s
       idle: 2m
+    buffer_limit:
+      read: 4KB
+      write: 4KB
     cors:
       allowed_origins:
         - example.org

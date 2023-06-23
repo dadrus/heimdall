@@ -19,6 +19,7 @@ package config
 import (
 	"time"
 
+	"github.com/inhies/go-bytesize"
 	"github.com/rs/zerolog"
 )
 
@@ -33,6 +34,8 @@ const (
 	defaultMetricsServicePort    = 10250
 	defaultProfilingServicePort  = 10251
 
+	defaultBufferSize = 4 * bytesize.KB
+
 	loopbackIP = "127.0.0.1"
 )
 
@@ -46,6 +49,10 @@ func defaultConfig() Configuration {
 					Write: defaultWriteTimeout,
 					Idle:  defaultIdleTimeout,
 				},
+				BufferLimit: BufferLimit{
+					Read:  defaultBufferSize,
+					Write: defaultBufferSize,
+				},
 			},
 			Decision: ServiceConfig{
 				Port: defaultDecisionServicePort,
@@ -54,6 +61,10 @@ func defaultConfig() Configuration {
 					Write: defaultWriteTimeout,
 					Idle:  defaultIdleTimeout,
 				},
+				BufferLimit: BufferLimit{
+					Read:  defaultBufferSize,
+					Write: defaultBufferSize,
+				},
 			},
 			Management: ServiceConfig{
 				Port: defaultManagementServicePort,
@@ -61,6 +72,10 @@ func defaultConfig() Configuration {
 					Read:  defaultReadTimeout,
 					Write: defaultWriteTimeout,
 					Idle:  defaultIdleTimeout,
+				},
+				BufferLimit: BufferLimit{
+					Read:  defaultBufferSize,
+					Write: defaultBufferSize,
 				},
 			},
 		},

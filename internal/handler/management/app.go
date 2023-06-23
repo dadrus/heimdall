@@ -53,6 +53,8 @@ func newApp(args appArgs) *fiber.App {
 		ReadTimeout:             service.Timeout.Read,
 		WriteTimeout:            service.Timeout.Write,
 		IdleTimeout:             service.Timeout.Idle,
+		ReadBufferSize:          int(service.BufferLimit.Read),
+		WriteBufferSize:         int(service.BufferLimit.Write),
 		DisableStartupMessage:   true,
 		EnableTrustedProxyCheck: true,
 		JSONDecoder:             json.Unmarshal,

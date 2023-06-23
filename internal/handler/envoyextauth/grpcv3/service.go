@@ -95,6 +95,8 @@ func newService(
 
 	srv := grpc.NewServer(
 		grpc.KeepaliveParams(keepalive.ServerParameters{Timeout: service.Timeout.Idle}),
+		grpc.ReadBufferSize(int(service.BufferLimit.Read)),
+		grpc.WriteBufferSize(int(service.BufferLimit.Write)),
 		grpc.UnknownServiceHandler(func(srv interface{}, stream grpc.ServerStream) error {
 			return status.Error(codes.Unknown, "unknown service or method")
 		}),

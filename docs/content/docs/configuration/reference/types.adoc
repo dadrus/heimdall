@@ -417,6 +417,33 @@ message: No groups ending with @acme.co present
 ----
 ====
 
+== Buffer Limit
+
+Following configuration properties are supported to limit:
+
+* *`read`*: _link:{{< relref "#_bytesize" >}}[ByteSize]_ (optional)
++
+The maximum size for the read buffer allowed to read the full request including body. Defaults to 4KB.
+
+* *`write`*: _link:{{< relref "#_bytesize" >}}[ByteSize]_ (optional)
++
+The maximum size for the write buffer of the response. Defaults to 4KB.
+
+.Setting the read buffer size limit to 1MB and the write buffer size limit to 2KB.
+====
+[source, yaml]
+----
+read: 1MB
+write: 2KB
+----
+====
+
+== ByteSize
+
+ByteSize is actually a string type, which adheres to the following pattern: `^[0-9]+(B|KB|MB)$`
+
+So with `10B` you can define the byte size of 10 bytes and with `2MB` you can say 2 megabytes.
+
 == CORS
 
 https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS[CORS] (Cross-Origin Resource Sharing) headers can be added and configured by making use of this type. This functionality allows for advanced security features to quickly be set. If CORS headers are set, then heimdall does not pass preflight requests to its decision pipeline, instead the response will be generated and sent back to the client directly. Following properties are supported:
