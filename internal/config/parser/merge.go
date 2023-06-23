@@ -29,16 +29,20 @@ func merge(dest, src any) any {
 	vDst := reflect.ValueOf(dest)
 	vSrc := reflect.ValueOf(src)
 
-	if vSrc.Type() != vDst.Type() {
-		panic(fmt.Sprintf("Cannot merge %s and %s. Types are different: %s - %s", dest, src, vDst.Type(), vSrc.Type()))
-	}
-
 	// nolint: exhaustive
 	switch vDst.Kind() {
 	case reflect.Map:
+		if vSrc.Type() != vDst.Type() {
+			panic(fmt.Sprintf("Cannot merge %s and %s. Types are different: %s - %s", dest, src, vDst.Type(), vSrc.Type()))
+		}
+
 		// nolint: forcetypeassert
 		return mergeMaps(dest.(map[string]any), src.(map[string]any))
 	case reflect.Slice:
+		if vSrc.Type() != vDst.Type() {
+			panic(fmt.Sprintf("Cannot merge %s and %s. Types are different: %s - %s", dest, src, vDst.Type(), vSrc.Type()))
+		}
+
 		// nolint: forcetypeassert
 		return mergeSlices(dest.([]any), src.([]any))
 	default:
