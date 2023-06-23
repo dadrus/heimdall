@@ -56,7 +56,7 @@ type URLRewriter struct {
 	QueryParamsToRemove QueryParamsRemover `json:"strip_query_parameters" yaml:"strip_query_parameters"`
 }
 
-func (r *URLRewriter) Rewrite(value *url.URL) *url.URL {
+func (r *URLRewriter) Rewrite(value *url.URL) {
 	value.Scheme = x.IfThenElseExec(
 		len(r.Scheme) != 0,
 		func() string { return r.Scheme },
@@ -64,8 +64,6 @@ func (r *URLRewriter) Rewrite(value *url.URL) *url.URL {
 	)
 	value.Path = r.transformPath(value.Path)
 	value.RawQuery = r.transformQuery(value.RawQuery)
-
-	return value
 }
 
 func (r *URLRewriter) transformPath(value string) string {

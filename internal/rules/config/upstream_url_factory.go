@@ -20,7 +20,7 @@ func (f *UpstreamURLFactory) CreateURL(value *url.URL) *url.URL {
 	}
 
 	if f.URLRewriter != nil {
-		return f.URLRewriter.Rewrite(upstreamURL)
+		f.URLRewriter.Rewrite(upstreamURL)
 	}
 
 	return upstreamURL
