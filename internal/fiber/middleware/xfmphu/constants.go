@@ -20,7 +20,9 @@ const (
 	xForwardedMethod = "X-Forwarded-Method"
 	xForwardedURI    = "X-Forwarded-Uri"
 	xForwardedPath   = "X-Forwarded-Path"
-	xSentFrom        = "X-Sent-From"
 
+	// nginx specifics
+	xSentFrom         = "X-Sent-From"
+	xOriginalMethod   = "X-Original-Method"
 	nginxIngressAgent = "nginx-ingress-controller"
 )
