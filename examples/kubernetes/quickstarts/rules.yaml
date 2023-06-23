@@ -1,4 +1,4 @@
-apiVersion: heimdall.dadrus.github.com/v1alpha1
+apiVersion: heimdall.dadrus.github.com/v1alpha2
 kind: RuleSet
 metadata:
   name: echo-app-rules
@@ -10,7 +10,8 @@ spec:
     - id: public-access
       match:
         url: http://<**>/public
-      upstream: http://echo-app.quickstarts.svc.cluster.local:8080
+      forward_to:
+        host: echo-app.quickstarts.svc.cluster.local:8080
       execute:
         - authenticator: noop_authenticator
         - authorizer: allow_all_requests
@@ -18,6 +19,7 @@ spec:
     - id: anonymous-access
       match:
         url: http://<**>/anonymous
-      upstream: http://echo-app.quickstarts.svc.cluster.local:8080
+      forward_to:
+        host: echo-app.quickstarts.svc.cluster.local:8080
       execute:
         - authorizer: allow_all_requests
