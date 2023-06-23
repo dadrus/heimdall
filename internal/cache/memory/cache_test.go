@@ -104,3 +104,23 @@ func TestCacheUsage(t *testing.T) {
 		})
 	}
 }
+
+func TestCacheExpiration(t *testing.T) {
+	t.Parallel()
+
+	cache := New()
+	cache.Set("baz", "bar", 1*time.Second)
+
+	hits := 0
+
+	for i := 0; i < 8; i++ {
+		time.Sleep(250 * time.Millisecond)
+
+		item := cache.Get("baz")
+		if item != nil {
+			hits++
+		}
+	}
+
+	assert.LessOrEqual(t, hits, 4)
+}
