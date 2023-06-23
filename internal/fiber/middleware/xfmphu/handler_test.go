@@ -78,6 +78,25 @@ func TestMiddlewareApplicationWithoutConfiguredTrustedProxy(t *testing.T) {
 			},
 		},
 		{
+			uc: "X-Forwarded-Method set",
+			configureRequest: func(t *testing.T, req *http.Request) {
+				t.Helper()
+
+				req.Header.Set(xOriginalMethod, "POST")
+				req.URL.RawQuery = url.Values{"foo": []string{"bar"}}.Encode()
+			},
+			assert: func(t *testing.T) {
+				t.Helper()
+
+				require.True(t, testAppCalled)
+				assert.Equal(t, "GET", extractedMethod)
+				assert.Equal(t, "http", extractedURL.Scheme)
+				assert.Equal(t, "heimdall.test.local", extractedURL.Host)
+				assert.Equal(t, "/test", extractedURL.Path)
+				assert.Equal(t, url.Values{"foo": []string{"bar"}}, extractedURL.Query())
+			},
+		},
+		{
 			uc: "X-Forwarded-Proto set",
 			configureRequest: func(t *testing.T, req *http.Request) {
 				t.Helper()
@@ -272,6 +291,25 @@ func TestMiddlewareApplicationWithConfiguredTrustedProxy(t *testing.T) {
 				t.Helper()
 
 				req.Header.Set(xForwardedMethod, "POST")
+				req.URL.RawQuery = url.Values{"foo": []string{"bar"}}.Encode()
+			},
+			assert: func(t *testing.T) {
+				t.Helper()
+
+				require.True(t, testAppCalled)
+				assert.Equal(t, "POST", extractedMethod)
+				assert.Equal(t, "http", extractedURL.Scheme)
+				assert.Equal(t, "heimdall.test.local", extractedURL.Host)
+				assert.Equal(t, "/test", extractedURL.Path)
+				assert.Equal(t, url.Values{"foo": []string{"bar"}}, extractedURL.Query())
+			},
+		},
+		{
+			uc: "X-Forwarded-Method set",
+			configureRequest: func(t *testing.T, req *http.Request) {
+				t.Helper()
+
+				req.Header.Set(xOriginalMethod, "POST")
 				req.URL.RawQuery = url.Values{"foo": []string{"bar"}}.Encode()
 			},
 			assert: func(t *testing.T) {
