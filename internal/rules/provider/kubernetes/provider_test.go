@@ -38,7 +38,7 @@ import (
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	config2 "github.com/dadrus/heimdall/internal/rules/config"
-	"github.com/dadrus/heimdall/internal/rules/provider/kubernetes/api/v1alpha1"
+	"github.com/dadrus/heimdall/internal/rules/provider/kubernetes/api/v1alpha2"
 	"github.com/dadrus/heimdall/internal/rules/rule/mocks"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
@@ -141,18 +141,18 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 				return func(t *testing.T, watchRequest bool, w http.ResponseWriter) {
 					t.Helper()
 
-					rls := v1alpha1.RuleSetList{
+					rls := v1alpha2.RuleSetList{
 						TypeMeta: metav1.TypeMeta{
-							APIVersion: fmt.Sprintf("%s/%s", v1alpha1.GroupName, v1alpha1.GroupVersion),
+							APIVersion: fmt.Sprintf("%s/%s", v1alpha2.GroupName, v1alpha2.GroupVersion),
 							Kind:       "RuleSetList",
 						},
 						ListMeta: metav1.ListMeta{
 							ResourceVersion: "735820",
 						},
-						Items: []v1alpha1.RuleSet{
+						Items: []v1alpha2.RuleSet{
 							{
 								TypeMeta: metav1.TypeMeta{
-									APIVersion: fmt.Sprintf("%s/%s", v1alpha1.GroupName, v1alpha1.GroupVersion),
+									APIVersion: fmt.Sprintf("%s/%s", v1alpha2.GroupName, v1alpha2.GroupVersion),
 									Kind:       "RuleSet",
 								},
 								ObjectMeta: metav1.ObjectMeta{
@@ -163,7 +163,7 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 									Generation:        1,
 									CreationTimestamp: metav1.NewTime(time.Now()),
 								},
-								Spec: v1alpha1.RuleSetSpec{
+								Spec: v1alpha2.RuleSetSpec{
 									AuthClassName: "bar",
 									Rules: []config2.Rule{
 										{
@@ -201,9 +201,9 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 					err = metav1.Convert_watch_Event_To_v1_WatchEvent(
 						&watch.Event{
 							Type: watch.Bookmark,
-							Object: &v1alpha1.RuleSet{
+							Object: &v1alpha2.RuleSet{
 								TypeMeta: metav1.TypeMeta{
-									APIVersion: fmt.Sprintf("%s/%s", v1alpha1.GroupName, v1alpha1.GroupVersion),
+									APIVersion: fmt.Sprintf("%s/%s", v1alpha2.GroupName, v1alpha2.GroupVersion),
 									Kind:       "RuleSet",
 								},
 								ObjectMeta: metav1.ObjectMeta{
@@ -253,18 +253,18 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 				return func(t *testing.T, watchRequest bool, w http.ResponseWriter) {
 					t.Helper()
 
-					rls := v1alpha1.RuleSetList{
+					rls := v1alpha2.RuleSetList{
 						TypeMeta: metav1.TypeMeta{
-							APIVersion: fmt.Sprintf("%s/%s", v1alpha1.GroupName, v1alpha1.GroupVersion),
+							APIVersion: fmt.Sprintf("%s/%s", v1alpha2.GroupName, v1alpha2.GroupVersion),
 							Kind:       "RuleSetList",
 						},
 						ListMeta: metav1.ListMeta{
 							ResourceVersion: "735820",
 						},
-						Items: []v1alpha1.RuleSet{
+						Items: []v1alpha2.RuleSet{
 							{
 								TypeMeta: metav1.TypeMeta{
-									APIVersion: fmt.Sprintf("%s/%s", v1alpha1.GroupName, v1alpha1.GroupVersion),
+									APIVersion: fmt.Sprintf("%s/%s", v1alpha2.GroupName, v1alpha2.GroupVersion),
 									Kind:       "RuleSet",
 								},
 								ObjectMeta: metav1.ObjectMeta{
@@ -275,7 +275,7 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 									Generation:        1,
 									CreationTimestamp: metav1.NewTime(time.Now()),
 								},
-								Spec: v1alpha1.RuleSetSpec{
+								Spec: v1alpha2.RuleSetSpec{
 									AuthClassName: "bar",
 									Rules: []config2.Rule{
 										{
@@ -313,9 +313,9 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 					err = metav1.Convert_watch_Event_To_v1_WatchEvent(
 						&watch.Event{
 							Type: watch.Bookmark,
-							Object: &v1alpha1.RuleSet{
+							Object: &v1alpha2.RuleSet{
 								TypeMeta: metav1.TypeMeta{
-									APIVersion: fmt.Sprintf("%s/%s", v1alpha1.GroupName, v1alpha1.GroupVersion),
+									APIVersion: fmt.Sprintf("%s/%s", v1alpha2.GroupName, v1alpha2.GroupVersion),
 									Kind:       "RuleSet",
 								},
 								ObjectMeta: metav1.ObjectMeta{
@@ -389,18 +389,18 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 				return func(t *testing.T, watchRequest bool, w http.ResponseWriter) {
 					t.Helper()
 
-					rls := v1alpha1.RuleSetList{
+					rls := v1alpha2.RuleSetList{
 						TypeMeta: metav1.TypeMeta{
-							APIVersion: fmt.Sprintf("%s/%s", v1alpha1.GroupName, v1alpha1.GroupVersion),
+							APIVersion: fmt.Sprintf("%s/%s", v1alpha2.GroupName, v1alpha2.GroupVersion),
 							Kind:       "RuleSetList",
 						},
 						ListMeta: metav1.ListMeta{
 							ResourceVersion: "735820",
 						},
-						Items: []v1alpha1.RuleSet{
+						Items: []v1alpha2.RuleSet{
 							{
 								TypeMeta: metav1.TypeMeta{
-									APIVersion: fmt.Sprintf("%s/%s", v1alpha1.GroupName, v1alpha1.GroupVersion),
+									APIVersion: fmt.Sprintf("%s/%s", v1alpha2.GroupName, v1alpha2.GroupVersion),
 									Kind:       "RuleSet",
 								},
 								ObjectMeta: metav1.ObjectMeta{
@@ -411,7 +411,7 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 									Generation:        1,
 									CreationTimestamp: metav1.NewTime(time.Now()),
 								},
-								Spec: v1alpha1.RuleSetSpec{
+								Spec: v1alpha2.RuleSetSpec{
 									AuthClassName: "bar",
 									Rules: []config2.Rule{
 										{
@@ -449,9 +449,9 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 					err = metav1.Convert_watch_Event_To_v1_WatchEvent(
 						&watch.Event{
 							Type: watch.Bookmark,
-							Object: &v1alpha1.RuleSet{
+							Object: &v1alpha2.RuleSet{
 								TypeMeta: metav1.TypeMeta{
-									APIVersion: fmt.Sprintf("%s/%s", v1alpha1.GroupName, v1alpha1.GroupVersion),
+									APIVersion: fmt.Sprintf("%s/%s", v1alpha2.GroupName, v1alpha2.GroupVersion),
 									Kind:       "RuleSet",
 								},
 								ObjectMeta: metav1.ObjectMeta{
@@ -510,9 +510,9 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 
 						evt := watch.Event{
 							Type: watch.Added,
-							Object: &v1alpha1.RuleSet{
+							Object: &v1alpha2.RuleSet{
 								TypeMeta: metav1.TypeMeta{
-									APIVersion: fmt.Sprintf("%s/%s", v1alpha1.GroupName, v1alpha1.GroupVersion),
+									APIVersion: fmt.Sprintf("%s/%s", v1alpha2.GroupName, v1alpha2.GroupVersion),
 									Kind:       "RuleSet",
 								},
 								ObjectMeta: metav1.ObjectMeta{
@@ -523,7 +523,7 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 									Generation:        1,
 									CreationTimestamp: metav1.NewTime(time.Now()),
 								},
-								Spec: v1alpha1.RuleSetSpec{
+								Spec: v1alpha2.RuleSetSpec{
 									AuthClassName: "bar",
 									Rules: []config2.Rule{
 										{
@@ -585,9 +585,9 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 						}
 					} else {
 						// empty rule set initially
-						rls := v1alpha1.RuleSetList{
+						rls := v1alpha2.RuleSetList{
 							TypeMeta: metav1.TypeMeta{
-								APIVersion: fmt.Sprintf("%s/%s", v1alpha1.GroupName, v1alpha1.GroupVersion),
+								APIVersion: fmt.Sprintf("%s/%s", v1alpha2.GroupName, v1alpha2.GroupVersion),
 								Kind:       "RuleSetList",
 							},
 							ListMeta: metav1.ListMeta{
@@ -662,9 +662,9 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 
 						evt := watch.Event{
 							Type: watch.Added,
-							Object: &v1alpha1.RuleSet{
+							Object: &v1alpha2.RuleSet{
 								TypeMeta: metav1.TypeMeta{
-									APIVersion: fmt.Sprintf("%s/%s", v1alpha1.GroupName, v1alpha1.GroupVersion),
+									APIVersion: fmt.Sprintf("%s/%s", v1alpha2.GroupName, v1alpha2.GroupVersion),
 									Kind:       "RuleSet",
 								},
 								ObjectMeta: metav1.ObjectMeta{
@@ -675,7 +675,7 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 									Generation:        1,
 									CreationTimestamp: metav1.NewTime(time.Now()),
 								},
-								Spec: v1alpha1.RuleSetSpec{
+								Spec: v1alpha2.RuleSetSpec{
 									AuthClassName: "bar",
 									Rules: []config2.Rule{
 										{
@@ -737,9 +737,9 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 						}
 					} else {
 						// empty rule set initially
-						rls := v1alpha1.RuleSetList{
+						rls := v1alpha2.RuleSetList{
 							TypeMeta: metav1.TypeMeta{
-								APIVersion: fmt.Sprintf("%s/%s", v1alpha1.GroupName, v1alpha1.GroupVersion),
+								APIVersion: fmt.Sprintf("%s/%s", v1alpha2.GroupName, v1alpha2.GroupVersion),
 								Kind:       "RuleSetList",
 							},
 							ListMeta: metav1.ListMeta{
@@ -786,9 +786,9 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 
 						evt := watch.Event{
 							Type: watch.Added,
-							Object: &v1alpha1.RuleSet{
+							Object: &v1alpha2.RuleSet{
 								TypeMeta: metav1.TypeMeta{
-									APIVersion: fmt.Sprintf("%s/%s", v1alpha1.GroupName, v1alpha1.GroupVersion),
+									APIVersion: fmt.Sprintf("%s/%s", v1alpha2.GroupName, v1alpha2.GroupVersion),
 									Kind:       "RuleSet",
 								},
 								ObjectMeta: metav1.ObjectMeta{
@@ -799,7 +799,7 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 									Generation:        1,
 									CreationTimestamp: metav1.NewTime(time.Now()),
 								},
-								Spec: v1alpha1.RuleSetSpec{
+								Spec: v1alpha2.RuleSetSpec{
 									AuthClassName: "bar",
 									Rules: []config2.Rule{
 										{
@@ -846,8 +846,8 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 							var watchEvt metav1.WatchEvent
 
 							evt.Type = watch.Modified
-							ruleSet := evt.Object.(*v1alpha1.RuleSet) // nolint:forcetypeassert
-							ruleSet.Spec = v1alpha1.RuleSetSpec{
+							ruleSet := evt.Object.(*v1alpha2.RuleSet) // nolint:forcetypeassert
+							ruleSet.Spec = v1alpha2.RuleSetSpec{
 								AuthClassName: "bar",
 								Rules: []config2.Rule{
 									{
@@ -888,9 +888,9 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 						}
 					} else {
 						// empty rule set initially
-						rls := v1alpha1.RuleSetList{
+						rls := v1alpha2.RuleSetList{
 							TypeMeta: metav1.TypeMeta{
-								APIVersion: fmt.Sprintf("%s/%s", v1alpha1.GroupName, v1alpha1.GroupVersion),
+								APIVersion: fmt.Sprintf("%s/%s", v1alpha2.GroupName, v1alpha2.GroupVersion),
 								Kind:       "RuleSetList",
 							},
 							ListMeta: metav1.ListMeta{
@@ -978,9 +978,9 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 
 						evt := watch.Event{
 							Type: watch.Added,
-							Object: &v1alpha1.RuleSet{
+							Object: &v1alpha2.RuleSet{
 								TypeMeta: metav1.TypeMeta{
-									APIVersion: fmt.Sprintf("%s/%s", v1alpha1.GroupName, v1alpha1.GroupVersion),
+									APIVersion: fmt.Sprintf("%s/%s", v1alpha2.GroupName, v1alpha2.GroupVersion),
 									Kind:       "RuleSet",
 								},
 								ObjectMeta: metav1.ObjectMeta{
@@ -991,7 +991,7 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 									Generation:        1,
 									CreationTimestamp: metav1.NewTime(time.Now()),
 								},
-								Spec: v1alpha1.RuleSetSpec{
+								Spec: v1alpha2.RuleSetSpec{
 									AuthClassName: "bar",
 									Rules: []config2.Rule{
 										{
@@ -1038,8 +1038,8 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 							var watchEvt metav1.WatchEvent
 
 							evt.Type = watch.Modified
-							ruleSet := evt.Object.(*v1alpha1.RuleSet) // nolint:forcetypeassert
-							ruleSet.Spec = v1alpha1.RuleSetSpec{
+							ruleSet := evt.Object.(*v1alpha2.RuleSet) // nolint:forcetypeassert
+							ruleSet.Spec = v1alpha2.RuleSetSpec{
 								AuthClassName: "bar",
 								Rules: []config2.Rule{
 									{
@@ -1080,9 +1080,9 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 						}
 					} else {
 						// empty rule set initially
-						rls := v1alpha1.RuleSetList{
+						rls := v1alpha2.RuleSetList{
 							TypeMeta: metav1.TypeMeta{
-								APIVersion: fmt.Sprintf("%s/%s", v1alpha1.GroupName, v1alpha1.GroupVersion),
+								APIVersion: fmt.Sprintf("%s/%s", v1alpha2.GroupName, v1alpha2.GroupVersion),
 								Kind:       "RuleSetList",
 							},
 							ListMeta: metav1.ListMeta{
