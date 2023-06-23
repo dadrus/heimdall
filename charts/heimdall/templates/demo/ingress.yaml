@@ -33,8 +33,19 @@ metadata:
     {{- include "heimdall.demo.labels" . | nindent 4 }}
   {{- if eq .Values.operationMode "decision" }}
   annotations:
-    {{ .Values.demo.forwardAuthMiddlewareAnnotation }}: "http://{{ include "heimdall.fullname" . }}.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.service.decision.port }}{{ .Values.demo.forwardAuthMiddlewareRequestUri }}"
-    {{ .Values.demo.forwardAuthMiddlewareResponseAnnotation }}: Authorization
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+        auth_request               /_auth;
+        auth_request_set           $authHeader0 $upstream_http_authorization;
+        proxy_set_header           'Authorization' $authHeader0;
+    nginx.ingress.kubernetes.io/server-snippet: |
+        location = /_auth {
+          internal;
+          proxy_method             $request_method;
+          proxy_pass               "http://{{ include "heimdall.fullname" . }}.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.service.decision.port }}{{ .Values.demo.forwardAuthMiddlewareRequestUri }}";
+          proxy_pass_request_body  off;
+          proxy_set_header         Content-Length   "";
+          proxy_set_header         Host $http_host;
+        }
   {{- end }}
 spec:
   rules:

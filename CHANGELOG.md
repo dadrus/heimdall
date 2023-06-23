@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.9.0-alpha](https://github.com/dadrus/heimdall/compare/v0.8.2-alpha...v0.9.0-alpha) (2023-06-23)
+
+
+### Features
+
+* Configuration for read and write buffer sizes ([#706](https://github.com/dadrus/heimdall/issues/706)) ([6dcab1f](https://github.com/dadrus/heimdall/commit/6dcab1ff43bccef86b97173ffb953891983ed3a6))
+* Support for `X-Original-Method` used by nginx ingress controller ([#710](https://github.com/dadrus/heimdall/issues/710)) ([d95b989](https://github.com/dadrus/heimdall/commit/d95b989031f757d63349ce0536a6664b207aaf3a))
+
+
+### Bug Fixes
+
+* Refresh of cached items disabled to avoid retrieval of stale items ([#711](https://github.com/dadrus/heimdall/issues/711)) ([82c869b](https://github.com/dadrus/heimdall/commit/82c869b3f3dc2ab1d4d25d04029ccd928a6fadf4))
+
 ## [0.8.2-alpha](https://github.com/dadrus/heimdall/compare/v0.8.1-alpha...v0.8.2-alpha) (2023-06-21)
 
 

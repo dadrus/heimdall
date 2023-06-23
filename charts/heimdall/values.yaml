@@ -30,7 +30,7 @@ demo:
   # change the values to what is required for your ingress controller
   forwardAuthMiddlewareAnnotation: nginx.ingress.kubernetes.io/auth-url
   forwardAuthMiddlewareResponseAnnotation: nginx.ingress.kubernetes.io/auth-response-headers
-  forwardAuthMiddlewareRequestUri: /$request_uri
+  forwardAuthMiddlewareRequestUri: $request_uri
 
 # Default values for heimdall.
 image:
