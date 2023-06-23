@@ -61,6 +61,21 @@ proxy:
 ----
 ====
 
+* *`buffer_limit`*: _link:{{< relref "/docs/configuration/reference/types.adoc#_buffer_limit" >}}[BufferLimit]_ (optional)
++
+Read and write buffer limits for incoming requests and responses created by heimdall default to 4KB. You can however override this by making use of this property and specifying the limits you need.
++
+.Setting the read buffer size limit to 1MB and the write buffer size limit to 2KB.
+====
+[source, yaml]
+----
+management:
+  buffer_limit:
+    read: 1MB
+    write: 2KB
+----
+====
+
 * *`cors`*: _link:{{< relref "/docs/configuration/reference/types.adoc#_cors" >}}[CORS]_ (optional)
 +
 https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS[CORS] (Cross-Origin Resource Sharing) headers can be added and configured by making use of this option. This functionality allows for advanced security features to quickly be set. If CORS headers are set, then the Heimdall does not pass preflight requests neither to its pipeline, nor to the upstream service. Instead, the response will be generated and sent back to the client directly.

@@ -61,6 +61,21 @@ decision:
 ----
 ====
 
+* *`buffer_limit`*: _link:{{< relref "/docs/configuration/reference/types.adoc#_buffer_limit" >}}[BufferLimit]_ (optional)
++
+Read and write buffer limits for incoming requests and responses created by heimdall default to 4KB. You can however override this by making use of this property and specifying the limits you need.
++
+.Setting the read buffer size limit to 1MB and the write buffer size limit to 2KB.
+====
+[source, yaml]
+----
+decision:
+  buffer_limit:
+    read: 1MB
+    write: 2KB
+----
+====
+
 * *`tls`*: _link:{{< relref "/docs/configuration/reference/types.adoc#_tls" >}}[TLS]_ (optional)
 +
 By default, the Decision service accepts HTTP requests. Depending on your deployment scenario, you could require Heimdall to accept HTTPs requests only (which is highly recommended). You can do so by making use of this option.
