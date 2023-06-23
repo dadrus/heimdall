@@ -152,11 +152,6 @@ func (u *jwtUnifier) Execute(ctx heimdall.Context, sub *subject.Subject) error {
 		}
 	}
 
-	logger.Debug().
-		Str("_cache_key", cacheKey).
-		Str("_jwt", jwtToken).
-		Msg("Used JWT for upstream")
-
 	ctx.AddHeaderForUpstream(u.headerName, fmt.Sprintf("%s %s", u.headerScheme, jwtToken))
 
 	return nil
