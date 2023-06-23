@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/rs/zerolog"
 	"github.com/valyala/fasthttp"
 
 	"github.com/dadrus/heimdall/internal/fasthttp/opentelemetry"
@@ -122,8 +123,16 @@ func (s *RequestContext) FinalizeAndForward(mutator URIMutator, timeout time.Dur
 		return err
 	}
 
+	upstreamURL := targetURL.String()
+
+	logger := zerolog.Ctx(s.c.UserContext())
+	logger.Info().
+		Str("_method", s.reqMethod).
+		Str("_upstream", upstreamURL).
+		Msg("Forwarding request")
+
 	s.c.Request().Header.SetMethod(s.reqMethod)
-	s.c.Request().SetRequestURI(targetURL.String())
+	s.c.Request().SetRequestURI(upstreamURL)
 
 	return opentelemetry.NewClient(&fasthttp.Client{}).
 		DoTimeout(s.c.UserContext(), s.c.Request(), s.c.Response(), timeout)
