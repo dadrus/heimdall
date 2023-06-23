@@ -4,7 +4,8 @@ rules:
 - id: rule1
   match:
     url: http://<**>/public
-  upstream: http://upstream:80
+  forward_to:
+    host: upstream:80
   execute:
     - authenticator: do_nothing
     - unifier: do_nothing
@@ -12,7 +13,8 @@ rules:
 - id: rule2
   match:
     url: http://<**>/anonymous
-  upstream: http://upstream:80
+  forward_to:
+    host: upstream:80
   execute:
     - authenticator: anon
 
