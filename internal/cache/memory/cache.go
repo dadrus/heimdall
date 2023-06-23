@@ -28,7 +28,7 @@ type InMemoryCache struct {
 }
 
 func New() *InMemoryCache {
-	return &InMemoryCache{c: ttlcache.New[string, any]()}
+	return &InMemoryCache{c: ttlcache.New[string, any](ttlcache.WithDisableTouchOnHit[string, any]())}
 }
 
 func (c *InMemoryCache) Start(_ context.Context) error {
