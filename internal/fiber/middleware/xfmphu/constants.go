@@ -21,7 +21,8 @@ const (
 	xForwardedURI    = "X-Forwarded-Uri"
 	xForwardedPath   = "X-Forwarded-Path"
 
-	// nginx specifics
+	// the following header are nginx specific.
+
 	xSentFrom         = "X-Sent-From"
 	xOriginalMethod   = "X-Original-Method"
 	nginxIngressAgent = "nginx-ingress-controller"
