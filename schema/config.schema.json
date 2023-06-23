@@ -205,7 +205,35 @@
         }
       }
     },
-
+    "bufferLimitConfig": {
+      "type": "object",
+      "description": "Overrides the default request and response buffer sizes",
+      "additionalProperties": false,
+      "properties": {
+        "read": {
+          "description": "The maximum buffer size for reading the entire request, including the body. Increase this parameter to prevent unexpected closing a client connection if the client request exceeds the default 4KB.",
+          "type": "string",
+          "default": "4KB",
+          "pattern": "^[0-9]+(B|KB|MB)$",
+          "examples": [
+            "5KB",
+            "1MB",
+            "1.6MB"
+          ]
+        },
+        "write": {
+          "description": "The maximum buffer size for writing the response. Increase this parameter to prevent unexpected closing a client connection if a response create by heimdall exceeds the default 4KB.",
+          "type": "string",
+          "default": "4KB",
+          "pattern": "^[0-9]+(B|KB|MB)$",
+          "examples": [
+            "5KB",
+            "1MB",
+            "1.6MB"
+          ]
+        }
+      }
+    },
     "responseOverride": {
       "type": "object",
       "description": "Overrides the defaults for responses",
@@ -1788,6 +1816,9 @@
             "timeout": {
               "$ref": "#/definitions/timeoutConfig"
             },
+            "buffer_limit": {
+              "$ref": "#/definitions/bufferLimitConfig"
+            },
             "tls": {
               "$ref": "#/definitions/tlsConfig"
             },
@@ -1823,6 +1854,9 @@
             },
             "timeout": {
               "$ref": "#/definitions/timeoutConfig"
+            },
+            "buffer_limit": {
+              "$ref": "#/definitions/bufferLimitConfig"
             },
             "cors": {
               "$ref": "#/definitions/corsConfig"
@@ -1862,6 +1896,9 @@
             },
             "timeout": {
               "$ref": "#/definitions/timeoutConfig"
+            },
+            "buffer_limit": {
+              "$ref": "#/definitions/bufferLimitConfig"
             },
             "cors": {
               "$ref": "#/definitions/corsConfig"

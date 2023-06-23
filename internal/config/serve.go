@@ -20,7 +20,14 @@ import (
 	"crypto/tls"
 	"fmt"
 	"time"
+
+	"github.com/inhies/go-bytesize"
 )
+
+type BufferLimit struct {
+	Read  bytesize.ByteSize `koanf:"read"`
+	Write bytesize.ByteSize `koanf:"write"`
+}
 
 type Timeout struct {
 	Read  time.Duration `koanf:"read,string"`
@@ -75,6 +82,7 @@ type ServiceConfig struct {
 	Host           string        `koanf:"host"`
 	Port           int           `koanf:"port"`
 	Timeout        Timeout       `koanf:"timeout"`
+	BufferLimit    BufferLimit   `koanf:"buffer_limit"`
 	CORS           *CORS         `koanf:"cors,omitempty"`
 	TLS            *TLS          `koanf:"tls,omitempty"`
 	TrustedProxies *[]string     `koanf:"trusted_proxies,omitempty"`
