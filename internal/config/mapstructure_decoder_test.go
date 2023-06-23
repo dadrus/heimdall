@@ -20,6 +20,7 @@ import (
 	"crypto/tls"
 	"testing"
 
+	"github.com/inhies/go-bytesize"
 	"github.com/mitchellh/mapstructure"
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
@@ -36,102 +37,20 @@ func TestDecodeLogLevel(t *testing.T) {
 	}
 
 	for _, tc := range []struct {
-		uc     string
-		config []byte
-		assert func(t *testing.T, err error, level zerolog.Level)
+		config string
+		expect zerolog.Level
 	}{
-		{
-			uc:     "debug level",
-			config: []byte(`level: debug`),
-			assert: func(t *testing.T, err error, level zerolog.Level) {
-				t.Helper()
-
-				require.NoError(t, err)
-				assert.Equal(t, zerolog.DebugLevel, level)
-			},
-		},
-		{
-			uc:     "info level",
-			config: []byte(`level: info`),
-			assert: func(t *testing.T, err error, level zerolog.Level) {
-				t.Helper()
-
-				require.NoError(t, err)
-				assert.Equal(t, zerolog.InfoLevel, level)
-			},
-		},
-		{
-			uc:     "warn level",
-			config: []byte(`level: warn`),
-			assert: func(t *testing.T, err error, level zerolog.Level) {
-				t.Helper()
-
-				require.NoError(t, err)
-				assert.Equal(t, zerolog.WarnLevel, level)
-			},
-		},
-		{
-			uc:     "error level",
-			config: []byte(`level: error`),
-			assert: func(t *testing.T, err error, level zerolog.Level) {
-				t.Helper()
-
-				require.NoError(t, err)
-				assert.Equal(t, zerolog.ErrorLevel, level)
-			},
-		},
-		{
-			uc:     "fatal level",
-			config: []byte(`level: fatal`),
-			assert: func(t *testing.T, err error, level zerolog.Level) {
-				t.Helper()
-
-				require.NoError(t, err)
-				assert.Equal(t, zerolog.FatalLevel, level)
-			},
-		},
-		{
-			uc:     "panic level",
-			config: []byte(`level: panic`),
-			assert: func(t *testing.T, err error, level zerolog.Level) {
-				t.Helper()
-
-				require.NoError(t, err)
-				assert.Equal(t, zerolog.PanicLevel, level)
-			},
-		},
-		{
-			uc:     "no level",
-			config: []byte(`level: no`),
-			assert: func(t *testing.T, err error, level zerolog.Level) {
-				t.Helper()
-
-				require.NoError(t, err)
-				assert.Equal(t, zerolog.NoLevel, level)
-			},
-		},
-		{
-			uc:     "disabled",
-			config: []byte(`level: disabled`),
-			assert: func(t *testing.T, err error, level zerolog.Level) {
-				t.Helper()
-
-				require.NoError(t, err)
-				assert.Equal(t, zerolog.Disabled, level)
-			},
-		},
-		{
-			uc:     "trace level",
-			config: []byte(`level: trace`),
-			assert: func(t *testing.T, err error, level zerolog.Level) {
-				t.Helper()
-
-				require.NoError(t, err)
-				assert.Equal(t, zerolog.TraceLevel, level)
-			},
-		},
+		{config: `level: debug`, expect: zerolog.DebugLevel},
+		{config: `level: info`, expect: zerolog.InfoLevel},
+		{config: `level: warn`, expect: zerolog.WarnLevel},
+		{config: `level: error`, expect: zerolog.ErrorLevel},
+		{config: `level: fatal`, expect: zerolog.FatalLevel},
+		{config: `level: panic`, expect: zerolog.PanicLevel},
+		{config: `level: no`, expect: zerolog.NoLevel},
+		{config: `level: disabled`, expect: zerolog.Disabled},
+		{config: `level: trace`, expect: zerolog.TraceLevel},
 	} {
-		t.Run("case="+tc.uc, func(t *testing.T) {
+		t.Run("case="+tc.config, func(t *testing.T) {
 			// GIVEN
 			var typ Type
 
@@ -141,14 +60,15 @@ func TestDecodeLogLevel(t *testing.T) {
 			})
 			require.NoError(t, err)
 
-			conf, err := testsupport.DecodeTestConfig(tc.config)
+			conf, err := testsupport.DecodeTestConfig([]byte(tc.config))
 			require.NoError(t, err)
 
 			// WHEN
 			err = dec.Decode(conf)
 
 			// THEN
-			tc.assert(t, err, typ.Level)
+			require.NoError(t, err)
+			assert.Equal(t, tc.expect, typ.Level)
 		})
 	}
 }
@@ -161,42 +81,14 @@ func TestDecodeLogFormat(t *testing.T) {
 	}
 
 	for _, tc := range []struct {
-		uc     string
-		config []byte
-		assert func(t *testing.T, err error, format LogFormat)
+		config string
+		expect LogFormat
 	}{
-		{
-			uc:     "gelf format",
-			config: []byte(`format: gelf`),
-			assert: func(t *testing.T, err error, format LogFormat) {
-				t.Helper()
-
-				require.NoError(t, err)
-				assert.Equal(t, LogGelfFormat, format)
-			},
-		},
-		{
-			uc:     "text format",
-			config: []byte(`format: text`),
-			assert: func(t *testing.T, err error, format LogFormat) {
-				t.Helper()
-
-				require.NoError(t, err)
-				assert.Equal(t, LogTextFormat, format)
-			},
-		},
-		{
-			uc:     "unknown format with text as fallback",
-			config: []byte(`format: foo`),
-			assert: func(t *testing.T, err error, format LogFormat) {
-				t.Helper()
-
-				require.NoError(t, err)
-				assert.Equal(t, LogTextFormat, format)
-			},
-		},
+		{config: `format: gelf`, expect: LogGelfFormat},
+		{config: `format: text`, expect: LogTextFormat},
+		{config: `format: foo`, expect: LogTextFormat},
 	} {
-		t.Run("case="+tc.uc, func(t *testing.T) {
+		t.Run("case="+tc.config, func(t *testing.T) {
 			// GIVEN
 			var typ Type
 
@@ -206,14 +98,15 @@ func TestDecodeLogFormat(t *testing.T) {
 			})
 			require.NoError(t, err)
 
-			conf, err := testsupport.DecodeTestConfig(tc.config)
+			conf, err := testsupport.DecodeTestConfig([]byte(tc.config))
 			require.NoError(t, err)
 
 			// WHEN
 			err = dec.Decode(conf)
 
 			// THEN
-			tc.assert(t, err, typ.Format)
+			require.NoError(t, err)
+			assert.Equal(t, tc.expect, typ.Format)
 		})
 	}
 }
@@ -358,6 +251,44 @@ func TestDecodeTLSMinVersion(t *testing.T) {
 
 			// THEN
 			tc.assert(t, err, typ.MinVersion)
+		})
+	}
+}
+
+func TestStringToByteSizeHookFunc(t *testing.T) {
+	t.Parallel()
+
+	type Type struct {
+		Size bytesize.ByteSize `mapstructure:"size"`
+	}
+
+	for _, tc := range []struct {
+		config string
+		expect bytesize.ByteSize
+	}{
+		{config: "size: 1B", expect: 1 * bytesize.B},
+		{config: "size: 3KB", expect: 3 * bytesize.KB},
+		{config: "size: 5MB", expect: 5 * bytesize.MB},
+	} {
+		t.Run("case="+tc.config, func(t *testing.T) {
+			// GIVEN
+			var typ Type
+
+			dec, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
+				DecodeHook: stringToByteSizeHookFunc(),
+				Result:     &typ,
+			})
+			require.NoError(t, err)
+
+			conf, err := testsupport.DecodeTestConfig([]byte(tc.config))
+			require.NoError(t, err)
+
+			// WHEN
+			err = dec.Decode(conf)
+
+			// THEN
+			require.NoError(t, err)
+			assert.Equal(t, tc.expect, typ.Size)
 		})
 	}
 }
