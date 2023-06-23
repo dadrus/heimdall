@@ -30,6 +30,9 @@ serve:
       read: 2s
       write: 5s
       idle: 2m
+    buffer_limit:
+      read: 10KB
+      write: 10KB
     tls:
       key_store:
         path: /path/to/key/store.pem

@@ -43,6 +43,7 @@ func NewConfiguration(envPrefix EnvVarPrefix, configFile ConfigurationPath) (*Co
 	opts := []parser.Option{
 		parser.WithDecodeHookFunc(mapstructure.StringToTimeDurationHookFunc()),
 		parser.WithDecodeHookFunc(mapstructure.StringToSliceHookFunc(",")),
+		parser.WithDecodeHookFunc(stringToByteSizeHookFunc()),
 		parser.WithDecodeHookFunc(logLevelDecodeHookFunc),
 		parser.WithDecodeHookFunc(logFormatDecodeHookFunc),
 		parser.WithDecodeHookFunc(decodeTLSCipherSuiteHookFunc),

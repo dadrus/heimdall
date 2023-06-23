@@ -20,6 +20,8 @@ import (
 	"crypto/tls"
 	"reflect"
 
+	"github.com/inhies/go-bytesize"
+	"github.com/mitchellh/mapstructure"
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
@@ -123,5 +125,21 @@ func decodeTLSMinVersionHookFunc(from reflect.Type, to reflect.Type, data any) (
 		return tls.VersionTLS13, nil
 	default:
 		return data, errorchain.NewWithMessagef(heimdall.ErrConfiguration, "TLS version %s is unsupported", data)
+	}
+}
+
+func stringToByteSizeHookFunc() mapstructure.DecodeHookFunc {
+	return func(f reflect.Type, t reflect.Type, data interface{}) (interface{}, error) {
+		if f.Kind() != reflect.String {
+			return data, nil
+		}
+
+		if t != reflect.TypeOf(bytesize.ByteSize(0)) {
+			return data, nil
+		}
+
+		// Convert it by parsing
+		// nolint: forcetypeassert
+		return bytesize.Parse(data.(string))
 	}
 }
