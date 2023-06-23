@@ -79,20 +79,3 @@ func matcherDecodeHookFunc(from reflect.Type, to reflect.Type, data any) (any, e
 		Strategy: x.IfThenElse(strategyPresent, strategyValue, "glob"),
 	}, nil
 }
-
-func forwardToDecodeHookFunc(from reflect.Type, to reflect.Type, data any) (any, error) {
-	var ep UpstreamURLFactory
-
-	if from.Kind() != reflect.String {
-		return data, nil
-	}
-
-	dect := reflect.ValueOf(&ep).Elem().Type()
-	if !dect.AssignableTo(to) {
-		return data, nil
-	}
-
-	// nolint: forcetypeassert
-	// already checked above
-	return UpstreamURLFactory{Host: data.(string)}, nil
-}
