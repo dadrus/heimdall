@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestPrefixAdderAddTo(t *testing.T) {
@@ -47,35 +48,51 @@ func TestQueryParamsRemoverRemoveFrom(t *testing.T) {
 }
 
 func TestURLRewriterRewrite(t *testing.T) {
-	t.Parallel()
-
 	for _, tc := range []struct {
 		uc       string
+		original string
 		rewriter *URLRewriter
 		expected string
 	}{
 		{
 			uc:       "rewrite scheme only",
+			original: "http://foo.bar/foo/bar?baz=bar&bar=foo&foo=baz",
 			rewriter: &URLRewriter{Scheme: "https"},
 			expected: "https://foo.bar/foo/bar?baz=bar&bar=foo&foo=baz",
 		},
 		{
+			uc:       "rewrite with url encoded path fragments",
+			original: "http://foo.bar/%5Bid%5D/bar?baz=bar&bar=foo&foo=baz",
+			rewriter: &URLRewriter{},
+			expected: "http://foo.bar/%5Bid%5D/bar?baz=bar&bar=foo&foo=baz",
+		},
+		{
 			uc:       "cut only the path prefix",
+			original: "http://foo.bar/foo/bar?baz=bar&bar=foo&foo=baz",
 			rewriter: &URLRewriter{PathPrefixToCut: "/foo"},
 			expected: "http://foo.bar/bar?baz=bar&bar=foo&foo=baz",
 		},
 		{
+			uc:       "cut only the urlencoded path prefix",
+			original: "http://foo.bar/%5Bid%5D/bar?baz=bar&bar=foo&foo=baz",
+			rewriter: &URLRewriter{PathPrefixToCut: "/[id]"},
+			expected: "http://foo.bar/bar?baz=bar&bar=foo&foo=baz",
+		},
+		{
 			uc:       "add only a path prefix",
+			original: "http://foo.bar/foo/bar?baz=bar&bar=foo&foo=baz",
 			rewriter: &URLRewriter{PathPrefixToAdd: "/baz"},
 			expected: "http://foo.bar/baz/foo/bar?baz=bar&bar=foo&foo=baz",
 		},
 		{
 			uc:       "remove only a query param",
+			original: "http://foo.bar/foo/bar?baz=bar&bar=foo&foo=baz",
 			rewriter: &URLRewriter{QueryParamsToRemove: QueryParamsRemover{"baz"}},
 			expected: "http://foo.bar/foo/bar?bar=foo&foo=baz",
 		},
 		{
-			uc: "rewrite everything",
+			uc:       "rewrite everything",
+			original: "http://foo.bar/foo/bar?baz=bar&bar=foo&foo=baz",
 			rewriter: &URLRewriter{
 				Scheme:              "https",
 				PathPrefixToCut:     "/foo",
@@ -87,12 +104,8 @@ func TestURLRewriterRewrite(t *testing.T) {
 	} {
 		t.Run(tc.uc, func(t *testing.T) {
 			// GIVEN
-			requestURL := &url.URL{
-				Scheme:   "http",
-				Host:     "foo.bar",
-				Path:     "/foo/bar",
-				RawQuery: "baz=bar&bar=foo&foo=baz",
-			}
+			requestURL, err := url.Parse(tc.original)
+			require.NoError(t, err)
 
 			// WHEN
 			tc.rewriter.Rewrite(requestURL)
