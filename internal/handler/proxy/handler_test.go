@@ -399,8 +399,7 @@ func TestHandleProxyEndpointRequest(t *testing.T) {
 				})).Return(upstreamURL, nil)
 
 				repository.EXPECT().FindRule(mock.MatchedBy(func(reqURL *url.URL) bool {
-					res := reqURL.String()
-					return res == "http://heimdall.test.local/%5Bbarfoo%5D"
+					return reqURL.String() == "http://heimdall.test.local/%5Bbarfoo%5D"
 				})).Return(rule, nil)
 			},
 			instructUpstream: func(t *testing.T) {
