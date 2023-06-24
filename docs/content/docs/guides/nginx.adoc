@@ -161,7 +161,7 @@ With that additional slash however, all requests to heimdall will have a duplica
 Heimdall has an automatic workaround for that: if the call is done by the nginx ingress controller and there is `//` as suffix in the path, the first slash is removed. There is however no possibility to fix that for requests without the path part (see above). If this is an issue in your context, consider using the integration option described below.
 ====
 
-Alternatively, you can also use the `nginx.ingress.kubernetes.io/configuration-snippet`, `nginx.ingress.kubernetes.io/server-snippet` and `nginx.ingress.kubernetes.io/auth-response-headers` annotations and provide configuration as described above for the vanilla nginx. There will be no issues with slashes then at all.
+Alternatively, you can also use the `nginx.ingress.kubernetes.io/configuration-snippet` and `nginx.ingress.kubernetes.io/server-snippet` annotations and provide configuration as described above for the vanilla nginx. There will be no issues with slashes then at all.
 
 .Possible Configuration
 ====

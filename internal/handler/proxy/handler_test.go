@@ -333,7 +333,7 @@ func TestHandleProxyEndpointRequest(t *testing.T) {
 				mutator.EXPECT().Mutate(mock.Anything).Return(&url.URL{
 					Scheme: upstreamURL.Scheme,
 					Host:   upstreamURL.Host,
-					Path:   "/foobar",
+					Path:   "/[id]/foobar",
 				}, nil)
 
 				rule.EXPECT().MatchesMethod(http.MethodGet).Return(true)
@@ -353,7 +353,7 @@ func TestHandleProxyEndpointRequest(t *testing.T) {
 
 				upstreamCheckRequest = func(req *http.Request) {
 					assert.Equal(t, http.MethodGet, req.Method)
-					assert.Equal(t, "/foobar", req.URL.Path)
+					assert.Equal(t, "/[id]/foobar", req.URL.Path)
 
 					assert.Equal(t, "baz", req.Header.Get("X-Foo-Bar"))
 					cookie, err := req.Cookie("X-Bar-Foo")
@@ -402,7 +402,7 @@ func TestHandleProxyEndpointRequest(t *testing.T) {
 					strings.NewReader("hello"))
 
 				req.Header.Set("Content-Type", "text/html")
-				req.Header.Set("X-Forwarded-Path", "/barfoo")
+				req.Header.Set("X-Forwarded-Path", "/%5Bbarfoo%5D")
 
 				return req
 			},
@@ -413,7 +413,7 @@ func TestHandleProxyEndpointRequest(t *testing.T) {
 				mutator.EXPECT().Mutate(mock.Anything).Return(&url.URL{
 					Scheme: upstreamURL.Scheme,
 					Host:   upstreamURL.Host,
-					Path:   "/barfoo",
+					Path:   "/[barfoo]",
 				}, nil)
 
 				rule.EXPECT().MatchesMethod(http.MethodPost).Return(true)
@@ -425,7 +425,7 @@ func TestHandleProxyEndpointRequest(t *testing.T) {
 				})).Return(mutator, nil)
 
 				repository.EXPECT().FindRule(mock.MatchedBy(func(reqURL *url.URL) bool {
-					return reqURL.String() == "http://heimdall.test.local/barfoo"
+					return reqURL.String() == "http://heimdall.test.local/%5Bbarfoo%5D"
 				})).Return(rule, nil)
 			},
 			instructUpstream: func(t *testing.T) {
@@ -433,7 +433,7 @@ func TestHandleProxyEndpointRequest(t *testing.T) {
 
 				upstreamCheckRequest = func(req *http.Request) {
 					assert.Equal(t, http.MethodPost, req.Method)
-					assert.Equal(t, "/barfoo", req.URL.Path)
+					assert.Equal(t, "/[barfoo]", req.URL.Path)
 
 					assert.Equal(t, "baz", req.Header.Get("X-Foo-Bar"))
 					cookie, err := req.Cookie("X-Bar-Foo")

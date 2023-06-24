@@ -71,7 +71,7 @@ func TestRepositoryFindRule(t *testing.T) {
 	}{
 		{
 			uc:         "no matching rule without default rule",
-			requestURL: &url.URL{Scheme: "http", Host: "foo.bar", Path: "baz"},
+			requestURL: &url.URL{Scheme: "http", Host: "foo.bar", Path: "/baz"},
 			configureFactory: func(t *testing.T, factory *mocks.FactoryMock) {
 				t.Helper()
 
@@ -86,7 +86,7 @@ func TestRepositoryFindRule(t *testing.T) {
 		},
 		{
 			uc:         "no matching rule with default rule",
-			requestURL: &url.URL{Scheme: "http", Host: "foo.bar", Path: "baz"},
+			requestURL: &url.URL{Scheme: "http", Host: "foo.bar", Path: "/baz"},
 			configureFactory: func(t *testing.T, factory *mocks.FactoryMock) {
 				t.Helper()
 
@@ -102,7 +102,7 @@ func TestRepositoryFindRule(t *testing.T) {
 		},
 		{
 			uc:         "matching rule",
-			requestURL: &url.URL{Scheme: "http", Host: "foo.bar", Path: "baz"},
+			requestURL: &url.URL{Scheme: "http", Host: "foo.bar", Path: "/baz"},
 			configureFactory: func(t *testing.T, factory *mocks.FactoryMock) {
 				t.Helper()
 

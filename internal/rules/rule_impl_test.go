@@ -82,7 +82,7 @@ func TestRuleMatchURL(t *testing.T) {
 	for _, tc := range []struct {
 		uc          string
 		matcher     func(t *testing.T) patternmatcher.PatternMatcher
-		toBeMatched *url.URL
+		toBeMatched string
 		assert      func(t *testing.T, matched bool)
 	}{
 		{
@@ -95,7 +95,24 @@ func TestRuleMatchURL(t *testing.T) {
 
 				return matcher
 			},
-			toBeMatched: &url.URL{Scheme: "http", Host: "foo.bar", Path: "baz"},
+			toBeMatched: "http://foo.bar/baz",
+			assert: func(t *testing.T, matched bool) {
+				t.Helper()
+
+				assert.True(t, matched)
+			},
+		},
+		{
+			uc: "matches with urlencoded path fragments",
+			matcher: func(t *testing.T) patternmatcher.PatternMatcher {
+				t.Helper()
+
+				matcher, err := patternmatcher.NewPatternMatcher("glob", "http://foo.bar/[id]/baz")
+				require.NoError(t, err)
+
+				return matcher
+			},
+			toBeMatched: "http://foo.bar/%5Bid%5D/baz",
 			assert: func(t *testing.T, matched bool) {
 				t.Helper()
 
@@ -112,7 +129,24 @@ func TestRuleMatchURL(t *testing.T) {
 
 				return matcher
 			},
-			toBeMatched: &url.URL{Scheme: "https", Host: "foo.bar", Path: "baz"},
+			toBeMatched: "https://foo.bar/baz",
+			assert: func(t *testing.T, matched bool) {
+				t.Helper()
+
+				assert.False(t, matched)
+			},
+		},
+		{
+			uc: "query params are ignored while matching",
+			matcher: func(t *testing.T) patternmatcher.PatternMatcher {
+				t.Helper()
+
+				matcher, err := patternmatcher.NewPatternMatcher("glob", "http://foo.bar/baz")
+				require.NoError(t, err)
+
+				return matcher
+			},
+			toBeMatched: "https://foo.bar/baz?foo=bar",
 			assert: func(t *testing.T, matched bool) {
 				t.Helper()
 
@@ -124,8 +158,11 @@ func TestRuleMatchURL(t *testing.T) {
 			// GIVEN
 			rul := &ruleImpl{urlMatcher: tc.matcher(t)}
 
+			tbmu, err := url.Parse(tc.toBeMatched)
+			require.NoError(t, err)
+
 			// WHEN
-			matched := rul.MatchesURL(tc.toBeMatched)
+			matched := rul.MatchesURL(tbmu)
 
 			// THEN
 			tc.assert(t, matched)
