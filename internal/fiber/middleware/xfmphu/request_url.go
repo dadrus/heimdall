@@ -79,7 +79,6 @@ func requestURL(c *fiber.Ctx) *url.URL {
 			func() string { return host },
 			func() string { return c.Hostname() }),
 		Path:     path,
-		RawPath:  rawPath,
 		RawQuery: query,
 	}
 }
