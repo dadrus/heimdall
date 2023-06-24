@@ -16,7 +16,6 @@ func (f *UpstreamURLFactory) CreateURL(value *url.URL) *url.URL {
 		Scheme:   value.Scheme,
 		Host:     f.Host,
 		Path:     value.Path,
-		RawPath:  value.RawPath,
 		RawQuery: value.RawQuery,
 	}
 

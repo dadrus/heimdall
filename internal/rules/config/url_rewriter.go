@@ -63,7 +63,6 @@ func (r *URLRewriter) Rewrite(value *url.URL) {
 		func() string { return value.Scheme },
 	)
 	value.Path = r.transformPath(value.Path)
-	value.RawPath = r.transformPath(value.RawPath)
 	value.RawQuery = r.transformQuery(value.RawQuery)
 }
 
