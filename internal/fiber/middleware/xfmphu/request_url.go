@@ -29,10 +29,11 @@ import (
 
 func requestURL(c *fiber.Ctx) *url.URL {
 	var (
-		proto string
-		host  string
-		path  string
-		query string
+		proto   string
+		host    string
+		rawPath string
+		path    string
+		query   string
 	)
 
 	if c.IsProxyTrusted() {
@@ -41,25 +42,25 @@ func requestURL(c *fiber.Ctx) *url.URL {
 			forwardedURI, _ := url.Parse(forwardedURIVal)
 			proto = forwardedURI.Scheme
 			host = forwardedURI.Host
-			path = forwardedURI.Path
+			rawPath = forwardedURI.Path
 			query = forwardedURI.Query().Encode()
 		}
 	}
 
-	if len(path) == 0 && c.IsProxyTrusted() {
-		path = c.Get(xForwardedPath)
+	if len(rawPath) == 0 && c.IsProxyTrusted() {
+		rawPath = c.Get(xForwardedPath)
 	}
 
-	if len(path) == 0 {
-		path = c.Params("*")
-		if len(path) != 0 {
-			path = fmt.Sprintf("/%s", path)
+	if len(rawPath) == 0 {
+		rawPath = c.Params("*")
+		if len(rawPath) != 0 {
+			rawPath = fmt.Sprintf("/%s", rawPath)
 		}
 
 		// there is a bug in the implementation of the nginx controller
 		// see: https://github.com/kubernetes/ingress-nginx/issues/10114
-		if c.Get(xSentFrom) == nginxIngressAgent && strings.HasPrefix(path, "//") {
-			path = strings.TrimPrefix(path, "/")
+		if c.Get(xSentFrom) == nginxIngressAgent && strings.HasPrefix(rawPath, "//") {
+			rawPath = strings.TrimPrefix(rawPath, "/")
 		}
 	}
 
@@ -67,6 +68,8 @@ func requestURL(c *fiber.Ctx) *url.URL {
 		origReqURL := *c.Request().URI()
 		query = stringx.ToString(origReqURL.QueryString())
 	}
+
+	path, _ = url.PathUnescape(rawPath)
 
 	return &url.URL{
 		Scheme: x.IfThenElseExec(len(proto) != 0,
@@ -76,6 +79,7 @@ func requestURL(c *fiber.Ctx) *url.URL {
 			func() string { return host },
 			func() string { return c.Hostname() }),
 		Path:     path,
+		RawPath:  rawPath,
 		RawQuery: query,
 	}
 }
