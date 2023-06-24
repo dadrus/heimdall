@@ -120,12 +120,9 @@ func (s *RequestContext) FinalizeAndForward(upstreamURL *url.URL, timeout time.D
 		s.c.Request().Header.Del(name)
 	}
 
-	URL := &url.URL{
-		Scheme:   upstreamURL.Scheme,
-		Host:     upstreamURL.Host,
-		Path:     s.reqURL.Path,
-		RawQuery: s.reqURL.RawQuery,
-	}
+	URL := *s.reqURL
+	URL.Scheme = upstreamURL.Scheme
+	URL.Host = upstreamURL.Host
 
 	s.c.Request().Header.SetMethod(s.reqMethod)
 	s.c.Request().SetRequestURI(URL.String())
