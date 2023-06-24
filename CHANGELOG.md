@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.9.1-alpha](https://github.com/dadrus/heimdall/compare/v0.9.0-alpha...v0.9.1-alpha) (2023-06-24)
+
+
+### Bug Fixes
+
+* Matcher expressions do not have to cope with url encoded path fragments any more if such are present ([#721](https://github.com/dadrus/heimdall/issues/721)) ([4a8b0a0](https://github.com/dadrus/heimdall/commit/4a8b0a048fde6b306773ffee2dc8feb56610fa0a))
+* Query parameters are now ignored while matching the request url ([#719](https://github.com/dadrus/heimdall/issues/719)) ([69fce94](https://github.com/dadrus/heimdall/commit/69fce9411fddafe5e043309ff1296d4b601373bc))
+* URL encoding fixed while forwarding the request to the upstream in proxy mode ([#716](https://github.com/dadrus/heimdall/issues/716)) ([9234ea1](https://github.com/dadrus/heimdall/commit/9234ea168cf94b32e4a4d5e1486ec6552d9b7d37))
+
 ## [0.9.0-alpha](https://github.com/dadrus/heimdall/compare/v0.8.2-alpha...v0.9.0-alpha) (2023-06-23)
 
 
