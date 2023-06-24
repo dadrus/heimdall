@@ -17,6 +17,7 @@
 package rules
 
 import (
+	"fmt"
 	"net/url"
 
 	"github.com/rs/zerolog"
@@ -75,7 +76,12 @@ func (r *ruleImpl) Execute(ctx heimdall.Context) (*url.URL, error) {
 }
 
 func (r *ruleImpl) MatchesURL(requestURL *url.URL) bool {
-	return r.urlMatcher.Match(requestURL.String())
+	toBeMatched := url.URL{
+		Scheme: requestURL.Scheme,
+		Opaque: fmt.Sprintf("//%s%s", requestURL.Host, requestURL.Path),
+	}
+
+	return r.urlMatcher.Match(toBeMatched.String())
 }
 
 func (r *ruleImpl) MatchesMethod(method string) bool { return slices.Contains(r.methods, method) }
