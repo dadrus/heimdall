@@ -68,6 +68,8 @@ func requestURL(c *fiber.Ctx) *url.URL {
 		query = stringx.ToString(origReqURL.QueryString())
 	}
 
+	unescapedPath, _ := url.PathUnescape(path)
+
 	return &url.URL{
 		Scheme: x.IfThenElseExec(len(proto) != 0,
 			func() string { return proto },
@@ -75,7 +77,8 @@ func requestURL(c *fiber.Ctx) *url.URL {
 		Host: x.IfThenElseExec(len(host) != 0,
 			func() string { return host },
 			func() string { return c.Hostname() }),
-		Path:     path,
+		Path:     unescapedPath,
+		RawPath:  path,
 		RawQuery: query,
 	}
 }
