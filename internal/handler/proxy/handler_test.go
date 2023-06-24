@@ -318,7 +318,7 @@ func TestHandleProxyEndpointRequest(t *testing.T) {
 
 				req := httptest.NewRequest(
 					http.MethodPost,
-					"http://heimdall.test.local/foobar",
+					"http://heimdall.test.local/%5Bid%5D/foobar",
 					strings.NewReader("hello"))
 
 				req.Header.Set("Content-Type", "text/html")
@@ -345,7 +345,7 @@ func TestHandleProxyEndpointRequest(t *testing.T) {
 				})).Return(mutator, nil)
 
 				repository.EXPECT().FindRule(mock.MatchedBy(func(reqURL *url.URL) bool {
-					return reqURL.String() == "http://heimdall.test.local/foobar"
+					return reqURL.String() == "http://heimdall.test.local/%5Bid%5D/foobar"
 				})).Return(rule, nil)
 			},
 			instructUpstream: func(t *testing.T) {
