@@ -383,7 +383,7 @@ func TestHandleProxyEndpointRequest(t *testing.T) {
 					strings.NewReader("hello"))
 
 				req.Header.Set("Content-Type", "text/html")
-				req.Header.Set("X-Forwarded-Path", "/barfoo")
+				req.Header.Set("X-Forwarded-Path", "/%5Bbarfoo%5D")
 
 				return req
 			},
@@ -399,7 +399,8 @@ func TestHandleProxyEndpointRequest(t *testing.T) {
 				})).Return(upstreamURL, nil)
 
 				repository.EXPECT().FindRule(mock.MatchedBy(func(reqURL *url.URL) bool {
-					return reqURL.String() == "http://heimdall.test.local/barfoo"
+					res := reqURL.String()
+					return res == "http://heimdall.test.local/%5Bbarfoo%5D"
 				})).Return(rule, nil)
 			},
 			instructUpstream: func(t *testing.T) {
@@ -407,7 +408,7 @@ func TestHandleProxyEndpointRequest(t *testing.T) {
 
 				upstreamCheckRequest = func(req *http.Request) {
 					assert.Equal(t, http.MethodPost, req.Method)
-					assert.Equal(t, "/barfoo", req.URL.Path)
+					assert.Equal(t, "/[barfoo]", req.URL.Path)
 
 					assert.Equal(t, "baz", req.Header.Get("X-Foo-Bar"))
 					cookie, err := req.Cookie("X-Bar-Foo")
