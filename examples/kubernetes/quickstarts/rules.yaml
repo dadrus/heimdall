@@ -9,7 +9,7 @@ spec:
   rules:
     - id: public-access
       match:
-        url: http://<**>/public
+        url: http://<**>/pub/<**>
       forward_to:
         host: echo-app.quickstarts.svc.cluster.local:8080
       execute:
@@ -18,7 +18,7 @@ spec:
         - unifier: noop_unifier
     - id: anonymous-access
       match:
-        url: http://<**>/anonymous
+        url: http://<**>/anon/<**>
       forward_to:
         host: echo-app.quickstarts.svc.cluster.local:8080
       execute:
