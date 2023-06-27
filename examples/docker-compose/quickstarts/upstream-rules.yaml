@@ -3,18 +3,24 @@ version: "1alpha2"
 rules:
 - id: rule1
   match:
-    url: http://<**>/public
+    url: http://<**>/pub/<**>
   forward_to:
     host: upstream:80
+    rewrite:
+      strip_path_prefix: /pub
+      add_path_prefix: /v1
   execute:
     - authenticator: do_nothing
     - unifier: do_nothing
 
 - id: rule2
   match:
-    url: http://<**>/anonymous
+    url: http://<**>/anon/<**>
   forward_to:
     host: upstream:80
+    rewrite:
+      strip_path_prefix: /anon
+      add_path_prefix: /v1
   execute:
     - authenticator: anon
 
