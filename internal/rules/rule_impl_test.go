@@ -24,6 +24,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/dadrus/heimdall/internal/heimdall"
 	heimdallmocks "github.com/dadrus/heimdall/internal/heimdall/mocks"
 	"github.com/dadrus/heimdall/internal/rules/config"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
@@ -400,6 +401,45 @@ func TestRuleExecute(t *testing.T) {
 
 			// THEN
 			tc.assert(t, err, urlMutator)
+		})
+	}
+}
+
+func TestRuleMutate(t *testing.T) {
+	t.Parallel()
+
+	origURL := &url.URL{Scheme: "http", Host: "foo.bar", Path: "/foo"}
+
+	for _, tc := range []struct {
+		uc         string
+		urlFactory UpstreamURLFactory
+		err        error
+	}{
+		{
+			uc:  "no upstream url factory defined",
+			err: heimdall.ErrConfiguration,
+		},
+		{
+			uc: "upstream url factory defined",
+			urlFactory: func() UpstreamURLFactory {
+				factoryMock := mocks.NewUpstreamURLFactoryMock(t)
+				factoryMock.EXPECT().CreateURL(origURL).Return(nil)
+
+				return factoryMock
+			}(),
+		},
+	} {
+		t.Run(tc.uc, func(t *testing.T) {
+			// GIVEN
+			rul := &ruleImpl{upstreamURLFactory: tc.urlFactory}
+
+			// WHEN
+			_, err := rul.Mutate(origURL)
+
+			// THEN
+			if tc.err != nil {
+				require.ErrorIs(t, err, tc.err)
+			}
 		})
 	}
 }

@@ -29,6 +29,8 @@ import (
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
+//go:generate mockery --name UpstreamURLFactory --structname UpstreamURLFactoryMock
+
 type UpstreamURLFactory interface {
 	CreateURL(from *url.URL) *url.URL
 }
