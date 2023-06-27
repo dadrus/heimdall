@@ -27,17 +27,61 @@ Defines how to match a rule and supports the following properties:
 +
 Glob or Regex pattern of the endpoints of your upstream service, which this rule should apply to. Query parameters are ignored.
 
-** *`strategy`*: _link:{{< relref "#_matching_strategy" >}}[Matching Strategy]_ (optional)
+** *`strategy`*: _string_ (optional)
 +
-Which strategy to use for matching of the value, provided in the `url` property. Can be `glob` or `regex`. Defaults to `glob`.
+Which strategy to use for matching of the value, provided in the `url` property. Can be one of:
+
+*** `regex` - to match `url` expressions by making use of regular expressions. Internally, heimdall makes use of Heimdall uses https://github.com/dlclark/regexp2[dlclark/regexp2] to implement this strategy. Head over to linked resource to get more insights about possible options.
++
+.Regular expressions patterns
+====
+* `\https://mydomain.com/` matches `\https://mydomain.com/` and doesn't match `\https://mydomain.com/foo` or `\https://mydomain.com`.
+* `<https|http>://mydomain.com/<.*>` matches `\https://mydomain.com/` and `\http://mydomain.com/foo`. Doesn't match `\https://other-domain.com/` or `\https://mydomain.com`.
+* `\http://mydomain.com/<[[:digit:]]+>` matches `\http://mydomain.com/123`, but doesn't match `\http://mydomain/abc`.
+* `\http://mydomain.com/<(?!protected).*>` matches `\http://mydomain.com/resource`, but doesn't match `\http://mydomain.com/protected`.
+====
+
+*** `glob` - to match `url` expressions by making use of glob expressions. Internally, heimdall makes use of Heimdall uses https://github.com/gobwas/glob[gobwas/glob] to implement this strategy. Head over to linked resource to get more insights about possible options.
++
+.Glob patterns
+====
+* `\https://mydomain.com/<m?n>` matches `\https://mydomain.com/man` and does not match `\http://mydomain.com/foo`.
+* `\https://mydomain.com/<{foo*,bar*}>` matches `\https://mydomain.com/foo` or `\https://mydomain.com/bar` and doesn't match `\https://mydomain.com/any`.
+====
 
 * *`methods`*: _string array_ (optional)
 +
 Which HTTP methods (`GET`, `POST`, `PATCH`, etc) are allowed for the matched URL. If not specified, every request to that URL will result in `405 Method Not Allowed` response from heimdall.
 
-* *`upstream`*: _string_ (mandatory in Proxy operation mode)
+* *`forward_to`*: _RequestForwarder_ (mandatory in Proxy operation mode)
 +
-Defines where to forward the proxied request to. Used only when heimdall is operated in the Proxy operation mode. Only the URL schema and the host parts are used if this property is specified.
+Defines where to forward the proxied request to. Used only when heimdall is operated in the Proxy operation mode and supports the following properties:
+
+** *`host`*: _string_ (mandatory)
++
+Host (and port) to be used for request forwarding. If no `rewrite` property (see below) is specified, all other parts, like scheme, path, etc. of the original url are preserved. E.g. if the original request is `\https://mydomain.com/api/v1/something?foo=bar&bar=baz` and the value of this property is set to `my-backend:8080`, the url used to forward the request to the upstream will be `\https://my-backend:8080/api/v1/something?foo=bar&bar=baz`
++
+WARNING: As of today the `Host` header is preserved while forwarding the request. This will change in the future heimdall release. Instead of the `Host` header, heimdall will set the `X-Forwarded-Host` header with the same value. If you rely on that header to be preserved, add a `unifier` to your pipeline, which sets this value explicitly.
+
+** *`rewrite`*: _OriginalURLRewriter_ (optional)
++
+Can be used to rewrite further parts of the original url before forwarding the request. If specified at least one of the following supported (middleware) properties must be specified:
+
+*** *`scheme`*: _string_ (optional)
++
+If defined, heimdall will use the specified value for the url scheme part while forwarding the request to the upstream.
+
+*** *`strip_path_prefix`*: _string_ (optional)
++
+If defined, heimdall will strip the specified prefix from the original url path. E.g. if the path of the original url is `/api/v1/something` and the value of this property is set to `/api/v1`, the request to the upstream will have the url path set to `/something`.
+
+*** *`add_path_prefix`*: _string_ (optional)
++
+This middleware is applied after the execution of the `strip_path_prefix` middleware described above. If defined, heimdall will add the specified path prefix to the path used to forward the request to the upstream service. E.g. if the path of the original url or the pass resulting after the application of the `strip_path_prefix` middleware is `/something` and the value of this property is set to `/my-backend`, the request to the upstream will have the url path set to `/my-backend/something`.
+
+*** *`strip_query_parameters`*: _string array_ (optional)
++
+If defined, heimdall will remove the specified query parameters from the original url before forwarding the request to the upstream service. E.g. if the query parameters part of the original url is `foo=bar&bar=baz` and the value of this property is set to `["foo"]`, the query part of the request to the upstream will be set to `bar=baz`
 
 * *`execute`*: _link:{{< relref "#_regular_pipeline" >}}[Regular Pipeline]_ (mandatory)
 +
@@ -55,7 +99,11 @@ id: rule:foo:bar
 match:
   url: http://my-service.local/<**>
   strategy: glob
-upstream: http://backend-a:8080
+forward_to:
+  host: backend-a:8080
+  rewrite:
+    scheme: http
+    strip_path_prefix: /api/v1
 methods:
   - GET
   - POST
@@ -67,30 +115,6 @@ execute:
 on_error:
   - error_handler: foobar
 ----
-====
-
-=== Matching Strategy
-
-Matching strategies are used to match the `url` patterns in rules and explicitly set by making use of `matching_strategy` rule property. Following strategies are available:
-
-* `regex` - to match `url` expressions by making use of regular expressions.
-* `glob` - to match `url` expressions by making use of glob expressions.
-
-Heimdall uses https://github.com/dlclark/regexp2[dlclark/regexp2] and https://github.com/gobwas/glob[gobwas/glob] to match `regex` expressions, respectively `glob` expressions. Head over to linked resources to get more insights about possible options for expression definitions.
-
-.Regular expressions patterns
-====
-* `\https://mydomain.com/` matches `\https://mydomain.com/` and doesn't match `\https://mydomain.com/foo` or `\https://mydomain.com`.
-* `<https|http>://mydomain.com/<.*>` matches `\https://mydomain.com/` and `\http://mydomain.com/foo`. Doesn't match `\https://other-domain.com/` or `\https://mydomain.com`.
-* `\http://mydomain.com/<[[:digit:]]+>` matches `\http://mydomain.com/123`, but doesn't match `\http://mydomain/abc`.
-* `\http://mydomain.com/<(?!protected).*>` matches `\http://mydomain.com/resource`, but doesn't match `\http://mydomain.com/protected`.
-====
-
-
-.Glob patterns
-====
-* `\https://mydomain.com/<m?n>` matches `\https://mydomain.com/man` and does not match `\http://mydomain.com/foo`.
-* `\https://mydomain.com/<{foo*,bar*}>` matches `\https://mydomain.com/foo` or `\https://mydomain.com/bar` and doesn't match `\https://mydomain.com/any`.
 ====
 
 === Regular Pipeline
@@ -192,7 +216,7 @@ List of the actual rules.
 ====
 [source, yaml]
 ----
-version: "1"
+version: "1alpha2"
 name: my-rule-set
 rules:
 - id: rule:1
