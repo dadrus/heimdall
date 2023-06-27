@@ -269,6 +269,6 @@ func (p *provider) deleteRuleSet(obj any) {
 }
 
 func (p *provider) mapVersion(_ string) string {
-	// currently the only possible version is v1alpha1, which is mapped to the version "1" used internally
-	return "1"
+	// currently the only possible version is v1alpha2, which is mapped to the version "1alpha2" used internally
+	return "1alpha2"
 }
