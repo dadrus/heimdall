@@ -147,7 +147,8 @@ And there is a rule, which allows anonymous requests and sets a header with subj
 id: rule:my-service:anonymous-api-access
 match:
   url: <**>/my-service/api
-upstream: https://my-backend-service:8888
+forward_to:
+  host: my-backend-service:8888
 methods:
   - GET
 execute:
