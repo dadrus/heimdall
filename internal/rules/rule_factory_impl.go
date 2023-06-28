@@ -235,9 +235,9 @@ func checkProxyModeApplicability(srcID string, ruleConfig config2.Rule) error {
 		return nil
 	}
 
-	if len(urlRewriter.Scheme) == 0 ||
-		len(urlRewriter.PathPrefixToAdd) == 0 ||
-		len(urlRewriter.PathPrefixToCut) == 0 ||
+	if len(urlRewriter.Scheme) == 0 &&
+		len(urlRewriter.PathPrefixToAdd) == 0 &&
+		len(urlRewriter.PathPrefixToCut) == 0 &&
 		len(urlRewriter.QueryParamsToRemove) == 0 {
 		return errorchain.NewWithMessagef(heimdall.ErrConfiguration,
 			"rewrite is defined in forward_to in rule ID=%s from %s, but is empty", ruleConfig.ID, srcID)
