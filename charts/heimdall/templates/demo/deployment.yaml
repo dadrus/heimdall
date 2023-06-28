@@ -22,6 +22,8 @@ metadata:
   namespace: heimdall-demo
   labels:
     {{- include "heimdall.demo.labels" . | nindent 4 }}
+  annotations:
+    checksum/config: {{ include (print $.Template.BasePath "/demo/configmap.yaml") . | sha256sum }}
 spec:
   selector:
     matchLabels:
