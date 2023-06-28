@@ -488,7 +488,7 @@ func TestRuleFactoryNew(t *testing.T) {
 			configureMocks(t, handlerFactory)
 
 			// WHEN
-			factory, err := NewRuleFactory(handlerFactory, tc.config, log.Logger)
+			factory, err := NewRuleFactory(handlerFactory, tc.config, config.DecisionMode, log.Logger)
 
 			// THEN
 			var (
