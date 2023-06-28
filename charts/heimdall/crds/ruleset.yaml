@@ -92,7 +92,7 @@ spec:
                             type: object
                             x-kubernetes-validations:
                               - rule: "has(self.scheme) || has(self.strip_path_prefix) || has(self.add_path_prefix) || has(self.strip_query_parameters)"
-                                message: "rewrite is defined, but does not contain an middleware"
+                                message: "rewrite is defined, but does not contain any middleware"
                               - rule: "has(self.strip_query_parameters) ? size(self.strip_query_parameters) > 0 : true"
                                 message: "no query parameters defined in strip_query_parameters"
                             properties:
