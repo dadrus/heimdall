@@ -199,17 +199,21 @@ func (f *ruleFactory) CreateRule(version, srcID string, ruleConfig config2.Rule)
 	}
 
 	return &ruleImpl{
-		id:                 ruleConfig.ID,
-		urlMatcher:         matcher,
-		upstreamURLFactory: ruleConfig.UpstreamURLFactory,
-		methods:            methods,
-		srcID:              srcID,
-		isDefault:          false,
-		hash:               hash,
-		sc:                 authenticators,
-		sh:                 subHandlers,
-		un:                 unifiers,
-		eh:                 errorHandlers,
+		id:         ruleConfig.ID,
+		urlMatcher: matcher,
+		// this is weird, but without upstreamURLFactory will not be nil
+		// it will contain a nil pointer to the type of ruleConfig.UpstreamURLFactory
+		// so nil check on upstreamURLFactory will fail
+		upstreamURLFactory: x.IfThenElse[UpstreamURLFactory](ruleConfig.UpstreamURLFactory != nil,
+			ruleConfig.UpstreamURLFactory, nil),
+		methods:   methods,
+		srcID:     srcID,
+		isDefault: false,
+		hash:      hash,
+		sc:        authenticators,
+		sh:        subHandlers,
+		un:        unifiers,
+		eh:        errorHandlers,
 	}, nil
 }
 
