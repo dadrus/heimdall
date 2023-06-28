@@ -27,7 +27,10 @@ metadata:
   labels:
     {{- include "heimdall.labels" $data | nindent 4 }}
   annotations:
+    checksum/config: {{ include (print $.Template.BasePath "/heimdall/configmap.yaml") . | sha256sum }}
+    {{- with .Values.deployment.annotations }}
     {{- toYaml .Values.deployment.annotations | nindent 4 }}
+    {{- end }}
 spec:
   {{- if not .Values.deployment.autoscaling.enabled }}
   replicas: {{ .Values.deployment.replicaCount }}
