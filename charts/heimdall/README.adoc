@@ -54,14 +54,14 @@ This chart does also support a demo installation, which can be enabled by using 
 +
 [source,bash]
 ----
-$ curl -v -H "Host: demo-app" <you cluster ip and port>/heimdall-demo/public
+$ curl -v -H "Host: demo-app" <you cluster ip and port>/heimdall-demo/pub/foo
 ----
 
 * Send requests to an endpoint which expects a JWT with a `sub` claim set to `anonymous`
 +
 [source,bash]
 ----
-$ curl -v -H "Host: demo-app" <you cluster ip and port>/heimdall-demo/anonymous
+$ curl -v -H "Host: demo-app" <you cluster ip and port>/heimdall-demo/anon/foo
 ----
 
 * All other endpoints are not allowed to be called and will result in HTTP 403

@@ -67,10 +67,14 @@ func (h *Handler) registerRoutes(router fiber.Router, logger zerolog.Logger) {
 
 func (h *Handler) proxy(c *fiber.Ctx) error {
 	logger := zerolog.Ctx(c.UserContext())
-	logger.Debug().Msg("Proxy endpoint called")
 
 	reqURL := fiberxforwarded.RequestURL(c.UserContext())
 	method := fiberxforwarded.RequestMethod(c.UserContext())
+
+	logger.Debug().
+		Str("_method", method).
+		Str("_url", reqURL.String()).
+		Msg("Proxy endpoint called")
 
 	rul, err := h.r.FindRule(reqURL)
 	if err != nil {
@@ -84,12 +88,12 @@ func (h *Handler) proxy(c *fiber.Ctx) error {
 
 	reqCtx := requestcontext.New(c, method, reqURL, h.s)
 
-	upstreamURL, err := rul.Execute(reqCtx)
+	mutator, err := rul.Execute(reqCtx)
 	if err != nil {
 		return err
 	}
 
 	logger.Debug().Msg("Finalizing request")
 
-	return reqCtx.FinalizeAndForward(upstreamURL, h.t)
+	return reqCtx.FinalizeAndForward(mutator, h.t)
 }

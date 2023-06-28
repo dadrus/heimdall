@@ -1,11 +1,10 @@
-version: "1"
+version: "1alpha2"
 name: test-rule-set
 rules:
 - id: rule:foo
   match:
     url: http://foo.bar/<**>
     strategy: glob
-  upstream: http://bar.foo
 #  methods: # reuses default
 #    - GET
 #    - POST

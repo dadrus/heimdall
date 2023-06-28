@@ -144,8 +144,11 @@ func TestHandleProxyEndpointRequest(t *testing.T) {
 			configureMocks: func(t *testing.T, repository *mocks4.RepositoryMock, rule *mocks4.RuleMock) {
 				t.Helper()
 
+				mutator := mocks4.NewURIMutatorMock(t)
+				mutator.EXPECT().Mutate(mock.Anything).Return(nil, heimdall.ErrConfiguration)
+
 				rule.EXPECT().MatchesMethod(http.MethodPost).Return(true)
-				rule.EXPECT().Execute(mock.Anything).Return(nil, nil)
+				rule.EXPECT().Execute(mock.Anything).Return(mutator, nil)
 
 				repository.EXPECT().FindRule(mock.Anything).Return(rule, nil)
 			},
@@ -200,12 +203,14 @@ func TestHandleProxyEndpointRequest(t *testing.T) {
 			configureMocks: func(t *testing.T, repository *mocks4.RepositoryMock, rule *mocks4.RuleMock) {
 				t.Helper()
 
+				mutator := mocks4.NewURIMutatorMock(t)
+
 				rule.EXPECT().MatchesMethod(http.MethodPost).Return(true)
 				rule.EXPECT().Execute(mock.MatchedBy(func(ctx *requestcontext.RequestContext) bool {
 					ctx.SetPipelineError(heimdall.ErrAuthorization)
 
 					return true
-				})).Return(upstreamURL, nil)
+				})).Return(mutator, nil)
 
 				repository.EXPECT().FindRule(mock.Anything).Return(rule, nil)
 			},
@@ -243,13 +248,20 @@ func TestHandleProxyEndpointRequest(t *testing.T) {
 			configureMocks: func(t *testing.T, repository *mocks4.RepositoryMock, rule *mocks4.RuleMock) {
 				t.Helper()
 
+				mutator := mocks4.NewURIMutatorMock(t)
+				mutator.EXPECT().Mutate(mock.Anything).Return(&url.URL{
+					Scheme: upstreamURL.Scheme,
+					Host:   upstreamURL.Host,
+					Path:   "/foobar",
+				}, nil)
+
 				rule.EXPECT().MatchesMethod(http.MethodPost).Return(true)
 				rule.EXPECT().Execute(mock.MatchedBy(func(ctx *requestcontext.RequestContext) bool {
 					ctx.AddHeaderForUpstream("X-Foo-Bar", "baz")
 					ctx.AddCookieForUpstream("X-Bar-Foo", "zab")
 
 					return true
-				})).Return(upstreamURL, nil)
+				})).Return(mutator, nil)
 
 				repository.EXPECT().FindRule(mock.MatchedBy(func(reqURL *url.URL) bool {
 					return reqURL.String() == "http://heimdall.test.local/foobar"
@@ -317,13 +329,20 @@ func TestHandleProxyEndpointRequest(t *testing.T) {
 			configureMocks: func(t *testing.T, repository *mocks4.RepositoryMock, rule *mocks4.RuleMock) {
 				t.Helper()
 
+				mutator := mocks4.NewURIMutatorMock(t)
+				mutator.EXPECT().Mutate(mock.Anything).Return(&url.URL{
+					Scheme: upstreamURL.Scheme,
+					Host:   upstreamURL.Host,
+					Path:   "/[id]/foobar",
+				}, nil)
+
 				rule.EXPECT().MatchesMethod(http.MethodGet).Return(true)
 				rule.EXPECT().Execute(mock.MatchedBy(func(ctx *requestcontext.RequestContext) bool {
 					ctx.AddHeaderForUpstream("X-Foo-Bar", "baz")
 					ctx.AddCookieForUpstream("X-Bar-Foo", "zab")
 
 					return true
-				})).Return(upstreamURL, nil)
+				})).Return(mutator, nil)
 
 				repository.EXPECT().FindRule(mock.MatchedBy(func(reqURL *url.URL) bool {
 					return reqURL.String() == "http://heimdall.test.local/%5Bid%5D/foobar"
@@ -390,13 +409,20 @@ func TestHandleProxyEndpointRequest(t *testing.T) {
 			configureMocks: func(t *testing.T, repository *mocks4.RepositoryMock, rule *mocks4.RuleMock) {
 				t.Helper()
 
+				mutator := mocks4.NewURIMutatorMock(t)
+				mutator.EXPECT().Mutate(mock.Anything).Return(&url.URL{
+					Scheme: upstreamURL.Scheme,
+					Host:   upstreamURL.Host,
+					Path:   "/[barfoo]",
+				}, nil)
+
 				rule.EXPECT().MatchesMethod(http.MethodPost).Return(true)
 				rule.EXPECT().Execute(mock.MatchedBy(func(ctx *requestcontext.RequestContext) bool {
 					ctx.AddHeaderForUpstream("X-Foo-Bar", "baz")
 					ctx.AddCookieForUpstream("X-Bar-Foo", "zab")
 
 					return true
-				})).Return(upstreamURL, nil)
+				})).Return(mutator, nil)
 
 				repository.EXPECT().FindRule(mock.MatchedBy(func(reqURL *url.URL) bool {
 					return reqURL.String() == "http://heimdall.test.local/%5Bbarfoo%5D"

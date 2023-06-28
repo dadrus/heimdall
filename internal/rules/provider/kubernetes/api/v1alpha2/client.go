@@ -14,7 +14,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package v1alpha1
+package v1alpha2
 
 import (
 	"context"
@@ -29,7 +29,7 @@ import (
 
 const (
 	GroupName    = "heimdall.dadrus.github.com"
-	GroupVersion = "v1alpha1"
+	GroupVersion = "v1alpha2"
 )
 
 func addKnownTypes(gv schema.GroupVersion) func(scheme *runtime.Scheme) error {

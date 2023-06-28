@@ -75,19 +75,21 @@ Put together, this configuration will let heimdall create a JSON Web Token (JWT)
 +
 [source, yaml]
 ----
-version: "1"
+version: "1alpha2"
 rules:
 - id: rule1  # <1>
   match:
     url: http://<**>/anonymous
-  upstream: http://upstream
+  forward_to:
+    host: upstream
   execute:
     - authorizer: allow_all_requests
 
 - id: rule2  # <2>
   match:
     url: http://<**>/public
-  upstream: http://upstream
+  forward_to:
+    host: upstream
   execute:
     - authenticator: noop
     - authorizer: allow_all_requests

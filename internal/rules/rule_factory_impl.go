@@ -4,7 +4,6 @@ import (
 	"crypto"
 	"errors"
 	"fmt"
-	"net/url"
 
 	"github.com/goccy/go-json"
 	"github.com/rs/zerolog"
@@ -19,10 +18,15 @@ import (
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
-func NewRuleFactory(hf mechanisms.Factory, conf *config.Configuration, logger zerolog.Logger) (rule.Factory, error) {
+func NewRuleFactory(
+	hf mechanisms.Factory,
+	conf *config.Configuration,
+	mode config.OperationMode,
+	logger zerolog.Logger,
+) (rule.Factory, error) {
 	logger.Debug().Msg("Creating rule factory")
 
-	rf := &ruleFactory{hf: hf, hasDefaultRule: false, logger: logger}
+	rf := &ruleFactory{hf: hf, hasDefaultRule: false, logger: logger, mode: mode}
 
 	if err := rf.initWithDefaultRule(conf.Rules.Default, logger); err != nil {
 		logger.Error().Err(err).Msg("Loading default rule failed")
@@ -38,6 +42,7 @@ type ruleFactory struct {
 	logger         zerolog.Logger
 	defaultRule    *ruleImpl
 	hasDefaultRule bool
+	mode           config.OperationMode
 }
 
 //nolint:funlen,gocognit,cyclop
@@ -129,7 +134,8 @@ func (f *ruleFactory) createExecutePipeline(
 func (f *ruleFactory) DefaultRule() rule.Rule { return f.defaultRule }
 func (f *ruleFactory) HasDefaultRule() bool   { return f.hasDefaultRule }
 
-func (f *ruleFactory) CreateRule(version, srcID string, ruleConfig config2.Rule) ( // nolint: cyclop
+//nolint:cyclop
+func (f *ruleFactory) CreateRule(version, srcID string, ruleConfig config2.Rule) (
 	rule.Rule, error,
 ) {
 	if len(ruleConfig.ID) == 0 {
@@ -137,23 +143,18 @@ func (f *ruleFactory) CreateRule(version, srcID string, ruleConfig config2.Rule)
 			"no ID defined for rule ID=%s from %s", ruleConfig.ID, srcID)
 	}
 
+	if f.mode == config.ProxyMode {
+		if err := checkProxyModeApplicability(srcID, ruleConfig); err != nil {
+			return nil, err
+		}
+	}
+
 	matcher, err := patternmatcher.NewPatternMatcher(
-		ruleConfig.RuleMatcher.Strategy, ruleConfig.RuleMatcher.URL,
-	)
+		ruleConfig.RuleMatcher.Strategy, ruleConfig.RuleMatcher.URL)
 	if err != nil {
 		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
 			"bad URL pattern for %s strategy defined for rule ID=%s from %s",
 			ruleConfig.RuleMatcher.Strategy, ruleConfig.ID, srcID).CausedBy(err)
-	}
-
-	var upstreamURL *url.URL
-
-	if len(ruleConfig.Upstream) != 0 {
-		upstreamURL, err = url.Parse(ruleConfig.Upstream)
-		if err != nil {
-			return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
-				"bad upstream URL defined for rule ID=%s from %s", ruleConfig.ID, srcID).CausedBy(err)
-		}
 	}
 
 	authenticators, subHandlers, unifiers, err := f.createExecutePipeline(version, ruleConfig.Execute)
@@ -198,18 +199,51 @@ func (f *ruleFactory) CreateRule(version, srcID string, ruleConfig config2.Rule)
 	}
 
 	return &ruleImpl{
-		id:          ruleConfig.ID,
-		urlMatcher:  matcher,
-		upstreamURL: upstreamURL,
-		methods:     methods,
-		srcID:       srcID,
-		isDefault:   false,
-		hash:        hash,
-		sc:          authenticators,
-		sh:          subHandlers,
-		un:          unifiers,
-		eh:          errorHandlers,
+		id:         ruleConfig.ID,
+		urlMatcher: matcher,
+		// this is weird, but without upstreamURLFactory will not be nil
+		// it will contain a nil pointer to the type of ruleConfig.UpstreamURLFactory
+		// so nil check on upstreamURLFactory will fail
+		upstreamURLFactory: x.IfThenElse[UpstreamURLFactory](ruleConfig.UpstreamURLFactory != nil,
+			ruleConfig.UpstreamURLFactory, nil),
+		methods:   methods,
+		srcID:     srcID,
+		isDefault: false,
+		hash:      hash,
+		sc:        authenticators,
+		sh:        subHandlers,
+		un:        unifiers,
+		eh:        errorHandlers,
 	}, nil
+}
+
+func checkProxyModeApplicability(srcID string, ruleConfig config2.Rule) error {
+	if ruleConfig.UpstreamURLFactory == nil {
+		return errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+			"heimdall is operated in proxy mode, but no forward_to is defined in rule ID=%s from %s",
+			ruleConfig.ID, srcID)
+	}
+
+	if len(ruleConfig.UpstreamURLFactory.Host) == 0 {
+		return errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+			"missing host definition in forward_to in rule ID=%s from %s",
+			ruleConfig.ID, srcID)
+	}
+
+	urlRewriter := ruleConfig.UpstreamURLFactory.URLRewriter
+	if urlRewriter == nil {
+		return nil
+	}
+
+	if len(urlRewriter.Scheme) == 0 ||
+		len(urlRewriter.PathPrefixToAdd) == 0 ||
+		len(urlRewriter.PathPrefixToCut) == 0 ||
+		len(urlRewriter.QueryParamsToRemove) == 0 {
+		return errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+			"rewrite is defined in forward_to in rule ID=%s from %s, but is empty", ruleConfig.ID, srcID)
+	}
+
+	return nil
 }
 
 func (f *ruleFactory) createHash(ruleConfig config2.Rule) ([]byte, error) {

@@ -35,7 +35,7 @@ import (
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	config2 "github.com/dadrus/heimdall/internal/rules/config"
-	"github.com/dadrus/heimdall/internal/rules/provider/kubernetes/api/v1alpha1"
+	"github.com/dadrus/heimdall/internal/rules/provider/kubernetes/api/v1alpha2"
 	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
@@ -48,7 +48,7 @@ type ConfigFactory func() (*rest.Config, error)
 type provider struct {
 	p          rule.SetProcessor
 	l          zerolog.Logger
-	cl         v1alpha1.Client
+	cl         v1alpha2.Client
 	cancel     context.CancelFunc
 	configured bool
 	wg         sync.WaitGroup
@@ -78,7 +78,7 @@ func newProvider(
 		AuthClass string `mapstructure:"auth_class"`
 	}
 
-	client, err := v1alpha1.NewClient(k8sConf)
+	client, err := v1alpha2.NewClient(k8sConf)
 	if err != nil {
 		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
 			"failed creating client for connecting to kubernetes cluster").
@@ -112,7 +112,7 @@ func (p *provider) newController(ctx context.Context, namespace string) cache.Co
 			ListFunc:  func(opts metav1.ListOptions) (runtime.Object, error) { return repository.List(ctx, opts) },
 			WatchFunc: func(opts metav1.ListOptions) (watch.Interface, error) { return repository.Watch(ctx, opts) },
 		},
-		&v1alpha1.RuleSet{},
+		&v1alpha2.RuleSet{},
 		0,
 		cache.ResourceEventHandlerFuncs{AddFunc: p.addRuleSet, DeleteFunc: p.deleteRuleSet, UpdateFunc: p.updateRuleSet},
 		p.filterAuthClass,
@@ -123,7 +123,7 @@ func (p *provider) newController(ctx context.Context, namespace string) cache.Co
 
 func (p *provider) filterAuthClass(input any) (any, error) {
 	// should never be of a different type. ok if panics
-	rs := input.(*v1alpha1.RuleSet) // nolint: forcetypeassert
+	rs := input.(*v1alpha2.RuleSet) // nolint: forcetypeassert
 
 	if rs.Spec.AuthClassName != p.ac {
 		p.l.Info().
@@ -193,7 +193,7 @@ func (p *provider) Stop(ctx context.Context) error {
 
 func (p *provider) updateRuleSet(_, newObj any) {
 	// should never be of a different type. ok if panics
-	rs := newObj.(*v1alpha1.RuleSet) // nolint: forcetypeassert
+	rs := newObj.(*v1alpha2.RuleSet) // nolint: forcetypeassert
 
 	conf := &config2.RuleSet{
 		MetaData: config2.MetaData{
@@ -219,7 +219,7 @@ func (p *provider) updateRuleSet(_, newObj any) {
 
 func (p *provider) addRuleSet(obj any) {
 	// should never be of a different type. ok if panics
-	rs := obj.(*v1alpha1.RuleSet) // nolint: forcetypeassert
+	rs := obj.(*v1alpha2.RuleSet) // nolint: forcetypeassert
 
 	conf := &config2.RuleSet{
 		MetaData: config2.MetaData{
@@ -245,7 +245,7 @@ func (p *provider) addRuleSet(obj any) {
 
 func (p *provider) deleteRuleSet(obj any) {
 	// should never be of a different type. ok if panics
-	rs := obj.(*v1alpha1.RuleSet) // nolint: forcetypeassert
+	rs := obj.(*v1alpha2.RuleSet) // nolint: forcetypeassert
 
 	conf := &config2.RuleSet{
 		MetaData: config2.MetaData{
@@ -269,6 +269,6 @@ func (p *provider) deleteRuleSet(obj any) {
 }
 
 func (p *provider) mapVersion(_ string) string {
-	// currently the only possible version is v1alpha1, which is mapped to the version "1" used internally
-	return "1"
+	// currently the only possible version is v1alpha2, which is mapped to the version "1alpha2" used internally
+	return "1alpha2"
 }

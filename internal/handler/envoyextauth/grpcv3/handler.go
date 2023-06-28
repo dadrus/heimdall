@@ -34,10 +34,14 @@ type Handler struct {
 
 func (h *Handler) Check(ctx context.Context, creq *envoy_auth.CheckRequest) (*envoy_auth.CheckResponse, error) {
 	logger := zerolog.Ctx(ctx)
-	logger.Debug().Msg("Decision Envoy ExtAuth called")
 
 	reqCtx := NewRequestContext(ctx, creq, h.s)
 	req := reqCtx.Request()
+
+	logger.Debug().
+		Str("_method", req.Method).
+		Str("_url", req.URL.String()).
+		Msg("Decision Envoy ExtAuth called")
 
 	rul, err := h.r.FindRule(req.URL)
 	if err != nil {

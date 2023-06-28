@@ -1,3 +1,3 @@
 package config
 
-const CurrentRuleSetVersion = "1"
+const CurrentRuleSetVersion = "1alpha2"

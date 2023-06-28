@@ -38,7 +38,7 @@ func TestValidateRuleset(t *testing.T) {
 		{
 			uc:        "everything is valid",
 			confFile:  "test_data/config.yaml",
-			rulesFile: "test_data/ruleset.yaml",
+			rulesFile: "test_data/valid-ruleset.yaml",
 		},
 	} {
 		t.Run(tc.uc, func(t *testing.T) {
@@ -70,6 +70,7 @@ func TestRunValidateRulesCommand(t *testing.T) {
 		uc        string
 		confFile  string
 		rulesFile string
+		proxyMode bool
 		expError  string
 	}{
 		{
@@ -77,9 +78,22 @@ func TestRunValidateRulesCommand(t *testing.T) {
 			expError: "no config file",
 		},
 		{
-			uc:        "everything is valid",
+			uc:        "everything is valid for decision mode usage",
 			confFile:  "test_data/config.yaml",
-			rulesFile: "test_data/ruleset.yaml",
+			rulesFile: "test_data/valid-ruleset.yaml",
+		},
+		{
+			uc:        "invalid for proxy usage",
+			proxyMode: true,
+			confFile:  "test_data/config.yaml",
+			rulesFile: "test_data/invalid-ruleset-for-proxy-usage.yaml",
+			expError:  "no forward_to",
+		},
+		{
+			uc:        "everything is valid for proxy mode usage",
+			proxyMode: true,
+			confFile:  "test_data/config.yaml",
+			rulesFile: "test_data/valid-ruleset.yaml",
 		},
 	} {
 		t.Run(tc.uc, func(t *testing.T) {
@@ -95,10 +109,18 @@ func TestRunValidateRulesCommand(t *testing.T) {
 
 			cmd.Flags().StringP("config", "c", "", "Path to heimdall's configuration file.")
 
+			flags := []string{}
+
 			if len(tc.confFile) != 0 {
-				err := cmd.ParseFlags([]string{"--config", tc.confFile})
-				require.NoError(t, err)
+				flags = append(flags, "--config", tc.confFile)
 			}
+
+			if tc.proxyMode {
+				flags = append(flags, "--proxy-mode")
+			}
+
+			err = cmd.ParseFlags(flags)
+			require.NoError(t, err)
 
 			// WHEN
 			cmd.Run(cmd, []string{tc.rulesFile})

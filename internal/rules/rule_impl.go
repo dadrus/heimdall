@@ -25,23 +25,41 @@ import (
 
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/patternmatcher"
+	"github.com/dadrus/heimdall/internal/rules/rule"
+	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
-type ruleImpl struct {
-	id          string
-	urlMatcher  patternmatcher.PatternMatcher
-	upstreamURL *url.URL
-	methods     []string
-	srcID       string
-	isDefault   bool
-	hash        []byte
-	sc          compositeSubjectCreator
-	sh          compositeSubjectHandler
-	un          compositeSubjectHandler
-	eh          compositeErrorHandler
+//go:generate mockery --name UpstreamURLFactory --structname UpstreamURLFactoryMock
+
+type UpstreamURLFactory interface {
+	CreateURL(from *url.URL) *url.URL
 }
 
-func (r *ruleImpl) Execute(ctx heimdall.Context) (*url.URL, error) {
+type ruleImpl struct {
+	id                 string
+	urlMatcher         patternmatcher.PatternMatcher
+	upstreamURLFactory UpstreamURLFactory
+	methods            []string
+	srcID              string
+	isDefault          bool
+	hash               []byte
+	sc                 compositeSubjectCreator
+	sh                 compositeSubjectHandler
+	un                 compositeSubjectHandler
+	eh                 compositeErrorHandler
+}
+
+func (r *ruleImpl) Mutate(uri *url.URL) (*url.URL, error) {
+	if r.upstreamURLFactory == nil {
+		// happens only if default rule has been applied or if the rule does not have an upstream defined
+		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
+			"no upstream URL defined")
+	}
+
+	return r.upstreamURLFactory.CreateURL(uri), nil
+}
+
+func (r *ruleImpl) Execute(ctx heimdall.Context) (rule.URIMutator, error) {
 	logger := zerolog.Ctx(ctx.AppContext())
 
 	if r.isDefault {
@@ -72,7 +90,7 @@ func (r *ruleImpl) Execute(ctx heimdall.Context) (*url.URL, error) {
 		return nil, err
 	}
 
-	return r.upstreamURL, nil
+	return r, nil
 }
 
 func (r *ruleImpl) MatchesURL(requestURL *url.URL) bool {

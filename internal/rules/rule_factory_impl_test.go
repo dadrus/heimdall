@@ -17,6 +17,7 @@
 package rules
 
 import (
+	"net/url"
 	"testing"
 
 	"github.com/rs/zerolog/log"
@@ -487,7 +488,7 @@ func TestRuleFactoryNew(t *testing.T) {
 			configureMocks(t, handlerFactory)
 
 			// WHEN
-			factory, err := NewRuleFactory(handlerFactory, tc.config, log.Logger)
+			factory, err := NewRuleFactory(handlerFactory, tc.config, config.DecisionMode, log.Logger)
 
 			// THEN
 			var (
@@ -512,6 +513,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 
 	for _, tc := range []struct {
 		uc             string
+		opMode         config.OperationMode
 		config         config2.Rule
 		defaultRule    *ruleImpl
 		configureMocks func(t *testing.T, mhf *mocks3.FactoryMock)
@@ -526,6 +528,48 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
 				assert.Contains(t, err.Error(), "no ID defined")
+			},
+		},
+		{
+			uc:     "in proxy mode, with id, but missing forward_to definition",
+			opMode: config.ProxyMode,
+			config: config2.Rule{ID: "foobar"},
+			assert: func(t *testing.T, err error, rul *ruleImpl) {
+				t.Helper()
+
+				require.Error(t, err)
+				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				assert.Contains(t, err.Error(), "no forward_to")
+			},
+		},
+		{
+			uc:     "in proxy mode, with id and empty forward_to definition",
+			opMode: config.ProxyMode,
+			config: config2.Rule{ID: "foobar", UpstreamURLFactory: &config2.UpstreamURLFactory{}},
+			assert: func(t *testing.T, err error, rul *ruleImpl) {
+				t.Helper()
+
+				require.Error(t, err)
+				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				assert.Contains(t, err.Error(), "missing host")
+			},
+		},
+		{
+			uc:     "in proxy mode, with id and forward_to.host, but empty rewrite definition",
+			opMode: config.ProxyMode,
+			config: config2.Rule{
+				ID: "foobar",
+				UpstreamURLFactory: &config2.UpstreamURLFactory{
+					Host:        "foo.bar",
+					URLRewriter: &config2.URLRewriter{},
+				},
+			},
+			assert: func(t *testing.T, err error, rul *ruleImpl) {
+				t.Helper()
+
+				require.Error(t, err)
+				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				assert.Contains(t, err.Error(), "rewrite is defined")
 			},
 		},
 		{
@@ -548,21 +592,6 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
 				assert.Contains(t, err.Error(), "bad URL pattern")
-			},
-		},
-		{
-			uc: "without default rule and error in upstream url",
-			config: config2.Rule{
-				ID:          "foobar",
-				RuleMatcher: config2.Matcher{URL: "http://foo.bar", Strategy: "glob"},
-				Upstream:    "http://[::1]:namedport",
-			},
-			assert: func(t *testing.T, err error, rul *ruleImpl) {
-				t.Helper()
-
-				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "bad upstream URL")
 			},
 		},
 		{
@@ -712,7 +741,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 			},
 		},
 		{
-			uc: "without default rule but with minimum required configuration",
+			uc: "without default rule but with minimum required configuration in decision mode",
 			config: config2.Rule{
 				ID:          "foobar",
 				RuleMatcher: config2.Matcher{URL: "http://foo.bar", Strategy: "glob"},
@@ -746,6 +775,43 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 			},
 		},
 		{
+			uc:     "without default rule but with minimum required configuration in proxy mode",
+			opMode: config.ProxyMode,
+			config: config2.Rule{
+				ID:                 "foobar",
+				UpstreamURLFactory: &config2.UpstreamURLFactory{Host: "foo.bar"},
+				RuleMatcher:        config2.Matcher{URL: "http://foo.bar", Strategy: "glob"},
+				Execute: []config.MechanismConfig{
+					{"authenticator": "foo"},
+					{"unifier": "bar"},
+				},
+				Methods: []string{"FOO", "BAR"},
+			},
+			configureMocks: func(t *testing.T, mhf *mocks3.FactoryMock) {
+				t.Helper()
+
+				mhf.EXPECT().CreateAuthenticator("test", "foo", mock.Anything).Return(&mocks2.AuthenticatorMock{}, nil)
+				mhf.EXPECT().CreateUnifier("test", "bar", mock.Anything).Return(&mocks7.UnifierMock{}, nil)
+			},
+			assert: func(t *testing.T, err error, rul *ruleImpl) {
+				t.Helper()
+
+				require.NoError(t, err)
+				require.NotNil(t, rul)
+
+				assert.Equal(t, "test", rul.srcID)
+				assert.False(t, rul.isDefault)
+				assert.Equal(t, "foobar", rul.id)
+				assert.NotNil(t, rul.urlMatcher)
+				assert.ElementsMatch(t, rul.methods, []string{"FOO", "BAR"})
+				assert.Len(t, rul.sc, 1)
+				assert.Len(t, rul.sh, 0)
+				assert.Len(t, rul.un, 1)
+				assert.Len(t, rul.eh, 0)
+				assert.NotNil(t, rul.upstreamURLFactory)
+			},
+		},
+		{
 			uc: "with default rule and with id and url only",
 			config: config2.Rule{
 				ID:          "foobar",
@@ -776,11 +842,10 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 			},
 		},
 		{
-			uc: "with default rule and with all attributes defined by the rule itself",
+			uc: "with default rule and with all attributes defined by the rule itself in decision mode",
 			config: config2.Rule{
 				ID:          "foobar",
 				RuleMatcher: config2.Matcher{URL: "http://foo.bar", Strategy: "glob"},
-				Upstream:    "http://bar.foo",
 				Execute: []config.MechanismConfig{
 					{"authenticator": "foo"},
 					{"contextualizer": "bar"},
@@ -824,7 +889,6 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				assert.Equal(t, "foobar", rul.id)
 				assert.NotNil(t, rul.urlMatcher)
 				assert.ElementsMatch(t, rul.methods, []string{"BAR", "BAZ"})
-				assert.Equal(t, "http://bar.foo", rul.upstreamURL.String())
 
 				// nil checks above mean the responses from the mockHandlerFactory are used
 				// and not the values from the default rule
@@ -837,6 +901,85 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				assert.NotNil(t, rul.un[0])
 				require.Len(t, rul.eh, 1)
 				assert.NotNil(t, rul.eh[0])
+			},
+		},
+		{
+			uc:     "with default rule and with all attributes defined by the rule itself in proxy mode",
+			opMode: config.ProxyMode,
+			config: config2.Rule{
+				ID:          "foobar",
+				RuleMatcher: config2.Matcher{URL: "http://foo.bar", Strategy: "glob"},
+				UpstreamURLFactory: &config2.UpstreamURLFactory{
+					Host: "bar.foo",
+					URLRewriter: &config2.URLRewriter{
+						Scheme:              "https",
+						PathPrefixToCut:     "/foo",
+						PathPrefixToAdd:     "/baz",
+						QueryParamsToRemove: []string{"bar"},
+					},
+				},
+				Execute: []config.MechanismConfig{
+					{"authenticator": "foo"},
+					{"contextualizer": "bar"},
+					{"authorizer": "zab"},
+					{"unifier": "baz"},
+				},
+				ErrorHandler: []config.MechanismConfig{
+					{"error_handler": "foo"},
+				},
+				Methods: []string{"BAR", "BAZ"},
+			},
+			defaultRule: &ruleImpl{
+				methods: []string{"FOO"},
+				sc:      compositeSubjectCreator{&mocks.SubjectCreatorMock{}},
+				sh:      compositeSubjectHandler{&mocks.SubjectHandlerMock{}},
+				un:      compositeSubjectHandler{&mocks.SubjectHandlerMock{}},
+				eh:      compositeErrorHandler{&mocks.ErrorHandlerMock{}},
+			},
+			configureMocks: func(t *testing.T, mhf *mocks3.FactoryMock) {
+				t.Helper()
+
+				mhf.EXPECT().CreateAuthenticator("test", "foo", mock.Anything).
+					Return(&mocks2.AuthenticatorMock{}, nil)
+				mhf.EXPECT().CreateContextualizer("test", "bar", mock.Anything).
+					Return(&mocks5.ContextualizerMock{}, nil)
+				mhf.EXPECT().CreateAuthorizer("test", "zab", mock.Anything).
+					Return(&mocks4.AuthorizerMock{}, nil)
+				mhf.EXPECT().CreateUnifier("test", "baz", mock.Anything).
+					Return(&mocks7.UnifierMock{}, nil)
+				mhf.EXPECT().CreateErrorHandler("test", "foo", mock.Anything).
+					Return(&mocks6.ErrorHandlerMock{}, nil)
+			},
+			assert: func(t *testing.T, err error, rul *ruleImpl) {
+				t.Helper()
+
+				require.NoError(t, err)
+				require.NotNil(t, rul)
+
+				assert.Equal(t, "test", rul.srcID)
+				assert.False(t, rul.isDefault)
+				assert.Equal(t, "foobar", rul.id)
+				assert.NotNil(t, rul.urlMatcher)
+				assert.ElementsMatch(t, rul.methods, []string{"BAR", "BAZ"})
+				assert.Equal(t, "https://bar.foo/baz/bar?foo=bar", rul.upstreamURLFactory.CreateURL(&url.URL{
+					Scheme:   "http",
+					Host:     "foo.bar:8888",
+					Path:     "/foo/bar",
+					RawQuery: url.Values{"bar": []string{"foo"}, "foo": []string{"bar"}}.Encode(),
+				}).String())
+
+				// nil checks above mean the responses from the mockHandlerFactory are used
+				// and not the values from the default rule
+				require.Len(t, rul.sc, 1)
+				assert.NotNil(t, rul.sc[0])
+				require.Len(t, rul.sh, 2)
+				assert.NotNil(t, rul.sh[0])
+				assert.NotNil(t, rul.sh[1])
+				require.Len(t, rul.un, 1)
+				assert.NotNil(t, rul.un[0])
+				require.Len(t, rul.eh, 1)
+				assert.NotNil(t, rul.eh[0])
+				assert.NotNil(t, rul.upstreamURLFactory)
 			},
 		},
 		{
@@ -966,6 +1109,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 			factory := &ruleFactory{
 				hf:             handlerFactory,
 				defaultRule:    tc.defaultRule,
+				mode:           tc.opMode,
 				logger:         log.Logger,
 				hasDefaultRule: x.IfThenElse(tc.defaultRule != nil, true, false),
 			}
