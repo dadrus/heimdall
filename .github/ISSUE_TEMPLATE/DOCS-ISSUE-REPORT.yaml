@@ -1,0 +1,44 @@
+name: Bug Report
+description: File a documentation issue report
+labels: [bug, documentation]
+body:
+  - id: thanks
+    type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to fill out this report!
+
+  - id: checklist
+    type: checkboxes
+    attributes:
+      label: Preflight checklist
+      options:
+        - label: I agree to follow this project's [Code of Conduct](https://github.com/dadrus/heimdall/blob/main/CODE_OF_CONDUCT.md).
+          required: true
+        - label: I have read and am following this repository's [Contribution Guidelines](https://github.com/dadrus/heimdall/blob/main/CONTRIBUTING.md)."
+          required: true
+
+  - id: what-happened
+    type: textarea
+    attributes:
+      label: Describe the issue
+      description: A clear and concise description of what is missing or wrong. Also tell us, what did you expect to see in the documentation.
+      placeholder: Tell us your observation!
+    validations:
+      required: true
+
+  - id: version
+    type: input
+    attributes:
+      label: Version
+      description: | 
+        What version of heimdall are you running? Please provide the output from `heimdall --version`.
+    validations:
+      required: true
+
+  - id: additional
+    type: textarea
+    attributes:
+      label: Additional Context
+      description: Add any other context information about the issue here.
+
