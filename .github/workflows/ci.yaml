@@ -282,7 +282,6 @@ jobs:
       - name: Prepare image version
         id: image-version
         run: |
- #         export version=$(echo ${{ needs.prepare-release.outputs.tag_name }} |  sed 's/v//g')
           echo ::set-output name=result::0.10.0-alpha
       - name: Checkout repository
         uses: actions/checkout@v3
