@@ -18,7 +18,6 @@ package kubernetes
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -40,8 +39,6 @@ import (
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
-
-var ErrBadAuthClass = errors.New("bad authClass in a RuleSet")
 
 type ConfigFactory func() (*rest.Config, error)
 
@@ -107,7 +104,7 @@ func newProvider(
 
 func (p *provider) newController(ctx context.Context, namespace string) cache.Controller {
 	repository := p.cl.RuleSetRepository(namespace)
-	_, controller := cache.NewTransformingInformer(
+	_, controller := cache.NewInformer(
 		&cache.ListWatch{
 			ListFunc:  func(opts metav1.ListOptions) (runtime.Object, error) { return repository.List(ctx, opts) },
 			WatchFunc: func(opts metav1.ListOptions) (watch.Interface, error) { return repository.Watch(ctx, opts) },
@@ -115,25 +112,9 @@ func (p *provider) newController(ctx context.Context, namespace string) cache.Co
 		&v1alpha2.RuleSet{},
 		0,
 		cache.ResourceEventHandlerFuncs{AddFunc: p.addRuleSet, DeleteFunc: p.deleteRuleSet, UpdateFunc: p.updateRuleSet},
-		p.filterAuthClass,
 	)
 
 	return controller
-}
-
-func (p *provider) filterAuthClass(input any) (any, error) {
-	// should never be of a different type. ok if panics
-	rs := input.(*v1alpha2.RuleSet) // nolint: forcetypeassert
-
-	if rs.Spec.AuthClassName != p.ac {
-		p.l.Info().
-			Msgf("Ignoring ruleset due to authClassName mismatch (namespace=%s, name=%s, uid=%s)",
-				rs.Namespace, rs.Name, rs.UID)
-
-		return nil, ErrBadAuthClass
-	}
-
-	return input, nil
 }
 
 func (p *provider) Start(_ context.Context) error {
@@ -195,6 +176,14 @@ func (p *provider) updateRuleSet(_, newObj any) {
 	// should never be of a different type. ok if panics
 	rs := newObj.(*v1alpha2.RuleSet) // nolint: forcetypeassert
 
+	if rs.Spec.AuthClassName != p.ac {
+		p.l.Info().
+			Msgf("Ignoring ruleset creation due to authClassName mismatch (namespace=%s, name=%s, uid=%s)",
+				rs.Namespace, rs.Name, rs.UID)
+
+		return
+	}
+
 	conf := &config2.RuleSet{
 		MetaData: config2.MetaData{
 			Source:  fmt.Sprintf("%s:%s:%s", ProviderType, rs.Namespace, rs.UID),
@@ -221,6 +210,14 @@ func (p *provider) addRuleSet(obj any) {
 	// should never be of a different type. ok if panics
 	rs := obj.(*v1alpha2.RuleSet) // nolint: forcetypeassert
 
+	if rs.Spec.AuthClassName != p.ac {
+		p.l.Info().
+			Msgf("Ignoring ruleset creation due to authClassName mismatch (namespace=%s, name=%s, uid=%s)",
+				rs.Namespace, rs.Name, rs.UID)
+
+		return
+	}
+
 	conf := &config2.RuleSet{
 		MetaData: config2.MetaData{
 			Source:  fmt.Sprintf("%s:%s:%s", ProviderType, rs.Namespace, rs.UID),
@@ -246,6 +243,14 @@ func (p *provider) addRuleSet(obj any) {
 func (p *provider) deleteRuleSet(obj any) {
 	// should never be of a different type. ok if panics
 	rs := obj.(*v1alpha2.RuleSet) // nolint: forcetypeassert
+
+	if rs.Spec.AuthClassName != p.ac {
+		p.l.Info().
+			Msgf("Ignoring ruleset creation due to authClassName mismatch (namespace=%s, name=%s, uid=%s)",
+				rs.Namespace, rs.Name, rs.UID)
+
+		return
+	}
 
 	conf := &config2.RuleSet{
 		MetaData: config2.MetaData{

@@ -204,7 +204,7 @@ endpoints:
 				time.Sleep(250 * time.Millisecond)
 
 				messages := logs.String()
-				assert.Contains(t, messages, "name resolution")
+				assert.Contains(t, messages, "dial tcp")
 				assert.Contains(t, messages, "No updates received")
 			},
 		},

@@ -1171,3 +1171,96 @@ func TestRuleFactoryConfigExtraction(t *testing.T) {
 		})
 	}
 }
+
+func TestRuleFactoryProxyModeApplicability(t *testing.T) {
+	t.Parallel()
+
+	for _, tc := range []struct {
+		uc          string
+		ruleConfig  config2.Rule
+		shouldError bool
+	}{
+		{
+			uc:          "no upstream url factory",
+			ruleConfig:  config2.Rule{},
+			shouldError: true,
+		},
+		{
+			uc:          "no host defined",
+			ruleConfig:  config2.Rule{UpstreamURLFactory: &config2.UpstreamURLFactory{}},
+			shouldError: true,
+		},
+		{
+			uc:         "with host but no rewrite options",
+			ruleConfig: config2.Rule{UpstreamURLFactory: &config2.UpstreamURLFactory{Host: "foo.bar"}},
+		},
+		{
+			uc: "with host and empty rewrite option",
+			ruleConfig: config2.Rule{
+				UpstreamURLFactory: &config2.UpstreamURLFactory{
+					Host:        "foo.bar",
+					URLRewriter: &config2.URLRewriter{},
+				},
+			},
+			shouldError: true,
+		},
+		{
+			uc: "with host and scheme rewrite option",
+			ruleConfig: config2.Rule{
+				UpstreamURLFactory: &config2.UpstreamURLFactory{
+					Host:        "foo.bar",
+					URLRewriter: &config2.URLRewriter{Scheme: "https"},
+				},
+			},
+		},
+		{
+			uc: "with host and strip path prefix rewrite option",
+			ruleConfig: config2.Rule{
+				UpstreamURLFactory: &config2.UpstreamURLFactory{
+					Host:        "foo.bar",
+					URLRewriter: &config2.URLRewriter{PathPrefixToCut: "/foo"},
+				},
+			},
+		},
+		{
+			uc: "with host and add path prefix rewrite option",
+			ruleConfig: config2.Rule{
+				UpstreamURLFactory: &config2.UpstreamURLFactory{
+					Host:        "foo.bar",
+					URLRewriter: &config2.URLRewriter{PathPrefixToAdd: "/foo"},
+				},
+			},
+		},
+		{
+			uc: "with host and empty strip query parameter rewrite option",
+			ruleConfig: config2.Rule{
+				UpstreamURLFactory: &config2.UpstreamURLFactory{
+					Host:        "foo.bar",
+					URLRewriter: &config2.URLRewriter{QueryParamsToRemove: []string{}},
+				},
+			},
+			shouldError: true,
+		},
+		{
+			uc: "with host and strip query parameter rewrite option",
+			ruleConfig: config2.Rule{
+				UpstreamURLFactory: &config2.UpstreamURLFactory{
+					Host:        "foo.bar",
+					URLRewriter: &config2.URLRewriter{QueryParamsToRemove: []string{"foo"}},
+				},
+			},
+		},
+	} {
+		t.Run(tc.uc, func(t *testing.T) {
+			// WHEN
+			err := checkProxyModeApplicability("test", tc.ruleConfig)
+
+			// THEN
+			if tc.shouldError {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
