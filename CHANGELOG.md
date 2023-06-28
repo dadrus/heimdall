@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.10.0-alpha](https://github.com/dadrus/heimdall/compare/v0.9.1-alpha...v0.10.0-alpha) (2023-06-28)
+
+
+### ⚠ BREAKING CHANGES
+
+* Support for URL rewriting while forwarding the processed request to the upstream service ([#703](https://github.com/dadrus/heimdall/issues/703))
+
+### Features
+
+* Support for automatically Helm roll deployments ([#731](https://github.com/dadrus/heimdall/issues/731)) ([bd2d438](https://github.com/dadrus/heimdall/commit/bd2d43815893aacb863aeaf5eec3f183fa71fde1))
+* Support for URL rewriting while forwarding the processed request to the upstream service ([#703](https://github.com/dadrus/heimdall/issues/703)) ([be62972](https://github.com/dadrus/heimdall/commit/be62972b4cd07f96fce581ee16901dd2b586456a))
+
 ## [0.9.1-alpha](https://github.com/dadrus/heimdall/compare/v0.9.0-alpha...v0.9.1-alpha) (2023-06-24)
 
 
