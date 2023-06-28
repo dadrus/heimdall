@@ -274,16 +274,16 @@ jobs:
 
   release-helm-chart:
     runs-on: ubuntu-22.04
-    needs:
-      - prepare-release
-      - release-docker-images
-    if: needs.prepare-release.outputs.release_created
+#    needs:
+#      - prepare-release
+#      - release-docker-images
+#    if: needs.prepare-release.outputs.release_created
     steps:
       - name: Prepare image version
         id: image-version
         run: |
-          export version=$(echo ${{ needs.prepare-release.outputs.tag_name }} |  sed 's/v//g')
-          echo ::set-output name=result::$version
+ #         export version=$(echo ${{ needs.prepare-release.outputs.tag_name }} |  sed 's/v//g')
+          echo ::set-output name=result::0.10.0-alpha
       - name: Checkout repository
         uses: actions/checkout@v3
       - name: Publish Helm Chart
