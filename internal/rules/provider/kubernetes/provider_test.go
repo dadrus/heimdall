@@ -114,6 +114,34 @@ func TestNewProvider(t *testing.T) {
 	}
 }
 
+func TestProviderRuleSetFiltering(t *testing.T) {
+	t.Parallel()
+
+	for _, tc := range []struct {
+		uc            string
+		lifecycleFunc func(prov *provider) func(obj any)
+	}{
+		{uc: "new filtered", lifecycleFunc: func(prov *provider) func(obj any) { return prov.addRuleSet }},
+		{uc: "update filtered", lifecycleFunc: func(prov *provider) func(obj any) {
+			return func(obj any) { prov.updateRuleSet(nil, obj) }
+		}},
+		{uc: "delete filtered", lifecycleFunc: func(prov *provider) func(obj any) { return prov.deleteRuleSet }},
+	} {
+		t.Run(tc.uc, func(t *testing.T) {
+			// GIVEN
+			logs := &strings.Builder{}
+			prov := &provider{ac: "foo", l: zerolog.New(logs)}
+			rs := &v1alpha2.RuleSet{Spec: v1alpha2.RuleSetSpec{AuthClassName: "bar"}}
+
+			// WHEN
+			tc.lifecycleFunc(prov)(rs)
+
+			// THEN
+			require.Contains(t, logs.String(), "Ignoring ruleset")
+		})
+	}
+}
+
 func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 	type ResponseWriter func(t *testing.T, watchRequest bool, w http.ResponseWriter)
 
@@ -132,118 +160,6 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 		setupProcessor func(t *testing.T, processor *mocks.RuleSetProcessorMock)
 		assert         func(t *testing.T, logs fmt.Stringer, processor *mocks.RuleSetProcessorMock)
 	}{
-		{
-			uc:   "rule set filtered due to wrong auth class",
-			conf: []byte("auth_class: foo"),
-			writeResponse: func() ResponseWriter {
-				callIdx := 0
-
-				return func(t *testing.T, watchRequest bool, w http.ResponseWriter) {
-					t.Helper()
-
-					rls := v1alpha2.RuleSetList{
-						TypeMeta: metav1.TypeMeta{
-							APIVersion: fmt.Sprintf("%s/%s", v1alpha2.GroupName, v1alpha2.GroupVersion),
-							Kind:       "RuleSetList",
-						},
-						ListMeta: metav1.ListMeta{
-							ResourceVersion: "735820",
-						},
-						Items: []v1alpha2.RuleSet{
-							{
-								TypeMeta: metav1.TypeMeta{
-									APIVersion: fmt.Sprintf("%s/%s", v1alpha2.GroupName, v1alpha2.GroupVersion),
-									Kind:       "RuleSet",
-								},
-								ObjectMeta: metav1.ObjectMeta{
-									Name:              "test-rule",
-									Namespace:         "foo",
-									ResourceVersion:   "702666",
-									UID:               "dfb2a2f1-1ad2-4d8c-8456-516fc94abb86",
-									Generation:        1,
-									CreationTimestamp: metav1.NewTime(time.Now()),
-								},
-								Spec: v1alpha2.RuleSetSpec{
-									AuthClassName: "bar",
-									Rules: []config2.Rule{
-										{
-											ID: "test",
-											RuleMatcher: config2.Matcher{
-												URL:      "http://foo.bar",
-												Strategy: "glob",
-											},
-											UpstreamURLFactory: &config2.UpstreamURLFactory{
-												Host: "baz",
-												URLRewriter: &config2.URLRewriter{
-													Scheme:              "http",
-													PathPrefixToCut:     "/foo",
-													PathPrefixToAdd:     "/bar",
-													QueryParamsToRemove: []string{"baz"},
-												},
-											},
-											Methods: []string{http.MethodGet},
-											Execute: []config.MechanismConfig{
-												{"authenticator": "authn"},
-												{"authorizer": "authz"},
-											},
-										},
-									},
-								},
-							},
-						},
-					}
-
-					rawRls, err := json.Marshal(rls)
-					require.NoError(t, err)
-
-					var evt metav1.WatchEvent
-
-					err = metav1.Convert_watch_Event_To_v1_WatchEvent(
-						&watch.Event{
-							Type: watch.Bookmark,
-							Object: &v1alpha2.RuleSet{
-								TypeMeta: metav1.TypeMeta{
-									APIVersion: fmt.Sprintf("%s/%s", v1alpha2.GroupName, v1alpha2.GroupVersion),
-									Kind:       "RuleSet",
-								},
-								ObjectMeta: metav1.ObjectMeta{
-									ResourceVersion: "715382",
-								},
-							},
-						},
-						&evt, nil)
-					require.NoError(t, err)
-
-					rawEvt, err := json.Marshal(evt)
-					require.NoError(t, err)
-
-					w.Header().Set("Content-Type", "application/json")
-					if watchRequest {
-						if callIdx == 0 {
-							_, err := w.Write(rawEvt)
-							require.NoError(t, err)
-						} else {
-							time.Sleep(1 * time.Second)
-							w.WriteHeader(http.StatusInternalServerError)
-						}
-
-						callIdx++
-					} else {
-						_, err := w.Write(rawRls)
-						require.NoError(t, err)
-					}
-				}
-			}(),
-			assert: func(t *testing.T, logs fmt.Stringer, processor *mocks.RuleSetProcessorMock) {
-				t.Helper()
-
-				time.Sleep(250 * time.Millisecond)
-
-				messages := logs.String()
-				assert.Contains(t, messages, "Ignoring ruleset")
-				assert.NotContains(t, messages, "Rule set changed")
-			},
-		},
 		{
 			uc:   "rule set added",
 			conf: []byte("auth_class: bar"),
