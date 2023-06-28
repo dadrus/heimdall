@@ -16,7 +16,7 @@ import (
 
 // NewValidateRulesCommand represents the "validate rules" command.
 func NewValidateRulesCommand() *cobra.Command {
-	return &cobra.Command{
+	cmd := &cobra.Command{
 		Use:     "rules [path to ruleset]",
 		Short:   "Validates heimdall's ruleset",
 		Args:    cobra.ExactArgs(1),
@@ -31,6 +31,11 @@ func NewValidateRulesCommand() *cobra.Command {
 			cmd.Println("Rule set is valid")
 		},
 	}
+
+	cmd.PersistentFlags().Bool("proxy-mode", false,
+		"If specified, rule set validation considers usage in proxy operation mode")
+
+	return cmd
 }
 
 func validateRuleSet(cmd *cobra.Command, args []string) error {
@@ -42,6 +47,11 @@ func validateRuleSet(cmd *cobra.Command, args []string) error {
 	configPath, _ := cmd.Flags().GetString("config")
 	if len(configPath) == 0 {
 		return ErrNoConfigFile
+	}
+
+	opMode := config.DecisionMode
+	if proxyMode, _ := cmd.Flags().GetBool("proxy-mode"); proxyMode {
+		opMode = config.ProxyMode
 	}
 
 	conf, err := config.NewConfiguration(
@@ -59,7 +69,7 @@ func validateRuleSet(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	rFactory, err := rules.NewRuleFactory(mFactory, conf, logger)
+	rFactory, err := rules.NewRuleFactory(mFactory, conf, opMode, logger)
 	if err != nil {
 		return err
 	}
