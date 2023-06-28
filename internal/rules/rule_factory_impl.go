@@ -220,6 +220,12 @@ func checkProxyModeApplicability(srcID string, ruleConfig config2.Rule) error {
 			ruleConfig.ID, srcID)
 	}
 
+	if len(ruleConfig.UpstreamURLFactory.Host) == 0 {
+		return errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+			"missing host definition in forward_to in rule ID=%s from %s",
+			ruleConfig.ID, srcID)
+	}
+
 	urlRewriter := ruleConfig.UpstreamURLFactory.URLRewriter
 	if urlRewriter == nil {
 		return nil
