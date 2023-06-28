@@ -24,10 +24,13 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/dadrus/heimdall/internal/heimdall"
 	heimdallmocks "github.com/dadrus/heimdall/internal/heimdall/mocks"
+	"github.com/dadrus/heimdall/internal/rules/config"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
 	"github.com/dadrus/heimdall/internal/rules/mocks"
 	"github.com/dadrus/heimdall/internal/rules/patternmatcher"
+	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
@@ -172,9 +175,9 @@ func TestRuleExecute(t *testing.T) {
 	t.Parallel()
 
 	for _, tc := range []struct {
-		uc             string
-		upstreamURL    *url.URL
-		configureMocks func(
+		uc                 string
+		upstreamURLFactory UpstreamURLFactory
+		configureMocks     func(
 			t *testing.T,
 			ctx *heimdallmocks.ContextMock,
 			authenticator *mocks.SubjectCreatorMock,
@@ -182,11 +185,10 @@ func TestRuleExecute(t *testing.T) {
 			unifier *mocks.SubjectHandlerMock,
 			errHandler *mocks.ErrorHandlerMock,
 		)
-		assert func(t *testing.T, err error, upstreamURL *url.URL)
+		assert func(t *testing.T, err error, mutator rule.URIMutator)
 	}{
 		{
-			uc:          "authenticator fails, but error handler succeeds",
-			upstreamURL: &url.URL{Scheme: "http", Host: "test.local", Path: "foo"},
+			uc: "authenticator fails, but error handler succeeds",
 			configureMocks: func(t *testing.T, ctx *heimdallmocks.ContextMock, authenticator *mocks.SubjectCreatorMock,
 				authorizer *mocks.SubjectHandlerMock, unifier *mocks.SubjectHandlerMock,
 				errHandler *mocks.ErrorHandlerMock,
@@ -197,16 +199,15 @@ func TestRuleExecute(t *testing.T) {
 				authenticator.EXPECT().IsFallbackOnErrorAllowed().Return(false)
 				errHandler.EXPECT().Execute(ctx, testsupport.ErrTestPurpose).Return(true, nil)
 			},
-			assert: func(t *testing.T, err error, upstreamURL *url.URL) {
+			assert: func(t *testing.T, err error, mutator rule.URIMutator) {
 				t.Helper()
 
 				require.NoError(t, err)
-				assert.Nil(t, upstreamURL)
+				assert.Nil(t, mutator)
 			},
 		},
 		{
-			uc:          "authenticator fails, and error handler fails",
-			upstreamURL: &url.URL{Scheme: "http", Host: "test.local", Path: "foo"},
+			uc: "authenticator fails, and error handler fails",
 			configureMocks: func(t *testing.T, ctx *heimdallmocks.ContextMock, authenticator *mocks.SubjectCreatorMock,
 				authorizer *mocks.SubjectHandlerMock, unifier *mocks.SubjectHandlerMock,
 				errHandler *mocks.ErrorHandlerMock,
@@ -217,17 +218,16 @@ func TestRuleExecute(t *testing.T) {
 				authenticator.EXPECT().IsFallbackOnErrorAllowed().Return(false)
 				errHandler.EXPECT().Execute(ctx, testsupport.ErrTestPurpose).Return(true, testsupport.ErrTestPurpose2)
 			},
-			assert: func(t *testing.T, err error, upstreamURL *url.URL) {
+			assert: func(t *testing.T, err error, mutator rule.URIMutator) {
 				t.Helper()
 
 				require.Error(t, err)
 				assert.ErrorIs(t, err, testsupport.ErrTestPurpose2)
-				assert.Nil(t, upstreamURL)
+				assert.Nil(t, mutator)
 			},
 		},
 		{
-			uc:          "authenticator succeeds, authorizer fails, but error handler succeeds",
-			upstreamURL: &url.URL{Scheme: "http", Host: "test.local", Path: "foo"},
+			uc: "authenticator succeeds, authorizer fails, but error handler succeeds",
 			configureMocks: func(t *testing.T, ctx *heimdallmocks.ContextMock, authenticator *mocks.SubjectCreatorMock,
 				authorizer *mocks.SubjectHandlerMock, unifier *mocks.SubjectHandlerMock,
 				errHandler *mocks.ErrorHandlerMock,
@@ -241,16 +241,15 @@ func TestRuleExecute(t *testing.T) {
 				authorizer.EXPECT().ContinueOnError().Return(false)
 				errHandler.EXPECT().Execute(ctx, testsupport.ErrTestPurpose).Return(true, nil)
 			},
-			assert: func(t *testing.T, err error, upstreamURL *url.URL) {
+			assert: func(t *testing.T, err error, mutator rule.URIMutator) {
 				t.Helper()
 
 				require.NoError(t, err)
-				assert.Nil(t, upstreamURL)
+				assert.Nil(t, mutator)
 			},
 		},
 		{
-			uc:          "authenticator succeeds, authorizer fails and error handler fails",
-			upstreamURL: &url.URL{Scheme: "http", Host: "test.local", Path: "foo"},
+			uc: "authenticator succeeds, authorizer fails and error handler fails",
 			configureMocks: func(t *testing.T, ctx *heimdallmocks.ContextMock, authenticator *mocks.SubjectCreatorMock,
 				authorizer *mocks.SubjectHandlerMock, unifier *mocks.SubjectHandlerMock,
 				errHandler *mocks.ErrorHandlerMock,
@@ -264,17 +263,16 @@ func TestRuleExecute(t *testing.T) {
 				authorizer.EXPECT().ContinueOnError().Return(false)
 				errHandler.EXPECT().Execute(ctx, testsupport.ErrTestPurpose).Return(true, testsupport.ErrTestPurpose2)
 			},
-			assert: func(t *testing.T, err error, upstreamURL *url.URL) {
+			assert: func(t *testing.T, err error, mutator rule.URIMutator) {
 				t.Helper()
 
 				require.Error(t, err)
 				assert.ErrorIs(t, err, testsupport.ErrTestPurpose2)
-				assert.Nil(t, upstreamURL)
+				assert.Nil(t, mutator)
 			},
 		},
 		{
-			uc:          "authenticator succeeds, authorizer succeeds, unifier fails, but error handler succeeds",
-			upstreamURL: &url.URL{Scheme: "http", Host: "test.local", Path: "foo"},
+			uc: "authenticator succeeds, authorizer succeeds, unifier fails, but error handler succeeds",
 			configureMocks: func(t *testing.T, ctx *heimdallmocks.ContextMock, authenticator *mocks.SubjectCreatorMock,
 				authorizer *mocks.SubjectHandlerMock, unifier *mocks.SubjectHandlerMock,
 				errHandler *mocks.ErrorHandlerMock,
@@ -289,16 +287,15 @@ func TestRuleExecute(t *testing.T) {
 				unifier.EXPECT().ContinueOnError().Return(false)
 				errHandler.EXPECT().Execute(ctx, testsupport.ErrTestPurpose).Return(true, nil)
 			},
-			assert: func(t *testing.T, err error, upstreamURL *url.URL) {
+			assert: func(t *testing.T, err error, mutator rule.URIMutator) {
 				t.Helper()
 
 				require.NoError(t, err)
-				assert.Nil(t, upstreamURL)
+				assert.Nil(t, mutator)
 			},
 		},
 		{
-			uc:          "authenticator succeeds, authorizer succeeds, unifier fails and error handler fails",
-			upstreamURL: &url.URL{Scheme: "http", Host: "test.local", Path: "foo"},
+			uc: "authenticator succeeds, authorizer succeeds, unifier fails and error handler fails",
 			configureMocks: func(t *testing.T, ctx *heimdallmocks.ContextMock, authenticator *mocks.SubjectCreatorMock,
 				authorizer *mocks.SubjectHandlerMock, unifier *mocks.SubjectHandlerMock,
 				errHandler *mocks.ErrorHandlerMock,
@@ -313,17 +310,19 @@ func TestRuleExecute(t *testing.T) {
 				unifier.EXPECT().ContinueOnError().Return(false)
 				errHandler.EXPECT().Execute(ctx, testsupport.ErrTestPurpose).Return(true, testsupport.ErrTestPurpose2)
 			},
-			assert: func(t *testing.T, err error, upstreamURL *url.URL) {
+			assert: func(t *testing.T, err error, mutator rule.URIMutator) {
 				t.Helper()
 
 				require.Error(t, err)
 				assert.ErrorIs(t, err, testsupport.ErrTestPurpose2)
-				assert.Nil(t, upstreamURL)
+				assert.Nil(t, mutator)
 			},
 		},
 		{
-			uc:          "all handler succeed",
-			upstreamURL: &url.URL{Scheme: "http", Host: "test.local", Path: "foo"},
+			uc: "all handler succeed",
+			upstreamURLFactory: &config.UpstreamURLFactory{
+				Host: "foo.bar",
+			},
 			configureMocks: func(t *testing.T, ctx *heimdallmocks.ContextMock, authenticator *mocks.SubjectCreatorMock,
 				authorizer *mocks.SubjectHandlerMock, unifier *mocks.SubjectHandlerMock,
 				errHandler *mocks.ErrorHandlerMock,
@@ -336,11 +335,44 @@ func TestRuleExecute(t *testing.T) {
 				authorizer.EXPECT().Execute(ctx, sub).Return(nil)
 				unifier.EXPECT().Execute(ctx, sub).Return(nil)
 			},
-			assert: func(t *testing.T, err error, upstreamURL *url.URL) {
+			assert: func(t *testing.T, err error, mutator rule.URIMutator) {
 				t.Helper()
 
 				require.NoError(t, err)
-				assert.Equal(t, &url.URL{Scheme: "http", Host: "test.local", Path: "foo"}, upstreamURL)
+
+				upstreamURL, err := mutator.Mutate(&url.URL{Scheme: "http", Host: "foo.local", Path: "/foo"})
+				require.NoError(t, err)
+
+				assert.Equal(t, &url.URL{Scheme: "http", Host: "foo.bar", Path: "/foo"}, upstreamURL)
+			},
+		},
+		{
+			uc: "stripping path prefix",
+			upstreamURLFactory: &config.UpstreamURLFactory{
+				Host:        "foo.bar",
+				URLRewriter: &config.URLRewriter{PathPrefixToCut: "/api/v1"},
+			},
+			configureMocks: func(t *testing.T, ctx *heimdallmocks.ContextMock, authenticator *mocks.SubjectCreatorMock,
+				authorizer *mocks.SubjectHandlerMock, unifier *mocks.SubjectHandlerMock,
+				errHandler *mocks.ErrorHandlerMock,
+			) {
+				t.Helper()
+
+				sub := &subject.Subject{ID: "Foo"}
+
+				authenticator.EXPECT().Execute(ctx).Return(sub, nil)
+				authorizer.EXPECT().Execute(ctx, sub).Return(nil)
+				unifier.EXPECT().Execute(ctx, sub).Return(nil)
+			},
+			assert: func(t *testing.T, err error, mutator rule.URIMutator) {
+				t.Helper()
+
+				require.NoError(t, err)
+
+				upstreamURL, err := mutator.Mutate(&url.URL{Scheme: "http", Host: "foo.local", Path: "/api/v1/foo"})
+				require.NoError(t, err)
+
+				assert.Equal(t, &url.URL{Scheme: "http", Host: "foo.bar", Path: "/foo"}, upstreamURL)
 			},
 		},
 	} {
@@ -355,20 +387,59 @@ func TestRuleExecute(t *testing.T) {
 			errHandler := mocks.NewErrorHandlerMock(t)
 
 			rul := &ruleImpl{
-				upstreamURL: tc.upstreamURL,
-				sc:          compositeSubjectCreator{authenticator},
-				sh:          compositeSubjectHandler{authorizer},
-				un:          compositeSubjectHandler{unifier},
-				eh:          compositeErrorHandler{errHandler},
+				upstreamURLFactory: tc.upstreamURLFactory,
+				sc:                 compositeSubjectCreator{authenticator},
+				sh:                 compositeSubjectHandler{authorizer},
+				un:                 compositeSubjectHandler{unifier},
+				eh:                 compositeErrorHandler{errHandler},
 			}
 
 			tc.configureMocks(t, ctx, authenticator, authorizer, unifier, errHandler)
 
 			// WHEN
-			upstreamURL, err := rul.Execute(ctx)
+			urlMutator, err := rul.Execute(ctx)
 
 			// THEN
-			tc.assert(t, err, upstreamURL)
+			tc.assert(t, err, urlMutator)
+		})
+	}
+}
+
+func TestRuleMutate(t *testing.T) {
+	t.Parallel()
+
+	origURL := &url.URL{Scheme: "http", Host: "foo.bar", Path: "/foo"}
+
+	for _, tc := range []struct {
+		uc         string
+		urlFactory UpstreamURLFactory
+		err        error
+	}{
+		{
+			uc:  "no upstream url factory defined",
+			err: heimdall.ErrConfiguration,
+		},
+		{
+			uc: "upstream url factory defined",
+			urlFactory: func() UpstreamURLFactory {
+				factoryMock := mocks.NewUpstreamURLFactoryMock(t)
+				factoryMock.EXPECT().CreateURL(origURL).Return(nil)
+
+				return factoryMock
+			}(),
+		},
+	} {
+		t.Run(tc.uc, func(t *testing.T) {
+			// GIVEN
+			rul := &ruleImpl{upstreamURLFactory: tc.urlFactory}
+
+			// WHEN
+			_, err := rul.Mutate(origURL)
+
+			// THEN
+			if tc.err != nil {
+				require.ErrorIs(t, err, tc.err)
+			}
 		})
 	}
 }

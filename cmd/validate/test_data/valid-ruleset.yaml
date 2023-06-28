@@ -7,12 +7,16 @@ rules:
     strategy: glob
   forward_to:
     host: bar.foo
+    rewrite:
+      strip_path_prefix: /foo
+      add_path_prefix: /baz
+      strip_query_parameters: [boo]
 #  methods: # reuses default
 #    - GET
 #    - POST
   execute:
     - authenticator: unauthorized_authenticator
-    - authenticator: jwt_authenticator
+    - authenticator: jwt_authenticator1
       config:
         assertions:
           allowed_algorithms:

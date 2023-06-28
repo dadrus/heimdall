@@ -61,7 +61,8 @@ func createDecisionApp(cmd *cobra.Command) (*fx.App, error) {
 		fx.NopLogger,
 		fx.Supply(
 			config.ConfigurationPath(configPath),
-			config.EnvVarPrefix(envPrefix)),
+			config.EnvVarPrefix(envPrefix),
+			config.DecisionMode),
 		internal.Module,
 	}
 

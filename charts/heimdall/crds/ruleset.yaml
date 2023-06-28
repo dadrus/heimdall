@@ -27,7 +27,7 @@ spec:
     singular: ruleset
     listKind: RuleSetList
   versions:
-    - name: v1alpha1
+    - name: v1alpha2
       served: true
       storage: true
       schema:
@@ -77,9 +77,39 @@ spec:
                             enum:
                               - regex
                               - glob
-                      upstream:
-                        description: Schema, host and port of the upstream service to forward the request to. Required only if heimdall is used in proxy operation mode.
-                        type: string
+                      forward_to:
+                        description: Where to forward the request to. Required only if heimdall is used in proxy operation mode.
+                        type: object
+                        x-kubernetes-validations:
+                          - rule: "has(self.host)"
+                            message: "no host is defined for the forward_to property"
+                        properties:
+                          host:
+                            description: Host and port of the upstream service to forward the request to
+                            type: string
+                          rewrite:
+                            description: Configures middlewares to rewrite parts of the URL
+                            type: object
+                            x-kubernetes-validations:
+                              - rule: "has(self.scheme) || has(self.strip_path_prefix) || has(self.add_path_prefix) || has(self.strip_query_parameters)"
+                                message: "rewrite is defined, but does not contain any middleware"
+                              - rule: "has(self.strip_query_parameters) ? size(self.strip_query_parameters) > 0 : true"
+                                message: "no query parameters defined in strip_query_parameters"
+                            properties:
+                              scheme:
+                                description: If you want to overwrite the used HTTP scheme, set it here
+                                type: string
+                              strip_path_prefix:
+                                description: If you want to cut a prefix from the URL path, set it here
+                                type: string
+                              add_path_prefix:
+                                description: If you want to add a prefix to the URL path, set it here
+                                type: string
+                              strip_query_parameters:
+                                description: If you want to remove some query parameters, specify it here
+                                type: array
+                                items:
+                                  type: string
                       methods:
                         description: The allowed HTTP methods
                         type: array

@@ -38,7 +38,7 @@ import (
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	config2 "github.com/dadrus/heimdall/internal/rules/config"
-	"github.com/dadrus/heimdall/internal/rules/provider/kubernetes/api/v1alpha1"
+	"github.com/dadrus/heimdall/internal/rules/provider/kubernetes/api/v1alpha2"
 	"github.com/dadrus/heimdall/internal/rules/rule/mocks"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
@@ -141,18 +141,18 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 				return func(t *testing.T, watchRequest bool, w http.ResponseWriter) {
 					t.Helper()
 
-					rls := v1alpha1.RuleSetList{
+					rls := v1alpha2.RuleSetList{
 						TypeMeta: metav1.TypeMeta{
-							APIVersion: fmt.Sprintf("%s/%s", v1alpha1.GroupName, v1alpha1.GroupVersion),
+							APIVersion: fmt.Sprintf("%s/%s", v1alpha2.GroupName, v1alpha2.GroupVersion),
 							Kind:       "RuleSetList",
 						},
 						ListMeta: metav1.ListMeta{
 							ResourceVersion: "735820",
 						},
-						Items: []v1alpha1.RuleSet{
+						Items: []v1alpha2.RuleSet{
 							{
 								TypeMeta: metav1.TypeMeta{
-									APIVersion: fmt.Sprintf("%s/%s", v1alpha1.GroupName, v1alpha1.GroupVersion),
+									APIVersion: fmt.Sprintf("%s/%s", v1alpha2.GroupName, v1alpha2.GroupVersion),
 									Kind:       "RuleSet",
 								},
 								ObjectMeta: metav1.ObjectMeta{
@@ -163,7 +163,7 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 									Generation:        1,
 									CreationTimestamp: metav1.NewTime(time.Now()),
 								},
-								Spec: v1alpha1.RuleSetSpec{
+								Spec: v1alpha2.RuleSetSpec{
 									AuthClassName: "bar",
 									Rules: []config2.Rule{
 										{
@@ -172,8 +172,16 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 												URL:      "http://foo.bar",
 												Strategy: "glob",
 											},
-											Upstream: "http://bar",
-											Methods:  []string{http.MethodGet},
+											UpstreamURLFactory: &config2.UpstreamURLFactory{
+												Host: "baz",
+												URLRewriter: &config2.URLRewriter{
+													Scheme:              "http",
+													PathPrefixToCut:     "/foo",
+													PathPrefixToAdd:     "/bar",
+													QueryParamsToRemove: []string{"baz"},
+												},
+											},
+											Methods: []string{http.MethodGet},
 											Execute: []config.MechanismConfig{
 												{"authenticator": "authn"},
 												{"authorizer": "authz"},
@@ -193,9 +201,9 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 					err = metav1.Convert_watch_Event_To_v1_WatchEvent(
 						&watch.Event{
 							Type: watch.Bookmark,
-							Object: &v1alpha1.RuleSet{
+							Object: &v1alpha2.RuleSet{
 								TypeMeta: metav1.TypeMeta{
-									APIVersion: fmt.Sprintf("%s/%s", v1alpha1.GroupName, v1alpha1.GroupVersion),
+									APIVersion: fmt.Sprintf("%s/%s", v1alpha2.GroupName, v1alpha2.GroupVersion),
 									Kind:       "RuleSet",
 								},
 								ObjectMeta: metav1.ObjectMeta{
@@ -245,18 +253,18 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 				return func(t *testing.T, watchRequest bool, w http.ResponseWriter) {
 					t.Helper()
 
-					rls := v1alpha1.RuleSetList{
+					rls := v1alpha2.RuleSetList{
 						TypeMeta: metav1.TypeMeta{
-							APIVersion: fmt.Sprintf("%s/%s", v1alpha1.GroupName, v1alpha1.GroupVersion),
+							APIVersion: fmt.Sprintf("%s/%s", v1alpha2.GroupName, v1alpha2.GroupVersion),
 							Kind:       "RuleSetList",
 						},
 						ListMeta: metav1.ListMeta{
 							ResourceVersion: "735820",
 						},
-						Items: []v1alpha1.RuleSet{
+						Items: []v1alpha2.RuleSet{
 							{
 								TypeMeta: metav1.TypeMeta{
-									APIVersion: fmt.Sprintf("%s/%s", v1alpha1.GroupName, v1alpha1.GroupVersion),
+									APIVersion: fmt.Sprintf("%s/%s", v1alpha2.GroupName, v1alpha2.GroupVersion),
 									Kind:       "RuleSet",
 								},
 								ObjectMeta: metav1.ObjectMeta{
@@ -267,7 +275,7 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 									Generation:        1,
 									CreationTimestamp: metav1.NewTime(time.Now()),
 								},
-								Spec: v1alpha1.RuleSetSpec{
+								Spec: v1alpha2.RuleSetSpec{
 									AuthClassName: "bar",
 									Rules: []config2.Rule{
 										{
@@ -276,8 +284,16 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 												URL:      "http://foo.bar",
 												Strategy: "glob",
 											},
-											Upstream: "http://bar",
-											Methods:  []string{http.MethodGet},
+											UpstreamURLFactory: &config2.UpstreamURLFactory{
+												Host: "baz",
+												URLRewriter: &config2.URLRewriter{
+													Scheme:              "http",
+													PathPrefixToCut:     "/foo",
+													PathPrefixToAdd:     "/bar",
+													QueryParamsToRemove: []string{"baz"},
+												},
+											},
+											Methods: []string{http.MethodGet},
 											Execute: []config.MechanismConfig{
 												{"authenticator": "authn"},
 												{"authorizer": "authz"},
@@ -297,9 +313,9 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 					err = metav1.Convert_watch_Event_To_v1_WatchEvent(
 						&watch.Event{
 							Type: watch.Bookmark,
-							Object: &v1alpha1.RuleSet{
+							Object: &v1alpha2.RuleSet{
 								TypeMeta: metav1.TypeMeta{
-									APIVersion: fmt.Sprintf("%s/%s", v1alpha1.GroupName, v1alpha1.GroupVersion),
+									APIVersion: fmt.Sprintf("%s/%s", v1alpha2.GroupName, v1alpha2.GroupVersion),
 									Kind:       "RuleSet",
 								},
 								ObjectMeta: metav1.ObjectMeta{
@@ -347,14 +363,14 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 
 				ruleSet := mock2.ArgumentCaptorFrom[*config2.RuleSet](&processor.Mock, "captor1").Value()
 				assert.Contains(t, ruleSet.Source, "kubernetes:foo:dfb2a2f1-1ad2-4d8c-8456-516fc94abb86")
-				assert.Equal(t, "1", ruleSet.Version)
+				assert.Equal(t, "1alpha2", ruleSet.Version)
 				assert.Equal(t, "test-rule", ruleSet.Name)
 				assert.Len(t, ruleSet.Rules, 1)
 
 				rule := ruleSet.Rules[0]
 				assert.Equal(t, "test", rule.ID)
 				assert.Equal(t, "http://foo.bar", rule.RuleMatcher.URL)
-				assert.Equal(t, "http://bar", rule.Upstream)
+				assert.Equal(t, "baz", rule.UpstreamURLFactory.Host)
 				assert.Equal(t, "glob", rule.RuleMatcher.Strategy)
 				assert.Len(t, rule.Methods, 1)
 				assert.Contains(t, rule.Methods, http.MethodGet)
@@ -373,18 +389,18 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 				return func(t *testing.T, watchRequest bool, w http.ResponseWriter) {
 					t.Helper()
 
-					rls := v1alpha1.RuleSetList{
+					rls := v1alpha2.RuleSetList{
 						TypeMeta: metav1.TypeMeta{
-							APIVersion: fmt.Sprintf("%s/%s", v1alpha1.GroupName, v1alpha1.GroupVersion),
+							APIVersion: fmt.Sprintf("%s/%s", v1alpha2.GroupName, v1alpha2.GroupVersion),
 							Kind:       "RuleSetList",
 						},
 						ListMeta: metav1.ListMeta{
 							ResourceVersion: "735820",
 						},
-						Items: []v1alpha1.RuleSet{
+						Items: []v1alpha2.RuleSet{
 							{
 								TypeMeta: metav1.TypeMeta{
-									APIVersion: fmt.Sprintf("%s/%s", v1alpha1.GroupName, v1alpha1.GroupVersion),
+									APIVersion: fmt.Sprintf("%s/%s", v1alpha2.GroupName, v1alpha2.GroupVersion),
 									Kind:       "RuleSet",
 								},
 								ObjectMeta: metav1.ObjectMeta{
@@ -395,7 +411,7 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 									Generation:        1,
 									CreationTimestamp: metav1.NewTime(time.Now()),
 								},
-								Spec: v1alpha1.RuleSetSpec{
+								Spec: v1alpha2.RuleSetSpec{
 									AuthClassName: "bar",
 									Rules: []config2.Rule{
 										{
@@ -404,8 +420,16 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 												URL:      "http://foo.bar",
 												Strategy: "glob",
 											},
-											Upstream: "http://bar",
-											Methods:  []string{http.MethodGet},
+											UpstreamURLFactory: &config2.UpstreamURLFactory{
+												Host: "bar",
+												URLRewriter: &config2.URLRewriter{
+													Scheme:              "http",
+													PathPrefixToCut:     "/foo",
+													PathPrefixToAdd:     "/bar",
+													QueryParamsToRemove: []string{"baz"},
+												},
+											},
+											Methods: []string{http.MethodGet},
 											Execute: []config.MechanismConfig{
 												{"authenticator": "authn"},
 												{"authorizer": "authz"},
@@ -425,9 +449,9 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 					err = metav1.Convert_watch_Event_To_v1_WatchEvent(
 						&watch.Event{
 							Type: watch.Bookmark,
-							Object: &v1alpha1.RuleSet{
+							Object: &v1alpha2.RuleSet{
 								TypeMeta: metav1.TypeMeta{
-									APIVersion: fmt.Sprintf("%s/%s", v1alpha1.GroupName, v1alpha1.GroupVersion),
+									APIVersion: fmt.Sprintf("%s/%s", v1alpha2.GroupName, v1alpha2.GroupVersion),
 									Kind:       "RuleSet",
 								},
 								ObjectMeta: metav1.ObjectMeta{
@@ -486,9 +510,9 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 
 						evt := watch.Event{
 							Type: watch.Added,
-							Object: &v1alpha1.RuleSet{
+							Object: &v1alpha2.RuleSet{
 								TypeMeta: metav1.TypeMeta{
-									APIVersion: fmt.Sprintf("%s/%s", v1alpha1.GroupName, v1alpha1.GroupVersion),
+									APIVersion: fmt.Sprintf("%s/%s", v1alpha2.GroupName, v1alpha2.GroupVersion),
 									Kind:       "RuleSet",
 								},
 								ObjectMeta: metav1.ObjectMeta{
@@ -499,7 +523,7 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 									Generation:        1,
 									CreationTimestamp: metav1.NewTime(time.Now()),
 								},
-								Spec: v1alpha1.RuleSetSpec{
+								Spec: v1alpha2.RuleSetSpec{
 									AuthClassName: "bar",
 									Rules: []config2.Rule{
 										{
@@ -508,8 +532,16 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 												URL:      "http://foo.bar",
 												Strategy: "glob",
 											},
-											Upstream: "http://bar",
-											Methods:  []string{http.MethodGet},
+											UpstreamURLFactory: &config2.UpstreamURLFactory{
+												Host: "bar",
+												URLRewriter: &config2.URLRewriter{
+													Scheme:              "http",
+													PathPrefixToCut:     "/foo",
+													PathPrefixToAdd:     "/bar",
+													QueryParamsToRemove: []string{"baz"},
+												},
+											},
+											Methods: []string{http.MethodGet},
 											Execute: []config.MechanismConfig{
 												{"authenticator": "authn"},
 												{"authorizer": "authz"},
@@ -553,9 +585,9 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 						}
 					} else {
 						// empty rule set initially
-						rls := v1alpha1.RuleSetList{
+						rls := v1alpha2.RuleSetList{
 							TypeMeta: metav1.TypeMeta{
-								APIVersion: fmt.Sprintf("%s/%s", v1alpha1.GroupName, v1alpha1.GroupVersion),
+								APIVersion: fmt.Sprintf("%s/%s", v1alpha2.GroupName, v1alpha2.GroupVersion),
 								Kind:       "RuleSetList",
 							},
 							ListMeta: metav1.ListMeta{
@@ -593,14 +625,14 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 
 				ruleSet := mock2.ArgumentCaptorFrom[*config2.RuleSet](&processor.Mock, "captor1").Value()
 				assert.Equal(t, ruleSet.Source, "kubernetes:foo:dfb2a2f1-1ad2-4d8c-8456-516fc94abb86")
-				assert.Equal(t, "1", ruleSet.Version)
+				assert.Equal(t, "1alpha2", ruleSet.Version)
 				assert.Equal(t, "test-rule", ruleSet.Name)
 				assert.Len(t, ruleSet.Rules, 1)
 
 				createdRule := ruleSet.Rules[0]
 				assert.Equal(t, "test", createdRule.ID)
 				assert.Equal(t, "http://foo.bar", createdRule.RuleMatcher.URL)
-				assert.Equal(t, "http://bar", createdRule.Upstream)
+				assert.Equal(t, "bar", createdRule.UpstreamURLFactory.Host)
 				assert.Equal(t, "glob", createdRule.RuleMatcher.Strategy)
 				assert.Len(t, createdRule.Methods, 1)
 				assert.Contains(t, createdRule.Methods, http.MethodGet)
@@ -611,7 +643,7 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 
 				ruleSet = mock2.ArgumentCaptorFrom[*config2.RuleSet](&processor.Mock, "captor2").Value()
 				assert.Equal(t, "kubernetes:foo:dfb2a2f1-1ad2-4d8c-8456-516fc94abb86", ruleSet.Source)
-				assert.Equal(t, "1", ruleSet.Version)
+				assert.Equal(t, "1alpha2", ruleSet.Version)
 				assert.Equal(t, "test-rule", ruleSet.Name)
 			},
 		},
@@ -630,9 +662,9 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 
 						evt := watch.Event{
 							Type: watch.Added,
-							Object: &v1alpha1.RuleSet{
+							Object: &v1alpha2.RuleSet{
 								TypeMeta: metav1.TypeMeta{
-									APIVersion: fmt.Sprintf("%s/%s", v1alpha1.GroupName, v1alpha1.GroupVersion),
+									APIVersion: fmt.Sprintf("%s/%s", v1alpha2.GroupName, v1alpha2.GroupVersion),
 									Kind:       "RuleSet",
 								},
 								ObjectMeta: metav1.ObjectMeta{
@@ -643,7 +675,7 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 									Generation:        1,
 									CreationTimestamp: metav1.NewTime(time.Now()),
 								},
-								Spec: v1alpha1.RuleSetSpec{
+								Spec: v1alpha2.RuleSetSpec{
 									AuthClassName: "bar",
 									Rules: []config2.Rule{
 										{
@@ -652,8 +684,16 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 												URL:      "http://foo.bar",
 												Strategy: "glob",
 											},
-											Upstream: "http://bar",
-											Methods:  []string{http.MethodGet},
+											UpstreamURLFactory: &config2.UpstreamURLFactory{
+												Host: "bar",
+												URLRewriter: &config2.URLRewriter{
+													Scheme:              "http",
+													PathPrefixToCut:     "/foo",
+													PathPrefixToAdd:     "/bar",
+													QueryParamsToRemove: []string{"baz"},
+												},
+											},
+											Methods: []string{http.MethodGet},
 											Execute: []config.MechanismConfig{
 												{"authenticator": "authn"},
 												{"authorizer": "authz"},
@@ -697,9 +737,9 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 						}
 					} else {
 						// empty rule set initially
-						rls := v1alpha1.RuleSetList{
+						rls := v1alpha2.RuleSetList{
 							TypeMeta: metav1.TypeMeta{
-								APIVersion: fmt.Sprintf("%s/%s", v1alpha1.GroupName, v1alpha1.GroupVersion),
+								APIVersion: fmt.Sprintf("%s/%s", v1alpha2.GroupName, v1alpha2.GroupVersion),
 								Kind:       "RuleSetList",
 							},
 							ListMeta: metav1.ListMeta{
@@ -746,9 +786,9 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 
 						evt := watch.Event{
 							Type: watch.Added,
-							Object: &v1alpha1.RuleSet{
+							Object: &v1alpha2.RuleSet{
 								TypeMeta: metav1.TypeMeta{
-									APIVersion: fmt.Sprintf("%s/%s", v1alpha1.GroupName, v1alpha1.GroupVersion),
+									APIVersion: fmt.Sprintf("%s/%s", v1alpha2.GroupName, v1alpha2.GroupVersion),
 									Kind:       "RuleSet",
 								},
 								ObjectMeta: metav1.ObjectMeta{
@@ -759,7 +799,7 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 									Generation:        1,
 									CreationTimestamp: metav1.NewTime(time.Now()),
 								},
-								Spec: v1alpha1.RuleSetSpec{
+								Spec: v1alpha2.RuleSetSpec{
 									AuthClassName: "bar",
 									Rules: []config2.Rule{
 										{
@@ -768,8 +808,16 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 												URL:      "http://foo.bar",
 												Strategy: "glob",
 											},
-											Upstream: "http://bar",
-											Methods:  []string{http.MethodGet},
+											UpstreamURLFactory: &config2.UpstreamURLFactory{
+												Host: "bar",
+												URLRewriter: &config2.URLRewriter{
+													Scheme:              "http",
+													PathPrefixToCut:     "/foo",
+													PathPrefixToAdd:     "/bar",
+													QueryParamsToRemove: []string{"baz"},
+												},
+											},
+											Methods: []string{http.MethodGet},
 											Execute: []config.MechanismConfig{
 												{"authenticator": "authn"},
 												{"authorizer": "authz"},
@@ -798,8 +846,8 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 							var watchEvt metav1.WatchEvent
 
 							evt.Type = watch.Modified
-							ruleSet := evt.Object.(*v1alpha1.RuleSet) // nolint:forcetypeassert
-							ruleSet.Spec = v1alpha1.RuleSetSpec{
+							ruleSet := evt.Object.(*v1alpha2.RuleSet) // nolint:forcetypeassert
+							ruleSet.Spec = v1alpha2.RuleSetSpec{
 								AuthClassName: "bar",
 								Rules: []config2.Rule{
 									{
@@ -808,8 +856,16 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 											URL:      "http://foo.bar",
 											Strategy: "glob",
 										},
-										Upstream: "http://bar",
-										Methods:  []string{http.MethodGet},
+										UpstreamURLFactory: &config2.UpstreamURLFactory{
+											Host: "bar",
+											URLRewriter: &config2.URLRewriter{
+												Scheme:              "http",
+												PathPrefixToCut:     "/foo",
+												PathPrefixToAdd:     "/bar",
+												QueryParamsToRemove: []string{"baz"},
+											},
+										},
+										Methods: []string{http.MethodGet},
 										Execute: []config.MechanismConfig{
 											{"authenticator": "test_authn"},
 											{"authorizer": "test_authz"},
@@ -832,9 +888,9 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 						}
 					} else {
 						// empty rule set initially
-						rls := v1alpha1.RuleSetList{
+						rls := v1alpha2.RuleSetList{
 							TypeMeta: metav1.TypeMeta{
-								APIVersion: fmt.Sprintf("%s/%s", v1alpha1.GroupName, v1alpha1.GroupVersion),
+								APIVersion: fmt.Sprintf("%s/%s", v1alpha2.GroupName, v1alpha2.GroupVersion),
 								Kind:       "RuleSetList",
 							},
 							ListMeta: metav1.ListMeta{
@@ -872,14 +928,14 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 
 				ruleSet := mock2.ArgumentCaptorFrom[*config2.RuleSet](&processor.Mock, "captor1").Value()
 				assert.Equal(t, ruleSet.Source, "kubernetes:foo:dfb2a2f1-1ad2-4d8c-8456-516fc94abb86")
-				assert.Equal(t, "1", ruleSet.Version)
+				assert.Equal(t, "1alpha2", ruleSet.Version)
 				assert.Equal(t, "test-rule", ruleSet.Name)
 				assert.Len(t, ruleSet.Rules, 1)
 
 				createdRule := ruleSet.Rules[0]
 				assert.Equal(t, "test", createdRule.ID)
 				assert.Equal(t, "http://foo.bar", createdRule.RuleMatcher.URL)
-				assert.Equal(t, "http://bar", createdRule.Upstream)
+				assert.Equal(t, "bar", createdRule.UpstreamURLFactory.Host)
 				assert.Equal(t, "glob", createdRule.RuleMatcher.Strategy)
 				assert.Len(t, createdRule.Methods, 1)
 				assert.Contains(t, createdRule.Methods, http.MethodGet)
@@ -890,14 +946,14 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 
 				ruleSet = mock2.ArgumentCaptorFrom[*config2.RuleSet](&processor.Mock, "captor2").Value()
 				assert.Equal(t, ruleSet.Source, "kubernetes:foo:dfb2a2f1-1ad2-4d8c-8456-516fc94abb86")
-				assert.Equal(t, "1", ruleSet.Version)
+				assert.Equal(t, "1alpha2", ruleSet.Version)
 				assert.Equal(t, "test-rule", ruleSet.Name)
 				assert.Len(t, ruleSet.Rules, 1)
 
 				updatedRule := ruleSet.Rules[0]
 				assert.Equal(t, "test", updatedRule.ID)
 				assert.Equal(t, "http://foo.bar", updatedRule.RuleMatcher.URL)
-				assert.Equal(t, "http://bar", updatedRule.Upstream)
+				assert.Equal(t, "bar", updatedRule.UpstreamURLFactory.Host)
 				assert.Equal(t, "glob", updatedRule.RuleMatcher.Strategy)
 				assert.Len(t, updatedRule.Methods, 1)
 				assert.Contains(t, updatedRule.Methods, http.MethodGet)
@@ -922,9 +978,9 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 
 						evt := watch.Event{
 							Type: watch.Added,
-							Object: &v1alpha1.RuleSet{
+							Object: &v1alpha2.RuleSet{
 								TypeMeta: metav1.TypeMeta{
-									APIVersion: fmt.Sprintf("%s/%s", v1alpha1.GroupName, v1alpha1.GroupVersion),
+									APIVersion: fmt.Sprintf("%s/%s", v1alpha2.GroupName, v1alpha2.GroupVersion),
 									Kind:       "RuleSet",
 								},
 								ObjectMeta: metav1.ObjectMeta{
@@ -935,7 +991,7 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 									Generation:        1,
 									CreationTimestamp: metav1.NewTime(time.Now()),
 								},
-								Spec: v1alpha1.RuleSetSpec{
+								Spec: v1alpha2.RuleSetSpec{
 									AuthClassName: "bar",
 									Rules: []config2.Rule{
 										{
@@ -944,8 +1000,16 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 												URL:      "http://foo.bar",
 												Strategy: "glob",
 											},
-											Upstream: "http://bar",
-											Methods:  []string{http.MethodGet},
+											UpstreamURLFactory: &config2.UpstreamURLFactory{
+												Host: "bar",
+												URLRewriter: &config2.URLRewriter{
+													Scheme:              "http",
+													PathPrefixToCut:     "/foo",
+													PathPrefixToAdd:     "/bar",
+													QueryParamsToRemove: []string{"baz"},
+												},
+											},
+											Methods: []string{http.MethodGet},
 											Execute: []config.MechanismConfig{
 												{"authenticator": "authn"},
 												{"authorizer": "authz"},
@@ -974,8 +1038,8 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 							var watchEvt metav1.WatchEvent
 
 							evt.Type = watch.Modified
-							ruleSet := evt.Object.(*v1alpha1.RuleSet) // nolint:forcetypeassert
-							ruleSet.Spec = v1alpha1.RuleSetSpec{
+							ruleSet := evt.Object.(*v1alpha2.RuleSet) // nolint:forcetypeassert
+							ruleSet.Spec = v1alpha2.RuleSetSpec{
 								AuthClassName: "bar",
 								Rules: []config2.Rule{
 									{
@@ -984,8 +1048,16 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 											URL:      "http://foo.bar",
 											Strategy: "glob",
 										},
-										Upstream: "http://bar",
-										Methods:  []string{http.MethodGet},
+										UpstreamURLFactory: &config2.UpstreamURLFactory{
+											Host: "baz",
+											URLRewriter: &config2.URLRewriter{
+												Scheme:              "http",
+												PathPrefixToCut:     "/foo",
+												PathPrefixToAdd:     "/bar",
+												QueryParamsToRemove: []string{"baz"},
+											},
+										},
+										Methods: []string{http.MethodGet},
 										Execute: []config.MechanismConfig{
 											{"authenticator": "test_authn"},
 											{"authorizer": "test_authz"},
@@ -1008,9 +1080,9 @@ func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
 						}
 					} else {
 						// empty rule set initially
-						rls := v1alpha1.RuleSetList{
+						rls := v1alpha2.RuleSetList{
 							TypeMeta: metav1.TypeMeta{
-								APIVersion: fmt.Sprintf("%s/%s", v1alpha1.GroupName, v1alpha1.GroupVersion),
+								APIVersion: fmt.Sprintf("%s/%s", v1alpha2.GroupName, v1alpha2.GroupVersion),
 								Kind:       "RuleSetList",
 							},
 							ListMeta: metav1.ListMeta{

@@ -15,8 +15,8 @@ In that setup heimdall is not integrated with any other reverse proxy.
 2. Play with it
 
    ```bash
-   curl -v http://127.0.0.1:9090/anonymous
-   curl -v http://127.0.0.1:9090/public
+   curl -v http://127.0.0.1:9090/anon/foo
+   curl -v http://127.0.0.1:9090/pub/foo
    curl -v http://127.0.0.1:9090/foo
    curl -v -H "Accept: Bar" http://127.0.0.1:9090/foo
    ```
@@ -36,8 +36,8 @@ In that setup heimdall is integrated with Traefik. All requests are sent to trae
 2. Play with it
 
    ```bash
-   curl -v http://127.0.0.1:9090/anonymous
-   curl -v http://127.0.0.1:9090/public
+   curl -v http://127.0.0.1:9090/anon/foo
+   curl -v http://127.0.0.1:9090/pub/foo
    curl -v http://127.0.0.1:9090/foo
    curl -v -H "Accept: Bar" http://127.0.0.1:9090/foo
    ```
@@ -66,8 +66,8 @@ In that setup heimdall is integrated with Envoy Proxy. All requests are sent to 
 2. Play with it
 
    ```bash
-   curl -v http://127.0.0.1:9090/anonymous
-   curl -v http://127.0.0.1:9090/public
+   curl -v http://127.0.0.1:9090/anon/foo
+   curl -v http://127.0.0.1:9090/pub/foo
    curl -v http://127.0.0.1:9090/foo
    curl -v -H "Accept: Bar" http://127.0.0.1:9090/foo
    ```

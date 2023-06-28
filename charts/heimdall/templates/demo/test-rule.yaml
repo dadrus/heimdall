@@ -15,7 +15,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 {{- if .Values.demo.enabled }}
-apiVersion: heimdall.dadrus.github.com/v1alpha1
+apiVersion: heimdall.dadrus.github.com/v1alpha2
 kind: RuleSet
 metadata:
   name: {{ include "heimdall.demo.fullname" . }}-test-rule
@@ -26,16 +26,18 @@ spec:
   rules:
     - id: public-access
       match:
-        url: http://<**>/public
-      upstream: http://{{ include "heimdall.demo.fullname" . }}.heimdall-demo.svc.cluster.local:8080
+        url: http://<**>/pub/<**>
+      forward_to:
+        host: {{ include "heimdall.demo.fullname" . }}.heimdall-demo.svc.cluster.local:8080
       execute:
         - authenticator: noop_authenticator
         - authorizer: allow_all_requests
         - unifier: noop_unifier
     - id: anonymous-access
       match:
-        url: http://<**>/anonymous
-      upstream: http://{{ include "heimdall.demo.fullname" . }}.heimdall-demo.svc.cluster.local:8080
+        url: http://<**>/anon/<**>
+      forward_to:
+        host: {{ include "heimdall.demo.fullname" . }}.heimdall-demo.svc.cluster.local:8080
       execute:
         - authorizer: allow_all_requests
 

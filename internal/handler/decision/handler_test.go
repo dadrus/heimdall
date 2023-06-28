@@ -176,7 +176,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 					ctx.AddCookieForUpstream("X-Bar-Foo", "zab")
 
 					return true
-				})).Return(&url.URL{Scheme: "http", Host: "heimdall.test.local", Path: "/foobar"}, nil)
+				})).Return(mocks4.NewURIMutatorMock(t), nil)
 
 				repository.EXPECT().FindRule(mock.MatchedBy(func(reqURL *url.URL) bool {
 					return reqURL.Scheme == "http" && reqURL.Host == "heimdall.test.local" && reqURL.Path == "/foobar"
@@ -228,7 +228,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 					ctx.AddCookieForUpstream("X-Bar-Foo", "zab")
 
 					return true
-				})).Return(&url.URL{Scheme: "https", Host: "test.com", Path: "/bar"}, nil)
+				})).Return(mocks4.NewURIMutatorMock(t), nil)
 
 				repository.EXPECT().FindRule(mock.MatchedBy(func(reqURL *url.URL) bool {
 					return reqURL.Scheme == "http" && reqURL.Host == "heimdall.test.local" && reqURL.Path == "/foobar"
@@ -281,7 +281,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 					ctx.AddCookieForUpstream("X-Bar-Foo", "zab")
 
 					return true
-				})).Return(&url.URL{Scheme: "http", Host: "heimdall.test.local", Path: "/foobar"}, nil)
+				})).Return(mocks4.NewURIMutatorMock(t), nil)
 
 				repository.EXPECT().FindRule(mock.MatchedBy(func(reqURL *url.URL) bool {
 					return reqURL.Scheme == "http" && reqURL.Host == "heimdall.test.local" && reqURL.Path == "/foobar"
@@ -327,7 +327,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 
 				rule.EXPECT().MatchesMethod(http.MethodGet).Return(true)
 				rule.EXPECT().Execute(mock.Anything).
-					Return(&url.URL{Scheme: "http", Host: "heimdall.test.local", Path: "/foobar"}, nil)
+					Return(mocks4.NewURIMutatorMock(t), nil)
 
 				repository.EXPECT().FindRule(mock.MatchedBy(func(reqURL *url.URL) bool {
 					return reqURL.Scheme == "http" && reqURL.Host == "heimdall.test.local" && reqURL.Path == "/foobar"
@@ -361,7 +361,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 
 				rule.EXPECT().MatchesMethod(http.MethodPost).Return(true)
 				rule.EXPECT().Execute(mock.Anything).
-					Return(&url.URL{Scheme: "http", Host: "test.com", Path: "/foobar"}, nil)
+					Return(mocks4.NewURIMutatorMock(t), nil)
 
 				repository.EXPECT().FindRule(mock.MatchedBy(func(reqURL *url.URL) bool {
 					return reqURL.Scheme == "http" && reqURL.Host == "test.com" && reqURL.Path == "/foobar"
@@ -395,7 +395,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 
 				rule.EXPECT().MatchesMethod(http.MethodPost).Return(true)
 				rule.EXPECT().Execute(mock.Anything).
-					Return(&url.URL{Scheme: "http", Host: "heimdall.test.local", Path: "/bar"}, nil)
+					Return(mocks4.NewURIMutatorMock(t), nil)
 
 				repository.EXPECT().FindRule(mock.MatchedBy(func(reqURL *url.URL) bool {
 					return reqURL.Scheme == "http" && reqURL.Host == "heimdall.test.local" && reqURL.Path == "bar"
@@ -429,7 +429,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 
 				rule.EXPECT().MatchesMethod(http.MethodPost).Return(true)
 				rule.EXPECT().Execute(mock.Anything).
-					Return(&url.URL{Scheme: "https", Host: "heimdall.test.local", Path: "/foobar"}, nil)
+					Return(mocks4.NewURIMutatorMock(t), nil)
 
 				repository.EXPECT().FindRule(mock.MatchedBy(func(reqURL *url.URL) bool {
 					return reqURL.Scheme == "https" && reqURL.Host == "heimdall.test.local" && reqURL.Path == "/foobar"
@@ -466,7 +466,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 
 				rule.EXPECT().MatchesMethod(http.MethodPatch).Return(true)
 				rule.EXPECT().Execute(mock.Anything).
-					Return(&url.URL{Scheme: "https", Host: "test.com", Path: "/bar"}, nil)
+					Return(mocks4.NewURIMutatorMock(t), nil)
 
 				repository.EXPECT().FindRule(mock.MatchedBy(func(reqURL *url.URL) bool {
 					return reqURL.Scheme == "https" && reqURL.Host == "test.com" && reqURL.Path == "bar"

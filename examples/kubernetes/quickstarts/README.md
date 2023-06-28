@@ -38,8 +38,8 @@ If you don't have one, you can easily create it using kind. Checkout the `exampl
 3. Play with it
 
    ```bash
-   curl -v -H "Host: echo-app.local" http://127.0.0.1/anonymous
-   curl -v -H "Host: echo-app.local" http://127.0.0.1/public
+   curl -v -H "Host: echo-app.local" http://127.0.0.1/anon/foo
+   curl -v -H "Host: echo-app.local" http://127.0.0.1/pub/foo
    curl -v -H "Host: echo-app.local" http://127.0.0.1/foo
    ```
 

@@ -45,6 +45,7 @@ func New(logger zerolog.Logger) fiber.Handler {
 		logCtx = logTraceData(c.UserContext(), logCtx)
 
 		if c.IsProxyTrusted() {
+			logCtx = logHeader(c, logCtx, "X-Forwarded-Method", "_http_x_forwarded_method")
 			logCtx = logHeader(c, logCtx, "X-Forwarded-Proto", "_http_x_forwarded_proto")
 			logCtx = logHeader(c, logCtx, "X-Forwarded-Host", "_http_x_forwarded_host")
 			logCtx = logHeader(c, logCtx, "X-Forwarded-Path", "_http_x_forwarded_path")
