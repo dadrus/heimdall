@@ -18,7 +18,6 @@ package kubernetes
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -40,8 +39,6 @@ import (
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
-
-var ErrBadAuthClass = errors.New("bad authClass in a RuleSet")
 
 type ConfigFactory func() (*rest.Config, error)
 
