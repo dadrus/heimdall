@@ -782,8 +782,14 @@ func TestGenericContextualizerExecute(t *testing.T) {
 						"X-Bar":        "{{ .Subject.Attributes.bar }}",
 					},
 				},
+				v: values.Values{"foo": "bar"},
 				payload: func() template.Template {
-					tpl, _ := template.New(`{ "user_id": {{ quote .Subject.ID }}}`)
+					tpl, _ := template.New(`
+{
+	"user_id": {{ quote .Subject.ID }},
+	"value": {{ quote .Values.foo }}
+}
+`)
 
 					return tpl
 				}(),
@@ -809,7 +815,7 @@ func TestGenericContextualizerExecute(t *testing.T) {
 					content, err := io.ReadAll(req.Body)
 					require.NoError(t, err)
 
-					assert.JSONEq(t, `{"user_id": "Foo"}`, string(content))
+					assert.JSONEq(t, `{"user_id": "Foo", "value": "bar"}`, string(content))
 				}
 
 				responseContentType = "application/json"

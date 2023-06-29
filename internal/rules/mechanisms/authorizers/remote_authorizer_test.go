@@ -517,8 +517,9 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 					URL:     srv.URL,
 					Headers: map[string]string{"Foo-Bar": "{{ .Subject.Attributes.bar }}"},
 				},
+				v: values.Values{"foo": "bar"},
 				payload: func() template.Template {
-					tpl, _ := template.New("{{ .Subject.ID }}")
+					tpl, _ := template.New("{{ .Subject.ID }}-{{ .Values.foo }}")
 
 					return tpl
 				}(),
@@ -543,7 +544,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 					data, err := io.ReadAll(req.Body)
 					assert.NoError(t, err)
 
-					assert.Equal(t, "my-id", string(data))
+					assert.Equal(t, "my-id-bar", string(data))
 				}
 			},
 			configureContext: func(t *testing.T, ctx *heimdallmocks.ContextMock) {

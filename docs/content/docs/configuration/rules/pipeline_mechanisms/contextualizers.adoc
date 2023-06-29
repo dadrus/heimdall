@@ -49,9 +49,9 @@ If set to `true`, allows the pipeline to continue with the execution of the next
 
 * *`values`* _map of strings_ (optional, overridable)
 +
-A key value map, which is made accessible to the template rendering engine as link:{{< relref "overview.adoc#_values" >}}[`Values`] object, e.g. to render parts of the URL.
+A key value map, which is made accessible to the template rendering engine as link:{{< relref "overview.adoc#_values" >}}[`Values`] object to render parts of the URL or the payload.
 
-.Contextualizer configuration
+.Contextualizer configuration without payload
 ====
 
 In this example the contextualizer is configured to call an endpoint using the HTTP `GET` method with the subject id being part of the url path. As the endpoint requires the `X-My-Session-Cookie` cookie for subject authentication purposes, `forward_cookies` is used to achieve this.
@@ -66,5 +66,25 @@ config:
     method: GET
   forward_cookies:
     - X-My-Session-Cookie
+----
+====
+
+.Contextualizer configuration with payload
+====
+
+In this example the contextualizer is configured to call an endpoint using the HTTP `POST` and send some data. Since the `values` property is not defined, but used in the payload, it must be specified in a rule making use of this contextualzer.
+
+[source, yaml]
+----
+id: foo
+type: generic
+config:
+  endpoint:
+    url: https://some-other.service/users
+    method: POST
+  payload: |
+    {
+      "user_id": {{ quote .Values.user_id }}
+    }
 ----
 ====

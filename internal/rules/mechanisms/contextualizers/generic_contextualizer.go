@@ -251,6 +251,7 @@ func (h *genericContextualizer) createRequest(ctx heimdall.Context, sub *subject
 		value, err := h.payload.Render(map[string]any{
 			"Request": ctx.Request(),
 			"Subject": sub,
+			"Values":  h.v,
 		})
 		if err != nil {
 			return nil, errorchain.NewWithMessage(heimdall.ErrInternal,

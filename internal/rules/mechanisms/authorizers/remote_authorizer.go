@@ -289,6 +289,7 @@ func (a *remoteAuthorizer) createRequest(ctx heimdall.Context, sub *subject.Subj
 		bodyContents, err := a.payload.Render(map[string]any{
 			"Request": ctx.Request(),
 			"Subject": sub,
+			"Values":  a.v,
 		})
 		if err != nil {
 			return nil, errorchain.

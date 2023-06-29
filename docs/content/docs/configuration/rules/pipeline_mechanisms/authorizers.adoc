@@ -134,7 +134,7 @@ Allows caching of the authorization endpoint responses. Defaults to 0s, which me
 
 * *`values`* _map of strings_ (optional, overridable)
 +
-A key value map, which is made accessible to the template rendering engine as link:{{< relref "overview.adoc#_values" >}}[`Values`] object, e.g. to render parts of the URL.
+A key value map, which is made accessible to the template rendering engine as link:{{< relref "overview.adoc#_values" >}}[`Values`] object, to render parts of the URL or the payload.
 
 .Configuration of Remote authorizer to communicate with https://www.openpolicyagent.org/[Open Policy Agent] (OPA)
 ====
@@ -156,7 +156,7 @@ config:
         user: ${OPA_USER}
         password: ${OPA_PASSWORD}
   payload: |
-    { "input": { "user": {{ quote .Subject.ID }} } }
+    { "input": { "user": {{ quote .Subject.ID }} }, "some_data": {{ quote .Values.whatever }} }
   values:
     namespace: myapi/policy
     policy: allow_write
@@ -187,6 +187,7 @@ A specific rule could then use this authorizer in the following ways:
     config: # overriding with rule specifics
       values:
         policy: allow_read
+        whatever: foo
   - # other mechanisms
 ----
 
