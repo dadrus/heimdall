@@ -38,6 +38,7 @@ import (
 	heimdallmocks "github.com/dadrus/heimdall/internal/heimdall/mocks"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/values"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
@@ -117,8 +118,6 @@ payload: bar
 			config: []byte(`
 endpoint:
   url: http://bar.foo
-  values:
-    foo: bar
 forward_headers:
   - X-User-ID
   - X-Foo-Bar
@@ -126,6 +125,8 @@ forward_cookies:
   - My-Foo-Session
 payload: "{{ .Subject.ID }}"
 cache_ttl: 5s
+values:
+  foo: bar
 continue_pipeline_on_error: true
 `),
 			assert: func(t *testing.T, err error, contextualizer *genericContextualizer) {
@@ -135,7 +136,6 @@ continue_pipeline_on_error: true
 				require.NotNil(t, contextualizer)
 
 				assert.Equal(t, "http://bar.foo", contextualizer.e.URL)
-				assert.Equal(t, endpoint.Values{"foo": "bar"}, contextualizer.e.Values)
 				require.NotNil(t, contextualizer.payload)
 				val, err := contextualizer.payload.Render(map[string]any{
 					"Subject": &subject.Subject{ID: "baz"},
@@ -148,6 +148,7 @@ continue_pipeline_on_error: true
 				assert.Contains(t, contextualizer.fwdHeaders, "X-User-ID")
 				assert.Contains(t, contextualizer.fwdHeaders, "X-Foo-Bar")
 				assert.Equal(t, 5*time.Second, contextualizer.ttl)
+				assert.Equal(t, values.Values{"foo": "bar"}, contextualizer.v)
 
 				assert.Equal(t, "contextualizer", contextualizer.HandlerID())
 				assert.True(t, contextualizer.ContinueOnError())
@@ -344,13 +345,11 @@ forward_cookies:
 			},
 		},
 		{
-			uc: "with everything possible, but endpoint values reconfigured",
+			uc: "with everything possible, but values reconfigured",
 			id: "contextualizer5",
 			prototypeConfig: []byte(`
 endpoint:
   url: http://foo.bar
-  values:
-    foo: bar
 payload: bar
 forward_headers:
   - X-User-ID
@@ -358,6 +357,8 @@ forward_headers:
 forward_cookies:
   - My-Foo-Session
 cache_ttl: 5s
+values:
+  foo: bar
 continue_pipeline_on_error: true
 `),
 			config: []byte(`
@@ -392,6 +393,7 @@ continue_pipeline_on_error: false
 				assert.Contains(t, configured.fwdCookies, "Foo-Session")
 				assert.NotEqual(t, prototype.ttl, configured.ttl)
 				assert.Equal(t, 15*time.Second, configured.ttl)
+				assert.Equal(t, prototype.v, configured.v)
 				assert.Equal(t, "contextualizer5", configured.HandlerID())
 				assert.True(t, prototype.ContinueOnError())
 				assert.False(t, configured.ContinueOnError())
@@ -403,8 +405,6 @@ continue_pipeline_on_error: false
 			prototypeConfig: []byte(`
 endpoint:
   url: http://foo.bar
-  values:
-    foo: bar
 payload: bar
 forward_headers:
   - X-User-ID
@@ -412,18 +412,19 @@ forward_headers:
 forward_cookies:
   - My-Foo-Session
 cache_ttl: 5s
+values:
+  foo: bar
 continue_pipeline_on_error: true
 `),
 			config: []byte(`
-endpoint:
-  values:
-    bar: foo
 payload: foo
 forward_headers:
   - Foo-Bar
 forward_cookies:
   - Foo-Session
 cache_ttl: 15s
+values:
+  bar: foo
 continue_pipeline_on_error: false
 `),
 			assert: func(t *testing.T, err error, prototype *genericContextualizer, configured *genericContextualizer) {
@@ -432,10 +433,9 @@ continue_pipeline_on_error: false
 				require.NoError(t, err)
 
 				assert.NotEqual(t, prototype, configured)
-				assert.NotEqual(t, prototype.e, configured.e)
-				assert.Equal(t, prototype.e.URL, configured.e.URL)
-				assert.NotEqual(t, prototype.e.Values, configured.e.Values)
-				assert.Equal(t, endpoint.Values{"bar": "foo", "foo": "bar"}, configured.e.Values)
+				assert.Equal(t, prototype.e, configured.e)
+				assert.NotEqual(t, prototype.v, configured.v)
+				assert.Equal(t, values.Values{"bar": "foo", "foo": "bar"}, configured.v)
 				assert.Equal(t, prototype.id, configured.id)
 				assert.NotEqual(t, prototype.payload, configured.payload)
 				require.NotNil(t, configured.payload)
