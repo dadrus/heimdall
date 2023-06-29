@@ -1,4 +1,4 @@
-package endpoint
+package values
 
 import "golang.org/x/exp/maps"
 
