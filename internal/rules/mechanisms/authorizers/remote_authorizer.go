@@ -38,6 +38,7 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/contenttype"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/values"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/stringx"
@@ -66,6 +67,7 @@ type remoteAuthorizer struct {
 	headersForUpstream []string
 	ttl                time.Duration
 	celEnv             *cel.Env
+	v                  values.Values
 }
 
 type authorizationInformation struct {
@@ -95,6 +97,7 @@ func newRemoteAuthorizer(id string, rawConfig map[string]any) (*remoteAuthorizer
 		Expressions              []*cellib.Expression `mapstructure:"expressions"`
 		ResponseHeadersToForward []string             `mapstructure:"forward_response_headers_to_upstream"`
 		CacheTTL                 time.Duration        `mapstructure:"cache_ttl"`
+		Values                   values.Values        `mapstructure:"values"`
 	}
 
 	var conf Config
@@ -138,6 +141,7 @@ func newRemoteAuthorizer(id string, rawConfig map[string]any) (*remoteAuthorizer
 		headersForUpstream: conf.ResponseHeadersToForward,
 		ttl:                conf.CacheTTL,
 		celEnv:             env,
+		v:                  conf.Values,
 	}, nil
 }
 
@@ -197,16 +201,12 @@ func (a *remoteAuthorizer) WithConfig(rawConfig map[string]any) (Authorizer, err
 		return a, nil
 	}
 
-	type Endpoint struct {
-		Values endpoint.Values `mapstructure:"values"`
-	}
-
 	type Config struct {
-		Endpoint                 Endpoint             `mapstructure:"endpoint"`
 		Payload                  template.Template    `mapstructure:"payload"`
 		Expressions              []*cellib.Expression `mapstructure:"expressions"`
 		ResponseHeadersToForward []string             `mapstructure:"forward_response_headers_to_upstream"`
 		CacheTTL                 time.Duration        `mapstructure:"cache_ttl"`
+		Values                   values.Values        `mapstructure:"values"`
 	}
 
 	var conf Config
@@ -224,18 +224,16 @@ func (a *remoteAuthorizer) WithConfig(rawConfig map[string]any) (Authorizer, err
 		}
 	}
 
-	ept := a.e
-	ept.Values = ept.Values.Merge(conf.Endpoint.Values)
-
 	return &remoteAuthorizer{
 		id:          a.id,
-		e:           ept,
+		e:           a.e,
 		payload:     x.IfThenElse(conf.Payload != nil, conf.Payload, a.payload),
 		celEnv:      a.celEnv,
 		expressions: x.IfThenElse(len(conf.Expressions) != 0, conf.Expressions, a.expressions),
 		headersForUpstream: x.IfThenElse(len(conf.ResponseHeadersToForward) != 0,
 			conf.ResponseHeadersToForward, a.headersForUpstream),
 		ttl: x.IfThenElse(conf.CacheTTL > 0, conf.CacheTTL, a.ttl),
+		v:   a.v.Merge(conf.Values),
 	}, nil
 }
 
@@ -303,7 +301,7 @@ func (a *remoteAuthorizer) createRequest(ctx heimdall.Context, sub *subject.Subj
 	}
 
 	req, err := a.e.CreateRequest(ctx.AppContext(), body,
-		endpoint.RenderFunc(func(tplString string, values map[string]string) (string, error) {
+		endpoint.RenderFunc(func(tplString string) (string, error) {
 			tpl, err := template.New(tplString)
 			if err != nil {
 				return "", errorchain.
@@ -314,7 +312,7 @@ func (a *remoteAuthorizer) createRequest(ctx heimdall.Context, sub *subject.Subj
 
 			return tpl.Render(map[string]any{
 				"Subject": sub,
-				"Values":  values,
+				"Values":  a.v,
 			})
 		}))
 	if err != nil {
