@@ -528,10 +528,6 @@ Whether HTTP caching according to https://www.rfc-editor.org/rfc/rfc7234[RFC 723
 +
 NOTE: If the endpoint referenced by the URL does not provide any explicit expiration time, no heuristic freshness lifetime is calculated. Heimdall treats such responses as not cacheable.
 
-* *`values`* _map of strings_ (optional)
-+
-A key value map, which is made accessible to the template rendering engine as link:{{< relref "../rules/pipeline_mechanisms/overview.adoc#_values" >}}[`Values`] object, e.g. to render parts of the URL.
-
 .Endpoint configuration as string
 ====
 [source, text]

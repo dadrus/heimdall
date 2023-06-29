@@ -294,13 +294,11 @@ func (a *genericAuthenticator) createRequest(ctx heimdall.Context, authData stri
 				WithErrorContext(a).CausedBy(err)
 		}
 
-		logger.Debug().Str("_payload", value).Msg("Request payload")
-
 		body = strings.NewReader(value)
 	}
 
 	req, err := a.e.CreateRequest(ctx.AppContext(), body,
-		endpoint.RenderFunc(func(value string, values map[string]string) (string, error) {
+		endpoint.RenderFunc(func(value string) (string, error) {
 			tpl, err := template.New(value)
 			if err != nil {
 				return "", errorchain.NewWithMessage(heimdall.ErrInternal, "failed to create template").

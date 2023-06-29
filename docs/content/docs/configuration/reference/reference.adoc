@@ -232,14 +232,14 @@ rules:
           method: POST
           headers:
             foo-bar: "{{ .Subject.ID }}"
-          values:
-            some-key: some-value
           auth:
             type: api_key
             config:
               in: header
               name: X-API-Key
               value: super duper secret
+        values:
+          some-key: some-value
         payload: "https://bla.bar"
         expressions:
           - expression: |

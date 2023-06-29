@@ -43,6 +43,7 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/cellib"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/values"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
@@ -158,6 +159,8 @@ forward_response_headers_to_upstream:
   - Foo
   - Bar
 cache_ttl: 5s
+values:
+  foo: bar
 `),
 			assert: func(t *testing.T, err error, auth *remoteAuthorizer) {
 				t.Helper()
@@ -185,6 +188,7 @@ cache_ttl: 5s
 				assert.Contains(t, auth.headersForUpstream, "Bar")
 				assert.NotNil(t, auth.ttl)
 				assert.Equal(t, 5*time.Second, auth.ttl)
+				assert.Equal(t, values.Values{"foo": "bar"}, auth.v)
 
 				assert.Equal(t, "authz", auth.HandlerID())
 				assert.False(t, auth.ContinueOnError())
@@ -319,15 +323,15 @@ expressions:
 			},
 		},
 		{
-			uc: "with everything possible, but endpoint values reconfigured",
+			uc: "with everything possible, but values reconfigured",
 			id: "authz4",
 			prototypeConfig: []byte(`
 endpoint:
   url: http://foo.bar
   headers:
     Foo: Bar
-  values:
-    foo: bar
+values:
+  foo: bar
 `),
 			config: []byte(`
 payload: Baz
@@ -364,6 +368,7 @@ cache_ttl: 15s
 				assert.Equal(t, 15*time.Second, configured.ttl)
 
 				assert.NotEqual(t, prototype.ttl, configured.ttl)
+				assert.Equal(t, prototype.v, configured.v)
 				assert.NotEqual(t, prototype.headersForUpstream, configured.headersForUpstream)
 				assert.NotEqual(t, prototype.payload, configured.payload)
 				assert.Equal(t, "authz4", configured.HandlerID())
@@ -378,13 +383,12 @@ endpoint:
   url: http://foo.bar
   headers:
     Foo: Bar
-  values:
-    foo: bar
+values:
+  foo: bar
 `),
 			config: []byte(`
-endpoint:
-  values:
-    bar: foo
+values:
+  bar: foo
 payload: Baz
 forward_response_headers_to_upstream:
   - Bar
@@ -400,11 +404,11 @@ cache_ttl: 15s
 
 				assert.NotEqual(t, prototype, configured)
 				assert.NotNil(t, configured)
-				assert.NotEqual(t, prototype.e, configured.e)
+				assert.Equal(t, prototype.e, configured.e)
 				assert.Equal(t, prototype.e.URL, configured.e.URL)
 				assert.Equal(t, prototype.e.Headers, configured.e.Headers)
-				assert.NotEqual(t, prototype.e.Values, configured.e.Values)
-				assert.Equal(t, endpoint.Values{"bar": "foo", "foo": "bar"}, configured.e.Values)
+				assert.NotEqual(t, prototype.v, configured.v)
+				assert.Equal(t, values.Values{"bar": "foo", "foo": "bar"}, configured.v)
 				assert.Equal(t, prototype.id, configured.id)
 				require.NotNil(t, configured.payload)
 				val, err := configured.payload.Render(nil)

@@ -17,11 +17,11 @@
 package endpoint
 
 type Renderer interface {
-	Render(template string, values map[string]string) (string, error)
+	Render(template string) (string, error)
 }
 
-type RenderFunc func(template string, values map[string]string) (string, error)
+type RenderFunc func(template string) (string, error)
 
-func (f RenderFunc) Render(template string, values map[string]string) (string, error) {
-	return f(template, values)
+func (f RenderFunc) Render(template string) (string, error) {
+	return f(template)
 }
