@@ -9,7 +9,7 @@ require (
 	github.com/elnormous/contenttype v1.0.4
 	github.com/envoyproxy/go-control-plane v0.11.1
 	github.com/fsnotify/fsnotify v1.6.0
-	github.com/go-co-op/gocron v1.30.0
+	github.com/go-co-op/gocron v1.30.1
 	github.com/go-logr/zerologr v1.2.3
 	github.com/gobwas/glob v0.2.3
 	github.com/goccy/go-json v0.10.2
