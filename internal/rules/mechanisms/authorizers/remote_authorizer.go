@@ -59,6 +59,8 @@ func init() {
 		})
 }
 
+var errNoContent = errors.New("no content in response")
+
 type remoteAuthorizer struct {
 	id                 string
 	e                  endpoint.Endpoint
@@ -270,7 +272,7 @@ func (a *remoteAuthorizer) doAuthorize(ctx heimdall.Context, sub *subject.Subjec
 	defer resp.Body.Close()
 
 	data, err := a.readResponse(ctx, resp)
-	if err != nil {
+	if err != nil && !errors.Is(err, errNoContent) {
 		return nil, err
 	}
 
@@ -339,7 +341,7 @@ func (a *remoteAuthorizer) readResponse(ctx heimdall.Context, resp *http.Respons
 	if resp.ContentLength == 0 {
 		logger.Debug().Msg("No content received")
 
-		return nil, nil
+		return nil, errNoContent
 	}
 
 	rawData, err := io.ReadAll(resp.Body)
