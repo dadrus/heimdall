@@ -45,6 +45,8 @@ const (
 	defaultTTL = 10 * time.Second
 )
 
+var errNoContent = errors.New("no payload received")
+
 // by intention. Used only during application bootstrap
 // nolint
 func init() {
@@ -235,7 +237,7 @@ func (h *genericContextualizer) callEndpoint(ctx heimdall.Context, sub *subject.
 	defer resp.Body.Close()
 
 	data, err := h.readResponse(ctx, resp)
-	if err != nil {
+	if err != nil && !errors.Is(err, errNoContent) {
 		return nil, err
 	}
 
@@ -317,7 +319,7 @@ func (h *genericContextualizer) readResponse(ctx heimdall.Context, resp *http.Re
 	if resp.ContentLength == 0 {
 		logger.Warn().Msg("No data received from the contextualization endpoint")
 
-		return nil, nil
+		return nil, errNoContent
 	}
 
 	rawData, err := io.ReadAll(resp.Body)
