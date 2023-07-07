@@ -10,13 +10,13 @@ linters:
     - ireturn
     - exhaustruct
     - exhaustivestruct
-    - interfacer
     - testpackage
     - paralleltest
     - nolintlint
     - tparallel
     - depguard
     # deprecated
+    - interfacer
     - varcheck
     - deadcode
     - nosnakecase
@@ -31,6 +31,12 @@ issues:
     - path: '(.+)_test\.go'
       linters:
         - funlen
+        - maintidx
+        - cyclop
+        - gocognit
+        - goerr113
+        - lll
+        - errcheck
 
 linters-settings:
   exhaustive:
