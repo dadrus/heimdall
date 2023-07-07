@@ -44,6 +44,8 @@ import (
 	"github.com/dadrus/heimdall/internal/x/stringx"
 )
 
+var errNoContent = errors.New("no payload received")
+
 // by intention. Used only during application bootstrap
 // nolint
 func init() {
@@ -58,8 +60,6 @@ func init() {
 			return true, auth, err
 		})
 }
-
-var errNoContent = errors.New("no content in response")
 
 type remoteAuthorizer struct {
 	id                 string
