@@ -35,7 +35,6 @@ import (
 	mocks4 "github.com/dadrus/heimdall/internal/rules/rule/mocks"
 )
 
-// nolint: gocognit, cyclop, maintidx
 func TestHandleDecisionEndpointRequest(t *testing.T) {
 	t.Parallel()
 
@@ -497,7 +496,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				Logger:     log.Logger,
 			})
 
-			defer app.Shutdown() // nolint: errcheck
+			defer app.Shutdown()
 
 			_, err := newHandler(handlerArgs{
 				App:             app,

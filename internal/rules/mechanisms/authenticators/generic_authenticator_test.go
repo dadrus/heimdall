@@ -282,7 +282,7 @@ session_lifespan:
 	}
 }
 
-func TestGenericAuthenticatorWithConfig(t *testing.T) { // nolint: maintidx
+func TestGenericAuthenticatorWithConfig(t *testing.T) {
 	t.Parallel()
 
 	for _, tc := range []struct {
@@ -700,7 +700,6 @@ forward_cookies:
 	}
 }
 
-// nolint: maintidx
 func TestGenericAuthenticatorExecute(t *testing.T) {
 	t.Parallel()
 

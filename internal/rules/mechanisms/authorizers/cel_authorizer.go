@@ -30,7 +30,8 @@ import (
 )
 
 // by intention. Used only during application bootstrap
-// nolint
+//
+//nolint:gochecknoinits
 func init() {
 	registerAuthorizerTypeFactory(
 		func(id string, typ string, conf map[string]any) (bool, Authorizer, error) {

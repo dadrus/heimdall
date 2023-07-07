@@ -49,7 +49,7 @@ import (
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
-func TestAccessLogInterceptorForKnownService(t *testing.T) { //nolint:maintidx
+func TestAccessLogInterceptorForKnownService(t *testing.T) {
 	otel.SetTracerProvider(sdktrace.NewTracerProvider())
 	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(propagation.TraceContext{}))
 
@@ -137,7 +137,7 @@ func TestAccessLogInterceptorForKnownService(t *testing.T) { //nolint:maintidx
 				t.Helper()
 
 				m.On("Check", mock.Anything, mock.Anything).
-					Return(nil, fmt.Errorf("test error")) // nolint: goerr113
+					Return(nil, fmt.Errorf("test error"))
 			},
 			assert: func(t *testing.T, logEvent1, logEvent2 map[string]any) {
 				t.Helper()
@@ -185,7 +185,7 @@ func TestAccessLogInterceptorForKnownService(t *testing.T) { //nolint:maintidx
 					mock.MatchedBy(
 						func(ctx context.Context) bool {
 							accesscontext.SetSubject(ctx, "bar")
-							accesscontext.SetError(ctx, fmt.Errorf("test error")) // nolint: goerr113
+							accesscontext.SetError(ctx, fmt.Errorf("test error"))
 
 							return true
 						},
@@ -263,7 +263,6 @@ func TestAccessLogInterceptorForKnownService(t *testing.T) { //nolint:maintidx
 			client := envoy_auth.NewAuthorizationClient(conn)
 
 			// WHEN
-			// nolint: errcheck
 			client.Check(tc.outgoingContext(t), &envoy_auth.CheckRequest{
 				Attributes: &envoy_auth.AttributeContext{
 					Request: &envoy_auth.AttributeContext_Request{
@@ -333,7 +332,6 @@ func TestAccessLogInterceptorForUnknownService(t *testing.T) {
 	client := mocks.NewTestClient(conn)
 
 	// WHEN
-	// nolint: errcheck
 	_, err = client.Test(context.Background(), &mocks.TestRequest{})
 
 	// THEN

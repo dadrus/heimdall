@@ -39,7 +39,6 @@ import (
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
-// nolint: maintidx
 func TestRuleFactoryNew(t *testing.T) {
 	t.Parallel()
 
@@ -507,7 +506,6 @@ func TestRuleFactoryNew(t *testing.T) {
 	}
 }
 
-// nolint: maintidx
 func TestRuleFactoryCreateRule(t *testing.T) {
 	t.Parallel()
 

@@ -26,11 +26,9 @@ import (
 var (
 	ErrUnsupportedAuthenticatorType = errors.New("authenticator type unsupported")
 
-	// by intention. Used only during application bootstrap
-	// nolint
-	authenticatorTypeFactories []AuthenticatorTypeFactory
-	// nolint
-	authenticatorTypeFactoriesMu sync.RWMutex
+	// by intention. Used only during application bootstrap.
+	authenticatorTypeFactories   []AuthenticatorTypeFactory //nolint:gochecknoglobals
+	authenticatorTypeFactoriesMu sync.RWMutex               //nolint:gochecknoglobals
 )
 
 type AuthenticatorTypeFactory func(id string, typ string, config map[string]any) (bool, Authenticator, error)

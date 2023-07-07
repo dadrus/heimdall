@@ -59,14 +59,14 @@ func TestConfigLoaderLoad(t *testing.T) {
 	fileName := tempFile.Name()
 	defer os.Remove(fileName)
 
-	_, err = tempFile.Write([]byte(`
+	_, err = tempFile.WriteString(`
 some_string: "overridden by yaml file"
 someint: 10
 nested1:
   somebool: true
 nested_2:
   - some_string: "from yaml"
-`))
+`)
 	require.NoError(t, err)
 
 	// override parts of the above config with values from env variables

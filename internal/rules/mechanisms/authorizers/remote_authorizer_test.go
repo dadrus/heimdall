@@ -463,7 +463,6 @@ cache_ttl: 15s
 	}
 }
 
-// nolint: maintidx
 func TestRemoteAuthorizerExecute(t *testing.T) {
 	t.Parallel()
 

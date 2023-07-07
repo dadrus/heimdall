@@ -60,7 +60,6 @@ const (
 	kidRSAKey         = "key_rsa"
 )
 
-// nolint: maintidx
 func TestJwtAuthenticatorCreate(t *testing.T) {
 	t.Parallel()
 
@@ -356,7 +355,6 @@ trust_store: ` + trustStorePath),
 	}
 }
 
-// nolint: maintidx
 func TestJwtAuthenticatorWithConfig(t *testing.T) {
 	t.Parallel()
 
@@ -715,7 +713,6 @@ cache_ttl: 5s`),
 	}
 }
 
-// nolint: maintidx
 func TestJwtAuthenticatorExecute(t *testing.T) {
 	t.Parallel()
 

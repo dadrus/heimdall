@@ -40,7 +40,6 @@ func DecodeScopesMatcherHookFunc() mapstructure.DecodeHookFunc {
 			return data, nil
 		}
 
-		// nolint
 		// we care about these two cases only
 		switch from.Kind() {
 		case reflect.Map:
@@ -52,6 +51,7 @@ func DecodeScopesMatcherHookFunc() mapstructure.DecodeHookFunc {
 			createMatcher := func(scopes []string) (ScopesMatcher, error) {
 				return ExactScopeStrategyMatcher(scopes), nil
 			}
+
 			return createMatcherFromValues(createMatcher, data)
 		default:
 			return nil, errorchain.NewWithMessage(ErrConfiguration, "invalid structure for scopes matcher")
@@ -102,12 +102,9 @@ func decodeMatcherFromMap(data any) (ScopesMatcher, error) {
 }
 
 func createMatcherFromValues(createMatcher ScopeMatcherFactory, values any) (ScopesMatcher, error) {
-	// nolint
-	scopes := make([]string, len(values.([]any)))
-	// nolint
-	for i, v := range values.([]any) {
-		// nolint
-		scopes[i] = v.(string)
+	scopes := make([]string, len(values.([]any))) // nolint: forcetypeassert
+	for i, v := range values.([]any) {            // nolint: forcetypeassert
+		scopes[i] = v.(string) // nolint: forcetypeassert
 	}
 
 	return createMatcher(scopes)

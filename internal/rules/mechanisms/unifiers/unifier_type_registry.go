@@ -26,11 +26,9 @@ import (
 var (
 	ErrUnsupportedUnifierType = errors.New("unifier type unsupported")
 
-	// by intention. Used only during application bootstrap
-	// nolint
-	typeFactories []UnifierTypeFactory
-	// nolint
-	typeFactoriesMu sync.RWMutex
+	// by intention. Used only during application bootstrap.
+	typeFactories   []UnifierTypeFactory //nolint:gochecknoglobals
+	typeFactoriesMu sync.RWMutex         //nolint:gochecknoglobals
 )
 
 type UnifierTypeFactory func(id string, typ string, c map[string]any) (bool, Unifier, error)

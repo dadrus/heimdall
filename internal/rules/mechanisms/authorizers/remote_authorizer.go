@@ -44,8 +44,11 @@ import (
 	"github.com/dadrus/heimdall/internal/x/stringx"
 )
 
+var errNoContent = errors.New("no payload received")
+
 // by intention. Used only during application bootstrap
-// nolint
+//
+//nolint:gochecknoinits
 func init() {
 	registerAuthorizerTypeFactory(
 		func(id string, typ string, conf map[string]any) (bool, Authorizer, error) {
@@ -270,7 +273,7 @@ func (a *remoteAuthorizer) doAuthorize(ctx heimdall.Context, sub *subject.Subjec
 	defer resp.Body.Close()
 
 	data, err := a.readResponse(ctx, resp)
-	if err != nil {
+	if err != nil && !errors.Is(err, errNoContent) {
 		return nil, err
 	}
 
@@ -339,7 +342,7 @@ func (a *remoteAuthorizer) readResponse(ctx heimdall.Context, resp *http.Respons
 	if resp.ContentLength == 0 {
 		logger.Debug().Msg("No content received")
 
-		return nil, nil
+		return nil, errNoContent
 	}
 
 	rawData, err := io.ReadAll(resp.Body)

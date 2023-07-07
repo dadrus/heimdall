@@ -50,9 +50,9 @@ func (r QueryParamsRemover) RemoveFrom(value string) string {
 }
 
 type URLRewriter struct {
-	Scheme              string             `json:"scheme" yaml:"scheme"`
-	PathPrefixToCut     PrefixCutter       `json:"strip_path_prefix" yaml:"strip_path_prefix"`
-	PathPrefixToAdd     PrefixAdder        `json:"add_path_prefix" yaml:"add_path_prefix"`
+	Scheme              string             `json:"scheme"                 yaml:"scheme"`
+	PathPrefixToCut     PrefixCutter       `json:"strip_path_prefix"      yaml:"strip_path_prefix"`
+	PathPrefixToAdd     PrefixAdder        `json:"add_path_prefix"        yaml:"add_path_prefix"`
 	QueryParamsToRemove QueryParamsRemover `json:"strip_query_parameters" yaml:"strip_query_parameters"`
 }
 

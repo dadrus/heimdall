@@ -142,7 +142,7 @@ func TestProviderRuleSetFiltering(t *testing.T) {
 	}
 }
 
-func TestProviderLifecycle(t *testing.T) { //nolint:maintidx,gocognit, cyclop
+func TestProviderLifecycle(t *testing.T) {
 	type ResponseWriter func(t *testing.T, watchRequest bool, w http.ResponseWriter)
 
 	var writeResponse ResponseWriter

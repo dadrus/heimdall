@@ -183,7 +183,7 @@ func TestFinalizeRequestContext(t *testing.T) {
 			updateContext: func(t *testing.T, ctx heimdall.Context) {
 				t.Helper()
 
-				ctx.SetPipelineError(errors.New("test error")) // nolint: goerr113
+				ctx.SetPipelineError(errors.New("test error"))
 				ctx.AddHeaderForUpstream("x-for-upstream", "some-value")
 				ctx.AddCookieForUpstream("some-cookie", "value-1")
 				ctx.AddCookieForUpstream("some-other-cookie", "value-2")

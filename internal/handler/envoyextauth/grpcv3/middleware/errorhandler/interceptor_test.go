@@ -37,7 +37,7 @@ import (
 	"github.com/dadrus/heimdall/internal/heimdall"
 )
 
-func TestErrorInterceptor(t *testing.T) { //nolint:maintidx
+func TestErrorInterceptor(t *testing.T) {
 	t.Parallel()
 
 	for _, tc := range []struct {
@@ -279,7 +279,6 @@ func TestErrorInterceptor(t *testing.T) { //nolint:maintidx
 			client := envoy_auth.NewAuthorizationClient(conn)
 
 			// WHEN
-			// nolint: errcheck
 			resp, err := client.Check(context.Background(), &envoy_auth.CheckRequest{
 				Attributes: &envoy_auth.AttributeContext{
 					Request: &envoy_auth.AttributeContext_Request{

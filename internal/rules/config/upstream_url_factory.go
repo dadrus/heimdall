@@ -7,7 +7,7 @@ import (
 )
 
 type UpstreamURLFactory struct {
-	Host        string       `json:"host" yaml:"host"`
+	Host        string       `json:"host"    yaml:"host"`
 	URLRewriter *URLRewriter `json:"rewrite" yaml:"rewrite"`
 }
 

@@ -344,7 +344,6 @@ func TestRepositoryRuleSetLifecycleManagement(t *testing.T) {
 			repo := newRepository(queue, &ruleFactory{}, log.Logger)
 			require.NoError(t, repo.Start(ctx))
 
-			// nolint: errcheck
 			defer repo.Stop(ctx)
 
 			// WHEN
