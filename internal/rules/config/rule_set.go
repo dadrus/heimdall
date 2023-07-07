@@ -18,8 +18,8 @@ type RuleSet struct {
 	MetaData
 
 	Version string `json:"version" yaml:"version"`
-	Name    string `json:"name" yaml:"name"`
-	Rules   []Rule `json:"rules" yaml:"rules"`
+	Name    string `json:"name"    yaml:"name"`
+	Rules   []Rule `json:"rules"   yaml:"rules"`
 }
 
 func (rs RuleSet) VerifyPathPrefix(prefix string) error {

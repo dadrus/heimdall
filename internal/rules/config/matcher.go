@@ -23,7 +23,7 @@ import (
 )
 
 type Matcher struct {
-	URL      string `json:"url" yaml:"url"`
+	URL      string `json:"url"      yaml:"url"`
 	Strategy string `json:"strategy" yaml:"strategy"`
 }
 
