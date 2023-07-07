@@ -130,7 +130,6 @@ func TestNewProvider(t *testing.T) {
 	}
 }
 
-// nolint: maintidx
 func TestProviderLifecycle(t *testing.T) {
 	for _, tc := range []struct {
 		uc             string
@@ -477,7 +476,7 @@ rules:
 			// WHEN
 			err = prov.Start(ctx)
 
-			defer prov.Stop(ctx) // nolint: errcheck
+			defer prov.Stop(ctx)
 
 			writeContents(t, tmpFile, tmpDir)
 

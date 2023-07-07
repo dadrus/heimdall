@@ -34,7 +34,7 @@ import (
 	"github.com/dadrus/heimdall/internal/x"
 )
 
-func TestFetchRuleSets(t *testing.T) { //nolint:maintidx
+func TestFetchRuleSets(t *testing.T) {
 	// aws is not used, but an aws s3 compatible implementation
 	// however, since the aws sdk is used to talk to it,
 	// it expects credentials, even these are not used at the end

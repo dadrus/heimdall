@@ -48,7 +48,8 @@ const (
 var errNoContent = errors.New("no payload received")
 
 // by intention. Used only during application bootstrap
-// nolint
+//
+//nolint:gochecknoinits
 func init() {
 	registerContextualizerTypeFactory(
 		func(id string, typ string, conf map[string]any) (bool, Contextualizer, error) {

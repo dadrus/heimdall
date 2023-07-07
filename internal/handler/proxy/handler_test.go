@@ -40,7 +40,6 @@ import (
 	"github.com/dadrus/heimdall/internal/x"
 )
 
-// nolint: maintidx
 func TestHandleProxyEndpointRequest(t *testing.T) {
 	t.Parallel()
 
@@ -494,7 +493,7 @@ func TestHandleProxyEndpointRequest(t *testing.T) {
 				Logger:     log.Logger,
 			})
 
-			defer app.Shutdown() // nolint: errcheck
+			defer app.Shutdown()
 
 			_, err := newHandler(handlerArgs{
 				App:             app,

@@ -42,7 +42,8 @@ const (
 )
 
 // by intention. Used only during application bootstrap
-// nolint
+//
+//nolint:gochecknoinits
 func init() {
 	registerUnifierTypeFactory(
 		func(id string, typ string, conf map[string]any) (bool, Unifier, error) {

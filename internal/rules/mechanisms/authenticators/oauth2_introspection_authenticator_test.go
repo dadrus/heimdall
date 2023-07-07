@@ -494,7 +494,6 @@ subject:
 	}
 }
 
-// nolint: maintidx
 func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 	t.Parallel()
 
@@ -1296,7 +1295,6 @@ func TestCacheTTLCalculation(t *testing.T) {
 			},
 		},
 		{
-			// nolint: lll
 			uc:            "negative ttl settings and exp set to a value response, which would result in positive ttl with 10s leeway",
 			authenticator: &oauth2IntrospectionAuthenticator{ttl: &negativeTTL},
 			response: func() *oauth2.IntrospectionResponse {
@@ -1329,7 +1327,6 @@ func TestCacheTTLCalculation(t *testing.T) {
 			},
 		},
 		{
-			// nolint: lll
 			uc:            "zero ttl settings and exp set to a value response, which would result in positive ttl with 10s leeway",
 			authenticator: &oauth2IntrospectionAuthenticator{ttl: &negativeTTL},
 			response: func() *oauth2.IntrospectionResponse {

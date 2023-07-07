@@ -40,7 +40,7 @@ func TestMiddlewareApplicationWithoutConfiguredTrustedProxy(t *testing.T) {
 	})
 	app.Use(New())
 
-	defer app.Shutdown() // nolint: errcheck
+	defer app.Shutdown()
 
 	app.Get("test", func(ctx *fiber.Ctx) error {
 		testAppCalled = true
@@ -179,7 +179,7 @@ func TestMiddlewareApplicationWithConfiguredTrustedProxy(t *testing.T) {
 	})
 	app.Use(New())
 
-	defer app.Shutdown() // nolint: errcheck
+	defer app.Shutdown()
 
 	app.Get("test", func(ctx *fiber.Ctx) error {
 		testAppCalled = true

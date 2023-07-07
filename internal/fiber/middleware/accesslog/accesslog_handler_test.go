@@ -17,7 +17,6 @@
 package accesslog
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -108,9 +107,8 @@ func TestLoggerHandler(t *testing.T) {
 			setHeader: func(t *testing.T, req *http.Request) {
 				t.Helper()
 
-				// nolint: contextcheck
 				otel.GetTextMapPropagator().Inject(
-					trace.ContextWithRemoteSpanContext(context.Background(), parentCtx),
+					trace.ContextWithRemoteSpanContext(req.Context(), parentCtx),
 					propagation.HeaderCarrier(req.Header))
 
 				req.Header.Set("X-Forwarded-Proto", "https")
@@ -123,7 +121,7 @@ func TestLoggerHandler(t *testing.T) {
 			configureHandler: func(t *testing.T, ctx *fiber.Ctx) error {
 				t.Helper()
 
-				return fmt.Errorf("test error") // nolint: goerr113
+				return fmt.Errorf("test error")
 			},
 			assert: func(t *testing.T, logEvent1, logEvent2 map[string]any) {
 				t.Helper()
@@ -181,7 +179,7 @@ func TestLoggerHandler(t *testing.T) {
 				t.Helper()
 
 				accesscontext.SetSubject(ctx.UserContext(), "bar")
-				accesscontext.SetError(ctx.UserContext(), fmt.Errorf("test error")) // nolint: goerr113
+				accesscontext.SetError(ctx.UserContext(), fmt.Errorf("test error"))
 
 				return nil
 			},

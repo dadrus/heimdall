@@ -59,7 +59,7 @@ func getLabel(labels []*dto.LabelPair, name string) string {
 	return ""
 }
 
-func TestHandlerObserveKnownRequests(t *testing.T) { //nolint:maintidx
+func TestHandlerObserveKnownRequests(t *testing.T) {
 	for _, tc := range []struct {
 		uc            string
 		configureMock func(t *testing.T, srv *mocks.MockHandler)
@@ -277,7 +277,6 @@ func TestHandlerObserveKnownRequests(t *testing.T) { //nolint:maintidx
 
 			// WHEN
 			// we're not interested in the response and the error
-			// nolint: errcheck
 			client.Check(context.Background(), &envoy_auth.CheckRequest{
 				Attributes: &envoy_auth.AttributeContext{
 					Request: &envoy_auth.AttributeContext_Request{
@@ -338,7 +337,6 @@ func TestHandlerObserveUnknownRequests(t *testing.T) {
 
 	// WHEN
 	// we're not interested in the response and the error
-	// nolint: errcheck
 	_, err = client.Test(context.Background(), &mocks.TestRequest{})
 
 	// THEN

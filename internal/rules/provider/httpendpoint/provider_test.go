@@ -164,7 +164,7 @@ endpoints:
 	}
 }
 
-func TestProviderLifecycle(t *testing.T) { //nolint:maintidx
+func TestProviderLifecycle(t *testing.T) {
 	t.Parallel()
 
 	type ResponseWriter func(t *testing.T, w http.ResponseWriter)

@@ -168,7 +168,7 @@ continue_pipeline_on_error: true
 	}
 }
 
-func TestCreateGenericContextualizerFromPrototype(t *testing.T) { //nolint:maintidx
+func TestCreateGenericContextualizerFromPrototype(t *testing.T) {
 	t.Parallel()
 
 	for _, tc := range []struct {
@@ -487,7 +487,6 @@ continue_pipeline_on_error: false
 	}
 }
 
-// nolint: maintidx
 func TestGenericContextualizerExecute(t *testing.T) {
 	t.Parallel()
 

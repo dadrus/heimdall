@@ -24,9 +24,8 @@ import (
 type CompositeExtractStrategy []AuthDataExtractStrategy
 
 func (ce CompositeExtractStrategy) GetAuthData(ctx heimdall.Context) (string, error) {
-	// nolint
 	// preallocation not possible
-	var errors []error
+	var errors []error //nolint:prealloc
 
 	for _, e := range ce {
 		val, err := e.GetAuthData(ctx)

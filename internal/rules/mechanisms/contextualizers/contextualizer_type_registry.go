@@ -26,11 +26,9 @@ import (
 var (
 	ErrUnsupportedContextualizerType = errors.New("contextualizer type unsupported")
 
-	// by intention. Used only during application bootstrap
-	// nolint
-	typeFactories []ContextualizerTypeFactory
-	// nolint
-	typeFactoriesMu sync.RWMutex
+	// by intention. Used only during application bootstrap.
+	typeFactories   []ContextualizerTypeFactory //nolint:gochecknoglobals
+	typeFactoriesMu sync.RWMutex                //nolint:gochecknoglobals
 )
 
 type ContextualizerTypeFactory func(id string, typ string, c map[string]any) (bool, Contextualizer, error)

@@ -18,7 +18,7 @@ package config
 
 import "go.uber.org/fx"
 
-// nolint
+//nolint:gochecknoglobals
 var Module = fx.Options(
 	fx.Provide(NewConfiguration),
 	fx.Provide(LogConfiguration),

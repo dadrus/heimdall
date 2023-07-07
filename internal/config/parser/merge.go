@@ -29,7 +29,6 @@ func merge(dest, src any) any {
 	vDst := reflect.ValueOf(dest)
 	vSrc := reflect.ValueOf(src)
 
-	// nolint: exhaustive
 	switch vDst.Kind() {
 	case reflect.Map:
 		if vSrc.Type() != vDst.Type() {

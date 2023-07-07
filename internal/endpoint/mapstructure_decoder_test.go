@@ -33,7 +33,6 @@ func TestDecodeAuthenticationStrategyHookFuncForBasicAuthStrategy(t *testing.T) 
 		AuthStrategy AuthenticationStrategy `mapstructure:"auth"`
 	}
 
-	// nolint
 	// du to a bug in the linter
 	for _, tc := range []struct {
 		uc     string
@@ -53,7 +52,7 @@ auth:
 
 				assert.NoError(t, err)
 				assert.IsType(t, &BasicAuthStrategy{}, as)
-				bas := as.(*BasicAuthStrategy)
+				bas := as.(*BasicAuthStrategy) // nolint: forcetypeassert
 				assert.Equal(t, "foo", bas.User)
 				assert.Equal(t, "bar", bas.Password)
 			},
@@ -133,7 +132,6 @@ func TestDecodeAuthenticationStrategyHookFuncForAPIKeyStrategy(t *testing.T) {
 		AuthStrategy AuthenticationStrategy `mapstructure:"auth"`
 	}
 
-	// nolint
 	// du to a bug in the linter
 	for _, tc := range []struct {
 		uc     string
@@ -155,7 +153,7 @@ auth:
 
 				assert.NoError(t, err)
 				assert.IsType(t, &APIKeyStrategy{}, as)
-				aks := as.(*APIKeyStrategy)
+				aks := as.(*APIKeyStrategy) // nolint: forcetypeassert
 				assert.Equal(t, "foo", aks.Name)
 				assert.Equal(t, "bar", aks.Value)
 				assert.Equal(t, "header", aks.In)
@@ -176,7 +174,7 @@ auth:
 
 				assert.NoError(t, err)
 				assert.IsType(t, &APIKeyStrategy{}, as)
-				aks := as.(*APIKeyStrategy)
+				aks := as.(*APIKeyStrategy) // nolint: forcetypeassert
 				assert.Equal(t, "foo", aks.Name)
 				assert.Equal(t, "bar", aks.Value)
 				assert.Equal(t, "cookie", aks.In)
@@ -197,7 +195,7 @@ auth:
 
 				assert.NoError(t, err)
 				assert.IsType(t, &APIKeyStrategy{}, as)
-				aks := as.(*APIKeyStrategy)
+				aks := as.(*APIKeyStrategy) // nolint: forcetypeassert
 				assert.Equal(t, "foo", aks.Name)
 				assert.Equal(t, "bar", aks.Value)
 				assert.Equal(t, "query", aks.In)
@@ -313,7 +311,6 @@ func TestDecodeAuthenticationStrategyHookFuncForClientCredentialsStrategy(t *tes
 		AuthStrategy AuthenticationStrategy `mapstructure:"auth"`
 	}
 
-	// nolint
 	// du to a bug in the linter
 	for _, tc := range []struct {
 		uc     string
@@ -335,7 +332,7 @@ auth:
 
 				assert.NoError(t, err)
 				assert.IsType(t, &ClientCredentialsStrategy{}, as)
-				ccs := as.(*ClientCredentialsStrategy)
+				ccs := as.(*ClientCredentialsStrategy) // nolint: forcetypeassert
 				assert.Equal(t, "foo", ccs.ClientID)
 				assert.Equal(t, "bar", ccs.ClientSecret)
 				assert.Equal(t, "http://foobar.foo", ccs.TokenURL)
@@ -359,7 +356,7 @@ auth:
 
 				assert.NoError(t, err)
 				assert.IsType(t, &ClientCredentialsStrategy{}, as)
-				ccs := as.(*ClientCredentialsStrategy)
+				ccs := as.(*ClientCredentialsStrategy) // nolint: forcetypeassert
 				assert.Equal(t, "foo", ccs.ClientID)
 				assert.Equal(t, "bar", ccs.ClientSecret)
 				assert.Equal(t, "http://foobar.foo", ccs.TokenURL)
