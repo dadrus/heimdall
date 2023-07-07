@@ -15,6 +15,7 @@ linters:
     - paralleltest
     - nolintlint
     - tparallel
+    - depguard
     # deprecated
     - varcheck
     - deadcode
