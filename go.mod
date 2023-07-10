@@ -45,7 +45,7 @@ require (
 	github.com/valyala/fasthttp v1.48.0
 	github.com/ybbus/httpretry v1.0.2
 	github.com/yl2chen/cidranger v1.0.2
-	github.com/youmark/pkcs8 v1.1
+	github.com/youmark/pkcs8 v0.0.0-20181117223130-1be2e3e5546d
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.42.0
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.42.0
 	go.opentelemetry.io/contrib/propagators/autoprop v0.42.0
