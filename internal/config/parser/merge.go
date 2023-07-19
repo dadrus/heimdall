@@ -19,6 +19,8 @@ package parser
 import (
 	"fmt"
 	"reflect"
+
+	"github.com/knadh/koanf/maps"
 )
 
 func merge(dest, src any) any {
@@ -72,7 +74,7 @@ func mergeSlices(dest, src []any) []any {
 }
 
 func mergeMaps(dest, src map[string]any) map[string]any {
-	for k, v := range src {
+	for k, v := range maps.Unflatten(src, ".") {
 		old := dest[k]
 		if old == nil {
 			dest[k] = v
