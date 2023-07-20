@@ -17,13 +17,16 @@
 package config
 
 import (
+	"bytes"
 	"errors"
 	"io"
 
+	"github.com/drone/envsubst/v2"
 	"gopkg.in/yaml.v3"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
+	"github.com/dadrus/heimdall/internal/x/stringx"
 )
 
 var ErrEmptyRuleSet = errors.New("empty rule set")
@@ -53,7 +56,19 @@ func parseYAML(reader io.Reader) (*RuleSet, error) {
 		ruleSet   RuleSet
 	)
 
-	dec := yaml.NewDecoder(reader)
+	raw, err := io.ReadAll(reader)
+	if err != nil {
+		return nil, errorchain.NewWithMessage(heimdall.ErrInternal,
+			"failed to read rule set").CausedBy(err)
+	}
+
+	content, err := envsubst.EvalEnv(stringx.ToString(raw))
+	if err != nil {
+		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
+			"failed to evaluate env variables in rule set").CausedBy(err)
+	}
+
+	dec := yaml.NewDecoder(bytes.NewReader(stringx.ToBytes(content)))
 	if err := dec.Decode(&rawConfig); err != nil {
 		if errors.Is(err, io.EOF) {
 			return nil, ErrEmptyRuleSet
@@ -62,7 +77,7 @@ func parseYAML(reader io.Reader) (*RuleSet, error) {
 		return nil, err
 	}
 
-	err := DecodeConfig(rawConfig, &ruleSet)
+	err = DecodeConfig(rawConfig, &ruleSet)
 
 	return &ruleSet, err
 }

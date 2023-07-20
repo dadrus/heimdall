@@ -126,7 +126,7 @@ rules:
 }
 
 func TestParseYAML(t *testing.T) {
-	t.Parallel()
+	t.Setenv("FOO", "bar")
 
 	for _, tc := range []struct {
 		uc     string
@@ -151,7 +151,7 @@ func TestParseYAML(t *testing.T) {
 			},
 		},
 		{
-			uc: "valid rule set spec",
+			uc: "valid rule set spec without env usage",
 			conf: []byte(`
 version: "1"
 name: foo
@@ -165,6 +165,42 @@ rules:
 				require.NotNil(t, ruleSet)
 				assert.Equal(t, "1", ruleSet.Version)
 				assert.Equal(t, "foo", ruleSet.Name)
+				assert.Len(t, ruleSet.Rules, 1)
+				assert.Equal(t, ruleSet.Rules[0].ID, "bar")
+			},
+		},
+		{
+			uc: "valid rule set spec with invalid env spec",
+			conf: []byte(`
+version: "1"
+name: ${FOO
+rules:
+- id: bar
+`),
+			assert: func(t *testing.T, err error, ruleSet *RuleSet) {
+				t.Helper()
+
+				require.Error(t, err)
+				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				assert.Contains(t, err.Error(), "evaluate env")
+				require.Nil(t, ruleSet)
+			},
+		},
+		{
+			uc: "valid rule set spec with valid env usage",
+			conf: []byte(`
+version: "1"
+name: ${FOO}
+rules:
+- id: bar
+`),
+			assert: func(t *testing.T, err error, ruleSet *RuleSet) {
+				t.Helper()
+
+				require.NoError(t, err)
+				require.NotNil(t, ruleSet)
+				assert.Equal(t, "1", ruleSet.Version)
+				assert.Equal(t, "bar", ruleSet.Name)
 				assert.Len(t, ruleSet.Rules, 1)
 				assert.Equal(t, ruleSet.Rules[0].ID, "bar")
 			},
