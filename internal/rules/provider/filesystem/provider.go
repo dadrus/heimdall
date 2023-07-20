@@ -39,12 +39,13 @@ import (
 )
 
 type Provider struct {
-	src        string
-	w          *fsnotify.Watcher
-	p          rule.SetProcessor
-	l          zerolog.Logger
-	states     sync.Map
-	configured bool
+	src            string
+	w              *fsnotify.Watcher
+	p              rule.SetProcessor
+	l              zerolog.Logger
+	states         sync.Map
+	envVarsEnabled bool
+	configured     bool
 }
 
 func NewProvider(conf *config.Configuration, processor rule.SetProcessor, logger zerolog.Logger) (*Provider, error) {
@@ -55,8 +56,9 @@ func NewProvider(conf *config.Configuration, processor rule.SetProcessor, logger
 	}
 
 	type Config struct {
-		Src   string `koanf:"src"`
-		Watch bool   `koanf:"watch"`
+		Src            string `mapstructure:"src"`
+		Watch          bool   `mapstructure:"watch"`
+		EnvVarsEnabled bool   `mapstructure:"env_vars_enabled"`
 	}
 
 	var providerConf Config
@@ -100,11 +102,12 @@ func NewProvider(conf *config.Configuration, processor rule.SetProcessor, logger
 	logger.Info().Msg("Rule provider configured.")
 
 	return &Provider{
-		src:        absPath,
-		w:          watcher,
-		p:          processor,
-		l:          logger,
-		configured: true,
+		src:            absPath,
+		w:              watcher,
+		p:              processor,
+		l:              logger,
+		configured:     true,
+		envVarsEnabled: providerConf.EnvVarsEnabled,
 	}, nil
 }
 
@@ -263,7 +266,7 @@ func (p *Provider) loadRuleSet(fileName string) (*config2.RuleSet, error) {
 
 	md := sha256.New()
 
-	ruleSet, err := config2.ParseRules("application/yaml", io.TeeReader(file, md))
+	ruleSet, err := config2.ParseRules("application/yaml", io.TeeReader(file, md), p.envVarsEnabled)
 	if err != nil {
 		return nil, errorchain.NewWithMessage(heimdall.ErrInternal, "failed to parse received rule set").
 			CausedBy(err)
