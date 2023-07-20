@@ -31,12 +31,12 @@ import (
 
 var ErrEmptyRuleSet = errors.New("empty rule set")
 
-func ParseRules(contentType string, reader io.Reader) (*RuleSet, error) {
+func ParseRules(contentType string, reader io.Reader, envUsageEnabled bool) (*RuleSet, error) {
 	switch contentType {
 	case "application/json":
 		fallthrough
 	case "application/yaml":
-		return parseYAML(reader)
+		return parseYAML(reader, envUsageEnabled)
 	default:
 		// check if the contents are empty. in that case nothing needs to be decoded anyway
 		b := make([]byte, 1)
@@ -50,25 +50,29 @@ func ParseRules(contentType string, reader io.Reader) (*RuleSet, error) {
 	}
 }
 
-func parseYAML(reader io.Reader) (*RuleSet, error) {
+func parseYAML(reader io.Reader, envUsageEnabled bool) (*RuleSet, error) {
 	var (
 		rawConfig map[string]any
 		ruleSet   RuleSet
 	)
 
-	raw, err := io.ReadAll(reader)
-	if err != nil {
-		return nil, errorchain.NewWithMessage(heimdall.ErrInternal,
-			"failed to read rule set").CausedBy(err)
+	if envUsageEnabled {
+		raw, err := io.ReadAll(reader)
+		if err != nil {
+			return nil, errorchain.NewWithMessage(heimdall.ErrInternal,
+				"failed to read rule set").CausedBy(err)
+		}
+
+		content, err := envsubst.EvalEnv(stringx.ToString(raw))
+		if err != nil {
+			return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
+				"failed to evaluate env variables in rule set").CausedBy(err)
+		}
+
+		reader = bytes.NewReader(stringx.ToBytes(content))
 	}
 
-	content, err := envsubst.EvalEnv(stringx.ToString(raw))
-	if err != nil {
-		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
-			"failed to evaluate env variables in rule set").CausedBy(err)
-	}
-
-	dec := yaml.NewDecoder(bytes.NewReader(stringx.ToBytes(content)))
+	dec := yaml.NewDecoder(reader)
 	if err := dec.Decode(&rawConfig); err != nil {
 		if errors.Is(err, io.EOF) {
 			return nil, ErrEmptyRuleSet
@@ -77,7 +81,7 @@ func parseYAML(reader io.Reader) (*RuleSet, error) {
 		return nil, err
 	}
 
-	err = DecodeConfig(rawConfig, &ruleSet)
+	err := DecodeConfig(rawConfig, &ruleSet)
 
 	return &ruleSet, err
 }
