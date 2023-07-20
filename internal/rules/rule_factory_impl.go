@@ -360,6 +360,8 @@ func expandHTTPMethods(methods []string) ([]string, error) {
 			http.MethodDelete, http.MethodConnect, http.MethodOptions, http.MethodTrace)
 	}
 
+	slices.SortFunc(methods, func(a, b string) bool { return strings.Compare(a, b) == -1 })
+
 	methods = slices.Compact(methods)
 	if res := slicex.Filter(methods, func(s string) bool { return len(s) == 0 }); len(res) != 0 {
 		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
