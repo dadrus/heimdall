@@ -32,9 +32,9 @@ import (
 
 var (
 	//nolint:gochecknoglobals
-	requestType = types.NewTypeValue(reflect.TypeOf(heimdall.Request{}).String(), traits.ReceiverType)
+	requestType = cel.ObjectType(reflect.TypeOf(heimdall.Request{}).String(), traits.ReceiverType)
 	//nolint:gochecknoglobals
-	urlType = types.NewTypeValue(reflect.TypeOf(url.URL{}).String(), traits.ReceiverType)
+	urlType = cel.ObjectType(reflect.TypeOf(url.URL{}).String(), traits.ReceiverType)
 )
 
 type heimdallLibrary struct{}
