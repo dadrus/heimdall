@@ -17,6 +17,7 @@
 package rules
 
 import (
+	"net/http"
 	"net/url"
 	"testing"
 
@@ -371,6 +372,31 @@ func TestRuleFactoryNew(t *testing.T) {
 			},
 		},
 		{
+			uc: "new factory with default rule, consisting of authorizer and unifier with error while expanding methods",
+			config: &config.Configuration{Rules: config.Rules{
+				Default: &config.DefaultRule{
+					Execute: []config.MechanismConfig{
+						{"authenticator": "bar"},
+						{"unifier": "baz"},
+					},
+					Methods: []string{"FOO", ""},
+				},
+			}},
+			configureMocks: func(t *testing.T, mhf *mocks3.FactoryMock) {
+				t.Helper()
+
+				mhf.EXPECT().CreateAuthenticator(mock.Anything, "bar", mock.Anything).Return(nil, nil)
+				mhf.EXPECT().CreateUnifier(mock.Anything, "baz", mock.Anything).Return(nil, nil)
+			},
+			assert: func(t *testing.T, err error, ruleFactory *ruleFactory) {
+				t.Helper()
+
+				require.Error(t, err)
+				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				assert.Contains(t, err.Error(), "failed to expand")
+			},
+		},
+		{
 			uc: "new factory with default rule, consisting of authorizer and unifier without methods defined",
 			config: &config.Configuration{Rules: config.Rules{
 				Default: &config.DefaultRule{
@@ -712,6 +738,31 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
 				assert.Contains(t, err.Error(), "no unifier defined")
+			},
+		},
+		{
+			uc: "without default rule and with authenticator and unifier configured, but with error while expanding methods",
+			config: config2.Rule{
+				ID:          "foobar",
+				RuleMatcher: config2.Matcher{URL: "http://foo.bar", Strategy: "glob"},
+				Execute: []config.MechanismConfig{
+					{"authenticator": "foo"},
+					{"unifier": "bar"},
+				},
+				Methods: []string{"FOO", ""},
+			},
+			configureMocks: func(t *testing.T, mhf *mocks3.FactoryMock) {
+				t.Helper()
+
+				mhf.EXPECT().CreateAuthenticator("test", "foo", mock.Anything).Return(&mocks2.AuthenticatorMock{}, nil)
+				mhf.EXPECT().CreateUnifier("test", "bar", mock.Anything).Return(&mocks7.UnifierMock{}, nil)
+			},
+			assert: func(t *testing.T, err error, rul *ruleImpl) {
+				t.Helper()
+
+				require.Error(t, err)
+				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				assert.Contains(t, err.Error(), "failed to expand")
 			},
 		},
 		{
@@ -1258,6 +1309,67 @@ func TestRuleFactoryProxyModeApplicability(t *testing.T) {
 				require.Error(t, err)
 			} else {
 				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestExpandHTTPMethods(t *testing.T) {
+	t.Parallel()
+
+	for _, tc := range []struct {
+		uc          string
+		configured  []string
+		expected    []string
+		shouldError bool
+	}{
+		{
+			uc: "empty configuration",
+		},
+		{
+			uc:          "empty method in list",
+			configured:  []string{"FOO", ""},
+			shouldError: true,
+		},
+		{
+			uc:         "duplicates should be removed",
+			configured: []string{"BAR", "BAZ", "BAZ", "FOO", "FOO", "ZAB"},
+			expected:   []string{"BAR", "BAZ", "FOO", "ZAB"},
+		},
+		{
+			uc:         "only ALL configured",
+			configured: []string{"ALL"},
+			expected: []string{
+				http.MethodConnect, http.MethodDelete, http.MethodGet, http.MethodHead, http.MethodOptions,
+				http.MethodPatch, http.MethodPost, http.MethodPut, http.MethodTrace,
+			},
+		},
+		{
+			uc:         "ALL without POST and TRACE",
+			configured: []string{"ALL", "!POST", "!TRACE"},
+			expected: []string{
+				http.MethodConnect, http.MethodDelete, http.MethodGet, http.MethodHead,
+				http.MethodOptions, http.MethodPatch, http.MethodPut,
+			},
+		},
+		{
+			uc:         "ALL with duplicates and without POST and TRACE",
+			configured: []string{"ALL", "GET", "!POST", "!TRACE", "!TRACE"},
+			expected: []string{
+				http.MethodConnect, http.MethodDelete, http.MethodGet, http.MethodHead,
+				http.MethodOptions, http.MethodPatch, http.MethodPut,
+			},
+		},
+	} {
+		t.Run(tc.uc, func(t *testing.T) {
+			// WHEN
+			res, err := expandHTTPMethods(tc.configured)
+
+			// THEN
+			if tc.shouldError {
+				require.Error(t, err)
+			} else {
+				require.Equal(t, tc.expected, res)
 			}
 		})
 	}

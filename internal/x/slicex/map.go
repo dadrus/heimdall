@@ -16,13 +16,11 @@
 
 package slicex
 
-func Filter[T any](src []T, apply func(T) bool) []T {
-	var dst []T
+func Map[S any, D any](src []S, apply func(S) D) []D {
+	dst := make([]D, len(src))
 
-	for _, n := range src {
-		if apply(n) {
-			dst = append(dst, n)
-		}
+	for i, n := range src {
+		dst[i] = apply(n)
 	}
 
 	return dst
