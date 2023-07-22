@@ -17,14 +17,21 @@
 package requestcontext
 
 import (
+	"bufio"
 	"context"
+	"fmt"
+	"net"
 	"net/http"
+	"net/http/httputil"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/rs/zerolog"
 	"github.com/valyala/fasthttp"
+	"github.com/valyala/fasthttp/fasthttpadaptor"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 
 	"github.com/dadrus/heimdall/internal/fasthttp/opentelemetry"
 	"github.com/dadrus/heimdall/internal/heimdall"
@@ -103,36 +110,75 @@ func (s *RequestContext) FinalizeAndForward(mutator URIMutator, timeout time.Dur
 		return s.err
 	}
 
-	for k := range s.upstreamHeaders {
-		s.c.Request().Header.Set(k, s.upstreamHeaders.Get(k))
-	}
-
-	for k, v := range s.upstreamCookies {
-		s.c.Request().Header.SetCookie(k, v)
-	}
-
-	// delete headers, which are useless for the upstream service, before forwarding the request
-	for _, name := range []string{
-		"X-Forwarded-Method", "X-Forwarded-Uri", "X-Forwarded-Path",
-	} {
-		s.c.Request().Header.Del(name)
-	}
-
 	targetURL, err := mutator.Mutate(s.reqURL)
 	if err != nil {
 		return err
 	}
 
-	upstreamURL := targetURL.String()
-
 	logger := zerolog.Ctx(s.c.UserContext())
 	logger.Info().
 		Str("_method", s.reqMethod).
-		Str("_upstream", upstreamURL).
+		Str("_upstream", targetURL.String()).
 		Msg("Forwarding request")
 
-	s.c.Request().Header.SetMethod(s.reqMethod)
-	s.c.Request().SetRequestURI(upstreamURL)
+	req, err := http.NewRequestWithContext(s.c.UserContext(), s.reqMethod, targetURL.String(), nil)
+	if err != nil {
+		return err
+	}
+
+	if err = fasthttpadaptor.ConvertRequest(s.c.Context(), req, true); err != nil {
+		return err
+	}
+
+	// overridden by the above ConvertRequest call
+	req.Method = s.reqMethod
+	req.URL = targetURL
+
+	c := http.Client{
+		Transport: otelhttp.NewTransport(
+			http.DefaultTransport,
+			otelhttp.WithSpanNameFormatter(func(_ string, r *http.Request) string {
+				return fmt.Sprintf("%s %s %s @%s", r.Proto, r.Method, r.URL.Path, targetURL.Host)
+			})),
+	}
+
+	resp, err := c.Do(req)
+	if err != nil {
+		return err
+	}
+
+	proxy := httputil.ReverseProxy{
+		Transport: otelhttp.NewTransport(
+			http.DefaultTransport,
+			otelhttp.WithSpanNameFormatter(func(_ string, r *http.Request) string {
+				return fmt.Sprintf("%s %s %s @%s", r.Proto, r.Method, r.URL.Path, targetURL.Host)
+			})),
+		Rewrite: func(request *httputil.ProxyRequest) {
+			request.Out.Method = s.reqMethod
+			request.Out.URL = targetURL
+
+			for k := range s.upstreamHeaders {
+				request.Out.Header.Set(k, s.upstreamHeaders.Get(k))
+			}
+
+			for k, v := range s.upstreamCookies {
+				request.Out.AddCookie(&http.Cookie{Name: k, Value: v})
+			}
+
+			// delete headers, which are useless for the upstream service, before forwarding the request
+			for _, name := range []string{
+				"X-Forwarded-Method", "X-Forwarded-Uri", "X-Forwarded-Path",
+			} {
+				request.Out.Header.Del(name)
+			}
+		},
+	}
+
+	fmt.Println(resp)
+
+	proxy.ServeHTTP(nil, req)
+
+	// websocket.FastHTTPUpgrader{}.
 
 	if logger.GetLevel() == zerolog.TraceLevel {
 		logger.Trace().Msg("Request: \n" + s.c.Request().String())
@@ -140,4 +186,45 @@ func (s *RequestContext) FinalizeAndForward(mutator URIMutator, timeout time.Dur
 
 	return opentelemetry.NewClient(&fasthttp.Client{}).
 		DoTimeout(s.c.UserContext(), s.c.Request(), s.c.Response(), timeout)
+
+	return nil
+}
+
+func newResponseWriterAdapter(ctx *fasthttp.RequestCtx) http.ResponseWriter {
+	return &responseWriterAdaptor{
+		ctx:    ctx,
+		header: make(http.Header),
+	}
+}
+
+type responseWriterAdaptor struct {
+	ctx    *fasthttp.RequestCtx
+	header http.Header
+}
+
+func (rw *responseWriterAdaptor) Header() http.Header { return rw.header }
+
+func (rw *responseWriterAdaptor) Write(data []byte) (int, error) {
+	rw.WriteHeader(http.StatusOK)
+
+	return rw.ctx.Write(data)
+}
+
+func (rw *responseWriterAdaptor) WriteHeader(statusCode int) {
+	for k, v := range rw.header {
+		rw.ctx.Response.Header.Set(k, strings.Join(v, ";"))
+	}
+
+	rw.ctx.Response.SetStatusCode(statusCode)
+}
+
+func (rw *responseWriterAdaptor) Hijack() (net.Conn, *bufio.ReadWriter, error) {
+	var con net.Conn
+
+	rw.ctx.Hijack(func(c net.Conn) { con = c })
+
+	return con, bufio.NewReadWriter(bufio.NewReader(con), bufio.NewWriter(con)), nil
+}
+
+type conn struct {
 }
