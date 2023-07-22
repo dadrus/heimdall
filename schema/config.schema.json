@@ -1575,6 +1575,11 @@
         "src": {
           "description": "Load rules from one or more rule files. Can be a directory containing ruleset files or a single ruleset file",
           "type": "string"
+        },
+        "env_vars_enabled": {
+          "description": "whether to enable env var usage",
+          "type": "boolean",
+          "default": false
         }
       }
     },
