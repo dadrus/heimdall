@@ -384,6 +384,7 @@ rules:
     file_system:
       src: test_rules.yaml
       watch: true
+      env_vars_enabled: false
 
     http_endpoint:
       watch_interval: 5m
