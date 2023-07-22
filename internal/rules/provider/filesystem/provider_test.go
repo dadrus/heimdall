@@ -103,6 +103,7 @@ func TestNewProvider(t *testing.T) {
 				assert.True(t, prov.configured)
 				assert.Equal(t, tmpFile.Name(), prov.src)
 				assert.Nil(t, prov.w)
+				assert.False(t, prov.envVarsEnabled)
 			},
 		},
 		{
@@ -116,6 +117,21 @@ func TestNewProvider(t *testing.T) {
 				assert.True(t, prov.configured)
 				assert.Equal(t, tmpFile.Name(), prov.src)
 				assert.NotNil(t, prov.w)
+				assert.False(t, prov.envVarsEnabled)
+			},
+		},
+		{
+			uc:   "successfully created provider with env var support enabled",
+			conf: map[string]any{"src": tmpFile.Name(), "env_vars_enabled": true},
+			assert: func(t *testing.T, err error, prov *Provider) {
+				t.Helper()
+
+				require.NoError(t, err)
+				require.NotNil(t, prov)
+				assert.True(t, prov.configured)
+				assert.Equal(t, tmpFile.Name(), prov.src)
+				assert.Nil(t, prov.w)
+				assert.True(t, prov.envVarsEnabled)
 			},
 		},
 	} {
