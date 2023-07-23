@@ -126,12 +126,13 @@ rules:
 Create a rule file (`rule.yaml`) with the following contents:
 
 ```yaml
-version: "1"
+version: "1alpha2"
 rules:
   - id: test-rule
     match: 
       url: http://<**>/<**>
-    upstream: http://upstream
+    forward_to:
+      host: upstream
     execute:
       - authorizer: allow_all_requests
 ```
