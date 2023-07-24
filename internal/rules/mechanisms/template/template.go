@@ -22,6 +22,7 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"strings"
 	"text/template"
 
 	"github.com/Masterminds/sprig/v3"
@@ -50,7 +51,10 @@ func New(val string) (Template, error) {
 
 	tmpl, err := template.New("Heimdall").
 		Funcs(funcMap).
-		Funcs(template.FuncMap{"urlenc": urlEncode}).
+		Funcs(template.FuncMap{
+			"urlenc": urlEncode,
+			"split":  split,
+		}).
 		Parse(val)
 	if err != nil {
 		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration, "failed to parse template").
@@ -85,4 +89,8 @@ func urlEncode(value any) string {
 	default:
 		return ""
 	}
+}
+
+func split(value, separator string) []string {
+	return strings.Split(value, separator)
 }
