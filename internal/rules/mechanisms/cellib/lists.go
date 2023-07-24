@@ -27,7 +27,7 @@ func (listsLib) CompileOptions() []cel.EnvOption {
 			cel.MemberOverload("list_last",
 				[]*cel.Type{listType}, cel.TypeParamType("T"),
 				cel.UnaryBinding(func(value ref.Val) ref.Val {
-					return last(value)
+					return last(value.(traits.Lister)) // nolint: forcetypeassert
 				}),
 			),
 		),
@@ -47,8 +47,7 @@ func (listsLib) CompileOptions() []cel.EnvOption {
 	}
 }
 
-func last(value ref.Val) ref.Val {
-	list := value.(traits.Lister)         // nolint: forcetypeassert
+func last(list traits.Lister) ref.Val {
 	listLength := list.Size().(types.Int) // nolint: forcetypeassert
 
 	if listLength == 0 {
@@ -63,14 +62,16 @@ func (listsLib) ProgramOptions() []cel.ProgramOption {
 }
 
 func at(listVal traits.Lister, pos types.Int) (ref.Val, error) {
-	list := listVal.(traits.Lister)          // nolint: forcetypeassert
+	list := listVal
 	listLength := listVal.Size().(types.Int) // nolint: forcetypeassert
 
 	if pos >= 0 && pos >= listLength {
+		// nolint: goerr113
 		return nil, fmt.Errorf("cannot at(%d), position is outside of the list boundaries", pos)
 	}
 
 	if pos < 0 && (-pos-1) >= listLength {
+		// nolint: goerr113
 		return nil, fmt.Errorf("cannot at(%d), position is outside of the list boundaries", pos)
 	}
 
