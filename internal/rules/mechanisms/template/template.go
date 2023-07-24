@@ -22,6 +22,7 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"reflect"
 	"text/template"
 
 	"github.com/Masterminds/sprig/v3"
@@ -50,7 +51,10 @@ func New(val string) (Template, error) {
 
 	tmpl, err := template.New("Heimdall").
 		Funcs(funcMap).
-		Funcs(template.FuncMap{"urlenc": urlEncode}).
+		Funcs(template.FuncMap{
+			"urlenc":  urlEncode,
+			"atIndex": atIndex,
+		}).
 		Parse(val)
 	if err != nil {
 		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration, "failed to parse template").
@@ -84,5 +88,38 @@ func urlEncode(value any) string {
 		return url.QueryEscape(t.String())
 	default:
 		return ""
+	}
+}
+
+func atIndex(pos int, list interface{}) (interface{}, error) {
+	tp := reflect.TypeOf(list).Kind()
+	switch tp {
+	case reflect.Slice, reflect.Array:
+		l2 := reflect.ValueOf(list)
+
+		length := l2.Len()
+		if length == 0 {
+			return nil, nil // nolint: nilnil
+		}
+
+		if pos >= 0 && pos >= length {
+			// nolint: goerr113
+			return nil, fmt.Errorf("cannot at(%d), position is outside of the list boundaries", pos)
+		}
+
+		if pos < 0 && (-pos-1) >= length {
+			// nolint: goerr113
+			return nil, fmt.Errorf("cannot at(%d), position is outside of the list boundaries", pos)
+		}
+
+		if pos >= 0 {
+			return l2.Index(pos).Interface(), nil
+		}
+
+		return l2.Index(length + pos).Interface(), nil
+
+	default:
+		// nolint: goerr113
+		return nil, fmt.Errorf("cannot find at on type %s", tp)
 	}
 }

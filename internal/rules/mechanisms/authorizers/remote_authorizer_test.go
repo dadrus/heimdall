@@ -151,8 +151,8 @@ expressions:
 			id: "authz",
 			config: []byte(`
 endpoint:
-  url: http://foo.bar
-payload: "{{ .Subject.ID }}"
+  url: http://foo.bar/test
+payload: "{{ .Subject.ID }}: {{ splitList \"/\" .Request.URL.Path | atIndex -1 }}"
 expressions:
   - expression: "Payload.foo == 'bar'"
 forward_response_headers_to_upstream:
@@ -165,15 +165,21 @@ values:
 			assert: func(t *testing.T, err error, auth *remoteAuthorizer) {
 				t.Helper()
 
+				require.NoError(t, err)
+
 				ctx := heimdallmocks.NewContextMock(t)
 				ctx.EXPECT().AppContext().Return(context.Background()).Maybe()
 
-				require.NoError(t, err)
+				rfunc := heimdallmocks.NewRequestFunctionsMock(t)
 
 				require.NotNil(t, auth)
 				require.NotNil(t, auth.payload)
 				val, err := auth.payload.Render(map[string]any{
 					"Subject": &subject.Subject{ID: "bar"},
+					"Request": &heimdall.Request{
+						RequestFunctions: rfunc,
+						URL:              &url.URL{Scheme: "http", Host: "foo.bar", Path: "/foo/bar"},
+					},
 				})
 				require.NoError(t, err)
 				require.NotEmpty(t, auth.expressions)
@@ -182,7 +188,7 @@ values:
 				})
 				assert.NoError(t, err)
 				assert.True(t, ok)
-				assert.Equal(t, "bar", val)
+				assert.Equal(t, "bar: bar", val)
 				assert.Len(t, auth.headersForUpstream, 2)
 				assert.Contains(t, auth.headersForUpstream, "Foo")
 				assert.Contains(t, auth.headersForUpstream, "Bar")
