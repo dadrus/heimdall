@@ -271,11 +271,12 @@ expressions:
   - expression: Request.URL.Host == 'localhost'
   - expression: Request.URL.Path == '/test'
   - expression: size(Request.URL.Query()) == 2
+  - expression: Request.URL.Query().foo == ["bar"]
   - expression: Request.Header('X-Custom-Header') == "foobar"
   - expression: Request.ClientIP.exists_one(v, v == '127.0.0.1')
   - expression: Request.Cookie("FooCookie") == "barfoo"
   - expression: Request.URL.String() == "http://localhost/test?foo=bar&baz=zab"
-  - expression: Request.LastURLPathFragment() == "test"
+  - expression: Request.URL.Path.split("/").last() == "test"
 `),
 			configureContextAndSubject: func(t *testing.T, ctx *mocks.ContextMock, sub *subject.Subject) {
 				t.Helper()
@@ -290,7 +291,6 @@ expressions:
 				reqf := mocks.NewRequestFunctionsMock(t)
 				reqf.EXPECT().Header("X-Custom-Header").Return("foobar")
 				reqf.EXPECT().Cookie("FooCookie").Return("barfoo")
-				reqf.EXPECT().LastURLPathFragment().Return("test")
 
 				ctx.EXPECT().Request().Return(&heimdall.Request{
 					RequestFunctions: reqf,

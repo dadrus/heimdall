@@ -187,47 +187,6 @@ func (_c *RequestFunctionsMock_Headers_Call) RunAndReturn(run func() map[string]
 	return _c
 }
 
-// LastURLPathFragment provides a mock function with given fields:
-func (_m *RequestFunctionsMock) LastURLPathFragment() string {
-	ret := _m.Called()
-
-	var r0 string
-	if rf, ok := ret.Get(0).(func() string); ok {
-		r0 = rf()
-	} else {
-		r0 = ret.Get(0).(string)
-	}
-
-	return r0
-}
-
-// RequestFunctionsMock_LastURLPathFragment_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'LastURLPathFragment'
-type RequestFunctionsMock_LastURLPathFragment_Call struct {
-	*mock.Call
-}
-
-// LastURLPathFragment is a helper method to define mock.On call
-func (_e *RequestFunctionsMock_Expecter) LastURLPathFragment() *RequestFunctionsMock_LastURLPathFragment_Call {
-	return &RequestFunctionsMock_LastURLPathFragment_Call{Call: _e.mock.On("LastURLPathFragment")}
-}
-
-func (_c *RequestFunctionsMock_LastURLPathFragment_Call) Run(run func()) *RequestFunctionsMock_LastURLPathFragment_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run()
-	})
-	return _c
-}
-
-func (_c *RequestFunctionsMock_LastURLPathFragment_Call) Return(_a0 string) *RequestFunctionsMock_LastURLPathFragment_Call {
-	_c.Call.Return(_a0)
-	return _c
-}
-
-func (_c *RequestFunctionsMock_LastURLPathFragment_Call) RunAndReturn(run func() string) *RequestFunctionsMock_LastURLPathFragment_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
 type mockConstructorTestingTNewRequestFunctionsMock interface {
 	mock.TestingT
 	Cleanup(func())

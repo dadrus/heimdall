@@ -20,7 +20,6 @@ import (
 	"context"
 	"net/http"
 	"net/url"
-	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -60,12 +59,6 @@ func (s *RequestContext) Request() *heimdall.Request {
 		URL:              s.reqURL,
 		ClientIP:         s.RequestClientIPs(),
 	}
-}
-
-func (s *RequestContext) LastURLPathFragment() string {
-	pathFragments := strings.Split(s.reqURL.Path, "/")
-
-	return pathFragments[len(pathFragments)-1]
 }
 
 func (s *RequestContext) Headers() map[string]string              { return s.c.GetReqHeaders() }
@@ -144,3 +137,4 @@ func (s *RequestContext) FinalizeAndForward(mutator URIMutator, timeout time.Dur
 	return opentelemetry.NewClient(&fasthttp.Client{}).
 		DoTimeout(s.c.UserContext(), s.c.Request(), s.c.Response(), timeout)
 }
+

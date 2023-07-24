@@ -114,12 +114,6 @@ func (s *RequestContext) Cookie(name string) string {
 	return ""
 }
 
-func (s *RequestContext) LastURLPathFragment() string {
-	pathFragments := strings.Split(s.reqURL.Path, "/")
-
-	return pathFragments[len(pathFragments)-1]
-}
-
 func (s *RequestContext) Body() []byte                            { return s.reqRawBody }
 func (s *RequestContext) AppContext() context.Context             { return s.ctx }
 func (s *RequestContext) SetPipelineError(err error)              { s.err = err }

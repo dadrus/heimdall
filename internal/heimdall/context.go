@@ -43,7 +43,6 @@ type RequestFunctions interface {
 	Cookie(name string) string
 	Headers() map[string]string
 	Body() []byte
-	LastURLPathFragment() string
 }
 
 type Request struct {

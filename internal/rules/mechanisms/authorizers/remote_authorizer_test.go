@@ -152,7 +152,7 @@ expressions:
 			config: []byte(`
 endpoint:
   url: http://foo.bar/test
-payload: "{{ .Subject.ID }}: {{ .Request.LastURLPathFragment }}"
+payload: "{{ .Subject.ID }}: {{ split .Request.URL.Path \"/\" | last }}"
 expressions:
   - expression: "Payload.foo == 'bar'"
 forward_response_headers_to_upstream:
@@ -171,7 +171,6 @@ values:
 				ctx.EXPECT().AppContext().Return(context.Background()).Maybe()
 
 				rfunc := heimdallmocks.NewRequestFunctionsMock(t)
-				rfunc.EXPECT().LastURLPathFragment().Return("baz")
 
 				require.NotNil(t, auth)
 				require.NotNil(t, auth.payload)
@@ -189,7 +188,7 @@ values:
 				})
 				assert.NoError(t, err)
 				assert.True(t, ok)
-				assert.Equal(t, "bar: baz", val)
+				assert.Equal(t, "bar: bar", val)
 				assert.Len(t, auth.headersForUpstream, 2)
 				assert.Contains(t, auth.headersForUpstream, "Foo")
 				assert.Contains(t, auth.headersForUpstream, "Bar")
