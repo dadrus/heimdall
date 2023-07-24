@@ -17,14 +17,14 @@ func TestUrls(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	rawUri := "http://localhost/foo/bar?foo=bar&foo=baz&bar=foo"
+	rawURI := "http://localhost/foo/bar?foo=bar&foo=baz&bar=foo"
 	uri, err := url.Parse("http://localhost/foo/bar?foo=bar&foo=baz&bar=foo")
 	require.NoError(t, err)
 
 	for _, tc := range []struct {
 		expr string
 	}{
-		{expr: `uri.String() == "` + rawUri + `"`},
+		{expr: `uri.String() == "` + rawURI + `"`},
 		{expr: `uri.Query() == {"foo":["bar", "baz"], "bar": ["foo"]}`},
 		{expr: `uri.Query().bar == ["foo"]`},
 	} {
@@ -44,8 +44,7 @@ func TestUrls(t *testing.T) {
 
 			out, _, err := prg.Eval(map[string]any{"uri": uri})
 			require.NoError(t, err)
-			require.True(t, out.Value().(bool))
-
+			require.Equal(t, true, out.Value())
 		})
 	}
 }

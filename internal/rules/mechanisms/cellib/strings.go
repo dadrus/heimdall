@@ -90,4 +90,3 @@ func regexFindAll(regex string, value string) ([]string, error) {
 
 	return matches, nil
 }
-

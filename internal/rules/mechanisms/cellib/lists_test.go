@@ -45,7 +45,7 @@ func TestLists(t *testing.T) {
 				require.Error(t, err)
 				assert.Equal(t, tc.err, err.Error())
 			} else {
-				require.True(t, out.Value().(bool))
+				require.Equal(t, true, out.Value())
 			}
 		})
 	}

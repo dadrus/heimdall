@@ -22,7 +22,7 @@ func TestRequests(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	rawUri := "http://localhost/foo/bar?foo=bar&foo=baz&bar=foo"
+	rawURI := "http://localhost/foo/bar?foo=bar&foo=baz&bar=foo"
 	uri, err := url.Parse("http://localhost/foo/bar?foo=bar&foo=baz&bar=foo")
 	require.NoError(t, err)
 
@@ -41,7 +41,7 @@ func TestRequests(t *testing.T) {
 		expr string
 	}{
 		{expr: `req.Method == "HEAD"`},
-		{expr: `req.URL.String() == "` + rawUri + `"`},
+		{expr: `req.URL.String() == "` + rawURI + `"`},
 		{expr: `req.Cookie("foo") == "bar"`},
 		{expr: `req.Header("bar") == "baz"`},
 	} {
@@ -61,7 +61,7 @@ func TestRequests(t *testing.T) {
 
 			out, _, err := prg.Eval(map[string]any{"req": req})
 			require.NoError(t, err)
-			require.True(t, out.Value().(bool))
+			require.Equal(t, true, out.Value())
 		})
 	}
 }

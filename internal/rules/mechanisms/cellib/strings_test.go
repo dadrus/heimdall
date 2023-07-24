@@ -35,8 +35,7 @@ func TestStrings(t *testing.T) {
 
 			out, _, err := prg.Eval(cel.NoVars())
 			require.NoError(t, err)
-			require.True(t, out.Value().(bool))
-
+			require.Equal(t, true, out.Value())
 		})
 	}
 }
