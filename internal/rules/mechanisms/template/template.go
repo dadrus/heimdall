@@ -22,7 +22,7 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
-	"strings"
+	"reflect"
 	"text/template"
 
 	"github.com/Masterminds/sprig/v3"
@@ -53,7 +53,7 @@ func New(val string) (Template, error) {
 		Funcs(funcMap).
 		Funcs(template.FuncMap{
 			"urlenc": urlEncode,
-			"split":  split,
+			"at":     at,
 		}).
 		Parse(val)
 	if err != nil {
@@ -91,6 +91,34 @@ func urlEncode(value any) string {
 	}
 }
 
-func split(value, separator string) []string {
-	return strings.Split(value, separator)
+func at(list interface{}, pos int) (interface{}, error) {
+	tp := reflect.TypeOf(list).Kind()
+	switch tp {
+	case reflect.Slice, reflect.Array:
+		l2 := reflect.ValueOf(list)
+
+		len := l2.Len()
+		if len == 0 {
+			return nil, nil
+		}
+
+		if pos >= 0 && pos >= len {
+			// nolint: goerr113
+			return nil, fmt.Errorf("cannot at(%d), position is outside of the list boundaries", pos)
+		}
+
+		if pos < 0 && (-pos-1) >= len {
+			// nolint: goerr113
+			return nil, fmt.Errorf("cannot at(%d), position is outside of the list boundaries", pos)
+		}
+
+		if pos >= 0 {
+			return l2.Index(pos).Interface(), nil
+		}
+
+		return l2.Index(len + pos).Interface(), nil
+
+	default:
+		return nil, fmt.Errorf("cannot find at on type %s", tp)
+	}
 }
