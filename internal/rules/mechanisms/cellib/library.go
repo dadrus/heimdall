@@ -45,6 +45,13 @@ func (heimdallLibrary) LibraryName() string {
 
 func (heimdallLibrary) CompileOptions() []cel.EnvOption {
 	return []cel.EnvOption{
+		cel.StdLib(),
+		ext.Lists(),
+		ext.Encoders(),
+		ext.Math(),
+		ext.Sets(),
+		ext.Strings(),
+		Lists(),
 		cel.DefaultUTCTimeZone(true),
 		ext.NativeTypes(
 			reflect.TypeOf(&subject.Subject{}),
