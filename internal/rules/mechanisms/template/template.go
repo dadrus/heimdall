@@ -52,8 +52,8 @@ func New(val string) (Template, error) {
 	tmpl, err := template.New("Heimdall").
 		Funcs(funcMap).
 		Funcs(template.FuncMap{
-			"urlenc": urlEncode,
-			"at":     at,
+			"urlenc":  urlEncode,
+			"atIndex": atIndex,
 		}).
 		Parse(val)
 	if err != nil {
@@ -91,7 +91,7 @@ func urlEncode(value any) string {
 	}
 }
 
-func at(pos int, list interface{}) (interface{}, error) {
+func atIndex(pos int, list interface{}) (interface{}, error) {
 	tp := reflect.TypeOf(list).Kind()
 	switch tp {
 	case reflect.Slice, reflect.Array:

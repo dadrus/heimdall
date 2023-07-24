@@ -152,7 +152,7 @@ expressions:
 			config: []byte(`
 endpoint:
   url: http://foo.bar/test
-payload: "{{ .Subject.ID }}: {{ splitList \"/\" .Request.URL.Path | at -1 }}"
+payload: "{{ .Subject.ID }}: {{ splitList \"/\" .Request.URL.Path | atIndex -1 }}"
 expressions:
   - expression: "Payload.foo == 'bar'"
 forward_response_headers_to_upstream:
