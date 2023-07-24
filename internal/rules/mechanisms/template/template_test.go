@@ -94,3 +94,39 @@ func TestTemplateRender(t *testing.T) {
 "values": ["foo", "bar"]
 }`, res)
 }
+
+func TestAtIndex(t *testing.T) {
+	t.Parallel()
+
+	for _, tc := range []struct {
+		val  any
+		expr string
+		res  string
+		err  string
+	}{
+		{val: []int{1, 2, 3, 4}, expr: "{{ atIndex 0 .Slice }}", res: "1"},
+		{val: []int{1, 2, 3, 4}, expr: "{{ atIndex 2 .Slice }}", res: "3"},
+		{val: []int{1, 2, 3, 4}, expr: "{{ atIndex -1 .Slice }}", res: "4"},
+		{val: []int{1, 2, 3, 4}, expr: "{{ atIndex -3 .Slice }}", res: "2"},
+		{val: []int{1, 2, 3, 4}, expr: "{{ atIndex 6 .Slice }}",
+			err: "cannot at(6), position is outside of the list boundaries"},
+		{val: []int{1, 2, 3, 4}, expr: "{{ atIndex -6 .Slice }}",
+			err: "cannot at(-6), position is outside of the list boundaries"},
+		{val: "foo", expr: "{{ atIndex 1 .Slice }}", err: "cannot find at on type string"},
+		{val: []string{}, expr: "{{ atIndex 0 .Slice }}", res: "<no value>"},
+	} {
+		t.Run(tc.expr, func(t *testing.T) {
+			tmpl, err := template.New(tc.expr)
+			require.NoError(t, err)
+
+			res, err := tmpl.Render(map[string]any{"Slice": tc.val})
+
+			if len(tc.err) != 0 {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), tc.err)
+			} else {
+				require.Equal(t, tc.res, res)
+			}
+		})
+	}
+}
