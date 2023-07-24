@@ -108,10 +108,14 @@ func TestAtIndex(t *testing.T) {
 		{val: []int{1, 2, 3, 4}, expr: "{{ atIndex 2 .Slice }}", res: "3"},
 		{val: []int{1, 2, 3, 4}, expr: "{{ atIndex -1 .Slice }}", res: "4"},
 		{val: []int{1, 2, 3, 4}, expr: "{{ atIndex -3 .Slice }}", res: "2"},
-		{val: []int{1, 2, 3, 4}, expr: "{{ atIndex 6 .Slice }}",
-			err: "cannot at(6), position is outside of the list boundaries"},
-		{val: []int{1, 2, 3, 4}, expr: "{{ atIndex -6 .Slice }}",
-			err: "cannot at(-6), position is outside of the list boundaries"},
+		{
+			val: []int{1, 2, 3, 4}, expr: "{{ atIndex 6 .Slice }}",
+			err: "cannot at(6), position is outside of the list boundaries",
+		},
+		{
+			val: []int{1, 2, 3, 4}, expr: "{{ atIndex -6 .Slice }}",
+			err: "cannot at(-6), position is outside of the list boundaries",
+		},
 		{val: "foo", expr: "{{ atIndex 1 .Slice }}", err: "cannot find at on type string"},
 		{val: []string{}, expr: "{{ atIndex 0 .Slice }}", res: "<no value>"},
 	} {
