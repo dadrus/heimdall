@@ -137,4 +137,3 @@ func (s *RequestContext) FinalizeAndForward(mutator URIMutator, timeout time.Dur
 	return opentelemetry.NewClient(&fasthttp.Client{}).
 		DoTimeout(s.c.UserContext(), s.c.Request(), s.c.Response(), timeout)
 }
-
