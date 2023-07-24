@@ -91,7 +91,7 @@ func urlEncode(value any) string {
 	}
 }
 
-func at(list interface{}, pos int) (interface{}, error) {
+func at(pos int, list interface{}) (interface{}, error) {
 	tp := reflect.TypeOf(list).Kind()
 	switch tp {
 	case reflect.Slice, reflect.Array:
