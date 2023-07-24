@@ -26,7 +26,7 @@ func (stringsLib) CompileOptions() []cel.EnvOption {
 		cel.Function("regexFind",
 			cel.MemberOverload("string_regexFind",
 				[]*cel.Type{cel.StringType, cel.StringType}, cel.StringType,
-				cel.BinaryBinding(func(regexVal, stringVal ref.Val) ref.Val {
+				cel.BinaryBinding(func(stringVal, regexVal ref.Val) ref.Val {
 					result, err := regexFind(regexVal.Value().(string), stringVal.Value().(string)) // nolint: forcetypeassert
 					if err != nil {
 						return types.WrapErr(err)
@@ -39,7 +39,7 @@ func (stringsLib) CompileOptions() []cel.EnvOption {
 		cel.Function("regexFindAll",
 			cel.MemberOverload("string_regexFindAll",
 				[]*cel.Type{cel.StringType, cel.StringType}, cel.ListType(cel.StringType),
-				cel.BinaryBinding(func(regexVal, stringVal ref.Val) ref.Val {
+				cel.BinaryBinding(func(stringVal, regexVal ref.Val) ref.Val {
 					result, err := regexFindAll(regexVal.Value().(string), stringVal.Value().(string)) // nolint: forcetypeassert
 					if err != nil {
 						return types.WrapErr(err)
@@ -90,3 +90,4 @@ func regexFindAll(regex string, value string) ([]string, error) {
 
 	return matches, nil
 }
+
