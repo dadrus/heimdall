@@ -97,17 +97,17 @@ func at(pos int, list interface{}) (interface{}, error) {
 	case reflect.Slice, reflect.Array:
 		l2 := reflect.ValueOf(list)
 
-		len := l2.Len()
-		if len == 0 {
-			return nil, nil
+		length := l2.Len()
+		if length == 0 {
+			return nil, nil // nolint: nilnil
 		}
 
-		if pos >= 0 && pos >= len {
+		if pos >= 0 && pos >= length {
 			// nolint: goerr113
 			return nil, fmt.Errorf("cannot at(%d), position is outside of the list boundaries", pos)
 		}
 
-		if pos < 0 && (-pos-1) >= len {
+		if pos < 0 && (-pos-1) >= length {
 			// nolint: goerr113
 			return nil, fmt.Errorf("cannot at(%d), position is outside of the list boundaries", pos)
 		}
@@ -116,9 +116,10 @@ func at(pos int, list interface{}) (interface{}, error) {
 			return l2.Index(pos).Interface(), nil
 		}
 
-		return l2.Index(len + pos).Interface(), nil
+		return l2.Index(length + pos).Interface(), nil
 
 	default:
+		// nolint: goerr113
 		return nil, fmt.Errorf("cannot find at on type %s", tp)
 	}
 }
