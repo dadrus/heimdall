@@ -33,7 +33,7 @@ func (requestsLib) CompileOptions() []cel.EnvOption {
 		ext.NativeTypes(reflect.TypeOf(&heimdall.Request{})),
 		cel.Function("Header",
 			cel.MemberOverload("request_Header",
-				[]*cel.Type{cel.ObjectType(requestType.TypeName()), cel.StringType}, cel.StringType,
+				[]*cel.Type{requestType, cel.StringType}, cel.StringType,
 				cel.BinaryBinding(func(lhs ref.Val, rhs ref.Val) ref.Val {
 					// nolint: forcetypeassert
 					req := lhs.Value().(*heimdall.Request)
@@ -45,7 +45,7 @@ func (requestsLib) CompileOptions() []cel.EnvOption {
 		),
 		cel.Function("Cookie",
 			cel.MemberOverload("request_Cookie",
-				[]*cel.Type{cel.ObjectType(requestType.TypeName()), cel.StringType}, cel.StringType,
+				[]*cel.Type{requestType, cel.StringType}, cel.StringType,
 				cel.BinaryBinding(func(lhs ref.Val, rhs ref.Val) ref.Val {
 					// nolint: forcetypeassert
 					req := lhs.Value().(*heimdall.Request)
@@ -57,7 +57,7 @@ func (requestsLib) CompileOptions() []cel.EnvOption {
 		),
 		cel.Function("LastURLPathFragment",
 			cel.MemberOverload("request_LastURLPathFragment",
-				[]*cel.Type{cel.ObjectType(requestType.TypeName())}, cel.StringType,
+				[]*cel.Type{requestType}, cel.StringType,
 				cel.UnaryBinding(func(value ref.Val) ref.Val {
 					// nolint: forcetypeassert
 					req := value.Value().(*heimdall.Request)
