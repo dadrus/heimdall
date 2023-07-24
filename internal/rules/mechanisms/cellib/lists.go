@@ -16,7 +16,11 @@ func Lists() cel.EnvOption {
 type listsLib struct{}
 
 func (listsLib) LibraryName() string {
-	return "dadrus.heimdall.ext.lists"
+	return "dadrus.heimdall.lists"
+}
+
+func (listsLib) ProgramOptions() []cel.ProgramOption {
+	return []cel.ProgramOption{}
 }
 
 func (listsLib) CompileOptions() []cel.EnvOption {
@@ -55,10 +59,6 @@ func last(list traits.Lister) ref.Val {
 	}
 
 	return types.DefaultTypeAdapter.NativeToValue(list.Get(listLength - 1))
-}
-
-func (listsLib) ProgramOptions() []cel.ProgramOption {
-	return []cel.ProgramOption{}
 }
 
 func at(listVal traits.Lister, pos types.Int) (ref.Val, error) {
