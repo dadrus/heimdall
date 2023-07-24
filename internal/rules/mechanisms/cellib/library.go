@@ -28,7 +28,7 @@ import (
 type heimdallLibrary struct{}
 
 func (heimdallLibrary) LibraryName() string {
-	return "dadrus.heimdall"
+	return "dadrus.heimdall.main"
 }
 
 func (heimdallLibrary) CompileOptions() []cel.EnvOption {
