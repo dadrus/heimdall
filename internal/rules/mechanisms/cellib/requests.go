@@ -55,17 +55,5 @@ func (requestsLib) CompileOptions() []cel.EnvOption {
 				}),
 			),
 		),
-		cel.Function("LastURLPathFragment",
-			cel.MemberOverload("request_LastURLPathFragment",
-				[]*cel.Type{requestType}, cel.StringType,
-				cel.UnaryBinding(func(value ref.Val) ref.Val {
-					// nolint: forcetypeassert
-					req := value.Value().(*heimdall.Request)
-
-					// nolint: forcetypeassert
-					return types.String(req.LastURLPathFragment())
-				}),
-			),
-		),
 	}
 }
