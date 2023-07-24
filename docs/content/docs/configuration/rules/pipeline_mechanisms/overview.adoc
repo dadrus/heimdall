@@ -359,7 +359,7 @@ config:
     {
       "user": "user:{{ .Subject.ID }}",
       "relation": "write",
-      "object": "file:{{ splitList "/" .RequestURL.Path | last }}"
+      "object": "file:{{ splitList "/" .Request.URL.Path | last }}"
     }
   expressions:
   - expression: |
