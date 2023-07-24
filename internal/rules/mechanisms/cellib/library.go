@@ -52,6 +52,7 @@ func (heimdallLibrary) CompileOptions() []cel.EnvOption {
 		ext.Sets(),
 		ext.Strings(),
 		Lists(),
+		Strings(),
 		cel.DefaultUTCTimeZone(true),
 		ext.NativeTypes(
 			reflect.TypeOf(&subject.Subject{}),
