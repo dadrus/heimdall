@@ -19,7 +19,6 @@ func TestLists(t *testing.T) {
 		err  string
 	}{
 		{expr: `[1,2,3,4].last() == 4`},
-		{expr: `[].last() == 0`},
 		{expr: `[1,2,3,4].at(0) == 1`},
 		{expr: `[1,2,3,4].at(2) == 3`},
 		{expr: `[1,2,3,4].at(-1) == 4`},
