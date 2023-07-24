@@ -296,9 +296,22 @@ Values = {
 
 == Templating
 
-Some pipeline mechanisms support templating using https://golang.org/pkg/text/template/[Golang Text Templates]. To ease the usage, all http://masterminds.github.io/sprig/[sprig] functions, except `env` and `expandenv`, as well as an `urlenc` function are available. Latter is handy if you need to generate request body or query parameters e.g. for communication with further systems. Templates can act on all objects described above (link:{{< relref "#_subject" >}}[Subject], link:{{< relref "#_request" >}}[Request], link:{{< relref "#_payload" >}}[Payload] and link:{{< relref "#_values" >}}[Values]). Which exactly are supported is mechanism specific.
+Some pipeline mechanisms support templating using https://golang.org/pkg/text/template/[Golang Text Templates]. Templates can act on all objects described above (link:{{< relref "#_subject" >}}[Subject], link:{{< relref "#_request" >}}[Request], link:{{< relref "#_payload" >}}[Payload] and link:{{< relref "#_values" >}}[Values]). Which exactly are supported is mechanism specific.
 
-.Template, rendering a JSON object
+To ease the usage, all http://masterminds.github.io/sprig/[sprig] functions, except `env` and `expandenv`, as well as the following functions are available:
+
+* `urlenc` - Encodes a given string using url encoding. Is handy if you need to generate request body or query parameters e.g. for communication with further systems.
+
+* `atIndex` - Implements python-like access to arrays and takes as a single argument the index to access the element in the array at. With index being a positive values it works exactly the same way, as with the usage of the build-in index function to access array elements. With negative index value, one can access the array elements from the tail of the array. -1 is the index of the last element, -2 the index of the element before the last one, etc.
++
+Example: `{{ atIndex 2 [1,2,3,4,5] }}` evaluates to `3` (behaves the same way as the `index` function) and `{{ atIndex -2 [1,2,3,4,5] }}` evaluates to `4`.
+
+* `splitList` - Splits a given string using a separator. The result is a string array.
++
+Example: `{{ splitList "/" "/foo/bar" }}` evaluates to the `["", "foo", "bar"]` array.
+
+
+.Rendering a JSON object
 ====
 Imagine, we have a `POST` request for the URL `\http://foobar.baz/zab?foo=bar`, with a header `X-Foo` set to `bar` value, for which heimdall was able to identify a subject, with `ID=foo` and which `Attributes` contain an entry `email: foo@bar`, then you can generate a JSON object with this information with the following template:
 
@@ -331,11 +344,60 @@ This will result in the following JSON object:
 ----
 ====
 
+.Access the last part of the path
+====
+Imagine, we have a `POST` request to the URL `\http://foobar.baz/zab/1234`, with `1234` being the ID of an object, which should be updated, and you would like to control access to using OPA. This can be achieved with the following authorizer:
+
+[source, yaml]
+----
+id: opa_authorizer
+type: remote
+config:
+  endpoint:
+    url: https://opa.local/v1/data/some_policy
+  payload: |
+    { "input": { "user_id": {{ quote .Subject.ID }}, "object_id": {{ splitList "/" .RequestURL.Path | last | quote }} } }
+  expressions:
+  - expression: |
+      Payload.result == true
+----
+
+Please note how the `"object_id"` is set in the `payload` property above. The OPA policy is omitted for brevity. When `payload` template is rendered, it will result in the following JSON object:
+
+[source, json]
+----
+{ "user_id": "<whatever>", "object_id": "1234" }
+----
+====
+
 You can find further examples as part of mechanism descriptions, supporting templating.
 
 == Expressions
 
 Expressions can be used to execute authorization logic. As of today only https://github.com/google/cel-spec[CEL] is supported as expression language. Which of the link:{{<  relref "#_evaluation_objects" >}}[evaluation objects] are available to the expression depends on the mechanism.
+
+In addition to the build-in method and functions, as well as the methods available on the evaluation objects, following functions are available:
+
+* `split` - this function works on strings and expects a separator as a single argument. The result is a string array.
++
+Example: `"/foo/bar/baz".split("/")` returns `["", "foo", "bar", "baz"]`.
+
+* `regexFind` - this function returns the first (left most) match of a regular expression in the given string.
++
+Example: `"abcd1234".regexFind("[a-zA-Z][1-9]")` returns `"d1"`.
+
+* `regexFindAll` - this function returns an array of all matches of a regular expression in the given string.
++
+Example: `"123456789".regexFindAll("[2,4,6,8]")` returns `["2","4","6","8"]`.
+
+* `at` - this function implements python-like access to arrays and takes as a single argument the index to access the element in the array at. With index being a positive values it works exactly the same way, as with the usage of `[]` to access array elements. With negative index value, one can access the array elements from the tail of the array. -1 is the index of the last element, -2 the index of the element before the last one, etc.
++
+Example: `[1,2,3,4,5].at(2)` returns `3` and `[1,2,3,4,5].at(-2)` returns `4`.
+
+* `last` - this function works on arrays and returns the last element of an array or `nil` if the array is empty.
++
+Example: `[1,2,3,4,5].last()` returns `5`
+
 
 Some examples:
 
@@ -355,13 +417,6 @@ a CEL expression to check the `result` attribute is set to `true`, would look as
 ----
 Payload.result == true
 ----
-
-or even simpler:
-
-[source, cel]
-----
-Payload.result
-----
 ====
 
 .Check whether the user is member of the admin group
@@ -370,5 +425,13 @@ Payload.result
 ----
 has(Subject.Attributes.groups) &&
    Subject.Attributes.groups.exists(g, g == "admin")
+----
+====
+
+.Access the last path part of the matched URL
+====
+[source, cel]
+----
+Request.URL.Path.split("/").last()
 ----
 ====
