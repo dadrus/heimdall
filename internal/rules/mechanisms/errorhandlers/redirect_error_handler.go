@@ -29,7 +29,8 @@ import (
 )
 
 // by intention. Used only during application bootstrap
-// nolint
+//
+//nolint:gochecknoinits
 func init() {
 	registerErrorHandlerTypeFactory(
 		func(id string, typ string, conf map[string]any) (bool, ErrorHandler, error) {

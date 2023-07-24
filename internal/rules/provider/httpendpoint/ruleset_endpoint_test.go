@@ -80,7 +80,7 @@ func TestRuleSetEndpointInit(t *testing.T) {
 	}
 }
 
-func TestRuleSetEndpointFetchRuleSet(t *testing.T) { //nolint:maintidx
+func TestRuleSetEndpointFetchRuleSet(t *testing.T) {
 	t.Parallel()
 
 	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(

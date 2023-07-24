@@ -51,7 +51,27 @@ Which strategy to use for matching of the value, provided in the `url` property.
 
 * *`methods`*: _string array_ (optional)
 +
-Which HTTP methods (`GET`, `POST`, `PATCH`, etc) are allowed for the matched URL. If not specified, every request to that URL will result in `405 Method Not Allowed` response from heimdall.
+Which HTTP methods (`GET`, `POST`, `PATCH`, etc) are allowed for the matched URL. If not specified, every request to that URL will result in `405 Method Not Allowed` response from heimdall. If all methods should be allowed, one can use a special `ALL` placeholder. If all, except some specific methods should be allowed, one can specify `ALL` and remove specific methods by adding the `!` sign to the to be removed method. In that case you have to specify the value in braces. See also examples below.
++
+.Methods list which effectively expands to all HTTP methods
+====
+[source, yaml]
+----
+methods:
+  - ALL
+----
+====
++
+.Methods list consisting of all HTTP methods without `TRACE` and `OPTIONS`
+====
+[source, yaml]
+----
+methods:
+  - ALL
+  - "!TRACE"
+  - "!OPTIONS"
+----
+====
 
 * *`forward_to`*: _RequestForwarder_ (mandatory in Proxy operation mode)
 +

@@ -117,7 +117,7 @@ rules:
 	} {
 		t.Run(tc.uc, func(t *testing.T) {
 			// WHEN
-			rules, err := ParseRules(tc.contentType, bytes.NewBuffer(tc.content))
+			rules, err := ParseRules(tc.contentType, bytes.NewBuffer(tc.content), false)
 
 			// THEN
 			tc.assert(t, err, rules)
@@ -126,12 +126,13 @@ rules:
 }
 
 func TestParseYAML(t *testing.T) {
-	t.Parallel()
+	t.Setenv("FOO", "bar")
 
 	for _, tc := range []struct {
-		uc     string
-		conf   []byte
-		assert func(t *testing.T, err error, ruleSet *RuleSet)
+		uc           string
+		conf         []byte
+		envSupported bool
+		assert       func(t *testing.T, err error, ruleSet *RuleSet)
 	}{
 		{
 			uc: "empty rule set spec",
@@ -151,7 +152,7 @@ func TestParseYAML(t *testing.T) {
 			},
 		},
 		{
-			uc: "valid rule set spec",
+			uc: "valid rule set spec without env usage",
 			conf: []byte(`
 version: "1"
 name: foo
@@ -169,10 +170,67 @@ rules:
 				assert.Equal(t, ruleSet.Rules[0].ID, "bar")
 			},
 		},
+		{
+			uc:           "valid rule set spec with invalid env spec",
+			envSupported: true,
+			conf: []byte(`
+version: "1"
+name: ${FOO
+rules:
+- id: bar
+`),
+			assert: func(t *testing.T, err error, ruleSet *RuleSet) {
+				t.Helper()
+
+				require.Error(t, err)
+				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				assert.Contains(t, err.Error(), "evaluate env")
+				require.Nil(t, ruleSet)
+			},
+		},
+		{
+			uc:           "valid rule set spec with valid env usage",
+			envSupported: true,
+			conf: []byte(`
+version: "1"
+name: ${FOO}
+rules:
+- id: bar
+`),
+			assert: func(t *testing.T, err error, ruleSet *RuleSet) {
+				t.Helper()
+
+				require.NoError(t, err)
+				require.NotNil(t, ruleSet)
+				assert.Equal(t, "1", ruleSet.Version)
+				assert.Equal(t, "bar", ruleSet.Name)
+				assert.Len(t, ruleSet.Rules, 1)
+				assert.Equal(t, ruleSet.Rules[0].ID, "bar")
+			},
+		},
+		{
+			uc: "valid rule set spec with valid env usage, which is however not enabled",
+			conf: []byte(`
+version: "1"
+name: ${FOO}
+rules:
+- id: bar
+`),
+			assert: func(t *testing.T, err error, ruleSet *RuleSet) {
+				t.Helper()
+
+				require.NoError(t, err)
+				require.NotNil(t, ruleSet)
+				assert.Equal(t, "1", ruleSet.Version)
+				assert.Equal(t, "${FOO}", ruleSet.Name)
+				assert.Len(t, ruleSet.Rules, 1)
+				assert.Equal(t, ruleSet.Rules[0].ID, "bar")
+			},
+		},
 	} {
 		t.Run(tc.uc, func(t *testing.T) {
 			// WHEN
-			ruleSet, err := parseYAML(bytes.NewBuffer(tc.conf))
+			ruleSet, err := parseYAML(bytes.NewBuffer(tc.conf), tc.envSupported)
 
 			// THEN
 			tc.assert(t, err, ruleSet)

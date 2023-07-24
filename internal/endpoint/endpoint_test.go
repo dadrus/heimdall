@@ -171,21 +171,23 @@ func TestEndpointCreateClient(t *testing.T) {
 func TestEndpointCreateRequest(t *testing.T) {
 	t.Parallel()
 
-	renderer := RenderFunc(func(tpl string, values map[string]string) (string, error) {
-		tmpl, err := template.New("test").Parse(tpl)
-		if err != nil {
-			return "", err
+	renderer := func(values map[string]any) RenderFunc {
+		return func(tpl string) (string, error) {
+			tmpl, err := template.New("test").Parse(tpl)
+			if err != nil {
+				return "", err
+			}
+
+			var buf bytes.Buffer
+
+			err = tmpl.Execute(&buf, map[string]any{"Values": values})
+			if err != nil {
+				return "", err
+			}
+
+			return buf.String(), nil
 		}
-
-		var buf bytes.Buffer
-
-		err = tmpl.Execute(&buf, map[string]any{"Values": values})
-		if err != nil {
-			return "", err
-		}
-
-		return buf.String(), nil
-	})
+	}
 
 	for _, tc := range []struct {
 		uc       string
@@ -311,10 +313,9 @@ func TestEndpointCreateRequest(t *testing.T) {
 		{
 			uc: "with templated url",
 			endpoint: Endpoint{
-				URL:    "http://test.org/{{ .Values.key }}",
-				Values: map[string]string{"key": "foo"},
+				URL: "http://test.org/{{ .Values.key }}",
 			},
-			renderer: renderer,
+			renderer: renderer(map[string]any{"key": "foo"}),
 			assert: func(t *testing.T, request *http.Request, err error) {
 				t.Helper()
 
@@ -327,7 +328,7 @@ func TestEndpointCreateRequest(t *testing.T) {
 			endpoint: Endpoint{
 				URL: "http://test.org/{{ .Values.foo }",
 			},
-			renderer: renderer,
+			renderer: renderer(nil),
 			assert: func(t *testing.T, request *http.Request, err error) {
 				t.Helper()
 
@@ -339,14 +340,13 @@ func TestEndpointCreateRequest(t *testing.T) {
 		{
 			uc: "with templated header",
 			endpoint: Endpoint{
-				URL:    "http://test.org",
-				Values: map[string]string{"key": "foo"},
+				URL: "http://test.org",
 				Headers: map[string]string{
 					"X-My-Header-1": "{{ .Values.key }}",
 					"X-My-Header-2": "bar",
 				},
 			},
-			renderer: renderer,
+			renderer: renderer(map[string]any{"key": "foo"}),
 			assert: func(t *testing.T, request *http.Request, err error) {
 				t.Helper()
 
@@ -363,7 +363,7 @@ func TestEndpointCreateRequest(t *testing.T) {
 				URL:     "http://test.org",
 				Headers: map[string]string{"X-My-Header-1": "{{ .Values.key }"},
 			},
-			renderer: renderer,
+			renderer: renderer(nil),
 			assert: func(t *testing.T, request *http.Request, err error) {
 				t.Helper()
 
@@ -380,7 +380,7 @@ func TestEndpointCreateRequest(t *testing.T) {
 			}
 
 			// WHEN
-			req, err := tc.endpoint.CreateRequest(context.Background(), body, renderer)
+			req, err := tc.endpoint.CreateRequest(context.Background(), body, tc.renderer)
 
 			// THEN
 			tc.assert(t, req, err)

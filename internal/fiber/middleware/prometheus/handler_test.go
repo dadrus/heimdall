@@ -48,7 +48,7 @@ func getLabel(labels []*dto.LabelPair, name string) string {
 	return ""
 }
 
-func TestHandlerObserveRequests(t *testing.T) { //nolint:maintidx
+func TestHandlerObserveRequests(t *testing.T) {
 	t.Parallel()
 
 	for _, tc := range []struct {
@@ -211,7 +211,7 @@ func TestHandlerObserveRequests(t *testing.T) { //nolint:maintidx
 			app.Post("test", func(ctx *fiber.Ctx) error { return ctx.SendStatus(500) })
 			app.Patch("error", func(ctx *fiber.Ctx) error { return fiber.ErrGone })
 
-			defer app.Shutdown() // nolint: errcheck
+			defer app.Shutdown()
 
 			// WHEN
 			resp, err := app.Test(tc.req, -1)

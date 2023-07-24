@@ -40,7 +40,8 @@ import (
 )
 
 // by intention. Used only during application bootstrap
-// nolint
+//
+//nolint:gochecknoinits
 func init() {
 	registerAuthenticatorTypeFactory(
 		func(id string, typ string, conf map[string]any) (bool, Authenticator, error) {
@@ -294,13 +295,11 @@ func (a *genericAuthenticator) createRequest(ctx heimdall.Context, authData stri
 				WithErrorContext(a).CausedBy(err)
 		}
 
-		logger.Debug().Str("_payload", value).Msg("Request payload")
-
 		body = strings.NewReader(value)
 	}
 
 	req, err := a.e.CreateRequest(ctx.AppContext(), body,
-		endpoint.RenderFunc(func(value string, values map[string]string) (string, error) {
+		endpoint.RenderFunc(func(value string) (string, error) {
 			tpl, err := template.New(value)
 			if err != nil {
 				return "", errorchain.NewWithMessage(heimdall.ErrInternal, "failed to create template").

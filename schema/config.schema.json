@@ -517,13 +517,6 @@
               "description": "Enables or disables http cache usage according to RFC 7234",
               "type": "boolean",
               "default": false
-            },
-            "values": {
-              "description": "Key-Value map with entries required for templating of e.g. the URL",
-              "type": "object",
-              "minLength": 0,
-              "uniqueItems": true,
-              "default": []
             }
           }
         },
@@ -1170,6 +1163,13 @@
                 "1m",
                 "30s"
               ]
+            },
+            "values": {
+              "description": "Key-Value map with entries required for templating of e.g. the endpoint URL",
+              "type": "object",
+              "minLength": 0,
+              "uniqueItems": true,
+              "default": []
             }
           }
         }
@@ -1238,6 +1238,13 @@
               "type": "boolean",
               "description": "Continue the pipeline execution even if this contextualizer fails",
               "default": false
+            },
+            "values": {
+              "description": "Key-Value map with entries required for templating of e.g. the endpoint URL",
+              "type": "object",
+              "minLength": 0,
+              "uniqueItems": true,
+              "default": []
             }
           }
         }
@@ -1568,6 +1575,11 @@
         "src": {
           "description": "Load rules from one or more rule files. Can be a directory containing ruleset files or a single ruleset file",
           "type": "string"
+        },
+        "env_vars_enabled": {
+          "description": "whether to enable env var usage",
+          "type": "boolean",
+          "default": false
         }
       }
     },

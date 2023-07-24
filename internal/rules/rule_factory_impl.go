@@ -4,9 +4,12 @@ import (
 	"crypto"
 	"errors"
 	"fmt"
+	"net/http"
+	"strings"
 
 	"github.com/goccy/go-json"
 	"github.com/rs/zerolog"
+	"golang.org/x/exp/slices"
 
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
@@ -16,6 +19,7 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
+	"github.com/dadrus/heimdall/internal/x/slicex"
 )
 
 func NewRuleFactory(
@@ -134,7 +138,7 @@ func (f *ruleFactory) createExecutePipeline(
 func (f *ruleFactory) DefaultRule() rule.Rule { return f.defaultRule }
 func (f *ruleFactory) HasDefaultRule() bool   { return f.hasDefaultRule }
 
-//nolint:cyclop
+//nolint:cyclop, funlen
 func (f *ruleFactory) CreateRule(version, srcID string, ruleConfig config2.Rule) (
 	rule.Rule, error,
 ) {
@@ -167,7 +171,11 @@ func (f *ruleFactory) CreateRule(version, srcID string, ruleConfig config2.Rule)
 		return nil, err
 	}
 
-	methods := ruleConfig.Methods
+	methods, err := expandHTTPMethods(ruleConfig.Methods)
+	if err != nil {
+		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+			"failed to expand allowed HTTP methods for rule ID=%s from %s", ruleConfig.ID, srcID).CausedBy(err)
+	}
 
 	if f.defaultRule != nil {
 		authenticators = x.IfThenElse(len(authenticators) != 0, authenticators, f.defaultRule.sc)
@@ -317,13 +325,19 @@ func (f *ruleFactory) initWithDefaultRule(ruleConfig *config.DefaultRule, logger
 		return errorchain.NewWithMessagef(heimdall.ErrConfiguration, "no unifier defined for default rule")
 	}
 
-	if len(ruleConfig.Methods) == 0 {
+	methods, err := expandHTTPMethods(ruleConfig.Methods)
+	if err != nil {
+		return errorchain.NewWithMessagef(heimdall.ErrConfiguration, "failed to expand allowed HTTP methods").
+			CausedBy(err)
+	}
+
+	if len(methods) == 0 {
 		return errorchain.NewWithMessagef(heimdall.ErrConfiguration, "no methods defined for default rule")
 	}
 
 	f.defaultRule = &ruleImpl{
 		id:        "default",
-		methods:   ruleConfig.Methods,
+		methods:   methods,
 		srcID:     "config",
 		isDefault: true,
 		sc:        authenticators,
@@ -335,6 +349,30 @@ func (f *ruleFactory) initWithDefaultRule(ruleConfig *config.DefaultRule, logger
 	f.hasDefaultRule = true
 
 	return nil
+}
+
+func expandHTTPMethods(methods []string) ([]string, error) {
+	if slices.Contains(methods, "ALL") {
+		methods = slices.DeleteFunc(methods, func(method string) bool { return method == "ALL" })
+
+		methods = append(methods,
+			http.MethodGet, http.MethodHead, http.MethodPost, http.MethodPut, http.MethodPatch,
+			http.MethodDelete, http.MethodConnect, http.MethodOptions, http.MethodTrace)
+	}
+
+	slices.SortFunc(methods, func(a, b string) bool { return strings.Compare(a, b) == -1 })
+
+	methods = slices.Compact(methods)
+	if res := slicex.Filter(methods, func(s string) bool { return len(s) == 0 }); len(res) != 0 {
+		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
+			"methods list contains empty values. have you forgotten to put the corresponding value into braces?")
+	}
+
+	tbr := slicex.Filter(methods, func(s string) bool { return strings.HasPrefix(s, "!") })
+	methods = slicex.Subtract(methods, tbr)
+	tbr = slicex.Map[string, string](tbr, func(s string) string { return strings.TrimPrefix(s, "!") })
+
+	return slicex.Subtract(methods, tbr), nil
 }
 
 type CheckFunc func() error

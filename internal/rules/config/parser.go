@@ -17,23 +17,26 @@
 package config
 
 import (
+	"bytes"
 	"errors"
 	"io"
 
+	"github.com/drone/envsubst/v2"
 	"gopkg.in/yaml.v3"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
+	"github.com/dadrus/heimdall/internal/x/stringx"
 )
 
 var ErrEmptyRuleSet = errors.New("empty rule set")
 
-func ParseRules(contentType string, reader io.Reader) (*RuleSet, error) {
+func ParseRules(contentType string, reader io.Reader, envUsageEnabled bool) (*RuleSet, error) {
 	switch contentType {
 	case "application/json":
 		fallthrough
 	case "application/yaml":
-		return parseYAML(reader)
+		return parseYAML(reader, envUsageEnabled)
 	default:
 		// check if the contents are empty. in that case nothing needs to be decoded anyway
 		b := make([]byte, 1)
@@ -47,11 +50,27 @@ func ParseRules(contentType string, reader io.Reader) (*RuleSet, error) {
 	}
 }
 
-func parseYAML(reader io.Reader) (*RuleSet, error) {
+func parseYAML(reader io.Reader, envUsageEnabled bool) (*RuleSet, error) {
 	var (
 		rawConfig map[string]any
 		ruleSet   RuleSet
 	)
+
+	if envUsageEnabled {
+		raw, err := io.ReadAll(reader)
+		if err != nil {
+			return nil, errorchain.NewWithMessage(heimdall.ErrInternal,
+				"failed to read rule set").CausedBy(err)
+		}
+
+		content, err := envsubst.EvalEnv(stringx.ToString(raw))
+		if err != nil {
+			return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
+				"failed to evaluate env variables in rule set").CausedBy(err)
+		}
+
+		reader = bytes.NewReader(stringx.ToBytes(content))
+	}
 
 	dec := yaml.NewDecoder(reader)
 	if err := dec.Decode(&rawConfig); err != nil {

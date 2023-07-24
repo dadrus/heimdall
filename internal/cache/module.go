@@ -26,7 +26,7 @@ import (
 	"github.com/dadrus/heimdall/internal/config"
 )
 
-// nolint
+//nolint:gochecknoglobals
 var Module = fx.Provide(
 	fx.Annotate(
 		newCache,

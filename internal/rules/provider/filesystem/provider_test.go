@@ -103,6 +103,7 @@ func TestNewProvider(t *testing.T) {
 				assert.True(t, prov.configured)
 				assert.Equal(t, tmpFile.Name(), prov.src)
 				assert.Nil(t, prov.w)
+				assert.False(t, prov.envVarsEnabled)
 			},
 		},
 		{
@@ -116,6 +117,21 @@ func TestNewProvider(t *testing.T) {
 				assert.True(t, prov.configured)
 				assert.Equal(t, tmpFile.Name(), prov.src)
 				assert.NotNil(t, prov.w)
+				assert.False(t, prov.envVarsEnabled)
+			},
+		},
+		{
+			uc:   "successfully created provider with env var support enabled",
+			conf: map[string]any{"src": tmpFile.Name(), "env_vars_enabled": true},
+			assert: func(t *testing.T, err error, prov *Provider) {
+				t.Helper()
+
+				require.NoError(t, err)
+				require.NotNil(t, prov)
+				assert.True(t, prov.configured)
+				assert.Equal(t, tmpFile.Name(), prov.src)
+				assert.Nil(t, prov.w)
+				assert.True(t, prov.envVarsEnabled)
 			},
 		},
 	} {
@@ -130,7 +146,6 @@ func TestNewProvider(t *testing.T) {
 	}
 }
 
-// nolint: maintidx
 func TestProviderLifecycle(t *testing.T) {
 	for _, tc := range []struct {
 		uc             string
@@ -183,11 +198,11 @@ func TestProviderLifecycle(t *testing.T) {
 			setupContents: func(t *testing.T, file *os.File, dir string) string {
 				t.Helper()
 
-				_, err := file.Write([]byte(`
+				_, err := file.WriteString(`
 version: "1"
 rules:
 - id: foo
-`))
+`)
 				require.NoError(t, err)
 
 				return file.Name()
@@ -232,11 +247,11 @@ rules:
 				tmpFile, err := os.CreateTemp(dir, "test-rule-")
 				require.NoError(t, err)
 
-				_, err = tmpFile.Write([]byte(`
+				_, err = tmpFile.WriteString(`
 version: "2"
 rules:
 - id: foo
-`))
+`)
 				require.NoError(t, err)
 
 				return dir
@@ -271,11 +286,11 @@ rules:
 				tmpFile, err := os.CreateTemp(tmpDir, "test-rule-")
 				require.NoError(t, err)
 
-				_, err = tmpFile.Write([]byte(`
+				_, err = tmpFile.WriteString(`
 version: "1"
 rules:
 - id: foo
-`))
+`)
 				require.NoError(t, err)
 
 				return dir
@@ -303,11 +318,11 @@ rules:
 
 				time.Sleep(200 * time.Millisecond)
 
-				_, err = tmpFile.Write([]byte(`
+				_, err = tmpFile.WriteString(`
 version: "1"
 rules:
 - id: foo
-`))
+`)
 				require.NoError(t, err)
 
 				time.Sleep(200 * time.Millisecond)
@@ -350,11 +365,11 @@ rules:
 			writeContents: func(t *testing.T, file *os.File, dir string) {
 				t.Helper()
 
-				_, err := file.Write([]byte(`
+				_, err := file.WriteString(`
 version: "1"
 rules:
 - id: foo
-`))
+`)
 				require.NoError(t, err)
 
 				time.Sleep(200 * time.Millisecond)
@@ -362,11 +377,11 @@ rules:
 				_, err = file.Seek(0, 0)
 				require.NoError(t, err)
 
-				_, err = file.Write([]byte(`
+				_, err = file.WriteString(`
 version: "1"
 rules:
 - id: foo
-`))
+`)
 				require.NoError(t, err)
 
 				time.Sleep(200 * time.Millisecond)
@@ -374,11 +389,11 @@ rules:
 				_, err = file.Seek(0, 0)
 				require.NoError(t, err)
 
-				_, err = file.Write([]byte(`
+				_, err = file.WriteString(`
 version: "2"
 rules:
 - id: bar
-`))
+`)
 				require.NoError(t, err)
 
 				time.Sleep(200 * time.Millisecond)
@@ -477,7 +492,7 @@ rules:
 			// WHEN
 			err = prov.Start(ctx)
 
-			defer prov.Stop(ctx) // nolint: errcheck
+			defer prov.Stop(ctx)
 
 			writeContents(t, tmpFile, tmpDir)
 

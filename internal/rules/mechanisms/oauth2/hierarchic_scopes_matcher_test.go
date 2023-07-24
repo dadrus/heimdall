@@ -82,7 +82,6 @@ func TestHierarchicScopeStrategy(t *testing.T) {
 			},
 		},
 		{
-			// nolint: lll
 			uc:             "required scopes with single element doesn't match provided scopes with a single scope having required scope as prefix",
 			requiredScopes: HierarchicScopeStrategyMatcher{"foo.bar"},
 			providedScopes: []string{"foo.bar.baz"},
@@ -103,7 +102,6 @@ func TestHierarchicScopeStrategy(t *testing.T) {
 			},
 		},
 		{
-			// nolint: lll
 			uc:             "required scopes with multiple elements match provided scopes in hierarchy, which also include further scopes",
 			requiredScopes: HierarchicScopeStrategyMatcher{"foo.bar", "bar.foo"},
 			providedScopes: []string{"foo", "bar.foo", "baz"},

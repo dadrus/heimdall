@@ -26,11 +26,9 @@ import (
 var (
 	ErrUnsupportedAuthorizerType = errors.New("authorizer type unsupported")
 
-	// by intention. Used only during application bootstrap
-	// nolint
-	authorizerTypeFactories []AuthorizerTypeFactory
-	// nolint
-	authorizerTypeFactoriesMu sync.RWMutex
+	// by intention. Used only during application bootstrap.
+	authorizerTypeFactories   []AuthorizerTypeFactory //nolint:gochecknoglobals
+	authorizerTypeFactoriesMu sync.RWMutex            //nolint:gochecknoglobals
 )
 
 type AuthorizerTypeFactory func(id string, typ string, config map[string]any) (bool, Authorizer, error)

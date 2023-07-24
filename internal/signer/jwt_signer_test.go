@@ -43,7 +43,6 @@ import (
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
-// nolint: maintidx
 func TestNewJWTSigner(t *testing.T) {
 	t.Parallel()
 

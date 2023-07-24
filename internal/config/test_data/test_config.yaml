@@ -290,8 +290,8 @@ rules:
             method: POST
             headers:
               foo-bar: "{{ .Subject.ID }}"
-            values:
-              key: value
+          values:
+            key: value
           payload: https://bla.bar
           forward_response_headers_to_upstream:
             - bla-bar
@@ -320,14 +320,14 @@ rules:
             url: http://profile/{{ .Subject.ID }}
             headers:
               foo: bar
-            values:
-              some-key: some-value
             auth:
               type: api_key
               config:
                 in: query
                 name: key
                 value: super duper secret
+          values:
+            some-key: some-value
     unifiers:
       - id: jwt
         type: jwt
@@ -384,6 +384,7 @@ rules:
     file_system:
       src: test_rules.yaml
       watch: true
+      env_vars_enabled: false
 
     http_endpoint:
       watch_interval: 5m

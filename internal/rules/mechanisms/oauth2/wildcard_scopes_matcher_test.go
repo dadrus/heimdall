@@ -172,7 +172,6 @@ func TestWildcardScopeStrategy(t *testing.T) {
 			},
 		},
 		{
-			// nolint: lll
 			uc:             "single simple hierarchical required scope doesn't match partially root prefixed wildcard provided scopes",
 			requiredScopes: WildcardScopeStrategyMatcher{"foo.bar"},
 			providedScopes: []string{"fo*"},
@@ -203,7 +202,6 @@ func TestWildcardScopeStrategy(t *testing.T) {
 			},
 		},
 		{
-			// nolint: lll
 			uc:             "hierarchical wildcard required scope doesn't match hierarchical provided scope with not matching parts",
 			requiredScopes: WildcardScopeStrategyMatcher{"foo.*.bar"},
 			providedScopes: []string{"foo.baz.bar"},

@@ -110,11 +110,9 @@ To enable the usage of this authorizer, you have to set the `type` property to `
 
 Configuration using the `config` property is mandatory. Following properties are available:
 
-* *`endpoint`*: _link:{{< relref "/docs/configuration/reference/types.adoc#_endpoint">}}[Endpoint]_ (mandatory, partially overridable)
+* *`endpoint`*: _link:{{< relref "/docs/configuration/reference/types.adoc#_endpoint">}}[Endpoint]_ (mandatory, not overridable)
 +
 The API endpoint of your authorization system. At least the `url` must be configured. This mechanism allows templating of the url and makes the link:{{< relref "overview.adoc#_subject" >}}[`Subject`] object, as well as the link:{{< relref "overview.adoc#_values" >}}[`Values`] (see also below) objects available to it. By default, this authorizer will use HTTP `POST` to send the rendered payload to this endpoint. You can override this behavior by configuring `method` as well. Depending on the API requirements of your authorization system, you might need to configure further properties, like headers, etc.
-+
-The only overridable property on the rule level is the `values` property, which allows rule specific configuration of the URL.
 
 * *`payload`*: _string_ (optional, overridable)
 +
@@ -133,6 +131,10 @@ Enables forwarding of any headers from the authorization endpoint response to th
 * *`cache_ttl`*: _link:{{< relref "/docs/configuration/reference/types.adoc#_duration" >}}[Duration]_ (optional, overridable)
 +
 Allows caching of the authorization endpoint responses. Defaults to 0s, which means no caching. The cache key is calculated from the entire configuration of the authorizer instance and the available information about the current subject.
+
+* *`values`* _map of strings_ (optional, overridable)
++
+A key value map, which is made accessible to the template rendering engine as link:{{< relref "overview.adoc#_values" >}}[`Values`] object, to render parts of the URL or the payload.
 
 .Configuration of Remote authorizer to communicate with https://www.openpolicyagent.org/[Open Policy Agent] (OPA)
 ====
@@ -153,11 +155,11 @@ config:
       config:
         user: ${OPA_USER}
         password: ${OPA_PASSWORD}
-    values:
-      namespace: myapi/policy
-      policy: allow_write
   payload: |
-    { "input": { "user": {{ quote .Subject.ID }} } }
+    { "input": { "user": {{ quote .Subject.ID }} }, "some_data": {{ quote .Values.whatever }} }
+  values:
+    namespace: myapi/policy
+    policy: allow_write
   expressions:
     - expression: |
         Payload.result == true
@@ -183,9 +185,9 @@ A specific rule could then use this authorizer in the following ways:
   - # other mechanisms
   - authorizer: opa
     config: # overriding with rule specifics
-      endpoint:
-        values:
-          policy: allow_read
+      values:
+        policy: allow_read
+        whatever: foo
   - # other mechanisms
 ----
 

@@ -353,7 +353,6 @@ func TestCreateKeyStoreFromPEMFile(t *testing.T) {
 	}
 }
 
-// nolint: maintidx
 func TestCreateKeyStoreFromPEMBytes(t *testing.T) {
 	t.Parallel()
 

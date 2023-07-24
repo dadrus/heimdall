@@ -23,11 +23,9 @@ To enable the usage of this contextualizer, you have to set the `type` property 
 
 Configuration using the `config` property is mandatory. Following properties are available:
 
-* *`endpoint`*: _link:{{< relref "/docs/configuration/reference/types.adoc#_endpoint">}}[Endpoint]_ (mandatory, partially overridable)
+* *`endpoint`*: _link:{{< relref "/docs/configuration/reference/types.adoc#_endpoint">}}[Endpoint]_ (mandatory, not overridable)
 +
 The API of the service providing additional attributes about the authenticated user. At least the `url` must be configured. This mechanism allows templating of the url and makes the link:{{< relref "overview.adoc#_subject" >}}[`Subject`] object, as well as the link:{{< relref "overview.adoc#_values" >}}[`Values`] (see also below) objects available to it. By default, this contextualizer will use HTTP `POST` to send the rendered payload to this endpoint. You can override this behavior by configuring `method` as well. Depending on the API requirements of the system, this contextualizer should communicate to, you might need to configure further properties, like headers, etc.
-+
-The only overridable property on the rule level is the `values` property, which allows rule specific configuration of the URL.
 
 * *`forward_headers`*: _string array_ (optional, overridable)
 +
@@ -49,7 +47,11 @@ Allows caching of the API responses. Defaults to 10 seconds. The cache key is ca
 +
 If set to `true`, allows the pipeline to continue with the execution of the next mechanisms. So the error, if thrown, is ignored. Defaults to `false`, which means the execution of the regular pipeline is stopped and the execution of the error pipeline is started.
 
-.Contextualizer configuration
+* *`values`* _map of strings_ (optional, overridable)
++
+A key value map, which is made accessible to the template rendering engine as link:{{< relref "overview.adoc#_values" >}}[`Values`] object to render parts of the URL or the payload.
+
+.Contextualizer configuration without payload
 ====
 
 In this example the contextualizer is configured to call an endpoint using the HTTP `GET` method with the subject id being part of the url path. As the endpoint requires the `X-My-Session-Cookie` cookie for subject authentication purposes, `forward_cookies` is used to achieve this.
@@ -64,5 +66,25 @@ config:
     method: GET
   forward_cookies:
     - X-My-Session-Cookie
+----
+====
+
+.Contextualizer configuration with payload
+====
+
+In this example the contextualizer is configured to call an endpoint using the HTTP `POST` and send some data. Since the `values` property is not defined, but used in the payload, it must be specified in a rule making use of this contextualzer.
+
+[source, yaml]
+----
+id: foo
+type: generic
+config:
+  endpoint:
+    url: https://some-other.service/users
+    method: POST
+  payload: |
+    {
+      "user_id": {{ quote .Values.user_id }}
+    }
 ----
 ====

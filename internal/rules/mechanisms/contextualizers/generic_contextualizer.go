@@ -35,6 +35,7 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/contenttype"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/values"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/stringx"
@@ -44,8 +45,11 @@ const (
 	defaultTTL = 10 * time.Second
 )
 
+var errNoContent = errors.New("no payload received")
+
 // by intention. Used only during application bootstrap
-// nolint
+//
+//nolint:gochecknoinits
 func init() {
 	registerContextualizerTypeFactory(
 		func(id string, typ string, conf map[string]any) (bool, Contextualizer, error) {
@@ -71,6 +75,7 @@ type genericContextualizer struct {
 	fwdHeaders      []string
 	fwdCookies      []string
 	continueOnError bool
+	v               values.Values
 }
 
 func newGenericContextualizer(id string, rawConfig map[string]any) (*genericContextualizer, error) {
@@ -81,6 +86,7 @@ func newGenericContextualizer(id string, rawConfig map[string]any) (*genericCont
 		Payload         template.Template `mapstructure:"payload"`
 		CacheTTL        *time.Duration    `mapstructure:"cache_ttl"`
 		ContinueOnError bool              `mapstructure:"continue_pipeline_on_error"`
+		Values          values.Values     `mapstructure:"values"`
 	}
 
 	var conf Config
@@ -109,6 +115,7 @@ func newGenericContextualizer(id string, rawConfig map[string]any) (*genericCont
 		fwdCookies:      conf.ForwardCookies,
 		ttl:             ttl,
 		continueOnError: conf.ContinueOnError,
+		v:               conf.Values,
 	}, nil
 }
 
@@ -169,17 +176,13 @@ func (h *genericContextualizer) WithConfig(rawConfig map[string]any) (Contextual
 		return h, nil
 	}
 
-	type Endpoint struct {
-		Values endpoint.Values `mapstructure:"values"`
-	}
-
 	type Config struct {
-		Endpoint        Endpoint          `mapstructure:"endpoint"`
 		ForwardHeaders  []string          `mapstructure:"forward_headers"`
 		ForwardCookies  []string          `mapstructure:"forward_cookies"`
 		Payload         template.Template `mapstructure:"payload"`
 		CacheTTL        *time.Duration    `mapstructure:"cache_ttl"`
 		ContinueOnError *bool             `mapstructure:"continue_pipeline_on_error"`
+		Values          values.Values     `mapstructure:"values"`
 	}
 
 	var conf Config
@@ -189,12 +192,9 @@ func (h *genericContextualizer) WithConfig(rawConfig map[string]any) (Contextual
 			CausedBy(err)
 	}
 
-	ept := h.e
-	ept.Values = ept.Values.Merge(conf.Endpoint.Values)
-
 	return &genericContextualizer{
 		id:         h.id,
-		e:          ept,
+		e:          h.e,
 		payload:    x.IfThenElse(conf.Payload != nil, conf.Payload, h.payload),
 		fwdHeaders: x.IfThenElse(len(conf.ForwardHeaders) != 0, conf.ForwardHeaders, h.fwdHeaders),
 		fwdCookies: x.IfThenElse(len(conf.ForwardCookies) != 0, conf.ForwardCookies, h.fwdCookies),
@@ -204,6 +204,7 @@ func (h *genericContextualizer) WithConfig(rawConfig map[string]any) (Contextual
 		continueOnError: x.IfThenElseExec(conf.ContinueOnError != nil,
 			func() bool { return *conf.ContinueOnError },
 			func() bool { return h.continueOnError }),
+		v: h.v.Merge(conf.Values),
 	}, nil
 }
 
@@ -237,7 +238,7 @@ func (h *genericContextualizer) callEndpoint(ctx heimdall.Context, sub *subject.
 	defer resp.Body.Close()
 
 	data, err := h.readResponse(ctx, resp)
-	if err != nil {
+	if err != nil && !errors.Is(err, errNoContent) {
 		return nil, err
 	}
 
@@ -253,6 +254,7 @@ func (h *genericContextualizer) createRequest(ctx heimdall.Context, sub *subject
 		value, err := h.payload.Render(map[string]any{
 			"Request": ctx.Request(),
 			"Subject": sub,
+			"Values":  h.v,
 		})
 		if err != nil {
 			return nil, errorchain.NewWithMessage(heimdall.ErrInternal,
@@ -264,7 +266,7 @@ func (h *genericContextualizer) createRequest(ctx heimdall.Context, sub *subject
 	}
 
 	req, err := h.e.CreateRequest(ctx.AppContext(), body,
-		endpoint.RenderFunc(func(value string, values map[string]string) (string, error) {
+		endpoint.RenderFunc(func(value string) (string, error) {
 			tpl, err := template.New(value)
 			if err != nil {
 				return "", errorchain.NewWithMessage(heimdall.ErrInternal, "failed to create template").
@@ -274,7 +276,7 @@ func (h *genericContextualizer) createRequest(ctx heimdall.Context, sub *subject
 
 			return tpl.Render(map[string]any{
 				"Subject": sub,
-				"Values":  values,
+				"Values":  h.v,
 			})
 		}))
 	if err != nil {
@@ -318,7 +320,7 @@ func (h *genericContextualizer) readResponse(ctx heimdall.Context, resp *http.Re
 	if resp.ContentLength == 0 {
 		logger.Warn().Msg("No data received from the contextualization endpoint")
 
-		return nil, nil
+		return nil, errNoContent
 	}
 
 	rawData, err := io.ReadAll(resp.Body)

@@ -24,9 +24,8 @@ import (
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
-// by intention. Used only during application bootstrap
-// nolint
-func init() {
+// by intention. Used only during application bootstrap.
+func init() { // nolint: gochecknoinits
 	registerAuthenticatorTypeFactory(
 		func(id string, typ string, conf map[string]any) (bool, Authenticator, error) {
 			if typ != AuthenticatorAnonymous {

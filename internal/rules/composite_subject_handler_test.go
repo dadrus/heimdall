@@ -46,7 +46,7 @@ func TestCompositeSubjectHandlerExecution(t *testing.T) {
 			) {
 				t.Helper()
 
-				first.EXPECT().Execute(ctx, sub).Return(errors.New("first fails")) // nolint: goerr113
+				first.EXPECT().Execute(ctx, sub).Return(errors.New("first fails"))
 				first.EXPECT().ContinueOnError().Return(false)
 			},
 			assert: func(t *testing.T, err error) {
@@ -63,7 +63,7 @@ func TestCompositeSubjectHandlerExecution(t *testing.T) {
 			) {
 				t.Helper()
 
-				first.EXPECT().Execute(ctx, sub).Return(errors.New("first fails")) // nolint: goerr113
+				first.EXPECT().Execute(ctx, sub).Return(errors.New("first fails"))
 				first.EXPECT().ContinueOnError().Return(true)
 				second.EXPECT().Execute(ctx, sub).Return(nil)
 			},
@@ -81,7 +81,7 @@ func TestCompositeSubjectHandlerExecution(t *testing.T) {
 				t.Helper()
 
 				first.EXPECT().Execute(ctx, sub).Return(nil)
-				second.EXPECT().Execute(ctx, sub).Return(errors.New("second fails")) // nolint: goerr113
+				second.EXPECT().Execute(ctx, sub).Return(errors.New("second fails"))
 				second.EXPECT().ContinueOnError().Return(false)
 			},
 			assert: func(t *testing.T, err error) {
@@ -99,7 +99,7 @@ func TestCompositeSubjectHandlerExecution(t *testing.T) {
 				t.Helper()
 
 				first.EXPECT().Execute(ctx, sub).Return(nil)
-				second.EXPECT().Execute(ctx, sub).Return(errors.New("second fails")) // nolint: goerr113
+				second.EXPECT().Execute(ctx, sub).Return(errors.New("second fails"))
 				second.EXPECT().ContinueOnError().Return(true)
 			},
 			assert: func(t *testing.T, err error) {

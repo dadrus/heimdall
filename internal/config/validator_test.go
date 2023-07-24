@@ -76,7 +76,7 @@ func TestValidateConfigFileWithInvalidYAMLContent(t *testing.T) {
 
 	defer os.Remove(tmpFile.Name())
 
-	_, err = tmpFile.Write([]byte(`foobar`))
+	_, err = tmpFile.WriteString(`foobar`)
 	require.NoError(t, err)
 
 	err = ValidateConfig(tmpFile.Name())
@@ -94,7 +94,7 @@ func TestValidateConfigFileWithValidYAMLContentButFailingSchemaValidation(t *tes
 
 	defer os.Remove(tmpFile.Name())
 
-	_, err = tmpFile.Write([]byte(`foo: bar`))
+	_, err = tmpFile.WriteString(`foo: bar`)
 	require.NoError(t, err)
 
 	err = ValidateConfig(tmpFile.Name())

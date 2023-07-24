@@ -33,7 +33,6 @@ const (
 )
 
 func toSyslogLevel(level zerolog.Level) SyslogLevel {
-	// nolint
 	switch level {
 	case zerolog.DebugLevel, zerolog.TraceLevel:
 		return Debugging

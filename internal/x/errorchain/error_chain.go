@@ -183,6 +183,6 @@ func (ec *ErrorChain) String() string {
 
 type message struct { //nolint:musttag
 	XMLName xml.Name `json:"-"`
-	Code    string   `xml:"code" json:"code"`
-	Message string   `xml:"message,omitempty" json:"message,omitempty"`
+	Code    string   `json:"code"              xml:"code"`
+	Message string   `json:"message,omitempty" xml:"message,omitempty"`
 }

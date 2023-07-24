@@ -17,7 +17,6 @@
 package logger
 
 import (
-	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -72,9 +71,8 @@ func TestLoggerHandler(t *testing.T) {
 			setHeader: func(t *testing.T, req *http.Request) {
 				t.Helper()
 
-				// nolint: contextcheck
 				otel.GetTextMapPropagator().Inject(
-					trace.ContextWithRemoteSpanContext(context.Background(), parentCtx),
+					trace.ContextWithRemoteSpanContext(req.Context(), parentCtx),
 					propagation.HeaderCarrier(req.Header))
 			},
 			assert: func(t *testing.T, logstring string) {

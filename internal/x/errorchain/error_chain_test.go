@@ -177,7 +177,6 @@ func TestErrorChainAsUsedWithConcreteType(t *testing.T) {
 	err := errorchain.NewWithMessage(errTest, "foo").
 		WithErrorContext(errTest2)
 
-	// nolint: errcheck
 	defer func() { recover() }()
 
 	// WHEN

@@ -25,10 +25,15 @@ import (
 )
 
 func TestConfigLoaderLoad(t *testing.T) {
+	type NestedValue struct {
+		Value string `koanf:"value"`
+	}
+
 	type TestNestedConfig struct {
-		SomeString string `koanf:"some_string"`
-		SomeInt    int    `koanf:"someint"`
-		SomeBool   bool   `koanf:"somebool"`
+		SomeString string      `koanf:"some_string"`
+		SomeInt    int         `koanf:"someint"`
+		SomeBool   bool        `koanf:"somebool"`
+		Nested     NestedValue `koanf:"inner"`
 	}
 
 	type TestConfig struct {
@@ -46,6 +51,7 @@ func TestConfigLoaderLoad(t *testing.T) {
 		Nested2: []TestNestedConfig{
 			{
 				SomeBool: true,
+				Nested:   NestedValue{Value: "bar"},
 			},
 		},
 	}
@@ -59,14 +65,14 @@ func TestConfigLoaderLoad(t *testing.T) {
 	fileName := tempFile.Name()
 	defer os.Remove(fileName)
 
-	_, err = tempFile.Write([]byte(`
+	_, err = tempFile.WriteString(`
 some_string: "overridden by yaml file"
 someint: 10
 nested1:
   somebool: true
 nested_2:
   - some_string: "from yaml"
-`))
+`)
 	require.NoError(t, err)
 
 	// override parts of the above config with values from env variables
@@ -74,8 +80,10 @@ nested_2:
 	t.Setenv("CONFIGLOADERTEST_SOMEINT", "42")
 	t.Setenv("CONFIGLOADERTEST_NESTED1_SOME__STRING", "from env")
 	t.Setenv("CONFIGLOADERTEST_NESTED1_SOMEINT", "111")
+	t.Setenv("CONFIGLOADERTEST_NESTED1_INNER_VALUE", "bar")
 	t.Setenv("CONFIGLOADERTEST_NESTED__2_0_SOMEBOOL", "true")
 	t.Setenv("CONFIGLOADERTEST_NESTED__2_0_SOMEINT", "222")
+	t.Setenv("CONFIGLOADERTEST_NESTED__2_0_INNER_VALUE", "foo")
 	t.Setenv("CONFIGLOADERTEST_NESTED__2_1_SOMEBOOL", "true")
 	t.Setenv("CONFIGLOADERTEST_NESTED__2_1_SOME__STRING", "from env as well")
 	t.Setenv("CONFIGLOADERTEST_NESTED__2_1_SOMEINT", "333")
@@ -94,12 +102,15 @@ nested_2:
 	assert.Equal(t, "from env", config.Nested1.SomeString) // set by env
 	assert.Equal(t, 111, config.Nested1.SomeInt)           // set by env
 	assert.True(t, config.Nested1.SomeBool)                // set by yaml
+	assert.Equal(t, "bar", config.Nested1.Nested.Value)    // set by env
 
 	assert.Equal(t, "from yaml", config.Nested2[0].SomeString) // set by yaml
 	assert.Equal(t, 222, config.Nested2[0].SomeInt)            // set by env
 	assert.True(t, config.Nested2[0].SomeBool)                 // set by env
+	assert.Equal(t, "foo", config.Nested2[0].Nested.Value)     // set by env
 
 	assert.Equal(t, "from env as well", config.Nested2[1].SomeString) // set by yaml
 	assert.Equal(t, 333, config.Nested2[1].SomeInt)                   // set by env
 	assert.True(t, config.Nested2[1].SomeBool)                        // set by env
+	assert.Empty(t, config.Nested2[1].Nested.Value)
 }

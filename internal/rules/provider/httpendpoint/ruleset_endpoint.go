@@ -73,7 +73,7 @@ func (e *ruleSetEndpoint) FetchRuleSet(ctx context.Context) (*config.RuleSet, er
 
 	md := sha256.New()
 
-	ruleSet, err := config.ParseRules(resp.Header.Get("Content-Type"), io.TeeReader(resp.Body, md))
+	ruleSet, err := config.ParseRules(resp.Header.Get("Content-Type"), io.TeeReader(resp.Body, md), false)
 	if err != nil {
 		return nil, errorchain.NewWithMessage(heimdall.ErrInternal, "failed to parse received rule set").
 			CausedBy(err)

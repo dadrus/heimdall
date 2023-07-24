@@ -17,7 +17,7 @@ The configuration of the default rule can be done by making use of the `default`
 
 * *`methods`*: _string array_ (optional)
 +
-Which HTTP methods (`GET`, `POST`, `PATCH`, etc) are allowed. Defaults to an empty array. If the default rule is defined and the upstream service API specific rule (see also link:{{< relref "configuration.adoc" >}}[Rule Definition] does not override it, no methods will be accepted, effectively resulting in `405 Method Not Allowed` response to Heimdall's client for any urls matched by that particular rule.
+Which HTTP methods (`GET`, `POST`, `PATCH`, etc) are allowed. Expansion using `ALL` and removal by prefixing the method with an `!` is supported as with the regular rules. Defaults to an empty array. If the default rule is defined and the upstream service API specific rule (see also link:{{< relref "configuration.adoc" >}}[Rule Definition] does not override it, no methods will be accepted, effectively resulting in `405 Method Not Allowed` response to Heimdall's client for any urls matched by that particular rule.
 
 * *`execute`*: _link:{{< relref "configuration.adoc#_regular_pipeline" >}}[Regular Pipeline]_ (mandatory)
 +

@@ -63,7 +63,7 @@ func TestTracerSpanManagementWithoutSkippingOnMissingParentSpan(t *testing.T) {
 	app.Get("filtered", func(ctx *fiber.Ctx) error { return nil })
 	app.Post("test", func(ctx *fiber.Ctx) error { return ctx.SendStatus(500) })
 
-	defer app.Shutdown() // nolint: errcheck
+	defer app.Shutdown()
 
 	for _, tc := range []struct {
 		uc      string
@@ -211,7 +211,7 @@ func TestTracerSpanManagementWithSkippingOnMissingParentSpan(t *testing.T) {
 		WithSkipSpanWithoutParent(true)))
 
 	app.Get("test", func(ctx *fiber.Ctx) error { return nil })
-	// nolint: errcheck
+
 	defer app.Shutdown()
 
 	for _, tc := range []struct {
@@ -297,7 +297,7 @@ func TestSpanIsSetToContextToEnablePropagationToUpstreamServices(t *testing.T) {
 
 		return nil
 	})
-	// nolint: errcheck
+
 	defer app.Shutdown()
 
 	// WHEN
