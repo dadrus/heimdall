@@ -306,7 +306,7 @@ To ease the usage, all http://masterminds.github.io/sprig/[sprig] functions, exc
 +
 Example: `{{ atIndex 2 [1,2,3,4,5] }}` evaluates to `3` (behaves the same way as the `index` function) and `{{ atIndex -2 [1,2,3,4,5] }}` evaluates to `4`.
 
-* `splitList` - Splits a given string using a separator. The result is a string array.
+* `splitList` - Splits a given string using a separator (part of the sprig library, but not documented). The result is a string array.
 +
 Example: `{{ splitList "/" "/foo/bar" }}` evaluates to the `["", "foo", "bar"]` array.
 
@@ -346,27 +346,35 @@ This will result in the following JSON object:
 
 .Access the last part of the path
 ====
-Imagine, we have a `POST` request to the URL `\http://foobar.baz/zab/1234`, with `1234` being the ID of an object, which should be updated, and you would like to control access to using OPA. This can be achieved with the following authorizer:
+Imagine, we have a `POST` request to the URL `\http://foobar.baz/zab/1234`, with `1234` being the identifier of a file, which should be updated with the contents sent in the body of the request, and you would like to control access to the aforesaid object using e.g. OpenFGA. This can be achieved with the following authorizer:
 
 [source, yaml]
 ----
-id: opa_authorizer
+id: openfga_authorizer
 type: remote
 config:
   endpoint:
-    url: https://opa.local/v1/data/some_policy
+    url: https://openfga/stores/files/check
   payload: |
-    { "input": { "user_id": {{ quote .Subject.ID }}, "object_id": {{ splitList "/" .RequestURL.Path | last | quote }} } }
+    {
+      "user": "user:{{ .Subject.ID }}",
+      "relation": "write",
+      "object": "file:{{ splitList "/" .RequestURL.Path | last }}"
+    }
   expressions:
   - expression: |
-      Payload.result == true
+      Payload.allowed == true
 ----
 
-Please note how the `"object_id"` is set in the `payload` property above. The OPA policy is omitted for brevity. When `payload` template is rendered, it will result in the following JSON object:
+Please note how the `"object"` is set in the `payload` property above. When the `payload` template is rendered and for the above said request heimdall was able to identify the subject with `ID=foo`, following JSON object will be created:
 
 [source, json]
 ----
-{ "user_id": "<whatever>", "object_id": "1234" }
+{
+  "user": "user:foo",
+  "relation": "write",
+  "object": "file:1234"
+}
 ----
 ====
 
@@ -374,9 +382,9 @@ You can find further examples as part of mechanism descriptions, supporting temp
 
 == Expressions
 
-Expressions can be used to execute authorization logic. As of today only https://github.com/google/cel-spec[CEL] is supported as expression language. Which of the link:{{<  relref "#_evaluation_objects" >}}[evaluation objects] are available to the expression depends on the mechanism.
+Expressions can be used to execute authorization logic. As of today only https://github.com/google/cel-spec[CEL] is supported as expression language. All standard, as well as https://pkg.go.dev/github.com/google/cel-go/ext#pkg-functions[extension] functions are available. Which of the link:{{<  relref "#_evaluation_objects" >}}[evaluation objects] are available to the expression depends on the mechanism.
 
-In addition to the build-in method and functions, as well as the methods available on the evaluation objects, following functions are available:
+In addition to the build-in, respectively extension methods and functions, as well as the methods available on the evaluation objects, following functions are available as well:
 
 * `split` - this function works on strings and expects a separator as a single argument. The result is a string array.
 +
