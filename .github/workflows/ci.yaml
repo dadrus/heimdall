@@ -260,7 +260,7 @@ jobs:
         id: image-version
         run: |
           export version=$(echo ${{ needs.prepare-release.outputs.tag_name }} |  sed 's/v//g')
-          echo ::set-output name=result::$version
+          echo "result=$version" >> $GITHUB_OUTPUT
       - name: Checkout repository
         uses: actions/checkout@v3
       - name: Set up QEMU
@@ -310,7 +310,7 @@ jobs:
         id: image-version
         run: |
           export version=$(echo ${{ needs.prepare-release.outputs.tag_name }} |  sed 's/v//g')
-          echo ::set-output name=result::$version
+          echo "result=$version" >> $GITHUB_OUTPUT
       - name: Checkout repository
         uses: actions/checkout@v3
       - name: Publish Helm Chart
