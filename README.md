@@ -3,7 +3,7 @@
 [![Security-Scan](https://github.com/dadrus/heimdall/actions/workflows/security.yaml/badge.svg)](https://github.com/dadrus/heimdall/actions/workflows/security.yml)
 [![Go Report Card](https://goreportcard.com/badge/github.com/dadrus/heimdall)](https://goreportcard.com/report/github.com/dadrus/heimdall)
 [![codecov](https://codecov.io/gh/dadrus/heimdall/branch/main/graph/badge.svg)](https://codecov.io/gh/dadrus/heimdall)
-[![Docker](https://img.shields.io/docker/v/dadrus/heimdall?color=lightblue&label=docker&logo=docker)](https://hub.docker.com/r/dadrus/heimdall)
+[![Docker](https://img.shields.io/docker/v/dadrus/heimdall/latest?color=lightblue&label=docker&logo=docker)](https://hub.docker.com/r/dadrus/heimdall)
 [![Helm Chart](https://img.shields.io/badge/dynamic/yaml.svg?label=helm%20chart&url=https://dadrus.github.io/heimdall/charts/index.yaml&query=$.entries.heimdall[0].version&logo=helm&logoColor=white)](https://github.com/dadrus/heimdall/tree/main/charts/heimdall)
 
 ## Background
