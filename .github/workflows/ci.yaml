@@ -199,8 +199,8 @@ jobs:
           md5sum: false
           extra_files: CHANGELOG.md LICENSE
 
-  # this job is here only for the verification purpose of the docker images build
-  build-docker-images:
+  # this job builds container images for PRs, as well as publishes these on merges to main
+  build-dev-container-images:
     runs-on: ubuntu-22.04
     needs:
       - test
@@ -213,7 +213,22 @@ jobs:
         uses: docker/setup-qemu-action@v2
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
-      - name: Build and push
+      - name: Login to container registry
+        if: ${{ github.ref == 'refs/heads/main' }}
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USER }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Collect container meta-info
+        id: meta
+        uses: docker/metadata-action@v4
+        with:
+          images: ${{ github.repository }}
+          labels: |
+            org.opencontainers.image.version=${{ github.sha }}
+            org.opencontainers.image.documentation=${{ env.DOCUMENTATION_URL }}
+      - name: Build images
+        if: ${{ github.ref != 'refs/heads/main' }}
         uses: docker/build-push-action@v4
         with:
           context: .
@@ -221,9 +236,21 @@ jobs:
           platforms: linux/amd64,linux/arm64,linux/arm
           push: false
           build-args: VERSION=${{ github.sha }}
-          tags: ${{ github.repository }}:latest
+          tags: ${{ github.repository }}:local
+      - name: Build and push dev images to container registry
+        if: ${{ github.ref == 'refs/heads/main' }}
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          file: ./docker/Dockerfile
+          platforms: linux/amd64,linux/arm64,linux/arm
+          push: true
+          build-args: VERSION=${{ github.sha }}
+          labels: ${{ steps.meta.outputs.labels }}
+          tags: ${{ github.repository }}:dev-${{ github.sha }},${{ github.repository }}:dev
 
-  release-docker-images:
+  # this job releases container images
+  release-container-images:
     if: needs.prepare-release.outputs.release_created
     runs-on: ubuntu-22.04
     needs:
@@ -276,7 +303,7 @@ jobs:
     runs-on: ubuntu-22.04
     needs:
       - prepare-release
-      - release-docker-images
+      - release-container-images
     if: needs.prepare-release.outputs.release_created
     steps:
       - name: Prepare image version
