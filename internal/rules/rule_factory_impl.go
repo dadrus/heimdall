@@ -360,7 +360,7 @@ func expandHTTPMethods(methods []string) ([]string, error) {
 			http.MethodDelete, http.MethodConnect, http.MethodOptions, http.MethodTrace)
 	}
 
-	slices.SortFunc(methods, func(a, b string) bool { return strings.Compare(a, b) == -1 })
+	slices.SortFunc(methods, strings.Compare)
 
 	methods = slices.Compact(methods)
 	if res := slicex.Filter(methods, func(s string) bool { return len(s) == 0 }); len(res) != 0 {
