@@ -2,17 +2,18 @@
 Please note: This project expects semantic PRs. That means each PR name must comply to the pattern "tag: description",
 with "tag" being one from the following list and "description" being the name/description of your PR:
 
+* build - The PR is related to the build system of the project
+* chore - The PR is about housekeeping, like fixing typos, and alike
+* ci - The PR updates the CI
+* docs - The PR updates the documentation
+* deps - The PR updates dependencies
 * feat - The PR implements a new feature
 * fix - The PR fixes for a bug
-* docs - The PR updates the documentation
-* style - The PR updates the UI style
-* refactor - The PR is about code refactoring
 * perf - The PR implements new performance tests
-* test - The PR implements new tests
-* build - The PR is related to the build system of the project
-* ci - The PR updates the CI
-* chore - The PR is about housekeeping, like dependency updates, and alike
+* refactor - The PR is about code refactoring
 * revert - The PR reverts one of the previous PRs
+* style - The PR updates the UI style
+* test - The PR implements new tests
 * wip - The PR is not yet ready for review; it is Work in Progress.
 
 E.g.: "feat: Some cool feature".
@@ -24,8 +25,9 @@ E.g.: "feat!: Some cool feature"
 When you create PRs which are not yet complete in sense of the implementation/changes, please use the "wip" tag
 to inform the maintainers, you're not ready with your work, and you're not expecting a review.
 
-As of today only PRs tagged with "feat" and "fix", as well as all breaking change PRs (those with a "!" after the tag)
-are included into the change list of a release. This may change in the future. All contributors are referenced in the release, despite whether the actual PR is listed ot not.
+As of today only PRs tagged with "feat", "fix", "deps" and "docs" as well as all breaking change PRs (those with
+a "!" after the tag) are included into the change list of a release. This may change in the future. All contributors
+are referenced in the release, despite whether the actual PR is listed ot not.
 
 If your PR addresses multiple changes, you can represent these by adding additional semantic commit messages at the
 end of the Description section (See below)
