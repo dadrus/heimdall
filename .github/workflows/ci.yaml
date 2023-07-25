@@ -129,6 +129,7 @@ jobs:
         with:
           command: manifest
           token: ${{ secrets.GITHUB_TOKEN }}
+          changelog-types: '[{"type":"docs","section":"Documentation Updates","hidden":false}]'
 
   build-binaries:
     runs-on: ubuntu-22.04
