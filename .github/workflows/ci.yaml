@@ -18,8 +18,59 @@ env:
   DOCUMENTATION_URL: "https://dadrus.github.io/heimdall/"
 
 jobs:
+  check-changes:
+    runs-on: ubuntu-22.04
+    outputs:
+      code_changed:  ${{steps.code-changes.outputs.count > 0}}
+      test_data_changed: ${{steps.test-data-changes.outputs.count > 0}}
+      image_config_changed: ${{steps.image-config-changes.outputs.count > 0}}
+      helm_chart_changed: ${{steps.helm-chart-changes.outputs.count > 0}}
+      docs_changed: ${{steps.docs-changes.outputs.count > 0}}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      - name: Check code changes
+        id: code-changes
+        uses: technote-space/get-diff-action@v6
+        with:
+          PATTERNS: |
+            *.go
+            **/*.go
+            schema/*.json
+          FILES: |
+            go.mod
+            go.sum
+      - name: Check test data changes
+        id: test-data-changes
+        uses: technote-space/get-diff-action@v6
+        with:
+          PATTERNS: |
+            cmd/**/*.yaml
+            internal/**/*.yaml
+      - name: Check container image config changes
+        id: image-config-changes
+        uses: technote-space/get-diff-action@v6
+        with:
+          PATTERNS: |
+            **/*Dockerfile
+      - name: Check helm chart changes
+        id: helm-chart-changes
+        uses: technote-space/get-diff-action@v6
+        with:
+          PATTERNS: |
+            charts/**
+      - name: Check documentation changes
+        id: docs-changes
+        uses: technote-space/get-diff-action@v6
+        with:
+          PATTERNS: |
+            docs/**
+
   check-licenses:
     runs-on: ubuntu-22.04
+    needs:
+      - check-changes
+    if: needs.check-changes.outputs.code_changed == 'true'
     steps:
       - name: Set up Go
         uses: actions/setup-go@v4
@@ -34,6 +85,9 @@ jobs:
 
   lint-code:
     runs-on: ubuntu-22.04
+    needs:
+      - check-changes
+    if: needs.check-changes.outputs.code_changed == 'true'
     steps:
     - name: Set up Go
       uses: actions/setup-go@v4
@@ -49,6 +103,9 @@ jobs:
 
   lint-api:
     runs-on: ubuntu-22.04
+    needs:
+      - check-changes
+    if: needs.check-changes.outputs.docs_changed == 'true'
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -63,6 +120,9 @@ jobs:
 
   lint-dockerfiles:
     runs-on: ubuntu-22.04
+    needs:
+      - check-changes
+    if: needs.check-changes.outputs.image_config_changed == 'true'
     steps:
     - name: Checkout repository
       uses: actions/checkout@v3
@@ -77,6 +137,9 @@ jobs:
 
   lint-helm-chart:
     runs-on: ubuntu-22.04
+    needs:
+      - check-changes
+    if: needs.check-changes.outputs.helm_chart_changed == 'true'
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -101,6 +164,9 @@ jobs:
 
   test:
     runs-on: ubuntu-22.04
+    needs:
+      - check-changes
+    if: needs.check-changes.outputs.code_changed == 'true' || needs.check-changes.outputs.test_data_changed == 'true'
     steps:
     - name: Set up Go
       uses: actions/setup-go@v4
@@ -158,7 +224,7 @@ jobs:
       - name: Build
         run: CGO_ENABLED=0 GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -trimpath -ldflags="-buildid= -w -s -X github.com/dadrus/heimdall/version.Version=${{ github.sha }}" -o ./build/
       - uses: actions/upload-artifact@v3
-        if: github.event_name != 'pull_request'
+        if: github.ref == 'refs/heads/main'
         with:
           name: build-result-${{ matrix.goos }}-${{ matrix.goarch }}
           path: ./build/*
@@ -204,8 +270,12 @@ jobs:
     runs-on: ubuntu-22.04
     needs:
       - test
+      - check-changes
       - prepare-release
-    if: always() && needs.prepare-release.outputs.release_created == false && needs.test.result == 'success'
+    if: > 
+      always() && 
+      needs.prepare-release.outputs.release_created == false && 
+      (needs.test.result == 'success' || (needs.test.result == 'skipped' && needs.check-changes.outputs.image_config_changed == 'true'))
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -213,12 +283,6 @@ jobs:
         uses: docker/setup-qemu-action@v2
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
-      - name: Login to container registry
-        if: ${{ github.ref == 'refs/heads/main' }}
-        uses: docker/login-action@v2
-        with:
-          username: ${{ secrets.DOCKERHUB_USER }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
       - name: Collect container meta-info
         id: meta
         uses: docker/metadata-action@v4
@@ -228,7 +292,7 @@ jobs:
             org.opencontainers.image.version=${{ github.sha }}
             org.opencontainers.image.documentation=${{ env.DOCUMENTATION_URL }}
       - name: Build images
-        if: ${{ github.ref != 'refs/heads/main' }}
+        if: github.ref != 'refs/heads/main'
         uses: docker/build-push-action@v4
         with:
           context: .
@@ -237,8 +301,14 @@ jobs:
           push: false
           build-args: VERSION=${{ github.sha }}
           tags: ${{ github.repository }}:local
+      - name: Login to container registry
+        if: github.ref == 'refs/heads/main'
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USER }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
       - name: Build and push dev images to container registry
-        if: ${{ github.ref == 'refs/heads/main' }}
+        if: github.ref == 'refs/heads/main'
         uses: docker/build-push-action@v4
         with:
           context: .
@@ -321,22 +391,18 @@ jobs:
           linting: off
           app_version: ${{ steps.image-version.outputs.result }}
 
-  documentation:
+  build-dev-documentation:
     runs-on: ubuntu-22.04
     needs:
       - prepare-release
-    if: always()
+      - check-changes
+    if: needs.prepare-release.outputs.release_created == false && needs.check-changes.outputs.docs_changed == 'true'
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
         with:
           submodules: true  # Fetch Hugo themes (true OR recursive)
           fetch-depth: 0    # Fetch all history for .GitInfo and .Lastmod
-      - name: Calculate diff of the docs
-        uses: technote-space/get-diff-action@v6
-        with:
-          PATTERNS: |
-            docs/**
       - name: Setup Hugo
         uses: peaceiris/actions-hugo@v2
         with:
@@ -355,16 +421,7 @@ jobs:
       - name: Install dependencies
         working-directory: ./docs
         run: npm install
-      - name: Update version string to new released version
-        if: needs.prepare-release.outputs.release_created
-        uses: jacobtomlinson/gha-find-replace@v3
-        with:
-          find: "x-current-version"
-          replace: "${{ needs.prepare-release.outputs.tag_name }}"
-          regex: false
-          include: docs/**
       - name: Update version string to dev version
-        if: github.ref == 'refs/heads/main' && needs.prepare-release.outputs.release_created == false && env.GIT_DIFF
         uses: jacobtomlinson/gha-find-replace@v3
         with:
           find: "x-current-version"
@@ -374,8 +431,56 @@ jobs:
       - name: Build documentation
         working-directory: ./docs
         run: npm run build
+      - name: Deploy documentation
+        if: github.ref == 'refs/heads/main'
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./docs/public
+          destination_dir: dev
+
+  release-documentation:
+    runs-on: ubuntu-20.04
+    needs:
+      - prepare-release
+    if: needs.prepare-release.outputs.release_created
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          submodules: true  # Fetch Hugo themes (true OR recursive)
+          fetch-depth: 0    # Fetch all history for .GitInfo and .Lastmod
+      - name: Setup Hugo
+        uses: peaceiris/actions-hugo@v2
+        with:
+          hugo-version: 0.100.1
+          extended: true
+      - name: Setup Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 17.7
+      - name: Install mermaid
+        run: npm install -g @mermaid-js/mermaid-cli
+      - name: Setup ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: 2.7
+      - name: Install asciidoctor
+        run: gem install asciidoctor asciidoctor-diagram asciidoctor-html5s rouge
+      - name: Install dependencies
+        working-directory: ./docs
+        run: npm install
+      - name: Update version string to new released version
+        uses: jacobtomlinson/gha-find-replace@v3
+        with:
+          find: "x-current-version"
+          replace: "${{ needs.prepare-release.outputs.tag_name }}"
+          regex: false
+          include: docs/**
+      - name: Build documentation
+        working-directory: ./docs
+        run: hugo --minify -d ./public
       - name: Update uri for redirecting to new version
-        if: needs.prepare-release.outputs.release_created
         uses: jacobtomlinson/gha-find-replace@v3
         with:
           find: "x-released-version"
@@ -384,18 +489,9 @@ jobs:
           include: docs/**
       - name: Update versions JSON document
         id: update-version-json
-        if: needs.prepare-release.outputs.release_created
         run: |
           cat ./docs/versions/data.json | jq '. + [{ "version": "${{ needs.prepare-release.outputs.tag_name }}", "path": "/heimdall/${{ needs.prepare-release.outputs.tag_name }}" }]' | tee ./docs/versions/data.json
-      - name: Deploy dev documentation
-        if: github.ref == 'refs/heads/main' && needs.prepare-release.outputs.release_created == false && env.GIT_DIFF
-        uses: peaceiris/actions-gh-pages@v3
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./docs/public
-          destination_dir: dev
-      - name: Deploy released documentation
-        if: needs.prepare-release.outputs.release_created
+      - name: Deploy documentation
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
@@ -403,25 +499,22 @@ jobs:
           destination_dir: ${{ needs.prepare-release.outputs.tag_name }}
       - name: Deploy redirect to new released version
         uses: peaceiris/actions-gh-pages@v3
-        if: needs.prepare-release.outputs.release_created
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./docs/redirect
           keep_files: true
       - name: Deploy versions JSON document
         uses: peaceiris/actions-gh-pages@v3
-        if: needs.prepare-release.outputs.release_created
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./docs/versions
           keep_files: true
       - name: Commit updated versions JSON document
-        if: steps.update-version-json.outcome == 'success' && needs.prepare-release.outputs.release_created
+        if: steps.update-version-json.outcome == 'success'
         run: |
           git config --local user.email "{{ github.sha }}+github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           git add ./docs/versions/data.json
           git commit -m "chore(${{ github.ref_name }}): Preparing for next iteration"
       - name: Push changes
-        if: needs.prepare-release.outputs.release_created
         uses: ad-m/github-push-action@master
