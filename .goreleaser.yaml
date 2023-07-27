@@ -42,3 +42,16 @@ archives:
 
 checksum:
   name_template: "{{ .ProjectName }}_{{ .Tag }}_checksums.txt"
+
+signs:
+  - cmd: cosign
+    signature: "${artifact}-keyless.sig"
+    certificate: "${artifact}-keyless.pem"
+    args:
+      - "sign-blob"
+      - "--oidc-issuer=https://token.actions.githubusercontent.com"
+      - "--output-signature=${artifact}-keyless.sig"
+      - "--output-certificate=${artifact}-keyless.pem"
+      - "${artifact}"
+      - "--yes"
+    artifacts: all
