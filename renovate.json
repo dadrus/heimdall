@@ -3,10 +3,10 @@
     "config:base",
     ":semanticCommits",
     ":semanticCommitTypeAll(deps)",
-    ":semanticCommitScopeDisabled",
-    ":commitMessageAction(Update)"
+    ":semanticCommitScopeDisabled"
   ],
   "assigneesFromCodeOwners": true,
   "addLabels": ["dependency"],
-  "automerge": false
+  "automerge": false,
+  "commitMessageAction": "Update"
 }
