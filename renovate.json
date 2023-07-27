@@ -3,7 +3,8 @@
     "config:base",
     ":semanticCommits",
     ":semanticCommitTypeAll(deps)",
-    ":semanticCommitScopeDisabled"
+    ":semanticCommitScopeDisabled",
+    ":commitMessageAction(Update)"
   ],
   "assigneesFromCodeOwners": true,
   "addLabels": ["dependency"],
