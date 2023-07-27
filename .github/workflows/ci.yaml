@@ -260,6 +260,9 @@ jobs:
   # this job builds container images for PRs, as well as publishes these on merges to main
   build-dev-container-images:
     runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+      id-token: write
     needs:
       - test
       - check-changes
@@ -271,6 +274,11 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
+      - name: Install Cosign
+        if: github.ref == 'refs/heads/main'
+        uses: sigstore/cosign-installer@v3.1.1
+        with:
+          cosign-release: "${{ env.COSIGN_VERSION }}"
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v2
       - name: Set up Docker Buildx
@@ -301,6 +309,7 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       - name: Build and push dev images to container registry
         if: github.ref == 'refs/heads/main'
+        id: publish-image
         uses: docker/build-push-action@v4
         with:
           context: .
@@ -310,11 +319,20 @@ jobs:
           build-args: VERSION=${{ github.sha }}
           labels: ${{ steps.meta.outputs.labels }}
           tags: ${{ github.repository }}:dev-${{ github.sha }},${{ github.repository }}:dev
+      - name: Sign the published Docker image
+        if: steps.publish-image.conclusion == 'success'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: cosign sign --yes ${{ github.repository }}@${{ steps.publish-image.outputs.digest }}
+
 
   # this job releases container images
   release-container-images:
     if: needs.prepare-release.outputs.release_created
     runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+      id-token: write
     needs:
       - prepare-release
     steps:
@@ -325,6 +343,10 @@ jobs:
         run: |
           export version=$(echo ${{ needs.prepare-release.outputs.tag_name }} |  sed 's/v//g')
           echo "result=$version" >> $GITHUB_OUTPUT
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@v3.1.1
+        with:
+          cosign-release: "${{ env.COSIGN_VERSION }}"
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v2
       - name: Set up Docker Buildx
@@ -342,7 +364,8 @@ jobs:
           labels: |
             org.opencontainers.image.version=${{ steps.image-version.outputs.result }}
             org.opencontainers.image.documentation=${{ env.DOCUMENTATION_URL }}
-      - name: Build and push images to DockerHub
+      - name: Build and push images to container registry
+        id: publish-image
         uses: docker/build-push-action@v4
         with:
           context: .
@@ -352,6 +375,11 @@ jobs:
           build-args: VERSION=${{ needs.prepare-release.outputs.tag_name }}
           labels: ${{ steps.meta.outputs.labels }}
           tags: ${{ github.repository }}:${{ steps.image-version.outputs.result }},${{ github.repository }}:latest
+      - name: Sign the published container image
+        if: steps.publish-image.conclusion == 'success'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: cosign sign --yes ${{ github.repository }}@${{ steps.publish-image.outputs.digest }}
       - name: Update DockerHub repository description & readme
         uses: peter-evans/dockerhub-description@v3
         with:
@@ -504,7 +532,7 @@ jobs:
       - name: Commit updated versions JSON document
         if: steps.update-version-json.outcome == 'success'
         run: |
-          git config --local user.email "{{ github.sha }}+github-actions[bot]@users.noreply.github.com"
+          git config --local user.email "${{ github.sha }}+github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           git add ./docs/versions/data.json
           git commit -m "chore(${{ github.ref_name }}): Preparing for next iteration"
