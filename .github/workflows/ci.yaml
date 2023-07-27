@@ -72,14 +72,14 @@ jobs:
       - check-changes
     if: needs.check-changes.outputs.code_changed == 'true'
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
       - name: Set up Go
         uses: actions/setup-go@v4
         with:
           go-version: "${{ env.GO_VERSION }}"
       - name: Get google/go-licenses package
         run: go install github.com/google/go-licenses@latest
-      - name: Checkout repository
-        uses: actions/checkout@v3
       - name: Check the licenses
         run: go-licenses check --disallowed_types=forbidden,restricted,reciprocal,permissive,unknown .
 
@@ -89,17 +89,17 @@ jobs:
       - check-changes
     if: needs.check-changes.outputs.code_changed == 'true'
     steps:
-    - name: Set up Go
-      uses: actions/setup-go@v4
-      with:
-        go-version: "${{ env.GO_VERSION }}"
-    - name: Checkout repository
-      uses: actions/checkout@v3
-    - name: golangci-lint
-      uses: golangci/golangci-lint-action@v3
-      with:
-        version: ${{ env.GOLANGCI_LINT_VERSION }}
-        args: --timeout 5m
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: "${{ env.GO_VERSION }}"
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v3
+        with:
+          version: ${{ env.GOLANGCI_LINT_VERSION }}
+          args: --timeout 5m
 
   lint-api:
     runs-on: ubuntu-22.04
@@ -168,19 +168,19 @@ jobs:
       - check-changes
     if: needs.check-changes.outputs.code_changed == 'true' || needs.check-changes.outputs.test_data_changed == 'true'
     steps:
-    - name: Set up Go
-      uses: actions/setup-go@v4
-      with:
-        go-version: "${{ env.GO_VERSION }}"
-    - name: Checkout repository
-      uses: actions/checkout@v3
-    - name: Test
-      run: go test -v -coverprofile=coverage.cov -coverpkg=./... ./...
-    - name: Code Coverage
-      uses: codecov/codecov-action@v3
-      with:
-        files: coverage.cov
-        verbose: true
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+         go-version: "${{ env.GO_VERSION }}"
+      - name: Test
+        run: go test -v -coverprofile=coverage.cov -coverpkg=./... ./...
+      - name: Code Coverage
+        uses: codecov/codecov-action@v3
+        with:
+          files: coverage.cov
+          verbose: true
 
   prepare-release:
     runs-on: ubuntu-22.04
@@ -215,12 +215,12 @@ jobs:
           - goarch: arm64
             goos: windows
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
       - name: Set up Go
         uses: actions/setup-go@v4
         with:
           go-version: "${{ env.GO_VERSION }}"
-      - name: Checkout repository
-        uses: actions/checkout@v3
       - name: Build
         run: CGO_ENABLED=0 GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -trimpath -ldflags="-buildid= -w -s -X github.com/dadrus/heimdall/version.Version=${{ github.sha }}" -o ./build/
       - uses: actions/upload-artifact@v3
@@ -310,13 +310,13 @@ jobs:
     needs:
       - prepare-release
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
       - name: Prepare image version
         id: image-version
         run: |
           export version=$(echo ${{ needs.prepare-release.outputs.tag_name }} |  sed 's/v//g')
           echo "result=$version" >> $GITHUB_OUTPUT
-      - name: Checkout repository
-        uses: actions/checkout@v3
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v2
       - name: Set up Docker Buildx
@@ -360,13 +360,13 @@ jobs:
       - release-container-images
     if: needs.prepare-release.outputs.release_created
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
       - name: Prepare image version
         id: image-version
         run: |
           export version=$(echo ${{ needs.prepare-release.outputs.tag_name }} |  sed 's/v//g')
           echo "result=$version" >> $GITHUB_OUTPUT
-      - name: Checkout repository
-        uses: actions/checkout@v3
       - name: Publish Helm Chart
         uses: stefanprodan/helm-gh-pages@v1.7.0
         with:
