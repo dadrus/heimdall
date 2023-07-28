@@ -69,7 +69,7 @@ Read and write buffer limits (default to 4KB) for incoming requests and response
 ====
 [source, yaml]
 ----
-management:
+proxy:
   buffer_limit:
     read: 1MB
     write: 2KB
