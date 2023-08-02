@@ -403,4 +403,17 @@ env:
 ```
 
 a| `{}` (empty map)
+
+a| `extraArgs`
+
+Optional extra arguments to pass to heimdall when starting.
+
+E.g. to start heimdall in decision mode for integration with envoy v3 ext_auth, set it to:
+
+```.yaml
+extraArgs:
+  - --envoy-grpc
+```
+
+a| `[]` (empty array)
 |===

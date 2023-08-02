@@ -123,6 +123,9 @@ service:
 # Configures arbitrary environment variables for the deployment
 env: { }
 
+# Optional flags for heimdall to use
+extraArgs: []
+
 # heimdall config defaults
 # DO NOT OVERRIDE the values here. Use heimdall config yaml file instead!
 serve:
