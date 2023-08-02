@@ -352,6 +352,16 @@ a| `deployment.affinity`
 Affinity settings for the deploment
 a| `{}` (empty map)
 
+a| `deployment.volumes`
+
+Optional volumes to use
+a| `[]` (empty array)
+
+a| `deployment.volumeMounts`
+
+Optional volumeMounts to use
+a| `[]` (empty array)
+
 a| `service.labels`
 
 Enables you to set additional labels for the created services
