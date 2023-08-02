@@ -64,17 +64,21 @@ spec:
         - name: {{ include "heimdall.name" $data }}-config-volume
           configMap:
             name: {{ include "heimdall.fullname" $data }}-config
+        {{- with .Values.deployment.volumes }}
+          {{- toYaml . | nindent 8 }}
+        {{- end }}
       containers:
         - name: {{ .Chart.Name }}
           securityContext:
             {{- toYaml .Values.deployment.securityContext | nindent 12 }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
-          {{- if eq $opMode "decision" }}
-          args: [ "serve", "decision" ]
-          {{- else }}
-          args: [ "serve", "proxy" ]
-          {{- end }}
+          args:
+            - serve
+            - {{- if eq $opMode "decision" }} decision{{- else }} proxy{{- end }}
+            {{- with .Values.extraArgs }}
+              {{- toYaml . | nindent 12 }}
+            {{- end }}
           ports:
             {{- if eq $opMode "decision" }}
             - name: http-decision
@@ -102,6 +106,9 @@ spec:
             - name: {{ include "heimdall.name" . }}-config-volume
               mountPath: /etc/heimdall
               readOnly: true
+          {{- with .Values.deployment.volumeMounts }}
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
           {{- if .Values.env }}
           env:
             {{- range $key, $val := .Values.env }}

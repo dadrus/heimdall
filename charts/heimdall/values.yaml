@@ -18,7 +18,7 @@
 # Defaults to "decision" as operating in proxy mode makes most probably only sense
 # if heimdall is installed as a side card either in the Ingress Controller itself,
 # or in each pod before the actual business service.
-operationMode: "decision" # decision or proxy
+operationMode: decision # decision or proxy
 
 # If set to true, a demo deployment with exemplary rules, as these can be found in the documentation,
 # will be done
@@ -95,6 +95,12 @@ deployment:
 
   affinity: { }
 
+  # Optional volumes to be used
+  volumes: [ ]
+
+  # Optional volume mounts to be used
+  volumeMounts: [ ]
+
 # Configures k8s services (decision, proxy, management)
 service:
   # Remove the curly braces after 'labels:' if you do want to specify additional labels
@@ -122,6 +128,9 @@ service:
 
 # Configures arbitrary environment variables for the deployment
 env: { }
+
+# Optional flags for heimdall to use
+extraArgs: []
 
 # heimdall config defaults
 # DO NOT OVERRIDE the values here. Use heimdall config yaml file instead!
