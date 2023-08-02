@@ -10,10 +10,10 @@ spec:
     fqdn: echo-app.local
     tls:
       secretName: echo-app
-    authorization:
-      extensionRef:
-        name: heimdall
-        namespace: heimdall
+#    authorization:
+#      extensionRef:
+#        name: heimdall
+#        namespace: heimdall
   routes:
     - conditions:
         - prefix: /

@@ -1,0 +1,24 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: heimdall-pod-monitor
+  namespace: heimdall
+  labels:
+    release: prometheus
+    app.kubernetes.io/instance: heimdall
+    app.kubernetes.io/name: heimdall
+    app.kubernetes.io/part-of: heimdall
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: heimdall
+      app.kubernetes.io/name: heimdall
+  podMetricsEndpoints:
+    - path: /metrics
+      port: http-metrics
+      scheme: http
+      interval: 30s
+  jobLabel: heimdall-pod-monitor
+  namespaceSelector:
+    matchNames:
+      - heimdall
