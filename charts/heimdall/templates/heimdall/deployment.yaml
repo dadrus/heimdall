@@ -111,10 +111,10 @@ spec:
           {{- end }}
           {{- if .Values.env }}
           env:
-            {{- range $key, $val := .Values.env }}
-              - name: {{ $key }}
-                value: {{ $val }}
-            {{- end }}
+          {{- range $key, $val := .Values.env }}
+            - name: {{ $key }}
+              value: "{{ $val }}"
+          {{- end }}
           {{- end }}
           livenessProbe:
             httpGet:
