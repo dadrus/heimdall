@@ -70,11 +70,12 @@ spec:
             {{- toYaml .Values.deployment.securityContext | nindent 12 }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
-          {{- if eq $opMode "decision" }}
-          args: [ "serve", "decision" ]
-          {{- else }}
-          args: [ "serve", "proxy" ]
-          {{- end }}
+          args:
+            - serve
+            - {{- if eq $opMode "decision" }} decision{{- else }} proxy{{- end }}
+            {{- with .Values.extraArgs }}
+              {{- toYaml . | nindent 12 }}
+            {{- end }}
           ports:
             {{- if eq $opMode "decision" }}
             - name: http-decision
