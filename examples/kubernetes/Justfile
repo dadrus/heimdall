@@ -89,8 +89,6 @@ install-nginx-ingress-controller:
   #  --wait
 
 install-contour-ingress-controller: setup-charts
-  #kubectl apply -f https://projectcontour.io/quickstart/contour.yaml --wait=true
-  #kubectl patch daemonsets -n projectcontour envoy -p '{"spec":{"template":{"spec":{"nodeSelector":{"ingress-ready":"true"},"tolerations":[{"key":"node-role.kubernetes.io/control-plane","operator":"Equal","effect":"NoSchedule"},{"key":"node-role.kubernetes.io/master","operator":"Equal","effect":"NoSchedule"}]}}}}'
   helm upgrade --install contour-ingress-controller bitnami/contour \
     -n projectcontour --create-namespace \
     --set contour.debug=true \
@@ -128,10 +126,22 @@ install-cert-manager: setup-charts
     selfSigned: {}
   EOF
 
+install-echo-service:
+  kustomize build quickstarts/overlays/contour-ingress | kubectl apply -f -
+
+install-heimdall:
+  kubectl create namespace heimdall
+  kubectl apply -f quickstarts/heimdall-certificate.yaml
+  helm upgrade --install heimdall -n heimdall \
+    -f quickstarts/heimdall-config.yaml \
+    -f quickstarts/heimdall-values.yaml \
+    --wait ../../charts/heimdall
+  kubectl apply -f quickstarts/heimdall-extension-service.yaml
+
 create-cluster:
   kind create cluster --config kind/kind.yaml --name {{cluster_name}}
 
-setup-cluster: create-cluster install-ingress-controller install-observability-stack
+setup-cluster: create-cluster install-lb install-cert-manager install-contour-ingress-controller install-heimdall install-echo-service
 
 delete-cluster:
   kind delete clusters {{cluster_name}}

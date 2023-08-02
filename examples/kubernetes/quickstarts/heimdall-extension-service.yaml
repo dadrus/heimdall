@@ -8,6 +8,3 @@ spec:
   services:
     - name: heimdall
       port: 4456
-  validation:
-    subjectName: heimdall
-    caSecret: heimdall-tls
