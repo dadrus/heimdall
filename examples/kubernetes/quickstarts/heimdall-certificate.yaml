@@ -22,7 +22,6 @@ spec:
     size: 2048
   usages:
     - "server auth"
-    - "digital signature"
   dnsNames:
     - heimdall
     - heimdall.heimdall
