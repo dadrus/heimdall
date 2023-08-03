@@ -17,6 +17,7 @@ setup-charts:
   helm repo add grafana https://grafana.github.io/helm-charts
   helm repo add metallb https://metallb.github.io/metallb
   helm repo add jetstack https://charts.jetstack.io
+  helm repo add dadrus https://dadrus.github.io/heimdall/charts
   helm repo update
 
 ## Installs Grafana
@@ -78,15 +79,15 @@ install-dashboards:
 
 install-observability-stack: install-grafana install-prometheus install-loki install-tempo install-phlare install-dashboards
 
-install-nginx-ingress-controller:
-  kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/kind/deploy.yaml --wait=true
-  #helm upgrade --install \
-  #  nginx-ic bitnami/nginx-ingress-controller \
-  #  -n nginx-ic \
-  #  --create-namespace \
-  #  --version {{nginx_version}} \
-  #  -f nginx-values.yaml \
-  #  --wait
+install-nginx-ingress-controller: setup-charts
+  #kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/kind/deploy.yaml --wait=true
+  helm upgrade --install \
+    nginx-ic bitnami/nginx-ingress-controller \
+    -n nginx-ic \
+    --create-namespace \
+    --version {{nginx_version}} \
+    -f nginx-values.yaml \
+    --wait
 
 install-contour-ingress-controller: setup-charts
   helm upgrade --install contour-ingress-controller bitnami/contour \
@@ -126,8 +127,8 @@ install-cert-manager: setup-charts
     selfSigned: {}
   EOF
 
-install-echo-service:
-  kustomize build quickstarts/overlays/contour-ingress | kubectl apply -f -
+install-echo-service ingress-controller=contour:
+  kustomize build quickstarts/overlays/{{ingress-controller}}-ingress | kubectl apply -f -
 
 install-heimdall:
   kubectl create namespace heimdall
@@ -141,7 +142,7 @@ install-heimdall:
 create-cluster:
   kind create cluster --config kind/kind.yaml --name {{cluster_name}}
 
-setup-cluster: create-cluster install-lb install-cert-manager install-contour-ingress-controller install-heimdall install-echo-service
+setup-cluster: create-cluster install-lb install-cert-manager install-ingress-controller
 
 delete-cluster:
   kind delete clusters {{cluster_name}}

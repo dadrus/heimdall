@@ -2,12 +2,7 @@ updateStrategy:
   type: RollingUpdate
   rollingUpdate:
     maxUnavailable: 1
-hostNetwork: true
-daemonset.useHostPort: true
-
 terminationGracePeriodSeconds: 0
-service:
-  type: NodePort
 nodeSelector:
   ingress-ready: "true"
 tolerations:
@@ -16,5 +11,3 @@ tolerations:
     effect: "NoSchedule"
 publishService:
   enabled: false
-extraArgs:
-  publish-status-address: localhost
