@@ -67,10 +67,10 @@ func TestNewJWTSigner(t *testing.T) {
 	ecdsaPrivKey4, err := ecdsa.GenerateKey(elliptic.P521(), rand.Reader)
 	require.NoError(t, err)
 
-	cert, err := testsupport.NewCertificateBuilder(testsupport.WithValidity(time.Now(), 10*time.Hour),
+	cert4, err := testsupport.NewCertificateBuilder(testsupport.WithValidity(time.Now(), 10*time.Hour),
 		testsupport.WithSerialNumber(big.NewInt(1)),
 		testsupport.WithSubject(pkix.Name{
-			CommonName:   "test cert",
+			CommonName:   "test cert 4",
 			Organization: []string{"Test"},
 			Country:      []string{"EU"},
 		}),
@@ -80,8 +80,21 @@ func TestNewJWTSigner(t *testing.T) {
 		Build()
 	require.NoError(t, err)
 
-	testDir := t.TempDir()
-	keyFile, err := os.Create(filepath.Join(testDir, "keys.pem"))
+	ecdsaPrivKey5, err := ecdsa.GenerateKey(elliptic.P521(), rand.Reader)
+	require.NoError(t, err)
+
+	cert5, err := testsupport.NewCertificateBuilder(testsupport.WithValidity(time.Now(), 10*time.Hour),
+		testsupport.WithSerialNumber(big.NewInt(1)),
+		testsupport.WithSubject(pkix.Name{
+			CommonName:   "test cert 5",
+			Organization: []string{"Test"},
+			Country:      []string{"EU"},
+		}),
+		testsupport.WithSubjectPubKey(&ecdsaPrivKey5.PublicKey, x509.ECDSAWithSHA512),
+		testsupport.WithKeyUsage(x509.KeyUsageDigitalSignature),
+		testsupport.WithSelfSigned(),
+		testsupport.WithSignaturePrivKey(ecdsaPrivKey5)).
+		Build()
 	require.NoError(t, err)
 
 	pemBytes, err := pemx.BuildPEM(
@@ -91,9 +104,15 @@ func TestNewJWTSigner(t *testing.T) {
 		pemx.WithECDSAPrivateKey(ecdsaPrivKey1, pemx.WithHeader("X-Key-ID", "key4")),
 		pemx.WithECDSAPrivateKey(ecdsaPrivKey2, pemx.WithHeader("X-Key-ID", "key5")),
 		pemx.WithECDSAPrivateKey(ecdsaPrivKey3, pemx.WithHeader("X-Key-ID", "key6")),
-		pemx.WithECDSAPrivateKey(ecdsaPrivKey4, pemx.WithHeader("X-Key-ID", "invalid")),
-		pemx.WithX509Certificate(cert),
+		pemx.WithECDSAPrivateKey(ecdsaPrivKey4, pemx.WithHeader("X-Key-ID", "missing_key_usage")),
+		pemx.WithX509Certificate(cert4),
+		pemx.WithECDSAPrivateKey(ecdsaPrivKey5, pemx.WithHeader("X-Key-ID", "self_signed")),
+		pemx.WithX509Certificate(cert5),
 	)
+	require.NoError(t, err)
+
+	testDir := t.TempDir()
+	keyFile, err := os.Create(filepath.Join(testDir, "keys.pem"))
 	require.NoError(t, err)
 
 	_, err = keyFile.Write(pemBytes)
@@ -250,14 +269,36 @@ func TestNewJWTSigner(t *testing.T) {
 			},
 		},
 		{
-			uc:     "with certificate, which cannot be used for signature",
-			config: config.SignerConfig{Name: "foo", KeyStore: config.KeyStore{Path: keyFile.Name()}, KeyID: "invalid"},
+			uc: "with certificate, which cannot be used for signature due to missing key usage",
+			config: config.SignerConfig{
+				Name:     "foo",
+				KeyStore: config.KeyStore{Path: keyFile.Name()},
+				KeyID:    "missing_key_usage",
+			},
 			assert: func(t *testing.T, err error, signer *jwtSigner) {
 				t.Helper()
 
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "certificate cannot be used")
+				assert.Contains(t, err.Error(), "missing key usage: DigitalSignature")
+			},
+		},
+		{
+			uc: "with self-signed certificate usable for JWT signing",
+			config: config.SignerConfig{
+				Name:     "foo",
+				KeyStore: config.KeyStore{Path: keyFile.Name()},
+				KeyID:    "self_signed",
+			},
+			assert: func(t *testing.T, err error, signer *jwtSigner) {
+				t.Helper()
+
+				require.NoError(t, err)
+
+				assert.Equal(t, "foo", signer.iss)
+				assert.Equal(t, ecdsaPrivKey5, signer.key)
+				assert.Equal(t, "self_signed", signer.jwk.KeyID)
+				assert.Equal(t, string(jose.ES512), signer.jwk.Algorithm)
 			},
 		},
 	} {
