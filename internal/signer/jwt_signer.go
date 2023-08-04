@@ -92,6 +92,7 @@ func NewJWTSigner(conf *config.Configuration, logger zerolog.Logger) (heimdall.J
 	if len(kse.CertChain) != 0 {
 		if err = pkix.ValidateCertificate(kse.CertChain[0],
 			pkix.WithKeyUsage(x509.KeyUsageDigitalSignature),
+			pkix.WithRootCACertificates([]*x509.Certificate{kse.CertChain[len(kse.CertChain)-1]}),
 			pkix.WithCurrentTime(time.Now()),
 		); err != nil {
 			logger.Error().Err(err).Msg("Failed validating certificate")
