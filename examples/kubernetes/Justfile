@@ -138,7 +138,6 @@ install-heimdall ingress_controller=default_ingress_controller:
     -n heimdall \
     -f quickstarts/heimdall-config.yaml \
     -f quickstarts/heimdall-values.yaml \
-    --set image.repository=heimdall --set image.tag=local \
     --set "${extraArgs}" \
     --wait
 
