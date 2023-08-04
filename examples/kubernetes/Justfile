@@ -81,8 +81,7 @@ install-dashboards:
 install-observability-stack: install-grafana install-prometheus install-loki install-tempo install-phlare install-dashboards
 
 install-nginx-ingress-controller:
-  helm upgrade --install \
-    nginx-ingress-controller bitnami/nginx-ingress-controller \
+  helm upgrade --install nginx-ingress-controller bitnami/nginx-ingress-controller \
     -n nginx-ingress-controller --create-namespace \
     --version {{nginx_version}} \
     --wait
@@ -135,12 +134,13 @@ install-heimdall ingress_controller=default_ingress_controller:
     extraArgs='extraArgs={--envoy-grpc}'
   fi
 
-  helm upgrade --install heimdall -n heimdall \
+  helm upgrade --install heimdall  dadrus/heimdall \
+    -n heimdall \
     -f quickstarts/heimdall-config.yaml \
     -f quickstarts/heimdall-values.yaml \
     --set image.repository=heimdall --set image.tag=local \
     --set "${extraArgs}" \
-    --wait ../../charts/heimdall
+    --wait
 
   if [ "{{ingress_controller}}" == "contour" ]; then
       kubectl apply -f quickstarts/heimdall-extension-service.yaml
