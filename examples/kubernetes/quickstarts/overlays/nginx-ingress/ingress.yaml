@@ -6,7 +6,7 @@ metadata:
   labels:
     app.kubernetes.io/name: echo-app
   annotations:
-    nginx.ingress.kubernetes.io/auth-url: "http://heimdall.heimdall.svc.cluster.local:4456/$request_uri"
+    nginx.ingress.kubernetes.io/auth-url: "https://heimdall.heimdall.svc.cluster.local:4456/$request_uri"
     nginx.ingress.kubernetes.io/auth-response-headers: "Authorization"
 spec:
   ingressClassName: "nginx"

@@ -10,6 +10,7 @@ certmanager_version := '1.12.3'
 
 kind_base_domain := '127.0.0.1.nip.io'
 cluster_name := 'demo-cluster'
+default_ingress_controller := "contour"
 
 setup-charts:
   helm repo add bitnami https://charts.bitnami.com/bitnami
@@ -79,26 +80,20 @@ install-dashboards:
 
 install-observability-stack: install-grafana install-prometheus install-loki install-tempo install-phlare install-dashboards
 
-install-nginx-ingress-controller: setup-charts
-  #kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/kind/deploy.yaml --wait=true
+install-nginx-ingress-controller:
   helm upgrade --install \
-    nginx-ic bitnami/nginx-ingress-controller \
-    -n nginx-ic \
-    --create-namespace \
+    nginx-ingress-controller bitnami/nginx-ingress-controller \
+    -n nginx-ingress-controller --create-namespace \
     --version {{nginx_version}} \
-    -f nginx-values.yaml \
     --wait
 
-install-contour-ingress-controller: setup-charts
+install-contour-ingress-controller:
   helm upgrade --install contour-ingress-controller bitnami/contour \
     -n projectcontour --create-namespace \
-    --set contour.debug=true \
     --version {{contour_version}} \
     --wait
 
-install-ingress-controller: install-nginx-ingress-controller install-contour-ingress-controller
-
-install-lb: setup-charts
+install-lb:
   #!/usr/bin/env bash
   helm upgrade --install metallb metallb/metallb \
     -n metallb-system --create-namespace \
@@ -107,7 +102,7 @@ install-lb: setup-charts
 
   ./configure-metallb.sh
 
-install-cert-manager: setup-charts
+install-cert-manager:
   #!/usr/bin/env bash
   kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v{{certmanager_version}}/cert-manager.crds.yaml
 
@@ -127,22 +122,38 @@ install-cert-manager: setup-charts
     selfSigned: {}
   EOF
 
-install-echo-service ingress-controller=contour:
-  kustomize build quickstarts/overlays/{{ingress-controller}}-ingress | kubectl apply -f -
+install-echo-service ingress_controller=default_ingress_controller:
+  kustomize build quickstarts/overlays/{{ingress_controller}}-ingress | kubectl apply -f -
 
-install-heimdall:
+install-heimdall ingress_controller=default_ingress_controller:
+  #!/usr/bin/env bash
   kubectl create namespace heimdall
   kubectl apply -f quickstarts/heimdall-certificate.yaml
+
+  extraArgs='extraArgs={}'
+  if [ "{{ingress_controller}}" == "contour" ]; then
+    extraArgs='extraArgs={--envoy-grpc}'
+  fi
+
   helm upgrade --install heimdall -n heimdall \
     -f quickstarts/heimdall-config.yaml \
     -f quickstarts/heimdall-values.yaml \
+    --set image.repository=heimdall --set image.tag=local \
+    --set "${extraArgs}" \
     --wait ../../charts/heimdall
-  kubectl apply -f quickstarts/heimdall-extension-service.yaml
+
+  if [ "{{ingress_controller}}" == "contour" ]; then
+      kubectl apply -f quickstarts/heimdall-extension-service.yaml
+  fi
 
 create-cluster:
   kind create cluster --config kind/kind.yaml --name {{cluster_name}}
 
-setup-cluster: create-cluster install-lb install-cert-manager install-ingress-controller
+setup-cluster: create-cluster setup-charts install-lb install-cert-manager
+
+install-ngnix-demo: setup-cluster install-nginx-ingress-controller (install-heimdall "nginx") (install-echo-service "nginx")
+
+install-contour-demo: setup-cluster install-contour-ingress-controller (install-heimdall "contour") (install-echo-service "contour")
 
 delete-cluster:
   kind delete clusters {{cluster_name}}

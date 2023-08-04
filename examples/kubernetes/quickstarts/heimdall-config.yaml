@@ -10,6 +10,10 @@ serve:
     trusted_proxies:
       - 0.0.0.0/0
 
+signer:
+  key_store:
+    path: /etc/heimdall/certs/jwt/tls-combined.pem
+
 rules:
   mechanisms:
     authenticators:
