@@ -3,8 +3,16 @@ log:
 
 serve:
   decision:
+    tls:
+      min_version: TLS1.2
+      key_store:
+        path: /etc/heimdall/certs/ssl/tls-combined.pem
     trusted_proxies:
       - 0.0.0.0/0
+
+signer:
+  key_store:
+    path: /etc/heimdall/certs/jwt/tls-combined.pem
 
 rules:
   mechanisms:

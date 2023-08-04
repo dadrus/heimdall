@@ -1,0 +1,22 @@
+apiVersion: projectcontour.io/v1
+kind: HTTPProxy
+metadata:
+  name: echo-app
+  namespace: quickstarts
+  labels:
+    app.kubernetes.io/name: echo-app
+spec:
+  virtualhost:
+    fqdn: echo-app.local
+    tls:
+      secretName: echo-app
+    authorization:
+      extensionRef:
+        name: heimdall
+        namespace: heimdall
+  routes:
+    - conditions:
+        - prefix: /
+      services:
+        - name: echo-app
+          port: 8080
