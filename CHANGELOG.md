@@ -1,5 +1,39 @@
 # Changelog
 
+## [0.11.0-alpha](https://github.com/dadrus/heimdall/compare/v0.10.1-alpha...v0.11.0-alpha) (2023-08-04)
+
+
+### ⚠ BREAKING CHANGES
+
+* `values` property for endpoint teplating must be configured on the mechanism conf level ([#746](https://github.com/dadrus/heimdall/issues/746))
+
+### Features
+
+* Helm chart allows usage of optionall volumes and volume mounts ([#825](https://github.com/dadrus/heimdall/issues/825)) ([0ed2cf0](https://github.com/dadrus/heimdall/commit/0ed2cf0c54faa904fcbbfcbba03295a8c4df0606))
+* Helm chart enhanced to allow passing optional arguments to heimdall ([#824](https://github.com/dadrus/heimdall/issues/824)) ([9b0149d](https://github.com/dadrus/heimdall/commit/9b0149dc041cb95161a4db86f8d30efe99d9b86a))
+* HTTP method expansion with placeholder key words ([#774](https://github.com/dadrus/heimdall/issues/774)) ([d25be3b](https://github.com/dadrus/heimdall/commit/d25be3b8a3504f229841476392a650cf97fded73))
+* New CEL and template functions to ease access to different parts of the request and beyond ([#689](https://github.com/dadrus/heimdall/issues/689)) ([730b220](https://github.com/dadrus/heimdall/commit/730b2206fdfc688ca42bcdf0e344d8fa6bfba232))
+* Support of env variables in rule sets loaded by the `file_system` provider using Bash syntax ([#775](https://github.com/dadrus/heimdall/issues/775)) ([6fa6415](https://github.com/dadrus/heimdall/commit/6fa6415da12ede1285ffbe9e9c58a774036c5f05))
+* Values object can be used in payload of generic contextualizer and remote authorizer ([#749](https://github.com/dadrus/heimdall/issues/749)) ([42267cb](https://github.com/dadrus/heimdall/commit/42267cbc074049be92dfb5ad205236691900399a))
+
+
+### Code Refactorings
+
+* `values` property for endpoint teplating must be configured on the mechanism conf level ([#746](https://github.com/dadrus/heimdall/issues/746)) ([9809fe4](https://github.com/dadrus/heimdall/commit/9809fe4d9bb6c5161af1fe47887dafcb2eaefa89))
+
+
+### Bug Fixes
+
+* Loading of structured configuration from env variables ([#768](https://github.com/dadrus/heimdall/issues/768)) ([a76c722](https://github.com/dadrus/heimdall/commit/a76c722072640ddb628f2a8f2ba48fe7ab53e360))
+* Quoting configured env vars in helm chart ([#827](https://github.com/dadrus/heimdall/issues/827)) ([b4eeb96](https://github.com/dadrus/heimdall/commit/b4eeb962c55aa06cdebae0febc4aba248cf74995))
+* Validation of a self-signed certificate does not require its presence in the system wide trust store any more ([#830](https://github.com/dadrus/heimdall/issues/830)) ([56a2d1f](https://github.com/dadrus/heimdall/commit/56a2d1f33fd0c207dbda0eb033ec02a66684818a))
+
+
+### Documentation
+
+* New integration guide for Contour ingress controller ([#828](https://github.com/dadrus/heimdall/issues/828)) ([ea62e91](https://github.com/dadrus/heimdall/commit/ea62e9195f3516b6a70a67bd4b475ec3f7bf99e7))
+* Proxy buffer sizes example fixed ([#814](https://github.com/dadrus/heimdall/issues/814)) ([6867822](https://github.com/dadrus/heimdall/commit/68678228af37e21e11273cbdc88f5326494ef8c5))
+
 ## [0.10.1-alpha](https://github.com/dadrus/heimdall/compare/v0.10.0-alpha...v0.10.1-alpha) (2023-06-28)
 
 
