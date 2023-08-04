@@ -94,6 +94,8 @@ func NewJWTSigner(conf *config.Configuration, logger zerolog.Logger) (heimdall.J
 			pkix.WithKeyUsage(x509.KeyUsageDigitalSignature),
 			pkix.WithCurrentTime(time.Now()),
 		); err != nil {
+			logger.Error().Err(err).Msg("Failed validating certificate")
+
 			return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
 				"configured certificate cannot be used for JWT signing purposes").CausedBy(err)
 		}
