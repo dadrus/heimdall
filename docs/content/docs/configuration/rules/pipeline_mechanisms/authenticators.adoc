@@ -332,7 +332,7 @@ If set to `true`, allows the pipeline to fall back to the next authenticator in 
 
 * *`validate_jwk`*: _boolean_ (optional, not overridable)
 +
-Enables or disables the verification of the JWK certificate used for JWT signature verification purposes. Effective only if the JWK contains a certificate. The verification happens according to https://www.rfc-editor.org/rfc/rfc5280#section-6.1[RFC 5280, section 6.1] and also includes the check, that the certificate is allowed to be used for signature verification purposes. Revokation check is not supported. Defaults to `true`.
+Enables or disables the verification of the JWK certificate used for JWT signature verification purposes. Effective only if the JWK contains a certificate. The verification happens according to https://www.rfc-editor.org/rfc/rfc5280#section-6.1[RFC 5280, section 6.1] and also includes the check, that the certificate is allowed to be used for signature verification purposes. Revocation check is not supported. Defaults to `true`.
 
 * *`trust_store`*: _string_ (optional, not overridable)
 +
