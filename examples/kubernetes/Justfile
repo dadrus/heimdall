@@ -5,6 +5,7 @@ tempo_version := '0.16.8'
 phlare_version := '0.1.2'
 nginx_version := '9.7.7'
 contour_version := '12.2.4'
+emissary_version := '3.7.2'
 metallb_version := '0.13.10'
 certmanager_version := '1.12.3'
 
@@ -19,6 +20,7 @@ setup-charts:
   helm repo add metallb https://metallb.github.io/metallb
   helm repo add jetstack https://charts.jetstack.io
   helm repo add dadrus https://dadrus.github.io/heimdall/charts
+  helm repo add datawire https://app.getambassador.io
   helm repo update
 
 ## Installs Grafana
@@ -90,6 +92,16 @@ install-contour-ingress-controller:
   helm upgrade --install contour-ingress-controller bitnami/contour \
     -n projectcontour --create-namespace \
     --version {{contour_version}} \
+    --wait
+
+install-emissary-ingress-controller:
+  kubectl create namespace emissary
+  kubectl apply -f https://app.getambassador.io/yaml/emissary/3.7.2/emissary-crds.yaml
+  kubectl wait --timeout=90s --for=condition=available deployment emissary-apiext -n emissary-system
+
+  helm install upgrade --install emissary-ingress datawire/emissary-ingress \
+    --n emissary  \
+    --version {{emissary_version}} \
     --wait
 
 install-lb:
