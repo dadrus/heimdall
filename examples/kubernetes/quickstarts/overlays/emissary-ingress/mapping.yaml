@@ -1,0 +1,8 @@
+apiVersion: getambassador.io/v3alpha1
+kind: Mapping
+metadata:
+  name: echo-app-backend
+spec:
+  hostname: echo-app.local
+  prefix: /
+  service: echo-app

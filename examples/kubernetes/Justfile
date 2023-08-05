@@ -95,14 +95,32 @@ install-contour-ingress-controller:
     --wait
 
 install-emissary-ingress-controller:
+  #!/usr/bin/env bash
   kubectl create namespace emissary
-  kubectl apply -f https://app.getambassador.io/yaml/emissary/3.7.2/emissary-crds.yaml
+  kubectl apply -f https://app.getambassador.io/yaml/emissary/{{emissary_version}}/emissary-crds.yaml
   kubectl wait --timeout=90s --for=condition=available deployment emissary-apiext -n emissary-system
 
   helm install upgrade --install emissary-ingress datawire/emissary-ingress \
     --n emissary  \
     --version {{emissary_version}} \
     --wait
+
+  kubectl apply -f - <<EOF
+  apiVersion: getambassador.io/v3alpha1
+  kind: Listener
+  metadata:
+    name: emissary-ingress-listener
+    namespace: emissary
+  spec:
+    port: 80
+    protocol: HTTP
+    securityModel: XFP
+    hostBinding:
+      namespace:
+        from: ALL
+  EOF
+
+
 
 install-lb:
   #!/usr/bin/env bash
@@ -165,6 +183,8 @@ setup-cluster: create-cluster setup-charts install-lb install-cert-manager
 install-ngnix-demo: setup-cluster install-nginx-ingress-controller (install-heimdall "nginx") (install-echo-service "nginx")
 
 install-contour-demo: setup-cluster install-contour-ingress-controller (install-heimdall "contour") (install-echo-service "contour")
+
+install-emissary-demo: setup-cluster install-emissary-ingress-controller (install-heimdall "nginx") (install-echo-service "emissary")
 
 delete-cluster:
   kind delete clusters {{cluster_name}}
