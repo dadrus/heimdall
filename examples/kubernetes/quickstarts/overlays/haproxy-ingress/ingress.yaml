@@ -9,8 +9,9 @@ metadata:
     haproxy-ingress.github.io/auth-url: "https://heimdall.heimdall.svc.cluster.local:4456"
     haproxy-ingress.github.io/auth-method: "*"
     haproxy-ingress.github.io/auth-headers-succeed: "Authorization"
-    haproxy-ingress.github.io/config-frontend: |
-      http-request set-header X-Forwarded-Uri %[url]
+    haproxy-ingress.github.io/headers: |
+      X-Forwarded-Uri: %[url]
+      X-Forwarded-Path: %[path]
 spec:
   ingressClassName: "haproxy"
   rules:
