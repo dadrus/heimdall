@@ -385,7 +385,7 @@ func TestMiddlewareApplicationWithConfiguredTrustedProxy(t *testing.T) {
 			configureRequest: func(t *testing.T, req *http.Request) {
 				t.Helper()
 
-				req.Header.Set("X-Forwarded-Uri", "https://foo.bar/bar?bar=foo")
+				req.Header.Set("X-Forwarded-Uri", "/bar?bar=foo")
 				req.URL.RawQuery = url.Values{"foo": []string{"bar"}}.Encode()
 			},
 			assert: func(t *testing.T) {
@@ -393,8 +393,8 @@ func TestMiddlewareApplicationWithConfiguredTrustedProxy(t *testing.T) {
 
 				require.True(t, testAppCalled)
 				assert.Equal(t, "GET", extractedMethod)
-				assert.Equal(t, "https", extractedURL.Scheme)
-				assert.Equal(t, "foo.bar", extractedURL.Host)
+				assert.Equal(t, "http", extractedURL.Scheme)
+				assert.Equal(t, "heimdall.test.local", extractedURL.Host)
 				assert.Equal(t, "/bar", extractedURL.Path)
 				assert.Equal(t, url.Values{"bar": []string{"foo"}}, extractedURL.Query())
 			},
