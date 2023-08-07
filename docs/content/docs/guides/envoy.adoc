@@ -106,7 +106,12 @@ http_filters:
   # other http filter
 ----
 
-NOTE: Envoy does not set `X-Forwarded-*` headers, as long as the `envoy.filters.http.dynamic_forward_proxy` is not configured. In such cases matching of URLs happens based on those URLs, used by Envoy while communicating with heimdall. That means your rules should ignore the scheme and host parts, respectively use the values specific for heimdall and not of the domain.
+[NOTE]
+====
+Envoy does not set `X-Forwarded-\*` headers, as long as the `envoy.filters.http.dynamic_forward_proxy` is not configured. In such cases matching of URLs happens based on those URLs, used by Envoy while communicating with heimdall. That means your rules should ignore the scheme and host parts, respectively use the values specific for heimdall and not of the domain. Please follow link:{{< relref "/docs/operations/security.adoc#_http_headers_security_considerations" >}}[Security Considerations] if your rules rely on any of the `X-Forwarded-*` headers, and you integrate heimdall with envoy using `http_service`.
+
+If you integrate heimdall with envoy via `grpc_service`, spoofing of the aforesaid headers is not possible.
+====
 
 == Demo Setup
 
