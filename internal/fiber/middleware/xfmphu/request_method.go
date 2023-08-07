@@ -26,12 +26,6 @@ func requestMethod(c *fiber.Ctx) string {
 		if len(forwardedMethodVal) != 0 {
 			return forwardedMethodVal
 		}
-
-		// used by nginx ingress controller
-		forwardedMethodVal = c.Get(xOriginalMethod)
-		if len(forwardedMethodVal) != 0 {
-			return forwardedMethodVal
-		}
 	}
 
 	return c.Method()
