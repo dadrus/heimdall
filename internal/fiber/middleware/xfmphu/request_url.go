@@ -23,14 +23,11 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 
-	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/stringx"
 )
 
 func requestURL(c *fiber.Ctx) *url.URL {
 	var (
-		proto   string
-		host    string
 		rawPath string
 		path    string
 		query   string
@@ -40,15 +37,11 @@ func requestURL(c *fiber.Ctx) *url.URL {
 		forwardedURIVal := c.Get(xForwardedURI)
 		if len(forwardedURIVal) != 0 {
 			forwardedURI, _ := url.Parse(forwardedURIVal)
-			proto = forwardedURI.Scheme
-			host = forwardedURI.Host
 			rawPath = forwardedURI.Path
 			query = forwardedURI.Query().Encode()
+		} else {
+			rawPath = c.Get(xForwardedPath)
 		}
-	}
-
-	if len(rawPath) == 0 && c.IsProxyTrusted() {
-		rawPath = c.Get(xForwardedPath)
 	}
 
 	if len(rawPath) == 0 {
@@ -72,12 +65,8 @@ func requestURL(c *fiber.Ctx) *url.URL {
 	path, _ = url.PathUnescape(rawPath)
 
 	return &url.URL{
-		Scheme: x.IfThenElseExec(len(proto) != 0,
-			func() string { return proto },
-			func() string { return c.Protocol() }),
-		Host: x.IfThenElseExec(len(host) != 0,
-			func() string { return host },
-			func() string { return c.Hostname() }),
+		Scheme:   c.Protocol(),
+		Host:     c.Hostname(),
 		Path:     path,
 		RawQuery: query,
 	}
