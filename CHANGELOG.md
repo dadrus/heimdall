@@ -6,6 +6,11 @@
 ### Bug Fixes
 
 * Usage of `X-Forwarded-*` headers enhanced security wise ([#839](https://github.com/dadrus/heimdall/issues/839)) ([cd4f7e8](https://github.com/dadrus/heimdall/commit/cd4f7e8b603992831a1bd617f6853751574fd016))
+* Fix for wrong HTTP scheme used while matching the rules if heimdall is operated over TLS ([#839](https://github.com/dadrus/heimdall/issues/839)) ([cd4f7e8](https://github.com/dadrus/heimdall/commit/cd4f7e8b603992831a1bd617f6853751574fd016))
+
+### Documentation
+
+* Available integration guides updated to describe secure integration options only ([#839](https://github.com/dadrus/heimdall/issues/839)) ([cd4f7e8](https://github.com/dadrus/heimdall/commit/cd4f7e8b603992831a1bd617f6853751574fd016)
 
 
 ### Dependencies
