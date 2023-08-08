@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.11.1-alpha](https://github.com/dadrus/heimdall/compare/v0.11.0-alpha...v0.11.1-alpha) (2023-08-08)
+
+
+### Bug Fixes
+
+* Usage of `X-Forwarded-*` headers enhanced security wise ([#839](https://github.com/dadrus/heimdall/issues/839)) ([cd4f7e8](https://github.com/dadrus/heimdall/commit/cd4f7e8b603992831a1bd617f6853751574fd016))
+
+
+### Dependencies
+
+* update golang.org/x/exp digest to 050eac2 ([#842](https://github.com/dadrus/heimdall/issues/842)) ([964a867](https://github.com/dadrus/heimdall/commit/964a867aa689f57dbb6e92b78d7d05e1fb1a1acf))
+* update google.golang.org/genproto/googleapis/rpc digest to 1744710 ([#841](https://github.com/dadrus/heimdall/issues/841)) ([8f5c5e3](https://github.com/dadrus/heimdall/commit/8f5c5e3f5e9276a57ead596e370c65b5668dbb16))
+
 ## [0.11.0-alpha](https://github.com/dadrus/heimdall/compare/v0.10.1-alpha...v0.11.0-alpha) (2023-08-04)
 
 
