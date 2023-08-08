@@ -141,7 +141,7 @@ nginx.ingress.kubernetes.io/configuration-snippet: |
   proxy_set_header           'Authorization' $auth_header;
   proxy_set_header Proxy     "";
 nginx.ingress.kubernetes.io/server-snippet: |
-  location = /_auth { <3>
+  location = /_auth {
     internal;
     access_log               off;
     proxy_method             $request_method;
