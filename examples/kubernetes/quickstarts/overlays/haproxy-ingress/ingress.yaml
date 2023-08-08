@@ -7,11 +7,11 @@ metadata:
     app.kubernetes.io/name: echo-app
   annotations:
     haproxy-ingress.github.io/auth-url: "https://heimdall.heimdall.svc.cluster.local:4456"
-    haproxy-ingress.github.io/auth-method: "*"
-    haproxy-ingress.github.io/auth-headers-succeed: "Authorization"
+    haproxy-ingress.github.io/auth-headers-succeed: "authorization"
     haproxy-ingress.github.io/headers: |
-      X-Forwarded-Uri: %[url]
-      X-Forwarded-Path: %[path]
+      X-Forwarded-Uri: %[baseq]
+      X-Forwarded-Method: %[method]
+      X-Forwarded-Host: %[req.hdr(host)]
 spec:
   ingressClassName: "haproxy"
   rules:
