@@ -10,7 +10,7 @@ spec:
     - id: public-access
       match:
         url: <**>://<**>/pub/<**>
-      forward_to:
+      forward_to: # only required for proxy operation mode
         host: echo-app.quickstarts.svc.cluster.local:8080
       execute:
         - authenticator: noop_authenticator
@@ -19,14 +19,14 @@ spec:
     - id: anonymous-access
       match:
         url: <**>://<**>/anon/<**>
-      forward_to:
+      forward_to: # only required for proxy operation mode
         host: echo-app.quickstarts.svc.cluster.local:8080
       execute:
         - authorizer: allow_all_requests
     - id: redirect
       match:
         url: <**>://<**>/redir/<**>
-      forward_to:
+      forward_to: # only required for proxy operation mode
         host: echo-app.quickstarts.svc.cluster.local:8080
       execute:
         - authenticator: deny_authenticator
