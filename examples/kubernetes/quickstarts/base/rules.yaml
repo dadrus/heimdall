@@ -23,3 +23,10 @@ spec:
         host: echo-app.quickstarts.svc.cluster.local:8080
       execute:
         - authorizer: allow_all_requests
+    - id: redirect
+      match:
+        url: <**>://<**>/redir/<**>
+      forward_to:
+        host: echo-app.quickstarts.svc.cluster.local:8080
+      execute:
+        - authenticator: deny_authenticator
