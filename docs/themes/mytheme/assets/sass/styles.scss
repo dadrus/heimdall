@@ -229,3 +229,31 @@ doc-version-select {
 .search-result:last-of-type {
   border-bottom: 0;
 }
+
+.reference-link {
+  &:link,
+  &:visited,
+  &:active,
+  &:hover {
+    display: none;
+    margin-left: 0.5rem;
+    text-decoration: none;
+    color: black;
+    //font-size: 0.8em;
+    // align-self: center;
+  }
+
+  &:hover {
+    display: inline-block;
+    color: blue;
+  }
+
+  h1[id]:hover &,
+  h2[id]:hover &,
+  h3[id]:hover &,
+  h4[id]:hover &,
+  h5[id]:hover &,
+  h6[id]:hover & {
+    display: inline-block;
+  }
+}

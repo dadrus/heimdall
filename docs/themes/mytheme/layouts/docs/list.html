@@ -36,7 +36,9 @@
   <main class="px-3 pt-4 flex-xxl-grow-0">
     <h1>{{ .Title }}</h1>
     <div>
-      {{ .Content }}
+      <linkable-headline-area>
+        {{ .Content }}
+      </linkable-headline-area>
     </div>
     {{ partial "last-updated-info.html" . }}
     {{ partial "bottom-navigation.html" . }}

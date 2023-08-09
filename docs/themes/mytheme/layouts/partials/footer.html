@@ -58,6 +58,7 @@
 <!-- JavaScript and dependencies -->
 {{- $bundle := slice
     (resources.Get "js/doc-version-select.js")
+    (resources.Get "js/linkable-headline-area.js")
     (resources.Get "js/doc-search.js") |
     resources.Concat "js/main.js" |
     js.Build (dict "minify" true) -}}

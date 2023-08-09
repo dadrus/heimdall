@@ -1,6 +1,6 @@
 <header class="navbar navbar-expand-md navbar-dark bg-dark sticky-top">
   <nav class="container-xxl flex-wrap flex-lg-nowrap" aria-label="Main navigation">
-    <a class="navbar-brand text-white {{- if .IsHome -}} active {{- end -}}" href="{{ .Site.Home.RelPermalink }}">
+    <a class="navbar-brand text-white {{- if .IsHome -}} active {{- end -}}" href="{{ .Site.Home.RelPermalink }}" style="font-weight: 500; font-size: 1.5rem;">
       {{ .Site.Title }}
     </a>
 
@@ -11,7 +11,7 @@
     </button>
     <div class="offcanvas offcanvas-end bg-dark" tabindex="-1" id="mainMenuContent" data-bs-scroll="true" aria-labelledby="mainMenuContentLabel">
       <div class="offcanvas-header">
-        <h4 class="offcanvas-title text-white" id="mainMenuContentLabel">Heimdall</h4>
+        <h5 class="offcanvas-title text-white" id="mainMenuContentLabel">Heimdall</h5>
         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close main menu"></button>
       </div>
       <div class="offcanvas-body">
@@ -19,9 +19,9 @@
           {{ $currentPage := . }}
           {{- range .Site.Menus.main.ByWeight -}}
           {{ if .HasChildren }}
-          <li class="nav-item dropdown">
+          <li class="nav-item dropdown" style="display: flex">
             <a class='nav-link dropdown-toggle text-white{{- if or ($currentPage.IsMenuCurrent "main" .) ($currentPage.HasMenuCurrent "main" .) }} active {{ end -}}'
-               href="#" id="{{ .Title }}-navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+               href="#" id="{{ .Title }}-navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false" style="align-self: center">
               {{ .Title }}
             </a>
 
@@ -35,9 +35,9 @@
             </ul>
           </li>
           {{ else }}
-          <li class="nav-item">
+          <li class="nav-item" style="display: flex">
             <a class='nav-link text-white {{- if or ($currentPage.IsMenuCurrent "main" .) ($currentPage.HasMenuCurrent "main" .) }} active {{ end -}}'
-               href="{{ relURL .URL }}">
+               href="{{ relURL .URL }}" style="align-self: center">
               {{ .Title }}
             </a>
           </li>
@@ -45,7 +45,7 @@
           {{ end }}
         </ul>
         <hr class="text-white-50 d-md-none">
-        <ul class="navbar-nav flex-column ms-auto">
+        <ul class="navbar-nav flex-column ms-auto" style="align-self: center">
           <doc-version-select class="nav-item dropdown"
                               version-file="{{ .Site.Params.version_file }}"
                               current-version="{{ .Site.Params.version }}"
@@ -57,8 +57,8 @@
         </ul>
         {{ if .Site.Params.github }}
         <ul class="navbar-nav flex-column">
-          <li class="nav-item mb-1">
-            <a class="nav-link text-white"
+          <li class="nav-item mb-1" style="display: flex">
+            <a class="nav-link text-white" style="align-self: center"
                href="https://github.com/{{.Site.Params.github.user}}/{{.Site.Params.github.project}}">
               <svg xmlns="http://www.w3.org/2000/svg" role="img" width="20" height="20" fill="currentColor"
                    class="bi bi-github text-white" viewBox="0 0 16 16">
