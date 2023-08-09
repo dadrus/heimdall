@@ -210,5 +210,5 @@ static_resources:
                       port_value: 80
 ----
 
-After starting the docker compose environment, you can run the curl commands shown in the referenced guide. This time however against envoy by using port 9090. E.g. `$ curl -v 127.0.0.1:9090/anonymous`. By the way, this setup is also available on https://github.com/dadrus/heimdall/tree/main/examples/docker-compose/quickstarts[GitHub].
+After starting the docker compose environment, you can run the curl commands shown in the referenced guide. This time however against envoy by using port 9090. E.g. `$ curl -v 127.0.0.1:9090/anonymous`. By the way, this setup is also available on https://github.com/dadrus/heimdall/tree/main/examples[GitHub].
 

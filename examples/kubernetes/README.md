@@ -1,6 +1,6 @@
 # Kubernetes Quickstarts
 
-This directory contains working examples described in the getting started, as well as in the integration guides of the documentation. The demonstration of the decision operation mode is done via integration with the corresponding ingress controllers. As of now, these are [Contour](https://projectcontour.io) and the [NGINX Ingress Controller](https://docs.nginx.com/nginx-ingress-controller/).
+This directory contains working examples described in the getting started, as well as in the integration guides of the documentation. The demonstration of the decision operation mode is done via integration with the corresponding ingress controllers. As of now, these are [Contour](https://projectcontour.io), the [NGINX Ingress Controller](https://docs.nginx.com/nginx-ingress-controller/) and [HAProxy Ingress Controller](https://haproxy-ingress.github.io/).
 
 # Prerequisites
 
@@ -14,68 +14,41 @@ To be able to install and play with quickstarts, you need
 * [Docker](https://www.docker.com/) to be able running containers
 * [curl](https://curl.se/) to play around with the exposed APIs of the setup
 
-# Demo with NGINX Ingress Controller
+# Install the demo
 
-In that setup heimdall is integrated with NGINX Ingress Controller. All incoming requests are sent to NGINX, which then contacts heimdall as external authorization middleware and depending on the response from heimdall either forwards the request to the upstream service, or directly responses with an error from heimdall.
+Depending on the Ingress Controller you want to install the demo for, execute
 
-1. Set up the demo
-
-   ```bash
-   just install-ngnix-demo
-   ```
-   
-   Depending on your internet connection, it may take some minutes. So, maybe it's time to grab some coffee :)
-   When just finishes doing its job, you'll have a fully configured kubernetes cluster running locally.
-2. Check which IP is used for the ingress-controller and set a variable to that value. You can easily achieve this with
-   ```bash
-   export SERVICE_IP=$(kubectl get svc --namespace nginx-ingress-controller nginx-ingress-controller -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
-   ```
-   It is required for communication purposes with the demo service
-3. Play with it
-
-   ```bash
-   curl -v --resolve echo-app.local:80:${SERVICE_IP} http://echo-app.local/anon/foo
-   curl -v --resolve echo-app.local:80:${SERVICE_IP} http://echo-app.local/pub/foo
-   curl -v --resolve echo-app.local:80:${SERVICE_IP} http://echo-app.local/foo
+```bash
+   just install-<ingress controller>-demo
    ```
 
-   Check the responses
+with `<ingress controller>` being either `contour`, `nginx` or `haproxy`. That command line will install and set up a kind based k8s cluster locally including all required services and configuring the used ingress controller to forward all incoming requests to heimdall as external authorization middleware. Depending on the response from heimdall the ingress controller will either forward the request to the upstream service (in that case a simple echo service), or directly respond with an error from heimdall to the client.
 
-4. Delete the cluster
+Depending on your internet connection, it may take some minutes. So, maybe it's time to grab some coffee :)
 
-   ```bash
-   just delete-cluster
-   ```
+# Play with the demo
 
-# Demo with Contour Ingress Controller
+Check which IP is used for the ingress-controller and set a variable to that value. You can easily achieve this with
 
-In that setup heimdall is integrated with Contour Ingress Controller. All incoming requests are sent to Contour, which then contacts heimdall as external authorization middleware and depending on the response from heimdall either forwards the request to the upstream service, or directly responses with an error from heimdall.
+```bash
+export SERVICE_IP=$(kubectl get svc --namespace nginx-ingress-controller nginx-ingress-controller -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+```
 
-1. Set up the demo
+It is required for communication purposes with the demo service.
 
-   ```bash
-   just install-contour-demo
-   ```
+Now, use
 
-   Depending on your internet connection, it may take some minutes. So, maybe it's time to grab some coffee :)
-   When just finishes doing its job, you'll have a fully configured kubernetes cluster running locally.
-2. Check which IP is used for the ingress controller and set a variable to that value. You can easily achieve this with
-   ```bash
-   export SERVICE_IP=$(kubectl get svc --namespace projectcontour contour-ingress-controller-envoy -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
-   ```
-   It is required for communication purposes with the demo service
-3. Play with it
+```bash
+curl -v --resolve echo-app.local:80:${SERVICE_IP} http://echo-app.local/anon/foo
+curl -v --resolve echo-app.local:80:${SERVICE_IP} http://echo-app.local/pub/foo
+curl -v --resolve echo-app.local:80:${SERVICE_IP} http://echo-app.local/redir/foo
+curl -v --resolve echo-app.local:80:${SERVICE_IP} http://echo-app.local/foo
+```
 
-   ```bash
-   curl -v --resolve echo-app.local:443:${SERVICE_IP} https://echo-app.local/anon/foo
-   curl -v --resolve echo-app.local:443:${SERVICE_IP} https://echo-app.local/pub/foo
-   curl -v --resolve echo-app.local:443:${SERVICE_IP} https://echo-app.local/foo
-   ```
+and check the responses.
 
-   Check the responses
+# Delete the demo
 
-4. Delete the cluster
-
-   ```bash
-   just delete-cluster
-   ```
+```bash
+just delete-cluster
+```
