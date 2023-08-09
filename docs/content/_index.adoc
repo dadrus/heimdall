@@ -51,5 +51,6 @@ By outsourcing authentication and authorization decisions to heimdall you can re
 * Use existing authorization systems, like OpenFGA, Ory Keto, Open Policy Agent and many more.
 * Use existing authentication systems supporting OpenID Connect or OAuth2
 * Combine existing authentication systems
+* Can be integrated with any proxy or API Gateway.
 
 {{% /seo %}}
