@@ -14,7 +14,7 @@ Heimdall is a cloud native Identity Aware Proxy and Access Control Decision serv
 
 {{% seo title="Easy to integrate" %}}
 
-Use technics you are already familiar with
+Use techniques you are already familiar with
 
 [source, yaml]
 ----
@@ -32,14 +32,14 @@ spec:
         - authorizer: opa
 ----
 
-The decision process can be controlled by each and every upstream service individually via rules, which heimdall can load from different sources, like e.g. from a `RuleSet` kubernetes resource.
+Create rules for each upstream and path you want to secure, loading them from a variety of sources such as Kubernetes custom resources, S3 buckets or regular files.
 
 
 {{% /seo %}}
 
 {{% seo title="Reduces the cognitive load of your team" %}}
 
-By outsourcing authentication and authorization decisions to heimdall you can reduce the complexity of your code base, free resources and reduce the cognitive load of your team pretty much.
+By outsourcing authentication and authorization decisions to heimdall you can reduce the complexity of your code base, free resources and reduce the cognitive load of your team substantially.
 
 {{% /seo %}}
 
