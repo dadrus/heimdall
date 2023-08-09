@@ -4,13 +4,18 @@ date: 2022-06-05T20:03:18+02:00
 draft: false
 ---
 
-{{< seo
-    title="Verify access all the time and everywhere with Heimdall"
->}}
+{{% seo title="Verify access all the time and everywhere with Heimdall" %}}
 Heimdall is a cloud native Identity Aware Proxy and Access Control Decision service, which can help you adopting Zero Trust architecture by authenticating, enriching and authorizing incoming HTTP requests at any level. No need to learn new protocols, authentication and authorization frameworks.
-<br><br>
-<a class="btn btn-primary btn-lg" type="button" href="link:{{< relref "/docs/getting_started/concepts.adoc" >}}">Get Started</a>
-{{< /seo >}}
+
+
+link:{{< relref "/docs/getting_started/concepts.adoc" >}}[Get Started]
+{{% /seo %}}
+
+{{% seo title="Reduce the cognitive load of your team" %}}
+
+By outsourcing authentication and authorization decisions to heimdall you can reduce the complexity of your code base, free resources and reduce the cognitive load of your team substantially.
+
+{{% /seo %}}
 
 {{% seo title="Easy to integrate" %}}
 
@@ -32,14 +37,9 @@ spec:
         - authorizer: opa
 ----
 
-Create rules for each upstream and path you want to secure, loading them from a variety of sources such as Kubernetes custom resources, S3 buckets or regular files.
+Create rules for each upstream and path you want to secure, loading them from a variety of sources such as Kubernetes custom resources, S3 buckets, any HTTPs endpoints or regular files.
 
-
-{{% /seo %}}
-
-{{% seo title="Reduces the cognitive load of your team" %}}
-
-By outsourcing authentication and authorization decisions to heimdall you can reduce the complexity of your code base, free resources and reduce the cognitive load of your team substantially.
+link:{{< relref "/docs/configuration/rules/overview.adoc" >}}"[Learn more about rules]
 
 {{% /seo %}}
 
