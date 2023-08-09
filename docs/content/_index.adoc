@@ -6,9 +6,50 @@ draft: false
 
 {{< seo
     title="Verify access all the time and everywhere with Heimdall"
-    link="/docs/getting_started/concepts.adoc"
-    link_title="Get Started"
 >}}
-Adopt Zero Trust architecture by authenticating, enriching and authorizing incoming HTTP requests at any level. No need to learn new protocols, authentication and authorization frameworks. You can still use them.
+Heimdall is a cloud native Identity Aware Proxy and Access Control Decision service, which can help you adopting Zero Trust architecture by authenticating, enriching and authorizing incoming HTTP requests at any level. No need to learn new protocols, authentication and authorization frameworks.
+<br><br>
+<a class="btn btn-primary btn-lg" type="button" href="link:{{< relref "/docs/getting_started/concepts.adoc" >}}">Get Started</a>
 {{< /seo >}}
 
+{{% seo title="Easy to integrate" %}}
+
+Use technics you are already familiar with
+
+[source, yaml]
+----
+apiVersion: heimdall.dadrus.github.com/v1alpha2
+kind: RuleSet
+metadata:
+  name: My awesome service
+spec:
+  rules:
+    - id: my_api_rule
+      match:
+        url: http://127.0.0.1:9090/api/<**>
+      execute:
+        - authenticator: keycloak
+        - authorizer: opa
+----
+
+The decision process can be controlled by each and every upstream service individually via rules, which heimdall can load from different sources, like e.g. from a `RuleSet` kubernetes resource.
+
+
+{{% /seo %}}
+
+{{% seo title="Reduces the cognitive load of your team" %}}
+
+By outsourcing authentication and authorization decisions to heimdall you can reduce the complexity of your code base, free resources and reduce the cognitive load of your team pretty much.
+
+{{% /seo %}}
+
+{{% seo title="Feature rich" %}}
+
+* Use pipelines to compose reusable steps into the logic you need
+* Dynamically enrich requests with information like e.g. user data to help you make authorization decisions
+* Use Common Expression Language to implement complex authorization logic within a pipeline
+* Use existing authorization systems, like OpenFGA, Ory Keto, Open Policy Agent and many more.
+* Use existing authentication systems supporting OpenID Connect or OAuth2
+* Combine existing authentication systems
+
+{{% /seo %}}
