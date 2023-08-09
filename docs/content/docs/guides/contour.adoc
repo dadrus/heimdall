@@ -67,3 +67,5 @@ deployment:
     readOnly: true
     mountPath: /certs
 ----
+
+Checkout the examples on https://github.com/dadrus/heimdall/tree/main/examples[GitHub] for a working demo.

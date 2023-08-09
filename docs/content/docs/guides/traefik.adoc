@@ -46,6 +46,6 @@ service:
     # further labels
 ----
 
-A fully working example with Traefik is shown in the link:{{< relref "../getting_started/decision_service_quickstart.adoc#_run_integrated" >}}[Decision Service Quickstart] and is also available on https://github.com/dadrus/heimdall/tree/main/examples/docker-compose/quickstarts[GitHub].
+A fully working example with Traefik is shown in the link:{{< relref "../getting_started/decision_service_quickstart.adoc#_run_integrated" >}}[Decision Service Quickstart] and is also available on https://github.com/dadrus/heimdall/tree/main/examples[GitHub].
 
 ====

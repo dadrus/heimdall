@@ -154,4 +154,4 @@ nginx.ingress.kubernetes.io/server-snippet: |
 ----
 ====
 
-Checkout the Kubernetes quickstarts on https://github.com/dadrus/heimdall/tree/main/examples/kubernetes/quickstarts[GitHub] for a working demo.
+Checkout the examples on https://github.com/dadrus/heimdall/tree/main/examples[GitHub] for a working demo.
