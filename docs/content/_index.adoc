@@ -4,4 +4,11 @@ date: 2022-06-05T20:03:18+02:00
 draft: false
 ---
 
-This page will provide an overview about heimdall in the future. For now head over to link:{{< relref "/docs/welcome.adoc" >}}[Docs] or other areas of this page linked in the header above or the footer below to get started.
+{{< seo
+    title="Verify access all the time and everywhere with Heimdall"
+    link="/docs/getting_started/concepts.adoc"
+    link_title="Get Started"
+>}}
+Adopt Zero Trust architecture by authenticating, enriching and authorizing incoming HTTP requests at any level. No need to learn new protocols, authentication and authorization frameworks. You can still use them.
+{{< /seo >}}
+

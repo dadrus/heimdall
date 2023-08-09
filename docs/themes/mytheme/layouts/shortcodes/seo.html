@@ -1,0 +1,7 @@
+<div class="container py-5">
+    <h1 class="display-5 fw-bold col-md-8">{{ .Get "title" }}</h1>
+    <p class="col-md-8 fs-4">{{ .Inner }}</p>
+    {{ $link := .Get "link" }}
+    {{ $linkTitle := .Get "link_title" }}
+    <a class="btn btn-primary btn-lg" type="button" href="{{ relref . $link }}">{{ $linkTitle }}</a>
+</div>
