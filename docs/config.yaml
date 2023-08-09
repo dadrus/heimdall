@@ -57,6 +57,10 @@ menu:
       title: Get Started
       weight: 300
 
+    - identifier: guides
+      title: Integration Guides
+      weight: 400
+
 frontmatter:
   date:
     - date
@@ -68,7 +72,7 @@ frontmatter:
     - ':default'
 
 params:
-  copyright: 2022 © Heimdall Project Authors. All rights reserved.
+  copyright: 2022-2023 © Heimdall Project Authors. All rights reserved.
   version: x-current-version
   license:
     name: Apache 2.0
@@ -78,6 +82,9 @@ params:
   github:
     user: dadrus
     project: heimdall
+  community:
+    title: Discord
+    url: https://discord.gg/qQgg8xKuyb
   version_file: /heimdall/data.json
   search_index_file: /heimdall/x-current-version/index.json
   path_prefix: /heimdall/x-current-version

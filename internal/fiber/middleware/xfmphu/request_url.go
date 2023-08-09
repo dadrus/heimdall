@@ -19,7 +19,6 @@ package xfmphu
 import (
 	"fmt"
 	"net/url"
-	"strings"
 
 	"github.com/gofiber/fiber/v2"
 
@@ -30,7 +29,6 @@ import (
 func requestURL(c *fiber.Ctx) *url.URL {
 	var (
 		proto   string
-		host    string
 		rawPath string
 		path    string
 		query   string
@@ -40,27 +38,23 @@ func requestURL(c *fiber.Ctx) *url.URL {
 		forwardedURIVal := c.Get(xForwardedURI)
 		if len(forwardedURIVal) != 0 {
 			forwardedURI, _ := url.Parse(forwardedURIVal)
-			proto = forwardedURI.Scheme
-			host = forwardedURI.Host
 			rawPath = forwardedURI.Path
 			query = forwardedURI.Query().Encode()
+		} else {
+			rawPath = c.Get(xForwardedPath)
 		}
+
+		proto = c.Get(xForwardedProto)
 	}
 
-	if len(rawPath) == 0 && c.IsProxyTrusted() {
-		rawPath = c.Get(xForwardedPath)
+	if len(proto) == 0 {
+		proto = x.IfThenElse(c.Context().IsTLS(), "https", "http")
 	}
 
 	if len(rawPath) == 0 {
 		rawPath = c.Params("*")
 		if len(rawPath) != 0 {
 			rawPath = fmt.Sprintf("/%s", rawPath)
-		}
-
-		// there is a bug in the implementation of the nginx controller
-		// see: https://github.com/kubernetes/ingress-nginx/issues/10114
-		if c.Get(xSentFrom) == nginxIngressAgent && strings.HasPrefix(rawPath, "//") {
-			rawPath = strings.TrimPrefix(rawPath, "/")
 		}
 	}
 
@@ -72,12 +66,8 @@ func requestURL(c *fiber.Ctx) *url.URL {
 	path, _ = url.PathUnescape(rawPath)
 
 	return &url.URL{
-		Scheme: x.IfThenElseExec(len(proto) != 0,
-			func() string { return proto },
-			func() string { return c.Protocol() }),
-		Host: x.IfThenElseExec(len(host) != 0,
-			func() string { return host },
-			func() string { return c.Hostname() }),
+		Scheme:   proto,
+		Host:     c.Hostname(),
 		Path:     path,
 		RawQuery: query,
 	}

@@ -21,6 +21,8 @@ rules:
         type: anonymous
       - id: noop_authenticator
         type: noop
+      - id: deny_authenticator
+        type: unauthorized
     authorizers:
       - id: deny_all_requests
         type: deny
@@ -31,7 +33,14 @@ rules:
         type: jwt
       - id: noop_unifier
         type: noop
-
+    error_handlers:
+      - id: redirect
+        type: redirect
+        config:
+          to: http://foo.bar?origin={{ .Request.URL | urlenc }}
+          when:
+            - error:
+                - type: authentication_error
   default:
     methods:
       - GET
@@ -40,6 +49,8 @@ rules:
       - authenticator: anonymous_authenticator
       - authorizer: deny_all_requests
       - unifier: create_jwt
+    on_error:
+      - error_handler: redirect
 
   providers:
     kubernetes: {}

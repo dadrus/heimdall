@@ -5,9 +5,9 @@ draft: false
 weight: 27
 menu:
   docs:
-    parent: "Guides"
-  guides:
-    weight: 20
+    parent: "Integration Guides"
+  main:
+    parent: guides
 ---
 
 https://www.envoyproxy.io/[Envoy] is a high performance distributed proxy designed for single services and applications, as well as a communication bus and “universal data plane” designed for large microservice “service mesh” architectures. When operating heimdall in link:{{< relref "/docs/getting_started/concepts.adoc#_decision_mode" >}}[Decision Operation Mode], integration with Envoy can be achieved by making use of an https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/ext_authz/v3/ext_authz.proto.html[External Authorization] filter. In such setup, Envoy delegates authentication and authorization to heimdall. If heimdall answers with a `200 OK` HTTP code, Envoy grants access and forwards the original request to the upstream service. Otherwise, the response from heimdall is treated as an error and is returned to the client.
@@ -106,7 +106,12 @@ http_filters:
   # other http filter
 ----
 
-NOTE: Envoy does not set `X-Forwarded-*` headers, as long as the `envoy.filters.http.dynamic_forward_proxy` is not configured. In such cases matching of URLs happens based on those URLs, used by Envoy while communicating with heimdall. That means your rules should ignore the scheme and host parts, respectively use the values specific for heimdall and not of the domain.
+[NOTE]
+====
+Envoy does not set `X-Forwarded-\*` headers, as long as the `envoy.filters.http.dynamic_forward_proxy` is not configured. In such cases matching of URLs happens based on those URLs, used by Envoy while communicating with heimdall. That means your rules should ignore the scheme and host parts, respectively use the values specific for heimdall and not of the domain. Please follow link:{{< relref "/docs/operations/security.adoc#_http_headers_security_considerations" >}}[Security Considerations] if your rules rely on any of the `X-Forwarded-*` headers, and you integrate heimdall with envoy using `http_service`.
+
+If you integrate heimdall with envoy via `grpc_service`, spoofing of the aforesaid headers is not possible.
+====
 
 == Demo Setup
 
@@ -205,5 +210,5 @@ static_resources:
                       port_value: 80
 ----
 
-After starting the docker compose environment, you can run the curl commands shown in the referenced guide. This time however against envoy by using port 9090. E.g. `$ curl -v 127.0.0.1:9090/anonymous`. By the way, this setup is also available on https://github.com/dadrus/heimdall/tree/main/examples/docker-compose/quickstarts[GitHub].
+After starting the docker compose environment, you can run the curl commands shown in the referenced guide. This time however against envoy by using port 9090. E.g. `$ curl -v 127.0.0.1:9090/anonymous`. By the way, this setup is also available on https://github.com/dadrus/heimdall/tree/main/examples[GitHub].
 

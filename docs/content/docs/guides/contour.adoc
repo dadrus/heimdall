@@ -5,9 +5,9 @@ draft: false
 weight: 29
 menu:
   docs:
-    parent: "Guides"
-  guides:
-    weight: 20
+    parent: "Integration Guides"
+  main:
+    parent: guides
 ---
 
 https://projectcontour.io/[Contour] is an open source, high performance ingress controller for Kubernetes, implementing a control plane for https://www.envoyproxy.io/[Envoy] edge and a service proxy.
@@ -67,3 +67,5 @@ deployment:
     readOnly: true
     mountPath: /certs
 ----
+
+Checkout the examples on https://github.com/dadrus/heimdall/tree/main/examples[GitHub] for a working demo.
