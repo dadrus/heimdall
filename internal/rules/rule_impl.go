@@ -19,9 +19,9 @@ package rules
 import (
 	"fmt"
 	"net/url"
+	"slices"
 
 	"github.com/rs/zerolog"
-	"golang.org/x/exp/slices"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/patternmatcher"
