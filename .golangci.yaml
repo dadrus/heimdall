@@ -15,6 +15,7 @@ linters:
     - nolintlint
     - tparallel
     - depguard
+    - zerologlint
     # deprecated
     - interfacer
     - varcheck

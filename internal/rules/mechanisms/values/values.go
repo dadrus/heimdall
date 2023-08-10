@@ -1,6 +1,6 @@
 package values
 
-import "golang.org/x/exp/maps"
+import "maps"
 
 type Values map[string]string
 

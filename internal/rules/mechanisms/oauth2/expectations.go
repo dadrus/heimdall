@@ -18,9 +18,8 @@ package oauth2
 
 import (
 	"errors"
+	"slices"
 	"time"
-
-	"golang.org/x/exp/slices"
 
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"

@@ -23,9 +23,8 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"math/big"
+	"slices"
 	"time"
-
-	"golang.org/x/exp/slices"
 )
 
 type EndEntity struct {
