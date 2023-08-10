@@ -39,7 +39,7 @@ require (
 	github.com/santhosh-tekuri/jsonschema/v5 v5.3.1
 	github.com/spf13/cobra v1.7.0
 	github.com/stretchr/testify v1.8.4
-	github.com/tidwall/gjson v1.15.0
+	github.com/tidwall/gjson v1.16.0
 	github.com/tonglil/opentelemetry-go-datadog-propagator v0.1.0
 	github.com/undefinedlabs/go-mpatch v1.0.7
 	github.com/valyala/fasthttp v1.48.0
