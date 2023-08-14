@@ -1,0 +1,8 @@
+<div class="bg-light px-4 py-5 text-center">
+    <h1 class="display-5 fw-bold text-body-emphasis pt-5">{{ .Site.Title }}</h1>
+    <div class="col-lg-6 mx-auto">
+        <p class="lead fs-4 mt-4 mb-4">{{ .Site.Params.Description }}</p>
+        <a class="btn btn-outline-primary fw-semibold mt-4 mx-3" href="https://github.com/{{.Site.Params.github.user}}/{{.Site.Params.github.project}}/releases">Download</a>
+        <a class="btn btn-outline-primary fw-semibold mt-4 mx-3" href="{{ relref . .Site.Params.docs_entry_point }}">Read the Docs</a>
+    </div>
+</div>
