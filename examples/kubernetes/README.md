@@ -22,27 +22,29 @@ Depending on the Ingress Controller you want to install the demo for, execute
    just install-<ingress controller>-demo
    ```
 
-with `<ingress controller>` being either `contour`, `nginx` or `haproxy`. That command line will install and set up a kind based k8s cluster locally including all required services and configuring the used ingress controller to forward all incoming requests to heimdall as external authorization middleware. Depending on the response from heimdall the ingress controller will either forward the request to the upstream service (in that case a simple echo service), or directly respond with an error from heimdall to the client.
+with `<ingress controller>` being either `contour`, `nginx`, `haproxy`, or `emissary`. That command line will install and set up a kind based k8s cluster locally including all required services and configuring the used ingress controller to forward all incoming requests to heimdall as external authorization middleware. Depending on the response from heimdall the ingress controller will either forward the request to the upstream service (in that case a simple echo service), or directly respond with an error from heimdall to the client.
 
 Depending on your internet connection, it may take some minutes. So, maybe it's time to grab some coffee :)
 
 # Play with the demo
 
-Check which IP is used for the ingress-controller and set a variable to that value. You can easily achieve this with
+Check which IP is used for the ingress-controller and set a variable to that value. You can easily achieve this by querying the LB IP address of the used ingress controller with e.g. 
 
 ```bash
-export SERVICE_IP=$(kubectl get svc --namespace nginx-ingress-controller nginx-ingress-controller -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+export SERVICE_IP=$(kubectl get svc -n nginx-ingress-controller nginx-ingress-controller -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
 ```
 
-It is required for communication purposes with the demo service.
+for NGINX. 
+
+That IP is required for communication purposes with the demo service.
 
 Now, use
 
 ```bash
-curl -v --resolve echo-app.local:80:${SERVICE_IP} http://echo-app.local/anon/foo
-curl -v --resolve echo-app.local:80:${SERVICE_IP} http://echo-app.local/pub/foo
-curl -v --resolve echo-app.local:80:${SERVICE_IP} http://echo-app.local/redir/foo
-curl -v --resolve echo-app.local:80:${SERVICE_IP} http://echo-app.local/foo
+curl -vk --resolve echo-app.local:443:${SERVICE_IP} https://echo-app.local/anon/foo
+curl -vk --resolve echo-app.local:443:${SERVICE_IP} https://echo-app.local/pub/foo
+curl -vk --resolve echo-app.local:443:${SERVICE_IP} https://echo-app.local/redir/foo
+curl -vk --resolve echo-app.local:443:${SERVICE_IP} https://echo-app.local/foo
 ```
 
 and check the responses.

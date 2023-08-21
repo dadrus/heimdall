@@ -2,7 +2,8 @@ apiVersion: getambassador.io/v3alpha1
 kind: Mapping
 metadata:
   name: echo-app-backend
+  namespace: quickstarts
 spec:
   hostname: echo-app.local
   prefix: /
-  service: echo-app
+  service: echo-app:8080
