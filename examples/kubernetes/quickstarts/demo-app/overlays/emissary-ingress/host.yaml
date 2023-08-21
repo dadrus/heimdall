@@ -1,0 +1,11 @@
+apiVersion: getambassador.io/v3alpha1
+kind: Host
+metadata:
+  name: echo-app
+  namespace: quickstarts
+spec:
+  hostname: echo-app.local
+  acmeProvider:
+    authority: none
+  tlsSecret:
+    name: echo-app
