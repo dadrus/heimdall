@@ -16,6 +16,7 @@ env:
   KUBERNETES_API_VERSION: "1.27.0"
   NODE_VERSION: "18.16"
   COSIGN_VERSION: "v2.1.1"
+  CYCLONEDX_GOMOD_VERSION: "v1.4.1"
   DOCUMENTATION_URL: "https://dadrus.github.io/heimdall/"
 
 jobs:
@@ -253,7 +254,10 @@ jobs:
       - name: Install CycloneDX gomod
         run: go install github.com/CycloneDX/cyclonedx-gomod/cmd/cyclonedx-gomod@v1.4.1
       - name: Generate SBOM
-        run: cyclonedx-gomod app -licenses -assert-licenses -json -std -output CycloneDX-SBOM.json -main .
+        uses: CycloneDX/gh-gomod-generate-sbom@v2
+        with:
+          version: "${{ env.CYCLONEDX_GOMOD_VERSION }}"
+          args: app -licenses -assert-licenses -json -std -output CycloneDX-SBOM.json -main .
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v4
         with:
@@ -283,6 +287,12 @@ jobs:
         uses: sigstore/cosign-installer@v3.1.1
         with:
           cosign-release: "${{ env.COSIGN_VERSION }}"
+      - name: Generate SBOM
+        if: github.ref == 'refs/heads/main'
+        uses: CycloneDX/gh-gomod-generate-sbom@v2
+        with:
+          version: "${{ env.CYCLONEDX_GOMOD_VERSION }}"
+          args: app -licenses -assert-licenses -json -std -output CycloneDX-SBOM.json -main .
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v2
       - name: Set up Docker Buildx
@@ -328,6 +338,11 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: cosign sign --yes ${{ github.repository }}@${{ steps.publish-image.outputs.digest }}
+      - name: Attest and attach SBOM
+        if: steps.publish-image.conclusion == 'success'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: cosign attest --yes --predicate CycloneDX-SBOM.json --type cyclonedx ${{ github.repository }}@${{ steps.publish-image.outputs.digest }}
 
 
   # this job releases container images
@@ -351,6 +366,11 @@ jobs:
         uses: sigstore/cosign-installer@v3.1.1
         with:
           cosign-release: "${{ env.COSIGN_VERSION }}"
+      - name: Generate SBOM
+        uses: CycloneDX/gh-gomod-generate-sbom@v2
+        with:
+          version: "${{ env.CYCLONEDX_GOMOD_VERSION }}"
+          args: app -licenses -assert-licenses -json -std -output CycloneDX-SBOM.json -main .
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v2
       - name: Set up Docker Buildx
@@ -384,6 +404,11 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: cosign sign --yes ${{ github.repository }}@${{ steps.publish-image.outputs.digest }}
+      - name: Attest and attach SBOM
+        if: steps.publish-image.conclusion == 'success'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: cosign attest --yes --predicate CycloneDX-SBOM.json --type cyclonedx ${{ github.repository }}@${{ steps.publish-image.outputs.digest }}
       - name: Update DockerHub repository description & readme
         uses: peter-evans/dockerhub-description@v3
         with:
