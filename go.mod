@@ -17,7 +17,7 @@ require (
 	github.com/gofiber/fiber/v2 v2.48.0
 	github.com/google/cel-go v0.17.1
 	github.com/google/uuid v1.3.1
-	github.com/grpc-ecosystem/go-grpc-middleware v1.4.0
+	github.com/grpc-ecosystem/go-grpc-middleware/v2 v2.0.0
 	github.com/grpc-ecosystem/go-grpc-middleware/v2 v2.0.0
 	github.com/iancoleman/strcase v0.3.0
 	github.com/inhies/go-bytesize v0.0.0-20220417184213-4913239db9cf
