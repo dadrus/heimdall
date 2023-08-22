@@ -18,7 +18,7 @@ package grpcv3
 
 import (
 	envoy_auth "github.com/envoyproxy/go-control-plane/envoy/service/auth/v3"
-	grpc_recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
+	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/recovery"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/rs/zerolog"
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
@@ -48,17 +48,17 @@ func newService(
 ) *grpc.Server {
 	service := conf.Serve.Decision
 	accessLogger := accesslogmiddleware.New(logger)
-	recoveryHandler := grpc_recovery.WithRecoveryHandler(func(any) error {
+	recoveryHandler := recovery.WithRecoveryHandler(func(any) error {
 		return status.Error(codes.Internal, "internal error")
 	})
 
 	streamInterceptors := []grpc.StreamServerInterceptor{
-		grpc_recovery.StreamServerInterceptor(recoveryHandler),
+		recovery.StreamServerInterceptor(recoveryHandler),
 		otelgrpc.StreamServerInterceptor(),
 	}
 
 	unaryInterceptors := []grpc.UnaryServerInterceptor{
-		grpc_recovery.UnaryServerInterceptor(recoveryHandler),
+		recovery.UnaryServerInterceptor(recoveryHandler),
 		otelgrpc.UnaryServerInterceptor(),
 	}
 

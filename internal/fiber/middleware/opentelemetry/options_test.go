@@ -60,12 +60,13 @@ func TestOptionsWithTracer(t *testing.T) {
 		t.Run("case="+tc.uc, func(t *testing.T) {
 			// GIVEN
 			apply := WithTracer(tc.tracer)
+			opt := &tc.opt //nolint:gosec
 
 			// WHEN
-			apply(&tc.opt)
+			apply(opt)
 
 			// THEN
-			tc.assert(t, &tc.opt)
+			tc.assert(t, opt)
 		})
 	}
 }
@@ -108,12 +109,13 @@ func TestOptionsWithSpanObserver(t *testing.T) {
 		t.Run("case="+tc.uc, func(t *testing.T) {
 			// GIVEN
 			apply := WithSpanObserver(tc.observer)
+			opt := &tc.opt //nolint:gosec
 
 			// WHEN
-			apply(&tc.opt)
+			apply(opt)
 
 			// THEN
-			tc.assert(t, &tc.opt)
+			tc.assert(t, opt)
 		})
 	}
 }
@@ -156,12 +158,13 @@ func TestOptionsWithOperationNameProvider(t *testing.T) {
 		t.Run("case="+tc.uc, func(t *testing.T) {
 			// GIVEN
 			apply := WithOperationNameProvider(tc.provider)
+			opt := &tc.opt //nolint:gosec
 
 			// WHEN
-			apply(&tc.opt)
+			apply(opt)
 
 			// THEN
-			tc.assert(t, &tc.opt)
+			tc.assert(t, opt)
 		})
 	}
 }
@@ -204,12 +207,13 @@ func TestOptionsWithOperationFilter(t *testing.T) {
 		t.Run("case="+tc.uc, func(t *testing.T) {
 			// GIVEN
 			apply := WithOperationFilter(tc.filter)
+			opt := &tc.opt //nolint:gosec
 
 			// WHEN
-			apply(&tc.opt)
+			apply(opt)
 
 			// THEN
-			tc.assert(t, &tc.opt)
+			tc.assert(t, opt)
 		})
 	}
 }
@@ -246,12 +250,13 @@ func TestOptionsWithSkipSpanWithoutParent(t *testing.T) {
 		t.Run("case="+tc.uc, func(t *testing.T) {
 			// GIVEN
 			apply := WithSkipSpanWithoutParent(tc.skip)
+			opt := &tc.opt //nolint:gosec
 
 			// WHEN
-			apply(&tc.opt)
+			apply(opt)
 
 			// THEN
-			tc.assert(t, &tc.opt)
+			tc.assert(t, opt)
 		})
 	}
 }
