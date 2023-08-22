@@ -250,6 +250,10 @@ jobs:
         uses: sigstore/cosign-installer@v3.1.1
         with:
           cosign-release: "${{ env.COSIGN_VERSION }}"
+      - name: Install CycloneDX gomod
+        run: go install github.com/CycloneDX/cyclonedx-gomod/cmd/cyclonedx-gomod@v1.4.1
+      - name: Generate SBOM
+        run: cyclonedx-gomod app -licenses -assert-licenses -json -std -output CycloneDX-SBOM.json -main .
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v4
         with:

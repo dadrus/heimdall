@@ -12,6 +12,9 @@
 cover.out
 coverage.*
 
+# Ingnore generated SBOM
+CycloneDX-SBOM.json
+
 # Documentation
 
 # ignore asciidoctor generated files
