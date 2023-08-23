@@ -567,3 +567,18 @@ jobs:
           git commit -m "chore(${{ github.ref_name }}): Preparing for next iteration"
       - name: Push changes
         uses: ad-m/github-push-action@master
+
+  sbom-test:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@v3.1.1
+        with:
+          cosign-release: "${{ env.COSIGN_VERSION }}"
+      - name: Generate SBOM
+        uses: CycloneDX/gh-gomod-generate-sbom@v2
+        with:
+          version: "${{ env.CYCLONEDX_GOMOD_VERSION }}"
+          args: app -licenses -assert-licenses -json -std -output CycloneDX-SBOM.json -main .
