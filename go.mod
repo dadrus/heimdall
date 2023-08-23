@@ -15,7 +15,7 @@ require (
 	github.com/goccy/go-json v0.10.2
 	github.com/gofiber/adaptor/v2 v2.2.1
 	github.com/gofiber/fiber/v2 v2.48.0
-	github.com/google/cel-go v0.17.3
+	github.com/google/cel-go v0.17.4
 	github.com/google/uuid v1.3.1
 	github.com/grpc-ecosystem/go-grpc-middleware/v2 v2.0.0
 	github.com/iancoleman/strcase v0.3.0
