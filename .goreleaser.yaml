@@ -54,4 +54,4 @@ signs:
       - "--output-certificate=${artifact}-keyless.pem"
       - "${artifact}"
       - "--yes"
-    artifacts: checksum
+    artifacts: all

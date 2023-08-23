@@ -74,4 +74,136 @@ In a typical production scenario, there is a need for proper key and certificate
 The cryptographic material for the above said verification purposes is available via the link:{{< relref "/openapi/#tag/Well-Known/operation/well_known_jwks" >}}[JWKS endpoint] for the upstream services.
 * you can configure multiple keys in heimdall's `key_store` and specify the `key_id` of the key to use. The easiest way to let heimdall use the key id, you need, is to set `X-Key-ID` header in the PEM block of the corresponding private key. With that in place you can perform key roll over without down-times by first updating the key stores of all heimdall instances to include the new key and certificates, and when this is done, by updating the key id to reference the new key material instance by instance. This way all upstream services can verify the signatures of the objects issued by heimdall, regardless of the used key material, as all heimdall instances, are able to serve the new and the old cryptographic material.
 
+== Verifying Heimdall Binaries and Container Images
+
+Heimdall binaries and container images are signed using https://docs.sigstore.dev/docs/signing/quickstart/[Cosign] and the https://docs.sigstore.dev/docs/signing/overview/[keyless signing feature].
+
+=== Prerequisites
+
+* Install https://docs.sigstore.dev/docs/system_config/installation/[Cosign]
+
+=== Container Image Signature Verification
+
+The signatures are stored in the same repository as the container images they reference. To verify the container image using Cosign, execute the following command:
+
+[source, bash]
+----
+cosign verify dadrus/heimdall:<tag> \
+  --certificate-identity-regexp=https://github.com/dadrus/heimdall/.github/workflows/ci.yaml* \
+  --certificate-oidc-issuer=https://token.actions.githubusercontent.com | jq
+----
+
+In successful verification case, cosign will print similar output to the one shown below and exit with `0`.
+
+[source, json]
+----
+[
+  {
+    "critical": {
+      "identity": {
+        "docker-reference": "index.docker.io/dadrus/heimdall"
+      },
+      "image": {
+        "docker-manifest-digest": "sha256:289b1a3eeeceeef08362a6fbcf4b95e726686d17998798e149c30b6974728eaf"
+      },
+      "type": "cosign container image signature"
+    },
+    "optional": {
+      "1.3.6.1.4.1.57264.1.1": "https://token.actions.githubusercontent.com",
+      "1.3.6.1.4.1.57264.1.2": "push",
+      "1.3.6.1.4.1.57264.1.3": "04379639dc5f3fbfc260e883ee4938a35076d63e",
+      "1.3.6.1.4.1.57264.1.4": "CI",
+      "1.3.6.1.4.1.57264.1.5": "dadrus/heimdall",
+      "1.3.6.1.4.1.57264.1.6": "refs/heads/main",
+      "Bundle": {
+        "SignedEntryTimestamp": "MEUCIFIvxs30zysroG6ItUNL+hfE3Cxn4GuiQe8d1u5N27OEAiEAqmzLrw80846U53nL/jtQ3U/2yx8Jqu8H75g6sihIcpg=",
+        "Payload": {
+          "body": "eyJhcGlWZXJzaW9uIjoi...xTMHRMUW89In19fX0=",
+          "integratedTime": 1692727396,
+          "logIndex": 32332529,
+          "logID": "c0d23d6ad406973f9559f3ba2d1ca01f84147d8ffc5b8445c224f98b9591801d"
+        }
+      },
+      "Issuer": "https://token.actions.githubusercontent.com",
+      "Subject": "https://github.com/dadrus/heimdall/.github/workflows/ci.yaml@refs/heads/main",
+      "githubWorkflowName": "CI",
+      "githubWorkflowRef": "refs/heads/main",
+      "githubWorkflowRepository": "dadrus/heimdall",
+      "githubWorkflowSha": "04379639dc5f3fbfc260e883ee4938a35076d63e",
+      "githubWorkflowTrigger": "push"
+    }
+  }
+]
+----
+
+For released images, the `Subject` value ends with `@refs/tags/<release version>`.
+
+=== Release Binary Signature Verification
+
+The detached signatures, as well as certificates for all released archives are published together with the corresponding platform specific archive. The names of the signature files adhere to the `<archive>-keyless.sig` name pattern and the names of the certificate files adhere to the `<archive>-keyless.pem` name pattern, with `<archive>` being the archive for a platform specific build.
+
+To verify the signature of the archive, hence its contents including the platform specific heimdall binary with Cosign execute the following command:
+
+[source, bash]
+----
+cosign verify-blob /path/to/the/downloaded/<archive> \
+  --certificate-identity-regexp=https://github.com/dadrus/heimdall/.github/workflows/ci.yaml* \
+  --certificate-oidc-issuer=https://token.actions.githubusercontent.com \
+  --signature /path/to/the/downloaded/<archive>-keyless.sig \
+  --certificate /path/to/the/downloaded/<archive>--keyless.pem
+----
+
+In successful verification case, cosign will print the following output and exit with `0`.
+
+[source, bash]
+----
+Verified OK
+----
+
+== Software Bill of Material (SBOM)
+
+Heimdall is shipped with an SBOM in https://cyclonedx.org/[CyclonDX] (json) format.
+
+If you use a released binary of heimdall, the corresponding file is part of the platform specific archive. That way, if you verify the signature of the archive (see above), you do also get evidence about the validity of the SBOM.
+
+If you use a container image, the same SBOM is attached to the image as attestation signed with Cosign. These attestations are stored in the same repository as the container images. To verify the attestation and retrieve the SBOM execute the following command once Cosign is installed:
+
+[source, bash]
+----
+cosign verify-attestation dadrus/heimdall:<tag> \
+  --certificate-identity-regexp=https://github.com/dadrus/heimdall/.github/workflows/ci.yaml* \
+  --certificate-oidc-issuer=https://token.actions.githubusercontent.com \
+  --type=cyclonedx
+----
+
+In successful verification case, cosign will print similar output to the one shown below and exit with `0`.
+
+[source, bash]
+----
+{
+  "payloadType": "application/vnd.in-toto+json",
+  "payload": "eyJfdHlwZSI6Imh...LCJ2ZXJzaW9uIjoxfX0=",
+  "signatures": [
+    {
+      "keyid": "",
+      "sig": "MEQCICGdo9hmIUrBRzVQ23VS...6ToNGa5YrommZNCQ=="
+    }
+  ]
+}
+----
+
+Here, `payload` is the base64 encoded attestation value embedding the SBOM.
+
+As one-liner, you can verify the signature and extract the SBOM as follows:
+
+[source, bash]
+----
+cosign verify-attestation dadrus/heimdall:<tag> \
+  --certificate-identity-regexp=https://github.com/dadrus/heimdall/.github/workflows/ci.yaml* \
+  --certificate-oidc-issuer=https://token.actions.githubusercontent.com \
+  --type=cyclonedx | jq -r ".payload" | base64 -d | jq -r ".predicate" > heimdall.sbom.json
+----
+
+The result will be the `heimdall.sbom.json` SBOM document, which you can use with any SCA or monitoring tool of your choice, e.g. https://dependencytrack.org/[Dependency Track].
+
 
