@@ -581,4 +581,4 @@ jobs:
         uses: CycloneDX/gh-gomod-generate-sbom@v2
         with:
           version: "${{ env.CYCLONEDX_GOMOD_VERSION }}"
-          args: app -licenses -assert-licenses -json -std -output CycloneDX-SBOM.json -main .
+          args: app -licenses -assert-licenses -json -std -output CycloneDX-SBOM.json -verbose
