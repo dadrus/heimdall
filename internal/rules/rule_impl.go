@@ -63,9 +63,9 @@ func (r *ruleImpl) Execute(ctx heimdall.Context) (rule.URIMutator, error) {
 	logger := zerolog.Ctx(ctx.AppContext())
 
 	if r.isDefault {
-		logger.Debug().Msg("Executing default rule")
+		logger.Info().Msg("Executing default rule")
 	} else {
-		logger.Debug().Str("_src", r.srcID).Str("_id", r.id).Msg("Executing rule")
+		logger.Info().Str("_src", r.srcID).Str("_id", r.id).Msg("Executing rule")
 	}
 
 	// authenticators
