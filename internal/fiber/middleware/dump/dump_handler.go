@@ -16,7 +16,7 @@ func New() fiber.Handler {
 		logger.Trace().Msg("Request: \n" + ctx.Context().Request.String())
 
 		err := ctx.Next()
-		if err != nil {
+		if err == nil {
 			logger.Trace().Msg("Response: \n" + ctx.Context().Response.String())
 		}
 
