@@ -227,8 +227,6 @@ func (a *genericAuthenticator) getSubjectInformation(ctx heimdall.Context, authD
 		return nil, err
 	}
 
-	logger.Debug().Str("_payload", stringx.ToString(payload)).Msg("Raw subject information")
-
 	if a.sessionLifespanConf != nil {
 		session, err = a.sessionLifespanConf.CreateSessionLifespan(payload)
 		if err != nil {
