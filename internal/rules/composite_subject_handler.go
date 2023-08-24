@@ -17,10 +17,12 @@
 package rules
 
 import (
+	"github.com/goccy/go-json"
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
+	"github.com/dadrus/heimdall/internal/x/stringx"
 )
 
 type compositeSubjectHandler []subjectHandler
@@ -29,6 +31,15 @@ func (cm compositeSubjectHandler) Execute(ctx heimdall.Context, sub *subject.Sub
 	logger := zerolog.Ctx(ctx.AppContext())
 
 	for _, m := range cm {
+		if logger.GetLevel() == zerolog.TraceLevel {
+			dump, err := json.Marshal(sub)
+			if err != nil {
+				logger.Trace().Err(err).Msg("Failed to dump subject")
+			} else {
+				logger.Trace().Msg("Subject: \n" + stringx.ToString(dump))
+			}
+		}
+
 		err := m.Execute(ctx, sub)
 		if err != nil {
 			logger.Info().Err(err).Msg("Pipeline step execution failed")
