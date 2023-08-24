@@ -190,7 +190,7 @@ func (a *genericAuthenticator) IsFallbackOnErrorAllowed() bool {
 	return a.allowFallbackOnError
 }
 
-func (a *genericAuthenticator) HandlerID() string {
+func (a *genericAuthenticator) ID() string {
 	return a.id
 }
 

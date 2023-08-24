@@ -108,7 +108,7 @@ payload: bar
 				assert.Equal(t, defaultTTL, contextualizer.ttl)
 				assert.False(t, contextualizer.ContinueOnError())
 
-				assert.Equal(t, "contextualizer", contextualizer.HandlerID())
+				assert.Equal(t, "contextualizer", contextualizer.ID())
 				assert.False(t, contextualizer.ContinueOnError())
 			},
 		},
@@ -150,7 +150,7 @@ continue_pipeline_on_error: true
 				assert.Equal(t, 5*time.Second, contextualizer.ttl)
 				assert.Equal(t, values.Values{"foo": "bar"}, contextualizer.v)
 
-				assert.Equal(t, "contextualizer", contextualizer.HandlerID())
+				assert.Equal(t, "contextualizer", contextualizer.ID())
 				assert.True(t, contextualizer.ContinueOnError())
 			},
 		},
@@ -192,7 +192,7 @@ payload: bar
 				require.NoError(t, err)
 
 				assert.Equal(t, prototype, configured)
-				assert.Equal(t, "contextualizer1", configured.HandlerID())
+				assert.Equal(t, "contextualizer1", configured.ID())
 			},
 		},
 		{
@@ -246,7 +246,7 @@ payload: foo
 				assert.Equal(t, prototype.fwdHeaders, configured.fwdHeaders)
 				assert.Equal(t, prototype.fwdCookies, configured.fwdCookies)
 				assert.Equal(t, prototype.ttl, configured.ttl)
-				assert.Equal(t, "contextualizer2", configured.HandlerID())
+				assert.Equal(t, "contextualizer2", configured.ID())
 				assert.False(t, prototype.ContinueOnError())
 				assert.False(t, configured.ContinueOnError())
 			},
@@ -290,7 +290,7 @@ forward_headers:
 				assert.Contains(t, configured.fwdHeaders, "Foo-Bar")
 				assert.Equal(t, prototype.fwdCookies, configured.fwdCookies)
 				assert.Equal(t, prototype.ttl, configured.ttl)
-				assert.Equal(t, "contextualizer3", configured.HandlerID())
+				assert.Equal(t, "contextualizer3", configured.ID())
 				assert.False(t, prototype.ContinueOnError())
 				assert.False(t, configured.ContinueOnError())
 			},
@@ -339,7 +339,7 @@ forward_cookies:
 				assert.Len(t, configured.fwdCookies, 1)
 				assert.Contains(t, configured.fwdCookies, "Foo-Session")
 				assert.Equal(t, prototype.ttl, configured.ttl)
-				assert.Equal(t, "contextualizer4", configured.HandlerID())
+				assert.Equal(t, "contextualizer4", configured.ID())
 				assert.True(t, prototype.ContinueOnError())
 				assert.True(t, configured.ContinueOnError())
 			},
@@ -394,7 +394,7 @@ continue_pipeline_on_error: false
 				assert.NotEqual(t, prototype.ttl, configured.ttl)
 				assert.Equal(t, 15*time.Second, configured.ttl)
 				assert.Equal(t, prototype.v, configured.v)
-				assert.Equal(t, "contextualizer5", configured.HandlerID())
+				assert.Equal(t, "contextualizer5", configured.ID())
 				assert.True(t, prototype.ContinueOnError())
 				assert.False(t, configured.ContinueOnError())
 			},
@@ -452,7 +452,7 @@ continue_pipeline_on_error: false
 				assert.Contains(t, configured.fwdCookies, "Foo-Session")
 				assert.NotEqual(t, prototype.ttl, configured.ttl)
 				assert.Equal(t, 15*time.Second, configured.ttl)
-				assert.Equal(t, "contextualizer5", configured.HandlerID())
+				assert.Equal(t, "contextualizer5", configured.ID())
 				assert.True(t, prototype.ContinueOnError())
 				assert.False(t, configured.ContinueOnError())
 			},
@@ -537,9 +537,9 @@ func TestGenericContextualizerExecute(t *testing.T) {
 				assert.ErrorIs(t, err, heimdall.ErrInternal)
 				assert.Contains(t, err.Error(), "'nil' subject")
 
-				var identifier interface{ HandlerID() string }
+				var identifier interface{ ID() string }
 				require.True(t, errors.As(err, &identifier))
-				assert.Equal(t, "contextualizer", identifier.HandlerID())
+				assert.Equal(t, "contextualizer", identifier.ID())
 			},
 		},
 		{
@@ -647,9 +647,9 @@ func TestGenericContextualizerExecute(t *testing.T) {
 				assert.ErrorIs(t, err, heimdall.ErrInternal)
 				assert.Contains(t, err.Error(), "failed to render payload")
 
-				var identifier interface{ HandlerID() string }
+				var identifier interface{ ID() string }
 				require.True(t, errors.As(err, &identifier))
-				assert.Equal(t, "contextualizer1", identifier.HandlerID())
+				assert.Equal(t, "contextualizer1", identifier.ID())
 			},
 		},
 		{
@@ -668,9 +668,9 @@ func TestGenericContextualizerExecute(t *testing.T) {
 				assert.ErrorIs(t, err, heimdall.ErrCommunication)
 				assert.Contains(t, err.Error(), "contextualizer endpoint failed")
 
-				var identifier interface{ HandlerID() string }
+				var identifier interface{ ID() string }
 				require.True(t, errors.As(err, &identifier))
-				assert.Equal(t, "contextualizer2", identifier.HandlerID())
+				assert.Equal(t, "contextualizer2", identifier.ID())
 			},
 		},
 		{
@@ -694,9 +694,9 @@ func TestGenericContextualizerExecute(t *testing.T) {
 				assert.ErrorIs(t, err, heimdall.ErrCommunication)
 				assert.Contains(t, err.Error(), "unexpected response code")
 
-				var identifier interface{ HandlerID() string }
+				var identifier interface{ ID() string }
 				require.True(t, errors.As(err, &identifier))
-				assert.Equal(t, "contextualizer3", identifier.HandlerID())
+				assert.Equal(t, "contextualizer3", identifier.ID())
 			},
 		},
 		{

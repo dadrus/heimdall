@@ -189,7 +189,7 @@ func (u *jwtUnifier) WithConfig(rawConfig map[string]any) (Unifier, error) {
 	}, nil
 }
 
-func (u *jwtUnifier) HandlerID() string { return u.id }
+func (u *jwtUnifier) ID() string { return u.id }
 
 func (u *jwtUnifier) ContinueOnError() bool { return false }
 

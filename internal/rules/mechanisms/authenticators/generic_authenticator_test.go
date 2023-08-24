@@ -145,7 +145,7 @@ subject:
 				assert.Equal(t, time.Duration(0), auth.ttl)
 				assert.False(t, auth.IsFallbackOnErrorAllowed())
 				assert.Nil(t, auth.sessionLifespanConf)
-				assert.Equal(t, "auth1", auth.HandlerID())
+				assert.Equal(t, "auth1", auth.ID())
 			},
 		},
 		{
@@ -179,7 +179,7 @@ cache_ttl: 5s`),
 				assert.Equal(t, 5*time.Second, auth.ttl)
 				assert.False(t, auth.IsFallbackOnErrorAllowed())
 				assert.Nil(t, auth.sessionLifespanConf)
-				assert.Equal(t, "auth1", auth.HandlerID())
+				assert.Equal(t, "auth1", auth.ID())
 			},
 		},
 		{
@@ -216,7 +216,7 @@ allow_fallback_on_error: true`),
 				assert.Equal(t, time.Duration(0), auth.ttl)
 				assert.True(t, auth.IsFallbackOnErrorAllowed())
 				assert.Nil(t, auth.sessionLifespanConf)
-				assert.Equal(t, "auth1", auth.HandlerID())
+				assert.Equal(t, "auth1", auth.ID())
 			},
 		},
 		{
@@ -265,7 +265,7 @@ session_lifespan:
 				assert.Equal(t, "zab", auth.sessionLifespanConf.NotAfterField)
 				assert.Equal(t, "foo bar", auth.sessionLifespanConf.TimeFormat)
 				assert.Equal(t, 2*time.Second, auth.sessionLifespanConf.ValidityLeeway)
-				assert.Equal(t, "auth1", auth.HandlerID())
+				assert.Equal(t, "auth1", auth.ID())
 			},
 		},
 	} {
@@ -319,7 +319,7 @@ allow_fallback_on_error: true`),
 				require.NoError(t, err)
 
 				assert.Equal(t, prototype, configured)
-				assert.Equal(t, "auth2", configured.HandlerID())
+				assert.Equal(t, "auth2", configured.ID())
 			},
 		},
 		{
@@ -379,7 +379,7 @@ subject:
 				assert.Equal(t, 5*time.Second, configured.ttl)
 				assert.Equal(t, prototype.IsFallbackOnErrorAllowed(), configured.IsFallbackOnErrorAllowed())
 				assert.Equal(t, prototype.sessionLifespanConf, configured.sessionLifespanConf)
-				assert.Equal(t, "auth2", configured.HandlerID())
+				assert.Equal(t, "auth2", configured.ID())
 			},
 		},
 		{
@@ -411,7 +411,7 @@ subject:
 				assert.NotEqual(t, prototype.IsFallbackOnErrorAllowed(), configured.IsFallbackOnErrorAllowed())
 				assert.True(t, configured.IsFallbackOnErrorAllowed())
 				assert.Equal(t, prototype.sessionLifespanConf, configured.sessionLifespanConf)
-				assert.Equal(t, "auth2", configured.HandlerID())
+				assert.Equal(t, "auth2", configured.ID())
 			},
 		},
 		{
@@ -450,7 +450,7 @@ cache_ttl: 15s`),
 				assert.Equal(t, 5*time.Second, prototype.ttl)
 				assert.Equal(t, prototype.IsFallbackOnErrorAllowed(), configured.IsFallbackOnErrorAllowed())
 				assert.Equal(t, prototype.sessionLifespanConf, configured.sessionLifespanConf)
-				assert.Equal(t, "auth2", configured.HandlerID())
+				assert.Equal(t, "auth2", configured.ID())
 			},
 		},
 		{
@@ -499,7 +499,7 @@ session_lifespan:
 				assert.Equal(t, "zab", configured.sessionLifespanConf.NotAfterField)
 				assert.Equal(t, "foo bar", configured.sessionLifespanConf.TimeFormat)
 				assert.Equal(t, 2*time.Second, configured.sessionLifespanConf.ValidityLeeway)
-				assert.Equal(t, "auth2", configured.HandlerID())
+				assert.Equal(t, "auth2", configured.ID())
 			},
 		},
 		{
@@ -704,7 +704,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 	t.Parallel()
 
 	type HandlerIdentifier interface {
-		HandlerID() string
+		ID() string
 	}
 
 	var (
@@ -772,7 +772,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 
 				var identifier HandlerIdentifier
 				require.True(t, errors.As(err, &identifier))
-				assert.Equal(t, "auth3", identifier.HandlerID())
+				assert.Equal(t, "auth3", identifier.ID())
 			},
 		},
 		{
@@ -808,7 +808,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 
 				var identifier HandlerIdentifier
 				require.True(t, errors.As(err, &identifier))
-				assert.Equal(t, "auth3", identifier.HandlerID())
+				assert.Equal(t, "auth3", identifier.ID())
 			},
 		},
 		{
@@ -838,7 +838,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 
 				var identifier HandlerIdentifier
 				require.True(t, errors.As(err, &identifier))
-				assert.Equal(t, "auth3", identifier.HandlerID())
+				assert.Equal(t, "auth3", identifier.ID())
 			},
 		},
 		{
@@ -868,7 +868,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 
 				var identifier HandlerIdentifier
 				require.True(t, errors.As(err, &identifier))
-				assert.Equal(t, "auth3", identifier.HandlerID())
+				assert.Equal(t, "auth3", identifier.ID())
 			},
 		},
 		{
@@ -903,7 +903,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 
 				var identifier HandlerIdentifier
 				require.True(t, errors.As(err, &identifier))
-				assert.Equal(t, "auth3", identifier.HandlerID())
+				assert.Equal(t, "auth3", identifier.ID())
 			},
 		},
 		{
@@ -956,7 +956,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 
 				var identifier HandlerIdentifier
 				require.True(t, errors.As(err, &identifier))
-				assert.Equal(t, "auth3", identifier.HandlerID())
+				assert.Equal(t, "auth3", identifier.ID())
 			},
 		},
 		{
@@ -1237,7 +1237,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 
 				var identifier HandlerIdentifier
 				require.True(t, errors.As(err, &identifier))
-				assert.Equal(t, "auth3", identifier.HandlerID())
+				assert.Equal(t, "auth3", identifier.ID())
 			},
 		},
 		{
@@ -1294,7 +1294,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 
 				var identifier HandlerIdentifier
 				require.True(t, errors.As(err, &identifier))
-				assert.Equal(t, "auth3", identifier.HandlerID())
+				assert.Equal(t, "auth3", identifier.ID())
 			},
 		},
 		{

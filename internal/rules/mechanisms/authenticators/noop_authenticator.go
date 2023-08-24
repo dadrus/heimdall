@@ -61,3 +61,5 @@ func (a *noopAuthenticator) IsFallbackOnErrorAllowed() bool {
 	// not allowed, as no error can happen when this authenticator is executed
 	return false
 }
+
+func (a *noopAuthenticator) ID() string { return a.id }

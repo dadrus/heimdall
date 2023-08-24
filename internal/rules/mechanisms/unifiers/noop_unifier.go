@@ -52,6 +52,6 @@ func (u *noopUnifier) Execute(ctx heimdall.Context, _ *subject.Subject) error {
 
 func (u *noopUnifier) WithConfig(map[string]any) (Unifier, error) { return u, nil }
 
-func (u *noopUnifier) HandlerID() string { return u.id }
+func (u *noopUnifier) ID() string { return u.id }
 
 func (u *noopUnifier) ContinueOnError() bool { return false }

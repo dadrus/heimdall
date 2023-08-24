@@ -56,6 +56,6 @@ func (a *allowAuthorizer) WithConfig(map[string]any) (Authorizer, error) {
 	return a, nil
 }
 
-func (a *allowAuthorizer) HandlerID() string { return a.id }
+func (a *allowAuthorizer) ID() string { return a.id }
 
 func (a *allowAuthorizer) ContinueOnError() bool { return false }

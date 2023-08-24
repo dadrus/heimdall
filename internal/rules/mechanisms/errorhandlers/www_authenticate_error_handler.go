@@ -122,4 +122,4 @@ func (eh *wwwAuthenticateErrorHandler) WithConfig(rawConfig map[string]any) (Err
 	}, nil
 }
 
-func (eh *wwwAuthenticateErrorHandler) HandlerID() string { return eh.id }
+func (eh *wwwAuthenticateErrorHandler) ID() string { return eh.id }

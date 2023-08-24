@@ -24,6 +24,7 @@ import (
 //go:generate mockery --name Authenticator --structname AuthenticatorMock
 
 type Authenticator interface {
+	ID() string
 	Execute(heimdall.Context) (*subject.Subject, error)
 	WithConfig(config map[string]any) (Authenticator, error)
 	IsFallbackOnErrorAllowed() bool

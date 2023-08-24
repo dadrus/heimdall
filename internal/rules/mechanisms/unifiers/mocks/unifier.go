@@ -108,6 +108,47 @@ func (_c *UnifierMock_Execute_Call) RunAndReturn(run func(heimdall.Context, *sub
 	return _c
 }
 
+// ID provides a mock function with given fields:
+func (_m *UnifierMock) ID() string {
+	ret := _m.Called()
+
+	var r0 string
+	if rf, ok := ret.Get(0).(func() string); ok {
+		r0 = rf()
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+
+	return r0
+}
+
+// UnifierMock_ID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ID'
+type UnifierMock_ID_Call struct {
+	*mock.Call
+}
+
+// ID is a helper method to define mock.On call
+func (_e *UnifierMock_Expecter) ID() *UnifierMock_ID_Call {
+	return &UnifierMock_ID_Call{Call: _e.mock.On("ID")}
+}
+
+func (_c *UnifierMock_ID_Call) Run(run func()) *UnifierMock_ID_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *UnifierMock_ID_Call) Return(_a0 string) *UnifierMock_ID_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *UnifierMock_ID_Call) RunAndReturn(run func() string) *UnifierMock_ID_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // WithConfig provides a mock function with given fields: config
 func (_m *UnifierMock) WithConfig(config map[string]interface{}) (unifiers.Unifier, error) {
 	ret := _m.Called(config)

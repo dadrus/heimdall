@@ -23,6 +23,7 @@ import (
 //go:generate mockery --name ErrorHandler --structname ErrorHandlerMock
 
 type ErrorHandler interface {
+	ID() string
 	Execute(ctx heimdall.Context, err error) (bool, error)
 	WithConfig(config map[string]any) (ErrorHandler, error)
 }

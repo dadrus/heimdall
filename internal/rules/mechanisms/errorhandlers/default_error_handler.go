@@ -55,4 +55,4 @@ func (eh *defaultErrorHandler) Execute(ctx heimdall.Context, err error) (bool, e
 
 func (eh *defaultErrorHandler) WithConfig(_ map[string]any) (ErrorHandler, error) { return eh, nil }
 
-func (eh *defaultErrorHandler) HandlerID() string { return eh.id }
+func (eh *defaultErrorHandler) ID() string { return eh.id }
