@@ -30,7 +30,7 @@ type compositeSubjectHandler []subjectHandler
 func (cm compositeSubjectHandler) Execute(ctx heimdall.Context, sub *subject.Subject) error {
 	logger := zerolog.Ctx(ctx.AppContext())
 
-	for _, m := range cm {
+	for _, handler := range cm {
 		if logger.GetLevel() == zerolog.TraceLevel {
 			dump, err := json.Marshal(sub)
 			if err != nil {
@@ -40,11 +40,11 @@ func (cm compositeSubjectHandler) Execute(ctx heimdall.Context, sub *subject.Sub
 			}
 		}
 
-		err := m.Execute(ctx, sub)
+		err := handler.Execute(ctx, sub)
 		if err != nil {
 			logger.Info().Err(err).Msg("Pipeline step execution failed")
 
-			if m.ContinueOnError() {
+			if handler.ContinueOnError() {
 				logger.Info().Msg("Error ignored. Continuing pipeline execution")
 			} else {
 				return err
