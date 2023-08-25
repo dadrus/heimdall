@@ -82,6 +82,6 @@ func (a *anonymousAuthenticator) IsFallbackOnErrorAllowed() bool {
 	return false
 }
 
-func (a *anonymousAuthenticator) HandlerID() string {
+func (a *anonymousAuthenticator) ID() string {
 	return a.id
 }

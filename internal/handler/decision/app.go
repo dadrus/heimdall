@@ -29,6 +29,7 @@ import (
 	"github.com/dadrus/heimdall/internal/config"
 	accesslogmiddleware "github.com/dadrus/heimdall/internal/fiber/middleware/accesslog"
 	cachemiddleware "github.com/dadrus/heimdall/internal/fiber/middleware/cache"
+	dumpmiddleware "github.com/dadrus/heimdall/internal/fiber/middleware/dump"
 	errormiddleware "github.com/dadrus/heimdall/internal/fiber/middleware/errorhandler"
 	loggermiddlerware "github.com/dadrus/heimdall/internal/fiber/middleware/logger"
 	tracingmiddleware "github.com/dadrus/heimdall/internal/fiber/middleware/opentelemetry"
@@ -81,6 +82,7 @@ func newApp(args appArgs) *fiber.App {
 	app.Use(
 		accesslogmiddleware.New(args.Logger),
 		loggermiddlerware.New(args.Logger),
+		dumpmiddleware.New(),
 		errormiddleware.New(
 			errormiddleware.WithVerboseErrors(service.Respond.Verbose),
 			errormiddleware.WithPreconditionErrorCode(service.Respond.With.ArgumentError.Code),

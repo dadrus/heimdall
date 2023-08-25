@@ -32,6 +32,7 @@ import (
 	"github.com/dadrus/heimdall/internal/config"
 	accesslogmiddleware "github.com/dadrus/heimdall/internal/fiber/middleware/accesslog"
 	cachemiddleware "github.com/dadrus/heimdall/internal/fiber/middleware/cache"
+	dumpmiddleware "github.com/dadrus/heimdall/internal/fiber/middleware/dump"
 	errormiddleware "github.com/dadrus/heimdall/internal/fiber/middleware/errorhandler"
 	loggermiddlerware "github.com/dadrus/heimdall/internal/fiber/middleware/logger"
 	tracingmiddleware "github.com/dadrus/heimdall/internal/fiber/middleware/opentelemetry"
@@ -79,8 +80,11 @@ func newApp(args appArgs) *fiber.App {
 		))
 	}
 
-	app.Use(accesslogmiddleware.New(args.Logger))
-	app.Use(loggermiddlerware.New(args.Logger))
+	app.Use(
+		accesslogmiddleware.New(args.Logger),
+		loggermiddlerware.New(args.Logger),
+		dumpmiddleware.New(),
+	)
 
 	if service.CORS != nil {
 		app.Use(cors.New(cors.Config{

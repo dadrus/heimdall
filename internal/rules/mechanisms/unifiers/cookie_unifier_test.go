@@ -103,7 +103,7 @@ cookies:
 
 				require.NoError(t, err)
 				assert.Len(t, unifier.cookies, 2)
-				assert.Equal(t, "cun", unifier.HandlerID())
+				assert.Equal(t, "cun", unifier.ID())
 
 				val, err := unifier.cookies["foo"].Render(nil)
 				require.NoError(t, err)
@@ -154,7 +154,7 @@ cookies:
 
 				require.NoError(t, err)
 				assert.Equal(t, prototype, configured)
-				assert.Equal(t, "cun1", configured.HandlerID())
+				assert.Equal(t, "cun1", configured.ID())
 			},
 		},
 		{
@@ -170,7 +170,7 @@ cookies:
 
 				require.NoError(t, err)
 				assert.Equal(t, prototype, configured)
-				assert.Equal(t, "cun2", configured.HandlerID())
+				assert.Equal(t, "cun2", configured.ID())
 			},
 		},
 		{
@@ -191,8 +191,8 @@ cookies:
 				assert.NotEqual(t, prototype, configured)
 				require.NotNil(t, configured)
 				assert.NotEmpty(t, configured.cookies)
-				assert.Equal(t, "cun3", configured.HandlerID())
-				assert.Equal(t, prototype.HandlerID(), configured.HandlerID())
+				assert.Equal(t, "cun3", configured.ID())
+				assert.Equal(t, prototype.ID(), configured.ID())
 
 				val, err := configured.cookies["bar"].Render(nil)
 				require.NoError(t, err)
@@ -251,9 +251,9 @@ cookies:
 				assert.ErrorIs(t, err, heimdall.ErrInternal)
 				assert.Contains(t, err.Error(), "'nil' subject")
 
-				var identifier interface{ HandlerID() string }
+				var identifier interface{ ID() string }
 				require.True(t, errors.As(err, &identifier))
-				assert.Equal(t, "cun1", identifier.HandlerID())
+				assert.Equal(t, "cun1", identifier.ID())
 			},
 		},
 		{

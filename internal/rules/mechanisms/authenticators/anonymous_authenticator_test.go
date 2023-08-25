@@ -47,7 +47,7 @@ func TestCreateAnonymousAuthenticator(t *testing.T) {
 				require.NoError(t, err)
 
 				assert.Equal(t, "anon", auth.Subject)
-				assert.Equal(t, "auth1", auth.HandlerID())
+				assert.Equal(t, "auth1", auth.ID())
 			},
 		},
 		{
@@ -60,7 +60,7 @@ func TestCreateAnonymousAuthenticator(t *testing.T) {
 				require.NoError(t, err)
 
 				assert.Equal(t, "anonymous", auth.Subject)
-				assert.Equal(t, "auth1", auth.HandlerID())
+				assert.Equal(t, "auth1", auth.ID())
 			},
 		},
 		{
@@ -110,7 +110,7 @@ func TestCreateAnonymousAuthenticatorFromPrototype(t *testing.T) {
 
 				assert.Equal(t, prototype, configured)
 				assert.Equal(t, "anonymous", configured.Subject)
-				assert.Equal(t, "auth2", configured.HandlerID())
+				assert.Equal(t, "auth2", configured.ID())
 			},
 		},
 		{
@@ -125,7 +125,7 @@ func TestCreateAnonymousAuthenticatorFromPrototype(t *testing.T) {
 
 				assert.NotEqual(t, prototype, configured)
 				assert.Equal(t, prototype.id, configured.id)
-				assert.Equal(t, "auth2", configured.HandlerID())
+				assert.Equal(t, "auth2", configured.ID())
 				assert.NotEqual(t, prototype.Subject, configured.Subject)
 				assert.Equal(t, "anon", prototype.Subject)
 				assert.Equal(t, "foo", configured.Subject)

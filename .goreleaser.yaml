@@ -39,6 +39,7 @@ archives:
     files:
       - LICENSE
       - CHANGELOG.md
+      - CycloneDX-SBOM.json
 
 checksum:
   name_template: "{{ .ProjectName }}_{{ .Tag }}_checksums.txt"

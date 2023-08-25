@@ -143,4 +143,4 @@ func (eh *redirectErrorHandler) WithConfig(rawConfig map[string]any) (ErrorHandl
 	}, nil
 }
 
-func (eh *redirectErrorHandler) HandlerID() string { return eh.id }
+func (eh *redirectErrorHandler) ID() string { return eh.id }

@@ -5,6 +5,7 @@ tempo_version := '0.16.8'
 phlare_version := '0.1.2'
 nginx_version := '9.7.7'
 contour_version := '12.2.4'
+emissary_version := '8.7.2'
 haproxy_version := '0.14.4'
 metallb_version := '0.13.10'
 certmanager_version := '1.12.3'
@@ -20,6 +21,7 @@ setup-charts:
   helm repo add metallb https://metallb.github.io/metallb
   helm repo add jetstack https://charts.jetstack.io
   helm repo add dadrus https://dadrus.github.io/heimdall/charts
+  helm repo add datawire https://app.getambassador.io
   helm repo add haproxy-ingress https://haproxy-ingress.github.io/charts
   helm repo update
 
@@ -66,7 +68,7 @@ install-tempo: setup-charts
     --wait
   kubectl apply -f grafana/data-sources/tempo.yaml
 
-# Installs Phlareheimdall
+# Installs Phlare
 install-phlare: setup-charts
   helm upgrade --install phlare grafana/phlare \
    -n monitoring --create-namespace \
@@ -90,9 +92,37 @@ install-nginx-ingress-controller:
 
 install-contour-ingress-controller:
   helm upgrade --install contour-ingress-controller bitnami/contour \
-    -n projectcontour --create-namespace \
+    -n contour-ingress-controller --create-namespace \
     --version {{contour_version}} \
     --wait
+
+install-emissary-ingress-controller:
+  #!/usr/bin/env bash
+  app_version=$(helm search repo emissary --version {{emissary_version}} -o json | jq -r '.[0].app_version')
+  kubectl apply -f https://app.getambassador.io/yaml/emissary/${app_version}/emissary-crds.yaml
+  kubectl wait --timeout=90s --for=condition=available deployment emissary-apiext -n emissary-system
+
+  helm upgrade --install emissary-ingress datawire/emissary-ingress \
+    -n emissary-ingress-controller --create-namespace \
+    --version {{emissary_version}}
+
+  kubectl -n emissary-ingress-controller wait --for condition=available --timeout=90s deploy -lapp.kubernetes.io/instance=emissary-ingress
+
+  kubectl apply -f - <<EOF
+  apiVersion: getambassador.io/v3alpha1
+  kind: Listener
+  metadata:
+    name: emissary-tls-ingress-listener
+    namespace: emissary-ingress-controller
+  spec:
+    port: 8443
+    protocol: HTTPS
+    securityModel: XFP
+    hostBinding:
+      namespace:
+        from: ALL
+  EOF
+
 
 install-haproxy-ingress-controller:
   helm install haproxy-ingress-controller haproxy-ingress/haproxy-ingress \
@@ -108,7 +138,7 @@ install-lb:
     --version {{metallb_version}} \
     --wait
 
-  ./configure-metallb.sh
+  ./metallb/configure.sh
 
 install-cert-manager:
   #!/usr/bin/env bash
@@ -131,27 +161,29 @@ install-cert-manager:
   EOF
 
 install-echo-service ingress_controller=default_ingress_controller:
-  kustomize build quickstarts/overlays/{{ingress_controller}}-ingress | kubectl apply -f -
+  kustomize build quickstarts/demo-app/overlays/{{ingress_controller}}-ingress | kubectl apply -f -
 
 install-heimdall ingress_controller=default_ingress_controller:
   #!/usr/bin/env bash
   kubectl create namespace heimdall
-  kubectl apply -f quickstarts/heimdall-certificate.yaml
+  kubectl apply -f quickstarts/heimdall/certificate.yaml
 
   extraArgs='extraArgs={}'
-  if [ "{{ingress_controller}}" == "contour" ]; then
+  if [[ "{{ingress_controller}}" == "contour" || "{{ingress_controller}}" == "emissary" ]]; then
     extraArgs='extraArgs={--envoy-grpc}'
   fi
 
-  helm upgrade --install heimdall  dadrus/heimdall \
+  helm upgrade --install heimdall dadrus/heimdall \
     -n heimdall \
-    -f quickstarts/heimdall-config.yaml \
-    -f quickstarts/heimdall-values.yaml \
+    -f quickstarts/heimdall/config.yaml \
+    -f quickstarts/heimdall/helm-values.yaml \
     --set "${extraArgs}" \
     --wait
 
   if [ "{{ingress_controller}}" == "contour" ]; then
-      kubectl apply -f quickstarts/heimdall-extension-service.yaml
+      kubectl apply -f quickstarts/heimdall/contour-extension-service.yaml
+  elif [ "{{ingress_controller}}" == "emissary" ]; then
+      kubectl apply -f quickstarts/heimdall/emissary-auth-service.yaml
   fi
 
 create-cluster:
@@ -164,6 +196,8 @@ install-ngnix-demo: setup-cluster install-nginx-ingress-controller (install-heim
 install-contour-demo: setup-cluster install-contour-ingress-controller (install-heimdall "contour") (install-echo-service "contour")
 
 install-haproxy-demo: setup-cluster install-haproxy-ingress-controller (install-heimdall "haproxy") (install-echo-service "haproxy")
+
+install-emissary-demo: setup-cluster install-emissary-ingress-controller (install-heimdall "emissary") (install-echo-service "emissary")
 
 delete-cluster:
   kind delete clusters {{cluster_name}}

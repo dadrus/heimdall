@@ -36,6 +36,7 @@ import (
 	"github.com/dadrus/heimdall/internal/httpcache"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
+	"github.com/dadrus/heimdall/internal/x/httpx"
 	"github.com/dadrus/heimdall/internal/x/stringx"
 )
 
@@ -71,7 +72,7 @@ func (e Endpoint) Validate() error {
 func (e Endpoint) CreateClient(peerName string) *http.Client {
 	client := &http.Client{
 		Transport: otelhttp.NewTransport(
-			http.DefaultTransport,
+			httpx.NewTraceRoundTripper(http.DefaultTransport),
 			otelhttp.WithSpanNameFormatter(func(_ string, r *http.Request) string {
 				return fmt.Sprintf("%s %s %s @%s", r.Proto, r.Method, r.URL.Path, peerName)
 			})),

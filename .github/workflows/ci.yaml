@@ -9,13 +9,14 @@ on:
       - main
 
 env:
-  GO_VERSION: "1.20"
-  GOLANGCI_LINT_VERSION: "v1.53.3"
+  GO_VERSION: "1.21"
+  GOLANGCI_LINT_VERSION: "v1.54.2"
   HELM_VERSION: "3.12.1"
   KUBECONFORM_VERSION: "0.6.2"
   KUBERNETES_API_VERSION: "1.27.0"
   NODE_VERSION: "18.16"
   COSIGN_VERSION: "v2.1.1"
+  CYCLONEDX_GOMOD_VERSION: "v1.4.1"
   DOCUMENTATION_URL: "https://dadrus.github.io/heimdall/"
 
 jobs:
@@ -246,10 +247,19 @@ jobs:
           fetch-depth: 0
       - name: Set up Go
         uses: actions/setup-go@v4
+        with:
+          go-version: "${{ env.GO_VERSION }}"
       - name: Install Cosign
         uses: sigstore/cosign-installer@v3.1.1
         with:
           cosign-release: "${{ env.COSIGN_VERSION }}"
+      - name: Install CycloneDX gomod
+        run: go install github.com/CycloneDX/cyclonedx-gomod/cmd/cyclonedx-gomod@v1.4.1
+      - name: Generate SBOM
+        uses: CycloneDX/gh-gomod-generate-sbom@v2
+        with:
+          version: "${{ env.CYCLONEDX_GOMOD_VERSION }}"
+          args: app -licenses -assert-licenses -json -std -output CycloneDX-SBOM.json -main .
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v4
         with:
@@ -279,6 +289,16 @@ jobs:
         uses: sigstore/cosign-installer@v3.1.1
         with:
           cosign-release: "${{ env.COSIGN_VERSION }}"
+      - name: Set up Go # required as the sbom generator is compiled using go < 1.21
+        uses: actions/setup-go@v4
+        with:
+          go-version: "${{ env.GO_VERSION }}"
+      - name: Generate SBOM
+        if: github.ref == 'refs/heads/main'
+        uses: CycloneDX/gh-gomod-generate-sbom@v2
+        with:
+          version: "${{ env.CYCLONEDX_GOMOD_VERSION }}"
+          args: app -licenses -assert-licenses -json -std -output CycloneDX-SBOM.json -main .
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v2
       - name: Set up Docker Buildx
@@ -324,6 +344,11 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: cosign sign --yes ${{ github.repository }}@${{ steps.publish-image.outputs.digest }}
+      - name: Attest and attach SBOM
+        if: steps.publish-image.conclusion == 'success'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: cosign attest --yes --predicate CycloneDX-SBOM.json --type cyclonedx ${{ github.repository }}@${{ steps.publish-image.outputs.digest }}
 
 
   # this job releases container images
@@ -347,6 +372,15 @@ jobs:
         uses: sigstore/cosign-installer@v3.1.1
         with:
           cosign-release: "${{ env.COSIGN_VERSION }}"
+      - name: Set up Go # required as the sbom generator is compiled using go < 1.21
+        uses: actions/setup-go@v4
+        with:
+          go-version: "${{ env.GO_VERSION }}"
+      - name: Generate SBOM
+        uses: CycloneDX/gh-gomod-generate-sbom@v2
+        with:
+          version: "${{ env.CYCLONEDX_GOMOD_VERSION }}"
+          args: app -licenses -assert-licenses -json -std -output CycloneDX-SBOM.json -main .
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v2
       - name: Set up Docker Buildx
@@ -380,6 +414,11 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: cosign sign --yes ${{ github.repository }}@${{ steps.publish-image.outputs.digest }}
+      - name: Attest and attach SBOM
+        if: steps.publish-image.conclusion == 'success'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: cosign attest --yes --predicate CycloneDX-SBOM.json --type cyclonedx ${{ github.repository }}@${{ steps.publish-image.outputs.digest }}
       - name: Update DockerHub repository description & readme
         uses: peter-evans/dockerhub-description@v3
         with:
@@ -460,7 +499,7 @@ jobs:
           destination_dir: dev
 
   release-documentation:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     needs:
       - prepare-release
     if: needs.prepare-release.outputs.release_created

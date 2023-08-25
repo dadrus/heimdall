@@ -102,7 +102,7 @@ headers:
 
 				require.NoError(t, err)
 				assert.Len(t, unifier.headers, 2)
-				assert.Equal(t, "hun", unifier.HandlerID())
+				assert.Equal(t, "hun", unifier.ID())
 
 				val, err := unifier.headers["foo"].Render(nil)
 				require.NoError(t, err)
@@ -153,7 +153,7 @@ headers:
 
 				require.NoError(t, err)
 				assert.Equal(t, prototype, configured)
-				assert.Equal(t, "hun1", configured.HandlerID())
+				assert.Equal(t, "hun1", configured.ID())
 			},
 		},
 		{
@@ -169,7 +169,7 @@ headers:
 
 				require.NoError(t, err)
 				assert.Equal(t, prototype, configured)
-				assert.Equal(t, "hun2", configured.HandlerID())
+				assert.Equal(t, "hun2", configured.ID())
 			},
 		},
 		{
@@ -190,8 +190,8 @@ headers:
 				assert.NotEqual(t, prototype, configured)
 				require.NotNil(t, configured)
 				assert.NotEmpty(t, configured.headers)
-				assert.Equal(t, "hun3", configured.HandlerID())
-				assert.Equal(t, prototype.HandlerID(), configured.HandlerID())
+				assert.Equal(t, "hun3", configured.ID())
+				assert.Equal(t, prototype.ID(), configured.ID())
 
 				val, err := configured.headers["bar"].Render(nil)
 				require.NoError(t, err)
@@ -250,9 +250,9 @@ headers:
 				assert.ErrorIs(t, err, heimdall.ErrInternal)
 				assert.Contains(t, err.Error(), "'nil' subject")
 
-				var identifier interface{ HandlerID() string }
+				var identifier interface{ ID() string }
 				require.True(t, errors.As(err, &identifier))
-				assert.Equal(t, "hun1", identifier.HandlerID())
+				assert.Equal(t, "hun1", identifier.ID())
 			},
 		},
 		{

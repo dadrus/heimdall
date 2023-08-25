@@ -208,7 +208,7 @@ func (h *genericContextualizer) WithConfig(rawConfig map[string]any) (Contextual
 	}, nil
 }
 
-func (h *genericContextualizer) HandlerID() string { return h.id }
+func (h *genericContextualizer) ID() string { return h.id }
 
 func (h *genericContextualizer) ContinueOnError() bool { return h.continueOnError }
 

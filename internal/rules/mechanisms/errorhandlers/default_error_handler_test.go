@@ -60,5 +60,5 @@ func TestDefaultErrorHandlerPrototype(t *testing.T) {
 
 	assert.NoError(t, err2)
 	assert.Equal(t, prototype, eh2)
-	assert.Equal(t, "foo", prototype.HandlerID())
+	assert.Equal(t, "foo", prototype.ID())
 }

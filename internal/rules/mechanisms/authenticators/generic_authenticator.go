@@ -190,7 +190,7 @@ func (a *genericAuthenticator) IsFallbackOnErrorAllowed() bool {
 	return a.allowFallbackOnError
 }
 
-func (a *genericAuthenticator) HandlerID() string {
+func (a *genericAuthenticator) ID() string {
 	return a.id
 }
 
@@ -226,8 +226,6 @@ func (a *genericAuthenticator) getSubjectInformation(ctx heimdall.Context, authD
 	if err != nil {
 		return nil, err
 	}
-
-	logger.Debug().Str("_payload", stringx.ToString(payload)).Msg("Raw subject information")
 
 	if a.sessionLifespanConf != nil {
 		session, err = a.sessionLifespanConf.CreateSessionLifespan(payload)

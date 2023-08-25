@@ -26,11 +26,11 @@ import (
 )
 
 type TestError struct {
-	ID string
+	id string
 }
 
-func (e *TestError) HandlerID() string {
-	return e.ID
+func (e *TestError) ID() string {
+	return e.id
 }
 
 func (e *TestError) Error() string {
@@ -54,7 +54,7 @@ func TestErrorTypeMatcher(t *testing.T) {
 					HandlerID: "foobar",
 				},
 			},
-			err:      errorchain.New(&TestError{ID: "foobar"}).CausedBy(heimdall.ErrConfiguration),
+			err:      errorchain.New(&TestError{id: "foobar"}).CausedBy(heimdall.ErrConfiguration),
 			matching: true,
 		},
 		{
@@ -65,7 +65,7 @@ func TestErrorTypeMatcher(t *testing.T) {
 					HandlerID: "barfoo",
 				},
 			},
-			err:      errorchain.New(heimdall.ErrArgument).CausedBy(&TestError{ID: "barfoo"}),
+			err:      errorchain.New(heimdall.ErrArgument).CausedBy(&TestError{id: "barfoo"}),
 			matching: false,
 		},
 		{
@@ -80,7 +80,7 @@ func TestErrorTypeMatcher(t *testing.T) {
 					HandlerID: "foobar",
 				},
 			},
-			err:      errorchain.New(&TestError{ID: "foobar"}).CausedBy(heimdall.ErrConfiguration),
+			err:      errorchain.New(&TestError{id: "foobar"}).CausedBy(heimdall.ErrConfiguration),
 			matching: true,
 		},
 	} {

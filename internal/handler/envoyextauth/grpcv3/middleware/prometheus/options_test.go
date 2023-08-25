@@ -56,12 +56,13 @@ func TestOptionsWithRegisterer(t *testing.T) {
 		t.Run("case="+tc.uc, func(t *testing.T) {
 			// GIVEN
 			apply := WithRegisterer(tc.value)
+			opt := &tc.opt //nolint:gosec
 
 			// WHEN
-			apply(&tc.opt)
+			apply(opt)
 
 			// THEN
-			tc.assert(t, &tc.opt)
+			tc.assert(t, opt)
 		})
 	}
 }
@@ -99,12 +100,13 @@ func TestOptionsWithServiceName(t *testing.T) {
 		t.Run("case="+tc.uc, func(t *testing.T) {
 			// GIVEN
 			apply := WithServiceName(tc.value)
+			opt := &tc.opt //nolint:gosec
 
 			// WHEN
-			apply(&tc.opt)
+			apply(opt)
 
 			// THEN
-			tc.assert(t, &tc.opt)
+			tc.assert(t, opt)
 		})
 	}
 }
@@ -141,12 +143,13 @@ func TestOptionsWithNamespace(t *testing.T) {
 		t.Run("case="+tc.uc, func(t *testing.T) {
 			// GIVEN
 			apply := WithNamespace(tc.value)
+			opt := &tc.opt //nolint:gosec
 
 			// WHEN
-			apply(&tc.opt)
+			apply(opt)
 
 			// THEN
-			tc.assert(t, &tc.opt)
+			tc.assert(t, opt)
 		})
 	}
 }
@@ -183,12 +186,13 @@ func TestOptionsWithSubsystem(t *testing.T) {
 		t.Run("case="+tc.uc, func(t *testing.T) {
 			// GIVEN
 			apply := WithSubsystem(tc.value)
+			opt := &tc.opt //nolint:gosec
 
 			// WHEN
-			apply(&tc.opt)
+			apply(opt)
 
 			// THEN
-			tc.assert(t, &tc.opt)
+			tc.assert(t, opt)
 		})
 	}
 }
@@ -239,12 +243,13 @@ func TestOptionsWithLabel(t *testing.T) {
 		t.Run("case="+tc.uc, func(t *testing.T) {
 			// GIVEN
 			apply := WithLabel(tc.name, tc.value)
+			opt := &tc.opt //nolint:gosec
 
 			// WHEN
-			apply(&tc.opt)
+			apply(opt)
 
 			// THEN
-			tc.assert(t, &tc.opt)
+			tc.assert(t, opt)
 		})
 	}
 }
@@ -306,12 +311,13 @@ func TestOptionsWithLabels(t *testing.T) {
 		t.Run("case="+tc.uc, func(t *testing.T) {
 			// GIVEN
 			apply := WithLabels(tc.labels)
+			opt := &tc.opt //nolint:gosec
 
 			// WHEN
-			apply(&tc.opt)
+			apply(opt)
 
 			// THEN
-			tc.assert(t, &tc.opt)
+			tc.assert(t, opt)
 		})
 	}
 }

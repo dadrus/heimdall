@@ -47,7 +47,7 @@ func TestCreateDenyAuthorizerFromPrototype(t *testing.T) {
 	assert.IsType(t, &denyAuthorizer{}, conf2)
 
 	// nolint: forcetypeassert
-	assert.Equal(t, "foo", conf1.(*denyAuthorizer).HandlerID())
+	assert.Equal(t, "foo", conf1.(*denyAuthorizer).ID())
 	assert.False(t, conf1.ContinueOnError())
 	assert.False(t, conf2.ContinueOnError())
 	assert.False(t, prototype.ContinueOnError())
@@ -55,7 +55,7 @@ func TestCreateDenyAuthorizerFromPrototype(t *testing.T) {
 
 func TestDenyAuthorizerExecute(t *testing.T) {
 	// GIVEN
-	var identifier interface{ HandlerID() string }
+	var identifier interface{ ID() string }
 
 	ctx := mocks.NewContextMock(t)
 	ctx.EXPECT().AppContext().Return(context.Background())
@@ -71,5 +71,5 @@ func TestDenyAuthorizerExecute(t *testing.T) {
 	require.Contains(t, err.Error(), "denied by authorizer")
 
 	require.True(t, errors.As(err, &identifier))
-	assert.Equal(t, "bar", identifier.HandlerID())
+	assert.Equal(t, "bar", identifier.ID())
 }

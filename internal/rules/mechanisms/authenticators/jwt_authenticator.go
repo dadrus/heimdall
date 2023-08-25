@@ -235,7 +235,7 @@ func (a *jwtAuthenticator) IsFallbackOnErrorAllowed() bool {
 	return a.allowFallbackOnError
 }
 
-func (a *jwtAuthenticator) HandlerID() string {
+func (a *jwtAuthenticator) ID() string {
 	return a.id
 }
 

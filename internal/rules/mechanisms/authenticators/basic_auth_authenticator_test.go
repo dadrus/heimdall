@@ -64,7 +64,7 @@ password: bar`),
 				assert.Equal(t, userID, auth.userID)
 				assert.Equal(t, password, auth.password)
 				assert.False(t, auth.IsFallbackOnErrorAllowed())
-				assert.Equal(t, "auth1", auth.HandlerID())
+				assert.Equal(t, "auth1", auth.ID())
 			},
 		},
 		{
@@ -91,7 +91,7 @@ allow_fallback_on_error: true
 				assert.Equal(t, userID, auth.userID)
 				assert.Equal(t, password, auth.password)
 				assert.True(t, auth.IsFallbackOnErrorAllowed())
-				assert.Equal(t, "auth1", auth.HandlerID())
+				assert.Equal(t, "auth1", auth.ID())
 			},
 		},
 		{
@@ -170,7 +170,7 @@ password: bar`),
 
 				require.NoError(t, err)
 				assert.Equal(t, prototype, configured)
-				assert.Equal(t, "auth2", configured.HandlerID())
+				assert.Equal(t, "auth2", configured.ID())
 			},
 		},
 		{
@@ -190,7 +190,7 @@ allow_fallback_on_error: true
 				assert.Equal(t, prototype.password, configured.password)
 				assert.NotEqual(t, prototype.IsFallbackOnErrorAllowed(), configured.IsFallbackOnErrorAllowed())
 				assert.True(t, configured.IsFallbackOnErrorAllowed())
-				assert.Equal(t, "auth2", configured.HandlerID())
+				assert.Equal(t, "auth2", configured.ID())
 			},
 		},
 		{
@@ -211,7 +211,7 @@ password: baz`),
 				assert.Equal(t, prototype.userID, configured.userID)
 				assert.NotEqual(t, prototype.password, configured.password)
 				assert.Equal(t, prototype.IsFallbackOnErrorAllowed(), configured.IsFallbackOnErrorAllowed())
-				assert.Equal(t, "auth2", configured.HandlerID())
+				assert.Equal(t, "auth2", configured.ID())
 			},
 		},
 		{
@@ -231,7 +231,7 @@ password: baz`),
 				assert.Equal(t, prototype.userID, configured.userID)
 				assert.NotEqual(t, prototype.password, configured.password)
 				assert.Equal(t, prototype.IsFallbackOnErrorAllowed(), configured.IsFallbackOnErrorAllowed())
-				assert.Equal(t, "auth2", configured.HandlerID())
+				assert.Equal(t, "auth2", configured.ID())
 			},
 		},
 		{
@@ -251,7 +251,7 @@ user_id: baz`),
 				assert.NotEqual(t, prototype.userID, configured.userID)
 				assert.Equal(t, prototype.password, configured.password)
 				assert.Equal(t, prototype.IsFallbackOnErrorAllowed(), configured.IsFallbackOnErrorAllowed())
-				assert.Equal(t, "auth2", configured.HandlerID())
+				assert.Equal(t, "auth2", configured.ID())
 			},
 		},
 		{
@@ -272,7 +272,7 @@ password: bar`),
 				assert.NotEqual(t, prototype.userID, configured.userID)
 				assert.Equal(t, prototype.password, configured.password)
 				assert.Equal(t, prototype.IsFallbackOnErrorAllowed(), configured.IsFallbackOnErrorAllowed())
-				assert.Equal(t, "auth2", configured.HandlerID())
+				assert.Equal(t, "auth2", configured.ID())
 			},
 		},
 		{
@@ -293,7 +293,7 @@ password: baz`),
 				assert.NotEqual(t, prototype.userID, configured.userID)
 				assert.NotEqual(t, prototype.password, configured.password)
 				assert.Equal(t, prototype.IsFallbackOnErrorAllowed(), configured.IsFallbackOnErrorAllowed())
-				assert.Equal(t, "auth2", configured.HandlerID())
+				assert.Equal(t, "auth2", configured.ID())
 
 				md := sha256.New()
 				md.Write([]byte("baz"))
@@ -330,7 +330,7 @@ func TestBasicAuthAuthenticatorExecute(t *testing.T) {
 	t.Parallel()
 
 	type HandlerIdentifier interface {
-		HandlerID() string
+		ID() string
 	}
 
 	conf, err := testsupport.DecodeTestConfig([]byte(`
@@ -365,7 +365,7 @@ password: bar`))
 
 				var identifier HandlerIdentifier
 				require.True(t, errors.As(err, &identifier))
-				assert.Equal(t, "auth3", identifier.HandlerID())
+				assert.Equal(t, "auth3", identifier.ID())
 
 				assert.Nil(t, sub)
 			},
@@ -391,7 +391,7 @@ password: bar`))
 
 				var identifier HandlerIdentifier
 				require.True(t, errors.As(err, &identifier))
-				assert.Equal(t, "auth3", identifier.HandlerID())
+				assert.Equal(t, "auth3", identifier.ID())
 
 				assert.Nil(t, sub)
 			},
@@ -418,7 +418,7 @@ password: bar`))
 
 				var identifier HandlerIdentifier
 				require.True(t, errors.As(err, &identifier))
-				assert.Equal(t, "auth3", identifier.HandlerID())
+				assert.Equal(t, "auth3", identifier.ID())
 
 				assert.Nil(t, sub)
 			},
@@ -445,7 +445,7 @@ password: bar`))
 
 				var identifier HandlerIdentifier
 				require.True(t, errors.As(err, &identifier))
-				assert.Equal(t, "auth3", identifier.HandlerID())
+				assert.Equal(t, "auth3", identifier.ID())
 
 				assert.Nil(t, sub)
 			},
@@ -472,7 +472,7 @@ password: bar`))
 
 				var identifier HandlerIdentifier
 				require.True(t, errors.As(err, &identifier))
-				assert.Equal(t, "auth3", identifier.HandlerID())
+				assert.Equal(t, "auth3", identifier.ID())
 
 				assert.Nil(t, sub)
 			},

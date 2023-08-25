@@ -120,6 +120,6 @@ func (a *celAuthorizer) WithConfig(rawConfig map[string]any) (Authorizer, error)
 	return newCELAuthorizer(a.id, rawConfig)
 }
 
-func (a *celAuthorizer) HandlerID() string { return a.id }
+func (a *celAuthorizer) ID() string { return a.id }
 
 func (a *celAuthorizer) ContinueOnError() bool { return false }

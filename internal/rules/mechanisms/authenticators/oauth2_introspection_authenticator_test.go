@@ -124,7 +124,7 @@ assertions:
 				assert.True(t, ok)
 				assert.Equal(t, "sub", sess.IDFrom)
 
-				assert.Equal(t, "auth1", auth.HandlerID())
+				assert.Equal(t, "auth1", auth.ID())
 			},
 		},
 		{
@@ -179,7 +179,7 @@ subject:
 
 				assert.False(t, auth.IsFallbackOnErrorAllowed())
 
-				assert.Equal(t, "auth1", auth.HandlerID())
+				assert.Equal(t, "auth1", auth.ID())
 			},
 		},
 		{
@@ -250,7 +250,7 @@ allow_fallback_on_error: true
 
 				assert.True(t, auth.IsFallbackOnErrorAllowed())
 
-				assert.Equal(t, "auth1", auth.HandlerID())
+				assert.Equal(t, "auth1", auth.ID())
 			},
 		},
 	}
@@ -300,7 +300,7 @@ subject:
 				require.NoError(t, err)
 
 				assert.Equal(t, prototype, configured)
-				assert.Equal(t, "auth2", configured.HandlerID())
+				assert.Equal(t, "auth2", configured.ID())
 			},
 		},
 		{
@@ -364,7 +364,7 @@ assertions:
 				assert.Nil(t, prototype.ttl)
 				assert.Equal(t, prototype.ttl, configured.ttl)
 				assert.Equal(t, prototype.IsFallbackOnErrorAllowed(), configured.IsFallbackOnErrorAllowed())
-				assert.Equal(t, "auth2", configured.HandlerID())
+				assert.Equal(t, "auth2", configured.ID())
 			},
 		},
 		{
@@ -394,7 +394,7 @@ subject:
 				assert.Nil(t, prototype.ttl)
 				assert.Equal(t, 5*time.Second, *configured.ttl)
 				assert.Equal(t, prototype.IsFallbackOnErrorAllowed(), configured.IsFallbackOnErrorAllowed())
-				assert.Equal(t, "auth2", configured.HandlerID())
+				assert.Equal(t, "auth2", configured.ID())
 			},
 		},
 		{
@@ -431,7 +431,7 @@ cache_ttl: 15s
 				assert.Equal(t, 5*time.Second, *prototype.ttl)
 				assert.Equal(t, 15*time.Second, *configured.ttl)
 				assert.Equal(t, prototype.IsFallbackOnErrorAllowed(), configured.IsFallbackOnErrorAllowed())
-				assert.Equal(t, "auth2", configured.HandlerID())
+				assert.Equal(t, "auth2", configured.ID())
 			},
 		},
 		{
@@ -461,7 +461,7 @@ subject:
 				assert.Equal(t, prototype.ttl, configured.ttl)
 				assert.NotEqual(t, prototype.IsFallbackOnErrorAllowed(), configured.IsFallbackOnErrorAllowed())
 				assert.True(t, configured.IsFallbackOnErrorAllowed())
-				assert.Equal(t, "auth2", configured.HandlerID())
+				assert.Equal(t, "auth2", configured.ID())
 			},
 		},
 	} {
@@ -498,7 +498,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 	t.Parallel()
 
 	type HandlerIdentifier interface {
-		HandlerID() string
+		ID() string
 	}
 
 	var (
@@ -568,7 +568,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 
 				var identifier HandlerIdentifier
 				require.True(t, errors.As(err, &identifier))
-				assert.Equal(t, "auth3", identifier.HandlerID())
+				assert.Equal(t, "auth3", identifier.ID())
 			},
 		},
 		{
@@ -599,7 +599,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 
 				var identifier HandlerIdentifier
 				require.True(t, errors.As(err, &identifier))
-				assert.Equal(t, "auth3", identifier.HandlerID())
+				assert.Equal(t, "auth3", identifier.ID())
 			},
 		},
 		{
@@ -635,7 +635,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 
 				var identifier HandlerIdentifier
 				require.True(t, errors.As(err, &identifier))
-				assert.Equal(t, "auth3", identifier.HandlerID())
+				assert.Equal(t, "auth3", identifier.ID())
 			},
 		},
 		{
@@ -693,7 +693,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 
 				var identifier HandlerIdentifier
 				require.True(t, errors.As(err, &identifier))
-				assert.Equal(t, "auth3", identifier.HandlerID())
+				assert.Equal(t, "auth3", identifier.ID())
 			},
 		},
 		{
@@ -755,7 +755,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 
 				var identifier HandlerIdentifier
 				require.True(t, errors.As(err, &identifier))
-				assert.Equal(t, "auth3", identifier.HandlerID())
+				assert.Equal(t, "auth3", identifier.ID())
 			},
 		},
 		{
@@ -828,7 +828,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 
 				var identifier HandlerIdentifier
 				require.True(t, errors.As(err, &identifier))
-				assert.Equal(t, "auth3", identifier.HandlerID())
+				assert.Equal(t, "auth3", identifier.ID())
 			},
 		},
 		{
