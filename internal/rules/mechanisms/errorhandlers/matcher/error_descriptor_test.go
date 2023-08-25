@@ -26,10 +26,10 @@ import (
 )
 
 type testHandlerIdentifier struct {
-	ID string
+	id string
 }
 
-func (t *testHandlerIdentifier) HandlerID() string { return t.ID }
+func (t *testHandlerIdentifier) ID() string { return t.id }
 
 func TestErrorDescriptorMatches(t *testing.T) {
 	t.Parallel()
@@ -87,7 +87,7 @@ func TestErrorDescriptorMatches(t *testing.T) {
 				Errors:    []error{heimdall.ErrArgument},
 				HandlerID: "foo",
 			},
-			errToMatch: errorchain.New(heimdall.ErrArgument).WithErrorContext(&testHandlerIdentifier{ID: "bar"}),
+			errToMatch: errorchain.New(heimdall.ErrArgument).WithErrorContext(&testHandlerIdentifier{id: "bar"}),
 			matching:   false,
 		},
 		{
@@ -96,7 +96,7 @@ func TestErrorDescriptorMatches(t *testing.T) {
 				Errors:    []error{heimdall.ErrArgument},
 				HandlerID: "foo",
 			},
-			errToMatch: errorchain.New(heimdall.ErrArgument).WithErrorContext(&testHandlerIdentifier{ID: "foo"}),
+			errToMatch: errorchain.New(heimdall.ErrArgument).WithErrorContext(&testHandlerIdentifier{id: "foo"}),
 			matching:   true,
 		},
 	} {

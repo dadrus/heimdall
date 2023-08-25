@@ -40,10 +40,10 @@ func (ed ErrorDescriptor) matchesHandlerID(err error) bool {
 		return true
 	}
 
-	var handlerIdentifier interface{ HandlerID() string }
+	var handlerIdentifier interface{ ID() string }
 	ok := errors.As(err, &handlerIdentifier)
 
-	return ok && ed.HandlerID == handlerIdentifier.HandlerID()
+	return ok && ed.HandlerID == handlerIdentifier.ID()
 }
 
 func (ed ErrorDescriptor) matchesError(err error) bool {
