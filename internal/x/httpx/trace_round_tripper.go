@@ -9,36 +9,39 @@ import (
 	"github.com/dadrus/heimdall/internal/x/stringx"
 )
 
-type TraceRoundTripper struct {
-	Transport http.RoundTripper
+type traceRoundTripper struct {
+	t http.RoundTripper
 }
 
-func (t *TraceRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
-	logger := zerolog.Ctx(req.Context())
+func NewTraceRoundTripper(rt http.RoundTripper) http.RoundTripper {
+	return &traceRoundTripper{t: rt}
+}
 
-	if logger.GetLevel() == zerolog.TraceLevel {
-		dump, err := httputil.DumpRequestOut(req, true)
-		if err != nil {
-			logger.Trace().Err(err).Msg("Failed to dump request")
-		} else {
-			logger.Trace().Msg("Request: \n" + stringx.ToString(dump))
-		}
+func (t *traceRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
+	logger := zerolog.Ctx(req.Context())
+	if logger.GetLevel() != zerolog.TraceLevel {
+		return t.t.RoundTrip(req)
 	}
 
-	resp, err := t.Transport.RoundTrip(req)
+	dump, err := httputil.DumpRequestOut(req, true)
+	if err != nil {
+		logger.Trace().Err(err).Msg("Failed to dump request")
+	} else {
+		logger.Trace().Msg("Request: \n" + stringx.ToString(dump))
+	}
+
+	resp, err := t.t.RoundTrip(req)
 	if err != nil {
 		logger.Trace().Err(err).Msg("Failed sending request")
 
 		return nil, err
 	}
 
-	if logger.GetLevel() == zerolog.TraceLevel {
-		dump, err := httputil.DumpResponse(resp, true)
-		if err != nil {
-			logger.Trace().Err(err).Msg("Failed to dump response")
-		} else {
-			logger.Trace().Msg("Response: \n" + stringx.ToString(dump))
-		}
+	dump, err = httputil.DumpResponse(resp, true)
+	if err != nil {
+		logger.Trace().Err(err).Msg("Failed to dump response")
+	} else {
+		logger.Trace().Msg("Response: \n" + stringx.ToString(dump))
 	}
 
 	return resp, err
