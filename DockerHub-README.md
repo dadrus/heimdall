@@ -227,15 +227,17 @@ As of today heimdall is built as a multi-platform image for the following platfo
 
 * linux/amd64
 * linux/arm64
-* linux/arm
+* linux/arm/v7
 
 If you need support for other platforms, don't hesitate to file an issue at GitHub. Contributions are very welcome as well!
 
 All images adhere to the following patterns:
 
-* For stable, respectively released versions, image tags have the suffix of the corresponding version and have the `dadrus/heimdall:<version>` form. E.g. an image tagged with `dadrus/heimdall:v0.10.1-alpha` is the image for the released `v0.10.1-alpha` version of heimdall. In addition, there is a `dadrus/heimdall:latest` tag referencing the latest released version as well.
+* For stable, respectively released versions, image tags have the suffix of the corresponding version and have the `dadrus/heimdall:<version>` form. E.g. an image tagged with `dadrus/heimdall:0.11.1-alpha` is the image for the released `0.11.1-alpha` version of heimdall. In addition, there is a `dadrus/heimdall:latest` tag referencing the latest released version as well.
 
 * Development images are created from the main branch by heimdall's continuous integration and are tagged with the `dev` and with the `dev-<SHA>` suffix, where the SHA is the commit in heimdall main from which it was created. For example, after a build at commit `730b2206`, an image will be created for `dadrus/heimdall:dev-730b2206fdfc688ca42bcdf0e344d8fa6bfba232` and the image `dadrus/heimdall:dev` will be tagged to it until the next build.
+
+Each published image is signed using [Cosign](https://docs.sigstore.dev/docs/signing/quickstart/). The signatures are located in the same repository and have the tag pattern `sha256-<SHA256>.sig`. An SBOM is attached to each image as an attestation, created via Cosign as well. These objects are also present in this repository with tags adhering to the `sha256-<SHA256>.att` name pattern. Both, the images and the SBOM attestations are signed using [ keyless signing feature](https://docs.sigstore.dev/docs/signing/overview/). Please refer to heimdall's [Documentation](https://dadrus.github.io/heimdall/dev/docs/operations/security/#_verifying_heimdall_binaries_and_container_images) on how to verify both and extract the SBOM.
 
 ## License
 
