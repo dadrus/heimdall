@@ -124,7 +124,7 @@ payload: "{{ .Subject.ID }}"
 				assert.Empty(t, auth.headersForUpstream)
 				assert.Zero(t, auth.ttl)
 
-				assert.Equal(t, "authz", auth.HandlerID())
+				assert.Equal(t, "authz", auth.ID())
 				assert.False(t, auth.ContinueOnError())
 			},
 		},
@@ -196,7 +196,7 @@ values:
 				assert.Equal(t, 5*time.Second, auth.ttl)
 				assert.Equal(t, values.Values{"foo": "bar"}, auth.v)
 
-				assert.Equal(t, "authz", auth.HandlerID())
+				assert.Equal(t, "authz", auth.ID())
 				assert.False(t, auth.ContinueOnError())
 			},
 		},
@@ -238,7 +238,7 @@ payload: bar
 				require.NoError(t, err)
 
 				assert.Equal(t, prototype, configured)
-				assert.Equal(t, "authz1", configured.HandlerID())
+				assert.Equal(t, "authz1", configured.ID())
 				assert.False(t, configured.ContinueOnError())
 			},
 		},
@@ -257,7 +257,7 @@ payload: bar
 				require.NoError(t, err)
 
 				assert.Equal(t, prototype, configured)
-				assert.Equal(t, "authz2", configured.HandlerID())
+				assert.Equal(t, "authz2", configured.ID())
 				assert.False(t, configured.ContinueOnError())
 			},
 		},
@@ -304,7 +304,7 @@ cache_ttl: 1s
 				assert.Equal(t, prototype.expressions, configured.expressions)
 				assert.Empty(t, configured.headersForUpstream)
 				assert.NotNil(t, configured.ttl)
-				assert.Equal(t, "authz3", configured.HandlerID())
+				assert.Equal(t, "authz3", configured.ID())
 				assert.False(t, configured.ContinueOnError())
 			},
 		},
@@ -377,7 +377,7 @@ cache_ttl: 15s
 				assert.Equal(t, prototype.v, configured.v)
 				assert.NotEqual(t, prototype.headersForUpstream, configured.headersForUpstream)
 				assert.NotEqual(t, prototype.payload, configured.payload)
-				assert.Equal(t, "authz4", configured.HandlerID())
+				assert.Equal(t, "authz4", configured.ID())
 				assert.False(t, configured.ContinueOnError())
 			},
 		},
@@ -435,7 +435,7 @@ cache_ttl: 15s
 				assert.NotEqual(t, prototype.ttl, configured.ttl)
 				assert.NotEqual(t, prototype.headersForUpstream, configured.headersForUpstream)
 				assert.NotEqual(t, prototype.payload, configured.payload)
-				assert.Equal(t, "authz4", configured.HandlerID())
+				assert.Equal(t, "authz4", configured.ID())
 				assert.False(t, configured.ContinueOnError())
 			},
 		},
@@ -920,9 +920,9 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 				assert.ErrorIs(t, err, heimdall.ErrAuthorization)
 				assert.Contains(t, err.Error(), "authorization failed")
 
-				var identifier interface{ HandlerID() string }
+				var identifier interface{ ID() string }
 				require.True(t, errors.As(err, &identifier))
-				assert.Equal(t, "authz", identifier.HandlerID())
+				assert.Equal(t, "authz", identifier.ID())
 			},
 		},
 		{
@@ -977,9 +977,9 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 
 				assert.False(t, authorizationEndpointCalled)
 
-				var identifier interface{ HandlerID() string }
+				var identifier interface{ ID() string }
 				require.True(t, errors.As(err, &identifier))
-				assert.Equal(t, "authz", identifier.HandlerID())
+				assert.Equal(t, "authz", identifier.ID())
 			},
 		},
 		{
@@ -994,9 +994,9 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 				assert.ErrorIs(t, err, heimdall.ErrInternal)
 				assert.Contains(t, err.Error(), "due to 'nil' subject")
 
-				var identifier interface{ HandlerID() string }
+				var identifier interface{ ID() string }
 				require.True(t, errors.As(err, &identifier))
-				assert.Equal(t, "authz", identifier.HandlerID())
+				assert.Equal(t, "authz", identifier.ID())
 			},
 		},
 		{
@@ -1074,9 +1074,9 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 				assert.ErrorIs(t, err, heimdall.ErrAuthorization)
 				assert.Contains(t, err.Error(), "expression 1 failed")
 
-				var identifier interface{ HandlerID() string }
+				var identifier interface{ ID() string }
 				require.True(t, errors.As(err, &identifier))
-				assert.Equal(t, "authz", identifier.HandlerID())
+				assert.Equal(t, "authz", identifier.ID())
 			},
 		},
 		{

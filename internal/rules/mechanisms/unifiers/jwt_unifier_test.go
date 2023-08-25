@@ -57,7 +57,7 @@ func TestCreateJWTUnifier(t *testing.T) {
 				require.NotNil(t, unifier)
 				assert.Equal(t, defaultJWTTTL, unifier.ttl)
 				assert.Nil(t, unifier.claims)
-				assert.Equal(t, "jun", unifier.HandlerID())
+				assert.Equal(t, "jun", unifier.ID())
 				assert.Equal(t, "Authorization", unifier.headerName)
 				assert.Equal(t, "Bearer", unifier.headerScheme)
 			},
@@ -74,7 +74,7 @@ func TestCreateJWTUnifier(t *testing.T) {
 				require.NotNil(t, unifier)
 				assert.Equal(t, defaultJWTTTL, unifier.ttl)
 				assert.Nil(t, unifier.claims)
-				assert.Equal(t, "jun", unifier.HandlerID())
+				assert.Equal(t, "jun", unifier.ID())
 				assert.Equal(t, "Authorization", unifier.headerName)
 				assert.Equal(t, "Bearer", unifier.headerScheme)
 			},
@@ -91,7 +91,7 @@ func TestCreateJWTUnifier(t *testing.T) {
 				require.NotNil(t, unifier)
 				assert.Equal(t, expectedTTL, unifier.ttl)
 				assert.Nil(t, unifier.claims)
-				assert.Equal(t, "jun", unifier.HandlerID())
+				assert.Equal(t, "jun", unifier.ID())
 				assert.Equal(t, "Authorization", unifier.headerName)
 				assert.Equal(t, "Bearer", unifier.headerScheme)
 			},
@@ -127,7 +127,7 @@ claims:
 				})
 				require.NoError(t, err)
 				assert.Equal(t, `{ "sub": "bar" }`, val)
-				assert.Equal(t, "jun", unifier.HandlerID())
+				assert.Equal(t, "jun", unifier.ID())
 				assert.Equal(t, "Authorization", unifier.headerName)
 				assert.Equal(t, "Bearer", unifier.headerScheme)
 				assert.False(t, unifier.ContinueOnError())
@@ -154,7 +154,7 @@ claims:
 				})
 				require.NoError(t, err)
 				assert.Equal(t, `{ "sub": "bar" }`, val)
-				assert.Equal(t, "jun", unifier.HandlerID())
+				assert.Equal(t, "jun", unifier.ID())
 				assert.Equal(t, "Authorization", unifier.headerName)
 				assert.Equal(t, "Bearer", unifier.headerScheme)
 				assert.False(t, unifier.ContinueOnError())
@@ -203,7 +203,7 @@ header:
 				require.NotNil(t, unifier)
 				assert.Equal(t, defaultJWTTTL, unifier.ttl)
 				assert.Nil(t, unifier.claims)
-				assert.Equal(t, "jun", unifier.HandlerID())
+				assert.Equal(t, "jun", unifier.ID())
 				assert.Equal(t, "Foo", unifier.headerName)
 				assert.Empty(t, unifier.headerScheme)
 			},
@@ -223,7 +223,7 @@ header:
 				require.NotNil(t, unifier)
 				assert.Equal(t, defaultJWTTTL, unifier.ttl)
 				assert.Nil(t, unifier.claims)
-				assert.Equal(t, "jun", unifier.HandlerID())
+				assert.Equal(t, "jun", unifier.ID())
 				assert.Equal(t, "Foo", unifier.headerName)
 				assert.Equal(t, "Bar", unifier.headerScheme)
 			},
@@ -263,7 +263,7 @@ func TestCreateJWTUnifierFromPrototype(t *testing.T) {
 
 				require.NoError(t, err)
 				assert.Equal(t, prototype, configured)
-				assert.Equal(t, "jun1", configured.HandlerID())
+				assert.Equal(t, "jun1", configured.ID())
 				assert.False(t, configured.ContinueOnError())
 			},
 		},
@@ -276,7 +276,7 @@ func TestCreateJWTUnifierFromPrototype(t *testing.T) {
 
 				require.NoError(t, err)
 				assert.Equal(t, prototype, configured)
-				assert.Equal(t, "jun2", configured.HandlerID())
+				assert.Equal(t, "jun2", configured.ID())
 				assert.False(t, configured.ContinueOnError())
 			},
 		},
@@ -292,7 +292,7 @@ func TestCreateJWTUnifierFromPrototype(t *testing.T) {
 				assert.Equal(t, prototype.claims, configured.claims)
 				assert.NotEqual(t, prototype.ttl, configured.ttl)
 				assert.Equal(t, expectedTTL, configured.ttl)
-				assert.Equal(t, "jun3", configured.HandlerID())
+				assert.Equal(t, "jun3", configured.ID())
 				assert.False(t, prototype.ContinueOnError())
 				assert.False(t, configured.ContinueOnError())
 			},
@@ -328,7 +328,7 @@ claims:
 				})
 				require.NoError(t, err)
 				assert.Equal(t, `{ "sub": "bar" }`, val)
-				assert.Equal(t, "jun4", configured.HandlerID())
+				assert.Equal(t, "jun4", configured.ID())
 				assert.False(t, prototype.ContinueOnError())
 				assert.False(t, configured.ContinueOnError())
 			},
@@ -355,7 +355,7 @@ claims:
 				})
 				require.NoError(t, err)
 				assert.Equal(t, `{ "sub": "bar" }`, val)
-				assert.Equal(t, "jun5", configured.HandlerID())
+				assert.Equal(t, "jun5", configured.ID())
 				assert.False(t, prototype.ContinueOnError())
 				assert.False(t, configured.ContinueOnError())
 			},
@@ -428,9 +428,9 @@ func TestJWTUnifierExecute(t *testing.T) {
 				assert.ErrorIs(t, err, heimdall.ErrInternal)
 				assert.Contains(t, err.Error(), "'nil' subject")
 
-				var identifier interface{ HandlerID() string }
+				var identifier interface{ ID() string }
 				require.True(t, errors.As(err, &identifier))
-				assert.Equal(t, "jun1", identifier.HandlerID())
+				assert.Equal(t, "jun1", identifier.ID())
 			},
 		},
 		{
@@ -571,9 +571,9 @@ claims: '{
 				assert.ErrorIs(t, err, heimdall.ErrInternal)
 				assert.Contains(t, err.Error(), "failed to unmarshal claims")
 
-				var identifier interface{ HandlerID() string }
+				var identifier interface{ ID() string }
 				require.True(t, errors.As(err, &identifier))
-				assert.Equal(t, "jun2", identifier.HandlerID())
+				assert.Equal(t, "jun2", identifier.ID())
 			},
 		},
 		{
@@ -600,9 +600,9 @@ claims: '{
 				assert.ErrorIs(t, err, heimdall.ErrInternal)
 				assert.Contains(t, err.Error(), "failed to render")
 
-				var identifier interface{ HandlerID() string }
+				var identifier interface{ ID() string }
 				require.True(t, errors.As(err, &identifier))
-				assert.Equal(t, "jun3", identifier.HandlerID())
+				assert.Equal(t, "jun3", identifier.ID())
 			},
 		},
 	} {

@@ -75,6 +75,47 @@ func (_c *ErrorHandlerMock_Execute_Call) RunAndReturn(run func(heimdall.Context,
 	return _c
 }
 
+// ID provides a mock function with given fields:
+func (_m *ErrorHandlerMock) ID() string {
+	ret := _m.Called()
+
+	var r0 string
+	if rf, ok := ret.Get(0).(func() string); ok {
+		r0 = rf()
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+
+	return r0
+}
+
+// ErrorHandlerMock_ID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ID'
+type ErrorHandlerMock_ID_Call struct {
+	*mock.Call
+}
+
+// ID is a helper method to define mock.On call
+func (_e *ErrorHandlerMock_Expecter) ID() *ErrorHandlerMock_ID_Call {
+	return &ErrorHandlerMock_ID_Call{Call: _e.mock.On("ID")}
+}
+
+func (_c *ErrorHandlerMock_ID_Call) Run(run func()) *ErrorHandlerMock_ID_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *ErrorHandlerMock_ID_Call) Return(_a0 string) *ErrorHandlerMock_ID_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *ErrorHandlerMock_ID_Call) RunAndReturn(run func() string) *ErrorHandlerMock_ID_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // WithConfig provides a mock function with given fields: config
 func (_m *ErrorHandlerMock) WithConfig(config map[string]interface{}) (errorhandlers.ErrorHandler, error) {
 	ret := _m.Called(config)

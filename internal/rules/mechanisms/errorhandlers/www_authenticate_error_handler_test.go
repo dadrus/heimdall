@@ -100,7 +100,7 @@ when:
 
 				require.NoError(t, err)
 				require.NotNil(t, errorHandler)
-				assert.Equal(t, "with minimum required configuration", errorHandler.HandlerID())
+				assert.Equal(t, "with minimum required configuration", errorHandler.ID())
 				assert.Equal(t, "Please authenticate", errorHandler.realm)
 				require.Len(t, errorHandler.m, 1)
 				assert.Nil(t, errorHandler.m[0].CIDR)
@@ -126,7 +126,7 @@ when:
 
 				require.NoError(t, err)
 				require.NotNil(t, errorHandler)
-				assert.Equal(t, "with all possible attributes", errorHandler.HandlerID())
+				assert.Equal(t, "with all possible attributes", errorHandler.ID())
 				assert.Equal(t, "What is your password", errorHandler.realm)
 				require.Len(t, errorHandler.m, 1)
 				assert.Nil(t, errorHandler.m[0].CIDR)
@@ -177,7 +177,7 @@ when:
 
 				require.NoError(t, err)
 				assert.Equal(t, prototype, configured)
-				assert.Equal(t, "no new configuration provided", configured.HandlerID())
+				assert.Equal(t, "no new configuration provided", configured.ID())
 			},
 		},
 		{
@@ -195,7 +195,7 @@ when:
 
 				require.NoError(t, err)
 				assert.Equal(t, prototype, configured)
-				assert.Equal(t, "empty configuration provided", configured.HandlerID())
+				assert.Equal(t, "empty configuration provided", configured.ID())
 			},
 		},
 		{
@@ -237,7 +237,7 @@ when:
 				require.NoError(t, err)
 				assert.NotEqual(t, prototype, configured)
 				assert.NotNil(t, configured)
-				assert.Equal(t, "with 'when' reconfigured", configured.HandlerID())
+				assert.Equal(t, "with 'when' reconfigured", configured.ID())
 				assert.Equal(t, "Please authenticate", prototype.realm)
 				assert.Equal(t, prototype.realm, configured.realm)
 				assert.NotEqual(t, prototype.m, configured.m)
@@ -269,7 +269,7 @@ when:
 				require.NoError(t, err)
 				assert.NotEqual(t, prototype, configured)
 				assert.NotNil(t, configured)
-				assert.Equal(t, "with 'realm' reconfigured", configured.HandlerID())
+				assert.Equal(t, "with 'realm' reconfigured", configured.ID())
 				assert.NotEqual(t, prototype.realm, configured.realm)
 				assert.Equal(t, "You password please", configured.realm)
 				assert.Equal(t, prototype.m, configured.m)

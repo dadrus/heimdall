@@ -31,7 +31,7 @@ import (
 func TestUnauthorizedAuthenticatorExecution(t *testing.T) {
 	t.Parallel()
 	// GIVEN
-	var identifier interface{ HandlerID() string }
+	var identifier interface{ ID() string }
 
 	ctx := mocks.NewContextMock(t)
 	ctx.EXPECT().AppContext().Return(context.Background())
@@ -47,7 +47,7 @@ func TestUnauthorizedAuthenticatorExecution(t *testing.T) {
 	assert.Nil(t, sub)
 
 	require.True(t, errors.As(err, &identifier))
-	assert.Equal(t, "unauth", identifier.HandlerID())
+	assert.Equal(t, "unauth", identifier.ID())
 }
 
 func TestCreateUnauthorizedAuthenticatorFromPrototype(t *testing.T) {
@@ -66,7 +66,7 @@ func TestCreateUnauthorizedAuthenticatorFromPrototype(t *testing.T) {
 
 	// prototype and "created" authenticator are same
 	assert.Equal(t, prototype, uaa)
-	assert.Equal(t, "unauth", uaa.HandlerID())
+	assert.Equal(t, "unauth", uaa.ID())
 }
 
 func TestUnauthorizedAuthenticatorIsFallbackOnErrorAllowed(t *testing.T) {
@@ -80,5 +80,5 @@ func TestUnauthorizedAuthenticatorIsFallbackOnErrorAllowed(t *testing.T) {
 
 	// THEN
 	require.False(t, isAllowed)
-	require.Equal(t, "unauth", auth.HandlerID())
+	require.Equal(t, "unauth", auth.ID())
 }

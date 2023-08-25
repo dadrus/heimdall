@@ -24,6 +24,7 @@ import (
 //go:generate mockery --name Authorizer --structname AuthorizerMock
 
 type Authorizer interface {
+	ID() string
 	Execute(heimdall.Context, *subject.Subject) error
 	WithConfig(config map[string]any) (Authorizer, error)
 	ContinueOnError() bool

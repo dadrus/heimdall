@@ -106,6 +106,47 @@ func (_c *SubjectHandlerMock_Execute_Call) RunAndReturn(run func(heimdall.Contex
 	return _c
 }
 
+// ID provides a mock function with given fields:
+func (_m *SubjectHandlerMock) ID() string {
+	ret := _m.Called()
+
+	var r0 string
+	if rf, ok := ret.Get(0).(func() string); ok {
+		r0 = rf()
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+
+	return r0
+}
+
+// SubjectHandlerMock_ID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ID'
+type SubjectHandlerMock_ID_Call struct {
+	*mock.Call
+}
+
+// ID is a helper method to define mock.On call
+func (_e *SubjectHandlerMock_Expecter) ID() *SubjectHandlerMock_ID_Call {
+	return &SubjectHandlerMock_ID_Call{Call: _e.mock.On("ID")}
+}
+
+func (_c *SubjectHandlerMock_ID_Call) Run(run func()) *SubjectHandlerMock_ID_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *SubjectHandlerMock_ID_Call) Return(_a0 string) *SubjectHandlerMock_ID_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *SubjectHandlerMock_ID_Call) RunAndReturn(run func() string) *SubjectHandlerMock_ID_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 type mockConstructorTestingTNewSubjectHandlerMock interface {
 	mock.TestingT
 	Cleanup(func())

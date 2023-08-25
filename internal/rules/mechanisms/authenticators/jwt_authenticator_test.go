@@ -195,7 +195,7 @@ assertions:
 				assert.Empty(t, auth.trustStore)
 
 				// handler id
-				assert.Equal(t, "auth1", auth.HandlerID())
+				assert.Equal(t, "auth1", auth.ID())
 			},
 		},
 		{
@@ -258,7 +258,7 @@ cache_ttl: 5s`),
 				assert.Empty(t, auth.trustStore)
 
 				// handler id
-				assert.Equal(t, "auth1", auth.HandlerID())
+				assert.Equal(t, "auth1", auth.ID())
 			},
 		},
 		{
@@ -338,7 +338,7 @@ trust_store: ` + trustStorePath),
 				assert.Contains(t, auth.trustStore, rootCA1.Certificate)
 
 				// handler id
-				assert.Equal(t, "auth1", auth.HandlerID())
+				assert.Equal(t, "auth1", auth.ID())
 			},
 		},
 	} {
@@ -399,7 +399,7 @@ cache_ttl: 5s`),
 				require.NoError(t, err)
 
 				assert.Equal(t, prototype, configured)
-				assert.Equal(t, "auth2", configured.HandlerID())
+				assert.Equal(t, "auth2", configured.ID())
 			},
 		},
 		{
@@ -457,7 +457,7 @@ assertions:
 				assert.Equal(t, prototype.validateJWKCert, configured.validateJWKCert)
 				assert.Equal(t, prototype.trustStore, configured.trustStore)
 
-				assert.Equal(t, "auth2", configured.HandlerID())
+				assert.Equal(t, "auth2", configured.ID())
 			},
 		},
 		{
@@ -498,7 +498,7 @@ cache_ttl: 5s`),
 				assert.Equal(t, prototype.validateJWKCert, configured.validateJWKCert)
 				assert.Equal(t, prototype.trustStore, configured.trustStore)
 
-				assert.Equal(t, "auth2", configured.HandlerID())
+				assert.Equal(t, "auth2", configured.ID())
 			},
 		},
 		{
@@ -539,7 +539,7 @@ assertions:
 				assert.Equal(t, prototype.validateJWKCert, configured.validateJWKCert)
 				assert.Equal(t, prototype.trustStore, configured.trustStore)
 
-				assert.Equal(t, "auth2", configured.HandlerID())
+				assert.Equal(t, "auth2", configured.ID())
 			},
 		},
 		{
@@ -570,7 +570,7 @@ cache_ttl: 5s`),
 				assert.Equal(t, prototype.validateJWKCert, configured.validateJWKCert)
 				assert.Equal(t, prototype.trustStore, configured.trustStore)
 
-				assert.Equal(t, "auth2", configured.HandlerID())
+				assert.Equal(t, "auth2", configured.ID())
 			},
 		},
 		{
@@ -612,7 +612,7 @@ assertions:
 				assert.Equal(t, prototype.validateJWKCert, configured.validateJWKCert)
 				assert.Equal(t, prototype.trustStore, configured.trustStore)
 
-				assert.Equal(t, "auth2", configured.HandlerID())
+				assert.Equal(t, "auth2", configured.ID())
 			},
 		},
 		{
@@ -644,7 +644,7 @@ allow_fallback_on_error: true
 				assert.Equal(t, prototype.validateJWKCert, configured.validateJWKCert)
 				assert.Equal(t, prototype.trustStore, configured.trustStore)
 
-				assert.Equal(t, "auth2", configured.HandlerID())
+				assert.Equal(t, "auth2", configured.ID())
 			},
 		},
 		{
@@ -717,7 +717,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 	t.Parallel()
 
 	type HandlerIdentifier interface {
-		HandlerID() string
+		ID() string
 	}
 
 	var (
@@ -825,7 +825,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 
 				var identifier HandlerIdentifier
 				require.True(t, errors.As(err, &identifier))
-				assert.Equal(t, "auth3", identifier.HandlerID())
+				assert.Equal(t, "auth3", identifier.ID())
 			},
 		},
 		{
@@ -853,7 +853,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 
 				var identifier HandlerIdentifier
 				require.True(t, errors.As(err, &identifier))
-				assert.Equal(t, "auth3", identifier.HandlerID())
+				assert.Equal(t, "auth3", identifier.ID())
 			},
 		},
 		{
@@ -881,7 +881,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 
 				var identifier HandlerIdentifier
 				require.True(t, errors.As(err, &identifier))
-				assert.Equal(t, "auth3", identifier.HandlerID())
+				assert.Equal(t, "auth3", identifier.ID())
 			},
 		},
 		{
@@ -913,7 +913,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 
 				var identifier HandlerIdentifier
 				require.True(t, errors.As(err, &identifier))
-				assert.Equal(t, "auth3", identifier.HandlerID())
+				assert.Equal(t, "auth3", identifier.ID())
 			},
 		},
 		{
@@ -950,7 +950,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 
 				var identifier HandlerIdentifier
 				require.True(t, errors.As(err, &identifier))
-				assert.Equal(t, "auth3", identifier.HandlerID())
+				assert.Equal(t, "auth3", identifier.ID())
 			},
 		},
 		{
@@ -996,7 +996,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 
 				var identifier HandlerIdentifier
 				require.True(t, errors.As(err, &identifier))
-				assert.Equal(t, "auth3", identifier.HandlerID())
+				assert.Equal(t, "auth3", identifier.ID())
 			},
 		},
 		{
@@ -1042,7 +1042,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 
 				var identifier HandlerIdentifier
 				require.True(t, errors.As(err, &identifier))
-				assert.Equal(t, "auth3", identifier.HandlerID())
+				assert.Equal(t, "auth3", identifier.ID())
 			},
 		},
 		{
@@ -1087,7 +1087,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 
 				var identifier HandlerIdentifier
 				require.True(t, errors.As(err, &identifier))
-				assert.Equal(t, "auth3", identifier.HandlerID())
+				assert.Equal(t, "auth3", identifier.ID())
 			},
 		},
 		{
@@ -1132,7 +1132,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 
 				var identifier HandlerIdentifier
 				require.True(t, errors.As(err, &identifier))
-				assert.Equal(t, "auth3", identifier.HandlerID())
+				assert.Equal(t, "auth3", identifier.ID())
 			},
 		},
 		{
@@ -1177,7 +1177,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 
 				var identifier HandlerIdentifier
 				require.True(t, errors.As(err, &identifier))
-				assert.Equal(t, "auth3", identifier.HandlerID())
+				assert.Equal(t, "auth3", identifier.ID())
 			},
 		},
 		{
@@ -1227,7 +1227,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 
 				var identifier HandlerIdentifier
 				require.True(t, errors.As(err, &identifier))
-				assert.Equal(t, "auth3", identifier.HandlerID())
+				assert.Equal(t, "auth3", identifier.ID())
 			},
 		},
 		{
@@ -1476,7 +1476,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 
 				var identifier HandlerIdentifier
 				require.True(t, errors.As(err, &identifier))
-				assert.Equal(t, "auth3", identifier.HandlerID())
+				assert.Equal(t, "auth3", identifier.ID())
 			},
 		},
 		{
@@ -1715,7 +1715,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 
 				var identifier HandlerIdentifier
 				require.True(t, errors.As(err, &identifier))
-				assert.Equal(t, "auth3", identifier.HandlerID())
+				assert.Equal(t, "auth3", identifier.ID())
 			},
 		},
 		{
@@ -1759,7 +1759,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 
 				var identifier HandlerIdentifier
 				require.True(t, errors.As(err, &identifier))
-				assert.Equal(t, "auth3", identifier.HandlerID())
+				assert.Equal(t, "auth3", identifier.ID())
 			},
 		},
 		{
@@ -1804,7 +1804,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 
 				var identifier HandlerIdentifier
 				require.True(t, errors.As(err, &identifier))
-				assert.Equal(t, "auth3", identifier.HandlerID())
+				assert.Equal(t, "auth3", identifier.ID())
 			},
 		},
 	} {

@@ -213,7 +213,7 @@ func (a *oauth2IntrospectionAuthenticator) IsFallbackOnErrorAllowed() bool {
 	return a.allowFallbackOnError
 }
 
-func (a *oauth2IntrospectionAuthenticator) HandlerID() string {
+func (a *oauth2IntrospectionAuthenticator) ID() string {
 	return a.id
 }
 

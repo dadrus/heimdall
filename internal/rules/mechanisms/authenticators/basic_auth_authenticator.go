@@ -200,6 +200,6 @@ func (a *basicAuthAuthenticator) IsFallbackOnErrorAllowed() bool {
 	return a.allowFallbackOnError
 }
 
-func (a *basicAuthAuthenticator) HandlerID() string {
+func (a *basicAuthAuthenticator) ID() string {
 	return a.id
 }

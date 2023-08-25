@@ -240,7 +240,7 @@ func (a *remoteAuthorizer) WithConfig(rawConfig map[string]any) (Authorizer, err
 	}, nil
 }
 
-func (a *remoteAuthorizer) HandlerID() string { return a.id }
+func (a *remoteAuthorizer) ID() string { return a.id }
 
 func (a *remoteAuthorizer) ContinueOnError() bool { return false }
 

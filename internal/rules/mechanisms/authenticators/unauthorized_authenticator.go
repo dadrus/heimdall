@@ -65,6 +65,6 @@ func (a *unauthorizedAuthenticator) IsFallbackOnErrorAllowed() bool {
 	return false
 }
 
-func (a *unauthorizedAuthenticator) HandlerID() string {
+func (a *unauthorizedAuthenticator) ID() string {
 	return a.id
 }

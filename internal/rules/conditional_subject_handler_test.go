@@ -1,12 +1,14 @@
 package rules
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
+	"github.com/dadrus/heimdall/internal/heimdall/mocks"
 	rulemocks "github.com/dadrus/heimdall/internal/rules/mocks"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
@@ -26,6 +28,7 @@ func TestConditionalSubjectHandlerExecute(t *testing.T) {
 
 				c.EXPECT().CanExecute(mock.Anything, mock.Anything).Return(true, nil)
 				h.EXPECT().Execute(mock.Anything, mock.Anything).Return(nil)
+				h.EXPECT().ID().Return("test")
 			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
@@ -39,6 +42,7 @@ func TestConditionalSubjectHandlerExecute(t *testing.T) {
 				t.Helper()
 
 				c.EXPECT().CanExecute(mock.Anything, mock.Anything).Return(false, nil)
+				h.EXPECT().ID().Return("test")
 			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
@@ -52,6 +56,7 @@ func TestConditionalSubjectHandlerExecute(t *testing.T) {
 				t.Helper()
 
 				c.EXPECT().CanExecute(mock.Anything, mock.Anything).Return(true, testsupport.ErrTestPurpose)
+				h.EXPECT().ID().Return("test")
 			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
@@ -67,10 +72,13 @@ func TestConditionalSubjectHandlerExecute(t *testing.T) {
 			handler := rulemocks.NewSubjectHandlerMock(t)
 			decorator := conditionalSubjectHandler{c: condition, h: handler}
 
+			ctx := mocks.NewContextMock(t)
+			ctx.EXPECT().AppContext().Return(context.Background())
+
 			tc.configureMocks(t, condition, handler)
 
 			// WHEN
-			err := decorator.Execute(nil, nil)
+			err := decorator.Execute(ctx, nil)
 
 			// THEN
 			tc.assert(t, err)

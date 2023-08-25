@@ -118,7 +118,7 @@ expressions:
 				t.Helper()
 
 				require.NoError(t, err)
-				assert.Equal(t, "authz", auth.HandlerID())
+				assert.Equal(t, "authz", auth.ID())
 				assert.NotEmpty(t, auth.expressions)
 				assert.False(t, auth.ContinueOnError())
 			},
@@ -192,7 +192,7 @@ expressions:
 				assert.NotEqual(t, prototype, configured)
 				require.NotNil(t, configured)
 				assert.NotEqual(t, prototype.expressions, configured.expressions)
-				assert.Equal(t, "authz", configured.HandlerID())
+				assert.Equal(t, "authz", configured.ID())
 				assert.False(t, prototype.ContinueOnError())
 				assert.False(t, configured.ContinueOnError())
 			},
@@ -250,9 +250,9 @@ expressions:
 				assert.ErrorIs(t, err, heimdall.ErrAuthorization)
 				assert.Contains(t, err.Error(), "expression 1 failed")
 
-				var identifier interface{ HandlerID() string }
+				var identifier interface{ ID() string }
 				require.True(t, errors.As(err, &identifier))
-				assert.Equal(t, "authz1", identifier.HandlerID())
+				assert.Equal(t, "authz1", identifier.ID())
 			},
 		},
 		{

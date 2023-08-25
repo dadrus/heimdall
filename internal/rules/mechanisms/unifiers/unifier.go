@@ -24,6 +24,7 @@ import (
 //go:generate mockery --name Unifier --structname UnifierMock
 
 type Unifier interface {
+	ID() string
 	Execute(ctx heimdall.Context, sub *subject.Subject) error
 	WithConfig(config map[string]any) (Unifier, error)
 	ContinueOnError() bool

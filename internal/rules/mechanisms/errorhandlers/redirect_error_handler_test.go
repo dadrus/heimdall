@@ -128,7 +128,7 @@ when:
 
 				require.NoError(t, err)
 				require.NotNil(t, redEH)
-				assert.Equal(t, "with minimal valid configuration", redEH.HandlerID())
+				assert.Equal(t, "with minimal valid configuration", redEH.ID())
 
 				toURL, err := redEH.to.Render(nil)
 				require.NoError(t, err)
@@ -177,7 +177,7 @@ when:
 
 				require.NoError(t, err)
 				require.NotNil(t, redEH)
-				assert.Equal(t, "with full complex valid configuration", redEH.HandlerID())
+				assert.Equal(t, "with full complex valid configuration", redEH.ID())
 
 				ctx := mocks.NewContextMock(t)
 				ctx.EXPECT().Request().
@@ -260,7 +260,7 @@ when:
 
 				require.NoError(t, err)
 				assert.Equal(t, prototype, configured)
-				assert.Equal(t, "no new configuration provided", configured.HandlerID())
+				assert.Equal(t, "no new configuration provided", configured.ID())
 			},
 		},
 		{
@@ -277,7 +277,7 @@ when:
 
 				require.NoError(t, err)
 				assert.Equal(t, prototype, configured)
-				assert.Equal(t, "empty configuration provided", configured.HandlerID())
+				assert.Equal(t, "empty configuration provided", configured.ID())
 			},
 		},
 		{
@@ -318,7 +318,7 @@ when:
 				require.NoError(t, err)
 				assert.NotEqual(t, prototype, configured)
 				assert.NotNil(t, configured)
-				assert.Equal(t, "required 'when' field provided", configured.HandlerID())
+				assert.Equal(t, "required 'when' field provided", configured.ID())
 				assert.Equal(t, prototype.to, configured.to)
 				assert.Equal(t, prototype.code, configured.code)
 				assert.NotEqual(t, prototype.m, configured.m)

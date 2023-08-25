@@ -24,6 +24,7 @@ import (
 //go:generate mockery --name subjectHandler --structname SubjectHandlerMock
 
 type subjectHandler interface {
+	ID() string
 	Execute(heimdall.Context, *subject.Subject) error
 	ContinueOnError() bool
 }

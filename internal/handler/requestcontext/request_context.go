@@ -134,6 +134,10 @@ func (s *RequestContext) FinalizeAndForward(mutator URIMutator, timeout time.Dur
 	s.c.Request().Header.SetMethod(s.reqMethod)
 	s.c.Request().SetRequestURI(upstreamURL)
 
+	if logger.GetLevel() == zerolog.TraceLevel {
+		logger.Trace().Msg("Request: \n" + s.c.Request().String())
+	}
+
 	return opentelemetry.NewClient(&fasthttp.Client{}).
 		DoTimeout(s.c.UserContext(), s.c.Request(), s.c.Response(), timeout)
 }

@@ -1939,6 +1939,7 @@
           "type": "string",
           "default": "info",
           "enum": [
+            "trace",
             "debug",
             "info",
             "warning",
