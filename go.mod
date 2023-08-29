@@ -24,7 +24,6 @@ require (
 	github.com/jellydator/ttlcache/v3 v3.1.0
 	github.com/johannesboyne/gofakes3 v0.0.0-20230506070712-04da935ef877
 	github.com/justinas/alice v1.2.0
-	github.com/rs/cors v1.9.0
 	github.com/knadh/koanf/maps v0.1.1
 	github.com/knadh/koanf/parsers/yaml v0.1.0
 	github.com/knadh/koanf/providers/confmap v0.1.0
@@ -37,6 +36,7 @@ require (
 	github.com/pquerna/cachecontrol v0.2.0
 	github.com/prometheus/client_golang v1.16.0
 	github.com/prometheus/client_model v0.4.0
+	github.com/rs/cors v1.9.0
 	github.com/rs/zerolog v1.30.0
 	github.com/santhosh-tekuri/jsonschema/v5 v5.3.1
 	github.com/spf13/cobra v1.7.0
