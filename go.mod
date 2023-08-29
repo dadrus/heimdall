@@ -23,6 +23,8 @@ require (
 	github.com/instana/go-otel-exporter v1.0.0
 	github.com/jellydator/ttlcache/v3 v3.1.0
 	github.com/johannesboyne/gofakes3 v0.0.0-20230506070712-04da935ef877
+	github.com/justinas/alice v1.2.0
+	github.com/rs/cors v1.9.0
 	github.com/knadh/koanf/maps v0.1.1
 	github.com/knadh/koanf/parsers/yaml v0.1.0
 	github.com/knadh/koanf/providers/confmap v0.1.0
