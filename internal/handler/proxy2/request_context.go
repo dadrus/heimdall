@@ -46,7 +46,7 @@ func NewRequestContext(
 func (r *RequestContext) Header(name string) string { return r.req.Header.Get(name) }
 
 func (r *RequestContext) Cookie(name string) string {
-	if cookie, err := r.req.Cookie(name); err != nil {
+	if cookie, err := r.req.Cookie(name); err == nil {
 		return cookie.Raw
 	}
 
@@ -98,9 +98,7 @@ func (r *RequestContext) RequestClientIPs() []string {
 		values := strings.Split(forwardedFor, ",")
 		ips := make([]string, len(values)+1)
 
-		for idx, val := range values {
-			ips[idx] = val
-		}
+		copy(ips, values)
 
 		ips[len(ips)-1] = strings.Split(r.req.RemoteAddr, ":")[0]
 	}
