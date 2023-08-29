@@ -124,7 +124,7 @@ func newApp(args appArgs) *http.Server {
 		cachemiddleware.New(args.Cache),
 	).Then(newHandler(args.RulesRepository, args.Signer, service.Timeout.Read, eh))
 
-	srv := &http.Server{
+	return &http.Server{
 		Handler:        hc,
 		Addr:           service.Address(),
 		ReadTimeout:    service.Timeout.Read,
@@ -133,6 +133,4 @@ func newApp(args appArgs) *http.Server {
 		MaxHeaderBytes: int(service.BufferLimit.Read),
 		ErrorLog:       newStdLogger(args.Logger),
 	}
-
-	return srv
 }
