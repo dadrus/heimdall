@@ -6,8 +6,8 @@ import (
 
 	"github.com/rs/zerolog"
 
-	fiberxforwarded "github.com/dadrus/heimdall/internal/fiber/middleware/xfmphu"
 	"github.com/dadrus/heimdall/internal/handler/proxy2/middlewares/errorhandler"
+	"github.com/dadrus/heimdall/internal/handler/proxy2/middlewares/trustedproxy"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
@@ -32,8 +32,8 @@ func newHandler(
 func (h *handler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	ctx := req.Context()
 	logger := zerolog.Ctx(ctx)
-	reqURL := fiberxforwarded.RequestURL(ctx)
-	method := fiberxforwarded.RequestMethod(ctx)
+	reqURL := trustedproxy.RequestURL(ctx)
+	method := trustedproxy.RequestMethod(ctx)
 
 	logger.Debug().
 		Str("_method", method).
