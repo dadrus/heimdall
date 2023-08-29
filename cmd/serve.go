@@ -38,5 +38,6 @@ func init() {
 	serveCmd.PersistentFlags().String("env-config-prefix", "HEIMDALLCFG_",
 		"Prefix for the environment variables to consider for\nloading configuration from")
 	serveCmd.AddCommand(serve.NewProxyCommand())
+	serveCmd.AddCommand(serve.NewProxy2Command())
 	serveCmd.AddCommand(serve.NewDecisionCommand())
 }
