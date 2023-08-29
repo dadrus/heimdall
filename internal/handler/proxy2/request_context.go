@@ -3,6 +3,7 @@ package proxy2
 import (
 	"context"
 	"fmt"
+	"maps"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -13,6 +14,7 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/httpx"
 )
 
@@ -131,7 +133,7 @@ func (r *RequestContext) Finalize(targetURL *url.URL, timeout time.Duration) err
 			otelhttp.WithSpanNameFormatter(func(_ string, r *http.Request) string {
 				return fmt.Sprintf("%s %s %s @%s", r.Proto, r.Method, r.URL.Path, r.URL.Host)
 			})),
-		Rewrite: r.requestRewriter(targetURL),
+		Rewrite: r.requestRewriter(targetURL, maps.Clone(r.req.Header)),
 	}
 
 	ctx, cancel := context.WithTimeout(r.req.Context(), timeout)
@@ -142,7 +144,7 @@ func (r *RequestContext) Finalize(targetURL *url.URL, timeout time.Duration) err
 	return nil
 }
 
-func (r *RequestContext) requestRewriter(targetURL *url.URL) func(req *httputil.ProxyRequest) {
+func (r *RequestContext) requestRewriter(targetURL *url.URL, origHeader http.Header) func(req *httputil.ProxyRequest) {
 	return func(proxyReq *httputil.ProxyRequest) {
 		proxyReq.Out.Method = r.reqMethod
 		proxyReq.Out.URL = targetURL
@@ -156,10 +158,43 @@ func (r *RequestContext) requestRewriter(targetURL *url.URL) func(req *httputil.
 		}
 
 		// delete headers, which are useless for the upstream service, before forwarding the request
-		for _, name := range []string{
-			"X-Forwarded-Method", "X-Forwarded-Uri", "X-Forwarded-Path",
-		} {
-			proxyReq.Out.Header.Del(name)
+		proxyReq.Out.Header.Del("X-Forwarded-Method")
+		proxyReq.Out.Header.Del("X-Forwarded-Uri")
+		proxyReq.Out.Header.Del("X-Forwarded-Path")
+
+		// set headers, which might be relevant for the upstream, if these are present in the original request
+		// and have not been dropped
+		if val := origHeader.Get("X-Forwarded-Proto"); len(val) != 0 {
+			proxyReq.Out.Header.Set("X-Forwarded-Proto", val)
 		}
+
+		if val := origHeader.Get("X-Forwarded-Host"); len(val) != 0 {
+			proxyReq.Out.Header.Set("X-Forwarded-Host", val)
+		}
+
+		// it is safe to reuse these headers here, as these have been already dropped if the source is untrusted
+		forwardedForHeaderValue := origHeader.Get("X-Forwarded-For")
+		forwardedHeaderValue := origHeader.Get("Forwarded")
+
+		addr := strings.Split(r.req.RemoteAddr, ":")
+		clientIP := addr[0]
+
+		// Set the X-Forwarded-For
+		proxyReq.Out.Header.Set("X-Forwarded-For",
+			x.IfThenElseExec(len(forwardedForHeaderValue) == 0,
+				func() string { return clientIP },
+				func() string { return fmt.Sprintf("%s, %s", forwardedForHeaderValue, clientIP) }))
+
+		// Set the Forwarded header
+		proxyReq.Out.Header.Set("Forwarded",
+			x.IfThenElseExec(len(forwardedHeaderValue) == 0,
+				func() string {
+					return fmt.Sprintf("for=%s;proto=%s", clientIP, proxyReq.Out.Proto)
+				},
+				func() string {
+					return fmt.Sprintf("%s, for=%s;proto=%s", forwardedHeaderValue, clientIP, proxyReq.Out.Proto)
+				},
+			),
+		)
 	}
 }
