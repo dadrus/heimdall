@@ -121,4 +121,3 @@ func removeHopByHopHeaders(header headerAccessor) {
 		header.Del(f)
 	}
 }
-
