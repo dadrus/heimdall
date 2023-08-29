@@ -40,7 +40,7 @@ require (
 	github.com/spf13/cobra v1.7.0
 	github.com/stretchr/testify v1.8.4
 	github.com/tidwall/gjson v1.16.0
-	github.com/tonglil/opentelemetry-go-datadog-propagator v0.1.0
+	github.com/tonglil/opentelemetry-go-datadog-propagator v0.1.1
 	github.com/undefinedlabs/go-mpatch v1.0.7
 	github.com/valyala/fasthttp v1.49.0
 	github.com/ybbus/httpretry v1.0.2
