@@ -21,7 +21,7 @@ func New() func(http.Handler) http.Handler {
 				return
 			}
 
-			if dump, err := httputil.DumpRequest(req, true); err != nil {
+			if dump, err := httputil.DumpRequest(req, true); err == nil {
 				logger.Trace().Msg("Request: \n" + stringx.ToString(dump))
 			} else {
 				logger.Trace().Err(err).Msg("Failed dumping request")
