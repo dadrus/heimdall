@@ -17,20 +17,10 @@ func New() func(http.Handler) http.Handler {
 
 			defer func() {
 				if rec := recover(); rec != nil {
-					if err, ok := rec.(error); !ok {
-						logger.Error().
-							Err(err).
-							Str("_stack", stringx.ToString(debug.Stack())).
-							Msg("Panic caught")
-					} else {
-						logger.Error().
-							Str("_error", fmt.Sprintf("%v", rec)).
-							Str("_stack", stringx.ToString(debug.Stack())).
-							Msg("Panic caught")
-					}
-				}
+					logger.Error().Msg(fmt.Sprintf("%v\n%s", rec, stringx.ToString(debug.Stack())))
 
-				rw.WriteHeader(http.StatusInternalServerError)
+					rw.WriteHeader(http.StatusInternalServerError)
+				}
 			}()
 
 			next.ServeHTTP(rw, req)
