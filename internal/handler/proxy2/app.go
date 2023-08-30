@@ -76,6 +76,7 @@ func newApp(args appArgs) *http.Server {
 
 	hc := alice.New(
 		trustedproxy.New(
+			args.Logger,
 			x.IfThenElseExec(service.TrustedProxies != nil,
 				func() []string { return *service.TrustedProxies },
 				func() []string { return []string{} },
