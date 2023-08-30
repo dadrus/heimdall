@@ -70,7 +70,8 @@ func (h *handler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	if err = reqCtx.Finalize(targetURL, h.t); err != nil {
+	// context is already part of the reqCtx
+	if err = reqCtx.Finalize(targetURL, h.t); err != nil { //nolint:contextcheck
 		h.eh.HandleError(rw, req, err)
 	}
 }

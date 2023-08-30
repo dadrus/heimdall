@@ -16,14 +16,13 @@ func newStdLogger(logger zerolog.Logger) *stdlog.Logger {
 	return stdlog.New(adapter{logger}, "", 0)
 }
 
-func (a adapter) Write(p []byte) (int, error) {
-	n := len(p)
-	if n > 0 && p[n-1] == '\n' {
-		p = p[0 : n-1]
+func (a adapter) Write(data []byte) (int, error) {
+	length := len(data)
+	if length > 0 && data[length-1] == '\n' {
+		data = data[0 : length-1]
 	}
 
-	a.log.Error().Msg(stringx.ToString(p))
+	a.log.Error().Msg(stringx.ToString(data))
 
-	return n, nil
-
+	return length, nil
 }
