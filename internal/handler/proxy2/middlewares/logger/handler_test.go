@@ -17,25 +17,28 @@
 package logger
 
 import (
+	"context"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/goccy/go-json"
-	"github.com/gofiber/fiber/v2"
+	"github.com/justinas/alice"
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/propagation"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
 
-	tracingmiddleware "github.com/dadrus/heimdall/internal/fiber/middleware/opentelemetry"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
-func TestLoggerHandler(t *testing.T) {
+func TestHandlerExecution(t *testing.T) {
 	// GIVEN
 	otel.SetTracerProvider(sdktrace.NewTracerProvider())
 	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(propagation.TraceContext{}))
@@ -95,22 +98,42 @@ func TestLoggerHandler(t *testing.T) {
 			tb := &testsupport.TestingLog{TB: t}
 			logger := zerolog.New(zerolog.TestWriter{T: tb})
 
-			app := fiber.New()
-			app.Use(tracingmiddleware.New())
-			app.Use(New(logger))
-			app.Get("/test", func(ctx *fiber.Ctx) error {
-				zerolog.Ctx(ctx.UserContext()).Info().Msg("test called")
+			srv := httptest.NewServer(
+				alice.New(
+					func(next http.Handler) http.Handler {
+						return otelhttp.NewHandler(
+							next,
+							"",
+							otelhttp.WithTracerProvider(otel.GetTracerProvider()),
+							otelhttp.WithServerName("proxy"),
+							otelhttp.WithSpanNameFormatter(func(_ string, req *http.Request) string {
+								return fmt.Sprintf("EntryPoint %s %s%s",
+									strings.ToLower(req.URL.Scheme), "ctx.Context().LocalAddr().String()", req.URL.Path)
+							}),
+						)
+					},
+					New(logger),
+				).ThenFunc(func(rw http.ResponseWriter, req *http.Request) {
+					zerolog.Ctx(req.Context()).Info().Msg("test called")
 
-				return nil
-			})
+					rw.WriteHeader(http.StatusOK)
+				}),
+			)
 
-			req := httptest.NewRequest(http.MethodGet, "/test", nil)
+			defer srv.Close()
+
+			req, err := http.NewRequestWithContext(
+				context.Background(),
+				http.MethodGet,
+				fmt.Sprintf("%s/test", srv.URL),
+				nil,
+			)
+			require.NoError(t, err)
 
 			tc.setHeader(t, req)
 
 			// WHEN
-			resp, err := app.Test(req)
-			require.NoError(t, app.Shutdown())
+			resp, err := srv.Client().Do(req)
 
 			// THEN
 			require.NoError(t, err)
