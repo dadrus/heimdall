@@ -1,15 +1,11 @@
 package trustedproxy
 
 import (
-	"context"
 	"net"
 	"net/http"
-	"net/url"
 	"strings"
 
 	"github.com/gofiber/fiber/v2/log"
-
-	"github.com/dadrus/heimdall/internal/x"
 )
 
 var untrustedHeader = []string{ //nolint:gochecknoglobals
@@ -21,11 +17,6 @@ var untrustedHeader = []string{ //nolint:gochecknoglobals
 	"X-Forwarded-Path",
 	"X-Forwarded-Method",
 }
-
-type (
-	methodKey     struct{}
-	requestURLKey struct{}
-)
 
 type ipHolder interface {
 	Contains(ip net.IP) bool
@@ -71,52 +62,12 @@ func New(proxies ...string) func(http.Handler) http.Handler {
 		return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 			addr := strings.Split(req.RemoteAddr, ":")
 			if !trustedProxies.Contains(net.ParseIP(addr[0])) {
-				dropUntrustedHeaders(req)
+				for _, name := range untrustedHeader {
+					req.Header.Del(name)
+				}
 			}
 
-			method := requestMethod(req)
-			reqURL := requestURL(req)
-
-			ctx := context.WithValue(req.Context(), methodKey{}, method)
-			ctx = context.WithValue(ctx, requestURLKey{}, reqURL)
-
-			next.ServeHTTP(rw, req.WithContext(ctx))
+			next.ServeHTTP(rw, req)
 		})
 	}
-}
-
-func dropUntrustedHeaders(req *http.Request) {
-	for _, name := range untrustedHeader {
-		req.Header.Del(name)
-	}
-}
-
-// RequestMethod returns the HTTP method associated with the ctx. If no method is associated,
-// an empty string is returned.
-func RequestMethod(ctx context.Context) string {
-	var (
-		method string
-		ok     bool
-	)
-
-	if val := ctx.Value(methodKey{}); val != nil {
-		method, ok = val.(string)
-	}
-
-	return x.IfThenElse(ok, method, "")
-}
-
-// RequestURL returns the URL associated with the ctx. If no URL is associated,
-// nil is returned.
-func RequestURL(ctx context.Context) *url.URL {
-	var (
-		reqURL *url.URL
-		ok     bool
-	)
-
-	if val := ctx.Value(requestURLKey{}); val != nil {
-		reqURL, ok = val.(*url.URL)
-	}
-
-	return x.IfThenElse(ok, reqURL, nil)
 }
