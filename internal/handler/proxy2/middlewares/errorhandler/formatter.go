@@ -10,7 +10,7 @@ import (
 	"github.com/rs/zerolog"
 )
 
-var supportedMediaTypes = []contenttype.MediaType{
+var supportedMediaTypes = []contenttype.MediaType{ //nolint:gochecknoglobals
 	contenttype.NewMediaType("text/html"),
 	contenttype.NewMediaType("application/json"),
 	contenttype.NewMediaType("text/plain"),
@@ -42,14 +42,14 @@ func format(req *http.Request, body error) (contenttype.MediaType, []byte, error
 	}
 }
 
-func errorWriter(o *opts, code int) func(rw http.ResponseWriter, req *http.Request, err error) {
+func errorWriter(options *opts, code int) func(rw http.ResponseWriter, req *http.Request, err error) {
 	return func(rw http.ResponseWriter, req *http.Request, err error) {
 		var (
 			mt   contenttype.MediaType
 			body []byte
 		)
 
-		if o.verboseErrors {
+		if options.verboseErrors {
 			mt, body, err = format(req, err)
 			if err != nil {
 				zerolog.Ctx(req.Context()).Warn().Err(err).Msg("Response format negotiation failed. No body is sent")
@@ -64,6 +64,8 @@ func errorWriter(o *opts, code int) func(rw http.ResponseWriter, req *http.Reque
 		rw.WriteHeader(code)
 
 		if len(body) != 0 {
+			// Cannot do anything else here if writing fails
+			//nolint:errcheck
 			rw.Write(body)
 		}
 	}
