@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/gofiber/fiber/v2/log"
+	"github.com/rs/zerolog"
 )
 
 var untrustedHeader = []string{ //nolint:gochecknoglobals
@@ -40,19 +40,19 @@ func (tpm trustedProxySet) Contains(ip net.IP) bool {
 	return false
 }
 
-func New(proxies ...string) func(http.Handler) http.Handler {
-	ipHolders := make([]ipHolder, len(proxies))
+func New(logger zerolog.Logger, proxies ...string) func(http.Handler) http.Handler {
+	var ipHolders []ipHolder
 
-	for idx, ipAddr := range proxies {
+	for _, ipAddr := range proxies {
 		if strings.Contains(ipAddr, "/") {
 			_, ipNet, err := net.ParseCIDR(ipAddr)
 			if err != nil {
-				log.Warnf("IP range %q could not be parsed: %v", ipAddr, err)
+				logger.Warn().Err(err).Msgf("Trusted proxies IP range %q could not be parsed", ipAddr)
 			} else {
-				ipHolders[idx] = ipNet
+				ipHolders = append(ipHolders, ipNet)
 			}
 		} else {
-			ipHolders[idx] = simpleIP(net.ParseIP(ipAddr))
+			ipHolders = append(ipHolders, simpleIP(net.ParseIP(ipAddr)))
 		}
 	}
 
