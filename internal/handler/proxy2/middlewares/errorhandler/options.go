@@ -94,13 +94,3 @@ func WithVerboseErrors(flag bool) Option {
 		o.verboseErrors = flag
 	}
 }
-
-func errorWriter(o *opts, code int) func(rw http.ResponseWriter, req *http.Request, err error) {
-	return func(rw http.ResponseWriter, req *http.Request, err error) {
-		if o.verboseErrors {
-
-		}
-
-		rw.WriteHeader(code)
-	}
-}

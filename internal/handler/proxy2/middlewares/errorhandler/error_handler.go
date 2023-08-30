@@ -27,17 +27,17 @@ import (
 )
 
 func New(opts ...Option) *ErrorHandler {
-	options := defaultOptions
+	options := defaultOptions()
 
 	for _, opt := range opts {
-		opt(&options)
+		opt(options)
 	}
 
 	return &ErrorHandler{opts: options}
 }
 
 type ErrorHandler struct {
-	opts
+	*opts
 }
 
 func (h *ErrorHandler) HandleError(rw http.ResponseWriter, req *http.Request, err error) {
@@ -61,8 +61,7 @@ func (h *ErrorHandler) HandleError(rw http.ResponseWriter, req *http.Request, er
 
 		errors.As(err, &redirectError)
 
-		rw.Header().Set("Location", redirectError.RedirectTo)
-		rw.WriteHeader(redirectError.Code)
+		http.Redirect(rw, req, redirectError.RedirectTo, redirectError.Code)
 
 		return
 	default:

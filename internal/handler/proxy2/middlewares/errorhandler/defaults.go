@@ -20,26 +20,15 @@ import (
 	"net/http"
 )
 
-var defaultOptions = opts{ //nolint:gochecknoglobals
-	onAuthenticationError: func(rw http.ResponseWriter, req *http.Request, err error) {
-		rw.WriteHeader(http.StatusUnauthorized)
-	},
-	onAuthorizationError: func(rw http.ResponseWriter, req *http.Request, err error) {
-		rw.WriteHeader(http.StatusForbidden)
-	},
-	onCommunicationError: func(rw http.ResponseWriter, req *http.Request, err error) {
-		rw.WriteHeader(http.StatusBadGateway)
-	},
-	onPreconditionError: func(rw http.ResponseWriter, req *http.Request, err error) {
-		rw.WriteHeader(http.StatusBadRequest)
-	},
-	onBadMethodError: func(rw http.ResponseWriter, req *http.Request, err error) {
-		rw.WriteHeader(http.StatusMethodNotAllowed)
-	},
-	onNoRuleError: func(rw http.ResponseWriter, req *http.Request, err error) {
-		rw.WriteHeader(http.StatusNotFound)
-	},
-	onInternalError: func(rw http.ResponseWriter, req *http.Request, err error) {
-		rw.WriteHeader(http.StatusInternalServerError)
-	},
+func defaultOptions() *opts {
+	defaults := &opts{}
+	defaults.onAuthenticationError = errorWriter(defaults, http.StatusUnauthorized)
+	defaults.onAuthorizationError = errorWriter(defaults, http.StatusForbidden)
+	defaults.onCommunicationError = errorWriter(defaults, http.StatusBadGateway)
+	defaults.onPreconditionError = errorWriter(defaults, http.StatusBadRequest)
+	defaults.onBadMethodError = errorWriter(defaults, http.StatusMethodNotAllowed)
+	defaults.onNoRuleError = errorWriter(defaults, http.StatusNotFound)
+	defaults.onInternalError = errorWriter(defaults, http.StatusInternalServerError)
+
+	return defaults
 }
