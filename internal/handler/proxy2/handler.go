@@ -16,14 +16,14 @@ type handler struct {
 	r  rule.Repository
 	s  heimdall.JWTSigner
 	t  time.Duration
-	eh *errorhandler.ErrorHandler
+	eh errorhandler.ErrorHandler
 }
 
 func newHandler(
 	repo rule.Repository,
 	signer heimdall.JWTSigner,
 	timeout time.Duration,
-	eh *errorhandler.ErrorHandler,
+	eh errorhandler.ErrorHandler,
 ) http.Handler {
 	return &handler{r: repo, s: signer, t: timeout, eh: eh}
 }
