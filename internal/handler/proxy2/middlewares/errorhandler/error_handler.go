@@ -61,7 +61,8 @@ func (h *ErrorHandler) HandleError(rw http.ResponseWriter, req *http.Request, er
 
 		errors.As(err, &redirectError)
 
-		http.Redirect(rw, req, redirectError.RedirectTo, redirectError.Code)
+		rw.Header().Set("Location", redirectError.RedirectTo)
+		rw.WriteHeader(redirectError.Code)
 
 		return
 	default:

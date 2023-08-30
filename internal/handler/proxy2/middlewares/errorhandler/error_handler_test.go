@@ -17,14 +17,11 @@
 package errorhandler
 
 import (
-	"context"
-	"io"
 	"net/http"
+	"net/http/httptest"
 	"testing"
 
-	"github.com/gofiber/fiber/v2"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
 )
@@ -34,16 +31,11 @@ func TestHandlerHandle(t *testing.T) {
 
 	for _, tc := range []struct {
 		uc      string
-		handler fiber.Handler
+		handler *ErrorHandler
 		err     error
 		expCode int
 		expBody string
 	}{
-		{
-			uc:      "no error",
-			handler: New(),
-			expCode: http.StatusOK,
-		},
 		{
 			uc:      "authentication error default",
 			handler: New(),
@@ -211,25 +203,12 @@ func TestHandlerHandle(t *testing.T) {
 	} {
 		t.Run(tc.uc, func(t *testing.T) {
 			// GIVEN
-			app := fiber.New()
-			app.Use(tc.handler, func(c *fiber.Ctx) error { return tc.err })
+			recorder := httptest.NewRecorder()
 
-			req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, "/", nil)
-			require.NoError(t, err)
+			tc.handler.HandleError(recorder, httptest.NewRequest(http.MethodGet, "/foo", nil), tc.err)
 
-			// WHEN
-			resp, err := app.Test(req, 1)
-
-			// THEN
-			require.NoError(t, err)
-
-			defer resp.Body.Close()
-
-			data, err := io.ReadAll(resp.Body)
-			require.NoError(t, err)
-
-			assert.Equal(t, tc.expCode, resp.StatusCode)
-			assert.Equal(t, tc.expBody, string(data))
+			assert.Equal(t, tc.expCode, recorder.Code)
+			assert.Equal(t, tc.expBody, recorder.Body.String())
 		})
 	}
 }
