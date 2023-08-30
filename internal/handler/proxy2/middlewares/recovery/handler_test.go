@@ -17,7 +17,7 @@ import (
 	"github.com/dadrus/heimdall/internal/handler/proxy2/middlewares/errorhandler/mocks"
 )
 
-func TestHeaderExecution(t *testing.T) {
+func TestHandlerExecution(t *testing.T) {
 	t.Parallel()
 
 	for _, tc := range []struct {
