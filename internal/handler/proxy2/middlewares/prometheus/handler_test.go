@@ -50,7 +50,7 @@ func getLabel(labels []*dto.LabelPair, name string) string {
 	return ""
 }
 
-func TestHandlerObserveRequests(t *testing.T) {
+func TestHandlerExecution(t *testing.T) {
 	t.Parallel()
 
 	for _, tc := range []struct {
