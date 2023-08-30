@@ -83,6 +83,7 @@ func newApp(args appArgs) *http.Server {
 		),
 		accesslog.New(args.Logger),
 		logger.New(args.Logger),
+		dump.New(),
 		recovery.New(eh),
 		func(next http.Handler) http.Handler {
 			return otelhttp.NewHandler(
@@ -105,7 +106,6 @@ func newApp(args appArgs) *http.Server {
 			},
 			func() func(http.Handler) http.Handler { return passThrough },
 		),
-		dump.New(),
 		x.IfThenElseExec(service.CORS != nil,
 			func() func(http.Handler) http.Handler {
 				return cors.New(
