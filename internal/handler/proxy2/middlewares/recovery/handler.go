@@ -21,7 +21,10 @@ func New(eh *errorhandler.ErrorHandler) func(http.Handler) http.Handler {
 					zerolog.Ctx(req.Context()).Error().Msg(fmt.Sprintf("%v\n%s", rec, stringx.ToString(debug.Stack())))
 
 					// rec is always of type error here
-					eh.HandleError(rw, req, errorchain.New(heimdall.ErrInternal).CausedBy(rec.(error))) // nolint: forcetypeassert
+					// nolint: forcetypeassert
+					err := errorchain.NewWithMessage(heimdall.ErrInternal, "runtime error occurred").
+						CausedBy(rec.(error))
+					eh.HandleError(rw, req, err)
 				}
 			}()
 
