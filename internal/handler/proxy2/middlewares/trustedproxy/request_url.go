@@ -20,6 +20,8 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+
+	"github.com/dadrus/heimdall/internal/x"
 )
 
 func requestURL(req *http.Request) *url.URL {
@@ -31,12 +33,12 @@ func requestURL(req *http.Request) *url.URL {
 
 	proto := req.Header.Get("X-Forwarded-Proto")
 	if len(proto) == 0 {
-		proto = req.Proto
+		proto = x.IfThenElse(req.TLS == nil, "http", "https")
 	}
 
 	host := req.Header.Get("X-Forwarded-Host")
 	if len(host) == 0 {
-		host = req.URL.Host
+		host = req.Host
 	}
 
 	if val := req.Header.Get("X-Forwarded-Uri"); len(val) != 0 {
