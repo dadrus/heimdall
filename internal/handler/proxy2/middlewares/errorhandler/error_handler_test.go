@@ -31,7 +31,7 @@ func TestHandlerHandle(t *testing.T) {
 
 	for _, tc := range []struct {
 		uc      string
-		handler *ErrorHandler
+		handler ErrorHandler
 		err     error
 		expCode int
 		expBody string

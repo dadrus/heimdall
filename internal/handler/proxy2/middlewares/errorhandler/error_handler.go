@@ -26,21 +26,27 @@ import (
 	"github.com/dadrus/heimdall/internal/heimdall"
 )
 
-func New(opts ...Option) *ErrorHandler {
+//go:generate mockery --name ErrorHandler --structname ErrorHandlerMock
+
+type ErrorHandler interface {
+	HandleError(rw http.ResponseWriter, req *http.Request, err error)
+}
+
+func New(opts ...Option) ErrorHandler {
 	options := defaultOptions()
 
 	for _, opt := range opts {
 		opt(options)
 	}
 
-	return &ErrorHandler{opts: options}
+	return &errorHandler{opts: options}
 }
 
-type ErrorHandler struct {
+type errorHandler struct {
 	*opts
 }
 
-func (h *ErrorHandler) HandleError(rw http.ResponseWriter, req *http.Request, err error) {
+func (h *errorHandler) HandleError(rw http.ResponseWriter, req *http.Request, err error) {
 	ctx := req.Context()
 
 	switch {
