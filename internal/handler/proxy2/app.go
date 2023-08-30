@@ -83,7 +83,7 @@ func newApp(args appArgs) *http.Server {
 		),
 		accesslog.New(args.Logger),
 		logger.New(args.Logger),
-		recovery.New(),
+		recovery.New(eh),
 		func(next http.Handler) http.Handler {
 			return otelhttp.NewHandler(
 				next,
