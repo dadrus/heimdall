@@ -22,6 +22,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/felixge/httpsnoop"
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/accesscontext"
@@ -57,13 +58,11 @@ func New(logger zerolog.Logger) func(http.Handler) http.Handler {
 			accLog := logCtx.Logger()
 			accLog.Info().Msg("TX started")
 
-			next.ServeHTTP(rw, req)
+			metrics := httpsnoop.CaptureMetrics(next, rw, req)
 
-			err := accesscontext.Error(ctx)
-
-			logAccessStatus(ctx, accLog.Info(), err).
-				Int("_body_bytes_sent", 0).
-				Int("_http_status_code", http.StatusMultiStatus).
+			logAccessStatus(ctx, accLog.Info(), accesscontext.Error(ctx)).
+				Int64("_body_bytes_sent", metrics.Written).
+				Int("_http_status_code", metrics.Code).
 				Int64("_tx_duration_ms", time.Until(start).Milliseconds()).
 				Msg("TX finished")
 		})
@@ -72,23 +71,15 @@ func New(logger zerolog.Logger) func(http.Handler) http.Handler {
 
 func logAccessStatus(ctx context.Context, event *zerolog.Event, err error) *zerolog.Event {
 	subject := accesscontext.Subject(ctx)
-	accessErr := accesscontext.Error(ctx)
 
-	switch {
-	case err != nil:
-		if len(subject) != 0 {
-			event.Str("_subject", subject)
-		}
+	if len(subject) != 0 {
+		event.Str("_subject", subject)
+	}
 
+	if err != nil {
 		event.Err(err).Bool("_access_granted", false)
-	case accessErr != nil:
-		if len(subject) != 0 {
-			event.Str("_subject", subject)
-		}
-
-		event.Err(accessErr).Bool("_access_granted", false)
-	default:
-		event.Str("_subject", subject).Bool("_access_granted", true)
+	} else {
+		event.Bool("_access_granted", true)
 	}
 
 	return event
