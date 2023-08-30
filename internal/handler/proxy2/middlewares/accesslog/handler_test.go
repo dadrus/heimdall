@@ -17,6 +17,7 @@
 package accesslog
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -24,17 +25,17 @@ import (
 	"testing"
 
 	"github.com/goccy/go-json"
-	"github.com/gofiber/fiber/v2"
+	"github.com/justinas/alice"
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/propagation"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/dadrus/heimdall/internal/accesscontext"
-	tracingmiddleware "github.com/dadrus/heimdall/internal/fiber/middleware/opentelemetry"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
@@ -48,22 +49,23 @@ func TestLoggerHandler(t *testing.T) {
 	})
 
 	for _, tc := range []struct {
-		uc               string
-		setHeader        func(t *testing.T, req *http.Request)
-		configureHandler func(t *testing.T, ctx *fiber.Ctx) error
-		assert           func(t *testing.T, logEvent1, logEvent2 map[string]any)
+		uc            string
+		method        string
+		setHeader     func(t *testing.T, req *http.Request)
+		handleRequest func(t *testing.T, rw http.ResponseWriter, req *http.Request)
+		assert        func(t *testing.T, clientReq *http.Request, logEvent1, logEvent2 map[string]any)
 	}{
 		{
 			uc:        "without tracing, x-* header and errors",
+			method:    http.MethodGet,
 			setHeader: func(t *testing.T, req *http.Request) { t.Helper() },
-			configureHandler: func(t *testing.T, ctx *fiber.Ctx) error {
+			handleRequest: func(t *testing.T, rw http.ResponseWriter, req *http.Request) {
 				t.Helper()
 
-				accesscontext.SetSubject(ctx.UserContext(), "foo")
-
-				return nil
+				accesscontext.SetSubject(req.Context(), "foo")
+				rw.WriteHeader(http.StatusOK)
 			},
-			assert: func(t *testing.T, logEvent1, logEvent2 map[string]any) {
+			assert: func(t *testing.T, clientReq *http.Request, logEvent1, logEvent2 map[string]any) {
 				t.Helper()
 
 				require.Len(t, logEvent1, 11)
@@ -71,10 +73,10 @@ func TestLoggerHandler(t *testing.T) {
 				assert.Contains(t, logEvent1, "_tx_start")
 				assert.Contains(t, logEvent1, "_client_ip")
 				assert.Contains(t, logEvent1, "_http_user_agent")
-				assert.Equal(t, "GET", logEvent1["_http_method"])
-				assert.Equal(t, "example.com", logEvent1["_http_host"])
-				assert.Equal(t, "/test", logEvent1["_http_path"])
-				assert.Equal(t, "http", logEvent1["_http_scheme"])
+				assert.Equal(t, clientReq.Method, logEvent1["_http_method"])
+				assert.Equal(t, clientReq.URL.Host, logEvent1["_http_host"])
+				assert.Equal(t, clientReq.URL.Path, logEvent1["_http_path"])
+				assert.Equal(t, clientReq.URL.Scheme, logEvent1["_http_scheme"])
 				assert.Contains(t, logEvent1, "_trace_id")
 				assert.Contains(t, logEvent1, "_trace_id")
 				assert.NotEqual(t, parentCtx.TraceID().String(), logEvent1["_trace_id"])
@@ -86,10 +88,10 @@ func TestLoggerHandler(t *testing.T) {
 				assert.Contains(t, logEvent2, "_tx_start")
 				assert.Contains(t, logEvent2, "_tx_duration_ms")
 				assert.Contains(t, logEvent2, "_client_ip")
-				assert.Equal(t, "GET", logEvent2["_http_method"])
-				assert.Equal(t, "example.com", logEvent2["_http_host"])
-				assert.Equal(t, "/test", logEvent2["_http_path"])
-				assert.Equal(t, "http", logEvent2["_http_scheme"])
+				assert.Equal(t, clientReq.Method, logEvent2["_http_method"])
+				assert.Equal(t, clientReq.URL.Host, logEvent2["_http_host"])
+				assert.Equal(t, clientReq.URL.Path, logEvent2["_http_path"])
+				assert.Equal(t, clientReq.URL.Scheme, logEvent2["_http_scheme"])
 				assert.Contains(t, logEvent2, "_trace_id")
 				assert.Contains(t, logEvent2, "_trace_id")
 				assert.Equal(t, logEvent2["_trace_id"], logEvent2["_trace_id"])
@@ -103,7 +105,8 @@ func TestLoggerHandler(t *testing.T) {
 			},
 		},
 		{
-			uc: "with tracing, x-* header and error",
+			uc:     "with tracing, x-* header and error",
+			method: http.MethodPost,
 			setHeader: func(t *testing.T, req *http.Request) {
 				t.Helper()
 
@@ -118,12 +121,13 @@ func TestLoggerHandler(t *testing.T) {
 				req.Header.Set("X-Forwarded-For", "127.0.0.1")
 				req.Header.Set("Forwarded", "for=127.0.0.1")
 			},
-			configureHandler: func(t *testing.T, ctx *fiber.Ctx) error {
+			handleRequest: func(t *testing.T, rw http.ResponseWriter, req *http.Request) {
 				t.Helper()
 
-				return fmt.Errorf("test error")
+				accesscontext.SetError(req.Context(), fmt.Errorf("test error"))
+				rw.WriteHeader(http.StatusInternalServerError)
 			},
-			assert: func(t *testing.T, logEvent1, logEvent2 map[string]any) {
+			assert: func(t *testing.T, clientReq *http.Request, logEvent1, logEvent2 map[string]any) {
 				t.Helper()
 
 				require.Len(t, logEvent1, 18)
@@ -131,10 +135,10 @@ func TestLoggerHandler(t *testing.T) {
 				assert.Contains(t, logEvent1, "_tx_start")
 				assert.Contains(t, logEvent1, "_client_ip")
 				assert.Contains(t, logEvent1, "_http_user_agent")
-				assert.Equal(t, "GET", logEvent1["_http_method"])
-				assert.Equal(t, "example.com", logEvent1["_http_host"])
-				assert.Equal(t, "/test", logEvent1["_http_path"])
-				assert.Equal(t, "http", logEvent1["_http_scheme"])
+				assert.Equal(t, clientReq.Method, logEvent1["_http_method"])
+				assert.Equal(t, clientReq.URL.Host, logEvent1["_http_host"])
+				assert.Equal(t, clientReq.URL.Path, logEvent1["_http_path"])
+				assert.Equal(t, clientReq.URL.Scheme, logEvent1["_http_scheme"])
 				assert.Contains(t, logEvent1, "_span_id")
 				assert.Equal(t, parentCtx.TraceID().String(), logEvent1["_trace_id"])
 				assert.Equal(t, parentCtx.SpanID().String(), logEvent1["_parent_id"])
@@ -151,15 +155,15 @@ func TestLoggerHandler(t *testing.T) {
 				assert.Contains(t, logEvent2, "_tx_start")
 				assert.Contains(t, logEvent2, "_tx_duration_ms")
 				assert.Contains(t, logEvent2, "_client_ip")
-				assert.Equal(t, "GET", logEvent2["_http_method"])
-				assert.Equal(t, "example.com", logEvent2["_http_host"])
-				assert.Equal(t, "/test", logEvent2["_http_path"])
-				assert.Equal(t, "http", logEvent2["_http_scheme"])
+				assert.Equal(t, clientReq.Method, logEvent2["_http_method"])
+				assert.Equal(t, clientReq.URL.Host, logEvent2["_http_host"])
+				assert.Equal(t, clientReq.URL.Path, logEvent2["_http_path"])
+				assert.Equal(t, clientReq.URL.Scheme, logEvent2["_http_scheme"])
 				assert.Equal(t, logEvent2["_trace_id"], logEvent2["_trace_id"])
 				assert.Equal(t, logEvent2["_parent_id"], logEvent2["_parent_id"])
 				assert.Equal(t, logEvent2["_span_id"], logEvent2["_span_id"])
 				assert.Contains(t, logEvent2, "_body_bytes_sent")
-				assert.Equal(t, float64(200), logEvent2["_http_status_code"])
+				assert.Equal(t, float64(http.StatusInternalServerError), logEvent2["_http_status_code"])
 				assert.Equal(t, false, logEvent2["_access_granted"])
 				assert.Equal(t, "test error", logEvent2["error"])
 				assert.Contains(t, logEvent2, "_http_user_agent")
@@ -174,16 +178,16 @@ func TestLoggerHandler(t *testing.T) {
 		},
 		{
 			uc:        "without tracing and x-* header, but with subject and error set on context",
+			method:    http.MethodPatch,
 			setHeader: func(t *testing.T, req *http.Request) { t.Helper() },
-			configureHandler: func(t *testing.T, ctx *fiber.Ctx) error {
+			handleRequest: func(t *testing.T, rw http.ResponseWriter, req *http.Request) {
 				t.Helper()
 
-				accesscontext.SetSubject(ctx.UserContext(), "bar")
-				accesscontext.SetError(ctx.UserContext(), fmt.Errorf("test error"))
-
-				return nil
+				accesscontext.SetSubject(req.Context(), "bar")
+				accesscontext.SetError(req.Context(), fmt.Errorf("test error"))
+				rw.WriteHeader(http.StatusUnauthorized)
 			},
-			assert: func(t *testing.T, logEvent1, logEvent2 map[string]any) {
+			assert: func(t *testing.T, clientReq *http.Request, logEvent1, logEvent2 map[string]any) {
 				t.Helper()
 
 				require.Len(t, logEvent1, 11)
@@ -191,10 +195,10 @@ func TestLoggerHandler(t *testing.T) {
 				assert.Contains(t, logEvent1, "_tx_start")
 				assert.Contains(t, logEvent1, "_client_ip")
 				assert.Contains(t, logEvent1, "_http_user_agent")
-				assert.Equal(t, "GET", logEvent1["_http_method"])
-				assert.Equal(t, "example.com", logEvent1["_http_host"])
-				assert.Equal(t, "/test", logEvent1["_http_path"])
-				assert.Equal(t, "http", logEvent1["_http_scheme"])
+				assert.Equal(t, clientReq.Method, logEvent1["_http_method"])
+				assert.Equal(t, clientReq.URL.Host, logEvent1["_http_host"])
+				assert.Equal(t, clientReq.URL.Path, logEvent1["_http_path"])
+				assert.Equal(t, clientReq.URL.Scheme, logEvent1["_http_scheme"])
 				assert.Contains(t, logEvent1, "_trace_id")
 				assert.Contains(t, logEvent1, "_trace_id")
 				assert.NotEqual(t, parentCtx.TraceID().String(), logEvent1["_trace_id"])
@@ -206,16 +210,16 @@ func TestLoggerHandler(t *testing.T) {
 				assert.Contains(t, logEvent2, "_tx_start")
 				assert.Contains(t, logEvent2, "_tx_duration_ms")
 				assert.Contains(t, logEvent2, "_client_ip")
-				assert.Equal(t, "GET", logEvent2["_http_method"])
-				assert.Equal(t, "example.com", logEvent2["_http_host"])
-				assert.Equal(t, "/test", logEvent2["_http_path"])
-				assert.Equal(t, "http", logEvent2["_http_scheme"])
+				assert.Equal(t, clientReq.Method, logEvent2["_http_method"])
+				assert.Equal(t, clientReq.URL.Host, logEvent2["_http_host"])
+				assert.Equal(t, clientReq.URL.Path, logEvent2["_http_path"])
+				assert.Equal(t, clientReq.URL.Scheme, logEvent2["_http_scheme"])
 				assert.Contains(t, logEvent2, "_trace_id")
 				assert.Contains(t, logEvent2, "_trace_id")
 				assert.Equal(t, logEvent2["_trace_id"], logEvent2["_trace_id"])
 				assert.Equal(t, logEvent2["_parent_id"], logEvent2["_parent_id"])
 				assert.Contains(t, logEvent2, "_body_bytes_sent")
-				assert.Equal(t, float64(200), logEvent2["_http_status_code"])
+				assert.Equal(t, float64(http.StatusUnauthorized), logEvent2["_http_status_code"])
 				assert.Equal(t, false, logEvent2["_access_granted"])
 				assert.Equal(t, "bar", logEvent2["_subject"])
 				assert.Equal(t, "test error", logEvent2["error"])
@@ -229,18 +233,40 @@ func TestLoggerHandler(t *testing.T) {
 			tb := &testsupport.TestingLog{TB: t}
 			logger := zerolog.New(zerolog.TestWriter{T: tb})
 
-			app := fiber.New()
-			app.Use(tracingmiddleware.New())
-			app.Use(New(logger))
-			app.Get("/test", func(ctx *fiber.Ctx) error { return tc.configureHandler(t, ctx) })
+			srv := httptest.NewServer(
+				alice.New(
+					func(next http.Handler) http.Handler {
+						return otelhttp.NewHandler(
+							next,
+							"",
+							otelhttp.WithTracerProvider(otel.GetTracerProvider()),
+							otelhttp.WithServerName("proxy"),
+							otelhttp.WithSpanNameFormatter(func(_ string, req *http.Request) string {
+								return fmt.Sprintf("EntryPoint %s %s%s",
+									strings.ToLower(req.URL.Scheme), "ctx.Context().LocalAddr().String()", req.URL.Path)
+							}),
+						)
+					},
+					New(logger),
+				).ThenFunc(func(rw http.ResponseWriter, req *http.Request) {
+					tc.handleRequest(t, rw, req)
+				}),
+			)
 
-			req := httptest.NewRequest(http.MethodGet, "/test", nil)
+			defer srv.Close()
+
+			req, err := http.NewRequestWithContext(
+				context.Background(),
+				tc.method,
+				fmt.Sprintf("%s/test", srv.URL),
+				nil,
+			)
+			require.NoError(t, err)
 
 			tc.setHeader(t, req)
 
 			// WHEN
-			resp, err := app.Test(req, 1000000)
-			require.NoError(t, app.Shutdown())
+			resp, err := srv.Client().Do(req)
 
 			// THEN
 			require.NoError(t, err)
@@ -257,7 +283,7 @@ func TestLoggerHandler(t *testing.T) {
 			require.NoError(t, json.Unmarshal([]byte(events[0]+"}"), &logLine1))
 			require.NoError(t, json.Unmarshal([]byte(events[1]+"}"), &logLine2))
 
-			tc.assert(t, logLine1, logLine2)
+			tc.assert(t, req, logLine1, logLine2)
 		})
 	}
 }

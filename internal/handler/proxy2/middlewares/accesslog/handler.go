@@ -26,6 +26,7 @@ import (
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/accesscontext"
+	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/opentelemetry/tracecontext"
 )
 
@@ -43,8 +44,8 @@ func New(logger zerolog.Logger) func(http.Handler) http.Handler {
 				Str("_http_method", req.Method).
 				Str("_http_path", req.URL.Path).
 				Str("_http_user_agent", req.Header.Get("User-Agent")).
-				Str("_http_host", req.URL.Host).
-				Str("_http_scheme", req.URL.Scheme)
+				Str("_http_host", req.Host).
+				Str("_http_scheme", x.IfThenElse(req.TLS != nil, "https", "http"))
 			logCtx = logTraceData(ctx, logCtx)
 
 			logCtx = logHeader(req, logCtx, "X-Forwarded-Method", "_http_x_forwarded_method")
