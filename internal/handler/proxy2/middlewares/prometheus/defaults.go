@@ -23,9 +23,11 @@ import (
 )
 
 // nolint: gochecknoglobals
-var defaultOptions = opts{
-	registerer:      prometheus.DefaultRegisterer,
-	namespace:       "http",
-	labels:          make(prometheus.Labels),
-	filterOperation: func(req *http.Request) bool { return false },
+func defaultOptions() opts {
+	return opts{
+		registerer:      prometheus.DefaultRegisterer,
+		namespace:       "http",
+		labels:          make(prometheus.Labels),
+		filterOperation: func(req *http.Request) bool { return false },
+	}
 }

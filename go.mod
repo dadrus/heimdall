@@ -8,6 +8,7 @@ require (
 	github.com/drone/envsubst/v2 v2.0.0-20210730161058-179042472c46
 	github.com/elnormous/contenttype v1.0.4
 	github.com/envoyproxy/go-control-plane v0.11.1
+	github.com/felixge/httpsnoop v1.0.3
 	github.com/fsnotify/fsnotify v1.6.0
 	github.com/go-co-op/gocron v1.33.0
 	github.com/go-logr/zerologr v1.2.3
@@ -117,7 +118,6 @@ require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/envoyproxy/protoc-gen-validate v1.0.1 // indirect
 	github.com/fatih/structs v1.1.0 // indirect
-	github.com/felixge/httpsnoop v1.0.3 // indirect
 	github.com/go-logr/logr v1.2.4 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect

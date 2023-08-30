@@ -21,12 +21,13 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/felixge/httpsnoop"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 )
 
 func New(opts ...Option) func(http.Handler) http.Handler {
-	options := defaultOptions
+	options := defaultOptions()
 
 	for _, opt := range opts {
 		opt(&options)
@@ -80,10 +81,9 @@ func New(opts ...Option) func(http.Handler) http.Handler {
 				gauge.WithLabelValues(req.Method).Dec()
 			}()
 
-			d := newDelegator(rw)
-			next.ServeHTTP(d, req)
+			metrics := httpsnoop.CaptureMetrics(next, rw, req)
 
-			statusCode := strconv.Itoa(d.Status())
+			statusCode := strconv.Itoa(metrics.Code)
 			counter.WithLabelValues(statusCode, req.Method, req.URL.Path).Inc()
 
 			elapsed := float64(time.Since(start).Nanoseconds()) / MagicNumber
