@@ -1,14 +1,15 @@
 package dump
 
 import (
-	"errors"
+	"context"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 
 	"github.com/goccy/go-json"
-	"github.com/gofiber/fiber/v2"
+	"github.com/justinas/alice"
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -22,11 +23,10 @@ func TestDumpHandlerExecution(t *testing.T) {
 	for _, tc := range []struct {
 		uc       string
 		logLevel zerolog.Level
-		err      error
 		assert   func(t *testing.T, logstring string)
 	}{
 		{
-			uc:       "debug log level without error",
+			uc:       "debug log level",
 			logLevel: zerolog.DebugLevel,
 			assert: func(t *testing.T, logs string) {
 				t.Helper()
@@ -35,17 +35,7 @@ func TestDumpHandlerExecution(t *testing.T) {
 			},
 		},
 		{
-			uc:       "debug log level with error",
-			logLevel: zerolog.DebugLevel,
-			err:      errors.New("test error"),
-			assert: func(t *testing.T, logs string) {
-				t.Helper()
-
-				assert.Empty(t, logs)
-			},
-		},
-		{
-			uc:       "trace log level without error",
+			uc:       "trace log level",
 			logLevel: zerolog.TraceLevel,
 			assert: func(t *testing.T, logs string) {
 				t.Helper()
@@ -70,62 +60,37 @@ func TestDumpHandlerExecution(t *testing.T) {
 				assert.Contains(t, line2["message"], "Barfoo")
 			},
 		},
-		{
-			uc:       "trace log level with error",
-			logLevel: zerolog.TraceLevel,
-			err:      errors.New("test error"),
-			assert: func(t *testing.T, logs string) {
-				t.Helper()
-
-				require.NotEmpty(t, logs)
-
-				lines := strings.Split(logs, "}{")
-				require.Len(t, lines, 2)
-
-				var line1 map[string]any
-				err := json.Unmarshal([]byte(lines[0]+"}"), &line1)
-				require.NoError(t, err)
-
-				assert.Equal(t, "trace", line1["level"])
-				assert.Contains(t, line1["message"], "Foobar")
-
-				var line2 map[string]any
-				err = json.Unmarshal([]byte("{"+lines[1]), &line2)
-				require.NoError(t, err)
-
-				assert.Equal(t, "trace", line2["level"])
-				assert.Contains(t, line2["message"], "Failed processing request")
-			},
-		},
 	} {
 		t.Run(tc.uc, func(t *testing.T) {
 			// GIVEN
 			tb := &testsupport.TestingLog{TB: t}
 			logger := zerolog.New(zerolog.TestWriter{T: tb}).Level(tc.logLevel)
 
-			app := fiber.New()
-			app.Use(
-				func(c *fiber.Ctx) error {
-					ctx := c.UserContext()
+			srv := httptest.NewServer(
+				alice.New(
+					func(next http.Handler) http.Handler {
+						return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+							next.ServeHTTP(rw, req.WithContext(logger.WithContext(req.Context())))
+						})
+					},
+					New(),
+				).ThenFunc(func(rw http.ResponseWriter, req *http.Request) {
+					rw.WriteHeader(http.StatusOK)
+					rw.Write([]byte("Barfoo"))
+				}))
 
-					c.SetUserContext(logger.WithContext(ctx))
+			defer srv.Close()
 
-					return c.Next()
-				},
-				New(),
+			req, err := http.NewRequestWithContext(
+				context.Background(),
+				http.MethodGet,
+				fmt.Sprintf("%s/test", srv.URL),
+				strings.NewReader("Foobar"),
 			)
-			app.Get("/test", func(ctx *fiber.Ctx) error {
-				ctx.Write([]byte("Barfoo"))
-				ctx.Status(http.StatusOK)
-
-				return tc.err
-			})
-
-			req := httptest.NewRequest(http.MethodGet, "/test", strings.NewReader("Foobar"))
+			require.NoError(t, err)
 
 			// WHEN
-			resp, err := app.Test(req)
-			require.NoError(t, app.Shutdown())
+			resp, err := srv.Client().Do(req)
 
 			// THEN
 			require.NoError(t, err)
