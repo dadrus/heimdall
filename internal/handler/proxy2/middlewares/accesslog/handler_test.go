@@ -39,7 +39,7 @@ import (
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
-func TestLoggerHandler(t *testing.T) {
+func TestHandlerExecution(t *testing.T) {
 	// GIVEN
 	otel.SetTracerProvider(sdktrace.NewTracerProvider())
 	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(propagation.TraceContext{}))
