@@ -17,11 +17,13 @@
 package prometheus
 
 import (
+	"context"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/justinas/alice"
 	"github.com/prometheus/client_golang/prometheus"
 	dto "github.com/prometheus/client_model/go"
 	"github.com/stretchr/testify/assert"
@@ -53,12 +55,14 @@ func TestHandlerObserveRequests(t *testing.T) {
 
 	for _, tc := range []struct {
 		uc     string
-		req    *http.Request
+		path   string
+		method string
 		assert func(t *testing.T, metrics []*dto.MetricFamily)
 	}{
 		{
-			uc:  "metrics for filtered request",
-			req: httptest.NewRequest(http.MethodGet, "/filtered", nil),
+			uc:     "metrics for filtered request",
+			path:   "/filtered",
+			method: http.MethodGet,
 			assert: func(t *testing.T, metrics []*dto.MetricFamily) {
 				t.Helper()
 
@@ -66,8 +70,9 @@ func TestHandlerObserveRequests(t *testing.T) {
 			},
 		},
 		{
-			uc:  "metrics for successful request",
-			req: httptest.NewRequest(http.MethodGet, "/test", nil),
+			uc:     "metrics for successful request",
+			path:   "/test",
+			method: http.MethodGet,
 			assert: func(t *testing.T, metrics []*dto.MetricFamily) {
 				t.Helper()
 
@@ -108,8 +113,9 @@ func TestHandlerObserveRequests(t *testing.T) {
 			},
 		},
 		{
-			uc:  "metrics for request which failed with 500",
-			req: httptest.NewRequest(http.MethodPost, "/test", nil),
+			uc:     "metrics for request which failed with 500",
+			path:   "/test",
+			method: http.MethodPost,
 			assert: func(t *testing.T, metrics []*dto.MetricFamily) {
 				t.Helper()
 
@@ -150,8 +156,9 @@ func TestHandlerObserveRequests(t *testing.T) {
 			},
 		},
 		{
-			uc:  "metrics for request with server raising an error",
-			req: httptest.NewRequest(http.MethodPatch, "/error", nil),
+			uc:     "metrics for request with server raising an error",
+			path:   "/error",
+			method: http.MethodPatch,
 			assert: func(t *testing.T, metrics []*dto.MetricFamily) {
 				t.Helper()
 
@@ -196,25 +203,46 @@ func TestHandlerObserveRequests(t *testing.T) {
 			// GIVEN
 			registry := prometheus.NewRegistry()
 
-			app := fiber.New()
-			app.Use(New(
-				WithRegisterer(registry),
-				WithNamespace("foo"),
-				WithSubsystem("bar"),
-				WithLabel("baz", "zab"),
-				WithServiceName("foobar"),
-				WithOperationFilter(func(req *http.Request) bool { return req.URL.Path == "/filtered" }),
-			))
+			srv := httptest.NewServer(
+				alice.New(
+					New(
+						WithRegisterer(registry),
+						WithNamespace("foo"),
+						WithSubsystem("bar"),
+						WithLabel("baz", "zab"),
+						WithServiceName("foobar"),
+						WithOperationFilter(func(req *http.Request) bool { return req.URL.Path == "/filtered" }),
+					),
+				).ThenFunc(func(rw http.ResponseWriter, req *http.Request) {
+					switch req.URL.Path {
+					case "/test":
+						if req.Method == http.MethodGet {
+							rw.WriteHeader(http.StatusOK)
+						} else {
+							rw.WriteHeader(http.StatusInternalServerError)
+						}
+					case "/filtered":
+						rw.WriteHeader(http.StatusOK)
+					case "/error":
+						rw.WriteHeader(http.StatusGone)
+					default:
+						rw.WriteHeader(http.StatusNotFound)
+					}
+				}),
+			)
 
-			app.Get("test", func(ctx *fiber.Ctx) error { return nil })
-			app.Get("filtered", func(ctx *fiber.Ctx) error { return nil })
-			app.Post("test", func(ctx *fiber.Ctx) error { return ctx.SendStatus(500) })
-			app.Patch("error", func(ctx *fiber.Ctx) error { return fiber.ErrGone })
+			defer srv.Close()
 
-			defer app.Shutdown()
+			req, err := http.NewRequestWithContext(
+				context.Background(),
+				tc.method,
+				fmt.Sprintf("%s%s", srv.URL, tc.path),
+				nil,
+			)
+			require.NoError(t, err)
 
 			// WHEN
-			resp, err := app.Test(tc.req, -1)
+			resp, err := srv.Client().Do(req)
 			require.NoError(t, err)
 
 			defer resp.Body.Close()
