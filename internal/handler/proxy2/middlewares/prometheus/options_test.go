@@ -35,7 +35,7 @@ func TestOptionsWithRegisterer(t *testing.T) {
 	}{
 		{
 			uc:  "nil registerer",
-			opt: defaultOptions,
+			opt: defaultOptions(),
 			assert: func(t *testing.T, opt *opts) {
 				t.Helper()
 
@@ -44,7 +44,7 @@ func TestOptionsWithRegisterer(t *testing.T) {
 		},
 		{
 			uc:    "not nil registerer",
-			opt:   defaultOptions,
+			opt:   defaultOptions(),
 			value: prometheus.NewRegistry(),
 			assert: func(t *testing.T, opt *opts) {
 				t.Helper()
