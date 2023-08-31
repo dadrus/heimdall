@@ -320,6 +320,47 @@ func (_c *RequestContextMock_Signer_Call) RunAndReturn(run func() heimdall.JWTSi
 	return _c
 }
 
+// UpstreamURLRequired provides a mock function with given fields:
+func (_m *RequestContextMock) UpstreamURLRequired() bool {
+	ret := _m.Called()
+
+	var r0 bool
+	if rf, ok := ret.Get(0).(func() bool); ok {
+		r0 = rf()
+	} else {
+		r0 = ret.Get(0).(bool)
+	}
+
+	return r0
+}
+
+// RequestContextMock_UpstreamURLRequired_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'UpstreamURLRequired'
+type RequestContextMock_UpstreamURLRequired_Call struct {
+	*mock.Call
+}
+
+// UpstreamURLRequired is a helper method to define mock.On call
+func (_e *RequestContextMock_Expecter) UpstreamURLRequired() *RequestContextMock_UpstreamURLRequired_Call {
+	return &RequestContextMock_UpstreamURLRequired_Call{Call: _e.mock.On("UpstreamURLRequired")}
+}
+
+func (_c *RequestContextMock_UpstreamURLRequired_Call) Run(run func()) *RequestContextMock_UpstreamURLRequired_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *RequestContextMock_UpstreamURLRequired_Call) Return(_a0 bool) *RequestContextMock_UpstreamURLRequired_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *RequestContextMock_UpstreamURLRequired_Call) RunAndReturn(run func() bool) *RequestContextMock_UpstreamURLRequired_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 type mockConstructorTestingTNewRequestContextMock interface {
 	mock.TestingT
 	Cleanup(func())

@@ -1,6 +1,7 @@
 package rules
 
 import (
+	"context"
 	"net/http"
 	"net/url"
 	"testing"
@@ -32,6 +33,7 @@ func TestRuleExecutorExecute(t *testing.T) {
 			configureMocks: func(t *testing.T, ctx *mocks2.ContextMock, repo *mocks4.RepositoryMock, rule *mocks4.RuleMock) {
 				t.Helper()
 
+				ctx.EXPECT().AppContext().Return(context.Background())
 				ctx.EXPECT().Request().Return(&heimdall.Request{Method: http.MethodPost, URL: matchingURL})
 				repo.EXPECT().FindRule(matchingURL).Return(nil, heimdall.ErrNoRuleFound)
 			},
@@ -42,6 +44,7 @@ func TestRuleExecutorExecute(t *testing.T) {
 			configureMocks: func(t *testing.T, ctx *mocks2.ContextMock, repo *mocks4.RepositoryMock, rule *mocks4.RuleMock) {
 				t.Helper()
 
+				ctx.EXPECT().AppContext().Return(context.Background())
 				ctx.EXPECT().Request().Return(&heimdall.Request{Method: http.MethodPost, URL: matchingURL})
 				rule.EXPECT().MatchesMethod(http.MethodPost).Return(false)
 				rule.EXPECT().ID().Return("test_id")
@@ -55,6 +58,7 @@ func TestRuleExecutorExecute(t *testing.T) {
 			configureMocks: func(t *testing.T, ctx *mocks2.ContextMock, repo *mocks4.RepositoryMock, rule *mocks4.RuleMock) {
 				t.Helper()
 
+				ctx.EXPECT().AppContext().Return(context.Background())
 				ctx.EXPECT().Request().Return(&heimdall.Request{Method: http.MethodGet, URL: matchingURL})
 				rule.EXPECT().MatchesMethod(http.MethodGet).Return(true)
 				rule.EXPECT().Execute(ctx).Return(nil, heimdall.ErrAuthentication)
@@ -71,6 +75,7 @@ func TestRuleExecutorExecute(t *testing.T) {
 				mut := mocks4.NewURIMutatorMock(t)
 				mut.EXPECT().Mutate(matchingURL).Return(nil, heimdall.ErrInternal)
 
+				ctx.EXPECT().AppContext().Return(context.Background())
 				ctx.EXPECT().Request().Return(&heimdall.Request{Method: http.MethodGet, URL: matchingURL})
 				rule.EXPECT().MatchesMethod(http.MethodGet).Return(true)
 				rule.EXPECT().Execute(ctx).Return(mut, nil)
@@ -82,6 +87,7 @@ func TestRuleExecutorExecute(t *testing.T) {
 			configureMocks: func(t *testing.T, ctx *mocks2.ContextMock, repo *mocks4.RepositoryMock, rule *mocks4.RuleMock) {
 				t.Helper()
 
+				ctx.EXPECT().AppContext().Return(context.Background())
 				ctx.EXPECT().Request().Return(&heimdall.Request{Method: http.MethodGet, URL: matchingURL})
 				rule.EXPECT().MatchesMethod(http.MethodGet).Return(true)
 				rule.EXPECT().Execute(ctx).Return(nil, nil)
@@ -97,6 +103,7 @@ func TestRuleExecutorExecute(t *testing.T) {
 				mut := mocks4.NewURIMutatorMock(t)
 				mut.EXPECT().Mutate(matchingURL).Return(matchingURL, nil)
 
+				ctx.EXPECT().AppContext().Return(context.Background())
 				ctx.EXPECT().Request().Return(&heimdall.Request{Method: http.MethodGet, URL: matchingURL})
 				rule.EXPECT().MatchesMethod(http.MethodGet).Return(true)
 				rule.EXPECT().Execute(ctx).Return(mut, nil)

@@ -3,6 +3,8 @@ package rules
 import (
 	"net/url"
 
+	"github.com/rs/zerolog"
+
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
@@ -17,7 +19,15 @@ func newRuleExecutor(repository rule.Repository) rule.Executor {
 }
 
 func (e *ruleExecutor) Execute(ctx heimdall.Context, requireURL bool) (*url.URL, error) {
-	rul, err := e.r.FindRule(ctx.Request().URL)
+	req := ctx.Request()
+
+	//nolint:contextcheck
+	zerolog.Ctx(ctx.AppContext()).Debug().
+		Str("_method", req.Method).
+		Str("_url", req.URL.String()).
+		Msg("Analyzing request")
+
+	rul, err := e.r.FindRule(req.URL)
 	if err != nil {
 		return nil, err
 	}

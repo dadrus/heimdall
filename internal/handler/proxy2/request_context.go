@@ -142,7 +142,8 @@ func (r *requestContext) AppContext() context.Context             { return r.req
 func (r *requestContext) SetPipelineError(err error)              { r.err = err }
 func (r *requestContext) Signer() heimdall.JWTSigner              { return r.jwtSigner }
 
-func (r *requestContext) Error(err error) { r.eh.HandleError(r.rw, r.req, err) }
+func (r *requestContext) Error(err error)           { r.eh.HandleError(r.rw, r.req, err) }
+func (r *requestContext) UpstreamURLRequired() bool { return true }
 
 func (r *requestContext) Finalize(targetURL *url.URL) {
 	logger := zerolog.Ctx(r.AppContext())

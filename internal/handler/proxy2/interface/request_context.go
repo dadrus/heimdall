@@ -13,4 +13,5 @@ type RequestContext interface {
 
 	Finalize(targetURL *url.URL)
 	Error(err error)
+	UpstreamURLRequired() bool
 }
