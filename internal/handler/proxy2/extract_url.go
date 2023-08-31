@@ -17,14 +17,13 @@
 package proxy2
 
 import (
-	"fmt"
 	"net/http"
 	"net/url"
 
 	"github.com/dadrus/heimdall/internal/x"
 )
 
-func requestURL(req *http.Request) *url.URL {
+func extractURL(req *http.Request) *url.URL {
 	var (
 		rawPath string
 		path    string
@@ -42,7 +41,7 @@ func requestURL(req *http.Request) *url.URL {
 	}
 
 	if val := req.Header.Get("X-Forwarded-Uri"); len(val) != 0 {
-		if forwardedURI, err := url.Parse(val); err != nil {
+		if forwardedURI, err := url.Parse(val); err == nil {
 			rawPath = forwardedURI.Path
 			query = forwardedURI.Query().Encode()
 		}
@@ -51,10 +50,7 @@ func requestURL(req *http.Request) *url.URL {
 	}
 
 	if len(rawPath) == 0 {
-		rawPath = req.URL.RawPath
-		if len(rawPath) != 0 {
-			rawPath = fmt.Sprintf("/%s", rawPath)
-		}
+		rawPath = req.URL.Path
 	}
 
 	if len(query) == 0 {

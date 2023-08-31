@@ -52,8 +52,8 @@ type appArgs struct {
 	Cache      cache.Cache
 	Logger     zerolog.Logger
 
-	RulesRepository rule.Repository
-	Signer          heimdall.JWTSigner
+	Executor rule.Executor
+	Signer   heimdall.JWTSigner
 }
 
 func passThrough(next http.Handler) http.Handler {
@@ -123,7 +123,7 @@ func newApp(args appArgs) *http.Server {
 			func() func(http.Handler) http.Handler { return passThrough },
 		),
 		cachemiddleware.New(args.Cache),
-	).Then(newHandler(args.RulesRepository, args.Signer, service.Timeout.Read, eh))
+	).Then(newHandler(newRequestContextFactory(eh, args.Signer, service.Timeout.Read), args.Executor))
 
 	return &http.Server{
 		Handler:        hc,

@@ -69,6 +69,8 @@ func (h *Handler) registerRoutes(router fiber.Router, logger zerolog.Logger) {
 func (h *Handler) decisions(c *fiber.Ctx) error {
 	logger := zerolog.Ctx(c.UserContext())
 
+	c.Context().LocalAddr()
+
 	reqURL := fiberxforwarded.RequestURL(c.UserContext())
 	method := fiberxforwarded.RequestMethod(c.UserContext())
 

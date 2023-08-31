@@ -20,8 +20,7 @@ var (
 	crlf                  = []byte("\r\n")                                                     //nolint:gochecknoglobals
 )
 
-// nolint: funlen, gocognit, cyclop
-func New() func(http.Handler) http.Handler {
+func New() func(http.Handler) http.Handler { // nolint: funlen, gocognit, cyclop
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 			logger := zerolog.Ctx(req.Context())
@@ -42,7 +41,6 @@ func New() func(http.Handler) http.Handler {
 				wroteHeader          bool
 				hijacked             bool
 				contentLengthWritten bool
-				statusCode           int
 				buffer               bytes.Buffer
 				statusBuf            [3]byte
 			)
@@ -62,12 +60,10 @@ func New() func(http.Handler) http.Handler {
 				},
 				WriteHeader: func(headerFunc httpsnoop.WriteHeaderFunc) httpsnoop.WriteHeaderFunc {
 					return func(code int) {
-						statusCode = code
-
 						if !wroteHeader {
-							writeStatusLine(&buffer, protoAtLeast(req, 1, 1), statusCode, statusBuf[:])
+							writeStatusLine(&buffer, protoAtLeast(req, 1, 1), code, statusBuf[:])
 
-							if statusCode >= 100 && statusCode <= 199 && statusCode != http.StatusSwitchingProtocols {
+							if code >= 100 && code <= 199 && code != http.StatusSwitchingProtocols {
 								rw.Header().WriteSubset(&buffer, excludedHeadersNoBody) //nolint:errcheck
 								buffer.Write(crlf)
 							} else {
@@ -81,16 +77,15 @@ func New() func(http.Handler) http.Handler {
 							wroteHeader = true
 						}
 
-						rw.WriteHeader(statusCode)
+						rw.WriteHeader(code)
 					}
 				},
 				Write: func(writeFunc httpsnoop.WriteFunc) httpsnoop.WriteFunc {
 					return func(data []byte) (int, error) {
 						if !hijacked && !wroteHeader {
-							statusCode = http.StatusOK
 							rw.WriteHeader(http.StatusOK)
 
-							writeStatusLine(&buffer, protoAtLeast(req, 1, 1), statusCode, statusBuf[:])
+							writeStatusLine(&buffer, protoAtLeast(req, 1, 1), http.StatusOK, statusBuf[:])
 							rw.Header().Write(&buffer) //nolint:errcheck
 						}
 

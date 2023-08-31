@@ -59,8 +59,6 @@ func registerHooks(args hooksArgs) {
 					if err = args.App.Serve(ln); err != nil {
 						if !errors.Is(err, http.ErrServerClosed) {
 							args.Logger.Fatal().Err(err).Msg("Could not start Proxy service")
-						} else {
-							args.Logger.Info().Msg("Proxy service stopped")
 						}
 					}
 				}()

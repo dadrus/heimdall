@@ -13,12 +13,14 @@ import (
 	"github.com/rs/zerolog"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 
+	_interface "github.com/dadrus/heimdall/internal/handler/proxy2/interface"
+	"github.com/dadrus/heimdall/internal/handler/proxy2/middlewares/errorhandler"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/httpx"
 )
 
-type RequestContext struct {
+type requestContext struct {
 	reqMethod       string
 	reqURL          *url.URL
 	upstreamHeaders http.Header
@@ -26,26 +28,38 @@ type RequestContext struct {
 	jwtSigner       heimdall.JWTSigner
 	rw              http.ResponseWriter
 	req             *http.Request
+	eh              errorhandler.ErrorHandler
+	timeout         time.Duration
 	err             error
 }
 
-func NewRequestContext(
-	rw http.ResponseWriter, req *http.Request, method string, reqURL *url.URL, signer heimdall.JWTSigner,
-) *RequestContext {
-	return &RequestContext{
-		jwtSigner:       signer,
-		reqMethod:       method,
-		reqURL:          reqURL,
-		upstreamHeaders: make(http.Header),
-		upstreamCookies: make(map[string]string),
-		rw:              rw,
-		req:             req,
-	}
+type factoryFunc func(rw http.ResponseWriter, req *http.Request) _interface.RequestContext
+
+func (f factoryFunc) Create(rw http.ResponseWriter, req *http.Request) _interface.RequestContext {
+	return f(rw, req)
 }
 
-func (r *RequestContext) Header(name string) string { return r.req.Header.Get(name) }
+func newRequestContextFactory(
+	eh errorhandler.ErrorHandler, signer heimdall.JWTSigner, timeout time.Duration,
+) _interface.RequestContextFactory {
+	return factoryFunc(func(rw http.ResponseWriter, req *http.Request) _interface.RequestContext {
+		return &requestContext{
+			jwtSigner:       signer,
+			reqMethod:       extractMethod(req),
+			reqURL:          extractURL(req),
+			upstreamHeaders: make(http.Header),
+			upstreamCookies: make(map[string]string),
+			rw:              rw,
+			req:             req,
+			eh:              eh,
+			timeout:         timeout,
+		}
+	})
+}
 
-func (r *RequestContext) Cookie(name string) string {
+func (r *requestContext) Header(name string) string { return r.req.Header.Get(name) }
+
+func (r *requestContext) Cookie(name string) string {
 	if cookie, err := r.req.Cookie(name); err == nil {
 		return cookie.Raw
 	}
@@ -53,7 +67,7 @@ func (r *RequestContext) Cookie(name string) string {
 	return ""
 }
 
-func (r *RequestContext) Headers() map[string]string {
+func (r *requestContext) Headers() map[string]string {
 	headers := make(map[string]string, len(r.req.Header))
 
 	for k, v := range r.req.Header {
@@ -63,20 +77,20 @@ func (r *RequestContext) Headers() map[string]string {
 	return headers
 }
 
-func (r *RequestContext) Body() []byte {
+func (r *requestContext) Body() []byte {
 	return nil
 }
 
-func (r *RequestContext) Request() *heimdall.Request {
+func (r *requestContext) Request() *heimdall.Request {
 	return &heimdall.Request{
 		RequestFunctions: r,
 		Method:           r.reqMethod,
 		URL:              r.reqURL,
-		ClientIP:         r.RequestClientIPs(),
+		ClientIP:         r.requestClientIPs(),
 	}
 }
 
-func (r *RequestContext) RequestClientIPs() []string {
+func (r *requestContext) requestClientIPs() []string {
 	if forwarded := r.Header("Forwarded"); len(forwarded) != 0 {
 		values := strings.Split(forwarded, ",")
 		ips := make([]string, len(values)+1)
@@ -101,23 +115,27 @@ func (r *RequestContext) RequestClientIPs() []string {
 		copy(ips, values)
 
 		ips[len(ips)-1] = strings.Split(r.req.RemoteAddr, ":")[0]
+
+		return ips
 	}
 
 	return nil
 }
 
-func (r *RequestContext) AddHeaderForUpstream(name, value string) { r.upstreamHeaders.Add(name, value) }
-func (r *RequestContext) AddCookieForUpstream(name, value string) { r.upstreamCookies[name] = value }
-func (r *RequestContext) AppContext() context.Context             { return r.req.Context() }
-func (r *RequestContext) SetPipelineError(err error)              { r.err = err }
-func (r *RequestContext) Signer() heimdall.JWTSigner              { return r.jwtSigner }
+func (r *requestContext) AddHeaderForUpstream(name, value string) { r.upstreamHeaders.Add(name, value) }
+func (r *requestContext) AddCookieForUpstream(name, value string) { r.upstreamCookies[name] = value }
+func (r *requestContext) AppContext() context.Context             { return r.req.Context() }
+func (r *requestContext) SetPipelineError(err error)              { r.err = err }
+func (r *requestContext) Signer() heimdall.JWTSigner              { return r.jwtSigner }
 
-func (r *RequestContext) Finalize(targetURL *url.URL, timeout time.Duration) error {
+func (r *requestContext) Error(err error) { r.eh.HandleError(r.rw, r.req, err) }
+
+func (r *requestContext) Finalize(targetURL *url.URL) {
 	logger := zerolog.Ctx(r.req.Context())
 	logger.Debug().Msg("Finalizing request")
 
 	if r.err != nil {
-		return r.err
+		r.eh.HandleError(r.rw, r.req, r.err)
 	}
 
 	logger.Info().
@@ -134,15 +152,13 @@ func (r *RequestContext) Finalize(targetURL *url.URL, timeout time.Duration) err
 		Rewrite: r.requestRewriter(targetURL, maps.Clone(r.req.Header)),
 	}
 
-	ctx, cancel := context.WithTimeout(r.req.Context(), timeout)
+	ctx, cancel := context.WithTimeout(r.req.Context(), r.timeout)
 	defer cancel()
 
 	proxy.ServeHTTP(r.rw, r.req.WithContext(ctx))
-
-	return nil
 }
 
-func (r *RequestContext) requestRewriter(targetURL *url.URL, origHeader http.Header) func(req *httputil.ProxyRequest) {
+func (r *requestContext) requestRewriter(targetURL *url.URL, origHeader http.Header) func(req *httputil.ProxyRequest) {
 	return func(proxyReq *httputil.ProxyRequest) {
 		proxyReq.Out.Method = r.reqMethod
 		proxyReq.Out.URL = targetURL

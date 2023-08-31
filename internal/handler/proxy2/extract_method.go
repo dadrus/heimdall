@@ -20,7 +20,7 @@ import (
 	"net/http"
 )
 
-func requestMethod(req *http.Request) string {
+func extractMethod(req *http.Request) string {
 	if val := req.Header.Get("X-Forwarded-Method"); len(val) != 0 {
 		return val
 	}
