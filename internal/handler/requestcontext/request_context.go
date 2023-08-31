@@ -57,7 +57,7 @@ func (s *RequestContext) Request() *heimdall.Request {
 		RequestFunctions: s,
 		Method:           s.reqMethod,
 		URL:              s.reqURL,
-		ClientIP:         s.RequestClientIPs(),
+		ClientIP:         s.requestClientIPs(),
 	}
 }
 
@@ -70,7 +70,7 @@ func (s *RequestContext) SetPipelineError(err error)              { s.err = err 
 func (s *RequestContext) AddHeaderForUpstream(name, value string) { s.upstreamHeaders.Add(name, value) }
 func (s *RequestContext) AddCookieForUpstream(name, value string) { s.upstreamCookies[name] = value }
 func (s *RequestContext) Signer() heimdall.JWTSigner              { return s.jwtSigner }
-func (s *RequestContext) RequestClientIPs() []string {
+func (s *RequestContext) requestClientIPs() []string {
 	ips := s.c.IPs()
 
 	return x.IfThenElse(len(ips) != 0, ips, []string{s.c.IP()})
