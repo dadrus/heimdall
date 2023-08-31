@@ -22,9 +22,10 @@ func (e *ruleExecutor) Execute(ctx heimdall.Context, requireURL bool) (*url.URL,
 		return nil, err
 	}
 
-	if !rul.MatchesMethod(ctx.Request().Method) {
+	method := ctx.Request().Method
+	if !rul.MatchesMethod(method) {
 		return nil, errorchain.NewWithMessagef(heimdall.ErrMethodNotAllowed,
-			"rule (id=%s, src=%s) doesn't match %s method", rul.ID(), rul.SrcID(), ctx.Request().Method)
+			"rule (id=%s, src=%s) doesn't match %s method", rul.ID(), rul.SrcID(), method)
 	}
 
 	mut, err := rul.Execute(ctx)
