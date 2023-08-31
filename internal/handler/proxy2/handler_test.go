@@ -1,7 +1,6 @@
 package proxy2
 
 import (
-	"context"
 	"errors"
 	"net/http"
 	"net/http/httptest"
@@ -11,7 +10,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	mocks3 "github.com/dadrus/heimdall/internal/handler/proxy2/interface/mocks"
-	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/rule/mocks"
 	"github.com/dadrus/heimdall/internal/x"
 )
@@ -42,12 +40,7 @@ func TestHandlerServeHTTP(t *testing.T) {
 			req := httptest.NewRequest(http.MethodGet, "/test", nil)
 			rw := httptest.NewRecorder()
 
-			rc.EXPECT().AppContext().Return(context.Background())
-			rc.EXPECT().Request().Return(&heimdall.Request{
-				Method:   http.MethodGet,
-				URL:      req.URL,
-				ClientIP: []string{"127.0.0.1"},
-			})
+			rc.EXPECT().UpstreamURLRequired().Return(true)
 			rcf.EXPECT().Create(rw, req).Return(rc)
 			re.EXPECT().Execute(rc, true).Return(targetURL, x.IfThenElse(tc.err, testErr, nil))
 
