@@ -44,41 +44,40 @@ import (
 	"github.com/dadrus/heimdall/internal/x"
 )
 
-type appArgs struct {
+type serviceArgs struct {
 	fx.In
 
 	Config     *config.Configuration
 	Registerer prometheus.Registerer
 	Cache      cache.Cache
 	Logger     zerolog.Logger
-
-	Executor rule.Executor
-	Signer   heimdall.JWTSigner
+	Executor   rule.Executor
+	Signer     heimdall.JWTSigner
 }
 
 func passThrough(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) { next.ServeHTTP(rw, req) })
 }
 
-func newApp(args appArgs) *http.Server {
-	service := args.Config.Serve.Proxy
+func newService(args serviceArgs) *http.Server {
+	cfg := args.Config.Serve.Proxy
 
 	eh := errorhandler.New(
-		errorhandler.WithVerboseErrors(service.Respond.Verbose),
-		errorhandler.WithPreconditionErrorCode(service.Respond.With.ArgumentError.Code),
-		errorhandler.WithAuthenticationErrorCode(service.Respond.With.AuthenticationError.Code),
-		errorhandler.WithAuthorizationErrorCode(service.Respond.With.AuthorizationError.Code),
-		errorhandler.WithCommunicationErrorCode(service.Respond.With.CommunicationError.Code),
-		errorhandler.WithMethodErrorCode(service.Respond.With.BadMethodError.Code),
-		errorhandler.WithNoRuleErrorCode(service.Respond.With.NoRuleError.Code),
-		errorhandler.WithInternalServerErrorCode(service.Respond.With.InternalError.Code),
+		errorhandler.WithVerboseErrors(cfg.Respond.Verbose),
+		errorhandler.WithPreconditionErrorCode(cfg.Respond.With.ArgumentError.Code),
+		errorhandler.WithAuthenticationErrorCode(cfg.Respond.With.AuthenticationError.Code),
+		errorhandler.WithAuthorizationErrorCode(cfg.Respond.With.AuthorizationError.Code),
+		errorhandler.WithCommunicationErrorCode(cfg.Respond.With.CommunicationError.Code),
+		errorhandler.WithMethodErrorCode(cfg.Respond.With.BadMethodError.Code),
+		errorhandler.WithNoRuleErrorCode(cfg.Respond.With.NoRuleError.Code),
+		errorhandler.WithInternalServerErrorCode(cfg.Respond.With.InternalError.Code),
 	)
 
 	hc := alice.New(
 		trustedproxy.New(
 			args.Logger,
-			x.IfThenElseExec(service.TrustedProxies != nil,
-				func() []string { return *service.TrustedProxies },
+			x.IfThenElseExec(cfg.TrustedProxies != nil,
+				func() []string { return *cfg.TrustedProxies },
 				func() []string { return []string{} },
 			)...,
 		),
@@ -107,31 +106,31 @@ func newApp(args appArgs) *http.Server {
 			},
 			func() func(http.Handler) http.Handler { return passThrough },
 		),
-		x.IfThenElseExec(service.CORS != nil,
+		x.IfThenElseExec(cfg.CORS != nil,
 			func() func(http.Handler) http.Handler {
 				return cors.New(
 					cors.Options{
-						AllowedOrigins:   service.CORS.AllowedOrigins,
-						AllowedMethods:   service.CORS.AllowedMethods,
-						AllowedHeaders:   service.CORS.AllowedHeaders,
-						AllowCredentials: service.CORS.AllowCredentials,
-						ExposedHeaders:   service.CORS.ExposedHeaders,
-						MaxAge:           int(service.CORS.MaxAge.Seconds()),
+						AllowedOrigins:   cfg.CORS.AllowedOrigins,
+						AllowedMethods:   cfg.CORS.AllowedMethods,
+						AllowedHeaders:   cfg.CORS.AllowedHeaders,
+						AllowCredentials: cfg.CORS.AllowCredentials,
+						ExposedHeaders:   cfg.CORS.ExposedHeaders,
+						MaxAge:           int(cfg.CORS.MaxAge.Seconds()),
 					},
 				).Handler
 			},
 			func() func(http.Handler) http.Handler { return passThrough },
 		),
 		cachemiddleware.New(args.Cache),
-	).Then(newHandler(newRequestContextFactory(eh, args.Signer, service.Timeout.Read), args.Executor))
+	).Then(newHandler(newRequestContextFactory(eh, args.Signer, cfg.Timeout.Read), args.Executor))
 
 	return &http.Server{
 		Handler:        hc,
-		Addr:           service.Address(),
-		ReadTimeout:    service.Timeout.Read,
-		WriteTimeout:   service.Timeout.Write,
-		IdleTimeout:    service.Timeout.Idle,
-		MaxHeaderBytes: int(service.BufferLimit.Read),
+		Addr:           cfg.Address(),
+		ReadTimeout:    cfg.Timeout.Read,
+		WriteTimeout:   cfg.Timeout.Write,
+		IdleTimeout:    cfg.Timeout.Idle,
+		MaxHeaderBytes: int(cfg.BufferLimit.Read),
 		ErrorLog:       newStdLogger(args.Logger),
 	}
 }

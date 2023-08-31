@@ -29,7 +29,7 @@ import (
 )
 
 var Module = fx.Options( // nolint: gochecknoglobals
-	fx.Provide(fx.Annotated{Name: "proxy", Target: newApp}),
+	fx.Provide(fx.Annotated{Name: "proxy", Target: newService}),
 	fx.Invoke(registerHooks),
 )
 
@@ -39,7 +39,7 @@ type hooksArgs struct {
 	Lifecycle fx.Lifecycle
 	Config    *config.Configuration
 	Logger    zerolog.Logger
-	App       *http.Server `name:"proxy"`
+	Service   *http.Server `name:"proxy"`
 }
 
 func registerHooks(args hooksArgs) {
@@ -56,7 +56,7 @@ func registerHooks(args hooksArgs) {
 				go func() {
 					args.Logger.Info().Str("_address", ln.Addr().String()).Msg("Proxy service starts listening")
 
-					if err = args.App.Serve(ln); err != nil {
+					if err = args.Service.Serve(ln); err != nil {
 						if !errors.Is(err, http.ErrServerClosed) {
 							args.Logger.Fatal().Err(err).Msg("Could not start Proxy service")
 						}
@@ -68,7 +68,7 @@ func registerHooks(args hooksArgs) {
 			OnStop: func(ctx context.Context) error {
 				args.Logger.Info().Msg("Tearing down Proxy service")
 
-				return args.App.Shutdown(ctx)
+				return args.Service.Shutdown(ctx)
 			},
 		},
 	)
