@@ -131,6 +131,7 @@ func (r *requestContext) requestClientIPs() []string {
 		}
 	}
 
+	// nolint: makezero
 	ips = append(ips, strings.Split(r.req.RemoteAddr, ":")[0])
 
 	return ips
