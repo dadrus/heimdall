@@ -69,10 +69,9 @@ func (h *Handler) registerRoutes(router fiber.Router, logger zerolog.Logger) {
 func (h *Handler) decisions(c *fiber.Ctx) error {
 	logger := zerolog.Ctx(c.UserContext())
 
-	c.Context().LocalAddr()
-
 	reqURL := fiberxforwarded.RequestURL(c.UserContext())
 	method := fiberxforwarded.RequestMethod(c.UserContext())
+	reqCtx := requestcontext.New(c, method, reqURL, h.s)
 
 	logger.Debug().
 		Str("_method", method).
@@ -89,8 +88,6 @@ func (h *Handler) decisions(c *fiber.Ctx) error {
 			"rule doesn't match %s method", method)
 	}
 
-	reqCtx := requestcontext.New(c, method, reqURL, h.s)
-
 	_, err = rul.Execute(reqCtx)
 	if err != nil {
 		return err
@@ -98,5 +95,5 @@ func (h *Handler) decisions(c *fiber.Ctx) error {
 
 	logger.Debug().Msg("Finalizing request")
 
-	return reqCtx.Finalize(h.code)
+	return reqCtx.FinalizeWithStatus(h.code)
 }

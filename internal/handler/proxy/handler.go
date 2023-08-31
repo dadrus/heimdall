@@ -70,6 +70,7 @@ func (h *Handler) proxy(c *fiber.Ctx) error {
 
 	reqURL := fiberxforwarded.RequestURL(c.UserContext())
 	method := fiberxforwarded.RequestMethod(c.UserContext())
+	reqCtx := requestcontext.New(c, method, reqURL, h.s)
 
 	logger.Debug().
 		Str("_method", method).
@@ -85,8 +86,6 @@ func (h *Handler) proxy(c *fiber.Ctx) error {
 		return errorchain.NewWithMessagef(heimdall.ErrMethodNotAllowed,
 			"rule (id=%s, src=%s) doesn't match %s method", rul.ID(), rul.SrcID(), method)
 	}
-
-	reqCtx := requestcontext.New(c, method, reqURL, h.s)
 
 	mutator, err := rul.Execute(reqCtx)
 	if err != nil {

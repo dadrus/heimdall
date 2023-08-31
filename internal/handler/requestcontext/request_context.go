@@ -76,7 +76,7 @@ func (s *RequestContext) requestClientIPs() []string {
 	return x.IfThenElse(len(ips) != 0, ips, []string{s.c.IP()})
 }
 
-func (s *RequestContext) Finalize(statusCode int) error {
+func (s *RequestContext) FinalizeWithStatus(statusCode int) error {
 	if s.err != nil {
 		return s.err
 	}
