@@ -1,8 +1,10 @@
 package proxy2
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"maps"
 	"net/http"
 	"net/http/httputil"
@@ -18,6 +20,7 @@ import (
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/httpx"
+	"github.com/dadrus/heimdall/internal/x/slicex"
 )
 
 type requestContext struct {
@@ -31,6 +34,8 @@ type requestContext struct {
 	eh              errorhandler.ErrorHandler
 	timeout         time.Duration
 	err             error
+
+	savedBody []byte
 }
 
 type factoryFunc func(rw http.ResponseWriter, req *http.Request) _interface.RequestContext
@@ -61,7 +66,7 @@ func (r *requestContext) Header(name string) string { return r.req.Header.Get(na
 
 func (r *requestContext) Cookie(name string) string {
 	if cookie, err := r.req.Cookie(name); err == nil {
-		return cookie.Raw
+		return cookie.Value
 	}
 
 	return ""
@@ -78,48 +83,57 @@ func (r *requestContext) Headers() map[string]string {
 }
 
 func (r *requestContext) Body() []byte {
-	return nil
+	if r.req.Body == nil || r.req.Body == http.NoBody {
+		return nil
+	}
+
+	if r.savedBody == nil {
+		// drain body by reading its contents into memory and preserving
+		var buf bytes.Buffer
+		if _, err := buf.ReadFrom(r.req.Body); err != nil {
+			return nil
+		}
+
+		if err := r.req.Body.Close(); err != nil {
+			return nil
+		}
+
+		r.savedBody = buf.Bytes()
+		r.req.Body = io.NopCloser(bytes.NewReader(buf.Bytes()))
+	}
+
+	return r.savedBody
 }
 
 func (r *requestContext) Request() *heimdall.Request {
-	return &heimdall.Request{
-		RequestFunctions: r,
-		Method:           r.reqMethod,
-		URL:              r.reqURL,
-		ClientIP:         r.requestClientIPs(),
-	}
+	return &heimdall.Request{RequestFunctions: r, Method: r.reqMethod, URL: r.reqURL, ClientIP: r.requestClientIPs()}
 }
 
 func (r *requestContext) requestClientIPs() []string {
-	if forwarded := r.Header("Forwarded"); len(forwarded) != 0 {
+	var ips []string
+
+	if forwarded := r.req.Header.Get("Forwarded"); len(forwarded) != 0 {
 		values := strings.Split(forwarded, ",")
-		ips := make([]string, len(values)+1)
+		ips = make([]string, len(values))
 
 		for idx, val := range values {
-			for _, val := range strings.Split(val, ";") {
+			for _, val := range strings.Split(strings.TrimSpace(val), ";") {
 				if addr, found := strings.CutPrefix(val, "for="); found {
 					ips[idx] = addr
 				}
 			}
 		}
-
-		ips[len(ips)-1] = strings.Split(r.req.RemoteAddr, ":")[0]
-
-		return ips
 	}
 
-	if forwardedFor := r.Header("X-Forwarded-For"); len(forwardedFor) != 0 {
-		values := strings.Split(forwardedFor, ",")
-		ips := make([]string, len(values)+1)
-
-		copy(ips, values)
-
-		ips[len(ips)-1] = strings.Split(r.req.RemoteAddr, ":")[0]
-
-		return ips
+	if ips == nil {
+		if forwardedFor := r.req.Header.Get("X-Forwarded-For"); len(forwardedFor) != 0 {
+			ips = slicex.Map(strings.Split(forwardedFor, ","), strings.TrimSpace)
+		}
 	}
 
-	return nil
+	ips = append(ips, strings.Split(r.req.RemoteAddr, ":")[0])
+
+	return ips
 }
 
 func (r *requestContext) AddHeaderForUpstream(name, value string) { r.upstreamHeaders.Add(name, value) }
@@ -131,11 +145,13 @@ func (r *requestContext) Signer() heimdall.JWTSigner              { return r.jwt
 func (r *requestContext) Error(err error) { r.eh.HandleError(r.rw, r.req, err) }
 
 func (r *requestContext) Finalize(targetURL *url.URL) {
-	logger := zerolog.Ctx(r.req.Context())
+	logger := zerolog.Ctx(r.AppContext())
 	logger.Debug().Msg("Finalizing request")
 
 	if r.err != nil {
 		r.eh.HandleError(r.rw, r.req, r.err)
+
+		return
 	}
 
 	logger.Info().
@@ -162,6 +178,12 @@ func (r *requestContext) requestRewriter(targetURL *url.URL, origHeader http.Hea
 	return func(proxyReq *httputil.ProxyRequest) {
 		proxyReq.Out.Method = r.reqMethod
 		proxyReq.Out.URL = targetURL
+		proxyReq.Out.Host = targetURL.Host
+
+		// delete headers, which are useless for the upstream service, before forwarding the request
+		proxyReq.Out.Header.Del("X-Forwarded-Method")
+		proxyReq.Out.Header.Del("X-Forwarded-Uri")
+		proxyReq.Out.Header.Del("X-Forwarded-Path")
 
 		for k := range r.upstreamHeaders {
 			proxyReq.Out.Header.Set(k, r.upstreamHeaders.Get(k))
@@ -170,11 +192,6 @@ func (r *requestContext) requestRewriter(targetURL *url.URL, origHeader http.Hea
 		for k, v := range r.upstreamCookies {
 			proxyReq.Out.AddCookie(&http.Cookie{Name: k, Value: v})
 		}
-
-		// delete headers, which are useless for the upstream service, before forwarding the request
-		proxyReq.Out.Header.Del("X-Forwarded-Method")
-		proxyReq.Out.Header.Del("X-Forwarded-Uri")
-		proxyReq.Out.Header.Del("X-Forwarded-Path")
 
 		// set headers, which might be relevant for the upstream, if these are present in the original request
 		// and have not been dropped
@@ -194,21 +211,25 @@ func (r *requestContext) requestRewriter(targetURL *url.URL, origHeader http.Hea
 		clientIP := addr[0]
 
 		// Set the X-Forwarded-For
-		proxyReq.Out.Header.Set("X-Forwarded-For",
-			x.IfThenElseExec(len(forwardedForHeaderValue) == 0,
-				func() string { return clientIP },
-				func() string { return fmt.Sprintf("%s, %s", forwardedForHeaderValue, clientIP) }))
-
-		// Set the Forwarded header
-		proxyReq.Out.Header.Set("Forwarded",
-			x.IfThenElseExec(len(forwardedHeaderValue) == 0,
-				func() string {
-					return fmt.Sprintf("for=%s;proto=%s", clientIP, proxyReq.Out.Proto)
-				},
-				func() string {
-					return fmt.Sprintf("%s, for=%s;proto=%s", forwardedHeaderValue, clientIP, proxyReq.Out.Proto)
-				},
-			),
-		)
+		if len(forwardedForHeaderValue) != 0 {
+			proxyReq.Out.Header.Set("X-Forwarded-For",
+				x.IfThenElseExec(len(forwardedForHeaderValue) == 0,
+					func() string { return clientIP },
+					func() string { return fmt.Sprintf("%s, %s", forwardedForHeaderValue, clientIP) }))
+		} else {
+			// Set the Forwarded header
+			proxyReq.Out.Header.Set("Forwarded",
+				x.IfThenElseExec(len(forwardedHeaderValue) == 0,
+					func() string {
+						return fmt.Sprintf("for=%s;proto=%s", clientIP,
+							x.IfThenElse(proxyReq.Out.TLS != nil, "https", "http"))
+					},
+					func() string {
+						return fmt.Sprintf("%s, for=%s;proto=%s", forwardedHeaderValue, clientIP,
+							x.IfThenElse(proxyReq.Out.TLS != nil, "https", "http"))
+					},
+				),
+			)
+		}
 	}
 }
