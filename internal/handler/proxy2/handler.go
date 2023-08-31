@@ -3,16 +3,16 @@ package proxy2
 import (
 	"net/http"
 
-	_interface "github.com/dadrus/heimdall/internal/handler/proxy2/interface"
+	"github.com/dadrus/heimdall/internal/handler/request"
 	"github.com/dadrus/heimdall/internal/rules/rule"
 )
 
 type handler struct {
 	re  rule.Executor
-	rcf _interface.RequestContextFactory
+	rcf request.ContextFactory
 }
 
-func newHandler(rcf _interface.RequestContextFactory, re rule.Executor) http.Handler {
+func newHandler(rcf request.ContextFactory, re rule.Executor) http.Handler {
 	return &handler{rcf: rcf, re: re}
 }
 

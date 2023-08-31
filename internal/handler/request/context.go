@@ -1,4 +1,4 @@
-package _interface
+package request
 
 import (
 	"net/url"
@@ -6,9 +6,9 @@ import (
 	"github.com/dadrus/heimdall/internal/heimdall"
 )
 
-//go:generate mockery --name RequestContext --structname RequestContextMock
+//go:generate mockery --name Context --structname ContextMock
 
-type RequestContext interface {
+type Context interface {
 	heimdall.Context
 
 	Finalize(targetURL *url.URL)

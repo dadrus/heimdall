@@ -14,8 +14,8 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
-	_interface "github.com/dadrus/heimdall/internal/handler/proxy2/interface"
 	"github.com/dadrus/heimdall/internal/handler/proxy2/middlewares/errorhandler/mocks"
+	"github.com/dadrus/heimdall/internal/handler/request"
 	"github.com/dadrus/heimdall/internal/x/stringx"
 )
 
@@ -130,14 +130,14 @@ func TestRequestContextFinalize(t *testing.T) {
 		uc             string
 		upstreamCalled bool
 		headers        http.Header
-		setup          func(t *testing.T, ctx _interface.RequestContext, eh *mocks.ErrorHandlerMock)
+		setup          func(t *testing.T, ctx request.Context, eh *mocks.ErrorHandlerMock)
 		assert         func(t *testing.T, req *http.Request)
 	}{
 		{
 			"error was present, forwarding aborted",
 			false,
 			http.Header{},
-			func(t *testing.T, ctx _interface.RequestContext, eh *mocks.ErrorHandlerMock) {
+			func(t *testing.T, ctx request.Context, eh *mocks.ErrorHandlerMock) {
 				t.Helper()
 
 				err := errors.New("test error")
@@ -158,7 +158,7 @@ func TestRequestContextFinalize(t *testing.T) {
 			"no headers set",
 			true,
 			http.Header{},
-			func(t *testing.T, ctx _interface.RequestContext, eh *mocks.ErrorHandlerMock) { t.Helper() },
+			func(t *testing.T, ctx request.Context, eh *mocks.ErrorHandlerMock) { t.Helper() },
 			func(t *testing.T, req *http.Request) {
 				t.Helper()
 
@@ -183,7 +183,7 @@ func TestRequestContextFinalize(t *testing.T) {
 				"X-Forwarded-For":    []string{"127.0.0.2, 192.168.12.126"},
 				"Forwarded":          []string{"proto=http;for=127.0.0.3, proto=http;for=192.168.12.127"},
 			},
-			func(t *testing.T, ctx _interface.RequestContext, eh *mocks.ErrorHandlerMock) { t.Helper() },
+			func(t *testing.T, ctx request.Context, eh *mocks.ErrorHandlerMock) { t.Helper() },
 			func(t *testing.T, req *http.Request) {
 				t.Helper()
 
@@ -205,7 +205,7 @@ func TestRequestContextFinalize(t *testing.T) {
 				"X-Forwarded-Method": []string{http.MethodPost},
 				"Forwarded":          []string{"proto=http;for=127.0.0.3, proto=http;for=192.168.12.127"},
 			},
-			func(t *testing.T, ctx _interface.RequestContext, eh *mocks.ErrorHandlerMock) { t.Helper() },
+			func(t *testing.T, ctx request.Context, eh *mocks.ErrorHandlerMock) { t.Helper() },
 			func(t *testing.T, req *http.Request) {
 				t.Helper()
 
@@ -224,7 +224,7 @@ func TestRequestContextFinalize(t *testing.T) {
 			http.Header{
 				"X-Foo-Bar": []string{"bar"},
 			},
-			func(t *testing.T, ctx _interface.RequestContext, eh *mocks.ErrorHandlerMock) {
+			func(t *testing.T, ctx request.Context, eh *mocks.ErrorHandlerMock) {
 				t.Helper()
 
 				ctx.AddHeaderForUpstream("X-User-ID", "someid")

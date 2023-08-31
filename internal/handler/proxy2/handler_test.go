@@ -9,7 +9,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	mocks3 "github.com/dadrus/heimdall/internal/handler/proxy2/interface/mocks"
+	mocks3 "github.com/dadrus/heimdall/internal/handler/request/mocks"
 	"github.com/dadrus/heimdall/internal/rules/rule/mocks"
 	"github.com/dadrus/heimdall/internal/x"
 )
@@ -32,8 +32,8 @@ func TestHandlerServeHTTP(t *testing.T) {
 			testErr := errors.New("test")
 
 			re := mocks.NewExecutorMock(t)
-			rcf := mocks3.NewRequestContextFactoryMock(t)
-			rc := mocks3.NewRequestContextMock(t)
+			rcf := mocks3.NewContextFactoryMock(t)
+			rc := mocks3.NewContextMock(t)
 
 			proxy := newHandler(rcf, re)
 

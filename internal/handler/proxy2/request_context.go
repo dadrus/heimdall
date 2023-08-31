@@ -15,8 +15,8 @@ import (
 	"github.com/rs/zerolog"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 
-	_interface "github.com/dadrus/heimdall/internal/handler/proxy2/interface"
 	"github.com/dadrus/heimdall/internal/handler/proxy2/middlewares/errorhandler"
+	"github.com/dadrus/heimdall/internal/handler/request"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/httpx"
@@ -38,16 +38,16 @@ type requestContext struct {
 	savedBody []byte
 }
 
-type factoryFunc func(rw http.ResponseWriter, req *http.Request) _interface.RequestContext
+type factoryFunc func(rw http.ResponseWriter, req *http.Request) request.Context
 
-func (f factoryFunc) Create(rw http.ResponseWriter, req *http.Request) _interface.RequestContext {
+func (f factoryFunc) Create(rw http.ResponseWriter, req *http.Request) request.Context {
 	return f(rw, req)
 }
 
 func newRequestContextFactory(
 	eh errorhandler.ErrorHandler, signer heimdall.JWTSigner, timeout time.Duration,
-) _interface.RequestContextFactory {
-	return factoryFunc(func(rw http.ResponseWriter, req *http.Request) _interface.RequestContext {
+) request.ContextFactory {
+	return factoryFunc(func(rw http.ResponseWriter, req *http.Request) request.Context {
 		return &requestContext{
 			jwtSigner:       signer,
 			reqMethod:       extractMethod(req),
