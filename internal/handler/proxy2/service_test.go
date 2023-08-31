@@ -635,7 +635,6 @@ func TestProxyService(t *testing.T) {
 
 				require.NoError(t, err)
 				assert.Equal(t, http.StatusNoContent, response.StatusCode)
-
 			},
 		},
 	} {
