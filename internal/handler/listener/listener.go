@@ -74,7 +74,7 @@ func newTLSListener(tlsConf *config.TLS, listener net.Listener) (net.Listener, e
 	cfg := &tls.Config{
 		Certificates: []tls.Certificate{cert},
 		MinVersion:   tlsConf.MinVersion.OrDefault(),
-		NextProtos:   []string{http2.NextProtoTLS},
+		NextProtos:   []string{http2.NextProtoTLS, "http/1.1"},
 	}
 
 	if cfg.MinVersion != tls.VersionTLS13 {
