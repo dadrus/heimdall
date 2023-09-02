@@ -61,7 +61,7 @@ func New() func(http.Handler) http.Handler { // nolint: funlen, gocognit, cyclop
 				WriteHeader: func(headerFunc httpsnoop.WriteHeaderFunc) httpsnoop.WriteHeaderFunc {
 					return func(code int) {
 						if !wroteHeader {
-							writeStatusLine(&buffer, protoAtLeast(req, 1, 1), code, statusBuf[:])
+							writeStatusLine(&buffer, req.Proto, code, statusBuf[:])
 
 							if code >= 100 && code <= 199 && code != http.StatusSwitchingProtocols {
 								rw.Header().WriteSubset(&buffer, excludedHeadersNoBody) //nolint:errcheck
@@ -85,7 +85,7 @@ func New() func(http.Handler) http.Handler { // nolint: funlen, gocognit, cyclop
 						if !hijacked && !wroteHeader {
 							rw.WriteHeader(http.StatusOK)
 
-							writeStatusLine(&buffer, protoAtLeast(req, 1, 1), http.StatusOK, statusBuf[:])
+							writeStatusLine(&buffer, req.Proto, http.StatusOK, statusBuf[:])
 							rw.Header().Write(&buffer) //nolint:errcheck
 						}
 
@@ -112,17 +112,8 @@ func New() func(http.Handler) http.Handler { // nolint: funlen, gocognit, cyclop
 	}
 }
 
-func protoAtLeast(req *http.Request, major, minor int) bool {
-	return req.ProtoMajor > major ||
-		req.ProtoMajor == major && req.ProtoMinor >= minor
-}
-
-func writeStatusLine(bw *bytes.Buffer, is11 bool, code int, scratch []byte) {
-	if is11 {
-		bw.WriteString("HTTP/1.1 ")
-	} else {
-		bw.WriteString("HTTP/1.0 ")
-	}
+func writeStatusLine(bw *bytes.Buffer, proto string, code int, scratch []byte) {
+	bw.WriteString(fmt.Sprintf("%s ", proto))
 
 	if text := http.StatusText(code); text != "" {
 		bw.Write(strconv.AppendInt(scratch[:0], int64(code), 10)) //nolint:gomnd
