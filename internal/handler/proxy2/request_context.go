@@ -3,6 +3,7 @@ package proxy2
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
 	"fmt"
 	"io"
 	"maps"
@@ -14,6 +15,7 @@ import (
 
 	"github.com/rs/zerolog"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+	"golang.org/x/net/http2"
 
 	"github.com/dadrus/heimdall/internal/handler/proxy2/middlewares/errorhandler"
 	"github.com/dadrus/heimdall/internal/handler/request"
@@ -22,6 +24,9 @@ import (
 	"github.com/dadrus/heimdall/internal/x/httpx"
 	"github.com/dadrus/heimdall/internal/x/slicex"
 )
+
+// used for test purposes only
+var tlsClientConfig *tls.Config
 
 type requestContext struct {
 	reqMethod       string
@@ -163,17 +168,33 @@ func (r *requestContext) Finalize(targetURL *url.URL) {
 
 	proxy := &httputil.ReverseProxy{
 		Transport: otelhttp.NewTransport(
-			httpx.NewTraceRoundTripper(http.DefaultTransport),
+			httpx.NewTraceRoundTripper(r.transport()),
 			otelhttp.WithSpanNameFormatter(func(_ string, r *http.Request) string {
 				return fmt.Sprintf("%s %s %s @%s", r.Proto, r.Method, r.URL.Path, r.URL.Host)
 			})),
 		Rewrite: r.requestRewriter(targetURL, maps.Clone(r.req.Header)),
 	}
 
-	ctx, cancel := context.WithTimeout(r.req.Context(), r.timeout)
-	defer cancel()
+	proxy.ServeHTTP(r.rw, r.req)
+}
 
-	proxy.ServeHTTP(r.rw, r.req.WithContext(ctx))
+func (r *requestContext) transport() http.RoundTripper {
+	switch r.req.Proto {
+	case "HTTP/2.0":
+		return &http2.Transport{
+			ReadIdleTimeout: r.timeout,
+			TLSClientConfig: tlsClientConfig,
+		}
+	default:
+		return &http.Transport{
+			Proxy:                 http.ProxyFromEnvironment,
+			MaxIdleConns:          100,
+			IdleConnTimeout:       90 * time.Second,
+			TLSHandshakeTimeout:   10 * time.Second,
+			ExpectContinueTimeout: 1 * time.Second,
+			TLSClientConfig:       tlsClientConfig,
+		}
+	}
 }
 
 func (r *requestContext) requestRewriter(targetURL *url.URL, origHeader http.Header) func(req *httputil.ProxyRequest) {
