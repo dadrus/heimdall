@@ -189,9 +189,9 @@ func (r *requestContext) transport() http.RoundTripper {
 	default:
 		return &http.Transport{
 			Proxy:                 http.ProxyFromEnvironment,
-			MaxIdleConns:          100,
-			IdleConnTimeout:       90 * time.Second,
-			TLSHandshakeTimeout:   10 * time.Second,
+			MaxIdleConns:          100,              //nolint:gomnd
+			IdleConnTimeout:       90 * time.Second, //nolint:gomnd
+			TLSHandshakeTimeout:   10 * time.Second, //nolint:gomnd
 			ExpectContinueTimeout: 1 * time.Second,
 			TLSClientConfig:       tlsClientConfig,
 		}
