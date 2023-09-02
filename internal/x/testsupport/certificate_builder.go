@@ -24,6 +24,8 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"math/big"
+	"net"
+	"net/url"
 	"time"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
@@ -121,6 +123,30 @@ func WithIssuer(key any, cert *x509.Certificate) CertificateBuilderOption {
 func WithSubjectKeyID(skid []byte) CertificateBuilderOption {
 	return func(builder *CertificateBuilder) {
 		builder.tmpl.SubjectKeyId = skid
+	}
+}
+
+func WithDNSNames(names []string) CertificateBuilderOption {
+	return func(builder *CertificateBuilder) {
+		builder.tmpl.DNSNames = names
+	}
+}
+
+func WithIPAddresses(addresses []net.IP) CertificateBuilderOption {
+	return func(builder *CertificateBuilder) {
+		builder.tmpl.IPAddresses = addresses
+	}
+}
+
+func WithEMailAddresses(addresses []string) CertificateBuilderOption {
+	return func(builder *CertificateBuilder) {
+		builder.tmpl.EmailAddresses = addresses
+	}
+}
+
+func WithURIs(uris []*url.URL) CertificateBuilderOption {
+	return func(builder *CertificateBuilder) {
+		builder.tmpl.URIs = uris
 	}
 }
 
