@@ -20,7 +20,7 @@ import (
 	"crypto/tls"
 	"net"
 
-	"github.com/gofiber/fiber/v2"
+	"golang.org/x/net/http2"
 
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
@@ -69,14 +69,12 @@ func newTLSListener(tlsConf *config.TLS, listener net.Listener) (net.Listener, e
 			"key store entry is not suitable for TLS").CausedBy(err)
 	}
 
-	tlsHandler := &fiber.TLSHandler{}
-
 	// nolint:gosec
 	// configuration ensures, TLS versions below 1.2 are not possible
 	cfg := &tls.Config{
-		Certificates:   []tls.Certificate{cert},
-		MinVersion:     tlsConf.MinVersion.OrDefault(),
-		GetCertificate: tlsHandler.GetClientInfo,
+		Certificates: []tls.Certificate{cert},
+		MinVersion:   tlsConf.MinVersion.OrDefault(),
+		NextProtos:   []string{http2.NextProtoTLS},
 	}
 
 	if cfg.MinVersion != tls.VersionTLS13 {
