@@ -6,7 +6,6 @@ import (
 	"crypto/tls"
 	"fmt"
 	"io"
-	"maps"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -25,8 +24,10 @@ import (
 	"github.com/dadrus/heimdall/internal/x/slicex"
 )
 
-// used for test purposes only
-var tlsClientConfig *tls.Config
+// tlsClientConfig used for test purposes only to
+// set the certificate pool for peer certificate verification
+// purposes.
+var tlsClientConfig *tls.Config // nolint: gochecknoglobals
 
 type requestContext struct {
 	reqMethod       string
@@ -172,7 +173,7 @@ func (r *requestContext) Finalize(targetURL *url.URL) {
 			otelhttp.WithSpanNameFormatter(func(_ string, r *http.Request) string {
 				return fmt.Sprintf("%s %s %s @%s", r.Proto, r.Method, r.URL.Path, r.URL.Host)
 			})),
-		Rewrite: r.requestRewriter(targetURL, maps.Clone(r.req.Header)),
+		Rewrite: r.requestRewriter(targetURL),
 	}
 
 	proxy.ServeHTTP(r.rw, r.req)
@@ -197,7 +198,7 @@ func (r *requestContext) transport() http.RoundTripper {
 	}
 }
 
-func (r *requestContext) requestRewriter(targetURL *url.URL, origHeader http.Header) func(req *httputil.ProxyRequest) {
+func (r *requestContext) requestRewriter(targetURL *url.URL) func(req *httputil.ProxyRequest) {
 	return func(proxyReq *httputil.ProxyRequest) {
 		proxyReq.Out.Method = r.reqMethod
 		proxyReq.Out.URL = targetURL
@@ -218,17 +219,17 @@ func (r *requestContext) requestRewriter(targetURL *url.URL, origHeader http.Hea
 
 		// set headers, which might be relevant for the upstream, if these are present in the original request
 		// and have not been dropped
-		if val := origHeader.Get("X-Forwarded-Proto"); len(val) != 0 {
+		if val := proxyReq.In.Header.Get("X-Forwarded-Proto"); len(val) != 0 {
 			proxyReq.Out.Header.Set("X-Forwarded-Proto", val)
 		}
 
-		if val := origHeader.Get("X-Forwarded-Host"); len(val) != 0 {
+		if val := proxyReq.In.Header.Get("X-Forwarded-Host"); len(val) != 0 {
 			proxyReq.Out.Header.Set("X-Forwarded-Host", val)
 		}
 
 		// it is safe to reuse these headers here, as these have been already dropped if the source is untrusted
-		forwardedForHeaderValue := origHeader.Get("X-Forwarded-For")
-		forwardedHeaderValue := origHeader.Get("Forwarded")
+		forwardedForHeaderValue := proxyReq.In.Header.Get("X-Forwarded-For")
+		forwardedHeaderValue := proxyReq.In.Header.Get("Forwarded")
 
 		addr := strings.Split(r.req.RemoteAddr, ":")
 		clientIP := addr[0]
