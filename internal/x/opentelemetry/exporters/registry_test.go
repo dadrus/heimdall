@@ -25,7 +25,6 @@ import (
 	instana "github.com/instana/go-otel-exporter"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.opentelemetry.io/otel/exporters/jaeger"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
 	"go.opentelemetry.io/otel/exporters/zipkin"
 	"go.opentelemetry.io/otel/sdk/trace"
@@ -175,7 +174,7 @@ func TestCreateSpanExporters(t *testing.T) {
 		},
 		{
 			uc:    "list contains unsupported exporter type",
-			names: []string{"zipkin", "jaeger", "foobar"},
+			names: []string{"zipkin", "foobar"},
 			assert: func(t *testing.T, err error, expts []trace.SpanExporter) {
 				t.Helper()
 
@@ -226,7 +225,7 @@ func TestCreateSpanExporters(t *testing.T) {
 		},
 		{
 			uc:    "all supported exporter types",
-			names: []string{"otlp", "zipkin", "jaeger", "instana"},
+			names: []string{"otlp", "zipkin", "instana"},
 			setup: func(t *testing.T) {
 				t.Helper()
 				t.Setenv("INSTANA_ENDPOINT_URL", "http://instana:1234")
@@ -237,11 +236,10 @@ func TestCreateSpanExporters(t *testing.T) {
 				t.Helper()
 
 				require.NoError(t, err)
-				assert.Len(t, expts, 4)
+				assert.Len(t, expts, 3)
 				assert.IsType(t, &otlptrace.Exporter{}, expts[0])
 				assert.IsType(t, &zipkin.Exporter{}, expts[1])
-				assert.IsType(t, &jaeger.Exporter{}, expts[2])
-				assert.IsType(t, &instana.Exporter{}, expts[3])
+				assert.IsType(t, &instana.Exporter{}, expts[2])
 			},
 		},
 	} {
