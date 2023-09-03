@@ -22,12 +22,6 @@ import (
 	"github.com/dadrus/heimdall/internal/heimdall"
 )
 
-//go:generate mockery --name URIMutator --structname URIMutatorMock
-
-type URIMutator interface {
-	Mutate(uri *url.URL) (*url.URL, error)
-}
-
 //go:generate mockery --name Rule --structname RuleMock
 
 type Rule interface {

@@ -119,7 +119,7 @@ func TestProxyService(t *testing.T) {
 		enableMetrics    bool
 		createRequest    func(t *testing.T, host string) *http.Request
 		createClient     func(t *testing.T) *http.Client
-		configureMocks   func(t *testing.T, eh *mocks4.ExecutorMock)
+		configureMocks   func(t *testing.T, exec *mocks4.ExecutorMock)
 		instructUpstream func(t *testing.T)
 		assertResponse   func(t *testing.T, err error, resp *http.Response)
 	}{
@@ -138,10 +138,10 @@ func TestProxyService(t *testing.T) {
 
 				return req
 			},
-			configureMocks: func(t *testing.T, eh *mocks4.ExecutorMock) {
+			configureMocks: func(t *testing.T, exec *mocks4.ExecutorMock) {
 				t.Helper()
 
-				eh.EXPECT().Execute(mock.Anything, mock.Anything).Return(nil, heimdall.ErrNoRuleFound)
+				exec.EXPECT().Execute(mock.Anything).Return(nil, heimdall.ErrNoRuleFound)
 			},
 			assertResponse: func(t *testing.T, err error, response *http.Response) {
 				t.Helper()
@@ -171,10 +171,10 @@ func TestProxyService(t *testing.T) {
 
 				return req
 			},
-			configureMocks: func(t *testing.T, eh *mocks4.ExecutorMock) {
+			configureMocks: func(t *testing.T, exec *mocks4.ExecutorMock) {
 				t.Helper()
 
-				eh.EXPECT().Execute(mock.Anything, mock.Anything).Return(nil, heimdall.ErrMethodNotAllowed)
+				exec.EXPECT().Execute(mock.Anything).Return(nil, heimdall.ErrMethodNotAllowed)
 			},
 			assertResponse: func(t *testing.T, err error, response *http.Response) {
 				t.Helper()
@@ -204,10 +204,10 @@ func TestProxyService(t *testing.T) {
 
 				return req
 			},
-			configureMocks: func(t *testing.T, eh *mocks4.ExecutorMock) {
+			configureMocks: func(t *testing.T, exec *mocks4.ExecutorMock) {
 				t.Helper()
 
-				eh.EXPECT().Execute(mock.Anything, mock.Anything).Return(nil, heimdall.ErrConfiguration)
+				exec.EXPECT().Execute(mock.Anything).Return(nil, heimdall.ErrConfiguration)
 			},
 			assertResponse: func(t *testing.T, err error, response *http.Response) {
 				t.Helper()
@@ -237,10 +237,10 @@ func TestProxyService(t *testing.T) {
 
 				return req
 			},
-			configureMocks: func(t *testing.T, eh *mocks4.ExecutorMock) {
+			configureMocks: func(t *testing.T, exec *mocks4.ExecutorMock) {
 				t.Helper()
 
-				eh.EXPECT().Execute(mock.Anything, mock.Anything).Return(nil, heimdall.ErrAuthentication)
+				exec.EXPECT().Execute(mock.Anything).Return(nil, heimdall.ErrAuthentication)
 			},
 			assertResponse: func(t *testing.T, err error, response *http.Response) {
 				t.Helper()
@@ -270,10 +270,10 @@ func TestProxyService(t *testing.T) {
 
 				return req
 			},
-			configureMocks: func(t *testing.T, eh *mocks4.ExecutorMock) {
+			configureMocks: func(t *testing.T, exec *mocks4.ExecutorMock) {
 				t.Helper()
 
-				eh.EXPECT().Execute(mock.Anything, mock.Anything).Return(nil, heimdall.ErrAuthorization)
+				exec.EXPECT().Execute(mock.Anything).Return(nil, heimdall.ErrAuthorization)
 			},
 			assertResponse: func(t *testing.T, err error, response *http.Response) {
 				t.Helper()
@@ -308,10 +308,17 @@ func TestProxyService(t *testing.T) {
 
 				return req
 			},
-			configureMocks: func(t *testing.T, eh *mocks4.ExecutorMock) {
+			configureMocks: func(t *testing.T, exec *mocks4.ExecutorMock) {
 				t.Helper()
 
-				eh.EXPECT().Execute(
+				mut := mocks4.NewURIMutatorMock(t)
+				mut.EXPECT().Mutate(mock.Anything).Return(&url.URL{
+					Scheme: upstreamURL.Scheme,
+					Host:   upstreamURL.Host,
+					Path:   "/foobar",
+				}, nil)
+
+				exec.EXPECT().Execute(
 					mock.MatchedBy(func(ctx request.Context) bool {
 						ctx.AddHeaderForUpstream("X-Foo-Bar", "baz")
 						ctx.AddCookieForUpstream("X-Bar-Foo", "zab")
@@ -321,12 +328,7 @@ func TestProxyService(t *testing.T) {
 
 						return pathMatched && methodMatched
 					}),
-					mock.Anything,
-				).Return(&url.URL{
-					Scheme: upstreamURL.Scheme,
-					Host:   upstreamURL.Host,
-					Path:   "/foobar",
-				}, nil)
+				).Return(mut, nil)
 			},
 			instructUpstream: func(t *testing.T) {
 				t.Helper()
@@ -389,10 +391,17 @@ func TestProxyService(t *testing.T) {
 
 				return req
 			},
-			configureMocks: func(t *testing.T, eh *mocks4.ExecutorMock) {
+			configureMocks: func(t *testing.T, exec *mocks4.ExecutorMock) {
 				t.Helper()
 
-				eh.EXPECT().Execute(
+				mut := mocks4.NewURIMutatorMock(t)
+				mut.EXPECT().Mutate(mock.Anything).Return(&url.URL{
+					Scheme: upstreamURL.Scheme,
+					Host:   upstreamURL.Host,
+					Path:   "/[id]/foobar",
+				}, nil)
+
+				exec.EXPECT().Execute(
 					mock.MatchedBy(func(ctx request.Context) bool {
 						ctx.AddHeaderForUpstream("X-Foo-Bar", "baz")
 						ctx.AddCookieForUpstream("X-Bar-Foo", "zab")
@@ -402,12 +411,7 @@ func TestProxyService(t *testing.T) {
 
 						return pathMatched && methodMatched
 					}),
-					mock.Anything,
-				).Return(&url.URL{
-					Scheme: upstreamURL.Scheme,
-					Host:   upstreamURL.Host,
-					Path:   "/[id]/foobar",
-				}, nil)
+				).Return(mut, nil)
 			},
 			instructUpstream: func(t *testing.T) {
 				t.Helper()
@@ -469,10 +473,17 @@ func TestProxyService(t *testing.T) {
 
 				return req
 			},
-			configureMocks: func(t *testing.T, eh *mocks4.ExecutorMock) {
+			configureMocks: func(t *testing.T, exec *mocks4.ExecutorMock) {
 				t.Helper()
 
-				eh.EXPECT().Execute(
+				mut := mocks4.NewURIMutatorMock(t)
+				mut.EXPECT().Mutate(mock.Anything).Return(&url.URL{
+					Scheme: upstreamURL.Scheme,
+					Host:   upstreamURL.Host,
+					Path:   "/[barfoo]",
+				}, nil)
+
+				exec.EXPECT().Execute(
 					mock.MatchedBy(func(ctx request.Context) bool {
 						ctx.AddHeaderForUpstream("X-Foo-Bar", "baz")
 						ctx.AddCookieForUpstream("X-Bar-Foo", "zab")
@@ -482,12 +493,7 @@ func TestProxyService(t *testing.T) {
 
 						return pathMatched && methodMatched
 					}),
-					mock.Anything,
-				).Return(&url.URL{
-					Scheme: upstreamURL.Scheme,
-					Host:   upstreamURL.Host,
-					Path:   "/[barfoo]",
-				}, nil)
+				).Return(mut, nil)
 			},
 			instructUpstream: func(t *testing.T) {
 				t.Helper()
@@ -555,10 +561,17 @@ func TestProxyService(t *testing.T) {
 
 				return req
 			},
-			configureMocks: func(t *testing.T, eh *mocks4.ExecutorMock) {
+			configureMocks: func(t *testing.T, exec *mocks4.ExecutorMock) {
 				t.Helper()
 
-				eh.EXPECT().Execute(
+				mut := mocks4.NewURIMutatorMock(t)
+				mut.EXPECT().Mutate(mock.Anything).Return(&url.URL{
+					Scheme: upstreamURL.Scheme,
+					Host:   upstreamURL.Host,
+					Path:   "/bar",
+				}, nil)
+
+				exec.EXPECT().Execute(
 					mock.MatchedBy(func(ctx request.Context) bool {
 						ctx.AddHeaderForUpstream("X-Foo-Bar", "baz")
 
@@ -567,12 +580,7 @@ func TestProxyService(t *testing.T) {
 
 						return pathMatched && methodMatched
 					}),
-					mock.Anything,
-				).Return(&url.URL{
-					Scheme: upstreamURL.Scheme,
-					Host:   upstreamURL.Host,
-					Path:   "/bar",
-				}, nil)
+				).Return(mut, nil)
 			},
 			instructUpstream: func(t *testing.T) {
 				t.Helper()
@@ -638,7 +646,7 @@ func TestProxyService(t *testing.T) {
 
 				return req
 			},
-			configureMocks: func(t *testing.T, eh *mocks4.ExecutorMock) { t.Helper() },
+			configureMocks: func(t *testing.T, _ *mocks4.ExecutorMock) { t.Helper() },
 			assertResponse: func(t *testing.T, err error, response *http.Response) {
 				t.Helper()
 
@@ -683,7 +691,7 @@ func TestProxyService(t *testing.T) {
 
 				return req
 			},
-			configureMocks: func(t *testing.T, eh *mocks4.ExecutorMock) { t.Helper() },
+			configureMocks: func(t *testing.T, _ *mocks4.ExecutorMock) { t.Helper() },
 			assertResponse: func(t *testing.T, err error, response *http.Response) {
 				t.Helper()
 
@@ -730,10 +738,17 @@ func TestProxyService(t *testing.T) {
 
 				return req
 			},
-			configureMocks: func(t *testing.T, eh *mocks4.ExecutorMock) {
+			configureMocks: func(t *testing.T, exec *mocks4.ExecutorMock) {
 				t.Helper()
 
-				eh.EXPECT().Execute(
+				mut := mocks4.NewURIMutatorMock(t)
+				mut.EXPECT().Mutate(mock.Anything).Return(&url.URL{
+					Scheme: upstreamURL.Scheme,
+					Host:   upstreamURL.Host,
+					Path:   "/bar",
+				}, nil)
+
+				exec.EXPECT().Execute(
 					mock.MatchedBy(func(ctx request.Context) bool {
 						ctx.AddHeaderForUpstream("X-Foo-Bar", "baz")
 
@@ -742,12 +757,7 @@ func TestProxyService(t *testing.T) {
 
 						return pathMatched && methodMatched
 					}),
-					mock.Anything,
-				).Return(&url.URL{
-					Scheme: upstreamURL.Scheme,
-					Host:   upstreamURL.Host,
-					Path:   "/bar",
-				}, nil)
+				).Return(mut, nil)
 			},
 			instructUpstream: func(t *testing.T) {
 				t.Helper()
@@ -819,9 +829,9 @@ func TestProxyService(t *testing.T) {
 				Metrics: config.MetricsConfig{Enabled: tc.enableMetrics},
 			}
 			cch := mocks.NewCacheMock(t)
-			eh := mocks4.NewExecutorMock(t)
+			exec := mocks4.NewExecutorMock(t)
 
-			tc.configureMocks(t, eh)
+			tc.configureMocks(t, exec)
 			instructUpstream(t)
 
 			client := createClient(t)
@@ -831,7 +841,7 @@ func TestProxyService(t *testing.T) {
 				Registerer: registry,
 				Cache:      cch,
 				Logger:     log.Logger,
-				Executor:   eh,
+				Executor:   exec,
 			})
 
 			defer proxy.Shutdown(context.Background())

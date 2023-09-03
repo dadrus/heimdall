@@ -9,6 +9,7 @@ import (
 type UpstreamURLFactory struct {
 	Host        string       `json:"host"    yaml:"host"`
 	URLRewriter *URLRewriter `json:"rewrite" yaml:"rewrite"`
+	Protocol    string       `json:"proto"   yaml:"proto"`
 }
 
 func (f *UpstreamURLFactory) CreateURL(value *url.URL) *url.URL {

@@ -1,8 +1,6 @@
 package rules
 
 import (
-	"net/url"
-
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
@@ -18,7 +16,7 @@ func newRuleExecutor(repository rule.Repository) rule.Executor {
 	return &ruleExecutor{r: repository}
 }
 
-func (e *ruleExecutor) Execute(ctx heimdall.Context, requireURL bool) (*url.URL, error) {
+func (e *ruleExecutor) Execute(ctx heimdall.Context) (rule.URIMutator, error) {
 	req := ctx.Request()
 
 	//nolint:contextcheck
@@ -38,14 +36,5 @@ func (e *ruleExecutor) Execute(ctx heimdall.Context, requireURL bool) (*url.URL,
 			"rule (id=%s, src=%s) doesn't match %s method", rul.ID(), rul.SrcID(), method)
 	}
 
-	mut, err := rul.Execute(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	if requireURL {
-		return mut.Mutate(ctx.Request().URL)
-	}
-
-	return &url.URL{}, nil
+	return rul.Execute(ctx)
 }

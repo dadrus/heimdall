@@ -16,9 +16,9 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"golang.org/x/net/http2"
 
-	"github.com/dadrus/heimdall/internal/handler/proxy2/middlewares/errorhandler"
 	"github.com/dadrus/heimdall/internal/handler/request"
 	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/httpx"
 	"github.com/dadrus/heimdall/internal/x/slicex"
@@ -37,7 +37,6 @@ type requestContext struct {
 	jwtSigner       heimdall.JWTSigner
 	rw              http.ResponseWriter
 	req             *http.Request
-	eh              errorhandler.ErrorHandler
 	timeout         time.Duration
 	err             error
 
@@ -50,9 +49,7 @@ func (f factoryFunc) Create(rw http.ResponseWriter, req *http.Request) request.C
 	return f(rw, req)
 }
 
-func newRequestContextFactory(
-	eh errorhandler.ErrorHandler, signer heimdall.JWTSigner, timeout time.Duration,
-) request.ContextFactory {
+func newRequestContextFactory(signer heimdall.JWTSigner, timeout time.Duration) request.ContextFactory {
 	return factoryFunc(func(rw http.ResponseWriter, req *http.Request) request.Context {
 		return &requestContext{
 			jwtSigner:       signer,
@@ -62,7 +59,6 @@ func newRequestContextFactory(
 			upstreamCookies: make(map[string]string),
 			rw:              rw,
 			req:             req,
-			eh:              eh,
 			timeout:         timeout,
 		}
 	})
@@ -149,17 +145,17 @@ func (r *requestContext) AppContext() context.Context             { return r.req
 func (r *requestContext) SetPipelineError(err error)              { r.err = err }
 func (r *requestContext) Signer() heimdall.JWTSigner              { return r.jwtSigner }
 
-func (r *requestContext) Error(err error)           { r.eh.HandleError(r.rw, r.req, err) }
-func (r *requestContext) UpstreamURLRequired() bool { return true }
-
-func (r *requestContext) Finalize(targetURL *url.URL) {
+func (r *requestContext) Finalize(mut rule.URIMutator) error {
 	logger := zerolog.Ctx(r.AppContext())
 	logger.Debug().Msg("Finalizing request")
 
 	if r.err != nil {
-		r.eh.HandleError(r.rw, r.req, r.err)
+		return r.err
+	}
 
-		return
+	targetURL, err := mut.Mutate(r.reqURL)
+	if err != nil {
+		return err
 	}
 
 	logger.Info().
@@ -177,6 +173,8 @@ func (r *requestContext) Finalize(targetURL *url.URL) {
 	}
 
 	proxy.ServeHTTP(r.rw, r.req)
+
+	return nil
 }
 
 func (r *requestContext) transport() http.RoundTripper {

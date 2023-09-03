@@ -1,9 +1,8 @@
 package request
 
 import (
-	"net/url"
-
 	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/rules/rule"
 )
 
 //go:generate mockery --name Context --structname ContextMock
@@ -11,7 +10,5 @@ import (
 type Context interface {
 	heimdall.Context
 
-	Finalize(targetURL *url.URL)
-	Error(err error)
-	UpstreamURLRequired() bool
+	Finalize(mutator rule.URIMutator) error
 }

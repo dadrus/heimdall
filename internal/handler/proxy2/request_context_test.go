@@ -14,27 +14,10 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
-	"github.com/dadrus/heimdall/internal/handler/proxy2/middlewares/errorhandler/mocks"
 	"github.com/dadrus/heimdall/internal/handler/request"
+	mocks2 "github.com/dadrus/heimdall/internal/rules/rule/mocks"
 	"github.com/dadrus/heimdall/internal/x/stringx"
 )
-
-func TestRequestContextError(t *testing.T) {
-	t.Parallel()
-
-	testErr := errors.New("test error")
-	rw := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodHead, "https://foo.bar/test", nil)
-
-	eh := mocks.NewErrorHandlerMock(t)
-	eh.EXPECT().HandleError(rw, req, testErr)
-
-	factory := newRequestContextFactory(eh, nil, 0)
-	rc := factory.Create(rw, req)
-
-	// WHEN -> THEN expectations are met
-	rc.Error(testErr)
-}
 
 func TestRequestContextRequestClientIPs(t *testing.T) {
 	t.Parallel()
@@ -130,20 +113,37 @@ func TestRequestContextFinalize(t *testing.T) {
 		uc             string
 		upstreamCalled bool
 		headers        http.Header
-		setup          func(t *testing.T, ctx request.Context, eh *mocks.ErrorHandlerMock)
-		assert         func(t *testing.T, req *http.Request)
+		setup          func(*testing.T, request.Context, *mocks2.URIMutatorMock, *url.URL)
+		assertRequest  func(*testing.T, *http.Request)
 	}{
 		{
 			"error was present, forwarding aborted",
 			false,
 			http.Header{},
-			func(t *testing.T, ctx request.Context, eh *mocks.ErrorHandlerMock) {
+			func(t *testing.T, ctx request.Context, _ *mocks2.URIMutatorMock, _ *url.URL) {
 				t.Helper()
 
 				err := errors.New("test error")
 				ctx.SetPipelineError(err)
+			},
+			func(t *testing.T, req *http.Request) {
+				t.Helper()
 
-				eh.EXPECT().HandleError(mock.Anything, mock.Anything, err)
+				require.Len(t, req.Header, 3)
+				assert.NotEmpty(t, req.Header.Get("Accept-Encoding"))
+				assert.NotEmpty(t, req.Header.Get("Content-Length"))
+				assert.Equal(t, "for=192.0.2.1;proto=https", req.Header.Get("Forwarded"))
+			},
+		},
+		{
+			"error while retrieving target url",
+			false,
+			http.Header{},
+			func(t *testing.T, ctx request.Context, mut *mocks2.URIMutatorMock, _ *url.URL) {
+				t.Helper()
+
+				err := errors.New("test error")
+				mut.EXPECT().Mutate(mock.Anything).Return(nil, err)
 			},
 			func(t *testing.T, req *http.Request) {
 				t.Helper()
@@ -158,7 +158,11 @@ func TestRequestContextFinalize(t *testing.T) {
 			"no headers set",
 			true,
 			http.Header{},
-			func(t *testing.T, ctx request.Context, eh *mocks.ErrorHandlerMock) { t.Helper() },
+			func(t *testing.T, _ request.Context, mut *mocks2.URIMutatorMock, uri *url.URL) {
+				t.Helper()
+
+				mut.EXPECT().Mutate(mock.Anything).Return(uri, nil)
+			},
 			func(t *testing.T, req *http.Request) {
 				t.Helper()
 
@@ -183,7 +187,11 @@ func TestRequestContextFinalize(t *testing.T) {
 				"X-Forwarded-For":    []string{"127.0.0.2, 192.168.12.126"},
 				"Forwarded":          []string{"proto=http;for=127.0.0.3, proto=http;for=192.168.12.127"},
 			},
-			func(t *testing.T, ctx request.Context, eh *mocks.ErrorHandlerMock) { t.Helper() },
+			func(t *testing.T, _ request.Context, mut *mocks2.URIMutatorMock, uri *url.URL) {
+				t.Helper()
+
+				mut.EXPECT().Mutate(mock.Anything).Return(uri, nil)
+			},
 			func(t *testing.T, req *http.Request) {
 				t.Helper()
 
@@ -205,7 +213,11 @@ func TestRequestContextFinalize(t *testing.T) {
 				"X-Forwarded-Method": []string{http.MethodPost},
 				"Forwarded":          []string{"proto=http;for=127.0.0.3, proto=http;for=192.168.12.127"},
 			},
-			func(t *testing.T, ctx request.Context, eh *mocks.ErrorHandlerMock) { t.Helper() },
+			func(t *testing.T, _ request.Context, mut *mocks2.URIMutatorMock, uri *url.URL) {
+				t.Helper()
+
+				mut.EXPECT().Mutate(mock.Anything).Return(uri, nil)
+			},
 			func(t *testing.T, req *http.Request) {
 				t.Helper()
 
@@ -224,8 +236,10 @@ func TestRequestContextFinalize(t *testing.T) {
 			http.Header{
 				"X-Foo-Bar": []string{"bar"},
 			},
-			func(t *testing.T, ctx request.Context, eh *mocks.ErrorHandlerMock) {
+			func(t *testing.T, ctx request.Context, mut *mocks2.URIMutatorMock, uri *url.URL) {
 				t.Helper()
+
+				mut.EXPECT().Mutate(mock.Anything).Return(uri, nil)
 
 				ctx.AddHeaderForUpstream("X-User-ID", "someid")
 				ctx.AddHeaderForUpstream("X-Custom", "somevalue")
@@ -258,24 +272,29 @@ func TestRequestContextFinalize(t *testing.T) {
 			req := httptest.NewRequest(http.MethodGet, "https://foo.bar/test", bytes.NewBufferString("Ping"))
 			req.Header = tc.headers
 			rw := httptest.NewRecorder()
-			eh := mocks.NewErrorHandlerMock(t)
-			ctx := newRequestContextFactory(eh, nil, 100*time.Minute).Create(rw, req)
-			tc.setup(t, ctx, eh)
 
 			srv := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, req *http.Request) {
 				upstreamCalled = true
-				tc.assert(t, req)
+				tc.assertRequest(t, req)
 			}))
 			defer srv.Close()
+
+			ctx := newRequestContextFactory(nil, 100*time.Minute).Create(rw, req)
+			mut := mocks2.NewURIMutatorMock(t)
 
 			targetURL, err := url.Parse(srv.URL)
 			require.NoError(t, err)
 
+			tc.setup(t, ctx, mut, targetURL)
+
 			// WHEN
-			ctx.Finalize(targetURL)
+			err = ctx.Finalize(mut)
 
 			// THEN
 			require.Equal(t, tc.upstreamCalled, upstreamCalled)
+			if !tc.upstreamCalled {
+				require.Error(t, err)
+			}
 		})
 	}
 }
@@ -288,7 +307,7 @@ func TestRequestContextHeaders(t *testing.T) {
 	req.Header.Set("X-Foo-Bar", "foo")
 	req.Header.Add("X-Foo-Bar", "bar")
 
-	ctx := newRequestContextFactory(nil, nil, 0).Create(nil, req)
+	ctx := newRequestContextFactory(nil, 0).Create(nil, req)
 
 	// WHEN
 	headers := ctx.Request().Headers()
@@ -306,7 +325,7 @@ func TestRequestContextHeader(t *testing.T) {
 	req.Header.Set("X-Foo-Bar", "foo")
 	req.Header.Add("X-Foo-Bar", "bar")
 
-	ctx := newRequestContextFactory(nil, nil, 0).Create(nil, req)
+	ctx := newRequestContextFactory(nil, 0).Create(nil, req)
 
 	// WHEN
 	value := ctx.Request().Header("X-Foo-Bar")
@@ -322,7 +341,7 @@ func TestRequestContextCookie(t *testing.T) {
 	req := httptest.NewRequest(http.MethodHead, "https://foo.bar/test", nil)
 	req.Header.Set("Cookie", "foo=bar; bar=baz")
 
-	ctx := newRequestContextFactory(nil, nil, 0).Create(nil, req)
+	ctx := newRequestContextFactory(nil, 0).Create(nil, req)
 
 	// WHEN
 	value1 := ctx.Request().Cookie("bar")
@@ -342,10 +361,11 @@ func TestRequestContextBody(t *testing.T) {
 	req.Header.Set("X-Custom", "foo")
 
 	rw := httptest.NewRecorder()
-	eh := mocks.NewErrorHandlerMock(t)
 
-	ctx := newRequestContextFactory(eh, nil, 100*time.Minute).Create(rw, req)
+	ctx := newRequestContextFactory(nil, 100*time.Minute).Create(rw, req)
 	ctx.AddHeaderForUpstream("X-Foo", "bar")
+
+	mut := mocks2.NewURIMutatorMock(t)
 
 	srv := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, req *http.Request) {
 		upstreamCalled = true
@@ -370,13 +390,15 @@ func TestRequestContextBody(t *testing.T) {
 	targetURL, err := url.Parse(srv.URL)
 	require.NoError(t, err)
 
+	mut.EXPECT().Mutate(mock.Anything).Return(targetURL, nil)
+
 	// just consume body
 	first := ctx.Request().Body()
 	// there should be no difference
 	second := ctx.Request().Body()
 
 	// WHEN
-	ctx.Finalize(targetURL)
+	ctx.Finalize(mut)
 
 	// THEN
 	require.True(t, upstreamCalled)

@@ -22,7 +22,6 @@ func TestRuleExecutorExecute(t *testing.T) {
 	for _, tc := range []struct {
 		uc             string
 		expErr         error
-		requireURL     bool
 		createRequest  func(t *testing.T) *http.Request
 		configureMocks func(t *testing.T, ctx *mocks2.ContextMock, repo *mocks4.RepositoryMock, rule *mocks4.RuleMock)
 		assertResponse func(t *testing.T, err error, response *http.Response)
@@ -66,42 +65,11 @@ func TestRuleExecutorExecute(t *testing.T) {
 			},
 		},
 		{
-			uc:         "rule execution succeeds, but url retrieval fails",
-			requireURL: true,
-			expErr:     heimdall.ErrInternal,
+			uc: "rule execution succeeds",
 			configureMocks: func(t *testing.T, ctx *mocks2.ContextMock, repo *mocks4.RepositoryMock, rule *mocks4.RuleMock) {
 				t.Helper()
 
 				mut := mocks4.NewURIMutatorMock(t)
-				mut.EXPECT().Mutate(matchingURL).Return(nil, heimdall.ErrInternal)
-
-				ctx.EXPECT().AppContext().Return(context.Background())
-				ctx.EXPECT().Request().Return(&heimdall.Request{Method: http.MethodGet, URL: matchingURL})
-				rule.EXPECT().MatchesMethod(http.MethodGet).Return(true)
-				rule.EXPECT().Execute(ctx).Return(mut, nil)
-				repo.EXPECT().FindRule(matchingURL).Return(rule, nil)
-			},
-		},
-		{
-			uc: "rule execution succeeds, without url retrieval",
-			configureMocks: func(t *testing.T, ctx *mocks2.ContextMock, repo *mocks4.RepositoryMock, rule *mocks4.RuleMock) {
-				t.Helper()
-
-				ctx.EXPECT().AppContext().Return(context.Background())
-				ctx.EXPECT().Request().Return(&heimdall.Request{Method: http.MethodGet, URL: matchingURL})
-				rule.EXPECT().MatchesMethod(http.MethodGet).Return(true)
-				rule.EXPECT().Execute(ctx).Return(nil, nil)
-				repo.EXPECT().FindRule(matchingURL).Return(rule, nil)
-			},
-		},
-		{
-			uc:         "rule execution with url retrieval succeeds",
-			requireURL: true,
-			configureMocks: func(t *testing.T, ctx *mocks2.ContextMock, repo *mocks4.RepositoryMock, rule *mocks4.RuleMock) {
-				t.Helper()
-
-				mut := mocks4.NewURIMutatorMock(t)
-				mut.EXPECT().Mutate(matchingURL).Return(matchingURL, nil)
 
 				ctx.EXPECT().AppContext().Return(context.Background())
 				ctx.EXPECT().Request().Return(&heimdall.Request{Method: http.MethodGet, URL: matchingURL})
@@ -122,17 +90,14 @@ func TestRuleExecutorExecute(t *testing.T) {
 			exec := newRuleExecutor(repo)
 
 			// WHEN
-			targetURL, err := exec.Execute(ctx, tc.requireURL)
+			mut, err := exec.Execute(ctx)
 
 			// THEN
 			if tc.expErr != nil {
 				require.ErrorIs(t, err, tc.expErr)
 			} else {
 				require.NoError(t, err)
-
-				if tc.requireURL {
-					require.NotEqual(t, &url.URL{}, targetURL)
-				}
+				require.NotNil(t, mut)
 			}
 		})
 	}
