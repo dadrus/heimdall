@@ -17,41 +17,35 @@
 package proxy
 
 import (
-	"time"
-
 	"github.com/gofiber/fiber/v2"
 	"github.com/rs/zerolog"
 	"go.uber.org/fx"
 
 	"github.com/dadrus/heimdall/internal/config"
-	fiberxforwarded "github.com/dadrus/heimdall/internal/fiber/middleware/xfmphu"
 	"github.com/dadrus/heimdall/internal/handler/requestcontext"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/rule"
-	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
 type Handler struct {
-	r rule.Repository
-	s heimdall.JWTSigner
-	t time.Duration
+	f requestcontext.ContextFactory
+	e rule.Executor
 }
 
 type handlerArgs struct {
 	fx.In
 
-	App             *fiber.App `name:"proxy"`
-	RulesRepository rule.Repository
-	Config          *config.Configuration
-	Signer          heimdall.JWTSigner
-	Logger          zerolog.Logger
+	App    *fiber.App `name:"proxy"`
+	Exec   rule.Executor
+	Config *config.Configuration
+	Signer heimdall.JWTSigner
+	Logger zerolog.Logger
 }
 
 func newHandler(args handlerArgs) (*Handler, error) {
 	handler := &Handler{
-		r: args.RulesRepository,
-		s: args.Signer,
-		t: args.Config.Serve.Proxy.Timeout.Read,
+		f: requestcontext.NewProxyContextFactory(args.Signer, args.Config.Serve.Proxy.Timeout.Read),
+		e: args.Exec,
 	}
 
 	handler.registerRoutes(args.App.Group("/"), args.Logger)
@@ -62,37 +56,16 @@ func newHandler(args handlerArgs) (*Handler, error) {
 func (h *Handler) registerRoutes(router fiber.Router, logger zerolog.Logger) {
 	logger.Debug().Msg("Registering Proxy service routes")
 
-	router.All("/*", fiberxforwarded.New(), h.proxy)
+	router.All("/*", h.proxy)
 }
 
 func (h *Handler) proxy(c *fiber.Ctx) error {
-	logger := zerolog.Ctx(c.UserContext())
+	rc := h.f.Create(c)
 
-	reqURL := fiberxforwarded.RequestURL(c.UserContext())
-	method := fiberxforwarded.RequestMethod(c.UserContext())
-	reqCtx := requestcontext.New(c, method, reqURL, h.s)
-
-	logger.Debug().
-		Str("_method", method).
-		Str("_url", reqURL.String()).
-		Msg("Proxy endpoint called")
-
-	rul, err := h.r.FindRule(reqURL)
+	mut, err := h.e.Execute(rc)
 	if err != nil {
 		return err
 	}
 
-	if !rul.MatchesMethod(method) {
-		return errorchain.NewWithMessagef(heimdall.ErrMethodNotAllowed,
-			"rule (id=%s, src=%s) doesn't match %s method", rul.ID(), rul.SrcID(), method)
-	}
-
-	mutator, err := rul.Execute(reqCtx)
-	if err != nil {
-		return err
-	}
-
-	logger.Debug().Msg("Finalizing request")
-
-	return reqCtx.FinalizeAndForward(mutator, h.t)
+	return rc.Finalize(mut)
 }

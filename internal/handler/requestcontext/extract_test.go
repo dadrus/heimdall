@@ -14,7 +14,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package xfmphu
+package requestcontext
 
 import (
 	"context"
@@ -44,10 +44,10 @@ func TestMiddlewareApplicationWithoutConfiguredTrustedProxy(t *testing.T) {
 
 	defer app.Shutdown()
 
-	app.All("/*", New(), func(ctx *fiber.Ctx) error {
+	app.All("/*", func(ctx *fiber.Ctx) error {
 		testAppCalled = true
-		extractedURL = RequestURL(ctx.UserContext())
-		extractedMethod = RequestMethod(ctx.UserContext())
+		extractedURL = extractURL(ctx)
+		extractedMethod = extractMethod(ctx)
 
 		return nil
 	})
@@ -193,10 +193,10 @@ func TestMiddlewareApplicationWithConfiguredTrustedProxy(t *testing.T) {
 
 	defer app.Shutdown()
 
-	app.All("/*", New(), func(ctx *fiber.Ctx) error {
+	app.All("/*", func(ctx *fiber.Ctx) error {
 		testAppCalled = true
-		extractedURL = RequestURL(ctx.UserContext())
-		extractedMethod = RequestMethod(ctx.UserContext())
+		extractedURL = extractURL(ctx)
+		extractedMethod = extractMethod(ctx)
 
 		return nil
 	})

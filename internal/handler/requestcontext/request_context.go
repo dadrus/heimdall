@@ -28,8 +28,11 @@ import (
 
 	"github.com/dadrus/heimdall/internal/fasthttp/opentelemetry"
 	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/x"
 )
+
+type finalizer func(mutator rule.URIMutator) error
 
 type RequestContext struct {
 	c               *fiber.Ctx
@@ -38,18 +41,10 @@ type RequestContext struct {
 	upstreamHeaders http.Header
 	upstreamCookies map[string]string
 	jwtSigner       heimdall.JWTSigner
+	timeout         time.Duration
+	responseCode    int
 	err             error
-}
-
-func New(c *fiber.Ctx, method string, reqURL *url.URL, signer heimdall.JWTSigner) *RequestContext {
-	return &RequestContext{
-		c:               c,
-		jwtSigner:       signer,
-		reqMethod:       method,
-		reqURL:          reqURL,
-		upstreamHeaders: make(http.Header),
-		upstreamCookies: make(map[string]string),
-	}
+	finalize        finalizer
 }
 
 func (s *RequestContext) Request() *heimdall.Request {
@@ -76,11 +71,18 @@ func (s *RequestContext) requestClientIPs() []string {
 	return x.IfThenElse(len(ips) != 0, ips, []string{s.c.IP()})
 }
 
-func (s *RequestContext) FinalizeWithStatus(statusCode int) error {
+func (s *RequestContext) Finalize(mutator rule.URIMutator) error {
+	logger := zerolog.Ctx(s.c.Context())
+	logger.Debug().Msg("Finalizing request")
+
 	if s.err != nil {
 		return s.err
 	}
 
+	return s.finalize(mutator)
+}
+
+func (s *RequestContext) finalizeWithStatus(_ rule.URIMutator) error {
 	for k := range s.upstreamHeaders {
 		s.c.Response().Header.Set(k, s.upstreamHeaders.Get(k))
 	}
@@ -89,19 +91,25 @@ func (s *RequestContext) FinalizeWithStatus(statusCode int) error {
 		s.c.Cookie(&fiber.Cookie{Name: k, Value: v})
 	}
 
-	s.c.Status(statusCode)
+	s.c.Status(s.responseCode)
 
 	return nil
 }
 
-type URIMutator interface {
-	Mutate(uri *url.URL) (*url.URL, error)
-}
+func (s *RequestContext) finalizeAndForward(mut rule.URIMutator) error {
+	logger := zerolog.Ctx(s.c.UserContext())
 
-func (s *RequestContext) FinalizeAndForward(mutator URIMutator, timeout time.Duration) error {
-	if s.err != nil {
-		return s.err
+	targetURL, err := mut.Mutate(s.reqURL)
+	if err != nil {
+		return err
 	}
+
+	upstreamURL := targetURL.String()
+
+	logger.Info().
+		Str("_method", s.reqMethod).
+		Str("_upstream", upstreamURL).
+		Msg("Forwarding request")
 
 	for k := range s.upstreamHeaders {
 		s.c.Request().Header.Set(k, s.upstreamHeaders.Get(k))
@@ -118,19 +126,6 @@ func (s *RequestContext) FinalizeAndForward(mutator URIMutator, timeout time.Dur
 		s.c.Request().Header.Del(name)
 	}
 
-	targetURL, err := mutator.Mutate(s.reqURL)
-	if err != nil {
-		return err
-	}
-
-	upstreamURL := targetURL.String()
-
-	logger := zerolog.Ctx(s.c.UserContext())
-	logger.Info().
-		Str("_method", s.reqMethod).
-		Str("_upstream", upstreamURL).
-		Msg("Forwarding request")
-
 	s.c.Request().Header.SetMethod(s.reqMethod)
 	s.c.Request().SetRequestURI(upstreamURL)
 
@@ -139,5 +134,50 @@ func (s *RequestContext) FinalizeAndForward(mutator URIMutator, timeout time.Dur
 	}
 
 	return opentelemetry.NewClient(&fasthttp.Client{}).
-		DoTimeout(s.c.UserContext(), s.c.Request(), s.c.Response(), timeout)
+		DoTimeout(s.c.UserContext(), s.c.Request(), s.c.Response(), s.timeout)
+}
+
+type ContextFactory interface {
+	Create(c *fiber.Ctx) *RequestContext
+}
+
+type factoryFunc func(c *fiber.Ctx) *RequestContext
+
+func (f factoryFunc) Create(c *fiber.Ctx) *RequestContext {
+	return f(c)
+}
+
+func NewProxyContextFactory(signer heimdall.JWTSigner, timeout time.Duration) ContextFactory {
+	return factoryFunc(func(ctx *fiber.Ctx) *RequestContext {
+		rc := &RequestContext{
+			jwtSigner:       signer,
+			reqMethod:       extractMethod(ctx),
+			reqURL:          extractURL(ctx),
+			upstreamHeaders: make(http.Header),
+			upstreamCookies: make(map[string]string),
+			c:               ctx,
+			timeout:         timeout,
+		}
+		rc.finalize = rc.finalizeAndForward
+
+		return rc
+	})
+}
+
+func NewDecisionContextFactory(signer heimdall.JWTSigner, responseCode int) ContextFactory {
+	return factoryFunc(func(ctx *fiber.Ctx) *RequestContext {
+		rc := &RequestContext{
+			jwtSigner:       signer,
+			reqMethod:       extractMethod(ctx),
+			reqURL:          extractURL(ctx),
+			upstreamHeaders: make(http.Header),
+			upstreamCookies: make(map[string]string),
+			c:               ctx,
+			responseCode:    responseCode,
+		}
+
+		rc.finalize = rc.finalizeWithStatus
+
+		return rc
+	})
 }

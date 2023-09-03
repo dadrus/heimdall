@@ -14,7 +14,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package xfmphu
+package requestcontext
 
 import (
 	"fmt"
@@ -26,7 +26,7 @@ import (
 	"github.com/dadrus/heimdall/internal/x/stringx"
 )
 
-func requestURL(c *fiber.Ctx) *url.URL {
+func extractURL(ctx *fiber.Ctx) *url.URL {
 	var (
 		proto   string
 		rawPath string
@@ -34,32 +34,32 @@ func requestURL(c *fiber.Ctx) *url.URL {
 		query   string
 	)
 
-	if c.IsProxyTrusted() {
-		forwardedURIVal := c.Get(xForwardedURI)
+	if ctx.IsProxyTrusted() {
+		forwardedURIVal := ctx.Get(xForwardedURI)
 		if len(forwardedURIVal) != 0 {
 			forwardedURI, _ := url.Parse(forwardedURIVal)
 			rawPath = forwardedURI.Path
 			query = forwardedURI.Query().Encode()
 		} else {
-			rawPath = c.Get(xForwardedPath)
+			rawPath = ctx.Get(xForwardedPath)
 		}
 
-		proto = c.Get(xForwardedProto)
+		proto = ctx.Get(xForwardedProto)
 	}
 
 	if len(proto) == 0 {
-		proto = x.IfThenElse(c.Context().IsTLS(), "https", "http")
+		proto = x.IfThenElse(ctx.Context().IsTLS(), "https", "http")
 	}
 
 	if len(rawPath) == 0 {
-		rawPath = c.Params("*")
+		rawPath = ctx.Params("*")
 		if len(rawPath) != 0 {
 			rawPath = fmt.Sprintf("/%s", rawPath)
 		}
 	}
 
 	if len(query) == 0 {
-		origReqURL := *c.Request().URI()
+		origReqURL := *ctx.Request().URI()
 		query = stringx.ToString(origReqURL.QueryString())
 	}
 
@@ -67,7 +67,7 @@ func requestURL(c *fiber.Ctx) *url.URL {
 
 	return &url.URL{
 		Scheme:   proto,
-		Host:     c.Hostname(),
+		Host:     ctx.Hostname(),
 		Path:     path,
 		RawQuery: query,
 	}

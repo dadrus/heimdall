@@ -14,7 +14,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package xfmphu
+package requestcontext
 
 const (
 	xForwardedProto  = "X-Forwarded-Proto"

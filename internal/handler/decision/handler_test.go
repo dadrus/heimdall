@@ -20,7 +20,6 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
-	"net/url"
 	"testing"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -31,6 +30,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/cache/mocks"
 	"github.com/dadrus/heimdall/internal/config"
+	"github.com/dadrus/heimdall/internal/handler/request"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	mocks4 "github.com/dadrus/heimdall/internal/rules/rule/mocks"
 )
@@ -42,7 +42,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 		uc             string
 		serviceConf    config.ServiceConfig
 		createRequest  func(t *testing.T) *http.Request
-		configureMocks func(t *testing.T, repository *mocks4.RepositoryMock, rule *mocks4.RuleMock)
+		configureMocks func(t *testing.T, exec *mocks4.ExecutorMock)
 		assertResponse func(t *testing.T, err error, response *http.Response)
 	}{
 		{
@@ -52,10 +52,10 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 
 				return httptest.NewRequest(http.MethodGet, "/", nil)
 			},
-			configureMocks: func(t *testing.T, repository *mocks4.RepositoryMock, rule *mocks4.RuleMock) {
+			configureMocks: func(t *testing.T, exec *mocks4.ExecutorMock) {
 				t.Helper()
 
-				repository.EXPECT().FindRule(mock.Anything).Return(nil, heimdall.ErrNoRuleFound)
+				exec.EXPECT().Execute(mock.Anything).Return(nil, heimdall.ErrNoRuleFound)
 			},
 			assertResponse: func(t *testing.T, err error, response *http.Response) {
 				t.Helper()
@@ -75,11 +75,10 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 
 				return httptest.NewRequest(http.MethodPost, "/", nil)
 			},
-			configureMocks: func(t *testing.T, repository *mocks4.RepositoryMock, rule *mocks4.RuleMock) {
+			configureMocks: func(t *testing.T, exec *mocks4.ExecutorMock) {
 				t.Helper()
 
-				rule.EXPECT().MatchesMethod(http.MethodPost).Return(false)
-				repository.EXPECT().FindRule(mock.Anything).Return(rule, nil)
+				exec.EXPECT().Execute(mock.Anything).Return(nil, heimdall.ErrMethodNotAllowed)
 			},
 			assertResponse: func(t *testing.T, err error, response *http.Response) {
 				t.Helper()
@@ -99,13 +98,10 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 
 				return httptest.NewRequest(http.MethodPost, "/", nil)
 			},
-			configureMocks: func(t *testing.T, repository *mocks4.RepositoryMock, rule *mocks4.RuleMock) {
+			configureMocks: func(t *testing.T, exec *mocks4.ExecutorMock) {
 				t.Helper()
 
-				rule.EXPECT().MatchesMethod(http.MethodPost).Return(true)
-				rule.EXPECT().Execute(mock.Anything).Return(nil, heimdall.ErrAuthentication)
-
-				repository.EXPECT().FindRule(mock.Anything).Return(rule, nil)
+				exec.EXPECT().Execute(mock.Anything).Return(nil, heimdall.ErrAuthentication)
 			},
 			assertResponse: func(t *testing.T, err error, response *http.Response) {
 				t.Helper()
@@ -125,17 +121,10 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 
 				return httptest.NewRequest(http.MethodPost, "/", nil)
 			},
-			configureMocks: func(t *testing.T, repository *mocks4.RepositoryMock, rule *mocks4.RuleMock) {
+			configureMocks: func(t *testing.T, exec *mocks4.ExecutorMock) {
 				t.Helper()
 
-				rule.EXPECT().MatchesMethod(http.MethodPost).Return(true)
-				rule.EXPECT().Execute(mock.MatchedBy(func(ctx heimdall.Context) bool {
-					ctx.SetPipelineError(heimdall.ErrAuthorization)
-
-					return true
-				})).Return(nil, nil)
-
-				repository.EXPECT().FindRule(mock.Anything).Return(rule, nil)
+				exec.EXPECT().Execute(mock.Anything).Return(nil, heimdall.ErrAuthorization)
 			},
 			assertResponse: func(t *testing.T, err error, response *http.Response) {
 				t.Helper()
@@ -166,20 +155,22 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 
 				return req
 			},
-			configureMocks: func(t *testing.T, repository *mocks4.RepositoryMock, rule *mocks4.RuleMock) {
+			configureMocks: func(t *testing.T, exec *mocks4.ExecutorMock) {
 				t.Helper()
 
-				rule.EXPECT().MatchesMethod(http.MethodPost).Return(true)
-				rule.EXPECT().Execute(mock.MatchedBy(func(ctx heimdall.Context) bool {
-					ctx.AddHeaderForUpstream("X-Foo-Bar", "baz")
-					ctx.AddCookieForUpstream("X-Bar-Foo", "zab")
+				exec.EXPECT().Execute(
+					mock.MatchedBy(func(ctx request.Context) bool {
+						ctx.AddHeaderForUpstream("X-Foo-Bar", "baz")
+						ctx.AddCookieForUpstream("X-Bar-Foo", "zab")
 
-					return true
-				})).Return(mocks4.NewURIMutatorMock(t), nil)
+						req := ctx.Request()
 
-				repository.EXPECT().FindRule(mock.MatchedBy(func(reqURL *url.URL) bool {
-					return reqURL.Scheme == "http" && reqURL.Host == "heimdall.test.local" && reqURL.Path == "/foobar"
-				})).Return(rule, nil)
+						return req.URL.Scheme == "http" &&
+							req.URL.Host == "heimdall.test.local" &&
+							req.URL.Path == "/foobar" &&
+							req.Method == http.MethodPost
+					}),
+				).Return(nil, nil)
 			},
 			assertResponse: func(t *testing.T, err error, response *http.Response) {
 				t.Helper()
@@ -218,20 +209,22 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 
 				return req
 			},
-			configureMocks: func(t *testing.T, repository *mocks4.RepositoryMock, rule *mocks4.RuleMock) {
+			configureMocks: func(t *testing.T, exec *mocks4.ExecutorMock) {
 				t.Helper()
 
-				rule.EXPECT().MatchesMethod(http.MethodPost).Return(true)
-				rule.EXPECT().Execute(mock.MatchedBy(func(ctx heimdall.Context) bool {
-					ctx.AddHeaderForUpstream("X-Foo-Bar", "baz")
-					ctx.AddCookieForUpstream("X-Bar-Foo", "zab")
+				exec.EXPECT().Execute(
+					mock.MatchedBy(func(ctx request.Context) bool {
+						ctx.AddHeaderForUpstream("X-Foo-Bar", "baz")
+						ctx.AddCookieForUpstream("X-Bar-Foo", "zab")
 
-					return true
-				})).Return(mocks4.NewURIMutatorMock(t), nil)
+						req := ctx.Request()
 
-				repository.EXPECT().FindRule(mock.MatchedBy(func(reqURL *url.URL) bool {
-					return reqURL.Scheme == "http" && reqURL.Host == "heimdall.test.local" && reqURL.Path == "/foobar"
-				})).Return(rule, nil)
+						return req.URL.Scheme == "http" &&
+							req.URL.Host == "heimdall.test.local" &&
+							req.URL.Path == "/foobar" &&
+							req.Method == http.MethodPost
+					}),
+				).Return(nil, nil)
 			},
 			assertResponse: func(t *testing.T, err error, response *http.Response) {
 				t.Helper()
@@ -271,20 +264,22 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 
 				return req
 			},
-			configureMocks: func(t *testing.T, repository *mocks4.RepositoryMock, rule *mocks4.RuleMock) {
+			configureMocks: func(t *testing.T, exec *mocks4.ExecutorMock) {
 				t.Helper()
 
-				rule.EXPECT().MatchesMethod(http.MethodPost).Return(true)
-				rule.EXPECT().Execute(mock.MatchedBy(func(ctx heimdall.Context) bool {
-					ctx.AddHeaderForUpstream("X-Foo-Bar", "baz")
-					ctx.AddCookieForUpstream("X-Bar-Foo", "zab")
+				exec.EXPECT().Execute(
+					mock.MatchedBy(func(ctx request.Context) bool {
+						ctx.AddHeaderForUpstream("X-Foo-Bar", "baz")
+						ctx.AddCookieForUpstream("X-Bar-Foo", "zab")
 
-					return true
-				})).Return(mocks4.NewURIMutatorMock(t), nil)
+						req := ctx.Request()
 
-				repository.EXPECT().FindRule(mock.MatchedBy(func(reqURL *url.URL) bool {
-					return reqURL.Scheme == "http" && reqURL.Host == "heimdall.test.local" && reqURL.Path == "/foobar"
-				})).Return(rule, nil)
+						return req.URL.Scheme == "http" &&
+							req.URL.Host == "heimdall.test.local" &&
+							req.URL.Path == "/foobar" &&
+							req.Method == http.MethodPost
+					}),
+				).Return(nil, nil)
 			},
 			assertResponse: func(t *testing.T, err error, response *http.Response) {
 				t.Helper()
@@ -321,16 +316,19 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 
 				return req
 			},
-			configureMocks: func(t *testing.T, repository *mocks4.RepositoryMock, rule *mocks4.RuleMock) {
+			configureMocks: func(t *testing.T, exec *mocks4.ExecutorMock) {
 				t.Helper()
 
-				rule.EXPECT().MatchesMethod(http.MethodGet).Return(true)
-				rule.EXPECT().Execute(mock.Anything).
-					Return(mocks4.NewURIMutatorMock(t), nil)
+				exec.EXPECT().Execute(
+					mock.MatchedBy(func(ctx request.Context) bool {
+						req := ctx.Request()
 
-				repository.EXPECT().FindRule(mock.MatchedBy(func(reqURL *url.URL) bool {
-					return reqURL.Scheme == "http" && reqURL.Host == "heimdall.test.local" && reqURL.Path == "/foobar"
-				})).Return(rule, nil)
+						return req.URL.Scheme == "http" &&
+							req.URL.Host == "heimdall.test.local" &&
+							req.URL.Path == "/foobar" &&
+							req.Method == http.MethodGet
+					}),
+				).Return(nil, nil)
 			},
 			assertResponse: func(t *testing.T, err error, response *http.Response) {
 				t.Helper()
@@ -355,16 +353,19 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 
 				return req
 			},
-			configureMocks: func(t *testing.T, repository *mocks4.RepositoryMock, rule *mocks4.RuleMock) {
+			configureMocks: func(t *testing.T, exec *mocks4.ExecutorMock) {
 				t.Helper()
 
-				rule.EXPECT().MatchesMethod(http.MethodPost).Return(true)
-				rule.EXPECT().Execute(mock.Anything).
-					Return(mocks4.NewURIMutatorMock(t), nil)
+				exec.EXPECT().Execute(
+					mock.MatchedBy(func(ctx request.Context) bool {
+						req := ctx.Request()
 
-				repository.EXPECT().FindRule(mock.MatchedBy(func(reqURL *url.URL) bool {
-					return reqURL.Scheme == "http" && reqURL.Host == "test.com" && reqURL.Path == "/foobar"
-				})).Return(rule, nil)
+						return req.URL.Scheme == "http" &&
+							req.URL.Host == "test.com" &&
+							req.URL.Path == "/foobar" &&
+							req.Method == http.MethodPost
+					}),
+				).Return(nil, nil)
 			},
 			assertResponse: func(t *testing.T, err error, response *http.Response) {
 				t.Helper()
@@ -385,20 +386,23 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 					"http://heimdall.test.local/foobar",
 					nil)
 
-				req.Header.Set("X-Forwarded-Path", "bar")
+				req.Header.Set("X-Forwarded-Path", "/bar")
 
 				return req
 			},
-			configureMocks: func(t *testing.T, repository *mocks4.RepositoryMock, rule *mocks4.RuleMock) {
+			configureMocks: func(t *testing.T, exec *mocks4.ExecutorMock) {
 				t.Helper()
 
-				rule.EXPECT().MatchesMethod(http.MethodPost).Return(true)
-				rule.EXPECT().Execute(mock.Anything).
-					Return(mocks4.NewURIMutatorMock(t), nil)
+				exec.EXPECT().Execute(
+					mock.MatchedBy(func(ctx request.Context) bool {
+						req := ctx.Request()
 
-				repository.EXPECT().FindRule(mock.MatchedBy(func(reqURL *url.URL) bool {
-					return reqURL.Scheme == "http" && reqURL.Host == "heimdall.test.local" && reqURL.Path == "bar"
-				})).Return(rule, nil)
+						return req.URL.Scheme == "http" &&
+							req.URL.Host == "heimdall.test.local" &&
+							req.URL.Path == "/bar" &&
+							req.Method == http.MethodPost
+					}),
+				).Return(nil, nil)
 			},
 			assertResponse: func(t *testing.T, err error, response *http.Response) {
 				t.Helper()
@@ -423,16 +427,19 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 
 				return req
 			},
-			configureMocks: func(t *testing.T, repository *mocks4.RepositoryMock, rule *mocks4.RuleMock) {
+			configureMocks: func(t *testing.T, exec *mocks4.ExecutorMock) {
 				t.Helper()
 
-				rule.EXPECT().MatchesMethod(http.MethodPost).Return(true)
-				rule.EXPECT().Execute(mock.Anything).
-					Return(mocks4.NewURIMutatorMock(t), nil)
+				exec.EXPECT().Execute(
+					mock.MatchedBy(func(ctx request.Context) bool {
+						req := ctx.Request()
 
-				repository.EXPECT().FindRule(mock.MatchedBy(func(reqURL *url.URL) bool {
-					return reqURL.Scheme == "https" && reqURL.Host == "heimdall.test.local" && reqURL.Path == "/foobar"
-				})).Return(rule, nil)
+						return req.URL.Scheme == "https" &&
+							req.URL.Host == "heimdall.test.local" &&
+							req.URL.Path == "/foobar" &&
+							req.Method == http.MethodPost
+					}),
+				).Return(nil, nil)
 			},
 			assertResponse: func(t *testing.T, err error, response *http.Response) {
 				t.Helper()
@@ -455,21 +462,24 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 
 				req.Header.Set("X-Forwarded-Proto", "https")
 				req.Header.Set("X-Forwarded-Host", "test.com")
-				req.Header.Set("X-Forwarded-Path", "bar")
+				req.Header.Set("X-Forwarded-Path", "/bar")
 				req.Header.Set("X-Forwarded-Method", http.MethodPatch)
 
 				return req
 			},
-			configureMocks: func(t *testing.T, repository *mocks4.RepositoryMock, rule *mocks4.RuleMock) {
+			configureMocks: func(t *testing.T, exec *mocks4.ExecutorMock) {
 				t.Helper()
 
-				rule.EXPECT().MatchesMethod(http.MethodPatch).Return(true)
-				rule.EXPECT().Execute(mock.Anything).
-					Return(mocks4.NewURIMutatorMock(t), nil)
+				exec.EXPECT().Execute(
+					mock.MatchedBy(func(ctx request.Context) bool {
+						req := ctx.Request()
 
-				repository.EXPECT().FindRule(mock.MatchedBy(func(reqURL *url.URL) bool {
-					return reqURL.Scheme == "https" && reqURL.Host == "test.com" && reqURL.Path == "bar"
-				})).Return(rule, nil)
+						return req.URL.Scheme == "https" &&
+							req.URL.Host == "test.com" &&
+							req.URL.Path == "/bar" &&
+							req.Method == http.MethodPatch
+					}),
+				).Return(nil, nil)
 			},
 			assertResponse: func(t *testing.T, err error, response *http.Response) {
 				t.Helper()
@@ -483,11 +493,10 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 			// GIVEN
 			conf := &config.Configuration{Serve: config.ServeConfig{Decision: tc.serviceConf}}
 			cch := mocks.NewCacheMock(t)
-			repo := mocks4.NewRepositoryMock(t)
-			rule := mocks4.NewRuleMock(t)
+			exec := mocks4.NewExecutorMock(t)
 			logger := log.Logger
 
-			tc.configureMocks(t, repo, rule)
+			tc.configureMocks(t, exec)
 
 			app := newApp(appArgs{
 				Config:     conf,
@@ -499,10 +508,10 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 			defer app.Shutdown()
 
 			_, err := newHandler(handlerArgs{
-				App:             app,
-				RulesRepository: repo,
-				Logger:          logger,
-				Config:          conf,
+				App:    app,
+				Exec:   exec,
+				Logger: logger,
+				Config: conf,
 			})
 			require.NoError(t, err)
 

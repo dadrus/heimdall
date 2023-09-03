@@ -14,19 +14,19 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package xfmphu
+package requestcontext
 
 import (
 	"github.com/gofiber/fiber/v2"
 )
 
-func requestMethod(c *fiber.Ctx) string {
-	if c.IsProxyTrusted() {
-		forwardedMethodVal := c.Get(xForwardedMethod)
+func extractMethod(ctx *fiber.Ctx) string {
+	if ctx.IsProxyTrusted() {
+		forwardedMethodVal := ctx.Get(xForwardedMethod)
 		if len(forwardedMethodVal) != 0 {
 			return forwardedMethodVal
 		}
 	}
 
-	return c.Method()
+	return ctx.Method()
 }
