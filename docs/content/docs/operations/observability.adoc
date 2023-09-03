@@ -217,10 +217,9 @@ Configured propagators are used for inbound, as well as for outbound traffic.
 
 === Span Exporters
 
-Span Exporter handle the delivery of spans to external receivers (collectors, or agents). This is the final component in the trace export pipeline and typically provided by the APM vendor, like Jaeger, Zipkin, Instana, etc. Since not every multi-service system may have an up to day telemetry receiver supporting protocols defined by OTEL, interoperability can be achieved by configuring the required exporters by making use of the `OTEL_TRACES_EXPORTER` environment variable. OTEL defines the following values for this variable:
+Span Exporter handle the delivery of spans to external receivers (collectors, or agents). This is the final component in the trace export pipeline and typically provided by the APM vendor, like Jaeger, Zipkin, Instana, etc. Since not every multi-service system may have an up to day telemetry receiver supporting protocols defined by OTEL, interoperability can be achieved by configuring the required exporters by making use of the `OTEL_TRACES_EXPORTER` environment variable. OTEL defines the following values for this variablefootnote:[jaeger exporter has been marked as deprecated and is not supported anymore]:
 
 * `otlp` - https://opentelemetry.io/docs/reference/specification/protocol/otlp/[OTLP] exporter. Enabled by default if `OTEL_TRACES_EXPORTER` is not set.
-* `jaeger` - https://github.com/jaegertracing/jaeger-idl/blob/main/thrift/jaeger.thrift[Jaeger Thrift] exporter to export spans in Jaeger data model.
 * `zipkin` - https://zipkin.io/zipkin-api/[Zipkin] exporter to export spans in Zipkin data model.
 * `none` - No automatically configured exporter for traces.
 
