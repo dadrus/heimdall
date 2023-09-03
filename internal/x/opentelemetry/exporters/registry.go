@@ -23,7 +23,6 @@ import (
 	"sync"
 
 	instana "github.com/instana/go-otel-exporter"
-	"go.opentelemetry.io/otel/exporters/jaeger"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
 	"go.opentelemetry.io/otel/exporters/zipkin"
@@ -60,9 +59,6 @@ var exporters = &registry{ //nolint:gochecknoglobals
 		},
 		"zipkin": func(ctx context.Context) (trace.SpanExporter, error) {
 			return zipkin.New("")
-		},
-		"jaeger": func(ctx context.Context) (trace.SpanExporter, error) {
-			return jaeger.New(jaeger.WithAgentEndpoint())
 		},
 		"instana": func(ctx context.Context) (exp trace.SpanExporter, err error) { //nolint:nonamedreturns
 			defer func() {
