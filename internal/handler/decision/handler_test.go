@@ -30,7 +30,6 @@ import (
 
 	"github.com/dadrus/heimdall/internal/cache/mocks"
 	"github.com/dadrus/heimdall/internal/config"
-	"github.com/dadrus/heimdall/internal/handler/request"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	mocks4 "github.com/dadrus/heimdall/internal/rules/rule/mocks"
 )
@@ -159,7 +158,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				t.Helper()
 
 				exec.EXPECT().Execute(
-					mock.MatchedBy(func(ctx request.Context) bool {
+					mock.MatchedBy(func(ctx heimdall.Context) bool {
 						ctx.AddHeaderForUpstream("X-Foo-Bar", "baz")
 						ctx.AddCookieForUpstream("X-Bar-Foo", "zab")
 
@@ -213,7 +212,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				t.Helper()
 
 				exec.EXPECT().Execute(
-					mock.MatchedBy(func(ctx request.Context) bool {
+					mock.MatchedBy(func(ctx heimdall.Context) bool {
 						ctx.AddHeaderForUpstream("X-Foo-Bar", "baz")
 						ctx.AddCookieForUpstream("X-Bar-Foo", "zab")
 
@@ -268,7 +267,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				t.Helper()
 
 				exec.EXPECT().Execute(
-					mock.MatchedBy(func(ctx request.Context) bool {
+					mock.MatchedBy(func(ctx heimdall.Context) bool {
 						ctx.AddHeaderForUpstream("X-Foo-Bar", "baz")
 						ctx.AddCookieForUpstream("X-Bar-Foo", "zab")
 
@@ -320,7 +319,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				t.Helper()
 
 				exec.EXPECT().Execute(
-					mock.MatchedBy(func(ctx request.Context) bool {
+					mock.MatchedBy(func(ctx heimdall.Context) bool {
 						req := ctx.Request()
 
 						return req.URL.Scheme == "http" &&
@@ -357,7 +356,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				t.Helper()
 
 				exec.EXPECT().Execute(
-					mock.MatchedBy(func(ctx request.Context) bool {
+					mock.MatchedBy(func(ctx heimdall.Context) bool {
 						req := ctx.Request()
 
 						return req.URL.Scheme == "http" &&
@@ -394,7 +393,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				t.Helper()
 
 				exec.EXPECT().Execute(
-					mock.MatchedBy(func(ctx request.Context) bool {
+					mock.MatchedBy(func(ctx heimdall.Context) bool {
 						req := ctx.Request()
 
 						return req.URL.Scheme == "http" &&
@@ -431,7 +430,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				t.Helper()
 
 				exec.EXPECT().Execute(
-					mock.MatchedBy(func(ctx request.Context) bool {
+					mock.MatchedBy(func(ctx heimdall.Context) bool {
 						req := ctx.Request()
 
 						return req.URL.Scheme == "https" &&
@@ -471,7 +470,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				t.Helper()
 
 				exec.EXPECT().Execute(
-					mock.MatchedBy(func(ctx request.Context) bool {
+					mock.MatchedBy(func(ctx heimdall.Context) bool {
 						req := ctx.Request()
 
 						return req.URL.Scheme == "https" &&

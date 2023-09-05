@@ -34,7 +34,6 @@ import (
 
 	"github.com/dadrus/heimdall/internal/cache/mocks"
 	"github.com/dadrus/heimdall/internal/config"
-	"github.com/dadrus/heimdall/internal/handler/request"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	mocks4 "github.com/dadrus/heimdall/internal/rules/rule/mocks"
 	"github.com/dadrus/heimdall/internal/x"
@@ -233,7 +232,7 @@ func TestHandleProxyEndpointRequest(t *testing.T) {
 				}, nil)
 
 				exec.EXPECT().Execute(
-					mock.MatchedBy(func(ctx request.Context) bool {
+					mock.MatchedBy(func(ctx heimdall.Context) bool {
 						ctx.AddHeaderForUpstream("X-Foo-Bar", "baz")
 						ctx.AddCookieForUpstream("X-Bar-Foo", "zab")
 
@@ -314,7 +313,7 @@ func TestHandleProxyEndpointRequest(t *testing.T) {
 				}, nil)
 
 				exec.EXPECT().Execute(
-					mock.MatchedBy(func(ctx request.Context) bool {
+					mock.MatchedBy(func(ctx heimdall.Context) bool {
 						ctx.AddHeaderForUpstream("X-Foo-Bar", "baz")
 						ctx.AddCookieForUpstream("X-Bar-Foo", "zab")
 
@@ -394,7 +393,7 @@ func TestHandleProxyEndpointRequest(t *testing.T) {
 				}, nil)
 
 				exec.EXPECT().Execute(
-					mock.MatchedBy(func(ctx request.Context) bool {
+					mock.MatchedBy(func(ctx heimdall.Context) bool {
 						ctx.AddHeaderForUpstream("X-Foo-Bar", "baz")
 						ctx.AddCookieForUpstream("X-Bar-Foo", "zab")
 
