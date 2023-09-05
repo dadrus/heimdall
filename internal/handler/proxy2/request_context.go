@@ -14,7 +14,6 @@ import (
 
 	"github.com/rs/zerolog"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
-	"golang.org/x/net/http2"
 
 	"github.com/dadrus/heimdall/internal/handler/request"
 	"github.com/dadrus/heimdall/internal/heimdall"
@@ -165,7 +164,17 @@ func (r *requestContext) Finalize(mut rule.URIMutator) error {
 
 	proxy := &httputil.ReverseProxy{
 		Transport: otelhttp.NewTransport(
-			httpx.NewTraceRoundTripper(r.transport()),
+			// non default transport is used here only because of the
+			// tlsClientConfig used for test purposes
+			httpx.NewTraceRoundTripper(&http.Transport{
+				Proxy:                 http.ProxyFromEnvironment,
+				MaxIdleConns:          100,              //nolint:gomnd
+				IdleConnTimeout:       90 * time.Second, //nolint:gomnd
+				TLSHandshakeTimeout:   10 * time.Second, //nolint:gomnd
+				ExpectContinueTimeout: 1 * time.Second,
+				TLSClientConfig:       tlsClientConfig,
+				ForceAttemptHTTP2:     true,
+			}),
 			otelhttp.WithSpanNameFormatter(func(_ string, r *http.Request) string {
 				return fmt.Sprintf("%s %s %s @%s", r.Proto, r.Method, r.URL.Path, r.URL.Host)
 			})),
@@ -175,25 +184,6 @@ func (r *requestContext) Finalize(mut rule.URIMutator) error {
 	proxy.ServeHTTP(r.rw, r.req)
 
 	return nil
-}
-
-func (r *requestContext) transport() http.RoundTripper {
-	switch r.req.Proto {
-	case "HTTP/2.0":
-		return &http2.Transport{
-			ReadIdleTimeout: r.timeout,
-			TLSClientConfig: tlsClientConfig,
-		}
-	default:
-		return &http.Transport{
-			Proxy:                 http.ProxyFromEnvironment,
-			MaxIdleConns:          100,              //nolint:gomnd
-			IdleConnTimeout:       90 * time.Second, //nolint:gomnd
-			TLSHandshakeTimeout:   10 * time.Second, //nolint:gomnd
-			ExpectContinueTimeout: 1 * time.Second,
-			TLSClientConfig:       tlsClientConfig,
-		}
-	}
 }
 
 func (r *requestContext) requestRewriter(targetURL *url.URL) func(req *httputil.ProxyRequest) {
