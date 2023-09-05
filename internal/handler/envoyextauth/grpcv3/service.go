@@ -43,7 +43,7 @@ func newService(
 	registerer prometheus.Registerer,
 	cch cache.Cache,
 	logger zerolog.Logger,
-	repository rule.Repository,
+	exec rule.Executor,
 	signer heimdall.JWTSigner,
 ) *grpc.Server {
 	service := conf.Serve.Decision
@@ -104,7 +104,7 @@ func newService(
 		grpc.ChainStreamInterceptor(streamInterceptors...),
 	)
 
-	envoy_auth.RegisterAuthorizationServer(srv, &Handler{r: repository, s: signer})
+	envoy_auth.RegisterAuthorizationServer(srv, &Handler{e: exec, s: signer})
 
 	return srv
 }

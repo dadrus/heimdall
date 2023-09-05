@@ -40,7 +40,7 @@ type hooksArgs struct {
 	Lifecycle  fx.Lifecycle
 	Config     *config.Configuration
 	Logger     zerolog.Logger
-	Repository rule.Repository
+	Exec       rule.Executor
 	Signer     heimdall.JWTSigner
 	Registerer prometheus.Registerer
 	Cache      cache.Cache
@@ -54,7 +54,7 @@ func registerHooks(args hooksArgs) {
 		return
 	}
 
-	service := newService(args.Config, args.Registerer, args.Cache, args.Logger, args.Repository, args.Signer)
+	service := newService(args.Config, args.Registerer, args.Cache, args.Logger, args.Exec, args.Signer)
 
 	args.Lifecycle.Append(
 		fx.Hook{
