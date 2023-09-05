@@ -12,7 +12,7 @@ Heimdall is inspired by the ZeroTrust idea and also by [Promerium](https://www.p
 
 ## Heimdall's Promise
 
-Heimdall authenticates and authorizes incoming HTTP requests as well as enriches these with further contextual information and finally transforms resulting subject information into a format, required by the upstream services.
+Heimdall authenticates and authorizes incoming HTTP (HTTP 1.x and HTTP 2.0) requests as well as enriches these with further contextual information and finally transforms resulting subject information into a format, required by the upstream services.
 
 This decision and transformation process can be controlled by each and every upstream service individually via rules, respectively rule sets, which heimdall can load from different sources, like
 
