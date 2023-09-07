@@ -1041,8 +1041,10 @@ func TestWebSocketSupport(t *testing.T) {
 	time.Sleep(50 * time.Millisecond)
 
 	wsURL := url.URL{Scheme: "ws", Host: proxy.Addr, Path: "/foo"}
-	con, _, err := websocket.DefaultDialer.Dial(wsURL.String(), nil)
+	con, resp, err := websocket.DefaultDialer.Dial(wsURL.String(), nil)
 	require.NoError(t, err)
+
+	defer resp.Body.Close()
 
 	mt, message, err := con.ReadMessage()
 	require.NoError(t, err)
