@@ -20,8 +20,6 @@ import (
 	"crypto/tls"
 	"net"
 
-	"golang.org/x/net/http2"
-
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/keystore"
@@ -74,7 +72,7 @@ func newTLSListener(tlsConf *config.TLS, listener net.Listener) (net.Listener, e
 	cfg := &tls.Config{
 		Certificates: []tls.Certificate{cert},
 		MinVersion:   tlsConf.MinVersion.OrDefault(),
-		NextProtos:   []string{http2.NextProtoTLS, "http/1.1"},
+		NextProtos:   []string{"h2", "http/1.1"},
 	}
 
 	if cfg.MinVersion != tls.VersionTLS13 {
