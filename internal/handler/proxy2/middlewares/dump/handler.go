@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"net/http/httputil"
@@ -19,6 +20,26 @@ var (
 	excludedHeadersNoBody = map[string]bool{"Content-Length": true, "Transfer-Encoding": true} //nolint:gochecknoglobals
 	crlf                  = []byte("\r\n")                                                     //nolint:gochecknoglobals
 )
+
+type traceWriter struct {
+	l    *zerolog.Logger
+	done bool
+}
+
+func (tw *traceWriter) Write(data []byte) (int, error) {
+	// only the very first write is relevant for hijacked connections
+	// afterward, the transmission of payloads happens
+	// actually, the above said transmission is done directly on the connection
+	// and not using the buffer. So we'll actually be called only once
+	if tw.done {
+		return len(data), nil
+	}
+
+	tw.l.Trace().Msg("Response: \n" + stringx.ToString(data))
+	tw.done = true
+
+	return len(data), nil
+}
 
 func New() func(http.Handler) http.Handler { // nolint: funlen, gocognit, cyclop
 	return func(next http.Handler) http.Handler {
@@ -38,11 +59,10 @@ func New() func(http.Handler) http.Handler { // nolint: funlen, gocognit, cyclop
 			}
 
 			var (
-				wroteHeader          bool
-				hijacked             bool
-				contentLengthWritten bool
-				buffer               bytes.Buffer
-				statusBuf            [3]byte
+				wroteHeader bool
+				hijacked    bool
+				buffer      bytes.Buffer
+				statusBuf   [3]byte
 			)
 
 			next.ServeHTTP(httpsnoop.Wrap(rw, httpsnoop.Hooks{
@@ -50,56 +70,46 @@ func New() func(http.Handler) http.Handler { // nolint: funlen, gocognit, cyclop
 					return func() (net.Conn, *bufio.ReadWriter, error) {
 						hijacked = true
 
-						logger.Trace().Msg("Response: \n" + stringx.ToString(buffer.Bytes()))
+						con, _, err := hijackFunc()
+						if err != nil {
+							return nil, nil, err
+						}
 
-						// reset the buffer entirely to be consumed by GC
-						buffer = bytes.Buffer{}
-
-						return rw.(http.Hijacker).Hijack() // nolint: forcetypeassert
+						return con,
+							bufio.NewReadWriter(
+								bufio.NewReader(con),
+								bufio.NewWriter(io.MultiWriter(con, &traceWriter{l: logger}))),
+							nil
 					}
 				},
 				WriteHeader: func(headerFunc httpsnoop.WriteHeaderFunc) httpsnoop.WriteHeaderFunc {
 					return func(code int) {
 						if !wroteHeader {
 							writeStatusLine(&buffer, req.Proto, code, statusBuf[:])
+							rw.Header().Write(&buffer) //nolint:errcheck
 
-							if code >= 100 && code <= 199 && code != http.StatusSwitchingProtocols {
-								rw.Header().WriteSubset(&buffer, excludedHeadersNoBody) //nolint:errcheck
+							if len(rw.Header().Get("Content-Length")) != 0 {
 								buffer.Write(crlf)
-							} else {
-								rw.Header().Write(&buffer) //nolint:errcheck
-
-								if len(rw.Header().Get("Content-Length")) != 0 {
-									buffer.Write(crlf)
-								}
 							}
 
 							wroteHeader = true
 						}
 
-						rw.WriteHeader(code)
+						headerFunc(code)
 					}
 				},
 				Write: func(writeFunc httpsnoop.WriteFunc) httpsnoop.WriteFunc {
 					return func(data []byte) (int, error) {
-						if !hijacked && !wroteHeader {
+						if !wroteHeader {
 							rw.WriteHeader(http.StatusOK)
 
 							writeStatusLine(&buffer, req.Proto, http.StatusOK, statusBuf[:])
 							rw.Header().Write(&buffer) //nolint:errcheck
 						}
 
-						if !hijacked {
-							if len(rw.Header().Get("Content-Length")) == 0 && !contentLengthWritten {
-								http.Header{"Content-Length": []string{strconv.Itoa(len(data))}}.Write(&buffer) //nolint:errcheck
-								buffer.Write(crlf)
-								contentLengthWritten = true
-							}
+						buffer.Write(data)
 
-							buffer.Write(data)
-						}
-
-						return rw.Write(data)
+						return writeFunc(data)
 					}
 				},
 			}), req)
