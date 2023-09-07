@@ -16,10 +16,7 @@ import (
 	"github.com/dadrus/heimdall/internal/x/stringx"
 )
 
-var (
-	excludedHeadersNoBody = map[string]bool{"Content-Length": true, "Transfer-Encoding": true} //nolint:gochecknoglobals
-	crlf                  = []byte("\r\n")                                                     //nolint:gochecknoglobals
-)
+var crlf = []byte("\r\n") //nolint:gochecknoglobals
 
 type traceWriter struct {
 	l    *zerolog.Logger
@@ -66,11 +63,11 @@ func New() func(http.Handler) http.Handler { // nolint: funlen, gocognit, cyclop
 			)
 
 			next.ServeHTTP(httpsnoop.Wrap(rw, httpsnoop.Hooks{
-				Hijack: func(hijackFunc httpsnoop.HijackFunc) httpsnoop.HijackFunc {
+				Hijack: func(hijack httpsnoop.HijackFunc) httpsnoop.HijackFunc {
 					return func() (net.Conn, *bufio.ReadWriter, error) {
 						hijacked = true
 
-						con, _, err := hijackFunc()
+						con, _, err := hijack()
 						if err != nil {
 							return nil, nil, err
 						}
@@ -82,7 +79,7 @@ func New() func(http.Handler) http.Handler { // nolint: funlen, gocognit, cyclop
 							nil
 					}
 				},
-				WriteHeader: func(headerFunc httpsnoop.WriteHeaderFunc) httpsnoop.WriteHeaderFunc {
+				WriteHeader: func(writeHeader httpsnoop.WriteHeaderFunc) httpsnoop.WriteHeaderFunc {
 					return func(code int) {
 						if !wroteHeader {
 							writeStatusLine(&buffer, req.Proto, code, statusBuf[:])
@@ -95,10 +92,10 @@ func New() func(http.Handler) http.Handler { // nolint: funlen, gocognit, cyclop
 							wroteHeader = true
 						}
 
-						headerFunc(code)
+						writeHeader(code)
 					}
 				},
-				Write: func(writeFunc httpsnoop.WriteFunc) httpsnoop.WriteFunc {
+				Write: func(write httpsnoop.WriteFunc) httpsnoop.WriteFunc {
 					return func(data []byte) (int, error) {
 						if !wroteHeader {
 							rw.WriteHeader(http.StatusOK)
@@ -109,7 +106,7 @@ func New() func(http.Handler) http.Handler { // nolint: funlen, gocognit, cyclop
 
 						buffer.Write(data)
 
-						return writeFunc(data)
+						return write(data)
 					}
 				},
 			}), req)
