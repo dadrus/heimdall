@@ -34,7 +34,7 @@ import (
 	"github.com/dadrus/heimdall/internal/x"
 )
 
-type requestContext struct {
+type RequestContext struct {
 	ctx             context.Context // nolint: containedctx
 	ips             []string
 	reqMethod       string
@@ -48,7 +48,7 @@ type requestContext struct {
 	err             error
 }
 
-func NewRequestContext(ctx context.Context, req *envoy_auth.CheckRequest, signer heimdall.JWTSigner) *requestContext {
+func NewRequestContext(ctx context.Context, req *envoy_auth.CheckRequest, signer heimdall.JWTSigner) *RequestContext {
 	var clientIPs []string
 
 	if rmd, ok := metadata.FromIncomingContext(ctx); ok {
@@ -58,7 +58,7 @@ func NewRequestContext(ctx context.Context, req *envoy_auth.CheckRequest, signer
 		}
 	}
 
-	return &requestContext{
+	return &RequestContext{
 		ctx:        ctx,
 		ips:        clientIPs,
 		reqMethod:  req.Attributes.Request.Http.Method,
@@ -88,7 +88,7 @@ func canonicalizeHeaders(headers map[string]string) map[string]string {
 	return result
 }
 
-func (s *requestContext) Request() *heimdall.Request {
+func (s *RequestContext) Request() *heimdall.Request {
 	return &heimdall.Request{
 		RequestFunctions: s,
 		Method:           s.reqMethod,
@@ -97,10 +97,10 @@ func (s *requestContext) Request() *heimdall.Request {
 	}
 }
 
-func (s *requestContext) Headers() map[string]string { return s.reqHeaders }
-func (s *requestContext) Header(name string) string  { return s.reqHeaders[name] }
+func (s *RequestContext) Headers() map[string]string { return s.reqHeaders }
+func (s *RequestContext) Header(name string) string  { return s.reqHeaders[name] }
 
-func (s *requestContext) Cookie(name string) string {
+func (s *RequestContext) Cookie(name string) string {
 	values, ok := s.reqHeaders["Cookie"]
 	if !ok {
 		return ""
@@ -115,14 +115,14 @@ func (s *requestContext) Cookie(name string) string {
 	return ""
 }
 
-func (s *requestContext) Body() []byte                            { return s.reqRawBody }
-func (s *requestContext) AppContext() context.Context             { return s.ctx }
-func (s *requestContext) SetPipelineError(err error)              { s.err = err }
-func (s *requestContext) AddHeaderForUpstream(name, value string) { s.upstreamHeaders.Add(name, value) }
-func (s *requestContext) AddCookieForUpstream(name, value string) { s.upstreamCookies[name] = value }
-func (s *requestContext) Signer() heimdall.JWTSigner              { return s.jwtSigner }
+func (s *RequestContext) Body() []byte                            { return s.reqRawBody }
+func (s *RequestContext) AppContext() context.Context             { return s.ctx }
+func (s *RequestContext) SetPipelineError(err error)              { s.err = err }
+func (s *RequestContext) AddHeaderForUpstream(name, value string) { s.upstreamHeaders.Add(name, value) }
+func (s *RequestContext) AddCookieForUpstream(name, value string) { s.upstreamCookies[name] = value }
+func (s *RequestContext) Signer() heimdall.JWTSigner              { return s.jwtSigner }
 
-func (s *requestContext) Finalize() (*envoy_auth.CheckResponse, error) {
+func (s *RequestContext) Finalize() (*envoy_auth.CheckResponse, error) {
 	zerolog.Ctx(s.ctx).Debug().Msg("Finalizing request")
 
 	if s.err != nil {
