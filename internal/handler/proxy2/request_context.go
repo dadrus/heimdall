@@ -19,6 +19,7 @@ import (
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/x"
+	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/httpx"
 	"github.com/dadrus/heimdall/internal/x/slicex"
 )
@@ -163,6 +164,12 @@ func (r *requestContext) Finalize(mut rule.URIMutator) error {
 		Msg("Forwarding request")
 
 	proxy := &httputil.ReverseProxy{
+		ErrorHandler: func(rw http.ResponseWriter, req *http.Request, err error) {
+			logger.Error().Err(err).Msg("Proxying error")
+
+			r.err = errorchain.NewWithMessage(heimdall.ErrCommunication, "Failed to proxy request").
+				CausedBy(err)
+		},
 		Transport: otelhttp.NewTransport(
 			// non default transport is used here only because of the
 			// tlsClientConfig used for test purposes
@@ -183,7 +190,8 @@ func (r *requestContext) Finalize(mut rule.URIMutator) error {
 
 	proxy.ServeHTTP(r.rw, r.req)
 
-	return nil
+	// set in the proxy error handler above
+	return r.err
 }
 
 func (r *requestContext) requestRewriter(targetURL *url.URL) func(req *httputil.ProxyRequest) {
