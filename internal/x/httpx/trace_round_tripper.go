@@ -23,9 +23,9 @@ func (t *traceRoundTripper) RoundTrip(req *http.Request) (*http.Response, error)
 		return t.t.RoundTrip(req)
 	}
 
-	dump, err := httputil.DumpRequestOut(req, true)
+	dump, err := httputil.DumpRequestOut(req, req.ContentLength != 0)
 	if err != nil {
-		logger.Trace().Err(err).Msg("Failed to dump request")
+		logger.Trace().Err(err).Msg("Failed dumping out request")
 	} else {
 		if req.Proto == "HTTP/2.0" {
 			logger.Trace().Msg("Used HTTP protocol is HTTP/2.0, even the dump shows HTTP/1.1.")
@@ -40,9 +40,9 @@ func (t *traceRoundTripper) RoundTrip(req *http.Request) (*http.Response, error)
 		return nil, err
 	}
 
-	dump, err = httputil.DumpResponse(resp, true)
+	dump, err = httputil.DumpResponse(resp, resp.ContentLength != 0)
 	if err != nil {
-		logger.Trace().Err(err).Msg("Failed to dump response")
+		logger.Trace().Err(err).Msg("Failed dumping response")
 	} else {
 		logger.Trace().Msg("Inbound Response: \n" + stringx.ToString(dump))
 	}
