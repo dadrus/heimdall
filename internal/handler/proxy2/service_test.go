@@ -27,7 +27,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	"golang.org/x/net/http2"
 
 	"github.com/dadrus/heimdall/internal/cache/mocks"
 	"github.com/dadrus/heimdall/internal/config"
@@ -683,11 +682,12 @@ func TestProxyService(t *testing.T) {
 				pool.AddCert(proxyCert)
 
 				return &http.Client{
-					Transport: &http2.Transport{
+					Transport: &http.Transport{
 						TLSClientConfig: &tls.Config{
 							RootCAs:    pool,
 							MinVersion: tls.VersionTLS13,
 						},
+						ForceAttemptHTTP2: true,
 					},
 				}
 			},
@@ -777,11 +777,12 @@ func TestProxyService(t *testing.T) {
 				pool.AddCert(proxyCert)
 
 				return &http.Client{
-					Transport: &http2.Transport{
+					Transport: &http.Transport{
 						TLSClientConfig: &tls.Config{
 							RootCAs:    pool,
 							MinVersion: tls.VersionTLS13,
 						},
+						ForceAttemptHTTP2: true,
 					},
 				}
 			},
