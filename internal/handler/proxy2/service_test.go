@@ -21,6 +21,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gorilla/websocket"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
@@ -948,4 +949,117 @@ func TestProxyService(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestWebSocketSupport(t *testing.T) {
+	t.Parallel()
+
+	port, err := testsupport.GetFreePort()
+	require.NoError(t, err)
+
+	upstreamSrv := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+		require.Equal(t, "/bar", req.URL.Path)
+
+		upgrader := websocket.Upgrader{
+			CheckOrigin: func(r *http.Request) bool {
+				return true
+			},
+		}
+
+		con, err := upgrader.Upgrade(rw, req, nil)
+		require.NoError(t, err)
+
+		defer con.Close()
+
+		err = con.WriteMessage(websocket.TextMessage, []byte("ping 1"))
+		require.NoError(t, err)
+
+		_, message, err := con.ReadMessage()
+		require.NoError(t, err)
+		assert.Equal(t, []byte("ping 1"), message)
+
+		err = con.WriteMessage(websocket.TextMessage, []byte("ping 2"))
+		require.NoError(t, err)
+
+		_, message, err = con.ReadMessage()
+		require.NoError(t, err)
+		assert.Equal(t, []byte("ping 2"), message)
+	}))
+	defer upstreamSrv.Close()
+
+	upstreamURL, err := url.Parse(upstreamSrv.URL)
+	require.NoError(t, err)
+
+	exec := mocks4.NewExecutorMock(t)
+	mut := mocks4.NewURIMutatorMock(t)
+	mut.EXPECT().Mutate(mock.Anything).Return(&url.URL{
+		Scheme: upstreamURL.Scheme,
+		Host:   upstreamURL.Host,
+		Path:   "/bar",
+	}, nil)
+
+	exec.EXPECT().Execute(
+		mock.MatchedBy(func(ctx heimdall.Context) bool {
+			pathMatched := ctx.Request().URL.Path == "/foo"
+			methodMatched := ctx.Request().Method == http.MethodGet
+
+			return pathMatched && methodMatched
+		}),
+	).Return(mut, nil)
+
+	conf := &config.Configuration{
+		Serve: config.ServeConfig{
+			Proxy: config.ServiceConfig{
+				Timeout: config.Timeout{
+					Read:  1 * time.Second,
+					Write: 1 * time.Second,
+					Idle:  1 * time.Second,
+				},
+				Host: "127.0.0.1",
+				Port: port,
+			},
+		},
+	}
+
+	proxy := newService(serviceArgs{
+		Config:     conf,
+		Registerer: prometheus.NewRegistry(),
+		Logger:     log.Logger,
+		Cache:      mocks.NewCacheMock(t),
+		Executor:   exec,
+	})
+
+	defer proxy.Shutdown(context.Background())
+
+	listener, err := listener.New("tcp", conf.Serve.Proxy)
+	require.NoError(t, err)
+
+	go func() {
+		err := proxy.Serve(listener)
+		require.ErrorIs(t, err, http.ErrServerClosed)
+	}()
+	time.Sleep(50 * time.Millisecond)
+
+	wsURL := url.URL{Scheme: "ws", Host: proxy.Addr, Path: "/foo"}
+	con, _, err := websocket.DefaultDialer.Dial(wsURL.String(), nil)
+	require.NoError(t, err)
+
+	mt, message, err := con.ReadMessage()
+	require.NoError(t, err)
+	require.Equal(t, websocket.TextMessage, mt)
+	assert.Equal(t, []byte("ping 1"), message)
+
+	err = con.WriteMessage(mt, message)
+	require.NoError(t, err)
+
+	mt, message, err = con.ReadMessage()
+	require.NoError(t, err)
+	require.Equal(t, websocket.TextMessage, mt)
+	assert.Equal(t, []byte("ping 2"), message)
+
+	err = con.WriteMessage(websocket.TextMessage, message)
+	require.NoError(t, err)
+
+	err = con.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
+	require.NoError(t, err)
 }
