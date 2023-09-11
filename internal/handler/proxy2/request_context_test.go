@@ -400,14 +400,19 @@ func TestRequestContextHeader(t *testing.T) {
 	req := httptest.NewRequest(http.MethodHead, "https://foo.bar/test", nil)
 	req.Header.Set("X-Foo-Bar", "foo")
 	req.Header.Add("X-Foo-Bar", "bar")
+	req.Host = "bar.foo"
 
 	ctx := newRequestContextFactory(nil, 0).Create(nil, req)
 
 	// WHEN
-	value := ctx.Request().Header("X-Foo-Bar")
+	xFooBarValue := ctx.Request().Header("X-Foo-Bar")
+	hostValue := ctx.Request().Header("Host")
+	emptyValue := ctx.Request().Header("X-Not-Present")
 
 	// THEN
-	assert.Equal(t, "foo", value)
+	assert.Equal(t, "foo", xFooBarValue)
+	assert.Equal(t, "bar.foo", hostValue)
+	assert.Empty(t, emptyValue)
 }
 
 func TestRequestContextCookie(t *testing.T) {

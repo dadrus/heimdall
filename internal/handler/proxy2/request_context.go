@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httputil"
+	"net/textproto"
 	"net/url"
 	"strings"
 	"time"
@@ -40,7 +41,10 @@ type requestContext struct {
 	timeout         time.Duration
 	err             error
 
+	// the following properties are create lazy and cached
+
 	savedBody []byte
+	hmdlReq   *heimdall.Request
 }
 
 type factoryFunc func(rw http.ResponseWriter, req *http.Request) request.Context
@@ -64,7 +68,19 @@ func newRequestContextFactory(signer heimdall.JWTSigner, timeout time.Duration) 
 	})
 }
 
-func (r *requestContext) Header(name string) string { return r.req.Header.Get(name) }
+func (r *requestContext) Header(name string) string {
+	key := textproto.CanonicalMIMEHeaderKey(name)
+	if key == "Host" {
+		return r.req.Host
+	}
+
+	value := r.req.Header[key]
+	if len(value) == 0 {
+		return ""
+	}
+
+	return value[0]
+}
 
 func (r *requestContext) Cookie(name string) string {
 	if cookie, err := r.req.Cookie(name); err == nil {
@@ -108,7 +124,16 @@ func (r *requestContext) Body() []byte {
 }
 
 func (r *requestContext) Request() *heimdall.Request {
-	return &heimdall.Request{RequestFunctions: r, Method: r.reqMethod, URL: r.reqURL, ClientIP: r.requestClientIPs()}
+	if r.hmdlReq == nil {
+		r.hmdlReq = &heimdall.Request{
+			RequestFunctions: r,
+			Method:           r.reqMethod,
+			URL:              r.reqURL,
+			ClientIP:         r.requestClientIPs(),
+		}
+	}
+
+	return r.hmdlReq
 }
 
 func (r *requestContext) requestClientIPs() []string {
@@ -120,7 +145,7 @@ func (r *requestContext) requestClientIPs() []string {
 
 		for idx, val := range values {
 			for _, val := range strings.Split(strings.TrimSpace(val), ";") {
-				if addr, found := strings.CutPrefix(val, "for="); found {
+				if addr, found := strings.CutPrefix(strings.TrimSpace(val), "for="); found {
 					ips[idx] = addr
 				}
 			}
