@@ -91,8 +91,9 @@ func (r *requestContext) Cookie(name string) string {
 }
 
 func (r *requestContext) Headers() map[string]string {
-	headers := make(map[string]string, len(r.req.Header))
+	headers := make(map[string]string, len(r.req.Header)+1)
 
+	headers["Host"] = r.req.Host
 	for k, v := range r.req.Header {
 		headers[k] = strings.Join(v, ",")
 	}
