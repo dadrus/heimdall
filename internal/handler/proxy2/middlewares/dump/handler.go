@@ -66,6 +66,8 @@ func New() func(http.Handler) http.Handler { // nolint: funlen, gocognit, cyclop
 				Hijack: func(hijack httpsnoop.HijackFunc) httpsnoop.HijackFunc {
 					return func() (net.Conn, *bufio.ReadWriter, error) {
 						hijacked = true
+						buffer.Reset()
+						buffer = bytes.Buffer{}
 
 						con, _, err := hijack()
 						if err != nil {
@@ -98,10 +100,10 @@ func New() func(http.Handler) http.Handler { // nolint: funlen, gocognit, cyclop
 				Write: func(write httpsnoop.WriteFunc) httpsnoop.WriteFunc {
 					return func(data []byte) (int, error) {
 						if !wroteHeader {
-							rw.WriteHeader(http.StatusOK)
-
 							writeStatusLine(&buffer, req.Proto, http.StatusOK, statusBuf[:])
 							rw.Header().Write(&buffer) //nolint:errcheck
+
+							rw.WriteHeader(http.StatusOK)
 						}
 
 						buffer.Write(data)
@@ -115,6 +117,8 @@ func New() func(http.Handler) http.Handler { // nolint: funlen, gocognit, cyclop
 				// build message from the collected data
 				logger.Trace().Msg("Response: \n" + stringx.ToString(buffer.Bytes()))
 			}
+
+			buffer.Reset()
 		})
 	}
 }
