@@ -209,47 +209,48 @@ func (r *requestContext) requestRewriter(targetURL *url.URL) func(req *httputil.
 			proxyReq.Out.Header.Set(k, r.upstreamHeaders.Get(k))
 		}
 
+		if host := r.upstreamHeaders.Get("Host"); len(host) != 0 {
+			proxyReq.Out.Host = host
+			proxyReq.Out.Header.Del("Host")
+		}
+
 		for k, v := range r.upstreamCookies {
 			proxyReq.Out.AddCookie(&http.Cookie{Name: k, Value: v})
 		}
 
 		// set headers, which might be relevant for the upstream, if these are present in the original request
 		// and have not been dropped
-		if val := proxyReq.In.Header.Get("X-Forwarded-Proto"); len(val) != 0 {
-			proxyReq.Out.Header.Set("X-Forwarded-Proto", val)
-		}
-
-		if val := proxyReq.In.Header.Get("X-Forwarded-Host"); len(val) != 0 {
-			proxyReq.Out.Header.Set("X-Forwarded-Host", val)
-		}
-
-		// it is safe to reuse these headers here, as these have been already dropped if the source is untrusted
-		forwardedForHeaderValue := proxyReq.In.Header.Get("X-Forwarded-For")
-		forwardedHeaderValue := proxyReq.In.Header.Get("Forwarded")
+		forwardedHost := proxyReq.In.Header.Get("X-Forwarded-Host")
+		forwardedProto := proxyReq.In.Header.Get("X-Forwarded-Proto")
+		forwardedFor := proxyReq.In.Header.Get("X-Forwarded-For")
+		forwarded := proxyReq.In.Header.Get("Forwarded")
+		proto := x.IfThenElse(proxyReq.In.TLS != nil, "https", "http")
 
 		addr := strings.Split(r.req.RemoteAddr, ":")
 		clientIP := addr[0]
 
-		// Set the X-Forwarded-For
-		if len(forwardedForHeaderValue) != 0 {
-			proxyReq.Out.Header.Set("X-Forwarded-For",
-				x.IfThenElseExec(len(forwardedForHeaderValue) == 0,
-					func() string { return clientIP },
-					func() string { return fmt.Sprintf("%s, %s", forwardedForHeaderValue, clientIP) }))
+		if len(forwardedFor) != 0 || len(forwardedProto) != 0 || len(forwardedHost) != 0 {
+			proxyReq.Out.Header.Set("X-Forwarded-For", x.IfThenElseExec(len(forwardedFor) == 0,
+				func() string { return clientIP },
+				func() string { return fmt.Sprintf("%s, %s", forwardedFor, clientIP) }))
+
+			proxyReq.Out.Header.Set("X-Forwarded-Proto", x.IfThenElseExec(len(forwardedProto) == 0,
+				func() string { return proto },
+				func() string { return forwardedProto }))
+
+			proxyReq.Out.Header.Set("X-Forwarded-Host", x.IfThenElseExec(len(forwardedHost) == 0,
+				func() string { return proxyReq.In.Host },
+				func() string { return forwardedHost }))
 		} else {
-			// Set the Forwarded header
-			proxyReq.Out.Header.Set("Forwarded",
-				x.IfThenElseExec(len(forwardedHeaderValue) == 0,
-					func() string {
-						return fmt.Sprintf("for=%s;proto=%s", clientIP,
-							x.IfThenElse(proxyReq.Out.TLS != nil, "https", "http"))
-					},
-					func() string {
-						return fmt.Sprintf("%s, for=%s;proto=%s", forwardedHeaderValue, clientIP,
-							x.IfThenElse(proxyReq.Out.TLS != nil, "https", "http"))
-					},
-				),
-			)
+			proxyReq.Out.Header.Set("Forwarded", x.IfThenElseExec(len(forwarded) == 0,
+				func() string {
+					return fmt.Sprintf("for=%s;host=%s;proto=%s",
+						clientIP, proxyReq.In.Host, proto)
+				},
+				func() string {
+					return fmt.Sprintf("%s, for=%s;host=%s;proto=%s",
+						forwarded, clientIP, proxyReq.In.Host, proto)
+				}))
 		}
 	}
 }

@@ -117,53 +117,32 @@ func TestRequestContextFinalize(t *testing.T) {
 		assertRequest  func(*testing.T, *http.Request)
 	}{
 		{
-			"error was present, forwarding aborted",
-			false,
-			http.Header{},
-			func(t *testing.T, ctx request.Context, _ *mocks2.URIMutatorMock, _ *url.URL) {
+			uc: "error was present, forwarding aborted",
+			setup: func(t *testing.T, ctx request.Context, _ *mocks2.URIMutatorMock, _ *url.URL) {
 				t.Helper()
 
 				err := errors.New("test error")
 				ctx.SetPipelineError(err)
 			},
-			func(t *testing.T, req *http.Request) {
-				t.Helper()
-
-				require.Len(t, req.Header, 3)
-				assert.NotEmpty(t, req.Header.Get("Accept-Encoding"))
-				assert.NotEmpty(t, req.Header.Get("Content-Length"))
-				assert.Equal(t, "for=192.0.2.1;proto=https", req.Header.Get("Forwarded"))
-			},
 		},
 		{
-			"error while retrieving target url",
-			false,
-			http.Header{},
-			func(t *testing.T, ctx request.Context, mut *mocks2.URIMutatorMock, _ *url.URL) {
+			uc: "error while retrieving target url",
+			setup: func(t *testing.T, ctx request.Context, mut *mocks2.URIMutatorMock, _ *url.URL) {
 				t.Helper()
 
 				err := errors.New("test error")
 				mut.EXPECT().Mutate(mock.Anything).Return(nil, err)
 			},
-			func(t *testing.T, req *http.Request) {
-				t.Helper()
-
-				require.Len(t, req.Header, 3)
-				assert.NotEmpty(t, req.Header.Get("Accept-Encoding"))
-				assert.NotEmpty(t, req.Header.Get("Content-Length"))
-				assert.Equal(t, "for=192.0.2.1;proto=https", req.Header.Get("Forwarded"))
-			},
 		},
 		{
-			"no headers set",
-			true,
-			http.Header{},
-			func(t *testing.T, _ request.Context, mut *mocks2.URIMutatorMock, uri *url.URL) {
+			uc:             "no headers set",
+			upstreamCalled: true,
+			setup: func(t *testing.T, _ request.Context, mut *mocks2.URIMutatorMock, uri *url.URL) {
 				t.Helper()
 
 				mut.EXPECT().Mutate(mock.Anything).Return(uri, nil)
 			},
-			func(t *testing.T, req *http.Request) {
+			assertRequest: func(t *testing.T, req *http.Request) {
 				t.Helper()
 
 				assert.Contains(t, req.Host, "127.0.0.1")
@@ -172,13 +151,13 @@ func TestRequestContextFinalize(t *testing.T) {
 				require.Len(t, req.Header, 3)
 				assert.NotEmpty(t, req.Header.Get("Accept-Encoding"))
 				assert.NotEmpty(t, req.Header.Get("Content-Length"))
-				assert.Equal(t, "for=192.0.2.1;proto=https", req.Header.Get("Forwarded"))
+				assert.Equal(t, "for=192.0.2.1;host=foo.bar;proto=https", req.Header.Get("Forwarded"))
 			},
 		},
 		{
-			"all X-Forwarded-* and Forwarded headers present",
-			true,
-			http.Header{
+			uc:             "all X-Forwarded-* and Forwarded headers present",
+			upstreamCalled: true,
+			headers: http.Header{
 				"X-Forwarded-Proto":  []string{"https"},
 				"X-Forwarded-Host":   []string{"bar.foo"},
 				"X-Forwarded-Path":   []string{"/foobar"},
@@ -187,12 +166,12 @@ func TestRequestContextFinalize(t *testing.T) {
 				"X-Forwarded-For":    []string{"127.0.0.2, 192.168.12.126"},
 				"Forwarded":          []string{"proto=http;for=127.0.0.3, proto=http;for=192.168.12.127"},
 			},
-			func(t *testing.T, _ request.Context, mut *mocks2.URIMutatorMock, uri *url.URL) {
+			setup: func(t *testing.T, _ request.Context, mut *mocks2.URIMutatorMock, uri *url.URL) {
 				t.Helper()
 
 				mut.EXPECT().Mutate(mock.Anything).Return(uri, nil)
 			},
-			func(t *testing.T, req *http.Request) {
+			assertRequest: func(t *testing.T, req *http.Request) {
 				t.Helper()
 
 				assert.Contains(t, req.Host, "127.0.0.1")
@@ -207,18 +186,18 @@ func TestRequestContextFinalize(t *testing.T) {
 			},
 		},
 		{
-			"only X-Forwarded-Method and Forwarded headers are present",
-			true,
-			http.Header{
+			uc:             "only X-Forwarded-Method and Forwarded headers are present",
+			upstreamCalled: true,
+			headers: http.Header{
 				"X-Forwarded-Method": []string{http.MethodPost},
 				"Forwarded":          []string{"proto=http;for=127.0.0.3, proto=http;for=192.168.12.127"},
 			},
-			func(t *testing.T, _ request.Context, mut *mocks2.URIMutatorMock, uri *url.URL) {
+			setup: func(t *testing.T, _ request.Context, mut *mocks2.URIMutatorMock, uri *url.URL) {
 				t.Helper()
 
 				mut.EXPECT().Mutate(mock.Anything).Return(uri, nil)
 			},
-			func(t *testing.T, req *http.Request) {
+			assertRequest: func(t *testing.T, req *http.Request) {
 				t.Helper()
 
 				assert.Contains(t, req.Host, "127.0.0.1")
@@ -227,16 +206,16 @@ func TestRequestContextFinalize(t *testing.T) {
 				require.Len(t, req.Header, 3)
 				assert.NotEmpty(t, req.Header.Get("Accept-Encoding"))
 				assert.NotEmpty(t, req.Header.Get("Content-Length"))
-				assert.Equal(t, "proto=http;for=127.0.0.3, proto=http;for=192.168.12.127, for=192.0.2.1;proto=https", req.Header.Get("Forwarded"))
+				assert.Equal(t, "proto=http;for=127.0.0.3, proto=http;for=192.168.12.127, for=192.0.2.1;host=foo.bar;proto=https", req.Header.Get("Forwarded"))
 			},
 		},
 		{
-			"only custom headers and results from rule execution are present",
-			true,
-			http.Header{
+			uc:             "only custom headers and results from rule execution are present",
+			upstreamCalled: true,
+			headers: http.Header{
 				"X-Foo-Bar": []string{"bar"},
 			},
-			func(t *testing.T, ctx request.Context, mut *mocks2.URIMutatorMock, uri *url.URL) {
+			setup: func(t *testing.T, ctx request.Context, mut *mocks2.URIMutatorMock, uri *url.URL) {
 				t.Helper()
 
 				mut.EXPECT().Mutate(mock.Anything).Return(uri, nil)
@@ -247,7 +226,7 @@ func TestRequestContextFinalize(t *testing.T) {
 				ctx.AddCookieForUpstream("my_cookie_1", "my_value_1")
 				ctx.AddCookieForUpstream("my_cookie_2", "my_value_2")
 			},
-			func(t *testing.T, req *http.Request) {
+			assertRequest: func(t *testing.T, req *http.Request) {
 				t.Helper()
 
 				assert.Contains(t, req.Host, "127.0.0.1")
@@ -258,11 +237,108 @@ func TestRequestContextFinalize(t *testing.T) {
 				assert.NotEmpty(t, req.Header.Get("Content-Length"))
 				assert.Contains(t, req.Header.Get("Cookie"), "my_cookie_1=my_value_1")
 				assert.Contains(t, req.Header.Get("Cookie"), "my_cookie_2=my_value_2")
-				assert.Equal(t, "for=192.0.2.1;proto=https", req.Header.Get("Forwarded"))
+				assert.Equal(t, "for=192.0.2.1;host=foo.bar;proto=https", req.Header.Get("Forwarded"))
 				assert.Equal(t, "somevalue", req.Header.Get("X-Custom"))
 				assert.Equal(t, "bar", req.Header.Get("X-Foo-Bar"))
 				assert.Equal(t, http.MethodDelete, req.Header.Get("X-Forwarded-Method"))
 				assert.Equal(t, "someid", req.Header.Get("X-User-Id"))
+			},
+		},
+		{
+			uc:             "Host header is set for upstream",
+			upstreamCalled: true,
+			setup: func(t *testing.T, ctx request.Context, mut *mocks2.URIMutatorMock, uri *url.URL) {
+				t.Helper()
+
+				mut.EXPECT().Mutate(mock.Anything).Return(uri, nil)
+
+				ctx.AddHeaderForUpstream("Host", "bar.foo")
+			},
+			assertRequest: func(t *testing.T, req *http.Request) {
+				t.Helper()
+
+				assert.Contains(t, req.Host, "bar.foo")
+				assert.Equal(t, http.MethodGet, req.Method)
+
+				require.Len(t, req.Header, 3)
+				assert.NotEmpty(t, req.Header.Get("Accept-Encoding"))
+				assert.NotEmpty(t, req.Header.Get("Content-Length"))
+				assert.Equal(t, "for=192.0.2.1;host=foo.bar;proto=https", req.Header.Get("Forwarded"))
+			},
+		},
+		{
+			uc:             "Only X-Forwarded-Proto header is present",
+			upstreamCalled: true,
+			headers: http.Header{
+				"X-Forwarded-Proto": []string{"http"},
+			},
+			setup: func(t *testing.T, ctx request.Context, mut *mocks2.URIMutatorMock, uri *url.URL) {
+				t.Helper()
+
+				mut.EXPECT().Mutate(mock.Anything).Return(uri, nil)
+			},
+			assertRequest: func(t *testing.T, req *http.Request) {
+				t.Helper()
+
+				assert.Contains(t, req.Host, "127.0.0.1")
+				assert.Equal(t, http.MethodGet, req.Method)
+
+				require.Len(t, req.Header, 5)
+				assert.NotEmpty(t, req.Header.Get("Accept-Encoding"))
+				assert.NotEmpty(t, req.Header.Get("Content-Length"))
+				assert.Equal(t, "http", req.Header.Get("X-Forwarded-Proto"))
+				assert.Equal(t, "foo.bar", req.Header.Get("X-Forwarded-Host"))
+				assert.Equal(t, "192.0.2.1", req.Header.Get("X-Forwarded-For"))
+			},
+		},
+		{
+			uc:             "Only X-Forwarded-Host header is present",
+			upstreamCalled: true,
+			headers: http.Header{
+				"X-Forwarded-Host": []string{"bar.foo"},
+			},
+			setup: func(t *testing.T, ctx request.Context, mut *mocks2.URIMutatorMock, uri *url.URL) {
+				t.Helper()
+
+				mut.EXPECT().Mutate(mock.Anything).Return(uri, nil)
+			},
+			assertRequest: func(t *testing.T, req *http.Request) {
+				t.Helper()
+
+				assert.Contains(t, req.Host, "127.0.0.1")
+				assert.Equal(t, http.MethodGet, req.Method)
+
+				require.Len(t, req.Header, 5)
+				assert.NotEmpty(t, req.Header.Get("Accept-Encoding"))
+				assert.NotEmpty(t, req.Header.Get("Content-Length"))
+				assert.Equal(t, "https", req.Header.Get("X-Forwarded-Proto"))
+				assert.Equal(t, "bar.foo", req.Header.Get("X-Forwarded-Host"))
+				assert.Equal(t, "192.0.2.1", req.Header.Get("X-Forwarded-For"))
+			},
+		},
+		{
+			uc:             "Only X-Forwarded-For header is present",
+			upstreamCalled: true,
+			headers: http.Header{
+				"X-Forwarded-For": []string{"172.2.34.1"},
+			},
+			setup: func(t *testing.T, ctx request.Context, mut *mocks2.URIMutatorMock, uri *url.URL) {
+				t.Helper()
+
+				mut.EXPECT().Mutate(mock.Anything).Return(uri, nil)
+			},
+			assertRequest: func(t *testing.T, req *http.Request) {
+				t.Helper()
+
+				assert.Contains(t, req.Host, "127.0.0.1")
+				assert.Equal(t, http.MethodGet, req.Method)
+
+				require.Len(t, req.Header, 5)
+				assert.NotEmpty(t, req.Header.Get("Accept-Encoding"))
+				assert.NotEmpty(t, req.Header.Get("Content-Length"))
+				assert.Equal(t, "https", req.Header.Get("X-Forwarded-Proto"))
+				assert.Equal(t, "foo.bar", req.Header.Get("X-Forwarded-Host"))
+				assert.Equal(t, "172.2.34.1, 192.0.2.1", req.Header.Get("X-Forwarded-For"))
 			},
 		},
 	} {
@@ -376,7 +452,7 @@ func TestRequestContextBody(t *testing.T) {
 		require.Len(t, req.Header, 5)
 		assert.NotEmpty(t, req.Header.Get("Accept-Encoding"))
 		assert.NotEmpty(t, req.Header.Get("Content-Length"))
-		assert.Equal(t, "for=192.0.2.1;proto=https", req.Header.Get("Forwarded"))
+		assert.Equal(t, "for=192.0.2.1;host=foo.bar;proto=https", req.Header.Get("Forwarded"))
 		assert.Equal(t, "foo", req.Header.Get("X-Custom"))
 		assert.Equal(t, "bar", req.Header.Get("X-Foo"))
 
