@@ -379,7 +379,7 @@ func TestRequestContextHeaders(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
-	req := httptest.NewRequest(http.MethodHead, "https://foo.bar/test", nil)
+	req := httptest.NewRequest(http.MethodHead, "https://foo.baz/test", nil)
 	req.Header.Set("X-Foo-Bar", "foo")
 	req.Header.Add("X-Foo-Bar", "bar")
 
@@ -389,8 +389,9 @@ func TestRequestContextHeaders(t *testing.T) {
 	headers := ctx.Request().Headers()
 
 	// THEN
-	require.Len(t, headers, 1)
+	require.Len(t, headers, 2)
 	assert.Equal(t, "foo,bar", headers["X-Foo-Bar"])
+	assert.Equal(t, "foo.baz", headers["Host"])
 }
 
 func TestRequestContextHeader(t *testing.T) {

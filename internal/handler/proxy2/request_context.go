@@ -45,6 +45,7 @@ type requestContext struct {
 
 	savedBody []byte
 	hmdlReq   *heimdall.Request
+	headers   map[string]string
 }
 
 type factoryFunc func(rw http.ResponseWriter, req *http.Request) request.Context
@@ -91,14 +92,16 @@ func (r *requestContext) Cookie(name string) string {
 }
 
 func (r *requestContext) Headers() map[string]string {
-	headers := make(map[string]string, len(r.req.Header)+1)
+	if len(r.headers) == 0 {
+		r.headers = make(map[string]string, len(r.req.Header)+1)
 
-	headers["Host"] = r.req.Host
-	for k, v := range r.req.Header {
-		headers[k] = strings.Join(v, ",")
+		r.headers["Host"] = r.req.Host
+		for k, v := range r.req.Header {
+			r.headers[textproto.CanonicalMIMEHeaderKey(k)] = strings.Join(v, ",")
+		}
 	}
 
-	return headers
+	return r.headers
 }
 
 func (r *requestContext) Body() []byte {
