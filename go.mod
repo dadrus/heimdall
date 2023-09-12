@@ -49,14 +49,14 @@ require (
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.43.0
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.43.0
 	go.opentelemetry.io/contrib/propagators/autoprop v0.43.0
-	go.opentelemetry.io/otel v1.17.0
-	go.opentelemetry.io/otel/bridge/opentracing v1.17.0
-	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.17.0
-	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.17.0
-	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.17.0
-	go.opentelemetry.io/otel/exporters/zipkin v1.17.0
-	go.opentelemetry.io/otel/sdk v1.17.0
-	go.opentelemetry.io/otel/trace v1.17.0
+	go.opentelemetry.io/otel v1.18.0
+	go.opentelemetry.io/otel/bridge/opentracing v1.18.0
+	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.18.0
+	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.18.0
+	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.18.0
+	go.opentelemetry.io/otel/exporters/zipkin v1.18.0
+	go.opentelemetry.io/otel/sdk v1.18.0
+	go.opentelemetry.io/otel/trace v1.18.0
 	go.uber.org/fx v1.20.0
 	gocloud.dev v0.34.0
 	golang.org/x/exp v0.0.0-20230817173708-d852ddb80c63
@@ -166,7 +166,7 @@ require (
 	go.opentelemetry.io/contrib/propagators/b3 v1.18.0 // indirect
 	go.opentelemetry.io/contrib/propagators/jaeger v1.18.0 // indirect
 	go.opentelemetry.io/contrib/propagators/ot v1.18.0 // indirect
-	go.opentelemetry.io/otel/metric v1.17.0 // indirect
+	go.opentelemetry.io/otel/metric v1.18.0 // indirect
 	go.opentelemetry.io/proto/otlp v1.0.0 // indirect
 	go.uber.org/atomic v1.11.0 // indirect
 	go.uber.org/dig v1.17.0 // indirect
@@ -176,7 +176,7 @@ require (
 	golang.org/x/net v0.14.0 // indirect
 	golang.org/x/oauth2 v0.10.0 // indirect
 	golang.org/x/sync v0.3.0 // indirect
-	golang.org/x/sys v0.11.0 // indirect
+	golang.org/x/sys v0.12.0 // indirect
 	golang.org/x/term v0.11.0 // indirect
 	golang.org/x/text v0.12.0 // indirect
 	golang.org/x/time v0.3.0 // indirect
