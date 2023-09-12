@@ -45,6 +45,7 @@ proxy:
 ----
 ====
 
+[#_timeout]
 * *`timeout`*: _link:{{< relref "/docs/configuration/reference/types.adoc#_timeout" >}}[Timeout]_ (optional)
 +
 Like written in the introduction of this section, Heimdall configures useful timeout defaults. You can however override this by making use of the `timeout` option and specifying the timeouts, you need. The `read` timeout is also used while waiting for the responses from the upstream service. Setting it to `0` will make forwarding the requests to the upstream service impossible.
