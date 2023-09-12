@@ -40,10 +40,10 @@ type requestContext struct {
 	jwtSigner       heimdall.JWTSigner
 	rw              http.ResponseWriter
 	req             *http.Request
-	readTimeout     time.Duration
 	writeTimeout    time.Duration
-	idleTimeout     time.Duration
+	readTimeout     time.Duration
 	err             error
+	transport       *http.Transport
 
 	// the following properties are create lazy and cached
 
@@ -59,6 +59,23 @@ func (f factoryFunc) Create(rw http.ResponseWriter, req *http.Request) request.C
 }
 
 func newRequestContextFactory(signer heimdall.JWTSigner, timeouts config.Timeout) request.ContextFactory {
+	transport := &http.Transport{
+		// tlsClientConfig used for test purposes only
+		// must be removed as soon as tls configuration
+		// is possible per upstream
+		Proxy: http.ProxyFromEnvironment,
+		DialContext: (&net.Dialer{
+			Timeout:   30 * time.Second, //nolint:gomnd
+			KeepAlive: 30 * time.Second, //nolint:gomnd
+		}).DialContext,
+		MaxIdleConns:          100, //nolint:gomnd
+		IdleConnTimeout:       timeouts.Idle,
+		TLSHandshakeTimeout:   10 * time.Second, //nolint:gomnd
+		ExpectContinueTimeout: 1 * time.Second,
+		ForceAttemptHTTP2:     true,
+		TLSClientConfig:       tlsClientConfig,
+	}
+
 	return factoryFunc(func(rw http.ResponseWriter, req *http.Request) request.Context {
 		return &requestContext{
 			jwtSigner:       signer,
@@ -68,9 +85,9 @@ func newRequestContextFactory(signer heimdall.JWTSigner, timeouts config.Timeout
 			upstreamCookies: make(map[string]string),
 			rw:              rw,
 			req:             req,
-			readTimeout:     timeouts.Read,
+			transport:       transport,
 			writeTimeout:    timeouts.Write,
-			idleTimeout:     timeouts.Idle,
+			readTimeout:     timeouts.Read,
 		}
 	})
 }
@@ -207,22 +224,7 @@ func (r *requestContext) Finalize(upstream rule.Backend) error {
 		ModifyResponse: r.applyDeadlines(logger, upstream), // nolint: bodyclose
 		Rewrite:        r.rewriteRequest(upstream.URL()),
 		Transport: otelhttp.NewTransport(
-			httpx.NewTraceRoundTripper(&http.Transport{
-				// tlsClientConfig used for test purposes only
-				// must be removed as soon as tls configuration
-				// is possible per upstream
-				Proxy: http.ProxyFromEnvironment,
-				DialContext: (&net.Dialer{
-					Timeout:   30 * time.Second, //nolint:gomnd
-					KeepAlive: 30 * time.Second, //nolint:gomnd
-				}).DialContext,
-				MaxIdleConns:          100, //nolint:gomnd
-				IdleConnTimeout:       r.idleTimeout,
-				TLSHandshakeTimeout:   10 * time.Second, //nolint:gomnd
-				ExpectContinueTimeout: 1 * time.Second,
-				ForceAttemptHTTP2:     true,
-				TLSClientConfig:       tlsClientConfig,
-			}),
+			httpx.NewTraceRoundTripper(r.transport),
 			otelhttp.WithSpanNameFormatter(func(_ string, r *http.Request) string {
 				return fmt.Sprintf("%s %s %s @%s", r.Proto, r.Method, r.URL.Path, r.URL.Host)
 			})),
@@ -274,13 +276,11 @@ func (r *requestContext) rewriteRequest(targetURL *url.URL) func(req *httputil.P
 				func() string { return clientIP },
 				func() string { return fmt.Sprintf("%s, %s", forwardedFor, clientIP) }))
 
-			proxyReq.Out.Header.Set("X-Forwarded-Proto", x.IfThenElseExec(len(forwardedProto) == 0,
-				func() string { return proto },
-				func() string { return forwardedProto }))
+			proxyReq.Out.Header.Set("X-Forwarded-Proto",
+				x.IfThenElse(len(forwardedProto) == 0, proto, forwardedProto))
 
-			proxyReq.Out.Header.Set("X-Forwarded-Host", x.IfThenElseExec(len(forwardedHost) == 0,
-				func() string { return proxyReq.In.Host },
-				func() string { return forwardedHost }))
+			proxyReq.Out.Header.Set("X-Forwarded-Host",
+				x.IfThenElse(len(forwardedHost) == 0, proxyReq.In.Host, forwardedHost))
 		} else {
 			proxyReq.Out.Header.Set("Forwarded", x.IfThenElseExec(len(forwarded) == 0,
 				func() string {
@@ -328,10 +328,10 @@ func (r *requestContext) applyDeadlines(logger *zerolog.Logger, backend rule.Bac
 	}
 }
 
-func toDeadline(timout time.Duration) time.Time {
-	if timout < 0 {
+func toDeadline(timeout time.Duration) time.Time {
+	if timeout == 0 {
 		return time.Time{}
 	}
 
-	return time.Now().Add(timout)
+	return time.Now().Add(timeout)
 }
