@@ -18,8 +18,6 @@ package rules
 
 import (
 	"fmt"
-	"net"
-	"net/http"
 	"net/url"
 	"slices"
 	"time"
@@ -109,21 +107,6 @@ type backend struct {
 	readTimeout  *time.Duration
 	writeTimeout *time.Duration
 	targetURL    *url.URL
-}
-
-func (b *backend) Transport() http.RoundTripper {
-	return &http.Transport{
-		Proxy: http.ProxyFromEnvironment,
-		DialContext: (&net.Dialer{
-			Timeout:   30 * time.Second, //nolint:gomnd
-			KeepAlive: 30 * time.Second, //nolint:gomnd
-		}).DialContext,
-		MaxIdleConns:          100,              //nolint:gomnd
-		IdleConnTimeout:       90 * time.Second, //nolint:gomnd
-		TLSHandshakeTimeout:   10 * time.Second, //nolint:gomnd
-		ExpectContinueTimeout: 1 * time.Second,
-		ForceAttemptHTTP2:     true,
-	}
 }
 
 func (b *backend) URL() *url.URL                { return b.targetURL }
