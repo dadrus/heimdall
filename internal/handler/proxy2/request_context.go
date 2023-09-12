@@ -204,7 +204,7 @@ func (r *requestContext) Finalize(upstream rule.Backend) error {
 			r.err = errorchain.NewWithMessage(heimdall.ErrCommunication, "Failed to proxy request").
 				CausedBy(err)
 		},
-		ModifyResponse: r.applyDeadlines(logger, upstream),
+		ModifyResponse: r.applyDeadlines(logger, upstream), // nolint: bodyclose
 		Rewrite:        r.rewriteRequest(upstream.URL()),
 		Transport: otelhttp.NewTransport(
 			httpx.NewTraceRoundTripper(&http.Transport{
