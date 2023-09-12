@@ -25,10 +25,10 @@ func TestHandlerServeHTTP(t *testing.T) {
 			setup: func(t *testing.T, exec *mocks.ExecutorMock, ctx *mocks3.ContextMock, eh *mocks2.ErrorHandlerMock) {
 				t.Helper()
 
-				mut := mocks.NewURIMutatorMock(t)
+				upstream := mocks.NewBackendMock(t)
 
-				exec.EXPECT().Execute(ctx).Return(mut, nil)
-				ctx.EXPECT().Finalize(mut).Return(nil)
+				exec.EXPECT().Execute(ctx).Return(upstream, nil)
+				ctx.EXPECT().Finalize(upstream).Return(nil)
 			},
 		},
 		{
@@ -48,10 +48,10 @@ func TestHandlerServeHTTP(t *testing.T) {
 				t.Helper()
 
 				err := errors.New("finalizer error")
-				mut := mocks.NewURIMutatorMock(t)
+				upstream := mocks.NewBackendMock(t)
 
-				exec.EXPECT().Execute(ctx).Return(mut, nil)
-				ctx.EXPECT().Finalize(mut).Return(err)
+				exec.EXPECT().Execute(ctx).Return(upstream, nil)
+				ctx.EXPECT().Finalize(upstream).Return(err)
 				eh.EXPECT().HandleError(mock.Anything, mock.Anything, err)
 			},
 		},

@@ -6,6 +6,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/http/httputil"
 	"net/textproto"
@@ -16,6 +17,7 @@ import (
 	"github.com/rs/zerolog"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 
+	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/handler/request"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/rule"
@@ -38,7 +40,9 @@ type requestContext struct {
 	jwtSigner       heimdall.JWTSigner
 	rw              http.ResponseWriter
 	req             *http.Request
-	timeout         time.Duration
+	readTimeout     time.Duration
+	writeTimeout    time.Duration
+	idleTimeout     time.Duration
 	err             error
 
 	// the following properties are create lazy and cached
@@ -54,7 +58,7 @@ func (f factoryFunc) Create(rw http.ResponseWriter, req *http.Request) request.C
 	return f(rw, req)
 }
 
-func newRequestContextFactory(signer heimdall.JWTSigner, timeout time.Duration) request.ContextFactory {
+func newRequestContextFactory(signer heimdall.JWTSigner, timeouts config.Timeout) request.ContextFactory {
 	return factoryFunc(func(rw http.ResponseWriter, req *http.Request) request.Context {
 		return &requestContext{
 			jwtSigner:       signer,
@@ -64,7 +68,9 @@ func newRequestContextFactory(signer heimdall.JWTSigner, timeout time.Duration) 
 			upstreamCookies: make(map[string]string),
 			rw:              rw,
 			req:             req,
-			timeout:         timeout,
+			readTimeout:     timeouts.Read,
+			writeTimeout:    timeouts.Write,
+			idleTimeout:     timeouts.Idle,
 		}
 	})
 }
@@ -174,7 +180,7 @@ func (r *requestContext) AppContext() context.Context             { return r.req
 func (r *requestContext) SetPipelineError(err error)              { r.err = err }
 func (r *requestContext) Signer() heimdall.JWTSigner              { return r.jwtSigner }
 
-func (r *requestContext) Finalize(mut rule.URIMutator) error {
+func (r *requestContext) Finalize(upstream rule.Backend) error {
 	logger := zerolog.Ctx(r.AppContext())
 	logger.Debug().Msg("Finalizing request")
 
@@ -182,14 +188,13 @@ func (r *requestContext) Finalize(mut rule.URIMutator) error {
 		return r.err
 	}
 
-	targetURL, err := mut.Mutate(r.reqURL)
-	if err != nil {
-		return err
+	if upstream == nil {
+		return errorchain.NewWithMessage(heimdall.ErrConfiguration, "No upstream reference defined")
 	}
 
 	logger.Info().
 		Str("_method", r.reqMethod).
-		Str("_upstream", targetURL.String()).
+		Str("_upstream", upstream.URL().String()).
 		Msg("Forwarding request")
 
 	proxy := &httputil.ReverseProxy{
@@ -199,22 +204,28 @@ func (r *requestContext) Finalize(mut rule.URIMutator) error {
 			r.err = errorchain.NewWithMessage(heimdall.ErrCommunication, "Failed to proxy request").
 				CausedBy(err)
 		},
+		ModifyResponse: r.applyDeadlines(logger, upstream),
+		Rewrite:        r.rewriteRequest(upstream.URL()),
 		Transport: otelhttp.NewTransport(
-			// non default transport is used here only because of the
-			// tlsClientConfig used for test purposes
 			httpx.NewTraceRoundTripper(&http.Transport{
-				Proxy:                 http.ProxyFromEnvironment,
-				MaxIdleConns:          100,              //nolint:gomnd
-				IdleConnTimeout:       90 * time.Second, //nolint:gomnd
+				// tlsClientConfig used for test purposes only
+				// must be removed as soon as tls configuration
+				// is possible per upstream
+				Proxy: http.ProxyFromEnvironment,
+				DialContext: (&net.Dialer{
+					Timeout:   30 * time.Second, //nolint:gomnd
+					KeepAlive: 30 * time.Second, //nolint:gomnd
+				}).DialContext,
+				MaxIdleConns:          100, //nolint:gomnd
+				IdleConnTimeout:       r.idleTimeout,
 				TLSHandshakeTimeout:   10 * time.Second, //nolint:gomnd
 				ExpectContinueTimeout: 1 * time.Second,
-				TLSClientConfig:       tlsClientConfig,
 				ForceAttemptHTTP2:     true,
+				TLSClientConfig:       tlsClientConfig,
 			}),
 			otelhttp.WithSpanNameFormatter(func(_ string, r *http.Request) string {
 				return fmt.Sprintf("%s %s %s @%s", r.Proto, r.Method, r.URL.Path, r.URL.Host)
 			})),
-		Rewrite: r.requestRewriter(targetURL),
 	}
 
 	proxy.ServeHTTP(r.rw, r.req)
@@ -223,7 +234,7 @@ func (r *requestContext) Finalize(mut rule.URIMutator) error {
 	return r.err
 }
 
-func (r *requestContext) requestRewriter(targetURL *url.URL) func(req *httputil.ProxyRequest) {
+func (r *requestContext) rewriteRequest(targetURL *url.URL) func(req *httputil.ProxyRequest) {
 	return func(proxyReq *httputil.ProxyRequest) {
 		proxyReq.Out.Method = r.reqMethod
 		proxyReq.Out.URL = targetURL
@@ -282,4 +293,45 @@ func (r *requestContext) requestRewriter(targetURL *url.URL) func(req *httputil.
 				}))
 		}
 	}
+}
+
+func (r *requestContext) applyDeadlines(logger *zerolog.Logger, backend rule.Backend) func(resp *http.Response) error {
+	return func(resp *http.Response) error {
+		rc := http.NewResponseController(r.rw) //nolint:bodyclose
+
+		wt := backend.WriteTimeout()
+		rt := backend.ReadTimeout()
+
+		var wdl, rdl time.Time
+
+		if wt != nil {
+			wdl = toDeadline(*wt)
+		} else {
+			wdl = toDeadline(r.writeTimeout)
+		}
+
+		if rt != nil {
+			rdl = toDeadline(*rt)
+		} else {
+			rdl = toDeadline(r.readTimeout)
+		}
+
+		if err := rc.SetWriteDeadline(wdl); err != nil {
+			logger.Warn().Err(err).Msg("Failed to reset write timeout.")
+		}
+
+		if err := rc.SetReadDeadline(rdl); err != nil {
+			logger.Warn().Err(err).Msg("Failed to reset read timeout.")
+		}
+
+		return nil
+	}
+}
+
+func toDeadline(timout time.Duration) time.Time {
+	if timout < 0 {
+		return time.Time{}
+	}
+
+	return time.Now().Add(timout)
 }

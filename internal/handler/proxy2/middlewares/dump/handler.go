@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"strconv"
+	"strings"
 
 	"github.com/felixge/httpsnoop"
 	"github.com/rs/zerolog"
@@ -49,7 +50,12 @@ func New() func(http.Handler) http.Handler { // nolint: funlen, gocognit, cyclop
 				return
 			}
 
-			if dump, err := httputil.DumpRequest(req, true); err == nil {
+			contentType := req.Header.Get("Content-Type")
+			// don't dump the body if content type is some sort of stream
+			if dump, err := httputil.DumpRequest(req,
+				req.ContentLength != 0 &&
+					!strings.Contains(contentType, "stream") &&
+					!strings.Contains(contentType, "application/x-ndjson")); err == nil {
 				logger.Trace().Msg("Request: \n" + stringx.ToString(dump))
 			} else {
 				logger.Trace().Err(err).Msg("Failed dumping request")
@@ -58,6 +64,7 @@ func New() func(http.Handler) http.Handler { // nolint: funlen, gocognit, cyclop
 			var (
 				wroteHeader bool
 				hijacked    bool
+				flushed     bool
 				buffer      bytes.Buffer
 				statusBuf   [3]byte
 			)
@@ -111,9 +118,22 @@ func New() func(http.Handler) http.Handler { // nolint: funlen, gocognit, cyclop
 						return write(data)
 					}
 				},
+				Flush: func(flush httpsnoop.FlushFunc) httpsnoop.FlushFunc {
+					return func() {
+						if !flushed {
+							logger.Trace().Msg("Response: \n" + stringx.ToString(buffer.Bytes()))
+							flushed = true
+
+							buffer.Reset()
+							buffer = bytes.Buffer{}
+						}
+
+						flush()
+					}
+				},
 			}), req)
 
-			if !hijacked {
+			if !hijacked && !flushed {
 				// build message from the collected data
 				logger.Trace().Msg("Response: \n" + stringx.ToString(buffer.Bytes()))
 			}

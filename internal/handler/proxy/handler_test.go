@@ -224,12 +224,12 @@ func TestHandleProxyEndpointRequest(t *testing.T) {
 			configureMocks: func(t *testing.T, exec *mocks4.ExecutorMock) {
 				t.Helper()
 
-				mut := mocks4.NewURIMutatorMock(t)
-				mut.EXPECT().Mutate(mock.Anything).Return(&url.URL{
+				backend := mocks4.NewBackendMock(t)
+				backend.EXPECT().URL().Return(&url.URL{
 					Scheme: upstreamURL.Scheme,
 					Host:   upstreamURL.Host,
 					Path:   "/foobar",
-				}, nil)
+				})
 
 				exec.EXPECT().Execute(
 					mock.MatchedBy(func(ctx heimdall.Context) bool {
@@ -241,7 +241,7 @@ func TestHandleProxyEndpointRequest(t *testing.T) {
 
 						return pathMatched && methodMatched
 					}),
-				).Return(mut, nil)
+				).Return(backend, nil)
 			},
 			instructUpstream: func(t *testing.T) {
 				t.Helper()
@@ -305,12 +305,12 @@ func TestHandleProxyEndpointRequest(t *testing.T) {
 			configureMocks: func(t *testing.T, exec *mocks4.ExecutorMock) {
 				t.Helper()
 
-				mut := mocks4.NewURIMutatorMock(t)
-				mut.EXPECT().Mutate(mock.Anything).Return(&url.URL{
+				backend := mocks4.NewBackendMock(t)
+				backend.EXPECT().URL().Return(&url.URL{
 					Scheme: upstreamURL.Scheme,
 					Host:   upstreamURL.Host,
 					Path:   "/[id]/foobar",
-				}, nil)
+				})
 
 				exec.EXPECT().Execute(
 					mock.MatchedBy(func(ctx heimdall.Context) bool {
@@ -322,7 +322,7 @@ func TestHandleProxyEndpointRequest(t *testing.T) {
 
 						return pathMatched && methodMatched
 					}),
-				).Return(mut, nil)
+				).Return(backend, nil)
 			},
 			instructUpstream: func(t *testing.T) {
 				t.Helper()
@@ -385,12 +385,12 @@ func TestHandleProxyEndpointRequest(t *testing.T) {
 			configureMocks: func(t *testing.T, exec *mocks4.ExecutorMock) {
 				t.Helper()
 
-				mut := mocks4.NewURIMutatorMock(t)
-				mut.EXPECT().Mutate(mock.Anything).Return(&url.URL{
+				backend := mocks4.NewBackendMock(t)
+				backend.EXPECT().URL().Return(&url.URL{
 					Scheme: upstreamURL.Scheme,
 					Host:   upstreamURL.Host,
 					Path:   "/[barfoo]",
-				}, nil)
+				})
 
 				exec.EXPECT().Execute(
 					mock.MatchedBy(func(ctx heimdall.Context) bool {
@@ -402,7 +402,7 @@ func TestHandleProxyEndpointRequest(t *testing.T) {
 
 						return pathMatched && methodMatched
 					}),
-				).Return(mut, nil)
+				).Return(backend, nil)
 			},
 			instructUpstream: func(t *testing.T) {
 				t.Helper()

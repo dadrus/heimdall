@@ -11,10 +11,11 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
+	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/handler/request"
+	"github.com/dadrus/heimdall/internal/rules/rule"
 	mocks2 "github.com/dadrus/heimdall/internal/rules/rule/mocks"
 	"github.com/dadrus/heimdall/internal/x/stringx"
 )
@@ -113,34 +114,32 @@ func TestRequestContextFinalize(t *testing.T) {
 		uc             string
 		upstreamCalled bool
 		headers        http.Header
-		setup          func(*testing.T, request.Context, *mocks2.URIMutatorMock, *url.URL)
+		setup          func(*testing.T, request.Context, *url.URL) rule.Backend
 		assertRequest  func(*testing.T, *http.Request)
 	}{
 		{
 			uc: "error was present, forwarding aborted",
-			setup: func(t *testing.T, ctx request.Context, _ *mocks2.URIMutatorMock, _ *url.URL) {
+			setup: func(t *testing.T, ctx request.Context, upstreamURL *url.URL) rule.Backend {
 				t.Helper()
 
 				err := errors.New("test error")
 				ctx.SetPipelineError(err)
-			},
-		},
-		{
-			uc: "error while retrieving target url",
-			setup: func(t *testing.T, ctx request.Context, mut *mocks2.URIMutatorMock, _ *url.URL) {
-				t.Helper()
 
-				err := errors.New("test error")
-				mut.EXPECT().Mutate(mock.Anything).Return(nil, err)
+				return nil
 			},
 		},
 		{
 			uc:             "no headers set",
 			upstreamCalled: true,
-			setup: func(t *testing.T, _ request.Context, mut *mocks2.URIMutatorMock, uri *url.URL) {
+			setup: func(t *testing.T, _ request.Context, upstreamURL *url.URL) rule.Backend {
 				t.Helper()
 
-				mut.EXPECT().Mutate(mock.Anything).Return(uri, nil)
+				backend := mocks2.NewBackendMock(t)
+				backend.EXPECT().URL().Return(upstreamURL)
+				backend.EXPECT().WriteTimeout().Return(nil)
+				backend.EXPECT().ReadTimeout().Return(nil)
+
+				return backend
 			},
 			assertRequest: func(t *testing.T, req *http.Request) {
 				t.Helper()
@@ -166,10 +165,15 @@ func TestRequestContextFinalize(t *testing.T) {
 				"X-Forwarded-For":    []string{"127.0.0.2, 192.168.12.126"},
 				"Forwarded":          []string{"proto=http;for=127.0.0.3, proto=http;for=192.168.12.127"},
 			},
-			setup: func(t *testing.T, _ request.Context, mut *mocks2.URIMutatorMock, uri *url.URL) {
+			setup: func(t *testing.T, _ request.Context, upstreamURL *url.URL) rule.Backend {
 				t.Helper()
 
-				mut.EXPECT().Mutate(mock.Anything).Return(uri, nil)
+				backend := mocks2.NewBackendMock(t)
+				backend.EXPECT().URL().Return(upstreamURL)
+				backend.EXPECT().WriteTimeout().Return(nil)
+				backend.EXPECT().ReadTimeout().Return(nil)
+
+				return backend
 			},
 			assertRequest: func(t *testing.T, req *http.Request) {
 				t.Helper()
@@ -192,10 +196,15 @@ func TestRequestContextFinalize(t *testing.T) {
 				"X-Forwarded-Method": []string{http.MethodPost},
 				"Forwarded":          []string{"proto=http;for=127.0.0.3, proto=http;for=192.168.12.127"},
 			},
-			setup: func(t *testing.T, _ request.Context, mut *mocks2.URIMutatorMock, uri *url.URL) {
+			setup: func(t *testing.T, _ request.Context, upstreamURL *url.URL) rule.Backend {
 				t.Helper()
 
-				mut.EXPECT().Mutate(mock.Anything).Return(uri, nil)
+				backend := mocks2.NewBackendMock(t)
+				backend.EXPECT().URL().Return(upstreamURL)
+				backend.EXPECT().WriteTimeout().Return(nil)
+				backend.EXPECT().ReadTimeout().Return(nil)
+
+				return backend
 			},
 			assertRequest: func(t *testing.T, req *http.Request) {
 				t.Helper()
@@ -215,16 +224,21 @@ func TestRequestContextFinalize(t *testing.T) {
 			headers: http.Header{
 				"X-Foo-Bar": []string{"bar"},
 			},
-			setup: func(t *testing.T, ctx request.Context, mut *mocks2.URIMutatorMock, uri *url.URL) {
+			setup: func(t *testing.T, ctx request.Context, upstreamURL *url.URL) rule.Backend {
 				t.Helper()
-
-				mut.EXPECT().Mutate(mock.Anything).Return(uri, nil)
 
 				ctx.AddHeaderForUpstream("X-User-ID", "someid")
 				ctx.AddHeaderForUpstream("X-Custom", "somevalue")
 				ctx.AddHeaderForUpstream("X-Forwarded-Method", http.MethodDelete)
 				ctx.AddCookieForUpstream("my_cookie_1", "my_value_1")
 				ctx.AddCookieForUpstream("my_cookie_2", "my_value_2")
+
+				backend := mocks2.NewBackendMock(t)
+				backend.EXPECT().URL().Return(upstreamURL)
+				backend.EXPECT().WriteTimeout().Return(nil)
+				backend.EXPECT().ReadTimeout().Return(nil)
+
+				return backend
 			},
 			assertRequest: func(t *testing.T, req *http.Request) {
 				t.Helper()
@@ -247,12 +261,17 @@ func TestRequestContextFinalize(t *testing.T) {
 		{
 			uc:             "Host header is set for upstream",
 			upstreamCalled: true,
-			setup: func(t *testing.T, ctx request.Context, mut *mocks2.URIMutatorMock, uri *url.URL) {
+			setup: func(t *testing.T, ctx request.Context, upstreamURL *url.URL) rule.Backend {
 				t.Helper()
 
-				mut.EXPECT().Mutate(mock.Anything).Return(uri, nil)
-
 				ctx.AddHeaderForUpstream("Host", "bar.foo")
+
+				backend := mocks2.NewBackendMock(t)
+				backend.EXPECT().URL().Return(upstreamURL)
+				backend.EXPECT().WriteTimeout().Return(nil)
+				backend.EXPECT().ReadTimeout().Return(nil)
+
+				return backend
 			},
 			assertRequest: func(t *testing.T, req *http.Request) {
 				t.Helper()
@@ -272,10 +291,15 @@ func TestRequestContextFinalize(t *testing.T) {
 			headers: http.Header{
 				"X-Forwarded-Proto": []string{"http"},
 			},
-			setup: func(t *testing.T, ctx request.Context, mut *mocks2.URIMutatorMock, uri *url.URL) {
+			setup: func(t *testing.T, ctx request.Context, upstreamURL *url.URL) rule.Backend {
 				t.Helper()
 
-				mut.EXPECT().Mutate(mock.Anything).Return(uri, nil)
+				backend := mocks2.NewBackendMock(t)
+				backend.EXPECT().URL().Return(upstreamURL)
+				backend.EXPECT().WriteTimeout().Return(nil)
+				backend.EXPECT().ReadTimeout().Return(nil)
+
+				return backend
 			},
 			assertRequest: func(t *testing.T, req *http.Request) {
 				t.Helper()
@@ -297,10 +321,15 @@ func TestRequestContextFinalize(t *testing.T) {
 			headers: http.Header{
 				"X-Forwarded-Host": []string{"bar.foo"},
 			},
-			setup: func(t *testing.T, ctx request.Context, mut *mocks2.URIMutatorMock, uri *url.URL) {
+			setup: func(t *testing.T, ctx request.Context, upstreamURL *url.URL) rule.Backend {
 				t.Helper()
 
-				mut.EXPECT().Mutate(mock.Anything).Return(uri, nil)
+				backend := mocks2.NewBackendMock(t)
+				backend.EXPECT().URL().Return(upstreamURL)
+				backend.EXPECT().WriteTimeout().Return(nil)
+				backend.EXPECT().ReadTimeout().Return(nil)
+
+				return backend
 			},
 			assertRequest: func(t *testing.T, req *http.Request) {
 				t.Helper()
@@ -322,10 +351,15 @@ func TestRequestContextFinalize(t *testing.T) {
 			headers: http.Header{
 				"X-Forwarded-For": []string{"172.2.34.1"},
 			},
-			setup: func(t *testing.T, ctx request.Context, mut *mocks2.URIMutatorMock, uri *url.URL) {
+			setup: func(t *testing.T, ctx request.Context, upstreamURL *url.URL) rule.Backend {
 				t.Helper()
 
-				mut.EXPECT().Mutate(mock.Anything).Return(uri, nil)
+				backend := mocks2.NewBackendMock(t)
+				backend.EXPECT().URL().Return(upstreamURL)
+				backend.EXPECT().WriteTimeout().Return(nil)
+				backend.EXPECT().ReadTimeout().Return(nil)
+
+				return backend
 			},
 			assertRequest: func(t *testing.T, req *http.Request) {
 				t.Helper()
@@ -355,16 +389,20 @@ func TestRequestContextFinalize(t *testing.T) {
 			}))
 			defer srv.Close()
 
-			ctx := newRequestContextFactory(nil, 100*time.Minute).Create(rw, req)
-			mut := mocks2.NewURIMutatorMock(t)
-
 			targetURL, err := url.Parse(srv.URL)
 			require.NoError(t, err)
 
-			tc.setup(t, ctx, mut, targetURL)
+			timeouts := config.Timeout{
+				Read:  100 * time.Millisecond,
+				Write: 100 * time.Millisecond,
+				Idle:  1 * time.Second,
+			}
+			ctx := newRequestContextFactory(nil, timeouts).Create(rw, req)
+
+			backend := tc.setup(t, ctx, targetURL)
 
 			// WHEN
-			err = ctx.Finalize(mut)
+			err = ctx.Finalize(backend)
 
 			// THEN
 			require.Equal(t, tc.upstreamCalled, upstreamCalled)
@@ -383,7 +421,12 @@ func TestRequestContextHeaders(t *testing.T) {
 	req.Header.Set("X-Foo-Bar", "foo")
 	req.Header.Add("X-Foo-Bar", "bar")
 
-	ctx := newRequestContextFactory(nil, 0).Create(nil, req)
+	timeouts := config.Timeout{
+		Read:  100 * time.Millisecond,
+		Write: 100 * time.Millisecond,
+		Idle:  1 * time.Second,
+	}
+	ctx := newRequestContextFactory(nil, timeouts).Create(nil, req)
 
 	// WHEN
 	headers := ctx.Request().Headers()
@@ -403,7 +446,12 @@ func TestRequestContextHeader(t *testing.T) {
 	req.Header.Add("X-Foo-Bar", "bar")
 	req.Host = "bar.foo"
 
-	ctx := newRequestContextFactory(nil, 0).Create(nil, req)
+	timeouts := config.Timeout{
+		Read:  100 * time.Millisecond,
+		Write: 100 * time.Millisecond,
+		Idle:  1 * time.Second,
+	}
+	ctx := newRequestContextFactory(nil, timeouts).Create(nil, req)
 
 	// WHEN
 	xFooBarValue := ctx.Request().Header("X-Foo-Bar")
@@ -423,7 +471,13 @@ func TestRequestContextCookie(t *testing.T) {
 	req := httptest.NewRequest(http.MethodHead, "https://foo.bar/test", nil)
 	req.Header.Set("Cookie", "foo=bar; bar=baz")
 
-	ctx := newRequestContextFactory(nil, 0).Create(nil, req)
+	timeouts := config.Timeout{
+		Read:  100 * time.Millisecond,
+		Write: 100 * time.Millisecond,
+		Idle:  1 * time.Second,
+	}
+
+	ctx := newRequestContextFactory(nil, timeouts).Create(nil, req)
 
 	// WHEN
 	value1 := ctx.Request().Cookie("bar")
@@ -444,10 +498,14 @@ func TestRequestContextBody(t *testing.T) {
 
 	rw := httptest.NewRecorder()
 
-	ctx := newRequestContextFactory(nil, 100*time.Minute).Create(rw, req)
-	ctx.AddHeaderForUpstream("X-Foo", "bar")
+	timeouts := config.Timeout{
+		Read:  100 * time.Millisecond,
+		Write: 100 * time.Millisecond,
+		Idle:  1 * time.Second,
+	}
 
-	mut := mocks2.NewURIMutatorMock(t)
+	ctx := newRequestContextFactory(nil, timeouts).Create(rw, req)
+	ctx.AddHeaderForUpstream("X-Foo", "bar")
 
 	srv := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, req *http.Request) {
 		upstreamCalled = true
@@ -472,7 +530,10 @@ func TestRequestContextBody(t *testing.T) {
 	targetURL, err := url.Parse(srv.URL)
 	require.NoError(t, err)
 
-	mut.EXPECT().Mutate(mock.Anything).Return(targetURL, nil)
+	backend := mocks2.NewBackendMock(t)
+	backend.EXPECT().URL().Return(targetURL)
+	backend.EXPECT().WriteTimeout().Return(nil)
+	backend.EXPECT().ReadTimeout().Return(nil)
 
 	// just consume body
 	first := ctx.Request().Body()
@@ -480,7 +541,7 @@ func TestRequestContextBody(t *testing.T) {
 	second := ctx.Request().Body()
 
 	// WHEN
-	ctx.Finalize(mut)
+	ctx.Finalize(backend)
 
 	// THEN
 	require.True(t, upstreamCalled)

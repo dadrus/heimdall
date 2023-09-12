@@ -25,19 +25,19 @@ func (_m *RuleMock) EXPECT() *RuleMock_Expecter {
 }
 
 // Execute provides a mock function with given fields: _a0
-func (_m *RuleMock) Execute(_a0 heimdall.Context) (rule.URIMutator, error) {
+func (_m *RuleMock) Execute(_a0 heimdall.Context) (rule.Backend, error) {
 	ret := _m.Called(_a0)
 
-	var r0 rule.URIMutator
+	var r0 rule.Backend
 	var r1 error
-	if rf, ok := ret.Get(0).(func(heimdall.Context) (rule.URIMutator, error)); ok {
+	if rf, ok := ret.Get(0).(func(heimdall.Context) (rule.Backend, error)); ok {
 		return rf(_a0)
 	}
-	if rf, ok := ret.Get(0).(func(heimdall.Context) rule.URIMutator); ok {
+	if rf, ok := ret.Get(0).(func(heimdall.Context) rule.Backend); ok {
 		r0 = rf(_a0)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(rule.URIMutator)
+			r0 = ret.Get(0).(rule.Backend)
 		}
 	}
 
@@ -68,12 +68,12 @@ func (_c *RuleMock_Execute_Call) Run(run func(_a0 heimdall.Context)) *RuleMock_E
 	return _c
 }
 
-func (_c *RuleMock_Execute_Call) Return(_a0 rule.URIMutator, _a1 error) *RuleMock_Execute_Call {
+func (_c *RuleMock_Execute_Call) Return(_a0 rule.Backend, _a1 error) *RuleMock_Execute_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *RuleMock_Execute_Call) RunAndReturn(run func(heimdall.Context) (rule.URIMutator, error)) *RuleMock_Execute_Call {
+func (_c *RuleMock_Execute_Call) RunAndReturn(run func(heimdall.Context) (rule.Backend, error)) *RuleMock_Execute_Call {
 	_c.Call.Return(run)
 	return _c
 }

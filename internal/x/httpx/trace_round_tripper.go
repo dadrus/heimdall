@@ -3,6 +3,7 @@ package httpx
 import (
 	"net/http"
 	"net/http/httputil"
+	"strings"
 
 	"github.com/rs/zerolog"
 
@@ -23,7 +24,12 @@ func (t *traceRoundTripper) RoundTrip(req *http.Request) (*http.Response, error)
 		return t.t.RoundTrip(req)
 	}
 
-	dump, err := httputil.DumpRequestOut(req, req.ContentLength != 0)
+	contentType := req.Header.Get("Content-Type")
+	// don't dump the body if content type is some sort of stream
+	dump, err := httputil.DumpRequestOut(req,
+		req.ContentLength != 0 &&
+			!strings.Contains(contentType, "stream") &&
+			!strings.Contains(contentType, "application/x-ndjson"))
 	if err != nil {
 		logger.Trace().Err(err).Msg("Failed dumping out request")
 	} else {
@@ -40,7 +46,12 @@ func (t *traceRoundTripper) RoundTrip(req *http.Request) (*http.Response, error)
 		return nil, err
 	}
 
-	dump, err = httputil.DumpResponse(resp, resp.ContentLength != 0)
+	contentType = resp.Header.Get("Content-Type")
+	// don't dump the body if content type is some sort of stream
+	dump, err = httputil.DumpResponse(resp,
+		resp.ContentLength != 0 &&
+			!strings.Contains(contentType, "stream") &&
+			!strings.Contains(contentType, "application/x-ndjson"))
 	if err != nil {
 		logger.Trace().Err(err).Msg("Failed dumping response")
 	} else {

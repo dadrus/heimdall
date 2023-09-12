@@ -16,7 +16,7 @@ func newRuleExecutor(repository rule.Repository) rule.Executor {
 	return &ruleExecutor{r: repository}
 }
 
-func (e *ruleExecutor) Execute(ctx heimdall.Context) (rule.URIMutator, error) {
+func (e *ruleExecutor) Execute(ctx heimdall.Context) (rule.Backend, error) {
 	req := ctx.Request()
 
 	//nolint:contextcheck

@@ -7,5 +7,5 @@ import (
 //go:generate mockery --name Executor --structname ExecutorMock
 
 type Executor interface {
-	Execute(ctx heimdall.Context) (URIMutator, error)
+	Execute(ctx heimdall.Context) (Backend, error)
 }

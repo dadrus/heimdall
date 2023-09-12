@@ -569,7 +569,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 		{
 			uc:     "in proxy mode, with id and empty forward_to definition",
 			opMode: config.ProxyMode,
-			config: config2.Rule{ID: "foobar", UpstreamURLFactory: &config2.UpstreamURLFactory{}},
+			config: config2.Rule{ID: "foobar", Backend: &config2.Backend{}},
 			assert: func(t *testing.T, err error, rul *ruleImpl) {
 				t.Helper()
 
@@ -583,7 +583,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 			opMode: config.ProxyMode,
 			config: config2.Rule{
 				ID: "foobar",
-				UpstreamURLFactory: &config2.UpstreamURLFactory{
+				Backend: &config2.Backend{
 					Host:        "foo.bar",
 					URLRewriter: &config2.URLRewriter{},
 				},
@@ -827,9 +827,9 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 			uc:     "without default rule but with minimum required configuration in proxy mode",
 			opMode: config.ProxyMode,
 			config: config2.Rule{
-				ID:                 "foobar",
-				UpstreamURLFactory: &config2.UpstreamURLFactory{Host: "foo.bar"},
-				RuleMatcher:        config2.Matcher{URL: "http://foo.bar", Strategy: "glob"},
+				ID:          "foobar",
+				Backend:     &config2.Backend{Host: "foo.bar"},
+				RuleMatcher: config2.Matcher{URL: "http://foo.bar", Strategy: "glob"},
 				Execute: []config.MechanismConfig{
 					{"authenticator": "foo"},
 					{"unifier": "bar"},
@@ -857,7 +857,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				assert.Len(t, rul.sh, 0)
 				assert.Len(t, rul.un, 1)
 				assert.Len(t, rul.eh, 0)
-				assert.NotNil(t, rul.upstreamURLFactory)
+				assert.NotNil(t, rul.backend)
 			},
 		},
 		{
@@ -958,7 +958,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 			config: config2.Rule{
 				ID:          "foobar",
 				RuleMatcher: config2.Matcher{URL: "http://foo.bar", Strategy: "glob"},
-				UpstreamURLFactory: &config2.UpstreamURLFactory{
+				Backend: &config2.Backend{
 					Host: "bar.foo",
 					URLRewriter: &config2.URLRewriter{
 						Scheme:              "https",
@@ -1010,7 +1010,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				assert.Equal(t, "foobar", rul.id)
 				assert.NotNil(t, rul.urlMatcher)
 				assert.ElementsMatch(t, rul.methods, []string{"BAR", "BAZ"})
-				assert.Equal(t, "https://bar.foo/baz/bar?foo=bar", rul.upstreamURLFactory.CreateURL(&url.URL{
+				assert.Equal(t, "https://bar.foo/baz/bar?foo=bar", rul.backend.CreateURL(&url.URL{
 					Scheme:   "http",
 					Host:     "foo.bar:8888",
 					Path:     "/foo/bar",
@@ -1028,7 +1028,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				assert.NotNil(t, rul.un[0])
 				require.Len(t, rul.eh, 1)
 				assert.NotNil(t, rul.eh[0])
-				assert.NotNil(t, rul.upstreamURLFactory)
+				assert.NotNil(t, rul.backend)
 			},
 		},
 		{
@@ -1236,17 +1236,17 @@ func TestRuleFactoryProxyModeApplicability(t *testing.T) {
 		},
 		{
 			uc:          "no host defined",
-			ruleConfig:  config2.Rule{UpstreamURLFactory: &config2.UpstreamURLFactory{}},
+			ruleConfig:  config2.Rule{Backend: &config2.Backend{}},
 			shouldError: true,
 		},
 		{
 			uc:         "with host but no rewrite options",
-			ruleConfig: config2.Rule{UpstreamURLFactory: &config2.UpstreamURLFactory{Host: "foo.bar"}},
+			ruleConfig: config2.Rule{Backend: &config2.Backend{Host: "foo.bar"}},
 		},
 		{
 			uc: "with host and empty rewrite option",
 			ruleConfig: config2.Rule{
-				UpstreamURLFactory: &config2.UpstreamURLFactory{
+				Backend: &config2.Backend{
 					Host:        "foo.bar",
 					URLRewriter: &config2.URLRewriter{},
 				},
@@ -1256,7 +1256,7 @@ func TestRuleFactoryProxyModeApplicability(t *testing.T) {
 		{
 			uc: "with host and scheme rewrite option",
 			ruleConfig: config2.Rule{
-				UpstreamURLFactory: &config2.UpstreamURLFactory{
+				Backend: &config2.Backend{
 					Host:        "foo.bar",
 					URLRewriter: &config2.URLRewriter{Scheme: "https"},
 				},
@@ -1265,7 +1265,7 @@ func TestRuleFactoryProxyModeApplicability(t *testing.T) {
 		{
 			uc: "with host and strip path prefix rewrite option",
 			ruleConfig: config2.Rule{
-				UpstreamURLFactory: &config2.UpstreamURLFactory{
+				Backend: &config2.Backend{
 					Host:        "foo.bar",
 					URLRewriter: &config2.URLRewriter{PathPrefixToCut: "/foo"},
 				},
@@ -1274,7 +1274,7 @@ func TestRuleFactoryProxyModeApplicability(t *testing.T) {
 		{
 			uc: "with host and add path prefix rewrite option",
 			ruleConfig: config2.Rule{
-				UpstreamURLFactory: &config2.UpstreamURLFactory{
+				Backend: &config2.Backend{
 					Host:        "foo.bar",
 					URLRewriter: &config2.URLRewriter{PathPrefixToAdd: "/foo"},
 				},
@@ -1283,7 +1283,7 @@ func TestRuleFactoryProxyModeApplicability(t *testing.T) {
 		{
 			uc: "with host and empty strip query parameter rewrite option",
 			ruleConfig: config2.Rule{
-				UpstreamURLFactory: &config2.UpstreamURLFactory{
+				Backend: &config2.Backend{
 					Host:        "foo.bar",
 					URLRewriter: &config2.URLRewriter{QueryParamsToRemove: []string{}},
 				},
@@ -1293,7 +1293,7 @@ func TestRuleFactoryProxyModeApplicability(t *testing.T) {
 		{
 			uc: "with host and strip query parameter rewrite option",
 			ruleConfig: config2.Rule{
-				UpstreamURLFactory: &config2.UpstreamURLFactory{
+				Backend: &config2.Backend{
 					Host:        "foo.bar",
 					URLRewriter: &config2.URLRewriter{QueryParamsToRemove: []string{"foo"}},
 				},

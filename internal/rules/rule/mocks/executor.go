@@ -23,19 +23,19 @@ func (_m *ExecutorMock) EXPECT() *ExecutorMock_Expecter {
 }
 
 // Execute provides a mock function with given fields: ctx
-func (_m *ExecutorMock) Execute(ctx heimdall.Context) (rule.URIMutator, error) {
+func (_m *ExecutorMock) Execute(ctx heimdall.Context) (rule.Backend, error) {
 	ret := _m.Called(ctx)
 
-	var r0 rule.URIMutator
+	var r0 rule.Backend
 	var r1 error
-	if rf, ok := ret.Get(0).(func(heimdall.Context) (rule.URIMutator, error)); ok {
+	if rf, ok := ret.Get(0).(func(heimdall.Context) (rule.Backend, error)); ok {
 		return rf(ctx)
 	}
-	if rf, ok := ret.Get(0).(func(heimdall.Context) rule.URIMutator); ok {
+	if rf, ok := ret.Get(0).(func(heimdall.Context) rule.Backend); ok {
 		r0 = rf(ctx)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(rule.URIMutator)
+			r0 = ret.Get(0).(rule.Backend)
 		}
 	}
 
@@ -66,12 +66,12 @@ func (_c *ExecutorMock_Execute_Call) Run(run func(ctx heimdall.Context)) *Execut
 	return _c
 }
 
-func (_c *ExecutorMock_Execute_Call) Return(_a0 rule.URIMutator, _a1 error) *ExecutorMock_Execute_Call {
+func (_c *ExecutorMock_Execute_Call) Return(_a0 rule.Backend, _a1 error) *ExecutorMock_Execute_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *ExecutorMock_Execute_Call) RunAndReturn(run func(heimdall.Context) (rule.URIMutator, error)) *ExecutorMock_Execute_Call {
+func (_c *ExecutorMock_Execute_Call) RunAndReturn(run func(heimdall.Context) (rule.Backend, error)) *ExecutorMock_Execute_Call {
 	_c.Call.Return(run)
 	return _c
 }

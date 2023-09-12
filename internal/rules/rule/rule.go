@@ -27,7 +27,7 @@ import (
 type Rule interface {
 	ID() string
 	SrcID() string
-	Execute(heimdall.Context) (URIMutator, error)
+	Execute(heimdall.Context) (Backend, error)
 	MatchesURL(*url.URL) bool
 	MatchesMethod(string) bool
 }

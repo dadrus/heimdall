@@ -21,20 +21,20 @@ import (
 )
 
 type Rule struct {
-	ID                 string                   `json:"id"         yaml:"id"`
-	RuleMatcher        Matcher                  `json:"match"      yaml:"match"`
-	UpstreamURLFactory *UpstreamURLFactory      `json:"forward_to" yaml:"forward_to"`
-	Methods            []string                 `json:"methods"    yaml:"methods"`
-	Execute            []config.MechanismConfig `json:"execute"    yaml:"execute"`
-	ErrorHandler       []config.MechanismConfig `json:"on_error"   yaml:"on_error"`
+	ID           string                   `json:"id"         yaml:"id"`
+	RuleMatcher  Matcher                  `json:"match"      yaml:"match"`
+	Backend      *Backend                 `json:"forward_to" yaml:"forward_to"`
+	Methods      []string                 `json:"methods"    yaml:"methods"`
+	Execute      []config.MechanismConfig `json:"execute"    yaml:"execute"`
+	ErrorHandler []config.MechanismConfig `json:"on_error"   yaml:"on_error"`
 }
 
 func (in *Rule) DeepCopyInto(out *Rule) {
 	*out = *in
 	out.RuleMatcher = in.RuleMatcher
 
-	if in.UpstreamURLFactory != nil {
-		in, out := in.UpstreamURLFactory, out.UpstreamURLFactory
+	if in.Backend != nil {
+		in, out := in.Backend, out.Backend
 
 		in.DeepCopyInto(out)
 	}

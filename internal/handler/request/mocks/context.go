@@ -136,11 +136,11 @@ func (_c *ContextMock_AppContext_Call) RunAndReturn(run func() context.Context) 
 }
 
 // Finalize provides a mock function with given fields: mutator
-func (_m *ContextMock) Finalize(mutator rule.URIMutator) error {
+func (_m *ContextMock) Finalize(mutator rule.Backend) error {
 	ret := _m.Called(mutator)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(rule.URIMutator) error); ok {
+	if rf, ok := ret.Get(0).(func(rule.Backend) error); ok {
 		r0 = rf(mutator)
 	} else {
 		r0 = ret.Error(0)
@@ -155,14 +155,14 @@ type ContextMock_Finalize_Call struct {
 }
 
 // Finalize is a helper method to define mock.On call
-//   - mutator rule.URIMutator
+//   - mutator rule.Backend
 func (_e *ContextMock_Expecter) Finalize(mutator interface{}) *ContextMock_Finalize_Call {
 	return &ContextMock_Finalize_Call{Call: _e.mock.On("Finalize", mutator)}
 }
 
-func (_c *ContextMock_Finalize_Call) Run(run func(mutator rule.URIMutator)) *ContextMock_Finalize_Call {
+func (_c *ContextMock_Finalize_Call) Run(run func(mutator rule.Backend)) *ContextMock_Finalize_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(rule.URIMutator))
+		run(args[0].(rule.Backend))
 	})
 	return _c
 }
@@ -172,7 +172,7 @@ func (_c *ContextMock_Finalize_Call) Return(_a0 error) *ContextMock_Finalize_Cal
 	return _c
 }
 
-func (_c *ContextMock_Finalize_Call) RunAndReturn(run func(rule.URIMutator) error) *ContextMock_Finalize_Call {
+func (_c *ContextMock_Finalize_Call) RunAndReturn(run func(rule.Backend) error) *ContextMock_Finalize_Call {
 	_c.Call.Return(run)
 	return _c
 }

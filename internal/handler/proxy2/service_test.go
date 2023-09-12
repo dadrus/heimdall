@@ -17,6 +17,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -35,6 +36,7 @@ import (
 	mocks4 "github.com/dadrus/heimdall/internal/rules/rule/mocks"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/pkix/pemx"
+	"github.com/dadrus/heimdall/internal/x/stringx"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
@@ -255,7 +257,9 @@ func TestProxyService(t *testing.T) {
 		{
 			uc: "successful rule execution - request method and path are taken from the real request " +
 				"(trusted proxy not configured)",
-			serviceConf: config.ServiceConfig{Timeout: config.Timeout{Read: 10 * time.Second}},
+			serviceConf: config.ServiceConfig{
+				Timeout: config.Timeout{Read: 1 * time.Second, Write: 1 * time.Second, Idle: 1 * time.Second},
+			},
 			createRequest: func(t *testing.T, host string) *http.Request {
 				t.Helper()
 
@@ -275,12 +279,14 @@ func TestProxyService(t *testing.T) {
 			configureMocks: func(t *testing.T, exec *mocks4.ExecutorMock, upstreamURL *url.URL) {
 				t.Helper()
 
-				mut := mocks4.NewURIMutatorMock(t)
-				mut.EXPECT().Mutate(mock.Anything).Return(&url.URL{
+				backend := mocks4.NewBackendMock(t)
+				backend.EXPECT().URL().Return(&url.URL{
 					Scheme: upstreamURL.Scheme,
 					Host:   upstreamURL.Host,
 					Path:   "/foobar",
-				}, nil)
+				})
+				backend.EXPECT().ReadTimeout().Return(nil)
+				backend.EXPECT().WriteTimeout().Return(nil)
 
 				exec.EXPECT().Execute(
 					mock.MatchedBy(func(ctx heimdall.Context) bool {
@@ -292,7 +298,7 @@ func TestProxyService(t *testing.T) {
 
 						return pathMatched && methodMatched
 					}),
-				).Return(mut, nil)
+				).Return(backend, nil)
 			},
 			processRequest: func(t *testing.T, rw http.ResponseWriter, req *http.Request) {
 				t.Helper()
@@ -337,7 +343,7 @@ func TestProxyService(t *testing.T) {
 			uc: "successful rule execution - request method is taken from the header " +
 				"(trusted proxy configured)",
 			serviceConf: config.ServiceConfig{
-				Timeout:        config.Timeout{Read: 10 * time.Second},
+				Timeout:        config.Timeout{Read: 1 * time.Second, Write: 1 * time.Second, Idle: 1 * time.Second},
 				TrustedProxies: &[]string{"0.0.0.0/0"},
 			},
 			createRequest: func(t *testing.T, host string) *http.Request {
@@ -358,12 +364,14 @@ func TestProxyService(t *testing.T) {
 			configureMocks: func(t *testing.T, exec *mocks4.ExecutorMock, upstreamURL *url.URL) {
 				t.Helper()
 
-				mut := mocks4.NewURIMutatorMock(t)
-				mut.EXPECT().Mutate(mock.Anything).Return(&url.URL{
+				backend := mocks4.NewBackendMock(t)
+				backend.EXPECT().URL().Return(&url.URL{
 					Scheme: upstreamURL.Scheme,
 					Host:   upstreamURL.Host,
 					Path:   "/[id]/foobar",
-				}, nil)
+				})
+				backend.EXPECT().ReadTimeout().Return(nil)
+				backend.EXPECT().WriteTimeout().Return(nil)
 
 				exec.EXPECT().Execute(
 					mock.MatchedBy(func(ctx heimdall.Context) bool {
@@ -375,7 +383,7 @@ func TestProxyService(t *testing.T) {
 
 						return pathMatched && methodMatched
 					}),
-				).Return(mut, nil)
+				).Return(backend, nil)
 			},
 			processRequest: func(t *testing.T, rw http.ResponseWriter, req *http.Request) {
 				t.Helper()
@@ -419,7 +427,7 @@ func TestProxyService(t *testing.T) {
 			uc: "successful rule execution - request path is taken from the header " +
 				"(trusted proxy configured)",
 			serviceConf: config.ServiceConfig{
-				Timeout:        config.Timeout{Read: 10 * time.Second},
+				Timeout:        config.Timeout{Read: 1 * time.Second, Write: 1 * time.Second, Idle: 1 * time.Second},
 				TrustedProxies: &[]string{"0.0.0.0/0"},
 			},
 			createRequest: func(t *testing.T, host string) *http.Request {
@@ -440,12 +448,14 @@ func TestProxyService(t *testing.T) {
 			configureMocks: func(t *testing.T, exec *mocks4.ExecutorMock, upstreamURL *url.URL) {
 				t.Helper()
 
-				mut := mocks4.NewURIMutatorMock(t)
-				mut.EXPECT().Mutate(mock.Anything).Return(&url.URL{
+				backend := mocks4.NewBackendMock(t)
+				backend.EXPECT().URL().Return(&url.URL{
 					Scheme: upstreamURL.Scheme,
 					Host:   upstreamURL.Host,
 					Path:   "/[barfoo]",
-				}, nil)
+				})
+				backend.EXPECT().ReadTimeout().Return(nil)
+				backend.EXPECT().WriteTimeout().Return(nil)
 
 				exec.EXPECT().Execute(
 					mock.MatchedBy(func(ctx heimdall.Context) bool {
@@ -457,7 +467,7 @@ func TestProxyService(t *testing.T) {
 
 						return pathMatched && methodMatched
 					}),
-				).Return(mut, nil)
+				).Return(backend, nil)
 			},
 			processRequest: func(t *testing.T, rw http.ResponseWriter, req *http.Request) {
 				t.Helper()
@@ -500,7 +510,7 @@ func TestProxyService(t *testing.T) {
 		{
 			uc: "CORS test actual request",
 			serviceConf: config.ServiceConfig{
-				Timeout: config.Timeout{Read: 10 * time.Second},
+				Timeout: config.Timeout{Read: 1 * time.Second, Write: 1 * time.Second, Idle: 1 * time.Second},
 				CORS: &config.CORS{
 					AllowedMethods:   []string{http.MethodGet},
 					AllowedOrigins:   []string{"https://foo.bar"},
@@ -528,12 +538,14 @@ func TestProxyService(t *testing.T) {
 			configureMocks: func(t *testing.T, exec *mocks4.ExecutorMock, upstreamURL *url.URL) {
 				t.Helper()
 
-				mut := mocks4.NewURIMutatorMock(t)
-				mut.EXPECT().Mutate(mock.Anything).Return(&url.URL{
+				backend := mocks4.NewBackendMock(t)
+				backend.EXPECT().URL().Return(&url.URL{
 					Scheme: upstreamURL.Scheme,
 					Host:   upstreamURL.Host,
 					Path:   "/bar",
-				}, nil)
+				})
+				backend.EXPECT().ReadTimeout().Return(nil)
+				backend.EXPECT().WriteTimeout().Return(nil)
 
 				exec.EXPECT().Execute(
 					mock.MatchedBy(func(ctx heimdall.Context) bool {
@@ -544,7 +556,7 @@ func TestProxyService(t *testing.T) {
 
 						return pathMatched && methodMatched
 					}),
-				).Return(mut, nil)
+				).Return(backend, nil)
 			},
 			processRequest: func(t *testing.T, rw http.ResponseWriter, req *http.Request) {
 				t.Helper()
@@ -668,7 +680,7 @@ func TestProxyService(t *testing.T) {
 		{
 			uc: "http2 usage",
 			serviceConf: config.ServiceConfig{
-				Timeout: config.Timeout{Read: 1000 * time.Second},
+				Timeout: config.Timeout{Read: 1 * time.Second, Write: 1 * time.Second, Idle: 1 * time.Second},
 				TLS: &config.TLS{
 					KeyStore: config.KeyStore{
 						Path: pemFile.Name(),
@@ -706,12 +718,14 @@ func TestProxyService(t *testing.T) {
 			configureMocks: func(t *testing.T, exec *mocks4.ExecutorMock, upstreamURL *url.URL) {
 				t.Helper()
 
-				mut := mocks4.NewURIMutatorMock(t)
-				mut.EXPECT().Mutate(mock.Anything).Return(&url.URL{
+				backend := mocks4.NewBackendMock(t)
+				backend.EXPECT().URL().Return(&url.URL{
 					Scheme: upstreamURL.Scheme,
 					Host:   upstreamURL.Host,
 					Path:   "/bar",
-				}, nil)
+				})
+				backend.EXPECT().ReadTimeout().Return(nil)
+				backend.EXPECT().WriteTimeout().Return(nil)
 
 				exec.EXPECT().Execute(
 					mock.MatchedBy(func(ctx heimdall.Context) bool {
@@ -722,7 +736,7 @@ func TestProxyService(t *testing.T) {
 
 						return pathMatched && methodMatched
 					}),
-				).Return(mut, nil)
+				).Return(backend, nil)
 			},
 			processRequest: func(t *testing.T, rw http.ResponseWriter, req *http.Request) {
 				t.Helper()
@@ -763,7 +777,7 @@ func TestProxyService(t *testing.T) {
 			uc:           "http2 not supported by upstream server",
 			disableHTTP2: true,
 			serviceConf: config.ServiceConfig{
-				Timeout: config.Timeout{Read: 1000 * time.Second},
+				Timeout: config.Timeout{Read: 1 * time.Second, Write: 1 * time.Second, Idle: 1 * time.Second},
 				TLS: &config.TLS{
 					KeyStore: config.KeyStore{
 						Path: pemFile.Name(),
@@ -801,12 +815,14 @@ func TestProxyService(t *testing.T) {
 			configureMocks: func(t *testing.T, exec *mocks4.ExecutorMock, upstreamURL *url.URL) {
 				t.Helper()
 
-				mut := mocks4.NewURIMutatorMock(t)
-				mut.EXPECT().Mutate(mock.Anything).Return(&url.URL{
+				backend := mocks4.NewBackendMock(t)
+				backend.EXPECT().URL().Return(&url.URL{
 					Scheme: upstreamURL.Scheme,
 					Host:   upstreamURL.Host,
 					Path:   "/bar",
-				}, nil)
+				})
+				backend.EXPECT().ReadTimeout().Return(nil)
+				backend.EXPECT().WriteTimeout().Return(nil)
 
 				exec.EXPECT().Execute(
 					mock.MatchedBy(func(ctx heimdall.Context) bool {
@@ -817,7 +833,7 @@ func TestProxyService(t *testing.T) {
 
 						return pathMatched && methodMatched
 					}),
-				).Return(mut, nil)
+				).Return(backend, nil)
 			},
 			processRequest: func(t *testing.T, rw http.ResponseWriter, req *http.Request) {
 				t.Helper()
@@ -992,12 +1008,14 @@ func TestWebSocketSupport(t *testing.T) {
 	require.NoError(t, err)
 
 	exec := mocks4.NewExecutorMock(t)
-	mut := mocks4.NewURIMutatorMock(t)
-	mut.EXPECT().Mutate(mock.Anything).Return(&url.URL{
+	backend := mocks4.NewBackendMock(t)
+	backend.EXPECT().URL().Return(&url.URL{
 		Scheme: upstreamURL.Scheme,
 		Host:   upstreamURL.Host,
 		Path:   "/bar",
-	}, nil)
+	})
+	backend.EXPECT().WriteTimeout().Return(nil)
+	backend.EXPECT().ReadTimeout().Return(nil)
 
 	exec.EXPECT().Execute(
 		mock.MatchedBy(func(ctx heimdall.Context) bool {
@@ -1006,7 +1024,7 @@ func TestWebSocketSupport(t *testing.T) {
 
 			return pathMatched && methodMatched
 		}),
-	).Return(mut, nil)
+	).Return(backend, nil)
 
 	conf := &config.Configuration{
 		Serve: config.ServeConfig{
@@ -1065,4 +1083,111 @@ func TestWebSocketSupport(t *testing.T) {
 
 	err = con.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
 	require.NoError(t, err)
+}
+
+func TestServerSentEventsSupport(t *testing.T) {
+	t.Parallel()
+
+	port, err := testsupport.GetFreePort()
+	require.NoError(t, err)
+
+	upstreamSrv := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+		require.Equal(t, "/bar", req.URL.Path)
+
+		rw.Header().Set("Content-Type", "text/event-stream")
+		rw.Header().Set("Cache-Control", "no-cache")
+		rw.Header().Set("Connection", "keep-alive")
+
+		rc := http.NewResponseController(rw) // nolint: bodyclose
+
+		for i := 0; i < 5; i++ {
+			_, err := rw.Write(stringx.ToBytes(fmt.Sprintf("%d", i)))
+			require.NoError(t, err)
+
+			require.NoError(t, rc.Flush())
+
+			time.Sleep(50 * time.Millisecond)
+		}
+	}))
+	defer upstreamSrv.Close()
+
+	upstreamURL, err := url.Parse(upstreamSrv.URL)
+	require.NoError(t, err)
+
+	exec := mocks4.NewExecutorMock(t)
+
+	disabledTimout := -1 * time.Second
+	backend := mocks4.NewBackendMock(t)
+	backend.EXPECT().URL().Return(&url.URL{
+		Scheme: upstreamURL.Scheme,
+		Host:   upstreamURL.Host,
+		Path:   "/bar",
+	})
+	backend.EXPECT().WriteTimeout().Return(&disabledTimout)
+	backend.EXPECT().ReadTimeout().Return(nil)
+
+	exec.EXPECT().Execute(
+		mock.MatchedBy(func(ctx heimdall.Context) bool {
+			pathMatched := ctx.Request().URL.Path == "/foo"
+			methodMatched := ctx.Request().Method == http.MethodGet
+
+			return pathMatched && methodMatched
+		}),
+	).Return(backend, nil)
+
+	conf := &config.Configuration{
+		Serve: config.ServeConfig{
+			Proxy: config.ServiceConfig{
+				Timeout: config.Timeout{
+					Read:  500 * time.Millisecond,
+					Write: 50 * time.Millisecond,
+					Idle:  1 * time.Second,
+				},
+				Host: "127.0.0.1",
+				Port: port,
+			},
+		},
+	}
+
+	proxy := newService(serviceArgs{
+		Config:     conf,
+		Registerer: prometheus.NewRegistry(),
+		Logger:     log.Logger, // logging.NewLogger(config.LoggingConfig{Level: zerolog.DebugLevel}),
+		Cache:      mocks.NewCacheMock(t),
+		Executor:   exec,
+	})
+
+	defer proxy.Shutdown(context.Background())
+
+	listener, err := listener.New("tcp", conf.Serve.Proxy)
+	require.NoError(t, err)
+
+	go func() {
+		err := proxy.Serve(listener)
+		require.ErrorIs(t, err, http.ErrServerClosed)
+	}()
+	time.Sleep(50 * time.Millisecond)
+
+	req, err := http.NewRequestWithContext(context.TODO(), http.MethodGet, fmt.Sprintf("http://%s/foo", proxy.Addr), nil)
+	require.NoError(t, err)
+	req.Header.Set("Cache-Control", "no-cache")
+	req.Header.Set("Accept", "text/event-stream")
+	req.Header.Set("Connection", "keep-alive")
+
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+
+	defer resp.Body.Close()
+
+	data := make([]byte, 1)
+
+	for i := 0; i < 5; i++ {
+		_, err = resp.Body.Read(data)
+		require.NoError(t, err)
+		val, err := strconv.Atoi(stringx.ToString(data))
+		require.NoError(t, err)
+		assert.Equal(t, i, val)
+	}
+
+	time.Sleep(60 * time.Millisecond)
 }

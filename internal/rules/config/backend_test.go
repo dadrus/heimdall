@@ -13,25 +13,25 @@ func TestUpstreamURLFactoryCreateURL(t *testing.T) {
 
 	for _, tc := range []struct {
 		uc       string
-		factory  *UpstreamURLFactory
+		factory  *Backend
 		original string
 		expected string
 	}{
 		{
 			uc:       "set host and rewrite scheme",
-			factory:  &UpstreamURLFactory{Host: "bar.foo", URLRewriter: &URLRewriter{Scheme: "https"}},
+			factory:  &Backend{Host: "bar.foo", URLRewriter: &URLRewriter{Scheme: "https"}},
 			original: "http://foo.bar/foo/bar?baz=bar&bar=foo&foo=baz",
 			expected: "https://bar.foo/foo/bar?baz=bar&bar=foo&foo=baz",
 		},
 		{
 			uc:       "set host only",
-			factory:  &UpstreamURLFactory{Host: "bar.foo"},
+			factory:  &Backend{Host: "bar.foo"},
 			original: "http://foo.bar/foo/bar?baz=bar&bar=foo&foo=baz",
 			expected: "http://bar.foo/foo/bar?baz=bar&bar=foo&foo=baz",
 		},
 		{
 			uc:       "set host only for url with urlencoded path fragment",
-			factory:  &UpstreamURLFactory{Host: "bar.foo"},
+			factory:  &Backend{Host: "bar.foo"},
 			original: "http://foo.bar/foo/%5Bid%5D?baz=bar&bar=foo&foo=baz",
 			expected: "http://bar.foo/foo/%5Bid%5D?baz=bar&bar=foo&foo=baz",
 		},
@@ -54,9 +54,9 @@ func TestUpstreamURLFactoryDeepCopyInto(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
-	var out UpstreamURLFactory
+	var out Backend
 
-	in := UpstreamURLFactory{
+	in := Backend{
 		Host: "bar.foo",
 		URLRewriter: &URLRewriter{
 			Scheme:              "https",

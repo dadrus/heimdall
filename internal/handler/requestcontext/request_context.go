@@ -30,9 +30,10 @@ import (
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/x"
+	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
-type finalizer func(mutator rule.URIMutator) error
+type finalizer func(mutator rule.Backend) error
 
 type RequestContext struct {
 	c               *fiber.Ctx
@@ -71,7 +72,7 @@ func (s *RequestContext) requestClientIPs() []string {
 	return x.IfThenElse(len(ips) != 0, ips, []string{s.c.IP()})
 }
 
-func (s *RequestContext) Finalize(mutator rule.URIMutator) error {
+func (s *RequestContext) Finalize(backend rule.Backend) error {
 	logger := zerolog.Ctx(s.c.Context())
 	logger.Debug().Msg("Finalizing request")
 
@@ -79,10 +80,10 @@ func (s *RequestContext) Finalize(mutator rule.URIMutator) error {
 		return s.err
 	}
 
-	return s.finalize(mutator)
+	return s.finalize(backend)
 }
 
-func (s *RequestContext) finalizeWithStatus(_ rule.URIMutator) error {
+func (s *RequestContext) finalizeWithStatus(_ rule.Backend) error {
 	for k := range s.upstreamHeaders {
 		s.c.Response().Header.Set(k, s.upstreamHeaders.Get(k))
 	}
@@ -96,14 +97,14 @@ func (s *RequestContext) finalizeWithStatus(_ rule.URIMutator) error {
 	return nil
 }
 
-func (s *RequestContext) finalizeAndForward(mut rule.URIMutator) error {
+func (s *RequestContext) finalizeAndForward(upstream rule.Backend) error {
 	logger := zerolog.Ctx(s.c.UserContext())
 
-	targetURL, err := mut.Mutate(s.reqURL)
-	if err != nil {
-		return err
+	if upstream == nil {
+		return errorchain.NewWithMessage(heimdall.ErrConfiguration, "No upstream reference defined")
 	}
 
+	targetURL := upstream.URL()
 	upstreamURL := targetURL.String()
 
 	logger.Info().

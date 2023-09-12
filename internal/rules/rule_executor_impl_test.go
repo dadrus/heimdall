@@ -69,12 +69,12 @@ func TestRuleExecutorExecute(t *testing.T) {
 			configureMocks: func(t *testing.T, ctx *mocks2.ContextMock, repo *mocks4.RepositoryMock, rule *mocks4.RuleMock) {
 				t.Helper()
 
-				mut := mocks4.NewURIMutatorMock(t)
+				upstream := mocks4.NewBackendMock(t)
 
 				ctx.EXPECT().AppContext().Return(context.Background())
 				ctx.EXPECT().Request().Return(&heimdall.Request{Method: http.MethodGet, URL: matchingURL})
 				rule.EXPECT().MatchesMethod(http.MethodGet).Return(true)
-				rule.EXPECT().Execute(ctx).Return(mut, nil)
+				rule.EXPECT().Execute(ctx).Return(upstream, nil)
 				repo.EXPECT().FindRule(matchingURL).Return(rule, nil)
 			},
 		},
