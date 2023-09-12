@@ -1116,7 +1116,7 @@ func TestServerSentEventsSupport(t *testing.T) {
 
 	exec := mocks4.NewExecutorMock(t)
 
-	disabledTimout := -1 * time.Second
+	disabledTimout := 0 * time.Second
 	backend := mocks4.NewBackendMock(t)
 	backend.EXPECT().URL().Return(&url.URL{
 		Scheme: upstreamURL.Scheme,
@@ -1152,7 +1152,7 @@ func TestServerSentEventsSupport(t *testing.T) {
 	proxy := newService(serviceArgs{
 		Config:     conf,
 		Registerer: prometheus.NewRegistry(),
-		Logger:     log.Logger, // logging.NewLogger(config.LoggingConfig{Level: zerolog.DebugLevel}),
+		Logger:     log.Logger,
 		Cache:      mocks.NewCacheMock(t),
 		Executor:   exec,
 	})
