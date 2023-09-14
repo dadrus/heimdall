@@ -103,36 +103,6 @@ This middleware is applied after the execution of the `strip_path_prefix` middle
 +
 If defined, heimdall will remove the specified query parameters from the original url before forwarding the request to the upstream service. E.g. if the query parameters part of the original url is `foo=bar&bar=baz` and the value of this property is set to `["foo"]`, the query part of the request to the upstream will be set to `bar=baz`
 
-** *`with`*: _ConnectionConfiguration_ (optional)
-+
-Can be used to specify connection specific properties. As of now, these are only timeouts.
-
-*** *`timeout`*: _Timeout_ (mandatory)
-+
-Which `read` and `write` timeouts should be applied to the opened upstream connections. If configured at least one timeout must be defined. Both timeouts default to timeouts defined for the _link:{{< relref "/docs/configuration/services/proxy.adoc#_timeout" >}}[proxy service]_.
-
-**** *`read`*: _link:{{< relref "/docs/configuration/reference/types.adoc#_duration" >}}[Duration]_ (optional)
-+
-The amount of time allowed to read the full request including body.
-
-**** *`write`*: _link:{{< relref "/docs/configuration/reference/types.adoc#_duration" >}}[Duration]_ (optional)
-+
-The maximum duration before timing out writes of the response.
-+
-.Disable write timeouts for SSE use cases
-====
-[source, yaml]
-----
-id: rule:sse
-forward_to:
-  host: sse-backend:8080
-  with:
-    timeout:
-      write: 0s
-# further properties
-----
-====
-
 * *`execute`*: _link:{{< relref "#_regular_pipeline" >}}[Regular Pipeline]_ (mandatory)
 +
 Which mechanisms to use to authenticate, authorize, hydrate (enrich) and mutate the subject of the request.
