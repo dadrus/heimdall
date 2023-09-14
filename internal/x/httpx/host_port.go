@@ -3,12 +3,14 @@ package httpx
 import "net"
 
 func IPFromHostPort(hp string) string {
-	h, _, err := net.SplitHostPort(hp)
+	host, _, err := net.SplitHostPort(hp)
 	if err != nil {
 		return ""
 	}
-	if len(h) > 0 && h[0] == '[' {
-		return h[1 : len(h)-1]
+
+	if len(host) > 0 && host[0] == '[' {
+		return host[1 : len(host)-1]
 	}
-	return h
+
+	return host
 }
