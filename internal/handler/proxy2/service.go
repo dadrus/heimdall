@@ -47,15 +47,11 @@ import (
 	"github.com/dadrus/heimdall/internal/x"
 )
 
-type conKeyType struct{}
-
-type deadlineResetter struct {
-	conKey *conKeyType
-}
+type deadlineResetter struct{}
 
 func (dr *deadlineResetter) handler(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		if val := req.Context().Value(dr.conKey); val != nil {
+		if val := req.Context().Value(dr); val != nil {
 			type DeadlinesResetter interface{ MonitorAndResetDeadlines(bool) }
 
 			monitor, ok := val.(DeadlinesResetter)
@@ -73,10 +69,10 @@ func (dr *deadlineResetter) handler(next http.Handler) http.Handler {
 
 func (dr *deadlineResetter) contexter(ctx context.Context, con net.Conn) context.Context {
 	if tlsCon, ok := con.(*tls.Conn); ok {
-		return context.WithValue(ctx, dr.conKey, tlsCon.NetConn())
+		return context.WithValue(ctx, dr, tlsCon.NetConn())
 	}
 
-	return context.WithValue(ctx, dr.conKey, con)
+	return context.WithValue(ctx, dr, con)
 }
 
 type serviceArgs struct {
@@ -95,7 +91,7 @@ func passThrough(next http.Handler) http.Handler {
 }
 
 func newService(args serviceArgs) *http.Server {
-	dr := &deadlineResetter{conKey: &conKeyType{}}
+	dr := &deadlineResetter{}
 	cfg := args.Config.Serve.Proxy
 	eh := errorhandler.New(
 		errorhandler.WithVerboseErrors(cfg.Respond.Verbose),
