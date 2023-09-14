@@ -56,12 +56,14 @@ type deadlineResetter struct {
 func (dr *deadlineResetter) handler(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 		if val := req.Context().Value(dr.conKey); val != nil {
-			monitor, ok := val.(interface{ MonitorDeadlines(bool) })
+			type DeadlinesResetter interface{ MonitorAndResetDeadlines(bool) }
+
+			monitor, ok := val.(DeadlinesResetter)
 
 			if ok {
-				monitor.MonitorDeadlines(true)
+				monitor.MonitorAndResetDeadlines(true)
 
-				defer monitor.MonitorDeadlines(false)
+				defer monitor.MonitorAndResetDeadlines(false)
 			}
 		}
 

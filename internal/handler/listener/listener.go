@@ -72,7 +72,7 @@ func (c *conn) Write(data []byte) (int, error) {
 	return n, err
 }
 
-func (c *conn) MonitorDeadlines(flag bool) {
+func (c *conn) MonitorAndResetDeadlines(flag bool) {
 	c.monitorDeadlines.Store(flag)
 }
 
