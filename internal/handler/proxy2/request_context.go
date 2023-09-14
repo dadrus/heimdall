@@ -220,8 +220,7 @@ func (r *requestContext) Finalize(upstream rule.Backend) error {
 			r.err = errorchain.NewWithMessage(heimdall.ErrCommunication, "Failed to proxy request").
 				CausedBy(err)
 		},
-		ModifyResponse: r.applyDeadlines(logger, upstream), // nolint: bodyclose
-		Rewrite:        r.rewriteRequest(upstream.URL()),
+		Rewrite: r.rewriteRequest(upstream.URL()),
 		Transport: otelhttp.NewTransport(
 			httpx.NewTraceRoundTripper(r.transport),
 			otelhttp.WithSpanNameFormatter(func(_ string, r *http.Request) string {
@@ -290,45 +289,4 @@ func (r *requestContext) rewriteRequest(targetURL *url.URL) func(req *httputil.P
 				}))
 		}
 	}
-}
-
-func (r *requestContext) applyDeadlines(logger *zerolog.Logger, backend rule.Backend) func(resp *http.Response) error {
-	return func(resp *http.Response) error {
-		rc := http.NewResponseController(r.rw) //nolint:bodyclose
-
-		wt := backend.WriteTimeout()
-		rt := backend.ReadTimeout()
-
-		var wdl, rdl time.Time
-
-		if wt != nil {
-			wdl = toDeadline(*wt)
-		} else {
-			wdl = toDeadline(r.writeTimeout)
-		}
-
-		if rt != nil {
-			rdl = toDeadline(*rt)
-		} else {
-			rdl = toDeadline(r.readTimeout)
-		}
-
-		if err := rc.SetWriteDeadline(wdl); err != nil {
-			logger.Warn().Err(err).Msg("Failed to reset write timeout.")
-		}
-
-		if err := rc.SetReadDeadline(rdl); err != nil {
-			logger.Warn().Err(err).Msg("Failed to reset read timeout.")
-		}
-
-		return nil
-	}
-}
-
-func toDeadline(timeout time.Duration) time.Time {
-	if timeout == 0 {
-		return time.Time{}
-	}
-
-	return time.Now().Add(timeout)
 }

@@ -1116,15 +1116,12 @@ func TestServerSentEventsSupport(t *testing.T) {
 
 	exec := mocks4.NewExecutorMock(t)
 
-	disabledTimout := 0 * time.Second
 	backend := mocks4.NewBackendMock(t)
 	backend.EXPECT().URL().Return(&url.URL{
 		Scheme: upstreamURL.Scheme,
 		Host:   upstreamURL.Host,
 		Path:   "/bar",
 	})
-	backend.EXPECT().WriteTimeout().Return(&disabledTimout)
-	backend.EXPECT().ReadTimeout().Return(nil)
 
 	exec.EXPECT().Execute(
 		mock.MatchedBy(func(ctx heimdall.Context) bool {
@@ -1139,7 +1136,7 @@ func TestServerSentEventsSupport(t *testing.T) {
 		Serve: config.ServeConfig{
 			Proxy: config.ServiceConfig{
 				Timeout: config.Timeout{
-					Read:  500 * time.Millisecond,
+					Read:  40 * time.Millisecond,
 					Write: 50 * time.Millisecond,
 					Idle:  1 * time.Second,
 				},

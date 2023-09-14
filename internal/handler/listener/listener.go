@@ -19,6 +19,8 @@ package listener
 import (
 	"crypto/tls"
 	"net"
+	"sync/atomic"
+	"time"
 
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
@@ -26,18 +28,97 @@ import (
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
+type conn struct {
+	net.Conn
+
+	readTimeout      time.Duration
+	writeTimeout     time.Duration
+	monitorDeadlines *atomic.Bool // 0 means false, 1 means true
+	bytesRead        *atomic.Int32
+	bytesWritten     *atomic.Int32
+}
+
+func (c *conn) Read(data []byte) (int, error) {
+	if c.monitorDeadlines.Load() && c.bytesRead.Load() > 0 {
+		c.bytesRead.Store(0)
+
+		if err := c.Conn.SetReadDeadline(time.Now().Add(c.readTimeout)); err != nil {
+			return 0, err
+		}
+	}
+
+	n, err := c.Conn.Read(data)
+	if c.monitorDeadlines.Load() {
+		c.bytesRead.Add(int32(n))
+	}
+
+	return n, err
+}
+
+func (c *conn) Write(data []byte) (int, error) {
+	if c.monitorDeadlines.Load() && c.bytesWritten.Load() > 0 {
+		c.bytesWritten.Store(0)
+
+		if err := c.Conn.SetWriteDeadline(time.Now().Add(c.writeTimeout)); err != nil {
+			return 0, err
+		}
+	}
+
+	n, err := c.Conn.Write(data)
+	if c.monitorDeadlines.Load() {
+		c.bytesWritten.Add(int32(n))
+	}
+
+	return n, err
+}
+
+func (c *conn) MonitorDeadlines(flag bool) {
+	c.monitorDeadlines.Store(flag)
+}
+
+type listener struct {
+	net.Listener
+
+	readTimeout  time.Duration
+	writeTimeout time.Duration
+}
+
+func (l *listener) Accept() (net.Conn, error) {
+	con, err := l.Listener.Accept()
+	if err != nil {
+		return nil, err
+	}
+
+	return &conn{
+		Conn:             con,
+		readTimeout:      l.readTimeout,
+		writeTimeout:     l.writeTimeout,
+		monitorDeadlines: &atomic.Bool{},
+		bytesRead:        &atomic.Int32{},
+		bytesWritten:     &atomic.Int32{},
+	}, nil
+}
+
 func New(network string, conf config.ServiceConfig) (net.Listener, error) {
-	listener, err := net.Listen(network, conf.Address())
+	listnr, err := net.Listen(network, conf.Address())
 	if err != nil {
 		return nil, errorchain.NewWithMessage(heimdall.ErrInternal, "failed creating listener").
 			CausedBy(err)
 	}
 
 	if conf.TLS != nil {
-		return newTLSListener(conf.TLS, listener)
+		listnr, err = newTLSListener(conf.TLS, listnr)
 	}
 
-	return listener, nil
+	if err != nil {
+		return nil, err
+	}
+
+	return &listener{
+		Listener:     listnr,
+		readTimeout:  conf.Timeout.Read,
+		writeTimeout: conf.Timeout.Write,
+	}, nil
 }
 
 func newTLSListener(tlsConf *config.TLS, listener net.Listener) (net.Listener, error) {

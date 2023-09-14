@@ -17,6 +17,7 @@
 package proxy2
 
 import (
+	"context"
 	"fmt"
 	"net"
 	"net/http"
@@ -45,6 +46,32 @@ import (
 	"github.com/dadrus/heimdall/internal/x"
 )
 
+type conKeyType struct{}
+
+type deadlineResetter struct {
+	conKey *conKeyType
+}
+
+func (dr *deadlineResetter) handler(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+		if val := req.Context().Value(dr.conKey); val != nil {
+			monitor, ok := val.(interface{ MonitorDeadlines(bool) })
+
+			if ok {
+				monitor.MonitorDeadlines(true)
+
+				defer monitor.MonitorDeadlines(false)
+			}
+		}
+
+		next.ServeHTTP(rw, req)
+	})
+}
+
+func (dr *deadlineResetter) contexter(ctx context.Context, con net.Conn) context.Context {
+	return context.WithValue(ctx, dr.conKey, con)
+}
+
 type serviceArgs struct {
 	fx.In
 
@@ -61,8 +88,8 @@ func passThrough(next http.Handler) http.Handler {
 }
 
 func newService(args serviceArgs) *http.Server {
+	dr := &deadlineResetter{conKey: &conKeyType{}}
 	cfg := args.Config.Serve.Proxy
-
 	eh := errorhandler.New(
 		errorhandler.WithVerboseErrors(cfg.Respond.Verbose),
 		errorhandler.WithPreconditionErrorCode(cfg.Respond.With.ArgumentError.Code),
@@ -128,6 +155,7 @@ func newService(args serviceArgs) *http.Server {
 			func() func(http.Handler) http.Handler { return passThrough },
 		),
 		cachemiddleware.New(args.Cache),
+		dr.handler,
 	).Then(newHandler(newRequestContextFactory(args.Signer, cfg.Timeout), args.Executor, eh))
 
 	return &http.Server{
@@ -138,5 +166,6 @@ func newService(args serviceArgs) *http.Server {
 		IdleTimeout:    cfg.Timeout.Idle,
 		MaxHeaderBytes: int(cfg.BufferLimit.Read),
 		ErrorLog:       newStdLogger(args.Logger),
+		ConnContext:    dr.contexter,
 	}
 }
