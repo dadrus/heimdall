@@ -3,11 +3,7 @@
 package mocks
 
 import (
-	http "net/http"
-
 	mock "github.com/stretchr/testify/mock"
-
-	time "time"
 
 	url "net/url"
 )
@@ -23,92 +19,6 @@ type BackendMock_Expecter struct {
 
 func (_m *BackendMock) EXPECT() *BackendMock_Expecter {
 	return &BackendMock_Expecter{mock: &_m.Mock}
-}
-
-// ReadTimeout provides a mock function with given fields:
-func (_m *BackendMock) ReadTimeout() *time.Duration {
-	ret := _m.Called()
-
-	var r0 *time.Duration
-	if rf, ok := ret.Get(0).(func() *time.Duration); ok {
-		r0 = rf()
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*time.Duration)
-		}
-	}
-
-	return r0
-}
-
-// BackendMock_ReadTimeout_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ReadTimeout'
-type BackendMock_ReadTimeout_Call struct {
-	*mock.Call
-}
-
-// ReadTimeout is a helper method to define mock.On call
-func (_e *BackendMock_Expecter) ReadTimeout() *BackendMock_ReadTimeout_Call {
-	return &BackendMock_ReadTimeout_Call{Call: _e.mock.On("ReadTimeout")}
-}
-
-func (_c *BackendMock_ReadTimeout_Call) Run(run func()) *BackendMock_ReadTimeout_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run()
-	})
-	return _c
-}
-
-func (_c *BackendMock_ReadTimeout_Call) Return(_a0 *time.Duration) *BackendMock_ReadTimeout_Call {
-	_c.Call.Return(_a0)
-	return _c
-}
-
-func (_c *BackendMock_ReadTimeout_Call) RunAndReturn(run func() *time.Duration) *BackendMock_ReadTimeout_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// Transport provides a mock function with given fields:
-func (_m *BackendMock) Transport() http.RoundTripper {
-	ret := _m.Called()
-
-	var r0 http.RoundTripper
-	if rf, ok := ret.Get(0).(func() http.RoundTripper); ok {
-		r0 = rf()
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(http.RoundTripper)
-		}
-	}
-
-	return r0
-}
-
-// BackendMock_Transport_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Transport'
-type BackendMock_Transport_Call struct {
-	*mock.Call
-}
-
-// Transport is a helper method to define mock.On call
-func (_e *BackendMock_Expecter) Transport() *BackendMock_Transport_Call {
-	return &BackendMock_Transport_Call{Call: _e.mock.On("Transport")}
-}
-
-func (_c *BackendMock_Transport_Call) Run(run func()) *BackendMock_Transport_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run()
-	})
-	return _c
-}
-
-func (_c *BackendMock_Transport_Call) Return(_a0 http.RoundTripper) *BackendMock_Transport_Call {
-	_c.Call.Return(_a0)
-	return _c
-}
-
-func (_c *BackendMock_Transport_Call) RunAndReturn(run func() http.RoundTripper) *BackendMock_Transport_Call {
-	_c.Call.Return(run)
-	return _c
 }
 
 // URL provides a mock function with given fields:
@@ -150,49 +60,6 @@ func (_c *BackendMock_URL_Call) Return(_a0 *url.URL) *BackendMock_URL_Call {
 }
 
 func (_c *BackendMock_URL_Call) RunAndReturn(run func() *url.URL) *BackendMock_URL_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// WriteTimeout provides a mock function with given fields:
-func (_m *BackendMock) WriteTimeout() *time.Duration {
-	ret := _m.Called()
-
-	var r0 *time.Duration
-	if rf, ok := ret.Get(0).(func() *time.Duration); ok {
-		r0 = rf()
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*time.Duration)
-		}
-	}
-
-	return r0
-}
-
-// BackendMock_WriteTimeout_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'WriteTimeout'
-type BackendMock_WriteTimeout_Call struct {
-	*mock.Call
-}
-
-// WriteTimeout is a helper method to define mock.On call
-func (_e *BackendMock_Expecter) WriteTimeout() *BackendMock_WriteTimeout_Call {
-	return &BackendMock_WriteTimeout_Call{Call: _e.mock.On("WriteTimeout")}
-}
-
-func (_c *BackendMock_WriteTimeout_Call) Run(run func()) *BackendMock_WriteTimeout_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run()
-	})
-	return _c
-}
-
-func (_c *BackendMock_WriteTimeout_Call) Return(_a0 *time.Duration) *BackendMock_WriteTimeout_Call {
-	_c.Call.Return(_a0)
-	return _c
-}
-
-func (_c *BackendMock_WriteTimeout_Call) RunAndReturn(run func() *time.Duration) *BackendMock_WriteTimeout_Call {
 	_c.Call.Return(run)
 	return _c
 }

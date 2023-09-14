@@ -136,8 +136,6 @@ func TestRequestContextFinalize(t *testing.T) {
 
 				backend := mocks2.NewBackendMock(t)
 				backend.EXPECT().URL().Return(upstreamURL)
-				backend.EXPECT().WriteTimeout().Return(nil)
-				backend.EXPECT().ReadTimeout().Return(nil)
 
 				return backend
 			},
@@ -170,8 +168,6 @@ func TestRequestContextFinalize(t *testing.T) {
 
 				backend := mocks2.NewBackendMock(t)
 				backend.EXPECT().URL().Return(upstreamURL)
-				backend.EXPECT().WriteTimeout().Return(nil)
-				backend.EXPECT().ReadTimeout().Return(nil)
 
 				return backend
 			},
@@ -201,8 +197,6 @@ func TestRequestContextFinalize(t *testing.T) {
 
 				backend := mocks2.NewBackendMock(t)
 				backend.EXPECT().URL().Return(upstreamURL)
-				backend.EXPECT().WriteTimeout().Return(nil)
-				backend.EXPECT().ReadTimeout().Return(nil)
 
 				return backend
 			},
@@ -235,8 +229,6 @@ func TestRequestContextFinalize(t *testing.T) {
 
 				backend := mocks2.NewBackendMock(t)
 				backend.EXPECT().URL().Return(upstreamURL)
-				backend.EXPECT().WriteTimeout().Return(nil)
-				backend.EXPECT().ReadTimeout().Return(nil)
 
 				return backend
 			},
@@ -268,8 +260,6 @@ func TestRequestContextFinalize(t *testing.T) {
 
 				backend := mocks2.NewBackendMock(t)
 				backend.EXPECT().URL().Return(upstreamURL)
-				backend.EXPECT().WriteTimeout().Return(nil)
-				backend.EXPECT().ReadTimeout().Return(nil)
 
 				return backend
 			},
@@ -296,8 +286,6 @@ func TestRequestContextFinalize(t *testing.T) {
 
 				backend := mocks2.NewBackendMock(t)
 				backend.EXPECT().URL().Return(upstreamURL)
-				backend.EXPECT().WriteTimeout().Return(nil)
-				backend.EXPECT().ReadTimeout().Return(nil)
 
 				return backend
 			},
@@ -326,8 +314,6 @@ func TestRequestContextFinalize(t *testing.T) {
 
 				backend := mocks2.NewBackendMock(t)
 				backend.EXPECT().URL().Return(upstreamURL)
-				backend.EXPECT().WriteTimeout().Return(nil)
-				backend.EXPECT().ReadTimeout().Return(nil)
 
 				return backend
 			},
@@ -356,8 +342,6 @@ func TestRequestContextFinalize(t *testing.T) {
 
 				backend := mocks2.NewBackendMock(t)
 				backend.EXPECT().URL().Return(upstreamURL)
-				backend.EXPECT().WriteTimeout().Return(nil)
-				backend.EXPECT().ReadTimeout().Return(nil)
 
 				return backend
 			},
@@ -532,8 +516,6 @@ func TestRequestContextBody(t *testing.T) {
 
 	backend := mocks2.NewBackendMock(t)
 	backend.EXPECT().URL().Return(targetURL)
-	backend.EXPECT().WriteTimeout().Return(nil)
-	backend.EXPECT().ReadTimeout().Return(nil)
 
 	// just consume body
 	first := ctx.Request().Body()

@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"net/url"
 	"slices"
-	"time"
 
 	"github.com/rs/zerolog"
 
@@ -79,9 +78,7 @@ func (r *ruleImpl) Execute(ctx heimdall.Context) (rule.Backend, error) {
 
 	if r.backend != nil {
 		upstream = &backend{
-			readTimeout:  r.backend.ReadTimeout(),
-			writeTimeout: r.backend.WriteTimeout(),
-			targetURL:    r.backend.CreateURL(ctx.Request().URL),
+			targetURL: r.backend.CreateURL(ctx.Request().URL),
 		}
 	}
 
@@ -104,11 +101,7 @@ func (r *ruleImpl) ID() string { return r.id }
 func (r *ruleImpl) SrcID() string { return r.srcID }
 
 type backend struct {
-	readTimeout  *time.Duration
-	writeTimeout *time.Duration
-	targetURL    *url.URL
+	targetURL *url.URL
 }
 
-func (b *backend) URL() *url.URL                { return b.targetURL }
-func (b *backend) ReadTimeout() *time.Duration  { return b.readTimeout }
-func (b *backend) WriteTimeout() *time.Duration { return b.writeTimeout }
+func (b *backend) URL() *url.URL { return b.targetURL }

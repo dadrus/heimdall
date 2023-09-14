@@ -18,6 +18,7 @@ package proxy2
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"net"
 	"net/http"
@@ -69,6 +70,10 @@ func (dr *deadlineResetter) handler(next http.Handler) http.Handler {
 }
 
 func (dr *deadlineResetter) contexter(ctx context.Context, con net.Conn) context.Context {
+	if tlsCon, ok := con.(*tls.Conn); ok {
+		return context.WithValue(ctx, dr.conKey, tlsCon.NetConn())
+	}
+
 	return context.WithValue(ctx, dr.conKey, con)
 }
 

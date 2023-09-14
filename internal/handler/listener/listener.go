@@ -33,9 +33,9 @@ type conn struct {
 
 	readTimeout      time.Duration
 	writeTimeout     time.Duration
-	monitorDeadlines *atomic.Bool // 0 means false, 1 means true
-	bytesRead        *atomic.Int32
-	bytesWritten     *atomic.Int32
+	monitorDeadlines atomic.Bool
+	bytesRead        atomic.Int32
+	bytesWritten     atomic.Int32
 }
 
 func (c *conn) Read(data []byte) (int, error) {
@@ -90,12 +90,9 @@ func (l *listener) Accept() (net.Conn, error) {
 	}
 
 	return &conn{
-		Conn:             con,
-		readTimeout:      l.readTimeout,
-		writeTimeout:     l.writeTimeout,
-		monitorDeadlines: &atomic.Bool{},
-		bytesRead:        &atomic.Int32{},
-		bytesWritten:     &atomic.Int32{},
+		Conn:         con,
+		readTimeout:  l.readTimeout,
+		writeTimeout: l.writeTimeout,
 	}, nil
 }
 
@@ -106,19 +103,17 @@ func New(network string, conf config.ServiceConfig) (net.Listener, error) {
 			CausedBy(err)
 	}
 
-	if conf.TLS != nil {
-		listnr, err = newTLSListener(conf.TLS, listnr)
-	}
-
-	if err != nil {
-		return nil, err
-	}
-
-	return &listener{
+	wrapped := &listener{
 		Listener:     listnr,
 		readTimeout:  conf.Timeout.Read,
 		writeTimeout: conf.Timeout.Write,
-	}, nil
+	}
+
+	if conf.TLS != nil {
+		return newTLSListener(conf.TLS, wrapped)
+	}
+
+	return wrapped, nil
 }
 
 func newTLSListener(tlsConf *config.TLS, listener net.Listener) (net.Listener, error) {

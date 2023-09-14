@@ -285,8 +285,6 @@ func TestProxyService(t *testing.T) {
 					Host:   upstreamURL.Host,
 					Path:   "/foobar",
 				})
-				backend.EXPECT().ReadTimeout().Return(nil)
-				backend.EXPECT().WriteTimeout().Return(nil)
 
 				exec.EXPECT().Execute(
 					mock.MatchedBy(func(ctx heimdall.Context) bool {
@@ -370,8 +368,6 @@ func TestProxyService(t *testing.T) {
 					Host:   upstreamURL.Host,
 					Path:   "/[id]/foobar",
 				})
-				backend.EXPECT().ReadTimeout().Return(nil)
-				backend.EXPECT().WriteTimeout().Return(nil)
 
 				exec.EXPECT().Execute(
 					mock.MatchedBy(func(ctx heimdall.Context) bool {
@@ -454,8 +450,6 @@ func TestProxyService(t *testing.T) {
 					Host:   upstreamURL.Host,
 					Path:   "/[barfoo]",
 				})
-				backend.EXPECT().ReadTimeout().Return(nil)
-				backend.EXPECT().WriteTimeout().Return(nil)
 
 				exec.EXPECT().Execute(
 					mock.MatchedBy(func(ctx heimdall.Context) bool {
@@ -544,8 +538,6 @@ func TestProxyService(t *testing.T) {
 					Host:   upstreamURL.Host,
 					Path:   "/bar",
 				})
-				backend.EXPECT().ReadTimeout().Return(nil)
-				backend.EXPECT().WriteTimeout().Return(nil)
 
 				exec.EXPECT().Execute(
 					mock.MatchedBy(func(ctx heimdall.Context) bool {
@@ -680,7 +672,7 @@ func TestProxyService(t *testing.T) {
 		{
 			uc: "http2 usage",
 			serviceConf: config.ServiceConfig{
-				Timeout: config.Timeout{Read: 1 * time.Second, Write: 1 * time.Second, Idle: 1 * time.Second},
+				Timeout: config.Timeout{Read: 1000 * time.Second, Write: 1000 * time.Second, Idle: 1000 * time.Second},
 				TLS: &config.TLS{
 					KeyStore: config.KeyStore{
 						Path: pemFile.Name(),
@@ -724,8 +716,6 @@ func TestProxyService(t *testing.T) {
 					Host:   upstreamURL.Host,
 					Path:   "/bar",
 				})
-				backend.EXPECT().ReadTimeout().Return(nil)
-				backend.EXPECT().WriteTimeout().Return(nil)
 
 				exec.EXPECT().Execute(
 					mock.MatchedBy(func(ctx heimdall.Context) bool {
@@ -821,8 +811,6 @@ func TestProxyService(t *testing.T) {
 					Host:   upstreamURL.Host,
 					Path:   "/bar",
 				})
-				backend.EXPECT().ReadTimeout().Return(nil)
-				backend.EXPECT().WriteTimeout().Return(nil)
 
 				exec.EXPECT().Execute(
 					mock.MatchedBy(func(ctx heimdall.Context) bool {
@@ -1014,8 +1002,6 @@ func TestWebSocketSupport(t *testing.T) {
 		Host:   upstreamURL.Host,
 		Path:   "/bar",
 	})
-	backend.EXPECT().WriteTimeout().Return(nil)
-	backend.EXPECT().ReadTimeout().Return(nil)
 
 	exec.EXPECT().Execute(
 		mock.MatchedBy(func(ctx heimdall.Context) bool {
