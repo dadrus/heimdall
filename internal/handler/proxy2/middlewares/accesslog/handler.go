@@ -19,7 +19,6 @@ package accesslog
 import (
 	"context"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/felixge/httpsnoop"
@@ -27,6 +26,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/accesscontext"
 	"github.com/dadrus/heimdall/internal/x"
+	"github.com/dadrus/heimdall/internal/x/httpx"
 	"github.com/dadrus/heimdall/internal/x/opentelemetry/tracecontext"
 )
 
@@ -36,11 +36,11 @@ func New(logger zerolog.Logger) func(http.Handler) http.Handler {
 			start := time.Now()
 			ctx := accesscontext.New(req.Context())
 			req = req.WithContext(ctx)
-			addr := strings.Split(req.RemoteAddr, ":")
+			host := httpx.IPFromHostPort(req.RemoteAddr)
 
 			logCtx := logger.Level(zerolog.InfoLevel).With().
 				Int64("_tx_start", start.Unix()).
-				Str("_client_ip", addr[0]).
+				Str("_client_ip", host).
 				Str("_http_method", req.Method).
 				Str("_http_path", req.URL.Path).
 				Str("_http_user_agent", req.Header.Get("User-Agent")).

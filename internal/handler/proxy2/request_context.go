@@ -185,8 +185,7 @@ func (r *requestContext) requestClientIPs() []string {
 		}
 	}
 
-	// nolint: makezero
-	ips = append(ips, strings.Split(r.req.RemoteAddr, ":")[0])
+	ips = append(ips, httpx.IPFromHostPort(r.req.RemoteAddr)) // nolint: makezero
 
 	return ips
 }
@@ -267,9 +266,7 @@ func (r *requestContext) rewriteRequest(targetURL *url.URL) func(req *httputil.P
 		forwardedFor := proxyReq.In.Header.Get("X-Forwarded-For")
 		forwarded := proxyReq.In.Header.Get("Forwarded")
 		proto := x.IfThenElse(proxyReq.In.TLS != nil, "https", "http")
-
-		addr := strings.Split(r.req.RemoteAddr, ":")
-		clientIP := addr[0]
+		clientIP := httpx.IPFromHostPort(r.req.RemoteAddr)
 
 		if len(forwardedFor) != 0 || len(forwardedProto) != 0 || len(forwardedHost) != 0 {
 			proxyReq.Out.Header.Set("X-Forwarded-For", x.IfThenElseExec(len(forwardedFor) == 0,

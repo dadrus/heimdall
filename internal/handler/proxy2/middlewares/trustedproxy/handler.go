@@ -6,6 +6,8 @@ import (
 	"strings"
 
 	"github.com/rs/zerolog"
+
+	"github.com/dadrus/heimdall/internal/x/httpx"
 )
 
 var untrustedHeader = []string{ //nolint:gochecknoglobals
@@ -60,8 +62,7 @@ func New(logger zerolog.Logger, proxies ...string) func(http.Handler) http.Handl
 
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-			addr := strings.Split(req.RemoteAddr, ":")
-			if !trustedProxies.Contains(net.ParseIP(addr[0])) {
+			if !trustedProxies.Contains(net.ParseIP(httpx.IPFromHostPort(req.RemoteAddr))) {
 				for _, name := range untrustedHeader {
 					req.Header.Del(name)
 				}

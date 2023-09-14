@@ -18,6 +18,7 @@ package proxy2
 
 import (
 	"fmt"
+	"net"
 	"net/http"
 	"strings"
 
@@ -92,8 +93,13 @@ func newService(args serviceArgs) *http.Server {
 				otelhttp.WithTracerProvider(otel.GetTracerProvider()),
 				otelhttp.WithServerName("proxy"),
 				otelhttp.WithSpanNameFormatter(func(_ string, req *http.Request) string {
+					localAddr := "unknown"
+					if addr, ok := req.Context().Value(http.LocalAddrContextKey).(net.Addr); ok {
+						localAddr = addr.String()
+					}
+
 					return fmt.Sprintf("EntryPoint %s %s%s",
-						strings.ToLower(req.URL.Scheme), "ctx.Context().LocalAddr().String()", req.URL.Path)
+						strings.ToLower(req.URL.Scheme), localAddr, req.URL.Path)
 				}),
 			)
 		},
