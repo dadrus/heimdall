@@ -42,7 +42,10 @@ func (c *conn) Read(data []byte) (int, error) {
 	if c.monitorDeadlines.Load() && c.bytesRead.Load() > 0 {
 		c.bytesRead.Store(0)
 
-		if err := c.Conn.SetReadDeadline(time.Now().Add(c.readTimeout)); err != nil {
+		// reset read & write deadlines as otherwise there is a chance
+		// that after reading the data, the write deadline kicked in and
+		// writing is not possible anymore
+		if err := c.Conn.SetDeadline(time.Now().Add(c.readTimeout)); err != nil {
 			return 0, err
 		}
 	}
