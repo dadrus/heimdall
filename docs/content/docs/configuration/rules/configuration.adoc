@@ -81,7 +81,7 @@ Defines where to forward the proxied request to. Used only when heimdall is oper
 +
 Host (and port) to be used for request forwarding. If no `rewrite` property (see below) is specified, all other parts, like scheme, path, etc. of the original url are preserved. E.g. if the original request is `\https://mydomain.com/api/v1/something?foo=bar&bar=baz` and the value of this property is set to `my-backend:8080`, the url used to forward the request to the upstream will be `\https://my-backend:8080/api/v1/something?foo=bar&bar=baz`
 +
-WARNING: As of today the `Host` header is preserved while forwarding the request. This will change in the future heimdall release. Instead of the `Host` header, heimdall will set the `X-Forwarded-Host` header with the same value. If you rely on that header to be preserved, add a `unifier` to your pipeline, which sets this value explicitly.
+NOTE: The `Host` header is not preserved while forwarding the request. If you need it to be set to the value from the original request, make use of the link:{{< relref "pipeline_mechanisms/unifiers.adoc#_header" >}}[header unifier] in your `execute` pipeline and set it accordingly. The example below demonstrates that.
 
 ** *`rewrite`*: _OriginalURLRewriter_ (optional)
 +
@@ -105,7 +105,7 @@ If defined, heimdall will remove the specified query parameters from the origina
 
 * *`execute`*: _link:{{< relref "#_regular_pipeline" >}}[Regular Pipeline]_ (mandatory)
 +
-Which mechanisms to use to authenticate, authorize, hydrate (enrich) and mutate the subject of the request.
+Which mechanisms to use to authenticate, authorize, contextualize (enrich) and unify the subject and other information available in the request.
 
 * *`on_error`*: _link:{{< relref "#_error_handler_pipeline" >}}[Error Handler Pipeline]_ (optional)
 +
@@ -128,10 +128,21 @@ methods:
   - GET
   - POST
 execute:
+  # the following just demonstrates how to make use of specific
+  # mechanisms in the simplest possible form
   - authenticator: foo
   - authorizer: bar
   - contextualizer: foo
   - unifier: zab
+  # the following one demonstrates how to preserve the
+  # Host header from the original request, while forwarding
+  # it to the upstream service
+  - unifier: preserve-host
+    # the config property can be omitted, if already configured
+    # in the header unifier mechanism ()
+    config:
+      headers:
+        Host: '{{ .Request.Header("Host") }}'
 on_error:
   - error_handler: foobar
 ----

@@ -33,7 +33,7 @@ import (
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
-type finalizer func(mutator rule.Backend) error
+type finalizer func(rule.Backend) error
 
 type RequestContext struct {
 	c               *fiber.Ctx
