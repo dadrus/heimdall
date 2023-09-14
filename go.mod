@@ -15,7 +15,7 @@ require (
 	github.com/gobwas/glob v0.2.3
 	github.com/goccy/go-json v0.10.2
 	github.com/gofiber/adaptor/v2 v2.2.1
-	github.com/gofiber/fiber/v2 v2.49.1
+	github.com/gofiber/fiber/v2 v2.49.2
 	github.com/google/cel-go v0.18.0
 	github.com/google/uuid v1.3.1
 	github.com/gorilla/websocket v1.5.0
@@ -50,9 +50,9 @@ require (
 	github.com/ybbus/httpretry v1.0.2
 	github.com/yl2chen/cidranger v1.0.2
 	github.com/youmark/pkcs8 v0.0.0-20201027041543-1326539a0a0a
-	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.43.0
-	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.43.0
-	go.opentelemetry.io/contrib/propagators/autoprop v0.43.0
+	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.44.0
+	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.44.0
+	go.opentelemetry.io/contrib/propagators/autoprop v0.44.0
 	go.opentelemetry.io/otel v1.18.0
 	go.opentelemetry.io/otel/bridge/opentracing v1.18.0
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.18.0
@@ -64,13 +64,13 @@ require (
 	go.uber.org/fx v1.20.0
 	gocloud.dev v0.34.0
 	golang.org/x/exp v0.0.0-20230905200255-921286631fa9
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20230911183012-2d3300fd4832
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20230913181813-007df8e322eb
 	google.golang.org/grpc v1.58.0
 	google.golang.org/protobuf v1.31.0
 	gopkg.in/square/go-jose.v2 v2.6.0
 	gopkg.in/yaml.v3 v3.0.1
-	k8s.io/apimachinery v0.28.1
-	k8s.io/client-go v0.28.1
+	k8s.io/apimachinery v0.28.2
+	k8s.io/client-go v0.28.2
 	k8s.io/klog/v2 v2.100.1
 )
 
@@ -165,10 +165,10 @@ require (
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/valyala/tcplisten v1.0.0 // indirect
 	go.opencensus.io v0.24.0 // indirect
-	go.opentelemetry.io/contrib/propagators/aws v1.18.0 // indirect
-	go.opentelemetry.io/contrib/propagators/b3 v1.18.0 // indirect
-	go.opentelemetry.io/contrib/propagators/jaeger v1.18.0 // indirect
-	go.opentelemetry.io/contrib/propagators/ot v1.18.0 // indirect
+	go.opentelemetry.io/contrib/propagators/aws v1.19.0 // indirect
+	go.opentelemetry.io/contrib/propagators/b3 v1.19.0 // indirect
+	go.opentelemetry.io/contrib/propagators/jaeger v1.19.0 // indirect
+	go.opentelemetry.io/contrib/propagators/ot v1.19.0 // indirect
 	go.opentelemetry.io/otel/metric v1.18.0 // indirect
 	go.opentelemetry.io/proto/otlp v1.0.0 // indirect
 	go.uber.org/atomic v1.11.0 // indirect
@@ -191,7 +191,7 @@ require (
 	google.golang.org/genproto/googleapis/api v0.0.0-20230803162519-f966b187b2e5 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
-	k8s.io/api v0.28.1 // indirect
+	k8s.io/api v0.28.2 // indirect
 	k8s.io/utils v0.0.0-20230406110748-d93618cff8a2 // indirect
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.3 // indirect
