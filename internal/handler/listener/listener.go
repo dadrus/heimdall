@@ -31,59 +31,56 @@ import (
 type conn struct {
 	net.Conn
 
-	readTimeout      time.Duration
-	writeTimeout     time.Duration
-	monitorDeadlines atomic.Bool
-	bytesRead        atomic.Int32
-	bytesWritten     atomic.Int32
-}
-
-func (c *conn) Read(data []byte) (int, error) {
-	if c.monitorDeadlines.Load() && c.bytesRead.Load() > 0 {
-		c.bytesRead.Store(0)
-
-		// reset read & write deadlines as otherwise there is a chance
-		// that after reading the data, the write deadline kicked in and
-		// writing is not possible anymore
-		if err := c.Conn.SetDeadline(time.Now().Add(c.readTimeout)); err != nil {
-			return 0, err
-		}
-	}
-
-	n, err := c.Conn.Read(data)
-	if c.monitorDeadlines.Load() {
-		c.bytesRead.Add(int32(n))
-	}
-
-	return n, err
+	writeTimeout  atomic.Pointer[time.Duration]
+	resetDeadline atomic.Bool
+	bytesWritten  atomic.Int32
 }
 
 func (c *conn) Write(data []byte) (int, error) {
-	if c.monitorDeadlines.Load() && c.bytesWritten.Load() > 0 {
+	if c.resetDeadline.Load() && c.bytesWritten.Load() > 0 {
 		c.bytesWritten.Store(0)
 
-		if err := c.Conn.SetWriteDeadline(time.Now().Add(c.writeTimeout)); err != nil {
+		if err := c.Conn.SetWriteDeadline(time.Now().Add(*c.writeTimeout.Load())); err != nil {
 			return 0, err
 		}
 	}
 
 	n, err := c.Conn.Write(data)
-	if c.monitorDeadlines.Load() {
+	if c.resetDeadline.Load() {
 		c.bytesWritten.Add(int32(n))
 	}
 
 	return n, err
 }
 
+func (c *conn) SetDeadline(deadline time.Time) error {
+	if deadline.Equal(time.Time{}) {
+		c.resetDeadline.Store(false)
+	} else {
+		timeout := time.Until(deadline)
+		c.writeTimeout.Store(&timeout)
+	}
+
+	return c.Conn.SetDeadline(deadline)
+}
+
+func (c *conn) SetWriteDeadline(deadline time.Time) error {
+	if deadline.Equal(time.Time{}) {
+		c.resetDeadline.Store(false)
+	} else {
+		timeout := time.Until(deadline)
+		c.writeTimeout.Store(&timeout)
+	}
+
+	return c.Conn.SetWriteDeadline(deadline)
+}
+
 func (c *conn) MonitorAndResetDeadlines(flag bool) {
-	c.monitorDeadlines.Store(flag)
+	c.resetDeadline.Store(flag)
 }
 
 type listener struct {
 	net.Listener
-
-	readTimeout  time.Duration
-	writeTimeout time.Duration
 }
 
 func (l *listener) Accept() (net.Conn, error) {
@@ -92,11 +89,7 @@ func (l *listener) Accept() (net.Conn, error) {
 		return nil, err
 	}
 
-	return &conn{
-		Conn:         con,
-		readTimeout:  l.readTimeout,
-		writeTimeout: l.writeTimeout,
-	}, nil
+	return &conn{Conn: con}, nil
 }
 
 func New(network string, conf config.ServiceConfig) (net.Listener, error) {
@@ -106,11 +99,7 @@ func New(network string, conf config.ServiceConfig) (net.Listener, error) {
 			CausedBy(err)
 	}
 
-	wrapped := &listener{
-		Listener:     listnr,
-		readTimeout:  conf.Timeout.Read,
-		writeTimeout: conf.Timeout.Write,
-	}
+	wrapped := &listener{Listener: listnr}
 
 	if conf.TLS != nil {
 		return newTLSListener(conf.TLS, wrapped)
