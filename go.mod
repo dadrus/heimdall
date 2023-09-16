@@ -24,7 +24,7 @@ require (
 	github.com/inhies/go-bytesize v0.0.0-20220417184213-4913239db9cf
 	github.com/instana/go-otel-exporter v1.0.0
 	github.com/jellydator/ttlcache/v3 v3.1.0
-	github.com/johannesboyne/gofakes3 v0.0.0-20230905042043-42c772b34232
+	github.com/johannesboyne/gofakes3 v0.0.0-20230914150226-f005f5cc03aa
 	github.com/justinas/alice v1.2.0
 	github.com/knadh/koanf/maps v0.1.1
 	github.com/knadh/koanf/parsers/yaml v0.1.0
@@ -65,7 +65,7 @@ require (
 	gocloud.dev v0.34.0
 	golang.org/x/exp v0.0.0-20230905200255-921286631fa9
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20230913181813-007df8e322eb
-	google.golang.org/grpc v1.58.0
+	google.golang.org/grpc v1.58.1
 	google.golang.org/protobuf v1.31.0
 	gopkg.in/square/go-jose.v2 v2.6.0
 	gopkg.in/yaml.v3 v3.0.1
