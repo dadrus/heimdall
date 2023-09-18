@@ -186,6 +186,8 @@ func (u *jwtUnifier) WithConfig(rawConfig map[string]any) (Unifier, error) {
 		ttl: x.IfThenElseExec(conf.TTL != nil,
 			func() time.Duration { return *conf.TTL },
 			func() time.Duration { return u.ttl }),
+		headerName:   u.headerName,
+		headerScheme: u.headerScheme,
 	}, nil
 }
 
