@@ -31,7 +31,7 @@ import (
 type conn struct {
 	net.Conn
 
-	writeTimeout  atomic.Pointer[time.Duration]
+	writeTimeout  atomic.Int64
 	resetDeadline atomic.Bool
 	bytesWritten  atomic.Int32
 }
@@ -40,7 +40,7 @@ func (c *conn) Write(data []byte) (int, error) {
 	if c.resetDeadline.Load() && c.bytesWritten.Load() > 0 {
 		c.bytesWritten.Store(0)
 
-		if err := c.Conn.SetWriteDeadline(time.Now().Add(*c.writeTimeout.Load())); err != nil {
+		if err := c.Conn.SetWriteDeadline(time.Now().Add(time.Duration(c.writeTimeout.Load()))); err != nil {
 			return 0, err
 		}
 	}
@@ -57,8 +57,7 @@ func (c *conn) SetDeadline(deadline time.Time) error {
 	if deadline.Equal(time.Time{}) {
 		c.resetDeadline.Store(false)
 	} else {
-		timeout := time.Until(deadline)
-		c.writeTimeout.Store(&timeout)
+		c.writeTimeout.Store(int64(time.Until(deadline)))
 	}
 
 	return c.Conn.SetDeadline(deadline)
@@ -68,8 +67,7 @@ func (c *conn) SetWriteDeadline(deadline time.Time) error {
 	if deadline.Equal(time.Time{}) {
 		c.resetDeadline.Store(false)
 	} else {
-		timeout := time.Until(deadline)
-		c.writeTimeout.Store(&timeout)
+		c.writeTimeout.Store(int64(time.Until(deadline)))
 	}
 
 	return c.Conn.SetWriteDeadline(deadline)
