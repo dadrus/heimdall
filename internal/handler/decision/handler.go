@@ -66,10 +66,10 @@ func (h *Handler) registerRoutes(router fiber.Router, logger zerolog.Logger) {
 func (h *Handler) decisions(c *fiber.Ctx) error {
 	rc := h.f.Create(c)
 
-	mut, err := h.e.Execute(rc)
+	upstream, err := h.e.Execute(rc)
 	if err != nil {
 		return err
 	}
 
-	return rc.Finalize(mut)
+	return rc.Finalize(upstream)
 }
