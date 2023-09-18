@@ -73,7 +73,7 @@ func (s *RequestContext) requestClientIPs() []string {
 }
 
 func (s *RequestContext) Finalize(backend rule.Backend) error {
-	logger := zerolog.Ctx(s.c.Context())
+	logger := zerolog.Ctx(s.c.UserContext())
 	logger.Debug().Msg("Finalizing request")
 
 	if s.err != nil {
