@@ -45,7 +45,7 @@ type requestContext struct {
 	err             error
 	transport       *http.Transport
 
-	// the following properties are create lazy and cached
+	// the following properties are created lazy and cached
 
 	savedBody []byte
 	hmdlReq   *heimdall.Request
@@ -58,7 +58,7 @@ func (f factoryFunc) Create(rw http.ResponseWriter, req *http.Request) request.C
 	return f(rw, req)
 }
 
-func newRequestContextFactory(signer heimdall.JWTSigner, timeouts config.Timeout) request.ContextFactory {
+func newRequestContextFactory(signer heimdall.JWTSigner, cfg config.ServiceConfig) request.ContextFactory {
 	transport := &http.Transport{
 		// tlsClientConfig used for test purposes only
 		// must be removed as soon as tls configuration
@@ -69,7 +69,8 @@ func newRequestContextFactory(signer heimdall.JWTSigner, timeouts config.Timeout
 			KeepAlive: 30 * time.Second, //nolint:gomnd
 		}).DialContext,
 		MaxIdleConns:          100, //nolint:gomnd
-		IdleConnTimeout:       timeouts.Idle,
+		MaxIdleConnsPerHost:   50,  //nolint:gomnd
+		IdleConnTimeout:       cfg.Timeout.Idle,
 		TLSHandshakeTimeout:   10 * time.Second, //nolint:gomnd
 		ExpectContinueTimeout: 1 * time.Second,
 		ForceAttemptHTTP2:     true,
@@ -86,8 +87,8 @@ func newRequestContextFactory(signer heimdall.JWTSigner, timeouts config.Timeout
 			rw:              rw,
 			req:             req,
 			transport:       transport,
-			writeTimeout:    timeouts.Write,
-			readTimeout:     timeouts.Read,
+			writeTimeout:    cfg.Timeout.Write,
+			readTimeout:     cfg.Timeout.Read,
 		}
 	})
 }

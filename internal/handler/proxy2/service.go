@@ -159,7 +159,7 @@ func newService(args serviceArgs) *http.Server {
 		),
 		cachemiddleware.New(args.Cache),
 		dr.handler,
-	).Then(newHandler(newRequestContextFactory(args.Signer, cfg.Timeout), args.Executor, eh))
+	).Then(newHandler(newRequestContextFactory(args.Signer, cfg), args.Executor, eh))
 
 	return &http.Server{
 		Handler:        hc,

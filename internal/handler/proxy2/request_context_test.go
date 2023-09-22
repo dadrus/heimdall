@@ -381,7 +381,7 @@ func TestRequestContextFinalize(t *testing.T) {
 				Write: 100 * time.Millisecond,
 				Idle:  1 * time.Second,
 			}
-			ctx := newRequestContextFactory(nil, timeouts).Create(rw, req)
+			ctx := newRequestContextFactory(nil, config.ServiceConfig{Timeout: timeouts}).Create(rw, req)
 
 			backend := tc.setup(t, ctx, targetURL)
 
@@ -410,7 +410,7 @@ func TestRequestContextHeaders(t *testing.T) {
 		Write: 100 * time.Millisecond,
 		Idle:  1 * time.Second,
 	}
-	ctx := newRequestContextFactory(nil, timeouts).Create(nil, req)
+	ctx := newRequestContextFactory(nil, config.ServiceConfig{Timeout: timeouts}).Create(nil, req)
 
 	// WHEN
 	headers := ctx.Request().Headers()
@@ -435,7 +435,7 @@ func TestRequestContextHeader(t *testing.T) {
 		Write: 100 * time.Millisecond,
 		Idle:  1 * time.Second,
 	}
-	ctx := newRequestContextFactory(nil, timeouts).Create(nil, req)
+	ctx := newRequestContextFactory(nil, config.ServiceConfig{Timeout: timeouts}).Create(nil, req)
 
 	// WHEN
 	xFooBarValue := ctx.Request().Header("X-Foo-Bar")
@@ -461,7 +461,7 @@ func TestRequestContextCookie(t *testing.T) {
 		Idle:  1 * time.Second,
 	}
 
-	ctx := newRequestContextFactory(nil, timeouts).Create(nil, req)
+	ctx := newRequestContextFactory(nil, config.ServiceConfig{Timeout: timeouts}).Create(nil, req)
 
 	// WHEN
 	value1 := ctx.Request().Cookie("bar")
@@ -488,7 +488,7 @@ func TestRequestContextBody(t *testing.T) {
 		Idle:  1 * time.Second,
 	}
 
-	ctx := newRequestContextFactory(nil, timeouts).Create(rw, req)
+	ctx := newRequestContextFactory(nil, config.ServiceConfig{Timeout: timeouts}).Create(rw, req)
 	ctx.AddHeaderForUpstream("X-Foo", "bar")
 
 	srv := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, req *http.Request) {
