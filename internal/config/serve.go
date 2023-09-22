@@ -35,6 +35,12 @@ type Timeout struct {
 	Idle  time.Duration `koanf:"idle,string"`
 }
 
+type ConnectionsLimit struct {
+	MaxPerHost     int `koanf:"max_per_host"`
+	MaxIdle        int `koanf:"max_idle"`
+	MaxIdlePerHost int `koanf:"max_idle_per_host"`
+}
+
 type CORS struct {
 	AllowedOrigins   []string      `koanf:"allowed_origins"`
 	AllowedMethods   []string      `koanf:"allowed_methods"`
@@ -79,14 +85,15 @@ type TLS struct {
 }
 
 type ServiceConfig struct {
-	Host           string        `koanf:"host"`
-	Port           int           `koanf:"port"`
-	Timeout        Timeout       `koanf:"timeout"`
-	BufferLimit    BufferLimit   `koanf:"buffer_limit"`
-	CORS           *CORS         `koanf:"cors,omitempty"`
-	TLS            *TLS          `koanf:"tls,omitempty"`
-	TrustedProxies *[]string     `koanf:"trusted_proxies,omitempty"`
-	Respond        RespondConfig `koanf:"respond"`
+	Host             string           `koanf:"host"`
+	Port             int              `koanf:"port"`
+	Timeout          Timeout          `koanf:"timeout"`
+	BufferLimit      BufferLimit      `koanf:"buffer_limit"`
+	ConnectionsLimit ConnectionsLimit `koanf:"connections_limit"`
+	CORS             *CORS            `koanf:"cors,omitempty"`
+	TLS              *TLS             `koanf:"tls,omitempty"`
+	TrustedProxies   *[]string        `koanf:"trusted_proxies,omitempty"`
+	Respond          RespondConfig    `koanf:"respond"`
 }
 
 func (c ServiceConfig) Address() string { return fmt.Sprintf("%s:%d", c.Host, c.Port) }
