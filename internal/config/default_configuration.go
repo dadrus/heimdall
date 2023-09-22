@@ -28,6 +28,9 @@ const (
 	defaultWriteTimeout = time.Second * 10
 	defaultIdleTimeout  = time.Second * 120
 
+	defaultMaxIdleConnections        = 100
+	defaultMaxIdleConnectionsPerHost = 50
+
 	defaultProxyServicePort      = 4455
 	defaultDecisionServicePort   = 4456
 	defaultManagementServicePort = 4457
@@ -52,6 +55,10 @@ func defaultConfig() Configuration {
 				BufferLimit: BufferLimit{
 					Read:  defaultBufferSize,
 					Write: defaultBufferSize,
+				},
+				ConnectionsLimit: ConnectionsLimit{
+					MaxIdle:        defaultMaxIdleConnections,
+					MaxIdlePerHost: defaultMaxIdleConnectionsPerHost,
 				},
 			},
 			Decision: ServiceConfig{
