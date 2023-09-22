@@ -68,8 +68,8 @@ func newRequestContextFactory(signer heimdall.JWTSigner, cfg config.ServiceConfi
 			Timeout:   30 * time.Second, //nolint:gomnd
 			KeepAlive: 30 * time.Second, //nolint:gomnd
 		}).DialContext,
-		MaxIdleConns:          100, //nolint:gomnd
-		MaxIdleConnsPerHost:   50,  //nolint:gomnd
+		MaxIdleConns:          cfg.ConnectionsLimit.MaxIdle,
+		MaxIdleConnsPerHost:   cfg.ConnectionsLimit.MaxIdlePerHost,
 		IdleConnTimeout:       cfg.Timeout.Idle,
 		TLSHandshakeTimeout:   10 * time.Second, //nolint:gomnd
 		ExpectContinueTimeout: 1 * time.Second,
