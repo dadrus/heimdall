@@ -25,7 +25,7 @@ import (
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
-func TestCreateProxy2App(t *testing.T) {
+func TestCreateProxyApp(t *testing.T) {
 	// this test verifies that all dependencies are resolved
 	// and nothing has been forgotten
 	port1, err := testsupport.GetFreePort()
@@ -37,6 +37,6 @@ func TestCreateProxy2App(t *testing.T) {
 	t.Setenv("SERVE_PROXY_PORT", strconv.Itoa(port1))
 	t.Setenv("SERVE_MANAGEMENT_PORT", strconv.Itoa(port2))
 
-	_, err = createProxy2App(NewProxy2Command())
+	_, err = createProxyApp(NewProxyCommand())
 	require.NoError(t, err)
 }

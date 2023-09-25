@@ -27,14 +27,14 @@ import (
 	"github.com/dadrus/heimdall/internal/handler/proxy"
 )
 
-// NewProxy2Command represents the proxy command.
-func NewProxy2Command() *cobra.Command {
+// NewProxyCommand represents the proxy command.
+func NewProxyCommand() *cobra.Command {
 	return &cobra.Command{
-		Use:     "proxy2",
+		Use:     "proxy",
 		Short:   "Starts heimdall in Reverse Proxy operation mode",
-		Example: "heimdall serve proxy2",
+		Example: "heimdall serve proxy",
 		Run: func(cmd *cobra.Command, _ []string) {
-			app, err := createProxy2App(cmd)
+			app, err := createProxyApp(cmd)
 			if err != nil {
 				cmd.PrintErrf("Failed to initialize proxy service: %v", err)
 
@@ -46,7 +46,7 @@ func NewProxy2Command() *cobra.Command {
 	}
 }
 
-func createProxy2App(cmd *cobra.Command) (*fx.App, error) {
+func createProxyApp(cmd *cobra.Command) (*fx.App, error) {
 	configPath, _ := cmd.Flags().GetString("config")
 	envPrefix, _ := cmd.Flags().GetString("env-config-prefix")
 
