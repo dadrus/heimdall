@@ -14,31 +14,16 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package proxy2
+package proxy
 
 import (
-	stdlog "log"
-
-	"github.com/rs/zerolog"
-
-	"github.com/dadrus/heimdall/internal/x/stringx"
+	"net/http"
 )
 
-type adapter struct {
-	log zerolog.Logger
-}
-
-func newStdLogger(logger zerolog.Logger) *stdlog.Logger {
-	return stdlog.New(adapter{logger}, "", 0)
-}
-
-func (a adapter) Write(data []byte) (int, error) {
-	length := len(data)
-	if length > 0 && data[length-1] == '\n' {
-		data = data[0 : length-1]
+func extractMethod(req *http.Request) string {
+	if val := req.Header.Get("X-Forwarded-Method"); len(val) != 0 {
+		return val
 	}
 
-	a.log.Error().Msg(stringx.ToString(data))
-
-	return length, nil
+	return req.Method
 }

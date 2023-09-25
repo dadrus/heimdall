@@ -14,7 +14,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package proxy2
+package proxy
 
 import (
 	"context"
@@ -34,14 +34,14 @@ import (
 
 	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/dadrus/heimdall/internal/config"
-	"github.com/dadrus/heimdall/internal/handler/proxy2/middlewares/accesslog"
-	cachemiddleware "github.com/dadrus/heimdall/internal/handler/proxy2/middlewares/cache"
-	"github.com/dadrus/heimdall/internal/handler/proxy2/middlewares/dump"
-	"github.com/dadrus/heimdall/internal/handler/proxy2/middlewares/errorhandler"
-	"github.com/dadrus/heimdall/internal/handler/proxy2/middlewares/logger"
-	prometheusmiddleware "github.com/dadrus/heimdall/internal/handler/proxy2/middlewares/prometheus"
-	"github.com/dadrus/heimdall/internal/handler/proxy2/middlewares/recovery"
-	"github.com/dadrus/heimdall/internal/handler/proxy2/middlewares/trustedproxy"
+	"github.com/dadrus/heimdall/internal/handler/proxy/middlewares/accesslog"
+	cachemiddleware "github.com/dadrus/heimdall/internal/handler/proxy/middlewares/cache"
+	"github.com/dadrus/heimdall/internal/handler/proxy/middlewares/dump"
+	"github.com/dadrus/heimdall/internal/handler/proxy/middlewares/errorhandler"
+	"github.com/dadrus/heimdall/internal/handler/proxy/middlewares/logger"
+	prometheusmiddleware "github.com/dadrus/heimdall/internal/handler/proxy/middlewares/prometheus"
+	"github.com/dadrus/heimdall/internal/handler/proxy/middlewares/recovery"
+	"github.com/dadrus/heimdall/internal/handler/proxy/middlewares/trustedproxy"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/x"

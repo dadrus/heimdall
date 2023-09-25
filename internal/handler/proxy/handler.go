@@ -14,12 +14,12 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package proxy2
+package proxy
 
 import (
 	"net/http"
 
-	"github.com/dadrus/heimdall/internal/handler/proxy2/middlewares/errorhandler"
+	"github.com/dadrus/heimdall/internal/handler/proxy/middlewares/errorhandler"
 	"github.com/dadrus/heimdall/internal/handler/request"
 	"github.com/dadrus/heimdall/internal/rules/rule"
 )

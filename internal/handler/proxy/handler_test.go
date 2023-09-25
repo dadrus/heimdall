@@ -14,7 +14,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package proxy2
+package proxy
 
 import (
 	"errors"
@@ -24,7 +24,7 @@ import (
 
 	"github.com/stretchr/testify/mock"
 
-	mocks2 "github.com/dadrus/heimdall/internal/handler/proxy2/middlewares/errorhandler/mocks"
+	mocks2 "github.com/dadrus/heimdall/internal/handler/proxy/middlewares/errorhandler/mocks"
 	mocks3 "github.com/dadrus/heimdall/internal/handler/request/mocks"
 	"github.com/dadrus/heimdall/internal/rules/rule/mocks"
 )

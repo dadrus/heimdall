@@ -24,7 +24,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal"
 	"github.com/dadrus/heimdall/internal/config"
-	"github.com/dadrus/heimdall/internal/handler/proxy2"
+	"github.com/dadrus/heimdall/internal/handler/proxy"
 )
 
 // NewProxy2Command represents the proxy command.
@@ -57,7 +57,7 @@ func createProxy2App(cmd *cobra.Command) (*fx.App, error) {
 			config.EnvVarPrefix(envPrefix),
 			config.ProxyMode),
 		internal.Module,
-		proxy2.Module,
+		proxy.Module,
 	)
 
 	return app, app.Err()

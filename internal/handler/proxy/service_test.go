@@ -14,7 +14,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package proxy2
+package proxy
 
 import (
 	"context"

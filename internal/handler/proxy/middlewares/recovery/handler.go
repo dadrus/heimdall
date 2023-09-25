@@ -23,7 +23,7 @@ import (
 
 	"github.com/rs/zerolog"
 
-	"github.com/dadrus/heimdall/internal/handler/proxy2/middlewares/errorhandler"
+	"github.com/dadrus/heimdall/internal/handler/proxy/middlewares/errorhandler"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/stringx"
