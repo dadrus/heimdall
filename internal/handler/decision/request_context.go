@@ -1,4 +1,4 @@
-package decision2
+package decision
 
 import (
 	"net/http"
