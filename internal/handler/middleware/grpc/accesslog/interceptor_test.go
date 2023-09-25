@@ -45,7 +45,7 @@ import (
 	"google.golang.org/grpc/test/bufconn"
 
 	"github.com/dadrus/heimdall/internal/accesscontext"
-	"github.com/dadrus/heimdall/internal/handler/envoyextauth/grpcv3/middleware/mocks"
+	mocks2 "github.com/dadrus/heimdall/internal/handler/middleware/grpc/mocks"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
@@ -60,7 +60,7 @@ func TestAccessLogInterceptorForKnownService(t *testing.T) {
 	for _, tc := range []struct {
 		uc              string
 		outgoingContext func(t *testing.T) context.Context
-		configureMock   func(t *testing.T, m *mocks.MockHandler)
+		configureMock   func(t *testing.T, m *mocks2.MockHandler)
 		assert          func(t *testing.T, logEvent1, logEvent2 map[string]any)
 	}{
 		{
@@ -70,7 +70,7 @@ func TestAccessLogInterceptorForKnownService(t *testing.T) {
 
 				return context.Background()
 			},
-			configureMock: func(t *testing.T, m *mocks.MockHandler) {
+			configureMock: func(t *testing.T, m *mocks2.MockHandler) {
 				t.Helper()
 
 				m.On("Check",
@@ -133,7 +133,7 @@ func TestAccessLogInterceptorForKnownService(t *testing.T) {
 
 				return metadata.NewOutgoingContext(context.Background(), metadata.New(md))
 			},
-			configureMock: func(t *testing.T, m *mocks.MockHandler) {
+			configureMock: func(t *testing.T, m *mocks2.MockHandler) {
 				t.Helper()
 
 				m.On("Check", mock.Anything, mock.Anything).
@@ -178,7 +178,7 @@ func TestAccessLogInterceptorForKnownService(t *testing.T) {
 
 				return context.Background()
 			},
-			configureMock: func(t *testing.T, m *mocks.MockHandler) {
+			configureMock: func(t *testing.T, m *mocks2.MockHandler) {
 				t.Helper()
 
 				m.On("Check",
@@ -237,7 +237,7 @@ func TestAccessLogInterceptorForKnownService(t *testing.T) {
 			lis := bufconn.Listen(1024 * 1024)
 			tb := &testsupport.TestingLog{TB: t}
 			logger := zerolog.New(zerolog.TestWriter{T: tb})
-			handler := &mocks.MockHandler{}
+			handler := &mocks2.MockHandler{}
 			conn, err := grpc.DialContext(context.Background(), "bufnet",
 				grpc.WithContextDialer(func(context.Context, string) (net.Conn, error) { return lis.Dial() }),
 				grpc.WithTransportCredentials(insecure.NewCredentials()))
@@ -302,7 +302,7 @@ func TestAccessLogInterceptorForUnknownService(t *testing.T) {
 	lis := bufconn.Listen(1024 * 1024)
 	tb := &testsupport.TestingLog{TB: t}
 	logger := zerolog.New(zerolog.TestWriter{T: tb})
-	handler := &mocks.MockHandler{}
+	handler := &mocks2.MockHandler{}
 	bufDialer := func(context.Context, string) (net.Conn, error) {
 		return lis.Dial()
 	}
@@ -329,10 +329,10 @@ func TestAccessLogInterceptorForUnknownService(t *testing.T) {
 		require.NoError(t, err)
 	}()
 
-	client := mocks.NewTestClient(conn)
+	client := mocks2.NewTestClient(conn)
 
 	// WHEN
-	_, err = client.Test(context.Background(), &mocks.TestRequest{})
+	_, err = client.Test(context.Background(), &mocks2.TestRequest{})
 
 	// THEN
 	require.Error(t, err)

@@ -33,7 +33,7 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/test/bufconn"
 
-	"github.com/dadrus/heimdall/internal/handler/envoyextauth/grpcv3/middleware/mocks"
+	"github.com/dadrus/heimdall/internal/handler/middleware/grpc/mocks"
 	"github.com/dadrus/heimdall/internal/heimdall"
 )
 

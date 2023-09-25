@@ -36,7 +36,7 @@ import (
 	"google.golang.org/grpc/status"
 	"google.golang.org/grpc/test/bufconn"
 
-	"github.com/dadrus/heimdall/internal/handler/envoyextauth/grpcv3/middleware/mocks"
+	mocks2 "github.com/dadrus/heimdall/internal/handler/middleware/grpc/mocks"
 )
 
 func metricForType(metrics []*dto.MetricFamily, metricType *dto.MetricType) *dto.MetricFamily {
@@ -62,12 +62,12 @@ func getLabel(labels []*dto.LabelPair, name string) string {
 func TestHandlerObserveKnownRequests(t *testing.T) {
 	for _, tc := range []struct {
 		uc            string
-		configureMock func(t *testing.T, srv *mocks.MockHandler)
+		configureMock func(t *testing.T, srv *mocks2.MockHandler)
 		assert        func(t *testing.T, metrics []*dto.MetricFamily)
 	}{
 		{
 			uc: "metrics for successful request",
-			configureMock: func(t *testing.T, handler *mocks.MockHandler) {
+			configureMock: func(t *testing.T, handler *mocks2.MockHandler) {
 				t.Helper()
 
 				handler.On("Check", mock.Anything, mock.Anything).Return(&envoy_auth.CheckResponse{
@@ -129,7 +129,7 @@ func TestHandlerObserveKnownRequests(t *testing.T) {
 		},
 		{
 			uc: "metrics for request which failed with 403",
-			configureMock: func(t *testing.T, handler *mocks.MockHandler) {
+			configureMock: func(t *testing.T, handler *mocks2.MockHandler) {
 				t.Helper()
 
 				handler.On("Check", mock.Anything, mock.Anything).Return(&envoy_auth.CheckResponse{
@@ -191,7 +191,7 @@ func TestHandlerObserveKnownRequests(t *testing.T) {
 		},
 		{
 			uc: "metrics for request with server raising an error",
-			configureMock: func(t *testing.T, handler *mocks.MockHandler) {
+			configureMock: func(t *testing.T, handler *mocks2.MockHandler) {
 				t.Helper()
 
 				handler.On("Check", mock.Anything, mock.Anything).
@@ -249,7 +249,7 @@ func TestHandlerObserveKnownRequests(t *testing.T) {
 			// GIVEN
 			registry := prometheus.NewRegistry()
 			lis := bufconn.Listen(1024 * 1024)
-			handler := &mocks.MockHandler{}
+			handler := &mocks2.MockHandler{}
 			conn, err := grpc.DialContext(context.Background(), "bufnet",
 				grpc.WithContextDialer(func(context.Context, string) (net.Conn, error) { return lis.Dial() }),
 				grpc.WithTransportCredentials(insecure.NewCredentials()))
@@ -305,7 +305,7 @@ func TestHandlerObserveUnknownRequests(t *testing.T) {
 	// GIVEN
 	registry := prometheus.NewRegistry()
 	lis := bufconn.Listen(1024 * 1024)
-	handler := &mocks.MockHandler{}
+	handler := &mocks2.MockHandler{}
 	conn, err := grpc.DialContext(context.Background(), "bufnet",
 		grpc.WithContextDialer(func(context.Context, string) (net.Conn, error) { return lis.Dial() }),
 		grpc.WithTransportCredentials(insecure.NewCredentials()))
@@ -333,11 +333,11 @@ func TestHandlerObserveUnknownRequests(t *testing.T) {
 		require.NoError(t, err)
 	}()
 
-	client := mocks.NewTestClient(conn)
+	client := mocks2.NewTestClient(conn)
 
 	// WHEN
 	// we're not interested in the response and the error
-	_, err = client.Test(context.Background(), &mocks.TestRequest{})
+	_, err = client.Test(context.Background(), &mocks2.TestRequest{})
 
 	// THEN
 	assert.Error(t, err)

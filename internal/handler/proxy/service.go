@@ -34,14 +34,14 @@ import (
 
 	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/dadrus/heimdall/internal/config"
-	"github.com/dadrus/heimdall/internal/handler/middleware/accesslog"
-	cachemiddleware "github.com/dadrus/heimdall/internal/handler/middleware/cache"
-	"github.com/dadrus/heimdall/internal/handler/middleware/dump"
-	errorhandler2 "github.com/dadrus/heimdall/internal/handler/middleware/errorhandler"
-	"github.com/dadrus/heimdall/internal/handler/middleware/logger"
-	prometheus2 "github.com/dadrus/heimdall/internal/handler/middleware/prometheus"
-	"github.com/dadrus/heimdall/internal/handler/middleware/recovery"
-	"github.com/dadrus/heimdall/internal/handler/middleware/trustedproxy"
+	"github.com/dadrus/heimdall/internal/handler/middleware/http/accesslog"
+	cachemiddleware "github.com/dadrus/heimdall/internal/handler/middleware/http/cache"
+	"github.com/dadrus/heimdall/internal/handler/middleware/http/dump"
+	"github.com/dadrus/heimdall/internal/handler/middleware/http/errorhandler"
+	"github.com/dadrus/heimdall/internal/handler/middleware/http/logger"
+	prometheus3 "github.com/dadrus/heimdall/internal/handler/middleware/http/prometheus"
+	"github.com/dadrus/heimdall/internal/handler/middleware/http/recovery"
+	"github.com/dadrus/heimdall/internal/handler/middleware/http/trustedproxy"
 	"github.com/dadrus/heimdall/internal/handler/service"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/rule"
@@ -100,15 +100,15 @@ func passThrough(next http.Handler) http.Handler {
 func newService(args serviceArgs) *http.Server {
 	der := &deadlineResetter{}
 	cfg := args.Config.Serve.Proxy
-	eh := errorhandler2.New(
-		errorhandler2.WithVerboseErrors(cfg.Respond.Verbose),
-		errorhandler2.WithPreconditionErrorCode(cfg.Respond.With.ArgumentError.Code),
-		errorhandler2.WithAuthenticationErrorCode(cfg.Respond.With.AuthenticationError.Code),
-		errorhandler2.WithAuthorizationErrorCode(cfg.Respond.With.AuthorizationError.Code),
-		errorhandler2.WithCommunicationErrorCode(cfg.Respond.With.CommunicationError.Code),
-		errorhandler2.WithMethodErrorCode(cfg.Respond.With.BadMethodError.Code),
-		errorhandler2.WithNoRuleErrorCode(cfg.Respond.With.NoRuleError.Code),
-		errorhandler2.WithInternalServerErrorCode(cfg.Respond.With.InternalError.Code),
+	eh := errorhandler.New(
+		errorhandler.WithVerboseErrors(cfg.Respond.Verbose),
+		errorhandler.WithPreconditionErrorCode(cfg.Respond.With.ArgumentError.Code),
+		errorhandler.WithAuthenticationErrorCode(cfg.Respond.With.AuthenticationError.Code),
+		errorhandler.WithAuthorizationErrorCode(cfg.Respond.With.AuthorizationError.Code),
+		errorhandler.WithCommunicationErrorCode(cfg.Respond.With.CommunicationError.Code),
+		errorhandler.WithMethodErrorCode(cfg.Respond.With.BadMethodError.Code),
+		errorhandler.WithNoRuleErrorCode(cfg.Respond.With.NoRuleError.Code),
+		errorhandler.WithInternalServerErrorCode(cfg.Respond.With.InternalError.Code),
 	)
 
 	hc := alice.New(
@@ -138,9 +138,9 @@ func newService(args serviceArgs) *http.Server {
 		},
 		x.IfThenElseExec(args.Config.Metrics.Enabled,
 			func() func(http.Handler) http.Handler {
-				return prometheus2.New(
-					prometheus2.WithServiceName("proxy"),
-					prometheus2.WithRegisterer(args.Registerer),
+				return prometheus3.New(
+					prometheus3.WithServiceName("proxy"),
+					prometheus3.WithRegisterer(args.Registerer),
 				)
 			},
 			func() func(http.Handler) http.Handler { return passThrough },

@@ -19,7 +19,7 @@ package service
 import (
 	"net/http"
 
-	"github.com/dadrus/heimdall/internal/handler/middleware/errorhandler"
+	"github.com/dadrus/heimdall/internal/handler/middleware/http/errorhandler"
 	"github.com/dadrus/heimdall/internal/handler/requestcontext"
 	"github.com/dadrus/heimdall/internal/rules/rule"
 )
