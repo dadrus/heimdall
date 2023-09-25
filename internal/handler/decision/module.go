@@ -56,10 +56,7 @@ func registerHooks(args hooksArgs) {
 		return
 	}
 
-	srv := newService(
-		args.Config, args.Registerer, args.Cache,
-		args.Logger, args.Executor, args.Signer,
-	)
+	srv := newService(args.Config, args.Registerer, args.Cache, args.Logger, args.Executor, args.Signer)
 
 	args.Lifecycle.Append(
 		fx.Hook{

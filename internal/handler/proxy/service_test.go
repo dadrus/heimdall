@@ -932,13 +932,7 @@ func TestProxyService(t *testing.T) {
 
 			client := createClient(t)
 
-			proxy := newService(serviceArgs{
-				Config:     conf,
-				Registerer: registry,
-				Cache:      cch,
-				Logger:     log.Logger,
-				Executor:   exec,
-			})
+			proxy := newService(conf, registry, cch, log.Logger, exec, nil)
 
 			defer proxy.Shutdown(context.Background())
 
@@ -1040,13 +1034,7 @@ func TestWebSocketSupport(t *testing.T) {
 		},
 	}
 
-	proxy := newService(serviceArgs{
-		Config:     conf,
-		Registerer: prometheus.NewRegistry(),
-		Logger:     log.Logger,
-		Cache:      mocks.NewCacheMock(t),
-		Executor:   exec,
-	})
+	proxy := newService(conf, prometheus.NewRegistry(), mocks.NewCacheMock(t), log.Logger, exec, nil)
 
 	defer proxy.Shutdown(context.Background())
 
@@ -1146,13 +1134,7 @@ func TestServerSentEventsSupport(t *testing.T) {
 		},
 	}
 
-	proxy := newService(serviceArgs{
-		Config:     conf,
-		Registerer: prometheus.NewRegistry(),
-		Logger:     log.Logger,
-		Cache:      mocks.NewCacheMock(t),
-		Executor:   exec,
-	})
+	proxy := newService(conf, prometheus.NewRegistry(), mocks.NewCacheMock(t), log.Logger, exec, nil)
 
 	defer proxy.Shutdown(context.Background())
 
