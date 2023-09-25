@@ -14,7 +14,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package proxy
+package loggeradapter
 
 import (
 	stdlog "log"
@@ -24,15 +24,15 @@ import (
 	"github.com/dadrus/heimdall/internal/x/stringx"
 )
 
-type adapter struct {
+type zerologadapter struct {
 	log zerolog.Logger
 }
 
-func newStdLogger(logger zerolog.Logger) *stdlog.Logger {
-	return stdlog.New(adapter{logger}, "", 0)
+func NewStdLogger(logger zerolog.Logger) *stdlog.Logger {
+	return stdlog.New(zerologadapter{logger}, "", 0)
 }
 
-func (a adapter) Write(data []byte) (int, error) {
+func (a zerologadapter) Write(data []byte) (int, error) {
 	length := len(data)
 	if length > 0 && data[length-1] == '\n' {
 		data = data[0 : length-1]

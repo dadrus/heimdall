@@ -45,6 +45,7 @@ import (
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/x"
+	"github.com/dadrus/heimdall/internal/x/loggeradapter"
 )
 
 type deadlineResetter struct{}
@@ -168,7 +169,7 @@ func newService(args serviceArgs) *http.Server {
 		WriteTimeout:   cfg.Timeout.Write,
 		IdleTimeout:    cfg.Timeout.Idle,
 		MaxHeaderBytes: int(cfg.BufferLimit.Read),
-		ErrorLog:       newStdLogger(args.Logger),
+		ErrorLog:       loggeradapter.NewStdLogger(args.Logger),
 		ConnContext:    dr.contexter,
 	}
 }
