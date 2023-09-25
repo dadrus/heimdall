@@ -20,17 +20,17 @@ import (
 	"net/http"
 
 	"github.com/dadrus/heimdall/internal/handler/middleware/errorhandler"
-	"github.com/dadrus/heimdall/internal/handler/request"
+	"github.com/dadrus/heimdall/internal/handler/requestcontext"
 	"github.com/dadrus/heimdall/internal/rules/rule"
 )
 
 type handler struct {
 	e  rule.Executor
-	f  request.ContextFactory
+	f  requestcontext.ContextFactory
 	eh errorhandler.ErrorHandler
 }
 
-func NewHandler(rcf request.ContextFactory, re rule.Executor, eh errorhandler.ErrorHandler) http.Handler {
+func NewHandler(rcf requestcontext.ContextFactory, re rule.Executor, eh errorhandler.ErrorHandler) http.Handler {
 	return &handler{f: rcf, eh: eh, e: re}
 }
 

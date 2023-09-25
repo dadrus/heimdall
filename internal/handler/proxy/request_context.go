@@ -13,7 +13,7 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 
 	"github.com/dadrus/heimdall/internal/config"
-	"github.com/dadrus/heimdall/internal/handler/request"
+	"github.com/dadrus/heimdall/internal/handler/requestcontext"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/x"
@@ -22,14 +22,14 @@ import (
 )
 
 type requestContext struct {
-	*request.RequestContext
+	*requestcontext.RequestContext
 
 	rw        http.ResponseWriter
 	req       *http.Request
 	transport *http.Transport
 }
 
-func newContextFactory(signer heimdall.JWTSigner, cfg config.ServiceConfig, tlsCfg *tls.Config) request.ContextFactory {
+func newContextFactory(signer heimdall.JWTSigner, cfg config.ServiceConfig, tlsCfg *tls.Config) requestcontext.ContextFactory {
 	transport := &http.Transport{
 		// tlsClientConfig used for test purposes only
 		// must be removed as soon as tls configuration
@@ -50,9 +50,9 @@ func newContextFactory(signer heimdall.JWTSigner, cfg config.ServiceConfig, tlsC
 		TLSClientConfig:       tlsCfg,
 	}
 
-	return request.FactoryFunc(func(rw http.ResponseWriter, req *http.Request) request.Context {
+	return requestcontext.FactoryFunc(func(rw http.ResponseWriter, req *http.Request) requestcontext.Context {
 		return &requestContext{
-			RequestContext: request.NewRequestContext(signer, req),
+			RequestContext: requestcontext.New(signer, req),
 			transport:      transport,
 			rw:             rw,
 			req:            req,

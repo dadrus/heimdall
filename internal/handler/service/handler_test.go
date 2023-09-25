@@ -25,7 +25,7 @@ import (
 	"github.com/stretchr/testify/mock"
 
 	mocks2 "github.com/dadrus/heimdall/internal/handler/middleware/errorhandler/mocks"
-	mocks3 "github.com/dadrus/heimdall/internal/handler/request/mocks"
+	mocks3 "github.com/dadrus/heimdall/internal/handler/requestcontext/mocks"
 	"github.com/dadrus/heimdall/internal/rules/rule/mocks"
 )
 

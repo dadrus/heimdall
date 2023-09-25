@@ -14,16 +14,17 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package request
+package requestcontext
 
 import (
-	"net/http"
+	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/rules/rule"
 )
 
-func extractMethod(req *http.Request) string {
-	if val := req.Header.Get("X-Forwarded-Method"); len(val) != 0 {
-		return val
-	}
+//go:generate mockery --name Context --structname ContextMock
 
-	return req.Method
+type Context interface {
+	heimdall.Context
+
+	Finalize(rule.Backend) error
 }

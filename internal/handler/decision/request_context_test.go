@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/dadrus/heimdall/internal/handler/request"
+	"github.com/dadrus/heimdall/internal/handler/requestcontext"
 )
 
 func TestRequestContextFinalize(t *testing.T) {
@@ -19,12 +19,12 @@ func TestRequestContextFinalize(t *testing.T) {
 	for _, tc := range []struct {
 		uc     string
 		code   int
-		setup  func(t *testing.T, rc request.Context)
+		setup  func(t *testing.T, rc requestcontext.Context)
 		assert func(t *testing.T, err error, rec *httptest.ResponseRecorder)
 	}{
 		{
 			uc: "finalize returns error",
-			setup: func(t *testing.T, rc request.Context) {
+			setup: func(t *testing.T, rc requestcontext.Context) {
 				t.Helper()
 
 				rc.SetPipelineError(errors.New("test error"))
@@ -38,7 +38,7 @@ func TestRequestContextFinalize(t *testing.T) {
 		{
 			uc:   "only response code is set",
 			code: http.StatusNoContent,
-			setup: func(t *testing.T, rc request.Context) {
+			setup: func(t *testing.T, rc requestcontext.Context) {
 				t.Helper()
 			},
 			assert: func(t *testing.T, err error, rec *httptest.ResponseRecorder) {
@@ -53,7 +53,7 @@ func TestRequestContextFinalize(t *testing.T) {
 		{
 			uc:   "only response code and headers are set",
 			code: http.StatusMultiStatus,
-			setup: func(t *testing.T, rc request.Context) {
+			setup: func(t *testing.T, rc requestcontext.Context) {
 				t.Helper()
 
 				rc.AddHeaderForUpstream("X-Foo", "bar")
@@ -71,7 +71,7 @@ func TestRequestContextFinalize(t *testing.T) {
 		{
 			uc:   "only response code and cookies are set",
 			code: http.StatusAccepted,
-			setup: func(t *testing.T, rc request.Context) {
+			setup: func(t *testing.T, rc requestcontext.Context) {
 				t.Helper()
 
 				rc.AddCookieForUpstream("x-foo", "bar")
@@ -89,7 +89,7 @@ func TestRequestContextFinalize(t *testing.T) {
 		{
 			uc:   "everything is set",
 			code: http.StatusOK,
-			setup: func(t *testing.T, rc request.Context) {
+			setup: func(t *testing.T, rc requestcontext.Context) {
 				t.Helper()
 
 				rc.AddHeaderForUpstream("X-Foo", "bar")

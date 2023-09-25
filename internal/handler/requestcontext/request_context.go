@@ -14,7 +14,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package request
+package requestcontext
 
 import (
 	"bytes"
@@ -46,7 +46,7 @@ type RequestContext struct {
 	headers   map[string]string
 }
 
-func NewRequestContext(signer heimdall.JWTSigner, req *http.Request) *RequestContext {
+func New(signer heimdall.JWTSigner, req *http.Request) *RequestContext {
 	return &RequestContext{
 		jwtSigner:       signer,
 		reqMethod:       extractMethod(req),

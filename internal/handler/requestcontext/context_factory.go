@@ -14,17 +14,18 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package request
+package requestcontext
 
-import (
-	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/rules/rule"
-)
+import "net/http"
 
-//go:generate mockery --name Context --structname ContextMock
+//go:generate mockery --name ContextFactory --structname ContextFactoryMock
 
-type Context interface {
-	heimdall.Context
+type ContextFactory interface {
+	Create(rw http.ResponseWriter, req *http.Request) Context
+}
 
-	Finalize(rule.Backend) error
+type FactoryFunc func(rw http.ResponseWriter, req *http.Request) Context
+
+func (f FactoryFunc) Create(rw http.ResponseWriter, req *http.Request) Context {
+	return f(rw, req)
 }

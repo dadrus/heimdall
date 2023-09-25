@@ -5,7 +5,7 @@ package mocks
 import (
 	http "net/http"
 
-	request "github.com/dadrus/heimdall/internal/handler/request"
+	request "github.com/dadrus/heimdall/internal/handler/requestcontext"
 	mock "github.com/stretchr/testify/mock"
 )
 

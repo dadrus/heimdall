@@ -14,7 +14,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package request
+package requestcontext
 
 import (
 	"bytes"
@@ -122,7 +122,7 @@ func TestRequestContextHeaders(t *testing.T) {
 	req.Header.Set("X-Foo-Bar", "foo")
 	req.Header.Add("X-Foo-Bar", "bar")
 
-	ctx := NewRequestContext(nil, req)
+	ctx := New(nil, req)
 
 	// WHEN
 	headers := ctx.Request().Headers()
@@ -142,7 +142,7 @@ func TestRequestContextHeader(t *testing.T) {
 	req.Header.Add("X-Foo-Bar", "bar")
 	req.Host = "bar.foo"
 
-	ctx := NewRequestContext(nil, req)
+	ctx := New(nil, req)
 
 	// WHEN
 	xFooBarValue := ctx.Request().Header("X-Foo-Bar")
@@ -162,7 +162,7 @@ func TestRequestContextCookie(t *testing.T) {
 	req := httptest.NewRequest(http.MethodHead, "https://foo.bar/test", nil)
 	req.Header.Set("Cookie", "foo=bar; bar=baz")
 
-	ctx := NewRequestContext(nil, req)
+	ctx := New(nil, req)
 
 	// WHEN
 	value1 := ctx.Request().Cookie("bar")
@@ -179,7 +179,7 @@ func TestRequestContextBody(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "https://foo.bar/test", bytes.NewBufferString("Ping"))
 	req.Header.Set("X-Custom", "foo")
 
-	ctx := NewRequestContext(nil, req)
+	ctx := New(nil, req)
 	ctx.AddHeaderForUpstream("X-Foo", "bar")
 
 	// just consume body

@@ -29,7 +29,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/config"
-	"github.com/dadrus/heimdall/internal/handler/request"
+	"github.com/dadrus/heimdall/internal/handler/requestcontext"
 	"github.com/dadrus/heimdall/internal/rules/rule"
 	mocks2 "github.com/dadrus/heimdall/internal/rules/rule/mocks"
 )
@@ -41,12 +41,12 @@ func TestRequestContextFinalize(t *testing.T) {
 		uc             string
 		upstreamCalled bool
 		headers        http.Header
-		setup          func(*testing.T, request.Context, *url.URL) rule.Backend
+		setup          func(*testing.T, requestcontext.Context, *url.URL) rule.Backend
 		assertRequest  func(*testing.T, *http.Request)
 	}{
 		{
 			uc: "error was present, forwarding aborted",
-			setup: func(t *testing.T, ctx request.Context, upstreamURL *url.URL) rule.Backend {
+			setup: func(t *testing.T, ctx requestcontext.Context, upstreamURL *url.URL) rule.Backend {
 				t.Helper()
 
 				err := errors.New("test error")
@@ -58,7 +58,7 @@ func TestRequestContextFinalize(t *testing.T) {
 		{
 			uc:             "no headers set",
 			upstreamCalled: true,
-			setup: func(t *testing.T, _ request.Context, upstreamURL *url.URL) rule.Backend {
+			setup: func(t *testing.T, _ requestcontext.Context, upstreamURL *url.URL) rule.Backend {
 				t.Helper()
 
 				backend := mocks2.NewBackendMock(t)
@@ -90,7 +90,7 @@ func TestRequestContextFinalize(t *testing.T) {
 				"X-Forwarded-For":    []string{"127.0.0.2, 192.168.12.126"},
 				"Forwarded":          []string{"proto=http;for=127.0.0.3, proto=http;for=192.168.12.127"},
 			},
-			setup: func(t *testing.T, _ request.Context, upstreamURL *url.URL) rule.Backend {
+			setup: func(t *testing.T, _ requestcontext.Context, upstreamURL *url.URL) rule.Backend {
 				t.Helper()
 
 				backend := mocks2.NewBackendMock(t)
@@ -119,7 +119,7 @@ func TestRequestContextFinalize(t *testing.T) {
 				"X-Forwarded-Method": []string{http.MethodPost},
 				"Forwarded":          []string{"proto=http;for=127.0.0.3, proto=http;for=192.168.12.127"},
 			},
-			setup: func(t *testing.T, _ request.Context, upstreamURL *url.URL) rule.Backend {
+			setup: func(t *testing.T, _ requestcontext.Context, upstreamURL *url.URL) rule.Backend {
 				t.Helper()
 
 				backend := mocks2.NewBackendMock(t)
@@ -145,7 +145,7 @@ func TestRequestContextFinalize(t *testing.T) {
 			headers: http.Header{
 				"X-Foo-Bar": []string{"bar"},
 			},
-			setup: func(t *testing.T, ctx request.Context, upstreamURL *url.URL) rule.Backend {
+			setup: func(t *testing.T, ctx requestcontext.Context, upstreamURL *url.URL) rule.Backend {
 				t.Helper()
 
 				ctx.AddHeaderForUpstream("X-User-ID", "someid")
@@ -180,7 +180,7 @@ func TestRequestContextFinalize(t *testing.T) {
 		{
 			uc:             "Host header is set for upstream",
 			upstreamCalled: true,
-			setup: func(t *testing.T, ctx request.Context, upstreamURL *url.URL) rule.Backend {
+			setup: func(t *testing.T, ctx requestcontext.Context, upstreamURL *url.URL) rule.Backend {
 				t.Helper()
 
 				ctx.AddHeaderForUpstream("Host", "bar.foo")
@@ -208,7 +208,7 @@ func TestRequestContextFinalize(t *testing.T) {
 			headers: http.Header{
 				"X-Forwarded-Proto": []string{"http"},
 			},
-			setup: func(t *testing.T, ctx request.Context, upstreamURL *url.URL) rule.Backend {
+			setup: func(t *testing.T, ctx requestcontext.Context, upstreamURL *url.URL) rule.Backend {
 				t.Helper()
 
 				backend := mocks2.NewBackendMock(t)
@@ -236,7 +236,7 @@ func TestRequestContextFinalize(t *testing.T) {
 			headers: http.Header{
 				"X-Forwarded-Host": []string{"bar.foo"},
 			},
-			setup: func(t *testing.T, ctx request.Context, upstreamURL *url.URL) rule.Backend {
+			setup: func(t *testing.T, ctx requestcontext.Context, upstreamURL *url.URL) rule.Backend {
 				t.Helper()
 
 				backend := mocks2.NewBackendMock(t)
@@ -264,7 +264,7 @@ func TestRequestContextFinalize(t *testing.T) {
 			headers: http.Header{
 				"X-Forwarded-For": []string{"172.2.34.1"},
 			},
-			setup: func(t *testing.T, ctx request.Context, upstreamURL *url.URL) rule.Backend {
+			setup: func(t *testing.T, ctx requestcontext.Context, upstreamURL *url.URL) rule.Backend {
 				t.Helper()
 
 				backend := mocks2.NewBackendMock(t)

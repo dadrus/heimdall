@@ -14,18 +14,16 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package request
+package requestcontext
 
-import "net/http"
+import (
+	"net/http"
+)
 
-//go:generate mockery --name ContextFactory --structname ContextFactoryMock
+func extractMethod(req *http.Request) string {
+	if val := req.Header.Get("X-Forwarded-Method"); len(val) != 0 {
+		return val
+	}
 
-type ContextFactory interface {
-	Create(rw http.ResponseWriter, req *http.Request) Context
-}
-
-type FactoryFunc func(rw http.ResponseWriter, req *http.Request) Context
-
-func (f FactoryFunc) Create(rw http.ResponseWriter, req *http.Request) Context {
-	return f(rw, req)
+	return req.Method
 }
