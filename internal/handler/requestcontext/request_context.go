@@ -20,17 +20,13 @@ import (
 	"context"
 	"net/http"
 	"net/url"
-	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/rs/zerolog"
-	"github.com/valyala/fasthttp"
 
-	"github.com/dadrus/heimdall/internal/fasthttp/opentelemetry"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/x"
-	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
 type finalizer func(rule.Backend) error
@@ -42,7 +38,6 @@ type RequestContext struct {
 	upstreamHeaders http.Header
 	upstreamCookies map[string]string
 	jwtSigner       heimdall.JWTSigner
-	timeout         time.Duration
 	responseCode    int
 	err             error
 	finalize        finalizer
@@ -97,47 +92,6 @@ func (s *RequestContext) finalizeWithStatus(_ rule.Backend) error {
 	return nil
 }
 
-func (s *RequestContext) finalizeAndForward(upstream rule.Backend) error {
-	logger := zerolog.Ctx(s.c.UserContext())
-
-	if upstream == nil {
-		return errorchain.NewWithMessage(heimdall.ErrConfiguration, "No upstream reference defined")
-	}
-
-	targetURL := upstream.URL()
-	upstreamURL := targetURL.String()
-
-	logger.Info().
-		Str("_method", s.reqMethod).
-		Str("_upstream", upstreamURL).
-		Msg("Forwarding request")
-
-	for k := range s.upstreamHeaders {
-		s.c.Request().Header.Set(k, s.upstreamHeaders.Get(k))
-	}
-
-	for k, v := range s.upstreamCookies {
-		s.c.Request().Header.SetCookie(k, v)
-	}
-
-	// delete headers, which are useless for the upstream service, before forwarding the request
-	for _, name := range []string{
-		"X-Forwarded-Method", "X-Forwarded-Uri", "X-Forwarded-Path",
-	} {
-		s.c.Request().Header.Del(name)
-	}
-
-	s.c.Request().Header.SetMethod(s.reqMethod)
-	s.c.Request().SetRequestURI(upstreamURL)
-
-	if logger.GetLevel() == zerolog.TraceLevel {
-		logger.Trace().Msg("Request: \n" + s.c.Request().String())
-	}
-
-	return opentelemetry.NewClient(&fasthttp.Client{}).
-		DoTimeout(s.c.UserContext(), s.c.Request(), s.c.Response(), s.timeout)
-}
-
 type ContextFactory interface {
 	Create(c *fiber.Ctx) *RequestContext
 }
@@ -146,23 +100,6 @@ type factoryFunc func(c *fiber.Ctx) *RequestContext
 
 func (f factoryFunc) Create(c *fiber.Ctx) *RequestContext {
 	return f(c)
-}
-
-func NewProxyContextFactory(signer heimdall.JWTSigner, timeout time.Duration) ContextFactory {
-	return factoryFunc(func(ctx *fiber.Ctx) *RequestContext {
-		rc := &RequestContext{
-			jwtSigner:       signer,
-			reqMethod:       extractMethod(ctx),
-			reqURL:          extractURL(ctx),
-			upstreamHeaders: make(http.Header),
-			upstreamCookies: make(map[string]string),
-			c:               ctx,
-			timeout:         timeout,
-		}
-		rc.finalize = rc.finalizeAndForward
-
-		return rc
-	})
 }
 
 func NewDecisionContextFactory(signer heimdall.JWTSigner, responseCode int) ContextFactory {
