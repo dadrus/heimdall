@@ -29,7 +29,11 @@ type requestContext struct {
 	transport *http.Transport
 }
 
-func newContextFactory(signer heimdall.JWTSigner, cfg config.ServiceConfig, tlsCfg *tls.Config) requestcontext.ContextFactory {
+func newContextFactory(
+	signer heimdall.JWTSigner,
+	cfg config.ServiceConfig,
+	tlsCfg *tls.Config,
+) requestcontext.ContextFactory {
 	transport := &http.Transport{
 		// tlsClientConfig used for test purposes only
 		// must be removed as soon as tls configuration

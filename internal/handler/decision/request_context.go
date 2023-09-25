@@ -10,7 +10,10 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/rule"
 )
 
-func newContextFactory(signer heimdall.JWTSigner, responseCode int) requestcontext.ContextFactory {
+func newContextFactory(
+	signer heimdall.JWTSigner,
+	responseCode int,
+) requestcontext.ContextFactory {
 	return requestcontext.FactoryFunc(func(rw http.ResponseWriter, req *http.Request) requestcontext.Context {
 		return &requestContext{
 			RequestContext: requestcontext.New(signer, req),
