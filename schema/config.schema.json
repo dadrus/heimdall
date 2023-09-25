@@ -234,6 +234,28 @@
         }
       }
     },
+    "connectionsLimitConfig": {
+      "type": "object",
+      "description": "Overrides the default limits for connections",
+      "additionalProperties": false,
+      "properties": {
+        "max_per_host": {
+          "description": "Max allowed connections per host. 0 means no limits (default)",
+          "type": "integer",
+          "default": 0
+        },
+        "max_idle": {
+          "description": "Max allowed idle connections. Defaults to 100",
+          "type": "integer",
+          "default": 100
+        },
+        "max_idle_per_host": {
+          "description": "Max allowed idle connections per host. Defaults to 100",
+          "type": "integer",
+          "default": 100
+        }
+      }
+    },
     "responseOverride": {
       "type": "object",
       "description": "Overrides the defaults for responses",
@@ -1869,6 +1891,9 @@
             },
             "buffer_limit": {
               "$ref": "#/definitions/bufferLimitConfig"
+            },
+            "connections_limit": {
+              "$ref": "#/definitions/connectionsLimitConfig"
             },
             "cors": {
               "$ref": "#/definitions/corsConfig"
