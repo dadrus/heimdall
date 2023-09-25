@@ -9,7 +9,7 @@ menu:
     parent: "Services"
 ---
 
-The Management service is always there, regardless of the mode of operation Heimdall is started in. By default, Heimdall listens on `0.0.0.0:4457` endpoint for incoming requests in this mode of operation and also configures useful default timeouts. No other options are configured. You can however adjust the configuration for your needs.
+The Management service is always there, regardless of the mode of operation Heimdall is started in. By default, Heimdall listens on `0.0.0.0:4457` endpoint for incoming requests and also configures useful default timeouts as well as buffer limits. No other options are configured. You can however adjust the configuration for your needs.
 
 This service exposes the health and the JWKS endpoints.
 
@@ -61,3 +61,22 @@ https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS[CORS] (Cross-Origin Resou
 +
 By default, the Management endpoint accepts HTTP requests. Depending on your deployment scenario, you could require Heimdall to accept HTTPs requests only (which is highly recommended). You can do so by making use of this option.
 
+.Complex management service configuration.
+====
+[source, yaml]
+----
+decision:
+  host: 127.0.0.1
+  tls:
+    key_store:
+      path: /path/to/keystore.pem
+      password: VerySecure!
+  timeout:
+    read: 1s
+    write: 2s
+    idle: 30s
+  buffer_limit:
+    read: 4KB
+    write: 10KB
+----
+====
