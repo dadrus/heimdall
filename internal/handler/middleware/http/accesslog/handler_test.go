@@ -227,6 +227,55 @@ func TestHandlerExecution(t *testing.T) {
 				assert.Equal(t, "TX finished", logEvent2["message"])
 			},
 		},
+		{
+			uc:        "without tracing and x-* header, but with subject and redirect handling",
+			method:    http.MethodPatch,
+			setHeader: func(t *testing.T, req *http.Request) { t.Helper() },
+			handleRequest: func(t *testing.T, rw http.ResponseWriter, req *http.Request) {
+				t.Helper()
+
+				accesscontext.SetSubject(req.Context(), "bar")
+				rw.WriteHeader(http.StatusSeeOther)
+			},
+			assert: func(t *testing.T, clientReq *http.Request, logEvent1, logEvent2 map[string]any) {
+				t.Helper()
+
+				require.Len(t, logEvent1, 11)
+				assert.Equal(t, "info", logEvent1["level"])
+				assert.Contains(t, logEvent1, "_tx_start")
+				assert.Contains(t, logEvent1, "_client_ip")
+				assert.Contains(t, logEvent1, "_http_user_agent")
+				assert.Equal(t, clientReq.Method, logEvent1["_http_method"])
+				assert.Equal(t, clientReq.URL.Host, logEvent1["_http_host"])
+				assert.Equal(t, clientReq.URL.Path, logEvent1["_http_path"])
+				assert.Equal(t, clientReq.URL.Scheme, logEvent1["_http_scheme"])
+				assert.Contains(t, logEvent1, "_trace_id")
+				assert.Contains(t, logEvent1, "_trace_id")
+				assert.NotEqual(t, parentCtx.TraceID().String(), logEvent1["_trace_id"])
+				assert.NotEqual(t, parentCtx.SpanID().String(), logEvent1["_parent_id"])
+				assert.Equal(t, "TX started", logEvent1["message"])
+
+				require.Len(t, logEvent2, 16)
+				assert.Equal(t, "info", logEvent2["level"])
+				assert.Contains(t, logEvent2, "_tx_start")
+				assert.Contains(t, logEvent2, "_tx_duration_ms")
+				assert.Contains(t, logEvent2, "_client_ip")
+				assert.Equal(t, clientReq.Method, logEvent2["_http_method"])
+				assert.Equal(t, clientReq.URL.Host, logEvent2["_http_host"])
+				assert.Equal(t, clientReq.URL.Path, logEvent2["_http_path"])
+				assert.Equal(t, clientReq.URL.Scheme, logEvent2["_http_scheme"])
+				assert.Contains(t, logEvent2, "_trace_id")
+				assert.Contains(t, logEvent2, "_trace_id")
+				assert.Equal(t, logEvent2["_trace_id"], logEvent2["_trace_id"])
+				assert.Equal(t, logEvent2["_parent_id"], logEvent2["_parent_id"])
+				assert.Contains(t, logEvent2, "_body_bytes_sent")
+				assert.Equal(t, float64(http.StatusSeeOther), logEvent2["_http_status_code"])
+				assert.Equal(t, false, logEvent2["_access_granted"])
+				assert.Equal(t, "bar", logEvent2["_subject"])
+				assert.Contains(t, logEvent2, "_http_user_agent")
+				assert.Equal(t, "TX finished", logEvent2["message"])
+			},
+		},
 	} {
 		t.Run(tc.uc, func(t *testing.T) {
 			// GIVEN
