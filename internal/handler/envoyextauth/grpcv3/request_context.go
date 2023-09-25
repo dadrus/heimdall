@@ -25,6 +25,7 @@ import (
 
 	envoy_core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	envoy_auth "github.com/envoyproxy/go-control-plane/envoy/service/auth/v3"
+	"github.com/rs/zerolog"
 	"google.golang.org/genproto/googleapis/rpc/status"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
@@ -122,6 +123,8 @@ func (s *RequestContext) AddCookieForUpstream(name, value string) { s.upstreamCo
 func (s *RequestContext) Signer() heimdall.JWTSigner              { return s.jwtSigner }
 
 func (s *RequestContext) Finalize() (*envoy_auth.CheckResponse, error) {
+	zerolog.Ctx(s.ctx).Debug().Msg("Finalizing request")
+
 	if s.err != nil {
 		return nil, s.err
 	}

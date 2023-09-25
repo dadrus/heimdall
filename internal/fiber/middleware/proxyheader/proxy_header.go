@@ -22,7 +22,6 @@ import (
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/valyala/fasthttp"
 
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/stringx"
@@ -69,11 +68,21 @@ func New() fiber.Handler {
 				func() string { return fmt.Sprintf("for=%s;proto=%s", clientIP, proto) },
 				func() string { return fmt.Sprintf("%s, for=%s;proto=%s", forwardedHeaderValue, clientIP, proto) }))
 
-		return c.Next()
+		err := c.Next()
+
+		removeHopByHopHeaders(&c.Response().Header)
+
+		return err
 	}
 }
 
-func stripHopByHopHeader(header *fasthttp.RequestHeader) {
+type headerAccessor interface {
+	Peek(key string) []byte
+	Set(key, value string)
+	Del(key string)
+}
+
+func stripHopByHopHeader(header headerAccessor) {
 	// copying explicitly, as it will be removed by the removeHopByHopHeaders
 	// and if not copied, will be invalid
 	upgradeT := string(upgradeType(header))
@@ -86,7 +95,7 @@ func stripHopByHopHeader(header *fasthttp.RequestHeader) {
 	}
 }
 
-func upgradeType(header *fasthttp.RequestHeader) []byte {
+func upgradeType(header headerAccessor) []byte {
 	values := header.Peek("Connection")
 	if strings.Contains(strings.ToLower(stringx.ToString(values)), "upgrade") {
 		return header.Peek("Upgrade")
@@ -95,7 +104,7 @@ func upgradeType(header *fasthttp.RequestHeader) []byte {
 	return nil
 }
 
-func removeHopByHopHeaders(header *fasthttp.RequestHeader) {
+func removeHopByHopHeaders(header headerAccessor) {
 	values := stringx.ToString(header.Peek("Connection"))
 
 	// RFC 7230, section 6.1: Remove headers listed in the "Connection" header.

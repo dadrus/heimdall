@@ -1,4 +1,4 @@
-// Copyright 2022 Dimitrij Drus <dadrus@gmx.de>
+// Copyright 2023 Dimitrij Drus <dadrus@gmx.de>
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,8 +18,9 @@ package proxy
 
 import (
 	"context"
+	"errors"
+	"net/http"
 
-	"github.com/gofiber/fiber/v2"
 	"github.com/rs/zerolog"
 	"go.uber.org/fx"
 
@@ -28,11 +29,8 @@ import (
 )
 
 var Module = fx.Options( // nolint: gochecknoglobals
-	fx.Provide(fx.Annotated{Name: "proxy", Target: newApp}),
-	fx.Invoke(
-		newHandler,
-		registerHooks,
-	),
+	fx.Provide(fx.Annotated{Name: "proxy", Target: newService}),
+	fx.Invoke(registerHooks),
 )
 
 type hooksArgs struct {
@@ -41,11 +39,11 @@ type hooksArgs struct {
 	Lifecycle fx.Lifecycle
 	Config    *config.Configuration
 	Logger    zerolog.Logger
-	App       *fiber.App `name:"proxy"`
+	Service   *http.Server `name:"proxy"`
 }
 
 func registerHooks(args hooksArgs) {
-	ln, err := listener.New(args.App.Config().Network, args.Config.Serve.Proxy)
+	ln, err := listener.New("tcp", args.Config.Serve.Proxy)
 	if err != nil {
 		args.Logger.Fatal().Err(err).Msg("Could not create listener for the Proxy service")
 
@@ -58,8 +56,10 @@ func registerHooks(args hooksArgs) {
 				go func() {
 					args.Logger.Info().Str("_address", ln.Addr().String()).Msg("Proxy service starts listening")
 
-					if err = args.App.Listener(ln); err != nil {
-						args.Logger.Fatal().Err(err).Msg("Could not start Proxy service")
+					if err = args.Service.Serve(ln); err != nil {
+						if !errors.Is(err, http.ErrServerClosed) {
+							args.Logger.Fatal().Err(err).Msg("Could not start Proxy service")
+						}
 					}
 				}()
 
@@ -68,7 +68,7 @@ func registerHooks(args hooksArgs) {
 			OnStop: func(ctx context.Context) error {
 				args.Logger.Info().Msg("Tearing down Proxy service")
 
-				return args.App.Shutdown()
+				return args.Service.Shutdown(ctx)
 			},
 		},
 	)

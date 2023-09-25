@@ -20,45 +20,23 @@ import (
 	"context"
 
 	envoy_auth "github.com/envoyproxy/go-control-plane/envoy/service/auth/v3"
-	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/rule"
-	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
 type Handler struct {
-	r rule.Repository
+	e rule.Executor
 	s heimdall.JWTSigner
 }
 
-func (h *Handler) Check(ctx context.Context, creq *envoy_auth.CheckRequest) (*envoy_auth.CheckResponse, error) {
-	logger := zerolog.Ctx(ctx)
+func (h *Handler) Check(ctx context.Context, req *envoy_auth.CheckRequest) (*envoy_auth.CheckResponse, error) {
+	reqCtx := NewRequestContext(ctx, req, h.s)
 
-	reqCtx := NewRequestContext(ctx, creq, h.s)
-	req := reqCtx.Request()
-
-	logger.Debug().
-		Str("_method", req.Method).
-		Str("_url", req.URL.String()).
-		Msg("Decision Envoy ExtAuth called")
-
-	rul, err := h.r.FindRule(req.URL)
+	_, err := h.e.Execute(reqCtx)
 	if err != nil {
 		return nil, err
 	}
-
-	if !rul.MatchesMethod(req.Method) {
-		return nil, errorchain.NewWithMessagef(heimdall.ErrMethodNotAllowed,
-			"rule doesn't match %s method", req.Method)
-	}
-
-	_, err = rul.Execute(reqCtx)
-	if err != nil {
-		return nil, err
-	}
-
-	logger.Debug().Msg("Finalizing request")
 
 	return reqCtx.Finalize()
 }

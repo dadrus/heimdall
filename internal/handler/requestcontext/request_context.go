@@ -20,16 +20,16 @@ import (
 	"context"
 	"net/http"
 	"net/url"
-	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/rs/zerolog"
-	"github.com/valyala/fasthttp"
 
-	"github.com/dadrus/heimdall/internal/fasthttp/opentelemetry"
 	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/x"
 )
+
+type finalizer func(rule.Backend) error
 
 type RequestContext struct {
 	c               *fiber.Ctx
@@ -38,18 +38,9 @@ type RequestContext struct {
 	upstreamHeaders http.Header
 	upstreamCookies map[string]string
 	jwtSigner       heimdall.JWTSigner
+	responseCode    int
 	err             error
-}
-
-func New(c *fiber.Ctx, method string, reqURL *url.URL, signer heimdall.JWTSigner) *RequestContext {
-	return &RequestContext{
-		c:               c,
-		jwtSigner:       signer,
-		reqMethod:       method,
-		reqURL:          reqURL,
-		upstreamHeaders: make(http.Header),
-		upstreamCookies: make(map[string]string),
-	}
+	finalize        finalizer
 }
 
 func (s *RequestContext) Request() *heimdall.Request {
@@ -57,7 +48,7 @@ func (s *RequestContext) Request() *heimdall.Request {
 		RequestFunctions: s,
 		Method:           s.reqMethod,
 		URL:              s.reqURL,
-		ClientIP:         s.RequestClientIPs(),
+		ClientIP:         s.requestClientIPs(),
 	}
 }
 
@@ -70,17 +61,24 @@ func (s *RequestContext) SetPipelineError(err error)              { s.err = err 
 func (s *RequestContext) AddHeaderForUpstream(name, value string) { s.upstreamHeaders.Add(name, value) }
 func (s *RequestContext) AddCookieForUpstream(name, value string) { s.upstreamCookies[name] = value }
 func (s *RequestContext) Signer() heimdall.JWTSigner              { return s.jwtSigner }
-func (s *RequestContext) RequestClientIPs() []string {
+func (s *RequestContext) requestClientIPs() []string {
 	ips := s.c.IPs()
 
 	return x.IfThenElse(len(ips) != 0, ips, []string{s.c.IP()})
 }
 
-func (s *RequestContext) Finalize(statusCode int) error {
+func (s *RequestContext) Finalize(backend rule.Backend) error {
+	logger := zerolog.Ctx(s.c.UserContext())
+	logger.Debug().Msg("Finalizing request")
+
 	if s.err != nil {
 		return s.err
 	}
 
+	return s.finalize(backend)
+}
+
+func (s *RequestContext) finalizeWithStatus(_ rule.Backend) error {
 	for k := range s.upstreamHeaders {
 		s.c.Response().Header.Set(k, s.upstreamHeaders.Get(k))
 	}
@@ -89,55 +87,35 @@ func (s *RequestContext) Finalize(statusCode int) error {
 		s.c.Cookie(&fiber.Cookie{Name: k, Value: v})
 	}
 
-	s.c.Status(statusCode)
+	s.c.Status(s.responseCode)
 
 	return nil
 }
 
-type URIMutator interface {
-	Mutate(uri *url.URL) (*url.URL, error)
+type ContextFactory interface {
+	Create(c *fiber.Ctx) *RequestContext
 }
 
-func (s *RequestContext) FinalizeAndForward(mutator URIMutator, timeout time.Duration) error {
-	if s.err != nil {
-		return s.err
-	}
+type factoryFunc func(c *fiber.Ctx) *RequestContext
 
-	for k := range s.upstreamHeaders {
-		s.c.Request().Header.Set(k, s.upstreamHeaders.Get(k))
-	}
+func (f factoryFunc) Create(c *fiber.Ctx) *RequestContext {
+	return f(c)
+}
 
-	for k, v := range s.upstreamCookies {
-		s.c.Request().Header.SetCookie(k, v)
-	}
+func NewDecisionContextFactory(signer heimdall.JWTSigner, responseCode int) ContextFactory {
+	return factoryFunc(func(ctx *fiber.Ctx) *RequestContext {
+		rc := &RequestContext{
+			jwtSigner:       signer,
+			reqMethod:       extractMethod(ctx),
+			reqURL:          extractURL(ctx),
+			upstreamHeaders: make(http.Header),
+			upstreamCookies: make(map[string]string),
+			c:               ctx,
+			responseCode:    responseCode,
+		}
 
-	// delete headers, which are useless for the upstream service, before forwarding the request
-	for _, name := range []string{
-		"X-Forwarded-Method", "X-Forwarded-Uri", "X-Forwarded-Path",
-	} {
-		s.c.Request().Header.Del(name)
-	}
+		rc.finalize = rc.finalizeWithStatus
 
-	targetURL, err := mutator.Mutate(s.reqURL)
-	if err != nil {
-		return err
-	}
-
-	upstreamURL := targetURL.String()
-
-	logger := zerolog.Ctx(s.c.UserContext())
-	logger.Info().
-		Str("_method", s.reqMethod).
-		Str("_upstream", upstreamURL).
-		Msg("Forwarding request")
-
-	s.c.Request().Header.SetMethod(s.reqMethod)
-	s.c.Request().SetRequestURI(upstreamURL)
-
-	if logger.GetLevel() == zerolog.TraceLevel {
-		logger.Trace().Msg("Request: \n" + s.c.Request().String())
-	}
-
-	return opentelemetry.NewClient(&fasthttp.Client{}).
-		DoTimeout(s.c.UserContext(), s.c.Request(), s.c.Response(), timeout)
+		return rc
+	})
 }

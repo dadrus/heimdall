@@ -1,3 +1,19 @@
+// Copyright 2023 Dimitrij Drus <dadrus@gmx.de>
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+// SPDX-License-Identifier: Apache-2.0
+
 package grpcv3
 
 import (
@@ -27,15 +43,15 @@ import (
 func TestHandleDecisionEndpointRequest(t *testing.T) {
 	for _, tc := range []struct {
 		uc             string
-		configureMocks func(t *testing.T, repository *mocks2.RepositoryMock, rule *mocks2.RuleMock)
+		configureMocks func(t *testing.T, exec *mocks2.ExecutorMock)
 		assertResponse func(t *testing.T, err error, response *envoy_auth.CheckResponse)
 	}{
 		{
 			uc: "no rules configured",
-			configureMocks: func(t *testing.T, repository *mocks2.RepositoryMock, rule *mocks2.RuleMock) {
+			configureMocks: func(t *testing.T, exec *mocks2.ExecutorMock) {
 				t.Helper()
 
-				repository.EXPECT().FindRule(mock.Anything).Return(nil, heimdall.ErrNoRuleFound)
+				exec.EXPECT().Execute(mock.Anything).Return(nil, heimdall.ErrNoRuleFound)
 			},
 			assertResponse: func(t *testing.T, err error, response *envoy_auth.CheckResponse) {
 				t.Helper()
@@ -52,12 +68,10 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 		},
 		{
 			uc: "rule doesn't match method",
-			configureMocks: func(t *testing.T, repository *mocks2.RepositoryMock, rule *mocks2.RuleMock) {
+			configureMocks: func(t *testing.T, exec *mocks2.ExecutorMock) {
 				t.Helper()
 
-				rule.EXPECT().MatchesMethod(http.MethodPost).Return(false)
-
-				repository.EXPECT().FindRule(mock.Anything).Return(rule, nil)
+				exec.EXPECT().Execute(mock.Anything).Return(nil, heimdall.ErrMethodNotAllowed)
 			},
 			assertResponse: func(t *testing.T, err error, response *envoy_auth.CheckResponse) {
 				t.Helper()
@@ -74,13 +88,10 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 		},
 		{
 			uc: "rule execution fails with authentication error",
-			configureMocks: func(t *testing.T, repository *mocks2.RepositoryMock, rule *mocks2.RuleMock) {
+			configureMocks: func(t *testing.T, exec *mocks2.ExecutorMock) {
 				t.Helper()
 
-				rule.EXPECT().MatchesMethod(http.MethodPost).Return(true)
-				rule.EXPECT().Execute(mock.Anything).Return(nil, heimdall.ErrAuthentication)
-
-				repository.EXPECT().FindRule(mock.Anything).Return(rule, nil)
+				exec.EXPECT().Execute(mock.Anything).Return(nil, heimdall.ErrAuthentication)
 			},
 			assertResponse: func(t *testing.T, err error, response *envoy_auth.CheckResponse) {
 				t.Helper()
@@ -97,17 +108,10 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 		},
 		{
 			uc: "rule execution fails with authorization error",
-			configureMocks: func(t *testing.T, repository *mocks2.RepositoryMock, rule *mocks2.RuleMock) {
+			configureMocks: func(t *testing.T, exec *mocks2.ExecutorMock) {
 				t.Helper()
 
-				rule.EXPECT().MatchesMethod(http.MethodPost).Return(true)
-				rule.EXPECT().Execute(mock.MatchedBy(func(ctx heimdall.Context) bool {
-					ctx.SetPipelineError(heimdall.ErrAuthorization)
-
-					return true
-				})).Return(nil, nil)
-
-				repository.EXPECT().FindRule(mock.Anything).Return(rule, nil)
+				exec.EXPECT().Execute(mock.Anything).Return(nil, heimdall.ErrAuthorization)
 			},
 			assertResponse: func(t *testing.T, err error, response *envoy_auth.CheckResponse) {
 				t.Helper()
@@ -124,17 +128,14 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 		},
 		{
 			uc: "rule execution fails with a redirect",
-			configureMocks: func(t *testing.T, repository *mocks2.RepositoryMock, rule *mocks2.RuleMock) {
+			configureMocks: func(t *testing.T, exec *mocks2.ExecutorMock) {
 				t.Helper()
 
-				rule.EXPECT().MatchesMethod(http.MethodPost).Return(true)
-				rule.EXPECT().Execute(mock.Anything).Return(nil, &heimdall.RedirectError{
+				exec.EXPECT().Execute(mock.Anything).Return(nil, &heimdall.RedirectError{
 					Message:    "test redirect",
 					Code:       http.StatusFound,
 					RedirectTo: "http://foo.bar",
 				})
-
-				repository.EXPECT().FindRule(mock.Anything).Return(rule, nil)
 			},
 			assertResponse: func(t *testing.T, err error, response *envoy_auth.CheckResponse) {
 				t.Helper()
@@ -153,13 +154,17 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 		},
 		{
 			uc: "rule execution succeeds",
-			configureMocks: func(t *testing.T, repository *mocks2.RepositoryMock, rule *mocks2.RuleMock) {
+			configureMocks: func(t *testing.T, exec *mocks2.ExecutorMock) {
 				t.Helper()
 
-				rule.EXPECT().MatchesMethod(http.MethodPost).Return(true)
-				rule.EXPECT().Execute(mock.Anything).Return(nil, nil)
+				exec.EXPECT().Execute(
+					mock.MatchedBy(func(ctx heimdall.Context) bool {
+						req := ctx.Request()
 
-				repository.EXPECT().FindRule(mock.Anything).Return(rule, nil)
+						return req.URL.Path == "/test" &&
+							req.Method == http.MethodPost
+					}),
+				).Return(nil, nil)
 			},
 			assertResponse: func(t *testing.T, err error, response *envoy_auth.CheckResponse) {
 				t.Helper()
@@ -174,10 +179,10 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 		},
 		{
 			uc: "server panics and error does not contain traces",
-			configureMocks: func(t *testing.T, repository *mocks2.RepositoryMock, rule *mocks2.RuleMock) {
+			configureMocks: func(t *testing.T, exec *mocks2.ExecutorMock) {
 				t.Helper()
 
-				repository.EXPECT().FindRule(mock.Anything).Panic("wuff")
+				exec.EXPECT().Execute(mock.Anything).Panic("wuff")
 			},
 			assertResponse: func(t *testing.T, err error, response *envoy_auth.CheckResponse) {
 				t.Helper()
@@ -196,12 +201,11 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 			require.NoError(t, err)
 			conf := &config.Configuration{Metrics: config.MetricsConfig{Enabled: true}}
 			cch := mocks.NewCacheMock(t)
-			repo := mocks2.NewRepositoryMock(t)
-			rule := mocks2.NewRuleMock(t)
+			exec := mocks2.NewExecutorMock(t)
 
-			tc.configureMocks(t, repo, rule)
+			tc.configureMocks(t, exec)
 
-			srv := newService(conf, prometheus.NewRegistry(), cch, log.Logger, repo, nil)
+			srv := newService(conf, prometheus.NewRegistry(), cch, log.Logger, exec, nil)
 
 			defer srv.Stop()
 

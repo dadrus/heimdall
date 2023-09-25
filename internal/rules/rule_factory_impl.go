@@ -1,3 +1,19 @@
+// Copyright 2022 Dimitrij Drus <dadrus@gmx.de>
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+// SPDX-License-Identifier: Apache-2.0
+
 package rules
 
 import (
@@ -209,36 +225,32 @@ func (f *ruleFactory) CreateRule(version, srcID string, ruleConfig config2.Rule)
 	return &ruleImpl{
 		id:         ruleConfig.ID,
 		urlMatcher: matcher,
-		// this is weird, but without upstreamURLFactory will not be nil
-		// it will contain a nil pointer to the type of ruleConfig.UpstreamURLFactory
-		// so nil check on upstreamURLFactory will fail
-		upstreamURLFactory: x.IfThenElse[UpstreamURLFactory](ruleConfig.UpstreamURLFactory != nil,
-			ruleConfig.UpstreamURLFactory, nil),
-		methods:   methods,
-		srcID:     srcID,
-		isDefault: false,
-		hash:      hash,
-		sc:        authenticators,
-		sh:        subHandlers,
-		un:        unifiers,
-		eh:        errorHandlers,
+		backend:    ruleConfig.Backend,
+		methods:    methods,
+		srcID:      srcID,
+		isDefault:  false,
+		hash:       hash,
+		sc:         authenticators,
+		sh:         subHandlers,
+		un:         unifiers,
+		eh:         errorHandlers,
 	}, nil
 }
 
 func checkProxyModeApplicability(srcID string, ruleConfig config2.Rule) error {
-	if ruleConfig.UpstreamURLFactory == nil {
+	if ruleConfig.Backend == nil {
 		return errorchain.NewWithMessagef(heimdall.ErrConfiguration,
 			"heimdall is operated in proxy mode, but no forward_to is defined in rule ID=%s from %s",
 			ruleConfig.ID, srcID)
 	}
 
-	if len(ruleConfig.UpstreamURLFactory.Host) == 0 {
+	if len(ruleConfig.Backend.Host) == 0 {
 		return errorchain.NewWithMessagef(heimdall.ErrConfiguration,
 			"missing host definition in forward_to in rule ID=%s from %s",
 			ruleConfig.ID, srcID)
 	}
 
-	urlRewriter := ruleConfig.UpstreamURLFactory.URLRewriter
+	urlRewriter := ruleConfig.Backend.URLRewriter
 	if urlRewriter == nil {
 		return nil
 	}

@@ -136,7 +136,7 @@ func verifyRuleSetList(t *testing.T, rls *RuleSetList) {
 	assert.Equal(t, "http://127.0.0.1:9090/foobar/<{foos*}>", rule.RuleMatcher.URL)
 	assert.Empty(t, rule.Methods)
 	assert.Empty(t, rule.ErrorHandler)
-	assert.Equal(t, "https://foo.bar/baz/bar?foo=bar", rule.UpstreamURLFactory.CreateURL(&url.URL{
+	assert.Equal(t, "https://foo.bar/baz/bar?foo=bar", rule.Backend.CreateURL(&url.URL{
 		Scheme:   "http",
 		Host:     "bar.foo:8888",
 		Path:     "/foo/bar",

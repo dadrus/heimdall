@@ -47,6 +47,10 @@ serve:
     buffer_limit:
       read: 4KB
       write: 4KB
+    connections_limit:
+      max_idle: 100
+      max_idle_per_host: 100
+      max_per_host: 20
     cors:
       allowed_origins:
         - example.org

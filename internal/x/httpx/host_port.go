@@ -1,4 +1,4 @@
-// Copyright 2022 Dimitrij Drus <dadrus@gmx.de>
+// Copyright 2023 Dimitrij Drus <dadrus@gmx.de>
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,11 +14,19 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package xfmphu
+package httpx
 
-const (
-	xForwardedProto  = "X-Forwarded-Proto"
-	xForwardedMethod = "X-Forwarded-Method"
-	xForwardedURI    = "X-Forwarded-Uri"
-	xForwardedPath   = "X-Forwarded-Path"
-)
+import "net"
+
+func IPFromHostPort(hp string) string {
+	host, _, err := net.SplitHostPort(hp)
+	if err != nil {
+		return ""
+	}
+
+	if len(host) > 0 && host[0] == '[' {
+		return host[1 : len(host)-1]
+	}
+
+	return host
+}

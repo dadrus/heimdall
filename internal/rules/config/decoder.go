@@ -25,6 +25,7 @@ func DecodeConfig(input any, output any) error {
 		&mapstructure.DecoderConfig{
 			DecodeHook: mapstructure.ComposeDecodeHookFunc(
 				matcherDecodeHookFunc,
+				mapstructure.StringToTimeDurationHookFunc(),
 			),
 			Result:      output,
 			ErrorUnused: true,

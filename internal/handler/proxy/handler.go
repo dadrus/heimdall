@@ -1,4 +1,4 @@
-// Copyright 2022 Dimitrij Drus <dadrus@gmx.de>
+// Copyright 2023 Dimitrij Drus <dadrus@gmx.de>
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,83 +17,34 @@
 package proxy
 
 import (
-	"time"
+	"net/http"
 
-	"github.com/gofiber/fiber/v2"
-	"github.com/rs/zerolog"
-	"go.uber.org/fx"
-
-	"github.com/dadrus/heimdall/internal/config"
-	fiberxforwarded "github.com/dadrus/heimdall/internal/fiber/middleware/xfmphu"
-	"github.com/dadrus/heimdall/internal/handler/requestcontext"
-	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/handler/proxy/middleware/errorhandler"
+	"github.com/dadrus/heimdall/internal/handler/request"
 	"github.com/dadrus/heimdall/internal/rules/rule"
-	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
-type Handler struct {
-	r rule.Repository
-	s heimdall.JWTSigner
-	t time.Duration
+type handler struct {
+	e  rule.Executor
+	f  request.ContextFactory
+	eh errorhandler.ErrorHandler
 }
 
-type handlerArgs struct {
-	fx.In
-
-	App             *fiber.App `name:"proxy"`
-	RulesRepository rule.Repository
-	Config          *config.Configuration
-	Signer          heimdall.JWTSigner
-	Logger          zerolog.Logger
+func newHandler(rcf request.ContextFactory, re rule.Executor, eh errorhandler.ErrorHandler) http.Handler {
+	return &handler{f: rcf, eh: eh, e: re}
 }
 
-func newHandler(args handlerArgs) (*Handler, error) {
-	handler := &Handler{
-		r: args.RulesRepository,
-		s: args.Signer,
-		t: args.Config.Serve.Proxy.Timeout.Read,
-	}
+func (h *handler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
+	rc := h.f.Create(rw, req)
 
-	handler.registerRoutes(args.App.Group("/"), args.Logger)
-
-	return handler, nil
-}
-
-func (h *Handler) registerRoutes(router fiber.Router, logger zerolog.Logger) {
-	logger.Debug().Msg("Registering Proxy service routes")
-
-	router.All("/*", fiberxforwarded.New(), h.proxy)
-}
-
-func (h *Handler) proxy(c *fiber.Ctx) error {
-	logger := zerolog.Ctx(c.UserContext())
-
-	reqURL := fiberxforwarded.RequestURL(c.UserContext())
-	method := fiberxforwarded.RequestMethod(c.UserContext())
-
-	logger.Debug().
-		Str("_method", method).
-		Str("_url", reqURL.String()).
-		Msg("Proxy endpoint called")
-
-	rul, err := h.r.FindRule(reqURL)
+	mut, err := h.e.Execute(rc)
 	if err != nil {
-		return err
+		h.eh.HandleError(rw, req, err)
+
+		return
 	}
 
-	if !rul.MatchesMethod(method) {
-		return errorchain.NewWithMessagef(heimdall.ErrMethodNotAllowed,
-			"rule (id=%s, src=%s) doesn't match %s method", rul.ID(), rul.SrcID(), method)
+	if err = rc.Finalize(mut); err != nil {
+		h.eh.HandleError(rw, req, err)
 	}
-
-	reqCtx := requestcontext.New(c, method, reqURL, h.s)
-
-	mutator, err := rul.Execute(reqCtx)
-	if err != nil {
-		return err
-	}
-
-	logger.Debug().Msg("Finalizing request")
-
-	return reqCtx.FinalizeAndForward(mutator, h.t)
 }

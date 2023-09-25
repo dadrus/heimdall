@@ -1,4 +1,4 @@
-// Copyright 2022 Dimitrij Drus <dadrus@gmx.de>
+// Copyright 2023 Dimitrij Drus <dadrus@gmx.de>
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,19 +14,18 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package xfmphu
+package cache
 
 import (
-	"github.com/gofiber/fiber/v2"
+	"net/http"
+
+	"github.com/dadrus/heimdall/internal/cache"
 )
 
-func requestMethod(c *fiber.Ctx) string {
-	if c.IsProxyTrusted() {
-		forwardedMethodVal := c.Get(xForwardedMethod)
-		if len(forwardedMethodVal) != 0 {
-			return forwardedMethodVal
-		}
+func New(cch cache.Cache) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+			next.ServeHTTP(rw, req.WithContext(cache.WithContext(req.Context(), cch)))
+		})
 	}
-
-	return c.Method()
 }

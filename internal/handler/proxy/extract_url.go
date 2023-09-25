@@ -1,4 +1,4 @@
-// Copyright 2022 Dimitrij Drus <dadrus@gmx.de>
+// Copyright 2023 Dimitrij Drus <dadrus@gmx.de>
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,60 +14,54 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package xfmphu
+package proxy
 
 import (
-	"fmt"
+	"net/http"
 	"net/url"
 
-	"github.com/gofiber/fiber/v2"
-
 	"github.com/dadrus/heimdall/internal/x"
-	"github.com/dadrus/heimdall/internal/x/stringx"
 )
 
-func requestURL(c *fiber.Ctx) *url.URL {
+func extractURL(req *http.Request) *url.URL {
 	var (
-		proto   string
 		rawPath string
 		path    string
 		query   string
 	)
 
-	if c.IsProxyTrusted() {
-		forwardedURIVal := c.Get(xForwardedURI)
-		if len(forwardedURIVal) != 0 {
-			forwardedURI, _ := url.Parse(forwardedURIVal)
-			rawPath = forwardedURI.Path
-			query = forwardedURI.Query().Encode()
-		} else {
-			rawPath = c.Get(xForwardedPath)
-		}
-
-		proto = c.Get(xForwardedProto)
+	proto := req.Header.Get("X-Forwarded-Proto")
+	if len(proto) == 0 {
+		proto = x.IfThenElse(req.TLS == nil, "http", "https")
 	}
 
-	if len(proto) == 0 {
-		proto = x.IfThenElse(c.Context().IsTLS(), "https", "http")
+	host := req.Header.Get("X-Forwarded-Host")
+	if len(host) == 0 {
+		host = req.Host
+	}
+
+	if val := req.Header.Get("X-Forwarded-Uri"); len(val) != 0 {
+		if forwardedURI, err := url.Parse(val); err == nil {
+			rawPath = forwardedURI.Path
+			query = forwardedURI.Query().Encode()
+		}
+	} else {
+		rawPath = req.Header.Get("X-Forwarded-Path")
 	}
 
 	if len(rawPath) == 0 {
-		rawPath = c.Params("*")
-		if len(rawPath) != 0 {
-			rawPath = fmt.Sprintf("/%s", rawPath)
-		}
+		rawPath = req.URL.Path
 	}
 
 	if len(query) == 0 {
-		origReqURL := *c.Request().URI()
-		query = stringx.ToString(origReqURL.QueryString())
+		query = req.URL.RawQuery
 	}
 
 	path, _ = url.PathUnescape(rawPath)
 
 	return &url.URL{
 		Scheme:   proto,
-		Host:     c.Hostname(),
+		Host:     host,
 		Path:     path,
 		RawQuery: query,
 	}

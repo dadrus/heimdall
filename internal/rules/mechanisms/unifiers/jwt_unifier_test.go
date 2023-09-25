@@ -290,6 +290,8 @@ func TestCreateJWTUnifierFromPrototype(t *testing.T) {
 				require.NoError(t, err)
 				assert.NotEqual(t, prototype, configured)
 				assert.Equal(t, prototype.claims, configured.claims)
+				assert.Equal(t, "Authorization", configured.headerName)
+				assert.Equal(t, "Bearer", configured.headerScheme)
 				assert.NotEqual(t, prototype.ttl, configured.ttl)
 				assert.Equal(t, expectedTTL, configured.ttl)
 				assert.Equal(t, "jun3", configured.ID())
@@ -321,6 +323,8 @@ claims:
 				require.NoError(t, err)
 				assert.NotEqual(t, prototype, configured)
 				assert.Equal(t, prototype.ttl, configured.ttl)
+				assert.Equal(t, "Authorization", configured.headerName)
+				assert.Equal(t, "Bearer", configured.headerScheme)
 				assert.NotEqual(t, prototype.claims, configured.claims)
 				require.NotNil(t, configured.claims)
 				val, err := configured.claims.Render(map[string]any{
@@ -346,6 +350,8 @@ claims:
 
 				require.NoError(t, err)
 				assert.NotEqual(t, prototype, configured)
+				assert.Equal(t, "Authorization", configured.headerName)
+				assert.Equal(t, "Bearer", configured.headerScheme)
 				assert.NotEqual(t, prototype.ttl, configured.ttl)
 				assert.Equal(t, expectedTTL, configured.ttl)
 				assert.NotEqual(t, prototype.claims, configured.claims)

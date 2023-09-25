@@ -200,7 +200,7 @@ func TestProviderLifecycle(t *testing.T) {
 												URL:      "http://foo.bar",
 												Strategy: "glob",
 											},
-											UpstreamURLFactory: &config2.UpstreamURLFactory{
+											Backend: &config2.Backend{
 												Host: "baz",
 												URLRewriter: &config2.URLRewriter{
 													Scheme:              "http",
@@ -286,7 +286,7 @@ func TestProviderLifecycle(t *testing.T) {
 				rule := ruleSet.Rules[0]
 				assert.Equal(t, "test", rule.ID)
 				assert.Equal(t, "http://foo.bar", rule.RuleMatcher.URL)
-				assert.Equal(t, "baz", rule.UpstreamURLFactory.Host)
+				assert.Equal(t, "baz", rule.Backend.Host)
 				assert.Equal(t, "glob", rule.RuleMatcher.Strategy)
 				assert.Len(t, rule.Methods, 1)
 				assert.Contains(t, rule.Methods, http.MethodGet)
@@ -336,7 +336,7 @@ func TestProviderLifecycle(t *testing.T) {
 												URL:      "http://foo.bar",
 												Strategy: "glob",
 											},
-											UpstreamURLFactory: &config2.UpstreamURLFactory{
+											Backend: &config2.Backend{
 												Host: "bar",
 												URLRewriter: &config2.URLRewriter{
 													Scheme:              "http",
@@ -448,7 +448,7 @@ func TestProviderLifecycle(t *testing.T) {
 												URL:      "http://foo.bar",
 												Strategy: "glob",
 											},
-											UpstreamURLFactory: &config2.UpstreamURLFactory{
+											Backend: &config2.Backend{
 												Host: "bar",
 												URLRewriter: &config2.URLRewriter{
 													Scheme:              "http",
@@ -548,7 +548,7 @@ func TestProviderLifecycle(t *testing.T) {
 				createdRule := ruleSet.Rules[0]
 				assert.Equal(t, "test", createdRule.ID)
 				assert.Equal(t, "http://foo.bar", createdRule.RuleMatcher.URL)
-				assert.Equal(t, "bar", createdRule.UpstreamURLFactory.Host)
+				assert.Equal(t, "bar", createdRule.Backend.Host)
 				assert.Equal(t, "glob", createdRule.RuleMatcher.Strategy)
 				assert.Len(t, createdRule.Methods, 1)
 				assert.Contains(t, createdRule.Methods, http.MethodGet)
@@ -600,7 +600,7 @@ func TestProviderLifecycle(t *testing.T) {
 												URL:      "http://foo.bar",
 												Strategy: "glob",
 											},
-											UpstreamURLFactory: &config2.UpstreamURLFactory{
+											Backend: &config2.Backend{
 												Host: "bar",
 												URLRewriter: &config2.URLRewriter{
 													Scheme:              "http",
@@ -724,7 +724,7 @@ func TestProviderLifecycle(t *testing.T) {
 												URL:      "http://foo.bar",
 												Strategy: "glob",
 											},
-											UpstreamURLFactory: &config2.UpstreamURLFactory{
+											Backend: &config2.Backend{
 												Host: "bar",
 												URLRewriter: &config2.URLRewriter{
 													Scheme:              "http",
@@ -772,7 +772,7 @@ func TestProviderLifecycle(t *testing.T) {
 											URL:      "http://foo.bar",
 											Strategy: "glob",
 										},
-										UpstreamURLFactory: &config2.UpstreamURLFactory{
+										Backend: &config2.Backend{
 											Host: "bar",
 											URLRewriter: &config2.URLRewriter{
 												Scheme:              "http",
@@ -851,7 +851,7 @@ func TestProviderLifecycle(t *testing.T) {
 				createdRule := ruleSet.Rules[0]
 				assert.Equal(t, "test", createdRule.ID)
 				assert.Equal(t, "http://foo.bar", createdRule.RuleMatcher.URL)
-				assert.Equal(t, "bar", createdRule.UpstreamURLFactory.Host)
+				assert.Equal(t, "bar", createdRule.Backend.Host)
 				assert.Equal(t, "glob", createdRule.RuleMatcher.Strategy)
 				assert.Len(t, createdRule.Methods, 1)
 				assert.Contains(t, createdRule.Methods, http.MethodGet)
@@ -869,7 +869,7 @@ func TestProviderLifecycle(t *testing.T) {
 				updatedRule := ruleSet.Rules[0]
 				assert.Equal(t, "test", updatedRule.ID)
 				assert.Equal(t, "http://foo.bar", updatedRule.RuleMatcher.URL)
-				assert.Equal(t, "bar", updatedRule.UpstreamURLFactory.Host)
+				assert.Equal(t, "bar", updatedRule.Backend.Host)
 				assert.Equal(t, "glob", updatedRule.RuleMatcher.Strategy)
 				assert.Len(t, updatedRule.Methods, 1)
 				assert.Contains(t, updatedRule.Methods, http.MethodGet)
@@ -916,7 +916,7 @@ func TestProviderLifecycle(t *testing.T) {
 												URL:      "http://foo.bar",
 												Strategy: "glob",
 											},
-											UpstreamURLFactory: &config2.UpstreamURLFactory{
+											Backend: &config2.Backend{
 												Host: "bar",
 												URLRewriter: &config2.URLRewriter{
 													Scheme:              "http",
@@ -964,7 +964,7 @@ func TestProviderLifecycle(t *testing.T) {
 											URL:      "http://foo.bar",
 											Strategy: "glob",
 										},
-										UpstreamURLFactory: &config2.UpstreamURLFactory{
+										Backend: &config2.Backend{
 											Host: "baz",
 											URLRewriter: &config2.URLRewriter{
 												Scheme:              "http",

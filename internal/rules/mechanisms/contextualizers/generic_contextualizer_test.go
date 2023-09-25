@@ -491,8 +491,8 @@ func TestGenericContextualizerExecute(t *testing.T) {
 	t.Parallel()
 
 	var (
-		hydrationEndpointCalled bool
-		checkRequest            func(req *http.Request)
+		remoteEndpointCalled bool
+		checkRequest         func(req *http.Request)
 
 		responseContentType string
 		responseContent     []byte
@@ -500,7 +500,7 @@ func TestGenericContextualizerExecute(t *testing.T) {
 	)
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		hydrationEndpointCalled = true
+		remoteEndpointCalled = true
 
 		checkRequest(r)
 
@@ -531,7 +531,7 @@ func TestGenericContextualizerExecute(t *testing.T) {
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
 
-				assert.False(t, hydrationEndpointCalled)
+				assert.False(t, remoteEndpointCalled)
 
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrInternal)
@@ -566,7 +566,7 @@ func TestGenericContextualizerExecute(t *testing.T) {
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
 
-				assert.False(t, hydrationEndpointCalled)
+				assert.False(t, remoteEndpointCalled)
 
 				require.NoError(t, err)
 				assert.Len(t, sub.Attributes, 2)
@@ -613,7 +613,7 @@ func TestGenericContextualizerExecute(t *testing.T) {
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
 
-				assert.True(t, hydrationEndpointCalled)
+				assert.True(t, remoteEndpointCalled)
 
 				require.NoError(t, err)
 				assert.Len(t, sub.Attributes, 2)
@@ -641,7 +641,7 @@ func TestGenericContextualizerExecute(t *testing.T) {
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
 
-				assert.False(t, hydrationEndpointCalled)
+				assert.False(t, remoteEndpointCalled)
 
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrInternal)
@@ -662,7 +662,7 @@ func TestGenericContextualizerExecute(t *testing.T) {
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
 
-				assert.False(t, hydrationEndpointCalled)
+				assert.False(t, remoteEndpointCalled)
 
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrCommunication)
@@ -688,7 +688,7 @@ func TestGenericContextualizerExecute(t *testing.T) {
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
 
-				assert.True(t, hydrationEndpointCalled)
+				assert.True(t, remoteEndpointCalled)
 
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrCommunication)
@@ -720,7 +720,7 @@ func TestGenericContextualizerExecute(t *testing.T) {
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
 
-				assert.True(t, hydrationEndpointCalled)
+				assert.True(t, remoteEndpointCalled)
 
 				require.NoError(t, err)
 
@@ -762,7 +762,7 @@ func TestGenericContextualizerExecute(t *testing.T) {
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
 
-				assert.True(t, hydrationEndpointCalled)
+				assert.True(t, remoteEndpointCalled)
 
 				require.NoError(t, err)
 
@@ -838,7 +838,7 @@ func TestGenericContextualizerExecute(t *testing.T) {
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
 
-				assert.True(t, hydrationEndpointCalled)
+				assert.True(t, remoteEndpointCalled)
 
 				require.NoError(t, err)
 
@@ -851,7 +851,7 @@ func TestGenericContextualizerExecute(t *testing.T) {
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
 			// GIVEN
-			hydrationEndpointCalled = false
+			remoteEndpointCalled = false
 			responseContentType = ""
 			responseContent = nil
 
