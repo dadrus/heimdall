@@ -29,7 +29,7 @@ const (
 	defaultIdleTimeout  = time.Second * 120
 
 	defaultMaxIdleConnections        = 100
-	defaultMaxIdleConnectionsPerHost = 50
+	defaultMaxIdleConnectionsPerHost = 100
 
 	defaultProxyServicePort      = 4455
 	defaultDecisionServicePort   = 4456
