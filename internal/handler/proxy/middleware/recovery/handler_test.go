@@ -30,7 +30,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
-	"github.com/dadrus/heimdall/internal/handler/proxy/middlewares/errorhandler/mocks"
+	"github.com/dadrus/heimdall/internal/handler/proxy/middleware/errorhandler/mocks"
 )
 
 func TestHandlerExecution(t *testing.T) {

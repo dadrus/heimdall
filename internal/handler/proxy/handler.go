@@ -19,7 +19,7 @@ package proxy
 import (
 	"net/http"
 
-	"github.com/dadrus/heimdall/internal/handler/proxy/middlewares/errorhandler"
+	"github.com/dadrus/heimdall/internal/handler/proxy/middleware/errorhandler"
 	"github.com/dadrus/heimdall/internal/handler/request"
 	"github.com/dadrus/heimdall/internal/rules/rule"
 )
