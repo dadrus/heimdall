@@ -21,34 +21,45 @@ import (
 	"errors"
 	"net/http"
 
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/rs/zerolog"
 	"go.uber.org/fx"
 
+	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/handler/listener"
+	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/rules/rule"
 )
 
 var Module = fx.Options( // nolint: gochecknoglobals
-	fx.Provide(fx.Annotated{Name: "decision", Target: newService}),
 	fx.Invoke(registerHooks),
 )
 
 type hooksArgs struct {
 	fx.In
 
-	Lifecycle fx.Lifecycle
-	Config    *config.Configuration
-	Logger    zerolog.Logger
-	Service   *http.Server `name:"decision"`
+	Lifecycle  fx.Lifecycle
+	Config     *config.Configuration
+	Logger     zerolog.Logger
+	Registerer prometheus.Registerer
+	Cache      cache.Cache
+	Executor   rule.Executor
+	Signer     heimdall.JWTSigner
 }
 
 func registerHooks(args hooksArgs) {
-	ln, err := listener.New("tcp", args.Config.Serve.Proxy)
+	ln, err := listener.New("tcp", args.Config.Serve.Decision)
 	if err != nil {
 		args.Logger.Fatal().Err(err).Msg("Could not create listener for the Decision service")
 
 		return
 	}
+
+	srv := newService(
+		args.Config, args.Registerer, args.Cache,
+		args.Logger, args.Executor, args.Signer,
+	)
 
 	args.Lifecycle.Append(
 		fx.Hook{
@@ -56,7 +67,7 @@ func registerHooks(args hooksArgs) {
 				go func() {
 					args.Logger.Info().Str("_address", ln.Addr().String()).Msg("Decision service starts listening")
 
-					if err = args.Service.Serve(ln); err != nil {
+					if err = srv.Serve(ln); err != nil {
 						if !errors.Is(err, http.ErrServerClosed) {
 							args.Logger.Fatal().Err(err).Msg("Could not start Decision service")
 						}
@@ -68,7 +79,7 @@ func registerHooks(args hooksArgs) {
 			OnStop: func(ctx context.Context) error {
 				args.Logger.Info().Msg("Tearing down Decision service")
 
-				return args.Service.Shutdown(ctx)
+				return srv.Shutdown(ctx)
 			},
 		},
 	)

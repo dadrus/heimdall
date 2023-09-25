@@ -28,7 +28,6 @@ import (
 	"github.com/rs/zerolog"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel"
-	"go.uber.org/fx"
 
 	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/dadrus/heimdall/internal/config"
@@ -47,23 +46,19 @@ import (
 	"github.com/dadrus/heimdall/internal/x/loggeradapter"
 )
 
-type serviceArgs struct {
-	fx.In
-
-	Config     *config.Configuration
-	Registerer prometheus.Registerer
-	Cache      cache.Cache
-	Logger     zerolog.Logger
-	Executor   rule.Executor
-	Signer     heimdall.JWTSigner
-}
-
 func passThrough(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) { next.ServeHTTP(rw, req) })
 }
 
-func newService(args serviceArgs) *http.Server {
-	cfg := args.Config.Serve.Decision
+func newService(
+	conf *config.Configuration,
+	reg prometheus.Registerer,
+	cch cache.Cache,
+	log zerolog.Logger,
+	exec rule.Executor,
+	signer heimdall.JWTSigner,
+) *http.Server {
+	cfg := conf.Serve.Decision
 	eh := errorhandler.New(
 		errorhandler.WithVerboseErrors(cfg.Respond.Verbose),
 		errorhandler.WithPreconditionErrorCode(cfg.Respond.With.ArgumentError.Code),
@@ -78,14 +73,14 @@ func newService(args serviceArgs) *http.Server {
 
 	hc := alice.New(
 		trustedproxy.New(
-			args.Logger,
+			log,
 			x.IfThenElseExec(cfg.TrustedProxies != nil,
 				func() []string { return *cfg.TrustedProxies },
 				func() []string { return []string{} },
 			)...,
 		),
-		accesslog.New(args.Logger),
-		logger.New(args.Logger),
+		accesslog.New(log),
+		logger.New(log),
 		dump.New(),
 		recovery.New(eh),
 		func(next http.Handler) http.Handler {
@@ -100,17 +95,17 @@ func newService(args serviceArgs) *http.Server {
 				}),
 			)
 		},
-		x.IfThenElseExec(args.Config.Metrics.Enabled,
+		x.IfThenElseExec(conf.Metrics.Enabled,
 			func() func(http.Handler) http.Handler {
 				return prometheus2.New(
 					prometheus2.WithServiceName("decision"),
-					prometheus2.WithRegisterer(args.Registerer),
+					prometheus2.WithRegisterer(reg),
 				)
 			},
 			func() func(http.Handler) http.Handler { return passThrough },
 		),
-		cachemiddleware.New(args.Cache),
-	).Then(service.NewHandler(newContextFactory(args.Signer, acceptedCode), args.Executor, eh))
+		cachemiddleware.New(cch),
+	).Then(service.NewHandler(newContextFactory(signer, acceptedCode), exec, eh))
 
 	return &http.Server{
 		Handler:        hc,
@@ -119,7 +114,7 @@ func newService(args serviceArgs) *http.Server {
 		WriteTimeout:   cfg.Timeout.Write,
 		IdleTimeout:    cfg.Timeout.Idle,
 		MaxHeaderBytes: int(cfg.BufferLimit.Read),
-		ErrorLog:       loggeradapter.NewStdLogger(args.Logger),
+		ErrorLog:       loggeradapter.NewStdLogger(log),
 	}
 }
 

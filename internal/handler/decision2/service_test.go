@@ -566,13 +566,14 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 
 			client := &http.Client{Transport: &http.Transport{}}
 
-			decision := newService(serviceArgs{
-				Config:     conf,
-				Registerer: prometheus.NewRegistry(),
-				Cache:      cch,
-				Logger:     log.Logger,
-				Executor:   exec,
-			})
+			decision := newService(
+				conf,
+				prometheus.NewRegistry(),
+				cch,
+				log.Logger,
+				exec,
+				nil,
+			)
 
 			defer decision.Shutdown(context.Background())
 
