@@ -54,6 +54,13 @@ serve:
       read: 2s
       write: 5s
       idle: 2m
+    connections_limit:
+      max_per_host: 10
+      max_idle: 100
+      max_idle_per_host: 50
+    buffer_limit:
+      read: 10KB
+      write: 10KB
     cors:
       allowed_origins:
         - example.org
