@@ -61,7 +61,7 @@ func New(logger zerolog.Logger) func(http.Handler) http.Handler {
 
 			metrics := httpsnoop.CaptureMetrics(next, rw, req)
 
-			logAccessStatus(ctx, accLog.Info(), accesscontext.Error(ctx)).
+			logAccessStatus(ctx, accLog.Info(), metrics.Code).
 				Int64("_body_bytes_sent", metrics.Written).
 				Int("_http_status_code", metrics.Code).
 				Int64("_tx_duration_ms", time.Until(start).Milliseconds()).
@@ -70,14 +70,15 @@ func New(logger zerolog.Logger) func(http.Handler) http.Handler {
 	}
 }
 
-func logAccessStatus(ctx context.Context, event *zerolog.Event, err error) *zerolog.Event {
+func logAccessStatus(ctx context.Context, event *zerolog.Event, statusCode int) *zerolog.Event {
 	subject := accesscontext.Subject(ctx)
+	err := accesscontext.Error(ctx)
 
 	if len(subject) != 0 {
 		event.Str("_subject", subject)
 	}
 
-	if err != nil {
+	if err != nil || statusCode >= 300 {
 		event.Err(err).Bool("_access_granted", false)
 	} else {
 		event.Bool("_access_granted", true)
