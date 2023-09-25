@@ -14,7 +14,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package proxy
+package service
 
 import (
 	"errors"
@@ -81,7 +81,7 @@ func TestHandlerServeHTTP(t *testing.T) {
 
 			tc.setup(t, re, rc, eh)
 
-			proxy := newHandler(rcf, re, eh)
+			proxy := NewHandler(rcf, re, eh)
 
 			req := httptest.NewRequest(http.MethodGet, "/test", nil)
 			rw := httptest.NewRecorder()

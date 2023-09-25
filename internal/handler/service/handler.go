@@ -14,7 +14,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package proxy
+package service
 
 import (
 	"net/http"
@@ -30,7 +30,7 @@ type handler struct {
 	eh errorhandler.ErrorHandler
 }
 
-func newHandler(rcf request.ContextFactory, re rule.Executor, eh errorhandler.ErrorHandler) http.Handler {
+func NewHandler(rcf request.ContextFactory, re rule.Executor, eh errorhandler.ErrorHandler) http.Handler {
 	return &handler{f: rcf, eh: eh, e: re}
 }
 

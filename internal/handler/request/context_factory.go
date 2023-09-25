@@ -23,3 +23,9 @@ import "net/http"
 type ContextFactory interface {
 	Create(rw http.ResponseWriter, req *http.Request) Context
 }
+
+type FactoryFunc func(rw http.ResponseWriter, req *http.Request) Context
+
+func (f FactoryFunc) Create(rw http.ResponseWriter, req *http.Request) Context {
+	return f(rw, req)
+}

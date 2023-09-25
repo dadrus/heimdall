@@ -14,11 +14,9 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package proxy
+package decision2
 
 import (
-	"context"
-	"crypto/tls"
 	"fmt"
 	"net"
 	"net/http"
@@ -26,7 +24,6 @@ import (
 
 	"github.com/justinas/alice"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/rs/cors"
 	"github.com/rs/zerolog"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel"
@@ -37,7 +34,7 @@ import (
 	"github.com/dadrus/heimdall/internal/handler/middleware/accesslog"
 	cachemiddleware "github.com/dadrus/heimdall/internal/handler/middleware/cache"
 	"github.com/dadrus/heimdall/internal/handler/middleware/dump"
-	errorhandler2 "github.com/dadrus/heimdall/internal/handler/middleware/errorhandler"
+	"github.com/dadrus/heimdall/internal/handler/middleware/errorhandler"
 	"github.com/dadrus/heimdall/internal/handler/middleware/logger"
 	prometheus2 "github.com/dadrus/heimdall/internal/handler/middleware/prometheus"
 	"github.com/dadrus/heimdall/internal/handler/middleware/recovery"
@@ -48,39 +45,6 @@ import (
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/loggeradapter"
 )
-
-// tlsClientConfig used for test purposes only to
-// set the certificate pool for peer certificate verification
-// purposes.
-var tlsClientConfig *tls.Config // nolint: gochecknoglobals
-
-type deadlineResetter struct{}
-
-func (dr *deadlineResetter) handler(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		if val := req.Context().Value(dr); val != nil {
-			type DeadlinesResetter interface{ MonitorAndResetDeadlines(bool) }
-
-			monitor, ok := val.(DeadlinesResetter)
-
-			if ok {
-				monitor.MonitorAndResetDeadlines(true)
-
-				defer monitor.MonitorAndResetDeadlines(false)
-			}
-		}
-
-		next.ServeHTTP(rw, req)
-	})
-}
-
-func (dr *deadlineResetter) contexter(ctx context.Context, con net.Conn) context.Context {
-	if tlsCon, ok := con.(*tls.Conn); ok {
-		return context.WithValue(ctx, dr, tlsCon.NetConn())
-	}
-
-	return context.WithValue(ctx, dr, con)
-}
 
 type serviceArgs struct {
 	fx.In
@@ -98,17 +62,16 @@ func passThrough(next http.Handler) http.Handler {
 }
 
 func newService(args serviceArgs) *http.Server {
-	der := &deadlineResetter{}
-	cfg := args.Config.Serve.Proxy
-	eh := errorhandler2.New(
-		errorhandler2.WithVerboseErrors(cfg.Respond.Verbose),
-		errorhandler2.WithPreconditionErrorCode(cfg.Respond.With.ArgumentError.Code),
-		errorhandler2.WithAuthenticationErrorCode(cfg.Respond.With.AuthenticationError.Code),
-		errorhandler2.WithAuthorizationErrorCode(cfg.Respond.With.AuthorizationError.Code),
-		errorhandler2.WithCommunicationErrorCode(cfg.Respond.With.CommunicationError.Code),
-		errorhandler2.WithMethodErrorCode(cfg.Respond.With.BadMethodError.Code),
-		errorhandler2.WithNoRuleErrorCode(cfg.Respond.With.NoRuleError.Code),
-		errorhandler2.WithInternalServerErrorCode(cfg.Respond.With.InternalError.Code),
+	cfg := args.Config.Serve.Decision
+	eh := errorhandler.New(
+		errorhandler.WithVerboseErrors(cfg.Respond.Verbose),
+		errorhandler.WithPreconditionErrorCode(cfg.Respond.With.ArgumentError.Code),
+		errorhandler.WithAuthenticationErrorCode(cfg.Respond.With.AuthenticationError.Code),
+		errorhandler.WithAuthorizationErrorCode(cfg.Respond.With.AuthorizationError.Code),
+		errorhandler.WithCommunicationErrorCode(cfg.Respond.With.CommunicationError.Code),
+		errorhandler.WithMethodErrorCode(cfg.Respond.With.BadMethodError.Code),
+		errorhandler.WithNoRuleErrorCode(cfg.Respond.With.NoRuleError.Code),
+		errorhandler.WithInternalServerErrorCode(cfg.Respond.With.InternalError.Code),
 	)
 
 	hc := alice.New(
@@ -122,14 +85,13 @@ func newService(args serviceArgs) *http.Server {
 		accesslog.New(args.Logger),
 		logger.New(args.Logger),
 		dump.New(),
-		der.handler,
 		recovery.New(eh),
 		func(next http.Handler) http.Handler {
 			return otelhttp.NewHandler(
 				next,
 				"",
 				otelhttp.WithTracerProvider(otel.GetTracerProvider()),
-				otelhttp.WithServerName("proxy"),
+				otelhttp.WithServerName("decision"),
 				otelhttp.WithSpanNameFormatter(func(_ string, req *http.Request) string {
 					return fmt.Sprintf("EntryPoint %s %s%s",
 						strings.ToLower(req.URL.Scheme), getLocalAddress(req), req.URL.Path)
@@ -139,29 +101,14 @@ func newService(args serviceArgs) *http.Server {
 		x.IfThenElseExec(args.Config.Metrics.Enabled,
 			func() func(http.Handler) http.Handler {
 				return prometheus2.New(
-					prometheus2.WithServiceName("proxy"),
+					prometheus2.WithServiceName("decision"),
 					prometheus2.WithRegisterer(args.Registerer),
 				)
 			},
 			func() func(http.Handler) http.Handler { return passThrough },
 		),
-		x.IfThenElseExec(cfg.CORS != nil,
-			func() func(http.Handler) http.Handler {
-				return cors.New(
-					cors.Options{
-						AllowedOrigins:   cfg.CORS.AllowedOrigins,
-						AllowedMethods:   cfg.CORS.AllowedMethods,
-						AllowedHeaders:   cfg.CORS.AllowedHeaders,
-						AllowCredentials: cfg.CORS.AllowCredentials,
-						ExposedHeaders:   cfg.CORS.ExposedHeaders,
-						MaxAge:           int(cfg.CORS.MaxAge.Seconds()),
-					},
-				).Handler
-			},
-			func() func(http.Handler) http.Handler { return passThrough },
-		),
 		cachemiddleware.New(args.Cache),
-	).Then(service.NewHandler(newContextFactory(args.Signer, cfg, tlsClientConfig), args.Executor, eh))
+	).Then(service.NewHandler(newContextFactory(args.Signer, cfg.Respond.With.Accepted.Code), args.Executor, eh))
 
 	return &http.Server{
 		Handler:        hc,
@@ -171,7 +118,6 @@ func newService(args serviceArgs) *http.Server {
 		IdleTimeout:    cfg.Timeout.Idle,
 		MaxHeaderBytes: int(cfg.BufferLimit.Read),
 		ErrorLog:       loggeradapter.NewStdLogger(args.Logger),
-		ConnContext:    der.contexter,
 	}
 }
 
