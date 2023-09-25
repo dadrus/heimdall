@@ -115,6 +115,7 @@ func newService(args serviceArgs) *http.Server {
 		accesslog.New(args.Logger),
 		logger.New(args.Logger),
 		dump.New(),
+		dr.handler,
 		recovery.New(eh),
 		func(next http.Handler) http.Handler {
 			return otelhttp.NewHandler(
@@ -158,7 +159,6 @@ func newService(args serviceArgs) *http.Server {
 			func() func(http.Handler) http.Handler { return passThrough },
 		),
 		cachemiddleware.New(args.Cache),
-		dr.handler,
 	).Then(newHandler(newRequestContextFactory(args.Signer, cfg), args.Executor, eh))
 
 	return &http.Server{
