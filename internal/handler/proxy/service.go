@@ -133,10 +133,7 @@ func newService(
 		},
 		x.IfThenElseExec(conf.Metrics.Enabled,
 			func() func(http.Handler) http.Handler {
-				return prometheus3.New(
-					prometheus3.WithServiceName("proxy"),
-					prometheus3.WithRegisterer(reg),
-				)
+				return prometheus3.New(prometheus3.WithServiceName("proxy"), prometheus3.WithRegisterer(reg))
 			},
 			func() func(http.Handler) http.Handler { return passThrough },
 		),
