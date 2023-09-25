@@ -24,7 +24,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal"
 	"github.com/dadrus/heimdall/internal/config"
-	"github.com/dadrus/heimdall/internal/handler/decision"
+	"github.com/dadrus/heimdall/internal/handler/decision2"
 	envoy_extauth "github.com/dadrus/heimdall/internal/handler/envoyextauth/grpcv3"
 )
 
@@ -69,7 +69,7 @@ func createDecisionApp(cmd *cobra.Command) (*fx.App, error) {
 	if useEnvoyExtAuth {
 		opts = append(opts, envoy_extauth.Module)
 	} else {
-		opts = append(opts, decision.Module)
+		opts = append(opts, decision2.Module)
 	}
 
 	app := fx.New(opts...)
