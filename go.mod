@@ -47,7 +47,6 @@ require (
 	github.com/tidwall/gjson v1.17.0
 	github.com/tonglil/opentelemetry-go-datadog-propagator v0.1.1
 	github.com/undefinedlabs/go-mpatch v1.0.7
-	github.com/valyala/fasthttp v1.49.0
 	github.com/ybbus/httpretry v1.0.2
 	github.com/yl2chen/cidranger v1.0.2
 	github.com/youmark/pkcs8 v0.0.0-20201027041543-1326539a0a0a
@@ -166,6 +165,7 @@ require (
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.0 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
+	github.com/valyala/fasthttp v1.49.0 // indirect
 	github.com/valyala/tcplisten v1.0.0 // indirect
 	go.opencensus.io v0.24.0 // indirect
 	go.opentelemetry.io/contrib/propagators/aws v1.19.0 // indirect
