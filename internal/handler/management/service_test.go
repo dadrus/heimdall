@@ -23,6 +23,7 @@ import (
 	"crypto/rand"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -40,7 +41,7 @@ import (
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
-type JWKSTestSuite struct {
+type ServiceTestSuite struct {
 	suite.Suite
 	rootCA1 *testsupport.CA
 	intCA1  *testsupport.CA
@@ -51,7 +52,7 @@ type JWKSTestSuite struct {
 	ks  keystore.KeyStore
 }
 
-func (suite *JWKSTestSuite) SetupSuite() {
+func (suite *ServiceTestSuite) SetupSuite() {
 	var err error
 
 	// ROOT CAs
@@ -116,15 +117,15 @@ func (suite *JWKSTestSuite) SetupSuite() {
 	suite.srv = httptest.NewServer(newManagementHandler(signer))
 }
 
-func (suite *JWKSTestSuite) TearDownSuite() {
+func (suite *ServiceTestSuite) TearDownSuite() {
 	suite.srv.Close()
 }
 
-func TestJWKSTestSuite(t *testing.T) {
-	suite.Run(t, new(JWKSTestSuite))
+func TestServiceTestSuite(t *testing.T) {
+	suite.Run(t, new(ServiceTestSuite))
 }
 
-func (suite *JWKSTestSuite) TestJWKSRequestWithoutEtagUsage() {
+func (suite *ServiceTestSuite) TestJWKSRequestWithoutEtagUsage() {
 	// WHEN
 	client := &http.Client{Transport: &http.Transport{}}
 	req, err := http.NewRequestWithContext(context.TODO(), http.MethodGet, suite.srv.URL+"/.well-known/jwks", nil)
@@ -180,7 +181,7 @@ func (suite *JWKSTestSuite) TestJWKSRequestWithoutEtagUsage() {
 	assert.Empty(suite.T(), jwk[0].CertificateThumbprintSHA256)
 }
 
-func (suite *JWKSTestSuite) TestJWKSRequestWithEtagUsage() {
+func (suite *ServiceTestSuite) TestJWKSRequestWithEtagUsage() {
 	// GIVEN
 	client := &http.Client{Transport: &http.Transport{}}
 	req, err := http.NewRequestWithContext(context.TODO(), http.MethodGet, suite.srv.URL+"/.well-known/jwks", nil)
@@ -210,4 +211,30 @@ func (suite *JWKSTestSuite) TestJWKSRequestWithEtagUsage() {
 
 	assert.Equal(suite.T(), http.StatusNotModified, resp2.StatusCode)
 	assert.Empty(suite.T(), resp2.Header.Get("Content-Length"))
+}
+
+func TestHealthRequest(t *testing.T) {
+	t.Parallel()
+
+	// GIVEN
+	srv := httptest.NewServer(newManagementHandler(nil))
+	defer srv.Close()
+
+	client := &http.Client{Transport: &http.Transport{}}
+	req, err := http.NewRequestWithContext(context.TODO(), http.MethodGet, srv.URL+"/.well-known/health", nil)
+	require.NoError(t, err)
+
+	// WHEN
+	resp, err := client.Do(req)
+
+	// THEN
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	defer resp.Body.Close()
+
+	rawResp, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
+
+	assert.JSONEq(t, `{ "status": "ok"}`, string(rawResp))
 }

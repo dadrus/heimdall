@@ -2,7 +2,6 @@ package management
 
 import (
 	"fmt"
-	"net"
 	"net/http"
 	"strings"
 
@@ -22,6 +21,7 @@ import (
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/recovery"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/x"
+	"github.com/dadrus/heimdall/internal/x/httpx"
 	"github.com/dadrus/heimdall/internal/x/loggeradapter"
 )
 
@@ -52,7 +52,7 @@ func newService(
 				otelhttp.WithServerName("management"),
 				otelhttp.WithSpanNameFormatter(func(_ string, req *http.Request) string {
 					return fmt.Sprintf("EntryPoint %s %s%s",
-						strings.ToLower(req.URL.Scheme), getLocalAddress(req), req.URL.Path)
+						strings.ToLower(req.URL.Scheme), httpx.LocalAddress(req), req.URL.Path)
 				}),
 				otelhttp.WithFilter(opFilter),
 			)
@@ -93,13 +93,4 @@ func newService(
 		MaxHeaderBytes: int(cfg.BufferLimit.Read),
 		ErrorLog:       loggeradapter.NewStdLogger(log),
 	}
-}
-
-func getLocalAddress(req *http.Request) string {
-	localAddr := "unknown"
-	if addr, ok := req.Context().Value(http.LocalAddrContextKey).(net.Addr); ok {
-		localAddr = addr.String()
-	}
-
-	return localAddr
 }
