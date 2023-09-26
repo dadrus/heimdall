@@ -50,8 +50,8 @@ func initializeOTEL(lifecycle fx.Lifecycle, conf *config.Configuration, logger z
 		resource.Default(),
 		resource.NewWithAttributes(
 			semconv.SchemaURL,
-			semconv.ServiceNameKey.String("heimdall"),
-			semconv.ServiceVersionKey.String(version.Version)))
+			semconv.ServiceName("heimdall"),
+			semconv.ServiceVersion(version.Version)))
 	if err != nil {
 		return err
 	}
