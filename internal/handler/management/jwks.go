@@ -37,6 +37,6 @@ func jwks(signer heimdall.JWTSigner) http.Handler {
 		}
 
 		rw.Header().Set("Content-Type", "application/json")
-		rw.Write(res)
+		_, _ = rw.Write(res)
 	})
 }
