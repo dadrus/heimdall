@@ -1,4 +1,4 @@
-package management2
+package management
 
 import (
 	"fmt"

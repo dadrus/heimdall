@@ -14,7 +14,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package management2
+package management
 
 import (
 	"net/http"
