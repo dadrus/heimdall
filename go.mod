@@ -11,6 +11,7 @@ require (
 	github.com/felixge/httpsnoop v1.0.3
 	github.com/fsnotify/fsnotify v1.6.0
 	github.com/go-co-op/gocron v1.34.2
+	github.com/go-http-utils/etag v0.0.0-20161124023236-513ea8f21eb1
 	github.com/go-logr/zerologr v1.2.3
 	github.com/gobwas/glob v0.2.3
 	github.com/goccy/go-json v0.10.2
@@ -118,6 +119,8 @@ require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/envoyproxy/protoc-gen-validate v1.0.2 // indirect
 	github.com/fatih/structs v1.1.0 // indirect
+	github.com/go-http-utils/fresh v0.0.0-20161124030543-7231e26a4b27 // indirect
+	github.com/go-http-utils/headers v0.0.0-20181008091004-fed159eddc2a // indirect
 	github.com/go-logr/logr v1.2.4 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
