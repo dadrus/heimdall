@@ -14,16 +14,31 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package requestcontext
+package loggeradapter
 
 import (
-	"net/http"
+	stdlog "log"
+
+	"github.com/rs/zerolog"
+
+	"github.com/dadrus/heimdall/internal/x/stringx"
 )
 
-func extractMethod(req *http.Request) string {
-	if val := req.Header.Get("X-Forwarded-Method"); len(val) != 0 {
-		return val
+type zerologadapter struct {
+	log zerolog.Logger
+}
+
+func NewStdLogger(logger zerolog.Logger) *stdlog.Logger {
+	return stdlog.New(zerologadapter{logger}, "", 0)
+}
+
+func (a zerologadapter) Write(data []byte) (int, error) {
+	length := len(data)
+	if length > 0 && data[length-1] == '\n' {
+		data = data[0 : length-1]
 	}
 
-	return req.Method
+	a.log.Error().Msg(stringx.ToString(data))
+
+	return length, nil
 }
