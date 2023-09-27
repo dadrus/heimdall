@@ -18,17 +18,21 @@ package metrics
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
+	"time"
 
-	"github.com/gofiber/adaptor/v2"
-	"github.com/gofiber/fiber/v2"
+	"github.com/justinas/alice"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/rs/zerolog"
 	"go.uber.org/fx"
 
 	"github.com/dadrus/heimdall/internal/config"
+	"github.com/dadrus/heimdall/internal/handler/listener"
+	"github.com/dadrus/heimdall/internal/handler/middleware/http/methodfilter"
+	"github.com/dadrus/heimdall/internal/x/loggeradapter"
 )
 
 var Module = fx.Options( // nolint: gochecknoglobals
@@ -57,11 +61,6 @@ func registerHooks(args hooksArgs) {
 		return
 	}
 
-	app := fiber.New(fiber.Config{
-		AppName:               "Heimdall's Metrics endpoint",
-		DisableStartupMessage: true,
-	})
-
 	metricsHandler := promhttp.InstrumentMetricHandler(
 		args.Registerer,
 		promhttp.HandlerFor(
@@ -73,16 +72,38 @@ func registerHooks(args hooksArgs) {
 		),
 	)
 
-	registerRoutes(app.Group(args.Config.Metrics.MetricsPath), args.Logger, metricsHandler)
+	mux := http.NewServeMux()
+	mux.Handle(args.Config.Metrics.MetricsPath,
+		alice.New(methodfilter.New(http.MethodGet)).
+			Then(metricsHandler))
+
+	srv := &http.Server{
+		Handler:        mux,
+		Addr:           args.Config.Metrics.Address(),
+		ReadTimeout:    5 * time.Second,  // nolint: gomnd
+		WriteTimeout:   10 * time.Second, // nolint: gomnd
+		IdleTimeout:    90 * time.Second, // nolint: gomnd
+		MaxHeaderBytes: 4096,             // nolint: gomnd
+		ErrorLog:       loggeradapter.NewStdLogger(args.Logger),
+	}
 
 	args.Lifecycle.Append(
 		fx.Hook{
 			OnStart: func(ctx context.Context) error {
+				ln, err := listener.New("tcp", args.Config.Metrics.Address(), nil)
+				if err != nil {
+					args.Logger.Fatal().Err(err).Msg("Could not create listener for the Metrics service")
+
+					return err
+				}
+
 				go func() {
-					addr := args.Config.Metrics.Address()
-					args.Logger.Info().Str("_address", addr).Msg("Metrics service starts listening")
-					if err := app.Listen(addr); err != nil {
-						args.Logger.Fatal().Err(err).Msg("Could not start Metrics service")
+					args.Logger.Info().Str("_address", ln.Addr().String()).Msg("Metrics service starts listening")
+
+					if err = srv.Serve(ln); err != nil {
+						if !errors.Is(err, http.ErrServerClosed) {
+							args.Logger.Fatal().Err(err).Msg("Could not start Metrics service")
+						}
 					}
 				}()
 
@@ -91,14 +112,8 @@ func registerHooks(args hooksArgs) {
 			OnStop: func(ctx context.Context) error {
 				args.Logger.Info().Msg("Tearing down Metrics service")
 
-				return app.Shutdown()
+				return srv.Shutdown(ctx)
 			},
 		},
 	)
-}
-
-func registerRoutes(router fiber.Router, logger zerolog.Logger, handler http.Handler) {
-	logger.Debug().Msg("Registering Metrics service routes")
-
-	router.Get("", adaptor.HTTPHandler(handler))
 }
