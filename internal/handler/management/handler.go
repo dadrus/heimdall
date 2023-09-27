@@ -15,7 +15,7 @@ import (
 )
 
 func newManagementHandler(signer heimdall.JWTSigner, eh errorhandler.ErrorHandler) http.Handler {
-	h := &handler{
+	mh := &handler{
 		s:  signer,
 		eh: eh,
 	}
@@ -24,10 +24,10 @@ func newManagementHandler(signer heimdall.JWTSigner, eh errorhandler.ErrorHandle
 
 	mux.Handle(EndpointHealth,
 		alice.New(methodfilter.New(http.MethodGet)).
-			Then(http.HandlerFunc(h.health)))
+			Then(http.HandlerFunc(mh.health)))
 	mux.Handle(EndpointJWKS,
 		alice.New(methodfilter.New(http.MethodGet)).
-			Then(etag.Handler(http.HandlerFunc(h.jwks), false)))
+			Then(etag.Handler(http.HandlerFunc(mh.jwks), false)))
 
 	return mux
 }
