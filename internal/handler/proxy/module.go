@@ -17,17 +17,13 @@
 package proxy
 
 import (
-	"context"
-	"errors"
-	"net/http"
-
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/rs/zerolog"
 	"go.uber.org/fx"
 
 	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/dadrus/heimdall/internal/config"
-	"github.com/dadrus/heimdall/internal/handler/listener"
+	"github.com/dadrus/heimdall/internal/handler/fxlcm"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/rule"
 )
@@ -49,37 +45,17 @@ type hooksArgs struct {
 }
 
 func registerHooks(args hooksArgs) {
-	cfg := args.Config.Serve.Proxy
-
-	srv := newService(args.Config, args.Registerer, args.Cache, args.Logger, args.Executor, args.Signer)
+	slm := &fxlcm.LifecycleManager{
+		Service: "Proxy",
+		Server:  newService(args.Config, args.Registerer, args.Cache, args.Logger, args.Executor, args.Signer),
+		Logger:  args.Logger,
+		TLSConf: args.Config.Serve.Proxy.TLS,
+	}
 
 	args.Lifecycle.Append(
 		fx.Hook{
-			OnStart: func(ctx context.Context) error {
-				ln, err := listener.New("tcp", cfg.Address(), cfg.TLS)
-				if err != nil {
-					args.Logger.Fatal().Err(err).Msg("Could not create listener for the Proxy service")
-
-					return err
-				}
-
-				go func() {
-					args.Logger.Info().Str("_address", ln.Addr().String()).Msg("Proxy service starts listening")
-
-					if err = srv.Serve(ln); err != nil {
-						if !errors.Is(err, http.ErrServerClosed) {
-							args.Logger.Fatal().Err(err).Msg("Could not start Proxy service")
-						}
-					}
-				}()
-
-				return nil
-			},
-			OnStop: func(ctx context.Context) error {
-				args.Logger.Info().Msg("Tearing down Proxy service")
-
-				return srv.Shutdown(ctx)
-			},
+			OnStart: slm.Start,
+			OnStop:  slm.Stop,
 		},
 	)
 }

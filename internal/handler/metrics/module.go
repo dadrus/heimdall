@@ -17,8 +17,6 @@
 package metrics
 
 import (
-	"context"
-	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -30,7 +28,7 @@ import (
 	"go.uber.org/fx"
 
 	"github.com/dadrus/heimdall/internal/config"
-	"github.com/dadrus/heimdall/internal/handler/listener"
+	"github.com/dadrus/heimdall/internal/handler/fxlcm"
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/methodfilter"
 	"github.com/dadrus/heimdall/internal/x/loggeradapter"
 )
@@ -61,59 +59,38 @@ func registerHooks(args hooksArgs) {
 		return
 	}
 
-	metricsHandler := promhttp.InstrumentMetricHandler(
-		args.Registerer,
-		promhttp.HandlerFor(
-			args.Gatherer,
-			promhttp.HandlerOpts{
-				Registry: args.Registerer,
-				ErrorLog: ErrLoggerFun(func(v ...interface{}) { args.Logger.Error().Msg(fmt.Sprint(v...)) }),
-			},
-		),
-	)
-
 	mux := http.NewServeMux()
 	mux.Handle(args.Config.Metrics.MetricsPath,
 		alice.New(methodfilter.New(http.MethodGet)).
-			Then(metricsHandler))
+			Then(promhttp.InstrumentMetricHandler(
+				args.Registerer,
+				promhttp.HandlerFor(
+					args.Gatherer,
+					promhttp.HandlerOpts{
+						Registry: args.Registerer,
+						ErrorLog: ErrLoggerFun(func(v ...interface{}) { args.Logger.Error().Msg(fmt.Sprint(v...)) }),
+					},
+				),
+			)))
 
-	srv := &http.Server{
-		Handler:        mux,
-		Addr:           args.Config.Metrics.Address(),
-		ReadTimeout:    5 * time.Second,  // nolint: gomnd
-		WriteTimeout:   10 * time.Second, // nolint: gomnd
-		IdleTimeout:    90 * time.Second, // nolint: gomnd
-		MaxHeaderBytes: 4096,             // nolint: gomnd
-		ErrorLog:       loggeradapter.NewStdLogger(args.Logger),
+	slm := &fxlcm.LifecycleManager{
+		Service: "Metrics",
+		Server: &http.Server{
+			Handler:        mux,
+			Addr:           args.Config.Metrics.Address(),
+			ReadTimeout:    5 * time.Second,  // nolint: gomnd
+			WriteTimeout:   10 * time.Second, // nolint: gomnd
+			IdleTimeout:    90 * time.Second, // nolint: gomnd
+			MaxHeaderBytes: 4096,             // nolint: gomnd
+			ErrorLog:       loggeradapter.NewStdLogger(args.Logger),
+		},
+		Logger: args.Logger,
 	}
 
 	args.Lifecycle.Append(
 		fx.Hook{
-			OnStart: func(ctx context.Context) error {
-				ln, err := listener.New("tcp", args.Config.Metrics.Address(), nil)
-				if err != nil {
-					args.Logger.Fatal().Err(err).Msg("Could not create listener for the Metrics service")
-
-					return err
-				}
-
-				go func() {
-					args.Logger.Info().Str("_address", ln.Addr().String()).Msg("Metrics service starts listening")
-
-					if err = srv.Serve(ln); err != nil {
-						if !errors.Is(err, http.ErrServerClosed) {
-							args.Logger.Fatal().Err(err).Msg("Could not start Metrics service")
-						}
-					}
-				}()
-
-				return nil
-			},
-			OnStop: func(ctx context.Context) error {
-				args.Logger.Info().Msg("Tearing down Metrics service")
-
-				return srv.Shutdown(ctx)
-			},
+			OnStart: slm.Start,
+			OnStop:  slm.Stop,
 		},
 	)
 }

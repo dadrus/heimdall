@@ -17,7 +17,6 @@
 package profiling
 
 import (
-	"context"
 	"net/http"
 	_ "net/http/pprof" //nolint:gosec
 	"time"
@@ -26,6 +25,8 @@ import (
 	"go.uber.org/fx"
 
 	"github.com/dadrus/heimdall/internal/config"
+	"github.com/dadrus/heimdall/internal/handler/fxlcm"
+	"github.com/dadrus/heimdall/internal/x/loggeradapter"
 )
 
 var Module = fx.Options( // nolint: gochecknoglobals
@@ -47,28 +48,21 @@ func registerHooks(args hooksArgs) {
 		return
 	}
 
-	server := &http.Server{
-		Addr:              args.Config.Profiling.Address(),
-		ReadHeaderTimeout: 5 * time.Second, //nolint:gomnd
+	slm := &fxlcm.LifecycleManager{
+		Service: "Profiling",
+		Server: &http.Server{
+			Addr:              args.Config.Profiling.Address(),
+			ReadHeaderTimeout: 5 * time.Second,  // nolint: gomnd
+			IdleTimeout:       90 * time.Second, // nolint: gomnd
+			ErrorLog:          loggeradapter.NewStdLogger(args.Logger),
+		},
+		Logger: args.Logger,
 	}
 
 	args.Lifecycle.Append(
 		fx.Hook{
-			OnStart: func(ctx context.Context) error {
-				go func() {
-					args.Logger.Info().Str("_address", server.Addr).Msg("Profiling service starts listening")
-					if err := server.ListenAndServe(); err != nil {
-						args.Logger.Fatal().Err(err).Msg("Could not start Profiling service")
-					}
-				}()
-
-				return nil
-			},
-			OnStop: func(ctx context.Context) error {
-				args.Logger.Info().Msg("Tearing down Profiling service")
-
-				return server.Shutdown(ctx)
-			},
+			OnStart: slm.Start,
+			OnStop:  slm.Stop,
 		},
 	)
 }
