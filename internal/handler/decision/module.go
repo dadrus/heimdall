@@ -51,18 +51,18 @@ type hooksArgs struct {
 func registerHooks(args hooksArgs) {
 	cfg := args.Config.Serve.Decision
 
-	ln, err := listener.New("tcp", cfg.Address(), cfg.TLS)
-	if err != nil {
-		args.Logger.Fatal().Err(err).Msg("Could not create listener for the Decision service")
-
-		return
-	}
-
 	srv := newService(args.Config, args.Registerer, args.Cache, args.Logger, args.Executor, args.Signer)
 
 	args.Lifecycle.Append(
 		fx.Hook{
 			OnStart: func(ctx context.Context) error {
+				ln, err := listener.New("tcp", cfg.Address(), cfg.TLS)
+				if err != nil {
+					args.Logger.Fatal().Err(err).Msg("Could not create listener for the Decision service")
+
+					return err
+				}
+
 				go func() {
 					args.Logger.Info().Str("_address", ln.Addr().String()).Msg("Decision service starts listening")
 
