@@ -18,8 +18,6 @@ package decision
 
 import (
 	"context"
-	"errors"
-	"net/http"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/rs/zerolog"
@@ -27,57 +25,34 @@ import (
 
 	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/dadrus/heimdall/internal/config"
-	"github.com/dadrus/heimdall/internal/handler/listener"
+	"github.com/dadrus/heimdall/internal/handler/fxlcm"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/rule"
 )
 
-var Module = fx.Options( // nolint: gochecknoglobals
-	fx.Invoke(registerHooks),
+var Module = fx.Invoke( // nolint: gochecknoglobals
+	fx.Annotate(
+		newLifecycleManager,
+		fx.OnStart(func(ctx context.Context, lcm *fxlcm.LifecycleManager) error { return lcm.Start(ctx) }),
+		fx.OnStop(func(ctx context.Context, lcm *fxlcm.LifecycleManager) error { return lcm.Stop(ctx) }),
+	),
 )
 
-type hooksArgs struct {
-	fx.In
+func newLifecycleManager(
+	conf *config.Configuration,
+	logger zerolog.Logger,
+	registerer prometheus.Registerer,
+	cch cache.Cache,
+	exec rule.Executor,
+	signer heimdall.JWTSigner,
+) *fxlcm.LifecycleManager {
+	cfg := conf.Serve.Decision
 
-	Lifecycle  fx.Lifecycle
-	Config     *config.Configuration
-	Logger     zerolog.Logger
-	Registerer prometheus.Registerer
-	Cache      cache.Cache
-	Executor   rule.Executor
-	Signer     heimdall.JWTSigner
-}
-
-func registerHooks(args hooksArgs) {
-	ln, err := listener.New("tcp", args.Config.Serve.Decision)
-	if err != nil {
-		args.Logger.Fatal().Err(err).Msg("Could not create listener for the Decision service")
-
-		return
+	return &fxlcm.LifecycleManager{
+		ServiceName:    "Decision",
+		ServiceAddress: cfg.Address(),
+		Server:         newService(conf, registerer, cch, logger, exec, signer),
+		Logger:         logger,
+		TLSConf:        cfg.TLS,
 	}
-
-	srv := newService(args.Config, args.Registerer, args.Cache, args.Logger, args.Executor, args.Signer)
-
-	args.Lifecycle.Append(
-		fx.Hook{
-			OnStart: func(ctx context.Context) error {
-				go func() {
-					args.Logger.Info().Str("_address", ln.Addr().String()).Msg("Decision service starts listening")
-
-					if err = srv.Serve(ln); err != nil {
-						if !errors.Is(err, http.ErrServerClosed) {
-							args.Logger.Fatal().Err(err).Msg("Could not start Decision service")
-						}
-					}
-				}()
-
-				return nil
-			},
-			OnStop: func(ctx context.Context) error {
-				args.Logger.Info().Msg("Tearing down Decision service")
-
-				return srv.Shutdown(ctx)
-			},
-		},
-	)
 }

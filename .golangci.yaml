@@ -65,7 +65,6 @@ linters-settings:
     ignore-names:
       - err
     ignore-decls:
-      - c *fiber.Ctx
       - t testing.T
       - i int
       - T any

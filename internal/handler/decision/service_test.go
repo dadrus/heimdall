@@ -555,7 +555,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 			srvConf.Host = "127.0.0.1"
 			srvConf.Port = port
 
-			listener, err := listener.New("tcp", srvConf)
+			listener, err := listener.New("tcp", srvConf.Address(), srvConf.TLS)
 			require.NoError(t, err)
 
 			conf := &config.Configuration{Serve: config.ServeConfig{Decision: srvConf}}
@@ -584,7 +584,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 			time.Sleep(50 * time.Millisecond)
 
 			// WHEN
-			resp, err := client.Do(tc.createRequest(t, decision.Addr))
+			resp, err := client.Do(tc.createRequest(t, srvConf.Address()))
 
 			// THEN
 			if err == nil {

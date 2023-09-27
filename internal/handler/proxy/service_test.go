@@ -918,7 +918,7 @@ func TestProxyService(t *testing.T) {
 			proxyConf.Host = "127.0.0.1"
 			proxyConf.Port = port
 
-			listener, err := listener.New("tcp", proxyConf)
+			listener, err := listener.New("tcp", proxyConf.Address(), proxyConf.TLS)
 			require.NoError(t, err)
 
 			conf := &config.Configuration{
@@ -943,7 +943,7 @@ func TestProxyService(t *testing.T) {
 			time.Sleep(50 * time.Millisecond)
 
 			// WHEN
-			resp, err := client.Do(tc.createRequest(t, proxy.Addr))
+			resp, err := client.Do(tc.createRequest(t, proxyConf.Address()))
 
 			// THEN
 			if err == nil {
@@ -1038,7 +1038,7 @@ func TestWebSocketSupport(t *testing.T) {
 
 	defer proxy.Shutdown(context.Background())
 
-	listener, err := listener.New("tcp", conf.Serve.Proxy)
+	listener, err := listener.New("tcp", conf.Serve.Proxy.Address(), conf.Serve.Proxy.TLS)
 	require.NoError(t, err)
 
 	go func() {
@@ -1047,7 +1047,7 @@ func TestWebSocketSupport(t *testing.T) {
 	}()
 	time.Sleep(50 * time.Millisecond)
 
-	wsURL := url.URL{Scheme: "ws", Host: proxy.Addr, Path: "/foo"}
+	wsURL := url.URL{Scheme: "ws", Host: conf.Serve.Proxy.Address(), Path: "/foo"}
 	con, resp, err := websocket.DefaultDialer.Dial(wsURL.String(), nil)
 	require.NoError(t, err)
 
@@ -1138,7 +1138,7 @@ func TestServerSentEventsSupport(t *testing.T) {
 
 	defer proxy.Shutdown(context.Background())
 
-	listener, err := listener.New("tcp", conf.Serve.Proxy)
+	listener, err := listener.New("tcp", conf.Serve.Proxy.Address(), conf.Serve.Proxy.TLS)
 	require.NoError(t, err)
 
 	go func() {
@@ -1147,7 +1147,7 @@ func TestServerSentEventsSupport(t *testing.T) {
 	}()
 	time.Sleep(50 * time.Millisecond)
 
-	req, err := http.NewRequestWithContext(context.TODO(), http.MethodGet, fmt.Sprintf("http://%s/foo", proxy.Addr), nil)
+	req, err := http.NewRequestWithContext(context.TODO(), http.MethodGet, fmt.Sprintf("http://%s/foo", conf.Serve.Proxy.Address()), nil)
 	require.NoError(t, err)
 	req.Header.Set("Cache-Control", "no-cache")
 	req.Header.Set("Accept", "text/event-stream")
