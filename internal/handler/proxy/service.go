@@ -38,6 +38,7 @@ import (
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/dump"
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/errorhandler"
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/logger"
+	"github.com/dadrus/heimdall/internal/handler/middleware/http/passthrough"
 	prometheus3 "github.com/dadrus/heimdall/internal/handler/middleware/http/prometheus"
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/recovery"
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/trustedproxy"
@@ -80,10 +81,6 @@ func (dr *deadlineResetter) contexter(ctx context.Context, con net.Conn) context
 	}
 
 	return context.WithValue(ctx, dr, con)
-}
-
-func passThrough(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) { next.ServeHTTP(rw, req) })
 }
 
 func newService(
@@ -136,7 +133,7 @@ func newService(
 			func() func(http.Handler) http.Handler {
 				return prometheus3.New(prometheus3.WithServiceName("proxy"), prometheus3.WithRegisterer(reg))
 			},
-			func() func(http.Handler) http.Handler { return passThrough },
+			func() func(http.Handler) http.Handler { return passthrough.New },
 		),
 		x.IfThenElseExec(cfg.CORS != nil,
 			func() func(http.Handler) http.Handler {
@@ -151,7 +148,7 @@ func newService(
 					},
 				).Handler
 			},
-			func() func(http.Handler) http.Handler { return passThrough },
+			func() func(http.Handler) http.Handler { return passthrough.New },
 		),
 		cachemiddleware.New(cch),
 	).Then(service.NewHandler(newContextFactory(signer, cfg, tlsClientConfig), exec, eh))

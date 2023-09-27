@@ -17,6 +17,7 @@ import (
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/dump"
 	errorhandler2 "github.com/dadrus/heimdall/internal/handler/middleware/http/errorhandler"
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/logger"
+	"github.com/dadrus/heimdall/internal/handler/middleware/http/passthrough"
 	prometheus3 "github.com/dadrus/heimdall/internal/handler/middleware/http/prometheus"
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/recovery"
 	"github.com/dadrus/heimdall/internal/heimdall"
@@ -24,10 +25,6 @@ import (
 	"github.com/dadrus/heimdall/internal/x/httpx"
 	"github.com/dadrus/heimdall/internal/x/loggeradapter"
 )
-
-func passThrough(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) { next.ServeHTTP(rw, req) })
-}
 
 func newService(
 	conf *config.Configuration,
@@ -65,7 +62,7 @@ func newService(
 					prometheus3.WithOperationFilter(opFilter),
 				)
 			},
-			func() func(http.Handler) http.Handler { return passThrough },
+			func() func(http.Handler) http.Handler { return passthrough.New },
 		),
 		x.IfThenElseExec(cfg.CORS != nil,
 			func() func(http.Handler) http.Handler {
@@ -80,7 +77,7 @@ func newService(
 					},
 				).Handler
 			},
-			func() func(http.Handler) http.Handler { return passThrough },
+			func() func(http.Handler) http.Handler { return passthrough.New },
 		),
 	).Then(newManagementHandler(signer, eh))
 
