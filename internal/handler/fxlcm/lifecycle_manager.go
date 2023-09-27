@@ -12,6 +12,8 @@ import (
 	"github.com/dadrus/heimdall/internal/handler/listener"
 )
 
+//go:generate mockery --name Server --structname ServerMock
+
 type Server interface {
 	Serve(l net.Listener) error
 	Shutdown(ctx context.Context) error
@@ -52,5 +54,10 @@ func (m *LifecycleManager) Start(_ context.Context) error {
 func (m *LifecycleManager) Stop(ctx context.Context) error {
 	m.Logger.Info().Str("_service", m.ServiceName).Msg("Tearing down service")
 
-	return m.Server.Shutdown(ctx)
+	err := m.Server.Shutdown(ctx)
+	if err != nil {
+		m.Logger.Warn().Err(err).Str("_service", m.ServiceName).Msg("Graceful shutdown failed")
+	}
+
+	return err
 }
