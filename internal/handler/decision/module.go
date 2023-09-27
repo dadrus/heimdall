@@ -49,7 +49,9 @@ type hooksArgs struct {
 }
 
 func registerHooks(args hooksArgs) {
-	ln, err := listener.New("tcp", args.Config.Serve.Decision)
+	cfg := args.Config.Serve.Decision
+
+	ln, err := listener.New("tcp", cfg.Address(), cfg.TLS)
 	if err != nil {
 		args.Logger.Fatal().Err(err).Msg("Could not create listener for the Decision service")
 
