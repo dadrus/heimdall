@@ -17,15 +17,13 @@
 package grpcv3
 
 import (
-	"context"
-
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/rs/zerolog"
 	"go.uber.org/fx"
 
 	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/dadrus/heimdall/internal/config"
-	"github.com/dadrus/heimdall/internal/handler/listener"
+	"github.com/dadrus/heimdall/internal/handler/fxlcm"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/rule"
 )
@@ -48,48 +46,20 @@ type hooksArgs struct {
 
 func registerHooks(args hooksArgs) {
 	cfg := args.Config.Serve.Decision
-
-	service := newService(args.Config, args.Registerer, args.Cache, args.Logger, args.Exec, args.Signer)
+	slm := &fxlcm.LifecycleManager{
+		ServiceName:    "Decision Envoy ExtAuth",
+		ServiceAddress: cfg.Address(),
+		Server: &adapter{
+			s: newService(args.Config, args.Registerer, args.Cache, args.Logger, args.Exec, args.Signer),
+		},
+		Logger:  args.Logger,
+		TLSConf: cfg.TLS,
+	}
 
 	args.Lifecycle.Append(
 		fx.Hook{
-			OnStart: func(ctx context.Context) error {
-				ln, err := listener.New("tcp4", cfg.Address(), cfg.TLS)
-				if err != nil {
-					args.Logger.Fatal().Err(err).Msg("Could not create listener for the Decision Envoy ExtAuth service")
-
-					return err
-				}
-
-				go func() {
-					args.Logger.Info().Str("_address", ln.Addr().String()).
-						Msg("Decision Envoy ExtAuth service starts listening")
-
-					if err = service.Serve(ln); err != nil {
-						args.Logger.Fatal().Err(err).Msg("Could not start Decision Envoy ExtAuth service")
-					}
-				}()
-
-				return nil
-			},
-			OnStop: func(ctx context.Context) error {
-				args.Logger.Info().Msg("Tearing down Decision Envoy ExtAuth service")
-
-				done := make(chan struct{})
-
-				go func() {
-					service.GracefulStop()
-					close(done)
-				}()
-
-				select {
-				case <-done:
-				case <-ctx.Done():
-					service.Stop()
-				}
-
-				return nil
-			},
+			OnStart: slm.Start,
+			OnStop:  slm.Stop,
 		},
 	)
 }
