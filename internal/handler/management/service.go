@@ -82,7 +82,7 @@ func newService(
 			},
 			func() func(http.Handler) http.Handler { return passThrough },
 		),
-	).Then(newManagementHandler(signer))
+	).Then(newManagementHandler(signer, eh))
 
 	return &http.Server{
 		Handler:        hc,

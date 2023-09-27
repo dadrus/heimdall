@@ -25,16 +25,19 @@ import (
 	"crypto/x509/pkix"
 	"io"
 	"net/http"
-	"net/http/httptest"
 	"testing"
 	"time"
 
 	"github.com/goccy/go-json"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"gopkg.in/square/go-jose.v2"
 
+	"github.com/dadrus/heimdall/internal/config"
+	"github.com/dadrus/heimdall/internal/handler/listener"
 	"github.com/dadrus/heimdall/internal/heimdall/mocks"
 	"github.com/dadrus/heimdall/internal/keystore"
 	"github.com/dadrus/heimdall/internal/x/pkix/pemx"
@@ -48,8 +51,10 @@ type ServiceTestSuite struct {
 	ee1     *testsupport.EndEntity
 	ee2     *testsupport.EndEntity
 
-	srv *httptest.Server
-	ks  keystore.KeyStore
+	srv    *http.Server
+	ks     keystore.KeyStore
+	signer *mocks.JWTSignerMock
+	addr   string
 }
 
 func (suite *ServiceTestSuite) SetupSuite() {
@@ -104,21 +109,39 @@ func (suite *ServiceTestSuite) SetupSuite() {
 
 	suite.ks, err = keystore.NewKeyStoreFromPEMBytes(pemBytes, "")
 	suite.NoError(err)
-
-	keys := make([]jose.JSONWebKey, len(suite.ks.Entries()))
-
-	for idx, entry := range suite.ks.Entries() {
-		keys[idx] = entry.JWK()
-	}
-
-	signer := mocks.NewJWTSignerMock(suite.T())
-	signer.EXPECT().Keys().Return(keys)
-
-	suite.srv = httptest.NewServer(newManagementHandler(signer))
 }
 
-func (suite *ServiceTestSuite) TearDownSuite() {
-	suite.srv.Close()
+func (suite *ServiceTestSuite) SetupTest() {
+	port, err := testsupport.GetFreePort()
+	suite.Require().NoError(err)
+
+	conf := &config.Configuration{
+		Serve: config.ServeConfig{
+			Management: config.ServiceConfig{
+				Host: "127.0.0.1",
+				Port: port,
+				CORS: &config.CORS{},
+			},
+		},
+		Metrics: config.MetricsConfig{Enabled: true},
+	}
+
+	listener, err := listener.New("tcp", conf.Serve.Management)
+	suite.Require().NoError(err)
+	suite.addr = "http://" + listener.Addr().String()
+
+	suite.signer = mocks.NewJWTSignerMock(suite.T())
+	suite.srv = newService(conf, prometheus.NewRegistry(), log.Logger, suite.signer)
+
+	go func() {
+		err = suite.srv.Serve(listener)
+		suite.Require().ErrorIs(err, http.ErrServerClosed)
+	}()
+	time.Sleep(50 * time.Millisecond)
+}
+
+func (suite *ServiceTestSuite) TearDownTest() {
+	suite.srv.Shutdown(context.Background())
 }
 
 func TestServiceTestSuite(t *testing.T) {
@@ -126,16 +149,24 @@ func TestServiceTestSuite(t *testing.T) {
 }
 
 func (suite *ServiceTestSuite) TestJWKSRequestWithoutEtagUsage() {
+	// GIVEN
+	keys := make([]jose.JSONWebKey, len(suite.ks.Entries()))
+	for idx, entry := range suite.ks.Entries() {
+		keys[idx] = entry.JWK()
+	}
+
+	suite.signer.EXPECT().Keys().Return(keys)
+
 	// WHEN
 	client := &http.Client{Transport: &http.Transport{}}
-	req, err := http.NewRequestWithContext(context.TODO(), http.MethodGet, suite.srv.URL+"/.well-known/jwks", nil)
-	require.NoError(suite.T(), err)
+	req, err := http.NewRequestWithContext(context.TODO(), http.MethodGet, suite.addr+"/.well-known/jwks", nil)
+	suite.Require().NoError(err)
 
 	resp, err := client.Do(req)
 
 	// THEN
-	require.NoError(suite.T(), err)
-	require.Equal(suite.T(), http.StatusOK, resp.StatusCode)
+	suite.Require().NoError(err)
+	suite.Require().Equal(http.StatusOK, resp.StatusCode)
 
 	defer resp.Body.Close()
 
@@ -143,98 +174,100 @@ func (suite *ServiceTestSuite) TestJWKSRequestWithoutEtagUsage() {
 
 	decoder := json.NewDecoder(resp.Body)
 	err = decoder.Decode(&jwks)
-	require.NoError(suite.T(), err)
+	suite.Require().NoError(err)
 
-	require.Len(suite.T(), jwks.Keys, 2)
+	suite.Require().Len(jwks.Keys, 2)
 
 	jwk := jwks.Key("bar")
-	require.Len(suite.T(), jwk, 1)
+	suite.Require().Len(jwk, 1)
 	entry, err := suite.ks.GetKey("bar")
-	require.NoError(suite.T(), err)
+	suite.Require().NoError(err)
 
 	expected := entry.JWK()
-	assert.Equal(suite.T(), expected.KeyID, jwk[0].KeyID)
-	assert.Equal(suite.T(), expected.Key, jwk[0].Key)
-	assert.Equal(suite.T(), expected.Algorithm, jwk[0].Algorithm)
-	assert.Equal(suite.T(), expected.Use, jwk[0].Use)
-	assert.Empty(suite.T(), jwk[0].Certificates)
-	assert.Nil(suite.T(), jwk[0].CertificatesURL)
-	assert.Empty(suite.T(), jwk[0].CertificateThumbprintSHA1)
-	assert.Empty(suite.T(), jwk[0].CertificateThumbprintSHA256)
+	suite.Assert().Equal(expected.KeyID, jwk[0].KeyID)
+	suite.Assert().Equal(expected.Key, jwk[0].Key)
+	suite.Assert().Equal(expected.Algorithm, jwk[0].Algorithm)
+	suite.Assert().Equal(expected.Use, jwk[0].Use)
+	suite.Assert().Empty(jwk[0].Certificates)
+	suite.Assert().Nil(jwk[0].CertificatesURL)
+	suite.Assert().Empty(jwk[0].CertificateThumbprintSHA1)
+	suite.Assert().Empty(jwk[0].CertificateThumbprintSHA256)
 
 	jwk = jwks.Key("foo")
-	require.Len(suite.T(), jwk, 1)
+	suite.Require().Len(jwk, 1)
 	entry, err = suite.ks.GetKey("foo")
-	require.NoError(suite.T(), err)
+	suite.Require().NoError(err)
 
 	expected = entry.JWK()
-	assert.Equal(suite.T(), expected.KeyID, jwk[0].KeyID)
-	assert.Equal(suite.T(), expected.Key, jwk[0].Key)
-	assert.Equal(suite.T(), expected.Algorithm, jwk[0].Algorithm)
-	assert.Equal(suite.T(), expected.Use, jwk[0].Use)
-	assert.Len(suite.T(), jwk[0].Certificates, 3)
-	assert.Equal(suite.T(), expected.Certificates[0], jwk[0].Certificates[0])
-	assert.Equal(suite.T(), expected.Certificates[1], jwk[0].Certificates[1])
-	assert.Equal(suite.T(), expected.Certificates[2], jwk[0].Certificates[2])
-	assert.Nil(suite.T(), jwk[0].CertificatesURL)
-	assert.Empty(suite.T(), jwk[0].CertificateThumbprintSHA1)
-	assert.Empty(suite.T(), jwk[0].CertificateThumbprintSHA256)
+	suite.Assert().Equal(expected.KeyID, jwk[0].KeyID)
+	suite.Assert().Equal(expected.Key, jwk[0].Key)
+	suite.Assert().Equal(expected.Algorithm, jwk[0].Algorithm)
+	suite.Assert().Equal(expected.Use, jwk[0].Use)
+	suite.Assert().Len(jwk[0].Certificates, 3)
+	suite.Assert().Equal(expected.Certificates[0], jwk[0].Certificates[0])
+	suite.Assert().Equal(expected.Certificates[1], jwk[0].Certificates[1])
+	suite.Assert().Equal(expected.Certificates[2], jwk[0].Certificates[2])
+	suite.Assert().Nil(jwk[0].CertificatesURL)
+	suite.Assert().Empty(jwk[0].CertificateThumbprintSHA1)
+	suite.Assert().Empty(jwk[0].CertificateThumbprintSHA256)
 }
 
 func (suite *ServiceTestSuite) TestJWKSRequestWithEtagUsage() {
 	// GIVEN
+	keys := make([]jose.JSONWebKey, len(suite.ks.Entries()))
+	for idx, entry := range suite.ks.Entries() {
+		keys[idx] = entry.JWK()
+	}
+
+	suite.signer.EXPECT().Keys().Return(keys)
+
 	client := &http.Client{Transport: &http.Transport{}}
-	req, err := http.NewRequestWithContext(context.TODO(), http.MethodGet, suite.srv.URL+"/.well-known/jwks", nil)
-	require.NoError(suite.T(), err)
+	req, err := http.NewRequestWithContext(context.TODO(), http.MethodGet, suite.addr+"/.well-known/jwks", nil)
+	suite.Require().NoError(err)
 
 	resp1, err := client.Do(req)
-	require.NoError(suite.T(), err)
+	suite.Require().NoError(err)
 
 	defer resp1.Body.Close()
 
-	require.Equal(suite.T(), http.StatusOK, resp1.StatusCode)
+	suite.Require().Equal(http.StatusOK, resp1.StatusCode)
 
 	etagValue := resp1.Header.Get("ETag")
-	require.NotEmpty(suite.T(), etagValue)
+	suite.Require().NotEmpty(etagValue)
 
-	req, err = http.NewRequestWithContext(context.TODO(), http.MethodGet, suite.srv.URL+"/.well-known/jwks", nil)
-	require.NoError(suite.T(), err)
+	req, err = http.NewRequestWithContext(context.TODO(), http.MethodGet, suite.addr+"/.well-known/jwks", nil)
+	suite.Require().NoError(err)
 	req.Header.Set("If-None-Match", etagValue)
 
 	// WHEN
 	resp2, err := client.Do(req)
 
 	// THEN
-	require.NoError(suite.T(), err)
+	suite.Require().NoError(err)
 
 	defer resp2.Body.Close()
 
-	assert.Equal(suite.T(), http.StatusNotModified, resp2.StatusCode)
-	assert.Empty(suite.T(), resp2.Header.Get("Content-Length"))
+	suite.Assert().Equal(http.StatusNotModified, resp2.StatusCode)
+	suite.Assert().Empty(resp2.Header.Get("Content-Length"))
 }
 
-func TestHealthRequest(t *testing.T) {
-	t.Parallel()
-
+func (suite *ServiceTestSuite) TestHealthRequest() {
 	// GIVEN
-	srv := httptest.NewServer(newManagementHandler(nil))
-	defer srv.Close()
-
 	client := &http.Client{Transport: &http.Transport{}}
-	req, err := http.NewRequestWithContext(context.TODO(), http.MethodGet, srv.URL+"/.well-known/health", nil)
-	require.NoError(t, err)
+	req, err := http.NewRequestWithContext(context.TODO(), http.MethodGet, suite.addr+"/.well-known/health", nil)
+	suite.Require().NoError(err)
 
 	// WHEN
 	resp, err := client.Do(req)
 
 	// THEN
-	require.NoError(t, err)
-	require.Equal(t, http.StatusOK, resp.StatusCode)
+	suite.Require().NoError(err)
+	suite.Require().Equal(http.StatusOK, resp.StatusCode)
 
 	defer resp.Body.Close()
 
 	rawResp, err := io.ReadAll(resp.Body)
-	require.NoError(t, err)
+	suite.Require().NoError(err)
 
-	assert.JSONEq(t, `{ "status": "ok"}`, string(rawResp))
+	assert.JSONEq(suite.T(), `{ "status": "ok"}`, string(rawResp))
 }
