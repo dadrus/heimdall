@@ -21,7 +21,6 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/gofiber/fiber/v2"
 	"github.com/justinas/alice"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/rs/zerolog"
@@ -66,7 +65,7 @@ func newService(
 		errorhandler2.WithNoRuleErrorCode(cfg.Respond.With.NoRuleError.Code),
 		errorhandler2.WithInternalServerErrorCode(cfg.Respond.With.InternalError.Code),
 	)
-	acceptedCode := x.IfThenElse(cfg.Respond.With.Accepted.Code != 0, cfg.Respond.With.Accepted.Code, fiber.StatusOK)
+	acceptedCode := x.IfThenElse(cfg.Respond.With.Accepted.Code != 0, cfg.Respond.With.Accepted.Code, http.StatusOK)
 
 	hc := alice.New(
 		trustedproxy.New(
