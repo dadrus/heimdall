@@ -17,6 +17,8 @@
 package management
 
 import (
+	"context"
+
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/rs/zerolog"
 	"go.uber.org/fx"
@@ -26,29 +28,27 @@ import (
 	"github.com/dadrus/heimdall/internal/heimdall"
 )
 
-var Module = fx.Options( // nolint: gochecknoglobals
-	fx.Invoke(registerHooks),
+var Module = fx.Invoke( // nolint: gochecknoglobals
+	fx.Annotate(
+		newLifecycleManager,
+		fx.OnStart(func(ctx context.Context, lcm *fxlcm.LifecycleManager) error { return lcm.Start(ctx) }),
+		fx.OnStop(func(ctx context.Context, lcm *fxlcm.LifecycleManager) error { return lcm.Stop(ctx) }),
+	),
 )
 
-type hooksArgs struct {
-	fx.In
+func newLifecycleManager(
+	conf *config.Configuration,
+	logger zerolog.Logger,
+	registerer prometheus.Registerer,
+	signer heimdall.JWTSigner,
+) *fxlcm.LifecycleManager {
+	cfg := conf.Serve.Management
 
-	Lifecycle  fx.Lifecycle
-	Config     *config.Configuration
-	Logger     zerolog.Logger
-	Registerer prometheus.Registerer
-	Signer     heimdall.JWTSigner
-}
-
-func registerHooks(args hooksArgs) {
-	cfg := args.Config.Serve.Management
-	slm := &fxlcm.LifecycleManager{
+	return &fxlcm.LifecycleManager{
 		ServiceName:    "Management",
 		ServiceAddress: cfg.Address(),
-		Server:         newService(args.Config, args.Registerer, args.Logger, args.Signer),
-		Logger:         args.Logger,
+		Server:         newService(conf, registerer, logger, signer),
+		Logger:         logger,
 		TLSConf:        cfg.TLS,
 	}
-
-	args.Lifecycle.Append(slm.Hook())
 }

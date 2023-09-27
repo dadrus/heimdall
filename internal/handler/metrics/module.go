@@ -17,6 +17,7 @@
 package metrics
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"time"
@@ -33,9 +34,23 @@ import (
 	"github.com/dadrus/heimdall/internal/x/loggeradapter"
 )
 
-var Module = fx.Options( // nolint: gochecknoglobals
-	fx.Invoke(registerHooks),
+var Module = fx.Invoke( // nolint: gochecknoglobals
+	fx.Annotate(
+		newLifecycleManager,
+		fx.OnStart(func(ctx context.Context, lcm lifecycleManager) error { return lcm.Start(ctx) }),
+		fx.OnStop(func(ctx context.Context, lcm lifecycleManager) error { return lcm.Stop(ctx) }),
+	),
 )
+
+type lifecycleManager interface {
+	Start(context.Context) error
+	Stop(context.Context) error
+}
+
+type noopManager struct{}
+
+func (noopManager) Start(context.Context) error { return nil }
+func (noopManager) Stop(context.Context) error  { return nil }
 
 // ErrLoggerFun is an adapter for promhttp Logger to log errors.
 type ErrLoggerFun func(v ...interface{})
@@ -45,19 +60,18 @@ func (l ErrLoggerFun) Println(v ...interface{}) { l(v) }
 type hooksArgs struct {
 	fx.In
 
-	Lifecycle  fx.Lifecycle
 	Registerer prometheus.Registerer
 	Gatherer   prometheus.Gatherer
 	Config     *config.Configuration
 	Logger     zerolog.Logger
 }
 
-func registerHooks(args hooksArgs) {
+func newLifecycleManager(args hooksArgs) lifecycleManager {
 	cfg := args.Config.Metrics
 	if !cfg.Enabled {
 		args.Logger.Info().Msg("Metrics service disabled")
 
-		return
+		return noopManager{}
 	}
 
 	mux := http.NewServeMux()
@@ -74,7 +88,7 @@ func registerHooks(args hooksArgs) {
 				),
 			)))
 
-	slm := &fxlcm.LifecycleManager{
+	return &fxlcm.LifecycleManager{
 		ServiceName:    "Metrics",
 		ServiceAddress: cfg.Address(),
 		Server: &http.Server{
@@ -87,6 +101,4 @@ func registerHooks(args hooksArgs) {
 		},
 		Logger: args.Logger,
 	}
-
-	args.Lifecycle.Append(slm.Hook())
 }

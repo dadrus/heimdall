@@ -17,6 +17,8 @@
 package decision
 
 import (
+	"context"
+
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/rs/zerolog"
 	"go.uber.org/fx"
@@ -28,31 +30,29 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/rule"
 )
 
-var Module = fx.Options( // nolint: gochecknoglobals
-	fx.Invoke(registerHooks),
+var Module = fx.Invoke( // nolint: gochecknoglobals
+	fx.Annotate(
+		newLifecycleManager,
+		fx.OnStart(func(ctx context.Context, lcm *fxlcm.LifecycleManager) error { return lcm.Start(ctx) }),
+		fx.OnStop(func(ctx context.Context, lcm *fxlcm.LifecycleManager) error { return lcm.Stop(ctx) }),
+	),
 )
 
-type hooksArgs struct {
-	fx.In
+func newLifecycleManager(
+	conf *config.Configuration,
+	logger zerolog.Logger,
+	registerer prometheus.Registerer,
+	cch cache.Cache,
+	exec rule.Executor,
+	signer heimdall.JWTSigner,
+) *fxlcm.LifecycleManager {
+	cfg := conf.Serve.Decision
 
-	Lifecycle  fx.Lifecycle
-	Config     *config.Configuration
-	Logger     zerolog.Logger
-	Registerer prometheus.Registerer
-	Cache      cache.Cache
-	Executor   rule.Executor
-	Signer     heimdall.JWTSigner
-}
-
-func registerHooks(args hooksArgs) {
-	cfg := args.Config.Serve.Decision
-	slm := &fxlcm.LifecycleManager{
+	return &fxlcm.LifecycleManager{
 		ServiceName:    "Decision",
 		ServiceAddress: cfg.Address(),
-		Server:         newService(args.Config, args.Registerer, args.Cache, args.Logger, args.Executor, args.Signer),
-		Logger:         args.Logger,
+		Server:         newService(conf, registerer, cch, logger, exec, signer),
+		Logger:         logger,
 		TLSConf:        cfg.TLS,
 	}
-
-	args.Lifecycle.Append(slm.Hook())
 }

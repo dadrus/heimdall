@@ -17,6 +17,7 @@
 package profiling
 
 import (
+	"context"
 	"net/http"
 	_ "net/http/pprof" //nolint:gosec
 	"time"
@@ -29,36 +30,40 @@ import (
 	"github.com/dadrus/heimdall/internal/x/loggeradapter"
 )
 
-var Module = fx.Options( // nolint: gochecknoglobals
-	fx.Invoke(registerHooks),
-)
-
-type hooksArgs struct {
-	fx.In
-
-	Lifecycle fx.Lifecycle
-	Config    *config.Configuration
-	Logger    zerolog.Logger
+type lifecycleManager interface {
+	Start(context.Context) error
+	Stop(context.Context) error
 }
 
-func registerHooks(args hooksArgs) {
-	cfg := args.Config.Profiling
-	if !cfg.Enabled {
-		args.Logger.Info().Msg("Profiling service disabled")
+type noopManager struct{}
 
-		return
+func (noopManager) Start(context.Context) error { return nil }
+func (noopManager) Stop(context.Context) error  { return nil }
+
+var Module = fx.Invoke( // nolint: gochecknoglobals
+	fx.Annotate(
+		newLifecycleManager,
+		fx.OnStart(func(ctx context.Context, lcm lifecycleManager) error { return lcm.Start(ctx) }),
+		fx.OnStop(func(ctx context.Context, lcm lifecycleManager) error { return lcm.Stop(ctx) }),
+	),
+)
+
+func newLifecycleManager(conf *config.Configuration, logger zerolog.Logger) lifecycleManager {
+	cfg := conf.Profiling
+	if !cfg.Enabled {
+		logger.Info().Msg("Profiling service disabled")
+
+		return noopManager{}
 	}
 
-	slm := &fxlcm.LifecycleManager{
+	return &fxlcm.LifecycleManager{
 		ServiceName:    "Profiling",
 		ServiceAddress: cfg.Address(),
+		Logger:         logger,
 		Server: &http.Server{
 			ReadHeaderTimeout: 5 * time.Second,  // nolint: gomnd
 			IdleTimeout:       90 * time.Second, // nolint: gomnd
-			ErrorLog:          loggeradapter.NewStdLogger(args.Logger),
+			ErrorLog:          loggeradapter.NewStdLogger(logger),
 		},
-		Logger: args.Logger,
 	}
-
-	args.Lifecycle.Append(slm.Hook())
 }
