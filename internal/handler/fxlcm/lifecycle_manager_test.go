@@ -91,7 +91,7 @@ func TestLifecycleManagerStart(t *testing.T) {
 			}
 
 			// WHEN
-			err = lcm.Start(context.TODO())
+			err = lcm.start(context.TODO())
 			time.Sleep(50 * time.Millisecond)
 
 			// THEN
@@ -154,7 +154,7 @@ func TestLifecycleManagerStop(t *testing.T) {
 			}
 
 			// WHEN
-			err := lcm.Stop(context.TODO())
+			err := lcm.stop(context.TODO())
 
 			// THEN
 			tc.assert(t, err, tb.CollectedLog())

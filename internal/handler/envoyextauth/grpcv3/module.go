@@ -56,10 +56,5 @@ func registerHooks(args hooksArgs) {
 		TLSConf: cfg.TLS,
 	}
 
-	args.Lifecycle.Append(
-		fx.Hook{
-			OnStart: slm.Start,
-			OnStop:  slm.Stop,
-		},
-	)
+	args.Lifecycle.Append(slm.Hook())
 }

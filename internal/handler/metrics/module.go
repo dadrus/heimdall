@@ -88,10 +88,5 @@ func registerHooks(args hooksArgs) {
 		Logger: args.Logger,
 	}
 
-	args.Lifecycle.Append(
-		fx.Hook{
-			OnStart: slm.Start,
-			OnStop:  slm.Stop,
-		},
-	)
+	args.Lifecycle.Append(slm.Hook())
 }

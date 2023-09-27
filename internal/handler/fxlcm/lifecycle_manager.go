@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/rs/zerolog"
+	"go.uber.org/fx"
 
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/handler/listener"
@@ -27,7 +28,7 @@ type LifecycleManager struct {
 	TLSConf        *config.TLS
 }
 
-func (m *LifecycleManager) Start(_ context.Context) error {
+func (m *LifecycleManager) start(_ context.Context) error {
 	ln, err := listener.New("tcp", m.ServiceAddress, m.TLSConf)
 	if err != nil {
 		m.Logger.Fatal().Err(err).Str("_service", m.ServiceName).Msg("Could not create listener")
@@ -51,7 +52,7 @@ func (m *LifecycleManager) Start(_ context.Context) error {
 	return nil
 }
 
-func (m *LifecycleManager) Stop(ctx context.Context) error {
+func (m *LifecycleManager) stop(ctx context.Context) error {
 	m.Logger.Info().Str("_service", m.ServiceName).Msg("Tearing down service")
 
 	err := m.Server.Shutdown(ctx)
@@ -61,3 +62,5 @@ func (m *LifecycleManager) Stop(ctx context.Context) error {
 
 	return err
 }
+
+func (m *LifecycleManager) Hook() fx.Hook { return fx.StartStopHook(m.start, m.stop) }
