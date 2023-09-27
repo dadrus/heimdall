@@ -7,7 +7,6 @@ import (
 	"net/http"
 
 	"github.com/rs/zerolog"
-	"go.uber.org/fx"
 
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/handler/listener"
@@ -62,5 +61,3 @@ func (m *LifecycleManager) Stop(ctx context.Context) error {
 
 	return err
 }
-
-func (m *LifecycleManager) Hook() fx.Hook { return fx.StartStopHook(m.Start, m.Stop) }
