@@ -83,7 +83,6 @@ func newService(
 
 	return &http.Server{
 		Handler:        hc,
-		Addr:           cfg.Address(),
 		ReadTimeout:    cfg.Timeout.Read,
 		WriteTimeout:   cfg.Timeout.Write,
 		IdleTimeout:    cfg.Timeout.Idle,

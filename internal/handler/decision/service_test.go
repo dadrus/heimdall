@@ -584,7 +584,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 			time.Sleep(50 * time.Millisecond)
 
 			// WHEN
-			resp, err := client.Do(tc.createRequest(t, decision.Addr))
+			resp, err := client.Do(tc.createRequest(t, srvConf.Address()))
 
 			// THEN
 			if err == nil {

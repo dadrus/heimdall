@@ -46,10 +46,11 @@ type hooksArgs struct {
 
 func registerHooks(args hooksArgs) {
 	slm := &fxlcm.LifecycleManager{
-		Service: "Proxy",
-		Server:  newService(args.Config, args.Registerer, args.Cache, args.Logger, args.Executor, args.Signer),
-		Logger:  args.Logger,
-		TLSConf: args.Config.Serve.Proxy.TLS,
+		ServiceName:    "Proxy",
+		ServiceAddress: args.Config.Serve.Proxy.Address(),
+		Server:         newService(args.Config, args.Registerer, args.Cache, args.Logger, args.Executor, args.Signer),
+		Logger:         args.Logger,
+		TLSConf:        args.Config.Serve.Proxy.TLS,
 	}
 
 	args.Lifecycle.Append(

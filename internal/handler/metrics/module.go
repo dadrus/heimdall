@@ -74,10 +74,10 @@ func registerHooks(args hooksArgs) {
 			)))
 
 	slm := &fxlcm.LifecycleManager{
-		Service: "Metrics",
+		ServiceName:    "Metrics",
+		ServiceAddress: args.Config.Metrics.Address(),
 		Server: &http.Server{
 			Handler:        mux,
-			Addr:           args.Config.Metrics.Address(),
 			ReadTimeout:    5 * time.Second,  // nolint: gomnd
 			WriteTimeout:   10 * time.Second, // nolint: gomnd
 			IdleTimeout:    90 * time.Second, // nolint: gomnd

@@ -49,9 +49,9 @@ func registerHooks(args hooksArgs) {
 	}
 
 	slm := &fxlcm.LifecycleManager{
-		Service: "Profiling",
+		ServiceName:    "Profiling",
+		ServiceAddress: args.Config.Profiling.Address(),
 		Server: &http.Server{
-			Addr:              args.Config.Profiling.Address(),
 			ReadHeaderTimeout: 5 * time.Second,  // nolint: gomnd
 			IdleTimeout:       90 * time.Second, // nolint: gomnd
 			ErrorLog:          loggeradapter.NewStdLogger(args.Logger),
