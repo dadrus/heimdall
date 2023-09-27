@@ -90,8 +90,8 @@ func (l *listener) Accept() (net.Conn, error) {
 	return &conn{Conn: con}, nil
 }
 
-func New(network string, conf config.ServiceConfig) (net.Listener, error) {
-	listnr, err := net.Listen(network, conf.Address())
+func New(network, address string, tlsConf *config.TLS) (net.Listener, error) {
+	listnr, err := net.Listen(network, address)
 	if err != nil {
 		return nil, errorchain.NewWithMessage(heimdall.ErrInternal, "failed creating listener").
 			CausedBy(err)
@@ -99,8 +99,8 @@ func New(network string, conf config.ServiceConfig) (net.Listener, error) {
 
 	wrapped := &listener{Listener: listnr}
 
-	if conf.TLS != nil {
-		return newTLSListener(conf.TLS, wrapped)
+	if tlsConf != nil {
+		return newTLSListener(tlsConf, wrapped)
 	}
 
 	return wrapped, nil
