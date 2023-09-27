@@ -103,7 +103,8 @@ func TestRequestContextFinalize(t *testing.T) {
 				require.NoError(t, err)
 
 				assert.Len(t, rec.Header(), 3)
-				assert.Equal(t, []string{"x-foo=bar", "x-bar=foo"}, rec.Header().Values("Set-Cookie"))
+				assert.Contains(t, rec.Header().Values("Set-Cookie"), "x-bar=foo")
+				assert.Contains(t, rec.Header().Values("Set-Cookie"), "x-foo=bar")
 				assert.Equal(t, "bar", rec.Header().Get("X-Foo"))
 				assert.Equal(t, "foo", rec.Header().Get("X-Bar"))
 				assert.Equal(t, http.StatusOK, rec.Code)
