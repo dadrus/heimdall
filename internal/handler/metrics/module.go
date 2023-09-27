@@ -53,14 +53,15 @@ type hooksArgs struct {
 }
 
 func registerHooks(args hooksArgs) {
-	if !args.Config.Metrics.Enabled {
+	cfg := args.Config.Metrics
+	if !cfg.Enabled {
 		args.Logger.Info().Msg("Metrics service disabled")
 
 		return
 	}
 
 	mux := http.NewServeMux()
-	mux.Handle(args.Config.Metrics.MetricsPath,
+	mux.Handle(cfg.MetricsPath,
 		alice.New(methodfilter.New(http.MethodGet)).
 			Then(promhttp.InstrumentMetricHandler(
 				args.Registerer,
@@ -75,7 +76,7 @@ func registerHooks(args hooksArgs) {
 
 	slm := &fxlcm.LifecycleManager{
 		ServiceName:    "Metrics",
-		ServiceAddress: args.Config.Metrics.Address(),
+		ServiceAddress: cfg.Address(),
 		Server: &http.Server{
 			Handler:        mux,
 			ReadTimeout:    5 * time.Second,  // nolint: gomnd

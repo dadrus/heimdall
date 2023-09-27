@@ -42,7 +42,8 @@ type hooksArgs struct {
 }
 
 func registerHooks(args hooksArgs) {
-	if !args.Config.Profiling.Enabled {
+	cfg := args.Config.Profiling
+	if !cfg.Enabled {
 		args.Logger.Info().Msg("Profiling service disabled")
 
 		return
@@ -50,7 +51,7 @@ func registerHooks(args hooksArgs) {
 
 	slm := &fxlcm.LifecycleManager{
 		ServiceName:    "Profiling",
-		ServiceAddress: args.Config.Profiling.Address(),
+		ServiceAddress: cfg.Address(),
 		Server: &http.Server{
 			ReadHeaderTimeout: 5 * time.Second,  // nolint: gomnd
 			IdleTimeout:       90 * time.Second, // nolint: gomnd
