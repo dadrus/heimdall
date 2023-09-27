@@ -17,16 +17,12 @@
 package management
 
 import (
-	"context"
-	"errors"
-	"net/http"
-
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/rs/zerolog"
 	"go.uber.org/fx"
 
 	"github.com/dadrus/heimdall/internal/config"
-	"github.com/dadrus/heimdall/internal/handler/listener"
+	"github.com/dadrus/heimdall/internal/handler/fxlcm"
 	"github.com/dadrus/heimdall/internal/heimdall"
 )
 
@@ -45,37 +41,17 @@ type hooksArgs struct {
 }
 
 func registerHooks(args hooksArgs) {
-	cfg := args.Config.Serve.Management
-
-	srv := newService(args.Config, args.Registerer, args.Logger, args.Signer)
+	slm := &fxlcm.LifecycleManager{
+		Service: "Management",
+		Server:  newService(args.Config, args.Registerer, args.Logger, args.Signer),
+		Logger:  args.Logger,
+		TLSConf: args.Config.Serve.Management.TLS,
+	}
 
 	args.Lifecycle.Append(
 		fx.Hook{
-			OnStart: func(ctx context.Context) error {
-				ln, err := listener.New("tcp", cfg.Address(), cfg.TLS)
-				if err != nil {
-					args.Logger.Fatal().Err(err).Msg("Could not create listener for the Management service")
-
-					return err
-				}
-
-				go func() {
-					args.Logger.Info().Str("_address", ln.Addr().String()).Msg("Management service starts listening")
-
-					if err = srv.Serve(ln); err != nil {
-						if !errors.Is(err, http.ErrServerClosed) {
-							args.Logger.Fatal().Err(err).Msg("Could not start Management service")
-						}
-					}
-				}()
-
-				return nil
-			},
-			OnStop: func(ctx context.Context) error {
-				args.Logger.Info().Msg("Tearing down Management service")
-
-				return srv.Shutdown(ctx)
-			},
+			OnStart: slm.Start,
+			OnStop:  slm.Stop,
 		},
 	)
 }
