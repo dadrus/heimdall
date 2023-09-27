@@ -41,8 +41,8 @@ Head over to the [documentation](https://dadrus.github.io/heimdall/) for details
 ## Beyond the Functionality
 
 Heimdall's main focus points beyond its functionality are:
-* Performance - To achieve this, Heimdall makes use of [Fiber](https://gofiber.io/) and does not load or convert data during execution whenever possible. This is also true for reflection use.
-* Clear abstractions - To allow extensibility and even replacement components if required, like e.g. of the currently used HTTP engine, and this without any side effects.
+* Performance - To achieve this, heimdall does use any http routing frameworks or middlewares and does not load or convert data during execution whenever possible. This is also true for reflection use.
+* Clear abstractions - To allow extensibility and even replacement of components without side effects.
 * Simplicity - To allow better understanding of code to everybody, who would like to contribute.
 
 ## Current State
