@@ -47,18 +47,20 @@ type hooksArgs struct {
 }
 
 func registerHooks(args hooksArgs) {
-	ln, err := listener.New("tcp4", args.Config.Serve.Decision)
-	if err != nil {
-		args.Logger.Fatal().Err(err).Msg("Could not create listener for the Decision Envoy ExtAuth service")
-
-		return
-	}
+	cfg := args.Config.Serve.Decision
 
 	service := newService(args.Config, args.Registerer, args.Cache, args.Logger, args.Exec, args.Signer)
 
 	args.Lifecycle.Append(
 		fx.Hook{
 			OnStart: func(ctx context.Context) error {
+				ln, err := listener.New("tcp4", cfg.Address(), cfg.TLS)
+				if err != nil {
+					args.Logger.Fatal().Err(err).Msg("Could not create listener for the Decision Envoy ExtAuth service")
+
+					return err
+				}
+
 				go func() {
 					args.Logger.Info().Str("_address", ln.Addr().String()).
 						Msg("Decision Envoy ExtAuth service starts listening")
