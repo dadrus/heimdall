@@ -27,7 +27,6 @@ import (
 	"github.com/dadrus/heimdall/internal/handler/profiling"
 	"github.com/dadrus/heimdall/internal/logging"
 	"github.com/dadrus/heimdall/internal/otel"
-	"github.com/dadrus/heimdall/internal/prometheus"
 	"github.com/dadrus/heimdall/internal/rules"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms"
 	"github.com/dadrus/heimdall/internal/signer"
@@ -44,7 +43,6 @@ var Module = fx.Options( //nolint:gochecknoglobals
 	cache.Module,
 	signer.Module,
 	mechanisms.Module,
-	prometheus.Module,
 	rules.Module,
 	management.Module,
 	metrics.Module,
