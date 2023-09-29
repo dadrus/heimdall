@@ -19,6 +19,7 @@ package otelmetrics
 import (
 	"context"
 	"net"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -95,7 +96,8 @@ func (h *metricsInterceptor) observeUnaryRequest(
 	ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler,
 ) (any, error) {
 	attr := spanInfo(info.FullMethod, peerFromCtx(ctx))
-	attributes := append(h.attributes, h.subsystem)
+
+	attributes := append(slices.Clone(h.attributes), h.subsystem)
 	attributes = append(attributes, attr...)
 
 	opt := metric.WithAttributes(attributes...)
@@ -115,7 +117,8 @@ func (h *metricsInterceptor) observeStreamRequest(
 ) error {
 	ctx := stream.Context()
 	attr := spanInfo(info.FullMethod, peerFromCtx(ctx))
-	attributes := append(h.attributes, h.subsystem)
+
+	attributes := append(slices.Clone(h.attributes), h.subsystem)
 	attributes = append(attributes, attr...)
 
 	opt := metric.WithAttributes(attributes...)
