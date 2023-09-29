@@ -18,34 +18,22 @@ package exporters
 
 import (
 	"context"
-	"testing"
+	"os"
+	"strings"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
+	"go.opentelemetry.io/otel/sdk/trace"
 )
 
-func TestNewWithoutSetEnvVariable(t *testing.T) {
-	t.Parallel()
+// NewSpanExporters returns a slice of trace.SpanExporters defined by the
+// OTEL_TRACES_EXPORTER environment variable. An "otel" SpanExporter is returned
+// if no exporter is defined for the environment variable. A no-op
+// SpanExporter will be returned if "none" is defined anywhere in the
+// environment variable.
+func NewSpanExporters(ctx context.Context) ([]trace.SpanExporter, error) {
+	exporterNames, ok := os.LookupEnv("OTEL_TRACES_EXPORTER")
+	if !ok {
+		return createSpanExporters(ctx)
+	}
 
-	// WHEN
-	expts, err := New(context.Background())
-
-	// THEN
-	require.NoError(t, err)
-	assert.Len(t, expts, 1)
-	assert.IsType(t, expts[0], &otlptrace.Exporter{})
-}
-
-func TestNewWithSetEnvVariable(t *testing.T) {
-	// GIVEN
-	t.Setenv(otelTracesExportersEnvKey, "none")
-
-	// WHEN
-	expts, err := New(context.Background())
-
-	// THEN
-	require.NoError(t, err)
-	assert.Len(t, expts, 1)
-	assert.IsType(t, noopExporter{}, expts[0])
+	return createSpanExporters(ctx, strings.Split(exporterNames, ",")...)
 }

@@ -18,26 +18,16 @@ package exporters
 
 import (
 	"context"
-	"os"
-	"strings"
 
 	"go.opentelemetry.io/otel/sdk/trace"
 )
 
-// otelTracesExportersEnvKey is the environment variable name identifying
-// exporters to use.
-const otelTracesExportersEnvKey = "OTEL_TRACES_EXPORTER"
+// NoopExporter is an exporter that drops all received spans and performs no
+// action.
+type noopSpanExporter struct{}
 
-// New returns a slice of trace.SpanExporters defined by the
-// OTEL_TRACES_EXPORTER environment variable. An "otel" SpanExporter is returned
-// if no exporter is defined for the environment variable. A no-op
-// SpanExporter will be returned if "none" is defined anywhere in the
-// environment variable.
-func New(ctx context.Context) ([]trace.SpanExporter, error) {
-	exporterNames, ok := os.LookupEnv(otelTracesExportersEnvKey)
-	if !ok {
-		return createSpanExporters(ctx)
-	}
+// ExportSpans handles export of spans by dropping them.
+func (noopSpanExporter) ExportSpans(context.Context, []trace.ReadOnlySpan) error { return nil }
 
-	return createSpanExporters(ctx, strings.Split(exporterNames, ",")...)
-}
+// Shutdown stops the exporter by doing nothing.
+func (noopSpanExporter) Shutdown(context.Context) error { return nil }

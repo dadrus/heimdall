@@ -18,16 +18,34 @@ package exporters
 
 import (
 	"context"
+	"testing"
 
-	"go.opentelemetry.io/otel/sdk/trace"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
 )
 
-// NoopExporter is an exporter that drops all received spans and performs no
-// action.
-type noopExporter struct{}
+func TestNewSpanExportersWithoutSetEnvVariable(t *testing.T) {
+	t.Parallel()
 
-// ExportSpans handles export of spans by dropping them.
-func (noopExporter) ExportSpans(context.Context, []trace.ReadOnlySpan) error { return nil }
+	// WHEN
+	expts, err := NewSpanExporters(context.Background())
 
-// Shutdown stops the exporter by doing nothing.
-func (noopExporter) Shutdown(context.Context) error { return nil }
+	// THEN
+	require.NoError(t, err)
+	assert.Len(t, expts, 1)
+	assert.IsType(t, expts[0], &otlptrace.Exporter{})
+}
+
+func TestNewSpanExportersWithSetEnvVariable(t *testing.T) {
+	// GIVEN
+	t.Setenv(otelTracesExportersEnvKey, "none")
+
+	// WHEN
+	expts, err := NewSpanExporters(context.Background())
+
+	// THEN
+	require.NoError(t, err)
+	assert.Len(t, expts, 1)
+	assert.IsType(t, noopSpanExporter{}, expts[0])
+}
