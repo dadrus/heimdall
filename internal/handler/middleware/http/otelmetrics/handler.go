@@ -36,13 +36,9 @@ const (
 )
 
 func New(opts ...Option) func(http.Handler) http.Handler {
-	options := defaultOptions()
+	conf := newConfig(opts...)
 
-	for _, opt := range opts {
-		opt(&options)
-	}
-
-	meter := options.provider.Meter(instrumentationName)
+	meter := conf.provider.Meter(instrumentationName)
 
 	requestsServedTotal, err := meter.Float64Counter(
 		otelhttp.RequestCount,
@@ -64,20 +60,20 @@ func New(opts ...Option) func(http.Handler) http.Handler {
 
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-			if options.filterOperation(req) {
+			if conf.filterOperation(req) {
 				next.ServeHTTP(rw, req)
 
 				return
 			}
 
 			labeler, _ := otelhttp.LabelerFromContext(req.Context())
-			if options.subsystem.Valid() {
-				labeler.Add(options.subsystem)
+			if conf.subsystem.Valid() {
+				labeler.Add(conf.subsystem)
 			}
 
-			attributes := serverRequestMetrics(options.server, req)
+			attributes := serverRequestMetrics(conf.server, req)
 			attributes = append(labeler.Get(), attributes...)
-			attributes = append(attributes, options.attributes...)
+			attributes = append(attributes, conf.attributes...)
 
 			opt := metric.WithAttributes(attributes...)
 

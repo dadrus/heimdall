@@ -19,6 +19,7 @@ package otelmetrics
 import (
 	"net/http"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 )
@@ -27,7 +28,7 @@ const serviceSubsystemKey = attribute.Key("service.subsystem")
 
 type OperationFilter func(req *http.Request) bool
 
-type opts struct {
+type config struct {
 	server          string
 	subsystem       attribute.KeyValue
 	provider        metric.MeterProvider
@@ -35,10 +36,10 @@ type opts struct {
 	filterOperation OperationFilter
 }
 
-type Option func(*opts)
+type Option func(*config)
 
 func WithMeterProvider(provider metric.MeterProvider) Option {
-	return func(o *opts) {
+	return func(o *config) {
 		if provider != nil {
 			o.provider = provider
 		}
@@ -46,13 +47,13 @@ func WithMeterProvider(provider metric.MeterProvider) Option {
 }
 
 func WithAttributes(kv ...attribute.KeyValue) Option {
-	return func(o *opts) {
+	return func(o *config) {
 		o.attributes = append(o.attributes, kv...)
 	}
 }
 
 func WithOperationFilter(filter OperationFilter) Option {
-	return func(o *opts) {
+	return func(o *config) {
 		if filter != nil {
 			o.filterOperation = filter
 		}
@@ -60,7 +61,7 @@ func WithOperationFilter(filter OperationFilter) Option {
 }
 
 func WithServerName(name string) Option {
-	return func(o *opts) {
+	return func(o *config) {
 		if len(name) != 0 {
 			o.server = name
 		}
@@ -68,9 +69,22 @@ func WithServerName(name string) Option {
 }
 
 func WithSubsystem(name string) Option {
-	return func(o *opts) {
+	return func(o *config) {
 		if len(name) != 0 {
 			o.subsystem = serviceSubsystemKey.String(name)
 		}
 	}
+}
+
+func newConfig(opts ...Option) config {
+	conf := config{
+		provider:        otel.GetMeterProvider(),
+		filterOperation: func(req *http.Request) bool { return false },
+	}
+
+	for _, opt := range opts {
+		opt(&conf)
+	}
+
+	return conf
 }

@@ -33,14 +33,14 @@ func TestOptionsWithMeterProvider(t *testing.T) {
 
 	for _, tc := range []struct {
 		uc     string
-		opt    opts
+		opt    config
 		value  metric.MeterProvider
-		assert func(t *testing.T, opt *opts)
+		assert func(t *testing.T, opt *config)
 	}{
 		{
 			uc:  "nil provider",
 			opt: defaultOptions(),
-			assert: func(t *testing.T, opt *opts) {
+			assert: func(t *testing.T, opt *config) {
 				t.Helper()
 
 				assert.Equal(t, otel.GetMeterProvider(), opt.provider)
@@ -50,7 +50,7 @@ func TestOptionsWithMeterProvider(t *testing.T) {
 			uc:    "not nil registerer",
 			opt:   defaultOptions(),
 			value: sdk.NewMeterProvider(),
-			assert: func(t *testing.T, opt *opts) {
+			assert: func(t *testing.T, opt *config) {
 				t.Helper()
 
 				assert.NotNil(t, opt.provider)
@@ -77,14 +77,14 @@ func TestOptionsWithAttributes(t *testing.T) {
 
 	for _, tc := range []struct {
 		uc         string
-		opt        opts
+		opt        config
 		attributes []attribute.KeyValue
-		assert     func(t *testing.T, opt *opts)
+		assert     func(t *testing.T, opt *config)
 	}{
 		{
 			uc:  "without attributes",
-			opt: opts{},
-			assert: func(t *testing.T, opt *opts) {
+			opt: config{},
+			assert: func(t *testing.T, opt *config) {
 				t.Helper()
 
 				assert.Empty(t, opt.attributes)
@@ -92,12 +92,12 @@ func TestOptionsWithAttributes(t *testing.T) {
 		},
 		{
 			uc:  "with multiple attibutes",
-			opt: opts{},
+			opt: config{},
 			attributes: []attribute.KeyValue{
 				attribute.String("foo", "bar"),
 				attribute.String("baz", "zab"),
 			},
-			assert: func(t *testing.T, opt *opts) {
+			assert: func(t *testing.T, opt *config) {
 				t.Helper()
 
 				assert.Len(t, opt.attributes, 2)
@@ -127,14 +127,14 @@ func TestOptionsWithOperationFilter(t *testing.T) {
 
 	for _, tc := range []struct {
 		uc     string
-		opt    opts
+		opt    config
 		value  OperationFilter
-		assert func(t *testing.T, opt *opts)
+		assert func(t *testing.T, opt *config)
 	}{
 		{
 			uc:  "without operations filter set",
-			opt: opts{},
-			assert: func(t *testing.T, opt *opts) {
+			opt: config{},
+			assert: func(t *testing.T, opt *config) {
 				t.Helper()
 
 				assert.Nil(t, opt.filterOperation)
@@ -142,9 +142,9 @@ func TestOptionsWithOperationFilter(t *testing.T) {
 		},
 		{
 			uc:    "with filter",
-			opt:   opts{},
+			opt:   config{},
 			value: func(req *http.Request) bool { return true },
-			assert: func(t *testing.T, opt *opts) {
+			assert: func(t *testing.T, opt *config) {
 				t.Helper()
 
 				assert.NotNil(t, opt.filterOperation)
@@ -171,14 +171,14 @@ func TestOptionsWithServerName(t *testing.T) {
 
 	for _, tc := range []struct {
 		uc     string
-		opt    opts
+		opt    config
 		name   string
-		assert func(t *testing.T, opt *opts)
+		assert func(t *testing.T, opt *config)
 	}{
 		{
 			uc:  "without server name",
-			opt: opts{},
-			assert: func(t *testing.T, opt *opts) {
+			opt: config{},
+			assert: func(t *testing.T, opt *config) {
 				t.Helper()
 
 				assert.Empty(t, opt.server)
@@ -186,9 +186,9 @@ func TestOptionsWithServerName(t *testing.T) {
 		},
 		{
 			uc:   "with server name",
-			opt:  opts{},
+			opt:  config{},
 			name: "foobar.local",
-			assert: func(t *testing.T, opt *opts) {
+			assert: func(t *testing.T, opt *config) {
 				t.Helper()
 
 				assert.Equal(t, "foobar.local", opt.server)
@@ -214,14 +214,14 @@ func TestOptionsWithSubsystem(t *testing.T) {
 
 	for _, tc := range []struct {
 		uc     string
-		opt    opts
+		opt    config
 		name   string
-		assert func(t *testing.T, opt *opts)
+		assert func(t *testing.T, opt *config)
 	}{
 		{
 			uc:  "without subsystem name",
-			opt: opts{},
-			assert: func(t *testing.T, opt *opts) {
+			opt: config{},
+			assert: func(t *testing.T, opt *config) {
 				t.Helper()
 
 				assert.False(t, opt.subsystem.Valid())
@@ -229,9 +229,9 @@ func TestOptionsWithSubsystem(t *testing.T) {
 		},
 		{
 			uc:   "with subsystem name",
-			opt:  opts{},
+			opt:  config{},
 			name: "foobar",
-			assert: func(t *testing.T, opt *opts) {
+			assert: func(t *testing.T, opt *config) {
 				t.Helper()
 
 				assert.True(t, opt.subsystem.Valid())
