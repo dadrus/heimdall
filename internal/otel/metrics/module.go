@@ -11,8 +11,7 @@ import (
 	"github.com/dadrus/heimdall/internal/x"
 )
 
-// nolint: gochecknoglobals
-var Module = fx.Options(
+var Module = fx.Options( // nolint: gochecknoglobals
 	fx.Invoke(runtime.Start),
 	fx.Invoke(host.Start),
 	fx.Invoke(monitorCertificateExpiry),
