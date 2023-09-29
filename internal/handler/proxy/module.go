@@ -19,7 +19,6 @@ package proxy
 import (
 	"context"
 
-	"github.com/prometheus/client_golang/prometheus"
 	"github.com/rs/zerolog"
 	"go.uber.org/fx"
 
@@ -41,7 +40,6 @@ var Module = fx.Invoke( // nolint: gochecknoglobals
 func newLifecycleManager(
 	conf *config.Configuration,
 	logger zerolog.Logger,
-	registerer prometheus.Registerer,
 	cch cache.Cache,
 	executor rule.Executor,
 	signer heimdall.JWTSigner,
@@ -51,7 +49,7 @@ func newLifecycleManager(
 	return &fxlcm.LifecycleManager{
 		ServiceName:    "Proxy",
 		ServiceAddress: cfg.Address(),
-		Server:         newService(conf, registerer, cch, logger, executor, signer),
+		Server:         newService(conf, cch, logger, executor, signer),
 		Logger:         logger,
 		TLSConf:        cfg.TLS,
 	}
