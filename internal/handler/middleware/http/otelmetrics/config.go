@@ -76,7 +76,7 @@ func WithSubsystem(name string) Option {
 	}
 }
 
-func newConfig(opts ...Option) config {
+func newConfig(opts ...Option) *config {
 	conf := config{
 		provider:        otel.GetMeterProvider(),
 		filterOperation: func(req *http.Request) bool { return false },
@@ -86,5 +86,5 @@ func newConfig(opts ...Option) config {
 		opt(&conf)
 	}
 
-	return conf
+	return &conf
 }

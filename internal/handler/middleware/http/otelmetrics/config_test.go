@@ -24,7 +24,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/metric"
 	sdk "go.opentelemetry.io/otel/sdk/metric"
 )
 
@@ -33,13 +32,12 @@ func TestOptionsWithMeterProvider(t *testing.T) {
 
 	for _, tc := range []struct {
 		uc     string
-		opt    config
-		value  metric.MeterProvider
+		opt    Option
 		assert func(t *testing.T, opt *config)
 	}{
 		{
 			uc:  "nil provider",
-			opt: defaultOptions(),
+			opt: WithSubsystem("foo"),
 			assert: func(t *testing.T, opt *config) {
 				t.Helper()
 
@@ -47,9 +45,8 @@ func TestOptionsWithMeterProvider(t *testing.T) {
 			},
 		},
 		{
-			uc:    "not nil registerer",
-			opt:   defaultOptions(),
-			value: sdk.NewMeterProvider(),
+			uc:  "not nil registerer",
+			opt: WithMeterProvider(sdk.NewMeterProvider()),
 			assert: func(t *testing.T, opt *config) {
 				t.Helper()
 
@@ -59,15 +56,11 @@ func TestOptionsWithMeterProvider(t *testing.T) {
 		},
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
-			// GIVEN
-			apply := WithMeterProvider(tc.value)
-			opt := &tc.opt //nolint:gosec
-
 			// WHEN
-			apply(opt)
+			cfg := newConfig(tc.opt)
 
 			// THEN
-			tc.assert(t, opt)
+			tc.assert(t, cfg)
 		})
 	}
 }
