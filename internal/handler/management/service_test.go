@@ -29,7 +29,6 @@ import (
 	"time"
 
 	"github.com/goccy/go-json"
-	"github.com/prometheus/client_golang/prometheus"
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -131,7 +130,7 @@ func (suite *ServiceTestSuite) SetupTest() {
 	suite.addr = "http://" + listener.Addr().String()
 
 	suite.signer = mocks.NewJWTSignerMock(suite.T())
-	suite.srv = newService(conf, prometheus.NewRegistry(), log.Logger, suite.signer)
+	suite.srv = newService(conf, log.Logger, suite.signer)
 
 	go func() {
 		err = suite.srv.Serve(listener)

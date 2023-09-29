@@ -19,7 +19,6 @@ package management
 import (
 	"context"
 
-	"github.com/prometheus/client_golang/prometheus"
 	"github.com/rs/zerolog"
 	"go.uber.org/fx"
 
@@ -39,7 +38,6 @@ var Module = fx.Invoke( // nolint: gochecknoglobals
 func newLifecycleManager(
 	conf *config.Configuration,
 	logger zerolog.Logger,
-	registerer prometheus.Registerer,
 	signer heimdall.JWTSigner,
 ) *fxlcm.LifecycleManager {
 	cfg := conf.Serve.Management
@@ -47,7 +45,7 @@ func newLifecycleManager(
 	return &fxlcm.LifecycleManager{
 		ServiceName:    "Management",
 		ServiceAddress: cfg.Address(),
-		Server:         newService(conf, registerer, logger, signer),
+		Server:         newService(conf, logger, signer),
 		Logger:         logger,
 		TLSConf:        cfg.TLS,
 	}
