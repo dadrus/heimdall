@@ -16,7 +16,11 @@
 
 package httpx
 
-import "net"
+import (
+	"net"
+	"strconv"
+	"strings"
+)
 
 func IPFromHostPort(hp string) string {
 	host, _, err := net.SplitHostPort(hp)
@@ -29,4 +33,45 @@ func IPFromHostPort(hp string) string {
 	}
 
 	return host
+}
+
+func HostPort(hostport string) (string, int) {
+	var (
+		host string
+		port int
+	)
+	port = -1
+
+	if strings.HasPrefix(hostport, "[") {
+		addrEnd := strings.LastIndex(hostport, "]")
+
+		if addrEnd < 0 {
+			// Invalid hostport.
+			return host, port
+		}
+
+		if i := strings.LastIndex(hostport[addrEnd:], ":"); i < 0 {
+			host = hostport[1:addrEnd]
+
+			return host, port
+		}
+	} else {
+		if i := strings.LastIndex(hostport, ":"); i < 0 {
+			host = hostport
+
+			return host, port
+		}
+	}
+
+	host, pStr, err := net.SplitHostPort(hostport)
+	if err != nil {
+		return host, port
+	}
+
+	p, err := strconv.ParseUint(pStr, 10, 16)
+	if err != nil {
+		return host, port
+	}
+
+	return host, int(p)
 }
