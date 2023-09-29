@@ -11,7 +11,7 @@ func createResource() (*resource.Resource, error) {
 	return resource.Merge(
 		resource.Default(),
 		resource.NewWithAttributes(
-			semconv.SchemaURL,
+			"",
 			semconv.ServiceName("heimdall"),
 			semconv.ServiceVersion(version.Version)))
 }
