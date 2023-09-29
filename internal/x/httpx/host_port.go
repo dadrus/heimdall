@@ -40,6 +40,7 @@ func HostPort(hostport string) (string, int) {
 		host string
 		port int
 	)
+
 	port = -1
 
 	if strings.HasPrefix(hostport, "[") {

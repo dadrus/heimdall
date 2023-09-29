@@ -88,13 +88,13 @@ func New(opts ...Option) func(http.Handler) http.Handler {
 			}()
 
 			next.ServeHTTP(rw, req)
-
 		})
 	}
 }
 
 func serverRequestMetrics(server string, req *http.Request) []attribute.KeyValue {
-	n := 4 // Method, scheme, proto, and host name.
+	attrsCount := 4 // Method, scheme, proto, and host name.
+
 	var (
 		host string
 		port int
@@ -112,10 +112,10 @@ func serverRequestMetrics(server string, req *http.Request) []attribute.KeyValue
 
 	hostPort := requiredHTTPPort(req.TLS != nil, port)
 	if hostPort > 0 {
-		n++
+		attrsCount++
 	}
 
-	attrs := make([]attribute.KeyValue, 0, n)
+	attrs := make([]attribute.KeyValue, 0, attrsCount)
 	attrs = append(attrs, methodMetric(req.Method))
 	attrs = append(attrs, x.IfThenElse(req.TLS != nil, semconv.HTTPSchemeHTTPS, semconv.HTTPSchemeHTTP))
 	attrs = append(attrs, flavor(req.Proto))
@@ -131,10 +131,19 @@ func serverRequestMetrics(server string, req *http.Request) []attribute.KeyValue
 func methodMetric(method string) attribute.KeyValue {
 	method = strings.ToUpper(method)
 	switch method {
-	case http.MethodConnect, http.MethodDelete, http.MethodGet, http.MethodHead, http.MethodOptions, http.MethodPatch, http.MethodPost, http.MethodPut, http.MethodTrace:
+	case http.MethodConnect,
+		http.MethodDelete,
+		http.MethodGet,
+		http.MethodHead,
+		http.MethodOptions,
+		http.MethodPatch,
+		http.MethodPost,
+		http.MethodPut,
+		http.MethodTrace:
 	default:
 		method = "_OTHER"
 	}
+
 	return semconv.HTTPMethodKey.String(method)
 }
 
@@ -163,5 +172,6 @@ func requiredHTTPPort(https bool, port int) int { // nolint:revive
 			return port
 		}
 	}
+
 	return -1
 }

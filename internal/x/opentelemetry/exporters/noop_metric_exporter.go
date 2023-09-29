@@ -18,4 +18,4 @@ func (noopMetricExporter) Aggregation(metric.InstrumentKind) metric.Aggregation 
 }
 func (noopMetricExporter) Export(context.Context, *metricdata.ResourceMetrics) error { return nil }
 func (noopMetricExporter) ForceFlush(context.Context) error                          { return nil }
-func (noopMetricExporter) Shutdown(ctx context.Context) error                        { return nil }
+func (noopMetricExporter) Shutdown(context.Context) error                            { return nil }
