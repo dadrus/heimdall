@@ -63,7 +63,9 @@ func newLifecycleManager(conf *config.Configuration, logger zerolog.Logger) life
 	cfg := conf.Metrics
 	exporterNames, _ := os.LookupEnv("OTEL_METRICS_EXPORTER")
 
-	if !cfg.Enabled || !strings.Contains(exporterNames, "prometheus") {
+	if !cfg.Enabled ||
+		!strings.Contains(exporterNames, "prometheus") ||
+		strings.Contains(exporterNames, "none") {
 		logger.Info().Msg("Metrics service disabled")
 
 		return noopManager{}
