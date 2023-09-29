@@ -59,21 +59,12 @@ type ErrLoggerFun func(v ...interface{})
 
 func (l ErrLoggerFun) Println(v ...interface{}) { l(v) }
 
-type hooksArgs struct {
-	fx.In
-
-	Registerer prometheus.Registerer
-	Gatherer   prometheus.Gatherer
-	Config     *config.Configuration
-	Logger     zerolog.Logger
-}
-
-func newLifecycleManager(args hooksArgs) lifecycleManager {
-	cfg := args.Config.Metrics
+func newLifecycleManager(conf *config.Configuration, logger zerolog.Logger) lifecycleManager {
+	cfg := conf.Metrics
 	exporterNames, _ := os.LookupEnv("OTEL_METRICS_EXPORTER")
 
 	if !cfg.Enabled || !strings.Contains(exporterNames, "prometheus") {
-		args.Logger.Info().Msg("Metrics service disabled")
+		logger.Info().Msg("Metrics service disabled")
 
 		return noopManager{}
 	}
@@ -86,8 +77,8 @@ func newLifecycleManager(args hooksArgs) lifecycleManager {
 				promhttp.HandlerFor(
 					prometheus.DefaultGatherer,
 					promhttp.HandlerOpts{
-						Registry: args.Registerer,
-						ErrorLog: ErrLoggerFun(func(v ...interface{}) { args.Logger.Error().Msg(fmt.Sprint(v...)) }),
+						Registry: prometheus.DefaultRegisterer,
+						ErrorLog: ErrLoggerFun(func(v ...interface{}) { logger.Error().Msg(fmt.Sprint(v...)) }),
 					},
 				),
 			)))
@@ -101,8 +92,8 @@ func newLifecycleManager(args hooksArgs) lifecycleManager {
 			WriteTimeout:   10 * time.Second, // nolint: gomnd
 			IdleTimeout:    90 * time.Second, // nolint: gomnd
 			MaxHeaderBytes: 4096,             // nolint: gomnd
-			ErrorLog:       loggeradapter.NewStdLogger(args.Logger),
+			ErrorLog:       loggeradapter.NewStdLogger(logger),
 		},
-		Logger: args.Logger,
+		Logger: logger,
 	}
 }
