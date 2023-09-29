@@ -27,7 +27,7 @@ type service struct {
 	certificates []*x509.Certificate
 }
 
-type expirationCollector struct {
+type expirationObserver struct {
 	meter              metric.Meter
 	services           []*service
 	monitorEECertsOnly bool
@@ -40,7 +40,7 @@ func Start(opts ...Option) error {
 		conf.provider = otel.GetMeterProvider()
 	}
 
-	collector := &expirationCollector{
+	eo := &expirationObserver{
 		meter: conf.provider.Meter(
 			"github.com/dadrus/heimdall/internal/otel/metrics/certificate",
 			metric.WithInstrumentationVersion(version.Version),
@@ -49,10 +49,10 @@ func Start(opts ...Option) error {
 		monitorEECertsOnly: conf.monitorEECertsOnly,
 	}
 
-	return collector.register()
+	return eo.register()
 }
 
-func (c *expirationCollector) register() error {
+func (eo *expirationObserver) register() error {
 	var (
 		err               error
 		expirationCounter metric.Float64ObservableUpDownCounter
@@ -64,7 +64,7 @@ func (c *expirationCollector) register() error {
 	lock.Lock()
 	defer lock.Unlock()
 
-	expirationCounter, err = c.meter.Float64ObservableUpDownCounter(
+	expirationCounter, err = eo.meter.Float64ObservableUpDownCounter(
 		"certificate.expiry",
 		metric.WithDescription("Number of seconds until certificate expires"),
 		metric.WithUnit("s"),
@@ -73,17 +73,17 @@ func (c *expirationCollector) register() error {
 		return err
 	}
 
-	_, err = c.meter.RegisterCallback(
+	_, err = eo.meter.RegisterCallback(
 		func(ctx context.Context, observer metric.Observer) error {
 			lock.Lock()
 			defer lock.Unlock()
 
-			for _, srv := range c.services {
-				if c.monitorEECertsOnly {
-					c.observeCertificate(observer, expirationCounter, srv.certificates[0], srv.name)
+			for _, srv := range eo.services {
+				if eo.monitorEECertsOnly {
+					eo.observeCertificate(observer, expirationCounter, srv.certificates[0], srv.name)
 				} else {
 					for _, cert := range srv.certificates {
-						c.observeCertificate(observer, expirationCounter, cert, srv.name)
+						eo.observeCertificate(observer, expirationCounter, cert, srv.name)
 					}
 				}
 			}
@@ -96,7 +96,7 @@ func (c *expirationCollector) register() error {
 	return err
 }
 
-func (c *expirationCollector) observeCertificate(
+func (eo *expirationObserver) observeCertificate(
 	observer metric.Observer,
 	counter metric.Float64ObservableUpDownCounter,
 	cert *x509.Certificate,
