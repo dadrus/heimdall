@@ -39,7 +39,7 @@ func TestNewSpanExportersWithoutSetEnvVariable(t *testing.T) {
 
 func TestNewSpanExportersWithSetEnvVariable(t *testing.T) {
 	// GIVEN
-	t.Setenv(otelTracesExportersEnvKey, "none")
+	t.Setenv("OTEL_TRACES_EXPORTER", "none")
 
 	// WHEN
 	expts, err := NewSpanExporters(context.Background())

@@ -126,7 +126,7 @@ func TestCreateSpanExporters(t *testing.T) {
 			uc: "default exporter type with error",
 			setup: func(t *testing.T) {
 				t.Helper()
-				t.Setenv(otelExporterOtlpTracesProtocolEnvKey, "foobar")
+				t.Setenv("OTEL_EXPORTER_OTLP_PROTOCOL", "foobar")
 			},
 			assert: func(t *testing.T, err error, expts []trace.SpanExporter) {
 				t.Helper()
@@ -153,7 +153,7 @@ func TestCreateSpanExporters(t *testing.T) {
 				t.Helper()
 				t.Setenv("INSTANA_ENDPOINT_URL", "http://instana:1234")
 				t.Setenv("INSTANA_AGENT_KEY", "foobar")
-				t.Setenv(otelExporterOtlpTracesProtocolEnvKey, "grpc")
+				t.Setenv("OTEL_EXPORTER_OTLP_PROTOCOL", "grpc")
 			},
 			assert: func(t *testing.T, err error, expts []trace.SpanExporter) {
 				t.Helper()
