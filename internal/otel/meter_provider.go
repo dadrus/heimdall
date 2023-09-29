@@ -4,8 +4,6 @@ import (
 	"context"
 
 	"github.com/rs/zerolog"
-	"go.opentelemetry.io/contrib/instrumentation/host"
-	"go.opentelemetry.io/contrib/instrumentation/runtime"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -42,14 +40,6 @@ func initMeterProvider(
 	mp := metric.NewMeterProvider(opts...)
 	otel.SetMeterProvider(mp)
 	lifecycle.Append(fx.StopHook(mp.Shutdown))
-
-	if err = runtime.Start(runtime.WithMeterProvider(mp)); err != nil {
-		return err
-	}
-
-	if err = host.Start(host.WithMeterProvider(mp)); err != nil {
-		return err
-	}
 
 	logger.Info().Msg("OpenTelemetry metrics initialized.")
 
