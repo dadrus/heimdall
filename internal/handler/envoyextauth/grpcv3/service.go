@@ -32,7 +32,7 @@ import (
 	cachemiddleware "github.com/dadrus/heimdall/internal/handler/middleware/grpc/cache"
 	"github.com/dadrus/heimdall/internal/handler/middleware/grpc/errorhandler"
 	loggermiddleware "github.com/dadrus/heimdall/internal/handler/middleware/grpc/logger"
-	prometheus2 "github.com/dadrus/heimdall/internal/handler/middleware/grpc/prometheus"
+	"github.com/dadrus/heimdall/internal/handler/middleware/grpc/otelmetrics"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/rule"
 )
@@ -50,22 +50,18 @@ func newService(
 		return status.Error(codes.Internal, "internal error")
 	})
 
+	metrics := otelmetrics.New(otelmetrics.WithSubsystem("decision"))
+
 	streamInterceptors := []grpc.StreamServerInterceptor{
 		recovery.StreamServerInterceptor(recoveryHandler),
 		otelgrpc.StreamServerInterceptor(),
+		metrics.StreamServerInterceptor(),
 	}
 
 	unaryInterceptors := []grpc.UnaryServerInterceptor{
 		recovery.UnaryServerInterceptor(recoveryHandler),
 		otelgrpc.UnaryServerInterceptor(),
-	}
-
-	if conf.Metrics.Enabled {
-		metrics := prometheus2.New(
-			prometheus2.WithServiceName("decision"),
-		)
-		unaryInterceptors = append(unaryInterceptors, metrics.Unary())
-		streamInterceptors = append(streamInterceptors, metrics.Stream())
+		metrics.UnaryServerInterceptor(),
 	}
 
 	unaryInterceptors = append(unaryInterceptors,
