@@ -136,7 +136,7 @@ func TestHandlerExecution(t *testing.T) {
 						WithMeterProvider(meterProvider),
 						WithAttributes(attribute.Key("baz").String("zab")),
 						WithSubsystem("foobar"),
-						WithOperationFilter(func(req *http.Request) bool { return req.URL.Path == "/filtered" }),
+						WithOperationFilter(func(req *http.Request) bool { return req.URL.Path != "/filtered" }),
 					),
 				).ThenFunc(func(rw http.ResponseWriter, req *http.Request) {
 					switch req.URL.Path {

@@ -130,18 +130,18 @@ func TestOptionsWithOperationFilter(t *testing.T) {
 			assert: func(t *testing.T, opt *config) {
 				t.Helper()
 
-				assert.Nil(t, opt.filterOperation)
+				assert.Nil(t, opt.shouldProcess)
 			},
 		},
 		{
 			uc:    "with filter",
 			opt:   config{},
-			value: func(req *http.Request) bool { return true },
+			value: func(req *http.Request) bool { return false },
 			assert: func(t *testing.T, opt *config) {
 				t.Helper()
 
-				assert.NotNil(t, opt.filterOperation)
-				assert.True(t, opt.filterOperation(nil))
+				assert.NotNil(t, opt.shouldProcess)
+				assert.False(t, opt.shouldProcess(nil))
 			},
 		},
 	} {

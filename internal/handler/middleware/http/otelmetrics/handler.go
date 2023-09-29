@@ -43,7 +43,6 @@ func New(opts ...Option) func(http.Handler) http.Handler {
 	requestsServedTotal, err := meter.Float64Counter(
 		otelhttp.RequestCount,
 		metric.WithDescription("Measures the incoming request count total"),
-		metric.WithUnit("1"),
 	)
 	if err != nil {
 		panic(err)
@@ -52,7 +51,6 @@ func New(opts ...Option) func(http.Handler) http.Handler {
 	activeRequests, err := meter.Float64UpDownCounter(
 		requestsActive,
 		metric.WithDescription("Measures the number of concurrent HTTP requests that are currently in-flight."),
-		metric.WithUnit("1"),
 	)
 	if err != nil {
 		panic(err)
@@ -60,7 +58,7 @@ func New(opts ...Option) func(http.Handler) http.Handler {
 
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-			if conf.filterOperation(req) {
+			if !conf.shouldProcess(req) {
 				next.ServeHTTP(rw, req)
 
 				return

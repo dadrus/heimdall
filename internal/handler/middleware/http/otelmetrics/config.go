@@ -29,11 +29,11 @@ const serviceSubsystemKey = attribute.Key("service.subsystem")
 type OperationFilter func(req *http.Request) bool
 
 type config struct {
-	server          string
-	subsystem       attribute.KeyValue
-	provider        metric.MeterProvider
-	attributes      []attribute.KeyValue
-	filterOperation OperationFilter
+	server        string
+	subsystem     attribute.KeyValue
+	provider      metric.MeterProvider
+	attributes    []attribute.KeyValue
+	shouldProcess OperationFilter
 }
 
 type Option func(*config)
@@ -55,7 +55,7 @@ func WithAttributes(kv ...attribute.KeyValue) Option {
 func WithOperationFilter(filter OperationFilter) Option {
 	return func(o *config) {
 		if filter != nil {
-			o.filterOperation = filter
+			o.shouldProcess = filter
 		}
 	}
 }
@@ -78,8 +78,8 @@ func WithSubsystem(name string) Option {
 
 func newConfig(opts ...Option) *config {
 	conf := config{
-		provider:        otel.GetMeterProvider(),
-		filterOperation: func(req *http.Request) bool { return false },
+		provider:      otel.GetMeterProvider(),
+		shouldProcess: func(req *http.Request) bool { return true },
 	}
 
 	for _, opt := range opts {
