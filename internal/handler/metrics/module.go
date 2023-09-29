@@ -20,6 +20,8 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"os"
+	"strings"
 	"time"
 
 	"github.com/justinas/alice"
@@ -68,7 +70,9 @@ type hooksArgs struct {
 
 func newLifecycleManager(args hooksArgs) lifecycleManager {
 	cfg := args.Config.Metrics
-	if !cfg.Enabled {
+	exporterNames, _ := os.LookupEnv("OTEL_METRICS_EXPORTER")
+
+	if !cfg.Enabled || !strings.Contains(exporterNames, "prometheus") {
 		args.Logger.Info().Msg("Metrics service disabled")
 
 		return noopManager{}
@@ -78,9 +82,9 @@ func newLifecycleManager(args hooksArgs) lifecycleManager {
 	mux.Handle(cfg.MetricsPath,
 		alice.New(methodfilter.New(http.MethodGet)).
 			Then(promhttp.InstrumentMetricHandler(
-				args.Registerer,
+				prometheus.DefaultRegisterer,
 				promhttp.HandlerFor(
-					args.Gatherer,
+					prometheus.DefaultGatherer,
 					promhttp.HandlerOpts{
 						Registry: args.Registerer,
 						ErrorLog: ErrLoggerFun(func(v ...interface{}) { args.Logger.Error().Msg(fmt.Sprint(v...)) }),
