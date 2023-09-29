@@ -69,7 +69,7 @@ func TestInitializeOTEL(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, exporters.ErrFailedCreatingExporter)
+				assert.ErrorIs(t, err, exporters.ErrFailedCreatingTracesExporter)
 			},
 		},
 		{
