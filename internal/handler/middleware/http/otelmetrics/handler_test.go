@@ -128,14 +128,6 @@ func TestHandlerExecution(t *testing.T) {
 			meterProvider := metric.NewMeterProvider(
 				metric.WithResource(resource.Default()),
 				metric.WithReader(exp),
-				metric.WithView(
-					metric.NewView(
-						metric.Instrument{Name: "mp_histogram"},
-						metric.Stream{Aggregation: metric.AggregationExplicitBucketHistogram{
-							Boundaries: []float64{100, 300, 500},
-						}},
-					),
-				),
 			)
 
 			srv := httptest.NewServer(
