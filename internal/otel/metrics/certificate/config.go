@@ -75,7 +75,7 @@ func WithEndEntityMonitoringOnly(flag bool) Option {
 	}
 }
 
-func newConfig(opts ...Option) config {
+func newConfig(opts ...Option) *config {
 	conf := config{
 		provider: otel.GetMeterProvider(),
 	}
@@ -84,5 +84,5 @@ func newConfig(opts ...Option) config {
 		opt(&conf)
 	}
 
-	return conf
+	return &conf
 }
