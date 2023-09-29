@@ -20,6 +20,8 @@ import (
 	"github.com/rs/zerolog"
 	"go.opentelemetry.io/otel"
 	"go.uber.org/fx"
+
+	"github.com/dadrus/heimdall/internal/otel/metrics"
 )
 
 // Module is used on app bootstrap.
@@ -31,4 +33,5 @@ var Module = fx.Options(
 	}),
 	fx.Invoke(initTraceProvider),
 	fx.Invoke(initMeterProvider),
+	metrics.Module,
 )
