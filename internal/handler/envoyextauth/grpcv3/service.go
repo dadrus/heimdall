@@ -19,7 +19,6 @@ package grpcv3
 import (
 	envoy_auth "github.com/envoyproxy/go-control-plane/envoy/service/auth/v3"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/recovery"
-	"github.com/prometheus/client_golang/prometheus"
 	"github.com/rs/zerolog"
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"google.golang.org/grpc"
@@ -40,7 +39,6 @@ import (
 
 func newService(
 	conf *config.Configuration,
-	registerer prometheus.Registerer,
 	cch cache.Cache,
 	logger zerolog.Logger,
 	exec rule.Executor,
@@ -65,7 +63,6 @@ func newService(
 	if conf.Metrics.Enabled {
 		metrics := prometheus2.New(
 			prometheus2.WithServiceName("decision"),
-			prometheus2.WithRegisterer(registerer),
 		)
 		unaryInterceptors = append(unaryInterceptors, metrics.Unary())
 		streamInterceptors = append(streamInterceptors, metrics.Stream())
