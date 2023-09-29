@@ -31,8 +31,20 @@ func attributeValue(set attribute.Set, key attribute.Key) attribute.Value {
 	return attribute.Value{}
 }
 
-func checkMetric(t *testing.T, data metricdata.DataPoint[float64], service string, cert *x509.Certificate) {
+func dataPointForCert(cert *x509.Certificate, dps []metricdata.DataPoint[float64]) metricdata.DataPoint[float64] {
+	for _, dp := range dps {
+		if cert.Subject.String() == attributeValue(dp.Attributes, subjectAttrKey).AsString() {
+			return dp
+		}
+	}
+
+	return metricdata.DataPoint[float64]{}
+}
+
+func checkMetric(t *testing.T, dp []metricdata.DataPoint[float64], service string, cert *x509.Certificate) {
 	t.Helper()
+
+	data := dataPointForCert(cert, dp)
 
 	assert.LessOrEqual(t, data.Value-time.Until(cert.NotAfter).Seconds(), 1.0)
 
@@ -160,7 +172,7 @@ func TestCertificateExpirationCollector(t *testing.T) {
 				assert.False(t, data.IsMonotonic)
 				assert.Len(t, data.DataPoints, 1)
 
-				checkMetric(t, data.DataPoints[0], "foo", rootCA1.Certificate)
+				checkMetric(t, data.DataPoints, "foo", rootCA1.Certificate)
 			},
 		},
 		{
@@ -187,11 +199,11 @@ func TestCertificateExpirationCollector(t *testing.T) {
 				assert.Len(t, data.DataPoints, 3)
 
 				// first certificate in the chain
-				checkMetric(t, data.DataPoints[0], "foo", ee1cert)
+				checkMetric(t, data.DataPoints, "foo", ee1cert)
 				// second certificate in the chain
-				checkMetric(t, data.DataPoints[1], "foo", intCA1Cert)
+				checkMetric(t, data.DataPoints, "foo", intCA1Cert)
 				// third certificate in the chain
-				checkMetric(t, data.DataPoints[2], "foo", rootCA1.Certificate)
+				checkMetric(t, data.DataPoints, "foo", rootCA1.Certificate)
 			},
 		},
 		{
@@ -218,11 +230,11 @@ func TestCertificateExpirationCollector(t *testing.T) {
 				assert.Len(t, data.DataPoints, 3)
 
 				// first certificate in the chain
-				checkMetric(t, data.DataPoints[0], "foo", ee2cert)
+				checkMetric(t, data.DataPoints, "foo", ee2cert)
 				// second certificate in the chain
-				checkMetric(t, data.DataPoints[1], "foo", intCA1Cert)
+				checkMetric(t, data.DataPoints, "foo", intCA1Cert)
 				// third certificate in the chain
-				checkMetric(t, data.DataPoints[2], "foo", rootCA1.Certificate)
+				checkMetric(t, data.DataPoints, "foo", rootCA1.Certificate)
 			},
 		},
 		{
@@ -249,7 +261,7 @@ func TestCertificateExpirationCollector(t *testing.T) {
 				assert.Len(t, data.DataPoints, 1)
 
 				// first certificate in the chain
-				checkMetric(t, data.DataPoints[0], "foo", ee1cert)
+				checkMetric(t, data.DataPoints, "foo", ee1cert)
 			},
 		},
 		{
@@ -277,9 +289,9 @@ func TestCertificateExpirationCollector(t *testing.T) {
 				assert.Len(t, data.DataPoints, 2)
 
 				// service 1
-				checkMetric(t, data.DataPoints[0], "foo", ee1cert)
+				checkMetric(t, data.DataPoints, "foo", ee1cert)
 				// service 2
-				checkMetric(t, data.DataPoints[1], "bar", ee2cert)
+				checkMetric(t, data.DataPoints, "bar", ee2cert)
 			},
 		},
 		{
