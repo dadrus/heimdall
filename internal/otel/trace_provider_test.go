@@ -27,6 +27,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/propagation"
+	"go.opentelemetry.io/otel/sdk/resource"
 	"go.uber.org/fx"
 
 	"github.com/dadrus/heimdall/internal/config"
@@ -39,7 +40,7 @@ type mockLifecycle struct{ mock.Mock }
 
 func (m *mockLifecycle) Append(hook fx.Hook) { m.Called(hook) }
 
-func TestInitializeOTEL(t *testing.T) {
+func TestInitTraceProvider(t *testing.T) {
 	for _, tc := range []struct {
 		uc         string
 		conf       config.TracingConfig
@@ -90,9 +91,6 @@ func TestInitializeOTEL(t *testing.T) {
 
 				require.NoError(t, err)
 				assert.Contains(t, logged, "tracing initialized")
-				assert.Contains(t, logged, "Tearing down Opentelemetry provider")
-				assert.Contains(t, logged, "OTEL Error")
-				assert.Contains(t, logged, "test error")
 
 				// since no OTEL environment variables are set, default propagators shall have been registered
 				require.Len(t, propagator, 2)
@@ -114,7 +112,12 @@ func TestInitializeOTEL(t *testing.T) {
 			setupMocks(t, mock)
 
 			// WHEN
-			err := initializeOTEL(mock, &config.Configuration{Tracing: tc.conf}, logger)
+			err := initTraceProvider(
+				&config.Configuration{Tracing: tc.conf},
+				resource.Default(),
+				logger,
+				mock,
+			)
 			otel.Handle(fmt.Errorf("test error"))
 			propagator := otel.GetTextMapPropagator()
 
