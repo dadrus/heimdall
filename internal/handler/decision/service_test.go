@@ -24,7 +24,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/prometheus/client_golang/prometheus"
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -566,15 +565,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 
 			client := &http.Client{Transport: &http.Transport{}}
 
-			decision := newService(
-				conf,
-				prometheus.NewRegistry(),
-				cch,
-				log.Logger,
-				exec,
-				nil,
-			)
-
+			decision := newService(conf, cch, log.Logger, exec, nil)
 			defer decision.Shutdown(context.Background())
 
 			go func() {

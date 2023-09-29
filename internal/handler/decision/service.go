@@ -22,20 +22,17 @@ import (
 	"strings"
 
 	"github.com/justinas/alice"
-	"github.com/prometheus/client_golang/prometheus"
 	"github.com/rs/zerolog"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
-	"go.opentelemetry.io/otel"
 
 	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/accesslog"
 	cachemiddleware "github.com/dadrus/heimdall/internal/handler/middleware/http/cache"
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/dump"
-	errorhandler2 "github.com/dadrus/heimdall/internal/handler/middleware/http/errorhandler"
+	"github.com/dadrus/heimdall/internal/handler/middleware/http/errorhandler"
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/logger"
-	"github.com/dadrus/heimdall/internal/handler/middleware/http/passthrough"
-	prometheus3 "github.com/dadrus/heimdall/internal/handler/middleware/http/prometheus"
+	"github.com/dadrus/heimdall/internal/handler/middleware/http/otelmetrics"
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/recovery"
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/trustedproxy"
 	"github.com/dadrus/heimdall/internal/handler/service"
@@ -48,22 +45,21 @@ import (
 
 func newService(
 	conf *config.Configuration,
-	reg prometheus.Registerer,
 	cch cache.Cache,
 	log zerolog.Logger,
 	exec rule.Executor,
 	signer heimdall.JWTSigner,
 ) *http.Server {
 	cfg := conf.Serve.Decision
-	eh := errorhandler2.New(
-		errorhandler2.WithVerboseErrors(cfg.Respond.Verbose),
-		errorhandler2.WithPreconditionErrorCode(cfg.Respond.With.ArgumentError.Code),
-		errorhandler2.WithAuthenticationErrorCode(cfg.Respond.With.AuthenticationError.Code),
-		errorhandler2.WithAuthorizationErrorCode(cfg.Respond.With.AuthorizationError.Code),
-		errorhandler2.WithCommunicationErrorCode(cfg.Respond.With.CommunicationError.Code),
-		errorhandler2.WithMethodErrorCode(cfg.Respond.With.BadMethodError.Code),
-		errorhandler2.WithNoRuleErrorCode(cfg.Respond.With.NoRuleError.Code),
-		errorhandler2.WithInternalServerErrorCode(cfg.Respond.With.InternalError.Code),
+	eh := errorhandler.New(
+		errorhandler.WithVerboseErrors(cfg.Respond.Verbose),
+		errorhandler.WithPreconditionErrorCode(cfg.Respond.With.ArgumentError.Code),
+		errorhandler.WithAuthenticationErrorCode(cfg.Respond.With.AuthenticationError.Code),
+		errorhandler.WithAuthorizationErrorCode(cfg.Respond.With.AuthorizationError.Code),
+		errorhandler.WithCommunicationErrorCode(cfg.Respond.With.CommunicationError.Code),
+		errorhandler.WithMethodErrorCode(cfg.Respond.With.BadMethodError.Code),
+		errorhandler.WithNoRuleErrorCode(cfg.Respond.With.NoRuleError.Code),
+		errorhandler.WithInternalServerErrorCode(cfg.Respond.With.InternalError.Code),
 	)
 	acceptedCode := x.IfThenElse(cfg.Respond.With.Accepted.Code != 0, cfg.Respond.With.Accepted.Code, http.StatusOK)
 
@@ -79,26 +75,16 @@ func newService(
 		logger.New(log),
 		dump.New(),
 		recovery.New(eh),
-		func(next http.Handler) http.Handler {
-			return otelhttp.NewHandler(
-				next,
-				"",
-				otelhttp.WithTracerProvider(otel.GetTracerProvider()),
-				otelhttp.WithServerName("decision"),
-				otelhttp.WithSpanNameFormatter(func(_ string, req *http.Request) string {
-					return fmt.Sprintf("EntryPoint %s %s%s",
-						strings.ToLower(req.URL.Scheme), httpx.LocalAddress(req), req.URL.Path)
-				}),
-			)
-		},
-		x.IfThenElseExec(conf.Metrics.Enabled,
-			func() func(http.Handler) http.Handler {
-				return prometheus3.New(
-					prometheus3.WithServiceName("decision"),
-					prometheus3.WithRegisterer(reg),
-				)
-			},
-			func() func(http.Handler) http.Handler { return passthrough.New },
+		otelhttp.NewMiddleware("",
+			otelhttp.WithServerName(cfg.Address()),
+			otelhttp.WithSpanNameFormatter(func(_ string, req *http.Request) string {
+				return fmt.Sprintf("EntryPoint %s %s%s",
+					strings.ToLower(req.URL.Scheme), httpx.LocalAddress(req), req.URL.Path)
+			}),
+		),
+		otelmetrics.New(
+			otelmetrics.WithSubsystem("decision"),
+			otelmetrics.WithServerName(cfg.Address()),
 		),
 		cachemiddleware.New(cch),
 	).Then(service.NewHandler(newContextFactory(signer, acceptedCode), exec, eh))
