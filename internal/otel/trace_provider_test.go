@@ -18,7 +18,6 @@ package otel
 
 import (
 	"context"
-	"fmt"
 	"testing"
 
 	"github.com/rs/zerolog"
@@ -81,7 +80,6 @@ func TestInitTraceProvider(t *testing.T) {
 
 				lcMock.On("Append",
 					mock.MatchedBy(func(hook fx.Hook) bool {
-						// should not fail and corresponding log statement shall be logged
 						return hook.OnStop(context.Background()) == nil
 					}),
 				)
@@ -118,7 +116,6 @@ func TestInitTraceProvider(t *testing.T) {
 				logger,
 				mock,
 			)
-			otel.Handle(fmt.Errorf("test error"))
 			propagator := otel.GetTextMapPropagator()
 
 			// THEN
