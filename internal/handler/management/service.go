@@ -31,7 +31,7 @@ func newService(
 ) *http.Server {
 	cfg := conf.Serve.Management
 	eh := errorhandler2.New()
-	opFilter := func(req *http.Request) bool { return req.URL.Path == EndpointHealth }
+	opFilter := func(req *http.Request) bool { return req.URL.Path != EndpointHealth }
 
 	hc := alice.New(
 		accesslog.New(log),
