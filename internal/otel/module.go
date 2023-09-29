@@ -14,7 +14,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package tracing
+package otel
 
 import (
 	"github.com/rs/zerolog"
