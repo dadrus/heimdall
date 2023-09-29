@@ -52,6 +52,7 @@ type metricsInterceptor struct {
 func (h *metricsInterceptor) UnaryServerInterceptor() grpc.UnaryServerInterceptor {
 	return h.observeUnaryRequest
 }
+
 func (h *metricsInterceptor) StreamServerInterceptor() grpc.StreamServerInterceptor {
 	return h.observeStreamRequest
 }
@@ -93,7 +94,7 @@ func New(opts ...Option) ServerInterceptor {
 func (h *metricsInterceptor) observeUnaryRequest(
 	ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler,
 ) (any, error) {
-	_, attr := spanInfo(info.FullMethod, peerFromCtx(ctx))
+	attr := spanInfo(info.FullMethod, peerFromCtx(ctx))
 	attributes := append(h.attributes, h.subsystem)
 	attributes = append(attributes, attr...)
 
@@ -101,6 +102,7 @@ func (h *metricsInterceptor) observeUnaryRequest(
 
 	h.requestsServedTotal.Add(ctx, 1, opt)
 	h.activeRequests.Add(ctx, 1, opt)
+
 	defer func() {
 		h.activeRequests.Add(ctx, -1, opt)
 	}()
@@ -112,7 +114,7 @@ func (h *metricsInterceptor) observeStreamRequest(
 	srv any, stream grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler,
 ) error {
 	ctx := stream.Context()
-	_, attr := spanInfo(info.FullMethod, peerFromCtx(ctx))
+	attr := spanInfo(info.FullMethod, peerFromCtx(ctx))
 	attributes := append(h.attributes, h.subsystem)
 	attributes = append(attributes, attr...)
 
@@ -120,6 +122,7 @@ func (h *metricsInterceptor) observeStreamRequest(
 
 	h.requestsServedTotal.Add(ctx, 1, opt)
 	h.activeRequests.Add(ctx, 1, opt)
+
 	defer func() {
 		h.activeRequests.Add(ctx, -1, opt)
 	}()
@@ -132,11 +135,12 @@ func peerFromCtx(ctx context.Context) string {
 	if !ok {
 		return ""
 	}
+
 	return p.Addr.String()
 }
 
 func peerAttr(addr string) []attribute.KeyValue {
-	host, p, err := net.SplitHostPort(addr)
+	host, port, err := net.SplitHostPort(addr)
 	if err != nil {
 		return nil
 	}
@@ -144,7 +148,8 @@ func peerAttr(addr string) []attribute.KeyValue {
 	if host == "" {
 		host = "127.0.0.1"
 	}
-	port, err := strconv.Atoi(p)
+
+	portVal, err := strconv.Atoi(port)
 	if err != nil {
 		return nil
 	}
@@ -153,12 +158,12 @@ func peerAttr(addr string) []attribute.KeyValue {
 	if ip := net.ParseIP(host); ip != nil {
 		attr = []attribute.KeyValue{
 			semconv.NetSockPeerAddr(host),
-			semconv.NetSockPeerPort(port),
+			semconv.NetSockPeerPort(portVal),
 		}
 	} else {
 		attr = []attribute.KeyValue{
 			semconv.NetPeerName(host),
-			semconv.NetPeerPort(port),
+			semconv.NetPeerPort(portVal),
 		}
 	}
 
@@ -170,26 +175,31 @@ func parseFullMethod(fullMethod string) (string, []attribute.KeyValue) {
 		// Invalid format, does not follow `/package.service/method`.
 		return fullMethod, nil
 	}
+
 	name := fullMethod[1:]
 	pos := strings.LastIndex(name, "/")
+
 	if pos < 0 {
 		// Invalid format, does not follow `/package.service/method`.
 		return name, nil
 	}
+
 	service, method := name[:pos], name[pos+1:]
 
 	var attrs []attribute.KeyValue
 	if service != "" {
 		attrs = append(attrs, semconv.RPCService(service))
 	}
+
 	if method != "" {
 		attrs = append(attrs, semconv.RPCMethod(method))
 	}
+
 	return name, attrs
 }
 
-func spanInfo(fullMethod, peerAddress string) (string, []attribute.KeyValue) {
-	name, mAttrs := parseFullMethod(fullMethod)
+func spanInfo(fullMethod, peerAddress string) []attribute.KeyValue {
+	_, mAttrs := parseFullMethod(fullMethod)
 	peerAttrs := peerAttr(peerAddress)
 
 	attrs := make([]attribute.KeyValue, 0, 1+len(mAttrs)+len(peerAttrs))
@@ -197,5 +207,5 @@ func spanInfo(fullMethod, peerAddress string) (string, []attribute.KeyValue) {
 	attrs = append(attrs, mAttrs...)
 	attrs = append(attrs, peerAttrs...)
 
-	return name, attrs
+	return attrs
 }
