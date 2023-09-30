@@ -34,7 +34,7 @@ const (
 	defaultProxyServicePort      = 4455
 	defaultDecisionServicePort   = 4456
 	defaultManagementServicePort = 4457
-	defaultMetricsServicePort    = 10250
+	defaultMetricsServicePort    = 9464
 	defaultProfilingServicePort  = 10251
 
 	defaultBufferSize = 4 * bytesize.KB
