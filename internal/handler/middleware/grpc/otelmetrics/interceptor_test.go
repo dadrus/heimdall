@@ -101,8 +101,8 @@ func TestHandlerObserveKnownRequests(t *testing.T) {
 				assert.Equal(t, "heimdall.local",
 					attributeValue(activeRequests.DataPoints[0].Attributes, "server.address").AsString())
 				assert.True(t, activeRequests.DataPoints[0].Attributes.HasValue("server.port"))
-				assert.True(t, activeRequests.DataPoints[0].Attributes.HasValue(semconv.NetPeerNameKey))
-				assert.True(t, activeRequests.DataPoints[0].Attributes.HasValue(semconv.NetPeerPortKey))
+				assert.True(t, activeRequests.DataPoints[0].Attributes.HasValue(semconv.NetSockPeerAddrKey))
+				assert.True(t, activeRequests.DataPoints[0].Attributes.HasValue(semconv.NetSockPeerPortKey))
 			},
 		},
 		{
@@ -152,8 +152,8 @@ func TestHandlerObserveKnownRequests(t *testing.T) {
 				assert.Equal(t, "heimdall.local",
 					attributeValue(activeRequests.DataPoints[0].Attributes, "server.address").AsString())
 				assert.True(t, activeRequests.DataPoints[0].Attributes.HasValue("server.port"))
-				assert.True(t, activeRequests.DataPoints[0].Attributes.HasValue(semconv.NetPeerNameKey))
-				assert.True(t, activeRequests.DataPoints[0].Attributes.HasValue(semconv.NetPeerPortKey))
+				assert.True(t, activeRequests.DataPoints[0].Attributes.HasValue(semconv.NetSockPeerAddrKey))
+				assert.True(t, activeRequests.DataPoints[0].Attributes.HasValue(semconv.NetSockPeerPortKey))
 			},
 		},
 		{
@@ -197,8 +197,8 @@ func TestHandlerObserveKnownRequests(t *testing.T) {
 				assert.Equal(t, "heimdall.local",
 					attributeValue(activeRequests.DataPoints[0].Attributes, "server.address").AsString())
 				assert.True(t, activeRequests.DataPoints[0].Attributes.HasValue("server.port"))
-				assert.True(t, activeRequests.DataPoints[0].Attributes.HasValue(semconv.NetPeerNameKey))
-				assert.True(t, activeRequests.DataPoints[0].Attributes.HasValue(semconv.NetPeerPortKey))
+				assert.True(t, activeRequests.DataPoints[0].Attributes.HasValue(semconv.NetSockPeerAddrKey))
+				assert.True(t, activeRequests.DataPoints[0].Attributes.HasValue(semconv.NetSockPeerPortKey))
 			},
 		},
 	} {
@@ -349,6 +349,6 @@ func TestHandlerObserveUnknownRequests(t *testing.T) {
 	assert.Equal(t, "127.0.0.1",
 		attributeValue(activeRequests.DataPoints[0].Attributes, "server.address").AsString())
 	assert.True(t, activeRequests.DataPoints[0].Attributes.HasValue("server.port"))
-	assert.True(t, activeRequests.DataPoints[0].Attributes.HasValue(semconv.NetPeerNameKey))
-	assert.True(t, activeRequests.DataPoints[0].Attributes.HasValue(semconv.NetPeerPortKey))
+	assert.True(t, activeRequests.DataPoints[0].Attributes.HasValue(semconv.NetSockPeerAddrKey))
+	assert.True(t, activeRequests.DataPoints[0].Attributes.HasValue(semconv.NetSockPeerPortKey))
 }
