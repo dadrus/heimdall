@@ -72,12 +72,6 @@ var spanExporters = &registry[trace.SpanExporter]{ //nolint:gochecknoglobals
 	},
 }
 
-func RegisterSpanExporterFactory(name string, factory FactoryFunc[trace.SpanExporter]) {
-	if err := spanExporters.store(name, factory); err != nil {
-		panic(err)
-	}
-}
-
 func createSpanExporters(ctx context.Context, names ...string) ([]trace.SpanExporter, error) {
 	var exps []trace.SpanExporter //nolint:prealloc
 

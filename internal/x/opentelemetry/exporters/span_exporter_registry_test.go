@@ -18,8 +18,6 @@ package exporters
 
 import (
 	"context"
-	"errors"
-	"fmt"
 	"testing"
 
 	instana "github.com/instana/go-otel-exporter"
@@ -31,40 +29,6 @@ import (
 
 	"github.com/dadrus/heimdall/internal/x"
 )
-
-var errTest = errors.New("for test purpose")
-
-func TestRegisterSpanExporterFactory(t *testing.T) {
-	t.Cleanup(func() { spanExporters.remove("custom") })
-
-	// WHEN
-	RegisterSpanExporterFactory("custom",
-		func(ctx context.Context) (trace.SpanExporter, error) { return nil, errTest })
-
-	// THEN
-	v, ok := spanExporters.load("custom")
-	assert.True(t, ok)
-
-	_, err := v(context.Background())
-	assert.Equal(t, errTest, err)
-}
-
-func TestDuplicateRegisterSpanExporterFactoryPanics(t *testing.T) {
-	// GIVEN
-	name := "custom"
-	factory := func(ctx context.Context) (trace.SpanExporter, error) { return nil, errTest }
-	errString := fmt.Sprintf("%s: %s", ErrDuplicateRegistration, name)
-
-	t.Cleanup(func() { spanExporters.remove(name) })
-
-	// GIVEN
-	RegisterSpanExporterFactory(name, factory)
-
-	// WHEN & THEN
-	assert.PanicsWithError(t, errString, func() {
-		RegisterSpanExporterFactory(name, factory)
-	})
-}
 
 func TestCreateSpanExporters(t *testing.T) {
 	for _, tc := range []struct {

@@ -2,6 +2,7 @@ package exporters
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -73,7 +74,7 @@ func TestRegistryExistentLoad(t *testing.T) {
 	reg := registry[trace.SpanExporter]{}
 
 	require.NoError(t, reg.store("existent",
-		func(ctx context.Context) (trace.SpanExporter, error) { return nil, errTest }))
+		func(ctx context.Context) (trace.SpanExporter, error) { return nil, errors.New("for test purpose") }))
 
 	// WHEN
 	value, ok := reg.load("existent")
@@ -83,5 +84,5 @@ func TestRegistryExistentLoad(t *testing.T) {
 	assert.NotNil(t, value)
 
 	_, err := value(context.Background())
-	assert.Equal(t, errTest, err)
+	assert.Contains(t, err.Error(), "for test purpose")
 }
