@@ -43,9 +43,3 @@ func (r *registry[T]) store(key string, value FactoryFunc[T]) error {
 
 	return nil
 }
-
-func (r *registry[T]) remove(key string) {
-	r.mu.Lock()
-	delete(r.names, key)
-	r.mu.Unlock()
-}
