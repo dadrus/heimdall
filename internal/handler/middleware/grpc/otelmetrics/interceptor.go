@@ -72,10 +72,6 @@ func New(opts ...Option) ServerInterceptor {
 		panic(err)
 	}
 
-	if err != nil {
-		panic(err)
-	}
-
 	handler := &metricsInterceptor{
 		activeRequests: activeRequestsMeasure,
 		attributes:     conf.attributes,
@@ -143,20 +139,11 @@ func peerAttr(addr string) []attribute.KeyValue {
 		return nil
 	}
 
-	var attr []attribute.KeyValue
 	if ip := net.ParseIP(host); ip != nil {
-		attr = []attribute.KeyValue{
-			semconv.NetSockPeerAddr(host),
-			semconv.NetSockPeerPort(portVal),
-		}
-	} else {
-		attr = []attribute.KeyValue{
-			semconv.NetPeerName(host),
-			semconv.NetPeerPort(portVal),
-		}
+		return []attribute.KeyValue{semconv.NetSockPeerAddr(host), semconv.NetSockPeerPort(portVal)}
 	}
 
-	return attr
+	return []attribute.KeyValue{semconv.NetPeerName(host), semconv.NetPeerPort(portVal)}
 }
 
 func parseFullMethod(fullMethod string) (string, []attribute.KeyValue) {
