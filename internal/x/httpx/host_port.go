@@ -56,12 +56,10 @@ func HostPort(hp string) (string, int) {
 
 			return host, port
 		}
-	} else {
-		if i := strings.LastIndex(hp, ":"); i < 0 {
-			host = hp
+	} else if i := strings.LastIndex(hp, ":"); i < 0 {
+		host = hp
 
-			return host, port
-		}
+		return host, port
 	}
 
 	host, pStr, err := net.SplitHostPort(hp)
