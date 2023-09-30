@@ -35,7 +35,7 @@ func IPFromHostPort(hp string) string {
 	return host
 }
 
-func HostPort(hostport string) (string, int) {
+func HostPort(hp string) (string, int) {
 	var (
 		host string
 		port int
@@ -43,28 +43,28 @@ func HostPort(hostport string) (string, int) {
 
 	port = -1
 
-	if strings.HasPrefix(hostport, "[") {
-		addrEnd := strings.LastIndex(hostport, "]")
+	if strings.HasPrefix(hp, "[") {
+		addrEnd := strings.LastIndex(hp, "]")
 
 		if addrEnd < 0 {
 			// Invalid hostport.
 			return host, port
 		}
 
-		if i := strings.LastIndex(hostport[addrEnd:], ":"); i < 0 {
-			host = hostport[1:addrEnd]
+		if i := strings.LastIndex(hp[addrEnd:], ":"); i < 0 {
+			host = hp[1:addrEnd]
 
 			return host, port
 		}
 	} else {
-		if i := strings.LastIndex(hostport, ":"); i < 0 {
-			host = hostport
+		if i := strings.LastIndex(hp, ":"); i < 0 {
+			host = hp
 
 			return host, port
 		}
 	}
 
-	host, pStr, err := net.SplitHostPort(hostport)
+	host, pStr, err := net.SplitHostPort(hp)
 	if err != nil {
 		return host, port
 	}
