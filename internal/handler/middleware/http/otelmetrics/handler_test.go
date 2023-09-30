@@ -72,31 +72,9 @@ func TestHandlerExecution(t *testing.T) {
 				assert.Equal(t, "github.com/dadrus/heimdall/internal/handler/middleware/http/otelmetrics",
 					metrics.Scope.Name)
 
-				require.Len(t, metrics.Metrics, 2)
+				require.Len(t, metrics.Metrics, 1)
 
-				requestsTotalMetric := metrics.Metrics[0]
-				assert.Equal(t, "http.server.request_count", requestsTotalMetric.Name)
-				assert.Equal(t, "Measures the incoming request count total", requestsTotalMetric.Description)
-				totalRequests := requestsTotalMetric.Data.(metricdata.Sum[float64]) // nolint: forcetypeassert
-				assert.True(t, totalRequests.IsMonotonic)
-				require.Len(t, totalRequests.DataPoints, 1)
-				require.Equal(t, float64(1), totalRequests.DataPoints[0].Value)
-				require.Equal(t, 7, totalRequests.DataPoints[0].Attributes.Len())
-				assert.Equal(t, "foobar",
-					attributeValue(totalRequests.DataPoints[0].Attributes, "service.subsystem").AsString())
-				assert.Equal(t, "zab",
-					attributeValue(totalRequests.DataPoints[0].Attributes, "baz").AsString())
-				assert.Equal(t, "1.1",
-					attributeValue(totalRequests.DataPoints[0].Attributes, "http.flavor").AsString())
-				assert.Equal(t, http.MethodGet,
-					attributeValue(totalRequests.DataPoints[0].Attributes, "http.method").AsString())
-				assert.Equal(t, "http",
-					attributeValue(totalRequests.DataPoints[0].Attributes, "http.scheme").AsString())
-				assert.Equal(t, "127.0.0.1",
-					attributeValue(totalRequests.DataPoints[0].Attributes, "net.host.name").AsString())
-				assert.True(t, totalRequests.DataPoints[0].Attributes.HasValue("net.host.port"))
-
-				activeRequestsMetric := metrics.Metrics[1]
+				activeRequestsMetric := metrics.Metrics[0]
 				assert.Equal(t, "http.server.active_requests", activeRequestsMetric.Name)
 				assert.Equal(t, "Measures the number of concurrent HTTP requests that are currently in-flight.",
 					activeRequestsMetric.Description)
