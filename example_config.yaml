@@ -32,7 +32,7 @@ log:
   format: text
 
 metrics:
-  host: 0.0.0.0
+  enabled: false
 
 profiling:
   enabled: true
