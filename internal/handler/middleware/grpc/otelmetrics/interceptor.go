@@ -33,7 +33,7 @@ import (
 const (
 	instrumentationName = "github.com/dadrus/heimdall/internal/handler/middleware/grpc/otelmetrics"
 
-	requestsActive = "grpc.server.active_requests"
+	requestsActive = "rpc.server.active_requests"
 )
 
 type ServerInterceptor interface {
@@ -61,17 +61,21 @@ func New(opts ...Option) ServerInterceptor {
 
 	meter := conf.provider.Meter(instrumentationName)
 
-	activeRequests, err := meter.Float64UpDownCounter(
+	activeRequestsMeasure, err := meter.Float64UpDownCounter(
 		requestsActive,
 		metric.WithDescription("Measures the number of concurrent GRPC requests that are currently in-flight."),
-		metric.WithUnit("1"),
+		metric.WithUnit("{request}"),
 	)
 	if err != nil {
 		panic(err)
 	}
 
+	if err != nil {
+		panic(err)
+	}
+
 	handler := &metricsInterceptor{
-		activeRequests: activeRequests,
+		activeRequests: activeRequestsMeasure,
 		attributes:     conf.attributes,
 		server:         conf.server,
 		subsystem:      conf.subsystem,
