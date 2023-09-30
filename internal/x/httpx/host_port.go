@@ -19,7 +19,6 @@ package httpx
 import (
 	"net"
 	"strconv"
-	"strings"
 )
 
 func IPFromHostPort(hp string) string {
@@ -36,40 +35,14 @@ func IPFromHostPort(hp string) string {
 }
 
 func HostPort(hp string) (string, int) {
-	var (
-		host string
-		port int
-	)
-
-	port = -1
-
-	if strings.HasPrefix(hp, "[") {
-		addrEnd := strings.LastIndex(hp, "]")
-
-		if addrEnd < 0 {
-			// Invalid hostport.
-			return host, port
-		}
-
-		if i := strings.LastIndex(hp[addrEnd:], ":"); i < 0 {
-			host = hp[1:addrEnd]
-
-			return host, port
-		}
-	} else if i := strings.LastIndex(hp, ":"); i < 0 {
-		host = hp
-
-		return host, port
-	}
-
 	host, pStr, err := net.SplitHostPort(hp)
 	if err != nil {
-		return host, port
+		return "", -1
 	}
 
 	p, err := strconv.ParseUint(pStr, 10, 16)
 	if err != nil {
-		return host, port
+		return host, -1
 	}
 
 	return host, int(p)
