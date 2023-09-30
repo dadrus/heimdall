@@ -10,6 +10,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/handler/fxlcm"
+	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
 func TestNewLifecycleManager(t *testing.T) {
@@ -71,11 +72,14 @@ func TestNewLifecycleManager(t *testing.T) {
 				t.Helper()
 				t.Setenv("OTEL_METRICS_EXPORTER", "prometheus")
 
+				port, err := testsupport.GetFreePort()
+				require.NoError(t, err)
+
 				return &config.Configuration{
 					Metrics: config.MetricsConfig{
 						Enabled:     true,
 						MetricsPath: "/metrics",
-						Port:        1025,
+						Port:        port,
 					},
 				}
 			},
