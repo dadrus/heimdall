@@ -20,7 +20,6 @@ import (
 	"context"
 	"net"
 	"slices"
-	"strconv"
 	"strings"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -65,7 +64,7 @@ func New(opts ...Option) ServerInterceptor {
 
 	activeRequestsMeasure, err := meter.Float64UpDownCounter(
 		requestsActive,
-		metric.WithDescription("Measures the number of concurrent GRPC requests that are currently in-flight."),
+		metric.WithDescription("Measures the number of concurrent RPC requests that are currently in-flight."),
 		metric.WithUnit("{request}"),
 	)
 	if err != nil {
@@ -125,25 +124,17 @@ func peerFromCtx(ctx context.Context) string {
 }
 
 func peerAttr(addr string) []attribute.KeyValue {
-	host, port, err := net.SplitHostPort(addr)
-	if err != nil {
-		return nil
-	}
+	host, port := httpx.HostPort(addr)
 
 	if host == "" {
 		host = "127.0.0.1"
 	}
 
-	portVal, err := strconv.Atoi(port)
-	if err != nil {
-		return nil
-	}
-
 	if ip := net.ParseIP(host); ip != nil {
-		return []attribute.KeyValue{semconv.NetSockPeerAddr(host), semconv.NetSockPeerPort(portVal)}
+		return []attribute.KeyValue{semconv.NetSockPeerAddr(host), semconv.NetSockPeerPort(port)}
 	}
 
-	return []attribute.KeyValue{semconv.NetPeerName(host), semconv.NetPeerPort(portVal)}
+	return []attribute.KeyValue{semconv.NetPeerName(host), semconv.NetPeerPort(port)}
 }
 
 func parseFullMethod(fullMethod string) (string, []attribute.KeyValue) {
@@ -188,8 +179,12 @@ func serverRequestMetrics(fullMethod, serverAddress, peerAddress string) []attri
 	return attrs
 }
 
-func serverAttr(address string) []attribute.KeyValue {
-	host, port := httpx.HostPort(address)
+func serverAttr(addr string) []attribute.KeyValue {
+	host, port := httpx.HostPort(addr)
+
+	if host == "" {
+		host = "127.0.0.1"
+	}
 
 	return []attribute.KeyValue{
 		attribute.Key("server.address").String(host),

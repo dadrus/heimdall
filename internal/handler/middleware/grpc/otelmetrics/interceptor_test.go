@@ -31,6 +31,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/resource"
+	semconv "go.opentelemetry.io/otel/semconv/v1.18.0"
 	rpc_status "google.golang.org/genproto/googleapis/rpc/status"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -79,14 +80,14 @@ func TestHandlerObserveKnownRequests(t *testing.T) {
 
 				activeRequestsMetric := metrics.Metrics[0]
 				assert.Equal(t, "rpc.server.active_requests", activeRequestsMetric.Name)
-				assert.Equal(t, "Measures the number of concurrent GRPC requests that are currently in-flight.",
+				assert.Equal(t, "Measures the number of concurrent RPC requests that are currently in-flight.",
 					activeRequestsMetric.Description)
 
 				activeRequests := activeRequestsMetric.Data.(metricdata.Sum[float64]) // nolint: forcetypeassert
 				assert.False(t, activeRequests.IsMonotonic)
 				require.Len(t, activeRequests.DataPoints, 1)
 				require.Equal(t, float64(0), activeRequests.DataPoints[0].Value)
-				require.Equal(t, 7, activeRequests.DataPoints[0].Attributes.Len())
+				require.Equal(t, 9, activeRequests.DataPoints[0].Attributes.Len())
 				assert.Equal(t, "foobar",
 					attributeValue(activeRequests.DataPoints[0].Attributes, "service.subsystem").AsString())
 				assert.Equal(t, "zab",
@@ -100,6 +101,8 @@ func TestHandlerObserveKnownRequests(t *testing.T) {
 				assert.Equal(t, "heimdall.local",
 					attributeValue(activeRequests.DataPoints[0].Attributes, "server.address").AsString())
 				assert.True(t, activeRequests.DataPoints[0].Attributes.HasValue("server.port"))
+				assert.True(t, activeRequests.DataPoints[0].Attributes.HasValue(semconv.NetPeerNameKey))
+				assert.True(t, activeRequests.DataPoints[0].Attributes.HasValue(semconv.NetPeerPortKey))
 			},
 		},
 		{
@@ -128,14 +131,14 @@ func TestHandlerObserveKnownRequests(t *testing.T) {
 
 				activeRequestsMetric := metrics.Metrics[0]
 				assert.Equal(t, "rpc.server.active_requests", activeRequestsMetric.Name)
-				assert.Equal(t, "Measures the number of concurrent GRPC requests that are currently in-flight.",
+				assert.Equal(t, "Measures the number of concurrent RPC requests that are currently in-flight.",
 					activeRequestsMetric.Description)
 
 				activeRequests := activeRequestsMetric.Data.(metricdata.Sum[float64]) // nolint: forcetypeassert
 				assert.False(t, activeRequests.IsMonotonic)
 				require.Len(t, activeRequests.DataPoints, 1)
 				require.Equal(t, float64(0), activeRequests.DataPoints[0].Value)
-				require.Equal(t, 7, activeRequests.DataPoints[0].Attributes.Len())
+				require.Equal(t, 9, activeRequests.DataPoints[0].Attributes.Len())
 				assert.Equal(t, "foobar",
 					attributeValue(activeRequests.DataPoints[0].Attributes, "service.subsystem").AsString())
 				assert.Equal(t, "zab",
@@ -149,6 +152,8 @@ func TestHandlerObserveKnownRequests(t *testing.T) {
 				assert.Equal(t, "heimdall.local",
 					attributeValue(activeRequests.DataPoints[0].Attributes, "server.address").AsString())
 				assert.True(t, activeRequests.DataPoints[0].Attributes.HasValue("server.port"))
+				assert.True(t, activeRequests.DataPoints[0].Attributes.HasValue(semconv.NetPeerNameKey))
+				assert.True(t, activeRequests.DataPoints[0].Attributes.HasValue(semconv.NetPeerPortKey))
 			},
 		},
 		{
@@ -171,14 +176,14 @@ func TestHandlerObserveKnownRequests(t *testing.T) {
 
 				activeRequestsMetric := metrics.Metrics[0]
 				assert.Equal(t, "rpc.server.active_requests", activeRequestsMetric.Name)
-				assert.Equal(t, "Measures the number of concurrent GRPC requests that are currently in-flight.",
+				assert.Equal(t, "Measures the number of concurrent RPC requests that are currently in-flight.",
 					activeRequestsMetric.Description)
 
 				activeRequests := activeRequestsMetric.Data.(metricdata.Sum[float64]) // nolint: forcetypeassert
 				assert.False(t, activeRequests.IsMonotonic)
 				require.Len(t, activeRequests.DataPoints, 1)
 				require.Equal(t, float64(0), activeRequests.DataPoints[0].Value)
-				require.Equal(t, 7, activeRequests.DataPoints[0].Attributes.Len())
+				require.Equal(t, 9, activeRequests.DataPoints[0].Attributes.Len())
 				assert.Equal(t, "foobar",
 					attributeValue(activeRequests.DataPoints[0].Attributes, "service.subsystem").AsString())
 				assert.Equal(t, "zab",
@@ -192,6 +197,8 @@ func TestHandlerObserveKnownRequests(t *testing.T) {
 				assert.Equal(t, "heimdall.local",
 					attributeValue(activeRequests.DataPoints[0].Attributes, "server.address").AsString())
 				assert.True(t, activeRequests.DataPoints[0].Attributes.HasValue("server.port"))
+				assert.True(t, activeRequests.DataPoints[0].Attributes.HasValue(semconv.NetPeerNameKey))
+				assert.True(t, activeRequests.DataPoints[0].Attributes.HasValue(semconv.NetPeerPortKey))
 			},
 		},
 	} {
@@ -280,7 +287,7 @@ func TestHandlerObserveUnknownRequests(t *testing.T) {
 		WithMeterProvider(meterProvider),
 		WithSubsystem("foobar"),
 		WithAttributes(attribute.Key("baz").String("zab")),
-		WithServerName("heimdall.local:8080"),
+		WithServerName(":8080"),
 	)
 	srv := grpc.NewServer(
 		grpc.UnknownServiceHandler(func(srv interface{}, stream grpc.ServerStream) error {
@@ -321,14 +328,14 @@ func TestHandlerObserveUnknownRequests(t *testing.T) {
 
 	activeRequestsMetric := metrics.Metrics[0]
 	assert.Equal(t, "rpc.server.active_requests", activeRequestsMetric.Name)
-	assert.Equal(t, "Measures the number of concurrent GRPC requests that are currently in-flight.",
+	assert.Equal(t, "Measures the number of concurrent RPC requests that are currently in-flight.",
 		activeRequestsMetric.Description)
 
 	activeRequests := activeRequestsMetric.Data.(metricdata.Sum[float64]) // nolint: forcetypeassert
 	assert.False(t, activeRequests.IsMonotonic)
 	require.Len(t, activeRequests.DataPoints, 1)
 	require.Equal(t, float64(0), activeRequests.DataPoints[0].Value)
-	require.Equal(t, 7, activeRequests.DataPoints[0].Attributes.Len())
+	require.Equal(t, 9, activeRequests.DataPoints[0].Attributes.Len())
 	assert.Equal(t, "foobar",
 		attributeValue(activeRequests.DataPoints[0].Attributes, "service.subsystem").AsString())
 	assert.Equal(t, "zab",
@@ -339,7 +346,9 @@ func TestHandlerObserveUnknownRequests(t *testing.T) {
 		attributeValue(activeRequests.DataPoints[0].Attributes, "rpc.service").AsString())
 	assert.Equal(t, "grpc",
 		attributeValue(activeRequests.DataPoints[0].Attributes, "rpc.system").AsString())
-	assert.Equal(t, "heimdall.local",
+	assert.Equal(t, "127.0.0.1",
 		attributeValue(activeRequests.DataPoints[0].Attributes, "server.address").AsString())
 	assert.True(t, activeRequests.DataPoints[0].Attributes.HasValue("server.port"))
+	assert.True(t, activeRequests.DataPoints[0].Attributes.HasValue(semconv.NetPeerNameKey))
+	assert.True(t, activeRequests.DataPoints[0].Attributes.HasValue(semconv.NetPeerPortKey))
 }
