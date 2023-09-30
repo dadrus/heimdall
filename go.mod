@@ -10,7 +10,7 @@ require (
 	github.com/envoyproxy/go-control-plane v0.11.1
 	github.com/felixge/httpsnoop v1.0.3
 	github.com/fsnotify/fsnotify v1.6.0
-	github.com/go-co-op/gocron v1.34.2
+	github.com/go-co-op/gocron v1.35.0
 	github.com/go-http-utils/etag v0.0.0-20161124023236-513ea8f21eb1
 	github.com/go-logr/zerologr v1.2.3
 	github.com/gobwas/glob v0.2.3
@@ -36,7 +36,7 @@ require (
 	github.com/ory/ladon v1.2.0
 	github.com/pquerna/cachecontrol v0.2.0
 	github.com/prometheus/client_golang v1.17.0
-	github.com/rs/cors v1.10.0
+	github.com/rs/cors v1.10.1
 	github.com/rs/zerolog v1.31.0
 	github.com/santhosh-tekuri/jsonschema/v5 v5.3.1
 	github.com/spf13/cobra v1.7.0
