@@ -188,7 +188,7 @@ Otherwise, if you configure it to use `gelf` format, the output will look as fol
 
 == Tracing in Heimdall
 
-Heimdall makes use of https://opentelemetry.io/[OpenTelemetry] for distributed tracing to support recording of paths taken by requests and supports all environment variables including the defined values according to https://opentelemetry.io/docs/reference/specification/sdk-environment-variables/[OpenTelemetry Environment Variable Specification]. In addition to these environment variables, heimdall defines its own tracing options, which are described in link:{{< relref "/docs/configuration/observability/tracing.adoc" >}}[Tracing Configuration] and can be used to tune the behaviour.
+Heimdall makes use of https://opentelemetry.io/[OpenTelemetry] for distributed tracing to support recording of paths taken by requests and supports all environment variables including the defined values according to https://opentelemetry.io/docs/reference/specification/sdk-environment-variables/[OpenTelemetry Environment Variables] and https://opentelemetry.io/docs/concepts/sdk-configuration/[OpenTelemetry SDK Configuration] specifications. In addition to these environment variables, heimdall defines some additional options, which are described in link:{{< relref "/docs/configuration/observability/tracing.adoc" >}}[Tracing Configuration] and can be used to tune the behaviour.
 
 NOTE: Tracing is enabled by default.
 
@@ -243,12 +243,26 @@ If your environment supports OpenTelemetry and usage of defaults is ok, most pro
 
 == Metrics in Heimdall
 
-By default, heimdall exposes https://grafana.com/oss/prometheus/[Prometheus] style metrics on the `127.0.0.1:10250/metrics` HTTP endpoint (See also link:{{< relref "/docs/configuration/observability/metrics.adoc" >}}[Metrics Configuration]) which comprise the following information:
+Heimdall makes use of https://opentelemetry.io/[OpenTelemetry] to emit metrics. Depending on the configuration, push or pull based metrics export is supported. As with tracing, the entire configuration happens via environment variables as defined by https://opentelemetry.io/docs/reference/specification/sdk-environment-variables/[OpenTelemetry Environment Variables] and https://opentelemetry.io/docs/concepts/sdk-configuration/[OpenTelemetry SDK Configuration] specifications. In addition to these environment variables, heimdall allows disabling collection and exposure of metrics if required, which is described under link:{{< relref "/docs/configuration/observability/tracing.adoc" >}}[Tracing Configuration].
+
+NOTE: Metric exposure is enabled by default.
+
+This chapter serves the purpose of a quick introduction to metrics collected and exposed by heimdall.
+
+=== Metric Exporters
+
+By default, metrics are pushed to the OTEL exporter using the `http/protobuf` transport protocol. You can change that behavior by making use of either the https://opentelemetry.io/docs/concepts/sdk-configuration/otlp-exporter-configuration/#otel_exporter_otlp_metrics_protocol[`OTEL_EXPORTER_OTLP_METRICS_PROTOCOL`], or the https://opentelemetry.io/docs/concepts/sdk-configuration/otlp-exporter-configuration/#otel_exporter_otlp_protocol[`OTEL_EXPORTER_OTLP_PROTOCOL`] environment variable.
+
+To let heimdall know where to push the metrics to, either https://opentelemetry.io/docs/concepts/sdk-configuration/otlp-exporter-configuration/#otel_exporter_otlp_metrics_endpoint[`OTEL_EXPORTER_OTLP_METRICS_ENDPOINT`], or https://opentelemetry.io/docs/concepts/sdk-configuration/otlp-exporter-configuration/#otel_exporter_otlp_endpoint[`OTEL_EXPORTER_OTLP_ENDPOINT`] must be defined.
+
+To let heimdall expose metrics over a pull based service (https://grafana.com/oss/prometheus/[Prometheus] style), the https://opentelemetry.io/docs/concepts/sdk-configuration/general-sdk-configuration/#otel_metrics_exporter[`OTEL_METRICS_EXPORTER`] environment variable must be set to `"prometheus"`. In that case heimdall will expose the `127.0.0.1:9464/metrics` endpoint which can be queried using the HTTP GET verb. You can change the host and port of that service by making use of the https://opentelemetry.io/docs/specs/otel/configuration/sdk-environment-variables/#prometheus-exporter[`OTEL_EXPORTER_PROMETHEUS_HOST`] and https://opentelemetry.io/docs/specs/otel/configuration/sdk-environment-variables/#prometheus-exporter[`OTEL_EXPORTER_PROMETHEUS_PORT`] environment variables.
+
+=== Available Metrics
 
 * Process information, like CPU, memory, file descriptor usage and start time
 * Go runtime information, including details about GC, number of goroutines and OS threats
 * Information about the metrics endpoint itself, including the number of internal errors encountered while gathering the metrics, number of current inflight and overall scrapes done.
-* Information about the decision and proxy requests handled, including the total amount and duration of http requests by status code, method and path, as well as information about requests in progress.
+* Information about the decision and proxy requests handled, including the total amount and duration of http and grpc requests by status code and method, as well as information about requests in progress.
 * Information about expiry for configured certificates.
 
 The following table provide detailed information about these
