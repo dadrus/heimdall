@@ -30,31 +30,23 @@ func monitorCertificateExpiry(conf *config.Configuration) error {
 		signerKeyID        string
 	)
 
-	if conf.Serve.Decision.TLS != nil {
-		decisionSrvKS, _ = keystore.NewKeyStoreFromPEMFile(
-			conf.Serve.Decision.TLS.KeyStore.Path,
-			conf.Serve.Decision.TLS.KeyStore.Password,
-		)
+	dSrvTLSConf := conf.Serve.Decision.TLS
+	pSrvTLSConf := conf.Serve.Proxy.TLS
+	mSrvTLSConf := conf.Serve.Management.TLS
 
-		decisionSrvKeyID = conf.Serve.Decision.TLS.KeyID
+	if dSrvTLSConf != nil {
+		decisionSrvKS, _ = keystore.NewKeyStoreFromPEMFile(dSrvTLSConf.KeyStore.Path, dSrvTLSConf.KeyStore.Password)
+		decisionSrvKeyID = dSrvTLSConf.KeyID
 	}
 
-	if conf.Serve.Proxy.TLS != nil {
-		proxySrvKS, _ = keystore.NewKeyStoreFromPEMFile(
-			conf.Serve.Proxy.TLS.KeyStore.Path,
-			conf.Serve.Proxy.TLS.KeyStore.Password,
-		)
-
-		proxySrvKeyID = conf.Serve.Proxy.TLS.KeyID
+	if pSrvTLSConf != nil {
+		proxySrvKS, _ = keystore.NewKeyStoreFromPEMFile(pSrvTLSConf.KeyStore.Path, pSrvTLSConf.KeyStore.Password)
+		proxySrvKeyID = pSrvTLSConf.KeyID
 	}
 
-	if conf.Serve.Management.TLS != nil {
-		managementSrvKS, _ = keystore.NewKeyStoreFromPEMFile(
-			conf.Serve.Management.TLS.KeyStore.Path,
-			conf.Serve.Management.TLS.KeyStore.Password,
-		)
-
-		managementSrvKeyID = conf.Serve.Management.TLS.KeyID
+	if mSrvTLSConf != nil {
+		managementSrvKS, _ = keystore.NewKeyStoreFromPEMFile(mSrvTLSConf.KeyStore.Path, mSrvTLSConf.KeyStore.Password)
+		managementSrvKeyID = mSrvTLSConf.KeyID
 	}
 
 	signerKS, _ = keystore.NewKeyStoreFromPEMFile(
