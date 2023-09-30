@@ -19,10 +19,10 @@ package config
 import "fmt"
 
 type MetricsConfig struct {
-	Enabled     bool   `koanf:"enabled"`
-	Host        string `koanf:"host"`
-	Port        int    `koanf:"port"`
-	MetricsPath string `koanf:"metrics_path"`
+	Enabled     bool `koanf:"enabled"`
+	Host        string
+	Port        int
+	MetricsPath string
 }
 
 func (c MetricsConfig) Address() string { return fmt.Sprintf("%s:%d", c.Host, c.Port) }
