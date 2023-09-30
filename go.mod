@@ -37,7 +37,7 @@ require (
 	github.com/pquerna/cachecontrol v0.2.0
 	github.com/prometheus/client_golang v1.17.0
 	github.com/prometheus/client_model v0.4.1-0.20230718164431-9a2bf3000d16
-	github.com/rs/cors v1.10.0
+	github.com/rs/cors v1.10.1
 	github.com/rs/zerolog v1.31.0
 	github.com/santhosh-tekuri/jsonschema/v5 v5.3.1
 	github.com/spf13/cobra v1.7.0
