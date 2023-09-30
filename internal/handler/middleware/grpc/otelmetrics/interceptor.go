@@ -28,6 +28,8 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.18.0"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/peer"
+
+	"github.com/dadrus/heimdall/internal/x/httpx"
 )
 
 const (
@@ -87,7 +89,7 @@ func New(opts ...Option) ServerInterceptor {
 func (h *metricsInterceptor) observeUnaryRequest(
 	ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler,
 ) (any, error) {
-	attr := spanInfo(info.FullMethod, peerFromCtx(ctx))
+	attr := serverRequestMetrics(info.FullMethod, h.server, peerFromCtx(ctx))
 
 	attributes := append(slices.Clone(h.attributes), h.subsystem)
 	attributes = append(attributes, attr...)
@@ -104,7 +106,7 @@ func (h *metricsInterceptor) observeStreamRequest(
 	srv any, stream grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler,
 ) error {
 	ctx := stream.Context()
-	attr := spanInfo(info.FullMethod, peerFromCtx(ctx))
+	attr := serverRequestMetrics(info.FullMethod, h.server, peerFromCtx(ctx))
 
 	attributes := append(slices.Clone(h.attributes), h.subsystem)
 	attributes = append(attributes, attr...)
@@ -185,14 +187,25 @@ func parseFullMethod(fullMethod string) (string, []attribute.KeyValue) {
 	return name, attrs
 }
 
-func spanInfo(fullMethod, peerAddress string) []attribute.KeyValue {
+func serverRequestMetrics(fullMethod, serverAddress, peerAddress string) []attribute.KeyValue {
 	_, mAttrs := parseFullMethod(fullMethod)
 	peerAttrs := peerAttr(peerAddress)
+	serverAttrs := serverAttr(serverAddress)
 
-	attrs := make([]attribute.KeyValue, 0, 1+len(mAttrs)+len(peerAttrs))
+	attrs := make([]attribute.KeyValue, 0, 1+len(mAttrs)+len(peerAttrs)+len(serverAttrs))
 	attrs = append(attrs, semconv.RPCSystemGRPC)
 	attrs = append(attrs, mAttrs...)
 	attrs = append(attrs, peerAttrs...)
+	attrs = append(attrs, serverAttrs...)
 
 	return attrs
+}
+
+func serverAttr(address string) []attribute.KeyValue {
+	host, port := httpx.HostPort(address)
+
+	return []attribute.KeyValue{
+		attribute.Key("server.address").String(host),
+		attribute.Key("server.port").Int(port),
+	}
 }
