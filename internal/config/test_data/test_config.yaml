@@ -115,20 +115,17 @@ log:
   level: debug
   format: text
 
+tracing:
+  enabled: true
+  span_processor: batch
+
 metrics:
   enabled: true
-  host: 0.0.0.0
-  port: 9000
-  metrics_path: /metrics
 
 profiling:
   enabled: true
   host: 0.0.0.0
   port: 6060
-
-tracing:
-  enabled: true
-  span_processor: batch
 
 signer:
   name: foobar
