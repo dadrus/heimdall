@@ -50,7 +50,10 @@ func newService(
 		return status.Error(codes.Internal, "internal error")
 	})
 
-	metrics := otelmetrics.New(otelmetrics.WithSubsystem("decision"))
+	metrics := otelmetrics.New(
+		otelmetrics.WithServerName(service.Address()),
+		otelmetrics.WithSubsystem("decision"),
+	)
 
 	streamInterceptors := []grpc.StreamServerInterceptor{
 		recovery.StreamServerInterceptor(recoveryHandler),
