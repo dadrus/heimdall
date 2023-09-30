@@ -43,6 +43,7 @@ func New(opts ...Option) func(http.Handler) http.Handler {
 	activeRequests, err := meter.Float64UpDownCounter(
 		requestsActive,
 		metric.WithDescription("Measures the number of concurrent HTTP requests that are currently in-flight."),
+		metric.WithUnit("{request}"),
 	)
 	if err != nil {
 		panic(err)
