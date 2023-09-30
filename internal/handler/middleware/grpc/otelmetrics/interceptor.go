@@ -23,7 +23,6 @@ import (
 	"strconv"
 	"strings"
 
-	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	semconv "go.opentelemetry.io/otel/semconv/v1.18.0"
@@ -43,11 +42,10 @@ type ServerInterceptor interface {
 }
 
 type metricsInterceptor struct {
-	requestsServedTotal metric.Float64Counter
-	activeRequests      metric.Float64UpDownCounter
-	attributes          []attribute.KeyValue
-	server              string
-	subsystem           attribute.KeyValue
+	activeRequests metric.Float64UpDownCounter
+	attributes     []attribute.KeyValue
+	server         string
+	subsystem      attribute.KeyValue
 }
 
 func (h *metricsInterceptor) UnaryServerInterceptor() grpc.UnaryServerInterceptor {
@@ -63,15 +61,6 @@ func New(opts ...Option) ServerInterceptor {
 
 	meter := conf.provider.Meter(instrumentationName)
 
-	requestsServedTotal, err := meter.Float64Counter(
-		otelhttp.RequestCount,
-		metric.WithDescription("Measures the incoming request count total."),
-		metric.WithUnit("1"),
-	)
-	if err != nil {
-		panic(err)
-	}
-
 	activeRequests, err := meter.Float64UpDownCounter(
 		requestsActive,
 		metric.WithDescription("Measures the number of concurrent GRPC requests that are currently in-flight."),
@@ -82,11 +71,10 @@ func New(opts ...Option) ServerInterceptor {
 	}
 
 	handler := &metricsInterceptor{
-		requestsServedTotal: requestsServedTotal,
-		activeRequests:      activeRequests,
-		attributes:          conf.attributes,
-		server:              conf.server,
-		subsystem:           conf.subsystem,
+		activeRequests: activeRequests,
+		attributes:     conf.attributes,
+		server:         conf.server,
+		subsystem:      conf.subsystem,
 	}
 
 	return handler
@@ -102,12 +90,8 @@ func (h *metricsInterceptor) observeUnaryRequest(
 
 	opt := metric.WithAttributes(attributes...)
 
-	h.requestsServedTotal.Add(ctx, 1, opt)
 	h.activeRequests.Add(ctx, 1, opt)
-
-	defer func() {
-		h.activeRequests.Add(ctx, -1, opt)
-	}()
+	defer h.activeRequests.Add(ctx, -1, opt)
 
 	return handler(ctx, req)
 }
@@ -123,12 +107,8 @@ func (h *metricsInterceptor) observeStreamRequest(
 
 	opt := metric.WithAttributes(attributes...)
 
-	h.requestsServedTotal.Add(ctx, 1, opt)
 	h.activeRequests.Add(ctx, 1, opt)
-
-	defer func() {
-		h.activeRequests.Add(ctx, -1, opt)
-	}()
+	defer h.activeRequests.Add(ctx, -1, opt)
 
 	return handler(srv, stream)
 }
