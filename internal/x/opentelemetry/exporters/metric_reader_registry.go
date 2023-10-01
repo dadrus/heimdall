@@ -35,9 +35,9 @@ var metricReaders = &registry[metric.Reader]{ //nolint:gochecknoglobals
 }
 
 func createExporter(ctx context.Context) (metric.Exporter, error) {
-	val, ok := os.LookupEnv("OTEL_EXPORTER_OTLP_PROTOCOL")
+	val, ok := os.LookupEnv("OTEL_EXPORTER_OTLP_METRICS_PROTOCOL")
 	if !ok {
-		val = envOr("OTEL_EXPORTER_OTLP_METRICS_PROTOCOL", "http/protobuf")
+		val = envOr("OTEL_EXPORTER_OTLP_PROTOCOL", "http/protobuf")
 	}
 
 	switch val {
