@@ -41,9 +41,9 @@ var (
 var spanExporters = &registry[trace.SpanExporter]{ //nolint:gochecknoglobals
 	names: map[string]FactoryFunc[trace.SpanExporter]{
 		"otlp": func(ctx context.Context) (trace.SpanExporter, error) {
-			val, ok := os.LookupEnv("OTEL_EXPORTER_OTLP_PROTOCOL")
+			val, ok := os.LookupEnv("OTEL_EXPORTER_OTLP_TRACES_PROTOCOL")
 			if !ok {
-				val = envOr("OTEL_EXPORTER_OTLP_TRACES_PROTOCOL", "http/protobuf")
+				val = envOr("OTEL_EXPORTER_OTLP_PROTOCOL", "http/protobuf")
 			}
 
 			switch val {
