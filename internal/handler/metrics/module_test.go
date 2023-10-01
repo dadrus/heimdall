@@ -2,6 +2,7 @@ package metrics
 
 import (
 	"context"
+	"strconv"
 	"testing"
 
 	"github.com/rs/zerolog/log"
@@ -75,11 +76,11 @@ func TestNewLifecycleManager(t *testing.T) {
 				port, err := testsupport.GetFreePort()
 				require.NoError(t, err)
 
+				t.Setenv("OTEL_EXPORTER_PROMETHEUS_PORT", strconv.Itoa(port))
+
 				return &config.Configuration{
 					Metrics: config.MetricsConfig{
-						Enabled:     true,
-						MetricsPath: "/metrics",
-						Port:        port,
+						Enabled: true,
 					},
 				}
 			},

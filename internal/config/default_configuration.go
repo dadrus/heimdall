@@ -34,7 +34,6 @@ const (
 	defaultProxyServicePort      = 4455
 	defaultDecisionServicePort   = 4456
 	defaultManagementServicePort = 4457
-	defaultMetricsServicePort    = 9464
 	defaultProfilingServicePort  = 10251
 
 	defaultBufferSize = 4 * bytesize.KB
@@ -95,10 +94,7 @@ func defaultConfig() Configuration {
 			SpanProcessorType: SpanProcessorBatch,
 		},
 		Metrics: MetricsConfig{
-			Enabled:     true,
-			Port:        defaultMetricsServicePort,
-			Host:        loopbackIP,
-			MetricsPath: "/metrics",
+			Enabled: true,
 		},
 		Profiling: ProfilingConfig{
 			Enabled: false,

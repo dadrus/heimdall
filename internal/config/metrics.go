@@ -16,13 +16,26 @@
 
 package config
 
-import "fmt"
+import (
+	"fmt"
+	"os"
+)
 
 type MetricsConfig struct {
-	Enabled     bool `koanf:"enabled"`
-	Host        string
-	Port        int
-	MetricsPath string
+	Enabled bool `koanf:"enabled"`
 }
 
-func (c MetricsConfig) Address() string { return fmt.Sprintf("%s:%d", c.Host, c.Port) }
+func envOr(key, defaultValue string) string {
+	if v, ok := os.LookupEnv(key); ok && v != "" {
+		return v
+	}
+
+	return defaultValue
+}
+
+func (c MetricsConfig) Address() string {
+	return fmt.Sprintf("%s:%s",
+		envOr("OTEL_EXPORTER_PROMETHEUS_HOST", "127.0.0.1"),
+		envOr("OTEL_EXPORTER_PROMETHEUS_PORT", "9464"),
+	)
+}

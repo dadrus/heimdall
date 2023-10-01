@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"strconv"
 	"strings"
 	"time"
 
@@ -60,24 +59,6 @@ type ErrLoggerFun func(v ...interface{})
 
 func (l ErrLoggerFun) Println(v ...interface{}) { l(v) }
 
-func envOrString(key, defaultValue string) string {
-	if v, ok := os.LookupEnv(key); ok && v != "" {
-		return v
-	}
-
-	return defaultValue
-}
-
-func envOrInt(key string, defaultValue int) int {
-	if v, ok := os.LookupEnv(key); ok && v != "" {
-		if val, err := strconv.Atoi(v); err == nil {
-			return val
-		}
-	}
-
-	return defaultValue
-}
-
 func newLifecycleManager(conf *config.Configuration, logger zerolog.Logger) lifecycleManager {
 	cfg := conf.Metrics
 	exporterNames, _ := os.LookupEnv("OTEL_METRICS_EXPORTER")
@@ -90,11 +71,8 @@ func newLifecycleManager(conf *config.Configuration, logger zerolog.Logger) life
 		return noopManager{}
 	}
 
-	cfg.Host = envOrString("OTEL_EXPORTER_PROMETHEUS_HOST", cfg.Host)
-	cfg.Port = envOrInt("OTEL_EXPORTER_PROMETHEUS_PORT", cfg.Port)
-
 	mux := http.NewServeMux()
-	mux.Handle(cfg.MetricsPath,
+	mux.Handle("/metrics",
 		alice.New(methodfilter.New(http.MethodGet)).
 			Then(promhttp.InstrumentMetricHandler(
 				prometheus.DefaultRegisterer,
