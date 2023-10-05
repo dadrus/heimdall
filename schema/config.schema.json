@@ -1993,25 +1993,6 @@
           "description": "Whether exposure of metrics is enabled or not",
           "type": "boolean",
           "default": true
-        },
-        "port": {
-          "description": "The port to listen on.",
-          "type": "integer",
-          "default": 10250
-        },
-        "host": {
-          "description": "The network interface to listen on. Leave empty to listen on all interfaces. Defaults to the 'loopback' interface",
-          "type": "string",
-          "default": "127.0.0.1",
-          "examples": [
-            "localhost",
-            "0.0.0.0"
-          ]
-        },
-        "metrics_path": {
-          "description": "The path to provide metrics on",
-          "type": "string",
-          "default": "/metrics"
         }
       }
     },

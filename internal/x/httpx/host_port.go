@@ -16,7 +16,10 @@
 
 package httpx
 
-import "net"
+import (
+	"net"
+	"strconv"
+)
 
 func IPFromHostPort(hp string) string {
 	host, _, err := net.SplitHostPort(hp)
@@ -29,4 +32,18 @@ func IPFromHostPort(hp string) string {
 	}
 
 	return host
+}
+
+func HostPort(hp string) (string, int) {
+	host, pStr, err := net.SplitHostPort(hp)
+	if err != nil {
+		return "", -1
+	}
+
+	p, err := strconv.ParseUint(pStr, 10, 16)
+	if err != nil {
+		return host, -1
+	}
+
+	return host, int(p)
 }

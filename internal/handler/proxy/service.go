@@ -25,11 +25,9 @@ import (
 	"strings"
 
 	"github.com/justinas/alice"
-	"github.com/prometheus/client_golang/prometheus"
 	"github.com/rs/cors"
 	"github.com/rs/zerolog"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
-	"go.opentelemetry.io/otel"
 
 	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/dadrus/heimdall/internal/config"
@@ -38,8 +36,8 @@ import (
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/dump"
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/errorhandler"
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/logger"
+	"github.com/dadrus/heimdall/internal/handler/middleware/http/otelmetrics"
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/passthrough"
-	prometheus3 "github.com/dadrus/heimdall/internal/handler/middleware/http/prometheus"
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/recovery"
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/trustedproxy"
 	"github.com/dadrus/heimdall/internal/handler/service"
@@ -85,7 +83,6 @@ func (dr *deadlineResetter) contexter(ctx context.Context, con net.Conn) context
 
 func newService(
 	conf *config.Configuration,
-	reg prometheus.Registerer,
 	cch cache.Cache,
 	log zerolog.Logger,
 	exec rule.Executor,
@@ -117,23 +114,16 @@ func newService(
 		dump.New(),
 		der.handler,
 		recovery.New(eh),
-		func(next http.Handler) http.Handler {
-			return otelhttp.NewHandler(
-				next,
-				"",
-				otelhttp.WithTracerProvider(otel.GetTracerProvider()),
-				otelhttp.WithServerName("proxy"),
-				otelhttp.WithSpanNameFormatter(func(_ string, req *http.Request) string {
-					return fmt.Sprintf("EntryPoint %s %s%s",
-						strings.ToLower(req.URL.Scheme), httpx.LocalAddress(req), req.URL.Path)
-				}),
-			)
-		},
-		x.IfThenElseExec(conf.Metrics.Enabled,
-			func() func(http.Handler) http.Handler {
-				return prometheus3.New(prometheus3.WithServiceName("proxy"), prometheus3.WithRegisterer(reg))
-			},
-			func() func(http.Handler) http.Handler { return passthrough.New },
+		otelhttp.NewMiddleware("",
+			otelhttp.WithServerName(cfg.Address()),
+			otelhttp.WithSpanNameFormatter(func(_ string, req *http.Request) string {
+				return fmt.Sprintf("EntryPoint %s %s%s",
+					strings.ToLower(req.URL.Scheme), httpx.LocalAddress(req), req.URL.Path)
+			}),
+		),
+		otelmetrics.New(
+			otelmetrics.WithSubsystem("proxy"),
+			otelmetrics.WithServerName(cfg.Address()),
 		),
 		x.IfThenElseExec(cfg.CORS != nil,
 			func() func(http.Handler) http.Handler {

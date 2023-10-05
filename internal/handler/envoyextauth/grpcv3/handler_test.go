@@ -24,7 +24,6 @@ import (
 
 	envoy_auth "github.com/envoyproxy/go-control-plane/envoy/service/auth/v3"
 	typev3 "github.com/envoyproxy/go-control-plane/envoy/type/v3"
-	"github.com/prometheus/client_golang/prometheus"
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -205,7 +204,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 
 			tc.configureMocks(t, exec)
 
-			srv := newService(conf, prometheus.NewRegistry(), cch, log.Logger, exec, nil)
+			srv := newService(conf, cch, log.Logger, exec, nil)
 
 			defer srv.Stop()
 

@@ -26,11 +26,10 @@ import (
 	"github.com/dadrus/heimdall/internal/handler/metrics"
 	"github.com/dadrus/heimdall/internal/handler/profiling"
 	"github.com/dadrus/heimdall/internal/logging"
-	"github.com/dadrus/heimdall/internal/prometheus"
+	"github.com/dadrus/heimdall/internal/otel"
 	"github.com/dadrus/heimdall/internal/rules"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms"
 	"github.com/dadrus/heimdall/internal/signer"
-	"github.com/dadrus/heimdall/internal/tracing"
 	"github.com/dadrus/heimdall/version"
 )
 
@@ -40,11 +39,10 @@ var Module = fx.Options( //nolint:gochecknoglobals
 	fx.Invoke(func(logger zerolog.Logger) {
 		logger.Info().Str("_version", version.Version).Msg("Starting heimdall")
 	}),
-	tracing.Module,
+	otel.Module,
 	cache.Module,
 	signer.Module,
 	mechanisms.Module,
-	prometheus.Module,
 	rules.Module,
 	management.Module,
 	metrics.Module,

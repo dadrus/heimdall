@@ -14,38 +14,24 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package exporters
+package otel
 
 import (
-	"context"
-	"testing"
+	"github.com/rs/zerolog"
+	"go.opentelemetry.io/otel"
+	"go.uber.org/fx"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
+	"github.com/dadrus/heimdall/internal/otel/metrics"
 )
 
-func TestNewWithoutSetEnvVariable(t *testing.T) {
-	t.Parallel()
-
-	// WHEN
-	expts, err := New(context.Background())
-
-	// THEN
-	require.NoError(t, err)
-	assert.Len(t, expts, 1)
-	assert.IsType(t, expts[0], &otlptrace.Exporter{})
-}
-
-func TestNewWithSetEnvVariable(t *testing.T) {
-	// GIVEN
-	t.Setenv(otelTracesExportersEnvKey, "none")
-
-	// WHEN
-	expts, err := New(context.Background())
-
-	// THEN
-	require.NoError(t, err)
-	assert.Len(t, expts, 1)
-	assert.IsType(t, noopExporter{}, expts[0])
-}
+// Module is used on app bootstrap.
+// nolint: gochecknoglobals
+var Module = fx.Options(
+	fx.Provide(createResource),
+	fx.Invoke(func(logger zerolog.Logger) {
+		otel.SetErrorHandler(otel.ErrorHandlerFunc(func(err error) { logger.Warn().Err(err).Msg("OTEL Error") }))
+	}),
+	fx.Invoke(initTraceProvider),
+	fx.Invoke(initMeterProvider),
+	metrics.Module,
+)

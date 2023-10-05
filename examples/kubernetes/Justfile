@@ -186,7 +186,6 @@ install-heimdall ingress_controller=default_ingress_controller:
     -f quickstarts/heimdall/config.yaml \
     -f quickstarts/heimdall/helm-values.yaml \
     --set "${extraArgs}" \
-    --set env.OTEL_EXPORTER_OTLP_TRACES_PROTOCOL=grpc,env.OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=http://tempo.monitoring:4317 \
     --wait
 
   if [ "{{ingress_controller}}" == "contour" ]; then

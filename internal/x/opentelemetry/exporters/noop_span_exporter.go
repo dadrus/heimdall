@@ -1,4 +1,4 @@
-// Copyright 2023 Dimitrij Drus <dadrus@gmx.de>
+// Copyright 2022 Dimitrij Drus <dadrus@gmx.de>
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,20 +14,20 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package prometheus
+package exporters
 
 import (
-	"net/http"
+	"context"
 
-	"github.com/prometheus/client_golang/prometheus"
+	"go.opentelemetry.io/otel/sdk/trace"
 )
 
-// nolint: gochecknoglobals
-func defaultOptions() opts {
-	return opts{
-		registerer:      prometheus.DefaultRegisterer,
-		namespace:       "http",
-		labels:          make(prometheus.Labels),
-		filterOperation: func(req *http.Request) bool { return false },
-	}
-}
+// NoopExporter is an exporter that drops all received spans and performs no
+// action.
+type noopSpanExporter struct{}
+
+// ExportSpans handles export of spans by dropping them.
+func (noopSpanExporter) ExportSpans(context.Context, []trace.ReadOnlySpan) error { return nil }
+
+// Shutdown stops the exporter by doing nothing.
+func (noopSpanExporter) Shutdown(context.Context) error { return nil }

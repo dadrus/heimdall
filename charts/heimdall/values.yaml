@@ -141,11 +141,6 @@ serve:
     port: 4455
   management:
     port: 4457
-metrics:
-  enabled: true
-  port: 10250
-  host: 0.0.0.0 # to enable scraping of metrics information by corresponding agents.
-  metrics_path: "/metrics"
 profiling:
   enabled: false
   port: 10251

@@ -19,7 +19,6 @@ package grpcv3
 import (
 	"context"
 
-	"github.com/prometheus/client_golang/prometheus"
 	"github.com/rs/zerolog"
 	"go.uber.org/fx"
 
@@ -43,7 +42,6 @@ func newLifecycleManager(
 	logger zerolog.Logger,
 	exec rule.Executor,
 	signer heimdall.JWTSigner,
-	registerer prometheus.Registerer,
 	cch cache.Cache,
 ) *fxlcm.LifecycleManager {
 	cfg := conf.Serve.Decision
@@ -52,7 +50,7 @@ func newLifecycleManager(
 		ServiceName:    "Decision Envoy ExtAuth",
 		ServiceAddress: cfg.Address(),
 		Server: &adapter{
-			s: newService(conf, registerer, cch, logger, exec, signer),
+			s: newService(conf, cch, logger, exec, signer),
 		},
 		Logger:  logger,
 		TLSConf: cfg.TLS,

@@ -39,11 +39,14 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
-	"github.com/prometheus/client_golang/prometheus"
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+	"go.opentelemetry.io/otel/sdk/resource"
 
 	"github.com/dadrus/heimdall/internal/cache/mocks"
 	"github.com/dadrus/heimdall/internal/config"
@@ -875,6 +878,15 @@ func TestProxyService(t *testing.T) {
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
 			// GIVEN
+			exp := metric.NewManualReader()
+
+			if tc.enableMetrics {
+				otel.SetMeterProvider(metric.NewMeterProvider(
+					metric.WithResource(resource.Default()),
+					metric.WithReader(exp),
+				))
+			}
+
 			upstreamCalled := false
 
 			processRequest := x.IfThenElse(tc.processRequest != nil, tc.processRequest,
@@ -909,8 +921,6 @@ func TestProxyService(t *testing.T) {
 					return &http.Client{Transport: &http.Transport{}}
 				})
 
-			registry := prometheus.NewRegistry()
-
 			port, err := testsupport.GetFreePort()
 			require.NoError(t, err)
 
@@ -932,7 +942,7 @@ func TestProxyService(t *testing.T) {
 
 			client := createClient(t)
 
-			proxy := newService(conf, registry, cch, log.Logger, exec, nil)
+			proxy := newService(conf, cch, log.Logger, exec, nil)
 
 			defer proxy.Shutdown(context.Background())
 
@@ -952,13 +962,15 @@ func TestProxyService(t *testing.T) {
 
 			tc.assertResponse(t, err, upstreamCalled, resp)
 
-			metrics, err := registry.Gather()
-			require.NoError(t, err)
+			var rm metricdata.ResourceMetrics
+
+			err = exp.Collect(context.TODO(), &rm)
 
 			if tc.enableMetrics {
-				require.NotEmpty(t, metrics)
+				require.NoError(t, err)
+				require.NotEmpty(t, rm.ScopeMetrics)
 			} else {
-				require.Empty(t, metrics)
+				require.Empty(t, rm.ScopeMetrics)
 			}
 		})
 	}
@@ -1034,7 +1046,7 @@ func TestWebSocketSupport(t *testing.T) {
 		},
 	}
 
-	proxy := newService(conf, prometheus.NewRegistry(), mocks.NewCacheMock(t), log.Logger, exec, nil)
+	proxy := newService(conf, mocks.NewCacheMock(t), log.Logger, exec, nil)
 
 	defer proxy.Shutdown(context.Background())
 
@@ -1134,7 +1146,7 @@ func TestServerSentEventsSupport(t *testing.T) {
 		},
 	}
 
-	proxy := newService(conf, prometheus.NewRegistry(), mocks.NewCacheMock(t), log.Logger, exec, nil)
+	proxy := newService(conf, mocks.NewCacheMock(t), log.Logger, exec, nil)
 
 	defer proxy.Shutdown(context.Background())
 

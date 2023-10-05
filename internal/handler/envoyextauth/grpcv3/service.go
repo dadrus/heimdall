@@ -19,7 +19,6 @@ package grpcv3
 import (
 	envoy_auth "github.com/envoyproxy/go-control-plane/envoy/service/auth/v3"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/recovery"
-	"github.com/prometheus/client_golang/prometheus"
 	"github.com/rs/zerolog"
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"google.golang.org/grpc"
@@ -33,14 +32,13 @@ import (
 	cachemiddleware "github.com/dadrus/heimdall/internal/handler/middleware/grpc/cache"
 	"github.com/dadrus/heimdall/internal/handler/middleware/grpc/errorhandler"
 	loggermiddleware "github.com/dadrus/heimdall/internal/handler/middleware/grpc/logger"
-	prometheus2 "github.com/dadrus/heimdall/internal/handler/middleware/grpc/prometheus"
+	"github.com/dadrus/heimdall/internal/handler/middleware/grpc/otelmetrics"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/rule"
 )
 
 func newService(
 	conf *config.Configuration,
-	registerer prometheus.Registerer,
 	cch cache.Cache,
 	logger zerolog.Logger,
 	exec rule.Executor,
@@ -52,23 +50,21 @@ func newService(
 		return status.Error(codes.Internal, "internal error")
 	})
 
+	metrics := otelmetrics.New(
+		otelmetrics.WithServerName(service.Address()),
+		otelmetrics.WithSubsystem("decision"),
+	)
+
 	streamInterceptors := []grpc.StreamServerInterceptor{
 		recovery.StreamServerInterceptor(recoveryHandler),
 		otelgrpc.StreamServerInterceptor(),
+		metrics.StreamServerInterceptor(),
 	}
 
 	unaryInterceptors := []grpc.UnaryServerInterceptor{
 		recovery.UnaryServerInterceptor(recoveryHandler),
 		otelgrpc.UnaryServerInterceptor(),
-	}
-
-	if conf.Metrics.Enabled {
-		metrics := prometheus2.New(
-			prometheus2.WithServiceName("decision"),
-			prometheus2.WithRegisterer(registerer),
-		)
-		unaryInterceptors = append(unaryInterceptors, metrics.Unary())
-		streamInterceptors = append(streamInterceptors, metrics.Stream())
+		metrics.UnaryServerInterceptor(),
 	}
 
 	unaryInterceptors = append(unaryInterceptors,
