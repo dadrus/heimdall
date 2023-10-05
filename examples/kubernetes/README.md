@@ -49,6 +49,8 @@ curl -vk --resolve echo-app.local:443:${SERVICE_IP} https://echo-app.local/foo
 
 and check the responses.
 
+Please note: Since nginx does not support 302 response codes from an external auth service, the call to `https://echo-app.local/redir/foo` will result in a 500 error code returned by nginx.
+
 # Delete the demo
 
 ```bash
