@@ -43,6 +43,11 @@ spec:
       labels:
         {{- include "heimdall.selectorLabels" $data | nindent 8 }}
       annotations:
+        {{- if contains "prometheus" .Values.env.OTEL_METRICS_EXPORTER }}
+        prometheus.io/scrape: "true"
+        prometheus.io/path: "/metrics"
+        prometheus.io/port: "{{ .Values.env.OTEL_EXPORTER_PROMETHEUS_PORT | default 9464 }}"
+        {{- end }}
         {{- if .Values.profiling.enabled }}
         phlare.grafana.com/scrape: "true"
         phlare.grafana.com/port: "{{ .Values.profiling.port }}"
@@ -89,6 +94,11 @@ spec:
             - name: http-management
               protocol: TCP
               containerPort: {{ .Values.serve.management.port }}
+            {{- if contains "prometheus" .Values.env.OTEL_METRICS_EXPORTER }}
+            - name: http-metrics
+              protocol: TCP
+              containerPort: {{ .Values.env.OTEL_EXPORTER_PROMETHEUS_PORT | default 9464 }}
+            {{- end }}
             {{- if .Values.profiling.enabled }}
             - name: http-profiling
               protocol: TCP
