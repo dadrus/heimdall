@@ -259,10 +259,10 @@ To let heimdall expose metrics over a pull based service (https://grafana.com/os
 
 === Available Metrics
 
-* Process information, like CPU, memory, file descriptor usage and start time
-* Go runtime information, including details about GC, number of goroutines and OS threats
-* Information about the metrics endpoint itself, including the number of internal errors encountered while gathering the metrics, number of current inflight and overall scrapes done.
-* Information about the handled requests on each active service, as well as information about requests in progress.
+* System metrics according to https://opentelemetry.io/docs/specs/otel/metrics/semantic_conventions/system-metrics/[OpenTelemetry Semantic Conventions for System Metrics].
+* Process and Go runtime metrics according to https://opentelemetry.io/docs/specs/otel/metrics/semantic_conventions/process-metrics/[OpenTelemetry Semantic Conventions for OS Process Metrics].
+* Information about the handled requests on each active service, as well as information about requests in progress according to OpenTelemetry https://opentelemetry.io/docs/specs/otel/metrics/semantic_conventions/http-metrics/[Semantic Conventions for HTTP Metrics] and https://opentelemetry.io/docs/specs/otel/metrics/semantic_conventions/rpc-metrics/[General RPC conventions].
+* Information about the metrics endpoint itself (if enabled), including the number of internal errors encountered while gathering the metrics, number of current inflight and overall scrapes done.
 * Information about expiry for configured certificates.
 
 All, but custom metrics adhere to the https://opentelemetry.io/docs/specs/otel/metrics/semantic_conventions/[OpenTelementry semantic conventions]. For that reason, only the custom metrics are listed in the table below.
