@@ -1272,8 +1272,8 @@
         }
       }
     },
-    "unifierJwt": {
-      "description": "Creates a JWT Token from the given subject information",
+    "finalizerJwt": {
+      "description": "Creates a JWT Token from the available subject and request information to be passed to the upstream service",
       "type": "object",
       "additionalProperties": false,
       "required": [
@@ -1285,11 +1285,11 @@
           "const": "jwt"
         },
         "id": {
-          "description": "The unique id of the unifier to be used in the rule definition",
+          "description": "The unique id of the finalizer to be used in the rule definition",
           "type": "string"
         },
         "config": {
-          "description": "JWT unifier Configuration",
+          "description": "JWT finalizer configuration",
           "type": "object",
           "additionalProperties": false,
           "required": [
@@ -1297,6 +1297,7 @@
           ],
           "properties": {
             "claims": {
+              "description": "Custom claims, which should be included into the JWT.",
               "type": "string"
             },
             "ttl": {
@@ -1330,8 +1331,8 @@
         }
       }
     },
-    "unifierHeader": {
-      "description": "Transforms the request, allowing passing the credentials to the upstream application via headers",
+    "finalizerHeader": {
+      "description": "Allowing passing any information to the upstream service via headers",
       "type": "object",
       "additionalProperties": false,
       "required": [
@@ -1344,7 +1345,7 @@
           "const": "header"
         },
         "id": {
-          "description": "The unique id of the unifier to be used in the rule definition",
+          "description": "The unique id of the finalizer to be used in the rule definition",
           "type": "string"
         },
         "config": {
@@ -1366,8 +1367,8 @@
         }
       }
     },
-    "unifierCookie": {
-      "description": "Transforms the request, allowing passing the credentials to the upstream application via cookies",
+    "finalizerCookie": {
+      "description": "Transforms the request, allowing passing the credentials to the upstream service via cookies",
       "type": "object",
       "additionalProperties": false,
       "required": [
@@ -1380,7 +1381,7 @@
           "const": "cookie"
         },
         "id": {
-          "description": "The unique id of the unifier to be used in the rule definition",
+          "description": "The unique id of the finalizer to be used in the rule definition",
           "type": "string"
         },
         "config": {
@@ -1402,8 +1403,8 @@
         }
       }
     },
-    "unifierNoop": {
-      "description": "Noop Unifier",
+    "finalizerNoop": {
+      "description": "Does nothing",
       "type": "object",
       "additionalProperties": false,
       "properties": {
@@ -1411,7 +1412,7 @@
           "const": "noop"
         },
         "id": {
-          "description": "The unique id of the unifier to be used in the rule definition",
+          "description": "The unique id of the finalizer to be used in the rule definition",
           "type": "string"
         }
       }
@@ -1710,7 +1711,7 @@
       "additionalProperties": false,
       "required": [
         "authenticators",
-        "unifiers"
+        "finalizers"
       ],
       "properties": {
         "error_handlers": {
@@ -1793,24 +1794,24 @@
             "$ref": "#/definitions/contextualizerGeneric"
           }
         },
-        "unifiers": {
-          "description": "Unifiers",
+        "finalizers": {
+          "description": "Finalizers",
           "type": "array",
           "additionalItems": false,
           "uniqueItems": true,
           "items": {
             "anyOf": [
               {
-                "$ref": "#/definitions/unifierNoop"
+                "$ref": "#/definitions/finalizerNoop"
               },
               {
-                "$ref": "#/definitions/unifierJwt"
+                "$ref": "#/definitions/finalizerJwt"
               },
               {
-                "$ref": "#/definitions/unifierHeader"
+                "$ref": "#/definitions/finalizerHeader"
               },
               {
-                "$ref": "#/definitions/unifierCookie"
+                "$ref": "#/definitions/finalizerCookie"
               }
             ]
           }
