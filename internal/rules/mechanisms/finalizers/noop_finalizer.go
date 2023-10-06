@@ -14,7 +14,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package unifiers
+package finalizers
 
 import (
 	"github.com/rs/zerolog"
@@ -27,31 +27,31 @@ import (
 //
 //nolint:gochecknoinits
 func init() {
-	registerUnifierTypeFactory(
-		func(id string, typ string, conf map[string]any) (bool, Unifier, error) {
-			if typ != UnifierNoop {
+	registerTypeFactory(
+		func(id string, typ string, conf map[string]any) (bool, Finalizer, error) {
+			if typ != FinalizerNoop {
 				return false, nil, nil
 			}
 
-			return true, newNoopUnifier(id), nil
+			return true, newNoopFinalizer(id), nil
 		})
 }
 
-func newNoopUnifier(id string) *noopUnifier { return &noopUnifier{id: id} }
+func newNoopFinalizer(id string) *noopFinalizer { return &noopFinalizer{id: id} }
 
-type noopUnifier struct {
+type noopFinalizer struct {
 	id string
 }
 
-func (u *noopUnifier) Execute(ctx heimdall.Context, _ *subject.Subject) error {
+func (u *noopFinalizer) Execute(ctx heimdall.Context, _ *subject.Subject) error {
 	logger := zerolog.Ctx(ctx.AppContext())
-	logger.Debug().Str("_id", u.id).Msg("Unifying using noop unifier")
+	logger.Debug().Str("_id", u.id).Msg("Finalizing using noop finalizer")
 
 	return nil
 }
 
-func (u *noopUnifier) WithConfig(map[string]any) (Unifier, error) { return u, nil }
+func (u *noopFinalizer) WithConfig(map[string]any) (Finalizer, error) { return u, nil }
 
-func (u *noopUnifier) ID() string { return u.id }
+func (u *noopFinalizer) ID() string { return u.id }
 
-func (u *noopUnifier) ContinueOnError() bool { return false }
+func (u *noopFinalizer) ContinueOnError() bool { return false }

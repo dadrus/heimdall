@@ -66,7 +66,6 @@ func newContextFactory(
 
 func (r *requestContext) Finalize(upstream rule.Backend) error {
 	logger := zerolog.Ctx(r.AppContext())
-	logger.Debug().Msg("Finalizing request")
 
 	if err := r.PipelineError(); err != nil {
 		return err

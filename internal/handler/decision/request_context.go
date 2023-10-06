@@ -31,12 +31,11 @@ type requestContext struct {
 }
 
 func (r *requestContext) Finalize(_ rule.Backend) error {
-	logger := zerolog.Ctx(r.AppContext())
-	logger.Debug().Msg("Finalizing request")
-
 	if err := r.PipelineError(); err != nil {
 		return err
 	}
+
+	zerolog.Ctx(r.AppContext()).Debug().Msg("Creating response")
 
 	uh := r.UpstreamHeaders()
 	for k := range uh {

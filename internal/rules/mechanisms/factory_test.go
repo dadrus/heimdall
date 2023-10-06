@@ -34,8 +34,8 @@ import (
 	mocks4 "github.com/dadrus/heimdall/internal/rules/mechanisms/contextualizers/mocks"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/errorhandlers"
 	mocks5 "github.com/dadrus/heimdall/internal/rules/mechanisms/errorhandlers/mocks"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/unifiers"
-	mocks6 "github.com/dadrus/heimdall/internal/rules/mechanisms/unifiers/mocks"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/finalizers"
+	mocks6 "github.com/dadrus/heimdall/internal/rules/mechanisms/finalizers/mocks"
 	"github.com/dadrus/heimdall/internal/x"
 )
 
@@ -316,7 +316,7 @@ func TestHandlerFactoryCreateContextualizer(t *testing.T) {
 	}
 }
 
-func TestHandlerFactoryCreateUnifier(t *testing.T) {
+func TestHandlerFactoryCreateFinalizer(t *testing.T) {
 	t.Parallel()
 
 	ID := "foo"
@@ -325,58 +325,58 @@ func TestHandlerFactoryCreateUnifier(t *testing.T) {
 		uc            string
 		id            string
 		conf          map[string]any
-		configureMock func(t *testing.T, mUn *mocks6.UnifierMock)
-		assert        func(t *testing.T, err error, unifier unifiers.Unifier)
+		configureMock func(t *testing.T, mFin *mocks6.FinalizerMock)
+		assert        func(t *testing.T, err error, finalizer finalizers.Finalizer)
 	}{
 		{
-			uc: "no unifier for given id",
+			uc: "no finalizer for given id",
 			id: "bar",
-			assert: func(t *testing.T, err error, unifier unifiers.Unifier) {
+			assert: func(t *testing.T, err error, _ finalizers.Finalizer) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, ErrUnifierCreation)
-				assert.Contains(t, err.Error(), "no unifier prototype")
+				assert.ErrorIs(t, err, ErrFinalizerCreation)
+				assert.Contains(t, err.Error(), "no finalizer prototype")
 			},
 		},
 		{
 			uc:   "with failing creation from prototype",
 			conf: map[string]any{"foo": "bar"},
-			configureMock: func(t *testing.T, mUn *mocks6.UnifierMock) {
+			configureMock: func(t *testing.T, finalizer *mocks6.FinalizerMock) {
 				t.Helper()
 
-				mUn.EXPECT().WithConfig(mock.Anything).Return(nil, heimdall.ErrArgument)
+				finalizer.EXPECT().WithConfig(mock.Anything).Return(nil, heimdall.ErrArgument)
 			},
-			assert: func(t *testing.T, err error, unifier unifiers.Unifier) {
+			assert: func(t *testing.T, err error, _ finalizers.Finalizer) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, ErrUnifierCreation)
+				assert.ErrorIs(t, err, ErrFinalizerCreation)
 				assert.Contains(t, err.Error(), heimdall.ErrArgument.Error())
 			},
 		},
 		{
 			uc:   "successful creation from prototype",
 			conf: map[string]any{"foo": "bar"},
-			configureMock: func(t *testing.T, mUn *mocks6.UnifierMock) {
+			configureMock: func(t *testing.T, finalizer *mocks6.FinalizerMock) {
 				t.Helper()
 
-				mUn.EXPECT().WithConfig(mock.Anything).Return(mUn, nil)
+				finalizer.EXPECT().WithConfig(mock.Anything).Return(finalizer, nil)
 			},
-			assert: func(t *testing.T, err error, unifier unifiers.Unifier) {
+			assert: func(t *testing.T, err error, finalizer finalizers.Finalizer) {
 				t.Helper()
 
 				require.NoError(t, err)
-				assert.NotNil(t, unifier)
+				assert.NotNil(t, finalizer)
 			},
 		},
 		{
 			uc: "successful creation with empty config",
-			assert: func(t *testing.T, err error, unifier unifiers.Unifier) {
+			assert: func(t *testing.T, err error, finalizer finalizers.Finalizer) {
 				t.Helper()
 
 				require.NoError(t, err)
-				assert.NotNil(t, unifier)
+				assert.NotNil(t, finalizer)
 			},
 		},
 	} {
@@ -384,15 +384,15 @@ func TestHandlerFactoryCreateUnifier(t *testing.T) {
 			// GIVEN
 			configureMock := x.IfThenElse(tc.configureMock != nil,
 				tc.configureMock,
-				func(t *testing.T, mUn *mocks6.UnifierMock) { t.Helper() })
+				func(t *testing.T, mFin *mocks6.FinalizerMock) { t.Helper() })
 
-			mUn := mocks6.NewUnifierMock(t)
-			configureMock(t, mUn)
+			mFin := mocks6.NewFinalizerMock(t)
+			configureMock(t, mFin)
 
 			factory := &mechanismsFactory{
 				r: &prototypeRepository{
-					unifiers: map[string]unifiers.Unifier{
-						ID: mUn,
+					finalizers: map[string]finalizers.Finalizer{
+						ID: mFin,
 					},
 				},
 			}
@@ -400,10 +400,10 @@ func TestHandlerFactoryCreateUnifier(t *testing.T) {
 			id := x.IfThenElse(len(tc.id) != 0, tc.id, ID)
 
 			// WHEN
-			unifier, err := factory.CreateUnifier("test", id, tc.conf)
+			finalizer, err := factory.CreateFinalizer("test", id, tc.conf)
 
 			// THEN
-			tc.assert(t, err, unifier)
+			tc.assert(t, err, finalizer)
 		})
 	}
 }
@@ -519,7 +519,7 @@ func TestCreateHandlerFactory(t *testing.T) {
 				require.NotNil(t, factory.r)
 				assert.Empty(t, factory.r.errorHandlers)
 				assert.Empty(t, factory.r.contextualizers)
-				assert.Empty(t, factory.r.unifiers)
+				assert.Empty(t, factory.r.finalizers)
 				assert.Empty(t, factory.r.authenticators)
 				assert.Empty(t, factory.r.authorizers)
 			},

@@ -24,7 +24,7 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/authorizers"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/contextualizers"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/errorhandlers"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/unifiers"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/finalizers"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
@@ -105,21 +105,21 @@ func (hf *mechanismsFactory) CreateContextualizer(_, id string, conf config.Mech
 	return prototype, nil
 }
 
-func (hf *mechanismsFactory) CreateUnifier(_, id string, conf config.MechanismConfig) (
-	unifiers.Unifier, error,
+func (hf *mechanismsFactory) CreateFinalizer(_, id string, conf config.MechanismConfig) (
+	finalizers.Finalizer, error,
 ) {
-	prototype, err := hf.r.Unifier(id)
+	prototype, err := hf.r.Finalizer(id)
 	if err != nil {
-		return nil, errorchain.New(ErrUnifierCreation).CausedBy(err)
+		return nil, errorchain.New(ErrFinalizerCreation).CausedBy(err)
 	}
 
 	if conf != nil {
-		unifier, err := prototype.WithConfig(conf)
+		finalizer, err := prototype.WithConfig(conf)
 		if err != nil {
-			return nil, errorchain.New(ErrUnifierCreation).CausedBy(err)
+			return nil, errorchain.New(ErrFinalizerCreation).CausedBy(err)
 		}
 
-		return unifier, nil
+		return finalizer, nil
 	}
 
 	return prototype, nil

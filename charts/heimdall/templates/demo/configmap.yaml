@@ -70,10 +70,10 @@ data:
           type: deny
         - id: allow_all_requests
           type: allow
-        unifiers:
+        finalizers:
         - id: create_jwt
           type: jwt
-        - id: noop_unifier
+        - id: noop_finalizer
           type: noop
 
       default:
@@ -83,7 +83,7 @@ data:
         execute:
           - authenticator: anonymous_authenticator
           - authorizer: deny_all_requests
-          - unifier: create_jwt
+          - finalizer: create_jwt
 
       providers:
         kubernetes: {}

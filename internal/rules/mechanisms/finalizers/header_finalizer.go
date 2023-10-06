@@ -14,7 +14,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package unifiers
+package finalizers
 
 import (
 	"github.com/rs/zerolog"
@@ -29,82 +29,82 @@ import (
 //
 //nolint:gochecknoinits
 func init() {
-	registerUnifierTypeFactory(
-		func(id string, typ string, conf map[string]any) (bool, Unifier, error) {
-			if typ != UnifierCookie {
+	registerTypeFactory(
+		func(id string, typ string, conf map[string]any) (bool, Finalizer, error) {
+			if typ != FinalizerHeader {
 				return false, nil, nil
 			}
 
-			unifier, err := newCookieUnifier(id, conf)
+			finalizer, err := newHeaderFinalizer(id, conf)
 
-			return true, unifier, err
+			return true, finalizer, err
 		})
 }
 
-type cookieUnifier struct {
+type headerFinalizer struct {
 	id      string
-	cookies map[string]template.Template
+	headers map[string]template.Template
 }
 
-func newCookieUnifier(id string, rawConfig map[string]any) (*cookieUnifier, error) {
+func newHeaderFinalizer(id string, rawConfig map[string]any) (*headerFinalizer, error) {
 	type Config struct {
-		Cookies map[string]template.Template `mapstructure:"cookies"`
+		Headers map[string]template.Template `mapstructure:"headers"`
 	}
 
 	var conf Config
 	if err := decodeConfig(rawConfig, &conf); err != nil {
 		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration, "failed to unmarshal cookie unifier config").
+			NewWithMessage(heimdall.ErrConfiguration, "failed to unmarshal header finalizer config").
 			CausedBy(err)
 	}
 
-	if len(conf.Cookies) == 0 {
+	if len(conf.Headers) == 0 {
 		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration, "no cookie definitions provided")
+			NewWithMessage(heimdall.ErrConfiguration, "no headers definitions provided")
 	}
 
-	return &cookieUnifier{
+	return &headerFinalizer{
 		id:      id,
-		cookies: conf.Cookies,
+		headers: conf.Headers,
 	}, nil
 }
 
-func (u *cookieUnifier) Execute(ctx heimdall.Context, sub *subject.Subject) error {
+func (u *headerFinalizer) Execute(ctx heimdall.Context, sub *subject.Subject) error {
 	logger := zerolog.Ctx(ctx.AppContext())
-	logger.Debug().Str("_id", u.id).Msg("Unifying using cookie unifier")
+	logger.Debug().Str("_id", u.id).Msg("Finalizing using header finalizer")
 
 	if sub == nil {
 		return errorchain.
-			NewWithMessage(heimdall.ErrInternal, "failed to execute cookie unifier due to 'nil' subject").
+			NewWithMessage(heimdall.ErrInternal, "failed to execute header finalizer due to 'nil' subject").
 			WithErrorContext(u)
 	}
 
-	for name, tmpl := range u.cookies {
+	for name, tmpl := range u.headers {
 		value, err := tmpl.Render(map[string]any{
 			"Request": ctx.Request(),
 			"Subject": sub,
 		})
 		if err != nil {
 			return errorchain.
-				NewWithMessagef(heimdall.ErrInternal, "failed to render value for '%s' cookie", name).
+				NewWithMessagef(heimdall.ErrInternal, "failed to render value for '%s' header", name).
 				WithErrorContext(u).
 				CausedBy(err)
 		}
 
-		ctx.AddCookieForUpstream(name, value)
+		ctx.AddHeaderForUpstream(name, value)
 	}
 
 	return nil
 }
 
-func (u *cookieUnifier) WithConfig(config map[string]any) (Unifier, error) {
+func (u *headerFinalizer) WithConfig(config map[string]any) (Finalizer, error) {
 	if len(config) == 0 {
 		return u, nil
 	}
 
-	return newCookieUnifier(u.id, config)
+	return newHeaderFinalizer(u.id, config)
 }
 
-func (u *cookieUnifier) ID() string { return u.id }
+func (u *headerFinalizer) ID() string { return u.id }
 
-func (u *cookieUnifier) ContinueOnError() bool { return false }
+func (u *headerFinalizer) ContinueOnError() bool { return false }

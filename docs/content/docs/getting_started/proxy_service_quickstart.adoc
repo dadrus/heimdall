@@ -41,7 +41,7 @@ rules:
       type: deny
     - id: allow_all_requests  # <4>
       type: allow
-    unifiers:
+    finalizers:
     - id: create_jwt  # <5>
       type: jwt
     - id: noop
@@ -54,7 +54,7 @@ rules:
     execute:
       - authenticator: anonymous_authenticator
       - authorizer: deny_all_requests
-      - unifier: create_jwt
+      - finalizer: create_jwt
 
   providers:
     file_system:  # <7>
@@ -65,7 +65,7 @@ rules:
 <2> Configures the `anonymous` authenticator.
 <3> Configures the `deny` authorizer.
 <4> Configures the `allow` authorizer. It will be used in our rule to allow requests.
-<5> Configures the `jwt` unifier.
+<5> Configures the `jwt` finalizer.
 <6> Configures the default rule.
 <7> Configures the `file_system` provider, which will allow loading of our rule from the file system.
 +
@@ -93,10 +93,10 @@ rules:
   execute:
     - authenticator: noop
     - authorizer: allow_all_requests
-    - unifier: noop
+    - finalizer: noop
 ----
 +
-<1> This rule matches any host and the `/anonymous` path and forwards the request to our upstream service (which we're going to define next). In addition, it reuses the configuration from the default rule. Here, the methods, which are allowed, as well as the authorizers and unifiers. So we don't need to define them here.
+<1> This rule matches any host and the `/anonymous` path and forwards the request to our upstream service (which we're going to define next). In addition, it reuses the configuration from the default rule. Here, the methods, which are allowed, as well as the authorizers and finalizers. So we don't need to define them in the rule.
 <2> This rule matches any host and the `/public` path and forwards the request as the previous rule to our upstream service. This rule doesn't perform any kind of request verification or transformation.
 
 . Create or copy the following `docker-compose.yaml` file and modify it to include the correct paths to your `config.yaml` and `rule.yaml` files:

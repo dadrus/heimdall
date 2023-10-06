@@ -42,7 +42,7 @@ rules:
         type: anonymous
       - id: reject_requests
         type: unauthorized
-    unifiers:  # <4>
+    finalizers:  # <4>
       - id: do_nothing
         type: noop
       - id: create_jwt
@@ -54,7 +54,7 @@ rules:
       - POST
     execute:
       - authenticator: reject_requests
-      - unifier: create_jwt
+      - finalizer: create_jwt
 
   providers:
     file_system:  # <6>
@@ -64,7 +64,7 @@ rules:
 <1> Here we are setting the log level to `info` to be able to see any log output. By default, heimdall logs on `error` log level.
 <2> Configures heimdall's decision service to trust requests from all sources. This allows usage of `X-Forwarded-*` headers. This configuration is only required if you want to try out the docker compose example from below.
 <3> Configures a couple of authenticators - the `noop` authenticator, which does nothing, the `anonymous` authenticator, which treats every request as anonymous (creates a subject with its id set to anonymous) and the `unauthorized` authenticator, which rejects every request with `401 Unauthorized` HTTP code.
-<4> Configured a couple of unifiers - the `noop` unifier, which does nothing and the jwt` unifier, which transforms the information about the subject into a JWT.
+<4> Configured a couple of finalizers - the `noop` finalizer, which does nothing and the jwt` finalizer, which transforms the information about the subject into a JWT.
 <5> Configures the default rule, which will obviously reject every request.
 <6> Configures a `file_system` provider, which allows heimdall loading rules from the local filesystem; here from the `/heimdall/conf/rule.yaml` file.
 
@@ -80,7 +80,7 @@ rules:
     url: http://<**>/public
   execute:
     - authenticator: do_nothing
-    - unifier: do_nothing
+    - finalizer: do_nothing
 
 - id: rule2  # <2>
   match:
@@ -91,8 +91,8 @@ rules:
 
 This file contains two rules:
 
-<1> This rule should match the `\http://<**>/public` url and accept every request without performing any authentication and unification.
-<2> This rule should match the `\http://<**>/anonymous` url. It uses the `anon` authenticator from our mechanisms definitions and since it does not specify a unifier, the unifier from the default rule `create_jwt` is used.
+<1> This rule should match the `\http://<**>/public` url and accept every request without performing any authentication and finalization.
+<2> This rule should match the `\http://<**>/anonymous` url. It uses the `anon` authenticator from our mechanisms definitions and since it does not specify any finalizers, the finalizers from the default rule, here the `create_jwt` finalizer, is used.
 
 == Run Standalone
 Run heimdall specifying the configuration file from above

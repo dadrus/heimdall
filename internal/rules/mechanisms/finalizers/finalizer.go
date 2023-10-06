@@ -14,27 +14,18 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package unifiers
+package finalizers
 
 import (
-	"github.com/mitchellh/mapstructure"
-
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
+	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
 )
 
-func decodeConfig(input any, output any) error {
-	dec, err := mapstructure.NewDecoder(
-		&mapstructure.DecoderConfig{
-			DecodeHook: mapstructure.ComposeDecodeHookFunc(
-				mapstructure.StringToTimeDurationHookFunc(),
-				template.DecodeTemplateHookFunc(),
-			),
-			Result:      output,
-			ErrorUnused: true,
-		})
-	if err != nil {
-		return err
-	}
+//go:generate mockery --name Finalizer --structname FinalizerMock
 
-	return dec.Decode(input)
+type Finalizer interface {
+	ID() string
+	Execute(ctx heimdall.Context, sub *subject.Subject) error
+	WithConfig(config map[string]any) (Finalizer, error)
+	ContinueOnError() bool
 }

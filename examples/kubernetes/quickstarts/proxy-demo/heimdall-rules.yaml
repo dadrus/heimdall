@@ -1,0 +1,43 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: heimdall-rules
+  namespace: quickstarts
+  labels:
+    app.kubernetes.io/name: echo-app
+immutable: true
+data:
+  rules.yaml: |
+    version: "1alpha2"
+    rules:
+      - id: public-access
+        match:
+          url: <**>://<**>/pub/<**>
+        forward_to:
+          host: localhost:8080
+          rewrite:
+            scheme: http
+        execute:
+          - authenticator: noop_authenticator
+          - authorizer: allow_all_requests
+          - finalizer: noop_finalizer
+
+      - id: anonymous-access
+        match:
+          url: <**>://<**>/anon/<**>
+        forward_to:
+          host: localhost:8080
+          rewrite:
+            scheme: http
+        execute:
+          - authorizer: allow_all_requests
+
+      - id: redirect
+        match:
+          url: <**>://<**>/redir/<**>
+        forward_to:
+          host: localhost:8080
+          rewrite:
+            scheme: http
+        execute:
+         - authenticator: deny_authenticator

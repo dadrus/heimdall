@@ -15,7 +15,7 @@ https://doc.traefik.io/traefik/[Traefik Proxy] is a modern HTTP proxy and load b
 To achieve this, configure traefik
 
 * to make use of the aforesaid ForwardAuth middleware by setting the `address` property to the decision service endpoint and
-* configure the `authResponseHeaders` to contain the required header name(s), heimdall sets in the HTTP responses (depends on your link:{{< relref "/docs/configuration/rules/pipeline_mechanisms/contextualizers.adoc" >}}[Contextualizers] and link:{{< relref "/docs/configuration/rules/pipeline_mechanisms/unifiers.adoc" >}}[Unifiers] configuration).
+* configure the `authResponseHeaders` to contain the required header name(s), heimdall sets in the HTTP responses (depends on your link:{{< relref "/docs/configuration/rules/pipeline_mechanisms/contextualizers.adoc" >}}[Contextualizers] and link:{{< relref "/docs/configuration/rules/pipeline_mechanisms/finalizers.adoc" >}}[Finalizers] configuration).
 * Configure the route of your service to make use of this middleware.
 
 [CAUTION]

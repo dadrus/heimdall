@@ -14,7 +14,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package unifiers
+package finalizers
 
 import (
 	"context"
@@ -35,7 +35,7 @@ import (
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
-func TestCreateJWTUnifier(t *testing.T) {
+func TestCreateJWTFinalizer(t *testing.T) {
 	t.Parallel()
 
 	const expectedTTL = 5 * time.Second
@@ -44,62 +44,62 @@ func TestCreateJWTUnifier(t *testing.T) {
 		uc     string
 		id     string
 		config []byte
-		assert func(t *testing.T, err error, unifier *jwtUnifier)
+		assert func(t *testing.T, err error, finalizer *jwtFinalizer)
 	}{
 		{
 			uc: "without config",
 			id: "jun",
-			assert: func(t *testing.T, err error, unifier *jwtUnifier) {
+			assert: func(t *testing.T, err error, finalizer *jwtFinalizer) {
 				t.Helper()
 
 				require.NoError(t, err)
 
-				require.NotNil(t, unifier)
-				assert.Equal(t, defaultJWTTTL, unifier.ttl)
-				assert.Nil(t, unifier.claims)
-				assert.Equal(t, "jun", unifier.ID())
-				assert.Equal(t, "Authorization", unifier.headerName)
-				assert.Equal(t, "Bearer", unifier.headerScheme)
+				require.NotNil(t, finalizer)
+				assert.Equal(t, defaultJWTTTL, finalizer.ttl)
+				assert.Nil(t, finalizer.claims)
+				assert.Equal(t, "jun", finalizer.ID())
+				assert.Equal(t, "Authorization", finalizer.headerName)
+				assert.Equal(t, "Bearer", finalizer.headerScheme)
 			},
 		},
 		{
 			uc:     "with empty config",
 			id:     "jun",
 			config: []byte(``),
-			assert: func(t *testing.T, err error, unifier *jwtUnifier) {
+			assert: func(t *testing.T, err error, finalizer *jwtFinalizer) {
 				t.Helper()
 
 				require.NoError(t, err)
 
-				require.NotNil(t, unifier)
-				assert.Equal(t, defaultJWTTTL, unifier.ttl)
-				assert.Nil(t, unifier.claims)
-				assert.Equal(t, "jun", unifier.ID())
-				assert.Equal(t, "Authorization", unifier.headerName)
-				assert.Equal(t, "Bearer", unifier.headerScheme)
+				require.NotNil(t, finalizer)
+				assert.Equal(t, defaultJWTTTL, finalizer.ttl)
+				assert.Nil(t, finalizer.claims)
+				assert.Equal(t, "jun", finalizer.ID())
+				assert.Equal(t, "Authorization", finalizer.headerName)
+				assert.Equal(t, "Bearer", finalizer.headerScheme)
 			},
 		},
 		{
 			uc:     "with ttl only",
 			id:     "jun",
 			config: []byte(`ttl: 5s`),
-			assert: func(t *testing.T, err error, unifier *jwtUnifier) {
+			assert: func(t *testing.T, err error, finalizer *jwtFinalizer) {
 				t.Helper()
 
 				require.NoError(t, err)
 
-				require.NotNil(t, unifier)
-				assert.Equal(t, expectedTTL, unifier.ttl)
-				assert.Nil(t, unifier.claims)
-				assert.Equal(t, "jun", unifier.ID())
-				assert.Equal(t, "Authorization", unifier.headerName)
-				assert.Equal(t, "Bearer", unifier.headerScheme)
+				require.NotNil(t, finalizer)
+				assert.Equal(t, expectedTTL, finalizer.ttl)
+				assert.Nil(t, finalizer.claims)
+				assert.Equal(t, "jun", finalizer.ID())
+				assert.Equal(t, "Authorization", finalizer.headerName)
+				assert.Equal(t, "Bearer", finalizer.headerScheme)
 			},
 		},
 		{
 			uc:     "with too short ttl",
 			config: []byte(`ttl: 5ms`),
-			assert: func(t *testing.T, err error, _ *jwtUnifier) {
+			assert: func(t *testing.T, err error, _ *jwtFinalizer) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -114,23 +114,23 @@ func TestCreateJWTUnifier(t *testing.T) {
 claims: 
   '{ "sub": {{ quote .Subject.ID }} }'
 `),
-			assert: func(t *testing.T, err error, unifier *jwtUnifier) {
+			assert: func(t *testing.T, err error, finalizer *jwtFinalizer) {
 				t.Helper()
 
 				require.NoError(t, err)
 
-				require.NotNil(t, unifier)
-				assert.Equal(t, defaultJWTTTL, unifier.ttl)
-				require.NotNil(t, unifier.claims)
-				val, err := unifier.claims.Render(map[string]any{
+				require.NotNil(t, finalizer)
+				assert.Equal(t, defaultJWTTTL, finalizer.ttl)
+				require.NotNil(t, finalizer.claims)
+				val, err := finalizer.claims.Render(map[string]any{
 					"Subject": &subject.Subject{ID: "bar"},
 				})
 				require.NoError(t, err)
 				assert.Equal(t, `{ "sub": "bar" }`, val)
-				assert.Equal(t, "jun", unifier.ID())
-				assert.Equal(t, "Authorization", unifier.headerName)
-				assert.Equal(t, "Bearer", unifier.headerScheme)
-				assert.False(t, unifier.ContinueOnError())
+				assert.Equal(t, "jun", finalizer.ID())
+				assert.Equal(t, "Authorization", finalizer.headerName)
+				assert.Equal(t, "Bearer", finalizer.headerScheme)
+				assert.False(t, finalizer.ContinueOnError())
 			},
 		},
 		{
@@ -141,23 +141,23 @@ ttl: 5s
 claims: 
   '{ "sub": {{ quote .Subject.ID }} }'
 `),
-			assert: func(t *testing.T, err error, unifier *jwtUnifier) {
+			assert: func(t *testing.T, err error, finalizer *jwtFinalizer) {
 				t.Helper()
 
 				require.NoError(t, err)
 
-				require.NotNil(t, unifier)
-				assert.Equal(t, expectedTTL, unifier.ttl)
-				require.NotNil(t, unifier.claims)
-				val, err := unifier.claims.Render(map[string]any{
+				require.NotNil(t, finalizer)
+				assert.Equal(t, expectedTTL, finalizer.ttl)
+				require.NotNil(t, finalizer.claims)
+				val, err := finalizer.claims.Render(map[string]any{
 					"Subject": &subject.Subject{ID: "bar"},
 				})
 				require.NoError(t, err)
 				assert.Equal(t, `{ "sub": "bar" }`, val)
-				assert.Equal(t, "jun", unifier.ID())
-				assert.Equal(t, "Authorization", unifier.headerName)
-				assert.Equal(t, "Bearer", unifier.headerScheme)
-				assert.False(t, unifier.ContinueOnError())
+				assert.Equal(t, "jun", finalizer.ID())
+				assert.Equal(t, "Authorization", finalizer.headerName)
+				assert.Equal(t, "Bearer", finalizer.headerScheme)
+				assert.False(t, finalizer.ContinueOnError())
 			},
 		},
 		{
@@ -166,7 +166,7 @@ claims:
 ttl: 5s
 foo: bar"
 `),
-			assert: func(t *testing.T, err error, _ *jwtUnifier) {
+			assert: func(t *testing.T, err error, _ *jwtFinalizer) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -181,7 +181,7 @@ foo: bar"
 header:
   scheme: Foo
 `),
-			assert: func(t *testing.T, err error, unifier *jwtUnifier) {
+			assert: func(t *testing.T, err error, _ *jwtFinalizer) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -196,16 +196,16 @@ header:
 header:
   name: Foo
 `),
-			assert: func(t *testing.T, err error, unifier *jwtUnifier) {
+			assert: func(t *testing.T, err error, finalizer *jwtFinalizer) {
 				t.Helper()
 
 				require.NoError(t, err)
-				require.NotNil(t, unifier)
-				assert.Equal(t, defaultJWTTTL, unifier.ttl)
-				assert.Nil(t, unifier.claims)
-				assert.Equal(t, "jun", unifier.ID())
-				assert.Equal(t, "Foo", unifier.headerName)
-				assert.Empty(t, unifier.headerScheme)
+				require.NotNil(t, finalizer)
+				assert.Equal(t, defaultJWTTTL, finalizer.ttl)
+				assert.Nil(t, finalizer.claims)
+				assert.Equal(t, "jun", finalizer.ID())
+				assert.Equal(t, "Foo", finalizer.headerName)
+				assert.Empty(t, finalizer.headerScheme)
 			},
 		},
 		{
@@ -216,16 +216,16 @@ header:
   name: Foo
   scheme: Bar
 `),
-			assert: func(t *testing.T, err error, unifier *jwtUnifier) {
+			assert: func(t *testing.T, err error, finalizer *jwtFinalizer) {
 				t.Helper()
 
 				require.NoError(t, err)
-				require.NotNil(t, unifier)
-				assert.Equal(t, defaultJWTTTL, unifier.ttl)
-				assert.Nil(t, unifier.claims)
-				assert.Equal(t, "jun", unifier.ID())
-				assert.Equal(t, "Foo", unifier.headerName)
-				assert.Equal(t, "Bar", unifier.headerScheme)
+				require.NotNil(t, finalizer)
+				assert.Equal(t, defaultJWTTTL, finalizer.ttl)
+				assert.Nil(t, finalizer.claims)
+				assert.Equal(t, "jun", finalizer.ID())
+				assert.Equal(t, "Foo", finalizer.headerName)
+				assert.Equal(t, "Bar", finalizer.headerScheme)
 			},
 		},
 	} {
@@ -234,15 +234,15 @@ header:
 			require.NoError(t, err)
 
 			// WHEN
-			unifier, err := newJWTUnifier(tc.id, conf)
+			finalizer, err := newJWTFinalizer(tc.id, conf)
 
 			// THEN
-			tc.assert(t, err, unifier)
+			tc.assert(t, err, finalizer)
 		})
 	}
 }
 
-func TestCreateJWTUnifierFromPrototype(t *testing.T) {
+func TestCreateJWTFinalizerFromPrototype(t *testing.T) {
 	t.Parallel()
 
 	const (
@@ -253,12 +253,12 @@ func TestCreateJWTUnifierFromPrototype(t *testing.T) {
 		uc     string
 		id     string
 		config []byte
-		assert func(t *testing.T, err error, prototype *jwtUnifier, configured *jwtUnifier)
+		assert func(t *testing.T, err error, prototype *jwtFinalizer, configured *jwtFinalizer)
 	}{
 		{
 			uc: "no new configuration provided",
 			id: "jun1",
-			assert: func(t *testing.T, err error, prototype *jwtUnifier, configured *jwtUnifier) {
+			assert: func(t *testing.T, err error, prototype *jwtFinalizer, configured *jwtFinalizer) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -271,7 +271,7 @@ func TestCreateJWTUnifierFromPrototype(t *testing.T) {
 			uc:     "empty configuration provided",
 			id:     "jun2",
 			config: []byte(``),
-			assert: func(t *testing.T, err error, prototype *jwtUnifier, configured *jwtUnifier) {
+			assert: func(t *testing.T, err error, prototype *jwtFinalizer, configured *jwtFinalizer) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -284,7 +284,7 @@ func TestCreateJWTUnifierFromPrototype(t *testing.T) {
 			uc:     "configuration with ttl only provided",
 			id:     "jun3",
 			config: []byte(`ttl: 5s`),
-			assert: func(t *testing.T, err error, prototype *jwtUnifier, configured *jwtUnifier) {
+			assert: func(t *testing.T, err error, prototype *jwtFinalizer, configured *jwtFinalizer) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -302,7 +302,7 @@ func TestCreateJWTUnifierFromPrototype(t *testing.T) {
 		{
 			uc:     "configuration with too short ttl",
 			config: []byte(`ttl: 5ms`),
-			assert: func(t *testing.T, err error, prototype *jwtUnifier, configured *jwtUnifier) {
+			assert: func(t *testing.T, err error, prototype *jwtFinalizer, configured *jwtFinalizer) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -317,7 +317,7 @@ func TestCreateJWTUnifierFromPrototype(t *testing.T) {
 claims:
   '{ "sub": {{ quote .Subject.ID }} }'
 `),
-			assert: func(t *testing.T, err error, prototype *jwtUnifier, configured *jwtUnifier) {
+			assert: func(t *testing.T, err error, prototype *jwtFinalizer, configured *jwtFinalizer) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -345,7 +345,7 @@ ttl: 5s
 claims:
   '{ "sub": {{ quote .Subject.ID }} }'
 `),
-			assert: func(t *testing.T, err error, prototype *jwtUnifier, configured *jwtUnifier) {
+			assert: func(t *testing.T, err error, prototype *jwtFinalizer, configured *jwtFinalizer) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -372,7 +372,7 @@ claims:
 ttl: 5s
 foo: bar
 `),
-			assert: func(t *testing.T, err error, prototype *jwtUnifier, configured *jwtUnifier) {
+			assert: func(t *testing.T, err error, prototype *jwtFinalizer, configured *jwtFinalizer) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -385,29 +385,29 @@ foo: bar
 			conf, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
 
-			prototype, err := newJWTUnifier(tc.id, nil)
+			prototype, err := newJWTFinalizer(tc.id, nil)
 			require.NoError(t, err)
 
 			// WHEN
-			unifier, err := prototype.WithConfig(conf)
+			finalizer, err := prototype.WithConfig(conf)
 
 			// THEN
 			var (
-				jwtUn *jwtUnifier
-				ok    bool
+				jwtFin *jwtFinalizer
+				ok     bool
 			)
 
 			if err == nil {
-				jwtUn, ok = unifier.(*jwtUnifier)
+				jwtFin, ok = finalizer.(*jwtFinalizer)
 				require.True(t, ok)
 			}
 
-			tc.assert(t, err, prototype, jwtUn)
+			tc.assert(t, err, prototype, jwtFin)
 		})
 	}
 }
 
-func TestJWTUnifierExecute(t *testing.T) {
+func TestJWTFinalizerExecute(t *testing.T) {
 	t.Parallel()
 
 	const configuredTTL = 1 * time.Minute
@@ -452,9 +452,9 @@ func TestJWTUnifierExecute(t *testing.T) {
 				ctx.EXPECT().Signer().Return(signer)
 				ctx.EXPECT().AddHeaderForUpstream("Authorization", "Bearer TestToken")
 
-				unifier := jwtUnifier{ttl: defaultJWTTTL}
+				finalizer := jwtFinalizer{ttl: defaultJWTTTL}
 
-				cacheKey := unifier.calculateCacheKey(sub, signer)
+				cacheKey := finalizer.calculateCacheKey(sub, signer)
 				cch.EXPECT().Get(cacheKey).Return("TestToken")
 			},
 			assert: func(t *testing.T, err error) {
@@ -479,8 +479,8 @@ func TestJWTUnifierExecute(t *testing.T) {
 				ctx.EXPECT().Signer().Return(signer)
 				ctx.EXPECT().AddHeaderForUpstream("Authorization", "Bearer barfoo")
 
-				unifier := jwtUnifier{ttl: configuredTTL}
-				cacheKey := unifier.calculateCacheKey(sub, signer)
+				finalizer := jwtFinalizer{ttl: configuredTTL}
+				cacheKey := finalizer.calculateCacheKey(sub, signer)
 
 				cch.EXPECT().Get(cacheKey).Return(time.Second)
 				cch.EXPECT().Delete(cacheKey)
@@ -632,11 +632,11 @@ claims: '{
 			mctx.EXPECT().AppContext().Return(cache.WithContext(context.Background(), cch))
 			configureMocks(t, mctx, signer, cch, tc.subject)
 
-			unifier, err := newJWTUnifier(tc.id, conf)
+			finalizer, err := newJWTFinalizer(tc.id, conf)
 			require.NoError(t, err)
 
 			// WHEN
-			err = unifier.Execute(mctx, tc.subject)
+			err = finalizer.Execute(mctx, tc.subject)
 
 			// THEN
 			tc.assert(t, err)
