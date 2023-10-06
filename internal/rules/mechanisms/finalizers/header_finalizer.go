@@ -71,7 +71,7 @@ func newHeaderFinalizer(id string, rawConfig map[string]any) (*headerFinalizer, 
 
 func (u *headerFinalizer) Execute(ctx heimdall.Context, sub *subject.Subject) error {
 	logger := zerolog.Ctx(ctx.AppContext())
-	logger.Debug().Str("_id", u.id).Msg("Unifying using header finalizer")
+	logger.Debug().Str("_id", u.id).Msg("Finalizing using header finalizer")
 
 	if sub == nil {
 		return errorchain.
