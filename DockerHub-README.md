@@ -25,7 +25,7 @@ rules:
     authenticators:
     - id: anonymous_authenticator
       type: anonymous
-    unifiers:
+    finalizers:
     - id: create_jwt
       type: jwt
 
@@ -35,7 +35,7 @@ rules:
       - POST
     execute:
       - authenticator: anonymous_authenticator
-      - unifier: create_jwt
+      - finalizer: create_jwt
 ```
 
 Start heimdall:
@@ -104,7 +104,7 @@ rules:
       type: deny
     - id: allow_all_requests
       type: allow
-    unifiers:
+    finalizers:
     - id: create_jwt
       type: jwt
       
@@ -115,7 +115,7 @@ rules:
     execute:
       - authenticator: anonymous_authenticator
       - authorizer: deny_all_requests
-      - unifier: create_jwt
+      - finalizer: create_jwt
 
   providers:
     file_system:
