@@ -65,7 +65,7 @@ rules:
     authenticators:
     - id: anonymous_authenticator
       type: anonymous
-    unifiers:
+    finalizers:
     - id: create_jwt
       type: jwt
 
@@ -75,7 +75,7 @@ rules:
       - POST
     execute:
       - authenticator: anonymous_authenticator
-      - unifier: create_jwt
+      - finalizer: create_jwt
 ----
 ====
 
@@ -96,7 +96,7 @@ rules:
             config:
               user: ${INTROSPECT_EP_USER}
               password: ${INTROSPECT_EP_PASSWORD}
-    unifiers:
+    finalizers:
     - id: create_jwt
       type: jwt
 ----

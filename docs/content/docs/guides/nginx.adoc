@@ -53,8 +53,8 @@ location = /_auth {  <4>
 }
 ----
 <1> Configures NGINX to forward every request to the internal `/_auth` endpoint (this is where the actual heimdall integration happens - see below).
-<2> When the response from heimdall returns, this and the next line set the Cookies set by heimdall in the response (whether you need this depends on your link:{{< relref "/docs/configuration/rules/pipeline_mechanisms/contextualizers.adoc" >}}[Contextualizers] and link:{{< relref "/docs/configuration/rules/pipeline_mechanisms/unifiers.adoc" >}}[Unifiers] configuration)
-<3> When the response from heimdall returns, this and the next line set the `Authorization` header set by heimdall in the response (which header to set depends again on your link:{{< relref "/docs/configuration/rules/pipeline_mechanisms/contextualizers.adoc" >}}[Contextualizers] and link:{{< relref "/docs/configuration/rules/pipeline_mechanisms/unifiers.adoc" >}}[Unifiers] configuration)
+<2> When the response from heimdall returns, this and the next line set the Cookies set by heimdall in the response (whether you need this depends on your link:{{< relref "/docs/configuration/rules/pipeline_mechanisms/contextualizers.adoc" >}}[Contextualizers] and link:{{< relref "/docs/configuration/rules/pipeline_mechanisms/Finalizers.adoc" >}}[Finalizers] configuration)
+<3> When the response from heimdall returns, this and the next line set the `Authorization` header set by heimdall in the response (which header to set depends again on your link:{{< relref "/docs/configuration/rules/pipeline_mechanisms/contextualizers.adoc" >}}[Contextualizers] and link:{{< relref "/docs/configuration/rules/pipeline_mechanisms/finalizers.adoc" >}}[Finalizers] configuration)
 <4> This is where the "magic" happens
 <5> Configure NGINX to use the HTTP method used by its client. Without this setting the implementation of `proxy_path` will use the HTTP GET method.
 <6> Configures NGINX to pass the request to heimdall and sets the request path and queries from the original request
@@ -118,7 +118,7 @@ nginx.ingress.kubernetes.io/auth-snippet: | <3>
 ----
 <1> Configures the controller to use heimdall's decision service endpoint with `<heimdall service name>`, `<namespace>` and `<decision port>` depending on your configuration.
 <2> Let NGINX forward the `Authorization` header set by heimdall to the upstream service upon successful response. This configuration depends on
-your link:{{< relref "/docs/configuration/rules/pipeline_mechanisms/contextualizers.adoc" >}}[Contextualizers] and link:{{< relref "/docs/configuration/rules/pipeline_mechanisms/unifiers.adoc" >}}[Unifiers] configuration. If not configured, NGINX will only react on `Set-Cookie` headers in responses from heimdall by default.
+your link:{{< relref "/docs/configuration/rules/pipeline_mechanisms/contextualizers.adoc" >}}[Contextualizers] and link:{{< relref "/docs/configuration/rules/pipeline_mechanisms/finalizers.adoc" >}}[Finalizers] configuration. If not configured, NGINX will only react on `Set-Cookie` headers in responses from heimdall by default.
 <3> Configures the required headers to pass the information about the used HTTP scheme, host and port, request path and used query parameters to be forwarded to heimdall.
 +
 NOTE: Without that, heimdall will not be able extracting relevant information from the NGINX request as it does not support NGINX proprietary `X-Original-Method` and `X-Original-Uri` used by it for the same purposes.

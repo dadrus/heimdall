@@ -76,7 +76,7 @@ Heimdall intercepts all your application related HTTP(s) traffic, allowing a bro
                  |                                                                                   |                    |
                  |+------------------+ +------------------+ +------------------+ +------------------+|                    |
                  || cCCC             | | cCCC             | | cCCC             | | cCCC             ||                    :
-                 || 1. Authenticate  | | 2. Contextualize | | 3. Authorize     | | 4. Unify         ||                    |
+                 || 1. Authenticate  | | 2. Contextualize | | 3. Authorize     | | 4. Finalize      ||                    |
                  ||                  | |                  | |                  | |                  ||   +------------------+
                  |+------------------+ +------------------+ +------------------+ +------------------+|   |  Backend Service |
                  |                                                                                   |   |                  |
