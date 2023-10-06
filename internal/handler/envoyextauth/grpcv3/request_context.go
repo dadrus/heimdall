@@ -123,11 +123,11 @@ func (s *RequestContext) AddCookieForUpstream(name, value string) { s.upstreamCo
 func (s *RequestContext) Signer() heimdall.JWTSigner              { return s.jwtSigner }
 
 func (s *RequestContext) Finalize() (*envoy_auth.CheckResponse, error) {
-	zerolog.Ctx(s.ctx).Debug().Msg("Finalizing request")
-
 	if s.err != nil {
 		return nil, s.err
 	}
+
+	zerolog.Ctx(s.ctx).Debug().Msg("Creating response")
 
 	headers := make([]*envoy_core.HeaderValueOption,
 		len(s.upstreamHeaders)+x.IfThenElse(len(s.upstreamCookies) == 0, 0, 1))
