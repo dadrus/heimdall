@@ -148,7 +148,7 @@ rules:
             url: http://profile
             headers:
               foo: bar
-    unifiers:
+    finalizers:
       - id: jwt
         type: jwt
         config:
@@ -186,7 +186,7 @@ rules:
       - POST
     execute:
       - authenticator: anonymous_authenticator
-      - unifier: jwt
+      - finalizer: jwt
     on_error:
       - error_handler: authenticate_with_kratos
 
