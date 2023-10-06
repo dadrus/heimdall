@@ -210,8 +210,8 @@ X-Forwarded-For: 172.22.0.1
 
 What did you actually do? ;)
 
-* You've created a very simple configuration with a default rule, with preconfigured defaults. The used authenticator instructs heimdall to create an anonymous subject for every request on every URL for the HTTP methods GET and POST. The default authenticator rejects any request and the default unifier creates a JWT from the subject mentioned above.
-* You've created a very simple rule, which reuses the default authenticator and unifier and configures an authorizer, which allows any request to pass through.
+* You've created a very simple configuration with a default rule, with preconfigured defaults. The used authenticator instructs heimdall to create an anonymous subject for every request on every URL for the HTTP methods GET and POST. The default authenticator rejects any request and the default finalizer creates a JWT from the subject mentioned above.
+* You've created a very simple rule, which reuses the default authenticator and finalizer and configures an authorizer, which allows any request to pass through.
 * You've created and started a docker compose environment with heimdall operated in proxy mode and a "upstream" service, which responds with everything it receives.
 * And sent an HTTP GET request to an imaginary `foobar` endpoint. 
 * Heimdall run the request through its pipeline and forwarded the enriched (`Authorization` header) request to the "upstream" service, which just returned all it has received to the caller. 
