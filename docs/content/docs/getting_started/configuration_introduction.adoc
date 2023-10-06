@@ -167,7 +167,7 @@ The corresponding environment variables would be
 [source,bash]
 ----
 HEIMDALLCFG_RULES_MECHANISMS_AUTHENTICATORS_0_ID=anonymous_authenticator
-HEIMDALLCFG_RULES_MECHANISMS__AUTHENTICATORS_0_TYPE=anonymous
+HEIMDALLCFG_RULES_MECHANISMS_AUTHENTICATORS_0_TYPE=anonymous
 ----
 
 * If a name of a property has `\_` it must be escaped with an additional `_`.
