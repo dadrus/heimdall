@@ -122,9 +122,6 @@ tracing:
 
 metrics:
   enabled: true
-  host: 0.0.0.0
-  port: 9000
-  metrics_path: /metrics
 
 profiling:
   enabled: false
