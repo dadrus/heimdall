@@ -19,7 +19,7 @@ package httpendpoint
 import (
 	"github.com/mitchellh/mapstructure"
 
-	"github.com/dadrus/heimdall/internal/endpoint"
+	"github.com/dadrus/heimdall/internal/rules/endpoint"
 )
 
 func decodeConfig(input any, output any) error {
