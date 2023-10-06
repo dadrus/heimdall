@@ -19,7 +19,7 @@ package authorizers
 import (
 	"github.com/mitchellh/mapstructure"
 
-	"github.com/dadrus/heimdall/internal/endpoint"
+	"github.com/dadrus/heimdall/internal/rules/endpoint"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
 )
 
