@@ -101,7 +101,7 @@ Defines how long the JWT should be valid. Defaults to 5 minutes. Heimdall sets t
 +
 Defines the `name` and `scheme` to be used for the header. Defaults to `Authorization` with scheme `Bearer`. If defined, the `name` property must be set. If `scheme` is not defined, no scheme will be prepended to the resulting JWT.
 
-The generated JWT is always cached until 5 seconds before its expiration. The cache key is calculated from the entire configuration of the finalizer instance and the available information about the current subject and request.
+The generated JWT is always cached until 5 seconds before its expiration. The cache key is calculated from the entire configuration of the finalizer instance and the available information about the current subject.
 
 .JWT finalizer configuration
 ====

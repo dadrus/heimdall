@@ -193,4 +193,4 @@ Heimdall gets the rule sets from link:{{< relref "/docs/configuration/rules/prov
 
 In all cases, a single rule definition adheres to the schema defined in link:{{< relref "/docs/configuration/rules/configuration.adoc" >}}[rule configuration].
 
-NOTE: Usage of environment variables is not possible with, respectively in rule sets.
+NOTE: Usage of environment variables in rule sets depend on the used provider.
