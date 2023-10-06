@@ -14,7 +14,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package unifiers
+package finalizers
 
 import (
 	"errors"
@@ -24,27 +24,27 @@ import (
 )
 
 var (
-	ErrUnsupportedUnifierType = errors.New("unifier type unsupported")
+	ErrUnsupportedType = errors.New("finalizer type unsupported")
 
 	// by intention. Used only during application bootstrap.
-	typeFactories   []UnifierTypeFactory //nolint:gochecknoglobals
-	typeFactoriesMu sync.RWMutex         //nolint:gochecknoglobals
+	typeFactories   []TypeFactory //nolint:gochecknoglobals
+	typeFactoriesMu sync.RWMutex  //nolint:gochecknoglobals
 )
 
-type UnifierTypeFactory func(id string, typ string, c map[string]any) (bool, Unifier, error)
+type TypeFactory func(id string, typ string, c map[string]any) (bool, Finalizer, error)
 
-func registerUnifierTypeFactory(factory UnifierTypeFactory) {
+func registerTypeFactory(factory TypeFactory) {
 	typeFactoriesMu.Lock()
 	defer typeFactoriesMu.Unlock()
 
 	if factory == nil {
-		panic("RegisterUnifierType factory is nil")
+		panic("finalizer type factory is nil")
 	}
 
 	typeFactories = append(typeFactories, factory)
 }
 
-func CreateUnifierPrototype(id string, typ string, mConfig map[string]any) (Unifier, error) {
+func CreatePrototype(id string, typ string, mConfig map[string]any) (Finalizer, error) {
 	typeFactoriesMu.RLock()
 	defer typeFactoriesMu.RUnlock()
 
@@ -54,5 +54,5 @@ func CreateUnifierPrototype(id string, typ string, mConfig map[string]any) (Unif
 		}
 	}
 
-	return nil, errorchain.NewWithMessagef(ErrUnsupportedUnifierType, "'%s'", typ)
+	return nil, errorchain.NewWithMessagef(ErrUnsupportedType, "'%s'", typ)
 }

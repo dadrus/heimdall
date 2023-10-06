@@ -14,7 +14,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package unifiers
+package finalizers
 
 import (
 	"context"
@@ -26,38 +26,38 @@ import (
 	"github.com/dadrus/heimdall/internal/heimdall/mocks"
 )
 
-func TestNoopUnifierExecution(t *testing.T) {
+func TestNoopFinalizerExecution(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
 	ctx := mocks.NewContextMock(t)
 	ctx.EXPECT().AppContext().Return(context.Background())
 
-	unifier := newNoopUnifier("foo")
+	finalizer := newNoopFinalizer("foo")
 
 	// WHEN
-	err := unifier.Execute(ctx, nil)
+	err := finalizer.Execute(ctx, nil)
 
 	// THEN
 	require.NoError(t, err)
-	assert.Equal(t, "foo", unifier.ID())
-	assert.False(t, unifier.ContinueOnError())
+	assert.Equal(t, "foo", finalizer.ID())
+	assert.False(t, finalizer.ContinueOnError())
 }
 
-func TestCreateNoopUnifierFromPrototype(t *testing.T) {
+func TestCreateNoopFinalizerFromPrototype(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
-	prototype := newNoopUnifier("baz")
+	prototype := newNoopFinalizer("baz")
 
 	// WHEN
-	un1, err1 := prototype.WithConfig(nil)
-	un2, err2 := prototype.WithConfig(map[string]any{"foo": "bar"})
+	fin1, err1 := prototype.WithConfig(nil)
+	fin2, err2 := prototype.WithConfig(map[string]any{"foo": "bar"})
 
 	// THEN
 	assert.NoError(t, err1)
-	assert.Equal(t, prototype, un1)
+	assert.Equal(t, prototype, fin1)
 
 	assert.NoError(t, err2)
-	assert.Equal(t, prototype, un2)
+	assert.Equal(t, prototype, fin2)
 }

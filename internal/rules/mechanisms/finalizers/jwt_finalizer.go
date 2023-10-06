@@ -14,7 +14,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package unifiers
+package finalizers
 
 import (
 	"crypto/sha256"
@@ -45,19 +45,19 @@ const (
 //
 //nolint:gochecknoinits
 func init() {
-	registerUnifierTypeFactory(
-		func(id string, typ string, conf map[string]any) (bool, Unifier, error) {
-			if typ != UnifierJwt {
+	registerTypeFactory(
+		func(id string, typ string, conf map[string]any) (bool, Finalizer, error) {
+			if typ != FinalizerJwt {
 				return false, nil, nil
 			}
 
-			unifier, err := newJWTUnifier(id, conf)
+			finalizer, err := newJWTFinalizer(id, conf)
 
-			return true, unifier, err
+			return true, finalizer, err
 		})
 }
 
-type jwtUnifier struct {
+type jwtFinalizer struct {
 	id           string
 	claims       template.Template
 	ttl          time.Duration
@@ -65,7 +65,7 @@ type jwtUnifier struct {
 	headerScheme string
 }
 
-func newJWTUnifier(id string, rawConfig map[string]any) (*jwtUnifier, error) {
+func newJWTFinalizer(id string, rawConfig map[string]any) (*jwtFinalizer, error) {
 	type HeaderConfig struct {
 		Name   string `mapstructure:"name"`
 		Scheme string `mapstructure:"scheme"`
@@ -80,7 +80,7 @@ func newJWTUnifier(id string, rawConfig map[string]any) (*jwtUnifier, error) {
 	var conf Config
 	if err := decodeConfig(rawConfig, &conf); err != nil {
 		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration, "failed to unmarshal JWT unifier config").
+			NewWithMessage(heimdall.ErrConfiguration, "failed to unmarshal JWT finalizer config").
 			CausedBy(err)
 	}
 
@@ -94,7 +94,7 @@ func newJWTUnifier(id string, rawConfig map[string]any) (*jwtUnifier, error) {
 			NewWithMessage(heimdall.ErrConfiguration, "configured JWT header name is an empty string")
 	}
 
-	return &jwtUnifier{
+	return &jwtFinalizer{
 		id:     id,
 		claims: conf.Claims,
 		ttl: x.IfThenElseExec(conf.TTL != nil,
@@ -109,13 +109,13 @@ func newJWTUnifier(id string, rawConfig map[string]any) (*jwtUnifier, error) {
 	}, nil
 }
 
-func (u *jwtUnifier) Execute(ctx heimdall.Context, sub *subject.Subject) error {
+func (u *jwtFinalizer) Execute(ctx heimdall.Context, sub *subject.Subject) error {
 	logger := zerolog.Ctx(ctx.AppContext())
-	logger.Debug().Str("_id", u.id).Msg("Unifying using JWT unifier")
+	logger.Debug().Str("_id", u.id).Msg("Finalizing using JWT finalizer")
 
 	if sub == nil {
 		return errorchain.
-			NewWithMessage(heimdall.ErrInternal, "failed to execute jwt unifier due to 'nil' subject").
+			NewWithMessage(heimdall.ErrInternal, "failed to execute jwt finalizer due to 'nil' subject").
 			WithErrorContext(u)
 	}
 
@@ -158,7 +158,7 @@ func (u *jwtUnifier) Execute(ctx heimdall.Context, sub *subject.Subject) error {
 	return nil
 }
 
-func (u *jwtUnifier) WithConfig(rawConfig map[string]any) (Unifier, error) {
+func (u *jwtFinalizer) WithConfig(rawConfig map[string]any) (Finalizer, error) {
 	if len(rawConfig) == 0 {
 		return u, nil
 	}
@@ -171,7 +171,7 @@ func (u *jwtUnifier) WithConfig(rawConfig map[string]any) (Unifier, error) {
 	var conf Config
 	if err := decodeConfig(rawConfig, &conf); err != nil {
 		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration, "failed to unmarshal JWT unifier config").
+			NewWithMessage(heimdall.ErrConfiguration, "failed to unmarshal JWT finalizer config").
 			CausedBy(err)
 	}
 
@@ -180,7 +180,7 @@ func (u *jwtUnifier) WithConfig(rawConfig map[string]any) (Unifier, error) {
 			NewWithMessage(heimdall.ErrConfiguration, "configured JWT ttl is less than one second")
 	}
 
-	return &jwtUnifier{
+	return &jwtFinalizer{
 		id:     u.id,
 		claims: x.IfThenElse(conf.Claims != nil, conf.Claims, u.claims),
 		ttl: x.IfThenElseExec(conf.TTL != nil,
@@ -191,11 +191,11 @@ func (u *jwtUnifier) WithConfig(rawConfig map[string]any) (Unifier, error) {
 	}, nil
 }
 
-func (u *jwtUnifier) ID() string { return u.id }
+func (u *jwtFinalizer) ID() string { return u.id }
 
-func (u *jwtUnifier) ContinueOnError() bool { return false }
+func (u *jwtFinalizer) ContinueOnError() bool { return false }
 
-func (u *jwtUnifier) generateToken(ctx heimdall.Context, sub *subject.Subject) (string, error) {
+func (u *jwtFinalizer) generateToken(ctx heimdall.Context, sub *subject.Subject) (string, error) {
 	iss := ctx.Signer()
 
 	claims := map[string]any{}
@@ -230,7 +230,7 @@ func (u *jwtUnifier) generateToken(ctx heimdall.Context, sub *subject.Subject) (
 	return token, nil
 }
 
-func (u *jwtUnifier) calculateCacheKey(sub *subject.Subject, iss heimdall.JWTSigner) string {
+func (u *jwtFinalizer) calculateCacheKey(sub *subject.Subject, iss heimdall.JWTSigner) string {
 	const int64BytesCount = 8
 
 	ttlBytes := make([]byte, int64BytesCount)

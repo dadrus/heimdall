@@ -24,13 +24,13 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/authorizers"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/contextualizers"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/errorhandlers"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/unifiers"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/finalizers"
 )
 
 var (
 	ErrAuthenticatorCreation  = errors.New("failed to create authenticator")
 	ErrAuthorizerCreation     = errors.New("failed to create authorizer")
-	ErrUnifierCreation        = errors.New("failed to create unifier")
+	ErrFinalizerCreation      = errors.New("failed to create finalizer")
 	ErrContextualizerCreation = errors.New("failed to create contextualizer")
 	ErrErrorHandlerCreation   = errors.New("failed to create error handler")
 )
@@ -41,6 +41,6 @@ type Factory interface {
 	CreateAuthenticator(version, id string, conf config.MechanismConfig) (authenticators.Authenticator, error)
 	CreateAuthorizer(version, id string, conf config.MechanismConfig) (authorizers.Authorizer, error)
 	CreateContextualizer(version, id string, conf config.MechanismConfig) (contextualizers.Contextualizer, error)
-	CreateUnifier(version, id string, conf config.MechanismConfig) (unifiers.Unifier, error)
+	CreateFinalizer(version, id string, conf config.MechanismConfig) (finalizers.Finalizer, error)
 	CreateErrorHandler(version, id string, conf config.MechanismConfig) (errorhandlers.ErrorHandler, error)
 }

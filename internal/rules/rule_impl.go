@@ -39,7 +39,7 @@ type ruleImpl struct {
 	hash       []byte
 	sc         compositeSubjectCreator
 	sh         compositeSubjectHandler
-	un         compositeSubjectHandler
+	fi         compositeSubjectHandler
 	eh         compositeErrorHandler
 }
 
@@ -67,8 +67,8 @@ func (r *ruleImpl) Execute(ctx heimdall.Context) (rule.Backend, error) {
 		return nil, err
 	}
 
-	// unifiers
-	if err = r.un.Execute(ctx, sub); err != nil {
+	// finalizers
+	if err = r.fi.Execute(ctx, sub); err != nil {
 		_, err := r.eh.Execute(ctx, err)
 
 		return nil, err

@@ -14,7 +14,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package unifiers
+package finalizers
 
 import (
 	"github.com/rs/zerolog"
@@ -29,24 +29,24 @@ import (
 //
 //nolint:gochecknoinits
 func init() {
-	registerUnifierTypeFactory(
-		func(id string, typ string, conf map[string]any) (bool, Unifier, error) {
-			if typ != UnifierHeader {
+	registerTypeFactory(
+		func(id string, typ string, conf map[string]any) (bool, Finalizer, error) {
+			if typ != FinalizerHeader {
 				return false, nil, nil
 			}
 
-			unifier, err := newHeaderUnifier(id, conf)
+			finalizer, err := newHeaderFinalizer(id, conf)
 
-			return true, unifier, err
+			return true, finalizer, err
 		})
 }
 
-type headerUnifier struct {
+type headerFinalizer struct {
 	id      string
 	headers map[string]template.Template
 }
 
-func newHeaderUnifier(id string, rawConfig map[string]any) (*headerUnifier, error) {
+func newHeaderFinalizer(id string, rawConfig map[string]any) (*headerFinalizer, error) {
 	type Config struct {
 		Headers map[string]template.Template `mapstructure:"headers"`
 	}
@@ -54,7 +54,7 @@ func newHeaderUnifier(id string, rawConfig map[string]any) (*headerUnifier, erro
 	var conf Config
 	if err := decodeConfig(rawConfig, &conf); err != nil {
 		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration, "failed to unmarshal header unifier config").
+			NewWithMessage(heimdall.ErrConfiguration, "failed to unmarshal header finalizer config").
 			CausedBy(err)
 	}
 
@@ -63,19 +63,19 @@ func newHeaderUnifier(id string, rawConfig map[string]any) (*headerUnifier, erro
 			NewWithMessage(heimdall.ErrConfiguration, "no headers definitions provided")
 	}
 
-	return &headerUnifier{
+	return &headerFinalizer{
 		id:      id,
 		headers: conf.Headers,
 	}, nil
 }
 
-func (u *headerUnifier) Execute(ctx heimdall.Context, sub *subject.Subject) error {
+func (u *headerFinalizer) Execute(ctx heimdall.Context, sub *subject.Subject) error {
 	logger := zerolog.Ctx(ctx.AppContext())
-	logger.Debug().Str("_id", u.id).Msg("Unifying using header unifier")
+	logger.Debug().Str("_id", u.id).Msg("Unifying using header finalizer")
 
 	if sub == nil {
 		return errorchain.
-			NewWithMessage(heimdall.ErrInternal, "failed to execute header unifier due to 'nil' subject").
+			NewWithMessage(heimdall.ErrInternal, "failed to execute header finalizer due to 'nil' subject").
 			WithErrorContext(u)
 	}
 
@@ -97,14 +97,14 @@ func (u *headerUnifier) Execute(ctx heimdall.Context, sub *subject.Subject) erro
 	return nil
 }
 
-func (u *headerUnifier) WithConfig(config map[string]any) (Unifier, error) {
+func (u *headerFinalizer) WithConfig(config map[string]any) (Finalizer, error) {
 	if len(config) == 0 {
 		return u, nil
 	}
 
-	return newHeaderUnifier(u.id, config)
+	return newHeaderFinalizer(u.id, config)
 }
 
-func (u *headerUnifier) ID() string { return u.id }
+func (u *headerFinalizer) ID() string { return u.id }
 
-func (u *headerUnifier) ContinueOnError() bool { return false }
+func (u *headerFinalizer) ContinueOnError() bool { return false }

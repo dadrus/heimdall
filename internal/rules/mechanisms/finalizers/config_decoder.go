@@ -14,18 +14,27 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package unifiers
+package finalizers
 
 import (
-	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
+	"github.com/mitchellh/mapstructure"
+
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
 )
 
-//go:generate mockery --name Unifier --structname UnifierMock
+func decodeConfig(input any, output any) error {
+	dec, err := mapstructure.NewDecoder(
+		&mapstructure.DecoderConfig{
+			DecodeHook: mapstructure.ComposeDecodeHookFunc(
+				mapstructure.StringToTimeDurationHookFunc(),
+				template.DecodeTemplateHookFunc(),
+			),
+			Result:      output,
+			ErrorUnused: true,
+		})
+	if err != nil {
+		return err
+	}
 
-type Unifier interface {
-	ID() string
-	Execute(ctx heimdall.Context, sub *subject.Subject) error
-	WithConfig(config map[string]any) (Unifier, error)
-	ContinueOnError() bool
+	return dec.Decode(input)
 }

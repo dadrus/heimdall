@@ -14,11 +14,11 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package unifiers
+package finalizers
 
 const (
-	UnifierNoop   = "noop"
-	UnifierJwt    = "jwt"
-	UnifierHeader = "header"
-	UnifierCookie = "cookie"
+	FinalizerNoop   = "noop"
+	FinalizerJwt    = "jwt"
+	FinalizerHeader = "header"
+	FinalizerCookie = "cookie"
 )

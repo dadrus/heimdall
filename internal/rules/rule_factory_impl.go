@@ -73,33 +73,33 @@ func (f *ruleFactory) createExecutePipeline(
 	var (
 		authenticators  compositeSubjectCreator
 		subjectHandlers compositeSubjectHandler
-		unifiers        compositeSubjectHandler
+		finalizers      compositeSubjectHandler
 	)
 
 	contextualizersCheck := func() error {
-		if len(unifiers) != 0 {
+		if len(finalizers) != 0 {
 			return errorchain.NewWithMessage(heimdall.ErrConfiguration,
-				"at least one unifier is defined before a contextualizer")
+				"at least one finalizer is defined before a contextualizer")
 		}
 
 		return nil
 	}
 
 	authorizersCheck := func() error {
-		if len(unifiers) != 0 {
+		if len(finalizers) != 0 {
 			return errorchain.NewWithMessage(heimdall.ErrConfiguration,
-				"at least one unifier is defined before an authorizer")
+				"at least one finalizer is defined before an authorizer")
 		}
 
 		return nil
 	}
 
-	unifiersCheck := func() error { return nil }
+	finalizersCheck := func() error { return nil }
 
 	for _, pipelineStep := range pipeline {
 		id, found := pipelineStep["authenticator"]
 		if found {
-			if len(subjectHandlers) != 0 || len(unifiers) != 0 {
+			if len(subjectHandlers) != 0 || len(finalizers) != 0 {
 				return nil, nil, nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
 					"an authenticator is defined after some other non authenticator type")
 			}
@@ -134,12 +134,12 @@ func (f *ruleFactory) createExecutePipeline(
 			continue
 		}
 
-		handler, err = createHandler(version, "unifier", pipelineStep, unifiersCheck,
-			f.hf.CreateUnifier)
+		handler, err = createHandler(version, "finalizer", pipelineStep, finalizersCheck,
+			f.hf.CreateFinalizer)
 		if err != nil && !errors.Is(err, errHandlerNotFound) {
 			return nil, nil, nil, err
 		} else if handler != nil {
-			unifiers = append(unifiers, handler)
+			finalizers = append(finalizers, handler)
 
 			continue
 		}
@@ -148,7 +148,7 @@ func (f *ruleFactory) createExecutePipeline(
 			"unsupported configuration in execute")
 	}
 
-	return authenticators, subjectHandlers, unifiers, nil
+	return authenticators, subjectHandlers, finalizers, nil
 }
 
 func (f *ruleFactory) DefaultRule() rule.Rule { return f.defaultRule }
@@ -177,7 +177,7 @@ func (f *ruleFactory) CreateRule(version, srcID string, ruleConfig config2.Rule)
 			ruleConfig.RuleMatcher.Strategy, ruleConfig.ID, srcID).CausedBy(err)
 	}
 
-	authenticators, subHandlers, unifiers, err := f.createExecutePipeline(version, ruleConfig.Execute)
+	authenticators, subHandlers, finalizers, err := f.createExecutePipeline(version, ruleConfig.Execute)
 	if err != nil {
 		return nil, err
 	}
@@ -196,7 +196,7 @@ func (f *ruleFactory) CreateRule(version, srcID string, ruleConfig config2.Rule)
 	if f.defaultRule != nil {
 		authenticators = x.IfThenElse(len(authenticators) != 0, authenticators, f.defaultRule.sc)
 		subHandlers = x.IfThenElse(len(subHandlers) != 0, subHandlers, f.defaultRule.sh)
-		unifiers = x.IfThenElse(len(unifiers) != 0, unifiers, f.defaultRule.un)
+		finalizers = x.IfThenElse(len(finalizers) != 0, finalizers, f.defaultRule.fi)
 		errorHandlers = x.IfThenElse(len(errorHandlers) != 0, errorHandlers, f.defaultRule.eh)
 		methods = x.IfThenElse(len(methods) != 0, methods, f.defaultRule.methods)
 	}
@@ -206,9 +206,9 @@ func (f *ruleFactory) CreateRule(version, srcID string, ruleConfig config2.Rule)
 			"no authenticator defined for rule ID=%s from %s", ruleConfig.ID, srcID)
 	}
 
-	if len(unifiers) == 0 {
+	if len(finalizers) == 0 {
 		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
-			"no unifier defined for rule ID=%s from %s", ruleConfig.ID, srcID)
+			"no finalizer defined for rule ID=%s from %s", ruleConfig.ID, srcID)
 	}
 
 	if len(methods) == 0 {
@@ -232,7 +232,7 @@ func (f *ruleFactory) CreateRule(version, srcID string, ruleConfig config2.Rule)
 		hash:       hash,
 		sc:         authenticators,
 		sh:         subHandlers,
-		un:         unifiers,
+		fi:         finalizers,
 		eh:         errorHandlers,
 	}, nil
 }
@@ -313,7 +313,7 @@ func (f *ruleFactory) initWithDefaultRule(ruleConfig *config.DefaultRule, logger
 
 	logger.Debug().Msg("Loading default rule")
 
-	authenticators, subHandlers, unifiers, err := f.createExecutePipeline(
+	authenticators, subHandlers, finalizers, err := f.createExecutePipeline(
 		config2.CurrentRuleSetVersion,
 		ruleConfig.Execute,
 	)
@@ -333,8 +333,8 @@ func (f *ruleFactory) initWithDefaultRule(ruleConfig *config.DefaultRule, logger
 		return errorchain.NewWithMessage(heimdall.ErrConfiguration, "no authenticator defined for default rule")
 	}
 
-	if len(unifiers) == 0 {
-		return errorchain.NewWithMessagef(heimdall.ErrConfiguration, "no unifier defined for default rule")
+	if len(finalizers) == 0 {
+		return errorchain.NewWithMessagef(heimdall.ErrConfiguration, "no finalizer defined for default rule")
 	}
 
 	methods, err := expandHTTPMethods(ruleConfig.Methods)
@@ -354,7 +354,7 @@ func (f *ruleFactory) initWithDefaultRule(ruleConfig *config.DefaultRule, logger
 		isDefault: true,
 		sc:        authenticators,
 		sh:        subHandlers,
-		un:        unifiers,
+		fi:        finalizers,
 		eh:        errorHandlers,
 	}
 
