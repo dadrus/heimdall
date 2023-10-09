@@ -329,7 +329,7 @@ header:
 				assert.Equal(t, "Authorization", prototype.headerName)
 				assert.Equal(t, "X-Foo-Bar", configured.headerName)
 				assert.Equal(t, "Bearer", prototype.headerScheme)
-				assert.Equal(t, prototype.headerScheme, configured.headerScheme)
+				assert.Empty(t, configured.headerScheme)
 				assert.Empty(t, prototype.scopes)
 				assert.Equal(t, prototype.scopes, configured.scopes)
 			},
@@ -555,7 +555,7 @@ func TestClientCredentialsFinalizerExecute(t *testing.T) {
 			finalizer: &oauth2ClientCredentialsFinalizer{
 				id:           "test",
 				headerName:   "Authorization",
-				headerScheme: "Bearer",
+				headerScheme: "Bar",
 				tokenURL:     srv.URL,
 				clientID:     "bar",
 				clientSecret: "foo",
@@ -572,9 +572,9 @@ func TestClientCredentialsFinalizerExecute(t *testing.T) {
 						TokenType:   "Foo",
 						ExpiresIn:   &expIn,
 					},
-					5*time.Minute-10*time.Second,
+					5*time.Minute-5*time.Second,
 				).Return()
-				ctx.EXPECT().AddHeaderForUpstream("Authorization", "Bearer barfoo").Return()
+				ctx.EXPECT().AddHeaderForUpstream("Authorization", "Bar barfoo").Return()
 			},
 			assertRequest: func(t *testing.T, req *http.Request) {
 				t.Helper()
@@ -741,7 +741,7 @@ func TestClientCredentialsFinalizerExecute(t *testing.T) {
 				clientID:     "bar",
 				clientSecret: "foo",
 				ttl: func() *time.Duration {
-					ttl := -1 * time.Minute
+					ttl := 0 * time.Second
 
 					return &ttl
 				}(),
