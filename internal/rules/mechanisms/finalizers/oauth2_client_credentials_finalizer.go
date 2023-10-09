@@ -87,14 +87,13 @@ func newOAuth2ClientCredentialsFinalizer(
 
 	var conf Config
 	if err := decodeConfig(rawConfig, &conf); err != nil {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration, "failed to unmarshal Client Credentials finalizer config").
-			CausedBy(err)
+		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
+			"failed to unmarshal oauth2_client_credentials finalizer config").CausedBy(err)
 	}
 
 	if err := newValidator().Struct(conf); err != nil {
 		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
-			"failed validating Client Credentials finalizer config").CausedBy(err)
+			"failed validating oauth2_client_credentials finalizer config").CausedBy(err)
 	}
 
 	return &oauth2ClientCredentialsFinalizer{
@@ -118,8 +117,8 @@ func (f *oauth2ClientCredentialsFinalizer) ID() string            { return f.id 
 
 func (f *oauth2ClientCredentialsFinalizer) WithConfig(rawConfig map[string]any) (Finalizer, error) {
 	type HeaderConfig struct {
-		Name   string  `mapstructure:"name"   validate:"required"`
-		Scheme *string `mapstructure:"scheme"`
+		Name   string `mapstructure:"name"   validate:"required"`
+		Scheme string `mapstructure:"scheme"`
 	}
 
 	type Config struct {
@@ -130,14 +129,13 @@ func (f *oauth2ClientCredentialsFinalizer) WithConfig(rawConfig map[string]any) 
 
 	var conf Config
 	if err := decodeConfig(rawConfig, &conf); err != nil {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration, "failed to unmarshal Client Credentials finalizer config").
-			CausedBy(err)
+		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
+			"failed to unmarshal oauth2_client_credentials finalizer config").CausedBy(err)
 	}
 
 	if err := newValidator().Struct(conf); err != nil {
 		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
-			"failed validating Client Credentials finalizer config").CausedBy(err)
+			"failed validating oauth2_client_credentials finalizer config").CausedBy(err)
 	}
 
 	return &oauth2ClientCredentialsFinalizer{
@@ -150,15 +148,15 @@ func (f *oauth2ClientCredentialsFinalizer) WithConfig(rawConfig map[string]any) 
 		headerName: x.IfThenElseExec(conf.Header != nil,
 			func() string { return conf.Header.Name },
 			func() string { return f.headerName }),
-		headerScheme: x.IfThenElseExec(conf.Header != nil && conf.Header.Scheme != nil,
-			func() string { return *conf.Header.Scheme },
+		headerScheme: x.IfThenElseExec(conf.Header != nil,
+			func() string { return conf.Header.Scheme },
 			func() string { return f.headerScheme }),
 	}, nil
 }
 
 func (f *oauth2ClientCredentialsFinalizer) Execute(ctx heimdall.Context, _ *subject.Subject) error {
 	logger := zerolog.Ctx(ctx.AppContext())
-	logger.Debug().Msg("Finalizing using client_credentials finalizer")
+	logger.Debug().Msg("Finalizing using oauth2_client_credentials finalizer")
 
 	cch := cache.Ctx(ctx.AppContext())
 
@@ -260,7 +258,7 @@ func (f *oauth2ClientCredentialsFinalizer) getAccessToken(ctx context.Context) (
 func (f *oauth2ClientCredentialsFinalizer) getCacheTTL(resp *tokenEndpointResponse) time.Duration {
 	// timeLeeway defines the default time deviation to ensure the token is still valid
 	// when used from cache
-	const timeLeeway = 10
+	const timeLeeway = 5
 
 	if !f.isCacheEnabled() {
 		return 0
