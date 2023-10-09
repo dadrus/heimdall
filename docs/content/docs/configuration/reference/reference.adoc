@@ -300,6 +300,14 @@ rules:
       config:
         cookies:
           foo-bar: '{{ .Subject.ID }}'
+    - id: oauth2_client_credentials
+      type: get_token
+      config:
+        header:
+          name: X-Token
+        token_url: https://my-oauth-provider.com/token
+        client_id: my_client
+        client_secret: VerySecret!
 
     error_handlers:
     - id: default

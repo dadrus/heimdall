@@ -9,7 +9,7 @@ menu:
     parent: "Pipeline Mechanisms"
 ---
 
-Finalizers, as the name implies, finalize the successful execution of the pipeline and make the available information about the link:{{< relref "overview.adoc#_subject" >}}[`Subject`] and the link:{{< relref "overview.adoc#_request" >}}[`Request`] to the upstream service in a format expected, respectively required by it. This ranges from adding a simple header to a structured JWT in a specific header.
+Finalizers, as the name implies, finalize the successful execution of the pipeline and usually make the available information about the link:{{< relref "overview.adoc#_subject" >}}[`Subject`] and the link:{{< relref "overview.adoc#_request" >}}[`Request`] to the upstream service in a format expected, respectively required by it. The available options range from adding a simple header over a structured JWT in a specific header, to driving specific protocols, e.g. to obtain a token required by the upstream service.
 
 == Finalizer Types
 
@@ -125,7 +125,7 @@ config:
 
 === OAuth2 Client Credentials
 
-This finalizer drives the OAuth2 client credentials flow to obtain a token, which should be used for communication with the upstream service. By default, the obtained token into a token is made available to your upstream service in the HTTP `Authorization` header with `Bearer` scheme set. Unlike the other finalizers, it does not have access to any objects created by the rule execution pipeline.
+This finalizer drives the OAuth2 client credentials flow to obtain a token, which should be used for communication with the upstream service. By default, as long as not otherwise configured (see configuration options below), the obtained token is made available to your upstream service in the HTTP `Authorization` header with `Bearer` scheme set. Unlike the other finalizers, it does not have access to any objects created by the rule execution pipeline.
 
 NOTE: To enable the usage of this finalizer, you have to set the `type` property to `oauth2_client_credentials`.
 
