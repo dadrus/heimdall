@@ -3,6 +3,7 @@ package finalizers
 import (
 	"context"
 	"crypto/sha256"
+	"encoding/binary"
 	"encoding/hex"
 	"fmt"
 	"net/http"
@@ -202,11 +203,22 @@ func (f *oauth2ClientCredentialsFinalizer) Execute(ctx heimdall.Context, _ *subj
 }
 
 func (f *oauth2ClientCredentialsFinalizer) calculateCacheKey() string {
+	const int64BytesCount = 8
+
+	ttlBytes := make([]byte, int64BytesCount)
+	if f.ttl != nil {
+		binary.LittleEndian.PutUint64(ttlBytes, uint64(*f.ttl))
+	} else {
+		binary.LittleEndian.PutUint64(ttlBytes, 0)
+	}
+
 	digest := sha256.New()
+	digest.Write(stringx.ToBytes(FinalizerOAuth2ClientCredentials))
 	digest.Write(stringx.ToBytes(f.clientID))
 	digest.Write(stringx.ToBytes(f.clientSecret))
 	digest.Write(stringx.ToBytes(f.tokenURL))
 	digest.Write(stringx.ToBytes(strings.Join(f.scopes, "")))
+	digest.Write(ttlBytes)
 
 	return hex.EncodeToString(digest.Sum(nil))
 }
