@@ -21,5 +21,5 @@ const (
 	FinalizerJwt                     = "jwt"
 	FinalizerHeader                  = "header"
 	FinalizerCookie                  = "cookie"
-	FinalizerOAuth2ClientCredentials = "oauth2_client_credentials"
+	FinalizerOAuth2ClientCredentials = "oauth2_client_credentials" // nolint: gosec
 )

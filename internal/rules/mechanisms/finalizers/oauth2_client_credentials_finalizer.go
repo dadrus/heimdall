@@ -43,7 +43,7 @@ func init() {
 func newValidator() *validator.Validate {
 	validate := validator.New(validator.WithRequiredStructEnabled())
 	validate.RegisterTagNameFunc(func(fld reflect.StructField) string {
-		return strings.SplitN(fld.Tag.Get("mapstructure"), ",", 2)[0]
+		return strings.SplitN(fld.Tag.Get("mapstructure"), ",", 2)[0] // nolint: gomnd
 	})
 
 	return validate
@@ -66,7 +66,10 @@ type oauth2ClientCredentialsFinalizer struct {
 	headerScheme string
 }
 
-func newOAuth2ClientCredentialsFinalizer(id string, rawConfig map[string]any) (*oauth2ClientCredentialsFinalizer, error) {
+func newOAuth2ClientCredentialsFinalizer(
+	id string,
+	rawConfig map[string]any,
+) (*oauth2ClientCredentialsFinalizer, error) {
 	type HeaderConfig struct {
 		Name   string `mapstructure:"name"   validate:"required"`
 		Scheme string `mapstructure:"scheme"`
