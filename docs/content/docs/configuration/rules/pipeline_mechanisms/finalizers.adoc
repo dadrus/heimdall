@@ -122,3 +122,56 @@ config:
     }
 ----
 ====
+
+=== OAuth2 Client Credentials
+
+This finalizer drives the OAuth2 client credentials flow to obtain a token, which should be used for communication with the upstream service. By default, the obtained token into a token is made available to your upstream service in the HTTP `Authorization` header with `Bearer` scheme set. Unlike the other finalizers, it does not have access to any objects created by the rule execution pipeline.
+
+NOTE: To enable the usage of this finalizer, you have to set the `type` property to `oauth2_client_credentials`.
+
+Configuration using the `config` property is mandatory. Following properties are available:
+
+
+* *`client_id`*: _string_ (mandatory)
++
+The client identifier for heimdall.
+
+* *`client_secret`*: _string_ (mandatory)
++
+The client secret for heimdall.
+
+* *`scopes`*: _string array_ (optional)
++
+The scopes required for the access token.
+
+* *`token_url`*: _string_ (mandatory)
++
+The token endpoint of the authorization server.
+
+* *`cache_ttl`*: _link:{{< relref "/docs/configuration/reference/types.adoc#_duration" >}}[Duration]_ (optional, overridable)
++
+How long to cache the token received from the token endpoint. Defaults to the token expiration information from the token endpoint (the value of the `expires_in` field) if present. If the token expiration inforation is not present and `cache_ttl` is not configured, the received token is not cached. If the token expiration information is present in the response and `cache_ttl` is configured the shorter value is taken. If caching is enabled, the token is cached until 5 seconds before its expiration. To disable caching, set it to `0s`. The cache key calculation is based on the entire `oauth2_client_credentials` configuration without considering the `header` property.
+
+* *`header`*: _object_ (optional, overridable)
++
+Defines the `name` and `scheme` to be used for the header. Defaults to `Authorization` with scheme `Bearer`. If defined, the `name` property must be set. If `scheme` is not defined, no scheme will be prepended to the resulting JWT.
+
+.OAuth2 Client Credentials finalizer configuration
+====
+[source, yaml]
+----
+id: oauth2_client_credentials
+type: get_token
+config:
+  cache_ttl: 5m
+  header:
+    name: X-Token
+    scheme: MyScheme
+  token_url: https://my-oauth-provider.com/token
+  client_id: my_client
+  client_secret: VerySecret!
+  scopes:
+    - foo
+    - bar
+----
+====
