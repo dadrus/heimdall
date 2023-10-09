@@ -30,11 +30,11 @@ import (
 func init() {
 	registerTypeFactory(
 		func(id string, typ string, conf map[string]any) (bool, Finalizer, error) {
-			if typ != FinalizerClientCredentials {
+			if typ != FinalizerOAuth2ClientCredentials {
 				return false, nil, nil
 			}
 
-			finalizer, err := newClientCredentialsFinalizer(id, conf)
+			finalizer, err := newOAuth2ClientCredentialsFinalizer(id, conf)
 
 			return true, finalizer, err
 		})
@@ -55,7 +55,7 @@ type tokenEndpointResponse struct {
 	ExpiresIn   *int64 `json:"expires_in,omitempty"`
 }
 
-type clientCredentialsFinalizer struct {
+type oauth2ClientCredentialsFinalizer struct {
 	id           string
 	tokenURL     string
 	clientID     string
@@ -66,7 +66,7 @@ type clientCredentialsFinalizer struct {
 	headerScheme string
 }
 
-func newClientCredentialsFinalizer(id string, rawConfig map[string]any) (*clientCredentialsFinalizer, error) {
+func newOAuth2ClientCredentialsFinalizer(id string, rawConfig map[string]any) (*oauth2ClientCredentialsFinalizer, error) {
 	type HeaderConfig struct {
 		Name   string `mapstructure:"name"   validate:"required"`
 		Scheme string `mapstructure:"scheme"`
@@ -77,7 +77,7 @@ func newClientCredentialsFinalizer(id string, rawConfig map[string]any) (*client
 		ClientID     string         `mapstructure:"client_id"     validate:"required"`
 		ClientSecret string         `mapstructure:"client_secret" validate:"required"`
 		Scopes       []string       `mapstructure:"scopes"`
-		TTL          *time.Duration `mapstructure:"ttl"`
+		TTL          *time.Duration `mapstructure:"cache_ttl"`
 		Header       *HeaderConfig  `mapstructure:"header"`
 	}
 
@@ -93,7 +93,7 @@ func newClientCredentialsFinalizer(id string, rawConfig map[string]any) (*client
 			"failed validating Client Credentials finalizer config").CausedBy(err)
 	}
 
-	return &clientCredentialsFinalizer{
+	return &oauth2ClientCredentialsFinalizer{
 		id:           id,
 		tokenURL:     conf.TokenURL,
 		clientID:     conf.ClientID,
@@ -109,10 +109,10 @@ func newClientCredentialsFinalizer(id string, rawConfig map[string]any) (*client
 	}, nil
 }
 
-func (f *clientCredentialsFinalizer) ContinueOnError() bool { return false }
-func (f *clientCredentialsFinalizer) ID() string            { return f.id }
+func (f *oauth2ClientCredentialsFinalizer) ContinueOnError() bool { return false }
+func (f *oauth2ClientCredentialsFinalizer) ID() string            { return f.id }
 
-func (f *clientCredentialsFinalizer) WithConfig(rawConfig map[string]any) (Finalizer, error) {
+func (f *oauth2ClientCredentialsFinalizer) WithConfig(rawConfig map[string]any) (Finalizer, error) {
 	type HeaderConfig struct {
 		Name   string  `mapstructure:"name"   validate:"required"`
 		Scheme *string `mapstructure:"scheme"`
@@ -120,7 +120,7 @@ func (f *clientCredentialsFinalizer) WithConfig(rawConfig map[string]any) (Final
 
 	type Config struct {
 		Scopes []string       `mapstructure:"scopes"`
-		TTL    *time.Duration `mapstructure:"ttl"`
+		TTL    *time.Duration `mapstructure:"cache_ttl"`
 		Header *HeaderConfig  `mapstructure:"header"`
 	}
 
@@ -136,7 +136,7 @@ func (f *clientCredentialsFinalizer) WithConfig(rawConfig map[string]any) (Final
 			"failed validating Client Credentials finalizer config").CausedBy(err)
 	}
 
-	return &clientCredentialsFinalizer{
+	return &oauth2ClientCredentialsFinalizer{
 		id:           f.id,
 		tokenURL:     f.tokenURL,
 		clientID:     f.clientID,
@@ -152,7 +152,7 @@ func (f *clientCredentialsFinalizer) WithConfig(rawConfig map[string]any) (Final
 	}, nil
 }
 
-func (f *clientCredentialsFinalizer) Execute(ctx heimdall.Context, _ *subject.Subject) error {
+func (f *oauth2ClientCredentialsFinalizer) Execute(ctx heimdall.Context, _ *subject.Subject) error {
 	logger := zerolog.Ctx(ctx.AppContext())
 	logger.Debug().Msg("Finalizing using client_credentials finalizer")
 
@@ -198,7 +198,7 @@ func (f *clientCredentialsFinalizer) Execute(ctx heimdall.Context, _ *subject.Su
 	return nil
 }
 
-func (f *clientCredentialsFinalizer) calculateCacheKey() string {
+func (f *oauth2ClientCredentialsFinalizer) calculateCacheKey() string {
 	digest := sha256.New()
 	digest.Write(stringx.ToBytes(f.clientID))
 	digest.Write(stringx.ToBytes(f.clientSecret))
@@ -208,7 +208,7 @@ func (f *clientCredentialsFinalizer) calculateCacheKey() string {
 	return hex.EncodeToString(digest.Sum(nil))
 }
 
-func (f *clientCredentialsFinalizer) getAccessToken(ctx context.Context) (*tokenEndpointResponse, error) {
+func (f *oauth2ClientCredentialsFinalizer) getAccessToken(ctx context.Context) (*tokenEndpointResponse, error) {
 	ept := endpoint.Endpoint{
 		URL:    f.tokenURL,
 		Method: http.MethodPost,
@@ -242,7 +242,7 @@ func (f *clientCredentialsFinalizer) getAccessToken(ctx context.Context) (*token
 	return &resp, nil
 }
 
-func (f *clientCredentialsFinalizer) getCacheTTL(resp *tokenEndpointResponse) time.Duration {
+func (f *oauth2ClientCredentialsFinalizer) getCacheTTL(resp *tokenEndpointResponse) time.Duration {
 	// timeLeeway defines the default time deviation to ensure the token is still valid
 	// when used from cache
 	const timeLeeway = 10
@@ -278,7 +278,7 @@ func (f *clientCredentialsFinalizer) getCacheTTL(resp *tokenEndpointResponse) ti
 	}
 }
 
-func (f *clientCredentialsFinalizer) isCacheEnabled() bool {
+func (f *oauth2ClientCredentialsFinalizer) isCacheEnabled() bool {
 	// cache is enabled if it is not configured (in that case the ttl value from the
 	// token response if used), or if it is configured and the value > 0
 	return f.ttl == nil || (f.ttl != nil && *f.ttl > 0)

@@ -30,11 +30,11 @@ func TestNewClientCredentialsFinalizer(t *testing.T) {
 		uc     string
 		id     string
 		config []byte
-		assert func(t *testing.T, err error, finalizer *clientCredentialsFinalizer)
+		assert func(t *testing.T, err error, finalizer *oauth2ClientCredentialsFinalizer)
 	}{
 		{
 			uc: "without configuration",
-			assert: func(t *testing.T, err error, _ *clientCredentialsFinalizer) {
+			assert: func(t *testing.T, err error, _ *oauth2ClientCredentialsFinalizer) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -48,7 +48,7 @@ func TestNewClientCredentialsFinalizer(t *testing.T) {
 		{
 			uc:     "with empty configuration",
 			config: []byte(``),
-			assert: func(t *testing.T, err error, _ *clientCredentialsFinalizer) {
+			assert: func(t *testing.T, err error, _ *oauth2ClientCredentialsFinalizer) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -65,7 +65,7 @@ func TestNewClientCredentialsFinalizer(t *testing.T) {
 token_url: https://foo.bar
 foo: bar
 `),
-			assert: func(t *testing.T, err error, _ *clientCredentialsFinalizer) {
+			assert: func(t *testing.T, err error, _ *oauth2ClientCredentialsFinalizer) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -81,7 +81,7 @@ token_url: https://foo.bar
 client_id: foo
 client_secret: bar
 `),
-			assert: func(t *testing.T, err error, finalizer *clientCredentialsFinalizer) {
+			assert: func(t *testing.T, err error, finalizer *oauth2ClientCredentialsFinalizer) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -105,7 +105,7 @@ client_secret: bar
 token_url: https://foo.bar
 client_id: foo
 client_secret: bar
-ttl: 11s
+cache_ttl: 11s
 scopes:
   - foo
   - baz
@@ -113,7 +113,7 @@ header:
   name: "X-My-Header"
   scheme: Foo
 `),
-			assert: func(t *testing.T, err error, finalizer *clientCredentialsFinalizer) {
+			assert: func(t *testing.T, err error, finalizer *oauth2ClientCredentialsFinalizer) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -138,7 +138,7 @@ header:
 			require.NoError(t, err)
 
 			// WHEN
-			finalizer, err := newClientCredentialsFinalizer(tc.id, conf)
+			finalizer, err := newOAuth2ClientCredentialsFinalizer(tc.id, conf)
 
 			// THEN
 			tc.assert(t, err, finalizer)
@@ -154,7 +154,7 @@ func TestCreateClientCredentialsFinalizerFromPrototype(t *testing.T) {
 		id              string
 		prototypeConfig []byte
 		config          []byte
-		assert          func(t *testing.T, err error, prototype *clientCredentialsFinalizer, configured *clientCredentialsFinalizer)
+		assert          func(t *testing.T, err error, prototype *oauth2ClientCredentialsFinalizer, configured *oauth2ClientCredentialsFinalizer)
 	}{
 		{
 			uc: "no new configuration provided",
@@ -163,7 +163,7 @@ func TestCreateClientCredentialsFinalizerFromPrototype(t *testing.T) {
 token_url: https://foo.bar
 client_id: foo
 client_secret: bar
-ttl: 11s
+cache_ttl: 11s
 scopes:
   - foo
   - baz
@@ -171,7 +171,7 @@ header:
   name: "X-My-Header"
   scheme: Foo
 `),
-			assert: func(t *testing.T, err error, prototype *clientCredentialsFinalizer, configured *clientCredentialsFinalizer) {
+			assert: func(t *testing.T, err error, prototype *oauth2ClientCredentialsFinalizer, configured *oauth2ClientCredentialsFinalizer) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -185,7 +185,7 @@ header:
 token_url: https://foo.bar
 client_id: foo
 client_secret: bar
-ttl: 11s
+cache_ttl: 11s
 scopes:
   - foo
   - baz
@@ -194,7 +194,7 @@ header:
   scheme: Foo
 `),
 			config: []byte(``),
-			assert: func(t *testing.T, err error, prototype *clientCredentialsFinalizer, configured *clientCredentialsFinalizer) {
+			assert: func(t *testing.T, err error, prototype *oauth2ClientCredentialsFinalizer, configured *oauth2ClientCredentialsFinalizer) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -209,14 +209,14 @@ header:
 token_url: https://foo.bar
 client_id: foo
 client_secret: bar
-ttl: 11s
+cache_ttl: 11s
 `),
 			config: []byte(`
 scopes:
   - foo
   - baz
 `),
-			assert: func(t *testing.T, err error, prototype *clientCredentialsFinalizer, configured *clientCredentialsFinalizer) {
+			assert: func(t *testing.T, err error, prototype *oauth2ClientCredentialsFinalizer, configured *oauth2ClientCredentialsFinalizer) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -248,12 +248,12 @@ scopes:
 token_url: https://foo.bar
 client_id: foo
 client_secret: bar
-ttl: 11s
+cache_ttl: 11s
 `),
 			config: []byte(`
-ttl: 12s
+cache_ttl: 12s
 `),
-			assert: func(t *testing.T, err error, prototype *clientCredentialsFinalizer, configured *clientCredentialsFinalizer) {
+			assert: func(t *testing.T, err error, prototype *oauth2ClientCredentialsFinalizer, configured *oauth2ClientCredentialsFinalizer) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -282,12 +282,12 @@ ttl: 12s
 token_url: https://foo.bar
 client_id: foo
 client_secret: bar
-ttl: 11s
+cache_ttl: 11s
 `),
 			config: []byte(`
 foo: 10s
 `),
-			assert: func(t *testing.T, err error, prototype *clientCredentialsFinalizer, configured *clientCredentialsFinalizer) {
+			assert: func(t *testing.T, err error, prototype *oauth2ClientCredentialsFinalizer, configured *oauth2ClientCredentialsFinalizer) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -305,13 +305,13 @@ foo: 10s
 token_url: https://foo.bar
 client_id: foo
 client_secret: bar
-ttl: 11s
+cache_ttl: 11s
 `),
 			config: []byte(`
 header:
   name: X-Foo-Bar
 `),
-			assert: func(t *testing.T, err error, prototype *clientCredentialsFinalizer, configured *clientCredentialsFinalizer) {
+			assert: func(t *testing.T, err error, prototype *oauth2ClientCredentialsFinalizer, configured *oauth2ClientCredentialsFinalizer) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -341,14 +341,14 @@ header:
 token_url: https://foo.bar
 client_id: foo
 client_secret: bar
-ttl: 11s
+cache_ttl: 11s
 `),
 			config: []byte(`
 header:
   name: X-Foo-Bar
   scheme: Foo
 `),
-			assert: func(t *testing.T, err error, prototype *clientCredentialsFinalizer, configured *clientCredentialsFinalizer) {
+			assert: func(t *testing.T, err error, prototype *oauth2ClientCredentialsFinalizer, configured *oauth2ClientCredentialsFinalizer) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -378,13 +378,13 @@ header:
 token_url: https://foo.bar
 client_id: foo
 client_secret: bar
-ttl: 11s
+cache_ttl: 11s
 `),
 			config: []byte(`
 header:
   scheme: Foo
 `),
-			assert: func(t *testing.T, err error, prototype *clientCredentialsFinalizer, configured *clientCredentialsFinalizer) {
+			assert: func(t *testing.T, err error, prototype *oauth2ClientCredentialsFinalizer, configured *oauth2ClientCredentialsFinalizer) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -400,7 +400,7 @@ header:
 			conf, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
 
-			prototype, err := newClientCredentialsFinalizer(tc.id, pc)
+			prototype, err := newOAuth2ClientCredentialsFinalizer(tc.id, pc)
 			require.NoError(t, err)
 
 			// WHEN
@@ -409,11 +409,11 @@ header:
 			// THEN
 			var (
 				ok            bool
-				realFinalizer *clientCredentialsFinalizer
+				realFinalizer *oauth2ClientCredentialsFinalizer
 			)
 
 			if err == nil {
-				realFinalizer, ok = finalizer.(*clientCredentialsFinalizer)
+				realFinalizer, ok = finalizer.(*oauth2ClientCredentialsFinalizer)
 				require.True(t, ok)
 			}
 
@@ -477,7 +477,7 @@ func TestClientCredentialsFinalizerExecute(t *testing.T) {
 
 	for _, tc := range []struct {
 		uc             string
-		finalizer      *clientCredentialsFinalizer
+		finalizer      *oauth2ClientCredentialsFinalizer
 		configureMocks func(t *testing.T, ctx *mocks.ContextMock, cch *mocks2.CacheMock)
 		assertRequest  RequestAsserter
 		buildResponse  ResponseBuilder
@@ -485,7 +485,7 @@ func TestClientCredentialsFinalizerExecute(t *testing.T) {
 	}{
 		{
 			uc: "reusing response from cache",
-			finalizer: &clientCredentialsFinalizer{
+			finalizer: &oauth2ClientCredentialsFinalizer{
 				id:           "test",
 				headerName:   "Authorization",
 				headerScheme: "Bearer",
@@ -505,7 +505,7 @@ func TestClientCredentialsFinalizerExecute(t *testing.T) {
 		},
 		{
 			uc: "cache entry of wrong type and no ttl in issued token",
-			finalizer: &clientCredentialsFinalizer{
+			finalizer: &oauth2ClientCredentialsFinalizer{
 				id:           "test",
 				headerName:   "Authorization",
 				headerScheme: "Bearer",
@@ -552,7 +552,7 @@ func TestClientCredentialsFinalizerExecute(t *testing.T) {
 		},
 		{
 			uc: "ttl not configured, no cache entry and token has expires_in claim",
-			finalizer: &clientCredentialsFinalizer{
+			finalizer: &oauth2ClientCredentialsFinalizer{
 				id:           "test",
 				headerName:   "Authorization",
 				headerScheme: "Bearer",
@@ -611,7 +611,7 @@ func TestClientCredentialsFinalizerExecute(t *testing.T) {
 		},
 		{
 			uc: "error while unmarshalling token",
-			finalizer: &clientCredentialsFinalizer{
+			finalizer: &oauth2ClientCredentialsFinalizer{
 				id:           "test",
 				tokenURL:     srv.URL,
 				clientID:     "bar",
@@ -638,7 +638,7 @@ func TestClientCredentialsFinalizerExecute(t *testing.T) {
 		},
 		{
 			uc: "error while sending request",
-			finalizer: &clientCredentialsFinalizer{
+			finalizer: &oauth2ClientCredentialsFinalizer{
 				id:           "test",
 				tokenURL:     "http://127.0.0.1:11111",
 				clientID:     "bar",
@@ -665,7 +665,7 @@ func TestClientCredentialsFinalizerExecute(t *testing.T) {
 		},
 		{
 			uc: "full configuration, no cache hit and token has expires_in claim",
-			finalizer: &clientCredentialsFinalizer{
+			finalizer: &oauth2ClientCredentialsFinalizer{
 				id:           "test",
 				headerName:   "X-My-Header",
 				headerScheme: "Foo",
@@ -733,7 +733,7 @@ func TestClientCredentialsFinalizerExecute(t *testing.T) {
 		},
 		{
 			uc: "disabled cache",
-			finalizer: &clientCredentialsFinalizer{
+			finalizer: &oauth2ClientCredentialsFinalizer{
 				id:           "test",
 				headerName:   "X-My-Header",
 				headerScheme: "Foo",
@@ -790,7 +790,7 @@ func TestClientCredentialsFinalizerExecute(t *testing.T) {
 		},
 		{
 			uc: "custom cache ttl and no expires_in in token",
-			finalizer: &clientCredentialsFinalizer{
+			finalizer: &oauth2ClientCredentialsFinalizer{
 				id:           "test",
 				headerName:   "X-My-Header",
 				headerScheme: "Foo",
