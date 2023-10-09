@@ -1471,6 +1471,24 @@
                 "1m",
                 "30s"
               ]
+            },
+            "header": {
+              "type": "object",
+              "description": "Header and scheme to use to transport the issued token to the upstream service",
+              "additionalProperties": false,
+              "required": ["name"],
+              "properties": {
+                "name": {
+                  "description": "The header name to use",
+                  "type": "string",
+                  "default": "Authorization"
+                },
+                "scheme": {
+                  "description": "The scheme to use",
+                  "type": "string",
+                  "default": "Bearer"
+                }
+              }
             }
           }
         }
