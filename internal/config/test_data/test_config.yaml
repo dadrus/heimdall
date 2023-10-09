@@ -365,6 +365,9 @@ rules:
           scopes:
             - foo
             - bar
+          header:
+            name: My-Header
+            scheme: Foo
     error_handlers:
       - id: default
         type: default
