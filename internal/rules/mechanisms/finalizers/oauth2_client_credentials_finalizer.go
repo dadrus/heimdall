@@ -8,11 +8,9 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"reflect"
 	"strings"
 	"time"
 
-	"github.com/go-playground/validator/v10"
 	"github.com/goccy/go-json"
 	"github.com/rs/zerolog"
 
@@ -20,6 +18,7 @@ import (
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/endpoint"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
+	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/stringx"
@@ -39,15 +38,6 @@ func init() {
 
 			return true, finalizer, err
 		})
-}
-
-func newValidator() *validator.Validate {
-	validate := validator.New(validator.WithRequiredStructEnabled())
-	validate.RegisterTagNameFunc(func(fld reflect.StructField) string {
-		return strings.SplitN(fld.Tag.Get("mapstructure"), ",", 2)[0] // nolint: gomnd
-	})
-
-	return validate
 }
 
 type tokenEndpointResponse struct {
@@ -91,7 +81,7 @@ func newOAuth2ClientCredentialsFinalizer(
 			"failed to unmarshal oauth2_client_credentials finalizer config").CausedBy(err)
 	}
 
-	if err := newValidator().Struct(conf); err != nil {
+	if err := validation.ValidateStruct(conf); err != nil {
 		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
 			"failed validating oauth2_client_credentials finalizer config").CausedBy(err)
 	}
@@ -133,7 +123,7 @@ func (f *oauth2ClientCredentialsFinalizer) WithConfig(rawConfig map[string]any) 
 			"failed to unmarshal oauth2_client_credentials finalizer config").CausedBy(err)
 	}
 
-	if err := newValidator().Struct(conf); err != nil {
+	if err := validation.ValidateStruct(conf); err != nil {
 		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
 			"failed validating oauth2_client_credentials finalizer config").CausedBy(err)
 	}
