@@ -6,7 +6,6 @@ import (
 
 	ut "github.com/go-playground/universal-translator"
 	"github.com/go-playground/validator/v10"
-	"golang.org/x/exp/maps"
 )
 
 func wrapError(err error, trans ut.Translator) error {
@@ -25,7 +24,24 @@ type validationError struct {
 func (v *validationError) Error() string {
 	var errs validator.ValidationErrors
 	if errors.As(v.err, &errs) {
-		return strings.Join(maps.Values(errs.Translate(v.t)), ", ")
+		translations := errs.Translate(v.t)
+		messages := make([]string, len(translations))
+		idx := 0
+
+		for key, value := range errs.Translate(v.t) {
+			ns := strings.Split(key, ".")
+			namespace := strings.Join(ns[1:len(ns)-1], ".")
+
+			if len(namespace) == 0 {
+				messages[idx] = value
+			} else {
+				messages[idx] = namespace + "." + value
+			}
+
+			idx++
+		}
+
+		return strings.Join(messages, ", ")
 	}
 
 	return v.err.Error()
