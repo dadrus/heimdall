@@ -22,8 +22,29 @@ func init() {
 	translate, _ = uni.GetTranslator("en")
 	validate = validator.New(validator.WithRequiredStructEnabled())
 
-	err := entranslations.RegisterDefaultTranslations(validate, translate)
-	if err != nil {
+	if err := entranslations.RegisterDefaultTranslations(validate, translate); err != nil {
+		panic(err)
+	}
+
+	if err := validate.RegisterTranslation(
+		"required_without",
+		translate,
+		func(ut ut.Translator) error {
+			return ut.Add(
+				"required_without",
+				"{0} is a required field as long as {1} is not set",
+				false,
+			)
+		},
+		func(ut ut.Translator, fe validator.FieldError) string {
+			translation, err := ut.T(fe.Tag(), fe.Field(), strings.ToLower(fe.Param()))
+			if err != nil {
+				return fe.Error()
+			}
+
+			return translation
+		},
+	); err != nil {
 		panic(err)
 	}
 
