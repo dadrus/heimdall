@@ -370,7 +370,7 @@ func (a *oauth2IntrospectionAuthenticator) getCacheTTL(introspectResp *oauth2.In
 	case configuredTTL != 0 && introspectionResponseTTL == 0:
 		return configuredTTL
 	default:
-		return x.IfThenElse(configuredTTL < introspectionResponseTTL, configuredTTL, introspectionResponseTTL)
+		return min(configuredTTL, introspectionResponseTTL)
 	}
 }
 
