@@ -74,7 +74,7 @@ func newOAuth2IntrospectionAuthenticator(id string, rawConfig map[string]any) (
 	type Config struct {
 		Endpoint             endpoint.Endpoint                   `mapstructure:"introspection_endpoint"  validate:"required"`
 		Assertions           oauth2.Expectation                  `mapstructure:"assertions"              validate:"required"`
-		SubjectInfo          SubjectInfo                         `mapstructure:"subject"                 validate:"omitempty"`
+		SubjectInfo          SubjectInfo                         `mapstructure:"subject"                 validate:"-"`
 		AuthDataSource       extractors.CompositeExtractStrategy `mapstructure:"token_source"`
 		CacheTTL             *time.Duration                      `mapstructure:"cache_ttl"`
 		AllowFallbackOnError bool                                `mapstructure:"allow_fallback_on_error"`
