@@ -36,6 +36,7 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/values"
+	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/stringx"
@@ -80,7 +81,7 @@ type genericContextualizer struct {
 
 func newGenericContextualizer(id string, rawConfig map[string]any) (*genericContextualizer, error) {
 	type Config struct {
-		Endpoint        endpoint.Endpoint `mapstructure:"endpoint"`
+		Endpoint        endpoint.Endpoint `mapstructure:"endpoint"                   validate:"required"`
 		ForwardHeaders  []string          `mapstructure:"forward_headers"`
 		ForwardCookies  []string          `mapstructure:"forward_cookies"`
 		Payload         template.Template `mapstructure:"payload"`
@@ -92,14 +93,13 @@ func newGenericContextualizer(id string, rawConfig map[string]any) (*genericCont
 	var conf Config
 	if err := decodeConfig(rawConfig, &conf); err != nil {
 		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration, "failed to unmarshal generic contextualizer config").
+			NewWithMessage(heimdall.ErrConfiguration, "failed decoding 'generic' contextualizer config").
 			CausedBy(err)
 	}
 
-	if err := conf.Endpoint.Validate(); err != nil {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration, "failed to validate endpoint configuration").
-			CausedBy(err)
+	if err := validation.ValidateStruct(&conf); err != nil {
+		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
+			"failed validating 'generic' contextualizer config").CausedBy(err)
 	}
 
 	ttl := defaultTTL
@@ -188,7 +188,7 @@ func (h *genericContextualizer) WithConfig(rawConfig map[string]any) (Contextual
 	var conf Config
 	if err := decodeConfig(rawConfig, &conf); err != nil {
 		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration, "failed to unmarshal generic contextualizer config").
+			NewWithMessage(heimdall.ErrConfiguration, "failed decoding 'generic' contextualizer config").
 			CausedBy(err)
 	}
 

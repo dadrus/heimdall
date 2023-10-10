@@ -64,7 +64,7 @@ foo: bar
 
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "failed to unmarshal")
+				assert.Contains(t, err.Error(), "failed decoding")
 			},
 		},
 		{
@@ -79,7 +79,7 @@ payload: bar
 
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "failed to validate endpoint")
+				assert.Contains(t, err.Error(), "'endpoint'.'url' is a required field")
 			},
 		},
 		{
@@ -208,7 +208,7 @@ payload: bar
 
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "failed to unmarshal")
+				assert.Contains(t, err.Error(), "failed decoding")
 			},
 		},
 		{
