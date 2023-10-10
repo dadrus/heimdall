@@ -369,7 +369,7 @@ func (a *genericAuthenticator) getCacheTTL(sessionLifespan *SessionLifespan) tim
 		expiresIn := sessionLifespan.exp.Unix() - time.Now().Unix() - timeLeeway
 		expirationTTL := x.IfThenElse(expiresIn > 0, time.Duration(expiresIn)*time.Second, 0)
 
-		return x.IfThenElse(a.ttl < expirationTTL, a.ttl, expirationTTL)
+		return min(a.ttl, expirationTTL)
 	}
 
 	return a.ttl

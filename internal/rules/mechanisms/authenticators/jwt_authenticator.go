@@ -278,7 +278,7 @@ func (a *jwtAuthenticator) getCacheTTL(key *jose.JSONWebKey) time.Duration {
 	case configuredTTL != 0 && certTTL == 0:
 		return configuredTTL
 	default:
-		return x.IfThenElse(configuredTTL < certTTL, configuredTTL, certTTL)
+		return min(configuredTTL, certTTL)
 	}
 }
 
