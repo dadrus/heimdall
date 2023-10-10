@@ -74,11 +74,11 @@ func DecodeAuthenticationStrategyHookFunc() mapstructure.DecodeHookFunc {
 
 		switch typed["type"] {
 		case "basic_auth":
-			return decodeStrategy[BasicAuthStrategy]("basic_auth", typed["config"])
+			return decodeStrategy("basic_auth", &BasicAuthStrategy{}, typed["config"])
 		case "api_key":
-			return decodeStrategy[APIKeyStrategy]("api_key", typed["config"])
+			return decodeStrategy("api_key", &APIKeyStrategy{}, typed["config"])
 		case "client_credentials":
-			return decodeStrategy[ClientCredentialsStrategy]("client_credentials", typed["config"])
+			return decodeStrategy("client_credentials", &ClientCredentialsStrategy{}, typed["config"])
 		default:
 			return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
 				"unsupported authentication type: '%s'", typed["type"])
@@ -86,23 +86,21 @@ func DecodeAuthenticationStrategyHookFunc() mapstructure.DecodeHookFunc {
 	}
 }
 
-func decodeStrategy[Strategy any](name string, config any) (*Strategy, error) {
-	var strategy Strategy
-
+func decodeStrategy[S AuthenticationStrategy](name string, strategy S, config any) (AuthenticationStrategy, error) {
 	if config == nil {
 		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
 			"'%s' strategy requires 'config' property to be set", name)
 	}
 
-	if err := mapstructure.Decode(config, &strategy); err != nil {
+	if err := mapstructure.Decode(config, strategy); err != nil {
 		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
 			"failed to unmarshal '%s' strategy config", name).CausedBy(err)
 	}
 
-	if err := validation.ValidateStruct(&strategy); err != nil {
+	if err := validation.ValidateStruct(strategy); err != nil {
 		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
-			"failed validating `%s` strategy config", name).CausedBy(err)
+			"failed validating '%s' strategy config", name).CausedBy(err)
 	}
 
-	return &strategy, nil
+	return strategy, nil
 }
