@@ -48,18 +48,18 @@ func TestCreateCELAuthorizer(t *testing.T) {
 
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "no expressions provided")
+				assert.Contains(t, err.Error(), "'expressions' is a required field")
 			},
 		},
 		{
 			uc:     "without rules",
-			config: []byte(``),
+			config: []byte(`expressions: []`),
 			assert: func(t *testing.T, err error, auth *celAuthorizer) {
 				t.Helper()
 
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "no expressions provided")
+				assert.Contains(t, err.Error(), "'expressions' must contain more than 0 items")
 			},
 		},
 		{
@@ -103,7 +103,21 @@ foo: bar
 
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "failed to unmarshal")
+				assert.Contains(t, err.Error(), "failed decoding")
+			},
+		},
+		{
+			uc: "with expression list without expression value",
+			config: []byte(`
+expressions:
+  - message: bar
+`),
+			assert: func(t *testing.T, err error, auth *celAuthorizer) {
+				t.Helper()
+
+				require.Error(t, err)
+				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				assert.Contains(t, err.Error(), "'expressions'[0].'expression' is a required field")
 			},
 		},
 		{
