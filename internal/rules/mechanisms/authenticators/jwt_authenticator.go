@@ -38,6 +38,7 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/oauth2"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
 	"github.com/dadrus/heimdall/internal/truststore"
+	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/pkix"
@@ -76,36 +77,26 @@ type jwtAuthenticator struct {
 
 func newJwtAuthenticator(id string, rawConfig map[string]any) (*jwtAuthenticator, error) { // nolint: funlen
 	type Config struct {
-		Endpoint             endpoint.Endpoint                   `mapstructure:"jwks_endpoint"`
+		Endpoint             endpoint.Endpoint                   `mapstructure:"jwks_endpoint"           validate:"required"`
+		Assertions           oauth2.Expectation                  `mapstructure:"assertions"              validate:"required"`
+		SubjectInfo          SubjectInfo                         `mapstructure:"subject"                 validate:"omitempty"` //nolint:lll
 		AuthDataSource       extractors.CompositeExtractStrategy `mapstructure:"jwt_source"`
-		Assertions           oauth2.Expectation                  `mapstructure:"assertions"`
-		SubjectInfo          SubjectInfo                         `mapstructure:"subject"`
 		CacheTTL             *time.Duration                      `mapstructure:"cache_ttl"`
 		AllowFallbackOnError bool                                `mapstructure:"allow_fallback_on_error"`
 		ValidateJWK          *bool                               `mapstructure:"validate_jwk"`
 		TrustStore           truststore.TrustStore               `mapstructure:"trust_store"`
 	}
 
-	var (
-		conf Config
-		err  error
-	)
-
-	if err = decodeConfig(rawConfig, &conf); err != nil {
+	var conf Config
+	if err := decodeConfig(rawConfig, &conf); err != nil {
 		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration, "failed to unmarshal jwt authenticator config").
+			NewWithMessage(heimdall.ErrConfiguration, "failed decoding 'jwt' authenticator config").
 			CausedBy(err)
 	}
 
-	if err = conf.Endpoint.Validate(); err != nil {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration, "failed to validate endpoint configuration").
-			CausedBy(err)
-	}
-
-	if len(conf.Assertions.TrustedIssuers) == 0 {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration, "no trusted issuers configured")
+	if err := validation.ValidateStruct(&conf); err != nil {
+		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
+			"failed validating 'jwt' authenticator config").CausedBy(err)
 	}
 
 	if conf.Endpoint.Headers == nil {
@@ -212,7 +203,7 @@ func (a *jwtAuthenticator) WithConfig(config map[string]any) (Authenticator, err
 	var conf Config
 	if err := decodeConfig(config, &conf); err != nil {
 		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration, "failed to unmarshal jwt authenticator config").
+			NewWithMessage(heimdall.ErrConfiguration, "failed decoding 'jwt' authenticator config").
 			CausedBy(err)
 	}
 
