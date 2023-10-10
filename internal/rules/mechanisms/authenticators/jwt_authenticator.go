@@ -79,7 +79,7 @@ func newJwtAuthenticator(id string, rawConfig map[string]any) (*jwtAuthenticator
 	type Config struct {
 		Endpoint             endpoint.Endpoint                   `mapstructure:"jwks_endpoint"           validate:"required"`
 		Assertions           oauth2.Expectation                  `mapstructure:"assertions"              validate:"required"`
-		SubjectInfo          SubjectInfo                         `mapstructure:"subject"                 validate:"omitempty"` //nolint:lll
+		SubjectInfo          SubjectInfo                         `mapstructure:"subject"                 validate:"-"`
 		AuthDataSource       extractors.CompositeExtractStrategy `mapstructure:"jwt_source"`
 		CacheTTL             *time.Duration                      `mapstructure:"cache_ttl"`
 		AllowFallbackOnError bool                                `mapstructure:"allow_fallback_on_error"`
