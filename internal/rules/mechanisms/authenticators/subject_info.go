@@ -25,7 +25,7 @@ import (
 )
 
 type SubjectInfo struct {
-	IDFrom         string `mapstructure:"id"`
+	IDFrom         string `mapstructure:"id"         validate:"required"`
 	AttributesFrom string `mapstructure:"attributes"`
 }
 
