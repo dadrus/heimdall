@@ -164,10 +164,9 @@ func (f *oauth2ClientCredentialsFinalizer) Execute(ctx heimdall.Context, _ *subj
 
 	var (
 		ok         bool
-		err        error
 		cacheKey   string
 		cacheEntry any
-		tokenInfo  *tokenEndpointResponse
+		token      string
 	)
 
 	if f.isCacheEnabled() {
@@ -176,7 +175,7 @@ func (f *oauth2ClientCredentialsFinalizer) Execute(ctx heimdall.Context, _ *subj
 	}
 
 	if cacheEntry != nil {
-		if tokenInfo, ok = cacheEntry.(*tokenEndpointResponse); !ok {
+		if token, ok = cacheEntry.(string); !ok {
 			logger.Warn().Msg("Wrong object type from cache")
 			cch.Delete(cacheKey)
 		} else {
@@ -184,20 +183,22 @@ func (f *oauth2ClientCredentialsFinalizer) Execute(ctx heimdall.Context, _ *subj
 		}
 	}
 
-	if tokenInfo == nil {
+	if len(token) == 0 {
 		logger.Debug().Msg("Retrieving new access token")
 
-		tokenInfo, err = f.getAccessToken(ctx.AppContext())
+		tokenInfo, err := f.getAccessToken(ctx.AppContext())
 		if err != nil {
 			return err
 		}
 
+		token = tokenInfo.AccessToken
+
 		if cacheTTL := f.getCacheTTL(tokenInfo); cacheTTL > 0 {
-			cch.Set(cacheKey, tokenInfo, cacheTTL)
+			cch.Set(cacheKey, token, cacheTTL)
 		}
 	}
 
-	ctx.AddHeaderForUpstream(f.headerName, fmt.Sprintf("%s %s", f.headerScheme, tokenInfo.AccessToken))
+	ctx.AddHeaderForUpstream(f.headerName, fmt.Sprintf("%s %s", f.headerScheme, token))
 
 	return nil
 }
