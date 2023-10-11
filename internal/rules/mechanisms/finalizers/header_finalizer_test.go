@@ -47,18 +47,18 @@ func TestCreateHeaderFinalizer(t *testing.T) {
 
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "no header")
+				assert.Contains(t, err.Error(), "'headers' is a required field")
 			},
 		},
 		{
-			uc:     "without header configuration",
-			config: []byte(``),
+			uc:     "with empty headers configuration",
+			config: []byte(`headers: {}`),
 			assert: func(t *testing.T, err error, _ *headerFinalizer) {
 				t.Helper()
 
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "no header")
+				assert.Contains(t, err.Error(), "'headers' must contain more than 0 items")
 			},
 		},
 		{
@@ -73,7 +73,7 @@ foo: bar
 
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "failed to unmarshal")
+				assert.Contains(t, err.Error(), "failed decoding")
 			},
 		},
 		{
@@ -87,7 +87,7 @@ headers:
 
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "failed to unmarshal")
+				assert.Contains(t, err.Error(), "failed decoding")
 			},
 		},
 		{
