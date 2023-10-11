@@ -54,21 +54,6 @@ type Retry struct {
 	MaxDelay    time.Duration `mapstructure:"max_delay"`
 }
 
-func (e Endpoint) Validate() error {
-	if len(e.URL) == 0 {
-		return errorchain.
-			NewWithMessage(heimdall.ErrConfiguration, "endpoint requires url to be set")
-	}
-
-	// this ensures that user info, scheme and host cannot be templated
-	if _, err := url.Parse(e.URL); err != nil {
-		return errorchain.NewWithMessage(heimdall.ErrConfiguration,
-			"failed to parse endpoint URL").CausedBy(err)
-	}
-
-	return nil
-}
-
 func (e Endpoint) CreateClient(peerName string) *http.Client {
 	client := &http.Client{
 		Transport: otelhttp.NewTransport(

@@ -29,14 +29,6 @@ type SubjectInfo struct {
 	AttributesFrom string `mapstructure:"attributes"`
 }
 
-func (s *SubjectInfo) Validate() error {
-	if len(s.IDFrom) == 0 {
-		return errorchain.NewWithMessage(heimdall.ErrConfiguration, "no subject.id set")
-	}
-
-	return nil
-}
-
 func (s *SubjectInfo) CreateSubject(rawData []byte) (*subject.Subject, error) {
 	attributesFrom := "@this"
 	if len(s.AttributesFrom) != 0 {
