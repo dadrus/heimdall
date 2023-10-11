@@ -90,18 +90,11 @@ func (e *ruleSetEndpoint) FetchRuleSet(ctx context.Context) (*config.RuleSet, er
 	return ruleSet, nil
 }
 
-func (e *ruleSetEndpoint) init() error {
-	if err := e.Validate(); err != nil {
-		return errorchain.NewWithMessage(heimdall.ErrConfiguration, "validation of a ruleset endpoint failed").
-			CausedBy(err)
-	}
-
+func (e *ruleSetEndpoint) init() {
 	e.Method = http.MethodGet
 
 	if e.HTTPCacheEnabled == nil {
 		cacheEnabled := true
 		e.HTTPCacheEnabled = &cacheEnabled
 	}
-
-	return nil
 }
