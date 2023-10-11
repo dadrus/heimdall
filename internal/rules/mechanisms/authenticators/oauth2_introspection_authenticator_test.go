@@ -68,7 +68,7 @@ foo: bar
 
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "failed to unmarshal")
+				assert.Contains(t, err.Error(), "failed decoding")
 			},
 		},
 		{
@@ -85,14 +85,14 @@ subject:
 
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "validate endpoint")
+				assert.Contains(t, err.Error(), "'introspection_endpoint' is a required field")
 			},
 		},
 		{
 			uc: "with missing trusted issuers assertion config",
 			config: []byte(`
 introspection_endpoint:
-  url: foobar.local
+  url: http://foobar.local
 subject:
   id: some_template
 `),
@@ -101,7 +101,7 @@ subject:
 
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "no trusted issuers")
+				assert.Contains(t, err.Error(), "'assertions' is a required field")
 			},
 		},
 		{
@@ -109,7 +109,7 @@ subject:
 			id: "auth1",
 			config: []byte(`
 introspection_endpoint:
-  url: foobar.local
+  url: http://foobar.local
 assertions:
   issuers:
     - foobar
@@ -132,7 +132,7 @@ assertions:
 			id: "auth1",
 			config: []byte(`
 introspection_endpoint:
-  url: foobar.local
+  url: http://foobar.local
 assertions:
   issuers:
     - foobar
@@ -145,7 +145,7 @@ subject:
 				require.NoError(t, err)
 
 				// assert endpoint config
-				assert.Equal(t, "foobar.local", auth.e.URL)
+				assert.Equal(t, "http://foobar.local", auth.e.URL)
 				assert.Equal(t, http.MethodPost, auth.e.Method)
 				assert.Len(t, auth.e.Headers, 2)
 				assert.Contains(t, auth.e.Headers, "Content-Type")
@@ -286,7 +286,7 @@ func TestCreateOAuth2IntrospectionAuthenticatorFromPrototype(t *testing.T) {
 			id: "auth2",
 			prototypeConfig: []byte(`
 introspection_endpoint:
-  url: foobar.local
+  url: http://foobar.local
 assertions:
   issuers:
     - foobar
@@ -307,7 +307,7 @@ subject:
 			uc: "with unsupported fields",
 			prototypeConfig: []byte(`
 introspection_endpoint:
-  url: foobar.local
+  url: http://foobar.local
 assertions:
   issuers:
     - foobar
@@ -321,7 +321,7 @@ subject:
 
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "failed to unmarshal")
+				assert.Contains(t, err.Error(), "failed decoding")
 			},
 		},
 		{
@@ -329,7 +329,7 @@ subject:
 			id: "auth2",
 			prototypeConfig: []byte(`
 introspection_endpoint:
-  url: foobar.local
+  url: http://foobar.local
 assertions:
   issuers:
     - foobar
@@ -372,7 +372,7 @@ assertions:
 			id: "auth2",
 			prototypeConfig: []byte(`
 introspection_endpoint:
-  url: foobar.local
+  url: http://foobar.local
 assertions:
   issuers:
     - foobar
@@ -402,7 +402,7 @@ subject:
 			id: "auth2",
 			prototypeConfig: []byte(`
 introspection_endpoint:
-  url: foobar.local
+  url: http://foobar.local
 assertions:
   issuers:
     - foobar
@@ -439,7 +439,7 @@ cache_ttl: 15s
 			id: "auth2",
 			prototypeConfig: []byte(`
 introspection_endpoint:
-  url: foobar.local
+  url: http://foobar.local
 assertions:
   issuers:
     - foobar

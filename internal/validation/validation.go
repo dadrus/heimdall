@@ -22,8 +22,11 @@ func init() {
 	translate, _ = uni.GetTranslator("en")
 	validate = validator.New(validator.WithRequiredStructEnabled())
 
-	err := entranslations.RegisterDefaultTranslations(validate, translate)
-	if err != nil {
+	if err := entranslations.RegisterDefaultTranslations(validate, translate); err != nil {
+		panic(err)
+	}
+
+	if err := registerTranslations(validate, translate); err != nil {
 		panic(err)
 	}
 

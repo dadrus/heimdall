@@ -22,6 +22,7 @@ import (
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
+	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
@@ -48,19 +49,19 @@ type cookieFinalizer struct {
 
 func newCookieFinalizer(id string, rawConfig map[string]any) (*cookieFinalizer, error) {
 	type Config struct {
-		Cookies map[string]template.Template `mapstructure:"cookies"`
+		Cookies map[string]template.Template `mapstructure:"cookies" validate:"required,gt=0"`
 	}
 
 	var conf Config
 	if err := decodeConfig(rawConfig, &conf); err != nil {
 		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration, "failed to unmarshal cookie finalizer config").
+			NewWithMessage(heimdall.ErrConfiguration, "failed decoding 'cookies' finalizer config").
 			CausedBy(err)
 	}
 
-	if len(conf.Cookies) == 0 {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration, "no cookie definitions provided")
+	if err := validation.ValidateStruct(&conf); err != nil {
+		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
+			"failed validating 'cookies' finalizer config").CausedBy(err)
 	}
 
 	return &cookieFinalizer{

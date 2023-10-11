@@ -35,6 +35,7 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/extractors"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/oauth2"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
+	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/stringx"
@@ -71,10 +72,10 @@ func newOAuth2IntrospectionAuthenticator(id string, rawConfig map[string]any) (
 	error,
 ) {
 	type Config struct {
-		Endpoint             endpoint.Endpoint                   `mapstructure:"introspection_endpoint"`
+		Endpoint             endpoint.Endpoint                   `mapstructure:"introspection_endpoint"  validate:"required"`
+		Assertions           oauth2.Expectation                  `mapstructure:"assertions"              validate:"required"`
+		SubjectInfo          SubjectInfo                         `mapstructure:"subject"                 validate:"-"`
 		AuthDataSource       extractors.CompositeExtractStrategy `mapstructure:"token_source"`
-		Assertions           oauth2.Expectation                  `mapstructure:"assertions"`
-		SubjectInfo          SubjectInfo                         `mapstructure:"subject"`
 		CacheTTL             *time.Duration                      `mapstructure:"cache_ttl"`
 		AllowFallbackOnError bool                                `mapstructure:"allow_fallback_on_error"`
 	}
@@ -83,19 +84,13 @@ func newOAuth2IntrospectionAuthenticator(id string, rawConfig map[string]any) (
 	if err := decodeConfig(rawConfig, &conf); err != nil {
 		return nil, errorchain.
 			NewWithMessage(heimdall.ErrConfiguration,
-				"failed to unmarshal oauth2 introspection authenticator config").
+				"failed decoding 'oauth2_introspection' authenticator config").
 			CausedBy(err)
 	}
 
-	if err := conf.Endpoint.Validate(); err != nil {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration, "failed to validate endpoint configuration").
-			CausedBy(err)
-	}
-
-	if len(conf.Assertions.TrustedIssuers) == 0 {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration, "no trusted issuers configured")
+	if err := validation.ValidateStruct(&conf); err != nil {
+		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
+			"failed validating 'oauth2_introspection' authenticator config").CausedBy(err)
 	}
 
 	if len(conf.SubjectInfo.IDFrom) == 0 {
@@ -191,9 +186,8 @@ func (a *oauth2IntrospectionAuthenticator) WithConfig(rawConfig map[string]any) 
 
 	var conf Config
 	if err := decodeConfig(rawConfig, &conf); err != nil {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration, "failed to unmarshal configuration").
-			CausedBy(err)
+		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
+			"failed decoding 'oauth2_introspection' authenticator config").CausedBy(err)
 	}
 
 	return &oauth2IntrospectionAuthenticator{

@@ -27,9 +27,9 @@ import (
 )
 
 type APIKeyStrategy struct {
-	In    string `mapstructure:"in"`
-	Name  string `mapstructure:"name"`
-	Value string `mapstructure:"value"`
+	In    string `mapstructure:"in"    validate:"required,oneof=cookie header query"`
+	Name  string `mapstructure:"name"  validate:"required"`
+	Value string `mapstructure:"value" validate:"required"`
 }
 
 func (c *APIKeyStrategy) Apply(_ context.Context, req *http.Request) error {

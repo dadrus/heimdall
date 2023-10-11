@@ -25,8 +25,8 @@ import (
 )
 
 type BasicAuthStrategy struct {
-	User     string `mapstructure:"user"`
-	Password string `mapstructure:"password"`
+	User     string `mapstructure:"user"     validate:"required"`
+	Password string `mapstructure:"password" validate:"required"`
 }
 
 func (c *BasicAuthStrategy) Apply(_ context.Context, req *http.Request) error {

@@ -69,7 +69,7 @@ auth:
 				t.Helper()
 
 				assert.Error(t, err)
-				assert.ErrorContains(t, err, "'user' property to be set")
+				assert.ErrorContains(t, err, "'user' is a required field")
 			},
 		},
 		{
@@ -84,7 +84,7 @@ auth:
 				t.Helper()
 
 				assert.Error(t, err)
-				assert.ErrorContains(t, err, "'password' property to be set")
+				assert.ErrorContains(t, err, "'password' is a required field")
 			},
 		},
 		{
@@ -215,7 +215,7 @@ auth:
 				t.Helper()
 
 				assert.Error(t, err)
-				assert.ErrorContains(t, err, "to either 'header', 'cookie', or 'query'")
+				assert.ErrorContains(t, err, "'in' must be one of [cookie header query]")
 			},
 		},
 		{
@@ -231,7 +231,7 @@ auth:
 				t.Helper()
 
 				assert.Error(t, err)
-				assert.ErrorContains(t, err, "'in' property to be set")
+				assert.ErrorContains(t, err, "'in' is a required field")
 			},
 		},
 		{
@@ -247,7 +247,7 @@ auth:
 				t.Helper()
 
 				assert.Error(t, err)
-				assert.ErrorContains(t, err, "'name' property to be set")
+				assert.ErrorContains(t, err, "'name' is a required field")
 			},
 		},
 		{
@@ -263,7 +263,7 @@ auth:
 				t.Helper()
 
 				assert.Error(t, err)
-				assert.ErrorContains(t, err, "'value' property to be set")
+				assert.ErrorContains(t, err, "'value' is a required field")
 			},
 		},
 		{
@@ -376,7 +376,7 @@ auth:
 				t.Helper()
 
 				assert.Error(t, err)
-				assert.ErrorContains(t, err, "'client_id' property to be set")
+				assert.ErrorContains(t, err, "'client_id' is a required field")
 			},
 		},
 		{
@@ -392,7 +392,7 @@ auth:
 				t.Helper()
 
 				assert.Error(t, err)
-				assert.ErrorContains(t, err, "'client_secret' property to be set")
+				assert.ErrorContains(t, err, "'client_secret' is a required field")
 			},
 		},
 		{
@@ -408,7 +408,7 @@ auth:
 				t.Helper()
 
 				assert.Error(t, err)
-				assert.ErrorContains(t, err, "'token_url' property to be set")
+				assert.ErrorContains(t, err, "'token_url' is a required field")
 			},
 		},
 		{

@@ -98,7 +98,7 @@ foo: bar
 
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "failed to unmarshal")
+				assert.Contains(t, err.Error(), "failed decoding")
 			},
 		},
 		{
@@ -116,7 +116,7 @@ subject:
 
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "endpoint configuration")
+				assert.Contains(t, err.Error(), "'jwks_endpoint' is a required field")
 			},
 		},
 		{
@@ -134,7 +134,7 @@ subject:
 
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "no trusted issuers")
+				assert.Contains(t, err.Error(), "'issuers' is a required field")
 			},
 		},
 		{
@@ -418,7 +418,7 @@ cache_ttl: 5s`),
 				// THEN
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "failed to unmarshal")
+				assert.Contains(t, err.Error(), "failed decoding")
 			},
 		},
 		{
