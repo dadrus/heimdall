@@ -37,7 +37,7 @@ import (
 const defaultCacheLeeway = 15
 
 type ClientCredentialsStrategy struct {
-	TokenURL     string   `mapstructure:"token_url"     validate:"required,http_url"`
+	TokenURL     string   `mapstructure:"token_url"     validate:"required,url"`
 	ClientID     string   `mapstructure:"client_id"     validate:"required"`
 	ClientSecret string   `mapstructure:"client_secret" validate:"required"`
 	Scopes       []string `mapstructure:"scopes"`
