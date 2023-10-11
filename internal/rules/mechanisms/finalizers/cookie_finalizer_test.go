@@ -47,18 +47,18 @@ func TestCreateCookieFinalizer(t *testing.T) {
 
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "no cookie")
+				assert.Contains(t, err.Error(), "'cookies' is a required field")
 			},
 		},
 		{
-			uc:     "without cookie configuration",
-			config: []byte(``),
+			uc:     "with empty cookies configuration",
+			config: []byte(`cookies: {}`),
 			assert: func(t *testing.T, err error, _ *cookieFinalizer) {
 				t.Helper()
 
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "no cookie")
+				assert.Contains(t, err.Error(), "'cookies' must contain more than 0 items")
 			},
 		},
 		{
@@ -73,7 +73,7 @@ foo: bar
 
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "failed to unmarshal")
+				assert.Contains(t, err.Error(), "failed decoding")
 			},
 		},
 		{
@@ -88,7 +88,7 @@ cookies:
 				require.Nil(t, finalizer)
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "failed to unmarshal")
+				assert.Contains(t, err.Error(), "failed decoding")
 			},
 		},
 		{
