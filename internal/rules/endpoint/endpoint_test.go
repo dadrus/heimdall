@@ -36,53 +36,6 @@ import (
 	"github.com/dadrus/heimdall/internal/x"
 )
 
-func TestEndpointValidate(t *testing.T) {
-	t.Parallel()
-
-	for _, tc := range []struct {
-		uc       string
-		endpoint Endpoint
-		assert   func(t *testing.T, err error)
-	}{
-		{
-			uc:       "endpoint without required URL attribute",
-			endpoint: Endpoint{Method: "GET"},
-			assert: func(t *testing.T, err error) {
-				t.Helper()
-
-				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "requires url")
-			},
-		},
-		{
-			uc:       "endpoint with malformed URL",
-			endpoint: Endpoint{URL: "{{ .Values.foo }}://foo.bar"},
-			assert: func(t *testing.T, err error) {
-				t.Helper()
-
-				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "failed to parse")
-			},
-		},
-		{
-			uc:       "endpoint with required URL attribute",
-			endpoint: Endpoint{URL: "http://foo.bar"},
-			assert: func(t *testing.T, err error) {
-				t.Helper()
-
-				assert.NoError(t, err)
-			},
-		},
-	} {
-		t.Run("case="+tc.uc, func(t *testing.T) {
-			// THEN
-			tc.assert(t, tc.endpoint.Validate())
-		})
-	}
-}
-
 func TestEndpointCreateClient(t *testing.T) {
 	t.Parallel()
 

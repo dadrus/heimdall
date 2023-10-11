@@ -65,7 +65,7 @@ subject:
 
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "failed to decode")
+				assert.Contains(t, err.Error(), "failed decoding")
 			},
 		},
 		{
@@ -80,7 +80,24 @@ subject:
 
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "endpoint configuration")
+				assert.Contains(t, err.Error(), "'identity_info_endpoint' is a required field")
+			},
+		},
+		{
+			uc: "bad url config",
+			config: []byte(`
+identity_info_endpoint:
+  url: test.com
+authentication_data_source:
+  - header: foo-header
+subject:
+  id: some_template`),
+			assertError: func(t *testing.T, err error, auth *genericAuthenticator) {
+				t.Helper()
+
+				require.Error(t, err)
+				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				assert.Contains(t, err.Error(), "'identity_info_endpoint'.'url' must be a valid URL")
 			},
 		},
 		{
@@ -95,7 +112,7 @@ authentication_data_source:
 
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "subject configuration")
+				assert.Contains(t, err.Error(), "'subject' is a required field")
 			},
 		},
 		{
@@ -110,7 +127,24 @@ subject:
 
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "authentication_data_source")
+				assert.Contains(t, err.Error(), "'authentication_data_source' is a required field")
+			},
+		},
+		{
+			uc: "missing subject id config",
+			config: []byte(`
+identity_info_endpoint:
+  url: http://test.com
+subject:
+  attributes: some_template
+authentication_data_source:
+  - header: foo-header`),
+			assertError: func(t *testing.T, err error, auth *genericAuthenticator) {
+				t.Helper()
+
+				require.Error(t, err)
+				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				assert.Contains(t, err.Error(), "'subject'.'id' is a required field")
 			},
 		},
 		{
@@ -340,7 +374,7 @@ subject:
 
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "failed to parse")
+				assert.Contains(t, err.Error(), "failed decoding")
 			},
 		},
 		{
@@ -523,7 +557,7 @@ identity_info_endpoint:
 
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "failed to parse")
+				assert.Contains(t, err.Error(), "failed decoding")
 			},
 		},
 		{
@@ -547,7 +581,7 @@ authentication_data_source:
 
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "failed to parse")
+				assert.Contains(t, err.Error(), "failed decoding")
 			},
 		},
 		{
@@ -571,7 +605,7 @@ subject:
 
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "failed to parse")
+				assert.Contains(t, err.Error(), "failed decoding")
 			},
 		},
 		{
@@ -595,7 +629,7 @@ session_lifespan:
 
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "failed to parse")
+				assert.Contains(t, err.Error(), "failed decoding")
 			},
 		},
 		{
@@ -619,7 +653,7 @@ payload: |
 
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "failed to parse")
+				assert.Contains(t, err.Error(), "failed decoding")
 			},
 		},
 		{
@@ -643,7 +677,7 @@ forward_headers:
 
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "failed to parse")
+				assert.Contains(t, err.Error(), "failed decoding")
 			},
 		},
 		{
@@ -667,7 +701,7 @@ forward_cookies:
 
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "failed to parse")
+				assert.Contains(t, err.Error(), "failed decoding")
 			},
 		},
 	} {

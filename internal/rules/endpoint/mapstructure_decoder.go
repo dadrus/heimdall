@@ -22,6 +22,7 @@ import (
 	"github.com/mitchellh/mapstructure"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
@@ -73,11 +74,11 @@ func DecodeAuthenticationStrategyHookFunc() mapstructure.DecodeHookFunc {
 
 		switch typed["type"] {
 		case "basic_auth":
-			return decodeBasicAuthStrategy(typed["config"])
+			return decodeStrategy("basic_auth", &BasicAuthStrategy{}, typed["config"])
 		case "api_key":
-			return decodeAPIKeyStrategy(typed["config"])
+			return decodeStrategy("api_key", &APIKeyStrategy{}, typed["config"])
 		case "client_credentials":
-			return decodeClientCredentialsStrategy(typed["config"])
+			return decodeStrategy("client_credentials", &ClientCredentialsStrategy{}, typed["config"])
 		default:
 			return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
 				"unsupported authentication type: '%s'", typed["type"])
@@ -85,95 +86,21 @@ func DecodeAuthenticationStrategyHookFunc() mapstructure.DecodeHookFunc {
 	}
 }
 
-func decodeClientCredentialsStrategy(config any) (AuthenticationStrategy, error) {
-	var strategy ClientCredentialsStrategy
-
+func decodeStrategy[S AuthenticationStrategy](name string, strategy S, config any) (AuthenticationStrategy, error) {
 	if config == nil {
-		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
-			"client-credentials strategy requires 'config' property to be set")
+		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+			"'%s' strategy requires 'config' property to be set", name)
 	}
 
-	err := mapstructure.Decode(config, &strategy)
-	if err != nil {
-		return nil, err
+	if err := mapstructure.Decode(config, strategy); err != nil {
+		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+			"failed to unmarshal '%s' strategy config", name).CausedBy(err)
 	}
 
-	if len(strategy.ClientID) == 0 {
-		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
-			"client-credentials strategy requires 'client_id' property to be set")
+	if err := validation.ValidateStruct(strategy); err != nil {
+		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+			"failed validating '%s' strategy config", name).CausedBy(err)
 	}
 
-	if len(strategy.ClientSecret) == 0 {
-		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
-			"client-credentials strategy requires 'client_secret' property to be set")
-	}
-
-	if len(strategy.TokenURL) == 0 {
-		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
-			"client-credentials strategy requires 'token_url' property to be set")
-	}
-
-	return &strategy, nil
-}
-
-func decodeAPIKeyStrategy(config any) (AuthenticationStrategy, error) {
-	var strategy APIKeyStrategy
-
-	if config == nil {
-		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
-			"api-key strategy requires 'config' property to be set")
-	}
-
-	err := mapstructure.Decode(config, &strategy)
-	if err != nil {
-		return nil, err
-	}
-
-	if len(strategy.Name) == 0 {
-		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
-			"api-key strategy requires 'name' property to be set")
-	}
-
-	if len(strategy.Value) == 0 {
-		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
-			"api-key strategy requires 'value' property to be set")
-	}
-
-	if len(strategy.In) == 0 {
-		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
-			"api-key strategy requires 'in' property to be set")
-	}
-
-	if strategy.In != "header" && strategy.In != "cookie" && strategy.In != "query" {
-		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
-			"api-key strategy requires 'in' property to be set to either 'header', 'cookie', or 'query'")
-	}
-
-	return &strategy, nil
-}
-
-func decodeBasicAuthStrategy(config any) (AuthenticationStrategy, error) {
-	var strategy BasicAuthStrategy
-
-	if config == nil {
-		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
-			"basic-auth strategy requires 'config' property to be set")
-	}
-
-	err := mapstructure.Decode(config, &strategy)
-	if err != nil {
-		return nil, err
-	}
-
-	if len(strategy.User) == 0 {
-		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
-			"basic-auth strategy requires 'user' property to be set")
-	}
-
-	if len(strategy.Password) == 0 {
-		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
-			"basic-auth strategy requires 'password' property to be set")
-	}
-
-	return &strategy, nil
+	return strategy, nil
 }

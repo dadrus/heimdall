@@ -40,44 +40,17 @@ import (
 func TestRuleSetEndpointInit(t *testing.T) {
 	t.Parallel()
 
-	for _, tc := range []struct {
-		uc     string
-		ep     *ruleSetEndpoint
-		assert func(t *testing.T, err error, ep *ruleSetEndpoint)
-	}{
-		{
-			uc: "init fails due to not set url",
-			ep: &ruleSetEndpoint{},
-			assert: func(t *testing.T, err error, ep *ruleSetEndpoint) {
-				t.Helper()
+	// GIVEN
+	ep := &ruleSetEndpoint{Endpoint: endpoint.Endpoint{URL: "http://foo.bar"}}
 
-				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "validation")
-			},
-		},
-		{
-			uc: "init successful",
-			ep: &ruleSetEndpoint{Endpoint: endpoint.Endpoint{URL: "http://foo.bar"}},
-			assert: func(t *testing.T, err error, ep *ruleSetEndpoint) {
-				t.Helper()
+	// WHEN
+	ep.init()
 
-				require.NoError(t, err)
-				assert.Equal(t, "http://foo.bar", ep.URL)
-				assert.Equal(t, http.MethodGet, ep.Method)
-				require.NotNil(t, ep.HTTPCacheEnabled)
-				assert.True(t, *ep.HTTPCacheEnabled)
-			},
-		},
-	} {
-		t.Run(tc.uc, func(t *testing.T) {
-			// WHEN
-			err := tc.ep.init()
-
-			// THEN
-			tc.assert(t, err, tc.ep)
-		})
-	}
+	// THEN
+	assert.Equal(t, "http://foo.bar", ep.URL)
+	assert.Equal(t, http.MethodGet, ep.Method)
+	require.NotNil(t, ep.HTTPCacheEnabled)
+	assert.True(t, *ep.HTTPCacheEnabled)
 }
 
 func TestRuleSetEndpointFetchRuleSet(t *testing.T) {

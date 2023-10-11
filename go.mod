@@ -10,7 +10,7 @@ require (
 	github.com/envoyproxy/go-control-plane v0.11.1
 	github.com/felixge/httpsnoop v1.0.3
 	github.com/fsnotify/fsnotify v1.6.0
-	github.com/go-co-op/gocron v1.35.1
+	github.com/go-co-op/gocron v1.35.2
 	github.com/go-http-utils/etag v0.0.0-20161124023236-513ea8f21eb1
 	github.com/go-logr/zerologr v1.2.3
 	github.com/go-playground/locales v0.14.1
@@ -72,7 +72,7 @@ require (
 	gocloud.dev v0.34.0
 	golang.org/x/exp v0.0.0-20231006140011-7918f672742d
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20231009173412-8bfb1ae86b6c
-	google.golang.org/grpc v1.58.2
+	google.golang.org/grpc v1.58.3
 	google.golang.org/protobuf v1.31.0
 	gopkg.in/square/go-jose.v2 v2.6.0
 	gopkg.in/yaml.v3 v3.0.1

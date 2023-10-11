@@ -37,10 +37,10 @@ import (
 const defaultCacheLeeway = 15
 
 type ClientCredentialsStrategy struct {
-	ClientID     string   `mapstructure:"client_id"`
-	ClientSecret string   `mapstructure:"client_secret"`
+	TokenURL     string   `mapstructure:"token_url"     validate:"required,url"`
+	ClientID     string   `mapstructure:"client_id"     validate:"required"`
+	ClientSecret string   `mapstructure:"client_secret" validate:"required"`
 	Scopes       []string `mapstructure:"scopes"`
-	TokenURL     string   `mapstructure:"token_url"`
 }
 
 func (c *ClientCredentialsStrategy) Apply(ctx context.Context, req *http.Request) error {

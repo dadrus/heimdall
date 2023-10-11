@@ -47,7 +47,7 @@ func TestCreateWWWAuthenticateErrorHandler(t *testing.T) {
 
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "no 'when' error handler")
+				assert.Contains(t, err.Error(), "'when' is a required field")
 			},
 		},
 		{
@@ -57,18 +57,18 @@ func TestCreateWWWAuthenticateErrorHandler(t *testing.T) {
 
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "no 'when' error handler")
+				assert.Contains(t, err.Error(), "'when' is a required field")
 			},
 		},
 		{
-			uc:     "with empty configuration",
-			config: []byte(``),
+			uc:     "with empty 'When' configuration",
+			config: []byte(`when: []`),
 			assert: func(t *testing.T, err error, errorHandler *wwwAuthenticateErrorHandler) {
 				t.Helper()
 
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "no 'when' error handler")
+				assert.Contains(t, err.Error(), "'when' must contain more than 0 items")
 			},
 		},
 		{
@@ -85,7 +85,7 @@ foo: bar
 
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "failed to unmarshal")
+				assert.Contains(t, err.Error(), "failed decoding")
 			},
 		},
 		{
@@ -213,7 +213,7 @@ when:
 
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "failed to unmarshal")
+				assert.Contains(t, err.Error(), "failed decoding")
 			},
 		},
 		{

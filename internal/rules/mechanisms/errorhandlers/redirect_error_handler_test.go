@@ -48,7 +48,7 @@ func TestCreateRedirectErrorHandler(t *testing.T) {
 
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "requires 'to' parameter")
+				assert.Contains(t, err.Error(), "'to' is a required field")
 			},
 		},
 		{
@@ -59,28 +59,21 @@ func TestCreateRedirectErrorHandler(t *testing.T) {
 
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "no 'when' error handler conditions defined")
+				assert.Contains(t, err.Error(), "'when' is a required field")
 			},
 		},
 		{
-			uc: "without provided configuration",
+			uc: "with empty 'When' configuration",
+			config: []byte(`
+to: http://foo.bar
+when: []
+`),
 			assert: func(t *testing.T, err error, redEH *redirectErrorHandler) {
 				t.Helper()
 
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "requires 'to' parameter")
-			},
-		},
-		{
-			uc:     "with empty configuration",
-			config: []byte(``),
-			assert: func(t *testing.T, err error, redEH *redirectErrorHandler) {
-				t.Helper()
-
-				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "requires 'to' parameter")
+				assert.Contains(t, err.Error(), "'when' must contain more than 0 items")
 			},
 		},
 		{
@@ -95,7 +88,7 @@ when:
 
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "failed to unmarshal")
+				assert.Contains(t, err.Error(), "failed decoding")
 			},
 		},
 		{
@@ -112,7 +105,7 @@ when:
 
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "failed to unmarshal")
+				assert.Contains(t, err.Error(), "failed decoding")
 			},
 		},
 		{
@@ -294,7 +287,7 @@ when:
 
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "failed to unmarshal")
+				assert.Contains(t, err.Error(), "failed decoding")
 			},
 		},
 		{

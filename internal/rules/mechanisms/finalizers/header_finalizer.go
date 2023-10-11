@@ -22,6 +22,7 @@ import (
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
+	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
@@ -48,19 +49,19 @@ type headerFinalizer struct {
 
 func newHeaderFinalizer(id string, rawConfig map[string]any) (*headerFinalizer, error) {
 	type Config struct {
-		Headers map[string]template.Template `mapstructure:"headers"`
+		Headers map[string]template.Template `mapstructure:"headers" validate:"required,gt=0"`
 	}
 
 	var conf Config
 	if err := decodeConfig(rawConfig, &conf); err != nil {
 		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration, "failed to unmarshal header finalizer config").
+			NewWithMessage(heimdall.ErrConfiguration, "failed decoding 'headers' finalizer config").
 			CausedBy(err)
 	}
 
-	if len(conf.Headers) == 0 {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration, "no headers definitions provided")
+	if err := validation.ValidateStruct(&conf); err != nil {
+		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
+			"failed validating 'headers' finalizer config").CausedBy(err)
 	}
 
 	return &headerFinalizer{

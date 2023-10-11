@@ -104,7 +104,7 @@ func TestCreateJWTFinalizer(t *testing.T) {
 
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "less than one second")
+				assert.Contains(t, err.Error(), "'ttl' must be greater than 1s")
 			},
 		},
 		{
@@ -171,7 +171,7 @@ foo: bar"
 
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "failed to unmarshal")
+				assert.Contains(t, err.Error(), "failed decoding")
 			},
 		},
 		{
@@ -186,7 +186,7 @@ header:
 
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "empty string")
+				assert.Contains(t, err.Error(), "'header'.'name' is a required field")
 			},
 		},
 		{
@@ -307,7 +307,7 @@ func TestCreateJWTFinalizerFromPrototype(t *testing.T) {
 
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "less than one second")
+				assert.Contains(t, err.Error(), "'ttl' must be greater than 1s")
 			},
 		},
 		{
@@ -377,7 +377,7 @@ foo: bar
 
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "failed to unmarshal")
+				assert.Contains(t, err.Error(), "failed decoding")
 			},
 		},
 	} {

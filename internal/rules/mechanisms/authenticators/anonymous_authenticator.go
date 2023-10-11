@@ -43,7 +43,7 @@ func newAnonymousAuthenticator(id string, rawConfig map[string]any) (*anonymousA
 
 	if err := decodeConfig(rawConfig, &auth); err != nil {
 		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration, "failed to decode anonymous authenticator config").
+			NewWithMessage(heimdall.ErrConfiguration, "failed decoding 'anonymous' authenticator config").
 			CausedBy(err)
 	}
 
