@@ -131,22 +131,31 @@ NOTE: To enable the usage of this finalizer, you have to set the `type` property
 
 Configuration using the `config` property is mandatory. Following properties are available:
 
+* *`token_url`*: _string_ (mandatory, not overridable)
++
+The token endpoint of the authorization server.
 
-* *`client_id`*: _string_ (mandatory)
+* *`client_id`*: _string_ (mandatory, not overridable)
 +
 The client identifier for heimdall.
 
-* *`client_secret`*: _string_ (mandatory)
+* *`client_secret`*: _string_ (mandatory, not overridable)
 +
 The client secret for heimdall.
 
-* *`scopes`*: _string array_ (optional)
+* *`auth_method`*: _string_ (optional, not overridable)
++
+The authentication method to be used according to https://www.rfc-editor.org/rfc/rfc6749#section-2.3.1[RFC 6749, Client Password]. Can one of
+
+** `basic_auth` (default if `auth_method` is not set): With that authentication method, the `"application/x-www-form-urlencoded"` encoded values of `client_id` and `client_secret` are sent to the authorization server via the `Authorization` header using the `Basic` scheme.
+
+** `request_body`: With that authentication method the `client_id` and `client_secret` are sent in the request body together with the other parameters (e.g. `scopes`) defined by the flow.
++
+WARNING: Usage of `request_body` authentication method is not recommended and should be avoided.
+
+* *`scopes`*: _string array_ (optional, overridable)
 +
 The scopes required for the access token.
-
-* *`token_url`*: _string_ (mandatory)
-+
-The token endpoint of the authorization server.
 
 * *`cache_ttl`*: _link:{{< relref "/docs/configuration/reference/types.adoc#_duration" >}}[Duration]_ (optional, overridable)
 +
@@ -170,6 +179,7 @@ config:
   token_url: https://my-oauth-provider.com/token
   client_id: my_client
   client_secret: VerySecret!
+  auth_method: basic_auth
   scopes:
     - foo
     - bar
