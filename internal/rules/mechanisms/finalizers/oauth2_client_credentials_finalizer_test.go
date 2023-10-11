@@ -74,6 +74,22 @@ foo: bar
 			},
 		},
 		{
+			uc: "with bad auth method attributes",
+			config: []byte(`
+token_url: https://foo.bar
+client_id: foo
+client_secret: bar
+auth_method: bar
+`),
+			assert: func(t *testing.T, err error, _ *oauth2ClientCredentialsFinalizer) {
+				t.Helper()
+
+				require.Error(t, err)
+				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				assert.Contains(t, err.Error(), "'auth_method' must be one of [basic_auth request_body]")
+			},
+		},
+		{
 			uc: "with minimal valid config",
 			id: "minimal",
 			config: []byte(`
@@ -93,6 +109,7 @@ client_secret: bar
 				assert.Equal(t, "bar", finalizer.clientSecret)
 				assert.Equal(t, "Authorization", finalizer.headerName)
 				assert.Equal(t, "Bearer", finalizer.headerScheme)
+				assert.Equal(t, authMethodBasicAuth, finalizer.authMethod)
 				assert.Nil(t, finalizer.ttl)
 				assert.Empty(t, finalizer.scopes)
 				assert.False(t, finalizer.ContinueOnError())
@@ -105,6 +122,7 @@ client_secret: bar
 token_url: https://foo.bar
 client_id: foo
 client_secret: bar
+auth_method: request_body
 cache_ttl: 11s
 scopes:
   - foo
@@ -125,6 +143,7 @@ header:
 				assert.Equal(t, "bar", finalizer.clientSecret)
 				assert.Equal(t, "X-My-Header", finalizer.headerName)
 				assert.Equal(t, "Foo", finalizer.headerScheme)
+				assert.Equal(t, authMethodRequestBody, finalizer.authMethod)
 				assert.Equal(t, 11*time.Second, *finalizer.ttl)
 				assert.Len(t, finalizer.scopes, 2)
 				assert.Contains(t, finalizer.scopes, "foo")
@@ -239,6 +258,7 @@ scopes:
 				assert.Len(t, configured.scopes, 2)
 				assert.Contains(t, configured.scopes, "foo")
 				assert.Contains(t, configured.scopes, "baz")
+				assert.Equal(t, prototype.authMethod, configured.authMethod)
 			},
 		},
 		{
@@ -274,6 +294,7 @@ cache_ttl: 12s
 				assert.Equal(t, prototype.headerScheme, configured.headerScheme)
 				assert.Empty(t, prototype.scopes)
 				assert.Equal(t, prototype.scopes, configured.scopes)
+				assert.Equal(t, prototype.authMethod, configured.authMethod)
 			},
 		},
 		{
@@ -332,6 +353,7 @@ header:
 				assert.Empty(t, configured.headerScheme)
 				assert.Empty(t, prototype.scopes)
 				assert.Equal(t, prototype.scopes, configured.scopes)
+				assert.Equal(t, prototype.authMethod, configured.authMethod)
 			},
 		},
 		{
@@ -369,6 +391,7 @@ header:
 				assert.Equal(t, "Foo", configured.headerScheme)
 				assert.Empty(t, prototype.scopes)
 				assert.Equal(t, prototype.scopes, configured.scopes)
+				assert.Equal(t, prototype.authMethod, configured.authMethod)
 			},
 		},
 		{
@@ -427,13 +450,15 @@ func TestClientCredentialsFinalizerExecute(t *testing.T) {
 
 	type (
 		response struct {
-			AccessToken string `json:"access_token"`
-			TokenType   string `json:"token_type"`
-			ExpiresIn   int64  `json:"expires_in,omitempty"`
+			AccessToken      string `json:"access_token,omitempty"`
+			TokenType        string `json:"token_type,omitempty"`
+			ExpiresIn        int64  `json:"expires_in,omitempty"`
+			Error            string `json:"error,omitempty"`
+			ErrorDescription string `json:"error_description,omitempty"`
 		}
 
 		RequestAsserter func(t *testing.T, req *http.Request)
-		ResponseBuilder func(t *testing.T) any
+		ResponseBuilder func(t *testing.T) (any, int)
 	)
 
 	var (
@@ -458,7 +483,7 @@ func TestClientCredentialsFinalizerExecute(t *testing.T) {
 
 		assertRequest(t, req)
 
-		resp := buildResponse(t)
+		resp, code := buildResponse(t)
 
 		rawResp, err := json.MarshalContext(req.Context(), resp)
 		if err != nil {
@@ -470,6 +495,7 @@ func TestClientCredentialsFinalizerExecute(t *testing.T) {
 		w.Header().Set("Content-Type", "application/json")
 		w.Header().Set("Content-Length", strconv.Itoa(len(rawResp)))
 
+		w.WriteHeader(code)
 		_, err = w.Write(rawResp)
 		assert.NoError(t, err)
 	}))
@@ -535,13 +561,13 @@ func TestClientCredentialsFinalizerExecute(t *testing.T) {
 				assert.Equal(t, "client_credentials", req.FormValue("grant_type"))
 				assert.Empty(t, req.FormValue("scope"))
 			},
-			buildResponse: func(t *testing.T) any {
+			buildResponse: func(t *testing.T) (any, int) {
 				t.Helper()
 
 				return &response{
 					AccessToken: "barfoo",
 					TokenType:   "Foo",
-				}
+				}, http.StatusOK
 			},
 			assert: func(t *testing.T, err error, tokenEndpointCalled bool) {
 				t.Helper()
@@ -591,7 +617,7 @@ func TestClientCredentialsFinalizerExecute(t *testing.T) {
 				assert.Equal(t, "client_credentials", req.FormValue("grant_type"))
 				assert.Empty(t, req.FormValue("scope"))
 			},
-			buildResponse: func(t *testing.T) any {
+			buildResponse: func(t *testing.T) (any, int) {
 				t.Helper()
 
 				expiresIn := int64((5 * time.Minute).Seconds())
@@ -600,7 +626,7 @@ func TestClientCredentialsFinalizerExecute(t *testing.T) {
 					AccessToken: "barfoo",
 					TokenType:   "Foo",
 					ExpiresIn:   expiresIn,
-				}
+				}, http.StatusOK
 			},
 			assert: func(t *testing.T, err error, tokenEndpointCalled bool) {
 				t.Helper()
@@ -623,10 +649,10 @@ func TestClientCredentialsFinalizerExecute(t *testing.T) {
 				cch.EXPECT().Get(mock.Anything).Return(nil)
 			},
 			assertRequest: func(t *testing.T, req *http.Request) { t.Helper() },
-			buildResponse: func(t *testing.T) any {
+			buildResponse: func(t *testing.T) (any, int) {
 				t.Helper()
 
-				return "foo"
+				return "foo", http.StatusOK
 			},
 			assert: func(t *testing.T, err error, tokenEndpointCalled bool) {
 				t.Helper()
@@ -648,12 +674,6 @@ func TestClientCredentialsFinalizerExecute(t *testing.T) {
 				t.Helper()
 
 				cch.EXPECT().Get(mock.Anything).Return(nil)
-			},
-			assertRequest: func(t *testing.T, req *http.Request) { t.Helper() },
-			buildResponse: func(t *testing.T) any {
-				t.Helper()
-
-				return "foo"
 			},
 			assert: func(t *testing.T, err error, tokenEndpointCalled bool) {
 				t.Helper()
@@ -713,7 +733,7 @@ func TestClientCredentialsFinalizerExecute(t *testing.T) {
 				assert.Contains(t, scopes, "baz")
 				assert.Contains(t, scopes, "zab")
 			},
-			buildResponse: func(t *testing.T) any {
+			buildResponse: func(t *testing.T) (any, int) {
 				t.Helper()
 
 				expiresIn := int64((5 * time.Minute).Seconds())
@@ -722,7 +742,7 @@ func TestClientCredentialsFinalizerExecute(t *testing.T) {
 					AccessToken: "foobar",
 					TokenType:   "Foo",
 					ExpiresIn:   expiresIn,
-				}
+				}, http.StatusOK
 			},
 			assert: func(t *testing.T, err error, tokenEndpointCalled bool) {
 				t.Helper()
@@ -770,7 +790,7 @@ func TestClientCredentialsFinalizerExecute(t *testing.T) {
 				assert.Contains(t, scopes, "baz")
 				assert.Contains(t, scopes, "zab")
 			},
-			buildResponse: func(t *testing.T) any {
+			buildResponse: func(t *testing.T) (any, int) {
 				t.Helper()
 
 				expiresIn := int64((5 * time.Minute).Seconds())
@@ -779,7 +799,7 @@ func TestClientCredentialsFinalizerExecute(t *testing.T) {
 					AccessToken: "foobar",
 					TokenType:   "Foo",
 					ExpiresIn:   expiresIn,
-				}
+				}, http.StatusOK
 			},
 			assert: func(t *testing.T, err error, tokenEndpointCalled bool) {
 				t.Helper()
@@ -835,19 +855,226 @@ func TestClientCredentialsFinalizerExecute(t *testing.T) {
 				assert.Contains(t, scopes, "baz")
 				assert.Contains(t, scopes, "zab")
 			},
-			buildResponse: func(t *testing.T) any {
+			buildResponse: func(t *testing.T) (any, int) {
 				t.Helper()
 
 				return &response{
 					AccessToken: "foobar",
 					TokenType:   "Foo",
-				}
+				}, http.StatusOK
 			},
 			assert: func(t *testing.T, err error, tokenEndpointCalled bool) {
 				t.Helper()
 
 				require.NoError(t, err)
 				assert.True(t, tokenEndpointCalled)
+			},
+		},
+		{
+			uc: "using request_body authentication strategy",
+			finalizer: &oauth2ClientCredentialsFinalizer{
+				id:           "test",
+				headerName:   "X-My-Header",
+				headerScheme: "Foo",
+				tokenURL:     srv.URL,
+				clientID:     "bar foo",
+				clientSecret: "foo bar",
+				authMethod:   authMethodRequestBody,
+				ttl: func() *time.Duration {
+					ttl := 3 * time.Minute
+
+					return &ttl
+				}(),
+				scopes: []string{"baz", "zab"},
+			},
+			configureMocks: func(t *testing.T, ctx *mocks.ContextMock, cch *mocks2.CacheMock) {
+				t.Helper()
+
+				cch.EXPECT().Get(mock.Anything).Return(nil)
+				cch.EXPECT().Set(mock.Anything,
+					&tokenEndpointResponse{
+						AccessToken: "foobar",
+						TokenType:   "Foo",
+					},
+					3*time.Minute,
+				).Return()
+				ctx.EXPECT().AddHeaderForUpstream("X-My-Header", "Foo foobar").Return()
+			},
+			assertRequest: func(t *testing.T, req *http.Request) {
+				t.Helper()
+
+				assert.Equal(t, "application/x-www-form-urlencoded", req.Header.Get("Content-Type"))
+				assert.Equal(t, "application/json", req.Header.Get("Accept-Type"))
+				assert.Equal(t, "bar foo", req.FormValue("client_id"))
+				assert.Equal(t, "foo bar", req.FormValue("client_secret"))
+				assert.Equal(t, "client_credentials", req.FormValue("grant_type"))
+				scopes := strings.Split(req.FormValue("scope"), " ")
+				assert.Len(t, scopes, 2)
+				assert.Contains(t, scopes, "baz")
+				assert.Contains(t, scopes, "zab")
+			},
+			buildResponse: func(t *testing.T) (any, int) {
+				t.Helper()
+
+				return &response{
+					AccessToken: "foobar",
+					TokenType:   "Foo",
+				}, http.StatusOK
+			},
+			assert: func(t *testing.T, err error, tokenEndpointCalled bool) {
+				t.Helper()
+
+				require.NoError(t, err)
+				assert.True(t, tokenEndpointCalled)
+			},
+		},
+		{
+			uc: "misbehaving server on error",
+			finalizer: &oauth2ClientCredentialsFinalizer{
+				id:           "test",
+				headerName:   "X-My-Header",
+				headerScheme: "Foo",
+				tokenURL:     srv.URL,
+				clientID:     "bar",
+				clientSecret: "foo",
+				ttl: func() *time.Duration {
+					ttl := 0 * time.Minute
+
+					return &ttl
+				}(),
+				scopes: []string{"baz", "zab"},
+			},
+			assertRequest: func(t *testing.T, req *http.Request) {
+				t.Helper()
+
+				val, err := base64.StdEncoding.DecodeString(strings.TrimPrefix(req.Header.Get("Authorization"), "Basic "))
+				assert.NoError(t, err)
+
+				clientIDAndSecret := strings.Split(string(val), ":")
+				assert.Equal(t, "bar", clientIDAndSecret[0])
+				assert.Equal(t, "foo", clientIDAndSecret[1])
+
+				assert.Equal(t, "application/x-www-form-urlencoded", req.Header.Get("Content-Type"))
+				assert.Equal(t, "application/json", req.Header.Get("Accept-Type"))
+				assert.Equal(t, "client_credentials", req.FormValue("grant_type"))
+				scopes := strings.Split(req.FormValue("scope"), " ")
+				assert.Len(t, scopes, 2)
+				assert.Contains(t, scopes, "baz")
+				assert.Contains(t, scopes, "zab")
+			},
+			buildResponse: func(t *testing.T) (any, int) {
+				t.Helper()
+
+				// the following is not compliant as error is defined otherwise
+				// in https://www.rfc-editor.org/rfc/rfc6749#section-5.2
+				res, err := json.Marshal(map[string]any{
+					"error": map[string]any{
+						"error":             "invalid_request",
+						"error_description": "whatever",
+					},
+				})
+				require.NoError(t, err)
+
+				return &response{
+					Error: string(res),
+				}, http.StatusOK
+			},
+			assert: func(t *testing.T, err error, tokenEndpointCalled bool) {
+				t.Helper()
+
+				assert.True(t, tokenEndpointCalled)
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), "invalid_request")
+			},
+		},
+		{
+			uc: "misbehaving server on error, response code unexpected",
+			finalizer: &oauth2ClientCredentialsFinalizer{
+				id:           "test",
+				headerName:   "X-My-Header",
+				headerScheme: "Foo",
+				tokenURL:     srv.URL,
+				clientID:     "bar",
+				clientSecret: "foo",
+				ttl: func() *time.Duration {
+					ttl := 0 * time.Minute
+
+					return &ttl
+				}(),
+				scopes: []string{"baz", "zab"},
+			},
+			assertRequest: func(t *testing.T, req *http.Request) {
+				t.Helper()
+			},
+			buildResponse: func(t *testing.T) (any, int) {
+				t.Helper()
+
+				return &response{
+					Error:            "invalid_request",
+					ErrorDescription: "whatever",
+				}, http.StatusForbidden
+			},
+			assert: func(t *testing.T, err error, tokenEndpointCalled bool) {
+				t.Helper()
+
+				assert.True(t, tokenEndpointCalled)
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), "unexpected response code: 403")
+			},
+		},
+		{
+			uc: "compliant server on error",
+			finalizer: &oauth2ClientCredentialsFinalizer{
+				id:           "test",
+				headerName:   "X-My-Header",
+				headerScheme: "Foo",
+				tokenURL:     srv.URL,
+				clientID:     "bar",
+				clientSecret: "foo",
+				ttl: func() *time.Duration {
+					ttl := 3 * time.Minute
+
+					return &ttl
+				}(),
+				scopes: []string{"baz", "zab"},
+			},
+			configureMocks: func(t *testing.T, ctx *mocks.ContextMock, cch *mocks2.CacheMock) {
+				t.Helper()
+
+				cch.EXPECT().Get(mock.Anything).Return(nil)
+			},
+			assertRequest: func(t *testing.T, req *http.Request) {
+				t.Helper()
+
+				val, err := base64.StdEncoding.DecodeString(strings.TrimPrefix(req.Header.Get("Authorization"), "Basic "))
+				assert.NoError(t, err)
+
+				clientIDAndSecret := strings.Split(string(val), ":")
+				assert.Equal(t, "bar", clientIDAndSecret[0])
+				assert.Equal(t, "foo", clientIDAndSecret[1])
+
+				assert.Equal(t, "application/x-www-form-urlencoded", req.Header.Get("Content-Type"))
+				assert.Equal(t, "application/json", req.Header.Get("Accept-Type"))
+				assert.Equal(t, "client_credentials", req.FormValue("grant_type"))
+				scopes := strings.Split(req.FormValue("scope"), " ")
+				assert.Len(t, scopes, 2)
+				assert.Contains(t, scopes, "baz")
+				assert.Contains(t, scopes, "zab")
+			},
+			buildResponse: func(t *testing.T) (any, int) {
+				t.Helper()
+
+				return &response{
+					Error:            "invalid_request",
+					ErrorDescription: "whatever",
+				}, http.StatusBadRequest
+			},
+			assert: func(t *testing.T, err error, tokenEndpointCalled bool) {
+				t.Helper()
+
+				assert.True(t, tokenEndpointCalled)
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), "invalid_request")
 			},
 		},
 	} {

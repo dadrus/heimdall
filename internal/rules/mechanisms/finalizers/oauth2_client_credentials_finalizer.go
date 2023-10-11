@@ -6,6 +6,7 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"strings"
@@ -40,6 +41,13 @@ func init() {
 		})
 }
 
+type AuthMethod string
+
+const (
+	authMethodBasicAuth   AuthMethod = "basic_auth"
+	authMethodRequestBody AuthMethod = "request_body"
+)
+
 type tokenEndpointResponse struct {
 	AccessToken string `json:"access_token"`
 	TokenType   string `json:"token_type"`
@@ -51,6 +59,7 @@ type oauth2ClientCredentialsFinalizer struct {
 	tokenURL     string
 	clientID     string
 	clientSecret string
+	authMethod   AuthMethod
 	scopes       []string
 	ttl          *time.Duration
 	headerName   string
@@ -70,6 +79,7 @@ func newOAuth2ClientCredentialsFinalizer(
 		TokenURL     string         `mapstructure:"token_url"     validate:"required,http_url"`
 		ClientID     string         `mapstructure:"client_id"     validate:"required"`
 		ClientSecret string         `mapstructure:"client_secret" validate:"required"`
+		AuthMethod   AuthMethod     `mapstructure:"auth_method"   validate:"omitempty,oneof=basic_auth request_body"`
 		Scopes       []string       `mapstructure:"scopes"`
 		TTL          *time.Duration `mapstructure:"cache_ttl"`
 		Header       *HeaderConfig  `mapstructure:"header"`
@@ -93,6 +103,7 @@ func newOAuth2ClientCredentialsFinalizer(
 		clientSecret: conf.ClientSecret,
 		scopes:       conf.Scopes,
 		ttl:          conf.TTL,
+		authMethod:   x.IfThenElse(len(conf.AuthMethod) == 0, authMethodBasicAuth, conf.AuthMethod),
 		headerName: x.IfThenElseExec(conf.Header != nil,
 			func() string { return conf.Header.Name },
 			func() string { return "Authorization" }),
@@ -133,6 +144,7 @@ func (f *oauth2ClientCredentialsFinalizer) WithConfig(rawConfig map[string]any) 
 		tokenURL:     f.tokenURL,
 		clientID:     f.clientID,
 		clientSecret: f.clientSecret,
+		authMethod:   f.authMethod,
 		scopes:       x.IfThenElse(conf.Scopes != nil, conf.Scopes, f.scopes),
 		ttl:          x.IfThenElse(conf.TTL != nil, conf.TTL, f.ttl),
 		headerName: x.IfThenElseExec(conf.Header != nil,
@@ -213,12 +225,9 @@ func (f *oauth2ClientCredentialsFinalizer) calculateCacheKey() string {
 
 func (f *oauth2ClientCredentialsFinalizer) getAccessToken(ctx context.Context) (*tokenEndpointResponse, error) {
 	ept := endpoint.Endpoint{
-		URL:    f.tokenURL,
-		Method: http.MethodPost,
-		AuthStrategy: &endpoint.BasicAuthStrategy{
-			User:     url.QueryEscape(f.clientID),
-			Password: url.QueryEscape(f.clientSecret),
-		},
+		URL:          f.tokenURL,
+		Method:       http.MethodPost,
+		AuthStrategy: f.authStrategy(),
 		Headers: map[string]string{
 			"Content-Type": "application/x-www-form-urlencoded",
 			"Accept-Type":  "application/json",
@@ -230,7 +239,41 @@ func (f *oauth2ClientCredentialsFinalizer) getAccessToken(ctx context.Context) (
 		data.Add("scope", strings.Join(f.scopes, " "))
 	}
 
-	rawData, err := ept.SendRequest(ctx, strings.NewReader(data.Encode()), nil)
+	// This is not recommended, but there are non-compliant servers out there
+	// which do not support the Basic Auth authentication method required by
+	// the spec. See also https://www.rfc-editor.org/rfc/rfc6749#section-2.3.1
+	if ept.AuthStrategy == nil {
+		data.Add("client_id", f.clientID)
+		data.Add("client_secret", f.clientSecret)
+	}
+
+	rawData, err := ept.SendRequest(
+		ctx,
+		strings.NewReader(data.Encode()),
+		nil,
+		func(resp *http.Response) ([]byte, error) {
+			if resp.StatusCode != 200 && resp.StatusCode != 400 {
+				return nil, errorchain.NewWithMessagef(heimdall.ErrCommunication,
+					"unexpected response code: %v", resp.StatusCode)
+			}
+
+			rawData, err := io.ReadAll(resp.Body)
+			if err != nil {
+				return nil, errorchain.NewWithMessage(heimdall.ErrInternal,
+					"failed to read response").CausedBy(err)
+			}
+
+			// not checking resp.StatusCode here as the server may not be compliant and respond with 200
+			// even for errors
+			isError := strings.Contains(stringx.ToString(rawData), "error")
+			if isError {
+				return nil, errorchain.NewWithMessagef(heimdall.ErrCommunication,
+					"error from oauth2 server: %s", string(rawData))
+			}
+
+			return rawData, nil
+		},
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -243,6 +286,17 @@ func (f *oauth2ClientCredentialsFinalizer) getAccessToken(ctx context.Context) (
 	}
 
 	return &resp, nil
+}
+
+func (f *oauth2ClientCredentialsFinalizer) authStrategy() endpoint.AuthenticationStrategy {
+	if f.authMethod == authMethodRequestBody {
+		return nil
+	}
+
+	return &endpoint.BasicAuthStrategy{
+		User:     url.QueryEscape(f.clientID),
+		Password: url.QueryEscape(f.clientSecret),
+	}
 }
 
 func (f *oauth2ClientCredentialsFinalizer) getCacheTTL(resp *tokenEndpointResponse) time.Duration {
