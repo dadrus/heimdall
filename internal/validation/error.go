@@ -6,6 +6,8 @@ import (
 
 	ut "github.com/go-playground/universal-translator"
 	"github.com/go-playground/validator/v10"
+
+	"github.com/dadrus/heimdall/internal/x/slicex"
 )
 
 func wrapError(err error, trans ut.Translator) error {
@@ -28,9 +30,12 @@ func (v *validationError) Error() string {
 		messages := make([]string, len(translations))
 		idx := 0
 
-		for key, value := range errs.Translate(v.t) {
+		for key, value := range translations {
 			ns := strings.Split(key, ".")
-			namespace := strings.Join(ns[1:len(ns)-1], ".")
+			ns = slicex.Filter(ns[1:len(ns)-1], func(s string) bool {
+				return len(strings.Trim(s, "'")) != 0
+			})
+			namespace := strings.Join(ns, ".")
 
 			if len(namespace) == 0 {
 				messages[idx] = value
