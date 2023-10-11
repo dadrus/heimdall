@@ -60,7 +60,7 @@ Here, heimdall communicates with other systems as well, either to get further in
 Here, heimdall performs authorization checks, either locally, or by communicating with yet again further systems, like Open Policy Agent, Ory Keto and alike.
 ** *finalization* mechanisms, so-called link:{{< relref "/docs/configuration/rules/pipeline_mechanisms/finalizers.adoc" >}}[Finalizers], to be executed (if multiple are defined, they are executed in the order of their definition) - step 4 in the figure above.
 +
-This step finalizes the execution of the pipeline and typically transform the information collected so far about the subject and the request into objects expected by the upstream service. The available options range from adding a simple header over a structured JWT, to driving specific protocols, e.g. to obtain a token required by the upstream service.
+This step finalizes the execution of the pipeline and enriches the request with data such as subject information or authentication tokens required by the upstream service. The available options range from adding a simple header over a structured JWT, to driving specific protocols, e.g. to obtain a token required by the upstream service.
 * an error pipeline, consisting of link:{{< relref "/docs/configuration/rules/pipeline_mechanisms/error_handlers.adoc" >}}[error handler] mechanisms (if multiple are defined, they are executed as fallbacks), which are executed if any of the regular pipeline mechanisms fail. These mechanisms range from a simple error response to the client (which sent the request), to sophisticated ones supporting complex logic and redirects.
 
 The diagram below sketches the related execution logic
