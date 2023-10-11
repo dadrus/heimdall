@@ -160,8 +160,8 @@ Defines the `name` and `scheme` to be used for the header. Defaults to `Authoriz
 ====
 [source, yaml]
 ----
-id: oauth2_client_credentials
-type: get_token
+id: get_token
+type: oauth2_client_credentials
 config:
   cache_ttl: 5m
   header:

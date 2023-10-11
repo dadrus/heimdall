@@ -300,8 +300,8 @@ rules:
       config:
         cookies:
           foo-bar: '{{ .Subject.ID }}'
-    - id: oauth2_client_credentials
-      type: get_token
+    - id: get_token
+      type: oauth2_client_credentials
       config:
         header:
           name: X-Token
