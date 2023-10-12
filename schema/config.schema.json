@@ -1473,7 +1473,7 @@
             },
             "cache_ttl": {
               "type": "string",
-              "description": "How long to cache the issued token. Defaults to the value of the `expires_in` of the issued token. If `expires_in` is not present in the response, the token is not cached until this property is not explicitly configured. If `expires_in` is present in the response and this property is configured the shorter value is taken. A negative value will disable caching. ",
+              "description": "How long to cache the issued token. Defaults to the value of the `expires_in` of the issued token. If `expires_in` is not present in the response, the token is not cached until this property is not explicitly configured. If `expires_in` is present in the response and this property is configured the shorter value is taken. 0 or negative value will disable caching. ",
               "pattern": "^[0-9]+(ns|us|ms|s|m|h)$",
               "examples": [
                 "1h",
