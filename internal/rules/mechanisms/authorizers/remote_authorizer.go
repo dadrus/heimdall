@@ -38,7 +38,6 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/values"
-	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/stringx"
@@ -104,15 +103,8 @@ func newRemoteAuthorizer(id string, rawConfig map[string]any) (*remoteAuthorizer
 	}
 
 	var conf Config
-	if err := decodeConfig(rawConfig, &conf); err != nil {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration, "failed decoding 'remote' authorizer config").
-			CausedBy(err)
-	}
-
-	if err := validation.ValidateStruct(&conf); err != nil {
-		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
-			"failed validating 'remote' authorizer config").CausedBy(err)
+	if err := decodeConfig(AuthorizerRemote, rawConfig, &conf); err != nil {
+		return nil, err
 	}
 
 	env, err := cel.NewEnv(cellib.Library())
@@ -203,15 +195,8 @@ func (a *remoteAuthorizer) WithConfig(rawConfig map[string]any) (Authorizer, err
 	}
 
 	var conf Config
-	if err := decodeConfig(rawConfig, &conf); err != nil {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration, "failed decoding 'remote' authorizer config").
-			CausedBy(err)
-	}
-
-	if err := validation.ValidateStruct(&conf); err != nil {
-		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
-			"failed validating 'remote' authorizer config").CausedBy(err)
+	if err := decodeConfig(AuthorizerRemote, rawConfig, &conf); err != nil {
+		return nil, err
 	}
 
 	expressions, err := compileExpressions(conf.Expressions, a.celEnv)

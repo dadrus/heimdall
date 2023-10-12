@@ -19,7 +19,6 @@ import (
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/endpoint"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
-	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/stringx"
@@ -126,14 +125,8 @@ func newOAuth2ClientCredentialsFinalizer(
 	}
 
 	var conf Config
-	if err := decodeConfig(rawConfig, &conf); err != nil {
-		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
-			"failed to unmarshal oauth2_client_credentials finalizer config").CausedBy(err)
-	}
-
-	if err := validation.ValidateStruct(conf); err != nil {
-		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
-			"failed validating oauth2_client_credentials finalizer config").CausedBy(err)
+	if err := decodeConfig(FinalizerOAuth2ClientCredentials, rawConfig, &conf); err != nil {
+		return nil, err
 	}
 
 	return &oauth2ClientCredentialsFinalizer{
@@ -169,14 +162,8 @@ func (f *oauth2ClientCredentialsFinalizer) WithConfig(rawConfig map[string]any) 
 	}
 
 	var conf Config
-	if err := decodeConfig(rawConfig, &conf); err != nil {
-		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
-			"failed to unmarshal oauth2_client_credentials finalizer config").CausedBy(err)
-	}
-
-	if err := validation.ValidateStruct(conf); err != nil {
-		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
-			"failed validating oauth2_client_credentials finalizer config").CausedBy(err)
+	if err := decodeConfig(FinalizerOAuth2ClientCredentials, rawConfig, &conf); err != nil {
+		return nil, err
 	}
 
 	return &oauth2ClientCredentialsFinalizer{

@@ -22,7 +22,6 @@ import (
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
-	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
@@ -53,15 +52,8 @@ func newHeaderFinalizer(id string, rawConfig map[string]any) (*headerFinalizer, 
 	}
 
 	var conf Config
-	if err := decodeConfig(rawConfig, &conf); err != nil {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration, "failed decoding 'headers' finalizer config").
-			CausedBy(err)
-	}
-
-	if err := validation.ValidateStruct(&conf); err != nil {
-		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
-			"failed validating 'headers' finalizer config").CausedBy(err)
+	if err := decodeConfig(FinalizerHeader, rawConfig, &conf); err != nil {
+		return nil, err
 	}
 
 	return &headerFinalizer{

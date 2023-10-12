@@ -38,7 +38,6 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/oauth2"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
 	"github.com/dadrus/heimdall/internal/truststore"
-	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/pkix"
@@ -88,15 +87,8 @@ func newJwtAuthenticator(id string, rawConfig map[string]any) (*jwtAuthenticator
 	}
 
 	var conf Config
-	if err := decodeConfig(rawConfig, &conf); err != nil {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration, "failed decoding 'jwt' authenticator config").
-			CausedBy(err)
-	}
-
-	if err := validation.ValidateStruct(&conf); err != nil {
-		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
-			"failed validating 'jwt' authenticator config").CausedBy(err)
+	if err := decodeConfig(AuthenticatorJwt, rawConfig, &conf); err != nil {
+		return nil, err
 	}
 
 	if conf.Endpoint.Headers == nil {
@@ -195,16 +187,14 @@ func (a *jwtAuthenticator) WithConfig(config map[string]any) (Authenticator, err
 	}
 
 	type Config struct {
-		Assertions           *oauth2.Expectation `mapstructure:"assertions"`
+		Assertions           *oauth2.Expectation `mapstructure:"assertions"              validate:"-"`
 		CacheTTL             *time.Duration      `mapstructure:"cache_ttl"`
 		AllowFallbackOnError *bool               `mapstructure:"allow_fallback_on_error"`
 	}
 
 	var conf Config
-	if err := decodeConfig(config, &conf); err != nil {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration, "failed decoding 'jwt' authenticator config").
-			CausedBy(err)
+	if err := decodeConfig(AuthenticatorJwt, config, &conf); err != nil {
+		return nil, err
 	}
 
 	return &jwtAuthenticator{

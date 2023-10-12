@@ -35,7 +35,6 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/extractors"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/oauth2"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
-	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/stringx"
@@ -81,16 +80,8 @@ func newOAuth2IntrospectionAuthenticator(id string, rawConfig map[string]any) (
 	}
 
 	var conf Config
-	if err := decodeConfig(rawConfig, &conf); err != nil {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration,
-				"failed decoding 'oauth2_introspection' authenticator config").
-			CausedBy(err)
-	}
-
-	if err := validation.ValidateStruct(&conf); err != nil {
-		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
-			"failed validating 'oauth2_introspection' authenticator config").CausedBy(err)
+	if err := decodeConfig(AuthenticatorOAuth2Introspection, rawConfig, &conf); err != nil {
+		return nil, err
 	}
 
 	if len(conf.SubjectInfo.IDFrom) == 0 {
@@ -185,9 +176,8 @@ func (a *oauth2IntrospectionAuthenticator) WithConfig(rawConfig map[string]any) 
 	}
 
 	var conf Config
-	if err := decodeConfig(rawConfig, &conf); err != nil {
-		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
-			"failed decoding 'oauth2_introspection' authenticator config").CausedBy(err)
+	if err := decodeConfig(AuthenticatorOAuth2Introspection, rawConfig, &conf); err != nil {
+		return nil, err
 	}
 
 	return &oauth2IntrospectionAuthenticator{

@@ -36,7 +36,6 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/values"
-	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/stringx"
@@ -91,15 +90,8 @@ func newGenericContextualizer(id string, rawConfig map[string]any) (*genericCont
 	}
 
 	var conf Config
-	if err := decodeConfig(rawConfig, &conf); err != nil {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration, "failed decoding 'generic' contextualizer config").
-			CausedBy(err)
-	}
-
-	if err := validation.ValidateStruct(&conf); err != nil {
-		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
-			"failed validating 'generic' contextualizer config").CausedBy(err)
+	if err := decodeConfig(ContextualizerGeneric, rawConfig, &conf); err != nil {
+		return nil, err
 	}
 
 	ttl := defaultTTL
@@ -186,10 +178,8 @@ func (h *genericContextualizer) WithConfig(rawConfig map[string]any) (Contextual
 	}
 
 	var conf Config
-	if err := decodeConfig(rawConfig, &conf); err != nil {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration, "failed decoding 'generic' contextualizer config").
-			CausedBy(err)
+	if err := decodeConfig(ContextualizerGeneric, rawConfig, &conf); err != nil {
+		return nil, err
 	}
 
 	return &genericContextualizer{
