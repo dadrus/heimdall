@@ -27,7 +27,6 @@ import (
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/extractors"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
-	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/stringx"
@@ -68,15 +67,8 @@ func newBasicAuthAuthenticator(id string, rawConfig map[string]any) (*basicAuthA
 	}
 
 	var conf Config
-	if err := decodeConfig(rawConfig, &conf); err != nil {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration, "failed decoding 'basic_auth' authenticator config").
-			CausedBy(err)
-	}
-
-	if err := validation.ValidateStruct(&conf); err != nil {
-		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
-			"failed validating `basic_auth` authenticator config").CausedBy(err)
+	if err := decodeConfig(AuthenticatorBasicAuth, rawConfig, &conf); err != nil {
+		return nil, err
 	}
 
 	auth := basicAuthAuthenticator{
@@ -158,10 +150,8 @@ func (a *basicAuthAuthenticator) WithConfig(rawConfig map[string]any) (Authentic
 	}
 
 	var conf Config
-
-	if err := decodeConfig(rawConfig, &conf); err != nil {
-		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
-			"failed decoding 'basic_auth' authenticator config").CausedBy(err)
+	if err := decodeConfig(AuthenticatorBasicAuth, rawConfig, &conf); err != nil {
+		return nil, err
 	}
 
 	return &basicAuthAuthenticator{

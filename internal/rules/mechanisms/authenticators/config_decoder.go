@@ -19,14 +19,17 @@ package authenticators
 import (
 	"github.com/mitchellh/mapstructure"
 
+	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/endpoint"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/extractors"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/oauth2"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
 	"github.com/dadrus/heimdall/internal/truststore"
+	"github.com/dadrus/heimdall/internal/validation"
+	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
-func decodeConfig(input any, output any) error {
+func decodeConfig(authenticatorType string, input, output any) error {
 	dec, err := mapstructure.NewDecoder(
 		&mapstructure.DecoderConfig{
 			DecodeHook: mapstructure.ComposeDecodeHookFunc(
@@ -42,8 +45,19 @@ func decodeConfig(input any, output any) error {
 			ErrorUnused: true,
 		})
 	if err != nil {
-		return err
+		return errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+			"failed decoding '%s' authenticator config", authenticatorType).CausedBy(err)
 	}
 
-	return dec.Decode(input)
+	if err = dec.Decode(input); err != nil {
+		return errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+			"failed decoding '%s' authenticator config", authenticatorType).CausedBy(err)
+	}
+
+	if err = validation.ValidateStruct(output); err != nil {
+		return errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+			"failed validating `%s` authenticator config", authenticatorType).CausedBy(err)
+	}
+
+	return nil
 }

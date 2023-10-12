@@ -34,7 +34,6 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/extractors"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
-	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/stringx"
@@ -83,16 +82,8 @@ func newGenericAuthenticator(id string, rawConfig map[string]any) (*genericAuthe
 	}
 
 	var conf Config
-
-	if err := decodeConfig(rawConfig, &conf); err != nil {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration, "failed decoding 'generic' authenticator config").
-			CausedBy(err)
-	}
-
-	if err := validation.ValidateStruct(&conf); err != nil {
-		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
-			"failed validating 'generic' authenticator config").CausedBy(err)
+	if err := decodeConfig(AuthenticatorGeneric, rawConfig, &conf); err != nil {
+		return nil, err
 	}
 
 	return &genericAuthenticator{
@@ -151,9 +142,8 @@ func (a *genericAuthenticator) WithConfig(config map[string]any) (Authenticator,
 	}
 
 	var conf Config
-	if err := decodeConfig(config, &conf); err != nil {
-		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
-			"failed decoding 'generic' authenticator config").CausedBy(err)
+	if err := decodeConfig(AuthenticatorGeneric, config, &conf); err != nil {
+		return nil, err
 	}
 
 	return &genericAuthenticator{

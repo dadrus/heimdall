@@ -313,7 +313,7 @@ foo: 10s
 
 				require.Error(t, err)
 				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "failed to unmarshal")
+				assert.Contains(t, err.Error(), "failed decoding")
 
 				require.NotNil(t, prototype)
 				require.Nil(t, configured)

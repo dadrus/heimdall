@@ -23,9 +23,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/errorhandlers/matcher"
-	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/x"
-	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
 // by intention. Used only during application bootstrap
@@ -57,15 +55,8 @@ func newWWWAuthenticateErrorHandler(id string, rawConfig map[string]any) (*wwwAu
 	}
 
 	var conf Config
-	if err := decodeConfig(rawConfig, &conf); err != nil {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration, "failed decoding 'www_authenticate' error handler config").
-			CausedBy(err)
-	}
-
-	if err := validation.ValidateStruct(&conf); err != nil {
-		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
-			"failed validating 'www_authenticate' error handler config").CausedBy(err)
+	if err := decodeConfig(ErrorHandlerWWWAuthenticate, rawConfig, &conf); err != nil {
+		return nil, err
 	}
 
 	return &wwwAuthenticateErrorHandler{
@@ -103,15 +94,8 @@ func (eh *wwwAuthenticateErrorHandler) WithConfig(rawConfig map[string]any) (Err
 	}
 
 	var conf Config
-	if err := decodeConfig(rawConfig, &conf); err != nil {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration, "failed decoding 'www_authenticate' error handler config").
-			CausedBy(err)
-	}
-
-	if err := validation.ValidateStruct(&conf); err != nil {
-		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
-			"failed validating 'www_authenticate' error handler config").CausedBy(err)
+	if err := decodeConfig(ErrorHandlerWWWAuthenticate, rawConfig, &conf); err != nil {
+		return nil, err
 	}
 
 	return &wwwAuthenticateErrorHandler{

@@ -30,7 +30,6 @@ import (
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
-	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/stringx"
@@ -78,15 +77,8 @@ func newJWTFinalizer(id string, rawConfig map[string]any) (*jwtFinalizer, error)
 	}
 
 	var conf Config
-	if err := decodeConfig(rawConfig, &conf); err != nil {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration, "failed decoding 'jwt' finalizer config").
-			CausedBy(err)
-	}
-
-	if err := validation.ValidateStruct(&conf); err != nil {
-		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
-			"failed validating 'jwt' finalizer config").CausedBy(err)
+	if err := decodeConfig(FinalizerJwt, rawConfig, &conf); err != nil {
+		return nil, err
 	}
 
 	return &jwtFinalizer{
@@ -164,15 +156,8 @@ func (u *jwtFinalizer) WithConfig(rawConfig map[string]any) (Finalizer, error) {
 	}
 
 	var conf Config
-	if err := decodeConfig(rawConfig, &conf); err != nil {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration, "failed decoding 'jwt' finalizer config").
-			CausedBy(err)
-	}
-
-	if err := validation.ValidateStruct(&conf); err != nil {
-		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
-			"failed validating 'jwt' finalizer config").CausedBy(err)
+	if err := decodeConfig(FinalizerJwt, rawConfig, &conf); err != nil {
+		return nil, err
 	}
 
 	return &jwtFinalizer{
