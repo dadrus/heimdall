@@ -27,7 +27,7 @@ func TestCreateFinalizerPrototype(t *testing.T) {
 	t.Parallel()
 
 	// there are 4 finalizers implemented, which should have been registered
-	require.Len(t, typeFactories, 4)
+	require.Len(t, typeFactories, 5)
 
 	for _, tc := range []struct {
 		uc     string

@@ -17,8 +17,9 @@
 package finalizers
 
 const (
-	FinalizerNoop   = "noop"
-	FinalizerJwt    = "jwt"
-	FinalizerHeader = "header"
-	FinalizerCookie = "cookie"
+	FinalizerNoop                    = "noop"
+	FinalizerJwt                     = "jwt"
+	FinalizerHeader                  = "header"
+	FinalizerCookie                  = "cookie"
+	FinalizerOAuth2ClientCredentials = "oauth2_client_credentials" // nolint: gosec
 )

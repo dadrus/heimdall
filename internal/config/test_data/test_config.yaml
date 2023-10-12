@@ -355,6 +355,20 @@ rules:
         config:
           cookies:
             foo-bar: '{{ .Subject.ID }}'
+      - id: client_cred_grant
+        type: oauth2_client_credentials
+        config:
+          token_url: https://my-auth-provider/token
+          client_id: foo
+          client_secret: bar
+          auth_method: basic_auth
+          cache_ttl: 5m
+          scopes:
+            - foo
+            - bar
+          header:
+            name: My-Header
+            scheme: Foo
     error_handlers:
       - id: default
         type: default

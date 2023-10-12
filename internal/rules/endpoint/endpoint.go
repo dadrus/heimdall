@@ -125,7 +125,14 @@ func (e Endpoint) CreateRequest(ctx context.Context, body io.Reader, rndr Render
 	return req, nil
 }
 
-func (e Endpoint) SendRequest(ctx context.Context, body io.Reader, renderer Renderer) ([]byte, error) {
+type ResponseReader func(resp *http.Response) ([]byte, error)
+
+func (e Endpoint) SendRequest(
+	ctx context.Context,
+	body io.Reader,
+	renderer Renderer,
+	reader ...ResponseReader,
+) ([]byte, error) {
 	req, err := e.CreateRequest(ctx, body, renderer)
 	if err != nil {
 		return nil, err
@@ -142,6 +149,10 @@ func (e Endpoint) SendRequest(ctx context.Context, body io.Reader, renderer Rend
 	}
 
 	defer resp.Body.Close()
+
+	if len(reader) != 0 {
+		return reader[0](resp)
+	}
 
 	return e.readResponse(resp)
 }
