@@ -449,14 +449,6 @@ func TestClientCredentialsFinalizerExecute(t *testing.T) {
 	t.Parallel()
 
 	type (
-		response struct {
-			AccessToken      string `json:"access_token,omitempty"`
-			TokenType        string `json:"token_type,omitempty"`
-			ExpiresIn        int64  `json:"expires_in,omitempty"`
-			Error            string `json:"error,omitempty"`
-			ErrorDescription string `json:"error_description,omitempty"`
-		}
-
 		RequestAsserter func(t *testing.T, req *http.Request)
 		ResponseBuilder func(t *testing.T) (any, int)
 	)
@@ -564,7 +556,7 @@ func TestClientCredentialsFinalizerExecute(t *testing.T) {
 			buildResponse: func(t *testing.T) (any, int) {
 				t.Helper()
 
-				return &response{
+				return &TokenSuccessfulResponse{
 					AccessToken: "barfoo",
 					TokenType:   "Foo",
 				}, http.StatusOK
@@ -611,12 +603,10 @@ func TestClientCredentialsFinalizerExecute(t *testing.T) {
 			buildResponse: func(t *testing.T) (any, int) {
 				t.Helper()
 
-				expiresIn := int64((5 * time.Minute).Seconds())
-
-				return &response{
+				return &TokenSuccessfulResponse{
 					AccessToken: "barfoo",
 					TokenType:   "Foo",
-					ExpiresIn:   expiresIn,
+					ExpiresIn:   int64((5 * time.Minute).Seconds()),
 				}, http.StatusOK
 			},
 			assert: func(t *testing.T, err error, tokenEndpointCalled bool) {
@@ -627,7 +617,7 @@ func TestClientCredentialsFinalizerExecute(t *testing.T) {
 			},
 		},
 		{
-			uc: "error while unmarshalling token",
+			uc: "error while unmarshalling successful response",
 			finalizer: &oauth2ClientCredentialsFinalizer{
 				id:           "test",
 				tokenURL:     srv.URL,
@@ -644,6 +634,33 @@ func TestClientCredentialsFinalizerExecute(t *testing.T) {
 				t.Helper()
 
 				return "foo", http.StatusOK
+			},
+			assert: func(t *testing.T, err error, tokenEndpointCalled bool) {
+				t.Helper()
+
+				assert.True(t, tokenEndpointCalled)
+				require.Error(t, err)
+				assert.ErrorIs(t, err, heimdall.ErrInternal)
+			},
+		},
+		{
+			uc: "error while unmarshalling error response",
+			finalizer: &oauth2ClientCredentialsFinalizer{
+				id:           "test",
+				tokenURL:     srv.URL,
+				clientID:     "bar",
+				clientSecret: "foo",
+			},
+			configureMocks: func(t *testing.T, ctx *mocks.ContextMock, cch *mocks2.CacheMock) {
+				t.Helper()
+
+				cch.EXPECT().Get(mock.Anything).Return(nil)
+			},
+			assertRequest: func(t *testing.T, req *http.Request) { t.Helper() },
+			buildResponse: func(t *testing.T) (any, int) {
+				t.Helper()
+
+				return "foo", http.StatusBadRequest
 			},
 			assert: func(t *testing.T, err error, tokenEndpointCalled bool) {
 				t.Helper()
@@ -718,12 +735,10 @@ func TestClientCredentialsFinalizerExecute(t *testing.T) {
 			buildResponse: func(t *testing.T) (any, int) {
 				t.Helper()
 
-				expiresIn := int64((5 * time.Minute).Seconds())
-
-				return &response{
+				return &TokenSuccessfulResponse{
 					AccessToken: "foobar",
 					TokenType:   "Foo",
-					ExpiresIn:   expiresIn,
+					ExpiresIn:   int64((5 * time.Minute).Seconds()),
 				}, http.StatusOK
 			},
 			assert: func(t *testing.T, err error, tokenEndpointCalled bool) {
@@ -775,12 +790,10 @@ func TestClientCredentialsFinalizerExecute(t *testing.T) {
 			buildResponse: func(t *testing.T) (any, int) {
 				t.Helper()
 
-				expiresIn := int64((5 * time.Minute).Seconds())
-
-				return &response{
+				return &TokenSuccessfulResponse{
 					AccessToken: "foobar",
 					TokenType:   "Foo",
-					ExpiresIn:   expiresIn,
+					ExpiresIn:   int64((5 * time.Minute).Seconds()),
 				}, http.StatusOK
 			},
 			assert: func(t *testing.T, err error, tokenEndpointCalled bool) {
@@ -834,7 +847,7 @@ func TestClientCredentialsFinalizerExecute(t *testing.T) {
 			buildResponse: func(t *testing.T) (any, int) {
 				t.Helper()
 
-				return &response{
+				return &TokenSuccessfulResponse{
 					AccessToken: "foobar",
 					TokenType:   "Foo",
 				}, http.StatusOK
@@ -886,7 +899,7 @@ func TestClientCredentialsFinalizerExecute(t *testing.T) {
 			buildResponse: func(t *testing.T) (any, int) {
 				t.Helper()
 
-				return &response{
+				return &TokenSuccessfulResponse{
 					AccessToken: "foobar",
 					TokenType:   "Foo",
 				}, http.StatusOK
@@ -938,15 +951,13 @@ func TestClientCredentialsFinalizerExecute(t *testing.T) {
 				// the following is not compliant as error is defined otherwise
 				// in https://www.rfc-editor.org/rfc/rfc6749#section-5.2
 				res, err := json.Marshal(map[string]any{
-					"error": map[string]any{
-						"error":             "invalid_request",
-						"error_description": "whatever",
-					},
+					"error":             "invalid_request",
+					"error_description": "whatever",
 				})
 				require.NoError(t, err)
 
-				return &response{
-					Error: string(res),
+				return &TokenErrorResponse{
+					ErrorType: string(res),
 				}, http.StatusOK
 			},
 			assert: func(t *testing.T, err error, tokenEndpointCalled bool) {
@@ -979,8 +990,8 @@ func TestClientCredentialsFinalizerExecute(t *testing.T) {
 			buildResponse: func(t *testing.T) (any, int) {
 				t.Helper()
 
-				return &response{
-					Error:            "invalid_request",
+				return &TokenErrorResponse{
+					ErrorType:        "invalid_request",
 					ErrorDescription: "whatever",
 				}, http.StatusForbidden
 			},
@@ -1034,9 +1045,10 @@ func TestClientCredentialsFinalizerExecute(t *testing.T) {
 			buildResponse: func(t *testing.T) (any, int) {
 				t.Helper()
 
-				return &response{
-					Error:            "invalid_request",
+				return &TokenErrorResponse{
+					ErrorType:        "invalid_request",
 					ErrorDescription: "whatever",
+					ErrorURI:         "https://www.rfc-editor.org/rfc/rfc6749#section-5.1",
 				}, http.StatusBadRequest
 			},
 			assert: func(t *testing.T, err error, tokenEndpointCalled bool) {

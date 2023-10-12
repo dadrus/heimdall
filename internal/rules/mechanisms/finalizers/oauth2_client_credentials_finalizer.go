@@ -48,10 +48,50 @@ const (
 	authMethodRequestBody AuthMethod = "request_body"
 )
 
-type tokenEndpointResponse struct {
-	AccessToken string `json:"access_token"`
-	TokenType   string `json:"token_type"`
-	ExpiresIn   *int64 `json:"expires_in,omitempty"`
+type TokenSuccessfulResponse struct {
+	AccessToken string `json:"access_token,omitempty"`
+	TokenType   string `json:"token_type,omitempty"`
+	ExpiresIn   int64  `json:"expires_in,omitempty"`
+	Scope       string `json:"scope,omitempty"`
+}
+
+type TokenErrorResponse struct { //nolint:errname
+	ErrorType        string `json:"error,omitempty"`
+	ErrorDescription string `json:"error_description,omitempty"`
+	ErrorURI         string `json:"error_uri,omitempty"`
+}
+
+func (e *TokenErrorResponse) Error() string {
+	builder := strings.Builder{}
+	builder.WriteString("error from oauth2 server: ")
+	builder.WriteString("error: ")
+	builder.WriteString(e.ErrorType)
+
+	if len(e.ErrorDescription) != 0 {
+		builder.WriteString(", error_description: ")
+		builder.WriteString(e.ErrorDescription)
+	}
+
+	if len(e.ErrorURI) != 0 {
+		builder.WriteString(", error_uri: ")
+		builder.WriteString(e.ErrorURI)
+	}
+
+	return builder.String()
+}
+
+type TokenEndpointResponse struct {
+	*TokenSuccessfulResponse
+	*TokenErrorResponse
+}
+
+func (r TokenEndpointResponse) Error() error {
+	// weird go behavior
+	if r.TokenErrorResponse != nil {
+		return r.TokenErrorResponse
+	}
+
+	return nil
 }
 
 type oauth2ClientCredentialsFinalizer struct {
@@ -224,7 +264,7 @@ func (f *oauth2ClientCredentialsFinalizer) calculateCacheKey() string {
 	return hex.EncodeToString(digest.Sum(nil))
 }
 
-func (f *oauth2ClientCredentialsFinalizer) getAccessToken(ctx context.Context) (*tokenEndpointResponse, error) {
+func (f *oauth2ClientCredentialsFinalizer) getAccessToken(ctx context.Context) (*TokenSuccessfulResponse, error) {
 	ept := endpoint.Endpoint{
 		URL:          f.tokenURL,
 		Method:       http.MethodPost,
@@ -253,7 +293,7 @@ func (f *oauth2ClientCredentialsFinalizer) getAccessToken(ctx context.Context) (
 		strings.NewReader(data.Encode()),
 		nil,
 		func(resp *http.Response) ([]byte, error) {
-			if resp.StatusCode != 200 && resp.StatusCode != 400 {
+			if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusBadRequest {
 				return nil, errorchain.NewWithMessagef(heimdall.ErrCommunication,
 					"unexpected response code: %v", resp.StatusCode)
 			}
@@ -264,12 +304,14 @@ func (f *oauth2ClientCredentialsFinalizer) getAccessToken(ctx context.Context) (
 					"failed to read response").CausedBy(err)
 			}
 
-			// not checking resp.StatusCode here as the server may not be compliant and respond with 200
-			// even for errors
-			isError := strings.Contains(stringx.ToString(rawData), "error")
-			if isError {
-				return nil, errorchain.NewWithMessagef(heimdall.ErrCommunication,
-					"error from oauth2 server: %s", string(rawData))
+			if resp.StatusCode == http.StatusBadRequest {
+				var ter TokenErrorResponse
+				if err := json.Unmarshal(rawData, &ter); err != nil {
+					return nil, errorchain.NewWithMessage(heimdall.ErrInternal,
+						"failed to unmarshal response").CausedBy(err)
+				}
+
+				return nil, errorchain.New(heimdall.ErrCommunication).CausedBy(&ter)
 			}
 
 			return rawData, nil
@@ -279,14 +321,19 @@ func (f *oauth2ClientCredentialsFinalizer) getAccessToken(ctx context.Context) (
 		return nil, err
 	}
 
-	var resp tokenEndpointResponse
+	// some oauth2 provider are not compliant and return errors via HTTP 200 instead of 400
+	// this is the reason for using a union struct here (see the error check below)
+	var resp TokenEndpointResponse
 	if err := json.Unmarshal(rawData, &resp); err != nil {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrInternal, "failed to unmarshal response").
-			CausedBy(err)
+		return nil, errorchain.NewWithMessage(heimdall.ErrInternal,
+			"failed to unmarshal response").CausedBy(err)
 	}
 
-	return &resp, nil
+	if resp.Error() != nil {
+		return nil, errorchain.New(heimdall.ErrCommunication).CausedBy(resp.Error())
+	}
+
+	return resp.TokenSuccessfulResponse, nil
 }
 
 func (f *oauth2ClientCredentialsFinalizer) authStrategy() endpoint.AuthenticationStrategy {
@@ -300,7 +347,7 @@ func (f *oauth2ClientCredentialsFinalizer) authStrategy() endpoint.Authenticatio
 	}
 }
 
-func (f *oauth2ClientCredentialsFinalizer) getCacheTTL(resp *tokenEndpointResponse) time.Duration {
+func (f *oauth2ClientCredentialsFinalizer) getCacheTTL(resp *TokenSuccessfulResponse) time.Duration {
 	// timeLeeway defines the default time deviation to ensure the token is still valid
 	// when used from cache
 	const timeLeeway = 5
@@ -312,9 +359,9 @@ func (f *oauth2ClientCredentialsFinalizer) getCacheTTL(resp *tokenEndpointRespon
 	// we cache by default using the settings in the token endpoint response (if available)
 	// or if ttl has been configured. Latter overwrites the settings in the token endpoint response
 	// if it is shorter than the ttl in the token endpoint response
-	tokenEndpointResponseTTL := x.IfThenElseExec(resp.ExpiresIn != nil,
+	tokenEndpointResponseTTL := x.IfThenElseExec(resp.ExpiresIn != 0,
 		func() time.Duration {
-			expiresIn := *resp.ExpiresIn - timeLeeway
+			expiresIn := resp.ExpiresIn - timeLeeway
 
 			return x.IfThenElse(expiresIn > 0, time.Duration(expiresIn)*time.Second, 0)
 		},
