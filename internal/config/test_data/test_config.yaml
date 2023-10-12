@@ -361,6 +361,7 @@ rules:
           token_url: https://my-auth-provider/token
           client_id: foo
           client_secret: bar
+          auth_method: basic_auth
           cache_ttl: 5m
           scopes:
             - foo

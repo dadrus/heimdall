@@ -1451,6 +1451,15 @@
               "description": "The OAuth 2.0 Client Secret to be used for the OAuth 2.0 Client Credentials Grant",
               "type": "string"
             },
+            "auth_method": {
+              "description": "How to transfer the client_id and client_secret to the oauth provider",
+              "type": "string",
+              "default": "basic_auth",
+              "enum": [
+                "basic_auth",
+                "request_body"
+              ]
+            },
             "token_url": {
               "description": "The OAuth 2.0 Token Endpoint where the OAuth 2.0 Client Credentials Grant will be performed",
               "type": "string"
