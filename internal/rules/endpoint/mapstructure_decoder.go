@@ -20,10 +20,6 @@ import (
 	"reflect"
 
 	"github.com/mitchellh/mapstructure"
-
-	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/validation"
-	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
 func DecodeEndpointHookFunc() mapstructure.DecodeHookFunc {
@@ -43,64 +39,4 @@ func DecodeEndpointHookFunc() mapstructure.DecodeHookFunc {
 		// nolint: forcetypeassert
 		return Endpoint{URL: data.(string)}, nil
 	}
-}
-
-func DecodeAuthenticationStrategyHookFunc() mapstructure.DecodeHookFunc {
-	return func(from reflect.Type, to reflect.Type, data any) (any, error) {
-		var as AuthenticationStrategy
-
-		if from.Kind() != reflect.Map {
-			return data, nil
-		}
-
-		dect := reflect.ValueOf(&as).Elem().Type()
-		if !dect.AssignableTo(to) {
-			return data, nil
-		}
-
-		typed := map[string]any{}
-
-		if m, ok := data.(map[any]any); ok {
-			for k, v := range m {
-				// nolint: forcetypeassert
-				// ok if panics
-				typed[k.(string)] = v
-			}
-		} else if m, ok := data.(map[string]any); ok {
-			typed = m
-		} else {
-			return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration, "unexpected configuration type")
-		}
-
-		switch typed["type"] {
-		case "basic_auth":
-			return decodeStrategy("basic_auth", &BasicAuthStrategy{}, typed["config"])
-		case "api_key":
-			return decodeStrategy("api_key", &APIKeyStrategy{}, typed["config"])
-		case "client_credentials":
-			return decodeStrategy("client_credentials", &ClientCredentialsStrategy{}, typed["config"])
-		default:
-			return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
-				"unsupported authentication type: '%s'", typed["type"])
-		}
-	}
-}
-
-func decodeStrategy[S AuthenticationStrategy](name string, strategy S, config any) (AuthenticationStrategy, error) {
-	if config == nil {
-		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
-			"'%s' strategy requires 'config' property to be set", name)
-	}
-
-	if err := mapstructure.Decode(config, strategy); err != nil {
-		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
-			"failed to unmarshal '%s' strategy config", name).CausedBy(err)
-	}
-
-	if err := validation.ValidateStruct(strategy); err != nil {
-		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
-			"failed validating '%s' strategy config", name).CausedBy(err)
-	}
-
-	return strategy, nil
 }

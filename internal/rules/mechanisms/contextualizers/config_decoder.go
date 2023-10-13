@@ -21,6 +21,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/endpoint"
+	"github.com/dadrus/heimdall/internal/rules/endpoint/authstrategy"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
 	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
@@ -30,7 +31,7 @@ func decodeConfig(contextualizerType string, input, output any) error {
 	dec, err := mapstructure.NewDecoder(
 		&mapstructure.DecoderConfig{
 			DecodeHook: mapstructure.ComposeDecodeHookFunc(
-				endpoint.DecodeAuthenticationStrategyHookFunc(),
+				authstrategy.DecodeAuthenticationStrategyHookFunc(),
 				endpoint.DecodeEndpointHookFunc(),
 				mapstructure.StringToTimeDurationHookFunc(),
 				template.DecodeTemplateHookFunc(),

@@ -19,6 +19,7 @@ package endpoint
 import (
 	"bytes"
 	"context"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -27,12 +28,14 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/ybbus/httpretry"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/httpcache"
+	"github.com/dadrus/heimdall/internal/rules/endpoint/mocks"
 	"github.com/dadrus/heimdall/internal/x"
 )
 
@@ -206,8 +209,20 @@ func TestEndpointCreateRequest(t *testing.T) {
 		{
 			uc: "with auth strategy, applied successfully",
 			endpoint: Endpoint{
-				URL:          "http://test.org",
-				AuthStrategy: &BasicAuthStrategy{User: "foo", Password: "bar"},
+				URL: "http://test.org",
+				AuthStrategy: func() AuthenticationStrategy {
+					as := mocks.NewAuthenticationStrategyMock(t)
+					as.EXPECT().Apply(
+						mock.Anything,
+						mock.MatchedBy(func(req *http.Request) bool {
+							req.Header.Set("X-Test", "test")
+
+							return true
+						}),
+					).Return(nil)
+
+					return as
+				}(),
 			},
 			assert: func(t *testing.T, request *http.Request, err error) {
 				t.Helper()
@@ -217,33 +232,44 @@ func TestEndpointCreateRequest(t *testing.T) {
 				assert.Equal(t, "POST", request.Method)
 				assert.Equal(t, "http://test.org", request.URL.String())
 				assert.Len(t, request.Header, 1)
-				assert.NotEmpty(t, request.Header.Get("Authorization"))
-				user, pass, _ := request.BasicAuth()
-				assert.Equal(t, "foo", user)
-				assert.Equal(t, "bar", pass)
+				assert.Equal(t, "test", request.Header.Get("X-Test"))
 			},
 		},
 		{
 			uc: "with failing auth strategy",
 			endpoint: Endpoint{
-				URL:          "http://test.org",
-				AuthStrategy: &APIKeyStrategy{In: "foo", Name: "bar", Value: "baz"},
+				URL: "http://test.org",
+				AuthStrategy: func() AuthenticationStrategy {
+					as := mocks.NewAuthenticationStrategyMock(t)
+					as.EXPECT().Apply(mock.Anything, mock.Anything).Return(errors.New("test error"))
+
+					return as
+				}(),
 			},
 			assert: func(t *testing.T, request *http.Request, err error) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				assert.ErrorIs(t, err, heimdall.ErrInternal)
 				assert.Contains(t, err.Error(), "failed to authenticate request")
 			},
 		},
 		{
 			uc: "with auth strategy and additional header",
 			endpoint: Endpoint{
-				URL:          "http://test.org",
-				Method:       "PATCH",
-				AuthStrategy: &BasicAuthStrategy{User: "foo", Password: "bar"},
-				Headers:      map[string]string{"Foo-Bar": "baz"},
+				URL:    "http://test.org",
+				Method: "PATCH",
+				AuthStrategy: func() AuthenticationStrategy {
+					as := mocks.NewAuthenticationStrategyMock(t)
+					as.EXPECT().Apply(mock.Anything, mock.MatchedBy(func(req *http.Request) bool {
+						req.Header.Set("X-Test", "test")
+
+						return true
+					})).Return(nil)
+
+					return as
+				}(),
+				Headers: map[string]string{"Foo-Bar": "baz"},
 			},
 			assert: func(t *testing.T, request *http.Request, err error) {
 				t.Helper()
@@ -254,12 +280,7 @@ func TestEndpointCreateRequest(t *testing.T) {
 				assert.Equal(t, "http://test.org", request.URL.String())
 
 				assert.Len(t, request.Header, 2)
-
-				assert.NotEmpty(t, request.Header.Get("Authorization"))
-				user, pass, _ := request.BasicAuth()
-				assert.Equal(t, "foo", user)
-				assert.Equal(t, "bar", pass)
-
+				assert.Equal(t, "test", request.Header.Get("X-Test"))
 				assert.Equal(t, "baz", request.Header.Get("Foo-Bar"))
 			},
 		},
@@ -410,10 +431,19 @@ func TestEndpointSendRequest(t *testing.T) {
 		{
 			uc: "successful",
 			endpoint: Endpoint{
-				URL:          srv.URL,
-				Method:       "PATCH",
-				AuthStrategy: &BasicAuthStrategy{User: "foo", Password: "bar"},
-				Headers:      map[string]string{"Foo-Bar": "baz"},
+				URL:    srv.URL,
+				Method: "PATCH",
+				AuthStrategy: func() AuthenticationStrategy {
+					as := mocks.NewAuthenticationStrategyMock(t)
+					as.EXPECT().Apply(mock.Anything, mock.MatchedBy(func(req *http.Request) bool {
+						req.Header.Set("X-Test", "test")
+
+						return true
+					})).Return(nil)
+
+					return as
+				}(),
+				Headers: map[string]string{"Foo-Bar": "baz"},
 			},
 			body: []byte(`{"hello":"world"}`),
 			instructServer: func(t *testing.T) {
@@ -427,12 +457,7 @@ func TestEndpointSendRequest(t *testing.T) {
 					assert.Equal(t, "PATCH", request.Method)
 
 					assert.NotEmpty(t, request.Header)
-
-					assert.NotEmpty(t, request.Header.Get("Authorization"))
-					user, pass, _ := request.BasicAuth()
-					assert.Equal(t, "foo", user)
-					assert.Equal(t, "bar", pass)
-
+					assert.Equal(t, "test", request.Header.Get("X-Test"))
 					assert.Equal(t, "baz", request.Header.Get("Foo-Bar"))
 
 					rawData, err := io.ReadAll(request.Body)
@@ -479,7 +504,12 @@ func TestEndpointHash(t *testing.T) {
 	// GIVEN
 	e1 := Endpoint{URL: "foo.bar"}
 	e2 := Endpoint{URL: "foo.bar", Method: "FOO", Headers: map[string]string{"baz": "foo"}}
-	e3 := Endpoint{URL: "foo.bar", Method: "FOO", AuthStrategy: &BasicAuthStrategy{User: "user", Password: "pass"}}
+	e3 := Endpoint{URL: "foo.bar", Method: "FOO", AuthStrategy: func() AuthenticationStrategy {
+		as := mocks.NewAuthenticationStrategyMock(t)
+		as.EXPECT().Hash().Return([]byte{1, 2, 3})
+
+		return as
+	}()}
 	e4 := Endpoint{URL: "foo.bar", Retry: &Retry{GiveUpAfter: 2}}
 
 	// WHEN

@@ -14,7 +14,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package endpoint
+package authstrategy
 
 import (
 	"context"
@@ -30,6 +30,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/rules/endpoint"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/stringx"
 )
@@ -88,7 +89,7 @@ func (c *ClientCredentialsStrategy) calculateCacheKey() string {
 }
 
 func (c *ClientCredentialsStrategy) getAccessToken(ctx context.Context) (*tokenEndpointResponse, error) {
-	ept := Endpoint{
+	ept := endpoint.Endpoint{
 		URL:    c.TokenURL,
 		Method: http.MethodPost,
 		AuthStrategy: &BasicAuthStrategy{

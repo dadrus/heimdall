@@ -14,7 +14,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package endpoint
+package authstrategy
 
 import (
 	"context"
@@ -24,6 +24,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/dadrus/heimdall/internal/rules/endpoint"
 )
 
 func TestApplyApiKeyStrategy(t *testing.T) {
@@ -31,7 +33,7 @@ func TestApplyApiKeyStrategy(t *testing.T) {
 
 	for _, tc := range []struct {
 		uc       string
-		strategy AuthenticationStrategy
+		strategy endpoint.AuthenticationStrategy
 		assert   func(t *testing.T, err error, req *http.Request)
 	}{
 		{

@@ -21,6 +21,8 @@ import (
 	"net/http"
 )
 
+//go:generate mockery --name AuthenticationStrategy --structname AuthenticationStrategyMock
+
 type AuthenticationStrategy interface {
 	Apply(context.Context, *http.Request) error
 	Hash() []byte

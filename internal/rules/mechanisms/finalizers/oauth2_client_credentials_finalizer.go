@@ -18,6 +18,7 @@ import (
 	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/endpoint"
+	"github.com/dadrus/heimdall/internal/rules/endpoint/authstrategy"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
@@ -328,7 +329,7 @@ func (f *oauth2ClientCredentialsFinalizer) authStrategy() endpoint.Authenticatio
 		return nil
 	}
 
-	return &endpoint.BasicAuthStrategy{
+	return &authstrategy.BasicAuthStrategy{
 		User:     url.QueryEscape(f.clientID),
 		Password: url.QueryEscape(f.clientSecret),
 	}

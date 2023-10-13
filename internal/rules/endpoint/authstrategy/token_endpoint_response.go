@@ -14,32 +14,10 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package endpoint
+package authstrategy
 
-import (
-	"context"
-	"crypto/sha256"
-	"net/http"
-
-	"github.com/dadrus/heimdall/internal/x/stringx"
-)
-
-type BasicAuthStrategy struct {
-	User     string `mapstructure:"user"     validate:"required"`
-	Password string `mapstructure:"password" validate:"required"`
-}
-
-func (c *BasicAuthStrategy) Apply(_ context.Context, req *http.Request) error {
-	req.SetBasicAuth(c.User, c.Password)
-
-	return nil
-}
-
-func (c *BasicAuthStrategy) Hash() []byte {
-	hash := sha256.New()
-
-	hash.Write(stringx.ToBytes(c.User))
-	hash.Write(stringx.ToBytes(c.Password))
-
-	return hash.Sum(nil)
+type tokenEndpointResponse struct {
+	AccessToken string `json:"access_token"`
+	TokenType   string `json:"token_type"`
+	ExpiresIn   int64  `json:"expires_in"`
 }
