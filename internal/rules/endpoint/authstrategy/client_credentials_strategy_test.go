@@ -124,20 +124,7 @@ func TestApplyClientCredentialsStrategy(t *testing.T) {
 
 		cch.EXPECT().Get(key).Return(nil)
 
-		var resp *TokenSuccessfulResponse
-
-		cch.EXPECT().Set(key,
-			mock.MatchedBy(func(val *TokenSuccessfulResponse) bool {
-				resp = val
-
-				return true
-			}),
-			mock.MatchedBy(func(val time.Duration) bool {
-				require.NotNil(t, resp)
-				assert.Equal(t, time.Duration(resp.ExpiresIn-defaultCacheLeeway)*time.Second, val)
-
-				return true
-			}))
+		cch.EXPECT().Set(key, mock.Anything, 30*time.Second-5*time.Second)
 	}
 
 	for _, tc := range []struct {
@@ -187,22 +174,9 @@ func TestApplyClientCredentialsStrategy(t *testing.T) {
 			setupCache: func(t *testing.T, cch *mocks.CacheMock, key string) {
 				t.Helper()
 
-				var resp *TokenSuccessfulResponse
-
-				cch.EXPECT().Get(key).Return("foo")
+				cch.EXPECT().Get(key).Return(10)
 				cch.EXPECT().Delete(key)
-				cch.EXPECT().Set(key,
-					mock.MatchedBy(func(val *TokenSuccessfulResponse) bool {
-						resp = val
-
-						return true
-					}),
-					mock.MatchedBy(func(val time.Duration) bool {
-						require.NotNil(t, resp)
-						assert.Equal(t, time.Duration(resp.ExpiresIn-defaultCacheLeeway)*time.Second, val)
-
-						return true
-					}))
+				cch.EXPECT().Set(key, mock.Anything, 30*time.Second-5*time.Second)
 			},
 			assert: func(t *testing.T, err error, req *http.Request) {
 				t.Helper()
@@ -237,13 +211,7 @@ func TestApplyClientCredentialsStrategy(t *testing.T) {
 			setupCache: func(t *testing.T, cch *mocks.CacheMock, key string) {
 				t.Helper()
 
-				cached := &TokenSuccessfulResponse{
-					AccessToken: "FooBar",
-					ExpiresIn:   time.Now().Unix() + 100,
-					TokenType:   "Baz",
-				}
-
-				cch.EXPECT().Get(key).Return(cached)
+				cch.EXPECT().Get(key).Return("FooBar")
 			},
 			assert: func(t *testing.T, err error, req *http.Request) {
 				t.Helper()
@@ -251,7 +219,7 @@ func TestApplyClientCredentialsStrategy(t *testing.T) {
 				assert.NoError(t, err)
 				assert.False(t, endpointCalled)
 
-				assert.Equal(t, "Baz FooBar", req.Header.Get("Authorization"))
+				assert.Equal(t, "Bearer FooBar", req.Header.Get("Authorization"))
 			},
 		},
 	} {

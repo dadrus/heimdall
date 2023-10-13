@@ -32,11 +32,10 @@ import (
 	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/endpoint"
+	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/stringx"
 )
-
-const defaultCacheLeeway = 15
 
 type AuthMethod string
 
@@ -64,45 +63,50 @@ func (c *ClientCredentialsStrategy) Apply(ctx context.Context, req *http.Request
 	logger := zerolog.Ctx(ctx)
 	logger.Debug().Msg("Applying client-credentials strategy to authenticate request")
 
-	key := c.calculateCacheKey()
-
 	cch := cache.Ctx(ctx)
-	if item := cch.Get(key); item != nil {
-		logger.Debug().Msg("Reusing access token from cache")
 
-		if tokenInfo, ok := item.(*TokenSuccessfulResponse); !ok {
+	var (
+		ok         bool
+		cacheKey   string
+		cacheEntry any
+		token      string
+	)
+
+	if c.isCacheEnabled() {
+		cacheKey = c.calculateCacheKey()
+		cacheEntry = cch.Get(cacheKey)
+	}
+
+	if cacheEntry != nil {
+		if token, ok = cacheEntry.(string); !ok {
 			logger.Warn().Msg("Wrong object type from cache")
-			cch.Delete(key)
+			cch.Delete(cacheKey)
 		} else {
-			req.Header.Set("Authorization", tokenInfo.TokenType+" "+tokenInfo.AccessToken)
-
-			return nil
+			logger.Debug().Msg("Reusing access token from cache")
 		}
 	}
 
-	logger.Debug().Msg("Retrieving new access token")
+	if len(token) == 0 {
+		logger.Debug().Msg("Retrieving new access token")
 
-	resp, err := c.getAccessToken(ctx)
-	if err != nil {
-		return err
+		tokenInfo, err := c.getAccessToken(ctx)
+		if err != nil {
+			return err
+		}
+
+		token = tokenInfo.AccessToken
+
+		if cacheTTL := c.getCacheTTL(tokenInfo); cacheTTL > 0 {
+			cch.Set(cacheKey, token, cacheTTL)
+		}
 	}
 
-	cch.Set(key, resp, time.Duration(resp.ExpiresIn-defaultCacheLeeway)*time.Second)
-
-	req.Header.Set("Authorization", resp.TokenType+" "+resp.AccessToken)
+	req.Header.Set("Authorization", "Bearer "+token)
 
 	return nil
 }
 
-func (c *ClientCredentialsStrategy) calculateCacheKey() string {
-	digest := sha256.New()
-	digest.Write(stringx.ToBytes(c.ClientID))
-	digest.Write(stringx.ToBytes(c.ClientSecret))
-	digest.Write(stringx.ToBytes(c.TokenURL))
-	digest.Write(stringx.ToBytes(strings.Join(c.Scopes, "")))
-
-	return hex.EncodeToString(digest.Sum(nil))
-}
+func (c *ClientCredentialsStrategy) calculateCacheKey() string { return hex.EncodeToString(c.Hash()) }
 
 func (c *ClientCredentialsStrategy) getAccessToken(ctx context.Context) (*TokenSuccessfulResponse, error) {
 	ept := endpoint.Endpoint{
@@ -186,11 +190,54 @@ func (c *ClientCredentialsStrategy) authStrategy() endpoint.AuthenticationStrate
 	}
 }
 
+func (c *ClientCredentialsStrategy) getCacheTTL(resp *TokenSuccessfulResponse) time.Duration {
+	// timeLeeway defines the default time deviation to ensure the token is still valid
+	// when used from cache
+	const timeLeeway = 5
+
+	if !c.isCacheEnabled() {
+		return 0
+	}
+
+	// we cache by default using the settings in the token endpoint response (if available)
+	// or if ttl has been configured. Latter overwrites the settings in the token endpoint response
+	// if it is shorter than the ttl in the token endpoint response
+	tokenEndpointResponseTTL := x.IfThenElseExec(resp.ExpiresIn != 0,
+		func() time.Duration {
+			expiresIn := resp.ExpiresIn - timeLeeway
+
+			return x.IfThenElse(expiresIn > 0, time.Duration(expiresIn)*time.Second, 0)
+		},
+		func() time.Duration { return 0 })
+
+	configuredTTL := x.IfThenElseExec(c.TTL != nil,
+		func() time.Duration { return *c.TTL },
+		func() time.Duration { return 0 })
+
+	switch {
+	case configuredTTL == 0 && tokenEndpointResponseTTL == 0:
+		return 0
+	case configuredTTL == 0 && tokenEndpointResponseTTL != 0:
+		return tokenEndpointResponseTTL
+	case configuredTTL != 0 && tokenEndpointResponseTTL == 0:
+		return configuredTTL
+	default:
+		return min(configuredTTL, tokenEndpointResponseTTL)
+	}
+}
+
+func (c *ClientCredentialsStrategy) isCacheEnabled() bool {
+	// cache is enabled if it is not configured (in that case the ttl value from the
+	// token response if used), or if it is configured and the value > 0
+	return c.TTL == nil || (c.TTL != nil && *c.TTL > 0)
+}
+
 func (c *ClientCredentialsStrategy) Hash() []byte {
-	hash := sha256.New()
+	digest := sha256.New()
+	digest.Write(stringx.ToBytes(c.ClientID))
+	digest.Write(stringx.ToBytes(c.ClientSecret))
+	digest.Write(stringx.ToBytes(c.TokenURL))
+	digest.Write(stringx.ToBytes(strings.Join(c.Scopes, "")))
 
-	hash.Write(stringx.ToBytes(c.ClientID))
-	hash.Write(stringx.ToBytes(c.ClientSecret))
-
-	return hash.Sum(nil)
+	return digest.Sum(nil)
 }
