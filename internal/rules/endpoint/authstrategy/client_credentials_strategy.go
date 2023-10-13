@@ -101,7 +101,19 @@ func (c *ClientCredentialsStrategy) Apply(ctx context.Context, req *http.Request
 		}
 	}
 
-	req.Header.Set("Authorization", "Bearer "+token)
+	headerName := x.IfThenElseExec(
+		c.Header != nil,
+		func() string { return c.Header.Name },
+		func() string { return "Authorization" },
+	)
+
+	headerScheme := x.IfThenElseExec(
+		c.Header != nil,
+		func() string { return c.Header.Scheme },
+		func() string { return "Bearer" },
+	)
+
+	req.Header.Set(headerName, headerScheme+" "+token)
 
 	return nil
 }
