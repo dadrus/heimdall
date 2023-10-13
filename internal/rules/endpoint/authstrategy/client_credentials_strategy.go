@@ -69,7 +69,7 @@ func (c *ClientCredentialsStrategy) Apply(ctx context.Context, req *http.Request
 	if item := cch.Get(key); item != nil {
 		logger.Debug().Msg("Reusing access token from cache")
 
-		if tokenInfo, ok := item.(*TokenEndpointResponse); !ok {
+		if tokenInfo, ok := item.(*TokenSuccessfulResponse); !ok {
 			logger.Warn().Msg("Wrong object type from cache")
 			cch.Delete(key)
 		} else {
@@ -103,7 +103,7 @@ func (c *ClientCredentialsStrategy) calculateCacheKey() string {
 	return hex.EncodeToString(digest.Sum(nil))
 }
 
-func (c *ClientCredentialsStrategy) getAccessToken(ctx context.Context) (*TokenEndpointResponse, error) {
+func (c *ClientCredentialsStrategy) getAccessToken(ctx context.Context) (*TokenSuccessfulResponse, error) {
 	ept := endpoint.Endpoint{
 		URL:          c.TokenURL,
 		Method:       http.MethodPost,
@@ -139,7 +139,7 @@ func (c *ClientCredentialsStrategy) getAccessToken(ctx context.Context) (*TokenE
 			CausedBy(err)
 	}
 
-	return &ter, nil
+	return ter.TokenSuccessfulResponse, nil
 }
 
 func (c *ClientCredentialsStrategy) authStrategy() endpoint.AuthenticationStrategy {
