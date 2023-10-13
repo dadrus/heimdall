@@ -105,12 +105,9 @@ func (c *ClientCredentialsStrategy) calculateCacheKey() string {
 
 func (c *ClientCredentialsStrategy) getAccessToken(ctx context.Context) (*TokenEndpointResponse, error) {
 	ept := endpoint.Endpoint{
-		URL:    c.TokenURL,
-		Method: http.MethodPost,
-		AuthStrategy: &BasicAuthStrategy{
-			User:     url.QueryEscape(c.ClientID),
-			Password: url.QueryEscape(c.ClientSecret),
-		},
+		URL:          c.TokenURL,
+		Method:       http.MethodPost,
+		AuthStrategy: c.authStrategy(),
 		Headers: map[string]string{
 			"Content-Type": "application/x-www-form-urlencoded",
 			"Accept-Type":  "application/json",
@@ -120,6 +117,14 @@ func (c *ClientCredentialsStrategy) getAccessToken(ctx context.Context) (*TokenE
 	data := url.Values{"grant_type": []string{"client_credentials"}}
 	if len(c.Scopes) != 0 {
 		data.Add("scope", strings.Join(c.Scopes, " "))
+	}
+
+	// This is not recommended, but there are non-compliant servers out there
+	// which do not support the Basic Auth authentication method required by
+	// the spec. See also https://www.rfc-editor.org/rfc/rfc6749#section-2.3.1
+	if ept.AuthStrategy == nil {
+		data.Add("client_id", c.ClientID)
+		data.Add("client_secret", c.ClientSecret)
 	}
 
 	rawData, err := ept.SendRequest(ctx, strings.NewReader(data.Encode()), nil)
@@ -135,6 +140,17 @@ func (c *ClientCredentialsStrategy) getAccessToken(ctx context.Context) (*TokenE
 	}
 
 	return &ter, nil
+}
+
+func (c *ClientCredentialsStrategy) authStrategy() endpoint.AuthenticationStrategy {
+	if c.AuthMethod == authMethodRequestBody {
+		return nil
+	}
+
+	return &BasicAuthStrategy{
+		User:     url.QueryEscape(c.ClientID),
+		Password: url.QueryEscape(c.ClientSecret),
+	}
 }
 
 func (c *ClientCredentialsStrategy) Hash() []byte {
