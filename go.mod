@@ -71,7 +71,7 @@ require (
 	go.uber.org/fx v1.20.0
 	gocloud.dev v0.34.0
 	golang.org/x/exp v0.0.0-20231006140011-7918f672742d
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20231009173412-8bfb1ae86b6c
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20231012201019-e917dd12ba7a
 	google.golang.org/grpc v1.58.3
 	google.golang.org/protobuf v1.31.0
 	gopkg.in/square/go-jose.v2 v2.6.0
