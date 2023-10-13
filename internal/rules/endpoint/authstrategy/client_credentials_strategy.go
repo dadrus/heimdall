@@ -54,7 +54,7 @@ func (c *ClientCredentialsStrategy) Apply(ctx context.Context, req *http.Request
 	if item := cch.Get(key); item != nil {
 		logger.Debug().Msg("Reusing access token from cache")
 
-		if tokenInfo, ok := item.(*tokenEndpointResponse); !ok {
+		if tokenInfo, ok := item.(*TokenEndpointResponse); !ok {
 			logger.Warn().Msg("Wrong object type from cache")
 			cch.Delete(key)
 		} else {
@@ -88,7 +88,7 @@ func (c *ClientCredentialsStrategy) calculateCacheKey() string {
 	return hex.EncodeToString(digest.Sum(nil))
 }
 
-func (c *ClientCredentialsStrategy) getAccessToken(ctx context.Context) (*tokenEndpointResponse, error) {
+func (c *ClientCredentialsStrategy) getAccessToken(ctx context.Context) (*TokenEndpointResponse, error) {
 	ept := endpoint.Endpoint{
 		URL:    c.TokenURL,
 		Method: http.MethodPost,
@@ -112,7 +112,7 @@ func (c *ClientCredentialsStrategy) getAccessToken(ctx context.Context) (*tokenE
 		return nil, err
 	}
 
-	var ter tokenEndpointResponse
+	var ter TokenEndpointResponse
 	if err := json.Unmarshal(rawData, &ter); err != nil {
 		return nil, errorchain.
 			NewWithMessage(heimdall.ErrInternal, "failed to unmarshal response").

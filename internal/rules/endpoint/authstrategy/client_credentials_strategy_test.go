@@ -124,10 +124,10 @@ func TestApplyClientCredentialsStrategy(t *testing.T) {
 
 		cch.EXPECT().Get(key).Return(nil)
 
-		var resp *tokenEndpointResponse
+		var resp *TokenEndpointResponse
 
 		cch.EXPECT().Set(key,
-			mock.MatchedBy(func(val *tokenEndpointResponse) bool {
+			mock.MatchedBy(func(val *TokenEndpointResponse) bool {
 				resp = val
 
 				return true
@@ -187,12 +187,12 @@ func TestApplyClientCredentialsStrategy(t *testing.T) {
 			setupCache: func(t *testing.T, cch *mocks.CacheMock, key string) {
 				t.Helper()
 
-				var resp *tokenEndpointResponse
+				var resp *TokenEndpointResponse
 
 				cch.EXPECT().Get(key).Return("foo")
 				cch.EXPECT().Delete(key)
 				cch.EXPECT().Set(key,
-					mock.MatchedBy(func(val *tokenEndpointResponse) bool {
+					mock.MatchedBy(func(val *TokenEndpointResponse) bool {
 						resp = val
 
 						return true
@@ -237,10 +237,12 @@ func TestApplyClientCredentialsStrategy(t *testing.T) {
 			setupCache: func(t *testing.T, cch *mocks.CacheMock, key string) {
 				t.Helper()
 
-				cached := &tokenEndpointResponse{
-					AccessToken: "FooBar",
-					ExpiresIn:   time.Now().Unix() + 100,
-					TokenType:   "Baz",
+				cached := &TokenEndpointResponse{
+					TokenSuccessfulResponse: &TokenSuccessfulResponse{
+						AccessToken: "FooBar",
+						ExpiresIn:   time.Now().Unix() + 100,
+						TokenType:   "Baz",
+					},
 				}
 
 				cch.EXPECT().Get(key).Return(cached)

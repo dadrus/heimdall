@@ -16,8 +16,50 @@
 
 package authstrategy
 
-type tokenEndpointResponse struct {
-	AccessToken string `json:"access_token"`
-	TokenType   string `json:"token_type"`
-	ExpiresIn   int64  `json:"expires_in"`
+import "strings"
+
+type TokenSuccessfulResponse struct {
+	AccessToken string `json:"access_token,omitempty"`
+	TokenType   string `json:"token_type,omitempty"`
+	ExpiresIn   int64  `json:"expires_in,omitempty"`
+	Scope       string `json:"scope,omitempty"`
+}
+
+type TokenErrorResponse struct { //nolint:errname
+	ErrorType        string `json:"error,omitempty"`
+	ErrorDescription string `json:"error_description,omitempty"`
+	ErrorURI         string `json:"error_uri,omitempty"`
+}
+
+func (e *TokenErrorResponse) Error() string {
+	builder := strings.Builder{}
+	builder.WriteString("error from oauth2 server: ")
+	builder.WriteString("error: ")
+	builder.WriteString(e.ErrorType)
+
+	if len(e.ErrorDescription) != 0 {
+		builder.WriteString(", error_description: ")
+		builder.WriteString(e.ErrorDescription)
+	}
+
+	if len(e.ErrorURI) != 0 {
+		builder.WriteString(", error_uri: ")
+		builder.WriteString(e.ErrorURI)
+	}
+
+	return builder.String()
+}
+
+type TokenEndpointResponse struct {
+	*TokenSuccessfulResponse
+	*TokenErrorResponse
+}
+
+func (r TokenEndpointResponse) Error() error {
+	// weird go behavior
+	if r.TokenErrorResponse != nil {
+		return r.TokenErrorResponse
+	}
+
+	return nil
 }
