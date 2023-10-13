@@ -37,11 +37,26 @@ import (
 
 const defaultCacheLeeway = 15
 
+type AuthMethod string
+
+const (
+	authMethodBasicAuth   AuthMethod = "basic_auth"
+	authMethodRequestBody AuthMethod = "request_body"
+)
+
+type HeaderConfig struct {
+	Name   string `mapstructure:"name"   validate:"required"`
+	Scheme string `mapstructure:"scheme"`
+}
+
 type ClientCredentialsStrategy struct {
-	TokenURL     string   `mapstructure:"token_url"     validate:"required,url"`
-	ClientID     string   `mapstructure:"client_id"     validate:"required"`
-	ClientSecret string   `mapstructure:"client_secret" validate:"required"`
-	Scopes       []string `mapstructure:"scopes"`
+	TokenURL     string         `mapstructure:"token_url"     validate:"required,url"`
+	ClientID     string         `mapstructure:"client_id"     validate:"required"`
+	ClientSecret string         `mapstructure:"client_secret" validate:"required"`
+	AuthMethod   AuthMethod     `mapstructure:"auth_method"   validate:"omitempty,oneof=basic_auth request_body"`
+	Scopes       []string       `mapstructure:"scopes"`
+	TTL          *time.Duration `mapstructure:"cache_ttl"`
+	Header       *HeaderConfig  `mapstructure:"header"`
 }
 
 func (c *ClientCredentialsStrategy) Apply(ctx context.Context, req *http.Request) error {
