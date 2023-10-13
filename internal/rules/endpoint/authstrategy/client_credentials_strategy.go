@@ -20,6 +20,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"io"
 	"net/http"
 	"net/url"
 	"strings"
@@ -127,7 +128,35 @@ func (c *ClientCredentialsStrategy) getAccessToken(ctx context.Context) (*TokenS
 		data.Add("client_secret", c.ClientSecret)
 	}
 
-	rawData, err := ept.SendRequest(ctx, strings.NewReader(data.Encode()), nil)
+	rawData, err := ept.SendRequest(
+		ctx,
+		strings.NewReader(data.Encode()),
+		nil,
+		func(resp *http.Response) ([]byte, error) {
+			if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusBadRequest {
+				return nil, errorchain.NewWithMessagef(heimdall.ErrCommunication,
+					"unexpected response code: %v", resp.StatusCode)
+			}
+
+			rawData, err := io.ReadAll(resp.Body)
+			if err != nil {
+				return nil, errorchain.NewWithMessage(heimdall.ErrInternal,
+					"failed to read response").CausedBy(err)
+			}
+
+			if resp.StatusCode == http.StatusBadRequest {
+				var ter TokenErrorResponse
+				if err := json.Unmarshal(rawData, &ter); err != nil {
+					return nil, errorchain.NewWithMessage(heimdall.ErrInternal,
+						"failed to unmarshal response").CausedBy(err)
+				}
+
+				return nil, errorchain.New(heimdall.ErrCommunication).CausedBy(&ter)
+			}
+
+			return rawData, nil
+		},
+	)
 	if err != nil {
 		return nil, err
 	}
