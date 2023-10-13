@@ -288,6 +288,12 @@ rules:
         config:
           endpoint:
             url: http://keto/{{ .Values.key }}
+            auth:
+              type: api_key
+              config:
+                in: header
+                name: X-Api-Key
+                value: VerySecret!
             method: POST
             headers:
               foo-bar: "{{ .Subject.ID }}"
@@ -309,6 +315,17 @@ rules:
         config:
           endpoint:
             url: http://foo.bar
+            auth:
+              type: client_credentials
+              config:
+                auth_method: request_body
+                token_url: http://foo.bar
+                client_id: foo
+                client_secret: bar
+                cache_ttl: 20s
+                header:
+                  name: X-Foo
+                  scheme: Bar
             method: GET
             headers:
               bla: bla

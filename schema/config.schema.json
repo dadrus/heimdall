@@ -390,6 +390,75 @@
         }
       }
     },
+    "oauth2ClientCredentialsFlowConfig": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "client_id",
+        "client_secret",
+        "token_url"
+      ],
+      "properties": {
+        "client_id": {
+          "description": "The OAuth 2.0 Client ID to be used for the OAuth 2.0 Client Credentials Grant",
+          "type": "string"
+        },
+        "client_secret": {
+          "description": "The OAuth 2.0 Client Secret to be used for the OAuth 2.0 Client Credentials Grant",
+          "type": "string"
+        },
+        "auth_method": {
+          "description": "How to transfer the client_id and client_secret to the oauth provider",
+          "type": "string",
+          "default": "basic_auth",
+          "enum": [
+            "basic_auth",
+            "request_body"
+          ]
+        },
+        "token_url": {
+          "description": "The OAuth 2.0 Token Endpoint where the OAuth 2.0 Client Credentials Grant will be performed",
+          "type": "string"
+        },
+        "scopes": {
+          "description": "The OAuth 2.0 Scopes to be requested during the OAuth 2.0 Client Credentials Grant",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "cache_ttl": {
+          "type": "string",
+          "description": "How long to cache the issued token. Defaults to the value of the `expires_in` of the issued token. If `expires_in` is not present in the response, the token is not cached until this property is not explicitly configured. If `expires_in` is present in the response and this property is configured the shorter value is taken. 0 or negative value will disable caching. ",
+          "pattern": "^[0-9]+(ns|us|ms|s|m|h)$",
+          "examples": [
+            "1h",
+            "1m",
+            "30s"
+          ]
+        },
+        "header": {
+          "type": "object",
+          "description": "Header and scheme to use to transport the issued token to the upstream",
+          "additionalProperties": false,
+          "required": [
+            "name"
+          ],
+          "properties": {
+            "name": {
+              "description": "The header name to use",
+              "type": "string",
+              "default": "Authorization"
+            },
+            "scheme": {
+              "description": "The scheme to use",
+              "type": "string",
+              "default": "Bearer"
+            }
+          }
+        }
+      }
+    },
     "ruleSetEndpointConfiguration": {
       "description": "Endpoint to load rule sets from",
       "type": "object",
@@ -633,38 +702,7 @@
           "const": "client_credentials"
         },
         "config": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": [
-            "client_id",
-            "client_secret",
-            "token_url"
-          ],
-          "properties": {
-            "client_id": {
-              "description": "The OAuth 2.0 Client ID to be used for the OAuth 2.0 Client Credentials Grant",
-              "type": "string"
-            },
-            "client_secret": {
-              "description": "The OAuth 2.0 Client Secret to be used for the OAuth 2.0 Client Credentials Grant",
-              "type": "string"
-            },
-            "token_url": {
-              "description": "The OAuth 2.0 Token Endpoint where the OAuth 2.0 Client Credentials Grant will be performed",
-              "type": "string"
-            },
-            "audience": {
-              "description": "The OAuth 2.0 Audience to be requested during the OAuth 2.0 Client Credentials Grant",
-              "type": "string"
-            },
-            "scopes": {
-              "description": "The OAuth 2.0 Scopes to be requested during the OAuth 2.0 Client Credentials Grant",
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            }
-          }
+          "$ref": "#/definitions/oauth2ClientCredentialsFlowConfig"
         }
       }
     },
@@ -1435,71 +1473,7 @@
           "type": "string"
         },
         "config": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": [
-            "client_id",
-            "client_secret",
-            "token_url"
-          ],
-          "properties": {
-            "client_id": {
-              "description": "The OAuth 2.0 Client ID to be used for the OAuth 2.0 Client Credentials Grant",
-              "type": "string"
-            },
-            "client_secret": {
-              "description": "The OAuth 2.0 Client Secret to be used for the OAuth 2.0 Client Credentials Grant",
-              "type": "string"
-            },
-            "auth_method": {
-              "description": "How to transfer the client_id and client_secret to the oauth provider",
-              "type": "string",
-              "default": "basic_auth",
-              "enum": [
-                "basic_auth",
-                "request_body"
-              ]
-            },
-            "token_url": {
-              "description": "The OAuth 2.0 Token Endpoint where the OAuth 2.0 Client Credentials Grant will be performed",
-              "type": "string"
-            },
-            "scopes": {
-              "description": "The OAuth 2.0 Scopes to be requested during the OAuth 2.0 Client Credentials Grant",
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            },
-            "cache_ttl": {
-              "type": "string",
-              "description": "How long to cache the issued token. Defaults to the value of the `expires_in` of the issued token. If `expires_in` is not present in the response, the token is not cached until this property is not explicitly configured. If `expires_in` is present in the response and this property is configured the shorter value is taken. 0 or negative value will disable caching. ",
-              "pattern": "^[0-9]+(ns|us|ms|s|m|h)$",
-              "examples": [
-                "1h",
-                "1m",
-                "30s"
-              ]
-            },
-            "header": {
-              "type": "object",
-              "description": "Header and scheme to use to transport the issued token to the upstream service",
-              "additionalProperties": false,
-              "required": ["name"],
-              "properties": {
-                "name": {
-                  "description": "The header name to use",
-                  "type": "string",
-                  "default": "Authorization"
-                },
-                "scheme": {
-                  "description": "The scheme to use",
-                  "type": "string",
-                  "default": "Bearer"
-                }
-              }
-            }
-          }
+          "$ref": "#/definitions/oauth2ClientCredentialsFlowConfig"
         }
       }
     },
