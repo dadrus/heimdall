@@ -155,6 +155,12 @@ rules:
       config:
         identity_info_endpoint:
           url: http://127.0.0.1:4433/sessions/whoami
+          auth:
+            auth:
+              type: basic_auth
+              config:
+                user: foo
+                password: bar
           retry:
             max_delay: 300ms
             give_up_after: 2s
@@ -175,10 +181,11 @@ rules:
             max_delay: 300ms
             give_up_after: 2s
           auth:
-            type: basic_auth
+            type: api_key
             config:
-              user: foo
-              password: bar
+              in: header
+              name: X-Api-Key
+              value: VerySecret!
         token_source:
           - header: Authorization
             schema: Bearer
@@ -266,11 +273,16 @@ rules:
           headers:
             bla: bla
           auth:
-            type: api_key
+            type: client_credentials
             config:
-              in: query
-              name: key
-              value: super duper secret
+              auth_method: request_body
+              token_url: http://bar.foo
+              client_id: foo
+              client_secret: bar
+              cache_ttl: 20s
+              header:
+                name: X-Foo
+                scheme: Bar
         payload: http://foo
     - id: profile_data_contextualizer
       type: generic
