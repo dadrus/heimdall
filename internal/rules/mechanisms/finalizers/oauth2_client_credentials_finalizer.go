@@ -116,7 +116,7 @@ func newOAuth2ClientCredentialsFinalizer(
 	}
 
 	type Config struct {
-		TokenURL     string         `mapstructure:"token_url"     validate:"required,http_url"`
+		TokenURL     string         `mapstructure:"token_url"     validate:"required,url"`
 		ClientID     string         `mapstructure:"client_id"     validate:"required"`
 		ClientSecret string         `mapstructure:"client_secret" validate:"required"`
 		AuthMethod   AuthMethod     `mapstructure:"auth_method"   validate:"omitempty,oneof=basic_auth request_body"`
