@@ -132,14 +132,18 @@ func (c *ClientCredentialsStrategy) getAccessToken(ctx context.Context) (*TokenS
 		return nil, err
 	}
 
-	var ter TokenEndpointResponse
-	if err := json.Unmarshal(rawData, &ter); err != nil {
+	var resp TokenEndpointResponse
+	if err := json.Unmarshal(rawData, &resp); err != nil {
 		return nil, errorchain.
 			NewWithMessage(heimdall.ErrInternal, "failed to unmarshal response").
 			CausedBy(err)
 	}
 
-	return ter.TokenSuccessfulResponse, nil
+	if resp.Error() != nil {
+		return nil, errorchain.New(heimdall.ErrCommunication).CausedBy(resp.Error())
+	}
+
+	return resp.TokenSuccessfulResponse, nil
 }
 
 func (c *ClientCredentialsStrategy) authStrategy() endpoint.AuthenticationStrategy {
