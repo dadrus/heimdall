@@ -82,7 +82,7 @@ func (c *Config) Token(ctx context.Context) (*TokenInfo, error) {
 	if tokenInfo == nil {
 		logger.Debug().Msg("Requesting new access token")
 
-		tokenInfo, err = c.getAccessToken(ctx)
+		tokenInfo, err = c.fetchToken(ctx)
 		if err != nil {
 			return nil, err
 		}
@@ -147,7 +147,7 @@ func (c *Config) isCacheEnabled() bool {
 	return c.TTL == nil || (c.TTL != nil && *c.TTL > 0)
 }
 
-func (c *Config) getAccessToken(ctx context.Context) (*TokenInfo, error) {
+func (c *Config) fetchToken(ctx context.Context) (*TokenInfo, error) {
 	ept := endpoint.Endpoint{
 		URL:          c.TokenURL,
 		Method:       http.MethodPost,
