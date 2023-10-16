@@ -127,7 +127,9 @@ cache_ttl: 11s
 scopes:
   - foo
   - baz
-header: "X-My-Header"
+header: 
+  name: "X-My-Header"
+  scheme: "Bar"
 `),
 			assert: func(t *testing.T, err error, finalizer *oauth2ClientCredentialsFinalizer) {
 				t.Helper()
@@ -140,6 +142,7 @@ header: "X-My-Header"
 				assert.Equal(t, "foo", finalizer.cfg.ClientID)
 				assert.Equal(t, "bar", finalizer.cfg.ClientSecret)
 				assert.Equal(t, "X-My-Header", finalizer.headerName)
+				assert.Equal(t, "Bar", finalizer.headerScheme)
 				assert.Equal(t, clientcredentials.AuthMethodRequestBody, finalizer.cfg.AuthMethod)
 				assert.Equal(t, 11*time.Second, *finalizer.cfg.TTL)
 				assert.Len(t, finalizer.cfg.Scopes, 2)
@@ -183,7 +186,8 @@ cache_ttl: 11s
 scopes:
   - foo
   - baz
-header: "X-My-Header"
+header: 
+  name: "X-My-Header"
 `),
 			assert: func(t *testing.T, err error, prototype *oauth2ClientCredentialsFinalizer, configured *oauth2ClientCredentialsFinalizer) {
 				t.Helper()
@@ -203,7 +207,8 @@ cache_ttl: 11s
 scopes:
   - foo
   - baz
-header: "X-My-Header"
+header: 
+  name: "X-My-Header"
 `),
 			config: []byte(``),
 			assert: func(t *testing.T, err error, prototype *oauth2ClientCredentialsFinalizer, configured *oauth2ClientCredentialsFinalizer) {
@@ -318,7 +323,8 @@ client_secret: bar
 cache_ttl: 11s
 `),
 			config: []byte(`
-header: X-Foo-Bar
+header: 
+  name: X-Foo-Bar
 `),
 			assert: func(t *testing.T, err error, prototype *oauth2ClientCredentialsFinalizer, configured *oauth2ClientCredentialsFinalizer) {
 				t.Helper()
@@ -486,8 +492,9 @@ func TestClientCredentialsFinalizerExecute(t *testing.T) {
 		{
 			uc: "full configuration, no cache hit and token has expires_in claim",
 			finalizer: &oauth2ClientCredentialsFinalizer{
-				id:         "test",
-				headerName: "X-My-Header",
+				id:           "test",
+				headerName:   "X-My-Header",
+				headerScheme: "Bar",
 				cfg: clientcredentials.Config{
 					TokenURL:     srv.URL,
 					ClientID:     "bar",
@@ -505,7 +512,7 @@ func TestClientCredentialsFinalizerExecute(t *testing.T) {
 
 				cch.EXPECT().Get(mock.Anything).Return(nil)
 				cch.EXPECT().Set(mock.Anything, mock.Anything, 3*time.Minute).Return()
-				ctx.EXPECT().AddHeaderForUpstream("X-My-Header", "Foo foobar").Return()
+				ctx.EXPECT().AddHeaderForUpstream("X-My-Header", "Bar foobar").Return()
 			},
 			assertRequest: func(t *testing.T, req *http.Request) {
 				t.Helper()

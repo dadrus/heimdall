@@ -158,11 +158,7 @@ func TestApplyClientCredentialsStrategy(t *testing.T) {
 					}(),
 					Scopes: []string{"baz", "zab"},
 				},
-				Header: func() *string {
-					name := "X-My-Header"
-
-					return &name
-				}(),
+				Header: &HeaderConfig{Name: "X-My-Header", Scheme: "Foo"},
 			},
 			configureMocks: func(t *testing.T, cch *mocks.CacheMock) {
 				t.Helper()
@@ -201,7 +197,7 @@ func TestApplyClientCredentialsStrategy(t *testing.T) {
 
 				require.NoError(t, err)
 				assert.True(t, tokenEndpointCalled)
-				assert.Equal(t, "Bar foobar", req.Header.Get("X-My-Header"))
+				assert.Equal(t, "Foo foobar", req.Header.Get("X-My-Header"))
 			},
 		},
 	} {

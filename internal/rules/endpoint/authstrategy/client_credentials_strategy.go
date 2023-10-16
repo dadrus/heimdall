@@ -25,10 +25,15 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/oauth2/clientcredentials"
 )
 
+type HeaderConfig struct {
+	Name   string `mapstructure:"name"   validate:"required"`
+	Scheme string `mapstructure:"scheme"`
+}
+
 type ClientCredentialsStrategy struct {
 	clientcredentials.Config `mapstructure:",squash"`
 
-	Header *string `mapstructure:"header" validate:"omitempty,gt=1"`
+	Header *HeaderConfig `mapstructure:"header"`
 }
 
 func (c *ClientCredentialsStrategy) Apply(ctx context.Context, req *http.Request) error {
@@ -42,10 +47,15 @@ func (c *ClientCredentialsStrategy) Apply(ctx context.Context, req *http.Request
 
 	headerName := "Authorization"
 	if c.Header != nil {
-		headerName = *c.Header
+		headerName = c.Header.Name
 	}
 
-	req.Header.Set(headerName, token.TokenType+" "+token.AccessToken)
+	headerScheme := token.TokenType
+	if c.Header != nil && len(c.Header.Scheme) != 0 {
+		headerScheme = c.Header.Scheme
+	}
+
+	req.Header.Set(headerName, headerScheme+" "+token.AccessToken)
 
 	return nil
 }
