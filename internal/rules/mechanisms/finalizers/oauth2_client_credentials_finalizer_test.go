@@ -19,6 +19,7 @@ import (
 	mocks2 "github.com/dadrus/heimdall/internal/cache/mocks"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/heimdall/mocks"
+	"github.com/dadrus/heimdall/internal/rules/oauth2/clientcredentials"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
@@ -104,15 +105,14 @@ client_secret: bar
 				require.NotNil(t, finalizer)
 
 				assert.Equal(t, "minimal", finalizer.ID())
-				assert.Equal(t, "https://foo.bar", finalizer.tokenURL)
-				assert.Equal(t, "foo", finalizer.clientID)
-				assert.Equal(t, "bar", finalizer.clientSecret)
-				assert.Equal(t, "Authorization", finalizer.headerName)
-				assert.Equal(t, "Bearer", finalizer.headerScheme)
-				assert.Equal(t, authMethodBasicAuth, finalizer.authMethod)
-				assert.Nil(t, finalizer.ttl)
-				assert.Empty(t, finalizer.scopes)
+				assert.Equal(t, "https://foo.bar", finalizer.cfg.TokenURL)
+				assert.Equal(t, "foo", finalizer.cfg.ClientID)
+				assert.Equal(t, "bar", finalizer.cfg.ClientSecret)
+				assert.Equal(t, clientcredentials.AuthMethodBasicAuth, finalizer.cfg.AuthMethod)
+				assert.Nil(t, finalizer.cfg.TTL)
+				assert.Empty(t, finalizer.cfg.Scopes)
 				assert.False(t, finalizer.ContinueOnError())
+				assert.Equal(t, "Authorization", finalizer.headerName)
 			},
 		},
 		{
@@ -127,9 +127,9 @@ cache_ttl: 11s
 scopes:
   - foo
   - baz
-header:
+header: 
   name: "X-My-Header"
-  scheme: Foo
+  scheme: "Bar"
 `),
 			assert: func(t *testing.T, err error, finalizer *oauth2ClientCredentialsFinalizer) {
 				t.Helper()
@@ -138,16 +138,16 @@ header:
 				require.NotNil(t, finalizer)
 
 				assert.Equal(t, "full", finalizer.ID())
-				assert.Equal(t, "https://foo.bar", finalizer.tokenURL)
-				assert.Equal(t, "foo", finalizer.clientID)
-				assert.Equal(t, "bar", finalizer.clientSecret)
+				assert.Equal(t, "https://foo.bar", finalizer.cfg.TokenURL)
+				assert.Equal(t, "foo", finalizer.cfg.ClientID)
+				assert.Equal(t, "bar", finalizer.cfg.ClientSecret)
 				assert.Equal(t, "X-My-Header", finalizer.headerName)
-				assert.Equal(t, "Foo", finalizer.headerScheme)
-				assert.Equal(t, authMethodRequestBody, finalizer.authMethod)
-				assert.Equal(t, 11*time.Second, *finalizer.ttl)
-				assert.Len(t, finalizer.scopes, 2)
-				assert.Contains(t, finalizer.scopes, "foo")
-				assert.Contains(t, finalizer.scopes, "baz")
+				assert.Equal(t, "Bar", finalizer.headerScheme)
+				assert.Equal(t, clientcredentials.AuthMethodRequestBody, finalizer.cfg.AuthMethod)
+				assert.Equal(t, 11*time.Second, *finalizer.cfg.TTL)
+				assert.Len(t, finalizer.cfg.Scopes, 2)
+				assert.Contains(t, finalizer.cfg.Scopes, "foo")
+				assert.Contains(t, finalizer.cfg.Scopes, "baz")
 				assert.False(t, finalizer.ContinueOnError())
 			},
 		},
@@ -186,9 +186,8 @@ cache_ttl: 11s
 scopes:
   - foo
   - baz
-header:
+header: 
   name: "X-My-Header"
-  scheme: Foo
 `),
 			assert: func(t *testing.T, err error, prototype *oauth2ClientCredentialsFinalizer, configured *oauth2ClientCredentialsFinalizer) {
 				t.Helper()
@@ -208,9 +207,8 @@ cache_ttl: 11s
 scopes:
   - foo
   - baz
-header:
+header: 
   name: "X-My-Header"
-  scheme: Foo
 `),
 			config: []byte(``),
 			assert: func(t *testing.T, err error, prototype *oauth2ClientCredentialsFinalizer, configured *oauth2ClientCredentialsFinalizer) {
@@ -242,23 +240,21 @@ scopes:
 
 				assert.NotEqual(t, prototype, configured)
 				assert.Equal(t, prototype.ID(), configured.ID())
-				assert.Equal(t, "https://foo.bar", prototype.tokenURL)
-				assert.Equal(t, prototype.tokenURL, configured.tokenURL)
-				assert.Equal(t, "foo", prototype.clientID)
-				assert.Equal(t, prototype.clientID, configured.clientID)
-				assert.Equal(t, "bar", prototype.clientSecret)
-				assert.Equal(t, prototype.clientSecret, configured.clientSecret)
-				assert.Equal(t, 11*time.Second, *prototype.ttl)
-				assert.Equal(t, prototype.ttl, configured.ttl)
+				assert.Equal(t, "https://foo.bar", prototype.cfg.TokenURL)
+				assert.Equal(t, prototype.cfg.TokenURL, configured.cfg.TokenURL)
+				assert.Equal(t, "foo", prototype.cfg.ClientID)
+				assert.Equal(t, prototype.cfg.ClientID, configured.cfg.ClientID)
+				assert.Equal(t, "bar", prototype.cfg.ClientSecret)
+				assert.Equal(t, prototype.cfg.ClientSecret, configured.cfg.ClientSecret)
+				assert.Equal(t, 11*time.Second, *prototype.cfg.TTL)
+				assert.Equal(t, prototype.cfg.TTL, configured.cfg.TTL)
 				assert.Equal(t, "Authorization", prototype.headerName)
 				assert.Equal(t, prototype.headerName, configured.headerName)
-				assert.Equal(t, "Bearer", prototype.headerScheme)
-				assert.Equal(t, prototype.headerScheme, configured.headerScheme)
-				assert.Empty(t, prototype.scopes)
-				assert.Len(t, configured.scopes, 2)
-				assert.Contains(t, configured.scopes, "foo")
-				assert.Contains(t, configured.scopes, "baz")
-				assert.Equal(t, prototype.authMethod, configured.authMethod)
+				assert.Empty(t, prototype.cfg.Scopes)
+				assert.Len(t, configured.cfg.Scopes, 2)
+				assert.Contains(t, configured.cfg.Scopes, "foo")
+				assert.Contains(t, configured.cfg.Scopes, "baz")
+				assert.Equal(t, prototype.cfg.AuthMethod, configured.cfg.AuthMethod)
 			},
 		},
 		{
@@ -280,21 +276,19 @@ cache_ttl: 12s
 
 				assert.NotEqual(t, prototype, configured)
 				assert.Equal(t, prototype.ID(), configured.ID())
-				assert.Equal(t, "https://foo.bar", prototype.tokenURL)
-				assert.Equal(t, prototype.tokenURL, configured.tokenURL)
-				assert.Equal(t, "foo", prototype.clientID)
-				assert.Equal(t, prototype.clientID, configured.clientID)
-				assert.Equal(t, "bar", prototype.clientSecret)
-				assert.Equal(t, prototype.clientSecret, configured.clientSecret)
-				assert.Equal(t, 11*time.Second, *prototype.ttl)
-				assert.Equal(t, 12*time.Second, *configured.ttl)
+				assert.Equal(t, "https://foo.bar", prototype.cfg.TokenURL)
+				assert.Equal(t, prototype.cfg.TokenURL, configured.cfg.TokenURL)
+				assert.Equal(t, "foo", prototype.cfg.ClientID)
+				assert.Equal(t, prototype.cfg.ClientID, configured.cfg.ClientID)
+				assert.Equal(t, "bar", prototype.cfg.ClientSecret)
+				assert.Equal(t, prototype.cfg.ClientSecret, configured.cfg.ClientSecret)
+				assert.Equal(t, 11*time.Second, *prototype.cfg.TTL)
+				assert.Equal(t, 12*time.Second, *configured.cfg.TTL)
 				assert.Equal(t, "Authorization", prototype.headerName)
 				assert.Equal(t, prototype.headerName, configured.headerName)
-				assert.Equal(t, "Bearer", prototype.headerScheme)
-				assert.Equal(t, prototype.headerScheme, configured.headerScheme)
-				assert.Empty(t, prototype.scopes)
-				assert.Equal(t, prototype.scopes, configured.scopes)
-				assert.Equal(t, prototype.authMethod, configured.authMethod)
+				assert.Empty(t, prototype.cfg.Scopes)
+				assert.Equal(t, prototype.cfg.Scopes, configured.cfg.Scopes)
+				assert.Equal(t, prototype.cfg.AuthMethod, configured.cfg.AuthMethod)
 			},
 		},
 		{
@@ -329,7 +323,7 @@ client_secret: bar
 cache_ttl: 11s
 `),
 			config: []byte(`
-header:
+header: 
   name: X-Foo-Bar
 `),
 			assert: func(t *testing.T, err error, prototype *oauth2ClientCredentialsFinalizer, configured *oauth2ClientCredentialsFinalizer) {
@@ -339,80 +333,19 @@ header:
 
 				assert.NotEqual(t, prototype, configured)
 				assert.Equal(t, prototype.ID(), configured.ID())
-				assert.Equal(t, "https://foo.bar", prototype.tokenURL)
-				assert.Equal(t, prototype.tokenURL, configured.tokenURL)
-				assert.Equal(t, "foo", prototype.clientID)
-				assert.Equal(t, prototype.clientID, configured.clientID)
-				assert.Equal(t, "bar", prototype.clientSecret)
-				assert.Equal(t, prototype.clientSecret, configured.clientSecret)
-				assert.Equal(t, 11*time.Second, *prototype.ttl)
-				assert.Equal(t, prototype.ttl, configured.ttl)
+				assert.Equal(t, "https://foo.bar", prototype.cfg.TokenURL)
+				assert.Equal(t, prototype.cfg.TokenURL, configured.cfg.TokenURL)
+				assert.Equal(t, "foo", prototype.cfg.ClientID)
+				assert.Equal(t, prototype.cfg.ClientID, configured.cfg.ClientID)
+				assert.Equal(t, "bar", prototype.cfg.ClientSecret)
+				assert.Equal(t, prototype.cfg.ClientSecret, configured.cfg.ClientSecret)
+				assert.Equal(t, 11*time.Second, *prototype.cfg.TTL)
+				assert.Equal(t, prototype.cfg.TTL, configured.cfg.TTL)
 				assert.Equal(t, "Authorization", prototype.headerName)
 				assert.Equal(t, "X-Foo-Bar", configured.headerName)
-				assert.Equal(t, "Bearer", prototype.headerScheme)
-				assert.Empty(t, configured.headerScheme)
-				assert.Empty(t, prototype.scopes)
-				assert.Equal(t, prototype.scopes, configured.scopes)
-				assert.Equal(t, prototype.authMethod, configured.authMethod)
-			},
-		},
-		{
-			uc: "header name and scheme reconfigured",
-			id: "3",
-			prototypeConfig: []byte(`
-token_url: https://foo.bar
-client_id: foo
-client_secret: bar
-cache_ttl: 11s
-`),
-			config: []byte(`
-header:
-  name: X-Foo-Bar
-  scheme: Foo
-`),
-			assert: func(t *testing.T, err error, prototype *oauth2ClientCredentialsFinalizer, configured *oauth2ClientCredentialsFinalizer) {
-				t.Helper()
-
-				require.NoError(t, err)
-
-				assert.NotEqual(t, prototype, configured)
-				assert.Equal(t, prototype.ID(), configured.ID())
-				assert.Equal(t, "https://foo.bar", prototype.tokenURL)
-				assert.Equal(t, prototype.tokenURL, configured.tokenURL)
-				assert.Equal(t, "foo", prototype.clientID)
-				assert.Equal(t, prototype.clientID, configured.clientID)
-				assert.Equal(t, "bar", prototype.clientSecret)
-				assert.Equal(t, prototype.clientSecret, configured.clientSecret)
-				assert.Equal(t, 11*time.Second, *prototype.ttl)
-				assert.Equal(t, prototype.ttl, configured.ttl)
-				assert.Equal(t, "Authorization", prototype.headerName)
-				assert.Equal(t, "X-Foo-Bar", configured.headerName)
-				assert.Equal(t, "Bearer", prototype.headerScheme)
-				assert.Equal(t, "Foo", configured.headerScheme)
-				assert.Empty(t, prototype.scopes)
-				assert.Equal(t, prototype.scopes, configured.scopes)
-				assert.Equal(t, prototype.authMethod, configured.authMethod)
-			},
-		},
-		{
-			uc: "only header scheme reconfigured",
-			id: "3",
-			prototypeConfig: []byte(`
-token_url: https://foo.bar
-client_id: foo
-client_secret: bar
-cache_ttl: 11s
-`),
-			config: []byte(`
-header:
-  scheme: Foo
-`),
-			assert: func(t *testing.T, err error, prototype *oauth2ClientCredentialsFinalizer, configured *oauth2ClientCredentialsFinalizer) {
-				t.Helper()
-
-				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "failed validating")
+				assert.Empty(t, prototype.cfg.Scopes)
+				assert.Equal(t, prototype.cfg.Scopes, configured.cfg.Scopes)
+				assert.Equal(t, prototype.cfg.AuthMethod, configured.cfg.AuthMethod)
 			},
 		},
 	} {
@@ -451,6 +384,13 @@ func TestClientCredentialsFinalizerExecute(t *testing.T) {
 	type (
 		RequestAsserter func(t *testing.T, req *http.Request)
 		ResponseBuilder func(t *testing.T) (any, int)
+
+		Token struct {
+			AccessToken string `json:"access_token,omitempty"`
+			TokenType   string `json:"token_type,omitempty"`
+			ExpiresIn   int64  `json:"expires_in,omitempty"`
+			Scope       string `json:"scope,omitempty"`
+		}
 	)
 
 	var (
@@ -504,14 +444,13 @@ func TestClientCredentialsFinalizerExecute(t *testing.T) {
 		{
 			uc: "reusing response from cache",
 			finalizer: &oauth2ClientCredentialsFinalizer{
-				id:           "test",
-				headerName:   "Authorization",
-				headerScheme: "Bearer",
+				id:         "test",
+				headerName: "Authorization",
 			},
 			configureMocks: func(t *testing.T, ctx *mocks.ContextMock, cch *mocks2.CacheMock) {
 				t.Helper()
 
-				cch.EXPECT().Get(mock.Anything).Return("foobar")
+				cch.EXPECT().Get(mock.Anything).Return(&clientcredentials.TokenInfo{AccessToken: "foobar", TokenType: "Bearer"})
 				ctx.EXPECT().AddHeaderForUpstream("Authorization", "Bearer foobar")
 			},
 			assert: func(t *testing.T, err error, tokenEndpointCalled bool) {
@@ -522,107 +461,14 @@ func TestClientCredentialsFinalizerExecute(t *testing.T) {
 			},
 		},
 		{
-			uc: "cache entry of wrong type and no ttl in issued token",
-			finalizer: &oauth2ClientCredentialsFinalizer{
-				id:           "test",
-				headerName:   "Authorization",
-				headerScheme: "Bearer",
-				tokenURL:     srv.URL,
-				clientID:     "foo",
-				clientSecret: "bar",
-			},
-			configureMocks: func(t *testing.T, ctx *mocks.ContextMock, cch *mocks2.CacheMock) {
-				t.Helper()
-
-				cch.EXPECT().Get(mock.Anything).Return(10)
-				cch.EXPECT().Delete(mock.Anything)
-				ctx.EXPECT().AddHeaderForUpstream("Authorization", "Bearer barfoo")
-			},
-			assertRequest: func(t *testing.T, req *http.Request) {
-				t.Helper()
-
-				val, err := base64.StdEncoding.DecodeString(strings.TrimPrefix(req.Header.Get("Authorization"), "Basic "))
-				assert.NoError(t, err)
-
-				clientIDAndSecret := strings.Split(string(val), ":")
-				assert.Equal(t, "foo", clientIDAndSecret[0])
-				assert.Equal(t, "bar", clientIDAndSecret[1])
-
-				assert.Equal(t, "application/x-www-form-urlencoded", req.Header.Get("Content-Type"))
-				assert.Equal(t, "application/json", req.Header.Get("Accept-Type"))
-				assert.Equal(t, "client_credentials", req.FormValue("grant_type"))
-				assert.Empty(t, req.FormValue("scope"))
-			},
-			buildResponse: func(t *testing.T) (any, int) {
-				t.Helper()
-
-				return &TokenSuccessfulResponse{
-					AccessToken: "barfoo",
-					TokenType:   "Foo",
-				}, http.StatusOK
-			},
-			assert: func(t *testing.T, err error, tokenEndpointCalled bool) {
-				t.Helper()
-
-				require.NoError(t, err)
-				assert.True(t, tokenEndpointCalled)
-			},
-		},
-		{
-			uc: "ttl not configured, no cache entry and token has expires_in claim",
-			finalizer: &oauth2ClientCredentialsFinalizer{
-				id:           "test",
-				headerName:   "Authorization",
-				headerScheme: "Bar",
-				tokenURL:     srv.URL,
-				clientID:     "bar",
-				clientSecret: "foo",
-			},
-			configureMocks: func(t *testing.T, ctx *mocks.ContextMock, cch *mocks2.CacheMock) {
-				t.Helper()
-
-				cch.EXPECT().Get(mock.Anything).Return(nil)
-				cch.EXPECT().Set(mock.Anything, "barfoo", 5*time.Minute-5*time.Second).Return()
-				ctx.EXPECT().AddHeaderForUpstream("Authorization", "Bar barfoo").Return()
-			},
-			assertRequest: func(t *testing.T, req *http.Request) {
-				t.Helper()
-
-				val, err := base64.StdEncoding.DecodeString(strings.TrimPrefix(req.Header.Get("Authorization"), "Basic "))
-				assert.NoError(t, err)
-
-				clientIDAndSecret := strings.Split(string(val), ":")
-				assert.Equal(t, "bar", clientIDAndSecret[0])
-				assert.Equal(t, "foo", clientIDAndSecret[1])
-
-				assert.Equal(t, "application/x-www-form-urlencoded", req.Header.Get("Content-Type"))
-				assert.Equal(t, "application/json", req.Header.Get("Accept-Type"))
-				assert.Equal(t, "client_credentials", req.FormValue("grant_type"))
-				assert.Empty(t, req.FormValue("scope"))
-			},
-			buildResponse: func(t *testing.T) (any, int) {
-				t.Helper()
-
-				return &TokenSuccessfulResponse{
-					AccessToken: "barfoo",
-					TokenType:   "Foo",
-					ExpiresIn:   int64((5 * time.Minute).Seconds()),
-				}, http.StatusOK
-			},
-			assert: func(t *testing.T, err error, tokenEndpointCalled bool) {
-				t.Helper()
-
-				require.NoError(t, err)
-				assert.True(t, tokenEndpointCalled)
-			},
-		},
-		{
 			uc: "error while unmarshalling successful response",
 			finalizer: &oauth2ClientCredentialsFinalizer{
-				id:           "test",
-				tokenURL:     srv.URL,
-				clientID:     "bar",
-				clientSecret: "foo",
+				id: "test",
+				cfg: clientcredentials.Config{
+					TokenURL:     srv.URL,
+					ClientID:     "bar",
+					ClientSecret: "foo",
+				},
 			},
 			configureMocks: func(t *testing.T, ctx *mocks.ContextMock, cch *mocks2.CacheMock) {
 				t.Helper()
@@ -644,75 +490,29 @@ func TestClientCredentialsFinalizerExecute(t *testing.T) {
 			},
 		},
 		{
-			uc: "error while unmarshalling error response",
-			finalizer: &oauth2ClientCredentialsFinalizer{
-				id:           "test",
-				tokenURL:     srv.URL,
-				clientID:     "bar",
-				clientSecret: "foo",
-			},
-			configureMocks: func(t *testing.T, ctx *mocks.ContextMock, cch *mocks2.CacheMock) {
-				t.Helper()
-
-				cch.EXPECT().Get(mock.Anything).Return(nil)
-			},
-			assertRequest: func(t *testing.T, req *http.Request) { t.Helper() },
-			buildResponse: func(t *testing.T) (any, int) {
-				t.Helper()
-
-				return "foo", http.StatusBadRequest
-			},
-			assert: func(t *testing.T, err error, tokenEndpointCalled bool) {
-				t.Helper()
-
-				assert.True(t, tokenEndpointCalled)
-				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrInternal)
-			},
-		},
-		{
-			uc: "error while sending request",
-			finalizer: &oauth2ClientCredentialsFinalizer{
-				id:           "test",
-				tokenURL:     "http://127.0.0.1:11111",
-				clientID:     "bar",
-				clientSecret: "foo",
-			},
-			configureMocks: func(t *testing.T, ctx *mocks.ContextMock, cch *mocks2.CacheMock) {
-				t.Helper()
-
-				cch.EXPECT().Get(mock.Anything).Return(nil)
-			},
-			assert: func(t *testing.T, err error, tokenEndpointCalled bool) {
-				t.Helper()
-
-				assert.False(t, tokenEndpointCalled)
-				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrCommunication)
-			},
-		},
-		{
 			uc: "full configuration, no cache hit and token has expires_in claim",
 			finalizer: &oauth2ClientCredentialsFinalizer{
 				id:           "test",
 				headerName:   "X-My-Header",
-				headerScheme: "Foo",
-				tokenURL:     srv.URL,
-				clientID:     "bar",
-				clientSecret: "foo",
-				ttl: func() *time.Duration {
-					ttl := 3 * time.Minute
+				headerScheme: "Bar",
+				cfg: clientcredentials.Config{
+					TokenURL:     srv.URL,
+					ClientID:     "bar",
+					ClientSecret: "foo",
+					TTL: func() *time.Duration {
+						ttl := 3 * time.Minute
 
-					return &ttl
-				}(),
-				scopes: []string{"baz", "zab"},
+						return &ttl
+					}(),
+					Scopes: []string{"baz", "zab"},
+				},
 			},
 			configureMocks: func(t *testing.T, ctx *mocks.ContextMock, cch *mocks2.CacheMock) {
 				t.Helper()
 
 				cch.EXPECT().Get(mock.Anything).Return(nil)
-				cch.EXPECT().Set(mock.Anything, "foobar", 3*time.Minute).Return()
-				ctx.EXPECT().AddHeaderForUpstream("X-My-Header", "Foo foobar").Return()
+				cch.EXPECT().Set(mock.Anything, mock.Anything, 3*time.Minute).Return()
+				ctx.EXPECT().AddHeaderForUpstream("X-My-Header", "Bar foobar").Return()
 			},
 			assertRequest: func(t *testing.T, req *http.Request) {
 				t.Helper()
@@ -725,7 +525,6 @@ func TestClientCredentialsFinalizerExecute(t *testing.T) {
 				assert.Equal(t, "foo", clientIDAndSecret[1])
 
 				assert.Equal(t, "application/x-www-form-urlencoded", req.Header.Get("Content-Type"))
-				assert.Equal(t, "application/json", req.Header.Get("Accept-Type"))
 				assert.Equal(t, "client_credentials", req.FormValue("grant_type"))
 				scopes := strings.Split(req.FormValue("scope"), " ")
 				assert.Len(t, scopes, 2)
@@ -735,7 +534,7 @@ func TestClientCredentialsFinalizerExecute(t *testing.T) {
 			buildResponse: func(t *testing.T) (any, int) {
 				t.Helper()
 
-				return &TokenSuccessfulResponse{
+				return &Token{
 					AccessToken: "foobar",
 					TokenType:   "Foo",
 					ExpiresIn:   int64((5 * time.Minute).Seconds()),
@@ -746,317 +545,6 @@ func TestClientCredentialsFinalizerExecute(t *testing.T) {
 
 				require.NoError(t, err)
 				assert.True(t, tokenEndpointCalled)
-			},
-		},
-		{
-			uc: "disabled cache",
-			finalizer: &oauth2ClientCredentialsFinalizer{
-				id:           "test",
-				headerName:   "X-My-Header",
-				headerScheme: "Foo",
-				tokenURL:     srv.URL,
-				clientID:     "bar",
-				clientSecret: "foo",
-				ttl: func() *time.Duration {
-					ttl := 0 * time.Second
-
-					return &ttl
-				}(),
-				scopes: []string{"baz", "zab"},
-			},
-			configureMocks: func(t *testing.T, ctx *mocks.ContextMock, cch *mocks2.CacheMock) {
-				t.Helper()
-
-				ctx.EXPECT().AddHeaderForUpstream("X-My-Header", "Foo foobar").Return()
-			},
-			assertRequest: func(t *testing.T, req *http.Request) {
-				t.Helper()
-
-				val, err := base64.StdEncoding.DecodeString(strings.TrimPrefix(req.Header.Get("Authorization"), "Basic "))
-				assert.NoError(t, err)
-
-				clientIDAndSecret := strings.Split(string(val), ":")
-				assert.Equal(t, "bar", clientIDAndSecret[0])
-				assert.Equal(t, "foo", clientIDAndSecret[1])
-
-				assert.Equal(t, "application/x-www-form-urlencoded", req.Header.Get("Content-Type"))
-				assert.Equal(t, "application/json", req.Header.Get("Accept-Type"))
-				assert.Equal(t, "client_credentials", req.FormValue("grant_type"))
-				scopes := strings.Split(req.FormValue("scope"), " ")
-				assert.Len(t, scopes, 2)
-				assert.Contains(t, scopes, "baz")
-				assert.Contains(t, scopes, "zab")
-			},
-			buildResponse: func(t *testing.T) (any, int) {
-				t.Helper()
-
-				return &TokenSuccessfulResponse{
-					AccessToken: "foobar",
-					TokenType:   "Foo",
-					ExpiresIn:   int64((5 * time.Minute).Seconds()),
-				}, http.StatusOK
-			},
-			assert: func(t *testing.T, err error, tokenEndpointCalled bool) {
-				t.Helper()
-
-				require.NoError(t, err)
-				assert.True(t, tokenEndpointCalled)
-			},
-		},
-		{
-			uc: "custom cache ttl and no expires_in in token",
-			finalizer: &oauth2ClientCredentialsFinalizer{
-				id:           "test",
-				headerName:   "X-My-Header",
-				headerScheme: "Foo",
-				tokenURL:     srv.URL,
-				clientID:     "bar",
-				clientSecret: "foo",
-				ttl: func() *time.Duration {
-					ttl := 3 * time.Minute
-
-					return &ttl
-				}(),
-				scopes: []string{"baz", "zab"},
-			},
-			configureMocks: func(t *testing.T, ctx *mocks.ContextMock, cch *mocks2.CacheMock) {
-				t.Helper()
-
-				cch.EXPECT().Get(mock.Anything).Return(nil)
-				cch.EXPECT().Set(mock.Anything, "foobar", 3*time.Minute).Return()
-				ctx.EXPECT().AddHeaderForUpstream("X-My-Header", "Foo foobar").Return()
-			},
-			assertRequest: func(t *testing.T, req *http.Request) {
-				t.Helper()
-
-				val, err := base64.StdEncoding.DecodeString(strings.TrimPrefix(req.Header.Get("Authorization"), "Basic "))
-				assert.NoError(t, err)
-
-				clientIDAndSecret := strings.Split(string(val), ":")
-				assert.Equal(t, "bar", clientIDAndSecret[0])
-				assert.Equal(t, "foo", clientIDAndSecret[1])
-
-				assert.Equal(t, "application/x-www-form-urlencoded", req.Header.Get("Content-Type"))
-				assert.Equal(t, "application/json", req.Header.Get("Accept-Type"))
-				assert.Equal(t, "client_credentials", req.FormValue("grant_type"))
-				scopes := strings.Split(req.FormValue("scope"), " ")
-				assert.Len(t, scopes, 2)
-				assert.Contains(t, scopes, "baz")
-				assert.Contains(t, scopes, "zab")
-			},
-			buildResponse: func(t *testing.T) (any, int) {
-				t.Helper()
-
-				return &TokenSuccessfulResponse{
-					AccessToken: "foobar",
-					TokenType:   "Foo",
-				}, http.StatusOK
-			},
-			assert: func(t *testing.T, err error, tokenEndpointCalled bool) {
-				t.Helper()
-
-				require.NoError(t, err)
-				assert.True(t, tokenEndpointCalled)
-			},
-		},
-		{
-			uc: "using request_body authentication strategy",
-			finalizer: &oauth2ClientCredentialsFinalizer{
-				id:           "test",
-				headerName:   "X-My-Header",
-				headerScheme: "Foo",
-				tokenURL:     srv.URL,
-				clientID:     "bar foo",
-				clientSecret: "foo bar",
-				authMethod:   authMethodRequestBody,
-				ttl: func() *time.Duration {
-					ttl := 3 * time.Minute
-
-					return &ttl
-				}(),
-				scopes: []string{"baz", "zab"},
-			},
-			configureMocks: func(t *testing.T, ctx *mocks.ContextMock, cch *mocks2.CacheMock) {
-				t.Helper()
-
-				cch.EXPECT().Get(mock.Anything).Return(nil)
-				cch.EXPECT().Set(mock.Anything, "foobar", 3*time.Minute).Return()
-				ctx.EXPECT().AddHeaderForUpstream("X-My-Header", "Foo foobar").Return()
-			},
-			assertRequest: func(t *testing.T, req *http.Request) {
-				t.Helper()
-
-				assert.Equal(t, "application/x-www-form-urlencoded", req.Header.Get("Content-Type"))
-				assert.Equal(t, "application/json", req.Header.Get("Accept-Type"))
-				assert.Equal(t, "bar foo", req.FormValue("client_id"))
-				assert.Equal(t, "foo bar", req.FormValue("client_secret"))
-				assert.Equal(t, "client_credentials", req.FormValue("grant_type"))
-				scopes := strings.Split(req.FormValue("scope"), " ")
-				assert.Len(t, scopes, 2)
-				assert.Contains(t, scopes, "baz")
-				assert.Contains(t, scopes, "zab")
-			},
-			buildResponse: func(t *testing.T) (any, int) {
-				t.Helper()
-
-				return &TokenSuccessfulResponse{
-					AccessToken: "foobar",
-					TokenType:   "Foo",
-				}, http.StatusOK
-			},
-			assert: func(t *testing.T, err error, tokenEndpointCalled bool) {
-				t.Helper()
-
-				require.NoError(t, err)
-				assert.True(t, tokenEndpointCalled)
-			},
-		},
-		{
-			uc: "misbehaving server on error",
-			finalizer: &oauth2ClientCredentialsFinalizer{
-				id:           "test",
-				headerName:   "X-My-Header",
-				headerScheme: "Foo",
-				tokenURL:     srv.URL,
-				clientID:     "bar",
-				clientSecret: "foo",
-				ttl: func() *time.Duration {
-					ttl := 0 * time.Minute
-
-					return &ttl
-				}(),
-				scopes: []string{"baz", "zab"},
-			},
-			assertRequest: func(t *testing.T, req *http.Request) {
-				t.Helper()
-
-				val, err := base64.StdEncoding.DecodeString(strings.TrimPrefix(req.Header.Get("Authorization"), "Basic "))
-				assert.NoError(t, err)
-
-				clientIDAndSecret := strings.Split(string(val), ":")
-				assert.Equal(t, "bar", clientIDAndSecret[0])
-				assert.Equal(t, "foo", clientIDAndSecret[1])
-
-				assert.Equal(t, "application/x-www-form-urlencoded", req.Header.Get("Content-Type"))
-				assert.Equal(t, "application/json", req.Header.Get("Accept-Type"))
-				assert.Equal(t, "client_credentials", req.FormValue("grant_type"))
-				scopes := strings.Split(req.FormValue("scope"), " ")
-				assert.Len(t, scopes, 2)
-				assert.Contains(t, scopes, "baz")
-				assert.Contains(t, scopes, "zab")
-			},
-			buildResponse: func(t *testing.T) (any, int) {
-				t.Helper()
-
-				// the following is not compliant as error is defined otherwise
-				// in https://www.rfc-editor.org/rfc/rfc6749#section-5.2
-				res, err := json.Marshal(map[string]any{
-					"error":             "invalid_request",
-					"error_description": "whatever",
-				})
-				require.NoError(t, err)
-
-				return &TokenErrorResponse{
-					ErrorType: string(res),
-				}, http.StatusOK
-			},
-			assert: func(t *testing.T, err error, tokenEndpointCalled bool) {
-				t.Helper()
-
-				assert.True(t, tokenEndpointCalled)
-				require.Error(t, err)
-				assert.Contains(t, err.Error(), "invalid_request")
-			},
-		},
-		{
-			uc: "misbehaving server on error, response code unexpected",
-			finalizer: &oauth2ClientCredentialsFinalizer{
-				id:           "test",
-				headerName:   "X-My-Header",
-				headerScheme: "Foo",
-				tokenURL:     srv.URL,
-				clientID:     "bar",
-				clientSecret: "foo",
-				ttl: func() *time.Duration {
-					ttl := 0 * time.Minute
-
-					return &ttl
-				}(),
-				scopes: []string{"baz", "zab"},
-			},
-			assertRequest: func(t *testing.T, req *http.Request) {
-				t.Helper()
-			},
-			buildResponse: func(t *testing.T) (any, int) {
-				t.Helper()
-
-				return &TokenErrorResponse{
-					ErrorType:        "invalid_request",
-					ErrorDescription: "whatever",
-				}, http.StatusForbidden
-			},
-			assert: func(t *testing.T, err error, tokenEndpointCalled bool) {
-				t.Helper()
-
-				assert.True(t, tokenEndpointCalled)
-				require.Error(t, err)
-				assert.Contains(t, err.Error(), "unexpected response code: 403")
-			},
-		},
-		{
-			uc: "compliant server on error",
-			finalizer: &oauth2ClientCredentialsFinalizer{
-				id:           "test",
-				headerName:   "X-My-Header",
-				headerScheme: "Foo",
-				tokenURL:     srv.URL,
-				clientID:     "bar",
-				clientSecret: "foo",
-				ttl: func() *time.Duration {
-					ttl := 3 * time.Minute
-
-					return &ttl
-				}(),
-				scopes: []string{"baz", "zab"},
-			},
-			configureMocks: func(t *testing.T, ctx *mocks.ContextMock, cch *mocks2.CacheMock) {
-				t.Helper()
-
-				cch.EXPECT().Get(mock.Anything).Return(nil)
-			},
-			assertRequest: func(t *testing.T, req *http.Request) {
-				t.Helper()
-
-				val, err := base64.StdEncoding.DecodeString(strings.TrimPrefix(req.Header.Get("Authorization"), "Basic "))
-				assert.NoError(t, err)
-
-				clientIDAndSecret := strings.Split(string(val), ":")
-				assert.Equal(t, "bar", clientIDAndSecret[0])
-				assert.Equal(t, "foo", clientIDAndSecret[1])
-
-				assert.Equal(t, "application/x-www-form-urlencoded", req.Header.Get("Content-Type"))
-				assert.Equal(t, "application/json", req.Header.Get("Accept-Type"))
-				assert.Equal(t, "client_credentials", req.FormValue("grant_type"))
-				scopes := strings.Split(req.FormValue("scope"), " ")
-				assert.Len(t, scopes, 2)
-				assert.Contains(t, scopes, "baz")
-				assert.Contains(t, scopes, "zab")
-			},
-			buildResponse: func(t *testing.T) (any, int) {
-				t.Helper()
-
-				return &TokenErrorResponse{
-					ErrorType:        "invalid_request",
-					ErrorDescription: "whatever",
-					ErrorURI:         "https://www.rfc-editor.org/rfc/rfc6749#section-5.1",
-				}, http.StatusBadRequest
-			},
-			assert: func(t *testing.T, err error, tokenEndpointCalled bool) {
-				t.Helper()
-
-				assert.True(t, tokenEndpointCalled)
-				require.Error(t, err)
-				assert.Contains(t, err.Error(), "invalid_request")
 			},
 		},
 	} {
