@@ -383,7 +383,6 @@ func TestClientCredentialsToken(t *testing.T) {
 				assert.True(t, tokenEndpointCalled)
 				assert.Equal(t, "Foo", token.TokenType)
 				assert.Equal(t, "foobar", token.AccessToken)
-
 			},
 		},
 		{
