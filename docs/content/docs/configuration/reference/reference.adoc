@@ -273,7 +273,7 @@ rules:
           headers:
             bla: bla
           auth:
-            type: client_credentials
+            type: oauth2_client_credentials
             config:
               auth_method: request_body
               token_url: http://bar.foo
