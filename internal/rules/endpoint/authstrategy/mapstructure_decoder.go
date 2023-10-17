@@ -59,8 +59,8 @@ func DecodeAuthenticationStrategyHookFunc() mapstructure.DecodeHookFunc {
 			return decodeStrategy("basic_auth", &BasicAuthStrategy{}, typed["config"])
 		case "api_key":
 			return decodeStrategy("api_key", &APIKeyStrategy{}, typed["config"])
-		case "client_credentials":
-			return decodeStrategy("client_credentials", &ClientCredentialsStrategy{}, typed["config"])
+		case "oauth2_client_credentials":
+			return decodeStrategy("oauth2_client_credentials", &ClientCredentialsStrategy{}, typed["config"])
 		default:
 			return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
 				"unsupported authentication type: '%s'", typed["type"])
