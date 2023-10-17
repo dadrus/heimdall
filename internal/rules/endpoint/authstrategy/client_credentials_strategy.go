@@ -38,7 +38,7 @@ type ClientCredentialsStrategy struct {
 
 func (c *ClientCredentialsStrategy) Apply(ctx context.Context, req *http.Request) error {
 	logger := zerolog.Ctx(ctx)
-	logger.Debug().Msg("Applying client-credentials strategy to authenticate request")
+	logger.Debug().Msg("Applying oauth2_client_credentials strategy to authenticate request")
 
 	token, err := c.Token(ctx)
 	if err != nil {
