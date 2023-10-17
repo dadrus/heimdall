@@ -515,7 +515,7 @@
               "$ref": "#/definitions/endpointAuthBasicAuthProperties"
             },
             {
-              "$ref": "#/definitions/endpointAuthClientCredentialsProperties"
+              "$ref": "#/definitions/endpointAuth2ClientCredentialsProperties"
             }
           ]
         },
@@ -600,7 +600,7 @@
                   "$ref": "#/definitions/endpointAuthBasicAuthProperties"
                 },
                 {
-                  "$ref": "#/definitions/endpointAuthClientCredentialsProperties"
+                  "$ref": "#/definitions/endpointAuth2ClientCredentialsProperties"
                 }
               ]
             },
@@ -691,7 +691,7 @@
         "config"
       ]
     },
-    "endpointAuthClientCredentialsProperties": {
+    "endpointAuth2ClientCredentialsProperties": {
       "additionalProperties": false,
       "required": [
         "type",
@@ -699,7 +699,7 @@
       ],
       "properties": {
         "type": {
-          "const": "client_credentials"
+          "const": "oauth2_client_credentials"
         },
         "config": {
           "$ref": "#/definitions/oauth2ClientCredentialsFlowConfig"

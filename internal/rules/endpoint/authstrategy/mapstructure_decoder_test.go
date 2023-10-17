@@ -322,7 +322,7 @@ func TestDecodeAuthenticationStrategyHookFuncForClientCredentialsStrategy(t *tes
 			uc: "client credentials with all required properties",
 			config: []byte(`
 auth:
-  type: client_credentials
+  type: oauth2_client_credentials
   config:
     client_id: foo
     client_secret: bar
@@ -343,7 +343,7 @@ auth:
 			uc: "client credentials with all possible properties",
 			config: []byte(`
 auth:
-  type: client_credentials
+  type: oauth2_client_credentials
   config:
     client_id: foo
     client_secret: bar
@@ -368,7 +368,7 @@ auth:
 			uc: "client credentials without client_id property",
 			config: []byte(`
 auth:
-  type: client_credentials
+  type: oauth2_client_credentials
   config:
     client_secret: bar
     token_url: http://foobar.foo
@@ -384,7 +384,7 @@ auth:
 			uc: "client credentials without client_secret property",
 			config: []byte(`
 auth:
-  type: client_credentials
+  type: oauth2_client_credentials
   config:
     client_id: foo
     token_url: http://foobar.foo
@@ -400,7 +400,7 @@ auth:
 			uc: "client credentials without token_url property",
 			config: []byte(`
 auth:
-  type: client_credentials
+  type: oauth2_client_credentials
   config:
     client_id: foo
     client_secret: bar
@@ -416,7 +416,7 @@ auth:
 			uc: "client credentials without config property",
 			config: []byte(`
 auth:
-  type: client_credentials
+  type: oauth2_client_credentials
 `),
 			assert: func(t *testing.T, err error, as endpoint.AuthenticationStrategy) {
 				t.Helper()

@@ -343,7 +343,7 @@ config:
 
 This strategy implements the https://datatracker.ietf.org/doc/html/rfc6749#section-4.4[OAuth2 Client Credentials Grant Flow] to obtain an access token expected by the endpoint. Heimdall caches the received access token.
 
-`type` must be set to `client_credentials`. `config` supports the following properties:
+`type` must be set to `oauth2_client_credentials`. `config` supports the following properties:
 
 
 * *`token_url`*: _string_ (mandatory)
@@ -386,7 +386,7 @@ Defines the `name` and `scheme` to be used for the header. Defaults to `Authoriz
 
 [source, yaml]
 ----
-type: client_credentials
+type: oauth2_client_credentials
 config:
   header:
     name: X-My-Token
