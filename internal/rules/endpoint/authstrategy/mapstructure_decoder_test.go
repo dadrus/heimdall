@@ -52,8 +52,8 @@ auth:
 				t.Helper()
 
 				assert.NoError(t, err)
-				assert.IsType(t, &BasicAuthStrategy{}, as)
-				bas := as.(*BasicAuthStrategy) // nolint: forcetypeassert
+				assert.IsType(t, &BasicAuth{}, as)
+				bas := as.(*BasicAuth) // nolint: forcetypeassert
 				assert.Equal(t, "foo", bas.User)
 				assert.Equal(t, "bar", bas.Password)
 			},
@@ -153,8 +153,8 @@ auth:
 				t.Helper()
 
 				assert.NoError(t, err)
-				assert.IsType(t, &APIKeyStrategy{}, as)
-				aks := as.(*APIKeyStrategy) // nolint: forcetypeassert
+				assert.IsType(t, &APIKey{}, as)
+				aks := as.(*APIKey) // nolint: forcetypeassert
 				assert.Equal(t, "foo", aks.Name)
 				assert.Equal(t, "bar", aks.Value)
 				assert.Equal(t, "header", aks.In)
@@ -174,8 +174,8 @@ auth:
 				t.Helper()
 
 				assert.NoError(t, err)
-				assert.IsType(t, &APIKeyStrategy{}, as)
-				aks := as.(*APIKeyStrategy) // nolint: forcetypeassert
+				assert.IsType(t, &APIKey{}, as)
+				aks := as.(*APIKey) // nolint: forcetypeassert
 				assert.Equal(t, "foo", aks.Name)
 				assert.Equal(t, "bar", aks.Value)
 				assert.Equal(t, "cookie", aks.In)
@@ -195,8 +195,8 @@ auth:
 				t.Helper()
 
 				assert.NoError(t, err)
-				assert.IsType(t, &APIKeyStrategy{}, as)
-				aks := as.(*APIKeyStrategy) // nolint: forcetypeassert
+				assert.IsType(t, &APIKey{}, as)
+				aks := as.(*APIKey) // nolint: forcetypeassert
 				assert.Equal(t, "foo", aks.Name)
 				assert.Equal(t, "bar", aks.Value)
 				assert.Equal(t, "query", aks.In)
@@ -332,8 +332,8 @@ auth:
 				t.Helper()
 
 				assert.NoError(t, err)
-				assert.IsType(t, &ClientCredentialsStrategy{}, as)
-				ccs := as.(*ClientCredentialsStrategy) // nolint: forcetypeassert
+				assert.IsType(t, &OAuth2ClientCredentials{}, as)
+				ccs := as.(*OAuth2ClientCredentials) // nolint: forcetypeassert
 				assert.Equal(t, "foo", ccs.ClientID)
 				assert.Equal(t, "bar", ccs.ClientSecret)
 				assert.Equal(t, "http://foobar.foo", ccs.TokenURL)
@@ -356,8 +356,8 @@ auth:
 				t.Helper()
 
 				assert.NoError(t, err)
-				assert.IsType(t, &ClientCredentialsStrategy{}, as)
-				ccs := as.(*ClientCredentialsStrategy) // nolint: forcetypeassert
+				assert.IsType(t, &OAuth2ClientCredentials{}, as)
+				ccs := as.(*OAuth2ClientCredentials) // nolint: forcetypeassert
 				assert.Equal(t, "foo", ccs.ClientID)
 				assert.Equal(t, "bar", ccs.ClientSecret)
 				assert.Equal(t, "http://foobar.foo", ccs.TokenURL)

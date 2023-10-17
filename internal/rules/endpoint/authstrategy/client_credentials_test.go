@@ -94,7 +94,7 @@ func TestApplyClientCredentialsStrategy(t *testing.T) {
 
 	for _, tc := range []struct {
 		uc             string
-		strategy       *ClientCredentialsStrategy
+		strategy       *OAuth2ClientCredentials
 		configureMocks func(t *testing.T, cch *mocks.CacheMock)
 		assertRequest  RequestAsserter
 		buildResponse  ResponseBuilder
@@ -102,7 +102,7 @@ func TestApplyClientCredentialsStrategy(t *testing.T) {
 	}{
 		{
 			uc:       "reusing response from cache, no custom header",
-			strategy: &ClientCredentialsStrategy{},
+			strategy: &OAuth2ClientCredentials{},
 			configureMocks: func(t *testing.T, cch *mocks.CacheMock) {
 				t.Helper()
 
@@ -120,7 +120,7 @@ func TestApplyClientCredentialsStrategy(t *testing.T) {
 		},
 		{
 			uc: "error while unmarshalling successful response",
-			strategy: &ClientCredentialsStrategy{
+			strategy: &OAuth2ClientCredentials{
 				Config: clientcredentials.Config{
 					TokenURL: srv.URL, ClientID: "bar", ClientSecret: "foo",
 				},
@@ -146,7 +146,7 @@ func TestApplyClientCredentialsStrategy(t *testing.T) {
 		},
 		{
 			uc: "full configuration, no cache hit and token has expires_in claim",
-			strategy: &ClientCredentialsStrategy{
+			strategy: &OAuth2ClientCredentials{
 				Config: clientcredentials.Config{
 					TokenURL:     srv.URL,
 					ClientID:     "bar",

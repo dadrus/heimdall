@@ -33,7 +33,7 @@ func TestApplyBasicAuthStrategy(t *testing.T) {
 	password := "Bar"
 	expectedValue := "Basic " + base64.StdEncoding.EncodeToString([]byte(user+":"+password))
 	req := &http.Request{Header: http.Header{}}
-	s := BasicAuthStrategy{User: user, Password: password}
+	s := BasicAuth{User: user, Password: password}
 
 	// WHEN
 	err := s.Apply(context.Background(), req)
@@ -47,8 +47,8 @@ func TestBasicAuthStrategyHash(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
-	s1 := &BasicAuthStrategy{User: "Foo", Password: "Bar"}
-	s2 := &BasicAuthStrategy{User: "Foo", Password: "Baz"}
+	s1 := &BasicAuth{User: "Foo", Password: "Bar"}
+	s2 := &BasicAuth{User: "Foo", Password: "Baz"}
 
 	// WHEN
 	hash1 := s1.Hash()

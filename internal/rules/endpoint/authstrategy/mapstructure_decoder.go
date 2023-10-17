@@ -56,11 +56,11 @@ func DecodeAuthenticationStrategyHookFunc() mapstructure.DecodeHookFunc {
 
 		switch typed["type"] {
 		case "basic_auth":
-			return decodeStrategy("basic_auth", &BasicAuthStrategy{}, typed["config"])
+			return decodeStrategy("basic_auth", &BasicAuth{}, typed["config"])
 		case "api_key":
-			return decodeStrategy("api_key", &APIKeyStrategy{}, typed["config"])
+			return decodeStrategy("api_key", &APIKey{}, typed["config"])
 		case "oauth2_client_credentials":
-			return decodeStrategy("oauth2_client_credentials", &ClientCredentialsStrategy{}, typed["config"])
+			return decodeStrategy("oauth2_client_credentials", &OAuth2ClientCredentials{}, typed["config"])
 		default:
 			return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
 				"unsupported authentication type: '%s'", typed["type"])

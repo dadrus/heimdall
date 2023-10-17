@@ -30,13 +30,13 @@ type HeaderConfig struct {
 	Scheme string `mapstructure:"scheme"`
 }
 
-type ClientCredentialsStrategy struct {
+type OAuth2ClientCredentials struct {
 	clientcredentials.Config `mapstructure:",squash"`
 
 	Header *HeaderConfig `mapstructure:"header"`
 }
 
-func (c *ClientCredentialsStrategy) Apply(ctx context.Context, req *http.Request) error {
+func (c *OAuth2ClientCredentials) Apply(ctx context.Context, req *http.Request) error {
 	logger := zerolog.Ctx(ctx)
 	logger.Debug().Msg("Applying oauth2_client_credentials strategy to authenticate request")
 
