@@ -38,7 +38,7 @@ func TestApplyApiKeyStrategy(t *testing.T) {
 	}{
 		{
 			uc:       "header strategy",
-			strategy: &APIKeyStrategy{In: "header", Name: "Foo", Value: "Bar"},
+			strategy: &APIKey{In: "header", Name: "Foo", Value: "Bar"},
 			assert: func(t *testing.T, err error, req *http.Request) {
 				t.Helper()
 
@@ -48,7 +48,7 @@ func TestApplyApiKeyStrategy(t *testing.T) {
 		},
 		{
 			uc:       "cookie strategy",
-			strategy: &APIKeyStrategy{In: "cookie", Name: "Foo", Value: "Bar"},
+			strategy: &APIKey{In: "cookie", Name: "Foo", Value: "Bar"},
 			assert: func(t *testing.T, err error, req *http.Request) {
 				t.Helper()
 
@@ -61,7 +61,7 @@ func TestApplyApiKeyStrategy(t *testing.T) {
 		},
 		{
 			uc:       "query strategy",
-			strategy: &APIKeyStrategy{In: "query", Name: "Foo", Value: "Bar"},
+			strategy: &APIKey{In: "query", Name: "Foo", Value: "Bar"},
 			assert: func(t *testing.T, err error, req *http.Request) {
 				t.Helper()
 
@@ -75,7 +75,7 @@ func TestApplyApiKeyStrategy(t *testing.T) {
 		},
 		{
 			uc:       "invalid strategy",
-			strategy: &APIKeyStrategy{In: "foo", Name: "Foo", Value: "Bar"},
+			strategy: &APIKey{In: "foo", Name: "Foo", Value: "Bar"},
 			assert: func(t *testing.T, err error, req *http.Request) {
 				t.Helper()
 
@@ -109,8 +109,8 @@ func TestAPIKeyStrategyHash(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
-	s1 := &APIKeyStrategy{In: "header", Name: "Foo", Value: "Bar"}
-	s2 := &APIKeyStrategy{In: "cookie", Name: "Foo", Value: "Bar"}
+	s1 := &APIKey{In: "header", Name: "Foo", Value: "Bar"}
+	s2 := &APIKey{In: "cookie", Name: "Foo", Value: "Bar"}
 
 	// WHEN
 	hash1 := s1.Hash()

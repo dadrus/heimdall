@@ -26,13 +26,13 @@ import (
 	"github.com/dadrus/heimdall/internal/x/stringx"
 )
 
-type APIKeyStrategy struct {
+type APIKey struct {
 	In    string `mapstructure:"in"    validate:"required,oneof=cookie header query"`
 	Name  string `mapstructure:"name"  validate:"required"`
 	Value string `mapstructure:"value" validate:"required"`
 }
 
-func (c *APIKeyStrategy) Apply(_ context.Context, req *http.Request) error {
+func (c *APIKey) Apply(_ context.Context, req *http.Request) error {
 	switch c.In {
 	case "cookie":
 		req.AddCookie(&http.Cookie{Name: c.Name, Value: c.Value})
@@ -50,7 +50,7 @@ func (c *APIKeyStrategy) Apply(_ context.Context, req *http.Request) error {
 	return nil
 }
 
-func (c *APIKeyStrategy) Hash() []byte {
+func (c *APIKey) Hash() []byte {
 	hash := sha256.New()
 
 	hash.Write(stringx.ToBytes(c.In))
