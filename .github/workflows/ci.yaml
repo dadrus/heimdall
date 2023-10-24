@@ -112,7 +112,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
       - name: Setup Node
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
       - name: Install Redocly CLI
@@ -468,7 +468,7 @@ jobs:
           hugo-version: 0.100.1
           extended: true
       - name: Setup Node
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: 17.7
       - name: Setup ruby
@@ -515,7 +515,7 @@ jobs:
           hugo-version: 0.100.1
           extended: true
       - name: Setup Node
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: 17.7
       - name: Install mermaid
