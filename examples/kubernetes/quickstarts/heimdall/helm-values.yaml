@@ -16,7 +16,7 @@ deployment:
 
 admissionController:
   annotations:
-    cert-manager.io/inject-ca-from: heimdall-tls
+    cert-manager.io/inject-ca-from: heimdall/heimdall-tls
 
 env:
   OTEL_METRICS_EXPORTER: "prometheus"
