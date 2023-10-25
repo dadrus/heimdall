@@ -1762,6 +1762,9 @@
           "type": "string",
           "description": "The class of this heimdall setup in the cluster. Used to filter for CRDs. Only CRDs with the same auth class will be considered and loaded",
           "default": "default"
+        },
+        "tls": {
+          "$ref": "#/definitions/tlsConfig"
         }
       }
     },
