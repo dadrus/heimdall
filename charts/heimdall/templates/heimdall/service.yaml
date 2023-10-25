@@ -51,7 +51,7 @@ spec:
       {{- $kubernetes := default dict $providers.kubernetes }}
       {{- if $kubernetes.tls }}
     - port: {{ .Values.service.admissionController.port }}
-      targetPort: http-admission-controller
+      targetPort: http-webhook
       protocol: TCP
       name: {{ .Values.service.admissionController.name }}
       {{- end }}
