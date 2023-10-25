@@ -14,7 +14,7 @@ metadata:
   annotations:
     {{- toYaml .Values.admissionController.annotations | nindent 4 }}
 webhooks:
-  - name: "ruleset-validator"
+  - name: "admission-controller.heimdall.dadrus.github.com"
     admissionReviewVersions: [ "v1" ]
     sideEffects: None
     timeoutSeconds: 5
