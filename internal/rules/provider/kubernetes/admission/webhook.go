@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"strconv"
 	"time"
 
 	"github.com/goccy/go-json"
@@ -46,13 +45,13 @@ func (wh *Webhook) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	}
 
 	if val := req.URL.Query().Get("timeout"); len(val) != 0 {
-		timeout, err := strconv.Atoi(val)
+		timeout, err := time.ParseDuration(val)
 		if err != nil {
-			log.Warn().Err(err).Msg("Failed to convert timeout query parameter. Ignoring it.")
+			log.Warn().Err(err).Msg("Failed parsing timeout query parameter. Ignoring it.")
 		}
 
 		var cancel context.CancelFunc
-		ctx, cancel = context.WithTimeout(ctx, time.Duration(timeout)*time.Second)
+		ctx, cancel = context.WithTimeout(ctx, timeout)
 
 		defer cancel()
 	}
