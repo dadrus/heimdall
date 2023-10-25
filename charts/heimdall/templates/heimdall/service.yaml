@@ -46,9 +46,9 @@ spec:
       protocol: TCP
       name: {{ .Values.service.proxy.name }}
       {{- end }}
-      {{ $rules := default dict .Values.rules }}
-      {{ $providers := default dict $rules.providers }}
-      {{ $kubernetes := default dict $rules.kubernetes }}
+      {{- $rules := default dict .Values.rules }}
+      {{- $providers := default dict $rules.providers }}
+      {{- $kubernetes := default dict $providers.kubernetes }}
       {{- if $kubernetes.tls }}
     - port: {{ .Values.service.admissionController.port }}
       targetPort: http-admission-controller

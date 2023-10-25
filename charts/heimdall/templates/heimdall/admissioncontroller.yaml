@@ -1,4 +1,9 @@
-{{- $data := dict "Release" .Release "Values" .Values "Chart" .Chart "Component" "admissionController" -}}
+{{- $rules := default dict .Values.rules }}
+{{- $providers := default dict $rules.providers }}
+{{- $kubernetes := default dict $providers.kubernetes }}
+{{- if $kubernetes.tls }}
+# Only active if .Values.rules.providers.kubernetes.tls is configured
+{{- $data := dict "Release" .Release "Values" .Values "Chart" .Chart "Component" "admissionController" }}
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingWebhookConfiguration
 metadata:
@@ -31,3 +36,4 @@ webhooks:
         name: {{ .Values.service.admissionController.name }}
         path: "/validate-ruleset"
         port: {{ .Values.service.admissionController.port }}
+{{- end }}

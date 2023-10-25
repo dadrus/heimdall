@@ -104,9 +104,9 @@ spec:
               protocol: TCP
               containerPort: {{ .Values.profiling.port }}
             {{- end }}
-            {{ $rules := default dict .Values.rules }}
-            {{ $providers := default dict $rules.providers }}
-            {{ $kubernetes := default dict $rules.kubernetes }}
+            {{- $rules := .Values.rules | default dict }}
+            {{- $providers := $rules.providers | default dict }}
+            {{- $kubernetes := $providers.kubernetes | default dict}}
             {{- if $kubernetes.tls }}
             - name: http-admission-controller
               protocol: TCP
