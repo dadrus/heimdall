@@ -147,6 +147,9 @@ admissionController:
   # Set to the required value if you want to specify the caBundle by yourself (see annotations for alternative)
   caBundle: ""
 
+  # Set to another value if required
+  timeoutSeconds: 5
+
 # Configures arbitrary environment variables for the deployment
 env: { }
 
