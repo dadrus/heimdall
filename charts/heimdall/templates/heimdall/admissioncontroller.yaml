@@ -1,0 +1,33 @@
+{{- $data := dict "Release" .Release "Values" .Values "Chart" .Chart "Component" "admissionController" -}}
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: {{ include "heimdall.fullname" $data }}
+  namespace: {{ include "heimdall.namespace" $data }}
+  labels:
+    {{- include "heimdall.labels" $data | nindent 4 }}
+  annotations:
+    {{- toYaml .Values.admissionController.annotations | nindent 4 }}
+webhooks:
+  - name: "ruleset-validator"
+    admissionReviewVersions: [ "v1" ]
+    sideEffects: None
+    timeoutSeconds: 5
+    {{- with .Values.admissionController.namespaceSelector }}
+      {{- toYaml . | nindent 8 }}
+    {{- end }}
+    rules:
+      - apiGroups:   ["heimdall.dadrus.github.com"]
+        apiVersions: ["v1alpha2"]
+        operations:  ["CREATE", "UPDATE"]
+        resources:   ["rulesets"]
+        scope:       "Namespaced"
+    clientConfig:
+      {{- with .Values.admissionController.caBundle }}
+      caBundle: {{ . }}
+      {{- end }}
+      service:
+        namespace: {{ include "heimdall.namespace" $data }}
+        name: {{ .Values.service.admissionController.name }}
+        path: "/validate-ruleset"
+        port: {{ .Values.service.admissionController.port }}
