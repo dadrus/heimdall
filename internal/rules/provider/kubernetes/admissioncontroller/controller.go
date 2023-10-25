@@ -15,21 +15,12 @@ type AdmissionController interface {
 	Stop(context.Context) error
 }
 
-type noopController struct{}
-
-func (noopController) Start(context.Context) error { return nil }
-func (noopController) Stop(context.Context) error  { return nil }
-
 func New(
 	tlsConf *config.TLS,
 	logger zerolog.Logger,
 	authClass string,
 	ruleFactory rule.Factory,
 ) AdmissionController {
-	if tlsConf == nil {
-		return noopController{}
-	}
-
 	listeningAddress := ":8433"
 
 	return &fxlcm.LifecycleManager{
