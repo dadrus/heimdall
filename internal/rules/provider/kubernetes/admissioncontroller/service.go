@@ -29,7 +29,7 @@ func (f errorHandlerFunc) HandleError(rw http.ResponseWriter, req *http.Request,
 }
 
 func newService(
-	conf *Config,
+	serviceName string,
 	ruleFactory rule.Factory,
 	authClass string,
 	log zerolog.Logger,
@@ -42,7 +42,7 @@ func newService(
 			rw.WriteHeader(http.StatusInternalServerError)
 		})),
 		otelhttp.NewMiddleware("",
-			otelhttp.WithServerName(conf.Address()),
+			otelhttp.WithServerName(serviceName),
 			otelhttp.WithSpanNameFormatter(func(_ string, req *http.Request) string {
 				return fmt.Sprintf("EntryPoint %s %s%s",
 					strings.ToLower(req.URL.Scheme), httpx.LocalAddress(req), req.URL.Path)
@@ -50,7 +50,7 @@ func newService(
 		),
 		otelmetrics.New(
 			otelmetrics.WithSubsystem("validating admission webhook"),
-			otelmetrics.WithServerName(conf.Address()),
+			otelmetrics.WithServerName(serviceName),
 		),
 	).Then(newHandler(ruleFactory, authClass))
 

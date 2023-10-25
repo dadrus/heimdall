@@ -5,6 +5,7 @@ import (
 
 	"github.com/rs/zerolog"
 
+	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/handler/fxlcm"
 	"github.com/dadrus/heimdall/internal/rules/rule"
 )
@@ -20,20 +21,22 @@ func (noopController) Start(context.Context) error { return nil }
 func (noopController) Stop(context.Context) error  { return nil }
 
 func New(
-	conf *Config,
+	tlsConf *config.TLS,
 	logger zerolog.Logger,
 	authClass string,
 	ruleFactory rule.Factory,
 ) AdmissionController {
-	if !conf.Enabled {
+	if tlsConf == nil {
 		return noopController{}
 	}
 
+	listeningAddress := ":8433"
+
 	return &fxlcm.LifecycleManager{
 		ServiceName:    "Validating Admission Controller",
-		ServiceAddress: conf.Address(),
-		Server:         newService(conf, ruleFactory, authClass, logger),
+		ServiceAddress: listeningAddress,
+		Server:         newService(listeningAddress, ruleFactory, authClass, logger),
 		Logger:         logger,
-		TLSConf:        &conf.TLS,
+		TLSConf:        tlsConf,
 	}
 }

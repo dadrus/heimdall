@@ -75,8 +75,8 @@ func newProvider(
 	}
 
 	type Config struct {
-		AuthClass         string                     `mapstructure:"auth_class"`
-		ValidationService admissioncontroller.Config `mapstructure:"validation_admitter"`
+		AuthClass string      `mapstructure:"auth_class"`
+		TLS       *config.TLS `mapstructure:"tls"`
 	}
 
 	client, err := v1alpha2.NewClient(k8sConf)
@@ -95,7 +95,7 @@ func newProvider(
 
 	logger = logger.With().Str("_provider_type", ProviderType).Logger()
 	authClass := x.IfThenElse(len(providerConf.AuthClass) != 0, providerConf.AuthClass, DefaultClass)
-	adc := admissioncontroller.New(&providerConf.ValidationService, logger, authClass, factory)
+	adc := admissioncontroller.New(providerConf.TLS, logger, authClass, factory)
 
 	logger.Info().Msg("Rule provider configured.")
 
