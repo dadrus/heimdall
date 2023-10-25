@@ -17,7 +17,7 @@ webhooks:
   - name: "admission-controller.heimdall.dadrus.github.com"
     admissionReviewVersions: [ "v1" ]
     sideEffects: None
-    timeoutSeconds: 5
+    timeoutSeconds: {{ .Values.admissionController.timeoutSeconds }}
     {{- with .Values.admissionController.namespaceSelector }}
       {{- toYaml . | nindent 8 }}
     {{- end }}
@@ -33,7 +33,7 @@ webhooks:
       {{- end }}
       service:
         namespace: {{ include "heimdall.namespace" $data }}
-        name: {{ .Values.service.admissionController.name }}
+        name: {{ include "heimdall.fullname" $data }}
         path: "/validate-ruleset"
         port: {{ .Values.service.admissionController.port }}
 {{- end }}
