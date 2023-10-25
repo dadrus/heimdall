@@ -106,7 +106,7 @@ func TestNewProvider(t *testing.T) {
 			k8sCF := func() (*rest.Config, error) { return &rest.Config{Host: "http://localhost:80001"}, nil }
 
 			// WHEN
-			prov, err := newProvider(conf, k8sCF, mocks.NewRuleSetProcessorMock(t), log.Logger)
+			prov, err := newProvider(log.Logger, conf, k8sCF, mocks.NewRuleSetProcessorMock(t), mocks.NewFactoryMock(t))
 
 			// THEN
 			tc.assert(t, err, prov)
@@ -1051,7 +1051,7 @@ func TestProviderLifecycle(t *testing.T) {
 			setupProcessor(t, processor)
 
 			logs := &strings.Builder{}
-			prov, err := newProvider(conf, k8sCF, processor, zerolog.New(logs))
+			prov, err := newProvider(zerolog.New(logs), conf, k8sCF, processor, mocks.NewFactoryMock(t))
 			require.NoError(t, err)
 
 			ctx := context.Background()

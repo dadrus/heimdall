@@ -34,6 +34,7 @@ import (
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	config2 "github.com/dadrus/heimdall/internal/rules/config"
+	"github.com/dadrus/heimdall/internal/rules/provider/kubernetes/admissioncontroller"
 	"github.com/dadrus/heimdall/internal/rules/provider/kubernetes/api/v1alpha2"
 	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/x"
@@ -46,6 +47,7 @@ type provider struct {
 	p          rule.SetProcessor
 	l          zerolog.Logger
 	cl         v1alpha2.Client
+	adc        admissioncontroller.AdmissionController
 	cancel     context.CancelFunc
 	configured bool
 	wg         sync.WaitGroup
@@ -53,10 +55,11 @@ type provider struct {
 }
 
 func newProvider(
+	logger zerolog.Logger,
 	conf *config.Configuration,
 	k8sCF ConfigFactory,
 	processor rule.SetProcessor,
-	logger zerolog.Logger,
+	factory rule.Factory,
 ) (*provider, error) {
 	rawConf := conf.Rules.Providers.Kubernetes
 
@@ -72,7 +75,8 @@ func newProvider(
 	}
 
 	type Config struct {
-		AuthClass string `mapstructure:"auth_class"`
+		AuthClass         string                     `mapstructure:"auth_class"`
+		ValidationService admissioncontroller.Config `mapstructure:"validation_admitter"`
 	}
 
 	client, err := v1alpha2.NewClient(k8sConf)
@@ -90,6 +94,8 @@ func newProvider(
 	}
 
 	logger = logger.With().Str("_provider_type", ProviderType).Logger()
+	authClass := x.IfThenElse(len(providerConf.AuthClass) != 0, providerConf.AuthClass, DefaultClass)
+	adc := admissioncontroller.New(&providerConf.ValidationService, logger, authClass, factory)
 
 	logger.Info().Msg("Rule provider configured.")
 
@@ -97,7 +103,8 @@ func newProvider(
 		p:          processor,
 		l:          logger,
 		cl:         client,
-		ac:         x.IfThenElse(len(providerConf.AuthClass) != 0, providerConf.AuthClass, DefaultClass),
+		ac:         authClass,
+		adc:        adc,
 		configured: true,
 	}, nil
 }
@@ -117,7 +124,7 @@ func (p *provider) newController(ctx context.Context, namespace string) cache.Co
 	return controller
 }
 
-func (p *provider) Start(_ context.Context) error {
+func (p *provider) Start(ctx context.Context) error {
 	if !p.configured {
 		return nil
 	}
@@ -126,24 +133,24 @@ func (p *provider) Start(_ context.Context) error {
 
 	p.l.Info().Msg("Starting rule definitions provider")
 
-	ctx, cancel := context.WithCancel(context.Background())
-	ctx = p.l.With().Logger().WithContext(ctx)
+	newCtx, cancel := context.WithCancel(context.Background())
+	newCtx = p.l.With().Logger().WithContext(newCtx)
 
 	p.cancel = cancel
 
 	// contextcheck disabled as the context object passed to Start
 	// will time out. We need however a fresh context here, which can be
 	// canceled
-	controller := p.newController(ctx, "") //nolint:contextcheck
+	controller := p.newController(newCtx, "") //nolint:contextcheck
 
 	p.wg.Add(1)
 
 	go func() {
-		controller.Run(ctx.Done())
+		controller.Run(newCtx.Done())
 		p.wg.Done()
 	}()
 
-	return nil
+	return p.adc.Start(ctx)
 }
 
 func (p *provider) Stop(ctx context.Context) error {
@@ -154,9 +161,9 @@ func (p *provider) Stop(ctx context.Context) error {
 	p.l.Info().Msg("Tearing down rule provider.")
 
 	p.cancel()
+	_ = p.adc.Stop(ctx)
 
 	done := make(chan struct{})
-
 	go func() {
 		p.wg.Wait()
 		close(done)
