@@ -108,7 +108,7 @@ spec:
             {{- $providers := $rules.providers | default dict }}
             {{- $kubernetes := $providers.kubernetes | default dict}}
             {{- if $kubernetes.tls }}
-            - name: http-webhook
+            - name: https-webhook
               protocol: TCP
               containerPort: 8443
             {{- end }}
