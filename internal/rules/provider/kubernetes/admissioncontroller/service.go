@@ -66,7 +66,7 @@ func newService(
 
 func newHandler(ruleFactory rule.Factory, authClass string) http.Handler {
 	mux := http.NewServeMux()
-	mux.Handle("/validate", admission.NewWebhook(&rulesetValidator{f: ruleFactory, ac: authClass}))
+	mux.Handle("/validate-ruleset", admission.NewWebhook(&rulesetValidator{f: ruleFactory, ac: authClass}))
 
 	return mux
 }
