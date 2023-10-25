@@ -44,6 +44,8 @@ func (m *LifecycleManager) Start(_ context.Context) error {
 		if err = m.Server.Serve(ln); err != nil {
 			if !errors.Is(err, http.ErrServerClosed) {
 				m.Logger.Fatal().Err(err).Str("_service", m.ServiceName).Msg("Could not start service")
+			} else {
+				m.Logger.Info().Str("_service", m.ServiceName).Msg("Service stopped")
 			}
 		}
 	}()
