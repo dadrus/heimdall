@@ -104,6 +104,14 @@ spec:
               protocol: TCP
               containerPort: {{ .Values.profiling.port }}
             {{- end }}
+            {{ $rules := default dict .Values.rules }}
+            {{ $providers := default dict $rules.providers }}
+            {{ $kubernetes := default dict $rules.kubernetes }}
+            {{- if $kubernetes.tls }}
+            - name: http-admission-controller
+              protocol: TCP
+              containerPort: 8443
+            {{- end }}
           volumeMounts:
             - name: {{ include "heimdall.name" . }}-config-volume
               mountPath: /etc/heimdall
