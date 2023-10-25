@@ -128,7 +128,7 @@ service:
   # Only used if rules.providers.kubernetes.tls is configured
   admissionController:
     # Service port
-    port: 8443
+    port: 4458
     # Service port name
     name: admission-controller
 

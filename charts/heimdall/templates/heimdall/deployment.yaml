@@ -110,7 +110,7 @@ spec:
             {{- if $kubernetes.tls }}
             - name: https-webhook
               protocol: TCP
-              containerPort: 8443
+              containerPort: 4458
             {{- end }}
           volumeMounts:
             - name: {{ include "heimdall.name" . }}-config-volume
