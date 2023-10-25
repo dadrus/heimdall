@@ -21,7 +21,7 @@ func New(
 	authClass string,
 	ruleFactory rule.Factory,
 ) AdmissionController {
-	listeningAddress := "0.0.0.0:8433"
+	listeningAddress := ":8433"
 
 	return &fxlcm.LifecycleManager{
 		ServiceName:    "Validating Admission Controller",
