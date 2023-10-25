@@ -18,11 +18,17 @@ package kubernetes
 
 import (
 	"github.com/mitchellh/mapstructure"
+
+	"github.com/dadrus/heimdall/internal/config"
 )
 
 func decodeConfig(input any, output any) error {
 	dec, err := mapstructure.NewDecoder(
 		&mapstructure.DecoderConfig{
+			DecodeHook: mapstructure.ComposeDecodeHookFunc(
+				config.DecodeTLSMinVersionHookFunc,
+				config.DecodeTLSCipherSuiteHookFunc,
+			),
 			Result:      output,
 			ErrorUnused: true,
 		})
