@@ -301,7 +301,7 @@ func TestNewWebhookServeHTTP(t *testing.T) {
 			setupMock := x.IfThenElse(
 				tc.setupHandler != nil,
 				tc.setupHandler,
-				func(t *testing.T, handler *HandlerMock) { t.Helper() },
+				func(t *testing.T, _ *HandlerMock) { t.Helper() },
 			)
 
 			handler := NewHandlerMock(t)
