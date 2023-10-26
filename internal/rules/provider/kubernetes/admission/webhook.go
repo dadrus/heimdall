@@ -57,9 +57,9 @@ func (wh *Webhook) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	}
 
 	log.Info().
-		Str("UID", string(ar.Request.UID)).
-		Str("kind", ar.Request.Kind.String()).
-		Str("ressource", ar.Request.Resource.String()).
+		Str("_uid", string(ar.Request.UID)).
+		Str("_kind", ar.Request.Kind.String()).
+		Str("_ressource", ar.Request.Resource.String()).
 		Msg("Handling request")
 
 	reviewRequest := &Request{AdmissionRequest: *ar.Request}
@@ -97,6 +97,6 @@ func (wh *Webhook) writeAdmissionResponse(log *zerolog.Logger, rw http.ResponseW
 	}
 
 	rw.Header().Set("Content-Type", "application/json")
-	rw.WriteHeader(int(ar.Response.Result.Code))
+	rw.WriteHeader(http.StatusOK)
 	rw.Write(res) //nolint:errcheck
 }
