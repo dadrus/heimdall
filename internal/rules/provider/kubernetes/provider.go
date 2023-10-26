@@ -195,7 +195,7 @@ func (p *provider) updateRuleSet(_, newObj any) {
 	rs := newObj.(*v1alpha2.RuleSet) // nolint: forcetypeassert
 
 	if rs.Spec.AuthClassName != p.ac {
-		p.l.Info().
+		p.l.Debug().
 			Msgf("Ignoring ruleset creation due to authClassName mismatch (namespace=%s, name=%s, uid=%s)",
 				rs.Namespace, rs.Name, rs.UID)
 
@@ -229,7 +229,7 @@ func (p *provider) addRuleSet(obj any) {
 	rs := obj.(*v1alpha2.RuleSet) // nolint: forcetypeassert
 
 	if rs.Spec.AuthClassName != p.ac {
-		p.l.Info().
+		p.l.Debug().
 			Msgf("Ignoring ruleset creation due to authClassName mismatch (namespace=%s, name=%s, uid=%s)",
 				rs.Namespace, rs.Name, rs.UID)
 
@@ -263,7 +263,7 @@ func (p *provider) deleteRuleSet(obj any) {
 	rs := obj.(*v1alpha2.RuleSet) // nolint: forcetypeassert
 
 	if rs.Spec.AuthClassName != p.ac {
-		p.l.Info().
+		p.l.Debug().
 			Msgf("Ignoring ruleset creation due to authClassName mismatch (namespace=%s, name=%s, uid=%s)",
 				rs.Namespace, rs.Name, rs.UID)
 
