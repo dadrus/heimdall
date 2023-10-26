@@ -65,13 +65,7 @@ func (wh *Webhook) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	reviewRequest := &Request{AdmissionRequest: *ar.Request}
 
 	reviewResponse := wh.h.Handle(ctx, reviewRequest)
-	if err := reviewResponse.complete(reviewRequest); err != nil {
-		log.Error().Err(err).Msg("unable to finalize the response")
-		wh.writeResponse(log, rw,
-			NewResponse(http.StatusInternalServerError, "failed finalizing request", err.Error()))
-
-		return
-	}
+	reviewResponse.complete(reviewRequest)
 
 	wh.writeResponse(log, rw, reviewResponse)
 }

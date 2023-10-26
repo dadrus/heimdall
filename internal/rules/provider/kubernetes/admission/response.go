@@ -4,8 +4,6 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/goccy/go-json"
-	"gomodules.xyz/jsonpatch/v2"
 	admissionv1 "k8s.io/api/admission/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -42,11 +40,9 @@ func NewResponse(code int, msg string, reasons ...string) *Response {
 
 type Response struct {
 	admissionv1.AdmissionResponse
-
-	Patches []jsonpatch.JsonPatchOperation
 }
 
-func (r *Response) complete(req *Request) error {
+func (r *Response) complete(req *Request) {
 	r.UID = req.UID
 
 	// ensure that we have a valid status code
@@ -57,20 +53,4 @@ func (r *Response) complete(req *Request) error {
 	if r.Result.Code == 0 {
 		r.Result.Code = http.StatusOK
 	}
-
-	if len(r.Patches) == 0 {
-		return nil
-	}
-
-	var err error
-
-	r.Patch, err = json.Marshal(r.Patches)
-	if err != nil {
-		return err
-	}
-
-	patchType := admissionv1.PatchTypeJSONPatch
-	r.PatchType = &patchType
-
-	return nil
 }
