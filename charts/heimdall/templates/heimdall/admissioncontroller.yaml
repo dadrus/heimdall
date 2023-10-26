@@ -31,10 +31,9 @@ webhooks:
       {{- $rules := .Values.rules | default dict }}
       {{- $providers := $rules.providers | default dict }}
       {{- $kubernetes := $providers.kubernetes | default dict}}
-      {{- $authClass := $kubernetes.auth_class | default "default" }}
       # Match only those rule sets, which relate to the configured auth class
       - name: 'auth-class-filter'
-        expression: 'request.object.spec.authClassName == "{{ $authClass }}"'
+        expression: 'object.spec.authClassName == {{ default (quote "default") (quote $kubernetes.auth_class) }}'
     clientConfig:
       {{- with .Values.admissionController.caBundle }}
       caBundle: {{ . }}
