@@ -10,6 +10,9 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/rule"
 )
 
+// available here for test purposes
+var listeningAddress = ":4458" //nolint:gochecknoglobals
+
 type AdmissionController interface {
 	Start(context.Context) error
 	Stop(context.Context) error
@@ -21,8 +24,6 @@ func New(
 	authClass string,
 	ruleFactory rule.Factory,
 ) AdmissionController {
-	listeningAddress := ":4458"
-
 	return &fxlcm.LifecycleManager{
 		ServiceName:    "Validating Admission Controller",
 		ServiceAddress: listeningAddress,
