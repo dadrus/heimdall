@@ -1,4 +1,7 @@
 deployment:
+  replicaCount: 1
+  autoscaling:
+    enabled: false
   volumes:
   - name: tls-cert-volume
     secret:
