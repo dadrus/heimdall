@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/goccy/go-json"
@@ -49,13 +50,20 @@ func (rv *rulesetValidator) Handle(ctx context.Context, req *admission.Request) 
 		},
 		Version: rv.mapVersion(rs.APIVersion),
 		Name:    rs.Name,
+		Rules:   rs.Spec.Rules,
 	}
+
+	var errs []string
 
 	for _, rc := range ruleSet.Rules {
 		_, err = rv.f.CreateRule(ruleSet.Version, ruleSet.Source, rc)
 		if err != nil {
-			return admission.NewResponse(http.StatusForbidden, err.Error())
+			errs = append(errs, err.Error())
 		}
+	}
+
+	if len(errs) != 0 {
+		return admission.NewResponse(http.StatusForbidden, strings.Join(errs, "; "))
 	}
 
 	return admission.NewResponse(http.StatusOK)
