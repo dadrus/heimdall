@@ -2,6 +2,7 @@ package admission
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/goccy/go-json"
 	"gomodules.xyz/jsonpatch/v2"
@@ -11,16 +12,29 @@ import (
 	"github.com/dadrus/heimdall/internal/x"
 )
 
-func NewResponse(code int, reason ...string) *Response {
+func NewResponse(code int, msg string, reasons ...string) *Response {
 	resp := &Response{
 		AdmissionResponse: admissionv1.AdmissionResponse{
 			Allowed: x.IfThenElse(code == http.StatusOK, true, false),
-			Result:  &metav1.Status{Code: int32(code)},
+			Result: &metav1.Status{
+				Code:    int32(code),
+				Status:  x.IfThenElse(code == http.StatusOK, "Success", "Failure"),
+				Message: msg,
+			},
 		},
 	}
 
-	if len(reason) > 0 {
-		resp.Result.Reason = metav1.StatusReason(reason[0])
+	if len(reasons) > 0 {
+		resp.Result.Details = &metav1.StatusDetails{Causes: make([]metav1.StatusCause, len(reasons))}
+
+		for idx, reason := range reasons {
+			resp.Result.Details.Causes[idx] = metav1.StatusCause{Message: reason}
+		}
+
+		// Unfortunately details alone are not sufficient. At least when using kubectl
+		// if no Reason is set, only the Message (see above) is printed, which
+		// typically does not provide any details which could help resolving the issue
+		resp.Result.Reason = metav1.StatusReason(strings.Join(reasons, "; "))
 	}
 
 	return resp
