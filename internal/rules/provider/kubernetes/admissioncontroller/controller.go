@@ -11,7 +11,9 @@ import (
 )
 
 // available here for test purposes
-var listeningAddress = ":4458" //nolint:gochecknoglobals
+//
+//nolint:gochecknoglobals
+var listeningAddress = ":4458"
 
 type AdmissionController interface {
 	Start(context.Context) error
