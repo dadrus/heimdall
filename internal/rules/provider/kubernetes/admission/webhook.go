@@ -48,12 +48,12 @@ func (wh *Webhook) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		timeout, err := time.ParseDuration(val)
 		if err != nil {
 			log.Warn().Err(err).Msg("Failed parsing timeout query parameter. Ignoring it.")
+		} else {
+			var cancel context.CancelFunc
+			ctx, cancel = context.WithTimeout(ctx, timeout)
+
+			defer cancel()
 		}
-
-		var cancel context.CancelFunc
-		ctx, cancel = context.WithTimeout(ctx, timeout)
-
-		defer cancel()
 	}
 
 	log.Info().
