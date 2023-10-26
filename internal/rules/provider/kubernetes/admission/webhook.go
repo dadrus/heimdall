@@ -31,7 +31,7 @@ func (wh *Webhook) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	if contentType := req.Header.Get("Content-Type"); contentType != "application/json" {
 		log.Error().Msgf("unable to process a request with an unknown content type %s", contentType)
 		wh.writeResponse(log, rw, NewResponse(http.StatusBadRequest,
-			fmt.Sprintf("contentType=%s, expected application/json", contentType)))
+			fmt.Sprintf("unexpected contentType=%s, expected application/json", contentType)))
 
 		return
 	}
@@ -39,7 +39,7 @@ func (wh *Webhook) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	ar := admissionv1.AdmissionReview{}
 	if err := json.NewDecoder(req.Body).Decode(&ar); err != nil {
 		log.Error().Err(err).Msg("unable to decode the request")
-		wh.writeResponse(log, rw, NewResponse(http.StatusBadRequest, err.Error()))
+		wh.writeResponse(log, rw, NewResponse(http.StatusBadRequest, "failed decoding request", err.Error()))
 
 		return
 	}
@@ -67,7 +67,8 @@ func (wh *Webhook) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	reviewResponse := wh.h.Handle(ctx, reviewRequest)
 	if err := reviewResponse.complete(reviewRequest); err != nil {
 		log.Error().Err(err).Msg("unable to finalize the response")
-		wh.writeResponse(log, rw, NewResponse(http.StatusInternalServerError, err.Error()))
+		wh.writeResponse(log, rw,
+			NewResponse(http.StatusInternalServerError, "failed finalizing request", err.Error()))
 
 		return
 	}

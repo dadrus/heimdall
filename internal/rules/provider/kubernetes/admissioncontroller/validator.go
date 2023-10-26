@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/goccy/go-json"
@@ -31,16 +30,20 @@ func (rv *rulesetValidator) Handle(ctx context.Context, req *admission.Request) 
 	if err != nil {
 		log.Error().Err(err).Msg("could not parse rule set")
 
-		return admission.NewResponse(http.StatusBadRequest, err.Error())
+		return admission.NewResponse(http.StatusBadRequest, "failed parsing RuleSet", err.Error())
 	}
 
 	if rs.Spec.AuthClassName != rv.ac {
 		msg := fmt.Sprintf(
 			"RuleSet ignored due to authClassName mismatch (namespace=%s, name=%s, uid=%s)",
 			rs.Namespace, rs.Name, rs.UID)
-		log.Info().Msg(msg)
+		log.Debug().Msg(msg)
 
-		return admission.NewResponse(http.StatusFailedDependency, msg)
+		// Responding with ok here as otherwise, if multiple deployments exist, the api server will not allow
+		// deploying the ruleset resource, even if another deployment was successfully able validating the rule set.
+		// When the resource will be made available to this instance upon deployment, it will anyway be filtered
+		// due the authClassName mismatch and not loaded.
+		return admission.NewResponse(http.StatusOK, msg)
 	}
 
 	ruleSet := &config.RuleSet{
@@ -63,10 +66,10 @@ func (rv *rulesetValidator) Handle(ctx context.Context, req *admission.Request) 
 	}
 
 	if len(errs) != 0 {
-		return admission.NewResponse(http.StatusForbidden, strings.Join(errs, "; "))
+		return admission.NewResponse(http.StatusForbidden, "RuleSet invalid", errs...)
 	}
 
-	return admission.NewResponse(http.StatusOK)
+	return admission.NewResponse(http.StatusOK, "RuleSet valid")
 }
 
 func (rv *rulesetValidator) ruleSetFrom(req *admission.Request) (*v1alpha2.RuleSet, error) {
