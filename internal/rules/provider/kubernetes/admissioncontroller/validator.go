@@ -78,11 +78,9 @@ func (rv *rulesetValidator) ruleSetFrom(req *admission.Request) (*v1alpha2.RuleS
 	}
 
 	p := &v1alpha2.RuleSet{}
-	if err := json.Unmarshal(req.Object.Raw, p); err != nil {
-		return nil, err
-	}
+	err := json.Unmarshal(req.Object.Raw, p)
 
-	return p, nil
+	return p, err
 }
 
 func (rv *rulesetValidator) mapVersion(_ string) string {
