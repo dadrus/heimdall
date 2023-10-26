@@ -224,11 +224,17 @@ The last one instructs heimdall to load rule set from a specific blob, namely a 
 
 == Kubernetes
 
-This provider is only supported if heimdall is running within Kubernetes and allows usage of link:{{< relref "#_ruleset_resource" >}}[Rule Set] resources deployed to the same Kubernetes environment. The configuration of this provider goes into the `kubernetes` property and supports the following configuration options:
+This provider is only supported if heimdall is running within Kubernetes and allows usage (validation and loading) of link:{{< relref "#_ruleset_resource" >}}[Rule Set] resources deployed to the same Kubernetes environment. The configuration of this provider goes into the `kubernetes` property and supports the following configuration options:
 
 * *`auth_class`*: _string_ (optional)
 +
-By making use of this property, you can specify which RuleSets should be used by this particular heimdall instance. If specified, heimdall will consider the value of the `authClassName` attribute of each RuleSet deployed to the cluster and load only those rules, which `authClassName` values match the value of `auth_class`. If not set all RuleSets will be used.
+By making use of this property, you can specify which RuleSets should be used by this particular heimdall instance. If specified, heimdall will consider the value of the `authClassName` attribute of each RuleSet deployed to the cluster and validate, respectively load only those rules, which `authClassName` values match the value of `auth_class`. If not set all RuleSets will be used.
+
+* *`tls`*: _link:{{< relref "/docs/configuration/reference/types.adoc#_tls" >}}[TLS]_ (optional)
++
+If configured, heimdall will start and expose a validating admission controller service on port `4458` listening on all interfaces. This service allows integration with the Kubernetes API server to let it validate the applied RuleSets. This way you will get a direct feedback about RuleSet issues without the need to look into heimdall logs if a RuleSet could not be loaded (See also link:{{< relref "/openapi/" >}}[API] documentation for more details).
++
+NOTE: To let the Kubernetes API server use the admission controller, there is a need for a properly configured https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/#validatingadmissionwebhook[`ValidatingAdmissionWebhook`]. The https://github.com/dadrus/heimdall/tree/main/charts/heimdall[Helm Chart] shipped with heimdall does this automatically as soon as this property is configured.
 
 .Minimal possible configuration
 ====
@@ -250,6 +256,22 @@ Here, the provider is configured to consider only those RuleSets, which `authCla
 ----
 kubernetes:
   auth_class: foo
+----
+====
+
+.Configuration with `auth_class` set and enabled validating admission controller
+====
+
+As with the previous example, the provider is configured to consider only those RuleSets, which `authClassName` is set to `foo`. The admission controller is enabled as well and will validate `RuleSet` resources before these are made available for loading.
+
+[source, yaml]
+----
+kubernetes:
+  auth_class: foo
+  tls:
+    # below is the minimal required configuration
+    key_store:
+      path: /path/to/file.pem
 ----
 ====
 
