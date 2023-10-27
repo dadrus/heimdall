@@ -58,6 +58,13 @@ tags:
       
       This information is only available on heimdall's **metrics port**.
 
+  - name: Validating Admission Controller
+    description: |
+      Implements a [validating admission controller webhook](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/)
+      for integration purposes with the Kubernetes API server. If used, allows a direct feedback for `RuleSet` resources upon deployment of these
+      into a Kubernetes cluster without the need to look into the logs, if a RuleSet could not be loaded for any reasons.
+
+      This functionality is only available on heimdall's **validating admission controller** port, supported in Kubernetes deployments only.
 x-tagGroups:
   - name: Management
     tags:
@@ -74,6 +81,9 @@ x-tagGroups:
   - name: Metrics
     tags:
       - Metrics
+  - name: Validating Admission Controller
+    tags:
+      - Validating Admission Controller
 
 components:
   schemas:
@@ -174,7 +184,7 @@ components:
                 type: string
               x5t#S256:
                 description: Stands for X.509 certificate SHA-256 thumbprint. This parameter is a base64url-encoded
-                  SHA-256 thumbprint (a.k.a. digest) of the DER encoding of an X.509 certificate 
+                  SHA-256 thumbprint (a.k.a. digest) of the DER encoding of an X.509 certificate
                   [RFC5280](https://www.rfc-editor.org/rfc/rfc5280)
                 type: string
 
@@ -388,6 +398,204 @@ paths:
                     y: elcChdCImsIaRT7xVLslehBpVaWKlNnCSTPhJLYXwcB1dS24bpUkwAiVijejZ0J0
         '304':
           $ref: '#/components/responses/NotModified'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /validate-ruleset:
+    servers:
+      - url: http://heimdall.decision.kuberetes.svc
+        description: RuleSet Validation Admission Controller
+    post:
+      summary: Validate RuleSet
+      description: |
+        Validates RuleSets enveloped into the [AdmissionReview](https://kubernetes.io/docs/reference/config-api/apiserver-admission.v1/#admission-k8s-io-v1-AdmissionReview) object as defined by the 
+        [Kubernetes Admission Controllers](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers)
+        specification.
+      tags:
+        - Validating Admission Controller
+      operationId: admission_controller_validate_ruleset
+      parameters:
+        - name: timeout
+          description: |
+            How long the validation is allowed to take. Adheres to the following pattern: `^[0-9]+(ns|us|ms|s|m|h)$`
+          in: query
+          required: false
+          schema:
+            type: string
+          example: 5s
+      requestBody:
+        description: |
+          The [AdmissionReview](https://kubernetes.io/docs/reference/config-api/apiserver-admission.v1/#admission-k8s-io-v1-AdmissionReview)
+          request object as specified by Kubernetes API enveloping a `RuleSet` to be validated.
+        required: true
+        content:
+          application/json:
+            example: {
+              "kind": "AdmissionReview",
+              "apiVersion": "admission.k8s.io/v1",
+              "request": {
+                "uid": "ce409862-eae0-4704-b7d5-46634efdaf9b",
+                "kind": {
+                  "group": "heimdall.dadrus.github.com",
+                  "version": "v1alpha2",
+                  "kind": "RuleSet"
+                },
+                "resource": {
+                  "group": "heimdall.dadrus.github.com",
+                  "version": "v1alpha2",
+                  "resource": "rulesets"
+                },
+                "requestKind": {
+                  "group": "heimdall.dadrus.github.com",
+                  "version": "v1alpha2",
+                  "kind": "RuleSet"
+                },
+                "requestResource": {
+                  "group": "heimdall.dadrus.github.com",
+                  "version": "v1alpha2",
+                  "resource": "rulesets"
+                },
+                "name": "echo-app-rules",
+                "namespace": "quickstarts",
+                "operation": "CREATE",
+                "userInfo": {
+                  "username": "kubernetes-admin",
+                  "groups": [
+                    "system:masters",
+                    "system:authenticated"
+                  ]
+                },
+                "object": {
+                  "apiVersion": "heimdall.dadrus.github.com/v1alpha2",
+                  "kind": "RuleSet",
+                  "metadata": {
+                    "annotations": {
+                      "kubectl.kubernetes.io/last-applied-configuration": "{\"apiVersion\":\"heimdall.dadrus.github.com/v1alpha2\",\"kind\":\"RuleSet\",\"metadata\":{\"annotations\":{},\"labels\":{\"app.kubernetes.io/name\":\"echo-app\"},\"name\":\"echo-app-rules\",\"namespace\":\"quickstarts\"},\"spec\":{\"rules\":[{\"execute\":[{\"authenticator\":\"noop_authenticator\"},{\"authorizer\":\"allow_all_requests\"},{\"finalizer\":\"noop_finalizer\"}],\"forward_to\":{\"host\":\"echo-app.quickstarts.svc.cluster.local:8080\"},\"id\":\"public-access\",\"match\":{\"url\":\"\\u003c**\\u003e://\\u003c**\\u003e/pub/\\u003c**\\u003e\"}},{\"execute\":[{\"authorizer\":\"allow_all_requests\"}],\"forward_to\":{\"host\":\"echo-app.quickstarts.svc.cluster.local:8080\"},\"id\":\"anonymous-access\",\"match\":{\"url\":\"\\u003c**\\u003e://\\u003c**\\u003e/anon/\\u003c**\\u003e\"}},{\"execute\":[{\"authenticator\":\"deny_authenticator\"}],\"forward_to\":{\"host\":\"echo-app.quickstarts.svc.cluster.local:8080\"},\"id\":\"redirect\",\"match\":{\"url\":\"\\u003c**\\u003e://\\u003c**\\u003e/redir/\\u003c**\\u003e\"}}]}}\n"
+                    },
+                    "creationTimestamp": "2023-10-25T17:13:37Z",
+                    "generation": 1,
+                    "labels": {
+                      "app.kubernetes.io/name": "echo-app"
+                    },
+                    "managedFields": [
+                      {
+                        "apiVersion": "heimdall.dadrus.github.com/v1alpha2",
+                        "fieldsType": "FieldsV1",
+                        "fieldsV1": {
+                          "f:metadata": {
+                            "f:annotations": {
+                              ".": {},
+                              "f:kubectl.kubernetes.io/last-applied-configuration": {}
+                            },
+                            "f:labels": {
+                              ".": {},
+                              "f:app.kubernetes.io/name": {}
+                            }
+                          },
+                          "f:spec": {
+                            ".": {},
+                            "f:authClassName": {},
+                            "f:rules": {}
+                          }
+                        },
+                        "manager": "kubectl-client-side-apply",
+                        "operation": "Update",
+                        "time": "2023-10-25T17:13:37Z"
+                      }
+                    ],
+                    "name": "echo-app-rules",
+                    "namespace": "quickstarts",
+                    "uid": "28703aca-bb5a-4355-8542-4b37b1146553"
+                  },
+                  "spec": {
+                    "authClassName": "default",
+                    "rules": [
+                      {
+                        "execute": [
+                          {
+                            "authenticator": "noop_authenticator"
+                          },
+                          {
+                            "authorizer": "allow_all_requests"
+                          },
+                          {
+                            "finalizer": "noop_finalizer"
+                          }
+                        ],
+                        "forward_to": {
+                          "host": "echo-app.quickstarts.svc.cluster.local:8080"
+                        },
+                        "id": "public-access",
+                        "match": {
+                          "strategy": "glob",
+                          "url": "<**>://<**>/pub/<**>"
+                        }
+                      },
+                      {
+                        "execute": [
+                          {
+                            "authorizer": "allow_all_requests"
+                          }
+                        ],
+                        "forward_to": {
+                          "host": "echo-app.quickstarts.svc.cluster.local:8080"
+                        },
+                        "id": "anonymous-access",
+                        "match": {
+                          "strategy": "glob",
+                          "url": "<**>://<**>/anon/<**>"
+                        }
+                      },
+                      {
+                        "execute": [
+                          {
+                            "authenticator": "deny_authenticator"
+                          }
+                        ],
+                        "forward_to": {
+                          "host": "echo-app.quickstarts.svc.cluster.local:8080"
+                        },
+                        "id": "redirect",
+                        "match": {
+                          "strategy": "glob",
+                          "url": "<**>://<**>/redir/<**>"
+                        }
+                      }
+                    ]
+                  }
+                },
+                "oldObject": null,
+                "dryRun": false,
+                "options": {
+                  "kind": "CreateOptions",
+                  "apiVersion": "meta.k8s.io/v1",
+                  "fieldManager": "kubectl-client-side-apply",
+                  "fieldValidation": "Strict"
+                }
+              }
+            }
+
+      responses:
+        '200':
+          description: |
+            The [AdmissionReview](https://kubernetes.io/docs/reference/config-api/apiserver-admission.v1/#admission-k8s-io-v1-AdmissionReview)
+            response object as specified by Kubernetes API.
+          content:
+            application/json:
+              example: {
+                "kind":"AdmissionReview",
+                "apiVersion":"admission.k8s.io/v1",
+                "response": {
+                  "uid":"ce409862-eae0-4704-b7d5-46634efdaf9b",
+                  "allowed":true,
+                  "status":{
+                    "metadata":{},
+                    "status":"Success",
+                    "message":"RuleSet valid",
+                    "code":200
+                  }
+                }
+              }
         '500':
           $ref: '#/components/responses/InternalServerError'
 
