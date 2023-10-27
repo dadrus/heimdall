@@ -73,7 +73,7 @@ func logFormatDecodeHookFunc(from reflect.Type, to reflect.Type, val any) (any, 
 }
 
 //nolint:cyclop
-func decodeTLSCipherSuiteHookFunc(from reflect.Type, to reflect.Type, data any) (any, error) {
+func DecodeTLSCipherSuiteHookFunc(from reflect.Type, to reflect.Type, data any) (any, error) {
 	var suites TLSCipherSuites
 
 	if from.Kind() != reflect.Slice || to != reflect.TypeOf(TLSCipherSuites{}) {
@@ -113,7 +113,7 @@ func decodeTLSCipherSuiteHookFunc(from reflect.Type, to reflect.Type, data any) 
 	return suites, nil
 }
 
-func decodeTLSMinVersionHookFunc(from reflect.Type, to reflect.Type, data any) (any, error) {
+func DecodeTLSMinVersionHookFunc(from reflect.Type, to reflect.Type, data any) (any, error) {
 	if from.Kind() != reflect.String || to != reflect.TypeOf(TLSMinVersion(0)) {
 		return data, nil
 	}

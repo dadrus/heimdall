@@ -389,5 +389,11 @@ rules:
 
     kubernetes:
       auth_class: foo
+      tls:
+        key_id: foo
+        key_store:
+          path: /path/to/pem.file
+          password: VerySecret!
+        min_version: TLS1.3
 ----
 

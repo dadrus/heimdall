@@ -53,4 +53,8 @@ rules:
       - error_handler: redirect
 
   providers:
-    kubernetes: {}
+    kubernetes:
+      tls:
+        min_version: TLS1.2
+        key_store:
+          path: /etc/heimdall/certs/ssl/tls-combined.pem

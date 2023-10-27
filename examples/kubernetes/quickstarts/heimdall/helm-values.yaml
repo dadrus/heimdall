@@ -1,4 +1,7 @@
 deployment:
+  replicaCount: 1
+  autoscaling:
+    enabled: false
   volumes:
   - name: tls-cert-volume
     secret:
@@ -13,6 +16,10 @@ deployment:
   - name: jwt-cert-volume
     readOnly: true
     mountPath: "/etc/heimdall/certs/jwt"
+
+admissionController:
+  annotations:
+    cert-manager.io/inject-ca-from: heimdall/heimdall-tls
 
 env:
   OTEL_METRICS_EXPORTER: "prometheus"
