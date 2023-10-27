@@ -16,7 +16,7 @@ import (
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/logger"
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/otelmetrics"
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/recovery"
-	"github.com/dadrus/heimdall/internal/rules/provider/kubernetes/admission"
+	"github.com/dadrus/heimdall/internal/rules/provider/kubernetes/admissioncontroller/admission"
 	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/x/httpx"
 	"github.com/dadrus/heimdall/internal/x/loggeradapter"

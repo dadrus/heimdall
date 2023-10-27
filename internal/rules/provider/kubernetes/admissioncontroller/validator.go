@@ -11,7 +11,7 @@ import (
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/rules/config"
-	"github.com/dadrus/heimdall/internal/rules/provider/kubernetes/admission"
+	"github.com/dadrus/heimdall/internal/rules/provider/kubernetes/admissioncontroller/admission"
 	"github.com/dadrus/heimdall/internal/rules/provider/kubernetes/api/v1alpha2"
 	"github.com/dadrus/heimdall/internal/rules/rule"
 )
