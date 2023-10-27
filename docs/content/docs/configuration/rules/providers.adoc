@@ -235,12 +235,12 @@ By making use of this property, you can specify which RuleSets should be used by
 If configured, heimdall will start and expose a validating admission controller service on port `4458` listening on all interfaces. This service allows integration with the Kubernetes API server enabling validation of the applied RuleSet resources before these are made available to heimdall for loading. This way you will get a direct feedback about RuleSet issues without the need to look into heimdall logs if a RuleSet could not be loaded (See also link:{{< relref "/openapi/#tag/Validating-Admission-Controller" >}}[API] documentation for more details).
 +
 To let the Kubernetes API server use the admission controller, there is a need for a properly configured https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#deploy-the-admission-webhook-service[`ValidatingWebhookConfiguration`]. The https://github.com/dadrus/heimdall/tree/main/charts/heimdall[Helm Chart] shipped with heimdall does this automatically as soon as this property is configured. It does however need a `caBundle` to be set or injected. Otherwise, the Kubernetes API server won't trust the configured TLS certificate and won't use the endpoint.
-+
+
 [CAUTION]
 ====
-Since multiple heimdall deployments can coexist, each with different `auth_class` configured, the API server request for a RuleSet with mismatching `authClassName` will be ignored, resulting in a successful response. This behavior is required as otherwise, as soon as the API server receives even a single failed validation response, the affected RuleSet resource will be discarded and not made available for loading.
+Since multiple heimdall deployments with different configured `auth_class` names can coexist, RuleSets with mismatching `authClassName` will be ignored by a particular deployment. In addition, Kubernetes API server validation requests for mismatching RuleSets result in a successful response. This behavior is required as otherwise, as soon as the API server receives even a single failed validation response, the affected RuleSet resource will be discarded and not made available for loading to any of the available heimdall deployments.
 
-That means, if there is no heimdall deployment feeling responsible for the given RuleSet (due to `authClassName` - `auth_class` mismatch), the affected RuleSet will be silently ignored.
+That also means, if there is no heimdall deployment feeling responsible for the given RuleSet (due to `authClassName` - `auth_class` mismatch), the affected RuleSet will be silently ignored.
 ====
 
 .Minimal possible configuration
