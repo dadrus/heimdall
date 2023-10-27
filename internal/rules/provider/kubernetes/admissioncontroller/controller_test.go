@@ -3,9 +3,19 @@ package admissioncontroller
 import (
 	"bytes"
 	"context"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
+	"crypto/tls"
+	"crypto/x509"
+	"crypto/x509/pkix"
 	"errors"
 	"fmt"
+	"math/big"
+	"net"
 	"net/http"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -22,11 +32,62 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/provider/kubernetes/api/v1alpha2"
 	"github.com/dadrus/heimdall/internal/rules/rule/mocks"
 	"github.com/dadrus/heimdall/internal/x"
+	"github.com/dadrus/heimdall/internal/x/pkix/pemx"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
 func TestControllerLifecycle(t *testing.T) {
 	t.Parallel()
+
+	testDir := t.TempDir()
+
+	serverKey, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
+	require.NoError(t, err)
+
+	serverCert, err := testsupport.NewCertificateBuilder(
+		testsupport.WithSerialNumber(big.NewInt(1)),
+		testsupport.WithValidity(time.Now(), 10*time.Hour),
+		testsupport.WithSubject(pkix.Name{
+			CommonName:   "test cert",
+			Organization: []string{"Test"},
+			Country:      []string{"EU"},
+		}),
+		testsupport.WithSubjectPubKey(&serverKey.PublicKey, x509.ECDSAWithSHA384),
+		testsupport.WithSignaturePrivKey(serverKey),
+		testsupport.WithKeyUsage(x509.KeyUsageDigitalSignature),
+		testsupport.WithExtendedKeyUsage(x509.ExtKeyUsageServerAuth),
+		testsupport.WithGeneratedSubjectKeyID(),
+		testsupport.WithIPAddresses([]net.IP{net.ParseIP("127.0.0.1")}),
+		testsupport.WithSelfSigned(),
+	).Build()
+	require.NoError(t, err)
+
+	pemBytes, err := pemx.BuildPEM(
+		pemx.WithECDSAPrivateKey(serverKey),
+		pemx.WithX509Certificate(serverCert),
+	)
+	require.NoError(t, err)
+
+	pemFile, err := os.Create(filepath.Join(testDir, "keystore.pem"))
+	require.NoError(t, err)
+
+	_, err = pemFile.Write(pemBytes)
+	require.NoError(t, err)
+
+	pool := x509.NewCertPool()
+	pool.AddCert(serverCert)
+
+	tlsClient := &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{
+				RootCAs:    pool,
+				MinVersion: tls.VersionTLS13,
+			},
+			ForceAttemptHTTP2: true,
+		},
+	}
+
+	notTLSClient := &http.Client{}
 
 	authClass := "test"
 
@@ -46,12 +107,31 @@ func TestControllerLifecycle(t *testing.T) {
 
 	for _, tc := range []struct {
 		uc               string
+		tls              *config.TLS
 		request          func(t *testing.T, URL string) *http.Request
 		setupRuleFactory func(t *testing.T, factory *mocks.FactoryMock)
-		assert           func(t *testing.T, resp *http.Response)
+		assert           func(t *testing.T, err error, resp *http.Response)
 	}{
 		{
-			uc: "unsupported review request kind",
+			uc: "admission controller not started",
+			request: func(t *testing.T, URL string) *http.Request {
+				t.Helper()
+
+				req, err := http.NewRequestWithContext(context.TODO(), http.MethodPost, URL, nil)
+				require.NoError(t, err)
+
+				return req
+			},
+			assert: func(t *testing.T, err error, resp *http.Response) {
+				t.Helper()
+
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), "connection refused")
+			},
+		},
+		{
+			uc:  "unsupported review request kind",
+			tls: &config.TLS{KeyStore: config.KeyStore{Path: pemFile.Name()}},
 			request: func(t *testing.T, URL string) *http.Request {
 				t.Helper()
 
@@ -66,14 +146,16 @@ func TestControllerLifecycle(t *testing.T) {
 
 				return req
 			},
-			assert: func(t *testing.T, resp *http.Response) {
+			assert: func(t *testing.T, err error, resp *http.Response) {
 				t.Helper()
+
+				require.NoError(t, err)
 
 				assert.Equal(t, http.StatusOK, resp.StatusCode)
 				assert.Equal(t, "application/json", resp.Header.Get("Content-Type"))
 
 				var reviewResp admissionv1.AdmissionReview
-				err := json.NewDecoder(resp.Body).Decode(&reviewResp)
+				err = json.NewDecoder(resp.Body).Decode(&reviewResp)
 				require.NoError(t, err)
 
 				vResp := reviewResp.Response
@@ -92,7 +174,8 @@ func TestControllerLifecycle(t *testing.T) {
 			},
 		},
 		{
-			uc: "RuleSet filtered",
+			uc:  "RuleSet filtered",
+			tls: &config.TLS{KeyStore: config.KeyStore{Path: pemFile.Name()}},
 			request: func(t *testing.T, URL string) *http.Request {
 				t.Helper()
 
@@ -125,14 +208,16 @@ func TestControllerLifecycle(t *testing.T) {
 
 				return req
 			},
-			assert: func(t *testing.T, resp *http.Response) {
+			assert: func(t *testing.T, err error, resp *http.Response) {
 				t.Helper()
+
+				require.NoError(t, err)
 
 				assert.Equal(t, http.StatusOK, resp.StatusCode)
 				assert.Equal(t, "application/json", resp.Header.Get("Content-Type"))
 
 				var reviewResp admissionv1.AdmissionReview
-				err := json.NewDecoder(resp.Body).Decode(&reviewResp)
+				err = json.NewDecoder(resp.Body).Decode(&reviewResp)
 				require.NoError(t, err)
 
 				vResp := reviewResp.Response
@@ -147,7 +232,8 @@ func TestControllerLifecycle(t *testing.T) {
 			},
 		},
 		{
-			uc: "RuleSet validation fails",
+			uc:  "RuleSet validation fails",
+			tls: &config.TLS{KeyStore: config.KeyStore{Path: pemFile.Name()}},
 			request: func(t *testing.T, URL string) *http.Request {
 				t.Helper()
 
@@ -211,14 +297,16 @@ func TestControllerLifecycle(t *testing.T) {
 				factory.EXPECT().CreateRule("1alpha2", mock.Anything, mock.Anything).
 					Once().Return(nil, errors.New("Test error"))
 			},
-			assert: func(t *testing.T, resp *http.Response) {
+			assert: func(t *testing.T, err error, resp *http.Response) {
 				t.Helper()
+
+				require.NoError(t, err)
 
 				assert.Equal(t, http.StatusOK, resp.StatusCode)
 				assert.Equal(t, "application/json", resp.Header.Get("Content-Type"))
 
 				var reviewResp admissionv1.AdmissionReview
-				err := json.NewDecoder(resp.Body).Decode(&reviewResp)
+				err = json.NewDecoder(resp.Body).Decode(&reviewResp)
 				require.NoError(t, err)
 
 				vResp := reviewResp.Response
@@ -237,7 +325,8 @@ func TestControllerLifecycle(t *testing.T) {
 			},
 		},
 		{
-			uc: "successful RuleSet validation",
+			uc:  "successful RuleSet validation",
+			tls: &config.TLS{KeyStore: config.KeyStore{Path: pemFile.Name()}},
 			request: func(t *testing.T, URL string) *http.Request {
 				t.Helper()
 
@@ -301,14 +390,16 @@ func TestControllerLifecycle(t *testing.T) {
 				factory.EXPECT().CreateRule("1alpha2", mock.Anything, mock.Anything).
 					Once().Return(nil, nil)
 			},
-			assert: func(t *testing.T, resp *http.Response) {
+			assert: func(t *testing.T, err error, resp *http.Response) {
 				t.Helper()
+
+				require.NoError(t, err)
 
 				assert.Equal(t, http.StatusOK, resp.StatusCode)
 				assert.Equal(t, "application/json", resp.Header.Get("Content-Type"))
 
 				var reviewResp admissionv1.AdmissionReview
-				err := json.NewDecoder(resp.Body).Decode(&reviewResp)
+				err = json.NewDecoder(resp.Body).Decode(&reviewResp)
 				require.NoError(t, err)
 
 				vResp := reviewResp.Response
@@ -341,33 +432,29 @@ func TestControllerLifecycle(t *testing.T) {
 			rf := mocks.NewFactoryMock(t)
 			setupMock(t, rf)
 
-			controller := New(
-				nil,
-				log.Logger,
-				authClass,
-				rf,
+			controller := New(tc.tls, log.Logger, authClass, rf)
+			serviceAddress := fmt.Sprintf("%s://%s/validate-ruleset",
+				x.IfThenElse(tc.tls != nil, "https", "http"),
+				listeningAddress,
 			)
-
-			serviceAddress := fmt.Sprintf("http://%s/validate-ruleset", listeningAddress)
+			client := x.IfThenElse(tc.tls != nil, tlsClient, notTLSClient)
 
 			err = controller.Start(context.TODO())
 			require.NoError(t, err)
 
-			time.Sleep(50 * time.Millisecond)
+			time.Sleep(20 * time.Millisecond)
 
 			defer controller.Stop(context.TODO())
-
-			client := &http.Client{Transport: &http.Transport{}}
 
 			// WHEN
 			resp, err := client.Do(tc.request(t, serviceAddress))
 
 			// THEN
-			require.NoError(t, err)
+			if err == nil {
+				defer resp.Body.Close()
+			}
 
-			defer resp.Body.Close()
-
-			tc.assert(t, resp)
+			tc.assert(t, err, resp)
 			rf.AssertExpectations(t)
 		})
 	}

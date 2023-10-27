@@ -41,11 +41,6 @@ import (
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
-type noopController struct{}
-
-func (noopController) Start(context.Context) error { return nil }
-func (noopController) Stop(context.Context) error  { return nil }
-
 type ConfigFactory func() (*rest.Config, error)
 
 type provider struct {
@@ -100,13 +95,7 @@ func newProvider(
 
 	logger = logger.With().Str("_provider_type", ProviderType).Logger()
 	authClass := x.IfThenElse(len(providerConf.AuthClass) != 0, providerConf.AuthClass, DefaultClass)
-	adc := x.IfThenElseExec(providerConf.TLS != nil,
-		func() admissioncontroller.AdmissionController {
-			return admissioncontroller.New(providerConf.TLS, logger, authClass, factory)
-		},
-		func() admissioncontroller.AdmissionController {
-			return noopController{}
-		})
+	adc := admissioncontroller.New(providerConf.TLS, logger, authClass, factory)
 
 	logger.Info().Msg("Rule provider configured.")
 
