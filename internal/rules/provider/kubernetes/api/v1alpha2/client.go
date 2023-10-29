@@ -18,8 +18,11 @@ package v1alpha2
 
 import (
 	"context"
+	"fmt"
+	"net/http"
 	"time"
 
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -27,6 +30,8 @@ import (
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
+
+	"github.com/dadrus/heimdall/internal/x/httpx"
 )
 
 const (
@@ -71,6 +76,12 @@ func NewClient(conf *rest.Config) (Client, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	cl.Client.Transport = otelhttp.NewTransport(
+		httpx.NewTraceRoundTripper(cl.Client.Transport),
+		otelhttp.WithSpanNameFormatter(func(_ string, r *http.Request) string {
+			return fmt.Sprintf("%s %s %s @%s", r.Proto, r.Method, r.URL.Path, r.URL.Host)
+		}))
 
 	return &client{cl: cl}, nil
 }
