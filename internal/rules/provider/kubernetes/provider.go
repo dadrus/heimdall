@@ -24,6 +24,7 @@ import (
 
 	"github.com/go-logr/zerologr"
 	"github.com/rs/zerolog"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
@@ -39,6 +40,14 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
+)
+
+type conditionReason string
+
+const (
+	authClassMismatch conditionReason = "AuthClassMismatch"
+	loaded            conditionReason = "Loaded"
+	invalidRuleSet    conditionReason = "Invalid"
 )
 
 type ConfigFactory func() (*rest.Config, error)
@@ -179,14 +188,73 @@ func (p *provider) Stop(ctx context.Context) error {
 	}
 }
 
+func (p *provider) addRuleSet(obj any) {
+	// should never be of a different type. ok if panics
+	rs := obj.(*v1alpha2.RuleSet) // nolint: forcetypeassert
+
+	if rs.Spec.AuthClassName != p.ac {
+		p.l.Debug().
+			Msgf("Ignoring ruleset creation due to authClassName mismatch (namespace=%s, name=%s, uid=%s)",
+				rs.Namespace, rs.Name, rs.UID)
+
+		p.updateStatus(
+			rs,
+			v1alpha2.RuleSetStatePending,
+			authClassMismatch,
+			fmt.Sprintf("RuleSet ignored due to auth_class='%s' - authClassName='%s' mismatch",
+				p.ac, rs.Spec.AuthClassName))
+
+		return
+	}
+
+	conf := &config2.RuleSet{
+		MetaData: config2.MetaData{
+			Source:  fmt.Sprintf("%s:%s:%s", ProviderType, rs.Namespace, rs.UID),
+			ModTime: rs.CreationTimestamp.Time,
+		},
+		Version: p.mapVersion(rs.APIVersion),
+		Name:    rs.Name,
+		Rules:   rs.Spec.Rules,
+	}
+
+	p.l.Info().Msg("New rule set received")
+
+	p.l.Debug().Str("_src", conf.Source).
+		Msgf("Rule set resource version mapped from '%s' to '%s'", rs.APIVersion, conf.Version)
+
+	if err := p.p.OnCreated(conf); err != nil {
+		p.l.Warn().Err(err).Str("_src", conf.Source).Msg("Failed creating rule set")
+		p.updateStatus(
+			rs,
+			v1alpha2.RuleSetStateFailed,
+			invalidRuleSet,
+			err.Error())
+	} else {
+		p.l.Info().Str("_src", conf.Source).Msg("Rule set created")
+		p.updateStatus(
+			rs,
+			v1alpha2.RuleSetStateActive,
+			loaded,
+			"RuleSet successfully loaded",
+		)
+	}
+}
+
 func (p *provider) updateRuleSet(_, newObj any) {
 	// should never be of a different type. ok if panics
 	rs := newObj.(*v1alpha2.RuleSet) // nolint: forcetypeassert
 
 	if rs.Spec.AuthClassName != p.ac {
 		p.l.Debug().
-			Msgf("Ignoring ruleset creation due to authClassName mismatch (namespace=%s, name=%s, uid=%s)",
+			Msgf("Ignoring ruleset update due to authClassName mismatch (namespace=%s, name=%s, uid=%s)",
 				rs.Namespace, rs.Name, rs.UID)
+
+		p.updateStatus(
+			rs,
+			v1alpha2.RuleSetStatePending,
+			authClassMismatch,
+			fmt.Sprintf("RuleSet ignored due to auth_class='%s' - authClassName='%s' mismatch",
+				p.ac, rs.Spec.AuthClassName))
 
 		return
 	}
@@ -213,47 +281,13 @@ func (p *provider) updateRuleSet(_, newObj any) {
 	}
 }
 
-func (p *provider) addRuleSet(obj any) {
-	// should never be of a different type. ok if panics
-	rs := obj.(*v1alpha2.RuleSet) // nolint: forcetypeassert
-
-	if rs.Spec.AuthClassName != p.ac {
-		p.l.Debug().
-			Msgf("Ignoring ruleset creation due to authClassName mismatch (namespace=%s, name=%s, uid=%s)",
-				rs.Namespace, rs.Name, rs.UID)
-
-		return
-	}
-
-	conf := &config2.RuleSet{
-		MetaData: config2.MetaData{
-			Source:  fmt.Sprintf("%s:%s:%s", ProviderType, rs.Namespace, rs.UID),
-			ModTime: rs.CreationTimestamp.Time,
-		},
-		Version: p.mapVersion(rs.APIVersion),
-		Name:    rs.Name,
-		Rules:   rs.Spec.Rules,
-	}
-
-	p.l.Info().Msg("New rule set received")
-
-	p.l.Debug().Str("_src", conf.Source).
-		Msgf("Rule set resource version mapped from '%s' to '%s'", rs.APIVersion, conf.Version)
-
-	if err := p.p.OnCreated(conf); err != nil {
-		p.l.Warn().Err(err).Str("_src", conf.Source).Msg("Failed creating rule set")
-	} else {
-		p.l.Info().Str("_src", conf.Source).Msg("Rule set created")
-	}
-}
-
 func (p *provider) deleteRuleSet(obj any) {
 	// should never be of a different type. ok if panics
 	rs := obj.(*v1alpha2.RuleSet) // nolint: forcetypeassert
 
 	if rs.Spec.AuthClassName != p.ac {
 		p.l.Debug().
-			Msgf("Ignoring ruleset creation due to authClassName mismatch (namespace=%s, name=%s, uid=%s)",
+			Msgf("Ignoring ruleset deletion due to authClassName mismatch (namespace=%s, name=%s, uid=%s)",
 				rs.Namespace, rs.Name, rs.UID)
 
 		return
@@ -283,4 +317,31 @@ func (p *provider) deleteRuleSet(obj any) {
 func (p *provider) mapVersion(_ string) string {
 	// currently the only possible version is v1alpha2, which is mapped to the version "1alpha2" used internally
 	return "1alpha2"
+}
+
+func (p *provider) updateStatus(
+	rs *v1alpha2.RuleSet,
+	state v1alpha2.RuleSetStatusEnum,
+	reason conditionReason,
+	msg string,
+) {
+	rsCopy := rs.DeepCopy()
+	conditionStatus := x.IfThenElse(state == v1alpha2.RuleSetStateActive, metav1.ConditionTrue, metav1.ConditionFalse)
+
+	meta.SetStatusCondition(&rsCopy.Status.Conditions, metav1.Condition{
+		Type:               rsCopy.Name,
+		Status:             conditionStatus,
+		ObservedGeneration: rsCopy.Generation,
+		Reason:             string(reason),
+		Message:            msg,
+	})
+
+	if state != v1alpha2.RuleSetStatePending {
+		rsCopy.Status.Status = state
+	}
+
+	repository := p.cl.RuleSetRepository(rsCopy.Namespace)
+	if _, err := repository.UpdateStatus(context.Background(), rsCopy, metav1.UpdateOptions{}); err != nil {
+		p.l.Warn().Err(err).Msg("Failed updating RuleSet status")
+	}
 }
