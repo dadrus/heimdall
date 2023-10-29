@@ -31,12 +31,29 @@ type RuleSetSpec struct {
 	Rules         []config.Rule `json:"rules"`
 }
 
+type RuleSetStatusEnum string
+
+const (
+	RuleSetStatePending RuleSetStatusEnum = "Pending"
+	RuleSetStateFailed  RuleSetStatusEnum = "Failed"
+	RuleSetStateActive  RuleSetStatusEnum = "Active"
+)
+
+type RuleSetConditionType string
+
+// +kubebuilder:object:generate=true
+type RuleSetStatus struct {
+	Status     RuleSetStatusEnum  `json:"status,omitempty"`
+	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,1,rep,name=conditions"` //nolint:lll
+}
+
 // +kubebuilder:object:generate=true
 type RuleSet struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec RuleSetSpec `json:"spec"`
+	Spec   RuleSetSpec   `json:"spec"`
+	Status RuleSetStatus `json:"status,omitempty"`
 }
 
 func (in *RuleSet) DeepCopyObject() runtime.Object { return in.DeepCopy() }
