@@ -46,6 +46,7 @@ spec:
                   description: Defines which heimdall setup should use the resource
                   type: string
                   default: default
+                  maxLength: 56
                 rules:
                   description: The actual rule set with rules defining the required pipeline mechanisms
                   type: array
@@ -58,13 +59,14 @@ spec:
                       - rule: "has(self.match) && has(self.match.url)"
                         message: "a rule must have a url set to match incoming requests"
                       - rule: "size(self.match.url) > 0"
-                        message: "the match url must be an expression and not be empty"
+                        message: "the url configured to match incoming requests must not be empty"
                       - rule: "has(self.execute) && size(self.execute) > 0"
                         message: "execute pipeline is not allowed to be empty"
                     properties:
                       id:
                         description: The identifier of the rule
                         type: string
+                        maxLength: 128
                       match:
                         description: How to match the rule
                         type: object
@@ -108,19 +110,23 @@ spec:
                               strip_path_prefix:
                                 description: If you want to cut a prefix from the URL path, set it here
                                 type: string
+                                maxLength: 128
                               add_path_prefix:
                                 description: If you want to add a prefix to the URL path, set it here
                                 type: string
+                                maxLength: 128
                               strip_query_parameters:
                                 description: If you want to remove some query parameters, specify it here
                                 type: array
                                 items:
                                   type: string
+                                  maxLength: 128
                       methods:
                         description: The allowed HTTP methods
                         type: array
                         items:
                           type: string
+                          maxLength: 16
                           enum:
                             - CONNECT
                             - DELETE
@@ -143,5 +149,72 @@ spec:
                         items:
                           type: object
                           x-kubernetes-preserve-unknown-fields: true
+            status:
+              description: Deployment status of a RuleSet
+              type: object
+              properties:
+                status:
+                  description: Whether a RuleSet is loaded and in use
+                  type: string
+                  default: Pending
+                  enum:
+                    - Pending
+                    - Failed
+                    - Active
+                conditions:
+                  description: Conditions store the status conditions of the RuleSet instances
+                  type: array
+                  items:
+                    description: Details for a single aspect of the current state of the RuleSet resource
+                    type: object
+                    required:
+                      - type
+                      - status
+                      - lastTransitionTime
+                      - reason
+                      - message
+                    properties:
+                      type:
+                        description: The type of the condition
+                        type: string
+                        maxLength: 316
+                        pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      status:
+                        description: The status of the condition, one of True, False, Unknown
+                        type: string
+                        default: Unknown
+                        enum:
+                          - "True"
+                          - "False"
+                          - "Unknown"
+                      observedGeneration:
+                        description: Represents the .metadata.generation that the condition was set based upon
+                        type: integer
+                        format: int64
+                        minimum: 0
+                      lastTransitionTime:
+                        description: The last time the condition transitioned from one status to another
+                        type: string
+                        format: date-time
+                      reason:
+                        description: Identifier indicating the reason for the condition's last transition
+                        type: string
+                        enum:
+                          - "AuthClassMismatch"
+                          - "Invalid"
+                          - "Active"
+                      message:
+                        description: Message indicating details about the transition
+                        type: string
+                        maxLength: 32768
+      additionalPrinterColumns:
+        - name: Status
+          type: string
+          jsonPath: .status.status
+        - name: Age
+          type: date
+          jsonPath: .metadata.creationTimestamp
+      subresources:
+        status: {}
 
 
