@@ -153,14 +153,18 @@ spec:
               description: Deployment status of a RuleSet
               type: object
               properties:
-                status:
-                  description: Whether a RuleSet is loaded and in use
-                  type: string
-                  default: Pending
-                  enum:
-                    - Pending
-                    - Failed
-                    - Active
+                matchingInstances:
+                  description: The IDs of heimdall instances with the auth_class referenced by the RuleSet
+                  type: array
+                  items:
+                    type: string
+                    maxLength: 56
+                usedByInstances:
+                  description: The IDs of heimdall instances, the RuleSet is loaded by
+                  type: array
+                  items:
+                    type: string
+                    maxLength: 56
                 conditions:
                   description: Conditions store the status conditions of the RuleSet instances
                   type: array
@@ -199,18 +203,18 @@ spec:
                       reason:
                         description: Identifier indicating the reason for the condition's last transition
                         type: string
-                        enum:
-                          - "AuthClassMismatch"
-                          - "Invalid"
-                          - "Active"
+                        maxLength: 32
                       message:
                         description: Message indicating details about the transition
                         type: string
                         maxLength: 32768
       additionalPrinterColumns:
-        - name: Status
-          type: string
-          jsonPath: .status.status
+        - name: In Use By
+          type: integer
+          jsonPath: .status.usedByInstances.length
+        - name: Matched By
+          type: integer
+          jsonPath: .status.matchingInstances.length
         - name: Age
           type: date
           jsonPath: .metadata.creationTimestamp
