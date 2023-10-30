@@ -99,7 +99,7 @@ func TestClientCredentialsToken(t *testing.T) {
 			configureMocks: func(t *testing.T, cch *mocks.CacheMock) {
 				t.Helper()
 
-				cch.EXPECT().Get(mock.Anything).Return(&TokenInfo{TokenType: "Bearer", AccessToken: "foobar"})
+				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(&TokenInfo{TokenType: "Bearer", AccessToken: "foobar"})
 			},
 			assert: func(t *testing.T, err error, tokenEndpointCalled bool, token *TokenInfo) {
 				t.Helper()
@@ -116,8 +116,8 @@ func TestClientCredentialsToken(t *testing.T) {
 			configureMocks: func(t *testing.T, cch *mocks.CacheMock) {
 				t.Helper()
 
-				cch.EXPECT().Get(mock.Anything).Return(10)
-				cch.EXPECT().Delete(mock.Anything)
+				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(10)
+				cch.EXPECT().Delete(mock.Anything, mock.Anything)
 			},
 			assertRequest: func(t *testing.T, req *http.Request) {
 				t.Helper()
@@ -162,8 +162,8 @@ func TestClientCredentialsToken(t *testing.T) {
 			configureMocks: func(t *testing.T, cch *mocks.CacheMock) {
 				t.Helper()
 
-				cch.EXPECT().Get(mock.Anything).Return(nil)
-				cch.EXPECT().Set(mock.Anything, mock.Anything,
+				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil)
+				cch.EXPECT().Set(mock.Anything, mock.Anything, mock.Anything,
 					mock.MatchedBy(func(ttl time.Duration) bool {
 						return ttl.Round(time.Second) == 5*time.Minute-5*time.Second
 					}),
@@ -209,7 +209,7 @@ func TestClientCredentialsToken(t *testing.T) {
 			configureMocks: func(t *testing.T, cch *mocks.CacheMock) {
 				t.Helper()
 
-				cch.EXPECT().Get(mock.Anything).Return(nil)
+				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil)
 			},
 			assertRequest: func(t *testing.T, req *http.Request) { t.Helper() },
 			buildResponse: func(t *testing.T) (any, int) {
@@ -231,7 +231,7 @@ func TestClientCredentialsToken(t *testing.T) {
 			configureMocks: func(t *testing.T, cch *mocks.CacheMock) {
 				t.Helper()
 
-				cch.EXPECT().Get(mock.Anything).Return(nil)
+				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil)
 			},
 			assertRequest: func(t *testing.T, req *http.Request) { t.Helper() },
 			buildResponse: func(t *testing.T) (any, int) {
@@ -253,7 +253,7 @@ func TestClientCredentialsToken(t *testing.T) {
 			configureMocks: func(t *testing.T, cch *mocks.CacheMock) {
 				t.Helper()
 
-				cch.EXPECT().Get(mock.Anything).Return(nil)
+				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil)
 			},
 			assert: func(t *testing.T, err error, tokenEndpointCalled bool, token *TokenInfo) {
 				t.Helper()
@@ -279,8 +279,8 @@ func TestClientCredentialsToken(t *testing.T) {
 			configureMocks: func(t *testing.T, cch *mocks.CacheMock) {
 				t.Helper()
 
-				cch.EXPECT().Get(mock.Anything).Return(nil)
-				cch.EXPECT().Set(mock.Anything, mock.Anything, 3*time.Minute).Return()
+				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil)
+				cch.EXPECT().Set(mock.Anything, mock.Anything, mock.Anything, 3*time.Minute).Return()
 			},
 			assertRequest: func(t *testing.T, req *http.Request) {
 				t.Helper()
@@ -401,8 +401,8 @@ func TestClientCredentialsToken(t *testing.T) {
 			configureMocks: func(t *testing.T, cch *mocks.CacheMock) {
 				t.Helper()
 
-				cch.EXPECT().Get(mock.Anything).Return(nil)
-				cch.EXPECT().Set(mock.Anything, mock.Anything, 3*time.Minute).Return()
+				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil)
+				cch.EXPECT().Set(mock.Anything, mock.Anything, mock.Anything, 3*time.Minute).Return()
 			},
 			assertRequest: func(t *testing.T, req *http.Request) {
 				t.Helper()
@@ -456,8 +456,8 @@ func TestClientCredentialsToken(t *testing.T) {
 			configureMocks: func(t *testing.T, cch *mocks.CacheMock) {
 				t.Helper()
 
-				cch.EXPECT().Get(mock.Anything).Return(nil)
-				cch.EXPECT().Set(mock.Anything, mock.Anything, 3*time.Minute).Return()
+				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil)
+				cch.EXPECT().Set(mock.Anything, mock.Anything, mock.Anything, 3*time.Minute).Return()
 			},
 			assertRequest: func(t *testing.T, req *http.Request) {
 				t.Helper()
@@ -581,7 +581,7 @@ func TestClientCredentialsToken(t *testing.T) {
 			configureMocks: func(t *testing.T, cch *mocks.CacheMock) {
 				t.Helper()
 
-				cch.EXPECT().Get(mock.Anything).Return(nil)
+				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil)
 			},
 			assertRequest: func(t *testing.T, req *http.Request) {
 				t.Helper()

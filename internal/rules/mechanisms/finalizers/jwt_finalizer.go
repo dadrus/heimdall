@@ -116,12 +116,12 @@ func (u *jwtFinalizer) Execute(ctx heimdall.Context, sub *subject.Subject) error
 	)
 
 	cacheKey := u.calculateCacheKey(sub, ctx.Signer())
-	cacheEntry = cch.Get(cacheKey)
+	cacheEntry = cch.Get(ctx.AppContext(), cacheKey)
 
 	if cacheEntry != nil {
 		if jwtToken, ok = cacheEntry.(string); !ok {
 			logger.Warn().Msg("Wrong object type from cache")
-			cch.Delete(cacheKey)
+			cch.Delete(ctx.AppContext(), cacheKey)
 		} else {
 			logger.Debug().Msg("Reusing JWT from cache")
 		}
@@ -136,7 +136,7 @@ func (u *jwtFinalizer) Execute(ctx heimdall.Context, sub *subject.Subject) error
 		}
 
 		if len(cacheKey) != 0 && u.ttl > defaultCacheLeeway {
-			cch.Set(cacheKey, jwtToken, u.ttl-defaultCacheLeeway)
+			cch.Set(ctx.AppContext(), cacheKey, jwtToken, u.ttl-defaultCacheLeeway)
 		}
 	}
 

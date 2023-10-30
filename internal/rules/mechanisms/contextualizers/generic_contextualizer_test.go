@@ -561,7 +561,7 @@ func TestGenericContextualizerExecute(t *testing.T) {
 				t.Helper()
 
 				key := contextualizer.calculateCacheKey(sub)
-				cch.EXPECT().Get(key).Return(&contextualizerData{payload: "Hi Foo"})
+				cch.EXPECT().Get(mock.Anything, key).Return(&contextualizerData{payload: "Hi Foo"})
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
@@ -592,9 +592,9 @@ func TestGenericContextualizerExecute(t *testing.T) {
 				t.Helper()
 
 				key := contextualizer.calculateCacheKey(sub)
-				cch.EXPECT().Get(key).Return("Hi Foo")
-				cch.EXPECT().Delete(key)
-				cch.EXPECT().Set(key, mock.MatchedBy(func(val *contextualizerData) bool {
+				cch.EXPECT().Get(mock.Anything, key).Return("Hi Foo")
+				cch.EXPECT().Delete(mock.Anything, key)
+				cch.EXPECT().Set(mock.Anything, key, mock.MatchedBy(func(val *contextualizerData) bool {
 					return val != nil && val.payload == "Hi from endpoint"
 				}), 5*time.Second)
 			},
@@ -741,8 +741,8 @@ func TestGenericContextualizerExecute(t *testing.T) {
 				t.Helper()
 
 				key := contextualizer.calculateCacheKey(sub)
-				cch.EXPECT().Get(key).Return(nil)
-				cch.EXPECT().Set(key, mock.MatchedBy(func(val *contextualizerData) bool {
+				cch.EXPECT().Get(mock.Anything, key).Return(nil)
+				cch.EXPECT().Set(mock.Anything, key, mock.MatchedBy(func(val *contextualizerData) bool {
 					return val != nil && val.payload == "Hi from endpoint"
 				}), contextualizer.ttl)
 			},

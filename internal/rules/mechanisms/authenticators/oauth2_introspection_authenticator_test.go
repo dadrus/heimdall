@@ -940,8 +940,8 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				t.Helper()
 
 				ads.EXPECT().GetAuthData(ctx).Return("test_access_token", nil)
-				cch.EXPECT().Get(mock.Anything).Return(nil)
-				cch.EXPECT().Set(mock.Anything, mock.Anything, mock.Anything)
+				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil)
+				cch.EXPECT().Set(mock.Anything, mock.Anything, mock.Anything, mock.Anything)
 			},
 			instructServer: func(t *testing.T) {
 				t.Helper()
@@ -1024,9 +1024,9 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				t.Helper()
 
 				ads.EXPECT().GetAuthData(ctx).Return("test_access_token", nil)
-				cch.EXPECT().Get(mock.Anything).Return(zeroTTL)
-				cch.EXPECT().Delete(mock.Anything)
-				cch.EXPECT().Set(mock.Anything, mock.Anything, mock.Anything)
+				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(zeroTTL)
+				cch.EXPECT().Delete(mock.Anything, mock.Anything)
+				cch.EXPECT().Set(mock.Anything, mock.Anything, mock.Anything, mock.Anything)
 			},
 			instructServer: func(t *testing.T) {
 				t.Helper()
@@ -1124,7 +1124,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				})
 				require.NoError(t, err)
 
-				cch.EXPECT().Get(mock.Anything).Return(rawIntrospectResponse)
+				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(rawIntrospectResponse)
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()

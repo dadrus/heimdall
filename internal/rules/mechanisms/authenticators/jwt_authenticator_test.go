@@ -34,6 +34,7 @@ import (
 
 	"github.com/goccy/go-json"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/square/go-jose.v2"
 	"gopkg.in/square/go-jose.v2/jwt"
@@ -1073,7 +1074,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				keys := jwks.Key(kidKeyWithoutCert)
 
 				ads.EXPECT().GetAuthData(ctx).Return(jwtSignedWithKeyOnlyJWK, nil)
-				cch.EXPECT().Get(cacheKey).Return(&keys[0])
+				cch.EXPECT().Get(mock.Anything, cacheKey).Return(&keys[0])
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
@@ -1118,7 +1119,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				keys := jwks.Key(kidKeyWithoutCert)
 
 				ads.EXPECT().GetAuthData(ctx).Return(jwtSignedWithKeyAndCertJWK, nil)
-				cch.EXPECT().Get(cacheKey).Return(&keys[0])
+				cch.EXPECT().Get(mock.Anything, cacheKey).Return(&keys[0])
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
@@ -1163,7 +1164,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				keys := jwks.Key(kidKeyWithoutCert)
 
 				ads.EXPECT().GetAuthData(ctx).Return(jwtSignedWithKeyOnlyJWK, nil)
-				cch.EXPECT().Get(cacheKey).Return(&keys[0])
+				cch.EXPECT().Get(mock.Anything, cacheKey).Return(&keys[0])
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
@@ -1213,7 +1214,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				keys := jwks.Key(kidKeyWithoutCert)
 
 				ads.EXPECT().GetAuthData(ctx).Return(jwtSignedWithKeyOnlyJWK, nil)
-				cch.EXPECT().Get(cacheKey).Return(&keys[0])
+				cch.EXPECT().Get(mock.Anything, cacheKey).Return(&keys[0])
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
@@ -1262,7 +1263,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				keys := jwks.Key(kidKeyWithoutCert)
 
 				ads.EXPECT().GetAuthData(ctx).Return(jwtSignedWithKeyOnlyJWK, nil)
-				cch.EXPECT().Get(cacheKey).Return(&keys[0])
+				cch.EXPECT().Get(mock.Anything, cacheKey).Return(&keys[0])
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
@@ -1317,8 +1318,8 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				keys := jwks.Key(kidKeyWithoutCert)
 
 				ads.EXPECT().GetAuthData(ctx).Return(jwtSignedWithKeyOnlyJWK, nil)
-				cch.EXPECT().Get(cacheKey).Return(nil)
-				cch.EXPECT().Set(cacheKey, &keys[0], *auth.ttl)
+				cch.EXPECT().Get(mock.Anything, cacheKey).Return(nil)
+				cch.EXPECT().Set(mock.Anything, cacheKey, &keys[0], *auth.ttl)
 			},
 			instructServer: func(t *testing.T) {
 				t.Helper()
@@ -1384,8 +1385,8 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				keys := jwks.Key(kidKeyWithCert)
 
 				ads.EXPECT().GetAuthData(ctx).Return(jwtSignedWithKeyAndCertJWK, nil)
-				cch.EXPECT().Get(cacheKey).Return(nil)
-				cch.EXPECT().Set(cacheKey, &keys[0], *auth.ttl)
+				cch.EXPECT().Get(mock.Anything, cacheKey).Return(nil)
+				cch.EXPECT().Set(mock.Anything, cacheKey, &keys[0], *auth.ttl)
 			},
 			instructServer: func(t *testing.T) {
 				t.Helper()
@@ -1451,7 +1452,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				require.NoError(t, err)
 
 				ads.EXPECT().GetAuthData(ctx).Return(jwtSignedWithKeyAndCertJWK, nil)
-				cch.EXPECT().Get(cacheKey).Return(nil)
+				cch.EXPECT().Get(mock.Anything, cacheKey).Return(nil)
 			},
 			instructServer: func(t *testing.T) {
 				t.Helper()
@@ -1513,8 +1514,8 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				keys := jwks.Key(kidKeyWithCert)
 
 				ads.EXPECT().GetAuthData(ctx).Return(jwtSignedWithKeyAndCertJWK, nil)
-				cch.EXPECT().Get(cacheKey).Return(nil)
-				cch.EXPECT().Set(cacheKey, &keys[0], *auth.ttl)
+				cch.EXPECT().Get(mock.Anything, cacheKey).Return(nil)
+				cch.EXPECT().Set(mock.Anything, cacheKey, &keys[0], *auth.ttl)
 			},
 			instructServer: func(t *testing.T) {
 				t.Helper()
@@ -1580,9 +1581,9 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				keys := jwks.Key(kidKeyWithoutCert)
 
 				ads.EXPECT().GetAuthData(ctx).Return(jwtSignedWithKeyOnlyJWK, nil)
-				cch.EXPECT().Get(cacheKey).Return("Hi Foo")
-				cch.EXPECT().Delete(cacheKey)
-				cch.EXPECT().Set(cacheKey, &keys[0], *auth.ttl)
+				cch.EXPECT().Get(mock.Anything, cacheKey).Return("Hi Foo")
+				cch.EXPECT().Delete(mock.Anything, cacheKey)
+				cch.EXPECT().Set(mock.Anything, cacheKey, &keys[0], *auth.ttl)
 			},
 			instructServer: func(t *testing.T) {
 				t.Helper()

@@ -214,13 +214,13 @@ func (a *oauth2IntrospectionAuthenticator) getSubjectInformation(ctx heimdall.Co
 
 	if a.isCacheEnabled() {
 		cacheKey = a.calculateCacheKey(token)
-		cacheEntry = cch.Get(cacheKey)
+		cacheEntry = cch.Get(ctx.AppContext(), cacheKey)
 	}
 
 	if cacheEntry != nil {
 		if cachedResponse, ok = cacheEntry.([]byte); !ok {
 			logger.Warn().Msg("Wrong object type from cache")
-			cch.Delete(cacheKey)
+			cch.Delete(ctx.AppContext(), cacheKey)
 		} else {
 			logger.Debug().Msg("Reusing introspection response from cache")
 
@@ -241,7 +241,7 @@ func (a *oauth2IntrospectionAuthenticator) getSubjectInformation(ctx heimdall.Co
 	}
 
 	if cacheTTL := a.getCacheTTL(introspectResp); cacheTTL > 0 {
-		cch.Set(cacheKey, rawResp, cacheTTL)
+		cch.Set(ctx.AppContext(), cacheKey, rawResp, cacheTTL)
 	}
 
 	return rawResp, nil
