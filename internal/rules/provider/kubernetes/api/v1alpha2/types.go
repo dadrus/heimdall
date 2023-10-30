@@ -20,9 +20,18 @@ package v1alpha2
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 
 	"github.com/dadrus/heimdall/internal/rules/config"
+)
+
+type ConditionReason string
+
+const (
+	ConditionRuleSetActive           ConditionReason = "RuleSetActive"
+	ConditionRuleSetActivationFailed ConditionReason = "RuleSetActivationFailed"
+	ConditionRuleSetUnloaded         ConditionReason = "RuleSetUnloaded"
+	ConditionRuleSetUnloadingFailed  ConditionReason = "RuleSetUnloadingFailed"
+	ConditionControllerStopped       ConditionReason = "ControllerStopped"
 )
 
 // +kubebuilder:object:generate=true
@@ -31,23 +40,15 @@ type RuleSetSpec struct {
 	Rules         []config.Rule `json:"rules"`
 }
 
-type RuleSetStatusEnum string
-
-const (
-	RuleSetStatePending RuleSetStatusEnum = "Pending"
-	RuleSetStateFailed  RuleSetStatusEnum = "Failed"
-	RuleSetStateActive  RuleSetStatusEnum = "Active"
-)
-
-type RuleSetConditionType string
-
 // +kubebuilder:object:generate=true
 type RuleSetStatus struct {
-	Status     RuleSetStatusEnum  `json:"status,omitempty"`
-	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,1,rep,name=conditions"` //nolint:lll
+	MatchingInstances []string           `json:"matchingInstances,omitempty" patchStrategy:"merge"`
+	UsedByInstances   []string           `json:"usedByInstances,omitempty"   patchStrategy:"merge"`
+	Conditions        []metav1.Condition `json:"conditions,omitempty"        patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,1,rep,name=conditions"` //nolint:lll
 }
 
 // +kubebuilder:object:generate=true
+// +kubebuilder:object:root=true
 type RuleSet struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -56,14 +57,11 @@ type RuleSet struct {
 	Status RuleSetStatus `json:"status,omitempty"`
 }
 
-func (in *RuleSet) DeepCopyObject() runtime.Object { return in.DeepCopy() }
-
 // +kubebuilder:object:generate=true
+// +kubebuilder:object:root=true
 type RuleSetList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 
 	Items []RuleSet `json:"items"`
 }
-
-func (in *RuleSetList) DeepCopyObject() runtime.Object { return in.DeepCopy() }

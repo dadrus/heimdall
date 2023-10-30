@@ -17,14 +17,9 @@
 package v1alpha2
 
 import (
-	"context"
-	"time"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 )
@@ -41,12 +36,6 @@ func addKnownTypes(gv schema.GroupVersion) func(scheme *runtime.Scheme) error {
 
 		return nil
 	}
-}
-
-type RuleSetRepository interface {
-	List(ctx context.Context, opts metav1.ListOptions) (*RuleSetList, error)
-	Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
-	UpdateStatus(ctx context.Context, rs *RuleSet, opts metav1.UpdateOptions) (*RuleSet, error)
 }
 
 type Client interface {
@@ -84,58 +73,4 @@ func (c *client) RuleSetRepository(namespace string) RuleSetRepository {
 		cl: c.cl,
 		ns: namespace,
 	}
-}
-
-type repository struct {
-	cl rest.Interface
-	ns string
-}
-
-func (r *repository) List(ctx context.Context, opts metav1.ListOptions) (*RuleSetList, error) {
-	var timeout time.Duration
-	if opts.TimeoutSeconds != nil {
-		timeout = time.Duration(*opts.TimeoutSeconds) * time.Second
-	}
-
-	result := &RuleSetList{}
-	err := r.cl.Get().
-		Namespace(r.ns).
-		Resource("rulesets").
-		VersionedParams(&opts, scheme.ParameterCodec).
-		Timeout(timeout).
-		Do(ctx).
-		Into(result)
-
-	return result, err
-}
-
-func (r *repository) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
-	var timeout time.Duration
-	if opts.TimeoutSeconds != nil {
-		timeout = time.Duration(*opts.TimeoutSeconds) * time.Second
-	}
-
-	opts.Watch = true
-
-	return r.cl.Get().
-		Namespace(r.ns).
-		Resource("rulesets").
-		VersionedParams(&opts, scheme.ParameterCodec).
-		Timeout(timeout).
-		Watch(ctx)
-}
-
-func (r *repository) UpdateStatus(ctx context.Context, rs *RuleSet, opts metav1.UpdateOptions) (*RuleSet, error) {
-	result := &RuleSet{}
-	err := r.cl.Patch(types.JSONPatchType).
-		Namespace(r.ns).
-		Resource("rulesets").
-		Name(rs.Name).
-		SubResource("status").
-		VersionedParams(&opts, scheme.ParameterCodec).
-		Body(rs).
-		Do(ctx).
-		Into(result)
-
-	return result, err
 }
