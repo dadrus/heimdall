@@ -24,7 +24,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestCacheUsage(t *testing.T) {
+func TestMemoryCacheUsage(t *testing.T) {
 	t.Parallel()
 
 	for _, tc := range []struct {
@@ -106,7 +106,7 @@ func TestCacheUsage(t *testing.T) {
 	}
 }
 
-func TestCacheExpiration(t *testing.T) {
+func TestMemoryCacheExpiration(t *testing.T) {
 	t.Parallel()
 
 	cache := New()
