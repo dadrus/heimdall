@@ -18,12 +18,15 @@ package kubernetes
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"net/http"
+	"os"
 	"sync"
-	"time"
 
 	"github.com/go-logr/zerologr"
 	"github.com/rs/zerolog"
+	errors2 "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -40,14 +43,7 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
-)
-
-type conditionReason string
-
-const (
-	authClassMismatch conditionReason = "AuthClassMismatch"
-	loaded            conditionReason = "Loaded"
-	invalidRuleSet    conditionReason = "Invalid"
+	"github.com/dadrus/heimdall/internal/x/slicex"
 )
 
 type ConfigFactory func() (*rest.Config, error)
@@ -59,8 +55,11 @@ type provider struct {
 	adc        admissioncontroller.AdmissionController
 	cancel     context.CancelFunc
 	configured bool
+	stopped    bool
 	wg         sync.WaitGroup
 	ac         string
+	id         string
+	store      cache.Store
 }
 
 func newProvider(
@@ -105,6 +104,7 @@ func newProvider(
 	logger = logger.With().Str("_provider_type", ProviderType).Logger()
 	authClass := x.IfThenElse(len(providerConf.AuthClass) != 0, providerConf.AuthClass, DefaultClass)
 	adc := admissioncontroller.New(providerConf.TLS, logger, authClass, factory)
+	instanceID, _ := os.Hostname()
 
 	logger.Info().Msg("Rule provider configured.")
 
@@ -114,23 +114,30 @@ func newProvider(
 		cl:         client,
 		ac:         authClass,
 		adc:        adc,
+		id:         x.IfThenElse(len(instanceID) == 0, "unknown", instanceID),
 		configured: true,
 	}, nil
 }
 
-func (p *provider) newController(ctx context.Context, namespace string) cache.Controller {
+func (p *provider) newController(ctx context.Context, namespace string) (cache.Store, cache.Controller) {
 	repository := p.cl.RuleSetRepository(namespace)
-	_, controller := cache.NewInformer(
+
+	return cache.NewInformer(
 		&cache.ListWatch{
 			ListFunc:  func(opts metav1.ListOptions) (runtime.Object, error) { return repository.List(ctx, opts) },
 			WatchFunc: func(opts metav1.ListOptions) (watch.Interface, error) { return repository.Watch(ctx, opts) },
 		},
 		&v1alpha2.RuleSet{},
 		0,
-		cache.ResourceEventHandlerFuncs{AddFunc: p.addRuleSet, DeleteFunc: p.deleteRuleSet, UpdateFunc: p.updateRuleSet},
+		cache.FilteringResourceEventHandler{
+			FilterFunc: p.filter,
+			Handler: cache.ResourceEventHandlerFuncs{
+				AddFunc:    p.addRuleSet,
+				DeleteFunc: p.deleteRuleSet,
+				UpdateFunc: p.updateRuleSet,
+			},
+		},
 	)
-
-	return controller
 }
 
 func (p *provider) Start(ctx context.Context) error {
@@ -150,7 +157,8 @@ func (p *provider) Start(ctx context.Context) error {
 	// contextcheck disabled as the context object passed to Start
 	// will time out. We need however a fresh context here, which can be
 	// canceled
-	controller := p.newController(newCtx, "") //nolint:contextcheck
+	store, controller := p.newController(newCtx, "") //nolint:contextcheck
+	p.store = store
 
 	p.wg.Add(1)
 
@@ -163,10 +171,11 @@ func (p *provider) Start(ctx context.Context) error {
 }
 
 func (p *provider) Stop(ctx context.Context) error {
-	if !p.configured {
+	if !p.configured || p.stopped {
 		return nil
 	}
 
+	p.stopped = true
 	p.l.Info().Msg("Tearing down rule provider.")
 
 	p.cancel()
@@ -178,6 +187,8 @@ func (p *provider) Stop(ctx context.Context) error {
 		close(done)
 	}()
 
+	p.finalize(ctx)
+
 	select {
 	case <-done:
 		return nil
@@ -188,78 +199,88 @@ func (p *provider) Stop(ctx context.Context) error {
 	}
 }
 
-func (p *provider) addRuleSet(obj any) {
+func (p *provider) filter(obj any) bool {
 	// should never be of a different type. ok if panics
 	rs := obj.(*v1alpha2.RuleSet) // nolint: forcetypeassert
 
-	if rs.Spec.AuthClassName != p.ac {
-		p.l.Debug().
-			Msgf("Ignoring ruleset creation due to authClassName mismatch (namespace=%s, name=%s, uid=%s)",
-				rs.Namespace, rs.Name, rs.UID)
+	return rs.Spec.AuthClassName == p.ac
+}
 
-		p.updateStatus(
-			rs,
-			v1alpha2.RuleSetStatePending,
-			authClassMismatch,
-			fmt.Sprintf("RuleSet ignored due to auth_class='%s' - authClassName='%s' mismatch",
-				p.ac, rs.Spec.AuthClassName))
-
+func (p *provider) addRuleSet(obj any) {
+	if p.stopped {
 		return
-	}
-
-	conf := &config2.RuleSet{
-		MetaData: config2.MetaData{
-			Source:  fmt.Sprintf("%s:%s:%s", ProviderType, rs.Namespace, rs.UID),
-			ModTime: rs.CreationTimestamp.Time,
-		},
-		Version: p.mapVersion(rs.APIVersion),
-		Name:    rs.Name,
-		Rules:   rs.Spec.Rules,
 	}
 
 	p.l.Info().Msg("New rule set received")
 
-	p.l.Debug().Str("_src", conf.Source).
-		Msgf("Rule set resource version mapped from '%s' to '%s'", rs.APIVersion, conf.Version)
+	// should never be of a different type. ok if panics
+	rs := obj.(*v1alpha2.RuleSet) // nolint: forcetypeassert
+	conf := p.toRuleSetConfiguration(rs)
 
 	if err := p.p.OnCreated(conf); err != nil {
 		p.l.Warn().Err(err).Str("_src", conf.Source).Msg("Failed creating rule set")
-		p.updateStatus(
-			rs,
-			v1alpha2.RuleSetStateFailed,
-			invalidRuleSet,
-			err.Error())
+
+		msg := fmt.Sprintf("%s instance failed loading RuleSet, reason: %s", p.id, err.Error())
+		p.updateStatus(context.Background(), rs, metav1.ConditionFalse, v1alpha2.ConditionRuleSetActivationFailed, msg)
 	} else {
-		p.l.Info().Str("_src", conf.Source).Msg("Rule set created")
-		p.updateStatus(
-			rs,
-			v1alpha2.RuleSetStateActive,
-			loaded,
-			"RuleSet successfully loaded",
-		)
+		msg := fmt.Sprintf("%s instance successfully loaded RuleSet", p.id)
+		p.updateStatus(context.Background(), rs, metav1.ConditionTrue, v1alpha2.ConditionRuleSetActive, msg)
 	}
 }
 
-func (p *provider) updateRuleSet(_, newObj any) {
-	// should never be of a different type. ok if panics
-	rs := newObj.(*v1alpha2.RuleSet) // nolint: forcetypeassert
-
-	if rs.Spec.AuthClassName != p.ac {
-		p.l.Debug().
-			Msgf("Ignoring ruleset update due to authClassName mismatch (namespace=%s, name=%s, uid=%s)",
-				rs.Namespace, rs.Name, rs.UID)
-
-		p.updateStatus(
-			rs,
-			v1alpha2.RuleSetStatePending,
-			authClassMismatch,
-			fmt.Sprintf("RuleSet ignored due to auth_class='%s' - authClassName='%s' mismatch",
-				p.ac, rs.Spec.AuthClassName))
-
+func (p *provider) updateRuleSet(oldObj, newObj any) {
+	if p.stopped {
 		return
 	}
 
-	conf := &config2.RuleSet{
+	// should never be of a different type. ok if panics
+	newRS := newObj.(*v1alpha2.RuleSet) // nolint: forcetypeassert
+	oldRS := oldObj.(*v1alpha2.RuleSet) // nolint: forcetypeassert
+
+	if oldRS.Generation == newRS.Generation {
+		// we're only interested in Spec updates. Changes in metadata or status are not of relevance
+		return
+	}
+
+	p.l.Info().Msg("Rule set update received")
+
+	conf := p.toRuleSetConfiguration(newRS)
+
+	if err := p.p.OnUpdated(conf); err != nil {
+		p.l.Warn().Err(err).Str("_src", conf.Source).Msg("Failed to apply rule set updates")
+
+		msg := fmt.Sprintf("%s instance failed updating RuleSet, reason: %s", p.id, err.Error())
+		p.updateStatus(context.Background(), newRS, metav1.ConditionFalse, v1alpha2.ConditionRuleSetActivationFailed, msg)
+	} else {
+		msg := fmt.Sprintf("%s instance successfully reloaded RuleSet", p.id)
+		p.updateStatus(context.Background(), newRS, metav1.ConditionTrue, v1alpha2.ConditionRuleSetActive, msg)
+	}
+}
+
+func (p *provider) deleteRuleSet(obj any) {
+	if p.stopped {
+		return
+	}
+
+	p.l.Info().Msg("Rule set deletion received")
+
+	// should never be of a different type. ok if panics
+	rs := obj.(*v1alpha2.RuleSet) // nolint: forcetypeassert
+	conf := p.toRuleSetConfiguration(rs)
+
+	if err := p.p.OnDeleted(conf); err != nil {
+		p.l.Warn().Err(err).Str("_src", conf.Source).Msg("Failed deleting rule set")
+
+		msg := fmt.Sprintf("%s instance failed unloading RuleSet, reason: %s", p.id, err.Error())
+		p.updateStatus(context.Background(), rs, metav1.ConditionTrue, v1alpha2.ConditionRuleSetUnloadingFailed, msg)
+	} else {
+		msg := fmt.Sprintf("%s instance dropped RuleSet", p.id)
+		p.updateStatus(context.Background(), rs, metav1.ConditionFalse, v1alpha2.ConditionRuleSetUnloaded, msg)
+	}
+}
+
+func (p *provider) toRuleSetConfiguration(rs *v1alpha2.RuleSet) *config2.RuleSet {
+	return &config2.RuleSet{
 		MetaData: config2.MetaData{
 			Source:  fmt.Sprintf("%s:%s:%s", ProviderType, rs.Namespace, rs.UID),
 			ModTime: rs.CreationTimestamp.Time,
@@ -267,50 +288,6 @@ func (p *provider) updateRuleSet(_, newObj any) {
 		Version: p.mapVersion(rs.APIVersion),
 		Name:    rs.Name,
 		Rules:   rs.Spec.Rules,
-	}
-
-	p.l.Info().Msg("Rule set update received")
-
-	p.l.Debug().Str("_src", conf.Source).
-		Msgf("Rule set resource version mapped from '%s' to '%s'", rs.APIVersion, conf.Version)
-
-	if err := p.p.OnUpdated(conf); err != nil {
-		p.l.Warn().Err(err).Str("_src", conf.Source).Msg("Failed to apply rule set updates")
-	} else {
-		p.l.Info().Str("_src", conf.Source).Msg("Rule set updated")
-	}
-}
-
-func (p *provider) deleteRuleSet(obj any) {
-	// should never be of a different type. ok if panics
-	rs := obj.(*v1alpha2.RuleSet) // nolint: forcetypeassert
-
-	if rs.Spec.AuthClassName != p.ac {
-		p.l.Debug().
-			Msgf("Ignoring ruleset deletion due to authClassName mismatch (namespace=%s, name=%s, uid=%s)",
-				rs.Namespace, rs.Name, rs.UID)
-
-		return
-	}
-
-	conf := &config2.RuleSet{
-		MetaData: config2.MetaData{
-			Source:  fmt.Sprintf("%s:%s:%s", ProviderType, rs.Namespace, rs.UID),
-			ModTime: time.Now(),
-		},
-		Version: p.mapVersion(rs.APIVersion),
-		Name:    rs.Name,
-	}
-
-	p.l.Info().Msg("Rule set deletion received")
-
-	p.l.Debug().Str("_src", conf.Source).
-		Msgf("Rule set resource version mapped from '%s' to '%s'", rs.APIVersion, conf.Version)
-
-	if err := p.p.OnDeleted(conf); err != nil {
-		p.l.Warn().Err(err).Str("_src", conf.Source).Msg("Failed deleting rule set")
-	} else {
-		p.l.Info().Str("_src", conf.Source).Msg("Rule set deleted")
 	}
 }
 
@@ -320,28 +297,51 @@ func (p *provider) mapVersion(_ string) string {
 }
 
 func (p *provider) updateStatus(
+	ctx context.Context,
 	rs *v1alpha2.RuleSet,
-	state v1alpha2.RuleSetStatusEnum,
-	reason conditionReason,
+	status metav1.ConditionStatus,
+	reason v1alpha2.ConditionReason,
 	msg string,
 ) {
 	rsCopy := rs.DeepCopy()
-	conditionStatus := x.IfThenElse(state == v1alpha2.RuleSetStateActive, metav1.ConditionTrue, metav1.ConditionFalse)
 
 	meta.SetStatusCondition(&rsCopy.Status.Conditions, metav1.Condition{
-		Type:               rsCopy.Name,
-		Status:             conditionStatus,
+		Type:               fmt.Sprintf("%s/Reconcile", p.id),
+		Status:             status,
 		ObservedGeneration: rsCopy.Generation,
 		Reason:             string(reason),
 		Message:            msg,
 	})
 
-	if state != v1alpha2.RuleSetStatePending {
-		rsCopy.Status.Status = state
+	if reason == v1alpha2.ConditionControllerStopped || reason == v1alpha2.ConditionRuleSetUnloaded {
+		rsCopy.Status.MatchingInstances = slicex.Subtract(rsCopy.Status.MatchingInstances, []string{p.id})
+	} else if len(slicex.Filter(rsCopy.Status.MatchingInstances, func(val string) bool { return p.id == val })) == 0 {
+		rsCopy.Status.MatchingInstances = append(rsCopy.Status.MatchingInstances, p.id)
+	}
+
+	if status == metav1.ConditionTrue &&
+		len(slicex.Filter(rsCopy.Status.UsedByInstances, func(val string) bool { return p.id == val })) == 0 {
+		rsCopy.Status.UsedByInstances = append(rsCopy.Status.UsedByInstances, p.id)
+	} else if status == metav1.ConditionFalse {
+		rsCopy.Status.UsedByInstances = slicex.Subtract(rsCopy.Status.UsedByInstances, []string{p.id})
 	}
 
 	repository := p.cl.RuleSetRepository(rsCopy.Namespace)
-	if _, err := repository.UpdateStatus(context.Background(), rsCopy, metav1.UpdateOptions{}); err != nil {
-		p.l.Warn().Err(err).Msg("Failed updating RuleSet status")
+	if _, err := repository.PatchStatus(ctx, v1alpha2.MergeFrom(rs, rsCopy), metav1.PatchOptions{}); err != nil {
+		var statusErr *errors2.StatusError
+		if !errors.As(err, &statusErr) || statusErr.ErrStatus.Code != http.StatusNotFound {
+			p.l.Warn().Err(err).Msg("Failed updating RuleSet status")
+		}
+	}
+}
+
+func (p *provider) finalize(ctx context.Context) {
+	for _, rs := range slicex.Filter(
+		// nolint: forcetypeassert
+		slicex.Map(p.store.List(), func(s any) *v1alpha2.RuleSet { return s.(*v1alpha2.RuleSet) }),
+		func(set *v1alpha2.RuleSet) bool { return set.Spec.AuthClassName == p.ac },
+	) {
+		p.updateStatus(ctx, rs, metav1.ConditionFalse, v1alpha2.ConditionControllerStopped,
+			fmt.Sprintf("%s instance stopped", p.id))
 	}
 }
