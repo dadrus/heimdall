@@ -1,6 +1,10 @@
 log:
   level: debug
 
+cache:
+  type: redis
+  dsn: redis://localhost:6379
+
 serve:
   decision:
     trusted_proxies:
@@ -46,5 +50,5 @@ rules:
 
   providers:
     file_system:
-      src: /heimdall/conf/rules.yaml
+      src: ./upstream-rules.yaml
       watch: true

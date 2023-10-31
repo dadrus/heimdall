@@ -23,6 +23,7 @@ import (
 	"go.uber.org/fx"
 
 	"github.com/dadrus/heimdall/internal/cache/memory"
+	redis1 "github.com/dadrus/heimdall/internal/cache/redis"
 	"github.com/dadrus/heimdall/internal/config"
 )
 
@@ -36,13 +37,27 @@ var Module = fx.Provide(
 )
 
 func newCache(conf *config.Configuration, logger zerolog.Logger) Cache {
-	if len(conf.Cache.Type) == 0 {
-		logger.Info().Msg("Instantiating in memory cache")
 
+	switch conf.Cache.Type {
+	case "":
+		logger.Info().Msg("Empty cache type. Instantiating in memory cache")
 		return memory.New()
+	case "memory":
+		logger.Info().Msg("Instantiating in memory cache")
+		return memory.New()
+	case "redis":
+		if len(conf.Cache.DSN) == 0 {
+			logger.Info().Msg("Redis configured but DSN missing. Instantiating noop cache")
+			return noopCache{}
+		} else {
+			logger.Info().Msg("Instantiating Redis cache")
+			return redis1.NewRedisCache(conf.Cache.DSN)
+		}
+	case "disabled":
+		logger.Info().Msg("Cache is disabled")
+		return noopCache{}
+	default:
+		logger.Info().Msg("Fallback: noop cache")
+		return noopCache{}
 	}
-
-	logger.Info().Msg("Cache is disabled")
-
-	return noopCache{}
 }

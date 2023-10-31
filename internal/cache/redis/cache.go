@@ -27,12 +27,11 @@ type RedisCache struct {
 	c *redis.Client
 }
 
-func NewRedisCache(opt *redis.Options) *RedisCache {
-	/*	opt, err := redis.ParseURL(dsn)
-		if err != nil {
-			panic(err)
-		}
-	*/
+func NewRedisCache(dsn string) *RedisCache {
+	opt, err := redis.ParseURL(dsn)
+	if err != nil {
+		panic(err)
+	}
 	client := redis.NewClient(opt)
 	return &RedisCache{c: client}
 }

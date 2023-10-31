@@ -23,6 +23,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/dadrus/heimdall/internal/cache/memory"
+	"github.com/dadrus/heimdall/internal/cache/redis"
 	"github.com/dadrus/heimdall/internal/config"
 )
 
@@ -35,7 +36,7 @@ func TestNewCache(t *testing.T) {
 		assert func(t *testing.T, cch Cache)
 	}{
 		{
-			uc:   "in memory cache",
+			uc:   "empty cache type",
 			conf: &config.Configuration{},
 			assert: func(t *testing.T, cch Cache) {
 				t.Helper()
@@ -44,7 +45,44 @@ func TestNewCache(t *testing.T) {
 			},
 		},
 		{
-			uc:   "disabled cache",
+			uc:   "in memory cache",
+			conf: &config.Configuration{Cache: config.CacheConfig{Type: "memory"}},
+			assert: func(t *testing.T, cch Cache) {
+				t.Helper()
+
+				assert.IsType(t, &memory.InMemoryCache{}, cch)
+			},
+		},
+
+		{
+			uc:   "Redis cache without DSN",
+			conf: &config.Configuration{Cache: config.CacheConfig{Type: "redis"}},
+			assert: func(t *testing.T, cch Cache) {
+				t.Helper()
+
+				assert.IsType(t, noopCache{}, cch)
+			},
+		},
+		{
+			uc:   "Redis cache",
+			conf: &config.Configuration{Cache: config.CacheConfig{Type: "redis", DSN: "redis://localhost.com:6379"}},
+			assert: func(t *testing.T, cch Cache) {
+				t.Helper()
+
+				assert.IsType(t, &redis.RedisCache{}, cch)
+			},
+		},
+		{
+			uc:   "disabled cache type",
+			conf: &config.Configuration{Cache: config.CacheConfig{Type: "disabled"}},
+			assert: func(t *testing.T, cch Cache) {
+				t.Helper()
+
+				assert.IsType(t, noopCache{}, cch)
+			},
+		},
+		{
+			uc:   "unknown cache type",
 			conf: &config.Configuration{Cache: config.CacheConfig{Type: "foo"}},
 			assert: func(t *testing.T, cch Cache) {
 				t.Helper()

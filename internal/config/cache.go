@@ -18,4 +18,5 @@ package config
 
 type CacheConfig struct {
 	Type string `koanf:"type"`
+	DSN  string `koanf:"dsn"`
 }

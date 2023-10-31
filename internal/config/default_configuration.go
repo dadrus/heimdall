@@ -107,5 +107,9 @@ func defaultConfig() Configuration {
 		Rules: Rules{
 			Prototypes: &MechanismPrototypes{},
 		},
+		Cache: CacheConfig{
+			Type: "memory",
+			DSN:  "",
+		},
 	}
 }

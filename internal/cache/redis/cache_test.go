@@ -5,18 +5,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dadrus/heimdall/internal/cache"
-	redis "github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/assert"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
 )
 
 var (
-	user        string    = "postgres"
-	password    string    = "secret"
-	exposedPort [1]string = [1]string{"6379/tcp"}
-	redisImage  string    = "redis:latest"
+	redisImage string = "redis:latest"
 )
 
 func TestRedisCacheUsage(t *testing.T) {
@@ -27,13 +22,13 @@ func TestRedisCacheUsage(t *testing.T) {
 	for _, tc := range []struct {
 		uc             string
 		key            string
-		configureCache func(*testing.T, cache.Cache)
+		configureCache func(*testing.T, *RedisCache)
 		assert         func(t *testing.T, data any)
 	}{
 		{
 			uc:  "can retrieve not expired value",
 			key: "foo",
-			configureCache: func(t *testing.T, redis cache.Cache) {
+			configureCache: func(t *testing.T, redis *RedisCache) {
 				t.Helper()
 
 				redis.Set(context.Background(), "foo", "bar", 10*time.Minute)
@@ -47,7 +42,7 @@ func TestRedisCacheUsage(t *testing.T) {
 		{
 			uc:  "cannot retrieve expired value",
 			key: "bar",
-			configureCache: func(t *testing.T, redis cache.Cache) {
+			configureCache: func(t *testing.T, redis *RedisCache) {
 				t.Helper()
 
 				redis.Set(context.Background(), "bar", "baz", 1*time.Millisecond)
@@ -63,7 +58,7 @@ func TestRedisCacheUsage(t *testing.T) {
 		{
 			uc:  "cannot retrieve deleted value",
 			key: "baz",
-			configureCache: func(t *testing.T, redis cache.Cache) {
+			configureCache: func(t *testing.T, redis *RedisCache) {
 				t.Helper()
 
 				redis.Set(context.Background(), "baz", "bar", 1*time.Second)
@@ -78,7 +73,7 @@ func TestRedisCacheUsage(t *testing.T) {
 		{
 			uc:  "cannot retrieve not existing value",
 			key: "baz",
-			configureCache: func(t *testing.T, redis cache.Cache) {
+			configureCache: func(t *testing.T, redis *RedisCache) {
 				t.Helper()
 			},
 			assert: func(t *testing.T, data any) {
@@ -100,7 +95,7 @@ func TestRedisCacheUsage(t *testing.T) {
 	}
 }
 
-func before(t *testing.T) cache.Cache {
+func before(t *testing.T) *RedisCache {
 	ctx := context.Background()
 	redisC := initRedisContainer(ctx, t)
 
@@ -110,9 +105,7 @@ func before(t *testing.T) cache.Cache {
 		t.Error(err)
 	}
 
-	cache := NewRedisCache(&redis.Options{
-		Addr: endpoint,
-	})
+	cache := NewRedisCache("redis://" + endpoint)
 	assert.NotEmpty(t, cache.c)
 
 	t.Cleanup(func() {
