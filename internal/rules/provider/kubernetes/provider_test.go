@@ -1505,9 +1505,6 @@ func TestProviderLifecycle(t *testing.T) {
 			defer prov.Stop(ctx) //nolint:errcheck
 
 			// THEN
-			defer func() {
-				fmt.Println(logs.String())
-			}()
 			require.NoError(t, err)
 			tc.assert(t, observations, processor)
 		})
