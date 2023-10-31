@@ -26,7 +26,6 @@ import (
 	"time"
 
 	"github.com/goccy/go-json"
-	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -1230,6 +1229,260 @@ func TestProviderLifecycle(t *testing.T) {
 			},
 		},
 		{
+			uc:   "a ruleset is added and then updated with a mismatching authClassName",
+			conf: []byte("auth_class: bar"),
+			writeResponse: func() ResponseWriter {
+				callIdx := 0
+
+				return func(t *testing.T, watchRequest bool, w http.ResponseWriter) {
+					t.Helper()
+
+					w.Header().Set("Content-Type", "application/json")
+					if watchRequest {
+						callIdx++
+
+						evt := watch.Event{
+							Type: watch.Added,
+							Object: &v1alpha2.RuleSet{
+								TypeMeta: metav1.TypeMeta{
+									APIVersion: fmt.Sprintf("%s/%s", v1alpha2.GroupName, v1alpha2.GroupVersion),
+									Kind:       "RuleSet",
+								},
+								ObjectMeta: metav1.ObjectMeta{
+									ResourceVersion:   "715382",
+									Name:              "test-rule",
+									Namespace:         "foo",
+									UID:               "dfb2a2f1-1ad2-4d8c-8456-516fc94abb86",
+									Generation:        int64(callIdx),
+									CreationTimestamp: metav1.NewTime(time.Now()),
+								},
+								Spec: v1alpha2.RuleSetSpec{
+									AuthClassName: "bar",
+									Rules: []config2.Rule{
+										{
+											ID: "test",
+											RuleMatcher: config2.Matcher{
+												URL:      "http://foo.bar",
+												Strategy: "glob",
+											},
+											Backend: &config2.Backend{
+												Host: "bar",
+												URLRewriter: &config2.URLRewriter{
+													Scheme:              "http",
+													PathPrefixToCut:     "/foo",
+													PathPrefixToAdd:     "/bar",
+													QueryParamsToRemove: []string{"baz"},
+												},
+											},
+											Methods: []string{http.MethodGet},
+											Execute: []config.MechanismConfig{
+												{"authenticator": "authn"},
+												{"authorizer": "authz"},
+											},
+										},
+									},
+								},
+							},
+						}
+
+						switch callIdx {
+						case 1:
+							// add a rule set
+							var watchEvt metav1.WatchEvent
+
+							err := metav1.Convert_watch_Event_To_v1_WatchEvent(&evt, &watchEvt, nil)
+							require.NoError(t, err)
+
+							rawEvt, err := json.Marshal(watchEvt)
+							require.NoError(t, err)
+
+							_, err = w.Write(rawEvt)
+							require.NoError(t, err)
+						case 2:
+							// update it
+							var watchEvt metav1.WatchEvent
+
+							evt.Type = watch.Modified
+							ruleSet := evt.Object.(*v1alpha2.RuleSet) // nolint:forcetypeassert
+							ruleSet.ResourceVersion = "715384"
+							ruleSet.Generation = int64(callIdx)
+							ruleSet.Spec.AuthClassName = "foo"
+							err := metav1.Convert_watch_Event_To_v1_WatchEvent(&evt, &watchEvt, nil)
+							require.NoError(t, err)
+
+							rawEvt, err := json.Marshal(watchEvt)
+							require.NoError(t, err)
+
+							_, err = w.Write(rawEvt)
+							require.NoError(t, err)
+						default:
+							// no changes
+							time.Sleep(1 * time.Second)
+							w.WriteHeader(http.StatusInternalServerError)
+						}
+					} else {
+						// empty rule set initially
+						rls := v1alpha2.RuleSetList{
+							TypeMeta: metav1.TypeMeta{
+								APIVersion: fmt.Sprintf("%s/%s", v1alpha2.GroupName, v1alpha2.GroupVersion),
+								Kind:       "RuleSetList",
+							},
+							ListMeta: metav1.ListMeta{
+								ResourceVersion: "735820",
+							},
+						}
+
+						rawRls, err := json.Marshal(rls)
+						require.NoError(t, err)
+
+						_, err = w.Write(rawRls)
+						require.NoError(t, err)
+					}
+				}
+			}(),
+			writeStatus: func() StatusWriter {
+				callIdx := 0
+
+				rs := v1alpha2.RuleSet{
+					TypeMeta: metav1.TypeMeta{
+						APIVersion: fmt.Sprintf("%s/%s", v1alpha2.GroupName, v1alpha2.GroupVersion),
+						Kind:       "RuleSet",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						ResourceVersion:   "715382",
+						Name:              "test-rule",
+						Namespace:         "foo",
+						UID:               "dfb2a2f1-1ad2-4d8c-8456-516fc94abb86",
+						Generation:        int64(callIdx),
+						CreationTimestamp: metav1.NewTime(time.Now()),
+					},
+					Spec: v1alpha2.RuleSetSpec{
+						AuthClassName: "bar",
+						Rules: []config2.Rule{
+							{
+								ID: "test",
+								RuleMatcher: config2.Matcher{
+									URL:      "http://foo.bar",
+									Strategy: "glob",
+								},
+								Backend: &config2.Backend{
+									Host: "bar",
+									URLRewriter: &config2.URLRewriter{
+										Scheme:              "http",
+										PathPrefixToCut:     "/foo",
+										PathPrefixToAdd:     "/bar",
+										QueryParamsToRemove: []string{"baz"},
+									},
+								},
+								Methods: []string{http.MethodGet},
+								Execute: []config.MechanismConfig{
+									{"authenticator": "authn"},
+									{"authorizer": "authz"},
+								},
+							},
+						},
+					},
+				}
+
+				return func(t *testing.T, r *http.Request, w http.ResponseWriter) {
+					t.Helper()
+
+					callIdx++
+
+					status := StatusUpdate{}
+					err := json.NewDecoder(r.Body).Decode(&status)
+					require.NoError(t, err)
+
+					observations.statusUpdates = append(observations.statusUpdates, &status.Status)
+
+					switch callIdx {
+					case 1:
+						rs.ResourceVersion = "715383"
+						rs.Generation = int64(callIdx)
+						rs.Status = status.Status
+					case 2:
+						rs.ResourceVersion = "715385"
+						rs.Generation = int64(callIdx)
+						rs.Spec.AuthClassName = "foo"
+						rs.Status = status.Status
+					}
+
+					data, err := json.Marshal(&rs)
+					require.NoError(t, err)
+
+					w.Header().Set("Content-Type", "application/json")
+					w.Write(data)
+				}
+			}(),
+			setupProcessor: func(t *testing.T, processor *mocks.RuleSetProcessorMock) {
+				t.Helper()
+
+				processor.EXPECT().OnCreated(mock.Anything).
+					Run(mock2.NewArgumentCaptor[*config2.RuleSet](&processor.Mock, "captor1").Capture).
+					Return(nil).Once()
+
+				processor.EXPECT().OnDeleted(mock.Anything).
+					Run(mock2.NewArgumentCaptor[*config2.RuleSet](&processor.Mock, "captor2").Capture).
+					Return(nil).Once()
+			},
+			assert: func(t *testing.T, observation *Observations, processor *mocks.RuleSetProcessorMock) {
+				t.Helper()
+
+				time.Sleep(250 * time.Millisecond)
+
+				ruleSet := mock2.ArgumentCaptorFrom[*config2.RuleSet](&processor.Mock, "captor1").Value()
+				assert.Equal(t, ruleSet.Source, "kubernetes:foo:dfb2a2f1-1ad2-4d8c-8456-516fc94abb86")
+				assert.Equal(t, "1alpha2", ruleSet.Version)
+				assert.Equal(t, "test-rule", ruleSet.Name)
+				assert.Len(t, ruleSet.Rules, 1)
+
+				createdRule := ruleSet.Rules[0]
+				assert.Equal(t, "test", createdRule.ID)
+				assert.Equal(t, "http://foo.bar", createdRule.RuleMatcher.URL)
+				assert.Equal(t, "bar", createdRule.Backend.Host)
+				assert.Equal(t, "glob", createdRule.RuleMatcher.Strategy)
+				assert.Len(t, createdRule.Methods, 1)
+				assert.Contains(t, createdRule.Methods, http.MethodGet)
+				assert.Empty(t, createdRule.ErrorHandler)
+				assert.Len(t, createdRule.Execute, 2)
+				assert.Equal(t, "authn", createdRule.Execute[0]["authenticator"])
+				assert.Equal(t, "authz", createdRule.Execute[1]["authorizer"])
+
+				ruleSet = mock2.ArgumentCaptorFrom[*config2.RuleSet](&processor.Mock, "captor2").Value()
+				assert.Equal(t, ruleSet.Source, "kubernetes:foo:dfb2a2f1-1ad2-4d8c-8456-516fc94abb86")
+				assert.Equal(t, "1alpha2", ruleSet.Version)
+				assert.Equal(t, "test-rule", ruleSet.Name)
+				assert.Len(t, ruleSet.Rules, 1)
+
+				deleteRule := ruleSet.Rules[0]
+				assert.Equal(t, "test", deleteRule.ID)
+				assert.Equal(t, "http://foo.bar", deleteRule.RuleMatcher.URL)
+				assert.Equal(t, "bar", deleteRule.Backend.Host)
+				assert.Equal(t, "glob", deleteRule.RuleMatcher.Strategy)
+				assert.Len(t, deleteRule.Methods, 1)
+				assert.Contains(t, deleteRule.Methods, http.MethodGet)
+				assert.Empty(t, deleteRule.ErrorHandler)
+				assert.Len(t, deleteRule.Execute, 2)
+				assert.Equal(t, "authn", deleteRule.Execute[0]["authenticator"])
+				assert.Equal(t, "authz", deleteRule.Execute[1]["authorizer"])
+
+				assert.Len(t, observation.statusUpdates, 2)
+				assert.Len(t, observation.statusUpdates[0].MatchingInstances, 1)
+				assert.Len(t, observation.statusUpdates[0].UsedByInstances, 1)
+				assert.Len(t, observation.statusUpdates[0].Conditions, 1)
+				condition := observation.statusUpdates[0].Conditions[0]
+				assert.Equal(t, metav1.ConditionTrue, condition.Status)
+				assert.Equal(t, v1alpha2.ConditionRuleSetActive, v1alpha2.ConditionReason(condition.Reason))
+
+				assert.Len(t, observation.statusUpdates[1].MatchingInstances, 0)
+				assert.Len(t, observation.statusUpdates[1].UsedByInstances, 0)
+				assert.Len(t, observation.statusUpdates[1].Conditions, 1)
+				condition = observation.statusUpdates[1].Conditions[0]
+				assert.Equal(t, metav1.ConditionFalse, condition.Status)
+				assert.Equal(t, v1alpha2.ConditionRuleSetUnloaded, v1alpha2.ConditionReason(condition.Reason))
+			},
+		},
+		{
 			uc:   "failed updating rule set",
 			conf: []byte("auth_class: bar"),
 			writeResponse: func() ResponseWriter {
@@ -1491,8 +1744,7 @@ func TestProviderLifecycle(t *testing.T) {
 			processor := mocks.NewRuleSetProcessorMock(t)
 			setupProcessor(t, processor)
 
-			logs := &strings.Builder{}
-			prov, err := newProvider(zerolog.New(logs), conf, k8sCF, processor, mocks.NewFactoryMock(t))
+			prov, err := newProvider(log.Logger, conf, k8sCF, processor, mocks.NewFactoryMock(t))
 			require.NoError(t, err)
 
 			ctx := context.Background()
