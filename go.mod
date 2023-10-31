@@ -10,7 +10,7 @@ require (
 	github.com/envoyproxy/go-control-plane v0.11.1
 	github.com/felixge/httpsnoop v1.0.3
 	github.com/fsnotify/fsnotify v1.7.0
-	github.com/go-co-op/gocron v1.35.2
+	github.com/go-co-op/gocron v1.35.3
 	github.com/go-http-utils/etag v0.0.0-20161124023236-513ea8f21eb1
 	github.com/go-logr/zerologr v1.2.3
 	github.com/go-playground/locales v0.14.1
