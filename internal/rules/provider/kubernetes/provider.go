@@ -78,8 +78,7 @@ func newProvider(
 	k8sConf, err := k8sCF()
 	if err != nil {
 		return nil, errorchain.NewWithMessage(heimdall.ErrInternal,
-			"failed to create kubernetes provider").
-			CausedBy(err)
+			"failed to create kubernetes provider").CausedBy(err)
 	}
 
 	type Config struct {
@@ -90,15 +89,13 @@ func newProvider(
 	client, err := v1alpha2.NewClient(k8sConf)
 	if err != nil {
 		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
-			"failed creating client for connecting to kubernetes cluster").
-			CausedBy(err)
+			"failed creating client for connecting to kubernetes cluster").CausedBy(err)
 	}
 
 	var providerConf Config
 	if err = decodeConfig(rawConf, &providerConf); err != nil {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration, "failed to decode kubernetes rule provider config").
-			CausedBy(err)
+		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
+			"failed to decode kubernetes rule provider config").CausedBy(err)
 	}
 
 	logger = logger.With().Str("_provider_type", ProviderType).Logger()
@@ -327,7 +324,11 @@ func (p *provider) updateStatus(
 	}
 
 	repository := p.cl.RuleSetRepository(rsCopy.Namespace)
-	if _, err := repository.PatchStatus(ctx, v1alpha2.MergeFrom(rs, rsCopy), metav1.PatchOptions{}); err != nil {
+	if _, err := repository.PatchStatus(
+		p.l.WithContext(ctx),
+		v1alpha2.MergeFrom(rs, rsCopy),
+		metav1.PatchOptions{},
+	); err != nil {
 		var statusErr *errors2.StatusError
 		if !errors.As(err, &statusErr) || statusErr.ErrStatus.Code != http.StatusNotFound {
 			p.l.Warn().Err(err).Msg("Failed updating RuleSet status")
