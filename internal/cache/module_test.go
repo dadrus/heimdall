@@ -56,7 +56,7 @@ func TestNewCache(t *testing.T) {
 
 		{
 			uc:   "Redis cache without DSN",
-			conf: &config.Configuration{Cache: config.CacheConfig{Type: "redis"}},
+			conf: &config.Configuration{Cache: config.CacheConfig{Type: "redis", RedisConfig: config.RedisConfig{}}},
 			assert: func(t *testing.T, cch Cache) {
 				t.Helper()
 
@@ -65,7 +65,7 @@ func TestNewCache(t *testing.T) {
 		},
 		{
 			uc:   "Redis cache",
-			conf: &config.Configuration{Cache: config.CacheConfig{Type: "redis", DSN: "redis://localhost.com:6379"}},
+			conf: &config.Configuration{Cache: config.CacheConfig{Type: "redis", RedisConfig: config.RedisConfig{Addr: "localhost.com:6379"}}},
 			assert: func(t *testing.T, cch Cache) {
 				t.Helper()
 

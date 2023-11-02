@@ -2057,15 +2057,38 @@
                         "disabled"
                     ]
                 },
-                "dsn": {
-                    "description": "Connection string to the Cache",
-                    "type": "string",
-                    "default": "",
-                    "examples": [
-                        "redis://localhost.com:6379",
-                        "redis[s]:[[user]:pass@]?[ip|host|socket[:port]][&params]"
-                    ]
+                "redis": {
+                    "description": "Redis configuration",
+                    "type": "object",
+                    "addr": {
+                        "description": "Connection string to the Cache",
+                        "type": "string",
+                        "default": "",
+                        "examples": [
+                            "localhost.com:6379",
+                            "my-redis.cloud.redislabs.com:6379"
+                        ]
+                    },
+                    "username": {
+                        "description": "Username for connection",
+                        "type": "string",
+                        "default": ""
+                    },
+                    "password": {
+                        "description": "Password for connection",
+                        "type": "string",
+                        "default": ""
+                    },
+                    "db": {
+                        "description": "db name",
+                        "type": "integer",
+                        "default": ""
+                    },
+                    "tls": {
+                        "$ref": "#/definitions/tlsConfig"
+                    }
                 }
+
             }
         },
         "metrics": {

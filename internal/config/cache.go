@@ -17,6 +17,15 @@
 package config
 
 type CacheConfig struct {
-	Type string `koanf:"type"`
-	DSN  string `koanf:"dsn"`
+	Type        string      `koanf:"type"`
+	RedisConfig RedisConfig `koanf:"redis,omitempty"`
+}
+
+type RedisConfig struct {
+	Addr         string `koanf:"addr"`
+	Username     string `koanf:"username"`
+	Password     string `koanf:"password"`
+	DB           int    `koanf:"db"`
+	TLS          *TLS   `koanf:"tls,omitempty"`
+	AdditionalCA string `koanf:"additional_ca"`
 }

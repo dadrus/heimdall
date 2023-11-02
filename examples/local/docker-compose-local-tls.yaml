@@ -1,0 +1,25 @@
+version: '3.7'
+
+services:
+ 
+  cache:
+    image: redis:latest
+    restart: always
+    ports:
+      - '6379:6379'
+    volumes:
+      - ./certificates/tests/tls:/redis/tls:ro
+    command: > 
+      redis-server --loglevel warning --tls-port 6379 --port 0 
+        --tls-cert-file /redis/tls/server.crt 
+        --tls-key-file /redis/tls/server.key 
+        --tls-ca-cert-file /redis/tls/ca.crt
+
+  upstream:
+    image: containous/whoami:latest
+    labels:
+      - traefik.enable=true
+      - traefik.http.services.whoami.loadbalancer.server.port=80
+      - traefik.http.routers.whoami.rule=PathPrefix("/")
+      - traefik.http.routers.whoami.middlewares=heimdall
+

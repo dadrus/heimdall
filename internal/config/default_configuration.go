@@ -109,7 +109,6 @@ func defaultConfig() Configuration {
 		},
 		Cache: CacheConfig{
 			Type: "memory",
-			DSN:  "",
 		},
 	}
 }

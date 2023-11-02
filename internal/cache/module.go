@@ -38,26 +38,33 @@ var Module = fx.Provide(
 
 func newCache(conf *config.Configuration, logger zerolog.Logger) Cache {
 
+	var cache Cache = nil
 	switch conf.Cache.Type {
 	case "":
 		logger.Info().Msg("Empty cache type. Instantiating in memory cache")
-		return memory.New()
+		cache = memory.New()
 	case "memory":
 		logger.Info().Msg("Instantiating in memory cache")
-		return memory.New()
+		cache = memory.New()
 	case "redis":
-		if len(conf.Cache.DSN) == 0 {
+		if len(conf.Cache.RedisConfig.Addr) == 0 {
 			logger.Info().Msg("Redis configured but DSN missing. Instantiating noop cache")
-			return noopCache{}
+			cache = noopCache{}
 		} else {
 			logger.Info().Msg("Instantiating Redis cache")
-			return redis1.NewRedisCache(conf.Cache.DSN)
+			cache = redis1.NewRedisCache(&conf.Cache, logger)
 		}
 	case "disabled":
 		logger.Info().Msg("Cache is disabled")
-		return noopCache{}
+		cache = noopCache{}
 	default:
 		logger.Info().Msg("Fallback: noop cache")
-		return noopCache{}
+		cache = noopCache{}
 	}
+
+	if cache == nil {
+		panic("Error initializing Redis cache")
+	}
+
+	return cache
 }
