@@ -30,6 +30,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
@@ -301,6 +302,9 @@ func (p *provider) updateStatus(
 	msg string,
 ) {
 	rsCopy := rs.DeepCopy()
+	repository := p.cl.RuleSetRepository(rsCopy.Namespace)
+
+	p.l.Debug().Msgf("Updating RuleSet status")
 
 	meta.SetStatusCondition(&rsCopy.Status.Conditions, metav1.Condition{
 		Type:               fmt.Sprintf("%s/Reconcile", p.id),
@@ -323,16 +327,40 @@ func (p *provider) updateStatus(
 		rsCopy.Status.UsedByInstances = slicex.Subtract(rsCopy.Status.UsedByInstances, []string{p.id})
 	}
 
-	repository := p.cl.RuleSetRepository(rsCopy.Namespace)
 	if _, err := repository.PatchStatus(
 		p.l.WithContext(ctx),
-		v1alpha2.MergeFrom(rs, rsCopy),
+		v1alpha2.NewJSONPatch(rs, rsCopy),
 		metav1.PatchOptions{},
 	); err != nil {
 		var statusErr *errors2.StatusError
-		if !errors.As(err, &statusErr) || statusErr.ErrStatus.Code != http.StatusNotFound {
-			p.l.Warn().Err(err).Msg("Failed updating RuleSet status")
+		if !errors.As(err, &statusErr) {
+			p.l.Warn().Err(err).Msgf("Failed updating RuleSet status")
+
+			return
 		}
+
+		p.l.Warn().Msgf(statusErr.DebugError())
+
+		switch statusErr.ErrStatus.Code {
+		case http.StatusNotFound:
+			// resource gone. Nothing can be done
+			p.l.Debug().Err(err).Msgf("RuleSet gone")
+
+			return
+		case http.StatusConflict, http.StatusUnprocessableEntity:
+			p.l.Debug().Err(err).Msgf("New resource version available. Retrieving it.")
+
+			rsKey := types.NamespacedName{Namespace: rsCopy.Namespace, Name: rsCopy.Name}
+			if rs, err = repository.Get(ctx, rsKey, metav1.GetOptions{}); err != nil {
+				p.l.Warn().Err(err).Msgf("Failed retrieving new RuleSet version for status update")
+			} else {
+				p.updateStatus(ctx, rs, status, reason, msg)
+			}
+		default:
+			p.l.Warn().Err(err).Msgf("Failed updating RuleSet status")
+		}
+	} else {
+		p.l.Debug().Msgf("RuleSet status updated")
 	}
 }
 
