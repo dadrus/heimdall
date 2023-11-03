@@ -5,23 +5,20 @@ import (
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 )
 
-type RuleSetRepository interface {
-	List(ctx context.Context, opts metav1.ListOptions) (*RuleSetList, error)
-	Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
-	PatchStatus(ctx context.Context, patch Patch, opts metav1.PatchOptions) (*RuleSet, error)
-}
-
-type repository struct {
+type ruleSetRepositoryImpl struct {
 	cl rest.Interface
 	ns string
 }
 
-func (r *repository) List(ctx context.Context, opts metav1.ListOptions) (*RuleSetList, error) {
+func (r *ruleSetRepositoryImpl) List(
+	ctx context.Context, opts metav1.ListOptions,
+) (*RuleSetList, error) {
 	var timeout time.Duration
 	if opts.TimeoutSeconds != nil {
 		timeout = time.Duration(*opts.TimeoutSeconds) * time.Second
@@ -39,7 +36,9 @@ func (r *repository) List(ctx context.Context, opts metav1.ListOptions) (*RuleSe
 	return result, err
 }
 
-func (r *repository) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+func (r *ruleSetRepositoryImpl) Watch(
+	ctx context.Context, opts metav1.ListOptions,
+) (watch.Interface, error) {
 	var timeout time.Duration
 	if opts.TimeoutSeconds != nil {
 		timeout = time.Duration(*opts.TimeoutSeconds) * time.Second
@@ -55,7 +54,25 @@ func (r *repository) Watch(ctx context.Context, opts metav1.ListOptions) (watch.
 		Watch(ctx)
 }
 
-func (r *repository) PatchStatus(ctx context.Context, patch Patch, opts metav1.PatchOptions) (*RuleSet, error) {
+func (r *ruleSetRepositoryImpl) Get(
+	ctx context.Context, key types.NamespacedName, opts metav1.GetOptions,
+) (*RuleSet, error) {
+	result := &RuleSet{}
+
+	err := r.cl.Get().
+		Namespace(key.Namespace).
+		Resource("rulesets").
+		VersionedParams(&opts, scheme.ParameterCodec).
+		Name(key.Name).
+		Do(ctx).
+		Into(result)
+
+	return result, err
+}
+
+func (r *ruleSetRepositoryImpl) PatchStatus(
+	ctx context.Context, patch Patch, opts metav1.PatchOptions,
+) (*RuleSet, error) {
 	result := &RuleSet{}
 
 	data, err := patch.Data()
