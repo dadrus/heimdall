@@ -38,6 +38,8 @@ func addKnownTypes(gv schema.GroupVersion) func(scheme *runtime.Scheme) error {
 	}
 }
 
+//go:generate mockery --name Client --structname ClientMock
+
 type Client interface {
 	RuleSetRepository(namespace string) RuleSetRepository
 }
@@ -69,7 +71,7 @@ type client struct {
 }
 
 func (c *client) RuleSetRepository(namespace string) RuleSetRepository {
-	return &repository{
+	return &ruleSetRepositoryImpl{
 		cl: c.cl,
 		ns: namespace,
 	}
