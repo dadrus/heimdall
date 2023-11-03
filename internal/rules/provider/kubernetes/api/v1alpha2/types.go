@@ -42,10 +42,10 @@ type RuleSetSpec struct {
 
 // +kubebuilder:object:generate=true
 type RuleSetStatus struct {
-	MatchingInstances []string `json:"matchingInstances,omitempty" patchStrategy:"merge"` // nolint: tagliatelle
-	UsedByInstances   []string `json:"usedByInstances,omitempty"   patchStrategy:"merge"` // nolint: tagliatelle
+	MatchingInstances []string `json:"matchingInstances" patchStrategy:"merge" protobuf:"bytes,14,rep,name=matchingInstances"` // nolint: tagliatelle
+	UsedByInstances   []string `json:"usedByInstances"   patchStrategy:"merge" protobuf:"bytes,14,rep,name=usedByInstances"`   // nolint: tagliatelle
 	//nolint:lll
-	Conditions []metav1.Condition `json:"conditions,omitempty" patchMergeKey:"type" patchStrategy:"merge" protobuf:"bytes,1,rep,name=conditions"`
+	Conditions []metav1.Condition `json:"conditions" patchMergeKey:"type" patchStrategy:"merge" protobuf:"bytes,1,rep,name=conditions"`
 }
 
 // +kubebuilder:object:generate=true
@@ -55,7 +55,7 @@ type RuleSet struct {
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
 	Spec   RuleSetSpec   `json:"spec"`
-	Status RuleSetStatus `json:"status,omitempty"`
+	Status RuleSetStatus `json:"status"`
 }
 
 // +kubebuilder:object:generate=true
