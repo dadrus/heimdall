@@ -8,7 +8,7 @@ require (
 	github.com/drone/envsubst/v2 v2.0.0-20210730161058-179042472c46
 	github.com/elnormous/contenttype v1.0.4
 	github.com/envoyproxy/go-control-plane v0.11.1
-	github.com/felixge/httpsnoop v1.0.3
+	github.com/felixge/httpsnoop v1.0.4
 	github.com/fsnotify/fsnotify v1.7.0
 	github.com/go-co-op/gocron v1.35.3
 	github.com/go-http-utils/etag v0.0.0-20161124023236-513ea8f21eb1
