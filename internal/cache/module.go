@@ -48,7 +48,7 @@ func newCache(conf *config.Configuration, logger zerolog.Logger) Cache {
 		cache = memory.New()
 	case "redis":
 		if len(conf.Cache.RedisConfig.Addr) == 0 {
-			logger.Info().Msg("Redis configured but DSN missing. Instantiating noop cache")
+			logger.Info().Msg("Redis configured but Addr missing. Instantiating noop cache")
 			cache = noopCache{}
 		} else {
 			logger.Info().Msg("Instantiating Redis cache")
