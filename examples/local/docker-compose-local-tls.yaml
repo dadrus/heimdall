@@ -1,6 +1,16 @@
 version: '3.7'
 
 services:
+
+  heimdall:
+    image: heimdall:local
+    volumes:
+      - ./heimdall-config-tls.yaml:/opt/heimdall/heimdall.yaml:ro
+      - ./upstream-rules.yaml:/opt/heimdall/upstream-rules.yaml:ro
+      - ./certificates:/opt/heimdall/certificates:ro
+    ports:
+      - 4456:4456
+    command: -c /opt/heimdall/heimdall.yaml serve decision
  
   cache:
     image: redis:latest
