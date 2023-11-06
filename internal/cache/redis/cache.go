@@ -34,7 +34,12 @@ type RedisCache struct {
 	c *redis.Client
 }
 
+// Redis implementation of the Cache interface
 func NewRedisCache(cfg *config.CacheConfig, logger zerolog.Logger) *RedisCache {
+
+	if len(cfg.RedisConfig.Addr) == 0 {
+		panic("must configure at least the Redis endpoint.")
+	}
 
 	opt := &redis.Options{
 		Addr:     cfg.RedisConfig.Addr,
@@ -50,7 +55,7 @@ func NewRedisCache(cfg *config.CacheConfig, logger zerolog.Logger) *RedisCache {
 			logger.Info().Msg("TLS for Redis connection enabled")
 			opt.TLSConfig = tlsConfig
 		} else {
-			logger.Info().Err(err).Msg("TLS for Redis connection failed")
+			logger.Fatal().Err(err).Msg("TLS for Redis connection failed")
 		}
 	} else {
 		logger.Info().Msg("TLS for Redis connection disabled. NEVER DO IT IN PRODUCTION!!!!")
@@ -67,6 +72,7 @@ func configureTLS(cfg *config.CacheConfig, logger zerolog.Logger) (*tls.Config, 
 		err error
 	)
 
+	// Expects the client certificate and PK in a PEM keystore
 	ks, err = keystore.NewKeyStoreFromPEMFile(cfg.RedisConfig.TLS.KeyStore.Path, cfg.RedisConfig.TLS.KeyStore.Password)
 
 	if err != nil {
@@ -74,6 +80,7 @@ func configureTLS(cfg *config.CacheConfig, logger zerolog.Logger) (*tls.Config, 
 		return nil, err
 	}
 
+	// cross check the PK with the one configured
 	if len(cfg.RedisConfig.TLS.KeyID) != 0 {
 		if kse, err = ks.GetKey(cfg.RedisConfig.TLS.KeyID); err != nil {
 			logger.Info().Err(err).Msg("Failed to fetch value from cache ")
@@ -88,6 +95,7 @@ func configureTLS(cfg *config.CacheConfig, logger zerolog.Logger) (*tls.Config, 
 		return nil, err
 	}
 
+	// possibly add special CA Certificates not contained in the standard locations
 	caCert, err := os.ReadFile(cfg.RedisConfig.AdditionalCA)
 	if err != nil {
 		log.Fatal(err)
@@ -106,10 +114,12 @@ func configureTLS(cfg *config.CacheConfig, logger zerolog.Logger) (*tls.Config, 
 
 }
 
+// not used for Redis
 func (c *RedisCache) Start(_ context.Context) error {
 	return nil
 }
 
+// not used for Redis
 func (c *RedisCache) Stop(_ context.Context) error {
 	return nil
 }
@@ -127,6 +137,8 @@ func (c *RedisCache) Set(ctx context.Context, key string, value any, ttl time.Du
 	_ = c.c.Set(ctx, key, value, ttl).Err()
 }
 
+// remove a key
 func (c *RedisCache) Delete(ctx context.Context, key string) {
+	// UNLINK removes the key asynchroneously; so we are not blocking here.
 	c.c.Unlink(ctx, key).Result()
 }
