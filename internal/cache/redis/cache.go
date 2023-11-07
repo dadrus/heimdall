@@ -24,19 +24,19 @@ import (
 	"os"
 	"time"
 
-	"github.com/dadrus/heimdall/internal/config"
-	"github.com/dadrus/heimdall/internal/keystore"
 	redis "github.com/redis/go-redis/v9"
 	"github.com/rs/zerolog"
+
+	"github.com/dadrus/heimdall/internal/config"
+	"github.com/dadrus/heimdall/internal/keystore"
 )
 
 type RedisCache struct {
 	c *redis.Client
 }
 
-// Redis implementation of the Cache interface
+// Redis implementation of the Cache interface.
 func NewRedisCache(cfg *config.CacheConfig, logger zerolog.Logger) *RedisCache {
-
 	if len(cfg.RedisConfig.Addr) == 0 {
 		panic("must configure at least the Redis endpoint.")
 	}
@@ -53,6 +53,7 @@ func NewRedisCache(cfg *config.CacheConfig, logger zerolog.Logger) *RedisCache {
 
 		if err == nil {
 			logger.Info().Msg("TLS for Redis connection enabled")
+
 			opt.TLSConfig = tlsConfig
 		} else {
 			logger.Fatal().Err(err).Msg("TLS for Redis connection failed")
@@ -62,6 +63,7 @@ func NewRedisCache(cfg *config.CacheConfig, logger zerolog.Logger) *RedisCache {
 	}
 
 	client := redis.NewClient(opt)
+
 	return &RedisCache{c: client}
 }
 
@@ -72,18 +74,20 @@ func configureTLS(cfg *config.CacheConfig, logger zerolog.Logger) (*tls.Config, 
 		err error
 	)
 
-	// Expects the client certificate and PK in a PEM keystore
+	// Expects the client certificate and PK in a PEM keystore.
 	ks, err = keystore.NewKeyStoreFromPEMFile(cfg.RedisConfig.TLS.KeyStore.Path, cfg.RedisConfig.TLS.KeyStore.Password)
 
 	if err != nil {
 		logger.Info().Err(err).Msg("Failed to load keystore ")
+
 		return nil, err
 	}
 
-	// cross check the PK with the one configured
+	// cross check the PK with the one configured.
 	if len(cfg.RedisConfig.TLS.KeyID) != 0 {
 		if kse, err = ks.GetKey(cfg.RedisConfig.TLS.KeyID); err != nil {
 			logger.Info().Err(err).Msg("Failed to fetch value from cache ")
+
 			return nil, err
 		}
 	} else {
@@ -95,10 +99,11 @@ func configureTLS(cfg *config.CacheConfig, logger zerolog.Logger) (*tls.Config, 
 		return nil, err
 	}
 
-	// possibly add special CA Certificates not contained in the standard locations
+	// possibly add special CA Certificates not contained in the standard locations.
 	caCert, err := os.ReadFile(cfg.RedisConfig.AdditionalCA)
 	if err != nil {
 		log.Fatal(err)
+
 		return nil, err
 	}
 
@@ -110,16 +115,16 @@ func configureTLS(cfg *config.CacheConfig, logger zerolog.Logger) (*tls.Config, 
 		Certificates: []tls.Certificate{cert},
 		RootCAs:      caCertPool,
 	}
-	return tls, nil
 
+	return tls, nil
 }
 
-// not used for Redis
+// not used for Redis.
 func (c *RedisCache) Start(_ context.Context) error {
 	return nil
 }
 
-// not used for Redis
+// not used for Redis.
 func (c *RedisCache) Stop(_ context.Context) error {
 	return nil
 }
@@ -128,17 +133,25 @@ func (c *RedisCache) Get(ctx context.Context, key string) any {
 	val, err := c.c.Get(ctx, key).Result()
 	if err != nil {
 		zerolog.Ctx(ctx).Info().Err(err).Msg("Failed to fetch value from cache")
+
 		return nil
 	}
+
 	return val
 }
 
 func (c *RedisCache) Set(ctx context.Context, key string, value any, ttl time.Duration) {
-	_ = c.c.Set(ctx, key, value, ttl).Err()
+	err := c.c.Set(ctx, key, value, ttl).Err()
+	if err != nil {
+		zerolog.Ctx(ctx).Info().Err(err).Msg("Failed to store value in cache")
+	}
 }
 
-// remove a key
+// remove a key.
 func (c *RedisCache) Delete(ctx context.Context, key string) {
 	// UNLINK removes the key asynchroneously; so we are not blocking here.
-	c.c.Unlink(ctx, key).Result()
+	err := c.c.Unlink(ctx, key).Err()
+	if err != nil {
+		zerolog.Ctx(ctx).Info().Err(err).Msg("Failed to unlink value from cache")
+	}
 }

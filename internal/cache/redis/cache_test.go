@@ -21,15 +21,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dadrus/heimdall/internal/config"
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
-)
 
-var (
-	redisImage string = "redis:latest"
+	"github.com/dadrus/heimdall/internal/config"
 )
 
 func TestRedisCacheUsage(t *testing.T) {
@@ -99,9 +96,9 @@ func TestRedisCacheUsage(t *testing.T) {
 
 				assert.Nil(t, data)
 			},
-		}} {
+		},
+	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
-
 			// WHEN
 			tc.configureCache(t, redisCache)
 
@@ -114,11 +111,12 @@ func TestRedisCacheUsage(t *testing.T) {
 }
 
 func before(t *testing.T) *RedisCache {
+	t.Helper()
+
 	ctx := context.Background()
 	redisC := initRedisContainer(ctx, t)
 
 	endpoint, err := redisC.Endpoint(ctx, "")
-
 	if err != nil {
 		t.Error(err)
 	}
@@ -133,13 +131,15 @@ func before(t *testing.T) *RedisCache {
 	t.Cleanup(func() {
 		shutDownRedisContainer(ctx, t, redisC)
 	})
+
 	return cache
 }
 
 func initRedisContainer(ctx context.Context, t *testing.T) testcontainers.Container {
+	t.Helper()
 
 	req := testcontainers.ContainerRequest{
-		Image:        redisImage,
+		Image:        "redis:latest",
 		ExposedPorts: []string{"6379/tcp"},
 		WaitingFor:   wait.ForLog("Ready to accept connections").WithStartupTimeout(30 * time.Second),
 	}
@@ -156,12 +156,16 @@ func initRedisContainer(ctx context.Context, t *testing.T) testcontainers.Contai
 }
 
 func shutDownRedisContainer(ctx context.Context, t *testing.T, c testcontainers.Container) {
+	t.Helper()
+
 	if err := c.Terminate(ctx); err != nil {
 		t.Logf("could not terminate postgres container, reason: %s", err)
 	}
 }
 
 func failOnError(t *testing.T, err error, msg string) {
+	t.Helper()
+
 	if err != nil {
 		t.Fatalf(msg+", reason: %s", err)
 	}

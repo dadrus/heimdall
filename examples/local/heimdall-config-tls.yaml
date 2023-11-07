@@ -12,7 +12,6 @@ cache:
       key_store:
         path: ./certificates/tests/tls/redis_client_keystore.pem
       key_id: bf5d129a7fec8b1fde11eab459784cc2f14e6c1d
-      min_version: TLS1.2
       cipher_suites:
         - TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
         - TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384
