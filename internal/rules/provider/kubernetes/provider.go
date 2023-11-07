@@ -20,11 +20,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math/rand"
 	"net/http"
 	"os"
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/go-logr/zerologr"
 	"github.com/rs/zerolog"
@@ -224,11 +226,25 @@ func (p *provider) addRuleSet(obj any) {
 	if err := p.p.OnCreated(conf); err != nil {
 		p.l.Warn().Err(err).Str("_src", conf.Source).Msg("Failed creating rule set")
 
-		msg := fmt.Sprintf("%s instance failed loading RuleSet, reason: %s", p.id, err.Error())
-		p.updateStatus(context.Background(), rs, metav1.ConditionFalse, v1alpha2.ConditionRuleSetActivationFailed, 1, 0, msg)
+		p.updateStatus(
+			context.Background(),
+			rs,
+			metav1.ConditionFalse,
+			v1alpha2.ConditionRuleSetActivationFailed,
+			1,
+			0,
+			fmt.Sprintf("%s instance failed loading RuleSet, reason: %s", p.id, err.Error()),
+		)
 	} else {
-		msg := fmt.Sprintf("%s instance successfully loaded RuleSet", p.id)
-		p.updateStatus(context.Background(), rs, metav1.ConditionTrue, v1alpha2.ConditionRuleSetActive, 1, 1, msg)
+		p.updateStatus(
+			context.Background(),
+			rs,
+			metav1.ConditionTrue,
+			v1alpha2.ConditionRuleSetActive,
+			1,
+			1,
+			fmt.Sprintf("%s instance successfully loaded RuleSet", p.id),
+		)
 	}
 }
 
@@ -253,11 +269,25 @@ func (p *provider) updateRuleSet(oldObj, newObj any) {
 	if err := p.p.OnUpdated(conf); err != nil {
 		p.l.Warn().Err(err).Str("_src", conf.Source).Msg("Failed to apply rule set updates")
 
-		msg := fmt.Sprintf("%s instance failed updating RuleSet, reason: %s", p.id, err.Error())
-		p.updateStatus(context.Background(), newRS, metav1.ConditionFalse, v1alpha2.ConditionRuleSetActivationFailed, 0, -1, msg)
+		p.updateStatus(
+			context.Background(),
+			newRS,
+			metav1.ConditionFalse,
+			v1alpha2.ConditionRuleSetActivationFailed,
+			0,
+			-1,
+			fmt.Sprintf("%s instance failed updating RuleSet, reason: %s", p.id, err.Error()),
+		)
 	} else {
-		msg := fmt.Sprintf("%s instance successfully reloaded RuleSet", p.id)
-		p.updateStatus(context.Background(), newRS, metav1.ConditionTrue, v1alpha2.ConditionRuleSetActive, 0, 0, msg)
+		p.updateStatus(
+			context.Background(),
+			newRS,
+			metav1.ConditionTrue,
+			v1alpha2.ConditionRuleSetActive,
+			0,
+			0,
+			fmt.Sprintf("%s instance successfully reloaded RuleSet", p.id),
+		)
 	}
 }
 
@@ -275,8 +305,15 @@ func (p *provider) deleteRuleSet(obj any) {
 	if err := p.p.OnDeleted(conf); err != nil {
 		p.l.Warn().Err(err).Str("_src", conf.Source).Msg("Failed deleting rule set")
 
-		msg := fmt.Sprintf("%s instance failed unloading RuleSet, reason: %s", p.id, err.Error())
-		p.updateStatus(context.Background(), rs, metav1.ConditionTrue, v1alpha2.ConditionRuleSetUnloadingFailed, 0, 0, msg)
+		p.updateStatus(
+			context.Background(),
+			rs,
+			metav1.ConditionTrue,
+			v1alpha2.ConditionRuleSetUnloadingFailed,
+			0,
+			0,
+			fmt.Sprintf("%s instance failed unloading RuleSet, reason: %s", p.id, err.Error()),
+		)
 	} else {
 		var msg string
 		if rs.Spec.AuthClassName != p.ac {
@@ -285,7 +322,15 @@ func (p *provider) deleteRuleSet(obj any) {
 			msg = fmt.Sprintf("%s instance dropped RuleSet", p.id)
 		}
 
-		p.updateStatus(context.Background(), rs, metav1.ConditionFalse, v1alpha2.ConditionRuleSetUnloaded, -1, -1, msg)
+		p.updateStatus(
+			context.Background(),
+			rs,
+			metav1.ConditionFalse,
+			v1alpha2.ConditionRuleSetUnloaded,
+			-1,
+			-1,
+			msg,
+		)
 	}
 }
 
@@ -338,9 +383,6 @@ func (p *provider) updateStatus(
 	loadedBy, _ := strconv.Atoi(usedBy[0])
 	matchedBy, _ := strconv.Atoi(usedBy[1])
 
-	matchedBy += matchIncrement
-	loadedBy += usageIncrement
-
 	modRS.Status.UsedBy = fmt.Sprintf("%d/%d", loadedBy+usageIncrement, matchedBy+matchIncrement)
 
 	_, err := repository.PatchStatus(
@@ -372,17 +414,14 @@ func (p *provider) updateStatus(
 	case http.StatusConflict, http.StatusUnprocessableEntity:
 		p.l.Debug().Err(err).Msgf("New resource version available. Retrieving it.")
 
+		// to avoid cascading reads and writes
+		time.Sleep(time.Duration(rand.Intn(50)) * time.Millisecond)
+
 		rsKey := types.NamespacedName{Namespace: rs.Namespace, Name: rs.Name}
-		if modRS, err = repository.Get(ctx, rsKey, metav1.GetOptions{}); err != nil {
+		if rs, err = repository.Get(ctx, rsKey, metav1.GetOptions{}); err != nil {
 			p.l.Warn().Err(err).Msgf("Failed retrieving new RuleSet version for status update")
 		} else {
-			if modRS.Generation != rs.Generation {
-				p.l.Debug().Msgf("New RuleSet generation available")
-
-				return
-			}
-
-			p.updateStatus(ctx, modRS, status, reason, matchIncrement, usageIncrement, msg)
+			p.updateStatus(ctx, rs, status, reason, matchIncrement, usageIncrement, msg)
 		}
 	default:
 		p.l.Warn().Err(err).Msgf("Failed updating RuleSet status")
