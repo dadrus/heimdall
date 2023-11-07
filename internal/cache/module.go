@@ -38,7 +38,7 @@ var Module = fx.Provide(
 
 func newCache(conf *config.Configuration, logger zerolog.Logger) Cache {
 
-	var cache Cache = nil
+	var cache Cache = noopCache{}
 	switch conf.Cache.Type {
 	case "":
 		logger.Info().Msg("Empty cache type. Instantiating in memory cache")
@@ -60,10 +60,6 @@ func newCache(conf *config.Configuration, logger zerolog.Logger) Cache {
 	default:
 		logger.Info().Msg("Fallback: noop cache")
 		cache = noopCache{}
-	}
-
-	if cache == nil {
-		panic("Error initializing Redis cache")
 	}
 
 	return cache
