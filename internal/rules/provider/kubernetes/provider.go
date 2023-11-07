@@ -22,6 +22,8 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strconv"
+	"strings"
 	"sync"
 
 	"github.com/go-logr/zerologr"
@@ -161,8 +163,12 @@ func (p *provider) Start(ctx context.Context) error {
 	p.wg.Add(1)
 
 	go func() {
+		p.l.Debug().Msg("Starting reconciliation loop")
+
 		controller.Run(newCtx.Done())
 		p.wg.Done()
+
+		p.l.Debug().Msg("Reconciliation loop exited")
 	}()
 
 	return p.adc.Start(ctx)
@@ -219,10 +225,10 @@ func (p *provider) addRuleSet(obj any) {
 		p.l.Warn().Err(err).Str("_src", conf.Source).Msg("Failed creating rule set")
 
 		msg := fmt.Sprintf("%s instance failed loading RuleSet, reason: %s", p.id, err.Error())
-		p.updateStatus(context.Background(), rs, metav1.ConditionFalse, v1alpha2.ConditionRuleSetActivationFailed, msg)
+		p.updateStatus(context.Background(), rs, metav1.ConditionFalse, v1alpha2.ConditionRuleSetActivationFailed, 1, 0, msg)
 	} else {
 		msg := fmt.Sprintf("%s instance successfully loaded RuleSet", p.id)
-		p.updateStatus(context.Background(), rs, metav1.ConditionTrue, v1alpha2.ConditionRuleSetActive, msg)
+		p.updateStatus(context.Background(), rs, metav1.ConditionTrue, v1alpha2.ConditionRuleSetActive, 1, 1, msg)
 	}
 }
 
@@ -248,10 +254,10 @@ func (p *provider) updateRuleSet(oldObj, newObj any) {
 		p.l.Warn().Err(err).Str("_src", conf.Source).Msg("Failed to apply rule set updates")
 
 		msg := fmt.Sprintf("%s instance failed updating RuleSet, reason: %s", p.id, err.Error())
-		p.updateStatus(context.Background(), newRS, metav1.ConditionFalse, v1alpha2.ConditionRuleSetActivationFailed, msg)
+		p.updateStatus(context.Background(), newRS, metav1.ConditionFalse, v1alpha2.ConditionRuleSetActivationFailed, 0, -1, msg)
 	} else {
 		msg := fmt.Sprintf("%s instance successfully reloaded RuleSet", p.id)
-		p.updateStatus(context.Background(), newRS, metav1.ConditionTrue, v1alpha2.ConditionRuleSetActive, msg)
+		p.updateStatus(context.Background(), newRS, metav1.ConditionTrue, v1alpha2.ConditionRuleSetActive, 0, 0, msg)
 	}
 }
 
@@ -270,10 +276,16 @@ func (p *provider) deleteRuleSet(obj any) {
 		p.l.Warn().Err(err).Str("_src", conf.Source).Msg("Failed deleting rule set")
 
 		msg := fmt.Sprintf("%s instance failed unloading RuleSet, reason: %s", p.id, err.Error())
-		p.updateStatus(context.Background(), rs, metav1.ConditionTrue, v1alpha2.ConditionRuleSetUnloadingFailed, msg)
+		p.updateStatus(context.Background(), rs, metav1.ConditionTrue, v1alpha2.ConditionRuleSetUnloadingFailed, 0, 0, msg)
 	} else {
-		msg := fmt.Sprintf("%s instance dropped RuleSet", p.id)
-		p.updateStatus(context.Background(), rs, metav1.ConditionFalse, v1alpha2.ConditionRuleSetUnloaded, msg)
+		var msg string
+		if rs.Spec.AuthClassName != p.ac {
+			msg = fmt.Sprintf("%s instance dropped RuleSet due to authClassName mismatch", p.id)
+		} else {
+			msg = fmt.Sprintf("%s instance dropped RuleSet", p.id)
+		}
+
+		p.updateStatus(context.Background(), rs, metav1.ConditionFalse, v1alpha2.ConditionRuleSetUnloaded, -1, -1, msg)
 	}
 }
 
@@ -299,68 +311,79 @@ func (p *provider) updateStatus(
 	rs *v1alpha2.RuleSet,
 	status metav1.ConditionStatus,
 	reason v1alpha2.ConditionReason,
+	matchIncrement int,
+	usageIncrement int,
 	msg string,
 ) {
-	rsCopy := rs.DeepCopy()
-	repository := p.cl.RuleSetRepository(rsCopy.Namespace)
+	modRS := rs.DeepCopy()
+	repository := p.cl.RuleSetRepository(modRS.Namespace)
 
-	p.l.Debug().Msgf("Updating RuleSet status")
-
-	meta.SetStatusCondition(&rsCopy.Status.Conditions, metav1.Condition{
-		Type:               fmt.Sprintf("%s/Reconcile", p.id),
-		Status:             status,
-		ObservedGeneration: rsCopy.Generation,
-		Reason:             string(reason),
-		Message:            msg,
-	})
+	p.l.Debug().Msg("Updating RuleSet status")
 
 	if reason == v1alpha2.ConditionControllerStopped || reason == v1alpha2.ConditionRuleSetUnloaded {
-		rsCopy.Status.MatchingInstances = slicex.Subtract(rsCopy.Status.MatchingInstances, []string{p.id})
-	} else if len(slicex.Filter(rsCopy.Status.MatchingInstances, func(val string) bool { return p.id == val })) == 0 {
-		rsCopy.Status.MatchingInstances = append(rsCopy.Status.MatchingInstances, p.id)
-	}
-
-	if status == metav1.ConditionTrue &&
-		len(slicex.Filter(rsCopy.Status.UsedByInstances, func(val string) bool { return p.id == val })) == 0 {
-		rsCopy.Status.UsedByInstances = append(rsCopy.Status.UsedByInstances, p.id)
-	} else if status == metav1.ConditionFalse {
-		rsCopy.Status.UsedByInstances = slicex.Subtract(rsCopy.Status.UsedByInstances, []string{p.id})
-	}
-
-	if _, err := repository.PatchStatus(
-		p.l.WithContext(ctx),
-		v1alpha2.NewJSONPatch(rs, rsCopy),
-		metav1.PatchOptions{},
-	); err != nil {
-		var statusErr *errors2.StatusError
-		if !errors.As(err, &statusErr) {
-			p.l.Warn().Err(err).Msgf("Failed updating RuleSet status")
-
-			return
-		}
-
-		p.l.Warn().Msgf(statusErr.DebugError())
-
-		switch statusErr.ErrStatus.Code {
-		case http.StatusNotFound:
-			// resource gone. Nothing can be done
-			p.l.Debug().Err(err).Msgf("RuleSet gone")
-
-			return
-		case http.StatusConflict, http.StatusUnprocessableEntity:
-			p.l.Debug().Err(err).Msgf("New resource version available. Retrieving it.")
-
-			rsKey := types.NamespacedName{Namespace: rsCopy.Namespace, Name: rsCopy.Name}
-			if rs, err = repository.Get(ctx, rsKey, metav1.GetOptions{}); err != nil {
-				p.l.Warn().Err(err).Msgf("Failed retrieving new RuleSet version for status update")
-			} else {
-				p.updateStatus(ctx, rs, status, reason, msg)
-			}
-		default:
-			p.l.Warn().Err(err).Msgf("Failed updating RuleSet status")
-		}
+		meta.RemoveStatusCondition(&modRS.Status.Conditions, fmt.Sprintf("%s/Reconcile", p.id))
 	} else {
+		meta.SetStatusCondition(&modRS.Status.Conditions, metav1.Condition{
+			Type:               fmt.Sprintf("%s/Reconcile", p.id),
+			Status:             status,
+			ObservedGeneration: modRS.Generation,
+			Reason:             string(reason),
+			Message:            msg,
+		})
+	}
+
+	usedBy := strings.Split(modRS.Status.UsedBy, "/")
+	loadedBy, _ := strconv.Atoi(usedBy[0])
+	matchedBy, _ := strconv.Atoi(usedBy[1])
+
+	matchedBy += matchIncrement
+	loadedBy += usageIncrement
+
+	modRS.Status.UsedBy = fmt.Sprintf("%d/%d", loadedBy+usageIncrement, matchedBy+matchIncrement)
+
+	_, err := repository.PatchStatus(
+		p.l.WithContext(ctx),
+		v1alpha2.NewJSONPatch(rs, modRS, true),
+		metav1.PatchOptions{},
+	)
+	if err == nil {
 		p.l.Debug().Msgf("RuleSet status updated")
+
+		return
+	}
+
+	var statusErr *errors2.StatusError
+	if !errors.As(err, &statusErr) {
+		p.l.Warn().Err(err).Msgf("Failed updating RuleSet status")
+
+		return
+	}
+
+	p.l.Warn().Msgf(statusErr.DebugError())
+
+	switch statusErr.ErrStatus.Code {
+	case http.StatusNotFound:
+		// resource gone. Nothing can be done
+		p.l.Debug().Msgf("RuleSet gone")
+
+		return
+	case http.StatusConflict, http.StatusUnprocessableEntity:
+		p.l.Debug().Err(err).Msgf("New resource version available. Retrieving it.")
+
+		rsKey := types.NamespacedName{Namespace: rs.Namespace, Name: rs.Name}
+		if modRS, err = repository.Get(ctx, rsKey, metav1.GetOptions{}); err != nil {
+			p.l.Warn().Err(err).Msgf("Failed retrieving new RuleSet version for status update")
+		} else {
+			if modRS.Generation != rs.Generation {
+				p.l.Debug().Msgf("New RuleSet generation available")
+
+				return
+			}
+
+			p.updateStatus(ctx, modRS, status, reason, matchIncrement, usageIncrement, msg)
+		}
+	default:
+		p.l.Warn().Err(err).Msgf("Failed updating RuleSet status")
 	}
 }
 
@@ -370,7 +393,7 @@ func (p *provider) finalize(ctx context.Context) {
 		slicex.Map(p.store.List(), func(s any) *v1alpha2.RuleSet { return s.(*v1alpha2.RuleSet) }),
 		func(set *v1alpha2.RuleSet) bool { return set.Spec.AuthClassName == p.ac },
 	) {
-		p.updateStatus(ctx, rs, metav1.ConditionFalse, v1alpha2.ConditionControllerStopped,
+		p.updateStatus(ctx, rs, metav1.ConditionFalse, v1alpha2.ConditionControllerStopped, -1, -1,
 			fmt.Sprintf("%s instance stopped", p.id))
 	}
 }
