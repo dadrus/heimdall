@@ -42,8 +42,7 @@ type RuleSetSpec struct {
 
 // +kubebuilder:object:generate=true
 type RuleSetStatus struct {
-	MatchingInstances []string `json:"matchingInstances" patchStrategy:"merge" protobuf:"bytes,14,rep,name=matchingInstances"` // nolint: tagliatelle
-	UsedByInstances   []string `json:"usedByInstances"   patchStrategy:"merge" protobuf:"bytes,14,rep,name=usedByInstances"`   // nolint: tagliatelle
+	UsedBy string `json:"usedBy"` // nolint: tagliatelle
 	//nolint:lll
 	Conditions []metav1.Condition `json:"conditions" patchMergeKey:"type" patchStrategy:"merge" protobuf:"bytes,1,rep,name=conditions"`
 }
