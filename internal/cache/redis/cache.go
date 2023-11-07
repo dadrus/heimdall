@@ -31,6 +31,7 @@ import (
 	"github.com/dadrus/heimdall/internal/keystore"
 )
 
+//nolint:revive
 type RedisCache struct {
 	c *redis.Client
 }
@@ -110,6 +111,8 @@ func configureTLS(cfg *config.CacheConfig, logger zerolog.Logger) (*tls.Config, 
 	caCertPool := x509.NewCertPool()
 	caCertPool.AppendCertsFromPEM(caCert)
 
+	// disable "G402 (CWE-295): TLS MinVersion too low. (Confidence: HIGH, Severity: HIGH)" -> False positive.
+	// #nosec G402
 	tls := &tls.Config{
 		MinVersion:   cfg.RedisConfig.TLS.MinVersion.OrDefault(),
 		Certificates: []tls.Certificate{cert},
