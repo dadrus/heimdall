@@ -332,6 +332,8 @@ func (p *provider) updateStatus(
 		})
 	}
 
+	modRS.Status.UsedBy = x.IfThenElse(len(modRS.Status.UsedBy) == 0, "0/0", modRS.Status.UsedBy)
+
 	usedBy := strings.Split(modRS.Status.UsedBy, "/")
 	loadedBy, _ := strconv.Atoi(usedBy[0])
 	matchedBy, _ := strconv.Atoi(usedBy[1])
