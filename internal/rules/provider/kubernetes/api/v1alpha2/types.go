@@ -42,9 +42,8 @@ type RuleSetSpec struct {
 
 // +kubebuilder:object:generate=true
 type RuleSetStatus struct {
-	UsedBy string `json:"usedBy"` // nolint: tagliatelle
-	//nolint:lll
-	Conditions []metav1.Condition `json:"conditions" patchMergeKey:"type" patchStrategy:"merge" protobuf:"bytes,1,rep,name=conditions"`
+	LoadedBy   string             `json:"loadedBy"` // nolint: tagliatelle
+	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
 // +kubebuilder:object:generate=true

@@ -358,11 +358,13 @@ func (p *provider) updateStatus(
 
 	p.l.Debug().Msg("Updating RuleSet status")
 
+	conditionType := fmt.Sprintf("%s/Reconciliation", p.id)
+
 	if reason == v1alpha2.ConditionControllerStopped || reason == v1alpha2.ConditionRuleSetUnloaded {
-		meta.RemoveStatusCondition(&modRS.Status.Conditions, fmt.Sprintf("%s/Reconcile", p.id))
+		meta.RemoveStatusCondition(&modRS.Status.Conditions, conditionType)
 	} else {
 		meta.SetStatusCondition(&modRS.Status.Conditions, metav1.Condition{
-			Type:               fmt.Sprintf("%s/Reconcile", p.id),
+			Type:               conditionType,
 			Status:             status,
 			ObservedGeneration: modRS.Generation,
 			Reason:             string(reason),
@@ -370,13 +372,13 @@ func (p *provider) updateStatus(
 		})
 	}
 
-	modRS.Status.UsedBy = x.IfThenElse(len(modRS.Status.UsedBy) == 0, "0/0", modRS.Status.UsedBy)
+	modRS.Status.LoadedBy = x.IfThenElse(len(modRS.Status.LoadedBy) == 0, "0/0", modRS.Status.LoadedBy)
 
-	usedBy := strings.Split(modRS.Status.UsedBy, "/")
+	usedBy := strings.Split(modRS.Status.LoadedBy, "/")
 	loadedBy, _ := strconv.Atoi(usedBy[0])
 	matchedBy, _ := strconv.Atoi(usedBy[1])
 
-	modRS.Status.UsedBy = fmt.Sprintf("%d/%d", loadedBy+usageIncrement, matchedBy+matchIncrement)
+	modRS.Status.LoadedBy = fmt.Sprintf("%d/%d", loadedBy+usageIncrement, matchedBy+matchIncrement)
 
 	_, err := repository.PatchStatus(
 		p.l.WithContext(ctx),
