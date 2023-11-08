@@ -315,13 +315,6 @@ func (p *provider) deleteRuleSet(obj any) {
 			fmt.Sprintf("%s instance failed unloading RuleSet, reason: %s", p.id, err.Error()),
 		)
 	} else {
-		var msg string
-		if rs.Spec.AuthClassName != p.ac {
-			msg = fmt.Sprintf("%s instance dropped RuleSet due to authClassName mismatch", p.id)
-		} else {
-			msg = fmt.Sprintf("%s instance dropped RuleSet", p.id)
-		}
-
 		p.updateStatus(
 			context.Background(),
 			rs,
@@ -329,7 +322,7 @@ func (p *provider) deleteRuleSet(obj any) {
 			v1alpha2.ConditionRuleSetUnloaded,
 			-1,
 			-1,
-			msg,
+			fmt.Sprintf("%s instance dropped RuleSet", p.id),
 		)
 	}
 }
@@ -396,14 +389,10 @@ func (p *provider) updateStatus(
 		return
 	}
 
+	// if there is an error, it is always of the below type
 	var statusErr *errors2.StatusError
-	if !errors.As(err, &statusErr) {
-		p.l.Warn().Err(err).Msgf("Failed updating RuleSet status")
 
-		return
-	}
-
-	p.l.Warn().Msgf(statusErr.DebugError())
+	errors.As(err, &statusErr)
 
 	switch statusErr.ErrStatus.Code {
 	case http.StatusNotFound:
@@ -415,7 +404,7 @@ func (p *provider) updateStatus(
 		p.l.Debug().Err(err).Msgf("New resource version available. Retrieving it.")
 
 		// to avoid cascading reads and writes
-		time.Sleep(time.Duration(rand.Intn(50)) * time.Millisecond)
+		time.Sleep(time.Duration(2*rand.Intn(50)) * time.Millisecond) //nolint:gomnd,gosec
 
 		rsKey := types.NamespacedName{Namespace: rs.Namespace, Name: rs.Name}
 		if rs, err = repository.Get(ctx, rsKey, metav1.GetOptions{}); err != nil {
