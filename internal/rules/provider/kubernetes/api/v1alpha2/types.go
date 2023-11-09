@@ -42,7 +42,7 @@ type RuleSetSpec struct {
 
 // +kubebuilder:object:generate=true
 type RuleSetStatus struct {
-	LoadedBy   string             `json:"loadedBy"` // nolint: tagliatelle
+	ActiveIn   string             `json:"activeIn"` // nolint: tagliatelle
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 

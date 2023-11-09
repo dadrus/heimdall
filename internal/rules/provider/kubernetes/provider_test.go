@@ -378,7 +378,7 @@ func TestProviderLifecycle(t *testing.T) {
 				assert.Equal(t, "authz", rule.Execute[1]["authorizer"])
 
 				assert.Len(t, *statusList, 1)
-				assert.Equal(t, "1/1", (*statusList)[0].LoadedBy)
+				assert.Equal(t, "1/1", (*statusList)[0].ActiveIn)
 
 				assert.Len(t, (*statusList)[0].Conditions, 1)
 				condition := (*statusList)[0].Conditions[0]
@@ -403,7 +403,7 @@ func TestProviderLifecycle(t *testing.T) {
 				time.Sleep(250 * time.Millisecond)
 
 				assert.Len(t, *statusList, 1)
-				assert.Equal(t, "0/1", (*statusList)[0].LoadedBy)
+				assert.Equal(t, "0/1", (*statusList)[0].ActiveIn)
 
 				assert.Len(t, (*statusList)[0].Conditions, 1)
 				condition := (*statusList)[0].Conditions[0]
@@ -483,7 +483,7 @@ func TestProviderLifecycle(t *testing.T) {
 
 				assert.Len(t, *statusList, 1)
 
-				assert.Equal(t, "1/1", (*statusList)[0].LoadedBy)
+				assert.Equal(t, "1/1", (*statusList)[0].ActiveIn)
 				assert.Len(t, (*statusList)[0].Conditions, 1)
 				condition := (*statusList)[0].Conditions[0]
 				assert.Equal(t, metav1.ConditionTrue, condition.Status)
@@ -608,7 +608,7 @@ func TestProviderLifecycle(t *testing.T) {
 
 				assert.Len(t, *statusList, 1)
 
-				assert.Equal(t, "1/1", (*statusList)[0].LoadedBy)
+				assert.Equal(t, "1/1", (*statusList)[0].ActiveIn)
 				assert.Len(t, (*statusList)[0].Conditions, 1)
 				condition := (*statusList)[0].Conditions[0]
 				assert.Equal(t, metav1.ConditionTrue, condition.Status)
@@ -641,13 +641,13 @@ func TestProviderLifecycle(t *testing.T) {
 				time.Sleep(250 * time.Millisecond)
 
 				assert.Len(t, *statusList, 2)
-				assert.Equal(t, "1/1", (*statusList)[0].LoadedBy)
+				assert.Equal(t, "1/1", (*statusList)[0].ActiveIn)
 				assert.Len(t, (*statusList)[0].Conditions, 1)
 				condition := (*statusList)[0].Conditions[0]
 				assert.Equal(t, metav1.ConditionTrue, condition.Status)
 				assert.Equal(t, v1alpha2.ConditionRuleSetActive, v1alpha2.ConditionReason(condition.Reason))
 
-				assert.Equal(t, "1/1", (*statusList)[1].LoadedBy)
+				assert.Equal(t, "1/1", (*statusList)[1].ActiveIn)
 				assert.Len(t, (*statusList)[1].Conditions, 1)
 				condition = (*statusList)[1].Conditions[0]
 				assert.Equal(t, metav1.ConditionTrue, condition.Status)
@@ -753,13 +753,13 @@ func TestProviderLifecycle(t *testing.T) {
 				assert.Equal(t, "test_authz", updatedRule.Execute[1]["authorizer"])
 
 				assert.Len(t, *statusList, 2)
-				assert.Equal(t, "1/1", (*statusList)[0].LoadedBy)
+				assert.Equal(t, "1/1", (*statusList)[0].ActiveIn)
 				assert.Len(t, (*statusList)[0].Conditions, 1)
 				condition := (*statusList)[0].Conditions[0]
 				assert.Equal(t, metav1.ConditionTrue, condition.Status)
 				assert.Equal(t, v1alpha2.ConditionRuleSetActive, v1alpha2.ConditionReason(condition.Reason))
 
-				assert.Equal(t, "1/1", (*statusList)[1].LoadedBy)
+				assert.Equal(t, "1/1", (*statusList)[1].ActiveIn)
 				assert.Len(t, (*statusList)[1].Conditions, 1)
 				condition = (*statusList)[1].Conditions[0]
 				assert.Equal(t, metav1.ConditionTrue, condition.Status)
@@ -772,7 +772,7 @@ func TestProviderLifecycle(t *testing.T) {
 			watchEvent: func(rs v1alpha2.RuleSet, callIdx int) (watch.Event, error) {
 				switch callIdx {
 				case 1:
-					rs.Status.LoadedBy = "1/1"
+					rs.Status.ActiveIn = "1/1"
 
 					return watch.Event{Type: watch.Modified, Object: &rs}, nil
 				case 2:
@@ -842,7 +842,7 @@ func TestProviderLifecycle(t *testing.T) {
 				assert.Equal(t, "authz", deleteRule.Execute[1]["authorizer"])
 
 				assert.GreaterOrEqual(t, len(*statusList), 1)
-				assert.Equal(t, "1/1", (*statusList)[0].LoadedBy)
+				assert.Equal(t, "1/1", (*statusList)[0].ActiveIn)
 				assert.Len(t, (*statusList)[0].Conditions, 1)
 				condition := (*statusList)[0].Conditions[0]
 				assert.Equal(t, metav1.ConditionTrue, condition.Status)
@@ -907,13 +907,13 @@ func TestProviderLifecycle(t *testing.T) {
 				time.Sleep(250 * time.Millisecond)
 
 				assert.Len(t, *statusList, 2)
-				assert.Equal(t, "1/1", (*statusList)[0].LoadedBy)
+				assert.Equal(t, "1/1", (*statusList)[0].ActiveIn)
 				assert.Len(t, (*statusList)[0].Conditions, 1)
 				condition := (*statusList)[0].Conditions[0]
 				assert.Equal(t, metav1.ConditionTrue, condition.Status)
 				assert.Equal(t, v1alpha2.ConditionRuleSetActive, v1alpha2.ConditionReason(condition.Reason))
 
-				assert.Equal(t, "0/1", (*statusList)[1].LoadedBy)
+				assert.Equal(t, "0/1", (*statusList)[1].ActiveIn)
 				assert.Len(t, (*statusList)[1].Conditions, 1)
 				condition = (*statusList)[1].Conditions[0]
 				assert.Equal(t, metav1.ConditionFalse, condition.Status)

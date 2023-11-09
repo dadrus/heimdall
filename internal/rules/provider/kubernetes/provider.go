@@ -372,13 +372,13 @@ func (p *provider) updateStatus(
 		})
 	}
 
-	modRS.Status.LoadedBy = x.IfThenElse(len(modRS.Status.LoadedBy) == 0, "0/0", modRS.Status.LoadedBy)
+	modRS.Status.ActiveIn = x.IfThenElse(len(modRS.Status.ActiveIn) == 0, "0/0", modRS.Status.ActiveIn)
 
-	usedBy := strings.Split(modRS.Status.LoadedBy, "/")
+	usedBy := strings.Split(modRS.Status.ActiveIn, "/")
 	loadedBy, _ := strconv.Atoi(usedBy[0])
 	matchedBy, _ := strconv.Atoi(usedBy[1])
 
-	modRS.Status.LoadedBy = fmt.Sprintf("%d/%d", loadedBy+usageIncrement, matchedBy+matchIncrement)
+	modRS.Status.ActiveIn = fmt.Sprintf("%d/%d", loadedBy+usageIncrement, matchedBy+matchIncrement)
 
 	_, err := repository.PatchStatus(
 		p.l.WithContext(ctx),
