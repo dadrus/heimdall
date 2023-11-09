@@ -23,7 +23,7 @@ jobs:
   check-changes:
     runs-on: ubuntu-22.04
     outputs:
-      code_changed:  ${{steps.code-changes.outputs.count > 0}}
+      code_changed: ${{steps.code-changes.outputs.count > 0}}
       test_data_changed: ${{steps.test-data-changes.outputs.count > 0}}
       image_config_changed: ${{steps.image-config-changes.outputs.count > 0}}
       helm_chart_changed: ${{steps.helm-chart-changes.outputs.count > 0}}
@@ -126,16 +126,16 @@ jobs:
       - check-changes
     if: needs.check-changes.outputs.image_config_changed == 'true'
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
-    - name: Run hadolint for Dockerfile
-      uses: hadolint/hadolint-action@v3.1.0
-      with:
-        dockerfile: docker/Dockerfile
-    - name: Run hadolint for debug.Dockerfile
-      uses: hadolint/hadolint-action@v3.1.0
-      with:
-        dockerfile: docker/debug.Dockerfile
+      - name: Checkout repository
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
+      - name: Run hadolint for Dockerfile
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: docker/Dockerfile
+      - name: Run hadolint for debug.Dockerfile
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: docker/debug.Dockerfile
 
   lint-helm-chart:
     runs-on: ubuntu-22.04
@@ -175,7 +175,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v4
         with:
-         go-version: "${{ env.GO_VERSION }}"
+          go-version: "${{ env.GO_VERSION }}"
       - name: Test
         run: go test -v -coverprofile=coverage.cov -coverpkg=./... ./...
       - name: Code Coverage
@@ -277,7 +277,7 @@ jobs:
       - test
       - check-changes
       - prepare-release
-    if: > 
+    if: >
       always() && 
       needs.prepare-release.outputs.release_created == false && 
       (needs.test.result == 'success' || (needs.test.result == 'skipped' && needs.check-changes.outputs.image_config_changed == 'true'))
