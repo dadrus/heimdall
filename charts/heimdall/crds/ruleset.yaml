@@ -156,5 +156,67 @@ spec:
                         items:
                           type: object
                           x-kubernetes-preserve-unknown-fields: true
+            status:
+              description: Deployment status of a RuleSet
+              type: object
+              default:
+                activeIn: "0/0"
+              properties:
+                activeIn:
+                  description: The number of heimdall instances loaded/responsible for the RuleSet
+                  type: string
+                  maxLength: 7
+                conditions:
+                  description: Conditions store the status conditions of the RuleSet instances
+                  type: array
+                  items:
+                    description: Details for a single aspect of the current state of the RuleSet resource
+                    type: object
+                    required:
+                      - type
+                      - status
+                      - lastTransitionTime
+                      - reason
+                      - message
+                    properties:
+                      type:
+                        description: The type of the condition
+                        type: string
+                        maxLength: 316
+                        pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      status:
+                        description: The status of the condition, one of True, False, Unknown
+                        type: string
+                        default: Unknown
+                        enum:
+                          - "True"
+                          - "False"
+                          - "Unknown"
+                      observedGeneration:
+                        description: Represents the .metadata.generation that the condition was set based upon
+                        type: integer
+                        format: int64
+                        minimum: 0
+                      lastTransitionTime:
+                        description: The last time the condition transitioned from one status to another
+                        type: string
+                        format: date-time
+                      reason:
+                        description: Identifier indicating the reason for the condition's last transition
+                        type: string
+                        maxLength: 32
+                      message:
+                        description: Message indicating details about the transition
+                        type: string
+                        maxLength: 1024
+      additionalPrinterColumns:
+        - name: Active In
+          type: string
+          jsonPath: .status.activeIn
+        - name: Age
+          type: date
+          jsonPath: .metadata.creationTimestamp
+      subresources:
+        status: {}
 
 

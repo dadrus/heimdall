@@ -331,3 +331,47 @@ spec:
         - authorizer: bar
 ----
 ====
+
+In addition to configuration attributes described above, a `RuleSet` resource has a `status` stanza, which provides information about the usage status as soon as a `RuleSet` has been loaded by at least one heimdall instance.
+
+By making use of `kubectl get -n <your namespace> rulesets.heimdall.dadrus.github.com` you'll get an overview of deployed `RuleSet` resources in a particular namespace, like e.g. shown below
+
+[source, bash]
+----
+NAME             ACTIVE IN       AGE
+test-rules       2/2             32m
+----
+
+The value `2/2` in `ACTIVE IN` means, <active in heimdall instances>/<matching instances>. With
+
+* "matching instances" being those heimdall instances, which `auth_class` matches the `authClassName` in the `RuleSet` and
+* "active in heimdall instances" are those from the "matching instances", which were able to load the `RuleSet`.
+
+In addition, you can also get further information about the executed reconciliations by the deployed heimdall instances by taking a look at the `.status.conditions` field. The reconciliation status of matching instances is present there. That also means, if there were errors while loading the `RuleSet`, these are present in this condition list
+
+E.g.
+
+[source, bash]
+----
+$ kubectl describe -n test rulesets.heimdall.dadrus.github.com test-rules
+
+Name:         test-rules
+Namespace:    test
+...
+Status:
+  Conditions:
+    Last Transition Time:  2023-11-08T21:55:36Z
+    Message:               heimdall-6fb66c47bc-kwqqn instance successfully loaded RuleSet
+    Observed Generation:   1
+    Reason:                RuleSetActive
+    Status:                True
+    Type:                  heimdall-6fb66c47bc-kwqqn/Reconciliation
+    Last Transition Time:  2023-11-08T21:55:36Z
+    Message:               heimdall-6fb66c47bc-l7skn instance successfully loaded RuleSet
+    Observed Generation:   1
+    Reason:                RuleSetActive
+    Status:                True
+    Type:                  heimdall-6fb66c47bc-l7skn/Reconciliation
+  Active In:               2/2
+  Events:                  <none>
+----
