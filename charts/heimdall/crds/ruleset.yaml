@@ -124,15 +124,25 @@ spec:
                           type: string
                           maxLength: 16
                           enum:
-                            - CONNECT
-                            - DELETE
-                            - GET
-                            - HEAD
-                            - OPTIONS
-                            - PATCH
-                            - POST
-                            - PUT
-                            - TRACE
+                            - "CONNECT"
+                            - "!CONNECT"
+                            - "DELETE"
+                            - "!DELETE"
+                            - "GET"
+                            - "!GET"
+                            - "HEAD"
+                            - "!HEAD"
+                            - "OPTIONS"
+                            - "!OPTIONS"
+                            - "PATCH"
+                            - "!PATCH"
+                            - "POST"
+                            - "!POST"
+                            - "PUT"
+                            - "!PUT"
+                            - "TRACE"
+                            - "!TRACE"
+                            - "ALL"
                       execute:
                         description: The pipeline mechanisms to execute
                         type: array
