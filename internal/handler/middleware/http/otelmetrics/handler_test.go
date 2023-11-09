@@ -81,7 +81,7 @@ func TestHandlerExecution(t *testing.T) {
 				activeRequests := activeRequestsMetric.Data.(metricdata.Sum[float64]) // nolint: forcetypeassert
 				assert.False(t, activeRequests.IsMonotonic)
 				require.Len(t, activeRequests.DataPoints, 1)
-				require.Equal(t, float64(0), activeRequests.DataPoints[0].Value)
+				require.InDelta(t, float64(0), activeRequests.DataPoints[0].Value, 0.00)
 				require.Equal(t, 7, activeRequests.DataPoints[0].Attributes.Len())
 				assert.Equal(t, "foobar",
 					attributeValue(activeRequests.DataPoints[0].Attributes, "service.subsystem").AsString())

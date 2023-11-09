@@ -93,7 +93,7 @@ func TestRuleSetEndpointFetchRuleSet(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrCommunication)
+				require.ErrorIs(t, err, heimdall.ErrCommunication)
 				assert.Contains(t, err.Error(), "endpoint failed")
 			},
 		},
@@ -114,7 +114,7 @@ func TestRuleSetEndpointFetchRuleSet(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrCommunication)
+				require.ErrorIs(t, err, heimdall.ErrCommunication)
 				assert.Contains(t, err.Error(), "response code: 400")
 			},
 		},
@@ -141,7 +141,7 @@ rules:
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrInternal)
+				require.ErrorIs(t, err, heimdall.ErrInternal)
 				assert.Contains(t, err.Error(), "content type")
 			},
 		},
@@ -162,7 +162,7 @@ rules:
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, config.ErrEmptyRuleSet)
+				require.ErrorIs(t, err, config.ErrEmptyRuleSet)
 			},
 		},
 		{
@@ -254,7 +254,7 @@ rules:
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
 				assert.Contains(t, err.Error(), "path prefix validation")
 			},
 		},
@@ -284,7 +284,7 @@ rules:
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
 				assert.Contains(t, err.Error(), "path prefix validation")
 			},
 		},

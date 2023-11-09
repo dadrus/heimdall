@@ -50,7 +50,7 @@ func TestExtractBodyParameter(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrArgument)
+				require.ErrorIs(t, err, heimdall.ErrArgument)
 				assert.Contains(t, err.Error(), "unsupported mime type")
 			},
 		},
@@ -70,7 +70,7 @@ func TestExtractBodyParameter(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrArgument)
+				require.ErrorIs(t, err, heimdall.ErrArgument)
 				assert.Contains(t, err.Error(), "failed to decode")
 			},
 		},
@@ -90,7 +90,7 @@ func TestExtractBodyParameter(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrArgument)
+				require.ErrorIs(t, err, heimdall.ErrArgument)
 				assert.Contains(t, err.Error(), "failed to decode")
 			},
 		},
@@ -110,7 +110,7 @@ func TestExtractBodyParameter(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrArgument)
+				require.ErrorIs(t, err, heimdall.ErrArgument)
 				assert.Contains(t, err.Error(), "no foobar parameter present")
 			},
 		},
@@ -130,7 +130,7 @@ func TestExtractBodyParameter(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrArgument)
+				require.ErrorIs(t, err, heimdall.ErrArgument)
 				assert.Contains(t, err.Error(), "no foobar parameter present")
 			},
 		},
@@ -150,7 +150,7 @@ func TestExtractBodyParameter(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrArgument)
+				require.ErrorIs(t, err, heimdall.ErrArgument)
 				assert.Contains(t, err.Error(), "multiple times")
 			},
 		},
@@ -170,7 +170,7 @@ func TestExtractBodyParameter(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrArgument)
+				require.ErrorIs(t, err, heimdall.ErrArgument)
 				assert.Contains(t, err.Error(), "multiple times")
 			},
 		},
@@ -190,7 +190,7 @@ func TestExtractBodyParameter(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrArgument)
+				require.ErrorIs(t, err, heimdall.ErrArgument)
 				assert.Contains(t, err.Error(), "unexpected type")
 			},
 		},
@@ -210,7 +210,7 @@ func TestExtractBodyParameter(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrArgument)
+				require.ErrorIs(t, err, heimdall.ErrArgument)
 				assert.Contains(t, err.Error(), "unexpected type")
 			},
 		},

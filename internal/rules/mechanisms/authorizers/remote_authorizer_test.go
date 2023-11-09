@@ -18,7 +18,6 @@ package authorizers
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -68,7 +67,7 @@ foo: bar
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
 				assert.Contains(t, err.Error(), "failed decoding")
 			},
 		},
@@ -83,7 +82,7 @@ payload: FooBar
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
 				assert.Contains(t, err.Error(), "'endpoint'.'url' is a required field")
 			},
 		},
@@ -97,7 +96,7 @@ endpoint:
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
 				assert.Contains(t, err.Error(), "'payload' is a required field as long as endpoint.headers")
 			},
 		},
@@ -166,7 +165,7 @@ expressions:
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
 				assert.Contains(t, err.Error(), "failed to compile")
 			},
 		},
@@ -210,7 +209,7 @@ values:
 				err = auth.expressions.eval(map[string]any{
 					"Payload": map[string]any{"foo": "bar"},
 				}, auth)
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				assert.Equal(t, "bar: bar", val)
 				assert.Len(t, auth.headersForUpstream, 2)
 				assert.Contains(t, auth.headersForUpstream, "Foo")
@@ -298,7 +297,7 @@ foo: bar
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
 				assert.Contains(t, err.Error(), "failed decoding")
 			},
 		},
@@ -347,7 +346,7 @@ expressions:
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
 				assert.Contains(t, err.Error(), "failed to compile")
 			},
 		},
@@ -388,7 +387,7 @@ cache_ttl: 15s
 				err = configured.expressions.eval(map[string]any{
 					"Payload": map[string]any{"foo": "bar"},
 				}, configured)
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				assert.Equal(t, "Baz", val)
 				assert.Len(t, configured.headersForUpstream, 2)
 				assert.Contains(t, configured.headersForUpstream, "Bar")
@@ -446,7 +445,7 @@ cache_ttl: 15s
 				err = configured.expressions.eval(map[string]any{
 					"Payload": map[string]any{"foo": "bar"},
 				}, configured)
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				assert.Equal(t, "Baz", val)
 				assert.Len(t, configured.headersForUpstream, 2)
 				assert.Contains(t, configured.headersForUpstream, "Bar")
@@ -519,7 +518,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 			w.Header().Set("Content-Type", responseContentType)
 			w.Header().Set("Content-Length", strconv.Itoa(len(responseContent)))
 			_, err := w.Write(responseContent)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 		}
 
 		w.WriteHeader(responseCode)
@@ -568,7 +567,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 					assert.Empty(t, req.Header.Get("Accept"))
 
 					data, err := io.ReadAll(req.Body)
-					assert.NoError(t, err)
+					require.NoError(t, err)
 
 					assert.Equal(t, "my-id-bar", string(data))
 				}
@@ -624,7 +623,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 					assert.Equal(t, "application/json", req.Header.Get("Accept"))
 
 					data, err := io.ReadAll(req.Body)
-					assert.NoError(t, err)
+					require.NoError(t, err)
 
 					var mapData map[string]string
 
@@ -666,7 +665,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 				authorizerAttrs, ok := attrs.(map[string]any)
 				require.True(t, ok)
 				assert.Len(t, authorizerAttrs, 3)
-				assert.Equal(t, true, authorizerAttrs["access_granted"])
+				assert.Equal(t, true, authorizerAttrs["access_granted"]) //nolint:testifylint
 				assert.Len(t, authorizerAttrs["permissions"], 2)
 				assert.Contains(t, authorizerAttrs["permissions"], "read_foo")
 				assert.Contains(t, authorizerAttrs["permissions"], "write_foo")
@@ -707,7 +706,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 					assert.Equal(t, "application/x-www-form-urlencoded", req.Header.Get("Content-Type"))
 
 					data, err := io.ReadAll(req.Body)
-					assert.NoError(t, err)
+					require.NoError(t, err)
 
 					formValues, err := url.ParseQuery(string(data))
 					require.NoError(t, err)
@@ -938,11 +937,11 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 
 				require.Error(t, err)
 
-				assert.ErrorIs(t, err, heimdall.ErrAuthorization)
+				require.ErrorIs(t, err, heimdall.ErrAuthorization)
 				assert.Contains(t, err.Error(), "authorization failed")
 
 				var identifier interface{ ID() string }
-				require.True(t, errors.As(err, &identifier))
+				require.ErrorAs(t, err, &identifier)
 				assert.Equal(t, "authz", identifier.ID())
 			},
 		},
@@ -993,13 +992,13 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrCommunication)
+				require.ErrorIs(t, err, heimdall.ErrCommunication)
 				assert.Contains(t, err.Error(), "endpoint failed")
 
 				assert.False(t, authorizationEndpointCalled)
 
 				var identifier interface{ ID() string }
-				require.True(t, errors.As(err, &identifier))
+				require.ErrorAs(t, err, &identifier)
 				assert.Equal(t, "authz", identifier.ID())
 			},
 		},
@@ -1012,11 +1011,11 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 				assert.False(t, authorizationEndpointCalled)
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrInternal)
+				require.ErrorIs(t, err, heimdall.ErrInternal)
 				assert.Contains(t, err.Error(), "due to 'nil' subject")
 
 				var identifier interface{ ID() string }
-				require.True(t, errors.As(err, &identifier))
+				require.ErrorAs(t, err, &identifier)
 				assert.Equal(t, "authz", identifier.ID())
 			},
 		},
@@ -1058,7 +1057,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 					assert.Equal(t, "application/json", req.Header.Get("Accept"))
 
 					data, err := io.ReadAll(req.Body)
-					assert.NoError(t, err)
+					require.NoError(t, err)
 
 					var mapData map[string]string
 
@@ -1090,11 +1089,11 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 				assert.True(t, authorizationEndpointCalled)
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrAuthorization)
+				require.ErrorIs(t, err, heimdall.ErrAuthorization)
 				assert.Contains(t, err.Error(), "false != true")
 
 				var identifier interface{ ID() string }
-				require.True(t, errors.As(err, &identifier))
+				require.ErrorAs(t, err, &identifier)
 				assert.Equal(t, "authz", identifier.ID())
 			},
 		},
@@ -1136,7 +1135,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 					assert.Equal(t, "application/json", req.Header.Get("Accept"))
 
 					data, err := io.ReadAll(req.Body)
-					assert.NoError(t, err)
+					require.NoError(t, err)
 
 					var mapData map[string]string
 
@@ -1175,7 +1174,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 				authorizerAttrs, ok := attrs.(map[string]any)
 				require.True(t, ok)
 				assert.Len(t, authorizerAttrs, 3)
-				assert.Equal(t, true, authorizerAttrs["access_granted"])
+				assert.Equal(t, true, authorizerAttrs["access_granted"]) //nolint:testifylint
 				assert.Len(t, authorizerAttrs["permissions"], 2)
 				assert.Contains(t, authorizerAttrs["permissions"], "read_foo")
 				assert.Contains(t, authorizerAttrs["permissions"], "write_foo")

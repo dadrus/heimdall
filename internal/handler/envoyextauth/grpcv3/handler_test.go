@@ -56,13 +56,13 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				t.Helper()
 
 				require.NoError(t, err)
-				assert.Equal(t, int32(codes.NotFound), response.Status.Code)
+				assert.Equal(t, int32(codes.NotFound), response.GetStatus().GetCode())
 
 				deniedResponse := response.GetDeniedResponse()
 				require.NotNil(t, deniedResponse)
-				assert.Equal(t, typev3.StatusCode(http.StatusNotFound), deniedResponse.Status.Code)
-				assert.Len(t, deniedResponse.Body, 0)
-				assert.Empty(t, deniedResponse.Headers)
+				assert.Equal(t, typev3.StatusCode(http.StatusNotFound), deniedResponse.GetStatus().GetCode())
+				assert.Empty(t, deniedResponse.GetBody())
+				assert.Empty(t, deniedResponse.GetHeaders())
 			},
 		},
 		{
@@ -76,13 +76,13 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				t.Helper()
 
 				require.NoError(t, err)
-				assert.Equal(t, int32(codes.InvalidArgument), response.Status.Code)
+				assert.Equal(t, int32(codes.InvalidArgument), response.GetStatus().GetCode())
 
 				deniedResponse := response.GetDeniedResponse()
 				require.NotNil(t, deniedResponse)
-				assert.Equal(t, typev3.StatusCode(http.StatusMethodNotAllowed), deniedResponse.Status.Code)
-				assert.Len(t, deniedResponse.Body, 0)
-				assert.Empty(t, deniedResponse.Headers)
+				assert.Equal(t, typev3.StatusCode(http.StatusMethodNotAllowed), deniedResponse.GetStatus().GetCode())
+				assert.Empty(t, deniedResponse.GetBody())
+				assert.Empty(t, deniedResponse.GetHeaders())
 			},
 		},
 		{
@@ -96,13 +96,13 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				t.Helper()
 
 				require.NoError(t, err)
-				assert.Equal(t, int32(codes.Unauthenticated), response.Status.Code)
+				assert.Equal(t, int32(codes.Unauthenticated), response.GetStatus().GetCode())
 
 				deniedResponse := response.GetDeniedResponse()
 				require.NotNil(t, deniedResponse)
-				assert.Equal(t, typev3.StatusCode(http.StatusUnauthorized), deniedResponse.Status.Code)
-				assert.Len(t, deniedResponse.Body, 0)
-				assert.Empty(t, deniedResponse.Headers)
+				assert.Equal(t, typev3.StatusCode(http.StatusUnauthorized), deniedResponse.GetStatus().GetCode())
+				assert.Empty(t, deniedResponse.GetBody())
+				assert.Empty(t, deniedResponse.GetHeaders())
 			},
 		},
 		{
@@ -116,13 +116,13 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				t.Helper()
 
 				require.NoError(t, err)
-				assert.Equal(t, int32(codes.PermissionDenied), response.Status.Code)
+				assert.Equal(t, int32(codes.PermissionDenied), response.GetStatus().GetCode())
 
 				deniedResponse := response.GetDeniedResponse()
 				require.NotNil(t, deniedResponse)
-				assert.Equal(t, typev3.StatusCode(http.StatusForbidden), deniedResponse.Status.Code)
-				assert.Len(t, deniedResponse.Body, 0)
-				assert.Empty(t, deniedResponse.Headers)
+				assert.Equal(t, typev3.StatusCode(http.StatusForbidden), deniedResponse.GetStatus().GetCode())
+				assert.Empty(t, deniedResponse.GetBody())
+				assert.Empty(t, deniedResponse.GetHeaders())
 			},
 		},
 		{
@@ -140,15 +140,15 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				t.Helper()
 
 				require.NoError(t, err)
-				assert.Equal(t, int32(codes.FailedPrecondition), response.Status.Code)
+				assert.Equal(t, int32(codes.FailedPrecondition), response.GetStatus().GetCode())
 
 				deniedResponse := response.GetDeniedResponse()
 				require.NotNil(t, deniedResponse)
-				assert.Equal(t, typev3.StatusCode(http.StatusFound), deniedResponse.Status.Code)
-				assert.Len(t, deniedResponse.Body, 0)
-				assert.Len(t, deniedResponse.Headers, 1)
-				assert.Equal(t, "Location", deniedResponse.Headers[0].Header.Key)
-				assert.Equal(t, "http://foo.bar", deniedResponse.Headers[0].Header.Value)
+				assert.Equal(t, typev3.StatusCode(http.StatusFound), deniedResponse.GetStatus().GetCode())
+				assert.Empty(t, deniedResponse.GetBody())
+				require.Len(t, deniedResponse.GetHeaders(), 1)
+				assert.Equal(t, "Location", deniedResponse.GetHeaders()[0].GetHeader().GetKey())
+				assert.Equal(t, "http://foo.bar", deniedResponse.GetHeaders()[0].GetHeader().GetValue())
 			},
 		},
 		{
@@ -169,11 +169,11 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				t.Helper()
 
 				require.NoError(t, err)
-				assert.Equal(t, int32(codes.OK), response.Status.Code)
+				assert.Equal(t, int32(codes.OK), response.GetStatus().GetCode())
 
 				okResponse := response.GetOkResponse()
 				require.NotNil(t, okResponse)
-				assert.Empty(t, okResponse.Headers)
+				assert.Empty(t, okResponse.GetHeaders())
 			},
 		},
 		{

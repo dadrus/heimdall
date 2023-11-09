@@ -44,7 +44,7 @@ func TestUrls(t *testing.T) {
 
 			out, _, err := prg.Eval(map[string]any{"uri": uri})
 			require.NoError(t, err)
-			require.Equal(t, true, out.Value())
+			require.Equal(t, true, out.Value()) //nolint:testifylint
 		})
 	}
 }

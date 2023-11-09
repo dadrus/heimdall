@@ -16,8 +16,8 @@ import (
 var listeningAddress = ":4458"
 
 type AdmissionController interface {
-	Start(context.Context) error
-	Stop(context.Context) error
+	Start(ctx context.Context) error
+	Stop(ctx context.Context) error
 }
 
 type noopController struct{}

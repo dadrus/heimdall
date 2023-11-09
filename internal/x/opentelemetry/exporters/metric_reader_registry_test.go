@@ -48,7 +48,7 @@ func TestCreateMetricReaders(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, ErrUnsupportedMetricExporterType)
+				require.ErrorIs(t, err, ErrUnsupportedMetricExporterType)
 				assert.Contains(t, err.Error(), "foobar")
 			},
 		},
@@ -64,9 +64,9 @@ func TestCreateMetricReaders(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, ErrFailedCreatingMetricExporter)
+				require.ErrorIs(t, err, ErrFailedCreatingMetricExporter)
 				assert.Contains(t, err.Error(), "otlp")
-				assert.ErrorIs(t, err, ErrUnsupportedOTLPProtocol)
+				require.ErrorIs(t, err, ErrUnsupportedOTLPProtocol)
 				assert.Contains(t, err.Error(), "foobar")
 			},
 		},
@@ -80,7 +80,7 @@ func TestCreateMetricReaders(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, ErrUnsupportedOTLPProtocol)
+				require.ErrorIs(t, err, ErrUnsupportedOTLPProtocol)
 				assert.Contains(t, err.Error(), "foobar")
 			},
 		},

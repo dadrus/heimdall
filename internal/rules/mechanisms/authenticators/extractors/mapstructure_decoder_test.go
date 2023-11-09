@@ -57,11 +57,11 @@ authentication_data_source:
 		),
 		Result: &ces,
 	})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	err = dec.Decode(settings["authentication_data_source"])
-	assert.NoError(t, err)
-	assert.Equal(t, 4, len(ces))
+	require.NoError(t, err)
+	assert.Len(t, ces, 4)
 
 	ce, ok := ces[0].(*CookieValueExtractStrategy)
 	require.True(t, ok)

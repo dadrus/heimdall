@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/rs/zerolog/log"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/config"
@@ -31,8 +30,8 @@ func TestNewLifecycleManager(t *testing.T) {
 				t.Helper()
 
 				require.IsType(t, noopManager{}, lm)
-				assert.NoError(t, lm.Start(context.TODO()))
-				assert.NoError(t, lm.Stop(context.TODO()))
+				require.NoError(t, lm.Start(context.TODO()))
+				require.NoError(t, lm.Stop(context.TODO()))
 			},
 		},
 		{
@@ -47,8 +46,8 @@ func TestNewLifecycleManager(t *testing.T) {
 				t.Helper()
 
 				require.IsType(t, noopManager{}, lm)
-				assert.NoError(t, lm.Start(context.TODO()))
-				assert.NoError(t, lm.Stop(context.TODO()))
+				require.NoError(t, lm.Start(context.TODO()))
+				require.NoError(t, lm.Stop(context.TODO()))
 			},
 		},
 		{
@@ -63,8 +62,8 @@ func TestNewLifecycleManager(t *testing.T) {
 				t.Helper()
 
 				require.IsType(t, noopManager{}, lm)
-				assert.NoError(t, lm.Start(context.TODO()))
-				assert.NoError(t, lm.Stop(context.TODO()))
+				require.NoError(t, lm.Start(context.TODO()))
+				require.NoError(t, lm.Stop(context.TODO()))
 			},
 		},
 		{
@@ -88,8 +87,8 @@ func TestNewLifecycleManager(t *testing.T) {
 				t.Helper()
 
 				require.IsType(t, &fxlcm.LifecycleManager{}, lm)
-				assert.NoError(t, lm.Start(context.TODO()))
-				assert.NoError(t, lm.Stop(context.TODO()))
+				require.NoError(t, lm.Start(context.TODO()))
+				require.NoError(t, lm.Stop(context.TODO()))
 			},
 		},
 	} {

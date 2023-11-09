@@ -75,7 +75,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 
 				data, err := io.ReadAll(response.Body)
 				require.NoError(t, err)
-				assert.Len(t, data, 0)
+				assert.Empty(t, data)
 			},
 		},
 		{
@@ -106,7 +106,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 
 				data, err := io.ReadAll(response.Body)
 				require.NoError(t, err)
-				assert.Len(t, data, 0)
+				assert.Empty(t, data)
 			},
 		},
 		{
@@ -137,7 +137,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 
 				data, err := io.ReadAll(response.Body)
 				require.NoError(t, err)
-				assert.Len(t, data, 0)
+				assert.Empty(t, data)
 			},
 		},
 		{
@@ -168,7 +168,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 
 				data, err := io.ReadAll(response.Body)
 				require.NoError(t, err)
-				assert.Len(t, data, 0)
+				assert.Empty(t, data)
 			},
 		},
 		{
@@ -215,10 +215,10 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 
 				data, err := io.ReadAll(response.Body)
 				require.NoError(t, err)
-				assert.Len(t, data, 0)
+				assert.Empty(t, data)
 
 				headerVal := response.Header.Get("X-Foo-Bar")
-				assert.Equal(t, headerVal, "baz")
+				assert.Equal(t, "baz", headerVal)
 
 				cookies := response.Cookies()
 				require.Len(t, cookies, 1)
@@ -275,10 +275,10 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 
 				data, err := io.ReadAll(response.Body)
 				require.NoError(t, err)
-				assert.Len(t, data, 0)
+				assert.Empty(t, data)
 
 				headerVal := response.Header.Get("X-Foo-Bar")
-				assert.Equal(t, headerVal, "baz")
+				assert.Equal(t, "baz", headerVal)
 
 				cookies := response.Cookies()
 				require.Len(t, cookies, 1)
@@ -333,10 +333,10 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 
 				data, err := io.ReadAll(response.Body)
 				require.NoError(t, err)
-				assert.Len(t, data, 0)
+				assert.Empty(t, data)
 
 				headerVal := response.Header.Get("X-Foo-Bar")
-				assert.Equal(t, headerVal, "baz")
+				assert.Equal(t, "baz", headerVal)
 
 				cookies := response.Cookies()
 				require.Len(t, cookies, 1)

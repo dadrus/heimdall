@@ -19,7 +19,7 @@ package oauth2
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestWildcardScopeStrategy(t *testing.T) {
@@ -38,7 +38,7 @@ func TestWildcardScopeStrategy(t *testing.T) {
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			},
 		},
 		{
@@ -48,7 +48,7 @@ func TestWildcardScopeStrategy(t *testing.T) {
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
-				assert.Error(t, err)
+				require.Error(t, err)
 			},
 		},
 		{
@@ -58,7 +58,7 @@ func TestWildcardScopeStrategy(t *testing.T) {
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
-				assert.Error(t, err)
+				require.Error(t, err)
 			},
 		},
 		{
@@ -68,7 +68,7 @@ func TestWildcardScopeStrategy(t *testing.T) {
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			},
 		},
 		{
@@ -78,7 +78,7 @@ func TestWildcardScopeStrategy(t *testing.T) {
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
-				assert.Error(t, err)
+				require.Error(t, err)
 			},
 		},
 		{
@@ -88,7 +88,7 @@ func TestWildcardScopeStrategy(t *testing.T) {
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
-				assert.Error(t, err)
+				require.Error(t, err)
 			},
 		},
 		{
@@ -98,7 +98,7 @@ func TestWildcardScopeStrategy(t *testing.T) {
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
-				assert.Error(t, err)
+				require.Error(t, err)
 			},
 		},
 		{
@@ -108,7 +108,7 @@ func TestWildcardScopeStrategy(t *testing.T) {
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			},
 		},
 		{
@@ -118,7 +118,7 @@ func TestWildcardScopeStrategy(t *testing.T) {
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
-				assert.Error(t, err)
+				require.Error(t, err)
 			},
 		},
 		{
@@ -128,7 +128,7 @@ func TestWildcardScopeStrategy(t *testing.T) {
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
-				assert.Error(t, err)
+				require.Error(t, err)
 			},
 		},
 		{
@@ -138,7 +138,7 @@ func TestWildcardScopeStrategy(t *testing.T) {
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			},
 		},
 		{
@@ -148,7 +148,7 @@ func TestWildcardScopeStrategy(t *testing.T) {
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
-				assert.Error(t, err)
+				require.Error(t, err)
 			},
 		},
 		{
@@ -158,7 +158,7 @@ func TestWildcardScopeStrategy(t *testing.T) {
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			},
 		},
 		{
@@ -168,7 +168,7 @@ func TestWildcardScopeStrategy(t *testing.T) {
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
-				assert.Error(t, err)
+				require.Error(t, err)
 			},
 		},
 		{
@@ -178,7 +178,7 @@ func TestWildcardScopeStrategy(t *testing.T) {
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
-				assert.Error(t, err)
+				require.Error(t, err)
 			},
 		},
 		{
@@ -188,7 +188,7 @@ func TestWildcardScopeStrategy(t *testing.T) {
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			},
 		},
 		{
@@ -198,7 +198,7 @@ func TestWildcardScopeStrategy(t *testing.T) {
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			},
 		},
 		{
@@ -208,7 +208,7 @@ func TestWildcardScopeStrategy(t *testing.T) {
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
-				assert.Error(t, err)
+				require.Error(t, err)
 			},
 		},
 		{
@@ -218,7 +218,7 @@ func TestWildcardScopeStrategy(t *testing.T) {
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			},
 		},
 	} {

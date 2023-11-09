@@ -103,7 +103,7 @@ func (h *interceptor) intercept(
 
 func acceptType(req any) string {
 	if req, ok := req.(*envoy_auth.CheckRequest); ok {
-		return req.Attributes.Request.Http.Headers["accept"]
+		return req.GetAttributes().GetRequest().GetHttp().GetHeaders()["accept"]
 	}
 
 	// This should never happen as the API is typed

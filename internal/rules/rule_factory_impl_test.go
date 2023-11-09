@@ -74,7 +74,7 @@ func TestRuleFactoryNew(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
 				assert.Contains(t, err.Error(), "unsupported configuration")
 			},
 		},
@@ -91,7 +91,7 @@ func TestRuleFactoryNew(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
 				assert.Contains(t, err.Error(), "unsupported configuration")
 			},
 		},
@@ -115,7 +115,7 @@ func TestRuleFactoryNew(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
 				assert.Contains(t, err.Error(), "an authenticator")
 			},
 		},
@@ -138,7 +138,7 @@ func TestRuleFactoryNew(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
 				assert.Contains(t, err.Error(), "an authenticator")
 			},
 		},
@@ -180,7 +180,7 @@ func TestRuleFactoryNew(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
 				assert.Contains(t, err.Error(), "before an authorizer")
 			},
 		},
@@ -222,7 +222,7 @@ func TestRuleFactoryNew(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
 				assert.Contains(t, err.Error(), "before a contextualizer")
 			},
 		},
@@ -295,7 +295,7 @@ func TestRuleFactoryNew(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
 				assert.Contains(t, err.Error(), "no authenticator")
 			},
 		},
@@ -317,7 +317,7 @@ func TestRuleFactoryNew(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
 				assert.Contains(t, err.Error(), "no finalizer")
 			},
 		},
@@ -341,7 +341,7 @@ func TestRuleFactoryNew(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
 				assert.Contains(t, err.Error(), "no finalizer")
 			},
 		},
@@ -367,7 +367,7 @@ func TestRuleFactoryNew(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
 				assert.Contains(t, err.Error(), "no finalizer")
 			},
 		},
@@ -392,7 +392,7 @@ func TestRuleFactoryNew(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
 				assert.Contains(t, err.Error(), "failed to expand")
 			},
 		},
@@ -416,7 +416,7 @@ func TestRuleFactoryNew(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
 				assert.Contains(t, err.Error(), "no methods defined")
 			},
 		},
@@ -451,9 +451,9 @@ func TestRuleFactoryNew(t *testing.T) {
 				assert.Equal(t, "config", defRule.srcID)
 				assert.ElementsMatch(t, defRule.methods, []string{"FOO"})
 				assert.Len(t, defRule.sc, 1)
-				assert.Len(t, defRule.sh, 0)
+				assert.Empty(t, defRule.sh)
 				assert.Len(t, defRule.fi, 1)
-				assert.Len(t, defRule.eh, 0)
+				assert.Empty(t, defRule.eh)
 			},
 		},
 		{
@@ -550,7 +550,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
 				assert.Contains(t, err.Error(), "no ID defined")
 			},
 		},
@@ -562,7 +562,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
 				assert.Contains(t, err.Error(), "no forward_to")
 			},
 		},
@@ -574,7 +574,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
 				assert.Contains(t, err.Error(), "missing host")
 			},
 		},
@@ -592,7 +592,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
 				assert.Contains(t, err.Error(), "rewrite is defined")
 			},
 		},
@@ -603,7 +603,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
 				assert.Contains(t, err.Error(), "bad URL pattern")
 			},
 		},
@@ -614,7 +614,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
 				assert.Contains(t, err.Error(), "bad URL pattern")
 			},
 		},
@@ -666,7 +666,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
 				assert.Contains(t, err.Error(), "no authenticator defined")
 			},
 		},
@@ -686,7 +686,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
 				assert.Contains(t, err.Error(), "no finalizer defined")
 			},
 		},
@@ -710,7 +710,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
 				assert.Contains(t, err.Error(), "no finalizer defined")
 			},
 		},
@@ -736,7 +736,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
 				assert.Contains(t, err.Error(), "no finalizer defined")
 			},
 		},
@@ -761,7 +761,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
 				assert.Contains(t, err.Error(), "failed to expand")
 			},
 		},
@@ -785,7 +785,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
 				assert.Contains(t, err.Error(), "no methods defined")
 			},
 		},
@@ -818,9 +818,9 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				assert.NotNil(t, rul.urlMatcher)
 				assert.ElementsMatch(t, rul.methods, []string{"FOO", "BAR"})
 				assert.Len(t, rul.sc, 1)
-				assert.Len(t, rul.sh, 0)
+				assert.Empty(t, rul.sh)
 				assert.Len(t, rul.fi, 1)
-				assert.Len(t, rul.eh, 0)
+				assert.Empty(t, rul.eh)
 			},
 		},
 		{
@@ -854,9 +854,9 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				assert.NotNil(t, rul.urlMatcher)
 				assert.ElementsMatch(t, rul.methods, []string{"FOO", "BAR"})
 				assert.Len(t, rul.sc, 1)
-				assert.Len(t, rul.sh, 0)
+				assert.Empty(t, rul.sh)
 				assert.Len(t, rul.fi, 1)
-				assert.Len(t, rul.eh, 0)
+				assert.Empty(t, rul.eh)
 				assert.NotNil(t, rul.backend)
 			},
 		},
@@ -1051,7 +1051,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
 				assert.Contains(t, err.Error(), "unexpected type")
 			},
 		},
@@ -1075,7 +1075,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
 				assert.Contains(t, err.Error(), "empty execution condition")
 			},
 		},

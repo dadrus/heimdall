@@ -51,7 +51,7 @@ func TestCreateErrorHandlerPrototypePrototype(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, ErrUnsupportedErrorHandlerType)
+				require.ErrorIs(t, err, ErrUnsupportedErrorHandlerType)
 			},
 		},
 	} {

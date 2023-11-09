@@ -21,7 +21,6 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
-	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -102,7 +101,7 @@ password: bar`),
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
 
 				assert.Nil(t, auth)
 			},
@@ -115,7 +114,7 @@ user_id: foo`),
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
 
 				assert.Nil(t, auth)
 			},
@@ -130,7 +129,7 @@ foo: bar`),
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
 
 				assert.Nil(t, auth)
 			},
@@ -358,13 +357,13 @@ password: bar`))
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
 
-				assert.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrAuthentication)
-				assert.ErrorIs(t, err, heimdall.ErrArgument)
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrAuthentication)
+				require.ErrorIs(t, err, heimdall.ErrArgument)
 				assert.Contains(t, err.Error(), "expected header not present")
 
 				var identifier HandlerIdentifier
-				require.True(t, errors.As(err, &identifier))
+				require.ErrorAs(t, err, &identifier)
 				assert.Equal(t, "auth3", identifier.ID())
 
 				assert.Nil(t, sub)
@@ -384,13 +383,13 @@ password: bar`))
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
 
-				assert.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrAuthentication)
-				assert.NotErrorIs(t, err, heimdall.ErrArgument)
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrAuthentication)
+				require.NotErrorIs(t, err, heimdall.ErrArgument)
 				assert.Contains(t, err.Error(), "failed to decode")
 
 				var identifier HandlerIdentifier
-				require.True(t, errors.As(err, &identifier))
+				require.ErrorAs(t, err, &identifier)
 				assert.Equal(t, "auth3", identifier.ID())
 
 				assert.Nil(t, sub)
@@ -411,13 +410,13 @@ password: bar`))
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
 
-				assert.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrAuthentication)
-				assert.NotErrorIs(t, err, heimdall.ErrArgument)
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrAuthentication)
+				require.NotErrorIs(t, err, heimdall.ErrArgument)
 				assert.Contains(t, err.Error(), "malformed user-id - password")
 
 				var identifier HandlerIdentifier
-				require.True(t, errors.As(err, &identifier))
+				require.ErrorAs(t, err, &identifier)
 				assert.Equal(t, "auth3", identifier.ID())
 
 				assert.Nil(t, sub)
@@ -438,13 +437,13 @@ password: bar`))
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
 
-				assert.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrAuthentication)
-				assert.NotErrorIs(t, err, heimdall.ErrArgument)
-				assert.Contains(t, err.Error(), "invalid user credentials")
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrAuthentication)
+				require.NotErrorIs(t, err, heimdall.ErrArgument)
+				require.Contains(t, err.Error(), "invalid user credentials")
 
 				var identifier HandlerIdentifier
-				require.True(t, errors.As(err, &identifier))
+				require.ErrorAs(t, err, &identifier)
 				assert.Equal(t, "auth3", identifier.ID())
 
 				assert.Nil(t, sub)
@@ -465,13 +464,13 @@ password: bar`))
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
 
-				assert.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrAuthentication)
-				assert.NotErrorIs(t, err, heimdall.ErrArgument)
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrAuthentication)
+				require.NotErrorIs(t, err, heimdall.ErrArgument)
 				assert.Contains(t, err.Error(), "invalid user credentials")
 
 				var identifier HandlerIdentifier
-				require.True(t, errors.As(err, &identifier))
+				require.ErrorAs(t, err, &identifier)
 				assert.Equal(t, "auth3", identifier.ID())
 
 				assert.Nil(t, sub)
@@ -495,7 +494,7 @@ password: bar`))
 				require.NoError(t, err)
 				require.NotNil(t, sub)
 
-				assert.Equal(t, sub.ID, "foo")
+				require.Equal(t, "foo", sub.ID)
 				assert.NotNil(t, sub.Attributes)
 			},
 		},

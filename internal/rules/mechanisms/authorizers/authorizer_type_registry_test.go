@@ -51,7 +51,7 @@ func TestCreateAuthorizerPrototypeUsingKnowType(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, ErrUnsupportedAuthorizerType)
+				require.ErrorIs(t, err, ErrUnsupportedAuthorizerType)
 			},
 		},
 	} {

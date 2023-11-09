@@ -129,7 +129,7 @@ func TestSessionLifespanConfigCreateSession(t *testing.T) {
 
 				require.Nil(t, session)
 				require.Error(t, err)
-				assert.ErrorIs(t, err, ErrSessionLifespanParseError)
+				require.ErrorIs(t, err, ErrSessionLifespanParseError)
 				assert.Contains(t, err.Error(), "issued_at")
 			},
 		},
@@ -191,7 +191,7 @@ func TestSessionLifespanConfigCreateSession(t *testing.T) {
 
 				require.Nil(t, session)
 				require.Error(t, err)
-				assert.ErrorIs(t, err, ErrSessionLifespanParseError)
+				require.ErrorIs(t, err, ErrSessionLifespanParseError)
 				assert.Contains(t, err.Error(), "not_before")
 			},
 		},
@@ -210,7 +210,7 @@ func TestSessionLifespanConfigCreateSession(t *testing.T) {
 				require.NotNil(t, session)
 				assert.True(t, session.active)
 				assert.Equal(t, time.Time{}, session.nbf)
-				assert.Equal(t, time.Unix(1661408890, 0), session.exp)
+				assert.Equal(t, time.Unix(1661408890, 0), session.exp) //nolint:testifylint
 				assert.Equal(t, time.Time{}, session.iat)
 				assert.Equal(t, time.Duration(0), session.leeway)
 			},
@@ -234,7 +234,7 @@ func TestSessionLifespanConfigCreateSession(t *testing.T) {
 				require.NotNil(t, session)
 				assert.True(t, session.active)
 				assert.Equal(t, time.Time{}, session.nbf)
-				assert.Equal(t, timeVal, session.exp)
+				assert.Equal(t, timeVal, session.exp) //nolint:testifylint
 				assert.Equal(t, time.Time{}, session.iat)
 				assert.Equal(t, time.Duration(0), session.leeway)
 			},
@@ -253,7 +253,7 @@ func TestSessionLifespanConfigCreateSession(t *testing.T) {
 
 				require.Nil(t, session)
 				require.Error(t, err)
-				assert.ErrorIs(t, err, ErrSessionLifespanParseError)
+				require.ErrorIs(t, err, ErrSessionLifespanParseError)
 				assert.Contains(t, err.Error(), "not_after")
 			},
 		},

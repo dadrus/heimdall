@@ -163,7 +163,7 @@ func TestEndpointCreateRequest(t *testing.T) {
 				assert.Equal(t, "POST", request.Method)
 				assert.Equal(t, "http://foo.bar", request.URL.String())
 				assert.Nil(t, request.Body)
-				assert.Len(t, request.Header, 0)
+				assert.Empty(t, request.Header)
 			},
 		},
 		{
@@ -177,7 +177,7 @@ func TestEndpointCreateRequest(t *testing.T) {
 				assert.Equal(t, "GET", request.Method)
 				assert.Equal(t, "http://test.org", request.URL.String())
 				assert.Nil(t, request.Body)
-				assert.Len(t, request.Header, 0)
+				assert.Empty(t, request.Header)
 			},
 		},
 		{
@@ -187,7 +187,7 @@ func TestEndpointCreateRequest(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrInternal)
+				require.ErrorIs(t, err, heimdall.ErrInternal)
 				assert.Contains(t, err.Error(), "failed to create a request")
 			},
 		},
@@ -203,7 +203,7 @@ func TestEndpointCreateRequest(t *testing.T) {
 				assert.Equal(t, "GET", request.Method)
 				assert.Equal(t, "http://test.org", request.URL.String())
 				assert.NotNil(t, request.Body)
-				assert.Len(t, request.Header, 0)
+				assert.Empty(t, request.Header)
 			},
 		},
 		{
@@ -250,7 +250,7 @@ func TestEndpointCreateRequest(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrInternal)
+				require.ErrorIs(t, err, heimdall.ErrInternal)
 				assert.Contains(t, err.Error(), "failed to authenticate request")
 			},
 		},
@@ -307,7 +307,7 @@ func TestEndpointCreateRequest(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrInternal)
+				require.ErrorIs(t, err, heimdall.ErrInternal)
 				assert.Contains(t, err.Error(), "failed to render URL")
 			},
 		},
@@ -342,7 +342,7 @@ func TestEndpointCreateRequest(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrInternal)
+				require.ErrorIs(t, err, heimdall.ErrInternal)
 				assert.Contains(t, err.Error(), "header value")
 			},
 		},
@@ -397,7 +397,7 @@ func TestEndpointSendRequest(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrInternal)
+				require.ErrorIs(t, err, heimdall.ErrInternal)
 				assert.Contains(t, err.Error(), "failed to create a request")
 			},
 		},
@@ -408,7 +408,7 @@ func TestEndpointSendRequest(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrCommunication)
+				require.ErrorIs(t, err, heimdall.ErrCommunication)
 				assert.Contains(t, err.Error(), "lookup heimdall")
 			},
 		},
@@ -424,7 +424,7 @@ func TestEndpointSendRequest(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrCommunication)
+				require.ErrorIs(t, err, heimdall.ErrCommunication)
 				assert.Contains(t, err.Error(), "unexpected response code")
 			},
 		},

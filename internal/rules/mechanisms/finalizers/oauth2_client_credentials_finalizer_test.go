@@ -39,7 +39,7 @@ func TestNewClientCredentialsFinalizer(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
 				assert.Contains(t, err.Error(), "failed validating")
 				assert.Contains(t, err.Error(), "token_url")
 				assert.Contains(t, err.Error(), "client_id")
@@ -53,7 +53,7 @@ func TestNewClientCredentialsFinalizer(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
 				assert.Contains(t, err.Error(), "failed validating")
 				assert.Contains(t, err.Error(), "token_url")
 				assert.Contains(t, err.Error(), "client_id")
@@ -70,7 +70,7 @@ foo: bar
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
 				assert.Contains(t, err.Error(), "invalid keys")
 			},
 		},
@@ -86,7 +86,7 @@ auth_method: bar
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
 				assert.Contains(t, err.Error(), "'auth_method' must be one of [basic_auth request_body]")
 			},
 		},
@@ -306,7 +306,7 @@ foo: 10s
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
 				assert.Contains(t, err.Error(), "failed decoding")
 
 				require.NotNil(t, prototype)
@@ -429,7 +429,7 @@ func TestClientCredentialsFinalizerExecute(t *testing.T) {
 
 		w.WriteHeader(code)
 		_, err = w.Write(rawResp)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 	}))
 	defer srv.Close()
 
@@ -486,7 +486,7 @@ func TestClientCredentialsFinalizerExecute(t *testing.T) {
 
 				assert.True(t, tokenEndpointCalled)
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrInternal)
+				require.ErrorIs(t, err, heimdall.ErrInternal)
 			},
 		},
 		{
@@ -518,7 +518,7 @@ func TestClientCredentialsFinalizerExecute(t *testing.T) {
 				t.Helper()
 
 				val, err := base64.StdEncoding.DecodeString(strings.TrimPrefix(req.Header.Get("Authorization"), "Basic "))
-				assert.NoError(t, err)
+				require.NoError(t, err)
 
 				clientIDAndSecret := strings.Split(string(val), ":")
 				assert.Equal(t, "bar", clientIDAndSecret[0])

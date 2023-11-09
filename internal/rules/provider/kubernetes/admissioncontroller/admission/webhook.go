@@ -15,7 +15,7 @@ import (
 //go:generate mockery --name Handler --structname HandlerMock --inpackage --testonly
 
 type Handler interface {
-	Handle(context.Context, *Request) *Response
+	Handle(ctx context.Context, req *Request) *Response
 }
 
 type Webhook struct {

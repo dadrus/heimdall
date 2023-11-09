@@ -23,6 +23,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestApplyBasicAuthStrategy(t *testing.T) {
@@ -39,7 +40,7 @@ func TestApplyBasicAuthStrategy(t *testing.T) {
 	err := s.Apply(context.Background(), req)
 
 	// THEN
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, expectedValue, req.Header.Get("Authorization"))
 }
 
