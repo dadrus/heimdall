@@ -43,9 +43,11 @@ spec:
       labels:
         {{- include "heimdall.selectorLabels" $data | nindent 8 }}
       annotations:
+        {{- if contains "prometheus" (.Values.env.OTEL_METRICS_EXPORTER | default "") }}
         prometheus.io/scrape: "true"
-        prometheus.io/path: "{{ .Values.metrics.metrics_path }}"
-        prometheus.io/port: "{{ .Values.metrics.port }}"
+        prometheus.io/path: "/metrics"
+        prometheus.io/port: "{{ .Values.env.OTEL_EXPORTER_PROMETHEUS_PORT | default 9464 }}"
+        {{- end }}
         {{- if .Values.profiling.enabled }}
         phlare.grafana.com/scrape: "true"
         phlare.grafana.com/port: "{{ .Values.profiling.port }}"
@@ -92,15 +94,23 @@ spec:
             - name: http-management
               protocol: TCP
               containerPort: {{ .Values.serve.management.port }}
-            {{- if .Values.metrics.enabled }}
+            {{- if contains "prometheus" ( .Values.env.OTEL_METRICS_EXPORTER | default "") }}
             - name: http-metrics
               protocol: TCP
-              containerPort: {{ .Values.metrics.port }}
+              containerPort: {{ .Values.env.OTEL_EXPORTER_PROMETHEUS_PORT | default 9464 }}
             {{- end }}
             {{- if .Values.profiling.enabled }}
             - name: http-profiling
               protocol: TCP
               containerPort: {{ .Values.profiling.port }}
+            {{- end }}
+            {{- $rules := .Values.rules | default dict }}
+            {{- $providers := $rules.providers | default dict }}
+            {{- $kubernetes := $providers.kubernetes | default dict}}
+            {{- if $kubernetes.tls }}
+            - name: https-webhook
+              protocol: TCP
+              containerPort: 4458
             {{- end }}
           volumeMounts:
             - name: {{ include "heimdall.name" . }}-config-volume

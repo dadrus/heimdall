@@ -59,7 +59,7 @@ func TestKoanfFromStruct(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
 				assert.Contains(t, err.Error(),
 					"field ThisIsMissingAKoanfTag does not have lowercase key, use the `koanf` tag")
 			},
@@ -75,12 +75,12 @@ func TestKoanfFromStruct(t *testing.T) {
 			assert: func(t *testing.T, err error, konf *koanf.Koanf) {
 				t.Helper()
 
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				konf.Print()
 
 				assert.Equal(t, "foo", konf.Get("some_string"))
 				assert.Equal(t, 42, konf.Get("someint"))
-				assert.Equal(t, true, konf.Get("nested1.somebool"))
+				assert.Equal(t, true, konf.Get("nested1.somebool")) //nolint:testifylint
 				assert.Empty(t, konf.Get("nested1.some_string"))
 				assert.Len(t, konf.Get("nested_2"), 2)
 			},

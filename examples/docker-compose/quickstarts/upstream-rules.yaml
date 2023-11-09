@@ -11,7 +11,7 @@ rules:
       add_path_prefix: /v1
   execute:
     - authenticator: do_nothing
-    - unifier: do_nothing
+    - finalizer: do_nothing
 
 - id: rule2
   match:

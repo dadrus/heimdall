@@ -26,39 +26,56 @@ import (
 
 var errCELResultType = errors.New("result type error")
 
-type Expression struct {
-	Value   string `mapstructure:"expression"`
-	Message string `mapstructure:"message"`
-
-	program cel.Program
-}
-
-func (e *Expression) Compile(env *cel.Env) error {
-	ast, iss := env.Compile(e.Value)
+func CompileExpression(env *cel.Env, expr, errMsg string) (*CompiledExpression, error) {
+	ast, iss := env.Compile(expr)
 	if iss.Err() != nil {
-		return iss.Err()
+		return nil, iss.Err()
 	}
 
 	ast, iss = env.Check(ast)
 	if iss != nil && iss.Err() != nil {
-		return iss.Err()
+		return nil, iss.Err()
 	}
 
 	if !reflect.DeepEqual(ast.OutputType(), cel.BoolType) {
-		return fmt.Errorf("%w: wanted bool, got %v", errCELResultType, ast.OutputType())
+		return nil, fmt.Errorf("%w: wanted bool, got %v", errCELResultType, ast.OutputType())
 	}
 
 	prg, err := env.Program(ast, cel.EvalOptions(cel.OptOptimize))
-	e.program = prg
-
-	return err
-}
-
-func (e *Expression) Eval(obj any) (bool, error) {
-	out, _, err := e.program.Eval(obj)
 	if err != nil {
-		return false, err
+		return nil, err
 	}
 
-	return out.Value() == true, nil
+	return &CompiledExpression{p: prg, msg: errMsg}, nil
+}
+
+type EvalError struct {
+	msg string
+}
+
+func (e *EvalError) Error() string { return e.msg }
+
+func (e *EvalError) Is(err error) bool {
+	ot := reflect.ValueOf(err).Elem().Type()
+	mt := reflect.ValueOf(e).Elem().Type()
+
+	return ot.AssignableTo(mt)
+}
+
+type CompiledExpression struct {
+	msg string
+	p   cel.Program
+}
+
+func (e *CompiledExpression) Eval(obj any) error {
+	out, _, err := e.p.Eval(obj)
+	if err != nil {
+		return err
+	}
+
+	if out.Value() == true {
+		return nil
+	}
+
+	return &EvalError{msg: e.msg}
 }

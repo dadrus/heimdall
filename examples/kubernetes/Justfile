@@ -10,7 +10,6 @@ haproxy_version := '0.14.4'
 metallb_version := '0.13.10'
 certmanager_version := '1.12.3'
 
-kind_base_domain := '127.0.0.1.nip.io'
 cluster_name := 'demo-cluster'
 default_ingress_controller := "contour"
 
@@ -26,12 +25,14 @@ setup-charts:
   helm repo update
 
 ## Installs Grafana
-install-grafana base_host=kind_base_domain: setup-charts
+install-grafana: setup-charts
   #!/usr/bin/env bash
+  lb_address=$(kubectl get svc -A -o json | jq -r '.items[] | select(.spec.type == "LoadBalancer").status.loadBalancer.ingress[0].ip')
+
   helm upgrade --install grafana bitnami/grafana-operator \
     -n monitoring --create-namespace \
-    --set grafana.ingress.hostname="grafana.{{base_host}}" \
-    --set grafana.config.server.root_url="https://grafana.{{base_host}}" \
+    --set grafana.ingress.hostname="grafana.${lb_address}.nip.io" \
+    --set grafana.config.server.root_url="https://grafana.${lb_address}.nip.io" \
     --values grafana/helm-values.yaml \
     --version {{grafana_version}} \
     --wait
@@ -82,12 +83,16 @@ install-dashboards:
     kubectl apply -f $f
   done
 
-install-observability-stack: install-grafana install-prometheus install-loki install-tempo install-phlare install-dashboards
+install-heimdall-pod-monitor:
+  kubectl apply -f quickstarts/heimdall/pod_monitor.yaml
+
+install-observability-stack: install-grafana install-prometheus install-loki install-tempo install-phlare install-dashboards install-heimdall-pod-monitor
 
 install-nginx-ingress-controller:
   helm upgrade --install nginx-ingress-controller bitnami/nginx-ingress-controller \
     -n nginx-ingress-controller --create-namespace \
     --version {{nginx_version}} \
+    --set metrics.enabled=true \
     --wait
 
 install-contour-ingress-controller:
@@ -163,6 +168,9 @@ install-cert-manager:
 install-echo-service ingress_controller=default_ingress_controller:
   kustomize build quickstarts/demo-app/overlays/{{ingress_controller}}-ingress | kubectl apply -f -
 
+install-echo-service-with-proxy:
+  kustomize build quickstarts/proxy-demo/ | kubectl apply -f -
+
 install-heimdall ingress_controller=default_ingress_controller:
   #!/usr/bin/env bash
   kubectl create namespace heimdall
@@ -191,13 +199,13 @@ create-cluster:
 
 setup-cluster: create-cluster setup-charts install-lb install-cert-manager
 
-install-ngnix-demo: setup-cluster install-nginx-ingress-controller (install-heimdall "nginx") (install-echo-service "nginx")
+install-ngnix-decision-demo: setup-cluster install-nginx-ingress-controller (install-heimdall "nginx") (install-echo-service "nginx")
 
-install-contour-demo: setup-cluster install-contour-ingress-controller (install-heimdall "contour") (install-echo-service "contour")
+install-contour-decision-demo: setup-cluster install-contour-ingress-controller (install-heimdall "contour") (install-echo-service "contour")
 
-install-haproxy-demo: setup-cluster install-haproxy-ingress-controller (install-heimdall "haproxy") (install-echo-service "haproxy")
+install-haproxy-decision-demo: setup-cluster install-haproxy-ingress-controller (install-heimdall "haproxy") (install-echo-service "haproxy")
 
-install-emissary-demo: setup-cluster install-emissary-ingress-controller (install-heimdall "emissary") (install-echo-service "emissary")
+install-emissary-decision-demo: setup-cluster install-emissary-ingress-controller (install-heimdall "emissary") (install-echo-service "emissary")
 
 delete-cluster:
   kind delete clusters {{cluster_name}}

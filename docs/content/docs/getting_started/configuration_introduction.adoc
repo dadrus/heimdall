@@ -65,7 +65,7 @@ rules:
     authenticators:
     - id: anonymous_authenticator
       type: anonymous
-    unifiers:
+    finalizers:
     - id: create_jwt
       type: jwt
 
@@ -75,7 +75,7 @@ rules:
       - POST
     execute:
       - authenticator: anonymous_authenticator
-      - unifier: create_jwt
+      - finalizer: create_jwt
 ----
 ====
 
@@ -96,7 +96,7 @@ rules:
             config:
               user: ${INTROSPECT_EP_USER}
               password: ${INTROSPECT_EP_PASSWORD}
-    unifiers:
+    finalizers:
     - id: create_jwt
       type: jwt
 ----
@@ -167,7 +167,7 @@ The corresponding environment variables would be
 [source,bash]
 ----
 HEIMDALLCFG_RULES_MECHANISMS_AUTHENTICATORS_0_ID=anonymous_authenticator
-HEIMDALLCFG_RULES_MECHANISMS__AUTHENTICATORS_0_TYPE=anonymous
+HEIMDALLCFG_RULES_MECHANISMS_AUTHENTICATORS_0_TYPE=anonymous
 ----
 
 * If a name of a property has `\_` it must be escaped with an additional `_`.
@@ -193,4 +193,4 @@ Heimdall gets the rule sets from link:{{< relref "/docs/configuration/rules/prov
 
 In all cases, a single rule definition adheres to the schema defined in link:{{< relref "/docs/configuration/rules/configuration.adoc" >}}[rule configuration].
 
-NOTE: Usage of environment variables is not possible with, respectively in rule sets.
+NOTE: Usage of environment variables in rule sets depend on the used provider.

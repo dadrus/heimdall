@@ -57,8 +57,8 @@ func TestNewProvider(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "failed to decode")
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				assert.Contains(t, err.Error(), "failed decoding")
 			},
 		},
 		{
@@ -68,8 +68,8 @@ func TestNewProvider(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "no endpoints configured")
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				assert.Contains(t, err.Error(), "'endpoints' is a required field")
 			},
 		},
 		{
@@ -83,8 +83,8 @@ endpoints:
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "failed to decode")
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				assert.Contains(t, err.Error(), "failed decoding")
 			},
 		},
 		{
@@ -97,8 +97,8 @@ endpoints:
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "failed to initialize #0 http_endpoint")
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				assert.Contains(t, err.Error(), "'endpoints'[0].'url' is a required field")
 			},
 		},
 		{
@@ -387,7 +387,7 @@ rules:
 
 				time.Sleep(1000 * time.Millisecond)
 
-				assert.True(t, requestCount >= 4)
+				assert.GreaterOrEqual(t, requestCount, 4)
 				assert.Contains(t, logs.String(), "No updates received")
 
 				ruleSets := mock2.ArgumentCaptorFrom[*config2.RuleSet](&processor.Mock, "captor1").Values()
@@ -479,7 +479,7 @@ rules:
 
 				time.Sleep(2 * time.Second)
 
-				assert.True(t, requestCount >= 4)
+				assert.GreaterOrEqual(t, requestCount, 4)
 				assert.Contains(t, logs.String(), "No updates received")
 
 				ruleSet := mock2.ArgumentCaptorFrom[*config2.RuleSet](&processor.Mock, "captor1").Value()

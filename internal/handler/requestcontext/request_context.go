@@ -1,4 +1,4 @@
-// Copyright 2022 Dimitrij Drus <dadrus@gmx.de>
+// Copyright 2023 Dimitrij Drus <dadrus@gmx.de>
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,127 +17,149 @@
 package requestcontext
 
 import (
+	"bytes"
 	"context"
+	"io"
 	"net/http"
+	"net/textproto"
 	"net/url"
-	"time"
+	"strings"
 
-	"github.com/gofiber/fiber/v2"
-	"github.com/rs/zerolog"
-	"github.com/valyala/fasthttp"
-
-	"github.com/dadrus/heimdall/internal/fasthttp/opentelemetry"
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/x"
+	"github.com/dadrus/heimdall/internal/x/httpx"
+	"github.com/dadrus/heimdall/internal/x/slicex"
 )
 
 type RequestContext struct {
-	c               *fiber.Ctx
 	reqMethod       string
 	reqURL          *url.URL
 	upstreamHeaders http.Header
 	upstreamCookies map[string]string
 	jwtSigner       heimdall.JWTSigner
+	req             *http.Request
 	err             error
+
+	// the following properties are created lazy and cached
+
+	savedBody []byte
+	hmdlReq   *heimdall.Request
+	headers   map[string]string
 }
 
-func New(c *fiber.Ctx, method string, reqURL *url.URL, signer heimdall.JWTSigner) *RequestContext {
+func New(signer heimdall.JWTSigner, req *http.Request) *RequestContext {
 	return &RequestContext{
-		c:               c,
 		jwtSigner:       signer,
-		reqMethod:       method,
-		reqURL:          reqURL,
+		reqMethod:       extractMethod(req),
+		reqURL:          extractURL(req),
 		upstreamHeaders: make(http.Header),
 		upstreamCookies: make(map[string]string),
+		req:             req,
 	}
 }
 
-func (s *RequestContext) Request() *heimdall.Request {
-	return &heimdall.Request{
-		RequestFunctions: s,
-		Method:           s.reqMethod,
-		URL:              s.reqURL,
-		ClientIP:         s.RequestClientIPs(),
+func (r *RequestContext) Header(name string) string {
+	key := textproto.CanonicalMIMEHeaderKey(name)
+	if key == "Host" {
+		return r.req.Host
 	}
+
+	value := r.req.Header[key]
+	if len(value) == 0 {
+		return ""
+	}
+
+	return value[0]
 }
 
-func (s *RequestContext) Headers() map[string]string              { return s.c.GetReqHeaders() }
-func (s *RequestContext) Header(name string) string               { return s.c.Get(name) }
-func (s *RequestContext) Cookie(name string) string               { return s.c.Cookies(name) }
-func (s *RequestContext) Body() []byte                            { return s.c.Body() }
-func (s *RequestContext) AppContext() context.Context             { return s.c.UserContext() }
-func (s *RequestContext) SetPipelineError(err error)              { s.err = err }
-func (s *RequestContext) AddHeaderForUpstream(name, value string) { s.upstreamHeaders.Add(name, value) }
-func (s *RequestContext) AddCookieForUpstream(name, value string) { s.upstreamCookies[name] = value }
-func (s *RequestContext) Signer() heimdall.JWTSigner              { return s.jwtSigner }
-func (s *RequestContext) RequestClientIPs() []string {
-	ips := s.c.IPs()
+func (r *RequestContext) Cookie(name string) string {
+	if cookie, err := r.req.Cookie(name); err == nil {
+		return cookie.Value
+	}
 
-	return x.IfThenElse(len(ips) != 0, ips, []string{s.c.IP()})
+	return ""
 }
 
-func (s *RequestContext) Finalize(statusCode int) error {
-	if s.err != nil {
-		return s.err
+func (r *RequestContext) Headers() map[string]string {
+	if len(r.headers) == 0 {
+		r.headers = make(map[string]string, len(r.req.Header)+1)
+
+		r.headers["Host"] = r.req.Host
+		for k, v := range r.req.Header {
+			r.headers[textproto.CanonicalMIMEHeaderKey(k)] = strings.Join(v, ",")
+		}
 	}
 
-	for k := range s.upstreamHeaders {
-		s.c.Response().Header.Set(k, s.upstreamHeaders.Get(k))
-	}
-
-	for k, v := range s.upstreamCookies {
-		s.c.Cookie(&fiber.Cookie{Name: k, Value: v})
-	}
-
-	s.c.Status(statusCode)
-
-	return nil
+	return r.headers
 }
 
-type URIMutator interface {
-	Mutate(uri *url.URL) (*url.URL, error)
+func (r *RequestContext) Body() []byte {
+	if r.req.Body == nil || r.req.Body == http.NoBody {
+		return nil
+	}
+
+	if r.savedBody == nil {
+		// drain body by reading its contents into memory and preserving
+		var buf bytes.Buffer
+		if _, err := buf.ReadFrom(r.req.Body); err != nil {
+			return nil
+		}
+
+		if err := r.req.Body.Close(); err != nil {
+			return nil
+		}
+
+		r.savedBody = buf.Bytes()
+		r.req.Body = io.NopCloser(bytes.NewReader(buf.Bytes()))
+	}
+
+	return r.savedBody
 }
 
-func (s *RequestContext) FinalizeAndForward(mutator URIMutator, timeout time.Duration) error {
-	if s.err != nil {
-		return s.err
+func (r *RequestContext) Request() *heimdall.Request {
+	if r.hmdlReq == nil {
+		r.hmdlReq = &heimdall.Request{
+			RequestFunctions: r,
+			Method:           r.reqMethod,
+			URL:              r.reqURL,
+			ClientIP:         r.requestClientIPs(),
+		}
 	}
 
-	for k := range s.upstreamHeaders {
-		s.c.Request().Header.Set(k, s.upstreamHeaders.Get(k))
-	}
-
-	for k, v := range s.upstreamCookies {
-		s.c.Request().Header.SetCookie(k, v)
-	}
-
-	// delete headers, which are useless for the upstream service, before forwarding the request
-	for _, name := range []string{
-		"X-Forwarded-Method", "X-Forwarded-Uri", "X-Forwarded-Path",
-	} {
-		s.c.Request().Header.Del(name)
-	}
-
-	targetURL, err := mutator.Mutate(s.reqURL)
-	if err != nil {
-		return err
-	}
-
-	upstreamURL := targetURL.String()
-
-	logger := zerolog.Ctx(s.c.UserContext())
-	logger.Info().
-		Str("_method", s.reqMethod).
-		Str("_upstream", upstreamURL).
-		Msg("Forwarding request")
-
-	s.c.Request().Header.SetMethod(s.reqMethod)
-	s.c.Request().SetRequestURI(upstreamURL)
-
-	if logger.GetLevel() == zerolog.TraceLevel {
-		logger.Trace().Msg("Request: \n" + s.c.Request().String())
-	}
-
-	return opentelemetry.NewClient(&fasthttp.Client{}).
-		DoTimeout(s.c.UserContext(), s.c.Request(), s.c.Response(), timeout)
+	return r.hmdlReq
 }
+
+func (r *RequestContext) requestClientIPs() []string {
+	var ips []string
+
+	if forwarded := r.req.Header.Get("Forwarded"); len(forwarded) != 0 {
+		values := strings.Split(forwarded, ",")
+		ips = make([]string, len(values))
+
+		for idx, val := range values {
+			for _, val := range strings.Split(strings.TrimSpace(val), ";") {
+				if addr, found := strings.CutPrefix(strings.TrimSpace(val), "for="); found {
+					ips[idx] = addr
+				}
+			}
+		}
+	}
+
+	if ips == nil {
+		if forwardedFor := r.req.Header.Get("X-Forwarded-For"); len(forwardedFor) != 0 {
+			ips = slicex.Map(strings.Split(forwardedFor, ","), strings.TrimSpace)
+		}
+	}
+
+	ips = append(ips, httpx.IPFromHostPort(r.req.RemoteAddr)) // nolint: makezero
+
+	return ips
+}
+
+func (r *RequestContext) AddHeaderForUpstream(name, value string) { r.upstreamHeaders.Add(name, value) }
+func (r *RequestContext) UpstreamHeaders() http.Header            { return r.upstreamHeaders }
+func (r *RequestContext) AddCookieForUpstream(name, value string) { r.upstreamCookies[name] = value }
+func (r *RequestContext) UpstreamCookies() map[string]string      { return r.upstreamCookies }
+func (r *RequestContext) AppContext() context.Context             { return r.req.Context() }
+func (r *RequestContext) SetPipelineError(err error)              { r.err = err }
+func (r *RequestContext) PipelineError() error                    { return r.err }
+func (r *RequestContext) Signer() heimdall.JWTSigner              { return r.jwtSigner }

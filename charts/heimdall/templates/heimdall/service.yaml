@@ -46,5 +46,14 @@ spec:
       protocol: TCP
       name: {{ .Values.service.proxy.name }}
       {{- end }}
+      {{- $rules := default dict .Values.rules }}
+      {{- $providers := default dict $rules.providers }}
+      {{- $kubernetes := default dict $providers.kubernetes }}
+      {{- if $kubernetes.tls }}
+    - port: {{ .Values.service.admissionController.port }}
+      targetPort: https-webhook
+      protocol: TCP
+      name: {{ .Values.service.admissionController.name }}
+      {{- end }}
   selector:
     {{- include "heimdall.selectorLabels" $data | nindent 4 }}

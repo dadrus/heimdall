@@ -224,11 +224,24 @@ The last one instructs heimdall to load rule set from a specific blob, namely a 
 
 == Kubernetes
 
-This provider is only supported if heimdall is running within Kubernetes and allows usage of link:{{< relref "#_ruleset_resource" >}}[Rule Set] resources deployed to the same Kubernetes environment. The configuration of this provider goes into the `kubernetes` property and supports the following configuration options:
+This provider is only supported if heimdall is running within Kubernetes and allows usage (validation and loading) of link:{{< relref "#_ruleset_resource" >}}[Rule Set] resources deployed to the same Kubernetes environment. The configuration of this provider goes into the `kubernetes` property and supports the following configuration options:
 
 * *`auth_class`*: _string_ (optional)
 +
-By making use of this property, you can specify which RuleSets should be used by this particular heimdall instance. If specified, heimdall will consider the value of the `authClassName` attribute of each RuleSet deployed to the cluster and load only those rules, which `authClassName` values match the value of `auth_class`. If not set all RuleSets will be used.
+By making use of this property, you can specify which RuleSets should be used by this particular heimdall instance. If specified, heimdall will consider the value of the `authClassName` attribute of each RuleSet deployed to the cluster and validate, respectively load only those rules, which `authClassName` values match the value of `auth_class`. If not set all RuleSets will be used.
+
+* *`tls`*: _link:{{< relref "/docs/configuration/reference/types.adoc#_tls" >}}[TLS]_ (optional)
++
+If configured, heimdall will start and expose a validating admission controller service on port `4458` listening on all interfaces. This service allows integration with the Kubernetes API server enabling validation of the applied RuleSet resources before these are made available to heimdall for loading. This way you will get a direct feedback about RuleSet issues without the need to look into heimdall logs if a RuleSet could not be loaded (See also link:{{< relref "/openapi/#tag/Validating-Admission-Controller" >}}[API] documentation for more details).
++
+To let the Kubernetes API server use the admission controller, there is a need for a properly configured https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#deploy-the-admission-webhook-service[`ValidatingWebhookConfiguration`]. The https://github.com/dadrus/heimdall/tree/main/charts/heimdall[Helm Chart] shipped with heimdall does this automatically as soon as this property is configured. It does however need a `caBundle` to be set or injected. Otherwise, the Kubernetes API server won't trust the configured TLS certificate and won't use the endpoint.
+
+[CAUTION]
+====
+Since multiple heimdall deployments with different configured `auth_class` names can coexist, RuleSets with mismatching `authClassName` will be ignored by a particular deployment. In addition, Kubernetes API server validation requests for mismatching RuleSets result in a successful response. This behavior is required as otherwise, as soon as the API server receives even a single failed validation response, the affected RuleSet resource will be discarded and not made available for loading to any of the available heimdall deployments.
+
+That also means, if there is no heimdall deployment feeling responsible for the given RuleSet (due to `authClassName` - `auth_class` mismatch), the affected RuleSet will be silently ignored.
+====
 
 .Minimal possible configuration
 ====
@@ -253,7 +266,23 @@ kubernetes:
 ----
 ====
 
-[CAUTION]
+.Configuration with `auth_class` set and enabled validating admission controller
+====
+
+As with the previous example, the provider is configured to consider only those RuleSets, which `authClassName` is set to `foo`. The admission controller is enabled as well and will validate `RuleSet` resources before these are made available for loading.
+
+[source, yaml]
+----
+kubernetes:
+  auth_class: foo
+  tls:
+    # below is the minimal required configuration
+    key_store:
+      path: /path/to/file.pem
+----
+====
+
+[NOTE]
 ====
 This provider requires a RuleSet CRD being deployed, otherwise heimdall will not be able to monitor corresponding resources and emit error messages to the log.
 
@@ -302,3 +331,47 @@ spec:
         - authorizer: bar
 ----
 ====
+
+In addition to configuration attributes described above, a `RuleSet` resource has a `status` stanza, which provides information about the usage status as soon as a `RuleSet` has been loaded by at least one heimdall instance.
+
+By making use of `kubectl get -n <your namespace> rulesets.heimdall.dadrus.github.com` you'll get an overview of deployed `RuleSet` resources in a particular namespace, like e.g. shown below
+
+[source, bash]
+----
+NAME             ACTIVE IN       AGE
+test-rules       2/2             32m
+----
+
+The value `2/2` in `ACTIVE IN` means, <active in heimdall instances>/<matching instances>. With
+
+* "matching instances" being those heimdall instances, which `auth_class` matches the `authClassName` in the `RuleSet` and
+* "active in heimdall instances" are those from the "matching instances", which were able to load the `RuleSet`.
+
+In addition, you can also get further information about the executed reconciliations by the deployed heimdall instances by taking a look at the `.status.conditions` field. The reconciliation status of matching instances is present there. That also means, if there were errors while loading the `RuleSet`, these are present in this condition list
+
+E.g.
+
+[source, bash]
+----
+$ kubectl describe -n test rulesets.heimdall.dadrus.github.com test-rules
+
+Name:         test-rules
+Namespace:    test
+...
+Status:
+  Conditions:
+    Last Transition Time:  2023-11-08T21:55:36Z
+    Message:               heimdall-6fb66c47bc-kwqqn instance successfully loaded RuleSet
+    Observed Generation:   1
+    Reason:                RuleSetActive
+    Status:                True
+    Type:                  heimdall-6fb66c47bc-kwqqn/Reconciliation
+    Last Transition Time:  2023-11-08T21:55:36Z
+    Message:               heimdall-6fb66c47bc-l7skn instance successfully loaded RuleSet
+    Observed Generation:   1
+    Reason:                RuleSetActive
+    Status:                True
+    Type:                  heimdall-6fb66c47bc-l7skn/Reconciliation
+  Active In:               2/2
+  Events:                  <none>
+----

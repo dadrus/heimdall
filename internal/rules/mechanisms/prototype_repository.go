@@ -26,7 +26,7 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/authorizers"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/contextualizers"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/errorhandlers"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/unifiers"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/finalizers"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
@@ -66,12 +66,12 @@ func newPrototypeRepository(
 		return nil, err
 	}
 
-	logger.Debug().Msg("Loading definitions for unifiers")
+	logger.Debug().Msg("Loading definitions for finalizers")
 
-	unifierMap, err := createPipelineObjects(conf.Rules.Prototypes.Unifiers, logger,
-		unifiers.CreateUnifierPrototype)
+	finalizerMap, err := createPipelineObjects(conf.Rules.Prototypes.Finalizers, logger,
+		finalizers.CreatePrototype)
 	if err != nil {
-		logger.Error().Err(err).Msg("Failed loading unifier definitions")
+		logger.Error().Err(err).Msg("Failed loading finalizer definitions")
 
 		return nil, err
 	}
@@ -90,7 +90,7 @@ func newPrototypeRepository(
 		authenticators:  authenticatorMap,
 		authorizers:     authorizerMap,
 		contextualizers: contextualizerMap,
-		unifiers:        unifierMap,
+		finalizers:      finalizerMap,
 		errorHandlers:   ehMap,
 	}, nil
 }
@@ -119,7 +119,7 @@ type prototypeRepository struct {
 	authenticators  map[string]authenticators.Authenticator
 	authorizers     map[string]authorizers.Authorizer
 	contextualizers map[string]contextualizers.Contextualizer
-	unifiers        map[string]unifiers.Unifier
+	finalizers      map[string]finalizers.Finalizer
 	errorHandlers   map[string]errorhandlers.ErrorHandler
 }
 
@@ -153,14 +153,14 @@ func (r *prototypeRepository) Contextualizer(id string) (contextualizers.Context
 	return contextualizer, nil
 }
 
-func (r *prototypeRepository) Unifier(id string) (unifiers.Unifier, error) {
-	unifier, ok := r.unifiers[id]
+func (r *prototypeRepository) Finalizer(id string) (finalizers.Finalizer, error) {
+	finalizer, ok := r.finalizers[id]
 	if !ok {
 		return nil, errorchain.NewWithMessagef(ErrNoSuchPipelineObject,
-			"no unifier prototype for id='%s' found", id)
+			"no finalizer prototype for id='%s' found", id)
 	}
 
-	return unifier, nil
+	return finalizer, nil
 }
 
 func (r *prototypeRepository) ErrorHandler(id string) (errorhandlers.ErrorHandler, error) {

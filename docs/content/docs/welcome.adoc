@@ -64,7 +64,7 @@ Heimdall addresses the aforesaid challenges companies and developers face, espec
 
 == How It Works
 
-Heimdall intercepts all your application related network traffic, allowing a broad set of application aware authentication and authorization features based on the rules you define. This is done by routing each request through a rule specific pipeline as depicted in diagram below.
+Heimdall intercepts all your application related HTTP(s) traffic, allowing a broad set of application aware authentication and authorization features based on the rules you define. This is done by routing each request through a rule specific pipeline as depicted in diagram below.
 
 [[_fig_heimdall_request_pipeline]]
 .Request Pipeline
@@ -76,7 +76,7 @@ Heimdall intercepts all your application related network traffic, allowing a bro
                  |                                                                                   |                    |
                  |+------------------+ +------------------+ +------------------+ +------------------+|                    |
                  || cCCC             | | cCCC             | | cCCC             | | cCCC             ||                    :
-                 || 1. Authenticate  | | 2. Contextualize | | 3. Authorize     | | 4. Unify         ||                    |
+                 || 1. Authenticate  | | 2. Contextualize | | 3. Authorize     | | 4. Finalize      ||                    |
                  ||                  | |                  | |                  | |                  ||   +------------------+
                  |+------------------+ +------------------+ +------------------+ +------------------+|   |  Backend Service |
                  |                                                                                   |   |                  |

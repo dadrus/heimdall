@@ -53,28 +53,14 @@ type redirectErrorHandler struct {
 
 func newRedirectErrorHandler(id string, rawConfig map[string]any) (*redirectErrorHandler, error) {
 	type Config struct {
-		To   template.Template               `mapstructure:"to"`
+		To   template.Template               `mapstructure:"to"   validate:"required"`
+		When []matcher.ErrorConditionMatcher `mapstructure:"when" validate:"required,gt=0"`
 		Code int                             `mapstructure:"code"`
-		When []matcher.ErrorConditionMatcher `mapstructure:"when"`
 	}
 
 	var conf Config
-	if err := decodeConfig(rawConfig, &conf); err != nil {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration, "failed to unmarshal redirect error handler config").
-			CausedBy(err)
-	}
-
-	if conf.To == nil {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration,
-				"redirect error handler requires 'to' parameter to be set")
-	}
-
-	if len(conf.When) == 0 {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration,
-				"no 'when' error handler conditions defined for the redirect error handler")
+	if err := decodeConfig(ErrorHandlerRedirect, rawConfig, &conf); err != nil {
+		return nil, err
 	}
 
 	return &redirectErrorHandler{
@@ -119,20 +105,12 @@ func (eh *redirectErrorHandler) WithConfig(rawConfig map[string]any) (ErrorHandl
 	}
 
 	type Config struct {
-		When []matcher.ErrorConditionMatcher `mapstructure:"when"`
+		When []matcher.ErrorConditionMatcher `mapstructure:"when" validate:"required,gt=0"`
 	}
 
 	var conf Config
-	if err := decodeConfig(rawConfig, &conf); err != nil {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration, "failed to unmarshal redirect error handler config").
-			CausedBy(err)
-	}
-
-	if len(conf.When) == 0 {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration,
-				"no error handler conditions defined for the redirect error handler")
+	if err := decodeConfig(ErrorHandlerRedirect, rawConfig, &conf); err != nil {
+		return nil, err
 	}
 
 	return &redirectErrorHandler{

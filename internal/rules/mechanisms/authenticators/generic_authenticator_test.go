@@ -18,7 +18,6 @@ package authenticators
 
 import (
 	"context"
-	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -32,9 +31,9 @@ import (
 
 	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/dadrus/heimdall/internal/cache/mocks"
-	"github.com/dadrus/heimdall/internal/endpoint"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	heimdallmocks "github.com/dadrus/heimdall/internal/heimdall/mocks"
+	"github.com/dadrus/heimdall/internal/rules/endpoint"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/extractors"
 	mocks2 "github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/extractors/mocks"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
@@ -64,8 +63,8 @@ subject:
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "failed to decode")
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				assert.Contains(t, err.Error(), "failed decoding")
 			},
 		},
 		{
@@ -79,8 +78,25 @@ subject:
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "endpoint configuration")
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				assert.Contains(t, err.Error(), "'identity_info_endpoint' is a required field")
+			},
+		},
+		{
+			uc: "bad url config",
+			config: []byte(`
+identity_info_endpoint:
+  url: test.com
+authentication_data_source:
+  - header: foo-header
+subject:
+  id: some_template`),
+			assertError: func(t *testing.T, err error, auth *genericAuthenticator) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				assert.Contains(t, err.Error(), "'identity_info_endpoint'.'url' must be a valid URL")
 			},
 		},
 		{
@@ -94,8 +110,8 @@ authentication_data_source:
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "subject configuration")
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				assert.Contains(t, err.Error(), "'subject' is a required field")
 			},
 		},
 		{
@@ -109,8 +125,25 @@ subject:
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "authentication_data_source")
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				assert.Contains(t, err.Error(), "'authentication_data_source' is a required field")
+			},
+		},
+		{
+			uc: "missing subject id config",
+			config: []byte(`
+identity_info_endpoint:
+  url: http://test.com
+subject:
+  attributes: some_template
+authentication_data_source:
+  - header: foo-header`),
+			assertError: func(t *testing.T, err error, auth *genericAuthenticator) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				assert.Contains(t, err.Error(), "'subject'.'id' is a required field")
 			},
 		},
 		{
@@ -339,8 +372,8 @@ subject:
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "failed to parse")
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				assert.Contains(t, err.Error(), "failed decoding")
 			},
 		},
 		{
@@ -522,8 +555,8 @@ identity_info_endpoint:
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "failed to parse")
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				assert.Contains(t, err.Error(), "failed decoding")
 			},
 		},
 		{
@@ -546,8 +579,8 @@ authentication_data_source:
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "failed to parse")
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				assert.Contains(t, err.Error(), "failed decoding")
 			},
 		},
 		{
@@ -570,8 +603,8 @@ subject:
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "failed to parse")
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				assert.Contains(t, err.Error(), "failed decoding")
 			},
 		},
 		{
@@ -594,8 +627,8 @@ session_lifespan:
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "failed to parse")
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				assert.Contains(t, err.Error(), "failed decoding")
 			},
 		},
 		{
@@ -618,8 +651,8 @@ payload: |
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "failed to parse")
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				assert.Contains(t, err.Error(), "failed decoding")
 			},
 		},
 		{
@@ -642,8 +675,8 @@ forward_headers:
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "failed to parse")
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				assert.Contains(t, err.Error(), "failed decoding")
 			},
 		},
 		{
@@ -666,8 +699,8 @@ forward_cookies:
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "failed to parse")
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				assert.Contains(t, err.Error(), "failed decoding")
 			},
 		},
 	} {
@@ -730,7 +763,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 			w.Header().Set("Content-Type", responseContentType)
 			w.Header().Set("Content-Length", strconv.Itoa(len(responseContent)))
 			_, err := w.Write(responseContent)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 		}
 
 		w.WriteHeader(responseCode)
@@ -767,11 +800,11 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				assert.False(t, endpointCalled)
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrAuthentication)
+				require.ErrorIs(t, err, heimdall.ErrAuthentication)
 				assert.Contains(t, err.Error(), "failed to get authentication data")
 
 				var identifier HandlerIdentifier
-				require.True(t, errors.As(err, &identifier))
+				require.ErrorAs(t, err, &identifier)
 				assert.Equal(t, "auth3", identifier.ID())
 			},
 		},
@@ -803,11 +836,11 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				assert.False(t, endpointCalled)
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrInternal)
+				require.ErrorIs(t, err, heimdall.ErrInternal)
 				assert.Contains(t, err.Error(), "failed to render payload")
 
 				var identifier HandlerIdentifier
-				require.True(t, errors.As(err, &identifier))
+				require.ErrorAs(t, err, &identifier)
 				assert.Equal(t, "auth3", identifier.ID())
 			},
 		},
@@ -833,11 +866,11 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				assert.False(t, endpointCalled)
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrInternal)
+				require.ErrorIs(t, err, heimdall.ErrInternal)
 				assert.Contains(t, err.Error(), "failed to render URL")
 
 				var identifier HandlerIdentifier
-				require.True(t, errors.As(err, &identifier))
+				require.ErrorAs(t, err, &identifier)
 				assert.Equal(t, "auth3", identifier.ID())
 			},
 		},
@@ -863,11 +896,11 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				assert.False(t, endpointCalled)
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrCommunication)
+				require.ErrorIs(t, err, heimdall.ErrCommunication)
 				assert.Contains(t, err.Error(), "request to the endpoint")
 
 				var identifier HandlerIdentifier
-				require.True(t, errors.As(err, &identifier))
+				require.ErrorAs(t, err, &identifier)
 				assert.Equal(t, "auth3", identifier.ID())
 			},
 		},
@@ -898,11 +931,11 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				assert.True(t, endpointCalled)
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrCommunication)
+				require.ErrorIs(t, err, heimdall.ErrCommunication)
 				assert.Contains(t, err.Error(), "unexpected response code")
 
 				var identifier HandlerIdentifier
-				require.True(t, errors.As(err, &identifier))
+				require.ErrorAs(t, err, &identifier)
 				assert.Equal(t, "auth3", identifier.ID())
 			},
 		},
@@ -951,11 +984,11 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				assert.True(t, endpointCalled)
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrInternal)
+				require.ErrorIs(t, err, heimdall.ErrInternal)
 				assert.Contains(t, err.Error(), "failed to extract subject")
 
 				var identifier HandlerIdentifier
-				require.True(t, errors.As(err, &identifier))
+				require.ErrorAs(t, err, &identifier)
 				assert.Equal(t, "auth3", identifier.ID())
 			},
 		},
@@ -1226,11 +1259,11 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				assert.True(t, endpointCalled)
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrAuthentication)
+				require.ErrorIs(t, err, heimdall.ErrAuthentication)
 				assert.Contains(t, err.Error(), "not active")
 
 				var identifier HandlerIdentifier
-				require.True(t, errors.As(err, &identifier))
+				require.ErrorAs(t, err, &identifier)
 				assert.Equal(t, "auth3", identifier.ID())
 			},
 		},
@@ -1281,11 +1314,11 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				assert.True(t, endpointCalled)
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrInternal)
+				require.ErrorIs(t, err, heimdall.ErrInternal)
 				assert.Contains(t, err.Error(), "failed parsing issued_at")
 
 				var identifier HandlerIdentifier
-				require.True(t, errors.As(err, &identifier))
+				require.ErrorAs(t, err, &identifier)
 				assert.Equal(t, "auth3", identifier.ID())
 			},
 		},

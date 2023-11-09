@@ -1,4 +1,4 @@
-FROM golang:1.21.0-bookworm
+FROM golang:1.21.4-bookworm
 ENV CGO_ENABLED 1
 
 RUN apt-get update && apt-get install -y --no-install-recommends inotify-tools=3.14-7 psmisc=23.2-1+deb10u1 \

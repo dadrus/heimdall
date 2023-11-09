@@ -143,7 +143,7 @@ rules:
             url: http://profile
             headers:
               foo: bar
-    unifiers:
+    finalizers:
       - id: jwt
         type: jwt
         config:
@@ -182,7 +182,7 @@ rules:
       - POST
     execute:
       - authenticator: anonymous_authenticator
-      - unifier: jwt
+      - finalizer: jwt
     on_error:
       - error_handler: authenticate_with_kratos
 
@@ -223,3 +223,9 @@ rules:
 
     kubernetes:
       auth_class: foo
+      tls:
+        key_id: foo
+        key_store:
+          path: /path/to/pem.file
+          password: VerySecret!
+        min_version: TLS1.3

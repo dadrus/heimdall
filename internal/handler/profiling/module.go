@@ -26,49 +26,44 @@ import (
 	"go.uber.org/fx"
 
 	"github.com/dadrus/heimdall/internal/config"
+	"github.com/dadrus/heimdall/internal/handler/fxlcm"
+	"github.com/dadrus/heimdall/internal/x/loggeradapter"
 )
 
-var Module = fx.Options( // nolint: gochecknoglobals
-	fx.Invoke(registerHooks),
-)
-
-type hooksArgs struct {
-	fx.In
-
-	Lifecycle fx.Lifecycle
-	Config    *config.Configuration
-	Logger    zerolog.Logger
+type lifecycleManager interface {
+	Start(ctx context.Context) error
+	Stop(ctx context.Context) error
 }
 
-func registerHooks(args hooksArgs) {
-	if !args.Config.Profiling.Enabled {
-		args.Logger.Info().Msg("Profiling service disabled")
+type noopManager struct{}
 
-		return
+func (noopManager) Start(context.Context) error { return nil }
+func (noopManager) Stop(context.Context) error  { return nil }
+
+var Module = fx.Invoke( // nolint: gochecknoglobals
+	fx.Annotate(
+		newLifecycleManager,
+		fx.OnStart(func(ctx context.Context, lcm lifecycleManager) error { return lcm.Start(ctx) }),
+		fx.OnStop(func(ctx context.Context, lcm lifecycleManager) error { return lcm.Stop(ctx) }),
+	),
+)
+
+func newLifecycleManager(conf *config.Configuration, logger zerolog.Logger) lifecycleManager {
+	cfg := conf.Profiling
+	if !cfg.Enabled {
+		logger.Info().Msg("Profiling service disabled")
+
+		return noopManager{}
 	}
 
-	server := &http.Server{
-		Addr:              args.Config.Profiling.Address(),
-		ReadHeaderTimeout: 5 * time.Second, //nolint:gomnd
-	}
-
-	args.Lifecycle.Append(
-		fx.Hook{
-			OnStart: func(ctx context.Context) error {
-				go func() {
-					args.Logger.Info().Str("_address", server.Addr).Msg("Profiling service starts listening")
-					if err := server.ListenAndServe(); err != nil {
-						args.Logger.Fatal().Err(err).Msg("Could not start Profiling service")
-					}
-				}()
-
-				return nil
-			},
-			OnStop: func(ctx context.Context) error {
-				args.Logger.Info().Msg("Tearing down Profiling service")
-
-				return server.Shutdown(ctx)
-			},
+	return &fxlcm.LifecycleManager{
+		ServiceName:    "Profiling",
+		ServiceAddress: cfg.Address(),
+		Logger:         logger,
+		Server: &http.Server{
+			ReadHeaderTimeout: 5 * time.Second,  // nolint: gomnd
+			IdleTimeout:       90 * time.Second, // nolint: gomnd
+			ErrorLog:          loggeradapter.NewStdLogger(logger),
 		},
-	)
+	}
 }

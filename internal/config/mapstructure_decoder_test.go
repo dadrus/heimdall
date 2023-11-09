@@ -173,7 +173,7 @@ cipher_suites:
 			var typ Type
 
 			dec, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
-				DecodeHook: decodeTLSCipherSuiteHookFunc,
+				DecodeHook: DecodeTLSCipherSuiteHookFunc,
 				Result:     &typ,
 			})
 			require.NoError(t, err)
@@ -238,7 +238,7 @@ func TestDecodeTLSMinVersion(t *testing.T) {
 			var typ Type
 
 			dec, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
-				DecodeHook: decodeTLSMinVersionHookFunc,
+				DecodeHook: DecodeTLSMinVersionHookFunc,
 				Result:     &typ,
 			})
 			require.NoError(t, err)

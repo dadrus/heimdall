@@ -21,7 +21,6 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"errors"
-	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -32,8 +31,8 @@ import (
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/cache"
-	"github.com/dadrus/heimdall/internal/endpoint"
 	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/rules/endpoint"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/cellib"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/contenttype"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
@@ -66,7 +65,7 @@ type remoteAuthorizer struct {
 	id                 string
 	e                  endpoint.Endpoint
 	payload            template.Template
-	expressions        []*cellib.Expression
+	expressions        compiledExpressions
 	headersForUpstream []string
 	ttl                time.Duration
 	celEnv             *cel.Env
@@ -95,31 +94,17 @@ func (ai *authorizationInformation) addAttributesTo(key string, sub *subject.Sub
 
 func newRemoteAuthorizer(id string, rawConfig map[string]any) (*remoteAuthorizer, error) {
 	type Config struct {
-		Endpoint                 endpoint.Endpoint    `mapstructure:"endpoint"`
-		Payload                  template.Template    `mapstructure:"payload"`
-		Expressions              []*cellib.Expression `mapstructure:"expressions"`
-		ResponseHeadersToForward []string             `mapstructure:"forward_response_headers_to_upstream"`
-		CacheTTL                 time.Duration        `mapstructure:"cache_ttl"`
-		Values                   values.Values        `mapstructure:"values"`
+		Endpoint                 endpoint.Endpoint `mapstructure:"endpoint"                             validate:"required"` //nolint:lll
+		Expressions              []Expression      `mapstructure:"expressions"                          validate:"dive"`
+		Payload                  template.Template `mapstructure:"payload"                              validate:"required_without=Endpoint.Headers"` //nolint:lll
+		ResponseHeadersToForward []string          `mapstructure:"forward_response_headers_to_upstream"`
+		CacheTTL                 time.Duration     `mapstructure:"cache_ttl"`
+		Values                   values.Values     `mapstructure:"values"`
 	}
 
 	var conf Config
-	if err := decodeConfig(rawConfig, &conf); err != nil {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration, "failed to unmarshal remote authorizer config").
-			CausedBy(err)
-	}
-
-	if err := conf.Endpoint.Validate(); err != nil {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration, "failed to validate endpoint configuration").
-			CausedBy(err)
-	}
-
-	if len(conf.Endpoint.Headers) == 0 && conf.Payload == nil {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration,
-				"either a payload or at least one endpoint header must be configured for remote authorizer")
+	if err := decodeConfig(AuthorizerRemote, rawConfig, &conf); err != nil {
+		return nil, err
 	}
 
 	env, err := cel.NewEnv(cellib.Library())
@@ -128,19 +113,16 @@ func newRemoteAuthorizer(id string, rawConfig map[string]any) (*remoteAuthorizer
 			"failed creating CEL environment").CausedBy(err)
 	}
 
-	for i, expression := range conf.Expressions {
-		err = expression.Compile(env)
-		if err != nil {
-			return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
-				"failed to compile expression %d (%s)", i+1, expression.Value).CausedBy(err)
-		}
+	expressions, err := compileExpressions(conf.Expressions, env)
+	if err != nil {
+		return nil, err
 	}
 
 	return &remoteAuthorizer{
 		id:                 id,
 		e:                  conf.Endpoint,
 		payload:            conf.Payload,
-		expressions:        conf.Expressions,
+		expressions:        expressions,
 		headersForUpstream: conf.ResponseHeadersToForward,
 		ttl:                conf.CacheTTL,
 		celEnv:             env,
@@ -205,26 +187,21 @@ func (a *remoteAuthorizer) WithConfig(rawConfig map[string]any) (Authorizer, err
 	}
 
 	type Config struct {
-		Payload                  template.Template    `mapstructure:"payload"`
-		Expressions              []*cellib.Expression `mapstructure:"expressions"`
-		ResponseHeadersToForward []string             `mapstructure:"forward_response_headers_to_upstream"`
-		CacheTTL                 time.Duration        `mapstructure:"cache_ttl"`
-		Values                   values.Values        `mapstructure:"values"`
+		Payload                  template.Template `mapstructure:"payload"`
+		Expressions              []Expression      `mapstructure:"expressions"                          validate:"dive"`
+		ResponseHeadersToForward []string          `mapstructure:"forward_response_headers_to_upstream"`
+		CacheTTL                 time.Duration     `mapstructure:"cache_ttl"`
+		Values                   values.Values     `mapstructure:"values"`
 	}
 
 	var conf Config
-	if err := decodeConfig(rawConfig, &conf); err != nil {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration, "failed to unmarshal remote authorizer config").
-			CausedBy(err)
+	if err := decodeConfig(AuthorizerRemote, rawConfig, &conf); err != nil {
+		return nil, err
 	}
 
-	for i, expression := range conf.Expressions {
-		err := expression.Compile(a.celEnv)
-		if err != nil {
-			return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
-				"failed to compile expression %d (%s)", i+1, expression.Value).CausedBy(err)
-		}
+	expressions, err := compileExpressions(conf.Expressions, a.celEnv)
+	if err != nil {
+		return nil, err
 	}
 
 	return &remoteAuthorizer{
@@ -232,7 +209,7 @@ func (a *remoteAuthorizer) WithConfig(rawConfig map[string]any) (Authorizer, err
 		e:           a.e,
 		payload:     x.IfThenElse(conf.Payload != nil, conf.Payload, a.payload),
 		celEnv:      a.celEnv,
-		expressions: x.IfThenElse(len(conf.Expressions) != 0, conf.Expressions, a.expressions),
+		expressions: x.IfThenElse(len(expressions) != 0, expressions, a.expressions),
 		headersForUpstream: x.IfThenElse(len(conf.ResponseHeadersToForward) != 0,
 			conf.ResponseHeadersToForward, a.headersForUpstream),
 		ttl: x.IfThenElse(conf.CacheTTL > 0, conf.CacheTTL, a.ttl),
@@ -397,22 +374,5 @@ func (a *remoteAuthorizer) verify(ctx heimdall.Context, result any) error {
 	logger := zerolog.Ctx(ctx.AppContext())
 	logger.Debug().Msg("Verifying authorization response")
 
-	obj := map[string]any{"Payload": result}
-
-	for i, expression := range a.expressions {
-		ok, err := expression.Eval(obj)
-		if err != nil {
-			return errorchain.NewWithMessagef(heimdall.ErrInternal, "failed evaluating expression %d", i+1).
-				WithErrorContext(a).CausedBy(err)
-		}
-
-		if !ok {
-			return errorchain.NewWithMessage(heimdall.ErrAuthorization,
-				x.IfThenElse(len(expression.Message) != 0, expression.Message,
-					fmt.Sprintf("expression %d failed", i+1))).
-				WithErrorContext(a)
-		}
-	}
-
-	return nil
+	return a.expressions.eval(map[string]any{"Payload": result}, a)
 }

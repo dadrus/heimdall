@@ -30,9 +30,9 @@ import (
 
 	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/dadrus/heimdall/internal/cache/mocks"
-	"github.com/dadrus/heimdall/internal/endpoint"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/config"
+	"github.com/dadrus/heimdall/internal/rules/endpoint"
 	"github.com/dadrus/heimdall/internal/x"
 	otelmock "github.com/dadrus/heimdall/internal/x/opentelemetry/mocks"
 )
@@ -40,44 +40,17 @@ import (
 func TestRuleSetEndpointInit(t *testing.T) {
 	t.Parallel()
 
-	for _, tc := range []struct {
-		uc     string
-		ep     *ruleSetEndpoint
-		assert func(t *testing.T, err error, ep *ruleSetEndpoint)
-	}{
-		{
-			uc: "init fails due to not set url",
-			ep: &ruleSetEndpoint{},
-			assert: func(t *testing.T, err error, ep *ruleSetEndpoint) {
-				t.Helper()
+	// GIVEN
+	ep := &ruleSetEndpoint{Endpoint: endpoint.Endpoint{URL: "http://foo.bar"}}
 
-				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "validation")
-			},
-		},
-		{
-			uc: "init successful",
-			ep: &ruleSetEndpoint{Endpoint: endpoint.Endpoint{URL: "http://foo.bar"}},
-			assert: func(t *testing.T, err error, ep *ruleSetEndpoint) {
-				t.Helper()
+	// WHEN
+	ep.init()
 
-				require.NoError(t, err)
-				assert.Equal(t, "http://foo.bar", ep.URL)
-				assert.Equal(t, http.MethodGet, ep.Method)
-				require.NotNil(t, ep.HTTPCacheEnabled)
-				assert.True(t, *ep.HTTPCacheEnabled)
-			},
-		},
-	} {
-		t.Run(tc.uc, func(t *testing.T) {
-			// WHEN
-			err := tc.ep.init()
-
-			// THEN
-			tc.assert(t, err, tc.ep)
-		})
-	}
+	// THEN
+	assert.Equal(t, "http://foo.bar", ep.URL)
+	assert.Equal(t, http.MethodGet, ep.Method)
+	require.NotNil(t, ep.HTTPCacheEnabled)
+	assert.True(t, *ep.HTTPCacheEnabled)
 }
 
 func TestRuleSetEndpointFetchRuleSet(t *testing.T) {
@@ -120,7 +93,7 @@ func TestRuleSetEndpointFetchRuleSet(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrCommunication)
+				require.ErrorIs(t, err, heimdall.ErrCommunication)
 				assert.Contains(t, err.Error(), "endpoint failed")
 			},
 		},
@@ -141,7 +114,7 @@ func TestRuleSetEndpointFetchRuleSet(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrCommunication)
+				require.ErrorIs(t, err, heimdall.ErrCommunication)
 				assert.Contains(t, err.Error(), "response code: 400")
 			},
 		},
@@ -168,7 +141,7 @@ rules:
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrInternal)
+				require.ErrorIs(t, err, heimdall.ErrInternal)
 				assert.Contains(t, err.Error(), "content type")
 			},
 		},
@@ -189,7 +162,7 @@ rules:
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, config.ErrEmptyRuleSet)
+				require.ErrorIs(t, err, config.ErrEmptyRuleSet)
 			},
 		},
 		{
@@ -281,7 +254,7 @@ rules:
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
 				assert.Contains(t, err.Error(), "path prefix validation")
 			},
 		},
@@ -311,7 +284,7 @@ rules:
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
 				assert.Contains(t, err.Error(), "path prefix validation")
 			},
 		},

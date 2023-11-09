@@ -28,13 +28,13 @@ rules:
     - authenticator: hydra_authenticator
     - contextualizer: subscription_contextualizer
     - authorizer: allow_all_authorizer
-    - unifier: jwt
+    - finalizer: jwt
       config:
         claims: |
           {"foo": "bar"}
-    - unifier: bla
+    - finalizer: bla
       config:
         headers:
           foo-bar: bla
-    - unifier: blabla
+    - finalizer: blabla
 # no on_error (reuses default)

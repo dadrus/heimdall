@@ -32,7 +32,7 @@ spec:
       execute:
         - authenticator: noop_authenticator
         - authorizer: allow_all_requests
-        - unifier: noop_unifier
+        - finalizer: noop_finalizer
     - id: anonymous-access
       match:
         url: http://<**>/anon/<**>

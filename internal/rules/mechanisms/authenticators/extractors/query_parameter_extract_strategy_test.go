@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/heimdall/mocks"
@@ -48,7 +49,7 @@ func TestExtractQueryParameter(t *testing.T) {
 	val, err := strategy.GetAuthData(ctx)
 
 	// THEN
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, queryParamValue, val)
 }
 
@@ -70,6 +71,6 @@ func TestExtractNotExistingQueryParameterValue(t *testing.T) {
 	_, err := strategy.GetAuthData(ctx)
 
 	// THEN
-	assert.Error(t, err)
-	assert.ErrorIs(t, err, heimdall.ErrArgument)
+	require.Error(t, err)
+	require.ErrorIs(t, err, heimdall.ErrArgument)
 }

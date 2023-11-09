@@ -21,7 +21,6 @@ import (
 
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
-	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
 // by intention. Used only during application bootstrap.
@@ -41,10 +40,8 @@ func init() { // nolint: gochecknoinits
 func newAnonymousAuthenticator(id string, rawConfig map[string]any) (*anonymousAuthenticator, error) {
 	var auth anonymousAuthenticator
 
-	if err := decodeConfig(rawConfig, &auth); err != nil {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration, "failed to decode anonymous authenticator config").
-			CausedBy(err)
+	if err := decodeConfig(AuthenticatorAnonymous, rawConfig, &auth); err != nil {
+		return nil, err
 	}
 
 	if len(auth.Subject) == 0 {

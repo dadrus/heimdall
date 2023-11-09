@@ -30,8 +30,8 @@ import (
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/cache"
-	"github.com/dadrus/heimdall/internal/endpoint"
 	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/rules/endpoint"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/contenttype"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
@@ -80,7 +80,7 @@ type genericContextualizer struct {
 
 func newGenericContextualizer(id string, rawConfig map[string]any) (*genericContextualizer, error) {
 	type Config struct {
-		Endpoint        endpoint.Endpoint `mapstructure:"endpoint"`
+		Endpoint        endpoint.Endpoint `mapstructure:"endpoint"                   validate:"required"`
 		ForwardHeaders  []string          `mapstructure:"forward_headers"`
 		ForwardCookies  []string          `mapstructure:"forward_cookies"`
 		Payload         template.Template `mapstructure:"payload"`
@@ -90,16 +90,8 @@ func newGenericContextualizer(id string, rawConfig map[string]any) (*genericCont
 	}
 
 	var conf Config
-	if err := decodeConfig(rawConfig, &conf); err != nil {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration, "failed to unmarshal generic contextualizer config").
-			CausedBy(err)
-	}
-
-	if err := conf.Endpoint.Validate(); err != nil {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration, "failed to validate endpoint configuration").
-			CausedBy(err)
+	if err := decodeConfig(ContextualizerGeneric, rawConfig, &conf); err != nil {
+		return nil, err
 	}
 
 	ttl := defaultTTL
@@ -186,10 +178,8 @@ func (h *genericContextualizer) WithConfig(rawConfig map[string]any) (Contextual
 	}
 
 	var conf Config
-	if err := decodeConfig(rawConfig, &conf); err != nil {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration, "failed to unmarshal generic contextualizer config").
-			CausedBy(err)
+	if err := decodeConfig(ContextualizerGeneric, rawConfig, &conf); err != nil {
+		return nil, err
 	}
 
 	return &genericContextualizer{

@@ -29,8 +29,8 @@ import (
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/cache"
-	"github.com/dadrus/heimdall/internal/endpoint"
 	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/rules/endpoint"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/extractors"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
@@ -70,40 +70,20 @@ type genericAuthenticator struct {
 
 func newGenericAuthenticator(id string, rawConfig map[string]any) (*genericAuthenticator, error) {
 	type Config struct {
-		Endpoint              endpoint.Endpoint                   `mapstructure:"identity_info_endpoint"`
-		AuthDataSource        extractors.CompositeExtractStrategy `mapstructure:"authentication_data_source"`
+		Endpoint              endpoint.Endpoint                   `mapstructure:"identity_info_endpoint"     validate:"required"` //nolint:lll
+		SubjectInfo           SubjectInfo                         `mapstructure:"subject"                    validate:"required"` //nolint:lll
+		AuthDataSource        extractors.CompositeExtractStrategy `mapstructure:"authentication_data_source" validate:"required"` //nolint:lll
 		ForwardHeaders        []string                            `mapstructure:"forward_headers"`
 		ForwardCookies        []string                            `mapstructure:"forward_cookies"`
 		Payload               template.Template                   `mapstructure:"payload"`
-		SubjectInfo           SubjectInfo                         `mapstructure:"subject"`
 		SessionLifespanConfig *SessionLifespanConfig              `mapstructure:"session_lifespan"`
 		CacheTTL              *time.Duration                      `mapstructure:"cache_ttl"`
 		AllowFallbackOnError  bool                                `mapstructure:"allow_fallback_on_error"`
 	}
 
 	var conf Config
-
-	if err := decodeConfig(rawConfig, &conf); err != nil {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration, "failed to decode generic authenticator config").
-			CausedBy(err)
-	}
-
-	if err := conf.Endpoint.Validate(); err != nil {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration, "failed to validate endpoint configuration").
-			CausedBy(err)
-	}
-
-	if err := conf.SubjectInfo.Validate(); err != nil {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration, "failed to validate subject configuration").
-			CausedBy(err)
-	}
-
-	if conf.AuthDataSource == nil {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration, "no authentication_data_source configured")
+	if err := decodeConfig(AuthenticatorGeneric, rawConfig, &conf); err != nil {
+		return nil, err
 	}
 
 	return &genericAuthenticator{
@@ -162,10 +142,8 @@ func (a *genericAuthenticator) WithConfig(config map[string]any) (Authenticator,
 	}
 
 	var conf Config
-	if err := decodeConfig(config, &conf); err != nil {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration, "failed to parse configuration").
-			CausedBy(err)
+	if err := decodeConfig(AuthenticatorGeneric, config, &conf); err != nil {
+		return nil, err
 	}
 
 	return &genericAuthenticator{
@@ -369,7 +347,7 @@ func (a *genericAuthenticator) getCacheTTL(sessionLifespan *SessionLifespan) tim
 		expiresIn := sessionLifespan.exp.Unix() - time.Now().Unix() - timeLeeway
 		expirationTTL := x.IfThenElse(expiresIn > 0, time.Duration(expiresIn)*time.Second, 0)
 
-		return x.IfThenElse(a.ttl < expirationTTL, a.ttl, expirationTTL)
+		return min(a.ttl, expirationTTL)
 	}
 
 	return a.ttl

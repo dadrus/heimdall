@@ -24,7 +24,6 @@ import (
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/errorhandlers/matcher"
 	"github.com/dadrus/heimdall/internal/x"
-	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
 // by intention. Used only during application bootstrap
@@ -51,21 +50,13 @@ type wwwAuthenticateErrorHandler struct {
 
 func newWWWAuthenticateErrorHandler(id string, rawConfig map[string]any) (*wwwAuthenticateErrorHandler, error) {
 	type Config struct {
+		When  []matcher.ErrorConditionMatcher `mapstructure:"when"  validate:"required,gt=0"`
 		Realm string                          `mapstructure:"realm"`
-		When  []matcher.ErrorConditionMatcher `mapstructure:"when"`
 	}
 
 	var conf Config
-	if err := decodeConfig(rawConfig, &conf); err != nil {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration, "failed to unmarshal redirect error handler config").
-			CausedBy(err)
-	}
-
-	if len(conf.When) == 0 {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration,
-				"no 'when' error handler conditions defined for the www-authenticate error handler")
+	if err := decodeConfig(ErrorHandlerWWWAuthenticate, rawConfig, &conf); err != nil {
+		return nil, err
 	}
 
 	return &wwwAuthenticateErrorHandler{
@@ -98,16 +89,13 @@ func (eh *wwwAuthenticateErrorHandler) WithConfig(rawConfig map[string]any) (Err
 	}
 
 	type Config struct {
+		When  *[]matcher.ErrorConditionMatcher `mapstructure:"when"  validate:"omitempty,gt=0"`
 		Realm *string                          `mapstructure:"realm"`
-		When  *[]matcher.ErrorConditionMatcher `mapstructure:"when"`
 	}
 
 	var conf Config
-	if err := decodeConfig(rawConfig, &conf); err != nil {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration,
-				"failed to unmarshal www authenticate error handler config").
-			CausedBy(err)
+	if err := decodeConfig(ErrorHandlerWWWAuthenticate, rawConfig, &conf); err != nil {
+		return nil, err
 	}
 
 	return &wwwAuthenticateErrorHandler{

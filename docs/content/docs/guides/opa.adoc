@@ -105,6 +105,6 @@ config:
     { "input": { "user": {{ quote .Subject.ID }} } }
 ----
 
-Upon successful execution of the corresponding request, the response from the OPA endpoint will be stored in the `Subject.Attributes["billing_contextualizer"]` field. That way, you can use that information in a link:{{< relref "/docs/configuration/rules/pipeline_mechanisms/unifiers.adoc" >}}[Unifier] to forward the group membership to the billing service API.
+Upon successful execution of the corresponding request, the response from the OPA endpoint will be stored in the `Subject.Attributes["billing_contextualizer"]` field. That way, you can use that information in a link:{{< relref "/docs/configuration/rules/pipeline_mechanisms/finalizers.adoc" >}}[Finalizer] to forward the group membership to the billing service API.
 
 ====

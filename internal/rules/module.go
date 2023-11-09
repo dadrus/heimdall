@@ -54,6 +54,7 @@ var Module = fx.Options(
 			fx.OnStop(func(ctx context.Context, o *repository) error { return o.Stop(ctx) }),
 		),
 		func(r *repository) rule.Repository { return r },
+		newRuleExecutor,
 		NewRuleSetProcessor,
 	),
 	provider.Module,

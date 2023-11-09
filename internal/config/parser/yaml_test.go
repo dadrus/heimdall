@@ -55,7 +55,7 @@ nested_2:
 				assert.Equal(t, "foo", konf.Get("some_string"))
 				assert.Equal(t, 3, konf.Get("someint"))
 				assert.Equal(t, "bar", konf.Get("nested1.some_string"))
-				assert.Equal(t, true, konf.Get("nested1.somebool"))
+				assert.Equal(t, true, konf.Get("nested1.somebool")) //nolint:testifylint
 				assert.Len(t, konf.Get("nested_2"), 1)
 				assert.Contains(t, konf.Get("nested_2"), map[string]any{"some_string": "baz", "somebool": false})
 			},
@@ -79,7 +79,7 @@ nested_2:
 				assert.Equal(t, "BAR", konf.Get("some_string"))
 				assert.Equal(t, 3, konf.Get("someint"))
 				assert.Equal(t, "bar", konf.Get("nested1.some_string"))
-				assert.Equal(t, true, konf.Get("nested1.somebool"))
+				assert.Equal(t, true, konf.Get("nested1.somebool")) //nolint:testifylint
 				assert.Len(t, konf.Get("nested_2"), 1)
 				assert.Contains(t, konf.Get("nested_2"),
 					map[string]any{

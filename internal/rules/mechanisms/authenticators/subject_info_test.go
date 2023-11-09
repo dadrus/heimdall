@@ -26,49 +26,6 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
 )
 
-func TestSubjectInfoValidate(t *testing.T) {
-	t.Parallel()
-
-	for _, tc := range []struct {
-		uc        string
-		configure func(t *testing.T, s *SubjectInfo)
-		assert    func(t *testing.T, err error)
-	}{
-		{
-			uc: "subject.id is set",
-			configure: func(t *testing.T, s *SubjectInfo) {
-				t.Helper()
-
-				s.IDFrom = "foobar"
-			},
-			assert: func(t *testing.T, err error) {
-				t.Helper()
-				assert.NoError(t, err)
-			},
-		},
-		{
-			uc:        "subject.id is not set",
-			configure: func(t *testing.T, s *SubjectInfo) { t.Helper() },
-			assert: func(t *testing.T, err error) {
-				t.Helper()
-				assert.Error(t, err)
-			},
-		},
-	} {
-		t.Run("case="+tc.uc, func(t *testing.T) {
-			// GIVEN
-			s := SubjectInfo{}
-			tc.configure(t, &s)
-
-			// WHEN
-			err := s.Validate()
-
-			// THEN
-			tc.assert(t, err)
-		})
-	}
-}
-
 func TestSubjectInfoCreateSubject(t *testing.T) {
 	t.Parallel()
 
@@ -158,8 +115,8 @@ func TestSubjectInfoCreateSubject(t *testing.T) {
 			},
 			assert: func(t *testing.T, err error, _ *subject.Subject) {
 				t.Helper()
-				assert.Error(t, err)
-				assert.ErrorContains(t, err, "could not extract attributes")
+				require.Error(t, err)
+				require.ErrorContains(t, err, "could not extract attributes")
 			},
 		},
 		{
@@ -171,8 +128,8 @@ func TestSubjectInfoCreateSubject(t *testing.T) {
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
-				assert.Error(t, err)
-				assert.ErrorContains(t, err, "could not extract subject")
+				require.Error(t, err)
+				require.ErrorContains(t, err, "could not extract subject")
 			},
 		},
 	} {

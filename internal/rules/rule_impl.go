@@ -24,42 +24,26 @@ import (
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/rules/config"
 	"github.com/dadrus/heimdall/internal/rules/patternmatcher"
 	"github.com/dadrus/heimdall/internal/rules/rule"
-	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
-//go:generate mockery --name UpstreamURLFactory --structname UpstreamURLFactoryMock
-
-type UpstreamURLFactory interface {
-	CreateURL(from *url.URL) *url.URL
-}
-
 type ruleImpl struct {
-	id                 string
-	urlMatcher         patternmatcher.PatternMatcher
-	upstreamURLFactory UpstreamURLFactory
-	methods            []string
-	srcID              string
-	isDefault          bool
-	hash               []byte
-	sc                 compositeSubjectCreator
-	sh                 compositeSubjectHandler
-	un                 compositeSubjectHandler
-	eh                 compositeErrorHandler
+	id         string
+	urlMatcher patternmatcher.PatternMatcher
+	backend    *config.Backend
+	methods    []string
+	srcID      string
+	isDefault  bool
+	hash       []byte
+	sc         compositeSubjectCreator
+	sh         compositeSubjectHandler
+	fi         compositeSubjectHandler
+	eh         compositeErrorHandler
 }
 
-func (r *ruleImpl) Mutate(uri *url.URL) (*url.URL, error) {
-	if r.upstreamURLFactory == nil {
-		// happens only if default rule has been applied or if the rule does not have an upstream defined
-		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
-			"no upstream URL defined")
-	}
-
-	return r.upstreamURLFactory.CreateURL(uri), nil
-}
-
-func (r *ruleImpl) Execute(ctx heimdall.Context) (rule.URIMutator, error) {
+func (r *ruleImpl) Execute(ctx heimdall.Context) (rule.Backend, error) {
 	logger := zerolog.Ctx(ctx.AppContext())
 
 	if r.isDefault {
@@ -83,14 +67,22 @@ func (r *ruleImpl) Execute(ctx heimdall.Context) (rule.URIMutator, error) {
 		return nil, err
 	}
 
-	// unifiers
-	if err = r.un.Execute(ctx, sub); err != nil {
+	// finalizers
+	if err = r.fi.Execute(ctx, sub); err != nil {
 		_, err := r.eh.Execute(ctx, err)
 
 		return nil, err
 	}
 
-	return r, nil
+	var upstream rule.Backend
+
+	if r.backend != nil {
+		upstream = &backend{
+			targetURL: r.backend.CreateURL(ctx.Request().URL),
+		}
+	}
+
+	return upstream, nil
 }
 
 func (r *ruleImpl) MatchesURL(requestURL *url.URL) bool {
@@ -107,3 +99,9 @@ func (r *ruleImpl) MatchesMethod(method string) bool { return slices.Contains(r.
 func (r *ruleImpl) ID() string { return r.id }
 
 func (r *ruleImpl) SrcID() string { return r.srcID }
+
+type backend struct {
+	targetURL *url.URL
+}
+
+func (b *backend) URL() *url.URL { return b.targetURL }

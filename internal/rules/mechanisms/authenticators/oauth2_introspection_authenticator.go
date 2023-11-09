@@ -30,8 +30,8 @@ import (
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/cache"
-	"github.com/dadrus/heimdall/internal/endpoint"
 	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/rules/endpoint"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/extractors"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/oauth2"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
@@ -71,31 +71,17 @@ func newOAuth2IntrospectionAuthenticator(id string, rawConfig map[string]any) (
 	error,
 ) {
 	type Config struct {
-		Endpoint             endpoint.Endpoint                   `mapstructure:"introspection_endpoint"`
+		Endpoint             endpoint.Endpoint                   `mapstructure:"introspection_endpoint"  validate:"required"`
+		Assertions           oauth2.Expectation                  `mapstructure:"assertions"              validate:"required"`
+		SubjectInfo          SubjectInfo                         `mapstructure:"subject"                 validate:"-"`
 		AuthDataSource       extractors.CompositeExtractStrategy `mapstructure:"token_source"`
-		Assertions           oauth2.Expectation                  `mapstructure:"assertions"`
-		SubjectInfo          SubjectInfo                         `mapstructure:"subject"`
 		CacheTTL             *time.Duration                      `mapstructure:"cache_ttl"`
 		AllowFallbackOnError bool                                `mapstructure:"allow_fallback_on_error"`
 	}
 
 	var conf Config
-	if err := decodeConfig(rawConfig, &conf); err != nil {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration,
-				"failed to unmarshal oauth2 introspection authenticator config").
-			CausedBy(err)
-	}
-
-	if err := conf.Endpoint.Validate(); err != nil {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration, "failed to validate endpoint configuration").
-			CausedBy(err)
-	}
-
-	if len(conf.Assertions.TrustedIssuers) == 0 {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration, "no trusted issuers configured")
+	if err := decodeConfig(AuthenticatorOAuth2Introspection, rawConfig, &conf); err != nil {
+		return nil, err
 	}
 
 	if len(conf.SubjectInfo.IDFrom) == 0 {
@@ -190,10 +176,8 @@ func (a *oauth2IntrospectionAuthenticator) WithConfig(rawConfig map[string]any) 
 	}
 
 	var conf Config
-	if err := decodeConfig(rawConfig, &conf); err != nil {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration, "failed to unmarshal configuration").
-			CausedBy(err)
+	if err := decodeConfig(AuthenticatorOAuth2Introspection, rawConfig, &conf); err != nil {
+		return nil, err
 	}
 
 	return &oauth2IntrospectionAuthenticator{
@@ -370,7 +354,7 @@ func (a *oauth2IntrospectionAuthenticator) getCacheTTL(introspectResp *oauth2.In
 	case configuredTTL != 0 && introspectionResponseTTL == 0:
 		return configuredTTL
 	default:
-		return x.IfThenElse(configuredTTL < introspectionResponseTTL, configuredTTL, introspectionResponseTTL)
+		return min(configuredTTL, introspectionResponseTTL)
 	}
 }
 

@@ -234,6 +234,28 @@
         }
       }
     },
+    "connectionsLimitConfig": {
+      "type": "object",
+      "description": "Overrides the default limits for connections",
+      "additionalProperties": false,
+      "properties": {
+        "max_per_host": {
+          "description": "Max allowed connections per host. 0 means no limits (default)",
+          "type": "integer",
+          "default": 0
+        },
+        "max_idle": {
+          "description": "Max allowed idle connections. Defaults to 100",
+          "type": "integer",
+          "default": 100
+        },
+        "max_idle_per_host": {
+          "description": "Max allowed idle connections per host. Defaults to 100",
+          "type": "integer",
+          "default": 100
+        }
+      }
+    },
     "responseOverride": {
       "type": "object",
       "description": "Overrides the defaults for responses",
@@ -368,6 +390,75 @@
         }
       }
     },
+    "oauth2ClientCredentialsFlowConfig": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "client_id",
+        "client_secret",
+        "token_url"
+      ],
+      "properties": {
+        "client_id": {
+          "description": "The OAuth 2.0 Client ID to be used for the OAuth 2.0 Client Credentials Grant",
+          "type": "string"
+        },
+        "client_secret": {
+          "description": "The OAuth 2.0 Client Secret to be used for the OAuth 2.0 Client Credentials Grant",
+          "type": "string"
+        },
+        "auth_method": {
+          "description": "How to transfer the client_id and client_secret to the oauth provider",
+          "type": "string",
+          "default": "basic_auth",
+          "enum": [
+            "basic_auth",
+            "request_body"
+          ]
+        },
+        "token_url": {
+          "description": "The OAuth 2.0 Token Endpoint where the OAuth 2.0 Client Credentials Grant will be performed",
+          "type": "string"
+        },
+        "scopes": {
+          "description": "The OAuth 2.0 Scopes to be requested during the OAuth 2.0 Client Credentials Grant",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "cache_ttl": {
+          "type": "string",
+          "description": "How long to cache the issued token. Defaults to the value of the `expires_in` of the issued token. If `expires_in` is not present in the response, the token is not cached until this property is not explicitly configured. If `expires_in` is present in the response and this property is configured the shorter value is taken. 0 or negative value will disable caching. ",
+          "pattern": "^[0-9]+(ns|us|ms|s|m|h)$",
+          "examples": [
+            "1h",
+            "1m",
+            "30s"
+          ]
+        },
+        "header": {
+          "type": "object",
+          "description": "Header and scheme to use to transport the issued token to the upstream",
+          "additionalProperties": false,
+          "required": [
+            "name"
+          ],
+          "properties": {
+            "name": {
+              "description": "The header name to use",
+              "type": "string",
+              "default": "Authorization"
+            },
+            "scheme": {
+              "description": "The scheme to use",
+              "type": "string",
+              "default": "Bearer"
+            }
+          }
+        }
+      }
+    },
     "ruleSetEndpointConfiguration": {
       "description": "Endpoint to load rule sets from",
       "type": "object",
@@ -424,7 +515,7 @@
               "$ref": "#/definitions/endpointAuthBasicAuthProperties"
             },
             {
-              "$ref": "#/definitions/endpointAuthClientCredentialsProperties"
+              "$ref": "#/definitions/endpointAuth2ClientCredentialsProperties"
             }
           ]
         },
@@ -509,7 +600,7 @@
                   "$ref": "#/definitions/endpointAuthBasicAuthProperties"
                 },
                 {
-                  "$ref": "#/definitions/endpointAuthClientCredentialsProperties"
+                  "$ref": "#/definitions/endpointAuth2ClientCredentialsProperties"
                 }
               ]
             },
@@ -600,7 +691,7 @@
         "config"
       ]
     },
-    "endpointAuthClientCredentialsProperties": {
+    "endpointAuth2ClientCredentialsProperties": {
       "additionalProperties": false,
       "required": [
         "type",
@@ -608,41 +699,10 @@
       ],
       "properties": {
         "type": {
-          "const": "client_credentials"
+          "const": "oauth2_client_credentials"
         },
         "config": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": [
-            "client_id",
-            "client_secret",
-            "token_url"
-          ],
-          "properties": {
-            "client_id": {
-              "description": "The OAuth 2.0 Client ID to be used for the OAuth 2.0 Client Credentials Grant",
-              "type": "string"
-            },
-            "client_secret": {
-              "description": "The OAuth 2.0 Client Secret to be used for the OAuth 2.0 Client Credentials Grant",
-              "type": "string"
-            },
-            "token_url": {
-              "description": "The OAuth 2.0 Token Endpoint where the OAuth 2.0 Client Credentials Grant will be performed",
-              "type": "string"
-            },
-            "audience": {
-              "description": "The OAuth 2.0 Audience to be requested during the OAuth 2.0 Client Credentials Grant",
-              "type": "string"
-            },
-            "scopes": {
-              "description": "The OAuth 2.0 Scopes to be requested during the OAuth 2.0 Client Credentials Grant",
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            }
-          }
+          "$ref": "#/definitions/oauth2ClientCredentialsFlowConfig"
         }
       }
     },
@@ -1250,8 +1310,8 @@
         }
       }
     },
-    "unifierJwt": {
-      "description": "Creates a JWT Token from the given subject information",
+    "finalizerJwt": {
+      "description": "Creates a JWT Token from the available subject and request information to be passed to the upstream service",
       "type": "object",
       "additionalProperties": false,
       "required": [
@@ -1263,11 +1323,11 @@
           "const": "jwt"
         },
         "id": {
-          "description": "The unique id of the unifier to be used in the rule definition",
+          "description": "The unique id of the finalizer to be used in the rule definition",
           "type": "string"
         },
         "config": {
-          "description": "JWT unifier Configuration",
+          "description": "JWT finalizer configuration",
           "type": "object",
           "additionalProperties": false,
           "required": [
@@ -1275,6 +1335,7 @@
           ],
           "properties": {
             "claims": {
+              "description": "Custom claims, which should be included into the JWT.",
               "type": "string"
             },
             "ttl": {
@@ -1308,8 +1369,8 @@
         }
       }
     },
-    "unifierHeader": {
-      "description": "Transforms the request, allowing passing the credentials to the upstream application via headers",
+    "finalizerHeader": {
+      "description": "Allowing passing any information to the upstream service via headers",
       "type": "object",
       "additionalProperties": false,
       "required": [
@@ -1322,7 +1383,7 @@
           "const": "header"
         },
         "id": {
-          "description": "The unique id of the unifier to be used in the rule definition",
+          "description": "The unique id of the finalizer to be used in the rule definition",
           "type": "string"
         },
         "config": {
@@ -1344,8 +1405,8 @@
         }
       }
     },
-    "unifierCookie": {
-      "description": "Transforms the request, allowing passing the credentials to the upstream application via cookies",
+    "finalizerCookie": {
+      "description": "Transforms the request, allowing passing the credentials to the upstream service via cookies",
       "type": "object",
       "additionalProperties": false,
       "required": [
@@ -1358,7 +1419,7 @@
           "const": "cookie"
         },
         "id": {
-          "description": "The unique id of the unifier to be used in the rule definition",
+          "description": "The unique id of the finalizer to be used in the rule definition",
           "type": "string"
         },
         "config": {
@@ -1380,8 +1441,8 @@
         }
       }
     },
-    "unifierNoop": {
-      "description": "Noop Unifier",
+    "finalizerNoop": {
+      "description": "Does nothing",
       "type": "object",
       "additionalProperties": false,
       "properties": {
@@ -1389,8 +1450,30 @@
           "const": "noop"
         },
         "id": {
-          "description": "The unique id of the unifier to be used in the rule definition",
+          "description": "The unique id of the finalizer to be used in the rule definition",
           "type": "string"
+        }
+      }
+    },
+    "finalizerClientCredentials": {
+      "description": "Drives the OAuth2 client credentials flow and adds the corresponding token to the headers for the upstream",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "type",
+        "config"
+      ],
+      "properties": {
+        "type": {
+          "const": "oauth2_client_credentials"
+        },
+        "id": {
+          "description": "The unique id of the finalizer to be used in the rule definition",
+          "type": "string"
+        },
+        "config": {
+          "$ref": "#/definitions/oauth2ClientCredentialsFlowConfig"
         }
       }
     },
@@ -1679,6 +1762,9 @@
           "type": "string",
           "description": "The class of this heimdall setup in the cluster. Used to filter for CRDs. Only CRDs with the same auth class will be considered and loaded",
           "default": "default"
+        },
+        "tls": {
+          "$ref": "#/definitions/tlsConfig"
         }
       }
     },
@@ -1688,7 +1774,7 @@
       "additionalProperties": false,
       "required": [
         "authenticators",
-        "unifiers"
+        "finalizers"
       ],
       "properties": {
         "error_handlers": {
@@ -1771,24 +1857,27 @@
             "$ref": "#/definitions/contextualizerGeneric"
           }
         },
-        "unifiers": {
-          "description": "Unifiers",
+        "finalizers": {
+          "description": "Finalizers",
           "type": "array",
           "additionalItems": false,
           "uniqueItems": true,
           "items": {
             "anyOf": [
               {
-                "$ref": "#/definitions/unifierNoop"
+                "$ref": "#/definitions/finalizerNoop"
               },
               {
-                "$ref": "#/definitions/unifierJwt"
+                "$ref": "#/definitions/finalizerJwt"
               },
               {
-                "$ref": "#/definitions/unifierHeader"
+                "$ref": "#/definitions/finalizerHeader"
               },
               {
-                "$ref": "#/definitions/unifierCookie"
+                "$ref": "#/definitions/finalizerCookie"
+              },
+              {
+                "$ref": "#/definitions/finalizerClientCredentials"
               }
             ]
           }
@@ -1869,6 +1958,9 @@
             },
             "buffer_limit": {
               "$ref": "#/definitions/bufferLimitConfig"
+            },
+            "connections_limit": {
+              "$ref": "#/definitions/connectionsLimitConfig"
             },
             "cors": {
               "$ref": "#/definitions/corsConfig"
@@ -1968,25 +2060,6 @@
           "description": "Whether exposure of metrics is enabled or not",
           "type": "boolean",
           "default": true
-        },
-        "port": {
-          "description": "The port to listen on.",
-          "type": "integer",
-          "default": 10250
-        },
-        "host": {
-          "description": "The network interface to listen on. Leave empty to listen on all interfaces. Defaults to the 'loopback' interface",
-          "type": "string",
-          "default": "127.0.0.1",
-          "examples": [
-            "localhost",
-            "0.0.0.0"
-          ]
-        },
-        "metrics_path": {
-          "description": "The path to provide metrics on",
-          "type": "string",
-          "default": "/metrics"
         }
       }
     },

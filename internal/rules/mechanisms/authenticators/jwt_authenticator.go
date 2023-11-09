@@ -32,8 +32,8 @@ import (
 	"gopkg.in/square/go-jose.v2/jwt"
 
 	"github.com/dadrus/heimdall/internal/cache"
-	"github.com/dadrus/heimdall/internal/endpoint"
 	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/rules/endpoint"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/extractors"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/oauth2"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
@@ -76,36 +76,19 @@ type jwtAuthenticator struct {
 
 func newJwtAuthenticator(id string, rawConfig map[string]any) (*jwtAuthenticator, error) { // nolint: funlen
 	type Config struct {
-		Endpoint             endpoint.Endpoint                   `mapstructure:"jwks_endpoint"`
+		Endpoint             endpoint.Endpoint                   `mapstructure:"jwks_endpoint"           validate:"required"`
+		Assertions           oauth2.Expectation                  `mapstructure:"assertions"              validate:"required"`
+		SubjectInfo          SubjectInfo                         `mapstructure:"subject"                 validate:"-"`
 		AuthDataSource       extractors.CompositeExtractStrategy `mapstructure:"jwt_source"`
-		Assertions           oauth2.Expectation                  `mapstructure:"assertions"`
-		SubjectInfo          SubjectInfo                         `mapstructure:"subject"`
 		CacheTTL             *time.Duration                      `mapstructure:"cache_ttl"`
 		AllowFallbackOnError bool                                `mapstructure:"allow_fallback_on_error"`
 		ValidateJWK          *bool                               `mapstructure:"validate_jwk"`
 		TrustStore           truststore.TrustStore               `mapstructure:"trust_store"`
 	}
 
-	var (
-		conf Config
-		err  error
-	)
-
-	if err = decodeConfig(rawConfig, &conf); err != nil {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration, "failed to unmarshal jwt authenticator config").
-			CausedBy(err)
-	}
-
-	if err = conf.Endpoint.Validate(); err != nil {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration, "failed to validate endpoint configuration").
-			CausedBy(err)
-	}
-
-	if len(conf.Assertions.TrustedIssuers) == 0 {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration, "no trusted issuers configured")
+	var conf Config
+	if err := decodeConfig(AuthenticatorJwt, rawConfig, &conf); err != nil {
+		return nil, err
 	}
 
 	if conf.Endpoint.Headers == nil {
@@ -204,16 +187,14 @@ func (a *jwtAuthenticator) WithConfig(config map[string]any) (Authenticator, err
 	}
 
 	type Config struct {
-		Assertions           *oauth2.Expectation `mapstructure:"assertions"`
+		Assertions           *oauth2.Expectation `mapstructure:"assertions"              validate:"-"`
 		CacheTTL             *time.Duration      `mapstructure:"cache_ttl"`
 		AllowFallbackOnError *bool               `mapstructure:"allow_fallback_on_error"`
 	}
 
 	var conf Config
-	if err := decodeConfig(config, &conf); err != nil {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration, "failed to unmarshal jwt authenticator config").
-			CausedBy(err)
+	if err := decodeConfig(AuthenticatorJwt, config, &conf); err != nil {
+		return nil, err
 	}
 
 	return &jwtAuthenticator{
@@ -278,7 +259,7 @@ func (a *jwtAuthenticator) getCacheTTL(key *jose.JSONWebKey) time.Duration {
 	case configuredTTL != 0 && certTTL == 0:
 		return configuredTTL
 	default:
-		return x.IfThenElse(configuredTTL < certTTL, configuredTTL, certTTL)
+		return min(configuredTTL, certTTL)
 	}
 }
 

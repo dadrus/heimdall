@@ -117,7 +117,9 @@ After having installed heimdall, you have to integrate it with your ingress cont
 
 ==== Metrics Collection
 
-Since heimdall exposes a comprehensive set of Prometheus style metrics on its metrics endpoint, you can, assuming you are running a https://github.com/prometheus-operator/prometheus-operator[Prometheus Operator] in your cluster, create the following `PodMonitor` resource to enable metrics collection.
+===== Prometheus Style Metrics
+
+If you have configured heimdall to expose a pull based (prometheus style) metrics endpoint, you can, assuming you are running a https://github.com/prometheus-operator/prometheus-operator[Prometheus Operator] in your cluster, create the following `PodMonitor` resource to enable metrics collection.
 
 [source, yaml]
 ----
@@ -401,6 +403,31 @@ a| `service.management.name`
 
 The name of the port exposed by the k8s Service created for heimdall's management endpoint.
 a| `management`
+
+a| `admissionController.labels`
+
+Allows setting additional labels for the `ValidatingWebhookConfiguration` resource used to let the API server communicate with heimdall to validate `RuleSet` resources, before these made available to heimdall for loading.
+a| `{}` (empty map)
+
+a| `admissionController.annotations`
+
+Can be used to specify required annotations for the `ValidatingWebhookConfiguration` resource, like e.g. `cert-manager.io/inject-ca-from: <secret name>`, `service.beta.openshift.io/inject-cabundle=true` and alike.
+a| `{}` (empty map)
+
+a| `admissionController.namespaceSelector`
+
+Allows specifying a namespaceSelector for the `ValidatingWebhookConfiguration` resource
+a| `{}` (empty map)
+
+a| `admissionController.caBundle`
+
+Allows configuration of the `caBundle` in the `ValidatingWebhookConfiguration` resource. Either this one, or a corresponding annotation (see annotations examples above) must be specified if the usage of the validating admission controller is desired. Otherwise, the API server won't be able to communicate with heimdall.
+a| `""`
+
+a| `admissionController.timeoutSeconds`
+
+How long the webhook implemented by the admission controller is allowed to run while validating `RuleSet` resources. After the timeout passes, the webhook call will be ignored by the API server resulting in discarding the affected `RuleSet` ressource.
+a| `5`
 
 a| `env`
 

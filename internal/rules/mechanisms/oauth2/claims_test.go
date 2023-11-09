@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestClaimsValidate(t *testing.T) {
@@ -46,7 +47,7 @@ func TestClaimsValidate(t *testing.T) {
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
-				assert.Error(t, err)
+				require.Error(t, err)
 				assert.Contains(t, err.Error(), "issuer")
 			},
 		},
@@ -63,7 +64,7 @@ func TestClaimsValidate(t *testing.T) {
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
-				assert.Error(t, err)
+				require.Error(t, err)
 				assert.Contains(t, err.Error(), "audience")
 			},
 		},
@@ -81,7 +82,7 @@ func TestClaimsValidate(t *testing.T) {
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
-				assert.Error(t, err)
+				require.Error(t, err)
 				assert.Contains(t, err.Error(), "valid")
 			},
 		},
@@ -100,7 +101,7 @@ func TestClaimsValidate(t *testing.T) {
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
-				assert.Error(t, err)
+				require.Error(t, err)
 				assert.Contains(t, err.Error(), "issued")
 			},
 		},
@@ -121,7 +122,7 @@ func TestClaimsValidate(t *testing.T) {
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
-				assert.Error(t, err)
+				require.Error(t, err)
 				assert.Contains(t, err.Error(), "scope")
 			},
 		},
@@ -142,7 +143,7 @@ func TestClaimsValidate(t *testing.T) {
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
-				assert.Error(t, err)
+				require.Error(t, err)
 				assert.Contains(t, err.Error(), "scope")
 			},
 		},
@@ -163,7 +164,7 @@ func TestClaimsValidate(t *testing.T) {
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			},
 		},
 		{
@@ -183,7 +184,7 @@ func TestClaimsValidate(t *testing.T) {
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			},
 		},
 	} {

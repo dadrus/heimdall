@@ -134,7 +134,7 @@ scopes:
 			assert: func(t *testing.T, err error, matcher ScopesMatcher) {
 				t.Helper()
 
-				assert.Error(t, err)
+				require.Error(t, err)
 			},
 		},
 		{
@@ -146,7 +146,7 @@ scopes:
 			assert: func(t *testing.T, err error, matcher ScopesMatcher) {
 				t.Helper()
 
-				assert.Error(t, err)
+				require.Error(t, err)
 			},
 		},
 	} {

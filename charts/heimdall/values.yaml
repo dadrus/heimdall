@@ -125,6 +125,30 @@ service:
     port: 4457
     # Service port name
     name: management
+  # Only used if rules.providers.kubernetes.tls is configured
+  admissionController:
+    # Service port
+    port: 4458
+    # Service port name
+    name: admission-controller
+
+# Only used if rules.providers.kubernetes.tls is configured
+admissionController:
+  # Remove the curly braces after 'labels:' if you do want to specify additional labels
+  labels: { }
+
+  # Remove the curly braces after 'annotations:' if you want to specify annotations
+  # e.g. cert-manager.io/inject-ca-from: <secret name>, or service.beta.openshift.io/inject-cabundle=true
+  annotations: { }
+
+  # Remove the curly braces after 'namespaceSelector:' if you want to specify a namespaceSelector
+  namespaceSelector: {}
+
+  # Set to the required value if you want to specify the caBundle by yourself (see annotations for alternative)
+  caBundle: ""
+
+  # Set to another value if required
+  timeoutSeconds: 5
 
 # Configures arbitrary environment variables for the deployment
 env: { }
@@ -141,11 +165,6 @@ serve:
     port: 4455
   management:
     port: 4457
-metrics:
-  enabled: true
-  port: 10250
-  host: 0.0.0.0 # to enable scraping of metrics information by corresponding agents.
-  metrics_path: "/metrics"
 profiling:
   enabled: false
   port: 10251

@@ -14,7 +14,7 @@ All mechanisms supported by heimdall fall into following categories:
 * link:{{< relref "authenticators.adoc">}}[Authenticators], which inspect HTTP requests for presence of authentication objects, like e.g. the presence of a specific cookie. If such objects exist, authenticators verify the related authentication status and obtain information about the corresponding subject. A subject, could be a user who tries to use particular functionality of the upstream service, a machine (if you have machine-2-machine interaction), or something different. Authenticators ensure the subject is authenticated and the information available about it is valid.
 * link:{{< relref "authorizers.adoc">}}[Authorizers], which ensure that the subject obtained via an authenticator has the required permissions to submit the given HTTP request and thus to execute the corresponding logic in the upstream service. E.g. a specific endpoint of the upstream service might only be accessible to a "user" from the "admin" group, or to an HTTP request if a specific HTTP header is set.
 * link:{{< relref "contextualizers.adoc">}}[Contextualizers], which enrich the information about the subject obtained via an authenticator with further contextual information, required either by the upstream service itself or an authorizer. This can be handy if the actual authentication system doesn't have all information about the subject (which is usually the case in microservice architectures), or if dynamic information about the subject, like the current location based on the IP address, is required.
-* link:{{< relref "unifiers.adoc">}}[Unifiers], which finalize the successful execution of the pipeline and unify the available information about the subject by transforming it into a format expected, respectively required by the upstream service. This ranges from adding a query parameter, to a structured JWT in a specific header.
+* link:{{< relref "finalizers.adoc">}}[Finalizers], which, as the name implies, finalize the execution of the pipeline and enrich the request with data such as subject information or authentication tokens required by the upstream service. The available options range from adding a simple header over a structured JWT, to driving specific protocols, e.g. to obtain a token required by the upstream service.
 * link:{{< relref "error_handlers.adoc">}}[Error Handlers], which are responsible for execution of logic if any of the mechanisms described above fail. These range from a simple error response to the client, which sent the request, to sophisticated ones, supporting complex logic and redirects.
 
 == General Configuration
@@ -31,8 +31,8 @@ rules:
       <list of authorizers>
     contextualizers:
       <list of contextualizers>
-    unifiers:
-      <list of unifiers>
+    finalizers:
+      <list of finalizers>
     error_handlers:
       <list of error handlers>
 ----
@@ -108,8 +108,8 @@ rules:
         forward_headers:
           - Authorization
         cache_ttl: 1m
-    unifiers:
-    - id: jwt_unifier
+    finalizers:
+    - id: jwt_finalizer
       type: jwt
       config:
         ttl: 5m

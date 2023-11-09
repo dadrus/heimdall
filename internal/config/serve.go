@@ -17,7 +17,6 @@
 package config
 
 import (
-	"crypto/tls"
 	"fmt"
 	"time"
 
@@ -35,6 +34,12 @@ type Timeout struct {
 	Idle  time.Duration `koanf:"idle,string"`
 }
 
+type ConnectionsLimit struct {
+	MaxPerHost     int `koanf:"max_per_host"`
+	MaxIdle        int `koanf:"max_idle"`
+	MaxIdlePerHost int `koanf:"max_idle_per_host"`
+}
+
 type CORS struct {
 	AllowedOrigins   []string      `koanf:"allowed_origins"`
 	AllowedMethods   []string      `koanf:"allowed_methods"`
@@ -44,49 +49,16 @@ type CORS struct {
 	MaxAge           time.Duration `koanf:"max_age,string"`
 }
 
-type TLSCipherSuites []uint16
-
-func (s TLSCipherSuites) OrDefault() []uint16 {
-	if len(s) == 0 {
-		return []uint16{
-			tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
-			tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
-			tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
-			tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
-			tls.TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305,
-			tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,
-		}
-	}
-
-	return s
-}
-
-type TLSMinVersion uint16
-
-func (v TLSMinVersion) OrDefault() uint16 {
-	if v == 0 {
-		return tls.VersionTLS13
-	}
-
-	return uint16(v)
-}
-
-type TLS struct {
-	KeyStore     KeyStore        `koanf:"key_store"`
-	KeyID        string          `koanf:"key_id"`
-	CipherSuites TLSCipherSuites `koanf:"cipher_suites"`
-	MinVersion   TLSMinVersion   `koanf:"min_version"`
-}
-
 type ServiceConfig struct {
-	Host           string        `koanf:"host"`
-	Port           int           `koanf:"port"`
-	Timeout        Timeout       `koanf:"timeout"`
-	BufferLimit    BufferLimit   `koanf:"buffer_limit"`
-	CORS           *CORS         `koanf:"cors,omitempty"`
-	TLS            *TLS          `koanf:"tls,omitempty"`
-	TrustedProxies *[]string     `koanf:"trusted_proxies,omitempty"`
-	Respond        RespondConfig `koanf:"respond"`
+	Host             string           `koanf:"host"`
+	Port             int              `koanf:"port"`
+	Timeout          Timeout          `koanf:"timeout"`
+	BufferLimit      BufferLimit      `koanf:"buffer_limit"`
+	ConnectionsLimit ConnectionsLimit `koanf:"connections_limit"`
+	CORS             *CORS            `koanf:"cors,omitempty"`
+	TLS              *TLS             `koanf:"tls,omitempty"`
+	TrustedProxies   *[]string        `koanf:"trusted_proxies,omitempty"`
+	Respond          RespondConfig    `koanf:"respond"`
 }
 
 func (c ServiceConfig) Address() string { return fmt.Sprintf("%s:%d", c.Host, c.Port) }

@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestExpectationAssertAlgorithm(t *testing.T) {
@@ -39,7 +40,7 @@ func TestExpectationAssertAlgorithm(t *testing.T) {
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
-				assert.Error(t, err)
+				require.Error(t, err)
 			},
 		},
 		{
@@ -49,7 +50,7 @@ func TestExpectationAssertAlgorithm(t *testing.T) {
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			},
 		},
 	} {
@@ -79,7 +80,7 @@ func TestExpectationAssertIssuer(t *testing.T) {
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
-				assert.Error(t, err)
+				require.Error(t, err)
 			},
 		},
 		{
@@ -89,7 +90,7 @@ func TestExpectationAssertIssuer(t *testing.T) {
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			},
 		},
 	} {
@@ -119,7 +120,7 @@ func TestExpectationAssertAudience(t *testing.T) {
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
-				assert.Error(t, err)
+				require.Error(t, err)
 			},
 		},
 		{
@@ -129,7 +130,7 @@ func TestExpectationAssertAudience(t *testing.T) {
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			},
 		},
 	} {
@@ -159,7 +160,7 @@ func TestExpectationAssertValidity(t *testing.T) {
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			},
 		},
 		{
@@ -169,7 +170,7 @@ func TestExpectationAssertValidity(t *testing.T) {
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			},
 		},
 		{
@@ -179,7 +180,7 @@ func TestExpectationAssertValidity(t *testing.T) {
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
-				assert.Error(t, err)
+				require.Error(t, err)
 			},
 		},
 		{
@@ -189,7 +190,7 @@ func TestExpectationAssertValidity(t *testing.T) {
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
-				assert.Error(t, err)
+				require.Error(t, err)
 			},
 		},
 		{
@@ -199,7 +200,7 @@ func TestExpectationAssertValidity(t *testing.T) {
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
-				assert.Error(t, err)
+				require.Error(t, err)
 			},
 		},
 		{
@@ -209,7 +210,7 @@ func TestExpectationAssertValidity(t *testing.T) {
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
-				assert.Error(t, err)
+				require.Error(t, err)
 			},
 		},
 		{
@@ -219,7 +220,7 @@ func TestExpectationAssertValidity(t *testing.T) {
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			},
 		},
 		{
@@ -229,7 +230,7 @@ func TestExpectationAssertValidity(t *testing.T) {
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			},
 		},
 		{
@@ -239,7 +240,7 @@ func TestExpectationAssertValidity(t *testing.T) {
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			},
 		},
 		{
@@ -249,7 +250,7 @@ func TestExpectationAssertValidity(t *testing.T) {
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			},
 		},
 		{
@@ -259,7 +260,7 @@ func TestExpectationAssertValidity(t *testing.T) {
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			},
 		},
 		{
@@ -269,7 +270,7 @@ func TestExpectationAssertValidity(t *testing.T) {
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			},
 		},
 		{
@@ -279,7 +280,7 @@ func TestExpectationAssertValidity(t *testing.T) {
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			},
 		},
 		{
@@ -289,7 +290,7 @@ func TestExpectationAssertValidity(t *testing.T) {
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			},
 		},
 		{
@@ -299,7 +300,7 @@ func TestExpectationAssertValidity(t *testing.T) {
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			},
 		},
 		{
@@ -309,7 +310,7 @@ func TestExpectationAssertValidity(t *testing.T) {
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			},
 		},
 		{
@@ -319,7 +320,7 @@ func TestExpectationAssertValidity(t *testing.T) {
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
-				assert.Error(t, err)
+				require.Error(t, err)
 			},
 		},
 		{
@@ -329,7 +330,7 @@ func TestExpectationAssertValidity(t *testing.T) {
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
-				assert.Error(t, err)
+				require.Error(t, err)
 			},
 		},
 	} {
@@ -359,7 +360,7 @@ func TestExpectationAssertIssuanceTime(t *testing.T) {
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			},
 		},
 		{
@@ -369,7 +370,7 @@ func TestExpectationAssertIssuanceTime(t *testing.T) {
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			},
 		},
 		{
@@ -379,7 +380,7 @@ func TestExpectationAssertIssuanceTime(t *testing.T) {
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
-				assert.Error(t, err)
+				require.Error(t, err)
 			},
 		},
 		{
@@ -389,7 +390,7 @@ func TestExpectationAssertIssuanceTime(t *testing.T) {
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			},
 		},
 		{
@@ -399,7 +400,7 @@ func TestExpectationAssertIssuanceTime(t *testing.T) {
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			},
 		},
 		{
@@ -409,7 +410,7 @@ func TestExpectationAssertIssuanceTime(t *testing.T) {
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
-				assert.Error(t, err)
+				require.Error(t, err)
 			},
 		},
 		{
@@ -419,7 +420,7 @@ func TestExpectationAssertIssuanceTime(t *testing.T) {
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
-				assert.Error(t, err)
+				require.Error(t, err)
 			},
 		},
 		{
@@ -429,7 +430,7 @@ func TestExpectationAssertIssuanceTime(t *testing.T) {
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
-				assert.Error(t, err)
+				require.Error(t, err)
 			},
 		},
 		{
@@ -439,7 +440,7 @@ func TestExpectationAssertIssuanceTime(t *testing.T) {
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			},
 		},
 		{
@@ -449,7 +450,7 @@ func TestExpectationAssertIssuanceTime(t *testing.T) {
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			},
 		},
 	} {
@@ -479,7 +480,7 @@ func TestExpectationAssertScopes(t *testing.T) {
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			},
 		},
 		{
@@ -489,7 +490,7 @@ func TestExpectationAssertScopes(t *testing.T) {
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
-				assert.Error(t, err)
+				require.Error(t, err)
 			},
 		},
 	} {
@@ -518,7 +519,7 @@ func TestMergeExpectations(t *testing.T) {
 			assert: func(t *testing.T, merged *Expectation, source *Expectation, target *Expectation) {
 				t.Helper()
 
-				assert.Equal(t, source, merged)
+				require.Equal(t, source, merged)
 			},
 		},
 		{
@@ -534,7 +535,7 @@ func TestMergeExpectations(t *testing.T) {
 			assert: func(t *testing.T, merged *Expectation, source *Expectation, target *Expectation) {
 				t.Helper()
 
-				assert.Equal(t, source, merged)
+				require.Equal(t, source, merged)
 			},
 		},
 		{

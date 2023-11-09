@@ -21,7 +21,7 @@ Which HTTP methods (`GET`, `POST`, `PATCH`, etc) are allowed. Expansion using `A
 
 * *`execute`*: _link:{{< relref "configuration.adoc#_regular_pipeline" >}}[Regular Pipeline]_ (mandatory)
 +
-Which mechanisms to use for authentication, authorization, hydration (enrich) and mutation of the request and the subject. At least one link:{{< relref "./pipeline_mechanisms/authenticators.adoc" >}}[authenticator] and one link:{{< relref "./pipeline_mechanisms/unifiers.adoc" >}}[unifier] must be defined. A specific rule (see also link:{{< relref "configuration.adoc" >}}[Rule]) can omit the definition of authenticators, if it wants to reuse the authenticators defined in the default rule. Same is true for other mechanisms. Exception are link:{{< relref "./pipeline_mechanisms/authorizers.adoc" >}}[authorizers] and link:{{< relref "./pipeline_mechanisms/contextualizers.adoc" >}}[contextualizers]. As soon, as a specific rule defines at least one authorizer or contextualizer, those authorizers and contextualizers (defined in the default rule) are not considered anymore.
+Which mechanisms to use for authentication, authorization, contextualization (enrich) and finalization of the pipeline. At least one link:{{< relref "./pipeline_mechanisms/authenticators.adoc" >}}[authenticator] and one link:{{< relref "./pipeline_mechanisms/finalizers.adoc" >}}[finalizer] must be defined. A specific rule (see also link:{{< relref "configuration.adoc" >}}[Rule]) can omit the definition of authenticators, if it wants to reuse the authenticators defined in the default rule. Same is true for other mechanisms. Exception are link:{{< relref "./pipeline_mechanisms/authorizers.adoc" >}}[authorizers] and link:{{< relref "./pipeline_mechanisms/contextualizers.adoc" >}}[contextualizers]. As soon, as a specific rule defines at least one authorizer or contextualizer, those authorizers and contextualizers (defined in the default rule) are not considered anymore.
 
 * *`on_error`*: _link:{{< relref "configuration.adoc#_error_handler_pipeline" >}}[Error Handler Pipeline]_ (mandatory)
 +
@@ -40,12 +40,12 @@ rules:
       - authenticator: session_cookie_from_kratos_authn
       - authenticator: oauth2_introspect_token_from_keycloak_authn
       - authorizer: deny_all_requests_authz
-      - unifier: jwt_unifier
+      - finalizer: create_jwt
     on_error:
       - error_handler: authenticate_with_kratos_eh
 ----
 
-This example defines a default rule, which allows HTTP `GET` and `PATCH` requests on any URL (will respond with `405 Method Not Allowed` for any other HTTP method used by a client). The regular pipeline consists of two authenticators, with `session_cookie_from_kratos_authn` being the first and `oauth2_introspect_token_from_keycloak_authn` being the fallback (if the first one fails), a `deny_all_requests_authz` authorizer and the `jwt_unifier` unifier. The error pipeline is configured to execute only the `authenticate_with_kratos_eh` error handler.
+This example defines a default rule, which allows HTTP `GET` and `PATCH` requests on any URL (will respond with `405 Method Not Allowed` for any other HTTP method used by a client). The regular pipeline consists of two authenticators, with `session_cookie_from_kratos_authn` being the first and `oauth2_introspect_token_from_keycloak_authn` being the fallback (if the first one fails), a `deny_all_requests_authz` authorizer and the `create_jwt` finalizer. The error pipeline is configured to execute only the `authenticate_with_kratos_eh` error handler.
 
 Obviously, the regular pipeline (defined in the `execute` property) of this default rule will always result in an error due to `deny_all_requests_authz`. This way it is thought to provide secure defaults and let the upstream specific rules override at least the part dealing with authorization. Such an upstream specific rule could then look like follows:
 
@@ -58,6 +58,6 @@ execute:
   - authorizer: allow_all_requests_authz
 ----
 
-Take a look at how `methods`, `on_error`, as well as the authenticators and unifiers from the `execute` definition of the default rule are reused. Easy, no?
+Take a look at how `methods`, `on_error`, as well as the authenticators and finalizers from the `execute` definition of the default rule are reused. Easy, no?
 ====
  

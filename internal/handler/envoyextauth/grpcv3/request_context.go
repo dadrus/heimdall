@@ -25,6 +25,7 @@ import (
 
 	envoy_core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	envoy_auth "github.com/envoyproxy/go-control-plane/envoy/service/auth/v3"
+	"github.com/rs/zerolog"
 	"google.golang.org/genproto/googleapis/rpc/status"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
@@ -60,17 +61,17 @@ func NewRequestContext(ctx context.Context, req *envoy_auth.CheckRequest, signer
 	return &RequestContext{
 		ctx:        ctx,
 		ips:        clientIPs,
-		reqMethod:  req.Attributes.Request.Http.Method,
-		reqHeaders: canonicalizeHeaders(req.Attributes.Request.Http.Headers),
+		reqMethod:  req.GetAttributes().GetRequest().GetHttp().GetMethod(),
+		reqHeaders: canonicalizeHeaders(req.GetAttributes().GetRequest().GetHttp().GetHeaders()),
 		reqURL: &url.URL{
-			Scheme:   req.Attributes.Request.Http.Scheme,
-			Host:     req.Attributes.Request.Http.Host,
-			Path:     req.Attributes.Request.Http.Path,
-			RawQuery: req.Attributes.Request.Http.Query,
-			Fragment: req.Attributes.Request.Http.Fragment,
+			Scheme:   req.GetAttributes().GetRequest().GetHttp().GetScheme(),
+			Host:     req.GetAttributes().GetRequest().GetHttp().GetHost(),
+			Path:     req.GetAttributes().GetRequest().GetHttp().GetPath(),
+			RawQuery: req.GetAttributes().GetRequest().GetHttp().GetQuery(),
+			Fragment: req.GetAttributes().GetRequest().GetHttp().GetFragment(),
 		},
-		reqBody:         req.Attributes.Request.Http.Body,
-		reqRawBody:      req.Attributes.Request.Http.RawBody,
+		reqBody:         req.GetAttributes().GetRequest().GetHttp().GetBody(),
+		reqRawBody:      req.GetAttributes().GetRequest().GetHttp().GetRawBody(),
 		jwtSigner:       signer,
 		upstreamHeaders: make(http.Header),
 		upstreamCookies: make(map[string]string),
@@ -125,6 +126,8 @@ func (s *RequestContext) Finalize() (*envoy_auth.CheckResponse, error) {
 	if s.err != nil {
 		return nil, s.err
 	}
+
+	zerolog.Ctx(s.ctx).Debug().Msg("Creating response")
 
 	headers := make([]*envoy_core.HeaderValueOption,
 		len(s.upstreamHeaders)+x.IfThenElse(len(s.upstreamCookies) == 0, 0, 1))

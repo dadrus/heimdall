@@ -78,10 +78,10 @@ func (suite *CertChainTestSuite) SetupSuite() {
 
 	// ROOT CAs
 	suite.rootCA1, err = testsupport.NewRootCA("Test Root CA 1", time.Hour*24)
-	suite.NoError(err)
+	suite.Require().NoError(err)
 
 	suite.rootCA2, err = testsupport.NewRootCA("Test Root CA 2", time.Hour*24)
-	suite.NoError(err)
+	suite.Require().NoError(err)
 
 	// CROSS CERT
 	suite.crossCert, err = suite.rootCA1.IssueCertificate(
@@ -90,11 +90,11 @@ func (suite *CertChainTestSuite) SetupSuite() {
 		testsupport.WithValidity(suite.rootCA2.Certificate.NotBefore, time.Hour*24),
 		testsupport.WithSubjectPubKey(suite.rootCA2.Certificate.PublicKey, x509.ECDSAWithSHA384),
 	)
-	suite.NoError(err)
+	suite.Require().NoError(err)
 
 	// INT CAs
 	intCA1PrivKey, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
-	suite.NoError(err)
+	suite.Require().NoError(err)
 	intCA1Cert, err := suite.rootCA1.IssueCertificate(
 		testsupport.WithSubject(pkix.Name{
 			CommonName:   "Test Int CA 1",
@@ -104,11 +104,11 @@ func (suite *CertChainTestSuite) SetupSuite() {
 		testsupport.WithIsCA(),
 		testsupport.WithValidity(time.Now(), time.Hour*24),
 		testsupport.WithSubjectPubKey(&intCA1PrivKey.PublicKey, x509.ECDSAWithSHA384))
-	suite.NoError(err)
+	suite.Require().NoError(err)
 	suite.intCA1 = testsupport.NewCA(intCA1PrivKey, intCA1Cert)
 
 	intCA2PrivKey, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
-	suite.NoError(err)
+	suite.Require().NoError(err)
 	intCA2Cert, err := suite.rootCA1.IssueCertificate(
 		testsupport.WithSubject(pkix.Name{
 			CommonName:   "Test Int CA 2",
@@ -118,11 +118,11 @@ func (suite *CertChainTestSuite) SetupSuite() {
 		testsupport.WithIsCA(),
 		testsupport.WithValidity(time.Now(), time.Hour*24),
 		testsupport.WithSubjectPubKey(&intCA2PrivKey.PublicKey, x509.ECDSAWithSHA384))
-	suite.NoError(err)
+	suite.Require().NoError(err)
 	suite.intCA2 = testsupport.NewCA(intCA2PrivKey, intCA2Cert)
 
 	intCA3PrivKey, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
-	suite.NoError(err)
+	suite.Require().NoError(err)
 	intCA3Cert, err := suite.intCA2.IssueCertificate(
 		testsupport.WithSubject(pkix.Name{
 			CommonName:   "Test Int CA 3",
@@ -132,11 +132,11 @@ func (suite *CertChainTestSuite) SetupSuite() {
 		testsupport.WithKeyUsage(x509.KeyUsageDigitalSignature),
 		testsupport.WithValidity(time.Now(), time.Hour*24),
 		testsupport.WithSubjectPubKey(&intCA3PrivKey.PublicKey, x509.ECDSAWithSHA384))
-	suite.NoError(err)
+	suite.Require().NoError(err)
 	suite.intCA3 = testsupport.NewCA(intCA3PrivKey, intCA3Cert)
 
 	intCA4PrivKey, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
-	suite.NoError(err)
+	suite.Require().NoError(err)
 	intCA4Cert, err := suite.rootCA2.IssueCertificate(
 		testsupport.WithSubject(pkix.Name{
 			CommonName:   "Test Int CA 4",
@@ -146,12 +146,12 @@ func (suite *CertChainTestSuite) SetupSuite() {
 		testsupport.WithIsCA(),
 		testsupport.WithValidity(time.Now(), time.Hour*24),
 		testsupport.WithSubjectPubKey(&intCA4PrivKey.PublicKey, x509.ECDSAWithSHA384))
-	suite.NoError(err)
+	suite.Require().NoError(err)
 	suite.intCA4 = testsupport.NewCA(intCA4PrivKey, intCA4Cert)
 
 	// EE CERTS
 	ee1PrivKey, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
-	require.NoError(suite.T(), err)
+	suite.Require().NoError(err)
 	ee1cert, err := suite.intCA1.IssueCertificate(
 		testsupport.WithSubject(pkix.Name{
 			CommonName:   "Test EE 1",
@@ -160,11 +160,11 @@ func (suite *CertChainTestSuite) SetupSuite() {
 		}),
 		testsupport.WithValidity(time.Now(), time.Hour*24),
 		testsupport.WithSubjectPubKey(&ee1PrivKey.PublicKey, x509.ECDSAWithSHA384))
-	suite.NoError(err)
+	suite.Require().NoError(err)
 	suite.ee1 = &testsupport.EndEntity{Certificate: ee1cert, PrivKey: ee1PrivKey}
 
 	ee2PrivKey, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
-	suite.NoError(err)
+	suite.Require().NoError(err)
 	ee2cert, err := suite.intCA1.IssueCertificate(
 		testsupport.WithSubject(pkix.Name{
 			CommonName:   "Test EE 2",
@@ -174,11 +174,11 @@ func (suite *CertChainTestSuite) SetupSuite() {
 		testsupport.WithValidity(time.Now().Add(-time.Hour*24), time.Hour*1),
 		testsupport.WithSubjectPubKey(&ee2PrivKey.PublicKey, x509.ECDSAWithSHA384),
 		testsupport.WithKeyUsage(x509.KeyUsageDigitalSignature))
-	suite.NoError(err)
+	suite.Require().NoError(err)
 	suite.ee2 = &testsupport.EndEntity{Certificate: ee2cert, PrivKey: ee2PrivKey}
 
 	ee3PrivKey, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
-	suite.NoError(err)
+	suite.Require().NoError(err)
 	ee3cert, err := suite.intCA2.IssueCertificate(
 		testsupport.WithSubject(pkix.Name{
 			CommonName:   "Test EE 3",
@@ -188,11 +188,11 @@ func (suite *CertChainTestSuite) SetupSuite() {
 		testsupport.WithValidity(time.Now(), time.Hour*1),
 		testsupport.WithSubjectPubKey(&ee3PrivKey.PublicKey, x509.ECDSAWithSHA384),
 		testsupport.WithKeyUsage(x509.KeyUsageDigitalSignature))
-	suite.NoError(err)
+	suite.Require().NoError(err)
 	suite.ee3 = &testsupport.EndEntity{Certificate: ee3cert, PrivKey: ee3PrivKey}
 
 	ee4PrivKey, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
-	suite.NoError(err)
+	suite.Require().NoError(err)
 	ee4cert, err := suite.intCA3.IssueCertificate(
 		testsupport.WithSubject(pkix.Name{
 			CommonName:   "Test EE 4",
@@ -202,11 +202,11 @@ func (suite *CertChainTestSuite) SetupSuite() {
 		testsupport.WithValidity(time.Now(), time.Hour*1),
 		testsupport.WithSubjectPubKey(&ee4PrivKey.PublicKey, x509.ECDSAWithSHA384),
 		testsupport.WithKeyUsage(x509.KeyUsageDigitalSignature))
-	suite.NoError(err)
+	suite.Require().NoError(err)
 	suite.ee4 = &testsupport.EndEntity{Certificate: ee4cert, PrivKey: ee4PrivKey}
 
 	ee5PrivKey, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
-	suite.NoError(err)
+	suite.Require().NoError(err)
 	ee5cert, err := suite.intCA4.IssueCertificate(
 		testsupport.WithSubject(pkix.Name{
 			CommonName:   "Test EE 5",
@@ -216,7 +216,7 @@ func (suite *CertChainTestSuite) SetupSuite() {
 		testsupport.WithValidity(time.Now(), time.Hour*1),
 		testsupport.WithSubjectPubKey(&ee5PrivKey.PublicKey, x509.ECDSAWithSHA384),
 		testsupport.WithKeyUsage(x509.KeyUsageDigitalSignature))
-	suite.NoError(err)
+	suite.Require().NoError(err)
 	suite.ee5 = &testsupport.EndEntity{Certificate: ee5cert, PrivKey: ee5PrivKey}
 }
 
@@ -323,7 +323,7 @@ func (suite *CertChainTestSuite) TestValidateChain() {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
 				assert.Contains(t, err.Error(), "certificate has expired or is not yet valid")
 			},
 		},
@@ -351,7 +351,7 @@ func (suite *CertChainTestSuite) TestValidateChain() {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
 				assert.Contains(t, err.Error(), "parent certificate cannot sign")
 			},
 		},

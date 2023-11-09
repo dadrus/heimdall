@@ -51,7 +51,7 @@ func TestCreateAuthenticatorPrototype(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, ErrUnsupportedAuthenticatorType)
+				require.ErrorIs(t, err, ErrUnsupportedAuthenticatorType)
 			},
 		},
 	} {

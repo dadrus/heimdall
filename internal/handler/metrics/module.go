@@ -20,85 +20,82 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"os"
+	"strings"
+	"time"
 
-	"github.com/gofiber/adaptor/v2"
-	"github.com/gofiber/fiber/v2"
+	"github.com/justinas/alice"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/rs/zerolog"
 	"go.uber.org/fx"
 
 	"github.com/dadrus/heimdall/internal/config"
+	"github.com/dadrus/heimdall/internal/handler/fxlcm"
+	"github.com/dadrus/heimdall/internal/handler/middleware/http/methodfilter"
+	"github.com/dadrus/heimdall/internal/x/loggeradapter"
 )
 
-var Module = fx.Options( // nolint: gochecknoglobals
-	fx.Invoke(registerHooks),
+var Module = fx.Invoke( // nolint: gochecknoglobals
+	fx.Annotate(
+		newLifecycleManager,
+		fx.OnStart(func(ctx context.Context, lcm lifecycleManager) error { return lcm.Start(ctx) }),
+		fx.OnStop(func(ctx context.Context, lcm lifecycleManager) error { return lcm.Stop(ctx) }),
+	),
 )
+
+type lifecycleManager interface {
+	Start(ctx context.Context) error
+	Stop(ctx context.Context) error
+}
+
+type noopManager struct{}
+
+func (noopManager) Start(context.Context) error { return nil }
+func (noopManager) Stop(context.Context) error  { return nil }
 
 // ErrLoggerFun is an adapter for promhttp Logger to log errors.
 type ErrLoggerFun func(v ...interface{})
 
 func (l ErrLoggerFun) Println(v ...interface{}) { l(v) }
 
-type hooksArgs struct {
-	fx.In
+func newLifecycleManager(conf *config.Configuration, logger zerolog.Logger) lifecycleManager {
+	cfg := conf.Metrics
+	exporterNames, _ := os.LookupEnv("OTEL_METRICS_EXPORTER")
 
-	Lifecycle  fx.Lifecycle
-	Registerer prometheus.Registerer
-	Gatherer   prometheus.Gatherer
-	Config     *config.Configuration
-	Logger     zerolog.Logger
-}
+	if !cfg.Enabled ||
+		!strings.Contains(exporterNames, "prometheus") ||
+		strings.Contains(exporterNames, "none") {
+		logger.Info().Msg("Metrics service disabled")
 
-func registerHooks(args hooksArgs) {
-	if !args.Config.Metrics.Enabled {
-		args.Logger.Info().Msg("Metrics service disabled")
-
-		return
+		return noopManager{}
 	}
 
-	app := fiber.New(fiber.Config{
-		AppName:               "Heimdall's Metrics endpoint",
-		DisableStartupMessage: true,
-	})
+	mux := http.NewServeMux()
+	mux.Handle("/metrics",
+		alice.New(methodfilter.New(http.MethodGet)).
+			Then(promhttp.InstrumentMetricHandler(
+				prometheus.DefaultRegisterer,
+				promhttp.HandlerFor(
+					prometheus.DefaultGatherer,
+					promhttp.HandlerOpts{
+						Registry: prometheus.DefaultRegisterer,
+						ErrorLog: ErrLoggerFun(func(v ...interface{}) { logger.Error().Msg(fmt.Sprint(v...)) }),
+					},
+				),
+			)))
 
-	metricsHandler := promhttp.InstrumentMetricHandler(
-		args.Registerer,
-		promhttp.HandlerFor(
-			args.Gatherer,
-			promhttp.HandlerOpts{
-				Registry: args.Registerer,
-				ErrorLog: ErrLoggerFun(func(v ...interface{}) { args.Logger.Error().Msg(fmt.Sprint(v...)) }),
-			},
-		),
-	)
-
-	registerRoutes(app.Group(args.Config.Metrics.MetricsPath), args.Logger, metricsHandler)
-
-	args.Lifecycle.Append(
-		fx.Hook{
-			OnStart: func(ctx context.Context) error {
-				go func() {
-					addr := args.Config.Metrics.Address()
-					args.Logger.Info().Str("_address", addr).Msg("Metrics service starts listening")
-					if err := app.Listen(addr); err != nil {
-						args.Logger.Fatal().Err(err).Msg("Could not start Metrics service")
-					}
-				}()
-
-				return nil
-			},
-			OnStop: func(ctx context.Context) error {
-				args.Logger.Info().Msg("Tearing down Metrics service")
-
-				return app.Shutdown()
-			},
+	return &fxlcm.LifecycleManager{
+		ServiceName:    "Metrics",
+		ServiceAddress: cfg.Address(),
+		Server: &http.Server{
+			Handler:        mux,
+			ReadTimeout:    5 * time.Second,  // nolint: gomnd
+			WriteTimeout:   10 * time.Second, // nolint: gomnd
+			IdleTimeout:    90 * time.Second, // nolint: gomnd
+			MaxHeaderBytes: 4096,             // nolint: gomnd
+			ErrorLog:       loggeradapter.NewStdLogger(logger),
 		},
-	)
-}
-
-func registerRoutes(router fiber.Router, logger zerolog.Logger, handler http.Handler) {
-	logger.Debug().Msg("Registering Metrics service routes")
-
-	router.Get("", adaptor.HTTPHandler(handler))
+		Logger: logger,
+	}
 }

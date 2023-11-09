@@ -47,8 +47,8 @@ func TestCreateRedirectErrorHandler(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "requires 'to' parameter")
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				assert.Contains(t, err.Error(), "'to' is a required field")
 			},
 		},
 		{
@@ -58,29 +58,22 @@ func TestCreateRedirectErrorHandler(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "no 'when' error handler conditions defined")
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				assert.Contains(t, err.Error(), "'when' is a required field")
 			},
 		},
 		{
-			uc: "without provided configuration",
+			uc: "with empty 'When' configuration",
+			config: []byte(`
+to: http://foo.bar
+when: []
+`),
 			assert: func(t *testing.T, err error, redEH *redirectErrorHandler) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "requires 'to' parameter")
-			},
-		},
-		{
-			uc:     "with empty configuration",
-			config: []byte(``),
-			assert: func(t *testing.T, err error, redEH *redirectErrorHandler) {
-				t.Helper()
-
-				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "requires 'to' parameter")
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				assert.Contains(t, err.Error(), "'when' must contain more than 0 items")
 			},
 		},
 		{
@@ -94,8 +87,8 @@ when:
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "failed to unmarshal")
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				assert.Contains(t, err.Error(), "failed decoding")
 			},
 		},
 		{
@@ -111,8 +104,8 @@ when:
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "failed to unmarshal")
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				assert.Contains(t, err.Error(), "failed decoding")
 			},
 		},
 		{
@@ -293,8 +286,8 @@ when:
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "failed to unmarshal")
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				assert.Contains(t, err.Error(), "failed decoding")
 			},
 		},
 		{
@@ -386,7 +379,7 @@ when:
 			assert: func(t *testing.T, wasResponsible bool, err error) {
 				t.Helper()
 
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				assert.False(t, wasResponsible)
 			},
 		},
@@ -407,8 +400,8 @@ when:
 			assert: func(t *testing.T, wasResponsible bool, err error) {
 				t.Helper()
 
-				assert.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrInternal)
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrInternal)
 				assert.Contains(t, err.Error(), "failed to render")
 				assert.True(t, wasResponsible)
 			},
@@ -439,7 +432,7 @@ when:
 			assert: func(t *testing.T, wasResponsible bool, err error) {
 				t.Helper()
 
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				assert.True(t, wasResponsible)
 			},
 		},
@@ -479,7 +472,7 @@ when:
 			assert: func(t *testing.T, wasResponsible bool, err error) {
 				t.Helper()
 
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				assert.True(t, wasResponsible)
 			},
 		},

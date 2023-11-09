@@ -35,7 +35,7 @@ If you configure heimdall to log in `text` format, you can expect output similar
 2022-08-03T12:51:52+02:00 DBG Decision endpoint called
 2022-08-03T12:51:52+02:00 DBG Executing default rule
 2022-08-03T12:51:52+02:00 DBG Authenticating using anonymous authenticator
-2022-08-03T12:51:52+02:00 DBG Mutating using JWT unifier
+2022-08-03T12:51:52+02:00 DBG Finalizing using JWT finalizer
 2022-08-03T12:51:52+02:00 DBG Generating new JWT
 2022-08-03T12:51:52+02:00 DBG Finalizing request
 ----
@@ -76,7 +76,7 @@ Otherwise, if you configure it to use `gelf` (see https://docs.graylog.org/v1/do
  "_trace_id": "00000000000000000a5af97bffe6a8a2", "short_message": "Authenticating using anonymous authenticator"}
 {"_level_name": "DEBUG", "version": "1.1", "host": "unknown", "timestamp": 1659523295,
  "level": 7, "_parent_id": "3449bda63ed70206", "_span_id": "f57c007257fee0ed",
- "_trace_id": "00000000000000000a5af97bffe6a8a2", "short_message": "Mutating using JWT unifier"}
+ "_trace_id": "00000000000000000a5af97bffe6a8a2", "short_message": "Finalizing using JWT finalizer"}
 {"_level_name": "DEBUG", "version": "1.1", "host": "unknown", "timestamp": 1659523295,
  "level": 7, "_parent_id": "3449bda63ed70206", "_span_id": "f57c007257fee0ed",
  "_trace_id": "00000000000000000a5af97bffe6a8a2", "short_message": "Generating new JWT"}
@@ -188,7 +188,7 @@ Otherwise, if you configure it to use `gelf` format, the output will look as fol
 
 == Tracing in Heimdall
 
-Heimdall makes use of https://opentelemetry.io/[OpenTelemetry] for distributed tracing to support recording of paths taken by requests and supports all environment variables including the defined values according to https://opentelemetry.io/docs/reference/specification/sdk-environment-variables/[OpenTelemetry Environment Variable Specification]. In addition to these environment variables, heimdall defines its own tracing options, which are described in link:{{< relref "/docs/configuration/observability/tracing.adoc" >}}[Tracing Configuration] and can be used to tune the behaviour.
+Heimdall makes use of https://opentelemetry.io/[OpenTelemetry] for distributed tracing to support recording of paths taken by requests and supports all environment variables including the defined values according to https://opentelemetry.io/docs/reference/specification/sdk-environment-variables/[OpenTelemetry Environment Variables] and https://opentelemetry.io/docs/concepts/sdk-configuration/[OpenTelemetry SDK Configuration] specifications. In addition to these environment variables, heimdall defines some additional options, which are described in link:{{< relref "/docs/configuration/observability/tracing.adoc" >}}[Tracing Configuration] and can be used to tune the behaviour.
 
 NOTE: Tracing is enabled by default.
 
@@ -217,10 +217,9 @@ Configured propagators are used for inbound, as well as for outbound traffic.
 
 === Span Exporters
 
-Span Exporter handle the delivery of spans to external receivers (collectors, or agents). This is the final component in the trace export pipeline and typically provided by the APM vendor, like Jaeger, Zipkin, Instana, etc. Since not every multi-service system may have an up to day telemetry receiver supporting protocols defined by OTEL, interoperability can be achieved by configuring the required exporters by making use of the `OTEL_TRACES_EXPORTER` environment variable. OTEL defines the following values for this variable:
+Span Exporter handle the delivery of spans to external receivers (collectors, or agents). This is the final component in the trace export pipeline and typically provided by the APM vendor, like Jaeger, Zipkin, Instana, etc. Since not every multi-service system may have an up to day telemetry receiver supporting protocols defined by OTEL, interoperability can be achieved by configuring the required exporters by making use of the `OTEL_TRACES_EXPORTER` environment variable. OTEL defines the following values for this variablefootnote:[jaeger exporter has been marked as deprecated and is not supported anymore]:
 
 * `otlp` - https://opentelemetry.io/docs/reference/specification/protocol/otlp/[OTLP] exporter. Enabled by default if `OTEL_TRACES_EXPORTER` is not set.
-* `jaeger` - https://github.com/jaegertracing/jaeger-idl/blob/main/thrift/jaeger.thrift[Jaeger Thrift] exporter to export spans in Jaeger data model.
 * `zipkin` - https://zipkin.io/zipkin-api/[Zipkin] exporter to export spans in Zipkin data model.
 * `none` - No automatically configured exporter for traces.
 
@@ -244,257 +243,58 @@ If your environment supports OpenTelemetry and usage of defaults is ok, most pro
 
 == Metrics in Heimdall
 
-By default, heimdall exposes https://grafana.com/oss/prometheus/[Prometheus] style metrics on the `127.0.0.1:10250/metrics` HTTP endpoint (See also link:{{< relref "/docs/configuration/observability/metrics.adoc" >}}[Metrics Configuration]) which comprise the following information:
+Heimdall makes use of https://opentelemetry.io/[OpenTelemetry] to emit metrics. Depending on the configuration, push or pull based metrics export is supported. As with tracing, the entire configuration happens via environment variables as defined by https://opentelemetry.io/docs/reference/specification/sdk-environment-variables/[OpenTelemetry Environment Variables] and https://opentelemetry.io/docs/concepts/sdk-configuration/[OpenTelemetry SDK Configuration] specifications. In addition to these environment variables, heimdall allows disabling collection and exposure of metrics if required, which is described under link:{{< relref "/docs/configuration/observability/tracing.adoc" >}}[Tracing Configuration].
 
-* Process information, like CPU, memory, file descriptor usage and start time
-* Go runtime information, including details about GC, number of goroutines and OS threats
-* Information about the metrics endpoint itself, including the number of internal errors encountered while gathering the metrics, number of current inflight and overall scrapes done.
-* Information about the decision and proxy requests handled, including the total amount and duration of http requests by status code, method and path, as well as information about requests in progress.
+NOTE: Metric exposure is enabled by default.
+
+This chapter serves the purpose of a quick introduction to metrics collected and exposed by heimdall.
+
+=== Metric Exporters
+
+By default, metrics are pushed to the OTEL collector using the `http/protobuf` transport protocol. You can change that behavior by making use of either the https://opentelemetry.io/docs/concepts/sdk-configuration/otlp-exporter-configuration/#otel_exporter_otlp_metrics_protocol[`OTEL_EXPORTER_OTLP_METRICS_PROTOCOL`], or the https://opentelemetry.io/docs/concepts/sdk-configuration/otlp-exporter-configuration/#otel_exporter_otlp_protocol[`OTEL_EXPORTER_OTLP_PROTOCOL`] environment variable.
+
+To let heimdall know where to push the metrics to, either https://opentelemetry.io/docs/concepts/sdk-configuration/otlp-exporter-configuration/#otel_exporter_otlp_metrics_endpoint[`OTEL_EXPORTER_OTLP_METRICS_ENDPOINT`], or https://opentelemetry.io/docs/concepts/sdk-configuration/otlp-exporter-configuration/#otel_exporter_otlp_endpoint[`OTEL_EXPORTER_OTLP_ENDPOINT`] must be defined.
+
+To let heimdall expose metrics over a pull based service (https://grafana.com/oss/prometheus/[Prometheus] style), the https://opentelemetry.io/docs/concepts/sdk-configuration/general-sdk-configuration/#otel_metrics_exporter[`OTEL_METRICS_EXPORTER`] environment variable must be set to `"prometheus"`. In that case heimdall will expose the `127.0.0.1:9464/metrics` endpoint which can be queried using the HTTP GET verb. You can change the host and port of that service by making use of the https://opentelemetry.io/docs/specs/otel/configuration/sdk-environment-variables/#prometheus-exporter[`OTEL_EXPORTER_PROMETHEUS_HOST`] and https://opentelemetry.io/docs/specs/otel/configuration/sdk-environment-variables/#prometheus-exporter[`OTEL_EXPORTER_PROMETHEUS_PORT`] environment variables.
+
+=== Available Metrics
+
+* System metrics according to https://opentelemetry.io/docs/specs/otel/metrics/semantic_conventions/system-metrics/[OpenTelemetry Semantic Conventions for System Metrics].
+* Process and Go runtime metrics according to https://opentelemetry.io/docs/specs/otel/metrics/semantic_conventions/process-metrics/[OpenTelemetry Semantic Conventions for OS Process Metrics].
+* Information about the handled requests on each active service, as well as information about requests in progress according to OpenTelemetry https://opentelemetry.io/docs/specs/otel/metrics/semantic_conventions/http-metrics/[Semantic Conventions for HTTP Metrics] and https://opentelemetry.io/docs/specs/otel/metrics/semantic_conventions/rpc-metrics/[General RPC conventions].
+* Information about the metrics endpoint itself (if enabled), including the number of internal errors encountered while gathering the metrics, number of current inflight and overall scrapes done.
 * Information about expiry for configured certificates.
 
-The following table provide detailed information about these
+All, but custom metrics adhere to the https://opentelemetry.io/docs/specs/otel/metrics/semantic_conventions/[OpenTelementry semantic conventions]. For that reason, only the custom metrics are listed in the table below.
+
+==== Metric: `certificate.expiry`
+Number of seconds until a certificate used by a particular service (decision, proxy, management), as well as signer expires. The metric type is UpDownCounter und the unit is s.
 
 [cols="2,1,5"]
 |===
-| Metric | Type | Description
+| **Attribute** | **Type** | **Description**
 
-3+| _Process Information_
+| `service`
+| string
+| The service, the certificate is configured for.
 
-| `process_cpu_seconds_total`
-| Counter
-| Total user and system CPU time spent in seconds.
+| `issuer`
+| string
+| Issuer DN of the certificate.
 
-| `process_max_fds`
-| Gauge
-| Maximum number of open file descriptors.
+| `serial_nr`
+| string
+| The serial number of the certificate.
 
-| `process_open_fds`
-| Gauge
-| Number of open file descriptors.
+| `subject`
+| string
+| Subject DN of the certificate.
 
-| `process_resident_memory_bytes`
-| Gauge
-| Resident memory size in bytes.
-
-| `process_start_time_seconds`
-| Gauge
-| Start time of the process since unix epoch in seconds.
-
-| `process_virtual_memory_bytes`
-| Gauge
-| Virtual memory size in bytes.
-
-| `process_virtual_memory_max_bytes`
-| Gauge
-| Maximum amount of virtual memory available in bytes.
-
-3+| _Go Runtime Information_
-
-| `go_cgo_go_to_c_calls_calls_total`
-| Counter
-| Count of calls made from Go to C by the current process.
-
-| `go_gc_cycles_automatic_gc_cycles_total`
-| Counter
-| Count of completed GC cycles generated by the Go runtime.
-
-| `go_gc_cycles_forced_gc_cycles_total`
-| Counter
-| Count of completed GC cycles forced by the application.
-
-| `go_gc_cycles_total_gc_cycles_total`
-| Counter
-| Count of all completed GC cycles.
-
-| `go_gc_duration_seconds`
-| Summary
-| A summary of the pause duration of garbage collection cycles.
-
-| `go_gc_heap_allocs_by_size_bytes`
-| Histogram
-| Distribution of heap allocations by approximate size. Note that this does not include tiny objects as defined by /gc/heap/tiny/allocs:objects, only tiny blocks.
-
-| `go_gc_heap_allocs_bytes_total`
-| Counter
-| Cumulative sum of memory allocated to the heap by the application.
-
-| `go_gc_heap_allocs_objects_total`
-| Counter
-| Cumulative count of heap allocations triggered by the application. Note that this does not include tiny objects as defined by /gc/heap/tiny/allocs:objects, only tiny blocks.
-
-| `go_gc_heap_frees_by_size_bytes`
-| Histogram
-| istribution of freed heap allocations by approximate size. Note that this does not include tiny objects as defined by /gc/heap/tiny/allocs:objects, only tiny blocks.
-
-| `go_gc_heap_frees_bytes_total`
-| Counter
-| Cumulative sum of heap memory freed by the garbage collector.
-
-| `go_gc_heap_frees_objects_total`
-| Counter
-| Cumulative count of heap allocations whose storage was freed by the garbage collector. Note that this does not include tiny objects as defined by /gc/heap/tiny/allocs:objects, only tiny blocks.
-
-| `go_gc_heap_goal_bytes`
-| Gauge
-| Heap size target for the end of the GC cycle.
-
-| `go_gc_heap_objects_objects`
-| Gauge
-| Number of objects, live or unswept, occupying heap memory.
-
-| `go_gc_heap_tiny_allocs_objects_total`
-| Counter
-| Count of small allocations that are packed together into blocks. These allocations are counted separately from other allocations because each individual allocation is not tracked by the runtime, only their block. Each block is already accounted for in allocs-by-size and frees-by-size.
-
-| `go_gc_limiter_last_enabled_gc_cycle`
-| Gauge
-| GC cycle the last time the GC CPU limiter was enabled. This metric is useful for diagnosing the root cause of an out-of-memory error, because the limiter trades memory for CPU time when the GC's CPU time gets too high. This is most likely to occur with use of SetMemoryLimit. The first GC cycle is cycle 1, so a value of 0 indicates that it was never enabled.
-
-| `go_gc_pauses_seconds`
-| Histogram
-| Distribution individual GC-related stop-the-world pause latencies.
-
-| `go_gc_stack_starting_size_bytes`
-| Gauge
-| The stack size of new goroutines.
-
-| `go_goroutines`
-| Gauge
-| Number of goroutines that currently exist.
-
-| `go_info`
-| Gauge
-| Information about the Go environment.
-
-| `go_memory_classes_heap_free_bytes`
-| Gauge
-| Memory that is completely free and eligible to be returned to the underlying system, but has not been. This metric is the runtime's estimate of free address space that is backed by physical memory.
-
-| `go_memory_classes_heap_objects_bytes`
-| Gauge
-| Memory occupied by live objects and dead objects that have not yet been marked free by the garbage collector.
-
-| `go_memory_classes_heap_released_bytes`
-| Gauge
-| Memory that is completely free and has been returned to the underlying system. This metric is the runtime's estimate of free address space that is still mapped into the process, but is not backed by physical memory.
-
-| `go_memory_classes_heap_stacks_bytes`
-| Gauge
-| Memory allocated from the heap that is reserved for stack space, whether or not it is currently in-use.
-
-| `go_memory_classes_heap_stacks_bytes`
-| Gauge
-| Memory allocated from the heap that is reserved for stack space, whether or not it is currently in-use.
-
-| `go_memory_classes_heap_unused_bytes`
-| Gauge
-| Memory that is reserved for heap objects but is not currently used to hold heap objects.
-
-| `go_memory_classes_metadata_mcache_free_bytes`
-| Gauge
-| Memory that is reserved for runtime mcache structures, but not in-use.
-
-| `go_memory_classes_metadata_mcache_inuse_bytes`
-| Gauge
-| Memory that is occupied by runtime mcache structures that are currently being used.
-
-| `go_memory_classes_metadata_mspan_free_bytes`
-| Gauge
-| Memory that is reserved for runtime mspan structures, but not in-use.
-
-| `go_memory_classes_metadata_mspan_inuse_bytes`
-| Gauge
-| Memory that is occupied by runtime mspan structures that are currently being used.
-
-| `go_memory_classes_metadata_other_bytes`
-| Gauge
-| Memory that is reserved for or used to hold runtime metadata.
-
-| `go_memory_classes_os_stacks_bytes`
-| Gauge
-| Stack memory allocated by the underlying operating system.
-
-| `go_memory_classes_other_bytes`
-| Gauge
-| Memory used by execution trace buffers, structures for debugging the runtime, finalizer and profiler specials, and more.
-
-| `go_memory_classes_profiling_buckets_bytes`
-| Gauge
-| Memory that is used by the stack trace hash map used for profiling.
-
-| `go_memory_classes_total_bytes`
-| Gauge
-| All memory mapped by the Go runtime into the current process as read-write. Note that this does not include memory mapped by code called via cgo or via the syscall package. Sum of all metrics in /memory/classes.
-
-| `go_memstats_last_gc_time_seconds`
-| Gauge
-| Number of seconds since 1970 of last garbage collection.
-
-| `go_sched_gomaxprocs_threads`
-| Gauge
-| The current runtime.GOMAXPROCS setting, or the number of operating system threads that can execute user-level Go code simultaneously.
-
-| `go_sched_goroutines_goroutines`
-| Gauge
-| Count of live goroutines.
-
-| `go_sched_latencies_seconds`
-| Histogram
-| Distribution of the time goroutines have spent in the scheduler in a runnable state before actually running.
-
-| `go_threads`
-| Gauge
-| Number of OS threads created.
-
-3+| _Decision / Proxy / Management Service request related_
-
-| `http_request_duration_seconds`
-| Histogram
-| Duration of all HTTP requests by service (decision, proxy, management), status code, method and path.
-
-| `http_requests_in_progress_total`
-| Gauge
-| All the requests in progress by service (decision, proxy, management) and method
-
-| `http_requests_total`
-| Counter
-| Count all http requests by service (decision, proxy, management), status code, method and path.
-
-| `grpc_request_duration_seconds`
-| Histogram
-| Duration of all requests by tunneled HTTP status code, service (decision) and method, as well as by GRPC method and status code.
-
-| `grpc_requests_in_progress_total`
-| Gauge
-| All the requests in progress by service (decision), tunneled HTTP method, as well as by GRPC method.
-
-| `grpc_requests_total`
-| Counter
-| Count all requests by service (decision), tunneled HTTP status code, service and method, as well as by GRPC method and status code.
-
-3+| _Certificate expiry information_
-
-| `certificate_expiry_seconds`
-| Gauge
-| Number of seconds until a certificate used by a particular service (decision, proxy, management), as well as signer expires. Contains certificate identification information as well.
-
-3+| _Metrics endpoint statistics_
-
-| `promhttp_metric_handler_requests_in_flight`
-| Gauge
-| Current number of scrapes being served.
-
-| `promhttp_metric_handler_requests_total`
-| Counter
-| Total number of scrapes by HTTP status code.
-
-| `promhttp_metric_handler_errors_total`
-| Counter
-| Total number of internal errors encountered by the promhttp metric handler.
+| `dns_names`
+| string
+| DNS entries in the SAN extension
 
 |===
-
-NOTE: More details about Prometheus metric types can be found https://prometheus.io/docs/concepts/metric_types/[here].
 
 == Runtime Profiling in Heimdall
 

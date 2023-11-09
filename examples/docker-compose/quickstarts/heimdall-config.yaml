@@ -15,7 +15,7 @@ rules:
         type: anonymous
       - id: reject_requests
         type: unauthorized
-    unifiers:
+    finalizers:
       - id: do_nothing
         type: noop
       - id: create_jwt
@@ -41,7 +41,7 @@ rules:
       - POST
     execute:
       - authenticator: reject_requests
-      - unifier: create_jwt
+      - finalizer: create_jwt
     on_error:
       - error_handler: redirect_to_login
 

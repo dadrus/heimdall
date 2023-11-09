@@ -333,7 +333,7 @@ func TestCreateKeyStoreFromPEMFile(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
 				assert.Contains(t, err.Error(), "duplicate entry")
 			},
 		},
@@ -380,7 +380,7 @@ func TestCreateKeyStoreFromPEMBytes(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
 				assert.Contains(t, err.Error(), "duplicate entry")
 			},
 		},
@@ -401,7 +401,7 @@ xijD/4gPFRBfs2GsfVZzSL9kH7HH0chB9w==
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrInternal)
+				require.ErrorIs(t, err, heimdall.ErrInternal)
 				assert.Contains(t, err.Error(), "unsupported entry")
 			},
 		},
@@ -422,7 +422,7 @@ xijD/4gPFRBfs2GsfVZzSL9kH7HH0chB9w==
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrInternal)
+				require.ErrorIs(t, err, heimdall.ErrInternal)
 				assert.Contains(t, err.Error(), "failed to parse")
 			},
 		},
@@ -622,7 +622,7 @@ xijD/4gPFRBfs2GsfVZzSL9kH7HH0chB9w==
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
 				assert.Contains(t, err.Error(), "duplicate entry for key_id=foo")
 			},
 		},
@@ -733,7 +733,7 @@ func TestKeyStoreGetKey(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, keystore.ErrNoSuchKey)
+				require.ErrorIs(t, err, keystore.ErrNoSuchKey)
 			},
 		},
 		{

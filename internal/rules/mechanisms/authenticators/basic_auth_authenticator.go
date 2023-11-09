@@ -61,27 +61,14 @@ type basicAuthAuthenticator struct {
 
 func newBasicAuthAuthenticator(id string, rawConfig map[string]any) (*basicAuthAuthenticator, error) {
 	type Config struct {
-		UserID               string `mapstructure:"user_id"`
-		Password             string `mapstructure:"password"`
+		UserID               string `mapstructure:"user_id"                 validate:"required"`
+		Password             string `mapstructure:"password"                validate:"required"`
 		AllowFallbackOnError bool   `mapstructure:"allow_fallback_on_error"`
 	}
 
 	var conf Config
-
-	if err := decodeConfig(rawConfig, &conf); err != nil {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration, "failed to decode basic_auth authenticator config").
-			CausedBy(err)
-	}
-
-	if len(conf.UserID) == 0 {
-		return nil, errorchain.
-			NewWithMessagef(heimdall.ErrConfiguration, "basic_auth authenticator requires user_id to be set")
-	}
-
-	if len(conf.Password) == 0 {
-		return nil, errorchain.
-			NewWithMessagef(heimdall.ErrConfiguration, "basic_auth authenticator requires password to be set")
+	if err := decodeConfig(AuthenticatorBasicAuth, rawConfig, &conf); err != nil {
+		return nil, err
 	}
 
 	auth := basicAuthAuthenticator{
@@ -163,11 +150,8 @@ func (a *basicAuthAuthenticator) WithConfig(rawConfig map[string]any) (Authentic
 	}
 
 	var conf Config
-
-	if err := decodeConfig(rawConfig, &conf); err != nil {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration, "failed to decode basic_auth authenticator config").
-			CausedBy(err)
+	if err := decodeConfig(AuthenticatorBasicAuth, rawConfig, &conf); err != nil {
+		return nil, err
 	}
 
 	return &basicAuthAuthenticator{

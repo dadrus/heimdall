@@ -339,39 +339,62 @@ config:
 ----
 ====
 
-=== Client Credentials Strategy
+=== OAuth2 Client Credentials Grant Flow Strategy
 
 This strategy implements the https://datatracker.ietf.org/doc/html/rfc6749#section-4.4[OAuth2 Client Credentials Grant Flow] to obtain an access token expected by the endpoint. Heimdall caches the received access token.
 
-`type` must be set to `client_credentials`. `config` supports the following properties:
+`type` must be set to `oauth2_client_credentials`. `config` supports the following properties:
 
-* *`client_id`*: _string_ (mandatory)
-+
-The client identifier for Heimdall.
-
-* *`client_secret`*: _string_ (mandatory)
-+
-The client secret for Heimdall.
-
-* *`scopes`*: _string array_ (optional)
-+
-The scopes required for the access token.
 
 * *`token_url`*: _string_ (mandatory)
 +
 The token endpoint of the authorization server.
 
+* *`client_id`*: _string_ (mandatory)
++
+The client identifier for heimdall.
 
-.Client Credentials Strategy configuration
+* *`client_secret`*: _string_ (mandatory)
++
+The client secret for heimdall.
+
+* *`auth_method`*: _string_ (optional)
++
+The authentication method to be used according to https://www.rfc-editor.org/rfc/rfc6749#section-2.3.1[RFC 6749, Client Password]. Can be one of
+
+** `basic_auth` (default if `auth_method` is not set): With that authentication method, the `"application/x-www-form-urlencoded"` encoded values of `client_id` and `client_secret` are sent to the authorization server via the `Authorization` header using the `Basic` scheme.
+
+** `request_body`: With that authentication method the `client_id` and `client_secret` are sent in the request body together with the other parameters (e.g. `scopes`) defined by the flow.
++
+WARNING: Usage of `request_body` authentication method is not recommended and should be avoided.
+
+* *`scopes`*: _string array_ (optional)
++
+The scopes required for the access token.
+
+* *`cache_ttl`*: _link:{{< relref "/docs/configuration/reference/types.adoc#_duration" >}}[Duration]_ (optional)
++
+How long to cache the token received from the token endpoint. Defaults to the token expiration information from the token endpoint (the value of the `expires_in` field) if present. If the token expiration inforation is not present and `cache_ttl` is not configured, the received token is not cached. If the token expiration information is present in the response and `cache_ttl` is configured the shorter value is taken. If caching is enabled, the token is cached until 5 seconds before its expiration. To disable caching, set it to `0s`. The cache key calculation is based on the values of `token_url`, `client_id`, `client_secret` and the `scopes` properties.
+
+* *`header`*: _object_ (optional, overridable)
++
+Defines the `name` and `scheme` to be used for the header. Defaults to `Authorization` with scheme `Bearer`. If defined, the `name` property must be set. If `scheme` is not defined, no scheme will be prepended to the resulting JWT.
+
+
+.Strategy configuration
 ====
 
 [source, yaml]
 ----
-type: client_credentials
+type: oauth2_client_credentials
 config:
+  header:
+    name: X-My-Token
   token_url: https://my-auth.provider/token
   client_id: foo
   client_secret: bar
+  auth_method: basic_auth
+  ttl: 10m
   scopes:
     - baz
     - zap
@@ -414,27 +437,6 @@ expression: |
       .all(c, subject.attributes[c]
       .all(g, g.endsWith('@acme.co')))
 message: No groups ending with @acme.co present
-----
-====
-
-== Buffer Limit
-
-Following configuration properties are supported to limit:
-
-* *`read`*: _link:{{< relref "#_bytesize" >}}[ByteSize]_ (optional)
-+
-The maximum size for the read buffer allowed to read the full request including body. Defaults to 4KB.
-
-* *`write`*: _link:{{< relref "#_bytesize" >}}[ByteSize]_ (optional)
-+
-The maximum size for the write buffer of the response. Defaults to 4KB.
-
-.Setting the read buffer size limit to 1MB and the write buffer size limit to 2KB.
-====
-[source, yaml]
-----
-read: 1MB
-write: 2KB
 ----
 ====
 
@@ -983,32 +985,6 @@ validity_leeway: 10s
 
 As you see, there is no need to define the time format as the times values appearing in the responses from an introspection endpoint are Unix Epoch time stamps.
 
-====
-
-== Timeout
-
-Following configuration properties are supported:
-
-* *`read`*: _link:{{< relref "#_duration" >}}[Duration]_ (optional)
-+
-The amount of time allowed to read the full request including body. Defaults to 5 seconds.
-
-* *`write`*: _link:{{< relref "#_duration" >}}[Duration]_ (optional)
-+
-The maximum duration before timing out writes of the response. Defaults to 10 seconds.
-
-* *`idle`*: _link:{{< relref "#_duration" >}}[Duration]_ (optional)
-+
-The maximum amount of time to wait for the next request when keep-alive is enabled. If `ìdle` is `0`, the value of `read` timeout is used. Defaults to 2 minutes.
-
-.Setting the read timeout to 1 second, write timeout to 2 seconds and the idle timeout to 1 minute.
-====
-[source, yaml]
-----
-read: 1s
-write: 2s
-idle: 1m
-----
 ====
 
 == TLS

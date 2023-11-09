@@ -18,7 +18,6 @@ package authenticators
 
 import (
 	"context"
-	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -42,11 +41,11 @@ func TestUnauthorizedAuthenticatorExecution(t *testing.T) {
 	sub, err := auth.Execute(ctx)
 
 	// THEN
-	assert.ErrorIs(t, err, heimdall.ErrAuthentication)
-	assert.ErrorContains(t, err, "denied by authenticator")
+	require.ErrorIs(t, err, heimdall.ErrAuthentication)
+	require.ErrorContains(t, err, "denied by authenticator")
 	assert.Nil(t, sub)
 
-	require.True(t, errors.As(err, &identifier))
+	require.ErrorAs(t, err, &identifier)
 	assert.Equal(t, "unauth", identifier.ID())
 }
 
@@ -59,7 +58,7 @@ func TestCreateUnauthorizedAuthenticatorFromPrototype(t *testing.T) {
 	auth, err := prototype.WithConfig(nil)
 
 	// THEN
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	uaa, ok := auth.(*unauthorizedAuthenticator)
 	require.True(t, ok)

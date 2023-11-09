@@ -47,6 +47,10 @@ serve:
     buffer_limit:
       read: 4KB
       write: 4KB
+    connections_limit:
+      max_idle: 100
+      max_idle_per_host: 100
+      max_per_host: 20
     cors:
       allowed_origins:
         - example.org
@@ -111,20 +115,17 @@ log:
   level: debug
   format: text
 
+tracing:
+  enabled: true
+  span_processor: batch
+
 metrics:
   enabled: true
-  host: 0.0.0.0
-  port: 9000
-  metrics_path: /metrics
 
 profiling:
   enabled: true
   host: 0.0.0.0
   port: 6060
-
-tracing:
-  enabled: true
-  span_processor: batch
 
 signer:
   name: foobar
@@ -287,6 +288,12 @@ rules:
         config:
           endpoint:
             url: http://keto/{{ .Values.key }}
+            auth:
+              type: api_key
+              config:
+                in: header
+                name: X-Api-Key
+                value: VerySecret!
             method: POST
             headers:
               foo-bar: "{{ .Subject.ID }}"
@@ -308,6 +315,17 @@ rules:
         config:
           endpoint:
             url: http://foo.bar
+            auth:
+              type: oauth2_client_credentials
+              config:
+                auth_method: request_body
+                token_url: http://foo.bar
+                client_id: foo
+                client_secret: bar
+                cache_ttl: 20s
+                header:
+                  name: X-Foo
+                  scheme: Bar
             method: GET
             headers:
               bla: bla
@@ -328,7 +346,7 @@ rules:
                 value: super duper secret
           values:
             some-key: some-value
-    unifiers:
+    finalizers:
       - id: jwt
         type: jwt
         config:
@@ -354,6 +372,20 @@ rules:
         config:
           cookies:
             foo-bar: '{{ .Subject.ID }}'
+      - id: client_cred_grant
+        type: oauth2_client_credentials
+        config:
+          token_url: https://my-auth-provider/token
+          client_id: foo
+          client_secret: bar
+          auth_method: basic_auth
+          cache_ttl: 5m
+          scopes:
+            - foo
+            - bar
+          header:
+            name: My-Header
+            scheme: Foo
     error_handlers:
       - id: default
         type: default
@@ -376,7 +408,7 @@ rules:
       - POST
     execute:
       - authenticator: anonymous_authenticator
-      - unifier: jwt
+      - finalizer: jwt
     on_error:
       - error_handler: authenticate_with_kratos
 
@@ -418,3 +450,9 @@ rules:
 
     kubernetes:
       auth_class: foo
+      tls:
+        key_id: foo
+        key_store:
+          path: /path/to/pem.file
+          password: VerySecret!
+        min_version: TLS1.3

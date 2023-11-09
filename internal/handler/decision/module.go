@@ -1,4 +1,4 @@
-// Copyright 2022 Dimitrij Drus <dadrus@gmx.de>
+// Copyright 2023 Dimitrij Drus <dadrus@gmx.de>
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,57 +19,38 @@ package decision
 import (
 	"context"
 
-	"github.com/gofiber/fiber/v2"
 	"github.com/rs/zerolog"
 	"go.uber.org/fx"
 
+	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/dadrus/heimdall/internal/config"
-	"github.com/dadrus/heimdall/internal/handler/listener"
+	"github.com/dadrus/heimdall/internal/handler/fxlcm"
+	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/rules/rule"
 )
 
-var Module = fx.Options( // nolint: gochecknoglobals
-	fx.Provide(fx.Annotated{Name: "decision", Target: newApp}),
-	fx.Invoke(
-		newHandler,
-		registerHooks,
+var Module = fx.Invoke( // nolint: gochecknoglobals
+	fx.Annotate(
+		newLifecycleManager,
+		fx.OnStart(func(ctx context.Context, lcm *fxlcm.LifecycleManager) error { return lcm.Start(ctx) }),
+		fx.OnStop(func(ctx context.Context, lcm *fxlcm.LifecycleManager) error { return lcm.Stop(ctx) }),
 	),
 )
 
-type hooksArgs struct {
-	fx.In
+func newLifecycleManager(
+	conf *config.Configuration,
+	logger zerolog.Logger,
+	cch cache.Cache,
+	exec rule.Executor,
+	signer heimdall.JWTSigner,
+) *fxlcm.LifecycleManager {
+	cfg := conf.Serve.Decision
 
-	Lifecycle fx.Lifecycle
-	Config    *config.Configuration
-	Logger    zerolog.Logger
-	App       *fiber.App `name:"decision"`
-}
-
-func registerHooks(args hooksArgs) {
-	ln, err := listener.New(args.App.Config().Network, args.Config.Serve.Decision)
-	if err != nil {
-		args.Logger.Fatal().Err(err).Msg("Could not create listener for the Decision service")
-
-		return
+	return &fxlcm.LifecycleManager{
+		ServiceName:    "Decision",
+		ServiceAddress: cfg.Address(),
+		Server:         newService(conf, cch, logger, exec, signer),
+		Logger:         logger,
+		TLSConf:        cfg.TLS,
 	}
-
-	args.Lifecycle.Append(
-		fx.Hook{
-			OnStart: func(ctx context.Context) error {
-				go func() {
-					args.Logger.Info().Str("_address", ln.Addr().String()).Msg("Decision service starts listening")
-
-					if err = args.App.Listener(ln); err != nil {
-						args.Logger.Fatal().Err(err).Msg("Could not start Decision service")
-					}
-				}()
-
-				return nil
-			},
-			OnStop: func(ctx context.Context) error {
-				args.Logger.Info().Msg("Tearing down Decision service")
-
-				return args.App.Shutdown()
-			},
-		},
-	)
 }

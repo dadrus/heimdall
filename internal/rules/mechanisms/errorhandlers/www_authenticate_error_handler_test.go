@@ -46,8 +46,8 @@ func TestCreateWWWAuthenticateErrorHandler(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "no 'when' error handler")
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				assert.Contains(t, err.Error(), "'when' is a required field")
 			},
 		},
 		{
@@ -56,19 +56,19 @@ func TestCreateWWWAuthenticateErrorHandler(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "no 'when' error handler")
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				assert.Contains(t, err.Error(), "'when' is a required field")
 			},
 		},
 		{
-			uc:     "with empty configuration",
-			config: []byte(``),
+			uc:     "with empty 'When' configuration",
+			config: []byte(`when: []`),
 			assert: func(t *testing.T, err error, errorHandler *wwwAuthenticateErrorHandler) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "no 'when' error handler")
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				assert.Contains(t, err.Error(), "'when' must contain more than 0 items")
 			},
 		},
 		{
@@ -84,8 +84,8 @@ foo: bar
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "failed to unmarshal")
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				assert.Contains(t, err.Error(), "failed decoding")
 			},
 		},
 		{
@@ -212,8 +212,8 @@ when:
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "failed to unmarshal")
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				assert.Contains(t, err.Error(), "failed decoding")
 			},
 		},
 		{
@@ -326,7 +326,7 @@ when:
 			assert: func(t *testing.T, wasResponsible bool, err error) {
 				t.Helper()
 
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				assert.False(t, wasResponsible)
 			},
 		},
@@ -354,7 +354,7 @@ when:
 			assert: func(t *testing.T, wasResponsible bool, err error) {
 				t.Helper()
 
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				assert.True(t, wasResponsible)
 			},
 		},
@@ -383,7 +383,7 @@ when:
 			assert: func(t *testing.T, wasResponsible bool, err error) {
 				t.Helper()
 
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				assert.True(t, wasResponsible)
 			},
 		},

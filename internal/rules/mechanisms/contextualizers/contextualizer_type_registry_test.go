@@ -19,7 +19,6 @@ package contextualizers
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
@@ -43,7 +42,7 @@ func TestCreateContextualzerPrototype(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
 			},
 		},
 		{
@@ -53,7 +52,7 @@ func TestCreateContextualzerPrototype(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, ErrUnsupportedContextualizerType)
+				require.ErrorIs(t, err, ErrUnsupportedContextualizerType)
 			},
 		},
 	} {

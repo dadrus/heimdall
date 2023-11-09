@@ -33,7 +33,7 @@ haproxy-ingress.github.io/headers: | <3>
 ----
 <1> Configures the controller to use heimdall's decision service endpoint with `<heimdall service name>`, `<namespace>` and `<decision port>` depending on your configuration.
 <2> Let HAProxy forward the `Authorization` header set by heimdall to the upstream service upon successful response. This configuration depends on
-your link:{{< relref "/docs/configuration/rules/pipeline_mechanisms/contextualizers.adoc" >}}[Contextualizers] and link:{{< relref "/docs/configuration/rules/pipeline_mechanisms/unifiers.adoc" >}}[Unifiers] configuration.
+your link:{{< relref "/docs/configuration/rules/pipeline_mechanisms/contextualizers.adoc" >}}[Contextualizers] and link:{{< relref "/docs/configuration/rules/pipeline_mechanisms/finalizers.adoc" >}}[Finalizers] configuration.
 +
 NOTE: There is currently a limitation in HAProxy Ingress Controller regarding the case-insensitivity for headers. Since heimdall returns the header in lower-case, it is important to set the names of the required to be forwarded headers in lower case as well.
 <3> Configures the required headers to pass the information about the used HTTP scheme, host and port, request path and used query parameters to be forwarded to heimdall. `X-Forwarded-Proto` is not used, as it is already set by HAProxy by default.

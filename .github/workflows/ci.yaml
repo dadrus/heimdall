@@ -9,8 +9,8 @@ on:
       - main
 
 env:
-  GO_VERSION: "1.21"
-  GOLANGCI_LINT_VERSION: "v1.54.2"
+  GO_VERSION: "1.21.4"
+  GOLANGCI_LINT_VERSION: "v1.55.2"
   HELM_VERSION: "3.12.1"
   KUBECONFORM_VERSION: "0.6.2"
   KUBERNETES_API_VERSION: "1.27.0"
@@ -23,14 +23,14 @@ jobs:
   check-changes:
     runs-on: ubuntu-22.04
     outputs:
-      code_changed:  ${{steps.code-changes.outputs.count > 0}}
+      code_changed: ${{steps.code-changes.outputs.count > 0}}
       test_data_changed: ${{steps.test-data-changes.outputs.count > 0}}
       image_config_changed: ${{steps.image-config-changes.outputs.count > 0}}
       helm_chart_changed: ${{steps.helm-chart-changes.outputs.count > 0}}
       docs_changed: ${{steps.docs-changes.outputs.count > 0}}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
       - name: Check code changes
         id: code-changes
         uses: technote-space/get-diff-action@v6
@@ -75,7 +75,7 @@ jobs:
     if: needs.check-changes.outputs.code_changed == 'true'
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
       - name: Set up Go
         uses: actions/setup-go@v4
         with:
@@ -92,7 +92,7 @@ jobs:
     if: needs.check-changes.outputs.code_changed == 'true'
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
       - name: Set up Go
         uses: actions/setup-go@v4
         with:
@@ -110,9 +110,9 @@ jobs:
     if: needs.check-changes.outputs.docs_changed == 'true'
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
       - name: Setup Node
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
       - name: Install Redocly CLI
@@ -126,16 +126,16 @@ jobs:
       - check-changes
     if: needs.check-changes.outputs.image_config_changed == 'true'
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v3
-    - name: Run hadolint for Dockerfile
-      uses: hadolint/hadolint-action@v3.1.0
-      with:
-        dockerfile: docker/Dockerfile
-    - name: Run hadolint for debug.Dockerfile
-      uses: hadolint/hadolint-action@v3.1.0
-      with:
-        dockerfile: docker/debug.Dockerfile
+      - name: Checkout repository
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
+      - name: Run hadolint for Dockerfile
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: docker/Dockerfile
+      - name: Run hadolint for debug.Dockerfile
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: docker/debug.Dockerfile
 
   lint-helm-chart:
     runs-on: ubuntu-22.04
@@ -144,7 +144,7 @@ jobs:
     if: needs.check-changes.outputs.helm_chart_changed == 'true'
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
       - name: Setup k8s tools
         uses: yokawasa/action-setup-kube-tools@v0.9.3
         with:
@@ -171,11 +171,11 @@ jobs:
     if: needs.check-changes.outputs.code_changed == 'true' || needs.check-changes.outputs.test_data_changed == 'true'
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
       - name: Set up Go
         uses: actions/setup-go@v4
         with:
-         go-version: "${{ env.GO_VERSION }}"
+          go-version: "${{ env.GO_VERSION }}"
       - name: Test
         run: go test -v -coverprofile=coverage.cov -coverpkg=./... ./...
       - name: Code Coverage
@@ -218,7 +218,7 @@ jobs:
             goos: windows
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
       - name: Set up Go
         uses: actions/setup-go@v4
         with:
@@ -242,7 +242,7 @@ jobs:
       id-token: write
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
         with:
           fetch-depth: 0
       - name: Set up Go
@@ -250,7 +250,7 @@ jobs:
         with:
           go-version: "${{ env.GO_VERSION }}"
       - name: Install Cosign
-        uses: sigstore/cosign-installer@v3.1.1
+        uses: sigstore/cosign-installer@v3.2.0
         with:
           cosign-release: "${{ env.COSIGN_VERSION }}"
       - name: Install CycloneDX gomod
@@ -261,7 +261,7 @@ jobs:
           version: "${{ env.CYCLONEDX_GOMOD_VERSION }}"
           args: app -licenses -assert-licenses -json -std -output CycloneDX-SBOM.json -main .
       - name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@v4
+        uses: goreleaser/goreleaser-action@v5
         with:
           args: release --clean
         env:
@@ -277,16 +277,16 @@ jobs:
       - test
       - check-changes
       - prepare-release
-    if: > 
+    if: >
       always() && 
       needs.prepare-release.outputs.release_created == false && 
       (needs.test.result == 'success' || (needs.test.result == 'skipped' && needs.check-changes.outputs.image_config_changed == 'true'))
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
       - name: Install Cosign
         if: github.ref == 'refs/heads/main'
-        uses: sigstore/cosign-installer@v3.1.1
+        uses: sigstore/cosign-installer@v3.2.0
         with:
           cosign-release: "${{ env.COSIGN_VERSION }}"
       - name: Set up Go # required as the sbom generator is compiled using go < 1.21
@@ -300,12 +300,12 @@ jobs:
           version: "${{ env.CYCLONEDX_GOMOD_VERSION }}"
           args: app -licenses -assert-licenses -json -std -output CycloneDX-SBOM.json -main .
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v2
+        uses: docker/setup-qemu-action@v3
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
+        uses: docker/setup-buildx-action@v3
       - name: Collect container meta-info
         id: meta
-        uses: docker/metadata-action@v4
+        uses: docker/metadata-action@v5
         with:
           images: ${{ github.repository }}
           labels: |
@@ -313,7 +313,7 @@ jobs:
             org.opencontainers.image.documentation=${{ env.DOCUMENTATION_URL }}
       - name: Build images
         if: github.ref != 'refs/heads/main'
-        uses: docker/build-push-action@v4
+        uses: docker/build-push-action@v5
         with:
           context: .
           file: ./docker/Dockerfile
@@ -323,14 +323,14 @@ jobs:
           tags: ${{ github.repository }}:local
       - name: Login to container registry
         if: github.ref == 'refs/heads/main'
-        uses: docker/login-action@v2
+        uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USER }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       - name: Build and push dev images to container registry
         if: github.ref == 'refs/heads/main'
         id: publish-image
-        uses: docker/build-push-action@v4
+        uses: docker/build-push-action@v5
         with:
           context: .
           file: ./docker/Dockerfile
@@ -362,14 +362,14 @@ jobs:
       - prepare-release
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
       - name: Prepare image version
         id: image-version
         run: |
           export version=$(echo ${{ needs.prepare-release.outputs.tag_name }} |  sed 's/v//g')
           echo "result=$version" >> $GITHUB_OUTPUT
       - name: Install Cosign
-        uses: sigstore/cosign-installer@v3.1.1
+        uses: sigstore/cosign-installer@v3.2.0
         with:
           cosign-release: "${{ env.COSIGN_VERSION }}"
       - name: Set up Go # required as the sbom generator is compiled using go < 1.21
@@ -382,17 +382,17 @@ jobs:
           version: "${{ env.CYCLONEDX_GOMOD_VERSION }}"
           args: app -licenses -assert-licenses -json -std -output CycloneDX-SBOM.json -main .
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v2
+        uses: docker/setup-qemu-action@v3
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
+        uses: docker/setup-buildx-action@v3
       - name: Login to DockerHub
-        uses: docker/login-action@v2
+        uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USER }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       - name: Collect Docker meta-info
         id: meta
-        uses: docker/metadata-action@v4
+        uses: docker/metadata-action@v5
         with:
           images: ${{ github.repository }}
           labels: |
@@ -400,7 +400,7 @@ jobs:
             org.opencontainers.image.documentation=${{ env.DOCUMENTATION_URL }}
       - name: Build and push images to container registry
         id: publish-image
-        uses: docker/build-push-action@v4
+        uses: docker/build-push-action@v5
         with:
           context: .
           file: ./docker/Dockerfile
@@ -436,7 +436,7 @@ jobs:
     if: needs.prepare-release.outputs.release_created
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
       - name: Prepare image version
         id: image-version
         run: |
@@ -458,7 +458,7 @@ jobs:
     if: needs.prepare-release.outputs.release_created == false && needs.check-changes.outputs.docs_changed == 'true'
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
         with:
           submodules: true  # Fetch Hugo themes (true OR recursive)
           fetch-depth: 0    # Fetch all history for .GitInfo and .Lastmod
@@ -468,7 +468,7 @@ jobs:
           hugo-version: 0.100.1
           extended: true
       - name: Setup Node
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: 17.7
       - name: Setup ruby
@@ -505,7 +505,7 @@ jobs:
     if: needs.prepare-release.outputs.release_created
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
         with:
           submodules: true  # Fetch Hugo themes (true OR recursive)
           fetch-depth: 0    # Fetch all history for .GitInfo and .Lastmod
@@ -515,7 +515,7 @@ jobs:
           hugo-version: 0.100.1
           extended: true
       - name: Setup Node
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: 17.7
       - name: Install mermaid

@@ -19,7 +19,7 @@ To be able to install and play with quickstarts, you need
 Depending on the Ingress Controller you want to install the demo for, execute
 
 ```bash
-   just install-<ingress controller>-demo
+   just install-<ingress controller>-decision-demo
    ```
 
 with `<ingress controller>` being either `contour`, `nginx`, `haproxy`, or `emissary`. That command line will install and set up a kind based k8s cluster locally including all required services and configuring the used ingress controller to forward all incoming requests to heimdall as external authorization middleware. Depending on the response from heimdall the ingress controller will either forward the request to the upstream service (in that case a simple echo service), or directly respond with an error from heimdall to the client.
@@ -48,6 +48,8 @@ curl -vk --resolve echo-app.local:443:${SERVICE_IP} https://echo-app.local/foo
 ```
 
 and check the responses.
+
+Please note: Since nginx does not support 302 response codes from an external auth service, the call to `https://echo-app.local/redir/foo` will result in a 500 error code returned by nginx.
 
 # Delete the demo
 

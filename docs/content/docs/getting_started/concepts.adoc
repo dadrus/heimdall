@@ -27,7 +27,7 @@ As described in the link:{{< relref "/docs/welcome.adoc" >}}[Welcome] section an
                  |                                                                                   |                    |
                  |+------------------+ +------------------+ +------------------+ +------------------+|                    |
                  || cCCC             | | cCCC             | | cCCC             | | cCCC             ||                    :
-                 || 1. Authenticate  | | 2. Contextualize | | 3. Authorize     | | 4. Unify         ||                    |
+                 || 1. Authenticate  | | 2. Contextualize | | 3. Authorize     | | 4. Finalize      ||                    |
                  ||                  | |                  | |                  | |                  ||   +------------------+
                  |+------------------+ +------------------+ +------------------+ +------------------+|   |  Backend Service |
                  |                                                                                   |   |                  |
@@ -58,9 +58,9 @@ Here, heimdall communicates with other systems as well, either to get further in
 ** *authorization* mechanisms, so-called link:{{< relref "/docs/configuration/rules/pipeline_mechanisms/authorizers.adoc" >}}[Authorizers], to be executed (if multiple are defined, they are executed in the order of their definition; can be mixed with contextualization mechanisms) - step 3 in the figure above.
 +
 Here, heimdall performs authorization checks, either locally, or by communicating with yet again further systems, like Open Policy Agent, Ory Keto and alike.
-** *unification* mechanisms, so-called link:{{< relref "/docs/configuration/rules/pipeline_mechanisms/unifiers.adoc" >}}[Unifiers], to be executed (if multiple are defined, they are executed in the order of their definition) - step 4 in the figure above.
+** *finalization* mechanisms, so-called link:{{< relref "/docs/configuration/rules/pipeline_mechanisms/finalizers.adoc" >}}[Finalizers], to be executed (if multiple are defined, they are executed in the order of their definition) - step 4 in the figure above.
 +
-This step unifies the information collected so far about the subject and the request by transforming it into an object expected by the upstream service. That reaches from a simple custom header, carrying e.g. the id of the subject, to a JWT carried in the `Authorization` header.
+This step finalizes the execution of the pipeline and enriches the request with data such as subject information or authentication tokens required by the upstream service. The available options range from adding a simple header over a structured JWT, to driving specific protocols, e.g. to obtain a token required by the upstream service.
 * an error pipeline, consisting of link:{{< relref "/docs/configuration/rules/pipeline_mechanisms/error_handlers.adoc" >}}[error handler] mechanisms (if multiple are defined, they are executed as fallbacks), which are executed if any of the regular pipeline mechanisms fail. These mechanisms range from a simple error response to the client (which sent the request), to sophisticated ones supporting complex logic and redirects.
 
 The diagram below sketches the related execution logic
@@ -153,7 +153,7 @@ methods:
   - GET
 execute:
   - authenticator: anonymous-authn
-  - unifier: id-header
+  - finalizer: id-header
 ----
 
 Then the request will be forwarded as follows:
@@ -241,7 +241,7 @@ methods:
   - GET
 execute:
   - authenticator: anonymous-authn
-  - unifier: id-header
+  - finalizer: id-header
 ----
 
 Then heimdall will respond with:

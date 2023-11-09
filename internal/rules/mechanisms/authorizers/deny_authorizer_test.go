@@ -18,7 +18,6 @@ package authorizers
 
 import (
 	"context"
-	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -70,6 +69,6 @@ func TestDenyAuthorizerExecute(t *testing.T) {
 	require.ErrorIs(t, err, heimdall.ErrAuthorization)
 	require.Contains(t, err.Error(), "denied by authorizer")
 
-	require.True(t, errors.As(err, &identifier))
+	require.ErrorAs(t, err, &identifier)
 	assert.Equal(t, "bar", identifier.ID())
 }

@@ -19,7 +19,6 @@ package grpcv3
 import (
 	envoy_auth "github.com/envoyproxy/go-control-plane/envoy/service/auth/v3"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/recovery"
-	"github.com/prometheus/client_golang/prometheus"
 	"github.com/rs/zerolog"
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"google.golang.org/grpc"
@@ -29,21 +28,20 @@ import (
 
 	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/dadrus/heimdall/internal/config"
-	accesslogmiddleware "github.com/dadrus/heimdall/internal/handler/envoyextauth/grpcv3/middleware/accesslog"
-	cachemiddleware "github.com/dadrus/heimdall/internal/handler/envoyextauth/grpcv3/middleware/cache"
-	errormiddleware "github.com/dadrus/heimdall/internal/handler/envoyextauth/grpcv3/middleware/errorhandler"
-	loggermiddleware "github.com/dadrus/heimdall/internal/handler/envoyextauth/grpcv3/middleware/logger"
-	prometheusmiddleware "github.com/dadrus/heimdall/internal/handler/envoyextauth/grpcv3/middleware/prometheus"
+	accesslogmiddleware "github.com/dadrus/heimdall/internal/handler/middleware/grpc/accesslog"
+	cachemiddleware "github.com/dadrus/heimdall/internal/handler/middleware/grpc/cache"
+	"github.com/dadrus/heimdall/internal/handler/middleware/grpc/errorhandler"
+	loggermiddleware "github.com/dadrus/heimdall/internal/handler/middleware/grpc/logger"
+	"github.com/dadrus/heimdall/internal/handler/middleware/grpc/otelmetrics"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/rule"
 )
 
 func newService(
 	conf *config.Configuration,
-	registerer prometheus.Registerer,
 	cch cache.Cache,
 	logger zerolog.Logger,
-	repository rule.Repository,
+	exec rule.Executor,
 	signer heimdall.JWTSigner,
 ) *grpc.Server {
 	service := conf.Serve.Decision
@@ -52,35 +50,33 @@ func newService(
 		return status.Error(codes.Internal, "internal error")
 	})
 
+	metrics := otelmetrics.New(
+		otelmetrics.WithServerName(service.Address()),
+		otelmetrics.WithSubsystem("decision"),
+	)
+
 	streamInterceptors := []grpc.StreamServerInterceptor{
 		recovery.StreamServerInterceptor(recoveryHandler),
 		otelgrpc.StreamServerInterceptor(),
+		metrics.StreamServerInterceptor(),
 	}
 
 	unaryInterceptors := []grpc.UnaryServerInterceptor{
 		recovery.UnaryServerInterceptor(recoveryHandler),
 		otelgrpc.UnaryServerInterceptor(),
-	}
-
-	if conf.Metrics.Enabled {
-		metrics := prometheusmiddleware.New(
-			prometheusmiddleware.WithServiceName("decision"),
-			prometheusmiddleware.WithRegisterer(registerer),
-		)
-		unaryInterceptors = append(unaryInterceptors, metrics.Unary())
-		streamInterceptors = append(streamInterceptors, metrics.Stream())
+		metrics.UnaryServerInterceptor(),
 	}
 
 	unaryInterceptors = append(unaryInterceptors,
-		errormiddleware.New(
-			errormiddleware.WithVerboseErrors(service.Respond.Verbose),
-			errormiddleware.WithPreconditionErrorCode(service.Respond.With.ArgumentError.Code),
-			errormiddleware.WithAuthenticationErrorCode(service.Respond.With.AuthenticationError.Code),
-			errormiddleware.WithAuthorizationErrorCode(service.Respond.With.AuthorizationError.Code),
-			errormiddleware.WithCommunicationErrorCode(service.Respond.With.CommunicationError.Code),
-			errormiddleware.WithMethodErrorCode(service.Respond.With.BadMethodError.Code),
-			errormiddleware.WithNoRuleErrorCode(service.Respond.With.NoRuleError.Code),
-			errormiddleware.WithInternalServerErrorCode(service.Respond.With.InternalError.Code),
+		errorhandler.New(
+			errorhandler.WithVerboseErrors(service.Respond.Verbose),
+			errorhandler.WithPreconditionErrorCode(service.Respond.With.ArgumentError.Code),
+			errorhandler.WithAuthenticationErrorCode(service.Respond.With.AuthenticationError.Code),
+			errorhandler.WithAuthorizationErrorCode(service.Respond.With.AuthorizationError.Code),
+			errorhandler.WithCommunicationErrorCode(service.Respond.With.CommunicationError.Code),
+			errorhandler.WithMethodErrorCode(service.Respond.With.BadMethodError.Code),
+			errorhandler.WithNoRuleErrorCode(service.Respond.With.NoRuleError.Code),
+			errorhandler.WithInternalServerErrorCode(service.Respond.With.InternalError.Code),
 		),
 		// the accesslogger is used here to have access to the error object
 		// as it will be replaced by a CheckResponse object returned to envoy
@@ -104,7 +100,7 @@ func newService(
 		grpc.ChainStreamInterceptor(streamInterceptors...),
 	)
 
-	envoy_auth.RegisterAuthorizationServer(srv, &Handler{r: repository, s: signer})
+	envoy_auth.RegisterAuthorizationServer(srv, &Handler{e: exec, s: signer})
 
 	return srv
 }

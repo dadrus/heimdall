@@ -37,7 +37,7 @@ func TestRuleConfigDeepCopyInto(t *testing.T) {
 			URL:      "bar",
 			Strategy: "glob",
 		},
-		UpstreamURLFactory: &UpstreamURLFactory{
+		Backend: &Backend{
 			Host: "baz",
 			URLRewriter: &URLRewriter{
 				Scheme:              "http",
@@ -57,7 +57,7 @@ func TestRuleConfigDeepCopyInto(t *testing.T) {
 	// THEN
 	assert.Equal(t, in.ID, out.ID)
 	assert.Equal(t, in.RuleMatcher.URL, out.RuleMatcher.URL)
-	assert.Equal(t, in.UpstreamURLFactory, out.UpstreamURLFactory)
+	assert.Equal(t, in.Backend, out.Backend)
 	assert.Equal(t, in.RuleMatcher.Strategy, out.RuleMatcher.Strategy)
 	assert.Equal(t, in.Methods, out.Methods)
 	assert.Equal(t, in.Execute, out.Execute)
@@ -74,7 +74,7 @@ func TestRuleConfigDeepCopy(t *testing.T) {
 			URL:      "bar",
 			Strategy: "glob",
 		},
-		UpstreamURLFactory: &UpstreamURLFactory{
+		Backend: &Backend{
 			Host: "baz",
 			URLRewriter: &URLRewriter{
 				Scheme:              "http",
@@ -93,12 +93,12 @@ func TestRuleConfigDeepCopy(t *testing.T) {
 
 	// THEN
 	// different addresses
-	require.False(t, &in == out)
+	require.NotSame(t, &in, out)
 
 	// but same contents
 	assert.Equal(t, in.ID, out.ID)
 	assert.Equal(t, in.RuleMatcher.URL, out.RuleMatcher.URL)
-	assert.Equal(t, in.UpstreamURLFactory, out.UpstreamURLFactory)
+	assert.Equal(t, in.Backend, out.Backend)
 	assert.Equal(t, in.RuleMatcher.Strategy, out.RuleMatcher.Strategy)
 	assert.Equal(t, in.Methods, out.Methods)
 	assert.Equal(t, in.Execute, out.Execute)

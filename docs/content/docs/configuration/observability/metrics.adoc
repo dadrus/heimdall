@@ -9,7 +9,9 @@ menu:
     parent: "Observability"
 ---
 
-Heimdall exposes https://grafana.com/oss/prometheus/[Prometheus] style metrics on `127.0.0.1:10250/metrics` endpoint for analysis and visualization purposes.
+Heimdall generates https://opentelemetry.io/[OpenTelemetry] metrics and can export these either by pushing these to an OTEL collector (the default behavior), or by exposing them via a pull based service (https://grafana.com/oss/prometheus/[Prometheus] style).
+
+Metrics are generated and exported by default. If this is not desired, you can explicitly disable this behavior by making use of the configuration options, described below. Alternatively, you can set the `OTEL_METRICS_EXPORTER` environment variable to `none`.
 
 == Configuration
 
@@ -28,43 +30,7 @@ metrics:
 ----
 ====
 
-* *`host`*: _string_ (optional)
-+
-By making use of this property, you can specify the TCP/IP address on which heimdall should listen for connections from client applications. The entry `0.0.0.0` allows listening for all IPv4 addresses. Defaults to `127.0.0.1` - the loopback interface to avoid unwanted exposure of metrics.
-+
-NOTE: If you operate heimdall in a container, you should set this property to a value, which would allow your APM system to scrape this information.
-+
-.Configure heimdall to allow listening on any TCP/IP interfaces.
-====
-[source, yaml]
-----
-metrics:
-  host: 0.0.0.0
-----
-====
+Beyond that, the entire configuration happens by making use of the environment variables as defined by https://opentelemetry.io/docs/reference/specification/sdk-environment-variables/[OpenTelemetry Environment Variable Specification] and https://opentelemetry.io/docs/concepts/sdk-configuration/[OpenTelemetry SDK Configuration]. Head over to link:{{< relref "/docs/operations/observability.adoc#_metrics_in_heimdall" >}}[Observability] section and the referenced OTEL documentation for more details.
 
-* *`port`*: _integer_ (optional)
-+
-By making use of this property, you can specify the TCP port the heimdall should listen on. Defaults to `10250`.
-+
-.Configure heimdall to listen on port `9999` for metrics requests.
-====
-[source, yaml]
-----
-metrics:
-  port: 9999
-----
-====
 
-* *`metrics_path`*: _string_ (optional)
-+
-By making use of this property, you can specify the path under which prometheus metrics information is made available. Defaults to `/metrics`.
-+
-.Configure heimdall expose metrics information behind `/prometheus` path.
-====
-[source, yaml]
-----
-metrics:
-  metrics_path: /prometheus
-----
-====
+

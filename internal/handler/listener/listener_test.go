@@ -107,7 +107,7 @@ func TestNewListener(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrInternal)
+				require.ErrorIs(t, err, heimdall.ErrInternal)
 				assert.Contains(t, err.Error(), "failed creating listener")
 			},
 		},
@@ -135,7 +135,7 @@ func TestNewListener(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrInternal)
+				require.ErrorIs(t, err, heimdall.ErrInternal)
 				assert.Contains(t, err.Error(), "failed loading")
 			},
 		},
@@ -153,7 +153,7 @@ func TestNewListener(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
 				assert.Contains(t, err.Error(), "no such key")
 			},
 		},
@@ -171,7 +171,7 @@ func TestNewListener(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
 				assert.Contains(t, err.Error(), "no certificate present")
 			},
 		},
@@ -220,7 +220,7 @@ func TestNewListener(t *testing.T) {
 			tc.serviceConf.Port = port
 
 			// WHEN
-			ln, err := New(tc.network, tc.serviceConf)
+			ln, err := New(tc.network, tc.serviceConf.Address(), tc.serviceConf.TLS)
 
 			// THEN
 			defer func() {

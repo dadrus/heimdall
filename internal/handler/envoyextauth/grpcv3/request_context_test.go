@@ -1,3 +1,19 @@
+// Copyright 2023 Dimitrij Drus <dadrus@gmx.de>
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+// SPDX-License-Identifier: Apache-2.0
+
 package grpcv3
 
 import (
@@ -57,14 +73,14 @@ func TestNewRequestContext(t *testing.T) {
 	)
 
 	// THEN
-	require.Equal(t, httpReq.Method, ctx.Request().Method)
-	require.Equal(t, httpReq.Scheme, ctx.Request().URL.Scheme)
-	require.Equal(t, httpReq.Host, ctx.Request().URL.Host)
-	require.Equal(t, httpReq.Path, ctx.Request().URL.Path)
-	require.Equal(t, httpReq.Fragment, ctx.Request().URL.Fragment)
-	require.Equal(t, httpReq.Query, ctx.Request().URL.RawQuery)
+	require.Equal(t, httpReq.GetMethod(), ctx.Request().Method)
+	require.Equal(t, httpReq.GetScheme(), ctx.Request().URL.Scheme)
+	require.Equal(t, httpReq.GetHost(), ctx.Request().URL.Host)
+	require.Equal(t, httpReq.GetPath(), ctx.Request().URL.Path)
+	require.Equal(t, httpReq.GetFragment(), ctx.Request().URL.Fragment)
+	require.Equal(t, httpReq.GetQuery(), ctx.Request().URL.RawQuery)
 	require.Equal(t, "moo", ctx.Request().URL.Query().Get("bar"))
-	require.Equal(t, httpReq.RawBody, ctx.Request().Body())
+	require.Equal(t, httpReq.GetRawBody(), ctx.Request().Body())
 	require.Len(t, ctx.Request().Headers(), 3)
 	require.Equal(t, "barfoo", ctx.Request().Header("X-Foo-Bar"))
 	require.Equal(t, "foo", ctx.Request().Cookie("bar"))
@@ -72,7 +88,7 @@ func TestNewRequestContext(t *testing.T) {
 	require.Empty(t, ctx.Request().Cookie("baz"))
 	require.NotNil(t, ctx.AppContext())
 	require.NotNil(t, ctx.Signer())
-	assert.Equal(t, ctx.Request().ClientIP, []string{"127.0.0.1", "192.168.1.1"})
+	assert.Equal(t, []string{"127.0.0.1", "192.168.1.1"}, ctx.Request().ClientIP)
 }
 
 func TestFinalizeRequestContext(t *testing.T) {
@@ -80,8 +96,8 @@ func TestFinalizeRequestContext(t *testing.T) {
 
 	findHeader := func(headers []*corev3.HeaderValueOption, name string) *corev3.HeaderValue {
 		for _, header := range headers {
-			if header.Header.Key == name {
-				return header.Header
+			if header.GetHeader().GetKey() == name {
+				return header.GetHeader()
 			}
 		}
 
@@ -108,19 +124,19 @@ func TestFinalizeRequestContext(t *testing.T) {
 				require.NoError(t, err)
 				require.NotNil(t, response)
 
-				assert.Equal(t, int32(codes.OK), response.Status.Code)
+				assert.Equal(t, int32(codes.OK), response.GetStatus().GetCode())
 
 				okResponse := response.GetOkResponse()
 				require.NotNil(t, okResponse)
 
-				require.Len(t, okResponse.Headers, 2)
+				require.Len(t, okResponse.GetHeaders(), 2)
 
-				header := findHeader(okResponse.Headers, "X-For-Upstream-1")
+				header := findHeader(okResponse.GetHeaders(), "X-For-Upstream-1")
 				require.NotNil(t, header)
-				assert.Equal(t, "some-value-1,some-value-3", header.Value)
-				header = findHeader(okResponse.Headers, "X-For-Upstream-2")
+				assert.Equal(t, "some-value-1,some-value-3", header.GetValue())
+				header = findHeader(okResponse.GetHeaders(), "X-For-Upstream-2")
 				require.NotNil(t, header)
-				assert.Equal(t, "some-value-2", header.Value)
+				assert.Equal(t, "some-value-2", header.GetValue())
 			},
 		},
 		{
@@ -137,17 +153,17 @@ func TestFinalizeRequestContext(t *testing.T) {
 				require.NoError(t, err)
 				require.NotNil(t, response)
 
-				assert.Equal(t, int32(codes.OK), response.Status.Code)
+				assert.Equal(t, int32(codes.OK), response.GetStatus().GetCode())
 
 				okResponse := response.GetOkResponse()
 				require.NotNil(t, okResponse)
 
-				require.Len(t, okResponse.Headers, 1)
-				assert.Equal(t, "Cookie", okResponse.Headers[0].Header.Key)
-				values := strings.Split(okResponse.Headers[0].Header.Value, ";")
+				require.Len(t, okResponse.GetHeaders(), 1)
+				assert.Equal(t, "Cookie", okResponse.GetHeaders()[0].GetHeader().GetKey())
+				values := strings.Split(okResponse.GetHeaders()[0].GetHeader().GetValue(), ";")
 				assert.Len(t, values, 2)
-				assert.Contains(t, okResponse.Headers[0].Header.Value, "some-cookie=value-1")
-				assert.Contains(t, okResponse.Headers[0].Header.Value, "some-other-cookie=value-2")
+				assert.Contains(t, okResponse.GetHeaders()[0].GetHeader().GetValue(), "some-cookie=value-1")
+				assert.Contains(t, okResponse.GetHeaders()[0].GetHeader().GetValue(), "some-other-cookie=value-2")
 			},
 		},
 		{
@@ -164,18 +180,18 @@ func TestFinalizeRequestContext(t *testing.T) {
 				require.NoError(t, err)
 				require.NotNil(t, response)
 
-				assert.Equal(t, int32(codes.OK), response.Status.Code)
+				assert.Equal(t, int32(codes.OK), response.GetStatus().GetCode())
 
 				okResponse := response.GetOkResponse()
 				require.NotNil(t, okResponse)
 
-				require.Len(t, okResponse.Headers, 2)
-				header := findHeader(okResponse.Headers, "X-For-Upstream")
+				require.Len(t, okResponse.GetHeaders(), 2)
+				header := findHeader(okResponse.GetHeaders(), "X-For-Upstream")
 				require.NotNil(t, header)
-				assert.Equal(t, "some-value", header.Value)
-				header = findHeader(okResponse.Headers, "Cookie")
+				assert.Equal(t, "some-value", header.GetValue())
+				header = findHeader(okResponse.GetHeaders(), "Cookie")
 				require.NotNil(t, header)
-				assert.Equal(t, "some-cookie=value-1", header.Value)
+				assert.Equal(t, "some-cookie=value-1", header.GetValue())
 			},
 		},
 		{
@@ -192,7 +208,7 @@ func TestFinalizeRequestContext(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.Equal(t, err.Error(), "test error")
+				assert.Equal(t, "test error", err.Error())
 				require.Nil(t, response)
 			},
 		},

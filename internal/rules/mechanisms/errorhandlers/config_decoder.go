@@ -19,11 +19,14 @@ package errorhandlers
 import (
 	"github.com/mitchellh/mapstructure"
 
+	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/errorhandlers/matcher"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
+	"github.com/dadrus/heimdall/internal/validation"
+	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
-func decodeConfig(input any, output any) error {
+func decodeConfig(errorHandlerType string, input, output any) error {
 	dec, err := mapstructure.NewDecoder(
 		&mapstructure.DecoderConfig{
 			DecodeHook: mapstructure.ComposeDecodeHookFunc(
@@ -35,8 +38,19 @@ func decodeConfig(input any, output any) error {
 			ErrorUnused: true,
 		})
 	if err != nil {
-		return err
+		return errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+			"failed decoding '%s' error handler config", errorHandlerType).CausedBy(err)
 	}
 
-	return dec.Decode(input)
+	if err = dec.Decode(input); err != nil {
+		return errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+			"failed decoding '%s' error handler config", errorHandlerType).CausedBy(err)
+	}
+
+	if err = validation.ValidateStruct(output); err != nil {
+		return errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+			"failed validating '%s' error handler config", errorHandlerType).CausedBy(err)
+	}
+
+	return nil
 }

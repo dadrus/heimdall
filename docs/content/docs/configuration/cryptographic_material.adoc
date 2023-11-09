@@ -9,7 +9,7 @@ menu:
     parent: "Configuration"
 ---
 
-Some link:{{< relref "/docs/configuration/rules/pipeline_mechanisms/unifiers.adoc" >}}[Unifiers], which finalize the successful execution of the pipeline, can generated signed objects, like a JWT, to be forwarded to the upstream services. In such cases Heimdall acts as an issuer of such objects and needs at least corresponding key material.
+Some link:{{< relref "/docs/configuration/rules/pipeline_mechanisms/finalizers.adoc" >}}[Finalizers], which, as the name implies, finalize the successful execution of the pipeline, can generated signed objects, like a JWT, to be forwarded to the upstream services. In such cases Heimdall acts as an issuer of such objects and needs at least corresponding key material.
 
 == Configuration
 

@@ -19,14 +19,15 @@ package httpendpoint
 import (
 	"github.com/mitchellh/mapstructure"
 
-	"github.com/dadrus/heimdall/internal/endpoint"
+	"github.com/dadrus/heimdall/internal/rules/endpoint"
+	"github.com/dadrus/heimdall/internal/rules/endpoint/authstrategy"
 )
 
 func decodeConfig(input any, output any) error {
 	dec, err := mapstructure.NewDecoder(
 		&mapstructure.DecoderConfig{
 			DecodeHook: mapstructure.ComposeDecodeHookFunc(
-				endpoint.DecodeAuthenticationStrategyHookFunc(),
+				authstrategy.DecodeAuthenticationStrategyHookFunc(),
 				endpoint.DecodeEndpointHookFunc(),
 				mapstructure.StringToTimeDurationHookFunc(),
 			),

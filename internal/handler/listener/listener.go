@@ -1,4 +1,4 @@
-// Copyright 2022 Dimitrij Drus <dadrus@gmx.de>
+// Copyright 2023 Dimitrij Drus <dadrus@gmx.de>
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,8 +19,8 @@ package listener
 import (
 	"crypto/tls"
 	"net"
-
-	"github.com/gofiber/fiber/v2"
+	"sync/atomic"
+	"time"
 
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
@@ -28,18 +28,82 @@ import (
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
-func New(network string, conf config.ServiceConfig) (net.Listener, error) {
-	listener, err := net.Listen(network, conf.Address())
+type conn struct {
+	net.Conn
+
+	writeTimeout  atomic.Int64
+	resetDeadline atomic.Bool
+	bytesWritten  atomic.Int32
+}
+
+func (c *conn) Write(data []byte) (int, error) {
+	if c.resetDeadline.Load() && c.bytesWritten.Load() > 0 {
+		c.bytesWritten.Store(0)
+
+		if err := c.Conn.SetWriteDeadline(time.Now().Add(time.Duration(c.writeTimeout.Load()))); err != nil {
+			return 0, err
+		}
+	}
+
+	n, err := c.Conn.Write(data)
+	if c.resetDeadline.Load() {
+		c.bytesWritten.Add(int32(n))
+	}
+
+	return n, err
+}
+
+func (c *conn) SetDeadline(deadline time.Time) error {
+	if deadline.Equal(time.Time{}) {
+		c.resetDeadline.Store(false)
+	} else {
+		c.writeTimeout.Store(int64(time.Until(deadline)))
+	}
+
+	return c.Conn.SetDeadline(deadline)
+}
+
+func (c *conn) SetWriteDeadline(deadline time.Time) error {
+	if deadline.Equal(time.Time{}) {
+		c.resetDeadline.Store(false)
+	} else {
+		c.writeTimeout.Store(int64(time.Until(deadline)))
+	}
+
+	return c.Conn.SetWriteDeadline(deadline)
+}
+
+func (c *conn) MonitorAndResetDeadlines(flag bool) {
+	c.resetDeadline.Store(flag)
+}
+
+type listener struct {
+	net.Listener
+}
+
+func (l *listener) Accept() (net.Conn, error) {
+	con, err := l.Listener.Accept()
+	if err != nil {
+		return nil, err
+	}
+
+	return &conn{Conn: con}, nil
+}
+
+func New(network, address string, tlsConf *config.TLS) (net.Listener, error) {
+	listnr, err := net.Listen(network, address)
 	if err != nil {
 		return nil, errorchain.NewWithMessage(heimdall.ErrInternal, "failed creating listener").
 			CausedBy(err)
 	}
 
-	if conf.TLS != nil {
-		return newTLSListener(conf.TLS, listener)
+	wrapped := &listener{Listener: listnr}
+
+	if tlsConf != nil {
+		return newTLSListener(tlsConf, wrapped)
 	}
 
-	return listener, nil
+	return wrapped, nil
 }
 
 func newTLSListener(tlsConf *config.TLS, listener net.Listener) (net.Listener, error) {
@@ -69,14 +133,12 @@ func newTLSListener(tlsConf *config.TLS, listener net.Listener) (net.Listener, e
 			"key store entry is not suitable for TLS").CausedBy(err)
 	}
 
-	tlsHandler := &fiber.TLSHandler{}
-
 	// nolint:gosec
 	// configuration ensures, TLS versions below 1.2 are not possible
 	cfg := &tls.Config{
-		Certificates:   []tls.Certificate{cert},
-		MinVersion:     tlsConf.MinVersion.OrDefault(),
-		GetCertificate: tlsHandler.GetClientInfo,
+		Certificates: []tls.Certificate{cert},
+		MinVersion:   tlsConf.MinVersion.OrDefault(),
+		NextProtos:   []string{"h2", "http/1.1"},
 	}
 
 	if cfg.MinVersion != tls.VersionTLS13 {

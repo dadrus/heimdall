@@ -97,7 +97,7 @@ func (s *ClientTestSuite) SetupSuite() {
 		} else {
 			_, err = w.Write([]byte(response))
 		}
-		require.NoError(s.T(), err)
+		s.Require().NoError(err)
 
 		w.WriteHeader(http.StatusOK)
 	}))
@@ -105,7 +105,7 @@ func (s *ClientTestSuite) SetupSuite() {
 	var err error
 
 	s.cl, err = NewClient(&rest.Config{Host: s.srv.URL})
-	require.NoError(s.T(), err)
+	s.Require().NoError(err)
 }
 
 func (s *ClientTestSuite) TearDownSuite() {
@@ -136,7 +136,7 @@ func verifyRuleSetList(t *testing.T, rls *RuleSetList) {
 	assert.Equal(t, "http://127.0.0.1:9090/foobar/<{foos*}>", rule.RuleMatcher.URL)
 	assert.Empty(t, rule.Methods)
 	assert.Empty(t, rule.ErrorHandler)
-	assert.Equal(t, "https://foo.bar/baz/bar?foo=bar", rule.UpstreamURLFactory.CreateURL(&url.URL{
+	assert.Equal(t, "https://foo.bar/baz/bar?foo=bar", rule.Backend.CreateURL(&url.URL{
 		Scheme:   "http",
 		Host:     "bar.foo:8888",
 		Path:     "/foo/bar",
@@ -152,7 +152,7 @@ func (s *ClientTestSuite) TestRuleSetsList() {
 	rls, err := s.cl.RuleSetRepository("foo").List(context.Background(), metav1.ListOptions{})
 
 	// THEN
-	require.NoError(s.T(), err)
+	s.Require().NoError(err)
 	verifyRuleSetList(s.T(), rls)
 }
 
@@ -161,14 +161,14 @@ func (s *ClientTestSuite) TestRuleSetsWatch() {
 	watcher, err := s.cl.RuleSetRepository("foo").Watch(context.Background(), metav1.ListOptions{})
 
 	// THEN
-	require.NoError(s.T(), err)
+	s.Require().NoError(err)
 
 	evtChain := watcher.ResultChan()
 
 	evt := <-evtChain
 
-	assert.Equal(s.T(), watch.Added, evt.Type)
-	assert.IsType(s.T(), &RuleSetList{}, evt.Object)
+	s.Equal(watch.Added, evt.Type)
+	s.IsType(&RuleSetList{}, evt.Object)
 	// nolint: forcetypeassert
 	verifyRuleSetList(s.T(), evt.Object.(*RuleSetList))
 }

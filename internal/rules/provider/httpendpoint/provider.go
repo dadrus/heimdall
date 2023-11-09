@@ -32,6 +32,7 @@ import (
 	"github.com/dadrus/heimdall/internal/heimdall"
 	config2 "github.com/dadrus/heimdall/internal/rules/config"
 	"github.com/dadrus/heimdall/internal/rules/rule"
+	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
@@ -58,30 +59,24 @@ func newProvider(
 	}
 
 	type Config struct {
-		Endpoints     []*ruleSetEndpoint `mapstructure:"endpoints"`
+		Endpoints     []*ruleSetEndpoint `mapstructure:"endpoints"      validate:"required,gt=0,dive"`
 		WatchInterval *time.Duration     `mapstructure:"watch_interval"`
 	}
 
 	var providerConf Config
 	if err := decodeConfig(rawConf, &providerConf); err != nil {
 		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration, "failed to decode http_endpoint rule provider config").
+			NewWithMessage(heimdall.ErrConfiguration, "failed decoding http_endpoint rule provider config").
 			CausedBy(err)
 	}
 
-	if len(providerConf.Endpoints) == 0 {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration,
-				"no endpoints configured for http_endpoint rule provider")
+	if err := validation.ValidateStruct(&providerConf); err != nil {
+		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
+			"failed validating http_endpoint rule provider config").CausedBy(err)
 	}
 
-	for idx, ep := range providerConf.Endpoints {
-		if err := ep.init(); err != nil {
-			return nil, errorchain.
-				NewWithMessagef(heimdall.ErrConfiguration,
-					"failed to initialize #%d http_endpoint in the rule provider endpoint configuration", idx).
-				CausedBy(err)
-		}
+	for _, ep := range providerConf.Endpoints {
+		ep.init()
 	}
 
 	logger = logger.With().Str("_provider_type", "http_endpoint").Logger()
@@ -132,7 +127,7 @@ func (p *provider) Stop(_ context.Context) error {
 		return nil
 	}
 
-	p.l.Info().Msg("Tearing down rule provider.")
+	p.l.Info().Msg("Tearing down rule provider")
 
 	p.s.Stop()
 	p.cancel()

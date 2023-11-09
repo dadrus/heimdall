@@ -18,7 +18,6 @@ package authorizers
 
 import (
 	"context"
-	"errors"
 	"net/http"
 	"net/url"
 	"testing"
@@ -47,19 +46,19 @@ func TestCreateCELAuthorizer(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "no expressions provided")
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				assert.Contains(t, err.Error(), "'expressions' is a required field")
 			},
 		},
 		{
 			uc:     "without rules",
-			config: []byte(``),
+			config: []byte(`expressions: []`),
 			assert: func(t *testing.T, err error, auth *celAuthorizer) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "no expressions provided")
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				assert.Contains(t, err.Error(), "'expressions' must contain more than 0 items")
 			},
 		},
 		{
@@ -72,7 +71,7 @@ expressions:
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
 				assert.Contains(t, err.Error(), "failed to compile")
 			},
 		},
@@ -86,7 +85,7 @@ expressions:
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
 				assert.Contains(t, err.Error(), "wanted bool")
 			},
 		},
@@ -102,8 +101,22 @@ foo: bar
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "failed to unmarshal")
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				assert.Contains(t, err.Error(), "failed decoding")
+			},
+		},
+		{
+			uc: "with expression list without expression value",
+			config: []byte(`
+expressions:
+  - message: bar
+`),
+			assert: func(t *testing.T, err error, auth *celAuthorizer) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				assert.Contains(t, err.Error(), "'expressions'[0].'expression' is a required field")
 			},
 		},
 		{
@@ -247,11 +260,11 @@ expressions:
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrAuthorization)
+				require.ErrorIs(t, err, heimdall.ErrAuthorization)
 				assert.Contains(t, err.Error(), "expression 1 failed")
 
 				var identifier interface{ ID() string }
-				require.True(t, errors.As(err, &identifier))
+				require.ErrorAs(t, err, &identifier)
 				assert.Equal(t, "authz1", identifier.ID())
 			},
 		},

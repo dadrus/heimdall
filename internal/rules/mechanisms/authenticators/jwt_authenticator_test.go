@@ -24,7 +24,6 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"crypto/x509/pkix"
-	"errors"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -40,10 +39,10 @@ import (
 
 	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/dadrus/heimdall/internal/cache/mocks"
-	"github.com/dadrus/heimdall/internal/endpoint"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	heimdallmocks "github.com/dadrus/heimdall/internal/heimdall/mocks"
 	"github.com/dadrus/heimdall/internal/keystore"
+	"github.com/dadrus/heimdall/internal/rules/endpoint"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/extractors"
 	mocks2 "github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/extractors/mocks"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/oauth2"
@@ -97,8 +96,8 @@ foo: bar
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "failed to unmarshal")
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				assert.Contains(t, err.Error(), "failed decoding")
 			},
 		},
 		{
@@ -115,8 +114,8 @@ subject:
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "endpoint configuration")
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				assert.Contains(t, err.Error(), "'jwks_endpoint' is a required field")
 			},
 		},
 		{
@@ -133,8 +132,8 @@ subject:
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "no trusted issuers")
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				assert.Contains(t, err.Error(), "'issuers' is a required field")
 			},
 		},
 		{
@@ -154,9 +153,9 @@ assertions:
 				// endpoint settings
 				assert.Equal(t, "http://test.com", auth.e.URL)
 				assert.Equal(t, "GET", auth.e.Method)
-				assert.Equal(t, 1, len(auth.e.Headers))
+				assert.Len(t, auth.e.Headers, 1)
 				assert.Contains(t, auth.e.Headers, "Accept-Type")
-				assert.Equal(t, auth.e.Headers["Accept-Type"], "application/json")
+				assert.Equal(t, "application/json", auth.e.Headers["Accept-Type"])
 
 				// token extractor settings
 				assert.IsType(t, extractors.CompositeExtractStrategy{}, auth.ads)
@@ -166,7 +165,7 @@ assertions:
 				assert.Contains(t, auth.ads, extractors.BodyParameterExtractStrategy{Name: "access_token"})
 
 				// assertions settings
-				assert.NoError(t, auth.a.ScopesMatcher.Match([]string{}))
+				require.NoError(t, auth.a.ScopesMatcher.Match([]string{}))
 				assert.Empty(t, auth.a.TargetAudiences)
 				assert.Len(t, auth.a.TrustedIssuers, 1)
 				assert.Contains(t, auth.a.TrustedIssuers, "foobar")
@@ -216,9 +215,9 @@ cache_ttl: 5s`),
 				// endpoint settings
 				assert.Equal(t, "http://test.com", auth.e.URL)
 				assert.Equal(t, "GET", auth.e.Method)
-				assert.Equal(t, 1, len(auth.e.Headers))
+				assert.Len(t, auth.e.Headers, 1)
 				assert.Contains(t, auth.e.Headers, "Accept-Type")
-				assert.Equal(t, auth.e.Headers["Accept-Type"], "application/json")
+				assert.Equal(t, "application/json", auth.e.Headers["Accept-Type"])
 
 				// token extractor settings
 				assert.IsType(t, extractors.CompositeExtractStrategy{}, auth.ads)
@@ -228,7 +227,7 @@ cache_ttl: 5s`),
 				assert.Contains(t, auth.ads, extractors.BodyParameterExtractStrategy{Name: "access_token"})
 
 				// assertions settings
-				assert.NoError(t, auth.a.ScopesMatcher.Match([]string{}))
+				require.NoError(t, auth.a.ScopesMatcher.Match([]string{}))
 				assert.Empty(t, auth.a.TargetAudiences)
 				assert.Len(t, auth.a.TrustedIssuers, 1)
 				assert.Contains(t, auth.a.TrustedIssuers, "foobar")
@@ -297,9 +296,9 @@ trust_store: ` + trustStorePath),
 				// endpoint settings
 				assert.Equal(t, "http://test.com", auth.e.URL)
 				assert.Equal(t, "POST", auth.e.Method)
-				assert.Equal(t, 1, len(auth.e.Headers))
+				assert.Len(t, auth.e.Headers, 1)
 				assert.Contains(t, auth.e.Headers, "Accept-Type")
-				assert.Equal(t, auth.e.Headers["Accept-Type"], "application/foobar")
+				assert.Equal(t, "application/foobar", auth.e.Headers["Accept-Type"])
 
 				// token extractor settings
 				assert.IsType(t, extractors.CompositeExtractStrategy{}, auth.ads)
@@ -312,7 +311,7 @@ trust_store: ` + trustStorePath),
 
 				// assertions settings
 				assert.NotNil(t, auth.a.ScopesMatcher)
-				assert.NoError(t, auth.a.ScopesMatcher.Match([]string{"foo"}))
+				require.NoError(t, auth.a.ScopesMatcher.Match([]string{"foo"}))
 				assert.Empty(t, auth.a.TargetAudiences)
 				assert.Len(t, auth.a.TrustedIssuers, 1)
 				assert.Contains(t, auth.a.TrustedIssuers, "foobar")
@@ -417,8 +416,8 @@ cache_ttl: 5s`),
 
 				// THEN
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "failed to unmarshal")
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				assert.Contains(t, err.Error(), "failed decoding")
 			},
 		},
 		{
@@ -447,7 +446,7 @@ assertions:
 				assert.Equal(t, prototype.sf, configured.sf)
 				assert.NotEqual(t, prototype.a, configured.a)
 
-				assert.NoError(t, configured.a.ScopesMatcher.Match([]string{}))
+				require.NoError(t, configured.a.ScopesMatcher.Match([]string{}))
 				assert.Empty(t, configured.a.TargetAudiences)
 				assert.ElementsMatch(t, configured.a.TrustedIssuers, []string{"barfoo"})
 				assert.ElementsMatch(t, configured.a.AllowedAlgorithms, []string{string(jose.ES512)})
@@ -487,7 +486,7 @@ cache_ttl: 5s`),
 				assert.Equal(t, prototype.sf, configured.sf)
 				assert.NotEqual(t, prototype.a, configured.a)
 
-				assert.NoError(t, configured.a.ScopesMatcher.Match([]string{}))
+				require.NoError(t, configured.a.ScopesMatcher.Match([]string{}))
 				assert.Empty(t, configured.a.TargetAudiences)
 				assert.ElementsMatch(t, configured.a.TrustedIssuers, []string{"barfoo"})
 				assert.ElementsMatch(t, configured.a.AllowedAlgorithms, []string{string(jose.ES512)})
@@ -528,7 +527,7 @@ assertions:
 				assert.Equal(t, prototype.sf, configured.sf)
 				assert.NotEqual(t, prototype.a, configured.a)
 
-				assert.NoError(t, configured.a.ScopesMatcher.Match([]string{}))
+				require.NoError(t, configured.a.ScopesMatcher.Match([]string{}))
 				assert.Empty(t, configured.a.TargetAudiences)
 				assert.ElementsMatch(t, configured.a.TrustedIssuers, []string{"barfoo"})
 				assert.ElementsMatch(t, configured.a.AllowedAlgorithms, []string{string(jose.ES512)})
@@ -661,7 +660,7 @@ cache_ttl: 5s`),
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
 				assert.Contains(t, err.Error(), "has invalid keys: trust_store")
 			},
 		},
@@ -679,7 +678,7 @@ cache_ttl: 5s`),
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
 				assert.Contains(t, err.Error(), "has invalid keys: validate_jwk")
 			},
 		},
@@ -782,7 +781,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			w.Header().Set("Content-Type", responseContentType)
 			w.Header().Set("Content-Length", strconv.Itoa(len(responseContent)))
 			_, err := w.Write(responseContent)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 		}
 
 		w.WriteHeader(responseCode)
@@ -819,12 +818,12 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				assert.False(t, endpointCalled)
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrAuthentication)
-				assert.NotErrorIs(t, err, heimdall.ErrArgument)
+				require.ErrorIs(t, err, heimdall.ErrAuthentication)
+				require.NotErrorIs(t, err, heimdall.ErrArgument)
 				assert.Contains(t, err.Error(), "no JWT")
 
 				var identifier HandlerIdentifier
-				require.True(t, errors.As(err, &identifier))
+				require.ErrorAs(t, err, &identifier)
 				assert.Equal(t, "auth3", identifier.ID())
 			},
 		},
@@ -847,12 +846,12 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				assert.False(t, endpointCalled)
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrAuthentication)
-				assert.ErrorIs(t, err, heimdall.ErrArgument)
+				require.ErrorIs(t, err, heimdall.ErrAuthentication)
+				require.ErrorIs(t, err, heimdall.ErrArgument)
 				assert.Contains(t, err.Error(), "JWS format must have three parts")
 
 				var identifier HandlerIdentifier
-				require.True(t, errors.As(err, &identifier))
+				require.ErrorAs(t, err, &identifier)
 				assert.Equal(t, "auth3", identifier.ID())
 			},
 		},
@@ -875,12 +874,12 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				assert.False(t, endpointCalled)
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrAuthentication)
-				assert.ErrorIs(t, err, heimdall.ErrArgument)
+				require.ErrorIs(t, err, heimdall.ErrAuthentication)
+				require.ErrorIs(t, err, heimdall.ErrArgument)
 				assert.Contains(t, err.Error(), "parse JWT")
 
 				var identifier HandlerIdentifier
-				require.True(t, errors.As(err, &identifier))
+				require.ErrorAs(t, err, &identifier)
 				assert.Equal(t, "auth3", identifier.ID())
 			},
 		},
@@ -907,12 +906,12 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				assert.False(t, endpointCalled)
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrCommunication)
-				assert.NotErrorIs(t, err, heimdall.ErrArgument)
+				require.ErrorIs(t, err, heimdall.ErrCommunication)
+				require.NotErrorIs(t, err, heimdall.ErrArgument)
 				assert.Contains(t, err.Error(), "JWKS endpoint failed")
 
 				var identifier HandlerIdentifier
-				require.True(t, errors.As(err, &identifier))
+				require.ErrorAs(t, err, &identifier)
 				assert.Equal(t, "auth3", identifier.ID())
 			},
 		},
@@ -944,12 +943,12 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				assert.True(t, endpointCalled)
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrCommunication)
-				assert.NotErrorIs(t, err, heimdall.ErrArgument)
+				require.ErrorIs(t, err, heimdall.ErrCommunication)
+				require.NotErrorIs(t, err, heimdall.ErrArgument)
 				assert.Contains(t, err.Error(), "unexpected response")
 
 				var identifier HandlerIdentifier
-				require.True(t, errors.As(err, &identifier))
+				require.ErrorAs(t, err, &identifier)
 				assert.Equal(t, "auth3", identifier.ID())
 			},
 		},
@@ -990,12 +989,12 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				assert.True(t, endpointCalled)
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrInternal)
-				assert.NotErrorIs(t, err, heimdall.ErrArgument)
+				require.ErrorIs(t, err, heimdall.ErrInternal)
+				require.NotErrorIs(t, err, heimdall.ErrArgument)
 				assert.Contains(t, err.Error(), "failed to unmarshal")
 
 				var identifier HandlerIdentifier
-				require.True(t, errors.As(err, &identifier))
+				require.ErrorAs(t, err, &identifier)
 				assert.Equal(t, "auth3", identifier.ID())
 			},
 		},
@@ -1036,12 +1035,12 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				assert.True(t, endpointCalled)
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrAuthentication)
-				assert.NotErrorIs(t, err, heimdall.ErrArgument)
+				require.ErrorIs(t, err, heimdall.ErrAuthentication)
+				require.NotErrorIs(t, err, heimdall.ErrArgument)
 				assert.Contains(t, err.Error(), "no (unique) key found")
 
 				var identifier HandlerIdentifier
-				require.True(t, errors.As(err, &identifier))
+				require.ErrorAs(t, err, &identifier)
 				assert.Equal(t, "auth3", identifier.ID())
 			},
 		},
@@ -1081,12 +1080,12 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				assert.False(t, endpointCalled)
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrAuthentication)
-				assert.NotErrorIs(t, err, heimdall.ErrArgument)
+				require.ErrorIs(t, err, heimdall.ErrAuthentication)
+				require.NotErrorIs(t, err, heimdall.ErrArgument)
 				assert.Contains(t, err.Error(), "algorithm is not allowed")
 
 				var identifier HandlerIdentifier
-				require.True(t, errors.As(err, &identifier))
+				require.ErrorAs(t, err, &identifier)
 				assert.Equal(t, "auth3", identifier.ID())
 			},
 		},
@@ -1126,12 +1125,12 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				assert.False(t, endpointCalled)
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrAuthentication)
-				assert.NotErrorIs(t, err, heimdall.ErrArgument)
+				require.ErrorIs(t, err, heimdall.ErrAuthentication)
+				require.NotErrorIs(t, err, heimdall.ErrArgument)
 				assert.Contains(t, err.Error(), "JWT signature")
 
 				var identifier HandlerIdentifier
-				require.True(t, errors.As(err, &identifier))
+				require.ErrorAs(t, err, &identifier)
 				assert.Equal(t, "auth3", identifier.ID())
 			},
 		},
@@ -1171,12 +1170,12 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				assert.False(t, endpointCalled)
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrAuthentication)
-				assert.NotErrorIs(t, err, heimdall.ErrArgument)
+				require.ErrorIs(t, err, heimdall.ErrAuthentication)
+				require.NotErrorIs(t, err, heimdall.ErrArgument)
 				assert.Contains(t, err.Error(), "assertion conditions")
 
 				var identifier HandlerIdentifier
-				require.True(t, errors.As(err, &identifier))
+				require.ErrorAs(t, err, &identifier)
 				assert.Equal(t, "auth3", identifier.ID())
 			},
 		},
@@ -1221,12 +1220,12 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				assert.False(t, endpointCalled)
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrInternal)
-				assert.NotErrorIs(t, err, heimdall.ErrArgument)
+				require.ErrorIs(t, err, heimdall.ErrInternal)
+				require.NotErrorIs(t, err, heimdall.ErrArgument)
 				assert.Contains(t, err.Error(), "failed to extract subject")
 
 				var identifier HandlerIdentifier
-				require.True(t, errors.As(err, &identifier))
+				require.ErrorAs(t, err, &identifier)
 				assert.Equal(t, "auth3", identifier.ID())
 			},
 		},
@@ -1470,12 +1469,12 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				assert.True(t, endpointCalled)
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrAuthentication)
+				require.ErrorIs(t, err, heimdall.ErrAuthentication)
 				assert.Contains(t, err.Error(), "JWK")
 				assert.Contains(t, err.Error(), "invalid")
 
 				var identifier HandlerIdentifier
-				require.True(t, errors.As(err, &identifier))
+				require.ErrorAs(t, err, &identifier)
 				assert.Equal(t, "auth3", identifier.ID())
 			},
 		},
@@ -1710,11 +1709,11 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				assert.True(t, endpointCalled)
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrInternal)
+				require.ErrorIs(t, err, heimdall.ErrInternal)
 				assert.Contains(t, err.Error(), "failed to unmarshal")
 
 				var identifier HandlerIdentifier
-				require.True(t, errors.As(err, &identifier))
+				require.ErrorAs(t, err, &identifier)
 				assert.Equal(t, "auth3", identifier.ID())
 			},
 		},
@@ -1754,11 +1753,11 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				assert.True(t, endpointCalled)
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrAuthentication)
+				require.ErrorIs(t, err, heimdall.ErrAuthentication)
 				assert.Contains(t, err.Error(), "None of the keys")
 
 				var identifier HandlerIdentifier
-				require.True(t, errors.As(err, &identifier))
+				require.ErrorAs(t, err, &identifier)
 				assert.Equal(t, "auth3", identifier.ID())
 			},
 		},
@@ -1799,11 +1798,11 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				assert.True(t, endpointCalled)
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrAuthentication)
+				require.ErrorIs(t, err, heimdall.ErrAuthentication)
 				assert.Contains(t, err.Error(), "None of the keys")
 
 				var identifier HandlerIdentifier
-				require.True(t, errors.As(err, &identifier))
+				require.ErrorAs(t, err, &identifier)
 				assert.Equal(t, "auth3", identifier.ID())
 			},
 		},

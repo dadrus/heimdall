@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/heimdall/mocks"
@@ -48,7 +49,7 @@ func TestExtractHeaderValue(t *testing.T) {
 			assert: func(t *testing.T, err error, authData string) {
 				t.Helper()
 
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				assert.Equal(t, "TestValue", authData)
 			},
 		},
@@ -66,8 +67,8 @@ func TestExtractHeaderValue(t *testing.T) {
 			assert: func(t *testing.T, err error, authData string) {
 				t.Helper()
 
-				assert.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrArgument)
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrArgument)
 				assert.Contains(t, err.Error(), "'Foo' schema")
 			},
 		},
@@ -85,8 +86,8 @@ func TestExtractHeaderValue(t *testing.T) {
 			assert: func(t *testing.T, err error, authData string) {
 				t.Helper()
 
-				assert.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrArgument)
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrArgument)
 				assert.Contains(t, err.Error(), "'Foo' schema")
 			},
 		},
@@ -104,7 +105,7 @@ func TestExtractHeaderValue(t *testing.T) {
 			assert: func(t *testing.T, err error, authData string) {
 				t.Helper()
 
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				assert.Equal(t, "TestValue", authData)
 			},
 		},
@@ -122,8 +123,8 @@ func TestExtractHeaderValue(t *testing.T) {
 			assert: func(t *testing.T, err error, authData string) {
 				t.Helper()
 
-				assert.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrArgument)
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrArgument)
 				assert.Contains(t, err.Error(), "no 'X-Test-Header' header")
 			},
 		},
