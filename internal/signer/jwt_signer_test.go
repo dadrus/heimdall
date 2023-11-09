@@ -170,7 +170,7 @@ func TestNewJWTSigner(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, keystore.ErrNoSuchKey)
+				require.ErrorIs(t, err, keystore.ErrNoSuchKey)
 			},
 		},
 		{
@@ -264,7 +264,7 @@ func TestNewJWTSigner(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
 				assert.Contains(t, err.Error(), "failed to get information about")
 			},
 		},
@@ -279,7 +279,7 @@ func TestNewJWTSigner(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
 				assert.Contains(t, err.Error(), "missing key usage: DigitalSignature")
 			},
 		},
@@ -398,7 +398,7 @@ func TestJWTSignerSign(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrInternal)
+				require.ErrorIs(t, err, heimdall.ErrInternal)
 				assert.Contains(t, err.Error(), "JWT signer")
 			},
 		},
@@ -420,7 +420,7 @@ func validateTestJWT(t *testing.T, rawJWT string, signer *jwtSigner,
 
 	const jwtDotCount = 2
 
-	require.Equal(t, strings.Count(rawJWT, "."), jwtDotCount)
+	require.Equal(t, jwtDotCount, strings.Count(rawJWT, "."))
 
 	token, err := jwt.ParseSigned(rawJWT)
 	require.NoError(t, err)
@@ -447,10 +447,10 @@ func validateTestJWT(t *testing.T, rawJWT string, signer *jwtSigner,
 	require.True(t, ok)
 
 	now := time.Now().Unix()
-	assert.True(t, float64(now) >= iat)
+	assert.GreaterOrEqual(t, float64(now), iat)
 
-	assert.Equal(t, iat, nbf)
-	assert.Equal(t, exp-ttl.Seconds(), nbf)
+	assert.InDelta(t, iat, nbf, 0.00)
+	assert.InDelta(t, exp-ttl.Seconds(), nbf, 0.00)
 
 	for k, v := range customClaims {
 		assert.Contains(t, jwtClaims, k)

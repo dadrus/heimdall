@@ -49,7 +49,7 @@ func TestRegistryDuplicateStore(t *testing.T) {
 
 	// THEN
 	require.Error(t, err)
-	assert.ErrorIs(t, err, ErrDuplicateRegistration)
+	require.ErrorIs(t, err, ErrDuplicateRegistration)
 	assert.Contains(t, err.Error(), "first")
 }
 

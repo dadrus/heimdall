@@ -86,7 +86,7 @@ func TestHandlerObserveKnownRequests(t *testing.T) {
 				activeRequests := activeRequestsMetric.Data.(metricdata.Sum[float64]) // nolint: forcetypeassert
 				assert.False(t, activeRequests.IsMonotonic)
 				require.Len(t, activeRequests.DataPoints, 1)
-				require.Equal(t, float64(0), activeRequests.DataPoints[0].Value)
+				require.InDelta(t, float64(0), activeRequests.DataPoints[0].Value, 0.00)
 				require.Equal(t, 9, activeRequests.DataPoints[0].Attributes.Len())
 				assert.Equal(t, "foobar",
 					attributeValue(activeRequests.DataPoints[0].Attributes, "service.subsystem").AsString())
@@ -137,7 +137,7 @@ func TestHandlerObserveKnownRequests(t *testing.T) {
 				activeRequests := activeRequestsMetric.Data.(metricdata.Sum[float64]) // nolint: forcetypeassert
 				assert.False(t, activeRequests.IsMonotonic)
 				require.Len(t, activeRequests.DataPoints, 1)
-				require.Equal(t, float64(0), activeRequests.DataPoints[0].Value)
+				require.InDelta(t, float64(0), activeRequests.DataPoints[0].Value, 0.00)
 				require.Equal(t, 9, activeRequests.DataPoints[0].Attributes.Len())
 				assert.Equal(t, "foobar",
 					attributeValue(activeRequests.DataPoints[0].Attributes, "service.subsystem").AsString())
@@ -182,7 +182,7 @@ func TestHandlerObserveKnownRequests(t *testing.T) {
 				activeRequests := activeRequestsMetric.Data.(metricdata.Sum[float64]) // nolint: forcetypeassert
 				assert.False(t, activeRequests.IsMonotonic)
 				require.Len(t, activeRequests.DataPoints, 1)
-				require.Equal(t, float64(0), activeRequests.DataPoints[0].Value)
+				require.InDelta(t, float64(0), activeRequests.DataPoints[0].Value, 0.00)
 				require.Equal(t, 9, activeRequests.DataPoints[0].Attributes.Len())
 				assert.Equal(t, "foobar",
 					attributeValue(activeRequests.DataPoints[0].Attributes, "service.subsystem").AsString())
@@ -309,7 +309,7 @@ func TestHandlerObserveUnknownRequests(t *testing.T) {
 	_, err = client.Test(context.Background(), &mocks2.TestRequest{})
 
 	// THEN
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Contains(t, err.Error(), "unknown service or method")
 	srv.Stop()
 
@@ -334,7 +334,7 @@ func TestHandlerObserveUnknownRequests(t *testing.T) {
 	activeRequests := activeRequestsMetric.Data.(metricdata.Sum[float64]) // nolint: forcetypeassert
 	assert.False(t, activeRequests.IsMonotonic)
 	require.Len(t, activeRequests.DataPoints, 1)
-	require.Equal(t, float64(0), activeRequests.DataPoints[0].Value)
+	require.InDelta(t, float64(0), activeRequests.DataPoints[0].Value, 0.00)
 	require.Equal(t, 9, activeRequests.DataPoints[0].Attributes.Len())
 	assert.Equal(t, "foobar",
 		attributeValue(activeRequests.DataPoints[0].Attributes, "service.subsystem").AsString())

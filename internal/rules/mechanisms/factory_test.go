@@ -58,7 +58,7 @@ func TestHandlerFactoryCreateAuthenticator(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, ErrAuthenticatorCreation)
+				require.ErrorIs(t, err, ErrAuthenticatorCreation)
 				assert.Contains(t, err.Error(), "no authenticator prototype")
 			},
 		},
@@ -74,7 +74,7 @@ func TestHandlerFactoryCreateAuthenticator(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, ErrAuthenticatorCreation)
+				require.ErrorIs(t, err, ErrAuthenticatorCreation)
 				assert.Contains(t, err.Error(), heimdall.ErrArgument.Error())
 			},
 		},
@@ -150,7 +150,7 @@ func TestHandlerFactoryCreateAuthorizer(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, ErrAuthorizerCreation)
+				require.ErrorIs(t, err, ErrAuthorizerCreation)
 				assert.Contains(t, err.Error(), "no authorizer prototype")
 			},
 		},
@@ -166,7 +166,7 @@ func TestHandlerFactoryCreateAuthorizer(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, ErrAuthorizerCreation)
+				require.ErrorIs(t, err, ErrAuthorizerCreation)
 				assert.Contains(t, err.Error(), heimdall.ErrArgument.Error())
 			},
 		},
@@ -242,7 +242,7 @@ func TestHandlerFactoryCreateContextualizer(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, ErrContextualizerCreation)
+				require.ErrorIs(t, err, ErrContextualizerCreation)
 				assert.Contains(t, err.Error(), "no contextualizer prototype")
 			},
 		},
@@ -259,7 +259,7 @@ func TestHandlerFactoryCreateContextualizer(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, ErrContextualizerCreation)
+				require.ErrorIs(t, err, ErrContextualizerCreation)
 				assert.Contains(t, err.Error(), heimdall.ErrArgument.Error())
 			},
 		},
@@ -335,7 +335,7 @@ func TestHandlerFactoryCreateFinalizer(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, ErrFinalizerCreation)
+				require.ErrorIs(t, err, ErrFinalizerCreation)
 				assert.Contains(t, err.Error(), "no finalizer prototype")
 			},
 		},
@@ -351,7 +351,7 @@ func TestHandlerFactoryCreateFinalizer(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, ErrFinalizerCreation)
+				require.ErrorIs(t, err, ErrFinalizerCreation)
 				assert.Contains(t, err.Error(), heimdall.ErrArgument.Error())
 			},
 		},
@@ -427,7 +427,7 @@ func TestHandlerFactoryCreateErrorHandler(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, ErrErrorHandlerCreation)
+				require.ErrorIs(t, err, ErrErrorHandlerCreation)
 				assert.Contains(t, err.Error(), "no error handler prototype")
 			},
 		},
@@ -443,7 +443,7 @@ func TestHandlerFactoryCreateErrorHandler(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, ErrErrorHandlerCreation)
+				require.ErrorIs(t, err, ErrErrorHandlerCreation)
 				assert.Contains(t, err.Error(), heimdall.ErrArgument.Error())
 			},
 		},
@@ -514,7 +514,7 @@ func TestCreateHandlerFactory(t *testing.T) {
 			assert: func(t *testing.T, err error, factory *mechanismsFactory) {
 				t.Helper()
 
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				require.NotNil(t, factory)
 				require.NotNil(t, factory.r)
 				assert.Empty(t, factory.r.errorHandlers)
@@ -542,7 +542,7 @@ func TestCreateHandlerFactory(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, authenticators.ErrUnsupportedAuthenticatorType)
+				require.ErrorIs(t, err, authenticators.ErrUnsupportedAuthenticatorType)
 			},
 		},
 	} {

@@ -23,5 +23,5 @@ import (
 //go:generate mockery --name Repository --structname RepositoryMock
 
 type Repository interface {
-	FindRule(*url.URL) (Rule, error)
+	FindRule(toMatch *url.URL) (Rule, error)
 }

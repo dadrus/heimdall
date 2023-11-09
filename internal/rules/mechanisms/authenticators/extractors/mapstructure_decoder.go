@@ -90,8 +90,8 @@ func createStrategy(data map[string]string) (AuthDataExtractStrategy, error) {
 		return &QueryParameterExtractStrategy{Name: value}, nil
 	} else if value, ok := data["body_parameter"]; ok {
 		return &BodyParameterExtractStrategy{Name: value}, nil
-	} else {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration, "unsupported authentication source")
 	}
+
+	return nil, errorchain.
+		NewWithMessage(heimdall.ErrConfiguration, "unsupported authentication source")
 }

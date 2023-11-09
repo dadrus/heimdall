@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/heimdall/mocks"
 	rulemocks "github.com/dadrus/heimdall/internal/rules/mocks"
@@ -46,7 +47,7 @@ func TestCompositeErrorHandlerExecutionWithFallback(t *testing.T) {
 	ok, err := eh.Execute(ctx, testsupport.ErrTestPurpose)
 
 	// THEN
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.True(t, ok)
 }
 
@@ -68,7 +69,7 @@ func TestCompositeErrorHandlerExecutionWithoutFallback(t *testing.T) {
 	ok, err := eh.Execute(ctx, testsupport.ErrTestPurpose)
 
 	// THEN
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.True(t, ok)
 }
 
@@ -91,6 +92,6 @@ func TestCompositeErrorHandlerExecutionWithNoApplicableErrorHandler(t *testing.T
 	ok, err := eh.Execute(ctx, testsupport.ErrTestPurpose)
 
 	// THEN
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.False(t, ok)
 }

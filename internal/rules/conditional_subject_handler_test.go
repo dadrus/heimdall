@@ -78,7 +78,7 @@ func TestConditionalSubjectHandlerExecute(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, testsupport.ErrTestPurpose)
+				require.ErrorIs(t, err, testsupport.ErrTestPurpose)
 			},
 		},
 	} {

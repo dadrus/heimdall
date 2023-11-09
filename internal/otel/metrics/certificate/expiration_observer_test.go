@@ -49,7 +49,7 @@ func checkMetric(t *testing.T, dp []metricdata.DataPoint[float64], service strin
 	assert.LessOrEqual(t, data.Value-time.Until(cert.NotAfter).Seconds(), 1.0)
 
 	attributes := data.Attributes
-	require.Equal(t, attributes.Len(), 5)
+	require.Equal(t, 5, attributes.Len())
 	assert.Equal(t, strings.Join(cert.DNSNames, ","), attributeValue(attributes, dnsNameAttrKey).AsString())
 	assert.Equal(t, cert.Issuer.String(), attributeValue(attributes, issuerAttrKey).AsString())
 	assert.Equal(t, cert.SerialNumber.String(), attributeValue(attributes, serialNrAttrKey).AsString())

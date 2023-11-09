@@ -39,7 +39,7 @@ func TestSessionLifespanAssert(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, ErrSessionValidity)
+				require.ErrorIs(t, err, ErrSessionValidity)
 				assert.Contains(t, err.Error(), "not active")
 			},
 		},
@@ -74,7 +74,7 @@ func TestSessionLifespanAssert(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, ErrSessionValidity)
+				require.ErrorIs(t, err, ErrSessionValidity)
 				assert.Contains(t, err.Error(), "issued in the future")
 			},
 		},
@@ -100,7 +100,7 @@ func TestSessionLifespanAssert(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, ErrSessionValidity)
+				require.ErrorIs(t, err, ErrSessionValidity)
 				assert.Contains(t, err.Error(), "not yet valid")
 			},
 		},
@@ -114,7 +114,7 @@ func TestSessionLifespanAssert(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, ErrSessionValidity)
+				require.ErrorIs(t, err, ErrSessionValidity)
 				assert.Contains(t, err.Error(), "expired")
 			},
 		},

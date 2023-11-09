@@ -222,7 +222,7 @@ func TestRuleExecute(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, testsupport.ErrTestPurpose2)
+				require.ErrorIs(t, err, testsupport.ErrTestPurpose2)
 				assert.Nil(t, backend)
 			},
 		},
@@ -267,7 +267,7 @@ func TestRuleExecute(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, testsupport.ErrTestPurpose2)
+				require.ErrorIs(t, err, testsupport.ErrTestPurpose2)
 				assert.Nil(t, backend)
 			},
 		},
@@ -314,7 +314,7 @@ func TestRuleExecute(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, testsupport.ErrTestPurpose2)
+				require.ErrorIs(t, err, testsupport.ErrTestPurpose2)
 				assert.Nil(t, backend)
 			},
 		},

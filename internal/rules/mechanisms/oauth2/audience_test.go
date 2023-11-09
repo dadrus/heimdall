@@ -80,7 +80,7 @@ func TestAudienceUnmarshalJSON(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, ErrConfiguration)
+				require.ErrorIs(t, err, ErrConfiguration)
 				assert.Contains(t, err.Error(), "unexpected content")
 			},
 		},
@@ -91,7 +91,7 @@ func TestAudienceUnmarshalJSON(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, ErrConfiguration)
+				require.ErrorIs(t, err, ErrConfiguration)
 				assert.Contains(t, err.Error(), "audience array")
 			},
 		},

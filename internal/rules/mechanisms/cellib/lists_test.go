@@ -45,7 +45,7 @@ func TestLists(t *testing.T) {
 				require.Error(t, err)
 				assert.Equal(t, tc.err, err.Error())
 			} else {
-				require.Equal(t, true, out.Value())
+				require.Equal(t, true, out.Value()) //nolint:testifylint
 			}
 		})
 	}

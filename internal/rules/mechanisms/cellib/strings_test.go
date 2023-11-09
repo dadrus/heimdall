@@ -35,7 +35,7 @@ func TestStrings(t *testing.T) {
 
 			out, _, err := prg.Eval(cel.NoVars())
 			require.NoError(t, err)
-			require.Equal(t, true, out.Value())
+			require.Equal(t, true, out.Value()) //nolint:testifylint
 		})
 	}
 }

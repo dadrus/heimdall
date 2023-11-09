@@ -94,13 +94,13 @@ func TestErrorResponse(t *testing.T) {
 			// THEN
 			require.NotNil(t, resp)
 
-			assert.Equal(t, int32(tc.grpcCode), resp.Status.Code)
+			assert.Equal(t, int32(tc.grpcCode), resp.GetStatus().GetCode())
 
 			deniedResp := resp.GetDeniedResponse()
-			assert.Equal(t, envoy_type.StatusCode(tc.httpCode), deniedResp.Status.Code)
-			assert.Equal(t, "Content-Type", deniedResp.Headers[0].Header.Key)
-			assert.Equal(t, tc.expectedType, deniedResp.Headers[0].Header.Value)
-			assert.Equal(t, tc.expBody, deniedResp.Body)
+			assert.Equal(t, envoy_type.StatusCode(tc.httpCode), deniedResp.GetStatus().GetCode())
+			assert.Equal(t, "Content-Type", deniedResp.GetHeaders()[0].GetHeader().GetKey())
+			assert.Equal(t, tc.expectedType, deniedResp.GetHeaders()[0].GetHeader().GetValue())
+			assert.Equal(t, tc.expBody, deniedResp.GetBody())
 		})
 	}
 }

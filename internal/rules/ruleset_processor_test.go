@@ -47,7 +47,7 @@ func TestRuleSetProcessorOnCreated(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, ErrUnsupportedRuleSetVersion)
+				require.ErrorIs(t, err, ErrUnsupportedRuleSetVersion)
 			},
 		},
 		{
@@ -63,7 +63,7 @@ func TestRuleSetProcessorOnCreated(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, testsupport.ErrTestPurpose)
+				require.ErrorIs(t, err, testsupport.ErrTestPurpose)
 				assert.Contains(t, err.Error(), "failed loading")
 			},
 		},
@@ -134,7 +134,7 @@ func TestRuleSetProcessorOnUpdated(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, ErrUnsupportedRuleSetVersion)
+				require.ErrorIs(t, err, ErrUnsupportedRuleSetVersion)
 			},
 		},
 		{
@@ -150,7 +150,7 @@ func TestRuleSetProcessorOnUpdated(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, testsupport.ErrTestPurpose)
+				require.ErrorIs(t, err, testsupport.ErrTestPurpose)
 				assert.Contains(t, err.Error(), "failed loading")
 			},
 		},

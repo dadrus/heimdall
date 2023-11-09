@@ -93,7 +93,7 @@ nested_2:
 		WithEnvPrefix("CONFIGLOADERTEST_"),
 	).Load(&config)
 
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	assert.Equal(t, "overridden by yaml file", config.SomeString) // yaml override
 	assert.Equal(t, 42, config.SomeInt)                           // env override

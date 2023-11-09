@@ -65,7 +65,7 @@ func TestNewProvider(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
 				assert.Contains(t, err.Error(), "failed to decode")
 			},
 		},
@@ -282,7 +282,7 @@ func (h *RuleSetResourceHandler) writeUpdateStatusResponse(t *testing.T, r *http
 	rv, err := strconv.Atoi(newRS.ResourceVersion)
 	require.NoError(t, err)
 
-	newRS.ResourceVersion = fmt.Sprintf("%d", rv+1)
+	newRS.ResourceVersion = strconv.Itoa(rv + 1)
 
 	h.rsUpdatedEvt <- newRS
 
@@ -461,7 +461,7 @@ func TestProviderLifecycle(t *testing.T) {
 				time.Sleep(250 * time.Millisecond)
 
 				ruleSet := mock2.ArgumentCaptorFrom[*config2.RuleSet](&processor.Mock, "captor1").Value()
-				assert.Equal(t, ruleSet.Source, "kubernetes:foo:dfb2a2f1-1ad2-4d8c-8456-516fc94abb86")
+				assert.Equal(t, "kubernetes:foo:dfb2a2f1-1ad2-4d8c-8456-516fc94abb86", ruleSet.Source)
 				assert.Equal(t, "1alpha2", ruleSet.Version)
 				assert.Equal(t, "test-rule", ruleSet.Name)
 				assert.Len(t, ruleSet.Rules, 1)
@@ -501,7 +501,7 @@ func TestProviderLifecycle(t *testing.T) {
 					rv, err := strconv.Atoi(rs.ResourceVersion)
 					require.NoError(t, err)
 
-					rs.ResourceVersion = fmt.Sprintf("%d", rv+1)
+					rs.ResourceVersion = strconv.Itoa(rv + 1)
 
 					return watch.Event{Type: watch.Modified, Object: &rs}, nil
 				default:
@@ -524,7 +524,7 @@ func TestProviderLifecycle(t *testing.T) {
 				time.Sleep(250 * time.Millisecond)
 
 				ruleSet := mock2.ArgumentCaptorFrom[*config2.RuleSet](&processor.Mock, "captor1").Value()
-				assert.Equal(t, ruleSet.Source, "kubernetes:foo:dfb2a2f1-1ad2-4d8c-8456-516fc94abb86")
+				assert.Equal(t, "kubernetes:foo:dfb2a2f1-1ad2-4d8c-8456-516fc94abb86", ruleSet.Source)
 				assert.Equal(t, "1alpha2", ruleSet.Version)
 				assert.Equal(t, "test-rule", ruleSet.Name)
 				assert.Len(t, ruleSet.Rules, 1)
@@ -541,7 +541,7 @@ func TestProviderLifecycle(t *testing.T) {
 				assert.Equal(t, "authn", createdRule.Execute[0]["authenticator"])
 				assert.Equal(t, "authz", createdRule.Execute[1]["authorizer"])
 
-				assert.Len(t, *statusList, 0)
+				assert.Empty(t, *statusList)
 			},
 		},
 		{
@@ -553,7 +553,7 @@ func TestProviderLifecycle(t *testing.T) {
 					rv, err := strconv.Atoi(rs.ResourceVersion)
 					require.NoError(t, err)
 
-					rs.ResourceVersion = fmt.Sprintf("%d", rv+1)
+					rs.ResourceVersion = strconv.Itoa(rv + 1)
 
 					return watch.Event{Type: watch.Modified, Object: &rs}, nil
 				default:
@@ -591,7 +591,7 @@ func TestProviderLifecycle(t *testing.T) {
 				time.Sleep(250 * time.Millisecond)
 
 				ruleSet := mock2.ArgumentCaptorFrom[*config2.RuleSet](&processor.Mock, "captor1").Value()
-				assert.Equal(t, ruleSet.Source, "kubernetes:foo:dfb2a2f1-1ad2-4d8c-8456-516fc94abb86")
+				assert.Equal(t, "kubernetes:foo:dfb2a2f1-1ad2-4d8c-8456-516fc94abb86", ruleSet.Source)
 				assert.Equal(t, "1alpha2", ruleSet.Version)
 				assert.Equal(t, "test-rule", ruleSet.Name)
 				assert.Len(t, ruleSet.Rules, 1)
@@ -667,7 +667,7 @@ func TestProviderLifecycle(t *testing.T) {
 					rv, err := strconv.Atoi(rs.ResourceVersion)
 					require.NoError(t, err)
 
-					rs.ResourceVersion = fmt.Sprintf("%d", rv+1)
+					rs.ResourceVersion = strconv.Itoa(rv + 1)
 					rs.Generation++
 					rs.Spec = v1alpha2.RuleSetSpec{
 						AuthClassName: "bar",
@@ -719,7 +719,7 @@ func TestProviderLifecycle(t *testing.T) {
 				time.Sleep(250 * time.Millisecond)
 
 				ruleSet := mock2.ArgumentCaptorFrom[*config2.RuleSet](&processor.Mock, "captor1").Value()
-				assert.Equal(t, ruleSet.Source, "kubernetes:foo:dfb2a2f1-1ad2-4d8c-8456-516fc94abb86")
+				assert.Equal(t, "kubernetes:foo:dfb2a2f1-1ad2-4d8c-8456-516fc94abb86", ruleSet.Source)
 				assert.Equal(t, "1alpha2", ruleSet.Version)
 				assert.Equal(t, "test-rule", ruleSet.Name)
 				assert.Len(t, ruleSet.Rules, 1)
@@ -737,7 +737,7 @@ func TestProviderLifecycle(t *testing.T) {
 				assert.Equal(t, "authz", createdRule.Execute[1]["authorizer"])
 
 				ruleSet = mock2.ArgumentCaptorFrom[*config2.RuleSet](&processor.Mock, "captor2").Value()
-				assert.Equal(t, ruleSet.Source, "kubernetes:foo:dfb2a2f1-1ad2-4d8c-8456-516fc94abb86")
+				assert.Equal(t, "kubernetes:foo:dfb2a2f1-1ad2-4d8c-8456-516fc94abb86", ruleSet.Source)
 				assert.Equal(t, "1alpha2", ruleSet.Version)
 				assert.Equal(t, "test-rule", ruleSet.Name)
 				assert.Len(t, ruleSet.Rules, 1)
@@ -781,7 +781,7 @@ func TestProviderLifecycle(t *testing.T) {
 					rv, err := strconv.Atoi(rs.ResourceVersion)
 					require.NoError(t, err)
 
-					rs.ResourceVersion = fmt.Sprintf("%d", rv+1)
+					rs.ResourceVersion = strconv.Itoa(rv + 1)
 					rs.Generation++
 					rs.Spec.AuthClassName = "foo"
 
@@ -808,7 +808,7 @@ func TestProviderLifecycle(t *testing.T) {
 				time.Sleep(250 * time.Millisecond)
 
 				ruleSet := mock2.ArgumentCaptorFrom[*config2.RuleSet](&processor.Mock, "captor1").Value()
-				assert.Equal(t, ruleSet.Source, "kubernetes:foo:dfb2a2f1-1ad2-4d8c-8456-516fc94abb86")
+				assert.Equal(t, "kubernetes:foo:dfb2a2f1-1ad2-4d8c-8456-516fc94abb86", ruleSet.Source)
 				assert.Equal(t, "1alpha2", ruleSet.Version)
 				assert.Equal(t, "test-rule", ruleSet.Name)
 				assert.Len(t, ruleSet.Rules, 1)
@@ -826,7 +826,7 @@ func TestProviderLifecycle(t *testing.T) {
 				assert.Equal(t, "authz", createdRule.Execute[1]["authorizer"])
 
 				ruleSet = mock2.ArgumentCaptorFrom[*config2.RuleSet](&processor.Mock, "captor2").Value()
-				assert.Equal(t, ruleSet.Source, "kubernetes:foo:dfb2a2f1-1ad2-4d8c-8456-516fc94abb86")
+				assert.Equal(t, "kubernetes:foo:dfb2a2f1-1ad2-4d8c-8456-516fc94abb86", ruleSet.Source)
 				assert.Equal(t, "1alpha2", ruleSet.Version)
 				assert.Equal(t, "test-rule", ruleSet.Name)
 				assert.Len(t, ruleSet.Rules, 1)
@@ -843,7 +843,7 @@ func TestProviderLifecycle(t *testing.T) {
 				assert.Equal(t, "authn", deleteRule.Execute[0]["authenticator"])
 				assert.Equal(t, "authz", deleteRule.Execute[1]["authorizer"])
 
-				assert.GreaterOrEqual(t, len(*statusList), 1)
+				assert.NotEmpty(t, *statusList)
 				assert.Equal(t, "1/1", (*statusList)[0].ActiveIn)
 				assert.Len(t, (*statusList)[0].Conditions, 1)
 				condition := (*statusList)[0].Conditions[0]
@@ -862,7 +862,7 @@ func TestProviderLifecycle(t *testing.T) {
 					rv, err := strconv.Atoi(rs.ResourceVersion)
 					require.NoError(t, err)
 
-					rs.ResourceVersion = fmt.Sprintf("%d", rv+1)
+					rs.ResourceVersion = strconv.Itoa(rv + 1)
 					rs.Generation++
 					rs.Spec = v1alpha2.RuleSetSpec{
 						AuthClassName: "bar",

@@ -98,7 +98,7 @@ func TestHandlerExecution(t *testing.T) {
 				assert.Equal(t, logEvent2["_parent_id"], logEvent2["_parent_id"])
 				assert.Contains(t, logEvent2, "_body_bytes_sent")
 				assert.Equal(t, float64(200), logEvent2["_http_status_code"])
-				assert.Equal(t, true, logEvent2["_access_granted"])
+				assert.Equal(t, true, logEvent2["_access_granted"]) //nolint:testifylint
 				assert.Equal(t, "foo", logEvent2["_subject"])
 				assert.Contains(t, logEvent2, "_http_user_agent")
 				assert.Equal(t, "TX finished", logEvent2["message"])
@@ -164,7 +164,7 @@ func TestHandlerExecution(t *testing.T) {
 				assert.Equal(t, logEvent2["_span_id"], logEvent2["_span_id"])
 				assert.Contains(t, logEvent2, "_body_bytes_sent")
 				assert.Equal(t, float64(http.StatusInternalServerError), logEvent2["_http_status_code"])
-				assert.Equal(t, false, logEvent2["_access_granted"])
+				assert.Equal(t, false, logEvent2["_access_granted"]) //nolint:testifylint
 				assert.Equal(t, "test error", logEvent2["error"])
 				assert.Contains(t, logEvent2, "_http_user_agent")
 				assert.Equal(t, "TX finished", logEvent2["message"])
@@ -220,7 +220,7 @@ func TestHandlerExecution(t *testing.T) {
 				assert.Equal(t, logEvent2["_parent_id"], logEvent2["_parent_id"])
 				assert.Contains(t, logEvent2, "_body_bytes_sent")
 				assert.Equal(t, float64(http.StatusUnauthorized), logEvent2["_http_status_code"])
-				assert.Equal(t, false, logEvent2["_access_granted"])
+				assert.Equal(t, false, logEvent2["_access_granted"]) //nolint:testifylint
 				assert.Equal(t, "bar", logEvent2["_subject"])
 				assert.Equal(t, "test error", logEvent2["error"])
 				assert.Contains(t, logEvent2, "_http_user_agent")
@@ -270,7 +270,7 @@ func TestHandlerExecution(t *testing.T) {
 				assert.Equal(t, logEvent2["_parent_id"], logEvent2["_parent_id"])
 				assert.Contains(t, logEvent2, "_body_bytes_sent")
 				assert.Equal(t, float64(http.StatusSeeOther), logEvent2["_http_status_code"])
-				assert.Equal(t, false, logEvent2["_access_granted"])
+				assert.Equal(t, false, logEvent2["_access_granted"]) //nolint:testifylint
 				assert.Equal(t, "bar", logEvent2["_subject"])
 				assert.Contains(t, logEvent2, "_http_user_agent")
 				assert.Equal(t, "TX finished", logEvent2["message"])

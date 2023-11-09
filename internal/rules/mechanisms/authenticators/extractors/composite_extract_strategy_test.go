@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/heimdall/mocks"
@@ -50,7 +51,7 @@ func TestCompositeExtractCookieValueWithoutSchema(t *testing.T) {
 	val, err := strategy.GetAuthData(ctx)
 
 	// THEN
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, actualValue, val)
 }
 
@@ -81,7 +82,7 @@ func TestCompositeExtractHeaderValueWithSchema(t *testing.T) {
 	val, err := strategy.GetAuthData(ctx)
 
 	// THEN
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, actualValue, val)
 }
 
@@ -109,6 +110,6 @@ func TestCompositeExtractStrategyOrder(t *testing.T) {
 	val, err := strategy.GetAuthData(ctx)
 
 	// THEN
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, actualValue, val)
 }

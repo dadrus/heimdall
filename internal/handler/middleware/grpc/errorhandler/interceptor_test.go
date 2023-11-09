@@ -295,13 +295,13 @@ func TestErrorInterceptor(t *testing.T) {
 			srv.Stop()
 			require.NoError(t, err)
 
-			assert.Equal(t, int32(tc.expGRPCCode), resp.Status.Code)
+			assert.Equal(t, int32(tc.expGRPCCode), resp.GetStatus().GetCode())
 
 			if tc.err != nil {
 				deniedResp := resp.GetDeniedResponse()
 				require.NotNil(t, deniedResp)
-				assert.Equal(t, tc.expHTTPCode, deniedResp.Status.Code)
-				assert.Equal(t, tc.expBody, deniedResp.Body)
+				assert.Equal(t, tc.expHTTPCode, deniedResp.GetStatus().GetCode())
+				assert.Equal(t, tc.expBody, deniedResp.GetBody())
 			}
 		})
 	}

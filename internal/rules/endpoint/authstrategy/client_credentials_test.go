@@ -88,7 +88,7 @@ func TestApplyClientCredentialsStrategy(t *testing.T) {
 
 		w.WriteHeader(code)
 		_, err = w.Write(rawResp)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 	}))
 	defer srv.Close()
 
@@ -170,7 +170,7 @@ func TestApplyClientCredentialsStrategy(t *testing.T) {
 				t.Helper()
 
 				val, err := base64.StdEncoding.DecodeString(strings.TrimPrefix(req.Header.Get("Authorization"), "Basic "))
-				assert.NoError(t, err)
+				require.NoError(t, err)
 
 				clientIDAndSecret := strings.Split(string(val), ":")
 				assert.Equal(t, "bar", clientIDAndSecret[0])

@@ -81,7 +81,7 @@ func TestClientCredentialsToken(t *testing.T) {
 
 		w.WriteHeader(code)
 		_, err = w.Write(rawResp)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 	}))
 	defer srv.Close()
 
@@ -123,7 +123,7 @@ func TestClientCredentialsToken(t *testing.T) {
 				t.Helper()
 
 				val, err := base64.StdEncoding.DecodeString(strings.TrimPrefix(req.Header.Get("Authorization"), "Basic "))
-				assert.NoError(t, err)
+				require.NoError(t, err)
 
 				clientIDAndSecret := strings.Split(string(val), ":")
 				assert.Equal(t, "foo", clientIDAndSecret[0])
@@ -173,7 +173,7 @@ func TestClientCredentialsToken(t *testing.T) {
 				t.Helper()
 
 				val, err := base64.StdEncoding.DecodeString(strings.TrimPrefix(req.Header.Get("Authorization"), "Basic "))
-				assert.NoError(t, err)
+				require.NoError(t, err)
 
 				clientIDAndSecret := strings.Split(string(val), ":")
 				assert.Equal(t, "bar", clientIDAndSecret[0])
@@ -222,7 +222,7 @@ func TestClientCredentialsToken(t *testing.T) {
 
 				assert.True(t, tokenEndpointCalled)
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrInternal)
+				require.ErrorIs(t, err, heimdall.ErrInternal)
 			},
 		},
 		{
@@ -244,7 +244,7 @@ func TestClientCredentialsToken(t *testing.T) {
 
 				assert.True(t, tokenEndpointCalled)
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrCommunication)
+				require.ErrorIs(t, err, heimdall.ErrCommunication)
 			},
 		},
 		{
@@ -260,7 +260,7 @@ func TestClientCredentialsToken(t *testing.T) {
 
 				assert.False(t, tokenEndpointCalled)
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrCommunication)
+				require.ErrorIs(t, err, heimdall.ErrCommunication)
 			},
 		},
 		{
@@ -286,7 +286,7 @@ func TestClientCredentialsToken(t *testing.T) {
 				t.Helper()
 
 				val, err := base64.StdEncoding.DecodeString(strings.TrimPrefix(req.Header.Get("Authorization"), "Basic "))
-				assert.NoError(t, err)
+				require.NoError(t, err)
 
 				clientIDAndSecret := strings.Split(string(val), ":")
 				assert.Equal(t, "bar", clientIDAndSecret[0])
@@ -353,7 +353,7 @@ func TestClientCredentialsToken(t *testing.T) {
 				t.Helper()
 
 				val, err := base64.StdEncoding.DecodeString(strings.TrimPrefix(req.Header.Get("Authorization"), "Basic "))
-				assert.NoError(t, err)
+				require.NoError(t, err)
 
 				clientIDAndSecret := strings.Split(string(val), ":")
 				assert.Equal(t, "bar", clientIDAndSecret[0])
@@ -408,7 +408,7 @@ func TestClientCredentialsToken(t *testing.T) {
 				t.Helper()
 
 				val, err := base64.StdEncoding.DecodeString(strings.TrimPrefix(req.Header.Get("Authorization"), "Basic "))
-				assert.NoError(t, err)
+				require.NoError(t, err)
 
 				clientIDAndSecret := strings.Split(string(val), ":")
 				assert.Equal(t, "bar", clientIDAndSecret[0])
@@ -505,7 +505,7 @@ func TestClientCredentialsToken(t *testing.T) {
 				t.Helper()
 
 				val, err := base64.StdEncoding.DecodeString(strings.TrimPrefix(req.Header.Get("Authorization"), "Basic "))
-				assert.NoError(t, err)
+				require.NoError(t, err)
 
 				clientIDAndSecret := strings.Split(string(val), ":")
 				assert.Equal(t, "bar", clientIDAndSecret[0])
@@ -587,7 +587,7 @@ func TestClientCredentialsToken(t *testing.T) {
 				t.Helper()
 
 				val, err := base64.StdEncoding.DecodeString(strings.TrimPrefix(req.Header.Get("Authorization"), "Basic "))
-				assert.NoError(t, err)
+				require.NoError(t, err)
 
 				clientIDAndSecret := strings.Split(string(val), ":")
 				assert.Equal(t, "bar", clientIDAndSecret[0])

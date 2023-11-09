@@ -18,7 +18,6 @@ package contextualizers
 
 import (
 	"context"
-	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -63,7 +62,7 @@ foo: bar
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
 				assert.Contains(t, err.Error(), "failed decoding")
 			},
 		},
@@ -78,7 +77,7 @@ payload: bar
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
 				assert.Contains(t, err.Error(), "'endpoint'.'url' is a required field")
 			},
 		},
@@ -207,7 +206,7 @@ payload: bar
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
 				assert.Contains(t, err.Error(), "failed decoding")
 			},
 		},
@@ -508,7 +507,7 @@ func TestGenericContextualizerExecute(t *testing.T) {
 			w.Header().Set("Content-Type", responseContentType)
 			w.Header().Set("Content-Length", strconv.Itoa(len(responseContent)))
 			_, err := w.Write(responseContent)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 		}
 
 		w.WriteHeader(responseCode)
@@ -534,11 +533,11 @@ func TestGenericContextualizerExecute(t *testing.T) {
 				assert.False(t, remoteEndpointCalled)
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrInternal)
+				require.ErrorIs(t, err, heimdall.ErrInternal)
 				assert.Contains(t, err.Error(), "'nil' subject")
 
 				var identifier interface{ ID() string }
-				require.True(t, errors.As(err, &identifier))
+				require.ErrorAs(t, err, &identifier)
 				assert.Equal(t, "contextualizer", identifier.ID())
 			},
 		},
@@ -570,7 +569,7 @@ func TestGenericContextualizerExecute(t *testing.T) {
 
 				require.NoError(t, err)
 				assert.Len(t, sub.Attributes, 2)
-				assert.Equal(t, sub.Attributes["contextualizer"], "Hi Foo")
+				assert.Equal(t, "Hi Foo", sub.Attributes["contextualizer"])
 			},
 		},
 		{
@@ -617,7 +616,7 @@ func TestGenericContextualizerExecute(t *testing.T) {
 
 				require.NoError(t, err)
 				assert.Len(t, sub.Attributes, 2)
-				assert.Equal(t, sub.Attributes["contextualizer"], "Hi from endpoint")
+				assert.Equal(t, "Hi from endpoint", sub.Attributes["contextualizer"])
 			},
 		},
 		{
@@ -644,11 +643,11 @@ func TestGenericContextualizerExecute(t *testing.T) {
 				assert.False(t, remoteEndpointCalled)
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrInternal)
+				require.ErrorIs(t, err, heimdall.ErrInternal)
 				assert.Contains(t, err.Error(), "failed to render payload")
 
 				var identifier interface{ ID() string }
-				require.True(t, errors.As(err, &identifier))
+				require.ErrorAs(t, err, &identifier)
 				assert.Equal(t, "contextualizer1", identifier.ID())
 			},
 		},
@@ -665,11 +664,11 @@ func TestGenericContextualizerExecute(t *testing.T) {
 				assert.False(t, remoteEndpointCalled)
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrCommunication)
+				require.ErrorIs(t, err, heimdall.ErrCommunication)
 				assert.Contains(t, err.Error(), "contextualizer endpoint failed")
 
 				var identifier interface{ ID() string }
-				require.True(t, errors.As(err, &identifier))
+				require.ErrorAs(t, err, &identifier)
 				assert.Equal(t, "contextualizer2", identifier.ID())
 			},
 		},
@@ -691,11 +690,11 @@ func TestGenericContextualizerExecute(t *testing.T) {
 				assert.True(t, remoteEndpointCalled)
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrCommunication)
+				require.ErrorIs(t, err, heimdall.ErrCommunication)
 				assert.Contains(t, err.Error(), "unexpected response code")
 
 				var identifier interface{ ID() string }
-				require.True(t, errors.As(err, &identifier))
+				require.ErrorAs(t, err, &identifier)
 				assert.Equal(t, "contextualizer3", identifier.ID())
 			},
 		},

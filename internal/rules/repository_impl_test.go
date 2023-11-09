@@ -56,7 +56,7 @@ func TestRepositoryAddAndRemoveRulesFromSameRuleSet(t *testing.T) {
 	repo.deleteRuleSet("bar")
 
 	// THEN
-	assert.Len(t, repo.rules, 0)
+	assert.Empty(t, repo.rules)
 }
 
 func TestRepositoryFindRule(t *testing.T) {
@@ -81,7 +81,7 @@ func TestRepositoryFindRule(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrNoRuleFound)
+				require.ErrorIs(t, err, heimdall.ErrNoRuleFound)
 			},
 		},
 		{
@@ -211,7 +211,7 @@ func TestRepositoryAddAndRemoveRulesFromDifferentRuleSets(t *testing.T) {
 	repo.deleteRuleSet("bar")
 
 	// THEN
-	assert.Len(t, repo.rules, 0)
+	assert.Empty(t, repo.rules)
 }
 
 func TestRepositoryRuleSetLifecycleManagement(t *testing.T) {
@@ -228,7 +228,7 @@ func TestRepositoryRuleSetLifecycleManagement(t *testing.T) {
 			assert: func(t *testing.T, repo *repository) {
 				t.Helper()
 
-				assert.Len(t, repo.rules, 0)
+				assert.Empty(t, repo.rules)
 			},
 		},
 		{
