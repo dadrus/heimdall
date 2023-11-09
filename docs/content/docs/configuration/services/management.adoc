@@ -65,7 +65,7 @@ By default, the Management endpoint accepts HTTP requests. Depending on your dep
 ====
 [source, yaml]
 ----
-decision:
+management:
   host: 127.0.0.1
   tls:
     key_store:
