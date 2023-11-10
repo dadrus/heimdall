@@ -21,8 +21,6 @@ data:
         authenticators:
           - id: anonymous_authenticator
             type: anonymous
-          - id: noop_authenticator
-            type: noop
           - id: deny_authenticator
             type: unauthorized
         authorizers:

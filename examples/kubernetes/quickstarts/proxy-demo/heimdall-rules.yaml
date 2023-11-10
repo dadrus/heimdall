@@ -18,7 +18,6 @@ data:
           rewrite:
             scheme: http
         execute:
-          - authenticator: noop_authenticator
           - authorizer: allow_all_requests
           - finalizer: noop_finalizer
 
