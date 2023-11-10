@@ -44,8 +44,6 @@ tracing:
 rules:
   mechanisms:
     authenticators:
-      - id: noop_authenticator
-        type: noop
       - id: anonymous_authenticator
         type: anonymous
       - id: unauthorized_authenticator
