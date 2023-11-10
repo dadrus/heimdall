@@ -19,7 +19,7 @@ require (
 	github.com/go-playground/validator/v10 v10.16.0
 	github.com/gobwas/glob v0.2.3
 	github.com/goccy/go-json v0.10.2
-	github.com/google/cel-go v0.18.1
+	github.com/google/cel-go v0.18.2
 	github.com/google/uuid v1.4.0
 	github.com/gorilla/websocket v1.5.1
 	github.com/grpc-ecosystem/go-grpc-middleware/v2 v2.0.1
@@ -100,6 +100,7 @@ require (
 	github.com/Masterminds/goutils v1.1.1 // indirect
 	github.com/Masterminds/semver/v3 v3.2.0 // indirect
 	github.com/antlr/antlr4/runtime/Go/antlr/v4 v4.0.0-20230512164433-5d1fd1a340c9 // indirect
+	github.com/antlr4-go/antlr/v4 v4.13.0 // indirect
 	github.com/aws/aws-sdk-go v1.44.314 // indirect
 	github.com/aws/aws-sdk-go-v2 v1.20.0 // indirect
 	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.4.11 // indirect
