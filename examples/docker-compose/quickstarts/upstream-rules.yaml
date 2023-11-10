@@ -10,7 +10,7 @@ rules:
       strip_path_prefix: /pub
       add_path_prefix: /v1
   execute:
-    - authenticator: do_nothing
+    - authenticator: anon
     - finalizer: do_nothing
 
 - id: rule2
