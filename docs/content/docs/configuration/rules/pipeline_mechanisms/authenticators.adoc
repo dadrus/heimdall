@@ -15,21 +15,6 @@ Authenticators inspect HTTP requests for presence of authentication objects, lik
 
 The following sections describe the available authenticator types in more detail. Some of these may support or require additional configuration. The corresponding properties are annotated with `mandatory`, respectively `optional` to denote configuration requirement, as well as with `overridable`, `not overriddable` and `partially overridable` to indicate whether the property can be overridden in a rule pipeline.
 
-=== Noop
-
-As the name implies, this authenticator does nothing. It tells heimdall to bypass the authentication. This authenticator type does not create a subject object, which is required by the most others pipeline mechanisms. This authenticator type also doesn't have any configuration options.
-
-To enable the usage of this authenticator, you have to set the `type` property to `noop`.
-
-.Configure Noop authenticator
-====
-[source, yaml]
-----
-id: foo
-type: noop
-----
-====
-
 === Unauthorized
 
 This authenticator rejects all requests as unauthenticated (on HTTP response code level this is then mapped to `401 Unauthorized`, hence the type name). It basically stops the successful execution of the pipeline resulting in the execution of the error handlers. This authenticator type doesn't have any configuration options.
