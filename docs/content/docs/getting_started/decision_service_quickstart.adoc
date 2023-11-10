@@ -77,7 +77,7 @@ rules:
   match:
     url: http://<**>/public
   execute:
-    - authenticator: do_nothing
+    - authenticator: anon
     - finalizer: do_nothing
 
 - id: rule2  # <2>
