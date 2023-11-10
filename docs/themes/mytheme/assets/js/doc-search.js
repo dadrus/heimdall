@@ -47,8 +47,10 @@ class DocSearch extends HTMLElement {
         });
 
         const searchForm = document.getElementById("docs-search");
+        const input = searchForm.querySelector("input[type=search]")
+
         const searchSuggestions = bs.Collapse.getOrCreateInstance(
-            document.getElementById("search-suggestions"));
+             document.getElementById("search-suggestions"), {toggle: false});
 
         searchForm.addEventListener("keydown", (ev) => {
             if (["Esc", "Escape"].includes(ev.key)) {
@@ -57,16 +59,22 @@ class DocSearch extends HTMLElement {
         });
 
         function checkFocus(ev) {
-            if (searchForm.contains(ev.relatedTarget)) {
+            if (searchForm.contains(ev.relatedTarget) && this.hasAttribute("visible")) {
                 return; // Special case for tab key
             }
 
-            if (searchForm.contains(document.activeElement)) {
+            console.log("Input Value", input?.value, input?.value?.length)
+
+            if (searchForm.contains(document.activeElement) && input?.value?.length != 0) {
+                this.setAttribute("visible", true)
                 searchSuggestions.show();
             } else {
+                this.removeAttribute("visible")
                 searchSuggestions.hide();
             }
         }
+
+        input.addEventListener("change", checkFocus)
 
         window.addEventListener("blur", checkFocus, true);
         window.addEventListener("focus", checkFocus, true);
