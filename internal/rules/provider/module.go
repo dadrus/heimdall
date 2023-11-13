@@ -41,13 +41,13 @@ func checkRuleProvider(logger zerolog.Logger, conf *config.Configuration) {
 	var ruleProviderConfigured bool
 
 	switch {
-	case conf.Rules.Providers.FileSystem != nil:
+	case conf.Providers.FileSystem != nil:
 		ruleProviderConfigured = true
-	case conf.Rules.Providers.HTTPEndpoint != nil:
+	case conf.Providers.HTTPEndpoint != nil:
 		ruleProviderConfigured = true
-	case conf.Rules.Providers.CloudBlob != nil:
+	case conf.Providers.CloudBlob != nil:
 		ruleProviderConfigured = true
-	case conf.Rules.Providers.Kubernetes != nil:
+	case conf.Providers.Kubernetes != nil:
 		ruleProviderConfigured = true
 	}
 

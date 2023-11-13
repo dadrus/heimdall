@@ -1,229 +1,228 @@
-rules:
-  mechanisms:
-    authenticators:
-      - id: anonymous_authenticator
-        type: anonymous
-      - id: unauthorized_authenticator
-        type: unauthorized
-      - id: kratos_session_authenticator
-        type: generic
-        config:
-          identity_info_endpoint:
-            url: http://127.0.0.1:4433/sessions/whoami
-            retry:
-              max_delay: 300ms
-              give_up_after: 2s
-          authentication_data_source:
-            - cookie: ory_kratos_session
-          subject:
-            attributes: "@this"
-            id: "identity.id"
-          allow_fallback_on_error: true
-          cache_ttl: 10m
-          session_lifespan:
-            active: active
-            issued_at: issued_at
-            not_before: authenticated_at
-            not_after: expires_at
-            time_format: "2006-01-02T15:04:05.999999Z07"
-            validity_leeway: 10s
-      - id: hydra_authenticator
-        type: oauth2_introspection
-        config:
-          introspection_endpoint:
-            url: http://hydra:4445/oauth2/introspect
-            retry:
-              max_delay: 300ms
-              give_up_after: 2s
-            auth:
-              type: basic_auth
-              config:
-                user: foo
-                password: bar
-          token_source:
-            - header: Authorization
-              schema: Bearer
-          assertions:
-            issuers:
-              - http://127.0.0.1:4444/
-            scopes:
-              - foo
-              - bar
-            audience:
-              - bla
-          subject:
-            attributes: "@this"
-            id: sub
-          allow_fallback_on_error: true
-      - id: jwt_authenticator1
-        type: jwt
-        config:
-          jwks_endpoint:
-            url: http://foo/token
-            method: GET
-            enable_http_cache: true
-          jwt_source:
-            - header: Authorization
-              schema: Bearer
-          assertions:
-            audience:
-              - bla
-            scopes:
-              - foo
-            allowed_algorithms:
-              - RSA
-            issuers:
-              - bla
-          subject:
-            attributes: "@this"
-            id: "identity.id"
-          cache_ttl: 5m
-          allow_fallback_on_error: true
-      - id: jwt_authenticator2
-        type: jwt
-        config:
-          jwks_endpoint: http://bar/token
-          assertions:
-             audience:
-               - bla
-             scopes:
-               - foo
-             allowed_algorithms:
-               - RSA
-             issuers:
-               - bla
-          allow_fallback_on_error: true
-          validate_jwk: true
-      - id: basic_auth_authenticator
-        type: basic_auth
-        config:
-          user_id: foo
-          password: bar
-          allow_fallback_on_error: false
-    authorizers:
-      - id: allow_all_authorizer
-        type: allow
-      - id: deny_all_authorizer
-        type: deny
-      - id: keto_authorizer
-        type: remote
-        config:
-          endpoint:
-            url: http://keto
-            method: POST
-            headers:
-              foo-bar: "{{ .Subject.ID }}"
-          payload: https://bla.bar
-          forward_response_headers_to_upstream:
-            - bla-bar
-          expressions:
-            - expression: "Payload.foo == 'bar'"
-      - id: attributes_based_authorizer_2
-        type: cel
-        config:
-          expressions:
-            - expression: "'admin' in Subject.Attributes.groups"
-    contextualizers:
-      - id: subscription_contextualizer
-        type: generic
-        config:
-          endpoint:
-            url: http://foo.bar
-            method: GET
-            headers:
-              bla: bla
-          payload: http://foo
-          continue_pipeline_on_error: true
-      - id: profile_data_contextualizer
-        type: generic
-        config:
-          endpoint:
-            url: http://profile
-            headers:
-              foo: bar
-    finalizers:
-      - id: jwt
-        type: jwt
-        config:
-          ttl: 5m
-          claims: |
-            {"user": {{ quote .Subject.ID }} }
-      - id: bla
-        type: header
-        config:
-          headers:
-            foo-bar: bla
-      - id: blabla
-        type: cookie
-        config:
-          cookies:
-            foo-bar: '{{ .Subject.ID }}'
-    error_handlers:
-      - id: default
-        type: default
-      - id: authenticate_with_kratos
-        type: redirect
-        config:
-          to: http://127.0.0.1:4433/self-service/login/browser?return_to={{ .Request.URL | urlenc }}
-          when:
-            - error:
-                - type: authentication_error
-                  raised_by: kratos_session_authenticator
-                - type: authorization_error
-              request_headers:
-                Accept:
-                  - '*/*'
-
-  default:
-    methods:
-      - GET
-      - POST
-    execute:
-      - authenticator: anonymous_authenticator
-      - finalizer: jwt
-    on_error:
-      - error_handler: authenticate_with_kratos
-
-  providers:
-    file_system:
-      src: test_rules.yaml
-      watch: true
-
-    http_endpoint:
-      watch_interval: 5m
-      endpoints:
-        - url: http://foo.bar/rules.yaml
-          rule_path_match_prefix: /foo
+mechanisms:
+  authenticators:
+    - id: anonymous_authenticator
+      type: anonymous
+    - id: unauthorized_authenticator
+      type: unauthorized
+    - id: kratos_session_authenticator
+      type: generic
+      config:
+        identity_info_endpoint:
+          url: http://127.0.0.1:4433/sessions/whoami
+          retry:
+            max_delay: 300ms
+            give_up_after: 2s
+        authentication_data_source:
+          - cookie: ory_kratos_session
+        subject:
+          attributes: "@this"
+          id: "identity.id"
+        allow_fallback_on_error: true
+        cache_ttl: 10m
+        session_lifespan:
+          active: active
+          issued_at: issued_at
+          not_before: authenticated_at
+          not_after: expires_at
+          time_format: "2006-01-02T15:04:05.999999Z07"
+          validity_leeway: 10s
+    - id: hydra_authenticator
+      type: oauth2_introspection
+      config:
+        introspection_endpoint:
+          url: http://hydra:4445/oauth2/introspect
+          retry:
+            max_delay: 300ms
+            give_up_after: 2s
+          auth:
+            type: basic_auth
+            config:
+              user: foo
+              password: bar
+        token_source:
+          - header: Authorization
+            schema: Bearer
+        assertions:
+          issuers:
+            - http://127.0.0.1:4444/
+          scopes:
+            - foo
+            - bar
+          audience:
+            - bla
+        subject:
+          attributes: "@this"
+          id: sub
+        allow_fallback_on_error: true
+    - id: jwt_authenticator1
+      type: jwt
+      config:
+        jwks_endpoint:
+          url: http://foo/token
+          method: GET
           enable_http_cache: true
-        - url: http://bar.foo/rules.yaml
+        jwt_source:
+          - header: Authorization
+            schema: Bearer
+        assertions:
+          audience:
+            - bla
+          scopes:
+            - foo
+          allowed_algorithms:
+            - RSA
+          issuers:
+            - bla
+        subject:
+          attributes: "@this"
+          id: "identity.id"
+        cache_ttl: 5m
+        allow_fallback_on_error: true
+    - id: jwt_authenticator2
+      type: jwt
+      config:
+        jwks_endpoint: http://bar/token
+        assertions:
+          audience:
+            - bla
+          scopes:
+            - foo
+          allowed_algorithms:
+            - RSA
+          issuers:
+            - bla
+        allow_fallback_on_error: true
+        validate_jwk: true
+    - id: basic_auth_authenticator
+      type: basic_auth
+      config:
+        user_id: foo
+        password: bar
+        allow_fallback_on_error: false
+  authorizers:
+    - id: allow_all_authorizer
+      type: allow
+    - id: deny_all_authorizer
+      type: deny
+    - id: keto_authorizer
+      type: remote
+      config:
+        endpoint:
+          url: http://keto
+          method: POST
+          headers:
+            foo-bar: "{{ .Subject.ID }}"
+        payload: https://bla.bar
+        forward_response_headers_to_upstream:
+          - bla-bar
+        expressions:
+          - expression: "Payload.foo == 'bar'"
+    - id: attributes_based_authorizer_2
+      type: cel
+      config:
+        expressions:
+          - expression: "'admin' in Subject.Attributes.groups"
+  contextualizers:
+    - id: subscription_contextualizer
+      type: generic
+      config:
+        endpoint:
+          url: http://foo.bar
+          method: GET
           headers:
             bla: bla
-          retry:
-            give_up_after: 5s
-            max_delay: 250ms
-          auth:
-            type: api_key
-            config:
-              name: foo
-              value: bar
-              in: header
+        payload: http://foo
+        continue_pipeline_on_error: true
+    - id: profile_data_contextualizer
+      type: generic
+      config:
+        endpoint:
+          url: http://profile
+          headers:
+            foo: bar
+  finalizers:
+    - id: jwt
+      type: jwt
+      config:
+        ttl: 5m
+        claims: |
+          {"user": {{ quote .Subject.ID }} }
+    - id: bla
+      type: header
+      config:
+        headers:
+          foo-bar: bla
+    - id: blabla
+      type: cookie
+      config:
+        cookies:
+          foo-bar: '{{ .Subject.ID }}'
+  error_handlers:
+    - id: default
+      type: default
+    - id: authenticate_with_kratos
+      type: redirect
+      config:
+        to: http://127.0.0.1:4433/self-service/login/browser?return_to={{ .Request.URL | urlenc }}
+        when:
+          - error:
+              - type: authentication_error
+                raised_by: kratos_session_authenticator
+              - type: authorization_error
+            request_headers:
+              Accept:
+                - '*/*'
 
-    cloud_blob:
-      watch_interval: 2m
-      buckets:
-        - url: gs://my-bucket
-          prefix: service1
-          rule_path_match_prefix: /service1
-        - url: gs://my-bucket
-          prefix: service2
-          rule_path_match_prefix: /service2
-        - url: s3://my-bucket/my-rule-set
+default_rule:
+  methods:
+    - GET
+    - POST
+  execute:
+    - authenticator: anonymous_authenticator
+    - finalizer: jwt
+  on_error:
+    - error_handler: authenticate_with_kratos
 
-    kubernetes:
-      auth_class: foo
-      tls:
-        key_id: foo
-        key_store:
-          path: /path/to/pem.file
-          password: VerySecret!
-        min_version: TLS1.3
+rule_providers:
+  file_system:
+    src: test_rules.yaml
+    watch: true
+
+  http_endpoint:
+    watch_interval: 5m
+    endpoints:
+      - url: http://foo.bar/rules.yaml
+        rule_path_match_prefix: /foo
+        enable_http_cache: true
+      - url: http://bar.foo/rules.yaml
+        headers:
+          bla: bla
+        retry:
+          give_up_after: 5s
+          max_delay: 250ms
+        auth:
+          type: api_key
+          config:
+            name: foo
+            value: bar
+            in: header
+
+  cloud_blob:
+    watch_interval: 2m
+    buckets:
+      - url: gs://my-bucket
+        prefix: service1
+        rule_path_match_prefix: /service1
+      - url: gs://my-bucket
+        prefix: service2
+        rule_path_match_prefix: /service2
+      - url: s3://my-bucket/my-rule-set
+
+  kubernetes:
+    auth_class: foo
+    tls:
+      key_id: foo
+      key_store:
+        path: /path/to/pem.file
+        password: VerySecret!
+      min_version: TLS1.3

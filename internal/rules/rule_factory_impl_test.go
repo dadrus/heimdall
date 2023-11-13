@@ -51,7 +51,7 @@ func TestRuleFactoryNew(t *testing.T) {
 	}{
 		{
 			uc:     "new factory without default rule",
-			config: &config.Configuration{Rules: config.Rules{}},
+			config: &config.Configuration{},
 			assert: func(t *testing.T, err error, ruleFactory *ruleFactory) {
 				t.Helper()
 
@@ -63,13 +63,13 @@ func TestRuleFactoryNew(t *testing.T) {
 		},
 		{
 			uc: "new factory with default rule with unsupported object in execute definition",
-			config: &config.Configuration{Rules: config.Rules{
+			config: &config.Configuration{
 				Default: &config.DefaultRule{
 					Execute: []config.MechanismConfig{
 						{"foo": "bar"},
 					},
 				},
-			}},
+			},
 			assert: func(t *testing.T, err error, _ *ruleFactory) {
 				t.Helper()
 
@@ -80,13 +80,13 @@ func TestRuleFactoryNew(t *testing.T) {
 		},
 		{
 			uc: "new factory with default rule with unsupported object in error handler definition",
-			config: &config.Configuration{Rules: config.Rules{
+			config: &config.Configuration{
 				Default: &config.DefaultRule{
 					ErrorHandler: []config.MechanismConfig{
 						{"foo": "bar"},
 					},
 				},
-			}},
+			},
 			assert: func(t *testing.T, err error, _ *ruleFactory) {
 				t.Helper()
 
@@ -97,14 +97,14 @@ func TestRuleFactoryNew(t *testing.T) {
 		},
 		{
 			uc: "new factory with malformed default rule, where authenticator loading happens after subject handlers",
-			config: &config.Configuration{Rules: config.Rules{
+			config: &config.Configuration{
 				Default: &config.DefaultRule{
 					Execute: []config.MechanismConfig{
 						{"contextualizer": "bar"},
 						{"authenticator": "foo"},
 					},
 				},
-			}},
+			},
 			configureMocks: func(t *testing.T, mhf *mocks3.FactoryMock) {
 				t.Helper()
 
@@ -121,14 +121,14 @@ func TestRuleFactoryNew(t *testing.T) {
 		},
 		{
 			uc: "new factory with malformed default rule, where authenticator loading happens after finalizers",
-			config: &config.Configuration{Rules: config.Rules{
+			config: &config.Configuration{
 				Default: &config.DefaultRule{
 					Execute: []config.MechanismConfig{
 						{"finalizer": "bar"},
 						{"authenticator": "foo"},
 					},
 				},
-			}},
+			},
 			configureMocks: func(t *testing.T, mhf *mocks3.FactoryMock) {
 				t.Helper()
 
@@ -144,11 +144,11 @@ func TestRuleFactoryNew(t *testing.T) {
 		},
 		{
 			uc: "new factory with default rule, where authenticator loading results in an error",
-			config: &config.Configuration{Rules: config.Rules{
+			config: &config.Configuration{
 				Default: &config.DefaultRule{
 					Execute: []config.MechanismConfig{{"authenticator": "foo"}},
 				},
-			}},
+			},
 			configureMocks: func(t *testing.T, mhf *mocks3.FactoryMock) {
 				t.Helper()
 
@@ -163,14 +163,14 @@ func TestRuleFactoryNew(t *testing.T) {
 		},
 		{
 			uc: "new factory with malformed default rule, where authorizer loading happens after finalizers",
-			config: &config.Configuration{Rules: config.Rules{
+			config: &config.Configuration{
 				Default: &config.DefaultRule{
 					Execute: []config.MechanismConfig{
 						{"finalizer": "bar"},
 						{"authorizer": "foo"},
 					},
 				},
-			}},
+			},
 			configureMocks: func(t *testing.T, mhf *mocks3.FactoryMock) {
 				t.Helper()
 
@@ -186,11 +186,11 @@ func TestRuleFactoryNew(t *testing.T) {
 		},
 		{
 			uc: "new factory with default rule, where authorizer loading results in an error",
-			config: &config.Configuration{Rules: config.Rules{
+			config: &config.Configuration{
 				Default: &config.DefaultRule{
 					Execute: []config.MechanismConfig{{"authorizer": "foo"}},
 				},
-			}},
+			},
 			configureMocks: func(t *testing.T, mhf *mocks3.FactoryMock) {
 				t.Helper()
 
@@ -205,14 +205,14 @@ func TestRuleFactoryNew(t *testing.T) {
 		},
 		{
 			uc: "new factory with malformed default rule, where contextualizer loading happens after finalizers",
-			config: &config.Configuration{Rules: config.Rules{
+			config: &config.Configuration{
 				Default: &config.DefaultRule{
 					Execute: []config.MechanismConfig{
 						{"finalizer": "bar"},
 						{"contextualizer": "foo"},
 					},
 				},
-			}},
+			},
 			configureMocks: func(t *testing.T, mhf *mocks3.FactoryMock) {
 				t.Helper()
 
@@ -228,11 +228,11 @@ func TestRuleFactoryNew(t *testing.T) {
 		},
 		{
 			uc: "new factory with default rule, where contextualizer loading results in an error",
-			config: &config.Configuration{Rules: config.Rules{
+			config: &config.Configuration{
 				Default: &config.DefaultRule{
 					Execute: []config.MechanismConfig{{"contextualizer": "foo"}},
 				},
-			}},
+			},
 			configureMocks: func(t *testing.T, mhf *mocks3.FactoryMock) {
 				t.Helper()
 
@@ -248,11 +248,11 @@ func TestRuleFactoryNew(t *testing.T) {
 		},
 		{
 			uc: "new factory with default rule, where finalizer loading results in an error",
-			config: &config.Configuration{Rules: config.Rules{
+			config: &config.Configuration{
 				Default: &config.DefaultRule{
 					Execute: []config.MechanismConfig{{"finalizer": "foo"}},
 				},
-			}},
+			},
 			configureMocks: func(t *testing.T, mhf *mocks3.FactoryMock) {
 				t.Helper()
 
@@ -267,11 +267,11 @@ func TestRuleFactoryNew(t *testing.T) {
 		},
 		{
 			uc: "new factory with default rule, where error_handler loading results in an error",
-			config: &config.Configuration{Rules: config.Rules{
+			config: &config.Configuration{
 				Default: &config.DefaultRule{
 					ErrorHandler: []config.MechanismConfig{{"error_handler": "foo"}},
 				},
-			}},
+			},
 			configureMocks: func(t *testing.T, mhf *mocks3.FactoryMock) {
 				t.Helper()
 
@@ -286,11 +286,11 @@ func TestRuleFactoryNew(t *testing.T) {
 		},
 		{
 			uc: "new factory with empty default rule",
-			config: &config.Configuration{Rules: config.Rules{
+			config: &config.Configuration{
 				Default: &config.DefaultRule{
 					Execute: []config.MechanismConfig{},
 				},
-			}},
+			},
 			assert: func(t *testing.T, err error, _ *ruleFactory) {
 				t.Helper()
 
@@ -301,13 +301,13 @@ func TestRuleFactoryNew(t *testing.T) {
 		},
 		{
 			uc: "new factory with default rule, consisting of authenticator only",
-			config: &config.Configuration{Rules: config.Rules{
+			config: &config.Configuration{
 				Default: &config.DefaultRule{
 					Execute: []config.MechanismConfig{
 						{"authenticator": "bar"},
 					},
 				},
-			}},
+			},
 			configureMocks: func(t *testing.T, mhf *mocks3.FactoryMock) {
 				t.Helper()
 
@@ -323,14 +323,14 @@ func TestRuleFactoryNew(t *testing.T) {
 		},
 		{
 			uc: "new factory with default rule, consisting of authorizer and contextualizer",
-			config: &config.Configuration{Rules: config.Rules{
+			config: &config.Configuration{
 				Default: &config.DefaultRule{
 					Execute: []config.MechanismConfig{
 						{"authenticator": "bar"},
 						{"contextualizer": "baz"},
 					},
 				},
-			}},
+			},
 			configureMocks: func(t *testing.T, mhf *mocks3.FactoryMock) {
 				t.Helper()
 
@@ -347,7 +347,7 @@ func TestRuleFactoryNew(t *testing.T) {
 		},
 		{
 			uc: "new factory with default rule, consisting of authorizer, contextualizer and authorizer",
-			config: &config.Configuration{Rules: config.Rules{
+			config: &config.Configuration{
 				Default: &config.DefaultRule{
 					Execute: []config.MechanismConfig{
 						{"authenticator": "bar"},
@@ -355,7 +355,7 @@ func TestRuleFactoryNew(t *testing.T) {
 						{"authorizer": "zab"},
 					},
 				},
-			}},
+			},
 			configureMocks: func(t *testing.T, mhf *mocks3.FactoryMock) {
 				t.Helper()
 
@@ -373,7 +373,7 @@ func TestRuleFactoryNew(t *testing.T) {
 		},
 		{
 			uc: "new factory with default rule, consisting of authorizer and finalizer with error while expanding methods",
-			config: &config.Configuration{Rules: config.Rules{
+			config: &config.Configuration{
 				Default: &config.DefaultRule{
 					Execute: []config.MechanismConfig{
 						{"authenticator": "bar"},
@@ -381,7 +381,7 @@ func TestRuleFactoryNew(t *testing.T) {
 					},
 					Methods: []string{"FOO", ""},
 				},
-			}},
+			},
 			configureMocks: func(t *testing.T, mhf *mocks3.FactoryMock) {
 				t.Helper()
 
@@ -398,14 +398,14 @@ func TestRuleFactoryNew(t *testing.T) {
 		},
 		{
 			uc: "new factory with default rule, consisting of authorizer and finalizer without methods defined",
-			config: &config.Configuration{Rules: config.Rules{
+			config: &config.Configuration{
 				Default: &config.DefaultRule{
 					Execute: []config.MechanismConfig{
 						{"authenticator": "bar"},
 						{"finalizer": "baz"},
 					},
 				},
-			}},
+			},
 			configureMocks: func(t *testing.T, mhf *mocks3.FactoryMock) {
 				t.Helper()
 
@@ -422,7 +422,7 @@ func TestRuleFactoryNew(t *testing.T) {
 		},
 		{
 			uc: "new factory with default rule, configured with all required elements",
-			config: &config.Configuration{Rules: config.Rules{
+			config: &config.Configuration{
 				Default: &config.DefaultRule{
 					Execute: []config.MechanismConfig{
 						{"authenticator": "bar"},
@@ -430,7 +430,7 @@ func TestRuleFactoryNew(t *testing.T) {
 					},
 					Methods: []string{"FOO"},
 				},
-			}},
+			},
 			configureMocks: func(t *testing.T, mhf *mocks3.FactoryMock) {
 				t.Helper()
 
@@ -458,7 +458,7 @@ func TestRuleFactoryNew(t *testing.T) {
 		},
 		{
 			uc: "new factory with default rule, configured with all possible elements",
-			config: &config.Configuration{Rules: config.Rules{
+			config: &config.Configuration{
 				Default: &config.DefaultRule{
 					Execute: []config.MechanismConfig{
 						{"authenticator": "bar"},
@@ -472,7 +472,7 @@ func TestRuleFactoryNew(t *testing.T) {
 					},
 					Methods: []string{"FOO", "BAR"},
 				},
-			}},
+			},
 			configureMocks: func(t *testing.T, mhf *mocks3.FactoryMock) {
 				t.Helper()
 

@@ -38,7 +38,7 @@ func newPrototypeRepository(
 ) (*prototypeRepository, error) {
 	logger.Debug().Msg("Loading definitions for authenticators")
 
-	authenticatorMap, err := createPipelineObjects(conf.Rules.Prototypes.Authenticators, logger,
+	authenticatorMap, err := createPipelineObjects(conf.Prototypes.Authenticators, logger,
 		authenticators.CreateAuthenticatorPrototype)
 	if err != nil {
 		logger.Error().Err(err).Msg("Failed loading authenticators definitions")
@@ -48,7 +48,7 @@ func newPrototypeRepository(
 
 	logger.Debug().Msg("Loading definitions for authorizers")
 
-	authorizerMap, err := createPipelineObjects(conf.Rules.Prototypes.Authorizers, logger,
+	authorizerMap, err := createPipelineObjects(conf.Prototypes.Authorizers, logger,
 		authorizers.CreateAuthorizerPrototype)
 	if err != nil {
 		logger.Error().Err(err).Msg("Failed loading authorizers definitions")
@@ -58,7 +58,7 @@ func newPrototypeRepository(
 
 	logger.Debug().Msg("Loading definitions for contextualizer")
 
-	contextualizerMap, err := createPipelineObjects(conf.Rules.Prototypes.Contextualizers, logger,
+	contextualizerMap, err := createPipelineObjects(conf.Prototypes.Contextualizers, logger,
 		contextualizers.CreateContextualizerPrototype)
 	if err != nil {
 		logger.Error().Err(err).Msg("Failed loading contextualizer definitions")
@@ -68,7 +68,7 @@ func newPrototypeRepository(
 
 	logger.Debug().Msg("Loading definitions for finalizers")
 
-	finalizerMap, err := createPipelineObjects(conf.Rules.Prototypes.Finalizers, logger,
+	finalizerMap, err := createPipelineObjects(conf.Prototypes.Finalizers, logger,
 		finalizers.CreatePrototype)
 	if err != nil {
 		logger.Error().Err(err).Msg("Failed loading finalizer definitions")
@@ -78,7 +78,7 @@ func newPrototypeRepository(
 
 	logger.Debug().Msg("Loading definitions for error handler")
 
-	ehMap, err := createPipelineObjects(conf.Rules.Prototypes.ErrorHandlers, logger,
+	ehMap, err := createPipelineObjects(conf.Prototypes.ErrorHandlers, logger,
 		errorhandlers.CreateErrorHandlerPrototype)
 	if err != nil {
 		logger.Error().Err(err).Msg("Failed loading error handler definitions")

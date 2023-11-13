@@ -134,9 +134,7 @@ buckets:
 			require.NoError(t, err)
 
 			conf := &config.Configuration{
-				Rules: config.Rules{
-					Providers: config.RuleProviders{CloudBlob: providerConf},
-				},
+				Providers: config.RuleProviders{CloudBlob: providerConf},
 			}
 
 			// WHEN
@@ -518,9 +516,7 @@ rules:
 			setupProcessor(t, mock)
 
 			conf := &config.Configuration{
-				Rules: config.Rules{
-					Providers: config.RuleProviders{CloudBlob: providerConf},
-				},
+				Providers: config.RuleProviders{CloudBlob: providerConf},
 			}
 
 			logs := &strings.Builder{}

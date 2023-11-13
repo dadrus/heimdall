@@ -137,7 +137,7 @@ func TestNewProvider(t *testing.T) {
 	} {
 		t.Run(tc.uc, func(t *testing.T) {
 			// GIVEN
-			conf := &config.Configuration{Rules: config.Rules{Providers: config.RuleProviders{FileSystem: tc.conf}}}
+			conf := &config.Configuration{Providers: config.RuleProviders{FileSystem: tc.conf}}
 
 			prov, err := NewProvider(conf, nil, log.Logger)
 

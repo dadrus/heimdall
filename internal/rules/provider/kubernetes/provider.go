@@ -74,7 +74,7 @@ func newProvider(
 	processor rule.SetProcessor,
 	factory rule.Factory,
 ) (*provider, error) {
-	rawConf := conf.Rules.Providers.Kubernetes
+	rawConf := conf.Providers.Kubernetes
 
 	if rawConf == nil {
 		return &provider{}, nil
