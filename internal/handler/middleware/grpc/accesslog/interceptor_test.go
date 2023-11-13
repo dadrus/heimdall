@@ -248,10 +248,8 @@ func TestAccessLogInterceptorForKnownService(t *testing.T) {
 			tc.configureMock(t, handler)
 
 			srv := grpc.NewServer(
-				grpc.ChainUnaryInterceptor(
-					otelgrpc.UnaryServerInterceptor(),
-					New(logger).Unary(),
-				),
+				grpc.StatsHandler(otelgrpc.NewServerHandler()),
+				grpc.ChainUnaryInterceptor(New(logger).Unary()),
 			)
 			envoy_auth.RegisterAuthorizationServer(srv, handler)
 
@@ -317,10 +315,8 @@ func TestAccessLogInterceptorForUnknownService(t *testing.T) {
 		grpc.UnknownServiceHandler(func(srv interface{}, stream grpc.ServerStream) error {
 			return status.Error(codes.Unknown, "unknown service or method")
 		}),
-		grpc.ChainStreamInterceptor(
-			otelgrpc.StreamServerInterceptor(),
-			New(logger).Stream(),
-		),
+		grpc.StatsHandler(otelgrpc.NewServerHandler()),
+		grpc.ChainStreamInterceptor(New(logger).Stream()),
 	)
 	envoy_auth.RegisterAuthorizationServer(srv, handler)
 
