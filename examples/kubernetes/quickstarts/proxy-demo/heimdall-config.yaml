@@ -31,8 +31,6 @@ data:
         finalizers:
           - id: create_jwt
             type: jwt
-          - id: noop_finalizer
-            type: noop
         error_handlers:
           - id: redirect
             type: redirect
@@ -48,7 +46,6 @@ data:
         execute:
           - authenticator: anonymous_authenticator
           - authorizer: deny_all_requests
-          - finalizer: create_jwt
         on_error:
           - error_handler: redirect
 
