@@ -29,32 +29,31 @@ Heimdall can be configured via environment variables, as well as using a configu
 log:
   level: info  # <1>
 
-rules:
-  mechanisms:
-    authenticators:
-    - id: anonymous_authenticator  # <2>
-      type: anonymous
-    authorizers:
-    - id: deny_all_requests  # <3>
-      type: deny
-    - id: allow_all_requests  # <4>
-      type: allow
-    finalizers:
-    - id: create_jwt  # <5>
-      type: jwt
+mechanisms:
+  authenticators:
+  - id: anonymous_authenticator  # <2>
+    type: anonymous
+  authorizers:
+  - id: deny_all_requests  # <3>
+    type: deny
+  - id: allow_all_requests  # <4>
+    type: allow
+  finalizers:
+  - id: create_jwt  # <5>
+    type: jwt
 
-  default:  # <6>
-    methods:
-      - GET
-      - POST
-    execute:
-      - authenticator: anonymous_authenticator
-      - authorizer: deny_all_requests
+default_rule:  # <6>
+  methods:
+  - GET
+  - POST
+  execute:
+  - authenticator: anonymous_authenticator
+  - authorizer: deny_all_requests
 
-  providers:
-    file_system:  # <7>
-      src: /heimdall/conf/rule.yaml
-      watch: true
+rule_providers:
+  file_system:  # <7>
+    src: /heimdall/conf/rule.yaml
+    watch: true
 ----
 <1> Here we are setting the log level to `info` to be able to see any log output. By default, heimdall logs on `error` log level.
 <2> Configures the `anonymous` authenticator.

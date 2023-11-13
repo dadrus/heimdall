@@ -33,28 +33,27 @@ serve:
     trusted_proxies:  # <2>
       - 0.0.0.0/0
 
-rules:
-  mechanisms:
-    authenticators:  # <3>
-      - id: anon
-        type: anonymous
-      - id: reject_requests
-        type: unauthorized
-    finalizers:  # <4>
-      - id: create_jwt
-        type: jwt
+mechanisms:
+  authenticators:  # <3>
+    - id: anon
+      type: anonymous
+    - id: reject_requests
+      type: unauthorized
+  finalizers:  # <4>
+    - id: create_jwt
+      type: jwt
 
-  default:  # <5>
-    methods:
-      - GET
-      - POST
-    execute:
-      - authenticator: reject_requests
+default_rule:  # <5>
+  methods:
+    - GET
+    - POST
+  execute:
+    - authenticator: reject_requests
 
-  providers:
-    file_system:  # <6>
-      src: /heimdall/conf/rules.yaml
-      watch: true
+rule_providers:
+  file_system:  # <6>
+    src: /heimdall/conf/rules.yaml
+    watch: true
 ----
 <1> Here we are setting the log level to `info` to be able to see any log output. By default, heimdall logs on `error` log level.
 <2> Configures heimdall's decision service to trust requests from all sources. This allows usage of `X-Forwarded-*` headers. This configuration is only required if you want to try out the docker compose example from below.

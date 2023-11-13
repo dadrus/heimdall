@@ -9,7 +9,7 @@ menu:
     parent: "Rules"
 ---
 
-Providers define the sources to load the link:{{< relref "configuration.adoc#_rule_set" >}}[Rule Sets] from. These make heimdall's behavior dynamic. All providers, you want to enable for a heimdall instance must be configured within the `providers` section of heimdall's `rules` configuration.
+Providers define the sources to load the link:{{< relref "configuration.adoc#_rule_set" >}}[Rule Sets] from. These make heimdall's behavior dynamic. All providers, you want to enable for a heimdall instance must be configured within the `rule_providers` section of heimdall's configuration.
 
 Supported providers, including the corresponding configuration options are described below
 
