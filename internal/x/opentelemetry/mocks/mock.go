@@ -24,16 +24,18 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/bridge/opentracing/migration"
 	"go.opentelemetry.io/otel/codes"
-	semconv "go.opentelemetry.io/otel/semconv/v1.18.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 	"go.opentelemetry.io/otel/trace"
+	"go.opentelemetry.io/otel/trace/embedded"
+	"go.opentelemetry.io/otel/trace/noop"
 )
 
-//nolint:gochecknoglobals
+//nolint:revive // ignoring missing comments for unexported global variables in an internal package.
 var (
-	StatusCodeKey    = attribute.Key("status.code")
-	StatusMessageKey = attribute.Key("status.message")
-	ErrorKey         = attribute.Key("error")
-	NameKey          = attribute.Key("name")
+	StatusCodeKey    = attribute.Key("status.code")    //nolint:gochecknoglobals
+	StatusMessageKey = attribute.Key("status.message") //nolint:gochecknoglobals
+	ErrorKey         = attribute.Key("error")          //nolint:gochecknoglobals
+	NameKey          = attribute.Key("name")           //nolint:gochecknoglobals
 )
 
 type MockContextKeyValue struct {
@@ -42,6 +44,8 @@ type MockContextKeyValue struct {
 }
 
 type MockTracerProvider struct {
+	embedded.TracerProvider
+
 	tracer *MockTracer
 }
 
@@ -50,10 +54,13 @@ func (m *MockTracerProvider) Tracer(_ string, _ ...trace.TracerOption) trace.Tra
 }
 
 type MockTracer struct {
+	embedded.Tracer
+
 	FinishedSpans         []*MockSpan
 	SpareTraceIDs         []trace.TraceID
 	SpareSpanIDs          []trace.SpanID
 	SpareContextKeyValues []MockContextKeyValue
+	TraceFlags            trace.TraceFlags
 
 	randLock sync.Mutex
 	rand     *rand.Rand
@@ -79,7 +86,7 @@ func NewMockTraceProvider() *MockTracerProvider {
 	return &MockTracerProvider{tracer: NewMockTracer()}
 }
 
-func (t *MockTracer) Start(ctx context.Context, name string, opts ...trace.SpanStartOption) (
+func (t *MockTracer) Start(ctx context.Context, _ string, opts ...trace.SpanStartOption) (
 	context.Context, trace.Span,
 ) {
 	config := trace.NewSpanStartConfig(opts...)
@@ -92,13 +99,13 @@ func (t *MockTracer) Start(ctx context.Context, name string, opts ...trace.SpanS
 	spanContext := trace.NewSpanContext(trace.SpanContextConfig{
 		TraceID:    t.getTraceID(ctx, &config),
 		SpanID:     t.getSpanID(),
-		TraceFlags: 0,
+		TraceFlags: t.TraceFlags,
 	})
+
 	span := &MockSpan{
 		mockTracer:     t,
 		officialTracer: t,
 		spanContext:    spanContext,
-		Name:           name,
 		Attributes:     config.Attributes(),
 		StartTime:      startTime,
 		EndTime:        time.Time{},
@@ -169,8 +176,8 @@ func (t *MockTracer) getParentSpanContext(ctx context.Context, config *trace.Spa
 func (t *MockTracer) getSpanID() trace.SpanID {
 	if len(t.SpareSpanIDs) > 0 {
 		spanID := t.SpareSpanIDs[0]
-
 		t.SpareSpanIDs = t.SpareSpanIDs[1:]
+
 		if len(t.SpareSpanIDs) == 0 {
 			t.SpareSpanIDs = nil
 		}
@@ -216,13 +223,14 @@ type MockEvent struct {
 }
 
 type MockSpan struct {
+	embedded.Span
+
 	mockTracer     *MockTracer
 	officialTracer trace.Tracer
 	spanContext    trace.SpanContext
 	SpanKind       trace.SpanKind
 	recording      bool
 
-	Name         string
 	Attributes   []attribute.KeyValue
 	StartTime    time.Time
 	EndTime      time.Time
@@ -310,9 +318,10 @@ func (s *MockSpan) RecordError(err error, opts ...trace.EventOption) {
 
 	s.SetStatus(codes.Error, "")
 	opts = append(opts, trace.WithAttributes(
-		semconv.ExceptionTypeKey.String(reflect.TypeOf(err).String()),
-		semconv.ExceptionMessageKey.String(err.Error()),
+		semconv.ExceptionType(reflect.TypeOf(err).String()),
+		semconv.ExceptionMessage(err.Error()),
 	))
+
 	s.AddEvent(semconv.ExceptionEventName, opts...)
 }
 
@@ -322,7 +331,6 @@ func (s *MockSpan) Tracer() trace.Tracer {
 
 func (s *MockSpan) AddEvent(name string, o ...trace.EventOption) {
 	c := trace.NewEventConfig(o...)
-
 	s.Events = append(s.Events, MockEvent{
 		Timestamp:  c.Timestamp(),
 		Name:       name,
@@ -334,6 +342,4 @@ func (s *MockSpan) OverrideTracer(tracer trace.Tracer) {
 	s.officialTracer = tracer
 }
 
-func (s *MockSpan) TracerProvider() trace.TracerProvider {
-	return &MockTracerProvider{tracer: s.mockTracer}
-}
+func (s *MockSpan) TracerProvider() trace.TracerProvider { return noop.NewTracerProvider() }
