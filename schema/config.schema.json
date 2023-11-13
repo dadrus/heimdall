@@ -866,20 +866,6 @@
         }
       }
     },
-    "authenticatorNoop": {
-      "description": "Noop Authenticator",
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "type": {
-          "const": "noop"
-        },
-        "id": {
-          "description": "The unique id of the authenticator to be used in the rule definition",
-          "type": "string"
-        }
-      }
-    },
     "authenticatorUnauthorized": {
       "description": "Unauthorized Authenticator",
       "type": "object",
@@ -1804,9 +1790,6 @@
             "anyOf": [
               {
                 "$ref": "#/definitions/authenticatorAnonymous"
-              },
-              {
-                "$ref": "#/definitions/authenticatorNoop"
               },
               {
                 "$ref": "#/definitions/authenticatorUnauthorized"
