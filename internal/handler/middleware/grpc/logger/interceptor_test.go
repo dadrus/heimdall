@@ -132,10 +132,8 @@ func TestLoggerInterceptor(t *testing.T) {
 				Return(nil, fmt.Errorf("test error"))
 
 			srv := grpc.NewServer(
-				grpc.ChainUnaryInterceptor(
-					otelgrpc.UnaryServerInterceptor(),
-					New(logger),
-				),
+				grpc.StatsHandler(otelgrpc.NewServerHandler()),
+				grpc.ChainUnaryInterceptor(New(logger)),
 			)
 			envoy_auth.RegisterAuthorizationServer(srv, handler)
 
