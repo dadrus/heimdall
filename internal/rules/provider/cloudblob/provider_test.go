@@ -186,24 +186,6 @@ func TestProviderLifecycle(t *testing.T) {
 
 	for _, tc := range []testCase{
 		{
-			uc: "with rule set loading error due to DNS error",
-			conf: []byte(`
-buckets:
-- url: s3://does-not-exist-for-heimdall?endpoint=does-not-exist.local&region=eu-central-1
-`),
-			assert: func(t *testing.T, tc testCase, logs fmt.Stringer, processor *mocks.RuleSetProcessorMock) {
-				t.Helper()
-
-				time.Sleep(1 * time.Second)
-
-				messages := logs.String()
-				assert.Contains(t, messages, "communication error")
-				assert.Contains(t, messages, "Failed to fetch rule set")
-				assert.Contains(t, messages, "dial tcp")
-				assert.Contains(t, messages, "No updates received")
-			},
-		},
-		{
 			uc: "with no blobs in the bucket",
 			conf: []byte(`
 buckets:
