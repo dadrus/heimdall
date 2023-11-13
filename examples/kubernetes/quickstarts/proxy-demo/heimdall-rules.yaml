@@ -19,7 +19,6 @@ data:
             scheme: http
         execute:
           - authorizer: allow_all_requests
-          - finalizer: noop_finalizer
 
       - id: anonymous-access
         match:
@@ -30,6 +29,7 @@ data:
             scheme: http
         execute:
           - authorizer: allow_all_requests
+          - finalizer: create_jwt
 
       - id: redirect
         match:

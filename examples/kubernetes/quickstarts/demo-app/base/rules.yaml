@@ -14,7 +14,6 @@ spec:
         host: echo-app.quickstarts.svc.cluster.local:8080
       execute:
         - authorizer: allow_all_requests
-        - finalizer: noop_finalizer
     - id: anonymous-access
       match:
         url: <**>://<**>/anon/<**>
@@ -22,6 +21,7 @@ spec:
         host: echo-app.quickstarts.svc.cluster.local:8080
       execute:
         - authorizer: allow_all_requests
+        - finalizer: create_jwt
     - id: redirect
       match:
         url: <**>://<**>/redir/<**>

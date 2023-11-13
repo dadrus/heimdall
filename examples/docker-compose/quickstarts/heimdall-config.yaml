@@ -14,8 +14,6 @@ rules:
       - id: reject_requests
         type: unauthorized
     finalizers:
-      - id: do_nothing
-        type: noop
       - id: create_jwt
         type: jwt
     error_handlers:
@@ -39,7 +37,6 @@ rules:
       - POST
     execute:
       - authenticator: reject_requests
-      - finalizer: create_jwt
     on_error:
       - error_handler: redirect_to_login
 
