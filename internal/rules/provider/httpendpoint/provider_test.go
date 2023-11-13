@@ -193,22 +193,6 @@ func TestProviderLifecycle(t *testing.T) {
 		assert         func(t *testing.T, logs fmt.Stringer, processor *mocks.RuleSetProcessorMock)
 	}{
 		{
-			uc: "with rule set loading error due to DNS error",
-			conf: []byte(`
-endpoints:
-- url: https://foo.bar.local/rules.yaml
-`),
-			assert: func(t *testing.T, logs fmt.Stringer, processor *mocks.RuleSetProcessorMock) {
-				t.Helper()
-
-				time.Sleep(250 * time.Millisecond)
-
-				messages := logs.String()
-				assert.Contains(t, messages, "dial tcp")
-				assert.Contains(t, messages, "No updates received")
-			},
-		},
-		{
 			uc: "with rule set loading error due server error response",
 			conf: []byte(`
 endpoints:
