@@ -63,8 +63,6 @@ data:
         authenticators:
         - id: anonymous_authenticator
           type: anonymous
-        - id: noop_authenticator
-          type: noop
         authorizers:
         - id: deny_all_requests
           type: deny

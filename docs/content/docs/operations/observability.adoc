@@ -29,7 +29,6 @@ If you configure heimdall to log in `text` format, you can expect output similar
 2022-08-03T12:51:48+02:00 DBG Creating rule set event queue.
 2022-08-03T12:51:48+02:00 INF Loading pipeline definitions
 2022-08-03T12:51:48+02:00 DBG Loading definitions for authenticators
-2022-08-03T12:51:48+02:00 DBG Loading pipeline definition id=noop_authenticator type=noop
 2022-08-03T12:51:48+02:00 DBG Loading pipeline definition id=anonymous_authenticator type=anonymous
 ...
 2022-08-03T12:51:52+02:00 DBG Decision endpoint called
@@ -56,9 +55,6 @@ Otherwise, if you configure it to use `gelf` (see https://docs.graylog.org/v1/do
  "level": 6, "short_message": "Loading pipeline definitions"}
 {"_level_name": "DEBUG", "version": "1.1", "host": "unknown", "timestamp": 1659523288,
  "level": 7,"short_message": "Loading definitions for authenticators"}
-{"_level_name": "DEBUG", "version": "1.1", "host": "unknown", "id": "noop_authenticator",
- "type": "noop","timestamp": 1659523288,
- "level": 7, "short_message": "Loading pipeline definition"}
 {"_level_name": "DEBUG", "version": "1.1", "host": "unknown", "id": "anonymous_authenticator",
  "type": "anonymous","timestamp": 1659523288,
  "level": 7, "short_message": "Loading pipeline definition"}

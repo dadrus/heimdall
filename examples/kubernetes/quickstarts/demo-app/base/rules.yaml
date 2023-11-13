@@ -13,7 +13,6 @@ spec:
       forward_to: # only required for proxy operation mode
         host: echo-app.quickstarts.svc.cluster.local:8080
       execute:
-        - authenticator: noop_authenticator
         - authorizer: allow_all_requests
         - finalizer: noop_finalizer
     - id: anonymous-access

@@ -34,8 +34,6 @@ rules:
     authenticators:
     - id: anonymous_authenticator  # <2>
       type: anonymous
-    - id: noop
-      type: noop
     authorizers:
     - id: deny_all_requests  # <3>
       type: deny
@@ -91,7 +89,6 @@ rules:
   forward_to:
     host: upstream
   execute:
-    - authenticator: noop
     - authorizer: allow_all_requests
     - finalizer: noop
 ----

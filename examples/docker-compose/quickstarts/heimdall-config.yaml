@@ -9,8 +9,6 @@ serve:
 rules:
   mechanisms:
     authenticators:
-      - id: do_nothing
-        type: noop
       - id: anon
         type: anonymous
       - id: reject_requests
