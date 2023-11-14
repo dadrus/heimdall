@@ -84,6 +84,8 @@ func (u *cookieFinalizer) Execute(ctx heimdall.Context, sub *subject.Subject) er
 				CausedBy(err)
 		}
 
+		logger.Debug().Str("_value", value).Msg("Rendered template")
+
 		ctx.AddCookieForUpstream(name, value)
 	}
 

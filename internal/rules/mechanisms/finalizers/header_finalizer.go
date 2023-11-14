@@ -84,6 +84,8 @@ func (u *headerFinalizer) Execute(ctx heimdall.Context, sub *subject.Subject) er
 				CausedBy(err)
 		}
 
+		logger.Debug().Str("_value", value).Msg("Rendered template")
+
 		ctx.AddHeaderForUpstream(name, value)
 	}
 
