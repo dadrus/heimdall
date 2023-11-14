@@ -8,6 +8,7 @@ menu:
     parent: "Integration Guides"
   main:
     parent: guides
+description: Explains how to integrate heimdall with Contour, an open source, high performance ingress controller for Kubernetes.
 ---
 
 https://projectcontour.io/[Contour] is an open source, high performance ingress controller for Kubernetes, implementing a control plane for https://www.envoyproxy.io/[Envoy] edge and a service proxy.

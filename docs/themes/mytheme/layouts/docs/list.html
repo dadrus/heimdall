@@ -37,7 +37,22 @@
     <h1>{{ .Title }}</h1>
     <div>
       <linkable-headline-area>
-        {{ .Content }}
+        <div class="row">
+          {{ $currentSection := .CurrentSection }}
+          {{ range where .Site.RegularPages.ByTitle "Section" .Section }}
+          {{ if in (.RelPermalink | string) $currentSection.RelPermalink }}
+          <div class="col-sm-1 col-md-3 col-xxl-4">
+            <div class="card my-3">
+              <div class="card-body">
+                <h5 class="card-title">{{ .Params.title | title }}</h5>
+                <p class="card-text">{{ .Description }}</p>
+                <a class="stretched-link" href="{{ .RelPermalink }}">Read &rarr;</a>
+              </div>
+            </div>
+          </div>
+          {{ end }}
+          {{ end }}
+        </div>
       </linkable-headline-area>
     </div>
     {{ partial "last-updated-info.html" . }}

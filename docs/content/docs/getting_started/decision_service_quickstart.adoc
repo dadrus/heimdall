@@ -9,6 +9,7 @@ menu:
     weight: 20
   main:
     parent: get_started
+description: Describes a very simple use case in which you'll see heimdall's Decision service in action.
 ---
 
 This document describes a very simple use case in which you'll see heimdall's Decision service in action.

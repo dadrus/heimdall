@@ -8,9 +8,10 @@ menu:
     parent: "Integration Guides"
   main:
     parent: guides
+description: Explains how to integrate heimdall with Emissary-Ingress, an Envoy-powered open source, high performance ingress controller and API Gateway for Kubernetes.
 ---
 
-https://www.getambassador.io/products/api-gateway[Emissary-Ingress] is an Envoy-powered open source,high performance ingress controller and API Gateway for Kubernetes from https://www.getambassador.io/[Ambassador Labs].
+https://www.getambassador.io/products/api-gateway[Emissary-Ingress] is an Envoy-powered open source, high performance ingress controller and API Gateway for Kubernetes from https://www.getambassador.io/[Ambassador Labs].
 
 When operating heimdall in link:{{< relref "/docs/getting_started/concepts.adoc#_decision_mode" >}}[Decision Operation Mode], integration with Emissary-Ingress can be achieved by creating an https://www.getambassador.io/docs/emissary/latest/topics/running/services/auth-service[`AuthService`] resource for heimdall. If you're using the commercial https://www.getambassador.io/docs/edge-stack[Ambassador Edge Stack], you have to use the https://www.getambassador.io/docs/edge-stack/latest/topics/using/filters/external[External Filter] instead, which spec is more or less identical to the `AuthService` resource referenced above. In both cases the  underlying Envoy proxy will be configured to delegate authentication and authorization of all incoming requests for all routes to heimdall. There is also an option to disable that forwarding on a route level if required by configuring a `Mapping` resource and setting `bypass_auth` to `true`. This will tell Emissary-ingress to allow all requests for that Mapping through without interacting with the external auth service.
 
