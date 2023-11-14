@@ -47,8 +47,6 @@ class DocSearch extends HTMLElement {
         });
 
         const searchForm = document.getElementById("docs-search");
-        const input = searchForm.querySelector("input[type=search]")
-
         const searchSuggestions = bs.Collapse.getOrCreateInstance(
              document.getElementById("search-suggestions"), {toggle: false});
 
@@ -59,22 +57,16 @@ class DocSearch extends HTMLElement {
         });
 
         function checkFocus(ev) {
-            if (searchForm.contains(ev.relatedTarget) && this.hasAttribute("visible")) {
+            if (searchForm.contains(ev.relatedTarget)) {
                 return; // Special case for tab key
             }
 
-            console.log("Input Value", input?.value, input?.value?.length)
-
-            if (searchForm.contains(document.activeElement) && input?.value?.length != 0) {
-                this.setAttribute("visible", true)
+            if (searchForm.contains(document.activeElement)) {
                 searchSuggestions.show();
             } else {
-                this.removeAttribute("visible")
                 searchSuggestions.hide();
             }
         }
-
-        input.addEventListener("change", checkFocus)
 
         window.addEventListener("blur", checkFocus, true);
         window.addEventListener("focus", checkFocus, true);
@@ -97,10 +89,6 @@ class DocSearch extends HTMLElement {
     resultTemplate(post) {
         const searchValue = document.getElementById("search").value
         const pathPrefix = this.pathPrefix
-
-        if (searchValue.length < 3) {
-            return ""
-        }
 
         const parser = new DOMParser()
         const doc = parser.parseFromString(post.html_content, 'text/html')
