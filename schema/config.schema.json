@@ -2112,69 +2112,62 @@
         }
       }
     },
-    "rules": {
-      "description": "Rules to use",
+    "mechanisms": {
+      "$ref": "#/definitions/mechanismDefinitions"
+    },
+    "providers": {
+      "description": "Where to load rules from",
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "mechanisms": {
-          "$ref": "#/definitions/mechanismDefinitions"
+        "file_system": {
+          "$ref": "#/definitions/fileSystemProvider"
         },
-        "providers": {
-          "description": "Where to load rules from",
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "file_system": {
-              "$ref": "#/definitions/fileSystemProvider"
-            },
-            "http_endpoint": {
-              "$ref": "#/definitions/httpEndpointProvider"
-            },
-            "cloud_blob": {
-              "$ref": "#/definitions/cloudBlobProvider"
-            },
-            "kubernetes": {
-              "$ref": "#/definitions/kubernetesProvider"
-            }
+        "http_endpoint": {
+          "$ref": "#/definitions/httpEndpointProvider"
+        },
+        "cloud_blob": {
+          "$ref": "#/definitions/cloudBlobProvider"
+        },
+        "kubernetes": {
+          "$ref": "#/definitions/kubernetesProvider"
+        }
+      }
+    },
+    "default_rule": {
+      "description": "Defines the defaults, respectively fallbacks for any rule.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "methods": {
+          "description": "Allowed HTTP methods for any endpoint",
+          "type": "array",
+          "additionalItems": false,
+          "uniqueItems": true,
+          "items": {
+            "type": "string"
+          },
+          "examples": [
+            "GET",
+            "POST"
+          ]
+        },
+        "execute": {
+          "description": "The mechanisms to execute (authenticators, authorizers, etc)",
+          "type": "array",
+          "additionalItems": false,
+          "uniqueItems": true,
+          "items": {
+            "type": "object"
           }
         },
-        "default": {
-          "description": "Defines the defaults, respectively fallbacks for any rule.",
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "methods": {
-              "description": "Allowed HTTP methods for any endpoint",
-              "type": "array",
-              "additionalItems": false,
-              "uniqueItems": true,
-              "items": {
-                "type": "string"
-              },
-              "examples": [
-                "GET",
-                "POST"
-              ]
-            },
-            "execute": {
-              "description": "The mechanisms to execute (authenticators, authorizers, etc)",
-              "type": "array",
-              "additionalItems": false,
-              "uniqueItems": true,
-              "items": {
-                "type": "object"
-              }
-            },
-            "on_error": {
-              "description": "error handler mechanisms",
-              "type": "array",
-              "additionalItems": false,
-              "uniqueItems": true,
-              "items": {
-                "type": "object"
-              }
-            }
+        "on_error": {
+          "description": "error handler mechanisms",
+          "type": "array",
+          "additionalItems": false,
+          "uniqueItems": true,
+          "items": {
+            "type": "object"
           }
         }
       }

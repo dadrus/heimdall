@@ -13,7 +13,7 @@ Heimdall lets you not only define upstream service specific rules, it does also 
 
 NOTE: The default rule does not support all the properties, which can be configured in a specific link:{{< relref "configuration.adoc" >}}[rule]. E.g. it can not be used to forward requests to an upstream service, heimdall is protecting. So, if you operate heimdall in the reverse proxy mode, the default rule should be configured to reject requests. Otherwise, heimdall will respond with an error.
 
-The configuration of the default rule can be done by making use of the `default` property and configuring the following options.
+The configuration of the default rule can be done by making use of the `default_rule` property and configuring the following options.
 
 * *`methods`*: _string array_ (optional)
 +
@@ -31,18 +31,17 @@ Which error handler mechanisms to use if any of the mechanisms, defined in the `
 ====
 [source, yaml]
 ----
-rules:
-  default:
-    methods:
-      - GET
-      - PATCH
-    execute:
-      - authenticator: session_cookie_from_kratos_authn
-      - authenticator: oauth2_introspect_token_from_keycloak_authn
-      - authorizer: deny_all_requests_authz
-      - finalizer: create_jwt
-    on_error:
-      - error_handler: authenticate_with_kratos_eh
+default_rule:
+  methods:
+    - GET
+    - PATCH
+  execute:
+    - authenticator: session_cookie_from_kratos_authn
+    - authenticator: oauth2_introspect_token_from_keycloak_authn
+    - authorizer: deny_all_requests_authz
+    - finalizer: create_jwt
+  on_error:
+    - error_handler: authenticate_with_kratos_eh
 ----
 
 This example defines a default rule, which allows HTTP `GET` and `PATCH` requests on any URL (will respond with `405 Method Not Allowed` for any other HTTP method used by a client). The regular pipeline consists of two authenticators, with `session_cookie_from_kratos_authn` being the first and `oauth2_introspect_token_from_keycloak_authn` being the fallback (if the first one fails), a `deny_all_requests_authz` authorizer and the `create_jwt` finalizer. The error pipeline is configured to execute only the `authenticate_with_kratos_eh` error handler.

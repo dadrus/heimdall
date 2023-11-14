@@ -58,31 +58,30 @@ data:
       {{- toYaml . | nindent 6 }}
     {{- end }}
 
-    rules:
-      mechanisms:
-        authenticators:
-        - id: anonymous_authenticator
-          type: anonymous
-        authorizers:
-        - id: deny_all_requests
-          type: deny
-        - id: allow_all_requests
-          type: allow
-        finalizers:
-        - id: create_jwt
-          type: jwt
-        - id: noop_finalizer
-          type: noop
+    mechanisms:
+      authenticators:
+      - id: anonymous_authenticator
+        type: anonymous
+      authorizers:
+      - id: deny_all_requests
+        type: deny
+      - id: allow_all_requests
+        type: allow
+      finalizers:
+      - id: create_jwt
+        type: jwt
+      - id: noop_finalizer
+        type: noop
 
-      default:
-        methods:
-          - GET
-          - POST
-        execute:
-          - authenticator: anonymous_authenticator
-          - authorizer: deny_all_requests
-          - finalizer: create_jwt
+    default_rule:
+      methods:
+        - GET
+        - POST
+      execute:
+        - authenticator: anonymous_authenticator
+        - authorizer: deny_all_requests
+        - finalizer: create_jwt
 
-      providers:
-        kubernetes: {}
+    providers:
+      kubernetes: {}
     {{- end }}

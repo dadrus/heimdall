@@ -102,9 +102,7 @@ func TestNewProvider(t *testing.T) {
 			require.NoError(t, err)
 
 			conf := &config.Configuration{
-				Rules: config.Rules{
-					Providers: config.RuleProviders{Kubernetes: providerConf},
-				},
+				Providers: config.RuleProviders{Kubernetes: providerConf},
 			}
 			k8sCF := func() (*rest.Config, error) { return &rest.Config{Host: "http://localhost:80001"}, nil }
 
@@ -936,9 +934,7 @@ func TestProviderLifecycle(t *testing.T) {
 			}
 
 			conf := &config.Configuration{
-				Rules: config.Rules{
-					Providers: config.RuleProviders{Kubernetes: providerConf},
-				},
+				Providers: config.RuleProviders{Kubernetes: providerConf},
 			}
 
 			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

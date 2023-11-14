@@ -150,9 +150,7 @@ endpoints:
 			require.NoError(t, err)
 
 			conf := &config.Configuration{
-				Rules: config.Rules{
-					Providers: config.RuleProviders{HTTPEndpoint: providerConf},
-				},
+				Providers: config.RuleProviders{HTTPEndpoint: providerConf},
 			}
 
 			// WHEN
@@ -722,9 +720,7 @@ rules:
 			require.NoError(t, err)
 
 			conf := &config.Configuration{
-				Rules: config.Rules{
-					Providers: config.RuleProviders{HTTPEndpoint: providerConf},
-				},
+				Providers: config.RuleProviders{HTTPEndpoint: providerConf},
 			}
 
 			processor := mocks.NewRuleSetProcessorMock(t)

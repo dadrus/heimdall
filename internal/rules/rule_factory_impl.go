@@ -48,7 +48,7 @@ func NewRuleFactory(
 
 	rf := &ruleFactory{hf: hf, hasDefaultRule: false, logger: logger, mode: mode}
 
-	if err := rf.initWithDefaultRule(conf.Rules.Default, logger); err != nil {
+	if err := rf.initWithDefaultRule(conf.Default, logger); err != nil {
 		logger.Error().Err(err).Msg("Loading default rule failed")
 
 		return nil, err
