@@ -20,22 +20,21 @@ Create a configuration file named `heimdall.yaml`:
 log:
   level: info
 
-rules:
-  mechanisms:
-    authenticators:
-    - id: anonymous_authenticator
-      type: anonymous
-    finalizers:
-    - id: create_jwt
-      type: jwt
+mechanisms:
+  authenticators:
+  - id: anonymous_authenticator
+    type: anonymous
+  finalizers:
+  - id: create_jwt
+    type: jwt
 
-  default:
-    methods:
-      - GET
-      - POST
-    execute:
-      - authenticator: anonymous_authenticator
-      - finalizer: create_jwt
+default_rule:
+  methods:
+  - GET
+  - POST
+  execute:
+  - authenticator: anonymous_authenticator
+  - finalizer: create_jwt
 ```
 
 Start heimdall:
@@ -94,33 +93,32 @@ Create a config file (`config.yaml`) with the following content:
 log:
   level: info
 
-rules:
-  mechanisms:
-    authenticators:
-    - id: anonymous_authenticator
-      type: anonymous
-    authorizers:
-    - id: deny_all_requests
-      type: deny
-    - id: allow_all_requests
-      type: allow
-    finalizers:
-    - id: create_jwt
-      type: jwt
+mechanisms:
+  authenticators:
+  - id: anonymous_authenticator
+    type: anonymous
+  authorizers:
+  - id: deny_all_requests
+    type: deny
+  - id: allow_all_requests
+    type: allow
+  finalizers:
+  - id: create_jwt
+    type: jwt
       
-  default:
-    methods:
-      - GET
-      - POST
-    execute:
-      - authenticator: anonymous_authenticator
-      - authorizer: deny_all_requests
-      - finalizer: create_jwt
+default_rule:
+  methods:
+  - GET
+  - POST
+  execute:
+  - authenticator: anonymous_authenticator
+  - authorizer: deny_all_requests
+  - finalizer: create_jwt
 
-  providers:
-    file_system:
-      src: /heimdall/conf/rule.yaml
-      watch: true
+providers:
+  file_system:
+    src: /heimdall/conf/rule.yaml
+    watch: true
 ```
 
 Create a rule file (`rule.yaml`) with the following contents:
