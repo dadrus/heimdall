@@ -7,6 +7,7 @@ menu:
   docs:
     parent: "Getting Started"
     weight: 40
+description: Explains available configuration options.
 ---
 
 Configuration in heimdall can refer to two different things:

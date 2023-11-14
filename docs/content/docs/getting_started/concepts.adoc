@@ -9,6 +9,7 @@ menu:
     weight: 10
   main:
     parent: get_started
+description: Gives you the required insights about heimdall's architecture to get started.
 ---
 
 Everything you need to know.
