@@ -35,7 +35,7 @@ type Configuration struct { //nolint:musttag
 	Cache      CacheConfig          `koanf:"cache"`
 	Prototypes *MechanismPrototypes `koanf:"mechanisms,omitempty"`
 	Default    *DefaultRule         `koanf:"default_rule,omitempty"`
-	Providers  RuleProviders        `koanf:"rule_providers,omitempty"`
+	Providers  RuleProviders        `koanf:"providers,omitempty"`
 }
 
 func NewConfiguration(envPrefix EnvVarPrefix, configFile ConfigurationPath) (*Configuration, error) {

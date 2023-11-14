@@ -39,7 +39,7 @@ default_rule:
   on_error:
     - error_handler: redirect_to_login
 
-rule_providers:
+providers:
   file_system:
     src: /heimdall/conf/rules.yaml
     watch: true

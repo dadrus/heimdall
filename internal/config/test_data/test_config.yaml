@@ -409,7 +409,7 @@ default_rule:
   on_error:
     - error_handler: authenticate_with_kratos
 
-rule_providers:
+providers:
   file_system:
     src: test_rules.yaml
     watch: true

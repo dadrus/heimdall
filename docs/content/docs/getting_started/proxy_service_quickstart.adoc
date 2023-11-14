@@ -50,7 +50,7 @@ default_rule:  # <6>
   - authenticator: anonymous_authenticator
   - authorizer: deny_all_requests
 
-rule_providers:
+providers:
   file_system:  # <7>
     src: /heimdall/conf/rule.yaml
     watch: true

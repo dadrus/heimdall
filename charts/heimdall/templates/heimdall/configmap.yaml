@@ -64,8 +64,8 @@ data:
       {{- toYaml . | nindent 6 }}
     {{- end }}
 
-    {{- with .Values.rule_providers }}
-    rule_providers:
+    {{- with .Values.providers }}
+    providers:
       {{- toYaml . | nindent 6 }}
     {{- end }}
 {{- end }}

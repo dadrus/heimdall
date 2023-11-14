@@ -48,6 +48,6 @@ data:
       on_error:
         - error_handler: redirect
 
-    rule_providers:
+    providers:
       file_system:
         src: /heimdall/rules.yaml

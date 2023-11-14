@@ -46,7 +46,7 @@ default_rule:
   on_error:
     - error_handler: redirect
 
-rule_providers:
+providers:
   kubernetes:
     tls:
       min_version: TLS1.2

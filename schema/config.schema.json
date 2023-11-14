@@ -2115,7 +2115,7 @@
     "mechanisms": {
       "$ref": "#/definitions/mechanismDefinitions"
     },
-    "rule_providers": {
+    "providers": {
       "description": "Where to load rules from",
       "type": "object",
       "additionalProperties": false,

@@ -50,7 +50,7 @@ default_rule:  # <5>
   execute:
     - authenticator: reject_requests
 
-rule_providers:
+providers:
   file_system:  # <6>
     src: /heimdall/conf/rules.yaml
     watch: true
