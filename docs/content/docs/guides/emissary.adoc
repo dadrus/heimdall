@@ -2,7 +2,7 @@
 title: "Emissary Ingress Integration"
 date: 2023-08-21T15:23:41+02:00
 draft: false
-weight: 30
+weight: 26
 menu:
   docs:
     parent: "Integration Guides"

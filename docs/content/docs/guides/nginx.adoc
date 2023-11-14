@@ -2,7 +2,7 @@
 title: "NGINX Integration"
 date: 2022-07-29T00:14:49+02:00
 draft: false
-weight: 26
+weight: 30
 menu:
   docs:
     parent: "Integration Guides"
