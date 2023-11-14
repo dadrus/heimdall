@@ -181,7 +181,6 @@ func (u *jwtFinalizer) generateToken(ctx heimdall.Context, sub *subject.Subject)
 	claims := map[string]any{}
 	if u.claims != nil {
 		vals, err := u.claims.Render(map[string]any{
-			"Request": ctx.Request(),
 			"Subject": sub,
 		})
 		if err != nil {
@@ -190,6 +189,9 @@ func (u *jwtFinalizer) generateToken(ctx heimdall.Context, sub *subject.Subject)
 				WithErrorContext(u).
 				CausedBy(err)
 		}
+
+		logger := zerolog.Ctx(ctx.AppContext())
+		logger.Debug().Str("_value", vals).Msg("Rendered template")
 
 		if err = json.Unmarshal(stringx.ToBytes(vals), &claims); err != nil {
 			return "", errorchain.

@@ -33,38 +33,32 @@ serve:
     trusted_proxies:  # <2>
       - 0.0.0.0/0
 
-rules:
-  mechanisms:
-    authenticators:  # <3>
-      - id: do_nothing
-        type: noop
-      - id: anon
-        type: anonymous
-      - id: reject_requests
-        type: unauthorized
-    finalizers:  # <4>
-      - id: do_nothing
-        type: noop
-      - id: create_jwt
-        type: jwt
+mechanisms:
+  authenticators:  # <3>
+    - id: anon
+      type: anonymous
+    - id: reject_requests
+      type: unauthorized
+  finalizers:  # <4>
+    - id: create_jwt
+      type: jwt
 
-  default:  # <5>
-    methods:
-      - GET
-      - POST
-    execute:
-      - authenticator: reject_requests
-      - finalizer: create_jwt
+default_rule:  # <5>
+  methods:
+    - GET
+    - POST
+  execute:
+    - authenticator: reject_requests
 
-  providers:
-    file_system:  # <6>
-      src: /heimdall/conf/rules.yaml
-      watch: true
+providers:
+  file_system:  # <6>
+    src: /heimdall/conf/rules.yaml
+    watch: true
 ----
 <1> Here we are setting the log level to `info` to be able to see any log output. By default, heimdall logs on `error` log level.
 <2> Configures heimdall's decision service to trust requests from all sources. This allows usage of `X-Forwarded-*` headers. This configuration is only required if you want to try out the docker compose example from below.
-<3> Configures a couple of authenticators - the `noop` authenticator, which does nothing, the `anonymous` authenticator, which treats every request as anonymous (creates a subject with its id set to anonymous) and the `unauthorized` authenticator, which rejects every request with `401 Unauthorized` HTTP code.
-<4> Configured a couple of finalizers - the `noop` finalizer, which does nothing and the jwt` finalizer, which transforms the information about the subject into a JWT.
+<3> Configures a couple of authenticators - the `anonymous` authenticator, which treats every request as anonymous (creates a subject with its id set to anonymous) and the `unauthorized` authenticator, which rejects every request with `401 Unauthorized` HTTP code.
+<4> Configured a finalizer - the jwt` finalizer, which transforms the information about the subject into a JWT.
 <5> Configures the default rule, which will obviously reject every request.
 <6> Configures a `file_system` provider, which allows heimdall loading rules from the local filesystem; here from the `/heimdall/conf/rule.yaml` file.
 
@@ -79,20 +73,20 @@ rules:
   match:
     url: http://<**>/public
   execute:
-    - authenticator: do_nothing
-    - finalizer: do_nothing
+    - authenticator: anon
 
 - id: rule2  # <2>
   match:
     url: http://<**>/anonymous
   execute:
     - authenticator: anon
+    - finalizer: create_jwt
 ----
 
 This file contains two rules:
 
-<1> This rule should match the `\http://<**>/public` url and accept every request without performing any authentication and finalization.
-<2> This rule should match the `\http://<**>/anonymous` url. It uses the `anon` authenticator from our mechanisms definitions and since it does not specify any finalizers, the finalizers from the default rule, here the `create_jwt` finalizer, is used.
+<1> This rule should match the `\http://<**>/public` url and accept every request without performing any authentication and finalization. For that reason it uses the `anon` authenticator from our mechanisms definitions.
+<2> This rule should match the `\http://<**>/anonymous` url. It uses the `anon` authenticator and `create_jwt` finalizer from our mechanisms definitions. Latter creates a JWT for the created anonymous subject.
 
 == Run Standalone
 Run heimdall specifying the configuration file from above

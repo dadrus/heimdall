@@ -29,41 +29,35 @@ Heimdall can be configured via environment variables, as well as using a configu
 log:
   level: info  # <1>
 
-rules:
-  mechanisms:
-    authenticators:
-    - id: anonymous_authenticator  # <2>
-      type: anonymous
-    - id: noop
-      type: noop
-    authorizers:
-    - id: deny_all_requests  # <3>
-      type: deny
-    - id: allow_all_requests  # <4>
-      type: allow
-    finalizers:
-    - id: create_jwt  # <5>
-      type: jwt
-    - id: noop
-      type: noop
+mechanisms:
+  authenticators:
+  - id: anonymous_authenticator  # <2>
+    type: anonymous
+  authorizers:
+  - id: deny_all_requests  # <3>
+    type: deny
+  - id: allow_all_requests  # <4>
+    type: allow
+  finalizers:
+  - id: create_jwt  # <5>
+    type: jwt
 
-  default:  # <6>
-    methods:
-      - GET
-      - POST
-    execute:
-      - authenticator: anonymous_authenticator
-      - authorizer: deny_all_requests
-      - finalizer: create_jwt
+default_rule:  # <6>
+  methods:
+  - GET
+  - POST
+  execute:
+  - authenticator: anonymous_authenticator
+  - authorizer: deny_all_requests
 
-  providers:
-    file_system:  # <7>
-      src: /heimdall/conf/rule.yaml
-      watch: true
+providers:
+  file_system:  # <7>
+    src: /heimdall/conf/rule.yaml
+    watch: true
 ----
 <1> Here we are setting the log level to `info` to be able to see any log output. By default, heimdall logs on `error` log level.
 <2> Configures the `anonymous` authenticator.
-<3> Configures the `deny` authorizer.
+<3> Configures the `deny` authorizer, which rejects all requests.
 <4> Configures the `allow` authorizer. It will be used in our rule to allow requests.
 <5> Configures the `jwt` finalizer.
 <6> Configures the default rule.
@@ -84,6 +78,7 @@ rules:
     host: upstream
   execute:
     - authorizer: allow_all_requests
+    - finalizer: create_jwt
 
 - id: rule2  # <2>
   match:
@@ -91,12 +86,10 @@ rules:
   forward_to:
     host: upstream
   execute:
-    - authenticator: noop
     - authorizer: allow_all_requests
-    - finalizer: noop
 ----
 +
-<1> This rule matches any host and the `/anonymous` path and forwards the request to our upstream service (which we're going to define next). In addition, it reuses the configuration from the default rule. Here, the methods, which are allowed, as well as the authorizers and finalizers. So we don't need to define them in the rule.
+<1> This rule matches any host and the `/anonymous` path and forwards the request to our upstream service (which we're going to define next). In addition, it reuses the configuration from the default rule. Here, the methods, which are allowed, as well as the authenticator. So we don't need to define them in the rule.
 <2> This rule matches any host and the `/public` path and forwards the request as the previous rule to our upstream service. This rule doesn't perform any kind of request verification or transformation.
 
 . Create or copy the following `docker-compose.yaml` file and modify it to include the correct paths to your `config.yaml` and `rule.yaml` files:

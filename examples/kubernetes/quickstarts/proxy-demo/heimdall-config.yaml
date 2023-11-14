@@ -16,44 +16,38 @@ data:
         trusted_proxies:
           - 0.0.0.0/0
 
-    rules:
-      mechanisms:
-        authenticators:
-          - id: anonymous_authenticator
-            type: anonymous
-          - id: noop_authenticator
-            type: noop
-          - id: deny_authenticator
-            type: unauthorized
-        authorizers:
-          - id: deny_all_requests
-            type: deny
-          - id: allow_all_requests
-            type: allow
-        finalizers:
-          - id: create_jwt
-            type: jwt
-          - id: noop_finalizer
-            type: noop
-        error_handlers:
-          - id: redirect
-            type: redirect
-            config:
-              to: http://foo.bar?origin={{ .Request.URL | urlenc }}
-              when:
-                - error:
-                    - type: authentication_error
-      default:
-        methods:
-          - GET
-          - POST
-        execute:
-          - authenticator: anonymous_authenticator
-          - authorizer: deny_all_requests
-          - finalizer: create_jwt
-        on_error:
-          - error_handler: redirect
+    mechanisms:
+      authenticators:
+        - id: anonymous_authenticator
+          type: anonymous
+        - id: deny_authenticator
+          type: unauthorized
+      authorizers:
+        - id: deny_all_requests
+          type: deny
+        - id: allow_all_requests
+          type: allow
+      finalizers:
+        - id: create_jwt
+          type: jwt
+      error_handlers:
+        - id: redirect
+          type: redirect
+          config:
+            to: http://foo.bar?origin={{ .Request.URL | urlenc }}
+            when:
+              - error:
+                  - type: authentication_error
+    default_rule:
+      methods:
+        - GET
+        - POST
+      execute:
+        - authenticator: anonymous_authenticator
+        - authorizer: deny_all_requests
+      on_error:
+        - error_handler: redirect
 
-      providers:
-        file_system:
-          src: /heimdall/rules.yaml
+    providers:
+      file_system:
+        src: /heimdall/rules.yaml

@@ -6,47 +6,41 @@ serve:
     trusted_proxies:
       - 0.0.0.0/0
 
-rules:
-  mechanisms:
-    authenticators:
-      - id: do_nothing
-        type: noop
-      - id: anon
-        type: anonymous
-      - id: reject_requests
-        type: unauthorized
-    finalizers:
-      - id: do_nothing
-        type: noop
-      - id: create_jwt
-        type: jwt
-    error_handlers:
-      - id: default
-        type: default
-      - id: redirect_to_login
-        type: redirect
-        config:
-          to: http://127.0.0.1:8080/login?origin={{ .Request.URL | urlenc }}
-          when:
-            - error:
-                - type: authentication_error
-                  raised_by: reject_requests
-              request_headers:
-                Accept:
-                  - Bar
+mechanisms:
+  authenticators:
+    - id: anon
+      type: anonymous
+    - id: reject_requests
+      type: unauthorized
+  finalizers:
+    - id: create_jwt
+      type: jwt
+  error_handlers:
+    - id: default
+      type: default
+    - id: redirect_to_login
+      type: redirect
+      config:
+        to: http://127.0.0.1:8080/login?origin={{ .Request.URL | urlenc }}
+        when:
+          - error:
+              - type: authentication_error
+                raised_by: reject_requests
+            request_headers:
+              Accept:
+                - Bar
 
-  default:
-    methods:
-      - GET
-      - POST
-    execute:
-      - authenticator: reject_requests
-      - finalizer: create_jwt
-    on_error:
-      - error_handler: redirect_to_login
+default_rule:
+  methods:
+    - GET
+    - POST
+  execute:
+    - authenticator: reject_requests
+  on_error:
+    - error_handler: redirect_to_login
 
-  providers:
-    file_system:
-      src: /heimdall/conf/rules.yaml
-      watch: true
+providers:
+  file_system:
+    src: /heimdall/conf/rules.yaml
+    watch: true
 

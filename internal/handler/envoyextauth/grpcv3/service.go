@@ -57,13 +57,11 @@ func newService(
 
 	streamInterceptors := []grpc.StreamServerInterceptor{
 		recovery.StreamServerInterceptor(recoveryHandler),
-		otelgrpc.StreamServerInterceptor(),
 		metrics.StreamServerInterceptor(),
 	}
 
 	unaryInterceptors := []grpc.UnaryServerInterceptor{
 		recovery.UnaryServerInterceptor(recoveryHandler),
-		otelgrpc.UnaryServerInterceptor(),
 		metrics.UnaryServerInterceptor(),
 	}
 
@@ -96,6 +94,7 @@ func newService(
 		grpc.UnknownServiceHandler(func(srv interface{}, stream grpc.ServerStream) error {
 			return status.Error(codes.Unknown, "unknown service or method")
 		}),
+		grpc.StatsHandler(otelgrpc.NewServerHandler()),
 		grpc.ChainUnaryInterceptor(unaryInterceptors...),
 		grpc.ChainStreamInterceptor(streamInterceptors...),
 	)

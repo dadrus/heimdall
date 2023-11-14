@@ -48,7 +48,7 @@ func NewRuleFactory(
 
 	rf := &ruleFactory{hf: hf, hasDefaultRule: false, logger: logger, mode: mode}
 
-	if err := rf.initWithDefaultRule(conf.Rules.Default, logger); err != nil {
+	if err := rf.initWithDefaultRule(conf.Default, logger); err != nil {
 		logger.Error().Err(err).Msg("Loading default rule failed")
 
 		return nil, err
@@ -206,11 +206,6 @@ func (f *ruleFactory) CreateRule(version, srcID string, ruleConfig config2.Rule)
 			"no authenticator defined for rule ID=%s from %s", ruleConfig.ID, srcID)
 	}
 
-	if len(finalizers) == 0 {
-		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
-			"no finalizer defined for rule ID=%s from %s", ruleConfig.ID, srcID)
-	}
-
 	if len(methods) == 0 {
 		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
 			"no methods defined for rule ID=%s from %s", ruleConfig.ID, srcID)
@@ -331,10 +326,6 @@ func (f *ruleFactory) initWithDefaultRule(ruleConfig *config.DefaultRule, logger
 
 	if len(authenticators) == 0 {
 		return errorchain.NewWithMessage(heimdall.ErrConfiguration, "no authenticator defined for default rule")
-	}
-
-	if len(finalizers) == 0 {
-		return errorchain.NewWithMessagef(heimdall.ErrConfiguration, "no finalizer defined for default rule")
 	}
 
 	methods, err := expandHTTPMethods(ruleConfig.Methods)

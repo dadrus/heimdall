@@ -54,8 +54,18 @@ data:
       {{- toYaml . | nindent 6 }}
     {{- end }}
 
-    {{- with .Values.rules }}
-    rules:
+    {{- with .Values.mechanisms }}
+    mechanisms:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
+
+    {{- with .Values.default_rule }}
+    default_rule:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
+
+    {{- with .Values.providers }}
+    providers:
       {{- toYaml . | nindent 6 }}
     {{- end }}
 {{- end }}

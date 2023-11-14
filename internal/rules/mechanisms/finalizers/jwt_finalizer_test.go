@@ -541,7 +541,6 @@ claims: '{
 
 				ctx.EXPECT().Signer().Return(signer)
 				ctx.EXPECT().AddHeaderForUpstream("X-Token", "Bar barfoo")
-				ctx.EXPECT().Request().Return(&heimdall.Request{})
 
 				cch.EXPECT().Get(mock.Anything).Return(nil)
 				cch.EXPECT().Set(mock.Anything, "barfoo", defaultJWTTTL-defaultCacheLeeway)
@@ -565,7 +564,6 @@ claims: '{
 				signer.EXPECT().Hash().Return([]byte("foobar"))
 
 				ctx.EXPECT().Signer().Return(signer)
-				ctx.EXPECT().Request().Return(&heimdall.Request{})
 
 				cch.EXPECT().Get(mock.Anything).Return(nil)
 			},
@@ -594,7 +592,6 @@ claims: '{
 				signer.EXPECT().Hash().Return([]byte("foobar"))
 
 				ctx.EXPECT().Signer().Return(signer)
-				ctx.EXPECT().Request().Return(&heimdall.Request{})
 
 				cch.EXPECT().Get(mock.Anything).Return(nil)
 			},

@@ -10,8 +10,7 @@ rules:
       strip_path_prefix: /pub
       add_path_prefix: /v1
   execute:
-    - authenticator: do_nothing
-    - finalizer: do_nothing
+    - authenticator: anon
 
 - id: rule2
   match:
@@ -23,4 +22,5 @@ rules:
       add_path_prefix: /v1
   execute:
     - authenticator: anon
+    - finalizer: create_jwt
 

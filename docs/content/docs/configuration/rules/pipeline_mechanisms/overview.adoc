@@ -14,27 +14,26 @@ All mechanisms supported by heimdall fall into following categories:
 * link:{{< relref "authenticators.adoc">}}[Authenticators], which inspect HTTP requests for presence of authentication objects, like e.g. the presence of a specific cookie. If such objects exist, authenticators verify the related authentication status and obtain information about the corresponding subject. A subject, could be a user who tries to use particular functionality of the upstream service, a machine (if you have machine-2-machine interaction), or something different. Authenticators ensure the subject is authenticated and the information available about it is valid.
 * link:{{< relref "authorizers.adoc">}}[Authorizers], which ensure that the subject obtained via an authenticator has the required permissions to submit the given HTTP request and thus to execute the corresponding logic in the upstream service. E.g. a specific endpoint of the upstream service might only be accessible to a "user" from the "admin" group, or to an HTTP request if a specific HTTP header is set.
 * link:{{< relref "contextualizers.adoc">}}[Contextualizers], which enrich the information about the subject obtained via an authenticator with further contextual information, required either by the upstream service itself or an authorizer. This can be handy if the actual authentication system doesn't have all information about the subject (which is usually the case in microservice architectures), or if dynamic information about the subject, like the current location based on the IP address, is required.
-* link:{{< relref "finalizers.adoc">}}[Finalizers], which, as the name implies, finalize the execution of the pipeline and enrich the request with data such as subject information or authentication tokens required by the upstream service. The available options range from adding a simple header over a structured JWT, to driving specific protocols, e.g. to obtain a token required by the upstream service.
+* link:{{< relref "finalizers.adoc">}}[Finalizers], which, as the name implies, finalize the execution of the pipeline and enrich the request with data such as subject information or authentication tokens required by the upstream service. The available options range from doing nothing, adding a simple header over a structured JWT, to driving specific protocols, e.g. to obtain a token required by the upstream service.
 * link:{{< relref "error_handlers.adoc">}}[Error Handlers], which are responsible for execution of logic if any of the mechanisms described above fail. These range from a simple error response to the client, which sent the request, to sophisticated ones, supporting complex logic and redirects.
 
 == General Configuration
 
-All of the above said mechanisms must be configured in the `mechanisms` section of heimdall's `rules` configuration property. Only those mechanisms, which have been configured, can then be (re-)used by rules.
+All of the above said mechanisms must be configured in the `mechanisms` section of heimdall's configuration. Only those mechanisms, which have been configured, can then be (re-)used by rules.
 
 [source, yaml]
 ----
-rules:
-  mechanisms:
-    authenticators:
-      <list of authenticators>
-    authorizers:
-      <list of authorizers>
-    contextualizers:
-      <list of contextualizers>
-    finalizers:
-      <list of finalizers>
-    error_handlers:
-      <list of error handlers>
+mechanisms:
+  authenticators:
+    <list of authenticators>
+  authorizers:
+    <list of authorizers>
+  contextualizers:
+    <list of contextualizers>
+  finalizers:
+    <list of finalizers>
+  error_handlers:
+    <list of error handlers>
 ----
 
 Each mechanism configuration entry must contain at least the following properties:
@@ -50,21 +49,20 @@ For example, your authenticator definitions could look like this:
 
 [source, yaml]
 ----
-rules:
-  mechanisms:
-    authenticators:
-    - id: foo
-      type: bar
-    - id: baz
-      type: bla
-      config:
-        bla: bar
-    - id: zab
-      type: bar
-    - id: oof
-      type: bla
-      config:
-        bar: bla
+mechanisms:
+  authenticators:
+  - id: foo
+    type: bar
+  - id: baz
+    type: bla
+    config:
+      bla: bar
+  - id: zab
+    type: bar
+  - id: oof
+    type: bla
+    config:
+      bar: bla
 ----
 
 The above snippet configures two instances of an imaginary authenticator of a type `bar`, made available for usage in rules via ids `foo` and `zab`, as well as two instances of an imaginary authenticator of a type `bla`, made available for usage in rule via ids `baz` and `oof`. The `baz` and `oof` authenticators are different, as they are configured differently, but `foo` and `zab` authenticators do not have any configuration. So, they behave the same way and there is actually no need to define two instances of them.
@@ -75,69 +73,68 @@ Here is an example which configures a couple of mechanisms:
 
 [source, yaml]
 ----
-rules:
-  mechanisms:
-    authenticators:
-    - id: anon_authn
-      type: anonymous
-    - id: opaque_auth_token_authn
-      type: oauth2_introspection
-      config:
-        introspection_endpoint:
-          url: http://hydra:4445/oauth2/introspect
-      assertions:
-        issuers:
-          - http://127.0.0.1:4444/
-    authorizers:
-    - id: deny_all_authz
-      type: deny
-    - id: local_authz
-      type: cel
-      config:
-        expressions:
-          - expression:
-              "manager" in Subject.Attributes.groups
-            message: user is not in the expected group
-    contextualizers:
-    - id: group_manager
-      type: generic
-      config:
-        endpoint:
-          url: http://group-manager.local/groups
-          method: GET
-        forward_headers:
-          - Authorization
-        cache_ttl: 1m
-    finalizers:
-    - id: jwt_finalizer
-      type: jwt
-      config:
-        ttl: 5m
-        claims: |
-            {
-              {{ $user_name := .Subject.Attributes.identity.user_name -}}
-              "email": {{ quote .Subject.Attributes.identity.email }},
-              "email_verified": {{ .Subject.Attributes.identity.email_verified }},
-              {{ if $user_name -}}
-              "name": {{ quote $user_name }}
-              {{ else -}}
-              "name": {{ quote $email }}
-              {{ end -}}
-            }
-    error_handlers:
-    - id: default
-      type: default
-    - id: authenticate_with_kratos
-      type: redirect
-      config:
-        to: http://127.0.0.1:4433/self-service/login/browser?return_to={{ .Request.URL | urlenc }}
-        when:
-          - error:
-              - type: authentication_error
-              - type: authorization_error
-            request_headers:
-              Accept:
-                - text/html
+mechanisms:
+  authenticators:
+  - id: anon_authn
+    type: anonymous
+  - id: opaque_auth_token_authn
+    type: oauth2_introspection
+    config:
+      introspection_endpoint:
+        url: http://hydra:4445/oauth2/introspect
+    assertions:
+      issuers:
+        - http://127.0.0.1:4444/
+  authorizers:
+  - id: deny_all_authz
+    type: deny
+  - id: local_authz
+    type: cel
+    config:
+      expressions:
+        - expression:
+            "manager" in Subject.Attributes.groups
+          message: user is not in the expected group
+  contextualizers:
+  - id: group_manager
+    type: generic
+    config:
+      endpoint:
+        url: http://group-manager.local/groups
+        method: GET
+      forward_headers:
+        - Authorization
+      cache_ttl: 1m
+  finalizers:
+  - id: jwt_finalizer
+    type: jwt
+    config:
+      ttl: 5m
+      claims: |
+          {
+            {{ $user_name := .Subject.Attributes.identity.user_name -}}
+            "email": {{ quote .Subject.Attributes.identity.email }},
+            "email_verified": {{ .Subject.Attributes.identity.email_verified }},
+            {{ if $user_name -}}
+            "name": {{ quote $user_name }}
+            {{ else -}}
+            "name": {{ quote $email }}
+            {{ end -}}
+          }
+  error_handlers:
+  - id: default
+    type: default
+  - id: authenticate_with_kratos
+    type: redirect
+    config:
+      to: http://127.0.0.1:4433/self-service/login/browser?return_to={{ .Request.URL | urlenc }}
+      when:
+        - error:
+            - type: authentication_error
+            - type: authorization_error
+          request_headers:
+            Accept:
+              - text/html
 ----
 
 == Evaluation Objects

@@ -150,9 +150,7 @@ endpoints:
 			require.NoError(t, err)
 
 			conf := &config.Configuration{
-				Rules: config.Rules{
-					Providers: config.RuleProviders{HTTPEndpoint: providerConf},
-				},
+				Providers: config.RuleProviders{HTTPEndpoint: providerConf},
 			}
 
 			// WHEN
@@ -192,22 +190,6 @@ func TestProviderLifecycle(t *testing.T) {
 		writeResponse  ResponseWriter
 		assert         func(t *testing.T, logs fmt.Stringer, processor *mocks.RuleSetProcessorMock)
 	}{
-		{
-			uc: "with rule set loading error due to DNS error",
-			conf: []byte(`
-endpoints:
-- url: https://foo.bar.local/rules.yaml
-`),
-			assert: func(t *testing.T, logs fmt.Stringer, processor *mocks.RuleSetProcessorMock) {
-				t.Helper()
-
-				time.Sleep(250 * time.Millisecond)
-
-				messages := logs.String()
-				assert.Contains(t, messages, "dial tcp")
-				assert.Contains(t, messages, "No updates received")
-			},
-		},
 		{
 			uc: "with rule set loading error due server error response",
 			conf: []byte(`
@@ -738,9 +720,7 @@ rules:
 			require.NoError(t, err)
 
 			conf := &config.Configuration{
-				Rules: config.Rules{
-					Providers: config.RuleProviders{HTTPEndpoint: providerConf},
-				},
+				Providers: config.RuleProviders{HTTPEndpoint: providerConf},
 			}
 
 			processor := mocks.NewRuleSetProcessorMock(t)
