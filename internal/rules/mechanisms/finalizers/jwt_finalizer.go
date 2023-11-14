@@ -190,6 +190,9 @@ func (u *jwtFinalizer) generateToken(ctx heimdall.Context, sub *subject.Subject)
 				CausedBy(err)
 		}
 
+		logger := zerolog.Ctx(ctx.AppContext())
+		logger.Debug().Str("_value", vals).Msg("Rendered template")
+
 		if err = json.Unmarshal(stringx.ToBytes(vals), &claims); err != nil {
 			return "", errorchain.
 				NewWithMessage(heimdall.ErrInternal, "failed to unmarshal claims rendered by template").
