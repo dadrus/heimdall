@@ -181,7 +181,6 @@ func (u *jwtFinalizer) generateToken(ctx heimdall.Context, sub *subject.Subject)
 	claims := map[string]any{}
 	if u.claims != nil {
 		vals, err := u.claims.Render(map[string]any{
-			"Request": ctx.Request(),
 			"Subject": sub,
 		})
 		if err != nil {
