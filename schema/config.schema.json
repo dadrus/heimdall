@@ -723,7 +723,7 @@
               "header": {
                 "type": "string"
               },
-              "schema": {
+              "scheme": {
                 "type": "string"
               }
             }
