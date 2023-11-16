@@ -1090,11 +1090,11 @@
           ],
           "properties": {
             "user_id": {
-              "description": "The user id, respectively the user name for the authentication schema",
+              "description": "The user id, respectively the user name for the authentication scheme",
               "type": "string"
             },
             "password": {
-              "description": "The password for the client_id for the authentication schema",
+              "description": "The password for the client_id for the authentication scheme",
               "type": "string"
             },
             "allow_fallback_on_error": {
