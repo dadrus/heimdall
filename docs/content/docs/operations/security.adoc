@@ -84,14 +84,17 @@ Heimdall binaries and container images are signed using https://docs.sigstore.de
 
 === Container Image Signature Verification
 
-The signatures are stored in the same repository as the container images they reference. To verify the container image using Cosign, execute the following command:
+The signatures are stored in a repository named `dadrus/heimdall-signatures`. To verify the container image using Cosign, execute the following command:
 
 [source, bash]
 ----
+COSIGN_REPOSITORY=dadrus/heimdall-signatures \
 cosign verify dadrus/heimdall:<tag> \
   --certificate-identity-regexp=https://github.com/dadrus/heimdall/.github/workflows/ci.yaml* \
   --certificate-oidc-issuer=https://token.actions.githubusercontent.com | jq
 ----
+
+NOTE: If you pull heimdall images from ghcr.io, reference the `ghcr.io` registry while specifying the repository names. So `dadrus/heimdall-signatures` becomes `ghcr.io/dadrus/heimdall-signatures` and `dadrus/heimdall:<tag>` becomes `ghcr.io/dadrus/heimdall:<tag>`.
 
 In successful verification case, cosign will print similar output to the one shown below and exit with `0`.
 
@@ -166,15 +169,18 @@ Heimdall is shipped with an SBOM in https://cyclonedx.org/[CyclonDX] (json) form
 
 If you use a released binary of heimdall, the corresponding file is part of the platform specific archive. That way, if you verify the signature of the archive (see above), you do also get evidence about the validity of the SBOM.
 
-If you use a container image, the same SBOM is attached to the image as attestation signed with Cosign. These attestations are stored in the same repository as the container images. To verify the attestation and retrieve the SBOM execute the following command once Cosign is installed:
+If you use a container image, the same SBOM is attached to the image as attestation signed with Cosign. These attestations are stored in the `dadrus/heimdall-sbom` repository. To verify the attestation and retrieve the SBOM execute the following command once Cosign is installed:
 
 [source, bash]
 ----
+COSIGN_REPOSITORY=dadrus/heimdall-sbom \
 cosign verify-attestation dadrus/heimdall:<tag> \
   --certificate-identity-regexp=https://github.com/dadrus/heimdall/.github/workflows/ci.yaml* \
   --certificate-oidc-issuer=https://token.actions.githubusercontent.com \
   --type=cyclonedx
 ----
+
+NOTE: If you pull heimdall images from ghcr.io, reference the `ghcr.io` registry while specifying the repository names. So `dadrus/heimdall-sbom` becomes `ghcr.io/dadrus/heimdall-sbom` and `dadrus/heimdall:<tag>` becomes `ghcr.io/dadrus/heimdall:<tag>`.
 
 In successful verification case, cosign will print similar output to the one shown below and exit with `0`.
 
@@ -198,6 +204,7 @@ As one-liner, you can verify the signature and extract the SBOM as follows:
 
 [source, bash]
 ----
+COSIGN_REPOSITORY=dadrus/heimdall-sbom \
 cosign verify-attestation dadrus/heimdall:<tag> \
   --certificate-identity-regexp=https://github.com/dadrus/heimdall/.github/workflows/ci.yaml* \
   --certificate-oidc-issuer=https://token.actions.githubusercontent.com \

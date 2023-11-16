@@ -72,9 +72,9 @@ curl -L https://github.com/dadrus/heimdall/releases/download/${VERSION}/heimdall
     | tar -z -x
 ----
 
-== Docker Image
+== Container Image
 
-Heimdall utilizes a minimal container multi-arch image which you can find on https://hub.docker.com/r/dadrus/heimdall[DockerHub]. As with link:{{< relref "#_binary" >}}[Binary] releases, heimdall can be pulled in several flavors. These are however currently limited to the Linux OS. Supported architectures are:
+Heimdall utilizes a minimal container multi-arch image which you can find on https://hub.docker.com/r/dadrus/heimdall[DockerHub], or on https://github.com/users/dadrus/packages?repo_name=heimdall[GHCR]. As with link:{{< relref "#_binary" >}}[Binary] releases, heimdall can be pulled in several flavors. These are however currently limited to the Linux OS. Supported architectures are:
 
 * `amd64`
 * `arm64`
@@ -86,9 +86,11 @@ As with the binary distribution, all container images are signed (see also link:
 
 === Prerequisites
 
-* https://docs.docker.com/install/[Docker]
+* https://docs.docker.com/install/[Docker], https://podman.io/[Podman], or other container runtime of your choice (examples are however using docker).
 
 === Pull Image
+
+The steps below will pull the images from https://hub.docker.com/r/dadrus/heimdall[DockerHub]. If you want to pull them from https://github.com/users/dadrus/packages?repo_name=heimdall[GHCR], specify the `ghcr.io` registry in front of the repository.
 
 Following tag patterns exist:
 
