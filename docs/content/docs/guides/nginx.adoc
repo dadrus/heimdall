@@ -93,7 +93,7 @@ location = /_auth {
 ----
 <1> Configures NGINX to pass the request to heimdall.
 <2> Let NGINX forward the used HTTP method to heimdall.
-<3> Let NGINX forward the used HTTP schema to heimdall.
+<3> Let NGINX forward the used HTTP scheme to heimdall.
 <4> Let NGINX forward the used host to heimdall.
 <5> Let NGINX forward the used path and query parameter to heimdall.
 ====
