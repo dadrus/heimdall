@@ -15,7 +15,7 @@ Supported providers, including the corresponding configuration options are descr
 
 == Filesystem
 
-The filesystem provider allows loading of rule sets in a format defined in link:{{< relref "configuration.adoc#_rule_set" >}}[Rule Sets] from a file system. The configuration of this provider goes into the `file_system` property. This provider is handy for e.g. starting playing around with heimdall, e.g. locally, or using Docker, as well as if your deployment strategy considers deploying a heimdall instance as a Side-Car for each of your services.
+The filesystem provider allows loading of rule sets in a format defined in link:{{< relref "configuration.adoc#_rule_set" >}}[Rule Sets] from a file system. The configuration of this provider goes into the `file_system` property. This provider is handy for e.g. starting playing around with heimdall, e.g. locally, or using a container runtime, as well as if your deployment strategy considers deploying a heimdall instance as a Side-Car for each of your services.
 
 Following configuration options are supported:
 
