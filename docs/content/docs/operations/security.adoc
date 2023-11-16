@@ -48,7 +48,7 @@ As written above, heimdall makes use of the OS wide trust store to build the cer
 
 [NOTE]
 ====
-heimdall Docker image is shipped without any certificates by intention to ensure you take care about the up-to-date status of the trust store. This way, if you use heimdall in a container, you have to mount the OS trust store into heimdall's container to enable its usage.
+heimdall container image is shipped without any certificates by intention to ensure you take care about the up-to-date status of the trust store. This way, if you use heimdall in a container, you have to mount the OS trust store into heimdall's container to enable its usage.
 
 E.g.
 [source, bash]
