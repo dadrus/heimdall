@@ -41,7 +41,7 @@ mechanisms:
               password: bar
         token_source:
           - header: Authorization
-            schema: Bearer
+            scheme: Bearer
         assertions:
           issuers:
             - http://127.0.0.1:4444/
@@ -63,7 +63,7 @@ mechanisms:
           enable_http_cache: true
         jwt_source:
           - header: Authorization
-            schema: Bearer
+            scheme: Bearer
         assertions:
           audience:
             - bla
