@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Operations on Heimdall</title><link>https://dadrus.github.io/docs/operations/</link><description>Recent content in Operations on Heimdall</description><generator>Hugo -- gohugo.io</generator><language>en-us</language><lastBuildDate>Sat, 25 Jun 2022 14:39:36 +0200</lastBuildDate><atom:link href="https://dadrus.github.io/docs/operations/index.xml" rel="self" type="application/rss+xml"/><item><title>Install</title><link>https://dadrus.github.io/docs/operations/install/</link><pubDate>Mon, 25 Jul 2022 18:22:50 +0200</pubDate><guid>https://dadrus.github.io/docs/operations/install/</guid><description>Heimdall is shipped in multiple formats and architectures to suit a variety of deployment patterns. Available installation options are:
 Source code
 Binary
-Docker Image
+Container Image
 Helm Chart
 Source Code You can always build a copy of heimdall by following the following instructions for your OS/environment.
 Prerequisites git

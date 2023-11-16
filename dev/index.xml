@@ -4,10 +4,9 @@ It works as long as there is just one authentication system.
 When there are multiple backend services, which is typically the case in modern architectures, it requires each backend service to repetitively implement security related capabilities in its code, and related to this</description></item><item><title>Concepts</title><link>https://dadrus.github.io/docs/getting_started/concepts/</link><pubDate>Sat, 25 Jun 2022 14:29:17 +0200</pubDate><guid>https://dadrus.github.io/docs/getting_started/concepts/</guid><description>Everything you need to know.
 Pipeline As described in the Welcome section and also shown in the diagram below, heimdall authenticates and authorizes incoming HTTP requests, rejecting unauthenticated or unauthorized ones, as well as enriches the valid requests with further contextual information and transforms resulting subject information into a format, required by the upstream services. This is done in upstream service specific rules, which assemble the required individual pipelines by making use of different mechanisms.</description></item><item><title>Decision Service Quickstart</title><link>https://dadrus.github.io/docs/getting_started/decision_service_quickstart/</link><pubDate>Wed, 08 Jun 2022 20:43:27 +0200</pubDate><guid>https://dadrus.github.io/docs/getting_started/decision_service_quickstart/</guid><description>This document describes a very simple use case in which you’ll see heimdall’s Decision service in action.
 Prerequisites Download Heimdall in your flavor.
-Docker (optionally) and
+Docker, Podman, or other container runtime of your choice (examples are however using docker) (optionally) and
 docker-compose (optionally)
-Configure heimdall can be configured via environment variables, as well as using a configuration file. For simplicity reasons, we’ll use a configuration file here. So create a config file named config.yaml with the following content:
-log: level: info (1) serve: decision: trusted_proxies: (2) - 0.</description></item><item><title>Proxy Service Quickstart</title><link>https://dadrus.github.io/docs/getting_started/proxy_service_quickstart/</link><pubDate>Tue, 26 Jul 2022 09:40:27 +0200</pubDate><guid>https://dadrus.github.io/docs/getting_started/proxy_service_quickstart/</guid><description>This document describes a simple use case in which you’ll see heimdall’s Proxy service in action. Here, we’ll create a minimal but complete environment for running heimdall with containers.
+Configure heimdall can be configured via environment variables, as well as using a configuration file. For simplicity reasons, we’ll use a configuration file here. So create a config file named config.</description></item><item><title>Proxy Service Quickstart</title><link>https://dadrus.github.io/docs/getting_started/proxy_service_quickstart/</link><pubDate>Tue, 26 Jul 2022 09:40:27 +0200</pubDate><guid>https://dadrus.github.io/docs/getting_started/proxy_service_quickstart/</guid><description>This document describes a simple use case in which you’ll see heimdall’s Proxy service in action. Here, we’ll create a minimal but complete environment for running heimdall with containers.
 Prerequisites Docker and
 docker-compose
 Configure Heimdall can be configured via environment variables, as well as using a configuration file. For simplicity reasons, we’ll use a configuration file here.
@@ -18,7 +17,7 @@ the configuration of rules, respectively rule sets
 Elements in the static configuration set up the services, like decision service, which basically define the entry points, heimdall will listen to, the observability capabilities, like logging, the supported pipeline mechanisms, the default rule, as well as the rule providers (these elements are not expected to change often).</description></item><item><title>Install</title><link>https://dadrus.github.io/docs/operations/install/</link><pubDate>Mon, 25 Jul 2022 18:22:50 +0200</pubDate><guid>https://dadrus.github.io/docs/operations/install/</guid><description>Heimdall is shipped in multiple formats and architectures to suit a variety of deployment patterns. Available installation options are:
 Source code
 Binary
-Docker Image
+Container Image
 Helm Chart
 Source Code You can always build a copy of heimdall by following the following instructions for your OS/environment.
 Prerequisites git
