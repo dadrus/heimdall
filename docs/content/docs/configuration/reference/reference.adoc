@@ -185,7 +185,7 @@ mechanisms:
             value: VerySecret!
       token_source:
         - header: Authorization
-          schema: Bearer
+          scheme: Bearer
         - query_parameter: access_token
         - body_parameter: access_token
       assertions:
@@ -209,7 +209,7 @@ mechanisms:
         enable_http_cache: true
       jwt_source:
         - header: Authorization
-          schema: Bearer
+          scheme: Bearer
         - query_parameter: access_token
         - body_parameter: access_token
       assertions:

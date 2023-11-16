@@ -63,7 +63,7 @@ This fallback mechanism can become handy, if different clients of your applicati
 [source, yaml]
 ----
 - header: Authorization
-  schema: Bearer
+  scheme: Bearer
 - query_parameter: access_token
 - body_parameter: access_token
 ----
@@ -97,9 +97,9 @@ This strategy can retrieve authentication data from a specific HTTP header. Foll
 +
 The name of the header to use.
 
-* *`schema`*: _string_ (optional)
+* *`scheme`*: _string_ (optional)
 +
-Schema, which should be present in the header value. If specified, but not present in the header value, the authentication data cannot be retrieved, effectively making the affected authenticator feel not responsible for the request.
+Scheme, which should be present in the header value. If specified, but not present in the header value, the authentication data cannot be retrieved, effectively making the affected authenticator feel not responsible for the request.
 
 .Header Strategy usage
 ====
@@ -109,7 +109,7 @@ Imagine you want Heimdall to verify an access token used to protect your upstrea
 [source, yaml]
 ----
 - header: Authorization
-  schema: Bearer
+  scheme: Bearer
 ----
 ====
 
@@ -231,7 +231,7 @@ The scheme for the header added in front of the authentication data value.
 
 .Header strategy configuration
 ====
-The following snippet shows how to configure this strategy to send e.g. a token in a header named "X-ID-Token" with schema "Bearer".
+The following snippet shows how to configure this strategy to send e.g. a token in a header named "X-ID-Token" with scheme "Bearer".
 
 [source, yaml]
 ----
