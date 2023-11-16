@@ -115,7 +115,7 @@ func newOAuth2IntrospectionAuthenticator(id string, rawConfig map[string]any) (
 	ads := x.IfThenElseExec(conf.AuthDataSource == nil,
 		func() extractors.CompositeExtractStrategy {
 			return extractors.CompositeExtractStrategy{
-				extractors.HeaderValueExtractStrategy{Name: "Authorization", Schema: "Bearer"},
+				extractors.HeaderValueExtractStrategy{Name: "Authorization", Scheme: "Bearer"},
 				extractors.QueryParameterExtractStrategy{Name: "access_token"},
 				extractors.BodyParameterExtractStrategy{Name: "access_token"},
 			}

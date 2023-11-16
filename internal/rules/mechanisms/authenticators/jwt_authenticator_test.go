@@ -160,7 +160,7 @@ assertions:
 				// token extractor settings
 				assert.IsType(t, extractors.CompositeExtractStrategy{}, auth.ads)
 				assert.Len(t, auth.ads, 3)
-				assert.Contains(t, auth.ads, extractors.HeaderValueExtractStrategy{Name: "Authorization", Schema: "Bearer"})
+				assert.Contains(t, auth.ads, extractors.HeaderValueExtractStrategy{Name: "Authorization", Scheme: "Bearer"})
 				assert.Contains(t, auth.ads, extractors.QueryParameterExtractStrategy{Name: "access_token"})
 				assert.Contains(t, auth.ads, extractors.BodyParameterExtractStrategy{Name: "access_token"})
 
@@ -222,7 +222,7 @@ cache_ttl: 5s`),
 				// token extractor settings
 				assert.IsType(t, extractors.CompositeExtractStrategy{}, auth.ads)
 				assert.Len(t, auth.ads, 3)
-				assert.Contains(t, auth.ads, extractors.HeaderValueExtractStrategy{Name: "Authorization", Schema: "Bearer"})
+				assert.Contains(t, auth.ads, extractors.HeaderValueExtractStrategy{Name: "Authorization", Scheme: "Bearer"})
 				assert.Contains(t, auth.ads, extractors.QueryParameterExtractStrategy{Name: "access_token"})
 				assert.Contains(t, auth.ads, extractors.BodyParameterExtractStrategy{Name: "access_token"})
 
@@ -271,7 +271,7 @@ jwks_endpoint:
     Accept-Type: application/foobar
 jwt_source:
   - header: foo-header
-    schema: foo
+    scheme: foo
   - query_parameter: foo_query_param
   - body_parameter: foo_body_param
 assertions:
@@ -304,7 +304,7 @@ trust_store: ` + trustStorePath),
 				assert.IsType(t, extractors.CompositeExtractStrategy{}, auth.ads)
 				assert.Len(t, auth.ads, 3)
 				assert.Contains(t, auth.ads, &extractors.HeaderValueExtractStrategy{
-					Name: "foo-header", Schema: "foo",
+					Name: "foo-header", Scheme: "foo",
 				})
 				assert.Contains(t, auth.ads, &extractors.QueryParameterExtractStrategy{Name: "foo_query_param"})
 				assert.Contains(t, auth.ads, &extractors.BodyParameterExtractStrategy{Name: "foo_body_param"})
