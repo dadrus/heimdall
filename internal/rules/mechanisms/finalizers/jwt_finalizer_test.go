@@ -454,7 +454,7 @@ func TestJWTFinalizerExecute(t *testing.T) {
 				finalizer := jwtFinalizer{ttl: defaultJWTTTL}
 
 				cacheKey := finalizer.calculateCacheKey(sub, signer)
-				cch.EXPECT().Get(cacheKey).Return("TestToken")
+				cch.EXPECT().Get(mock.Anything, cacheKey).Return("TestToken")
 			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
@@ -481,9 +481,9 @@ func TestJWTFinalizerExecute(t *testing.T) {
 				finalizer := jwtFinalizer{ttl: configuredTTL}
 				cacheKey := finalizer.calculateCacheKey(sub, signer)
 
-				cch.EXPECT().Get(cacheKey).Return(time.Second)
-				cch.EXPECT().Delete(cacheKey)
-				cch.EXPECT().Set(cacheKey, "barfoo", configuredTTL-defaultCacheLeeway)
+				cch.EXPECT().Get(mock.Anything, cacheKey).Return(time.Second)
+				cch.EXPECT().Delete(mock.Anything, cacheKey)
+				cch.EXPECT().Set(mock.Anything, cacheKey, "barfoo", configuredTTL-defaultCacheLeeway)
 			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
@@ -507,8 +507,8 @@ func TestJWTFinalizerExecute(t *testing.T) {
 				ctx.EXPECT().Signer().Return(signer)
 				ctx.EXPECT().AddHeaderForUpstream("Authorization", "Bearer barfoo")
 
-				cch.EXPECT().Get(mock.Anything).Return(nil)
-				cch.EXPECT().Set(mock.Anything, "barfoo", configuredTTL-defaultCacheLeeway)
+				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil)
+				cch.EXPECT().Set(mock.Anything, mock.Anything, "barfoo", configuredTTL-defaultCacheLeeway)
 			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
@@ -542,8 +542,8 @@ claims: '{
 				ctx.EXPECT().Signer().Return(signer)
 				ctx.EXPECT().AddHeaderForUpstream("X-Token", "Bar barfoo")
 
-				cch.EXPECT().Get(mock.Anything).Return(nil)
-				cch.EXPECT().Set(mock.Anything, "barfoo", defaultJWTTTL-defaultCacheLeeway)
+				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil)
+				cch.EXPECT().Set(mock.Anything, mock.Anything, "barfoo", defaultJWTTTL-defaultCacheLeeway)
 			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
@@ -565,7 +565,7 @@ claims: '{
 
 				ctx.EXPECT().Signer().Return(signer)
 
-				cch.EXPECT().Get(mock.Anything).Return(nil)
+				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil)
 			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
@@ -593,7 +593,7 @@ claims: '{
 
 				ctx.EXPECT().Signer().Return(signer)
 
-				cch.EXPECT().Get(mock.Anything).Return(nil)
+				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil)
 			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()

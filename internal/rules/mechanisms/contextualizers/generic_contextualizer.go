@@ -133,13 +133,13 @@ func (h *genericContextualizer) Execute(ctx heimdall.Context, sub *subject.Subje
 
 	if h.ttl > 0 {
 		cacheKey = h.calculateCacheKey(sub)
-		cacheEntry = cch.Get(cacheKey)
+		cacheEntry = cch.Get(ctx.AppContext(), cacheKey)
 	}
 
 	if cacheEntry != nil {
 		if response, ok = cacheEntry.(*contextualizerData); !ok {
 			logger.Warn().Msg("Wrong object type from cache")
-			cch.Delete(cacheKey)
+			cch.Delete(ctx.AppContext(), cacheKey)
 		} else {
 			logger.Debug().Msg("Reusing contextualizer response from cache")
 		}
@@ -152,7 +152,7 @@ func (h *genericContextualizer) Execute(ctx heimdall.Context, sub *subject.Subje
 		}
 
 		if h.ttl > 0 && len(cacheKey) != 0 {
-			cch.Set(cacheKey, response, h.ttl)
+			cch.Set(ctx.AppContext(), cacheKey, response, h.ttl)
 		}
 	}
 

@@ -152,13 +152,13 @@ func (a *remoteAuthorizer) Execute(ctx heimdall.Context, sub *subject.Subject) e
 
 	if a.ttl > 0 {
 		cacheKey = a.calculateCacheKey(sub)
-		cacheEntry = cch.Get(cacheKey)
+		cacheEntry = cch.Get(ctx.AppContext(), cacheKey)
 	}
 
 	if cacheEntry != nil {
 		if authInfo, ok = cacheEntry.(*authorizationInformation); !ok {
 			logger.Warn().Msg("Wrong object type from cache")
-			cch.Delete(cacheKey)
+			cch.Delete(ctx.AppContext(), cacheKey)
 		} else {
 			logger.Debug().Msg("Reusing authorization information from cache")
 		}
@@ -171,7 +171,7 @@ func (a *remoteAuthorizer) Execute(ctx heimdall.Context, sub *subject.Subject) e
 		}
 
 		if a.ttl > 0 && len(cacheKey) != 0 {
-			cch.Set(cacheKey, authInfo, a.ttl)
+			cch.Set(ctx.AppContext(), cacheKey, authInfo, a.ttl)
 		}
 	}
 
