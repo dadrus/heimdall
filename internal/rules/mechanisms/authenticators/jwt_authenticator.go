@@ -35,8 +35,10 @@ import (
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/endpoint"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/extractors"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/oidc"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/oauth2"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
 	"github.com/dadrus/heimdall/internal/truststore"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
@@ -70,13 +72,20 @@ type jwtAuthenticator struct {
 	sf                   SubjectFactory
 	ads                  extractors.AuthDataExtractStrategy
 	allowFallbackOnError bool
+	endpointIsDiscovery  bool
 	trustStore           truststore.TrustStore
 	validateJWKCert      bool
 }
 
+type jwtAuthenticatorCacheEntry struct {
+	jwk        *jose.JSONWebKey
+	assertions *oauth2.Expectation
+}
+
 func newJwtAuthenticator(id string, rawConfig map[string]any) (*jwtAuthenticator, error) { // nolint: funlen
 	type Config struct {
-		Endpoint             endpoint.Endpoint                   `mapstructure:"jwks_endpoint"           validate:"required"`
+		JWKSEndpoint         *endpoint.Endpoint                  `mapstructure:"jwks_endpoint"           validate:"required_without=DiscoveryEndpoint,excluded_with=DiscoveryEndpoint"`
+		DiscoveryEndpoint    *endpoint.Endpoint                  `mapstructure:"oidc_discovery_endpoint" validate:"required_without=JWKSEndpoint,excluded_with=JWKSEndpoint"`
 		Assertions           oauth2.Expectation                  `mapstructure:"assertions"              validate:"required"`
 		SubjectInfo          SubjectInfo                         `mapstructure:"subject"                 validate:"-"`
 		AuthDataSource       extractors.CompositeExtractStrategy `mapstructure:"jwt_source"`
@@ -91,16 +100,24 @@ func newJwtAuthenticator(id string, rawConfig map[string]any) (*jwtAuthenticator
 		return nil, err
 	}
 
-	if conf.Endpoint.Headers == nil {
-		conf.Endpoint.Headers = make(map[string]string)
+	// Pick the right endpoint to apply defaults to, JWKSEndpoint if set, otherwise the discovery endpoint
+	endpoint := x.IfThenElse(conf.JWKSEndpoint != nil, conf.JWKSEndpoint, conf.DiscoveryEndpoint)
+
+	if endpoint.Headers == nil {
+		endpoint.Headers = make(map[string]string)
 	}
 
-	if _, ok := conf.Endpoint.Headers["Accept-Type"]; !ok {
-		conf.Endpoint.Headers["Accept-Type"] = "application/json"
+	if _, ok := endpoint.Headers["Accept-Type"]; !ok {
+		endpoint.Headers["Accept-Type"] = "application/json"
 	}
 
-	if len(conf.Endpoint.Method) == 0 {
-		conf.Endpoint.Method = "GET"
+	if len(endpoint.Method) == 0 {
+		endpoint.Method = "GET"
+	}
+
+	if conf.JWKSEndpoint != nil && len(conf.Assertions.TrustedIssuers) == 0 {
+		return nil, errorchain.
+			NewWithMessage(heimdall.ErrConfiguration, "'issuers' is a required field if JWKS endpoint is used")
 	}
 
 	if len(conf.Assertions.AllowedAlgorithms) == 0 {
@@ -132,7 +149,7 @@ func newJwtAuthenticator(id string, rawConfig map[string]any) (*jwtAuthenticator
 
 	return &jwtAuthenticator{
 		id:                   id,
-		e:                    conf.Endpoint,
+		e:                    *endpoint,
 		a:                    conf.Assertions,
 		ttl:                  conf.CacheTTL,
 		sf:                   &conf.SubjectInfo,
@@ -140,6 +157,7 @@ func newJwtAuthenticator(id string, rawConfig map[string]any) (*jwtAuthenticator
 		allowFallbackOnError: conf.AllowFallbackOnError,
 		validateJWKCert:      validateJWKCert,
 		trustStore:           conf.TrustStore,
+		endpointIsDiscovery:  conf.DiscoveryEndpoint != nil,
 	}, nil
 }
 
@@ -268,12 +286,12 @@ func (a *jwtAuthenticator) verifyToken(ctx heimdall.Context, token *jwt.JSONWebT
 		return a.verifyTokenWithoutKID(ctx, token)
 	}
 
-	sigKey, err := a.getKey(ctx, token.Headers[0].KeyID)
+	sigKey, assertions, err := a.getKey(ctx, token.Headers[0].KeyID)
 	if err != nil {
 		return nil, err
 	}
 
-	return a.verifyTokenWithKey(token, sigKey)
+	return a.verifyTokenWithKey(token, sigKey, assertions)
 }
 
 func (a *jwtAuthenticator) verifyTokenWithoutKID(ctx heimdall.Context, token *jwt.JSONWebToken) (
@@ -284,7 +302,7 @@ func (a *jwtAuthenticator) verifyTokenWithoutKID(ctx heimdall.Context, token *jw
 
 	var rawClaims json.RawMessage
 
-	jwks, err := a.fetchJWKS(ctx)
+	jwks, assertions, err := a.fetchJWKS(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -297,7 +315,7 @@ func (a *jwtAuthenticator) verifyTokenWithoutKID(ctx heimdall.Context, token *jw
 			continue
 		}
 
-		rawClaims, err = a.verifyTokenWithKey(token, &sigKey)
+		rawClaims, err = a.verifyTokenWithKey(token, &sigKey, assertions)
 		if err == nil {
 			break
 		}
@@ -315,74 +333,31 @@ func (a *jwtAuthenticator) verifyTokenWithoutKID(ctx heimdall.Context, token *jw
 	return rawClaims, nil
 }
 
-func (a *jwtAuthenticator) getKey(ctx heimdall.Context, keyID string) (*jose.JSONWebKey, error) {
-	cch := cache.Ctx(ctx.AppContext())
-	logger := zerolog.Ctx(ctx.AppContext())
-
-	var (
-		cacheKey   string
-		cacheEntry any
-		jwk        *jose.JSONWebKey
-		jwks       *jose.JSONWebKeySet
-		err        error
-		ok         bool
-	)
-
-	if a.isCacheEnabled() {
-		cacheKey = a.calculateCacheKey(keyID)
-		cacheEntry = cch.Get(ctx.AppContext(), cacheKey)
+func (a *jwtAuthenticator) resolveOpenIdDiscovery(ctx heimdall.Context) (*endpoint.Endpoint, *oauth2.Expectation, error) {
+	// the authenticator is configured to not have discovery enabled, so reuse the values.
+	if !a.endpointIsDiscovery {
+		return &a.e, &a.a, nil
 	}
 
-	if cacheEntry != nil {
-		if jwk, ok = cacheEntry.(*jose.JSONWebKey); !ok {
-			logger.Warn().Msg("Wrong object type from cache")
-			cch.Delete(ctx.AppContext(), cacheKey)
-		} else {
-			logger.Debug().Msg("Reusing JWK from cache")
+	// a.e is the OIDC discovery URL here
+
+	// TODO: JWT object here
+	templateData := map[string]any{}
+
+	req, err := a.e.CreateRequest(ctx.AppContext(), nil, endpoint.RenderFunc(func(value string) (string, error) {
+		tpl, err := template.New(value)
+		if err != nil {
+			return "", errorchain.NewWithMessage(heimdall.ErrInternal, "failed to create template").
+				WithErrorContext(a).
+				CausedBy(err)
 		}
-	}
 
-	if jwk != nil {
-		return jwk, nil
-	}
+		return tpl.Render(templateData)
+	}))
 
-	jwks, err = a.fetchJWKS(ctx)
 	if err != nil {
-		return nil, err
-	}
-
-	keys := jwks.Key(keyID)
-	if len(keys) != 1 {
-		return nil, errorchain.
-			NewWithMessagef(heimdall.ErrAuthentication,
-				"no (unique) key found for the keyID='%s' referenced in the JWT", keyID).
-			WithErrorContext(a)
-	}
-
-	jwk = &keys[0]
-	if err = a.validateJWK(jwk); err != nil {
-		return nil, errorchain.
-			NewWithMessagef(heimdall.ErrAuthentication, "JWK for keyID=%s is invalid", keyID).
-			WithErrorContext(a).
-			CausedBy(err)
-	}
-
-	if cacheTTL := a.getCacheTTL(jwk); cacheTTL > 0 {
-		cch.Set(ctx.AppContext(), cacheKey, jwk, cacheTTL)
-	}
-
-	return jwk, nil
-}
-
-func (a *jwtAuthenticator) fetchJWKS(ctx heimdall.Context) (*jose.JSONWebKeySet, error) {
-	logger := zerolog.Ctx(ctx.AppContext())
-
-	logger.Debug().Msg("Retrieving JWKS from configured endpoint")
-
-	req, err := a.e.CreateRequest(ctx.AppContext(), nil, nil)
-	if err != nil {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrInternal, "failed creating request").
+		return nil, nil, errorchain.
+			NewWithMessage(heimdall.ErrInternal, "failed creating openid discovery request").
 			WithErrorContext(a).
 			CausedBy(err)
 	}
@@ -391,21 +366,178 @@ func (a *jwtAuthenticator) fetchJWKS(ctx heimdall.Context) (*jose.JSONWebKeySet,
 	if err != nil {
 		var clientErr *url.Error
 		if errors.As(err, &clientErr) && clientErr.Timeout() {
-			return nil, errorchain.
-				NewWithMessage(heimdall.ErrCommunicationTimeout, "request to JWKS endpoint timed out").
+			return nil, nil, errorchain.
+				NewWithMessage(heimdall.ErrCommunicationTimeout, "request to openid discovery endpoint timed out").
 				WithErrorContext(a).
 				CausedBy(err)
 		}
 
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrCommunication, "request to JWKS endpoint failed").
+		return nil, nil, errorchain.
+			NewWithMessage(heimdall.ErrCommunication, "request to openid discovery endpoint failed").
 			WithErrorContext(a).
 			CausedBy(err)
 	}
 
 	defer resp.Body.Close()
 
-	return a.readJWKS(resp)
+	if !(resp.StatusCode >= http.StatusOK && resp.StatusCode < http.StatusMultipleChoices) {
+		return nil, nil, errorchain.
+			NewWithMessagef(heimdall.ErrCommunication, "unexpected response. code: %v", resp.StatusCode).
+			WithErrorContext(a)
+	}
+
+	rawData, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, nil, errorchain.
+			NewWithMessage(heimdall.ErrInternal, "failed to read response").
+			WithErrorContext(a).
+			CausedBy(err)
+	}
+
+	// unmarshal the received discovery document
+	var discovery oidc.DiscoveryDocument
+	if err := json.Unmarshal(rawData, &discovery); err != nil {
+		return nil, nil, errorchain.
+			NewWithMessage(heimdall.ErrInternal, "failed to unmarshal received discovery document").
+			WithErrorContext(a).
+			CausedBy(err)
+	}
+
+	// TODO: check if it makes sense to copy these from the discovery
+	ep := &endpoint.Endpoint{
+		URL:              discovery.JWKSUrl,
+		Method:           "GET",
+		Retry:            a.e.Retry,
+		AuthStrategy:     a.e.AuthStrategy,
+		HTTPCacheEnabled: a.e.HTTPCacheEnabled,
+		Headers:          a.e.Headers,
+	}
+
+	oidcIssuer := &oauth2.Expectation{
+		TrustedIssuers: []string{discovery.Issuer},
+		// TODO: AllowedAlgorithms
+	}
+	assertions := oidcIssuer.Merge(&a.a)
+
+	return ep, &assertions, nil
+}
+
+func (a *jwtAuthenticator) getKey(ctx heimdall.Context, keyID string) (*jose.JSONWebKey, *oauth2.Expectation, error) {
+	cch := cache.Ctx(ctx.AppContext())
+	logger := zerolog.Ctx(ctx.AppContext())
+
+	var (
+		cacheKey        string
+		cacheEntry      any
+		typedCacheEntry *jwtAuthenticatorCacheEntry
+		jwk             *jose.JSONWebKey
+		jwks            *jose.JSONWebKeySet
+		err             error
+		ok              bool
+	)
+
+	if a.isCacheEnabled() {
+		cacheKey = a.calculateCacheKey(keyID)
+		cacheEntry = cch.Get(ctx.AppContext(), cacheKey)
+	}
+
+	if cacheEntry != nil {
+		if typedCacheEntry, ok = cacheEntry.(*jwtAuthenticatorCacheEntry); !ok {
+			logger.Warn().Msg("Wrong object type from cache")
+			cch.Delete(ctx.AppContext(), cacheKey)
+		} else {
+			logger.Debug().Msg("Reusing JWK from cache")
+		}
+	}
+
+	if typedCacheEntry != nil {
+		return typedCacheEntry.jwk, typedCacheEntry.assertions, nil
+	}
+
+	jwks, assertions, err := a.fetchJWKS(ctx)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	keys := jwks.Key(keyID)
+	if len(keys) != 1 {
+		return nil, nil, errorchain.
+			NewWithMessagef(heimdall.ErrAuthentication,
+				"no (unique) key found for the keyID='%s' referenced in the JWT", keyID).
+			WithErrorContext(a)
+	}
+
+	jwk = &keys[0]
+	if err = a.validateJWK(jwk); err != nil {
+		return nil, nil, errorchain.
+			NewWithMessagef(heimdall.ErrAuthentication, "JWK for keyID=%s is invalid", keyID).
+			WithErrorContext(a).
+			CausedBy(err)
+	}
+
+	if cacheTTL := a.getCacheTTL(jwk); cacheTTL > 0 {
+		cch.Set(ctx.AppContext(), cacheKey, &jwtAuthenticatorCacheEntry{
+			jwk:        jwk,
+			assertions: assertions,
+		}, cacheTTL)
+	}
+
+	return jwk, assertions, nil
+}
+
+func (a *jwtAuthenticator) fetchJWKS(ctx heimdall.Context) (*jose.JSONWebKeySet, *oauth2.Expectation, error) {
+	logger := zerolog.Ctx(ctx.AppContext())
+
+	ep, assertions, err := a.resolveOpenIdDiscovery(ctx)
+	if err != nil {
+		return nil, nil, errorchain.
+			NewWithMessage(heimdall.ErrInternal, "failed to resolve OIDC discovery document").
+			WithErrorContext(a).
+			CausedBy(err)
+	}
+
+	logger.Debug().Msg("Retrieving JWKS from configured endpoint")
+
+	templateData := map[string]any{}
+
+	req, err := ep.CreateRequest(ctx.AppContext(), nil, endpoint.RenderFunc(func(value string) (string, error) {
+		tpl, err := template.New(value)
+		if err != nil {
+			return "", errorchain.NewWithMessage(heimdall.ErrInternal, "failed to create template").
+				WithErrorContext(a).
+				CausedBy(err)
+		}
+
+		return tpl.Render(templateData)
+	}))
+
+	if err != nil {
+		return nil, nil, errorchain.
+			NewWithMessage(heimdall.ErrInternal, "failed creating request").
+			WithErrorContext(a).
+			CausedBy(err)
+	}
+
+	resp, err := ep.CreateClient(req.URL.Hostname()).Do(req)
+	if err != nil {
+		var clientErr *url.Error
+		if errors.As(err, &clientErr) && clientErr.Timeout() {
+			return nil, nil, errorchain.
+				NewWithMessage(heimdall.ErrCommunicationTimeout, "request to JWKS endpoint timed out").
+				WithErrorContext(a).
+				CausedBy(err)
+		}
+
+		return nil, nil, errorchain.
+			NewWithMessage(heimdall.ErrCommunication, "request to JWKS endpoint failed").
+			WithErrorContext(a).
+			CausedBy(err)
+	}
+
+	defer resp.Body.Close()
+	jwks, err := a.readJWKS(resp)
+
+	return jwks, assertions, err
 }
 
 func (a *jwtAuthenticator) readJWKS(resp *http.Response) (*jose.JSONWebKeySet, error) {
@@ -435,7 +567,7 @@ func (a *jwtAuthenticator) readJWKS(resp *http.Response) (*jose.JSONWebKeySet, e
 	return &jwks, nil
 }
 
-func (a *jwtAuthenticator) verifyTokenWithKey(token *jwt.JSONWebToken, key *jose.JSONWebKey) (json.RawMessage, error) {
+func (a *jwtAuthenticator) verifyTokenWithKey(token *jwt.JSONWebToken, key *jose.JSONWebKey, assertions *oauth2.Expectation) (json.RawMessage, error) {
 	header := token.Headers[0]
 
 	if len(header.Algorithm) != 0 && key.Algorithm != header.Algorithm {
@@ -445,7 +577,7 @@ func (a *jwtAuthenticator) verifyTokenWithKey(token *jwt.JSONWebToken, key *jose
 			WithErrorContext(a)
 	}
 
-	if err := a.a.AssertAlgorithm(key.Algorithm); err != nil {
+	if err := assertions.AssertAlgorithm(key.Algorithm); err != nil {
 		return nil, errorchain.
 			NewWithMessagef(heimdall.ErrAuthentication, "%s algorithm is not allowed", key.Algorithm).
 			WithErrorContext(a).
@@ -464,7 +596,7 @@ func (a *jwtAuthenticator) verifyTokenWithKey(token *jwt.JSONWebToken, key *jose
 			CausedBy(err)
 	}
 
-	if err := claims.Validate(a.a); err != nil {
+	if err := claims.Validate(*assertions); err != nil {
 		return nil, errorchain.
 			NewWithMessage(heimdall.ErrAuthentication, "access token does not satisfy assertion conditions").
 			WithErrorContext(a).
