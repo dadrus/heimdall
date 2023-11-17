@@ -43,7 +43,7 @@ func (c *InMemoryCache) Stop(_ context.Context) error {
 	return nil
 }
 
-func (c *InMemoryCache) Get(key string) any {
+func (c *InMemoryCache) Get(_ context.Context, key string) any {
 	item := c.c.Get(key)
 	if item != nil && !item.IsExpired() {
 		return item.Value()
@@ -52,6 +52,8 @@ func (c *InMemoryCache) Get(key string) any {
 	return nil
 }
 
-func (c *InMemoryCache) Set(key string, value any, ttl time.Duration) { c.c.Set(key, value, ttl) }
+func (c *InMemoryCache) Set(_ context.Context, key string, value any, ttl time.Duration) {
+	c.c.Set(key, value, ttl)
+}
 
-func (c *InMemoryCache) Delete(key string) { c.c.Delete(key) }
+func (c *InMemoryCache) Delete(_ context.Context, key string) { c.c.Delete(key) }

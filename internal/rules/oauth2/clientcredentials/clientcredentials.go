@@ -67,13 +67,13 @@ func (c *Config) Token(ctx context.Context) (*TokenInfo, error) {
 
 	if c.isCacheEnabled() {
 		cacheKey = c.calculateCacheKey()
-		cacheEntry = cch.Get(cacheKey)
+		cacheEntry = cch.Get(ctx, cacheKey)
 	}
 
 	if cacheEntry != nil {
 		if tokenInfo, ok = cacheEntry.(*TokenInfo); !ok {
 			logger.Warn().Msg("Wrong object type from cache")
-			cch.Delete(cacheKey)
+			cch.Delete(ctx, cacheKey)
 		} else {
 			logger.Debug().Msg("Reusing access token from cache")
 		}
@@ -88,7 +88,7 @@ func (c *Config) Token(ctx context.Context) (*TokenInfo, error) {
 		}
 
 		if cacheTTL := c.getCacheTTL(tokenInfo); cacheTTL > 0 {
-			cch.Set(cacheKey, tokenInfo, cacheTTL)
+			cch.Set(ctx, cacheKey, tokenInfo, cacheTTL)
 		}
 	}
 

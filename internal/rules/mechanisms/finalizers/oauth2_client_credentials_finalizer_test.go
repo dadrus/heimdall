@@ -450,7 +450,7 @@ func TestClientCredentialsFinalizerExecute(t *testing.T) {
 			configureMocks: func(t *testing.T, ctx *mocks.ContextMock, cch *mocks2.CacheMock) {
 				t.Helper()
 
-				cch.EXPECT().Get(mock.Anything).Return(&clientcredentials.TokenInfo{AccessToken: "foobar", TokenType: "Bearer"})
+				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(&clientcredentials.TokenInfo{AccessToken: "foobar", TokenType: "Bearer"})
 				ctx.EXPECT().AddHeaderForUpstream("Authorization", "Bearer foobar")
 			},
 			assert: func(t *testing.T, err error, tokenEndpointCalled bool) {
@@ -473,7 +473,7 @@ func TestClientCredentialsFinalizerExecute(t *testing.T) {
 			configureMocks: func(t *testing.T, ctx *mocks.ContextMock, cch *mocks2.CacheMock) {
 				t.Helper()
 
-				cch.EXPECT().Get(mock.Anything).Return(nil)
+				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil)
 			},
 			assertRequest: func(t *testing.T, req *http.Request) { t.Helper() },
 			buildResponse: func(t *testing.T) (any, int) {
@@ -510,8 +510,8 @@ func TestClientCredentialsFinalizerExecute(t *testing.T) {
 			configureMocks: func(t *testing.T, ctx *mocks.ContextMock, cch *mocks2.CacheMock) {
 				t.Helper()
 
-				cch.EXPECT().Get(mock.Anything).Return(nil)
-				cch.EXPECT().Set(mock.Anything, mock.Anything, 3*time.Minute).Return()
+				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil)
+				cch.EXPECT().Set(mock.Anything, mock.Anything, mock.Anything, 3*time.Minute).Return()
 				ctx.EXPECT().AddHeaderForUpstream("X-My-Header", "Bar foobar").Return()
 			},
 			assertRequest: func(t *testing.T, req *http.Request) {

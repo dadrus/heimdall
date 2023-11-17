@@ -330,13 +330,13 @@ func (a *jwtAuthenticator) getKey(ctx heimdall.Context, keyID string) (*jose.JSO
 
 	if a.isCacheEnabled() {
 		cacheKey = a.calculateCacheKey(keyID)
-		cacheEntry = cch.Get(cacheKey)
+		cacheEntry = cch.Get(ctx.AppContext(), cacheKey)
 	}
 
 	if cacheEntry != nil {
 		if jwk, ok = cacheEntry.(*jose.JSONWebKey); !ok {
 			logger.Warn().Msg("Wrong object type from cache")
-			cch.Delete(cacheKey)
+			cch.Delete(ctx.AppContext(), cacheKey)
 		} else {
 			logger.Debug().Msg("Reusing JWK from cache")
 		}
@@ -368,7 +368,7 @@ func (a *jwtAuthenticator) getKey(ctx heimdall.Context, keyID string) (*jose.JSO
 	}
 
 	if cacheTTL := a.getCacheTTL(jwk); cacheTTL > 0 {
-		cch.Set(cacheKey, jwk, cacheTTL)
+		cch.Set(ctx.AppContext(), cacheKey, jwk, cacheTTL)
 	}
 
 	return jwk, nil

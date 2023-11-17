@@ -17,6 +17,7 @@
 package cache
 
 import (
+	"context"
 	"time"
 )
 
@@ -25,7 +26,7 @@ import (
 type Cache interface {
 	Evictor
 
-	Get(key string) any
-	Set(key string, value any, ttl time.Duration)
-	Delete(key string)
+	Get(ctx context.Context, key string) any
+	Set(ctx context.Context, key string, value any, ttl time.Duration)
+	Delete(ctx context.Context, key string)
 }

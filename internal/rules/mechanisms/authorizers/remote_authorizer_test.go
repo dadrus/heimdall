@@ -730,8 +730,8 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 
 				cacheKey := auth.calculateCacheKey(sub)
 
-				cch.EXPECT().Get(cacheKey).Return(nil)
-				cch.EXPECT().Set(cacheKey,
+				cch.EXPECT().Get(mock.Anything, cacheKey).Return(nil)
+				cch.EXPECT().Set(mock.Anything, cacheKey,
 					mock.MatchedBy(func(val *authorizationInformation) bool {
 						return val != nil && val.payload == nil && len(val.headers.Get("X-Foo-Bar")) != 0
 					}), auth.ttl)
@@ -780,8 +780,8 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 
 				cacheKey := auth.calculateCacheKey(sub)
 
-				cch.EXPECT().Get(cacheKey).Return(nil)
-				cch.EXPECT().Set(cacheKey, mock.Anything, auth.ttl)
+				cch.EXPECT().Get(mock.Anything, cacheKey).Return(nil)
+				cch.EXPECT().Set(mock.Anything, cacheKey, mock.Anything, auth.ttl)
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
@@ -827,7 +827,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 			configureCache: func(t *testing.T, cch *mocks.CacheMock, auth *remoteAuthorizer, sub *subject.Subject) {
 				t.Helper()
 
-				cch.EXPECT().Get(mock.Anything).Return(&authorizationInformation{
+				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(&authorizationInformation{
 					headers: http.Header{
 						"X-Foo-Bar": {"HeyFoo"},
 						"X-Bar-Foo": {"HeyBar"},
@@ -884,9 +884,9 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 			configureCache: func(t *testing.T, cch *mocks.CacheMock, auth *remoteAuthorizer, sub *subject.Subject) {
 				t.Helper()
 
-				cch.EXPECT().Get(mock.Anything).Return("Hello Foo")
-				cch.EXPECT().Delete(mock.Anything)
-				cch.EXPECT().Set(mock.Anything, mock.Anything, auth.ttl)
+				cch.EXPECT().Get(mock.Anything, mock.Anything).Return("Hello Foo")
+				cch.EXPECT().Delete(mock.Anything, mock.Anything)
+				cch.EXPECT().Set(mock.Anything, mock.Anything, mock.Anything, auth.ttl)
 			},
 			instructServer: func(t *testing.T) {
 				t.Helper()

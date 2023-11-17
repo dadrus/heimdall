@@ -186,13 +186,13 @@ func (a *genericAuthenticator) getSubjectInformation(ctx heimdall.Context, authD
 
 	if a.ttl > 0 {
 		cacheKey = a.calculateCacheKey(authData)
-		cacheEntry = cch.Get(cacheKey)
+		cacheEntry = cch.Get(ctx.AppContext(), cacheKey)
 	}
 
 	if cacheEntry != nil {
 		if cachedResponse, ok = cacheEntry.([]byte); !ok {
 			logger.Warn().Msg("Wrong object type from cache")
-			cch.Delete(cacheKey)
+			cch.Delete(ctx.AppContext(), cacheKey)
 		} else {
 			logger.Debug().Msg("Reusing subject information from cache")
 
@@ -219,7 +219,7 @@ func (a *genericAuthenticator) getSubjectInformation(ctx heimdall.Context, authD
 	}
 
 	if cacheTTL := a.getCacheTTL(session); cacheTTL > 0 {
-		cch.Set(cacheKey, payload, cacheTTL)
+		cch.Set(ctx.AppContext(), cacheKey, payload, cacheTTL)
 	}
 
 	return payload, nil
