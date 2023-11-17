@@ -106,7 +106,7 @@ func TestApplyClientCredentialsStrategy(t *testing.T) {
 			configureMocks: func(t *testing.T, cch *mocks.CacheMock) {
 				t.Helper()
 
-				cch.EXPECT().Get(mock.Anything).Return(&clientcredentials.TokenInfo{
+				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(&clientcredentials.TokenInfo{
 					AccessToken: "foobar", TokenType: "Bearer",
 				})
 			},
@@ -128,7 +128,7 @@ func TestApplyClientCredentialsStrategy(t *testing.T) {
 			configureMocks: func(t *testing.T, cch *mocks.CacheMock) {
 				t.Helper()
 
-				cch.EXPECT().Get(mock.Anything).Return(nil)
+				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil)
 			},
 			assertRequest: func(t *testing.T, req *http.Request) { t.Helper() },
 			buildResponse: func(t *testing.T) (any, int) {
@@ -163,8 +163,8 @@ func TestApplyClientCredentialsStrategy(t *testing.T) {
 			configureMocks: func(t *testing.T, cch *mocks.CacheMock) {
 				t.Helper()
 
-				cch.EXPECT().Get(mock.Anything).Return(nil)
-				cch.EXPECT().Set(mock.Anything, mock.Anything, 3*time.Minute).Return()
+				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil)
+				cch.EXPECT().Set(mock.Anything, mock.Anything, mock.Anything, 3*time.Minute).Return()
 			},
 			assertRequest: func(t *testing.T, req *http.Request) {
 				t.Helper()
