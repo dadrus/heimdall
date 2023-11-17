@@ -1022,11 +1022,23 @@
           "description": "JWT Authenticator Configuration",
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "jwks_endpoint"
+          "oneOf": [
+            {
+              "required": [
+                "jwks_endpoint"
+              ]
+            },
+            {
+              "required": [
+                "oidc_discovery_endpoint"
+              ]
+            }
           ],
           "properties": {
             "jwks_endpoint": {
+              "$ref": "#/definitions/endpointConfiguration"
+            },
+            "oidc_discovery_endpoint": {
               "$ref": "#/definitions/endpointConfiguration"
             },
             "jwt_source": {
