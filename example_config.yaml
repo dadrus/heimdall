@@ -93,7 +93,7 @@ mechanisms:
           enable_http_cache: true
         jwt_source:
           - header: Authorization
-            schema: Bearer
+            scheme: Bearer
         assertions:
           audience:
             - bla

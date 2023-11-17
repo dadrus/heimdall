@@ -619,7 +619,7 @@ paths:
             type: string
         - name: X-Forwarded-Proto
           in: header
-          description: Schema to use to build the url to verify access to. If not present defaults to the schema used to operate heimdall.
+          description: HTTP scheme to use to build the url to verify access to. If not present defaults to the scheme used to operate heimdall.
           schema:
             type: string
         - name: X-Forwarded-Host
@@ -706,7 +706,7 @@ paths:
             type: string
         - name: X-Forwarded-Proto
           in: header
-          description: Schema to use to build the url to verify access to. If not present defaults to the schema used to operate heimdall.
+          description: HTTP scheme to use to build the url to verify access to. If not present defaults to the scheme used to operate heimdall.
           schema:
             type: string
         - name: X-Forwarded-Host

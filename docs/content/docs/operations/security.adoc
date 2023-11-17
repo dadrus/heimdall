@@ -16,7 +16,7 @@ To operate heimdall in a secure way, you should configure heimdall accordingly. 
 
 If `trusted_proxies` property is configured (see also the corresponding link:{{< relref "/docs/configuration/services/decision.adoc#_trusted_proxies" >}}[Decision] and link:{{< relref "/docs/configuration/services/proxy.adoc#_trusted_proxies" >}}[Proxy] service configuration options) to let heimdall make use of different HTTP headers to build the URL for rule and HTTP method matching purposes, following logic apply:
 
-* The value for the used HTTP schema is taken from the `X-Forwarded-Proto` header.
+* The value for the used HTTP scheme is taken from the `X-Forwarded-Proto` header.
 * The value for the used HTTP host and port is taken from the `X-Forwarded-Host` header.
 * The value for the used HTTP path is taken either from `X-Forwarded-Uri` or `X-Forwarded-Path` with `X-Forwarded-Uri` taking precedence. Compared to `X-Forwarded-Path`, `X-Forwarded-Uri` does also contain query parameters.
 * The value for the used HTTP method is taken from the `X-Forwarded-Method` header.

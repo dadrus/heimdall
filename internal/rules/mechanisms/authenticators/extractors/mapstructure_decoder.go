@@ -78,12 +78,12 @@ func DecodeCompositeExtractStrategyHookFunc() mapstructure.DecodeHookFunc {
 
 func createStrategy(data map[string]string) (AuthDataExtractStrategy, error) {
 	if value, ok := data["header"]; ok { // nolint: nestif
-		var schema string
-		if p, ok := data["schema"]; ok {
-			schema = p
+		var scheme string
+		if p, ok := data["scheme"]; ok {
+			scheme = p
 		}
 
-		return &HeaderValueExtractStrategy{Name: value, Schema: schema}, nil
+		return &HeaderValueExtractStrategy{Name: value, Scheme: scheme}, nil
 	} else if value, ok := data["cookie"]; ok {
 		return &CookieValueExtractStrategy{Name: value}, nil
 	} else if value, ok := data["query_parameter"]; ok {
