@@ -152,7 +152,7 @@ func newJwtAuthenticator(id string, rawConfig map[string]any) (*jwtAuthenticator
 		allowFallbackOnError: conf.AllowFallbackOnError,
 		validateJWKCert:      validateJWKCert,
 		trustStore:           conf.TrustStore,
-		endpointIsDiscovery:  conf.DiscoveryEndpoint != nil,
+		endpointIsDiscovery:  conf.JWKSEndpoint == nil,
 	}, nil
 }
 
