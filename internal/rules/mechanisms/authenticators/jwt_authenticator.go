@@ -281,7 +281,7 @@ func (a *jwtAuthenticator) verifyToken(ctx heimdall.Context, token *jwt.JSONWebT
 		return a.verifyTokenWithoutKID(ctx, token)
 	}
 
-	sigKey, assertions, err := a.getKey(ctx, token.Headers[0].KeyID)
+	sigKey, assertions, err := a.getKey(ctx, token.Headers[0].KeyID, token)
 	if err != nil {
 		return nil, err
 	}
@@ -297,7 +297,7 @@ func (a *jwtAuthenticator) verifyTokenWithoutKID(ctx heimdall.Context, token *jw
 
 	var rawClaims json.RawMessage
 
-	ep, assertions, err := a.resolveOpenIdDiscovery(ctx)
+	ep, assertions, err := a.resolveOpenIdDiscovery(ctx, token)
 	if err != nil {
 		return nil, errorchain.
 			NewWithMessage(heimdall.ErrInternal, "failed to resolve OIDC discovery document").
@@ -336,7 +336,7 @@ func (a *jwtAuthenticator) verifyTokenWithoutKID(ctx heimdall.Context, token *jw
 	return rawClaims, nil
 }
 
-func (a *jwtAuthenticator) resolveOpenIdDiscovery(ctx heimdall.Context) (*endpoint.Endpoint, *oauth2.Expectation, error) {
+func (a *jwtAuthenticator) resolveOpenIdDiscovery(ctx heimdall.Context, token *jwt.JSONWebToken) (*endpoint.Endpoint, *oauth2.Expectation, error) {
 	// the authenticator is configured to not have discovery enabled, so reuse the values.
 	if !a.endpointIsDiscovery {
 		return &a.e, &a.a, nil
@@ -344,8 +344,17 @@ func (a *jwtAuthenticator) resolveOpenIdDiscovery(ctx heimdall.Context) (*endpoi
 
 	// a.e is the OIDC discovery URL here
 
-	// TODO: JWT object here
-	templateData := map[string]any{}
+	// Provide the "JWT" object to the render func template, so we can use it.
+	tokenData := map[string]any{}
+	if err := token.UnsafeClaimsWithoutVerification(tokenData); err != nil {
+		return nil, nil, errorchain.NewWithMessage(heimdall.ErrArgument, "failed to deserialize JWT").
+			WithErrorContext(a).
+			CausedBy(err)
+	}
+
+	templateData := map[string]any{
+		"JWT": tokenData,
+	}
 
 	req, err := a.e.CreateRequest(ctx.AppContext(), nil, endpoint.RenderFunc(func(value string) (string, error) {
 		tpl, err := template.New(value)
@@ -425,7 +434,7 @@ func (a *jwtAuthenticator) resolveOpenIdDiscovery(ctx heimdall.Context) (*endpoi
 	return ep, &assertions, nil
 }
 
-func (a *jwtAuthenticator) getKey(ctx heimdall.Context, keyID string) (*jose.JSONWebKey, *oauth2.Expectation, error) {
+func (a *jwtAuthenticator) getKey(ctx heimdall.Context, keyID string, token *jwt.JSONWebToken) (*jose.JSONWebKey, *oauth2.Expectation, error) {
 	cch := cache.Ctx(ctx.AppContext())
 	logger := zerolog.Ctx(ctx.AppContext())
 
@@ -438,7 +447,7 @@ func (a *jwtAuthenticator) getKey(ctx heimdall.Context, keyID string) (*jose.JSO
 		ok         bool
 	)
 
-	ep, assertions, err := a.resolveOpenIdDiscovery(ctx)
+	ep, assertions, err := a.resolveOpenIdDiscovery(ctx, token)
 	if err != nil {
 		return nil, nil, errorchain.
 			NewWithMessage(heimdall.ErrInternal, "failed to resolve OIDC discovery document").

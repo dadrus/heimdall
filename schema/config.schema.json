@@ -970,8 +970,17 @@
           "description": "OAuth2 Introspection Configuration",
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "introspection_endpoint"
+          "oneOf": [
+            {
+              "required": [
+                "jwks_endpoint"
+              ]
+            },
+            {
+              "required": [
+                "oidc_discovery_endpoint"
+              ]
+            }
           ],
           "properties": {
             "introspection_endpoint": {

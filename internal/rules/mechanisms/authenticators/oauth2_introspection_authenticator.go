@@ -36,7 +36,6 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/oidc"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/oauth2"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/stringx"
@@ -273,19 +272,7 @@ func (a *oauth2IntrospectionAuthenticator) resolveOpenIdDiscovery(ctx heimdall.C
 
 	// a.e is the OIDC discovery URL here
 
-	// TODO: JWT object here
-	templateData := map[string]any{}
-
-	req, err := a.e.CreateRequest(ctx.AppContext(), nil, endpoint.RenderFunc(func(value string) (string, error) {
-		tpl, err := template.New(value)
-		if err != nil {
-			return "", errorchain.NewWithMessage(heimdall.ErrInternal, "failed to create template").
-				WithErrorContext(a).
-				CausedBy(err)
-		}
-
-		return tpl.Render(templateData)
-	}))
+	req, err := a.e.CreateRequest(ctx.AppContext(), nil, nil)
 
 	if err != nil {
 		return nil, nil, errorchain.
