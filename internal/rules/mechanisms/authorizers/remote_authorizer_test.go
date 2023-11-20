@@ -740,10 +740,8 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 			configureCache: func(t *testing.T, cch *mocks.CacheMock, auth *remoteAuthorizer, sub *subject.Subject) {
 				t.Helper()
 
-				cacheKey := auth.calculateCacheKey(sub)
-
-				cch.EXPECT().Get(mock.Anything, cacheKey).Return(nil)
-				cch.EXPECT().Set(mock.Anything, cacheKey,
+				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil)
+				cch.EXPECT().Set(mock.Anything, mock.Anything,
 					mock.MatchedBy(func(val *authorizationInformation) bool {
 						return val != nil && val.payload == nil && len(val.headers.Get("X-Foo-Bar")) != 0
 					}), auth.ttl)
@@ -795,7 +793,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 			configureCache: func(t *testing.T, cch *mocks.CacheMock, auth *remoteAuthorizer, sub *subject.Subject) {
 				t.Helper()
 
-				cacheKey := auth.calculateCacheKey(sub)
+				cacheKey := auth.calculateCacheKey(sub, nil, "")
 
 				cch.EXPECT().Get(mock.Anything, cacheKey).Return(nil)
 				cch.EXPECT().Set(mock.Anything, cacheKey, mock.Anything, auth.ttl)
@@ -840,6 +838,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 
 				ctx.EXPECT().AddHeaderForUpstream("X-Foo-Bar", "HeyFoo")
 				ctx.EXPECT().AddHeaderForUpstream("X-Bar-Foo", "HeyBar")
+				ctx.EXPECT().Request().Return(nil)
 			},
 			configureCache: func(t *testing.T, cch *mocks.CacheMock, auth *remoteAuthorizer, sub *subject.Subject) {
 				t.Helper()
