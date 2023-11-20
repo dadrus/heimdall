@@ -227,12 +227,14 @@ func (h *genericContextualizer) callEndpoint(
 		if errors.As(err, &clientErr) && clientErr.Timeout() {
 			return nil, errorchain.NewWithMessage(heimdall.ErrCommunicationTimeout,
 				"request to the contextualizer endpoint timed out").
-				WithErrorContext(h).CausedBy(err)
+				WithErrorContext(h).
+				CausedBy(err)
 		}
 
 		return nil, errorchain.NewWithMessage(heimdall.ErrCommunication,
 			"request to the contextualizer endpoint failed").
-			WithErrorContext(h).CausedBy(err)
+			WithErrorContext(h).
+			CausedBy(err)
 	}
 
 	defer resp.Body.Close()
@@ -301,8 +303,8 @@ func (h *genericContextualizer) readResponse(ctx heimdall.Context, resp *http.Re
 	logger := zerolog.Ctx(ctx.AppContext())
 
 	if !(resp.StatusCode >= http.StatusOK && resp.StatusCode < http.StatusMultipleChoices) {
-		return nil, errorchain.
-			NewWithMessagef(heimdall.ErrCommunication, "unexpected response code: %v", resp.StatusCode).
+		return nil, errorchain.NewWithMessagef(heimdall.ErrCommunication,
+			"unexpected response code: %v", resp.StatusCode).
 			WithErrorContext(h)
 	}
 
@@ -382,9 +384,8 @@ func (h *genericContextualizer) renderTemplates(
 		"Request": ctx.Request(),
 		"Subject": sub,
 	}); err != nil {
-		return nil, "", errorchain.
-			NewWithMessage(heimdall.ErrInternal,
-				"failed to render values for the contextualization endpoint").
+		return nil, "", errorchain.NewWithMessage(heimdall.ErrInternal,
+			"failed to render values for the contextualization endpoint").
 			WithErrorContext(h).
 			CausedBy(err)
 	}
@@ -395,8 +396,8 @@ func (h *genericContextualizer) renderTemplates(
 			"Subject": sub,
 			"Values":  values,
 		}); err != nil {
-			return nil, "", errorchain.
-				NewWithMessage(heimdall.ErrInternal, "failed to render payload for the contextualization endpoint").
+			return nil, "", errorchain.NewWithMessage(heimdall.ErrInternal,
+				"failed to render payload for the contextualization endpoint").
 				WithErrorContext(h).
 				CausedBy(err)
 		}

@@ -630,6 +630,38 @@ func TestGenericContextualizerExecute(t *testing.T) {
 			},
 		},
 		{
+			uc: "with error in values rendering",
+			contextualizer: &genericContextualizer{
+				id: "contextualizer1",
+				e:  endpoint.Endpoint{URL: srv.URL},
+				v: func() values.Values {
+					tpl, err := template.New("{{ len .foo }}")
+					require.NoError(t, err)
+
+					return values.Values{"foo": tpl}
+				}(),
+			},
+			subject: &subject.Subject{ID: "Foo", Attributes: map[string]any{"bar": "baz"}},
+			configureContext: func(t *testing.T, ctx *heimdallmocks.ContextMock) {
+				t.Helper()
+
+				ctx.EXPECT().Request().Return(nil)
+			},
+			assert: func(t *testing.T, err error, sub *subject.Subject) {
+				t.Helper()
+
+				assert.False(t, remoteEndpointCalled)
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrInternal)
+				assert.Contains(t, err.Error(), "failed to render values")
+
+				var identifier interface{ ID() string }
+				require.ErrorAs(t, err, &identifier)
+				assert.Equal(t, "contextualizer1", identifier.ID())
+			},
+		},
+		{
 			uc: "with error in payload rendering",
 			contextualizer: &genericContextualizer{
 				id: "contextualizer1",
@@ -719,10 +751,17 @@ func TestGenericContextualizerExecute(t *testing.T) {
 			},
 		},
 		{
-			uc: "without payload",
+			uc: "without payload, but values, without cache hit",
 			contextualizer: &genericContextualizer{
-				id: "test-contextualizer",
-				e:  endpoint.Endpoint{URL: srv.URL + "/{{ .Subject.ID }}"},
+				id:  "test-contextualizer",
+				ttl: 5 * time.Second,
+				e:   endpoint.Endpoint{URL: srv.URL + "/{{ .Values.user_id }}"},
+				v: func() values.Values {
+					tpl, err := template.New("{{ .Subject.ID }}")
+					require.NoError(t, err)
+
+					return values.Values{"user_id": tpl}
+				}(),
 			},
 			subject: &subject.Subject{ID: "Foo", Attributes: map[string]any{"bar": "baz"}},
 			instructServer: func(t *testing.T) {
@@ -740,6 +779,14 @@ func TestGenericContextualizerExecute(t *testing.T) {
 				t.Helper()
 
 				ctx.EXPECT().Request().Return(nil)
+			},
+			configureCache: func(t *testing.T, cch *mocks.CacheMock, contextualizer *genericContextualizer,
+				sub *subject.Subject,
+			) {
+				t.Helper()
+
+				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil)
+				cch.EXPECT().Set(mock.Anything, mock.Anything, mock.Anything, mock.Anything)
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
