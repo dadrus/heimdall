@@ -561,13 +561,17 @@ func TestGenericContextualizerExecute(t *testing.T) {
 				}(),
 			},
 			subject: &subject.Subject{ID: "Foo", Attributes: map[string]any{"bar": "baz"}},
+			configureContext: func(t *testing.T, ctx *heimdallmocks.ContextMock) {
+				t.Helper()
+
+				ctx.EXPECT().Request().Return(nil)
+			},
 			configureCache: func(t *testing.T, cch *mocks.CacheMock, contextualizer *genericContextualizer,
 				sub *subject.Subject,
 			) {
 				t.Helper()
 
-				key := contextualizer.calculateCacheKey(sub)
-				cch.EXPECT().Get(mock.Anything, key).Return(&contextualizerData{payload: "Hi Foo"})
+				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(&contextualizerData{payload: "Hi Foo"})
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
@@ -597,10 +601,9 @@ func TestGenericContextualizerExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				key := contextualizer.calculateCacheKey(sub)
-				cch.EXPECT().Get(mock.Anything, key).Return("Hi Foo")
-				cch.EXPECT().Delete(mock.Anything, key)
-				cch.EXPECT().Set(mock.Anything, key, mock.MatchedBy(func(val *contextualizerData) bool {
+				cch.EXPECT().Get(mock.Anything, mock.Anything).Return("Hi Foo")
+				cch.EXPECT().Delete(mock.Anything, mock.Anything)
+				cch.EXPECT().Set(mock.Anything, mock.Anything, mock.MatchedBy(func(val *contextualizerData) bool {
 					return val != nil && val.payload == "Hi from endpoint"
 				}), 5*time.Second)
 			},
@@ -761,9 +764,8 @@ func TestGenericContextualizerExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				key := contextualizer.calculateCacheKey(sub)
-				cch.EXPECT().Get(mock.Anything, key).Return(nil)
-				cch.EXPECT().Set(mock.Anything, key, mock.MatchedBy(func(val *contextualizerData) bool {
+				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil)
+				cch.EXPECT().Set(mock.Anything, mock.Anything, mock.MatchedBy(func(val *contextualizerData) bool {
 					return val != nil && val.payload == "Hi from endpoint"
 				}), contextualizer.ttl)
 			},
