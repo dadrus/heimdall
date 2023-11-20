@@ -696,8 +696,13 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 						"Content-Type": "application/x-www-form-urlencoded",
 					},
 				},
+				v: func() values.Values {
+					tpl, _ := template.New("foo")
+
+					return values.Values{"foo": tpl}
+				}(),
 				payload: func() template.Template {
-					tpl, _ := template.New(`user_id={{ urlenc .Subject.ID }}&{{ .Subject.Attributes.bar }}=foo`)
+					tpl, _ := template.New(`user_id={{ urlenc .Subject.ID }}&{{ .Subject.Attributes.bar }}={{ .Values.foo }}`)
 
 					return tpl
 				}(),
@@ -1206,6 +1211,70 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 				assert.Contains(t, authorizerAttrs["permissions"], "write_foo")
 				assert.Len(t, authorizerAttrs["groups"], 1)
 				assert.Contains(t, authorizerAttrs["groups"], "Foo-Users")
+			},
+		},
+		{
+			uc: "with payload rendering error",
+			authorizer: &remoteAuthorizer{
+				id: "authorizer",
+				e:  endpoint.Endpoint{URL: srv.URL},
+				payload: func() template.Template {
+					tpl, err := template.New("{{ len .foo }}")
+					require.NoError(t, err)
+
+					return tpl
+				}(),
+			},
+			subject: &subject.Subject{ID: "Foo", Attributes: map[string]any{"bar": "baz"}},
+			configureContext: func(t *testing.T, ctx *heimdallmocks.ContextMock) {
+				t.Helper()
+
+				ctx.EXPECT().Request().Return(nil)
+			},
+			assert: func(t *testing.T, err error, sub *subject.Subject) {
+				t.Helper()
+
+				assert.False(t, authorizationEndpointCalled)
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrInternal)
+				assert.Contains(t, err.Error(), "failed to render payload")
+
+				var identifier interface{ ID() string }
+				require.ErrorAs(t, err, &identifier)
+				assert.Equal(t, "authorizer", identifier.ID())
+			},
+		},
+		{
+			uc: "with error in values rendering",
+			authorizer: &remoteAuthorizer{
+				id: "authorizer",
+				e:  endpoint.Endpoint{URL: srv.URL},
+				v: func() values.Values {
+					tpl, err := template.New("{{ len .foo }}")
+					require.NoError(t, err)
+
+					return values.Values{"foo": tpl}
+				}(),
+			},
+			subject: &subject.Subject{ID: "Foo", Attributes: map[string]any{"bar": "baz"}},
+			configureContext: func(t *testing.T, ctx *heimdallmocks.ContextMock) {
+				t.Helper()
+
+				ctx.EXPECT().Request().Return(nil)
+			},
+			assert: func(t *testing.T, err error, sub *subject.Subject) {
+				t.Helper()
+
+				assert.False(t, authorizationEndpointCalled)
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrInternal)
+				assert.Contains(t, err.Error(), "failed to render values")
+
+				var identifier interface{ ID() string }
+				require.ErrorAs(t, err, &identifier)
+				assert.Equal(t, "authorizer", identifier.ID())
 			},
 		},
 	} {
