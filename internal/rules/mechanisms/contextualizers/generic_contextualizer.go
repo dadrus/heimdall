@@ -344,7 +344,8 @@ func (h *genericContextualizer) readResponse(ctx heimdall.Context, resp *http.Re
 func (h *genericContextualizer) calculateCacheKey(
 	sub *subject.Subject,
 	values map[string]string,
-	payload string) string {
+	payload string,
+) string {
 	const int64BytesCount = 8
 
 	ttlBytes := make([]byte, int64BytesCount)
