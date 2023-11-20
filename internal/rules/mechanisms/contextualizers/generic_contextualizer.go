@@ -238,13 +238,25 @@ func (h *genericContextualizer) callEndpoint(ctx heimdall.Context, sub *subject.
 func (h *genericContextualizer) createRequest(ctx heimdall.Context, sub *subject.Subject) (*http.Request, error) {
 	logger := zerolog.Ctx(ctx.AppContext())
 
+	values, err := h.v.Render(map[string]any{
+		"Request": ctx.Request(),
+		"Subject": sub,
+	})
+	if err != nil {
+		return nil, errorchain.
+			NewWithMessage(heimdall.ErrInternal,
+				"failed to render values for the contextualizer endpoint").
+			WithErrorContext(h).
+			CausedBy(err)
+	}
+
 	var body io.Reader
 
 	if h.payload != nil {
 		value, err := h.payload.Render(map[string]any{
 			"Request": ctx.Request(),
 			"Subject": sub,
-			"Values":  h.v,
+			"Values":  values,
 		})
 		if err != nil {
 			return nil, errorchain.NewWithMessage(heimdall.ErrInternal,
@@ -265,8 +277,9 @@ func (h *genericContextualizer) createRequest(ctx heimdall.Context, sub *subject
 			}
 
 			return tpl.Render(map[string]any{
+				"Request": ctx.Request(),
 				"Subject": sub,
-				"Values":  h.v,
+				"Values":  values,
 			})
 		}))
 	if err != nil {

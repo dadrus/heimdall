@@ -125,7 +125,7 @@ forward_cookies:
 payload: "{{ .Subject.ID }}"
 cache_ttl: 5s
 values:
-  foo: bar
+  foo: "{{ .Subject.ID }}"
 continue_pipeline_on_error: true
 `),
 			assert: func(t *testing.T, err error, contextualizer *genericContextualizer) {
@@ -147,7 +147,12 @@ continue_pipeline_on_error: true
 				assert.Contains(t, contextualizer.fwdHeaders, "X-User-ID")
 				assert.Contains(t, contextualizer.fwdHeaders, "X-Foo-Bar")
 				assert.Equal(t, 5*time.Second, contextualizer.ttl)
-				assert.Equal(t, values.Values{"foo": "bar"}, contextualizer.v)
+
+				res, err := contextualizer.v.Render(map[string]any{
+					"Subject": &subject.Subject{ID: "bar"},
+				})
+				require.NoError(t, err)
+				assert.Equal(t, map[string]string{"foo": "bar"}, res)
 
 				assert.Equal(t, "contextualizer", contextualizer.ID())
 				assert.True(t, contextualizer.ContinueOnError())
@@ -434,7 +439,9 @@ continue_pipeline_on_error: false
 				assert.NotEqual(t, prototype, configured)
 				assert.Equal(t, prototype.e, configured.e)
 				assert.NotEqual(t, prototype.v, configured.v)
-				assert.Equal(t, values.Values{"bar": "foo", "foo": "bar"}, configured.v)
+				res, err := configured.v.Render(map[string]any{})
+				require.NoError(t, err)
+				assert.Equal(t, map[string]string{"bar": "foo", "foo": "bar"}, res)
 				assert.Equal(t, prototype.id, configured.id)
 				assert.NotEqual(t, prototype.payload, configured.payload)
 				require.NotNil(t, configured.payload)
@@ -658,6 +665,11 @@ func TestGenericContextualizerExecute(t *testing.T) {
 				e:  endpoint.Endpoint{URL: "http://heimdall.test.local"},
 			},
 			subject: &subject.Subject{ID: "Foo", Attributes: map[string]any{"bar": "baz"}},
+			configureContext: func(t *testing.T, ctx *heimdallmocks.ContextMock) {
+				t.Helper()
+
+				ctx.EXPECT().Request().Return(nil)
+			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
 
@@ -683,6 +695,11 @@ func TestGenericContextualizerExecute(t *testing.T) {
 				t.Helper()
 
 				responseCode = http.StatusInternalServerError
+			},
+			configureContext: func(t *testing.T, ctx *heimdallmocks.ContextMock) {
+				t.Helper()
+
+				ctx.EXPECT().Request().Return(nil)
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
@@ -716,6 +733,11 @@ func TestGenericContextualizerExecute(t *testing.T) {
 
 				responseCode = http.StatusAccepted
 			},
+			configureContext: func(t *testing.T, ctx *heimdallmocks.ContextMock) {
+				t.Helper()
+
+				ctx.EXPECT().Request().Return(nil)
+			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
 
@@ -744,6 +766,11 @@ func TestGenericContextualizerExecute(t *testing.T) {
 				cch.EXPECT().Set(mock.Anything, key, mock.MatchedBy(func(val *contextualizerData) bool {
 					return val != nil && val.payload == "Hi from endpoint"
 				}), contextualizer.ttl)
+			},
+			configureContext: func(t *testing.T, ctx *heimdallmocks.ContextMock) {
+				t.Helper()
+
+				ctx.EXPECT().Request().Return(nil)
 			},
 			instructServer: func(t *testing.T) {
 				t.Helper()
@@ -780,7 +807,11 @@ func TestGenericContextualizerExecute(t *testing.T) {
 						"X-Bar":        "{{ .Subject.Attributes.bar }}",
 					},
 				},
-				v: values.Values{"foo": "bar"},
+				v: func() values.Values {
+					tpl, _ := template.New("bar")
+
+					return values.Values{"foo": tpl}
+				}(),
 				payload: func() template.Template {
 					tpl, _ := template.New(`
 {
