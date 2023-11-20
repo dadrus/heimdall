@@ -16,9 +16,13 @@
 
 package values
 
-import "maps"
+import (
+	"maps"
 
-type Values map[string]string
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
+)
+
+type Values map[string]template.Template
 
 func (v Values) Merge(other Values) Values {
 	if len(other) == 0 {
@@ -38,4 +42,19 @@ func (v Values) Merge(other Values) Values {
 	}
 
 	return res
+}
+
+func (v Values) Render(values map[string]any) (map[string]string, error) {
+	res := make(map[string]string, len(v))
+
+	for key, val := range v {
+		rendered, err := val.Render(values)
+		if err != nil {
+			return nil, err
+		}
+
+		res[key] = rendered
+	}
+
+	return res, nil
 }
