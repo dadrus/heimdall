@@ -276,7 +276,7 @@ Payload = "SomeStringValue"
 
 === Values
 
-This object represents a key value map, with both, the key and the value being of string type. The contents depend on the configuration of the particular mechanism, respectively the corresponding override in a rule.
+This object represents a key value map, with both, the key and the value being of string type. Though, the actual values can be templated (see (link:{{< relref "#_templating" >}}[Templating]). The contents and the variables available in templates depend on the configuration of the particular mechanism, respectively the corresponding override in a rule.
 
 Here is an example:
 

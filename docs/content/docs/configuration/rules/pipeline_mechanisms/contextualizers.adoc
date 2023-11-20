@@ -37,7 +37,7 @@ If the API requires any cookies from the request to heimdall, you can forward th
 
 * *`payload`*: _string_ (optional, overridable)
 +
-Your link:{{< relref "overview.adoc#_templating" >}}[template] with definitions required to communicate to the endpoint. The template can make use of link:{{< relref "overview.adoc#_subject" >}}[`Subject`] and link:{{< relref "overview.adoc#_request" >}}[`Request`] objects.
+Your link:{{< relref "overview.adoc#_templating" >}}[template] with definitions required to communicate to the endpoint. The template can make use of link:{{< relref "overview.adoc#_values" >}}[`Values`], link:{{< relref "overview.adoc#_subject" >}}[`Subject`] and link:{{< relref "overview.adoc#_request" >}}[`Request`] objects.
 
 * *`cache_ttl`*: _link:{{< relref "/docs/configuration/reference/types.adoc#_duration" >}}[Duration]_ (optional, overridable)
 +
@@ -49,7 +49,7 @@ If set to `true`, allows the pipeline to continue with the execution of the next
 
 * *`values`* _map of strings_ (optional, overridable)
 +
-A key value map, which is made accessible to the template rendering engine as link:{{< relref "overview.adoc#_values" >}}[`Values`] object to render parts of the URL or the payload.
+A key value map, which is made accessible to the template rendering engine as link:{{< relref "overview.adoc#_values" >}}[`Values`] object to render parts of the URL and/or the payload. The actual values in that map can be templated as well with access to the link:{{< relref "overview.adoc#_subject" >}}[`Subject`] and link:{{< relref "overview.adoc#_request" >}}[`Request`] objects.
 
 .Contextualizer configuration without payload
 ====
@@ -72,7 +72,7 @@ config:
 .Contextualizer configuration with payload
 ====
 
-In this example the contextualizer is configured to call an endpoint using the HTTP `POST` and send some data. Since the `values` property is not defined, but used in the payload, it must be specified in a rule making use of this contextualzer.
+In this example the contextualizer is configured to call an endpoint using the HTTP `POST` and send some data.
 
 [source, yaml]
 ----
@@ -85,6 +85,23 @@ config:
   payload: |
     {
       "user_id": {{ quote .Values.user_id }}
+      "whatever": {{ quote .Values.whatever }}
     }
+----
+
+Since the `values` property is not defined but used in the payload, it must be specified in a rule making use of this contextualzer, e.g. in the following way:
+
+[source, yaml]
+----
+- id: rule1
+  # other rule properties
+  execute:
+  - # other mechanisms
+  - contextualizer: foo
+    config: # overriding with rule specifics
+      values:
+        user_id: "{{ .Subject.ID }}"
+        whatever: "some value"
+  - # other mechanisms
 ----
 ====
