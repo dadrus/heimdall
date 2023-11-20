@@ -265,11 +265,23 @@ func (a *remoteAuthorizer) doAuthorize(ctx heimdall.Context, sub *subject.Subjec
 func (a *remoteAuthorizer) createRequest(ctx heimdall.Context, sub *subject.Subject) (*http.Request, error) {
 	var body io.Reader
 
+	values, err := a.v.Render(map[string]any{
+		"Request": ctx.Request(),
+		"Subject": sub,
+	})
+	if err != nil {
+		return nil, errorchain.
+			NewWithMessage(heimdall.ErrInternal,
+				"failed to render values for the authorization endpoint").
+			WithErrorContext(a).
+			CausedBy(err)
+	}
+
 	if a.payload != nil {
 		bodyContents, err := a.payload.Render(map[string]any{
 			"Request": ctx.Request(),
 			"Subject": sub,
-			"Values":  a.v,
+			"Values":  values,
 		})
 		if err != nil {
 			return nil, errorchain.
@@ -292,8 +304,9 @@ func (a *remoteAuthorizer) createRequest(ctx heimdall.Context, sub *subject.Subj
 			}
 
 			return tpl.Render(map[string]any{
+				"Request": ctx.Request(),
 				"Subject": sub,
-				"Values":  a.v,
+				"Values":  values,
 			})
 		}))
 	if err != nil {

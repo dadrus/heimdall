@@ -183,7 +183,7 @@ forward_response_headers_to_upstream:
   - Bar
 cache_ttl: 5s
 values:
-  foo: bar
+  foo: "{{ .Subject.ID }}"
 `),
 			assert: func(t *testing.T, err error, auth *remoteAuthorizer) {
 				t.Helper()
@@ -216,7 +216,12 @@ values:
 				assert.Contains(t, auth.headersForUpstream, "Bar")
 				assert.NotNil(t, auth.ttl)
 				assert.Equal(t, 5*time.Second, auth.ttl)
-				assert.Equal(t, values.Values{"foo": "bar"}, auth.v)
+
+				res, err := auth.v.Render(map[string]any{
+					"Subject": &subject.Subject{ID: "bar"},
+				})
+				require.NoError(t, err)
+				assert.Equal(t, map[string]string{"foo": "bar"}, res)
 
 				assert.Equal(t, "authz", auth.ID())
 				assert.False(t, auth.ContinueOnError())
@@ -435,7 +440,10 @@ cache_ttl: 15s
 				assert.Equal(t, prototype.e.URL, configured.e.URL)
 				assert.Equal(t, prototype.e.Headers, configured.e.Headers)
 				assert.NotEqual(t, prototype.v, configured.v)
-				assert.Equal(t, values.Values{"bar": "foo", "foo": "bar"}, configured.v)
+
+				res, err := configured.v.Render(map[string]any{})
+				require.NoError(t, err)
+				assert.Equal(t, map[string]string{"bar": "foo", "foo": "bar"}, res)
 				assert.Equal(t, prototype.id, configured.id)
 				require.NotNil(t, configured.payload)
 				val, err := configured.payload.Render(nil)
@@ -542,7 +550,11 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 					URL:     srv.URL,
 					Headers: map[string]string{"Foo-Bar": "{{ .Subject.Attributes.bar }}"},
 				},
-				v: values.Values{"foo": "bar"},
+				v: func() values.Values {
+					tpl, _ := template.New("bar")
+
+					return values.Values{"foo": tpl}
+				}(),
 				payload: func() template.Template {
 					tpl, _ := template.New("{{ .Subject.ID }}-{{ .Values.foo }}")
 
@@ -775,6 +787,11 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 
 				responseCode = http.StatusOK
 			},
+			configureContext: func(t *testing.T, ctx *heimdallmocks.ContextMock) {
+				t.Helper()
+
+				ctx.EXPECT().Request().Return(nil)
+			},
 			configureCache: func(t *testing.T, cch *mocks.CacheMock, auth *remoteAuthorizer, sub *subject.Subject) {
 				t.Helper()
 
@@ -932,6 +949,11 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 
 				responseCode = http.StatusUnauthorized
 			},
+			configureContext: func(t *testing.T, ctx *heimdallmocks.ContextMock) {
+				t.Helper()
+
+				ctx.EXPECT().Request().Return(nil)
+			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
 
@@ -961,6 +983,11 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 				responseContent = []byte("Hi Foo")
 				responseContentType = "text/text"
 				responseCode = http.StatusOK
+			},
+			configureContext: func(t *testing.T, ctx *heimdallmocks.ContextMock) {
+				t.Helper()
+
+				ctx.EXPECT().Request().Return(nil)
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
