@@ -42,9 +42,8 @@ func (e Error) is(errType string) bool {
 
 func (e Error) source() string {
 	var handlerIdentifier interface{ ID() string }
-	ok := errors.As(e.err, &handlerIdentifier)
 
-	if ok {
+	if ok := errors.As(e.err, &handlerIdentifier); ok {
 		return handlerIdentifier.ID()
 	}
 
