@@ -68,7 +68,7 @@ With that configuration and without any additional rules, heimdall would reject 
 
 [source, yaml]
 ----
-version: "1alpha2"
+version: "1alpha3"
 rules:
 - id: rule1  # <1>
   match:

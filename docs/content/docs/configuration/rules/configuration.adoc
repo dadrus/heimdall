@@ -247,7 +247,7 @@ List of the actual rules.
 ====
 [source, yaml]
 ----
-version: "1alpha2"
+version: "1alpha3"
 name: my-rule-set
 rules:
 - id: rule:1

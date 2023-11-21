@@ -1,4 +1,4 @@
-version: "1alpha2"
+version: "1alpha3"
 name: test-rule-set
 rules:
 - id: rule:foo

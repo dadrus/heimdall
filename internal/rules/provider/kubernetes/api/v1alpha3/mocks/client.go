@@ -3,7 +3,7 @@
 package mocks
 
 import (
-	v1alpha2 "github.com/dadrus/heimdall/internal/rules/provider/kubernetes/api/v1alpha2"
+	"github.com/dadrus/heimdall/internal/rules/provider/kubernetes/api/v1alpha3"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -21,15 +21,15 @@ func (_m *ClientMock) EXPECT() *ClientMock_Expecter {
 }
 
 // RuleSetRepository provides a mock function with given fields: namespace
-func (_m *ClientMock) RuleSetRepository(namespace string) v1alpha2.RuleSetRepository {
+func (_m *ClientMock) RuleSetRepository(namespace string) v1alpha3.RuleSetRepository {
 	ret := _m.Called(namespace)
 
-	var r0 v1alpha2.RuleSetRepository
-	if rf, ok := ret.Get(0).(func(string) v1alpha2.RuleSetRepository); ok {
+	var r0 v1alpha3.RuleSetRepository
+	if rf, ok := ret.Get(0).(func(string) v1alpha3.RuleSetRepository); ok {
 		r0 = rf(namespace)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(v1alpha2.RuleSetRepository)
+			r0 = ret.Get(0).(v1alpha3.RuleSetRepository)
 		}
 	}
 
@@ -54,12 +54,12 @@ func (_c *ClientMock_RuleSetRepository_Call) Run(run func(namespace string)) *Cl
 	return _c
 }
 
-func (_c *ClientMock_RuleSetRepository_Call) Return(_a0 v1alpha2.RuleSetRepository) *ClientMock_RuleSetRepository_Call {
+func (_c *ClientMock_RuleSetRepository_Call) Return(_a0 v1alpha3.RuleSetRepository) *ClientMock_RuleSetRepository_Call {
 	_c.Call.Return(_a0)
 	return _c
 }
 
-func (_c *ClientMock_RuleSetRepository_Call) RunAndReturn(run func(string) v1alpha2.RuleSetRepository) *ClientMock_RuleSetRepository_Call {
+func (_c *ClientMock_RuleSetRepository_Call) RunAndReturn(run func(string) v1alpha3.RuleSetRepository) *ClientMock_RuleSetRepository_Call {
 	_c.Call.Return(run)
 	return _c
 }
