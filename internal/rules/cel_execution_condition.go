@@ -31,10 +31,15 @@ type celExecutionCondition struct {
 	p cel.Program
 }
 
-func (c *celExecutionCondition) CanExecute(ctx heimdall.Context, sub *subject.Subject) (bool, error) {
-	obj := map[string]any{
-		"Subject": sub,
-		"Request": ctx.Request(),
+func (c *celExecutionCondition) CanExecute(ctx heimdall.Context, sub *subject.Subject, causeErr error) (bool, error) {
+	obj := map[string]any{"Request": ctx.Request()}
+
+	if sub != nil {
+		obj["Subject"] = sub
+	}
+
+	if causeErr != nil {
+		obj["Error"] = cellib.WrapError(causeErr)
 	}
 
 	out, _, err := c.p.Eval(obj)
