@@ -34,7 +34,7 @@ demo:
 
 # Default values for heimdall.
 image:
-  repository: dadrus/heimdall
+  repository: ghcr.io/dadrus/heimdall
   pullPolicy: IfNotPresent
   tag: ""
   pullSecrets: [ ]
