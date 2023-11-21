@@ -243,7 +243,7 @@ a| `/$request_uri`
 a| `image.repository`
 
 The image repository to load heimdall image from
-a| `dadrus/heimdall`
+a| `ghcr.io/dadrus/heimdall`
 
 a| `image.tag`
 
