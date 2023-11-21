@@ -44,6 +44,8 @@ func (heimdallLibrary) CompileOptions() []cel.EnvOption {
 		Strings(),
 		Urls(),
 		Requests(),
+		Errors(),
+		Networks(),
 		ext.NativeTypes(reflect.TypeOf(&subject.Subject{})),
 		cel.Variable("Payload", cel.DynType),
 		cel.Variable("Subject", cel.DynType),
