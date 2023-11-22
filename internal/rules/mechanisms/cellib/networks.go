@@ -254,9 +254,9 @@ func (networksLib) CompileOptions() []cel.EnvOption {
 			),
 		),
 		cel.Function(operators.In,
-			decls.Overload("ip_in_networks",
+			cel.Overload("ip_in_networks",
 				[]*cel.Type{cel.StringType, ipNetworksType}, types.BoolType),
-			decls.Overload("ips_in_networks",
+			cel.Overload("ips_in_networks",
 				[]*cel.Type{cel.ListType(cel.StringType), ipNetworksType}, types.BoolType),
 		),
 	}
