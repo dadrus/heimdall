@@ -106,7 +106,7 @@ func TestCelExecutionConditionCanExecute(t *testing.T) {
 		},
 		{
 			uc:         "expression acting on client ip addresses",
-			expression: `network("10.10.10.0/24").Contains(Request.ClientIP[1])`,
+			expression: `Request.ClientIP[1] in network("10.10.10.0/24")`,
 			expected:   true,
 		},
 	} {
