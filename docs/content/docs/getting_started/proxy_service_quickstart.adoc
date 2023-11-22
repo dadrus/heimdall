@@ -12,7 +12,7 @@ menu:
 description: Describes a simple use case in which you'll see heimdall's Proxy service in action.
 ---
 
-This document describes a simple use case in which you'll see heimdall's Proxy service in action. Here, we'll create a minimal but complete environment for running heimdall with containers.
+This document describes a simple use case in which you'll see heimdall's proxy service in action. Here, we'll create a minimal but complete environment for running heimdall within containers.
 
 == Prerequisites
 
@@ -60,11 +60,11 @@ providers:
 <2> Configures the `anonymous` authenticator.
 <3> Configures the `deny` authorizer, which rejects all requests.
 <4> Configures the `allow` authorizer. It will be used in our rule to allow requests.
-<5> Configures the `jwt` finalizer.
-<6> Configures the default rule.
-<7> Configures the `file_system` provider, which will allow loading of our rule from the file system.
+<5> Configures the `jwt` finalizer to create JSON Web Tokens.
+<6> Configures the default rule, which is applied if no other rule matches.
+<7> Configures the `file_system` provider, which will load rules from the file system.
 +
-Put together, this configuration will let heimdall create a JSON Web Token (JWT) with `sub` claim set to `anonymous` for every request on every URL for the HTTP methods GET and POST. The JWT itself will be put into the `Authorization` header as a bearer token. Since the above default rule cannot be used to forward requests to the upstream service, the `deny` authenticator will reject the requests for us and enforce a configuration of an authorization mechanism in a specific rule, which we're going to define next.
+Put together, this configuration will let heimdall create a JSON Web Token (JWT) with `sub` claim set to `anonymous` for every request on every URL for the HTTP methods GET and POST. The JWT itself will be put into the `Authorization` header as a bearer token. The above default rule does not forward requests, instead it just rejects them with the `deny` authenticator. To forward requests to the upstream service, we need a configuration of an authorization mechanism in a specific rule, which we're going to define next.
 
 . Create a rule file (`rule.yaml`) with the following contents:
 +
@@ -90,7 +90,7 @@ rules:
     - authorizer: allow_all_requests
 ----
 +
-<1> This rule matches any host and the `/anonymous` path and forwards the request to our upstream service (which we're going to define next). In addition, it reuses the configuration from the default rule. Here, the methods, which are allowed, as well as the authenticator. So we don't need to define them in the rule.
+<1> This rule matches any hostname and the `/anonymous` path and forwards the request to our upstream service (which we're going to define next). In addition, it reuses the configuration from the default rule. Here, the methods, which are allowed, as well as the authenticator. So we don't need to define them in the rule.
 <2> This rule matches any host and the `/public` path and forwards the request as the previous rule to our upstream service. This rule doesn't perform any kind of request verification or transformation.
 
 . Create or copy the following `docker-compose.yaml` file and modify it to include the correct paths to your `config.yaml` and `rule.yaml` files:
