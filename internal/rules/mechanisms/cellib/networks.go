@@ -6,6 +6,8 @@ import (
 	"reflect"
 
 	"github.com/google/cel-go/cel"
+	"github.com/google/cel-go/common/decls"
+	"github.com/google/cel-go/common/operators"
 	"github.com/google/cel-go/common/types"
 	"github.com/google/cel-go/common/types/ref"
 	"github.com/google/cel-go/common/types/traits"
@@ -14,8 +16,8 @@ import (
 )
 
 var (
-	ipNetworkType  = cel.ObjectType(reflect.TypeOf(IPNetwork{}).String(), traits.ReceiverType)  //nolint:gochecknoglobals
-	ipNetworksType = cel.ObjectType(reflect.TypeOf(IPNetworks{}).String(), traits.ReceiverType) //nolint:gochecknoglobals
+	ipNetworkType  = cel.ObjectType(reflect.TypeOf(IPNetwork{}).String(), traits.ReceiverType|traits.ContainerType)  //nolint:gochecknoglobals
+	ipNetworksType = cel.ObjectType(reflect.TypeOf(IPNetworks{}).String(), traits.ReceiverType|traits.ContainerType) //nolint:gochecknoglobals
 )
 
 func newIPNetworks(cidrs []string) (IPNetworks, error) {
@@ -76,15 +78,32 @@ func (n IPNetworks) Value() any {
 	return n.Ranger
 }
 
-func (n IPNetworks) Contain(ip string) bool {
+func (n IPNetworks) Contains(value ref.Val) ref.Val {
+	if singleIP, ok := value.Value().(string); ok {
+		return types.Bool(n.containsIP(singleIP))
+	}
+
+	if lister, ok := value.(traits.Lister); ok {
+		ips, err := lister.ConvertToNative(reflect.TypeOf([]string{}))
+		if err != nil {
+			return types.WrapErr(err)
+		}
+
+		return types.Bool(n.containsAll(ips.([]string))) // nolint: forcetypeassert
+	}
+
+	return types.False
+}
+
+func (n IPNetworks) containsIP(ip string) bool {
 	res, _ := n.Ranger.Contains(net.ParseIP(ip))
 
 	return res
 }
 
-func (n IPNetworks) ContainAll(ips []string) bool {
+func (n IPNetworks) containsAll(ips []string) bool {
 	for _, ip := range ips {
-		if !n.Contain(ip) {
+		if !n.containsIP(ip) {
 			return false
 		}
 	}
@@ -142,9 +161,30 @@ func (v IPNetwork) Value() any {
 	return v.IPNet
 }
 
-func (v IPNetwork) ContainsAll(ips []string) bool {
+func (v IPNetwork) Contains(value ref.Val) ref.Val {
+	if singleIP, ok := value.Value().(string); ok {
+		return types.Bool(v.containsIP(singleIP))
+	}
+
+	if lister, ok := value.(traits.Lister); ok {
+		ips, err := lister.ConvertToNative(reflect.TypeOf([]string{}))
+		if err != nil {
+			return types.WrapErr(err)
+		}
+
+		return types.Bool(v.containsAll(ips.([]string))) // nolint: forcetypeassert
+	}
+
+	return types.False
+}
+
+func (v IPNetwork) containsIP(ip string) bool {
+	return v.IPNet.Contains(net.ParseIP(ip))
+}
+
+func (v IPNetwork) containsAll(ips []string) bool {
 	for _, ip := range ips {
-		if !v.Contains(net.ParseIP(ip)) {
+		if !v.containsIP(ip) {
 			return false
 		}
 	}
@@ -187,32 +227,14 @@ func (networksLib) CompileOptions() []cel.EnvOption {
 				}),
 			),
 		),
-		cel.Function("Contains",
-			cel.MemberOverload("network_Contains",
-				[]*cel.Type{ipNetworkType, cel.StringType}, cel.BoolType,
-				cel.BinaryBinding(func(netVal, ipVal ref.Val) ref.Val {
-					ipNet := netVal.(IPNetwork)  // nolint: forcetypeassert
-					ip := ipVal.Value().(string) // nolint: forcetypeassert
-
-					return types.Bool(ipNet.Contains(net.ParseIP(ip)))
-				}),
-			),
+		cel.Function(operators.In,
+			decls.Overload("ip_in_network",
+				[]*cel.Type{cel.StringType, ipNetworkType}, types.BoolType),
+			decls.Overload("ips_in_network",
+				[]*cel.Type{cel.ListType(cel.StringType), ipNetworkType}, types.BoolType),
 		),
-		cel.Function("ContainsAll",
-			cel.MemberOverload("network_ContainsAll",
-				[]*cel.Type{ipNetworkType, cel.ListType(cel.StringType)}, cel.BoolType,
-				cel.BinaryBinding(func(netVal, ipVal ref.Val) ref.Val {
-					ipNet := netVal.(IPNetwork) // nolint: forcetypeassert
 
-					nativeIPs, err := ipVal.ConvertToNative(reflect.TypeOf([]string{}))
-					if err != nil {
-						return types.WrapErr(err)
-					}
-
-					return types.Bool(ipNet.ContainsAll(nativeIPs.([]string))) // nolint: forcetypeassert
-				}),
-			),
-		),
+		// IPNetworks specific functions
 		cel.Function("networks",
 			cel.Overload("networks",
 				[]*cel.Type{cel.ListType(cel.StringType)}, cel.DynType,
@@ -231,31 +253,11 @@ func (networksLib) CompileOptions() []cel.EnvOption {
 				}),
 			),
 		),
-		cel.Function("Contain",
-			cel.MemberOverload("networks_Contain",
-				[]*cel.Type{ipNetworksType, cel.StringType}, cel.BoolType,
-				cel.BinaryBinding(func(netVal, ipVal ref.Val) ref.Val {
-					ipNet := netVal.(IPNetworks) // nolint: forcetypeassert
-
-					return types.Bool(ipNet.Contain(ipVal.Value().(string))) // nolint: forcetypeassert
-				}),
-			),
+		cel.Function(operators.In,
+			decls.Overload("ip_in_networks",
+				[]*cel.Type{cel.StringType, ipNetworksType}, types.BoolType),
+			decls.Overload("ips_in_networks",
+				[]*cel.Type{cel.ListType(cel.StringType), ipNetworksType}, types.BoolType),
 		),
-		cel.Function("ContainAll",
-			cel.MemberOverload("networks_ContainAll",
-				[]*cel.Type{ipNetworksType, cel.ListType(cel.StringType)}, cel.BoolType,
-				cel.BinaryBinding(func(netVal, ipVal ref.Val) ref.Val {
-					ipNet := netVal.(IPNetworks) // nolint: forcetypeassert
-
-					nativeIPs, err := ipVal.ConvertToNative(reflect.TypeOf([]string{}))
-					if err != nil {
-						return types.WrapErr(err)
-					}
-
-					return types.Bool(ipNet.ContainAll(nativeIPs.([]string))) // nolint: forcetypeassert
-				}),
-			),
-		),
-		// IPNetworks specific functions
 	}
 }
