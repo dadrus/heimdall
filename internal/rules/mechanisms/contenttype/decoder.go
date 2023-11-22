@@ -31,7 +31,7 @@ func NewDecoder(contentType string) (Decoder, error) {
 	switch {
 	case strings.Contains(contentType, "json"):
 		return JSONDecoder{}, nil
-	case contentType == "application/x-www-form-urlencoded":
+	case strings.Contains(contentType, "application/x-www-form-urlencoded"):
 		return WWWFormUrlencodedDecoder{}, nil
 	default:
 		return nil, ErrUnsupportedContentType
