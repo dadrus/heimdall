@@ -1,7 +1,6 @@
 package cellib
 
 import (
-	"errors"
 	"fmt"
 	"net"
 	"reflect"
@@ -17,8 +16,6 @@ import (
 var (
 	ipNetworkType  = cel.ObjectType(reflect.TypeOf(IPNetwork{}).String(), traits.ReceiverType)  //nolint:gochecknoglobals
 	ipNetworksType = cel.ObjectType(reflect.TypeOf(IPNetworks{}).String(), traits.ReceiverType) //nolint:gochecknoglobals
-
-	errTypeConversion = errors.New("type conversion error")
 )
 
 func newIPNetworks(cidrs []string) (IPNetworks, error) {
