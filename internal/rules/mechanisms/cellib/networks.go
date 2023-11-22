@@ -16,8 +16,12 @@ import (
 )
 
 var (
-	ipNetworkType  = cel.ObjectType(reflect.TypeOf(IPNetwork{}).String(), traits.ReceiverType|traits.ContainerType)  //nolint:gochecknoglobals
-	ipNetworksType = cel.ObjectType(reflect.TypeOf(IPNetworks{}).String(), traits.ReceiverType|traits.ContainerType) //nolint:gochecknoglobals
+	//nolint:gochecknoglobals
+	ipNetworkType = cel.ObjectType(reflect.TypeOf(IPNetwork{}).String(),
+		traits.ReceiverType|traits.ContainerType)
+	//nolint:gochecknoglobals
+	ipNetworksType = cel.ObjectType(reflect.TypeOf(IPNetworks{}).String(),
+		traits.ReceiverType|traits.ContainerType)
 )
 
 func newIPNetworks(cidrs []string) (IPNetworks, error) {
