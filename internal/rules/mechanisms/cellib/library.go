@@ -50,7 +50,6 @@ func (heimdallLibrary) CompileOptions() []cel.EnvOption {
 		cel.Variable("Payload", cel.DynType),
 		cel.Variable("Subject", cel.DynType),
 		cel.Variable("Request", cel.DynType),
-		cel.Variable("Error", cel.DynType),
 	}
 }
 
