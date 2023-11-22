@@ -61,7 +61,7 @@ func TestExtractBodyParameter(t *testing.T) {
 				t.Helper()
 
 				fnt := mocks.NewRequestFunctionsMock(t)
-				fnt.EXPECT().Header("Content-Type").Return("application/json")
+				fnt.EXPECT().Header("Content-Type").Return("application/json; charset=utf-8")
 				fnt.EXPECT().Body().Return([]byte("foo:?:bar"))
 
 				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: fnt})
@@ -81,7 +81,7 @@ func TestExtractBodyParameter(t *testing.T) {
 				t.Helper()
 
 				fnt := mocks.NewRequestFunctionsMock(t)
-				fnt.EXPECT().Header("Content-Type").Return("application/x-www-form-urlencoded")
+				fnt.EXPECT().Header("Content-Type").Return("application/x-www-form-urlencoded; charset=utf-8")
 				fnt.EXPECT().Body().Return([]byte("foo;"))
 
 				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: fnt})
