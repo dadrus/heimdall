@@ -2,7 +2,9 @@ package cellib
 
 import (
 	"errors"
+	"fmt"
 	"reflect"
+	"slices"
 
 	"github.com/google/cel-go/cel"
 	"github.com/google/cel-go/common/types"
@@ -13,25 +15,53 @@ import (
 	"github.com/dadrus/heimdall/internal/heimdall"
 )
 
+var errTypeType = cel.ObjectType(reflect.TypeOf(ErrorType{}).String(), traits.ReceiverType)
+
+type ErrorType []error
+
+func (et ErrorType) ConvertToNative(typeDesc reflect.Type) (any, error) {
+	if reflect.TypeOf(et).AssignableTo(typeDesc) {
+		return et, nil
+	}
+
+	if reflect.TypeOf([]error(et)).AssignableTo(typeDesc) {
+		return []error(et), nil
+	}
+
+	return nil, fmt.Errorf("%w: from 'ErrorType' to '%v'", errTypeConversion, typeDesc)
+}
+
+func (et ErrorType) ConvertToType(typeVal ref.Type) ref.Val {
+	switch typeVal {
+	case errTypeType:
+		return et
+	case cel.TypeType:
+		return errTypeType
+	}
+
+	return types.NewErr("type conversion error from 'networks' to '%s'", typeVal)
+}
+
+func (et ErrorType) Equal(other ref.Val) ref.Val {
+	otherEt, ok := other.(ErrorType)
+
+	return types.Bool(ok && slices.Equal(et, otherEt))
+}
+
+func (et ErrorType) Type() ref.Type {
+	return errTypeType
+}
+
+func (et ErrorType) Value() any {
+	return et
+}
+
 type Error struct {
 	err error
 }
 
-func (e Error) is(errType string) bool {
-	var realErrorTypes []error
-
-	switch errType {
-	case "authentication_error":
-		realErrorTypes = []error{heimdall.ErrAuthentication}
-	case "authorization_error":
-		realErrorTypes = []error{heimdall.ErrAuthorization}
-	case "internal_error":
-		realErrorTypes = []error{heimdall.ErrInternal, heimdall.ErrConfiguration}
-	case "precondition_error":
-		realErrorTypes = []error{heimdall.ErrArgument}
-	}
-
-	for _, v := range realErrorTypes {
+func (e Error) is(et ErrorType) bool {
+	for _, v := range et {
 		if errors.Is(e.err, v) {
 			return true
 		}
@@ -69,10 +99,17 @@ func (errorsLib) ProgramOptions() []cel.ProgramOption {
 }
 
 func (errorsLib) CompileOptions() []cel.EnvOption {
-	errType := cel.ObjectType(reflect.TypeOf(Error{}).String(), traits.ReceiverType)
+	errType := cel.ObjectType(reflect.TypeOf(Error{}).String(), traits.ReceiverType|traits.ComparerType)
 
 	return []cel.EnvOption{
 		ext.NativeTypes(reflect.TypeOf(Error{})),
+		cel.Variable("Error", errType),
+
+		cel.Constant("authentication_error", errTypeType, ErrorType{heimdall.ErrAuthentication}),
+		cel.Constant("authorization_error", errTypeType, ErrorType{heimdall.ErrAuthorization}),
+		cel.Constant("internal_error", errTypeType, ErrorType{heimdall.ErrInternal, heimdall.ErrConfiguration}),
+		cel.Constant("precondition_error", errTypeType, ErrorType{heimdall.ErrArgument}),
+
 		cel.Function("Source",
 			cel.MemberOverload("error_Source",
 				[]*cel.Type{errType}, cel.StringType,
@@ -85,10 +122,10 @@ func (errorsLib) CompileOptions() []cel.EnvOption {
 		),
 		cel.Function("Is",
 			cel.MemberOverload("error_Is",
-				[]*cel.Type{errType, cel.StringType}, cel.BoolType,
+				[]*cel.Type{errType, errTypeType}, cel.BoolType,
 				cel.BinaryBinding(func(errVal ref.Val, typeVal ref.Val) ref.Val {
-					err := errVal.Value().(Error)         // nolint: forcetypeassert
-					errorType := typeVal.Value().(string) // nolint: forcetypeassert
+					err := errVal.Value().(Error)            // nolint: forcetypeassert
+					errorType := typeVal.Value().(ErrorType) // nolint: forcetypeassert
 
 					return types.Bool(err.is(errorType))
 				}),

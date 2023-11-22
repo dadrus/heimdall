@@ -20,7 +20,6 @@ func TestErrors(t *testing.T) {
 	t.Parallel()
 
 	env, err := cel.NewEnv(
-		cel.Variable("Error", cel.DynType),
 		Errors(),
 	)
 	require.NoError(t, err)
@@ -28,11 +27,10 @@ func TestErrors(t *testing.T) {
 	for _, tc := range []struct {
 		expr string
 	}{
-		{expr: `Error.Is("authorization_error")`},
-		{expr: `Error.Is("authentication_error")`},
-		{expr: `Error.Is("internal_error")`},
-		{expr: `Error.Is("precondition_error")`},
-		{expr: `!Error.Is("unknown_error")`},
+		{expr: `Error.Is(authorization_error)`},
+		{expr: `Error.Is(authentication_error)`},
+		{expr: `Error.Is(internal_error)`},
+		{expr: `!Error.Is(precondition_error)`},
 		{expr: `Error.Source() == "test"`},
 	} {
 		t.Run(tc.expr, func(t *testing.T) {
@@ -50,7 +48,6 @@ func TestErrors(t *testing.T) {
 			require.NoError(t, err)
 
 			causeErr := errorchain.New(heimdall.ErrAuthorization).
-				CausedBy(errorchain.New(heimdall.ErrArgument)).
 				CausedBy(errorchain.New(heimdall.ErrAuthentication)).
 				CausedBy(errorchain.New(heimdall.ErrConfiguration)).
 				CausedBy(errorchain.New(heimdall.ErrInternal)).
