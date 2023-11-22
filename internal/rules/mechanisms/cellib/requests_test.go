@@ -29,6 +29,8 @@ func TestRequests(t *testing.T) {
 	reqf := mocks.NewRequestFunctionsMock(t)
 	reqf.EXPECT().Cookie("foo").Return("bar")
 	reqf.EXPECT().Header("bar").Return("baz")
+	reqf.EXPECT().Header("zab").Return("bar;charset=utf-8")
+	reqf.EXPECT().Header("accept").Return("text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
 
 	req := &heimdall.Request{
 		RequestFunctions: reqf,
@@ -44,6 +46,9 @@ func TestRequests(t *testing.T) {
 		{expr: `req.URL.String() == "` + rawURI + `"`},
 		{expr: `req.Cookie("foo") == "bar"`},
 		{expr: `req.Header("bar") == "baz"`},
+		{expr: `req.Header("zab") == "bar"`},
+		{expr: `req.Header("accept") in ["text/html", "application/xml", "application/json"]`},
+		{expr: `["text/html", "application/xml", "application/json"].exists(v, req.Header("accept").contains(v))`},
 	} {
 		t.Run(tc.expr, func(t *testing.T) {
 			ast, iss := env.Compile(tc.expr)
