@@ -15,7 +15,7 @@ import (
 	"github.com/dadrus/heimdall/internal/heimdall"
 )
 
-var errTypeType = cel.ObjectType(reflect.TypeOf(ErrorType{}).String(), traits.ReceiverType)
+var errTypeType = cel.ObjectType(reflect.TypeOf(ErrorType{}).String(), traits.ReceiverType) //nolint:gochecknoglobals
 
 type ErrorType []error
 
