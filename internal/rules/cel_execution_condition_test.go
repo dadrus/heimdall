@@ -101,7 +101,7 @@ func TestCelExecutionConditionCanExecute(t *testing.T) {
 		},
 		{
 			uc:         "expression acting on an error evaluating to true",
-			expression: `Error.Is(authorization_error) && Error.Is(precondition_error) && Error.Source() == "test"`,
+			expression: `Error == authorization_error && Error == precondition_error && Error.Source() == "test"`,
 			expected:   true,
 		},
 		{
