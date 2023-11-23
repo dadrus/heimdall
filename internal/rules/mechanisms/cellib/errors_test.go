@@ -27,11 +27,16 @@ func TestErrors(t *testing.T) {
 	for _, tc := range []struct {
 		expr string
 	}{
-		{expr: `Error.Is(authorization_error)`},
-		{expr: `Error.Is(authentication_error)`},
-		{expr: `Error.Is(internal_error)`},
-		{expr: `!Error.Is(precondition_error)`},
+		{expr: `Error == authorization_error`},
+		{expr: `authorization_error == Error`},
+		{expr: `Error == authentication_error`},
+		{expr: `Error == internal_error`},
+		{expr: `Error in [internal_error, authorization_error, authentication_error]`},
+		{expr: `Error != precondition_error`},
+		{expr: `precondition_error != Error`},
+		{expr: `internal_error == internal_error`},
 		{expr: `Error.Source() == "test"`},
+		{expr: `internal_error.Source() == ""`},
 	} {
 		t.Run(tc.expr, func(t *testing.T) {
 			ast, iss := env.Compile(tc.expr)
