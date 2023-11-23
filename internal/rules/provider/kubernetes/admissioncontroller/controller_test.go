@@ -29,7 +29,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/config"
 	config2 "github.com/dadrus/heimdall/internal/rules/config"
-	"github.com/dadrus/heimdall/internal/rules/provider/kubernetes/api/v1alpha2"
+	"github.com/dadrus/heimdall/internal/rules/provider/kubernetes/api/v1alpha3"
 	"github.com/dadrus/heimdall/internal/rules/rule/mocks"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/pkix/pemx"
@@ -98,10 +98,10 @@ func TestControllerLifecycle(t *testing.T) {
 			Namespace:       "test",
 			Name:            "test-rules",
 			Operation:       admissionv1.Create,
-			Kind:            metav1.GroupVersionKind{Group: v1alpha2.GroupName, Version: v1alpha2.GroupVersion, Kind: "RuleSet"},
-			Resource:        metav1.GroupVersionResource{Group: v1alpha2.GroupName, Version: v1alpha2.GroupVersion, Resource: "rulesets"},
-			RequestKind:     &metav1.GroupVersionKind{Group: v1alpha2.GroupName, Version: v1alpha2.GroupVersion, Kind: "RuleSet"},
-			RequestResource: &metav1.GroupVersionResource{Group: v1alpha2.GroupName, Version: v1alpha2.GroupVersion, Resource: "rulesets"},
+			Kind:            metav1.GroupVersionKind{Group: v1alpha3.GroupName, Version: v1alpha3.GroupVersion, Kind: "RuleSet"},
+			Resource:        metav1.GroupVersionResource{Group: v1alpha3.GroupName, Version: v1alpha3.GroupVersion, Resource: "rulesets"},
+			RequestKind:     &metav1.GroupVersionKind{Group: v1alpha3.GroupName, Version: v1alpha3.GroupVersion, Kind: "RuleSet"},
+			RequestResource: &metav1.GroupVersionResource{Group: v1alpha3.GroupName, Version: v1alpha3.GroupVersion, Resource: "rulesets"},
 		},
 	}
 
@@ -179,9 +179,9 @@ func TestControllerLifecycle(t *testing.T) {
 			request: func(t *testing.T, URL string) *http.Request {
 				t.Helper()
 
-				ruleSet := v1alpha2.RuleSet{
+				ruleSet := v1alpha3.RuleSet{
 					TypeMeta: metav1.TypeMeta{
-						APIVersion: fmt.Sprintf("%s/%s", v1alpha2.GroupName, v1alpha2.GroupVersion),
+						APIVersion: fmt.Sprintf("%s/%s", v1alpha3.GroupName, v1alpha3.GroupVersion),
 						Kind:       "RuleSet",
 					},
 					ObjectMeta: metav1.ObjectMeta{
@@ -192,7 +192,7 @@ func TestControllerLifecycle(t *testing.T) {
 						Generation:        1,
 						CreationTimestamp: metav1.NewTime(time.Now()),
 					},
-					Spec: v1alpha2.RuleSetSpec{AuthClassName: "foo"},
+					Spec: v1alpha3.RuleSetSpec{AuthClassName: "foo"},
 				}
 				data, err := json.Marshal(&ruleSet)
 				require.NoError(t, err)
@@ -237,9 +237,9 @@ func TestControllerLifecycle(t *testing.T) {
 			request: func(t *testing.T, URL string) *http.Request {
 				t.Helper()
 
-				ruleSet := v1alpha2.RuleSet{
+				ruleSet := v1alpha3.RuleSet{
 					TypeMeta: metav1.TypeMeta{
-						APIVersion: fmt.Sprintf("%s/%s", v1alpha2.GroupName, v1alpha2.GroupVersion),
+						APIVersion: fmt.Sprintf("%s/%s", v1alpha3.GroupName, v1alpha3.GroupVersion),
 						Kind:       "RuleSet",
 					},
 					ObjectMeta: metav1.ObjectMeta{
@@ -250,7 +250,7 @@ func TestControllerLifecycle(t *testing.T) {
 						Generation:        1,
 						CreationTimestamp: metav1.NewTime(time.Now()),
 					},
-					Spec: v1alpha2.RuleSetSpec{
+					Spec: v1alpha3.RuleSetSpec{
 						AuthClassName: authClass,
 						Rules: []config2.Rule{
 							{
@@ -294,7 +294,7 @@ func TestControllerLifecycle(t *testing.T) {
 			setupRuleFactory: func(t *testing.T, factory *mocks.FactoryMock) {
 				t.Helper()
 
-				factory.EXPECT().CreateRule("1alpha2", mock.Anything, mock.Anything).
+				factory.EXPECT().CreateRule("1alpha3", mock.Anything, mock.Anything).
 					Once().Return(nil, errors.New("Test error"))
 			},
 			assert: func(t *testing.T, err error, resp *http.Response) {
@@ -330,9 +330,9 @@ func TestControllerLifecycle(t *testing.T) {
 			request: func(t *testing.T, URL string) *http.Request {
 				t.Helper()
 
-				ruleSet := v1alpha2.RuleSet{
+				ruleSet := v1alpha3.RuleSet{
 					TypeMeta: metav1.TypeMeta{
-						APIVersion: fmt.Sprintf("%s/%s", v1alpha2.GroupName, v1alpha2.GroupVersion),
+						APIVersion: fmt.Sprintf("%s/%s", v1alpha3.GroupName, v1alpha3.GroupVersion),
 						Kind:       "RuleSet",
 					},
 					ObjectMeta: metav1.ObjectMeta{
@@ -343,7 +343,7 @@ func TestControllerLifecycle(t *testing.T) {
 						Generation:        1,
 						CreationTimestamp: metav1.NewTime(time.Now()),
 					},
-					Spec: v1alpha2.RuleSetSpec{
+					Spec: v1alpha3.RuleSetSpec{
 						AuthClassName: authClass,
 						Rules: []config2.Rule{
 							{
@@ -387,7 +387,7 @@ func TestControllerLifecycle(t *testing.T) {
 			setupRuleFactory: func(t *testing.T, factory *mocks.FactoryMock) {
 				t.Helper()
 
-				factory.EXPECT().CreateRule("1alpha2", mock.Anything, mock.Anything).
+				factory.EXPECT().CreateRule("1alpha3", mock.Anything, mock.Anything).
 					Once().Return(nil, nil)
 			},
 			assert: func(t *testing.T, err error, resp *http.Response) {

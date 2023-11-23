@@ -27,7 +27,7 @@ spec:
     singular: ruleset
     listKind: RuleSetList
   versions:
-    - name: v1alpha2
+    - name: v1alpha3
       served: true
       storage: true
       schema:

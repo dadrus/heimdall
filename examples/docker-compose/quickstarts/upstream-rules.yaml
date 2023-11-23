@@ -1,4 +1,4 @@
-version: "1alpha2"
+version: "1alpha3"
 
 rules:
 - id: rule1
