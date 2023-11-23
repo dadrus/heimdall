@@ -4,25 +4,18 @@ import (
 	"fmt"
 	"net"
 	"reflect"
+	"slices"
 
 	"github.com/google/cel-go/cel"
-	"github.com/google/cel-go/common/decls"
 	"github.com/google/cel-go/common/operators"
 	"github.com/google/cel-go/common/types"
 	"github.com/google/cel-go/common/types/ref"
 	"github.com/google/cel-go/common/types/traits"
-	"github.com/google/cel-go/ext"
 	"github.com/yl2chen/cidranger"
 )
 
-var (
-	//nolint:gochecknoglobals
-	ipNetworkType = cel.ObjectType(reflect.TypeOf(IPNetwork{}).String(),
-		traits.ReceiverType|traits.ContainerType)
-	//nolint:gochecknoglobals
-	ipNetworksType = cel.ObjectType(reflect.TypeOf(IPNetworks{}).String(),
-		traits.ReceiverType|traits.ContainerType)
-)
+//nolint:gochecknoglobals
+var ipNetworksType = cel.ObjectType(reflect.TypeOf(IPNetworks{}).String(), traits.ReceiverType|traits.ContainerType)
 
 func newIPNetworks(cidrs []string) (IPNetworks, error) {
 	ranger := cidranger.NewPCTrieRanger()
@@ -38,11 +31,13 @@ func newIPNetworks(cidrs []string) (IPNetworks, error) {
 		}
 	}
 
-	return IPNetworks{ranger}, nil
+	return IPNetworks{Ranger: ranger, cidrs: cidrs}, nil
 }
 
 type IPNetworks struct {
 	cidranger.Ranger
+
+	cidrs []string
 }
 
 func (n IPNetworks) ConvertToNative(typeDesc reflect.Type) (any, error) {
@@ -115,87 +110,6 @@ func (n IPNetworks) containsAll(ips []string) bool {
 	return true
 }
 
-func newIPNetwork(cidr string) (IPNetwork, error) {
-	_, ips, err := net.ParseCIDR(cidr)
-	if err != nil {
-		return IPNetwork{}, err
-	}
-
-	return IPNetwork{ips}, nil
-}
-
-type IPNetwork struct {
-	*net.IPNet
-}
-
-func (v IPNetwork) ConvertToNative(typeDesc reflect.Type) (any, error) {
-	if reflect.TypeOf(v.IPNet).AssignableTo(typeDesc) {
-		return v.IPNet, nil
-	}
-
-	if reflect.TypeOf(v).AssignableTo(typeDesc) {
-		return v, nil
-	}
-
-	return nil, fmt.Errorf("%w: from 'network' to '%v'", errTypeConversion, typeDesc)
-}
-
-func (v IPNetwork) ConvertToType(typeVal ref.Type) ref.Val {
-	switch typeVal {
-	case ipNetworkType:
-		return v
-	case cel.TypeType:
-		return ipNetworkType
-	}
-
-	return types.NewErr("type conversion error from '%s' to '%s'", ipNetworkType, typeVal)
-}
-
-func (v IPNetwork) Equal(other ref.Val) ref.Val {
-	otherDur, ok := other.(IPNetwork)
-
-	return types.Bool(ok && v.IPNet == otherDur.IPNet)
-}
-
-func (v IPNetwork) Type() ref.Type {
-	return ipNetworkType
-}
-
-func (v IPNetwork) Value() any {
-	return v.IPNet
-}
-
-func (v IPNetwork) Contains(value ref.Val) ref.Val {
-	if singleIP, ok := value.Value().(string); ok {
-		return types.Bool(v.containsIP(singleIP))
-	}
-
-	if lister, ok := value.(traits.Lister); ok {
-		ips, err := lister.ConvertToNative(reflect.TypeOf([]string{}))
-		if err != nil {
-			return types.WrapErr(err)
-		}
-
-		return types.Bool(v.containsAll(ips.([]string))) // nolint: forcetypeassert
-	}
-
-	return types.False
-}
-
-func (v IPNetwork) containsIP(ip string) bool {
-	return v.IPNet.Contains(net.ParseIP(ip))
-}
-
-func (v IPNetwork) containsAll(ips []string) bool {
-	for _, ip := range ips {
-		if !v.containsIP(ip) {
-			return false
-		}
-	}
-
-	return true
-}
-
 func Networks() cel.EnvOption {
 	return cel.Lib(networksLib{})
 }
@@ -210,48 +124,56 @@ func (networksLib) ProgramOptions() []cel.ProgramOption {
 	return []cel.ProgramOption{}
 }
 
-//nolint:funlen
 func (networksLib) CompileOptions() []cel.EnvOption {
+	var networkInstances []IPNetworks
+
 	return []cel.EnvOption{
-		ext.NativeTypes(
-			reflect.TypeOf(IPNetwork{}),
-			reflect.TypeOf(IPNetworks{}),
-		),
-		// IPNetwork specific functions
-		cel.Function("network",
-			cel.Overload("network",
-				[]*cel.Type{cel.StringType}, cel.DynType,
+		// IPNetworks specific functions
+		cel.Function("networks",
+			cel.Overload("networks_from_cidr",
+				[]*cel.Type{cel.StringType}, ipNetworksType,
 				cel.UnaryBinding(func(netVal ref.Val) ref.Val {
-					network, err := newIPNetwork(netVal.Value().(string))
+					addresses := []string{netVal.Value().(string)} // nolint: forcetypeassert
+
+					for _, net := range networkInstances {
+						if slices.Equal(net.cidrs, addresses) {
+							return net
+						}
+					}
+
+					networks, err := newIPNetworks(addresses)
 					if err != nil {
 						return types.WrapErr(err)
 					}
 
-					return network
+					networkInstances = append(networkInstances, networks)
+
+					return networks
 				}),
 			),
-		),
-		cel.Function(operators.In,
-			decls.Overload("ip_in_network",
-				[]*cel.Type{cel.StringType, ipNetworkType}, types.BoolType),
-			decls.Overload("ips_in_network",
-				[]*cel.Type{cel.ListType(cel.StringType), ipNetworkType}, types.BoolType),
-		),
-
-		// IPNetworks specific functions
-		cel.Function("networks",
-			cel.Overload("networks",
-				[]*cel.Type{cel.ListType(cel.StringType)}, cel.DynType,
+			cel.Overload("networks_from_cidr_array",
+				[]*cel.Type{cel.ListType(cel.StringType)}, ipNetworksType,
 				cel.UnaryBinding(func(netsVal ref.Val) ref.Val {
 					cidrs, err := netsVal.ConvertToNative(reflect.TypeOf([]string{}))
 					if err != nil {
 						return types.WrapErr(err)
 					}
 
-					networks, err := newIPNetworks(cidrs.([]string))
+					addresses := cidrs.([]string) // nolint: forcetypeassert
+					slices.Sort(addresses)
+
+					for _, net := range networkInstances {
+						if slices.Equal(net.cidrs, addresses) {
+							return net
+						}
+					}
+
+					networks, err := newIPNetworks(addresses)
 					if err != nil {
 						return types.WrapErr(err)
 					}
+
+					networkInstances = append(networkInstances, networks)
 
 					return networks
 				}),
