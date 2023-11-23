@@ -35,8 +35,8 @@ func TestErrors(t *testing.T) {
 		{expr: `Error != precondition_error`},
 		{expr: `precondition_error != Error`},
 		{expr: `internal_error == internal_error`},
-		{expr: `Error.Source() == "test"`},
-		{expr: `internal_error.Source() == ""`},
+		{expr: `Error.Source == "test"`},
+		{expr: `Error == Error`},
 	} {
 		t.Run(tc.expr, func(t *testing.T) {
 			ast, iss := env.Compile(tc.expr)

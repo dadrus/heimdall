@@ -13,15 +13,57 @@ import (
 	"github.com/google/cel-go/ext"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/x"
 )
 
 //nolint:gochecknoglobals
-var errType = cel.ObjectType(reflect.TypeOf(Error{}).String(), traits.ReceiverType|traits.ComparerType)
+var (
+	errType     = cel.ObjectType(reflect.TypeOf(Error{}).String(), traits.ComparerType)
+	errTypeType = cel.ObjectType(reflect.TypeOf(Error{}).String(), traits.ComparerType)
+)
+
+type ErrorType struct {
+	types []error
+}
+
+func (e ErrorType) ConvertToNative(_ reflect.Type) (any, error) {
+	return nil, fmt.Errorf("%w: 'ErrorType' cannot be converted to any native type", errTypeConversion)
+}
+
+func (e ErrorType) ConvertToType(typeVal ref.Type) ref.Val {
+	switch typeVal {
+	case errTypeType:
+		return e
+	case cel.TypeType:
+		return errTypeType
+	}
+
+	return types.NewErr("type conversion error from 'ErrorType' to '%s'", typeVal)
+}
+
+func (e ErrorType) Equal(other ref.Val) ref.Val {
+	if otherEt, ok := other.(ErrorType); ok {
+		return types.Bool(slices.Equal(e.types, otherEt.types))
+	}
+
+	if otherErr, ok := other.(Error); ok {
+		for _, v := range e.types {
+			if errors.Is(otherErr.err, v) {
+				return types.True
+			}
+		}
+	}
+
+	return types.False
+}
+
+func (e ErrorType) Type() ref.Type { return errType }
+
+func (e ErrorType) Value() any { return e }
 
 type Error struct {
-	types []error
-	err   error
+	err error
+
+	Source string
 }
 
 func (e Error) ConvertToNative(typeDesc reflect.Type) (any, error) {
@@ -44,44 +86,34 @@ func (e Error) ConvertToType(typeVal ref.Type) ref.Val {
 }
 
 func (e Error) Equal(other ref.Val) ref.Val {
-	otherEt, ok := other.(Error)
-
-	if len(e.types) != 0 && len(otherEt.types) != 0 {
-		return types.Bool(ok && slices.Equal(e.types, otherEt.types))
+	if otherEt, ok := other.(ErrorType); ok {
+		return otherEt.Equal(e)
 	}
 
-	errTypes := x.IfThenElse(len(e.types) != 0, e.types, otherEt.types)
-	err := x.IfThenElse(e.err != nil, e.err, otherEt.err)
-
-	for _, v := range errTypes {
-		if errors.Is(err, v) {
-			return types.True
-		}
+	if otherErr, ok := other.(Error); ok {
+		return types.Bool(errors.Is(e.err, otherErr.err))
 	}
 
 	return types.False
 }
 
-func (e Error) Type() ref.Type {
-	return errType
-}
+func (e Error) Type() ref.Type { return errType }
 
-func (e Error) Value() any {
-	return e
-}
-
-func (e Error) source() string {
-	var handlerIdentifier interface{ ID() string }
-
-	if ok := errors.As(e.err, &handlerIdentifier); ok {
-		return handlerIdentifier.ID()
-	}
-
-	return ""
-}
+func (e Error) Value() any { return e }
 
 func WrapError(err error) Error {
-	return Error{err: err}
+	var (
+		handlerIdentifier interface{ ID() string }
+		source            string
+	)
+
+	if ok := errors.As(err, &handlerIdentifier); ok {
+		source = handlerIdentifier.ID()
+	} else {
+		source = ""
+	}
+
+	return Error{err: err, Source: source}
 }
 
 func Errors() cel.EnvOption {
@@ -104,23 +136,12 @@ func (errorsLib) CompileOptions() []cel.EnvOption {
 		cel.Variable("Error", errType),
 
 		cel.Constant("authentication_error", errType,
-			Error{types: []error{heimdall.ErrAuthentication}}),
+			ErrorType{types: []error{heimdall.ErrAuthentication}}),
 		cel.Constant("authorization_error", errType,
-			Error{types: []error{heimdall.ErrAuthorization}}),
+			ErrorType{types: []error{heimdall.ErrAuthorization}}),
 		cel.Constant("internal_error", errType,
-			Error{types: []error{heimdall.ErrInternal, heimdall.ErrConfiguration}}),
+			ErrorType{types: []error{heimdall.ErrInternal, heimdall.ErrConfiguration}}),
 		cel.Constant("precondition_error", errType,
-			Error{types: []error{heimdall.ErrArgument}}),
-
-		cel.Function("Source",
-			cel.MemberOverload("error_Source",
-				[]*cel.Type{errType}, cel.StringType,
-				cel.UnaryBinding(func(errVal ref.Val) ref.Val {
-					err := errVal.Value().(Error) // nolint: forcetypeassert
-
-					return types.String(err.source())
-				}),
-			),
-		),
+			ErrorType{types: []error{heimdall.ErrArgument}}),
 	}
 }
