@@ -48,6 +48,7 @@ metadata:
         }
   {{- end }}
 spec:
+  ingressClassName: nginx
   rules:
     - host: "demo-app"
       http:
