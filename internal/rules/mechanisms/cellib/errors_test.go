@@ -34,6 +34,7 @@ func TestErrors(t *testing.T) {
 		{expr: `Error in [internal_error, authorization_error, authentication_error]`},
 		{expr: `Error != precondition_error`},
 		{expr: `precondition_error != Error`},
+		{expr: `Error != communication_error`},
 		{expr: `internal_error == internal_error`},
 		{expr: `Error.Source == "test"`},
 		{expr: `Error == Error`},

@@ -139,6 +139,8 @@ func (errorsLib) CompileOptions() []cel.EnvOption {
 			ErrorType{types: []error{heimdall.ErrAuthentication}}),
 		cel.Constant("authorization_error", errType,
 			ErrorType{types: []error{heimdall.ErrAuthorization}}),
+		cel.Constant("communication_error", errType,
+			ErrorType{types: []error{heimdall.ErrCommunication, heimdall.ErrCommunicationTimeout}}),
 		cel.Constant("internal_error", errType,
 			ErrorType{types: []error{heimdall.ErrInternal, heimdall.ErrConfiguration}}),
 		cel.Constant("precondition_error", errType,
