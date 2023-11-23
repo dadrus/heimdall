@@ -124,7 +124,7 @@ providers:
 Create a rule file (`rule.yaml`) with the following contents:
 
 ```yaml
-version: "1alpha2"
+version: "1alpha3"
 rules:
   - id: test-rule
     match: 

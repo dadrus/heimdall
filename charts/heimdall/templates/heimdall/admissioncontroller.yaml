@@ -23,7 +23,7 @@ webhooks:
     {{- end }}
     rules:
       - apiGroups:   ["heimdall.dadrus.github.com"]
-        apiVersions: ["v1alpha2"]
+        apiVersions: ["v1alpha3"]
         operations:  ["CREATE", "UPDATE"]
         resources:   ["rulesets"]
         scope:       "Namespaced"

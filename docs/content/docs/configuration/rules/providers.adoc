@@ -37,7 +37,7 @@ WARNING: All environment variables, used in the rule set files must be known in 
 ====
 [source, yaml]
 ----
-version: "1alpha2"
+version: "1alpha3"
 name: my-rule-set
 rules:
 - id: rule:1
@@ -316,7 +316,7 @@ List of the actual rules.
 ====
 [source, yaml]
 ----
-apiVersion: heimdall.dadrus.github.com/v1alpha2
+apiVersion: heimdall.dadrus.github.com/v1alpha3
 kind: RuleSet
 metadata:
   name: "<some name>"

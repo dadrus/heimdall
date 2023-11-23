@@ -22,10 +22,10 @@ The actual integration depends pretty much on your requirements and setup.
 
 The setup includes a demo app (which just echoes the request) and a rule set. If you're using NGINX as Ingress Controller, the abovesaid annotations are already added to the demo app ingress rule. So, to see heimdall in actions, just do.
 
-> curl -v -H "Host: demo-app" <you cluster ip and port>/heimdall-demo/public
+> curl -v -H "Host: demo-app" <you cluster ip and port>/heimdall-demo/pub/test
 This endpoint is not protected. so heimdall will just allow the request
 
-> curl -v -H "Host: demo-app" <you cluster ip and port>/heimdall-demo/anonymous
+> curl -v -H "Host: demo-app" <you cluster ip and port>/heimdall-demo/anon/test
 This endpoint is configured to accept anonymous requests. So heimdall will allow the request,
 but create a JWT with "sub" claim set to anonymous.
 

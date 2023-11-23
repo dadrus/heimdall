@@ -15,7 +15,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 {{- if .Values.demo.enabled }}
-apiVersion: heimdall.dadrus.github.com/v1alpha2
+apiVersion: heimdall.dadrus.github.com/v1alpha3
 kind: RuleSet
 metadata:
   name: {{ include "heimdall.demo.fullname" . }}-test-rule
