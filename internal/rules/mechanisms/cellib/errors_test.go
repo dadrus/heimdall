@@ -27,14 +27,14 @@ func TestErrors(t *testing.T) {
 	for _, tc := range []struct {
 		expr string
 	}{
-		{expr: `Error == authorization_error`},
-		{expr: `authorization_error == Error`},
-		{expr: `Error == authentication_error`},
-		{expr: `Error == internal_error`},
-		{expr: `Error in [internal_error, authorization_error, authentication_error]`},
-		{expr: `Error != precondition_error`},
-		{expr: `precondition_error != Error`},
-		{expr: `Error != communication_error`},
+		{expr: `type(Error) == authorization_error`},
+		{expr: `authorization_error == type(Error)`},
+		{expr: `type(Error) == authentication_error`},
+		{expr: `type(Error) == internal_error`},
+		{expr: `type(Error) in [internal_error, authorization_error, authentication_error]`},
+		{expr: `type(Error) != precondition_error`},
+		{expr: `precondition_error != type(Error)`},
+		{expr: `type(Error) != communication_error`},
 		{expr: `internal_error == internal_error`},
 		{expr: `Error.Source == "test"`},
 		{expr: `Error == Error`},
