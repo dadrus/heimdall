@@ -65,13 +65,9 @@ func (e ErrorType) Equal(other ref.Val) ref.Val {
 	return types.False
 }
 
-func (e ErrorType) Type() ref.Type {
-	return errType
-}
+func (e ErrorType) Type() ref.Type { return errType }
 
-func (e ErrorType) Value() any {
-	return e
-}
+func (e ErrorType) Value() any { return e }
 
 type Error struct {
 	errType ErrorType
@@ -107,13 +103,9 @@ func (e Error) Equal(other ref.Val) ref.Val {
 	return types.False
 }
 
-func (e Error) Type() ref.Type {
-	return errType
-}
+func (e Error) Type() ref.Type { return errType }
 
-func (e Error) Value() any {
-	return e
-}
+func (e Error) Value() any { return e }
 
 func WrapError(err error) Error {
 	var (
