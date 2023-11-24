@@ -16,9 +16,9 @@ func TestRequests(t *testing.T) {
 	t.Parallel()
 
 	env, err := cel.NewEnv(
-		cel.Variable("req", cel.DynType),
 		Requests(),
 		Urls(),
+		Networks(),
 	)
 	require.NoError(t, err)
 
@@ -36,19 +36,20 @@ func TestRequests(t *testing.T) {
 		RequestFunctions:  reqf,
 		Method:            http.MethodHead,
 		URL:               uri,
-		ClientIPAddresses: []string{"1.1.1.1"},
+		ClientIPAddresses: []string{"127.0.0.1"},
 	}
 
 	for _, tc := range []struct {
 		expr string
 	}{
-		{expr: `req.Method == "HEAD"`},
-		{expr: `req.URL.String() == "` + rawURI + `"`},
-		{expr: `req.Cookie("foo") == "bar"`},
-		{expr: `req.Header("bar") == "baz"`},
-		{expr: `req.Header("zab").contains("bar")`},
-		{expr: `req.Header("accept").matches("(text/html|application/xml)")`},
-		{expr: `["text/html", "application/xml", "application/json"].exists(v, req.Header("accept").contains(v))`},
+		{expr: `Request.Method == "HEAD"`},
+		{expr: `Request.URL.String() == "` + rawURI + `"`},
+		{expr: `Request.Cookie("foo") == "bar"`},
+		{expr: `Request.Header("bar") == "baz"`},
+		{expr: `Request.Header("zab").contains("bar")`},
+		{expr: `Request.Header("accept").matches("(text/html|application/xml)")`},
+		{expr: `["text/html", "application/xml", "application/json"].exists(v, Request.Header("accept").contains(v))`},
+		{expr: `Request.ClientIPAddresses in networks("127.0.0.0/24")`},
 	} {
 		t.Run(tc.expr, func(t *testing.T) {
 			ast, iss := env.Compile(tc.expr)
@@ -64,7 +65,7 @@ func TestRequests(t *testing.T) {
 			prg, err := env.Program(ast, cel.EvalOptions(cel.OptOptimize))
 			require.NoError(t, err)
 
-			out, _, err := prg.Eval(map[string]any{"req": req})
+			out, _, err := prg.Eval(map[string]any{"Request": req})
 			require.NoError(t, err)
 			require.Equal(t, true, out.Value()) //nolint:testifylint
 		})
