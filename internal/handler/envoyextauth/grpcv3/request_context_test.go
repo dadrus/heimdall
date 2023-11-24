@@ -88,7 +88,7 @@ func TestNewRequestContext(t *testing.T) {
 	require.Empty(t, ctx.Request().Cookie("baz"))
 	require.NotNil(t, ctx.AppContext())
 	require.NotNil(t, ctx.Signer())
-	assert.Equal(t, []string{"127.0.0.1", "192.168.1.1"}, ctx.Request().ClientIP)
+	assert.Equal(t, []string{"127.0.0.1", "192.168.1.1"}, ctx.Request().ClientIPAddresses)
 }
 
 func TestFinalizeRequestContext(t *testing.T) {

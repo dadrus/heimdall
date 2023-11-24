@@ -286,7 +286,7 @@ expressions:
   - expression: size(Request.URL.Query()) == 2
   - expression: Request.URL.Query().foo == ["bar"]
   - expression: Request.Header('X-Custom-Header') == "foobar"
-  - expression: Request.ClientIP.exists_one(v, v == '127.0.0.1')
+  - expression: Request.ClientIPAddresses.exists_one(v, v == '127.0.0.1')
   - expression: Request.Cookie("FooCookie") == "barfoo"
   - expression: Request.URL.String() == "http://localhost/test?foo=bar&baz=zab"
   - expression: Request.URL.Path.split("/").last() == "test"
@@ -314,7 +314,7 @@ expressions:
 						Path:     "/test",
 						RawQuery: "foo=bar&baz=zab",
 					},
-					ClientIP: []string{"127.0.0.1", "10.10.10.10"},
+					ClientIPAddresses: []string{"127.0.0.1", "10.10.10.10"},
 				})
 			},
 			assert: func(t *testing.T, err error) {

@@ -90,10 +90,10 @@ func canonicalizeHeaders(headers map[string]string) map[string]string {
 
 func (s *RequestContext) Request() *heimdall.Request {
 	return &heimdall.Request{
-		RequestFunctions: s,
-		Method:           s.reqMethod,
-		URL:              s.reqURL,
-		ClientIP:         s.ips,
+		RequestFunctions:  s,
+		Method:            s.reqMethod,
+		URL:               s.reqURL,
+		ClientIPAddresses: s.ips,
 	}
 }
 

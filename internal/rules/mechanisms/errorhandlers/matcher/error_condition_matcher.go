@@ -33,7 +33,7 @@ func (ecm ErrorConditionMatcher) Match(ctx heimdall.Context, err error) bool {
 		func() bool { return true })
 
 	ipMatched := x.IfThenElseExec(ecm.CIDR != nil,
-		func() bool { return ecm.CIDR.Match(ctx.Request().ClientIP...) },
+		func() bool { return ecm.CIDR.Match(ctx.Request().ClientIPAddresses...) },
 		func() bool { return true })
 
 	headerMatched := x.IfThenElseExec(ecm.Headers != nil,

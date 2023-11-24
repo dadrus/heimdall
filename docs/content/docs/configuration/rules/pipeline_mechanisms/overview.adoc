@@ -218,7 +218,7 @@ This method returns the URL as valid URL string of a form `scheme:host/path?quer
 +
 The parsed query with each key-value pair being a string to array of strings mapping.
 
-* *`ClientIP`*: _string array_
+* *`ClientIPAddresses`*: _string array_
 +
 The list of IP addresses the request passed through with the first entry being the ultimate client of the request. Only available if heimdall is configured to trust the client, sending this information, e.g. in the `X-Forwarded-From` header (see e.g. Decision Service link:{{< relref "/docs/configuration/services/decision.adoc#_trusted_proxies" >}}[trusted_proxies] configuration for more details).
 
