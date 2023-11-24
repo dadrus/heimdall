@@ -31,6 +31,7 @@ func (requestsLib) CompileOptions() []cel.EnvOption {
 
 	return []cel.EnvOption{
 		ext.NativeTypes(reflect.TypeOf(&heimdall.Request{})),
+		cel.Variable("Request", cel.DynType),
 		cel.Function("Header",
 			cel.MemberOverload("request_Header",
 				[]*cel.Type{requestType, cel.StringType}, cel.StringType,
