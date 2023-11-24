@@ -100,7 +100,8 @@ func (e Error) ConvertToType(typeVal ref.Type) ref.Val {
 
 func (e Error) Equal(other ref.Val) ref.Val {
 	if otherErr, ok := other.(Error); ok {
-		return types.Bool(e.errType.current == otherErr.errType.current)
+		// the values MUST be equal here
+		return types.Bool(e.errType.current == otherErr.errType.current) // nolint: errorlint
 	}
 
 	return types.False
