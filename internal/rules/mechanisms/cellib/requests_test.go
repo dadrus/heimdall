@@ -31,10 +31,10 @@ func TestRequests(t *testing.T) {
 	reqf.EXPECT().Header("bar").Return("baz")
 
 	req := &heimdall.Request{
-		RequestFunctions: reqf,
-		Method:           http.MethodHead,
-		URL:              uri,
-		ClientIP:         []string{"1.1.1.1"},
+		RequestFunctions:  reqf,
+		Method:            http.MethodHead,
+		URL:               uri,
+		ClientIPAddresses: []string{"1.1.1.1"},
 	}
 
 	for _, tc := range []struct {

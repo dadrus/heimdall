@@ -113,10 +113,10 @@ func (r *RequestContext) Body() []byte {
 func (r *RequestContext) Request() *heimdall.Request {
 	if r.hmdlReq == nil {
 		r.hmdlReq = &heimdall.Request{
-			RequestFunctions: r,
-			Method:           r.reqMethod,
-			URL:              r.reqURL,
-			ClientIP:         r.requestClientIPs(),
+			RequestFunctions:  r,
+			Method:            r.reqMethod,
+			URL:               r.reqURL,
+			ClientIPAddresses: r.requestClientIPs(),
 		}
 	}
 

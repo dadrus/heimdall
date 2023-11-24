@@ -48,7 +48,7 @@ type RequestFunctions interface {
 type Request struct {
 	RequestFunctions
 
-	Method   string
-	URL      *url.URL
-	ClientIP []string
+	Method            string
+	URL               *url.URL
+	ClientIPAddresses []string
 }

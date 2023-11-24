@@ -61,8 +61,8 @@ func TestErrorConditionMatcherMatch(t *testing.T) {
 				})
 
 				ctx.EXPECT().Request().Return(&heimdall.Request{
-					RequestFunctions: fnt,
-					ClientIP:         []string{"192.168.10.2"},
+					RequestFunctions:  fnt,
+					ClientIPAddresses: []string{"192.168.10.2"},
 				})
 			},
 			err:      heimdall.ErrConfiguration,
@@ -90,8 +90,8 @@ func TestErrorConditionMatcherMatch(t *testing.T) {
 				})
 
 				ctx.EXPECT().Request().Return(&heimdall.Request{
-					RequestFunctions: fnt,
-					ClientIP:         []string{"192.168.1.2"},
+					RequestFunctions:  fnt,
+					ClientIPAddresses: []string{"192.168.1.2"},
 				})
 			},
 			err:      heimdall.ErrArgument,
@@ -119,8 +119,8 @@ func TestErrorConditionMatcherMatch(t *testing.T) {
 				})
 
 				ctx.EXPECT().Request().Return(&heimdall.Request{
-					RequestFunctions: fnt,
-					ClientIP:         []string{"192.168.10.2"},
+					RequestFunctions:  fnt,
+					ClientIPAddresses: []string{"192.168.10.2"},
 				})
 			},
 			err:      heimdall.ErrArgument,
@@ -148,8 +148,8 @@ func TestErrorConditionMatcherMatch(t *testing.T) {
 				})
 
 				ctx.EXPECT().Request().Return(&heimdall.Request{
-					RequestFunctions: fnt,
-					ClientIP:         []string{"192.168.10.2"},
+					RequestFunctions:  fnt,
+					ClientIPAddresses: []string{"192.168.10.2"},
 				})
 			},
 			err:      heimdall.ErrArgument,
@@ -177,8 +177,8 @@ func TestErrorConditionMatcherMatch(t *testing.T) {
 				})
 
 				ctx.EXPECT().Request().Return(&heimdall.Request{
-					RequestFunctions: fnt,
-					ClientIP:         []string{"192.168.1.2"},
+					RequestFunctions:  fnt,
+					ClientIPAddresses: []string{"192.168.1.2"},
 				})
 			},
 			err:      heimdall.ErrConfiguration,
@@ -230,7 +230,7 @@ func TestErrorConditionMatcherMatch(t *testing.T) {
 				t.Helper()
 
 				ctx.EXPECT().Request().Return(&heimdall.Request{
-					ClientIP: []string{"192.168.1.2"},
+					ClientIPAddresses: []string{"192.168.1.2"},
 				})
 			},
 			err:      heimdall.ErrConfiguration,
