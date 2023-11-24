@@ -29,6 +29,8 @@ func TestErrors(t *testing.T) {
 	}{
 		{expr: `type(Error) == authorization_error`},
 		{expr: `authorization_error == type(Error)`},
+		{expr: `authorization_error != Error`},
+		{expr: `Error != authorization_error`},
 		{expr: `type(Error) == authentication_error`},
 		{expr: `type(Error) == internal_error`},
 		{expr: `type(Error) in [internal_error, authorization_error, authentication_error]`},
