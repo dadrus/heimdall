@@ -150,7 +150,7 @@ func TestRequestContextHeader(t *testing.T) {
 	emptyValue := ctx.Request().Header("X-Not-Present")
 
 	// THEN
-	assert.Equal(t, "foo", xFooBarValue)
+	assert.Equal(t, "foo,bar", xFooBarValue)
 	assert.Equal(t, "bar.foo", hostValue)
 	assert.Empty(t, emptyValue)
 }
