@@ -63,12 +63,7 @@ func (r *RequestContext) Header(name string) string {
 		return r.req.Host
 	}
 
-	value := r.req.Header[key]
-	if len(value) == 0 {
-		return ""
-	}
-
-	return value[0]
+	return strings.Join(r.req.Header.Values(key), ",")
 }
 
 func (r *RequestContext) Cookie(name string) string {
