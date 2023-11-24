@@ -218,13 +218,15 @@ This method returns the URL as valid URL string of a form `scheme:host/path?quer
 +
 The parsed query with each key-value pair being a string to array of strings mapping.
 
-* *`ClientIP`*: _string array_
+* *`ClientIPAddresses`*: _string array_
 +
 The list of IP addresses the request passed through with the first entry being the ultimate client of the request. Only available if heimdall is configured to trust the client, sending this information, e.g. in the `X-Forwarded-From` header (see e.g. Decision Service link:{{< relref "/docs/configuration/services/decision.adoc#_trusted_proxies" >}}[trusted_proxies] configuration for more details).
 
 * *`Header(name)`*: _method_,
 +
-This method expects the name of a header as input and returns the value of it as `string`. If the header is not present in the HTTP request an empty string (`""`) is returned.
+This method expects the name of a header as input and returns its value as a `string`. If the header is not present in the HTTP request an empty string (`""`) is returned. If a header appears multiple times in the request, the returned `string` is a comma separated list of all values.
++
+NOTE: A single header may be a comma separated list of actual values as well. Best example is the `Accept` header, which might be set to e.g. `text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8`).
 
 * *`Cookie(name)`*: _method_,
 +

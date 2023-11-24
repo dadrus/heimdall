@@ -33,10 +33,10 @@ func TestRequests(t *testing.T) {
 	reqf.EXPECT().Header("accept").Return("text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
 
 	req := &heimdall.Request{
-		RequestFunctions: reqf,
-		Method:           http.MethodHead,
-		URL:              uri,
-		ClientIP:         []string{"1.1.1.1"},
+		RequestFunctions:  reqf,
+		Method:            http.MethodHead,
+		URL:               uri,
+		ClientIPAddresses: []string{"1.1.1.1"},
 	}
 
 	for _, tc := range []struct {

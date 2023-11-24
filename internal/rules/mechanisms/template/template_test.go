@@ -40,10 +40,10 @@ func TestTemplateRender(t *testing.T) {
 
 	ctx := mocks.NewContextMock(t)
 	ctx.EXPECT().Request().Return(&heimdall.Request{
-		RequestFunctions: reqf,
-		Method:           http.MethodPatch,
-		URL:              &url.URL{Scheme: "http", Host: "foobar.baz", Path: "zab", RawQuery: "my_query_param=query_value"},
-		ClientIP:         []string{"192.168.1.1"},
+		RequestFunctions:  reqf,
+		Method:            http.MethodPatch,
+		URL:               &url.URL{Scheme: "http", Host: "foobar.baz", Path: "zab", RawQuery: "my_query_param=query_value"},
+		ClientIPAddresses: []string{"192.168.1.1"},
 	})
 
 	sub := &subject.Subject{
@@ -65,7 +65,7 @@ func TestTemplateRender(t *testing.T) {
 "my_header": {{ .Request.Header "X-My-Header" | quote }},
 "my_cookie": {{ .Request.Cookie "session_cookie" | quote }},
 "my_query_param": {{ index .Request.URL.Query.my_query_param 0 | quote }},
-"ips": {{ range $i, $el := .Request.ClientIP -}}{{ if $i }} {{ end }}{{ quote $el }}{{ end }},
+"ips": {{ range $i, $el := .Request.ClientIPAddresses -}}{{ if $i }} {{ end }}{{ quote $el }}{{ end }},
 "values": [{{ quote .Values.key1 }}, {{ quote .Values.key2 }}]
 }`)
 	require.NoError(t, err)
