@@ -101,7 +101,7 @@ func (eh *redirectErrorHandler) WithConfig(rawConfig map[string]any) (ErrorHandl
 	}
 
 	type Config struct {
-		Condition string `mapstructure:"if"   validate:"required"`
+		Condition string `mapstructure:"if" validate:"required"`
 	}
 
 	var conf Config

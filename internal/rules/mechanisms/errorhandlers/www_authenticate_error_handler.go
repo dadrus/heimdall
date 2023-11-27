@@ -49,7 +49,7 @@ type wwwAuthenticateErrorHandler struct {
 
 func newWWWAuthenticateErrorHandler(id string, rawConfig map[string]any) (*wwwAuthenticateErrorHandler, error) {
 	type Config struct {
-		Condition string `mapstructure:"if"   validate:"required"`
+		Condition string `mapstructure:"if"    validate:"required"`
 		Realm     string `mapstructure:"realm"`
 	}
 
