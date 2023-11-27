@@ -1145,6 +1145,68 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				require.Empty(t, rul.eh)
 			},
 		},
+		{
+			uc: "with conditional execution for error handler",
+			config: config2.Rule{
+				ID:          "foobar",
+				RuleMatcher: config2.Matcher{URL: "http://foo.bar", Strategy: "glob"},
+				Execute: []config.MechanismConfig{
+					{"authenticator": "foo"},
+					{"authorizer": "bar"},
+					{"finalizer": "baz"},
+				},
+				ErrorHandler: []config.MechanismConfig{
+					{"error_handler": "foo", "if": "true", "config": map[string]any{}},
+					{"error_handler": "bar", "if": "false", "config": map[string]any{}},
+				},
+				Methods: []string{"FOO"},
+			},
+			configureMocks: func(t *testing.T, mhf *mocks3.FactoryMock) {
+				t.Helper()
+
+				mhf.EXPECT().CreateAuthenticator("test", "foo", mock.Anything).
+					Return(&mocks2.AuthenticatorMock{}, nil)
+				mhf.EXPECT().CreateAuthorizer("test", "bar", mock.Anything).
+					Return(&mocks4.AuthorizerMock{}, nil)
+				mhf.EXPECT().CreateFinalizer("test", "baz", mock.Anything).
+					Return(&mocks7.FinalizerMock{}, nil)
+				mhf.EXPECT().CreateErrorHandler("test", "foo",
+					mock.MatchedBy(func(conf map[string]any) bool { return conf["if"] == "true" }),
+				).Return(&mocks6.ErrorHandlerMock{}, nil)
+				mhf.EXPECT().CreateErrorHandler("test", "bar",
+					mock.MatchedBy(func(conf map[string]any) bool { return conf["if"] == "false" }),
+				).Return(&mocks6.ErrorHandlerMock{}, nil)
+			},
+			assert: func(t *testing.T, err error, rul *ruleImpl) {
+				t.Helper()
+
+				require.NoError(t, err)
+				require.NotNil(t, rul)
+
+				assert.Equal(t, "test", rul.srcID)
+				assert.False(t, rul.isDefault)
+				assert.Equal(t, "foobar", rul.id)
+				assert.NotNil(t, rul.urlMatcher)
+				assert.ElementsMatch(t, rul.methods, []string{"FOO"})
+
+				require.Len(t, rul.sc, 1)
+				assert.NotNil(t, rul.sc[0])
+
+				require.Len(t, rul.sh, 1)
+
+				assert.NotNil(t, rul.sh[0])
+				sh, ok := rul.sh[0].(*conditionalSubjectHandler)
+				require.True(t, ok)
+				assert.IsType(t, defaultExecutionCondition{}, sh.c)
+
+				require.Len(t, rul.fi, 1)
+				un, ok := rul.fi[0].(*conditionalSubjectHandler)
+				require.True(t, ok)
+				assert.IsType(t, defaultExecutionCondition{}, un.c)
+
+				require.Len(t, rul.eh, 2)
+			},
+		},
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
 			// GIVEN
