@@ -40,6 +40,7 @@ func TestErrors(t *testing.T) {
 		{expr: `internal_error == internal_error`},
 		{expr: `Error.Source == "test"`},
 		{expr: `Error == Error`},
+		{expr: `type(communication_error) != type(Error)`},
 	} {
 		t.Run(tc.expr, func(t *testing.T) {
 			ast, iss := env.Compile(tc.expr)
@@ -64,6 +65,29 @@ func TestErrors(t *testing.T) {
 			out, _, err := prg.Eval(map[string]any{"Error": WrapError(causeErr)})
 			require.NoError(t, err)
 			require.Equal(t, true, out.Value()) //nolint:testifylint
+		})
+	}
+}
+
+func TestWrapError(t *testing.T) {
+	t.Parallel()
+
+	for _, tc := range []struct {
+		uc  string
+		err error
+		id  string
+	}{
+		{"no source", heimdall.ErrArgument, ""},
+		{"with source", errorchain.New(heimdall.ErrAuthorization).WithErrorContext(idProvider{id: "test"}), "test"},
+	} {
+		t.Run("", func(t *testing.T) {
+			// WHEN
+			wrapped := WrapError(tc.err)
+
+			// THEN
+			require.Equal(t, tc.id, wrapped.Source)
+			require.Equal(t, wrapped.errType.current, tc.err)
+			require.Empty(t, wrapped.errType.types)
 		})
 	}
 }
