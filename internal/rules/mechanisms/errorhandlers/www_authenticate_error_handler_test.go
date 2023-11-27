@@ -71,6 +71,17 @@ func TestCreateWWWAuthenticateErrorHandler(t *testing.T) {
 			},
 		},
 		{
+			uc:     "with invalid 'if' configuration",
+			config: []byte(`if: foo`),
+			assert: func(t *testing.T, err error, errorHandler *wwwAuthenticateErrorHandler) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				assert.Contains(t, err.Error(), "failed to compile")
+			},
+		},
+		{
 			uc: "with configuration containing unsupported fields",
 			config: []byte(`
 realm: FooBar
@@ -180,7 +191,7 @@ func TestCreateWWWAuthenticateErrorHandlerFromPrototype(t *testing.T) {
 			},
 		},
 		{
-			uc:              "with 'when' reconfigured",
+			uc:              "with 'if' reconfigured",
 			prototypeConfig: []byte(`if: type(Error) in [authentication_error, authorization_error]`),
 			config:          []byte(`if: type(Error) == precondition_error`),
 			assert: func(t *testing.T, err error, prototype *wwwAuthenticateErrorHandler,
@@ -191,10 +202,24 @@ func TestCreateWWWAuthenticateErrorHandlerFromPrototype(t *testing.T) {
 				require.NoError(t, err)
 				assert.NotEqual(t, prototype, configured)
 				assert.NotNil(t, configured)
-				assert.Equal(t, "with 'when' reconfigured", configured.ID())
+				assert.Equal(t, "with 'if' reconfigured", configured.ID())
 				assert.Equal(t, "Please authenticate", prototype.realm)
 				assert.Equal(t, prototype.realm, configured.realm)
 				assert.NotEqual(t, prototype.c, configured.c)
+			},
+		},
+		{
+			uc:              "with invalid 'if' reconfigured",
+			prototypeConfig: []byte(`if: type(Error) in [authentication_error, authorization_error]`),
+			config:          []byte(`if: foo`),
+			assert: func(t *testing.T, err error, prototype *wwwAuthenticateErrorHandler,
+				configured *wwwAuthenticateErrorHandler,
+			) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				assert.Contains(t, err.Error(), "failed to compile")
 			},
 		},
 		{

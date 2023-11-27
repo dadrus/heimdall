@@ -76,17 +76,17 @@ if: ""
 			},
 		},
 		{
-			uc: "with invalid when conditions configuration",
+			uc: "with invalid 'if' conditions configuration",
 			config: []byte(`
 to: http://foo.bar
-when: foo
+if: foo
 `),
 			assert: func(t *testing.T, err error, redEH *redirectErrorHandler) {
 				t.Helper()
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "failed decoding")
+				assert.Contains(t, err.Error(), "failed to compile")
 			},
 		},
 		{
@@ -218,6 +218,21 @@ if: type(Error) == authentication_error
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
 				assert.Contains(t, err.Error(), "failed decoding")
+			},
+		},
+		{
+			uc: "invalid 'if' condition",
+			prototypeConfig: []byte(`
+to: http://foo.bar
+if: type(Error) == authentication_error
+`),
+			config: []byte(`if: foo`),
+			assert: func(t *testing.T, err error, prototype *redirectErrorHandler, configured *redirectErrorHandler) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				assert.Contains(t, err.Error(), "failed to compile")
 			},
 		},
 		{
