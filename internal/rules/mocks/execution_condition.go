@@ -22,23 +22,23 @@ func (_m *ExecutionConditionMock) EXPECT() *ExecutionConditionMock_Expecter {
 	return &ExecutionConditionMock_Expecter{mock: &_m.Mock}
 }
 
-// CanExecute provides a mock function with given fields: ctx, sub, err
-func (_m *ExecutionConditionMock) CanExecute(ctx heimdall.Context, sub *subject.Subject, err error) (bool, error) {
-	ret := _m.Called(ctx, sub, err)
+// CanExecute provides a mock function with given fields: ctx, sub
+func (_m *ExecutionConditionMock) CanExecute(ctx heimdall.Context, sub *subject.Subject) (bool, error) {
+	ret := _m.Called(ctx, sub)
 
 	var r0 bool
 	var r1 error
-	if rf, ok := ret.Get(0).(func(heimdall.Context, *subject.Subject, error) (bool, error)); ok {
-		return rf(ctx, sub, err)
+	if rf, ok := ret.Get(0).(func(heimdall.Context, *subject.Subject) (bool, error)); ok {
+		return rf(ctx, sub)
 	}
-	if rf, ok := ret.Get(0).(func(heimdall.Context, *subject.Subject, error) bool); ok {
-		r0 = rf(ctx, sub, err)
+	if rf, ok := ret.Get(0).(func(heimdall.Context, *subject.Subject) bool); ok {
+		r0 = rf(ctx, sub)
 	} else {
 		r0 = ret.Get(0).(bool)
 	}
 
-	if rf, ok := ret.Get(1).(func(heimdall.Context, *subject.Subject, error) error); ok {
-		r1 = rf(ctx, sub, err)
+	if rf, ok := ret.Get(1).(func(heimdall.Context, *subject.Subject) error); ok {
+		r1 = rf(ctx, sub)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -54,14 +54,13 @@ type ExecutionConditionMock_CanExecute_Call struct {
 // CanExecute is a helper method to define mock.On call
 //   - ctx heimdall.Context
 //   - sub *subject.Subject
-//   - err error
-func (_e *ExecutionConditionMock_Expecter) CanExecute(ctx interface{}, sub interface{}, err interface{}) *ExecutionConditionMock_CanExecute_Call {
-	return &ExecutionConditionMock_CanExecute_Call{Call: _e.mock.On("CanExecute", ctx, sub, err)}
+func (_e *ExecutionConditionMock_Expecter) CanExecute(ctx interface{}, sub interface{}) *ExecutionConditionMock_CanExecute_Call {
+	return &ExecutionConditionMock_CanExecute_Call{Call: _e.mock.On("CanExecute", ctx, sub)}
 }
 
-func (_c *ExecutionConditionMock_CanExecute_Call) Run(run func(ctx heimdall.Context, sub *subject.Subject, err error)) *ExecutionConditionMock_CanExecute_Call {
+func (_c *ExecutionConditionMock_CanExecute_Call) Run(run func(ctx heimdall.Context, sub *subject.Subject)) *ExecutionConditionMock_CanExecute_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(heimdall.Context), args[1].(*subject.Subject), args[2].(error))
+		run(args[0].(heimdall.Context), args[1].(*subject.Subject))
 	})
 	return _c
 }
@@ -71,7 +70,7 @@ func (_c *ExecutionConditionMock_CanExecute_Call) Return(_a0 bool, _a1 error) *E
 	return _c
 }
 
-func (_c *ExecutionConditionMock_CanExecute_Call) RunAndReturn(run func(heimdall.Context, *subject.Subject, error) (bool, error)) *ExecutionConditionMock_CanExecute_Call {
+func (_c *ExecutionConditionMock_CanExecute_Call) RunAndReturn(run func(heimdall.Context, *subject.Subject) (bool, error)) *ExecutionConditionMock_CanExecute_Call {
 	_c.Call.Return(run)
 	return _c
 }

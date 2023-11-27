@@ -27,14 +27,7 @@ import (
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/heimdall/mocks"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
-	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
-
-type idProvider struct {
-	id string
-}
-
-func (i idProvider) ID() string { return i.id }
 
 func TestNewCelExecutionCondition(t *testing.T) {
 	t.Parallel()
@@ -59,7 +52,7 @@ func TestNewCelExecutionCondition(t *testing.T) {
 			} else {
 				require.NoError(t, err)
 				require.NotNil(t, condition)
-				require.NotNil(t, condition.p)
+				require.NotNil(t, condition.e)
 			}
 		})
 	}
@@ -100,11 +93,6 @@ func TestCelExecutionConditionCanExecute(t *testing.T) {
 			expected:   true,
 		},
 		{
-			uc:         "expression acting on an error evaluating to true",
-			expression: `type(Error) in [authorization_error, precondition_error] && Error.Source == "test"`,
-			expected:   true,
-		},
-		{
 			uc:         "expression acting on client ip addresses",
 			expression: `Request.ClientIPAddresses[1] in networks("10.10.10.0/24")`,
 			expected:   true,
@@ -125,15 +113,11 @@ func TestCelExecutionConditionCanExecute(t *testing.T) {
 				ClientIPAddresses: []string{"127.0.0.1", "10.10.10.10"},
 			})
 
-			causeErr := errorchain.New(heimdall.ErrAuthorization).
-				CausedBy(errorchain.New(heimdall.ErrArgument)).
-				WithErrorContext(idProvider{"test"})
-
 			condition, err := newCelExecutionCondition(tc.expression)
 			require.NoError(t, err)
 
 			// WHEN
-			can, err := condition.CanExecute(ctx, sub, causeErr)
+			can, err := condition.CanExecute(ctx, sub)
 
 			// THEN
 			require.NoError(t, err)
