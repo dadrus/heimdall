@@ -58,7 +58,7 @@ func TestCreateContextualzerPrototype(t *testing.T) {
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
 			// WHEN
-			errorHandler, err := CreateContextualizerPrototype("foo", tc.typ, nil)
+			errorHandler, err := CreatePrototype("foo", tc.typ, nil)
 
 			// THEN
 			tc.assert(t, err, errorHandler)

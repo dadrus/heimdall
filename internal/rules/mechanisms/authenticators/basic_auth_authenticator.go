@@ -40,7 +40,7 @@ const (
 //
 //nolint:gochecknoinits
 func init() {
-	registerAuthenticatorTypeFactory(
+	registerTypeFactory(
 		func(id string, typ string, conf map[string]any) (bool, Authenticator, error) {
 			if typ != AuthenticatorBasicAuth {
 				return false, nil, nil

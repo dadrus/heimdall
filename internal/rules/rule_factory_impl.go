@@ -282,17 +282,19 @@ func (f *ruleFactory) createOnErrorPipeline(
 	for _, ehStep := range ehConfigs {
 		id, found := ehStep["error_handler"]
 		if found {
-			condition, err := getExecutionCondition(ehStep["if"])
+			conf := getConfig(ehStep["config"])
+			condition := ehStep["if"]
+
+			if condition != nil {
+				conf["if"] = condition
+			}
+
+			eh, err := f.hf.CreateErrorHandler(version, id.(string), conf)
 			if err != nil {
 				return nil, err
 			}
 
-			eh, err := f.hf.CreateErrorHandler(version, id.(string), getConfig(ehStep["config"]))
-			if err != nil {
-				return nil, err
-			}
-
-			errorHandlers = append(errorHandlers, &conditionalErrorHandler{h: eh, c: condition})
+			errorHandlers = append(errorHandlers, eh)
 		} else {
 			return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
 				"unsupported configuration in error handler")

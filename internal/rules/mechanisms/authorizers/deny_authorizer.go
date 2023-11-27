@@ -28,7 +28,7 @@ import (
 //
 //nolint:gochecknoinits
 func init() {
-	registerAuthorizerTypeFactory(
+	registerTypeFactory(
 		func(id string, typ string, _ map[string]any) (bool, Authorizer, error) {
 			if typ != AuthorizerDeny {
 				return false, nil, nil

@@ -55,23 +55,17 @@ func (r *ruleImpl) Execute(ctx heimdall.Context) (rule.Backend, error) {
 	// authenticators
 	sub, err := r.sc.Execute(ctx)
 	if err != nil {
-		_, err := r.eh.Execute(ctx, err)
-
-		return nil, err
+		return nil, r.eh.Execute(ctx, err)
 	}
 
 	// authorizers & contextualizer
 	if err = r.sh.Execute(ctx, sub); err != nil {
-		_, err := r.eh.Execute(ctx, err)
-
-		return nil, err
+		return nil, r.eh.Execute(ctx, err)
 	}
 
 	// finalizers
 	if err = r.fi.Execute(ctx, sub); err != nil {
-		_, err := r.eh.Execute(ctx, err)
-
-		return nil, err
+		return nil, r.eh.Execute(ctx, err)
 	}
 
 	var upstream rule.Backend

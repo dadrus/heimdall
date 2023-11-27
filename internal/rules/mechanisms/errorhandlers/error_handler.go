@@ -24,6 +24,7 @@ import (
 
 type ErrorHandler interface {
 	ID() string
-	Execute(ctx heimdall.Context, err error) (bool, error)
+	CanExecute(ctx heimdall.Context, causeErr error) bool
+	Execute(ctx heimdall.Context, causeErr error) error
 	WithConfig(config map[string]any) (ErrorHandler, error)
 }

@@ -57,7 +57,7 @@ func TestCreateAuthorizerPrototypeUsingKnowType(t *testing.T) {
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
 			// WHEN
-			auth, err := CreateAuthorizerPrototype("foo", tc.typ, nil)
+			auth, err := CreatePrototype("foo", tc.typ, nil)
 
 			// THEN
 			tc.assert(t, err, auth)

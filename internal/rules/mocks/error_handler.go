@@ -20,28 +20,61 @@ func (_m *ErrorHandlerMock) EXPECT() *ErrorHandlerMock_Expecter {
 	return &ErrorHandlerMock_Expecter{mock: &_m.Mock}
 }
 
-// Execute provides a mock function with given fields: ctx, err
-func (_m *ErrorHandlerMock) Execute(ctx heimdall.Context, err error) (bool, error) {
-	ret := _m.Called(ctx, err)
+// CanExecute provides a mock function with given fields: ctx, causeErr
+func (_m *ErrorHandlerMock) CanExecute(ctx heimdall.Context, causeErr error) bool {
+	ret := _m.Called(ctx, causeErr)
 
 	var r0 bool
-	var r1 error
-	if rf, ok := ret.Get(0).(func(heimdall.Context, error) (bool, error)); ok {
-		return rf(ctx, err)
-	}
 	if rf, ok := ret.Get(0).(func(heimdall.Context, error) bool); ok {
-		r0 = rf(ctx, err)
+		r0 = rf(ctx, causeErr)
 	} else {
 		r0 = ret.Get(0).(bool)
 	}
 
-	if rf, ok := ret.Get(1).(func(heimdall.Context, error) error); ok {
-		r1 = rf(ctx, err)
+	return r0
+}
+
+// ErrorHandlerMock_CanExecute_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CanExecute'
+type ErrorHandlerMock_CanExecute_Call struct {
+	*mock.Call
+}
+
+// CanExecute is a helper method to define mock.On call
+//   - ctx heimdall.Context
+//   - causeErr error
+func (_e *ErrorHandlerMock_Expecter) CanExecute(ctx interface{}, causeErr interface{}) *ErrorHandlerMock_CanExecute_Call {
+	return &ErrorHandlerMock_CanExecute_Call{Call: _e.mock.On("CanExecute", ctx, causeErr)}
+}
+
+func (_c *ErrorHandlerMock_CanExecute_Call) Run(run func(ctx heimdall.Context, causeErr error)) *ErrorHandlerMock_CanExecute_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(heimdall.Context), args[1].(error))
+	})
+	return _c
+}
+
+func (_c *ErrorHandlerMock_CanExecute_Call) Return(_a0 bool) *ErrorHandlerMock_CanExecute_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *ErrorHandlerMock_CanExecute_Call) RunAndReturn(run func(heimdall.Context, error) bool) *ErrorHandlerMock_CanExecute_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// Execute provides a mock function with given fields: ctx, causeErr
+func (_m *ErrorHandlerMock) Execute(ctx heimdall.Context, causeErr error) error {
+	ret := _m.Called(ctx, causeErr)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(heimdall.Context, error) error); ok {
+		r0 = rf(ctx, causeErr)
 	} else {
-		r1 = ret.Error(1)
+		r0 = ret.Error(0)
 	}
 
-	return r0, r1
+	return r0
 }
 
 // ErrorHandlerMock_Execute_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Execute'
@@ -51,24 +84,24 @@ type ErrorHandlerMock_Execute_Call struct {
 
 // Execute is a helper method to define mock.On call
 //   - ctx heimdall.Context
-//   - err error
-func (_e *ErrorHandlerMock_Expecter) Execute(ctx interface{}, err interface{}) *ErrorHandlerMock_Execute_Call {
-	return &ErrorHandlerMock_Execute_Call{Call: _e.mock.On("Execute", ctx, err)}
+//   - causeErr error
+func (_e *ErrorHandlerMock_Expecter) Execute(ctx interface{}, causeErr interface{}) *ErrorHandlerMock_Execute_Call {
+	return &ErrorHandlerMock_Execute_Call{Call: _e.mock.On("Execute", ctx, causeErr)}
 }
 
-func (_c *ErrorHandlerMock_Execute_Call) Run(run func(ctx heimdall.Context, err error)) *ErrorHandlerMock_Execute_Call {
+func (_c *ErrorHandlerMock_Execute_Call) Run(run func(ctx heimdall.Context, causeErr error)) *ErrorHandlerMock_Execute_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		run(args[0].(heimdall.Context), args[1].(error))
 	})
 	return _c
 }
 
-func (_c *ErrorHandlerMock_Execute_Call) Return(_a0 bool, _a1 error) *ErrorHandlerMock_Execute_Call {
-	_c.Call.Return(_a0, _a1)
+func (_c *ErrorHandlerMock_Execute_Call) Return(_a0 error) *ErrorHandlerMock_Execute_Call {
+	_c.Call.Return(_a0)
 	return _c
 }
 
-func (_c *ErrorHandlerMock_Execute_Call) RunAndReturn(run func(heimdall.Context, error) (bool, error)) *ErrorHandlerMock_Execute_Call {
+func (_c *ErrorHandlerMock_Execute_Call) RunAndReturn(run func(heimdall.Context, error) error) *ErrorHandlerMock_Execute_Call {
 	_c.Call.Return(run)
 	return _c
 }

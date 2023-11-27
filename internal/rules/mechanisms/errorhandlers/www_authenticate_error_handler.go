@@ -22,7 +22,6 @@ import (
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/errorhandlers/matcher"
 	"github.com/dadrus/heimdall/internal/x"
 )
 
@@ -30,7 +29,7 @@ import (
 //
 //nolint:gochecknoinits
 func init() {
-	registerErrorHandlerTypeFactory(
+	registerTypeFactory(
 		func(id string, typ string, conf map[string]any) (bool, ErrorHandler, error) {
 			if typ != ErrorHandlerWWWAuthenticate {
 				return false, nil, nil
@@ -43,15 +42,15 @@ func init() {
 }
 
 type wwwAuthenticateErrorHandler struct {
-	id    string
+	*baseErrorHandler
+
 	realm string
-	m     []matcher.ErrorConditionMatcher
 }
 
 func newWWWAuthenticateErrorHandler(id string, rawConfig map[string]any) (*wwwAuthenticateErrorHandler, error) {
 	type Config struct {
-		When  []matcher.ErrorConditionMatcher `mapstructure:"when"  validate:"required,gt=0"`
-		Realm string                          `mapstructure:"realm"`
+		Condition string `mapstructure:"if"   validate:"required"`
+		Realm     string `mapstructure:"realm"`
 	}
 
 	var conf Config
@@ -59,28 +58,25 @@ func newWWWAuthenticateErrorHandler(id string, rawConfig map[string]any) (*wwwAu
 		return nil, err
 	}
 
+	base, err := newBaseErrorHandler(id, conf.Condition)
+	if err != nil {
+		return nil, err
+	}
+
 	return &wwwAuthenticateErrorHandler{
-		id:    id,
-		realm: x.IfThenElse(len(conf.Realm) != 0, conf.Realm, "Please authenticate"),
-		m:     conf.When,
+		baseErrorHandler: base,
+		realm:            x.IfThenElse(len(conf.Realm) != 0, conf.Realm, "Please authenticate"),
 	}, nil
 }
 
-func (eh *wwwAuthenticateErrorHandler) Execute(ctx heimdall.Context, err error) (bool, error) {
+func (eh *wwwAuthenticateErrorHandler) Execute(ctx heimdall.Context, _ error) error {
 	logger := zerolog.Ctx(ctx.AppContext())
-
-	for _, ecm := range eh.m {
-		if !ecm.Match(ctx, err) {
-			return false, nil
-		}
-	}
-
 	logger.Debug().Str("_id", eh.id).Msg("Handling error using www-authenticate error handler")
 
 	ctx.AddHeaderForUpstream("WWW-Authenticate", fmt.Sprintf("Basic realm=%s", eh.realm))
 	ctx.SetPipelineError(heimdall.ErrAuthentication)
 
-	return true, nil
+	return nil
 }
 
 func (eh *wwwAuthenticateErrorHandler) WithConfig(rawConfig map[string]any) (ErrorHandler, error) {
@@ -89,25 +85,33 @@ func (eh *wwwAuthenticateErrorHandler) WithConfig(rawConfig map[string]any) (Err
 	}
 
 	type Config struct {
-		When  *[]matcher.ErrorConditionMatcher `mapstructure:"when"  validate:"omitempty,gt=0"`
-		Realm *string                          `mapstructure:"realm"`
+		Condition string  `mapstructure:"if"`
+		Realm     *string `mapstructure:"realm"`
 	}
 
-	var conf Config
-	if err := decodeConfig(ErrorHandlerWWWAuthenticate, rawConfig, &conf); err != nil {
+	var (
+		conf Config
+		base *baseErrorHandler
+		err  error
+	)
+
+	if err = decodeConfig(ErrorHandlerWWWAuthenticate, rawConfig, &conf); err != nil {
 		return nil, err
 	}
 
+	if len(conf.Condition) != 0 {
+		base, err = newBaseErrorHandler(eh.id, conf.Condition)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		base = eh.baseErrorHandler
+	}
+
 	return &wwwAuthenticateErrorHandler{
-		id: eh.id,
+		baseErrorHandler: base,
 		realm: x.IfThenElseExec(conf.Realm != nil,
 			func() string { return *conf.Realm },
 			func() string { return eh.realm }),
-		m: x.IfThenElseExec(conf.When != nil,
-			func() []matcher.ErrorConditionMatcher { return *conf.When },
-			func() []matcher.ErrorConditionMatcher { return eh.m },
-		),
 	}, nil
 }
-
-func (eh *wwwAuthenticateErrorHandler) ID() string { return eh.id }

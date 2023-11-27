@@ -26,7 +26,7 @@ import (
 //
 //nolint:gochecknoinits
 func init() {
-	registerErrorHandlerTypeFactory(
+	registerTypeFactory(
 		func(id string, typ string, conf map[string]any) (bool, ErrorHandler, error) {
 			if typ != ErrorHandlerDefault {
 				return false, nil, nil
@@ -44,13 +44,15 @@ func newDefaultErrorHandler(id string) *defaultErrorHandler {
 	return &defaultErrorHandler{id: id}
 }
 
-func (eh *defaultErrorHandler) Execute(ctx heimdall.Context, err error) (bool, error) {
+func (eh *defaultErrorHandler) CanExecute(_ heimdall.Context, _ error) bool { return true }
+
+func (eh *defaultErrorHandler) Execute(ctx heimdall.Context, causeErr error) error {
 	logger := zerolog.Ctx(ctx.AppContext())
 	logger.Debug().Str("_id", eh.id).Msg("Handling error using default error handler")
 
-	ctx.SetPipelineError(err)
+	ctx.SetPipelineError(causeErr)
 
-	return true, nil
+	return nil
 }
 
 func (eh *defaultErrorHandler) WithConfig(_ map[string]any) (ErrorHandler, error) { return eh, nil }

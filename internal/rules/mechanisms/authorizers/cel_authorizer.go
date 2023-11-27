@@ -30,7 +30,7 @@ import (
 //
 //nolint:gochecknoinits
 func init() {
-	registerAuthorizerTypeFactory(
+	registerTypeFactory(
 		func(id string, typ string, conf map[string]any) (bool, Authorizer, error) {
 			if typ != AuthorizerCEL {
 				return false, nil, nil

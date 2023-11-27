@@ -33,7 +33,7 @@ var (
 
 type ContextualizerTypeFactory func(id string, typ string, c map[string]any) (bool, Contextualizer, error)
 
-func registerContextualizerTypeFactory(factory ContextualizerTypeFactory) {
+func registerTypeFactory(factory ContextualizerTypeFactory) {
 	typeFactoriesMu.Lock()
 	defer typeFactoriesMu.Unlock()
 
@@ -44,7 +44,7 @@ func registerContextualizerTypeFactory(factory ContextualizerTypeFactory) {
 	typeFactories = append(typeFactories, factory)
 }
 
-func CreateContextualizerPrototype(id string, typ string, config map[string]any) (Contextualizer, error) {
+func CreatePrototype(id string, typ string, config map[string]any) (Contextualizer, error) {
 	typeFactoriesMu.RLock()
 	defer typeFactoriesMu.RUnlock()
 
