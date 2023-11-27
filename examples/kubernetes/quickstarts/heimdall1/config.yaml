@@ -1,5 +1,5 @@
 log:
-  level: debug
+  level: trace
 
 serve:
   decision:
@@ -46,6 +46,7 @@ default_rule:
 
 providers:
   kubernetes:
+    auth_class: bar
     tls:
       min_version: TLS1.2
       key_store:

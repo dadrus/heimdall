@@ -33,11 +33,10 @@ data:
       error_handlers:
         - id: redirect
           type: redirect
+          if: type(Error) == authentication_error
           config:
             to: http://foo.bar?origin={{ .Request.URL | urlenc }}
-            when:
-              - error:
-                  - type: authentication_error
+
     default_rule:
       methods:
         - GET
