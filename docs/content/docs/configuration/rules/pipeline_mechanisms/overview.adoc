@@ -41,7 +41,7 @@ Each mechanism configuration entry must contain at least the following propertie
 * `id` - The unique identifier of the mechanism. Identifiers are used to reference the required mechanism within a rule. You can choose whatever identifier, you want. It is just a name. It must however be unique across all defined mechanisms of a particular mechanism category (like authenticator, authorizer, etc.).
 * `type` - The specific type of the mechanism.
 
-Depending on the mechanism type, there can be an additional `config` property, which then holds the mechanism's specific configuration an `if` property, which specifies when a particular mechanism should be executed.
+Depending on the mechanism type, there can be an additional `config` property, which then holds the mechanism's specific configuration and an `if` property, which specifies when a particular mechanism should be executed.
 
 Every mechanism type can be configured as many times as needed. However, for those, which don't have a configuration, it doesn't really make sense, as all of them would behave the same way.
 
@@ -274,7 +274,7 @@ Payload = "SomeStringValue"
 
 === Error
 
-This object represents an error, which has been raised during the execution of the pipeline and is available in link:{{< relref "error_handlers.adoc">}}[Error Handler] `if` link:{{< relref "#_expressions#">}}[CEL expressions]. Following properties are available:
+This object represents an error, which has been raised during the execution of the pipeline and is available in `if` link:{{< relref "#_expressions">}}[CEL expressions] of link:{{< relref "error_handlers.adoc">}}[Error Handlers]. Following properties are available:
 
 * *`Source`*: _string_
 +
