@@ -69,13 +69,9 @@ func (n IPNetworks) Equal(other ref.Val) ref.Val {
 	return types.Bool(ok && n.Ranger == otherDur.Ranger)
 }
 
-func (n IPNetworks) Type() ref.Type {
-	return ipNetworksType
-}
+func (n IPNetworks) Type() ref.Type { return ipNetworksType }
 
-func (n IPNetworks) Value() any {
-	return n.Ranger
-}
+func (n IPNetworks) Value() any { return n.Ranger }
 
 func (n IPNetworks) Contains(value ref.Val) ref.Val {
 	if singleIP, ok := value.Value().(string); ok {
