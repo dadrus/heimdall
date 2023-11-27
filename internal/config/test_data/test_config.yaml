@@ -388,16 +388,12 @@ mechanisms:
       type: default
     - id: authenticate_with_kratos
       type: redirect
+      if: |
+        ((type(Error) == authentication_error && Error.Source == "kratos_session_authenticator") ||
+        type(Error) == authorization_error) &&
+        Request.Header("Accept").contains("*/*")
       config:
         to: http://127.0.0.1:4433/self-service/login/browser?return_to={{ .Request.URL | urlenc }}
-        when:
-          - error:
-              - type: authentication_error
-                raised_by: kratos_session_authenticator
-              - type: authorization_error
-            request_headers:
-              Accept:
-                - '*/*'
 
 default_rule:
   methods:

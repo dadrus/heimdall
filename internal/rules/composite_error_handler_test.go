@@ -20,7 +20,6 @@ import (
 	"context"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/heimdall/mocks"
@@ -36,19 +35,19 @@ func TestCompositeErrorHandlerExecutionWithFallback(t *testing.T) {
 	ctx.EXPECT().AppContext().Return(context.Background())
 
 	eh1 := rulemocks.NewErrorHandlerMock(t)
-	eh1.EXPECT().Execute(ctx, testsupport.ErrTestPurpose).Return(false, nil)
+	eh1.EXPECT().CanExecute(ctx, testsupport.ErrTestPurpose).Return(false)
 
 	eh2 := rulemocks.NewErrorHandlerMock(t)
-	eh2.EXPECT().Execute(ctx, testsupport.ErrTestPurpose).Return(true, nil)
+	eh2.EXPECT().CanExecute(ctx, testsupport.ErrTestPurpose).Return(true)
+	eh2.EXPECT().Execute(ctx, testsupport.ErrTestPurpose).Return(nil)
 
 	eh := compositeErrorHandler{eh1, eh2}
 
 	// WHEN
-	ok, err := eh.Execute(ctx, testsupport.ErrTestPurpose)
+	err := eh.Execute(ctx, testsupport.ErrTestPurpose)
 
 	// THEN
 	require.NoError(t, err)
-	assert.True(t, ok)
 }
 
 func TestCompositeErrorHandlerExecutionWithoutFallback(t *testing.T) {
@@ -59,18 +58,18 @@ func TestCompositeErrorHandlerExecutionWithoutFallback(t *testing.T) {
 	ctx.EXPECT().AppContext().Return(context.Background())
 
 	eh1 := rulemocks.NewErrorHandlerMock(t)
-	eh1.EXPECT().Execute(ctx, testsupport.ErrTestPurpose).Return(true, nil)
+	eh1.EXPECT().CanExecute(ctx, testsupport.ErrTestPurpose).Return(true)
+	eh1.EXPECT().Execute(ctx, testsupport.ErrTestPurpose).Return(nil)
 
 	eh2 := rulemocks.NewErrorHandlerMock(t)
 
 	eh := compositeErrorHandler{eh1, eh2}
 
 	// WHEN
-	ok, err := eh.Execute(ctx, testsupport.ErrTestPurpose)
+	err := eh.Execute(ctx, testsupport.ErrTestPurpose)
 
 	// THEN
 	require.NoError(t, err)
-	assert.True(t, ok)
 }
 
 func TestCompositeErrorHandlerExecutionWithNoApplicableErrorHandler(t *testing.T) {
@@ -81,17 +80,16 @@ func TestCompositeErrorHandlerExecutionWithNoApplicableErrorHandler(t *testing.T
 	ctx.EXPECT().AppContext().Return(context.Background())
 
 	eh1 := rulemocks.NewErrorHandlerMock(t)
-	eh1.EXPECT().Execute(ctx, testsupport.ErrTestPurpose).Return(false, nil)
+	eh1.EXPECT().CanExecute(ctx, testsupport.ErrTestPurpose).Return(false)
 
 	eh2 := rulemocks.NewErrorHandlerMock(t)
-	eh2.EXPECT().Execute(ctx, testsupport.ErrTestPurpose).Return(false, nil)
+	eh2.EXPECT().CanExecute(ctx, testsupport.ErrTestPurpose).Return(false)
 
 	eh := compositeErrorHandler{eh1, eh2}
 
 	// WHEN
-	ok, err := eh.Execute(ctx, testsupport.ErrTestPurpose)
+	err := eh.Execute(ctx, testsupport.ErrTestPurpose)
 
 	// THEN
 	require.Error(t, err)
-	assert.False(t, ok)
 }

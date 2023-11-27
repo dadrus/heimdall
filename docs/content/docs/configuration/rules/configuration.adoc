@@ -211,7 +211,7 @@ This example uses
 
 Compared to the link:{{< relref "#_regular_pipeline" >}}[Regular Pipeline], the error handler pipeline is pretty simple. It is also a list of mechanisms, but all referenced types are link:{{< relref " pipeline_mechanisms/error_handlers.adoc" >}}[error handler types]. Thus, each entry in this list must have `error_handler` as key, followed by the `ìd` of the required error handler, previously defined in Heimdall's link:{{< relref "pipeline_mechanisms/overview.adoc" >}}[Pipeline Mechanisms] configuration. Error handlers are always executed as fallbacks. So, if the condition of the first error handler does not match, second is selected, if its condition matches, it is executed, otherwise the next one is selected, etc. If none of the conditions of the defined error handlers match, the link:{{< relref "pipeline_mechanisms/error_handlers.adoc#_default" >}}[default error handler] is executed.
 
-As with the regular pipeline, partial reconfiguration of the used mechanisms is possible if supported by the corresponding type. The overrides are always local to the given rule as well.
+As with the regular pipeline, partial reconfiguration of the used mechanisms is possible if supported by the corresponding type. Same is true for overrides of the `if` conditions. The overrides are always local to the given rule as well. If required
 
 .Two error handlers
 ====
@@ -219,9 +219,9 @@ As with the regular pipeline, partial reconfiguration of the used mechanisms is 
 ----
 - error_handler: foo
 - error_handler: bar
+  if: # rule specific condition
   config:
-    when:
-      # rule specific conditions
+      # rule specific config
 ----
 ====
 

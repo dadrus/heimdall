@@ -27,7 +27,6 @@ import (
 
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/heimdall/mocks"
-	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
@@ -40,14 +39,14 @@ func TestCreateWWWAuthenticateErrorHandler(t *testing.T) {
 		assert func(t *testing.T, err error, errorHandler *wwwAuthenticateErrorHandler)
 	}{
 		{
-			uc:     "configuration without required 'When' parameter",
+			uc:     "configuration without required 'if' parameter",
 			config: []byte(`realm: FooBar`),
 			assert: func(t *testing.T, err error, errorHandler *wwwAuthenticateErrorHandler) {
 				t.Helper()
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "'when' is a required field")
+				assert.Contains(t, err.Error(), "'if' is a required field")
 			},
 		},
 		{
@@ -57,27 +56,36 @@ func TestCreateWWWAuthenticateErrorHandler(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "'when' is a required field")
+				assert.Contains(t, err.Error(), "'if' is a required field")
 			},
 		},
 		{
-			uc:     "with empty 'When' configuration",
-			config: []byte(`when: []`),
+			uc:     "with empty 'if' configuration",
+			config: []byte(`if: ""`),
 			assert: func(t *testing.T, err error, errorHandler *wwwAuthenticateErrorHandler) {
 				t.Helper()
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "'when' must contain more than 0 items")
+				assert.Contains(t, err.Error(), "'if' is a required field")
+			},
+		},
+		{
+			uc:     "with invalid 'if' configuration",
+			config: []byte(`if: foo`),
+			assert: func(t *testing.T, err error, errorHandler *wwwAuthenticateErrorHandler) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				assert.Contains(t, err.Error(), "failed to compile")
 			},
 		},
 		{
 			uc: "with configuration containing unsupported fields",
 			config: []byte(`
 realm: FooBar
-when:
-  - error:
-      - type: authentication_error
+if: type(Error) == authentication_error
 foo: bar
 `),
 			assert: func(t *testing.T, err error, errorHandler *wwwAuthenticateErrorHandler) {
@@ -89,12 +97,8 @@ foo: bar
 			},
 		},
 		{
-			uc: "with minimum required configuration",
-			config: []byte(`
-when:
-  - error:
-      - type: authentication_error
-`),
+			uc:     "with minimum required configuration",
+			config: []byte(`if: type(Error) == authentication_error`),
 			assert: func(t *testing.T, err error, errorHandler *wwwAuthenticateErrorHandler) {
 				t.Helper()
 
@@ -102,24 +106,14 @@ when:
 				require.NotNil(t, errorHandler)
 				assert.Equal(t, "with minimum required configuration", errorHandler.ID())
 				assert.Equal(t, "Please authenticate", errorHandler.realm)
-				require.Len(t, errorHandler.m, 1)
-				assert.Nil(t, errorHandler.m[0].CIDR)
-				assert.Nil(t, errorHandler.m[0].Headers)
-				require.NotNil(t, errorHandler.m[0].Error)
-				errorDescriptors := *errorHandler.m[0].Error
-				assert.Len(t, errorDescriptors, 1)
-				matchingErrors := errorDescriptors[0].Errors
-				assert.Len(t, matchingErrors, 1)
-				assert.Equal(t, heimdall.ErrAuthentication, matchingErrors[0])
+				require.NotNil(t, errorHandler.c)
 			},
 		},
 		{
 			uc: "with all possible attributes",
 			config: []byte(`
 realm: "What is your password"
-when:
-  - error:
-      - type: precondition_error
+if: type(Error) == precondition_error
 `),
 			assert: func(t *testing.T, err error, errorHandler *wwwAuthenticateErrorHandler) {
 				t.Helper()
@@ -128,15 +122,7 @@ when:
 				require.NotNil(t, errorHandler)
 				assert.Equal(t, "with all possible attributes", errorHandler.ID())
 				assert.Equal(t, "What is your password", errorHandler.realm)
-				require.Len(t, errorHandler.m, 1)
-				assert.Nil(t, errorHandler.m[0].CIDR)
-				assert.Nil(t, errorHandler.m[0].Headers)
-				require.NotNil(t, errorHandler.m[0].Error)
-				errorDescriptors := *errorHandler.m[0].Error
-				assert.Len(t, errorDescriptors, 1)
-				matchingErrors := errorDescriptors[0].Errors
-				assert.Len(t, matchingErrors, 1)
-				assert.Equal(t, heimdall.ErrArgument, matchingErrors[0])
+				require.NotNil(t, errorHandler.c)
 			},
 		},
 	} {
@@ -164,12 +150,8 @@ func TestCreateWWWAuthenticateErrorHandlerFromPrototype(t *testing.T) {
 			configured *wwwAuthenticateErrorHandler)
 	}{
 		{
-			uc: "no new configuration provided",
-			prototypeConfig: []byte(`
-when:
-  - error:
-      - type: authentication_error
-`),
+			uc:              "no new configuration provided",
+			prototypeConfig: []byte(`if: type(Error) == authentication_error`),
 			assert: func(t *testing.T, err error, prototype *wwwAuthenticateErrorHandler,
 				configured *wwwAuthenticateErrorHandler,
 			) {
@@ -181,13 +163,9 @@ when:
 			},
 		},
 		{
-			uc: "empty configuration provided",
-			prototypeConfig: []byte(`
-when:
-  - error:
-      - type: authentication_error
-`),
-			config: []byte(``),
+			uc:              "empty configuration provided",
+			prototypeConfig: []byte(`if: type(Error) == authentication_error`),
+			config:          []byte(``),
 			assert: func(t *testing.T, err error, prototype *wwwAuthenticateErrorHandler,
 				configured *wwwAuthenticateErrorHandler,
 			) {
@@ -199,13 +177,9 @@ when:
 			},
 		},
 		{
-			uc: "unsupported fields provided",
-			prototypeConfig: []byte(`
-when:
-  - error:
-      - type: authentication_error
-`),
-			config: []byte(`to: http://foo.bar`),
+			uc:              "unsupported fields provided",
+			prototypeConfig: []byte(`if: type(Error) == authentication_error`),
+			config:          []byte(`to: http://foo.bar`),
 			assert: func(t *testing.T, err error, prototype *wwwAuthenticateErrorHandler,
 				configured *wwwAuthenticateErrorHandler,
 			) {
@@ -217,18 +191,9 @@ when:
 			},
 		},
 		{
-			uc: "with 'when' reconfigured",
-			prototypeConfig: []byte(`
-when:
-  - error:
-      - type: authentication_error
-      - type: authorization_error
-`),
-			config: []byte(`
-when:
-  - error:
-      - type: precondition_error
-`),
+			uc:              "with 'if' reconfigured",
+			prototypeConfig: []byte(`if: type(Error) in [authentication_error, authorization_error]`),
+			config:          []byte(`if: type(Error) == precondition_error`),
 			assert: func(t *testing.T, err error, prototype *wwwAuthenticateErrorHandler,
 				configured *wwwAuthenticateErrorHandler,
 			) {
@@ -237,30 +202,30 @@ when:
 				require.NoError(t, err)
 				assert.NotEqual(t, prototype, configured)
 				assert.NotNil(t, configured)
-				assert.Equal(t, "with 'when' reconfigured", configured.ID())
+				assert.Equal(t, "with 'if' reconfigured", configured.ID())
 				assert.Equal(t, "Please authenticate", prototype.realm)
 				assert.Equal(t, prototype.realm, configured.realm)
-				assert.NotEqual(t, prototype.m, configured.m)
-				assert.Len(t, configured.m, 1)
-				assert.Nil(t, configured.m[0].CIDR)
-				assert.Nil(t, configured.m[0].Headers)
-				assert.NotNil(t, configured.m[0].Error)
-
-				errorDescriptors := *configured.m[0].Error
-				assert.Len(t, errorDescriptors, 1)
-				matchingErrors := errorDescriptors[0].Errors
-				assert.Len(t, matchingErrors, 1)
-				assert.Equal(t, heimdall.ErrArgument, matchingErrors[0])
+				assert.NotEqual(t, prototype.c, configured.c)
 			},
 		},
 		{
-			uc: "with 'realm' reconfigured",
-			prototypeConfig: []byte(`
-when:
-  - error:
-      - type: authentication_error
-`),
-			config: []byte(`realm: "You password please"`),
+			uc:              "with invalid 'if' reconfigured",
+			prototypeConfig: []byte(`if: type(Error) in [authentication_error, authorization_error]`),
+			config:          []byte(`if: foo`),
+			assert: func(t *testing.T, err error, prototype *wwwAuthenticateErrorHandler,
+				configured *wwwAuthenticateErrorHandler,
+			) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				assert.Contains(t, err.Error(), "failed to compile")
+			},
+		},
+		{
+			uc:              "with 'realm' reconfigured",
+			prototypeConfig: []byte(`if: type(Error) == authentication_error`),
+			config:          []byte(`realm: "You password please"`),
 			assert: func(t *testing.T, err error, prototype *wwwAuthenticateErrorHandler,
 				configured *wwwAuthenticateErrorHandler,
 			) {
@@ -272,7 +237,7 @@ when:
 				assert.Equal(t, "with 'realm' reconfigured", configured.ID())
 				assert.NotEqual(t, prototype.realm, configured.realm)
 				assert.Equal(t, "You password please", configured.realm)
-				assert.Equal(t, prototype.m, configured.m)
+				assert.Equal(t, prototype.c, configured.c)
 			},
 		},
 	} {
@@ -316,13 +281,14 @@ func TestWWWAuthenticateErrorHandlerExecute(t *testing.T) {
 		assert           func(t *testing.T, wasResponsible bool, err error)
 	}{
 		{
-			uc: "not responsible for error",
-			config: []byte(`
-when:
-  - error:
-      - type: authentication_error
-`),
-			error: heimdall.ErrInternal,
+			uc:     "not responsible for error",
+			config: []byte(`if: type(Error) == authentication_error`),
+			error:  heimdall.ErrInternal,
+			configureContext: func(t *testing.T, ctx *mocks.ContextMock) {
+				t.Helper()
+
+				ctx.EXPECT().Request().Return(nil)
+			},
 			assert: func(t *testing.T, wasResponsible bool, err error) {
 				t.Helper()
 
@@ -331,16 +297,13 @@ when:
 			},
 		},
 		{
-			uc: "responsible for error with default realm",
-			config: []byte(`
-when:
-  - error:
-      - type: authentication_error
-`),
-			error: heimdall.ErrAuthentication,
+			uc:     "responsible for error with default realm",
+			config: []byte(`if: type(Error) == authentication_error`),
+			error:  heimdall.ErrAuthentication,
 			configureContext: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
+				ctx.EXPECT().Request().Return(nil)
 				ctx.EXPECT().SetPipelineError(heimdall.ErrAuthentication)
 				ctx.EXPECT().AddHeaderForUpstream("WWW-Authenticate",
 					mock.MatchedBy(func(val string) bool {
@@ -362,14 +325,13 @@ when:
 			uc: "responsible for error with custom realm",
 			config: []byte(`
 realm: "Your password please"
-when:
-  - error:
-      - type: authentication_error
+if: type(Error) == authentication_error
 `),
 			error: heimdall.ErrAuthentication,
 			configureContext: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
+				ctx.EXPECT().Request().Return(nil)
 				ctx.EXPECT().SetPipelineError(heimdall.ErrAuthentication)
 				ctx.EXPECT().AddHeaderForUpstream("WWW-Authenticate",
 					mock.MatchedBy(func(val string) bool {
@@ -390,26 +352,30 @@ when:
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
 			// GIVEN
-			configureContext := x.IfThenElse(tc.configureContext != nil,
-				tc.configureContext,
-				func(t *testing.T, ctx *mocks.ContextMock) { t.Helper() })
-
 			conf, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
 
 			mctx := mocks.NewContextMock(t)
 			mctx.EXPECT().AppContext().Return(context.Background())
 
-			configureContext(t, mctx)
+			tc.configureContext(t, mctx)
 
 			errorHandler, err := newWWWAuthenticateErrorHandler("foo", conf)
 			require.NoError(t, err)
 
+			var (
+				isResponsible bool
+				execErr       error
+			)
+
 			// WHEN
-			wasResponsible, err := errorHandler.Execute(mctx, tc.error)
+			isResponsible = errorHandler.CanExecute(mctx, tc.error)
+			if isResponsible {
+				execErr = errorHandler.Execute(mctx, tc.error)
+			}
 
 			// THEN
-			tc.assert(t, wasResponsible, err)
+			tc.assert(t, isResponsible, execErr)
 		})
 	}
 }

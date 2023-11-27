@@ -37,12 +37,9 @@ func TestDefaultErrorHandlerExecution(t *testing.T) {
 
 	errorHandler := newDefaultErrorHandler("foo")
 
-	// WHEN
-	wasHandled, err := errorHandler.Execute(ctx, heimdall.ErrConfiguration)
-
-	// THEN
-	assert.True(t, wasHandled)
-	require.NoError(t, err)
+	// WHEN & THEN
+	require.True(t, errorHandler.CanExecute(nil, nil))
+	require.NoError(t, errorHandler.Execute(ctx, heimdall.ErrConfiguration))
 }
 
 func TestDefaultErrorHandlerPrototype(t *testing.T) {

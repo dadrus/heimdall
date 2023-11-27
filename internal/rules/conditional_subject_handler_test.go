@@ -71,7 +71,8 @@ func TestConditionalSubjectHandlerExecute(t *testing.T) {
 			configureMocks: func(t *testing.T, c *rulemocks.ExecutionConditionMock, h *rulemocks.SubjectHandlerMock) {
 				t.Helper()
 
-				c.EXPECT().CanExecute(mock.Anything, mock.Anything).Return(true, testsupport.ErrTestPurpose)
+				c.EXPECT().CanExecute(mock.Anything, mock.Anything).
+					Return(true, testsupport.ErrTestPurpose)
 				h.EXPECT().ID().Return("test")
 			},
 			assert: func(t *testing.T, err error) {

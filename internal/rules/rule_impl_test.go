@@ -197,7 +197,8 @@ func TestRuleExecute(t *testing.T) {
 
 				authenticator.EXPECT().Execute(ctx).Return(nil, testsupport.ErrTestPurpose)
 				authenticator.EXPECT().IsFallbackOnErrorAllowed().Return(false)
-				errHandler.EXPECT().Execute(ctx, testsupport.ErrTestPurpose).Return(true, nil)
+				errHandler.EXPECT().CanExecute(ctx, testsupport.ErrTestPurpose).Return(true)
+				errHandler.EXPECT().Execute(ctx, testsupport.ErrTestPurpose).Return(nil)
 			},
 			assert: func(t *testing.T, err error, backend rule.Backend) {
 				t.Helper()
@@ -216,7 +217,8 @@ func TestRuleExecute(t *testing.T) {
 
 				authenticator.EXPECT().Execute(ctx).Return(nil, testsupport.ErrTestPurpose)
 				authenticator.EXPECT().IsFallbackOnErrorAllowed().Return(false)
-				errHandler.EXPECT().Execute(ctx, testsupport.ErrTestPurpose).Return(true, testsupport.ErrTestPurpose2)
+				errHandler.EXPECT().CanExecute(ctx, testsupport.ErrTestPurpose).Return(true)
+				errHandler.EXPECT().Execute(ctx, testsupport.ErrTestPurpose).Return(testsupport.ErrTestPurpose2)
 			},
 			assert: func(t *testing.T, err error, backend rule.Backend) {
 				t.Helper()
@@ -239,7 +241,8 @@ func TestRuleExecute(t *testing.T) {
 				authenticator.EXPECT().Execute(ctx).Return(sub, nil)
 				authorizer.EXPECT().Execute(ctx, sub).Return(testsupport.ErrTestPurpose)
 				authorizer.EXPECT().ContinueOnError().Return(false)
-				errHandler.EXPECT().Execute(ctx, testsupport.ErrTestPurpose).Return(true, nil)
+				errHandler.EXPECT().CanExecute(ctx, testsupport.ErrTestPurpose).Return(true)
+				errHandler.EXPECT().Execute(ctx, testsupport.ErrTestPurpose).Return(nil)
 			},
 			assert: func(t *testing.T, err error, backend rule.Backend) {
 				t.Helper()
@@ -261,7 +264,8 @@ func TestRuleExecute(t *testing.T) {
 				authenticator.EXPECT().Execute(ctx).Return(sub, nil)
 				authorizer.EXPECT().Execute(ctx, sub).Return(testsupport.ErrTestPurpose)
 				authorizer.EXPECT().ContinueOnError().Return(false)
-				errHandler.EXPECT().Execute(ctx, testsupport.ErrTestPurpose).Return(true, testsupport.ErrTestPurpose2)
+				errHandler.EXPECT().CanExecute(ctx, testsupport.ErrTestPurpose).Return(true)
+				errHandler.EXPECT().Execute(ctx, testsupport.ErrTestPurpose).Return(testsupport.ErrTestPurpose2)
 			},
 			assert: func(t *testing.T, err error, backend rule.Backend) {
 				t.Helper()
@@ -285,7 +289,8 @@ func TestRuleExecute(t *testing.T) {
 				authorizer.EXPECT().Execute(ctx, sub).Return(nil)
 				finalizer.EXPECT().Execute(ctx, sub).Return(testsupport.ErrTestPurpose)
 				finalizer.EXPECT().ContinueOnError().Return(false)
-				errHandler.EXPECT().Execute(ctx, testsupport.ErrTestPurpose).Return(true, nil)
+				errHandler.EXPECT().CanExecute(ctx, testsupport.ErrTestPurpose).Return(true)
+				errHandler.EXPECT().Execute(ctx, testsupport.ErrTestPurpose).Return(nil)
 			},
 			assert: func(t *testing.T, err error, backend rule.Backend) {
 				t.Helper()
@@ -308,7 +313,8 @@ func TestRuleExecute(t *testing.T) {
 				authorizer.EXPECT().Execute(ctx, sub).Return(nil)
 				finalizer.EXPECT().Execute(ctx, sub).Return(testsupport.ErrTestPurpose)
 				finalizer.EXPECT().ContinueOnError().Return(false)
-				errHandler.EXPECT().Execute(ctx, testsupport.ErrTestPurpose).Return(true, testsupport.ErrTestPurpose2)
+				errHandler.EXPECT().CanExecute(ctx, testsupport.ErrTestPurpose).Return(true)
+				errHandler.EXPECT().Execute(ctx, testsupport.ErrTestPurpose).Return(testsupport.ErrTestPurpose2)
 			},
 			assert: func(t *testing.T, err error, backend rule.Backend) {
 				t.Helper()

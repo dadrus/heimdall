@@ -282,7 +282,14 @@ func (f *ruleFactory) createOnErrorPipeline(
 	for _, ehStep := range ehConfigs {
 		id, found := ehStep["error_handler"]
 		if found {
-			eh, err := f.hf.CreateErrorHandler(version, id.(string), getConfig(ehStep["config"]))
+			conf := getConfig(ehStep["config"])
+			condition := ehStep["if"]
+
+			if condition != nil {
+				conf["if"] = condition
+			}
+
+			eh, err := f.hf.CreateErrorHandler(version, id.(string), conf)
 			if err != nil {
 				return nil, err
 			}
@@ -408,7 +415,7 @@ func createHandler[T subjectHandler](
 		return nil, err
 	}
 
-	return &conditionalSubjectHandler{h: handler, c: condition}, err
+	return &conditionalSubjectHandler{h: handler, c: condition}, nil
 }
 
 func getConfig(conf any) config.MechanismConfig {

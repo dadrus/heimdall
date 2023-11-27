@@ -1,0 +1,32 @@
+deployment:
+  replicaCount: 2
+  autoscaling:
+    enabled: false
+  volumes:
+  - name: tls-cert-volume
+    secret:
+      secretName: heimdall-tls
+  - name: jwt-cert-volume
+    secret:
+      secretName: heimdall-jwt
+  volumeMounts:
+  - name: tls-cert-volume
+    readOnly: true
+    mountPath: "/etc/heimdall/certs/ssl"
+  - name: jwt-cert-volume
+    readOnly: true
+    mountPath: "/etc/heimdall/certs/jwt"
+
+admissionController:
+  annotations:
+    cert-manager.io/inject-ca-from: heimdall1/heimdall-tls
+
+env:
+  OTEL_METRICS_EXPORTER: "prometheus"
+  OTEL_EXPORTER_PROMETHEUS_HOST: "0.0.0.0"
+  OTEL_EXPORTER_OTLP_PROTOCOL: "grpc"
+  OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: "http://tempo.monitoring:4317"
+
+image:
+  repository: heimdall
+  tag: local

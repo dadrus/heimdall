@@ -20,7 +20,6 @@ import (
 	"github.com/mitchellh/mapstructure"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/errorhandlers/matcher"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
 	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
@@ -30,8 +29,6 @@ func decodeConfig(errorHandlerType string, input, output any) error {
 	dec, err := mapstructure.NewDecoder(
 		&mapstructure.DecoderConfig{
 			DecodeHook: mapstructure.ComposeDecodeHookFunc(
-				matcher.DecodeCIDRMatcherHookFunc(),
-				matcher.DecodeErrorTypeMatcherHookFunc(),
 				template.DecodeTemplateHookFunc(),
 			),
 			Result:      output,

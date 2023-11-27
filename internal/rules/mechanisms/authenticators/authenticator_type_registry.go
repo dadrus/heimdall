@@ -33,7 +33,7 @@ var (
 
 type AuthenticatorTypeFactory func(id string, typ string, config map[string]any) (bool, Authenticator, error)
 
-func registerAuthenticatorTypeFactory(factory AuthenticatorTypeFactory) {
+func registerTypeFactory(factory AuthenticatorTypeFactory) {
 	authenticatorTypeFactoriesMu.Lock()
 	defer authenticatorTypeFactoriesMu.Unlock()
 
@@ -44,7 +44,7 @@ func registerAuthenticatorTypeFactory(factory AuthenticatorTypeFactory) {
 	authenticatorTypeFactories = append(authenticatorTypeFactories, factory)
 }
 
-func CreateAuthenticatorPrototype(id string, typ string, config map[string]any) (Authenticator, error) {
+func CreatePrototype(id string, typ string, config map[string]any) (Authenticator, error) {
 	authenticatorTypeFactoriesMu.RLock()
 	defer authenticatorTypeFactoriesMu.RUnlock()
 
