@@ -41,7 +41,7 @@ Each mechanism configuration entry must contain at least the following propertie
 * `id` - The unique identifier of the mechanism. Identifiers are used to reference the required mechanism within a rule. You can choose whatever identifier, you want. It is just a name. It must however be unique across all defined mechanisms of a particular mechanism category (like authenticator, authorizer, etc.).
 * `type` - The specific type of the mechanism.
 
-Depending on the mechanism type, there can be an additional `config` property, which then holds the mechanism's specific configuration.
+Depending on the mechanism type, there can be an additional `config` property, which then holds the mechanism's specific configuration an `if` property, which specifies when a particular mechanism should be executed.
 
 Every mechanism type can be configured as many times as needed. However, for those, which don't have a configuration, it doesn't really make sense, as all of them would behave the same way.
 
@@ -125,16 +125,12 @@ mechanisms:
   - id: default
     type: default
   - id: authenticate_with_kratos
+    if: |
+      type(Error) in [authentication_error, authorization_error] &&
+      Request.Header("Accept").contains("text/html")
     type: redirect
     config:
       to: http://127.0.0.1:4433/self-service/login/browser?return_to={{ .Request.URL | urlenc }}
-      when:
-        - error:
-            - type: authentication_error
-            - type: authorization_error
-          request_headers:
-            Accept:
-              - text/html
 ----
 
 == Evaluation Objects
@@ -275,6 +271,16 @@ Payload = { "result": true }
 Payload = "SomeStringValue"
 ----
 ====
+
+=== Error
+
+This object represents an error, which has been raised during the execution of the pipeline and is available in link:{{< relref "error_handlers.adoc">}}[Error Handler] `if` link:{{< relref "#_expressions#">}}[CEL expressions]. Following properties are available:
+
+* *`Source`*: _string_
++
+The ID of the mechanism, which raised the error.
+
+Proper error handling requires attention to the actual _link:{{< relref "/docs/configuration/reference/types.adoc#_errorstate_type" >}}[error type]_ available via `type(Error)`.
 
 === Values
 
@@ -440,5 +446,13 @@ has(Subject.Attributes.groups) &&
 [source, cel]
 ----
 Request.URL.Path.split("/").last()
+----
+====
+
+.Check if an error has been raised by an authenticator with the ID "foo"
+====
+[source, cel]
+----
+type(Error) == authentication_error && Error.Source == "foo"
 ----
 ====
