@@ -62,6 +62,15 @@ spec:
                         description: The identifier of the rule
                         type: string
                         maxLength: 128
+                      allow_encoded_slashes:
+                        description: Defines how to handle url-encoded slashes in url paths while matching and forwarding the requests
+                        type: string
+                        default: off
+                        maxLength: 10
+                        enum:
+                          - off
+                          - on
+                          - no_decode
                       match:
                         description: How to match the rule
                         type: object
