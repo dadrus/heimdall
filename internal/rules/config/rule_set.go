@@ -35,7 +35,7 @@ type RuleSet struct {
 
 	Version string `json:"version" yaml:"version"`
 	Name    string `json:"name"    yaml:"name"`
-	Rules   []Rule `json:"rules"   yaml:"rules"     validate:"dive"`
+	Rules   []Rule `json:"rules"   validate:"dive" yaml:"rules"`
 }
 
 func (rs RuleSet) VerifyPathPrefix(prefix string) error {

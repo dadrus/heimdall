@@ -30,7 +30,7 @@ const (
 
 type Rule struct {
 	ID                     string                   `json:"id"                    yaml:"id"`
-	EncodedSlashesHandling EncodedSlashesHandling   `json:"allow_encoded_slashes" yaml:"allow_encoded_slashes"  validate:"omitempty,oneof=off on no_decode"` //nolint:lll
+	EncodedSlashesHandling EncodedSlashesHandling   `json:"allow_encoded_slashes" yaml:"allow_encoded_slashes" validate:"omitempty,oneof=off on no_decode"` //nolint:lll,tagalign
 	RuleMatcher            Matcher                  `json:"match"                 yaml:"match"`
 	Backend                *Backend                 `json:"forward_to"            yaml:"forward_to"`
 	Methods                []string                 `json:"methods"               yaml:"methods"`
