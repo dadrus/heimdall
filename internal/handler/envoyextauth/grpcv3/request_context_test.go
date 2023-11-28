@@ -80,7 +80,7 @@ func TestNewRequestContext(t *testing.T) {
 	require.Equal(t, httpReq.GetFragment(), ctx.Request().URL.Fragment)
 	require.Equal(t, httpReq.GetQuery(), ctx.Request().URL.RawQuery)
 	require.Equal(t, "moo", ctx.Request().URL.Query().Get("bar"))
-	require.Equal(t, httpReq.GetRawBody(), ctx.Request().Body())
+	require.Equal(t, map[string]any{"content": []string{"heimdall"}}, ctx.Request().Body())
 	require.Len(t, ctx.Request().Headers(), 3)
 	require.Equal(t, "barfoo", ctx.Request().Header("X-Foo-Bar"))
 	require.Equal(t, "foo", ctx.Request().Cookie("bar"))
@@ -246,6 +246,83 @@ func TestFinalizeRequestContext(t *testing.T) {
 
 			// THEN
 			tc.assert(t, err, resp)
+		})
+	}
+}
+
+func TestRequestContextBody(t *testing.T) {
+	t.Parallel()
+
+	for _, tc := range []struct {
+		uc     string
+		ct     string
+		body   []byte
+		expect any
+	}{
+		{
+			uc:     "No body",
+			ct:     "empty",
+			body:   nil,
+			expect: "",
+		},
+		{
+			uc:     "No body",
+			ct:     "empty",
+			body:   []byte(""),
+			expect: "",
+		},
+		{
+			uc:     "Wrong content type",
+			ct:     "application/json",
+			body:   []byte("foo: bar"),
+			expect: "foo: bar",
+		},
+		{
+			uc:     "x-www-form-urlencoded encoded",
+			ct:     "application/x-www-form-urlencoded; charset=utf-8",
+			body:   []byte("content=heimdall"),
+			expect: map[string]any{"content": []string{"heimdall"}},
+		},
+		{
+			uc:     "json encoded",
+			ct:     "application/json; charset=utf-8",
+			body:   []byte(`{ "content": "heimdall" }`),
+			expect: map[string]any{"content": "heimdall"},
+		},
+		{
+			uc:     "yaml encoded",
+			ct:     "application/yaml; charset=utf-8",
+			body:   []byte("content: heimdall"),
+			expect: map[string]any{"content": "heimdall"},
+		},
+		{
+			uc:     "plain text",
+			ct:     "text/plain",
+			body:   []byte("content=heimdall"),
+			expect: "content=heimdall",
+		},
+	} {
+		t.Run(tc.uc, func(t *testing.T) {
+			// GIVEN
+			ctx := NewRequestContext(
+				context.Background(),
+				&envoy_auth.CheckRequest{
+					Attributes: &envoy_auth.AttributeContext{
+						Request: &envoy_auth.AttributeContext_Request{
+							Http: &envoy_auth.AttributeContext_HttpRequest{
+								RawBody: tc.body, Headers: map[string]string{"content-type": tc.ct},
+							},
+						},
+					},
+				},
+				nil,
+			)
+
+			// WHEN
+			data := ctx.Request().Body()
+
+			// THEN
+			assert.Equal(t, tc.expect, data)
 		})
 	}
 }
