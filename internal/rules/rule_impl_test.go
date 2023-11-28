@@ -110,7 +110,7 @@ func TestRuleMatchURL(t *testing.T) {
 			matcher: func(t *testing.T) patternmatcher.PatternMatcher {
 				t.Helper()
 
-				matcher, err := patternmatcher.NewPatternMatcher("glob", "http://foo.bar/%5Bid%5D/baz")
+				matcher, err := patternmatcher.NewPatternMatcher("glob", "http://foo.bar/[id]/baz")
 				require.NoError(t, err)
 
 				return matcher
@@ -145,12 +145,12 @@ func TestRuleMatchURL(t *testing.T) {
 			matcher: func(t *testing.T) patternmatcher.PatternMatcher {
 				t.Helper()
 
-				matcher, err := patternmatcher.NewPatternMatcher("glob", "http://foo.bar/foo/baz")
+				matcher, err := patternmatcher.NewPatternMatcher("glob", "http://foo.bar/foo/baz/[id]")
 				require.NoError(t, err)
 
 				return matcher
 			},
-			toBeMatched: "http://foo.bar/foo%2Fbaz",
+			toBeMatched: "http://foo.bar/foo%2Fbaz/%5Bid%5D",
 			assert: func(t *testing.T, matched bool) {
 				t.Helper()
 
@@ -163,12 +163,12 @@ func TestRuleMatchURL(t *testing.T) {
 			matcher: func(t *testing.T) patternmatcher.PatternMatcher {
 				t.Helper()
 
-				matcher, err := patternmatcher.NewPatternMatcher("glob", "http://foo.bar/foo%2Fbaz")
+				matcher, err := patternmatcher.NewPatternMatcher("glob", "http://foo.bar/foo%2Fbaz/[id]")
 				require.NoError(t, err)
 
 				return matcher
 			},
-			toBeMatched: "http://foo.bar/foo%2Fbaz",
+			toBeMatched: "http://foo.bar/foo%2Fbaz/%5Bid%5D",
 			assert: func(t *testing.T, matched bool) {
 				t.Helper()
 

@@ -90,18 +90,24 @@ func (r *ruleImpl) MatchesURL(requestURL *url.URL) bool {
 	var path string
 
 	switch r.encodedSlashesHandling {
-	case config.EncodedSlashesOn:
-		path = requestURL.Path
 	case config.EncodedSlashesOff:
 		if strings.Contains(requestURL.RawPath, "%2F") {
 			return false
 		}
 
-		fallthrough
+		path = requestURL.Path
 	case config.EncodedSlashesNoDecode:
+		if len(requestURL.RawPath) != 0 {
+			path = strings.ReplaceAll(requestURL.RawPath, "%2F", "$$$escaped-slash$$$")
+			path, _ = url.PathUnescape(path)
+			path = strings.ReplaceAll(path, "$$$escaped-slash$$$", "%2F")
+
+			break
+		}
+
 		fallthrough
 	default:
-		path = requestURL.EscapedPath()
+		path = requestURL.Path
 	}
 
 	return r.urlMatcher.Match(fmt.Sprintf("%s://%s%s", requestURL.Scheme, requestURL.Host, path))
