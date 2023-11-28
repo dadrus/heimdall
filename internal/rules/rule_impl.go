@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"net/url"
 	"slices"
+	"strings"
 
 	"github.com/rs/zerolog"
 
@@ -30,17 +31,18 @@ import (
 )
 
 type ruleImpl struct {
-	id         string
-	urlMatcher patternmatcher.PatternMatcher
-	backend    *config.Backend
-	methods    []string
-	srcID      string
-	isDefault  bool
-	hash       []byte
-	sc         compositeSubjectCreator
-	sh         compositeSubjectHandler
-	fi         compositeSubjectHandler
-	eh         compositeErrorHandler
+	id                     string
+	encodedSlashesHandling config.EncodedSlashesHandling
+	urlMatcher             patternmatcher.PatternMatcher
+	backend                *config.Backend
+	methods                []string
+	srcID                  string
+	isDefault              bool
+	hash                   []byte
+	sc                     compositeSubjectCreator
+	sh                     compositeSubjectHandler
+	fi                     compositeSubjectHandler
+	eh                     compositeErrorHandler
 }
 
 func (r *ruleImpl) Execute(ctx heimdall.Context) (rule.Backend, error) {
@@ -71,8 +73,13 @@ func (r *ruleImpl) Execute(ctx heimdall.Context) (rule.Backend, error) {
 	var upstream rule.Backend
 
 	if r.backend != nil {
+		targetURL := *ctx.Request().URL
+		if r.encodedSlashesHandling == config.EncodedSlashesOn && len(targetURL.RawPath) != 0 {
+			targetURL.RawPath = ""
+		}
+
 		upstream = &backend{
-			targetURL: r.backend.CreateURL(ctx.Request().URL),
+			targetURL: r.backend.CreateURL(&targetURL),
 		}
 	}
 
@@ -80,12 +87,24 @@ func (r *ruleImpl) Execute(ctx heimdall.Context) (rule.Backend, error) {
 }
 
 func (r *ruleImpl) MatchesURL(requestURL *url.URL) bool {
-	toBeMatched := url.URL{
-		Scheme: requestURL.Scheme,
-		Opaque: fmt.Sprintf("//%s%s", requestURL.Host, requestURL.Path),
+	var path string
+
+	switch r.encodedSlashesHandling {
+	case config.EncodedSlashesOn:
+		path = requestURL.Path
+	case config.EncodedSlashesOff:
+		if strings.Contains(requestURL.RawPath, "%2F") {
+			return false
+		}
+
+		fallthrough
+	case config.EncodedSlashesNoDecode:
+		fallthrough
+	default:
+		path = requestURL.EscapedPath()
 	}
 
-	return r.urlMatcher.Match(toBeMatched.String())
+	return r.urlMatcher.Match(fmt.Sprintf("%s://%s%s", requestURL.Scheme, requestURL.Host, path))
 }
 
 func (r *ruleImpl) MatchesMethod(method string) bool { return slices.Contains(r.methods, method) }
