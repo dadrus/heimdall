@@ -228,7 +228,39 @@ NOTE: A single header may be a comma separated list of actual values as well. Be
 +
 This method expects the name of a cookie as input and returns the value of it as `string`. If the cookie is not present in the HTTP request an empty string (`""`) is returned.
 
-Here is an example:
+* *`Body()`*: _method_,
++
+The parsed body with contents depending on the `Content-Type` header. Supported content types are any MIME types with `json` or `yaml` subtype, as well as `application/x-www-form-urlencoded`. If MIME type is unsupported, the method returns a string with the actual body contents.
++
+NOTE: The actual request body is parsed only on the first use of this function. All subsequent calls return the cached result.
++
+.Example results
+====
+If the `Content-Type` header is set to `application/json` and the actual request body is a valid JSON object, shown below
+[source, json]
+----
+{ "context": "heimdall" }
+----
+The call to the `Body()` function will return exactly this representation as a map.
+ +
+
+If the `Content-Type` header is set to `application/yaml` and the actual request body is a valid YAML object, shown below
+[source, yaml]
+----
+context: heimdall
+----
+The call to the `Body()` function will return `{ "context": "heimdall" }` representation as a map.
+ +
+
+If the `Content-Type` header is set to `application/x-www-form-urlencoded` and the actual request body is a valid object, shown below
+[source, yaml]
+----
+context=heimdall
+----
+The call to the `Body()` function will return this representation as a map with each value being a string array. In this particular case as `{ "context": [ "heimdall" ] }`.
+====
+
+Here is an example for a request object:
 
 .Example request object
 ====

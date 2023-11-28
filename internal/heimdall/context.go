@@ -42,7 +42,7 @@ type RequestFunctions interface {
 	Header(name string) string
 	Cookie(name string) string
 	Headers() map[string]string
-	Body() []byte
+	Body() any
 }
 
 type Request struct {

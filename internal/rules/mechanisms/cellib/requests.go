@@ -56,5 +56,16 @@ func (requestsLib) CompileOptions() []cel.EnvOption {
 				}),
 			),
 		),
+		cel.Function("Body",
+			cel.MemberOverload("request_Body",
+				[]*cel.Type{requestType}, cel.DynType,
+				cel.UnaryBinding(func(lhs ref.Val) ref.Val {
+					// nolint: forcetypeassert
+					req := lhs.Value().(*heimdall.Request)
+
+					return types.DefaultTypeAdapter.NativeToValue(req.Body())
+				}),
+			),
+		),
 	}
 }

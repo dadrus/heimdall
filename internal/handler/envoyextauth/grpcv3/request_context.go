@@ -31,6 +31,7 @@ import (
 	"google.golang.org/grpc/metadata"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/contenttype"
 	"github.com/dadrus/heimdall/internal/x"
 )
 
@@ -46,6 +47,8 @@ type RequestContext struct {
 	upstreamCookies map[string]string
 	jwtSigner       heimdall.JWTSigner
 	err             error
+
+	savedBody any
 }
 
 func NewRequestContext(ctx context.Context, req *envoy_auth.CheckRequest, signer heimdall.JWTSigner) *RequestContext {
@@ -88,20 +91,20 @@ func canonicalizeHeaders(headers map[string]string) map[string]string {
 	return result
 }
 
-func (s *RequestContext) Request() *heimdall.Request {
+func (r *RequestContext) Request() *heimdall.Request {
 	return &heimdall.Request{
-		RequestFunctions:  s,
-		Method:            s.reqMethod,
-		URL:               s.reqURL,
-		ClientIPAddresses: s.ips,
+		RequestFunctions:  r,
+		Method:            r.reqMethod,
+		URL:               r.reqURL,
+		ClientIPAddresses: r.ips,
 	}
 }
 
-func (s *RequestContext) Headers() map[string]string { return s.reqHeaders }
-func (s *RequestContext) Header(name string) string  { return s.reqHeaders[name] }
+func (r *RequestContext) Headers() map[string]string { return r.reqHeaders }
+func (r *RequestContext) Header(name string) string  { return r.reqHeaders[name] }
 
-func (s *RequestContext) Cookie(name string) string {
-	values, ok := s.reqHeaders["Cookie"]
+func (r *RequestContext) Cookie(name string) string {
+	values, ok := r.reqHeaders["Cookie"]
 	if !ok {
 		return ""
 	}
@@ -115,40 +118,61 @@ func (s *RequestContext) Cookie(name string) string {
 	return ""
 }
 
-func (s *RequestContext) Body() []byte                            { return s.reqRawBody }
-func (s *RequestContext) AppContext() context.Context             { return s.ctx }
-func (s *RequestContext) SetPipelineError(err error)              { s.err = err }
-func (s *RequestContext) AddHeaderForUpstream(name, value string) { s.upstreamHeaders.Add(name, value) }
-func (s *RequestContext) AddCookieForUpstream(name, value string) { s.upstreamCookies[name] = value }
-func (s *RequestContext) Signer() heimdall.JWTSigner              { return s.jwtSigner }
+func (r *RequestContext) Body() any {
+	if r.savedBody == nil {
+		decoder, err := contenttype.NewDecoder(r.Header("Content-Type"))
+		if err != nil {
+			r.savedBody = string(r.reqRawBody)
 
-func (s *RequestContext) Finalize() (*envoy_auth.CheckResponse, error) {
-	if s.err != nil {
-		return nil, s.err
+			return r.savedBody
+		}
+
+		data, err := decoder.Decode(r.reqRawBody)
+		if err != nil {
+			r.savedBody = string(r.reqRawBody)
+
+			return r.savedBody
+		}
+
+		r.savedBody = data
 	}
 
-	zerolog.Ctx(s.ctx).Debug().Msg("Creating response")
+	return r.savedBody
+}
+
+func (r *RequestContext) AppContext() context.Context             { return r.ctx }
+func (r *RequestContext) SetPipelineError(err error)              { r.err = err }
+func (r *RequestContext) AddHeaderForUpstream(name, value string) { r.upstreamHeaders.Add(name, value) }
+func (r *RequestContext) AddCookieForUpstream(name, value string) { r.upstreamCookies[name] = value }
+func (r *RequestContext) Signer() heimdall.JWTSigner              { return r.jwtSigner }
+
+func (r *RequestContext) Finalize() (*envoy_auth.CheckResponse, error) {
+	if r.err != nil {
+		return nil, r.err
+	}
+
+	zerolog.Ctx(r.ctx).Debug().Msg("Creating response")
 
 	headers := make([]*envoy_core.HeaderValueOption,
-		len(s.upstreamHeaders)+x.IfThenElse(len(s.upstreamCookies) == 0, 0, 1))
+		len(r.upstreamHeaders)+x.IfThenElse(len(r.upstreamCookies) == 0, 0, 1))
 	hidx := 0
 
-	for k := range s.upstreamHeaders {
+	for k := range r.upstreamHeaders {
 		headers[hidx] = &envoy_core.HeaderValueOption{
 			Header: &envoy_core.HeaderValue{
 				Key:   k,
-				Value: strings.Join(s.upstreamHeaders.Values(k), ","),
+				Value: strings.Join(r.upstreamHeaders.Values(k), ","),
 			},
 		}
 
 		hidx++
 	}
 
-	if len(s.upstreamCookies) != 0 {
-		cookies := make([]string, len(s.upstreamCookies))
+	if len(r.upstreamCookies) != 0 {
+		cookies := make([]string, len(r.upstreamCookies))
 		cidx := 0
 
-		for k, v := range s.upstreamCookies {
+		for k, v := range r.upstreamCookies {
 			cookies[cidx] = fmt.Sprintf("%s=%s", k, v)
 			cidx++
 		}

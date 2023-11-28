@@ -26,6 +26,7 @@ import (
 	"strings"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/contenttype"
 	"github.com/dadrus/heimdall/internal/x/httpx"
 	"github.com/dadrus/heimdall/internal/x/slicex"
 )
@@ -41,7 +42,7 @@ type RequestContext struct {
 
 	// the following properties are created lazy and cached
 
-	savedBody []byte
+	savedBody any
 	hmdlReq   *heimdall.Request
 	headers   map[string]string
 }
@@ -87,24 +88,40 @@ func (r *RequestContext) Headers() map[string]string {
 	return r.headers
 }
 
-func (r *RequestContext) Body() []byte {
+func (r *RequestContext) Body() any {
 	if r.req.Body == nil || r.req.Body == http.NoBody {
-		return nil
+		return ""
 	}
 
 	if r.savedBody == nil {
 		// drain body by reading its contents into memory and preserving
 		var buf bytes.Buffer
 		if _, err := buf.ReadFrom(r.req.Body); err != nil {
-			return nil
+			return ""
 		}
 
 		if err := r.req.Body.Close(); err != nil {
-			return nil
+			return ""
 		}
 
-		r.savedBody = buf.Bytes()
-		r.req.Body = io.NopCloser(bytes.NewReader(buf.Bytes()))
+		body := buf.Bytes()
+		r.req.Body = io.NopCloser(bytes.NewReader(body))
+
+		decoder, err := contenttype.NewDecoder(r.Header("Content-Type"))
+		if err != nil {
+			r.savedBody = string(body)
+
+			return r.savedBody
+		}
+
+		data, err := decoder.Decode(body)
+		if err != nil {
+			r.savedBody = string(body)
+
+			return r.savedBody
+		}
+
+		r.savedBody = data
 	}
 
 	return r.savedBody

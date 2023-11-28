@@ -33,6 +33,8 @@ func NewDecoder(contentType string) (Decoder, error) {
 		return JSONDecoder{}, nil
 	case strings.Contains(contentType, "application/x-www-form-urlencoded"):
 		return WWWFormUrlencodedDecoder{}, nil
+	case strings.Contains(contentType, "yaml"):
+		return YAMLDecoder{}, nil
 	default:
 		return nil, ErrUnsupportedContentType
 	}

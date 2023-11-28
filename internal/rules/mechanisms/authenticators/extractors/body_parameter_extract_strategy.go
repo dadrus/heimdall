@@ -20,7 +20,6 @@ import (
 	"strings"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/contenttype"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
@@ -29,18 +28,14 @@ type BodyParameterExtractStrategy struct {
 }
 
 func (es BodyParameterExtractStrategy) GetAuthData(ctx heimdall.Context) (string, error) {
-	decoder, err := contenttype.NewDecoder(ctx.Request().Header("Content-Type"))
-	if err != nil {
-		return "", errorchain.New(heimdall.ErrArgument).CausedBy(err)
+	data := ctx.Request().Body()
+
+	entries, ok := data.(map[string]any)
+	if !ok {
+		return "", errorchain.NewWithMessage(heimdall.ErrArgument, "no usable body present")
 	}
 
-	data, err := decoder.Decode(ctx.Request().Body())
-	if err != nil {
-		return "", errorchain.NewWithMessage(heimdall.ErrArgument,
-			"failed to decode request body").CausedBy(err)
-	}
-
-	entry, ok := data[es.Name]
+	entry, ok := entries[es.Name]
 	if !ok {
 		return "", errorchain.NewWithMessagef(heimdall.ErrArgument,
 			"no %s parameter present in request body", es.Name)
