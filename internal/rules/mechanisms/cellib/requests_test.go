@@ -31,6 +31,7 @@ func TestRequests(t *testing.T) {
 	reqf.EXPECT().Header("bar").Return("baz")
 	reqf.EXPECT().Header("zab").Return("bar;charset=utf-8")
 	reqf.EXPECT().Header("accept").Return("text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
+	reqf.EXPECT().Body().Return(map[string]any{"foo": []any{"bar"}})
 
 	req := &heimdall.Request{
 		RequestFunctions:  reqf,
@@ -50,6 +51,7 @@ func TestRequests(t *testing.T) {
 		{expr: `Request.Header("accept").matches("(text/html|application/xml)")`},
 		{expr: `["text/html", "application/xml", "application/json"].exists(v, Request.Header("accept").contains(v))`},
 		{expr: `Request.ClientIPAddresses in networks("127.0.0.0/24")`},
+		{expr: `Request.Body().foo[0] == "bar"`},
 	} {
 		t.Run(tc.expr, func(t *testing.T) {
 			ast, iss := env.Compile(tc.expr)
