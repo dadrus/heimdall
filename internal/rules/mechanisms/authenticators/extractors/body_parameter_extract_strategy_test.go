@@ -36,13 +36,13 @@ func TestExtractBodyParameter(t *testing.T) {
 		assert         func(t *testing.T, err error, authData string)
 	}{
 		{
-			uc:            "unsupported content type",
+			uc:            "body is a string",
 			parameterName: "foobar",
 			configureMocks: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
 				fnt := mocks.NewRequestFunctionsMock(t)
-				fnt.EXPECT().Header("Content-Type").Return("FooBar")
+				fnt.EXPECT().Body().Return("foobar=foo")
 
 				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: fnt})
 			},
@@ -51,58 +51,17 @@ func TestExtractBodyParameter(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrArgument)
-				assert.Contains(t, err.Error(), "unsupported mime type")
+				assert.Contains(t, err.Error(), "no usable body present")
 			},
 		},
 		{
-			uc:            "json body decoding error",
+			uc:            "json body does not contain required parameter",
 			parameterName: "foobar",
 			configureMocks: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
 				fnt := mocks.NewRequestFunctionsMock(t)
-				fnt.EXPECT().Header("Content-Type").Return("application/json; charset=utf-8")
-				fnt.EXPECT().Body().Return([]byte("foo:?:bar"))
-
-				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: fnt})
-			},
-			assert: func(t *testing.T, err error, authData string) {
-				t.Helper()
-
-				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrArgument)
-				assert.Contains(t, err.Error(), "failed to decode")
-			},
-		},
-		{
-			uc:            "form url encoded body decoding error",
-			parameterName: "foobar",
-			configureMocks: func(t *testing.T, ctx *mocks.ContextMock) {
-				t.Helper()
-
-				fnt := mocks.NewRequestFunctionsMock(t)
-				fnt.EXPECT().Header("Content-Type").Return("application/x-www-form-urlencoded; charset=utf-8")
-				fnt.EXPECT().Body().Return([]byte("foo;"))
-
-				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: fnt})
-			},
-			assert: func(t *testing.T, err error, authData string) {
-				t.Helper()
-
-				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrArgument)
-				assert.Contains(t, err.Error(), "failed to decode")
-			},
-		},
-		{
-			uc:            "json encoded body does not contain required parameter",
-			parameterName: "foobar",
-			configureMocks: func(t *testing.T, ctx *mocks.ContextMock) {
-				t.Helper()
-
-				fnt := mocks.NewRequestFunctionsMock(t)
-				fnt.EXPECT().Header("Content-Type").Return("application/json")
-				fnt.EXPECT().Body().Return([]byte(`{"bar": "foo"}`))
+				fnt.EXPECT().Body().Return(map[string]any{"foo": "bar"})
 
 				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: fnt})
 			},
@@ -121,8 +80,7 @@ func TestExtractBodyParameter(t *testing.T) {
 				t.Helper()
 
 				fnt := mocks.NewRequestFunctionsMock(t)
-				fnt.EXPECT().Header("Content-Type").Return("application/x-www-form-urlencoded")
-				fnt.EXPECT().Body().Return([]byte(`foo=bar`))
+				fnt.EXPECT().Body().Return(map[string]any{"foo": []any{"bar"}})
 
 				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: fnt})
 			},
@@ -135,14 +93,13 @@ func TestExtractBodyParameter(t *testing.T) {
 			},
 		},
 		{
-			uc:            "json encoded body contains required parameter multiple times",
+			uc:            "body contains required parameter multiple times #1",
 			parameterName: "foobar",
 			configureMocks: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
 				fnt := mocks.NewRequestFunctionsMock(t)
-				fnt.EXPECT().Header("Content-Type").Return("application/json")
-				fnt.EXPECT().Body().Return([]byte(`{"foobar": ["foo", "bar"]}`))
+				fnt.EXPECT().Body().Return(map[string]any{"foobar": []any{"foo", "bar"}})
 
 				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: fnt})
 			},
@@ -155,14 +112,13 @@ func TestExtractBodyParameter(t *testing.T) {
 			},
 		},
 		{
-			uc:            "form url encoded body contains required parameter multiple times",
+			uc:            "body contains required parameter multiple times #2",
 			parameterName: "foobar",
 			configureMocks: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
 				fnt := mocks.NewRequestFunctionsMock(t)
-				fnt.EXPECT().Header("Content-Type").Return("application/x-www-form-urlencoded")
-				fnt.EXPECT().Body().Return([]byte(`foobar=foo&foobar=bar`))
+				fnt.EXPECT().Body().Return(map[string]any{"foobar": []string{"foo", "bar"}})
 
 				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: fnt})
 			},
@@ -175,14 +131,13 @@ func TestExtractBodyParameter(t *testing.T) {
 			},
 		},
 		{
-			uc:            "json encoded body contains required parameter in wrong format #1",
+			uc:            "body contains required parameter in wrong format #1",
 			parameterName: "foobar",
 			configureMocks: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
 				fnt := mocks.NewRequestFunctionsMock(t)
-				fnt.EXPECT().Header("Content-Type").Return("application/json")
-				fnt.EXPECT().Body().Return([]byte(`{"foobar": [1]}`))
+				fnt.EXPECT().Body().Return(map[string]any{"foobar": []any{1}})
 
 				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: fnt})
 			},
@@ -195,14 +150,13 @@ func TestExtractBodyParameter(t *testing.T) {
 			},
 		},
 		{
-			uc:            "json encoded body contains required parameter in wrong format #2",
+			uc:            "body contains required parameter in wrong format #2",
 			parameterName: "foobar",
 			configureMocks: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
 				fnt := mocks.NewRequestFunctionsMock(t)
-				fnt.EXPECT().Header("Content-Type").Return("application/json")
-				fnt.EXPECT().Body().Return([]byte(`{"foobar": { "foo": "bar" }}`))
+				fnt.EXPECT().Body().Return(map[string]any{"foobar": map[string]any{"foo": "bar"}})
 
 				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: fnt})
 			},
@@ -215,14 +169,13 @@ func TestExtractBodyParameter(t *testing.T) {
 			},
 		},
 		{
-			uc:            "json encoded body contains required parameter",
+			uc:            "body contains required parameter #1",
 			parameterName: "foobar",
 			configureMocks: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
 				fnt := mocks.NewRequestFunctionsMock(t)
-				fnt.EXPECT().Header("Content-Type").Return("application/json")
-				fnt.EXPECT().Body().Return([]byte(`{"foobar": "foo"}`))
+				fnt.EXPECT().Body().Return(map[string]any{"foobar": "foo"})
 
 				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: fnt})
 			},
@@ -240,8 +193,7 @@ func TestExtractBodyParameter(t *testing.T) {
 				t.Helper()
 
 				fnt := mocks.NewRequestFunctionsMock(t)
-				fnt.EXPECT().Header("Content-Type").Return("application/x-www-form-urlencoded")
-				fnt.EXPECT().Body().Return([]byte(`foobar=foo`))
+				fnt.EXPECT().Body().Return(map[string]any{"foobar": []string{"foo"}})
 
 				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: fnt})
 			},
