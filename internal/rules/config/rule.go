@@ -20,13 +20,22 @@ import (
 	"github.com/dadrus/heimdall/internal/config"
 )
 
+type EncodedSlashesHandling string
+
+const (
+	EncodedSlashesOff      EncodedSlashesHandling = "off"
+	EncodedSlashesOn       EncodedSlashesHandling = "on"
+	EncodedSlashesNoDecode EncodedSlashesHandling = "no_decode"
+)
+
 type Rule struct {
-	ID           string                   `json:"id"         yaml:"id"`
-	RuleMatcher  Matcher                  `json:"match"      yaml:"match"`
-	Backend      *Backend                 `json:"forward_to" yaml:"forward_to"`
-	Methods      []string                 `json:"methods"    yaml:"methods"`
-	Execute      []config.MechanismConfig `json:"execute"    yaml:"execute"`
-	ErrorHandler []config.MechanismConfig `json:"on_error"   yaml:"on_error"`
+	ID                     string                   `json:"id"                    yaml:"id"`
+	EncodedSlashesHandling EncodedSlashesHandling   `json:"allow_encoded_slashes" yaml:"allow_encoded_slashes"  validate:"omitempty,oneof=off on no_decode"` //nolint:lll
+	RuleMatcher            Matcher                  `json:"match"                 yaml:"match"`
+	Backend                *Backend                 `json:"forward_to"            yaml:"forward_to"`
+	Methods                []string                 `json:"methods"               yaml:"methods"`
+	Execute                []config.MechanismConfig `json:"execute"               yaml:"execute"`
+	ErrorHandler           []config.MechanismConfig `json:"on_error"              yaml:"on_error"`
 }
 
 func (in *Rule) DeepCopyInto(out *Rule) {
