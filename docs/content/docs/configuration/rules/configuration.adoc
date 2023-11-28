@@ -244,7 +244,7 @@ In principle, a rule set is just a list of rules with some additional meta infor
 
 * *`version`*: _string_ (mandatory)
 +
-The version schema of the `RuleSet`. The current version of heimdall supports only the version `1`.
+The version schema of the `RuleSet`. The current version of heimdall supports only the version `1alpha3`.
 
 * *`name`*: _string_ (optional)
 +
