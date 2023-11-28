@@ -218,7 +218,12 @@ func (f *ruleFactory) CreateRule(version, srcID string, ruleConfig config2.Rule)
 	}
 
 	return &ruleImpl{
-		id:         ruleConfig.ID,
+		id: ruleConfig.ID,
+		encodedSlashesHandling: x.IfThenElse(
+			len(ruleConfig.EncodedSlashesHandling) != 0,
+			ruleConfig.EncodedSlashesHandling,
+			config2.EncodedSlashesOff,
+		),
 		urlMatcher: matcher,
 		backend:    ruleConfig.Backend,
 		methods:    methods,
@@ -346,14 +351,15 @@ func (f *ruleFactory) initWithDefaultRule(ruleConfig *config.DefaultRule, logger
 	}
 
 	f.defaultRule = &ruleImpl{
-		id:        "default",
-		methods:   methods,
-		srcID:     "config",
-		isDefault: true,
-		sc:        authenticators,
-		sh:        subHandlers,
-		fi:        finalizers,
-		eh:        errorHandlers,
+		id:                     "default",
+		encodedSlashesHandling: config2.EncodedSlashesOff,
+		methods:                methods,
+		srcID:                  "config",
+		isDefault:              true,
+		sc:                     authenticators,
+		sh:                     subHandlers,
+		fi:                     finalizers,
+		eh:                     errorHandlers,
 	}
 
 	f.hasDefaultRule = true
