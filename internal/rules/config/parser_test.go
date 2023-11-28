@@ -76,6 +76,21 @@ func TestParseRules(t *testing.T) {
 			},
 		},
 		{
+			uc:          "JSON content type with validation error",
+			contentType: "application/json",
+			content: []byte(`{
+"version": "1",
+"name": "foo",
+"rules": [{"id": "bar", "allow_encoded_slashes": "foo"}]
+}`),
+			assert: func(t *testing.T, err error, ruleSet *RuleSet) {
+				t.Helper()
+
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.Nil(t, ruleSet)
+			},
+		},
+		{
 			uc:          "JSON content type and empty contents",
 			contentType: "application/json",
 			assert: func(t *testing.T, err error, ruleSet *RuleSet) {
@@ -93,6 +108,7 @@ version: "1"
 name: foo
 rules:
 - id: bar
+  allow_encoded_slashes: off
 `),
 			assert: func(t *testing.T, err error, ruleSet *RuleSet) {
 				t.Helper()
@@ -102,6 +118,23 @@ rules:
 				assert.Equal(t, "1", ruleSet.Version)
 				assert.Equal(t, "foo", ruleSet.Name)
 				assert.Len(t, ruleSet.Rules, 1)
+			},
+		},
+		{
+			uc:          "YAML content type and validation error",
+			contentType: "application/yaml",
+			content: []byte(`
+version: "1"
+name: foo
+rules:
+- id: bar
+  allow_encoded_slashes: foo
+`),
+			assert: func(t *testing.T, err error, ruleSet *RuleSet) {
+				t.Helper()
+
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.Nil(t, ruleSet)
 			},
 		},
 		{

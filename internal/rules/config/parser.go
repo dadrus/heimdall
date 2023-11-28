@@ -81,7 +81,9 @@ func parseYAML(reader io.Reader, envUsageEnabled bool) (*RuleSet, error) {
 		return nil, err
 	}
 
-	err := DecodeConfig(rawConfig, &ruleSet)
+	if err := DecodeConfig(rawConfig, &ruleSet); err != nil {
+		return nil, err
+	}
 
-	return &ruleSet, err
+	return &ruleSet, nil
 }
