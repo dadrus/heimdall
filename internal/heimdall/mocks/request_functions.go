@@ -18,15 +18,15 @@ func (_m *RequestFunctionsMock) EXPECT() *RequestFunctionsMock_Expecter {
 }
 
 // Body provides a mock function with given fields:
-func (_m *RequestFunctionsMock) Body() []byte {
+func (_m *RequestFunctionsMock) Body() interface{} {
 	ret := _m.Called()
 
-	var r0 []byte
-	if rf, ok := ret.Get(0).(func() []byte); ok {
+	var r0 interface{}
+	if rf, ok := ret.Get(0).(func() interface{}); ok {
 		r0 = rf()
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]byte)
+			r0 = ret.Get(0).(interface{})
 		}
 	}
 
@@ -50,12 +50,12 @@ func (_c *RequestFunctionsMock_Body_Call) Run(run func()) *RequestFunctionsMock_
 	return _c
 }
 
-func (_c *RequestFunctionsMock_Body_Call) Return(_a0 []byte) *RequestFunctionsMock_Body_Call {
+func (_c *RequestFunctionsMock_Body_Call) Return(_a0 interface{}) *RequestFunctionsMock_Body_Call {
 	_c.Call.Return(_a0)
 	return _c
 }
 
-func (_c *RequestFunctionsMock_Body_Call) RunAndReturn(run func() []byte) *RequestFunctionsMock_Body_Call {
+func (_c *RequestFunctionsMock_Body_Call) RunAndReturn(run func() interface{}) *RequestFunctionsMock_Body_Call {
 	_c.Call.Return(run)
 	return _c
 }
