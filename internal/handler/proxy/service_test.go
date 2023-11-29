@@ -456,7 +456,7 @@ func TestProxyService(t *testing.T) {
 				require.NoError(t, err)
 
 				req.Header.Set("Content-Type", "text/html")
-				req.Header.Set("X-Forwarded-Path", "/%5Bbarfoo%5D")
+				req.Header.Set("X-Forwarded-Uri", "/%5Bbarfoo%5D")
 
 				return req
 			},

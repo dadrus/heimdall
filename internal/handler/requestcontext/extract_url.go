@@ -45,8 +45,6 @@ func extractURL(req *http.Request) *url.URL {
 			rawPath = forwardedURI.EscapedPath()
 			query = forwardedURI.Query().Encode()
 		}
-	} else {
-		rawPath = req.Header.Get("X-Forwarded-Path")
 	}
 
 	if len(rawPath) == 0 {

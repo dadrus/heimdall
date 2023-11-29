@@ -69,7 +69,7 @@ func TestExtractURL(t *testing.T) {
 			},
 		},
 		{
-			uc: "X-Forwarded-Path set",
+			uc: "X-Forwarded-Path is ignored",
 			configureRequest: func(t *testing.T, req *http.Request) {
 				t.Helper()
 
@@ -81,7 +81,7 @@ func TestExtractURL(t *testing.T) {
 
 				assert.Equal(t, "http", extracted.Scheme)
 				assert.Equal(t, "heimdall.test.local", extracted.Host)
-				assert.Equal(t, "/bar%2Ftest/foo/%5Bval%5D", extracted.EscapedPath())
+				assert.Equal(t, "/test%2Ffoo/bar/%5Bval%5D", extracted.EscapedPath())
 				assert.Equal(t, url.Values{"foo": []string{"bar"}}, extracted.Query())
 			},
 		},
