@@ -117,7 +117,6 @@ If the request comes from an intermediary, like e.g. an API Gateway and heimdall
 
 * `_http_x_forwarded_proto` - The value of the "X-Forwarded-Proto" header.
 * `_http_x_forwarded_host` - The value of the "X-Forwarded-Host" header.
-* `_http_x_forwarded_path` - The value of the "X-Forwarded-Path" header.
 * `_http_x_forwarded_uri` - The value of the "X-Forwarded-Uri" header.
 * `_http_x_forwarded_for` - The value of the "X-Forwarded-For" header.
 * `_http_forwarded` - The value of the "Forwarded" header.
