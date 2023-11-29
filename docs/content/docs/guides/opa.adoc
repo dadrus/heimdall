@@ -5,13 +5,13 @@ draft: false
 weight: 29
 menu:
   docs:
-    parent: "Integration Guides"
+    parent: "Guides"
   main:
     parent: guides
 description: Explains how to integrate heimdall with the Open Policy Agent, an open source, general purpose policy engine.
 ---
 
-https://www.openpolicyagent.org/[Open Policy Agent], or OPA, is an open source, general purpose policy engine, which decouples authorization, respectively policy decisions from other responsibilities of an application and can be used to implement fine-grained access control for your application. As such it is a very good fit for integrating with heimdall. And indeed, the integration is very simple. It is just a matter of using a link:{{< relref "/docs/configuration/rules/pipeline_mechanisms/authorizers.adoc#_remote" >}}[Remote Authorizer] or a link:{{< relref "/docs/configuration/rules/pipeline_mechanisms/contextualizers.adoc#_generic" >}}[Generic Contextualizer]. Which one is better for a particular use case depends on the specific application requirements. Here some examples demonstrating these and how it can be solved with heimdall:
+https://www.openpolicyagent.org/[Open Policy Agent], or OPA, is an open source, general purpose policy engine, which decouples authorization, respectively policy decisions from other responsibilities of an application and can be used to implement fine-grained access control for your application. As such it is a very good fit for integrating with heimdall. And indeed, the integration is very simple. It is just a matter of using a link:{{< relref "/docs/mechanisms/authorizers.adoc#_remote" >}}[Remote Authorizer] or a link:{{< relref "/docs/mechanisms/contextualizers.adoc#_generic" >}}[Generic Contextualizer]. Which one is better for a particular use case depends on the specific application requirements. Here some examples demonstrating these and how it can be solved with heimdall:
 
 [[_sharing_service_example]]
 .Sharing Service
@@ -42,7 +42,7 @@ It expects two pieces of information in the payload to the OPA instance:
 * the actual user, making the request and
 * the path to witch the request is made
 
-So something like this: `{ "input": { "user": "alice", "path": "bob/photos" } }`. Since the Rego policy defined above returns just `true` or `false`, the corresponding response from the OPA endpoint would be `{ "result": true }` or `{ "result": false }`. Given this and assuming the above policy can be used by making requests to `\https://opa.local/v1/data/share_photos/policy/allow`, the configuration of the link:{{< relref "/docs/configuration/rules/pipeline_mechanisms/authorizers.adoc#_remote" >}}[Remote Authorizer] would look like follows:
+So something like this: `{ "input": { "user": "alice", "path": "bob/photos" } }`. Since the Rego policy defined above returns just `true` or `false`, the corresponding response from the OPA endpoint would be `{ "result": true }` or `{ "result": false }`. Given this and assuming the above policy can be used by making requests to `\https://opa.local/v1/data/share_photos/policy/allow`, the configuration of the link:{{< relref "/docs/mechanisms/authorizers.adoc#_remote" >}}[Remote Authorizer] would look like follows:
 
 [source, yaml]
 ----
@@ -68,7 +68,7 @@ Imagine you have a billing service, which requires information about the members
 
 * `POST /create_invoice` to invoice the identified user.
 
-You could perform the required query to OPA entirely in your service and use the retrieved group memberships then. Alternatively, you could outsource the communication to OPA to heimdall and deal only with the group membership information in your service. Compared to the link:{{< relref "#_sharing_service_example" >}}[Sharing Service] example, this time heimdall would not perform any authorization, but rather enrich the subject information with further information. This way, we're not going to use a link:{{< relref "/docs/configuration/rules/pipeline_mechanisms/authorizers.adoc" >}}[Authorizer], but a link:{{< relref "/docs/configuration/rules/pipeline_mechanisms/contextualizers.adoc#_generic" >}}[Generic Contextualizer] instead. As with link:{{< relref "#_sharing_service_example" >}}[Sharing Service] example, there is a need for a https://www.openpolicyagent.org/docs/latest/policy-language/[Rego] policy, which could look like this:
+You could perform the required query to OPA entirely in your service and use the retrieved group memberships then. Alternatively, you could outsource the communication to OPA to heimdall and deal only with the group membership information in your service. Compared to the link:{{< relref "#_sharing_service_example" >}}[Sharing Service] example, this time heimdall would not perform any authorization, but rather enrich the subject information with further information. This way, we're not going to use a link:{{< relref "/docs/mechanisms/authorizers.adoc" >}}[Authorizer], but a link:{{< relref "/docs/mechanisms/contextualizers.adoc#_generic" >}}[Generic Contextualizer] instead. As with link:{{< relref "#_sharing_service_example" >}}[Sharing Service] example, there is a need for a https://www.openpolicyagent.org/docs/latest/policy-language/[Rego] policy, which could look like this:
 
 [source, rego]
 ----
@@ -88,7 +88,7 @@ groups {
 }
 ----
 
-It expects just one piece of information, namely the actual user, making the request. So something like this: `{ "input": { "user": "alice" } }`. Since the Rego policy defined above returns a list of groups, the corresponding response from the OPA endpoint would be `{ "result": ["group1", "group2"] }`. Given this and assuming the above policy can be used by making requests to `\https://opa.local/v1/data/invoice/policy/groups` and the authentication to that endpoint requires basic authentication, the configuration of the link:{{< relref "/docs/configuration/rules/pipeline_mechanisms/contextualizers.adoc#_generic" >}}[Generic Contextualizer] would look like follows:
+It expects just one piece of information, namely the actual user, making the request. So something like this: `{ "input": { "user": "alice" } }`. Since the Rego policy defined above returns a list of groups, the corresponding response from the OPA endpoint would be `{ "result": ["group1", "group2"] }`. Given this and assuming the above policy can be used by making requests to `\https://opa.local/v1/data/invoice/policy/groups` and the authentication to that endpoint requires basic authentication, the configuration of the link:{{< relref "/docs/mechanisms/contextualizers.adoc#_generic" >}}[Generic Contextualizer] would look like follows:
 
 [source, yaml]
 ----
@@ -106,6 +106,6 @@ config:
     { "input": { "user": {{ quote .Subject.ID }} } }
 ----
 
-Upon successful execution of the corresponding request, the response from the OPA endpoint will be stored in the `Subject.Attributes["billing_contextualizer"]` field. That way, you can use that information in a link:{{< relref "/docs/configuration/rules/pipeline_mechanisms/finalizers.adoc" >}}[Finalizer] to forward the group membership to the billing service API.
+Upon successful execution of the corresponding request, the response from the OPA endpoint will be stored in the `Subject.Attributes["billing_contextualizer"]` field. That way, you can use that information in a link:{{< relref "/docs/mechanisms/finalizers.adoc" >}}[Finalizer] to forward the group membership to the billing service API.
 
 ====

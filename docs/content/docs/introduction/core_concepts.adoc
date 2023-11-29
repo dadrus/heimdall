@@ -14,7 +14,7 @@ Everything you need to know.
 
 == Pipeline
 
-As described in the link:{{< relref "/docs/introduction/what_is_heimdall.adoc" >}}[What is heimdall] section and also shown in the diagram below, heimdall authenticates and authorizes incoming HTTP requests, rejecting unauthenticated or unauthorized ones, as well as enriches the valid requests with further contextual information and transforms resulting subject information into a format, required by the upstream services. This is done in upstream service specific link:{{< relref "/docs/configuration/rules/overview.adoc" >}}[rules], which assemble the required individual pipelines by making use of different link:{{< relref "/docs/configuration/rules/pipeline_mechanisms/overview.adoc" >}}[mechanisms].
+As described in the link:{{< relref "/docs/introduction/what_is_heimdall.adoc" >}}[What is heimdall] section and also shown in the diagram below, heimdall authenticates and authorizes incoming HTTP requests, rejecting unauthenticated or unauthorized ones, as well as enriches the valid requests with further contextual information and transforms resulting subject information into a format, required by the upstream services. This is done in upstream service specific link:{{< relref "/docs/rules/overview.adoc" >}}[rules], which assemble the required individual pipelines by making use of different link:{{< relref "/docs/mechanisms/overview.adoc" >}}[mechanisms].
 
 [[_fig_heimdall_request_pipeline]]
 .Request Pipeline
@@ -48,19 +48,19 @@ In general each rule contains
 * an url pattern - to match the incoming request against
 * a list of allowed HTTP methods for the matched requests
 * a regular pipeline, consisting of a list with
-** *authentication* mechanisms, so-called link:{{< relref "/docs/configuration/rules/pipeline_mechanisms/authenticators.adoc" >}}[Authenticators], to be executed (if multiple are defined, they are executed as fallbacks) - step 1 in the figure above.
+** *authentication* mechanisms, so-called link:{{< relref "/docs/mechanisms/authenticators.adoc" >}}[Authenticators], to be executed (if multiple are defined, they are executed as fallbacks) - step 1 in the figure above.
 +
 Here, heimdall typically communicates with the actual authentication systems to get information about the authenticated subject, or to get key material to verify the authentication information provided in the request, or perform other activities related to authentication.
-** *contextualization* mechanisms, so-called link:{{< relref "/docs/configuration/rules/pipeline_mechanisms/contextualizers.adoc" >}}[Contextualizers], to be executed (if multiple are defined, they are executed in the order of their definition; can be mixed with authorization mechanisms) - step 2 in the figure above.
+** *contextualization* mechanisms, so-called link:{{< relref "/docs/mechanisms/contextualizers.adoc" >}}[Contextualizers], to be executed (if multiple are defined, they are executed in the order of their definition; can be mixed with authorization mechanisms) - step 2 in the figure above.
 +
 Here, heimdall communicates with other systems as well, either to get further information about the subject, like specific attributes required by the upstream service and not available in the authentication information or the request itself. An example would be information about the request IP, like provided by https://www.abuseipdb.com/[AbuseIPDB], etc.
-** *authorization* mechanisms, so-called link:{{< relref "/docs/configuration/rules/pipeline_mechanisms/authorizers.adoc" >}}[Authorizers], to be executed (if multiple are defined, they are executed in the order of their definition; can be mixed with contextualization mechanisms) - step 3 in the figure above.
+** *authorization* mechanisms, so-called link:{{< relref "/docs/mechanisms/authorizers.adoc" >}}[Authorizers], to be executed (if multiple are defined, they are executed in the order of their definition; can be mixed with contextualization mechanisms) - step 3 in the figure above.
 +
 Here, heimdall performs authorization checks, either locally, or by communicating with yet again further systems, like Open Policy Agent, Ory Keto and alike.
-** *finalization* mechanisms, so-called link:{{< relref "/docs/configuration/rules/pipeline_mechanisms/finalizers.adoc" >}}[Finalizers], to be executed (if multiple are defined, they are executed in the order of their definition) - step 4 in the figure above.
+** *finalization* mechanisms, so-called link:{{< relref "/docs/mechanisms/finalizers.adoc" >}}[Finalizers], to be executed (if multiple are defined, they are executed in the order of their definition) - step 4 in the figure above.
 +
 This step finalizes the execution of the pipeline and enriches the request with data such as subject information or authentication tokens required by the upstream service. The available options range from adding a simple header over a structured JWT, to driving specific protocols, e.g. to obtain a token required by the upstream service.
-* an error pipeline, consisting of link:{{< relref "/docs/configuration/rules/pipeline_mechanisms/error_handlers.adoc" >}}[error handler] mechanisms (if multiple are defined, they are executed as fallbacks), which are executed if any of the regular pipeline mechanisms fail. These mechanisms range from a simple error response to the client (which sent the request), to sophisticated ones supporting complex logic and redirects.
+* an error pipeline, consisting of link:{{< relref "/docs/mechanisms/error_handlers.adoc" >}}[error handler] mechanisms (if multiple are defined, they are executed as fallbacks), which are executed if any of the regular pipeline mechanisms fail. These mechanisms range from a simple error response to the client (which sent the request), to sophisticated ones supporting complex logic and redirects.
 
 The diagram below sketches the related execution logic
 
@@ -125,7 +125,7 @@ To support different deployment scenarios, heimdall supports two operating modes
 
 In this mode heimdall forwards requests to the upstream service if these satisfy the conditions defined in matched rules. Otherwise, heimdall returns an error to the client. If the execution of the rule was successful, it also forwards additional headers, specified in the rule to the upstream service.
 
-Starting heimdall in this mode happens via the `serve proxy` command. Head over to the description of link:{{< relref "/docs/operations/cli.adoc" >}}[CLI] as well as link:{{< relref "/docs/configuration/services/proxy.adoc" >}}[Configuration] options for more details.
+Starting heimdall in this mode happens via the `serve proxy` command. Head over to the description of link:{{< relref "/docs/operations/cli.adoc" >}}[CLI] as well as link:{{< relref "/docs/services/proxy.adoc" >}}[Configuration] options for more details.
 
 .Reverse Proxy Example
 ====
@@ -214,7 +214,7 @@ Some payload
 
 In this mode heimdall can be integrated with most probably all modern API gateways and reverse proxies as a so-called "authentication middleware". Here the reverse proxy, respectively API gateway integrating with heimdall, will forward requests to heimdall by making use of its decision service endpoint for authentication and authorization purposes. As in the link:{{< relref "#_proxy_mode" >}}[Reverse Proxy] mode, heimdall will check if these requests match and satisfy the conditions defined in the available rules. If not, heimdall returns an error to its client (here API gateway/reverse proxy). If the rule execution was successful, it also responds to the API gateway/reverse proxy with `200 OK` (can be overridden if required) and sets headers/cookies, specified in the matched rule, which are then forwarded to the upstream service.
 
-Starting heimdall in this mode happens via the `serve decision` command. Head over to the description of link:{{< relref "/docs/operations/cli.adoc" >}}[CLI] as well as to link:{{< relref "/docs/configuration/services/decision.adoc" >}}[Configuration] options for more details.
+Starting heimdall in this mode happens via the `serve decision` command. Head over to the description of link:{{< relref "/docs/operations/cli.adoc" >}}[CLI] as well as to link:{{< relref "/docs/services/decision.adoc" >}}[Configuration] options for more details.
 
 .Decision Service Example
 ====

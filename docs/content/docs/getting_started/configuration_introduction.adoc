@@ -15,7 +15,7 @@ Configuration in heimdall can refer to two different things:
 * the static startup configuration and
 * the configuration of rules, respectively rule sets
 
-Elements in the static configuration set up the services, like link:{{< relref "/docs/configuration/services/decision.adoc" >}}[decision service], which basically define the entry points, heimdall will listen to, the observability capabilities, like link:{{< relref "/docs/configuration/observability/logging.adoc" >}}[logging], the supported link:{{< relref "/docs/configuration/rules/pipeline_mechanisms/overview.adoc" >}}[pipeline mechanisms], the link:{{< relref "/docs/configuration/rules/default.adoc" >}}[default rule], as well as the link:{{< relref "/docs/configuration/rules/providers.adoc" >}}[rule providers] (these elements are not expected to change often).
+Elements in the static configuration set up the services, like link:{{< relref "/docs/services/decision.adoc" >}}[decision service], which basically define the entry points, heimdall will listen to, the observability capabilities, like link:{{< relref "/docs/observability/logging.adoc" >}}[logging], the supported link:{{< relref "/docs/mechanisms/overview.adoc" >}}[pipeline mechanisms], the link:{{< relref "/docs/rules/default_rule.adoc" >}}[default rule], as well as the link:{{< relref "/docs/rules/providers.adoc" >}}[rule providers] (these elements are not expected to change often).
 
 The rule set contains everything that defines how the requests are handled by heimdall for your system.
 This configuration can change and is seamlessly hot-reloaded, without any request interruption or connection loss.
@@ -53,7 +53,7 @@ The values in the configuration file can also make use of environment variables.
 .Possible minimal fully working configuration
 ====
 
-The configuration below defines a link:{{< relref "/docs/configuration/rules/default.adoc" >}}[default rule] which lets heimdall create a JSON Web Token (JWT) with `sub` claim set to `anonymous` for every request on every URL for the HTTP methods GET and POST.
+The configuration below defines a link:{{< relref "/docs/rules/default_rule.adoc" >}}[default rule] which lets heimdall create a JSON Web Token (JWT) with `sub` claim set to `anonymous` for every request on every URL for the HTTP methods GET and POST.
 The JWT itself will be put into the `Authorization` header as a bearer token.
 
 [source,yaml]
@@ -131,7 +131,7 @@ HEIMDALLCFG_LOG_LEVEL=info
 
 * Array entries must be defined using `\_<IDX>[_]`, with `IDX` being the index of the array starting with `0` and `_` in brackets being only required, if the value of the configured element has a structure/hierarchy.
 +
-E.g. the `methods` of the link:{{< relref "/docs/configuration/rules/default.adoc" >}}[default rule] can be configured in a config file as
+E.g. the `methods` of the link:{{< relref "/docs/rules/default_rule.adoc" >}}[default rule] can be configured in a config file as
 +
 [source,yaml]
 ----
@@ -186,8 +186,8 @@ HEIMDALLCFG_TRACING_SERVICE__NAME=foobar
 
 == Rule Set Configuration
 
-Heimdall gets the rule sets from link:{{< relref "/docs/configuration/rules/providers.adoc" >}}[rule providers], which, depending on the provider, can load rules from a plain old configuration file, residing in the local file system, or even integrate with Kubernetes to load rules from custom resources.
+Heimdall gets the rule sets from link:{{< relref "/docs/rules/providers.adoc" >}}[rule providers], which, depending on the provider, can load rules from a plain old configuration file, residing in the local file system, or even integrate with Kubernetes to load rules from custom resources.
 
-In all cases, a single rule definition adheres to the schema defined in link:{{< relref "/docs/configuration/rules/configuration.adoc" >}}[rule configuration].
+In all cases, a single rule definition adheres to the schema defined in link:{{< relref "/docs/rules/configuration.adoc" >}}[rule configuration].
 
 NOTE: Usage of environment variables in rule sets depend on the used provider.

@@ -161,7 +161,7 @@ After having installed heimdall, you have to integrate it with your ingress cont
 
 ==== Metrics Collection
 
-Since heimdall exposes a comprehensive set of Prometheus style metrics on the link:{{< relref "/docs/configuration/observability/metrics.adoc" >}}[Metrics] endpoint, you can, assuming you are running a https://github.com/prometheus-operator/prometheus-operator[Prometheus Operator] in your cluster, create the following `PodMonitor` resource to enable metrics collection.
+Since heimdall exposes a comprehensive set of Prometheus style metrics on the link:{{< relref "/docs/observability/metrics.adoc" >}}[Metrics] endpoint, you can, assuming you are running a https://github.com/prometheus-operator/prometheus-operator[Prometheus Operator] in your cluster, create the following `PodMonitor` resource to enable metrics collection.
 
 [source, yaml]
 ----

@@ -1,0 +1,25 @@
+---
+title: "Rules Overview"
+date: 2022-06-09T22:13:32+02:00
+draft: false
+weight: 65
+menu:
+  docs:
+    weight: 5
+    parent: "Rules"
+---
+
+
+This section explains how rules can be defined and used in detail. Before diving onto this topic, we recommend to make yourself familiar with the principal link:{{< relref "/docs/introduction/core_concepts.adoc" >}}[Core Concepts].
+
+Core aspects of heimdall are rules. These let heimdall execute logic required by your upstream service to authenticate, authorize the incoming requests, enrich the information about the subject and transform it according your needs. However, to be able to define even a single rule, you must configure link:{{< relref "/docs/mechanisms/overview.adoc" >}}[pipeline mechanisms], which you can then use in any rules, you define. Rules are dynamic by nature and can come and go together with the upstream service defining these.
+
+All rule specific static configuration, including the definition of the aforesaid mechanisms can be done within heimdall's `rules` property.
+
+In general, following aspects are important when dealing with rules:
+
+* link:{{< relref "/docs/mechanisms/overview.adoc" >}}[Pipeline Mechanisms], which build the foundation of each and every possible pipeline defined by any single rule.
+* link:{{< relref "configuration.adoc" >}}[Rule], which assembles the individual pipeline by making use of previously defined link:{{< relref "/docs/mechanisms/overview.adoc" >}}[mechanisms] and which is executed, when the rule matches the request. For the purpose of the latter, it also defines the url patterns.
+* link:{{< relref "default_rule.adoc" >}}[Default Rule], which, if defined, is executed if no other rule matched the request.
+* link:{{< relref "providers.adoc" >}}[Rule Providers], which load the rules from different sources.
+

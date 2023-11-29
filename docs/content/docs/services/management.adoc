@@ -5,7 +5,7 @@ draft: false
 weight: 45
 menu:
   docs:
-    weight: 30
+    weight: 7
     parent: "Services"
 ---
 
@@ -29,15 +29,15 @@ By making use of this property, you can specify the TCP port the heimdall should
 +
 By using this property you can override the default timeouts used by heimdall. Following properties are supported:
 
-** *`idle`*: _link:{{< relref "/docs/configuration/reference/types.adoc#_duration" >}}[Duration]_ (optional)
+** *`idle`*: _link:{{< relref "/docs/configuration/types.adoc#_duration" >}}[Duration]_ (optional)
 +
 The maximum amount of time to wait for the next request when keep-alive is enabled. If set to 0, the value of the `read` timeout is used. Defaults to 2 minutes.
 
-** *`read`*: _link:{{< relref "/docs/configuration/reference/types.adoc#_duration" >}}[Duration]_ (optional)
+** *`read`*: _link:{{< relref "/docs/configuration/types.adoc#_duration" >}}[Duration]_ (optional)
 +
 The absolute amount of time allowed to read the entire request, including body. Defaults to 5 seconds. Setting this property to 0s will disable the timeout.
 
-** *`write`*: _link:{{< relref "/docs/configuration/reference/types.adoc#_duration" >}}[Duration]_ (optional)
+** *`write`*: _link:{{< relref "/docs/configuration/types.adoc#_duration" >}}[Duration]_ (optional)
 +
 The maximum duration before timing out writes of the response. Defaults to 10 seconds. Setting this property to 0s will disable the timeout.
 
@@ -45,19 +45,19 @@ The maximum duration before timing out writes of the response. Defaults to 10 se
 +
 Buffer limits for inbound requests and outbound responses. Following configuration properties are supported:
 
-** *`read`*: _link:{{< relref "/docs/configuration/reference/types.adoc#_bytesize" >}}[ByteSize]_ (optional)
+** *`read`*: _link:{{< relref "/docs/configuration/types.adoc#_bytesize" >}}[ByteSize]_ (optional)
 +
 The maximum size for the read buffer allowed to read the full request including body. Defaults to 4KB.
 
-** *`write`*: _link:{{< relref "/docs/configuration/reference/types.adoc#_bytesize" >}}[ByteSize]_ (optional)
+** *`write`*: _link:{{< relref "/docs/configuration/types.adoc#_bytesize" >}}[ByteSize]_ (optional)
 +
 The maximum size for the write buffer of the response. Defaults to 4KB.
 
-* *`cors`*: _link:{{< relref "/docs/configuration/reference/types.adoc#_cors" >}}[CORS]_ (optional)
+* *`cors`*: _link:{{< relref "/docs/configuration/types.adoc#_cors" >}}[CORS]_ (optional)
 +
 https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS[CORS] (Cross-Origin Resource Sharing) headers can be added and configured by making use of this option. This functionality allows for advanced security features to quickly be set.
 
-* *`tls`*: _link:{{< relref "/docs/configuration/reference/types.adoc#_tls" >}}[TLS]_ (optional)
+* *`tls`*: _link:{{< relref "/docs/configuration/types.adoc#_tls" >}}[TLS]_ (optional)
 +
 By default, the Management endpoint accepts HTTP requests. Depending on your deployment scenario, you could require Heimdall to accept HTTPs requests only (which is highly recommended). You can do so by making use of this option.
 

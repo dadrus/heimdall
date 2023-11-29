@@ -6,7 +6,7 @@ weight: 90
 menu:
   docs:
     weight: 40
-    parent: "Pipeline Mechanisms"
+    parent: "Mechanisms"
 ---
 
 Finalizers, as the name implies, finalize the execution of the pipeline and enrich the request with data such as subject information or authentication tokens required by the upstream service. The available options range from adding a simple header over a structured JWT in a specific header, to driving specific protocols, e.g. to obtain a token required by the upstream service.
@@ -95,7 +95,7 @@ Configuration using the `config` property is optional. Following properties are 
 +
 Your template with custom claims, you would like to add to the JWT (See also link:{{< relref "overview.adoc#_templating" >}}[Templating]).
 
-* *`ttl`*: _link:{{< relref "/docs/configuration/reference/types.adoc#_duration" >}}[Duration]_ (optional, overridable)
+* *`ttl`*: _link:{{< relref "/docs/configuration/types.adoc#_duration" >}}[Duration]_ (optional, overridable)
 +
 Defines how long the JWT should be valid. Defaults to 5 minutes. Heimdall sets the `iat` and the `nbf` claims to the current system time. The value of the `exp` claim is then influenced by the `ttl` property.
 
@@ -159,7 +159,7 @@ WARNING: Usage of `request_body` authentication method is not recommended and sh
 +
 The scopes required for the access token.
 
-* *`cache_ttl`*: _link:{{< relref "/docs/configuration/reference/types.adoc#_duration" >}}[Duration]_ (optional, overridable)
+* *`cache_ttl`*: _link:{{< relref "/docs/configuration/types.adoc#_duration" >}}[Duration]_ (optional, overridable)
 +
 How long to cache the token received from the token endpoint. Defaults to the token expiration information from the token endpoint (the value of the `expires_in` field) if present. If the token expiration inforation is not present and `cache_ttl` is not configured, the received token is not cached. If the token expiration information is present in the response and `cache_ttl` is configured the shorter value is taken. If caching is enabled, the token is cached until 5 seconds before its expiration. To disable caching, set it to `0s`. The cache key calculation is based on the entire `oauth2_client_credentials` configuration without considering the `header` property.
 

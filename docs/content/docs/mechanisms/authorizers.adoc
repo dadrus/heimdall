@@ -6,7 +6,7 @@ weight: 80
 menu:
   docs:
     weight: 20
-    parent: "Pipeline Mechanisms"
+    parent: "Mechanisms"
 ---
 
 Authorizers ensure that the link:{{< relref "overview.adoc#_subject" >}}[`Subject`] obtained via an authenticator has the required permissions to submit the given HTTP request and thus to execute the corresponding logic in the upstream service. E.g. a specific endpoint of the upstream service might only be accessible to a "user" from the "admin" group, or to an HTTP request if a specific HTTP header is set.
@@ -53,7 +53,7 @@ To enable the usage of this authorizer, you have to set the `type` property to `
 
 Configuration using the `config` property is mandatory. Following properties are available:
 
-* *`expressions`*: _link:{{< relref "/docs/configuration/reference/types.adoc#_authorization_expression">}}[Authorization Expression] array_ (mandatory, overridable)
+* *`expressions`*: _link:{{< relref "/docs/configuration/types.adoc#_authorization_expression">}}[Authorization Expression] array_ (mandatory, overridable)
 +
 List of authorization expressions, which define the actual authorization logic. Each expression has access to the link:{{< relref "overview.adoc#_subject" >}}[`Subject`] and the link:{{< relref "overview.adoc#_request" >}}[`Request`] objects.
 
@@ -110,7 +110,7 @@ To enable the usage of this authorizer, you have to set the `type` property to `
 
 Configuration using the `config` property is mandatory. Following properties are available:
 
-* *`endpoint`*: _link:{{< relref "/docs/configuration/reference/types.adoc#_endpoint">}}[Endpoint]_ (mandatory, not overridable)
+* *`endpoint`*: _link:{{< relref "/docs/configuration/types.adoc#_endpoint">}}[Endpoint]_ (mandatory, not overridable)
 +
 The API endpoint of your authorization system. At least the `url` must be configured. This mechanism allows templating of the url and makes the link:{{< relref "overview.adoc#_subject" >}}[`Subject`] object, as well as the link:{{< relref "overview.adoc#_values" >}}[`Values`] (see also below) objects available to it. By default, this authorizer will use HTTP `POST` to send the rendered payload to this endpoint. You can override this behavior by configuring `method` as well. Depending on the API requirements of your authorization system, you might need to configure further properties, like headers, etc.
 
@@ -118,7 +118,7 @@ The API endpoint of your authorization system. At least the `url` must be config
 +
 Your link:{{< relref "overview.adoc#_templating" >}}[template] with definitions required to communicate to the authorization endpoint. The template can make use of link:{{< relref "overview.adoc#_values" >}}[`Values`], link:{{< relref "overview.adoc#_subject" >}}[`Subject`] and link:{{< relref "overview.adoc#_request" >}}[`Request`] objects.
 
-* *`expressions`*: _link:{{< relref "/docs/configuration/reference/types.adoc#_authorization_expression">}}[Authorization Expression] array_ (optional, overridable)
+* *`expressions`*: _link:{{< relref "/docs/configuration/types.adoc#_authorization_expression">}}[Authorization Expression] array_ (optional, overridable)
 +
 List of https://github.com/google/cel-spec[CEL] expressions which define the logic to be applied to the response returned by the endpoint. All expressions are expected to evaluate to `true` if the authorization was successful. If any of the expressions evaluates to `false`, the authorization fails and the message defined by the failed expression will be logged.
 +
@@ -128,7 +128,7 @@ Each expression has access to the link:{{< relref "overview.adoc#_payload" >}}[`
 +
 Enables forwarding of any headers from the authorization endpoint response to the upstream service.
 
-* *`cache_ttl`*: _link:{{< relref "/docs/configuration/reference/types.adoc#_duration" >}}[Duration]_ (optional, overridable)
+* *`cache_ttl`*: _link:{{< relref "/docs/configuration/types.adoc#_duration" >}}[Duration]_ (optional, overridable)
 +
 Allows caching of the authorization endpoint responses. Defaults to 0s, which means no caching. The cache key is calculated from the entire configuration of the authorizer instance and the available information about the current subject.
 

@@ -5,7 +5,7 @@ draft: false
 weight: 31
 menu:
   docs:
-    parent: "Integration Guides"
+    parent: "Guides"
   main:
     parent: guides
 description: Explains how to integrate heimdall with Traefik Proxy, a modern HTTP proxy and load balancer for microservices.
@@ -16,12 +16,12 @@ https://doc.traefik.io/traefik/[Traefik Proxy] is a modern HTTP proxy and load b
 To achieve this, configure traefik
 
 * to make use of the aforesaid ForwardAuth middleware by setting the `address` property to the decision service endpoint and
-* configure the `authResponseHeaders` to contain the required header name(s), heimdall sets in the HTTP responses (depends on your link:{{< relref "/docs/configuration/rules/pipeline_mechanisms/contextualizers.adoc" >}}[Contextualizers] and link:{{< relref "/docs/configuration/rules/pipeline_mechanisms/finalizers.adoc" >}}[Finalizers] configuration).
+* configure the `authResponseHeaders` to contain the required header name(s), heimdall sets in the HTTP responses (depends on your link:{{< relref "/docs/mechanisms/contextualizers.adoc" >}}[Contextualizers] and link:{{< relref "/docs/mechanisms/finalizers.adoc" >}}[Finalizers] configuration).
 * Configure the route of your service to make use of this middleware.
 
 [CAUTION]
 ====
-Traefik makes use of `X-Forwarded-*` HTTP headers to forward the HTTP method, protocol, host, etc. to the ForwardAuth middleware. By default, heimdall does not trust those. To allow heimdall making use of such headers, you must configure link:{{< relref "/docs/configuration/services/decision.adoc#_trusted_proxies" >}}[trusted proxies] in heimdall's decision service configuration to contain the IPs or networks of your traefik instances. For test purposes, you can set it to "0.0.0.0/0", which would basically disable the check and let heimdall trust requests from any source.
+Traefik makes use of `X-Forwarded-*` HTTP headers to forward the HTTP method, protocol, host, etc. to the ForwardAuth middleware. By default, heimdall does not trust those. To allow heimdall making use of such headers, you must configure link:{{< relref "/docs/services/decision.adoc#_trusted_proxies" >}}[trusted proxies] in heimdall's decision service configuration to contain the IPs or networks of your traefik instances. For test purposes, you can set it to "0.0.0.0/0", which would basically disable the check and let heimdall trust requests from any source.
 ====
 
 NOTE: Since traefik makes use of those `X-Forwarded-*` headers, which heimdall also handles with precedence, there is no need to drop any headers to prevent spoofing (see also link:{{< relref "/docs/operations/security.adoc#_http_headers_security_considerations" >}}[Security Considerations] for details.

@@ -1,12 +1,12 @@
 ---
-title: "Static Configuration Reference"
+title: "Static Reference"
 date: 2022-06-09T18:57:50+02:00
 draft: false
 weight: 140
 menu:
   docs:
     weight: 20
-    parent: "Reference"
+    parent: "Configuration"
 ---
 
 Below you can find possible contents (not exhaustive) for Heimdall's `config.yaml` file. Head over to configuration documentation to get detailed explanation.

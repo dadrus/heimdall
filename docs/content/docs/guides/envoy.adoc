@@ -5,7 +5,7 @@ draft: false
 weight: 27
 menu:
   docs:
-    parent: "Integration Guides"
+    parent: "Guides"
   main:
     parent: guides
 description: Explains how to integrate heimdall with Envoy, a high performance distributed proxy.
@@ -61,7 +61,7 @@ clusters:
                     port_value: 4456
   # other cluster entries
 ----
-* to include an https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/ext_authz/v3/ext_authz.proto.html[External Authorization] HTTP filter in the definition of the HTTP connection manager and depending on the used configuration, either configure the `http_service` and let it contain the required header name(s), heimdall sets in the HTTP responses (depends on your link:{{< relref "/docs/configuration/rules/pipeline_mechanisms/contextualizers.adoc" >}}[Contextualizers] and link:{{< relref "/docs/configuration/rules/pipeline_mechanisms/finalizers.adoc" >}}[Finalizers] configuration), or configure the `grpc_service`.
+* to include an https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/ext_authz/v3/ext_authz.proto.html[External Authorization] HTTP filter in the definition of the HTTP connection manager and depending on the used configuration, either configure the `http_service` and let it contain the required header name(s), heimdall sets in the HTTP responses (depends on your link:{{< relref "/docs/mechanisms/contextualizers.adoc" >}}[Contextualizers] and link:{{< relref "/docs/mechanisms/finalizers.adoc" >}}[Finalizers] configuration), or configure the `grpc_service`.
 +
 The following snipped shows, how an https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/ext_authz/v3/ext_authz.proto.html[External Authorization] can be defined using `http_service` to let Envoy communicating with heimdall by making use of the previously defined `cluster` (see snippet from above) as well as forwarding all request headers to heimdall and to let it forward headers, set by heimdall in its responses (here the `Authorization` header) to the upstream services.
 +

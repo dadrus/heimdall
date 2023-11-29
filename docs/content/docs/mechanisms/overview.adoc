@@ -6,7 +6,7 @@ weight: 70
 menu:
   docs:
     weight: 5
-    parent: "Pipeline Mechanisms"
+    parent: "Mechanisms"
 ---
 
 All mechanisms supported by heimdall fall into following categories:
@@ -67,7 +67,7 @@ mechanisms:
 
 The above snippet configures two instances of an imaginary authenticator of a type `bar`, made available for usage in rules via ids `foo` and `zab`, as well as two instances of an imaginary authenticator of a type `bla`, made available for usage in rule via ids `baz` and `oof`. The `baz` and `oof` authenticators are different, as they are configured differently, but `foo` and `zab` authenticators do not have any configuration. So, they behave the same way and there is actually no need to define two instances of them.
 
-In simplest case a rule will just reuse mechanisms in its pipeline. In more complex cases a rule can reconfigure parts of it (More about rules configuration can be found link:{{< relref "../configuration.adoc" >}}[here]). Which parts can be reconfigured, respectively overridden are mechanism specific and described in the mechanism specific documentation. Reconfiguration is always limited to the particular rule pipeline and does not affect other rules.
+In simplest case a rule will just reuse mechanisms in its pipeline. In more complex cases a rule can reconfigure parts of it (More about rules configuration can be found link:{{< relref "/docs/rules/configuration.adoc" >}}[here]). Which parts can be reconfigured, respectively overridden are mechanism specific and described in the mechanism specific documentation. Reconfiguration is always limited to the particular rule pipeline and does not affect other rules.
 
 Here is an example which configures a couple of mechanisms:
 
@@ -216,7 +216,7 @@ The parsed query with each key-value pair being a string to array of strings map
 
 * *`ClientIPAddresses`*: _string array_
 +
-The list of IP addresses the request passed through with the first entry being the ultimate client of the request. Only available if heimdall is configured to trust the client, sending this information, e.g. in the `X-Forwarded-From` header (see e.g. Decision Service link:{{< relref "/docs/configuration/services/decision.adoc#_trusted_proxies" >}}[trusted_proxies] configuration for more details).
+The list of IP addresses the request passed through with the first entry being the ultimate client of the request. Only available if heimdall is configured to trust the client, sending this information, e.g. in the `X-Forwarded-From` header (see e.g. Decision Service link:{{< relref "/docs/services/decision.adoc#_trusted_proxies" >}}[trusted_proxies] configuration for more details).
 
 * *`Header(name)`*: _method_,
 +
@@ -312,7 +312,7 @@ This object represents an error, which has been raised during the execution of t
 +
 The ID of the mechanism, which raised the error.
 
-Proper error handling requires attention to the actual _link:{{< relref "/docs/configuration/reference/types.adoc#_errorstate_type" >}}[error type]_ available via `type(Error)`.
+Proper error handling requires attention to the actual _link:{{< relref "/docs/configuration/types.adoc#_errorstate_type" >}}[error type]_ available via `type(Error)`.
 
 === Values
 

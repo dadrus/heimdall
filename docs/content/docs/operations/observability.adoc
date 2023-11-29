@@ -16,7 +16,7 @@ Hemdall implements different observability mechanisms to support easier operatio
 
 Heimdall's implementation uses https://github.com/rs/zerolog[zerolog] - Zero Allocation JSON Logger, which can however also log in plain text. All emitted log statements include information related to distributed tracing (if tracing is enabled) so that not only log statements can be correlated to traces, but also all log statements belonging to single request/transaction can be correlated as well.
 
-Available Logging configuration options are described in link:{{< relref "/docs/configuration/observability/logging.adoc" >}}[Logging Configuration].
+Available Logging configuration options are described in link:{{< relref "/docs/observability/logging.adoc" >}}[Logging Configuration].
 
 === Regular Log Events
 
@@ -113,7 +113,7 @@ If the event has been emitted for a GRPC request, following fields are set:
 
 * `_grpc_method` - The full GRPC method used.
 
-If the request comes from an intermediary, like e.g. an API Gateway and heimdall is configured to trust that "proxy" (see link:{{< relref "/docs/configuration/services/decision.adoc#_trusted_proxies" >}}[`trusted_proxies` configuration] of the Decision service, as well as the link:{{< relref "/docs/configuration/services/proxy.adoc#_trusted_proxies" >}}[`trusted_proxies` configuration] of the Proxy service), then following fields will be part of the events as well if the corresponding HTTP headers were sent.
+If the request comes from an intermediary, like e.g. an API Gateway and heimdall is configured to trust that "proxy" (see link:{{< relref "/docs/services/decision.adoc#_trusted_proxies" >}}[`trusted_proxies` configuration] of the Decision service, as well as the link:{{< relref "/docs/services/proxy.adoc#_trusted_proxies" >}}[`trusted_proxies` configuration] of the Proxy service), then following fields will be part of the events as well if the corresponding HTTP headers were sent.
 
 * `_http_x_forwarded_proto` - The value of the "X-Forwarded-Proto" header.
 * `_http_x_forwarded_host` - The value of the "X-Forwarded-Host" header.
@@ -183,7 +183,7 @@ Otherwise, if you configure it to use `gelf` format, the output will look as fol
 
 == Tracing in Heimdall
 
-Heimdall makes use of https://opentelemetry.io/[OpenTelemetry] for distributed tracing to support recording of paths taken by requests and supports all environment variables including the defined values according to https://opentelemetry.io/docs/reference/specification/sdk-environment-variables/[OpenTelemetry Environment Variables] and https://opentelemetry.io/docs/concepts/sdk-configuration/[OpenTelemetry SDK Configuration] specifications. In addition to these environment variables, heimdall defines some additional options, which are described in link:{{< relref "/docs/configuration/observability/tracing.adoc" >}}[Tracing Configuration] and can be used to tune the behaviour.
+Heimdall makes use of https://opentelemetry.io/[OpenTelemetry] for distributed tracing to support recording of paths taken by requests and supports all environment variables including the defined values according to https://opentelemetry.io/docs/reference/specification/sdk-environment-variables/[OpenTelemetry Environment Variables] and https://opentelemetry.io/docs/concepts/sdk-configuration/[OpenTelemetry SDK Configuration] specifications. In addition to these environment variables, heimdall defines some additional options, which are described in link:{{< relref "/docs/observability/tracing.adoc" >}}[Tracing Configuration] and can be used to tune the behaviour.
 
 NOTE: Tracing is enabled by default.
 
@@ -238,7 +238,7 @@ If your environment supports OpenTelemetry and usage of defaults is ok, most pro
 
 == Metrics in Heimdall
 
-Heimdall makes use of https://opentelemetry.io/[OpenTelemetry] to emit metrics. Depending on the configuration, push or pull based metrics export is supported. As with tracing, the entire configuration happens via environment variables as defined by https://opentelemetry.io/docs/reference/specification/sdk-environment-variables/[OpenTelemetry Environment Variables] and https://opentelemetry.io/docs/concepts/sdk-configuration/[OpenTelemetry SDK Configuration] specifications. In addition to these environment variables, heimdall allows disabling collection and exposure of metrics if required, which is described under link:{{< relref "/docs/configuration/observability/tracing.adoc" >}}[Tracing Configuration].
+Heimdall makes use of https://opentelemetry.io/[OpenTelemetry] to emit metrics. Depending on the configuration, push or pull based metrics export is supported. As with tracing, the entire configuration happens via environment variables as defined by https://opentelemetry.io/docs/reference/specification/sdk-environment-variables/[OpenTelemetry Environment Variables] and https://opentelemetry.io/docs/concepts/sdk-configuration/[OpenTelemetry SDK Configuration] specifications. In addition to these environment variables, heimdall allows disabling collection and exposure of metrics if required, which is described under link:{{< relref "/docs/observability/tracing.adoc" >}}[Tracing Configuration].
 
 NOTE: Metric exposure is enabled by default.
 
@@ -293,7 +293,7 @@ Number of seconds until a certificate used by a particular service (decision, pr
 
 == Runtime Profiling in Heimdall
 
-If enabled, heimdall exposes a `/debug/pprof` HTTP endpoint on port `10251` (See also link:{{< relref "/docs/configuration/observability/profiling.adoc" >}}[Runtime Profiling Configuration]) on which runtime profiling data in the `profile.proto` format (also known as `pprof` format) can be consumed by APM tools, like https://github.com/google/pprof[Google's pprof], https://grafana.com/oss/phlare/[Grafana Phlare], https://pyroscope.io/[Pyroscope] and many more for visualization purposes. Following information is available:
+If enabled, heimdall exposes a `/debug/pprof` HTTP endpoint on port `10251` (See also link:{{< relref "/docs/observability/runtime_profiling.adoc" >}}[Runtime Profiling Configuration]) on which runtime profiling data in the `profile.proto` format (also known as `pprof` format) can be consumed by APM tools, like https://github.com/google/pprof[Google's pprof], https://grafana.com/oss/phlare/[Grafana Phlare], https://pyroscope.io/[Pyroscope] and many more for visualization purposes. Following information is available:
 
 
 * `allocs` - A sampling of all past memory allocations.

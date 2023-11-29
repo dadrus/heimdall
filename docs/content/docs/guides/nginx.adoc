@@ -5,7 +5,7 @@ draft: false
 weight: 30
 menu:
   docs:
-    parent: "Integration Guides"
+    parent: "Guides"
   main:
     parent: guides
 description: Explains how to integrate heimdall with NGINX, an HTTP and reverse proxy server which became famous as one of the fastest web servers out there.
@@ -13,11 +13,11 @@ description: Explains how to integrate heimdall with NGINX, an HTTP and reverse 
 
 https://nginx.org/[NGINX] is an HTTP and reverse proxy server which became famous as one of the fastest web servers out there, heimdall can be integrated with by making use of the https://nginx.org/en/docs/http/ngx_http_auth_request_module.html[ngx_http_auth_request_module]. In such setup, NGINX delegates authentication and authorization to heimdall. If heimdall answers with a 2XX code, NGINX grants access and forwards the original request to the upstream service. If heimdall returns 401 or 403, the access is denied with the corresponding error code. Any other response code returned by heimdall is considered an error.
 
-NOTE: If there is no matching rule on heimdall side, heimdall responds with `404 Not Found`, which, as said above will be treated by NGINX as error. To avoid such situations, you can define a link:{{< relref "/docs/configuration/rules/default.adoc" >}}[default rule], which is anyway recommended to have secure defaults, which, depending on the configuration, would then respond either with 401 or 403, or still 405 if you do not allow a specific HTTP method. To overcome 500 responses returned by nginx in such cases (when heimdall returns 405), you can configure heimdall to respond with another HTTP response code using the `respond` property on the level of the link:{{< relref "/docs/configuration/services/decision.adoc" >}}[decision service] or link:{{< relref "/docs/configuration/services/proxy.adoc" >}}[proxy service] configuration.
+NOTE: If there is no matching rule on heimdall side, heimdall responds with `404 Not Found`, which, as said above will be treated by NGINX as error. To avoid such situations, you can define a link:{{< relref "/docs/rules/default_rule.adoc" >}}[default rule], which is anyway recommended to have secure defaults, which, depending on the configuration, would then respond either with 401 or 403, or still 405 if you do not allow a specific HTTP method. To overcome 500 responses returned by nginx in such cases (when heimdall returns 405), you can configure heimdall to respond with another HTTP response code using the `respond` property on the level of the link:{{< relref "/docs/services/decision.adoc" >}}[decision service] or link:{{< relref "/docs/services/proxy.adoc" >}}[proxy service] configuration.
 
 Since NGINX is highly configurable and heimdall supports different integration options, you can use any of the configuration examples given below. All of these enable heimdall to build the URL of the protected backend server for rule matching purposes.
 
-In most cases you must configure heimdall to trust your NGINX instances by setting link:{{< relref "/docs/configuration/services/decision.adoc#_trusted_proxies" >}}[`trusted_proxies`] for the Decision, respectively Proxy service. Exceptions are described in the sections below.
+In most cases you must configure heimdall to trust your NGINX instances by setting link:{{< relref "/docs/services/decision.adoc#_trusted_proxies" >}}[`trusted_proxies`] for the Decision, respectively Proxy service. Exceptions are described in the sections below.
 
 [#_first_option]
 == Forward only the path and query information
@@ -54,8 +54,8 @@ location = /_auth {  <4>
 }
 ----
 <1> Configures NGINX to forward every request to the internal `/_auth` endpoint (this is where the actual heimdall integration happens - see below).
-<2> When the response from heimdall returns, this and the next line set the Cookies set by heimdall in the response (whether you need this depends on your link:{{< relref "/docs/configuration/rules/pipeline_mechanisms/contextualizers.adoc" >}}[Contextualizers] and link:{{< relref "/docs/configuration/rules/pipeline_mechanisms/Finalizers.adoc" >}}[Finalizers] configuration)
-<3> When the response from heimdall returns, this and the next line set the `Authorization` header set by heimdall in the response (which header to set depends again on your link:{{< relref "/docs/configuration/rules/pipeline_mechanisms/contextualizers.adoc" >}}[Contextualizers] and link:{{< relref "/docs/configuration/rules/pipeline_mechanisms/finalizers.adoc" >}}[Finalizers] configuration)
+<2> When the response from heimdall returns, this and the next line set the Cookies set by heimdall in the response (whether you need this depends on your link:{{< relref "/docs/mechanisms/contextualizers.adoc" >}}[Contextualizers] and link:{{< relref "/docs/mechanisms/finalizers.adoc" >}}[Finalizers] configuration)
+<3> When the response from heimdall returns, this and the next line set the `Authorization` header set by heimdall in the response (which header to set depends again on your link:{{< relref "/docs/mechanisms/contextualizers.adoc" >}}[Contextualizers] and link:{{< relref "/docs/mechanisms/finalizers.adoc" >}}[Finalizers] configuration)
 <4> This is where the "magic" happens
 <5> Configure NGINX to use the HTTP method used by its client. Without this setting the implementation of `proxy_path` will use the HTTP GET method.
 <6> Configures NGINX to pass the request to heimdall and sets the request path and queries from the original request
@@ -119,7 +119,7 @@ nginx.ingress.kubernetes.io/auth-snippet: | <3>
 ----
 <1> Configures the controller to use heimdall's decision service endpoint with `<heimdall service name>`, `<namespace>` and `<decision port>` depending on your configuration.
 <2> Let NGINX forward the `Authorization` header set by heimdall to the upstream service upon successful response. This configuration depends on
-your link:{{< relref "/docs/configuration/rules/pipeline_mechanisms/contextualizers.adoc" >}}[Contextualizers] and link:{{< relref "/docs/configuration/rules/pipeline_mechanisms/finalizers.adoc" >}}[Finalizers] configuration. If not configured, NGINX will only react on `Set-Cookie` headers in responses from heimdall by default.
+your link:{{< relref "/docs/mechanisms/contextualizers.adoc" >}}[Contextualizers] and link:{{< relref "/docs/mechanisms/finalizers.adoc" >}}[Finalizers] configuration. If not configured, NGINX will only react on `Set-Cookie` headers in responses from heimdall by default.
 <3> Configures the required headers to pass the information about the used HTTP scheme, host and port, request path and used query parameters to be forwarded to heimdall.
 +
 NOTE: Without that, heimdall will not be able extracting relevant information from the NGINX request as it does not support NGINX proprietary `X-Original-Method` and `X-Original-Uri` used by it for the same purposes.

@@ -6,7 +6,7 @@ weight: 85
 menu:
   docs:
     weight: 30
-    parent: "Pipeline Mechanisms"
+    parent: "Mechanisms"
 ---
 
 Contextualizers enrich the information about the link:{{< relref "overview.adoc#_subject" >}}[`Subject`] obtained via an authenticator mechanism with further information, required by either the endpoint of the upstream service itself or an authorizer mechanism. This can be handy if the actual authentication system doesn't have all information about the subject (which is usually the case in microservice architectures), or if dynamic information about the subject, like the current location based on the IP address, is required.
@@ -23,7 +23,7 @@ To enable the usage of this contextualizer, you have to set the `type` property 
 
 Configuration using the `config` property is mandatory. Following properties are available:
 
-* *`endpoint`*: _link:{{< relref "/docs/configuration/reference/types.adoc#_endpoint">}}[Endpoint]_ (mandatory, not overridable)
+* *`endpoint`*: _link:{{< relref "/docs/configuration/types.adoc#_endpoint">}}[Endpoint]_ (mandatory, not overridable)
 +
 The API of the service providing additional attributes about the authenticated user. At least the `url` must be configured. This mechanism allows templating of the url and makes the link:{{< relref "overview.adoc#_subject" >}}[`Subject`] object, as well as the link:{{< relref "overview.adoc#_values" >}}[`Values`] (see also below) objects available to it. By default, this contextualizer will use HTTP `POST` to send the rendered payload to this endpoint. You can override this behavior by configuring `method` as well. Depending on the API requirements of the system, this contextualizer should communicate to, you might need to configure further properties, like headers, etc.
 
@@ -39,7 +39,7 @@ If the API requires any cookies from the request to heimdall, you can forward th
 +
 Your link:{{< relref "overview.adoc#_templating" >}}[template] with definitions required to communicate to the endpoint. The template can make use of link:{{< relref "overview.adoc#_values" >}}[`Values`], link:{{< relref "overview.adoc#_subject" >}}[`Subject`] and link:{{< relref "overview.adoc#_request" >}}[`Request`] objects.
 
-* *`cache_ttl`*: _link:{{< relref "/docs/configuration/reference/types.adoc#_duration" >}}[Duration]_ (optional, overridable)
+* *`cache_ttl`*: _link:{{< relref "/docs/configuration/types.adoc#_duration" >}}[Duration]_ (optional, overridable)
 +
 Allows caching of the API responses. Defaults to 10 seconds. The cache key is calculated from the entire configuration of the contextualizer instance and the available information about the current subject.
 

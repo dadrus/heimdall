@@ -9,7 +9,7 @@ menu:
     parent: "Configuration"
 ---
 
-Some link:{{< relref "/docs/configuration/rules/pipeline_mechanisms/finalizers.adoc" >}}[Finalizers], which, as the name implies, finalize the successful execution of the pipeline, can generated signed objects, like a JWT, to be forwarded to the upstream services. In such cases Heimdall acts as an issuer of such objects and needs at least corresponding key material.
+Some link:{{< relref "/docs/mechanisms/finalizers.adoc" >}}[Finalizers], which, as the name implies, finalize the successful execution of the pipeline, can generated signed objects, like a JWT, to be forwarded to the upstream services. In such cases Heimdall acts as an issuer of such objects and needs at least corresponding key material.
 
 == Configuration
 
@@ -19,7 +19,7 @@ The configuration related to the issuance of signed objects can be done using th
 +
 The name used to specify the issuer. E.g. if a JWT is generated, this value is used to set the `iss` claim. If not set, the value `heimdall` is used.
 
-* *`key_store`*: _link:{{< relref "/docs/configuration/reference/types.adoc#_key_store" >}}[Key Store]_ (optional)
+* *`key_store`*: _link:{{< relref "/docs/configuration/types.adoc#_key_store" >}}[Key Store]_ (optional)
 +
 The key store containing the cryptographic material. If configured, at least one private key and the corresponding certificate must be present. If not configured, heimdall generates an ECDSA P-384 key pair on start up and uses it then.
 +

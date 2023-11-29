@@ -6,7 +6,7 @@ weight: 95
 menu:
   docs:
     weight: 50
-    parent: "Pipeline Mechanisms"
+    parent: "Mechanisms"
 ---
 
 Error Handlers are responsible for execution of logic if any of the link:{{< relref "authenticators.adoc" >}}[authenticators], link:{{< relref "authorizers.adoc" >}}[authorizers], link:{{< relref "contextualizers.adoc" >}}[contextualizers] or link:{{< relref "finalizers.adoc" >}}[finalizers] fails. The error handler mechanisms range from a simple error response to the client which sent the request to sophisticated ones, supporting complex logic and redirects.
@@ -17,7 +17,7 @@ The following sections describe the available error handler types in more detail
 
 === Default
 
-This mechanism is always there and is executed if no other error handler mechanism is responsible for the error. Actually, there is no need to explicitly configure it. The only exception is to allow overriding the link:{{< relref "../overview.adoc#_default_rule" >}}[default rule's] error handler chain in a specific rule for performance reasons (if configured error handlers in the default rule should not be considered). This mechanism type doesn't have any configuration options.
+This mechanism is always there and is executed if no other error handler mechanism is responsible for the error. Actually, there is no need to explicitly configure it. The only exception is to allow overriding the link:{{< relref "/docs/rules/overview.adoc#_default_rule" >}}[default rule's] error handler chain in a specific rule for performance reasons (if configured error handlers in the default rule should not be considered). This mechanism type doesn't have any configuration options.
 
 To enable the usage of this mechanism, you have to set the `type` property to `default`.
 

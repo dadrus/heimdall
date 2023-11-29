@@ -85,13 +85,13 @@ The configuration of this provider goes into the `http_endpoint` property. In co
 
 Following configuration options are supported:
 
-* *`watch_interval`*: _link:{{< relref "/docs/configuration/reference/types.adoc#_duration" >}}[Duration]_ (optional)
+* *`watch_interval`*: _link:{{< relref "/docs/configuration/types.adoc#_duration" >}}[Duration]_ (optional)
 +
 Whether the configured `endpoints` should be polled for updates. Defaults to `0s` (polling disabled).
 
 * *`endpoints`*: _RuleSetEndpoint array_ (mandatory)
 +
-Each entry of that array supports all the properties defined by link:{{< relref "/docs/configuration/reference/types.adoc#_endpoint" >}}[Endpoint], except `method`, which is always `GET`. enable_http_cacheAs with the link:{{< relref "/docs/configuration/reference/types.adoc#_endpoint" >}}[Endpoint] type, at least the `url` must be configured. Following properties are defined in addition:
+Each entry of that array supports all the properties defined by link:{{< relref "/docs/configuration/types.adoc#_endpoint" >}}[Endpoint], except `method`, which is always `GET`. enable_http_cacheAs with the link:{{< relref "/docs/configuration/types.adoc#_endpoint" >}}[Endpoint] type, at least the `url` must be configured. Following properties are defined in addition:
 +
 ** *`rule_path_match_prefix`*: _string_ (optional)
 +
@@ -155,7 +155,7 @@ The configuration of this provider goes into the `cloud_blob` property. As with 
 
 Following configuration options are supported:
 
-* *`watch_interval`*: _link:{{< relref "/docs/configuration/reference/types.adoc#_duration" >}}[Duration]_ (optional)
+* *`watch_interval`*: _link:{{< relref "/docs/configuration/types.adoc#_duration" >}}[Duration]_ (optional)
 +
 Whether the configured `buckets` should be polled for updates. Defaults to `0s` (polling disabled).
 
@@ -230,7 +230,7 @@ This provider is only supported if heimdall is running within Kubernetes and all
 +
 By making use of this property, you can specify which RuleSets should be used by this particular heimdall instance. If specified, heimdall will consider the value of the `authClassName` attribute of each RuleSet deployed to the cluster and validate, respectively load only those rules, which `authClassName` values match the value of `auth_class`. If not set all RuleSets will be used.
 
-* *`tls`*: _link:{{< relref "/docs/configuration/reference/types.adoc#_tls" >}}[TLS]_ (optional)
+* *`tls`*: _link:{{< relref "/docs/configuration/types.adoc#_tls" >}}[TLS]_ (optional)
 +
 If configured, heimdall will start and expose a validating admission controller service on port `4458` listening on all interfaces. This service allows integration with the Kubernetes API server enabling validation of the applied RuleSet resources before these are made available to heimdall for loading. This way you will get a direct feedback about RuleSet issues without the need to look into heimdall logs if a RuleSet could not be loaded (See also link:{{< relref "/openapi/#tag/Validating-Admission-Controller" >}}[API] documentation for more details).
 +
