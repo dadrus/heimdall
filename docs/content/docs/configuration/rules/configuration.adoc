@@ -58,7 +58,7 @@ Defines how to handle url-encoded slashes in url paths while matching and forwar
 ** *`no_decode`* - Accept requests using encoded slashes, but not touching them and showing them to the rules and the upstream. That is, the `%2F` just remains as is.
 
 +
-CAUTION: Since heimdall and the upstream service may treat the url-encoded slashes differently, accepting requests with url-encoded slashes can, depending on your rules, lead to https://cwe.mitre.org/data/definitions/436.html[Interpretation Conflict] vulnerabilities, resulting in privilege escalations.
+CAUTION: Since the proxy integrating with heimdall, heimdall by itself and the upstream service all may treat the url-encoded slashes differently, accepting requests with url-encoded slashes can, depending on your rules, lead to https://cwe.mitre.org/data/definitions/436.html[Interpretation Conflict] vulnerabilities, resulting in privilege escalations.
 
 * *`methods`*: _string array_ (optional)
 +
