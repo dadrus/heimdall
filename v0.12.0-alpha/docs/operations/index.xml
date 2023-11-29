@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Operations on Heimdall</title><link>https://dadrus.github.io/docs/operations/</link><description>Recent content in Operations on Heimdall</description><generator>Hugo -- gohugo.io</generator><language>en-us</language><lastBuildDate>Sat, 25 Jun 2022 14:39:36 +0200</lastBuildDate><atom:link href="https://dadrus.github.io/docs/operations/index.xml" rel="self" type="application/rss+xml"/><item><title>Install</title><link>https://dadrus.github.io/docs/operations/install/</link><pubDate>Mon, 25 Jul 2022 18:22:50 +0200</pubDate><guid>https://dadrus.github.io/docs/operations/install/</guid><description>Heimdall is shipped in multiple formats and architectures to suit a variety of deployment patterns. Available installation options are:
+Source code
+Binary
+Container Image
+Helm Chart
+Source Code You can always build a copy of heimdall by following the following instructions for your OS/environment.
+Prerequisites git
+The Go programming language &amp;gt;= 1.21
+Download Retrieve the latest copy of heimdall source code by cloning the git repository
+$ git clone git@github.</description></item><item><title>CLI</title><link>https://dadrus.github.io/docs/operations/cli/</link><pubDate>Thu, 09 Jun 2022 18:57:50 +0200</pubDate><guid>https://dadrus.github.io/docs/operations/cli/</guid><description>Heimdall’s Command Line Interface
+General heimdall [command] [flags] [arguments] Use heimdall help to get overview about available commands, respectively heimdall [command] help for help on any command.
+Flag’s usage:
+# set flag_argument to flag(s) heimdall [--flag=flag_argument] [-f [flag_argument]] E.g.
+heimdall validate config -c config.yaml Commands completion
+Generates the autocompletion script for the specified shell.
+health
+Calls heimdall’s healthcheck endpoint to verify the status of the deployment.
+help
+Provides an overview about the available commands and their descriptions.</description></item><item><title>Observability</title><link>https://dadrus.github.io/docs/operations/observability/</link><pubDate>Wed, 03 Aug 2022 18:53:31 +0200</pubDate><guid>https://dadrus.github.io/docs/operations/observability/</guid><description>Hemdall implements different observability mechanisms to support easier operation and integration in different APM products. The following sections provide insights about what can be expected.
+Logging in Heimdall Heimdall’s implementation uses zerolog - Zero Allocation JSON Logger, which can however also log in plain text. All emitted log statements include information related to distributed tracing (if tracing is enabled) so that not only log statements can be correlated to traces, but also all log statements belonging to single request/transaction can be correlated as well.</description></item><item><title>Security</title><link>https://dadrus.github.io/docs/operations/security/</link><pubDate>Mon, 15 Aug 2022 08:33:35 +0200</pubDate><guid>https://dadrus.github.io/docs/operations/security/</guid><description>To operate heimdall in a secure way, you should configure heimdall accordingly. Following sections address the corresponding areas.
+HTTP Header Security Considerations If trusted_proxies property is configured (see also the corresponding Decision and Proxy service configuration options) to let heimdall make use of different HTTP headers to build the URL for rule and HTTP method matching purposes, following logic apply:
+The value for the used HTTP scheme is taken from the X-Forwarded-Proto header.</description></item></channel></rss>
