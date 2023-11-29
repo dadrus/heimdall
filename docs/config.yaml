@@ -50,7 +50,7 @@ menu:
   main:
     - identifier: docs
       title: Docs
-      url: docs/welcome
+      url: docs/introduction/what_is_heimdall
       weight: 100
 
     - identifier: get_started
@@ -88,7 +88,7 @@ params:
   version_file: /heimdall/data.json
   search_index_file: /heimdall/x-current-version/index.json
   path_prefix: /heimdall/x-current-version
-  docs_entry_point: /docs/welcome.adoc
+  docs_entry_point: /docs/introduction/what_is_heimdall.adoc
 
 module:
   mounts:

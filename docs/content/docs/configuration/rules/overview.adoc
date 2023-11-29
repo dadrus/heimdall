@@ -10,7 +10,7 @@ menu:
 ---
 
 
-This section explains how rules can be defined and used in detail. Before diving onto this topic, we recommend to make yourself familiar with the principal link:{{< relref "/docs/getting_started/concepts.adoc" >}}[architecture and concepts].
+This section explains how rules can be defined and used in detail. Before diving onto this topic, we recommend to make yourself familiar with the principal link:{{< relref "/docs/introduction/core_concepts.adoc" >}}[Core Concepts].
 
 Core aspects of heimdall are rules. These let heimdall execute logic required by your upstream service to authenticate, authorize the incoming requests, enrich the information about the subject and transform it according your needs. However, to be able to define even a single rule, you must configure link:{{< relref "./pipeline_mechanisms/overview.adoc" >}}[pipeline mechanisms], which you can then use in any rules, you define. Rules are dynamic by nature and can come and go together with the upstream service defining these.
 

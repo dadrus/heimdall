@@ -1,14 +1,12 @@
 ---
-title: "Concepts"
-date: 2022-06-25T14:29:17+02:00
+title: "Core Concepts"
+date: 2023-11-29T22:06:28+02:00
 draft: false
 weight: 10
 menu:
   docs:
-    parent: "Getting Started"
+    parent: "Introduction"
     weight: 10
-  main:
-    parent: get_started
 description: Gives you the required insights about heimdall's architecture to get started.
 ---
 
@@ -16,7 +14,7 @@ Everything you need to know.
 
 == Pipeline
 
-As described in the link:{{< relref "/docs/welcome.adoc" >}}[Welcome] section and also shown in the diagram below, heimdall authenticates and authorizes incoming HTTP requests, rejecting unauthenticated or unauthorized ones, as well as enriches the valid requests with further contextual information and transforms resulting subject information into a format, required by the upstream services. This is done in upstream service specific link:{{< relref "/docs/configuration/rules/overview.adoc" >}}[rules], which assemble the required individual pipelines by making use of different link:{{< relref "/docs/configuration/rules/pipeline_mechanisms/overview.adoc" >}}[mechanisms].
+As described in the link:{{< relref "/docs/introduction/what_is_heimdall.adoc" >}}[What is heimdall] section and also shown in the diagram below, heimdall authenticates and authorizes incoming HTTP requests, rejecting unauthenticated or unauthorized ones, as well as enriches the valid requests with further contextual information and transforms resulting subject information into a format, required by the upstream services. This is done in upstream service specific link:{{< relref "/docs/configuration/rules/overview.adoc" >}}[rules], which assemble the required individual pipelines by making use of different link:{{< relref "/docs/configuration/rules/pipeline_mechanisms/overview.adoc" >}}[mechanisms].
 
 [[_fig_heimdall_request_pipeline]]
 .Request Pipeline

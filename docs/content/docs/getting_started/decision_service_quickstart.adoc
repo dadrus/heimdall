@@ -99,9 +99,9 @@ If you're using a binary, put the `rules.yaml` file into the `/heimdall/conf` di
 $ ./heimdall serve decision -c config.yaml
 ----
 
-The above command will start heimdall in a link:{{< relref "concepts.adoc#_decision_api_mode" >}}[decision] operation mode. By default, the service will be served on port `4456`.
+The above command will start heimdall in a link:{{< relref "/docs/introduction/core_concepts.adoc#_decision_api_mode" >}}[decision] operation mode. By default, the service will be served on port `4456`.
 
-Otherwise, if you've built a container image, run heimdall in the link:{{< relref "concepts.adoc#_decision_api_mode" >}}[decision] operation mode via
+Otherwise, if you've built a container image, run heimdall in the link:{{< relref "/docs/introduction/core_concepts.adoc#_decision_api_mode" >}}[decision] operation mode via
 
 [source, bash]
 ----

@@ -37,7 +37,7 @@ Logs, metrics and profiling information is very valuable for operating heimdall.
 
 == TLS
 
-As documented in link:{{< relref "/docs/getting_started/concepts.adoc" >}}[Concepts] section, the execution of heimdall's pipeline typically includes communication to other systems. The endpoints of the corresponding systems should be TLS protected. This is however actually out of scope for heimdall. What is in scope, is the verification of the used TLS server certificate, if TLS is used. This happens by making use of the operating system-wide trust store, containing the certificates of Root and Intermediate CAs (trust anchors) shipped with the OS. That means, you should
+As documented in link:{{< relref "/docs/introduction/core_concepts.adoc" >}}[Core Concepts] section, the execution of heimdall's pipeline typically includes communication to other systems. The endpoints of the corresponding systems should be TLS protected. This is however actually out of scope for heimdall. What is in scope, is the verification of the used TLS server certificate, if TLS is used. This happens by making use of the operating system-wide trust store, containing the certificates of Root and Intermediate CAs (trust anchors) shipped with the OS. That means, you should
 
 1. ensure this trust store contains the certificates of the Root CAs of your PKI hierarchy and
 2. ensure the endpoints, heimdall communicates with over TLS, provide not only their own certificates, but also the intermediate certificates and cross certificates not included within the OS trust store
