@@ -29,7 +29,7 @@ Whether the configured `src` should be watched for updates. Defaults to `false`.
 
 * *`env_vars_enabled`*: _boolean_ (optional)
 +
-Whether to enable environment variables access in the rule set files. Defaults to `false`. If set to `true`, environment variables usage using Bash syntax is possible as with the link:{{< relref "/docs/getting_started/configuration_introduction.adoc#_configuration_file" >}}[static configuration].
+Whether to enable environment variables access in the rule set files. Defaults to `false`. If set to `true`, environment variables usage using Bash syntax is possible as with the link:{{< relref "/docs/getting_started/configuration.adoc#_configuration_file" >}}[static configuration].
 +
 WARNING: All environment variables, used in the rule set files must be known in advance to the heimdall process (when it starts). In addition, the usage of that functionality might lead to security issues. If an adversary is somehow able to add new or update existing rule sets, it would be theoretically able exfiltrating environment variables available to the heimdall process by crafting contextualizers or authorizers, which would forward the corresponding values to a controlled service. So, use with caution, disable the watching of rule set updates and try to avoid!
 +

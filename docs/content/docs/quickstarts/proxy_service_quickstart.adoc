@@ -5,7 +5,7 @@ draft: false
 weight: 102
 menu:
   docs:
-    parent: "Getting Started"
+    parent: "Quickstarts"
     weight: 40
   main:
     parent: get_started
