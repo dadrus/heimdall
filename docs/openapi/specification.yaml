@@ -627,11 +627,6 @@ paths:
           description: Host to use to build the url to verify access to.
           schema:
             type: string
-        - name: X-Forwarded-Path
-          in: header
-          description: Path to use to build the url to verify access to. If not present the `Path` of the request is used.
-          schema:
-            type: string
         - name: X-Forwarded-Uri
           in: header
           description: The Uri to use to build the url to verify access to.
@@ -712,11 +707,6 @@ paths:
         - name: X-Forwarded-Host
           in: header
           description: Host to use to build the url to verify access to.
-          schema:
-            type: string
-        - name: X-Forwarded-Path
-          in: header
-          description: Path to use to build the url to verify access to. If not present the `Path` of the request is used.
           schema:
             type: string
         - name: X-Forwarded-Uri
