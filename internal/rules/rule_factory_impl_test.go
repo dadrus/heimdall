@@ -426,7 +426,6 @@ func TestRuleFactoryNew(t *testing.T) {
 				Default: &config.DefaultRule{
 					Execute: []config.MechanismConfig{
 						{"authenticator": "bar"},
-						{"finalizer": "baz"},
 					},
 					Methods: []string{"FOO"},
 				},
@@ -435,7 +434,6 @@ func TestRuleFactoryNew(t *testing.T) {
 				t.Helper()
 
 				mhf.EXPECT().CreateAuthenticator(mock.Anything, "bar", mock.Anything).Return(nil, nil)
-				mhf.EXPECT().CreateFinalizer(mock.Anything, "baz", mock.Anything).Return(nil, nil)
 			},
 			assert: func(t *testing.T, err error, ruleFactory *ruleFactory) {
 				t.Helper()
@@ -449,10 +447,11 @@ func TestRuleFactoryNew(t *testing.T) {
 				assert.True(t, defRule.isDefault)
 				assert.Equal(t, "default", defRule.id)
 				assert.Equal(t, "config", defRule.srcID)
+				assert.Equal(t, config2.EncodedSlashesOff, defRule.encodedSlashesHandling)
 				assert.ElementsMatch(t, defRule.methods, []string{"FOO"})
 				assert.Len(t, defRule.sc, 1)
 				assert.Empty(t, defRule.sh)
-				assert.Len(t, defRule.fi, 1)
+				assert.Empty(t, defRule.fi)
 				assert.Empty(t, defRule.eh)
 			},
 		},
@@ -495,6 +494,7 @@ func TestRuleFactoryNew(t *testing.T) {
 				assert.True(t, defRule.isDefault)
 				assert.Equal(t, "default", defRule.id)
 				assert.Equal(t, "config", defRule.srcID)
+				assert.Equal(t, config2.EncodedSlashesOff, defRule.encodedSlashesHandling)
 				assert.ElementsMatch(t, defRule.methods, []string{"FOO", "BAR"})
 				assert.Len(t, defRule.sc, 1)
 				assert.Len(t, defRule.sh, 2)
@@ -796,7 +796,6 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				RuleMatcher: config2.Matcher{URL: "http://foo.bar", Strategy: "glob"},
 				Execute: []config.MechanismConfig{
 					{"authenticator": "foo"},
-					{"finalizer": "bar"},
 				},
 				Methods: []string{"FOO", "BAR"},
 			},
@@ -804,7 +803,6 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				t.Helper()
 
 				mhf.EXPECT().CreateAuthenticator("test", "foo", mock.Anything).Return(&mocks2.AuthenticatorMock{}, nil)
-				mhf.EXPECT().CreateFinalizer("test", "bar", mock.Anything).Return(&mocks7.FinalizerMock{}, nil)
 			},
 			assert: func(t *testing.T, err error, rul *ruleImpl) {
 				t.Helper()
@@ -815,11 +813,12 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				assert.Equal(t, "test", rul.srcID)
 				assert.False(t, rul.isDefault)
 				assert.Equal(t, "foobar", rul.id)
+				assert.Equal(t, config2.EncodedSlashesOff, rul.encodedSlashesHandling)
 				assert.NotNil(t, rul.urlMatcher)
 				assert.ElementsMatch(t, rul.methods, []string{"FOO", "BAR"})
 				assert.Len(t, rul.sc, 1)
 				assert.Empty(t, rul.sh)
-				assert.Len(t, rul.fi, 1)
+				assert.Empty(t, rul.fi)
 				assert.Empty(t, rul.eh)
 			},
 		},
@@ -832,7 +831,6 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				RuleMatcher: config2.Matcher{URL: "http://foo.bar", Strategy: "glob"},
 				Execute: []config.MechanismConfig{
 					{"authenticator": "foo"},
-					{"finalizer": "bar"},
 				},
 				Methods: []string{"FOO", "BAR"},
 			},
@@ -840,7 +838,6 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				t.Helper()
 
 				mhf.EXPECT().CreateAuthenticator("test", "foo", mock.Anything).Return(&mocks2.AuthenticatorMock{}, nil)
-				mhf.EXPECT().CreateFinalizer("test", "bar", mock.Anything).Return(&mocks7.FinalizerMock{}, nil)
 			},
 			assert: func(t *testing.T, err error, rul *ruleImpl) {
 				t.Helper()
@@ -851,11 +848,12 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				assert.Equal(t, "test", rul.srcID)
 				assert.False(t, rul.isDefault)
 				assert.Equal(t, "foobar", rul.id)
+				assert.Equal(t, config2.EncodedSlashesOff, rul.encodedSlashesHandling)
 				assert.NotNil(t, rul.urlMatcher)
 				assert.ElementsMatch(t, rul.methods, []string{"FOO", "BAR"})
 				assert.Len(t, rul.sc, 1)
 				assert.Empty(t, rul.sh)
-				assert.Len(t, rul.fi, 1)
+				assert.Empty(t, rul.fi)
 				assert.Empty(t, rul.eh)
 				assert.NotNil(t, rul.backend)
 			},
@@ -893,8 +891,9 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 		{
 			uc: "with default rule and with all attributes defined by the rule itself in decision mode",
 			config: config2.Rule{
-				ID:          "foobar",
-				RuleMatcher: config2.Matcher{URL: "http://foo.bar", Strategy: "glob"},
+				ID:                     "foobar",
+				RuleMatcher:            config2.Matcher{URL: "http://foo.bar", Strategy: "glob"},
+				EncodedSlashesHandling: config2.EncodedSlashesNoDecode,
 				Execute: []config.MechanismConfig{
 					{"authenticator": "foo"},
 					{"contextualizer": "bar"},
@@ -936,6 +935,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				assert.Equal(t, "test", rul.srcID)
 				assert.False(t, rul.isDefault)
 				assert.Equal(t, "foobar", rul.id)
+				assert.Equal(t, config2.EncodedSlashesNoDecode, rul.encodedSlashesHandling)
 				assert.NotNil(t, rul.urlMatcher)
 				assert.ElementsMatch(t, rul.methods, []string{"BAR", "BAZ"})
 
@@ -956,8 +956,9 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 			uc:     "with default rule and with all attributes defined by the rule itself in proxy mode",
 			opMode: config.ProxyMode,
 			config: config2.Rule{
-				ID:          "foobar",
-				RuleMatcher: config2.Matcher{URL: "http://foo.bar", Strategy: "glob"},
+				ID:                     "foobar",
+				RuleMatcher:            config2.Matcher{URL: "http://foo.bar", Strategy: "glob"},
+				EncodedSlashesHandling: config2.EncodedSlashesOn,
 				Backend: &config2.Backend{
 					Host: "bar.foo",
 					URLRewriter: &config2.URLRewriter{
@@ -1008,6 +1009,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				assert.Equal(t, "test", rul.srcID)
 				assert.False(t, rul.isDefault)
 				assert.Equal(t, "foobar", rul.id)
+				assert.Equal(t, config2.EncodedSlashesOn, rul.encodedSlashesHandling)
 				assert.NotNil(t, rul.urlMatcher)
 				assert.ElementsMatch(t, rul.methods, []string{"BAR", "BAZ"})
 				assert.Equal(t, "https://bar.foo/baz/bar?foo=bar", rul.backend.CreateURL(&url.URL{

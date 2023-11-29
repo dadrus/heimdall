@@ -49,6 +49,17 @@ Which strategy to use for matching of the value, provided in the `url` property.
 * `\https://mydomain.com/<{foo*,bar*}>` matches `\https://mydomain.com/foo` or `\https://mydomain.com/bar` and doesn't match `\https://mydomain.com/any`.
 ====
 
+* *`allow_encoded_slashes`*: _string_ (optional)
++
+Defines how to handle url-encoded slashes in url paths while matching and forwarding the requests. Can be set to the one of the following values, defaulting to `off`:
+
+** *`off`* - Reject requests containing encoded slashes. Means, if the request URL contains an url-encoded slash (`%2F`), the rule will not match it.
+** *`on`* - Accept requests using encoded slashes, decoding them and making it transparent for the rules and the upstream url. That is, the `%2F` becomes a `/` and will be treated as such in all places.
+** *`no_decode`* - Accept requests using encoded slashes, but not touching them and showing them to the rules and the upstream. That is, the `%2F` just remains as is.
+
++
+CAUTION: Since the proxy integrating with heimdall, heimdall by itself and the upstream service all may treat the url-encoded slashes differently, accepting requests with url-encoded slashes can, depending on your rules, lead to https://cwe.mitre.org/data/definitions/436.html[Interpretation Conflict] vulnerabilities, resulting in privilege escalations.
+
 * *`methods`*: _string array_ (optional)
 +
 Which HTTP methods (`GET`, `POST`, `PATCH`, etc) are allowed for the matched URL. If not specified, every request to that URL will result in `405 Method Not Allowed` response from heimdall. If all methods should be allowed, one can use a special `ALL` placeholder. If all, except some specific methods should be allowed, one can specify `ALL` and remove specific methods by adding the `!` sign to the to be removed method. In that case you have to specify the value in braces. See also examples below.
@@ -233,7 +244,7 @@ In principle, a rule set is just a list of rules with some additional meta infor
 
 * *`version`*: _string_ (mandatory)
 +
-The version schema of the `RuleSet`. The current version of heimdall supports only the version `1`.
+The version schema of the `RuleSet`. The current version of heimdall supports only the version `1alpha3`.
 
 * *`name`*: _string_ (optional)
 +
