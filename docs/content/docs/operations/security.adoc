@@ -18,7 +18,7 @@ If `trusted_proxies` property is configured (see also the corresponding link:{{<
 
 * The value for the used HTTP scheme is taken from the `X-Forwarded-Proto` header.
 * The value for the used HTTP host and port is taken from the `X-Forwarded-Host` header.
-* The value for the used HTTP path is taken either from `X-Forwarded-Uri` or `X-Forwarded-Path` with `X-Forwarded-Uri` taking precedence. Compared to `X-Forwarded-Path`, `X-Forwarded-Uri` does also contain query parameters.
+* The value for the used HTTP path is taken from `X-Forwarded-Uri` header, which may also contain query parameters.
 * The value for the used HTTP method is taken from the `X-Forwarded-Method` header.
 
 If the evaluation result for any of the above said steps is empty, the corresponding value is taken from the actual request to heimdall. E.g. if `X-Forwarded-Method` is set, the HTTP method used to communicate with heimdall is used for rule matching respectively evaluation purposes.

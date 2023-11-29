@@ -51,7 +51,6 @@ func New(logger zerolog.Logger) func(http.Handler) http.Handler {
 			logCtx = logHeader(req, logCtx, "X-Forwarded-Method", "_http_x_forwarded_method")
 			logCtx = logHeader(req, logCtx, "X-Forwarded-Proto", "_http_x_forwarded_proto")
 			logCtx = logHeader(req, logCtx, "X-Forwarded-Host", "_http_x_forwarded_host")
-			logCtx = logHeader(req, logCtx, "X-Forwarded-Path", "_http_x_forwarded_path")
 			logCtx = logHeader(req, logCtx, "X-Forwarded-Uri", "_http_x_forwarded_uri")
 			logCtx = logHeader(req, logCtx, "X-Forwarded-For", "_http_x_forwarded_for")
 			logCtx = logHeader(req, logCtx, "Forwarded", "_http_forwarded")

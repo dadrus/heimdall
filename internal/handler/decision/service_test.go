@@ -187,7 +187,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 
 				req.Header.Set("X-Forwarded-Proto", "https")
 				req.Header.Set("X-Forwarded-Host", "test.com")
-				req.Header.Set("X-Forwarded-Path", "bar")
+				req.Header.Set("X-Forwarded-Uri", "/bar")
 				req.Header.Set("X-Forwarded-Method", http.MethodGet)
 
 				return req
@@ -242,7 +242,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 
 				req.Header.Set("X-Forwarded-Proto", "https")
 				req.Header.Set("X-Forwarded-Host", "test.com")
-				req.Header.Set("X-Forwarded-Path", "bar")
+				req.Header.Set("X-Forwarded-Uri", "/bar")
 				req.Header.Set("X-Forwarded-Method", http.MethodGet)
 
 				return req
@@ -303,7 +303,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 
 				req.Header.Set("X-Forwarded-Proto", "https")
 				req.Header.Set("X-Forwarded-Host", "test.com")
-				req.Header.Set("X-Forwarded-Path", "bar")
+				req.Header.Set("X-Forwarded-Uri", "/bar")
 				req.Header.Set("X-Forwarded-Method", http.MethodGet)
 
 				return req
@@ -438,7 +438,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				)
 				require.NoError(t, err)
 
-				req.Header.Set("X-Forwarded-Path", "/bar")
+				req.Header.Set("X-Forwarded-Uri", "/bar")
 
 				return req
 			},
@@ -518,7 +518,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 
 				req.Header.Set("X-Forwarded-Proto", "https")
 				req.Header.Set("X-Forwarded-Host", "test.com")
-				req.Header.Set("X-Forwarded-Path", "/bar")
+				req.Header.Set("X-Forwarded-Uri", "/bar")
 				req.Header.Set("X-Forwarded-Method", http.MethodPatch)
 
 				return req

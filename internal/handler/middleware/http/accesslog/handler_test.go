@@ -116,7 +116,7 @@ func TestHandlerExecution(t *testing.T) {
 
 				req.Header.Set("X-Forwarded-Proto", "https")
 				req.Header.Set("X-Forwarded-Host", "foobar.com")
-				req.Header.Set("X-Forwarded-Path", "/bar")
+				req.Header.Set("X-Forwarded-Path", "/baz")
 				req.Header.Set("X-Forwarded-Uri", "https://foobar.com/bar")
 				req.Header.Set("X-Forwarded-For", "127.0.0.1")
 				req.Header.Set("Forwarded", "for=127.0.0.1")
@@ -130,7 +130,7 @@ func TestHandlerExecution(t *testing.T) {
 			assert: func(t *testing.T, clientReq *http.Request, logEvent1, logEvent2 map[string]any) {
 				t.Helper()
 
-				require.Len(t, logEvent1, 18)
+				require.Len(t, logEvent1, 17)
 				assert.Equal(t, "info", logEvent1["level"])
 				assert.Contains(t, logEvent1, "_tx_start")
 				assert.Contains(t, logEvent1, "_client_ip")
@@ -145,12 +145,11 @@ func TestHandlerExecution(t *testing.T) {
 				assert.Equal(t, "TX started", logEvent1["message"])
 				assert.Equal(t, "https", logEvent1["_http_x_forwarded_proto"])
 				assert.Equal(t, "foobar.com", logEvent1["_http_x_forwarded_host"])
-				assert.Equal(t, "/bar", logEvent1["_http_x_forwarded_path"])
 				assert.Equal(t, "https://foobar.com/bar", logEvent1["_http_x_forwarded_uri"])
 				assert.Equal(t, "127.0.0.1", logEvent1["_http_x_forwarded_for"])
 				assert.Equal(t, "for=127.0.0.1", logEvent1["_http_forwarded"])
 
-				require.Len(t, logEvent2, 23)
+				require.Len(t, logEvent2, 22)
 				assert.Equal(t, "info", logEvent2["level"])
 				assert.Contains(t, logEvent2, "_tx_start")
 				assert.Contains(t, logEvent2, "_tx_duration_ms")
@@ -170,7 +169,6 @@ func TestHandlerExecution(t *testing.T) {
 				assert.Equal(t, "TX finished", logEvent2["message"])
 				assert.Equal(t, "https", logEvent1["_http_x_forwarded_proto"])
 				assert.Equal(t, "foobar.com", logEvent1["_http_x_forwarded_host"])
-				assert.Equal(t, "/bar", logEvent1["_http_x_forwarded_path"])
 				assert.Equal(t, "https://foobar.com/bar", logEvent1["_http_x_forwarded_uri"])
 				assert.Equal(t, "127.0.0.1", logEvent1["_http_x_forwarded_for"])
 				assert.Equal(t, "for=127.0.0.1", logEvent1["_http_forwarded"])
