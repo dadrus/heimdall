@@ -16,7 +16,7 @@ This document describes a very simple use case in which you'll see heimdall's De
 
 == Prerequisites
 
-* link:{{< relref "/docs/operations/install.adoc" >}}[Download Heimdall] in your flavor.
+* link:{{< relref "/docs/operations/installation.adoc" >}}[Download Heimdall] in your flavor.
 * https://docs.docker.com/install/[Docker], https://podman.io/[Podman], or other container runtime of your choice (examples are however using docker) (optionally) and
 * https://docs.docker.com/compose/install/[docker-compose] (optionally)
 
