@@ -2,7 +2,7 @@
 title: "Core Concepts"
 date: 2023-11-29T22:06:28+02:00
 draft: false
-weight: 10
+weight: 6
 menu:
   docs:
     parent: "Introduction"

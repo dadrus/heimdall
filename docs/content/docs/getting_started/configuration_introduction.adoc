@@ -2,11 +2,11 @@
 title: "Configuration Introduction"
 date: 2022-07-08T09:16:36+02:00
 draft: false
-weight: 17
+weight: 100
 menu:
   docs:
     parent: "Getting Started"
-    weight: 40
+    weight: 50
 description: Explains available configuration options.
 ---
 

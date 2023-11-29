@@ -2,7 +2,7 @@
 title: "Observability"
 date: 2022-08-03T18:53:31+02:00
 draft: false
-weight: 21
+weight: 12
 menu:
   docs:
     weight: 30

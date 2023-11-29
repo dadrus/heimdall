@@ -2,7 +2,7 @@
 title: "Security"
 date: 2022-08-15T08:33:35+02:00
 draft: false
-weight: 22
+weight: 13
 menu:
   docs:
     weight: 40
