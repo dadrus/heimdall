@@ -2,10 +2,10 @@
 title: "Rule"
 date: 2022-06-09T22:13:32+02:00
 draft: false
-weight: 100
+weight: 61
 menu:
   docs:
-    weight: 15
+    weight: 1
     parent: "Rules"
 ---
 
@@ -250,7 +250,7 @@ The version schema of the `RuleSet`. The current version of heimdall supports on
 +
 The name of a rule set. Used only for logging purposes.
 
-* *`rules`*: _link:{{< relref "configuration.adoc#_rule_configuration" >}}[Rule Configuration] array_ (mandatory)
+* *`rules`*: _link:{{< relref "#_rule_configuration" >}}[Rule Configuration] array_ (mandatory)
 +
 List of the actual rules.
 

@@ -2,10 +2,10 @@
 title: "Decision"
 date: 2022-06-09T18:55:36+02:00
 draft: false
-weight: 35
+weight: 31
 menu: 
   docs:
-    weight: 5
+    weight: 1
     parent: "Services"
 ---
 

@@ -2,20 +2,20 @@
 title: "Rule Providers"
 date: 2022-06-09T22:13:54+02:00
 draft: false
-weight: 110
+weight: 63
 menu:
   docs:
-    weight: 30
+    weight: 3
     parent: "Rules"
 ---
 
-Providers define the sources to load the link:{{< relref "configuration.adoc#_rule_set" >}}[Rule Sets] from. These make heimdall's behavior dynamic. All providers, you want to enable for a heimdall instance must be configured within the `providers` section of heimdall's configuration.
+Providers define the sources to load the link:{{< relref "rule.adoc#_rule_set" >}}[Rule Sets] from. These make heimdall's behavior dynamic. All providers, you want to enable for a heimdall instance must be configured within the `providers` section of heimdall's configuration.
 
 Supported providers, including the corresponding configuration options are described below
 
 == Filesystem
 
-The filesystem provider allows loading of rule sets in a format defined in link:{{< relref "configuration.adoc#_rule_set" >}}[Rule Sets] from a file system. The configuration of this provider goes into the `file_system` property. This provider is handy for e.g. starting playing around with heimdall, e.g. locally, or using a container runtime, as well as if your deployment strategy considers deploying a heimdall instance as a Side-Car for each of your services.
+The filesystem provider allows loading of rule sets in a format defined in link:{{< relref "rule.adoc#_rule_set" >}}[Rule Sets] from a file system. The configuration of this provider goes into the `file_system` property. This provider is handy for e.g. starting playing around with heimdall, e.g. locally, or using a container runtime, as well as if your deployment strategy considers deploying a heimdall instance as a Side-Car for each of your services.
 
 Following configuration options are supported:
 
@@ -29,7 +29,7 @@ Whether the configured `src` should be watched for updates. Defaults to `false`.
 
 * *`env_vars_enabled`*: _boolean_ (optional)
 +
-Whether to enable environment variables access in the rule set files. Defaults to `false`. If set to `true`, environment variables usage using Bash syntax is possible as with the link:{{< relref "/docs/getting_started/configuration.adoc#_configuration_file" >}}[static configuration].
+Whether to enable environment variables access in the rule set files. Defaults to `false`. If set to `true`, environment variables usage using Bash syntax is possible as with the link:{{< relref "/docs/getting_started/rules.adoc#_configuration_file" >}}[static configuration].
 +
 WARNING: All environment variables, used in the rule set files must be known in advance to the heimdall process (when it starts). In addition, the usage of that functionality might lead to security issues. If an adversary is somehow able to add new or update existing rule sets, it would be theoretically able exfiltrating environment variables available to the heimdall process by crafting contextualizers or authorizers, which would forward the corresponding values to a controlled service. So, use with caution, disable the watching of rule set updates and try to avoid!
 +
@@ -73,11 +73,11 @@ file_system:
 
 == HTTP Endpoint
 
-This provider allows loading of rule sets in a format defined in link:{{< relref "configuration.adoc#_rule_set" >}}[Rule Sets] from any remote endpoint accessible via HTTP(s) and supports rule sets in YAML, as well as in JSON format. The differentiation happens based on the `Content-Type` set in the response from the endpoint, which must be either `application/yaml` or `application/json`, otherwise an error is logged and the response from the endpoint is ignored.
+This provider allows loading of rule sets in a format defined in link:{{< relref "rule.adoc#_rule_set" >}}[Rule Sets] from any remote endpoint accessible via HTTP(s) and supports rule sets in YAML, as well as in JSON format. The differentiation happens based on the `Content-Type` set in the response from the endpoint, which must be either `application/yaml` or `application/json`, otherwise an error is logged and the response from the endpoint is ignored.
 
 The loading and removal of rules happens as follows:
 
-* if the response status code is an HTTP 200 OK and contains a link:{{< relref "configuration.adoc#_rule_set" >}}[Rule Sets] in a known format (see above), the corresponding rules are loaded (if the definitions are valid)
+* if the response status code is an HTTP 200 OK and contains a link:{{< relref "rule.adoc#_rule_set" >}}[Rule Sets] in a known format (see above), the corresponding rules are loaded (if the definitions are valid)
 * in case of network issues, like dns errors, timeouts and alike, the rule sets previously received from the corresponding endpoints are preserved.
 * in any other case related to network communication (e.g. not 200 status code, empty response body, unsupported format, network issues, etc.), the corresponding rules are removed if these were previously loaded.
 
@@ -143,7 +143,7 @@ http_endpoint:
 
 == Cloud Blob
 
-This provider allows loading of rule sets in a format defined in link:{{< relref "configuration.adoc#_rule_set" >}}[Rule Sets] from cloud blobs, like AWS S3 buckets, Google Cloud Storage, Azure Blobs, or other API compatible implementations and supports rule sets in YAML, as well as in JSON format. The differentiation happens based on the `Content-Type` set in the metadata of the loaded blob, which must be either `application/yaml` or `application/json`, otherwise an error is logged and the blob is ignored.
+This provider allows loading of rule sets in a format defined in link:{{< relref "rule.adoc#_rule_set" >}}[Rule Sets] from cloud blobs, like AWS S3 buckets, Google Cloud Storage, Azure Blobs, or other API compatible implementations and supports rule sets in YAML, as well as in JSON format. The differentiation happens based on the `Content-Type` set in the metadata of the loaded blob, which must be either `application/yaml` or `application/json`, otherwise an error is logged and the blob is ignored.
 
 The loading and removal of rules happens as follows:
 
@@ -308,7 +308,7 @@ The name of a rule set.
 +
 References the heimdall instance, which should use this `RuleSet`.
 
-* *`rules`*: _link:{{< relref "configuration.adoc#_rule_configuration" >}}[Rule Configuration] array_ (mandatory)
+* *`rules`*: _link:{{< relref "rule.adoc#_rule_configuration" >}}[Rule Configuration] array_ (mandatory)
 +
 List of the actual rules.
 

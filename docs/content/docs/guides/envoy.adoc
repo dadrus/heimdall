@@ -2,7 +2,7 @@
 title: "Envoy Integration"
 date: 2022-12-18T00:13:59+02:00
 draft: false
-weight: 27
+weight: 93
 menu:
   docs:
     parent: "Guides"

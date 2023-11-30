@@ -2,10 +2,10 @@
 title: "Error Handlers"
 date: 2022-06-09T18:57:29+02:00
 draft: false
-weight: 95
+weight: 55
 menu:
   docs:
-    weight: 50
+    weight: 5
     parent: "Mechanisms"
 ---
 

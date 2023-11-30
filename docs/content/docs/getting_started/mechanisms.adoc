@@ -2,11 +2,11 @@
 title: "What are Mechanisms?"
 date: 2022-11-29T22:31:36+02:00
 draft: false
-weight: 22
+weight: 23
 menu:
   docs:
     parent: "Getting Started"
-    weight: 15
+    weight: 3
 description: The building blocks of the request pipeline.
 ---
 
@@ -68,7 +68,7 @@ mechanisms:
 
 The above snippet configures two instances of an imaginary authenticator of a type `bar`, made available for usage in rules via ids `foo` and `zab`, as well as two instances of an imaginary authenticator of a type `bla`, made available for usage in rule via ids `baz` and `oof`. The `baz` and `oof` authenticators are different, as they are configured differently, but `foo` and `zab` authenticators do not have any configuration. So, they behave the same way and there is actually no need to define two instances of them.
 
-In simplest case a rule will just reuse mechanisms in its pipeline. In more complex cases a rule can reconfigure parts of it (More about rules configuration can be found link:{{< relref "/docs/rules/configuration.adoc" >}}[here]). Which parts can be reconfigured, respectively overridden are mechanism specific and described in the mechanism specific documentation. Reconfiguration is always limited to the particular rule pipeline and does not affect other rules.
+In simplest case a rule will just reuse mechanisms in its pipeline. In more complex cases a rule can reconfigure parts of it (More about rules configuration can be found link:{{< relref "/docs/rules/rule.adoc" >}}[here]). Which parts can be reconfigured, respectively overridden are mechanism specific and described in the mechanism specific documentation. Reconfiguration is always limited to the particular rule pipeline and does not affect other rules.
 
 Here is an example which configures a couple of mechanisms:
 

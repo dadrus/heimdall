@@ -2,10 +2,10 @@
 title: "Observability"
 date: 2022-08-03T18:53:31+02:00
 draft: false
-weight: 12
+weight: 13
 menu:
   docs:
-    weight: 30
+    weight: 3
     identifier: observability_and_operations
     parent: "Operations"
 ---

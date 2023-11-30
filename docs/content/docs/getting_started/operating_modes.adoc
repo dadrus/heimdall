@@ -2,10 +2,10 @@
 title: "Operating Modes"
 date: 2022-11-29T22:29:36+02:00
 draft: false
-weight: 21
+weight: 22
 menu:
   docs:
     parent: "Getting Started"
-    weight: 10
+    weight: 2
 description: The service modes, heimdall can be operated in.
 ---

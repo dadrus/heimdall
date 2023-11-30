@@ -2,10 +2,10 @@
 title: "CLI"
 date: 2022-06-09T18:57:50+02:00
 draft: false
-weight: 11
+weight: 12
 menu:
   docs:
-    weight: 20
+    weight: 2
     identifier: cli_overview
     parent: "Operations"
 ---

@@ -2,10 +2,10 @@
 title: "Proxy"
 date: 2022-06-09T18:55:45+02:00
 draft: false
-weight: 40
+weight: 32
 menu:
   docs:
-    weight: 6
+    weight: 2
     parent: "Services"
 ---
 

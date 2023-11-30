@@ -2,10 +2,10 @@
 title: "Types"
 date: 2022-06-09T18:56:56+02:00
 draft: false
-weight: 139
+weight: 71
 menu:
   docs:
-    weight: 10
+    weight: 1
     parent: "Configuration"
 ---
 

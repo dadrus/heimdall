@@ -2,11 +2,11 @@
 title: "What are Rules?"
 date: 2022-11-29T22:33:36+02:00
 draft: false
-weight: 23
+weight: 24
 menu:
   docs:
     parent: "Getting Started"
-    weight: 20
+    weight: 4
 description: The pipeline definitions.
 ---
 
@@ -20,7 +20,7 @@ All rule specific static configuration, including the definition of the aforesai
 In general, following aspects are important when dealing with rules:
 
 * link:{{< relref "/docs/getting_started/mechanisms.adoc" >}}[Pipeline Mechanisms], which build the foundation of each and every possible pipeline defined by any single rule.
-* link:{{< relref "configuration.adoc" >}}[Rule], which assembles the individual pipeline by making use of previously defined link:{{< relref "/docs/getting_started/mechanisms.adoc" >}}[mechanisms] and which is executed, when the rule matches the request. For the purpose of the latter, it also defines the url patterns.
+* link:{{< relref "/docs/rules/rule.adoc" >}}[Rule], which assembles the individual pipeline by making use of previously defined link:{{< relref "/docs/getting_started/mechanisms.adoc" >}}[mechanisms] and which is executed, when the rule matches the request. For the purpose of the latter, it also defines the url patterns.
 * link:{{< relref "default_rule.adoc" >}}[Default Rule], which, if defined, is executed if no other rule matched the request.
 * link:{{< relref "providers.adoc" >}}[Rule Providers], which load the rules from different sources.
 

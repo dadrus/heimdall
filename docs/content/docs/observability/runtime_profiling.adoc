@@ -2,10 +2,10 @@
 title: "Runtime Profiling"
 date: 2023-01-18T19:21:48+02:00
 draft: false
-weight: 65
+weight: 84
 menu:
   docs:
-    weight: 40
+    weight: 4
     parent: "Observability"
 ---
 

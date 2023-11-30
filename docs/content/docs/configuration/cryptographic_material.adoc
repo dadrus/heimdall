@@ -2,10 +2,10 @@
 title: "Cryptographic Material"
 date: 2022-08-15T06:47:22+02:00
 draft: false
-weight: 130
+weight: 73
 menu:
   docs:
-    weight: 45
+    weight: 3
     parent: "Configuration"
 ---
 

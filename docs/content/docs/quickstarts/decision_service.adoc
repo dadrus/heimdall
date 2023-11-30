@@ -2,11 +2,11 @@
 title: "Decision Service"
 date: 2022-06-08T20:43:27+02:00
 draft: false
-weight: 101
+weight: 41
 menu:
   docs:
     parent: "Quickstarts"
-    weight: 30
+    weight: 1
   main:
     parent: get_started
 description: Describes a very simple use case in which you'll see heimdall's Decision service in action.

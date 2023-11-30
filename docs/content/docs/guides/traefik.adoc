@@ -2,7 +2,7 @@
 title: "Traefik Proxy Integration"
 date: 2022-06-09T18:59:49+02:00
 draft: false
-weight: 31
+weight: 97
 menu:
   docs:
     parent: "Guides"

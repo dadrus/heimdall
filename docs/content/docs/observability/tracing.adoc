@@ -2,10 +2,10 @@
 title: "Tracing"
 date: 2022-06-09T18:56:12+02:00
 draft: false
-weight: 60
+weight: 83
 menu:
   docs:
-    weight: 30
+    weight: 3
     parent: "Observability"
 ---
 
