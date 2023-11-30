@@ -9,7 +9,7 @@ menu:
     parent: "Mechanisms"
 ---
 
-Contextualizers enrich the information about the link:{{< relref "overview.adoc#_subject" >}}[`Subject`] obtained via an authenticator mechanism with further information, required by either the endpoint of the upstream service itself or an authorizer mechanism. This can be handy if the actual authentication system doesn't have all information about the subject (which is usually the case in microservice architectures), or if dynamic information about the subject, like the current location based on the IP address, is required.
+Contextualizers enrich the information about the link:{{< relref "/docs/getting_started/mechanisms.adoc#_subject" >}}[`Subject`] obtained via an authenticator mechanism with further information, required by either the endpoint of the upstream service itself or an authorizer mechanism. This can be handy if the actual authentication system doesn't have all information about the subject (which is usually the case in microservice architectures), or if dynamic information about the subject, like the current location based on the IP address, is required.
 
 == Contextualizer Types
 
@@ -17,7 +17,7 @@ AThe following sections describe the available contextualizer types in more deta
 
 === Generic
 
-This mechanism allows you to communicate to any API you want to fetch further information about the subject. Typical scenario is getting specific attributes for later authorization purposes which are not known to the authentication system and thus were not made available in link:{{< relref "overview.adoc#_subject" >}}[`Subject's`] `Attributes` property. If the API responses with a 2xx HTTP response code, the payload is made available in the `Attributes` property of the `Subject`, otherwise, if not overridden, an error is thrown and the execution of the regular pipeline stops. To avoid overwriting of existing attributes, this object is however not available on the top level, but under a key named by the `id` of the authorizer (See also the example below). If the `Content-Type` of the response is either ending with `json` or is `application/x-www-form-urlencoded`, the payload is decoded and made available as map, otherwise it is treated as string, but, as written above, is made available as well.
+This mechanism allows you to communicate to any API you want to fetch further information about the subject. Typical scenario is getting specific attributes for later authorization purposes which are not known to the authentication system and thus were not made available in link:{{< relref "/docs/getting_started/mechanisms.adoc#_subject" >}}[`Subject's`] `Attributes` property. If the API responses with a 2xx HTTP response code, the payload is made available in the `Attributes` property of the `Subject`, otherwise, if not overridden, an error is thrown and the execution of the regular pipeline stops. To avoid overwriting of existing attributes, this object is however not available on the top level, but under a key named by the `id` of the authorizer (See also the example below). If the `Content-Type` of the response is either ending with `json` or is `application/x-www-form-urlencoded`, the payload is decoded and made available as map, otherwise it is treated as string, but, as written above, is made available as well.
 
 To enable the usage of this contextualizer, you have to set the `type` property to `generic`.
 
@@ -25,7 +25,7 @@ Configuration using the `config` property is mandatory. Following properties are
 
 * *`endpoint`*: _link:{{< relref "/docs/configuration/types.adoc#_endpoint">}}[Endpoint]_ (mandatory, not overridable)
 +
-The API of the service providing additional attributes about the authenticated user. At least the `url` must be configured. This mechanism allows templating of the url and makes the link:{{< relref "overview.adoc#_subject" >}}[`Subject`] object, as well as the link:{{< relref "overview.adoc#_values" >}}[`Values`] (see also below) objects available to it. By default, this contextualizer will use HTTP `POST` to send the rendered payload to this endpoint. You can override this behavior by configuring `method` as well. Depending on the API requirements of the system, this contextualizer should communicate to, you might need to configure further properties, like headers, etc.
+The API of the service providing additional attributes about the authenticated user. At least the `url` must be configured. This mechanism allows templating of the url and makes the link:{{< relref "/docs/getting_started/mechanisms.adoc#_subject" >}}[`Subject`] object, as well as the link:{{< relref "/docs/getting_started/mechanisms.adoc#_values" >}}[`Values`] (see also below) objects available to it. By default, this contextualizer will use HTTP `POST` to send the rendered payload to this endpoint. You can override this behavior by configuring `method` as well. Depending on the API requirements of the system, this contextualizer should communicate to, you might need to configure further properties, like headers, etc.
 
 * *`forward_headers`*: _string array_ (optional, overridable)
 +
@@ -37,7 +37,7 @@ If the API requires any cookies from the request to heimdall, you can forward th
 
 * *`payload`*: _string_ (optional, overridable)
 +
-Your link:{{< relref "overview.adoc#_templating" >}}[template] with definitions required to communicate to the endpoint. The template can make use of link:{{< relref "overview.adoc#_values" >}}[`Values`], link:{{< relref "overview.adoc#_subject" >}}[`Subject`] and link:{{< relref "overview.adoc#_request" >}}[`Request`] objects.
+Your link:{{< relref "/docs/getting_started/mechanisms.adoc#_templating" >}}[template] with definitions required to communicate to the endpoint. The template can make use of link:{{< relref "/docs/getting_started/mechanisms.adoc#_values" >}}[`Values`], link:{{< relref "/docs/getting_started/mechanisms.adoc#_subject" >}}[`Subject`] and link:{{< relref "/docs/getting_started/mechanisms.adoc#_request" >}}[`Request`] objects.
 
 * *`cache_ttl`*: _link:{{< relref "/docs/configuration/types.adoc#_duration" >}}[Duration]_ (optional, overridable)
 +
@@ -49,7 +49,7 @@ If set to `true`, allows the pipeline to continue with the execution of the next
 
 * *`values`* _map of strings_ (optional, overridable)
 +
-A key value map, which is made accessible to the template rendering engine as link:{{< relref "overview.adoc#_values" >}}[`Values`] object to render parts of the URL and/or the payload. The actual values in that map can be templated as well with access to the link:{{< relref "overview.adoc#_subject" >}}[`Subject`] and link:{{< relref "overview.adoc#_request" >}}[`Request`] objects.
+A key value map, which is made accessible to the template rendering engine as link:{{< relref "/docs/getting_started/mechanisms.adoc#_values" >}}[`Values`] object to render parts of the URL and/or the payload. The actual values in that map can be templated as well with access to the link:{{< relref "/docs/getting_started/mechanisms.adoc#_subject" >}}[`Subject`] and link:{{< relref "/docs/getting_started/mechanisms.adoc#_request" >}}[`Request`] objects.
 
 .Contextualizer configuration without payload
 ====

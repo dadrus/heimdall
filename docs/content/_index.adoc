@@ -31,7 +31,7 @@ spec:
 
 Create rules for each upstream and path you want to secure, respectively, which deviates from your defaults, loading them from a variety of sources such as Kubernetes custom resources, S3 buckets, any HTTPs endpoints or regular files.
 
-link:{{< relref "/docs/rules/overview.adoc" >}}"[Learn more about rules]
+link:{{< relref "/docs/getting_started/rules.adoc" >}}"[Learn more about rules]
 {{% /seo %}}
 
 {{% seo title="The value you get" %}}

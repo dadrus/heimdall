@@ -9,7 +9,7 @@ menu:
     parent: "Mechanisms"
 ---
 
-Authenticators inspect HTTP requests for presence of authentication objects, like e.g. the presence of a specific cookie. If such objects exist, authenticators verify the related authentication status and obtain information about the corresponding link:{{< relref "overview.adoc#_subject" >}}[subject]. A subject, could be a user, trying to use particular functionality of the upstream service, a machine (if you have machine-2-machine interaction), or something different. Authenticators ensure the subject is authenticated and the information available about it is valid.
+Authenticators inspect HTTP requests for presence of authentication objects, like e.g. the presence of a specific cookie. If such objects exist, authenticators verify the related authentication status and obtain information about the corresponding link:{{< relref "/docs/getting_started/mechanisms.adoc#_subject" >}}[subject]. A subject, could be a user, trying to use particular functionality of the upstream service, a machine (if you have machine-2-machine interaction), or something different. Authenticators ensure the subject is authenticated and the information available about it is valid.
 
 == Authenticator Types
 
@@ -32,7 +32,7 @@ type: unauthorized
 
 === Anonymous
 
-This authenticator just creates a link:{{< relref "overview.adoc#_subject" >}}[`Subject`] object and sets its `ID` to `anonymous` without doing anything else. You can overwrite the value of subject's id by using the optional `config` property.
+This authenticator just creates a link:{{< relref "/docs/getting_started/mechanisms.adoc#_subject" >}}[`Subject`] object and sets its `ID` to `anonymous` without doing anything else. You can overwrite the value of subject's id by using the optional `config` property.
 
 To enable the usage of this authenticator, you have to set the `type` property to `anonymous`.
 
@@ -40,7 +40,7 @@ Configuration using the `config` property is optional. Following properties are 
 
 * *`subject`*: _string_ (optional, overridable)
 +
-Enables setting the `ID` of the created link:{{< relref "overview.adoc#_subject" >}}[`Subject`] object to a custom value.
+Enables setting the `ID` of the created link:{{< relref "/docs/getting_started/mechanisms.adoc#_subject" >}}[`Subject`] object to a custom value.
 
 .Configuration of Anonymous authenticator
 ====
@@ -55,7 +55,7 @@ config:
 
 === Basic Auth
 
-This authenticator verifies the provided credentials according to the HTTP "Basic" authentication scheme, described in https://datatracker.ietf.org/doc/html/rfc7617[RFC 7617]. It does however not challenge the authentication, it only verifies the provided credentials and sets the link:{{< relref "overview.adoc#_subject" >}}[`Subject`] `ID` to the configured user identifier if the authentication succeeds. Otherwise, it raises an error, resulting in the execution of the configured error handlers. The link:{{< relref "error_handlers.adoc#_www_authenticate" >}}["WWW Authenticate"] error handler mechanism can for example be used if the corresponding challenge is required.
+This authenticator verifies the provided credentials according to the HTTP "Basic" authentication scheme, described in https://datatracker.ietf.org/doc/html/rfc7617[RFC 7617]. It does however not challenge the authentication, it only verifies the provided credentials and sets the link:{{< relref "/docs/getting_started/mechanisms.adoc#_subject" >}}[`Subject`] `ID` to the configured user identifier if the authentication succeeds. Otherwise, it raises an error, resulting in the execution of the configured error handlers. The link:{{< relref "error_handlers.adoc#_www_authenticate" >}}["WWW Authenticate"] error handler mechanism can for example be used if the corresponding challenge is required.
 
 To enable the usage of this authenticator, you have to set the `type` property to `basic_auth`.
 
@@ -113,11 +113,11 @@ If the `identity_info_endpoint` API requires any cookies from the request to hei
 
 * *`payload`*: _string_ (optional, not overridable)
 +
-Your link:{{< relref "overview.adoc#_templating" >}}[template] with definitions required to send the extracted authentication data. The template has access to the `AuthenticationData` object only.
+Your link:{{< relref "/docs/getting_started/mechanisms.adoc#_templating" >}}[template] with definitions required to send the extracted authentication data. The template has access to the `AuthenticationData` object only.
 
 * *`subject`*: _link:{{< relref "/docs/configuration/types.adoc#_subject" >}}[Subject]_ (mandatory, not overridable)
 +
-Where to extract the link:{{< relref "overview.adoc#_subject" >}}[`Subject`] information from the identity info endpoint response.
+Where to extract the link:{{< relref "/docs/getting_started/mechanisms.adoc#_subject" >}}[`Subject`] information from the identity info endpoint response.
 
 * *`cache_ttl`*: _link:{{< relref "/docs/configuration/types.adoc#_duration" >}}[Duration]_ (optional, overridable)
 +
@@ -258,7 +258,7 @@ Configures the required claim assertions. Overriding on rule level is possible e
 
 * *`subject`*: _link:{{< relref "/docs/configuration/types.adoc#_subject" >}}[Subject]_ (optional, not overridable)
 +
-Where to extract the link:{{< relref "overview.adoc#_subject" >}}[`Subject`] information from the introspection endpoint response. If not configured `sub` is used to extract the subject `ID` and all attributes from the introspection endpoint response are made available as `Attributes`.
+Where to extract the link:{{< relref "/docs/getting_started/mechanisms.adoc#_subject" >}}[`Subject`] information from the introspection endpoint response. If not configured `sub` is used to extract the subject `ID` and all attributes from the introspection endpoint response are made available as `Attributes`.
 
 * *`cache_ttl`*: _link:{{< relref "/docs/configuration/types.adoc#_duration" >}}[Duration]_ (optional, overridable)
 +
