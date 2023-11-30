@@ -8,7 +8,7 @@ menu:
     parent: "Quickstarts"
     weight: 2
   main:
-    parent: get_started
+    parent: quickstarts
 description: Describes a simple use case in which you'll see heimdall's Proxy service in action.
 ---
 
