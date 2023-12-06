@@ -683,6 +683,24 @@ cache_ttl: 5s`),
 				assert.Contains(t, err.Error(), "has invalid keys: validate_jwk")
 			},
 		},
+		{
+			uc: "prototype with discovery_endpoint",
+			prototypeConfig: []byte(`
+oidc_discovery_endpoint:
+  url: http://test.com
+assertions:
+  allowed_algorithms:
+  - RS256
+cache_ttl: 5s`),
+			assert: func(t *testing.T, err error, prototype *jwtAuthenticator, configured *jwtAuthenticator) {
+				t.Helper()
+
+				// THEN
+				require.NoError(t, err)
+
+				assert.Equal(t, prototype, configured)
+			},
+		},
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
 			pc, err := testsupport.DecodeTestConfig(tc.prototypeConfig)
@@ -721,13 +739,20 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 	}
 
 	var (
-		endpointCalled bool
-		checkRequest   func(req *http.Request)
+		endpointCalled     bool
+		oidcEndpointCalled bool
+		checkRequest       func(req *http.Request)
+		checkOIDCRequest   func(req *http.Request)
 
 		responseHeaders     map[string]string
 		responseContentType string
 		responseContent     []byte
 		responseCode        int
+
+		oidcResponseHeaders     map[string]string
+		oidcResponseContentType string
+		oidcResponseContent     []byte
+		oidcResponseCode        int
 	)
 
 	tenSecondsTTL := 10 * time.Second
@@ -787,7 +812,31 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 
 		w.WriteHeader(responseCode)
 	}))
+
+	oidcDiscoveryDocumentSuccessful, err := createDiscoveryDocument(t, srv.URL, issuer)
+	require.NoError(t, err)
+
+	oidcSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		oidcEndpointCalled = true
+
+		checkOIDCRequest(r)
+
+		for hn, hv := range oidcResponseHeaders {
+			w.Header().Set(hn, hv)
+		}
+
+		if oidcResponseContent != nil {
+			w.Header().Set("Content-Type", oidcResponseContentType)
+			w.Header().Set("Content-Length", strconv.Itoa(len(oidcResponseContent)))
+			_, err := w.Write(oidcResponseContent)
+			require.NoError(t, err)
+		}
+
+		w.WriteHeader(oidcResponseCode)
+	}))
+
 	defer srv.Close()
+	defer oidcSrv.Close()
 
 	for _, tc := range []struct {
 		uc             string
@@ -888,7 +937,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			uc: "with jwks endpoint communication error (dns)",
 			authenticator: &jwtAuthenticator{
 				id:  "auth3",
-				e:   endpoint.Endpoint{URL: "http://heimdall.test.local"},
+				e:   endpoint.Endpoint{URL: "http://jwks.heimdall.test.local"},
 				ttl: &disabledTTL,
 			},
 			configureMocks: func(t *testing.T,
@@ -910,6 +959,39 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				require.ErrorIs(t, err, heimdall.ErrCommunication)
 				require.NotErrorIs(t, err, heimdall.ErrArgument)
 				assert.Contains(t, err.Error(), "JWKS endpoint failed")
+
+				var identifier HandlerIdentifier
+				require.ErrorAs(t, err, &identifier)
+				assert.Equal(t, "auth3", identifier.ID())
+			},
+		},
+		{
+			uc: "with oidc endpoint communication error (dns)",
+			authenticator: &jwtAuthenticator{
+				id:                  "auth3",
+				e:                   endpoint.Endpoint{URL: "http://oidc.heimdall.test.local"},
+				endpointIsDiscovery: true,
+				ttl:                 &disabledTTL,
+			},
+			configureMocks: func(t *testing.T,
+				ctx *heimdallmocks.ContextMock,
+				_ *mocks.CacheMock,
+				ads *mocks2.AuthDataExtractStrategyMock,
+				_ *jwtAuthenticator,
+			) {
+				t.Helper()
+
+				ads.EXPECT().GetAuthData(ctx).Return(jwtSignedWithKeyOnlyJWK, nil)
+			},
+			assert: func(t *testing.T, err error, sub *subject.Subject) {
+				t.Helper()
+
+				assert.False(t, endpointCalled)
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrCommunication)
+				require.NotErrorIs(t, err, heimdall.ErrArgument)
+				assert.Contains(t, err.Error(), "request to openid discovery endpoint failed")
 
 				var identifier HandlerIdentifier
 				require.ErrorAs(t, err, &identifier)
@@ -942,6 +1024,44 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				t.Helper()
 
 				assert.True(t, endpointCalled)
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrCommunication)
+				require.NotErrorIs(t, err, heimdall.ErrArgument)
+				assert.Contains(t, err.Error(), "unexpected response")
+
+				var identifier HandlerIdentifier
+				require.ErrorAs(t, err, &identifier)
+				assert.Equal(t, "auth3", identifier.ID())
+			},
+		},
+		{
+			uc: "with unexpected response code from oidc server",
+			authenticator: &jwtAuthenticator{
+				id:                  "auth3",
+				e:                   endpoint.Endpoint{URL: oidcSrv.URL},
+				endpointIsDiscovery: true,
+				ttl:                 &disabledTTL,
+			},
+			configureMocks: func(t *testing.T,
+				ctx *heimdallmocks.ContextMock,
+				_ *mocks.CacheMock,
+				ads *mocks2.AuthDataExtractStrategyMock,
+				_ *jwtAuthenticator,
+			) {
+				t.Helper()
+
+				ads.EXPECT().GetAuthData(ctx).Return(jwtSignedWithKeyOnlyJWK, nil)
+			},
+			instructServer: func(t *testing.T) {
+				t.Helper()
+
+				oidcResponseCode = http.StatusInternalServerError
+			},
+			assert: func(t *testing.T, err error, sub *subject.Subject) {
+				t.Helper()
+
+				assert.True(t, oidcEndpointCalled)
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrCommunication)
@@ -988,6 +1108,53 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				t.Helper()
 
 				assert.True(t, endpointCalled)
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrInternal)
+				require.NotErrorIs(t, err, heimdall.ErrArgument)
+				assert.Contains(t, err.Error(), "failed to unmarshal")
+
+				var identifier HandlerIdentifier
+				require.ErrorAs(t, err, &identifier)
+				assert.Equal(t, "auth3", identifier.ID())
+			},
+		},
+		{
+			uc: "with oidc discovery document unmarshalling error",
+			authenticator: &jwtAuthenticator{
+				id: "auth3",
+				e: endpoint.Endpoint{
+					URL:     oidcSrv.URL,
+					Headers: map[string]string{"Accept": "application/json"},
+				},
+				endpointIsDiscovery: true,
+				ttl:                 &disabledTTL,
+			},
+			configureMocks: func(t *testing.T,
+				ctx *heimdallmocks.ContextMock,
+				_ *mocks.CacheMock,
+				ads *mocks2.AuthDataExtractStrategyMock,
+				_ *jwtAuthenticator,
+			) {
+				t.Helper()
+
+				ads.EXPECT().GetAuthData(ctx).Return(jwtSignedWithKeyOnlyJWK, nil)
+			},
+			instructServer: func(t *testing.T) {
+				t.Helper()
+
+				checkOIDCRequest = func(req *http.Request) {
+					assert.Equal(t, "application/json", req.Header.Get("Accept"))
+				}
+
+				oidcResponseCode = http.StatusOK
+				oidcResponseContent = []byte(`Hello Foo`)
+				oidcResponseContentType = "text/text"
+			},
+			assert: func(t *testing.T, err error, sub *subject.Subject) {
+				t.Helper()
+
+				assert.True(t, oidcEndpointCalled)
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrInternal)
@@ -1230,6 +1397,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				assert.Equal(t, "auth3", identifier.ID())
 			},
 		},
+
 		{
 			uc: "successful with positive cache hit",
 			authenticator: &jwtAuthenticator{
@@ -1397,6 +1565,80 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				responseCode = http.StatusOK
 				responseContent = jwksWithOneEntryWithKeyOnlyAndOneWithCertificate
 				responseContentType = "application/json"
+			},
+			assert: func(t *testing.T, err error, sub *subject.Subject) {
+				t.Helper()
+
+				assert.True(t, endpointCalled)
+
+				require.NoError(t, err)
+
+				require.NotNil(t, sub)
+				assert.Equal(t, subjectID, sub.ID)
+				assert.Len(t, sub.Attributes, 8)
+				assert.Len(t, sub.Attributes["aud"], 1)
+				assert.Contains(t, sub.Attributes["aud"], audience)
+				assert.Contains(t, sub.Attributes, "exp")
+				assert.Contains(t, sub.Attributes, "iat")
+				assert.Contains(t, sub.Attributes, "nbf")
+				assert.Equal(t, issuer, sub.Attributes["iss"])
+				assert.Contains(t, sub.Attributes["scp"], "foo")
+				assert.Contains(t, sub.Attributes["scp"], "bar")
+				assert.Equal(t, subjectID, sub.Attributes["sub"])
+			},
+		},
+		{
+			uc: "successful without cache hit using key & cert with disabled jwk validation and oidc discovery",
+			authenticator: &jwtAuthenticator{
+				e: endpoint.Endpoint{
+					URL:     oidcSrv.URL,
+					Headers: map[string]string{"Accept": "application/json"},
+				},
+				endpointIsDiscovery: true,
+				a: oauth2.Expectation{
+					AllowedAlgorithms: []string{"ES384"},
+					ScopesMatcher:     oauth2.ExactScopeStrategyMatcher{},
+				},
+				sf:  &SubjectInfo{IDFrom: "sub"},
+				ttl: &tenSecondsTTL,
+			},
+			configureMocks: func(t *testing.T,
+				ctx *heimdallmocks.ContextMock,
+				cch *mocks.CacheMock,
+				ads *mocks2.AuthDataExtractStrategyMock,
+				auth *jwtAuthenticator,
+			) {
+				t.Helper()
+
+				cacheKey := auth.calculateCacheKey(kidKeyWithCert)
+
+				var jwks jose.JSONWebKeySet
+				err := json.Unmarshal(jwksWithOneEntryWithKeyOnlyAndOneWithCertificate, &jwks)
+				require.NoError(t, err)
+
+				keys := jwks.Key(kidKeyWithCert)
+
+				ads.EXPECT().GetAuthData(ctx).Return(jwtSignedWithKeyAndCertJWK, nil)
+				cch.EXPECT().Get(mock.Anything, cacheKey).Return(nil)
+				cch.EXPECT().Set(mock.Anything, cacheKey, &keys[0], *auth.ttl)
+			},
+			instructServer: func(t *testing.T) {
+				t.Helper()
+
+				checkRequest = func(req *http.Request) {
+					assert.Equal(t, "application/json", req.Header.Get("Accept"))
+				}
+				checkOIDCRequest = func(req *http.Request) {
+					assert.Equal(t, "application/json", req.Header.Get("Accept"))
+				}
+
+				responseCode = http.StatusOK
+				responseContent = jwksWithOneEntryWithKeyOnlyAndOneWithCertificate
+				responseContentType = "application/json"
+
+				oidcResponseCode = http.StatusOK
+				oidcResponseContent = oidcDiscoveryDocumentSuccessful
+				oidcResponseContentType = "application/json"
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
@@ -1814,8 +2056,16 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			responseHeaders = nil
 			responseContentType = ""
 			responseContent = nil
+			responseCode = 0
+
+			oidcEndpointCalled = false
+			oidcResponseHeaders = nil
+			oidcResponseContentType = ""
+			oidcResponseContent = nil
+			oidcResponseCode = 0
 
 			checkRequest = func(*http.Request) { t.Helper() }
+			checkOIDCRequest = func(*http.Request) { t.Helper() }
 
 			instructServer := x.IfThenElse(tc.instructServer != nil,
 				tc.instructServer,
@@ -1911,6 +2161,14 @@ func createKS(t *testing.T) keystore.KeyStore {
 	return ks
 }
 
+func createDiscoveryDocument(t *testing.T, jwksUrl, issuer string) ([]byte, error) {
+	t.Helper()
+	return json.Marshal(map[string]string{
+		"jwks_uri": jwksUrl,
+		"issuer":   issuer,
+	})
+}
+
 func createJWT(t *testing.T, keyEntry *keystore.Entry, subject, issuer, audience string, setKid bool) string {
 	t.Helper()
 
@@ -1936,7 +2194,8 @@ func createJWT(t *testing.T, keyEntry *keystore.Entry, subject, issuer, audience
 		"jti": "foo",
 		"iat": time.Now().Unix() - 1,
 		"nbf": time.Now().Unix() - 1,
-		"exp": time.Now().Unix() + 2,
+		// expiry should be generous in case some things take longer than expected (e.g. dns/http)
+		"exp": time.Now().Unix() + 60,
 		"aud": []string{audience},
 		"scp": []string{"foo", "bar"},
 	})

@@ -346,7 +346,7 @@ func (a *jwtAuthenticator) resolveOpenIdDiscovery(ctx heimdall.Context, token *j
 
 	// Provide the "JWT" object to the render func template, so we can use it.
 	tokenData := map[string]any{}
-	if err := token.UnsafeClaimsWithoutVerification(tokenData); err != nil {
+	if err := token.UnsafeClaimsWithoutVerification(&tokenData); err != nil {
 		return nil, nil, errorchain.NewWithMessage(heimdall.ErrArgument, "failed to deserialize JWT").
 			WithErrorContext(a).
 			CausedBy(err)
