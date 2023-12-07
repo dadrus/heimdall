@@ -813,7 +813,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 		w.WriteHeader(responseCode)
 	}))
 
-	oidcDiscoveryDocumentSuccessful, err := createDiscoveryDocument(t, srv.URL, issuer)
+	oidcDiscoveryDocumentSuccessful, err := createDiscoveryDocumentJWKS(t, srv.URL, issuer)
 	require.NoError(t, err)
 
 	oidcSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -2161,7 +2161,7 @@ func createKS(t *testing.T) keystore.KeyStore {
 	return ks
 }
 
-func createDiscoveryDocument(t *testing.T, jwksUrl, issuer string) ([]byte, error) {
+func createDiscoveryDocumentJWKS(t *testing.T, jwksUrl, issuer string) ([]byte, error) {
 	t.Helper()
 	return json.Marshal(map[string]string{
 		"jwks_uri": jwksUrl,

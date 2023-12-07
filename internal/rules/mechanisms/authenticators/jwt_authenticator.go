@@ -425,9 +425,12 @@ func (a *jwtAuthenticator) resolveOpenIdDiscovery(ctx heimdall.Context, token *j
 		Headers:          a.e.Headers,
 	}
 
+	// We do only need to check for the issuer here
+	// While it would theoretically be possible to also check for the algorithms,
+	// token validation will fail anyway because no key for an unsupported algorithm would be present
+	// so it doesn't make sense to double check these.
 	oidcIssuer := &oauth2.Expectation{
 		TrustedIssuers: []string{discovery.Issuer},
-		// TODO: AllowedAlgorithms
 	}
 	assertions := oidcIssuer.Merge(&a.a)
 

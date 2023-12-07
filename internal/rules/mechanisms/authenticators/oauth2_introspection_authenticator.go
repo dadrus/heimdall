@@ -272,6 +272,8 @@ func (a *oauth2IntrospectionAuthenticator) resolveOpenIdDiscovery(ctx heimdall.C
 
 	// a.e is the OIDC discovery URL here
 
+	// TODO: does it make sense to *try* and run a JWT decode here?
+
 	req, err := a.e.CreateRequest(ctx.AppContext(), nil, nil)
 
 	if err != nil {
@@ -301,7 +303,7 @@ func (a *oauth2IntrospectionAuthenticator) resolveOpenIdDiscovery(ctx heimdall.C
 
 	if !(resp.StatusCode >= http.StatusOK && resp.StatusCode < http.StatusMultipleChoices) {
 		return nil, nil, errorchain.
-			NewWithMessagef(heimdall.ErrCommunication, "unexpected response. code: %v", resp.StatusCode).
+			NewWithMessagef(heimdall.ErrCommunication, "unexpected response code: %v", resp.StatusCode).
 			WithErrorContext(a)
 	}
 
@@ -325,16 +327,19 @@ func (a *oauth2IntrospectionAuthenticator) resolveOpenIdDiscovery(ctx heimdall.C
 	// TODO: check if it makes sense to copy these from the discovery
 	ep := &endpoint.Endpoint{
 		URL:              discovery.IntrospectionEndpoint,
-		Method:           "GET",
+		Method:           "POST", // OAuth introspection endpoint is *always* HTTP POST
 		Retry:            a.e.Retry,
 		AuthStrategy:     a.e.AuthStrategy,
 		HTTPCacheEnabled: a.e.HTTPCacheEnabled,
 		Headers:          a.e.Headers,
 	}
 
+	// We do only need to check for the issuer here
+	// While it would theoretically be possible to also check for the algorithms,
+	// token validation will fail anyway because no key for an unsupported algorithm would be present
+	// so it doesn't make sense to double check these.
 	oidcIssuer := &oauth2.Expectation{
 		TrustedIssuers: []string{discovery.Issuer},
-		// TODO: AllowedAlgorithms
 	}
 	assertions := oidcIssuer.Merge(&a.a)
 
