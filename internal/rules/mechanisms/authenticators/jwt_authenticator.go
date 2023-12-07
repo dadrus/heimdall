@@ -79,8 +79,8 @@ type jwtAuthenticator struct {
 
 func newJwtAuthenticator(id string, rawConfig map[string]any) (*jwtAuthenticator, error) { // nolint: funlen
 	type Config struct {
-		JWKSEndpoint         *endpoint.Endpoint                  `mapstructure:"jwks_endpoint"           validate:"required_without=DiscoveryEndpoint,excluded_with=DiscoveryEndpoint"`
-		DiscoveryEndpoint    *endpoint.Endpoint                  `mapstructure:"oidc_discovery_endpoint" validate:"required_without=JWKSEndpoint,excluded_with=JWKSEndpoint"`
+		JWKSEndpoint         *endpoint.Endpoint                  `mapstructure:"jwks_endpoint"           validate:"required_without=DiscoveryEndpoint,excluded_with=DiscoveryEndpoint"` //nolint:lll
+		DiscoveryEndpoint    *endpoint.Endpoint                  `mapstructure:"oidc_discovery_endpoint" validate:"required_without=JWKSEndpoint,excluded_with=JWKSEndpoint"`           //nolint:lll
 		Assertions           oauth2.Expectation                  `mapstructure:"assertions"              validate:"required"`
 		SubjectInfo          SubjectInfo                         `mapstructure:"subject"                 validate:"-"`
 		AuthDataSource       extractors.CompositeExtractStrategy `mapstructure:"jwt_source"`
@@ -297,7 +297,7 @@ func (a *jwtAuthenticator) verifyTokenWithoutKID(ctx heimdall.Context, token *jw
 
 	var rawClaims json.RawMessage
 
-	ep, assertions, err := a.resolveOpenIdDiscovery(ctx, token)
+	ep, assertions, err := a.resolveOpenIDDiscovery(ctx, token)
 	if err != nil {
 		return nil, errorchain.
 			NewWithMessage(heimdall.ErrInternal, "failed to resolve OIDC discovery document").
@@ -336,7 +336,9 @@ func (a *jwtAuthenticator) verifyTokenWithoutKID(ctx heimdall.Context, token *jw
 	return rawClaims, nil
 }
 
-func (a *jwtAuthenticator) resolveOpenIdDiscovery(ctx heimdall.Context, token *jwt.JSONWebToken) (*endpoint.Endpoint, *oauth2.Expectation, error) {
+func (a *jwtAuthenticator) resolveOpenIDDiscovery(
+	ctx heimdall.Context, token *jwt.JSONWebToken,
+) (*endpoint.Endpoint, *oauth2.Expectation, error) {
 	// the authenticator is configured to not have discovery enabled, so reuse the values.
 	if !a.endpointIsDiscovery {
 		return &a.e, &a.a, nil
@@ -356,63 +358,9 @@ func (a *jwtAuthenticator) resolveOpenIdDiscovery(ctx heimdall.Context, token *j
 		"JWT": tokenData,
 	}
 
-	req, err := a.e.CreateRequest(ctx.AppContext(), nil, endpoint.RenderFunc(func(value string) (string, error) {
-		tpl, err := template.New(value)
-		if err != nil {
-			return "", errorchain.NewWithMessage(heimdall.ErrInternal, "failed to create template").
-				WithErrorContext(a).
-				CausedBy(err)
-		}
-
-		return tpl.Render(templateData)
-	}))
-
+	discovery, err := oidc.FetchDiscoveryDocument(ctx, &a.e, templateData)
 	if err != nil {
-		return nil, nil, errorchain.
-			NewWithMessage(heimdall.ErrInternal, "failed creating openid discovery request").
-			WithErrorContext(a).
-			CausedBy(err)
-	}
-
-	resp, err := a.e.CreateClient(req.URL.Hostname()).Do(req)
-	if err != nil {
-		var clientErr *url.Error
-		if errors.As(err, &clientErr) && clientErr.Timeout() {
-			return nil, nil, errorchain.
-				NewWithMessage(heimdall.ErrCommunicationTimeout, "request to openid discovery endpoint timed out").
-				WithErrorContext(a).
-				CausedBy(err)
-		}
-
-		return nil, nil, errorchain.
-			NewWithMessage(heimdall.ErrCommunication, "request to openid discovery endpoint failed").
-			WithErrorContext(a).
-			CausedBy(err)
-	}
-
-	defer resp.Body.Close()
-
-	if !(resp.StatusCode >= http.StatusOK && resp.StatusCode < http.StatusMultipleChoices) {
-		return nil, nil, errorchain.
-			NewWithMessagef(heimdall.ErrCommunication, "unexpected response. code: %v", resp.StatusCode).
-			WithErrorContext(a)
-	}
-
-	rawData, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, nil, errorchain.
-			NewWithMessage(heimdall.ErrInternal, "failed to read response").
-			WithErrorContext(a).
-			CausedBy(err)
-	}
-
-	// unmarshal the received discovery document
-	var discovery oidc.DiscoveryDocument
-	if err := json.Unmarshal(rawData, &discovery); err != nil {
-		return nil, nil, errorchain.
-			NewWithMessage(heimdall.ErrInternal, "failed to unmarshal received discovery document").
-			WithErrorContext(a).
-			CausedBy(err)
+		return nil, nil, err.WithErrorContext(a)
 	}
 
 	ep := &endpoint.Endpoint{
@@ -436,7 +384,9 @@ func (a *jwtAuthenticator) resolveOpenIdDiscovery(ctx heimdall.Context, token *j
 	return ep, &assertions, nil
 }
 
-func (a *jwtAuthenticator) getKey(ctx heimdall.Context, keyID string, token *jwt.JSONWebToken) (*jose.JSONWebKey, *oauth2.Expectation, error) {
+func (a *jwtAuthenticator) getKey(
+	ctx heimdall.Context, keyID string, token *jwt.JSONWebToken,
+) (*jose.JSONWebKey, *oauth2.Expectation, error) {
 	cch := cache.Ctx(ctx.AppContext())
 	logger := zerolog.Ctx(ctx.AppContext())
 
@@ -449,7 +399,7 @@ func (a *jwtAuthenticator) getKey(ctx heimdall.Context, keyID string, token *jwt
 		ok         bool
 	)
 
-	ep, assertions, err := a.resolveOpenIdDiscovery(ctx, token)
+	ep, assertions, err := a.resolveOpenIDDiscovery(ctx, token)
 	if err != nil {
 		return nil, nil, errorchain.
 			NewWithMessage(heimdall.ErrInternal, "failed to resolve OIDC discovery document").
@@ -520,7 +470,6 @@ func (a *jwtAuthenticator) fetchJWKS(ctx heimdall.Context, ep *endpoint.Endpoint
 
 		return tpl.Render(templateData)
 	}))
-
 	if err != nil {
 		return nil, errorchain.
 			NewWithMessage(heimdall.ErrInternal, "failed creating request").
@@ -577,7 +526,9 @@ func (a *jwtAuthenticator) readJWKS(resp *http.Response) (*jose.JSONWebKeySet, e
 	return &jwks, nil
 }
 
-func (a *jwtAuthenticator) verifyTokenWithKey(token *jwt.JSONWebToken, key *jose.JSONWebKey, assertions *oauth2.Expectation) (json.RawMessage, error) {
+func (a *jwtAuthenticator) verifyTokenWithKey(
+	token *jwt.JSONWebToken, key *jose.JSONWebKey, assertions *oauth2.Expectation,
+) (json.RawMessage, error) {
 	header := token.Headers[0]
 
 	if len(header.Algorithm) != 0 && key.Algorithm != header.Algorithm {

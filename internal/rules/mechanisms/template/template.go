@@ -33,7 +33,10 @@ import (
 	"github.com/dadrus/heimdall/internal/x/stringx"
 )
 
-var ErrTemplateRender = errors.New("template error")
+var (
+	ErrTemplateRender = errors.New("template error")
+	ErrInvalidType    = errors.New("invalid type")
+)
 
 type Template interface {
 	Render(values map[string]any) (string, error)
@@ -94,26 +97,27 @@ func urlEncode(value any) string {
 }
 
 func parseJWT(value any) (interface{}, error) {
-	jwtInput := ""
-	switch t := value.(type) {
+	var jwtInput string
+	switch tp := value.(type) {
 	case string:
-		jwtInput = t
+		jwtInput = tp
 	case fmt.Stringer:
-		jwtInput = t.String()
+		jwtInput = tp.String()
 	default:
-		return nil, fmt.Errorf("cannot parse jwt from type %s", t)
+		return nil, fmt.Errorf("cannot parse jwt from type %s: %w", tp, ErrInvalidType)
 	}
 
 	token, err := jwt.ParseSigned(jwtInput)
 	if err != nil {
-		return nil, fmt.Errorf("jwt parse failed: %v", err)
+		return nil, fmt.Errorf("jwt parse failed: %w", err)
 	}
 
 	// return the claims data as untyped object
 	tokenData := map[string]interface{}{}
 	if err := token.UnsafeClaimsWithoutVerification(&tokenData); err != nil {
-		return nil, fmt.Errorf("failed to decode token claims: %v", err)
+		return nil, fmt.Errorf("failed to decode token claims: %w", err)
 	}
+
 	return tokenData, nil
 }
 

@@ -493,10 +493,11 @@ subject:
 	}
 }
 
-func createDiscoveryDocumentIntrospection(t *testing.T, introspectUrl, issuer string) ([]byte, error) {
+func createDiscoveryDocumentIntrospection(t *testing.T, introspectionURL, issuer string) ([]byte, error) {
 	t.Helper()
+
 	return json.Marshal(map[string]string{
-		"introspection_endpoint": introspectUrl,
+		"introspection_endpoint": introspectionURL,
 		"issuer":                 issuer,
 	})
 }

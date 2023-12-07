@@ -2161,10 +2161,11 @@ func createKS(t *testing.T) keystore.KeyStore {
 	return ks
 }
 
-func createDiscoveryDocumentJWKS(t *testing.T, jwksUrl, issuer string) ([]byte, error) {
+func createDiscoveryDocumentJWKS(t *testing.T, jwksURL, issuer string) ([]byte, error) {
 	t.Helper()
+
 	return json.Marshal(map[string]string{
-		"jwks_uri": jwksUrl,
+		"jwks_uri": jwksURL,
 		"issuer":   issuer,
 	})
 }

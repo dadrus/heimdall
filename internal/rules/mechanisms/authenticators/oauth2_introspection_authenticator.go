@@ -36,7 +36,6 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/oidc"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/oauth2"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/stringx"
@@ -74,8 +73,8 @@ func newOAuth2IntrospectionAuthenticator(id string, rawConfig map[string]any) (
 	error,
 ) {
 	type Config struct {
-		Endpoint          *endpoint.Endpoint `mapstructure:"introspection_endpoint"  validate:"required_without=DiscoveryEndpoint,excluded_with=DiscoveryEndpoint"`
-		DiscoveryEndpoint *endpoint.Endpoint `mapstructure:"discovery_endpoint" validate:"required_without=Endpoint,excluded_with=Endpoint"`
+		Endpoint          *endpoint.Endpoint `mapstructure:"introspection_endpoint"  validate:"required_without=DiscoveryEndpoint,excluded_with=DiscoveryEndpoint"` //nolint:lll,tagalign
+		DiscoveryEndpoint *endpoint.Endpoint `mapstructure:"discovery_endpoint" validate:"required_without=Endpoint,excluded_with=Endpoint"`                        //nolint:lll
 
 		Assertions           oauth2.Expectation                  `mapstructure:"assertions"              validate:"required"`
 		SubjectInfo          SubjectInfo                         `mapstructure:"subject"                 validate:"-"`
@@ -241,7 +240,7 @@ func (a *oauth2IntrospectionAuthenticator) getSubjectInformation(ctx heimdall.Co
 		}
 	}
 
-	ep, assertions, err := a.resolveOpenIdDiscovery(ctx, token)
+	ep, assertions, err := a.resolveOpenIDiscovery(ctx, token)
 	if err != nil {
 		return nil, err
 	}
@@ -265,7 +264,11 @@ func (a *oauth2IntrospectionAuthenticator) getSubjectInformation(ctx heimdall.Co
 	return rawResp, nil
 }
 
-func (a *oauth2IntrospectionAuthenticator) resolveOpenIdDiscovery(ctx heimdall.Context, tokenData string) (*endpoint.Endpoint, *oauth2.Expectation, error) {
+func (a *oauth2IntrospectionAuthenticator) resolveOpenIDiscovery(
+	ctx heimdall.Context, tokenData string,
+) (
+	*endpoint.Endpoint, *oauth2.Expectation, error,
+) {
 	// the authenticator is configured to not have discovery enabled, so reuse the values.
 	if !a.endpointIsDiscovery {
 		return &a.e, &a.a, nil
@@ -279,67 +282,13 @@ func (a *oauth2IntrospectionAuthenticator) resolveOpenIdDiscovery(ctx heimdall.C
 		"Token": tokenData,
 	}
 
-	req, err := a.e.CreateRequest(ctx.AppContext(), nil, endpoint.RenderFunc(func(value string) (string, error) {
-		tpl, err := template.New(value)
-		if err != nil {
-			return "", errorchain.NewWithMessage(heimdall.ErrInternal, "failed to create template").
-				WithErrorContext(a).
-				CausedBy(err)
-		}
-
-		return tpl.Render(templateData)
-	}))
-
+	discoveryDoc, err := oidc.FetchDiscoveryDocument(ctx, &a.e, templateData)
 	if err != nil {
-		return nil, nil, errorchain.
-			NewWithMessage(heimdall.ErrInternal, "failed creating openid discovery request").
-			WithErrorContext(a).
-			CausedBy(err)
-	}
-
-	resp, err := a.e.CreateClient(req.URL.Hostname()).Do(req)
-	if err != nil {
-		var clientErr *url.Error
-		if errors.As(err, &clientErr) && clientErr.Timeout() {
-			return nil, nil, errorchain.
-				NewWithMessage(heimdall.ErrCommunicationTimeout, "request to openid discovery endpoint timed out").
-				WithErrorContext(a).
-				CausedBy(err)
-		}
-
-		return nil, nil, errorchain.
-			NewWithMessage(heimdall.ErrCommunication, "request to openid discovery endpoint failed").
-			WithErrorContext(a).
-			CausedBy(err)
-	}
-
-	defer resp.Body.Close()
-
-	if !(resp.StatusCode >= http.StatusOK && resp.StatusCode < http.StatusMultipleChoices) {
-		return nil, nil, errorchain.
-			NewWithMessagef(heimdall.ErrCommunication, "unexpected response code: %v", resp.StatusCode).
-			WithErrorContext(a)
-	}
-
-	rawData, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, nil, errorchain.
-			NewWithMessage(heimdall.ErrInternal, "failed to read response").
-			WithErrorContext(a).
-			CausedBy(err)
-	}
-
-	// unmarshal the received discovery document
-	var discovery oidc.DiscoveryDocument
-	if err := json.Unmarshal(rawData, &discovery); err != nil {
-		return nil, nil, errorchain.
-			NewWithMessage(heimdall.ErrInternal, "failed to unmarshal received discovery document").
-			WithErrorContext(a).
-			CausedBy(err)
+		return nil, nil, err.WithErrorContext(a)
 	}
 
 	ep := &endpoint.Endpoint{
-		URL:              discovery.IntrospectionEndpoint,
+		URL:              discoveryDoc.IntrospectionEndpoint,
 		Method:           "POST", // OAuth introspection endpoint is *always* HTTP POST
 		Retry:            a.e.Retry,
 		AuthStrategy:     a.e.AuthStrategy,
@@ -352,7 +301,7 @@ func (a *oauth2IntrospectionAuthenticator) resolveOpenIdDiscovery(ctx heimdall.C
 	// token validation will fail anyway because no key for an unsupported algorithm would be present
 	// so it doesn't make sense to double check these.
 	oidcIssuer := &oauth2.Expectation{
-		TrustedIssuers: []string{discovery.Issuer},
+		TrustedIssuers: []string{discoveryDoc.Issuer},
 	}
 	assertions := oidcIssuer.Merge(&a.a)
 
