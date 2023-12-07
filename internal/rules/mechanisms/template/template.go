@@ -26,6 +26,7 @@ import (
 	"text/template"
 
 	"github.com/Masterminds/sprig/v3"
+	"gopkg.in/square/go-jose.v2/jwt"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
@@ -52,8 +53,9 @@ func New(val string) (Template, error) {
 	tmpl, err := template.New("Heimdall").
 		Funcs(funcMap).
 		Funcs(template.FuncMap{
-			"urlenc":  urlEncode,
-			"atIndex": atIndex,
+			"urlenc":   urlEncode,
+			"atIndex":  atIndex,
+			"parseJWT": parseJWT,
 		}).
 		Parse(val)
 	if err != nil {
@@ -89,6 +91,30 @@ func urlEncode(value any) string {
 	default:
 		return ""
 	}
+}
+
+func parseJWT(value any) (interface{}, error) {
+	jwtInput := ""
+	switch t := value.(type) {
+	case string:
+		jwtInput = t
+	case fmt.Stringer:
+		jwtInput = t.String()
+	default:
+		return nil, fmt.Errorf("cannot parse jwt from type %s", t)
+	}
+
+	token, err := jwt.ParseSigned(jwtInput)
+	if err != nil {
+		return nil, fmt.Errorf("jwt parse failed: %v", err)
+	}
+
+	// return the claims data as untyped object
+	tokenData := map[string]interface{}{}
+	if err := token.UnsafeClaimsWithoutVerification(&tokenData); err != nil {
+		return nil, fmt.Errorf("failed to decode token claims: %v", err)
+	}
+	return tokenData, nil
 }
 
 func atIndex(pos int, list interface{}) (interface{}, error) {

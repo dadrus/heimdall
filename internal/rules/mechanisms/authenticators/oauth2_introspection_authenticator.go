@@ -36,6 +36,7 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/oidc"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/oauth2"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/stringx"
@@ -240,7 +241,7 @@ func (a *oauth2IntrospectionAuthenticator) getSubjectInformation(ctx heimdall.Co
 		}
 	}
 
-	ep, assertions, err := a.resolveOpenIdDiscovery(ctx)
+	ep, assertions, err := a.resolveOpenIdDiscovery(ctx, token)
 	if err != nil {
 		return nil, err
 	}
@@ -264,7 +265,7 @@ func (a *oauth2IntrospectionAuthenticator) getSubjectInformation(ctx heimdall.Co
 	return rawResp, nil
 }
 
-func (a *oauth2IntrospectionAuthenticator) resolveOpenIdDiscovery(ctx heimdall.Context) (*endpoint.Endpoint, *oauth2.Expectation, error) {
+func (a *oauth2IntrospectionAuthenticator) resolveOpenIdDiscovery(ctx heimdall.Context, tokenData string) (*endpoint.Endpoint, *oauth2.Expectation, error) {
 	// the authenticator is configured to not have discovery enabled, so reuse the values.
 	if !a.endpointIsDiscovery {
 		return &a.e, &a.a, nil
@@ -272,9 +273,22 @@ func (a *oauth2IntrospectionAuthenticator) resolveOpenIdDiscovery(ctx heimdall.C
 
 	// a.e is the OIDC discovery URL here
 
-	// TODO: does it make sense to *try* and run a JWT decode here?
+	// Pass the token into the template.
+	// parseJWT can be used in the template to access other claims from the token.
+	templateData := map[string]any{
+		"Token": tokenData,
+	}
 
-	req, err := a.e.CreateRequest(ctx.AppContext(), nil, nil)
+	req, err := a.e.CreateRequest(ctx.AppContext(), nil, endpoint.RenderFunc(func(value string) (string, error) {
+		tpl, err := template.New(value)
+		if err != nil {
+			return "", errorchain.NewWithMessage(heimdall.ErrInternal, "failed to create template").
+				WithErrorContext(a).
+				CausedBy(err)
+		}
+
+		return tpl.Render(templateData)
+	}))
 
 	if err != nil {
 		return nil, nil, errorchain.
@@ -324,7 +338,6 @@ func (a *oauth2IntrospectionAuthenticator) resolveOpenIdDiscovery(ctx heimdall.C
 			CausedBy(err)
 	}
 
-	// TODO: check if it makes sense to copy these from the discovery
 	ep := &endpoint.Endpoint{
 		URL:              discovery.IntrospectionEndpoint,
 		Method:           "POST", // OAuth introspection endpoint is *always* HTTP POST

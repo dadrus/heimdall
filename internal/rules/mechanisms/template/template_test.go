@@ -134,3 +134,32 @@ func TestAtIndex(t *testing.T) {
 		})
 	}
 }
+
+func TestParseJWT(t *testing.T) {
+	t.Parallel()
+
+	for _, tc := range []struct {
+		val  any
+		expr string
+		res  string
+		err  string
+	}{
+		{val: "foo", expr: "{{ parseJWT .Token }}", err: "jwt parse failed"},
+		{val: struct{}{}, expr: "{{ parseJWT .Token }}", err: "cannot parse jwt from type"},
+		{val: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c", expr: "{{ get (parseJWT .Token) \"sub\" }}", res: "1234567890"},
+	} {
+		t.Run(tc.expr, func(t *testing.T) {
+			tmpl, err := template.New(tc.expr)
+			require.NoError(t, err)
+
+			res, err := tmpl.Render(map[string]any{"Token": tc.val})
+
+			if len(tc.err) != 0 {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), tc.err)
+			} else {
+				require.Equal(t, tc.res, res)
+			}
+		})
+	}
+}

@@ -415,7 +415,6 @@ func (a *jwtAuthenticator) resolveOpenIdDiscovery(ctx heimdall.Context, token *j
 			CausedBy(err)
 	}
 
-	// TODO: check if it makes sense to copy these from the discovery
 	ep := &endpoint.Endpoint{
 		URL:              discovery.JWKSUrl,
 		Method:           "GET",
