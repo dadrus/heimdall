@@ -2,7 +2,10 @@ builds:
   - env:
       - CGO_ENABLED=0
     ldflags:
-      - -buildid= -w -s -X github-integrations/main.Version={{ .Tag }}
+      - -buildid=
+      - -w
+      - -s
+      - -X github.com/dadrus/heimdall/version.Version={{ .Tag }}
     flags:
       - -trimpath
     goos:
