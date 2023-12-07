@@ -986,6 +986,9 @@
             "introspection_endpoint": {
               "$ref": "#/definitions/endpointConfiguration"
             },
+            "oidc_discovery_endpoint": {
+              "$ref": "#/definitions/endpointConfiguration"
+            },
             "token_source": {
               "$ref": "#/definitions/authenticationDataSource"
             },
