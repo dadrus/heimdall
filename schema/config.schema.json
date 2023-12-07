@@ -973,7 +973,7 @@
           "oneOf": [
             {
               "required": [
-                "jwks_endpoint"
+                "introspection_endpoint"
               ]
             },
             {
