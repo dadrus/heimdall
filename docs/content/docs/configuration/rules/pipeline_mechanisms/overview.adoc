@@ -137,6 +137,14 @@ mechanisms:
 
 Some mechanisms support, respectively require access to different types of objects they work on, e.g. to render a header with specific values, or to check whether some expectations apply. Following objects are available and have the following structure:
 
+=== Token
+
+This string is available in the OAuth2 Introspection Authenticator and contains the Token as received from the client.
+
+=== JWT
+
+This object is available in the JWT Authenticator and contains the unvalidated, deserialized claims of the Token directly from the client. This can be used to build dynamic OIDC Discovery URLs directly based on the clients token.
+
 === Subject
 
 This object contains the information about the authenticated subject and has the following attributes:
@@ -346,6 +354,10 @@ Example: `{{ atIndex 2 [1,2,3,4,5] }}` evaluates to `3` (behaves the same way as
 * `splitList` - Splits a given string using a separator (part of the sprig library, but not documented). The result is a string array.
 +
 Example: `{{ splitList "/" "/foo/bar" }}` evaluates to the `["", "foo", "bar"]` array.
+
+* `parseJWT` - Parses a string as JWT, returns the claims of the JWT as dict. Does not perform any validation or signature checks on the JWT.
++
+Example: `{{ get (parseJWT .Token) "sub" }}` evaluates to the `iss` field of the JWT.
 
 
 .Rendering a JSON object

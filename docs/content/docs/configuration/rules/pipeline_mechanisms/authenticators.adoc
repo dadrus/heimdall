@@ -244,9 +244,13 @@ To enable the usage of this authenticator, you have to set the `type` property t
 
 Configuration using the `config` property is mandatory. Following properties are available:
 
-* *`introspection_endpoint`*: _link:{{< relref "/docs/configuration/reference/types.adoc#_endpoint">}}[Endpoint]_ (mandatory, not overridable)
+* *`introspection_endpoint`*: _link:{{< relref "/docs/configuration/reference/types.adoc#_endpoint">}}[Endpoint]_ (mutually exclusive with oidc_discovery_endpoint, not overridable)
 +
 The introspection endpoint of the OAuth2 authorization provider. At least the `url` must be configured. There is no need to define the `method` property or setting the `Content-Type` or the `Accept` header. These are set by default to the values required by the https://datatracker.ietf.org/doc/html/rfc7662[OAuth 2.0 Token Introspection] RFC. You can however override these while configuring the authenticator.
+
+* *`oidc_discovery_endpoint`*: _link:{{< relref "/docs/configuration/reference/types.adoc#_endpoint">}}[Endpoint]_ (mutually exclusive with oidc_discovery_endpoint, not overridable)
++
+The OIDC discovery endpoint of the OAuth2 authorization provider. At least the `url` must be configured. If the OAuth introspection URL is not known upfront, it can be fetched via https://openid.net/specs/openid-connect-discovery-1_0.html. The URL is a link:{{< relref "overview.adoc#_templating" >}}[template] and has the link:{{< relref "overview.adoc#_values" >}}[`Token`] string available that contains the raw token as sent from the client. The host part of this URL can't be templated for security reasons.
 
 * *`token_source`*: _link:{{< relref "/docs/configuration/reference/types.adoc#_authentication_data_source" >}}[Authentication Data Source]_ (optional, not overridable)
 +
@@ -254,7 +258,7 @@ Where to get the access token from. Defaults to retrieve it from the `Authorizat
 
 * *`assertions`*: _link:{{< relref "/docs/configuration/reference/types.adoc#_assertions" >}}[Assertions]_ (mandatory, overridable)
 +
-Configures the required claim assertions. Overriding on rule level is possible even partially. Those parts of the assertion, which have not been overridden are taken from the prototype configuration.
+Configures the required claim assertions. Overriding on rule level is possible even partially. Those parts of the assertion, which have not been overridden are taken from the prototype configuration. If the OIDC discovery document is used, the list of issuers is optional here, as the issuer will be fetched from the discovery document.
 
 * *`subject`*: _link:{{< relref "/docs/configuration/reference/types.adoc#_subject" >}}[Subject]_ (optional, not overridable)
 +
@@ -283,6 +287,22 @@ config:
 ----
 ====
 
+.Configuration for Keycloak utilizing OIDC
+====
+[source, yaml]
+----
+id: keycloak
+type: oauth2_introspection
+config:
+  oidc_discovery_endpoint:
+    url: http://keycloak:8080/realms/app/.well-known/openid-configuration
+  assertions:
+    # Note that no issuer is configured here, since it'll be taken automatically based on the .well-known
+    algorithms:
+      - RS256
+----
+====
+
 === JWT
 
 As the link:{{< relref "#_oauth2_introspection">}}[OAuth2 Introspection] authenticator, this authenticator handles requests that have a Bearer token in the `Authorization` header, in a different header, a query parameter or a body parameter as well. Unlike the OAuth2 Introspection authenticator it expects the token to be a JSON Web Token (JWT) and verifies it according https://www.rfc-editor.org/rfc/rfc7519#section-7.2[RFC 7519, Section 7.2]. It does however not support encrypted payloads and nested JWTs. In addition to this, validation includes the verification of the time validity. Latter can be adjusted by specifying a leeway. All other validation options can and should be configured.
@@ -291,9 +311,13 @@ To enable the usage of this authenticator, you have to set the `type` property t
 
 Configuration using the `config` property is mandatory. Following properties are available:
 
-* *`jwks_endpoint`*: _link:{{< relref "/docs/configuration/reference/types.adoc#_endpoint">}}[Endpoint]_ (mandatory, not overridable)
+* *`jwks_endpoint`*: _link:{{< relref "/docs/configuration/reference/types.adoc#_endpoint">}}[Endpoint]_ (mutually exclusive with oidc_discovery_endpoint, not overridable)
 +
 The JWKS endpoint, this authenticator retrieves the key material in a format specified in https://datatracker.ietf.org/doc/html/rfc7519[RFC 7519] from for JWT signature verification purposes. The `url` must be configured. By default `method` is set to `GET` and the HTTP `Accept` header to `application/json`
+
+* *`oidc_discovery_endpoint`*: _link:{{< relref "/docs/configuration/reference/types.adoc#_endpoint">}}[Endpoint]_ (mutually exclusive with jwks_endpoint, not overridable)
++
+The OIDC discovery endpoint of the JWT authorization provider. At least the `url` must be configured. If the JWKS URL is not known upfront, it can be fetched via https://openid.net/specs/openid-connect-discovery-1_0.html. The URL is a link:{{< relref "overview.adoc#_templating" >}}[template] and has the link:{{< relref "overview.adoc#_values" >}}[`JWT`] object available that contains the deserialized claims of the input JWT. The Claims have *not* been validated at this point. The host part of this URL can't be templated for security reasons.
 
 * *`jwt_source`*: _link:{{< relref "/docs/configuration/reference/types.adoc#_authentication_data_source" >}}[Authentication Data Source]_ (optional, not overridable)
 +
@@ -301,7 +325,7 @@ Where to get the access token from. Defaults to retrieve it from the `Authorizat
 
 * *`assertions`*: _link:{{< relref "/docs/configuration/reference/types.adoc#_assertions" >}}[Assertions]_ (mandatory, overridable)
 +
-Configures the required claim assertions. Overriding on rule level is possible even partially. Those parts of the assertion, which have not been overridden are taken from the prototype configuration.
+Configures the required claim assertions. Overriding on rule level is possible even partially. Those parts of the assertion, which have not been overridden are taken from the prototype configuration. If the OIDC discovery document is used, the list of issuers is optional here, as the issuer will be fetched from the discovery document.
 
 * *`subject`*: _link:{{< relref "/docs/configuration/reference/types.adoc#_subject" >}}[Subject]_ (optional, not overridable)
 +
@@ -337,5 +361,21 @@ config:
   assertions:
     issuers:
       - http://127.0.0.1:4444/
+----
+====
+
+.Configuration for Keycloak utilizing OIDC
+====
+[source, yaml]
+----
+id: keycloak
+type: jwt
+config:
+  oidc_discovery_endpoint:
+    url: http://keycloak:8080/realms/app/.well-known/openid-configuration
+  assertions:
+    # Note that no issuer is configured here, since it'll be taken automatically based on the .well-known
+    algorithms:
+      - RS256
 ----
 ====
