@@ -14,7 +14,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package memory
+package cache
 
 import (
 	"context"
@@ -93,7 +93,7 @@ func TestMemoryCacheUsage(t *testing.T) {
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
 			// GIVEN
-			cache := New()
+			cache, _ := NewMemoryCache()
 
 			// WHEN
 			tc.configureCache(t, cache)
@@ -109,7 +109,7 @@ func TestMemoryCacheUsage(t *testing.T) {
 func TestMemoryCacheExpiration(t *testing.T) {
 	t.Parallel()
 
-	cache := New()
+	cache, _ := NewMemoryCache()
 	cache.Set(context.Background(), "baz", "bar", 1*time.Second)
 
 	hits := 0

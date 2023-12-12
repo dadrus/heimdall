@@ -10,7 +10,7 @@
             "request": "launch",
             "mode": "auto",
             "program": "main.go",
-            "args": ["serve", "-c", "heimdall-config.yaml", "decision"],
+            "args": ["serve", "-c", "heimdall-config-cluster-tls.yaml", "decision"],
             "cwd": "${workspaceFolder}/examples/local"
         }
     ]

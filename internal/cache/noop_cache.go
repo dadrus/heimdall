@@ -19,9 +19,29 @@ package cache
 import (
 	"context"
 	"time"
+
+	"github.com/dadrus/heimdall/internal/config"
 )
 
+// by intention. Used only during application bootstrap.
+func init() { // nolint: gochecknoinits
+	registerCacheTypeFactory(
+		func(typ string, conf *config.Configuration) (bool, Cache, error) {
+			if typ != CacheNoop {
+				return false, nil, nil
+			}
+
+			cache := noopCache{}
+
+			return true, cache, nil
+		})
+}
+
 type noopCache struct{}
+
+func (noopCache) Check(_ context.Context) error {
+	return nil
+}
 
 func (noopCache) Get(_ context.Context, _ string) any { return nil }
 

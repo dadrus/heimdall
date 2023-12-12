@@ -7,7 +7,17 @@ serve:
       - 0.0.0.0/0
 
 cache:
-  type: memory
+  type: redis-cluster
+  config:
+    addrs:
+      - "localhost:7000"
+      - "localhost:7001"
+      - "localhost:7002"
+      - "localhost:7003"
+      - "localhost:7004"
+      - "localhost:7005"
+    username: default
+    password: secret
 
 rules:
   mechanisms:
@@ -51,3 +61,4 @@ rules:
     file_system:
       src: ./upstream-rules.yaml
       watch: true
+      env_vars_enabled: false

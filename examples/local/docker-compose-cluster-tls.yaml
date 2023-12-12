@@ -1,0 +1,119 @@
+version: '3'
+
+networks:
+  redis-cluster-compose:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 192.168.156.0/24
+
+services:
+  redis-node-1:
+    image: redis:latest
+    ports:
+      - 7000:7000
+    networks:
+      redis-cluster-compose:
+        ipv4_address: 192.168.156.101
+    hostname: redis-node-1
+    volumes:
+      - ./cluster/7000:/redis
+      - ./certificates-cluster/tests/tls:/redis/tls:ro
+    command: redis-server  /redis/redis.conf 
+
+  redis-node-2:
+    image: redis:latest
+    ports:
+      - 7001:7001
+    networks:
+      redis-cluster-compose:
+        ipv4_address: 192.168.156.102
+    hostname: redis-node-2
+    volumes:
+      - ./cluster/7001:/redis
+      - ./certificates-cluster/tests/tls:/redis/tls:ro
+    command: redis-server /redis/redis.conf
+        --tls-ca-cert-file /redis/tls/ca.crt  
+
+  redis-node-3:
+    image: redis:latest
+    ports:
+      - 7002:7002
+    networks:
+      redis-cluster-compose:
+        ipv4_address: 192.168.156.103
+    hostname: redis-node-3
+    volumes:
+      - ./cluster/7002:/redis
+      - ./certificates-cluster/tests/tls:/redis/tls:ro
+    command: redis-server /redis/redis.conf 
+
+  redis-node-4:
+    image: redis:latest
+    ports:
+      - 7003:7003
+    networks:
+     redis-cluster-compose:
+        ipv4_address: 192.168.156.104
+    hostname: redis-node-4
+    volumes:
+      - ./cluster/7003:/redis
+      - ./certificates-cluster/tests/tls:/redis/tls:ro
+    command: redis-server /redis/redis.conf 
+
+  redis-node-5:
+    image: redis:latest
+    ports:
+      - 7004:7004
+    networks:
+      redis-cluster-compose:
+        ipv4_address: 192.168.156.105
+    hostname: redis-node-5
+    volumes:
+      - ./cluster/7004:/redis
+      - ./certificates-cluster/tests/tls:/redis/tls:ro
+    command: redis-server /redis/redis.conf
+  
+  redis-node-6:
+    image: redis:latest
+    ports:
+      - 7005:7005
+    networks:
+     redis-cluster-compose:
+        ipv4_address: 192.168.156.106
+    hostname: redis-node-6
+    volumes:
+      - ./cluster/7005:/redis
+      - ./certificates-cluster/tests/tls:/redis/tls:ro
+    command: redis-server  /redis/redis.conf 
+  
+  redis-cluster-creator:
+    image: redis:latest
+    ports:
+      - 6999:6999
+    networks:
+      redis-cluster-compose:
+        ipv4_address: 192.168.156.142
+    volumes:
+      - ./certificates-cluster/tests/tls:/redis/tls:ro
+    command: redis-cli --tls --cacert /redis/tls/ca.crt --cert /redis/tls/server.crt --key /redis/tls/server.key -p 7000 --cluster create redis-node-1:7000 redis-node-2:7001 redis-node-3:7002 redis-node-4:7003 redis-node-5:7004 redis-node-6:7005 --cluster-replicas 1 --cluster-yes
+    depends_on:
+      - redis-node-1
+      - redis-node-2
+      - redis-node-3
+      - redis-node-4
+      - redis-node-5
+      - redis-node-6
+  
+  redis-insight:
+    image: redislabs/redisinsight
+    ports:
+      - 8001:8001
+    networks:
+       redis-cluster-compose:
+        ipv4_address: 192.168.156.100
+    volumes:
+      - ./redisinsight:/db
+    depends_on:
+      - redis-cluster-creator

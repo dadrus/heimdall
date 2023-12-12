@@ -22,8 +22,6 @@ import (
 	"github.com/rs/zerolog"
 	"go.uber.org/fx"
 
-	"github.com/dadrus/heimdall/internal/cache/memory"
-	redis1 "github.com/dadrus/heimdall/internal/cache/redis"
 	"github.com/dadrus/heimdall/internal/config"
 )
 
@@ -39,33 +37,15 @@ var Module = fx.Provide(
 func newCache(conf *config.Configuration, logger zerolog.Logger) Cache {
 	var cache Cache
 
-	switch conf.Cache.Type {
-	case "":
-		logger.Info().Msg("Empty cache type. Instantiating in memory cache")
+	cache, err := CreateCachePrototype(conf.Cache.Type, conf)
+	if err != nil {
+		logger.Info().Err(err).Msg("Could not initialize Cache")
 
-		cache = memory.New()
-	case "memory":
-		logger.Info().Msg("Instantiating in memory cache")
+		return &noopCache{}
+	}
 
-		cache = memory.New()
-	case "redis":
-		if len(conf.Cache.RedisConfig.Addr) == 0 {
-			logger.Info().Msg("Redis configured but Addr missing. Instantiating noop cache")
-
-			cache = noopCache{}
-		} else {
-			logger.Info().Msg("Instantiating Redis cache")
-
-			cache = redis1.NewRedisCache(&conf.Cache, logger)
-		}
-	case "disabled":
-		logger.Info().Msg("Cache is disabled")
-
-		cache = noopCache{}
-	default:
-		logger.Info().Msg("Fallback: noop cache")
-
-		cache = noopCache{}
+	if err := cache.Check(context.Background()); err != nil {
+		logger.Info().Err(err).Msg("cache connection check failed")
 	}
 
 	return cache

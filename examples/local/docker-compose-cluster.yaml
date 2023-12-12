@@ -1,0 +1,98 @@
+version: '3'
+
+networks:
+  redis-cluster-compose:
+    driver: bridge
+
+services:
+  redis-node-1:
+    image: redis:latest
+    ports:
+      - 7000:7000
+    networks:
+      - redis-cluster-compose
+    hostname: redis-node-1
+    volumes:
+      - ./cluster/7000:/redis
+    command: redis-server /redis/redis.conf
+
+  redis-node-2:
+    image: redis:latest
+    ports:
+      - 7001:7001
+    networks:
+      - redis-cluster-compose
+    hostname: redis-node-2
+    volumes:
+      - ./cluster/7001:/redis
+    command: redis-server /redis/redis.conf
+
+  redis-node-3:
+    image: redis:latest
+    ports:
+      - 7002:7002
+    networks:
+      - redis-cluster-compose
+    hostname: redis-node-3
+    volumes:
+      - ./cluster/7002:/redis
+    command: redis-server /redis/redis.conf
+
+  redis-node-4:
+    image: redis:latest
+    ports:
+      - 7003:7003
+    networks:
+      - redis-cluster-compose
+    hostname: redis-node-4
+    volumes:
+      - ./cluster/7003:/redis
+    command: redis-server /redis/redis.conf
+
+  redis-node-5:
+    image: redis:latest
+    ports:
+      - 7004:7004
+    networks:
+      - redis-cluster-compose
+    hostname: redis-node-5
+    volumes:
+      - ./cluster/7004:/redis
+    command: redis-server /redis/redis.conf
+  
+  redis-node-6:
+    image: redis:latest
+    ports:
+      - 7005:7005
+    networks:
+      - redis-cluster-compose
+    hostname: redis-node-6
+    volumes:
+      - ./cluster/7005:/redis
+    command: redis-server /redis/redis.conf
+  
+  redis-cluster-creator:
+    image: redis:latest
+    ports:
+      - 6999:6999
+    networks:
+      - redis-cluster-compose
+    command: redis-cli -p 7000 --cluster create redis-node-1:7000 redis-node-2:7001 redis-node-3:7002 redis-node-4:7003 redis-node-5:7004 redis-node-6:7005 --cluster-replicas 1 --cluster-yes
+    depends_on:
+      - redis-node-1
+      - redis-node-2
+      - redis-node-3
+      - redis-node-4
+      - redis-node-5
+      - redis-node-6
+  
+  redis-insight:
+    image: redislabs/redisinsight
+    ports:
+      - 8001:8001
+    networks:
+      - redis-cluster-compose
+    volumes:
+      - ./redisinsight:/db
+    depends_on:
+      - redis-cluster-creator

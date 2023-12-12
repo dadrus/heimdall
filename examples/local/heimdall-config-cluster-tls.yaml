@@ -7,7 +7,22 @@ serve:
       - 0.0.0.0/0
 
 cache:
-  type: memory
+  type: redis-cluster
+  config:
+    addrs:
+      - "localhost:7000"
+      - "localhost:7001"
+      - "localhost:7002"
+      - "localhost:7003"
+      - "localhost:7004"
+      - "localhost:7005"
+    username: default
+    password: secret
+    tls:
+      key_store:
+        path: ./certificates-cluster/tests/tls/redis_client_keystore.pem
+      key_id: 0beee40bafa774409e0b0a8d22e7df667655cc15
+    additional_ca: ./certificates-cluster/tests/tls/ca.crt
 
 rules:
   mechanisms:
@@ -51,3 +66,4 @@ rules:
     file_system:
       src: ./upstream-rules.yaml
       watch: true
+      env_vars_enabled: false

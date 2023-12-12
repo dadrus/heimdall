@@ -14,21 +14,37 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package memory
+package cache
 
 import (
 	"context"
 	"time"
 
 	"github.com/jellydator/ttlcache/v3"
+
+	"github.com/dadrus/heimdall/internal/config"
 )
 
 type InMemoryCache struct {
 	c *ttlcache.Cache[string, any]
 }
 
-func New() *InMemoryCache {
-	return &InMemoryCache{c: ttlcache.New[string, any](ttlcache.WithDisableTouchOnHit[string, any]())}
+// by intention. Used only during application bootstrap.
+func init() { // nolint: gochecknoinits
+	registerCacheTypeFactory(
+		func(typ string, conf *config.Configuration) (bool, Cache, error) {
+			if typ != CacheInMemory {
+				return false, nil, nil
+			}
+
+			cache, err := NewMemoryCache()
+
+			return true, cache, err
+		})
+}
+
+func NewMemoryCache() (*InMemoryCache, error) {
+	return &InMemoryCache{c: ttlcache.New[string, any](ttlcache.WithDisableTouchOnHit[string, any]())}, nil
 }
 
 func (c *InMemoryCache) Start(_ context.Context) error {
@@ -57,3 +73,7 @@ func (c *InMemoryCache) Set(_ context.Context, key string, value any, ttl time.D
 }
 
 func (c *InMemoryCache) Delete(_ context.Context, key string) { c.c.Delete(key) }
+
+func (*InMemoryCache) Check(_ context.Context) error {
+	return nil
+}

@@ -27,12 +27,12 @@ import (
 
 type Configuration struct { //nolint:musttag
 	Serve     ServeConfig     `koanf:"serve"`
+	Cache     CacheProviders  `koanf:"cache"`
 	Log       LoggingConfig   `koanf:"log"`
 	Tracing   TracingConfig   `koanf:"tracing"`
 	Metrics   MetricsConfig   `koanf:"metrics"`
 	Profiling ProfilingConfig `koanf:"profiling"`
 	Signer    SignerConfig    `koanf:"signer"`
-	Cache     CacheConfig     `koanf:"cache"`
 	Rules     Rules           `koanf:"rules,omitempty"`
 }
 

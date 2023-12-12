@@ -14,14 +14,13 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package redis
+package cache
 
 import (
 	"context"
 	"testing"
 	"time"
 
-	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
@@ -121,11 +120,14 @@ func before(t *testing.T) *RedisCache {
 		t.Error(err)
 	}
 
-	conf := &config.Configuration{Cache: config.CacheConfig{Type: "redis", RedisConfig: config.RedisConfig{Addr: endpoint}}}
+	conf := &config.Configuration{
+		Cache: config.CacheProviders{
+			Type:   "redis",
+			Config: map[string]any{"Addr": endpoint},
+		},
+	}
 
-	cache := NewRedisCache(&conf.Cache, zerolog.New(zerolog.NewConsoleWriter(func(w *zerolog.ConsoleWriter) {
-		w.TimeFormat = time.RFC3339
-	})).With().Timestamp().Logger())
+	cache, _ := NewRedisCache(conf)
 	assert.NotEmpty(t, cache.c)
 
 	t.Cleanup(func() {

@@ -14,18 +14,21 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package config
+package cache
 
-type CacheConfig struct {
-	Type        string      `koanf:"type"`
-	RedisConfig RedisConfig `koanf:"redis,omitempty"`
-}
+import (
+	"github.com/mitchellh/mapstructure"
+)
 
-type RedisConfig struct {
-	Addr         string `koanf:"addr"`
-	Username     string `koanf:"username"`
-	Password     string `koanf:"password"`
-	DB           int    `koanf:"db"`
-	TLS          *TLS   `koanf:"tls,omitempty"`
-	AdditionalCA string `koanf:"additional_ca"`
+func decodeConfig(input any, output any) error {
+	dec, err := mapstructure.NewDecoder(
+		&mapstructure.DecoderConfig{
+			Result:      output,
+			ErrorUnused: true,
+		})
+	if err != nil {
+		return err
+	}
+
+	return dec.Decode(input)
 }

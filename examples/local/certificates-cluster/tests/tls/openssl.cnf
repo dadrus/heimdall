@@ -1,0 +1,25 @@
+[ server_cert ]
+keyUsage = digitalSignature, keyEncipherment
+nsCertType = server
+subjectAltName = @alt_names
+[alt_names]
+DNS.1 = redis-node-1
+DNS.2 = redis-node-2
+DNS.3 = redis-node-3
+DNS.4 = redis-node-4
+DNS.5 = redis-node-5
+DNS.6 = redis-node-6
+DNS.7 = localhost
+
+IP.1 = 192.168.156.101
+IP.2 = 192.168.156.102
+IP.3 = 192.168.156.103
+IP.4 = 192.168.156.104
+IP.5 = 192.168.156.105
+IP.6 = 192.168.156.106
+
+
+[ client_cert ]
+keyUsage = digitalSignature, keyEncipherment
+nsCertType = client
+

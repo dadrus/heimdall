@@ -85,6 +85,10 @@ func defaultConfig() Configuration {
 				},
 			},
 		},
+		Cache: CacheProviders{
+			Type:   "memory",
+			Config: map[string]any{},
+		},
 		Log: LoggingConfig{
 			Level:  zerolog.ErrorLevel,
 			Format: LogTextFormat,
@@ -106,9 +110,6 @@ func defaultConfig() Configuration {
 		},
 		Rules: Rules{
 			Prototypes: &MechanismPrototypes{},
-		},
-		Cache: CacheConfig{
-			Type: "memory",
 		},
 	}
 }

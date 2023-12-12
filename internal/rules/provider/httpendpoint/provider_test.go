@@ -32,7 +32,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
-	"github.com/dadrus/heimdall/internal/cache/memory"
+	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	config2 "github.com/dadrus/heimdall/internal/rules/config"
@@ -156,7 +156,8 @@ endpoints:
 			}
 
 			// WHEN
-			prov, err := newProvider(conf, memory.New(), mocks.NewRuleSetProcessorMock(t), log.Logger)
+			memcache, _ := cache.NewMemoryCache()
+			prov, err := newProvider(conf, memcache, mocks.NewRuleSetProcessorMock(t), log.Logger)
 
 			// THEN
 			tc.assert(t, err, prov)
@@ -747,7 +748,8 @@ rules:
 			setupProcessor(t, processor)
 
 			logs := &strings.Builder{}
-			prov, err := newProvider(conf, memory.New(), processor, zerolog.New(logs))
+			memcache, _ := cache.NewMemoryCache()
+			prov, err := newProvider(conf, memcache, processor, zerolog.New(logs))
 			require.NoError(t, err)
 
 			ctx := context.Background()

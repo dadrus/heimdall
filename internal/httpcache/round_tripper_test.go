@@ -27,7 +27,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/cache"
-	"github.com/dadrus/heimdall/internal/cache/memory"
 )
 
 func TestRoundTripperRoundTrip(t *testing.T) {
@@ -68,7 +67,8 @@ func TestRoundTripperRoundTrip(t *testing.T) {
 				Transport: &RoundTripper{Transport: http.DefaultTransport},
 			}
 
-			ctx := cache.WithContext(context.Background(), memory.New())
+			memcache, _ := cache.NewMemoryCache()
+			ctx := cache.WithContext(context.Background(), memcache)
 			req, err := http.NewRequestWithContext(ctx, http.MethodGet, srv.URL, nil)
 			require.NoError(t, err)
 

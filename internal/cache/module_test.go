@@ -22,8 +22,6 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/dadrus/heimdall/internal/cache/memory"
-	"github.com/dadrus/heimdall/internal/cache/redis"
 	"github.com/dadrus/heimdall/internal/config"
 )
 
@@ -41,22 +39,58 @@ func TestNewCache(t *testing.T) {
 			assert: func(t *testing.T, cch Cache) {
 				t.Helper()
 
-				assert.IsType(t, &memory.InMemoryCache{}, cch)
+				assert.IsType(t, &noopCache{}, cch)
 			},
 		},
 		{
-			uc:   "in memory cache",
-			conf: &config.Configuration{Cache: config.CacheConfig{Type: "memory"}},
+			uc: "in memory cache",
+			conf: &config.Configuration{
+				Cache: config.CacheProviders{
+					Type: "memory",
+				},
+			},
 			assert: func(t *testing.T, cch Cache) {
 				t.Helper()
 
-				assert.IsType(t, &memory.InMemoryCache{}, cch)
+				assert.IsType(t, &InMemoryCache{}, cch)
 			},
 		},
 
 		{
-			uc:   "Redis cache without DSN",
-			conf: &config.Configuration{Cache: config.CacheConfig{Type: "redis", RedisConfig: config.RedisConfig{}}},
+			uc: "Redis cache without DSN",
+			conf: &config.Configuration{
+				Cache: config.CacheProviders{
+					Type:   "redis",
+					Config: map[string]any{},
+				},
+			},
+			assert: func(t *testing.T, cch Cache) {
+				t.Helper()
+
+				assert.IsType(t, &noopCache{}, cch)
+			},
+		},
+		{
+			uc: "Redis cache",
+			conf: &config.Configuration{
+				Cache: config.CacheProviders{
+					Type:   "redis",
+					Config: map[string]any{"Addr": "localhost.com:6379"},
+				},
+			},
+			assert: func(t *testing.T, cch Cache) {
+				t.Helper()
+
+				assert.IsType(t, &RedisCache{}, cch)
+			},
+		},
+		{
+			uc: "disabled cache type",
+			conf: &config.Configuration{
+				Cache: config.CacheProviders{
+					Type: "noop",
+				},
+			},
 			assert: func(t *testing.T, cch Cache) {
 				t.Helper()
 
@@ -64,30 +98,17 @@ func TestNewCache(t *testing.T) {
 			},
 		},
 		{
-			uc:   "Redis cache",
-			conf: &config.Configuration{Cache: config.CacheConfig{Type: "redis", RedisConfig: config.RedisConfig{Addr: "localhost.com:6379"}}},
-			assert: func(t *testing.T, cch Cache) {
-				t.Helper()
-
-				assert.IsType(t, &redis.RedisCache{}, cch)
+			uc: "unknown cache type",
+			conf: &config.Configuration{
+				Cache: config.CacheProviders{
+					Type: "foo",
+				},
 			},
-		},
-		{
-			uc:   "disabled cache type",
-			conf: &config.Configuration{Cache: config.CacheConfig{Type: "disabled"}},
+
 			assert: func(t *testing.T, cch Cache) {
 				t.Helper()
 
-				assert.IsType(t, noopCache{}, cch)
-			},
-		},
-		{
-			uc:   "unknown cache type",
-			conf: &config.Configuration{Cache: config.CacheConfig{Type: "foo"}},
-			assert: func(t *testing.T, cch Cache) {
-				t.Helper()
-
-				assert.IsType(t, noopCache{}, cch)
+				assert.IsType(t, &noopCache{}, cch)
 			},
 		},
 	} {

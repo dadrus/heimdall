@@ -73,6 +73,119 @@
                 }
             }
         },
+        "cacheNoop": {
+            "description": "Noop Cache",
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "type": {
+                    "const": "noop"
+                }
+            }
+        },
+        "cacheInMemory": {
+            "description": "In memory cache",
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "type": {
+                    "const": "memory"
+                }
+            }
+        },
+        "cacheRedis": {
+            "description": "Redis cache",
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "addr": {
+                    "description": "Connection string to the Cache",
+                    "type": "string",
+                    "default": "",
+                    "examples": [
+                        "localhost.com:6379",
+                        "my-redis.cloud.redislabs.com:6379"
+                    ]
+                },
+                "username": {
+                    "description": "Username for connection",
+                    "type": "string",
+                    "default": ""
+                },
+                "password": {
+                    "description": "Password for connection",
+                    "type": "string",
+                    "default": ""
+                },
+                "db": {
+                    "description": "db name",
+                    "type": "integer",
+                    "default": ""
+                },
+                "tls": {
+                    "$ref": "#/definitions/tlsConfig"
+                },
+                "additional_ca": {
+                    "description": "Additional CAs.",
+                    "type": "string"
+
+                }
+
+            }
+        },
+        "cacheRedisCluster": {
+            "description": "Redis cluster cache",
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "addrs": {
+                    "description": "Connection string to the Cache",
+                    "type": "array",
+                    "items": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "default": "",
+                    "examples": [
+                        "node1:7000", "node2:7001", "node3:7002", "node4:7003", "node5:7004", "node6:7005"
+                    ]
+                },
+                "readOnly": {
+                    "description": "Enables read-only commands on slave nodes.",
+                    "type": "boolean",
+                    "default": false
+                },
+                "routeByLatency": {
+                    "description": "Enable routing by node latency. Allows routing read-only commands to the closest master or slave node. Enables ReadOnly.",
+                    "type": "boolean",
+                    "default": false
+                },
+                "routeRandomly": {
+                    "description": "Enable randon routing. Allows routing read-only commands to the random master or slave node. Enables ReadOnly. ",
+                    "type": "boolean",
+                    "default": false
+                },
+                "username": {
+                    "description": "Username for connection",
+                    "type": "string",
+                    "default": ""
+                },
+                "password": {
+                    "description": "Password for connection",
+                    "type": "string",
+                    "default": ""
+                },
+                "tls": {
+                    "$ref": "#/definitions/tlsConfig"
+                },
+                "additional_ca": {
+                    "description": "Additional CAs.",
+                    "type": "string"
+
+                }
+
+            }
+        },
         "corsConfig": {
             "description": "Configure [Cross Origin Resource Sharing (CORS)](http://www.w3.org/TR/cors/) using the following options.",
             "type": "object",
@@ -2043,52 +2156,36 @@
             }
         },
         "cache": {
-            "description": "Cache configuration. Defaults to in memory cache.",
+            "description": "Configure caches",
             "type": "object",
             "additionalProperties": false,
             "properties": {
                 "type": {
-                    "description": "Define cache type to use",
                     "type": "string",
-                    "default": "memory",
+                    "default": "noop",
                     "enum": [
+                        "noop",
                         "memory",
                         "redis",
-                        "disabled"
+                        "redis-cluster"
                     ]
                 },
-                "redis": {
-                    "description": "Redis configuration",
+                "config": {
                     "type": "object",
-                    "addr": {
-                        "description": "Connection string to the Cache",
-                        "type": "string",
-                        "default": "",
-                        "examples": [
-                            "localhost.com:6379",
-                            "my-redis.cloud.redislabs.com:6379"
-                        ]
-                    },
-                    "username": {
-                        "description": "Username for connection",
-                        "type": "string",
-                        "default": ""
-                    },
-                    "password": {
-                        "description": "Password for connection",
-                        "type": "string",
-                        "default": ""
-                    },
-                    "db": {
-                        "description": "db name",
-                        "type": "integer",
-                        "default": ""
-                    },
-                    "tls": {
-                        "$ref": "#/definitions/tlsConfig"
-                    }
+                    "oneOf": [{
+                            "$ref": "#/definitions/cacheNoop"
+                        },
+                        {
+                            "$ref": "#/definitions/cacheInMemory"
+                        },
+                        {
+                            "$ref": "#/definitions/cacheRedis"
+                        },
+                        {
+                            "$ref": "#/definitions/cacheRedisCluster"
+                        }
+                    ]
                 }
-
             }
         },
         "metrics": {

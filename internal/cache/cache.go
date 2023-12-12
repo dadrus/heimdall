@@ -29,4 +29,5 @@ type Cache interface {
 	Get(ctx context.Context, key string) any
 	Set(ctx context.Context, key string, value any, ttl time.Duration)
 	Delete(ctx context.Context, key string)
+	Check(ctx context.Context) error
 }
