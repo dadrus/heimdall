@@ -96,3 +96,13 @@ services:
       - ./redisinsight:/db
     depends_on:
       - redis-cluster-creator
+
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    ports:
+      - "16686:16686"
+      - "4318:4318"
+    environment:
+      - LOG_LEVEL=debug
+    networks:
+      - redis-cluster-compose

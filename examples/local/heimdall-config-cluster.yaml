@@ -53,3 +53,6 @@ providers:
   file_system:
     src: ./upstream-rules.yaml
     watch: true
+
+tracing:
+  span_processor: batch

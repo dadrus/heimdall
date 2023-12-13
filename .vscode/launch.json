@@ -11,7 +11,10 @@
             "mode": "auto",
             "program": "main.go",
             "args": ["serve", "-c", "heimdall-config-cluster-tls.yaml", "decision"],
-            "cwd": "${workspaceFolder}/examples/local"
+            "cwd": "${workspaceFolder}/examples/local",
+            "env": {
+                "OTEL_EXPORTER_OTLP_ENDPOINT": "http://localhost:4318" 
+            }
         }
     ]
 }

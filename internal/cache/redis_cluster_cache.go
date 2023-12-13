@@ -20,6 +20,7 @@ import (
 	"context"
 	"time"
 
+	redisotel "github.com/redis/go-redis/extra/redisotel/v9"
 	redis "github.com/redis/go-redis/v9"
 	"github.com/rs/zerolog"
 
@@ -97,6 +98,9 @@ func NewRedisClusterCache(conf *config.Configuration) (*RedisClusterCache, error
 	}
 
 	client := redis.NewClusterClient(opt)
+
+	_ = redisotel.InstrumentTracing(client)
+	// _ = redisotel.InstrumentMetrics(client)
 
 	return &RedisClusterCache{c: client}, nil
 }
