@@ -17,7 +17,7 @@
 package rules
 
 import (
-	"reflect"
+	"errors"
 
 	"github.com/google/cel-go/cel"
 
@@ -28,21 +28,25 @@ import (
 )
 
 type celExecutionCondition struct {
-	p cel.Program
+	e *cellib.CompiledExpression
 }
 
 func (c *celExecutionCondition) CanExecute(ctx heimdall.Context, sub *subject.Subject) (bool, error) {
-	obj := map[string]any{
-		"Subject": sub,
-		"Request": ctx.Request(),
+	obj := map[string]any{"Request": ctx.Request()}
+
+	if sub != nil {
+		obj["Subject"] = sub
 	}
 
-	out, _, err := c.p.Eval(obj)
-	if err != nil {
+	if err := c.e.Eval(obj); err != nil {
+		if errors.Is(err, &cellib.EvalError{}) {
+			return false, nil
+		}
+
 		return false, err
 	}
 
-	return out.Value() == true, nil
+	return true, nil
 }
 
 func newCelExecutionCondition(expression string) (*celExecutionCondition, error) {
@@ -52,22 +56,11 @@ func newCelExecutionCondition(expression string) (*celExecutionCondition, error)
 			"failed creating CEL environment").CausedBy(err)
 	}
 
-	ast, iss := env.Compile(expression)
-	if iss != nil {
-		return nil, errorchain.NewWithMessage(heimdall.ErrInternal,
-			"failed compiling cel expression").CausedBy(iss.Err())
-	}
-
-	if !reflect.DeepEqual(ast.OutputType(), cel.BoolType) {
-		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
-			"result type error: wanted bool, got %v", ast.OutputType())
-	}
-
-	prg, err := env.Program(ast, cel.EvalOptions(cel.OptOptimize))
+	expr, err := cellib.CompileExpression(env, expression, "expression evaluated to false")
 	if err != nil {
 		return nil, errorchain.NewWithMessage(heimdall.ErrInternal,
-			"failed creating cel program").CausedBy(err)
+			"failed compiling cel expression").CausedBy(err)
 	}
 
-	return &celExecutionCondition{p: prg}, nil
+	return &celExecutionCondition{e: expr}, nil
 }

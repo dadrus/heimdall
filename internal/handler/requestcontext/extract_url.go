@@ -42,15 +42,13 @@ func extractURL(req *http.Request) *url.URL {
 
 	if val := req.Header.Get("X-Forwarded-Uri"); len(val) != 0 {
 		if forwardedURI, err := url.Parse(val); err == nil {
-			rawPath = forwardedURI.Path
+			rawPath = forwardedURI.EscapedPath()
 			query = forwardedURI.Query().Encode()
 		}
-	} else {
-		rawPath = req.Header.Get("X-Forwarded-Path")
 	}
 
 	if len(rawPath) == 0 {
-		rawPath = req.URL.Path
+		rawPath = req.URL.EscapedPath()
 	}
 
 	if len(query) == 0 {
@@ -63,6 +61,7 @@ func extractURL(req *http.Request) *url.URL {
 		Scheme:   proto,
 		Host:     host,
 		Path:     path,
+		RawPath:  rawPath,
 		RawQuery: query,
 	}
 }

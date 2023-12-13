@@ -50,7 +50,7 @@ const defaultJWTAuthenticatorTTL = 10 * time.Minute
 //
 //nolint:gochecknoinits
 func init() {
-	registerAuthenticatorTypeFactory(
+	registerTypeFactory(
 		func(id string, typ string, conf map[string]any) (bool, Authenticator, error) {
 			if typ != AuthenticatorJwt {
 				return false, nil, nil
@@ -122,7 +122,7 @@ func newJwtAuthenticator(id string, rawConfig map[string]any) (*jwtAuthenticator
 	ads := x.IfThenElseExec(conf.AuthDataSource == nil,
 		func() extractors.CompositeExtractStrategy {
 			return extractors.CompositeExtractStrategy{
-				extractors.HeaderValueExtractStrategy{Name: "Authorization", Schema: "Bearer"},
+				extractors.HeaderValueExtractStrategy{Name: "Authorization", Scheme: "Bearer"},
 				extractors.QueryParameterExtractStrategy{Name: "access_token"},
 				extractors.BodyParameterExtractStrategy{Name: "access_token"},
 			}

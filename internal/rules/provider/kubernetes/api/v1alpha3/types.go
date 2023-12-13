@@ -14,15 +14,24 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package v1alpha2
+package v1alpha3
 
 //go:generate controller-gen object paths=$GOFILE
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 
 	"github.com/dadrus/heimdall/internal/rules/config"
+)
+
+type ConditionReason string
+
+const (
+	ConditionRuleSetActive           ConditionReason = "RuleSetActive"
+	ConditionRuleSetActivationFailed ConditionReason = "RuleSetActivationFailed"
+	ConditionRuleSetUnloaded         ConditionReason = "RuleSetUnloaded"
+	ConditionRuleSetUnloadingFailed  ConditionReason = "RuleSetUnloadingFailed"
+	ConditionControllerStopped       ConditionReason = "ControllerStopped"
 )
 
 // +kubebuilder:object:generate=true
@@ -32,21 +41,26 @@ type RuleSetSpec struct {
 }
 
 // +kubebuilder:object:generate=true
+type RuleSetStatus struct {
+	ActiveIn   string             `json:"activeIn"` // nolint: tagliatelle
+	Conditions []metav1.Condition `json:"conditions,omitempty"`
+}
+
+// +kubebuilder:object:generate=true
+// +kubebuilder:object:root=true
 type RuleSet struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec RuleSetSpec `json:"spec"`
+	Spec   RuleSetSpec   `json:"spec"`
+	Status RuleSetStatus `json:"status"`
 }
 
-func (in *RuleSet) DeepCopyObject() runtime.Object { return in.DeepCopy() }
-
 // +kubebuilder:object:generate=true
+// +kubebuilder:object:root=true
 type RuleSetList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 
 	Items []RuleSet `json:"items"`
 }
-
-func (in *RuleSetList) DeepCopyObject() runtime.Object { return in.DeepCopy() }

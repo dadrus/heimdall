@@ -32,6 +32,7 @@ func (f *Backend) CreateURL(value *url.URL) *url.URL {
 		Scheme:   value.Scheme,
 		Host:     f.Host,
 		Path:     value.Path,
+		RawPath:  value.RawPath,
 		RawQuery: value.RawQuery,
 	}
 

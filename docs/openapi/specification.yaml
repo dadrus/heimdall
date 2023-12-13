@@ -437,22 +437,22 @@ paths:
                 "uid": "ce409862-eae0-4704-b7d5-46634efdaf9b",
                 "kind": {
                   "group": "heimdall.dadrus.github.com",
-                  "version": "v1alpha2",
+                  "version": "v1alpha3",
                   "kind": "RuleSet"
                 },
                 "resource": {
                   "group": "heimdall.dadrus.github.com",
-                  "version": "v1alpha2",
+                  "version": "v1alpha3",
                   "resource": "rulesets"
                 },
                 "requestKind": {
                   "group": "heimdall.dadrus.github.com",
-                  "version": "v1alpha2",
+                  "version": "v1alpha3",
                   "kind": "RuleSet"
                 },
                 "requestResource": {
                   "group": "heimdall.dadrus.github.com",
-                  "version": "v1alpha2",
+                  "version": "v1alpha3",
                   "resource": "rulesets"
                 },
                 "name": "echo-app-rules",
@@ -466,11 +466,11 @@ paths:
                   ]
                 },
                 "object": {
-                  "apiVersion": "heimdall.dadrus.github.com/v1alpha2",
+                  "apiVersion": "heimdall.dadrus.github.com/v1alpha3",
                   "kind": "RuleSet",
                   "metadata": {
                     "annotations": {
-                      "kubectl.kubernetes.io/last-applied-configuration": "{\"apiVersion\":\"heimdall.dadrus.github.com/v1alpha2\",\"kind\":\"RuleSet\",\"metadata\":{\"annotations\":{},\"labels\":{\"app.kubernetes.io/name\":\"echo-app\"},\"name\":\"echo-app-rules\",\"namespace\":\"quickstarts\"},\"spec\":{\"rules\":[{\"execute\":[{\"authenticator\":\"noop_authenticator\"},{\"authorizer\":\"allow_all_requests\"},{\"finalizer\":\"noop_finalizer\"}],\"forward_to\":{\"host\":\"echo-app.quickstarts.svc.cluster.local:8080\"},\"id\":\"public-access\",\"match\":{\"url\":\"\\u003c**\\u003e://\\u003c**\\u003e/pub/\\u003c**\\u003e\"}},{\"execute\":[{\"authorizer\":\"allow_all_requests\"}],\"forward_to\":{\"host\":\"echo-app.quickstarts.svc.cluster.local:8080\"},\"id\":\"anonymous-access\",\"match\":{\"url\":\"\\u003c**\\u003e://\\u003c**\\u003e/anon/\\u003c**\\u003e\"}},{\"execute\":[{\"authenticator\":\"deny_authenticator\"}],\"forward_to\":{\"host\":\"echo-app.quickstarts.svc.cluster.local:8080\"},\"id\":\"redirect\",\"match\":{\"url\":\"\\u003c**\\u003e://\\u003c**\\u003e/redir/\\u003c**\\u003e\"}}]}}\n"
+                      "kubectl.kubernetes.io/last-applied-configuration": "{\"apiVersion\":\"heimdall.dadrus.github.com/v1alpha3\",\"kind\":\"RuleSet\",\"metadata\":{\"annotations\":{},\"labels\":{\"app.kubernetes.io/name\":\"echo-app\"},\"name\":\"echo-app-rules\",\"namespace\":\"quickstarts\"},\"spec\":{\"rules\":[{\"execute\":[{\"authorizer\":\"allow_all_requests\"},{\"finalizer\":\"noop_finalizer\"}],\"forward_to\":{\"host\":\"echo-app.quickstarts.svc.cluster.local:8080\"},\"id\":\"public-access\",\"match\":{\"url\":\"\\u003c**\\u003e://\\u003c**\\u003e/pub/\\u003c**\\u003e\"}},{\"execute\":[{\"authorizer\":\"allow_all_requests\"}],\"forward_to\":{\"host\":\"echo-app.quickstarts.svc.cluster.local:8080\"},\"id\":\"anonymous-access\",\"match\":{\"url\":\"\\u003c**\\u003e://\\u003c**\\u003e/anon/\\u003c**\\u003e\"}},{\"execute\":[{\"authenticator\":\"deny_authenticator\"}],\"forward_to\":{\"host\":\"echo-app.quickstarts.svc.cluster.local:8080\"},\"id\":\"redirect\",\"match\":{\"url\":\"\\u003c**\\u003e://\\u003c**\\u003e/redir/\\u003c**\\u003e\"}}]}}\n"
                     },
                     "creationTimestamp": "2023-10-25T17:13:37Z",
                     "generation": 1,
@@ -479,7 +479,7 @@ paths:
                     },
                     "managedFields": [
                       {
-                        "apiVersion": "heimdall.dadrus.github.com/v1alpha2",
+                        "apiVersion": "heimdall.dadrus.github.com/v1alpha3",
                         "fieldsType": "FieldsV1",
                         "fieldsV1": {
                           "f:metadata": {
@@ -512,9 +512,6 @@ paths:
                     "rules": [
                       {
                         "execute": [
-                          {
-                            "authenticator": "noop_authenticator"
-                          },
                           {
                             "authorizer": "allow_all_requests"
                           },
@@ -622,17 +619,12 @@ paths:
             type: string
         - name: X-Forwarded-Proto
           in: header
-          description: Schema to use to build the url to verify access to. If not present defaults to the schema used to operate heimdall.
+          description: HTTP scheme to use to build the url to verify access to. If not present defaults to the scheme used to operate heimdall.
           schema:
             type: string
         - name: X-Forwarded-Host
           in: header
           description: Host to use to build the url to verify access to.
-          schema:
-            type: string
-        - name: X-Forwarded-Path
-          in: header
-          description: Path to use to build the url to verify access to. If not present the `Path` of the request is used.
           schema:
             type: string
         - name: X-Forwarded-Uri
@@ -709,17 +701,12 @@ paths:
             type: string
         - name: X-Forwarded-Proto
           in: header
-          description: Schema to use to build the url to verify access to. If not present defaults to the schema used to operate heimdall.
+          description: HTTP scheme to use to build the url to verify access to. If not present defaults to the scheme used to operate heimdall.
           schema:
             type: string
         - name: X-Forwarded-Host
           in: header
           description: Host to use to build the url to verify access to.
-          schema:
-            type: string
-        - name: X-Forwarded-Path
-          in: header
-          description: Path to use to build the url to verify access to. If not present the `Path` of the request is used.
           schema:
             type: string
         - name: X-Forwarded-Uri

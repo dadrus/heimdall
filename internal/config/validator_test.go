@@ -32,7 +32,7 @@ func TestValidateNotExistingConfigFile(t *testing.T) {
 	err := ValidateConfig("foo.bar")
 
 	require.Error(t, err)
-	assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+	require.ErrorIs(t, err, heimdall.ErrConfiguration)
 	assert.Contains(t, err.Error(), "read config file")
 }
 
@@ -49,7 +49,7 @@ func TestValidateNotReadableConfigFile(t *testing.T) {
 	err = ValidateConfig(tmpFile.Name())
 
 	require.Error(t, err)
-	assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+	require.ErrorIs(t, err, heimdall.ErrConfiguration)
 	assert.Contains(t, err.Error(), "read config file")
 }
 
@@ -64,7 +64,7 @@ func TestValidateEmptyConfigFile(t *testing.T) {
 	err = ValidateConfig(tmpFile.Name())
 
 	require.Error(t, err)
-	assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+	require.ErrorIs(t, err, heimdall.ErrConfiguration)
 	assert.Contains(t, err.Error(), "empty")
 }
 
@@ -82,7 +82,7 @@ func TestValidateConfigFileWithInvalidYAMLContent(t *testing.T) {
 	err = ValidateConfig(tmpFile.Name())
 
 	require.Error(t, err)
-	assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+	require.ErrorIs(t, err, heimdall.ErrConfiguration)
 	assert.Contains(t, err.Error(), "parse config")
 }
 
@@ -100,7 +100,7 @@ func TestValidateConfigFileWithValidYAMLContentButFailingSchemaValidation(t *tes
 	err = ValidateConfig(tmpFile.Name())
 
 	require.Error(t, err)
-	assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+	require.ErrorIs(t, err, heimdall.ErrConfiguration)
 	assert.Contains(t, err.Error(), "validate")
 }
 

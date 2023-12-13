@@ -39,7 +39,7 @@ func TestMemoryCacheUsage(t *testing.T) {
 			configureCache: func(t *testing.T, cache *InMemoryCache) {
 				t.Helper()
 
-				cache.Set(context.Background(), "foo", "bar", 10*time.Minute)
+				cache.Set(context.TODO(), "foo", "bar", 10*time.Minute)
 			},
 			assert: func(t *testing.T, data any) {
 				t.Helper()
@@ -53,7 +53,7 @@ func TestMemoryCacheUsage(t *testing.T) {
 			configureCache: func(t *testing.T, cache *InMemoryCache) {
 				t.Helper()
 
-				cache.Set(context.Background(), "bar", "baz", 1*time.Microsecond)
+				cache.Set(context.TODO(), "bar", "baz", 1*time.Microsecond)
 
 				time.Sleep(200 * time.Millisecond)
 			},
@@ -69,8 +69,8 @@ func TestMemoryCacheUsage(t *testing.T) {
 			configureCache: func(t *testing.T, cache *InMemoryCache) {
 				t.Helper()
 
-				cache.Set(context.Background(), "baz", "bar", 1*time.Second)
-				cache.Delete(context.Background(), "baz")
+				cache.Set(context.TODO(), "baz", "bar", 1*time.Second)
+				cache.Delete(context.TODO(), "baz")
 			},
 			assert: func(t *testing.T, data any) {
 				t.Helper()
@@ -98,7 +98,7 @@ func TestMemoryCacheUsage(t *testing.T) {
 			// WHEN
 			tc.configureCache(t, cache)
 
-			data := cache.Get(context.Background(), tc.key)
+			data := cache.Get(context.TODO(), tc.key)
 
 			// THEN
 			tc.assert(t, data)
@@ -110,14 +110,14 @@ func TestMemoryCacheExpiration(t *testing.T) {
 	t.Parallel()
 
 	cache, _ := NewMemoryCache()
-	cache.Set(context.Background(), "baz", "bar", 1*time.Second)
+	cache.Set(context.TODO(), "baz", "bar", 1*time.Second)
 
 	hits := 0
 
 	for i := 0; i < 8; i++ {
 		time.Sleep(250 * time.Millisecond)
 
-		item := cache.Get(context.Background(), "baz")
+		item := cache.Get(context.TODO(), "baz")
 		if item != nil {
 			hits++
 		}

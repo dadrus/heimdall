@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/heimdall/mocks"
@@ -35,7 +36,7 @@ func TestExtractHeaderValue(t *testing.T) {
 		assert         func(t *testing.T, err error, authData string)
 	}{
 		{
-			uc:       "header is present, schema is irrelevant",
+			uc:       "header is present, scheme is irrelevant",
 			strategy: HeaderValueExtractStrategy{Name: "X-Test-Header"},
 			configureMocks: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
@@ -48,13 +49,13 @@ func TestExtractHeaderValue(t *testing.T) {
 			assert: func(t *testing.T, err error, authData string) {
 				t.Helper()
 
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				assert.Equal(t, "TestValue", authData)
 			},
 		},
 		{
-			uc:       "schema is required, header is present, but without any schema",
-			strategy: HeaderValueExtractStrategy{Name: "X-Test-Header", Schema: "Foo"},
+			uc:       "scheme is required, header is present, but without any scheme",
+			strategy: HeaderValueExtractStrategy{Name: "X-Test-Header", Scheme: "Foo"},
 			configureMocks: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
@@ -66,14 +67,14 @@ func TestExtractHeaderValue(t *testing.T) {
 			assert: func(t *testing.T, err error, authData string) {
 				t.Helper()
 
-				assert.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrArgument)
-				assert.Contains(t, err.Error(), "'Foo' schema")
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrArgument)
+				assert.Contains(t, err.Error(), "'Foo' scheme")
 			},
 		},
 		{
-			uc:       "schema is required, header is present, but with different schema",
-			strategy: HeaderValueExtractStrategy{Name: "X-Test-Header", Schema: "Foo"},
+			uc:       "scheme is required, header is present, but with different scheme",
+			strategy: HeaderValueExtractStrategy{Name: "X-Test-Header", Scheme: "Foo"},
 			configureMocks: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
@@ -85,14 +86,14 @@ func TestExtractHeaderValue(t *testing.T) {
 			assert: func(t *testing.T, err error, authData string) {
 				t.Helper()
 
-				assert.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrArgument)
-				assert.Contains(t, err.Error(), "'Foo' schema")
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrArgument)
+				assert.Contains(t, err.Error(), "'Foo' scheme")
 			},
 		},
 		{
-			uc:       "header with required schema is present",
-			strategy: HeaderValueExtractStrategy{Name: "X-Test-Header", Schema: "Foo"},
+			uc:       "header with required scheme is present",
+			strategy: HeaderValueExtractStrategy{Name: "X-Test-Header", Scheme: "Foo"},
 			configureMocks: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
@@ -104,13 +105,13 @@ func TestExtractHeaderValue(t *testing.T) {
 			assert: func(t *testing.T, err error, authData string) {
 				t.Helper()
 
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				assert.Equal(t, "TestValue", authData)
 			},
 		},
 		{
 			uc:       "header is not present at all",
-			strategy: HeaderValueExtractStrategy{Name: "X-Test-Header", Schema: "Foo"},
+			strategy: HeaderValueExtractStrategy{Name: "X-Test-Header", Scheme: "Foo"},
 			configureMocks: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
@@ -122,8 +123,8 @@ func TestExtractHeaderValue(t *testing.T) {
 			assert: func(t *testing.T, err error, authData string) {
 				t.Helper()
 
-				assert.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrArgument)
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrArgument)
 				assert.Contains(t, err.Error(), "no 'X-Test-Header' header")
 			},
 		},

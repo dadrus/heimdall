@@ -52,7 +52,7 @@ func TestNewCelExecutionCondition(t *testing.T) {
 			} else {
 				require.NoError(t, err)
 				require.NotNil(t, condition)
-				require.NotNil(t, condition.p)
+				require.NotNil(t, condition.e)
 			}
 		})
 	}
@@ -92,6 +92,11 @@ func TestCelExecutionConditionCanExecute(t *testing.T) {
 			expression: `Subject.ID == "foobar" && Request.Method == "GET"`,
 			expected:   true,
 		},
+		{
+			uc:         "expression acting on client ip addresses",
+			expression: `Request.ClientIPAddresses[1] in networks("10.10.10.0/24")`,
+			expected:   true,
+		},
 	} {
 		t.Run(tc.uc, func(t *testing.T) {
 			// GIVEN
@@ -105,7 +110,7 @@ func TestCelExecutionConditionCanExecute(t *testing.T) {
 					Path:     "/test",
 					RawQuery: "foo=bar&baz=zab",
 				},
-				ClientIP: []string{"127.0.0.1", "10.10.10.10"},
+				ClientIPAddresses: []string{"127.0.0.1", "10.10.10.10"},
 			})
 
 			condition, err := newCelExecutionCondition(tc.expression)

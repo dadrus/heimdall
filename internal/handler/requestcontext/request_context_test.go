@@ -150,7 +150,7 @@ func TestRequestContextHeader(t *testing.T) {
 	emptyValue := ctx.Request().Header("X-Not-Present")
 
 	// THEN
-	assert.Equal(t, "foo", xFooBarValue)
+	assert.Equal(t, "foo,bar", xFooBarValue)
 	assert.Equal(t, "bar.foo", hostValue)
 	assert.Empty(t, emptyValue)
 }
@@ -176,22 +176,67 @@ func TestRequestContextCookie(t *testing.T) {
 func TestRequestContextBody(t *testing.T) {
 	t.Parallel()
 
-	req := httptest.NewRequest(http.MethodPost, "https://foo.bar/test", bytes.NewBufferString("Ping"))
-	req.Header.Set("X-Custom", "foo")
+	for _, tc := range []struct {
+		uc     string
+		ct     string
+		body   io.Reader
+		expect any
+	}{
+		{
+			uc:     "No body",
+			ct:     "empty",
+			body:   nil,
+			expect: "",
+		},
+		{
+			uc:     "No body",
+			ct:     "empty",
+			body:   bytes.NewBufferString(""),
+			expect: "",
+		},
+		{
+			uc:     "Wrong content type",
+			ct:     "application/json",
+			body:   bytes.NewBufferString("foo: bar"),
+			expect: "foo: bar",
+		},
+		{
+			uc:     "x-www-form-urlencoded encoded",
+			ct:     "application/x-www-form-urlencoded; charset=utf-8",
+			body:   bytes.NewBufferString("content=heimdall"),
+			expect: map[string]any{"content": []string{"heimdall"}},
+		},
+		{
+			uc:     "json encoded",
+			ct:     "application/json; charset=utf-8",
+			body:   bytes.NewBufferString(`{ "content": "heimdall" }`),
+			expect: map[string]any{"content": "heimdall"},
+		},
+		{
+			uc:     "yaml encoded",
+			ct:     "application/yaml; charset=utf-8",
+			body:   bytes.NewBufferString("content: heimdall"),
+			expect: map[string]any{"content": "heimdall"},
+		},
+		{
+			uc:     "plain text",
+			ct:     "text/plain",
+			body:   bytes.NewBufferString("content=heimdall"),
+			expect: "content=heimdall",
+		},
+	} {
+		t.Run(tc.uc, func(t *testing.T) {
+			// GIVEN
+			req := httptest.NewRequest(http.MethodPost, "https://foo.bar/test", tc.body)
+			req.Header.Set("Content-Type", tc.ct)
 
-	ctx := New(nil, req)
-	ctx.AddHeaderForUpstream("X-Foo", "bar")
+			ctx := New(nil, req)
 
-	// just consume body
-	first := ctx.Request().Body()
-	// there should be no difference
-	second := ctx.Request().Body()
+			// WHEN
+			data := ctx.Request().Body()
 
-	// WHEN
-	orig, err := io.ReadAll(req.Body)
-	require.NoError(t, err)
-
-	// THEN
-	require.Equal(t, orig, first)
-	require.Equal(t, first, second)
+			// THEN
+			assert.Equal(t, tc.expect, data)
+		})
+	}
 }

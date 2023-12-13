@@ -25,7 +25,7 @@ import (
 
 type Authorizer interface {
 	ID() string
-	Execute(heimdall.Context, *subject.Subject) error
+	Execute(ctx heimdall.Context, sub *subject.Subject) error
 	WithConfig(config map[string]any) (Authorizer, error)
 	ContinueOnError() bool
 }

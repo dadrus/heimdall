@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/heimdall/mocks"
@@ -51,7 +52,7 @@ func TestCompositeSubjectCreatorExecution(t *testing.T) {
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			},
 		},
 		{
@@ -67,7 +68,7 @@ func TestCompositeSubjectCreatorExecution(t *testing.T) {
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
-				assert.Error(t, err)
+				require.Error(t, err)
 				assert.Equal(t, err, heimdall.ErrArgument)
 			},
 		},
@@ -84,7 +85,7 @@ func TestCompositeSubjectCreatorExecution(t *testing.T) {
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
-				assert.Error(t, err)
+				require.Error(t, err)
 				assert.Equal(t, err, testsupport.ErrTestPurpose)
 			},
 		},
@@ -102,7 +103,7 @@ func TestCompositeSubjectCreatorExecution(t *testing.T) {
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			},
 		},
 	} {

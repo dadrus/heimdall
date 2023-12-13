@@ -54,7 +54,7 @@ func format(req *http.Request, body error) (contenttype.MediaType, []byte, error
 	case "plain":
 		fallthrough
 	default:
-		return supportedMediaTypes[2], []byte(fmt.Sprintf("%s", body)), nil
+		return supportedMediaTypes[2], []byte(body.Error()), nil
 	}
 }
 

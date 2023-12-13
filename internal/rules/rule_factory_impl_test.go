@@ -51,7 +51,7 @@ func TestRuleFactoryNew(t *testing.T) {
 	}{
 		{
 			uc:     "new factory without default rule",
-			config: &config.Configuration{Rules: config.Rules{}},
+			config: &config.Configuration{},
 			assert: func(t *testing.T, err error, ruleFactory *ruleFactory) {
 				t.Helper()
 
@@ -63,48 +63,48 @@ func TestRuleFactoryNew(t *testing.T) {
 		},
 		{
 			uc: "new factory with default rule with unsupported object in execute definition",
-			config: &config.Configuration{Rules: config.Rules{
+			config: &config.Configuration{
 				Default: &config.DefaultRule{
 					Execute: []config.MechanismConfig{
 						{"foo": "bar"},
 					},
 				},
-			}},
+			},
 			assert: func(t *testing.T, err error, _ *ruleFactory) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "unsupported configuration")
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorContains(t, err, "unsupported configuration")
 			},
 		},
 		{
 			uc: "new factory with default rule with unsupported object in error handler definition",
-			config: &config.Configuration{Rules: config.Rules{
+			config: &config.Configuration{
 				Default: &config.DefaultRule{
 					ErrorHandler: []config.MechanismConfig{
 						{"foo": "bar"},
 					},
 				},
-			}},
+			},
 			assert: func(t *testing.T, err error, _ *ruleFactory) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "unsupported configuration")
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorContains(t, err, "unsupported configuration")
 			},
 		},
 		{
 			uc: "new factory with malformed default rule, where authenticator loading happens after subject handlers",
-			config: &config.Configuration{Rules: config.Rules{
+			config: &config.Configuration{
 				Default: &config.DefaultRule{
 					Execute: []config.MechanismConfig{
 						{"contextualizer": "bar"},
 						{"authenticator": "foo"},
 					},
 				},
-			}},
+			},
 			configureMocks: func(t *testing.T, mhf *mocks3.FactoryMock) {
 				t.Helper()
 
@@ -115,20 +115,20 @@ func TestRuleFactoryNew(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "an authenticator")
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorContains(t, err, "an authenticator")
 			},
 		},
 		{
 			uc: "new factory with malformed default rule, where authenticator loading happens after finalizers",
-			config: &config.Configuration{Rules: config.Rules{
+			config: &config.Configuration{
 				Default: &config.DefaultRule{
 					Execute: []config.MechanismConfig{
 						{"finalizer": "bar"},
 						{"authenticator": "foo"},
 					},
 				},
-			}},
+			},
 			configureMocks: func(t *testing.T, mhf *mocks3.FactoryMock) {
 				t.Helper()
 
@@ -138,17 +138,17 @@ func TestRuleFactoryNew(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "an authenticator")
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorContains(t, err, "an authenticator")
 			},
 		},
 		{
 			uc: "new factory with default rule, where authenticator loading results in an error",
-			config: &config.Configuration{Rules: config.Rules{
+			config: &config.Configuration{
 				Default: &config.DefaultRule{
 					Execute: []config.MechanismConfig{{"authenticator": "foo"}},
 				},
-			}},
+			},
 			configureMocks: func(t *testing.T, mhf *mocks3.FactoryMock) {
 				t.Helper()
 
@@ -163,14 +163,14 @@ func TestRuleFactoryNew(t *testing.T) {
 		},
 		{
 			uc: "new factory with malformed default rule, where authorizer loading happens after finalizers",
-			config: &config.Configuration{Rules: config.Rules{
+			config: &config.Configuration{
 				Default: &config.DefaultRule{
 					Execute: []config.MechanismConfig{
 						{"finalizer": "bar"},
 						{"authorizer": "foo"},
 					},
 				},
-			}},
+			},
 			configureMocks: func(t *testing.T, mhf *mocks3.FactoryMock) {
 				t.Helper()
 
@@ -180,17 +180,17 @@ func TestRuleFactoryNew(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "before an authorizer")
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorContains(t, err, "before an authorizer")
 			},
 		},
 		{
 			uc: "new factory with default rule, where authorizer loading results in an error",
-			config: &config.Configuration{Rules: config.Rules{
+			config: &config.Configuration{
 				Default: &config.DefaultRule{
 					Execute: []config.MechanismConfig{{"authorizer": "foo"}},
 				},
-			}},
+			},
 			configureMocks: func(t *testing.T, mhf *mocks3.FactoryMock) {
 				t.Helper()
 
@@ -205,14 +205,14 @@ func TestRuleFactoryNew(t *testing.T) {
 		},
 		{
 			uc: "new factory with malformed default rule, where contextualizer loading happens after finalizers",
-			config: &config.Configuration{Rules: config.Rules{
+			config: &config.Configuration{
 				Default: &config.DefaultRule{
 					Execute: []config.MechanismConfig{
 						{"finalizer": "bar"},
 						{"contextualizer": "foo"},
 					},
 				},
-			}},
+			},
 			configureMocks: func(t *testing.T, mhf *mocks3.FactoryMock) {
 				t.Helper()
 
@@ -222,17 +222,17 @@ func TestRuleFactoryNew(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "before a contextualizer")
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorContains(t, err, "before a contextualizer")
 			},
 		},
 		{
 			uc: "new factory with default rule, where contextualizer loading results in an error",
-			config: &config.Configuration{Rules: config.Rules{
+			config: &config.Configuration{
 				Default: &config.DefaultRule{
 					Execute: []config.MechanismConfig{{"contextualizer": "foo"}},
 				},
-			}},
+			},
 			configureMocks: func(t *testing.T, mhf *mocks3.FactoryMock) {
 				t.Helper()
 
@@ -248,11 +248,11 @@ func TestRuleFactoryNew(t *testing.T) {
 		},
 		{
 			uc: "new factory with default rule, where finalizer loading results in an error",
-			config: &config.Configuration{Rules: config.Rules{
+			config: &config.Configuration{
 				Default: &config.DefaultRule{
 					Execute: []config.MechanismConfig{{"finalizer": "foo"}},
 				},
-			}},
+			},
 			configureMocks: func(t *testing.T, mhf *mocks3.FactoryMock) {
 				t.Helper()
 
@@ -267,11 +267,11 @@ func TestRuleFactoryNew(t *testing.T) {
 		},
 		{
 			uc: "new factory with default rule, where error_handler loading results in an error",
-			config: &config.Configuration{Rules: config.Rules{
+			config: &config.Configuration{
 				Default: &config.DefaultRule{
 					ErrorHandler: []config.MechanismConfig{{"error_handler": "foo"}},
 				},
-			}},
+			},
 			configureMocks: func(t *testing.T, mhf *mocks3.FactoryMock) {
 				t.Helper()
 
@@ -286,28 +286,28 @@ func TestRuleFactoryNew(t *testing.T) {
 		},
 		{
 			uc: "new factory with empty default rule",
-			config: &config.Configuration{Rules: config.Rules{
+			config: &config.Configuration{
 				Default: &config.DefaultRule{
 					Execute: []config.MechanismConfig{},
 				},
-			}},
+			},
 			assert: func(t *testing.T, err error, _ *ruleFactory) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "no authenticator")
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorContains(t, err, "no authenticator")
 			},
 		},
 		{
 			uc: "new factory with default rule, consisting of authenticator only",
-			config: &config.Configuration{Rules: config.Rules{
+			config: &config.Configuration{
 				Default: &config.DefaultRule{
 					Execute: []config.MechanismConfig{
 						{"authenticator": "bar"},
 					},
 				},
-			}},
+			},
 			configureMocks: func(t *testing.T, mhf *mocks3.FactoryMock) {
 				t.Helper()
 
@@ -317,20 +317,20 @@ func TestRuleFactoryNew(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "no finalizer")
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorContains(t, err, "no methods")
 			},
 		},
 		{
 			uc: "new factory with default rule, consisting of authorizer and contextualizer",
-			config: &config.Configuration{Rules: config.Rules{
+			config: &config.Configuration{
 				Default: &config.DefaultRule{
 					Execute: []config.MechanismConfig{
 						{"authenticator": "bar"},
 						{"contextualizer": "baz"},
 					},
 				},
-			}},
+			},
 			configureMocks: func(t *testing.T, mhf *mocks3.FactoryMock) {
 				t.Helper()
 
@@ -341,13 +341,13 @@ func TestRuleFactoryNew(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "no finalizer")
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorContains(t, err, "no methods")
 			},
 		},
 		{
 			uc: "new factory with default rule, consisting of authorizer, contextualizer and authorizer",
-			config: &config.Configuration{Rules: config.Rules{
+			config: &config.Configuration{
 				Default: &config.DefaultRule{
 					Execute: []config.MechanismConfig{
 						{"authenticator": "bar"},
@@ -355,7 +355,7 @@ func TestRuleFactoryNew(t *testing.T) {
 						{"authorizer": "zab"},
 					},
 				},
-			}},
+			},
 			configureMocks: func(t *testing.T, mhf *mocks3.FactoryMock) {
 				t.Helper()
 
@@ -367,13 +367,13 @@ func TestRuleFactoryNew(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "no finalizer")
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorContains(t, err, "no methods")
 			},
 		},
 		{
 			uc: "new factory with default rule, consisting of authorizer and finalizer with error while expanding methods",
-			config: &config.Configuration{Rules: config.Rules{
+			config: &config.Configuration{
 				Default: &config.DefaultRule{
 					Execute: []config.MechanismConfig{
 						{"authenticator": "bar"},
@@ -381,7 +381,7 @@ func TestRuleFactoryNew(t *testing.T) {
 					},
 					Methods: []string{"FOO", ""},
 				},
-			}},
+			},
 			configureMocks: func(t *testing.T, mhf *mocks3.FactoryMock) {
 				t.Helper()
 
@@ -392,20 +392,20 @@ func TestRuleFactoryNew(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "failed to expand")
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorContains(t, err, "failed to expand")
 			},
 		},
 		{
 			uc: "new factory with default rule, consisting of authorizer and finalizer without methods defined",
-			config: &config.Configuration{Rules: config.Rules{
+			config: &config.Configuration{
 				Default: &config.DefaultRule{
 					Execute: []config.MechanismConfig{
 						{"authenticator": "bar"},
 						{"finalizer": "baz"},
 					},
 				},
-			}},
+			},
 			configureMocks: func(t *testing.T, mhf *mocks3.FactoryMock) {
 				t.Helper()
 
@@ -416,26 +416,24 @@ func TestRuleFactoryNew(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "no methods defined")
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorContains(t, err, "no methods defined")
 			},
 		},
 		{
 			uc: "new factory with default rule, configured with all required elements",
-			config: &config.Configuration{Rules: config.Rules{
+			config: &config.Configuration{
 				Default: &config.DefaultRule{
 					Execute: []config.MechanismConfig{
 						{"authenticator": "bar"},
-						{"finalizer": "baz"},
 					},
 					Methods: []string{"FOO"},
 				},
-			}},
+			},
 			configureMocks: func(t *testing.T, mhf *mocks3.FactoryMock) {
 				t.Helper()
 
 				mhf.EXPECT().CreateAuthenticator(mock.Anything, "bar", mock.Anything).Return(nil, nil)
-				mhf.EXPECT().CreateFinalizer(mock.Anything, "baz", mock.Anything).Return(nil, nil)
 			},
 			assert: func(t *testing.T, err error, ruleFactory *ruleFactory) {
 				t.Helper()
@@ -449,16 +447,17 @@ func TestRuleFactoryNew(t *testing.T) {
 				assert.True(t, defRule.isDefault)
 				assert.Equal(t, "default", defRule.id)
 				assert.Equal(t, "config", defRule.srcID)
+				assert.Equal(t, config2.EncodedSlashesOff, defRule.encodedSlashesHandling)
 				assert.ElementsMatch(t, defRule.methods, []string{"FOO"})
 				assert.Len(t, defRule.sc, 1)
-				assert.Len(t, defRule.sh, 0)
-				assert.Len(t, defRule.fi, 1)
-				assert.Len(t, defRule.eh, 0)
+				assert.Empty(t, defRule.sh)
+				assert.Empty(t, defRule.fi)
+				assert.Empty(t, defRule.eh)
 			},
 		},
 		{
 			uc: "new factory with default rule, configured with all possible elements",
-			config: &config.Configuration{Rules: config.Rules{
+			config: &config.Configuration{
 				Default: &config.DefaultRule{
 					Execute: []config.MechanismConfig{
 						{"authenticator": "bar"},
@@ -472,7 +471,7 @@ func TestRuleFactoryNew(t *testing.T) {
 					},
 					Methods: []string{"FOO", "BAR"},
 				},
-			}},
+			},
 			configureMocks: func(t *testing.T, mhf *mocks3.FactoryMock) {
 				t.Helper()
 
@@ -495,6 +494,7 @@ func TestRuleFactoryNew(t *testing.T) {
 				assert.True(t, defRule.isDefault)
 				assert.Equal(t, "default", defRule.id)
 				assert.Equal(t, "config", defRule.srcID)
+				assert.Equal(t, config2.EncodedSlashesOff, defRule.encodedSlashesHandling)
 				assert.ElementsMatch(t, defRule.methods, []string{"FOO", "BAR"})
 				assert.Len(t, defRule.sc, 1)
 				assert.Len(t, defRule.sh, 2)
@@ -550,7 +550,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
 				assert.Contains(t, err.Error(), "no ID defined")
 			},
 		},
@@ -562,7 +562,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
 				assert.Contains(t, err.Error(), "no forward_to")
 			},
 		},
@@ -574,7 +574,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
 				assert.Contains(t, err.Error(), "missing host")
 			},
 		},
@@ -592,7 +592,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
 				assert.Contains(t, err.Error(), "rewrite is defined")
 			},
 		},
@@ -603,7 +603,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
 				assert.Contains(t, err.Error(), "bad URL pattern")
 			},
 		},
@@ -614,7 +614,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
 				assert.Contains(t, err.Error(), "bad URL pattern")
 			},
 		},
@@ -666,7 +666,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
 				assert.Contains(t, err.Error(), "no authenticator defined")
 			},
 		},
@@ -686,8 +686,8 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "no finalizer defined")
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorContains(t, err, "no methods defined")
 			},
 		},
 		{
@@ -710,8 +710,8 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "no finalizer defined")
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorContains(t, err, "no methods defined")
 			},
 		},
 		{
@@ -736,8 +736,8 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "no finalizer defined")
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorContains(t, err, "no methods defined")
 			},
 		},
 		{
@@ -761,8 +761,8 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "failed to expand")
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorContains(t, err, "failed to expand")
 			},
 		},
 		{
@@ -785,8 +785,8 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "no methods defined")
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorContains(t, err, "no methods defined")
 			},
 		},
 		{
@@ -796,7 +796,6 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				RuleMatcher: config2.Matcher{URL: "http://foo.bar", Strategy: "glob"},
 				Execute: []config.MechanismConfig{
 					{"authenticator": "foo"},
-					{"finalizer": "bar"},
 				},
 				Methods: []string{"FOO", "BAR"},
 			},
@@ -804,7 +803,6 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				t.Helper()
 
 				mhf.EXPECT().CreateAuthenticator("test", "foo", mock.Anything).Return(&mocks2.AuthenticatorMock{}, nil)
-				mhf.EXPECT().CreateFinalizer("test", "bar", mock.Anything).Return(&mocks7.FinalizerMock{}, nil)
 			},
 			assert: func(t *testing.T, err error, rul *ruleImpl) {
 				t.Helper()
@@ -815,12 +813,13 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				assert.Equal(t, "test", rul.srcID)
 				assert.False(t, rul.isDefault)
 				assert.Equal(t, "foobar", rul.id)
+				assert.Equal(t, config2.EncodedSlashesOff, rul.encodedSlashesHandling)
 				assert.NotNil(t, rul.urlMatcher)
 				assert.ElementsMatch(t, rul.methods, []string{"FOO", "BAR"})
 				assert.Len(t, rul.sc, 1)
-				assert.Len(t, rul.sh, 0)
-				assert.Len(t, rul.fi, 1)
-				assert.Len(t, rul.eh, 0)
+				assert.Empty(t, rul.sh)
+				assert.Empty(t, rul.fi)
+				assert.Empty(t, rul.eh)
 			},
 		},
 		{
@@ -832,7 +831,6 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				RuleMatcher: config2.Matcher{URL: "http://foo.bar", Strategy: "glob"},
 				Execute: []config.MechanismConfig{
 					{"authenticator": "foo"},
-					{"finalizer": "bar"},
 				},
 				Methods: []string{"FOO", "BAR"},
 			},
@@ -840,7 +838,6 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				t.Helper()
 
 				mhf.EXPECT().CreateAuthenticator("test", "foo", mock.Anything).Return(&mocks2.AuthenticatorMock{}, nil)
-				mhf.EXPECT().CreateFinalizer("test", "bar", mock.Anything).Return(&mocks7.FinalizerMock{}, nil)
 			},
 			assert: func(t *testing.T, err error, rul *ruleImpl) {
 				t.Helper()
@@ -851,12 +848,13 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				assert.Equal(t, "test", rul.srcID)
 				assert.False(t, rul.isDefault)
 				assert.Equal(t, "foobar", rul.id)
+				assert.Equal(t, config2.EncodedSlashesOff, rul.encodedSlashesHandling)
 				assert.NotNil(t, rul.urlMatcher)
 				assert.ElementsMatch(t, rul.methods, []string{"FOO", "BAR"})
 				assert.Len(t, rul.sc, 1)
-				assert.Len(t, rul.sh, 0)
-				assert.Len(t, rul.fi, 1)
-				assert.Len(t, rul.eh, 0)
+				assert.Empty(t, rul.sh)
+				assert.Empty(t, rul.fi)
+				assert.Empty(t, rul.eh)
 				assert.NotNil(t, rul.backend)
 			},
 		},
@@ -893,8 +891,9 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 		{
 			uc: "with default rule and with all attributes defined by the rule itself in decision mode",
 			config: config2.Rule{
-				ID:          "foobar",
-				RuleMatcher: config2.Matcher{URL: "http://foo.bar", Strategy: "glob"},
+				ID:                     "foobar",
+				RuleMatcher:            config2.Matcher{URL: "http://foo.bar", Strategy: "glob"},
+				EncodedSlashesHandling: config2.EncodedSlashesNoDecode,
 				Execute: []config.MechanismConfig{
 					{"authenticator": "foo"},
 					{"contextualizer": "bar"},
@@ -936,6 +935,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				assert.Equal(t, "test", rul.srcID)
 				assert.False(t, rul.isDefault)
 				assert.Equal(t, "foobar", rul.id)
+				assert.Equal(t, config2.EncodedSlashesNoDecode, rul.encodedSlashesHandling)
 				assert.NotNil(t, rul.urlMatcher)
 				assert.ElementsMatch(t, rul.methods, []string{"BAR", "BAZ"})
 
@@ -956,8 +956,9 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 			uc:     "with default rule and with all attributes defined by the rule itself in proxy mode",
 			opMode: config.ProxyMode,
 			config: config2.Rule{
-				ID:          "foobar",
-				RuleMatcher: config2.Matcher{URL: "http://foo.bar", Strategy: "glob"},
+				ID:                     "foobar",
+				RuleMatcher:            config2.Matcher{URL: "http://foo.bar", Strategy: "glob"},
+				EncodedSlashesHandling: config2.EncodedSlashesOn,
 				Backend: &config2.Backend{
 					Host: "bar.foo",
 					URLRewriter: &config2.URLRewriter{
@@ -1008,6 +1009,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				assert.Equal(t, "test", rul.srcID)
 				assert.False(t, rul.isDefault)
 				assert.Equal(t, "foobar", rul.id)
+				assert.Equal(t, config2.EncodedSlashesOn, rul.encodedSlashesHandling)
 				assert.NotNil(t, rul.urlMatcher)
 				assert.ElementsMatch(t, rul.methods, []string{"BAR", "BAZ"})
 				assert.Equal(t, "https://bar.foo/baz/bar?foo=bar", rul.backend.CreateURL(&url.URL{
@@ -1051,8 +1053,8 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "unexpected type")
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorContains(t, err, "unexpected type")
 			},
 		},
 		{
@@ -1075,8 +1077,8 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "empty execution condition")
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorContains(t, err, "empty execution condition")
 			},
 		},
 		{
@@ -1143,6 +1145,68 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				assert.IsType(t, &celExecutionCondition{}, un.c)
 
 				require.Empty(t, rul.eh)
+			},
+		},
+		{
+			uc: "with conditional execution for error handler",
+			config: config2.Rule{
+				ID:          "foobar",
+				RuleMatcher: config2.Matcher{URL: "http://foo.bar", Strategy: "glob"},
+				Execute: []config.MechanismConfig{
+					{"authenticator": "foo"},
+					{"authorizer": "bar"},
+					{"finalizer": "baz"},
+				},
+				ErrorHandler: []config.MechanismConfig{
+					{"error_handler": "foo", "if": "true", "config": map[string]any{}},
+					{"error_handler": "bar", "if": "false", "config": map[string]any{}},
+				},
+				Methods: []string{"FOO"},
+			},
+			configureMocks: func(t *testing.T, mhf *mocks3.FactoryMock) {
+				t.Helper()
+
+				mhf.EXPECT().CreateAuthenticator("test", "foo", mock.Anything).
+					Return(&mocks2.AuthenticatorMock{}, nil)
+				mhf.EXPECT().CreateAuthorizer("test", "bar", mock.Anything).
+					Return(&mocks4.AuthorizerMock{}, nil)
+				mhf.EXPECT().CreateFinalizer("test", "baz", mock.Anything).
+					Return(&mocks7.FinalizerMock{}, nil)
+				mhf.EXPECT().CreateErrorHandler("test", "foo",
+					mock.MatchedBy(func(conf map[string]any) bool { return conf["if"] == "true" }),
+				).Return(&mocks6.ErrorHandlerMock{}, nil)
+				mhf.EXPECT().CreateErrorHandler("test", "bar",
+					mock.MatchedBy(func(conf map[string]any) bool { return conf["if"] == "false" }),
+				).Return(&mocks6.ErrorHandlerMock{}, nil)
+			},
+			assert: func(t *testing.T, err error, rul *ruleImpl) {
+				t.Helper()
+
+				require.NoError(t, err)
+				require.NotNil(t, rul)
+
+				assert.Equal(t, "test", rul.srcID)
+				assert.False(t, rul.isDefault)
+				assert.Equal(t, "foobar", rul.id)
+				assert.NotNil(t, rul.urlMatcher)
+				assert.ElementsMatch(t, rul.methods, []string{"FOO"})
+
+				require.Len(t, rul.sc, 1)
+				assert.NotNil(t, rul.sc[0])
+
+				require.Len(t, rul.sh, 1)
+
+				assert.NotNil(t, rul.sh[0])
+				sh, ok := rul.sh[0].(*conditionalSubjectHandler)
+				require.True(t, ok)
+				assert.IsType(t, defaultExecutionCondition{}, sh.c)
+
+				require.Len(t, rul.fi, 1)
+				un, ok := rul.fi[0].(*conditionalSubjectHandler)
+				require.True(t, ok)
+				assert.IsType(t, defaultExecutionCondition{}, un.c)
+
+				require.Len(t, rul.eh, 2)
 			},
 		},
 	} {

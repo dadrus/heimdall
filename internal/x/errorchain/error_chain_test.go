@@ -57,7 +57,7 @@ func TestErrorChainNew(t *testing.T) {
 
 	// THEN
 	require.Error(t, err)
-	assert.ErrorIs(t, err, errTest1)
+	require.ErrorIs(t, err, errTest1)
 	assert.Equal(t, err.Error(), errTest1.Error())
 	assert.Nil(t, err.ErrorContext())
 }
@@ -70,7 +70,7 @@ func TestErrorChainNewWithMessage(t *testing.T) {
 
 	// THEN
 	require.Error(t, err)
-	assert.ErrorIs(t, err, errTest1)
+	require.ErrorIs(t, err, errTest1)
 	assert.Equal(t, err.Error(), errTest1.Error()+": foobar")
 	assert.Nil(t, err.ErrorContext())
 }
@@ -83,7 +83,7 @@ func TestErrorChainNewWithFormattedMessage(t *testing.T) {
 
 	// THEN
 	require.Error(t, err)
-	assert.ErrorIs(t, err, errTest1)
+	require.ErrorIs(t, err, errTest1)
 	assert.Equal(t, err.Error(), errTest1.Error()+": foobar")
 	assert.Nil(t, err.ErrorContext())
 }
@@ -101,8 +101,8 @@ func TestErrorChainNewWithCause(t *testing.T) {
 
 	// THEN
 	require.Error(t, err)
-	assert.ErrorIs(t, err, errTest1)
-	assert.ErrorIs(t, err, errTest2)
+	require.ErrorIs(t, err, errTest1)
+	require.ErrorIs(t, err, errTest2)
 	assert.Equal(t, err.Error(), errTest1.Error()+": foo: "+errTest2.Error())
 	assert.Nil(t, err.ErrorContext())
 
@@ -126,15 +126,15 @@ func TestErrorChainNewWithCauseAndContextDetachedFromError(t *testing.T) {
 
 	// THEN
 	require.Error(t, err)
-	assert.ErrorIs(t, err, errTest1)
-	assert.ErrorIs(t, err, errTest2)
+	require.ErrorIs(t, err, errTest1)
+	require.ErrorIs(t, err, errTest2)
 	assert.Equal(t, err.Error(), errTest1.Error()+": foo: "+errTest2.Error())
 	assert.Equal(t, &errCtx{}, err.ErrorContext())
 
 	errs := err.Errors()
 	assert.ElementsMatch(t, errs, []error{errTest1, errTest2})
 
-	require.True(t, errors.As(err, &fooer))
+	require.ErrorAs(t, err, &fooer)
 	assert.Equal(t, "foo", fooer.Foo())
 }
 
@@ -153,15 +153,15 @@ func TestErrorChainNewWithCauseAndContextAttachedToError(t *testing.T) {
 
 	// THEN
 	require.Error(t, err)
-	assert.ErrorIs(t, err, errTest)
-	assert.ErrorIs(t, err, errTest2)
+	require.ErrorIs(t, err, errTest)
+	require.ErrorIs(t, err, errTest2)
 	assert.Equal(t, err.Error(), errTest.Error()+": foo: "+errTest2.Error())
 	assert.Nil(t, err.ErrorContext())
 
 	errs := err.Errors()
 	assert.ElementsMatch(t, errs, []error{errTest, errTest2})
 
-	require.True(t, errors.As(err, &barer))
+	require.ErrorAs(t, err, &barer)
 	assert.Equal(t, "bar", barer.Bar())
 }
 

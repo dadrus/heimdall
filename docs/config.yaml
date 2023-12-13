@@ -78,7 +78,7 @@ params:
     name: Apache 2.0
     url: https://github.com/dadrus/heimdall/blob/master/LICENSE
   author: Dimitrij Drus
-  description: Heimdall is an open source identity aware proxy (IAP) and access control decision service, designed for cloud native applications
+  description: An open source Identity Aware Proxy and an Access Control Decision service for cloud native applications
   github:
     user: dadrus
     project: heimdall
@@ -88,6 +88,7 @@ params:
   version_file: /heimdall/data.json
   search_index_file: /heimdall/x-current-version/index.json
   path_prefix: /heimdall/x-current-version
+  docs_entry_point: /docs/welcome.adoc
 
 module:
   mounts:

@@ -49,9 +49,9 @@ type Provider struct {
 }
 
 func NewProvider(conf *config.Configuration, processor rule.SetProcessor, logger zerolog.Logger) (*Provider, error) {
-	rawConf := conf.Rules.Providers.FileSystem
+	rawConf := conf.Providers.FileSystem
 
-	if conf.Rules.Providers.FileSystem == nil {
+	if conf.Providers.FileSystem == nil {
 		return &Provider{}, nil
 	}
 

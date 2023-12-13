@@ -116,7 +116,7 @@ The API endpoint of your authorization system. At least the `url` must be config
 
 * *`payload`*: _string_ (optional, overridable)
 +
-Your link:{{< relref "overview.adoc#_templating" >}}[template] with definitions required to communicate to the authorization endpoint. The template can make use of link:{{< relref "overview.adoc#_subject" >}}[`Subject`] and link:{{< relref "overview.adoc#_request" >}}[`Request`] objects.
+Your link:{{< relref "overview.adoc#_templating" >}}[template] with definitions required to communicate to the authorization endpoint. The template can make use of link:{{< relref "overview.adoc#_values" >}}[`Values`], link:{{< relref "overview.adoc#_subject" >}}[`Subject`] and link:{{< relref "overview.adoc#_request" >}}[`Request`] objects.
 
 * *`expressions`*: _link:{{< relref "/docs/configuration/reference/types.adoc#_authorization_expression">}}[Authorization Expression] array_ (optional, overridable)
 +
@@ -134,7 +134,7 @@ Allows caching of the authorization endpoint responses. Defaults to 0s, which me
 
 * *`values`* _map of strings_ (optional, overridable)
 +
-A key value map, which is made accessible to the template rendering engine as link:{{< relref "overview.adoc#_values" >}}[`Values`] object, to render parts of the URL or the payload.
+A key value map, which is made accessible to the template rendering engine as link:{{< relref "overview.adoc#_values" >}}[`Values`] object, to render parts of the URL and/or the payload. The actual values in that map can be templated as well with access to the link:{{< relref "overview.adoc#_subject" >}}[`Subject`] and link:{{< relref "overview.adoc#_request" >}}[`Request`] objects.
 
 .Configuration of Remote authorizer to communicate with https://www.openpolicyagent.org/[Open Policy Agent] (OPA)
 ====
@@ -160,6 +160,8 @@ config:
   values:
     namespace: myapi/policy
     policy: allow_write
+    whatever: |
+     {{ .Request.Header("X-Whatever") }}
   expressions:
     - expression: |
         Payload.result == true
@@ -187,7 +189,8 @@ A specific rule could then use this authorizer in the following ways:
     config: # overriding with rule specifics
       values:
         policy: allow_read
-        whatever: foo
+        whatever: |
+          {{ .Request.Header("X-SomethingElse") }}
   - # other mechanisms
 ----
 

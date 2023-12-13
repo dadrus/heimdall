@@ -18,7 +18,6 @@ package finalizers
 
 import (
 	"context"
-	"errors"
 	"testing"
 	"time"
 
@@ -103,7 +102,7 @@ func TestCreateJWTFinalizer(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
 				assert.Contains(t, err.Error(), "'ttl' must be greater than 1s")
 			},
 		},
@@ -170,7 +169,7 @@ foo: bar"
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
 				assert.Contains(t, err.Error(), "failed decoding")
 			},
 		},
@@ -185,7 +184,7 @@ header:
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
 				assert.Contains(t, err.Error(), "'header'.'name' is a required field")
 			},
 		},
@@ -306,7 +305,7 @@ func TestCreateJWTFinalizerFromPrototype(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
 				assert.Contains(t, err.Error(), "'ttl' must be greater than 1s")
 			},
 		},
@@ -376,7 +375,7 @@ foo: bar
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
 				assert.Contains(t, err.Error(), "failed decoding")
 			},
 		},
@@ -431,11 +430,11 @@ func TestJWTFinalizerExecute(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrInternal)
+				require.ErrorIs(t, err, heimdall.ErrInternal)
 				assert.Contains(t, err.Error(), "'nil' subject")
 
 				var identifier interface{ ID() string }
-				require.True(t, errors.As(err, &identifier))
+				require.ErrorAs(t, err, &identifier)
 				assert.Equal(t, "jun1", identifier.ID())
 			},
 		},
@@ -460,7 +459,7 @@ func TestJWTFinalizerExecute(t *testing.T) {
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			},
 		},
 		{
@@ -489,7 +488,7 @@ func TestJWTFinalizerExecute(t *testing.T) {
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			},
 		},
 		{
@@ -514,7 +513,7 @@ func TestJWTFinalizerExecute(t *testing.T) {
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			},
 		},
 		{
@@ -542,7 +541,6 @@ claims: '{
 
 				ctx.EXPECT().Signer().Return(signer)
 				ctx.EXPECT().AddHeaderForUpstream("X-Token", "Bar barfoo")
-				ctx.EXPECT().Request().Return(&heimdall.Request{})
 
 				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil)
 				cch.EXPECT().Set(mock.Anything, mock.Anything, "barfoo", defaultJWTTTL-defaultCacheLeeway)
@@ -550,7 +548,7 @@ claims: '{
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			},
 		},
 		{
@@ -566,7 +564,6 @@ claims: '{
 				signer.EXPECT().Hash().Return([]byte("foobar"))
 
 				ctx.EXPECT().Signer().Return(signer)
-				ctx.EXPECT().Request().Return(&heimdall.Request{})
 
 				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil)
 			},
@@ -574,11 +571,11 @@ claims: '{
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrInternal)
+				require.ErrorIs(t, err, heimdall.ErrInternal)
 				assert.Contains(t, err.Error(), "failed to unmarshal claims")
 
 				var identifier interface{ ID() string }
-				require.True(t, errors.As(err, &identifier))
+				require.ErrorAs(t, err, &identifier)
 				assert.Equal(t, "jun2", identifier.ID())
 			},
 		},
@@ -595,7 +592,6 @@ claims: '{
 				signer.EXPECT().Hash().Return([]byte("foobar"))
 
 				ctx.EXPECT().Signer().Return(signer)
-				ctx.EXPECT().Request().Return(&heimdall.Request{})
 
 				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil)
 			},
@@ -603,11 +599,11 @@ claims: '{
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrInternal)
+				require.ErrorIs(t, err, heimdall.ErrInternal)
 				assert.Contains(t, err.Error(), "failed to render")
 
 				var identifier interface{ ID() string }
-				require.True(t, errors.As(err, &identifier))
+				require.ErrorAs(t, err, &identifier)
 				assert.Equal(t, "jun3", identifier.ID())
 			},
 		},

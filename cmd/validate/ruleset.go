@@ -62,7 +62,7 @@ func validateRuleSet(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	conf.Rules.Providers.FileSystem = map[string]any{"src": args[0]}
+	conf.Providers.FileSystem = map[string]any{"src": args[0]}
 
 	mFactory, err := mechanisms.NewFactory(conf, logger)
 	if err != nil {

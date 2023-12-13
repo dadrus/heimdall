@@ -24,46 +24,37 @@ cache:
       key_id: 0beee40bafa774409e0b0a8d22e7df667655cc15
     additional_ca: ./certificates-cluster/tests/tls/ca.crt
 
-rules:
-  mechanisms:
-    authenticators:
-      - id: do_nothing
-        type: noop
-      - id: anon
-        type: anonymous
-      - id: reject_requests
-        type: unauthorized
-    finalizers:
-      - id: do_nothing
-        type: noop
-      - id: create_jwt
-        type: jwt
-    error_handlers:
-      - id: default
-        type: default
-      - id: redirect_to_login
-        type: redirect
-        config:
-          to: http://127.0.0.1:8080/login?origin={{ .Request.URL | urlenc }}
-          when:
-            - error:
-                - type: authentication_error
-                  raised_by: reject_requests
-              request_headers:
-                Accept:
-                  - Bar
-  default:
-    methods:
-      - GET
-      - POST
-    execute:
-      - authenticator: reject_requests
-      - finalizer: create_jwt
-    on_error:
-      - error_handler: redirect_to_login
+mechanisms:
+  authenticators:
+    - id: anon
+      type: anonymous
+    - id: reject_requests
+      type: unauthorized
+  finalizers:
+    - id: create_jwt
+      type: jwt
+  error_handlers:
+    - id: default
+      type: default
+    - id: redirect_to_login
+      type: redirect
+      if: >
+        type(Error) == authentication_error &&
+        Error.Source == "reject_requests" &&
+        Request.Header("Accept").contains("Bar")
+      config:
+        to: http://127.0.0.1:8080/login?origin={{ .Request.URL | urlenc }}
 
-  providers:
-    file_system:
-      src: ./upstream-rules.yaml
-      watch: true
-      env_vars_enabled: false
+default_rule:
+  methods:
+    - GET
+    - POST
+  execute:
+    - authenticator: reject_requests
+  on_error:
+    - error_handler: redirect_to_login
+
+providers:
+  file_system:
+    src: ./upstream-rules.yaml
+    watch: true

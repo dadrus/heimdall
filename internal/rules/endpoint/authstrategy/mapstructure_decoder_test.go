@@ -51,7 +51,7 @@ auth:
 			assert: func(t *testing.T, err error, as endpoint.AuthenticationStrategy) {
 				t.Helper()
 
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				assert.IsType(t, &BasicAuth{}, as)
 				bas := as.(*BasicAuth) // nolint: forcetypeassert
 				assert.Equal(t, "foo", bas.User)
@@ -69,8 +69,8 @@ auth:
 			assert: func(t *testing.T, err error, as endpoint.AuthenticationStrategy) {
 				t.Helper()
 
-				assert.Error(t, err)
-				assert.ErrorContains(t, err, "'user' is a required field")
+				require.Error(t, err)
+				require.ErrorContains(t, err, "'user' is a required field")
 			},
 		},
 		{
@@ -84,8 +84,8 @@ auth:
 			assert: func(t *testing.T, err error, as endpoint.AuthenticationStrategy) {
 				t.Helper()
 
-				assert.Error(t, err)
-				assert.ErrorContains(t, err, "'password' is a required field")
+				require.Error(t, err)
+				require.ErrorContains(t, err, "'password' is a required field")
 			},
 		},
 		{
@@ -97,8 +97,8 @@ auth:
 			assert: func(t *testing.T, err error, as endpoint.AuthenticationStrategy) {
 				t.Helper()
 
-				assert.Error(t, err)
-				assert.ErrorContains(t, err, "'config' property to be set")
+				require.Error(t, err)
+				require.ErrorContains(t, err, "'config' property to be set")
 			},
 		},
 	} {
@@ -112,7 +112,7 @@ auth:
 				),
 				Result: &typ,
 			})
-			assert.NoError(t, err)
+			require.NoError(t, err)
 
 			conf, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
@@ -152,7 +152,7 @@ auth:
 			assert: func(t *testing.T, err error, as endpoint.AuthenticationStrategy) {
 				t.Helper()
 
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				assert.IsType(t, &APIKey{}, as)
 				aks := as.(*APIKey) // nolint: forcetypeassert
 				assert.Equal(t, "foo", aks.Name)
@@ -173,7 +173,7 @@ auth:
 			assert: func(t *testing.T, err error, as endpoint.AuthenticationStrategy) {
 				t.Helper()
 
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				assert.IsType(t, &APIKey{}, as)
 				aks := as.(*APIKey) // nolint: forcetypeassert
 				assert.Equal(t, "foo", aks.Name)
@@ -194,7 +194,7 @@ auth:
 			assert: func(t *testing.T, err error, as endpoint.AuthenticationStrategy) {
 				t.Helper()
 
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				assert.IsType(t, &APIKey{}, as)
 				aks := as.(*APIKey) // nolint: forcetypeassert
 				assert.Equal(t, "foo", aks.Name)
@@ -215,8 +215,8 @@ auth:
 			assert: func(t *testing.T, err error, as endpoint.AuthenticationStrategy) {
 				t.Helper()
 
-				assert.Error(t, err)
-				assert.ErrorContains(t, err, "'in' must be one of [cookie header query]")
+				require.Error(t, err)
+				require.ErrorContains(t, err, "'in' must be one of [cookie header query]")
 			},
 		},
 		{
@@ -231,8 +231,8 @@ auth:
 			assert: func(t *testing.T, err error, as endpoint.AuthenticationStrategy) {
 				t.Helper()
 
-				assert.Error(t, err)
-				assert.ErrorContains(t, err, "'in' is a required field")
+				require.Error(t, err)
+				require.ErrorContains(t, err, "'in' is a required field")
 			},
 		},
 		{
@@ -247,8 +247,8 @@ auth:
 			assert: func(t *testing.T, err error, as endpoint.AuthenticationStrategy) {
 				t.Helper()
 
-				assert.Error(t, err)
-				assert.ErrorContains(t, err, "'name' is a required field")
+				require.Error(t, err)
+				require.ErrorContains(t, err, "'name' is a required field")
 			},
 		},
 		{
@@ -263,8 +263,8 @@ auth:
 			assert: func(t *testing.T, err error, as endpoint.AuthenticationStrategy) {
 				t.Helper()
 
-				assert.Error(t, err)
-				assert.ErrorContains(t, err, "'value' is a required field")
+				require.Error(t, err)
+				require.ErrorContains(t, err, "'value' is a required field")
 			},
 		},
 		{
@@ -276,8 +276,8 @@ auth:
 			assert: func(t *testing.T, err error, as endpoint.AuthenticationStrategy) {
 				t.Helper()
 
-				assert.Error(t, err)
-				assert.ErrorContains(t, err, "'config' property to be set")
+				require.Error(t, err)
+				require.ErrorContains(t, err, "'config' property to be set")
 			},
 		},
 	} {
@@ -291,7 +291,7 @@ auth:
 				),
 				Result: &typ,
 			})
-			assert.NoError(t, err)
+			require.NoError(t, err)
 
 			conf, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
@@ -331,7 +331,7 @@ auth:
 			assert: func(t *testing.T, err error, as endpoint.AuthenticationStrategy) {
 				t.Helper()
 
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				assert.IsType(t, &OAuth2ClientCredentials{}, as)
 				ccs := as.(*OAuth2ClientCredentials) // nolint: forcetypeassert
 				assert.Equal(t, "foo", ccs.ClientID)
@@ -355,7 +355,7 @@ auth:
 			assert: func(t *testing.T, err error, as endpoint.AuthenticationStrategy) {
 				t.Helper()
 
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				assert.IsType(t, &OAuth2ClientCredentials{}, as)
 				ccs := as.(*OAuth2ClientCredentials) // nolint: forcetypeassert
 				assert.Equal(t, "foo", ccs.ClientID)
@@ -376,8 +376,8 @@ auth:
 			assert: func(t *testing.T, err error, as endpoint.AuthenticationStrategy) {
 				t.Helper()
 
-				assert.Error(t, err)
-				assert.ErrorContains(t, err, "'client_id' is a required field")
+				require.Error(t, err)
+				require.ErrorContains(t, err, "'client_id' is a required field")
 			},
 		},
 		{
@@ -392,8 +392,8 @@ auth:
 			assert: func(t *testing.T, err error, as endpoint.AuthenticationStrategy) {
 				t.Helper()
 
-				assert.Error(t, err)
-				assert.ErrorContains(t, err, "'client_secret' is a required field")
+				require.Error(t, err)
+				require.ErrorContains(t, err, "'client_secret' is a required field")
 			},
 		},
 		{
@@ -408,8 +408,8 @@ auth:
 			assert: func(t *testing.T, err error, as endpoint.AuthenticationStrategy) {
 				t.Helper()
 
-				assert.Error(t, err)
-				assert.ErrorContains(t, err, "'token_url' is a required field")
+				require.Error(t, err)
+				require.ErrorContains(t, err, "'token_url' is a required field")
 			},
 		},
 		{
@@ -421,8 +421,8 @@ auth:
 			assert: func(t *testing.T, err error, as endpoint.AuthenticationStrategy) {
 				t.Helper()
 
-				assert.Error(t, err)
-				assert.ErrorContains(t, err, "'config' property to be set")
+				require.Error(t, err)
+				require.ErrorContains(t, err, "'config' property to be set")
 			},
 		},
 	} {
@@ -436,7 +436,7 @@ auth:
 				),
 				Result: &typ,
 			})
-			assert.NoError(t, err)
+			require.NoError(t, err)
 
 			conf, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
@@ -481,5 +481,5 @@ auth:
 
 	// THEN
 	require.Error(t, err)
-	assert.ErrorContains(t, err, "unsupported authentication type")
+	require.ErrorContains(t, err, "unsupported authentication type")
 }

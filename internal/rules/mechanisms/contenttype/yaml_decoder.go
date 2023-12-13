@@ -1,4 +1,4 @@
-// Copyright 2022 Dimitrij Drus <dadrus@gmx.de>
+// Copyright 2023 Dimitrij Drus <dadrus@gmx.de>
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,10 +14,17 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package config
+package contenttype
 
-type Rules struct {
-	Prototypes *MechanismPrototypes `koanf:"mechanisms,omitempty"`
-	Default    *DefaultRule         `koanf:"default,omitempty"`
-	Providers  RuleProviders        `koanf:"providers,omitempty"`
+import "gopkg.in/yaml.v3"
+
+type YAMLDecoder struct{}
+
+func (YAMLDecoder) Decode(rawData []byte) (map[string]any, error) {
+	var mapData map[string]any
+	if err := yaml.Unmarshal(rawData, &mapData); err != nil {
+		return nil, err
+	}
+
+	return mapData, nil
 }

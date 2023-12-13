@@ -51,13 +51,13 @@ func TestCreateErrorHandlerPrototypePrototype(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, ErrUnsupportedErrorHandlerType)
+				require.ErrorIs(t, err, ErrUnsupportedErrorHandlerType)
 			},
 		},
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
 			// WHEN
-			errorHandler, err := CreateErrorHandlerPrototype("foo", tc.typ, nil)
+			errorHandler, err := CreatePrototype("foo", tc.typ, nil)
 
 			// THEN
 			tc.assert(t, err, errorHandler)

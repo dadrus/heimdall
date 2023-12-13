@@ -832,7 +832,7 @@
                             "header": {
                                 "type": "string"
                             },
-                            "schema": {
+                            "scheme": {
                                 "type": "string"
                             }
                         }
@@ -971,20 +971,6 @@
                             "default": "anonymous"
                         }
                     }
-                }
-            }
-        },
-        "authenticatorNoop": {
-            "description": "Noop Authenticator",
-            "type": "object",
-            "additionalProperties": false,
-            "properties": {
-                "type": {
-                    "const": "noop"
-                },
-                "id": {
-                    "description": "The unique id of the authenticator to be used in the rule definition",
-                    "type": "string"
                 }
             }
         },
@@ -1212,11 +1198,11 @@
                     ],
                     "properties": {
                         "user_id": {
-                            "description": "The user id, respectively the user name for the authentication schema",
+                            "description": "The user id, respectively the user name for the authentication scheme",
                             "type": "string"
                         },
                         "password": {
-                            "description": "The password for the client_id for the authentication schema",
+                            "description": "The password for the client_id for the authentication scheme",
                             "type": "string"
                         },
                         "allow_fallback_on_error": {
@@ -1595,94 +1581,6 @@
                 "precondition_error"
             ]
         },
-        "errorDescriptor": {
-            "description": "Describes the error, an error handler should be responsible for",
-            "type": "object",
-            "additionalProperties": false,
-            "required": [
-                "type"
-            ],
-            "properties": {
-                "type": {
-                    "$ref": "#/definitions/errorType"
-                },
-                "raised_by": {
-                    "description": "Identifier of the pipeline mechanism, which raised this error",
-                    "type": "string"
-                }
-            }
-        },
-        "errorsWhen": {
-            "description": "Conditions under which circumstances an error handler should be responsible for handling the request. If no conditions are given, the error handler will be responsible for all errors. Sections error and request are combined using AND.",
-            "type": "array",
-            "additionalItems": false,
-            "items": {
-                "type": "object",
-                "additionalProperties": false,
-                "properties": {
-                    "error": {
-                        "description": "Defines which error this error handler should be responsible for. The list uses OR (e.g. when the error is authentication_error OR precondition_error). If left empty, all errors will be handled by this error handler.",
-                        "type": "array",
-                        "additionalItems": false,
-                        "items": {
-                            "$ref": "#/definitions/errorDescriptor"
-                        }
-                    },
-                    "request_cidr": {
-                        "description": "Defines one or more CIDR masks to match the client IP (remote address and X-Forwarded-For) against. If empty, all IPs will be matched. If more than one value, OR will be applied (e.g. 129.168.1.0/24 OR 188.177.0.0/16.",
-                        "type": "array",
-                        "additionalItems": false,
-                        "items": {
-                            "type": "string"
-                        }
-                    },
-                    "request_headers": {
-                        "description": "Defines conditions the HTTP Request Headers must fulfill for this mechanism to match the request. Subkeys are matched with AND. If, for example, content-type and accept-type are set, both requirements must be matched for the handler to be responsible.",
-                        "type": "object",
-                        "additionalProperties": {
-                            "type": "array"
-                        },
-                        "uniqueItems": true
-                    }
-                }
-            }
-        },
-        "errorHandlerWWWAuthenticate": {
-            "description": "WWW-Authenticate Error Handler",
-            "type": "object",
-            "additionalProperties": false,
-            "required": [
-                "id",
-                "type",
-                "config"
-            ],
-            "properties": {
-                "type": {
-                    "const": "www-authenticate"
-                },
-                "id": {
-                    "description": "The unique id of the error handler to be used in the rule definition",
-                    "type": "string"
-                },
-                "config": {
-                    "type": "object",
-                    "additionalProperties": false,
-                    "required": [
-                        "when"
-                    ],
-                    "properties": {
-                        "realm": {
-                            "description": "Message that will be displayed by the browser. Most browsers show a message like \"The website says: `,<realm>`\". Using a real message is thus more appropriate than a Realm identifier.",
-                            "type": "string",
-                            "default": "Please authenticate."
-                        },
-                        "when": {
-                            "$ref": "#/definitions/errorsWhen"
-                        }
-                    }
-                }
-            }
-        },
         "errorsHandlerDefault": {
             "description": "Regular error handler, which just converts the error based on the information available in the HTTP Accept header",
             "type": "object",
@@ -1701,6 +1599,44 @@
                 }
             }
         },
+        "errorHandlerWWWAuthenticate": {
+            "description": "WWW-Authenticate Error Handler",
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+                "id",
+                "type",
+                "if",
+                "config"
+            ],
+            "properties": {
+                "type": {
+                    "const": "www-authenticate"
+                },
+                "id": {
+                    "description": "The unique id of the error handler to be used in the rule definition",
+                    "type": "string"
+                },
+                "if": {
+                    "description": "Condition, when this error handler should be executed",
+                    "type": "string",
+                    "examples": [
+                        "type(Error) == authentication_error"
+                    ]
+                },
+                "config": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                        "realm": {
+                            "description": "Message that will be displayed by the browser. Most browsers show a message like \"The website says: `,<realm>`\". Using a real message is thus more appropriate than a Realm identifier.",
+                            "type": "string",
+                            "default": "Please authenticate."
+                        }
+                    }
+                }
+            }
+        },
         "errorsHandlerRedirect": {
             "description": "Redirect Error Handler",
             "type": "object",
@@ -1708,6 +1644,7 @@
             "required": [
                 "id",
                 "type",
+                "if",
                 "config"
             ],
             "properties": {
@@ -1717,6 +1654,13 @@
                 "id": {
                     "description": "The unique id of the error handler to be used in the rule definition",
                     "type": "string"
+                },
+                "if": {
+                    "description": "Condition, when this error handler should be executed",
+                    "type": "string",
+                    "examples": [
+                        "type(Error) == authentication_error"
+                    ]
                 },
                 "config": {
                     "type": "object",
@@ -1742,9 +1686,6 @@
                                 302
                             ],
                             "default": 302
-                        },
-                        "when": {
-                            "$ref": "#/definitions/errorsWhen"
                         }
                     }
                 }
@@ -1910,9 +1851,6 @@
                     "items": {
                         "anyOf": [{
                                 "$ref": "#/definitions/authenticatorAnonymous"
-                            },
-                            {
-                                "$ref": "#/definitions/authenticatorNoop"
                             },
                             {
                                 "$ref": "#/definitions/authenticatorUnauthorized"
@@ -2266,69 +2204,62 @@
                 }
             }
         },
-        "rules": {
-            "description": "Rules to use",
+        "mechanisms": {
+            "$ref": "#/definitions/mechanismDefinitions"
+        },
+        "providers": {
+            "description": "Where to load rules from",
             "type": "object",
             "additionalProperties": false,
             "properties": {
-                "mechanisms": {
-                    "$ref": "#/definitions/mechanismDefinitions"
+                "file_system": {
+                    "$ref": "#/definitions/fileSystemProvider"
                 },
-                "providers": {
-                    "description": "Where to load rules from",
-                    "type": "object",
-                    "additionalProperties": false,
-                    "properties": {
-                        "file_system": {
-                            "$ref": "#/definitions/fileSystemProvider"
-                        },
-                        "http_endpoint": {
-                            "$ref": "#/definitions/httpEndpointProvider"
-                        },
-                        "cloud_blob": {
-                            "$ref": "#/definitions/cloudBlobProvider"
-                        },
-                        "kubernetes": {
-                            "$ref": "#/definitions/kubernetesProvider"
-                        }
+                "http_endpoint": {
+                    "$ref": "#/definitions/httpEndpointProvider"
+                },
+                "cloud_blob": {
+                    "$ref": "#/definitions/cloudBlobProvider"
+                },
+                "kubernetes": {
+                    "$ref": "#/definitions/kubernetesProvider"
+                }
+            }
+        },
+        "default_rule": {
+            "description": "Defines the defaults, respectively fallbacks for any rule.",
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "methods": {
+                    "description": "Allowed HTTP methods for any endpoint",
+                    "type": "array",
+                    "additionalItems": false,
+                    "uniqueItems": true,
+                    "items": {
+                        "type": "string"
+                    },
+                    "examples": [
+                        "GET",
+                        "POST"
+                    ]
+                },
+                "execute": {
+                    "description": "The mechanisms to execute (authenticators, authorizers, etc)",
+                    "type": "array",
+                    "additionalItems": false,
+                    "uniqueItems": true,
+                    "items": {
+                        "type": "object"
                     }
                 },
-                "default": {
-                    "description": "Defines the defaults, respectively fallbacks for any rule.",
-                    "type": "object",
-                    "additionalProperties": false,
-                    "properties": {
-                        "methods": {
-                            "description": "Allowed HTTP methods for any endpoint",
-                            "type": "array",
-                            "additionalItems": false,
-                            "uniqueItems": true,
-                            "items": {
-                                "type": "string"
-                            },
-                            "examples": [
-                                "GET",
-                                "POST"
-                            ]
-                        },
-                        "execute": {
-                            "description": "The mechanisms to execute (authenticators, authorizers, etc)",
-                            "type": "array",
-                            "additionalItems": false,
-                            "uniqueItems": true,
-                            "items": {
-                                "type": "object"
-                            }
-                        },
-                        "on_error": {
-                            "description": "error handler mechanisms",
-                            "type": "array",
-                            "additionalItems": false,
-                            "uniqueItems": true,
-                            "items": {
-                                "type": "object"
-                            }
-                        }
+                "on_error": {
+                    "description": "error handler mechanisms",
+                    "type": "array",
+                    "additionalItems": false,
+                    "uniqueItems": true,
+                    "items": {
+                        "type": "object"
                     }
                 }
             }

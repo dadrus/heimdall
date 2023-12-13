@@ -1,14 +1,49 @@
 ---
-title: "Index"
+title: "Heimdall - a cloud native Identity Aware Proxy and Access Control Decision service"
 date: 2022-06-05T20:03:18+02:00
 draft: false
 ---
 
-{{< seo
-    title="Verify access all the time and everywhere with Heimdall"
-    link="/docs/getting_started/concepts.adoc"
-    link_title="Get Started"
->}}
-Adopt Zero Trust architecture by authenticating, enriching and authorizing incoming HTTP requests at any level. No need to learn new protocols, authentication and authorization frameworks. You can still use them.
-{{< /seo >}}
+{{% seo title="Verify access all the time and everywhere with Heimdall" alignment="right" %}}
+Adopt Zero Trust architecture by authenticating, enriching and authorizing incoming HTTP requests at any level. No need to learn new protocols, authentication and authorization frameworks. Just how to glue them with heimdall.
 
+link:{{< relref "/docs/getting_started/concepts.adoc" >}}[Get Started]
+{{% /seo %}}
+
+{{% seo title="Define rules reflecting your requirements" %}}
+Use declarative techniques you are already familiar with
+
+[source, yaml]
+----
+apiVersion: heimdall.dadrus.github.com/v1alpha3
+kind: RuleSet
+metadata:
+  name: My awesome service
+spec:
+  rules:
+    - id: my_api_rule
+      match:
+        url: http://127.0.0.1:9090/api/<**>
+      execute:
+        - authenticator: keycloak
+        - authorizer: opa
+----
+
+Create rules for each upstream and path you want to secure, respectively, which deviates from your defaults, loading them from a variety of sources such as Kubernetes custom resources, S3 buckets, any HTTPs endpoints or regular files.
+
+link:{{< relref "/docs/configuration/rules/overview.adoc" >}}"[Learn more about rules]
+{{% /seo %}}
+
+{{% seo title="The value you get" %}}
+{{% grid %}}
+{{% gridentry title="Reduce the cognitive load of your team" %}}By outsourcing authentication and authorization decisions to heimdall you can reduce the complexity of your code base, free resources and reduce the cognitive load of your team substantially.{{% /gridentry %}}
+{{% gridentry title="Secure defaults for your services" %}}Define logic to be executed if no rule matches{{% /gridentry %}}
+{{% gridentry title="Define mechanisms once, reuse many times" %}}Use rules to compose reusable steps into the logic you need individually for your services{{% /gridentry %}}
+{{% gridentry title="Add context information to requests" %}}Dynamically enrich requests with information like e.g. user data to help you make authorization decisions and reduce dependencies in your code{{% /gridentry %}}
+{{% gridentry title="Common Expression Language" %}}Use Common Expression Language to implement complex pipeline execution logic and simple authorization within a pipeline{{% /gridentry %}}
+{{% gridentry title="Authorization systems freedom" %}}Use existing authorization systems, like OpenFGA, Ory Keto, Open Policy Agent and alike and combine them if required to get the best out of different worlds{{% /gridentry %}}
+{{% gridentry title="OpenID Connect & OAuth2" %}}Use existing authentication systems supporting OpenID Connect or OAuth2{{% /gridentry %}}
+{{% gridentry title="Authentication systems freedom" %}}Combine existing authentication systems to protect different areas of your system with different authentication systems. E.g. you can use one system to protect customer facing functionality and yet another for managing access to your backoffice specific functionality{{% /gridentry %}}
+{{% /grid %}}
+
+{{% /seo %}}

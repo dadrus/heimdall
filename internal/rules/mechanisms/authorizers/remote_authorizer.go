@@ -49,7 +49,7 @@ var errNoContent = errors.New("no payload received")
 //
 //nolint:gochecknoinits
 func init() {
-	registerAuthorizerTypeFactory(
+	registerTypeFactory(
 		func(id string, typ string, conf map[string]any) (bool, Authorizer, error) {
 			if typ != AuthorizerRemote {
 				return false, nil, nil
@@ -109,8 +109,8 @@ func newRemoteAuthorizer(id string, rawConfig map[string]any) (*remoteAuthorizer
 
 	env, err := cel.NewEnv(cellib.Library())
 	if err != nil {
-		return nil, errorchain.NewWithMessage(heimdall.ErrInternal,
-			"failed creating CEL environment").CausedBy(err)
+		return nil, errorchain.NewWithMessage(heimdall.ErrInternal, "failed creating CEL environment").
+			CausedBy(err)
 	}
 
 	expressions, err := compileExpressions(conf.Expressions, env)
@@ -135,8 +135,8 @@ func (a *remoteAuthorizer) Execute(ctx heimdall.Context, sub *subject.Subject) e
 	logger.Debug().Str("_id", a.id).Msg("Authorizing using remote authorizer")
 
 	if sub == nil {
-		return errorchain.
-			NewWithMessage(heimdall.ErrInternal, "failed to execute remote authorizer due to 'nil' subject").
+		return errorchain.NewWithMessage(heimdall.ErrInternal,
+			"failed to execute remote authorizer due to 'nil' subject").
 			WithErrorContext(a)
 	}
 
@@ -150,8 +150,13 @@ func (a *remoteAuthorizer) Execute(ctx heimdall.Context, sub *subject.Subject) e
 		ok         bool
 	)
 
+	vals, payload, err := a.renderTemplates(ctx, sub)
+	if err != nil {
+		return err
+	}
+
 	if a.ttl > 0 {
-		cacheKey = a.calculateCacheKey(sub)
+		cacheKey = a.calculateCacheKey(sub, vals, payload)
 		cacheEntry = cch.Get(ctx.AppContext(), cacheKey)
 	}
 
@@ -165,7 +170,7 @@ func (a *remoteAuthorizer) Execute(ctx heimdall.Context, sub *subject.Subject) e
 	}
 
 	if authInfo == nil {
-		authInfo, err = a.doAuthorize(ctx, sub)
+		authInfo, err = a.doAuthorize(ctx, sub, vals, payload)
 		if err != nil {
 			return err
 		}
@@ -221,28 +226,48 @@ func (a *remoteAuthorizer) ID() string { return a.id }
 
 func (a *remoteAuthorizer) ContinueOnError() bool { return false }
 
-func (a *remoteAuthorizer) doAuthorize(ctx heimdall.Context, sub *subject.Subject) (*authorizationInformation, error) {
+func (a *remoteAuthorizer) doAuthorize(
+	ctx heimdall.Context,
+	sub *subject.Subject,
+	values map[string]string,
+	payload string,
+) (*authorizationInformation, error) {
 	logger := zerolog.Ctx(ctx.AppContext())
 	logger.Debug().Msg("Calling remote authorization endpoint")
 
-	req, err := a.createRequest(ctx, sub)
+	endpointRenderer := endpoint.RenderFunc(func(tplString string) (string, error) {
+		tpl, err := template.New(tplString)
+		if err != nil {
+			return "", errorchain.NewWithMessage(heimdall.ErrInternal, "failed to create template").
+				WithErrorContext(a).
+				CausedBy(err)
+		}
+
+		return tpl.Render(map[string]any{
+			"Subject": sub,
+			"Values":  values,
+		})
+	})
+
+	req, err := a.e.CreateRequest(ctx.AppContext(), strings.NewReader(payload), endpointRenderer)
 	if err != nil {
-		return nil, err
+		return nil, errorchain.NewWithMessage(heimdall.ErrInternal, "failed creating request").
+			WithErrorContext(a).
+			CausedBy(err)
 	}
 
 	resp, err := a.e.CreateClient(req.URL.Hostname()).Do(req)
 	if err != nil {
 		var clientErr *url.Error
 		if errors.As(err, &clientErr) && clientErr.Timeout() {
-			return nil, errorchain.
-				NewWithMessage(heimdall.ErrCommunicationTimeout,
-					"request to the authorization endpoint timed out").
+			return nil, errorchain.NewWithMessage(heimdall.ErrCommunicationTimeout,
+				"request to the authorization endpoint timed out").
 				WithErrorContext(a).
 				CausedBy(err)
 		}
 
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrCommunication, "request to the authorization endpoint failed").
+		return nil, errorchain.NewWithMessage(heimdall.ErrCommunication,
+			"request to the authorization endpoint failed").
 			WithErrorContext(a).
 			CausedBy(err)
 	}
@@ -262,57 +287,12 @@ func (a *remoteAuthorizer) doAuthorize(ctx heimdall.Context, sub *subject.Subjec
 	return &authorizationInformation{headers: resp.Header, payload: data}, nil
 }
 
-func (a *remoteAuthorizer) createRequest(ctx heimdall.Context, sub *subject.Subject) (*http.Request, error) {
-	var body io.Reader
-
-	if a.payload != nil {
-		bodyContents, err := a.payload.Render(map[string]any{
-			"Request": ctx.Request(),
-			"Subject": sub,
-			"Values":  a.v,
-		})
-		if err != nil {
-			return nil, errorchain.
-				NewWithMessage(heimdall.ErrInternal, "failed to render payload for the authorization endpoint").
-				WithErrorContext(a).
-				CausedBy(err)
-		}
-
-		body = strings.NewReader(bodyContents)
-	}
-
-	req, err := a.e.CreateRequest(ctx.AppContext(), body,
-		endpoint.RenderFunc(func(tplString string) (string, error) {
-			tpl, err := template.New(tplString)
-			if err != nil {
-				return "", errorchain.
-					NewWithMessage(heimdall.ErrInternal, "failed to create template").
-					WithErrorContext(a).
-					CausedBy(err)
-			}
-
-			return tpl.Render(map[string]any{
-				"Subject": sub,
-				"Values":  a.v,
-			})
-		}))
-	if err != nil {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrInternal, "failed creating request").
-			WithErrorContext(a).
-			CausedBy(err)
-	}
-
-	return req, nil
-}
-
 func (a *remoteAuthorizer) readResponse(ctx heimdall.Context, resp *http.Response) (any, error) {
 	logger := zerolog.Ctx(ctx.AppContext())
 
 	if !(resp.StatusCode >= http.StatusOK && resp.StatusCode < http.StatusMultipleChoices) {
-		return nil, errorchain.
-			NewWithMessagef(heimdall.ErrAuthorization,
-				"authorization failed based on received response code: %v", resp.StatusCode).
+		return nil, errorchain.NewWithMessagef(heimdall.ErrAuthorization,
+			"authorization failed based on received response code: %v", resp.StatusCode).
 			WithErrorContext(a)
 	}
 
@@ -324,8 +304,7 @@ func (a *remoteAuthorizer) readResponse(ctx heimdall.Context, resp *http.Respons
 
 	rawData, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrInternal, "failed to read response").
+		return nil, errorchain.NewWithMessage(heimdall.ErrInternal, "failed to read response").
 			WithErrorContext(a).
 			CausedBy(err)
 	}
@@ -342,8 +321,7 @@ func (a *remoteAuthorizer) readResponse(ctx heimdall.Context, resp *http.Respons
 
 	result, err := decoder.Decode(rawData)
 	if err != nil {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrInternal, "failed to unmarshal response").
+		return nil, errorchain.NewWithMessage(heimdall.ErrInternal, "failed to unmarshal response").
 			WithErrorContext(a).
 			CausedBy(err)
 	}
@@ -351,7 +329,7 @@ func (a *remoteAuthorizer) readResponse(ctx heimdall.Context, resp *http.Respons
 	return result, nil
 }
 
-func (a *remoteAuthorizer) calculateCacheKey(sub *subject.Subject) string {
+func (a *remoteAuthorizer) calculateCacheKey(sub *subject.Subject, values map[string]string, payload string) string {
 	const int64BytesCount = 8
 
 	ttlBytes := make([]byte, int64BytesCount)
@@ -361,11 +339,14 @@ func (a *remoteAuthorizer) calculateCacheKey(sub *subject.Subject) string {
 	hash.Write(a.e.Hash())
 	hash.Write(stringx.ToBytes(a.id))
 	hash.Write(stringx.ToBytes(strings.Join(a.headersForUpstream, ",")))
-	hash.Write(x.IfThenElseExec(a.payload != nil,
-		func() []byte { return a.payload.Hash() },
-		func() []byte { return []byte{} }))
+	hash.Write(stringx.ToBytes(payload))
 	hash.Write(ttlBytes)
 	hash.Write(sub.Hash())
+
+	for k, v := range values {
+		hash.Write(stringx.ToBytes(k))
+		hash.Write(stringx.ToBytes(v))
+	}
 
 	return hex.EncodeToString(hash.Sum(nil))
 }
@@ -375,4 +356,40 @@ func (a *remoteAuthorizer) verify(ctx heimdall.Context, result any) error {
 	logger.Debug().Msg("Verifying authorization response")
 
 	return a.expressions.eval(map[string]any{"Payload": result}, a)
+}
+
+func (a *remoteAuthorizer) renderTemplates(
+	ctx heimdall.Context,
+	sub *subject.Subject,
+) (map[string]string, string, error) {
+	var (
+		values  map[string]string
+		payload string
+		err     error
+	)
+
+	if values, err = a.v.Render(map[string]any{
+		"Request": ctx.Request(),
+		"Subject": sub,
+	}); err != nil {
+		return nil, "", errorchain.NewWithMessage(heimdall.ErrInternal,
+			"failed to render values for the authorization endpoint").
+			WithErrorContext(a).
+			CausedBy(err)
+	}
+
+	if a.payload != nil {
+		if payload, err = a.payload.Render(map[string]any{
+			"Request": ctx.Request(),
+			"Subject": sub,
+			"Values":  values,
+		}); err != nil {
+			return nil, "", errorchain.NewWithMessage(heimdall.ErrInternal,
+				"failed to render payload for the authorization endpoint").
+				WithErrorContext(a).
+				CausedBy(err)
+		}
+	}
+
+	return values, payload, nil
 }

@@ -54,7 +54,7 @@ func TestNumericDateUnmarshalJSON(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, ErrConfiguration)
+				require.ErrorIs(t, err, ErrConfiguration)
 				assert.Contains(t, err.Error(), "failed to parse")
 			},
 		},

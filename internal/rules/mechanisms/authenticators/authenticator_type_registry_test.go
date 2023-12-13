@@ -27,7 +27,7 @@ func TestCreateAuthenticatorPrototype(t *testing.T) {
 	t.Parallel()
 
 	// there are seven authenticators implemented, which should have been registered
-	require.Len(t, authenticatorTypeFactories, 7)
+	require.Len(t, authenticatorTypeFactories, 6)
 
 	for _, tc := range []struct {
 		uc     string
@@ -36,12 +36,12 @@ func TestCreateAuthenticatorPrototype(t *testing.T) {
 	}{
 		{
 			uc:  "using known type",
-			typ: AuthenticatorNoop,
+			typ: AuthenticatorAnonymous,
 			assert: func(t *testing.T, err error, auth Authenticator) {
 				t.Helper()
 
 				require.NoError(t, err)
-				assert.IsType(t, &noopAuthenticator{}, auth)
+				assert.IsType(t, &anonymousAuthenticator{}, auth)
 			},
 		},
 		{
@@ -51,13 +51,13 @@ func TestCreateAuthenticatorPrototype(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, ErrUnsupportedAuthenticatorType)
+				require.ErrorIs(t, err, ErrUnsupportedAuthenticatorType)
 			},
 		},
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
 			// WHEN
-			auth, err := CreateAuthenticatorPrototype("foo", tc.typ, nil)
+			auth, err := CreatePrototype("foo", tc.typ, nil)
 
 			// THEN
 			tc.assert(t, err, auth)

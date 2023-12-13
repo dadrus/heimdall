@@ -26,5 +26,5 @@ import (
 type Context interface {
 	heimdall.Context
 
-	Finalize(rule.Backend) error
+	Finalize(backend rule.Backend) error
 }

@@ -1,4 +1,4 @@
-// Copyright 2022 Dimitrij Drus <dadrus@gmx.de>
+// Copyright 2023 Dimitrij Drus <dadrus@gmx.de>
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,10 +16,13 @@
 
 package rules
 
-import "github.com/dadrus/heimdall/internal/heimdall"
+import (
+	"github.com/dadrus/heimdall/internal/heimdall"
+)
 
 //go:generate mockery --name errorHandler --structname ErrorHandlerMock
 
 type errorHandler interface {
-	Execute(ctx heimdall.Context, err error) (bool, error)
+	CanExecute(ctx heimdall.Context, causeErr error) bool
+	Execute(ctx heimdall.Context, causeErr error) error
 }

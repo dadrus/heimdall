@@ -9,13 +9,13 @@ menu:
     parent: "Rules"
 ---
 
-Providers define the sources to load the link:{{< relref "configuration.adoc#_rule_set" >}}[Rule Sets] from. These make heimdall's behavior dynamic. All providers, you want to enable for a heimdall instance must be configured within the `providers` section of heimdall's `rules` configuration.
+Providers define the sources to load the link:{{< relref "configuration.adoc#_rule_set" >}}[Rule Sets] from. These make heimdall's behavior dynamic. All providers, you want to enable for a heimdall instance must be configured within the `providers` section of heimdall's configuration.
 
 Supported providers, including the corresponding configuration options are described below
 
 == Filesystem
 
-The filesystem provider allows loading of rule sets in a format defined in link:{{< relref "configuration.adoc#_rule_set" >}}[Rule Sets] from a file system. The configuration of this provider goes into the `file_system` property. This provider is handy for e.g. starting playing around with heimdall, e.g. locally, or using Docker, as well as if your deployment strategy considers deploying a heimdall instance as a Side-Car for each of your services.
+The filesystem provider allows loading of rule sets in a format defined in link:{{< relref "configuration.adoc#_rule_set" >}}[Rule Sets] from a file system. The configuration of this provider goes into the `file_system` property. This provider is handy for e.g. starting playing around with heimdall, e.g. locally, or using a container runtime, as well as if your deployment strategy considers deploying a heimdall instance as a Side-Car for each of your services.
 
 Following configuration options are supported:
 
@@ -37,7 +37,7 @@ WARNING: All environment variables, used in the rule set files must be known in 
 ====
 [source, yaml]
 ----
-version: "1alpha2"
+version: "1alpha3"
 name: my-rule-set
 rules:
 - id: rule:1
@@ -316,7 +316,7 @@ List of the actual rules.
 ====
 [source, yaml]
 ----
-apiVersion: heimdall.dadrus.github.com/v1alpha2
+apiVersion: heimdall.dadrus.github.com/v1alpha3
 kind: RuleSet
 metadata:
   name: "<some name>"
@@ -331,3 +331,47 @@ spec:
         - authorizer: bar
 ----
 ====
+
+In addition to configuration attributes described above, a `RuleSet` resource has a `status` stanza, which provides information about the usage status as soon as a `RuleSet` has been loaded by at least one heimdall instance.
+
+By making use of `kubectl get -n <your namespace> rulesets.heimdall.dadrus.github.com` you'll get an overview of deployed `RuleSet` resources in a particular namespace, like e.g. shown below
+
+[source, bash]
+----
+NAME             ACTIVE IN       AGE
+test-rules       2/2             32m
+----
+
+The value `2/2` in `ACTIVE IN` means, <active in heimdall instances>/<matching instances>. With
+
+* "matching instances" being those heimdall instances, which `auth_class` matches the `authClassName` in the `RuleSet` and
+* "active in heimdall instances" are those from the "matching instances", which were able to load the `RuleSet`.
+
+In addition, you can also get further information about the executed reconciliations by the deployed heimdall instances by taking a look at the `.status.conditions` field. The reconciliation status of matching instances is present there. That also means, if there were errors while loading the `RuleSet`, these are present in this condition list
+
+E.g.
+
+[source, bash]
+----
+$ kubectl describe -n test rulesets.heimdall.dadrus.github.com test-rules
+
+Name:         test-rules
+Namespace:    test
+...
+Status:
+  Conditions:
+    Last Transition Time:  2023-11-08T21:55:36Z
+    Message:               heimdall-6fb66c47bc-kwqqn instance successfully loaded RuleSet
+    Observed Generation:   1
+    Reason:                RuleSetActive
+    Status:                True
+    Type:                  heimdall-6fb66c47bc-kwqqn/Reconciliation
+    Last Transition Time:  2023-11-08T21:55:36Z
+    Message:               heimdall-6fb66c47bc-l7skn instance successfully loaded RuleSet
+    Observed Generation:   1
+    Reason:                RuleSetActive
+    Status:                True
+    Type:                  heimdall-6fb66c47bc-l7skn/Reconciliation
+  Active In:               2/2
+  Events:                  <none>
+----

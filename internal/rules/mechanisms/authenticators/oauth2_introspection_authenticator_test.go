@@ -18,7 +18,6 @@ package authenticators
 
 import (
 	"context"
-	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
@@ -67,7 +66,7 @@ foo: bar
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
 				assert.Contains(t, err.Error(), "failed decoding")
 			},
 		},
@@ -84,7 +83,7 @@ subject:
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
 				assert.Contains(t, err.Error(), "'introspection_endpoint' is a required field")
 			},
 		},
@@ -100,7 +99,7 @@ subject:
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
 				assert.Contains(t, err.Error(), "'assertions' is a required field")
 			},
 		},
@@ -149,9 +148,9 @@ subject:
 				assert.Equal(t, http.MethodPost, auth.e.Method)
 				assert.Len(t, auth.e.Headers, 2)
 				assert.Contains(t, auth.e.Headers, "Content-Type")
-				assert.Equal(t, auth.e.Headers["Content-Type"], "application/x-www-form-urlencoded")
+				assert.Equal(t, "application/x-www-form-urlencoded", auth.e.Headers["Content-Type"])
 				assert.Contains(t, auth.e.Headers, "Accept")
-				assert.Equal(t, auth.e.Headers["Accept"], "application/json")
+				assert.Equal(t, "application/json", auth.e.Headers["Accept"])
 				assert.Nil(t, auth.e.AuthStrategy)
 				assert.Nil(t, auth.e.Retry)
 
@@ -160,7 +159,7 @@ subject:
 				assert.ElementsMatch(t, auth.a.AllowedAlgorithms, defaultAllowedAlgorithms())
 				assert.Len(t, auth.a.TrustedIssuers, 1)
 				assert.Contains(t, auth.a.TrustedIssuers, "foobar")
-				assert.NoError(t, auth.a.ScopesMatcher.Match([]string{}))
+				require.NoError(t, auth.a.ScopesMatcher.Match([]string{}))
 				assert.Equal(t, time.Duration(0), auth.a.ValidityLeeway)
 				assert.Empty(t, auth.a.TargetAudiences)
 
@@ -170,7 +169,7 @@ subject:
 				// assert token extractor settings
 				assert.IsType(t, extractors.CompositeExtractStrategy{}, auth.ads)
 				assert.Len(t, auth.ads, 3)
-				assert.Contains(t, auth.ads, extractors.HeaderValueExtractStrategy{Name: "Authorization", Schema: "Bearer"})
+				assert.Contains(t, auth.ads, extractors.HeaderValueExtractStrategy{Name: "Authorization", Scheme: "Bearer"})
 				assert.Contains(t, auth.ads, extractors.QueryParameterExtractStrategy{Name: "access_token"})
 				assert.Contains(t, auth.ads, extractors.BodyParameterExtractStrategy{Name: "access_token"})
 
@@ -193,7 +192,7 @@ introspection_endpoint:
     Accept: application/foobar
 token_source:
   - header: foo-header
-    schema: foo
+    scheme: foo
   - query_parameter: foo_query_param
   - body_parameter: foo_body_param
 assertions:
@@ -220,9 +219,9 @@ allow_fallback_on_error: true
 				assert.Equal(t, http.MethodPatch, auth.e.Method)
 				assert.Len(t, auth.e.Headers, 2)
 				assert.Contains(t, auth.e.Headers, "Content-Type")
-				assert.Equal(t, auth.e.Headers["Content-Type"], "application/x-www-form-urlencoded")
+				assert.Equal(t, "application/x-www-form-urlencoded", auth.e.Headers["Content-Type"])
 				assert.Contains(t, auth.e.Headers, "Accept")
-				assert.Equal(t, auth.e.Headers["Accept"], "application/foobar")
+				assert.Equal(t, "application/foobar", auth.e.Headers["Accept"])
 				assert.Nil(t, auth.e.AuthStrategy)
 				assert.Nil(t, auth.e.Retry)
 
@@ -231,7 +230,7 @@ allow_fallback_on_error: true
 				assert.ElementsMatch(t, auth.a.AllowedAlgorithms, []string{"ES256"})
 				assert.Len(t, auth.a.TrustedIssuers, 1)
 				assert.Contains(t, auth.a.TrustedIssuers, "foobar")
-				assert.NoError(t, auth.a.ScopesMatcher.Match([]string{"foo"}))
+				require.NoError(t, auth.a.ScopesMatcher.Match([]string{"foo"}))
 				assert.Equal(t, time.Duration(0), auth.a.ValidityLeeway)
 				assert.Empty(t, auth.a.TargetAudiences)
 
@@ -241,7 +240,7 @@ allow_fallback_on_error: true
 				// assert token extractor settings
 				assert.IsType(t, extractors.CompositeExtractStrategy{}, auth.ads)
 				assert.Len(t, auth.ads, 3)
-				assert.Contains(t, auth.ads, &extractors.HeaderValueExtractStrategy{Name: "foo-header", Schema: "foo"})
+				assert.Contains(t, auth.ads, &extractors.HeaderValueExtractStrategy{Name: "foo-header", Scheme: "foo"})
 				assert.Contains(t, auth.ads, &extractors.QueryParameterExtractStrategy{Name: "foo_query_param"})
 				assert.Contains(t, auth.ads, &extractors.BodyParameterExtractStrategy{Name: "foo_body_param"})
 
@@ -320,7 +319,7 @@ subject:
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
 				assert.Contains(t, err.Error(), "failed decoding")
 			},
 		},
@@ -356,7 +355,7 @@ assertions:
 				assert.Equal(t, prototype.sf, configured.sf)
 				assert.NotEqual(t, prototype.a, configured.a)
 
-				assert.NoError(t, configured.a.ScopesMatcher.Match([]string{}))
+				require.NoError(t, configured.a.ScopesMatcher.Match([]string{}))
 				assert.ElementsMatch(t, configured.a.TargetAudiences, []string{"baz"})
 				assert.ElementsMatch(t, configured.a.TrustedIssuers, []string{"barfoo"})
 				assert.ElementsMatch(t, configured.a.AllowedAlgorithms, []string{string(jose.ES512)})
@@ -526,7 +525,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 			w.Header().Set("Content-Type", responseContentType)
 			w.Header().Set("Content-Length", strconv.Itoa(len(responseContent)))
 			_, err := w.Write(responseContent)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 		}
 
 		w.WriteHeader(responseCode)
@@ -563,11 +562,11 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				assert.False(t, endpointCalled)
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrAuthentication)
+				require.ErrorIs(t, err, heimdall.ErrAuthentication)
 				assert.Contains(t, err.Error(), "no access token")
 
 				var identifier HandlerIdentifier
-				require.True(t, errors.As(err, &identifier))
+				require.ErrorAs(t, err, &identifier)
 				assert.Equal(t, "auth3", identifier.ID())
 			},
 		},
@@ -594,11 +593,11 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				assert.False(t, endpointCalled)
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrCommunication)
+				require.ErrorIs(t, err, heimdall.ErrCommunication)
 				assert.Contains(t, err.Error(), "introspection endpoint failed")
 
 				var identifier HandlerIdentifier
-				require.True(t, errors.As(err, &identifier))
+				require.ErrorAs(t, err, &identifier)
 				assert.Equal(t, "auth3", identifier.ID())
 			},
 		},
@@ -630,11 +629,11 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				assert.True(t, endpointCalled)
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrCommunication)
+				require.ErrorIs(t, err, heimdall.ErrCommunication)
 				assert.Contains(t, err.Error(), "unexpected response code")
 
 				var identifier HandlerIdentifier
-				require.True(t, errors.As(err, &identifier))
+				require.ErrorAs(t, err, &identifier)
 				assert.Equal(t, "auth3", identifier.ID())
 			},
 		},
@@ -672,8 +671,8 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 					assert.Equal(t, "application/json", req.Header.Get("Accept"))
 					assert.Equal(t, http.MethodPost, req.Method)
 
-					assert.NoError(t, req.ParseForm())
-					assert.Len(t, req.Form, 2)
+					require.NoError(t, req.ParseForm())
+					require.Len(t, req.Form, 2)
 					assert.Equal(t, "access_token", req.Form.Get("token_type_hint"))
 					assert.Equal(t, "test_access_token", req.Form.Get("token"))
 				}
@@ -688,11 +687,11 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				assert.True(t, endpointCalled)
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrInternal)
+				require.ErrorIs(t, err, heimdall.ErrInternal)
 				assert.Contains(t, err.Error(), "received introspection response")
 
 				var identifier HandlerIdentifier
-				require.True(t, errors.As(err, &identifier))
+				require.ErrorAs(t, err, &identifier)
 				assert.Equal(t, "auth3", identifier.ID())
 			},
 		},
@@ -731,7 +730,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 					assert.Equal(t, "application/json", req.Header.Get("Accept"))
 					assert.Equal(t, http.MethodPost, req.Method)
 
-					assert.NoError(t, req.ParseForm())
+					require.NoError(t, req.ParseForm())
 					assert.Len(t, req.Form, 2)
 					assert.Equal(t, "access_token", req.Form.Get("token_type_hint"))
 					assert.Equal(t, "test_access_token", req.Form.Get("token"))
@@ -750,11 +749,11 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				assert.True(t, endpointCalled)
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrAuthentication)
+				require.ErrorIs(t, err, heimdall.ErrAuthentication)
 				assert.Contains(t, err.Error(), "assertion conditions")
 
 				var identifier HandlerIdentifier
-				require.True(t, errors.As(err, &identifier))
+				require.ErrorAs(t, err, &identifier)
 				assert.Equal(t, "auth3", identifier.ID())
 			},
 		},
@@ -793,7 +792,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 					assert.Equal(t, "application/json", req.Header.Get("Accept"))
 					assert.Equal(t, http.MethodPost, req.Method)
 
-					assert.NoError(t, req.ParseForm())
+					require.NoError(t, req.ParseForm())
 					assert.Len(t, req.Form, 2)
 					assert.Equal(t, "access_token", req.Form.Get("token_type_hint"))
 					assert.Equal(t, "test_access_token", req.Form.Get("token"))
@@ -823,11 +822,11 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				assert.True(t, endpointCalled)
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrAuthentication)
+				require.ErrorIs(t, err, heimdall.ErrAuthentication)
 				assert.Contains(t, err.Error(), "assertion conditions")
 
 				var identifier HandlerIdentifier
-				require.True(t, errors.As(err, &identifier))
+				require.ErrorAs(t, err, &identifier)
 				assert.Equal(t, "auth3", identifier.ID())
 			},
 		},
@@ -869,7 +868,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 					assert.Equal(t, "application/json", req.Header.Get("Accept"))
 					assert.Equal(t, http.MethodPost, req.Method)
 
-					assert.NoError(t, req.ParseForm())
+					require.NoError(t, req.ParseForm())
 					assert.Len(t, req.Form, 2)
 					assert.Equal(t, "access_token", req.Form.Get("token_type_hint"))
 					assert.Equal(t, "test_access_token", req.Form.Get("token"))
@@ -902,9 +901,9 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 
 				require.NotNil(t, sub)
 				assert.Equal(t, "foo", sub.ID)
-				assert.Len(t, sub.Attributes, 10)
+				require.Len(t, sub.Attributes, 10)
 				assert.Equal(t, "foo bar", sub.Attributes["scope"])
-				assert.Equal(t, true, sub.Attributes["active"])
+				assert.Equal(t, true, sub.Attributes["active"]) //nolint:testifylint
 				assert.Equal(t, "unknown", sub.Attributes["username"])
 				assert.Equal(t, "foobar", sub.Attributes["iss"])
 				assert.Equal(t, "bar", sub.Attributes["aud"])
@@ -953,8 +952,8 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 					assert.Equal(t, "application/json", req.Header.Get("Accept"))
 					assert.Equal(t, http.MethodPost, req.Method)
 
-					assert.NoError(t, req.ParseForm())
-					assert.Len(t, req.Form, 2)
+					require.NoError(t, req.ParseForm())
+					require.Len(t, req.Form, 2)
 					assert.Equal(t, "access_token", req.Form.Get("token_type_hint"))
 					assert.Equal(t, "test_access_token", req.Form.Get("token"))
 				}
@@ -986,9 +985,9 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 
 				require.NotNil(t, sub)
 				assert.Equal(t, "foo", sub.ID)
-				assert.Len(t, sub.Attributes, 10)
+				require.Len(t, sub.Attributes, 10)
 				assert.Equal(t, "foo bar", sub.Attributes["scope"])
-				assert.Equal(t, true, sub.Attributes["active"])
+				assert.Equal(t, true, sub.Attributes["active"]) //nolint:testifylint
 				assert.Equal(t, "unknown", sub.Attributes["username"])
 				assert.Equal(t, "foobar", sub.Attributes["iss"])
 				assert.Equal(t, "bar", sub.Attributes["aud"])
@@ -1038,7 +1037,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 					assert.Equal(t, "application/json", req.Header.Get("Accept"))
 					assert.Equal(t, http.MethodPost, req.Method)
 
-					assert.NoError(t, req.ParseForm())
+					require.NoError(t, req.ParseForm())
 					assert.Len(t, req.Form, 2)
 					assert.Equal(t, "access_token", req.Form.Get("token_type_hint"))
 					assert.Equal(t, "test_access_token", req.Form.Get("token"))
@@ -1073,7 +1072,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				assert.Equal(t, "foo", sub.ID)
 				assert.Len(t, sub.Attributes, 10)
 				assert.Equal(t, "foo bar", sub.Attributes["scope"])
-				assert.Equal(t, true, sub.Attributes["active"])
+				assert.Equal(t, true, sub.Attributes["active"]) //nolint:testifylint
 				assert.Equal(t, "unknown", sub.Attributes["username"])
 				assert.Equal(t, "foobar", sub.Attributes["iss"])
 				assert.Equal(t, "bar", sub.Attributes["aud"])
@@ -1137,7 +1136,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				assert.Equal(t, "foo", sub.ID)
 				assert.Len(t, sub.Attributes, 10)
 				assert.Equal(t, "foo bar", sub.Attributes["scope"])
-				assert.Equal(t, true, sub.Attributes["active"])
+				assert.Equal(t, true, sub.Attributes["active"]) //nolint:testifylint
 				assert.Equal(t, "unknown", sub.Attributes["username"])
 				assert.Equal(t, "foobar", sub.Attributes["iss"])
 				assert.Equal(t, "bar", sub.Attributes["aud"])

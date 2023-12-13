@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"net/url"
 	"slices"
+	"strings"
 
 	"github.com/rs/zerolog"
 
@@ -30,17 +31,18 @@ import (
 )
 
 type ruleImpl struct {
-	id         string
-	urlMatcher patternmatcher.PatternMatcher
-	backend    *config.Backend
-	methods    []string
-	srcID      string
-	isDefault  bool
-	hash       []byte
-	sc         compositeSubjectCreator
-	sh         compositeSubjectHandler
-	fi         compositeSubjectHandler
-	eh         compositeErrorHandler
+	id                     string
+	encodedSlashesHandling config.EncodedSlashesHandling
+	urlMatcher             patternmatcher.PatternMatcher
+	backend                *config.Backend
+	methods                []string
+	srcID                  string
+	isDefault              bool
+	hash                   []byte
+	sc                     compositeSubjectCreator
+	sh                     compositeSubjectHandler
+	fi                     compositeSubjectHandler
+	eh                     compositeErrorHandler
 }
 
 func (r *ruleImpl) Execute(ctx heimdall.Context) (rule.Backend, error) {
@@ -55,30 +57,29 @@ func (r *ruleImpl) Execute(ctx heimdall.Context) (rule.Backend, error) {
 	// authenticators
 	sub, err := r.sc.Execute(ctx)
 	if err != nil {
-		_, err := r.eh.Execute(ctx, err)
-
-		return nil, err
+		return nil, r.eh.Execute(ctx, err)
 	}
 
 	// authorizers & contextualizer
 	if err = r.sh.Execute(ctx, sub); err != nil {
-		_, err := r.eh.Execute(ctx, err)
-
-		return nil, err
+		return nil, r.eh.Execute(ctx, err)
 	}
 
 	// finalizers
 	if err = r.fi.Execute(ctx, sub); err != nil {
-		_, err := r.eh.Execute(ctx, err)
-
-		return nil, err
+		return nil, r.eh.Execute(ctx, err)
 	}
 
 	var upstream rule.Backend
 
 	if r.backend != nil {
+		targetURL := *ctx.Request().URL
+		if r.encodedSlashesHandling == config.EncodedSlashesOn && len(targetURL.RawPath) != 0 {
+			targetURL.RawPath = ""
+		}
+
 		upstream = &backend{
-			targetURL: r.backend.CreateURL(ctx.Request().URL),
+			targetURL: r.backend.CreateURL(&targetURL),
 		}
 	}
 
@@ -86,12 +87,30 @@ func (r *ruleImpl) Execute(ctx heimdall.Context) (rule.Backend, error) {
 }
 
 func (r *ruleImpl) MatchesURL(requestURL *url.URL) bool {
-	toBeMatched := url.URL{
-		Scheme: requestURL.Scheme,
-		Opaque: fmt.Sprintf("//%s%s", requestURL.Host, requestURL.Path),
+	var path string
+
+	switch r.encodedSlashesHandling {
+	case config.EncodedSlashesOff:
+		if strings.Contains(requestURL.RawPath, "%2F") {
+			return false
+		}
+
+		path = requestURL.Path
+	case config.EncodedSlashesNoDecode:
+		if len(requestURL.RawPath) != 0 {
+			path = strings.ReplaceAll(requestURL.RawPath, "%2F", "$$$escaped-slash$$$")
+			path, _ = url.PathUnescape(path)
+			path = strings.ReplaceAll(path, "$$$escaped-slash$$$", "%2F")
+
+			break
+		}
+
+		fallthrough
+	default:
+		path = requestURL.Path
 	}
 
-	return r.urlMatcher.Match(toBeMatched.String())
+	return r.urlMatcher.Match(fmt.Sprintf("%s://%s%s", requestURL.Scheme, requestURL.Host, path))
 }
 
 func (r *ruleImpl) MatchesMethod(method string) bool { return slices.Contains(r.methods, method) }

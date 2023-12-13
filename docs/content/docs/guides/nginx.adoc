@@ -2,12 +2,13 @@
 title: "NGINX Integration"
 date: 2022-07-29T00:14:49+02:00
 draft: false
-weight: 26
+weight: 30
 menu:
   docs:
     parent: "Integration Guides"
   main:
     parent: guides
+description: Explains how to integrate heimdall with NGINX, an HTTP and reverse proxy server which became famous as one of the fastest web servers out there.
 ---
 
 https://nginx.org/[NGINX] is an HTTP and reverse proxy server which became famous as one of the fastest web servers out there, heimdall can be integrated with by making use of the https://nginx.org/en/docs/http/ngx_http_auth_request_module.html[ngx_http_auth_request_module]. In such setup, NGINX delegates authentication and authorization to heimdall. If heimdall answers with a 2XX code, NGINX grants access and forwards the original request to the upstream service. If heimdall returns 401 or 403, the access is denied with the corresponding error code. Any other response code returned by heimdall is considered an error.
@@ -92,7 +93,7 @@ location = /_auth {
 ----
 <1> Configures NGINX to pass the request to heimdall.
 <2> Let NGINX forward the used HTTP method to heimdall.
-<3> Let NGINX forward the used HTTP schema to heimdall.
+<3> Let NGINX forward the used HTTP scheme to heimdall.
 <4> Let NGINX forward the used host to heimdall.
 <5> Let NGINX forward the used path and query parameter to heimdall.
 ====

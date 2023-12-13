@@ -39,7 +39,7 @@ func TestValidateConfig(t *testing.T) {
 			// THEN
 			if tc.expError != nil {
 				require.Error(t, err)
-				assert.ErrorIs(t, err, tc.expError)
+				require.ErrorIs(t, err, tc.expError)
 			} else {
 				require.NoError(t, err)
 			}

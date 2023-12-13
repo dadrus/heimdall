@@ -75,7 +75,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 
 				data, err := io.ReadAll(response.Body)
 				require.NoError(t, err)
-				assert.Len(t, data, 0)
+				assert.Empty(t, data)
 			},
 		},
 		{
@@ -106,7 +106,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 
 				data, err := io.ReadAll(response.Body)
 				require.NoError(t, err)
-				assert.Len(t, data, 0)
+				assert.Empty(t, data)
 			},
 		},
 		{
@@ -137,7 +137,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 
 				data, err := io.ReadAll(response.Body)
 				require.NoError(t, err)
-				assert.Len(t, data, 0)
+				assert.Empty(t, data)
 			},
 		},
 		{
@@ -168,7 +168,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 
 				data, err := io.ReadAll(response.Body)
 				require.NoError(t, err)
-				assert.Len(t, data, 0)
+				assert.Empty(t, data)
 			},
 		},
 		{
@@ -187,7 +187,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 
 				req.Header.Set("X-Forwarded-Proto", "https")
 				req.Header.Set("X-Forwarded-Host", "test.com")
-				req.Header.Set("X-Forwarded-Path", "bar")
+				req.Header.Set("X-Forwarded-Uri", "/bar")
 				req.Header.Set("X-Forwarded-Method", http.MethodGet)
 
 				return req
@@ -215,10 +215,10 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 
 				data, err := io.ReadAll(response.Body)
 				require.NoError(t, err)
-				assert.Len(t, data, 0)
+				assert.Empty(t, data)
 
 				headerVal := response.Header.Get("X-Foo-Bar")
-				assert.Equal(t, headerVal, "baz")
+				assert.Equal(t, "baz", headerVal)
 
 				cookies := response.Cookies()
 				require.Len(t, cookies, 1)
@@ -242,7 +242,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 
 				req.Header.Set("X-Forwarded-Proto", "https")
 				req.Header.Set("X-Forwarded-Host", "test.com")
-				req.Header.Set("X-Forwarded-Path", "bar")
+				req.Header.Set("X-Forwarded-Uri", "/bar")
 				req.Header.Set("X-Forwarded-Method", http.MethodGet)
 
 				return req
@@ -275,10 +275,10 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 
 				data, err := io.ReadAll(response.Body)
 				require.NoError(t, err)
-				assert.Len(t, data, 0)
+				assert.Empty(t, data)
 
 				headerVal := response.Header.Get("X-Foo-Bar")
-				assert.Equal(t, headerVal, "baz")
+				assert.Equal(t, "baz", headerVal)
 
 				cookies := response.Cookies()
 				require.Len(t, cookies, 1)
@@ -303,7 +303,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 
 				req.Header.Set("X-Forwarded-Proto", "https")
 				req.Header.Set("X-Forwarded-Host", "test.com")
-				req.Header.Set("X-Forwarded-Path", "bar")
+				req.Header.Set("X-Forwarded-Uri", "/bar")
 				req.Header.Set("X-Forwarded-Method", http.MethodGet)
 
 				return req
@@ -333,10 +333,10 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 
 				data, err := io.ReadAll(response.Body)
 				require.NoError(t, err)
-				assert.Len(t, data, 0)
+				assert.Empty(t, data)
 
 				headerVal := response.Header.Get("X-Foo-Bar")
-				assert.Equal(t, headerVal, "baz")
+				assert.Equal(t, "baz", headerVal)
 
 				cookies := response.Cookies()
 				require.Len(t, cookies, 1)
@@ -438,7 +438,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				)
 				require.NoError(t, err)
 
-				req.Header.Set("X-Forwarded-Path", "/bar")
+				req.Header.Set("X-Forwarded-Uri", "/bar")
 
 				return req
 			},
@@ -518,7 +518,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 
 				req.Header.Set("X-Forwarded-Proto", "https")
 				req.Header.Set("X-Forwarded-Host", "test.com")
-				req.Header.Set("X-Forwarded-Path", "/bar")
+				req.Header.Set("X-Forwarded-Uri", "/bar")
 				req.Header.Set("X-Forwarded-Method", http.MethodPatch)
 
 				return req

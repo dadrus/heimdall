@@ -32,7 +32,7 @@ var (
 
 type ErrorHandlerTypeFactory func(id string, typ string, c map[string]any) (bool, ErrorHandler, error)
 
-func registerErrorHandlerTypeFactory(factory ErrorHandlerTypeFactory) {
+func registerTypeFactory(factory ErrorHandlerTypeFactory) {
 	errorHandlerTypeFactoriesMu.Lock()
 	defer errorHandlerTypeFactoriesMu.Unlock()
 
@@ -43,7 +43,7 @@ func registerErrorHandlerTypeFactory(factory ErrorHandlerTypeFactory) {
 	errorHandlerTypeFactories = append(errorHandlerTypeFactories, factory)
 }
 
-func CreateErrorHandlerPrototype(id string, typ string, config map[string]any) (ErrorHandler, error) {
+func CreatePrototype(id string, typ string, config map[string]any) (ErrorHandler, error) {
 	errorHandlerTypeFactoriesMu.RLock()
 	defer errorHandlerTypeFactoriesMu.RUnlock()
 

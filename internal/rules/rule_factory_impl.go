@@ -48,7 +48,7 @@ func NewRuleFactory(
 
 	rf := &ruleFactory{hf: hf, hasDefaultRule: false, logger: logger, mode: mode}
 
-	if err := rf.initWithDefaultRule(conf.Rules.Default, logger); err != nil {
+	if err := rf.initWithDefaultRule(conf.Default, logger); err != nil {
 		logger.Error().Err(err).Msg("Loading default rule failed")
 
 		return nil, err
@@ -206,11 +206,6 @@ func (f *ruleFactory) CreateRule(version, srcID string, ruleConfig config2.Rule)
 			"no authenticator defined for rule ID=%s from %s", ruleConfig.ID, srcID)
 	}
 
-	if len(finalizers) == 0 {
-		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
-			"no finalizer defined for rule ID=%s from %s", ruleConfig.ID, srcID)
-	}
-
 	if len(methods) == 0 {
 		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
 			"no methods defined for rule ID=%s from %s", ruleConfig.ID, srcID)
@@ -223,7 +218,12 @@ func (f *ruleFactory) CreateRule(version, srcID string, ruleConfig config2.Rule)
 	}
 
 	return &ruleImpl{
-		id:         ruleConfig.ID,
+		id: ruleConfig.ID,
+		encodedSlashesHandling: x.IfThenElse(
+			len(ruleConfig.EncodedSlashesHandling) != 0,
+			ruleConfig.EncodedSlashesHandling,
+			config2.EncodedSlashesOff,
+		),
 		urlMatcher: matcher,
 		backend:    ruleConfig.Backend,
 		methods:    methods,
@@ -287,7 +287,14 @@ func (f *ruleFactory) createOnErrorPipeline(
 	for _, ehStep := range ehConfigs {
 		id, found := ehStep["error_handler"]
 		if found {
-			eh, err := f.hf.CreateErrorHandler(version, id.(string), getConfig(ehStep["config"]))
+			conf := getConfig(ehStep["config"])
+			condition := ehStep["if"]
+
+			if condition != nil {
+				conf["if"] = condition
+			}
+
+			eh, err := f.hf.CreateErrorHandler(version, id.(string), conf)
 			if err != nil {
 				return nil, err
 			}
@@ -333,10 +340,6 @@ func (f *ruleFactory) initWithDefaultRule(ruleConfig *config.DefaultRule, logger
 		return errorchain.NewWithMessage(heimdall.ErrConfiguration, "no authenticator defined for default rule")
 	}
 
-	if len(finalizers) == 0 {
-		return errorchain.NewWithMessagef(heimdall.ErrConfiguration, "no finalizer defined for default rule")
-	}
-
 	methods, err := expandHTTPMethods(ruleConfig.Methods)
 	if err != nil {
 		return errorchain.NewWithMessagef(heimdall.ErrConfiguration, "failed to expand allowed HTTP methods").
@@ -348,14 +351,15 @@ func (f *ruleFactory) initWithDefaultRule(ruleConfig *config.DefaultRule, logger
 	}
 
 	f.defaultRule = &ruleImpl{
-		id:        "default",
-		methods:   methods,
-		srcID:     "config",
-		isDefault: true,
-		sc:        authenticators,
-		sh:        subHandlers,
-		fi:        finalizers,
-		eh:        errorHandlers,
+		id:                     "default",
+		encodedSlashesHandling: config2.EncodedSlashesOff,
+		methods:                methods,
+		srcID:                  "config",
+		isDefault:              true,
+		sc:                     authenticators,
+		sh:                     subHandlers,
+		fi:                     finalizers,
+		eh:                     errorHandlers,
 	}
 
 	f.hasDefaultRule = true
@@ -417,7 +421,7 @@ func createHandler[T subjectHandler](
 		return nil, err
 	}
 
-	return &conditionalSubjectHandler{h: handler, c: condition}, err
+	return &conditionalSubjectHandler{h: handler, c: condition}, nil
 }
 
 func getConfig(conf any) config.MechanismConfig {

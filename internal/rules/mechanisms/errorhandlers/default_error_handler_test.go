@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/heimdall/mocks"
@@ -36,12 +37,9 @@ func TestDefaultErrorHandlerExecution(t *testing.T) {
 
 	errorHandler := newDefaultErrorHandler("foo")
 
-	// WHEN
-	wasHandled, err := errorHandler.Execute(ctx, heimdall.ErrConfiguration)
-
-	// THEN
-	assert.True(t, wasHandled)
-	assert.NoError(t, err)
+	// WHEN & THEN
+	require.True(t, errorHandler.CanExecute(nil, nil))
+	require.NoError(t, errorHandler.Execute(ctx, heimdall.ErrConfiguration))
 }
 
 func TestDefaultErrorHandlerPrototype(t *testing.T) {
@@ -55,10 +53,10 @@ func TestDefaultErrorHandlerPrototype(t *testing.T) {
 	eh2, err2 := prototype.WithConfig(map[string]any{"foo": "bar"})
 
 	// THEN
-	assert.NoError(t, err1)
+	require.NoError(t, err1)
 	assert.Equal(t, prototype, eh1)
 
-	assert.NoError(t, err2)
+	require.NoError(t, err2)
 	assert.Equal(t, prototype, eh2)
 	assert.Equal(t, "foo", prototype.ID())
 }

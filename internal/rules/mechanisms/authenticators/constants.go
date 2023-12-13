@@ -17,7 +17,6 @@
 package authenticators
 
 const (
-	AuthenticatorNoop                = "noop"
 	AuthenticatorUnauthorized        = "unauthorized"
 	AuthenticatorBasicAuth           = "basic_auth"
 	AuthenticatorAnonymous           = "anonymous"

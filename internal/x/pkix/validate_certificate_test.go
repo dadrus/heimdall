@@ -27,7 +27,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/x/pkix/pemx"
@@ -142,9 +141,9 @@ func TestValidateCertificate(t *testing.T) {
 
 			// THEN
 			if tc.err {
-				assert.Error(t, err)
+				require.Error(t, err)
 			} else {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			}
 		})
 	}

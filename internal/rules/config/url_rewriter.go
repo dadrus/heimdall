@@ -78,7 +78,19 @@ func (r *URLRewriter) Rewrite(value *url.URL) {
 		func() string { return r.Scheme },
 		func() string { return value.Scheme },
 	)
-	value.Path = r.transformPath(value.Path)
+
+	rawPath := r.transformPath(value.EscapedPath())
+	if len(value.RawPath) != 0 {
+		// if the original url path had url encoded parts
+		value.RawPath = rawPath
+	}
+
+	value.Path, _ = url.PathUnescape(rawPath)
+	if value.Path != rawPath {
+		// if the new path contains url encoded parts
+		value.RawPath = rawPath
+	}
+
 	value.RawQuery = r.transformQuery(value.RawQuery)
 }
 

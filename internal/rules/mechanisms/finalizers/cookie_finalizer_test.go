@@ -18,7 +18,6 @@ package finalizers
 
 import (
 	"context"
-	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -46,7 +45,7 @@ func TestCreateCookieFinalizer(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
 				assert.Contains(t, err.Error(), "'cookies' is a required field")
 			},
 		},
@@ -57,7 +56,7 @@ func TestCreateCookieFinalizer(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
 				assert.Contains(t, err.Error(), "'cookies' must contain more than 0 items")
 			},
 		},
@@ -72,7 +71,7 @@ foo: bar
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
 				assert.Contains(t, err.Error(), "failed decoding")
 			},
 		},
@@ -87,7 +86,7 @@ cookies:
 
 				require.Nil(t, finalizer)
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
 				assert.Contains(t, err.Error(), "failed decoding")
 			},
 		},
@@ -248,11 +247,11 @@ cookies:
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrInternal)
+				require.ErrorIs(t, err, heimdall.ErrInternal)
 				assert.Contains(t, err.Error(), "'nil' subject")
 
 				var identifier interface{ ID() string }
-				require.True(t, errors.As(err, &identifier))
+				require.ErrorAs(t, err, &identifier)
 				assert.Equal(t, "cun1", identifier.ID())
 			},
 		},

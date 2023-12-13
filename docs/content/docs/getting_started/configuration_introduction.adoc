@@ -7,6 +7,7 @@ menu:
   docs:
     parent: "Getting Started"
     weight: 40
+description: Explains available configuration options.
 ---
 
 Configuration in heimdall can refer to two different things:
@@ -60,22 +61,21 @@ The JWT itself will be put into the `Authorization` header as a bearer token.
 log:
   level: info
 
-rules:
-  mechanisms:
-    authenticators:
-    - id: anonymous_authenticator
-      type: anonymous
-    finalizers:
-    - id: create_jwt
-      type: jwt
+mechanisms:
+  authenticators:
+  - id: anonymous_authenticator
+    type: anonymous
+  finalizers:
+  - id: create_jwt
+    type: jwt
 
-  default:
-    methods:
-      - GET
-      - POST
-    execute:
-      - authenticator: anonymous_authenticator
-      - finalizer: create_jwt
+default_rule:
+  methods:
+    - GET
+    - POST
+  execute:
+    - authenticator: anonymous_authenticator
+    - finalizer: create_jwt
 ----
 ====
 
@@ -83,22 +83,21 @@ rules:
 ====
 [source,yaml]
 ----
-rules:
-  mechanisms:
-    authenticators:
-    - id: hydra_authenticator
-      type: oauth2_introspection
-      config:
-        introspection_endpoint:
-          url: http://hydra:4445/oauth2/introspect
-          auth:
-            type: basic_auth
-            config:
-              user: ${INTROSPECT_EP_USER}
-              password: ${INTROSPECT_EP_PASSWORD}
-    finalizers:
-    - id: create_jwt
-      type: jwt
+mechanisms:
+  authenticators:
+  - id: hydra_authenticator
+    type: oauth2_introspection
+    config:
+      introspection_endpoint:
+        url: http://hydra:4445/oauth2/introspect
+        auth:
+          type: basic_auth
+          config:
+            user: ${INTROSPECT_EP_USER}
+            password: ${INTROSPECT_EP_PASSWORD}
+  finalizers:
+  - id: create_jwt
+    type: jwt
 ----
 ====
 
@@ -136,38 +135,36 @@ E.g. the `methods` of the link:{{< relref "/docs/configuration/rules/default.ado
 +
 [source,yaml]
 ----
-rules:
-  default:
-    methods:
-      - GET
-      - POST
+default_rule:
+  methods:
+    - GET
+    - POST
 ----
 +
 and using environment variables with
 +
 [source,bash]
 ----
-HEIMDALLCFG_RULES_DEFAULT_METHODS_0=GET
-HEIMDALLCFG_RULES_DEFAULT_METHODS_1=POST
+HEIMDALLCFG_DEFAULT__RULE_METHODS_0=GET
+HEIMDALLCFG_DEFAULT__RULE_METHODS_1=POST
 ----
 +
 For structured configuration, like the definition of the authenticators in the example above
 +
 [source,yaml]
 ----
-rules:
-  mechanisms:
-    authenticators:
-    - id: anonymous_authenticator
-      type: anonymous
+mechanisms:
+  authenticators:
+  - id: anonymous_authenticator
+    type: anonymous
 ----
 +
 The corresponding environment variables would be
 +
 [source,bash]
 ----
-HEIMDALLCFG_RULES_MECHANISMS_AUTHENTICATORS_0_ID=anonymous_authenticator
-HEIMDALLCFG_RULES_MECHANISMS_AUTHENTICATORS_0_TYPE=anonymous
+HEIMDALLCFG_MECHANISMS_AUTHENTICATORS_0_ID=anonymous_authenticator
+HEIMDALLCFG_MECHANISMS_AUTHENTICATORS_0_TYPE=anonymous
 ----
 
 * If a name of a property has `\_` it must be escaped with an additional `_`.

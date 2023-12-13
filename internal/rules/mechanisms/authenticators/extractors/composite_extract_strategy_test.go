@@ -21,12 +21,13 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/heimdall/mocks"
 )
 
-func TestCompositeExtractCookieValueWithoutSchema(t *testing.T) {
+func TestCompositeExtractCookieValueWithoutScheme(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
@@ -50,21 +51,21 @@ func TestCompositeExtractCookieValueWithoutSchema(t *testing.T) {
 	val, err := strategy.GetAuthData(ctx)
 
 	// THEN
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, actualValue, val)
 }
 
-func TestCompositeExtractHeaderValueWithSchema(t *testing.T) {
+func TestCompositeExtractHeaderValueWithScheme(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
 	headerName := "Test-Header"
 	queryParamName := "test_param"
-	headerSchema := "bar:"
+	headerScheme := "bar:"
 	actualValue := "foo"
 
 	fnt := mocks.NewRequestFunctionsMock(t)
-	fnt.EXPECT().Header(headerName).Return(headerSchema + " " + actualValue)
+	fnt.EXPECT().Header(headerName).Return(headerScheme + " " + actualValue)
 
 	ctx := mocks.NewContextMock(t)
 	ctx.EXPECT().Request().Return(&heimdall.Request{
@@ -74,14 +75,14 @@ func TestCompositeExtractHeaderValueWithSchema(t *testing.T) {
 
 	strategy := CompositeExtractStrategy{
 		QueryParameterExtractStrategy{Name: queryParamName},
-		HeaderValueExtractStrategy{Name: headerName, Schema: headerSchema},
+		HeaderValueExtractStrategy{Name: headerName, Scheme: headerScheme},
 	}
 
 	// WHEN
 	val, err := strategy.GetAuthData(ctx)
 
 	// THEN
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, actualValue, val)
 }
 
@@ -91,17 +92,17 @@ func TestCompositeExtractStrategyOrder(t *testing.T) {
 	// GIVEN
 	headerName := "Test-Header"
 	queryParamName := "test_param"
-	headerSchema := "bar:"
+	headerScheme := "bar:"
 	actualValue := "foo"
 
 	fnt := mocks.NewRequestFunctionsMock(t)
-	fnt.EXPECT().Header(headerName).Return(headerSchema + " " + actualValue)
+	fnt.EXPECT().Header(headerName).Return(headerScheme + " " + actualValue)
 
 	ctx := mocks.NewContextMock(t)
 	ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: fnt})
 
 	strategy := CompositeExtractStrategy{
-		HeaderValueExtractStrategy{Name: headerName, Schema: headerSchema},
+		HeaderValueExtractStrategy{Name: headerName, Scheme: headerScheme},
 		QueryParameterExtractStrategy{Name: queryParamName},
 	}
 
@@ -109,6 +110,6 @@ func TestCompositeExtractStrategyOrder(t *testing.T) {
 	val, err := strategy.GetAuthData(ctx)
 
 	// THEN
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, actualValue, val)
 }

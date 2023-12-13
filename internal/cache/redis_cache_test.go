@@ -112,7 +112,7 @@ func TestRedisCacheUsage(t *testing.T) {
 func before(t *testing.T) *RedisCache {
 	t.Helper()
 
-	ctx := context.Background()
+	ctx := context.TODO()
 	redisC := initRedisContainer(ctx, t)
 
 	endpoint, err := redisC.Endpoint(ctx, "")

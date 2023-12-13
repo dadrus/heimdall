@@ -48,7 +48,7 @@ class DocSearch extends HTMLElement {
 
         const searchForm = document.getElementById("docs-search");
         const searchSuggestions = bs.Collapse.getOrCreateInstance(
-            document.getElementById("search-suggestions"));
+             document.getElementById("search-suggestions"), {toggle: false});
 
         searchForm.addEventListener("keydown", (ev) => {
             if (["Esc", "Escape"].includes(ev.key)) {
@@ -89,10 +89,6 @@ class DocSearch extends HTMLElement {
     resultTemplate(post) {
         const searchValue = document.getElementById("search").value
         const pathPrefix = this.pathPrefix
-
-        if (searchValue.length < 3) {
-            return ""
-        }
 
         const parser = new DOMParser()
         const doc = parser.parseFromString(post.html_content, 'text/html')

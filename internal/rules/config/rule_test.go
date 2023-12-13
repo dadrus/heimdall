@@ -93,7 +93,7 @@ func TestRuleConfigDeepCopy(t *testing.T) {
 
 	// THEN
 	// different addresses
-	require.False(t, &in == out)
+	require.NotSame(t, &in, out)
 
 	// but same contents
 	assert.Equal(t, in.ID, out.ID)

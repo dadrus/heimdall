@@ -14,7 +14,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package v1alpha2
+package v1alpha3
 
 import (
 	"context"
@@ -38,9 +38,9 @@ const watchResponse = `{
 `
 
 const response = `{
-  "apiVersion": "heimdall.dadrus.github.com/v1alpha2",
+  "apiVersion": "heimdall.dadrus.github.com/v1alpha3",
   "items": [{
-      "apiVersion": "heimdall.dadrus.github.com/v1alpha2",
+      "apiVersion": "heimdall.dadrus.github.com/v1alpha3",
       "kind": "RuleSet",
       "metadata": {
         "name": "test-rule-set",
@@ -97,7 +97,7 @@ func (s *ClientTestSuite) SetupSuite() {
 		} else {
 			_, err = w.Write([]byte(response))
 		}
-		require.NoError(s.T(), err)
+		s.Require().NoError(err)
 
 		w.WriteHeader(http.StatusOK)
 	}))
@@ -105,7 +105,7 @@ func (s *ClientTestSuite) SetupSuite() {
 	var err error
 
 	s.cl, err = NewClient(&rest.Config{Host: s.srv.URL})
-	require.NoError(s.T(), err)
+	s.Require().NoError(err)
 }
 
 func (s *ClientTestSuite) TearDownSuite() {
@@ -124,7 +124,7 @@ func verifyRuleSetList(t *testing.T, rls *RuleSetList) {
 
 	ruleSet := rls.Items[0]
 	assert.Equal(t, "RuleSet", ruleSet.Kind)
-	assert.Equal(t, "heimdall.dadrus.github.com/v1alpha2", ruleSet.APIVersion)
+	assert.Equal(t, "heimdall.dadrus.github.com/v1alpha3", ruleSet.APIVersion)
 	assert.Equal(t, "test-rule-set", ruleSet.Name)
 	assert.Equal(t, "foo", ruleSet.Namespace)
 	assert.Equal(t, "foobar", ruleSet.Spec.AuthClassName)
@@ -152,7 +152,7 @@ func (s *ClientTestSuite) TestRuleSetsList() {
 	rls, err := s.cl.RuleSetRepository("foo").List(context.Background(), metav1.ListOptions{})
 
 	// THEN
-	require.NoError(s.T(), err)
+	s.Require().NoError(err)
 	verifyRuleSetList(s.T(), rls)
 }
 
@@ -161,14 +161,14 @@ func (s *ClientTestSuite) TestRuleSetsWatch() {
 	watcher, err := s.cl.RuleSetRepository("foo").Watch(context.Background(), metav1.ListOptions{})
 
 	// THEN
-	require.NoError(s.T(), err)
+	s.Require().NoError(err)
 
 	evtChain := watcher.ResultChan()
 
 	evt := <-evtChain
 
-	assert.Equal(s.T(), watch.Added, evt.Type)
-	assert.IsType(s.T(), &RuleSetList{}, evt.Object)
+	s.Equal(watch.Added, evt.Type)
+	s.IsType(&RuleSetList{}, evt.Object)
 	// nolint: forcetypeassert
 	verifyRuleSetList(s.T(), evt.Object.(*RuleSetList))
 }

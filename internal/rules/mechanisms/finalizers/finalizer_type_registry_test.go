@@ -51,7 +51,7 @@ func TestCreateFinalizerPrototype(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, ErrUnsupportedType)
+				require.ErrorIs(t, err, ErrUnsupportedType)
 			},
 		},
 	} {

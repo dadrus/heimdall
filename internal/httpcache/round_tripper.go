@@ -59,9 +59,10 @@ func (rt *RoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
 }
 
 func (rt *RoundTripper) cachedResponse(req *http.Request) (*http.Response, error) {
-	cch := cache.Ctx(req.Context())
+	ctx := req.Context()
+	cch := cache.Ctx(ctx)
 
-	cachedValue := cch.Get(req.Context(), cacheKey(req))
+	cachedValue := cch.Get(ctx, cacheKey(req))
 	if cachedValue == nil {
 		return nil, ErrNoCacheEntry
 	}
@@ -87,8 +88,9 @@ func (rt *RoundTripper) cacheResponse(req *http.Request, resp *http.Response) {
 		return
 	}
 
-	cch := cache.Ctx(req.Context())
-	cch.Set(req.Context(), cacheKey(req), respDump, time.Until(expires))
+	ctx := req.Context()
+	cch := cache.Ctx(ctx)
+	cch.Set(ctx, cacheKey(req), respDump, time.Until(expires))
 }
 
 func cacheKey(req *http.Request) string {

@@ -91,14 +91,26 @@ func TestURLRewriterRewrite(t *testing.T) {
 		{
 			uc:       "cut only the urlencoded path prefix",
 			original: "http://foo.bar/%5Bid%5D/bar?baz=bar&bar=foo&foo=baz",
-			rewriter: &URLRewriter{PathPrefixToCut: "/[id]"},
+			rewriter: &URLRewriter{PathPrefixToCut: "/%5Bid%5D"},
 			expected: "http://foo.bar/bar?baz=bar&bar=foo&foo=baz",
+		},
+		{
+			uc:       "cut only the urlencoded path prefix with encoded slash",
+			original: "http://foo.bar/foo%2Ftest/%5Bid%5D/bar?baz=bar&bar=foo&foo=baz",
+			rewriter: &URLRewriter{PathPrefixToCut: "/foo%2Ftest"},
+			expected: "http://foo.bar/%5Bid%5D/bar?baz=bar&bar=foo&foo=baz",
 		},
 		{
 			uc:       "add only a path prefix",
 			original: "http://foo.bar/foo/bar?baz=bar&bar=foo&foo=baz",
 			rewriter: &URLRewriter{PathPrefixToAdd: "/baz"},
 			expected: "http://foo.bar/baz/foo/bar?baz=bar&bar=foo&foo=baz",
+		},
+		{
+			uc:       "add a path prefix with urlencoded slash",
+			original: "http://foo.bar/foo/bar?baz=bar&bar=foo&foo=baz",
+			rewriter: &URLRewriter{PathPrefixToAdd: "/foo%2Ftest"},
+			expected: "http://foo.bar/foo%2Ftest/foo/bar?baz=bar&bar=foo&foo=baz",
 		},
 		{
 			uc:       "remove only a query param",

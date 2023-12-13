@@ -27,7 +27,7 @@ spec:
     singular: ruleset
     listKind: RuleSetList
   versions:
-    - name: v1alpha2
+    - name: v1alpha3
       served: true
       storage: true
       schema:
@@ -38,36 +38,44 @@ spec:
             spec:
               type: object
               description: Defines the actual rules and the authClassName these rules should be used by
-              x-kubernetes-validations:
-                - rule: "has(self.rules) && size(self.rules) > 0"
-                  message: "at least one rule definition must be provided"
+              required:
+                - rules
               properties:
                 authClassName:
                   description: Defines which heimdall setup should use the resource
                   type: string
                   default: default
+                  maxLength: 56
                 rules:
                   description: The actual rule set with rules defining the required pipeline mechanisms
                   type: array
+                  minItems: 1
                   items:
                     description: A himedall rule defining the pipeline mechanisms
                     type: object
-                    x-kubernetes-validations:
-                      - rule: "has(self.id)"
-                        message: "a rule must have an id defined"
-                      - rule: "has(self.match) && has(self.match.url)"
-                        message: "a rule must have a url set to match incoming requests"
-                      - rule: "size(self.match.url) > 0"
-                        message: "the match url must be an expression and not be empty"
-                      - rule: "has(self.execute) && size(self.execute) > 0"
-                        message: "execute pipeline is not allowed to be empty"
+                    required:
+                      - id
+                      - match
+                      - execute
                     properties:
                       id:
                         description: The identifier of the rule
                         type: string
+                        maxLength: 128
+                      allow_encoded_slashes:
+                        description: Defines how to handle url-encoded slashes in url paths while matching and forwarding the requests
+                        type: string
+                        default: "off"
+                        maxLength: 10
+                        enum:
+                          - "off"
+                          - "on"
+                          - "no_decode"
                       match:
                         description: How to match the rule
                         type: object
+                        required:
+                          - url
                         properties:
                           url:
                             description: The url to match
@@ -84,9 +92,8 @@ spec:
                       forward_to:
                         description: Where to forward the request to. Required only if heimdall is used in proxy operation mode.
                         type: object
-                        x-kubernetes-validations:
-                          - rule: "has(self.host)"
-                            message: "no host is defined for the forward_to property"
+                        required:
+                          - host
                         properties:
                           host:
                             description: Host and port of the upstream service to forward the request to
@@ -98,8 +105,6 @@ spec:
                             x-kubernetes-validations:
                               - rule: "has(self.scheme) || has(self.strip_path_prefix) || has(self.add_path_prefix) || has(self.strip_query_parameters)"
                                 message: "rewrite is defined, but does not contain any middleware"
-                              - rule: "has(self.strip_query_parameters) ? size(self.strip_query_parameters) > 0 : true"
-                                message: "no query parameters defined in strip_query_parameters"
                             properties:
                               scheme:
                                 description: If you want to overwrite the used HTTP scheme, set it here
@@ -108,32 +113,49 @@ spec:
                               strip_path_prefix:
                                 description: If you want to cut a prefix from the URL path, set it here
                                 type: string
+                                maxLength: 128
                               add_path_prefix:
                                 description: If you want to add a prefix to the URL path, set it here
                                 type: string
+                                maxLength: 128
                               strip_query_parameters:
                                 description: If you want to remove some query parameters, specify it here
                                 type: array
+                                minItems: 1
                                 items:
                                   type: string
+                                  maxLength: 128
                       methods:
                         description: The allowed HTTP methods
                         type: array
+                        minItems: 1
                         items:
                           type: string
+                          maxLength: 16
                           enum:
-                            - CONNECT
-                            - DELETE
-                            - GET
-                            - HEAD
-                            - OPTIONS
-                            - PATCH
-                            - POST
-                            - PUT
-                            - TRACE
+                            - "CONNECT"
+                            - "!CONNECT"
+                            - "DELETE"
+                            - "!DELETE"
+                            - "GET"
+                            - "!GET"
+                            - "HEAD"
+                            - "!HEAD"
+                            - "OPTIONS"
+                            - "!OPTIONS"
+                            - "PATCH"
+                            - "!PATCH"
+                            - "POST"
+                            - "!POST"
+                            - "PUT"
+                            - "!PUT"
+                            - "TRACE"
+                            - "!TRACE"
+                            - "ALL"
                       execute:
                         description: The pipeline mechanisms to execute
                         type: array
+                        minItems: 1
                         items:
                           type: object
                           x-kubernetes-preserve-unknown-fields: true
@@ -143,5 +165,67 @@ spec:
                         items:
                           type: object
                           x-kubernetes-preserve-unknown-fields: true
+            status:
+              description: Deployment status of a RuleSet
+              type: object
+              default:
+                activeIn: "0/0"
+              properties:
+                activeIn:
+                  description: The number of heimdall instances loaded/responsible for the RuleSet
+                  type: string
+                  maxLength: 7
+                conditions:
+                  description: Conditions store the status conditions of the RuleSet instances
+                  type: array
+                  items:
+                    description: Details for a single aspect of the current state of the RuleSet resource
+                    type: object
+                    required:
+                      - type
+                      - status
+                      - lastTransitionTime
+                      - reason
+                      - message
+                    properties:
+                      type:
+                        description: The type of the condition
+                        type: string
+                        maxLength: 316
+                        pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      status:
+                        description: The status of the condition, one of True, False, Unknown
+                        type: string
+                        default: Unknown
+                        enum:
+                          - "True"
+                          - "False"
+                          - "Unknown"
+                      observedGeneration:
+                        description: Represents the .metadata.generation that the condition was set based upon
+                        type: integer
+                        format: int64
+                        minimum: 0
+                      lastTransitionTime:
+                        description: The last time the condition transitioned from one status to another
+                        type: string
+                        format: date-time
+                      reason:
+                        description: Identifier indicating the reason for the condition's last transition
+                        type: string
+                        maxLength: 32
+                      message:
+                        description: Message indicating details about the transition
+                        type: string
+                        maxLength: 1024
+      additionalPrinterColumns:
+        - name: Active In
+          type: string
+          jsonPath: .status.activeIn
+        - name: Age
+          type: date
+          jsonPath: .metadata.creationTimestamp
+      subresources:
+        status: {}
 
 

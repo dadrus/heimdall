@@ -49,6 +49,17 @@ Which strategy to use for matching of the value, provided in the `url` property.
 * `\https://mydomain.com/<{foo*,bar*}>` matches `\https://mydomain.com/foo` or `\https://mydomain.com/bar` and doesn't match `\https://mydomain.com/any`.
 ====
 
+* *`allow_encoded_slashes`*: _string_ (optional)
++
+Defines how to handle url-encoded slashes in url paths while matching and forwarding the requests. Can be set to the one of the following values, defaulting to `off`:
+
+** *`off`* - Reject requests containing encoded slashes. Means, if the request URL contains an url-encoded slash (`%2F`), the rule will not match it.
+** *`on`* - Accept requests using encoded slashes, decoding them and making it transparent for the rules and the upstream url. That is, the `%2F` becomes a `/` and will be treated as such in all places.
+** *`no_decode`* - Accept requests using encoded slashes, but not touching them and showing them to the rules and the upstream. That is, the `%2F` just remains as is.
+
++
+CAUTION: Since the proxy integrating with heimdall, heimdall by itself and the upstream service all may treat the url-encoded slashes differently, accepting requests with url-encoded slashes can, depending on your rules, lead to https://cwe.mitre.org/data/definitions/436.html[Interpretation Conflict] vulnerabilities, resulting in privilege escalations.
+
 * *`methods`*: _string array_ (optional)
 +
 Which HTTP methods (`GET`, `POST`, `PATCH`, etc) are allowed for the matched URL. If not specified, every request to that URL will result in `405 Method Not Allowed` response from heimdall. If all methods should be allowed, one can use a special `ALL` placeholder. If all, except some specific methods should be allowed, one can specify `ALL` and remove specific methods by adding the `!` sign to the to be removed method. In that case you have to specify the value in braces. See also examples below.
@@ -150,13 +161,13 @@ on_error:
 
 === Regular Pipeline
 
-As described in the link:{{< relref "/docs/getting_started/concepts.adoc" >}}[Concepts] section, heimdall's decision pipeline consists of multiple mechanisms - at least consisting of link:{{< relref "pipeline_mechanisms/authenticators.adoc" >}}[authenticators] and link:{{< relref "pipeline_mechanisms/finalizers.adoc" >}}[finalizers]. The definition of such a pipeline happens as a list of required mechanisms (previously link:{{< relref "pipeline_mechanisms/overview.adoc" >}}[configured]) with the corresponding IDs in the following order:
+As described in the link:{{< relref "/docs/getting_started/concepts.adoc" >}}[Concepts] section, heimdall's decision pipeline consists of multiple mechanisms - at least consisting of link:{{< relref "pipeline_mechanisms/authenticators.adoc" >}}[authenticators]. The definition of such a pipeline happens as a list of required mechanisms (previously link:{{< relref "pipeline_mechanisms/overview.adoc" >}}[configured]) with the corresponding IDs in the following order:
 
 * List of link:{{< relref "pipeline_mechanisms/authenticators.adoc" >}}[authenticators] using `authenticator` as key, followed by the required authenticator `id`. Authenticators following the first defined in the list are used by heimdall as fallback. That is, if first authenticator fails due to missing authentication data, second is executed, etc. By default, fallback is not used if an authenticator fails due to validation errors of the given authentication data. E.g. if an authenticator fails to validate the signature of a JWT token, the next authenticator in the list will not be executed. Instead, the entire pipeline will fail and lead to the execution of the link:{{< relref "#_error_handler_pipeline" >}}[error handler pipeline]. This list is mandatory if no link:{{< relref "default.adoc" >}}[default rule] is configured.
 +
 NOTE: Some authenticators use the same sources to get subject authentication object from. E.g. the `jwt` and the `oauth2_introspection` authenticators can retrieve tokens from the same places in the request. If such authenticators are used in the same pipeline, you should configure the more specific ones before the more general ones to have working default fallbacks. To stay with the above example, the `jwt` authenticator is more specific compared to `oauth2_introspection`, as it will be only executed, if the token is in a JWT format. In contrast to this, the `oauth2_introspection` authenticator is more general and does not care about the token format, thus will feel responsible for the request as soon as it finds a bearer token. You can however also make use of the `allow_fallback_on_error` configuration property and set it to `true`. This will allow a fallback even if the verification of the credentials fail.
 * List of link:({{< relref "pipeline_mechanisms/contextualizers.adoc" >}}[contextualizers] and link:({{< relref "pipeline_mechanisms/authorizers.adoc" >}}[authorizers] in any order (optional). Can also be mixed. As with authenticators, the list definition happens using either `contextualizer` or `authorizer` as key, followed by the required `id`. All mechanisms in this list are executed in the order, they are defined. If any of these fails, the entire pipeline fails, which leads to the execution of the link:{{< relref "#_error_handler_pipeline" >}}[error handler pipeline]. This list is optional.
-* List of link:{{< relref "pipeline_mechanisms/finalizers.adoc" >}}[finalizers] using `finalizers` as key, followed by the required finalizer `id`. All finalizers in this list are executed in the order they are defined. If any of these fail, the entire pipeline fails, which leads to the execution of the link:{{< relref "#_error_handler_pipeline" >}}[error handler pipeline]. This list is mandatory if no link:{{< relref "default.adoc" >}}[default rule] is configured.
+* List of link:{{< relref "pipeline_mechanisms/finalizers.adoc" >}}[finalizers] using `finalizers` as key, followed by the required finalizer `id`. All finalizers in this list are executed in the order they are defined. If any of these fail, the entire pipeline fails, which leads to the execution of the link:{{< relref "#_error_handler_pipeline" >}}[error handler pipeline]. This list is optional. If a link:{{< relref "default.adoc" >}}[default rule] is configured, and no `finalizers` are configured on a specific rule level, the `finalizers` from the default rule are used. If the default rule does not have any `finalizers` configured either, no finalization will take place.
 
 In all cases, the used mechanism can be partially reconfigured if supported by the corresponding type. Configuration goes into the `config` properties. These reconfigurations are always local to the given rule. With other words, you can adjust your rule specific pipeline as you want without any side effects.
 
@@ -211,7 +222,7 @@ This example uses
 
 Compared to the link:{{< relref "#_regular_pipeline" >}}[Regular Pipeline], the error handler pipeline is pretty simple. It is also a list of mechanisms, but all referenced types are link:{{< relref " pipeline_mechanisms/error_handlers.adoc" >}}[error handler types]. Thus, each entry in this list must have `error_handler` as key, followed by the `ìd` of the required error handler, previously defined in Heimdall's link:{{< relref "pipeline_mechanisms/overview.adoc" >}}[Pipeline Mechanisms] configuration. Error handlers are always executed as fallbacks. So, if the condition of the first error handler does not match, second is selected, if its condition matches, it is executed, otherwise the next one is selected, etc. If none of the conditions of the defined error handlers match, the link:{{< relref "pipeline_mechanisms/error_handlers.adoc#_default" >}}[default error handler] is executed.
 
-As with the regular pipeline, partial reconfiguration of the used mechanisms is possible if supported by the corresponding type. The overrides are always local to the given rule as well.
+As with the regular pipeline, partial reconfiguration of the used mechanisms is possible if supported by the corresponding type. Same is true for overrides of the `if` conditions. The overrides are always local to the given rule as well. If required
 
 .Two error handlers
 ====
@@ -219,9 +230,9 @@ As with the regular pipeline, partial reconfiguration of the used mechanisms is 
 ----
 - error_handler: foo
 - error_handler: bar
+  if: # rule specific condition
   config:
-    when:
-      # rule specific conditions
+      # rule specific config
 ----
 ====
 
@@ -233,7 +244,7 @@ In principle, a rule set is just a list of rules with some additional meta infor
 
 * *`version`*: _string_ (mandatory)
 +
-The version schema of the `RuleSet`. The current version of heimdall supports only the version `1`.
+The version schema of the `RuleSet`. The current version of heimdall supports only the version `1alpha3`.
 
 * *`name`*: _string_ (optional)
 +
@@ -247,7 +258,7 @@ List of the actual rules.
 ====
 [source, yaml]
 ----
-version: "1alpha2"
+version: "1alpha3"
 name: my-rule-set
 rules:
 - id: rule:1

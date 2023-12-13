@@ -42,7 +42,7 @@ func TestApplyApiKeyStrategy(t *testing.T) {
 			assert: func(t *testing.T, err error, req *http.Request) {
 				t.Helper()
 
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				assert.Equal(t, "Bar", req.Header.Get("Foo"))
 			},
 		},
@@ -52,10 +52,10 @@ func TestApplyApiKeyStrategy(t *testing.T) {
 			assert: func(t *testing.T, err error, req *http.Request) {
 				t.Helper()
 
-				assert.NoError(t, err)
+				require.NoError(t, err)
 
 				cookie, err := req.Cookie("Foo")
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				assert.Equal(t, "Bar", cookie.Value)
 			},
 		},
@@ -65,7 +65,7 @@ func TestApplyApiKeyStrategy(t *testing.T) {
 			assert: func(t *testing.T, err error, req *http.Request) {
 				t.Helper()
 
-				assert.NoError(t, err)
+				require.NoError(t, err)
 
 				query := req.URL.Query()
 				assert.Len(t, query, 2)

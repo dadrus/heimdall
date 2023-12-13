@@ -18,6 +18,10 @@ package config
 
 import (
 	"github.com/mitchellh/mapstructure"
+
+	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/validation"
+	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
 func DecodeConfig(input any, output any) error {
@@ -35,5 +39,15 @@ func DecodeConfig(input any, output any) error {
 		return err
 	}
 
-	return dec.Decode(input)
+	if err = dec.Decode(input); err != nil {
+		return errorchain.NewWithMessage(heimdall.ErrConfiguration,
+			"failed decoding ruleset config").CausedBy(err)
+	}
+
+	if err = validation.ValidateStruct(output); err != nil {
+		return errorchain.NewWithMessage(heimdall.ErrConfiguration,
+			"failed validating ruleset config").CausedBy(err)
+	}
+
+	return nil
 }

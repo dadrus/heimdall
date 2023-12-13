@@ -66,7 +66,7 @@ func TestCreateSpanExporters(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, ErrUnsupportedTracesExporterType)
+				require.ErrorIs(t, err, ErrUnsupportedTracesExporterType)
 				assert.Contains(t, err.Error(), "foobar")
 			},
 		},
@@ -80,9 +80,9 @@ func TestCreateSpanExporters(t *testing.T) {
 				// to be set otherwise it panics (which is recovered)
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, ErrFailedCreatingTracesExporter)
+				require.ErrorIs(t, err, ErrFailedCreatingTracesExporter)
 				assert.Contains(t, err.Error(), "instana")
-				assert.ErrorIs(t, err, ErrFailedCreatingInstanaExporter)
+				require.ErrorIs(t, err, ErrFailedCreatingInstanaExporter)
 				assert.Contains(t, err.Error(), "environment variable")
 			},
 		},
@@ -96,7 +96,7 @@ func TestCreateSpanExporters(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, ErrUnsupportedOTLPProtocol)
+				require.ErrorIs(t, err, ErrUnsupportedOTLPProtocol)
 				assert.Contains(t, err.Error(), "foobar")
 			},
 		},

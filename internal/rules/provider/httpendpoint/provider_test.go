@@ -57,7 +57,7 @@ func TestNewProvider(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
 				assert.Contains(t, err.Error(), "failed decoding")
 			},
 		},
@@ -68,7 +68,7 @@ func TestNewProvider(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
 				assert.Contains(t, err.Error(), "'endpoints' is a required field")
 			},
 		},
@@ -83,7 +83,7 @@ endpoints:
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
 				assert.Contains(t, err.Error(), "failed decoding")
 			},
 		},
@@ -97,7 +97,7 @@ endpoints:
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
 				assert.Contains(t, err.Error(), "'endpoints'[0].'url' is a required field")
 			},
 		},
@@ -150,9 +150,7 @@ endpoints:
 			require.NoError(t, err)
 
 			conf := &config.Configuration{
-				Rules: config.Rules{
-					Providers: config.RuleProviders{HTTPEndpoint: providerConf},
-				},
+				Providers: config.RuleProviders{HTTPEndpoint: providerConf},
 			}
 
 			// WHEN
@@ -193,22 +191,6 @@ func TestProviderLifecycle(t *testing.T) {
 		writeResponse  ResponseWriter
 		assert         func(t *testing.T, logs fmt.Stringer, processor *mocks.RuleSetProcessorMock)
 	}{
-		{
-			uc: "with rule set loading error due to DNS error",
-			conf: []byte(`
-endpoints:
-- url: https://foo.bar.local/rules.yaml
-`),
-			assert: func(t *testing.T, logs fmt.Stringer, processor *mocks.RuleSetProcessorMock) {
-				t.Helper()
-
-				time.Sleep(250 * time.Millisecond)
-
-				messages := logs.String()
-				assert.Contains(t, messages, "dial tcp")
-				assert.Contains(t, messages, "No updates received")
-			},
-		},
 		{
 			uc: "with rule set loading error due server error response",
 			conf: []byte(`
@@ -388,7 +370,7 @@ rules:
 
 				time.Sleep(1000 * time.Millisecond)
 
-				assert.True(t, requestCount >= 4)
+				assert.GreaterOrEqual(t, requestCount, 4)
 				assert.Contains(t, logs.String(), "No updates received")
 
 				ruleSets := mock2.ArgumentCaptorFrom[*config2.RuleSet](&processor.Mock, "captor1").Values()
@@ -480,7 +462,7 @@ rules:
 
 				time.Sleep(2 * time.Second)
 
-				assert.True(t, requestCount >= 4)
+				assert.GreaterOrEqual(t, requestCount, 4)
 				assert.Contains(t, logs.String(), "No updates received")
 
 				ruleSet := mock2.ArgumentCaptorFrom[*config2.RuleSet](&processor.Mock, "captor1").Value()
@@ -739,9 +721,7 @@ rules:
 			require.NoError(t, err)
 
 			conf := &config.Configuration{
-				Rules: config.Rules{
-					Providers: config.RuleProviders{HTTPEndpoint: providerConf},
-				},
+				Providers: config.RuleProviders{HTTPEndpoint: providerConf},
 			}
 
 			processor := mocks.NewRuleSetProcessorMock(t)

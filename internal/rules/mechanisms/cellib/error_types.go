@@ -1,4 +1,4 @@
-// Copyright 2022 Dimitrij Drus <dadrus@gmx.de>
+// Copyright 2023 Dimitrij Drus <dadrus@gmx.de>
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,16 +14,8 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package matcher
+package cellib
 
-type ErrorMatcher []ErrorDescriptor
+import "errors"
 
-func (etm ErrorMatcher) Match(err error) bool {
-	for _, v := range etm {
-		if v.Matches(err) {
-			return true
-		}
-	}
-
-	return false
-}
+var errTypeConversion = errors.New("type conversion error")

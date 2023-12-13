@@ -8,7 +8,7 @@ metadata:
 immutable: true
 data:
   rules.yaml: |
-    version: "1alpha2"
+    version: "1alpha3"
     rules:
       - id: public-access
         match:
@@ -18,9 +18,7 @@ data:
           rewrite:
             scheme: http
         execute:
-          - authenticator: noop_authenticator
           - authorizer: allow_all_requests
-          - finalizer: noop_finalizer
 
       - id: anonymous-access
         match:
@@ -31,6 +29,7 @@ data:
             scheme: http
         execute:
           - authorizer: allow_all_requests
+          - finalizer: create_jwt
 
       - id: redirect
         match:

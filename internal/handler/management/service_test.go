@@ -30,8 +30,6 @@ import (
 
 	"github.com/goccy/go-json"
 	"github.com/rs/zerolog/log"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"gopkg.in/square/go-jose.v2"
 
@@ -61,11 +59,11 @@ func (suite *ServiceTestSuite) SetupSuite() {
 
 	// ROOT CAs
 	suite.rootCA1, err = testsupport.NewRootCA("Test Root CA 1", time.Hour*24)
-	suite.NoError(err)
+	suite.Require().NoError(err)
 
 	// INT CA
 	intCA1PrivKey, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
-	suite.NoError(err)
+	suite.Require().NoError(err)
 	intCA1Cert, err := suite.rootCA1.IssueCertificate(
 		testsupport.WithSubject(pkix.Name{
 			CommonName:   "Test Int CA 1",
@@ -75,12 +73,12 @@ func (suite *ServiceTestSuite) SetupSuite() {
 		testsupport.WithIsCA(),
 		testsupport.WithValidity(time.Now(), time.Hour*24),
 		testsupport.WithSubjectPubKey(&intCA1PrivKey.PublicKey, x509.ECDSAWithSHA384))
-	suite.NoError(err)
+	suite.Require().NoError(err)
 	suite.intCA1 = testsupport.NewCA(intCA1PrivKey, intCA1Cert)
 
 	// EE CERTS
 	ee1PrivKey, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
-	require.NoError(suite.T(), err)
+	suite.Require().NoError(err)
 	ee1cert, err := suite.intCA1.IssueCertificate(
 		testsupport.WithSubject(pkix.Name{
 			CommonName:   "Test EE 1",
@@ -90,11 +88,11 @@ func (suite *ServiceTestSuite) SetupSuite() {
 		testsupport.WithValidity(time.Now(), time.Hour*24),
 		testsupport.WithSubjectPubKey(&ee1PrivKey.PublicKey, x509.ECDSAWithSHA384),
 		testsupport.WithKeyUsage(x509.KeyUsageDigitalSignature))
-	suite.NoError(err)
+	suite.Require().NoError(err)
 	suite.ee1 = &testsupport.EndEntity{Certificate: ee1cert, PrivKey: ee1PrivKey}
 
 	ee2PrivKey, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
-	suite.NoError(err)
+	suite.Require().NoError(err)
 	suite.ee2 = &testsupport.EndEntity{PrivKey: ee2PrivKey}
 
 	pemBytes, err := pemx.BuildPEM(
@@ -104,10 +102,10 @@ func (suite *ServiceTestSuite) SetupSuite() {
 		pemx.WithX509Certificate(intCA1Cert),
 		pemx.WithX509Certificate(suite.rootCA1.Certificate),
 	)
-	suite.NoError(err)
+	suite.Require().NoError(err)
 
 	suite.ks, err = keystore.NewKeyStoreFromPEMBytes(pemBytes, "")
-	suite.NoError(err)
+	suite.Require().NoError(err)
 }
 
 func (suite *ServiceTestSuite) SetupTest() {
@@ -183,14 +181,14 @@ func (suite *ServiceTestSuite) TestJWKSRequestWithoutEtagUsage() {
 	suite.Require().NoError(err)
 
 	expected := entry.JWK()
-	suite.Assert().Equal(expected.KeyID, jwk[0].KeyID)
-	suite.Assert().Equal(expected.Key, jwk[0].Key)
-	suite.Assert().Equal(expected.Algorithm, jwk[0].Algorithm)
-	suite.Assert().Equal(expected.Use, jwk[0].Use)
-	suite.Assert().Empty(jwk[0].Certificates)
-	suite.Assert().Nil(jwk[0].CertificatesURL)
-	suite.Assert().Empty(jwk[0].CertificateThumbprintSHA1)
-	suite.Assert().Empty(jwk[0].CertificateThumbprintSHA256)
+	suite.Equal(expected.KeyID, jwk[0].KeyID)
+	suite.Equal(expected.Key, jwk[0].Key)
+	suite.Equal(expected.Algorithm, jwk[0].Algorithm)
+	suite.Equal(expected.Use, jwk[0].Use)
+	suite.Empty(jwk[0].Certificates)
+	suite.Nil(jwk[0].CertificatesURL)
+	suite.Empty(jwk[0].CertificateThumbprintSHA1)
+	suite.Empty(jwk[0].CertificateThumbprintSHA256)
 
 	jwk = jwks.Key("foo")
 	suite.Require().Len(jwk, 1)
@@ -198,17 +196,17 @@ func (suite *ServiceTestSuite) TestJWKSRequestWithoutEtagUsage() {
 	suite.Require().NoError(err)
 
 	expected = entry.JWK()
-	suite.Assert().Equal(expected.KeyID, jwk[0].KeyID)
-	suite.Assert().Equal(expected.Key, jwk[0].Key)
-	suite.Assert().Equal(expected.Algorithm, jwk[0].Algorithm)
-	suite.Assert().Equal(expected.Use, jwk[0].Use)
-	suite.Assert().Len(jwk[0].Certificates, 3)
-	suite.Assert().Equal(expected.Certificates[0], jwk[0].Certificates[0])
-	suite.Assert().Equal(expected.Certificates[1], jwk[0].Certificates[1])
-	suite.Assert().Equal(expected.Certificates[2], jwk[0].Certificates[2])
-	suite.Assert().Nil(jwk[0].CertificatesURL)
-	suite.Assert().Empty(jwk[0].CertificateThumbprintSHA1)
-	suite.Assert().Empty(jwk[0].CertificateThumbprintSHA256)
+	suite.Equal(expected.KeyID, jwk[0].KeyID)
+	suite.Equal(expected.Key, jwk[0].Key)
+	suite.Equal(expected.Algorithm, jwk[0].Algorithm)
+	suite.Equal(expected.Use, jwk[0].Use)
+	suite.Require().Len(jwk[0].Certificates, 3)
+	suite.Equal(expected.Certificates[0], jwk[0].Certificates[0])
+	suite.Equal(expected.Certificates[1], jwk[0].Certificates[1])
+	suite.Equal(expected.Certificates[2], jwk[0].Certificates[2])
+	suite.Nil(jwk[0].CertificatesURL)
+	suite.Empty(jwk[0].CertificateThumbprintSHA1)
+	suite.Empty(jwk[0].CertificateThumbprintSHA256)
 }
 
 func (suite *ServiceTestSuite) TestJWKSRequestWithEtagUsage() {
@@ -246,8 +244,8 @@ func (suite *ServiceTestSuite) TestJWKSRequestWithEtagUsage() {
 
 	defer resp2.Body.Close()
 
-	suite.Assert().Equal(http.StatusNotModified, resp2.StatusCode)
-	suite.Assert().Empty(resp2.Header.Get("Content-Length"))
+	suite.Equal(http.StatusNotModified, resp2.StatusCode)
+	suite.Empty(resp2.Header.Get("Content-Length"))
 }
 
 func (suite *ServiceTestSuite) TestHealthRequest() {
@@ -268,5 +266,5 @@ func (suite *ServiceTestSuite) TestHealthRequest() {
 	rawResp, err := io.ReadAll(resp.Body)
 	suite.Require().NoError(err)
 
-	assert.JSONEq(suite.T(), `{ "status": "ok"}`, string(rawResp))
+	suite.JSONEq(`{ "status": "ok"}`, string(rawResp))
 }

@@ -26,14 +26,16 @@ import (
 )
 
 type Configuration struct { //nolint:musttag
-	Serve     ServeConfig     `koanf:"serve"`
-	Cache     CacheProviders  `koanf:"cache"`
-	Log       LoggingConfig   `koanf:"log"`
-	Tracing   TracingConfig   `koanf:"tracing"`
-	Metrics   MetricsConfig   `koanf:"metrics"`
-	Profiling ProfilingConfig `koanf:"profiling"`
-	Signer    SignerConfig    `koanf:"signer"`
-	Rules     Rules           `koanf:"rules,omitempty"`
+	Serve      ServeConfig          `koanf:"serve"`
+	Log        LoggingConfig        `koanf:"log"`
+	Tracing    TracingConfig        `koanf:"tracing"`
+	Metrics    MetricsConfig        `koanf:"metrics"`
+	Profiling  ProfilingConfig      `koanf:"profiling"`
+	Signer     SignerConfig         `koanf:"signer"`
+	Cache      CacheProviders       `koanf:"cache"`
+	Prototypes *MechanismPrototypes `koanf:"mechanisms,omitempty"`
+	Default    *DefaultRule         `koanf:"default_rule,omitempty"`
+	Providers  RuleProviders        `koanf:"providers,omitempty"`
 }
 
 func NewConfiguration(envPrefix EnvVarPrefix, configFile ConfigurationPath) (*Configuration, error) {

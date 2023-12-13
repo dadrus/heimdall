@@ -9,8 +9,8 @@ on:
       - main
 
 env:
-  GO_VERSION: "1.21.3"
-  GOLANGCI_LINT_VERSION: "v1.54.2"
+  GO_VERSION: "1.21.5"
+  GOLANGCI_LINT_VERSION: "v1.55.2"
   HELM_VERSION: "3.12.1"
   KUBECONFORM_VERSION: "0.6.2"
   KUBERNETES_API_VERSION: "1.27.0"
@@ -23,7 +23,7 @@ jobs:
   check-changes:
     runs-on: ubuntu-22.04
     outputs:
-      code_changed:  ${{steps.code-changes.outputs.count > 0}}
+      code_changed: ${{steps.code-changes.outputs.count > 0}}
       test_data_changed: ${{steps.test-data-changes.outputs.count > 0}}
       image_config_changed: ${{steps.image-config-changes.outputs.count > 0}}
       helm_chart_changed: ${{steps.helm-chart-changes.outputs.count > 0}}
@@ -77,7 +77,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
       - name: Set up Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
           go-version: "${{ env.GO_VERSION }}"
       - name: Get google/go-licenses package
@@ -94,7 +94,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
       - name: Set up Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
           go-version: "${{ env.GO_VERSION }}"
       - name: golangci-lint
@@ -126,16 +126,16 @@ jobs:
       - check-changes
     if: needs.check-changes.outputs.image_config_changed == 'true'
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
-    - name: Run hadolint for Dockerfile
-      uses: hadolint/hadolint-action@v3.1.0
-      with:
-        dockerfile: docker/Dockerfile
-    - name: Run hadolint for debug.Dockerfile
-      uses: hadolint/hadolint-action@v3.1.0
-      with:
-        dockerfile: docker/debug.Dockerfile
+      - name: Checkout repository
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
+      - name: Run hadolint for Dockerfile
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: docker/Dockerfile
+      - name: Run hadolint for debug.Dockerfile
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: docker/debug.Dockerfile
 
   lint-helm-chart:
     runs-on: ubuntu-22.04
@@ -173,9 +173,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
       - name: Set up Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
-         go-version: "${{ env.GO_VERSION }}"
+          go-version: "${{ env.GO_VERSION }}"
       - name: Test
         run: go test -v -coverprofile=coverage.cov -coverpkg=./... ./...
       - name: Code Coverage
@@ -193,10 +193,7 @@ jobs:
     steps:
       - name: Prepare Release
         id: release_prepare
-        uses: google-github-actions/release-please-action@v3
-        with:
-          command: manifest
-          token: ${{ secrets.GITHUB_TOKEN }}
+        uses: google-github-actions/release-please-action@v4
 
   build-binaries:
     runs-on: ubuntu-22.04
@@ -220,7 +217,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
       - name: Set up Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
           go-version: "${{ env.GO_VERSION }}"
       - name: Build
@@ -246,11 +243,11 @@ jobs:
         with:
           fetch-depth: 0
       - name: Set up Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
           go-version: "${{ env.GO_VERSION }}"
       - name: Install Cosign
-        uses: sigstore/cosign-installer@v3.1.2
+        uses: sigstore/cosign-installer@v3.3.0
         with:
           cosign-release: "${{ env.COSIGN_VERSION }}"
       - name: Install CycloneDX gomod
@@ -272,12 +269,13 @@ jobs:
     runs-on: ubuntu-22.04
     permissions:
       contents: read
+      packages: write
       id-token: write
     needs:
       - test
       - check-changes
       - prepare-release
-    if: > 
+    if: >
       always() && 
       needs.prepare-release.outputs.release_created == false && 
       (needs.test.result == 'success' || (needs.test.result == 'skipped' && needs.check-changes.outputs.image_config_changed == 'true'))
@@ -286,11 +284,11 @@ jobs:
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
       - name: Install Cosign
         if: github.ref == 'refs/heads/main'
-        uses: sigstore/cosign-installer@v3.1.2
+        uses: sigstore/cosign-installer@v3.3.0
         with:
           cosign-release: "${{ env.COSIGN_VERSION }}"
       - name: Set up Go # required as the sbom generator is compiled using go < 1.21
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
           go-version: "${{ env.GO_VERSION }}"
       - name: Generate SBOM
@@ -321,12 +319,19 @@ jobs:
           push: false
           build-args: VERSION=${{ github.sha }}
           tags: ${{ github.repository }}:local
-      - name: Login to container registry
+      - name: Login to DockerHub
         if: github.ref == 'refs/heads/main'
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USER }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Login to GitHub
+        if: github.ref == 'refs/heads/main'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
       - name: Build and push dev images to container registry
         if: github.ref == 'refs/heads/main'
         id: publish-image
@@ -338,17 +343,37 @@ jobs:
           push: true
           build-args: VERSION=${{ github.sha }}
           labels: ${{ steps.meta.outputs.labels }}
-          tags: ${{ github.repository }}:dev-${{ github.sha }},${{ github.repository }}:dev
-      - name: Sign the published Docker image
+          tags: |
+            ${{ github.repository }}:dev
+            ${{ github.repository }}:dev-${{ github.sha }}
+            ghcr.io/${{ github.repository }}:dev
+            ghcr.io/${{ github.repository }}:dev-${{ github.sha }}
+      # DockerHub
+      - name: Sign the image published in DockerHub
         if: steps.publish-image.conclusion == 'success'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          COSIGN_REPOSITORY: ${{ github.repository }}-signatures
         run: cosign sign --yes ${{ github.repository }}@${{ steps.publish-image.outputs.digest }}
-      - name: Attest and attach SBOM
+      - name: Attest and attach SBOM to the image published in DockerHub
         if: steps.publish-image.conclusion == 'success'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          COSIGN_REPOSITORY: ${{ github.repository }}-sbom
         run: cosign attest --yes --predicate CycloneDX-SBOM.json --type cyclonedx ${{ github.repository }}@${{ steps.publish-image.outputs.digest }}
+      # GHCR
+      - name: Sign the image published in GitHub
+        if: steps.publish-image.conclusion == 'success'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          COSIGN_REPOSITORY: ghcr.io/${{ github.repository }}-signatures
+        run: cosign sign --yes ghcr.io/${{ github.repository }}@${{ steps.publish-image.outputs.digest }}
+      - name: Attest and attach SBOM to the image published in GitHub
+        if: steps.publish-image.conclusion == 'success'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          COSIGN_REPOSITORY: ghcr.io/${{ github.repository }}-sbom
+        run: cosign attest --yes --predicate CycloneDX-SBOM.json --type cyclonedx ghcr.io/${{ github.repository }}@${{ steps.publish-image.outputs.digest }}
 
 
   # this job releases container images
@@ -357,6 +382,7 @@ jobs:
     runs-on: ubuntu-22.04
     permissions:
       contents: read
+      packages: write
       id-token: write
     needs:
       - prepare-release
@@ -369,11 +395,11 @@ jobs:
           export version=$(echo ${{ needs.prepare-release.outputs.tag_name }} |  sed 's/v//g')
           echo "result=$version" >> $GITHUB_OUTPUT
       - name: Install Cosign
-        uses: sigstore/cosign-installer@v3.1.2
+        uses: sigstore/cosign-installer@v3.3.0
         with:
           cosign-release: "${{ env.COSIGN_VERSION }}"
       - name: Set up Go # required as the sbom generator is compiled using go < 1.21
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
           go-version: "${{ env.GO_VERSION }}"
       - name: Generate SBOM
@@ -390,6 +416,12 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USER }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Login to GitHub
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
       - name: Collect Docker meta-info
         id: meta
         uses: docker/metadata-action@v5
@@ -408,16 +440,23 @@ jobs:
           push: true
           build-args: VERSION=${{ needs.prepare-release.outputs.tag_name }}
           labels: ${{ steps.meta.outputs.labels }}
-          tags: ${{ github.repository }}:${{ steps.image-version.outputs.result }},${{ github.repository }}:latest
-      - name: Sign the published container image
+          tags: |
+            ${{ github.repository }}:latest
+            ${{ github.repository }}:${{ steps.image-version.outputs.result }}
+            ghcr.io/${{ github.repository }}:latest
+            ghcr.io/${{ github.repository }}:${{ steps.image-version.outputs.result }}
+      # DockerHub
+      - name: Sign the image published in DockerHub
         if: steps.publish-image.conclusion == 'success'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          COSIGN_REPOSITORY: ${{ github.repository }}-signatures
         run: cosign sign --yes ${{ github.repository }}@${{ steps.publish-image.outputs.digest }}
-      - name: Attest and attach SBOM
+      - name: Attest and attach SBOM to the image published in DockerHub
         if: steps.publish-image.conclusion == 'success'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          COSIGN_REPOSITORY: ${{ github.repository }}-sbom
         run: cosign attest --yes --predicate CycloneDX-SBOM.json --type cyclonedx ${{ github.repository }}@${{ steps.publish-image.outputs.digest }}
       - name: Update DockerHub repository description & readme
         uses: peter-evans/dockerhub-description@v3
@@ -427,6 +466,19 @@ jobs:
           repository: ${{ github.repository }}
           short-description: ${{ github.event.repository.description }}
           readme-filepath: ./DockerHub-README.md
+      # GHCR
+      - name: Sign the image published in GitHub
+        if: steps.publish-image.conclusion == 'success'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          COSIGN_REPOSITORY: ghcr.io/${{ github.repository }}-signatures
+        run: cosign sign --yes ghcr.io/${{ github.repository }}@${{ steps.publish-image.outputs.digest }}
+      - name: Attest and attach SBOM to the image published in GitHub
+        if: steps.publish-image.conclusion == 'success'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          COSIGN_REPOSITORY: ghcr.io/${{ github.repository }}-sbom
+        run: cosign attest --yes --predicate CycloneDX-SBOM.json --type cyclonedx ghcr.io/${{ github.repository }}@${{ steps.publish-image.outputs.digest }}
 
   release-helm-chart:
     runs-on: ubuntu-22.04

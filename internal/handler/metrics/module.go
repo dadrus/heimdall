@@ -45,8 +45,8 @@ var Module = fx.Invoke( // nolint: gochecknoglobals
 )
 
 type lifecycleManager interface {
-	Start(context.Context) error
-	Stop(context.Context) error
+	Start(ctx context.Context) error
+	Stop(ctx context.Context) error
 }
 
 type noopManager struct{}

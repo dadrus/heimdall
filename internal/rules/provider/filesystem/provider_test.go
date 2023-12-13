@@ -66,7 +66,7 @@ func TestNewProvider(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
 				assert.Contains(t, err.Error(), "failed to decode")
 			},
 		},
@@ -77,7 +77,7 @@ func TestNewProvider(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
 				assert.Contains(t, err.Error(), "no src")
 			},
 		},
@@ -88,7 +88,7 @@ func TestNewProvider(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, heimdall.ErrInternal)
+				require.ErrorIs(t, err, heimdall.ErrInternal)
 				assert.Contains(t, err.Error(), "failed to get info")
 			},
 		},
@@ -137,7 +137,7 @@ func TestNewProvider(t *testing.T) {
 	} {
 		t.Run(tc.uc, func(t *testing.T) {
 			// GIVEN
-			conf := &config.Configuration{Rules: config.Rules{Providers: config.RuleProviders{FileSystem: tc.conf}}}
+			conf := &config.Configuration{Providers: config.RuleProviders{FileSystem: tc.conf}}
 
 			prov, err := NewProvider(conf, nil, log.Logger)
 

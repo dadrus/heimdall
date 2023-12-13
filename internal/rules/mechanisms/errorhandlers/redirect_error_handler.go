@@ -22,7 +22,6 @@ import (
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/errorhandlers/matcher"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
@@ -32,7 +31,7 @@ import (
 //
 //nolint:gochecknoinits
 func init() {
-	registerErrorHandlerTypeFactory(
+	registerTypeFactory(
 		func(id string, typ string, conf map[string]any) (bool, ErrorHandler, error) {
 			if typ != ErrorHandlerRedirect {
 				return false, nil, nil
@@ -45,17 +44,17 @@ func init() {
 }
 
 type redirectErrorHandler struct {
-	id   string
+	*baseErrorHandler
+
 	to   template.Template
 	code int
-	m    []matcher.ErrorConditionMatcher
 }
 
 func newRedirectErrorHandler(id string, rawConfig map[string]any) (*redirectErrorHandler, error) {
 	type Config struct {
-		To   template.Template               `mapstructure:"to"   validate:"required"`
-		When []matcher.ErrorConditionMatcher `mapstructure:"when" validate:"required,gt=0"`
-		Code int                             `mapstructure:"code"`
+		Condition string            `mapstructure:"if"   validate:"required"`
+		To        template.Template `mapstructure:"to"   validate:"required"`
+		Code      int               `mapstructure:"code"`
 	}
 
 	var conf Config
@@ -63,30 +62,27 @@ func newRedirectErrorHandler(id string, rawConfig map[string]any) (*redirectErro
 		return nil, err
 	}
 
+	base, err := newBaseErrorHandler(id, conf.Condition)
+	if err != nil {
+		return nil, err
+	}
+
 	return &redirectErrorHandler{
-		id:   id,
-		to:   conf.To,
-		code: x.IfThenElse(conf.Code != 0, conf.Code, http.StatusFound),
-		m:    conf.When,
+		baseErrorHandler: base,
+		to:               conf.To,
+		code:             x.IfThenElse(conf.Code != 0, conf.Code, http.StatusFound),
 	}, nil
 }
 
-func (eh *redirectErrorHandler) Execute(ctx heimdall.Context, err error) (bool, error) {
+func (eh *redirectErrorHandler) Execute(ctx heimdall.Context, _ error) error {
 	logger := zerolog.Ctx(ctx.AppContext())
-
-	for _, ecm := range eh.m {
-		if !ecm.Match(ctx, err) {
-			return false, nil
-		}
-	}
-
 	logger.Debug().Str("_id", eh.id).Msg("Handling error using redirect error handler")
 
 	toURL, err := eh.to.Render(map[string]any{
 		"Request": ctx.Request(),
 	})
 	if err != nil {
-		return true, errorchain.NewWithMessage(heimdall.ErrInternal, "failed to render 'to' url").
+		return errorchain.NewWithMessage(heimdall.ErrInternal, "failed to render 'to' url").
 			CausedBy(err)
 	}
 
@@ -96,7 +92,7 @@ func (eh *redirectErrorHandler) Execute(ctx heimdall.Context, err error) (bool, 
 		RedirectTo: toURL,
 	})
 
-	return true, nil
+	return nil
 }
 
 func (eh *redirectErrorHandler) WithConfig(rawConfig map[string]any) (ErrorHandler, error) {
@@ -105,7 +101,7 @@ func (eh *redirectErrorHandler) WithConfig(rawConfig map[string]any) (ErrorHandl
 	}
 
 	type Config struct {
-		When []matcher.ErrorConditionMatcher `mapstructure:"when" validate:"required,gt=0"`
+		Condition string `mapstructure:"if" validate:"required"`
 	}
 
 	var conf Config
@@ -113,12 +109,14 @@ func (eh *redirectErrorHandler) WithConfig(rawConfig map[string]any) (ErrorHandl
 		return nil, err
 	}
 
+	base, err := newBaseErrorHandler(eh.id, conf.Condition)
+	if err != nil {
+		return nil, err
+	}
+
 	return &redirectErrorHandler{
-		id:   eh.id,
-		to:   eh.to,
-		code: eh.code,
-		m:    conf.When,
+		baseErrorHandler: base,
+		to:               eh.to,
+		code:             eh.code,
 	}, nil
 }
-
-func (eh *redirectErrorHandler) ID() string { return eh.id }

@@ -38,8 +38,8 @@ func newPrototypeRepository(
 ) (*prototypeRepository, error) {
 	logger.Debug().Msg("Loading definitions for authenticators")
 
-	authenticatorMap, err := createPipelineObjects(conf.Rules.Prototypes.Authenticators, logger,
-		authenticators.CreateAuthenticatorPrototype)
+	authenticatorMap, err := createPipelineObjects(conf.Prototypes.Authenticators, logger,
+		authenticators.CreatePrototype)
 	if err != nil {
 		logger.Error().Err(err).Msg("Failed loading authenticators definitions")
 
@@ -48,8 +48,8 @@ func newPrototypeRepository(
 
 	logger.Debug().Msg("Loading definitions for authorizers")
 
-	authorizerMap, err := createPipelineObjects(conf.Rules.Prototypes.Authorizers, logger,
-		authorizers.CreateAuthorizerPrototype)
+	authorizerMap, err := createPipelineObjects(conf.Prototypes.Authorizers, logger,
+		authorizers.CreatePrototype)
 	if err != nil {
 		logger.Error().Err(err).Msg("Failed loading authorizers definitions")
 
@@ -58,8 +58,8 @@ func newPrototypeRepository(
 
 	logger.Debug().Msg("Loading definitions for contextualizer")
 
-	contextualizerMap, err := createPipelineObjects(conf.Rules.Prototypes.Contextualizers, logger,
-		contextualizers.CreateContextualizerPrototype)
+	contextualizerMap, err := createPipelineObjects(conf.Prototypes.Contextualizers, logger,
+		contextualizers.CreatePrototype)
 	if err != nil {
 		logger.Error().Err(err).Msg("Failed loading contextualizer definitions")
 
@@ -68,7 +68,7 @@ func newPrototypeRepository(
 
 	logger.Debug().Msg("Loading definitions for finalizers")
 
-	finalizerMap, err := createPipelineObjects(conf.Rules.Prototypes.Finalizers, logger,
+	finalizerMap, err := createPipelineObjects(conf.Prototypes.Finalizers, logger,
 		finalizers.CreatePrototype)
 	if err != nil {
 		logger.Error().Err(err).Msg("Failed loading finalizer definitions")
@@ -78,8 +78,8 @@ func newPrototypeRepository(
 
 	logger.Debug().Msg("Loading definitions for error handler")
 
-	ehMap, err := createPipelineObjects(conf.Rules.Prototypes.ErrorHandlers, logger,
-		errorhandlers.CreateErrorHandlerPrototype)
+	ehMap, err := createPipelineObjects(conf.Prototypes.ErrorHandlers, logger,
+		errorhandlers.CreatePrototype)
 	if err != nil {
 		logger.Error().Err(err).Msg("Failed loading error handler definitions")
 
@@ -104,6 +104,10 @@ func createPipelineObjects[T any](
 
 	for _, pe := range pObjects {
 		logger.Debug().Str("_id", pe.ID).Str("_type", pe.Type).Msg("Loading pipeline definition")
+
+		if len(pe.Condition) != 0 {
+			pe.Config["if"] = pe.Condition
+		}
 
 		if r, err := create(pe.ID, pe.Type, pe.Config); err == nil {
 			objects[pe.ID] = r

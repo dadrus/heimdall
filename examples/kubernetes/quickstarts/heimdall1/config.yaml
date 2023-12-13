@@ -1,0 +1,53 @@
+log:
+  level: trace
+
+serve:
+  decision:
+    tls:
+      min_version: TLS1.2
+      key_store:
+        path: /etc/heimdall/certs/ssl/tls-combined.pem
+    trusted_proxies:
+      - 0.0.0.0/0
+
+signer:
+  key_store:
+    path: /etc/heimdall/certs/jwt/tls-combined.pem
+
+mechanisms:
+  authenticators:
+    - id: anonymous_authenticator
+      type: anonymous
+    - id: deny_authenticator
+      type: unauthorized
+  authorizers:
+    - id: deny_all_requests
+      type: deny
+    - id: allow_all_requests
+      type: allow
+  finalizers:
+    - id: create_jwt
+      type: jwt
+  error_handlers:
+    - id: redirect
+      type: redirect
+      if: type(Error) == authentication_error
+      config:
+        to: http://foo.bar?origin={{ .Request.URL | urlenc }}
+default_rule:
+  methods:
+    - GET
+    - POST
+  execute:
+    - authenticator: anonymous_authenticator
+    - authorizer: deny_all_requests
+  on_error:
+    - error_handler: redirect
+
+providers:
+  kubernetes:
+    auth_class: bar
+    tls:
+      min_version: TLS1.2
+      key_store:
+        path: /etc/heimdall/certs/ssl/tls-combined.pem

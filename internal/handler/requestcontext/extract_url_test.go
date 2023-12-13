@@ -17,12 +17,13 @@
 package requestcontext
 
 import (
+	"context"
 	"net/http"
-	"net/http/httptest"
 	"net/url"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestExtractURL(t *testing.T) {
@@ -46,7 +47,7 @@ func TestExtractURL(t *testing.T) {
 
 				assert.Equal(t, "https", extracted.Scheme)
 				assert.Equal(t, "heimdall.test.local", extracted.Host)
-				assert.Equal(t, "/test", extracted.Path)
+				assert.Equal(t, "/test%2Ffoo/bar/%5Bval%5D", extracted.EscapedPath())
 				assert.Equal(t, url.Values{"foo": []string{"bar"}}, extracted.Query())
 			},
 		},
@@ -63,16 +64,16 @@ func TestExtractURL(t *testing.T) {
 
 				assert.Equal(t, "http", extracted.Scheme)
 				assert.Equal(t, "foobar", extracted.Host)
-				assert.Equal(t, "/test", extracted.Path)
+				assert.Equal(t, "/test%2Ffoo/bar/%5Bval%5D", extracted.EscapedPath())
 				assert.Equal(t, url.Values{"foo": []string{"bar"}}, extracted.Query())
 			},
 		},
 		{
-			uc: "X-Forwarded-Path set",
+			uc: "X-Forwarded-Path is ignored",
 			configureRequest: func(t *testing.T, req *http.Request) {
 				t.Helper()
 
-				req.Header.Set("X-Forwarded-Path", "foobar")
+				req.Header.Set("X-Forwarded-Path", "/bar%2Ftest/foo/%5Bval%5D")
 				req.URL.RawQuery = url.Values{"foo": []string{"bar"}}.Encode()
 			},
 			assert: func(t *testing.T, extracted *url.URL) {
@@ -80,7 +81,7 @@ func TestExtractURL(t *testing.T) {
 
 				assert.Equal(t, "http", extracted.Scheme)
 				assert.Equal(t, "heimdall.test.local", extracted.Host)
-				assert.Equal(t, "foobar", extracted.Path)
+				assert.Equal(t, "/test%2Ffoo/bar/%5Bval%5D", extracted.EscapedPath())
 				assert.Equal(t, url.Values{"foo": []string{"bar"}}, extracted.Query())
 			},
 		},
@@ -89,7 +90,7 @@ func TestExtractURL(t *testing.T) {
 			configureRequest: func(t *testing.T, req *http.Request) {
 				t.Helper()
 
-				req.Header.Set("X-Forwarded-Uri", "/bar?bar=foo")
+				req.Header.Set("X-Forwarded-Uri", "/bar%2Ftest/foo/%5Bval%5D?bar=foo")
 				req.URL.RawQuery = url.Values{"foo": []string{"bar"}}.Encode()
 			},
 			assert: func(t *testing.T, extracted *url.URL) {
@@ -97,14 +98,20 @@ func TestExtractURL(t *testing.T) {
 
 				assert.Equal(t, "http", extracted.Scheme)
 				assert.Equal(t, "heimdall.test.local", extracted.Host)
-				assert.Equal(t, "/bar", extracted.Path)
+				assert.Equal(t, "/bar%2Ftest/foo/%5Bval%5D", extracted.EscapedPath())
 				assert.Equal(t, url.Values{"bar": []string{"foo"}}, extracted.Query())
 			},
 		},
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
 			// GIVEN
-			req := httptest.NewRequest(http.MethodGet, "http://heimdall.test.local/test", nil)
+			req, err := http.NewRequestWithContext(
+				context.TODO(),
+				http.MethodGet,
+				"http://heimdall.test.local/test%2Ffoo/bar/%5Bval%5D",
+				nil,
+			)
+			require.NoError(t, err)
 
 			tc.configureRequest(t, req)
 

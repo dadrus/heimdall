@@ -49,7 +49,7 @@ func (tw *traceWriter) Write(data []byte) (int, error) {
 		return len(data), nil
 	}
 
-	tw.l.Trace().Msg("Response: \n" + stringx.ToString(data))
+	tw.l.Trace().Msgf("Response: %s\n", stringx.ToString(data))
 	tw.done = true
 
 	return len(data), nil
@@ -72,7 +72,7 @@ func New() func(http.Handler) http.Handler { // nolint: funlen, gocognit, cyclop
 				req.ContentLength != 0 &&
 					!strings.Contains(contentType, "stream") &&
 					!strings.Contains(contentType, "application/x-ndjson")); err == nil {
-				logger.Trace().Msg("Request: \n" + stringx.ToString(dump))
+				logger.Trace().Msgf("Request: %s\n", stringx.ToString(dump))
 			} else {
 				logger.Trace().Err(err).Msg("Failed dumping request")
 			}
@@ -137,7 +137,7 @@ func New() func(http.Handler) http.Handler { // nolint: funlen, gocognit, cyclop
 				Flush: func(flush httpsnoop.FlushFunc) httpsnoop.FlushFunc {
 					return func() {
 						if !flushed {
-							logger.Trace().Msg("Response: \n" + stringx.ToString(buffer.Bytes()))
+							logger.Trace().Msgf("Response: %s\n", stringx.ToString(buffer.Bytes()))
 							flushed = true
 
 							buffer.Reset()
@@ -151,7 +151,7 @@ func New() func(http.Handler) http.Handler { // nolint: funlen, gocognit, cyclop
 
 			if !hijacked && !flushed {
 				// build message from the collected data
-				logger.Trace().Msg("Response: \n" + stringx.ToString(buffer.Bytes()))
+				logger.Trace().Msgf("Response: %s\n", stringx.ToString(buffer.Bytes()))
 			}
 
 			buffer.Reset()

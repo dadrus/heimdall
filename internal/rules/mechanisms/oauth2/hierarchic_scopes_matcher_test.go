@@ -19,7 +19,7 @@ package oauth2
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestHierarchicScopeStrategy(t *testing.T) {
@@ -38,7 +38,7 @@ func TestHierarchicScopeStrategy(t *testing.T) {
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			},
 		},
 		{
@@ -48,7 +48,7 @@ func TestHierarchicScopeStrategy(t *testing.T) {
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			},
 		},
 		{
@@ -58,7 +58,7 @@ func TestHierarchicScopeStrategy(t *testing.T) {
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			},
 		},
 		{
@@ -68,7 +68,7 @@ func TestHierarchicScopeStrategy(t *testing.T) {
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			},
 		},
 		{
@@ -78,7 +78,7 @@ func TestHierarchicScopeStrategy(t *testing.T) {
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			},
 		},
 		{
@@ -88,7 +88,7 @@ func TestHierarchicScopeStrategy(t *testing.T) {
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
-				assert.Error(t, err)
+				require.Error(t, err)
 			},
 		},
 		{
@@ -98,7 +98,7 @@ func TestHierarchicScopeStrategy(t *testing.T) {
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
-				assert.Error(t, err)
+				require.Error(t, err)
 			},
 		},
 		{
@@ -108,7 +108,7 @@ func TestHierarchicScopeStrategy(t *testing.T) {
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			},
 		},
 	} {

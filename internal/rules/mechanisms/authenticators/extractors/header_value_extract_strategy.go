@@ -26,17 +26,17 @@ import (
 
 type HeaderValueExtractStrategy struct {
 	Name   string
-	Schema string
+	Scheme string
 }
 
 func (es HeaderValueExtractStrategy) GetAuthData(s heimdall.Context) (string, error) {
 	if val := s.Request().Header(es.Name); len(val) != 0 {
-		if len(es.Schema) != 0 && !strings.HasPrefix(val, fmt.Sprintf("%s ", es.Schema)) {
+		if len(es.Scheme) != 0 && !strings.HasPrefix(val, fmt.Sprintf("%s ", es.Scheme)) {
 			return "", errorchain.NewWithMessagef(heimdall.ErrArgument,
-				"'%s' header present, but without required '%s' schema", es.Name, es.Schema)
+				"'%s' header present, but without required '%s' scheme", es.Name, es.Scheme)
 		}
 
-		return strings.TrimSpace(strings.TrimPrefix(val, es.Schema)), nil
+		return strings.TrimSpace(strings.TrimPrefix(val, es.Scheme)), nil
 	}
 
 	return "", errorchain.NewWithMessagef(heimdall.ErrArgument, "no '%s' header present", es.Name)

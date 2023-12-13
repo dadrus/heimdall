@@ -24,26 +24,20 @@ import (
 
 type compositeErrorHandler []errorHandler
 
-func (eh compositeErrorHandler) Execute(ctx heimdall.Context, exErr error) (bool, error) {
+func (eh compositeErrorHandler) Execute(ctx heimdall.Context, exErr error) error {
 	logger := zerolog.Ctx(ctx.AppContext())
 	logger.Debug().Msg("Handling pipeline error")
 
-	var (
-		err error
-		ok  bool
-	)
-
 	for _, eh := range eh {
-		ok, err = eh.Execute(ctx, exErr)
-		if err != nil {
-			logger.Error().Err(err).
-				Msg("Failed to execute error handler. Falling back to the next or the default one")
-		}
+		if eh.CanExecute(ctx, exErr) {
+			err := eh.Execute(ctx, exErr)
+			if err != nil {
+				logger.Error().Err(err).Msg("Failed to execute error handler")
+			}
 
-		if ok {
-			return ok, err
+			return err
 		}
 	}
 
-	return false, exErr
+	return exErr
 }

@@ -69,7 +69,7 @@ func TestInitTraceProvider(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, exporters.ErrFailedCreatingTracesExporter)
+				require.ErrorIs(t, err, exporters.ErrFailedCreatingTracesExporter)
 			},
 		},
 		{

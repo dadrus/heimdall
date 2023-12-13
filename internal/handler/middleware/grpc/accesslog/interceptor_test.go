@@ -111,7 +111,7 @@ func TestAccessLogInterceptorForKnownService(t *testing.T) {
 				assert.Contains(t, logEvent2, "_trace_id")
 				assert.Equal(t, logEvent2["_trace_id"], logEvent2["_trace_id"])
 				assert.Equal(t, logEvent2["_parent_id"], logEvent2["_parent_id"])
-				assert.Equal(t, true, logEvent2["_access_granted"])
+				assert.Equal(t, true, logEvent2["_access_granted"]) //nolint:testifylint
 				assert.Equal(t, "foo", logEvent2["_subject"])
 				assert.Equal(t, float64(codes.OK), logEvent2["_grpc_status_code"])
 				assert.Equal(t, "TX finished", logEvent2["message"])
@@ -163,7 +163,7 @@ func TestAccessLogInterceptorForKnownService(t *testing.T) {
 				assert.Equal(t, logEvent2["_trace_id"], logEvent2["_trace_id"])
 				assert.Equal(t, logEvent2["_parent_id"], logEvent2["_parent_id"])
 				assert.Equal(t, logEvent2["_span_id"], logEvent2["_span_id"])
-				assert.Equal(t, false, logEvent2["_access_granted"])
+				assert.Equal(t, false, logEvent2["_access_granted"]) //nolint:testifylint
 				assert.Equal(t, "test error", logEvent2["error"])
 				assert.Equal(t, "for=127.0.0.1", logEvent1["_forwarded"])
 				assert.Equal(t, "127.0.0.1", logEvent1["_x_forwarded_for"])
@@ -220,7 +220,7 @@ func TestAccessLogInterceptorForKnownService(t *testing.T) {
 				assert.Contains(t, logEvent2, "_trace_id")
 				assert.Equal(t, logEvent2["_trace_id"], logEvent2["_trace_id"])
 				assert.Equal(t, logEvent2["_parent_id"], logEvent2["_parent_id"])
-				assert.Equal(t, false, logEvent2["_access_granted"])
+				assert.Equal(t, false, logEvent2["_access_granted"]) //nolint:testifylint
 				assert.Equal(t, "bar", logEvent2["_subject"])
 				assert.Equal(t, "test error", logEvent2["error"])
 				assert.Equal(t, float64(codes.OK), logEvent2["_grpc_status_code"])
@@ -248,10 +248,8 @@ func TestAccessLogInterceptorForKnownService(t *testing.T) {
 			tc.configureMock(t, handler)
 
 			srv := grpc.NewServer(
-				grpc.ChainUnaryInterceptor(
-					otelgrpc.UnaryServerInterceptor(),
-					New(logger).Unary(),
-				),
+				grpc.StatsHandler(otelgrpc.NewServerHandler()),
+				grpc.ChainUnaryInterceptor(New(logger).Unary()),
 			)
 			envoy_auth.RegisterAuthorizationServer(srv, handler)
 
@@ -317,10 +315,8 @@ func TestAccessLogInterceptorForUnknownService(t *testing.T) {
 		grpc.UnknownServiceHandler(func(srv interface{}, stream grpc.ServerStream) error {
 			return status.Error(codes.Unknown, "unknown service or method")
 		}),
-		grpc.ChainStreamInterceptor(
-			otelgrpc.StreamServerInterceptor(),
-			New(logger).Stream(),
-		),
+		grpc.StatsHandler(otelgrpc.NewServerHandler()),
+		grpc.ChainStreamInterceptor(New(logger).Stream()),
 	)
 	envoy_auth.RegisterAuthorizationServer(srv, handler)
 
@@ -364,7 +360,7 @@ func TestAccessLogInterceptorForUnknownService(t *testing.T) {
 	assert.Contains(t, logEvent2, "_trace_id")
 	assert.Equal(t, logEvent2["_trace_id"], logEvent2["_trace_id"])
 	assert.Equal(t, logEvent2["_parent_id"], logEvent2["_parent_id"])
-	assert.Equal(t, false, logEvent2["_access_granted"])
+	assert.Equal(t, false, logEvent2["_access_granted"]) //nolint:testifylint
 	assert.Contains(t, logEvent2["error"], "unknown service or method")
 	assert.Equal(t, float64(codes.Unknown), logEvent2["_grpc_status_code"])
 	assert.Equal(t, "TX finished", logEvent2["message"])

@@ -108,8 +108,6 @@ func defaultConfig() Configuration {
 		Signer: SignerConfig{
 			Name: "heimdall",
 		},
-		Rules: Rules{
-			Prototypes: &MechanismPrototypes{},
-		},
+		Prototypes: &MechanismPrototypes{},
 	}
 }

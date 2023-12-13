@@ -9,6 +9,7 @@ menu:
     weight: 10
   main:
     parent: get_started
+description: Gives you the required insights about heimdall's architecture to get started.
 ---
 
 Everything you need to know.
@@ -79,7 +80,7 @@ flowchart TD
     errPipeline --> errResult[5: result of the\nused error handler]
 ....
 
-. *Url matches rule?* - This is the first step executed by heimdall. The information about the scheme, host, path and query is taken either from the URL itself, or if present and allowed, from the `X-Forwarded-Proto`, `X-Forwarded-Host`, `X-Forwarded-Path`, or `X-Forwarded-Uri` headers of the incoming request. The request is denied if there is no matching rule. Otherwise, the rule specific pipeline is executed. When heimdall is evaluating the rules against the request url it takes the first matching one. That allows simpler matching expressions and supports ordering of rules in rule set with most specific matchig expressions first.
+. *Url matches rule?* - This is the first step executed by heimdall. The information about the scheme, host, path and query is taken either from the URL itself, or if present and allowed, from the `X-Forwarded-Proto`, `X-Forwarded-Host`, or `X-Forwarded-Uri` headers of the incoming request. The request is denied if there is no matching rule. Otherwise, the rule specific pipeline is executed. When heimdall is evaluating the rules against the request url it takes the first matching one. That allows simpler matching expressions and supports ordering of rules in rule set with most specific matchig expressions first.
 . *Method allowed?* - As soon as a rule matching the request is found, a verification is done whether the used HTTP method is allowed or not. The information about the HTTP method is either taken from the request itself or, if present and allowed, from the `X-Forwarded-Method` header.
 . *Execute regular pipeline* - when the above steps succeed, the regular pipeline mechanisms defined in the matched rule are executed.
 . *Forward request, respectively respond to the API gateway* - when the above steps succeed, heimdall, depending on the link:{{< relref "#_operating_modes" >}}[operating mode], responds with, respectively forwards whatever was defined in the pipeline (usually this is a set of HTTP headers). Otherwise

@@ -1,3 +1,19 @@
+// Copyright 2023 Dimitrij Drus <dadrus@gmx.de>
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+// SPDX-License-Identifier: Apache-2.0
+
 package certificate
 
 import (
@@ -49,7 +65,7 @@ func checkMetric(t *testing.T, dp []metricdata.DataPoint[float64], service strin
 	assert.LessOrEqual(t, data.Value-time.Until(cert.NotAfter).Seconds(), 1.0)
 
 	attributes := data.Attributes
-	require.Equal(t, attributes.Len(), 5)
+	require.Equal(t, 5, attributes.Len())
 	assert.Equal(t, strings.Join(cert.DNSNames, ","), attributeValue(attributes, dnsNameAttrKey).AsString())
 	assert.Equal(t, cert.Issuer.String(), attributeValue(attributes, issuerAttrKey).AsString())
 	assert.Equal(t, cert.SerialNumber.String(), attributeValue(attributes, serialNrAttrKey).AsString())

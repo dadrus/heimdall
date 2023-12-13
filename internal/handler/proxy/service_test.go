@@ -138,7 +138,7 @@ func TestProxyService(t *testing.T) {
 
 				data, err := io.ReadAll(resp.Body)
 				require.NoError(t, err)
-				assert.Len(t, data, 0)
+				assert.Empty(t, data)
 			},
 		},
 		{
@@ -171,7 +171,7 @@ func TestProxyService(t *testing.T) {
 
 				data, err := io.ReadAll(resp.Body)
 				require.NoError(t, err)
-				assert.Len(t, data, 0)
+				assert.Empty(t, data)
 			},
 		},
 		{
@@ -204,7 +204,7 @@ func TestProxyService(t *testing.T) {
 
 				data, err := io.ReadAll(resp.Body)
 				require.NoError(t, err)
-				assert.Len(t, data, 0)
+				assert.Empty(t, data)
 			},
 		},
 		{
@@ -237,7 +237,7 @@ func TestProxyService(t *testing.T) {
 
 				data, err := io.ReadAll(resp.Body)
 				require.NoError(t, err)
-				assert.Len(t, data, 0)
+				assert.Empty(t, data)
 			},
 		},
 		{
@@ -270,7 +270,7 @@ func TestProxyService(t *testing.T) {
 
 				data, err := io.ReadAll(resp.Body)
 				require.NoError(t, err)
-				assert.Len(t, data, 0)
+				assert.Empty(t, data)
 			},
 		},
 		{
@@ -337,7 +337,7 @@ func TestProxyService(t *testing.T) {
 
 				rw.Header().Set("Content-Type", "application/json")
 				_, err = rw.Write([]byte(`{ "foo": "bar" }`))
-				assert.NoError(t, err)
+				require.NoError(t, err)
 
 				rw.WriteHeader(http.StatusOK)
 			},
@@ -419,7 +419,7 @@ func TestProxyService(t *testing.T) {
 
 				rw.Header().Set("Content-Type", "application/json")
 				_, err = rw.Write([]byte(`{ "foo": "bar" }`))
-				assert.NoError(t, err)
+				require.NoError(t, err)
 
 				rw.WriteHeader(http.StatusOK)
 			},
@@ -456,7 +456,7 @@ func TestProxyService(t *testing.T) {
 				require.NoError(t, err)
 
 				req.Header.Set("Content-Type", "text/html")
-				req.Header.Set("X-Forwarded-Path", "/%5Bbarfoo%5D")
+				req.Header.Set("X-Forwarded-Uri", "/%5Bbarfoo%5D")
 
 				return req
 			},
@@ -501,7 +501,7 @@ func TestProxyService(t *testing.T) {
 
 				rw.Header().Set("Content-Type", "application/json")
 				_, err = rw.Write([]byte(`{ "foo": "bar" }`))
-				assert.NoError(t, err)
+				require.NoError(t, err)
 
 				rw.WriteHeader(http.StatusOK)
 			},
@@ -584,7 +584,7 @@ func TestProxyService(t *testing.T) {
 
 				rw.Header().Set("Content-Type", "application/json")
 				_, err = rw.Write([]byte(`{ "foo": "bar" }`))
-				assert.NoError(t, err)
+				require.NoError(t, err)
 
 				rw.WriteHeader(http.StatusOK)
 			},
@@ -761,7 +761,7 @@ func TestProxyService(t *testing.T) {
 
 				rw.Header().Set("Content-Type", "application/json")
 				_, err = rw.Write([]byte(`{ "foo": "bar" }`))
-				assert.NoError(t, err)
+				require.NoError(t, err)
 
 				rw.WriteHeader(http.StatusOK)
 			},
@@ -856,7 +856,7 @@ func TestProxyService(t *testing.T) {
 
 				rw.Header().Set("Content-Type", "application/json")
 				_, err = rw.Write([]byte(`{ "foo": "bar" }`))
-				assert.NoError(t, err)
+				require.NoError(t, err)
 
 				rw.WriteHeader(http.StatusOK)
 			},
@@ -1101,7 +1101,7 @@ func TestServerSentEventsSupport(t *testing.T) {
 		rc := http.NewResponseController(rw) // nolint: bodyclose
 
 		for i := 0; i < 5; i++ {
-			_, err := rw.Write(stringx.ToBytes(fmt.Sprintf("%d", i)))
+			_, err := rw.Write(stringx.ToBytes(strconv.Itoa(i)))
 			require.NoError(t, err)
 
 			require.NoError(t, rc.Flush())

@@ -2,12 +2,13 @@
 title: "Integration with OPA"
 date: 2022-11-04T09:00:41+02:00
 draft: false
-weight: 28
+weight: 29
 menu:
   docs:
     parent: "Integration Guides"
   main:
     parent: guides
+description: Explains how to integrate heimdall with the Open Policy Agent, an open source, general purpose policy engine.
 ---
 
 https://www.openpolicyagent.org/[Open Policy Agent], or OPA, is an open source, general purpose policy engine, which decouples authorization, respectively policy decisions from other responsibilities of an application and can be used to implement fine-grained access control for your application. As such it is a very good fit for integrating with heimdall. And indeed, the integration is very simple. It is just a matter of using a link:{{< relref "/docs/configuration/rules/pipeline_mechanisms/authorizers.adoc#_remote" >}}[Remote Authorizer] or a link:{{< relref "/docs/configuration/rules/pipeline_mechanisms/contextualizers.adoc#_generic" >}}[Generic Contextualizer]. Which one is better for a particular use case depends on the specific application requirements. Here some examples demonstrating these and how it can be solved with heimdall:

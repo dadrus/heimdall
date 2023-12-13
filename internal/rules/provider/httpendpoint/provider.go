@@ -52,7 +52,7 @@ func newProvider(
 	processor rule.SetProcessor,
 	logger zerolog.Logger,
 ) (*provider, error) {
-	rawConf := conf.Rules.Providers.HTTPEndpoint
+	rawConf := conf.Providers.HTTPEndpoint
 
 	if rawConf == nil {
 		return &provider{}, nil

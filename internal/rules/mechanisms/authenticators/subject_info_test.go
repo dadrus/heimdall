@@ -115,8 +115,8 @@ func TestSubjectInfoCreateSubject(t *testing.T) {
 			},
 			assert: func(t *testing.T, err error, _ *subject.Subject) {
 				t.Helper()
-				assert.Error(t, err)
-				assert.ErrorContains(t, err, "could not extract attributes")
+				require.Error(t, err)
+				require.ErrorContains(t, err, "could not extract attributes")
 			},
 		},
 		{
@@ -128,8 +128,8 @@ func TestSubjectInfoCreateSubject(t *testing.T) {
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
-				assert.Error(t, err)
-				assert.ErrorContains(t, err, "could not extract subject")
+				require.Error(t, err)
+				require.ErrorContains(t, err, "could not extract subject")
 			},
 		},
 	} {

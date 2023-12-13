@@ -62,7 +62,7 @@ func TestInitMeterProvider(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorIs(t, err, exporters.ErrUnsupportedMetricExporterType)
+				require.ErrorIs(t, err, exporters.ErrUnsupportedMetricExporterType)
 			},
 		},
 		{
