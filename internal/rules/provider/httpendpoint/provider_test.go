@@ -115,8 +115,12 @@ endpoints:
 				assert.NotNil(t, prov.s)
 				assert.NotNil(t, prov.p)
 				assert.NotNil(t, prov.cancel)
+
+				time.Sleep(250 * time.Millisecond)
+
 				jobs := prov.s.Jobs()
 				assert.Len(t, jobs, 1)
+
 				lr, err := jobs[0].LastRun()
 				require.NoError(t, err)
 				assert.True(t, lr.IsZero())
