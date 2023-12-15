@@ -49,9 +49,7 @@ type provider struct {
 }
 
 func newProvider(
-	conf *config.Configuration,
-	processor rule.SetProcessor,
-	logger zerolog.Logger,
+	conf *config.Configuration, processor rule.SetProcessor, logger zerolog.Logger,
 ) (*provider, error) {
 	rawConf := conf.Providers.CloudBlob
 
@@ -66,9 +64,8 @@ func newProvider(
 
 	var providerConf Config
 	if err := decodeConfig(rawConf, &providerConf); err != nil {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration, "failed to decode cloud_blob rule provider config").
-			CausedBy(err)
+		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
+			"failed to decode cloud_blob rule provider config").CausedBy(err)
 	}
 
 	if len(providerConf.Buckets) == 0 {
@@ -153,9 +150,8 @@ func (p *provider) Stop(_ context.Context) error {
 	p.l.Info().Msg("Tearing down rule provider")
 
 	p.cancel()
-	p.s.Shutdown()
 
-	return nil
+	return p.s.Shutdown()
 }
 
 func (p *provider) watchChanges(ctx context.Context, rsf RuleSetFetcher) error {

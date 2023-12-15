@@ -46,10 +46,7 @@ type provider struct {
 }
 
 func newProvider(
-	conf *config.Configuration,
-	cch cache.Cache,
-	processor rule.SetProcessor,
-	logger zerolog.Logger,
+	conf *config.Configuration, cch cache.Cache, processor rule.SetProcessor, logger zerolog.Logger,
 ) (*provider, error) {
 	rawConf := conf.Providers.HTTPEndpoint
 
@@ -64,9 +61,8 @@ func newProvider(
 
 	var providerConf Config
 	if err := decodeConfig(rawConf, &providerConf); err != nil {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration, "failed decoding http_endpoint rule provider config").
-			CausedBy(err)
+		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
+			"failed decoding http_endpoint rule provider config").CausedBy(err)
 	}
 
 	if err := validation.ValidateStruct(&providerConf); err != nil {
@@ -149,9 +145,8 @@ func (p *provider) Stop(_ context.Context) error {
 	p.l.Info().Msg("Tearing down rule provider")
 
 	p.cancel()
-	p.s.Shutdown()
 
-	return nil
+	return p.s.Shutdown()
 }
 
 func (p *provider) watchChanges(ctx context.Context, rsf RuleSetFetcher) error {
