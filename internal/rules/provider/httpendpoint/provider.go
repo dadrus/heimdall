@@ -24,7 +24,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/go-co-op/gocron"
+	"github.com/go-co-op/gocron/v2"
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/cache"
@@ -33,24 +33,20 @@ import (
 	config2 "github.com/dadrus/heimdall/internal/rules/config"
 	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/validation"
-	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
 type provider struct {
 	p          rule.SetProcessor
 	l          zerolog.Logger
-	s          *gocron.Scheduler
+	s          gocron.Scheduler
 	cancel     context.CancelFunc
 	states     sync.Map
 	configured bool
 }
 
 func newProvider(
-	conf *config.Configuration,
-	cch cache.Cache,
-	processor rule.SetProcessor,
-	logger zerolog.Logger,
+	conf *config.Configuration, cch cache.Cache, processor rule.SetProcessor, logger zerolog.Logger,
 ) (*provider, error) {
 	rawConf := conf.Providers.HTTPEndpoint
 
@@ -65,9 +61,8 @@ func newProvider(
 
 	var providerConf Config
 	if err := decodeConfig(rawConf, &providerConf); err != nil {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration, "failed decoding http_endpoint rule provider config").
-			CausedBy(err)
+		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
+			"failed decoding http_endpoint rule provider config").CausedBy(err)
 	}
 
 	if err := validation.ValidateStruct(&providerConf); err != nil {
@@ -83,8 +78,19 @@ func newProvider(
 	ctx, cancel := context.WithCancel(context.Background())
 	ctx = logger.WithContext(cache.WithContext(ctx, cch))
 
-	scheduler := gocron.NewScheduler(time.UTC)
-	scheduler.SingletonModeAll()
+	scheduler, err := gocron.NewScheduler(
+		gocron.WithLocation(time.UTC),
+		gocron.WithGlobalJobOptions(
+			gocron.WithSingletonMode(gocron.LimitModeReschedule),
+			gocron.WithStartAt(gocron.WithStartImmediately()),
+		),
+	)
+	if err != nil {
+		cancel()
+
+		return nil, errorchain.NewWithMessage(heimdall.ErrInternal,
+			"failed creating scheduler for http_endpoint rule provider").CausedBy(err)
+	}
 
 	prov := &provider{
 		p:          processor,
@@ -95,10 +101,19 @@ func newProvider(
 	}
 
 	for idx, ep := range providerConf.Endpoints {
-		if _, err := x.IfThenElseExec(providerConf.WatchInterval != nil && *providerConf.WatchInterval > 0,
-			func() *gocron.Scheduler { return prov.s.Every(*providerConf.WatchInterval) },
-			func() *gocron.Scheduler { return prov.s.Every(1 * time.Second).LimitRunsTo(1) },
-		).Do(prov.watchChanges, ctx, ep); err != nil {
+		var (
+			definition gocron.JobDefinition
+			opts       []gocron.JobOption
+		)
+
+		if providerConf.WatchInterval != nil && *providerConf.WatchInterval > 0 {
+			definition = gocron.DurationJob(*providerConf.WatchInterval)
+		} else {
+			definition = gocron.DurationJob(1 * time.Second)
+			opts = []gocron.JobOption{gocron.WithLimitedRuns(1)}
+		}
+
+		if _, err = prov.s.NewJob(definition, gocron.NewTask(prov.watchChanges, ctx, ep), opts...); err != nil {
 			return nil, errorchain.NewWithMessagef(heimdall.ErrInternal,
 				"failed to create a rule provider worker to fetch rules sets from #%d http_endpoint", idx).
 				CausedBy(err)
@@ -117,7 +132,7 @@ func (p *provider) Start(_ context.Context) error {
 
 	p.l.Info().Msg("Starting rule definitions provider")
 
-	p.s.StartAsync() //nolint:contextcheck
+	p.s.Start()
 
 	return nil
 }
@@ -129,10 +144,9 @@ func (p *provider) Stop(_ context.Context) error {
 
 	p.l.Info().Msg("Tearing down rule provider")
 
-	p.s.Stop()
 	p.cancel()
 
-	return nil
+	return p.s.Shutdown()
 }
 
 func (p *provider) watchChanges(ctx context.Context, rsf RuleSetFetcher) error {

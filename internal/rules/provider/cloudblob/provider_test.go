@@ -116,15 +116,21 @@ buckets:
 				t.Helper()
 
 				require.NoError(t, err)
-
 				require.NotNil(t, prov)
 				assert.NotNil(t, prov.s)
 				assert.NotNil(t, prov.p)
 				assert.NotNil(t, prov.cancel)
-				assert.False(t, prov.s.IsRunning())
-				assert.Len(t, prov.s.Jobs(), 2)
-				assert.False(t, prov.s.Jobs()[0].IsRunning())
-				assert.False(t, prov.s.Jobs()[1].IsRunning())
+
+				time.Sleep(250 * time.Millisecond)
+
+				jobs := prov.s.Jobs()
+				assert.Len(t, jobs, 2)
+				lr, err := jobs[0].LastRun()
+				require.NoError(t, err)
+				assert.True(t, lr.IsZero())
+				lr, err = jobs[1].LastRun()
+				require.NoError(t, err)
+				assert.True(t, lr.IsZero())
 			},
 		},
 	} {

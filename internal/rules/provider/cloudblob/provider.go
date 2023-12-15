@@ -25,7 +25,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/go-co-op/gocron"
+	"github.com/go-co-op/gocron/v2"
 	"github.com/rs/zerolog"
 	"golang.org/x/exp/maps"
 
@@ -33,7 +33,6 @@ import (
 	"github.com/dadrus/heimdall/internal/heimdall"
 	rule_config "github.com/dadrus/heimdall/internal/rules/config"
 	"github.com/dadrus/heimdall/internal/rules/rule"
-	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/slicex"
 )
@@ -43,16 +42,14 @@ type BucketState map[string][]byte
 type provider struct {
 	p          rule.SetProcessor
 	l          zerolog.Logger
-	s          *gocron.Scheduler
+	s          gocron.Scheduler
 	cancel     context.CancelFunc
 	states     sync.Map
 	configured bool
 }
 
 func newProvider(
-	conf *config.Configuration,
-	processor rule.SetProcessor,
-	logger zerolog.Logger,
+	conf *config.Configuration, processor rule.SetProcessor, logger zerolog.Logger,
 ) (*provider, error) {
 	rawConf := conf.Providers.CloudBlob
 
@@ -67,9 +64,8 @@ func newProvider(
 
 	var providerConf Config
 	if err := decodeConfig(rawConf, &providerConf); err != nil {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrConfiguration, "failed to decode cloud_blob rule provider config").
-			CausedBy(err)
+		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
+			"failed to decode cloud_blob rule provider config").CausedBy(err)
 	}
 
 	if len(providerConf.Buckets) == 0 {
@@ -82,8 +78,19 @@ func newProvider(
 	ctx, cancel := context.WithCancel(context.Background())
 	ctx = logger.With().Logger().WithContext(ctx)
 
-	scheduler := gocron.NewScheduler(time.UTC)
-	scheduler.SingletonModeAll()
+	scheduler, err := gocron.NewScheduler(
+		gocron.WithLocation(time.UTC),
+		gocron.WithGlobalJobOptions(
+			gocron.WithSingletonMode(gocron.LimitModeReschedule),
+			gocron.WithStartAt(gocron.WithStartImmediately()),
+		),
+	)
+	if err != nil {
+		cancel()
+
+		return nil, errorchain.NewWithMessage(heimdall.ErrInternal,
+			"failed creating scheduler for cloud_blob rule provider").CausedBy(err)
+	}
 
 	prov := &provider{
 		p:          processor,
@@ -99,10 +106,19 @@ func newProvider(
 				"missing url for #%d bucket in cloud_blob rule provider configuration", idx)
 		}
 
-		if _, err := x.IfThenElseExec(providerConf.WatchInterval != nil && *providerConf.WatchInterval > 0,
-			func() *gocron.Scheduler { return prov.s.Every(*providerConf.WatchInterval) },
-			func() *gocron.Scheduler { return prov.s.Every(1 * time.Second).LimitRunsTo(1) }).
-			Do(prov.watchChanges, ctx, bucket); err != nil {
+		var (
+			definition gocron.JobDefinition
+			opts       []gocron.JobOption
+		)
+
+		if providerConf.WatchInterval != nil && *providerConf.WatchInterval > 0 {
+			definition = gocron.DurationJob(*providerConf.WatchInterval)
+		} else {
+			definition = gocron.DurationJob(1 * time.Second)
+			opts = []gocron.JobOption{gocron.WithLimitedRuns(1)}
+		}
+
+		if _, err = prov.s.NewJob(definition, gocron.NewTask(prov.watchChanges, ctx, bucket), opts...); err != nil {
 			return nil, errorchain.NewWithMessagef(heimdall.ErrInternal,
 				"failed to create a rule provider worker to fetch rules sets from #%d cloud_blob", idx).
 				CausedBy(err)
@@ -121,7 +137,7 @@ func (p *provider) Start(_ context.Context) error {
 
 	p.l.Info().Msg("Starting rule definitions provider")
 
-	p.s.StartAsync() //nolint:contextcheck
+	go p.s.Start()
 
 	return nil
 }
@@ -133,10 +149,9 @@ func (p *provider) Stop(_ context.Context) error {
 
 	p.l.Info().Msg("Tearing down rule provider")
 
-	p.s.Stop()
 	p.cancel()
 
-	return nil
+	return p.s.Shutdown()
 }
 
 func (p *provider) watchChanges(ctx context.Context, rsf RuleSetFetcher) error {
