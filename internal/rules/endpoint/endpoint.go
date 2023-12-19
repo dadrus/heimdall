@@ -51,7 +51,7 @@ type Retry struct {
 }
 
 type Endpoint struct {
-	URL          string                 `mapstructure:"url"    validate:"required,url"`
+	URL          string                 `mapstructure:"url"        validate:"required,url"`
 	Method       string                 `mapstructure:"method"`
 	Retry        *Retry                 `mapstructure:"retry"`
 	AuthStrategy AuthenticationStrategy `mapstructure:"auth"`
