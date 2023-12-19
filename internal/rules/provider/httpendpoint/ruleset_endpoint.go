@@ -93,8 +93,7 @@ func (e *ruleSetEndpoint) FetchRuleSet(ctx context.Context) (*config.RuleSet, er
 func (e *ruleSetEndpoint) init() {
 	e.Method = http.MethodGet
 
-	if e.HTTPCacheEnabled == nil {
-		cacheEnabled := true
-		e.HTTPCacheEnabled = &cacheEnabled
+	if e.HTTPCache == nil {
+		e.HTTPCache = &endpoint.HTTPCache{Enabled: true}
 	}
 }
