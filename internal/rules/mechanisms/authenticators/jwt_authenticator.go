@@ -348,7 +348,12 @@ func (a *jwtAuthenticator) verifyTokenWithoutKID(
 
 	var rawClaims json.RawMessage
 
-	jwks, err := a.fetchJWKS(ctx.AppContext(), ep, tokenClaims)
+	req, err := a.createRequest(ctx.AppContext(), ep, tokenClaims)
+	if err != nil {
+		return nil, err
+	}
+
+	jwks, err := a.fetchJWKS(ctx.AppContext(), ep.CreateClient(req.URL.Hostname()), req)
 	if err != nil {
 		return nil, err
 	}
@@ -394,8 +399,13 @@ func (a *jwtAuthenticator) getKey(
 		ok         bool
 	)
 
+	req, err := a.createRequest(ctx.AppContext(), ep, tokenClaims)
+	if err != nil {
+		return nil, err
+	}
+
 	if a.isCacheEnabled() {
-		cacheKey = a.calculateCacheKey(ep, keyID)
+		cacheKey = a.calculateCacheKey(ep, req.URL.String(), keyID)
 		cacheEntry = cch.Get(ctx.AppContext(), cacheKey)
 	}
 
@@ -412,7 +422,7 @@ func (a *jwtAuthenticator) getKey(
 		return jwk, nil
 	}
 
-	jwks, err = a.fetchJWKS(ctx.AppContext(), ep, tokenClaims)
+	jwks, err = a.fetchJWKS(ctx.AppContext(), ep.CreateClient(req.URL.Hostname()), req)
 	if err != nil {
 		return nil, err
 	}
@@ -441,12 +451,36 @@ func (a *jwtAuthenticator) getKey(
 }
 
 func (a *jwtAuthenticator) fetchJWKS(
-	ctx context.Context, ep *endpoint.Endpoint, claims map[string]any,
+	ctx context.Context, client *http.Client, req *http.Request,
 ) (*jose.JSONWebKeySet, error) {
 	logger := zerolog.Ctx(ctx)
 
 	logger.Debug().Msg("Retrieving JWKS from configured endpoint")
 
+	resp, err := client.Do(req)
+	if err != nil {
+		var clientErr *url.Error
+		if errors.As(err, &clientErr) && clientErr.Timeout() {
+			return nil, errorchain.
+				NewWithMessage(heimdall.ErrCommunicationTimeout, "request to JWKS endpoint timed out").
+				WithErrorContext(a).
+				CausedBy(err)
+		}
+
+		return nil, errorchain.
+			NewWithMessage(heimdall.ErrCommunication, "request to JWKS endpoint failed").
+			WithErrorContext(a).
+			CausedBy(err)
+	}
+
+	defer resp.Body.Close()
+
+	return a.readJWKS(resp)
+}
+
+func (a *jwtAuthenticator) createRequest(
+	ctx context.Context, ep *endpoint.Endpoint, claims map[string]any,
+) (*http.Request, error) {
 	req, err := ep.CreateRequest(ctx, nil, endpoint.RenderFunc(func(value string) (string, error) {
 		// ignoring closing braces here as it would anyway result in a broken template leading to an error
 		if !strings.Contains(value, "{{") {
@@ -469,25 +503,7 @@ func (a *jwtAuthenticator) fetchJWKS(
 			CausedBy(err)
 	}
 
-	resp, err := ep.CreateClient(req.URL.Hostname()).Do(req)
-	if err != nil {
-		var clientErr *url.Error
-		if errors.As(err, &clientErr) && clientErr.Timeout() {
-			return nil, errorchain.
-				NewWithMessage(heimdall.ErrCommunicationTimeout, "request to JWKS endpoint timed out").
-				WithErrorContext(a).
-				CausedBy(err)
-		}
-
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrCommunication, "request to JWKS endpoint failed").
-			WithErrorContext(a).
-			CausedBy(err)
-	}
-
-	defer resp.Body.Close()
-
-	return a.readJWKS(resp)
+	return req, nil
 }
 
 func (a *jwtAuthenticator) readJWKS(resp *http.Response) (*jose.JSONWebKeySet, error) {
@@ -559,9 +575,10 @@ func (a *jwtAuthenticator) verifyTokenWithKey(
 	return rawPayload, nil
 }
 
-func (a *jwtAuthenticator) calculateCacheKey(ep *endpoint.Endpoint, reference string) string {
+func (a *jwtAuthenticator) calculateCacheKey(ep *endpoint.Endpoint, renderedURL string, reference string) string {
 	digest := sha256.New()
 	digest.Write(ep.Hash())
+	digest.Write(stringx.ToBytes(renderedURL))
 	digest.Write(stringx.ToBytes(reference))
 
 	return hex.EncodeToString(digest.Sum(nil))

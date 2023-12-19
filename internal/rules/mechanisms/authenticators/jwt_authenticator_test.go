@@ -1322,7 +1322,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 					URL:     srv.URL,
 					Headers: map[string]string{"Accept": "application/json"},
 				}
-				cacheKey := auth.calculateCacheKey(ep, kidKeyWithoutCert)
+				cacheKey := auth.calculateCacheKey(ep, srv.URL, kidKeyWithoutCert)
 
 				var jwks jose.JSONWebKeySet
 				err := json.Unmarshal(jwksWithOneKeyOnlyEntry, &jwks)
@@ -1376,7 +1376,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 					URL:     srv.URL,
 					Headers: map[string]string{"Accept": "application/json"},
 				}
-				cacheKey := auth.calculateCacheKey(ep, kidKeyWithCert)
+				cacheKey := auth.calculateCacheKey(ep, srv.URL, kidKeyWithCert)
 
 				var jwks jose.JSONWebKeySet
 				err := json.Unmarshal(jwksWithOneKeyOnlyEntry, &jwks)
@@ -1430,7 +1430,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 					URL:     srv.URL,
 					Headers: map[string]string{"Accept": "application/json"},
 				}
-				cacheKey := auth.calculateCacheKey(ep, kidKeyWithoutCert)
+				cacheKey := auth.calculateCacheKey(ep, srv.URL, kidKeyWithoutCert)
 
 				var jwks jose.JSONWebKeySet
 				err := json.Unmarshal(jwksWithOneKeyOnlyEntry, &jwks)
@@ -1489,7 +1489,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 					URL:     srv.URL,
 					Headers: map[string]string{"Accept": "application/json"},
 				}
-				cacheKey := auth.calculateCacheKey(ep, kidKeyWithoutCert)
+				cacheKey := auth.calculateCacheKey(ep, srv.URL, kidKeyWithoutCert)
 
 				var jwks jose.JSONWebKeySet
 				err := json.Unmarshal(jwksWithOneKeyOnlyEntry, &jwks)
@@ -1548,7 +1548,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 					URL:     srv.URL,
 					Headers: map[string]string{"Accept": "application/json"},
 				}
-				cacheKey := auth.calculateCacheKey(ep, kidKeyWithoutCert)
+				cacheKey := auth.calculateCacheKey(ep, srv.URL, kidKeyWithoutCert)
 
 				var jwks jose.JSONWebKeySet
 				err := json.Unmarshal(jwksWithOneKeyOnlyEntry, &jwks)
@@ -1612,7 +1612,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 					URL:     srv.URL + "/{{ .TokenIssuer }}",
 					Headers: map[string]string{"Accept": "application/json"},
 				}
-				cacheKey := auth.calculateCacheKey(ep, kidKeyWithoutCert)
+				cacheKey := auth.calculateCacheKey(ep, fmt.Sprintf("%s/%s", srv.URL, issuer), kidKeyWithoutCert)
 
 				var jwks jose.JSONWebKeySet
 				err := json.Unmarshal(jwksWithOneKeyOnlyEntry, &jwks)
@@ -1689,7 +1689,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 					URL:     srv.URL,
 					Headers: map[string]string{"Accept": "application/json"},
 				}
-				cacheKey := auth.calculateCacheKey(ep, kidKeyWithCert)
+				cacheKey := auth.calculateCacheKey(ep, srv.URL, kidKeyWithCert)
 
 				var jwks jose.JSONWebKeySet
 				err := json.Unmarshal(jwksWithOneEntryWithKeyOnlyAndOneWithCertificate, &jwks)
@@ -1758,7 +1758,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 					Headers: map[string]string{"Accept": "application/json"},
 					Method:  http.MethodGet,
 				}
-				cacheKey := auth.calculateCacheKey(ep, kidKeyWithCert)
+				cacheKey := auth.calculateCacheKey(ep, srv.URL, kidKeyWithCert)
 
 				var jwks jose.JSONWebKeySet
 				err := json.Unmarshal(jwksWithOneEntryWithKeyOnlyAndOneWithCertificate, &jwks)
@@ -1852,7 +1852,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 					URL:     srv.URL,
 					Headers: map[string]string{"Accept": "application/json"},
 				}
-				cacheKey := auth.calculateCacheKey(ep, kidKeyWithCert)
+				cacheKey := auth.calculateCacheKey(ep, srv.URL, kidKeyWithCert)
 
 				var jwks jose.JSONWebKeySet
 				err := json.Unmarshal(jwksWithOneEntryWithKeyOnlyAndOneWithCertificate, &jwks)
@@ -1921,7 +1921,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 					URL:     srv.URL,
 					Headers: map[string]string{"Accept": "application/json"},
 				}
-				cacheKey := auth.calculateCacheKey(ep, kidKeyWithCert)
+				cacheKey := auth.calculateCacheKey(ep, srv.URL, kidKeyWithCert)
 
 				var jwks jose.JSONWebKeySet
 				err := json.Unmarshal(jwksWithOneEntryWithKeyOnlyAndOneWithCertificate, &jwks)
@@ -1997,7 +1997,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 					URL:     srv.URL,
 					Headers: map[string]string{"Accept": "application/json"},
 				}
-				cacheKey := auth.calculateCacheKey(ep, kidKeyWithoutCert)
+				cacheKey := auth.calculateCacheKey(ep, srv.URL, kidKeyWithoutCert)
 
 				var jwks jose.JSONWebKeySet
 				err := json.Unmarshal(jwksWithOneKeyOnlyEntry, &jwks)
