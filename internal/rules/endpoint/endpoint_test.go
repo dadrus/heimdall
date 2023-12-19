@@ -44,8 +44,6 @@ func TestEndpointCreateClient(t *testing.T) {
 
 	peerName := "foobar"
 
-	tBool := true
-
 	for _, tc := range []struct {
 		uc       string
 		endpoint Endpoint
@@ -63,12 +61,13 @@ func TestEndpointCreateClient(t *testing.T) {
 		},
 		{
 			uc:       "for endpoint without configured retry policy, but with http cache",
-			endpoint: Endpoint{URL: "http://foo.bar", HTTPCacheEnabled: &tBool},
+			endpoint: Endpoint{URL: "http://foo.bar", HTTPCache: &HTTPCache{Enabled: true}},
 			assert: func(t *testing.T, client *http.Client) {
 				t.Helper()
 
 				cacheTransport, ok := client.Transport.(*httpcache.RoundTripper)
 				require.True(t, ok)
+				assert.Equal(t, 0*time.Minute, cacheTransport.DefaultCacheTTL)
 
 				_, ok = cacheTransport.Transport.(*otelhttp.Transport)
 				require.True(t, ok)
@@ -94,17 +93,18 @@ func TestEndpointCreateClient(t *testing.T) {
 			},
 		},
 		{
-			uc: "for endpoint with configured retry policy and with http cache",
+			uc: "for endpoint with configured retry policy and with http cache with default cache ttl",
 			endpoint: Endpoint{
-				URL:              "http://foo.bar",
-				Retry:            &Retry{GiveUpAfter: 2 * time.Second, MaxDelay: 10 * time.Second},
-				HTTPCacheEnabled: &tBool,
+				URL:       "http://foo.bar",
+				Retry:     &Retry{GiveUpAfter: 2 * time.Second, MaxDelay: 10 * time.Second},
+				HTTPCache: &HTTPCache{Enabled: true, DefaultTTL: 15 * time.Minute},
 			},
 			assert: func(t *testing.T, client *http.Client) {
 				t.Helper()
 
 				cacheTransport, ok := client.Transport.(*httpcache.RoundTripper)
 				require.True(t, ok)
+				assert.Equal(t, 15*time.Minute, cacheTransport.DefaultCacheTTL)
 
 				rrt, ok := cacheTransport.Transport.(*httpretry.RetryRoundtripper)
 				require.True(t, ok)

@@ -40,18 +40,23 @@ import (
 	"github.com/dadrus/heimdall/internal/x/stringx"
 )
 
-type Endpoint struct {
-	URL              string                 `mapstructure:"url"               validate:"required,url"`
-	Method           string                 `mapstructure:"method"`
-	Retry            *Retry                 `mapstructure:"retry"`
-	AuthStrategy     AuthenticationStrategy `mapstructure:"auth"`
-	Headers          map[string]string      `mapstructure:"headers"`
-	HTTPCacheEnabled *bool                  `mapstructure:"enable_http_cache"`
+type HTTPCache struct {
+	Enabled    bool          `mapstructure:"enabled"`
+	DefaultTTL time.Duration `mapstructure:"default_ttl"`
 }
 
 type Retry struct {
 	GiveUpAfter time.Duration `mapstructure:"give_up_after"`
 	MaxDelay    time.Duration `mapstructure:"max_delay"`
+}
+
+type Endpoint struct {
+	URL          string                 `mapstructure:"url"    validate:"required,url"`
+	Method       string                 `mapstructure:"method"`
+	Retry        *Retry                 `mapstructure:"retry"`
+	AuthStrategy AuthenticationStrategy `mapstructure:"auth"`
+	Headers      map[string]string      `mapstructure:"headers"`
+	HTTPCache    *HTTPCache             `mapstructure:"http_cache"`
 }
 
 func (e Endpoint) CreateClient(peerName string) *http.Client {
@@ -70,8 +75,11 @@ func (e Endpoint) CreateClient(peerName string) *http.Client {
 				httpretry.ExponentialBackoff(e.Retry.MaxDelay, e.Retry.GiveUpAfter, 0)))
 	}
 
-	if e.HTTPCacheEnabled != nil && *e.HTTPCacheEnabled {
-		client.Transport = &httpcache.RoundTripper{Transport: client.Transport}
+	if e.HTTPCache != nil && e.HTTPCache.Enabled {
+		client.Transport = &httpcache.RoundTripper{
+			Transport:       client.Transport,
+			DefaultCacheTTL: e.HTTPCache.DefaultTTL,
+		}
 	}
 
 	return client
