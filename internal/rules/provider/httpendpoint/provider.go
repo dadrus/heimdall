@@ -101,19 +101,15 @@ func newProvider(
 	}
 
 	for idx, ep := range providerConf.Endpoints {
-		var (
-			definition gocron.JobDefinition
-			opts       []gocron.JobOption
-		)
+		var definition gocron.JobDefinition
 
 		if providerConf.WatchInterval != nil && *providerConf.WatchInterval > 0 {
 			definition = gocron.DurationJob(*providerConf.WatchInterval)
 		} else {
-			definition = gocron.DurationJob(1 * time.Second)
-			opts = []gocron.JobOption{gocron.WithLimitedRuns(1)}
+			definition = gocron.OneTimeJob(gocron.OneTimeJobStartImmediately())
 		}
 
-		if _, err = prov.s.NewJob(definition, gocron.NewTask(prov.watchChanges, ctx, ep), opts...); err != nil {
+		if _, err = prov.s.NewJob(definition, gocron.NewTask(prov.watchChanges, ctx, ep)); err != nil {
 			return nil, errorchain.NewWithMessagef(heimdall.ErrInternal,
 				"failed to create a rule provider worker to fetch rules sets from #%d http_endpoint", idx).
 				CausedBy(err)

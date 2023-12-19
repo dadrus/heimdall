@@ -106,19 +106,15 @@ func newProvider(
 				"missing url for #%d bucket in cloud_blob rule provider configuration", idx)
 		}
 
-		var (
-			definition gocron.JobDefinition
-			opts       []gocron.JobOption
-		)
+		var definition gocron.JobDefinition
 
 		if providerConf.WatchInterval != nil && *providerConf.WatchInterval > 0 {
 			definition = gocron.DurationJob(*providerConf.WatchInterval)
 		} else {
-			definition = gocron.DurationJob(1 * time.Second)
-			opts = []gocron.JobOption{gocron.WithLimitedRuns(1)}
+			definition = gocron.OneTimeJob(gocron.OneTimeJobStartImmediately())
 		}
 
-		if _, err = prov.s.NewJob(definition, gocron.NewTask(prov.watchChanges, ctx, bucket), opts...); err != nil {
+		if _, err = prov.s.NewJob(definition, gocron.NewTask(prov.watchChanges, ctx, bucket)); err != nil {
 			return nil, errorchain.NewWithMessagef(heimdall.ErrInternal,
 				"failed to create a rule provider worker to fetch rules sets from #%d cloud_blob", idx).
 				CausedBy(err)
