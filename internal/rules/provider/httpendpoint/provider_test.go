@@ -115,10 +115,15 @@ endpoints:
 				assert.NotNil(t, prov.s)
 				assert.NotNil(t, prov.p)
 				assert.NotNil(t, prov.cancel)
-				assert.False(t, prov.s.IsRunning())
-				assert.Len(t, prov.s.Jobs(), 1)
-				job := prov.s.Jobs()[0]
-				assert.False(t, job.IsRunning())
+
+				time.Sleep(250 * time.Millisecond)
+
+				jobs := prov.s.Jobs()
+				assert.Len(t, jobs, 1)
+
+				lr, err := jobs[0].LastRun()
+				require.NoError(t, err)
+				assert.True(t, lr.IsZero())
 			},
 		},
 		{
@@ -137,10 +142,18 @@ endpoints:
 				assert.NotNil(t, prov.s)
 				assert.NotNil(t, prov.p)
 				assert.NotNil(t, prov.cancel)
-				assert.False(t, prov.s.IsRunning())
-				assert.Len(t, prov.s.Jobs(), 2)
-				assert.False(t, prov.s.Jobs()[0].IsRunning())
-				assert.False(t, prov.s.Jobs()[1].IsRunning())
+
+				time.Sleep(250 * time.Millisecond)
+
+				jobs := prov.s.Jobs()
+				assert.Len(t, jobs, 2)
+
+				lr, err := jobs[0].LastRun()
+				require.NoError(t, err)
+				assert.True(t, lr.IsZero())
+				lr, err = jobs[1].LastRun()
+				require.NoError(t, err)
+				assert.True(t, lr.IsZero())
 			},
 		},
 	} {
@@ -745,6 +758,8 @@ rules:
 			err = prov.Start(ctx)
 
 			defer prov.Stop(ctx) //nolint:errcheck
+
+			// time.Sleep(2000 * time.Millisecond)
 
 			// THEN
 			require.NoError(t, err)
