@@ -155,7 +155,7 @@ assertions:
 				// endpoint settings
 				_, ok := auth.r.(oauth2.ResolverAdapterFunc)
 				require.True(t, ok)
-				md, err := auth.r.Get(context.TODO(), nil)
+				md, err := auth.r.Get(context.TODO(), nil, false)
 				require.NoError(t, err)
 				assert.Equal(t, "http://test.com", md.JWKSEndpoint.URL)
 				assert.Equal(t, http.MethodGet, md.JWKSEndpoint.Method)
@@ -221,7 +221,7 @@ cache_ttl: 5s`),
 				// endpoint settings
 				_, ok := auth.r.(oauth2.ResolverAdapterFunc)
 				require.True(t, ok)
-				md, err := auth.r.Get(context.TODO(), nil)
+				md, err := auth.r.Get(context.TODO(), nil, false)
 				require.NoError(t, err)
 				assert.Equal(t, "http://test.com", md.JWKSEndpoint.URL)
 				assert.Equal(t, http.MethodGet, md.JWKSEndpoint.Method)
@@ -306,7 +306,7 @@ trust_store: ` + trustStorePath),
 				// endpoint settings
 				_, ok := auth.r.(oauth2.ResolverAdapterFunc)
 				require.True(t, ok)
-				md, err := auth.r.Get(context.TODO(), nil)
+				md, err := auth.r.Get(context.TODO(), nil, false)
 				require.NoError(t, err)
 				assert.Equal(t, "http://test.com", md.JWKSEndpoint.URL)
 				assert.Equal(t, "POST", md.JWKSEndpoint.Method)
@@ -513,6 +513,8 @@ assertions:
 				assert.Equal(t, fmt.Sprintf("%v", prototype.r), fmt.Sprintf("%v", configured.r))
 				assert.Equal(t, prototype.ads, configured.ads)
 				assert.Equal(t, prototype.sf, configured.sf)
+				assert.True(t, prototype.validateMetadata)
+				assert.Equal(t, prototype.validateMetadata, configured.validateMetadata)
 				assert.NotEqual(t, prototype.a, configured.a)
 
 				require.NoError(t, configured.a.ScopesMatcher.Match([]string{}))
@@ -534,6 +536,10 @@ assertions:
 			prototypeConfig: []byte(`
 metadata_endpoint:
   url: http://test.com
+  http_cache:
+    enabled: true
+    default_ttl: 10m
+disable_issuer_identifier_verification: true
 `),
 			config: []byte(`
 assertions:
@@ -551,6 +557,8 @@ cache_ttl: 5s`),
 				assert.Equal(t, prototype.r, configured.r)
 				assert.Equal(t, prototype.ads, configured.ads)
 				assert.Equal(t, prototype.sf, configured.sf)
+				assert.False(t, prototype.validateMetadata)
+				assert.Equal(t, prototype.validateMetadata, configured.validateMetadata)
 				assert.NotEqual(t, prototype.a, configured.a)
 
 				require.NoError(t, configured.a.ScopesMatcher.Match([]string{}))
@@ -592,6 +600,8 @@ assertions:
 				assert.Equal(t, fmt.Sprintf("%v", prototype.r), fmt.Sprintf("%v", configured.r))
 				assert.Equal(t, prototype.ads, configured.ads)
 				assert.Equal(t, prototype.sf, configured.sf)
+				assert.True(t, prototype.validateMetadata)
+				assert.Equal(t, prototype.validateMetadata, configured.validateMetadata)
 				assert.NotEqual(t, prototype.a, configured.a)
 
 				require.NoError(t, configured.a.ScopesMatcher.Match([]string{}))
@@ -629,6 +639,8 @@ cache_ttl: 5s`),
 				assert.Equal(t, prototype.ads, configured.ads)
 				assert.Equal(t, prototype.sf, configured.sf)
 				assert.Equal(t, prototype.a, configured.a)
+				assert.True(t, prototype.validateMetadata)
+				assert.Equal(t, prototype.validateMetadata, configured.validateMetadata)
 
 				assert.Equal(t, 5*time.Second, *prototype.ttl)
 				assert.Equal(t, 15*time.Second, *configured.ttl)
@@ -664,6 +676,8 @@ assertions:
 				assert.Equal(t, prototype.r, configured.r)
 				assert.Equal(t, prototype.ads, configured.ads)
 				assert.Equal(t, prototype.sf, configured.sf)
+				assert.True(t, prototype.validateMetadata)
+				assert.Equal(t, prototype.validateMetadata, configured.validateMetadata)
 				assert.NotEqual(t, prototype.a, configured.a)
 				assert.Equal(t, prototype.ttl, configured.ttl)
 
@@ -703,6 +717,8 @@ allow_fallback_on_error: true
 				assert.Equal(t, prototype.sf, configured.sf)
 				assert.Equal(t, prototype.a, configured.a)
 				assert.Equal(t, prototype.ttl, configured.ttl)
+				assert.True(t, prototype.validateMetadata)
+				assert.Equal(t, prototype.validateMetadata, configured.validateMetadata)
 
 				assert.NotEqual(t, prototype.IsFallbackOnErrorAllowed(), configured.IsFallbackOnErrorAllowed())
 				assert.True(t, configured.IsFallbackOnErrorAllowed())
@@ -981,7 +997,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			uc: "with jwks endpoint rendering error",
 			authenticator: &jwtAuthenticator{
 				id: "auth3",
-				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
+				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any, _ bool) (oauth2.ServerMetadata, error) {
 					return oauth2.ServerMetadata{JWKSEndpoint: &endpoint.Endpoint{URL: srv.URL + "{{ Foo }}"}}, nil
 				}),
 				ttl: &disabledTTL,
@@ -1016,7 +1032,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			uc: "with jwks endpoint communication error (dns)",
 			authenticator: &jwtAuthenticator{
 				id: "auth3",
-				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
+				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any, _ bool) (oauth2.ServerMetadata, error) {
 					return oauth2.ServerMetadata{JWKSEndpoint: &endpoint.Endpoint{URL: "http://jwks.heimdall.test.local"}}, nil
 				}),
 				ttl: &disabledTTL,
@@ -1051,7 +1067,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			uc: "with unexpected response code from jwks endpoint",
 			authenticator: &jwtAuthenticator{
 				id: "auth3",
-				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
+				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any, _ bool) (oauth2.ServerMetadata, error) {
 					return oauth2.ServerMetadata{JWKSEndpoint: &endpoint.Endpoint{URL: srv.URL}}, nil
 				}),
 				ttl: &disabledTTL,
@@ -1091,7 +1107,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			uc: "with jwks unmarshalling error",
 			authenticator: &jwtAuthenticator{
 				id: "auth3",
-				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
+				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any, _ bool) (oauth2.ServerMetadata, error) {
 					return oauth2.ServerMetadata{
 						JWKSEndpoint: &endpoint.Endpoint{
 							URL:     srv.URL,
@@ -1142,7 +1158,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			uc: "without unique key id",
 			authenticator: &jwtAuthenticator{
 				id: "auth3",
-				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
+				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any, _ bool) (oauth2.ServerMetadata, error) {
 					return oauth2.ServerMetadata{
 						JWKSEndpoint: &endpoint.Endpoint{
 							URL:     srv.URL,
@@ -1279,7 +1295,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			uc: "with positive cache hit, but unsupported algorithm",
 			authenticator: &jwtAuthenticator{
 				id: "auth3",
-				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
+				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any, _ bool) (oauth2.ServerMetadata, error) {
 					return oauth2.ServerMetadata{
 						JWKSEndpoint: &endpoint.Endpoint{
 							URL:     srv.URL,
@@ -1333,7 +1349,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			uc: "with positive cache hit, but signature verification error",
 			authenticator: &jwtAuthenticator{
 				id: "auth3",
-				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
+				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any, _ bool) (oauth2.ServerMetadata, error) {
 					return oauth2.ServerMetadata{
 						JWKSEndpoint: &endpoint.Endpoint{
 							URL:     srv.URL,
@@ -1387,7 +1403,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			uc: "with positive cache hit, but claims verification error",
 			authenticator: &jwtAuthenticator{
 				id: "auth3",
-				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
+				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any, _ bool) (oauth2.ServerMetadata, error) {
 					return oauth2.ServerMetadata{
 						JWKSEndpoint: &endpoint.Endpoint{
 							URL:     srv.URL,
@@ -1441,7 +1457,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			uc: "with positive cache hit, but subject creation error",
 			authenticator: &jwtAuthenticator{
 				id: "auth3",
-				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
+				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any, _ bool) (oauth2.ServerMetadata, error) {
 					return oauth2.ServerMetadata{
 						JWKSEndpoint: &endpoint.Endpoint{
 							URL:     srv.URL,
@@ -1500,7 +1516,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 		{
 			uc: "successful with positive cache hit",
 			authenticator: &jwtAuthenticator{
-				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
+				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any, _ bool) (oauth2.ServerMetadata, error) {
 					return oauth2.ServerMetadata{
 						JWKSEndpoint: &endpoint.Endpoint{
 							URL:     srv.URL,
@@ -1564,7 +1580,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 		{
 			uc: "successful without cache hit using key only",
 			authenticator: &jwtAuthenticator{
-				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
+				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any, _ bool) (oauth2.ServerMetadata, error) {
 					return oauth2.ServerMetadata{
 						JWKSEndpoint: &endpoint.Endpoint{
 							URL:     srv.URL + "/{{ .TokenIssuer }}",
@@ -1641,7 +1657,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 		{
 			uc: "successful without cache hit using key & cert with disabled jwk validation",
 			authenticator: &jwtAuthenticator{
-				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
+				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any, _ bool) (oauth2.ServerMetadata, error) {
 					return oauth2.ServerMetadata{
 						JWKSEndpoint: &endpoint.Endpoint{
 							URL:     srv.URL,
@@ -1799,7 +1815,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			uc: "successful without cache hit using key & cert with enabled jwk validation using system trust store",
 			authenticator: &jwtAuthenticator{
 				id: "auth3",
-				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
+				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any, _ bool) (oauth2.ServerMetadata, error) {
 					return oauth2.ServerMetadata{
 						JWKSEndpoint: &endpoint.Endpoint{
 							URL:     srv.URL,
@@ -1867,7 +1883,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 		{
 			uc: "successful without cache hit using key & cert with jwk validation using custom trust store",
 			authenticator: &jwtAuthenticator{
-				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
+				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any, _ bool) (oauth2.ServerMetadata, error) {
 					return oauth2.ServerMetadata{
 						JWKSEndpoint: &endpoint.Endpoint{
 							URL:     srv.URL,
@@ -1945,7 +1961,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 		{
 			uc: "successful without bad cache hit",
 			authenticator: &jwtAuthenticator{
-				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
+				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any, _ bool) (oauth2.ServerMetadata, error) {
 					return oauth2.ServerMetadata{
 						JWKSEndpoint: &endpoint.Endpoint{
 							URL:     srv.URL,
@@ -2022,7 +2038,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 		{
 			uc: "successful validation of token without kid",
 			authenticator: &jwtAuthenticator{
-				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
+				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any, _ bool) (oauth2.ServerMetadata, error) {
 					return oauth2.ServerMetadata{
 						JWKSEndpoint: &endpoint.Endpoint{
 							URL:     srv.URL,
@@ -2086,7 +2102,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			uc: "validation of token without kid fails because of jwks response unmarshalling error",
 			authenticator: &jwtAuthenticator{
 				id: "auth3",
-				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
+				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any, _ bool) (oauth2.ServerMetadata, error) {
 					return oauth2.ServerMetadata{
 						JWKSEndpoint: &endpoint.Endpoint{
 							URL:     srv.URL,
@@ -2135,7 +2151,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			uc: "validation of token without kid fails as available keys don't have matching algorithms",
 			authenticator: &jwtAuthenticator{
 				id: "auth3",
-				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
+				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any, _ bool) (oauth2.ServerMetadata, error) {
 					return oauth2.ServerMetadata{
 						JWKSEndpoint: &endpoint.Endpoint{
 							URL:     srv.URL,
@@ -2184,7 +2200,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			uc: "validation of token without kid fails as available keys could not be verified",
 			authenticator: &jwtAuthenticator{
 				id: "auth3",
-				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
+				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any, _ bool) (oauth2.ServerMetadata, error) {
 					return oauth2.ServerMetadata{
 						JWKSEndpoint: &endpoint.Endpoint{
 							URL:     srv.URL,
