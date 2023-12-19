@@ -130,7 +130,7 @@ func TestClientCredentialsToken(t *testing.T) {
 				assert.Equal(t, "bar", clientIDAndSecret[1])
 
 				assert.Equal(t, "application/x-www-form-urlencoded", req.Header.Get("Content-Type"))
-				assert.Equal(t, "application/json", req.Header.Get("Accept-Type"))
+				assert.Equal(t, "application/json", req.Header.Get("Accept"))
 				assert.Equal(t, "client_credentials", req.FormValue("grant_type"))
 				assert.Empty(t, req.FormValue("scope"))
 			},
@@ -180,7 +180,7 @@ func TestClientCredentialsToken(t *testing.T) {
 				assert.Equal(t, "foo", clientIDAndSecret[1])
 
 				assert.Equal(t, "application/x-www-form-urlencoded", req.Header.Get("Content-Type"))
-				assert.Equal(t, "application/json", req.Header.Get("Accept-Type"))
+				assert.Equal(t, "application/json", req.Header.Get("Accept"))
 				assert.Equal(t, "client_credentials", req.FormValue("grant_type"))
 				assert.Empty(t, req.FormValue("scope"))
 			},
@@ -293,7 +293,7 @@ func TestClientCredentialsToken(t *testing.T) {
 				assert.Equal(t, "foo", clientIDAndSecret[1])
 
 				assert.Equal(t, "application/x-www-form-urlencoded", req.Header.Get("Content-Type"))
-				assert.Equal(t, "application/json", req.Header.Get("Accept-Type"))
+				assert.Equal(t, "application/json", req.Header.Get("Accept"))
 				assert.Equal(t, "client_credentials", req.FormValue("grant_type"))
 				scopes := strings.Split(req.FormValue("scope"), " ")
 				assert.Len(t, scopes, 2)
@@ -360,7 +360,7 @@ func TestClientCredentialsToken(t *testing.T) {
 				assert.Equal(t, "foo", clientIDAndSecret[1])
 
 				assert.Equal(t, "application/x-www-form-urlencoded", req.Header.Get("Content-Type"))
-				assert.Equal(t, "application/json", req.Header.Get("Accept-Type"))
+				assert.Equal(t, "application/json", req.Header.Get("Accept"))
 				assert.Equal(t, "client_credentials", req.FormValue("grant_type"))
 				scopes := strings.Split(req.FormValue("scope"), " ")
 				assert.Len(t, scopes, 2)
@@ -415,7 +415,7 @@ func TestClientCredentialsToken(t *testing.T) {
 				assert.Equal(t, "foo", clientIDAndSecret[1])
 
 				assert.Equal(t, "application/x-www-form-urlencoded", req.Header.Get("Content-Type"))
-				assert.Equal(t, "application/json", req.Header.Get("Accept-Type"))
+				assert.Equal(t, "application/json", req.Header.Get("Accept"))
 				assert.Equal(t, "client_credentials", req.FormValue("grant_type"))
 				scopes := strings.Split(req.FormValue("scope"), " ")
 				assert.Len(t, scopes, 2)
@@ -463,7 +463,7 @@ func TestClientCredentialsToken(t *testing.T) {
 				t.Helper()
 
 				assert.Equal(t, "application/x-www-form-urlencoded", req.Header.Get("Content-Type"))
-				assert.Equal(t, "application/json", req.Header.Get("Accept-Type"))
+				assert.Equal(t, "application/json", req.Header.Get("Accept"))
 				assert.Equal(t, "bar foo", req.FormValue("client_id"))
 				assert.Equal(t, "foo bar", req.FormValue("client_secret"))
 				assert.Equal(t, "client_credentials", req.FormValue("grant_type"))
@@ -512,7 +512,7 @@ func TestClientCredentialsToken(t *testing.T) {
 				assert.Equal(t, "foo", clientIDAndSecret[1])
 
 				assert.Equal(t, "application/x-www-form-urlencoded", req.Header.Get("Content-Type"))
-				assert.Equal(t, "application/json", req.Header.Get("Accept-Type"))
+				assert.Equal(t, "application/json", req.Header.Get("Accept"))
 				assert.Equal(t, "client_credentials", req.FormValue("grant_type"))
 			},
 			buildResponse: func(t *testing.T) (any, int) {
@@ -594,7 +594,7 @@ func TestClientCredentialsToken(t *testing.T) {
 				assert.Equal(t, "foo", clientIDAndSecret[1])
 
 				assert.Equal(t, "application/x-www-form-urlencoded", req.Header.Get("Content-Type"))
-				assert.Equal(t, "application/json", req.Header.Get("Accept-Type"))
+				assert.Equal(t, "application/json", req.Header.Get("Accept"))
 				assert.Equal(t, "client_credentials", req.FormValue("grant_type"))
 			},
 			buildResponse: func(t *testing.T) (any, int) {
