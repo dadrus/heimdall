@@ -43,7 +43,7 @@ import (
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
-func TestCreateOAuth2IntrospectionAuthenticator(t *testing.T) {
+func TestOAuth2IntrospectionAuthenticatorCreate(t *testing.T) {
 	t.Parallel()
 
 	testCases := []struct {
@@ -88,7 +88,7 @@ subject:
 			},
 		},
 		{
-			uc: "with missing trusted issuers assertion config",
+			uc: "with missing trusted issuers assertion config when not using metadata endpoint",
 			config: []byte(`
 introspection_endpoint:
   url: http://foobar.local
@@ -127,7 +127,7 @@ assertions:
 			},
 		},
 		{
-			uc: "with valid config with defaults",
+			uc: "with minimal introspection endpoint based config",
 			id: "auth1",
 			config: []byte(`
 introspection_endpoint:
@@ -135,8 +135,6 @@ introspection_endpoint:
 assertions:
   issuers:
     - foobar
-subject:
-  id: some_template
 `),
 			assert: func(t *testing.T, err error, auth *oauth2IntrospectionAuthenticator) {
 				t.Helper()
@@ -144,15 +142,18 @@ subject:
 				require.NoError(t, err)
 
 				// assert endpoint config
-				assert.Equal(t, "http://foobar.local", auth.e.URL)
-				assert.Equal(t, http.MethodPost, auth.e.Method)
-				assert.Len(t, auth.e.Headers, 2)
-				assert.Contains(t, auth.e.Headers, "Content-Type")
-				assert.Equal(t, "application/x-www-form-urlencoded", auth.e.Headers["Content-Type"])
-				assert.Contains(t, auth.e.Headers, "Accept")
-				assert.Equal(t, "application/json", auth.e.Headers["Accept"])
-				assert.Nil(t, auth.e.AuthStrategy)
-				assert.Nil(t, auth.e.Retry)
+				_, ok := auth.r.(oauth2.ResolverAdapterFunc)
+				require.True(t, ok)
+				md, err := auth.r.Get(context.TODO(), nil)
+				assert.Equal(t, "http://foobar.local", md.IntrospectionEndpoint.URL)
+				assert.Equal(t, http.MethodPost, md.IntrospectionEndpoint.Method)
+				assert.Len(t, md.IntrospectionEndpoint.Headers, 2)
+				assert.Contains(t, md.IntrospectionEndpoint.Headers, "Content-Type")
+				assert.Equal(t, "application/x-www-form-urlencoded", md.IntrospectionEndpoint.Headers["Content-Type"])
+				assert.Contains(t, md.IntrospectionEndpoint.Headers, "Accept")
+				assert.Equal(t, "application/json", md.IntrospectionEndpoint.Headers["Accept"])
+				assert.Nil(t, md.IntrospectionEndpoint.AuthStrategy)
+				assert.Nil(t, md.IntrospectionEndpoint.Retry)
 
 				// assert assertions
 				assert.Len(t, auth.a.AllowedAlgorithms, len(defaultAllowedAlgorithms()))
@@ -182,7 +183,7 @@ subject:
 			},
 		},
 		{
-			uc: "with valid config with overwrites",
+			uc: "with valid introspection endpoint based config with overwrites",
 			id: "auth1",
 			config: []byte(`
 introspection_endpoint:
@@ -215,15 +216,18 @@ allow_fallback_on_error: true
 				require.NoError(t, err)
 
 				// assert endpoint config
-				assert.Equal(t, "http://test.com", auth.e.URL)
-				assert.Equal(t, http.MethodPatch, auth.e.Method)
-				assert.Len(t, auth.e.Headers, 2)
-				assert.Contains(t, auth.e.Headers, "Content-Type")
-				assert.Equal(t, "application/x-www-form-urlencoded", auth.e.Headers["Content-Type"])
-				assert.Contains(t, auth.e.Headers, "Accept")
-				assert.Equal(t, "application/foobar", auth.e.Headers["Accept"])
-				assert.Nil(t, auth.e.AuthStrategy)
-				assert.Nil(t, auth.e.Retry)
+				_, ok := auth.r.(oauth2.ResolverAdapterFunc)
+				require.True(t, ok)
+				md, err := auth.r.Get(context.TODO(), nil)
+				assert.Equal(t, "http://test.com", md.IntrospectionEndpoint.URL)
+				assert.Equal(t, http.MethodPatch, md.IntrospectionEndpoint.Method)
+				assert.Len(t, md.IntrospectionEndpoint.Headers, 2)
+				assert.Contains(t, md.IntrospectionEndpoint.Headers, "Content-Type")
+				assert.Equal(t, "application/x-www-form-urlencoded", md.IntrospectionEndpoint.Headers["Content-Type"])
+				assert.Contains(t, md.IntrospectionEndpoint.Headers, "Accept")
+				assert.Equal(t, "application/foobar", md.IntrospectionEndpoint.Headers["Accept"])
+				assert.Nil(t, md.IntrospectionEndpoint.AuthStrategy)
+				assert.Nil(t, md.IntrospectionEndpoint.Retry)
 
 				// assert assertions
 				assert.Len(t, auth.a.AllowedAlgorithms, 1)
@@ -252,6 +256,48 @@ allow_fallback_on_error: true
 				assert.Equal(t, "auth1", auth.ID())
 			},
 		},
+		{
+			uc: "with minimal metadata endpoint based config",
+			id: "auth1",
+			config: []byte(`
+metadata_endpoint:
+  url: http://foobar.local
+`),
+			assert: func(t *testing.T, err error, auth *oauth2IntrospectionAuthenticator) {
+				t.Helper()
+
+				require.NoError(t, err)
+
+				// assert endpoint config
+				_, ok := auth.r.(oauth2.ResolverAdapterFunc)
+				require.False(t, ok)
+
+				// assert assertions
+				assert.Len(t, auth.a.AllowedAlgorithms, len(defaultAllowedAlgorithms()))
+				assert.ElementsMatch(t, auth.a.AllowedAlgorithms, defaultAllowedAlgorithms())
+				assert.Empty(t, auth.a.TrustedIssuers, 1)
+				require.NoError(t, auth.a.ScopesMatcher.Match([]string{}))
+				assert.Equal(t, time.Duration(0), auth.a.ValidityLeeway)
+				assert.Empty(t, auth.a.TargetAudiences)
+
+				// assert ttl
+				assert.Nil(t, auth.ttl)
+
+				// assert token extractor settings
+				assert.IsType(t, extractors.CompositeExtractStrategy{}, auth.ads)
+				assert.Len(t, auth.ads, 3)
+				assert.Contains(t, auth.ads, extractors.HeaderValueExtractStrategy{Name: "Authorization", Scheme: "Bearer"})
+				assert.Contains(t, auth.ads, extractors.QueryParameterExtractStrategy{Name: "access_token"})
+				assert.Contains(t, auth.ads, extractors.BodyParameterExtractStrategy{Name: "access_token"})
+
+				// assert subject factory
+				assert.NotNil(t, auth.sf)
+
+				assert.False(t, auth.IsFallbackOnErrorAllowed())
+
+				assert.Equal(t, "auth1", auth.ID())
+			},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -269,7 +315,7 @@ allow_fallback_on_error: true
 	}
 }
 
-func TestCreateOAuth2IntrospectionAuthenticatorFromPrototype(t *testing.T) {
+func TestOAuth2IntrospectionAuthenticatorWithConfig(t *testing.T) {
 	t.Parallel()
 
 	for _, tc := range []struct {
@@ -350,7 +396,7 @@ assertions:
 
 				require.NoError(t, err)
 
-				assert.Equal(t, prototype.e, configured.e)
+				assert.Equal(t, prototype.r, configured.r)
 				assert.Equal(t, prototype.ads, configured.ads)
 				assert.Equal(t, prototype.sf, configured.sf)
 				assert.NotEqual(t, prototype.a, configured.a)
@@ -370,7 +416,7 @@ assertions:
 			uc: "prototype config without cache, target config with cache overwrite",
 			id: "auth2",
 			prototypeConfig: []byte(`
-introspection_endpoint:
+metadata_endpoint:
   url: http://foobar.local
 assertions:
   issuers:
@@ -385,7 +431,7 @@ subject:
 
 				require.NoError(t, err)
 
-				assert.Equal(t, prototype.e, configured.e)
+				assert.Equal(t, prototype.r, configured.r)
 				assert.Equal(t, prototype.ads, configured.ads)
 				assert.Equal(t, prototype.sf, configured.sf)
 				assert.Equal(t, prototype.a, configured.a)
@@ -421,7 +467,7 @@ cache_ttl: 15s
 
 				require.NoError(t, err)
 
-				assert.Equal(t, prototype.e, configured.e)
+				assert.Equal(t, prototype.r, configured.r)
 				assert.Equal(t, prototype.ads, configured.ads)
 				assert.Equal(t, prototype.sf, configured.sf)
 				assert.NotEqual(t, prototype.a, configured.a)
@@ -452,7 +498,7 @@ subject:
 
 				require.NoError(t, err)
 
-				assert.Equal(t, prototype.e, configured.e)
+				assert.Equal(t, prototype.r, configured.r)
 				assert.Equal(t, prototype.ads, configured.ads)
 				assert.Equal(t, prototype.sf, configured.sf)
 				assert.Equal(t, prototype.a, configured.a)
@@ -549,8 +595,6 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 
 	oidcDiscoveryDocumentSuccessful, err := createDiscoveryDocumentIntrospection(t, srv.URL, "foobar")
 	require.NoError(t, err)
-	oidcDiscoveryDocumentInvalidIssuer, err := createDiscoveryDocumentIntrospection(t, srv.URL, "barfoo")
-	require.NoError(t, err)
 
 	oidcSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		oidcEndpointCalled = true
@@ -615,8 +659,10 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 		{
 			uc: "with disabled cache and endpoint communication error (dns)",
 			authenticator: &oauth2IntrospectionAuthenticator{
-				id:  "auth3",
-				e:   endpoint.Endpoint{URL: "http://introspection.heimdall.test.local"},
+				id: "auth3",
+				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
+					return oauth2.ServerMetadata{IntrospectionEndpoint: &endpoint.Endpoint{URL: "http://introspection.heimdall.test.local"}}, nil
+				}),
 				ttl: &zeroTTL,
 			},
 			configureMocks: func(t *testing.T,
@@ -644,42 +690,12 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 			},
 		},
 		{
-			uc: "with disabled cache and oidc discovery endpoint communication error (dns)",
-			authenticator: &oauth2IntrospectionAuthenticator{
-				id:                  "auth3",
-				e:                   endpoint.Endpoint{URL: "http://oidc.heimdall.test.local"},
-				endpointIsDiscovery: true,
-				ttl:                 &zeroTTL,
-			},
-			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.ContextMock,
-				_ *mocks.CacheMock,
-				ads *mocks2.AuthDataExtractStrategyMock,
-				_ *oauth2IntrospectionAuthenticator,
-			) {
-				t.Helper()
-
-				ads.EXPECT().GetAuthData(ctx).Return("test_access_token", nil)
-			},
-			assert: func(t *testing.T, err error, sub *subject.Subject) {
-				t.Helper()
-
-				assert.False(t, endpointCalled)
-
-				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrCommunication)
-				assert.Contains(t, err.Error(), "openid discovery endpoint failed")
-
-				var identifier HandlerIdentifier
-				require.ErrorAs(t, err, &identifier)
-				assert.Equal(t, "auth3", identifier.ID())
-			},
-		},
-		{
 			uc: "with disabled cache and unexpected response code from the endpoint",
 			authenticator: &oauth2IntrospectionAuthenticator{
-				id:  "auth3",
-				e:   endpoint.Endpoint{URL: srv.URL},
+				id: "auth3",
+				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
+					return oauth2.ServerMetadata{IntrospectionEndpoint: &endpoint.Endpoint{URL: srv.URL}}, nil
+				}),
 				ttl: &zeroTTL,
 			},
 			configureMocks: func(t *testing.T,
@@ -714,10 +730,9 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 		{
 			uc: "with disabled cache and unexpected response code from the oidc discovery endpoint",
 			authenticator: &oauth2IntrospectionAuthenticator{
-				id:                  "auth3",
-				e:                   endpoint.Endpoint{URL: oidcSrv.URL},
-				endpointIsDiscovery: true,
-				ttl:                 &zeroTTL,
+				id:  "auth3",
+				r:   oauth2.NewServerMetadataResolver(&endpoint.Endpoint{URL: oidcSrv.URL}),
+				ttl: &zeroTTL,
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.ContextMock,
@@ -752,14 +767,18 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 			uc: "with disabled cache and failing unmarshalling of the service response",
 			authenticator: &oauth2IntrospectionAuthenticator{
 				id: "auth3",
-				e: endpoint.Endpoint{
-					URL:    srv.URL,
-					Method: http.MethodPost,
-					Headers: map[string]string{
-						"Content-Type": "application/x-www-form-urlencoded",
-						"Accept":       "application/json",
-					},
-				},
+				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
+					return oauth2.ServerMetadata{
+						IntrospectionEndpoint: &endpoint.Endpoint{
+							URL:    srv.URL,
+							Method: http.MethodPost,
+							Headers: map[string]string{
+								"Content-Type": "application/x-www-form-urlencoded",
+								"Accept":       "application/json",
+							},
+						},
+					}, nil
+				}),
 				ttl: &zeroTTL,
 			},
 			configureMocks: func(t *testing.T,
@@ -807,64 +826,21 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 			},
 		},
 		{
-			uc: "with oidc discovery document unmarshalling error",
-			authenticator: &oauth2IntrospectionAuthenticator{
-				id: "auth3",
-				e: endpoint.Endpoint{
-					URL:     oidcSrv.URL,
-					Headers: map[string]string{"Accept": "application/json"},
-				},
-				endpointIsDiscovery: true,
-				ttl:                 &zeroTTL,
-			},
-			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.ContextMock,
-				_ *mocks.CacheMock,
-				ads *mocks2.AuthDataExtractStrategyMock,
-				_ *oauth2IntrospectionAuthenticator,
-			) {
-				t.Helper()
-
-				ads.EXPECT().GetAuthData(ctx).Return("test_access_token", nil)
-			},
-			instructServer: func(t *testing.T) {
-				t.Helper()
-
-				checkOIDCRequest = func(req *http.Request) {
-					assert.Equal(t, "application/json", req.Header.Get("Accept"))
-				}
-
-				oidcResponseCode = http.StatusOK
-				oidcResponseContent = []byte(`Hello Foo`)
-				oidcResponseContentType = "text/text"
-			},
-			assert: func(t *testing.T, err error, sub *subject.Subject) {
-				t.Helper()
-
-				assert.True(t, oidcEndpointCalled)
-
-				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrInternal)
-				require.NotErrorIs(t, err, heimdall.ErrArgument)
-				assert.Contains(t, err.Error(), "failed to unmarshal")
-
-				var identifier HandlerIdentifier
-				require.ErrorAs(t, err, &identifier)
-				assert.Equal(t, "auth3", identifier.ID())
-			},
-		},
-		{
 			uc: "with disabled cache and failing response validation (token not active)",
 			authenticator: &oauth2IntrospectionAuthenticator{
 				id: "auth3",
-				e: endpoint.Endpoint{
-					URL:    srv.URL,
-					Method: http.MethodPost,
-					Headers: map[string]string{
-						"Content-Type": "application/x-www-form-urlencoded",
-						"Accept":       "application/json",
-					},
-				},
+				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
+					return oauth2.ServerMetadata{
+						IntrospectionEndpoint: &endpoint.Endpoint{
+							URL:    srv.URL,
+							Method: http.MethodPost,
+							Headers: map[string]string{
+								"Content-Type": "application/x-www-form-urlencoded",
+								"Accept":       "application/json",
+							},
+						},
+					}, nil
+				}),
 				a:   oauth2.Expectation{TrustedIssuers: []string{"foobar"}},
 				ttl: &zeroTTL,
 			},
@@ -919,14 +895,18 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 			uc: "with disabled cache and failing response validation (issuer not trusted)",
 			authenticator: &oauth2IntrospectionAuthenticator{
 				id: "auth3",
-				e: endpoint.Endpoint{
-					URL:    srv.URL,
-					Method: http.MethodPost,
-					Headers: map[string]string{
-						"Content-Type": "application/x-www-form-urlencoded",
-						"Accept":       "application/json",
-					},
-				},
+				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
+					return oauth2.ServerMetadata{
+						IntrospectionEndpoint: &endpoint.Endpoint{
+							URL:    srv.URL,
+							Method: http.MethodPost,
+							Headers: map[string]string{
+								"Content-Type": "application/x-www-form-urlencoded",
+								"Accept":       "application/json",
+							},
+						},
+					}, nil
+				}),
 				a:   oauth2.Expectation{TrustedIssuers: []string{"barfoo"}},
 				ttl: &zeroTTL,
 			},
@@ -989,101 +969,20 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 			},
 		},
 		{
-			uc: "with disabled cache and failing response validation (issuer not trusted) from oidc discovery",
-			authenticator: &oauth2IntrospectionAuthenticator{
-				id: "auth3",
-				e: endpoint.Endpoint{
-					URL:    oidcSrv.URL,
-					Method: http.MethodGet,
-					Headers: map[string]string{
-						"Content-Type": "application/x-www-form-urlencoded",
-						"Accept":       "application/json",
-					},
-				},
-				endpointIsDiscovery: true,
-				a:                   oauth2.Expectation{},
-				ttl:                 &zeroTTL,
-			},
-			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.ContextMock,
-				_ *mocks.CacheMock,
-				ads *mocks2.AuthDataExtractStrategyMock,
-				_ *oauth2IntrospectionAuthenticator,
-			) {
-				t.Helper()
-
-				ads.EXPECT().GetAuthData(ctx).Return("test_access_token", nil)
-			},
-			instructServer: func(t *testing.T) {
-				t.Helper()
-
-				checkRequest = func(req *http.Request) {
-					t.Helper()
-
-					assert.Equal(t, "application/x-www-form-urlencoded", req.Header.Get("Content-Type"))
-					assert.Equal(t, "application/json", req.Header.Get("Accept"))
-					assert.Equal(t, http.MethodPost, req.Method)
-
-					require.NoError(t, req.ParseForm())
-					assert.Len(t, req.Form, 2)
-					assert.Equal(t, "access_token", req.Form.Get("token_type_hint"))
-					assert.Equal(t, "test_access_token", req.Form.Get("token"))
-				}
-				checkOIDCRequest = func(req *http.Request) {
-					t.Helper()
-
-					assert.Equal(t, "application/x-www-form-urlencoded", req.Header.Get("Content-Type"))
-					assert.Equal(t, "application/json", req.Header.Get("Accept"))
-					assert.Equal(t, http.MethodGet, req.Method)
-				}
-
-				rawIntrospectResponse, err := json.Marshal(map[string]any{
-					"active":     true,
-					"scope":      "foo bar",
-					"username":   "unknown",
-					"token_type": "Bearer",
-					"aud":        "bar",
-					"sub":        "foo",
-					"iss":        "foobar",
-					"iat":        time.Now().Unix(),
-					"nbf":        time.Now().Unix(),
-					"exp":        time.Now().Unix() + 30,
-				})
-				require.NoError(t, err)
-
-				responseContentType = "application/json"
-				responseContent = rawIntrospectResponse
-				responseCode = http.StatusOK
-
-				oidcResponseCode = http.StatusOK
-				oidcResponseContent = oidcDiscoveryDocumentInvalidIssuer
-				oidcResponseContentType = "application/json"
-			},
-			assert: func(t *testing.T, err error, sub *subject.Subject) {
-				t.Helper()
-
-				assert.True(t, endpointCalled)
-
-				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrAuthentication)
-				assert.Contains(t, err.Error(), "assertion conditions")
-
-				var identifier HandlerIdentifier
-				require.ErrorAs(t, err, &identifier)
-				assert.Equal(t, "auth3", identifier.ID())
-			},
-		},
-		{
 			uc: "with disabled cache and successful execution",
 			authenticator: &oauth2IntrospectionAuthenticator{
-				e: endpoint.Endpoint{
-					URL:    srv.URL,
-					Method: http.MethodPost,
-					Headers: map[string]string{
-						"Content-Type": "application/x-www-form-urlencoded",
-						"Accept":       "application/json",
-					},
-				},
+				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
+					return oauth2.ServerMetadata{
+						IntrospectionEndpoint: &endpoint.Endpoint{
+							URL:    srv.URL,
+							Method: http.MethodPost,
+							Headers: map[string]string{
+								"Content-Type": "application/x-www-form-urlencoded",
+								"Accept":       "application/json",
+							},
+						},
+					}, nil
+				}),
 				a: oauth2.Expectation{
 					TrustedIssuers: []string{"foobar"},
 					ScopesMatcher:  oauth2.ExactScopeStrategyMatcher{},
@@ -1159,18 +1058,8 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 		{
 			uc: "with disabled cache and successful execution from oidc discovery",
 			authenticator: &oauth2IntrospectionAuthenticator{
-				e: endpoint.Endpoint{
-					URL:    oidcSrv.URL,
-					Method: http.MethodGet,
-					Headers: map[string]string{
-						"Content-Type": "application/x-www-form-urlencoded",
-						"Accept":       "application/json",
-					},
-				},
-				endpointIsDiscovery: true,
-				a: oauth2.Expectation{
-					ScopesMatcher: oauth2.ExactScopeStrategyMatcher{},
-				},
+				r:   oauth2.NewServerMetadataResolver(&endpoint.Endpoint{URL: oidcSrv.URL}),
+				a:   oauth2.Expectation{ScopesMatcher: oauth2.ExactScopeStrategyMatcher{}},
 				sf:  &SubjectInfo{IDFrom: "sub"},
 				ttl: &zeroTTL,
 			},
@@ -1254,14 +1143,18 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 		{
 			uc: "with default cache, without cache hit and successful execution",
 			authenticator: &oauth2IntrospectionAuthenticator{
-				e: endpoint.Endpoint{
-					URL:    srv.URL,
-					Method: http.MethodPost,
-					Headers: map[string]string{
-						"Content-Type": "application/x-www-form-urlencoded",
-						"Accept":       "application/json",
-					},
-				},
+				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
+					return oauth2.ServerMetadata{
+						IntrospectionEndpoint: &endpoint.Endpoint{
+							URL:    srv.URL,
+							Method: http.MethodPost,
+							Headers: map[string]string{
+								"Content-Type": "application/x-www-form-urlencoded",
+								"Accept":       "application/json",
+							},
+						},
+					}, nil
+				}),
 				a: oauth2.Expectation{
 					TrustedIssuers: []string{"foobar"},
 					ScopesMatcher:  oauth2.ExactScopeStrategyMatcher{},
@@ -1338,14 +1231,18 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 		{
 			uc: "with default cache, with bad cache hit and successful execution",
 			authenticator: &oauth2IntrospectionAuthenticator{
-				e: endpoint.Endpoint{
-					URL:    srv.URL,
-					Method: http.MethodPost,
-					Headers: map[string]string{
-						"Content-Type": "application/x-www-form-urlencoded",
-						"Accept":       "application/json",
-					},
-				},
+				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
+					return oauth2.ServerMetadata{
+						IntrospectionEndpoint: &endpoint.Endpoint{
+							URL:    srv.URL,
+							Method: http.MethodPost,
+							Headers: map[string]string{
+								"Content-Type": "application/x-www-form-urlencoded",
+								"Accept":       "application/json",
+							},
+						},
+					}, nil
+				}),
 				a: oauth2.Expectation{
 					TrustedIssuers: []string{"foobar"},
 					ScopesMatcher:  oauth2.ExactScopeStrategyMatcher{},
@@ -1423,14 +1320,18 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 		{
 			uc: "with default cache, with cache hit and successful execution",
 			authenticator: &oauth2IntrospectionAuthenticator{
-				e: endpoint.Endpoint{
-					URL:    srv.URL,
-					Method: http.MethodPost,
-					Headers: map[string]string{
-						"Content-Type": "application/x-www-form-urlencoded",
-						"Accept":       "application/json",
-					},
-				},
+				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
+					return oauth2.ServerMetadata{
+						IntrospectionEndpoint: &endpoint.Endpoint{
+							URL:    srv.URL,
+							Method: http.MethodPost,
+							Headers: map[string]string{
+								"Content-Type": "application/x-www-form-urlencoded",
+								"Accept":       "application/json",
+							},
+						},
+					}, nil
+				}),
 				a: oauth2.Expectation{
 					TrustedIssuers: []string{"foobar"},
 					ScopesMatcher:  oauth2.ExactScopeStrategyMatcher{},
