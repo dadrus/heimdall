@@ -80,9 +80,9 @@ type jwtAuthenticator struct {
 func newJwtAuthenticator(id string, rawConfig map[string]any) (*jwtAuthenticator, error) { // nolint: funlen
 	type Config struct {
 		JWKSEndpoint                        *endpoint.Endpoint                  `mapstructure:"jwks_endpoint"        validate:"required_without=MetadataEndpoint,excluded_with=MetadataEndpoint"` //nolint:lll,tagalign
-		MetadataEndpoint                    *endpoint.Endpoint                  `mapstructure:"metadata_endpoint"    validate:"required_without=JWKSEndpoint,excluded_with=JWKSEndpoint"`         //nolint:lll
-		Assertions                          oauth2.Expectation                  `mapstructure:"assertions"           validate:"required_with=JWKSEndpoint"`                                       //nolint:lll
-		SubjectInfo                         SubjectInfo                         `mapstructure:"subject"              validate:"-"`                                                                //nolint:lll
+		MetadataEndpoint                    *endpoint.Endpoint                  `mapstructure:"metadata_endpoint"    validate:"required_without=JWKSEndpoint,excluded_with=JWKSEndpoint"`         //nolint:lll,tagalign
+		Assertions                          oauth2.Expectation                  `mapstructure:"assertions"           validate:"required_with=JWKSEndpoint"`                                       //nolint:lll,tagalign
+		SubjectInfo                         SubjectInfo                         `mapstructure:"subject"              validate:"-"`                                                                //nolint:lll,tagalign
 		AuthDataSource                      extractors.CompositeExtractStrategy `mapstructure:"jwt_source"`
 		CacheTTL                            *time.Duration                      `mapstructure:"cache_ttl"`
 		AllowFallbackOnError                bool                                `mapstructure:"allow_fallback_on_error"`
