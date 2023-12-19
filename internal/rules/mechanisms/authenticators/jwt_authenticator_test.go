@@ -982,7 +982,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			authenticator: &jwtAuthenticator{
 				id: "auth3",
 				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
-					return oauth2.ServerMetadata{JWKSEndpoint: &endpoint.Endpoint{URL: srv.URL + "{{ Foo }"}}, nil
+					return oauth2.ServerMetadata{JWKSEndpoint: &endpoint.Endpoint{URL: srv.URL + "{{ Foo }}"}}, nil
 				}),
 				ttl: &disabledTTL,
 			},
@@ -1567,7 +1567,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
 					return oauth2.ServerMetadata{
 						JWKSEndpoint: &endpoint.Endpoint{
-							URL:     srv.URL + "/{{ .JWT.iss }}",
+							URL:     srv.URL + "/{{ .TokenIssuer }}",
 							Headers: map[string]string{"Accept": "application/json"},
 						},
 					}, nil
@@ -1589,7 +1589,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				t.Helper()
 
 				ep := &endpoint.Endpoint{
-					URL:     srv.URL + "/{{ .JWT.iss }}",
+					URL:     srv.URL + "/{{ .TokenIssuer }}",
 					Headers: map[string]string{"Accept": "application/json"},
 				}
 				cacheKey := auth.calculateCacheKey(ep, kidKeyWithoutCert)
@@ -1717,7 +1717,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 		{
 			uc: "successful without cache hit using key & cert with disabled jwk validation using metadata discovery",
 			authenticator: &jwtAuthenticator{
-				r: oauth2.NewServerMetadataResolver(&endpoint.Endpoint{URL: oidcSrv.URL + "/{{ .JWT.iss }}"}),
+				r: oauth2.NewServerMetadataResolver(&endpoint.Endpoint{URL: oidcSrv.URL + "/{{ .TokenIssuer }}"}),
 				a: oauth2.Expectation{
 					AllowedAlgorithms: []string{"ES384"},
 					ScopesMatcher:     oauth2.ExactScopeStrategyMatcher{},

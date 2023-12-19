@@ -24,6 +24,7 @@ import (
 	"errors"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/goccy/go-json"
@@ -283,10 +284,8 @@ func (a *jwtAuthenticator) getCacheTTL(key *jose.JSONWebKey) time.Duration {
 	}
 }
 
-func (a *jwtAuthenticator) serverMetadata(
-	ctx heimdall.Context, tokenClaims map[string]any,
-) (oauth2.ServerMetadata, error) {
-	metadata, err := a.r.Get(ctx.AppContext(), map[string]any{"JWT": tokenClaims})
+func (a *jwtAuthenticator) serverMetadata(ctx heimdall.Context, claims map[string]any) (oauth2.ServerMetadata, error) {
+	metadata, err := a.r.Get(ctx.AppContext(), map[string]any{"TokenIssuer": claims["iss"]})
 	if err != nil {
 		return oauth2.ServerMetadata{}, errorchain.NewWithMessage(heimdall.ErrInternal,
 			"failed retrieving oauth2 server metadata").CausedBy(err).WithErrorContext(a)
@@ -436,13 +435,17 @@ func (a *jwtAuthenticator) getKey(
 }
 
 func (a *jwtAuthenticator) fetchJWKS(
-	ctx context.Context, ep *endpoint.Endpoint, tokenClaims map[string]any,
+	ctx context.Context, ep *endpoint.Endpoint, claims map[string]any,
 ) (*jose.JSONWebKeySet, error) {
 	logger := zerolog.Ctx(ctx)
 
 	logger.Debug().Msg("Retrieving JWKS from configured endpoint")
 
 	req, err := ep.CreateRequest(ctx, nil, endpoint.RenderFunc(func(value string) (string, error) {
+		if !strings.Contains(value, "{{") || !strings.Contains(value, "}}") {
+			return value, nil
+		}
+
 		tpl, err := template.New(value)
 		if err != nil {
 			return "", errorchain.NewWithMessage(heimdall.ErrInternal, "failed to create template").
@@ -450,7 +453,7 @@ func (a *jwtAuthenticator) fetchJWKS(
 				CausedBy(err)
 		}
 
-		return tpl.Render(map[string]any{"JWT": tokenClaims})
+		return tpl.Render(map[string]any{"TokenIssuer": claims["iss"]})
 	}))
 	if err != nil {
 		return nil, errorchain.
