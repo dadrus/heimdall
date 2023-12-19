@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/goccy/go-json"
 	"github.com/stretchr/testify/assert"
@@ -19,9 +20,6 @@ import (
 func TestNewServerMetadataResolver(t *testing.T) {
 	t.Parallel()
 
-	falseValue := false
-	trueValue := true
-
 	for _, tc := range []struct {
 		uc  string
 		ep  endpoint.Endpoint
@@ -31,30 +29,30 @@ func TestNewServerMetadataResolver(t *testing.T) {
 			uc: "only URL is set",
 			ep: endpoint.Endpoint{URL: "https://foo.bar"},
 			exp: endpoint.Endpoint{
-				URL:              "https://foo.bar",
-				Method:           http.MethodGet,
-				Headers:          map[string]string{"Accept": "application/json"},
-				HTTPCacheEnabled: &trueValue,
+				URL:       "https://foo.bar",
+				Method:    http.MethodGet,
+				Headers:   map[string]string{"Accept": "application/json"},
+				HTTPCache: &endpoint.HTTPCache{Enabled: true, DefaultTTL: 5 * time.Minute},
 			},
 		},
 		{
 			uc: "URL is set and http cache is disabled",
-			ep: endpoint.Endpoint{URL: "https://foo.bar", HTTPCacheEnabled: &falseValue},
+			ep: endpoint.Endpoint{URL: "https://foo.bar", HTTPCache: &endpoint.HTTPCache{Enabled: false}},
 			exp: endpoint.Endpoint{
-				URL:              "https://foo.bar",
-				Method:           http.MethodGet,
-				Headers:          map[string]string{"Accept": "application/json"},
-				HTTPCacheEnabled: &falseValue,
+				URL:       "https://foo.bar",
+				Method:    http.MethodGet,
+				Headers:   map[string]string{"Accept": "application/json"},
+				HTTPCache: &endpoint.HTTPCache{Enabled: false},
 			},
 		},
 		{
 			uc: "URL and method are set",
 			ep: endpoint.Endpoint{URL: "https://foo.bar", Method: http.MethodPost},
 			exp: endpoint.Endpoint{
-				URL:              "https://foo.bar",
-				Method:           http.MethodPost,
-				Headers:          map[string]string{"Accept": "application/json"},
-				HTTPCacheEnabled: &trueValue,
+				URL:       "https://foo.bar",
+				Method:    http.MethodPost,
+				Headers:   map[string]string{"Accept": "application/json"},
+				HTTPCache: &endpoint.HTTPCache{Enabled: true, DefaultTTL: 5 * time.Minute},
 			},
 		},
 		{
@@ -67,17 +65,31 @@ func TestNewServerMetadataResolver(t *testing.T) {
 					"Accept": "application/json",
 					"X-Foo":  "bar",
 				},
-				HTTPCacheEnabled: &trueValue,
+				HTTPCache: &endpoint.HTTPCache{Enabled: true, DefaultTTL: 5 * time.Minute},
 			},
 		},
 		{
 			uc: "URL and accept-type header are set",
 			ep: endpoint.Endpoint{URL: "https://foo.bar", Headers: map[string]string{"Accept": "text/html"}},
 			exp: endpoint.Endpoint{
-				URL:              "https://foo.bar",
-				Method:           http.MethodGet,
-				Headers:          map[string]string{"Accept": "text/html"},
-				HTTPCacheEnabled: &trueValue,
+				URL:       "https://foo.bar",
+				Method:    http.MethodGet,
+				Headers:   map[string]string{"Accept": "text/html"},
+				HTTPCache: &endpoint.HTTPCache{Enabled: true, DefaultTTL: 5 * time.Minute},
+			},
+		},
+		{
+			uc: "URL, accept-type header and explicitly enabled cache with cache ttl are set",
+			ep: endpoint.Endpoint{
+				URL:       "https://foo.bar",
+				Headers:   map[string]string{"Accept": "text/html"},
+				HTTPCache: &endpoint.HTTPCache{Enabled: true, DefaultTTL: 1 * time.Minute},
+			},
+			exp: endpoint.Endpoint{
+				URL:       "https://foo.bar",
+				Method:    http.MethodGet,
+				Headers:   map[string]string{"Accept": "text/html"},
+				HTTPCache: &endpoint.HTTPCache{Enabled: true, DefaultTTL: 1 * time.Minute},
 			},
 		},
 	} {

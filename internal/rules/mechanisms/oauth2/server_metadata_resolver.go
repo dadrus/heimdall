@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/goccy/go-json"
 
@@ -38,10 +39,8 @@ func NewServerMetadataResolver(ep *endpoint.Endpoint) ServerMetadataResolver {
 		ep.Method = http.MethodGet
 	}
 
-	if ep.HTTPCacheEnabled == nil {
-		cacheEnabled := true
-
-		ep.HTTPCacheEnabled = &cacheEnabled
+	if ep.HTTPCache == nil {
+		ep.HTTPCache = &endpoint.HTTPCache{Enabled: true, DefaultTTL: 5 * time.Minute}
 	}
 
 	return serverMetadataResolver{e: ep}
