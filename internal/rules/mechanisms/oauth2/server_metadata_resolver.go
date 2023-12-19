@@ -17,13 +17,15 @@ import (
 )
 
 type ServerMetadataResolver interface {
-	Get(ctx context.Context, args map[string]any) (ServerMetadata, error)
+	Get(ctx context.Context, args map[string]any, verifyMetadata bool) (ServerMetadata, error)
 }
 
-type ResolverAdapterFunc func(ctx context.Context, args map[string]any) (ServerMetadata, error)
+type ResolverAdapterFunc func(ctx context.Context, args map[string]any, verifyMetadata bool) (ServerMetadata, error)
 
-func (f ResolverAdapterFunc) Get(ctx context.Context, args map[string]any) (ServerMetadata, error) {
-	return f(ctx, args)
+func (f ResolverAdapterFunc) Get(
+	ctx context.Context, args map[string]any, verifyMetadata bool,
+) (ServerMetadata, error) {
+	return f(ctx, args, verifyMetadata)
 }
 
 func NewServerMetadataResolver(ep *endpoint.Endpoint) ServerMetadataResolver {
@@ -50,7 +52,9 @@ type serverMetadataResolver struct {
 	e *endpoint.Endpoint
 }
 
-func (r serverMetadataResolver) Get(ctx context.Context, args map[string]any) (ServerMetadata, error) {
+func (r serverMetadataResolver) Get(
+	ctx context.Context, args map[string]any, verifyMetadata bool,
+) (ServerMetadata, error) {
 	req, err := r.e.CreateRequest(ctx, nil, endpoint.RenderFunc(func(value string) (string, error) {
 		tpl, err := template.New(value)
 		if err != nil {
@@ -84,7 +88,18 @@ func (r serverMetadataResolver) Get(ctx context.Context, args map[string]any) (S
 			NewWithMessagef(heimdall.ErrCommunication, "unexpected response code: %v", resp.StatusCode)
 	}
 
-	return r.decodeResponse(resp)
+	sm, err := r.decodeResponse(resp)
+	if err != nil {
+		return ServerMetadata{}, err
+	}
+
+	if verifyMetadata {
+		if err = sm.verify(req.URL.String()); err != nil {
+			return ServerMetadata{}, err
+		}
+	}
+
+	return sm, nil
 }
 
 func (r serverMetadataResolver) decodeResponse(resp *http.Response) (ServerMetadata, error) {

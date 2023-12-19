@@ -319,7 +319,7 @@ func TestServerMetadataResolverGet(t *testing.T) {
 				rw.Header().Set("Content-Type", "application/json")
 
 				err := json.NewEncoder(rw).Encode(metadata{
-					Issuer:                             "heimdall.test",
+					Issuer:                             fmt.Sprintf("%s/bar", srv.URL),
 					JWKSEndpointURL:                    "https://foo.bar/jwks",
 					IntrospectionEndpointURL:           "https://foo.bar/introspection",
 					TokenEndpointAuthSigningAlgorithms: []string{"RS256", "PS384"},
@@ -332,7 +332,7 @@ func TestServerMetadataResolverGet(t *testing.T) {
 				require.True(t, endpointCalled)
 				require.NoError(t, err)
 
-				assert.Equal(t, "heimdall.test", sm.Issuer)
+				assert.Equal(t, fmt.Sprintf("%s/bar", srv.URL), sm.Issuer)
 
 				exp := endpoint.Endpoint{
 					URL:     "https://foo.bar/jwks",
@@ -352,6 +352,42 @@ func TestServerMetadataResolverGet(t *testing.T) {
 				assert.Equal(t, exp, *sm.IntrospectionEndpoint)
 			},
 		},
+		{
+			uc:   "valid server response with invalid issuer for metadata URL",
+			args: map[string]any{"Foo": "bar"},
+			buildURL: func(t *testing.T, baseURL string) string {
+				t.Helper()
+
+				return fmt.Sprintf("%s/.well-known/oauth-authorization-server/issuer1", baseURL)
+			},
+			checkRequest: func(t *testing.T, req *http.Request) {
+				t.Helper()
+
+				assert.Equal(t, "/.well-known/oauth-authorization-server/issuer1", req.URL.Path)
+				assert.Equal(t, http.MethodGet, req.Method)
+				assert.Equal(t, "application/json", req.Header.Get("Accept"))
+			},
+			createResponse: func(t *testing.T, rw http.ResponseWriter) {
+				t.Helper()
+
+				rw.Header().Set("Content-Type", "application/json")
+
+				err := json.NewEncoder(rw).Encode(metadata{
+					Issuer:                             fmt.Sprintf("%s/issuer2", srv.URL),
+					JWKSEndpointURL:                    "https://foo.bar/jwks",
+					IntrospectionEndpointURL:           "https://foo.bar/introspection",
+					TokenEndpointAuthSigningAlgorithms: []string{"RS256", "PS384"},
+				})
+				require.NoError(t, err)
+			},
+			assert: func(t *testing.T, endpointCalled bool, err error, sm ServerMetadata) {
+				t.Helper()
+
+				require.True(t, endpointCalled)
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+			},
+		},
 	} {
 		t.Run(tc.uc, func(t *testing.T) {
 			// GIVEN
@@ -368,7 +404,7 @@ func TestServerMetadataResolverGet(t *testing.T) {
 			resolver := NewServerMetadataResolver(&endpoint.Endpoint{URL: tc.buildURL(t, srv.URL)})
 
 			// WHEN
-			sm, err := resolver.Get(context.TODO(), tc.args)
+			sm, err := resolver.Get(context.TODO(), tc.args, true)
 
 			// THEN
 			tc.assert(t, endpointCalled, err, sm)
