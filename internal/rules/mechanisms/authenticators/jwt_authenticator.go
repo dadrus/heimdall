@@ -448,7 +448,8 @@ func (a *jwtAuthenticator) fetchJWKS(
 	logger.Debug().Msg("Retrieving JWKS from configured endpoint")
 
 	req, err := ep.CreateRequest(ctx, nil, endpoint.RenderFunc(func(value string) (string, error) {
-		if !strings.Contains(value, "{{") || !strings.Contains(value, "}}") {
+		// ignoring closing braces here as it would anyway result in a broken template leading to an error
+		if !strings.Contains(value, "{{") {
 			return value, nil
 		}
 
