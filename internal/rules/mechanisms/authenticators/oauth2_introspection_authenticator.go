@@ -65,6 +65,7 @@ type oauth2IntrospectionAuthenticator struct {
 	ads                  extractors.AuthDataExtractStrategy
 	ttl                  *time.Duration
 	allowFallbackOnError bool
+	validateMetadata     bool
 }
 
 func newOAuth2IntrospectionAuthenticator(id string, rawConfig map[string]any) (
@@ -72,13 +73,14 @@ func newOAuth2IntrospectionAuthenticator(id string, rawConfig map[string]any) (
 	error,
 ) {
 	type Config struct {
-		IntrospectionEndpoint *endpoint.Endpoint                  `mapstructure:"introspection_endpoint"  validate:"required_without=MetadataEndpoint,excluded_with=MetadataEndpoint"`           //nolint:lll,tagalign
-		MetadataEndpoint      *endpoint.Endpoint                  `mapstructure:"metadata_endpoint"       validate:"required_without=IntrospectionEndpoint,excluded_with=IntrospectionEndpoint"` //nolint:lll
-		Assertions            oauth2.Expectation                  `mapstructure:"assertions"              validate:"required"`
-		SubjectInfo           SubjectInfo                         `mapstructure:"subject"                 validate:"-"`
-		AuthDataSource        extractors.CompositeExtractStrategy `mapstructure:"token_source"`
-		CacheTTL              *time.Duration                      `mapstructure:"cache_ttl"`
-		AllowFallbackOnError  bool                                `mapstructure:"allow_fallback_on_error"`
+		IntrospectionEndpoint               *endpoint.Endpoint                  `mapstructure:"introspection_endpoint"  validate:"required_without=MetadataEndpoint,excluded_with=MetadataEndpoint"`           //nolint:lll,tagalign
+		MetadataEndpoint                    *endpoint.Endpoint                  `mapstructure:"metadata_endpoint"       validate:"required_without=IntrospectionEndpoint,excluded_with=IntrospectionEndpoint"` //nolint:lll
+		Assertions                          oauth2.Expectation                  `mapstructure:"assertions"              validate:"required"`                                                                   //nolint:lll
+		SubjectInfo                         SubjectInfo                         `mapstructure:"subject"                 validate:"-"`                                                                          //nolint:lll
+		AuthDataSource                      extractors.CompositeExtractStrategy `mapstructure:"token_source"`
+		CacheTTL                            *time.Duration                      `mapstructure:"cache_ttl"`
+		AllowFallbackOnError                bool                                `mapstructure:"allow_fallback_on_error"`
+		DisableIssuerIdentifierVerification bool                                `mapstructure:"disable_issuer_identifier_verification"` //nolint:lll
 	}
 
 	var conf Config
@@ -137,9 +139,11 @@ func newOAuth2IntrospectionAuthenticator(id string, rawConfig map[string]any) (
 				ep.Method = http.MethodPost
 			}
 
-			return oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
-				return oauth2.ServerMetadata{IntrospectionEndpoint: ep}, nil
-			})
+			return oauth2.ResolverAdapterFunc(
+				func(_ context.Context, _ map[string]any, _ bool) (oauth2.ServerMetadata, error) {
+					return oauth2.ServerMetadata{IntrospectionEndpoint: ep}, nil
+				},
+			)
 		},
 	)
 
@@ -151,6 +155,7 @@ func newOAuth2IntrospectionAuthenticator(id string, rawConfig map[string]any) (
 		sf:                   &conf.SubjectInfo,
 		ttl:                  conf.CacheTTL,
 		allowFallbackOnError: conf.AllowFallbackOnError,
+		validateMetadata:     !conf.DisableIssuerIdentifierVerification,
 	}, nil
 }
 
@@ -224,7 +229,7 @@ func (a *oauth2IntrospectionAuthenticator) ID() string {
 func (a *oauth2IntrospectionAuthenticator) serverMetadata(ctx heimdall.Context, token string) (oauth2.ServerMetadata, error) {
 	// Pass the token into the template.
 	// parseJWT can be used in the template to access other claims from the token.
-	metadata, err := a.r.Get(ctx.AppContext(), map[string]any{"Token": token})
+	metadata, err := a.r.Get(ctx.AppContext(), map[string]any{"Token": token}, a.validateMetadata)
 	if err != nil {
 		var cause *errorchain.ErrorChain
 		errors.As(err, &cause)

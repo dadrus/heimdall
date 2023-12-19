@@ -144,7 +144,7 @@ assertions:
 				// assert endpoint config
 				_, ok := auth.r.(oauth2.ResolverAdapterFunc)
 				require.True(t, ok)
-				md, err := auth.r.Get(context.TODO(), nil)
+				md, err := auth.r.Get(context.TODO(), nil, false)
 				assert.Equal(t, "http://foobar.local", md.IntrospectionEndpoint.URL)
 				assert.Equal(t, http.MethodPost, md.IntrospectionEndpoint.Method)
 				assert.Len(t, md.IntrospectionEndpoint.Headers, 2)
@@ -218,7 +218,7 @@ allow_fallback_on_error: true
 				// assert endpoint config
 				_, ok := auth.r.(oauth2.ResolverAdapterFunc)
 				require.True(t, ok)
-				md, err := auth.r.Get(context.TODO(), nil)
+				md, err := auth.r.Get(context.TODO(), nil, false)
 				assert.Equal(t, "http://test.com", md.IntrospectionEndpoint.URL)
 				assert.Equal(t, http.MethodPatch, md.IntrospectionEndpoint.Method)
 				assert.Len(t, md.IntrospectionEndpoint.Headers, 2)
@@ -660,7 +660,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 			uc: "with disabled cache and endpoint communication error (dns)",
 			authenticator: &oauth2IntrospectionAuthenticator{
 				id: "auth3",
-				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
+				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any, _ bool) (oauth2.ServerMetadata, error) {
 					return oauth2.ServerMetadata{IntrospectionEndpoint: &endpoint.Endpoint{URL: "http://introspection.heimdall.test.local"}}, nil
 				}),
 				ttl: &zeroTTL,
@@ -693,7 +693,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 			uc: "with disabled cache and unexpected response code from the endpoint",
 			authenticator: &oauth2IntrospectionAuthenticator{
 				id: "auth3",
-				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
+				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any, _ bool) (oauth2.ServerMetadata, error) {
 					return oauth2.ServerMetadata{IntrospectionEndpoint: &endpoint.Endpoint{URL: srv.URL}}, nil
 				}),
 				ttl: &zeroTTL,
@@ -767,7 +767,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 			uc: "with disabled cache and failing unmarshalling of the service response",
 			authenticator: &oauth2IntrospectionAuthenticator{
 				id: "auth3",
-				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
+				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any, _ bool) (oauth2.ServerMetadata, error) {
 					return oauth2.ServerMetadata{
 						IntrospectionEndpoint: &endpoint.Endpoint{
 							URL:    srv.URL,
@@ -829,7 +829,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 			uc: "with disabled cache and failing response validation (token not active)",
 			authenticator: &oauth2IntrospectionAuthenticator{
 				id: "auth3",
-				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
+				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any, _ bool) (oauth2.ServerMetadata, error) {
 					return oauth2.ServerMetadata{
 						IntrospectionEndpoint: &endpoint.Endpoint{
 							URL:    srv.URL,
@@ -895,7 +895,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 			uc: "with disabled cache and failing response validation (issuer not trusted)",
 			authenticator: &oauth2IntrospectionAuthenticator{
 				id: "auth3",
-				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
+				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any, _ bool) (oauth2.ServerMetadata, error) {
 					return oauth2.ServerMetadata{
 						IntrospectionEndpoint: &endpoint.Endpoint{
 							URL:    srv.URL,
@@ -971,7 +971,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 		{
 			uc: "with disabled cache and successful execution",
 			authenticator: &oauth2IntrospectionAuthenticator{
-				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
+				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any, _ bool) (oauth2.ServerMetadata, error) {
 					return oauth2.ServerMetadata{
 						IntrospectionEndpoint: &endpoint.Endpoint{
 							URL:    srv.URL,
@@ -1143,7 +1143,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 		{
 			uc: "with default cache, without cache hit and successful execution",
 			authenticator: &oauth2IntrospectionAuthenticator{
-				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
+				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any, _ bool) (oauth2.ServerMetadata, error) {
 					return oauth2.ServerMetadata{
 						IntrospectionEndpoint: &endpoint.Endpoint{
 							URL:    srv.URL,
@@ -1231,7 +1231,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 		{
 			uc: "with default cache, with bad cache hit and successful execution",
 			authenticator: &oauth2IntrospectionAuthenticator{
-				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
+				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any, _ bool) (oauth2.ServerMetadata, error) {
 					return oauth2.ServerMetadata{
 						IntrospectionEndpoint: &endpoint.Endpoint{
 							URL:    srv.URL,
@@ -1320,7 +1320,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 		{
 			uc: "with default cache, with cache hit and successful execution",
 			authenticator: &oauth2IntrospectionAuthenticator{
-				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
+				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any, _ bool) (oauth2.ServerMetadata, error) {
 					return oauth2.ServerMetadata{
 						IntrospectionEndpoint: &endpoint.Endpoint{
 							URL:    srv.URL,
