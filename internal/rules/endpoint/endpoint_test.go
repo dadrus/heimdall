@@ -526,7 +526,7 @@ func TestEndpointHash(t *testing.T) {
 
 	assert.NotEqual(t, hash1, hash2)
 	assert.NotEqual(t, hash1, hash3)
-	assert.NotEqual(t, hash1, hash4)
+	assert.Equal(t, hash1, hash4)
 	assert.NotEqual(t, hash2, hash3)
 	assert.NotEqual(t, hash2, hash4)
 	assert.NotEqual(t, hash3, hash4)

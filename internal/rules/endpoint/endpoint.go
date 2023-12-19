@@ -20,7 +20,6 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha256"
-	"encoding/binary"
 	"errors"
 	"fmt"
 	"io"
@@ -182,23 +181,10 @@ func (e Endpoint) readResponse(resp *http.Response) ([]byte, error) {
 }
 
 func (e Endpoint) Hash() []byte {
-	const int64BytesCount = 8
-
 	hash := sha256.New()
 
 	hash.Write(stringx.ToBytes(e.URL))
 	hash.Write(stringx.ToBytes(e.Method))
-
-	if e.Retry != nil {
-		maxDelayBytes := make([]byte, int64BytesCount)
-		binary.LittleEndian.PutUint64(maxDelayBytes, uint64(e.Retry.MaxDelay))
-
-		giveUpAfterBytes := make([]byte, int64BytesCount)
-		binary.LittleEndian.PutUint64(giveUpAfterBytes, uint64(e.Retry.GiveUpAfter))
-
-		hash.Write(maxDelayBytes)
-		hash.Write(giveUpAfterBytes)
-	}
 
 	buf := bytes.NewBufferString("")
 	for k, v := range e.Headers {
