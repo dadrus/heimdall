@@ -74,7 +74,7 @@ require (
 	gocloud.dev v0.35.0
 	golang.org/x/exp v0.0.0-20231214170342-aacd6d4b4611
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20231212172506-995d672761c0
-	google.golang.org/grpc v1.60.0
+	google.golang.org/grpc v1.60.1
 	google.golang.org/protobuf v1.31.0
 	gopkg.in/square/go-jose.v2 v2.6.0
 	gopkg.in/yaml.v3 v3.0.1
