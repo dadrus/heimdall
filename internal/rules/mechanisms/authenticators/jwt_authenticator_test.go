@@ -1264,6 +1264,10 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 
 				ads.EXPECT().GetAuthData(ctx).Return(jwtSignedWithKeyOnlyJWK, nil)
 				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil)
+				// http cache
+				cch.EXPECT().Set(mock.Anything, mock.Anything, mock.Anything, mock.MatchedBy(
+					func(ttl time.Duration) bool { return ttl.Round(time.Minute) == 5*time.Minute },
+				))
 			},
 			instructServer: func(t *testing.T) {
 				t.Helper()
@@ -1765,6 +1769,10 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				ads.EXPECT().GetAuthData(ctx).Return(jwtSignedWithKeyAndCertJWK, nil)
 				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil)
 				cch.EXPECT().Set(mock.Anything, cacheKey, &keys[0], *auth.ttl)
+				// http cache
+				cch.EXPECT().Set(mock.Anything, mock.Anything, mock.Anything, mock.MatchedBy(
+					func(ttl time.Duration) bool { return ttl.Round(time.Minute) == 5*time.Minute },
+				))
 			},
 			instructServer: func(t *testing.T) {
 				t.Helper()
