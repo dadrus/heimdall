@@ -99,7 +99,6 @@ func TestServerMetadataResolverGet(t *testing.T) {
 		Issuer                             string   `json:"issuer"`
 		JWKSEndpointURL                    string   `json:"jwks_uri"`
 		IntrospectionEndpointURL           string   `json:"introspection_endpoint"`
-		UserInfoEndpointURL                string   `json:"userinfo_endpoint"`
 		TokenEndpointAuthSigningAlgorithms []string `json:"token_endpoint_auth_signing_alg_values_supported"`
 	}
 
@@ -216,6 +215,78 @@ func TestServerMetadataResolverGet(t *testing.T) {
 			},
 		},
 		{
+			uc: "server's response contains jwks_uri with template",
+			buildURL: func(t *testing.T, baseURL string) string {
+				t.Helper()
+
+				return baseURL
+			},
+			checkRequest: func(t *testing.T, req *http.Request) {
+				t.Helper()
+
+				assert.Equal(t, "/", req.URL.Path)
+				assert.Equal(t, http.MethodGet, req.Method)
+				assert.Equal(t, "application/json", req.Header.Get("Accept"))
+			},
+			createResponse: func(t *testing.T, rw http.ResponseWriter) {
+				t.Helper()
+
+				rw.Header().Set("Content-Type", "application/json")
+
+				err := json.NewEncoder(rw).Encode(metadata{
+					Issuer:                             "heimdall.test",
+					JWKSEndpointURL:                    "https://foo.bar/jwks/{{ .Foo }}",
+					IntrospectionEndpointURL:           "https://foo.bar/introspection",
+					TokenEndpointAuthSigningAlgorithms: []string{"RS256", "PS384"},
+				})
+				require.NoError(t, err)
+			},
+			assert: func(t *testing.T, endpointCalled bool, err error, sm ServerMetadata) {
+				t.Helper()
+
+				require.True(t, endpointCalled)
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorContains(t, err, "jwks_uri contains a template")
+			},
+		},
+		{
+			uc: "server's response contains introspection_endpoint with template",
+			buildURL: func(t *testing.T, baseURL string) string {
+				t.Helper()
+
+				return baseURL
+			},
+			checkRequest: func(t *testing.T, req *http.Request) {
+				t.Helper()
+
+				assert.Equal(t, "/", req.URL.Path)
+				assert.Equal(t, http.MethodGet, req.Method)
+				assert.Equal(t, "application/json", req.Header.Get("Accept"))
+			},
+			createResponse: func(t *testing.T, rw http.ResponseWriter) {
+				t.Helper()
+
+				rw.Header().Set("Content-Type", "application/json")
+
+				err := json.NewEncoder(rw).Encode(metadata{
+					Issuer:                             "heimdall.test",
+					JWKSEndpointURL:                    "https://foo.bar/jwks",
+					IntrospectionEndpointURL:           "https://foo.bar/{{ .Foo }}/introspection",
+					TokenEndpointAuthSigningAlgorithms: []string{"RS256", "PS384"},
+				})
+				require.NoError(t, err)
+			},
+			assert: func(t *testing.T, endpointCalled bool, err error, sm ServerMetadata) {
+				t.Helper()
+
+				require.True(t, endpointCalled)
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorContains(t, err, "introspection_endpoint contains a template")
+			},
+		},
+		{
 			uc:   "valid server response for templated URL",
 			args: map[string]any{"Foo": "bar"},
 			buildURL: func(t *testing.T, baseURL string) string {
@@ -239,7 +310,6 @@ func TestServerMetadataResolverGet(t *testing.T) {
 					Issuer:                             "heimdall.test",
 					JWKSEndpointURL:                    "https://foo.bar/jwks",
 					IntrospectionEndpointURL:           "https://foo.bar/introspection",
-					UserInfoEndpointURL:                "https://foo.bar/userinfo",
 					TokenEndpointAuthSigningAlgorithms: []string{"RS256", "PS384"},
 				})
 				require.NoError(t, err)

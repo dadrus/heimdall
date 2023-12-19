@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 	"net/url"
+	"strings"
 
 	"github.com/goccy/go-json"
 
@@ -98,6 +99,18 @@ func (r serverMetadataResolver) decodeResponse(resp *http.Response) (ServerMetad
 	if err := json.NewDecoder(resp.Body).Decode(&spec); err != nil {
 		return ServerMetadata{}, errorchain.NewWithMessage(heimdall.ErrInternal,
 			"failed to unmarshal received oauth2 server metadata document").CausedBy(err)
+	}
+
+	if strings.Contains(spec.JWKSEndpointURL, "{{") &&
+		strings.Contains(spec.JWKSEndpointURL, "}}") {
+		return ServerMetadata{}, errorchain.NewWithMessage(heimdall.ErrConfiguration,
+			"received jwks_uri contains a template, which is not allowed")
+	}
+
+	if strings.Contains(spec.IntrospectionEndpointURL, "{{") &&
+		strings.Contains(spec.IntrospectionEndpointURL, "}}") {
+		return ServerMetadata{}, errorchain.NewWithMessage(heimdall.ErrConfiguration,
+			"received introspection_endpoint contains a template, which is not allowed")
 	}
 
 	var (
