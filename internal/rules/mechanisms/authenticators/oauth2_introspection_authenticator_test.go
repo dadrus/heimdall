@@ -146,6 +146,7 @@ assertions:
 				_, ok := auth.r.(oauth2.ResolverAdapterFunc)
 				require.True(t, ok)
 				md, err := auth.r.Get(context.TODO(), nil, false)
+				require.NoError(t, err)
 				assert.Equal(t, "http://foobar.local", md.IntrospectionEndpoint.URL)
 				assert.Equal(t, http.MethodPost, md.IntrospectionEndpoint.Method)
 				assert.Len(t, md.IntrospectionEndpoint.Headers, 2)
@@ -220,6 +221,7 @@ allow_fallback_on_error: true
 				_, ok := auth.r.(oauth2.ResolverAdapterFunc)
 				require.True(t, ok)
 				md, err := auth.r.Get(context.TODO(), nil, false)
+				require.NoError(t, err)
 				assert.Equal(t, "http://test.com", md.IntrospectionEndpoint.URL)
 				assert.Equal(t, http.MethodPatch, md.IntrospectionEndpoint.Method)
 				assert.Len(t, md.IntrospectionEndpoint.Headers, 2)
@@ -737,13 +739,14 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.ContextMock,
-				_ *mocks.CacheMock,
+				cch *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *oauth2IntrospectionAuthenticator,
 			) {
 				t.Helper()
 
 				ads.EXPECT().GetAuthData(ctx).Return("test_access_token", nil)
+				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil)
 			},
 			instructServer: func(t *testing.T) {
 				t.Helper()
@@ -1066,13 +1069,18 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.ContextMock,
-				_ *mocks.CacheMock,
+				cch *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
 				_ *oauth2IntrospectionAuthenticator,
 			) {
 				t.Helper()
 
 				ads.EXPECT().GetAuthData(ctx).Return("test_access_token", nil)
+				// http cache
+				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil)
+				cch.EXPECT().Set(mock.Anything, mock.Anything, mock.Anything, mock.MatchedBy(
+					func(ttl time.Duration) bool { return ttl.Round(time.Minute) == 5*time.Minute },
+				))
 			},
 			instructServer: func(t *testing.T) {
 				t.Helper()
@@ -1110,7 +1118,6 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				checkOIDCRequest = func(req *http.Request) {
 					t.Helper()
 
-					assert.Equal(t, "application/x-www-form-urlencoded", req.Header.Get("Content-Type"))
 					assert.Equal(t, "application/json", req.Header.Get("Accept"))
 					assert.Equal(t, http.MethodGet, req.Method)
 				}
