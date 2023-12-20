@@ -524,11 +524,17 @@ HTTP headers to be sent to the endpoint.
 +
 CAUTION: These headers are not analyzed by heimdall and are just forwarded to the endpoint. E.g. if you configure the `Content-Encoding` to something like `gzip`, the service behind the used endpoint might fail to answer, as it would expect the body to be compressed.
 
-* *`enable_http_cache`* _bool_ (optional)
+* *`http_cache`* _object_ (optional)
 +
-Whether HTTP caching according to https://www.rfc-editor.org/rfc/rfc7234[RFC 7234] should be used. Defaults to `false` if not otherwise stated in the description of the configuration type, making use of the `endpoint` property. If set to `true` heimdall will strictly follow the requirements from RFC 7234 and cache the responses if possible and reuse these if still valid.
+Controls whether HTTP caching according to https://www.rfc-editor.org/rfc/rfc7234[RFC 7234] should be used. To support this, that object defines the following properties:
+
+** *`enabled`* _boolean_ (optional)
 +
-NOTE: If the endpoint referenced by the URL does not provide any explicit expiration time, no heuristic freshness lifetime is calculated. Heimdall treats such responses as not cacheable.
+Defaults to `false` if not otherwise stated in the description of the configuration type, making use of the `endpoint` property. If set to `true` heimdall will strictly follow the requirements from RFC 7234 and cache the responses if possible and reuse these if still valid.
+
+** *`cache_ttl`* _link:{{< relref "#_duration" >}}[Duration]_ (optional)
++
+Specifies how long heimdall should cache the response if the endpoint referenced by the URL does not provide any explicit expiration time (no heuristic freshness lifetime is calculated). Without configuring this property, heimdall treats such responses as not cacheable. Defaults to `0s` if not otherwise stated in the description of the configuration type making use of the `endpoint` property.
 
 .Endpoint configuration as string
 ====
