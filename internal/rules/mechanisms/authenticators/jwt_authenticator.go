@@ -490,7 +490,6 @@ func (a *jwtAuthenticator) createRequest(
 		tpl, err := template.New(value)
 		if err != nil {
 			return "", errorchain.NewWithMessage(heimdall.ErrInternal, "failed to create template").
-				WithErrorContext(a).
 				CausedBy(err)
 		}
 

@@ -201,6 +201,9 @@ assertions:
 
 				// handler id
 				assert.Equal(t, "auth1", auth.ID())
+
+				// issuer identity validation
+				assert.True(t, auth.validateMetadata)
 			},
 		},
 		{
@@ -268,6 +271,9 @@ cache_ttl: 5s`),
 
 				// handler id
 				assert.Equal(t, "auth1", auth.ID())
+
+				// issuer identity validation
+				assert.True(t, auth.validateMetadata)
 			},
 		},
 		{
@@ -297,6 +303,7 @@ subject:
   id: some_claim
 allow_fallback_on_error: true
 validate_jwk: false
+disable_issuer_identifier_verification: true
 trust_store: ` + trustStorePath),
 			assert: func(t *testing.T, err error, auth *jwtAuthenticator) {
 				t.Helper()
@@ -352,6 +359,9 @@ trust_store: ` + trustStorePath),
 
 				// handler id
 				assert.Equal(t, "auth1", auth.ID())
+
+				// issuer identity validation
+				assert.False(t, auth.validateMetadata)
 			},
 		},
 		{
@@ -407,6 +417,9 @@ cache_ttl: 5s`),
 
 				// handler id
 				assert.Equal(t, "auth1", auth.ID())
+
+				// issuer identity validation
+				assert.True(t, auth.validateMetadata)
 			},
 		},
 	} {
@@ -799,15 +812,15 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 	}
 
 	var (
-		endpointCalled     bool
+		jwksEndpointCalled bool
 		oidcEndpointCalled bool
-		checkRequest       func(req *http.Request)
+		checkJWKSRequest   func(req *http.Request)
 		checkOIDCRequest   func(req *http.Request)
 
-		responseHeaders     map[string]string
-		responseContentType string
-		responseContent     []byte
-		responseCode        int
+		jwksResponseHeaders     map[string]string
+		jwksResponseContentType string
+		jwksResponseContent     []byte
+		jwksResponseCode        int
 
 		oidcResponseHeaders     map[string]string
 		oidcResponseContentType string
@@ -854,22 +867,22 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 	jwtSignedWithKeyAndCertJWK := createJWT(t, keyAndCertEntry, subjectID, issuer, audience, true)
 	jwtWithoutKIDSignedWithKeyAndCertJWK := createJWT(t, keyAndCertEntry, subjectID, issuer, audience, false)
 
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		endpointCalled = true
+	jwksSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		jwksEndpointCalled = true
 
-		checkRequest(r)
+		checkJWKSRequest(r)
 
-		for hn, hv := range responseHeaders {
+		for hn, hv := range jwksResponseHeaders {
 			w.Header().Set(hn, hv)
 		}
 
-		if responseContent != nil {
-			w.Header().Set("Content-Type", responseContentType)
-			w.Header().Set("Content-Length", strconv.Itoa(len(responseContent)))
-			_, err := w.Write(responseContent)
+		if jwksResponseContent != nil {
+			w.Header().Set("Content-Type", jwksResponseContentType)
+			w.Header().Set("Content-Length", strconv.Itoa(len(jwksResponseContent)))
+			_, err := w.Write(jwksResponseContent)
 			require.NoError(t, err)
 		} else {
-			w.WriteHeader(responseCode)
+			w.WriteHeader(jwksResponseCode)
 		}
 	}))
 
@@ -892,7 +905,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 		}
 	}))
 
-	defer srv.Close()
+	defer jwksSrv.Close()
 	defer oidcSrv.Close()
 
 	for _, tc := range []struct {
@@ -922,7 +935,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
 
-				assert.False(t, endpointCalled)
+				assert.False(t, jwksEndpointCalled)
 				assert.False(t, oidcEndpointCalled)
 
 				require.Error(t, err)
@@ -951,7 +964,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
 
-				assert.False(t, endpointCalled)
+				assert.False(t, jwksEndpointCalled)
 				assert.False(t, oidcEndpointCalled)
 
 				require.Error(t, err)
@@ -980,7 +993,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
 
-				assert.False(t, endpointCalled)
+				assert.False(t, jwksEndpointCalled)
 				assert.False(t, oidcEndpointCalled)
 
 				require.Error(t, err)
@@ -998,7 +1011,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			authenticator: &jwtAuthenticator{
 				id: "auth3",
 				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any, _ bool) (oauth2.ServerMetadata, error) {
-					return oauth2.ServerMetadata{JWKSEndpoint: &endpoint.Endpoint{URL: srv.URL + "{{ Foo }}"}}, nil
+					return oauth2.ServerMetadata{JWKSEndpoint: &endpoint.Endpoint{URL: jwksSrv.URL + "{{ Foo }}"}}, nil
 				}),
 				ttl: &disabledTTL,
 			},
@@ -1015,7 +1028,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
 
-				assert.False(t, endpointCalled)
+				assert.False(t, jwksEndpointCalled)
 				assert.False(t, oidcEndpointCalled)
 
 				require.Error(t, err)
@@ -1050,7 +1063,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
 
-				assert.False(t, endpointCalled)
+				assert.False(t, jwksEndpointCalled)
 				assert.False(t, oidcEndpointCalled)
 
 				require.Error(t, err)
@@ -1068,7 +1081,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			authenticator: &jwtAuthenticator{
 				id: "auth3",
 				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any, _ bool) (oauth2.ServerMetadata, error) {
-					return oauth2.ServerMetadata{JWKSEndpoint: &endpoint.Endpoint{URL: srv.URL}}, nil
+					return oauth2.ServerMetadata{JWKSEndpoint: &endpoint.Endpoint{URL: jwksSrv.URL}}, nil
 				}),
 				ttl: &disabledTTL,
 			},
@@ -1085,12 +1098,12 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			instructServer: func(t *testing.T) {
 				t.Helper()
 
-				responseCode = http.StatusInternalServerError
+				jwksResponseCode = http.StatusInternalServerError
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
 
-				assert.True(t, endpointCalled)
+				assert.True(t, jwksEndpointCalled)
 				assert.False(t, oidcEndpointCalled)
 
 				require.Error(t, err)
@@ -1110,7 +1123,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any, _ bool) (oauth2.ServerMetadata, error) {
 					return oauth2.ServerMetadata{
 						JWKSEndpoint: &endpoint.Endpoint{
-							URL:     srv.URL,
+							URL:     jwksSrv.URL,
 							Headers: map[string]string{"Accept": "application/json"},
 						},
 					}, nil
@@ -1130,18 +1143,18 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			instructServer: func(t *testing.T) {
 				t.Helper()
 
-				checkRequest = func(req *http.Request) {
+				checkJWKSRequest = func(req *http.Request) {
 					assert.Equal(t, "application/json", req.Header.Get("Accept"))
 				}
 
-				responseCode = http.StatusOK
-				responseContent = []byte(`Hello Foo`)
-				responseContentType = "text/text"
+				jwksResponseCode = http.StatusOK
+				jwksResponseContent = []byte(`Hello Foo`)
+				jwksResponseContentType = "text/text"
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
 
-				assert.True(t, endpointCalled)
+				assert.True(t, jwksEndpointCalled)
 				assert.False(t, oidcEndpointCalled)
 
 				require.Error(t, err)
@@ -1161,7 +1174,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any, _ bool) (oauth2.ServerMetadata, error) {
 					return oauth2.ServerMetadata{
 						JWKSEndpoint: &endpoint.Endpoint{
-							URL:     srv.URL,
+							URL:     jwksSrv.URL,
 							Headers: map[string]string{"Accept": "application/json"},
 						},
 					}, nil
@@ -1181,18 +1194,18 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			instructServer: func(t *testing.T) {
 				t.Helper()
 
-				checkRequest = func(req *http.Request) {
+				checkJWKSRequest = func(req *http.Request) {
 					assert.Equal(t, "application/json", req.Header.Get("Accept"))
 				}
 
-				responseCode = http.StatusOK
-				responseContent = jwksWithDuplicateEntries
-				responseContentType = "application/json"
+				jwksResponseCode = http.StatusOK
+				jwksResponseContent = jwksWithDuplicateEntries
+				jwksResponseContentType = "application/json"
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
 
-				assert.True(t, endpointCalled)
+				assert.True(t, jwksEndpointCalled)
 				assert.False(t, oidcEndpointCalled)
 
 				require.Error(t, err)
@@ -1235,7 +1248,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
 
-				assert.False(t, endpointCalled)
+				assert.False(t, jwksEndpointCalled)
 				assert.True(t, oidcEndpointCalled)
 
 				require.Error(t, err)
@@ -1283,7 +1296,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
 
-				assert.False(t, endpointCalled)
+				assert.False(t, jwksEndpointCalled)
 				assert.True(t, oidcEndpointCalled)
 
 				require.Error(t, err)
@@ -1302,7 +1315,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any, _ bool) (oauth2.ServerMetadata, error) {
 					return oauth2.ServerMetadata{
 						JWKSEndpoint: &endpoint.Endpoint{
-							URL:     srv.URL,
+							URL:     jwksSrv.URL,
 							Headers: map[string]string{"Accept": "application/json"},
 						},
 					}, nil
@@ -1319,10 +1332,10 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				t.Helper()
 
 				ep := &endpoint.Endpoint{
-					URL:     srv.URL,
+					URL:     jwksSrv.URL,
 					Headers: map[string]string{"Accept": "application/json"},
 				}
-				cacheKey := auth.calculateCacheKey(ep, srv.URL, kidKeyWithoutCert)
+				cacheKey := auth.calculateCacheKey(ep, jwksSrv.URL, kidKeyWithoutCert)
 
 				var jwks jose.JSONWebKeySet
 				err := json.Unmarshal(jwksWithOneKeyOnlyEntry, &jwks)
@@ -1336,7 +1349,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
 
-				assert.False(t, endpointCalled)
+				assert.False(t, jwksEndpointCalled)
 				assert.False(t, oidcEndpointCalled)
 
 				require.Error(t, err)
@@ -1356,7 +1369,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any, _ bool) (oauth2.ServerMetadata, error) {
 					return oauth2.ServerMetadata{
 						JWKSEndpoint: &endpoint.Endpoint{
-							URL:     srv.URL,
+							URL:     jwksSrv.URL,
 							Headers: map[string]string{"Accept": "application/json"},
 						},
 					}, nil
@@ -1373,10 +1386,10 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				t.Helper()
 
 				ep := &endpoint.Endpoint{
-					URL:     srv.URL,
+					URL:     jwksSrv.URL,
 					Headers: map[string]string{"Accept": "application/json"},
 				}
-				cacheKey := auth.calculateCacheKey(ep, srv.URL, kidKeyWithCert)
+				cacheKey := auth.calculateCacheKey(ep, jwksSrv.URL, kidKeyWithCert)
 
 				var jwks jose.JSONWebKeySet
 				err := json.Unmarshal(jwksWithOneKeyOnlyEntry, &jwks)
@@ -1390,7 +1403,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
 
-				assert.False(t, endpointCalled)
+				assert.False(t, jwksEndpointCalled)
 				assert.False(t, oidcEndpointCalled)
 
 				require.Error(t, err)
@@ -1410,7 +1423,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any, _ bool) (oauth2.ServerMetadata, error) {
 					return oauth2.ServerMetadata{
 						JWKSEndpoint: &endpoint.Endpoint{
-							URL:     srv.URL,
+							URL:     jwksSrv.URL,
 							Headers: map[string]string{"Accept": "application/json"},
 						},
 					}, nil
@@ -1427,10 +1440,10 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				t.Helper()
 
 				ep := &endpoint.Endpoint{
-					URL:     srv.URL,
+					URL:     jwksSrv.URL,
 					Headers: map[string]string{"Accept": "application/json"},
 				}
-				cacheKey := auth.calculateCacheKey(ep, srv.URL, kidKeyWithoutCert)
+				cacheKey := auth.calculateCacheKey(ep, jwksSrv.URL, kidKeyWithoutCert)
 
 				var jwks jose.JSONWebKeySet
 				err := json.Unmarshal(jwksWithOneKeyOnlyEntry, &jwks)
@@ -1444,7 +1457,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
 
-				assert.False(t, endpointCalled)
+				assert.False(t, jwksEndpointCalled)
 				assert.False(t, oidcEndpointCalled)
 
 				require.Error(t, err)
@@ -1464,7 +1477,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any, _ bool) (oauth2.ServerMetadata, error) {
 					return oauth2.ServerMetadata{
 						JWKSEndpoint: &endpoint.Endpoint{
-							URL:     srv.URL,
+							URL:     jwksSrv.URL,
 							Headers: map[string]string{"Accept": "application/json"},
 						},
 					}, nil
@@ -1486,10 +1499,10 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				t.Helper()
 
 				ep := &endpoint.Endpoint{
-					URL:     srv.URL,
+					URL:     jwksSrv.URL,
 					Headers: map[string]string{"Accept": "application/json"},
 				}
-				cacheKey := auth.calculateCacheKey(ep, srv.URL, kidKeyWithoutCert)
+				cacheKey := auth.calculateCacheKey(ep, jwksSrv.URL, kidKeyWithoutCert)
 
 				var jwks jose.JSONWebKeySet
 				err := json.Unmarshal(jwksWithOneKeyOnlyEntry, &jwks)
@@ -1503,7 +1516,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
 
-				assert.False(t, endpointCalled)
+				assert.False(t, jwksEndpointCalled)
 				assert.False(t, oidcEndpointCalled)
 
 				require.Error(t, err)
@@ -1523,7 +1536,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any, _ bool) (oauth2.ServerMetadata, error) {
 					return oauth2.ServerMetadata{
 						JWKSEndpoint: &endpoint.Endpoint{
-							URL:     srv.URL,
+							URL:     jwksSrv.URL,
 							Headers: map[string]string{"Accept": "application/json"},
 						},
 					}, nil
@@ -1545,10 +1558,10 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				t.Helper()
 
 				ep := &endpoint.Endpoint{
-					URL:     srv.URL,
+					URL:     jwksSrv.URL,
 					Headers: map[string]string{"Accept": "application/json"},
 				}
-				cacheKey := auth.calculateCacheKey(ep, srv.URL, kidKeyWithoutCert)
+				cacheKey := auth.calculateCacheKey(ep, jwksSrv.URL, kidKeyWithoutCert)
 
 				var jwks jose.JSONWebKeySet
 				err := json.Unmarshal(jwksWithOneKeyOnlyEntry, &jwks)
@@ -1562,7 +1575,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
 
-				assert.False(t, endpointCalled)
+				assert.False(t, jwksEndpointCalled)
 				assert.False(t, oidcEndpointCalled)
 
 				require.NoError(t, err)
@@ -1587,7 +1600,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any, _ bool) (oauth2.ServerMetadata, error) {
 					return oauth2.ServerMetadata{
 						JWKSEndpoint: &endpoint.Endpoint{
-							URL:     srv.URL + "/{{ .TokenIssuer }}",
+							URL:     jwksSrv.URL + "/{{ .TokenIssuer }}",
 							Headers: map[string]string{"Accept": "application/json"},
 						},
 					}, nil
@@ -1609,10 +1622,10 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				t.Helper()
 
 				ep := &endpoint.Endpoint{
-					URL:     srv.URL + "/{{ .TokenIssuer }}",
+					URL:     jwksSrv.URL + "/{{ .TokenIssuer }}",
 					Headers: map[string]string{"Accept": "application/json"},
 				}
-				cacheKey := auth.calculateCacheKey(ep, fmt.Sprintf("%s/%s", srv.URL, issuer), kidKeyWithoutCert)
+				cacheKey := auth.calculateCacheKey(ep, fmt.Sprintf("%s/%s", jwksSrv.URL, issuer), kidKeyWithoutCert)
 
 				var jwks jose.JSONWebKeySet
 				err := json.Unmarshal(jwksWithOneKeyOnlyEntry, &jwks)
@@ -1627,19 +1640,19 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			instructServer: func(t *testing.T) {
 				t.Helper()
 
-				checkRequest = func(req *http.Request) {
+				checkJWKSRequest = func(req *http.Request) {
 					assert.Equal(t, "application/json", req.Header.Get("Accept"))
 					assert.Equal(t, "/"+issuer, req.URL.Path)
 				}
 
-				responseCode = http.StatusOK
-				responseContent = jwksWithOneKeyOnlyEntry
-				responseContentType = "application/json"
+				jwksResponseCode = http.StatusOK
+				jwksResponseContent = jwksWithOneKeyOnlyEntry
+				jwksResponseContentType = "application/json"
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
 
-				assert.True(t, endpointCalled)
+				assert.True(t, jwksEndpointCalled)
 				assert.False(t, oidcEndpointCalled)
 
 				require.NoError(t, err)
@@ -1664,7 +1677,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any, _ bool) (oauth2.ServerMetadata, error) {
 					return oauth2.ServerMetadata{
 						JWKSEndpoint: &endpoint.Endpoint{
-							URL:     srv.URL,
+							URL:     jwksSrv.URL,
 							Headers: map[string]string{"Accept": "application/json"},
 						},
 					}, nil
@@ -1686,10 +1699,10 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				t.Helper()
 
 				ep := &endpoint.Endpoint{
-					URL:     srv.URL,
+					URL:     jwksSrv.URL,
 					Headers: map[string]string{"Accept": "application/json"},
 				}
-				cacheKey := auth.calculateCacheKey(ep, srv.URL, kidKeyWithCert)
+				cacheKey := auth.calculateCacheKey(ep, jwksSrv.URL, kidKeyWithCert)
 
 				var jwks jose.JSONWebKeySet
 				err := json.Unmarshal(jwksWithOneEntryWithKeyOnlyAndOneWithCertificate, &jwks)
@@ -1704,18 +1717,18 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			instructServer: func(t *testing.T) {
 				t.Helper()
 
-				checkRequest = func(req *http.Request) {
+				checkJWKSRequest = func(req *http.Request) {
 					assert.Equal(t, "application/json", req.Header.Get("Accept"))
 				}
 
-				responseCode = http.StatusOK
-				responseContent = jwksWithOneEntryWithKeyOnlyAndOneWithCertificate
-				responseContentType = "application/json"
+				jwksResponseCode = http.StatusOK
+				jwksResponseContent = jwksWithOneEntryWithKeyOnlyAndOneWithCertificate
+				jwksResponseContentType = "application/json"
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
 
-				assert.True(t, endpointCalled)
+				assert.True(t, jwksEndpointCalled)
 				assert.False(t, oidcEndpointCalled)
 
 				require.NoError(t, err)
@@ -1754,11 +1767,11 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				t.Helper()
 
 				ep := &endpoint.Endpoint{
-					URL:     srv.URL,
+					URL:     jwksSrv.URL,
 					Headers: map[string]string{"Accept": "application/json"},
 					Method:  http.MethodGet,
 				}
-				cacheKey := auth.calculateCacheKey(ep, srv.URL, kidKeyWithCert)
+				cacheKey := auth.calculateCacheKey(ep, jwksSrv.URL, kidKeyWithCert)
 
 				var jwks jose.JSONWebKeySet
 				err := json.Unmarshal(jwksWithOneEntryWithKeyOnlyAndOneWithCertificate, &jwks)
@@ -1777,7 +1790,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			instructServer: func(t *testing.T) {
 				t.Helper()
 
-				checkRequest = func(req *http.Request) {
+				checkJWKSRequest = func(req *http.Request) {
 					assert.Equal(t, "application/json", req.Header.Get("Accept"))
 				}
 				checkOIDCRequest = func(req *http.Request) {
@@ -1785,13 +1798,13 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 					assert.Equal(t, "/"+issuer, req.URL.Path)
 				}
 
-				responseCode = http.StatusOK
-				responseContent = jwksWithOneEntryWithKeyOnlyAndOneWithCertificate
-				responseContentType = "application/json"
+				jwksResponseCode = http.StatusOK
+				jwksResponseContent = jwksWithOneEntryWithKeyOnlyAndOneWithCertificate
+				jwksResponseContentType = "application/json"
 
 				oidcResponseCode = http.StatusOK
 				oidcResponseContent, err = json.Marshal(map[string]string{
-					"jwks_uri": srv.URL,
+					"jwks_uri": jwksSrv.URL,
 					"issuer":   issuer,
 				})
 				require.NoError(t, err)
@@ -1800,7 +1813,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
 
-				assert.True(t, endpointCalled)
+				assert.True(t, jwksEndpointCalled)
 				assert.True(t, oidcEndpointCalled)
 
 				require.NoError(t, err)
@@ -1826,7 +1839,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any, _ bool) (oauth2.ServerMetadata, error) {
 					return oauth2.ServerMetadata{
 						JWKSEndpoint: &endpoint.Endpoint{
-							URL:     srv.URL,
+							URL:     jwksSrv.URL,
 							Headers: map[string]string{"Accept": "application/json"},
 						},
 					}, nil
@@ -1849,10 +1862,10 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				t.Helper()
 
 				ep := &endpoint.Endpoint{
-					URL:     srv.URL,
+					URL:     jwksSrv.URL,
 					Headers: map[string]string{"Accept": "application/json"},
 				}
-				cacheKey := auth.calculateCacheKey(ep, srv.URL, kidKeyWithCert)
+				cacheKey := auth.calculateCacheKey(ep, jwksSrv.URL, kidKeyWithCert)
 
 				var jwks jose.JSONWebKeySet
 				err := json.Unmarshal(jwksWithOneEntryWithKeyOnlyAndOneWithCertificate, &jwks)
@@ -1864,18 +1877,18 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			instructServer: func(t *testing.T) {
 				t.Helper()
 
-				checkRequest = func(req *http.Request) {
+				checkJWKSRequest = func(req *http.Request) {
 					assert.Equal(t, "application/json", req.Header.Get("Accept"))
 				}
 
-				responseCode = http.StatusOK
-				responseContent = jwksWithOneEntryWithKeyOnlyAndOneWithCertificate
-				responseContentType = "application/json"
+				jwksResponseCode = http.StatusOK
+				jwksResponseContent = jwksWithOneEntryWithKeyOnlyAndOneWithCertificate
+				jwksResponseContentType = "application/json"
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
 
-				assert.True(t, endpointCalled)
+				assert.True(t, jwksEndpointCalled)
 				assert.False(t, oidcEndpointCalled)
 
 				require.Error(t, err)
@@ -1894,7 +1907,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any, _ bool) (oauth2.ServerMetadata, error) {
 					return oauth2.ServerMetadata{
 						JWKSEndpoint: &endpoint.Endpoint{
-							URL:     srv.URL,
+							URL:     jwksSrv.URL,
 							Headers: map[string]string{"Accept": "application/json"},
 						},
 					}, nil
@@ -1918,10 +1931,10 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				t.Helper()
 
 				ep := &endpoint.Endpoint{
-					URL:     srv.URL,
+					URL:     jwksSrv.URL,
 					Headers: map[string]string{"Accept": "application/json"},
 				}
-				cacheKey := auth.calculateCacheKey(ep, srv.URL, kidKeyWithCert)
+				cacheKey := auth.calculateCacheKey(ep, jwksSrv.URL, kidKeyWithCert)
 
 				var jwks jose.JSONWebKeySet
 				err := json.Unmarshal(jwksWithOneEntryWithKeyOnlyAndOneWithCertificate, &jwks)
@@ -1936,18 +1949,18 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			instructServer: func(t *testing.T) {
 				t.Helper()
 
-				checkRequest = func(req *http.Request) {
+				checkJWKSRequest = func(req *http.Request) {
 					assert.Equal(t, "application/json", req.Header.Get("Accept"))
 				}
 
-				responseCode = http.StatusOK
-				responseContent = jwksWithOneEntryWithKeyOnlyAndOneWithCertificate
-				responseContentType = "application/json"
+				jwksResponseCode = http.StatusOK
+				jwksResponseContent = jwksWithOneEntryWithKeyOnlyAndOneWithCertificate
+				jwksResponseContentType = "application/json"
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
 
-				assert.True(t, endpointCalled)
+				assert.True(t, jwksEndpointCalled)
 				assert.False(t, oidcEndpointCalled)
 
 				require.NoError(t, err)
@@ -1972,7 +1985,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any, _ bool) (oauth2.ServerMetadata, error) {
 					return oauth2.ServerMetadata{
 						JWKSEndpoint: &endpoint.Endpoint{
-							URL:     srv.URL,
+							URL:     jwksSrv.URL,
 							Headers: map[string]string{"Accept": "application/json"},
 						},
 					}, nil
@@ -1994,10 +2007,10 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				t.Helper()
 
 				ep := &endpoint.Endpoint{
-					URL:     srv.URL,
+					URL:     jwksSrv.URL,
 					Headers: map[string]string{"Accept": "application/json"},
 				}
-				cacheKey := auth.calculateCacheKey(ep, srv.URL, kidKeyWithoutCert)
+				cacheKey := auth.calculateCacheKey(ep, jwksSrv.URL, kidKeyWithoutCert)
 
 				var jwks jose.JSONWebKeySet
 				err := json.Unmarshal(jwksWithOneKeyOnlyEntry, &jwks)
@@ -2013,18 +2026,18 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			instructServer: func(t *testing.T) {
 				t.Helper()
 
-				checkRequest = func(req *http.Request) {
+				checkJWKSRequest = func(req *http.Request) {
 					assert.Equal(t, "application/json", req.Header.Get("Accept"))
 				}
 
-				responseCode = http.StatusOK
-				responseContent = jwksWithOneKeyOnlyEntry
-				responseContentType = "application/json"
+				jwksResponseCode = http.StatusOK
+				jwksResponseContent = jwksWithOneKeyOnlyEntry
+				jwksResponseContentType = "application/json"
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
 
-				assert.True(t, endpointCalled)
+				assert.True(t, jwksEndpointCalled)
 				assert.False(t, oidcEndpointCalled)
 
 				require.NoError(t, err)
@@ -2049,7 +2062,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any, _ bool) (oauth2.ServerMetadata, error) {
 					return oauth2.ServerMetadata{
 						JWKSEndpoint: &endpoint.Endpoint{
-							URL:     srv.URL,
+							URL:     jwksSrv.URL,
 							Headers: map[string]string{"Accept": "application/json"},
 						},
 					}, nil
@@ -2076,18 +2089,18 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			instructServer: func(t *testing.T) {
 				t.Helper()
 
-				checkRequest = func(req *http.Request) {
+				checkJWKSRequest = func(req *http.Request) {
 					assert.Equal(t, "application/json", req.Header.Get("Accept"))
 				}
 
-				responseCode = http.StatusOK
-				responseContent = jwksWithOneEntryWithKeyOnlyAndOneWithCertificate
-				responseContentType = "application/json"
+				jwksResponseCode = http.StatusOK
+				jwksResponseContent = jwksWithOneEntryWithKeyOnlyAndOneWithCertificate
+				jwksResponseContentType = "application/json"
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
 
-				assert.True(t, endpointCalled)
+				assert.True(t, jwksEndpointCalled)
 				assert.False(t, oidcEndpointCalled)
 
 				require.NoError(t, err)
@@ -2113,7 +2126,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any, _ bool) (oauth2.ServerMetadata, error) {
 					return oauth2.ServerMetadata{
 						JWKSEndpoint: &endpoint.Endpoint{
-							URL:     srv.URL,
+							URL:     jwksSrv.URL,
 							Headers: map[string]string{"Accept": "application/json"},
 						},
 					}, nil
@@ -2132,18 +2145,18 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			instructServer: func(t *testing.T) {
 				t.Helper()
 
-				checkRequest = func(req *http.Request) {
+				checkJWKSRequest = func(req *http.Request) {
 					assert.Equal(t, "application/json", req.Header.Get("Accept"))
 				}
 
-				responseCode = http.StatusOK
-				responseContent = []byte(`Hello Foo`)
-				responseContentType = "text/text"
+				jwksResponseCode = http.StatusOK
+				jwksResponseContent = []byte(`Hello Foo`)
+				jwksResponseContentType = "text/text"
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
 
-				assert.True(t, endpointCalled)
+				assert.True(t, jwksEndpointCalled)
 				assert.False(t, oidcEndpointCalled)
 
 				require.Error(t, err)
@@ -2162,7 +2175,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any, _ bool) (oauth2.ServerMetadata, error) {
 					return oauth2.ServerMetadata{
 						JWKSEndpoint: &endpoint.Endpoint{
-							URL:     srv.URL,
+							URL:     jwksSrv.URL,
 							Headers: map[string]string{"Accept": "application/json"},
 						},
 					}, nil
@@ -2181,18 +2194,18 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			instructServer: func(t *testing.T) {
 				t.Helper()
 
-				checkRequest = func(req *http.Request) {
+				checkJWKSRequest = func(req *http.Request) {
 					assert.Equal(t, "application/json", req.Header.Get("Accept"))
 				}
 
-				responseCode = http.StatusOK
-				responseContent = jwksWithRSAKey
-				responseContentType = "application/json"
+				jwksResponseCode = http.StatusOK
+				jwksResponseContent = jwksWithRSAKey
+				jwksResponseContentType = "application/json"
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
 
-				assert.True(t, endpointCalled)
+				assert.True(t, jwksEndpointCalled)
 				assert.False(t, oidcEndpointCalled)
 
 				require.Error(t, err)
@@ -2211,7 +2224,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any, _ bool) (oauth2.ServerMetadata, error) {
 					return oauth2.ServerMetadata{
 						JWKSEndpoint: &endpoint.Endpoint{
-							URL:     srv.URL,
+							URL:     jwksSrv.URL,
 							Headers: map[string]string{"Accept": "application/json"},
 						},
 					}, nil
@@ -2231,18 +2244,18 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			instructServer: func(t *testing.T) {
 				t.Helper()
 
-				checkRequest = func(req *http.Request) {
+				checkJWKSRequest = func(req *http.Request) {
 					assert.Equal(t, "application/json", req.Header.Get("Accept"))
 				}
 
-				responseCode = http.StatusOK
-				responseContent = jwksWithOneEntryWithKeyOnlyAndOneWithCertificate
-				responseContentType = "application/json"
+				jwksResponseCode = http.StatusOK
+				jwksResponseContent = jwksWithOneEntryWithKeyOnlyAndOneWithCertificate
+				jwksResponseContentType = "application/json"
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
 
-				assert.True(t, endpointCalled)
+				assert.True(t, jwksEndpointCalled)
 				assert.False(t, oidcEndpointCalled)
 
 				require.Error(t, err)
@@ -2257,11 +2270,11 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
 			// GIVEN
-			endpointCalled = false
-			responseHeaders = nil
-			responseContentType = ""
-			responseContent = nil
-			responseCode = 0
+			jwksEndpointCalled = false
+			jwksResponseHeaders = nil
+			jwksResponseContentType = ""
+			jwksResponseContent = nil
+			jwksResponseCode = 0
 
 			oidcEndpointCalled = false
 			oidcResponseHeaders = nil
@@ -2269,7 +2282,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			oidcResponseContent = nil
 			oidcResponseCode = 0
 
-			checkRequest = func(*http.Request) { t.Helper() }
+			checkJWKSRequest = func(*http.Request) { t.Helper() }
 			checkOIDCRequest = func(*http.Request) { t.Helper() }
 
 			instructServer := x.IfThenElse(tc.instructServer != nil,
