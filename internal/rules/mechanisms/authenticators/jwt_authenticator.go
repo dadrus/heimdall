@@ -95,8 +95,8 @@ func newJwtAuthenticator(id string, rawConfig map[string]any) (*jwtAuthenticator
 		conf.Endpoint.Headers = make(map[string]string)
 	}
 
-	if _, ok := conf.Endpoint.Headers["Accept-Type"]; !ok {
-		conf.Endpoint.Headers["Accept-Type"] = "application/json"
+	if _, ok := conf.Endpoint.Headers["Accept"]; !ok {
+		conf.Endpoint.Headers["Accept"] = "application/json"
 	}
 
 	if len(conf.Endpoint.Method) == 0 {
