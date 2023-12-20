@@ -18,6 +18,7 @@ package authenticators
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
@@ -396,7 +397,7 @@ assertions:
 
 				require.NoError(t, err)
 
-				assert.Equal(t, prototype.r, configured.r)
+				assert.Equal(t, fmt.Sprintf("%v", prototype.r), fmt.Sprintf("%v", configured.r))
 				assert.Equal(t, prototype.ads, configured.ads)
 				assert.Equal(t, prototype.sf, configured.sf)
 				assert.NotEqual(t, prototype.a, configured.a)
@@ -467,7 +468,7 @@ cache_ttl: 15s
 
 				require.NoError(t, err)
 
-				assert.Equal(t, prototype.r, configured.r)
+				assert.Equal(t, fmt.Sprintf("%v", prototype.r), fmt.Sprintf("%v", configured.r))
 				assert.Equal(t, prototype.ads, configured.ads)
 				assert.Equal(t, prototype.sf, configured.sf)
 				assert.NotEqual(t, prototype.a, configured.a)
@@ -498,7 +499,7 @@ subject:
 
 				require.NoError(t, err)
 
-				assert.Equal(t, prototype.r, configured.r)
+				assert.Equal(t, fmt.Sprintf("%v", prototype.r), fmt.Sprintf("%v", configured.r))
 				assert.Equal(t, prototype.ads, configured.ads)
 				assert.Equal(t, prototype.sf, configured.sf)
 				assert.Equal(t, prototype.a, configured.a)
