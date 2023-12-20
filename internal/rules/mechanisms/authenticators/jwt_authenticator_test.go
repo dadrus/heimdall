@@ -155,8 +155,8 @@ assertions:
 				assert.Equal(t, "http://test.com", auth.e.URL)
 				assert.Equal(t, "GET", auth.e.Method)
 				assert.Len(t, auth.e.Headers, 1)
-				assert.Contains(t, auth.e.Headers, "Accept-Type")
-				assert.Equal(t, "application/json", auth.e.Headers["Accept-Type"])
+				assert.Contains(t, auth.e.Headers, "Accept")
+				assert.Equal(t, "application/json", auth.e.Headers["Accept"])
 
 				// token extractor settings
 				assert.IsType(t, extractors.CompositeExtractStrategy{}, auth.ads)
@@ -217,8 +217,8 @@ cache_ttl: 5s`),
 				assert.Equal(t, "http://test.com", auth.e.URL)
 				assert.Equal(t, "GET", auth.e.Method)
 				assert.Len(t, auth.e.Headers, 1)
-				assert.Contains(t, auth.e.Headers, "Accept-Type")
-				assert.Equal(t, "application/json", auth.e.Headers["Accept-Type"])
+				assert.Contains(t, auth.e.Headers, "Accept")
+				assert.Equal(t, "application/json", auth.e.Headers["Accept"])
 
 				// token extractor settings
 				assert.IsType(t, extractors.CompositeExtractStrategy{}, auth.ads)
@@ -269,7 +269,7 @@ jwks_endpoint:
   url: http://test.com
   method: POST
   headers:
-    Accept-Type: application/foobar
+    Accept: application/foobar
 jwt_source:
   - header: foo-header
     scheme: foo
@@ -298,8 +298,8 @@ trust_store: ` + trustStorePath),
 				assert.Equal(t, "http://test.com", auth.e.URL)
 				assert.Equal(t, "POST", auth.e.Method)
 				assert.Len(t, auth.e.Headers, 1)
-				assert.Contains(t, auth.e.Headers, "Accept-Type")
-				assert.Equal(t, "application/foobar", auth.e.Headers["Accept-Type"])
+				assert.Contains(t, auth.e.Headers, "Accept")
+				assert.Equal(t, "application/foobar", auth.e.Headers["Accept"])
 
 				// token extractor settings
 				assert.IsType(t, extractors.CompositeExtractStrategy{}, auth.ads)
