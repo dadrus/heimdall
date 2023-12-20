@@ -139,7 +139,7 @@ subject:
 			},
 		},
 		{
-			uc: "valid jwks endpoint based configuration with defaults, without cache",
+			uc: "minimal jwks endpoint based configuration with defaults, without cache",
 			id: "auth1",
 			config: []byte(`
 jwks_endpoint:
@@ -812,20 +812,19 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 	}
 
 	var (
-		jwksEndpointCalled bool
-		oidcEndpointCalled bool
-		checkJWKSRequest   func(req *http.Request)
-		checkOIDCRequest   func(req *http.Request)
-
+		jwksEndpointCalled      bool
+		checkJWKSRequest        func(req *http.Request)
 		jwksResponseHeaders     map[string]string
 		jwksResponseContentType string
 		jwksResponseContent     []byte
 		jwksResponseCode        int
 
-		oidcResponseHeaders     map[string]string
-		oidcResponseContentType string
-		oidcResponseContent     []byte
-		oidcResponseCode        int
+		metadataEndpointCalled      bool
+		metadataOIDCRequest         func(req *http.Request)
+		metadataResponseHeaders     map[string]string
+		metadataResponseContentType string
+		metadataResponseContent     []byte
+		metadataResponseCode        int
 	)
 
 	tenSecondsTTL := 10 * time.Second
@@ -864,6 +863,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 	audience := "bar"
 
 	jwtSignedWithKeyOnlyJWK := createJWT(t, keyOnlyEntry, subjectID, issuer, audience, true)
+
 	jwtSignedWithKeyAndCertJWK := createJWT(t, keyAndCertEntry, subjectID, issuer, audience, true)
 	jwtWithoutKIDSignedWithKeyAndCertJWK := createJWT(t, keyAndCertEntry, subjectID, issuer, audience, false)
 
@@ -887,21 +887,21 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 	}))
 
 	oidcSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		oidcEndpointCalled = true
+		metadataEndpointCalled = true
 
-		checkOIDCRequest(r)
+		metadataOIDCRequest(r)
 
-		for hn, hv := range oidcResponseHeaders {
+		for hn, hv := range metadataResponseHeaders {
 			w.Header().Set(hn, hv)
 		}
 
-		if oidcResponseContent != nil {
-			w.Header().Set("Content-Type", oidcResponseContentType)
-			w.Header().Set("Content-Length", strconv.Itoa(len(oidcResponseContent)))
-			_, err := w.Write(oidcResponseContent)
+		if metadataResponseContent != nil {
+			w.Header().Set("Content-Type", metadataResponseContentType)
+			w.Header().Set("Content-Length", strconv.Itoa(len(metadataResponseContent)))
+			_, err := w.Write(metadataResponseContent)
 			require.NoError(t, err)
 		} else {
-			w.WriteHeader(oidcResponseCode)
+			w.WriteHeader(metadataResponseCode)
 		}
 	}))
 
@@ -936,7 +936,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				t.Helper()
 
 				assert.False(t, jwksEndpointCalled)
-				assert.False(t, oidcEndpointCalled)
+				assert.False(t, metadataEndpointCalled)
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrAuthentication)
@@ -965,7 +965,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				t.Helper()
 
 				assert.False(t, jwksEndpointCalled)
-				assert.False(t, oidcEndpointCalled)
+				assert.False(t, metadataEndpointCalled)
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrAuthentication)
@@ -994,7 +994,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				t.Helper()
 
 				assert.False(t, jwksEndpointCalled)
-				assert.False(t, oidcEndpointCalled)
+				assert.False(t, metadataEndpointCalled)
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrAuthentication)
@@ -1029,7 +1029,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				t.Helper()
 
 				assert.False(t, jwksEndpointCalled)
-				assert.False(t, oidcEndpointCalled)
+				assert.False(t, metadataEndpointCalled)
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrInternal)
@@ -1064,7 +1064,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				t.Helper()
 
 				assert.False(t, jwksEndpointCalled)
-				assert.False(t, oidcEndpointCalled)
+				assert.False(t, metadataEndpointCalled)
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrCommunication)
@@ -1104,7 +1104,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				t.Helper()
 
 				assert.True(t, jwksEndpointCalled)
-				assert.False(t, oidcEndpointCalled)
+				assert.False(t, metadataEndpointCalled)
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrCommunication)
@@ -1155,7 +1155,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				t.Helper()
 
 				assert.True(t, jwksEndpointCalled)
-				assert.False(t, oidcEndpointCalled)
+				assert.False(t, metadataEndpointCalled)
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrInternal)
@@ -1206,7 +1206,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				t.Helper()
 
 				assert.True(t, jwksEndpointCalled)
-				assert.False(t, oidcEndpointCalled)
+				assert.False(t, metadataEndpointCalled)
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrAuthentication)
@@ -1239,17 +1239,17 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			instructServer: func(t *testing.T) {
 				t.Helper()
 
-				checkOIDCRequest = func(req *http.Request) {
+				metadataOIDCRequest = func(req *http.Request) {
 					assert.Equal(t, "application/json", req.Header.Get("Accept"))
 				}
 
-				oidcResponseCode = http.StatusBadRequest
+				metadataResponseCode = http.StatusBadRequest
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
 
 				assert.False(t, jwksEndpointCalled)
-				assert.True(t, oidcEndpointCalled)
+				assert.True(t, metadataEndpointCalled)
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrInternal)
@@ -1285,19 +1285,19 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			instructServer: func(t *testing.T) {
 				t.Helper()
 
-				checkOIDCRequest = func(req *http.Request) {
+				metadataOIDCRequest = func(req *http.Request) {
 					assert.Equal(t, "application/json", req.Header.Get("Accept"))
 				}
 
-				oidcResponseContent, err = json.Marshal(map[string]string{"issuer": "foobar"})
+				metadataResponseContent, err = json.Marshal(map[string]string{"issuer": "foobar"})
 				require.NoError(t, err)
-				oidcResponseCode = http.StatusBadRequest
+				metadataResponseCode = http.StatusBadRequest
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
 
 				assert.False(t, jwksEndpointCalled)
-				assert.True(t, oidcEndpointCalled)
+				assert.True(t, metadataEndpointCalled)
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrInternal)
@@ -1350,7 +1350,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				t.Helper()
 
 				assert.False(t, jwksEndpointCalled)
-				assert.False(t, oidcEndpointCalled)
+				assert.False(t, metadataEndpointCalled)
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrAuthentication)
@@ -1404,7 +1404,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				t.Helper()
 
 				assert.False(t, jwksEndpointCalled)
-				assert.False(t, oidcEndpointCalled)
+				assert.False(t, metadataEndpointCalled)
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrAuthentication)
@@ -1458,7 +1458,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				t.Helper()
 
 				assert.False(t, jwksEndpointCalled)
-				assert.False(t, oidcEndpointCalled)
+				assert.False(t, metadataEndpointCalled)
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrAuthentication)
@@ -1517,7 +1517,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				t.Helper()
 
 				assert.False(t, jwksEndpointCalled)
-				assert.False(t, oidcEndpointCalled)
+				assert.False(t, metadataEndpointCalled)
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrInternal)
@@ -1576,7 +1576,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				t.Helper()
 
 				assert.False(t, jwksEndpointCalled)
-				assert.False(t, oidcEndpointCalled)
+				assert.False(t, metadataEndpointCalled)
 
 				require.NoError(t, err)
 
@@ -1653,7 +1653,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				t.Helper()
 
 				assert.True(t, jwksEndpointCalled)
-				assert.False(t, oidcEndpointCalled)
+				assert.False(t, metadataEndpointCalled)
 
 				require.NoError(t, err)
 
@@ -1729,7 +1729,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				t.Helper()
 
 				assert.True(t, jwksEndpointCalled)
-				assert.False(t, oidcEndpointCalled)
+				assert.False(t, metadataEndpointCalled)
 
 				require.NoError(t, err)
 
@@ -1793,7 +1793,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				checkJWKSRequest = func(req *http.Request) {
 					assert.Equal(t, "application/json", req.Header.Get("Accept"))
 				}
-				checkOIDCRequest = func(req *http.Request) {
+				metadataOIDCRequest = func(req *http.Request) {
 					assert.Equal(t, "application/json", req.Header.Get("Accept"))
 					assert.Equal(t, "/"+issuer, req.URL.Path)
 				}
@@ -1802,19 +1802,19 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				jwksResponseContent = jwksWithOneEntryWithKeyOnlyAndOneWithCertificate
 				jwksResponseContentType = "application/json"
 
-				oidcResponseCode = http.StatusOK
-				oidcResponseContent, err = json.Marshal(map[string]string{
+				metadataResponseCode = http.StatusOK
+				metadataResponseContent, err = json.Marshal(map[string]string{
 					"jwks_uri": jwksSrv.URL,
 					"issuer":   issuer,
 				})
 				require.NoError(t, err)
-				oidcResponseContentType = "application/json"
+				metadataResponseContentType = "application/json"
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
 
 				assert.True(t, jwksEndpointCalled)
-				assert.True(t, oidcEndpointCalled)
+				assert.True(t, metadataEndpointCalled)
 
 				require.NoError(t, err)
 
@@ -1889,7 +1889,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				t.Helper()
 
 				assert.True(t, jwksEndpointCalled)
-				assert.False(t, oidcEndpointCalled)
+				assert.False(t, metadataEndpointCalled)
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrAuthentication)
@@ -1961,7 +1961,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				t.Helper()
 
 				assert.True(t, jwksEndpointCalled)
-				assert.False(t, oidcEndpointCalled)
+				assert.False(t, metadataEndpointCalled)
 
 				require.NoError(t, err)
 
@@ -2038,7 +2038,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				t.Helper()
 
 				assert.True(t, jwksEndpointCalled)
-				assert.False(t, oidcEndpointCalled)
+				assert.False(t, metadataEndpointCalled)
 
 				require.NoError(t, err)
 
@@ -2101,7 +2101,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				t.Helper()
 
 				assert.True(t, jwksEndpointCalled)
-				assert.False(t, oidcEndpointCalled)
+				assert.False(t, metadataEndpointCalled)
 
 				require.NoError(t, err)
 
@@ -2157,7 +2157,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				t.Helper()
 
 				assert.True(t, jwksEndpointCalled)
-				assert.False(t, oidcEndpointCalled)
+				assert.False(t, metadataEndpointCalled)
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrInternal)
@@ -2206,7 +2206,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				t.Helper()
 
 				assert.True(t, jwksEndpointCalled)
-				assert.False(t, oidcEndpointCalled)
+				assert.False(t, metadataEndpointCalled)
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrAuthentication)
@@ -2256,7 +2256,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				t.Helper()
 
 				assert.True(t, jwksEndpointCalled)
-				assert.False(t, oidcEndpointCalled)
+				assert.False(t, metadataEndpointCalled)
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrAuthentication)
@@ -2300,7 +2300,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				checkJWKSRequest = func(req *http.Request) {
 					assert.Equal(t, "application/json", req.Header.Get("Accept"))
 				}
-				checkOIDCRequest = func(req *http.Request) {
+				metadataOIDCRequest = func(req *http.Request) {
 					assert.Equal(t, "application/json", req.Header.Get("Accept"))
 					assert.Equal(t, "/", req.URL.Path)
 				}
@@ -2309,18 +2309,18 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				jwksResponseContent = jwksWithOneEntryWithKeyOnlyAndOneWithCertificate
 				jwksResponseContentType = "application/json"
 
-				oidcResponseCode = http.StatusOK
-				oidcResponseContent, err = json.Marshal(map[string]string{
+				metadataResponseCode = http.StatusOK
+				metadataResponseContent, err = json.Marshal(map[string]string{
 					"jwks_uri": jwksSrv.URL,
 					"issuer":   issuer,
 				})
 				require.NoError(t, err)
-				oidcResponseContentType = "application/json"
+				metadataResponseContentType = "application/json"
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
 
-				assert.True(t, oidcEndpointCalled)
+				assert.True(t, metadataEndpointCalled)
 				assert.True(t, jwksEndpointCalled)
 
 				require.Error(t, err)
@@ -2337,14 +2337,14 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			jwksResponseContent = nil
 			jwksResponseCode = 0
 
-			oidcEndpointCalled = false
-			oidcResponseHeaders = nil
-			oidcResponseContentType = ""
-			oidcResponseContent = nil
-			oidcResponseCode = 0
+			metadataEndpointCalled = false
+			metadataResponseHeaders = nil
+			metadataResponseContentType = ""
+			metadataResponseContent = nil
+			metadataResponseCode = 0
 
 			checkJWKSRequest = func(*http.Request) { t.Helper() }
-			checkOIDCRequest = func(*http.Request) { t.Helper() }
+			metadataOIDCRequest = func(*http.Request) { t.Helper() }
 
 			instructServer := x.IfThenElse(tc.instructServer != nil,
 				tc.instructServer,

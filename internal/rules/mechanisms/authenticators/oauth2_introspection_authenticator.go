@@ -217,6 +217,7 @@ func (a *oauth2IntrospectionAuthenticator) WithConfig(rawConfig map[string]any) 
 		allowFallbackOnError: x.IfThenElseExec(conf.AllowFallbackOnError != nil,
 			func() bool { return *conf.AllowFallbackOnError },
 			func() bool { return a.allowFallbackOnError }),
+		validateMetadata: a.validateMetadata,
 	}, nil
 }
 
