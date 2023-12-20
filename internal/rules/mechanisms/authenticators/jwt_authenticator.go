@@ -575,7 +575,7 @@ func (a *jwtAuthenticator) verifyTokenWithKey(
 	return rawPayload, nil
 }
 
-func (a *jwtAuthenticator) calculateCacheKey(ep *endpoint.Endpoint, renderedURL string, reference string) string {
+func (a *jwtAuthenticator) calculateCacheKey(ep *endpoint.Endpoint, renderedURL, reference string) string {
 	digest := sha256.New()
 	digest.Write(ep.Hash())
 	digest.Write(stringx.ToBytes(renderedURL))
