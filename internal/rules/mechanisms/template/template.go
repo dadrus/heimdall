@@ -26,17 +26,13 @@ import (
 	"text/template"
 
 	"github.com/Masterminds/sprig/v3"
-	"gopkg.in/square/go-jose.v2/jwt"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/stringx"
 )
 
-var (
-	ErrTemplateRender = errors.New("template error")
-	ErrInvalidType    = errors.New("invalid type")
-)
+var ErrTemplateRender = errors.New("template error")
 
 type Template interface {
 	Render(values map[string]any) (string, error)
@@ -56,9 +52,8 @@ func New(val string) (Template, error) {
 	tmpl, err := template.New("Heimdall").
 		Funcs(funcMap).
 		Funcs(template.FuncMap{
-			"urlenc":   urlEncode,
-			"atIndex":  atIndex,
-			"parseJWT": parseJWT,
+			"urlenc":  urlEncode,
+			"atIndex": atIndex,
 		}).
 		Parse(val)
 	if err != nil {
@@ -94,31 +89,6 @@ func urlEncode(value any) string {
 	default:
 		return ""
 	}
-}
-
-func parseJWT(value any) (interface{}, error) {
-	var jwtInput string
-	switch tp := value.(type) {
-	case string:
-		jwtInput = tp
-	case fmt.Stringer:
-		jwtInput = tp.String()
-	default:
-		return nil, fmt.Errorf("cannot parse jwt from type %s: %w", tp, ErrInvalidType)
-	}
-
-	token, err := jwt.ParseSigned(jwtInput)
-	if err != nil {
-		return nil, fmt.Errorf("jwt parse failed: %w", err)
-	}
-
-	// return the claims data as untyped object
-	tokenData := map[string]interface{}{}
-	if err := token.UnsafeClaimsWithoutVerification(&tokenData); err != nil {
-		return nil, fmt.Errorf("failed to decode token claims: %w", err)
-	}
-
-	return tokenData, nil
 }
 
 func atIndex(pos int, list interface{}) (interface{}, error) {
