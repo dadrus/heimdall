@@ -154,7 +154,7 @@ func (c *Config) fetchToken(ctx context.Context) (*TokenInfo, error) {
 		AuthStrategy: c,
 		Headers: map[string]string{
 			"Content-Type": "application/x-www-form-urlencoded",
-			"Accept-Type":  "application/json",
+			"Accept":       "application/json",
 		},
 	}
 
