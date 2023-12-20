@@ -604,10 +604,27 @@
                 }
               ]
             },
-            "enable_http_cache": {
-              "description": "Enables or disables http cache usage according to RFC 7234",
-              "type": "boolean",
-              "default": false
+            "http_cache": {
+              "description": "Configures cache usage according to RFC 7234",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "description": "Enables or disables http cache usage",
+                  "type": "boolean",
+                  "default": false
+                },
+                "default_ttl": {
+                  "description": "How long a response from server should be cached if no cache related headers are present",
+                  "type": "string",
+                  "pattern": "^[0-9]+(ns|us|ms|s|m|h)$",
+                  "default": "0ms",
+                  "examples": [
+                    "1h",
+                    "1m",
+                    "30s"
+                  ]
+                }
+              }
             }
           }
         },
@@ -978,7 +995,7 @@
             },
             {
               "required": [
-                "oidc_discovery_endpoint"
+                "metadata_endpoint"
               ]
             }
           ],
@@ -986,7 +1003,7 @@
             "introspection_endpoint": {
               "$ref": "#/definitions/endpointConfiguration"
             },
-            "oidc_discovery_endpoint": {
+            "metadata_endpoint": {
               "$ref": "#/definitions/endpointConfiguration"
             },
             "token_source": {
@@ -1012,6 +1029,11 @@
             "allow_fallback_on_error": {
               "type": "boolean",
               "description": "Whether the pipeline should fallback to a next authenticator if this one fails validating the given credentials",
+              "default": false
+            },
+            "disable_issuer_identifier_verification": {
+              "type": "boolean",
+              "description": "Whether issuer identifier verification according to RFC8414 should be skipped. Used only if metadata_endpoint is configured",
               "default": false
             }
           }
@@ -1042,7 +1064,7 @@
             },
             {
               "required": [
-                "oidc_discovery_endpoint"
+                "metadata_endpoint"
               ]
             }
           ],
@@ -1050,7 +1072,7 @@
             "jwks_endpoint": {
               "$ref": "#/definitions/endpointConfiguration"
             },
-            "oidc_discovery_endpoint": {
+            "metadata_endpoint": {
               "$ref": "#/definitions/endpointConfiguration"
             },
             "jwt_source": {
@@ -1087,6 +1109,11 @@
               "type": "string",
               "description": "The path to the trust store PEM file, which contains the trust anchors used for JWK certificate verification purposes",
               "default": "system trust store"
+            },
+            "disable_issuer_identifier_verification": {
+              "type": "boolean",
+              "description": "Whether issuer identifier verification according to RFC8414 should be skipped. Used only if metadata_endpoint is configured",
+              "default": false
             }
           }
         }

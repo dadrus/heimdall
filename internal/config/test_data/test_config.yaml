@@ -200,7 +200,7 @@ mechanisms:
         subject:
           attributes: "@this"
           id: "identity.id"
-    - id: hydra_authenticator
+    - id: oauth2_introspection_using_introspection_endpoint
       type: oauth2_introspection
       config:
         introspection_endpoint:
@@ -213,6 +213,8 @@ mechanisms:
             config:
               user: foo
               password: bar
+          http_cache:
+            enabled: false
         token_source:
           - header: Authorization
             scheme: Bearer
@@ -228,13 +230,47 @@ mechanisms:
           attributes: "@this"
           id: sub
         allow_fallback_on_error: true
+        disable_issuer_identifier_verification: false
+    - id: oauth2_introspection_using_metadata_endpoint
+      type: oauth2_introspection
+      config:
+        metadata_endpoint:
+          url: http://hydra:4445/oauth2/introspect
+          retry:
+            max_delay: 300ms
+            give_up_after: 2s
+          auth:
+            type: basic_auth
+            config:
+              user: foo
+              password: bar
+          http_cache:
+            enabled: true
+            default_ttl: 1m
+        token_source:
+          - header: Authorization
+            scheme: Bearer
+        assertions:
+          issuers:
+            - http://127.0.0.1:4444/
+          scopes:
+            - foo
+            - bar
+          audience:
+            - bla
+        subject:
+          attributes: "@this"
+          id: sub
+        allow_fallback_on_error: true
+        disable_issuer_identifier_verification: false
     - id: jwt_authenticator1
       type: jwt
       config:
         jwks_endpoint:
           url: http://foo/token
           method: GET
-          enable_http_cache: true
+          http_cache:
+            enabled: true
         jwt_source:
           - header: Authorization
             scheme: Bearer
@@ -257,7 +293,7 @@ mechanisms:
     - id: jwt_authenticator2
       type: jwt
       config:
-        jwks_endpoint: http://bar/token
+        metadata_endpoint: http://bar/token
         assertions:
           audience:
             - bla
