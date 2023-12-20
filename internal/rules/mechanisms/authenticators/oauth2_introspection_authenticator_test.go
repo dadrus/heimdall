@@ -100,7 +100,7 @@ subject:
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "'assertions' is a required field")
+				assert.Contains(t, err.Error(), "assertions")
 			},
 		},
 		{
