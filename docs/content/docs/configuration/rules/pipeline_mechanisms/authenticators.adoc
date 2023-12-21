@@ -394,7 +394,7 @@ config:
 id: keycloak
 type: jwt
 config:
-  oidc_discovery_endpoint:
+  metadata_endpoint:
     url: http://keycloak:8080/realms/my-app/.well-known/openid-configuration
   # Note that no assertions are configured here, since it'll be resolved via the metadata endpoint
 ----
