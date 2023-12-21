@@ -36,7 +36,7 @@ func (sm ServerMetadata) verify(usedMetadataURL string) error {
 		expectedIssuer = strings.TrimSuffix(uriPrefix, "/")
 	}
 
-	if sm.Issuer != expectedIssuer {
+	if sm.Issuer != expectedIssuer && sm.Issuer != expectedIssuer+"/" {
 		return errorchain.NewWithMessagef(heimdall.ErrConfiguration,
 			"expected issuer '%s' does not match issuer '%s' from the received metadata",
 			expectedIssuer, sm.Issuer)

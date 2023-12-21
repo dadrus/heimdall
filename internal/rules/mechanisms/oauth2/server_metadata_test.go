@@ -22,8 +22,18 @@ func TestServerMetadataVerifyIssuer(t *testing.T) {
 			matching:    true,
 		},
 		{
+			metadataURL: "https://example.com/issuer1/.well-known/openid-configuration",
+			issuer:      "https://example.com/issuer1/",
+			matching:    true,
+		},
+		{
 			metadataURL: "https://example.com/realms/issuer1/.well-known/openid-configuration",
 			issuer:      "https://example.com/realms/issuer1",
+			matching:    true,
+		},
+		{
+			metadataURL: "https://example.com/realms/issuer1/.well-known/openid-configuration",
+			issuer:      "https://example.com/realms/issuer1/",
 			matching:    true,
 		},
 		{
@@ -32,8 +42,18 @@ func TestServerMetadataVerifyIssuer(t *testing.T) {
 			matching:    true,
 		},
 		{
+			metadataURL: "https://example.com/.well-known/openid-configuration",
+			issuer:      "https://example.com/",
+			matching:    true,
+		},
+		{
 			metadataURL: "https://example.com/.well-known/openid-configuration/issuer1",
 			issuer:      "https://example.com/issuer1",
+			matching:    true,
+		},
+		{
+			metadataURL: "https://example.com/.well-known/openid-configuration/issuer1",
+			issuer:      "https://example.com/issuer1/",
 			matching:    true,
 		},
 		{
@@ -42,8 +62,18 @@ func TestServerMetadataVerifyIssuer(t *testing.T) {
 			matching:    true,
 		},
 		{
+			metadataURL: "https://example.com/.well-known/oauth-authorization-server/issuer1",
+			issuer:      "https://example.com/issuer1/",
+			matching:    true,
+		},
+		{
 			metadataURL: "https://example.com/.well-known/oauth-authorization-server",
 			issuer:      "https://example.com",
+			matching:    true,
+		},
+		{
+			metadataURL: "https://example.com/.well-known/oauth-authorization-server",
+			issuer:      "https://example.com/",
 			matching:    true,
 		},
 		{
@@ -52,8 +82,18 @@ func TestServerMetadataVerifyIssuer(t *testing.T) {
 			matching:    true,
 		},
 		{
+			metadataURL: "https://example.com/.well-known/example-configuration",
+			issuer:      "https://example.com/",
+			matching:    true,
+		},
+		{
 			metadataURL: "https://example.com/.well-known/example-configuration/",
 			issuer:      "https://example.com",
+			matching:    true,
+		},
+		{
+			metadataURL: "https://example.com/.well-known/example-configuration/",
+			issuer:      "https://example.com/",
 			matching:    true,
 		},
 		{
@@ -62,13 +102,28 @@ func TestServerMetadataVerifyIssuer(t *testing.T) {
 			matching:    true,
 		},
 		{
+			metadataURL: "https://example.com/.well-known/example-configuration/issuer1",
+			issuer:      "https://example.com/issuer1/",
+			matching:    true,
+		},
+		{
 			metadataURL: "https://example.com/.well-known/example-configuration/issuer1/",
 			issuer:      "https://example.com/issuer1",
 			matching:    true,
 		},
 		{
+			metadataURL: "https://example.com/.well-known/example-configuration/issuer1/",
+			issuer:      "https://example.com/issuer1/",
+			matching:    true,
+		},
+		{
 			metadataURL: "https://example.com/example-configuration/issuer1/",
 			issuer:      "https://example.com/example-configuration/issuer1",
+			matching:    true,
+		},
+		{
+			metadataURL: "https://example.com/example-configuration/issuer1/",
+			issuer:      "https://example.com/example-configuration/issuer1/",
 			matching:    true,
 		},
 		{
