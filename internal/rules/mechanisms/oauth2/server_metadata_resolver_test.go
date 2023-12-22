@@ -32,7 +32,7 @@ func TestNewServerMetadataResolver(t *testing.T) {
 				URL:       "https://foo.bar",
 				Method:    http.MethodGet,
 				Headers:   map[string]string{"Accept": "application/json"},
-				HTTPCache: &endpoint.HTTPCache{Enabled: true, DefaultTTL: 5 * time.Minute},
+				HTTPCache: &endpoint.HTTPCache{Enabled: true, DefaultTTL: 30 * time.Minute},
 			},
 		},
 		{
@@ -52,7 +52,7 @@ func TestNewServerMetadataResolver(t *testing.T) {
 				URL:       "https://foo.bar",
 				Method:    http.MethodPost,
 				Headers:   map[string]string{"Accept": "application/json"},
-				HTTPCache: &endpoint.HTTPCache{Enabled: true, DefaultTTL: 5 * time.Minute},
+				HTTPCache: &endpoint.HTTPCache{Enabled: true, DefaultTTL: 30 * time.Minute},
 			},
 		},
 		{
@@ -65,7 +65,7 @@ func TestNewServerMetadataResolver(t *testing.T) {
 					"Accept": "application/json",
 					"X-Foo":  "bar",
 				},
-				HTTPCache: &endpoint.HTTPCache{Enabled: true, DefaultTTL: 5 * time.Minute},
+				HTTPCache: &endpoint.HTTPCache{Enabled: true, DefaultTTL: 30 * time.Minute},
 			},
 		},
 		{
@@ -75,7 +75,7 @@ func TestNewServerMetadataResolver(t *testing.T) {
 				URL:       "https://foo.bar",
 				Method:    http.MethodGet,
 				Headers:   map[string]string{"Accept": "text/html"},
-				HTTPCache: &endpoint.HTTPCache{Enabled: true, DefaultTTL: 5 * time.Minute},
+				HTTPCache: &endpoint.HTTPCache{Enabled: true, DefaultTTL: 30 * time.Minute},
 			},
 		},
 		{

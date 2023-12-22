@@ -1392,7 +1392,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				// http cache
 				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil)
 				cch.EXPECT().Set(mock.Anything, mock.Anything, mock.Anything, mock.MatchedBy(
-					func(ttl time.Duration) bool { return ttl.Round(time.Minute) == 5*time.Minute },
+					func(ttl time.Duration) bool { return ttl.Round(time.Minute) == 30*time.Minute },
 				))
 			},
 			instructServer: func(t *testing.T) {

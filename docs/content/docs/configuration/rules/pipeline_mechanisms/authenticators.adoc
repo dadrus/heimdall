@@ -256,7 +256,7 @@ The https://datatracker.ietf.org/doc/html/rfc8414[OAuth 2.0 Authorization Server
 +
 The configuration of this property is mutually exclusive with `introspection_endpoint`. At least the `url` must be configured. As with the `introspection_endpoint`, the path part of the `url` can be templated and has access to the `TokenIssuer` object already introduced above (with the same limitations).
 +
-As with the `introspection_endpoint` as well, the `metadata_endpoint` is by default configured to use `GET` as HTTP method and sets the `Accept` header to `application/json`, as also required by both specifications referenced above. In addition, to avoid useless communication, it is also configured to make use of HTTP cache according to http://tools.ietf.org/html/rfc7234[RFC 7234] with default HTTP cache ttl set to `5m`. All these settings can however be overridden if required.
+As with the `introspection_endpoint` as well, the `metadata_endpoint` is by default configured to use `GET` as HTTP method and sets the `Accept` header to `application/json`, as also required by both specifications referenced above. In addition, to avoid useless communication, it is also configured to make use of HTTP cache according to http://tools.ietf.org/html/rfc7234[RFC 7234] with default HTTP cache ttl set to `30m`. All these settings can however be overridden if required.
 
 * *`token_source`*: _link:{{< relref "/docs/configuration/reference/types.adoc#_authentication_data_source" >}}[Authentication Data Source]_ (optional, not overridable)
 +
@@ -336,7 +336,7 @@ The https://datatracker.ietf.org/doc/html/rfc8414[OAuth 2.0 Authorization Server
 +
 The configuration of this property is mutually exclusive with `jwks_endpoint`. At least the `url` must be configured. As with the `jwks_endpoint`, the path part of the `url` can be templated and has access to the `TokenIssuer` object already introduced above.
 +
-As with the `jwks_endpoint` as well, the `metadata_endpoint` is by default configured to use `GET` as HTTP method and sets the `Accept` header to `application/json`, as also required by both specifications referenced above. In addition, to avoid useless communication, it is also configured to make use of HTTP cache according to http://tools.ietf.org/html/rfc7234[RFC 7234] with default HTTP cache ttl set to `5m`. All these settings can however be overridden if required.
+As with the `jwks_endpoint` as well, the `metadata_endpoint` is by default configured to use `GET` as HTTP method and sets the `Accept` header to `application/json`, as also required by both specifications referenced above. In addition, to avoid useless communication, it is also configured to make use of HTTP cache according to http://tools.ietf.org/html/rfc7234[RFC 7234] with default HTTP cache ttl set to `30m`. All these settings can however be overridden if required.
 
 * *`jwt_source`*: _link:{{< relref "/docs/configuration/reference/types.adoc#_authentication_data_source" >}}[Authentication Data Source]_ (optional, not overridable)
 +

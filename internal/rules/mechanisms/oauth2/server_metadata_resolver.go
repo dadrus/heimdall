@@ -42,7 +42,7 @@ func NewServerMetadataResolver(ep *endpoint.Endpoint) ServerMetadataResolver {
 	}
 
 	if ep.HTTPCache == nil {
-		ep.HTTPCache = &endpoint.HTTPCache{Enabled: true, DefaultTTL: 5 * time.Minute} //nolint:gomnd
+		ep.HTTPCache = &endpoint.HTTPCache{Enabled: true, DefaultTTL: 30 * time.Minute} //nolint:gomnd
 	}
 
 	return serverMetadataResolver{e: ep}
