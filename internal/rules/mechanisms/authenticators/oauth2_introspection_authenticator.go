@@ -68,21 +68,19 @@ type oauth2IntrospectionAuthenticator struct {
 	ads                  extractors.AuthDataExtractStrategy
 	ttl                  *time.Duration
 	allowFallbackOnError bool
-	validateMetadata     bool
 }
 
 func newOAuth2IntrospectionAuthenticator( // nolint: funlen
 	id string, rawConfig map[string]any,
 ) (*oauth2IntrospectionAuthenticator, error) {
 	type Config struct {
-		IntrospectionEndpoint               *endpoint.Endpoint                  `mapstructure:"introspection_endpoint"  validate:"required_without=MetadataEndpoint,excluded_with=MetadataEndpoint"`           //nolint:lll,tagalign
-		MetadataEndpoint                    *endpoint.Endpoint                  `mapstructure:"metadata_endpoint"       validate:"required_without=IntrospectionEndpoint,excluded_with=IntrospectionEndpoint"` //nolint:lll,tagalign
-		Assertions                          oauth2.Expectation                  `mapstructure:"assertions"              validate:"required_with=IntrospectionEndpoint"`                                        //nolint:lll,tagalign
-		SubjectInfo                         SubjectInfo                         `mapstructure:"subject"                 validate:"-"`                                                                          //nolint:lll,tagalign
-		AuthDataSource                      extractors.CompositeExtractStrategy `mapstructure:"token_source"`
-		CacheTTL                            *time.Duration                      `mapstructure:"cache_ttl"`
-		AllowFallbackOnError                bool                                `mapstructure:"allow_fallback_on_error"`
-		DisableIssuerIdentifierVerification bool                                `mapstructure:"disable_issuer_identifier_verification"` //nolint:lll
+		IntrospectionEndpoint *endpoint.Endpoint                  `mapstructure:"introspection_endpoint"  validate:"required_without=MetadataEndpoint,excluded_with=MetadataEndpoint"`           //nolint:lll,tagalign
+		MetadataEndpoint      *oauth2.MetadataEndpoint            `mapstructure:"metadata_endpoint"       validate:"required_without=IntrospectionEndpoint,excluded_with=IntrospectionEndpoint"` //nolint:lll,tagalign
+		Assertions            oauth2.Expectation                  `mapstructure:"assertions"              validate:"required_with=IntrospectionEndpoint"`                                        //nolint:lll,tagalign
+		SubjectInfo           SubjectInfo                         `mapstructure:"subject"                 validate:"-"`                                                                          //nolint:lll,tagalign
+		AuthDataSource        extractors.CompositeExtractStrategy `mapstructure:"token_source"`
+		CacheTTL              *time.Duration                      `mapstructure:"cache_ttl"`
+		AllowFallbackOnError  bool                                `mapstructure:"allow_fallback_on_error"`
 	}
 
 	var conf Config
@@ -119,9 +117,7 @@ func newOAuth2IntrospectionAuthenticator( // nolint: funlen
 	)
 
 	resolver := x.IfThenElseExec(conf.MetadataEndpoint != nil,
-		func() oauth2.ServerMetadataResolver {
-			return oauth2.NewServerMetadataResolver(conf.MetadataEndpoint)
-		},
+		func() oauth2.ServerMetadataResolver { return conf.MetadataEndpoint },
 		func() oauth2.ServerMetadataResolver {
 			ep := conf.IntrospectionEndpoint
 
@@ -142,7 +138,7 @@ func newOAuth2IntrospectionAuthenticator( // nolint: funlen
 			}
 
 			return oauth2.ResolverAdapterFunc(
-				func(_ context.Context, _ map[string]any, _ bool) (oauth2.ServerMetadata, error) {
+				func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
 					return oauth2.ServerMetadata{IntrospectionEndpoint: ep}, nil
 				},
 			)
@@ -157,7 +153,6 @@ func newOAuth2IntrospectionAuthenticator( // nolint: funlen
 		sf:                   &conf.SubjectInfo,
 		ttl:                  conf.CacheTTL,
 		allowFallbackOnError: conf.AllowFallbackOnError,
-		validateMetadata:     !conf.DisableIssuerIdentifierVerification,
 	}, nil
 }
 
@@ -217,7 +212,6 @@ func (a *oauth2IntrospectionAuthenticator) WithConfig(rawConfig map[string]any) 
 		allowFallbackOnError: x.IfThenElseExec(conf.AllowFallbackOnError != nil,
 			func() bool { return *conf.AllowFallbackOnError },
 			func() bool { return a.allowFallbackOnError }),
-		validateMetadata: a.validateMetadata,
 	}, nil
 }
 
@@ -238,7 +232,7 @@ func (a *oauth2IntrospectionAuthenticator) serverMetadata(
 		args["TokenIssuer"] = claims["iss"]
 	}
 
-	metadata, err := a.r.Get(ctx.AppContext(), args, a.validateMetadata)
+	metadata, err := a.r.Get(ctx.AppContext(), args)
 	if err != nil {
 		return oauth2.ServerMetadata{}, errorchain.NewWithMessage(heimdall.ErrInternal,
 			"failed retrieving oauth2 server metadata").CausedBy(err).WithErrorContext(a)

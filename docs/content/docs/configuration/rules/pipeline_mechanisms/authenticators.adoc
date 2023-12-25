@@ -254,9 +254,15 @@ The configuration of this property is mutually exclusive with `metadata_endpoint
 +
 The https://datatracker.ietf.org/doc/html/rfc8414[OAuth 2.0 Authorization Server Metadata] endpoint of the OAuth2, respectively OIDC authorization provider (the https://openid.net/specs/openid-connect-discovery-1_0.html[OpenID Connect Discovery] specification is an OIDC specific profile of that specification). If the token introspection URL is not known upfront, it can be resolved by making use of that endpoint.
 +
-The configuration of this property is mutually exclusive with `introspection_endpoint`. At least the `url` must be configured. As with the `introspection_endpoint`, the path part of the `url` can be templated and has access to the `TokenIssuer` object already introduced above (with the same limitations).
+The configuration of this property is mutually exclusive with `introspection_endpoint`. At least the `url` must be configured, can be templated and has access to the `TokenIssuer` object already introduced above (with the same limitations).
 +
-As with the `introspection_endpoint` as well, the `metadata_endpoint` is by default configured to use `GET` as HTTP method and sets the `Accept` header to `application/json`, as also required by both specifications referenced above. In addition, to avoid useless communication, it is also configured to make use of HTTP cache according to http://tools.ietf.org/html/rfc7234[RFC 7234] with default HTTP cache ttl set to `30m`. All these settings can however be overridden if required.
+The `metadata_endpoint` is by default configured to use `GET` as HTTP method and sets the `Accept` header to `application/json` as also required by both specifications referenced above. In addition, to avoid useless communication, it is also configured to make use of HTTP cache according to http://tools.ietf.org/html/rfc7234[RFC 7234] with default HTTP cache ttl set to `30m`. All these settings can however be overridden if required.
++
+In addition to the properties specified by the link:{{< relref "/docs/configuration/reference/types.adoc#_endpoint">}}[`endpoint`] type, following properties are available:
+
+** *`disable_issuer_identifier_verification`*: _boolean_ (optional, not overridable)
++
+Upon retrieval of the server metadata, both, the https://datatracker.ietf.org/doc/html/rfc8414[OAuth 2.0 Authorization Server Metadata] RFC, and the https://openid.net/specs/openid-connect-discovery-1_0.html[OpenID Connect Discovery] specification, require the verification of the issuer identifier for security reasons, e.g. to prevent https://datatracker.ietf.org/doc/html/rfc8414#section-6.2[Spoofing Attacks]. There are however setups, where strictly following that recommendation would result in extended bandwidth usage (instead of communicating directly with the auth server within the cluster one would need to use the same domain, the client application uses, which introduces additional network hops). It might also not work at all as the actual identifier of the issuer would change depending on where the request come from. By making use of this property and setting it to `true`, one can disable the corresponding verification. Defaults to `false`.
 
 * *`token_source`*: _link:{{< relref "/docs/configuration/reference/types.adoc#_authentication_data_source" >}}[Authentication Data Source]_ (optional, not overridable)
 +
@@ -277,10 +283,6 @@ How long to cache the response. If not set, caching of the introspection respons
 * *`allow_fallback_on_error`*: _boolean_ (optional, overridable)
 +
 If set to `true`, allows the pipeline to fall back to the next authenticator in the pipeline if this one fails to verify the credentials. Defaults to `false`.
-
-* *`disable_issuer_identifier_verification`*: _boolean_ (optional, not overridable)
-+
-Both, the https://datatracker.ietf.org/doc/html/rfc8414[OAuth 2.0 Authorization Server Metadata] RFC, and the https://openid.net/specs/openid-connect-discovery-1_0.html[OpenID Connect Discovery] specification, require the verification of the issuer identifier for security reasons, e.g. to prevent https://datatracker.ietf.org/doc/html/rfc8414#section-6.2[Spoofing Attacks]. There are however setups, where strictly following that recommendation would result in extended bandwidth usage (instead of communicating directly with the auth server within the cluster one would need to use the same domain, the client application uses, which introduces additional network hops). It might also not work at all as the actual identifier of the issuer would change depending on where the request come from. By making use of this property and setting it to `true`, one can disable the corresponding verification. Defaults to `false`.
 
 .Minimal possible configuration
 ====
@@ -337,6 +339,12 @@ The https://datatracker.ietf.org/doc/html/rfc8414[OAuth 2.0 Authorization Server
 The configuration of this property is mutually exclusive with `jwks_endpoint`. At least the `url` must be configured. As with the `jwks_endpoint`, the path part of the `url` can be templated and has access to the `TokenIssuer` object already introduced above.
 +
 As with the `jwks_endpoint` as well, the `metadata_endpoint` is by default configured to use `GET` as HTTP method and sets the `Accept` header to `application/json`, as also required by both specifications referenced above. In addition, to avoid useless communication, it is also configured to make use of HTTP cache according to http://tools.ietf.org/html/rfc7234[RFC 7234] with default HTTP cache ttl set to `30m`. All these settings can however be overridden if required.
++
+In addition to the properties specified by the link:{{< relref "/docs/configuration/reference/types.adoc#_endpoint">}}[`endpoint`] type, following properties are available:
+
+** *`disable_issuer_identifier_verification`*: _boolean_ (optional, not overridable)
++
+Upon retrieval of the server metadata, both, the https://datatracker.ietf.org/doc/html/rfc8414[OAuth 2.0 Authorization Server Metadata] RFC, and the https://openid.net/specs/openid-connect-discovery-1_0.html[OpenID Connect Discovery] specification, require the verification of the issuer identifier for security reasons, e.g. to prevent https://datatracker.ietf.org/doc/html/rfc8414#section-6.2[Spoofing Attacks]. There are however setups, where strictly following that recommendation would result in extended bandwidth usage (instead of communicating directly with the auth server within the cluster one would need to use the same domain, the client application uses, which introduces additional network hops). It might also not work at all as the actual identifier of the issuer would change depending on where the request come from. By making use of this property and setting it to `true`, one can disable the corresponding verification. Defaults to `false`.
 
 * *`jwt_source`*: _link:{{< relref "/docs/configuration/reference/types.adoc#_authentication_data_source" >}}[Authentication Data Source]_ (optional, not overridable)
 +
@@ -365,10 +373,6 @@ Enables or disables the verification of the JWK certificate used for JWT signatu
 * *`trust_store`*: _string_ (optional, not overridable)
 +
 The path to a PEM file containing the trust anchors, to be used for the JWK certificate validation. Defaults to system trust store.
-
-* *`disable_issuer_identifier_verification`*: _boolean_ (optional, not overridable)
-+
-Both, the https://datatracker.ietf.org/doc/html/rfc8414[OAuth 2.0 Authorization Server Metadata] RFC, and the https://openid.net/specs/openid-connect-discovery-1_0.html[OpenID Connect Discovery] specification, require the verification of the issuer identifier for security reasons, e.g. to prevent https://datatracker.ietf.org/doc/html/rfc8414#section-6.2[Spoofing Attacks]. There are however setups, where strictly following that recommendation would result in extended bandwidth usage (instead of communicating directly with the auth server within the cluster one would need to use the same domain, the client application uses, which introduces additional network hops). It might also not work at all as the actual identifier of the issuer would change depending on where the request come from. By making use of this property and setting it to `true`, one can disable the corresponding verification. Defaults to `false`.
 
 NOTE: If a JWT does not reference a `kid`, heimdall always fetches a JWKS from the configured endpoint (so no caching is done) and iterates over the received keys until one matches. If none matches, the authenticator fails.
 

@@ -21,9 +21,9 @@ Required scopes given to the client.
 +
 Required entries in the `aud` claim. Both cases, either as whitespace separated string, or a JSON array are considered.
 
-* *`issuers`*: _string array_ (mandatory)
+* *`issuers`*: _string array_ (optional)
 +
-Issuers to trust. At least one issuer must be configured.
+Issuers to trust.
 
 * *`allowed_algorithms`*: _string array_ (optional)
 +

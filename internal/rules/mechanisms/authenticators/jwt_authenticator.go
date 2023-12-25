@@ -74,21 +74,19 @@ type jwtAuthenticator struct {
 	allowFallbackOnError bool
 	trustStore           truststore.TrustStore
 	validateJWKCert      bool
-	validateMetadata     bool
 }
 
 func newJwtAuthenticator(id string, rawConfig map[string]any) (*jwtAuthenticator, error) { // nolint: funlen
 	type Config struct {
-		JWKSEndpoint                        *endpoint.Endpoint                  `mapstructure:"jwks_endpoint"        validate:"required_without=MetadataEndpoint,excluded_with=MetadataEndpoint"` //nolint:lll,tagalign
-		MetadataEndpoint                    *endpoint.Endpoint                  `mapstructure:"metadata_endpoint"    validate:"required_without=JWKSEndpoint,excluded_with=JWKSEndpoint"`         //nolint:lll,tagalign
-		Assertions                          oauth2.Expectation                  `mapstructure:"assertions"           validate:"required_with=JWKSEndpoint"`                                       //nolint:lll,tagalign
-		SubjectInfo                         SubjectInfo                         `mapstructure:"subject"              validate:"-"`                                                                //nolint:lll,tagalign
-		AuthDataSource                      extractors.CompositeExtractStrategy `mapstructure:"jwt_source"`
-		CacheTTL                            *time.Duration                      `mapstructure:"cache_ttl"`
-		AllowFallbackOnError                bool                                `mapstructure:"allow_fallback_on_error"`
-		ValidateJWK                         *bool                               `mapstructure:"validate_jwk"`
-		TrustStore                          truststore.TrustStore               `mapstructure:"trust_store"`
-		DisableIssuerIdentifierVerification bool                                `mapstructure:"disable_issuer_identifier_verification"` //nolint:lll
+		JWKSEndpoint         *endpoint.Endpoint                  `mapstructure:"jwks_endpoint"        validate:"required_without=MetadataEndpoint,excluded_with=MetadataEndpoint"` //nolint:lll,tagalign
+		MetadataEndpoint     *oauth2.MetadataEndpoint            `mapstructure:"metadata_endpoint"    validate:"required_without=JWKSEndpoint,excluded_with=JWKSEndpoint"`         //nolint:lll,tagalign
+		Assertions           oauth2.Expectation                  `mapstructure:"assertions"           validate:"required_with=JWKSEndpoint"`                                       //nolint:lll,tagalign
+		SubjectInfo          SubjectInfo                         `mapstructure:"subject"              validate:"-"`                                                                //nolint:lll,tagalign
+		AuthDataSource       extractors.CompositeExtractStrategy `mapstructure:"jwt_source"`
+		CacheTTL             *time.Duration                      `mapstructure:"cache_ttl"`
+		AllowFallbackOnError bool                                `mapstructure:"allow_fallback_on_error"`
+		ValidateJWK          *bool                               `mapstructure:"validate_jwk"`
+		TrustStore           truststore.TrustStore               `mapstructure:"trust_store"`
 	}
 
 	var conf Config
@@ -129,9 +127,7 @@ func newJwtAuthenticator(id string, rawConfig map[string]any) (*jwtAuthenticator
 	)
 
 	resolver := x.IfThenElseExec(conf.MetadataEndpoint != nil,
-		func() oauth2.ServerMetadataResolver {
-			return oauth2.NewServerMetadataResolver(conf.MetadataEndpoint)
-		},
+		func() oauth2.ServerMetadataResolver { return conf.MetadataEndpoint },
 		func() oauth2.ServerMetadataResolver {
 			ep := conf.JWKSEndpoint
 
@@ -148,7 +144,7 @@ func newJwtAuthenticator(id string, rawConfig map[string]any) (*jwtAuthenticator
 			}
 
 			return oauth2.ResolverAdapterFunc(
-				func(_ context.Context, _ map[string]any, _ bool) (oauth2.ServerMetadata, error) {
+				func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
 					return oauth2.ServerMetadata{JWKSEndpoint: ep}, nil
 				},
 			)
@@ -165,7 +161,6 @@ func newJwtAuthenticator(id string, rawConfig map[string]any) (*jwtAuthenticator
 		allowFallbackOnError: conf.AllowFallbackOnError,
 		validateJWKCert:      validateJWKCert,
 		trustStore:           conf.TrustStore,
-		validateMetadata:     !conf.DisableIssuerIdentifierVerification,
 	}, nil
 }
 
@@ -233,9 +228,8 @@ func (a *jwtAuthenticator) WithConfig(config map[string]any) (Authenticator, err
 		allowFallbackOnError: x.IfThenElseExec(conf.AllowFallbackOnError != nil,
 			func() bool { return *conf.AllowFallbackOnError },
 			func() bool { return a.allowFallbackOnError }),
-		validateJWKCert:  a.validateJWKCert,
-		trustStore:       a.trustStore,
-		validateMetadata: a.validateMetadata,
+		validateJWKCert: a.validateJWKCert,
+		trustStore:      a.trustStore,
 	}, nil
 }
 
@@ -291,7 +285,7 @@ func (a *jwtAuthenticator) getCacheTTL(key *jose.JSONWebKey) time.Duration {
 }
 
 func (a *jwtAuthenticator) serverMetadata(ctx heimdall.Context, claims map[string]any) (oauth2.ServerMetadata, error) {
-	metadata, err := a.r.Get(ctx.AppContext(), map[string]any{"TokenIssuer": claims["iss"]}, a.validateMetadata)
+	metadata, err := a.r.Get(ctx.AppContext(), map[string]any{"TokenIssuer": claims["iss"]})
 	if err != nil {
 		return oauth2.ServerMetadata{}, errorchain.NewWithMessage(heimdall.ErrInternal,
 			"failed retrieving oauth2 server metadata").CausedBy(err).WithErrorContext(a)
