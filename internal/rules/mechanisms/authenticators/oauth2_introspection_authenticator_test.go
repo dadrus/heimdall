@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"strconv"
 	"testing"
 	"time"
 
@@ -105,6 +104,23 @@ subject:
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
 				assert.Contains(t, err.Error(), "'issuers' is a required field")
+			},
+		},
+		{
+			uc: "minimal introspection endpoint based config with malformed url",
+			id: "auth1",
+			config: []byte(`
+introspection_endpoint:
+  url: "{{ .IssuerName }}"
+assertions:
+  issuers:
+    - foobar`),
+			assert: func(t *testing.T, err error, _ *oauth2IntrospectionAuthenticator) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorContains(t, err, "'introspection_endpoint'.'url' must be a valid URL")
 			},
 		},
 		{
@@ -245,6 +261,21 @@ allow_fallback_on_error: true
 				assert.True(t, auth.IsFallbackOnErrorAllowed())
 
 				assert.Equal(t, "auth1", auth.ID())
+			},
+		},
+		{
+			uc: "minimal metadata endpoint based configuration with malformed endpoint",
+			id: "auth1",
+			config: []byte(`
+metadata_endpoint:
+  url: "{{ .IssuerName }}"
+`),
+			assert: func(t *testing.T, err error, _ *oauth2IntrospectionAuthenticator) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorContains(t, err, "'metadata_endpoint'.'url' must be a valid URL")
 			},
 		},
 		{
@@ -588,14 +619,12 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 	var (
 		introspectionEndpointCalled      bool
 		checkIntrospectionRequest        func(req *http.Request)
-		introspectionResponseHeaders     map[string]string
 		introspectionResponseContentType string
 		introspectionResponseContent     []byte
 		introspectionResponseCode        int
 
 		metadataEndpointCalled      bool
 		checkMetadataRequest        func(req *http.Request)
-		metadataResponseHeaders     map[string]string
 		metadataResponseContentType string
 		metadataResponseContent     []byte
 		metadataResponseCode        int
@@ -609,13 +638,8 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 
 		checkIntrospectionRequest(r)
 
-		for hn, hv := range introspectionResponseHeaders {
-			w.Header().Set(hn, hv)
-		}
-
 		if introspectionResponseContent != nil {
 			w.Header().Set("Content-Type", introspectionResponseContentType)
-			w.Header().Set("Content-Length", strconv.Itoa(len(introspectionResponseContent)))
 			_, err := w.Write(introspectionResponseContent)
 			require.NoError(t, err)
 		}
@@ -628,13 +652,8 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 
 		checkMetadataRequest(r)
 
-		for hn, hv := range metadataResponseHeaders {
-			w.Header().Set(hn, hv)
-		}
-
 		if metadataResponseContent != nil {
 			w.Header().Set("Content-Type", metadataResponseContentType)
-			w.Header().Set("Content-Length", strconv.Itoa(len(metadataResponseContent)))
 			_, err := w.Write(metadataResponseContent)
 			require.NoError(t, err)
 		}
@@ -1705,12 +1724,10 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 		t.Run("case="+tc.uc, func(t *testing.T) {
 			// GIVEN
 			introspectionEndpointCalled = false
-			introspectionResponseHeaders = nil
 			introspectionResponseContentType = ""
 			introspectionResponseContent = nil
 
 			metadataEndpointCalled = false
-			metadataResponseHeaders = nil
 			metadataResponseContentType = ""
 			metadataResponseContent = nil
 

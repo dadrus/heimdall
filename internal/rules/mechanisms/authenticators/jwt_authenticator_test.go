@@ -28,7 +28,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
-	"strconv"
 	"testing"
 	"time"
 
@@ -135,7 +134,24 @@ subject:
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "'issuers' is a required field")
+				require.ErrorContains(t, err, "'issuers' is a required field")
+			},
+		},
+		{
+			uc: "minimal jwks endpoint based configuration with malformed jwks endpoint",
+			id: "auth1",
+			config: []byte(`
+jwks_endpoint:
+  url: "{{ .IssuerName }}"
+assertions:
+  issuers:
+    - foobar`),
+			assert: func(t *testing.T, err error, auth *jwtAuthenticator) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorContains(t, err, "'jwks_endpoint'.'url' must be a valid URL")
 			},
 		},
 		{
@@ -352,6 +368,21 @@ trust_store: ` + trustStorePath),
 
 				// handler id
 				assert.Equal(t, "auth1", auth.ID())
+			},
+		},
+		{
+			uc: "minimal metadata endpoint based configuration with malformed endpoint",
+			id: "auth1",
+			config: []byte(`
+metadata_endpoint:
+  url: "{{ .IssuerName }}"
+`),
+			assert: func(t *testing.T, err error, auth *jwtAuthenticator) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorContains(t, err, "'metadata_endpoint'.'url' must be a valid URL")
 			},
 		},
 		{
@@ -790,14 +821,12 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 	var (
 		jwksEndpointCalled      bool
 		checkJWKSRequest        func(req *http.Request)
-		jwksResponseHeaders     map[string]string
 		jwksResponseContentType string
 		jwksResponseContent     []byte
 		jwksResponseCode        int
 
 		metadataEndpointCalled      bool
-		metadataOIDCRequest         func(req *http.Request)
-		metadataResponseHeaders     map[string]string
+		checkMetadataRequest        func(req *http.Request)
 		metadataResponseContentType string
 		metadataResponseContent     []byte
 		metadataResponseCode        int
@@ -848,13 +877,8 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 
 		checkJWKSRequest(r)
 
-		for hn, hv := range jwksResponseHeaders {
-			w.Header().Set(hn, hv)
-		}
-
 		if jwksResponseContent != nil {
 			w.Header().Set("Content-Type", jwksResponseContentType)
-			w.Header().Set("Content-Length", strconv.Itoa(len(jwksResponseContent)))
 			_, err := w.Write(jwksResponseContent)
 			require.NoError(t, err)
 		} else {
@@ -865,16 +889,11 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 	oidcSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		metadataEndpointCalled = true
 
-		metadataOIDCRequest(r)
-
-		for hn, hv := range metadataResponseHeaders {
-			w.Header().Set(hn, hv)
-		}
+		checkMetadataRequest(r)
 
 		if metadataResponseContent != nil {
 			w.Header().Set("Content-Type", metadataResponseContentType)
-			w.Header().Set("Content-Length", strconv.Itoa(len(metadataResponseContent)))
-			_, err := w.Write(metadataResponseContent)
+			_, err = w.Write(metadataResponseContent)
 			require.NoError(t, err)
 		} else {
 			w.WriteHeader(metadataResponseCode)
@@ -1215,7 +1234,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			instructServer: func(t *testing.T) {
 				t.Helper()
 
-				metadataOIDCRequest = func(req *http.Request) {
+				checkMetadataRequest = func(req *http.Request) {
 					assert.Equal(t, "application/json", req.Header.Get("Accept"))
 				}
 
@@ -1261,7 +1280,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			instructServer: func(t *testing.T) {
 				t.Helper()
 
-				metadataOIDCRequest = func(req *http.Request) {
+				checkMetadataRequest = func(req *http.Request) {
 					assert.Equal(t, "application/json", req.Header.Get("Accept"))
 				}
 
@@ -1772,7 +1791,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				checkJWKSRequest = func(req *http.Request) {
 					assert.Equal(t, "application/json", req.Header.Get("Accept"))
 				}
-				metadataOIDCRequest = func(req *http.Request) {
+				checkMetadataRequest = func(req *http.Request) {
 					assert.Equal(t, "application/json", req.Header.Get("Accept"))
 					assert.Equal(t, "/"+issuer, req.URL.Path)
 				}
@@ -2282,7 +2301,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				checkJWKSRequest = func(req *http.Request) {
 					assert.Equal(t, "application/json", req.Header.Get("Accept"))
 				}
-				metadataOIDCRequest = func(req *http.Request) {
+				checkMetadataRequest = func(req *http.Request) {
 					assert.Equal(t, "application/json", req.Header.Get("Accept"))
 					assert.Equal(t, "/", req.URL.Path)
 				}
@@ -2314,19 +2333,17 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 		t.Run("case="+tc.uc, func(t *testing.T) {
 			// GIVEN
 			jwksEndpointCalled = false
-			jwksResponseHeaders = nil
 			jwksResponseContentType = ""
 			jwksResponseContent = nil
 			jwksResponseCode = 0
 
 			metadataEndpointCalled = false
-			metadataResponseHeaders = nil
 			metadataResponseContentType = ""
 			metadataResponseContent = nil
 			metadataResponseCode = 0
 
 			checkJWKSRequest = func(*http.Request) { t.Helper() }
-			metadataOIDCRequest = func(*http.Request) { t.Helper() }
+			checkMetadataRequest = func(*http.Request) { t.Helper() }
 
 			instructServer := x.IfThenElse(tc.instructServer != nil,
 				tc.instructServer,
