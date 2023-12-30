@@ -230,12 +230,12 @@ mechanisms:
           attributes: "@this"
           id: sub
         allow_fallback_on_error: true
-        disable_issuer_identifier_verification: false
     - id: oauth2_introspection_using_metadata_endpoint
       type: oauth2_introspection
       config:
         metadata_endpoint:
           url: http://hydra:4445/oauth2/introspect
+          disable_issuer_identifier_verification: true
           retry:
             max_delay: 300ms
             give_up_after: 2s
@@ -262,7 +262,6 @@ mechanisms:
           attributes: "@this"
           id: sub
         allow_fallback_on_error: true
-        disable_issuer_identifier_verification: false
     - id: jwt_authenticator1
       type: jwt
       config:
