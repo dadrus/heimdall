@@ -109,7 +109,6 @@ mechanisms:
           attributes: "@this"
           id: "identity.id"
         cache_ttl: 5m
-        disable_issuer_identifier_verification: true
   authorizers:
     - id: allow_all_authorizer
       type: allow
