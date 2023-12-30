@@ -203,10 +203,11 @@ mechanisms:
   - id: jwt_authenticator
     type: jwt
     config:
-      jwks_endpoint:
-        url: http://foo/token
-        method: GET
-        enable_http_cache: true
+      metadata_endpoint:
+        url: http://auth-server/.well-known/oauth-authorization-server
+        http_cache:
+          enabled: true
+          cache_ttl: 1h
       jwt_source:
         - header: Authorization
           scheme: Bearer
@@ -219,8 +220,6 @@ mechanisms:
           - foo
         allowed_algorithms:
           - RS256
-        issuers:
-          - bla
       subject:
         attributes: "@this"
         id: "identity.id"

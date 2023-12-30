@@ -21,6 +21,7 @@ import (
 
 	"github.com/goccy/go-json"
 
+	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
@@ -31,7 +32,7 @@ type Scopes []string
 func (s *Scopes) UnmarshalJSON(b []byte) error {
 	var v interface{}
 	if err := json.Unmarshal(b, &v); err != nil {
-		return errorchain.NewWithMessage(ErrConfiguration, "failed to unmarshal scopes").CausedBy(err)
+		return errorchain.NewWithMessage(heimdall.ErrConfiguration, "failed to unmarshal scopes").CausedBy(err)
 	}
 
 	switch value := v.(type) {
@@ -43,7 +44,7 @@ func (s *Scopes) UnmarshalJSON(b []byte) error {
 		for idx, val := range value {
 			s, ok := val.(string)
 			if !ok {
-				return errorchain.NewWithMessage(ErrConfiguration, "failed to parse scopes array")
+				return errorchain.NewWithMessage(heimdall.ErrConfiguration, "failed to parse scopes array")
 			}
 
 			array[idx] = s
@@ -51,7 +52,7 @@ func (s *Scopes) UnmarshalJSON(b []byte) error {
 
 		*s = array
 	default:
-		return errorchain.NewWithMessage(ErrConfiguration, "unexpected content for scopes")
+		return errorchain.NewWithMessage(heimdall.ErrConfiguration, "unexpected content for scopes")
 	}
 
 	return nil

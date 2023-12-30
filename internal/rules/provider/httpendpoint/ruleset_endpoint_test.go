@@ -49,8 +49,8 @@ func TestRuleSetEndpointInit(t *testing.T) {
 	// THEN
 	assert.Equal(t, "http://foo.bar", ep.URL)
 	assert.Equal(t, http.MethodGet, ep.Method)
-	require.NotNil(t, ep.HTTPCacheEnabled)
-	assert.True(t, *ep.HTTPCacheEnabled)
+	require.NotNil(t, ep.HTTPCache)
+	assert.True(t, ep.HTTPCache.Enabled)
 }
 
 func TestRuleSetEndpointFetchRuleSet(t *testing.T) {

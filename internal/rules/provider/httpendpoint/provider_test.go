@@ -553,7 +553,8 @@ rules:
 watch_interval: 250ms
 endpoints:
   - url: ` + srv.URL + `
-    enable_http_cache: false
+    http_cache: 
+      enabled: false
 `),
 			writeResponse: func(t *testing.T, w http.ResponseWriter) {
 				t.Helper()
