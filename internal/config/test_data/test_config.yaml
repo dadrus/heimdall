@@ -262,7 +262,7 @@ mechanisms:
           attributes: "@this"
           id: sub
         allow_fallback_on_error: true
-    - id: jwt_authenticator1
+    - id: jwt_authenticator_using_jwks_endpoint
       type: jwt
       config:
         jwks_endpoint:
@@ -289,10 +289,15 @@ mechanisms:
         allow_fallback_on_error: true
         validate_jwk: true
         trust_store: /opt/heimdall/trust_store.pem
-    - id: jwt_authenticator2
+    - id: jwt_authenticator_using_metadata_endpoint
       type: jwt
       config:
-        metadata_endpoint: http://bar/token
+        metadata_endpoint:
+          url: http://bar/discovery
+          disable_issuer_identifier_verification: false
+          http_cache:
+            enabled: true
+            default_ttl: 10m
         assertions:
           audience:
             - bla
