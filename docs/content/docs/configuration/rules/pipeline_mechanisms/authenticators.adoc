@@ -284,7 +284,7 @@ How long to cache the response. If not set, caching of the introspection respons
 +
 If set to `true`, allows the pipeline to fall back to the next authenticator in the pipeline if this one fails to verify the credentials. Defaults to `false`.
 
-.Minimal possible configuration
+.Minimal possible configuration based on the Introspection endpoint
 ====
 [source, yaml]
 ----
@@ -376,7 +376,7 @@ The path to a PEM file containing the trust anchors, to be used for the JWK cert
 
 NOTE: If a JWT does not reference a `kid`, heimdall always fetches a JWKS from the configured endpoint (so no caching is done) and iterates over the received keys until one matches. If none matches, the authenticator fails.
 
-.Minimal possible configuration
+.Minimal possible configuration based on the JWKS endpoint
 ====
 [source, yaml]
 ----
