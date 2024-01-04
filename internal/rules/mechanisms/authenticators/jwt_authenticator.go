@@ -17,13 +17,14 @@
 package authenticators
 
 import (
+	"context"
 	"crypto/sha256"
 	"crypto/x509"
 	"encoding/hex"
 	"errors"
-	"io"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/goccy/go-json"
@@ -37,6 +38,7 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/extractors"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/oauth2"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
 	"github.com/dadrus/heimdall/internal/truststore"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
@@ -64,7 +66,7 @@ func init() {
 
 type jwtAuthenticator struct {
 	id                   string
-	e                    endpoint.Endpoint
+	r                    oauth2.ServerMetadataResolver
 	a                    oauth2.Expectation
 	ttl                  *time.Duration
 	sf                   SubjectFactory
@@ -76,9 +78,10 @@ type jwtAuthenticator struct {
 
 func newJwtAuthenticator(id string, rawConfig map[string]any) (*jwtAuthenticator, error) { // nolint: funlen
 	type Config struct {
-		Endpoint             endpoint.Endpoint                   `mapstructure:"jwks_endpoint"           validate:"required"`
-		Assertions           oauth2.Expectation                  `mapstructure:"assertions"              validate:"required"`
-		SubjectInfo          SubjectInfo                         `mapstructure:"subject"                 validate:"-"`
+		JWKSEndpoint         *endpoint.Endpoint                  `mapstructure:"jwks_endpoint"        validate:"required_without=MetadataEndpoint,excluded_with=MetadataEndpoint"` //nolint:lll,tagalign
+		MetadataEndpoint     *oauth2.MetadataEndpoint            `mapstructure:"metadata_endpoint"    validate:"required_without=JWKSEndpoint,excluded_with=JWKSEndpoint"`         //nolint:lll,tagalign
+		Assertions           oauth2.Expectation                  `mapstructure:"assertions"           validate:"required_with=JWKSEndpoint"`                                       //nolint:lll,tagalign
+		SubjectInfo          SubjectInfo                         `mapstructure:"subject"              validate:"-"`                                                                //nolint:lll,tagalign
 		AuthDataSource       extractors.CompositeExtractStrategy `mapstructure:"jwt_source"`
 		CacheTTL             *time.Duration                      `mapstructure:"cache_ttl"`
 		AllowFallbackOnError bool                                `mapstructure:"allow_fallback_on_error"`
@@ -91,16 +94,9 @@ func newJwtAuthenticator(id string, rawConfig map[string]any) (*jwtAuthenticator
 		return nil, err
 	}
 
-	if conf.Endpoint.Headers == nil {
-		conf.Endpoint.Headers = make(map[string]string)
-	}
-
-	if _, ok := conf.Endpoint.Headers["Accept-Type"]; !ok {
-		conf.Endpoint.Headers["Accept-Type"] = "application/json"
-	}
-
-	if len(conf.Endpoint.Method) == 0 {
-		conf.Endpoint.Method = "GET"
+	if conf.JWKSEndpoint != nil && len(conf.Assertions.TrustedIssuers) == 0 {
+		return nil, errorchain.
+			NewWithMessage(heimdall.ErrConfiguration, "'issuers' is a required field if JWKS endpoint is used")
 	}
 
 	if len(conf.Assertions.AllowedAlgorithms) == 0 {
@@ -130,9 +126,34 @@ func newJwtAuthenticator(id string, rawConfig map[string]any) (*jwtAuthenticator
 		func() extractors.CompositeExtractStrategy { return conf.AuthDataSource },
 	)
 
+	resolver := x.IfThenElseExec(conf.MetadataEndpoint != nil,
+		func() oauth2.ServerMetadataResolver { return conf.MetadataEndpoint },
+		func() oauth2.ServerMetadataResolver {
+			ep := conf.JWKSEndpoint
+
+			if ep.Headers == nil {
+				ep.Headers = make(map[string]string)
+			}
+
+			if _, ok := ep.Headers["Accept"]; !ok {
+				ep.Headers["Accept"] = "application/json"
+			}
+
+			if len(ep.Method) == 0 {
+				ep.Method = http.MethodGet
+			}
+
+			return oauth2.ResolverAdapterFunc(
+				func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
+					return oauth2.ServerMetadata{JWKSEndpoint: ep}, nil
+				},
+			)
+		},
+	)
+
 	return &jwtAuthenticator{
 		id:                   id,
-		e:                    conf.Endpoint,
+		r:                    resolver,
 		a:                    conf.Assertions,
 		ttl:                  conf.CacheTTL,
 		sf:                   &conf.SubjectInfo,
@@ -199,7 +220,7 @@ func (a *jwtAuthenticator) WithConfig(config map[string]any) (Authenticator, err
 
 	return &jwtAuthenticator{
 		id:  a.id,
-		e:   a.e,
+		r:   a.r,
 		a:   conf.Assertions.Merge(&a.a),
 		ttl: x.IfThenElse(conf.CacheTTL != nil, conf.CacheTTL, a.ttl),
 		sf:  a.sf,
@@ -263,28 +284,70 @@ func (a *jwtAuthenticator) getCacheTTL(key *jose.JSONWebKey) time.Duration {
 	}
 }
 
-func (a *jwtAuthenticator) verifyToken(ctx heimdall.Context, token *jwt.JSONWebToken) (json.RawMessage, error) {
-	if len(token.Headers[0].KeyID) == 0 {
-		return a.verifyTokenWithoutKID(ctx, token)
+func (a *jwtAuthenticator) serverMetadata(ctx heimdall.Context, claims map[string]any) (oauth2.ServerMetadata, error) {
+	metadata, err := a.r.Get(ctx.AppContext(), map[string]any{"TokenIssuer": claims["iss"]})
+	if err != nil {
+		return oauth2.ServerMetadata{}, errorchain.NewWithMessage(heimdall.ErrInternal,
+			"failed retrieving oauth2 server metadata").CausedBy(err).WithErrorContext(a)
 	}
 
-	sigKey, err := a.getKey(ctx, token.Headers[0].KeyID)
+	if metadata.JWKSEndpoint == nil {
+		return oauth2.ServerMetadata{}, errorchain.NewWithMessage(heimdall.ErrInternal,
+			"received server metadata does not contain the required jwks_uri").
+			WithErrorContext(a)
+	}
+
+	return metadata, nil
+}
+
+func (a *jwtAuthenticator) verifyToken(ctx heimdall.Context, token *jwt.JSONWebToken) (json.RawMessage, error) {
+	claims := map[string]any{}
+	if err := token.UnsafeClaimsWithoutVerification(&claims); err != nil {
+		return nil, errorchain.NewWithMessage(heimdall.ErrInternal, "failed to deserialize JWT").
+			WithErrorContext(a).
+			CausedBy(err)
+	}
+
+	metadata, err := a.serverMetadata(ctx, claims)
 	if err != nil {
 		return nil, err
 	}
 
-	return a.verifyTokenWithKey(token, sigKey)
+	// configured assertions take precedence over those available in the metadata
+	assertions := a.a.Merge(&oauth2.Expectation{
+		TrustedIssuers: []string{metadata.Issuer},
+	})
+
+	if len(token.Headers[0].KeyID) == 0 {
+		return a.verifyTokenWithoutKID(ctx, token, claims, metadata.JWKSEndpoint, &assertions)
+	}
+
+	sigKey, err := a.getKey(ctx, token.Headers[0].KeyID, claims, metadata.JWKSEndpoint)
+	if err != nil {
+		return nil, err
+	}
+
+	return a.verifyTokenWithKey(token, sigKey, &assertions)
 }
 
-func (a *jwtAuthenticator) verifyTokenWithoutKID(ctx heimdall.Context, token *jwt.JSONWebToken) (
-	json.RawMessage, error,
-) {
+func (a *jwtAuthenticator) verifyTokenWithoutKID(
+	ctx heimdall.Context,
+	token *jwt.JSONWebToken,
+	tokenClaims map[string]any,
+	ep *endpoint.Endpoint,
+	assertions *oauth2.Expectation,
+) (json.RawMessage, error) {
 	logger := zerolog.Ctx(ctx.AppContext())
 	logger.Info().Msg("No kid present in the JWT")
 
 	var rawClaims json.RawMessage
 
-	jwks, err := a.fetchJWKS(ctx)
+	req, err := a.createRequest(ctx.AppContext(), ep, tokenClaims)
+	if err != nil {
+		return nil, err
+	}
+
+	jwks, err := a.fetchJWKS(ctx.AppContext(), ep.CreateClient(req.URL.Hostname()), req)
 	if err != nil {
 		return nil, err
 	}
@@ -297,7 +360,7 @@ func (a *jwtAuthenticator) verifyTokenWithoutKID(ctx heimdall.Context, token *jw
 			continue
 		}
 
-		rawClaims, err = a.verifyTokenWithKey(token, &sigKey)
+		rawClaims, err = a.verifyTokenWithKey(token, &sigKey, assertions)
 		if err == nil {
 			break
 		}
@@ -315,7 +378,9 @@ func (a *jwtAuthenticator) verifyTokenWithoutKID(ctx heimdall.Context, token *jw
 	return rawClaims, nil
 }
 
-func (a *jwtAuthenticator) getKey(ctx heimdall.Context, keyID string) (*jose.JSONWebKey, error) {
+func (a *jwtAuthenticator) getKey(
+	ctx heimdall.Context, keyID string, tokenClaims map[string]any, ep *endpoint.Endpoint,
+) (*jose.JSONWebKey, error) {
 	cch := cache.Ctx(ctx.AppContext())
 	logger := zerolog.Ctx(ctx.AppContext())
 
@@ -328,8 +393,13 @@ func (a *jwtAuthenticator) getKey(ctx heimdall.Context, keyID string) (*jose.JSO
 		ok         bool
 	)
 
+	req, err := a.createRequest(ctx.AppContext(), ep, tokenClaims)
+	if err != nil {
+		return nil, err
+	}
+
 	if a.isCacheEnabled() {
-		cacheKey = a.calculateCacheKey(keyID)
+		cacheKey = a.calculateCacheKey(ep, req.URL.String(), keyID)
 		cacheEntry = cch.Get(ctx.AppContext(), cacheKey)
 	}
 
@@ -346,7 +416,7 @@ func (a *jwtAuthenticator) getKey(ctx heimdall.Context, keyID string) (*jose.JSO
 		return jwk, nil
 	}
 
-	jwks, err = a.fetchJWKS(ctx)
+	jwks, err = a.fetchJWKS(ctx.AppContext(), ep.CreateClient(req.URL.Hostname()), req)
 	if err != nil {
 		return nil, err
 	}
@@ -374,20 +444,14 @@ func (a *jwtAuthenticator) getKey(ctx heimdall.Context, keyID string) (*jose.JSO
 	return jwk, nil
 }
 
-func (a *jwtAuthenticator) fetchJWKS(ctx heimdall.Context) (*jose.JSONWebKeySet, error) {
-	logger := zerolog.Ctx(ctx.AppContext())
+func (a *jwtAuthenticator) fetchJWKS(
+	ctx context.Context, client *http.Client, req *http.Request,
+) (*jose.JSONWebKeySet, error) {
+	logger := zerolog.Ctx(ctx)
 
 	logger.Debug().Msg("Retrieving JWKS from configured endpoint")
 
-	req, err := a.e.CreateRequest(ctx.AppContext(), nil, nil)
-	if err != nil {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrInternal, "failed creating request").
-			WithErrorContext(a).
-			CausedBy(err)
-	}
-
-	resp, err := a.e.CreateClient(req.URL.Hostname()).Do(req)
+	resp, err := client.Do(req)
 	if err != nil {
 		var clientErr *url.Error
 		if errors.As(err, &clientErr) && clientErr.Timeout() {
@@ -408,6 +472,33 @@ func (a *jwtAuthenticator) fetchJWKS(ctx heimdall.Context) (*jose.JSONWebKeySet,
 	return a.readJWKS(resp)
 }
 
+func (a *jwtAuthenticator) createRequest(
+	ctx context.Context, ep *endpoint.Endpoint, claims map[string]any,
+) (*http.Request, error) {
+	req, err := ep.CreateRequest(ctx, nil, endpoint.RenderFunc(func(value string) (string, error) {
+		// ignoring closing braces here as it would anyway result in a broken template leading to an error
+		if !strings.Contains(value, "{{") {
+			return value, nil
+		}
+
+		tpl, err := template.New(value)
+		if err != nil {
+			return "", errorchain.NewWithMessage(heimdall.ErrInternal, "failed to create template").
+				CausedBy(err)
+		}
+
+		return tpl.Render(map[string]any{"TokenIssuer": claims["iss"]})
+	}))
+	if err != nil {
+		return nil, errorchain.
+			NewWithMessage(heimdall.ErrInternal, "failed creating request").
+			WithErrorContext(a).
+			CausedBy(err)
+	}
+
+	return req, nil
+}
+
 func (a *jwtAuthenticator) readJWKS(resp *http.Response) (*jose.JSONWebKeySet, error) {
 	if !(resp.StatusCode >= http.StatusOK && resp.StatusCode < http.StatusMultipleChoices) {
 		return nil, errorchain.
@@ -415,17 +506,10 @@ func (a *jwtAuthenticator) readJWKS(resp *http.Response) (*jose.JSONWebKeySet, e
 			WithErrorContext(a)
 	}
 
-	rawData, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrInternal, "failed to read response").
-			WithErrorContext(a).
-			CausedBy(err)
-	}
-
 	// unmarshal the received key set
 	var jwks jose.JSONWebKeySet
-	if err := json.Unmarshal(rawData, &jwks); err != nil {
+
+	if err := json.NewDecoder(resp.Body).Decode(&jwks); err != nil {
 		return nil, errorchain.
 			NewWithMessage(heimdall.ErrInternal, "failed to unmarshal received jwks").
 			WithErrorContext(a).
@@ -435,7 +519,9 @@ func (a *jwtAuthenticator) readJWKS(resp *http.Response) (*jose.JSONWebKeySet, e
 	return &jwks, nil
 }
 
-func (a *jwtAuthenticator) verifyTokenWithKey(token *jwt.JSONWebToken, key *jose.JSONWebKey) (json.RawMessage, error) {
+func (a *jwtAuthenticator) verifyTokenWithKey(
+	token *jwt.JSONWebToken, key *jose.JSONWebKey, assertions *oauth2.Expectation,
+) (json.RawMessage, error) {
 	header := token.Headers[0]
 
 	if len(header.Algorithm) != 0 && key.Algorithm != header.Algorithm {
@@ -445,7 +531,7 @@ func (a *jwtAuthenticator) verifyTokenWithKey(token *jwt.JSONWebToken, key *jose
 			WithErrorContext(a)
 	}
 
-	if err := a.a.AssertAlgorithm(key.Algorithm); err != nil {
+	if err := assertions.AssertAlgorithm(key.Algorithm); err != nil {
 		return nil, errorchain.
 			NewWithMessagef(heimdall.ErrAuthentication, "%s algorithm is not allowed", key.Algorithm).
 			WithErrorContext(a).
@@ -464,7 +550,7 @@ func (a *jwtAuthenticator) verifyTokenWithKey(token *jwt.JSONWebToken, key *jose
 			CausedBy(err)
 	}
 
-	if err := claims.Validate(a.a); err != nil {
+	if err := claims.Validate(*assertions); err != nil {
 		return nil, errorchain.
 			NewWithMessage(heimdall.ErrAuthentication, "access token does not satisfy assertion conditions").
 			WithErrorContext(a).
@@ -482,9 +568,10 @@ func (a *jwtAuthenticator) verifyTokenWithKey(token *jwt.JSONWebToken, key *jose
 	return rawPayload, nil
 }
 
-func (a *jwtAuthenticator) calculateCacheKey(reference string) string {
+func (a *jwtAuthenticator) calculateCacheKey(ep *endpoint.Endpoint, renderedURL, reference string) string {
 	digest := sha256.New()
-	digest.Write(a.e.Hash())
+	digest.Write(ep.Hash())
+	digest.Write(stringx.ToBytes(renderedURL))
 	digest.Write(stringx.ToBytes(reference))
 
 	return hex.EncodeToString(digest.Sum(nil))

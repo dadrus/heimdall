@@ -30,7 +30,7 @@ const defaultLeeway = 10 * time.Second
 var ErrAssertion = errors.New("assertion error")
 
 type Expectation struct {
-	TrustedIssuers    []string      `mapstructure:"issuers"            validate:"required"`
+	TrustedIssuers    []string      `mapstructure:"issuers"`
 	ScopesMatcher     ScopesMatcher `mapstructure:"scopes"`
 	TargetAudiences   []string      `mapstructure:"audience"`
 	AllowedAlgorithms []string      `mapstructure:"allowed_algorithms"`

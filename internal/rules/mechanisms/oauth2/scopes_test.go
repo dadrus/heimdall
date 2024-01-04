@@ -22,6 +22,8 @@ import (
 	"github.com/goccy/go-json"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/dadrus/heimdall/internal/heimdall"
 )
 
 func TestScopesUnmarshalJSON(t *testing.T) {
@@ -80,7 +82,7 @@ func TestScopesUnmarshalJSON(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, ErrConfiguration)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
 				assert.Contains(t, err.Error(), "unexpected content")
 			},
 		},
@@ -91,7 +93,7 @@ func TestScopesUnmarshalJSON(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, ErrConfiguration)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
 				assert.Contains(t, err.Error(), "scopes array")
 			},
 		},

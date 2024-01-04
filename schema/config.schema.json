@@ -604,9 +604,136 @@
                 }
               ]
             },
-            "enable_http_cache": {
-              "description": "Enables or disables http cache usage according to RFC 7234",
+            "http_cache": {
+              "description": "Configures cache usage according to RFC 7234",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "description": "Enables or disables http cache usage",
+                  "type": "boolean",
+                  "default": false
+                },
+                "default_ttl": {
+                  "description": "How long a response from server should be cached if no cache related headers are present",
+                  "type": "string",
+                  "pattern": "^[0-9]+(ns|us|ms|s|m|h)$",
+                  "default": "0ms",
+                  "examples": [
+                    "1h",
+                    "1m",
+                    "30s"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "string",
+          "description": "If only URL should be configured for the endpoint",
+          "format": "uri-reference",
+          "examples": [
+            "http://some.endpoint"
+          ]
+        }
+      ]
+    },
+    "metadataEndpointConfiguration": {
+      "description": "Metadata endpoint settings to discover OAuth2/OIDC configuration",
+      "anyOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "url"
+          ],
+          "properties": {
+            "url": {
+              "description": "The URL to communicate to.",
+              "type": "string",
+              "format": "uri",
+              "examples": [
+                "https://session-store-host"
+              ]
+            },
+            "method": {
+              "description": "The HTTP Method to use when communicating with the endpoint",
+              "type": "string",
+              "default": "GET",
+              "examples": [
+                "GET",
+                "POST"
+              ]
+            },
+            "headers": {
+              "description": "The HTTP headers to be send to the end point",
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              },
+              "minLength": 0,
+              "uniqueItems": true,
+              "default": []
+            },
+            "retry": {
+              "description": "How the implementation should behave when trying to access the configured endpoint",
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "give_up_after": {
+                  "description": "When the implementation should finally give up, if the endpoint is not answering.",
+                  "type": "string",
+                  "default": "1s",
+                  "pattern": "^[0-9]+(ns|us|ms|s|m|h)$"
+                },
+                "max_delay": {
+                  "description": "How long the implementation should wait between the attempts",
+                  "type": "string",
+                  "pattern": "^[0-9]+(ns|us|ms|s|m|h)$",
+                  "default": "100ms"
+                }
+              }
+            },
+            "auth": {
+              "description": "How to authenticate against the endpoint",
+              "type": "object",
+              "oneOf": [
+                {
+                  "$ref": "#/definitions/endpointAuthApiKeyProperties"
+                },
+                {
+                  "$ref": "#/definitions/endpointAuthBasicAuthProperties"
+                },
+                {
+                  "$ref": "#/definitions/endpointAuth2ClientCredentialsProperties"
+                }
+              ]
+            },
+            "http_cache": {
+              "description": "Configures cache usage according to RFC 7234",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "description": "Enables or disables http cache usage",
+                  "type": "boolean",
+                  "default": false
+                },
+                "default_ttl": {
+                  "description": "How long a response from server should be cached if no cache related headers are present",
+                  "type": "string",
+                  "pattern": "^[0-9]+(ns|us|ms|s|m|h)$",
+                  "default": "0ms",
+                  "examples": [
+                    "1h",
+                    "1m",
+                    "30s"
+                  ]
+                }
+              }
+            },
+            "disable_issuer_identifier_verification": {
               "type": "boolean",
+              "description": "Whether issuer identifier verification according to RFC8414 should be skipped. Used only if metadata_endpoint is configured",
               "default": false
             }
           }
@@ -970,12 +1097,24 @@
           "description": "OAuth2 Introspection Configuration",
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "introspection_endpoint"
+          "oneOf": [
+            {
+              "required": [
+                "introspection_endpoint"
+              ]
+            },
+            {
+              "required": [
+                "metadata_endpoint"
+              ]
+            }
           ],
           "properties": {
             "introspection_endpoint": {
               "$ref": "#/definitions/endpointConfiguration"
+            },
+            "metadata_endpoint": {
+              "$ref": "#/definitions/metadataEndpointConfiguration"
             },
             "token_source": {
               "$ref": "#/definitions/authenticationDataSource"
@@ -1022,12 +1161,24 @@
           "description": "JWT Authenticator Configuration",
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "jwks_endpoint"
+          "oneOf": [
+            {
+              "required": [
+                "jwks_endpoint"
+              ]
+            },
+            {
+              "required": [
+                "metadata_endpoint"
+              ]
+            }
           ],
           "properties": {
             "jwks_endpoint": {
               "$ref": "#/definitions/endpointConfiguration"
+            },
+            "metadata_endpoint": {
+              "$ref": "#/definitions/metadataEndpointConfiguration"
             },
             "jwt_source": {
               "$ref": "#/definitions/authenticationDataSource"
