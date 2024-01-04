@@ -63,7 +63,7 @@ mechanisms:
     - id: hydra_authenticator
       type: oauth2_introspection
       config:
-        introspection_endpoint:
+        metadata_endpoint:
           url: http://hydra:4445/oauth2/introspect
           retry:
             max_delay: 300ms
@@ -90,7 +90,9 @@ mechanisms:
         jwks_endpoint:
           url: http://foo/token
           method: GET
-          enable_http_cache: true
+          http_cache:
+            enabled: true
+            default_ttl: 5m
         jwt_source:
           - header: Authorization
             scheme: Bearer

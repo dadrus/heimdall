@@ -60,7 +60,8 @@ mechanisms:
         jwks_endpoint:
           url: http://foo/token
           method: GET
-          enable_http_cache: true
+          http_cache:
+            enabled: true
         jwt_source:
           - header: Authorization
             scheme: Bearer

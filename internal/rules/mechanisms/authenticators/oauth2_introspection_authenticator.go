@@ -17,6 +17,8 @@
 package authenticators
 
 import (
+	"bytes"
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
@@ -28,6 +30,7 @@ import (
 
 	"github.com/goccy/go-json"
 	"github.com/rs/zerolog"
+	"gopkg.in/square/go-jose.v2/jwt"
 
 	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/dadrus/heimdall/internal/heimdall"
@@ -35,6 +38,7 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/extractors"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/oauth2"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/stringx"
@@ -58,7 +62,7 @@ func init() {
 
 type oauth2IntrospectionAuthenticator struct {
 	id                   string
-	e                    endpoint.Endpoint
+	r                    oauth2.ServerMetadataResolver
 	a                    oauth2.Expectation
 	sf                   SubjectFactory
 	ads                  extractors.AuthDataExtractStrategy
@@ -66,17 +70,17 @@ type oauth2IntrospectionAuthenticator struct {
 	allowFallbackOnError bool
 }
 
-func newOAuth2IntrospectionAuthenticator(id string, rawConfig map[string]any) (
-	*oauth2IntrospectionAuthenticator,
-	error,
-) {
+func newOAuth2IntrospectionAuthenticator( // nolint: funlen
+	id string, rawConfig map[string]any,
+) (*oauth2IntrospectionAuthenticator, error) {
 	type Config struct {
-		Endpoint             endpoint.Endpoint                   `mapstructure:"introspection_endpoint"  validate:"required"`
-		Assertions           oauth2.Expectation                  `mapstructure:"assertions"              validate:"required"`
-		SubjectInfo          SubjectInfo                         `mapstructure:"subject"                 validate:"-"`
-		AuthDataSource       extractors.CompositeExtractStrategy `mapstructure:"token_source"`
-		CacheTTL             *time.Duration                      `mapstructure:"cache_ttl"`
-		AllowFallbackOnError bool                                `mapstructure:"allow_fallback_on_error"`
+		IntrospectionEndpoint *endpoint.Endpoint                  `mapstructure:"introspection_endpoint"  validate:"required_without=MetadataEndpoint,excluded_with=MetadataEndpoint"`           //nolint:lll,tagalign
+		MetadataEndpoint      *oauth2.MetadataEndpoint            `mapstructure:"metadata_endpoint"       validate:"required_without=IntrospectionEndpoint,excluded_with=IntrospectionEndpoint"` //nolint:lll,tagalign
+		Assertions            oauth2.Expectation                  `mapstructure:"assertions"              validate:"required_with=IntrospectionEndpoint"`                                        //nolint:lll,tagalign
+		SubjectInfo           SubjectInfo                         `mapstructure:"subject"                 validate:"-"`                                                                          //nolint:lll,tagalign
+		AuthDataSource        extractors.CompositeExtractStrategy `mapstructure:"token_source"`
+		CacheTTL              *time.Duration                      `mapstructure:"cache_ttl"`
+		AllowFallbackOnError  bool                                `mapstructure:"allow_fallback_on_error"`
 	}
 
 	var conf Config
@@ -84,24 +88,9 @@ func newOAuth2IntrospectionAuthenticator(id string, rawConfig map[string]any) (
 		return nil, err
 	}
 
-	if len(conf.SubjectInfo.IDFrom) == 0 {
-		conf.SubjectInfo.IDFrom = "sub"
-	}
-
-	if conf.Endpoint.Headers == nil {
-		conf.Endpoint.Headers = make(map[string]string)
-	}
-
-	if _, ok := conf.Endpoint.Headers["Content-Type"]; !ok {
-		conf.Endpoint.Headers["Content-Type"] = "application/x-www-form-urlencoded"
-	}
-
-	if _, ok := conf.Endpoint.Headers["Accept"]; !ok {
-		conf.Endpoint.Headers["Accept"] = "application/json"
-	}
-
-	if len(conf.Endpoint.Method) == 0 {
-		conf.Endpoint.Method = http.MethodPost
+	if conf.IntrospectionEndpoint != nil && len(conf.Assertions.TrustedIssuers) == 0 {
+		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
+			"'issuers' is a required field if introspection endpoint is used")
 	}
 
 	if len(conf.Assertions.AllowedAlgorithms) == 0 {
@@ -110,6 +99,10 @@ func newOAuth2IntrospectionAuthenticator(id string, rawConfig map[string]any) (
 
 	if conf.Assertions.ScopesMatcher == nil {
 		conf.Assertions.ScopesMatcher = oauth2.NoopMatcher{}
+	}
+
+	if len(conf.SubjectInfo.IDFrom) == 0 {
+		conf.SubjectInfo.IDFrom = "sub"
 	}
 
 	ads := x.IfThenElseExec(conf.AuthDataSource == nil,
@@ -123,10 +116,39 @@ func newOAuth2IntrospectionAuthenticator(id string, rawConfig map[string]any) (
 		func() extractors.CompositeExtractStrategy { return conf.AuthDataSource },
 	)
 
+	resolver := x.IfThenElseExec(conf.MetadataEndpoint != nil,
+		func() oauth2.ServerMetadataResolver { return conf.MetadataEndpoint },
+		func() oauth2.ServerMetadataResolver {
+			ep := conf.IntrospectionEndpoint
+
+			if ep.Headers == nil {
+				ep.Headers = make(map[string]string)
+			}
+
+			if _, ok := ep.Headers["Content-Type"]; !ok {
+				ep.Headers["Content-Type"] = "application/x-www-form-urlencoded"
+			}
+
+			if _, ok := ep.Headers["Accept"]; !ok {
+				ep.Headers["Accept"] = "application/json"
+			}
+
+			if len(ep.Method) == 0 {
+				ep.Method = http.MethodPost
+			}
+
+			return oauth2.ResolverAdapterFunc(
+				func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
+					return oauth2.ServerMetadata{IntrospectionEndpoint: ep}, nil
+				},
+			)
+		},
+	)
+
 	return &oauth2IntrospectionAuthenticator{
 		id:                   id,
 		ads:                  ads,
-		e:                    conf.Endpoint,
+		r:                    resolver,
 		a:                    conf.Assertions,
 		sf:                   &conf.SubjectInfo,
 		ttl:                  conf.CacheTTL,
@@ -182,7 +204,7 @@ func (a *oauth2IntrospectionAuthenticator) WithConfig(rawConfig map[string]any) 
 
 	return &oauth2IntrospectionAuthenticator{
 		id:  a.id,
-		e:   a.e,
+		r:   a.r,
 		a:   conf.Assertions.Merge(&a.a),
 		sf:  a.sf,
 		ads: a.ads,
@@ -201,6 +223,42 @@ func (a *oauth2IntrospectionAuthenticator) ID() string {
 	return a.id
 }
 
+func (a *oauth2IntrospectionAuthenticator) serverMetadata(
+	ctx heimdall.Context, claims map[string]any,
+) (oauth2.ServerMetadata, error) {
+	args := map[string]any{}
+
+	if len(claims) != 0 {
+		args["TokenIssuer"] = claims["iss"]
+	}
+
+	metadata, err := a.r.Get(ctx.AppContext(), args)
+	if err != nil {
+		return oauth2.ServerMetadata{}, errorchain.NewWithMessage(heimdall.ErrInternal,
+			"failed retrieving oauth2 server metadata").CausedBy(err).WithErrorContext(a)
+	}
+
+	if metadata.IntrospectionEndpoint == nil {
+		return oauth2.ServerMetadata{}, errorchain.NewWithMessage(heimdall.ErrInternal,
+			"received server metadata does not contain the required introspection_endpoint").
+			WithErrorContext(a)
+	}
+
+	return metadata, nil
+}
+
+func (a *oauth2IntrospectionAuthenticator) extractTokenClaims(token string) (map[string]any, error) {
+	jwtToken, err := jwt.ParseSigned(token)
+	if err == nil {
+		claims := map[string]any{}
+		if err = jwtToken.UnsafeClaimsWithoutVerification(&claims); err == nil {
+			return claims, nil
+		}
+	}
+
+	return nil, err
+}
+
 func (a *oauth2IntrospectionAuthenticator) getSubjectInformation(ctx heimdall.Context, token string) ([]byte, error) {
 	cch := cache.Ctx(ctx.AppContext())
 	logger := zerolog.Ctx(ctx.AppContext())
@@ -212,8 +270,23 @@ func (a *oauth2IntrospectionAuthenticator) getSubjectInformation(ctx heimdall.Co
 		ok             bool
 	)
 
+	claims, err := a.extractTokenClaims(token)
+	if err != nil {
+		logger.Debug().Err(err).Msg("Could not extract issuer information from token.")
+	}
+
+	metadata, err := a.serverMetadata(ctx, claims)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := a.createRequest(ctx.AppContext(), metadata.IntrospectionEndpoint, token, claims)
+	if err != nil {
+		return nil, err
+	}
+
 	if a.isCacheEnabled() {
-		cacheKey = a.calculateCacheKey(token)
+		cacheKey = a.calculateCacheKey(metadata.IntrospectionEndpoint, req.URL.String(), token)
 		cacheEntry = cch.Get(ctx.AppContext(), cacheKey)
 	}
 
@@ -228,12 +301,21 @@ func (a *oauth2IntrospectionAuthenticator) getSubjectInformation(ctx heimdall.Co
 		}
 	}
 
-	introspectResp, rawResp, err := a.fetchTokenIntrospectionResponse(ctx, token)
+	introspectResp, rawResp, err := a.fetchTokenIntrospectionResponse(
+		ctx,
+		metadata.IntrospectionEndpoint.CreateClient(req.URL.Hostname()),
+		req,
+	)
 	if err != nil {
 		return nil, err
 	}
 
-	if err = introspectResp.Validate(a.a); err != nil {
+	// configured assertions take precedence over those available in the metadata
+	assertions := a.a.Merge(&oauth2.Expectation{
+		TrustedIssuers: []string{metadata.Issuer},
+	})
+
+	if err = introspectResp.Validate(assertions); err != nil {
 		return nil, errorchain.
 			NewWithMessage(heimdall.ErrAuthentication, "access token does not satisfy assertion conditions").
 			WithErrorContext(a).
@@ -247,26 +329,50 @@ func (a *oauth2IntrospectionAuthenticator) getSubjectInformation(ctx heimdall.Co
 	return rawResp, nil
 }
 
-func (a *oauth2IntrospectionAuthenticator) fetchTokenIntrospectionResponse(
-	ctx heimdall.Context, token string,
-) (*oauth2.IntrospectionResponse, []byte, error) {
-	logger := zerolog.Ctx(ctx.AppContext())
+func (a *oauth2IntrospectionAuthenticator) createRequest(
+	ctx context.Context, ep *endpoint.Endpoint, token string, claims map[string]any,
+) (*http.Request, error) {
+	req, err := ep.CreateRequest(ctx,
+		strings.NewReader(
+			url.Values{
+				"token":           []string{token},
+				"token_type_hint": []string{"access_token"},
+			}.Encode()),
+		endpoint.RenderFunc(func(value string) (string, error) {
+			// ignoring closing braces here as it would anyway result in a broken template leading to an error
+			// if the token is not in a JWT format, there is nothing to render as well
+			if len(claims) == 0 || !strings.Contains(value, "{{") {
+				return value, nil
+			}
 
-	logger.Debug().Msg("Retrieving information about the access token from the introspection endpoint")
+			tpl, err := template.New(value)
+			if err != nil {
+				return "", errorchain.NewWithMessage(heimdall.ErrInternal, "failed to create template").
+					WithErrorContext(a).
+					CausedBy(err)
+			}
 
-	req, err := a.e.CreateRequest(ctx.AppContext(), strings.NewReader(
-		url.Values{
-			"token":           []string{token},
-			"token_type_hint": []string{"access_token"},
-		}.Encode()), nil)
+			return tpl.Render(map[string]any{"TokenIssuer": claims["iss"]})
+		}),
+	)
 	if err != nil {
-		return nil, nil, errorchain.
+		return nil, errorchain.
 			NewWithMessage(heimdall.ErrInternal, "failed creating request").
 			WithErrorContext(a).
 			CausedBy(err)
 	}
 
-	resp, err := a.e.CreateClient(req.URL.Hostname()).Do(req)
+	return req, nil
+}
+
+func (a *oauth2IntrospectionAuthenticator) fetchTokenIntrospectionResponse(
+	ctx heimdall.Context, client *http.Client, req *http.Request,
+) (*oauth2.IntrospectionResponse, []byte, error) {
+	logger := zerolog.Ctx(ctx.AppContext())
+
+	logger.Debug().Msg("Retrieving information about the access token from the introspection endpoint")
+
+	resp, err := client.Do(req)
 	if err != nil {
 		var clientErr *url.Error
 		if errors.As(err, &clientErr) && clientErr.Timeout() {
@@ -297,23 +403,19 @@ func (a *oauth2IntrospectionAuthenticator) readIntrospectionResponse(
 			WithErrorContext(a)
 	}
 
-	rawData, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, nil, errorchain.
-			NewWithMessage(heimdall.ErrInternal, "failed to read response").
-			WithErrorContext(a).
-			CausedBy(err)
-	}
+	var (
+		introspectionResponse oauth2.IntrospectionResponse
+		buf                   bytes.Buffer
+	)
 
-	var introspectionResponse oauth2.IntrospectionResponse
-	if err = json.Unmarshal(rawData, &introspectionResponse); err != nil {
+	if err := json.NewDecoder(io.TeeReader(resp.Body, &buf)).Decode(&introspectionResponse); err != nil {
 		return nil, nil, errorchain.
 			NewWithMessage(heimdall.ErrInternal, "failed to unmarshal received introspection response").
 			WithErrorContext(a).
 			CausedBy(err)
 	}
 
-	return &introspectionResponse, rawData, nil
+	return &introspectionResponse, buf.Bytes(), nil
 }
 
 func (a *oauth2IntrospectionAuthenticator) isCacheEnabled() bool {
@@ -358,10 +460,11 @@ func (a *oauth2IntrospectionAuthenticator) getCacheTTL(introspectResp *oauth2.In
 	}
 }
 
-func (a *oauth2IntrospectionAuthenticator) calculateCacheKey(reference string) string {
+func (a *oauth2IntrospectionAuthenticator) calculateCacheKey(ep *endpoint.Endpoint, templatedURL, token string) string {
 	digest := sha256.New()
-	digest.Write(a.e.Hash())
-	digest.Write(stringx.ToBytes(reference))
+	digest.Write(ep.Hash())
+	digest.Write(stringx.ToBytes(templatedURL))
+	digest.Write(stringx.ToBytes(token))
 
 	return hex.EncodeToString(digest.Sum(nil))
 }

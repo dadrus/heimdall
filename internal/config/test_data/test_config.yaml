@@ -200,7 +200,7 @@ mechanisms:
         subject:
           attributes: "@this"
           id: "identity.id"
-    - id: hydra_authenticator
+    - id: oauth2_introspection_using_introspection_endpoint
       type: oauth2_introspection
       config:
         introspection_endpoint:
@@ -213,6 +213,8 @@ mechanisms:
             config:
               user: foo
               password: bar
+          http_cache:
+            enabled: false
         token_source:
           - header: Authorization
             scheme: Bearer
@@ -228,13 +230,46 @@ mechanisms:
           attributes: "@this"
           id: sub
         allow_fallback_on_error: true
-    - id: jwt_authenticator1
+    - id: oauth2_introspection_using_metadata_endpoint
+      type: oauth2_introspection
+      config:
+        metadata_endpoint:
+          url: http://hydra:4445/oauth2/introspect
+          disable_issuer_identifier_verification: true
+          retry:
+            max_delay: 300ms
+            give_up_after: 2s
+          auth:
+            type: basic_auth
+            config:
+              user: foo
+              password: bar
+          http_cache:
+            enabled: true
+            default_ttl: 1m
+        token_source:
+          - header: Authorization
+            scheme: Bearer
+        assertions:
+          issuers:
+            - http://127.0.0.1:4444/
+          scopes:
+            - foo
+            - bar
+          audience:
+            - bla
+        subject:
+          attributes: "@this"
+          id: sub
+        allow_fallback_on_error: true
+    - id: jwt_authenticator_using_jwks_endpoint
       type: jwt
       config:
         jwks_endpoint:
           url: http://foo/token
           method: GET
-          enable_http_cache: true
+          http_cache:
+            enabled: true
         jwt_source:
           - header: Authorization
             scheme: Bearer
@@ -254,10 +289,15 @@ mechanisms:
         allow_fallback_on_error: true
         validate_jwk: true
         trust_store: /opt/heimdall/trust_store.pem
-    - id: jwt_authenticator2
+    - id: jwt_authenticator_using_metadata_endpoint
       type: jwt
       config:
-        jwks_endpoint: http://bar/token
+        metadata_endpoint:
+          url: http://bar/discovery
+          disable_issuer_identifier_verification: false
+          http_cache:
+            enabled: true
+            default_ttl: 10m
         assertions:
           audience:
             - bla

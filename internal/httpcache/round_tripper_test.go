@@ -53,10 +53,12 @@ func TestRoundTripperRoundTrip(t *testing.T) {
 	for _, tc := range []struct {
 		uc               string
 		setExpiresHeader bool
+		defaultTTL       time.Duration
 		requestCounts    int
 	}{
-		{uc: "should cache response", setExpiresHeader: true, requestCounts: 1},
-		{uc: "should not cache response", setExpiresHeader: false, requestCounts: 4},
+		{uc: "should cache response with expires header set", setExpiresHeader: true, requestCounts: 1},
+		{uc: "should not cache response without default cache ttl", requestCounts: 4},
+		{uc: "should cache response with default cache ttl without other headers", defaultTTL: 10 * time.Second, requestCounts: 1},
 	} {
 		t.Run(tc.uc, func(t *testing.T) {
 			// GIVEN
@@ -64,7 +66,10 @@ func TestRoundTripperRoundTrip(t *testing.T) {
 			setExpiresHeader = tc.setExpiresHeader
 
 			client := &http.Client{
-				Transport: &RoundTripper{Transport: http.DefaultTransport},
+				Transport: &RoundTripper{
+					Transport:       http.DefaultTransport,
+					DefaultCacheTTL: tc.defaultTTL,
+				},
 			}
 
 			memcache, _ := cache.NewMemoryCache()

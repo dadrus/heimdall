@@ -1,5 +1,44 @@
 # Changelog
 
+## [0.13.0-alpha](https://github.com/dadrus/heimdall/compare/v0.12.0-alpha...v0.13.0-alpha) (2024-01-03)
+
+
+### ⚠ BREAKING CHANGES
+
+* Endpoint specific HTTP cache settings refactored to allow HTTP cache ttl definition ([#1043](https://github.com/dadrus/heimdall/issues/1043))
+
+### Features
+
+* OAuth2/OIDC metadata discovery for `jwt` authenticator ([#1043](https://github.com/dadrus/heimdall/issues/1043)) ([2dbfa5f](https://github.com/dadrus/heimdall/commit/2dbfa5f49bf7611e41992d6946fe77a34cd237d3))
+* OAuth2/OIDC metadata discovery for `oauth2_introspection` authenticator ([#1043](https://github.com/dadrus/heimdall/issues/1043)) ([2dbfa5f](https://github.com/dadrus/heimdall/commit/2dbfa5f49bf7611e41992d6946fe77a34cd237d3))
+
+
+### Code Refactorings
+
+* Endpoint specific HTTP cache settings refactored to allow HTTP cache ttl definition ([#1043](https://github.com/dadrus/heimdall/issues/1043)) ([2dbfa5f](https://github.com/dadrus/heimdall/commit/2dbfa5f49bf7611e41992d6946fe77a34cd237d3))
+
+
+### Bug Fixes
+
+* Accept header usage ([#1107](https://github.com/dadrus/heimdall/issues/1107)) ([f738ee8](https://github.com/dadrus/heimdall/commit/f738ee80220e35e4c361437d86ccdab9f5a894c5))
+* Setting of binary artifacts version fixed ([#1087](https://github.com/dadrus/heimdall/issues/1087)) ([f7dbbee](https://github.com/dadrus/heimdall/commit/f7dbbee5ecc42b9182ef164c6c76ad09807d666f))
+
+
+### Dependencies
+
+* update golang to 1.21.5 ([#1082](https://github.com/dadrus/heimdall/issues/1082)) ([a996ce7](https://github.com/dadrus/heimdall/commit/a996ce78d7f28a390190a7c7a04262dc370782f2))
+* update golang.org/x/exp digest to 02704c9 ([#1111](https://github.com/dadrus/heimdall/issues/1111)) ([1e18000](https://github.com/dadrus/heimdall/commit/1e18000557ebf023a596b5379ef10413d2192f16))
+* update google.golang.org/genproto/googleapis/rpc digest to 50ed04b ([#1115](https://github.com/dadrus/heimdall/issues/1115)) ([eda1d2d](https://github.com/dadrus/heimdall/commit/eda1d2d48b8163fbcb442ed191f425c2cb4ad7b5))
+* update kubernetes packages to v0.29.0 ([#1100](https://github.com/dadrus/heimdall/issues/1100)) ([65b3619](https://github.com/dadrus/heimdall/commit/65b361936ca417972b91bd432a87a09008673810))
+* update module github.com/envoyproxy/go-control-plane to v0.12.0 ([#1117](https://github.com/dadrus/heimdall/issues/1117)) ([7fbb737](https://github.com/dadrus/heimdall/commit/7fbb737308bb6272423f66b6793aaa5c3a046e32))
+* update module github.com/go-co-op/gocron/v2 to v2.1.2 ([#1116](https://github.com/dadrus/heimdall/issues/1116)) ([13505da](https://github.com/dadrus/heimdall/commit/13505daf736278beadf36fc6c67534a894ed2b75))
+* update module github.com/google/uuid to v1.5.0 ([#1097](https://github.com/dadrus/heimdall/issues/1097)) ([5273ac8](https://github.com/dadrus/heimdall/commit/5273ac8008263393027b29a04534d96028445bb7))
+* update module github.com/jellydator/ttlcache/v3 to v3.1.1 ([#1102](https://github.com/dadrus/heimdall/issues/1102)) ([90dcc4d](https://github.com/dadrus/heimdall/commit/90dcc4db63d872f86e4c0ac4b3ce9dc7ceeee7d4))
+* update module github.com/prometheus/client_golang to v1.18.0 ([#1112](https://github.com/dadrus/heimdall/issues/1112)) ([57da7ec](https://github.com/dadrus/heimdall/commit/57da7ecd5b47ece03faadc5215546c02434aadbe))
+* update module gocloud.dev to v0.36.0 ([#1113](https://github.com/dadrus/heimdall/issues/1113)) ([584d51f](https://github.com/dadrus/heimdall/commit/584d51f8f0afdfc3e64fc85a4e107e73c2f6ddf1))
+* update module google.golang.org/grpc to v1.60.1 ([#1105](https://github.com/dadrus/heimdall/issues/1105)) ([329f647](https://github.com/dadrus/heimdall/commit/329f647a7047e8a2027296f1686d2760ef3cde24))
+* update module google.golang.org/protobuf to v1.32.0 ([#1109](https://github.com/dadrus/heimdall/issues/1109)) ([47d7785](https://github.com/dadrus/heimdall/commit/47d77852d7840c82f29eb2db460bb6f930b5ddfd))
+
 ## [0.12.0-alpha](https://github.com/dadrus/heimdall/compare/v0.11.1-alpha...v0.12.0-alpha) (2023-11-29)
 
 

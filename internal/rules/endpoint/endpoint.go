@@ -20,7 +20,6 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha256"
-	"encoding/binary"
 	"errors"
 	"fmt"
 	"io"
@@ -40,18 +39,23 @@ import (
 	"github.com/dadrus/heimdall/internal/x/stringx"
 )
 
-type Endpoint struct {
-	URL              string                 `mapstructure:"url"               validate:"required,url"`
-	Method           string                 `mapstructure:"method"`
-	Retry            *Retry                 `mapstructure:"retry"`
-	AuthStrategy     AuthenticationStrategy `mapstructure:"auth"`
-	Headers          map[string]string      `mapstructure:"headers"`
-	HTTPCacheEnabled *bool                  `mapstructure:"enable_http_cache"`
+type HTTPCache struct {
+	Enabled    bool          `mapstructure:"enabled"`
+	DefaultTTL time.Duration `mapstructure:"default_ttl"`
 }
 
 type Retry struct {
 	GiveUpAfter time.Duration `mapstructure:"give_up_after"`
 	MaxDelay    time.Duration `mapstructure:"max_delay"`
+}
+
+type Endpoint struct {
+	URL          string                 `mapstructure:"url"        validate:"required,url"`
+	Method       string                 `mapstructure:"method"`
+	Retry        *Retry                 `mapstructure:"retry"`
+	AuthStrategy AuthenticationStrategy `mapstructure:"auth"`
+	Headers      map[string]string      `mapstructure:"headers"`
+	HTTPCache    *HTTPCache             `mapstructure:"http_cache"`
 }
 
 func (e Endpoint) CreateClient(peerName string) *http.Client {
@@ -70,8 +74,11 @@ func (e Endpoint) CreateClient(peerName string) *http.Client {
 				httpretry.ExponentialBackoff(e.Retry.MaxDelay, e.Retry.GiveUpAfter, 0)))
 	}
 
-	if e.HTTPCacheEnabled != nil && *e.HTTPCacheEnabled {
-		client.Transport = &httpcache.RoundTripper{Transport: client.Transport}
+	if e.HTTPCache != nil && e.HTTPCache.Enabled {
+		client.Transport = &httpcache.RoundTripper{
+			Transport:       client.Transport,
+			DefaultCacheTTL: e.HTTPCache.DefaultTTL,
+		}
 	}
 
 	return client
@@ -174,23 +181,10 @@ func (e Endpoint) readResponse(resp *http.Response) ([]byte, error) {
 }
 
 func (e Endpoint) Hash() []byte {
-	const int64BytesCount = 8
-
 	hash := sha256.New()
 
 	hash.Write(stringx.ToBytes(e.URL))
 	hash.Write(stringx.ToBytes(e.Method))
-
-	if e.Retry != nil {
-		maxDelayBytes := make([]byte, int64BytesCount)
-		binary.LittleEndian.PutUint64(maxDelayBytes, uint64(e.Retry.MaxDelay))
-
-		giveUpAfterBytes := make([]byte, int64BytesCount)
-		binary.LittleEndian.PutUint64(giveUpAfterBytes, uint64(e.Retry.GiveUpAfter))
-
-		hash.Write(maxDelayBytes)
-		hash.Write(giveUpAfterBytes)
-	}
 
 	buf := bytes.NewBufferString("")
 	for k, v := range e.Headers {

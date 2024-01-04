@@ -24,10 +24,10 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
-	"strconv"
 	"testing"
 	"time"
 
@@ -102,7 +102,7 @@ foo: bar
 			},
 		},
 		{
-			uc: "missing jwks url config",
+			uc: "missing url config",
 			config: []byte(`
 jwt_source:
   - header: foo-header
@@ -120,7 +120,7 @@ subject:
 			},
 		},
 		{
-			uc: "missing trusted_issuers config",
+			uc: "missing trusted_issuers for jwks endpoint based configuration",
 			config: []byte(`
 jwks_endpoint:
   url: http://test.com
@@ -134,11 +134,28 @@ subject:
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "'issuers' is a required field")
+				require.ErrorContains(t, err, "'issuers' is a required field")
 			},
 		},
 		{
-			uc: "valid configuration with defaults, without cache",
+			uc: "minimal jwks endpoint based configuration with malformed jwks endpoint",
+			id: "auth1",
+			config: []byte(`
+jwks_endpoint:
+  url: "{{ .IssuerName }}"
+assertions:
+  issuers:
+    - foobar`),
+			assert: func(t *testing.T, err error, auth *jwtAuthenticator) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorContains(t, err, "'jwks_endpoint'.'url' must be a valid URL")
+			},
+		},
+		{
+			uc: "minimal jwks endpoint based configuration with defaults, without cache",
 			id: "auth1",
 			config: []byte(`
 jwks_endpoint:
@@ -152,11 +169,15 @@ assertions:
 				require.NoError(t, err)
 
 				// endpoint settings
-				assert.Equal(t, "http://test.com", auth.e.URL)
-				assert.Equal(t, "GET", auth.e.Method)
-				assert.Len(t, auth.e.Headers, 1)
-				assert.Contains(t, auth.e.Headers, "Accept-Type")
-				assert.Equal(t, "application/json", auth.e.Headers["Accept-Type"])
+				_, ok := auth.r.(oauth2.ResolverAdapterFunc)
+				require.True(t, ok)
+				md, err := auth.r.Get(context.TODO(), nil)
+				require.NoError(t, err)
+				assert.Equal(t, "http://test.com", md.JWKSEndpoint.URL)
+				assert.Equal(t, http.MethodGet, md.JWKSEndpoint.Method)
+				assert.Len(t, md.JWKSEndpoint.Headers, 1)
+				assert.Contains(t, md.JWKSEndpoint.Headers, "Accept")
+				assert.Equal(t, "application/json", md.JWKSEndpoint.Headers["Accept"])
 
 				// token extractor settings
 				assert.IsType(t, extractors.CompositeExtractStrategy{}, auth.ads)
@@ -199,7 +220,7 @@ assertions:
 			},
 		},
 		{
-			uc: "valid configuration with defaults and cache",
+			uc: "minimal jwks endpoint based configuration with cache",
 			id: "auth1",
 			config: []byte(`
 jwks_endpoint:
@@ -214,11 +235,15 @@ cache_ttl: 5s`),
 				require.NoError(t, err)
 
 				// endpoint settings
-				assert.Equal(t, "http://test.com", auth.e.URL)
-				assert.Equal(t, "GET", auth.e.Method)
-				assert.Len(t, auth.e.Headers, 1)
-				assert.Contains(t, auth.e.Headers, "Accept-Type")
-				assert.Equal(t, "application/json", auth.e.Headers["Accept-Type"])
+				_, ok := auth.r.(oauth2.ResolverAdapterFunc)
+				require.True(t, ok)
+				md, err := auth.r.Get(context.TODO(), nil)
+				require.NoError(t, err)
+				assert.Equal(t, "http://test.com", md.JWKSEndpoint.URL)
+				assert.Equal(t, http.MethodGet, md.JWKSEndpoint.Method)
+				assert.Len(t, md.JWKSEndpoint.Headers, 1)
+				assert.Contains(t, md.JWKSEndpoint.Headers, "Accept")
+				assert.Equal(t, "application/json", md.JWKSEndpoint.Headers["Accept"])
 
 				// token extractor settings
 				assert.IsType(t, extractors.CompositeExtractStrategy{}, auth.ads)
@@ -269,7 +294,7 @@ jwks_endpoint:
   url: http://test.com
   method: POST
   headers:
-    Accept-Type: application/foobar
+    Accept: application/foobar
 jwt_source:
   - header: foo-header
     scheme: foo
@@ -295,11 +320,15 @@ trust_store: ` + trustStorePath),
 				require.NoError(t, err)
 
 				// endpoint settings
-				assert.Equal(t, "http://test.com", auth.e.URL)
-				assert.Equal(t, "POST", auth.e.Method)
-				assert.Len(t, auth.e.Headers, 1)
-				assert.Contains(t, auth.e.Headers, "Accept-Type")
-				assert.Equal(t, "application/foobar", auth.e.Headers["Accept-Type"])
+				_, ok := auth.r.(oauth2.ResolverAdapterFunc)
+				require.True(t, ok)
+				md, err := auth.r.Get(context.TODO(), nil)
+				require.NoError(t, err)
+				assert.Equal(t, "http://test.com", md.JWKSEndpoint.URL)
+				assert.Equal(t, "POST", md.JWKSEndpoint.Method)
+				assert.Len(t, md.JWKSEndpoint.Headers, 1)
+				assert.Contains(t, md.JWKSEndpoint.Headers, "Accept")
+				assert.Equal(t, "application/foobar", md.JWKSEndpoint.Headers["Accept"])
 
 				// token extractor settings
 				assert.IsType(t, extractors.CompositeExtractStrategy{}, auth.ads)
@@ -336,6 +365,77 @@ trust_store: ` + trustStorePath),
 				// jwk validation settings
 				assert.False(t, auth.validateJWKCert)
 				assert.Contains(t, auth.trustStore, rootCA1.Certificate)
+
+				// handler id
+				assert.Equal(t, "auth1", auth.ID())
+			},
+		},
+		{
+			uc: "minimal metadata endpoint based configuration with malformed endpoint",
+			id: "auth1",
+			config: []byte(`
+metadata_endpoint:
+  url: "{{ .IssuerName }}"
+`),
+			assert: func(t *testing.T, err error, auth *jwtAuthenticator) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorContains(t, err, "'metadata_endpoint'.'url' must be a valid URL")
+			},
+		},
+		{
+			uc: "minimal metadata endpoint based configuration with cache",
+			id: "auth1",
+			config: []byte(`
+metadata_endpoint:
+  url: http://test.com
+  disable_issuer_identifier_verification: true
+cache_ttl: 5s`),
+			assert: func(t *testing.T, err error, auth *jwtAuthenticator) {
+				t.Helper()
+
+				require.NoError(t, err)
+
+				// endpoint settings
+				_, ok := auth.r.(oauth2.ResolverAdapterFunc)
+				require.False(t, ok)
+
+				// token extractor settings
+				assert.IsType(t, extractors.CompositeExtractStrategy{}, auth.ads)
+				assert.Len(t, auth.ads, 3)
+				assert.Contains(t, auth.ads, extractors.HeaderValueExtractStrategy{Name: "Authorization", Scheme: "Bearer"})
+				assert.Contains(t, auth.ads, extractors.QueryParameterExtractStrategy{Name: "access_token"})
+				assert.Contains(t, auth.ads, extractors.BodyParameterExtractStrategy{Name: "access_token"})
+
+				// assertions settings
+				require.NoError(t, auth.a.ScopesMatcher.Match([]string{}))
+				assert.Empty(t, auth.a.TargetAudiences)
+				assert.Empty(t, auth.a.TrustedIssuers)
+				assert.Len(t, auth.a.AllowedAlgorithms, 6)
+				assert.ElementsMatch(t, auth.a.AllowedAlgorithms, []string{
+					string(jose.ES256), string(jose.ES384), string(jose.ES512),
+					string(jose.PS256), string(jose.PS384), string(jose.PS512),
+				})
+				assert.Equal(t, time.Duration(0), auth.a.ValidityLeeway)
+
+				// subject settings
+				sess, ok := auth.sf.(*SubjectInfo)
+				require.True(t, ok)
+				assert.Equal(t, "sub", sess.IDFrom)
+				assert.Empty(t, sess.AttributesFrom)
+
+				// cache settings
+				assert.NotNil(t, auth.ttl)
+				assert.Equal(t, 5*time.Second, *auth.ttl)
+
+				// fallback settings
+				assert.False(t, auth.IsFallbackOnErrorAllowed())
+
+				// jwk validation settings
+				assert.True(t, auth.validateJWKCert)
+				assert.Empty(t, auth.trustStore)
 
 				// handler id
 				assert.Equal(t, "auth1", auth.ID())
@@ -442,7 +542,7 @@ assertions:
 				// THEN
 				require.NoError(t, err)
 
-				assert.Equal(t, prototype.e, configured.e)
+				assert.Equal(t, fmt.Sprintf("%v", prototype.r), fmt.Sprintf("%v", configured.r))
 				assert.Equal(t, prototype.ads, configured.ads)
 				assert.Equal(t, prototype.sf, configured.sf)
 				assert.NotEqual(t, prototype.a, configured.a)
@@ -464,11 +564,13 @@ assertions:
 			uc: "prototype config without cache, config with overwrites incl cache",
 			id: "auth2",
 			prototypeConfig: []byte(`
-jwks_endpoint:
+metadata_endpoint:
   url: http://test.com
-assertions:
-  issuers:
-    - foobar`),
+  http_cache:
+    enabled: true
+    default_ttl: 10m
+  disable_issuer_identifier_verification: true
+`),
 			config: []byte(`
 assertions:
   issuers:
@@ -482,7 +584,7 @@ cache_ttl: 5s`),
 				// THEN
 				require.NoError(t, err)
 
-				assert.Equal(t, prototype.e, configured.e)
+				assert.Equal(t, prototype.r, configured.r)
 				assert.Equal(t, prototype.ads, configured.ads)
 				assert.Equal(t, prototype.sf, configured.sf)
 				assert.NotEqual(t, prototype.a, configured.a)
@@ -523,7 +625,7 @@ assertions:
 				// THEN
 				require.NoError(t, err)
 
-				assert.Equal(t, prototype.e, configured.e)
+				assert.Equal(t, fmt.Sprintf("%v", prototype.r), fmt.Sprintf("%v", configured.r))
 				assert.Equal(t, prototype.ads, configured.ads)
 				assert.Equal(t, prototype.sf, configured.sf)
 				assert.NotEqual(t, prototype.a, configured.a)
@@ -559,7 +661,7 @@ cache_ttl: 5s`),
 				// THEN
 				require.NoError(t, err)
 
-				assert.Equal(t, prototype.e, configured.e)
+				assert.Equal(t, fmt.Sprintf("%v", prototype.r), fmt.Sprintf("%v", configured.r))
 				assert.Equal(t, prototype.ads, configured.ads)
 				assert.Equal(t, prototype.sf, configured.sf)
 				assert.Equal(t, prototype.a, configured.a)
@@ -577,7 +679,7 @@ cache_ttl: 5s`),
 			uc: "prototype without scopes configured, created authenticator configures them and merges other fields",
 			id: "auth2",
 			prototypeConfig: []byte(`
-jwks_endpoint:
+metadata_endpoint:
   url: http://test.com
 assertions:
   issuers:
@@ -595,10 +697,11 @@ assertions:
 				require.NoError(t, err)
 
 				assert.NotEqual(t, prototype, configured)
-				assert.Equal(t, prototype.e, configured.e)
+				assert.Equal(t, prototype.r, configured.r)
 				assert.Equal(t, prototype.ads, configured.ads)
 				assert.Equal(t, prototype.sf, configured.sf)
 				assert.NotEqual(t, prototype.a, configured.a)
+				assert.Equal(t, prototype.ttl, configured.ttl)
 
 				assert.Equal(t, prototype.a.TrustedIssuers, configured.a.TrustedIssuers)
 				assert.Equal(t, prototype.a.TargetAudiences, configured.a.TargetAudiences)
@@ -619,12 +722,9 @@ assertions:
 			uc: "prototype with defaults, configured allows fallback on errors",
 			id: "auth2",
 			prototypeConfig: []byte(`
-jwks_endpoint:
+metadata_endpoint:
   url: http://test.com
-assertions:
-  issuers:
-    - foobar
-cache_ttl: 5s`),
+`),
 			config: []byte(`
 allow_fallback_on_error: true
 `),
@@ -634,10 +734,11 @@ allow_fallback_on_error: true
 				require.NoError(t, err)
 
 				assert.NotEqual(t, prototype, configured)
-				assert.Equal(t, prototype.e, configured.e)
+				assert.Equal(t, prototype.r, configured.r)
 				assert.Equal(t, prototype.ads, configured.ads)
 				assert.Equal(t, prototype.sf, configured.sf)
 				assert.Equal(t, prototype.a, configured.a)
+				assert.Equal(t, prototype.ttl, configured.ttl)
 
 				assert.NotEqual(t, prototype.IsFallbackOnErrorAllowed(), configured.IsFallbackOnErrorAllowed())
 				assert.True(t, configured.IsFallbackOnErrorAllowed())
@@ -655,7 +756,7 @@ jwks_endpoint:
 assertions:
   issuers:
     - foobar
-cache_ttl: 5s`),
+`),
 			config: []byte(`trust_store: ` + trustStorePath),
 			assert: func(t *testing.T, err error, prototype *jwtAuthenticator, configured *jwtAuthenticator) {
 				t.Helper()
@@ -668,12 +769,9 @@ cache_ttl: 5s`),
 		{
 			uc: "prototype with defaults, configured does not allow jwk validation override",
 			prototypeConfig: []byte(`
-jwks_endpoint:
+metadata_endpoint:
   url: http://test.com
-assertions:
-  issuers:
-    - foobar
-cache_ttl: 5s`),
+`),
 			config: []byte(`validate_jwk: false`),
 			assert: func(t *testing.T, err error, prototype *jwtAuthenticator, configured *jwtAuthenticator) {
 				t.Helper()
@@ -721,13 +819,17 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 	}
 
 	var (
-		endpointCalled bool
-		checkRequest   func(req *http.Request)
+		jwksEndpointCalled      bool
+		checkJWKSRequest        func(req *http.Request)
+		jwksResponseContentType string
+		jwksResponseContent     []byte
+		jwksResponseCode        int
 
-		responseHeaders     map[string]string
-		responseContentType string
-		responseContent     []byte
-		responseCode        int
+		metadataEndpointCalled      bool
+		checkMetadataRequest        func(req *http.Request)
+		metadataResponseContentType string
+		metadataResponseContent     []byte
+		metadataResponseCode        int
 	)
 
 	tenSecondsTTL := 10 * time.Second
@@ -766,28 +868,40 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 	audience := "bar"
 
 	jwtSignedWithKeyOnlyJWK := createJWT(t, keyOnlyEntry, subjectID, issuer, audience, true)
+
 	jwtSignedWithKeyAndCertJWK := createJWT(t, keyAndCertEntry, subjectID, issuer, audience, true)
 	jwtWithoutKIDSignedWithKeyAndCertJWK := createJWT(t, keyAndCertEntry, subjectID, issuer, audience, false)
 
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		endpointCalled = true
+	jwksSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		jwksEndpointCalled = true
 
-		checkRequest(r)
+		checkJWKSRequest(r)
 
-		for hn, hv := range responseHeaders {
-			w.Header().Set(hn, hv)
-		}
-
-		if responseContent != nil {
-			w.Header().Set("Content-Type", responseContentType)
-			w.Header().Set("Content-Length", strconv.Itoa(len(responseContent)))
-			_, err := w.Write(responseContent)
+		if jwksResponseContent != nil {
+			w.Header().Set("Content-Type", jwksResponseContentType)
+			_, err := w.Write(jwksResponseContent)
 			require.NoError(t, err)
+		} else {
+			w.WriteHeader(jwksResponseCode)
 		}
-
-		w.WriteHeader(responseCode)
 	}))
-	defer srv.Close()
+
+	oidcSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		metadataEndpointCalled = true
+
+		checkMetadataRequest(r)
+
+		if metadataResponseContent != nil {
+			w.Header().Set("Content-Type", metadataResponseContentType)
+			_, err = w.Write(metadataResponseContent)
+			require.NoError(t, err)
+		} else {
+			w.WriteHeader(metadataResponseCode)
+		}
+	}))
+
+	defer jwksSrv.Close()
+	defer oidcSrv.Close()
 
 	for _, tc := range []struct {
 		uc             string
@@ -816,12 +930,13 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
 
-				assert.False(t, endpointCalled)
+				assert.False(t, jwksEndpointCalled)
+				assert.False(t, metadataEndpointCalled)
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrAuthentication)
 				require.NotErrorIs(t, err, heimdall.ErrArgument)
-				assert.Contains(t, err.Error(), "no JWT")
+				require.ErrorContains(t, err, "no JWT")
 
 				var identifier HandlerIdentifier
 				require.ErrorAs(t, err, &identifier)
@@ -844,12 +959,13 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
 
-				assert.False(t, endpointCalled)
+				assert.False(t, jwksEndpointCalled)
+				assert.False(t, metadataEndpointCalled)
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrAuthentication)
 				require.ErrorIs(t, err, heimdall.ErrArgument)
-				assert.Contains(t, err.Error(), "JWS format must have three parts")
+				require.ErrorContains(t, err, "JWS format must have three parts")
 
 				var identifier HandlerIdentifier
 				require.ErrorAs(t, err, &identifier)
@@ -872,12 +988,13 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
 
-				assert.False(t, endpointCalled)
+				assert.False(t, jwksEndpointCalled)
+				assert.False(t, metadataEndpointCalled)
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrAuthentication)
 				require.ErrorIs(t, err, heimdall.ErrArgument)
-				assert.Contains(t, err.Error(), "parse JWT")
+				require.ErrorContains(t, err, "parse JWT")
 
 				var identifier HandlerIdentifier
 				require.ErrorAs(t, err, &identifier)
@@ -885,10 +1002,12 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			},
 		},
 		{
-			uc: "with jwks endpoint communication error (dns)",
+			uc: "with jwks endpoint rendering error",
 			authenticator: &jwtAuthenticator{
-				id:  "auth3",
-				e:   endpoint.Endpoint{URL: "http://heimdall.test.local"},
+				id: "auth3",
+				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
+					return oauth2.ServerMetadata{JWKSEndpoint: &endpoint.Endpoint{URL: jwksSrv.URL + "{{ Foo }}"}}, nil
+				}),
 				ttl: &disabledTTL,
 			},
 			configureMocks: func(t *testing.T,
@@ -904,12 +1023,13 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
 
-				assert.False(t, endpointCalled)
+				assert.False(t, jwksEndpointCalled)
+				assert.False(t, metadataEndpointCalled)
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrCommunication)
-				require.NotErrorIs(t, err, heimdall.ErrArgument)
-				assert.Contains(t, err.Error(), "JWKS endpoint failed")
+				require.ErrorIs(t, err, heimdall.ErrInternal)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorContains(t, err, "render URL")
 
 				var identifier HandlerIdentifier
 				require.ErrorAs(t, err, &identifier)
@@ -917,10 +1037,47 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			},
 		},
 		{
-			uc: "with unexpected response code from server",
+			uc: "with jwks endpoint communication error (dns)",
 			authenticator: &jwtAuthenticator{
-				id:  "auth3",
-				e:   endpoint.Endpoint{URL: srv.URL},
+				id: "auth3",
+				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
+					return oauth2.ServerMetadata{JWKSEndpoint: &endpoint.Endpoint{URL: "http://jwks.heimdall.test.local"}}, nil
+				}),
+				ttl: &disabledTTL,
+			},
+			configureMocks: func(t *testing.T,
+				ctx *heimdallmocks.ContextMock,
+				_ *mocks.CacheMock,
+				ads *mocks2.AuthDataExtractStrategyMock,
+				_ *jwtAuthenticator,
+			) {
+				t.Helper()
+
+				ads.EXPECT().GetAuthData(ctx).Return(jwtSignedWithKeyOnlyJWK, nil)
+			},
+			assert: func(t *testing.T, err error, sub *subject.Subject) {
+				t.Helper()
+
+				assert.False(t, jwksEndpointCalled)
+				assert.False(t, metadataEndpointCalled)
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrCommunication)
+				require.NotErrorIs(t, err, heimdall.ErrArgument)
+				require.ErrorContains(t, err, "JWKS endpoint failed")
+
+				var identifier HandlerIdentifier
+				require.ErrorAs(t, err, &identifier)
+				assert.Equal(t, "auth3", identifier.ID())
+			},
+		},
+		{
+			uc: "with unexpected response code from jwks endpoint",
+			authenticator: &jwtAuthenticator{
+				id: "auth3",
+				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
+					return oauth2.ServerMetadata{JWKSEndpoint: &endpoint.Endpoint{URL: jwksSrv.URL}}, nil
+				}),
 				ttl: &disabledTTL,
 			},
 			configureMocks: func(t *testing.T,
@@ -936,17 +1093,18 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			instructServer: func(t *testing.T) {
 				t.Helper()
 
-				responseCode = http.StatusInternalServerError
+				jwksResponseCode = http.StatusInternalServerError
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
 
-				assert.True(t, endpointCalled)
+				assert.True(t, jwksEndpointCalled)
+				assert.False(t, metadataEndpointCalled)
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrCommunication)
 				require.NotErrorIs(t, err, heimdall.ErrArgument)
-				assert.Contains(t, err.Error(), "unexpected response")
+				require.ErrorContains(t, err, "unexpected response")
 
 				var identifier HandlerIdentifier
 				require.ErrorAs(t, err, &identifier)
@@ -957,10 +1115,14 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			uc: "with jwks unmarshalling error",
 			authenticator: &jwtAuthenticator{
 				id: "auth3",
-				e: endpoint.Endpoint{
-					URL:     srv.URL,
-					Headers: map[string]string{"Accept": "application/json"},
-				},
+				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
+					return oauth2.ServerMetadata{
+						JWKSEndpoint: &endpoint.Endpoint{
+							URL:     jwksSrv.URL,
+							Headers: map[string]string{"Accept": "application/json"},
+						},
+					}, nil
+				}),
 				ttl: &disabledTTL,
 			},
 			configureMocks: func(t *testing.T,
@@ -976,23 +1138,24 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			instructServer: func(t *testing.T) {
 				t.Helper()
 
-				checkRequest = func(req *http.Request) {
+				checkJWKSRequest = func(req *http.Request) {
 					assert.Equal(t, "application/json", req.Header.Get("Accept"))
 				}
 
-				responseCode = http.StatusOK
-				responseContent = []byte(`Hello Foo`)
-				responseContentType = "text/text"
+				jwksResponseCode = http.StatusOK
+				jwksResponseContent = []byte(`Hello Foo`)
+				jwksResponseContentType = "text/text"
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
 
-				assert.True(t, endpointCalled)
+				assert.True(t, jwksEndpointCalled)
+				assert.False(t, metadataEndpointCalled)
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrInternal)
 				require.NotErrorIs(t, err, heimdall.ErrArgument)
-				assert.Contains(t, err.Error(), "failed to unmarshal")
+				require.ErrorContains(t, err, "failed to unmarshal")
 
 				var identifier HandlerIdentifier
 				require.ErrorAs(t, err, &identifier)
@@ -1003,10 +1166,14 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			uc: "without unique key id",
 			authenticator: &jwtAuthenticator{
 				id: "auth3",
-				e: endpoint.Endpoint{
-					URL:     srv.URL,
-					Headers: map[string]string{"Accept": "application/json"},
-				},
+				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
+					return oauth2.ServerMetadata{
+						JWKSEndpoint: &endpoint.Endpoint{
+							URL:     jwksSrv.URL,
+							Headers: map[string]string{"Accept": "application/json"},
+						},
+					}, nil
+				}),
 				ttl: &disabledTTL,
 			},
 			configureMocks: func(t *testing.T,
@@ -1022,23 +1189,114 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			instructServer: func(t *testing.T) {
 				t.Helper()
 
-				checkRequest = func(req *http.Request) {
+				checkJWKSRequest = func(req *http.Request) {
 					assert.Equal(t, "application/json", req.Header.Get("Accept"))
 				}
 
-				responseCode = http.StatusOK
-				responseContent = jwksWithDuplicateEntries
-				responseContentType = "application/json"
+				jwksResponseCode = http.StatusOK
+				jwksResponseContent = jwksWithDuplicateEntries
+				jwksResponseContentType = "application/json"
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
 
-				assert.True(t, endpointCalled)
+				assert.True(t, jwksEndpointCalled)
+				assert.False(t, metadataEndpointCalled)
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrAuthentication)
 				require.NotErrorIs(t, err, heimdall.ErrArgument)
-				assert.Contains(t, err.Error(), "no (unique) key found")
+				require.ErrorContains(t, err, "no (unique) key found")
+
+				var identifier HandlerIdentifier
+				require.ErrorAs(t, err, &identifier)
+				assert.Equal(t, "auth3", identifier.ID())
+			},
+		},
+		{
+			uc: "with error while communicating to the metadata endpoint",
+			authenticator: &jwtAuthenticator{
+				id:  "auth3",
+				r:   &oauth2.MetadataEndpoint{Endpoint: endpoint.Endpoint{URL: oidcSrv.URL}},
+				ttl: &disabledTTL,
+			},
+			configureMocks: func(t *testing.T,
+				ctx *heimdallmocks.ContextMock,
+				cch *mocks.CacheMock,
+				ads *mocks2.AuthDataExtractStrategyMock,
+				_ *jwtAuthenticator,
+			) {
+				t.Helper()
+
+				ads.EXPECT().GetAuthData(ctx).Return(jwtSignedWithKeyOnlyJWK, nil)
+				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil)
+			},
+			instructServer: func(t *testing.T) {
+				t.Helper()
+
+				checkMetadataRequest = func(req *http.Request) {
+					assert.Equal(t, "application/json", req.Header.Get("Accept"))
+				}
+
+				metadataResponseCode = http.StatusBadRequest
+			},
+			assert: func(t *testing.T, err error, sub *subject.Subject) {
+				t.Helper()
+
+				assert.False(t, jwksEndpointCalled)
+				assert.True(t, metadataEndpointCalled)
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrInternal)
+				require.ErrorContains(t, err, "failed retrieving oauth2 server metadata")
+
+				var identifier HandlerIdentifier
+				require.ErrorAs(t, err, &identifier)
+				assert.Equal(t, "auth3", identifier.ID())
+			},
+		},
+		{
+			uc: "with no entry for jwks_uri from the metadata endpoint",
+			authenticator: &jwtAuthenticator{
+				id:  "auth3",
+				r:   &oauth2.MetadataEndpoint{Endpoint: endpoint.Endpoint{URL: oidcSrv.URL}},
+				ttl: &disabledTTL,
+			},
+			configureMocks: func(t *testing.T,
+				ctx *heimdallmocks.ContextMock,
+				cch *mocks.CacheMock,
+				ads *mocks2.AuthDataExtractStrategyMock,
+				_ *jwtAuthenticator,
+			) {
+				t.Helper()
+
+				ads.EXPECT().GetAuthData(ctx).Return(jwtSignedWithKeyOnlyJWK, nil)
+				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil)
+				// http cache
+				cch.EXPECT().Set(mock.Anything, mock.Anything, mock.Anything, mock.MatchedBy(
+					func(ttl time.Duration) bool { return ttl.Round(time.Minute) == 30*time.Minute },
+				))
+			},
+			instructServer: func(t *testing.T) {
+				t.Helper()
+
+				checkMetadataRequest = func(req *http.Request) {
+					assert.Equal(t, "application/json", req.Header.Get("Accept"))
+				}
+
+				metadataResponseContent, err = json.Marshal(map[string]string{"issuer": oidcSrv.URL})
+				require.NoError(t, err)
+				metadataResponseCode = http.StatusOK
+			},
+			assert: func(t *testing.T, err error, sub *subject.Subject) {
+				t.Helper()
+
+				assert.False(t, jwksEndpointCalled)
+				assert.True(t, metadataEndpointCalled)
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrInternal)
+				require.ErrorContains(t, err, "required jwks_uri")
 
 				var identifier HandlerIdentifier
 				require.ErrorAs(t, err, &identifier)
@@ -1049,10 +1307,14 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			uc: "with positive cache hit, but unsupported algorithm",
 			authenticator: &jwtAuthenticator{
 				id: "auth3",
-				e: endpoint.Endpoint{
-					URL:     srv.URL,
-					Headers: map[string]string{"Accept": "application/json"},
-				},
+				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
+					return oauth2.ServerMetadata{
+						JWKSEndpoint: &endpoint.Endpoint{
+							URL:     jwksSrv.URL,
+							Headers: map[string]string{"Accept": "application/json"},
+						},
+					}, nil
+				}),
 				a:   oauth2.Expectation{AllowedAlgorithms: []string{"foo"}},
 				ttl: &tenSecondsTTL,
 			},
@@ -1064,7 +1326,11 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				cacheKey := auth.calculateCacheKey(kidKeyWithoutCert)
+				ep := &endpoint.Endpoint{
+					URL:     jwksSrv.URL,
+					Headers: map[string]string{"Accept": "application/json"},
+				}
+				cacheKey := auth.calculateCacheKey(ep, jwksSrv.URL, kidKeyWithoutCert)
 
 				var jwks jose.JSONWebKeySet
 				err := json.Unmarshal(jwksWithOneKeyOnlyEntry, &jwks)
@@ -1078,12 +1344,13 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
 
-				assert.False(t, endpointCalled)
+				assert.False(t, jwksEndpointCalled)
+				assert.False(t, metadataEndpointCalled)
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrAuthentication)
 				require.NotErrorIs(t, err, heimdall.ErrArgument)
-				assert.Contains(t, err.Error(), "algorithm is not allowed")
+				require.ErrorContains(t, err, "algorithm is not allowed")
 
 				var identifier HandlerIdentifier
 				require.ErrorAs(t, err, &identifier)
@@ -1094,10 +1361,14 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			uc: "with positive cache hit, but signature verification error",
 			authenticator: &jwtAuthenticator{
 				id: "auth3",
-				e: endpoint.Endpoint{
-					URL:     srv.URL,
-					Headers: map[string]string{"Accept": "application/json"},
-				},
+				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
+					return oauth2.ServerMetadata{
+						JWKSEndpoint: &endpoint.Endpoint{
+							URL:     jwksSrv.URL,
+							Headers: map[string]string{"Accept": "application/json"},
+						},
+					}, nil
+				}),
 				a:   oauth2.Expectation{AllowedAlgorithms: []string{"ES384"}},
 				ttl: &tenSecondsTTL,
 			},
@@ -1109,7 +1380,11 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				cacheKey := auth.calculateCacheKey(kidKeyWithCert)
+				ep := &endpoint.Endpoint{
+					URL:     jwksSrv.URL,
+					Headers: map[string]string{"Accept": "application/json"},
+				}
+				cacheKey := auth.calculateCacheKey(ep, jwksSrv.URL, kidKeyWithCert)
 
 				var jwks jose.JSONWebKeySet
 				err := json.Unmarshal(jwksWithOneKeyOnlyEntry, &jwks)
@@ -1123,12 +1398,13 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
 
-				assert.False(t, endpointCalled)
+				assert.False(t, jwksEndpointCalled)
+				assert.False(t, metadataEndpointCalled)
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrAuthentication)
 				require.NotErrorIs(t, err, heimdall.ErrArgument)
-				assert.Contains(t, err.Error(), "JWT signature")
+				require.ErrorContains(t, err, "JWT signature")
 
 				var identifier HandlerIdentifier
 				require.ErrorAs(t, err, &identifier)
@@ -1139,10 +1415,14 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			uc: "with positive cache hit, but claims verification error",
 			authenticator: &jwtAuthenticator{
 				id: "auth3",
-				e: endpoint.Endpoint{
-					URL:     srv.URL,
-					Headers: map[string]string{"Accept": "application/json"},
-				},
+				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
+					return oauth2.ServerMetadata{
+						JWKSEndpoint: &endpoint.Endpoint{
+							URL:     jwksSrv.URL,
+							Headers: map[string]string{"Accept": "application/json"},
+						},
+					}, nil
+				}),
 				a:   oauth2.Expectation{AllowedAlgorithms: []string{"ES384"}, TrustedIssuers: []string{"untrusted"}},
 				ttl: &tenSecondsTTL,
 			},
@@ -1154,7 +1434,11 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				cacheKey := auth.calculateCacheKey(kidKeyWithoutCert)
+				ep := &endpoint.Endpoint{
+					URL:     jwksSrv.URL,
+					Headers: map[string]string{"Accept": "application/json"},
+				}
+				cacheKey := auth.calculateCacheKey(ep, jwksSrv.URL, kidKeyWithoutCert)
 
 				var jwks jose.JSONWebKeySet
 				err := json.Unmarshal(jwksWithOneKeyOnlyEntry, &jwks)
@@ -1168,12 +1452,13 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
 
-				assert.False(t, endpointCalled)
+				assert.False(t, jwksEndpointCalled)
+				assert.False(t, metadataEndpointCalled)
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrAuthentication)
 				require.NotErrorIs(t, err, heimdall.ErrArgument)
-				assert.Contains(t, err.Error(), "assertion conditions")
+				require.ErrorContains(t, err, "assertion conditions")
 
 				var identifier HandlerIdentifier
 				require.ErrorAs(t, err, &identifier)
@@ -1184,10 +1469,14 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			uc: "with positive cache hit, but subject creation error",
 			authenticator: &jwtAuthenticator{
 				id: "auth3",
-				e: endpoint.Endpoint{
-					URL:     srv.URL,
-					Headers: map[string]string{"Accept": "application/json"},
-				},
+				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
+					return oauth2.ServerMetadata{
+						JWKSEndpoint: &endpoint.Endpoint{
+							URL:     jwksSrv.URL,
+							Headers: map[string]string{"Accept": "application/json"},
+						},
+					}, nil
+				}),
 				a: oauth2.Expectation{
 					AllowedAlgorithms: []string{"ES384"},
 					TrustedIssuers:    []string{issuer},
@@ -1204,7 +1493,11 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				cacheKey := auth.calculateCacheKey(kidKeyWithoutCert)
+				ep := &endpoint.Endpoint{
+					URL:     jwksSrv.URL,
+					Headers: map[string]string{"Accept": "application/json"},
+				}
+				cacheKey := auth.calculateCacheKey(ep, jwksSrv.URL, kidKeyWithoutCert)
 
 				var jwks jose.JSONWebKeySet
 				err := json.Unmarshal(jwksWithOneKeyOnlyEntry, &jwks)
@@ -1218,25 +1511,31 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
 
-				assert.False(t, endpointCalled)
+				assert.False(t, jwksEndpointCalled)
+				assert.False(t, metadataEndpointCalled)
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrInternal)
 				require.NotErrorIs(t, err, heimdall.ErrArgument)
-				assert.Contains(t, err.Error(), "failed to extract subject")
+				require.ErrorContains(t, err, "failed to extract subject")
 
 				var identifier HandlerIdentifier
 				require.ErrorAs(t, err, &identifier)
 				assert.Equal(t, "auth3", identifier.ID())
 			},
 		},
+
 		{
 			uc: "successful with positive cache hit",
 			authenticator: &jwtAuthenticator{
-				e: endpoint.Endpoint{
-					URL:     srv.URL,
-					Headers: map[string]string{"Accept": "application/json"},
-				},
+				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
+					return oauth2.ServerMetadata{
+						JWKSEndpoint: &endpoint.Endpoint{
+							URL:     jwksSrv.URL,
+							Headers: map[string]string{"Accept": "application/json"},
+						},
+					}, nil
+				}),
 				a: oauth2.Expectation{
 					AllowedAlgorithms: []string{"ES384"},
 					TrustedIssuers:    []string{issuer},
@@ -1253,7 +1552,11 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				cacheKey := auth.calculateCacheKey(kidKeyWithoutCert)
+				ep := &endpoint.Endpoint{
+					URL:     jwksSrv.URL,
+					Headers: map[string]string{"Accept": "application/json"},
+				}
+				cacheKey := auth.calculateCacheKey(ep, jwksSrv.URL, kidKeyWithoutCert)
 
 				var jwks jose.JSONWebKeySet
 				err := json.Unmarshal(jwksWithOneKeyOnlyEntry, &jwks)
@@ -1267,7 +1570,8 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
 
-				assert.False(t, endpointCalled)
+				assert.False(t, jwksEndpointCalled)
+				assert.False(t, metadataEndpointCalled)
 
 				require.NoError(t, err)
 
@@ -1288,10 +1592,14 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 		{
 			uc: "successful without cache hit using key only",
 			authenticator: &jwtAuthenticator{
-				e: endpoint.Endpoint{
-					URL:     srv.URL,
-					Headers: map[string]string{"Accept": "application/json"},
-				},
+				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
+					return oauth2.ServerMetadata{
+						JWKSEndpoint: &endpoint.Endpoint{
+							URL:     jwksSrv.URL + "/{{ .TokenIssuer }}",
+							Headers: map[string]string{"Accept": "application/json"},
+						},
+					}, nil
+				}),
 				a: oauth2.Expectation{
 					AllowedAlgorithms: []string{"ES384"},
 					TrustedIssuers:    []string{issuer},
@@ -1308,7 +1616,11 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				cacheKey := auth.calculateCacheKey(kidKeyWithoutCert)
+				ep := &endpoint.Endpoint{
+					URL:     jwksSrv.URL + "/{{ .TokenIssuer }}",
+					Headers: map[string]string{"Accept": "application/json"},
+				}
+				cacheKey := auth.calculateCacheKey(ep, fmt.Sprintf("%s/%s", jwksSrv.URL, issuer), kidKeyWithoutCert)
 
 				var jwks jose.JSONWebKeySet
 				err := json.Unmarshal(jwksWithOneKeyOnlyEntry, &jwks)
@@ -1323,18 +1635,20 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			instructServer: func(t *testing.T) {
 				t.Helper()
 
-				checkRequest = func(req *http.Request) {
+				checkJWKSRequest = func(req *http.Request) {
 					assert.Equal(t, "application/json", req.Header.Get("Accept"))
+					assert.Equal(t, "/"+issuer, req.URL.Path)
 				}
 
-				responseCode = http.StatusOK
-				responseContent = jwksWithOneKeyOnlyEntry
-				responseContentType = "application/json"
+				jwksResponseCode = http.StatusOK
+				jwksResponseContent = jwksWithOneKeyOnlyEntry
+				jwksResponseContentType = "application/json"
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
 
-				assert.True(t, endpointCalled)
+				assert.True(t, jwksEndpointCalled)
+				assert.False(t, metadataEndpointCalled)
 
 				require.NoError(t, err)
 
@@ -1355,10 +1669,14 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 		{
 			uc: "successful without cache hit using key & cert with disabled jwk validation",
 			authenticator: &jwtAuthenticator{
-				e: endpoint.Endpoint{
-					URL:     srv.URL,
-					Headers: map[string]string{"Accept": "application/json"},
-				},
+				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
+					return oauth2.ServerMetadata{
+						JWKSEndpoint: &endpoint.Endpoint{
+							URL:     jwksSrv.URL,
+							Headers: map[string]string{"Accept": "application/json"},
+						},
+					}, nil
+				}),
 				a: oauth2.Expectation{
 					AllowedAlgorithms: []string{"ES384"},
 					TrustedIssuers:    []string{issuer},
@@ -1375,7 +1693,11 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				cacheKey := auth.calculateCacheKey(kidKeyWithCert)
+				ep := &endpoint.Endpoint{
+					URL:     jwksSrv.URL,
+					Headers: map[string]string{"Accept": "application/json"},
+				}
+				cacheKey := auth.calculateCacheKey(ep, jwksSrv.URL, kidKeyWithCert)
 
 				var jwks jose.JSONWebKeySet
 				err := json.Unmarshal(jwksWithOneEntryWithKeyOnlyAndOneWithCertificate, &jwks)
@@ -1390,18 +1712,107 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			instructServer: func(t *testing.T) {
 				t.Helper()
 
-				checkRequest = func(req *http.Request) {
+				checkJWKSRequest = func(req *http.Request) {
 					assert.Equal(t, "application/json", req.Header.Get("Accept"))
 				}
 
-				responseCode = http.StatusOK
-				responseContent = jwksWithOneEntryWithKeyOnlyAndOneWithCertificate
-				responseContentType = "application/json"
+				jwksResponseCode = http.StatusOK
+				jwksResponseContent = jwksWithOneEntryWithKeyOnlyAndOneWithCertificate
+				jwksResponseContentType = "application/json"
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
 
-				assert.True(t, endpointCalled)
+				assert.True(t, jwksEndpointCalled)
+				assert.False(t, metadataEndpointCalled)
+
+				require.NoError(t, err)
+
+				require.NotNil(t, sub)
+				assert.Equal(t, subjectID, sub.ID)
+				assert.Len(t, sub.Attributes, 8)
+				assert.Len(t, sub.Attributes["aud"], 1)
+				assert.Contains(t, sub.Attributes["aud"], audience)
+				assert.Contains(t, sub.Attributes, "exp")
+				assert.Contains(t, sub.Attributes, "iat")
+				assert.Contains(t, sub.Attributes, "nbf")
+				assert.Equal(t, issuer, sub.Attributes["iss"])
+				assert.Contains(t, sub.Attributes["scp"], "foo")
+				assert.Contains(t, sub.Attributes["scp"], "bar")
+				assert.Equal(t, subjectID, sub.Attributes["sub"])
+			},
+		},
+		{
+			uc: "successful without cache hit using key & cert with disabled jwk validation using metadata discovery",
+			authenticator: &jwtAuthenticator{
+				r: &oauth2.MetadataEndpoint{
+					Endpoint:                            endpoint.Endpoint{URL: oidcSrv.URL + "/{{ .TokenIssuer }}"},
+					DisableIssuerIdentifierVerification: true,
+				},
+				a: oauth2.Expectation{
+					AllowedAlgorithms: []string{"ES384"},
+					ScopesMatcher:     oauth2.ExactScopeStrategyMatcher{},
+				},
+				sf:  &SubjectInfo{IDFrom: "sub"},
+				ttl: &tenSecondsTTL,
+			},
+			configureMocks: func(t *testing.T,
+				ctx *heimdallmocks.ContextMock,
+				cch *mocks.CacheMock,
+				ads *mocks2.AuthDataExtractStrategyMock,
+				auth *jwtAuthenticator,
+			) {
+				t.Helper()
+
+				ep := &endpoint.Endpoint{
+					URL:     jwksSrv.URL,
+					Headers: map[string]string{"Accept": "application/json"},
+					Method:  http.MethodGet,
+				}
+				cacheKey := auth.calculateCacheKey(ep, jwksSrv.URL, kidKeyWithCert)
+
+				var jwks jose.JSONWebKeySet
+				err := json.Unmarshal(jwksWithOneEntryWithKeyOnlyAndOneWithCertificate, &jwks)
+				require.NoError(t, err)
+
+				keys := jwks.Key(kidKeyWithCert)
+
+				ads.EXPECT().GetAuthData(ctx).Return(jwtSignedWithKeyAndCertJWK, nil)
+				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil)
+				cch.EXPECT().Set(mock.Anything, cacheKey, &keys[0], *auth.ttl)
+				// http cache
+				cch.EXPECT().Set(mock.Anything, mock.Anything, mock.Anything, mock.MatchedBy(
+					func(ttl time.Duration) bool { return ttl.Round(time.Minute) == 30*time.Minute },
+				))
+			},
+			instructServer: func(t *testing.T) {
+				t.Helper()
+
+				checkJWKSRequest = func(req *http.Request) {
+					assert.Equal(t, "application/json", req.Header.Get("Accept"))
+				}
+				checkMetadataRequest = func(req *http.Request) {
+					assert.Equal(t, "application/json", req.Header.Get("Accept"))
+					assert.Equal(t, "/"+issuer, req.URL.Path)
+				}
+
+				jwksResponseCode = http.StatusOK
+				jwksResponseContent = jwksWithOneEntryWithKeyOnlyAndOneWithCertificate
+				jwksResponseContentType = "application/json"
+
+				metadataResponseCode = http.StatusOK
+				metadataResponseContent, err = json.Marshal(map[string]string{
+					"jwks_uri": jwksSrv.URL,
+					"issuer":   issuer,
+				})
+				require.NoError(t, err)
+				metadataResponseContentType = "application/json"
+			},
+			assert: func(t *testing.T, err error, sub *subject.Subject) {
+				t.Helper()
+
+				assert.True(t, jwksEndpointCalled)
+				assert.True(t, metadataEndpointCalled)
 
 				require.NoError(t, err)
 
@@ -1423,10 +1834,14 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			uc: "successful without cache hit using key & cert with enabled jwk validation using system trust store",
 			authenticator: &jwtAuthenticator{
 				id: "auth3",
-				e: endpoint.Endpoint{
-					URL:     srv.URL,
-					Headers: map[string]string{"Accept": "application/json"},
-				},
+				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
+					return oauth2.ServerMetadata{
+						JWKSEndpoint: &endpoint.Endpoint{
+							URL:     jwksSrv.URL,
+							Headers: map[string]string{"Accept": "application/json"},
+						},
+					}, nil
+				}),
 				a: oauth2.Expectation{
 					AllowedAlgorithms: []string{"ES384"},
 					TrustedIssuers:    []string{issuer},
@@ -1444,7 +1859,11 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				cacheKey := auth.calculateCacheKey(kidKeyWithCert)
+				ep := &endpoint.Endpoint{
+					URL:     jwksSrv.URL,
+					Headers: map[string]string{"Accept": "application/json"},
+				}
+				cacheKey := auth.calculateCacheKey(ep, jwksSrv.URL, kidKeyWithCert)
 
 				var jwks jose.JSONWebKeySet
 				err := json.Unmarshal(jwksWithOneEntryWithKeyOnlyAndOneWithCertificate, &jwks)
@@ -1456,23 +1875,24 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			instructServer: func(t *testing.T) {
 				t.Helper()
 
-				checkRequest = func(req *http.Request) {
+				checkJWKSRequest = func(req *http.Request) {
 					assert.Equal(t, "application/json", req.Header.Get("Accept"))
 				}
 
-				responseCode = http.StatusOK
-				responseContent = jwksWithOneEntryWithKeyOnlyAndOneWithCertificate
-				responseContentType = "application/json"
+				jwksResponseCode = http.StatusOK
+				jwksResponseContent = jwksWithOneEntryWithKeyOnlyAndOneWithCertificate
+				jwksResponseContentType = "application/json"
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
 
-				assert.True(t, endpointCalled)
+				assert.True(t, jwksEndpointCalled)
+				assert.False(t, metadataEndpointCalled)
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrAuthentication)
-				assert.Contains(t, err.Error(), "JWK")
-				assert.Contains(t, err.Error(), "invalid")
+				require.ErrorContains(t, err, "JWK")
+				require.ErrorContains(t, err, "invalid")
 
 				var identifier HandlerIdentifier
 				require.ErrorAs(t, err, &identifier)
@@ -1482,10 +1902,14 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 		{
 			uc: "successful without cache hit using key & cert with jwk validation using custom trust store",
 			authenticator: &jwtAuthenticator{
-				e: endpoint.Endpoint{
-					URL:     srv.URL,
-					Headers: map[string]string{"Accept": "application/json"},
-				},
+				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
+					return oauth2.ServerMetadata{
+						JWKSEndpoint: &endpoint.Endpoint{
+							URL:     jwksSrv.URL,
+							Headers: map[string]string{"Accept": "application/json"},
+						},
+					}, nil
+				}),
 				a: oauth2.Expectation{
 					AllowedAlgorithms: []string{"ES384"},
 					TrustedIssuers:    []string{issuer},
@@ -1504,7 +1928,11 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				cacheKey := auth.calculateCacheKey(kidKeyWithCert)
+				ep := &endpoint.Endpoint{
+					URL:     jwksSrv.URL,
+					Headers: map[string]string{"Accept": "application/json"},
+				}
+				cacheKey := auth.calculateCacheKey(ep, jwksSrv.URL, kidKeyWithCert)
 
 				var jwks jose.JSONWebKeySet
 				err := json.Unmarshal(jwksWithOneEntryWithKeyOnlyAndOneWithCertificate, &jwks)
@@ -1519,18 +1947,19 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			instructServer: func(t *testing.T) {
 				t.Helper()
 
-				checkRequest = func(req *http.Request) {
+				checkJWKSRequest = func(req *http.Request) {
 					assert.Equal(t, "application/json", req.Header.Get("Accept"))
 				}
 
-				responseCode = http.StatusOK
-				responseContent = jwksWithOneEntryWithKeyOnlyAndOneWithCertificate
-				responseContentType = "application/json"
+				jwksResponseCode = http.StatusOK
+				jwksResponseContent = jwksWithOneEntryWithKeyOnlyAndOneWithCertificate
+				jwksResponseContentType = "application/json"
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
 
-				assert.True(t, endpointCalled)
+				assert.True(t, jwksEndpointCalled)
+				assert.False(t, metadataEndpointCalled)
 
 				require.NoError(t, err)
 
@@ -1551,10 +1980,14 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 		{
 			uc: "successful without bad cache hit",
 			authenticator: &jwtAuthenticator{
-				e: endpoint.Endpoint{
-					URL:     srv.URL,
-					Headers: map[string]string{"Accept": "application/json"},
-				},
+				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
+					return oauth2.ServerMetadata{
+						JWKSEndpoint: &endpoint.Endpoint{
+							URL:     jwksSrv.URL,
+							Headers: map[string]string{"Accept": "application/json"},
+						},
+					}, nil
+				}),
 				a: oauth2.Expectation{
 					AllowedAlgorithms: []string{"ES384"},
 					TrustedIssuers:    []string{issuer},
@@ -1571,7 +2004,11 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				cacheKey := auth.calculateCacheKey(kidKeyWithoutCert)
+				ep := &endpoint.Endpoint{
+					URL:     jwksSrv.URL,
+					Headers: map[string]string{"Accept": "application/json"},
+				}
+				cacheKey := auth.calculateCacheKey(ep, jwksSrv.URL, kidKeyWithoutCert)
 
 				var jwks jose.JSONWebKeySet
 				err := json.Unmarshal(jwksWithOneKeyOnlyEntry, &jwks)
@@ -1587,18 +2024,19 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			instructServer: func(t *testing.T) {
 				t.Helper()
 
-				checkRequest = func(req *http.Request) {
+				checkJWKSRequest = func(req *http.Request) {
 					assert.Equal(t, "application/json", req.Header.Get("Accept"))
 				}
 
-				responseCode = http.StatusOK
-				responseContent = jwksWithOneKeyOnlyEntry
-				responseContentType = "application/json"
+				jwksResponseCode = http.StatusOK
+				jwksResponseContent = jwksWithOneKeyOnlyEntry
+				jwksResponseContentType = "application/json"
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
 
-				assert.True(t, endpointCalled)
+				assert.True(t, jwksEndpointCalled)
+				assert.False(t, metadataEndpointCalled)
 
 				require.NoError(t, err)
 
@@ -1619,10 +2057,14 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 		{
 			uc: "successful validation of token without kid",
 			authenticator: &jwtAuthenticator{
-				e: endpoint.Endpoint{
-					URL:     srv.URL,
-					Headers: map[string]string{"Accept": "application/json"},
-				},
+				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
+					return oauth2.ServerMetadata{
+						JWKSEndpoint: &endpoint.Endpoint{
+							URL:     jwksSrv.URL,
+							Headers: map[string]string{"Accept": "application/json"},
+						},
+					}, nil
+				}),
 				a: oauth2.Expectation{
 					AllowedAlgorithms: []string{"ES384"},
 					TrustedIssuers:    []string{issuer},
@@ -1645,18 +2087,19 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			instructServer: func(t *testing.T) {
 				t.Helper()
 
-				checkRequest = func(req *http.Request) {
+				checkJWKSRequest = func(req *http.Request) {
 					assert.Equal(t, "application/json", req.Header.Get("Accept"))
 				}
 
-				responseCode = http.StatusOK
-				responseContent = jwksWithOneEntryWithKeyOnlyAndOneWithCertificate
-				responseContentType = "application/json"
+				jwksResponseCode = http.StatusOK
+				jwksResponseContent = jwksWithOneEntryWithKeyOnlyAndOneWithCertificate
+				jwksResponseContentType = "application/json"
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
 
-				assert.True(t, endpointCalled)
+				assert.True(t, jwksEndpointCalled)
+				assert.False(t, metadataEndpointCalled)
 
 				require.NoError(t, err)
 
@@ -1678,10 +2121,14 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			uc: "validation of token without kid fails because of jwks response unmarshalling error",
 			authenticator: &jwtAuthenticator{
 				id: "auth3",
-				e: endpoint.Endpoint{
-					URL:     srv.URL,
-					Headers: map[string]string{"Accept": "application/json"},
-				},
+				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
+					return oauth2.ServerMetadata{
+						JWKSEndpoint: &endpoint.Endpoint{
+							URL:     jwksSrv.URL,
+							Headers: map[string]string{"Accept": "application/json"},
+						},
+					}, nil
+				}),
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.ContextMock,
@@ -1696,22 +2143,23 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			instructServer: func(t *testing.T) {
 				t.Helper()
 
-				checkRequest = func(req *http.Request) {
+				checkJWKSRequest = func(req *http.Request) {
 					assert.Equal(t, "application/json", req.Header.Get("Accept"))
 				}
 
-				responseCode = http.StatusOK
-				responseContent = []byte(`Hello Foo`)
-				responseContentType = "text/text"
+				jwksResponseCode = http.StatusOK
+				jwksResponseContent = []byte(`Hello Foo`)
+				jwksResponseContentType = "text/text"
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
 
-				assert.True(t, endpointCalled)
+				assert.True(t, jwksEndpointCalled)
+				assert.False(t, metadataEndpointCalled)
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrInternal)
-				assert.Contains(t, err.Error(), "failed to unmarshal")
+				require.ErrorContains(t, err, "failed to unmarshal")
 
 				var identifier HandlerIdentifier
 				require.ErrorAs(t, err, &identifier)
@@ -1722,10 +2170,14 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			uc: "validation of token without kid fails as available keys don't have matching algorithms",
 			authenticator: &jwtAuthenticator{
 				id: "auth3",
-				e: endpoint.Endpoint{
-					URL:     srv.URL,
-					Headers: map[string]string{"Accept": "application/json"},
-				},
+				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
+					return oauth2.ServerMetadata{
+						JWKSEndpoint: &endpoint.Endpoint{
+							URL:     jwksSrv.URL,
+							Headers: map[string]string{"Accept": "application/json"},
+						},
+					}, nil
+				}),
 			},
 			configureMocks: func(t *testing.T,
 				ctx *heimdallmocks.ContextMock,
@@ -1740,22 +2192,23 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			instructServer: func(t *testing.T) {
 				t.Helper()
 
-				checkRequest = func(req *http.Request) {
+				checkJWKSRequest = func(req *http.Request) {
 					assert.Equal(t, "application/json", req.Header.Get("Accept"))
 				}
 
-				responseCode = http.StatusOK
-				responseContent = jwksWithRSAKey
-				responseContentType = "application/json"
+				jwksResponseCode = http.StatusOK
+				jwksResponseContent = jwksWithRSAKey
+				jwksResponseContentType = "application/json"
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
 
-				assert.True(t, endpointCalled)
+				assert.True(t, jwksEndpointCalled)
+				assert.False(t, metadataEndpointCalled)
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrAuthentication)
-				assert.Contains(t, err.Error(), "None of the keys")
+				require.ErrorContains(t, err, "None of the keys")
 
 				var identifier HandlerIdentifier
 				require.ErrorAs(t, err, &identifier)
@@ -1766,10 +2219,14 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			uc: "validation of token without kid fails as available keys could not be verified",
 			authenticator: &jwtAuthenticator{
 				id: "auth3",
-				e: endpoint.Endpoint{
-					URL:     srv.URL,
-					Headers: map[string]string{"Accept": "application/json"},
-				},
+				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
+					return oauth2.ServerMetadata{
+						JWKSEndpoint: &endpoint.Endpoint{
+							URL:     jwksSrv.URL,
+							Headers: map[string]string{"Accept": "application/json"},
+						},
+					}, nil
+				}),
 				validateJWKCert: true,
 			},
 			configureMocks: func(t *testing.T,
@@ -1785,37 +2242,108 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			instructServer: func(t *testing.T) {
 				t.Helper()
 
-				checkRequest = func(req *http.Request) {
+				checkJWKSRequest = func(req *http.Request) {
 					assert.Equal(t, "application/json", req.Header.Get("Accept"))
 				}
 
-				responseCode = http.StatusOK
-				responseContent = jwksWithOneEntryWithKeyOnlyAndOneWithCertificate
-				responseContentType = "application/json"
+				jwksResponseCode = http.StatusOK
+				jwksResponseContent = jwksWithOneEntryWithKeyOnlyAndOneWithCertificate
+				jwksResponseContentType = "application/json"
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
 
-				assert.True(t, endpointCalled)
+				assert.True(t, jwksEndpointCalled)
+				assert.False(t, metadataEndpointCalled)
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrAuthentication)
-				assert.Contains(t, err.Error(), "None of the keys")
+				require.ErrorContains(t, err, "None of the keys")
 
 				var identifier HandlerIdentifier
 				require.ErrorAs(t, err, &identifier)
 				assert.Equal(t, "auth3", identifier.ID())
 			},
 		},
+		{
+			uc: "custom provided assertions take precedence over those coming from the metadata",
+			authenticator: &jwtAuthenticator{
+				r: &oauth2.MetadataEndpoint{
+					Endpoint:                            endpoint.Endpoint{URL: oidcSrv.URL},
+					DisableIssuerIdentifierVerification: true,
+				},
+				a: oauth2.Expectation{
+					ScopesMatcher:     oauth2.ExactScopeStrategyMatcher{},
+					AllowedAlgorithms: []string{"ES384"},
+					TrustedIssuers:    []string{"barfoo"},
+				},
+				sf:  &SubjectInfo{IDFrom: "sub"},
+				ttl: &disabledTTL,
+			},
+			configureMocks: func(t *testing.T,
+				ctx *heimdallmocks.ContextMock,
+				cch *mocks.CacheMock,
+				ads *mocks2.AuthDataExtractStrategyMock,
+				_ *jwtAuthenticator,
+			) {
+				t.Helper()
+
+				ads.EXPECT().GetAuthData(ctx).Return(jwtSignedWithKeyAndCertJWK, nil)
+				// http cache
+				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil)
+				cch.EXPECT().Set(mock.Anything, mock.Anything, mock.Anything, mock.MatchedBy(
+					func(ttl time.Duration) bool { return ttl.Round(time.Minute) == 30*time.Minute },
+				))
+			},
+			instructServer: func(t *testing.T) {
+				t.Helper()
+
+				checkJWKSRequest = func(req *http.Request) {
+					assert.Equal(t, "application/json", req.Header.Get("Accept"))
+				}
+				checkMetadataRequest = func(req *http.Request) {
+					assert.Equal(t, "application/json", req.Header.Get("Accept"))
+					assert.Equal(t, "/", req.URL.Path)
+				}
+
+				jwksResponseCode = http.StatusOK
+				jwksResponseContent = jwksWithOneEntryWithKeyOnlyAndOneWithCertificate
+				jwksResponseContentType = "application/json"
+
+				metadataResponseCode = http.StatusOK
+				metadataResponseContent, err = json.Marshal(map[string]string{
+					"jwks_uri": jwksSrv.URL,
+					"issuer":   issuer,
+				})
+				require.NoError(t, err)
+				metadataResponseContentType = "application/json"
+			},
+			assert: func(t *testing.T, err error, sub *subject.Subject) {
+				t.Helper()
+
+				assert.True(t, metadataEndpointCalled)
+				assert.True(t, jwksEndpointCalled)
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrAuthentication)
+				require.ErrorContains(t, err, "issuer foobar is not trusted")
+			},
+		},
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
 			// GIVEN
-			endpointCalled = false
-			responseHeaders = nil
-			responseContentType = ""
-			responseContent = nil
+			jwksEndpointCalled = false
+			jwksResponseContentType = ""
+			jwksResponseContent = nil
+			jwksResponseCode = 0
 
-			checkRequest = func(*http.Request) { t.Helper() }
+			metadataEndpointCalled = false
+			metadataResponseContentType = ""
+			metadataResponseContent = nil
+			metadataResponseCode = 0
+
+			checkJWKSRequest = func(*http.Request) { t.Helper() }
+			checkMetadataRequest = func(*http.Request) { t.Helper() }
 
 			instructServer := x.IfThenElse(tc.instructServer != nil,
 				tc.instructServer,
@@ -1936,7 +2464,8 @@ func createJWT(t *testing.T, keyEntry *keystore.Entry, subject, issuer, audience
 		"jti": "foo",
 		"iat": time.Now().Unix() - 1,
 		"nbf": time.Now().Unix() - 1,
-		"exp": time.Now().Unix() + 2,
+		// expiry should be generous in case some things take longer than expected (e.g. dns/http)
+		"exp": time.Now().Unix() + 60,
 		"aud": []string{audience},
 		"scp": []string{"foo", "bar"},
 	})

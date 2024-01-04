@@ -39,7 +39,8 @@ var (
 )
 
 type RoundTripper struct {
-	Transport http.RoundTripper
+	Transport       http.RoundTripper
+	DefaultCacheTTL time.Duration
 }
 
 func (rt *RoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
@@ -76,11 +77,17 @@ func (rt *RoundTripper) cachedResponse(req *http.Request) (*http.Response, error
 }
 
 func (rt *RoundTripper) cacheResponse(req *http.Request, resp *http.Response) {
-	defaultExpirationTime := time.Time{}
-
 	reasons, expires, err := cachecontrol.CachableResponse(req, resp, cachecontrol.Options{PrivateCache: true})
-	if err != nil || len(reasons) != 0 || expires == defaultExpirationTime {
+	if err != nil || len(reasons) != 0 {
 		return
+	}
+
+	if expires.IsZero() {
+		if rt.DefaultCacheTTL == 0 {
+			return
+		}
+
+		expires = time.Now().Add(rt.DefaultCacheTTL)
 	}
 
 	respDump, err := httputil.DumpResponse(resp, true)
