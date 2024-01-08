@@ -18,6 +18,8 @@ package rules
 
 import (
 	"github.com/rs/zerolog"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/trace"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
@@ -28,7 +30,16 @@ type compositeSubjectHandler []subjectHandler
 func (cm compositeSubjectHandler) Execute(ctx heimdall.Context, sub *subject.Subject) error {
 	logger := zerolog.Ctx(ctx.AppContext())
 
+	var span trace.Span
+
+	appContext := ctx.AppContext()
+
+	//if !trace.SpanFromContext(appContext).IsRecording() {
+	tracer := otel.GetTracerProvider().Tracer("heimdall")
+	appContext, span = tracer.Start(appContext, "heimdall.subject-handler")
+	//}
 	for _, handler := range cm {
+
 		err := handler.Execute(ctx, sub)
 		if err != nil {
 			logger.Info().Err(err).Msg("Pipeline step execution failed")
@@ -39,6 +50,10 @@ func (cm compositeSubjectHandler) Execute(ctx heimdall.Context, sub *subject.Sub
 				return err
 			}
 		}
+	}
+
+	if span != nil {
+		defer span.End()
 	}
 
 	return nil

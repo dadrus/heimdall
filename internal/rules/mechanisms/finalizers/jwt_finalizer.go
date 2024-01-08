@@ -25,6 +25,8 @@ import (
 
 	"github.com/goccy/go-json"
 	"github.com/rs/zerolog"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/trace"
 
 	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/dadrus/heimdall/internal/heimdall"
@@ -100,6 +102,13 @@ func (u *jwtFinalizer) Execute(ctx heimdall.Context, sub *subject.Subject) error
 	logger := zerolog.Ctx(ctx.AppContext())
 	logger.Debug().Str("_id", u.id).Msg("Finalizing using JWT finalizer")
 
+	appContext := ctx.AppContext()
+
+	var span trace.Span
+	//if !trace.SpanFromContext(appContext).IsRecording() {
+	appContext, span = otel.GetTracerProvider().Tracer("heimdall").Start(appContext, "heimdall.jwt-finalizer")
+	//}
+
 	if sub == nil {
 		return errorchain.
 			NewWithMessage(heimdall.ErrInternal, "failed to execute jwt finalizer due to 'nil' subject").
@@ -141,6 +150,10 @@ func (u *jwtFinalizer) Execute(ctx heimdall.Context, sub *subject.Subject) error
 	}
 
 	ctx.AddHeaderForUpstream(u.headerName, fmt.Sprintf("%s %s", u.headerScheme, jwtToken))
+
+	if span != nil {
+		defer span.End()
+	}
 
 	return nil
 }
