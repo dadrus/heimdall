@@ -72,7 +72,7 @@ frontmatter:
     - ':default'
 
 params:
-  copyright: 2022-2023 © Heimdall Project Authors. All rights reserved.
+  copyright: 2022-2024 © Heimdall Project Authors. All rights reserved.
   version: x-current-version
   license:
     name: Apache 2.0
