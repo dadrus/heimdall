@@ -128,7 +128,7 @@ This pipeline ensures that, according to the needs of the particular backend ser
 . each request is authenticated (so, you know who the subject of the request is) by making use of the available identity management systems,
 . the required contextual information about the subject is available (like e.g. current location based on IP, roles or groups membership information, etc.) by retrieving it from any possible API, so that
 . the subject can be and is authorized by your authorization system, or even directly by heimdall and
-. the information about the subject is transformed into a format, required by the backend service. So that irrespectively of the used authentication or authorization system, the subject information is always provided in the same stable representation.
+. the information about the subject is transformed into a format, required by the backend service. So that despite the used authentication or authorization system or protocol, the subject information is always provided in the same stable representation to your microservice.
 
 
 
