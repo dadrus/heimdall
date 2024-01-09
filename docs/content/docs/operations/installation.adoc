@@ -2,7 +2,7 @@
 title: "Installation"
 date: 2022-07-25T18:22:50+02:00
 draft: false
-weight: 11
+weight: 31
 menu:
   docs:
     weight: 1

@@ -2,7 +2,7 @@
 title: "What are Provider?"
 date: 2022-11-29T22:31:36+02:00
 draft: false
-weight: 25
+weight: 15
 menu:
   docs:
     parent: "Getting Started"

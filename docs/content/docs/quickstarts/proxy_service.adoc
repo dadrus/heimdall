@@ -2,7 +2,7 @@
 title: "Proxy Service"
 date: 2022-07-26T09:40:27+02:00
 draft: false
-weight: 42
+weight: 22
 menu:
   docs:
     parent: "Quickstarts"

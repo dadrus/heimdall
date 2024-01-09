@@ -2,7 +2,7 @@
 title: "Decision Service"
 date: 2022-06-08T20:43:27+02:00
 draft: false
-weight: 41
+weight: 21
 menu:
   docs:
     parent: "Quickstarts"

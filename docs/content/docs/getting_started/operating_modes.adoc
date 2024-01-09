@@ -2,7 +2,7 @@
 title: "Operating Modes"
 date: 2022-11-29T22:29:36+02:00
 draft: false
-weight: 22
+weight: 11
 menu:
   docs:
     parent: "Getting Started"
@@ -10,16 +10,12 @@ menu:
 description: The service modes, heimdall can be operated in.
 ---
 
-(Explain operating modes in depth)
-
-== Operating Modes
-
 To support different deployment scenarios, heimdall supports two operating modes:
 
 * as a link:{{< relref "#_proxy_mode" >}}[Reverse Proxy] in front of your upstream API or web server, or
 * as a link:{{< relref "#_decision_mode" >}}[Decision Service], integrated with your Reverse Proxy, or API Gateway (like https://konghq.com/[Kong], https://nginx.org[NGNIX], https://www.envoyproxy.io/[Envoy], https://traefik.io/[Traefik] and much more)
 
-=== Proxy Mode
+== Proxy Mode
 
 [[_fig_heimdall_proxy_deployment]]
 .Proxy Deployment
@@ -96,7 +92,7 @@ Some payload
 
 ====
 
-=== Decision Mode
+== Decision Mode
 
 [[_fig_heimdall_decision_deployment]]
 .Decision Deployment

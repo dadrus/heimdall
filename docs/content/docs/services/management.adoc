@@ -2,7 +2,7 @@
 title: "Management"
 date: 2022-06-09T18:55:36+02:00
 draft: false
-weight: 33
+weight: 43
 menu:
   docs:
     weight: 3
