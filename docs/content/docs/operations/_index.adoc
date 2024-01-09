@@ -4,5 +4,5 @@ date: 2022-06-25T14:39:36+02:00
 draft: false
 menu:
   docs:
-    weight: 10
+    weight: 20
 ---
