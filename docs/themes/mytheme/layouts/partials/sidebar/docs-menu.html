@@ -6,34 +6,31 @@
   <li class="nav-item">
     {{ $active := in $currentPage.RelPermalink .URL }}
     {{ if .HasChildren -}}
-    <button class="btn btn-toggle align-items-center rounded collapsed fw-bold border-0"
-            data-bs-toggle="collapse" data-bs-target="#section-{{ sha1 .Title }}"
-            aria-expanded="{{ if $active }}true{{ else }}false{{ end }}">
+    <button class="btn btn-toggle align-items-center rounded fw-bold border-0"
+            data-bs-target="#section-{{ sha1 .Title }}">
       {{ .Title }}
     </button>
-    <div id="section-{{ sha1 .Title }}" class="collapse{{ if $active }} show{{ end }}">
+    <div id="section-{{ sha1 .Title }}">
       <ul class="nav flex-column">
         {{ range .Children -}}
         <li class="nav-item">
           {{ $active := in $currentPage.RelPermalink .URL }}
           {{ if .HasChildren -}}
-          <button class="btn btn-toggle align-items-center rounded collapsed fw-bold border-0"
-                  data-bs-toggle="collapse" data-bs-target="#section-{{ sha1 .Title }}"
-                  aria-expanded="{{ if $active }}true{{ else }}false{{ end }}">
+          <button class="btn align-items-center rounded fw-bold border-0"
+                  data-bs-target="#section-{{ sha1 .Title }}">
             {{ .Title }}
           </button>
-          <div id="section-{{ sha1 .Title }}" class="collapse{{ if $active }} show{{ end }}">
+          <div id="section-{{ sha1 .Title }}">
             <ul class="nav flex-column">
               {{ range .Children -}}
               <li class="nav-item">
                 {{ $active := in $currentPage.RelPermalink .URL }}
                 {{ if .HasChildren -}}
-                <button class="btn btn-toggle align-items-center rounded collapsed fw-bold border-0"
-                        data-bs-toggle="collapse" data-bs-target="#section-{{ sha1 .Title }}"
-                        aria-expanded="{{ if $active }}true{{ else }}false{{ end }}">
+                <button class="btn align-items-center rounded fw-bold border-0"
+                        data-bs-target="#section-{{ sha1 .Title }}">
                   {{ .Title }}
                 </button>
-                <div id="section-{{ sha1 .Title }}" class="collapse{{ if $active }} show{{ end }}">
+                <div id="section-{{ sha1 .Title }}">
                   <ul class="nav flex-column">
                     {{ if and .URL (not (eq .Page.WordCount 0)) }}
                     <li class="nav-item"><a class="nav-link" href="{{ .URL }}">Overview</a></li>
