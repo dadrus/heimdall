@@ -1,0 +1,48 @@
+---
+title: "Rule Set"
+date: 2022-06-09T22:13:32+02:00
+draft: false
+weight: 61
+menu:
+  docs:
+    weight: 3
+    parent: "Rules"
+---
+
+== Rule Set
+
+In principle, a rule set is just a list of rules with some additional meta information. Each `RuleSet` definition has the following attributes if not stated otherwise by a particular link:{{< relref "providers.adoc" >}}[provider]:
+
+* *`version`*: _string_ (mandatory)
++
+The version schema of the `RuleSet`. The current version of heimdall supports only the version `1alpha3`.
+
+* *`name`*: _string_ (optional)
++
+The name of a rule set. Used only for logging purposes.
+
+* *`rules`*: _link:{{< relref "#_rule_configuration" >}}[Rule Configuration] array_ (mandatory)
++
+List of the actual rules.
+
+.Rule set with two rules
+====
+[source, yaml]
+----
+version: "1alpha3"
+name: my-rule-set
+rules:
+- id: rule:1
+  match:
+    url: https://my-service1.local/<**>
+  methods: [ "GET" ]
+  execute:
+    - authorizer: foobar
+- id: rule:2
+  match:
+    url: https://my-service2.local/<**>
+  methods: [ "GET" ]
+  execute:
+    - authorizer: barfoo
+----
+====

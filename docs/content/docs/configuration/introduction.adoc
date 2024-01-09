@@ -1,21 +1,23 @@
 ---
-title: "Configuration1"
+title: "Overview"
 date: 2022-07-08T09:16:36+02:00
 draft: false
 weight: 26
 menu:
   docs:
-    parent: "Getting Started"
-    weight: 6
+    parent: "Configuration"
+    weight: 1
 description: Explains available configuration options.
 ---
+
+Reference the rule set configuration here and mention that this section is dealing with static configuration only.
 
 Configuration in heimdall can refer to two different things:
 
 * the static startup configuration and
 * the configuration of rules, respectively rule sets
 
-Elements in the static configuration set up the services, like link:{{< relref "/docs/services/decision.adoc" >}}[decision service], which basically define the entry points, heimdall will listen to, the observability capabilities, like link:{{< relref "/docs/observability/logging.adoc" >}}[logging], the supported link:{{< relref "mechanisms.adoc" >}}[pipeline mechanisms], the link:{{< relref "/docs/rules/default_rule.adoc" >}}[default rule], as well as the link:{{< relref "/docs/rules/providers.adoc" >}}[rule providers] (these elements are not expected to change often).
+Elements in the static configuration set up the services, like link:{{< relref "/docs/services/decision.adoc" >}}[decision service], which basically define the entry points, heimdall will listen to, the observability capabilities, like link:{{< relref "/docs/observability/logging.adoc" >}}[logging], the supported link:{{< relref "/docs/getting_started/mechanisms.adoc" >}}[pipeline mechanisms], the link:{{< relref "/docs/rules/default_rule.adoc" >}}[default rule], as well as the link:{{< relref "/docs/rules/providers.adoc" >}}[rule providers] (these elements are not expected to change often).
 
 The rule set contains everything that defines how the requests are handled by heimdall for your system.
 This configuration can change and is seamlessly hot-reloaded, without any request interruption or connection loss.

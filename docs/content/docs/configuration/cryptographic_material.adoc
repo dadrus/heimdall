@@ -5,7 +5,7 @@ draft: false
 weight: 73
 menu:
   docs:
-    weight: 3
+    weight: 4
     parent: "Configuration"
 ---
 

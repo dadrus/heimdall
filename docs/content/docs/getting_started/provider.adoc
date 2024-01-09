@@ -9,3 +9,15 @@ menu:
     weight: 5
 description: Those, who are responsible for loading of rules from arbitrary sources.
 ---
+
+(Explain providers in depth, what do they mean? How are the used? What are they for?)
+
+Also explain what rule sets are and reference the actual existing providers.
+
+== Rule Set Configuration
+
+Heimdall gets the rule sets from link:{{< relref "/docs/rules/providers.adoc" >}}[rule providers], which, depending on the provider, can load rules from a plain old configuration file, residing in the local file system, or even integrate with Kubernetes to load rules from custom resources.
+
+In all cases, a single rule definition adheres to the schema defined in link:{{< relref "/docs/rules/rule.adoc" >}}[rule configuration].
+
+NOTE: Usage of environment variables in rule sets depend on the used provider.

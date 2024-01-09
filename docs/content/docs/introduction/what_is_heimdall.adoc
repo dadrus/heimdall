@@ -1,5 +1,5 @@
 ---
-title: "What is heimdall?"
+title: "What is heimdall"
 date: 2023-11-29T22:03:28+02:00
 draft: false
 weight: 5
@@ -9,93 +9,118 @@ menu:
     weight: 5
 ---
 
-== Background
+Heimdall is a cloud native identity aware proxy and access control decision service inspired by the Zero Trust idea. It can be integrated into available proxies and API gateways or operated stand alone and help you scaling and securing you services by transparently adding security capabilities and secure defaults related to authentication and authorization. It brings together authentication and authorization systems and can be thought as an orchestrator for these in front of your services, allowing however completely retaining control even without the need for any type of maintenance in your own code.
 
-The diagram below sketches how authentication and authorization is handled in most of today's applications.
+== Challenges addressed by Heimdall
+
+A typical (monolithic) system, or named it service, has not only to deal with the actual business logic, but also with authentication and authorization requirements (among other non-functional requirements) as depicted in the figure below.
+
+[ditaa, format=svg]
+.A typical monolithic system
+....
+                                             +------------------+
+                                             |                  |
+                                             |  Authentication  |
+                               +------------>|                  |
+                               |             |    System        |
+                               |             |                  |
+                               |             +------------------+
+                               |
+                  +------------|-------------------------------------------------------+
+                  |            |                                                       |
+                  |            |                Service (Code)                         |
+                  |            |                                                       |
++------------+    |  +---------+---------+  +--------+---------+  +-----------------+  |
+|            |    |  |                   |  |                  |  |                 |  |
+|            |    |  |   Authenticate    |  |    Authorize     |  |    Business     |  |
+|   Client   +--->|  |                   |  |                  |  |                 |  |
+|            |    |  |     Request       |  |     Request      |  |     Logic       |  |
+|            |    |  |                   |  |                  |  |                 |  |
++------------+    |  +-------------------+  +---+--------+-----+  +-----------------+  |
+                  |                             |        |                             |
+                  +-----------------------------|--------|-----------------------------+
+                                                |        |
+                    +---------------------------+        |
+                    |                                    |
+                    v                                    v
+          +------------------+                +------------------+
+          |                  |                |                  |-+
+          |  Authorization   |                |  Other Services  | |
+          |                  +--------------->|                  | |
+          |    System        |                |                  | |
+          |                  |                |                  | |
+          +------------------+                +------------------+ |
+                                                -------------------+
+
+....
+
+What do we have here?
+
+* To cover authentication requirements, that service will make use of some identity management system to verify the request authentication status.
+* The existing authorization requirements will most probably result in if else statements in code. Even such approaches are straight forward and easy to implement on the first sight, these are not easy to maintain and have many drawbacks (e.g. testing of particular use cases), and it becomes even more challenging when entering microservices.
+
+How does it look then if we have microservices?
+
+* Not every microservice will hold the entire information required for authorization purposes.
+* So, there will be a need to communicate to other services to get the required contextual information about the authenticated subject to be able to take the required authorization decision.
+* The management and maintenance of the authorization requirements will become even more challenging, as the implementation of these will usually be scattered across many services.
+
+To overcome these dependencies, organizations either start pushing that contextual information into the identity management system, making it a god system with all resulting negative effects, or start using special purpose authorization systems, allowing managing the corresponding authorization policies outside the code.
+
+Even that approach reduces dependencies between the services and also the time to market, it introduces a new dependency, which all, or almost all services must make use of. And, most probably, the authorization system will also need to somehow retrieve contextual information for authorization policy evaluation purposes.
+
+And we just started to scratch the top of the iceberg. What if our system, comprised from these microservices is implemented in different languages? Even there are many libraries and also frameworks addressing authentication challenges, usually we just want to make the lives of our developers easier by providing components, which work the same way for each and every language. So the setup depicted above, well become similar to the one depicted below.
 
 [[_fig_typical_deployment_scenario]]
-.Typical deployment scenario
+.Typical microservice deployment scenario
 [ditaa, format=svg]
 ....
-                                                   +------------------+
-                                                   |                  |
-                                                   |  Authentication  |
-                               +-----------------> |                  |
-                               |                   |    System        |
-                               |                   |                  |
-                               |                   +------------------+
-                               |
-                  +------------|------------------------------------------------------------------------------------+
-                  |            |                                                                                    |
-                  :            |                           Environment                                              |
-                  |            |                                                                                    |
-                  |            |            +--------------------------------------------------------------------+  |
-                  |            |            |                                                                    |  |
-                  |            |            |                           Backend Service                          |  |
-                  |            |            |                                                                    |  |
-                  |            |            |  +-------------------+  +------------------+  +-----------------+  |  |
-+------------+    |   +--------+--------+   |  |                   |  |                  |  |                 |  |  |
-|            |    |   |                 |   |  |                   |  |                  |  |                 |  |  |
-|            |    |   |  Authentication |   |  |  Verify Request's |  |    Authorize     |  |    Business     |  |  |
-|   Client   +------->|                 +-->|  |                   |  |                  |  |                 |  |  |
-|            |    |   |      Proxy      |   |  |  Authentication   |  |     Request      |  |     Logic       |  |  |
-|            |    |   |                 |   |  |                   |  |                  |  |                 |  |  |
-+------------+    |   +-----------------+   |  |     Status        |  |                  |  |                 |  |  |
-                  |                         |  |                   |  |                  |  |                 |  |  |
-                  |                         |  |                   |  |                  |  |                 |  |  |
-                  |                         |  +-------------------+  +------------------+  +-----------------+  |  |
-                  :                         |                                                                    |  |
-                  |                         |                                                                    |  |
-                  |                         +--------------------------------------------------------------------+  |
-                  |                                                                                                 |
-                  +-------------------------------------------------------------------------------------------------+
+                                              +------------------+
+                                              |                  |
+                                              |  Authentication  |
+                          +-----------------> |                  |
+                          |                   |    System        |
+                          |                   |                  |
+                          |                   +------------------+
+                          |
+                          |            +--------------------------------------------------------------------+
+                          |            |                                                                    |-+
+                          |            |                          Microservice (Code)                       | |
+                          |            |                                                                    | |
++------------+   +--------+--------+   |  +-------------------+  +------------------+  +-----------------+  | |
+|            |   |                 |   |  |                   |  |                  |  |                 |  | |
+|            |   |  Authentication |   |  |  Verify Request's |  |    Authorize     |  |    Business     |  | |
+|   Client   +-->|                 +-->|  |                   |  |                  |  |                 |  | |
+|            |   |      Proxy      |   |  |  Authentication   |  |     Request      |  |     Logic       |  | |
+|            |   |                 |   |  |                   |  |                  |  |                 |  | |
++------------+   +-----------------+   |  +-------------------+  +----+--------+----+  +-----------------+  | |
+                                       |                              |        |                            | |
+                                       +------------------------------|--------|----------------------------+ |
+                                          ----------------------------|--------|------------------------------+
+                                           +--------------------------+        |
+                                           |                                   |
+                                           v                                   v
+                                 +------------------+                +------------------+
+                                 |                  |                |                  |-+
+                                 |  Authorization   |                |  Other Services  | |
+                                 |                  +--------------->|                  | |
+                                 |    System        |                |                  | |
+                                 |                  |                |                  | |
+                                 +------------------+                +------------------+ |
+                                                                       -------------------+
 ....
 
-On the one hand it allows the backend service to fully control the corresponding security requirements. On the other hand it has some limitations:
+Here, a new authentication proxy, typically deployed as a sidecar with each microservice (sometimes also as a central proxy), is introduced taking over the responsibility for the existing authentication challenges and unifying the corresponding implementation. But there are still many drawbacks and limitations, like those addressed by the following questions
 
-* It works as long as there is just one authentication system.
-* When there are multiple backend services, which is typically the case in modern architectures, it requires each backend service to repetitively implement security related capabilities in its code, and related to this
-* it requires the backend services to communicate to further systems to e.g. get additional (context) information about the request and the subject (the user the request belongs to).
+* What if there is a need to have multiple identity management systems, e.g. one for the customers and one for accessing administrative or backoffice related functionality of the system?
+* What if there is a need to migrate from one authentication or authorization system to another?
+* What if there is a need to open the existing APIs?
+* What if there is a need to support multiple different clients, like browsers, like mobile apps, IoT devices, etc?
+* What if the business decides to change the existing authorization requirements, like introduction of a new subscription model, or alike, which would require additional information about our user, resulting in yet another dependency to some further service?
+* What if depending on the client, we need completely different authentication strategies or even protocols, like OAuth2 or OpenID Connect in one case, mTLS in another case and cookie based approach and yet another case?
+* How to ensure, that our microservice code does not implement shortcuts and thus does not compromise the security of the entire system? (And there are diverse options achieving that)
+* ...
 
-All this pretty often leads to the fact that up to 60% of the implementation efforts are spent on security topics and only the smaller rest on the actual business requirements. In addition, these limitations imply a lot of effort if there are changes to authentication and authorization requirements. So, what would you do if you have to use multiple authentication systems, e.g. for your customers and for your system admins, or backoffice stuff? What would you do, if e.g. our business would like to introduce a new service subscription model for its customers? What does this mean in sense of coordination-, implementation efforts and time-to-market?
+This is by far not an exhaustive list. But the main question related to it is what does all of that mean in sense of coordination-, implementation efforts and time-to-market?
 
-== Heimdall's Promise
-
-Heimdall addresses the aforesaid challenges companies and developers face, especially with a distributed or microservices architecture. Whether you're building from scratch or migrating existing applications, heimdall can help and allows you to transparently add security capabilities related to authentication and authorization without adding them to your own code, but nevertheless, by completely retaining control. It can do so standalone, but also integrated into available infrastructure.
-
-== How It Works
-
-Heimdall intercepts all your application related HTTP(s) traffic, allowing a broad set of application aware authentication and authorization features based on the rules you define. This is done by routing each request through a rule specific pipeline as depicted in diagram below.
-
-[[_fig_heimdall_request_pipeline]]
-.Request Pipeline
-[ditaa, format=svg]
-....
-                 /-----------------------------------------------------------------------------------\
-                 |                                                                                   |
-                 :                                Heimdall's Pipeline                                |<- controlled by> --+
-                 |                                                                                   |                    |
-                 |+------------------+ +------------------+ +------------------+ +------------------+|                    |
-                 || cCCC             | | cCCC             | | cCCC             | | cCCC             ||                    :
-                 || 1. Authenticate  | | 2. Contextualize | | 3. Authorize     | | 4. Finalize      ||                    |
-                 ||                  | |                  | |                  | |                  ||   +------------------+
-                 |+------------------+ +------------------+ +------------------+ +------------------+|   |  Backend Service |
-                 |                                                                                   |   |                  |
-+------------+   |                                                                                   |   |+----------------+|
-|            |   |                                                                                   |   ||                ||
-|   Client   |   |                                   Client Request Journey                          |   ||    Business    ||
-|            |------------------------------------------------------------------------------------------>||                ||
-|   Request  |   :                                                                                   |   ||    Logic       ||
-|            |   |                                                                                   |   ||                ||
-|            |   \-----------------------------------------------------------------------------------/   |+----------------+|
-+------------+                                                                                           +------------------+
-....
-
-This pipeline ensures that, according to the needs of the particular backend service endpoint,
-
-. each request is authenticated (so, you know who the subject of the request is),
-. the required contextual information about the subject is available (like e.g. current location based on IP, roles or groups membership information, etc.), so that
-. the subject can be and is authorized and
-. the information about the subject is transformed into a format, required by the backend service. So that irrespectively of the used authentication or authorization system, the subject information is always provided in the same stable representation.
-
-And all of that can be controlled by each and every backend service individually.
+This is exactly where heimdall can step in and help you to address these challenges, reduce the complexity of your code, free resources, increase your time to market and make your system more secure.

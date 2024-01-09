@@ -10,6 +10,8 @@ menu:
 description: The building blocks of the request pipeline.
 ---
 
+(Explain mechanisms in depth, what do they mean? How are the used? What are they for?)
+
 All mechanisms supported by heimdall fall into following categories:
 
 * link:{{< relref "authenticators.adoc">}}[Authenticators], which inspect HTTP requests for presence of authentication objects, like e.g. the presence of a specific cookie. If such objects exist, authenticators verify the related authentication status and obtain information about the corresponding subject. A subject, could be a user who tries to use particular functionality of the upstream service, a machine (if you have machine-2-machine interaction), or something different. Authenticators ensure the subject is authenticated and the information available about it is valid.

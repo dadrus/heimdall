@@ -10,6 +10,8 @@ menu:
 description: The pipeline definitions.
 ---
 
+(Explain rules in depth, what do they mean? How are the used? What are they for?)
+
 
 This section explains how rules can be defined and used in detail. Before diving onto this topic, we recommend to make yourself familiar with the principal link:{{< relref "/docs/introduction/core_concepts.adoc" >}}[Core Concepts].
 
