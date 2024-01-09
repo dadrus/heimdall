@@ -184,10 +184,4 @@ and using the environment variables with
 HEIMDALLCFG_TRACING_SERVICE__NAME=foobar
 ----
 
-== Rule Set Configuration
 
-Heimdall gets the rule sets from link:{{< relref "/docs/rules/providers.adoc" >}}[rule providers], which, depending on the provider, can load rules from a plain old configuration file, residing in the local file system, or even integrate with Kubernetes to load rules from custom resources.
-
-In all cases, a single rule definition adheres to the schema defined in link:{{< relref "/docs/rules/rule.adoc" >}}[rule configuration].
-
-NOTE: Usage of environment variables in rule sets depend on the used provider.
