@@ -1,0 +1,364 @@
+---
+title: "Evaluation Objects"
+date: 2024-01-10T15:53:47+02:00
+draft: false
+weight: 51
+menu:
+  docs:
+    weight: 1
+    parent: "Mechanisms"
+---
+
+Some mechanisms support, respectively require access to different types of objects they work on, e.g. to render a header with specific values, or to check whether some expectations apply. Following objects are available and have the following structure:
+
+== Subject
+
+This object contains the information about the authenticated subject and has the following attributes:
+
+* *`ID`*: _string_
++
+The identifier of the subject. This value is set by the authenticator, which was able to authenticate the subject.
+
+* *`Attributes`*: _map_
++
+Contains all attributes, which are known about the subject. The content is initially set by the authenticator, which was able to authenticate the subject. Mechanisms following the authenticator in a rule pipeline can update it, but cannot override any entries.
+
+Each object of this type can be thought as a JSON object. Here some examples:
+
+.Subject created by an Anonymous Authenticator
+====
+[source, javascript]
+----
+Subject = {
+  ID: "anonymous",
+  Attributes: {}
+}
+----
+====
+
+.Possible Subject created by an OAuth2 Authenticator
+====
+[source, javascript]
+----
+Subject = {
+  ID: "foobar",
+  Attributes: {
+    "sub": "foobar",
+    "exp": "1670600805",
+    "jti": "7b91ed8a-0251-4e02-8d51-9792785851e8",
+    "iat": "1670600305",
+    "iss": "http://testauthserver.local",
+    "nbf": "1670600305",
+    "extra": {
+        "foo": ["bar", "baz"]
+    }
+  }
+}
+----
+====
+
+=== Request
+
+This object contains information about the request handled by heimdall and has the following attributes and methods:
+
+* *`Method`*: _string_
++
+The HTTP method used, like `GET`, `POST`, etc.
+
+* *`URL`*: _URL_
++
+The URL of the matched request. This object has the following properties and methods:
+
+** *`Scheme`*: _string_
++
+The HTTP scheme part of the url
+** *`Host`*: _string_
++
+The host part of the url
+** *`Path`*: _string_
++
+The path part of the url
+** *`RawQuery`*: _string_
++
+The raw query part of the url.
+** *`String()`*: _method_
++
+This method returns the URL as valid URL string of a form `scheme:host/path?query`.
+** *`Query()`*: _method_
++
+The parsed query with each key-value pair being a string to array of strings mapping.
+
+* *`ClientIPAddresses`*: _string array_
++
+The list of IP addresses the request passed through with the first entry being the ultimate client of the request. Only available if heimdall is configured to trust the client, sending this information, e.g. in the `X-Forwarded-From` header (see e.g. Decision Service link:{{< relref "/docs/services/decision.adoc#_trusted_proxies" >}}[trusted_proxies] configuration for more details).
+
+* *`Header(name)`*: _method_,
++
+This method expects the name of a header as input and returns its value as a `string`. If the header is not present in the HTTP request an empty string (`""`) is returned. If a header appears multiple times in the request, the returned `string` is a comma separated list of all values.
++
+NOTE: A single header may be a comma separated list of actual values as well. Best example is the `Accept` header, which might be set to e.g. `text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8`).
+
+* *`Cookie(name)`*: _method_,
++
+This method expects the name of a cookie as input and returns the value of it as `string`. If the cookie is not present in the HTTP request an empty string (`""`) is returned.
+
+* *`Body()`*: _method_,
++
+The parsed body with contents depending on the `Content-Type` header. Supported content types are any MIME types with `json` or `yaml` subtype, as well as `application/x-www-form-urlencoded`. If MIME type is unsupported, the method returns a string with the actual body contents.
++
+NOTE: The actual request body is parsed only on the first use of this function. All subsequent calls return the cached result.
++
+.Example results
+====
+If the `Content-Type` header is set to `application/json` and the actual request body is a valid JSON object, shown below
+[source, json]
+----
+{ "context": "heimdall" }
+----
+The call to the `Body()` function will return exactly this representation as a map.
++
+
+If the `Content-Type` header is set to `application/yaml` and the actual request body is a valid YAML object, shown below
+[source, yaml]
+----
+context: heimdall
+----
+The call to the `Body()` function will return `{ "context": "heimdall" }` representation as a map.
++
+
+If the `Content-Type` header is set to `application/x-www-form-urlencoded` and the actual request body is a valid object, shown below
+[source, yaml]
+----
+context=heimdall
+----
+The call to the `Body()` function will return this representation as a map with each value being a string array. In this particular case as `{ "context": [ "heimdall" ] }`.
+====
+
+Here is an example for a request object:
+
+.Example request object
+====
+[source, javascript]
+----
+Request = {
+  Method: "GET",
+  Url: {
+    Scheme: "https",
+    Host: "localhost",
+    Path: "/test",
+    RawQuery: "baz=zab&baz=bar&foo=bar"
+  },
+  ClientIP: ["127.0.0.1", "10.10.10.10"]
+}
+----
+====
+
+=== Payload
+
+This object represents the contents of a payload, like the request body or a response body. The contents depend on the MIME-Type of the payload. For `json`, `yaml` or `x-www-form-urlencoded` encoded payload, the object is transformed to a JSON object. Otherwise, it is just a string.
+
+Here some examples:
+
+.Structured payload
+====
+
+The following JSON object is a typical response from OPA.
+
+[source, javascript]
+----
+Payload = { "result": true }
+----
+====
+
+.Unstructured payload
+====
+[source, javascript]
+----
+Payload = "SomeStringValue"
+----
+====
+
+=== Error
+
+This object represents an error, which has been raised during the execution of the pipeline and is available in `if` link:{{< relref "#_expressions">}}[CEL expressions] of link:{{< relref "error_handlers.adoc">}}[Error Handlers]. Following properties are available:
+
+* *`Source`*: _string_
++
+The ID of the mechanism, which raised the error.
+
+Proper error handling requires attention to the actual _link:{{< relref "/docs/configuration/types.adoc#_errorstate_type" >}}[error type]_ available via `type(Error)`.
+
+=== Values
+
+This object represents a key value map, with both, the key and the value being of string type. Though, the actual values can be templated (see (link:{{< relref "#_templating" >}}[Templating]). The contents and the variables available in templates depend on the configuration of the particular mechanism, respectively the corresponding override in a rule.
+
+Here is an example:
+
+.Example values object
+====
+[source, javascript]
+----
+Values = {
+  "some-key-1": "value-1",
+  "some-key-2": "value-2"
+}
+----
+====
+
+== Templating
+
+Some pipeline mechanisms support templating using https://golang.org/pkg/text/template/[Golang Text Templates]. Templates can act on all objects described above (link:{{< relref "#_subject" >}}[Subject], link:{{< relref "#_request" >}}[Request], link:{{< relref "#_payload" >}}[Payload] and link:{{< relref "#_values" >}}[Values]). Which exactly are supported is mechanism specific.
+
+To ease the usage, all http://masterminds.github.io/sprig/[sprig] functions, except `env` and `expandenv`, as well as the following functions are available:
+
+* `urlenc` - Encodes a given string using url encoding. Is handy if you need to generate request body or query parameters e.g. for communication with further systems.
+
+* `atIndex` - Implements python-like access to arrays and takes as a single argument the index to access the element in the array at. With index being a positive values it works exactly the same way, as with the usage of the build-in index function to access array elements. With negative index value, one can access the array elements from the tail of the array. -1 is the index of the last element, -2 the index of the element before the last one, etc.
++
+Example: `{{ atIndex 2 [1,2,3,4,5] }}` evaluates to `3` (behaves the same way as the `index` function) and `{{ atIndex -2 [1,2,3,4,5] }}` evaluates to `4`.
+
+* `splitList` - Splits a given string using a separator (part of the sprig library, but not documented). The result is a string array.
++
+Example: `{{ splitList "/" "/foo/bar" }}` evaluates to the `["", "foo", "bar"]` array.
+
+
+.Rendering a JSON object
+====
+Imagine, we have a `POST` request for the URL `\http://foobar.baz/zab?foo=bar`, with a header `X-Foo` set to `bar` value, for which heimdall was able to identify a subject, with `ID=foo` and which `Attributes` contain an entry `email: foo@bar`, then you can generate a JSON object with this information with the following template:
+
+[source, gotemplate]
+----
+{
+  "subject_id": {{ quote .Subject.ID }},
+  "email": {{ quote .Subject.Attributes.email }},
+  "request_url": {{ quote .Request.URL }},
+  "foo_value": {{ index .Request.URL.Query.foo 0 | quote }}
+  "request_method": {{ quote .Request.Method }},
+  "x_foo_value": {{ .Request.Header "X-Foo" | quote }}
+}
+----
+
+Please note how the access to the `foo` query parameter is done. Since `.Request.URL.Query.foo` returns an array of strings, the first element is taken to render the value for the `foo_value` key.
+
+This will result in the following JSON object:
+
+[source, json]
+----
+{
+    "subject_id": "foo",
+    "email": "foo@bar.baz",
+    "request_url": "http://foobar.baz/zab?foo=bar",
+    "foo_value": "bar",
+    "request_method": "POST",
+    "x_foo_value": "bar"
+}
+----
+====
+
+.Access the last part of the path
+====
+Imagine, we have a `POST` request to the URL `\http://foobar.baz/zab/1234`, with `1234` being the identifier of a file, which should be updated with the contents sent in the body of the request, and you would like to control access to the aforesaid object using e.g. OpenFGA. This can be achieved with the following authorizer:
+
+[source, yaml]
+----
+id: openfga_authorizer
+type: remote
+config:
+  endpoint:
+    url: https://openfga/stores/files/check
+  payload: |
+    {
+      "user": "user:{{ .Subject.ID }}",
+      "relation": "write",
+      "object": "file:{{ splitList "/" .Request.URL.Path | last }}"
+    }
+  expressions:
+  - expression: |
+      Payload.allowed == true
+----
+
+Please note how the `"object"` is set in the `payload` property above. When the `payload` template is rendered and for the above said request heimdall was able to identify the subject with `ID=foo`, following JSON object will be created:
+
+[source, json]
+----
+{
+  "user": "user:foo",
+  "relation": "write",
+  "object": "file:1234"
+}
+----
+====
+
+You can find further examples as part of mechanism descriptions, supporting templating.
+
+== Expressions
+
+Expressions can be used to execute authorization logic. As of today only https://github.com/google/cel-spec[CEL] is supported as expression language. All standard, as well as https://pkg.go.dev/github.com/google/cel-go/ext#pkg-functions[extension] functions are available. Which of the link:{{<  relref "#_evaluation_objects" >}}[evaluation objects] are available to the expression depends on the mechanism.
+
+In addition to the build-in, respectively extension methods and functions, as well as the methods available on the evaluation objects, following functions are available as well:
+
+* `split` - this function works on strings and expects a separator as a single argument. The result is a string array.
++
+Example: `"/foo/bar/baz".split("/")` returns `["", "foo", "bar", "baz"]`.
+
+* `regexFind` - this function returns the first (left most) match of a regular expression in the given string.
++
+Example: `"abcd1234".regexFind("[a-zA-Z][1-9]")` returns `"d1"`.
+
+* `regexFindAll` - this function returns an array of all matches of a regular expression in the given string.
++
+Example: `"123456789".regexFindAll("[2,4,6,8]")` returns `["2","4","6","8"]`.
+
+* `at` - this function implements python-like access to arrays and takes as a single argument the index to access the element in the array at. With index being a positive values it works exactly the same way, as with the usage of `[]` to access array elements. With negative index value, one can access the array elements from the tail of the array. -1 is the index of the last element, -2 the index of the element before the last one, etc.
++
+Example: `[1,2,3,4,5].at(2)` returns `3` and `[1,2,3,4,5].at(-2)` returns `4`.
+
+* `last` - this function works on arrays and returns the last element of an array or `nil` if the array is empty.
++
+Example: `[1,2,3,4,5].last()` returns `5`
+
+
+Some examples:
+
+.Evaluate Payload object
+====
+
+Given the following Payload object
+
+[source, javascript]
+----
+Payload = { "result": true }
+----
+
+a CEL expression to check the `result` attribute is set to `true`, would look as follows:
+
+[source, cel]
+----
+Payload.result == true
+----
+====
+
+.Check whether the user is member of the admin group
+====
+[source, cel]
+----
+has(Subject.Attributes.groups) &&
+   Subject.Attributes.groups.exists(g, g == "admin")
+----
+====
+
+.Access the last path part of the matched URL
+====
+[source, cel]
+----
+Request.URL.Path.split("/").last()
+----
+====
+
+.Check if an error has been raised by an authenticator with the ID "foo"
+====
+[source, cel]
+----
+type(Error) == authentication_error && Error.Source == "foo"
+----
+====

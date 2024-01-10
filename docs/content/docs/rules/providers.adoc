@@ -9,6 +9,15 @@ menu:
     parent: "Rules"
 ---
 
+
+== Rule Set Configuration
+
+Heimdall gets the rule sets from link:{{< relref "/docs/rules/providers.adoc" >}}[rule providers], which, depending on the provider, can load rules from a plain old configuration file, residing in the local file system, or even integrate with Kubernetes to load rules from custom resources.
+
+In all cases, a single rule definition adheres to the schema defined in link:{{< relref "/docs/rules/rule.adoc" >}}[rule configuration].
+
+NOTE: Usage of environment variables in rule sets depend on the used provider.
+
 Providers define the sources to load the link:{{< relref "rule.adoc#_rule_set" >}}[Rule Sets] from. These make heimdall's behavior dynamic. All providers, you want to enable for a heimdall instance must be configured within the `providers` section of heimdall's configuration.
 
 Supported providers, including the corresponding configuration options are described below

@@ -1,85 +1,91 @@
 ---
-title: "Request Pipeline"
+title: "Pipelines"
 date: 2022-11-29T22:29:36+02:00
 draft: false
-weight: 12
+weight: 11
 menu:
   docs:
     parent: "Getting Started"
-    weight: 2
+    weight: 1
 description: What the request pipeline is about.
 ---
 
-(Explain the pipeline in-depth)
+Pipelines are specified in rules and are used to authenticate and authorize the particular requests, as well as to handle encountered errors.
 
-== Pipeline
+== Authentication & Authorization Pipeline
 
-As described in the link:{{< relref "/docs/introduction/what_is_heimdall.adoc" >}}[What is heimdall] section and also shown in the diagram below, heimdall authenticates and authorizes incoming HTTP requests, rejecting unauthenticated or unauthorized ones, as well as enriches the valid requests with further contextual information and transforms resulting subject information into a format, required by the upstream services. This is done in upstream service specific link:{{< relref "/docs/getting_started/rules.adoc" >}}[rules], which assemble the required individual pipelines by making use of different link:{{< relref "/docs/getting_started/mechanisms.adoc" >}}[mechanisms].
+As described in the link:{{< relref "/docs/introduction/core_concepts.adoc" >}}[Core Concepts] chapter and also shown in the diagram below, central aspects of heimdall are upstream specific pipelines, which allow you orchestrating different services to authenticate, enrich and authorize incoming HTTP requests, as well as finally transform the resulting subject information into a format, required by your upstream services.
 
 [[_fig_heimdall_request_pipeline]]
-.Request Pipeline
+.Authentication & Authorization Pipeline
 [ditaa, format=svg]
 ....
                  /-----------------------------------------------------------------------------------\
                  |                                                                                   |
-                 :                                Heimdall's Pipeline                                |<- controlled by> --+
+                 :                     Authentication & Authorization Pipeline                       |<- controlled by> --+
                  |                                                                                   |                    |
                  |+------------------+ +------------------+ +------------------+ +------------------+|                    |
                  || cCCC             | | cCCC             | | cCCC             | | cCCC             ||                    :
                  || 1. Authenticate  | | 2. Contextualize | | 3. Authorize     | | 4. Finalize      ||                    |
                  ||                  | |                  | |                  | |                  ||   +------------------+
-                 |+------------------+ +------------------+ +------------------+ +------------------+|   |  Backend Service |
+                 |+------------------+ +------------------+ +------------------+ +------------------+|   |                  |
                  |                                                                                   |   |                  |
-+------------+   |                                                                                   |   |+----------------+|
-|            |   |                                                                                   |   ||                ||
-|   Client   |   |                                   Client Request Journey                          |   ||    Business    ||
-|            |------------------------------------------------------------------------------------------>||                ||
-|   Request  |   :                                                                                   |   ||    Logic       ||
-|            |   |                                                                                   |   ||                ||
-|            |   \-----------------------------------------------------------------------------------/   |+----------------+|
++------------+   |                                                                                   |   |   Microservice   |
+|            |   |                                                                                   |   |                  |
+|   Client   |   |                             Client Request Journey                                |   |                  |
+|            |------------------------------------------------------------------------------------------>|                  |
+|            |   :                                                                                   |   |                  |
+|            |   \-----------------------------------------------------------------------------------/   |                  |
 +------------+                                                                                           +------------------+
 ....
 
-Each rule defines which mechanisms are required for its pipeline and executed in which order.
+Even the figure above shows four steps, these are actually organized in three stages as depicted in the diagram below. Each of these stages is assembled by as many link:{{< relref "/docs/getting_started/mechanisms.adoc" >}}[mechanisms] (respectively steps), as required to fulfill the corresponding requirements.
 
-In general each rule contains
-
-* an identifier - to uniquely identify a rule
-* an url pattern - to match the incoming request against
-* a list of allowed HTTP methods for the matched requests
-* a regular pipeline, consisting of a list with
-** *authentication* mechanisms, so-called link:{{< relref "/docs/mechanisms/authenticators.adoc" >}}[Authenticators], to be executed (if multiple are defined, they are executed as fallbacks) - step 1 in the figure above.
-+
-Here, heimdall typically communicates with the actual authentication systems to get information about the authenticated subject, or to get key material to verify the authentication information provided in the request, or perform other activities related to authentication.
-** *contextualization* mechanisms, so-called link:{{< relref "/docs/mechanisms/contextualizers.adoc" >}}[Contextualizers], to be executed (if multiple are defined, they are executed in the order of their definition; can be mixed with authorization mechanisms) - step 2 in the figure above.
-+
-Here, heimdall communicates with other systems as well, either to get further information about the subject, like specific attributes required by the upstream service and not available in the authentication information or the request itself. An example would be information about the request IP, like provided by https://www.abuseipdb.com/[AbuseIPDB], etc.
-** *authorization* mechanisms, so-called link:{{< relref "/docs/mechanisms/authorizers.adoc" >}}[Authorizers], to be executed (if multiple are defined, they are executed in the order of their definition; can be mixed with contextualization mechanisms) - step 3 in the figure above.
-+
-Here, heimdall performs authorization checks, either locally, or by communicating with yet again further systems, like Open Policy Agent, Ory Keto and alike.
-** *finalization* mechanisms, so-called link:{{< relref "/docs/mechanisms/finalizers.adoc" >}}[Finalizers], to be executed (if multiple are defined, they are executed in the order of their definition) - step 4 in the figure above.
-+
-This step finalizes the execution of the pipeline and enriches the request with data such as subject information or authentication tokens required by the upstream service. The available options range from adding a simple header over a structured JWT, to driving specific protocols, e.g. to obtain a token required by the upstream service.
-* an error pipeline, consisting of link:{{< relref "/docs/mechanisms/error_handlers.adoc" >}}[error handler] mechanisms (if multiple are defined, they are executed as fallbacks), which are executed if any of the regular pipeline mechanisms fail. These mechanisms range from a simple error response to the client (which sent the request), to sophisticated ones supporting complex logic and redirects.
-
-The diagram below sketches the related execution logic
-
-[mermaid, format=svg, width=70%]
+.Pipeline Stages
+[ditaa, format=svg]
 ....
-flowchart TD
-    req[Request] --> findRule{1: url\nmatches\nrule?}
-    findRule -->|yes| methodCheck{2: method\nallowed?}
-    findRule -->|no| err1[404 Not Found]
-    methodCheck -->|yes| regularPipeline[3: execute regular pipeline]
-    methodCheck -->|no| err2[405 Method Not Allowed]
-    regularPipeline --> failed{failed?}
-    failed -->|yes| errPipeline[execute error pipeline]
-    failed -->|no| success[4: forward request,\nrespectively respond\nto the API gateway]
-    errPipeline --> errResult[5: result of the\nused error handler]
+                 /----------------------------------------------------------------------------------\
+                 |                                                                                  |
+                 :                     Authentication & Authorization Pipeline                      |<- controlled by> --+
+                 |                                                                                  |                    |
+                 |+------------------------+  +------------------------+  +------------------------+|                    |
+                 || cCCC                   |  | cCCC                   |  | cCCC                   ||                    :
+                 || Authentication         |  | Contextualization &    |  | Finalization           ||                    |
+                 ||                        |  |                        |  |                        ||                    |
+                 ||  Stage                 |  | Authorization Stage    |  |  Stage                 ||   +----------------+-+
+                 ||                        |  |                        |  |                        ||   |                  |
+                 |+-----------+------------+  +----+---------------+---+  +------------------------+|   |                  |
+                 |           |                     |               |                                |   |                  |
++------------+   |           :                     :               :                                |   |   Microservice   |
+|            |   |           |                     |               |                                |   |                  |
+|   Client   |   |           |                   Client Request Journey                             |   |                  |
+|            |----------------------------------------------------------------------------------------->|                  |
+|            |   :           :                     :               :                                |   |                  |
+|            |   |           |                     |               |                                |   |                  |
+|            |   \----------------------------------------------------------------------------------/   |                  |
++------------+               |                     |               |                                    +------------------+
+                             :                     :               :
+                             v                     v               v
+                  +----------------+     +----------------+     +----------------+
+                  |                |-+   |                |-+   |                |-+
+                  | Authentication | |   | Some other     | |   | Authorization  | |
+                  |                | |   |                | |   |                | |
+                  |  System        | |   |  System        | |   |  System        | |
+                  |                | |   |                | |   |                | |
+                  +----------------+ |   +----------------+ |   +----------------+ |
+                     ----------------+      ----------------+      ----------------+
 ....
 
-. *Url matches rule?* - This is the first step executed by heimdall. The information about the scheme, host, path and query is taken either from the URL itself, or if present and allowed, from the `X-Forwarded-Proto`, `X-Forwarded-Host`, or `X-Forwarded-Uri` headers of the incoming request. The request is denied if there is no matching rule. Otherwise, the rule specific pipeline is executed. When heimdall is evaluating the rules against the request url it takes the first matching one. That allows simpler matching expressions and supports ordering of rules in rule set with most specific matchig expressions first.
-. *Method allowed?* - As soon as a rule matching the request is found, a verification is done whether the used HTTP method is allowed or not. The information about the HTTP method is either taken from the request itself or, if present and allowed, from the `X-Forwarded-Method` header.
-. *Execute regular pipeline* - when the above steps succeed, the regular pipeline mechanisms defined in the matched rule are executed.
-. *Forward request, respectively respond to the API gateway* - when the above steps succeed, heimdall, depending on the link:{{< relref "#_operating_modes" >}}[operating mode], responds with, respectively forwards whatever was defined in the pipeline (usually this is a set of HTTP headers). Otherwise
-. *Execute error pipeline* is executed if any of the mechanisms, defined in the regular pipeline fail. This again results in a response, this time however, based on the definition in the used error handler.
+* **Authentication Stage:** In that stage you can use any amount of link:{{< relref "/docs/mechanisms/authenticators.adoc" >}}[authentication] mechanisms, including fallbacks, to let heimdall communicating with the actual authentication systems, like getting information about the authenticated subject of the request, getting key material to verify the authentication information provided in the request, or perform some other activities related to authentication. This stage is mandatory, which means, at least one authentication mechanism must be specified.
+
+* **Authorization Stage:** In that stage you can make use of any amount of link:{{< relref "/docs/mechanisms/contextualizers.adoc" >}}[contextualization] and link:{{< relref "/docs/mechanisms/authorizers.adoc" >}}[authorization] mechanisms to fulfill your authorization requirements. Here, you let heimdall communicating with other systems to collect contextual information required for authorization purposes (like e.g. getting the country for the IP, the request came from, retrieving subscription status of your customer, etc), and to perform the actual authorization, e.g. by talking to an Open Policy Agent, OpenFGA, any other type of authorization system, or even let heimdall performing the required checks locally. That stage is optional and is only executed after the successful execution of the authentication stage.
+
+* **Finalization Stage:** In that stage, you can use any amount of link:{{< relref "/docs/mechanisms/finalizers.adoc" >}}[finalization] mechanisms to complete the pipeline execution and allows you transforming the information collected about the subject in the previous stages into a format expected or required by your upstream service, or even driving specific protocols, e.g. to obtain a token required by the upstream service. That stage is optional and is only executed after the successful execution of the previous stage.
+
+Important to note is that stages are implicit. That is, a pipeline is just a list of mechanisms to be executed. That means, all link:{{< relref "/docs/mechanisms/authenticators.adoc" >}}[authentication] mechanisms must be specified before any link:{{< relref "/docs/mechanisms/contextualizers.adoc" >}}[contextualization], link:{{< relref "/docs/mechanisms/authorizers.adoc" >}}[authorization] or link:{{< relref "/docs/mechanisms/finalizers.adoc" >}}[finalization] mechanisms are specified and all link:{{< relref "/docs/mechanisms/finalizers.adoc" >}}[finalization] mechanisms must be specified at the end. Violation of that rule will let heimdall refuse loading of the particular rule.
+
+== Error Pipeline
+
+Obviously, a link:{{< relref "/docs/getting_started/mechanisms.adoc" >}}[mechanism] used in the previously described link:{{< relref "#_authentication_authorization_pipeline" >}}[Authentication & Authorization Pipeline] may fail. That will result in the execution of the error pipeline, which is basically a list of link:{{< relref "/docs/mechanisms/error_handlers.adoc" >}}[error handler] mechanisms (if multiple are defined, they are executed as fallbacks), ranging from a simple error response to the client (which sent the request) to sophisticated ones supporting complex logic and redirects.
+
+The error pipeline is optional. If no error handlers are defined, heimdall will just response with an HTTP response code based on the error raised in the authentication & authorization pipeline.

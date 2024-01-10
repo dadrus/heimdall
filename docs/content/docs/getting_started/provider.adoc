@@ -2,22 +2,38 @@
 title: "What are Provider?"
 date: 2022-11-29T22:31:36+02:00
 draft: false
-weight: 15
+weight: 14
 menu:
   docs:
     parent: "Getting Started"
-    weight: 5
+    weight: 4
 description: Those, who are responsible for loading of rules from arbitrary sources.
 ---
 
-(Explain providers in depth, what do they mean? How are the used? What are they for?)
+When rules define the behavior in sense of the desired authentication and authorization aspects and are organized in rule sets, then the providers are those entities, which manage the lifecycle of the rule sets.
 
-Also explain what rule sets are and reference the actual existing providers.
+These are the providers, which load, reload or remove rules when a new rule set appears,  changes are detected, or a rule set is deleted. While all providers are different in the sense that they support different sources to load rule sets from, most of them use the same file-based rule set format.
 
-== Rule Set Configuration
+The following table gives an overview about existing providers
 
-Heimdall gets the rule sets from link:{{< relref "/docs/rules/providers.adoc" >}}[rule providers], which, depending on the provider, can load rules from a plain old configuration file, residing in the local file system, or even integrate with Kubernetes to load rules from custom resources.
+[cols="2,2,5"]
+|===
+| **Provider** | **Rule Set Format** | **Short Description**
 
-In all cases, a single rule definition adheres to the schema defined in link:{{< relref "/docs/rules/rule.adoc" >}}[rule configuration].
+| link:{{< relref "/docs/rules/providers.adoc" >}}[File-System]
+| YAML file
+| Loads rule sets from local file system
 
-NOTE: Usage of environment variables in rule sets depend on the used provider.
+| link:{{< relref "/docs/rules/providers.adoc" >}}[HTTP Endpoint]
+| YAML file
+| Loads rule sets from an HTTP(s) endpoint
+
+| link:{{< relref "/docs/rules/providers.adoc" >}}[Cloud Blob]
+| YAML file
+| Loads rule sets from cloud blobs, like AWS S3, Google Cloud Storage, Azure Cloud Storage and alike.
+
+| link:{{< relref "/docs/rules/providers.adoc" >}}[Kubernetes]
+| Custom Resource
+| Loads rule sets made available to a kubernetes cluster as customer resources.
+
+|===

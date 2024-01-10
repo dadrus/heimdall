@@ -2,27 +2,158 @@
 title: "What are Rules?"
 date: 2022-11-29T22:33:36+02:00
 draft: false
-weight: 14
+weight: 13
 menu:
   docs:
     parent: "Getting Started"
-    weight: 4
-description: The pipeline definitions.
+    weight: 3
+description: catalogue and the car.
 ---
 
-(Explain rules in depth, what do they mean? How are the used? What are they for?)
+Rules are the entities, which allow you to define the authentication & authorization and error pipelines required by your upstream services. These are rules, which bring previously configured link:{{< relref "/docs/getting_started/mechanisms.adoc" >}}[mechanisms] to life.
+
+You can compare the relation between mechanisms and rules to a relation between a catalogue at a car dealer and a real car, when you get it. So, mechanisms is what you can see and select in a catalogue to compile your car and the rule is your car with real components and behaviour. In that sense rules instanciate mechanisms with the ability to tune these for your needs.
+
+== Rule Types
+
+Heimdall supports two types of rules:
+
+* The upstream specific rule, also called the regular rule. These rules are dynamic by nature and can come and go together with the upstream service defining these.
+* The default rule, which, if defined, is used by the regular rules to inherit their behaviour and is also executed if no other rule matches.
+
+== Rule Building Blocks
+
+As written above, a rule assembles an individual pipeline by making use of previously defined mechanisms, which are executed, when the rule matches the request.
+
+In general each rule consists of the following parts
+
+* an identifier - to uniquely identify a rule
+* an url pattern - to match the incoming request against (regular rules only)
+* a list of allowed HTTP methods for the matched requests
+* a list of mechanisms assembling the authentication & authorization pipeline and executed for the matched request,
+* an optional list of mechanisms assembling the error pipeline and executed if the authentication & authorization pipeline fails, and
+* optionally where to forward the request to upon successful execution of the authentication & authorization pipeline if heimdall is operated in proxy mode (regular rules only)
+
+== Organization of Rules
+
+Regular, respectively upstream specific rules must somehow be organized, versioned and also loaded. So, there must be some structure allowing all of that. That structure is defined by the so-called rule sets.
+
+In principle, a rule set is just file with a list of rules with some additional meta information, like format version, name of the rule set and alike. Rule sets do also allow ordering of rules, e.g. with most specific matching expressions first allowing simpler matching expressions.
+
+== Execution of Rules
+
+The diagram below sketches the logic executed by heimdall for each and every incoming request.
+
+[mermaid, format=svg, width=70%]
+....
+flowchart TD
+    req[Request] --> findRule{1: any\nrule\nmatching\nurl?}
+    findRule -->|yes| methodCheck{2: method\nallowed?}
+    findRule -->|no| err1[404 Not Found]
+    methodCheck -->|yes| regularPipeline[3: execute regular pipeline]
+    methodCheck -->|no| err2[405 Method Not Allowed]
+    regularPipeline --> failed{failed?}
+    failed -->|yes| errPipeline[execute error pipeline]
+    failed -->|no| success[4: forward request,\nrespectively respond\nto the API gateway]
+    errPipeline --> errResult[5: result of the\nused error handler]
+....
+
+. *Any rule matching url?* - This is the first step executed by heimdall in which it tries to find a rule matching the request url. The information about the scheme, host, path and query is taken either from the URL itself, or if present and allowed, from the `X-Forwarded-Proto`, `X-Forwarded-Host`, or `X-Forwarded-Uri` headers of the incoming request. The request is denied if there is no matching rule, respectively no default rule. Otherwise, the rule specific pipeline is executed. When heimdall is evaluating the rules against the request url it takes the first matching one.
+. *Method allowed?* - As soon as a rule matching the request is found (which might also be the default rule if specified and there was no regular rule matching the request), a check is done whether the used HTTP method is allowed or not. The information about the HTTP method is either taken from the request itself or, if present and allowed, from the `X-Forwarded-Method` header.
+. *Execute regular pipeline* - when the above steps succeed, the regular (authentication & authorization) pipeline mechanisms are executed.
+. *Forward request, respectively respond to the API gateway* - when the above steps succeed, heimdall, depending on the link:{{< relref "#_operating_modes" >}}[operating mode], responds with, respectively forwards whatever was defined in the pipeline (usually this is a set of HTTP headers). Otherwise
+. *Execute error pipeline* is executed if any of the mechanisms, defined in the regular pipeline fail. This again results in a response, this time however, based on the definition in the used error handler.
 
 
-This section explains how rules can be defined and used in detail. Before diving onto this topic, we recommend to make yourself familiar with the principal link:{{< relref "/docs/introduction/core_concepts.adoc" >}}[Core Concepts].
+== Default Rule & Inheritance
 
-Core aspects of heimdall are rules. These let heimdall execute logic required by your upstream service to authenticate, authorize the incoming requests, enrich the information about the subject and transform it according your needs. However, to be able to define even a single rule, you must configure link:{{< relref "/docs/getting_started/mechanisms.adoc" >}}[pipeline mechanisms], which you can then use in any rules, you define. Rules are dynamic by nature and can come and go together with the upstream service defining these.
+The link:{{< relref "#_rule_types" >}}[Rule Types] section tells, that a default rule can be used as a base to inherit behavior for the regular rule.
 
-All rule specific static configuration, including the definition of the aforesaid mechanisms can be done within heimdall's `rules` property.
+In principle, there is a need to differentiate between the defined rule and the effective rule. The first one is what you define in the rule set and the second one, the effective rule, is what is executed at runtime (comparable to polymorphism concept in programming languages). So, how does it work?
 
-In general, following aspects are important when dealing with rules:
+Imagine, the concept of a rule is e.g. an interface written in Java defining the following methods:
 
-* link:{{< relref "/docs/getting_started/mechanisms.adoc" >}}[Pipeline Mechanisms], which build the foundation of each and every possible pipeline defined by any single rule.
-* link:{{< relref "/docs/rules/rule.adoc" >}}[Rule], which assembles the individual pipeline by making use of previously defined link:{{< relref "/docs/getting_started/mechanisms.adoc" >}}[mechanisms] and which is executed, when the rule matches the request. For the purpose of the latter, it also defines the url patterns.
-* link:{{< relref "default_rule.adoc" >}}[Default Rule], which, if defined, is executed if no other rule matched the request.
-* link:{{< relref "providers.adoc" >}}[Rule Providers], which load the rules from different sources.
+[source, java]
+----
+public interface Rule {
+  public boolean checkMethods(methods []String)
+  public void executeAuthenticationStage(req Request)
+  public void executeAuthorizationStage(req Request)
+  public void executeFinalizationStage(req Request)
+  public void handleError(req Request)
+}
+----
+
+And the logic described in link:{{< relref "#_execution_of_rules" >}}[Execution of Rules] is implemented similar to what is shown in the snippet below
+
+[source, java]
+----
+Rule rule = findMatchingRule(req)
+if (!rule.checkMethods(req)) {
+  throw new MethodNotAllowedError()
+}
+
+try {
+  // execution of the authentication & authorization pipeline
+  rule.executeAuthenticationStage(req)
+  rule.executeAuthorizationStage(req)
+  rule.executeFinalizationStage(req)
+
+  // further logic related to response creation
+} catch(Exception e) {
+  // execution of the error pipeline
+  rule.handleError(req)
+
+  // further logic related to response creation
+}
+----
+
+with `findMatchingRule` returning a specific instance of a class implementing our `Rule` interface matching the request.
+
+Since there is some default behaviour in place, like error handling, if the error pipeline is empty, and some stages of the authentication & authorization pipeline is optional, internally, there is some kind of base rule in place, all other rules inherit from. So something like shown in the snippet below.
+
+[source, java]
+----
+public abstract class BaseRule implements Rule {
+  public abstract boolean checkMethods(methods []String)
+  public abstract void executeAuthenticationStage(req Request)
+  public void executeAuthorizationStage(req Request) {}
+  public void executeFinalizationStage(req Request) {}
+  public void handleError(req Request) { handlerErrorDefault(req) }
+}
+----
+
+If there is no default rule configured, an upstream specific rule can then be considered as a class inheriting from that `BaseRule` and must implement at least the two `checkMethods` and `executeAuthenticationStage` methods, similar to what is shown below
+
+[source, java]
+----
+public class MySpecificRule extends BaseRule {
+  public boolean checkMethods(methods []String) { ... }
+  public void executeAuthenticationStage(req Request) { ... }
+}
+----
+
+If however, there is a default rule configured, on one hand, it can be considered as yet another class deriving from our `BaseClass`. So, something like
+
+[source, java]
+----
+public class DefaultRule extends BaseRule {
+  public boolean checkMethods(methods []String) { ... }
+  public void executeAuthenticationStage(req Request) { ... }
+  public void executeAuthorizationStage(req Request) { ... }
+  public void executeFinalizationStage(req Request) { ... }
+  public void handleError(req Request) { ... }
+}
+----
+
+with at least the aforesaid two `checkMethods` and `executeAuthenticationStage` methods being implemented as this is also required for the regular rule.
+
+On the other hand, the definition of a regular, respectively upstream specific rule is then not a class deriving from the `BaseRule`, but from the `DefaultRule`. That way upstream specific rules are only required, if the behavior the default rule would not fit the given requirements of a particular service, respectively endpoint. So, if e.g. a rule requires only the authorization stage to be different from the default rule, it would result in something like shown in the snippet below.
+
+[source, java]
+----
+public class SpecificRule extends DefaultRule {
+  public void executeAuthorizationStage(req Request) { ... }
+}
+----
 

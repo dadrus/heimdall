@@ -2,10 +2,10 @@
 title: "Authenticators"
 date: 2022-06-09T18:56:56+02:00
 draft: false
-weight: 51
+weight: 52
 menu:
   docs:
-    weight: 1
+    weight: 2
     parent: "Mechanisms"
 ---
 
