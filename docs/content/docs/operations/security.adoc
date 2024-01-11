@@ -64,7 +64,7 @@ The verification of TLS server certificates is not the single configuration opti
 
 == Signatures
 
-When heimdall is used to issue signed objects, like JWTs, to enable upstream services to rely on authentic subject information, it acts as an issuer of such objects and requires corresponding configuration (see link:{{< relref "/docs/configuration/cryptographic_material.adoc" >}}[Cryptographic Material]).
+When heimdall is used to issue signed objects, like JWTs, to enable upstream services to rely on authentic subject information, it acts as an issuer of such objects and requires corresponding configuration a (see link:{{< relref "/docs/configuration/signer.adoc" >}}[Signer]).
 
 In a typical production scenario, there is a need for proper key and certificate management. This is supported by heimdall in the following way:
 

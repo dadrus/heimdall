@@ -1,11 +1,11 @@
 ---
-title: "Types"
+title: "Type Definitions"
 date: 2022-06-09T18:56:56+02:00
 draft: false
-weight: 42
+weight: 81
 menu:
   docs:
-    weight: 2
+    weight: 1
     parent: "Configuration"
 ---
 
