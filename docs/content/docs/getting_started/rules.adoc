@@ -140,7 +140,16 @@ public class DefaultRule extends BaseRule {
 
 with at least the aforesaid two `checkMethods` and `executeAuthenticationStage` methods being implemented as this is also required for the regular rule.
 
-On the other hand, the definition of a regular, respectively upstream specific rule is then not a class deriving from the `BaseRule`, but from the `DefaultRule`. That way upstream specific rules are only required, if the behavior the default rule would not fit the given requirements of a particular service, respectively endpoint. So, if e.g. a rule requires only the authorization stage to be different from the default rule, it would result in something like shown in the snippet below.
+On the other hand, the definition of a regular, respectively upstream specific rule is then not a class deriving from the `BaseRule`, but from the `DefaultRule`. That way upstream specific rules are only required, if the behavior the default rule would not fit the given requirements of a particular service, respectively endpoint. So, if e.g. a rule requires only the authorization stage to be different from the default rule, you would only specify the required authentication mechanisms. That  would result in something like shown in the snippet below.
+
+[source, java]
+----
+public class SpecificRule extends DefaultRule {
+  public void executeAuthenticationStage(req Request) { ... }
+}
+----
+
+And if there is a need to have the authorization stage deviating from the default rule, you would only specify the required authorization and contextualization mechanisms, resulting in something like
 
 [source, java]
 ----
@@ -148,4 +157,6 @@ public class SpecificRule extends DefaultRule {
   public void executeAuthorizationStage(req Request) { ... }
 }
 ----
+
+NOTE: You cannot override a single mechanism of a particular stage. As soon as you define a single mechanism in your regular rule's pipeline, belonging to the one or the other stage, the entire stage is overridden.
 
