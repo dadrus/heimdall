@@ -2,11 +2,10 @@
 title: "Security"
 date: 2022-08-15T08:33:35+02:00
 draft: false
-weight: 34
+weight: 35
 menu:
   docs:
-    weight: 4
-    identifier: operations_security
+    weight: 5
     parent: "Operations"
 ---
 

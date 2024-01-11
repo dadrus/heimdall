@@ -6,7 +6,6 @@ weight: 31
 menu:
   docs:
     weight: 1
-    identifier: install
     parent: "Operations"
   guides:
     weight: 5
@@ -131,7 +130,7 @@ $ helm repo update
 
 === Installing the Chart
 
-This chart expects a link:{{< relref "/docs/configuration/introduction.adoc#_configuration_file" >}}[heimdall configuration file] with authentication, authorization and so on mechanisms, required for your particular setup, which can be passed by using the `-f heimdall.yaml` flag during the installation.
+This chart expects a link:{{< relref "/docs/operations/configuration.adoc#_configuration_file" >}}[heimdall configuration file] with authentication, authorization and so on mechanisms, required for your particular setup, which can be passed by using the `-f heimdall.yaml` flag during the installation.
 
 If you need to override the name of the heimdall resources such as the deployment or services, the traditional `nameOverride` and `fullnameOverride` properties are supported.
 

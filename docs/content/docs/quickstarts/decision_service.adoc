@@ -1,5 +1,5 @@
 ---
-title: "Decision Service"
+title: "Decision Service Quickstart"
 date: 2022-06-08T20:43:27+02:00
 draft: false
 weight: 21
@@ -9,10 +9,12 @@ menu:
     weight: 1
   main:
     parent: quickstarts
-description: Describes a very simple use case in which you'll see heimdall's Decision service in action.
+description: This document describes a very simple use case in which you'll see heimdall's Decision service in action.
 ---
 
-This document describes a very simple use case in which you'll see heimdall's Decision service in action.
+The setup we're going to configure here mimics an upstream service, exposing two endpoints, `/public` and `/anonymous`, with requests to the first one being forwarded as is and to the second one enriched with a JWT with `sub` claim set to `anonymous`. Access to all other endpoints should be rejected.
+
+Since in the link:{{< relref "/docs/getting_started/operating_modes.adoc#_decision_mode" >}}[decision operation mode] heimdall just answers to requests without forwarding these anywhere, this document shows a link:{{< relref "#_run_standalone" >}}[standalone setup] first, followed by an link:{{< relref "#_run_integrated" >}}[integration with Traefik]. For latter docker-compose is used.
 
 == Prerequisites
 
@@ -22,8 +24,8 @@ This document describes a very simple use case in which you'll see heimdall's De
 
 == Configure
 
-heimdall can be configured via environment variables, as well as using a configuration file. For simplicity reasons, we'll use a configuration file here. So create a config file named `config.yaml` with the following content:
-
+. Create a config file named `config.yaml` with the following content:
++
 [source, yaml]
 ----
 log:
@@ -63,9 +65,8 @@ providers:
 <5> Configures the default rule, which will obviously reject every request.
 <6> Configures a `file_system` provider, which allows heimdall loading rules from the local filesystem; here from the `/heimdall/conf/rule.yaml` file.
 
-
-With that configuration and without any additional rules, heimdall would reject all requests with `401 Unauthorized`. But it has a `file_system` provider configured, which makes heimdall expect the referenced rules file already on startup. To make it more usable, create a `rules.yaml` file with the following content:
-
+. With that configuration and without any additional rules, heimdall would reject all requests with `401 Unauthorized`. But it has a `file_system` provider configured, which makes heimdall expect the referenced rules file already on startup. To make it more usable, create a `rules.yaml` file with the following content:
++
 [source, yaml]
 ----
 version: "1alpha3"
@@ -83,14 +84,15 @@ rules:
     - authenticator: anon
     - finalizer: create_jwt
 ----
-
++
 This file contains two rules:
-
++
 <1> This rule should match the `\http://<**>/public` url and accept every request without performing any authentication and finalization. For that reason it uses the `anon` authenticator from our mechanisms definitions.
 <2> This rule should match the `\http://<**>/anonymous` url. It uses the `anon` authenticator and `create_jwt` finalizer from our mechanisms definitions. Latter creates a JWT for the created anonymous subject.
 
 == Run Standalone
-Run heimdall specifying the configuration file from above
+
+Run heimdall specifying the configuration file from above.
 
 If you're using a binary, put the `rules.yaml` file into the `/heimdall/conf` directory (as heimdall will look the `rules.yaml` file in it according to our configuration from above) just execute
 
@@ -99,9 +101,9 @@ If you're using a binary, put the `rules.yaml` file into the `/heimdall/conf` di
 $ ./heimdall serve decision -c config.yaml
 ----
 
-The above command will start heimdall in a link:{{< relref "/docs/introduction/core_concepts.adoc#_decision_api_mode" >}}[decision] operation mode. By default, the service will be served on port `4456`.
+The above command will start heimdall in the decision operation mode. By default, the service will be served on port `4456`.
 
-Otherwise, if you've built a container image, run heimdall in the link:{{< relref "/docs/introduction/core_concepts.adoc#_decision_api_mode" >}}[decision] operation mode via
+Otherwise, if you've built a container image, run heimdall in the decision operation mode via
 
 [source, bash]
 ----
@@ -127,12 +129,14 @@ In both cases, you'll see similar output to
 2022-08-04T07:40:12+02:00 INF Decision service starts listening on: :4456
 ----
 
-Ignore the warnings. They are expected as we've neither configured a rule provider, nor have we configured a key store for JWT signing purposes. Nevertheless, the default rule can be used.
+Ignore the warnings. They are expected as we've not configured a key store for JWT signing purposes.
 
 == Run Integrated
 
-Alternatively, if you would like to have an environment close to a real scenario, you could make use of docker compose. Create the following `docker-compose.yaml` file for this purpose:
+Alternatively, if you would like to have an environment close to a real scenario, you could make use of docker compose.
 
+. Create the following `docker-compose.yaml` file for this purpose:
++
 [source, yaml]
 ----
 version: "3"
@@ -171,12 +175,21 @@ services:
       - traefik.http.routers.whoami.rule=PathPrefix("/")
       - traefik.http.routers.whoami.middlewares=heimdall
 ----
-
++
 This setup contains three services:
-
++
 <1> is Traefik, which is used to dispatch the incoming requests and also forward all of them to heimdall first.
 <2> is heimdall, configured to use the configuration and the rule files from above
 <3> is a small service, which just echoes back whatever it receives.
+
+. Start the services with
++
+[source, bash]
+----
+$ docker-compose up
+----
++
+in the directory, the above `docker-compose.yaml` file is located in.
 
 == Use
 

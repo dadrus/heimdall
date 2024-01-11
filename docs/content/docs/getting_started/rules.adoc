@@ -1,5 +1,5 @@
 ---
-title: "What are Rules?"
+title: "Rules "
 date: 2022-11-29T22:33:36+02:00
 draft: false
 weight: 13
@@ -10,20 +10,18 @@ menu:
 description: catalogue and the car.
 ---
 
-Rules are the entities, which allow you to define the authentication & authorization and error pipelines required by your upstream services. These are rules, which bring previously configured link:{{< relref "/docs/getting_started/mechanisms.adoc" >}}[mechanisms] to life.
+Rules are the entities, which allow you to define the authentication & authorization and error link:{{< relref "/docs/getting_started/pipelines.adoc" >}}[pipelines] required by your upstream services by making use of previously defined mechanisms. These are rules, which bring previously configured mechanisms to life.
 
-You can compare the relation between mechanisms and rules to a relation between a catalogue at a car dealer and a real car, when you get it. So, mechanisms is what you can see and select in a catalogue to compile your car and the rule is your car with real components and behaviour. In that sense rules instanciate mechanisms with the ability to tune these for your needs.
+You can compare the relation between mechanisms and rules to a relation between a catalogue at a car dealer and a real car, when you get it. So, mechanisms is what you can see and select in a catalogue (though, in case of heimdall you have to define that catalogue first) to compile your car and the rule is your car with real components and behaviour. In that sense when you define a rule, you specify which mechanisms should it be built from and whether you would like some "tuning" to be applied to better suit your needs. And at runtime, when the rule is loaded, it instantiates the specified mechanisms wich are then executed. That also means, each rule pipeline has its own mechanism instances at runtime.
 
 == Rule Types
 
 Heimdall supports two types of rules:
 
-* The upstream specific rule, also called the regular rule. These rules are dynamic by nature and can come and go together with the upstream service defining these.
+* The upstream specific rule, also called the regular rule. You can define as many regular rules, as required. These rules are dynamic by nature and can come and go together with the upstream service defining these.
 * The default rule, which, if defined, is used by the regular rules to inherit their behaviour and is also executed if no other rule matches.
 
 == Rule Building Blocks
-
-As written above, a rule assembles an individual pipeline by making use of previously defined mechanisms, which are executed, when the rule matches the request.
 
 In general each rule consists of the following parts
 
@@ -32,13 +30,7 @@ In general each rule consists of the following parts
 * a list of allowed HTTP methods for the matched requests
 * a list of mechanisms assembling the authentication & authorization pipeline and executed for the matched request,
 * an optional list of mechanisms assembling the error pipeline and executed if the authentication & authorization pipeline fails, and
-* optionally where to forward the request to upon successful execution of the authentication & authorization pipeline if heimdall is operated in proxy mode (regular rules only)
-
-== Organization of Rules
-
-Regular, respectively upstream specific rules must somehow be organized, versioned and also loaded. So, there must be some structure allowing all of that. That structure is defined by the so-called rule sets.
-
-In principle, a rule set is just file with a list of rules with some additional meta information, like format version, name of the rule set and alike. Rule sets do also allow ordering of rules, e.g. with most specific matching expressions first allowing simpler matching expressions.
+* optionally where to forward the request to upon successful execution of the authentication & authorization pipeline if heimdall is link:{{< relref "/docs/getting_started/operating_modes.adoc" >}}[operated in proxy mode] (regular rules only)
 
 == Execution of Rules
 
@@ -61,7 +53,7 @@ flowchart TD
 . *Any rule matching url?* - This is the first step executed by heimdall in which it tries to find a rule matching the request url. The information about the scheme, host, path and query is taken either from the URL itself, or if present and allowed, from the `X-Forwarded-Proto`, `X-Forwarded-Host`, or `X-Forwarded-Uri` headers of the incoming request. The request is denied if there is no matching rule, respectively no default rule. Otherwise, the rule specific pipeline is executed. When heimdall is evaluating the rules against the request url it takes the first matching one.
 . *Method allowed?* - As soon as a rule matching the request is found (which might also be the default rule if specified and there was no regular rule matching the request), a check is done whether the used HTTP method is allowed or not. The information about the HTTP method is either taken from the request itself or, if present and allowed, from the `X-Forwarded-Method` header.
 . *Execute regular pipeline* - when the above steps succeed, the regular (authentication & authorization) pipeline mechanisms are executed.
-. *Forward request, respectively respond to the API gateway* - when the above steps succeed, heimdall, depending on the link:{{< relref "#_operating_modes" >}}[operating mode], responds with, respectively forwards whatever was defined in the pipeline (usually this is a set of HTTP headers). Otherwise
+. *Forward request, respectively respond to the API gateway* - when the above steps succeed, heimdall, depending on the link:{{< relref "/docs/getting_started/operating_modes.adoc" >}}[operating mode], responds with, respectively forwards whatever was defined in the pipeline (usually this is a set of HTTP headers). Otherwise
 . *Execute error pipeline* is executed if any of the mechanisms, defined in the regular pipeline fail. This again results in a response, this time however, based on the definition in the used error handler.
 
 
@@ -69,7 +61,7 @@ flowchart TD
 
 The link:{{< relref "#_rule_types" >}}[Rule Types] section tells, that a default rule can be used as a base to inherit behavior for the regular rule.
 
-In principle, there is a need to differentiate between the defined rule and the effective rule. The first one is what you define in the rule set and the second one, the effective rule, is what is executed at runtime (comparable to polymorphism concept in programming languages). So, how does it work?
+In principle, there is a need to differentiate between the defined rule and the effective rule. The first one is what you define and the second one, the effective rule, is what is executed at runtime (comparable to polymorphism concept in programming languages). So, how does it work?
 
 Imagine, the concept of a rule is e.g. an interface written in Java defining the following methods:
 

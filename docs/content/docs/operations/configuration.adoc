@@ -1,28 +1,26 @@
 ---
-title: "Overview"
+title: "Configuration "
 date: 2022-07-08T09:16:36+02:00
 draft: false
-weight: 26
+weight: 32
 menu:
   docs:
-    parent: "Configuration"
-    weight: 1
+    parent: "Operations"
+    weight: 2
 description: Explains available configuration options.
 ---
 
-Reference the rule set configuration here and mention that this section is dealing with static configuration only.
-
 Configuration in heimdall can refer to two different things:
 
-* the static startup configuration and
-* the configuration of rules, respectively rule sets
+* the static startup configuration, which is the scope of this document and
+* the configuration of rules, respectively rule sets, which you can find link:{{< relref "/docs/rules/rule_set.adoc" >}}[here].
 
 Elements in the static configuration set up the services, like link:{{< relref "/docs/services/decision.adoc" >}}[decision service], which basically define the entry points, heimdall will listen to, the observability capabilities, like link:{{< relref "/docs/observability/logging.adoc" >}}[logging], the supported link:{{< relref "/docs/getting_started/mechanisms.adoc" >}}[pipeline mechanisms], the link:{{< relref "/docs/rules/default_rule.adoc" >}}[default rule], as well as the link:{{< relref "/docs/rules/providers.adoc" >}}[rule providers] (these elements are not expected to change often).
 
 The rule set contains everything that defines how the requests are handled by heimdall for your system.
 This configuration can change and is seamlessly hot-reloaded, without any request interruption or connection loss.
 
-== Static Startup Configuration
+== Available Options
 
 There are two different, not mutually exclusive (you can combine them), ways to define static configuration options in Heimdall:
 
@@ -36,7 +34,7 @@ If no configuration is provided, heimdall will set useful defaults.
 These are however not enough, as heimdall doesn't know your context - which mechanisms are required for the one or the other of your upstream services.
 So, you'll not really be able to use heimdall as all requests will be answered with an HTTP `405 Method Not Allowed` response code.
 
-=== Configuration File
+== Configuration File
 
 At start up, heimdall searches for static configuration in a file named `heimdall.yaml` in
 
@@ -103,7 +101,7 @@ mechanisms:
 ----
 ====
 
-=== Environment Variables
+== Environment Variables
 
 Every configuration property, which can be defined in a link:{{< relref "#_configuration_file" >}}[configuration file] can also be defined as environment variable.
 Following rules apply:

@@ -1,16 +1,15 @@
 ---
-title: "Observability"
+title: "Observability "
 date: 2022-08-03T18:53:31+02:00
 draft: false
-weight: 33
+weight: 34
 menu:
   docs:
-    weight: 3
-    identifier: observability_and_operations
+    weight: 4
     parent: "Operations"
 ---
 
-Hemdall implements different observability mechanisms to support easier operation and integration in different APM products. The following sections provide insights about what can be expected.
+To support easier operation and integration in diverse APM products heimdall implements different observability mechanisms. The following sections provide insights about what can be expected.
 
 == Logging in Heimdall
 
