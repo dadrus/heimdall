@@ -12,7 +12,7 @@ description: catalogue and the car.
 
 Rules are the entities, which allow you to define the authentication & authorization and error link:{{< relref "/docs/getting_started/pipelines.adoc" >}}[pipelines] required by your upstream services by making use of previously defined mechanisms. These are rules, which bring previously configured mechanisms to life.
 
-You can compare the relation between mechanisms and rules to a relation between a catalogue at a car dealer and a real car, when you get it. So, mechanisms is what you can see and select in a catalogue (though, in case of heimdall you have to define that catalogue first) to compile your car and the rule is your car with real components and behaviour. In that sense when you define a rule, you specify which mechanisms should it be built from and whether you would like some "tuning" to be applied to better suit your needs. And at runtime, when the rule is loaded, it instantiates the specified mechanisms wich are then executed. That also means, each rule pipeline has its own mechanism instances at runtime.
+You can compare the relation between mechanisms and rules to a relation between a catalogue at a car dealer and a real car, when you get it. So, mechanisms is what you can see and select in a catalogue (though, in case of heimdall you have to define that catalogue first) to compile your car and the rule is your car with real components and behaviour. In that sense when you define a rule, you specify which mechanisms should it be built from and whether you would like some "tuning" to be applied to better suit your needs.
 
 == Rule Types
 
@@ -31,6 +31,15 @@ In general each rule consists of the following parts
 * a list of mechanisms assembling the authentication & authorization pipeline and executed for the matched request,
 * an optional list of mechanisms assembling the error pipeline and executed if the authentication & authorization pipeline fails, and
 * optionally where to forward the request to upon successful execution of the authentication & authorization pipeline if heimdall is link:{{< relref "/docs/getting_started/operating_modes.adoc" >}}[operated in proxy mode] (regular rules only)
+
+== Memory Footprint
+
+Even the first paragraphs compare mechanisms and the rules with a catalogue of car parts and a real car, things are a bit more complex in reality.
+
+To minimize the memory footprint, heimdall instanciates all defined mechanisms on start up. And since all mechanisms are stateless, following is happening at runtime, when the rule is loaded:
+
+* If a rule, respectively its pipeline just references a mechanism without providing additional configuration, the already instantiated mechanism is used.
+* Otherwise, if the pipeline overrides any parts of the default mechanism configuration, a shallow copy of the referenced mechanism instance (created at start up) is created, and only those parts, which differ are replaced with new objects, representing the pipeline specific configuration.
 
 == Execution of Rules
 
@@ -158,5 +167,5 @@ public class SpecificRule extends DefaultRule {
 }
 ----
 
-NOTE: You cannot override a single mechanism of a particular stage. As soon as you define a single mechanism in your regular rule's pipeline, belonging to the one or the other stage, the entire stage is overridden.
+NOTE: You cannot override a single mechanism of a particular stage. As soon as you define a single mechanism in a pipeline, belonging to the one or the other stage, the entire stage is overridden.
 

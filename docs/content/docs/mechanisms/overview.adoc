@@ -1,5 +1,5 @@
 ---
-title: "MOverview"
+title: "Catalogue"
 date: 2024-01-11T15:01:21+02:00
 draft: false
 weight: 51
@@ -9,30 +9,38 @@ menu:
     parent: "Mechanisms"
 ---
 
+As described in link:{{< relref "/docs/getting_started/mechanisms.adoc" >}}[Getting Started / Mechanisms] section, mechanisms must be defined and configured before these can be used in rules.
+
+== Catalogue Configuration
+
+The corresponding mechanisms catalogue resides under the `mechanisms` property of heimdall static configuration and is organized based on mechanism categories as also shown in the snippet below.
+
 [source, yaml]
 ----
 mechanisms:
   authenticators:
-    <list of authenticators>
+    <list of authenticator definitions>
   authorizers:
-    <list of authorizers>
+    <list of authorizer definitions>
   contextualizers:
-    <list of contextualizers>
+    <list of contextualizer definitions>
   finalizers:
-    <list of finalizers>
+    <list of finalizer definitions>
   error_handlers:
-    <list of error handlers>
+    <list of error handler definitions>
 ----
 
-Each mechanism configuration entry contain the following properties:
+== General Mechanism Configuration
+
+Each mechanism definition entry in the catalogue contains the following properties:
 
 * `id` - A mandatory unique identifier of the mechanism. Identifiers are used to reference the required mechanism within a rule, respectively its pipelines. You can choose whatever identifier, you want. It is just a name. It must however be unique across all defined mechanisms of a particular mechanism category (like authenticator, authorizer, etc.).
-* `type` - The mandatory specific type of the mechanism.
-* `config` - An optional mechanism's specific configuration.
+* `type` - The mandatory specific type of the mechanism in the given category.
+* `config` - The mechanism's specific configuration if required by the type.
 
 Every mechanism type can be configured as many times as needed. However, for those, which don't have a configuration, it doesn't really make sense, as all of them would behave the same way.
 
-For example, your authenticator definitions could look like this:
+For example, your authenticator definitions could look like this (imaginary types are used):
 
 [source, yaml]
 ----
@@ -59,9 +67,9 @@ The above snippet configures
 
 The `baz` and `oof` authenticators are different, as they are configured differently, but `foo` and `zab` authenticators do not have any configuration. So, they behave the same way and there is actually no need to define two instances of them.
 
-In simplest case a rule will just reuse mechanisms in its pipeline. In more complex cases a rule can reconfigure parts of it (More about rules configuration can be found link:{{< relref "/docs/rules/rule.adoc" >}}[here]). Which parts can be reconfigured, respectively overridden are mechanism specific and described in the mechanism specific documentation. Reconfiguration is always limited to the particular rule pipeline and does not affect other rules.
+== Mechanisms Catalogue Example
 
-Here is an example which configures a couple of mechanisms:
+Here is an example which defines a mechanism catalogue using some of the available types:
 
 [source, yaml]
 ----
