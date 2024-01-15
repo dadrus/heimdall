@@ -9,7 +9,7 @@ menu:
     parent: "Mechanisms"
 ---
 
-As described in link:{{< relref "/docs/getting_started/mechanisms.adoc" >}}[Getting Started / Mechanisms] section, mechanisms must be defined and configured before these can be used in rules.
+As described in link:{{< relref "/docs/getting_started/mechanisms.adoc" >}}[Getting Started / Mechanisms] section, mechanisms must be defined and configured before these can be used in rules. That is happening in the so-called mechanisms catalogue. On start up heimdall instantiates all defined and configured mechanisms and makes these available for usage in rules.
 
 == Catalogue Configuration
 
@@ -40,32 +40,27 @@ Each mechanism definition entry in the catalogue contains the following properti
 
 Every mechanism type can be configured as many times as needed. However, for those, which don't have a configuration, it doesn't really make sense, as all of them would behave the same way.
 
-For example, your authenticator definitions could look like this (imaginary types are used):
+For example, your authenticator definitions could look like this:
 
 [source, yaml]
 ----
 mechanisms:
   authenticators:
-  - id: foo
-    type: bar
-  - id: baz
-    type: bla
+  - id: anon1
+    type: anonymous
+  - id: anon2
+    type: anonymous
+  - id: anon3
+    type: anonymous
     config:
-      bla: bar
-  - id: zab
-    type: bar
-  - id: oof
-    type: bla
+      subject: anon
+  - id: anon4
+    type: anonymous
     config:
-      bar: bla
+      subject: bla
 ----
 
-The above snippet configures
-
-* two instances of an imaginary authenticator of a type `bar`, made available for usage in rules via ids `foo` and `zab`, as well as
-* two instances of an imaginary authenticator of a type `bla`, made available for usage in rule via ids `baz` and `oof`.
-
-The `baz` and `oof` authenticators are different, as they are configured differently, but `foo` and `zab` authenticators do not have any configuration. So, they behave the same way and there is actually no need to define two instances of them.
+The above snippet configures four different instances of the anonymous authenticator mechanism, with `anon3` and `anon4` being different in their configuration and `anon1` and `anon2` being actually the same (as no configuration is provided). Since the last two mentioned behave the same way, there is actually no need to define two instances of them.
 
 == Mechanisms Catalogue Example
 
