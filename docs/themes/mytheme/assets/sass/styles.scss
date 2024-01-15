@@ -33,6 +33,7 @@ footer {
   .title {
     font-weight: bold;
   }
+
   img {
     height: auto !important;
     max-width: 100% !important;
@@ -78,6 +79,7 @@ h4 {
   pre {
     padding: .75rem;
   }
+
   b {
     display: none;
   }
@@ -87,6 +89,7 @@ h4 {
   b {
     display: none;
   }
+
   td {
     vertical-align: top;
     padding-bottom: .3rem;
@@ -104,20 +107,20 @@ h4 {
   height: 1.25em;
   letter-spacing: -.25ex;
   text-indent: -.25ex;
-  font-size: calc(13.5/var(--rem-base)*1rem);
+  font-size: calc(13.5 / var(--rem-base) * 1rem);
   font-family: var(--body-font-family);
   margin-right: 1rem;
 }
 
 .conum[data-value]::after {
-  content:attr(data-value)
+  content: attr(data-value)
 }
 
 p {
   code {
     //background-color: #f8f8f8;
     //padding: .2rem .5rem;
-    color: #f92672;//#6610f2; //#f92672;
+    color: #f92672; //#6610f2; //#f92672;
   }
 }
 
@@ -126,6 +129,7 @@ p {
     p {
       margin-bottom: .5rem;
     }
+
     &:last-of-type {
       p {
         margin-bottom: 0;
@@ -161,13 +165,14 @@ td {
       }
 
       i[title]::after {
-        content:attr(title);
+        content: attr(title);
         font-weight: bold;
         font-style: normal;
       }
 
       i[title] {
-        &::after,&::before {
+        &::after,
+        &::before {
           display: inline;
         }
       }
@@ -255,5 +260,54 @@ doc-version-select {
   h5[id]:hover &,
   h6[id]:hover & {
     display: inline-block;
+  }
+}
+
+@media (min-width: 60rem) {
+  .docs-side-toc {
+    position: sticky;
+    top: 5rem;
+    display: block !important;
+    height: calc(100vh - 6rem);
+    padding-left: .25rem;
+    margin-left: -.25rem;
+    overflow-y: auto;
+  }
+}
+
+.docs-page-toc {
+  position: sticky;
+  top: 5rem;
+  right: 0;
+  z-index: 2;
+  height: calc(100vh - 7rem);
+  overflow-y: auto;
+
+  nav {
+    font-size: .875rem;
+
+    ul {
+      padding-left: 0;
+      margin-bottom: 0;
+      list-style: none;
+
+      ul {
+        padding-left: 1rem;
+      }
+    }
+
+    a {
+      display: block;
+      padding: .125rem 0 .125rem .75rem;
+      color: inherit;
+      text-decoration: none;
+      border-left: .125rem solid transparent;
+
+      .active,
+      &:active,
+      &:hover {
+        color: var(--bs-link-color);
+      }
+    }
   }
 }

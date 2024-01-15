@@ -2,61 +2,22 @@
 {{ $section := $currentPage.Section -}}
 <ul class="nav flex-column">
   {{ range (index .Site.Menus $section) -}}
-  {{ $active := in $currentPage.RelPermalink .URL }}
   <li class="nav-item">
     {{ $active := in $currentPage.RelPermalink .URL }}
     {{ if .HasChildren -}}
-    <button class="btn btn-toggle align-items-center rounded fw-bold border-0"
-            data-bs-target="#section-{{ sha1 .Title }}">
-      {{ .Title }}
-    </button>
-    <div id="section-{{ sha1 .Title }}">
+    <strong class="d-none d-md-block fs-6">{{ .Title }}</strong>
+    <div class="mb-2">
       <ul class="nav flex-column">
         {{ range .Children -}}
         <li class="nav-item">
           {{ $active := in $currentPage.RelPermalink .URL }}
-          {{ if .HasChildren -}}
-          <button class="btn align-items-center rounded fw-bold border-0"
-                  data-bs-target="#section-{{ sha1 .Title }}">
-            {{ .Title }}
-          </button>
-          <div id="section-{{ sha1 .Title }}">
-            <ul class="nav flex-column">
-              {{ range .Children -}}
-              <li class="nav-item">
-                {{ $active := in $currentPage.RelPermalink .URL }}
-                {{ if .HasChildren -}}
-                <button class="btn align-items-center rounded fw-bold border-0"
-                        data-bs-target="#section-{{ sha1 .Title }}">
-                  {{ .Title }}
-                </button>
-                <div id="section-{{ sha1 .Title }}">
-                  <ul class="nav flex-column">
-                    {{ if and .URL (not (eq .Page.WordCount 0)) }}
-                    <li class="nav-item"><a class="nav-link" href="{{ .URL }}">Overview</a></li>
-                    {{ end }}
-                    {{ range .Children -}}
-                    {{ $active := in $currentPage.RelPermalink .URL }}
-                    <li class="nav-item"><a class="nav-link {{ if $active }}fw-bold{{ end }}" href="{{ .URL }}">{{ .Title }}</a></li>
-                    {{ end }}
-                  </ul>
-                </div>
-                {{ else }}
-                <a class="nav-link {{ if $active }}fw-bold{{ end }}" href="{{ .URL }}">{{ .Title }}</a>
-                {{ end }}
-              </li>
-              {{ end }}
-            </ul>
-          </div>
-          {{ else }}
-          <a class="nav-link {{ if $active }}fw-bold{{ end }}" href="{{ .URL }}">{{ .Title }}</a>
-          {{ end }}
+          <a class="nav-link {{ if $active }}link-primary{{ else }}link-secondary{{ end }}" href="{{ .URL }}">{{ .Title }}</a>
         </li>
         {{ end }}
       </ul>
     </div>
     {{- else -}}
-    <a class="nav-link {{ if $active }}fw-bold{{ end }}"  href="{{ .URL }}">{{- .Title -}}</a>
+    <a class="nav-link {{ if $active }}link-primary{{ else }}link-secondary{{ end }}"  href="{{ .URL }}">{{- .Title -}}</a>
     {{- end -}}
   </li>
   {{ end }}
