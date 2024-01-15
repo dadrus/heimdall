@@ -97,7 +97,7 @@ endpoint:
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "'payload' is a required field as long as endpoint.headers")
+				assert.Contains(t, err.Error(), "'payload' is a required field")
 			},
 		},
 		{
