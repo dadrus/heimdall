@@ -9,6 +9,8 @@ menu:
     parent: "Mechanisms"
 ---
 
+:toc:
+
 Authenticators inspect HTTP requests for presence of authentication objects, like e.g. the presence of a specific cookie. If such objects exist, authenticators verify the related authentication status and obtain information about the corresponding link:{{< relref "/docs/getting_started/mechanisms.adoc#_subject" >}}[subject]. A subject, could be a user, trying to use particular functionality of the upstream service, a machine (if you have machine-2-machine interaction), or something different. Authenticators ensure the subject is authenticated and the information available about it is valid.
 
 == Authenticator Types

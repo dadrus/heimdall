@@ -9,6 +9,8 @@ menu:
     parent: "Services"
 ---
 
+:toc:
+
 Proxy is one of the operating modes supported by Heimdall, used if you start Heimdall with `heimdall serve proxy`. By default, Heimdall listens on `0.0.0.0:4455` endpoint for incoming requests in this mode of operation and also configures useful default timeouts, amount of possible upstream connections is active and idle state, as well as buffer limits. No other options are configured. You can, and should however adjust the configuration for your needs.
 
 This service exposes only the proxy endpoint.

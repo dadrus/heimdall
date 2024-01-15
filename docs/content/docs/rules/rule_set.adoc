@@ -9,6 +9,8 @@ menu:
     parent: "Rules"
 ---
 
+:toc:
+
 == Rule Set
 
 In principle, a rule set is just a list of rules with some additional meta information. Each `RuleSet` definition has the following attributes if not stated otherwise by a particular link:{{< relref "providers.adoc" >}}[provider]:

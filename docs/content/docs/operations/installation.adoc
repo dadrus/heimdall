@@ -11,6 +11,8 @@ menu:
     weight: 5
 ---
 
+:toc:
+
 Heimdall is shipped in multiple formats and architectures to suit a variety of deployment patterns. Available installation options are:
 
 * link:{{< relref "#_source_code" >}}[Source code]

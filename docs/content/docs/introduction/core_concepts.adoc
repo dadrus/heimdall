@@ -10,6 +10,8 @@ menu:
 description: Gives you the required insights about heimdall's architecture to get started.
 ---
 
+:toc:
+
 == How are the challenges addressed
 
 Remember the figure from link:{{< relref "/docs/introduction/what_is_heimdall.adoc#_challenges_addressed_by_heimdall">}}["Challenges addressed by Heimdall"]?

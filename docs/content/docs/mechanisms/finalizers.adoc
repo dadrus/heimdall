@@ -9,6 +9,8 @@ menu:
     parent: "Mechanisms"
 ---
 
+:toc:
+
 Finalizers, as the name implies, finalize the execution of the pipeline and enrich the request with data such as subject information or authentication tokens required by the upstream service. The available options range from adding a simple header over a structured JWT in a specific header, to driving specific protocols, e.g. to obtain a token required by the upstream service.
 
 == Finalizer Types

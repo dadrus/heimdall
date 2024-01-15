@@ -9,6 +9,8 @@ menu:
     parent: "Observability"
 ---
 
+:toc:
+
 Heimdall can expose runtime profiling data in the `profile.proto` format (also known as `pprof` format), which can be consumed by many APM tools, like https://github.com/google/pprof[Google's pprof], https://grafana.com/oss/phlare/[Grafana Phlare], https://pyroscope.io/[Pyroscope] and many more for analysis and visualization purposes. By default, this service is disabled. If enabled, the profiling information is available on `127.0.0.1:10251/debug/pprof` endpoint.
 
 == Configuration

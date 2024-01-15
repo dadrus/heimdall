@@ -9,6 +9,8 @@ menu:
     parent: "Services"
 ---
 
+:toc:
+
 The Management service is always there, regardless of the mode of operation Heimdall is started in. By default, Heimdall listens on `0.0.0.0:4457` endpoint for incoming requests and also configures useful default timeouts as well as buffer limits. No other options are configured. You can however adjust the configuration for your needs.
 
 This service exposes the health and the JWKS endpoints.

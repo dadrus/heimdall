@@ -10,6 +10,8 @@ menu:
 description: What the request pipeline is about.
 ---
 
+:toc:
+
 Pipelines are specified in link:{{< relref "/docs/getting_started/rules.adoc" >}}[rules] and are used to authenticate and authorize the particular requests, as well as to handle encountered errors.
 
 As described in the link:{{< relref "/docs/introduction/core_concepts.adoc" >}}[Core Concepts] chapter and also shown in the diagram below, central aspects of heimdall are upstream specific pipelines, which allow you orchestrating different services to authenticate, enrich and authorize incoming HTTP requests, transform the resulting subject information into a format, or obtain credentials required for the communication with the particular upstream services.

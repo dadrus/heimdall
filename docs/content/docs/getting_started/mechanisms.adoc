@@ -10,6 +10,8 @@ menu:
 description: The building blocks of the request pipeline.
 ---
 
+:toc:
+
 Mechanisms are the building blocks for link:{{< relref "/docs/getting_started/rules.adoc" >}}[rule]  specific link:{{< relref "/docs/getting_started/pipelines.adoc">}}[pipelines] and define the required behavior for these.
 
 == Mechanism Categories

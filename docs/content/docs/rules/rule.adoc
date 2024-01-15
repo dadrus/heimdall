@@ -9,6 +9,8 @@ menu:
     parent: "Rules"
 ---
 
+:toc:
+
 Rules are the heart of heimdall. These allow execution of arbitrary logic, required by your upstream service. This section describes everything related to the configuration of a particular rule and how can these be combined to rule sets, which can then be loaded by a link:{{< relref "providers.adoc" >}}[rule provider].
 
 In simplest case a rule will just reuse mechanisms in its pipelines from a previously defined catalogue. In more complex cases a rule can reconfigure parts of it (More about rules configuration can be found link:{{< relref "/docs/rules/rule.adoc" >}}[here]). Which parts can be reconfigured, respectively overridden are mechanism specific and described in the mechanism specific documentation. Reconfiguration is always limited to the particular rule pipeline and does not affect other rules.

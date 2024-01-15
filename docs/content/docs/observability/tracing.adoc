@@ -9,6 +9,8 @@ menu:
     parent: "Observability"
 ---
 
+:toc:
+
 Heimdall makes use of https://opentelemetry.io/[OpenTelemetry] for distributed tracing to support recording of paths taken by requests as they propagate through multi-service architectures and supports all environment variables including the defined values according to https://opentelemetry.io/docs/reference/specification/sdk-environment-variables/[OpenTelemetry Environment Variable Specification].
 
 == Configuration

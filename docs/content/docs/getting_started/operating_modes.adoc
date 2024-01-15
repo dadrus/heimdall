@@ -10,6 +10,8 @@ menu:
 description: The service modes, heimdall can be operated in.
 ---
 
+:toc:
+
 To support different deployment scenarios, heimdall supports two operating modes:
 
 * as a link:{{< relref "#_proxy_mode" >}}[Reverse Proxy] in front of your upstream API or web server, or

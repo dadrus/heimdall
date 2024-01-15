@@ -9,6 +9,8 @@ menu:
     parent: "Observability"
 ---
 
+:toc:
+
 Heimdall generates https://opentelemetry.io/[OpenTelemetry] metrics and can export these either by pushing these to an OTEL collector (the default behavior), or by exposing them via a pull based service (https://grafana.com/oss/prometheus/[Prometheus] style).
 
 Metrics are generated and exported by default. If this is not desired, you can explicitly disable this behavior by making use of the configuration options, described below. Alternatively, you can set the `OTEL_METRICS_EXPORTER` environment variable to `none`.

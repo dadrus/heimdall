@@ -9,6 +9,8 @@ menu:
     parent: "Configuration"
 ---
 
+:toc:
+
 == Assertions
 
 This type enables configuration of required token and claim assertions. Depending on the object type (JWT or introspection response), the assertions apply to different parts of such objects.

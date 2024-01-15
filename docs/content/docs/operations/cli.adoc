@@ -9,6 +9,8 @@ menu:
     parent: "Operations"
 ---
 
+:toc:
+
 Heimdall's Command Line Interface
 
 == General

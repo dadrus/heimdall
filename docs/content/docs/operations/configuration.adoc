@@ -10,6 +10,8 @@ menu:
 description: Explains available configuration options.
 ---
 
+:toc:
+
 Configuration in heimdall can refer to two different things:
 
 * the static startup configuration, which is the scope of this document and

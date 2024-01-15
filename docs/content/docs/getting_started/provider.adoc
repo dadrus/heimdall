@@ -10,6 +10,8 @@ menu:
 description: Those, who are responsible for loading of rules from arbitrary sources.
 ---
 
+:toc:
+
 When link:{{< relref "/docs/getting_started/rules.adoc" >}}[rules] define the behavior in sense of the desired authentication and authorization aspects, then the providers are those entities, which manage the lifecycle of these. That are the providers, which load, reload or remove rules when new rules appears, changes are detected, or rules are deleted.
 
 == Rules Sets

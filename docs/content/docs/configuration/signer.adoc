@@ -9,6 +9,8 @@ menu:
     parent: "Configuration"
 ---
 
+:toc:
+
 Some link:{{< relref "/docs/mechanisms/finalizers.adoc" >}}[Finalizers] can issue signed objects, like a JWT to be forwarded to the upstream services. In such cases Heimdall acts as an issuer of such objects and needs at least the corresponding key material.
 
 == Configuration

@@ -11,6 +11,8 @@ menu:
 description: Explains how to integrate heimdall with HAProxy, a popular open source, fast, and reliable solution providing load balancer and reverse proxy features.
 ---
 
+:toc:
+
 https://www.haproxy.com/[HAProxy] (High Availability Proxy) is a popular open source, fast, and reliable solution providing load balancer and reverse proxy features for TCP- and HTTP-based applications, capable handling heavy load traffic and rerouting requests seamlessly across multiple workloads (e.g. web, application, database).
 
 HAProxy is highly extensible thanks to Lua scripting support. For that reason the vanilla HAProxy does not implement any means of external authorization support and requires custom Lua code to achieve integration with heimdall.

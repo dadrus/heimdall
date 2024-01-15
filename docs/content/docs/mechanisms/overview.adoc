@@ -9,6 +9,8 @@ menu:
     parent: "Mechanisms"
 ---
 
+:toc:
+
 As described in link:{{< relref "/docs/getting_started/mechanisms.adoc" >}}[Getting Started / Mechanisms] section, mechanisms must be defined and configured before these can be used in rules. That is happening in the so-called mechanisms catalogue. On start up heimdall instantiates all defined and configured mechanisms and makes these available for usage in rules.
 
 == Catalogue Configuration

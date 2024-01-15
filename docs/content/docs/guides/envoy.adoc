@@ -11,6 +11,8 @@ menu:
 description: Explains how to integrate heimdall with Envoy, a high performance distributed proxy.
 ---
 
+:toc:
+
 https://www.envoyproxy.io/[Envoy] is a high performance distributed proxy designed for single services and applications, as well as a communication bus and “universal data plane” designed for large microservice “service mesh” architectures. When operating heimdall in link:{{< relref "/docs/introduction/core_concepts.adoc#_decision_mode" >}}[Decision Operation Mode], integration with Envoy can be achieved by making use of an https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/ext_authz/v3/ext_authz.proto.html[External Authorization] filter. In such setup, Envoy delegates authentication and authorization to heimdall. If heimdall answers with a `200 OK` HTTP code, Envoy grants access and forwards the original request to the upstream service. Otherwise, the response from heimdall is treated as an error and is returned to the client.
 
 To achieve this, configure Envoy

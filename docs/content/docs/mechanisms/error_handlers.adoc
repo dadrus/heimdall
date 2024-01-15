@@ -9,6 +9,8 @@ menu:
     parent: "Mechanisms"
 ---
 
+:toc:
+
 Error Handlers are responsible for execution of logic if any of the link:{{< relref "authenticators.adoc" >}}[authenticators], link:{{< relref "authorizers.adoc" >}}[authorizers], link:{{< relref "contextualizers.adoc" >}}[contextualizers] or link:{{< relref "finalizers.adoc" >}}[finalizers] fails. The error handler mechanisms range from a simple error response to the client which sent the request to sophisticated ones, supporting complex logic and redirects.
 
 == Error Handler Types
