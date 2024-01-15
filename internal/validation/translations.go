@@ -36,19 +36,6 @@ func registerTranslations(validate *validator.Validate, trans ut.Translator) err
 		customTransFunc validator.TranslationFunc
 	}{
 		{
-			tag:         "required_without",
-			translation: "{0} is a required field as long as {1} is not set",
-			override:    false,
-			customTransFunc: func(ut ut.Translator, fe validator.FieldError) string {
-				translation, err := ut.T(fe.Tag(), fe.Field(), strings.ToLower(fe.Param()))
-				if err != nil {
-					return fe.Error()
-				}
-
-				return translation
-			},
-		},
-		{
 			tag: "gt",
 			customRegisFunc: func(ut ut.Translator) error {
 				return ut.Add("gt-duration", "{0} must be greater than {1}", false)
