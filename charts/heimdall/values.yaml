@@ -151,13 +151,14 @@ admissionController:
   timeoutSeconds: 5
 
 # Configures arbitrary environment variables for the deployment
-# Value can be either a string (propagated to value) or an object (propagated to valueFrom)
+# The value can be either a string (propagated to value) or an object (propagated to valueFrom)
 # Example:
 # env:
-#   HEIMDALL_EXAMPLE:
+#   ENV_VAR_CONFIGMAP:
 #     configMapKeyRef:
 #       name: "my-configmap"
 #       key: "EXAMPLE_KEY"
+#   ENV_VAR_SIMPLE: "value"
 env: {}
 
 # Configures extra environment to be pulled from referenced configmaps/secrets
