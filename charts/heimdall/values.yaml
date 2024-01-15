@@ -151,7 +151,18 @@ admissionController:
   timeoutSeconds: 5
 
 # Configures arbitrary environment variables for the deployment
-env: { }
+# Value can be either a string (propagated to value) or an object (propagated to valueFrom)
+# Example:
+# env:
+#   HEIMDALL_EXAMPLE:
+#     configMapKeyRef:
+#       name: "my-configmap"
+#       key: "EXAMPLE_KEY"
+env: {}
+
+# Configures extra environment to be pulled from referenced configmaps/secrets
+# directly mapped to envFrom
+envFrom: []
 
 # Optional flags for heimdall to use
 extraArgs: []
