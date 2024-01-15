@@ -60,7 +60,7 @@ mechanisms:
       subject: bla
 ----
 
-The above snippet configures four different instances of the anonymous authenticator mechanism, with `anon3` and `anon4` being different in their configuration and `anon1` and `anon2` being actually the same (as no configuration is provided). Since the last two mentioned behave the same way, there is actually no need to define two instances of them.
+The above snippet configures four different instances of the anonymous authenticator mechanism, with `anon1` and `anon2` being configured identically (as no configuration is provided), and `anon3` and `anon4` being different in their configuration. Since the first two mentioned behave the same way (both will set the Subject ID to `anonymous`), there is actually no need to define two instances of them.
 
 == Mechanisms Catalogue Example
 
