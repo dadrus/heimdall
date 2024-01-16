@@ -431,15 +431,31 @@ a| `5`
 
 a| `env`
 
-Environment variables, which should be made available to the heimdall deployment. E.g.
+Environment variables, which should be made available to the heimdall deployment. Variables can be specified as key-value pairs with string values or as an object referencing a ConfigMap or Secret key. E.g.
 
 ```.yaml
 env:
-  OTEL_EXPORTER_OTLP_TRACES_PROTOCOL=grpc
-  OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=http://tempo.tempo.svc.cluster.local:4317
+  OTEL_EXPORTER_OTLP_TRACES_PROTOCOL: grpc
+  OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: http://tempo.tempo.svc.cluster.local:4317
+  EXAMPLE_KEY:
+    configMapKeyRef:
+      name: example-configmap
+      key: EXAMPLE_KEY
 ```
 
 a| `{}` (empty map)
+
+a| `envFrom`
+
+Environment variables, which should be made available to the heimdall deployment, but are pulled from a ConfigMap or Secret resource instead of specified directly.
+
+```.yaml
+envFrom:
+- configMapRef:
+    name: example-configmap
+```
+
+a| `[]` (empty array)
 
 a| `extraArgs`
 
