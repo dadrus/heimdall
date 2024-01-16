@@ -443,7 +443,7 @@ env:
       key: EXAMPLE_KEY
 ```
 
-a| `{}` (empty array)
+a| `{}` (empty map)
 
 a| `envFrom`
 
@@ -455,7 +455,7 @@ envFrom:
     name: example-configmap
 ```
 
-a| `[]` (empty list)
+a| `[]` (empty array)
 
 a| `extraArgs`
 
