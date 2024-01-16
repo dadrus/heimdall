@@ -435,8 +435,8 @@ Environment variables, which should be made available to the heimdall deployment
 
 ```.yaml
 env:
-  OTEL_EXPORTER_OTLP_TRACES_PROTOCOL=grpc
-  OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=http://tempo.tempo.svc.cluster.local:4317
+  OTEL_EXPORTER_OTLP_TRACES_PROTOCOL: grpc
+  OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: http://tempo.tempo.svc.cluster.local:4317
   EXAMPLE_KEY:
     configMapKeyRef:
       name: example-configmap
