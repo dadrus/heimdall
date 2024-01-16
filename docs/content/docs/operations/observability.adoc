@@ -7,11 +7,10 @@ menu:
   docs:
     weight: 4
     parent: "Operations"
+description: To support easier operation and integration in diverse APM products heimdall implements different observability mechanisms. The following sections provide insights about what can be expected.
 ---
 
 :toc:
-
-To support easier operation and integration in diverse APM products heimdall implements different observability mechanisms. The following sections provide insights about what can be expected.
 
 == Logging in Heimdall
 

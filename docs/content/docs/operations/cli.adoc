@@ -7,13 +7,12 @@ menu:
   docs:
     weight: 3
     parent: "Operations"
+description: Here, you can find the description of heimdall's command line interface.
 ---
 
 :toc:
 
-Heimdall's Command Line Interface
-
-== General
+== Usage Patterns
 
 [source, bash]
 ----

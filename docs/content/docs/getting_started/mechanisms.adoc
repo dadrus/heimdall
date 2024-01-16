@@ -7,12 +7,10 @@ menu:
   docs:
     parent: "Getting Started"
     weight: 2
-description: The building blocks of the request pipeline.
+description: Mechanisms are the building blocks for rule specific pipelines and define the required behavior for these.
 ---
 
 :toc:
-
-Mechanisms are the building blocks for link:{{< relref "/docs/getting_started/rules.adoc" >}}[rule]  specific link:{{< relref "/docs/getting_started/pipelines.adoc">}}[pipelines] and define the required behavior for these.
 
 == Mechanism Categories
 

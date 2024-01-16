@@ -7,10 +7,12 @@ menu:
   docs:
     parent: "Getting Started"
     weight: 1
-description: What the request pipeline is about.
+description: Pipelines let you orchestrate existing authentication and authorization systems via mechanisms.
 ---
 
 :toc:
+
+== Overview
 
 Pipelines are specified in link:{{< relref "/docs/getting_started/rules.adoc" >}}[rules] and are used to authenticate and authorize the particular requests, as well as to handle encountered errors.
 

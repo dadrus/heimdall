@@ -14,6 +14,8 @@ description: This document describes a very simple use case in which you'll see 
 
 :toc:
 
+== Overview
+
 The setup we're going to configure here mimics an upstream service, exposing two endpoints, `/public` and `/anonymous`, with requests to the first one being forwarded as is and to the second one enriched with a JWT with `sub` claim set to `anonymous`. Access to all other endpoints should be rejected.
 
 Since in the link:{{< relref "/docs/getting_started/operating_modes.adoc#_decision_mode" >}}[decision operation mode] heimdall just answers to requests without forwarding these anywhere, this document shows a link:{{< relref "#_run_standalone" >}}[standalone setup] first, followed by an link:{{< relref "#_run_integrated" >}}[integration with Traefik]. For latter docker-compose is used.

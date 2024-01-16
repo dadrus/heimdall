@@ -7,12 +7,14 @@ menu:
   docs:
     parent: "Getting Started"
     weight: 3
-description: catalogue and the car.
+description: Rules defines what should happen to particular requests and under which conditions. They assemble authentication & authorization and error pipelines and bring previously configured mechanisms to life.
 ---
 
 :toc:
 
-Rules are the entities, which allow you to define the authentication & authorization and error link:{{< relref "/docs/getting_started/pipelines.adoc" >}}[pipelines] required by your upstream services by making use of previously defined mechanisms. These are rules, which bring previously configured mechanisms to life.
+== Overview
+
+Rules are the entities, which allow you to define the authentication & authorization and error link:{{< relref "/docs/getting_started/pipelines.adoc" >}}[pipelines] required by your upstream services by making use of previously defined mechanisms.
 
 You can compare the relation between mechanisms and rules to a relation between a catalogue at a car dealer and a real car, when you get it. So, mechanisms is what you can see and select in a catalogue (though, in case of heimdall you have to define that catalogue first) to compile your car and the rule is your car with real components and behaviour. In that sense when you define a rule, you specify which mechanisms should it be built from and whether you would like some "tuning" to be applied to better suit your needs.
 

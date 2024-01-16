@@ -9,16 +9,10 @@ menu:
     parent: "Operations"
   guides:
     weight: 5
+description: Heimdall is shipped in multiple formats and architectures to suit a variety of deployment patterns. The following chapters describe the available installation options.
 ---
 
 :toc:
-
-Heimdall is shipped in multiple formats and architectures to suit a variety of deployment patterns. Available installation options are:
-
-* link:{{< relref "#_source_code" >}}[Source code]
-* link:{{< relref "#_binary" >}}[Binary]
-* link:{{< relref "#_container_image" >}}[Container Image]
-* link:{{< relref "#_helm_chart" >}}[Helm Chart]
 
 == Source Code
 

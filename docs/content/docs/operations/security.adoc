@@ -7,11 +7,10 @@ menu:
   docs:
     weight: 5
     parent: "Operations"
+description: To operate heimdall in a secure way, you should configure heimdall accordingly. Following sections address the corresponding areas.
 ---
 
 :toc:
-
-To operate heimdall in a secure way, you should configure heimdall accordingly. Following sections address the corresponding areas.
 
 == HTTP Header Security Considerations
 
