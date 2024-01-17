@@ -6,18 +6,16 @@
     {{ $active := in $currentPage.RelPermalink .URL }}
     {{ if .HasChildren -}}
     <strong class="d-none d-md-block fs-6">{{ .Title }}</strong>
-    <div class="mb-2">
-      <ul class="nav flex-column">
-        {{ range .Children -}}
-        <li class="nav-item">
-          {{ $active := in $currentPage.RelPermalink .URL }}
-          <a class="nav-link {{ if $active }}link-primary{{ else }}link-secondary{{ end }}" href="{{ .URL }}">{{ .Title }}</a>
-        </li>
-        {{ end }}
-      </ul>
-    </div>
+    <ul class="nav flex-column mb-2">
+      {{ range .Children -}}
+      <li class="nav-item">
+        {{ $active := in $currentPage.RelPermalink .URL }}
+        <a class="nav-link {{ if $active }} link-primary {{ else }} link-secondary {{ end }}" href="{{ .URL }}">{{ .Title }}</a>
+      </li>
+      {{ end }}
+    </ul>
     {{- else -}}
-    <a class="nav-link {{ if $active }}link-primary{{ else }}link-secondary{{ end }}"  href="{{ .URL }}">{{- .Title -}}</a>
+    <a class="nav-link {{ if $active }} link-primary {{ else }} link-secondary {{ end }}"  href="{{ .URL }}">{{- .Title -}}</a>
     {{- end -}}
   </li>
   {{ end }}
