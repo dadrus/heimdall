@@ -9,8 +9,8 @@
 
 ### Features
 
-* OAuth2/OIDC metadata discovery for `jwt` authenticator ([#1043](https://github.com/dadrus/heimdall/issues/1043)) ([2dbfa5f](https://github.com/dadrus/heimdall/commit/2dbfa5f49bf7611e41992d6946fe77a34cd237d3))
-* OAuth2/OIDC metadata discovery for `oauth2_introspection` authenticator ([#1043](https://github.com/dadrus/heimdall/issues/1043)) ([2dbfa5f](https://github.com/dadrus/heimdall/commit/2dbfa5f49bf7611e41992d6946fe77a34cd237d3))
+* OAuth2/OIDC metadata discovery for `jwt` authenticator ([#1043](https://github.com/dadrus/heimdall/issues/1043)) by @martin31821 ([2dbfa5f](https://github.com/dadrus/heimdall/commit/2dbfa5f49bf7611e41992d6946fe77a34cd237d3))
+* OAuth2/OIDC metadata discovery for `oauth2_introspection` authenticator ([#1043](https://github.com/dadrus/heimdall/issues/1043)) by @martin31821 ([2dbfa5f](https://github.com/dadrus/heimdall/commit/2dbfa5f49bf7611e41992d6946fe77a34cd237d3))
 
 
 ### Code Refactorings
@@ -132,7 +132,7 @@
 * update module go.opentelemetry.io/contrib/instrumentation/runtime to v0.46.1 ([#1045](https://github.com/dadrus/heimdall/issues/1045)) ([1615f40](https://github.com/dadrus/heimdall/commit/1615f4002b17577c59916b54b5f691c788f08802))
 * update module go.opentelemetry.io/contrib/propagators/autoprop to v0.46.1 ([#1045](https://github.com/dadrus/heimdall/issues/1045)) ([1615f40](https://github.com/dadrus/heimdall/commit/1615f4002b17577c59916b54b5f691c788f08802))
 * update module go.uber.org/fx to v1.20.1 ([#978](https://github.com/dadrus/heimdall/issues/978)) ([98f67a0](https://github.com/dadrus/heimdall/commit/98f67a0d64e56ea18a859778b48517fd0dbc6c8f))
-* update module gocloud.dev to v0.34.0 ([#879](https://github.com/dadrus/heimdall/issues/879)) ([25ae833](https://github.com/dadrus/heimdall/commit/25ae833f439737fcf7ba61d8b0a4e6e3ba95fbca))
+* update module gocloud.dev to v0.34.0 ([#879](https://github.com/dadrus/heimdall/issues/879)) by @netthier ([25ae833](https://github.com/dadrus/heimdall/commit/25ae833f439737fcf7ba61d8b0a4e6e3ba95fbca))
 * update module google.golang.org/grpc to v1.59.0 ([#977](https://github.com/dadrus/heimdall/issues/977)) ([9211fae](https://github.com/dadrus/heimdall/commit/9211faeee037434b013182f753e9d52e38479086))
 * update module k8s.io/klog/v2 to v2.110.1 ([#994](https://github.com/dadrus/heimdall/issues/994)) ([e1b655a](https://github.com/dadrus/heimdall/commit/e1b655af3fa425b1892a5c127c64859f5b34d032))
 * update opentelemetry-go monorepo to v1.21.0 ([#1045](https://github.com/dadrus/heimdall/issues/1045)) ([1615f40](https://github.com/dadrus/heimdall/commit/1615f4002b17577c59916b54b5f691c788f08802))
@@ -187,7 +187,7 @@
 ### Documentation
 
 * New integration guide for Contour ingress controller ([#828](https://github.com/dadrus/heimdall/issues/828)) ([ea62e91](https://github.com/dadrus/heimdall/commit/ea62e9195f3516b6a70a67bd4b475ec3f7bf99e7))
-* Proxy buffer sizes example fixed ([#814](https://github.com/dadrus/heimdall/issues/814)) ([6867822](https://github.com/dadrus/heimdall/commit/68678228af37e21e11273cbdc88f5326494ef8c5))
+* Proxy buffer sizes example fixed ([#814](https://github.com/dadrus/heimdall/issues/814)) by @vinerich ([6867822](https://github.com/dadrus/heimdall/commit/68678228af37e21e11273cbdc88f5326494ef8c5))
 
 ## [0.10.1-alpha](https://github.com/dadrus/heimdall/compare/v0.10.0-alpha...v0.10.1-alpha) (2023-06-28)
 
@@ -196,7 +196,7 @@
 
 * Allow url rewrites with only a subset of fields set (proxy mode) ([109365f](https://github.com/dadrus/heimdall/commit/109365f7f4fecabfd7ee5abb112f0338af23ce13))
 * Include fullname in Helm RBAC resource names ([#737](https://github.com/dadrus/heimdall/issues/737)) ([dff3d4d](https://github.com/dadrus/heimdall/commit/dff3d4da3ef2baf46ee3064a88dd4984a7fdbb74))
-* Working `authClassName` filter if multiple heimdall deployments are present in a cluster ([#742](https://github.com/dadrus/heimdall/issues/742)) ([109365f](https://github.com/dadrus/heimdall/commit/109365f7f4fecabfd7ee5abb112f0338af23ce13))
+* Working `authClassName` filter if multiple heimdall deployments are present in a cluster ([#742](https://github.com/dadrus/heimdall/issues/742)) by @netthier ([109365f](https://github.com/dadrus/heimdall/commit/109365f7f4fecabfd7ee5abb112f0338af23ce13))
 
 ## [0.10.0-alpha](https://github.com/dadrus/heimdall/compare/v0.9.1-alpha...v0.10.0-alpha) (2023-06-28)
 
