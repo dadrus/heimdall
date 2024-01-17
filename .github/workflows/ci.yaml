@@ -482,25 +482,16 @@ jobs:
 
   release-helm-chart:
     runs-on: ubuntu-22.04
-    needs:
-      - prepare-release
-      - release-container-images
-    if: needs.prepare-release.outputs.release_created
     steps:
       - name: Checkout repository
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
-      - name: Prepare image version
-        id: image-version
-        run: |
-          export version=$(echo ${{ needs.prepare-release.outputs.tag_name }} |  sed 's/v//g')
-          echo "result=$version" >> $GITHUB_OUTPUT
       - name: Publish Helm Chart
         uses: stefanprodan/helm-gh-pages@v1.7.0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           target_dir: charts
           linting: off
-          app_version: ${{ steps.image-version.outputs.result }}
+          app_version: 0.13.0-alpha
 
   build-dev-documentation:
     runs-on: ubuntu-22.04
