@@ -194,7 +194,7 @@
 
 ### Bug Fixes
 
-* Allow url rewrites with only a subset of fields set (proxy mode) ([109365f](https://github.com/dadrus/heimdall/commit/109365f7f4fecabfd7ee5abb112f0338af23ce13))
+* Allow url rewrites with only a subset of fields set (proxy mode) ([#742](https://github.com/dadrus/heimdall/issues/742)) by @netthier ([109365f](https://github.com/dadrus/heimdall/commit/109365f7f4fecabfd7ee5abb112f0338af23ce13))
 * Include fullname in Helm RBAC resource names ([#737](https://github.com/dadrus/heimdall/issues/737)) by @netthier ([dff3d4d](https://github.com/dadrus/heimdall/commit/dff3d4da3ef2baf46ee3064a88dd4984a7fdbb74))
 * Working `authClassName` filter if multiple heimdall deployments are present in a cluster ([#742](https://github.com/dadrus/heimdall/issues/742)) by @netthier ([109365f](https://github.com/dadrus/heimdall/commit/109365f7f4fecabfd7ee5abb112f0338af23ce13))
 
