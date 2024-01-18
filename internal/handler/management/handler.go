@@ -20,10 +20,10 @@ import (
 	"net/http"
 
 	"github.com/go-http-utils/etag"
+	"github.com/go-jose/go-jose/v3"
 	"github.com/goccy/go-json"
 	"github.com/justinas/alice"
 	"github.com/rs/zerolog"
-	"gopkg.in/square/go-jose.v2"
 
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/errorhandler"
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/methodfilter"
