@@ -13,6 +13,7 @@ require (
 	github.com/fsnotify/fsnotify v1.7.0
 	github.com/go-co-op/gocron/v2 v2.2.0
 	github.com/go-http-utils/etag v0.0.0-20161124023236-513ea8f21eb1
+	github.com/go-jose/go-jose/v3 v3.0.1
 	github.com/go-logr/zerologr v1.2.3
 	github.com/go-playground/locales v0.14.1
 	github.com/go-playground/universal-translator v0.18.1
@@ -76,7 +77,6 @@ require (
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240116215550-a9fa1716bcac
 	google.golang.org/grpc v1.60.1
 	google.golang.org/protobuf v1.32.0
-	gopkg.in/square/go-jose.v2 v2.6.0
 	gopkg.in/yaml.v3 v3.0.1
 	k8s.io/api v0.29.1
 	k8s.io/apimachinery v0.29.1

@@ -19,7 +19,7 @@ package heimdall
 import (
 	"time"
 
-	"gopkg.in/square/go-jose.v2"
+	"github.com/go-jose/go-jose/v3"
 )
 
 //go:generate mockery --name JWTSigner --structname JWTSignerMock
