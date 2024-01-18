@@ -9,8 +9,8 @@
 
 ### Features
 
-* OAuth2/OIDC metadata discovery for `jwt` authenticator ([#1043](https://github.com/dadrus/heimdall/issues/1043)) ([2dbfa5f](https://github.com/dadrus/heimdall/commit/2dbfa5f49bf7611e41992d6946fe77a34cd237d3))
-* OAuth2/OIDC metadata discovery for `oauth2_introspection` authenticator ([#1043](https://github.com/dadrus/heimdall/issues/1043)) ([2dbfa5f](https://github.com/dadrus/heimdall/commit/2dbfa5f49bf7611e41992d6946fe77a34cd237d3))
+* OAuth2/OIDC metadata discovery for `jwt` authenticator ([#1043](https://github.com/dadrus/heimdall/issues/1043)) by @martin31821 ([2dbfa5f](https://github.com/dadrus/heimdall/commit/2dbfa5f49bf7611e41992d6946fe77a34cd237d3))
+* OAuth2/OIDC metadata discovery for `oauth2_introspection` authenticator ([#1043](https://github.com/dadrus/heimdall/issues/1043)) by @martin31821 ([2dbfa5f](https://github.com/dadrus/heimdall/commit/2dbfa5f49bf7611e41992d6946fe77a34cd237d3))
 
 
 ### Code Refactorings
@@ -187,16 +187,16 @@
 ### Documentation
 
 * New integration guide for Contour ingress controller ([#828](https://github.com/dadrus/heimdall/issues/828)) ([ea62e91](https://github.com/dadrus/heimdall/commit/ea62e9195f3516b6a70a67bd4b475ec3f7bf99e7))
-* Proxy buffer sizes example fixed ([#814](https://github.com/dadrus/heimdall/issues/814)) ([6867822](https://github.com/dadrus/heimdall/commit/68678228af37e21e11273cbdc88f5326494ef8c5))
+* Proxy buffer sizes example fixed ([#814](https://github.com/dadrus/heimdall/issues/814)) by @vinerich ([6867822](https://github.com/dadrus/heimdall/commit/68678228af37e21e11273cbdc88f5326494ef8c5))
 
 ## [0.10.1-alpha](https://github.com/dadrus/heimdall/compare/v0.10.0-alpha...v0.10.1-alpha) (2023-06-28)
 
 
 ### Bug Fixes
 
-* Allow url rewrites with only a subset of fields set (proxy mode) ([109365f](https://github.com/dadrus/heimdall/commit/109365f7f4fecabfd7ee5abb112f0338af23ce13))
-* Include fullname in Helm RBAC resource names ([#737](https://github.com/dadrus/heimdall/issues/737)) ([dff3d4d](https://github.com/dadrus/heimdall/commit/dff3d4da3ef2baf46ee3064a88dd4984a7fdbb74))
-* Working `authClassName` filter if multiple heimdall deployments are present in a cluster ([#742](https://github.com/dadrus/heimdall/issues/742)) ([109365f](https://github.com/dadrus/heimdall/commit/109365f7f4fecabfd7ee5abb112f0338af23ce13))
+* Allow url rewrites with only a subset of fields set (proxy mode) ([#742](https://github.com/dadrus/heimdall/issues/742)) by @netthier ([109365f](https://github.com/dadrus/heimdall/commit/109365f7f4fecabfd7ee5abb112f0338af23ce13))
+* Include fullname in Helm RBAC resource names ([#737](https://github.com/dadrus/heimdall/issues/737)) by @netthier ([dff3d4d](https://github.com/dadrus/heimdall/commit/dff3d4da3ef2baf46ee3064a88dd4984a7fdbb74))
+* Working `authClassName` filter if multiple heimdall deployments are present in a cluster ([#742](https://github.com/dadrus/heimdall/issues/742)) by @netthier ([109365f](https://github.com/dadrus/heimdall/commit/109365f7f4fecabfd7ee5abb112f0338af23ce13))
 
 ## [0.10.0-alpha](https://github.com/dadrus/heimdall/compare/v0.9.1-alpha...v0.10.0-alpha) (2023-06-28)
 

@@ -3,8 +3,8 @@
 package mocks
 
 import (
+	jose "github.com/go-jose/go-jose/v3"
 	mock "github.com/stretchr/testify/mock"
-	jose "gopkg.in/square/go-jose.v2"
 
 	time "time"
 )

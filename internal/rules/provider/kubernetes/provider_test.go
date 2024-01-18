@@ -28,7 +28,7 @@ import (
 	"testing"
 	"time"
 
-	jsonpatch "github.com/evanphx/json-patch"
+	jsonpatch "github.com/evanphx/json-patch/v5"
 	"github.com/goccy/go-json"
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"

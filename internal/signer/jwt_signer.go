@@ -25,11 +25,11 @@ import (
 	"crypto/x509"
 	"time"
 
+	"github.com/go-jose/go-jose/v3"
+	"github.com/go-jose/go-jose/v3/jwt"
 	"github.com/google/uuid"
 	"github.com/knadh/koanf/maps"
 	"github.com/rs/zerolog"
-	"gopkg.in/square/go-jose.v2"
-	"gopkg.in/square/go-jose.v2/jwt"
 
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
