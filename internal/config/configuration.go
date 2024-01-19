@@ -32,7 +32,7 @@ type Configuration struct { //nolint:musttag
 	Metrics    MetricsConfig        `koanf:"metrics"`
 	Profiling  ProfilingConfig      `koanf:"profiling"`
 	Signer     SignerConfig         `koanf:"signer"`
-	Cache      CacheProviders       `koanf:"cache"`
+	Cache      CacheConfig          `koanf:"cache"`
 	Prototypes *MechanismPrototypes `koanf:"mechanisms,omitempty"`
 	Default    *DefaultRule         `koanf:"default_rule,omitempty"`
 	Providers  RuleProviders        `koanf:"providers,omitempty"`

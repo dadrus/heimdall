@@ -85,7 +85,7 @@ func defaultConfig() Configuration {
 				},
 			},
 		},
-		Cache: CacheProviders{
+		Cache: CacheConfig{
 			Type:   "memory",
 			Config: map[string]any{},
 		},

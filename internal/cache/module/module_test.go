@@ -49,7 +49,7 @@ func TestNewCache(t *testing.T) {
 		{
 			uc: "in memory cache",
 			conf: &config.Configuration{
-				Cache: config.CacheProviders{
+				Cache: config.CacheConfig{
 					Type: "memory",
 				},
 			},
@@ -63,7 +63,7 @@ func TestNewCache(t *testing.T) {
 		{
 			uc: "Redis cache without DSN",
 			conf: &config.Configuration{
-				Cache: config.CacheProviders{
+				Cache: config.CacheConfig{
 					Type:   "redis",
 					Config: map[string]any{},
 				},
@@ -77,7 +77,7 @@ func TestNewCache(t *testing.T) {
 		{
 			uc: "Redis cache",
 			conf: &config.Configuration{
-				Cache: config.CacheProviders{
+				Cache: config.CacheConfig{
 					Type:   "redis",
 					Config: map[string]any{"Addr": "localhost.com:6379"},
 				},
@@ -91,7 +91,7 @@ func TestNewCache(t *testing.T) {
 		{
 			uc: "disabled cache type",
 			conf: &config.Configuration{
-				Cache: config.CacheProviders{
+				Cache: config.CacheConfig{
 					Type: "noop",
 				},
 			},
@@ -104,7 +104,7 @@ func TestNewCache(t *testing.T) {
 		{
 			uc: "unknown cache type",
 			conf: &config.Configuration{
-				Cache: config.CacheProviders{
+				Cache: config.CacheConfig{
 					Type: "foo",
 				},
 			},
