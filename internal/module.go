@@ -20,7 +20,7 @@ import (
 	"github.com/rs/zerolog"
 	"go.uber.org/fx"
 
-	"github.com/dadrus/heimdall/internal/cache"
+	"github.com/dadrus/heimdall/internal/cache/module"
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/handler/management"
 	"github.com/dadrus/heimdall/internal/handler/metrics"
@@ -40,7 +40,7 @@ var Module = fx.Options( //nolint:gochecknoglobals
 		logger.Info().Str("_version", version.Version).Msg("Starting heimdall")
 	}),
 	otel.Module,
-	cache.Module,
+	module.Module,
 	signer.Module,
 	mechanisms.Module,
 	rules.Module,

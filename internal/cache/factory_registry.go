@@ -20,7 +20,7 @@ import (
 	"errors"
 	"sync"
 
-	"github.com/dadrus/heimdall/internal/config"
+	"github.com/dadrus/heimdall/internal/cache/noop"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
@@ -29,32 +29,33 @@ var (
 	ErrConnectionCheckFailed = errors.New("cache connection failed")
 
 	// by intention. Used only during application bootstrap.
-	cacheTypeFactories   []TypeFactory //nolint:gochecknoglobals
-	cacheTypeFactoriesMu sync.RWMutex  //nolint:gochecknoglobals
+	factories   = make(map[string]Factory) //nolint:gochecknoglobals
+	factoriesMu sync.RWMutex               //nolint:gochecknoglobals
 )
 
-type TypeFactory func(typ string, cfg *config.Configuration) (bool, Cache, error)
-
-func registerCacheTypeFactory(factory TypeFactory) {
-	cacheTypeFactoriesMu.Lock()
-	defer cacheTypeFactoriesMu.Unlock()
+func Register(typ string, factory Factory) {
+	factoriesMu.Lock()
+	defer factoriesMu.Unlock()
 
 	if factory == nil {
-		panic("RegisterCacheType factory is nil")
+		panic("cache factory is nil")
 	}
 
-	cacheTypeFactories = append(cacheTypeFactories, factory)
+	factories[typ] = factory
 }
 
-func CreateCachePrototype(typ string, config *config.Configuration) (Cache, error) {
-	cacheTypeFactoriesMu.RLock()
-	defer cacheTypeFactoriesMu.RUnlock()
-
-	for _, create := range cacheTypeFactories {
-		if ok, at, err := create(typ, config); ok {
-			return at, err
-		}
+func Open(typ string, config map[string]any) (Cache, error) {
+	if typ == "noop" {
+		return &noop.Cache{}, nil
 	}
 
-	return nil, errorchain.NewWithMessagef(ErrUnsupportedCacheType, "'%s'", typ)
+	factoriesMu.RLock()
+	factory, ok := factories[typ]
+	factoriesMu.RUnlock()
+
+	if !ok {
+		return nil, errorchain.NewWithMessagef(ErrUnsupportedCacheType, "'%s'", typ)
+	}
+
+	return factory.Create(config)
 }

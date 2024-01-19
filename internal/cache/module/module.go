@@ -14,7 +14,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package cache
+package module
 
 import (
 	"context"
@@ -22,6 +22,10 @@ import (
 	"github.com/rs/zerolog"
 	"go.uber.org/fx"
 
+	"github.com/dadrus/heimdall/internal/cache"
+	_ "github.com/dadrus/heimdall/internal/cache/memory"
+	_ "github.com/dadrus/heimdall/internal/cache/noop"
+	_ "github.com/dadrus/heimdall/internal/cache/redis"
 	"github.com/dadrus/heimdall/internal/config"
 )
 
@@ -29,24 +33,18 @@ import (
 var Module = fx.Provide(
 	fx.Annotate(
 		newCache,
-		fx.OnStart(func(ctx context.Context, cch Cache) error { return cch.Start(ctx) }),
-		fx.OnStop(func(ctx context.Context, cch Cache) error { return cch.Stop(ctx) }),
+		fx.OnStart(func(ctx context.Context, cch cache.Cache) error { return cch.Start(ctx) }),
+		fx.OnStop(func(ctx context.Context, cch cache.Cache) error { return cch.Stop(ctx) }),
 	),
 )
 
-func newCache(conf *config.Configuration, logger zerolog.Logger) Cache {
-	var cache Cache
-
-	cache, err := CreateCachePrototype(conf.Cache.Type, conf)
+func newCache(conf *config.Configuration, logger zerolog.Logger) (cache.Cache, error) {
+	cache, err := cache.Open(conf.Cache.Type, conf.Cache.Config)
 	if err != nil {
 		logger.Info().Err(err).Msg("Could not initialize Cache")
 
-		return &noopCache{}
+		return nil, err
 	}
 
-	if err := cache.Check(context.Background()); err != nil {
-		logger.Info().Err(err).Msg("cache connection check failed")
-	}
-
-	return cache
+	return cache, nil
 }

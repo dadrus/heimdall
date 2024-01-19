@@ -14,7 +14,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package cache
+package module
 
 import (
 	"testing"
@@ -22,6 +22,10 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 
+	"github.com/dadrus/heimdall/internal/cache"
+	"github.com/dadrus/heimdall/internal/cache/memory"
+	"github.com/dadrus/heimdall/internal/cache/noop"
+	"github.com/dadrus/heimdall/internal/cache/redis"
 	"github.com/dadrus/heimdall/internal/config"
 )
 
@@ -31,15 +35,15 @@ func TestNewCache(t *testing.T) {
 	for _, tc := range []struct {
 		uc     string
 		conf   *config.Configuration
-		assert func(t *testing.T, cch Cache)
+		assert func(t *testing.T, cch cache.Cache)
 	}{
 		{
 			uc:   "empty cache type",
 			conf: &config.Configuration{},
-			assert: func(t *testing.T, cch Cache) {
+			assert: func(t *testing.T, cch cache.Cache) {
 				t.Helper()
 
-				assert.IsType(t, &noopCache{}, cch)
+				assert.IsType(t, &noop.Cache{}, cch)
 			},
 		},
 		{
@@ -49,10 +53,10 @@ func TestNewCache(t *testing.T) {
 					Type: "memory",
 				},
 			},
-			assert: func(t *testing.T, cch Cache) {
+			assert: func(t *testing.T, cch cache.Cache) {
 				t.Helper()
 
-				assert.IsType(t, &InMemoryCache{}, cch)
+				assert.IsType(t, &memory.Cache{}, cch)
 			},
 		},
 
@@ -64,10 +68,10 @@ func TestNewCache(t *testing.T) {
 					Config: map[string]any{},
 				},
 			},
-			assert: func(t *testing.T, cch Cache) {
+			assert: func(t *testing.T, cch cache.Cache) {
 				t.Helper()
 
-				assert.IsType(t, &noopCache{}, cch)
+				assert.IsType(t, &noop.Cache{}, cch)
 			},
 		},
 		{
@@ -78,10 +82,10 @@ func TestNewCache(t *testing.T) {
 					Config: map[string]any{"Addr": "localhost.com:6379"},
 				},
 			},
-			assert: func(t *testing.T, cch Cache) {
+			assert: func(t *testing.T, cch cache.Cache) {
 				t.Helper()
 
-				assert.IsType(t, &RedisCache{}, cch)
+				assert.IsType(t, &redis.SimpleCache{}, cch)
 			},
 		},
 		{
@@ -91,10 +95,10 @@ func TestNewCache(t *testing.T) {
 					Type: "noop",
 				},
 			},
-			assert: func(t *testing.T, cch Cache) {
+			assert: func(t *testing.T, cch cache.Cache) {
 				t.Helper()
 
-				assert.IsType(t, noopCache{}, cch)
+				assert.IsType(t, noop.Cache{}, cch)
 			},
 		},
 		{
@@ -105,16 +109,16 @@ func TestNewCache(t *testing.T) {
 				},
 			},
 
-			assert: func(t *testing.T, cch Cache) {
+			assert: func(t *testing.T, cch cache.Cache) {
 				t.Helper()
 
-				assert.IsType(t, &noopCache{}, cch)
+				assert.IsType(t, &noop.Cache{}, cch)
 			},
 		},
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
 			// WHEN
-			cch := newCache(tc.conf, log.Logger)
+			cch, _ := newCache(tc.conf, log.Logger)
 
 			// THEN
 			tc.assert(t, cch)

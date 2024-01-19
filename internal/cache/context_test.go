@@ -22,6 +22,9 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/dadrus/heimdall/internal/cache/mocks"
+	"github.com/dadrus/heimdall/internal/cache/noop"
 )
 
 func TestContextNoCacheConfigured(t *testing.T) {
@@ -32,30 +35,30 @@ func TestContextNoCacheConfigured(t *testing.T) {
 
 	// THEN
 	require.NotNil(t, cch)
-	assert.IsType(t, noopCache{}, cch)
+	assert.IsType(t, &noop.Cache{}, cch)
 }
 
 func TestContextCacheConfigured(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
-	memcache, _ := NewMemoryCache()
-	ctx := WithContext(context.Background(), memcache)
+	cache := mocks.NewCacheMock(t)
+	ctx := WithContext(context.Background(), cache)
 
 	// WHEN
 	cch := Ctx(ctx)
 
 	// THEN
 	require.NotNil(t, cch)
-	assert.IsType(t, &InMemoryCache{}, cch)
+	assert.IsType(t, &mocks.CacheMock{}, cch)
 }
 
 func TestContextCacheIsNotConfiguredTwice(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
-	cch1, _ := NewMemoryCache()
-	cch2, _ := NewMemoryCache()
+	cch1 := mocks.NewCacheMock(t)
+	cch2 := mocks.NewCacheMock(t)
 
 	ctx := context.Background()
 

@@ -14,7 +14,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package cache
+package memory
 
 import (
 	"context"
@@ -30,13 +30,13 @@ func TestMemoryCacheUsage(t *testing.T) {
 	for _, tc := range []struct {
 		uc             string
 		key            string
-		configureCache func(t *testing.T, cache *InMemoryCache)
+		configureCache func(t *testing.T, cache *Cache)
 		assert         func(t *testing.T, data any)
 	}{
 		{
 			uc:  "can retrieve not expired value",
 			key: "foo",
-			configureCache: func(t *testing.T, cache *InMemoryCache) {
+			configureCache: func(t *testing.T, cache *Cache) {
 				t.Helper()
 
 				cache.Set(context.TODO(), "foo", "bar", 10*time.Minute)
@@ -50,7 +50,7 @@ func TestMemoryCacheUsage(t *testing.T) {
 		{
 			uc:  "cannot retrieve expired value",
 			key: "bar",
-			configureCache: func(t *testing.T, cache *InMemoryCache) {
+			configureCache: func(t *testing.T, cache *Cache) {
 				t.Helper()
 
 				cache.Set(context.TODO(), "bar", "baz", 1*time.Microsecond)
@@ -66,7 +66,7 @@ func TestMemoryCacheUsage(t *testing.T) {
 		{
 			uc:  "cannot retrieve deleted value",
 			key: "baz",
-			configureCache: func(t *testing.T, cache *InMemoryCache) {
+			configureCache: func(t *testing.T, cache *Cache) {
 				t.Helper()
 
 				cache.Set(context.TODO(), "baz", "bar", 1*time.Second)
@@ -81,7 +81,7 @@ func TestMemoryCacheUsage(t *testing.T) {
 		{
 			uc:  "cannot retrieve not existing value",
 			key: "baz",
-			configureCache: func(t *testing.T, cache *InMemoryCache) {
+			configureCache: func(t *testing.T, cache *Cache) {
 				t.Helper()
 			},
 			assert: func(t *testing.T, data any) {
@@ -93,7 +93,7 @@ func TestMemoryCacheUsage(t *testing.T) {
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
 			// GIVEN
-			cache, _ := NewMemoryCache()
+			cache := NewCache()
 
 			// WHEN
 			tc.configureCache(t, cache)
@@ -109,7 +109,7 @@ func TestMemoryCacheUsage(t *testing.T) {
 func TestMemoryCacheExpiration(t *testing.T) {
 	t.Parallel()
 
-	cache, _ := NewMemoryCache()
+	cache := NewCache()
 	cache.Set(context.TODO(), "baz", "bar", 1*time.Second)
 
 	hits := 0

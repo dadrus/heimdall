@@ -14,7 +14,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package cache
+package redis
 
 import (
 	"context"
@@ -24,8 +24,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
-
-	"github.com/dadrus/heimdall/internal/config"
 )
 
 func TestRedisCacheUsage(t *testing.T) {
@@ -36,13 +34,13 @@ func TestRedisCacheUsage(t *testing.T) {
 	for _, tc := range []struct {
 		uc             string
 		key            string
-		configureCache func(*testing.T, *RedisCache)
+		configureCache func(*testing.T, *SimpleCache)
 		assert         func(t *testing.T, data any)
 	}{
 		{
 			uc:  "can retrieve not expired value",
 			key: "foo",
-			configureCache: func(t *testing.T, redis *RedisCache) {
+			configureCache: func(t *testing.T, redis *SimpleCache) {
 				t.Helper()
 
 				redis.Set(context.Background(), "foo", "bar", 10*time.Minute)
@@ -56,7 +54,7 @@ func TestRedisCacheUsage(t *testing.T) {
 		{
 			uc:  "cannot retrieve expired value",
 			key: "bar",
-			configureCache: func(t *testing.T, redis *RedisCache) {
+			configureCache: func(t *testing.T, redis *SimpleCache) {
 				t.Helper()
 
 				redis.Set(context.Background(), "bar", "baz", 1*time.Millisecond)
@@ -72,7 +70,7 @@ func TestRedisCacheUsage(t *testing.T) {
 		{
 			uc:  "cannot retrieve deleted value",
 			key: "baz",
-			configureCache: func(t *testing.T, redis *RedisCache) {
+			configureCache: func(t *testing.T, redis *SimpleCache) {
 				t.Helper()
 
 				redis.Set(context.Background(), "baz", "bar", 1*time.Second)
@@ -87,7 +85,7 @@ func TestRedisCacheUsage(t *testing.T) {
 		{
 			uc:  "cannot retrieve not existing value",
 			key: "baz",
-			configureCache: func(t *testing.T, redis *RedisCache) {
+			configureCache: func(t *testing.T, redis *SimpleCache) {
 				t.Helper()
 			},
 			assert: func(t *testing.T, data any) {
@@ -109,7 +107,7 @@ func TestRedisCacheUsage(t *testing.T) {
 	}
 }
 
-func before(t *testing.T) *RedisCache {
+func before(t *testing.T) *SimpleCache {
 	t.Helper()
 
 	ctx := context.TODO()
@@ -120,14 +118,7 @@ func before(t *testing.T) *RedisCache {
 		t.Error(err)
 	}
 
-	conf := &config.Configuration{
-		Cache: config.CacheProviders{
-			Type:   "redis",
-			Config: map[string]any{"Addr": endpoint},
-		},
-	}
-
-	cache, _ := NewRedisCache(conf)
+	cache, _ := NewSimpleCache(map[string]any{"Addr": endpoint})
 	assert.NotEmpty(t, cache.c)
 
 	t.Cleanup(func() {

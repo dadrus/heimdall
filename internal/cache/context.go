@@ -18,6 +18,8 @@ package cache
 
 import (
 	"context"
+
+	"github.com/dadrus/heimdall/internal/cache/noop"
 )
 
 type ctxKey struct{}
@@ -42,5 +44,5 @@ func Ctx(ctx context.Context) Cache {
 		return c
 	}
 
-	return noopCache{}
+	return &noop.Cache{}
 }

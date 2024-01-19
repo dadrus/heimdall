@@ -14,19 +14,17 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package cache
+package noop
 
 import (
 	"context"
 	"time"
 )
 
-//go:generate mockery --name Cache --structname CacheMock
+type Cache struct{}
 
-type Cache interface {
-	Evictor
-
-	Get(ctx context.Context, key string) any
-	Set(ctx context.Context, key string, value any, ttl time.Duration)
-	Delete(ctx context.Context, key string)
-}
+func (*Cache) Get(_ context.Context, _ string) any                     { return nil }
+func (*Cache) Set(_ context.Context, _ string, _ any, _ time.Duration) {}
+func (*Cache) Delete(_ context.Context, _ string)                      {}
+func (*Cache) Start(_ context.Context) error                           { return nil }
+func (*Cache) Stop(_ context.Context) error                            { return nil }
