@@ -21,11 +21,11 @@ import (
 
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/dadrus/heimdall/internal/cache/memory"
 	"github.com/dadrus/heimdall/internal/cache/noop"
-	"github.com/dadrus/heimdall/internal/cache/redis"
 	"github.com/dadrus/heimdall/internal/config"
 )
 
@@ -35,15 +35,16 @@ func TestNewCache(t *testing.T) {
 	for _, tc := range []struct {
 		uc     string
 		conf   *config.Configuration
-		assert func(t *testing.T, cch cache.Cache)
+		assert func(t *testing.T, err error, cch cache.Cache)
 	}{
 		{
 			uc:   "empty cache type",
 			conf: &config.Configuration{},
-			assert: func(t *testing.T, cch cache.Cache) {
+			assert: func(t *testing.T, err error, cch cache.Cache) {
 				t.Helper()
 
-				assert.IsType(t, &noop.Cache{}, cch)
+				require.Error(t, err)
+				require.ErrorIs(t, err, cache.ErrUnsupportedCacheType)
 			},
 		},
 		{
@@ -53,9 +54,10 @@ func TestNewCache(t *testing.T) {
 					Type: "memory",
 				},
 			},
-			assert: func(t *testing.T, cch cache.Cache) {
+			assert: func(t *testing.T, err error, cch cache.Cache) {
 				t.Helper()
 
+				require.NoError(t, err)
 				assert.IsType(t, &memory.Cache{}, cch)
 			},
 		},
@@ -68,10 +70,11 @@ func TestNewCache(t *testing.T) {
 					Config: map[string]any{},
 				},
 			},
-			assert: func(t *testing.T, cch cache.Cache) {
+			assert: func(t *testing.T, err error, cch cache.Cache) {
 				t.Helper()
 
-				assert.IsType(t, &noop.Cache{}, cch)
+				require.Error(t, err)
+				require.ErrorContains(t, err, "'addr' is a required field")
 			},
 		},
 		{
@@ -82,10 +85,11 @@ func TestNewCache(t *testing.T) {
 					Config: map[string]any{"Addr": "localhost.com:6379"},
 				},
 			},
-			assert: func(t *testing.T, cch cache.Cache) {
+			assert: func(t *testing.T, err error, cch cache.Cache) {
 				t.Helper()
 
-				assert.IsType(t, &redis.SimpleCache{}, cch)
+				require.Error(t, err)
+				require.ErrorContains(t, err, "connect to redis cache")
 			},
 		},
 		{
@@ -95,10 +99,11 @@ func TestNewCache(t *testing.T) {
 					Type: "noop",
 				},
 			},
-			assert: func(t *testing.T, cch cache.Cache) {
+			assert: func(t *testing.T, err error, cch cache.Cache) {
 				t.Helper()
 
-				assert.IsType(t, noop.Cache{}, cch)
+				require.NoError(t, err)
+				assert.IsType(t, &noop.Cache{}, cch)
 			},
 		},
 		{
@@ -109,19 +114,20 @@ func TestNewCache(t *testing.T) {
 				},
 			},
 
-			assert: func(t *testing.T, cch cache.Cache) {
+			assert: func(t *testing.T, err error, cch cache.Cache) {
 				t.Helper()
 
-				assert.IsType(t, &noop.Cache{}, cch)
+				require.Error(t, err)
+				require.ErrorIs(t, err, cache.ErrUnsupportedCacheType)
 			},
 		},
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
 			// WHEN
-			cch, _ := newCache(tc.conf, log.Logger)
+			cch, err := newCache(tc.conf, log.Logger)
 
 			// THEN
-			tc.assert(t, cch)
+			tc.assert(t, err, cch)
 		})
 	}
 }
