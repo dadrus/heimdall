@@ -99,7 +99,7 @@ func NewClusterCache(conf map[string]any) (*ClusterCache, error) {
 	_ = redisotel.InstrumentMetrics(client)
 
 	if err := client.Ping(context.Background()).Err(); err != nil {
-		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
+		return nil, errorchain.NewWithMessage(ErrConnectionCheckFailed,
 			"failed connect to redis cluster cache").CausedBy(err)
 	}
 

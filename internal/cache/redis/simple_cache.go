@@ -93,7 +93,7 @@ func NewSimpleCache(conf map[string]any) (*SimpleCache, error) {
 	_ = redisotel.InstrumentMetrics(client)
 
 	if err := client.Ping(context.Background()).Err(); err != nil {
-		return nil, errorchain.NewWithMessage(heimdall.ErrCommunication, "failed connect to redis cache").
+		return nil, errorchain.NewWithMessage(ErrConnectionCheckFailed, "failed connect to redis cache").
 			CausedBy(err)
 	}
 

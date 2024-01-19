@@ -25,8 +25,7 @@ import (
 )
 
 var (
-	ErrUnsupportedCacheType  = errors.New("cache type unsupported")
-	ErrConnectionCheckFailed = errors.New("cache connection failed")
+	ErrUnsupportedCacheType = errors.New("cache type unsupported")
 
 	// by intention. Used only during application bootstrap.
 	factories   = make(map[string]Factory) //nolint:gochecknoglobals
