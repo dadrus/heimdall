@@ -19,9 +19,6 @@ package authenticators
 import (
 	"github.com/rs/zerolog"
 
-	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/trace"
-
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
 )
@@ -64,17 +61,6 @@ type anonymousAuthenticator struct {
 func (a *anonymousAuthenticator) Execute(ctx heimdall.Context) (*subject.Subject, error) {
 	logger := zerolog.Ctx(ctx.AppContext())
 	logger.Debug().Str("_id", a.id).Msg("Authenticating using anonymous authenticator")
-
-	appContext := ctx.AppContext()
-
-	var span trace.Span
-	//if !trace.SpanFromContext(appContext).IsRecording() {
-	appContext, span = otel.GetTracerProvider().Tracer("heimdall").Start(appContext, "heimdall.anonymous-authenticator")
-	//}
-
-	if span != nil {
-		defer span.End()
-	}
 
 	return &subject.Subject{ID: a.Subject, Attributes: make(map[string]any)}, nil
 }

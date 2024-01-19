@@ -20,8 +20,6 @@ import (
 	"errors"
 
 	"github.com/rs/zerolog"
-	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/trace"
 
 	"github.com/dadrus/heimdall/internal/accesscontext"
 	"github.com/dadrus/heimdall/internal/heimdall"
@@ -38,15 +36,7 @@ func (ca compositeSubjectCreator) Execute(ctx heimdall.Context) (*subject.Subjec
 		err error
 	)
 
-	var span trace.Span
-
-	// if !trace.SpanFromContext(appContext).IsRecording() {
-	appContext := ctx.AppContext()
-	appContext, span = otel.GetTracerProvider().Tracer("heimdall").Start(appContext, "heimdall.subject-creator")
-	//}
-
 	for idx, a := range ca {
-
 		sub, err = a.Execute(ctx)
 		if err != nil {
 			logger.Info().Err(err).Msg("Pipeline step execution failed")
@@ -62,15 +52,7 @@ func (ca compositeSubjectCreator) Execute(ctx heimdall.Context) (*subject.Subjec
 
 		accesscontext.SetSubject(ctx.AppContext(), sub.ID)
 
-		if span != nil {
-			defer span.End()
-		}
-
 		return sub, nil
-	}
-
-	if span != nil {
-		defer span.End()
 	}
 
 	return nil, err

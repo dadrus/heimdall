@@ -61,7 +61,6 @@ func initTraceProvider(
 	otel.SetTracerProvider(tp)
 	otel.SetTextMapPropagator(propagators.New())
 
-	tp.Tracer("heimdall")
 	lifecycle.Append(fx.StopHook(tp.Shutdown))
 
 	logger.Info().Msg("OpenTelemetry tracing initialized.")
