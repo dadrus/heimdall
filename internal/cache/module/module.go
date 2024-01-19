@@ -23,9 +23,8 @@ import (
 	"go.uber.org/fx"
 
 	"github.com/dadrus/heimdall/internal/cache"
-	_ "github.com/dadrus/heimdall/internal/cache/memory"
-	_ "github.com/dadrus/heimdall/internal/cache/noop"
-	_ "github.com/dadrus/heimdall/internal/cache/redis"
+	_ "github.com/dadrus/heimdall/internal/cache/memory" // to register the memory cache
+	_ "github.com/dadrus/heimdall/internal/cache/redis"  // to register the redis cache
 	"github.com/dadrus/heimdall/internal/config"
 )
 
@@ -39,12 +38,12 @@ var Module = fx.Provide(
 )
 
 func newCache(conf *config.Configuration, logger zerolog.Logger) (cache.Cache, error) {
-	cache, err := cache.Open(conf.Cache.Type, conf.Cache.Config)
+	cch, err := cache.Open(conf.Cache.Type, conf.Cache.Config)
 	if err != nil {
 		logger.Info().Err(err).Msg("Could not initialize Cache")
 
 		return nil, err
 	}
 
-	return cache, nil
+	return cch, nil
 }
