@@ -20,7 +20,7 @@ require (
 	github.com/go-playground/validator/v10 v10.17.0
 	github.com/gobwas/glob v0.2.3
 	github.com/goccy/go-json v0.10.2
-	github.com/google/cel-go v0.18.2
+	github.com/google/cel-go v0.19.0
 	github.com/google/uuid v1.5.0
 	github.com/gorilla/websocket v1.5.1
 	github.com/grpc-ecosystem/go-grpc-middleware/v2 v2.0.1
