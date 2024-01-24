@@ -100,3 +100,9 @@ module:
       target: assets/js/bootstrap.bundle.js
     - source: node_modules/bootstrap-icons/font/fonts
       target: static/css/fonts
+security:
+  exec:
+    osEnv:
+      - (?i)^(PATH|PATHEXT|APPDATA|TMP|TEMP|TERM|GEM_PATH)$ # Note this GEM_PATH
+    allow:
+      - asciidoctor
