@@ -38,7 +38,7 @@
       <article class="docs-content col-xl-10 col-md-12">
         <h1>{{ .Title }}</h1>
         <p>{{ .Description }}</p>
-        <button class="btn btn-outline-secondary text-decoration-none d-md-none collapsed" type="button" data-bs-toggle="collapse"
+        <button class="btn btn-outline-secondary text-decoration-none d-md-none collapsed mb-3" type="button" data-bs-toggle="collapse"
                 data-bs-target="#page-content-toc-collapsible" aria-expanded="false" aria-controls="page-content-toc-collapsible">
           On this page
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-chevron-expand" viewBox="0 0 16 16">
@@ -46,8 +46,8 @@
           </svg>
         </button>
 
-        <div id="page-content-toc-collapsible" class="d-md-none collapse docs-page-toc text-muted">
-          <div class="card card-body">
+        <div id="page-content-toc-collapsible" class="d-md-none collapse text-muted">
+          <div class="card card-body mb-3">
             {{ .TableOfContents }}
           </div>
         </div>
