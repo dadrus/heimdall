@@ -273,16 +273,18 @@ doc-version-select {
     margin-left: -.25rem;
     overflow-y: auto;
   }
+
+  .docs-page-toc {
+    position: sticky;
+    top: 5rem;
+    right: 0;
+    z-index: 2;
+    overflow-y: auto;
+    height: calc(100vh - 7rem);
+  }
 }
 
 .docs-page-toc {
-  position: sticky;
-  top: 5rem;
-  right: 0;
-  z-index: 2;
-  overflow-y: auto;
-  height: calc(100vh - 7rem);
-
   nav {
     font-size: .875rem;
 
