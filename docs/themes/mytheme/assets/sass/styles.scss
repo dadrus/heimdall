@@ -305,9 +305,12 @@ doc-version-select {
       text-decoration: none;
       border-left: .125rem solid transparent;
 
-      &.active,
       &:hover {
         color: var(--bs-link-color);
+      }
+      &.active {
+        color: var(--bs-link-color);
+        font-weight: 500;
       }
     }
   }
