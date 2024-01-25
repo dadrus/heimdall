@@ -14,7 +14,7 @@ description: The following sections describe the available finalizer types in mo
 
 Some finalizers may support or require additional configuration. The corresponding properties are annotated with `mandatory`, respectively `optional` to denote configuration requirement, as well as with `overridable`, `not overriddable` and `partially overridable` to indicate whether the property can be overridden in a rule pipeline.
 
-=== Noop
+== Noop
 
 As the name implies, this finalizer does nothing. As finalizer are the last step in a rule pipeline and act on the available link:{{< relref "/docs/getting_started/mechanisms.adoc#_subject" >}}[`Subject`] information, the usage of this finalizer makes only sense in combination with the link:{{< relref "authenticators.adoc#_noop">}}[Noop Authenticator], e.g. if your API should be publicly available. This finalizer type also doesn't have any configuration options.
 
@@ -29,7 +29,7 @@ type: noop
 ----
 ====
 
-=== Header
+== Header
 
 This finalizer enables transformation of a link:{{< relref "/docs/getting_started/mechanisms.adoc#_subject" >}}[`Subject`] into HTTP headers. It can also be used to map information from the original link:{{< relref "/docs/getting_started/mechanisms.adoc#_request" >}}[`Request`] into headers expected by the upstream service.
 
@@ -55,7 +55,7 @@ config:
 ----
 ====
 
-=== Cookie
+== Cookie
 
 This finalizer enables transformation of a link:{{< relref "/docs/getting_started/mechanisms.adoc#_subject" >}}[`Subject`] into cookies. It can also be used to map information from the original link:{{< relref "/docs/getting_started/mechanisms.adoc#_request" >}}[`Request`] into cookies expected by the upstream service.
 
@@ -80,7 +80,7 @@ config:
 ----
 ====
 
-=== JWT
+== JWT
 
 This finalizer enables transformation of the link:{{< relref "/docs/getting_started/mechanisms.adoc#_subject" >}}[`Subject`] object into a token in a https://www.rfc-editor.org/rfc/rfc7519[JWT] format, which is then made available to your upstream service in either the HTTP `Authorization` header with `Bearer` scheme set, or in a custom header. In addition to setting the JWT specific claims, it allows setting custom claims as well. Your upstream service can then verify the signature of the JWT by making use of heimdall's JWKS endpoint to retrieve the required public keys/certificates from.
 
@@ -124,7 +124,7 @@ config:
 ----
 ====
 
-=== OAuth2 Client Credentials
+== OAuth2 Client Credentials
 
 This finalizer drives the https://www.rfc-editor.org/rfc/rfc6749#section-4.4[OAuth2 Client Credentials Grant] flow to obtain a token, which should be used for communication with the upstream service. By default, as long as not otherwise configured (see the options below), the obtained token is made available to your upstream service in the HTTP `Authorization` header with `Bearer` scheme set. Unlike the other finalizers, it does not have access to any objects created by the rule execution pipeline.
 

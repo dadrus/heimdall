@@ -14,7 +14,7 @@ description: The following sections describe the available authorizer types in m
 
 Some of the authorizers may support or require additional configuration. The corresponding properties are annotated with `mandatory`, respectively `optional` to denote configuration requirement, as well as with `overridable`, `not overriddable` and `partially overridable` to indicate whether the property can be overridden in a rule pipeline.
 
-=== Allow
+== Allow
 
 As the name implies, this authorizer allows any request passing through. This authorizer type also doesn't have any configuration options.
 
@@ -29,7 +29,7 @@ type: allow
 ----
 ====
 
-=== Deny
+== Deny
 
 As the name implies, this authorizer denies any request (on HTTP response code level this is then mapped to `403 Forbidden`). It basically stops the successful execution of the pipeline resulting in the execution of the error handler mechanisms. This authorizer type doesn't have any configuration options.
 
@@ -44,7 +44,7 @@ type: deny
 ----
 ====
 
-=== Local (CEL)
+== Local (CEL)
 
 This authorizer allows definition of authorization requirements based on information available about the authenticated subject, as well as the actual request by using https://github.com/google/cel-spec[CEL] based authorization expressions. Each expression is expected to return `true` to signal success. Otherwise, the authorization fails, resulting in the execution of the error handler mechanisms.
 
@@ -99,7 +99,7 @@ The usage of this type of configuration makes sense in a pipeline, which combine
 
 ====
 
-=== Remote
+== Remote
 
 This authorizer allows communication with other systems, like https://www.openpolicyagent.org/[Open Policy Agent], https://www.ory.sh/docs/keto/[Ory Keto], etc. for the actual authorization purpose. If the used endpoint answers with a not 2xx HTTP response code, this authorizer assumes, the authorization has failed, resulting in the execution of the error handler mechanisms. Otherwise, if no expressions for the verification of the response are defined, the authorizer assumes, the request has been authorized. If expressions are defined and do not fail, the authorization succeeds.
 

@@ -14,7 +14,7 @@ description: The following sections describe the available error handler types i
 
 Some of the error handlers may support or require additional configuration. The corresponding properties are annotated with `mandatory`, respectively `optional` to denote configuration requirement, as well as with `overridable`, `not overriddable` and `partially overridable` to indicate whether the property can be overridden in a rule pipeline.
 
-=== Default
+== Default
 
 This mechanism is always there and is executed if no other error handler mechanism is responsible for the error. Actually, there is no need to explicitly configure it. The only exception is to allow overriding the link:{{< relref "/docs/getting_started/rules.adoc#_default_rule" >}}[default rule's] error handler chain in a specific rule for performance reasons (if configured error handlers in the default rule should not be considered). This mechanism type doesn't have any configuration options.
 
@@ -31,7 +31,7 @@ type: default
 
 ====
 
-=== Redirect
+== Redirect
 
 This error handler mechanism allows redirecting the client to another endpoint, e.g. to let the user authenticate. Technically this error handler returns e.g. a HTTP `302 Found` response code and sets the HTTP `Location` header.
 
@@ -72,7 +72,7 @@ config:
 ====
 
 
-=== WWW-Authenticate
+== WWW-Authenticate
 
 This error handler mechanism responds with HTTP `401 Unauthorized` and a `WWW-Authenticate` HTTP header set. As of now, this error handler is the only one error handler, which transforms heimdall into an authentication system, a very simple one though. By configuring this error handler you can implement the https://datatracker.ietf.org/doc/html/rfc7617[Basic HTTP Authentication Scheme] by also making use of the link:{{< relref "authenticators.adoc#_basic_auth" >}}[Basic Auth] authenticator. Without that authenticator, the usage of this error handler does actually not make any sense.
 
