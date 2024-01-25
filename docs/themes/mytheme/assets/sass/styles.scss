@@ -280,8 +280,8 @@ doc-version-select {
   top: 5rem;
   right: 0;
   z-index: 2;
-  height: calc(100vh - 7rem);
   overflow-y: auto;
+  height: calc(100vh - 7rem);
 
   nav {
     font-size: .875rem;
@@ -303,8 +303,7 @@ doc-version-select {
       text-decoration: none;
       border-left: .125rem solid transparent;
 
-      .active,
-      &:active,
+      &.active,
       &:hover {
         color: var(--bs-link-color);
       }
