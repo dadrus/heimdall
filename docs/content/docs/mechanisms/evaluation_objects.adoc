@@ -7,13 +7,14 @@ menu:
   docs:
     weight: 2
     parent: "Mechanisms"
+description: Some mechanisms support, respectively require access to different types of objects they work on, e.g. to render a header with specific values, or to check whether some expectations apply. These are described on this page.
 ---
 
 :toc:
 
-Some mechanisms support, respectively require access to different types of objects they work on, e.g. to render a header with specific values, or to check whether some expectations apply. Following objects are available and have the following structure:
+== Objects
 
-== Subject
+=== Subject
 
 This object contains the information about the authenticated subject and has the following attributes:
 

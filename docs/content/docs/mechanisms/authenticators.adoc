@@ -7,17 +7,14 @@ menu:
   docs:
     weight: 3
     parent: "Mechanisms"
+description: The following sections describe the available authenticator types in more detail.
 ---
 
 :toc:
 
-Authenticators inspect HTTP requests for presence of authentication objects, like e.g. the presence of a specific cookie. If such objects exist, authenticators verify the related authentication status and obtain information about the corresponding link:{{< relref "/docs/getting_started/mechanisms.adoc#_subject" >}}[subject]. A subject, could be a user, trying to use particular functionality of the upstream service, a machine (if you have machine-2-machine interaction), or something different. Authenticators ensure the subject is authenticated and the information available about it is valid.
+Some of the supported authenticator types may support or require additional configuration. The corresponding properties are annotated with `mandatory`, respectively `optional` to denote configuration requirement, as well as with `overridable`, `not overriddable` and `partially overridable` to indicate whether the property can be overridden in a rule pipeline.
 
-== Authenticator Types
-
-The following sections describe the available authenticator types in more detail. Some of these may support or require additional configuration. The corresponding properties are annotated with `mandatory`, respectively `optional` to denote configuration requirement, as well as with `overridable`, `not overriddable` and `partially overridable` to indicate whether the property can be overridden in a rule pipeline.
-
-=== Unauthorized
+== Unauthorized
 
 This authenticator rejects all requests as unauthenticated (on HTTP response code level this is then mapped to `401 Unauthorized`, hence the type name). It basically stops the successful execution of the pipeline resulting in the execution of the error handlers. This authenticator type doesn't have any configuration options.
 
@@ -32,7 +29,7 @@ type: unauthorized
 ----
 ====
 
-=== Anonymous
+== Anonymous
 
 This authenticator just creates a link:{{< relref "/docs/getting_started/mechanisms.adoc#_subject" >}}[`Subject`] object and sets its `ID` to `anonymous` without doing anything else. You can overwrite the value of subject's id by using the optional `config` property.
 
@@ -55,7 +52,7 @@ config:
 ----
 ====
 
-=== Basic Auth
+== Basic Auth
 
 This authenticator verifies the provided credentials according to the HTTP "Basic" authentication scheme, described in https://datatracker.ietf.org/doc/html/rfc7617[RFC 7617]. It does however not challenge the authentication, it only verifies the provided credentials and sets the link:{{< relref "/docs/getting_started/mechanisms.adoc#_subject" >}}[`Subject`] `ID` to the configured user identifier if the authentication succeeds. Otherwise, it raises an error, resulting in the execution of the configured error handlers. The link:{{< relref "error_handlers.adoc#_www_authenticate" >}}["WWW Authenticate"] error handler mechanism can for example be used if the corresponding challenge is required.
 
@@ -87,7 +84,7 @@ config:
 ----
 ====
 
-=== Generic
+== Generic
 
 This authenticator is kind of a Swiss knife and can do a lot depending on the given configuration. It verifies the authentication status of the subject by making use of values available in cookies, headers, or query parameters of the HTTP request and communicating with the actual authentication system to perform the verification of the subject authentication status on the one hand, and to get the information about the subject on the other hand. There is however one limitation: it can only deal with JSON responses.
 
@@ -238,7 +235,7 @@ config:
 ----
 ====
 
-=== OAuth2 Introspection
+== OAuth2 Introspection
 
 This authenticator handles requests that have Bearer token in the HTTP Authorization header (`Authorization: Bearer <token>`), in the `access_token` query parameter or the `access_token` body parameter (latter, if the body is of `application/x-www-form-urlencoded` MIME type). It then uses https://datatracker.ietf.org/doc/html/rfc7662[OAuth 2.0 Token Introspection] endpoint to check if the token is valid. The validation includes at least the verification of the status and the time validity. That is if the token is still active and whether it has been issued in an acceptable time frame. Latter can be adjusted by specifying a leeway. All other validation options can and should be configured.
 
@@ -320,7 +317,7 @@ If the `iss` claim of the issued JWT is set to `https://my-auth-server.com/realm
 
 ====
 
-=== JWT
+== JWT
 
 As the link:{{< relref "#_oauth2_introspection">}}[OAuth2 Introspection] authenticator, this authenticator handles requests that have a Bearer token in the `Authorization` header, in a different header, a query parameter or a body parameter as well. Unlike the OAuth2 Introspection authenticator it expects the token to be a JSON Web Token (JWT) and verifies it according https://www.rfc-editor.org/rfc/rfc7519#section-7.2[RFC 7519, Section 7.2]. It does however not support encrypted payloads and nested JWTs. In addition to this, validation includes the verification of the time validity. Latter can be adjusted by specifying a leeway. All other validation options can and should be configured.
 

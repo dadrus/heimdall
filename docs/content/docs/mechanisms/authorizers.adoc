@@ -7,15 +7,12 @@ menu:
   docs:
     weight: 4
     parent: "Mechanisms"
+description: The following sections describe the available authorizer types in more detail.
 ---
 
 :toc:
 
-Authorizers ensure that the link:{{< relref "/docs/getting_started/mechanisms.adoc#_subject" >}}[`Subject`] obtained via an authenticator has the required permissions to submit the given HTTP request and thus to execute the corresponding logic in the upstream service. E.g. a specific endpoint of the upstream service might only be accessible to a "user" from the "admin" group, or to an HTTP request if a specific HTTP header is set.
-
-== Authorizer Types
-
-The following sections describe the available authorizer types in more detail. Some of these may support or require additional configuration. The corresponding properties are annotated with `mandatory`, respectively `optional` to denote configuration requirement, as well as with `overridable`, `not overriddable` and `partially overridable` to indicate whether the property can be overridden in a rule pipeline.
+Some of the authorizers may support or require additional configuration. The corresponding properties are annotated with `mandatory`, respectively `optional` to denote configuration requirement, as well as with `overridable`, `not overriddable` and `partially overridable` to indicate whether the property can be overridden in a rule pipeline.
 
 === Allow
 

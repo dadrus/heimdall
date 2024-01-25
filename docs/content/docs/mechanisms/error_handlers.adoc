@@ -7,15 +7,12 @@ menu:
   docs:
     weight: 7
     parent: "Mechanisms"
+description: The following sections describe the available error handler types in more detail.
 ---
 
 :toc:
 
-Error Handlers are responsible for execution of logic if any of the link:{{< relref "authenticators.adoc" >}}[authenticators], link:{{< relref "authorizers.adoc" >}}[authorizers], link:{{< relref "contextualizers.adoc" >}}[contextualizers] or link:{{< relref "finalizers.adoc" >}}[finalizers] fails. The error handler mechanisms range from a simple error response to the client which sent the request to sophisticated ones, supporting complex logic and redirects.
-
-== Error Handler Types
-
-The following sections describe the available error handler types in more detail. Some of these may support or require additional configuration. The corresponding properties are annotated with `mandatory`, respectively `optional` to denote configuration requirement, as well as with `overridable`, `not overriddable` and `partially overridable` to indicate whether the property can be overridden in a rule pipeline.
+Some of the error handlers may support or require additional configuration. The corresponding properties are annotated with `mandatory`, respectively `optional` to denote configuration requirement, as well as with `overridable`, `not overriddable` and `partially overridable` to indicate whether the property can be overridden in a rule pipeline.
 
 === Default
 

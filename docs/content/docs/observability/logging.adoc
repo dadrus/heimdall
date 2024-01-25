@@ -7,11 +7,10 @@ menu:
   docs:
     weight: 1
     parent: "Observability"
+description: Heimdall logs concern everything that happens to Heimdall itself (startup, configuration, events, shutdown, and so on). Logs are written to stdout by default in text format.
 ---
 
 :toc:
-
-Heimdall logs concern everything that happens to Heimdall itself (startup, configuration, events, shutdown, and so on). Logs are written to stdout by default in text format.
 
 == Configuration
 

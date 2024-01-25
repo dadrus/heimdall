@@ -7,15 +7,12 @@ menu:
   docs:
     weight: 6
     parent: "Mechanisms"
+description: The following sections describe the available finalizer types in more detail.
 ---
 
 :toc:
 
-Finalizers, as the name implies, finalize the execution of the pipeline and enrich the request with data such as subject information or authentication tokens required by the upstream service. The available options range from adding a simple header over a structured JWT in a specific header, to driving specific protocols, e.g. to obtain a token required by the upstream service.
-
-== Finalizer Types
-
-The following sections describe the available finalizer types in more detail. Some of these may support or require additional configuration. The corresponding properties are annotated with `mandatory`, respectively `optional` to denote configuration requirement, as well as with `overridable`, `not overriddable` and `partially overridable` to indicate whether the property can be overridden in a rule pipeline.
+Some finalizers may support or require additional configuration. The corresponding properties are annotated with `mandatory`, respectively `optional` to denote configuration requirement, as well as with `overridable`, `not overriddable` and `partially overridable` to indicate whether the property can be overridden in a rule pipeline.
 
 === Noop
 
