@@ -14,6 +14,8 @@
   }
 }
 
+
+
 footer {
   background-color: rgba(var(--bs-light-rgb), 1) !important;
 
@@ -77,7 +79,10 @@ h4 {
 
 .listingblock {
   pre {
+    border-radius: .4rem;
     padding: .75rem;
+    box-shadow: inset 0 0 0 1px #5c636a;
+    font-size: .875em;
   }
 
   b {
