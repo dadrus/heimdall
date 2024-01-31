@@ -1,5 +1,5 @@
 {{- define "main" -}}
-<nav class="navbar navbar-expand-lg bg-light" aria-label="Docs menu">
+<nav class="navbar __navbar-expand-lg bg-light" aria-label="Docs menu">
   <div class="container-xxl">
     <div class="row container-fluid">
       <doc-search class="col-auto me-auto" index-file="{{ .Site.Params.search_index_file }}"
@@ -10,7 +10,7 @@
           <div id="search-suggestions" class="shadow bg-white rounded collapse search-results"></div>
         </form>
       </doc-search>
-      <button class="col-auto navbar-toggler" type="button"
+      <button class="col-auto navbar-toggler d-xxl-none" type="button"
               data-bs-toggle="collapse" data-bs-target="#docsMenuContent"
               aria-controls="docsMenuContent" aria-expanded="false" aria-label="Open docs menu">
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-down-up"
@@ -20,7 +20,7 @@
         </svg>
       </button>
     </div>
-    <div class="row d-md-none">
+    <div class="row d-xxl-none">
       <div class="col-2 collapse navbar-collapse" id="docsMenuContent">
         {{ partial "sidebar/docs-menu.html" . }}
       </div>
@@ -29,16 +29,15 @@
 </nav>
 
 <div class="container-xxl d-xxl-flex">
-  <aside class="docs-side-toc d-none d-md-block pe-4 pt-4 flex-xxl-shrink-0">
+  <aside class="docs-side-toc d-none d-xxl-block pe-4 pt-4 flex-xxl-shrink-0">
     {{ partial "sidebar/docs-menu.html" . }}
   </aside>
 
-  <main class="container order-1">
-    <div class="row">
-      <article class="docs-content col-xl-10 col-md-12">
+  <main class="container order-1 d-flex flex-row">
+      <article class="docs-content __col-xl-10 __col-md-12 p-10">
         <h1>{{ .Title }}</h1>
         <p>{{ .Description }}</p>
-        <button class="btn btn-outline-secondary text-decoration-none d-md-none collapsed" type="button" data-bs-toggle="collapse"
+        <button class="btn btn-outline-secondary text-decoration-none d-xl-none collapsed" type="button" data-bs-toggle="collapse"
                 data-bs-target="#page-content-toc-collapsible" aria-expanded="false" aria-controls="page-content-toc-collapsible">
           On this page
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-chevron-expand" viewBox="0 0 16 16">
@@ -46,7 +45,7 @@
           </svg>
         </button>
 
-        <div id="page-content-toc-collapsible" class=" mb-3 d-md-none collapse text-muted docs-page-toc">
+        <div id="page-content-toc-collapsible" class=" mb-3 d-xl-none collapse text-muted docs-page-toc">
           <div class="card card-body">
             {{ .TableOfContents }}
           </div>
@@ -62,12 +61,11 @@
       </article>
 
       {{ if not .Params.notoc }}
-      <aside id="page-content-toc" class="docs-page-toc text-muted d-none d-md-block col-xl-2">
+      <aside id="page-content-toc" class="docs-page-toc text-muted d-none d-xl-block col-xl-2 p-2">
         <strong class="d-none d-md-block h6 pb-2 my-2 ms-3 border-bottom">On this page</strong>
         {{ .TableOfContents }}
       </aside>
       {{ end }}
-    </div>
   </main>
 </div>
 {{ end }}
