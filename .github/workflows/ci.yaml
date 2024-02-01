@@ -183,6 +183,7 @@ jobs:
         with:
           files: coverage.cov
           verbose: true
+          token: ${{ secrets.CODECOV_TOKEN }}
 
   prepare-release:
     runs-on: ubuntu-22.04
