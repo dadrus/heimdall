@@ -18,6 +18,10 @@ package redis
 
 import (
 	"github.com/mitchellh/mapstructure"
+
+	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/validation"
+	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
 func decodeConfig(input any, output any) error {
@@ -27,8 +31,19 @@ func decodeConfig(input any, output any) error {
 			ErrorUnused: true,
 		})
 	if err != nil {
-		return err
+		return errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+			"failed decoding redis cache config").CausedBy(err)
 	}
 
-	return dec.Decode(input)
+	if err = dec.Decode(input); err != nil {
+		return errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+			"failed decoding redis cache config").CausedBy(err)
+	}
+
+	if err = validation.ValidateStruct(output); err != nil {
+		return errorchain.NewWithMessagef(heimdall.ErrConfiguration,
+			"failed validating redis cache config").CausedBy(err)
+	}
+
+	return nil
 }
