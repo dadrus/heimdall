@@ -51,7 +51,7 @@ type Cache struct {
 
 func NewCache(conf map[string]any) (*Cache, error) {
 	type Config struct {
-		Addrs        []string    `mapstructure:"addrs" validate:"gt=0,dive,required"`
+		Addrs        []string    `mapstructure:"addrs"         validate:"gt=0,dive,required"`
 		Username     string      `mapstructure:"username"`
 		Password     string      `mapstructure:"password"`
 		DB           int         `mapstructure:"db"`
