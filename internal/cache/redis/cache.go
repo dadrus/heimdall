@@ -26,24 +26,11 @@ import (
 	"github.com/redis/rueidis/rueidisotel"
 	"github.com/rs/zerolog"
 
-	"github.com/dadrus/heimdall/internal/cache"
-	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
 var ErrConnectionCheckFailed = errors.New("cache connection failed")
-
-// by intention. Used only during application bootstrap.
-func init() { // nolint: gochecknoinits
-	cache.Register("redis", &cacheFactory{})
-}
-
-type cacheFactory struct{}
-
-func (*cacheFactory) Create(conf map[string]any) (cache.Cache, error) {
-	return NewCache(conf)
-}
 
 type Cache struct {
 	c   rueidis.Client
@@ -62,7 +49,6 @@ func NewCache(conf map[string]any) (*Cache, error) {
 			Username    string      `mapstructure:"username"`
 			Password    string      `mapstructure:"password"`
 			DB          int         `mapstructure:"db"`
-			TLS         *config.TLS `mapstructure:"tls"`
 			ClientCache ClientCache `mapstructure:"client_cache"`
 		}
 	)
@@ -82,13 +68,6 @@ func NewCache(conf map[string]any) (*Cache, error) {
 		Password:     cfg.Password,
 		DisableCache: cfg.ClientCache.Disabled,
 		SelectDB:     cfg.DB,
-	}
-
-	if cfg.TLS != nil {
-		if opts.TLSConfig, err = cfg.TLS.TLSConfig(); err != nil {
-			return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
-				"failed configuring tls for redis cache").CausedBy(err)
-		}
 	}
 
 	client, err := rueidisotel.NewClient(opts)

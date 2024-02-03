@@ -18,6 +18,7 @@ package redis
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -31,6 +32,8 @@ import (
 
 func TestNewCache(t *testing.T) {
 	t.Parallel()
+
+	db := miniredis.RunT(t)
 
 	for _, tc := range []struct {
 		uc     string
@@ -82,20 +85,13 @@ func TestNewCache(t *testing.T) {
 			},
 		},
 		{
-			uc: "with invalid tls config",
-			config: []byte(`
-addrs: 
- - "foo.local:12345"
-tls:	
-  trust_store:
-    path: "bar.cert"
-`),
+			uc:     "successful cache creation",
+			config: []byte(fmt.Sprintf("{addrs: [%s], client_cache: {disabled: true}}", db.Addr())),
 			assert: func(t *testing.T, err error, cch *Cache) {
 				t.Helper()
 
-				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.ErrorContains(t, err, "failed loading truststore")
+				require.NoError(t, err)
+				require.NotNil(t, cch)
 			},
 		},
 	} {
