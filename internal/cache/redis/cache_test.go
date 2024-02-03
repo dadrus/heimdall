@@ -81,6 +81,23 @@ func TestNewCache(t *testing.T) {
 				require.ErrorContains(t, err, "failed creating redis cache client")
 			},
 		},
+		{
+			uc: "with invalid tls config",
+			config: []byte(`
+addrs: 
+ - "foo.local:12345"
+tls:	
+  trust_store:
+    path: "bar.cert"
+`),
+			assert: func(t *testing.T, err error, cch *Cache) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorContains(t, err, "failed loading truststore")
+			},
+		},
 	} {
 		t.Run(tc.uc, func(t *testing.T) {
 			// GIVEN
@@ -89,6 +106,9 @@ func TestNewCache(t *testing.T) {
 
 			// WHEN
 			cch, err := NewCache(conf)
+			if err == nil {
+				defer cch.Stop(context.TODO())
+			}
 
 			// THEN
 			tc.assert(t, err, cch)
@@ -101,10 +121,12 @@ func TestCacheUsage(t *testing.T) {
 
 	db := miniredis.RunT(t)
 	cch, err := NewCache(map[string]any{
-		"addrs":         []string{db.Addr()},
-		"disable_cache": true,
+		"addrs":        []string{db.Addr()},
+		"client_cache": map[string]any{"disabled": true},
 	})
 	require.NoError(t, err)
+
+	defer cch.Stop(context.TODO())
 
 	for _, tc := range []struct {
 		uc             string

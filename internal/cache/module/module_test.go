@@ -74,22 +74,7 @@ func TestNewCache(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorContains(t, err, "'addr' is a required field")
-			},
-		},
-		{
-			uc: "Redis cache",
-			conf: &config.Configuration{
-				Cache: config.CacheConfig{
-					Type:   "redis",
-					Config: map[string]any{"Addr": "localhost.com:6379"},
-				},
-			},
-			assert: func(t *testing.T, err error, cch cache.Cache) {
-				t.Helper()
-
-				require.Error(t, err)
-				require.ErrorContains(t, err, "connect to redis cache")
+				require.ErrorContains(t, err, "'addrs' must contain more than 0 items")
 			},
 		},
 		{

@@ -46,23 +46,31 @@ func (*cacheFactory) Create(conf map[string]any) (cache.Cache, error) {
 }
 
 type Cache struct {
-	c rueidis.Client
+	c   rueidis.Client
+	ttl time.Duration
 }
 
 func NewCache(conf map[string]any) (*Cache, error) {
-	type Config struct {
-		Addrs        []string    `mapstructure:"addrs"         validate:"gt=0,dive,required"`
-		Username     string      `mapstructure:"username"`
-		Password     string      `mapstructure:"password"`
-		DB           int         `mapstructure:"db"`
-		TLS          *config.TLS `mapstructure:"tls"`
-		AdditionalCa string      `mapstructure:"additional_ca"`
-		DisableCache bool        `mapstructure:"disable_cache"`
-	}
+	type (
+		ClientCache struct {
+			Disabled bool          `mapstructure:"disabled"`
+			TTL      time.Duration `mapstructure:"ttl"`
+		}
 
-	var cfg Config
+		Config struct {
+			Addrs       []string    `mapstructure:"addrs"        validate:"gt=0,dive,required"`
+			Username    string      `mapstructure:"username"`
+			Password    string      `mapstructure:"password"`
+			DB          int         `mapstructure:"db"`
+			TLS         *config.TLS `mapstructure:"tls"`
+			ClientCache ClientCache `mapstructure:"client_cache"`
+		}
+	)
 
-	if err := decodeConfig(conf, &cfg); err != nil {
+	cfg := Config{ClientCache: ClientCache{TTL: time.Minute}}
+
+	err := decodeConfig(conf, &cfg)
+	if err != nil {
 		return nil, err
 	}
 
@@ -72,18 +80,15 @@ func NewCache(conf map[string]any) (*Cache, error) {
 		ShuffleInit:  true,
 		Username:     cfg.Username,
 		Password:     cfg.Password,
-		DisableCache: cfg.DisableCache,
+		DisableCache: cfg.ClientCache.Disabled,
 		SelectDB:     cfg.DB,
 	}
 
-	if cfg.TLS != nil && len(cfg.TLS.KeyStore.Path) != 0 {
-		tlsConfig, err := configureTLS(cfg.TLS, cfg.AdditionalCa)
-		if err != nil {
+	if cfg.TLS != nil {
+		if opts.TLSConfig, err = cfg.TLS.TLSConfig(); err != nil {
 			return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
 				"failed configuring tls for redis cache").CausedBy(err)
 		}
-
-		opts.TLSConfig = tlsConfig
 	}
 
 	client, err := rueidisotel.NewClient(opts)
@@ -92,12 +97,14 @@ func NewCache(conf map[string]any) (*Cache, error) {
 			"failed creating redis cache client").CausedBy(err)
 	}
 
-	if err := client.Do(context.Background(), client.B().Ping().Build()).Error(); err != nil {
+	if err = client.Do(context.Background(), client.B().Ping().Build()).Error(); err != nil {
+		client.Close()
+
 		return nil, errorchain.NewWithMessage(ErrConnectionCheckFailed, "failed connect to redis cache").
 			CausedBy(err)
 	}
 
-	return &Cache{c: client}, nil
+	return &Cache{c: client, ttl: cfg.ClientCache.TTL}, nil
 }
 
 func (c *Cache) Start(_ context.Context) error {
@@ -112,7 +119,7 @@ func (c *Cache) Stop(_ context.Context) error {
 }
 
 func (c *Cache) Get(ctx context.Context, key string) any {
-	val, err := c.c.DoCache(ctx, c.c.B().Get().Key(key).Cache(), time.Minute).ToString()
+	val, err := c.c.DoCache(ctx, c.c.B().Get().Key(key).Cache(), c.ttl).ToString()
 	if err != nil {
 		zerolog.Ctx(ctx).Warn().Err(err).Msg("Failed to fetch value from cache")
 
