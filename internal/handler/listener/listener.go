@@ -113,7 +113,7 @@ func newTLSListener(tlsConf *config.TLS, listener net.Listener) (net.Listener, e
 
 	if len(cfg.Certificates) == 0 {
 		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
-			"no tls server configuration available").CausedBy(err)
+			"no tls server key and certificate available")
 	}
 
 	return tls.NewListener(listener, cfg), nil
