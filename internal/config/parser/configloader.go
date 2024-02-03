@@ -20,9 +20,9 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/go-viper/mapstructure/v2"
 	"github.com/knadh/koanf/providers/confmap"
 	"github.com/knadh/koanf/v2"
-	"github.com/mitchellh/mapstructure"
 )
 
 type ConfigLoader interface {

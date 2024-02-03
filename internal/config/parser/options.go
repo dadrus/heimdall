@@ -19,7 +19,7 @@ package parser
 import (
 	"strings"
 
-	"github.com/mitchellh/mapstructure"
+	"github.com/go-viper/mapstructure/v2"
 )
 
 type ConfigValidator func(configPath string) error

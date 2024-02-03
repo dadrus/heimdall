@@ -18,6 +18,7 @@ require (
 	github.com/go-playground/locales v0.14.1
 	github.com/go-playground/universal-translator v0.18.1
 	github.com/go-playground/validator/v10 v10.17.0
+	github.com/go-viper/mapstructure/v2 v2.0.0-alpha.1
 	github.com/gobwas/glob v0.2.3
 	github.com/goccy/go-json v0.10.2
 	github.com/google/cel-go v0.19.0
@@ -36,7 +37,7 @@ require (
 	github.com/knadh/koanf/providers/env v0.1.0
 	github.com/knadh/koanf/providers/rawbytes v0.1.0
 	github.com/knadh/koanf/providers/structs v0.1.0
-	github.com/knadh/koanf/v2 v2.0.1
+	github.com/knadh/koanf/v2 v2.0.2
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/ory/ladon v1.2.0
 	github.com/pquerna/cachecontrol v0.2.0
