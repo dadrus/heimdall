@@ -18,7 +18,6 @@ package config
 
 import (
 	"crypto/tls"
-	"crypto/x509"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/keystore"
@@ -69,10 +68,7 @@ type TLS struct {
 }
 
 func (t *TLS) TLSConfig() (*tls.Config, error) {
-	var (
-		certPool *x509.CertPool
-		eeCerts  []tls.Certificate
-	)
+	var eeCerts []tls.Certificate
 
 	if len(t.KeyStore.Path) != 0 { //nolint:nestif
 		ks, err := keystore.NewKeyStoreFromPEMFile(t.KeyStore.Path, t.KeyStore.Password)
@@ -107,7 +103,6 @@ func (t *TLS) TLSConfig() (*tls.Config, error) {
 		Certificates: eeCerts,
 		MinVersion:   t.MinVersion.OrDefault(),
 		NextProtos:   []string{"h2", "http/1.1"},
-		RootCAs:      certPool,
 	}
 
 	if cfg.MinVersion != tls.VersionTLS13 {
