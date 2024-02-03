@@ -28,6 +28,7 @@ jobs:
       image_config_changed: ${{steps.image-config-changes.outputs.count > 0}}
       helm_chart_changed: ${{steps.helm-chart-changes.outputs.count > 0}}
       docs_changed: ${{steps.docs-changes.outputs.count > 0}}
+      ci_config_changed: ${{steps.ci-changes.outputs.count > 0}}
     steps:
       - name: Checkout repository
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
@@ -67,12 +68,20 @@ jobs:
         with:
           PATTERNS: |
             docs/**
+      - name: Check CI settings changes
+        id: ci-changes
+        uses: technote-space/get-diff-action@v6
+        with:
+          PATTERNS: |
+            .github/workflows/*.yaml
 
   check-licenses:
     runs-on: ubuntu-22.04
     needs:
       - check-changes
-    if: needs.check-changes.outputs.code_changed == 'true'
+    if: >
+      needs.check-changes.outputs.code_changed == 'true' || 
+      needs.check-changes.outputs.ci_config_changed == 'true'
     steps:
       - name: Checkout repository
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
@@ -89,7 +98,9 @@ jobs:
     runs-on: ubuntu-22.04
     needs:
       - check-changes
-    if: needs.check-changes.outputs.code_changed == 'true'
+    if: >
+      needs.check-changes.outputs.code_changed == 'true' || 
+      needs.check-changes.outputs.ci_config_changed == 'true'
     steps:
       - name: Checkout repository
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
@@ -107,7 +118,9 @@ jobs:
     runs-on: ubuntu-22.04
     needs:
       - check-changes
-    if: needs.check-changes.outputs.docs_changed == 'true'
+    if: > 
+      needs.check-changes.outputs.docs_changed == 'true' || 
+      needs.check-changes.outputs.ci_config_changed == 'true'
     steps:
       - name: Checkout repository
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
@@ -124,7 +137,9 @@ jobs:
     runs-on: ubuntu-22.04
     needs:
       - check-changes
-    if: needs.check-changes.outputs.image_config_changed == 'true'
+    if: > 
+      needs.check-changes.outputs.image_config_changed == 'true' || 
+      needs.check-changes.outputs.ci_config_changed == 'true'
     steps:
       - name: Checkout repository
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
@@ -141,7 +156,9 @@ jobs:
     runs-on: ubuntu-22.04
     needs:
       - check-changes
-    if: needs.check-changes.outputs.helm_chart_changed == 'true'
+    if: > 
+      needs.check-changes.outputs.helm_chart_changed == 'true' || 
+      needs.check-changes.outputs.ci_config_changed == 'true'
     steps:
       - name: Checkout repository
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
@@ -168,7 +185,10 @@ jobs:
     runs-on: ubuntu-22.04
     needs:
       - check-changes
-    if: needs.check-changes.outputs.code_changed == 'true' || needs.check-changes.outputs.test_data_changed == 'true'
+    if: >
+      needs.check-changes.outputs.code_changed == 'true' || 
+      needs.check-changes.outputs.test_data_changed == 'true' ||
+      needs.check-changes.outputs.ci_config_changed == 'true'
     steps:
       - name: Checkout repository
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
@@ -179,10 +199,11 @@ jobs:
       - name: Test
         run: go test -v -coverprofile=coverage.cov -coverpkg=./... ./...
       - name: Code Coverage
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v4
         with:
           files: coverage.cov
           verbose: true
+          token: ${{ secrets.CODECOV_TOKEN }}
 
   prepare-release:
     runs-on: ubuntu-22.04
@@ -247,7 +268,7 @@ jobs:
         with:
           go-version: "${{ env.GO_VERSION }}"
       - name: Install Cosign
-        uses: sigstore/cosign-installer@v3.3.0
+        uses: sigstore/cosign-installer@v3.4.0
         with:
           cosign-release: "${{ env.COSIGN_VERSION }}"
       - name: Install CycloneDX gomod
@@ -284,7 +305,7 @@ jobs:
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
       - name: Install Cosign
         if: github.ref == 'refs/heads/main'
-        uses: sigstore/cosign-installer@v3.3.0
+        uses: sigstore/cosign-installer@v3.4.0
         with:
           cosign-release: "${{ env.COSIGN_VERSION }}"
       - name: Set up Go # required as the sbom generator is compiled using go < 1.21
@@ -395,7 +416,7 @@ jobs:
           export version=$(echo ${{ needs.prepare-release.outputs.tag_name }} |  sed 's/v//g')
           echo "result=$version" >> $GITHUB_OUTPUT
       - name: Install Cosign
-        uses: sigstore/cosign-installer@v3.3.0
+        uses: sigstore/cosign-installer@v3.4.0
         with:
           cosign-release: "${{ env.COSIGN_VERSION }}"
       - name: Set up Go # required as the sbom generator is compiled using go < 1.21
@@ -459,7 +480,7 @@ jobs:
           COSIGN_REPOSITORY: ${{ github.repository }}-sbom
         run: cosign attest --yes --predicate CycloneDX-SBOM.json --type cyclonedx ${{ github.repository }}@${{ steps.publish-image.outputs.digest }}
       - name: Update DockerHub repository description & readme
-        uses: peter-evans/dockerhub-description@v3
+        uses: peter-evans/dockerhub-description@v4
         with:
           username: ${{ secrets.DOCKERHUB_USER }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
@@ -507,7 +528,9 @@ jobs:
     needs:
       - prepare-release
       - check-changes
-    if: needs.prepare-release.outputs.release_created == false && needs.check-changes.outputs.docs_changed == 'true'
+    if: >
+      needs.prepare-release.outputs.release_created == false && 
+      (needs.check-changes.outputs.docs_changed == 'true' || needs.check-changes.outputs.ci_config_changed == 'true')
     steps:
       - name: Checkout repository
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
