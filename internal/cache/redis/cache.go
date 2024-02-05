@@ -53,7 +53,7 @@ func NewCache(conf map[string]any) (*Cache, error) {
 		}
 	)
 
-	cfg := Config{ClientCache: ClientCache{TTL: time.Minute}}
+	cfg := Config{ClientCache: ClientCache{TTL: 5 * time.Minute}} //nolint:gomnd
 
 	err := decodeConfig(conf, &cfg)
 	if err != nil {
