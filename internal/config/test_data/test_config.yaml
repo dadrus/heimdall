@@ -111,6 +111,17 @@ serve:
       key_store:
         path: /path/to/keystore/file.pem
 
+cache:
+  type: redis
+  config:
+    addrs:
+      - foo:12345
+    db: 0
+    password: foobar
+    client_cache:
+      disabled: false
+      ttl: 5m
+
 log:
   level: debug
   format: text
