@@ -86,7 +86,7 @@ func defaultConfig() Configuration {
 			},
 		},
 		Cache: CacheConfig{
-			Type:   "memory",
+			Type:   "in-memory",
 			Config: map[string]any{},
 		},
 		Log: LoggingConfig{
