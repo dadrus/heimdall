@@ -140,57 +140,15 @@ func TestNewListener(t *testing.T) {
 			},
 		},
 		{
-			uc:      "fails due to not existent key for the given key id for TLS usage",
-			network: "tcp",
-			serviceConf: config.ServiceConfig{
-				TLS: &config.TLS{
-					KeyStore:   config.KeyStore{Path: pemFile.Name()},
-					KeyID:      "foo",
-					MinVersion: tls.VersionTLS12,
-				},
-			},
+			uc:          "fails due to not specified key store",
+			network:     "tcp",
+			serviceConf: config.ServiceConfig{TLS: &config.TLS{}},
 			assert: func(t *testing.T, err error, ln net.Listener, port string) {
 				t.Helper()
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "no such key")
-			},
-		},
-		{
-			uc:      "fails due to not present certificates for the given key id",
-			network: "tcp",
-			serviceConf: config.ServiceConfig{
-				TLS: &config.TLS{
-					KeyStore:   config.KeyStore{Path: pemFile.Name()},
-					KeyID:      "key2",
-					MinVersion: tls.VersionTLS12,
-				},
-			},
-			assert: func(t *testing.T, err error, ln net.Listener, port string) {
-				t.Helper()
-
-				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				assert.Contains(t, err.Error(), "no certificate present")
-			},
-		},
-		{
-			uc:      "successful with default key",
-			network: "tcp",
-			serviceConf: config.ServiceConfig{
-				TLS: &config.TLS{
-					KeyStore:   config.KeyStore{Path: pemFile.Name()},
-					MinVersion: tls.VersionTLS12,
-				},
-			},
-			assert: func(t *testing.T, err error, ln net.Listener, port string) {
-				t.Helper()
-
-				require.NoError(t, err)
-				require.NotNil(t, ln)
-				assert.Equal(t, "tcp", ln.Addr().Network())
-				assert.Contains(t, ln.Addr().String(), port)
+				assert.Contains(t, err.Error(), "no tls server key and certificate")
 			},
 		},
 		{
