@@ -53,6 +53,15 @@ func (ts *TrustStore) addEntry(strict bool) pemx.PEMBlockCallback {
 	}
 }
 
+func (ts *TrustStore) CertPool() *x509.CertPool {
+	pool := x509.NewCertPool()
+	for _, cert := range *ts {
+		pool.AddCert(cert)
+	}
+
+	return pool
+}
+
 func NewTrustStoreFromPEMFile(pemFilePath string, strict bool) (TrustStore, error) {
 	fInfo, err := os.Stat(pemFilePath)
 	if err != nil {

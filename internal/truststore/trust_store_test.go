@@ -69,3 +69,60 @@ func TestNewKeyStoreFromPEMBytes(t *testing.T) {
 	assert.Equal(t, intCA1Cert, ts[0])
 	assert.Equal(t, rootCA1.Certificate, ts[1])
 }
+
+func TestTrustStoreCertPool(t *testing.T) {
+	// GIVEN
+	// ROOT CAs
+	rootCA1, err := testsupport.NewRootCA("Test Root CA 1", time.Hour*24)
+	require.NoError(t, err)
+
+	// INT CA
+	intCA1PrivKey, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
+	require.NoError(t, err)
+	intCA1Cert, err := rootCA1.IssueCertificate(
+		testsupport.WithSubject(pkix.Name{
+			CommonName:   "Test Int CA 1",
+			Organization: []string{"Test"},
+			Country:      []string{"EU"},
+		}),
+		testsupport.WithIsCA(),
+		testsupport.WithValidity(time.Now(), time.Hour*24),
+		testsupport.WithSubjectPubKey(&intCA1PrivKey.PublicKey, x509.ECDSAWithSHA384))
+	require.NoError(t, err)
+
+	intCA1 := testsupport.NewCA(intCA1PrivKey, intCA1Cert)
+
+	// EE CERTS
+	ee1PrivKey, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
+	require.NoError(t, err)
+
+	ee1Cert, err := intCA1.IssueCertificate(
+		testsupport.WithSubject(pkix.Name{
+			CommonName:   "Test EE 1",
+			Organization: []string{"Test"},
+			Country:      []string{"EU"},
+		}),
+		testsupport.WithValidity(time.Now(), time.Hour*24),
+		testsupport.WithSubjectPubKey(&ee1PrivKey.PublicKey, x509.ECDSAWithSHA384),
+		testsupport.WithKeyUsage(x509.KeyUsageDigitalSignature))
+	require.NoError(t, err)
+
+	pemBytes, err := pemx.BuildPEM(
+		pemx.WithX509Certificate(intCA1Cert),
+		pemx.WithX509Certificate(rootCA1.Certificate),
+	)
+	require.NoError(t, err)
+
+	ts, err := NewTrustStoreFromPEMBytes(pemBytes, false)
+	require.NoError(t, err)
+
+	// WHEN
+	cp := ts.CertPool()
+
+	// THEN
+	require.NotNil(t, cp)
+
+	chains, err := ee1Cert.Verify(x509.VerifyOptions{Roots: cp})
+	require.NoError(t, err)
+	assert.Len(t, chains, 1)
+}

@@ -24,7 +24,6 @@ import (
 
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/keystore"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
@@ -107,42 +106,14 @@ func New(network, address string, tlsConf *config.TLS) (net.Listener, error) {
 }
 
 func newTLSListener(tlsConf *config.TLS, listener net.Listener) (net.Listener, error) {
-	var (
-		entry *keystore.Entry
-		err   error
-	)
-
-	ks, err := keystore.NewKeyStoreFromPEMFile(tlsConf.KeyStore.Path, tlsConf.KeyStore.Password)
+	cfg, err := tlsConf.TLSConfig()
 	if err != nil {
-		return nil, errorchain.NewWithMessage(heimdall.ErrInternal, "failed loading keystore").
-			CausedBy(err)
+		return nil, err
 	}
 
-	if len(tlsConf.KeyID) != 0 {
-		if entry, err = ks.GetKey(tlsConf.KeyID); err != nil {
-			return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
-				"failed retrieving key from key store").CausedBy(err)
-		}
-	} else {
-		entry = ks.Entries()[0]
-	}
-
-	cert, err := keystore.ToTLSCertificate(entry)
-	if err != nil {
+	if len(cfg.Certificates) == 0 {
 		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration,
-			"key store entry is not suitable for TLS").CausedBy(err)
-	}
-
-	// nolint:gosec
-	// configuration ensures, TLS versions below 1.2 are not possible
-	cfg := &tls.Config{
-		Certificates: []tls.Certificate{cert},
-		MinVersion:   tlsConf.MinVersion.OrDefault(),
-		NextProtos:   []string{"h2", "http/1.1"},
-	}
-
-	if cfg.MinVersion != tls.VersionTLS13 {
-		cfg.CipherSuites = tlsConf.CipherSuites.OrDefault()
+			"no tls server key and certificate available")
 	}
 
 	return tls.NewListener(listener, cfg), nil

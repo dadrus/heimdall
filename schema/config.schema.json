@@ -27,6 +27,9 @@
       "description": "TLS Configuration",
       "type": "object",
       "additionalProperties": false,
+      "required": [
+        "key_store"
+      ],
       "properties": {
         "key_store": {
           "$ref": "#/definitions/keyStore"
