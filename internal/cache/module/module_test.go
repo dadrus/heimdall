@@ -51,7 +51,7 @@ func TestNewCache(t *testing.T) {
 			uc: "in memory cache",
 			conf: &config.Configuration{
 				Cache: config.CacheConfig{
-					Type: "memory",
+					Type: "in-memory",
 				},
 			},
 			assert: func(t *testing.T, err error, cch cache.Cache) {

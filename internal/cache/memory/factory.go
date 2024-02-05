@@ -4,7 +4,7 @@ import "github.com/dadrus/heimdall/internal/cache"
 
 // by intention. Used only during application bootstrap.
 func init() { // nolint: gochecknoinits
-	cache.Register("memory", &factory{})
+	cache.Register("in-memory", &factory{})
 }
 
 type factory struct{}
