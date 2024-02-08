@@ -27,7 +27,7 @@ class SearchResult {
 
     render() {
         return `
-        <div class="mb-4">
+        <div class="p-3">
           <div class="mb-1 fw-bold" >${this.sections.join(" / ")} / ${this.title}</div>
           <div class="list-group">${this.items.reduce((prev, cur) => prev + cur.render(), "")}</div>
         </div>`
@@ -48,7 +48,7 @@ class DocSearch extends HTMLElement {
 
         const searchForm = document.getElementById("docs-search");
         const searchSuggestions = bs.Collapse.getOrCreateInstance(
-             document.getElementById("search-suggestions"), {toggle: false});
+            document.getElementById("search-suggestions"), {toggle: false});
 
         searchForm.addEventListener("keydown", (ev) => {
             if (["Esc", "Escape"].includes(ev.key)) {
@@ -63,8 +63,10 @@ class DocSearch extends HTMLElement {
 
             if (searchForm.contains(document.activeElement)) {
                 searchSuggestions.show();
+                document.body.style.overflow = "hidden";
             } else {
                 searchSuggestions.hide();
+                document.body.style.overflow = "auto";
             }
         }
 
