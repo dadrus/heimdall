@@ -151,7 +151,7 @@
                   "default": false
                 },
                 "ttl": {
-                  "description": " Specifies the maximum TTL on the client side for all used keys. If the key's TTL on the server is smaller than the client side TTL, the client side TTL will be capped.",
+                  "description": "Specifies the maximum TTL on the client side for all used keys. If the key's TTL on the server is smaller than the client side TTL, the client side TTL will be capped.",
                   "type": "string",
                   "pattern": "^[0-9]+(ns|us|ms|s|m|h)$",
                   "default": "5m",
