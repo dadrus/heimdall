@@ -10,7 +10,7 @@
           <div id="search-suggestions" class="shadow bg-white rounded collapse search-results"></div>
         </form>
       </doc-search>
-      <button class="col-auto navbar-toggler" type="button"
+      <button class="col-auto ms-auto d-md-none navbar-toggler" type="button"
               data-bs-toggle="collapse" data-bs-target="#docsMenuContent"
               aria-controls="docsMenuContent" aria-expanded="false" aria-label="Open docs menu">
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-down-up"
@@ -28,26 +28,24 @@
   </div>
 </nav>
 
-<div class="container-xxl d-xxl-flex">
+<div class="container-md d-md-flex container-xxl d-xxl-flex">
   <aside class="d-none d-md-block pe-4 pt-4 flex-xxl-shrink-0">
     {{ partial "sidebar/docs-menu.html" . }}
   </aside>
 
-  <main class="px-3 pt-4 flex-xxl-grow-0">
+  <main class="px-3 pt-4">
     <h1>{{ .Title }}</h1>
     <div>
       <linkable-headline-area>
-        <div class="row">
+        <div class="row gap-2">
           {{ $currentSection := .CurrentSection }}
           {{ range where .Site.RegularPages.ByTitle "Section" .Section }}
           {{ if in (.RelPermalink | string) $currentSection.RelPermalink }}
-          <div class="col-sm-1 col-md-3 col-xxl-4">
-            <div class="card my-3">
-              <div class="card-body">
-                <h5 class="card-title">{{ .Params.title | title }}</h5>
-                <p class="card-text">{{ .Description }}</p>
-                <a class="stretched-link" href="{{ .RelPermalink }}">Read &rarr;</a>
-              </div>
+          <div class="gridcol card my-3">
+            <div class="card-body d-flex flex-col flex-wrap">
+              <h5 class="card-title">{{ .Params.title | title }}</h5>
+              <p class="card-text">{{ .Description }}</p>
+              <a class="stretched-link align-self-end" href="{{ .RelPermalink }}">Read &rarr;</a>
             </div>
           </div>
           {{ end }}
