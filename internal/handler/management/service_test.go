@@ -131,9 +131,9 @@ func (suite *ServiceTestSuite) SetupTest() {
 	suite.srv = newService(conf, log.Logger, suite.signer)
 
 	go func() {
-		err = suite.srv.Serve(listener)
-		suite.Require().ErrorIs(err, http.ErrServerClosed)
+		suite.srv.Serve(listener)
 	}()
+
 	time.Sleep(50 * time.Millisecond)
 }
 

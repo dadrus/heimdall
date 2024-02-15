@@ -36,7 +36,7 @@ func TestValuesMerge(t *testing.T) {
 	}{
 		{
 			uc: "original is nil, new is nil",
-			assert: func(t *testing.T, merged Values, orig Values) {
+			assert: func(t *testing.T, merged Values, _ Values) {
 				t.Helper()
 
 				assert.Nil(t, merged)

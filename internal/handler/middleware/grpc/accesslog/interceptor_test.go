@@ -18,7 +18,7 @@ package accesslog
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"net"
 	"net/http"
 	"strings"
@@ -109,11 +109,11 @@ func TestAccessLogInterceptorForKnownService(t *testing.T) {
 				assert.Equal(t, logEvent1["_grpc_method"], logEvent2["_grpc_method"])
 				assert.Contains(t, logEvent2, "_trace_id")
 				assert.Contains(t, logEvent2, "_trace_id")
-				assert.Equal(t, logEvent2["_trace_id"], logEvent2["_trace_id"])
-				assert.Equal(t, logEvent2["_parent_id"], logEvent2["_parent_id"])
+				assert.Equal(t, logEvent1["_trace_id"], logEvent2["_trace_id"])
+				assert.Equal(t, logEvent1["_parent_id"], logEvent2["_parent_id"])
 				assert.Equal(t, true, logEvent2["_access_granted"]) //nolint:testifylint
 				assert.Equal(t, "foo", logEvent2["_subject"])
-				assert.Equal(t, float64(codes.OK), logEvent2["_grpc_status_code"])
+				assert.InDelta(t, float64(codes.OK), logEvent2["_grpc_status_code"], 0.001)
 				assert.Equal(t, "TX finished", logEvent2["message"])
 			},
 		},
@@ -137,7 +137,7 @@ func TestAccessLogInterceptorForKnownService(t *testing.T) {
 				t.Helper()
 
 				m.On("Check", mock.Anything, mock.Anything).
-					Return(nil, fmt.Errorf("test error"))
+					Return(nil, errors.New("test error"))
 			},
 			assert: func(t *testing.T, logEvent1, logEvent2 map[string]any) {
 				t.Helper()
@@ -160,14 +160,14 @@ func TestAccessLogInterceptorForKnownService(t *testing.T) {
 				assert.Contains(t, logEvent2, "_tx_duration_ms")
 				assert.Contains(t, logEvent2, "_client_ip")
 				assert.Equal(t, logEvent1["_grpc_method"], logEvent2["_grpc_method"])
-				assert.Equal(t, logEvent2["_trace_id"], logEvent2["_trace_id"])
-				assert.Equal(t, logEvent2["_parent_id"], logEvent2["_parent_id"])
-				assert.Equal(t, logEvent2["_span_id"], logEvent2["_span_id"])
+				assert.Equal(t, logEvent1["_trace_id"], logEvent2["_trace_id"])
+				assert.Equal(t, logEvent1["_parent_id"], logEvent2["_parent_id"])
+				assert.Equal(t, logEvent1["_span_id"], logEvent2["_span_id"])
 				assert.Equal(t, false, logEvent2["_access_granted"]) //nolint:testifylint
 				assert.Equal(t, "test error", logEvent2["error"])
 				assert.Equal(t, "for=127.0.0.1", logEvent1["_forwarded"])
 				assert.Equal(t, "127.0.0.1", logEvent1["_x_forwarded_for"])
-				assert.Equal(t, float64(codes.Unknown), logEvent2["_grpc_status_code"])
+				assert.InDelta(t, float64(codes.Unknown), logEvent2["_grpc_status_code"], 0.001)
 				assert.Equal(t, "TX finished", logEvent2["message"])
 			},
 		},
@@ -185,7 +185,7 @@ func TestAccessLogInterceptorForKnownService(t *testing.T) {
 					mock.MatchedBy(
 						func(ctx context.Context) bool {
 							accesscontext.SetSubject(ctx, "bar")
-							accesscontext.SetError(ctx, fmt.Errorf("test error"))
+							accesscontext.SetError(ctx, errors.New("test error"))
 
 							return true
 						},
@@ -218,12 +218,12 @@ func TestAccessLogInterceptorForKnownService(t *testing.T) {
 				assert.Equal(t, logEvent1["_grpc_method"], logEvent2["_grpc_method"])
 				assert.Contains(t, logEvent2, "_trace_id")
 				assert.Contains(t, logEvent2, "_trace_id")
-				assert.Equal(t, logEvent2["_trace_id"], logEvent2["_trace_id"])
-				assert.Equal(t, logEvent2["_parent_id"], logEvent2["_parent_id"])
+				assert.Equal(t, logEvent1["_trace_id"], logEvent2["_trace_id"])
+				assert.Equal(t, logEvent1["_parent_id"], logEvent2["_parent_id"])
 				assert.Equal(t, false, logEvent2["_access_granted"]) //nolint:testifylint
 				assert.Equal(t, "bar", logEvent2["_subject"])
 				assert.Equal(t, "test error", logEvent2["error"])
-				assert.Equal(t, float64(codes.OK), logEvent2["_grpc_status_code"])
+				assert.InDelta(t, float64(codes.OK), logEvent2["_grpc_status_code"], 0.001)
 				assert.Equal(t, "TX finished", logEvent2["message"])
 			},
 		},
@@ -254,8 +254,7 @@ func TestAccessLogInterceptorForKnownService(t *testing.T) {
 			envoy_auth.RegisterAuthorizationServer(srv, handler)
 
 			go func() {
-				err = srv.Serve(lis)
-				require.NoError(t, err)
+				srv.Serve(lis)
 			}()
 
 			client := envoy_auth.NewAuthorizationClient(conn)
@@ -312,7 +311,7 @@ func TestAccessLogInterceptorForUnknownService(t *testing.T) {
 	defer conn.Close()
 
 	srv := grpc.NewServer(
-		grpc.UnknownServiceHandler(func(srv interface{}, stream grpc.ServerStream) error {
+		grpc.UnknownServiceHandler(func(_ interface{}, _ grpc.ServerStream) error {
 			return status.Error(codes.Unknown, "unknown service or method")
 		}),
 		grpc.StatsHandler(otelgrpc.NewServerHandler()),
@@ -321,8 +320,7 @@ func TestAccessLogInterceptorForUnknownService(t *testing.T) {
 	envoy_auth.RegisterAuthorizationServer(srv, handler)
 
 	go func() {
-		err = srv.Serve(lis)
-		require.NoError(t, err)
+		srv.Serve(lis)
 	}()
 
 	client := mocks2.NewTestClient(conn)
@@ -358,10 +356,10 @@ func TestAccessLogInterceptorForUnknownService(t *testing.T) {
 	assert.Equal(t, logEvent1["_grpc_method"], logEvent2["_grpc_method"])
 	assert.Contains(t, logEvent2, "_trace_id")
 	assert.Contains(t, logEvent2, "_trace_id")
-	assert.Equal(t, logEvent2["_trace_id"], logEvent2["_trace_id"])
-	assert.Equal(t, logEvent2["_parent_id"], logEvent2["_parent_id"])
+	assert.Equal(t, logEvent1["_trace_id"], logEvent2["_trace_id"])
+	assert.Equal(t, logEvent1["_parent_id"], logEvent2["_parent_id"])
 	assert.Equal(t, false, logEvent2["_access_granted"]) //nolint:testifylint
 	assert.Contains(t, logEvent2["error"], "unknown service or method")
-	assert.Equal(t, float64(codes.Unknown), logEvent2["_grpc_status_code"])
+	assert.InDelta(t, float64(codes.Unknown), logEvent2["_grpc_status_code"], 0.001)
 	assert.Equal(t, "TX finished", logEvent2["message"])
 }

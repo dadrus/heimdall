@@ -91,7 +91,7 @@ nested_2:
 		{
 			uc:     "invalid yaml content",
 			config: []byte("foobar"),
-			assert: func(t *testing.T, err error, kanf *koanf.Koanf) {
+			assert: func(t *testing.T, err error, _ *koanf.Koanf) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -101,7 +101,7 @@ nested_2:
 		{
 			uc:     "invalid yaml env substitution",
 			config: []byte("${:}"),
-			assert: func(t *testing.T, err error, kanf *koanf.Koanf) {
+			assert: func(t *testing.T, err error, _ *koanf.Koanf) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -117,7 +117,7 @@ nested_2:
 				err := file.Chmod(0o222)
 				require.NoError(t, err)
 			},
-			assert: func(t *testing.T, err error, kanf *koanf.Koanf) {
+			assert: func(t *testing.T, err error, _ *koanf.Koanf) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -127,7 +127,7 @@ nested_2:
 	} {
 		t.Run(tc.uc, func(t *testing.T) {
 			// GIVEN
-			chmod := x.IfThenElse(tc.chmod != nil, tc.chmod, func(t *testing.T, file *os.File) { t.Helper() })
+			chmod := x.IfThenElse(tc.chmod != nil, tc.chmod, func(t *testing.T, _ *os.File) { t.Helper() })
 
 			tempFile, err := os.CreateTemp("", "config-test-*")
 			require.NoError(t, err)

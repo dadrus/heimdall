@@ -50,7 +50,7 @@ func NewLogger(conf config.LoggingConfig) zerolog.Logger {
 		Str("host", x.IfThenElse(err != nil, hostname, "unknown")).
 		Timestamp().
 		Logger().
-		Hook(zerolog.HookFunc(func(e *zerolog.Event, level zerolog.Level, message string) {
+		Hook(zerolog.HookFunc(func(e *zerolog.Event, level zerolog.Level, _ string) {
 			if level != zerolog.NoLevel {
 				e.Int8("level", int8(toSyslogLevel(level)))
 			}

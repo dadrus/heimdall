@@ -54,7 +54,7 @@ func TestMatcherDecodeHookFunc(t *testing.T) {
 match: 
   strategy: foo
 `),
-			assert: func(t *testing.T, err error, matcher *Matcher) {
+			assert: func(t *testing.T, err error, _ *Matcher) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -67,7 +67,7 @@ match:
 match: 
   url: 1
 `),
-			assert: func(t *testing.T, err error, matcher *Matcher) {
+			assert: func(t *testing.T, err error, _ *Matcher) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -81,7 +81,7 @@ match:
   url: foo.bar
   strategy: true
 `),
-			assert: func(t *testing.T, err error, matcher *Matcher) {
+			assert: func(t *testing.T, err error, _ *Matcher) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -95,7 +95,7 @@ match:
   url: foo.bar
   strategy: foo
 `),
-			assert: func(t *testing.T, err error, matcher *Matcher) {
+			assert: func(t *testing.T, err error, _ *Matcher) {
 				t.Helper()
 
 				require.Error(t, err)

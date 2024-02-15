@@ -53,7 +53,7 @@ func TestNewProvider(t *testing.T) {
 		{
 			uc:   "with unknown field",
 			conf: []byte(`foo: bar`),
-			assert: func(t *testing.T, err error, prov *provider) {
+			assert: func(t *testing.T, err error, _ *provider) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -64,7 +64,7 @@ func TestNewProvider(t *testing.T) {
 		{
 			uc:   "without endpoints",
 			conf: []byte(`watch_interval: 5s`),
-			assert: func(t *testing.T, err error, prov *provider) {
+			assert: func(t *testing.T, err error, _ *provider) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -79,7 +79,7 @@ watch_interval: 5s
 endpoints:
 - foo: bar
 `),
-			assert: func(t *testing.T, err error, prov *provider) {
+			assert: func(t *testing.T, err error, _ *provider) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -93,7 +93,7 @@ endpoints:
 endpoints:
 - method: POST
 `),
-			assert: func(t *testing.T, err error, prov *provider) {
+			assert: func(t *testing.T, err error, _ *provider) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -186,7 +186,7 @@ func TestProviderLifecycle(t *testing.T) {
 		rcm           sync.Mutex
 	)
 
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		rcm.Lock()
 		requestCount++
 		rcm.Unlock()
@@ -214,7 +214,7 @@ endpoints:
 
 				w.WriteHeader(http.StatusBadRequest)
 			},
-			assert: func(t *testing.T, logs fmt.Stringer, processor *mocks.RuleSetProcessorMock) {
+			assert: func(t *testing.T, logs fmt.Stringer, _ *mocks.RuleSetProcessorMock) {
 				t.Helper()
 
 				time.Sleep(250 * time.Millisecond)
@@ -235,7 +235,7 @@ endpoints:
 
 				w.WriteHeader(http.StatusOK)
 			},
-			assert: func(t *testing.T, logs fmt.Stringer, processor *mocks.RuleSetProcessorMock) {
+			assert: func(t *testing.T, logs fmt.Stringer, _ *mocks.RuleSetProcessorMock) {
 				t.Helper()
 
 				time.Sleep(250 * time.Millisecond)
@@ -617,7 +617,7 @@ rules:
 
 				processor.EXPECT().OnCreated(mock.Anything).Return(testsupport.ErrTestPurpose).Once()
 			},
-			assert: func(t *testing.T, logs fmt.Stringer, processor *mocks.RuleSetProcessorMock) {
+			assert: func(t *testing.T, logs fmt.Stringer, _ *mocks.RuleSetProcessorMock) {
 				t.Helper()
 
 				time.Sleep(200 * time.Millisecond)
@@ -668,7 +668,7 @@ rules:
 				processor.EXPECT().OnCreated(mock.Anything).Return(nil).Once()
 				processor.EXPECT().OnUpdated(mock.Anything).Return(testsupport.ErrTestPurpose)
 			},
-			assert: func(t *testing.T, logs fmt.Stringer, processor *mocks.RuleSetProcessorMock) {
+			assert: func(t *testing.T, logs fmt.Stringer, _ *mocks.RuleSetProcessorMock) {
 				t.Helper()
 
 				time.Sleep(1 * time.Second)
@@ -712,7 +712,7 @@ rules:
 				call := processor.EXPECT().OnCreated(mock.Anything).Return(nil).Once()
 				processor.EXPECT().OnDeleted(mock.Anything).Return(testsupport.ErrTestPurpose).NotBefore(call)
 			},
-			assert: func(t *testing.T, logs fmt.Stringer, processor *mocks.RuleSetProcessorMock) {
+			assert: func(t *testing.T, logs fmt.Stringer, _ *mocks.RuleSetProcessorMock) {
 				t.Helper()
 
 				time.Sleep(1 * time.Second)
@@ -728,7 +728,7 @@ rules:
 
 			setupProcessor := x.IfThenElse(tc.setupProcessor != nil,
 				tc.setupProcessor,
-				func(t *testing.T, processor *mocks.RuleSetProcessorMock) { t.Helper() })
+				func(t *testing.T, _ *mocks.RuleSetProcessorMock) { t.Helper() })
 
 			providerConf, err := testsupport.DecodeTestConfig(tc.conf)
 			require.NoError(t, err)

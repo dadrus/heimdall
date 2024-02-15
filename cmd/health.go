@@ -35,7 +35,7 @@ var healthCmd = &cobra.Command{
 	Use:     "health",
 	Short:   "Checks the health status of a Heimdall deployment",
 	Example: "heimdall health -e https://heimdall.local",
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(cmd *cobra.Command, _ []string) {
 		endpointURL, _ := cmd.Flags().GetString("endpoint")
 		outputFormat, _ := cmd.Flags().GetString("output")
 

@@ -516,7 +516,7 @@ func TestMergeExpectations(t *testing.T) {
 		{
 			uc:     "with nil target",
 			source: &Expectation{},
-			assert: func(t *testing.T, merged *Expectation, source *Expectation, target *Expectation) {
+			assert: func(t *testing.T, merged *Expectation, source *Expectation, _ *Expectation) {
 				t.Helper()
 
 				require.Equal(t, source, merged)
@@ -532,7 +532,7 @@ func TestMergeExpectations(t *testing.T) {
 				ValidityLeeway:    10 * time.Second,
 			},
 			target: &Expectation{},
-			assert: func(t *testing.T, merged *Expectation, source *Expectation, target *Expectation) {
+			assert: func(t *testing.T, merged *Expectation, source *Expectation, _ *Expectation) {
 				t.Helper()
 
 				require.Equal(t, source, merged)

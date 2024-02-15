@@ -52,7 +52,7 @@ func TestNewProvider(t *testing.T) {
 		{
 			uc:   "with unknown field",
 			conf: []byte(`foo: bar`),
-			assert: func(t *testing.T, err error, prov *provider) {
+			assert: func(t *testing.T, err error, _ *provider) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -63,7 +63,7 @@ func TestNewProvider(t *testing.T) {
 		{
 			uc:   "without buckets",
 			conf: []byte(`watch_interval: 5s`),
-			assert: func(t *testing.T, err error, prov *provider) {
+			assert: func(t *testing.T, err error, _ *provider) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -78,7 +78,7 @@ buckets:
   - url: s3://foobar
   - prefix: bar
 `),
-			assert: func(t *testing.T, err error, prov *provider) {
+			assert: func(t *testing.T, err error, _ *provider) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -94,7 +94,7 @@ buckets:
   - url: s3://foobar
   - foo: bar
 `),
-			assert: func(t *testing.T, err error, prov *provider) {
+			assert: func(t *testing.T, err error, _ *provider) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -195,7 +195,7 @@ func TestProviderLifecycle(t *testing.T) {
 buckets:
 - url: s3://` + bucketName + `?endpoint=` + srv.URL + `&disableSSL=true&s3ForcePathStyle=true&region=eu-central-1
 `),
-			assert: func(t *testing.T, tc testCase, logs fmt.Stringer, processor *mocks.RuleSetProcessorMock) {
+			assert: func(t *testing.T, _ testCase, logs fmt.Stringer, _ *mocks.RuleSetProcessorMock) {
 				t.Helper()
 
 				time.Sleep(250 * time.Millisecond)
@@ -219,7 +219,7 @@ buckets:
 					strings.NewReader(``), 0)
 				require.NoError(t, err)
 			},
-			assert: func(t *testing.T, tc testCase, logs fmt.Stringer, processor *mocks.RuleSetProcessorMock) {
+			assert: func(t *testing.T, _ testCase, logs fmt.Stringer, _ *mocks.RuleSetProcessorMock) {
 				t.Helper()
 
 				time.Sleep(250 * time.Millisecond)
@@ -257,7 +257,7 @@ rules:
 					Run(mock2.NewArgumentCaptor[*config2.RuleSet](&processor.Mock, "captor1").Capture).
 					Return(nil).Once()
 			},
-			assert: func(t *testing.T, tc testCase, logs fmt.Stringer, processor *mocks.RuleSetProcessorMock) {
+			assert: func(t *testing.T, _ testCase, logs fmt.Stringer, processor *mocks.RuleSetProcessorMock) {
 				t.Helper()
 
 				time.Sleep(600 * time.Millisecond)
@@ -301,7 +301,7 @@ rules:
 					Run(mock2.NewArgumentCaptor[*config2.RuleSet](&processor.Mock, "captor1").Capture).
 					Return(nil).Once()
 			},
-			assert: func(t *testing.T, tc testCase, logs fmt.Stringer, processor *mocks.RuleSetProcessorMock) {
+			assert: func(t *testing.T, _ testCase, logs fmt.Stringer, processor *mocks.RuleSetProcessorMock) {
 				t.Helper()
 
 				time.Sleep(600 * time.Millisecond)

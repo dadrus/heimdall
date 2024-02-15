@@ -159,7 +159,6 @@ func TestEntryToJWK(t *testing.T) {
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
 			// GIVEN
-
 			// WHEN
 			jwk := tc.entry.JWK()
 
@@ -216,7 +215,7 @@ func TestEntryToTLSCertificate(t *testing.T) {
 		{
 			uc:    "just the key is present",
 			entry: &Entry{PrivateKey: ee1PrivKey},
-			assert: func(t *testing.T, err error, entry *Entry, tlsCer tls.Certificate) {
+			assert: func(t *testing.T, err error, _ *Entry, _ tls.Certificate) {
 				t.Helper()
 
 				require.Error(t, err)

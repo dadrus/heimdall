@@ -126,7 +126,7 @@ func TestSubjectInfoCreateSubject(t *testing.T) {
 
 				s.IDFrom = "foo"
 			},
-			assert: func(t *testing.T, err error, sub *subject.Subject) {
+			assert: func(t *testing.T, err error, _ *subject.Subject) {
 				t.Helper()
 				require.Error(t, err)
 				require.ErrorContains(t, err, "could not extract subject")

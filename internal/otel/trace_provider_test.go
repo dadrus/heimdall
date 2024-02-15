@@ -65,7 +65,7 @@ func TestInitTraceProvider(t *testing.T) {
 				// instana exporter fails if further env vars are missing
 				t.Setenv("OTEL_TRACES_EXPORTER", "instana")
 			},
-			assert: func(t *testing.T, err error, _ propagation.TextMapPropagator, logged string) {
+			assert: func(t *testing.T, err error, _ propagation.TextMapPropagator, _ string) {
 				t.Helper()
 
 				require.Error(t, err)

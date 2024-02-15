@@ -99,7 +99,7 @@ func (r *requestContext) Finalize(upstream rule.Backend) error {
 	errHolder := struct{ err error }{}
 
 	proxy := &httputil.ReverseProxy{
-		ErrorHandler: func(rw http.ResponseWriter, req *http.Request, err error) {
+		ErrorHandler: func(_ http.ResponseWriter, _ *http.Request, err error) {
 			logger.Error().Err(err).Msg("Proxying error")
 
 			errHolder.err = errorchain.NewWithMessage(heimdall.ErrCommunication, "Failed to proxy request").

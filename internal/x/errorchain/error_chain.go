@@ -170,7 +170,7 @@ func (ec *ErrorChain) MarshalJSON() ([]byte, error) {
 
 func (ec *ErrorChain) MarshalXML(encoder *xml.Encoder, _ xml.StartElement) error {
 	return encoder.Encode(
-		message{
+		message{ //nolint:musttag
 			XMLName: xml.Name{Local: "error"},
 			Code:    strcase.ToLowerCamel(ec.head.err.Error()),
 			Message: ec.head.msg,
@@ -178,7 +178,7 @@ func (ec *ErrorChain) MarshalXML(encoder *xml.Encoder, _ xml.StartElement) error
 }
 
 func (ec *ErrorChain) String() string {
-	return fmt.Sprintf("%s: %s", ec.head.err.Error(), ec.head.msg)
+	return ec.head.err.Error() + ": " + ec.head.msg
 }
 
 type message struct { //nolint:musttag

@@ -79,7 +79,7 @@ func WithSubsystem(name string) Option {
 func newConfig(opts ...Option) *config {
 	conf := config{
 		provider:      otel.GetMeterProvider(),
-		shouldProcess: func(req *http.Request) bool { return true },
+		shouldProcess: func(_ *http.Request) bool { return true },
 	}
 
 	for _, opt := range opts {

@@ -42,7 +42,7 @@ func TestCreateRedirectErrorHandler(t *testing.T) {
 		{
 			uc:     "configuration without required 'To' parameter",
 			config: []byte(`code: 302`),
-			assert: func(t *testing.T, err error, redEH *redirectErrorHandler) {
+			assert: func(t *testing.T, err error, _ *redirectErrorHandler) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -53,7 +53,7 @@ func TestCreateRedirectErrorHandler(t *testing.T) {
 		{
 			uc:     "configuration without required 'if' parameter",
 			config: []byte(`to: http://foo.bar`),
-			assert: func(t *testing.T, err error, redEH *redirectErrorHandler) {
+			assert: func(t *testing.T, err error, _ *redirectErrorHandler) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -67,7 +67,7 @@ func TestCreateRedirectErrorHandler(t *testing.T) {
 to: http://foo.bar
 if: ""
 `),
-			assert: func(t *testing.T, err error, redEH *redirectErrorHandler) {
+			assert: func(t *testing.T, err error, _ *redirectErrorHandler) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -81,7 +81,7 @@ if: ""
 to: http://foo.bar
 if: foo
 `),
-			assert: func(t *testing.T, err error, redEH *redirectErrorHandler) {
+			assert: func(t *testing.T, err error, _ *redirectErrorHandler) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -96,7 +96,7 @@ to: http://foo.bar
 bar: foo
 if: true == false
 `),
-			assert: func(t *testing.T, err error, redEH *redirectErrorHandler) {
+			assert: func(t *testing.T, err error, _ *redirectErrorHandler) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -212,7 +212,7 @@ to: http://foo.bar
 if: type(Error) == authentication_error
 `),
 			config: []byte(`to: http://foo.bar`),
-			assert: func(t *testing.T, err error, prototype *redirectErrorHandler, configured *redirectErrorHandler) {
+			assert: func(t *testing.T, err error, _ *redirectErrorHandler, _ *redirectErrorHandler) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -227,7 +227,7 @@ to: http://foo.bar
 if: type(Error) == authentication_error
 `),
 			config: []byte(`if: foo`),
-			assert: func(t *testing.T, err error, prototype *redirectErrorHandler, configured *redirectErrorHandler) {
+			assert: func(t *testing.T, err error, _ *redirectErrorHandler, _ *redirectErrorHandler) {
 				t.Helper()
 
 				require.Error(t, err)

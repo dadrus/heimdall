@@ -45,7 +45,7 @@ func TestRuleExecutorExecute(t *testing.T) {
 		{
 			uc:     "no rules configured",
 			expErr: heimdall.ErrNoRuleFound,
-			configureMocks: func(t *testing.T, ctx *mocks2.ContextMock, repo *mocks4.RepositoryMock, rule *mocks4.RuleMock) {
+			configureMocks: func(t *testing.T, ctx *mocks2.ContextMock, repo *mocks4.RepositoryMock, _ *mocks4.RuleMock) {
 				t.Helper()
 
 				ctx.EXPECT().AppContext().Return(context.Background())

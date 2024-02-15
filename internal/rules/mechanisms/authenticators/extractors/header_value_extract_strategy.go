@@ -17,7 +17,6 @@
 package extractors
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
@@ -31,7 +30,7 @@ type HeaderValueExtractStrategy struct {
 
 func (es HeaderValueExtractStrategy) GetAuthData(s heimdall.Context) (string, error) {
 	if val := s.Request().Header(es.Name); len(val) != 0 {
-		if len(es.Scheme) != 0 && !strings.HasPrefix(val, fmt.Sprintf("%s ", es.Scheme)) {
+		if len(es.Scheme) != 0 && !strings.HasPrefix(val, es.Scheme+" ") {
 			return "", errorchain.NewWithMessagef(heimdall.ErrArgument,
 				"'%s' header present, but without required '%s' scheme", es.Name, es.Scheme)
 		}

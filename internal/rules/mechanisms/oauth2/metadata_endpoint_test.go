@@ -2,7 +2,6 @@ package oauth2
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -51,12 +50,12 @@ func TestMetadataEndpointGet(t *testing.T) {
 	}{
 		{
 			uc: "invalid template in path",
-			buildURL: func(t *testing.T, baseURL string) string {
+			buildURL: func(t *testing.T, _ string) string {
 				t.Helper()
 
-				return fmt.Sprintf("%s/{{ Foo }}", srv.URL)
+				return srv.URL + "/{{ Foo }}"
 			},
-			assert: func(t *testing.T, endpointCalled bool, err error, sm ServerMetadata) {
+			assert: func(t *testing.T, endpointCalled bool, err error, _ ServerMetadata) {
 				t.Helper()
 
 				require.False(t, endpointCalled)
@@ -67,12 +66,12 @@ func TestMetadataEndpointGet(t *testing.T) {
 		},
 		{
 			uc: "failed rendering template in path",
-			buildURL: func(t *testing.T, baseURL string) string {
+			buildURL: func(t *testing.T, _ string) string {
 				t.Helper()
 
-				return fmt.Sprintf("%s/{{ .Foo }", srv.URL)
+				return srv.URL + "/{{ .Foo }"
 			},
-			assert: func(t *testing.T, endpointCalled bool, err error, sm ServerMetadata) {
+			assert: func(t *testing.T, endpointCalled bool, err error, _ ServerMetadata) {
 				t.Helper()
 
 				require.False(t, endpointCalled)
@@ -83,12 +82,12 @@ func TestMetadataEndpointGet(t *testing.T) {
 		},
 		{
 			uc: "failed communicating with server",
-			buildURL: func(t *testing.T, baseURL string) string {
+			buildURL: func(t *testing.T, _ string) string {
 				t.Helper()
 
 				return "http://heimdall.test.local/foo"
 			},
-			assert: func(t *testing.T, endpointCalled bool, err error, sm ServerMetadata) {
+			assert: func(t *testing.T, endpointCalled bool, err error, _ ServerMetadata) {
 				t.Helper()
 
 				require.False(t, endpointCalled)
@@ -108,7 +107,7 @@ func TestMetadataEndpointGet(t *testing.T) {
 
 				rw.WriteHeader(http.StatusBadRequest)
 			},
-			assert: func(t *testing.T, endpointCalled bool, err error, sm ServerMetadata) {
+			assert: func(t *testing.T, endpointCalled bool, err error, _ ServerMetadata) {
 				t.Helper()
 
 				require.True(t, endpointCalled)
@@ -129,7 +128,7 @@ func TestMetadataEndpointGet(t *testing.T) {
 
 				rw.Write([]byte("bad response"))
 			},
-			assert: func(t *testing.T, endpointCalled bool, err error, sm ServerMetadata) {
+			assert: func(t *testing.T, endpointCalled bool, err error, _ ServerMetadata) {
 				t.Helper()
 
 				require.True(t, endpointCalled)
@@ -165,7 +164,7 @@ func TestMetadataEndpointGet(t *testing.T) {
 				})
 				require.NoError(t, err)
 			},
-			assert: func(t *testing.T, endpointCalled bool, err error, sm ServerMetadata) {
+			assert: func(t *testing.T, endpointCalled bool, err error, _ ServerMetadata) {
 				t.Helper()
 
 				require.True(t, endpointCalled)
@@ -201,7 +200,7 @@ func TestMetadataEndpointGet(t *testing.T) {
 				})
 				require.NoError(t, err)
 			},
-			assert: func(t *testing.T, endpointCalled bool, err error, sm ServerMetadata) {
+			assert: func(t *testing.T, endpointCalled bool, err error, _ ServerMetadata) {
 				t.Helper()
 
 				require.True(t, endpointCalled)
@@ -216,7 +215,7 @@ func TestMetadataEndpointGet(t *testing.T) {
 			buildURL: func(t *testing.T, baseURL string) string {
 				t.Helper()
 
-				return fmt.Sprintf("%s/{{ .Foo }}", baseURL)
+				return baseURL + "/{{ .Foo }}"
 			},
 			checkRequest: func(t *testing.T, req *http.Request) {
 				t.Helper()
@@ -231,7 +230,7 @@ func TestMetadataEndpointGet(t *testing.T) {
 				rw.Header().Set("Content-Type", "application/json")
 
 				err := json.NewEncoder(rw).Encode(metadata{
-					Issuer:                             fmt.Sprintf("%s/bar", srv.URL),
+					Issuer:                             srv.URL + "/bar",
 					JWKSEndpointURL:                    "https://foo.bar/jwks",
 					IntrospectionEndpointURL:           "https://foo.bar/introspection",
 					TokenEndpointAuthSigningAlgorithms: []string{"RS256", "PS384"},
@@ -244,7 +243,7 @@ func TestMetadataEndpointGet(t *testing.T) {
 				require.True(t, endpointCalled)
 				require.NoError(t, err)
 
-				assert.Equal(t, fmt.Sprintf("%s/bar", srv.URL), sm.Issuer)
+				assert.Equal(t, srv.URL+"/bar", sm.Issuer)
 
 				exp := endpoint.Endpoint{
 					URL:     "https://foo.bar/jwks",
@@ -270,7 +269,7 @@ func TestMetadataEndpointGet(t *testing.T) {
 			buildURL: func(t *testing.T, baseURL string) string {
 				t.Helper()
 
-				return fmt.Sprintf("%s/.well-known/oauth-authorization-server/issuer1", baseURL)
+				return baseURL + "/.well-known/oauth-authorization-server/issuer1"
 			},
 			checkRequest: func(t *testing.T, req *http.Request) {
 				t.Helper()
@@ -285,14 +284,14 @@ func TestMetadataEndpointGet(t *testing.T) {
 				rw.Header().Set("Content-Type", "application/json")
 
 				err := json.NewEncoder(rw).Encode(metadata{
-					Issuer:                             fmt.Sprintf("%s/issuer2", srv.URL),
+					Issuer:                             srv.URL + "/issuer2",
 					JWKSEndpointURL:                    "https://foo.bar/jwks",
 					IntrospectionEndpointURL:           "https://foo.bar/introspection",
 					TokenEndpointAuthSigningAlgorithms: []string{"RS256", "PS384"},
 				})
 				require.NoError(t, err)
 			},
-			assert: func(t *testing.T, endpointCalled bool, err error, sm ServerMetadata) {
+			assert: func(t *testing.T, endpointCalled bool, err error, _ ServerMetadata) {
 				t.Helper()
 
 				require.True(t, endpointCalled)
@@ -306,11 +305,11 @@ func TestMetadataEndpointGet(t *testing.T) {
 			endpointCalled = false
 
 			testRequest := x.IfThenElse(
-				tc.checkRequest != nil, tc.checkRequest, func(t *testing.T, req *http.Request) { t.Helper() })
+				tc.checkRequest != nil, tc.checkRequest, func(t *testing.T, _ *http.Request) { t.Helper() })
 			checkRequest = func(req *http.Request) { testRequest(t, req) }
 
 			createResponse := x.IfThenElse(
-				tc.createResponse != nil, tc.createResponse, func(t *testing.T, rw http.ResponseWriter) { t.Helper() })
+				tc.createResponse != nil, tc.createResponse, func(t *testing.T, _ http.ResponseWriter) { t.Helper() })
 			buildResponse = func(rw http.ResponseWriter) { createResponse(t, rw) }
 
 			ep := &MetadataEndpoint{Endpoint: endpoint.Endpoint{URL: tc.buildURL(t, srv.URL)}}

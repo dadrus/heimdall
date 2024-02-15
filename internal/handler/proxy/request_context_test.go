@@ -46,7 +46,7 @@ func TestRequestContextFinalize(t *testing.T) {
 	}{
 		{
 			uc: "error was present, forwarding aborted",
-			setup: func(t *testing.T, ctx requestcontext.Context, upstreamURL *url.URL) rule.Backend {
+			setup: func(t *testing.T, ctx requestcontext.Context, _ *url.URL) rule.Backend {
 				t.Helper()
 
 				err := errors.New("test error")
@@ -208,7 +208,7 @@ func TestRequestContextFinalize(t *testing.T) {
 			headers: http.Header{
 				"X-Forwarded-Proto": []string{"http"},
 			},
-			setup: func(t *testing.T, ctx requestcontext.Context, upstreamURL *url.URL) rule.Backend {
+			setup: func(t *testing.T, _ requestcontext.Context, upstreamURL *url.URL) rule.Backend {
 				t.Helper()
 
 				backend := mocks2.NewBackendMock(t)
@@ -236,7 +236,7 @@ func TestRequestContextFinalize(t *testing.T) {
 			headers: http.Header{
 				"X-Forwarded-Host": []string{"bar.foo"},
 			},
-			setup: func(t *testing.T, ctx requestcontext.Context, upstreamURL *url.URL) rule.Backend {
+			setup: func(t *testing.T, _ requestcontext.Context, upstreamURL *url.URL) rule.Backend {
 				t.Helper()
 
 				backend := mocks2.NewBackendMock(t)
@@ -264,7 +264,7 @@ func TestRequestContextFinalize(t *testing.T) {
 			headers: http.Header{
 				"X-Forwarded-For": []string{"172.2.34.1"},
 			},
-			setup: func(t *testing.T, ctx requestcontext.Context, upstreamURL *url.URL) rule.Backend {
+			setup: func(t *testing.T, _ requestcontext.Context, upstreamURL *url.URL) rule.Backend {
 				t.Helper()
 
 				backend := mocks2.NewBackendMock(t)
@@ -296,6 +296,7 @@ func TestRequestContextFinalize(t *testing.T) {
 
 			srv := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, req *http.Request) {
 				upstreamCalled = true
+
 				tc.assertRequest(t, req)
 			}))
 			defer srv.Close()
@@ -317,6 +318,7 @@ func TestRequestContextFinalize(t *testing.T) {
 
 			// THEN
 			require.Equal(t, tc.upstreamCalled, upstreamCalled)
+
 			if !tc.upstreamCalled {
 				require.Error(t, err)
 			}

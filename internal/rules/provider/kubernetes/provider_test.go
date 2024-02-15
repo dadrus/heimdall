@@ -61,7 +61,7 @@ func TestNewProvider(t *testing.T) {
 		{
 			uc:   "with unknown field",
 			conf: []byte(`foo: bar`),
-			assert: func(t *testing.T, err error, prov *provider) {
+			assert: func(t *testing.T, err error, _ *provider) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -389,7 +389,7 @@ func TestProviderLifecycle(t *testing.T) {
 		{
 			uc:   "adding rule set fails",
 			conf: []byte("auth_class: bar"),
-			watchEvent: func(rs v1alpha3.RuleSet, callIdx int) (watch.Event, error) {
+			watchEvent: func(rs v1alpha3.RuleSet, _ int) (watch.Event, error) {
 				return watch.Event{Type: watch.Bookmark, Object: &rs}, nil
 			},
 			setupProcessor: func(t *testing.T, processor *mocks.RuleSetProcessorMock) {
@@ -397,7 +397,7 @@ func TestProviderLifecycle(t *testing.T) {
 
 				processor.EXPECT().OnCreated(mock.Anything).Return(testsupport.ErrTestPurpose).Once()
 			},
-			assert: func(t *testing.T, statusList *[]*v1alpha3.RuleSetStatus, processor *mocks.RuleSetProcessorMock) {
+			assert: func(t *testing.T, statusList *[]*v1alpha3.RuleSetStatus, _ *mocks.RuleSetProcessorMock) {
 				t.Helper()
 
 				time.Sleep(250 * time.Millisecond)
@@ -506,7 +506,7 @@ func TestProviderLifecycle(t *testing.T) {
 					return watch.Event{Type: watch.Bookmark, Object: &rs}, nil
 				}
 			},
-			updateStatus: func(rs v1alpha3.RuleSet, callIdx int) (*metav1.Status, error) {
+			updateStatus: func(_ v1alpha3.RuleSet, _ int) (*metav1.Status, error) {
 				return nil, errors.New("test error")
 			},
 			setupProcessor: func(t *testing.T, processor *mocks.RuleSetProcessorMock) {
@@ -635,7 +635,7 @@ func TestProviderLifecycle(t *testing.T) {
 				processor.EXPECT().OnCreated(mock.Anything).Return(nil).Once()
 				processor.EXPECT().OnDeleted(mock.Anything).Return(testsupport.ErrTestPurpose).Once()
 			},
-			assert: func(t *testing.T, statusList *[]*v1alpha3.RuleSetStatus, processor *mocks.RuleSetProcessorMock) {
+			assert: func(t *testing.T, statusList *[]*v1alpha3.RuleSetStatus, _ *mocks.RuleSetProcessorMock) {
 				t.Helper()
 
 				time.Sleep(250 * time.Millisecond)
@@ -901,7 +901,7 @@ func TestProviderLifecycle(t *testing.T) {
 				processor.EXPECT().OnCreated(mock.Anything).Return(nil).Once()
 				processor.EXPECT().OnUpdated(mock.Anything).Return(testsupport.ErrTestPurpose).Once()
 			},
-			assert: func(t *testing.T, statusList *[]*v1alpha3.RuleSetStatus, processor *mocks.RuleSetProcessorMock) {
+			assert: func(t *testing.T, statusList *[]*v1alpha3.RuleSetStatus, _ *mocks.RuleSetProcessorMock) {
 				t.Helper()
 
 				time.Sleep(250 * time.Millisecond)
@@ -962,6 +962,7 @@ func TestProviderLifecycle(t *testing.T) {
 
 			defer func() {
 				_ = prov.Stop(ctx) //nolint:errcheck
+
 				handler.close()
 			}()
 

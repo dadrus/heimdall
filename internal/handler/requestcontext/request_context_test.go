@@ -37,7 +37,7 @@ func TestRequestContextRequestClientIPs(t *testing.T) {
 	}{
 		{
 			"neither Forwarded, not X-Forwarded-For headers are present",
-			func(t *testing.T, req *http.Request) { t.Helper() },
+			func(t *testing.T, _ *http.Request) { t.Helper() },
 			func(t *testing.T, ips []string) {
 				t.Helper()
 

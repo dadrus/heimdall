@@ -43,7 +43,7 @@ func TestNewCache(t *testing.T) {
 		{
 			uc:     "empty config",
 			config: []byte(``),
-			assert: func(t *testing.T, err error, cch *Cache) {
+			assert: func(t *testing.T, err error, _ *Cache) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -54,7 +54,7 @@ func TestNewCache(t *testing.T) {
 		{
 			uc:     "empty address provided",
 			config: []byte(`addrs: [""]`),
-			assert: func(t *testing.T, err error, cch *Cache) {
+			assert: func(t *testing.T, err error, _ *Cache) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -65,7 +65,7 @@ func TestNewCache(t *testing.T) {
 		{
 			uc:     "config contains unsupported properties",
 			config: []byte(`foo: bar`),
-			assert: func(t *testing.T, err error, cch *Cache) {
+			assert: func(t *testing.T, err error, _ *Cache) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -76,7 +76,7 @@ func TestNewCache(t *testing.T) {
 		{
 			uc:     "not existing address provided",
 			config: []byte(`addrs: ["foo.local:12345"]`),
-			assert: func(t *testing.T, err error, cch *Cache) {
+			assert: func(t *testing.T, err error, _ *Cache) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -178,7 +178,7 @@ func TestCacheUsage(t *testing.T) {
 		{
 			uc:  "cannot retrieve not existing value",
 			key: "baz",
-			configureCache: func(t *testing.T, cch *Cache) {
+			configureCache: func(t *testing.T, _ *Cache) {
 				t.Helper()
 			},
 			assert: func(t *testing.T, data any) {

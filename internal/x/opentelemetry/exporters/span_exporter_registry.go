@@ -55,10 +55,10 @@ var spanExporters = &registry[trace.SpanExporter]{ //nolint:gochecknoglobals
 				return nil, errorchain.NewWithMessage(ErrUnsupportedOTLPProtocol, val)
 			}
 		},
-		"zipkin": func(ctx context.Context) (trace.SpanExporter, error) {
+		"zipkin": func(_ context.Context) (trace.SpanExporter, error) {
 			return zipkin.New("")
 		},
-		"instana": func(ctx context.Context) (exp trace.SpanExporter, err error) { //nolint:nonamedreturns
+		"instana": func(_ context.Context) (exp trace.SpanExporter, err error) { //nolint:nonamedreturns
 			defer func() {
 				if r := recover(); r != nil {
 					err = errorchain.NewWithMessage(ErrFailedCreatingInstanaExporter, fmt.Sprintf("%s", r))

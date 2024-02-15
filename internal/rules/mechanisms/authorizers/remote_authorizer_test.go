@@ -18,7 +18,6 @@ package authorizers
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -63,7 +62,7 @@ endpoint:
   url: http://foo.bar
 foo: bar
 `),
-			assert: func(t *testing.T, err error, auth *remoteAuthorizer) {
+			assert: func(t *testing.T, err error, _ *remoteAuthorizer) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -78,7 +77,7 @@ endpoint:
   method: FOO
 payload: FooBar
 `),
-			assert: func(t *testing.T, err error, auth *remoteAuthorizer) {
+			assert: func(t *testing.T, err error, _ *remoteAuthorizer) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -92,7 +91,7 @@ payload: FooBar
 endpoint:
   url: http://foo.bar
 `),
-			assert: func(t *testing.T, err error, auth *remoteAuthorizer) {
+			assert: func(t *testing.T, err error, _ *remoteAuthorizer) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -161,7 +160,7 @@ payload: "{{ .Subject.ID }}"
 expressions:
   - expression: "foo == 'bar'"
 `),
-			assert: func(t *testing.T, err error, auth *remoteAuthorizer) {
+			assert: func(t *testing.T, err error, _ *remoteAuthorizer) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -298,7 +297,7 @@ payload: bar
 			config: []byte(`
 foo: bar
 `),
-			assert: func(t *testing.T, err error, prototype *remoteAuthorizer, configured *remoteAuthorizer) {
+			assert: func(t *testing.T, err error, _ *remoteAuthorizer, _ *remoteAuthorizer) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -347,7 +346,7 @@ payload: bar
 expressions:
   - expression: "foo == 'bar'"
 `),
-			assert: func(t *testing.T, err error, prototype *remoteAuthorizer, configured *remoteAuthorizer) {
+			assert: func(t *testing.T, err error, _ *remoteAuthorizer, _ *remoteAuthorizer) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -742,7 +741,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 				ctx.EXPECT().AddHeaderForUpstream("X-Foo-Bar", "HeyFoo")
 				ctx.EXPECT().Request().Return(nil)
 			},
-			configureCache: func(t *testing.T, cch *mocks.CacheMock, auth *remoteAuthorizer, sub *subject.Subject) {
+			configureCache: func(t *testing.T, cch *mocks.CacheMock, auth *remoteAuthorizer, _ *subject.Subject) {
 				t.Helper()
 
 				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil)
@@ -768,7 +767,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 			authorizer: &remoteAuthorizer{
 				id: "authorizer",
 				e: endpoint.Endpoint{
-					URL:     fmt.Sprintf("%s/{{ .Subject.ID }}", srv.URL),
+					URL:     srv.URL + "/{{ .Subject.ID }}",
 					Headers: map[string]string{"Accept": "application/x-www-form-urlencoded"},
 				},
 				ttl: 10 * time.Second,
@@ -845,7 +844,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 				ctx.EXPECT().AddHeaderForUpstream("X-Bar-Foo", "HeyBar")
 				ctx.EXPECT().Request().Return(nil)
 			},
-			configureCache: func(t *testing.T, cch *mocks.CacheMock, auth *remoteAuthorizer, sub *subject.Subject) {
+			configureCache: func(t *testing.T, cch *mocks.CacheMock, _ *remoteAuthorizer, _ *subject.Subject) {
 				t.Helper()
 
 				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(&authorizationInformation{
@@ -902,7 +901,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 				ctx.EXPECT().AddHeaderForUpstream("X-Foo-Bar", "HeyFoo")
 				ctx.EXPECT().Request().Return(nil)
 			},
-			configureCache: func(t *testing.T, cch *mocks.CacheMock, auth *remoteAuthorizer, sub *subject.Subject) {
+			configureCache: func(t *testing.T, cch *mocks.CacheMock, auth *remoteAuthorizer, _ *subject.Subject) {
 				t.Helper()
 
 				cch.EXPECT().Get(mock.Anything, mock.Anything).Return("Hello Foo")
@@ -958,7 +957,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 
 				ctx.EXPECT().Request().Return(nil)
 			},
-			assert: func(t *testing.T, err error, sub *subject.Subject) {
+			assert: func(t *testing.T, err error, _ *subject.Subject) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -1019,7 +1018,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 
 				ctx.EXPECT().Request().Return(nil)
 			},
-			assert: func(t *testing.T, err error, sub *subject.Subject) {
+			assert: func(t *testing.T, err error, _ *subject.Subject) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -1036,7 +1035,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 		{
 			uc:         "with error due to nil subject",
 			authorizer: &remoteAuthorizer{id: "authz"},
-			assert: func(t *testing.T, err error, sub *subject.Subject) {
+			assert: func(t *testing.T, err error, _ *subject.Subject) {
 				t.Helper()
 
 				assert.False(t, authorizationEndpointCalled)
@@ -1114,7 +1113,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 
 				ctx.EXPECT().Request().Return(nil)
 			},
-			assert: func(t *testing.T, err error, sub *subject.Subject) {
+			assert: func(t *testing.T, err error, _ *subject.Subject) {
 				t.Helper()
 
 				assert.True(t, authorizationEndpointCalled)
@@ -1231,7 +1230,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 
 				ctx.EXPECT().Request().Return(nil)
 			},
-			assert: func(t *testing.T, err error, sub *subject.Subject) {
+			assert: func(t *testing.T, err error, _ *subject.Subject) {
 				t.Helper()
 
 				assert.False(t, authorizationEndpointCalled)
@@ -1263,7 +1262,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 
 				ctx.EXPECT().Request().Return(nil)
 			},
-			assert: func(t *testing.T, err error, sub *subject.Subject) {
+			assert: func(t *testing.T, err error, _ *subject.Subject) {
 				t.Helper()
 
 				assert.False(t, authorizationEndpointCalled)

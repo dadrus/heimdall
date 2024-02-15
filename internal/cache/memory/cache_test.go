@@ -81,7 +81,7 @@ func TestMemoryCacheUsage(t *testing.T) {
 		{
 			uc:  "cannot retrieve not existing value",
 			key: "baz",
-			configureCache: func(t *testing.T, cache *Cache) {
+			configureCache: func(t *testing.T, _ *Cache) {
 				t.Helper()
 			},
 			assert: func(t *testing.T, data any) {

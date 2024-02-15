@@ -207,7 +207,7 @@ endpoint:
 payload: bar
 `),
 			config: []byte(`foo: bar`),
-			assert: func(t *testing.T, err error, prototype *genericContextualizer, configured *genericContextualizer) {
+			assert: func(t *testing.T, err error, _ *genericContextualizer, _ *genericContextualizer) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -534,7 +534,7 @@ func TestGenericContextualizerExecute(t *testing.T) {
 		{
 			uc:             "fails due to nil subject",
 			contextualizer: &genericContextualizer{id: "contextualizer", e: endpoint.Endpoint{URL: srv.URL}},
-			assert: func(t *testing.T, err error, sub *subject.Subject) {
+			assert: func(t *testing.T, err error, _ *subject.Subject) {
 				t.Helper()
 
 				assert.False(t, remoteEndpointCalled)
@@ -566,8 +566,8 @@ func TestGenericContextualizerExecute(t *testing.T) {
 
 				ctx.EXPECT().Request().Return(nil)
 			},
-			configureCache: func(t *testing.T, cch *mocks.CacheMock, contextualizer *genericContextualizer,
-				sub *subject.Subject,
+			configureCache: func(t *testing.T, cch *mocks.CacheMock, _ *genericContextualizer,
+				_ *subject.Subject,
 			) {
 				t.Helper()
 
@@ -596,8 +596,8 @@ func TestGenericContextualizerExecute(t *testing.T) {
 				}(),
 			},
 			subject: &subject.Subject{ID: "Foo", Attributes: map[string]any{"bar": "baz"}},
-			configureCache: func(t *testing.T, cch *mocks.CacheMock, contextualizer *genericContextualizer,
-				sub *subject.Subject,
+			configureCache: func(t *testing.T, cch *mocks.CacheMock, _ *genericContextualizer,
+				_ *subject.Subject,
 			) {
 				t.Helper()
 
@@ -647,7 +647,7 @@ func TestGenericContextualizerExecute(t *testing.T) {
 
 				ctx.EXPECT().Request().Return(nil)
 			},
-			assert: func(t *testing.T, err error, sub *subject.Subject) {
+			assert: func(t *testing.T, err error, _ *subject.Subject) {
 				t.Helper()
 
 				assert.False(t, remoteEndpointCalled)
@@ -679,7 +679,7 @@ func TestGenericContextualizerExecute(t *testing.T) {
 
 				ctx.EXPECT().Request().Return(nil)
 			},
-			assert: func(t *testing.T, err error, sub *subject.Subject) {
+			assert: func(t *testing.T, err error, _ *subject.Subject) {
 				t.Helper()
 
 				assert.False(t, remoteEndpointCalled)
@@ -705,7 +705,7 @@ func TestGenericContextualizerExecute(t *testing.T) {
 
 				ctx.EXPECT().Request().Return(nil)
 			},
-			assert: func(t *testing.T, err error, sub *subject.Subject) {
+			assert: func(t *testing.T, err error, _ *subject.Subject) {
 				t.Helper()
 
 				assert.False(t, remoteEndpointCalled)
@@ -736,7 +736,7 @@ func TestGenericContextualizerExecute(t *testing.T) {
 
 				ctx.EXPECT().Request().Return(nil)
 			},
-			assert: func(t *testing.T, err error, sub *subject.Subject) {
+			assert: func(t *testing.T, err error, _ *subject.Subject) {
 				t.Helper()
 
 				assert.True(t, remoteEndpointCalled)
@@ -780,8 +780,8 @@ func TestGenericContextualizerExecute(t *testing.T) {
 
 				ctx.EXPECT().Request().Return(nil)
 			},
-			configureCache: func(t *testing.T, cch *mocks.CacheMock, contextualizer *genericContextualizer,
-				sub *subject.Subject,
+			configureCache: func(t *testing.T, cch *mocks.CacheMock, _ *genericContextualizer,
+				_ *subject.Subject,
 			) {
 				t.Helper()
 
@@ -807,7 +807,7 @@ func TestGenericContextualizerExecute(t *testing.T) {
 			},
 			subject: &subject.Subject{ID: "Foo", Attributes: map[string]any{"bar": "baz"}},
 			configureCache: func(t *testing.T, cch *mocks.CacheMock, contextualizer *genericContextualizer,
-				sub *subject.Subject,
+				_ *subject.Subject,
 			) {
 				t.Helper()
 

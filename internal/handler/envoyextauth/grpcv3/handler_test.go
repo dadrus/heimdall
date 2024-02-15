@@ -183,7 +183,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 
 				exec.EXPECT().Execute(mock.Anything).Panic("wuff")
 			},
-			assertResponse: func(t *testing.T, err error, response *envoy_auth.CheckResponse) {
+			assertResponse: func(t *testing.T, err error, _ *envoy_auth.CheckResponse) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -198,6 +198,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				grpc.WithContextDialer(func(context.Context, string) (net.Conn, error) { return lis.Dial() }),
 				grpc.WithTransportCredentials(insecure.NewCredentials()))
 			require.NoError(t, err)
+
 			conf := &config.Configuration{Metrics: config.MetricsConfig{Enabled: true}}
 			cch := mocks.NewCacheMock(t)
 			exec := mocks2.NewExecutorMock(t)
@@ -209,8 +210,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 			defer srv.Stop()
 
 			go func() {
-				err := srv.Serve(lis)
-				require.NoError(t, err)
+				srv.Serve(lis)
 			}()
 
 			client := envoy_auth.NewAuthorizationClient(conn)

@@ -272,8 +272,7 @@ func TestErrorInterceptor(t *testing.T) {
 			envoy_auth.RegisterAuthorizationServer(srv, handler)
 
 			go func() {
-				err = srv.Serve(lis)
-				require.NoError(t, err)
+				srv.Serve(lis)
 			}()
 
 			client := envoy_auth.NewAuthorizationClient(conn)

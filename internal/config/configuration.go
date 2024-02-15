@@ -17,7 +17,6 @@
 package config
 
 import (
-	"fmt"
 	"os"
 
 	"github.com/mitchellh/mapstructure"
@@ -68,7 +67,7 @@ func NewConfiguration(envPrefix EnvVarPrefix, configFile ConfigurationPath) (*Co
 
 	homeDir, err := os.UserHomeDir()
 	if err == nil {
-		opts = append(opts, parser.WithConfigLookupDir(fmt.Sprintf("%s/.config/", homeDir)))
+		opts = append(opts, parser.WithConfigLookupDir(homeDir+"/.config/"))
 	}
 
 	opts = append(opts, parser.WithConfigLookupDir("/etc/heimdall/"))

@@ -59,6 +59,7 @@ func TestClientCredentialsToken(t *testing.T) {
 
 			return
 		}
+
 		if err := req.ParseForm(); err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 
@@ -211,13 +212,13 @@ func TestClientCredentialsToken(t *testing.T) {
 
 				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil)
 			},
-			assertRequest: func(t *testing.T, req *http.Request) { t.Helper() },
+			assertRequest: func(t *testing.T, _ *http.Request) { t.Helper() },
 			buildResponse: func(t *testing.T) (any, int) {
 				t.Helper()
 
 				return "foo", http.StatusOK
 			},
-			assert: func(t *testing.T, err error, tokenEndpointCalled bool, token *TokenInfo) {
+			assert: func(t *testing.T, err error, tokenEndpointCalled bool, _ *TokenInfo) {
 				t.Helper()
 
 				assert.True(t, tokenEndpointCalled)
@@ -233,13 +234,13 @@ func TestClientCredentialsToken(t *testing.T) {
 
 				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil)
 			},
-			assertRequest: func(t *testing.T, req *http.Request) { t.Helper() },
+			assertRequest: func(t *testing.T, _ *http.Request) { t.Helper() },
 			buildResponse: func(t *testing.T) (any, int) {
 				t.Helper()
 
 				return "foo", http.StatusBadRequest
 			},
-			assert: func(t *testing.T, err error, tokenEndpointCalled bool, token *TokenInfo) {
+			assert: func(t *testing.T, err error, tokenEndpointCalled bool, _ *TokenInfo) {
 				t.Helper()
 
 				assert.True(t, tokenEndpointCalled)
@@ -255,7 +256,7 @@ func TestClientCredentialsToken(t *testing.T) {
 
 				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil)
 			},
-			assert: func(t *testing.T, err error, tokenEndpointCalled bool, token *TokenInfo) {
+			assert: func(t *testing.T, err error, tokenEndpointCalled bool, _ *TokenInfo) {
 				t.Helper()
 
 				assert.False(t, tokenEndpointCalled)
@@ -330,7 +331,7 @@ func TestClientCredentialsToken(t *testing.T) {
 				assert.Equal(t, "foobar", token.AccessToken)
 				assert.Equal(t, 5*time.Minute, time.Until(token.Expiry).Round(time.Second))
 				assert.Equal(t, "bar", token.Extra("foo"))
-				assert.Equal(t, 42.0, token.Extra("bar"))
+				assert.InDelta(t, 42.0, token.Extra("bar"), 0.001)
 				assert.Len(t, token.Scopes, 2)
 				assert.Contains(t, token.Scopes, "baz")
 				assert.Contains(t, token.Scopes, "zab")
@@ -606,7 +607,7 @@ func TestClientCredentialsToken(t *testing.T) {
 					ErrorURI:         "https://www.rfc-editor.org/rfc/rfc6749#section-5.1",
 				}, http.StatusBadRequest
 			},
-			assert: func(t *testing.T, err error, tokenEndpointCalled bool, token *TokenInfo) {
+			assert: func(t *testing.T, err error, tokenEndpointCalled bool, _ *TokenInfo) {
 				t.Helper()
 
 				assert.True(t, tokenEndpointCalled)
@@ -623,7 +624,7 @@ func TestClientCredentialsToken(t *testing.T) {
 			)
 			assertRequest = x.IfThenElse(tc.assertRequest != nil,
 				tc.assertRequest,
-				func(t *testing.T, req *http.Request) { t.Helper() },
+				func(t *testing.T, _ *http.Request) { t.Helper() },
 			)
 			buildResponse = tc.buildResponse
 

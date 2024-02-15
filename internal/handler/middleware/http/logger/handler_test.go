@@ -54,7 +54,7 @@ func TestHandlerExecution(t *testing.T) {
 	}{
 		{
 			uc:        "without tracing",
-			setHeader: func(t *testing.T, req *http.Request) { t.Helper() },
+			setHeader: func(t *testing.T, _ *http.Request) { t.Helper() },
 			assert: func(t *testing.T, logstring string) {
 				t.Helper()
 
@@ -125,7 +125,7 @@ func TestHandlerExecution(t *testing.T) {
 			req, err := http.NewRequestWithContext(
 				context.Background(),
 				http.MethodGet,
-				fmt.Sprintf("%s/test", srv.URL),
+				srv.URL+"/test",
 				nil,
 			)
 			require.NoError(t, err)

@@ -18,7 +18,6 @@ package trustedproxy
 
 import (
 	"context"
-	"fmt"
 	"maps"
 	"net/http"
 	"net/http/httptest"
@@ -68,9 +67,10 @@ func TestHandlerExecution(t *testing.T) {
 			defer srv.Close()
 
 			req, err := http.NewRequestWithContext(
-				context.Background(), http.MethodGet, fmt.Sprintf("%s/test", srv.URL), nil)
-			req.Header = send
+				context.Background(), http.MethodGet, srv.URL+"/test", nil)
 			require.NoError(t, err)
+
+			req.Header = send
 
 			// WHEN
 			resp, err := srv.Client().Do(req)

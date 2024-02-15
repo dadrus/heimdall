@@ -82,7 +82,7 @@ func WithServiceKeyStore(serviceName string, ks keystore.KeyStore, certGetter Ce
 		return WithServiceCertificates(serviceName, certGetter(ks))
 	}
 
-	return func(conf *config) {}
+	return func(_ *config) {}
 }
 
 func WithEndEntityMonitoringOnly(flag bool) Option {

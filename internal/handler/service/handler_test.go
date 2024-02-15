@@ -38,7 +38,7 @@ func TestHandlerServeHTTP(t *testing.T) {
 	}{
 		{
 			uc: "no error",
-			setup: func(t *testing.T, exec *mocks.ExecutorMock, ctx *mocks3.ContextMock, eh *mocks2.ErrorHandlerMock) {
+			setup: func(t *testing.T, exec *mocks.ExecutorMock, ctx *mocks3.ContextMock, _ *mocks2.ErrorHandlerMock) {
 				t.Helper()
 
 				upstream := mocks.NewBackendMock(t)

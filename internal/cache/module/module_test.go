@@ -40,7 +40,7 @@ func TestNewCache(t *testing.T) {
 		{
 			uc:   "empty cache type",
 			conf: &config.Configuration{},
-			assert: func(t *testing.T, err error, cch cache.Cache) {
+			assert: func(t *testing.T, err error, _ cache.Cache) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -70,7 +70,7 @@ func TestNewCache(t *testing.T) {
 					Config: map[string]any{},
 				},
 			},
-			assert: func(t *testing.T, err error, cch cache.Cache) {
+			assert: func(t *testing.T, err error, _ cache.Cache) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -99,7 +99,7 @@ func TestNewCache(t *testing.T) {
 				},
 			},
 
-			assert: func(t *testing.T, err error, cch cache.Cache) {
+			assert: func(t *testing.T, err error, _ cache.Cache) {
 				t.Helper()
 
 				require.Error(t, err)

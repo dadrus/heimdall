@@ -58,7 +58,7 @@ func TestInitMeterProvider(t *testing.T) {
 
 				t.Setenv("OTEL_METRICS_EXPORTER", "does_not_exist")
 			},
-			assert: func(t *testing.T, err error, logged string) {
+			assert: func(t *testing.T, err error, _ string) {
 				t.Helper()
 
 				require.Error(t, err)

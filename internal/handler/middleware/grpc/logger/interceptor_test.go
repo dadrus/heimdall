@@ -18,13 +18,13 @@ package logger
 
 import (
 	"context"
-	"fmt"
 	"net"
 	"net/http"
 	"testing"
 
 	envoy_auth "github.com/envoyproxy/go-control-plane/envoy/service/auth/v3"
 	"github.com/goccy/go-json"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -129,7 +129,7 @@ func TestLoggerInterceptor(t *testing.T) {
 					return true
 				},
 			), mock.Anything).
-				Return(nil, fmt.Errorf("test error"))
+				Return(nil, errors.New("test error"))
 
 			srv := grpc.NewServer(
 				grpc.StatsHandler(otelgrpc.NewServerHandler()),
@@ -138,8 +138,7 @@ func TestLoggerInterceptor(t *testing.T) {
 			envoy_auth.RegisterAuthorizationServer(srv, handler)
 
 			go func() {
-				err = srv.Serve(lis)
-				require.NoError(t, err)
+				srv.Serve(lis)
 			}()
 
 			client := envoy_auth.NewAuthorizationClient(conn)

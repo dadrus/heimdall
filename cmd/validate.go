@@ -26,7 +26,7 @@ import (
 var validateCmd = &cobra.Command{
 	Use:   "validate",
 	Short: "Commands for validating heimdall's configuration",
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(cmd *cobra.Command, _ []string) {
 		cmd.Println(cmd.UsageString())
 	},
 }

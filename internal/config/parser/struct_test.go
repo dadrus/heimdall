@@ -55,7 +55,7 @@ func TestKoanfFromStruct(t *testing.T) {
 			conf: TestConfigWithUppercase{
 				ThisIsMissingAKoanfTag: "don't care",
 			},
-			assert: func(t *testing.T, err error, konf *koanf.Koanf) {
+			assert: func(t *testing.T, err error, _ *koanf.Koanf) {
 				t.Helper()
 
 				require.Error(t, err)

@@ -41,7 +41,7 @@ func TestCreateWWWAuthenticateErrorHandler(t *testing.T) {
 		{
 			uc:     "configuration without required 'if' parameter",
 			config: []byte(`realm: FooBar`),
-			assert: func(t *testing.T, err error, errorHandler *wwwAuthenticateErrorHandler) {
+			assert: func(t *testing.T, err error, _ *wwwAuthenticateErrorHandler) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -51,7 +51,7 @@ func TestCreateWWWAuthenticateErrorHandler(t *testing.T) {
 		},
 		{
 			uc: "without provided configuration",
-			assert: func(t *testing.T, err error, errorHandler *wwwAuthenticateErrorHandler) {
+			assert: func(t *testing.T, err error, _ *wwwAuthenticateErrorHandler) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -62,7 +62,7 @@ func TestCreateWWWAuthenticateErrorHandler(t *testing.T) {
 		{
 			uc:     "with empty 'if' configuration",
 			config: []byte(`if: ""`),
-			assert: func(t *testing.T, err error, errorHandler *wwwAuthenticateErrorHandler) {
+			assert: func(t *testing.T, err error, _ *wwwAuthenticateErrorHandler) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -73,7 +73,7 @@ func TestCreateWWWAuthenticateErrorHandler(t *testing.T) {
 		{
 			uc:     "with invalid 'if' configuration",
 			config: []byte(`if: foo`),
-			assert: func(t *testing.T, err error, errorHandler *wwwAuthenticateErrorHandler) {
+			assert: func(t *testing.T, err error, _ *wwwAuthenticateErrorHandler) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -88,7 +88,7 @@ realm: FooBar
 if: type(Error) == authentication_error
 foo: bar
 `),
-			assert: func(t *testing.T, err error, errorHandler *wwwAuthenticateErrorHandler) {
+			assert: func(t *testing.T, err error, _ *wwwAuthenticateErrorHandler) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -180,8 +180,8 @@ func TestCreateWWWAuthenticateErrorHandlerFromPrototype(t *testing.T) {
 			uc:              "unsupported fields provided",
 			prototypeConfig: []byte(`if: type(Error) == authentication_error`),
 			config:          []byte(`to: http://foo.bar`),
-			assert: func(t *testing.T, err error, prototype *wwwAuthenticateErrorHandler,
-				configured *wwwAuthenticateErrorHandler,
+			assert: func(t *testing.T, err error, _ *wwwAuthenticateErrorHandler,
+				_ *wwwAuthenticateErrorHandler,
 			) {
 				t.Helper()
 
@@ -212,8 +212,8 @@ func TestCreateWWWAuthenticateErrorHandlerFromPrototype(t *testing.T) {
 			uc:              "with invalid 'if' reconfigured",
 			prototypeConfig: []byte(`if: type(Error) in [authentication_error, authorization_error]`),
 			config:          []byte(`if: foo`),
-			assert: func(t *testing.T, err error, prototype *wwwAuthenticateErrorHandler,
-				configured *wwwAuthenticateErrorHandler,
+			assert: func(t *testing.T, err error, _ *wwwAuthenticateErrorHandler,
+				_ *wwwAuthenticateErrorHandler,
 			) {
 				t.Helper()
 

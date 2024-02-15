@@ -52,6 +52,7 @@ func (t *traceRoundTripper) RoundTrip(req *http.Request) (*http.Response, error)
 		if req.Proto == "HTTP/2.0" {
 			logger.Trace().Msg("Used HTTP protocol is HTTP/2.0, even the dump shows HTTP/1.1.")
 		}
+
 		logger.Trace().Msg("Outbound Request: \n" + stringx.ToString(dump))
 	}
 

@@ -136,7 +136,7 @@ func TestOptionsWithOperationFilter(t *testing.T) {
 		{
 			uc:    "with filter",
 			opt:   config{},
-			value: func(req *http.Request) bool { return false },
+			value: func(_ *http.Request) bool { return false },
 			assert: func(t *testing.T, opt *config) {
 				t.Helper()
 

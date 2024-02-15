@@ -18,6 +18,7 @@ package accesslog
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -58,7 +59,7 @@ func TestHandlerExecution(t *testing.T) {
 		{
 			uc:        "without tracing, x-* header and errors",
 			method:    http.MethodGet,
-			setHeader: func(t *testing.T, req *http.Request) { t.Helper() },
+			setHeader: func(t *testing.T, _ *http.Request) { t.Helper() },
 			handleRequest: func(t *testing.T, rw http.ResponseWriter, req *http.Request) {
 				t.Helper()
 
@@ -94,10 +95,10 @@ func TestHandlerExecution(t *testing.T) {
 				assert.Equal(t, clientReq.URL.Scheme, logEvent2["_http_scheme"])
 				assert.Contains(t, logEvent2, "_trace_id")
 				assert.Contains(t, logEvent2, "_trace_id")
-				assert.Equal(t, logEvent2["_trace_id"], logEvent2["_trace_id"])
-				assert.Equal(t, logEvent2["_parent_id"], logEvent2["_parent_id"])
+				assert.Equal(t, logEvent1["_trace_id"], logEvent2["_trace_id"])
+				assert.Equal(t, logEvent1["_parent_id"], logEvent2["_parent_id"])
 				assert.Contains(t, logEvent2, "_body_bytes_sent")
-				assert.Equal(t, float64(200), logEvent2["_http_status_code"])
+				assert.InDelta(t, float64(http.StatusOK), logEvent2["_http_status_code"], 0.001)
 				assert.Equal(t, true, logEvent2["_access_granted"]) //nolint:testifylint
 				assert.Equal(t, "foo", logEvent2["_subject"])
 				assert.Contains(t, logEvent2, "_http_user_agent")
@@ -124,7 +125,7 @@ func TestHandlerExecution(t *testing.T) {
 			handleRequest: func(t *testing.T, rw http.ResponseWriter, req *http.Request) {
 				t.Helper()
 
-				accesscontext.SetError(req.Context(), fmt.Errorf("test error"))
+				accesscontext.SetError(req.Context(), errors.New("test error"))
 				rw.WriteHeader(http.StatusInternalServerError)
 			},
 			assert: func(t *testing.T, clientReq *http.Request, logEvent1, logEvent2 map[string]any) {
@@ -158,11 +159,11 @@ func TestHandlerExecution(t *testing.T) {
 				assert.Equal(t, clientReq.URL.Host, logEvent2["_http_host"])
 				assert.Equal(t, clientReq.URL.Path, logEvent2["_http_path"])
 				assert.Equal(t, clientReq.URL.Scheme, logEvent2["_http_scheme"])
-				assert.Equal(t, logEvent2["_trace_id"], logEvent2["_trace_id"])
-				assert.Equal(t, logEvent2["_parent_id"], logEvent2["_parent_id"])
-				assert.Equal(t, logEvent2["_span_id"], logEvent2["_span_id"])
+				assert.Equal(t, logEvent1["_trace_id"], logEvent2["_trace_id"])
+				assert.Equal(t, logEvent1["_parent_id"], logEvent2["_parent_id"])
+				assert.Equal(t, logEvent1["_span_id"], logEvent2["_span_id"])
 				assert.Contains(t, logEvent2, "_body_bytes_sent")
-				assert.Equal(t, float64(http.StatusInternalServerError), logEvent2["_http_status_code"])
+				assert.InDelta(t, float64(http.StatusInternalServerError), logEvent2["_http_status_code"], 0.001)
 				assert.Equal(t, false, logEvent2["_access_granted"]) //nolint:testifylint
 				assert.Equal(t, "test error", logEvent2["error"])
 				assert.Contains(t, logEvent2, "_http_user_agent")
@@ -177,12 +178,12 @@ func TestHandlerExecution(t *testing.T) {
 		{
 			uc:        "without tracing and x-* header, but with subject and error set on context",
 			method:    http.MethodPatch,
-			setHeader: func(t *testing.T, req *http.Request) { t.Helper() },
+			setHeader: func(t *testing.T, _ *http.Request) { t.Helper() },
 			handleRequest: func(t *testing.T, rw http.ResponseWriter, req *http.Request) {
 				t.Helper()
 
 				accesscontext.SetSubject(req.Context(), "bar")
-				accesscontext.SetError(req.Context(), fmt.Errorf("test error"))
+				accesscontext.SetError(req.Context(), errors.New("test error"))
 				rw.WriteHeader(http.StatusUnauthorized)
 			},
 			assert: func(t *testing.T, clientReq *http.Request, logEvent1, logEvent2 map[string]any) {
@@ -214,10 +215,10 @@ func TestHandlerExecution(t *testing.T) {
 				assert.Equal(t, clientReq.URL.Scheme, logEvent2["_http_scheme"])
 				assert.Contains(t, logEvent2, "_trace_id")
 				assert.Contains(t, logEvent2, "_trace_id")
-				assert.Equal(t, logEvent2["_trace_id"], logEvent2["_trace_id"])
-				assert.Equal(t, logEvent2["_parent_id"], logEvent2["_parent_id"])
+				assert.Equal(t, logEvent1["_trace_id"], logEvent2["_trace_id"])
+				assert.Equal(t, logEvent1["_parent_id"], logEvent2["_parent_id"])
 				assert.Contains(t, logEvent2, "_body_bytes_sent")
-				assert.Equal(t, float64(http.StatusUnauthorized), logEvent2["_http_status_code"])
+				assert.InDelta(t, float64(http.StatusUnauthorized), logEvent2["_http_status_code"], 0.001)
 				assert.Equal(t, false, logEvent2["_access_granted"]) //nolint:testifylint
 				assert.Equal(t, "bar", logEvent2["_subject"])
 				assert.Equal(t, "test error", logEvent2["error"])
@@ -228,7 +229,7 @@ func TestHandlerExecution(t *testing.T) {
 		{
 			uc:        "without tracing and x-* header, but with subject and redirect handling",
 			method:    http.MethodPatch,
-			setHeader: func(t *testing.T, req *http.Request) { t.Helper() },
+			setHeader: func(t *testing.T, _ *http.Request) { t.Helper() },
 			handleRequest: func(t *testing.T, rw http.ResponseWriter, req *http.Request) {
 				t.Helper()
 
@@ -264,10 +265,10 @@ func TestHandlerExecution(t *testing.T) {
 				assert.Equal(t, clientReq.URL.Scheme, logEvent2["_http_scheme"])
 				assert.Contains(t, logEvent2, "_trace_id")
 				assert.Contains(t, logEvent2, "_trace_id")
-				assert.Equal(t, logEvent2["_trace_id"], logEvent2["_trace_id"])
-				assert.Equal(t, logEvent2["_parent_id"], logEvent2["_parent_id"])
+				assert.Equal(t, logEvent1["_trace_id"], logEvent2["_trace_id"])
+				assert.Equal(t, logEvent1["_parent_id"], logEvent2["_parent_id"])
 				assert.Contains(t, logEvent2, "_body_bytes_sent")
-				assert.Equal(t, float64(http.StatusSeeOther), logEvent2["_http_status_code"])
+				assert.InDelta(t, float64(http.StatusSeeOther), logEvent2["_http_status_code"], 0.001)
 				assert.Equal(t, false, logEvent2["_access_granted"]) //nolint:testifylint
 				assert.Equal(t, "bar", logEvent2["_subject"])
 				assert.Contains(t, logEvent2, "_http_user_agent")
@@ -305,7 +306,7 @@ func TestHandlerExecution(t *testing.T) {
 			req, err := http.NewRequestWithContext(
 				context.Background(),
 				tc.method,
-				fmt.Sprintf("%s/test", srv.URL),
+				srv.URL+"/test",
 				nil,
 			)
 			require.NoError(t, err)
