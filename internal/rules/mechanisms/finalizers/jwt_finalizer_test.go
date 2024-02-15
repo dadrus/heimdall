@@ -301,7 +301,7 @@ func TestCreateJWTFinalizerFromPrototype(t *testing.T) {
 		{
 			uc:     "configuration with too short ttl",
 			config: []byte(`ttl: 5ms`),
-			assert: func(t *testing.T, err error, prototype *jwtFinalizer, configured *jwtFinalizer) {
+			assert: func(t *testing.T, err error, _ *jwtFinalizer, _ *jwtFinalizer) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -371,7 +371,7 @@ claims:
 ttl: 5s
 foo: bar
 `),
-			assert: func(t *testing.T, err error, prototype *jwtFinalizer, configured *jwtFinalizer) {
+			assert: func(t *testing.T, err error, _ *jwtFinalizer, _ *jwtFinalizer) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -557,7 +557,7 @@ claims: '{
 			config:  []byte(`claims: "foo: bar"`),
 			subject: &subject.Subject{ID: "foo", Attributes: map[string]any{"baz": "bar"}},
 			configureMocks: func(t *testing.T, ctx *heimdallmocks.ContextMock, signer *heimdallmocks.JWTSignerMock,
-				cch *mocks.CacheMock, sub *subject.Subject,
+				cch *mocks.CacheMock, _ *subject.Subject,
 			) {
 				t.Helper()
 
@@ -585,7 +585,7 @@ claims: '{
 			config:  []byte(`claims: "{{ len .foobar }}"`),
 			subject: &subject.Subject{ID: "foo", Attributes: map[string]any{"baz": "bar"}},
 			configureMocks: func(t *testing.T, ctx *heimdallmocks.ContextMock, signer *heimdallmocks.JWTSignerMock,
-				cch *mocks.CacheMock, sub *subject.Subject,
+				cch *mocks.CacheMock, _ *subject.Subject,
 			) {
 				t.Helper()
 

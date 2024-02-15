@@ -60,7 +60,7 @@ func TestCreateMetricReaders(t *testing.T) {
 		{
 			uc:    "list contains unsupported exporter type",
 			names: []string{"otlp", "foobar"},
-			assert: func(t *testing.T, err error, readers []metric.Reader) {
+			assert: func(t *testing.T, err error, _ []metric.Reader) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -76,7 +76,7 @@ func TestCreateMetricReaders(t *testing.T) {
 
 				t.Setenv("OTEL_EXPORTER_OTLP_PROTOCOL", "foobar")
 			},
-			assert: func(t *testing.T, err error, readers []metric.Reader) {
+			assert: func(t *testing.T, err error, _ []metric.Reader) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -92,7 +92,7 @@ func TestCreateMetricReaders(t *testing.T) {
 				t.Helper()
 				t.Setenv("OTEL_EXPORTER_OTLP_PROTOCOL", "foobar")
 			},
-			assert: func(t *testing.T, err error, readers []metric.Reader) {
+			assert: func(t *testing.T, err error, _ []metric.Reader) {
 				t.Helper()
 
 				require.Error(t, err)

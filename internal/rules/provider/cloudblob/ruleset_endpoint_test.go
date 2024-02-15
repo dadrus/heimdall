@@ -77,7 +77,7 @@ func TestFetchRuleSets(t *testing.T) {
 					RawQuery: "endpoint=does-not-exist.local&foo=bar&region=eu-central-1",
 				},
 			},
-			assert: func(t *testing.T, err error, ruleSets []*config.RuleSet) {
+			assert: func(t *testing.T, err error, _ []*config.RuleSet) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -94,7 +94,7 @@ func TestFetchRuleSets(t *testing.T) {
 					RawQuery: fmt.Sprintf("endpoint=%s&disableSSL=true&s3ForcePathStyle=true&region=eu-central-1", srv.URL),
 				},
 			},
-			assert: func(t *testing.T, err error, ruleSets []*config.RuleSet) {
+			assert: func(t *testing.T, err error, _ []*config.RuleSet) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -121,7 +121,7 @@ func TestFetchRuleSets(t *testing.T) {
 					strings.NewReader(data), int64(len(data)))
 				require.NoError(t, err)
 			},
-			assert: func(t *testing.T, err error, ruleSets []*config.RuleSet) {
+			assert: func(t *testing.T, err error, _ []*config.RuleSet) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -201,7 +201,7 @@ func TestFetchRuleSets(t *testing.T) {
 					strings.NewReader(data), int64(len(data)))
 				require.NoError(t, err)
 			},
-			assert: func(t *testing.T, err error, ruleSets []*config.RuleSet) {
+			assert: func(t *testing.T, err error, _ []*config.RuleSet) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -347,7 +347,7 @@ rules:
 				},
 				Prefix: "api",
 			},
-			assert: func(t *testing.T, err error, ruleSets []*config.RuleSet) {
+			assert: func(t *testing.T, err error, _ []*config.RuleSet) {
 				t.Helper()
 
 				require.Error(t, err)

@@ -47,7 +47,7 @@ func TestCreateAuthenticatorPrototype(t *testing.T) {
 		{
 			uc:  "using unknown type",
 			typ: "foo",
-			assert: func(t *testing.T, err error, auth Authenticator) {
+			assert: func(t *testing.T, err error, _ Authenticator) {
 				t.Helper()
 
 				require.Error(t, err)

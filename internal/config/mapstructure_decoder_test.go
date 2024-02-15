@@ -129,7 +129,7 @@ func TestDecodeTLSCipherSuite(t *testing.T) {
 cipher_suites:
 - foo
 `),
-			assert: func(t *testing.T, err error, suites TLSCipherSuites) {
+			assert: func(t *testing.T, err error, _ TLSCipherSuites) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -205,7 +205,7 @@ func TestDecodeTLSMinVersion(t *testing.T) {
 		{
 			uc:     "unsupported version",
 			config: []byte(`min_version: foo`),
-			assert: func(t *testing.T, err error, minVersion TLSMinVersion) {
+			assert: func(t *testing.T, err error, _ TLSMinVersion) {
 				t.Helper()
 
 				require.Error(t, err)

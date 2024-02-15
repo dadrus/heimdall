@@ -231,8 +231,7 @@ func TestHandlerObserveKnownRequests(t *testing.T) {
 			envoy_auth.RegisterAuthorizationServer(srv, handler)
 
 			go func() {
-				err = srv.Serve(lis)
-				require.NoError(t, err)
+				srv.Serve(lis)
 			}()
 
 			client := envoy_auth.NewAuthorizationClient(conn)
@@ -290,7 +289,7 @@ func TestHandlerObserveUnknownRequests(t *testing.T) {
 		WithServerName(":8080"),
 	)
 	srv := grpc.NewServer(
-		grpc.UnknownServiceHandler(func(srv interface{}, stream grpc.ServerStream) error {
+		grpc.UnknownServiceHandler(func(_ any, _ grpc.ServerStream) error {
 			return status.Error(codes.Unknown, "unknown service or method")
 		}),
 		grpc.StreamInterceptor(metricsIntercepter.StreamServerInterceptor()))
@@ -298,8 +297,7 @@ func TestHandlerObserveUnknownRequests(t *testing.T) {
 	envoy_auth.RegisterAuthorizationServer(srv, handler)
 
 	go func() {
-		err = srv.Serve(lis)
-		require.NoError(t, err)
+		srv.Serve(lis)
 	}()
 
 	client := mocks2.NewTestClient(conn)

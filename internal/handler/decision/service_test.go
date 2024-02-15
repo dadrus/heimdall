@@ -569,9 +569,9 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 			defer decision.Shutdown(context.Background())
 
 			go func() {
-				err := decision.Serve(listener)
-				require.ErrorIs(t, err, http.ErrServerClosed)
+				decision.Serve(listener)
 			}()
+
 			time.Sleep(50 * time.Millisecond)
 
 			// WHEN

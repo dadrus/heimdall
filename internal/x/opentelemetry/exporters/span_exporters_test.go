@@ -34,7 +34,7 @@ func TestNewSpanExportersWithoutSetEnvVariable(t *testing.T) {
 	// THEN
 	require.NoError(t, err)
 	assert.Len(t, expts, 1)
-	assert.IsType(t, expts[0], &otlptrace.Exporter{})
+	assert.IsType(t, &otlptrace.Exporter{}, expts[0])
 }
 
 func TestNewSpanExportersWithSetEnvVariable(t *testing.T) {

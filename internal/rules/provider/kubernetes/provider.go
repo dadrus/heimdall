@@ -243,7 +243,7 @@ func (p *provider) addRuleSet(obj any) {
 			v1alpha3.ConditionRuleSetActive,
 			1,
 			1,
-			fmt.Sprintf("%s instance successfully loaded RuleSet", p.id),
+			p.id+" instance successfully loaded RuleSet",
 		)
 	}
 }
@@ -286,7 +286,7 @@ func (p *provider) updateRuleSet(oldObj, newObj any) {
 			v1alpha3.ConditionRuleSetActive,
 			0,
 			0,
-			fmt.Sprintf("%s instance successfully reloaded RuleSet", p.id),
+			p.id+" instance successfully reloaded RuleSet",
 		)
 	}
 }
@@ -312,7 +312,7 @@ func (p *provider) deleteRuleSet(obj any) {
 			v1alpha3.ConditionRuleSetUnloadingFailed,
 			0,
 			0,
-			fmt.Sprintf("%s instance failed unloading RuleSet, reason: %s", p.id, err.Error()),
+			p.id+" instance failed unloading RuleSet, reason: "+err.Error(),
 		)
 	} else {
 		p.updateStatus(
@@ -322,7 +322,7 @@ func (p *provider) deleteRuleSet(obj any) {
 			v1alpha3.ConditionRuleSetUnloaded,
 			-1,
 			-1,
-			fmt.Sprintf("%s instance dropped RuleSet", p.id),
+			p.id+" instance dropped RuleSet",
 		)
 	}
 }
@@ -358,7 +358,7 @@ func (p *provider) updateStatus(
 
 	p.l.Debug().Msg("Updating RuleSet status")
 
-	conditionType := fmt.Sprintf("%s/Reconciliation", p.id)
+	conditionType := p.id + "/Reconciliation"
 
 	if reason == v1alpha3.ConditionControllerStopped || reason == v1alpha3.ConditionRuleSetUnloaded {
 		meta.RemoveStatusCondition(&modRS.Status.Conditions, conditionType)
@@ -426,6 +426,6 @@ func (p *provider) finalize(ctx context.Context) {
 		func(set *v1alpha3.RuleSet) bool { return set.Spec.AuthClassName == p.ac },
 	) {
 		p.updateStatus(ctx, rs, metav1.ConditionFalse, v1alpha3.ConditionControllerStopped, -1, -1,
-			fmt.Sprintf("%s instance stopped", p.id))
+			p.id+" instance stopped")
 	}
 }

@@ -47,7 +47,7 @@ func TestCreateErrorHandlerPrototypePrototype(t *testing.T) {
 		{
 			uc:  "using unknown type",
 			typ: "foo",
-			assert: func(t *testing.T, err error, errorHandler ErrorHandler) {
+			assert: func(t *testing.T, err error, _ ErrorHandler) {
 				t.Helper()
 
 				require.Error(t, err)

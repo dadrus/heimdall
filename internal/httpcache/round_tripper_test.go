@@ -38,7 +38,7 @@ func TestRoundTripperRoundTrip(t *testing.T) {
 		requestCounts    int
 	)
 
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		requestCounts++
 
 		if setExpiresHeader {

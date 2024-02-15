@@ -131,7 +131,7 @@ scopes:
 scopes:
   matching_strategy: exact
 `),
-			assert: func(t *testing.T, err error, matcher ScopesMatcher) {
+			assert: func(t *testing.T, err error, _ ScopesMatcher) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -143,7 +143,7 @@ scopes:
 scopes:
   foo: bar
 `),
-			assert: func(t *testing.T, err error, matcher ScopesMatcher) {
+			assert: func(t *testing.T, err error, _ ScopesMatcher) {
 				t.Helper()
 
 				require.Error(t, err)

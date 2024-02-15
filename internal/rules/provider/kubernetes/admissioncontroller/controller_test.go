@@ -138,7 +138,7 @@ func TestControllerLifecycle(t *testing.T) {
 
 				return req
 			},
-			assert: func(t *testing.T, err error, resp *http.Response) {
+			assert: func(t *testing.T, err error, _ *http.Response) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -437,6 +437,7 @@ func TestControllerLifecycle(t *testing.T) {
 
 			port, err := testsupport.GetFreePort()
 			require.NoError(t, err)
+
 			listeningAddress = fmt.Sprintf("127.0.0.1:%d", port)
 
 			setupMock := x.IfThenElse(

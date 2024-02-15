@@ -48,7 +48,7 @@ func TestHandler(t *testing.T) {
 
 				next.EXPECT().ServeHTTP(mock.Anything, mock.Anything)
 			},
-			assert: func(t *testing.T, rec *httptest.ResponseRecorder) {
+			assert: func(t *testing.T, _ *httptest.ResponseRecorder) {
 				t.Helper()
 			},
 		},
@@ -56,7 +56,7 @@ func TestHandler(t *testing.T) {
 			uc:            "method not allowed",
 			requestMethod: http.MethodDelete,
 			filterMethod:  http.MethodGet,
-			setupNext: func(t *testing.T, next *mocks.HandlerMock) {
+			setupNext: func(t *testing.T, _ *mocks.HandlerMock) {
 				t.Helper()
 			},
 			assert: func(t *testing.T, rec *httptest.ResponseRecorder) {

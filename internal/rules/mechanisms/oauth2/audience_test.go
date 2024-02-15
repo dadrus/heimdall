@@ -69,7 +69,7 @@ func TestAudienceUnmarshalJSON(t *testing.T) {
 		{
 			uc:   "bad audience encoding (not a json object)",
 			json: []byte(`"aud": ["foo", "bar", "baz"]`),
-			assert: func(t *testing.T, err error, audience Audience) {
+			assert: func(t *testing.T, err error, _ Audience) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -78,7 +78,7 @@ func TestAudienceUnmarshalJSON(t *testing.T) {
 		{
 			uc:   "bad audience encoding (not expected content)",
 			json: []byte(`{ "aud": true }`),
-			assert: func(t *testing.T, err error, audience Audience) {
+			assert: func(t *testing.T, err error, _ Audience) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -89,7 +89,7 @@ func TestAudienceUnmarshalJSON(t *testing.T) {
 		{
 			uc:   "bad audience encoding (not expected json array content)",
 			json: []byte(`{ "aud": [true] }`),
-			assert: func(t *testing.T, err error, audience Audience) {
+			assert: func(t *testing.T, err error, _ Audience) {
 				t.Helper()
 
 				require.Error(t, err)

@@ -52,7 +52,7 @@ func TestNumericDateUnmarshalJSON(t *testing.T) {
 		{
 			uc:   "invalid config",
 			json: []byte(`{ "date": "foo" }`),
-			assert: func(t *testing.T, err error, date NumericDate) {
+			assert: func(t *testing.T, err error, _ NumericDate) {
 				t.Helper()
 
 				require.Error(t, err)

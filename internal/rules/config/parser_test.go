@@ -39,7 +39,7 @@ func TestParseRules(t *testing.T) {
 			uc:          "unsupported content type and not empty contents",
 			contentType: "foobar",
 			content:     []byte(`foo: bar`),
-			assert: func(t *testing.T, err error, ruleSet *RuleSet) {
+			assert: func(t *testing.T, err error, _ *RuleSet) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -169,7 +169,7 @@ func TestParseYAML(t *testing.T) {
 	}{
 		{
 			uc: "empty rule set spec",
-			assert: func(t *testing.T, err error, ruleSet *RuleSet) {
+			assert: func(t *testing.T, err error, _ *RuleSet) {
 				t.Helper()
 
 				require.ErrorIs(t, err, ErrEmptyRuleSet)
@@ -178,7 +178,7 @@ func TestParseYAML(t *testing.T) {
 		{
 			uc:   "invalid rule set spec",
 			conf: []byte(`foo: bar`),
-			assert: func(t *testing.T, err error, ruleSet *RuleSet) {
+			assert: func(t *testing.T, err error, _ *RuleSet) {
 				t.Helper()
 
 				require.Error(t, err)

@@ -108,6 +108,7 @@ func TestLifecycleManagerStart(t *testing.T) {
 
 			// WHEN
 			err = lcm.Start(context.TODO())
+
 			time.Sleep(50 * time.Millisecond)
 
 			// THEN

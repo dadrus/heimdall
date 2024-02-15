@@ -423,6 +423,7 @@ func TestClientCredentialsFinalizerExecute(t *testing.T) {
 
 			return
 		}
+
 		if err := req.ParseForm(); err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 
@@ -486,12 +487,12 @@ func TestClientCredentialsFinalizerExecute(t *testing.T) {
 					ClientSecret: "foo",
 				},
 			},
-			configureMocks: func(t *testing.T, ctx *mocks.ContextMock, cch *mocks2.CacheMock) {
+			configureMocks: func(t *testing.T, _ *mocks.ContextMock, cch *mocks2.CacheMock) {
 				t.Helper()
 
 				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil)
 			},
-			assertRequest: func(t *testing.T, req *http.Request) { t.Helper() },
+			assertRequest: func(t *testing.T, _ *http.Request) { t.Helper() },
 			buildResponse: func(t *testing.T) (any, int) {
 				t.Helper()
 

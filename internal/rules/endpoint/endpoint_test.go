@@ -183,7 +183,7 @@ func TestEndpointCreateRequest(t *testing.T) {
 		{
 			uc:       "with invalid URL",
 			endpoint: Endpoint{URL: "://test.org"},
-			assert: func(t *testing.T, request *http.Request, err error) {
+			assert: func(t *testing.T, _ *http.Request, err error) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -246,7 +246,7 @@ func TestEndpointCreateRequest(t *testing.T) {
 					return as
 				}(),
 			},
-			assert: func(t *testing.T, request *http.Request, err error) {
+			assert: func(t *testing.T, _ *http.Request, err error) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -303,7 +303,7 @@ func TestEndpointCreateRequest(t *testing.T) {
 				URL: "http://test.org/{{ .Values.foo }",
 			},
 			renderer: renderer(nil),
-			assert: func(t *testing.T, request *http.Request, err error) {
+			assert: func(t *testing.T, _ *http.Request, err error) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -338,7 +338,7 @@ func TestEndpointCreateRequest(t *testing.T) {
 				Headers: map[string]string{"X-My-Header-1": "{{ .Values.key }"},
 			},
 			renderer: renderer(nil),
-			assert: func(t *testing.T, request *http.Request, err error) {
+			assert: func(t *testing.T, _ *http.Request, err error) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -393,7 +393,7 @@ func TestEndpointSendRequest(t *testing.T) {
 		{
 			uc:       "with failing request creation",
 			endpoint: Endpoint{URL: "://test.org"},
-			assert: func(t *testing.T, response []byte, err error) {
+			assert: func(t *testing.T, _ []byte, err error) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -404,7 +404,7 @@ func TestEndpointSendRequest(t *testing.T) {
 		{
 			uc:       "with dns error",
 			endpoint: Endpoint{URL: "http://heimdall.test.local"},
-			assert: func(t *testing.T, response []byte, err error) {
+			assert: func(t *testing.T, _ []byte, err error) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -420,7 +420,7 @@ func TestEndpointSendRequest(t *testing.T) {
 
 				statusCode = http.StatusBadGateway
 			},
-			assert: func(t *testing.T, response []byte, err error) {
+			assert: func(t *testing.T, _ []byte, err error) {
 				t.Helper()
 
 				require.Error(t, err)

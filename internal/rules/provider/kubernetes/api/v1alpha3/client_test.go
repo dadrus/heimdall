@@ -88,6 +88,7 @@ type ClientTestSuite struct {
 func (s *ClientTestSuite) SetupSuite() {
 	s.srv = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
+
 		qWatch := r.URL.Query().Get("watch")
 
 		var err error
@@ -97,6 +98,7 @@ func (s *ClientTestSuite) SetupSuite() {
 		} else {
 			_, err = w.Write([]byte(response))
 		}
+
 		s.Require().NoError(err)
 
 		w.WriteHeader(http.StatusOK)

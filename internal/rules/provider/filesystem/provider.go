@@ -21,7 +21,6 @@ import (
 	"context"
 	"crypto/sha256"
 	"errors"
-	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -243,7 +242,7 @@ func (p *Provider) ruleSetDeleted(fileName string) error {
 
 	conf := &config2.RuleSet{
 		MetaData: config2.MetaData{
-			Source:  fmt.Sprintf("file_system:%s", fileName),
+			Source:  "file_system:" + fileName,
 			ModTime: time.Now(),
 		},
 	}
@@ -275,7 +274,7 @@ func (p *Provider) loadRuleSet(fileName string) (*config2.RuleSet, error) {
 	stat, _ := os.Stat(fileName)
 
 	ruleSet.Hash = md.Sum(nil)
-	ruleSet.Source = fmt.Sprintf("file_system:%s", fileName)
+	ruleSet.Source = "file_system:" + fileName
 	ruleSet.ModTime = stat.ModTime()
 
 	return ruleSet, nil

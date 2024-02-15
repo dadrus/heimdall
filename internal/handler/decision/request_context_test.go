@@ -45,7 +45,7 @@ func TestRequestContextFinalize(t *testing.T) {
 
 				rc.SetPipelineError(errors.New("test error"))
 			},
-			assert: func(t *testing.T, err error, rec *httptest.ResponseRecorder) {
+			assert: func(t *testing.T, err error, _ *httptest.ResponseRecorder) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -54,7 +54,7 @@ func TestRequestContextFinalize(t *testing.T) {
 		{
 			uc:   "only response code is set",
 			code: http.StatusNoContent,
-			setup: func(t *testing.T, rc requestcontext.Context) {
+			setup: func(t *testing.T, _ requestcontext.Context) {
 				t.Helper()
 			},
 			assert: func(t *testing.T, err error, rec *httptest.ResponseRecorder) {

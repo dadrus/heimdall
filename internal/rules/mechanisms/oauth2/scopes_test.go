@@ -69,7 +69,7 @@ func TestScopesUnmarshalJSON(t *testing.T) {
 		{
 			uc:   "bad scope encoding (not a json object)",
 			json: []byte(`"scope": ["foo", "bar", "baz"]`),
-			assert: func(t *testing.T, err error, scopes Scopes) {
+			assert: func(t *testing.T, err error, _ Scopes) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -78,7 +78,7 @@ func TestScopesUnmarshalJSON(t *testing.T) {
 		{
 			uc:   "bad scope encoding (not expected content)",
 			json: []byte(`{ "scope": true }`),
-			assert: func(t *testing.T, err error, scopes Scopes) {
+			assert: func(t *testing.T, err error, _ Scopes) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -89,7 +89,7 @@ func TestScopesUnmarshalJSON(t *testing.T) {
 		{
 			uc:   "bad scope encoding (not expected json array content)",
 			json: []byte(`{ "scope": [true] }`),
-			assert: func(t *testing.T, err error, scopes Scopes) {
+			assert: func(t *testing.T, err error, _ Scopes) {
 				t.Helper()
 
 				require.Error(t, err)
