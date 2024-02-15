@@ -147,7 +147,7 @@ func TestTLSConfig(t *testing.T) {
 		{
 			uc:   "fails due to not existent key store for TLS usage",
 			conf: TLS{KeyStore: KeyStore{Path: "/no/such/file"}},
-			assert: func(t *testing.T, err error, conf *tls.Config) {
+			assert: func(t *testing.T, err error, _ *tls.Config) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -162,7 +162,7 @@ func TestTLSConfig(t *testing.T) {
 				KeyID:      "foo",
 				MinVersion: tls.VersionTLS12,
 			},
-			assert: func(t *testing.T, err error, conf *tls.Config) {
+			assert: func(t *testing.T, err error, _ *tls.Config) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -177,7 +177,7 @@ func TestTLSConfig(t *testing.T) {
 				KeyID:      "key2",
 				MinVersion: tls.VersionTLS12,
 			},
-			assert: func(t *testing.T, err error, conf *tls.Config) {
+			assert: func(t *testing.T, err error, _ *tls.Config) {
 				t.Helper()
 
 				require.Error(t, err)

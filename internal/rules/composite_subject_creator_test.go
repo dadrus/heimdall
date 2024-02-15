@@ -75,7 +75,7 @@ func TestCompositeSubjectCreatorExecution(t *testing.T) {
 		{
 			uc: "without fallback as first authenticator returns an error not equal to argument error",
 			configureMocks: func(t *testing.T, ctx heimdall.Context, first *rulemocks.SubjectCreatorMock,
-				second *rulemocks.SubjectCreatorMock, _ *subject.Subject,
+				_ *rulemocks.SubjectCreatorMock, _ *subject.Subject,
 			) {
 				t.Helper()
 

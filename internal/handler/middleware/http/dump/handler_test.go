@@ -18,7 +18,6 @@ package dump
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -90,7 +89,7 @@ func TestDumpHandlerExecution(t *testing.T) {
 						})
 					},
 					New(),
-				).ThenFunc(func(rw http.ResponseWriter, req *http.Request) {
+				).ThenFunc(func(rw http.ResponseWriter, _ *http.Request) {
 					rw.WriteHeader(http.StatusOK)
 					rw.Write([]byte("Barfoo"))
 				}))
@@ -100,7 +99,7 @@ func TestDumpHandlerExecution(t *testing.T) {
 			req, err := http.NewRequestWithContext(
 				context.Background(),
 				http.MethodGet,
-				fmt.Sprintf("%s/test", srv.URL),
+				srv.URL+"/test",
 				strings.NewReader("Foobar"),
 			)
 			require.NoError(t, err)

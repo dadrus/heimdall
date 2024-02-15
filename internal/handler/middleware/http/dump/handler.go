@@ -160,7 +160,7 @@ func New() func(http.Handler) http.Handler { // nolint: funlen, gocognit, cyclop
 }
 
 func writeStatusLine(bw *bytes.Buffer, proto string, code int, scratch []byte) {
-	bw.WriteString(fmt.Sprintf("%s ", proto))
+	bw.WriteString(proto + " ")
 
 	if text := http.StatusText(code); text != "" {
 		bw.Write(strconv.AppendInt(scratch[:0], int64(code), 10)) //nolint:gomnd

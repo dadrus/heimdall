@@ -166,7 +166,7 @@ func TestNewJWTSigner(t *testing.T) {
 		{
 			uc:     "with error while retrieving key from key store",
 			config: config.SignerConfig{Name: "foo", KeyStore: config.KeyStore{Path: keyFile.Name()}, KeyID: "baz"},
-			assert: func(t *testing.T, err error, signer *jwtSigner) {
+			assert: func(t *testing.T, err error, _ *jwtSigner) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -260,7 +260,7 @@ func TestNewJWTSigner(t *testing.T) {
 		{
 			uc:     "with not existing key store",
 			config: config.SignerConfig{Name: "foo", KeyStore: config.KeyStore{Path: "/does/not/exist"}},
-			assert: func(t *testing.T, err error, signer *jwtSigner) {
+			assert: func(t *testing.T, err error, _ *jwtSigner) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -275,7 +275,7 @@ func TestNewJWTSigner(t *testing.T) {
 				KeyStore: config.KeyStore{Path: keyFile.Name()},
 				KeyID:    "missing_key_usage",
 			},
-			assert: func(t *testing.T, err error, signer *jwtSigner) {
+			assert: func(t *testing.T, err error, _ *jwtSigner) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -394,7 +394,7 @@ func TestJWTSignerSign(t *testing.T) {
 				jwk: jose.JSONWebKey{KeyID: "bar", Algorithm: "foobar"},
 			},
 			claims: map[string]any{"baz": "zab", "bla": "foo"},
-			assert: func(t *testing.T, err error, rawJWT string, signer *jwtSigner, claims map[string]any) {
+			assert: func(t *testing.T, err error, _ string, _ *jwtSigner, _ map[string]any) {
 				t.Helper()
 
 				require.Error(t, err)

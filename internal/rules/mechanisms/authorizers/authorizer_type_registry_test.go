@@ -47,7 +47,7 @@ func TestCreateAuthorizerPrototypeUsingKnowType(t *testing.T) {
 		{
 			uc:  "using unknown type",
 			typ: "foo",
-			assert: func(t *testing.T, err error, auth Authorizer) {
+			assert: func(t *testing.T, err error, _ Authorizer) {
 				t.Helper()
 
 				require.Error(t, err)

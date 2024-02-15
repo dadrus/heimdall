@@ -27,7 +27,7 @@ func TestNewConfigurationFromStructWithDefaultsOnly(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
-	rawExp, err := yaml.Marshal(defaultConfig())
+	rawExp, err := yaml.Marshal(defaultConfig()) //nolint:musttag
 	require.NoError(t, err)
 
 	// WHEN
@@ -36,7 +36,7 @@ func TestNewConfigurationFromStructWithDefaultsOnly(t *testing.T) {
 	// THEN
 	require.NoError(t, err)
 
-	rawConf, err := yaml.Marshal(config)
+	rawConf, err := yaml.Marshal(config) //nolint:musttag
 	require.NoError(t, err)
 
 	require.Equal(t, string(rawExp), string(rawConf))
@@ -46,7 +46,7 @@ func TestNewConfigurationWithConfigFile(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
-	rawExp, err := yaml.Marshal(defaultConfig())
+	rawExp, err := yaml.Marshal(defaultConfig()) //nolint:musttag
 	require.NoError(t, err)
 
 	// WHEN
@@ -55,7 +55,7 @@ func TestNewConfigurationWithConfigFile(t *testing.T) {
 	// THEN
 	require.NoError(t, err)
 
-	rawConf, err := yaml.Marshal(config)
+	rawConf, err := yaml.Marshal(config) //nolint:musttag
 	require.NoError(t, err)
 
 	require.NotEqual(t, string(rawExp), string(rawConf))

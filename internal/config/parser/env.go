@@ -48,7 +48,7 @@ func toRealType(val string) any {
 
 	// here we're using the ability of the yaml parser to "guess" the type and convert the given string to it.
 	// this is not the fastest way, but ok for now.
-	yaml.Unmarshal(stringx.ToBytes(fmt.Sprintf("val: %s", val)), &parsed) // nolint: errcheck
+	yaml.Unmarshal(stringx.ToBytes("val: "+val), &parsed) // nolint: errcheck
 
 	return parsed["val"]
 }

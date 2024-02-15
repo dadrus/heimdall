@@ -44,7 +44,7 @@ func TestExtractMethod(t *testing.T) {
 		{
 			"from request",
 			http.MethodDelete,
-			func(t *testing.T, header http.Header) { t.Helper() },
+			func(t *testing.T, _ http.Header) { t.Helper() },
 		},
 	} {
 		t.Run(tc.uc, func(t *testing.T) {

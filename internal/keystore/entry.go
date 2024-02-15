@@ -63,7 +63,7 @@ func (e *Entry) JOSEAlgorithm() jose.SignatureAlgorithm {
 	case AlgECDSA:
 		return getECDSAAlgorithm(e.KeySize)
 	default:
-		panic(fmt.Sprintf("Unsupported algorithm: %s", e.Alg))
+		panic("Unsupported algorithm: " + e.Alg)
 	}
 }
 

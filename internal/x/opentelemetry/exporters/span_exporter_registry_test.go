@@ -62,7 +62,7 @@ func TestCreateSpanExporters(t *testing.T) {
 		{
 			uc:    "list contains unsupported exporter type",
 			names: []string{"zipkin", "foobar"},
-			assert: func(t *testing.T, err error, expts []trace.SpanExporter) {
+			assert: func(t *testing.T, err error, _ []trace.SpanExporter) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -73,7 +73,7 @@ func TestCreateSpanExporters(t *testing.T) {
 		{
 			uc:    "fails creating exporter type",
 			names: []string{"instana"},
-			assert: func(t *testing.T, err error, expts []trace.SpanExporter) {
+			assert: func(t *testing.T, err error, _ []trace.SpanExporter) {
 				t.Helper()
 
 				// instana exporter requires INSTANA_ENDPOINT_URL and INSTANA_AGENT_KEY
@@ -92,7 +92,7 @@ func TestCreateSpanExporters(t *testing.T) {
 				t.Helper()
 				t.Setenv("OTEL_EXPORTER_OTLP_PROTOCOL", "foobar")
 			},
-			assert: func(t *testing.T, err error, expts []trace.SpanExporter) {
+			assert: func(t *testing.T, err error, _ []trace.SpanExporter) {
 				t.Helper()
 
 				require.Error(t, err)

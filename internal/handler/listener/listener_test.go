@@ -103,7 +103,7 @@ func TestNewListener(t *testing.T) {
 			uc:          "creation fails",
 			network:     "foo",
 			serviceConf: config.ServiceConfig{},
-			assert: func(t *testing.T, err error, ln net.Listener, port string) {
+			assert: func(t *testing.T, err error, _ net.Listener, _ string) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -131,7 +131,7 @@ func TestNewListener(t *testing.T) {
 			serviceConf: config.ServiceConfig{
 				TLS: &config.TLS{KeyStore: config.KeyStore{Path: "/no/such/file"}},
 			},
-			assert: func(t *testing.T, err error, ln net.Listener, port string) {
+			assert: func(t *testing.T, err error, _ net.Listener, _ string) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -143,7 +143,7 @@ func TestNewListener(t *testing.T) {
 			uc:          "fails due to not specified key store",
 			network:     "tcp",
 			serviceConf: config.ServiceConfig{TLS: &config.TLS{}},
-			assert: func(t *testing.T, err error, ln net.Listener, port string) {
+			assert: func(t *testing.T, err error, _ net.Listener, _ string) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -175,6 +175,7 @@ func TestNewListener(t *testing.T) {
 			// GIVEN
 			port, err := freePort()
 			require.NoError(t, err)
+
 			tc.serviceConf.Port = port
 
 			// WHEN

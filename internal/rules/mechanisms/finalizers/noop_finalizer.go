@@ -28,7 +28,7 @@ import (
 //nolint:gochecknoinits
 func init() {
 	registerTypeFactory(
-		func(id string, typ string, conf map[string]any) (bool, Finalizer, error) {
+		func(id string, typ string, _ map[string]any) (bool, Finalizer, error) {
 			if typ != FinalizerNoop {
 				return false, nil, nil
 			}

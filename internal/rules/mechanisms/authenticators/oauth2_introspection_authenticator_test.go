@@ -688,7 +688,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 
 				ads.EXPECT().GetAuthData(ctx).Return("", heimdall.ErrCommunicationTimeout)
 			},
-			assert: func(t *testing.T, err error, sub *subject.Subject) {
+			assert: func(t *testing.T, err error, _ *subject.Subject) {
 				t.Helper()
 
 				assert.False(t, introspectionEndpointCalled)
@@ -721,7 +721,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 
 				ads.EXPECT().GetAuthData(ctx).Return("test_access_token", nil)
 			},
-			assert: func(t *testing.T, err error, sub *subject.Subject) {
+			assert: func(t *testing.T, err error, _ *subject.Subject) {
 				t.Helper()
 
 				assert.False(t, metadataEndpointCalled)
@@ -759,7 +759,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 
 				introspectionResponseCode = http.StatusInternalServerError
 			},
-			assert: func(t *testing.T, err error, sub *subject.Subject) {
+			assert: func(t *testing.T, err error, _ *subject.Subject) {
 				t.Helper()
 
 				assert.True(t, introspectionEndpointCalled)
@@ -796,7 +796,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 
 				metadataResponseCode = http.StatusInternalServerError
 			},
-			assert: func(t *testing.T, err error, sub *subject.Subject) {
+			assert: func(t *testing.T, err error, _ *subject.Subject) {
 				t.Helper()
 
 				assert.True(t, metadataEndpointCalled)
@@ -858,7 +858,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				introspectionResponseContent = []byte(`Hi foo`)
 				introspectionResponseCode = http.StatusOK
 			},
-			assert: func(t *testing.T, err error, sub *subject.Subject) {
+			assert: func(t *testing.T, err error, _ *subject.Subject) {
 				t.Helper()
 
 				assert.True(t, introspectionEndpointCalled)
@@ -924,7 +924,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				introspectionResponseContent = rawIntrospectResponse
 				introspectionResponseCode = http.StatusOK
 			},
-			assert: func(t *testing.T, err error, sub *subject.Subject) {
+			assert: func(t *testing.T, err error, _ *subject.Subject) {
 				t.Helper()
 
 				assert.True(t, introspectionEndpointCalled)
@@ -1001,7 +1001,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				introspectionResponseContent = rawIntrospectResponse
 				introspectionResponseCode = http.StatusOK
 			},
-			assert: func(t *testing.T, err error, sub *subject.Subject) {
+			assert: func(t *testing.T, err error, _ *subject.Subject) {
 				t.Helper()
 
 				assert.True(t, introspectionEndpointCalled)
@@ -1088,7 +1088,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				require.NoError(t, err)
 				metadataResponseCode = http.StatusOK
 			},
-			assert: func(t *testing.T, err error, sub *subject.Subject) {
+			assert: func(t *testing.T, err error, _ *subject.Subject) {
 				t.Helper()
 
 				assert.True(t, metadataEndpointCalled)
@@ -1177,7 +1177,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				require.NoError(t, err)
 				metadataResponseCode = http.StatusOK
 			},
-			assert: func(t *testing.T, err error, sub *subject.Subject) {
+			assert: func(t *testing.T, err error, _ *subject.Subject) {
 				t.Helper()
 
 				assert.True(t, metadataEndpointCalled)
@@ -1236,7 +1236,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				require.NoError(t, err)
 				metadataResponseCode = http.StatusOK
 			},
-			assert: func(t *testing.T, err error, sub *subject.Subject) {
+			assert: func(t *testing.T, err error, _ *subject.Subject) {
 				t.Helper()
 
 				assert.True(t, metadataEndpointCalled)
@@ -1283,7 +1283,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 
 				ads.EXPECT().GetAuthData(ctx).Return(jwtToken, nil)
 			},
-			assert: func(t *testing.T, err error, sub *subject.Subject) {
+			assert: func(t *testing.T, err error, _ *subject.Subject) {
 				t.Helper()
 
 				assert.False(t, introspectionEndpointCalled)
@@ -1500,7 +1500,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				ctx *heimdallmocks.ContextMock,
 				cch *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
-				auth *oauth2IntrospectionAuthenticator,
+				_ *oauth2IntrospectionAuthenticator,
 			) {
 				t.Helper()
 
@@ -1588,7 +1588,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				ctx *heimdallmocks.ContextMock,
 				cch *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
-				auth *oauth2IntrospectionAuthenticator,
+				_ *oauth2IntrospectionAuthenticator,
 			) {
 				t.Helper()
 
@@ -1677,7 +1677,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				ctx *heimdallmocks.ContextMock,
 				cch *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
-				auth *oauth2IntrospectionAuthenticator,
+				_ *oauth2IntrospectionAuthenticator,
 			) {
 				t.Helper()
 

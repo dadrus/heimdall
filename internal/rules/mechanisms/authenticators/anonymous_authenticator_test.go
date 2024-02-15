@@ -67,7 +67,7 @@ func TestCreateAnonymousAuthenticator(t *testing.T) {
 			uc:     "unsupported attributes",
 			id:     "auth1",
 			config: []byte("foo: bar"),
-			assert: func(t *testing.T, err error, auth *anonymousAuthenticator) {
+			assert: func(t *testing.T, err error, _ *anonymousAuthenticator) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -135,7 +135,7 @@ func TestCreateAnonymousAuthenticatorFromPrototype(t *testing.T) {
 			uc:     "malformed configured authenticator config",
 			id:     "auth2",
 			config: []byte("foo: bar"),
-			assert: func(t *testing.T, err error, prototype *anonymousAuthenticator, configured *anonymousAuthenticator) {
+			assert: func(t *testing.T, err error, _ *anonymousAuthenticator, _ *anonymousAuthenticator) {
 				t.Helper()
 
 				require.Error(t, err)

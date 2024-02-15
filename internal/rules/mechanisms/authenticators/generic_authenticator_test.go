@@ -59,7 +59,7 @@ identity_info_endpoint:
   url: http://test.com
 subject:
   id: some_template`),
-			assertError: func(t *testing.T, err error, auth *genericAuthenticator) {
+			assertError: func(t *testing.T, err error, _ *genericAuthenticator) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -74,7 +74,7 @@ authentication_data_source:
   - header: foo-header
 subject:
   id: some_template`),
-			assertError: func(t *testing.T, err error, auth *genericAuthenticator) {
+			assertError: func(t *testing.T, err error, _ *genericAuthenticator) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -91,7 +91,7 @@ authentication_data_source:
   - header: foo-header
 subject:
   id: some_template`),
-			assertError: func(t *testing.T, err error, auth *genericAuthenticator) {
+			assertError: func(t *testing.T, err error, _ *genericAuthenticator) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -106,7 +106,7 @@ identity_info_endpoint:
   url: http://test.com
 authentication_data_source:
   - header: foo-header`),
-			assertError: func(t *testing.T, err error, auth *genericAuthenticator) {
+			assertError: func(t *testing.T, err error, _ *genericAuthenticator) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -121,7 +121,7 @@ identity_info_endpoint:
   url: http://test.com
 subject:
   id: some_template`),
-			assertError: func(t *testing.T, err error, auth *genericAuthenticator) {
+			assertError: func(t *testing.T, err error, _ *genericAuthenticator) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -138,7 +138,7 @@ subject:
   attributes: some_template
 authentication_data_source:
   - header: foo-header`),
-			assertError: func(t *testing.T, err error, auth *genericAuthenticator) {
+			assertError: func(t *testing.T, err error, _ *genericAuthenticator) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -366,8 +366,8 @@ authentication_data_source:
 subject:
   id: some_template`),
 			config: []byte(`foo: bar`),
-			assert: func(t *testing.T, err error, prototype *genericAuthenticator,
-				configured *genericAuthenticator,
+			assert: func(t *testing.T, err error, _ *genericAuthenticator,
+				_ *genericAuthenticator,
 			) {
 				t.Helper()
 
@@ -549,8 +549,8 @@ subject:
 identity_info_endpoint:
   url: http://foo.bar
 `),
-			assert: func(t *testing.T, err error, prototype *genericAuthenticator,
-				configured *genericAuthenticator,
+			assert: func(t *testing.T, err error, _ *genericAuthenticator,
+				_ *genericAuthenticator,
 			) {
 				t.Helper()
 
@@ -573,8 +573,8 @@ subject:
 authentication_data_source:
   - header: bar-header
 `),
-			assert: func(t *testing.T, err error, prototype *genericAuthenticator,
-				configured *genericAuthenticator,
+			assert: func(t *testing.T, err error, _ *genericAuthenticator,
+				_ *genericAuthenticator,
 			) {
 				t.Helper()
 
@@ -597,8 +597,8 @@ subject:
 subject:
   id: new_template
 `),
-			assert: func(t *testing.T, err error, prototype *genericAuthenticator,
-				configured *genericAuthenticator,
+			assert: func(t *testing.T, err error, _ *genericAuthenticator,
+				_ *genericAuthenticator,
 			) {
 				t.Helper()
 
@@ -621,8 +621,8 @@ subject:
 session_lifespan:
   active: foo
 `),
-			assert: func(t *testing.T, err error, prototype *genericAuthenticator,
-				configured *genericAuthenticator,
+			assert: func(t *testing.T, err error, _ *genericAuthenticator,
+				_ *genericAuthenticator,
 			) {
 				t.Helper()
 
@@ -645,8 +645,8 @@ subject:
 payload: |
   foo=bar
 `),
-			assert: func(t *testing.T, err error, prototype *genericAuthenticator,
-				configured *genericAuthenticator,
+			assert: func(t *testing.T, err error, _ *genericAuthenticator,
+				_ *genericAuthenticator,
 			) {
 				t.Helper()
 
@@ -669,8 +669,8 @@ subject:
 forward_headers:
   - foo-bar
 `),
-			assert: func(t *testing.T, err error, prototype *genericAuthenticator,
-				configured *genericAuthenticator,
+			assert: func(t *testing.T, err error, _ *genericAuthenticator,
+				_ *genericAuthenticator,
 			) {
 				t.Helper()
 
@@ -693,8 +693,8 @@ subject:
 forward_cookies:
   - foo-bar
 `),
-			assert: func(t *testing.T, err error, prototype *genericAuthenticator,
-				configured *genericAuthenticator,
+			assert: func(t *testing.T, err error, _ *genericAuthenticator,
+				_ *genericAuthenticator,
 			) {
 				t.Helper()
 
@@ -794,7 +794,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 
 				ads.EXPECT().GetAuthData(ctx).Return("", heimdall.ErrCommunicationTimeout)
 			},
-			assert: func(t *testing.T, err error, sub *subject.Subject) {
+			assert: func(t *testing.T, err error, _ *subject.Subject) {
 				t.Helper()
 
 				assert.False(t, endpointCalled)
@@ -830,7 +830,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 
 				ads.EXPECT().GetAuthData(ctx).Return("test", nil)
 			},
-			assert: func(t *testing.T, err error, sub *subject.Subject) {
+			assert: func(t *testing.T, err error, _ *subject.Subject) {
 				t.Helper()
 
 				assert.False(t, endpointCalled)
@@ -860,7 +860,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 
 				ads.EXPECT().GetAuthData(ctx).Return("test", nil)
 			},
-			assert: func(t *testing.T, err error, sub *subject.Subject) {
+			assert: func(t *testing.T, err error, _ *subject.Subject) {
 				t.Helper()
 
 				assert.False(t, endpointCalled)
@@ -890,7 +890,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 
 				ads.EXPECT().GetAuthData(ctx).Return("session_token", nil)
 			},
-			assert: func(t *testing.T, err error, sub *subject.Subject) {
+			assert: func(t *testing.T, err error, _ *subject.Subject) {
 				t.Helper()
 
 				assert.False(t, endpointCalled)
@@ -925,7 +925,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 
 				responseCode = http.StatusInternalServerError
 			},
-			assert: func(t *testing.T, err error, sub *subject.Subject) {
+			assert: func(t *testing.T, err error, _ *subject.Subject) {
 				t.Helper()
 
 				assert.True(t, endpointCalled)
@@ -978,7 +978,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				responseContent = []byte(`{ "user_id": "barbar" }`)
 				responseContentType = "application/json"
 			},
-			assert: func(t *testing.T, err error, sub *subject.Subject) {
+			assert: func(t *testing.T, err error, _ *subject.Subject) {
 				t.Helper()
 
 				assert.True(t, endpointCalled)
@@ -1126,7 +1126,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				ctx *heimdallmocks.ContextMock,
 				cch *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
-				auth *genericAuthenticator,
+				_ *genericAuthenticator,
 			) {
 				t.Helper()
 
@@ -1223,7 +1223,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				ctx *heimdallmocks.ContextMock,
 				cch *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
-				auth *genericAuthenticator,
+				_ *genericAuthenticator,
 			) {
 				t.Helper()
 
@@ -1253,7 +1253,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				responseContent = []byte(`{ "user_id": "barbar", "active": false }`)
 				responseContentType = "application/json"
 			},
-			assert: func(t *testing.T, err error, sub *subject.Subject) {
+			assert: func(t *testing.T, err error, _ *subject.Subject) {
 				t.Helper()
 
 				assert.True(t, endpointCalled)
@@ -1286,7 +1286,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				ctx *heimdallmocks.ContextMock,
 				cch *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
-				auth *genericAuthenticator,
+				_ *genericAuthenticator,
 			) {
 				t.Helper()
 
@@ -1308,7 +1308,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				responseContent = []byte(`{ "user_id": "barbar", "iat": "2006-01-02T15:04:05.999999Z07" }`)
 				responseContentType = "application/json"
 			},
-			assert: func(t *testing.T, err error, sub *subject.Subject) {
+			assert: func(t *testing.T, err error, _ *subject.Subject) {
 				t.Helper()
 
 				assert.True(t, endpointCalled)
@@ -1346,7 +1346,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				ctx *heimdallmocks.ContextMock,
 				cch *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
-				auth *genericAuthenticator,
+				_ *genericAuthenticator,
 			) {
 				t.Helper()
 

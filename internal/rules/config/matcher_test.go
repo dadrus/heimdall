@@ -54,7 +54,7 @@ func TestMatcherUnmarshalJSON(t *testing.T) {
   strategy: foo
 }
 }`),
-			assert: func(t *testing.T, err error, matcher *Matcher) {
+			assert: func(t *testing.T, err error, _ *Matcher) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -68,7 +68,7 @@ func TestMatcherUnmarshalJSON(t *testing.T) {
   "strategy": "foo"
 }
 }`),
-			assert: func(t *testing.T, err error, matcher *Matcher) {
+			assert: func(t *testing.T, err error, _ *Matcher) {
 				t.Helper()
 
 				require.Error(t, err)

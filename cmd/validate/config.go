@@ -30,7 +30,7 @@ func NewValidateConfigCommand() *cobra.Command {
 		Use:     "config",
 		Short:   "Validates heimdall's configuration",
 		Example: "heimdall validate config -c myconfig.yaml",
-		Run: func(cmd *cobra.Command, args []string) {
+		Run: func(cmd *cobra.Command, _ []string) {
 			if err := validateConfig(cmd); err != nil {
 				cmd.PrintErrf("%v\n", err)
 

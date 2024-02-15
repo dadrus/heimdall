@@ -42,7 +42,7 @@ func TestCreateCELAuthorizer(t *testing.T) {
 	}{
 		{
 			uc: "without configuration",
-			assert: func(t *testing.T, err error, auth *celAuthorizer) {
+			assert: func(t *testing.T, err error, _ *celAuthorizer) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -53,7 +53,7 @@ func TestCreateCELAuthorizer(t *testing.T) {
 		{
 			uc:     "without rules",
 			config: []byte(`expressions: []`),
-			assert: func(t *testing.T, err error, auth *celAuthorizer) {
+			assert: func(t *testing.T, err error, _ *celAuthorizer) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -67,7 +67,7 @@ func TestCreateCELAuthorizer(t *testing.T) {
 expressions: 
   - expression: "foo()"
 `),
-			assert: func(t *testing.T, err error, auth *celAuthorizer) {
+			assert: func(t *testing.T, err error, _ *celAuthorizer) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -81,7 +81,7 @@ expressions:
 expressions: 
   - expression: "size(Subject.ID)"
 `),
-			assert: func(t *testing.T, err error, auth *celAuthorizer) {
+			assert: func(t *testing.T, err error, _ *celAuthorizer) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -97,7 +97,7 @@ expressions:
     message: bar
 foo: bar
 `),
-			assert: func(t *testing.T, err error, auth *celAuthorizer) {
+			assert: func(t *testing.T, err error, _ *celAuthorizer) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -111,7 +111,7 @@ foo: bar
 expressions:
   - message: bar
 `),
-			assert: func(t *testing.T, err error, auth *celAuthorizer) {
+			assert: func(t *testing.T, err error, _ *celAuthorizer) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -250,7 +250,7 @@ func TestCELAuthorizerExecute(t *testing.T) {
 expressions:
   - expression: "true == false"
 `),
-			configureContextAndSubject: func(t *testing.T, ctx *mocks.ContextMock, sub *subject.Subject) {
+			configureContextAndSubject: func(t *testing.T, ctx *mocks.ContextMock, _ *subject.Subject) {
 				// nothing is required here
 				t.Helper()
 

@@ -46,7 +46,7 @@ func TestExtractBodyParameter(t *testing.T) {
 
 				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: fnt})
 			},
-			assert: func(t *testing.T, err error, authData string) {
+			assert: func(t *testing.T, err error, _ string) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -65,7 +65,7 @@ func TestExtractBodyParameter(t *testing.T) {
 
 				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: fnt})
 			},
-			assert: func(t *testing.T, err error, authData string) {
+			assert: func(t *testing.T, err error, _ string) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -84,7 +84,7 @@ func TestExtractBodyParameter(t *testing.T) {
 
 				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: fnt})
 			},
-			assert: func(t *testing.T, err error, authData string) {
+			assert: func(t *testing.T, err error, _ string) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -103,7 +103,7 @@ func TestExtractBodyParameter(t *testing.T) {
 
 				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: fnt})
 			},
-			assert: func(t *testing.T, err error, authData string) {
+			assert: func(t *testing.T, err error, _ string) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -122,7 +122,7 @@ func TestExtractBodyParameter(t *testing.T) {
 
 				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: fnt})
 			},
-			assert: func(t *testing.T, err error, authData string) {
+			assert: func(t *testing.T, err error, _ string) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -141,7 +141,7 @@ func TestExtractBodyParameter(t *testing.T) {
 
 				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: fnt})
 			},
-			assert: func(t *testing.T, err error, authData string) {
+			assert: func(t *testing.T, err error, _ string) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -160,7 +160,7 @@ func TestExtractBodyParameter(t *testing.T) {
 
 				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: fnt})
 			},
-			assert: func(t *testing.T, err error, authData string) {
+			assert: func(t *testing.T, err error, _ string) {
 				t.Helper()
 
 				require.Error(t, err)

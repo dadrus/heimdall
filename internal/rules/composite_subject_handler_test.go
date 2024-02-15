@@ -58,7 +58,7 @@ func TestCompositeSubjectHandlerExecution(t *testing.T) {
 		{
 			uc: "First fails without pipeline continuation",
 			configureMocks: func(t *testing.T, ctx heimdall.Context, first *rulemocks.SubjectHandlerMock,
-				second *rulemocks.SubjectHandlerMock, sub *subject.Subject,
+				_ *rulemocks.SubjectHandlerMock, sub *subject.Subject,
 			) {
 				t.Helper()
 

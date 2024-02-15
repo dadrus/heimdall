@@ -123,7 +123,7 @@ func TestProxyService(t *testing.T) {
 
 				return req
 			},
-			configureMocks: func(t *testing.T, exec *mocks4.ExecutorMock, upstreamURL *url.URL) {
+			configureMocks: func(t *testing.T, exec *mocks4.ExecutorMock, _ *url.URL) {
 				t.Helper()
 
 				exec.EXPECT().Execute(mock.Anything).Return(nil, heimdall.ErrNoRuleFound)
@@ -156,7 +156,7 @@ func TestProxyService(t *testing.T) {
 
 				return req
 			},
-			configureMocks: func(t *testing.T, exec *mocks4.ExecutorMock, upstreamURL *url.URL) {
+			configureMocks: func(t *testing.T, exec *mocks4.ExecutorMock, _ *url.URL) {
 				t.Helper()
 
 				exec.EXPECT().Execute(mock.Anything).Return(nil, heimdall.ErrMethodNotAllowed)
@@ -189,7 +189,7 @@ func TestProxyService(t *testing.T) {
 
 				return req
 			},
-			configureMocks: func(t *testing.T, exec *mocks4.ExecutorMock, upstreamURL *url.URL) {
+			configureMocks: func(t *testing.T, exec *mocks4.ExecutorMock, _ *url.URL) {
 				t.Helper()
 
 				exec.EXPECT().Execute(mock.Anything).Return(nil, heimdall.ErrConfiguration)
@@ -222,7 +222,7 @@ func TestProxyService(t *testing.T) {
 
 				return req
 			},
-			configureMocks: func(t *testing.T, exec *mocks4.ExecutorMock, upstreamURL *url.URL) {
+			configureMocks: func(t *testing.T, exec *mocks4.ExecutorMock, _ *url.URL) {
 				t.Helper()
 
 				exec.EXPECT().Execute(mock.Anything).Return(nil, heimdall.ErrAuthentication)
@@ -255,7 +255,7 @@ func TestProxyService(t *testing.T) {
 
 				return req
 			},
-			configureMocks: func(t *testing.T, exec *mocks4.ExecutorMock, upstreamURL *url.URL) {
+			configureMocks: func(t *testing.T, exec *mocks4.ExecutorMock, _ *url.URL) {
 				t.Helper()
 
 				exec.EXPECT().Execute(mock.Anything).Return(nil, heimdall.ErrAuthorization)
@@ -369,7 +369,7 @@ func TestProxyService(t *testing.T) {
 				req, err := http.NewRequestWithContext(
 					context.TODO(),
 					http.MethodPost,
-					fmt.Sprintf("http://%s", host)+"/%5Bid%5D/foobar",
+					"http://"+host+"/%5Bid%5D/foobar",
 					strings.NewReader("hello"))
 				require.NoError(t, err)
 
@@ -633,7 +633,7 @@ func TestProxyService(t *testing.T) {
 
 				return req
 			},
-			configureMocks: func(t *testing.T, _ *mocks4.ExecutorMock, upstreamURL *url.URL) { t.Helper() },
+			configureMocks: func(t *testing.T, _ *mocks4.ExecutorMock, _ *url.URL) { t.Helper() },
 			assertResponse: func(t *testing.T, err error, upstreamCalled bool, resp *http.Response) {
 				t.Helper()
 
@@ -676,7 +676,7 @@ func TestProxyService(t *testing.T) {
 
 				return req
 			},
-			configureMocks: func(t *testing.T, _ *mocks4.ExecutorMock, upstreamURL *url.URL) { t.Helper() },
+			configureMocks: func(t *testing.T, _ *mocks4.ExecutorMock, _ *url.URL) { t.Helper() },
 			assertResponse: func(t *testing.T, err error, upstreamCalled bool, resp *http.Response) {
 				t.Helper()
 
@@ -947,9 +947,9 @@ func TestProxyService(t *testing.T) {
 			defer proxy.Shutdown(context.Background())
 
 			go func() {
-				err := proxy.Serve(listener)
-				require.ErrorIs(t, err, http.ErrServerClosed)
+				proxy.Serve(listener)
 			}()
+
 			time.Sleep(50 * time.Millisecond)
 
 			// WHEN
@@ -986,7 +986,7 @@ func TestWebSocketSupport(t *testing.T) {
 		require.Equal(t, "/bar", req.URL.Path)
 
 		upgrader := websocket.Upgrader{
-			CheckOrigin: func(r *http.Request) bool {
+			CheckOrigin: func(_ *http.Request) bool {
 				return true
 			},
 		}
@@ -1054,9 +1054,9 @@ func TestWebSocketSupport(t *testing.T) {
 	require.NoError(t, err)
 
 	go func() {
-		err := proxy.Serve(listener)
-		require.ErrorIs(t, err, http.ErrServerClosed)
+		proxy.Serve(listener)
 	}()
+
 	time.Sleep(50 * time.Millisecond)
 
 	wsURL := url.URL{Scheme: "ws", Host: conf.Serve.Proxy.Address(), Path: "/foo"}
@@ -1154,9 +1154,9 @@ func TestServerSentEventsSupport(t *testing.T) {
 	require.NoError(t, err)
 
 	go func() {
-		err := proxy.Serve(listener)
-		require.ErrorIs(t, err, http.ErrServerClosed)
+		proxy.Serve(listener)
 	}()
+
 	time.Sleep(50 * time.Millisecond)
 
 	req, err := http.NewRequestWithContext(context.TODO(), http.MethodGet, fmt.Sprintf("http://%s/foo", conf.Serve.Proxy.Address()), nil)

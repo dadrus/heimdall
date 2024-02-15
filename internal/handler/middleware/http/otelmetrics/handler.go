@@ -69,6 +69,7 @@ func New(opts ...Option) func(http.Handler) http.Handler {
 			opt := metric.WithAttributes(attributes...)
 
 			activeRequests.Add(req.Context(), 1, opt)
+
 			defer func() {
 				activeRequests.Add(req.Context(), -1, opt)
 			}()

@@ -77,7 +77,7 @@ func TestRepositoryFindRule(t *testing.T) {
 
 				factory.EXPECT().HasDefaultRule().Return(false)
 			},
-			assert: func(t *testing.T, err error, rul rule.Rule) {
+			assert: func(t *testing.T, err error, _ rule.Rule) {
 				t.Helper()
 
 				require.Error(t, err)

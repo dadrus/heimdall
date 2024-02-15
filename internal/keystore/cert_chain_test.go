@@ -295,7 +295,6 @@ func (suite *CertChainTestSuite) TestFindChain() {
 	} {
 		suite.T().Run("case="+tc.uc, func(t *testing.T) {
 			// GIVEN
-
 			// WHEN
 			chain := keystore.FindChain(tc.eeCert.PublicKey, tc.certPool)
 

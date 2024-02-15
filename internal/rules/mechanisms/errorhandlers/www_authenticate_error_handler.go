@@ -17,8 +17,6 @@
 package errorhandlers
 
 import (
-	"fmt"
-
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
@@ -73,7 +71,7 @@ func (eh *wwwAuthenticateErrorHandler) Execute(ctx heimdall.Context, _ error) er
 	logger := zerolog.Ctx(ctx.AppContext())
 	logger.Debug().Str("_id", eh.id).Msg("Handling error using www-authenticate error handler")
 
-	ctx.AddHeaderForUpstream("WWW-Authenticate", fmt.Sprintf("Basic realm=%s", eh.realm))
+	ctx.AddHeaderForUpstream("WWW-Authenticate", "Basic realm="+eh.realm)
 	ctx.SetPipelineError(heimdall.ErrAuthentication)
 
 	return nil

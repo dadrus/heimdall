@@ -93,7 +93,7 @@ jwt_source:
   - header: foo-header
 foo: bar
 `),
-			assert: func(t *testing.T, err error, a *jwtAuthenticator) {
+			assert: func(t *testing.T, err error, _ *jwtAuthenticator) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -111,7 +111,7 @@ assertions:
     - foobar
 subject:
   id: some_template`),
-			assert: func(t *testing.T, err error, a *jwtAuthenticator) {
+			assert: func(t *testing.T, err error, _ *jwtAuthenticator) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -129,7 +129,7 @@ assertions:
     - foobar
 subject:
   id: some_template`),
-			assert: func(t *testing.T, err error, a *jwtAuthenticator) {
+			assert: func(t *testing.T, err error, _ *jwtAuthenticator) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -146,7 +146,7 @@ jwks_endpoint:
 assertions:
   issuers:
     - foobar`),
-			assert: func(t *testing.T, err error, auth *jwtAuthenticator) {
+			assert: func(t *testing.T, err error, _ *jwtAuthenticator) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -377,7 +377,7 @@ trust_store: ` + trustStorePath),
 metadata_endpoint:
   url: "{{ .IssuerName }}"
 `),
-			assert: func(t *testing.T, err error, auth *jwtAuthenticator) {
+			assert: func(t *testing.T, err error, _ *jwtAuthenticator) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -512,7 +512,7 @@ assertions:
     - foobar
 cache_ttl: 5s`),
 			config: []byte(`foo: bar`),
-			assert: func(t *testing.T, err error, prototype *jwtAuthenticator, configured *jwtAuthenticator) {
+			assert: func(t *testing.T, err error, _ *jwtAuthenticator, _ *jwtAuthenticator) {
 				t.Helper()
 
 				// THEN
@@ -758,7 +758,7 @@ assertions:
     - foobar
 `),
 			config: []byte(`trust_store: ` + trustStorePath),
-			assert: func(t *testing.T, err error, prototype *jwtAuthenticator, configured *jwtAuthenticator) {
+			assert: func(t *testing.T, err error, _ *jwtAuthenticator, _ *jwtAuthenticator) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -773,7 +773,7 @@ metadata_endpoint:
   url: http://test.com
 `),
 			config: []byte(`validate_jwk: false`),
-			assert: func(t *testing.T, err error, prototype *jwtAuthenticator, configured *jwtAuthenticator) {
+			assert: func(t *testing.T, err error, _ *jwtAuthenticator, _ *jwtAuthenticator) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -927,7 +927,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 
 				ads.EXPECT().GetAuthData(ctx).Return("", heimdall.ErrCommunicationTimeout)
 			},
-			assert: func(t *testing.T, err error, sub *subject.Subject) {
+			assert: func(t *testing.T, err error, _ *subject.Subject) {
 				t.Helper()
 
 				assert.False(t, jwksEndpointCalled)
@@ -956,7 +956,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 
 				ads.EXPECT().GetAuthData(ctx).Return("foo.bar.baz.bam", nil)
 			},
-			assert: func(t *testing.T, err error, sub *subject.Subject) {
+			assert: func(t *testing.T, err error, _ *subject.Subject) {
 				t.Helper()
 
 				assert.False(t, jwksEndpointCalled)
@@ -985,7 +985,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 
 				ads.EXPECT().GetAuthData(ctx).Return("foo.bar.baz", nil)
 			},
-			assert: func(t *testing.T, err error, sub *subject.Subject) {
+			assert: func(t *testing.T, err error, _ *subject.Subject) {
 				t.Helper()
 
 				assert.False(t, jwksEndpointCalled)
@@ -1020,7 +1020,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 
 				ads.EXPECT().GetAuthData(ctx).Return(jwtSignedWithKeyOnlyJWK, nil)
 			},
-			assert: func(t *testing.T, err error, sub *subject.Subject) {
+			assert: func(t *testing.T, err error, _ *subject.Subject) {
 				t.Helper()
 
 				assert.False(t, jwksEndpointCalled)
@@ -1055,7 +1055,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 
 				ads.EXPECT().GetAuthData(ctx).Return(jwtSignedWithKeyOnlyJWK, nil)
 			},
-			assert: func(t *testing.T, err error, sub *subject.Subject) {
+			assert: func(t *testing.T, err error, _ *subject.Subject) {
 				t.Helper()
 
 				assert.False(t, jwksEndpointCalled)
@@ -1095,7 +1095,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 
 				jwksResponseCode = http.StatusInternalServerError
 			},
-			assert: func(t *testing.T, err error, sub *subject.Subject) {
+			assert: func(t *testing.T, err error, _ *subject.Subject) {
 				t.Helper()
 
 				assert.True(t, jwksEndpointCalled)
@@ -1146,7 +1146,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				jwksResponseContent = []byte(`Hello Foo`)
 				jwksResponseContentType = "text/text"
 			},
-			assert: func(t *testing.T, err error, sub *subject.Subject) {
+			assert: func(t *testing.T, err error, _ *subject.Subject) {
 				t.Helper()
 
 				assert.True(t, jwksEndpointCalled)
@@ -1197,7 +1197,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				jwksResponseContent = jwksWithDuplicateEntries
 				jwksResponseContentType = "application/json"
 			},
-			assert: func(t *testing.T, err error, sub *subject.Subject) {
+			assert: func(t *testing.T, err error, _ *subject.Subject) {
 				t.Helper()
 
 				assert.True(t, jwksEndpointCalled)
@@ -1240,7 +1240,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 
 				metadataResponseCode = http.StatusBadRequest
 			},
-			assert: func(t *testing.T, err error, sub *subject.Subject) {
+			assert: func(t *testing.T, err error, _ *subject.Subject) {
 				t.Helper()
 
 				assert.False(t, jwksEndpointCalled)
@@ -1288,7 +1288,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				require.NoError(t, err)
 				metadataResponseCode = http.StatusOK
 			},
-			assert: func(t *testing.T, err error, sub *subject.Subject) {
+			assert: func(t *testing.T, err error, _ *subject.Subject) {
 				t.Helper()
 
 				assert.False(t, jwksEndpointCalled)
@@ -1341,7 +1341,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				ads.EXPECT().GetAuthData(ctx).Return(jwtSignedWithKeyOnlyJWK, nil)
 				cch.EXPECT().Get(mock.Anything, cacheKey).Return(&keys[0])
 			},
-			assert: func(t *testing.T, err error, sub *subject.Subject) {
+			assert: func(t *testing.T, err error, _ *subject.Subject) {
 				t.Helper()
 
 				assert.False(t, jwksEndpointCalled)
@@ -1395,7 +1395,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				ads.EXPECT().GetAuthData(ctx).Return(jwtSignedWithKeyAndCertJWK, nil)
 				cch.EXPECT().Get(mock.Anything, cacheKey).Return(&keys[0])
 			},
-			assert: func(t *testing.T, err error, sub *subject.Subject) {
+			assert: func(t *testing.T, err error, _ *subject.Subject) {
 				t.Helper()
 
 				assert.False(t, jwksEndpointCalled)
@@ -1449,7 +1449,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				ads.EXPECT().GetAuthData(ctx).Return(jwtSignedWithKeyOnlyJWK, nil)
 				cch.EXPECT().Get(mock.Anything, cacheKey).Return(&keys[0])
 			},
-			assert: func(t *testing.T, err error, sub *subject.Subject) {
+			assert: func(t *testing.T, err error, _ *subject.Subject) {
 				t.Helper()
 
 				assert.False(t, jwksEndpointCalled)
@@ -1508,7 +1508,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				ads.EXPECT().GetAuthData(ctx).Return(jwtSignedWithKeyOnlyJWK, nil)
 				cch.EXPECT().Get(mock.Anything, cacheKey).Return(&keys[0])
 			},
-			assert: func(t *testing.T, err error, sub *subject.Subject) {
+			assert: func(t *testing.T, err error, _ *subject.Subject) {
 				t.Helper()
 
 				assert.False(t, jwksEndpointCalled)
@@ -1883,7 +1883,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				jwksResponseContent = jwksWithOneEntryWithKeyOnlyAndOneWithCertificate
 				jwksResponseContentType = "application/json"
 			},
-			assert: func(t *testing.T, err error, sub *subject.Subject) {
+			assert: func(t *testing.T, err error, _ *subject.Subject) {
 				t.Helper()
 
 				assert.True(t, jwksEndpointCalled)
@@ -2151,7 +2151,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				jwksResponseContent = []byte(`Hello Foo`)
 				jwksResponseContentType = "text/text"
 			},
-			assert: func(t *testing.T, err error, sub *subject.Subject) {
+			assert: func(t *testing.T, err error, _ *subject.Subject) {
 				t.Helper()
 
 				assert.True(t, jwksEndpointCalled)
@@ -2200,7 +2200,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				jwksResponseContent = jwksWithRSAKey
 				jwksResponseContentType = "application/json"
 			},
-			assert: func(t *testing.T, err error, sub *subject.Subject) {
+			assert: func(t *testing.T, err error, _ *subject.Subject) {
 				t.Helper()
 
 				assert.True(t, jwksEndpointCalled)
@@ -2250,7 +2250,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				jwksResponseContent = jwksWithOneEntryWithKeyOnlyAndOneWithCertificate
 				jwksResponseContentType = "application/json"
 			},
-			assert: func(t *testing.T, err error, sub *subject.Subject) {
+			assert: func(t *testing.T, err error, _ *subject.Subject) {
 				t.Helper()
 
 				assert.True(t, jwksEndpointCalled)
@@ -2318,7 +2318,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				require.NoError(t, err)
 				metadataResponseContentType = "application/json"
 			},
-			assert: func(t *testing.T, err error, sub *subject.Subject) {
+			assert: func(t *testing.T, err error, _ *subject.Subject) {
 				t.Helper()
 
 				assert.True(t, metadataEndpointCalled)

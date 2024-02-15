@@ -66,7 +66,7 @@ auth:
   config:
     password: bar
 `),
-			assert: func(t *testing.T, err error, as endpoint.AuthenticationStrategy) {
+			assert: func(t *testing.T, err error, _ endpoint.AuthenticationStrategy) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -81,7 +81,7 @@ auth:
   config:
     user: foo
 `),
-			assert: func(t *testing.T, err error, as endpoint.AuthenticationStrategy) {
+			assert: func(t *testing.T, err error, _ endpoint.AuthenticationStrategy) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -94,7 +94,7 @@ auth:
 auth:
   type: basic_auth
 `),
-			assert: func(t *testing.T, err error, as endpoint.AuthenticationStrategy) {
+			assert: func(t *testing.T, err error, _ endpoint.AuthenticationStrategy) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -212,7 +212,7 @@ auth:
     value: bar
     in: foobar
 `),
-			assert: func(t *testing.T, err error, as endpoint.AuthenticationStrategy) {
+			assert: func(t *testing.T, err error, _ endpoint.AuthenticationStrategy) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -228,7 +228,7 @@ auth:
     name: foo
     value: bar
 `),
-			assert: func(t *testing.T, err error, as endpoint.AuthenticationStrategy) {
+			assert: func(t *testing.T, err error, _ endpoint.AuthenticationStrategy) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -244,7 +244,7 @@ auth:
     value: bar
     in: header
 `),
-			assert: func(t *testing.T, err error, as endpoint.AuthenticationStrategy) {
+			assert: func(t *testing.T, err error, _ endpoint.AuthenticationStrategy) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -260,7 +260,7 @@ auth:
     name: foo
     in: header
 `),
-			assert: func(t *testing.T, err error, as endpoint.AuthenticationStrategy) {
+			assert: func(t *testing.T, err error, _ endpoint.AuthenticationStrategy) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -273,7 +273,7 @@ auth:
 auth:
   type: api_key
 `),
-			assert: func(t *testing.T, err error, as endpoint.AuthenticationStrategy) {
+			assert: func(t *testing.T, err error, _ endpoint.AuthenticationStrategy) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -373,7 +373,7 @@ auth:
     client_secret: bar
     token_url: http://foobar.foo
 `),
-			assert: func(t *testing.T, err error, as endpoint.AuthenticationStrategy) {
+			assert: func(t *testing.T, err error, _ endpoint.AuthenticationStrategy) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -389,7 +389,7 @@ auth:
     client_id: foo
     token_url: http://foobar.foo
 `),
-			assert: func(t *testing.T, err error, as endpoint.AuthenticationStrategy) {
+			assert: func(t *testing.T, err error, _ endpoint.AuthenticationStrategy) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -405,7 +405,7 @@ auth:
     client_id: foo
     client_secret: bar
 `),
-			assert: func(t *testing.T, err error, as endpoint.AuthenticationStrategy) {
+			assert: func(t *testing.T, err error, _ endpoint.AuthenticationStrategy) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -418,7 +418,7 @@ auth:
 auth:
   type: oauth2_client_credentials
 `),
-			assert: func(t *testing.T, err error, as endpoint.AuthenticationStrategy) {
+			assert: func(t *testing.T, err error, _ endpoint.AuthenticationStrategy) {
 				t.Helper()
 
 				require.Error(t, err)

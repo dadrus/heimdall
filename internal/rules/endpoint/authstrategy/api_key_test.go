@@ -76,7 +76,7 @@ func TestApplyApiKeyStrategy(t *testing.T) {
 		{
 			uc:       "invalid strategy",
 			strategy: &APIKey{In: "foo", Name: "Foo", Value: "Bar"},
-			assert: func(t *testing.T, err error, req *http.Request) {
+			assert: func(t *testing.T, err error, _ *http.Request) {
 				t.Helper()
 
 				require.Error(t, err)

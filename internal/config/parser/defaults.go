@@ -18,5 +18,5 @@ package parser
 
 // nolint: gochecknoglobals
 var defaultOptions = opts{
-	validate: func(configPath string) error { return nil },
+	validate: func(_ string) error { return nil },
 }

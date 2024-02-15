@@ -59,7 +59,7 @@ func TestRuleSetProcessorOnCreated(t *testing.T) {
 				mhf.EXPECT().CreateRule(mock.Anything, mock.Anything, mock.Anything).
 					Return(nil, testsupport.ErrTestPurpose)
 			},
-			assert: func(t *testing.T, err error, queue event.RuleSetChangedEventQueue) {
+			assert: func(t *testing.T, err error, _ event.RuleSetChangedEventQueue) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -100,7 +100,7 @@ func TestRuleSetProcessorOnCreated(t *testing.T) {
 			// GIVEM
 			configureFactory := x.IfThenElse(tc.configureFactory != nil,
 				tc.configureFactory,
-				func(t *testing.T, mhf *mocks.FactoryMock) { t.Helper() })
+				func(t *testing.T, _ *mocks.FactoryMock) { t.Helper() })
 
 			queue := make(event.RuleSetChangedEventQueue, 10)
 
@@ -146,7 +146,7 @@ func TestRuleSetProcessorOnUpdated(t *testing.T) {
 				mhf.EXPECT().CreateRule(mock.Anything, mock.Anything, mock.Anything).
 					Return(nil, testsupport.ErrTestPurpose)
 			},
-			assert: func(t *testing.T, err error, queue event.RuleSetChangedEventQueue) {
+			assert: func(t *testing.T, err error, _ event.RuleSetChangedEventQueue) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -188,7 +188,7 @@ func TestRuleSetProcessorOnUpdated(t *testing.T) {
 			// GIVEM
 			configureFactory := x.IfThenElse(tc.configureFactory != nil,
 				tc.configureFactory,
-				func(t *testing.T, mhf *mocks.FactoryMock) { t.Helper() })
+				func(t *testing.T, _ *mocks.FactoryMock) { t.Helper() })
 
 			queue := make(event.RuleSetChangedEventQueue, 10)
 

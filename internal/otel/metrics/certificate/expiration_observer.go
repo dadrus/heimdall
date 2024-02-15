@@ -90,7 +90,7 @@ func (eo *expirationObserver) register() error {
 	}
 
 	_, err = eo.meter.RegisterCallback(
-		func(ctx context.Context, observer metric.Observer) error {
+		func(_ context.Context, observer metric.Observer) error {
 			lock.Lock()
 			defer lock.Unlock()
 

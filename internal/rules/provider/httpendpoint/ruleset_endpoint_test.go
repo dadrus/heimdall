@@ -158,7 +158,7 @@ rules:
 
 				w.WriteHeader(http.StatusOK)
 			},
-			assert: func(t *testing.T, err error, ruleSet *config.RuleSet) {
+			assert: func(t *testing.T, err error, _ *config.RuleSet) {
 				t.Helper()
 
 				require.Error(t, err)

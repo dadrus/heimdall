@@ -20,7 +20,6 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"fmt"
 	"sync"
 	"time"
 
@@ -169,7 +168,7 @@ func (p *provider) watchChanges(ctx context.Context, rsf RuleSetFetcher) error {
 
 		ruleSet = &config2.RuleSet{
 			MetaData: config2.MetaData{
-				Source:  fmt.Sprintf("http_endpoint:%s", rsf.ID()),
+				Source:  "http_endpoint:" + rsf.ID(),
 				ModTime: time.Now(),
 			},
 		}

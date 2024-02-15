@@ -66,6 +66,7 @@ func TestApplyClientCredentialsStrategy(t *testing.T) {
 
 			return
 		}
+
 		if err := req.ParseForm(); err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 
@@ -130,7 +131,7 @@ func TestApplyClientCredentialsStrategy(t *testing.T) {
 
 				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil)
 			},
-			assertRequest: func(t *testing.T, req *http.Request) { t.Helper() },
+			assertRequest: func(t *testing.T, _ *http.Request) { t.Helper() },
 			buildResponse: func(t *testing.T) (any, int) {
 				t.Helper()
 
@@ -209,7 +210,7 @@ func TestApplyClientCredentialsStrategy(t *testing.T) {
 			)
 			assertRequest = x.IfThenElse(tc.assertRequest != nil,
 				tc.assertRequest,
-				func(t *testing.T, req *http.Request) { t.Helper() },
+				func(t *testing.T, _ *http.Request) { t.Helper() },
 			)
 			buildResponse = tc.buildResponse
 

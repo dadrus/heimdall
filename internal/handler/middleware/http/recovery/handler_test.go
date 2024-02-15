@@ -19,7 +19,6 @@ package recovery
 import (
 	"context"
 	"errors"
-	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -50,10 +49,10 @@ func TestHandlerExecution(t *testing.T) {
 			eh := mocks.NewErrorHandlerMock(t)
 			srv := httptest.NewServer(
 				alice.New(New(eh)).
-					ThenFunc(func(rw http.ResponseWriter, req *http.Request) {
+					ThenFunc(func(rw http.ResponseWriter, _ *http.Request) {
 						if tc.shouldPanic {
 							eh.EXPECT().HandleError(mock.Anything, mock.Anything, mock.Anything).Run(
-								func(rw http.ResponseWriter, req *http.Request, err error) {
+								func(rw http.ResponseWriter, _ *http.Request, _ error) {
 									rw.WriteHeader(http.StatusInsufficientStorage)
 								})
 
@@ -66,7 +65,7 @@ func TestHandlerExecution(t *testing.T) {
 			defer srv.Close()
 
 			req, err := http.NewRequestWithContext(
-				context.Background(), http.MethodGet, fmt.Sprintf("%s/test", srv.URL), nil)
+				context.Background(), http.MethodGet, srv.URL+"/test", nil)
 			require.NoError(t, err)
 
 			// WHEN
@@ -74,6 +73,7 @@ func TestHandlerExecution(t *testing.T) {
 
 			// THEN
 			require.NoError(t, err)
+
 			defer resp.Body.Close()
 
 			res, err := io.ReadAll(resp.Body)

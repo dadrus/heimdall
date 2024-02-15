@@ -44,7 +44,7 @@ var metricReaders = &registry[metric.Reader]{ //nolint:gochecknoglobals
 
 			return metric.NewPeriodicReader(exp), nil
 		},
-		"prometheus": func(ctx context.Context) (metric.Reader, error) {
+		"prometheus": func(_ context.Context) (metric.Reader, error) {
 			return prometheus.New()
 		},
 	},

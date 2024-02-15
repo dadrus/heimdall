@@ -200,8 +200,8 @@ func TestCreateKeyStoreFromPEMFile(t *testing.T) {
 
 				return "foobar.pem"
 			},
-			removeKeyStoreFile: func(t *testing.T, file string) { t.Helper() },
-			assert: func(t *testing.T, ks keystore.KeyStore, err error) {
+			removeKeyStoreFile: func(t *testing.T, _ string) { t.Helper() },
+			assert: func(t *testing.T, _ keystore.KeyStore, err error) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -223,7 +223,7 @@ func TestCreateKeyStoreFromPEMFile(t *testing.T) {
 
 				os.Remove(file)
 			},
-			assert: func(t *testing.T, ks keystore.KeyStore, err error) {
+			assert: func(t *testing.T, _ keystore.KeyStore, err error) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -248,7 +248,7 @@ func TestCreateKeyStoreFromPEMFile(t *testing.T) {
 
 				os.Remove(file)
 			},
-			assert: func(t *testing.T, ks keystore.KeyStore, err error) {
+			assert: func(t *testing.T, _ keystore.KeyStore, err error) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -329,7 +329,7 @@ func TestCreateKeyStoreFromPEMFile(t *testing.T) {
 
 				os.Remove(file)
 			},
-			assert: func(t *testing.T, ks keystore.KeyStore, err error) {
+			assert: func(t *testing.T, _ keystore.KeyStore, err error) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -376,7 +376,7 @@ func TestCreateKeyStoreFromPEMBytes(t *testing.T) {
 
 				return buf.Bytes()
 			},
-			assert: func(t *testing.T, ks keystore.KeyStore, err error) {
+			assert: func(t *testing.T, _ keystore.KeyStore, err error) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -397,7 +397,7 @@ xijD/4gPFRBfs2GsfVZzSL9kH7HH0chB9w==
 -----END FOOBAR KEY-----
 `)
 			},
-			assert: func(t *testing.T, ks keystore.KeyStore, err error) {
+			assert: func(t *testing.T, _ keystore.KeyStore, err error) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -418,7 +418,7 @@ xijD/4gPFRBfs2GsfVZzSL9kH7HH0chB9w==
 -----END RSA PRIVATE KEY-----
 `)
 			},
-			assert: func(t *testing.T, ks keystore.KeyStore, err error) {
+			assert: func(t *testing.T, _ keystore.KeyStore, err error) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -618,7 +618,7 @@ xijD/4gPFRBfs2GsfVZzSL9kH7HH0chB9w==
 
 				return pemBytes
 			},
-			assert: func(t *testing.T, ks keystore.KeyStore, err error) {
+			assert: func(t *testing.T, _ keystore.KeyStore, err error) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -660,7 +660,7 @@ func TestCreateKeyStoreFromKey(t *testing.T) {
 
 				return testSigner{}
 			},
-			assert: func(t *testing.T, ks keystore.KeyStore, err error) {
+			assert: func(t *testing.T, _ keystore.KeyStore, err error) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -724,12 +724,12 @@ func TestKeyStoreGetKey(t *testing.T) {
 	}{
 		{
 			uc: "not existing key entry",
-			keyID: func(t *testing.T, ks keystore.KeyStore) string {
+			keyID: func(t *testing.T, _ keystore.KeyStore) string {
 				t.Helper()
 
 				return "foo"
 			},
-			assert: func(t *testing.T, entry *keystore.Entry, err error) {
+			assert: func(t *testing.T, _ *keystore.Entry, err error) {
 				t.Helper()
 
 				require.Error(t, err)

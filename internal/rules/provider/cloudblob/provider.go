@@ -20,7 +20,6 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"fmt"
 	"slices"
 	"sync"
 	"time"
@@ -199,7 +198,7 @@ func (p *provider) ruleSetsUpdated(ruleSets []*rule_config.RuleSet, state Bucket
 	for _, ID := range removedIDs {
 		conf := &rule_config.RuleSet{
 			MetaData: rule_config.MetaData{
-				Source:  fmt.Sprintf("blob:%s", ID),
+				Source:  "blob:" + ID,
 				ModTime: time.Now(),
 			},
 		}

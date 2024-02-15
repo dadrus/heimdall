@@ -363,7 +363,7 @@ func TestRuleFactoryNew(t *testing.T) {
 				mhf.EXPECT().CreateContextualizer(mock.Anything, "baz", mock.Anything).Return(nil, nil)
 				mhf.EXPECT().CreateAuthorizer(mock.Anything, "zab", mock.Anything).Return(nil, nil)
 			},
-			assert: func(t *testing.T, err error, ruleFactory *ruleFactory) {
+			assert: func(t *testing.T, err error, _ *ruleFactory) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -388,7 +388,7 @@ func TestRuleFactoryNew(t *testing.T) {
 				mhf.EXPECT().CreateAuthenticator(mock.Anything, "bar", mock.Anything).Return(nil, nil)
 				mhf.EXPECT().CreateFinalizer(mock.Anything, "baz", mock.Anything).Return(nil, nil)
 			},
-			assert: func(t *testing.T, err error, ruleFactory *ruleFactory) {
+			assert: func(t *testing.T, err error, _ *ruleFactory) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -412,7 +412,7 @@ func TestRuleFactoryNew(t *testing.T) {
 				mhf.EXPECT().CreateAuthenticator(mock.Anything, "bar", mock.Anything).Return(nil, nil)
 				mhf.EXPECT().CreateFinalizer(mock.Anything, "baz", mock.Anything).Return(nil, nil)
 			},
-			assert: func(t *testing.T, err error, ruleFactory *ruleFactory) {
+			assert: func(t *testing.T, err error, _ *ruleFactory) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -507,7 +507,7 @@ func TestRuleFactoryNew(t *testing.T) {
 			// GIVEN
 			configureMocks := x.IfThenElse(tc.configureMocks != nil,
 				tc.configureMocks,
-				func(t *testing.T, mhf *mocks3.FactoryMock) { t.Helper() })
+				func(t *testing.T, _ *mocks3.FactoryMock) { t.Helper() })
 
 			handlerFactory := mocks3.NewFactoryMock(t)
 			configureMocks(t, handlerFactory)
@@ -546,7 +546,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 		{
 			uc:     "without default rule and with missing id",
 			config: config2.Rule{},
-			assert: func(t *testing.T, err error, rul *ruleImpl) {
+			assert: func(t *testing.T, err error, _ *ruleImpl) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -558,7 +558,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 			uc:     "in proxy mode, with id, but missing forward_to definition",
 			opMode: config.ProxyMode,
 			config: config2.Rule{ID: "foobar"},
-			assert: func(t *testing.T, err error, rul *ruleImpl) {
+			assert: func(t *testing.T, err error, _ *ruleImpl) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -570,7 +570,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 			uc:     "in proxy mode, with id and empty forward_to definition",
 			opMode: config.ProxyMode,
 			config: config2.Rule{ID: "foobar", Backend: &config2.Backend{}},
-			assert: func(t *testing.T, err error, rul *ruleImpl) {
+			assert: func(t *testing.T, err error, _ *ruleImpl) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -588,7 +588,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 					URLRewriter: &config2.URLRewriter{},
 				},
 			},
-			assert: func(t *testing.T, err error, rul *ruleImpl) {
+			assert: func(t *testing.T, err error, _ *ruleImpl) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -599,7 +599,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 		{
 			uc:     "without default rule, with id, but without url",
 			config: config2.Rule{ID: "foobar"},
-			assert: func(t *testing.T, err error, rul *ruleImpl) {
+			assert: func(t *testing.T, err error, _ *ruleImpl) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -610,7 +610,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 		{
 			uc:     "without default rule, with id, but bad url pattern",
 			config: config2.Rule{ID: "foobar", RuleMatcher: config2.Matcher{URL: "?>?<*??"}},
-			assert: func(t *testing.T, err error, rul *ruleImpl) {
+			assert: func(t *testing.T, err error, _ *ruleImpl) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -630,7 +630,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 
 				mhf.EXPECT().CreateAuthenticator("test", "foo", mock.Anything).Return(nil, testsupport.ErrTestPurpose)
 			},
-			assert: func(t *testing.T, err error, rul *ruleImpl) {
+			assert: func(t *testing.T, err error, _ *ruleImpl) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -649,7 +649,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 
 				mhf.EXPECT().CreateErrorHandler("test", "foo", mock.Anything).Return(nil, testsupport.ErrTestPurpose)
 			},
-			assert: func(t *testing.T, err error, rul *ruleImpl) {
+			assert: func(t *testing.T, err error, _ *ruleImpl) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -662,7 +662,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				ID:          "foobar",
 				RuleMatcher: config2.Matcher{URL: "http://foo.bar", Strategy: "regex"},
 			},
-			assert: func(t *testing.T, err error, rul *ruleImpl) {
+			assert: func(t *testing.T, err error, _ *ruleImpl) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -682,7 +682,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 
 				mhf.EXPECT().CreateAuthenticator("test", "foo", mock.Anything).Return(&mocks2.AuthenticatorMock{}, nil)
 			},
-			assert: func(t *testing.T, err error, rul *ruleImpl) {
+			assert: func(t *testing.T, err error, _ *ruleImpl) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -706,7 +706,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				mhf.EXPECT().CreateAuthenticator("test", "foo", mock.Anything).Return(&mocks2.AuthenticatorMock{}, nil)
 				mhf.EXPECT().CreateContextualizer("test", "bar", mock.Anything).Return(&mocks5.ContextualizerMock{}, nil)
 			},
-			assert: func(t *testing.T, err error, rul *ruleImpl) {
+			assert: func(t *testing.T, err error, _ *ruleImpl) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -732,7 +732,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				mhf.EXPECT().CreateContextualizer("test", "bar", mock.Anything).Return(&mocks5.ContextualizerMock{}, nil)
 				mhf.EXPECT().CreateAuthorizer("test", "baz", mock.Anything).Return(&mocks4.AuthorizerMock{}, nil)
 			},
-			assert: func(t *testing.T, err error, rul *ruleImpl) {
+			assert: func(t *testing.T, err error, _ *ruleImpl) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -757,7 +757,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				mhf.EXPECT().CreateAuthenticator("test", "foo", mock.Anything).Return(&mocks2.AuthenticatorMock{}, nil)
 				mhf.EXPECT().CreateFinalizer("test", "bar", mock.Anything).Return(&mocks7.FinalizerMock{}, nil)
 			},
-			assert: func(t *testing.T, err error, rul *ruleImpl) {
+			assert: func(t *testing.T, err error, _ *ruleImpl) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -781,7 +781,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				mhf.EXPECT().CreateAuthenticator("test", "foo", mock.Anything).Return(&mocks2.AuthenticatorMock{}, nil)
 				mhf.EXPECT().CreateFinalizer("test", "bar", mock.Anything).Return(&mocks7.FinalizerMock{}, nil)
 			},
-			assert: func(t *testing.T, err error, rul *ruleImpl) {
+			assert: func(t *testing.T, err error, _ *ruleImpl) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -1049,7 +1049,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 
 				mhf.EXPECT().CreateAuthenticator("test", "foo", mock.Anything).Return(&mocks2.AuthenticatorMock{}, nil)
 			},
-			assert: func(t *testing.T, err error, rul *ruleImpl) {
+			assert: func(t *testing.T, err error, _ *ruleImpl) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -1073,7 +1073,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 
 				mhf.EXPECT().CreateAuthenticator("test", "foo", mock.Anything).Return(&mocks2.AuthenticatorMock{}, nil)
 			},
-			assert: func(t *testing.T, err error, rul *ruleImpl) {
+			assert: func(t *testing.T, err error, _ *ruleImpl) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -1214,7 +1214,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 			// GIVEN
 			configureMocks := x.IfThenElse(tc.configureMocks != nil,
 				tc.configureMocks,
-				func(t *testing.T, mhf *mocks3.FactoryMock) { t.Helper() })
+				func(t *testing.T, _ *mocks3.FactoryMock) { t.Helper() })
 
 			handlerFactory := mocks3.NewFactoryMock(t)
 			configureMocks(t, handlerFactory)

@@ -20,7 +20,6 @@ import (
 	"context"
 	"crypto/sha256"
 	"errors"
-	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -84,7 +83,7 @@ func (e *ruleSetEndpoint) FetchRuleSet(ctx context.Context) (*config.RuleSet, er
 	}
 
 	ruleSet.Hash = md.Sum(nil)
-	ruleSet.Source = fmt.Sprintf("http_endpoint:%s", e.ID())
+	ruleSet.Source = "http_endpoint:" + e.ID()
 	ruleSet.ModTime = time.Now()
 
 	return ruleSet, nil
