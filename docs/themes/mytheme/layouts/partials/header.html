@@ -3,8 +3,7 @@
     <a class="navbar-brand text-white {{- if .IsHome -}} active {{- end -}}" href="{{ .Site.Home.RelPermalink }}" style="font-weight: 500; font-size: 1.5rem;">
       {{ .Site.Title }}
     </a>
-
-    <button class="navbar-toggler" type="button"
+    <button class="navbar-toggler order-1" type="button"
             data-bs-toggle="offcanvas" data-bs-target="#mainMenuContent"
             aria-controls="mainMenuContent" aria-expanded="false" aria-label="Open main menu">
       <span class="navbar-toggler-icon"></span>
@@ -43,7 +42,7 @@
           </li>
           {{ end }}
           {{ end }}
-        </ul>
+          </ul>
         <hr class="text-white-50 d-md-none">
         <ul class="navbar-nav flex-column ms-auto">
           <doc-version-select class="nav-item dropdown"
@@ -71,6 +70,29 @@
           </li>
         </ul>
         {{ end }}
+      </div>
+    </div>
+    <button class="navbar-toggler" type="button" data-bs-toggle="offcanvas" data-bs-target="#docSearch"
+          aria-controls="docSearch" aria-expanded="false" aria-label="Open search">
+          <span class="bi bi-search"></span>
+    </button>
+      <div class="offcanvas offcanvas-end bg-dark" id="docSearch" data-bs-scroll="true"
+            aria-labelledby="docSearchLabel">
+        <div class="offcanvas-header">
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas"
+            aria-label="Close search">
+          </button>
+        </div>
+        <div class="offcanvas-body">
+          <doc-search class="col-auto me-auto mw-75" index-file="{{ .Site.Params.search_index_file }}"
+                path-prefix="{{ .Site.Params.path_prefix }}">
+            <form id="docs-search" tabindex="1" class="position-relative ms-2">
+              <input id="search" class="form-control search-bar" type="search" placeholder="Search docs..."
+                  aria-label="Search docs..." autocomplete="off" onfocusout />
+              <div id="search-suggestions" class="shadow bg-white rounded collapse search-results"></div>
+            </form>
+          </doc-search>
+        </div>
       </div>
     </div>
   </nav>
