@@ -77,9 +77,3 @@ func (c *InMemoryCache) Set(_ context.Context, key string, value any, ttl time.D
 
 	return nil
 }
-
-func (c *InMemoryCache) Delete(_ context.Context, key string) error {
-	c.c.Delete(key)
-
-	return nil
-}

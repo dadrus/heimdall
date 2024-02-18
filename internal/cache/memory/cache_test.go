@@ -69,25 +69,6 @@ func TestCacheUsage(t *testing.T) {
 			},
 		},
 		{
-			uc:  "cannot retrieve deleted value",
-			key: "baz",
-			configureCache: func(t *testing.T, cache *InMemoryCache) {
-				t.Helper()
-
-				err := cache.Set(context.TODO(), "baz", "bar", 1*time.Second)
-				require.NoError(t, err)
-
-				err = cache.Delete(context.TODO(), "baz")
-				require.NoError(t, err)
-			},
-			assert: func(t *testing.T, err error, _ any) {
-				t.Helper()
-
-				require.Error(t, err)
-				require.ErrorIs(t, err, ErrNoCacheEntry)
-			},
-		},
-		{
 			uc:  "cannot retrieve not existing value",
 			key: "baz",
 			configureCache: func(t *testing.T, _ *InMemoryCache) {
