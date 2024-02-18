@@ -25,6 +25,5 @@ type noopCache struct{}
 
 func (noopCache) Get(_ context.Context, _ string, _ any) error                  { return nil }
 func (noopCache) Set(_ context.Context, _ string, _ any, _ time.Duration) error { return nil }
-func (noopCache) Delete(_ context.Context, _ string) error                      { return nil }
 func (noopCache) Start(_ context.Context) error                                 { return nil }
 func (noopCache) Stop(_ context.Context) error                                  { return nil }
