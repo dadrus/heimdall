@@ -23,8 +23,17 @@ func (_m *CacheMock) EXPECT() *CacheMock_Expecter {
 }
 
 // Delete provides a mock function with given fields: ctx, key
-func (_m *CacheMock) Delete(ctx context.Context, key string) {
-	_m.Called(ctx, key)
+func (_m *CacheMock) Delete(ctx context.Context, key string) error {
+	ret := _m.Called(ctx, key)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, string) error); ok {
+		r0 = rf(ctx, key)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
 }
 
 // CacheMock_Delete_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Delete'
@@ -46,27 +55,25 @@ func (_c *CacheMock_Delete_Call) Run(run func(ctx context.Context, key string)) 
 	return _c
 }
 
-func (_c *CacheMock_Delete_Call) Return() *CacheMock_Delete_Call {
-	_c.Call.Return()
+func (_c *CacheMock_Delete_Call) Return(_a0 error) *CacheMock_Delete_Call {
+	_c.Call.Return(_a0)
 	return _c
 }
 
-func (_c *CacheMock_Delete_Call) RunAndReturn(run func(context.Context, string)) *CacheMock_Delete_Call {
+func (_c *CacheMock_Delete_Call) RunAndReturn(run func(context.Context, string) error) *CacheMock_Delete_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
-// Get provides a mock function with given fields: ctx, key
-func (_m *CacheMock) Get(ctx context.Context, key string) interface{} {
-	ret := _m.Called(ctx, key)
+// Get provides a mock function with given fields: ctx, key, target
+func (_m *CacheMock) Get(ctx context.Context, key string, target interface{}) error {
+	ret := _m.Called(ctx, key, target)
 
-	var r0 interface{}
-	if rf, ok := ret.Get(0).(func(context.Context, string) interface{}); ok {
-		r0 = rf(ctx, key)
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, string, interface{}) error); ok {
+		r0 = rf(ctx, key, target)
 	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(interface{})
-		}
+		r0 = ret.Error(0)
 	}
 
 	return r0
@@ -80,30 +87,40 @@ type CacheMock_Get_Call struct {
 // Get is a helper method to define mock.On call
 //   - ctx context.Context
 //   - key string
-func (_e *CacheMock_Expecter) Get(ctx interface{}, key interface{}) *CacheMock_Get_Call {
-	return &CacheMock_Get_Call{Call: _e.mock.On("Get", ctx, key)}
+//   - target interface{}
+func (_e *CacheMock_Expecter) Get(ctx interface{}, key interface{}, target interface{}) *CacheMock_Get_Call {
+	return &CacheMock_Get_Call{Call: _e.mock.On("Get", ctx, key, target)}
 }
 
-func (_c *CacheMock_Get_Call) Run(run func(ctx context.Context, key string)) *CacheMock_Get_Call {
+func (_c *CacheMock_Get_Call) Run(run func(ctx context.Context, key string, target interface{})) *CacheMock_Get_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(string))
+		run(args[0].(context.Context), args[1].(string), args[2].(interface{}))
 	})
 	return _c
 }
 
-func (_c *CacheMock_Get_Call) Return(_a0 interface{}) *CacheMock_Get_Call {
+func (_c *CacheMock_Get_Call) Return(_a0 error) *CacheMock_Get_Call {
 	_c.Call.Return(_a0)
 	return _c
 }
 
-func (_c *CacheMock_Get_Call) RunAndReturn(run func(context.Context, string) interface{}) *CacheMock_Get_Call {
+func (_c *CacheMock_Get_Call) RunAndReturn(run func(context.Context, string, interface{}) error) *CacheMock_Get_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Set provides a mock function with given fields: ctx, key, value, ttl
-func (_m *CacheMock) Set(ctx context.Context, key string, value interface{}, ttl time.Duration) {
-	_m.Called(ctx, key, value, ttl)
+func (_m *CacheMock) Set(ctx context.Context, key string, value interface{}, ttl time.Duration) error {
+	ret := _m.Called(ctx, key, value, ttl)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, string, interface{}, time.Duration) error); ok {
+		r0 = rf(ctx, key, value, ttl)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
 }
 
 // CacheMock_Set_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Set'
@@ -127,12 +144,12 @@ func (_c *CacheMock_Set_Call) Run(run func(ctx context.Context, key string, valu
 	return _c
 }
 
-func (_c *CacheMock_Set_Call) Return() *CacheMock_Set_Call {
-	_c.Call.Return()
+func (_c *CacheMock_Set_Call) Return(_a0 error) *CacheMock_Set_Call {
+	_c.Call.Return(_a0)
 	return _c
 }
 
-func (_c *CacheMock_Set_Call) RunAndReturn(run func(context.Context, string, interface{}, time.Duration)) *CacheMock_Set_Call {
+func (_c *CacheMock_Set_Call) RunAndReturn(run func(context.Context, string, interface{}, time.Duration) error) *CacheMock_Set_Call {
 	_c.Call.Return(run)
 	return _c
 }

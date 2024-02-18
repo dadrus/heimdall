@@ -18,9 +18,16 @@ package memory
 
 import (
 	"context"
+	"errors"
+	"reflect"
 	"time"
 
 	"github.com/jellydator/ttlcache/v3"
+)
+
+var (
+	ErrNoCacheEntry  = errors.New("no cache entry")
+	ErrBadTargetType = errors.New("bad target type")
 )
 
 type InMemoryCache struct {
@@ -43,17 +50,36 @@ func (c *InMemoryCache) Stop(_ context.Context) error {
 	return nil
 }
 
-func (c *InMemoryCache) Get(_ context.Context, key string) any {
-	item := c.c.Get(key)
-	if item != nil && !item.IsExpired() {
-		return item.Value()
+func (c *InMemoryCache) Get(_ context.Context, key string, target any) error {
+	if target == nil {
+		return ErrBadTargetType
 	}
+
+	item := c.c.Get(key)
+	if item == nil || item.IsExpired() {
+		return ErrNoCacheEntry
+	}
+
+	val := item.Value()
+
+	targetVal := reflect.ValueOf(target)
+	if !reflect.TypeOf(val).AssignableTo(targetVal.Type().Elem()) {
+		return ErrBadTargetType
+	}
+
+	targetVal.Elem().Set(reflect.ValueOf(item.Value()))
 
 	return nil
 }
 
-func (c *InMemoryCache) Set(_ context.Context, key string, value any, ttl time.Duration) {
+func (c *InMemoryCache) Set(_ context.Context, key string, value any, ttl time.Duration) error {
 	c.c.Set(key, value, ttl)
+
+	return nil
 }
 
-func (c *InMemoryCache) Delete(_ context.Context, key string) { c.c.Delete(key) }
+func (c *InMemoryCache) Delete(_ context.Context, key string) error {
+	c.c.Delete(key)
+
+	return nil
+}

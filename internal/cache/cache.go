@@ -26,7 +26,7 @@ import (
 type Cache interface {
 	Evictor
 
-	Get(ctx context.Context, key string) any
-	Set(ctx context.Context, key string, value any, ttl time.Duration)
-	Delete(ctx context.Context, key string)
+	Get(ctx context.Context, key string, target any) error
+	Set(ctx context.Context, key string, value any, ttl time.Duration) error
+	Delete(ctx context.Context, key string) error
 }
