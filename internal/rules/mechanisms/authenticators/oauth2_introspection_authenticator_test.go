@@ -18,6 +18,7 @@ package authenticators
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -789,7 +790,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				t.Helper()
 
 				ads.EXPECT().GetAuthData(ctx).Return("test_access_token", nil)
-				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil)
+				cch.EXPECT().Get(mock.Anything, mock.Anything, mock.Anything).Return(errors.New("no cache entry"))
 			},
 			instructServer: func(t *testing.T) {
 				t.Helper()
@@ -1399,10 +1400,10 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 
 				ads.EXPECT().GetAuthData(ctx).Return(jwtToken, nil)
 				// http cache
-				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil)
+				cch.EXPECT().Get(mock.Anything, mock.Anything, mock.Anything).Return(errors.New("no cache entry"))
 				cch.EXPECT().Set(mock.Anything, mock.Anything, mock.Anything, mock.MatchedBy(
 					func(ttl time.Duration) bool { return ttl.Round(time.Minute) == 30*time.Minute },
-				))
+				)).Return(nil)
 			},
 			instructServer: func(t *testing.T) {
 				t.Helper()
@@ -1505,8 +1506,8 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				t.Helper()
 
 				ads.EXPECT().GetAuthData(ctx).Return("test_access_token", nil)
-				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil)
-				cch.EXPECT().Set(mock.Anything, mock.Anything, mock.Anything, mock.Anything)
+				cch.EXPECT().Get(mock.Anything, mock.Anything, mock.Anything).Return(errors.New("no cache entry"))
+				cch.EXPECT().Set(mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 			},
 			instructServer: func(t *testing.T) {
 				t.Helper()
@@ -1564,95 +1565,6 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 			},
 		},
 		{
-			uc: "with default cache, with bad cache hit and successful execution",
-			authenticator: &oauth2IntrospectionAuthenticator{
-				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
-					return oauth2.ServerMetadata{
-						IntrospectionEndpoint: &endpoint.Endpoint{
-							URL:    srv.URL,
-							Method: http.MethodPost,
-							Headers: map[string]string{
-								"Content-Type": "application/x-www-form-urlencoded",
-								"Accept":       "application/json",
-							},
-						},
-					}, nil
-				}),
-				a: oauth2.Expectation{
-					TrustedIssuers: []string{"foobar"},
-					ScopesMatcher:  oauth2.ExactScopeStrategyMatcher{},
-				},
-				sf: &SubjectInfo{IDFrom: "sub"},
-			},
-			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.ContextMock,
-				cch *mocks.CacheMock,
-				ads *mocks2.AuthDataExtractStrategyMock,
-				_ *oauth2IntrospectionAuthenticator,
-			) {
-				t.Helper()
-
-				ads.EXPECT().GetAuthData(ctx).Return("test_access_token", nil)
-				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(zeroTTL)
-				cch.EXPECT().Delete(mock.Anything, mock.Anything)
-				cch.EXPECT().Set(mock.Anything, mock.Anything, mock.Anything, mock.Anything)
-			},
-			instructServer: func(t *testing.T) {
-				t.Helper()
-
-				checkIntrospectionRequest = func(req *http.Request) {
-					t.Helper()
-
-					assert.Equal(t, "application/x-www-form-urlencoded", req.Header.Get("Content-Type"))
-					assert.Equal(t, "application/json", req.Header.Get("Accept"))
-					assert.Equal(t, http.MethodPost, req.Method)
-
-					require.NoError(t, req.ParseForm())
-					assert.Len(t, req.Form, 2)
-					assert.Equal(t, "access_token", req.Form.Get("token_type_hint"))
-					assert.Equal(t, "test_access_token", req.Form.Get("token"))
-				}
-
-				rawIntrospectResponse, err := json.Marshal(map[string]any{
-					"active":     true,
-					"scope":      "foo bar",
-					"username":   "unknown",
-					"token_type": "Bearer",
-					"aud":        "bar",
-					"sub":        "foo",
-					"iss":        "foobar",
-					"iat":        time.Now().Unix(),
-					"nbf":        time.Now().Unix(),
-					"exp":        time.Now().Unix() + 30,
-				})
-				require.NoError(t, err)
-
-				introspectionResponseContentType = "application/json"
-				introspectionResponseContent = rawIntrospectResponse
-				introspectionResponseCode = http.StatusOK
-			},
-			assert: func(t *testing.T, err error, sub *subject.Subject) {
-				t.Helper()
-
-				assert.True(t, introspectionEndpointCalled)
-
-				require.NoError(t, err)
-
-				require.NotNil(t, sub)
-				assert.Equal(t, "foo", sub.ID)
-				assert.Len(t, sub.Attributes, 10)
-				assert.Equal(t, "foo bar", sub.Attributes["scope"])
-				assert.Equal(t, true, sub.Attributes["active"]) //nolint:testifylint
-				assert.Equal(t, "unknown", sub.Attributes["username"])
-				assert.Equal(t, "foobar", sub.Attributes["iss"])
-				assert.Equal(t, "bar", sub.Attributes["aud"])
-				assert.Equal(t, "Bearer", sub.Attributes["token_type"])
-				assert.NotEmpty(t, sub.Attributes["nbf"])
-				assert.NotEmpty(t, sub.Attributes["iat"])
-				assert.NotEmpty(t, sub.Attributes["exp"])
-			},
-		},
-		{
 			uc: "with default cache, with cache hit and successful execution",
 			authenticator: &oauth2IntrospectionAuthenticator{
 				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
@@ -1697,7 +1609,12 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				})
 				require.NoError(t, err)
 
-				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(rawIntrospectResponse)
+				cch.EXPECT().Get(mock.Anything, mock.Anything, mock.MatchedBy(
+					func(data *[]byte) bool {
+						*data = rawIntrospectResponse
+
+						return true
+					})).Return(nil)
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()

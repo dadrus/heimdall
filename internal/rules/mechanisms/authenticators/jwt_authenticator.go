@@ -385,12 +385,9 @@ func (a *jwtAuthenticator) getKey(
 	logger := zerolog.Ctx(ctx.AppContext())
 
 	var (
-		cacheKey   string
-		cacheEntry any
-		jwk        *jose.JSONWebKey
-		jwks       *jose.JSONWebKeySet
-		err        error
-		ok         bool
+		cacheKey string
+		jwk      *jose.JSONWebKey
+		jwks     *jose.JSONWebKeySet
 	)
 
 	req, err := a.createRequest(ctx.AppContext(), ep, tokenClaims)
@@ -400,20 +397,11 @@ func (a *jwtAuthenticator) getKey(
 
 	if a.isCacheEnabled() {
 		cacheKey = a.calculateCacheKey(ep, req.URL.String(), keyID)
-		cacheEntry = cch.Get(ctx.AppContext(), cacheKey)
-	}
-
-	if cacheEntry != nil {
-		if jwk, ok = cacheEntry.(*jose.JSONWebKey); !ok {
-			logger.Warn().Msg("Wrong object type from cache")
-			cch.Delete(ctx.AppContext(), cacheKey)
-		} else {
+		if err = cch.Get(ctx.AppContext(), cacheKey, &jwk); err == nil {
 			logger.Debug().Msg("Reusing JWK from cache")
-		}
-	}
 
-	if jwk != nil {
-		return jwk, nil
+			return jwk, nil
+		}
 	}
 
 	jwks, err = a.fetchJWKS(ctx.AppContext(), ep.CreateClient(req.URL.Hostname()), req)
@@ -438,7 +426,9 @@ func (a *jwtAuthenticator) getKey(
 	}
 
 	if cacheTTL := a.getCacheTTL(jwk); cacheTTL > 0 {
-		cch.Set(ctx.AppContext(), cacheKey, jwk, cacheTTL)
+		if err = cch.Set(ctx.AppContext(), cacheKey, jwk, cacheTTL); err != nil {
+			logger.Warn().Err(err).Msg("Failed to cache JWK")
+		}
 	}
 
 	return jwk, nil

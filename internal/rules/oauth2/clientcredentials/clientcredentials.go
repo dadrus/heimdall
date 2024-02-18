@@ -58,37 +58,30 @@ func (c *Config) Token(ctx context.Context) (*TokenInfo, error) {
 	cch := cache.Ctx(ctx)
 
 	var (
-		ok         bool
-		err        error
-		cacheKey   string
-		cacheEntry any
-		tokenInfo  *TokenInfo
+		err       error
+		cacheKey  string
+		tokenInfo *TokenInfo
 	)
 
 	if c.isCacheEnabled() {
 		cacheKey = c.calculateCacheKey()
-		cacheEntry = cch.Get(ctx, cacheKey)
-	}
-
-	if cacheEntry != nil {
-		if tokenInfo, ok = cacheEntry.(*TokenInfo); !ok {
-			logger.Warn().Msg("Wrong object type from cache")
-			cch.Delete(ctx, cacheKey)
-		} else {
+		if err = cch.Get(ctx, cacheKey, &tokenInfo); err == nil {
 			logger.Debug().Msg("Reusing access token from cache")
+
+			return tokenInfo, nil
 		}
 	}
 
-	if tokenInfo == nil {
-		logger.Debug().Msg("Requesting new access token")
+	logger.Debug().Msg("Requesting new access token")
 
-		tokenInfo, err = c.fetchToken(ctx)
-		if err != nil {
-			return nil, err
-		}
+	tokenInfo, err = c.fetchToken(ctx)
+	if err != nil {
+		return nil, err
+	}
 
-		if cacheTTL := c.getCacheTTL(tokenInfo); cacheTTL > 0 {
-			cch.Set(ctx, cacheKey, tokenInfo, cacheTTL)
+	if cacheTTL := c.getCacheTTL(tokenInfo); cacheTTL > 0 {
+		if err = cch.Set(ctx, cacheKey, tokenInfo, cacheTTL); err != nil {
+			logger.Warn().Err(err).Msg("Failed to cache token info")
 		}
 	}
 
