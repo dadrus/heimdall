@@ -104,15 +104,15 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
-      - name: Set up Go
-        uses: actions/setup-go@v5
+      - name: Review code
+        uses: reviewdog/action-golangci-lint@v2
         with:
-          go-version: "${{ env.GO_VERSION }}"
-      - name: golangci-lint
-        uses: golangci/golangci-lint-action@v4
-        with:
-          version: ${{ env.GOLANGCI_LINT_VERSION }}
-          args: --timeout 5m
+          go_version: "${{ env.GO_VERSION }}"
+          golangci_lint_version: "${{ env.GOLANGCI_LINT_VERSION }}"
+          golangci_lint_flags: --out-format=checkstyle
+          reporter: github-pr-review
+          fail_on_error: true
+          reviewdog_flags: -f=checkstyle
 
   lint-api:
     runs-on: ubuntu-22.04
@@ -143,14 +143,11 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
-      - name: Run hadolint for Dockerfile
-        uses: hadolint/hadolint-action@v3.1.0
+      - name: Run hadolint
+        uses: reviewdog/action-hadolint@v1
         with:
-          dockerfile: docker/Dockerfile
-      - name: Run hadolint for debug.Dockerfile
-        uses: hadolint/hadolint-action@v3.1.0
-        with:
-          dockerfile: docker/debug.Dockerfile
+          reporter: github-pr-review
+          fail_on_error: true
 
   lint-helm-chart:
     runs-on: ubuntu-22.04
@@ -163,7 +160,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
       - name: Setup k8s tools
-        uses: yokawasa/action-setup-kube-tools@v0.9.3
+        uses: yokawasa/action-setup-kube-tools@v0.10.0
         with:
           setup-tools: |
             helm

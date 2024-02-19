@@ -109,34 +109,27 @@ func (u *jwtFinalizer) Execute(ctx heimdall.Context, sub *subject.Subject) error
 	cch := cache.Ctx(ctx.AppContext())
 
 	var (
-		cacheEntry any
-		jwtToken   string
-		ok         bool
-		err        error
+		jwtToken string
+		err      error
 	)
 
 	cacheKey := u.calculateCacheKey(sub, ctx.Signer())
-	cacheEntry = cch.Get(ctx.AppContext(), cacheKey)
+	if entry, err := cch.Get(ctx.AppContext(), cacheKey); err == nil {
+		logger.Debug().Msg("Reusing JWT from cache")
 
-	if cacheEntry != nil {
-		if jwtToken, ok = cacheEntry.(string); !ok {
-			logger.Warn().Msg("Wrong object type from cache")
-			cch.Delete(ctx.AppContext(), cacheKey)
-		} else {
-			logger.Debug().Msg("Reusing JWT from cache")
-		}
+		jwtToken = stringx.ToString(entry)
 	}
 
 	if len(jwtToken) == 0 {
-		logger.Debug().Msg("Generating new JWT")
-
 		jwtToken, err = u.generateToken(ctx, sub)
 		if err != nil {
 			return err
 		}
 
 		if len(cacheKey) != 0 && u.ttl > defaultCacheLeeway {
-			cch.Set(ctx.AppContext(), cacheKey, jwtToken, u.ttl-defaultCacheLeeway)
+			if err = cch.Set(ctx.AppContext(), cacheKey, stringx.ToBytes(jwtToken), u.ttl-defaultCacheLeeway); err != nil {
+				logger.Warn().Err(err).Msg("Failed to cache JWT token")
+			}
 		}
 	}
 
@@ -176,9 +169,12 @@ func (u *jwtFinalizer) ID() string { return u.id }
 func (u *jwtFinalizer) ContinueOnError() bool { return false }
 
 func (u *jwtFinalizer) generateToken(ctx heimdall.Context, sub *subject.Subject) (string, error) {
-	iss := ctx.Signer()
+	logger := zerolog.Ctx(ctx.AppContext())
+	logger.Debug().Msg("Generating new JWT")
 
+	iss := ctx.Signer()
 	claims := map[string]any{}
+
 	if u.claims != nil {
 		vals, err := u.claims.Render(map[string]any{
 			"Subject": sub,
@@ -190,7 +186,6 @@ func (u *jwtFinalizer) generateToken(ctx heimdall.Context, sub *subject.Subject)
 				CausedBy(err)
 		}
 
-		logger := zerolog.Ctx(ctx.AppContext())
 		logger.Debug().Str("_value", vals).Msg("Rendered template")
 
 		if err = json.Unmarshal(stringx.ToBytes(vals), &claims); err != nil {

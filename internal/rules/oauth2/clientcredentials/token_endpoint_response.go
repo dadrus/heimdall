@@ -22,24 +22,13 @@ import (
 )
 
 type TokenInfo struct {
-	AccessToken  string
-	RefreshToken string
-	TokenType    string
-	Expiry       time.Time
-	Scopes       []string
-
-	raw map[string]any
+	AccessToken  string    `json:"access_token"`
+	RefreshToken string    `json:"refresh_token"`
+	TokenType    string    `json:"token_type"`
+	Expiry       time.Time `json:"expiry"`
+	Scopes       []string  `json:"scopes"`
+	// extra claims are not yet supported
 }
-
-func (t *TokenInfo) WithExtra(extra map[string]any) *TokenInfo {
-	t2 := new(TokenInfo)
-	*t2 = *t
-	t2.raw = extra
-
-	return t2
-}
-
-func (t *TokenInfo) Extra(key string) any { return t.raw[key] }
 
 type TokenInfoResponse struct {
 	AccessToken  string `json:"access_token,omitempty"`

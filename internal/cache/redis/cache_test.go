@@ -128,7 +128,7 @@ func TestCacheUsage(t *testing.T) {
 		uc             string
 		key            string
 		configureCache func(*testing.T, *Cache)
-		assert         func(t *testing.T, data any)
+		assert         func(t *testing.T, err error, data []byte)
 	}{
 		{
 			uc:  "can retrieve not expired value",
@@ -136,12 +136,13 @@ func TestCacheUsage(t *testing.T) {
 			configureCache: func(t *testing.T, cch *Cache) {
 				t.Helper()
 
-				cch.Set(context.Background(), "foo", "bar", 10*time.Minute)
+				err := cch.Set(context.Background(), "foo", []byte("bar"), 10*time.Minute)
+				require.NoError(t, err)
 			},
-			assert: func(t *testing.T, data any) {
+			assert: func(t *testing.T, err error, data []byte) {
 				t.Helper()
 
-				assert.Equal(t, "bar", data)
+				assert.Equal(t, []byte("bar"), data)
 			},
 		},
 		{
@@ -150,26 +151,12 @@ func TestCacheUsage(t *testing.T) {
 			configureCache: func(t *testing.T, cch *Cache) {
 				t.Helper()
 
-				cch.Set(context.Background(), "bar", "baz", 1*time.Millisecond)
+				err := cch.Set(context.Background(), "bar", []byte("baz"), 1*time.Millisecond)
+				require.NoError(t, err)
 
 				db.FastForward(200 * time.Millisecond)
 			},
-			assert: func(t *testing.T, data any) {
-				t.Helper()
-
-				assert.Nil(t, data)
-			},
-		},
-		{
-			uc:  "cannot retrieve deleted value",
-			key: "baz",
-			configureCache: func(t *testing.T, cch *Cache) {
-				t.Helper()
-
-				cch.Set(context.Background(), "baz", "bar", 1*time.Second)
-				cch.Delete(context.Background(), "baz")
-			},
-			assert: func(t *testing.T, data any) {
+			assert: func(t *testing.T, err error, data []byte) {
 				t.Helper()
 
 				assert.Nil(t, data)
@@ -181,7 +168,7 @@ func TestCacheUsage(t *testing.T) {
 			configureCache: func(t *testing.T, _ *Cache) {
 				t.Helper()
 			},
-			assert: func(t *testing.T, data any) {
+			assert: func(t *testing.T, err error, data []byte) {
 				t.Helper()
 
 				assert.Nil(t, data)
@@ -192,10 +179,10 @@ func TestCacheUsage(t *testing.T) {
 			// WHEN
 			tc.configureCache(t, cch)
 
-			data := cch.Get(context.Background(), tc.key)
+			data, err := cch.Get(context.Background(), tc.key)
 
 			// THEN
-			tc.assert(t, data)
+			tc.assert(t, err, data)
 		})
 	}
 }

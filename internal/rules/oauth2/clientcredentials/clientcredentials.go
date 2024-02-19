@@ -57,38 +57,33 @@ func (c *Config) Token(ctx context.Context) (*TokenInfo, error) {
 	logger := zerolog.Ctx(ctx)
 	cch := cache.Ctx(ctx)
 
-	var (
-		ok         bool
-		err        error
-		cacheKey   string
-		cacheEntry any
-		tokenInfo  *TokenInfo
-	)
+	var cacheKey string
 
 	if c.isCacheEnabled() {
 		cacheKey = c.calculateCacheKey()
-		cacheEntry = cch.Get(ctx, cacheKey)
-	}
+		if entry, err := cch.Get(ctx, cacheKey); err == nil {
+			var tokenInfo TokenInfo
 
-	if cacheEntry != nil {
-		if tokenInfo, ok = cacheEntry.(*TokenInfo); !ok {
-			logger.Warn().Msg("Wrong object type from cache")
-			cch.Delete(ctx, cacheKey)
-		} else {
-			logger.Debug().Msg("Reusing access token from cache")
+			if err = json.Unmarshal(entry, &tokenInfo); err == nil {
+				logger.Debug().Msg("Reusing access token from cache")
+
+				return &tokenInfo, nil
+			}
 		}
 	}
 
-	if tokenInfo == nil {
-		logger.Debug().Msg("Requesting new access token")
+	logger.Debug().Msg("Requesting new access token")
 
-		tokenInfo, err = c.fetchToken(ctx)
-		if err != nil {
-			return nil, err
-		}
+	tokenInfo, err := c.fetchToken(ctx)
+	if err != nil {
+		return nil, err
+	}
 
-		if cacheTTL := c.getCacheTTL(tokenInfo); cacheTTL > 0 {
-			cch.Set(ctx, cacheKey, tokenInfo, cacheTTL)
+	if cacheTTL := c.getCacheTTL(tokenInfo); cacheTTL > 0 {
+		data, _ := json.Marshal(tokenInfo)
+
+		if err = cch.Set(ctx, cacheKey, data, cacheTTL); err != nil {
+			logger.Warn().Err(err).Msg("Failed to cache token info")
 		}
 	}
 
@@ -208,11 +203,7 @@ func (c *Config) fetchToken(ctx context.Context) (*TokenInfo, error) {
 		return nil, errorchain.New(heimdall.ErrCommunication).CausedBy(err)
 	}
 
-	var raw map[string]any
-	// ignoring errors for raw claims
-	json.Unmarshal(rawData, &raw) //nolint:errcheck
-
-	return tokenInfo.WithExtra(raw), nil
+	return tokenInfo, nil
 }
 
 func (c *Config) Apply(_ context.Context, req *http.Request) error {

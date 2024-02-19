@@ -19,6 +19,7 @@ package finalizers
 import (
 	"context"
 	"encoding/base64"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
@@ -467,7 +468,10 @@ func TestClientCredentialsFinalizerExecute(t *testing.T) {
 			configureMocks: func(t *testing.T, ctx *mocks.ContextMock, cch *mocks2.CacheMock) {
 				t.Helper()
 
-				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(&clientcredentials.TokenInfo{AccessToken: "foobar", TokenType: "Bearer"})
+				rawData, err := json.Marshal(clientcredentials.TokenInfo{AccessToken: "foobar", TokenType: "Bearer"})
+				require.NoError(t, err)
+
+				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(rawData, nil)
 				ctx.EXPECT().AddHeaderForUpstream("Authorization", "Bearer foobar")
 			},
 			assert: func(t *testing.T, err error, tokenEndpointCalled bool) {
@@ -490,7 +494,7 @@ func TestClientCredentialsFinalizerExecute(t *testing.T) {
 			configureMocks: func(t *testing.T, _ *mocks.ContextMock, cch *mocks2.CacheMock) {
 				t.Helper()
 
-				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil)
+				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, errors.New("no cache entry"))
 			},
 			assertRequest: func(t *testing.T, _ *http.Request) { t.Helper() },
 			buildResponse: func(t *testing.T) (any, int) {
@@ -527,8 +531,8 @@ func TestClientCredentialsFinalizerExecute(t *testing.T) {
 			configureMocks: func(t *testing.T, ctx *mocks.ContextMock, cch *mocks2.CacheMock) {
 				t.Helper()
 
-				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil)
-				cch.EXPECT().Set(mock.Anything, mock.Anything, mock.Anything, 3*time.Minute).Return()
+				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, errors.New("no cache entry"))
+				cch.EXPECT().Set(mock.Anything, mock.Anything, mock.Anything, 3*time.Minute).Return(nil)
 				ctx.EXPECT().AddHeaderForUpstream("X-My-Header", "Bar foobar").Return()
 			},
 			assertRequest: func(t *testing.T, req *http.Request) {

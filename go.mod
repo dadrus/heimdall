@@ -22,15 +22,15 @@ require (
 	github.com/go-viper/mapstructure/v2 v2.0.0-alpha.1
 	github.com/gobwas/glob v0.2.3
 	github.com/goccy/go-json v0.10.2
-	github.com/google/cel-go v0.19.0
+	github.com/google/cel-go v0.20.0
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/websocket v1.5.1
 	github.com/grpc-ecosystem/go-grpc-middleware/v2 v2.0.1
 	github.com/iancoleman/strcase v0.3.0
 	github.com/inhies/go-bytesize v0.0.0-20220417184213-4913239db9cf
 	github.com/instana/go-otel-exporter v1.0.0
-	github.com/jellydator/ttlcache/v3 v3.1.1
-	github.com/johannesboyne/gofakes3 v0.0.0-20240117152127-f7e9c41d81b2
+	github.com/jellydator/ttlcache/v3 v3.2.0
+	github.com/johannesboyne/gofakes3 v0.0.0-20240217095638-c55a48f17be6
 	github.com/justinas/alice v1.2.0
 	github.com/knadh/koanf/maps v0.1.1
 	github.com/knadh/koanf/parsers/yaml v0.1.0

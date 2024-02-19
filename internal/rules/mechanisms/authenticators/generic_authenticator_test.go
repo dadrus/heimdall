@@ -18,6 +18,7 @@ package authenticators
 
 import (
 	"context"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -1055,60 +1056,6 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 			},
 		},
 		{
-			uc: "successful execution with bad cache hit",
-			authenticator: &genericAuthenticator{
-				e: endpoint.Endpoint{
-					URL:    srv.URL,
-					Method: http.MethodGet,
-					Headers: map[string]string{
-						"Accept":      "application/json",
-						"X-Auth-Data": "{{ .AuthenticationData }}",
-					},
-				},
-				sf:  &SubjectInfo{IDFrom: "user_id"},
-				ttl: 5 * time.Second,
-			},
-			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.ContextMock,
-				cch *mocks.CacheMock,
-				ads *mocks2.AuthDataExtractStrategyMock,
-				auth *genericAuthenticator,
-			) {
-				t.Helper()
-
-				ads.EXPECT().GetAuthData(ctx).Return("session_token", nil)
-				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(time.Duration(10))
-				cch.EXPECT().Delete(mock.Anything, mock.Anything)
-				cch.EXPECT().Set(mock.Anything, mock.Anything, []byte(`{ "user_id": "barbar" }`), auth.ttl)
-			},
-			instructServer: func(t *testing.T) {
-				t.Helper()
-
-				checkRequest = func(req *http.Request) {
-					t.Helper()
-
-					assert.Equal(t, http.MethodGet, req.Method)
-					assert.Equal(t, "application/json", req.Header.Get("Accept"))
-					assert.Equal(t, "session_token", req.Header.Get("X-Auth-Data"))
-				}
-
-				responseCode = http.StatusOK
-				responseContent = []byte(`{ "user_id": "barbar" }`)
-				responseContentType = "application/json"
-			},
-			assert: func(t *testing.T, err error, sub *subject.Subject) {
-				t.Helper()
-
-				assert.True(t, endpointCalled)
-
-				require.NoError(t, err)
-
-				require.NotNil(t, sub)
-				assert.Equal(t, "barbar", sub.ID)
-				assert.Len(t, sub.Attributes, 1)
-			},
-		},
-		{
 			uc: "successful execution with positive cache hit",
 			authenticator: &genericAuthenticator{
 				e: endpoint.Endpoint{
@@ -1131,7 +1078,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				t.Helper()
 
 				ads.EXPECT().GetAuthData(ctx).Return("session_token", nil)
-				cch.EXPECT().Get(mock.Anything, mock.Anything).Return([]byte(`{ "user_id": "barbar" }`))
+				cch.EXPECT().Get(mock.Anything, mock.Anything).Return([]byte(`{ "user_id": "barbar" }`), nil)
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
@@ -1173,8 +1120,8 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: reqFuns})
 
 				ads.EXPECT().GetAuthData(ctx).Return("session_token", nil)
-				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil)
-				cch.EXPECT().Set(mock.Anything, mock.Anything, []byte(`{ "user_id": "barbar" }`), auth.ttl)
+				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, errors.New("test error"))
+				cch.EXPECT().Set(mock.Anything, mock.Anything, []byte(`{ "user_id": "barbar" }`), auth.ttl).Return(nil)
 			},
 			instructServer: func(t *testing.T) {
 				t.Helper()
@@ -1233,7 +1180,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: reqFuns})
 
 				ads.EXPECT().GetAuthData(ctx).Return("session_token", nil)
-				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil)
+				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, errors.New("no cache entry"))
 			},
 			instructServer: func(t *testing.T) {
 				t.Helper()
@@ -1291,7 +1238,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				t.Helper()
 
 				ads.EXPECT().GetAuthData(ctx).Return("session_token", nil)
-				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil)
+				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, errors.New("no cache entry"))
 			},
 			instructServer: func(t *testing.T) {
 				t.Helper()
@@ -1353,8 +1300,8 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				exp := strconv.FormatInt(time.Now().Add(15*time.Second).Unix(), 10)
 
 				ads.EXPECT().GetAuthData(ctx).Return("session_token", nil)
-				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil)
-				cch.EXPECT().Set(mock.Anything, mock.Anything, []byte(`{ "user_id": "barbar", "exp": `+exp+` }`), 5*time.Second)
+				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, errors.New("no cache entry"))
+				cch.EXPECT().Set(mock.Anything, mock.Anything, []byte(`{ "user_id": "barbar", "exp": `+exp+` }`), 5*time.Second).Return(nil)
 			},
 			instructServer: func(t *testing.T) {
 				t.Helper()

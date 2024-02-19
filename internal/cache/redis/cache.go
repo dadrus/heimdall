@@ -19,15 +19,14 @@ package redis
 import (
 	"context"
 	"errors"
-	"fmt"
 	"time"
 
 	"github.com/redis/rueidis"
 	"github.com/redis/rueidis/rueidisotel"
-	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
+	"github.com/dadrus/heimdall/internal/x/stringx"
 )
 
 var ErrConnectionCheckFailed = errors.New("cache connection failed")
@@ -97,28 +96,15 @@ func (c *Cache) Stop(_ context.Context) error {
 	return nil
 }
 
-func (c *Cache) Get(ctx context.Context, key string) any {
+func (c *Cache) Get(ctx context.Context, key string) ([]byte, error) {
 	val, err := c.c.DoCache(ctx, c.c.B().Get().Key(key).Cache(), c.ttl).ToString()
 	if err != nil {
-		zerolog.Ctx(ctx).Warn().Err(err).Msg("Failed to fetch value from cache")
-
-		return nil
+		return nil, err
 	}
 
-	return val
+	return stringx.ToBytes(val), nil
 }
 
-func (c *Cache) Set(ctx context.Context, key string, value any, ttl time.Duration) {
-	str := fmt.Sprintf("%s", value)
-
-	if err := c.c.Do(ctx, c.c.B().Set().Key(key).Value(str).Px(ttl).Build()).Error(); err != nil {
-		zerolog.Ctx(ctx).Warn().Err(err).Msg("Failed to store value in cache")
-	}
-}
-
-func (c *Cache) Delete(ctx context.Context, key string) {
-	// UNLINK removes the key asynchronously; so we are not blocking here.
-	if err := c.c.Do(ctx, c.c.B().Unlink().Key(key).Build()).Error(); err != nil {
-		zerolog.Ctx(ctx).Warn().Err(err).Msg("Failed to unlink value from cache")
-	}
+func (c *Cache) Set(ctx context.Context, key string, value []byte, ttl time.Duration) error {
+	return c.c.Do(ctx, c.c.B().Set().Key(key).Value(stringx.ToString(value)).Px(ttl).Build()).Error()
 }

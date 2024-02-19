@@ -27,6 +27,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/goccy/go-json"
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/cache"
@@ -64,7 +65,7 @@ func init() {
 }
 
 type contextualizerData struct {
-	payload any
+	Payload any `json:"payload"`
 }
 
 type genericContextualizer struct {
@@ -124,11 +125,8 @@ func (h *genericContextualizer) Execute(ctx heimdall.Context, sub *subject.Subje
 	cch := cache.Ctx(ctx.AppContext())
 
 	var (
-		cacheKey   string
-		err        error
-		ok         bool
-		cacheEntry any
-		response   *contextualizerData
+		cacheKey string
+		response *contextualizerData
 	)
 
 	vals, payload, err := h.renderTemplates(ctx, sub)
@@ -138,15 +136,14 @@ func (h *genericContextualizer) Execute(ctx heimdall.Context, sub *subject.Subje
 
 	if h.ttl > 0 {
 		cacheKey = h.calculateCacheKey(sub, vals, payload)
-		cacheEntry = cch.Get(ctx.AppContext(), cacheKey)
-	}
+		if entry, err := cch.Get(ctx.AppContext(), cacheKey); err == nil {
+			var cd contextualizerData
 
-	if cacheEntry != nil {
-		if response, ok = cacheEntry.(*contextualizerData); !ok {
-			logger.Warn().Msg("Wrong object type from cache")
-			cch.Delete(ctx.AppContext(), cacheKey)
-		} else {
-			logger.Debug().Msg("Reusing contextualizer response from cache")
+			if err = json.Unmarshal(entry, &cd); err == nil {
+				logger.Debug().Msg("Reusing contextualizer response from cache")
+
+				response = &cd
+			}
 		}
 	}
 
@@ -157,12 +154,16 @@ func (h *genericContextualizer) Execute(ctx heimdall.Context, sub *subject.Subje
 		}
 
 		if h.ttl > 0 && len(cacheKey) != 0 {
-			cch.Set(ctx.AppContext(), cacheKey, response, h.ttl)
+			data, _ := json.Marshal(response)
+
+			if err = cch.Set(ctx.AppContext(), cacheKey, data, h.ttl); err != nil {
+				logger.Warn().Err(err).Msg("Failed to cache contextualizer response")
+			}
 		}
 	}
 
-	if response.payload != nil {
-		sub.Attributes[h.id] = response.payload
+	if response.Payload != nil {
+		sub.Attributes[h.id] = response.Payload
 	}
 
 	return nil
@@ -244,7 +245,7 @@ func (h *genericContextualizer) callEndpoint(
 		return nil, err
 	}
 
-	return &contextualizerData{payload: data}, nil
+	return &contextualizerData{Payload: data}, nil
 }
 
 func (h *genericContextualizer) createRequest(

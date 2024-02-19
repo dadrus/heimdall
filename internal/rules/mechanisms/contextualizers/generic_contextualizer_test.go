@@ -18,6 +18,7 @@ package contextualizers
 
 import (
 	"context"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -26,6 +27,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/goccy/go-json"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -571,7 +573,10 @@ func TestGenericContextualizerExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(&contextualizerData{payload: "Hi Foo"})
+				rawData, err := json.Marshal(&contextualizerData{Payload: "Hi Foo"})
+				require.NoError(t, err)
+
+				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(rawData, nil)
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
@@ -581,52 +586,6 @@ func TestGenericContextualizerExecute(t *testing.T) {
 				require.NoError(t, err)
 				assert.Len(t, sub.Attributes, 2)
 				assert.Equal(t, "Hi Foo", sub.Attributes["contextualizer"])
-			},
-		},
-		{
-			uc: "with wrong object type in cache",
-			contextualizer: &genericContextualizer{
-				id:  "contextualizer",
-				e:   endpoint.Endpoint{URL: srv.URL},
-				ttl: 5 * time.Second,
-				payload: func() template.Template {
-					tpl, _ := template.New("foo")
-
-					return tpl
-				}(),
-			},
-			subject: &subject.Subject{ID: "Foo", Attributes: map[string]any{"bar": "baz"}},
-			configureCache: func(t *testing.T, cch *mocks.CacheMock, _ *genericContextualizer,
-				_ *subject.Subject,
-			) {
-				t.Helper()
-
-				cch.EXPECT().Get(mock.Anything, mock.Anything).Return("Hi Foo")
-				cch.EXPECT().Delete(mock.Anything, mock.Anything)
-				cch.EXPECT().Set(mock.Anything, mock.Anything, mock.MatchedBy(func(val *contextualizerData) bool {
-					return val != nil && val.payload == "Hi from endpoint"
-				}), 5*time.Second)
-			},
-			configureContext: func(t *testing.T, ctx *heimdallmocks.ContextMock) {
-				t.Helper()
-
-				ctx.EXPECT().Request().Return(nil)
-			},
-			instructServer: func(t *testing.T) {
-				t.Helper()
-
-				responseContentType = "text/text"
-				responseContent = []byte(`Hi from endpoint`)
-				responseCode = http.StatusOK
-			},
-			assert: func(t *testing.T, err error, sub *subject.Subject) {
-				t.Helper()
-
-				assert.True(t, remoteEndpointCalled)
-
-				require.NoError(t, err)
-				assert.Len(t, sub.Attributes, 2)
-				assert.Equal(t, "Hi from endpoint", sub.Attributes["contextualizer"])
 			},
 		},
 		{
@@ -785,8 +744,8 @@ func TestGenericContextualizerExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil)
-				cch.EXPECT().Set(mock.Anything, mock.Anything, mock.Anything, mock.Anything)
+				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, errors.New("no cache entry"))
+				cch.EXPECT().Set(mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
@@ -811,10 +770,13 @@ func TestGenericContextualizerExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil)
-				cch.EXPECT().Set(mock.Anything, mock.Anything, mock.MatchedBy(func(val *contextualizerData) bool {
-					return val != nil && val.payload == "Hi from endpoint"
-				}), contextualizer.ttl)
+				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, errors.New("no cache entry"))
+				cch.EXPECT().Set(mock.Anything, mock.Anything, mock.MatchedBy(func(data []byte) bool {
+					var val contextualizerData
+					err := json.Unmarshal(data, &val)
+
+					return err == nil && val.Payload == "Hi from endpoint"
+				}), contextualizer.ttl).Return(nil)
 			},
 			configureContext: func(t *testing.T, ctx *heimdallmocks.ContextMock) {
 				t.Helper()

@@ -18,6 +18,7 @@ package finalizers
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -454,36 +455,7 @@ func TestJWTFinalizerExecute(t *testing.T) {
 				finalizer := jwtFinalizer{ttl: defaultJWTTTL}
 
 				cacheKey := finalizer.calculateCacheKey(sub, signer)
-				cch.EXPECT().Get(mock.Anything, cacheKey).Return("TestToken")
-			},
-			assert: func(t *testing.T, err error) {
-				t.Helper()
-
-				require.NoError(t, err)
-			},
-		},
-		{
-			uc:      "with bad prefilled cache and without custom claims",
-			config:  []byte(`ttl: 1m`),
-			subject: &subject.Subject{ID: "foo", Attributes: map[string]any{"baz": "bar"}},
-			configureMocks: func(t *testing.T, ctx *heimdallmocks.ContextMock, signer *heimdallmocks.JWTSignerMock,
-				cch *mocks.CacheMock, sub *subject.Subject,
-			) {
-				t.Helper()
-
-				signer.EXPECT().Hash().Return([]byte("foobar"))
-				signer.EXPECT().Sign(sub.ID, configuredTTL, map[string]any{}).
-					Return("barfoo", nil)
-
-				ctx.EXPECT().Signer().Return(signer)
-				ctx.EXPECT().AddHeaderForUpstream("Authorization", "Bearer barfoo")
-
-				finalizer := jwtFinalizer{ttl: configuredTTL}
-				cacheKey := finalizer.calculateCacheKey(sub, signer)
-
-				cch.EXPECT().Get(mock.Anything, cacheKey).Return(time.Second)
-				cch.EXPECT().Delete(mock.Anything, cacheKey)
-				cch.EXPECT().Set(mock.Anything, cacheKey, "barfoo", configuredTTL-defaultCacheLeeway)
+				cch.EXPECT().Get(mock.Anything, cacheKey).Return([]byte("TestToken"), nil)
 			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
@@ -507,8 +479,8 @@ func TestJWTFinalizerExecute(t *testing.T) {
 				ctx.EXPECT().Signer().Return(signer)
 				ctx.EXPECT().AddHeaderForUpstream("Authorization", "Bearer barfoo")
 
-				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil)
-				cch.EXPECT().Set(mock.Anything, mock.Anything, "barfoo", configuredTTL-defaultCacheLeeway)
+				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, errors.New("no cache entry"))
+				cch.EXPECT().Set(mock.Anything, mock.Anything, []byte("barfoo"), configuredTTL-defaultCacheLeeway).Return(nil)
 			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
@@ -542,8 +514,8 @@ claims: '{
 				ctx.EXPECT().Signer().Return(signer)
 				ctx.EXPECT().AddHeaderForUpstream("X-Token", "Bar barfoo")
 
-				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil)
-				cch.EXPECT().Set(mock.Anything, mock.Anything, "barfoo", defaultJWTTTL-defaultCacheLeeway)
+				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, errors.New("no cache entry"))
+				cch.EXPECT().Set(mock.Anything, mock.Anything, []byte("barfoo"), defaultJWTTTL-defaultCacheLeeway).Return(nil)
 			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
@@ -565,7 +537,7 @@ claims: '{
 
 				ctx.EXPECT().Signer().Return(signer)
 
-				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil)
+				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, errors.New("no cache entry"))
 			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
@@ -593,7 +565,7 @@ claims: '{
 
 				ctx.EXPECT().Signer().Return(signer)
 
-				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil)
+				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, errors.New("no cache entry"))
 			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()

@@ -1,3 +1,2 @@
 case: underscore
 with-expecter: true
-mockname: "{{.InterfaceName}}"
