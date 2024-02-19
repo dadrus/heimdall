@@ -142,6 +142,7 @@ func TestCacheUsage(t *testing.T) {
 			assert: func(t *testing.T, err error, data []byte) {
 				t.Helper()
 
+				require.NoError(t, err)
 				assert.Equal(t, []byte("bar"), data)
 			},
 		},
@@ -159,6 +160,7 @@ func TestCacheUsage(t *testing.T) {
 			assert: func(t *testing.T, err error, data []byte) {
 				t.Helper()
 
+				require.Error(t, err)
 				assert.Nil(t, data)
 			},
 		},
@@ -171,6 +173,7 @@ func TestCacheUsage(t *testing.T) {
 			assert: func(t *testing.T, err error, data []byte) {
 				t.Helper()
 
+				require.Error(t, err)
 				assert.Nil(t, data)
 			},
 		},
