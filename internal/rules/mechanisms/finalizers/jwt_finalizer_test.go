@@ -455,12 +455,7 @@ func TestJWTFinalizerExecute(t *testing.T) {
 				finalizer := jwtFinalizer{ttl: defaultJWTTTL}
 
 				cacheKey := finalizer.calculateCacheKey(sub, signer)
-				cch.EXPECT().Get(mock.Anything, cacheKey, mock.MatchedBy(
-					func(token *string) bool {
-						*token = "TestToken"
-
-						return true
-					})).Return(nil)
+				cch.EXPECT().Get(mock.Anything, cacheKey).Return([]byte("TestToken"), nil)
 			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
@@ -484,8 +479,8 @@ func TestJWTFinalizerExecute(t *testing.T) {
 				ctx.EXPECT().Signer().Return(signer)
 				ctx.EXPECT().AddHeaderForUpstream("Authorization", "Bearer barfoo")
 
-				cch.EXPECT().Get(mock.Anything, mock.Anything, mock.Anything).Return(errors.New("no cache entry"))
-				cch.EXPECT().Set(mock.Anything, mock.Anything, "barfoo", configuredTTL-defaultCacheLeeway).Return(nil)
+				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, errors.New("no cache entry"))
+				cch.EXPECT().Set(mock.Anything, mock.Anything, []byte("barfoo"), configuredTTL-defaultCacheLeeway).Return(nil)
 			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
@@ -519,8 +514,8 @@ claims: '{
 				ctx.EXPECT().Signer().Return(signer)
 				ctx.EXPECT().AddHeaderForUpstream("X-Token", "Bar barfoo")
 
-				cch.EXPECT().Get(mock.Anything, mock.Anything, mock.Anything).Return(errors.New("no cache entry"))
-				cch.EXPECT().Set(mock.Anything, mock.Anything, "barfoo", defaultJWTTTL-defaultCacheLeeway).Return(nil)
+				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, errors.New("no cache entry"))
+				cch.EXPECT().Set(mock.Anything, mock.Anything, []byte("barfoo"), defaultJWTTTL-defaultCacheLeeway).Return(nil)
 			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
@@ -542,7 +537,7 @@ claims: '{
 
 				ctx.EXPECT().Signer().Return(signer)
 
-				cch.EXPECT().Get(mock.Anything, mock.Anything, mock.Anything).Return(errors.New("no cache entry"))
+				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, errors.New("no cache entry"))
 			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
@@ -570,7 +565,7 @@ claims: '{
 
 				ctx.EXPECT().Signer().Return(signer)
 
-				cch.EXPECT().Get(mock.Anything, mock.Anything, mock.Anything).Return(errors.New("no cache entry"))
+				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, errors.New("no cache entry"))
 			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()

@@ -27,6 +27,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/goccy/go-json"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -572,12 +573,10 @@ func TestGenericContextualizerExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				cch.EXPECT().Get(mock.Anything, mock.Anything, mock.MatchedBy(
-					func(cd **contextualizerData) bool {
-						*cd = &contextualizerData{payload: "Hi Foo"}
+				rawData, err := json.Marshal(&contextualizerData{payload: "Hi Foo"})
+				require.NoError(t, err)
 
-						return true
-					})).Return(nil)
+				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(rawData, nil)
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
@@ -745,7 +744,7 @@ func TestGenericContextualizerExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				cch.EXPECT().Get(mock.Anything, mock.Anything, mock.Anything).Return(errors.New("no cache entry"))
+				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, errors.New("no cache entry"))
 				cch.EXPECT().Set(mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
@@ -771,7 +770,7 @@ func TestGenericContextualizerExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				cch.EXPECT().Get(mock.Anything, mock.Anything, mock.Anything).Return(errors.New("no cache entry"))
+				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, errors.New("no cache entry"))
 				cch.EXPECT().Set(mock.Anything, mock.Anything, mock.MatchedBy(func(val *contextualizerData) bool {
 					return val != nil && val.payload == "Hi from endpoint"
 				}), contextualizer.ttl).Return(nil)

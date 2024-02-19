@@ -24,10 +24,7 @@ import (
 	"github.com/jellydator/ttlcache/v3"
 )
 
-var (
-	ErrNoCacheEntry  = errors.New("no cache entry")
-	ErrBadTargetType = errors.New("bad target type")
-)
+var ErrNoCacheEntry = errors.New("no cache entry")
 
 type InMemoryCache struct {
 	c *ttlcache.Cache[string, []byte]

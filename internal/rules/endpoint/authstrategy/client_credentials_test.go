@@ -108,14 +108,12 @@ func TestApplyClientCredentialsStrategy(t *testing.T) {
 			configureMocks: func(t *testing.T, cch *mocks.CacheMock) {
 				t.Helper()
 
-				cch.EXPECT().Get(mock.Anything, mock.Anything, mock.MatchedBy(
-					func(ti **clientcredentials.TokenInfo) bool {
-						*ti = &clientcredentials.TokenInfo{
-							AccessToken: "foobar", TokenType: "Bearer",
-						}
+				rawData, err := json.Marshal(clientcredentials.TokenInfo{
+					AccessToken: "foobar", TokenType: "Bearer",
+				})
+				require.NoError(t, err)
 
-						return true
-					})).Return(nil)
+				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(rawData, nil)
 			},
 			assert: func(t *testing.T, err error, tokenEndpointCalled bool, req *http.Request) {
 				t.Helper()
@@ -135,7 +133,7 @@ func TestApplyClientCredentialsStrategy(t *testing.T) {
 			configureMocks: func(t *testing.T, cch *mocks.CacheMock) {
 				t.Helper()
 
-				cch.EXPECT().Get(mock.Anything, mock.Anything, mock.Anything).Return(errors.New("no cache entry"))
+				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, errors.New("no cache entry"))
 			},
 			assertRequest: func(t *testing.T, _ *http.Request) { t.Helper() },
 			buildResponse: func(t *testing.T) (any, int) {
@@ -170,7 +168,7 @@ func TestApplyClientCredentialsStrategy(t *testing.T) {
 			configureMocks: func(t *testing.T, cch *mocks.CacheMock) {
 				t.Helper()
 
-				cch.EXPECT().Get(mock.Anything, mock.Anything, mock.Anything).Return(errors.New("no cache entry"))
+				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, errors.New("no cache entry"))
 				cch.EXPECT().Set(mock.Anything, mock.Anything, mock.Anything, 3*time.Minute).Return(nil)
 			},
 			assertRequest: func(t *testing.T, req *http.Request) {

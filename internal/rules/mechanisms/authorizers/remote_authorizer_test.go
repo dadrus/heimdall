@@ -745,7 +745,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 			configureCache: func(t *testing.T, cch *mocks.CacheMock, auth *remoteAuthorizer, _ *subject.Subject) {
 				t.Helper()
 
-				cch.EXPECT().Get(mock.Anything, mock.Anything, mock.Anything).Return(errors.New("no cache entry"))
+				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, errors.New("no cache entry"))
 				cch.EXPECT().Set(mock.Anything, mock.Anything,
 					mock.MatchedBy(func(val *authorizationInformation) bool {
 						return val != nil && val.payload == nil && len(val.headers.Get("X-Foo-Bar")) != 0
@@ -800,7 +800,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 
 				cacheKey := auth.calculateCacheKey(sub, nil, "")
 
-				cch.EXPECT().Get(mock.Anything, cacheKey, mock.Anything).Return(errors.New("no cache entry"))
+				cch.EXPECT().Get(mock.Anything, cacheKey).Return(nil, errors.New("no cache entry"))
 				cch.EXPECT().Set(mock.Anything, cacheKey, mock.Anything, auth.ttl).Return(nil)
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
@@ -848,18 +848,16 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 			configureCache: func(t *testing.T, cch *mocks.CacheMock, _ *remoteAuthorizer, _ *subject.Subject) {
 				t.Helper()
 
-				cch.EXPECT().Get(mock.Anything, mock.Anything, mock.MatchedBy(
-					func(ai **authorizationInformation) bool {
-						*ai = &authorizationInformation{
-							headers: http.Header{
-								"X-Foo-Bar": {"HeyFoo"},
-								"X-Bar-Foo": {"HeyBar"},
-							},
-							payload: map[string]string{"foo": "bar"},
-						}
+				rawInfo, err := json.Marshal(authorizationInformation{
+					headers: http.Header{
+						"X-Foo-Bar": {"HeyFoo"},
+						"X-Bar-Foo": {"HeyBar"},
+					},
+					payload: map[string]string{"foo": "bar"},
+				})
+				require.NoError(t, err)
 
-						return true
-					})).Return(nil)
+				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(rawInfo, nil)
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()

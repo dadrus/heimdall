@@ -32,7 +32,7 @@ func TestCacheUsage(t *testing.T) {
 		uc             string
 		key            string
 		configureCache func(t *testing.T, cache *InMemoryCache)
-		assert         func(t *testing.T, err error, data any)
+		assert         func(t *testing.T, err error, data []byte)
 	}{
 		{
 			uc:  "can retrieve not expired value",
@@ -40,10 +40,10 @@ func TestCacheUsage(t *testing.T) {
 			configureCache: func(t *testing.T, cache *InMemoryCache) {
 				t.Helper()
 
-				err := cache.Set(context.TODO(), "foo", "bar", 10*time.Minute)
+				err := cache.Set(context.TODO(), "foo", []byte("bar"), 10*time.Minute)
 				require.NoError(t, err)
 			},
-			assert: func(t *testing.T, err error, data any) {
+			assert: func(t *testing.T, err error, data []byte) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -56,12 +56,12 @@ func TestCacheUsage(t *testing.T) {
 			configureCache: func(t *testing.T, cache *InMemoryCache) {
 				t.Helper()
 
-				err := cache.Set(context.TODO(), "bar", "baz", 1*time.Microsecond)
+				err := cache.Set(context.TODO(), "bar", []byte("baz"), 1*time.Microsecond)
 				require.NoError(t, err)
 
 				time.Sleep(200 * time.Millisecond)
 			},
-			assert: func(t *testing.T, err error, _ any) {
+			assert: func(t *testing.T, err error, _ []byte) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -74,40 +74,22 @@ func TestCacheUsage(t *testing.T) {
 			configureCache: func(t *testing.T, _ *InMemoryCache) {
 				t.Helper()
 			},
-			assert: func(t *testing.T, err error, _ any) {
+			assert: func(t *testing.T, err error, _ []byte) {
 				t.Helper()
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, ErrNoCacheEntry)
 			},
 		},
-		{
-			uc:  "bad type on retrieving value",
-			key: "zab",
-			configureCache: func(t *testing.T, cache *InMemoryCache) {
-				t.Helper()
-
-				err := cache.Set(context.TODO(), "zab", 10, 1*time.Second)
-				require.NoError(t, err)
-			},
-			assert: func(t *testing.T, err error, _ any) {
-				t.Helper()
-
-				require.Error(t, err)
-				require.ErrorIs(t, err, ErrBadTargetType)
-			},
-		},
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
 			// GIVEN
-			var value string
-
 			cache := New()
 
 			// WHEN
 			tc.configureCache(t, cache)
 
-			err := cache.Get(context.TODO(), tc.key, &value)
+			value, err := cache.Get(context.TODO(), tc.key)
 
 			// THEN
 			tc.assert(t, err, value)
@@ -115,33 +97,22 @@ func TestCacheUsage(t *testing.T) {
 	}
 }
 
-func TestCacheGetNilTarget(t *testing.T) {
-	t.Parallel()
-
-	// WHEN
-	err := New().Get(context.TODO(), "foo", nil)
-
-	// THEN
-	require.Error(t, err)
-	require.ErrorIs(t, err, ErrBadTargetType)
-}
-
 func TestCacheExpiration(t *testing.T) {
 	t.Parallel()
 
 	cache := New()
-	cache.Set(context.TODO(), "baz", "bar", 1*time.Second)
+	cache.Set(context.TODO(), "baz", []byte("bar"), 1*time.Second)
 
 	hits := 0
 
 	for i := 0; i < 8; i++ {
 		time.Sleep(250 * time.Millisecond)
 
-		var value string
-
-		err := cache.Get(context.TODO(), "baz", &value)
+		value, err := cache.Get(context.TODO(), "baz")
 		if err == nil {
 			hits++
+
+			assert.Equal(t, []byte("bar"), value)
 		}
 	}
 

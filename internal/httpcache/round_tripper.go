@@ -60,9 +60,8 @@ func (rt *RoundTripper) cachedResponse(req *http.Request) (*http.Response, error
 	ctx := req.Context()
 	cch := cache.Ctx(ctx)
 
-	var respDump []byte
-
-	if err := cch.Get(ctx, cacheKey(req), &respDump); err != nil {
+	respDump, err := cch.Get(ctx, cacheKey(req))
+	if err != nil {
 		return nil, ErrNoCacheEntry
 	}
 
