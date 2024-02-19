@@ -74,13 +74,13 @@ type remoteAuthorizer struct {
 }
 
 type authorizationInformation struct {
-	headers http.Header
-	payload any
+	Headers http.Header `json:"headers"`
+	Payload any         `json:"payload"`
 }
 
 func (ai *authorizationInformation) addHeadersTo(headerNames []string, ctx heimdall.Context) {
 	for _, headerName := range headerNames {
-		headerValue := ai.headers.Get(headerName)
+		headerValue := ai.Headers.Get(headerName)
 		if len(headerValue) != 0 {
 			ctx.AddHeaderForUpstream(headerName, headerValue)
 		}
@@ -88,8 +88,8 @@ func (ai *authorizationInformation) addHeadersTo(headerNames []string, ctx heimd
 }
 
 func (ai *authorizationInformation) addAttributesTo(key string, sub *subject.Subject) {
-	if ai.payload != nil {
-		sub.Attributes[key] = ai.payload
+	if ai.Payload != nil {
+		sub.Attributes[key] = ai.Payload
 	}
 }
 
@@ -156,8 +156,12 @@ func (a *remoteAuthorizer) Execute(ctx heimdall.Context, sub *subject.Subject) e
 	if a.ttl > 0 {
 		cacheKey = a.calculateCacheKey(sub, vals, payload)
 		if entry, err := cch.Get(ctx.AppContext(), cacheKey); err == nil {
-			if err = json.Unmarshal(entry, authInfo); err == nil {
+			var ai authorizationInformation
+
+			if err = json.Unmarshal(entry, &ai); err == nil {
 				logger.Debug().Msg("Reusing authorization information from cache")
+
+				authInfo = &ai
 			}
 		}
 	}
@@ -281,7 +285,7 @@ func (a *remoteAuthorizer) doAuthorize(
 		return nil, err
 	}
 
-	return &authorizationInformation{headers: resp.Header, payload: data}, nil
+	return &authorizationInformation{Headers: resp.Header, Payload: data}, nil
 }
 
 func (a *remoteAuthorizer) readResponse(ctx heimdall.Context, resp *http.Response) (any, error) {

@@ -65,7 +65,7 @@ func init() {
 }
 
 type contextualizerData struct {
-	payload any
+	Payload any `json:"payload"`
 }
 
 type genericContextualizer struct {
@@ -137,8 +137,12 @@ func (h *genericContextualizer) Execute(ctx heimdall.Context, sub *subject.Subje
 	if h.ttl > 0 {
 		cacheKey = h.calculateCacheKey(sub, vals, payload)
 		if entry, err := cch.Get(ctx.AppContext(), cacheKey); err == nil {
-			if err = json.Unmarshal(entry, response); err != nil {
+			var cd contextualizerData
+
+			if err = json.Unmarshal(entry, &cd); err == nil {
 				logger.Debug().Msg("Reusing contextualizer response from cache")
+
+				response = &cd
 			}
 		}
 	}
@@ -158,8 +162,8 @@ func (h *genericContextualizer) Execute(ctx heimdall.Context, sub *subject.Subje
 		}
 	}
 
-	if response.payload != nil {
-		sub.Attributes[h.id] = response.payload
+	if response.Payload != nil {
+		sub.Attributes[h.id] = response.Payload
 	}
 
 	return nil
@@ -241,7 +245,7 @@ func (h *genericContextualizer) callEndpoint(
 		return nil, err
 	}
 
-	return &contextualizerData{payload: data}, nil
+	return &contextualizerData{Payload: data}, nil
 }
 
 func (h *genericContextualizer) createRequest(

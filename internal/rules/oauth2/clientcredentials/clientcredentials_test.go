@@ -113,6 +113,9 @@ func TestClientCredentialsToken(t *testing.T) {
 				assert.False(t, tokenEndpointCalled)
 				assert.Equal(t, "Bearer", token.TokenType)
 				assert.Equal(t, "foobar", token.AccessToken)
+				assert.Empty(t, token.RefreshToken)
+				assert.Empty(t, token.Scopes)
+				assert.Equal(t, time.Time{}, token.Expiry)
 			},
 		},
 		{
@@ -227,7 +230,7 @@ func TestClientCredentialsToken(t *testing.T) {
 			},
 		},
 		{
-			uc: "full configuration, no cache hit with scopes, expires_in and extra claims",
+			uc: "full configuration, no cache hit with scopes and expires_in",
 			cfg: &Config{
 				TokenURL:     srv.URL,
 				ClientID:     "bar",
@@ -292,8 +295,6 @@ func TestClientCredentialsToken(t *testing.T) {
 				assert.Equal(t, "Foo", token.TokenType)
 				assert.Equal(t, "foobar", token.AccessToken)
 				assert.Equal(t, 5*time.Minute, time.Until(token.Expiry).Round(time.Second))
-				assert.Equal(t, "bar", token.Extra("foo"))
-				assert.InDelta(t, 42.0, token.Extra("bar"), 0.001)
 				assert.Len(t, token.Scopes, 2)
 				assert.Contains(t, token.Scopes, "baz")
 				assert.Contains(t, token.Scopes, "zab")

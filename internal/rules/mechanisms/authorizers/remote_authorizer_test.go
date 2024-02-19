@@ -747,8 +747,11 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 
 				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, errors.New("no cache entry"))
 				cch.EXPECT().Set(mock.Anything, mock.Anything,
-					mock.MatchedBy(func(val *authorizationInformation) bool {
-						return val != nil && val.payload == nil && len(val.headers.Get("X-Foo-Bar")) != 0
+					mock.MatchedBy(func(data []byte) bool {
+						var ai authorizationInformation
+						err := json.Unmarshal(data, &ai)
+
+						return err == nil && ai.Payload == nil && len(ai.Headers.Get("X-Foo-Bar")) != 0
 					}), auth.ttl).Return(nil)
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
@@ -849,11 +852,11 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 				t.Helper()
 
 				rawInfo, err := json.Marshal(authorizationInformation{
-					headers: http.Header{
+					Headers: http.Header{
 						"X-Foo-Bar": {"HeyFoo"},
 						"X-Bar-Foo": {"HeyBar"},
 					},
-					payload: map[string]string{"foo": "bar"},
+					Payload: map[string]string{"foo": "bar"},
 				})
 				require.NoError(t, err)
 
@@ -870,7 +873,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 
 				attrs := sub.Attributes["authorizer"]
 				assert.NotEmpty(t, attrs)
-				authorizerAttrs, ok := attrs.(map[string]string)
+				authorizerAttrs, ok := attrs.(map[string]any)
 				require.True(t, ok)
 				assert.Len(t, authorizerAttrs, 1)
 				assert.Equal(t, "bar", authorizerAttrs["foo"])

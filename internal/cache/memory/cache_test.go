@@ -47,7 +47,7 @@ func TestCacheUsage(t *testing.T) {
 				t.Helper()
 
 				require.NoError(t, err)
-				assert.Equal(t, "bar", data)
+				assert.Equal(t, []byte("bar"), data)
 			},
 		},
 		{

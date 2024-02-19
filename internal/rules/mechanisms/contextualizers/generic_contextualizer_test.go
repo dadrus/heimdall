@@ -573,7 +573,7 @@ func TestGenericContextualizerExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				rawData, err := json.Marshal(&contextualizerData{payload: "Hi Foo"})
+				rawData, err := json.Marshal(&contextualizerData{Payload: "Hi Foo"})
 				require.NoError(t, err)
 
 				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(rawData, nil)
@@ -771,8 +771,11 @@ func TestGenericContextualizerExecute(t *testing.T) {
 				t.Helper()
 
 				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, errors.New("no cache entry"))
-				cch.EXPECT().Set(mock.Anything, mock.Anything, mock.MatchedBy(func(val *contextualizerData) bool {
-					return val != nil && val.payload == "Hi from endpoint"
+				cch.EXPECT().Set(mock.Anything, mock.Anything, mock.MatchedBy(func(data []byte) bool {
+					var val contextualizerData
+					err := json.Unmarshal(data, &val)
+
+					return err == nil && val.Payload == "Hi from endpoint"
 				}), contextualizer.ttl).Return(nil)
 			},
 			configureContext: func(t *testing.T, ctx *heimdallmocks.ContextMock) {

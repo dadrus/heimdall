@@ -1644,9 +1644,12 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 
 				keys := jwks.Key(kidKeyWithoutCert)
 
+				rawKey, err := json.Marshal(keys[0])
+				require.NoError(t, err)
+
 				ads.EXPECT().GetAuthData(ctx).Return(jwtSignedWithKeyOnlyJWK, nil)
 				cch.EXPECT().Get(mock.Anything, cacheKey).Return(nil, errors.New("no cache entry"))
-				cch.EXPECT().Set(mock.Anything, cacheKey, &keys[0], *auth.ttl).Return(nil)
+				cch.EXPECT().Set(mock.Anything, cacheKey, rawKey, *auth.ttl).Return(nil)
 			},
 			instructServer: func(t *testing.T) {
 				t.Helper()
@@ -1721,9 +1724,12 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 
 				keys := jwks.Key(kidKeyWithCert)
 
+				rawKey, err := json.Marshal(keys[0])
+				require.NoError(t, err)
+
 				ads.EXPECT().GetAuthData(ctx).Return(jwtSignedWithKeyAndCertJWK, nil)
 				cch.EXPECT().Get(mock.Anything, cacheKey).Return(nil, errors.New("no cache entry"))
-				cch.EXPECT().Set(mock.Anything, cacheKey, &keys[0], *auth.ttl).Return(nil)
+				cch.EXPECT().Set(mock.Anything, cacheKey, rawKey, *auth.ttl).Return(nil)
 			},
 			instructServer: func(t *testing.T) {
 				t.Helper()
@@ -1793,9 +1799,12 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 
 				keys := jwks.Key(kidKeyWithCert)
 
+				rawKey, err := json.Marshal(keys[0])
+				require.NoError(t, err)
+
 				ads.EXPECT().GetAuthData(ctx).Return(jwtSignedWithKeyAndCertJWK, nil)
 				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, errors.New("no cache entry"))
-				cch.EXPECT().Set(mock.Anything, cacheKey, &keys[0], *auth.ttl).Return(nil)
+				cch.EXPECT().Set(mock.Anything, cacheKey, rawKey, *auth.ttl).Return(nil)
 				// http cache
 				cch.EXPECT().Set(mock.Anything, mock.Anything, mock.Anything, mock.MatchedBy(
 					func(ttl time.Duration) bool { return ttl.Round(time.Minute) == 30*time.Minute },
@@ -1956,9 +1965,12 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 
 				keys := jwks.Key(kidKeyWithCert)
 
+				rawKey, err := json.Marshal(keys[0])
+				require.NoError(t, err)
+
 				ads.EXPECT().GetAuthData(ctx).Return(jwtSignedWithKeyAndCertJWK, nil)
 				cch.EXPECT().Get(mock.Anything, cacheKey).Return(nil, errors.New("no cache entry"))
-				cch.EXPECT().Set(mock.Anything, cacheKey, &keys[0], *auth.ttl).Return(nil)
+				cch.EXPECT().Set(mock.Anything, cacheKey, rawKey, *auth.ttl).Return(nil)
 			},
 			instructServer: func(t *testing.T) {
 				t.Helper()

@@ -64,7 +64,7 @@ func (c *Config) Token(ctx context.Context) (*TokenInfo, error) {
 		if entry, err := cch.Get(ctx, cacheKey); err == nil {
 			var tokenInfo TokenInfo
 
-			if err = json.Unmarshal(entry, &tokenInfo); err != nil {
+			if err = json.Unmarshal(entry, &tokenInfo); err == nil {
 				logger.Debug().Msg("Reusing access token from cache")
 
 				return &tokenInfo, nil
@@ -203,11 +203,7 @@ func (c *Config) fetchToken(ctx context.Context) (*TokenInfo, error) {
 		return nil, errorchain.New(heimdall.ErrCommunication).CausedBy(err)
 	}
 
-	var raw map[string]any
-	// ignoring errors for raw claims
-	json.Unmarshal(rawData, &raw) //nolint:errcheck
-
-	return tokenInfo.WithExtra(raw), nil
+	return tokenInfo, nil
 }
 
 func (c *Config) Apply(_ context.Context, req *http.Request) error {
