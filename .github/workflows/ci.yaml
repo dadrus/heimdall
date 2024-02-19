@@ -104,6 +104,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
+        with:
+          fetch-depth: 0
       - name: Review code
         uses: reviewdog/action-golangci-lint@v2
         with:
