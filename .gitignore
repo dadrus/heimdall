@@ -34,8 +34,5 @@ build
 docs/resources/_gen
 docs/.hugo_build.lock
 
-# files by redinsight
-examples/local/redisinsight
-
 # macOS
 .DS_Store
