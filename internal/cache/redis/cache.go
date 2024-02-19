@@ -71,15 +71,7 @@ func NewCache(conf map[string]any) (*Cache, error) {
 
 	client, err := rueidisotel.NewClient(opts)
 	if err != nil {
-		return nil, errorchain.NewWithMessage(heimdall.ErrInternal,
-			"failed creating redis cache client").CausedBy(err)
-	}
-
-	if err = client.Do(context.Background(), client.B().Ping().Build()).Error(); err != nil {
-		client.Close()
-
-		return nil, errorchain.NewWithMessage(ErrConnectionCheckFailed, "failed connect to redis cache").
-			CausedBy(err)
+		return nil, errorchain.NewWithMessage(heimdall.ErrInternal, "failed connecting to redis").CausedBy(err)
 	}
 
 	return &Cache{c: client, ttl: cfg.ClientCache.TTL}, nil
