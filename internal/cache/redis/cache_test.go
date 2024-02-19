@@ -81,7 +81,7 @@ func TestNewCache(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrInternal)
-				require.ErrorContains(t, err, "failed creating redis cache client")
+				require.ErrorContains(t, err, "failed creating redis client")
 			},
 		},
 		{
