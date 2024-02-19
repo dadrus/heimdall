@@ -182,13 +182,11 @@ func (a *genericAuthenticator) getSubjectInformation(ctx heimdall.Context, authD
 	)
 
 	if a.ttl > 0 {
-		var cachedResponse []byte
-
 		cacheKey = a.calculateCacheKey(authData)
-		if err := cch.Get(ctx.AppContext(), cacheKey, &cachedResponse); err == nil {
+		if entry, err := cch.Get(ctx.AppContext(), cacheKey); err == nil {
 			logger.Debug().Msg("Reusing subject information from cache")
 
-			return cachedResponse, nil
+			return entry, nil
 		}
 	}
 

@@ -57,30 +57,32 @@ func (c *Config) Token(ctx context.Context) (*TokenInfo, error) {
 	logger := zerolog.Ctx(ctx)
 	cch := cache.Ctx(ctx)
 
-	var (
-		err       error
-		cacheKey  string
-		tokenInfo *TokenInfo
-	)
+	var cacheKey string
 
 	if c.isCacheEnabled() {
 		cacheKey = c.calculateCacheKey()
-		if err = cch.Get(ctx, cacheKey, &tokenInfo); err == nil {
-			logger.Debug().Msg("Reusing access token from cache")
+		if entry, err := cch.Get(ctx, cacheKey); err == nil {
+			var tokenInfo TokenInfo
 
-			return tokenInfo, nil
+			if err = json.Unmarshal(entry, &tokenInfo); err != nil {
+				logger.Debug().Msg("Reusing access token from cache")
+
+				return &tokenInfo, nil
+			}
 		}
 	}
 
 	logger.Debug().Msg("Requesting new access token")
 
-	tokenInfo, err = c.fetchToken(ctx)
+	tokenInfo, err := c.fetchToken(ctx)
 	if err != nil {
 		return nil, err
 	}
 
 	if cacheTTL := c.getCacheTTL(tokenInfo); cacheTTL > 0 {
-		if err = cch.Set(ctx, cacheKey, tokenInfo, cacheTTL); err != nil {
+		data, _ := json.Marshal(tokenInfo)
+
+		if err = cch.Set(ctx, cacheKey, data, cacheTTL); err != nil {
 			logger.Warn().Err(err).Msg("Failed to cache token info")
 		}
 	}

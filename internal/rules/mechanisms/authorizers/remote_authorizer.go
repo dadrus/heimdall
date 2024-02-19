@@ -27,6 +27,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/goccy/go-json"
 	"github.com/google/cel-go/cel"
 	"github.com/rs/zerolog"
 
@@ -154,8 +155,10 @@ func (a *remoteAuthorizer) Execute(ctx heimdall.Context, sub *subject.Subject) e
 
 	if a.ttl > 0 {
 		cacheKey = a.calculateCacheKey(sub, vals, payload)
-		if err = cch.Get(ctx.AppContext(), cacheKey, &authInfo); err == nil {
-			logger.Debug().Msg("Reusing authorization information from cache")
+		if entry, err := cch.Get(ctx.AppContext(), cacheKey); err == nil {
+			if err = json.Unmarshal(entry, authInfo); err == nil {
+				logger.Debug().Msg("Reusing authorization information from cache")
+			}
 		}
 	}
 
@@ -166,7 +169,9 @@ func (a *remoteAuthorizer) Execute(ctx heimdall.Context, sub *subject.Subject) e
 		}
 
 		if a.ttl > 0 && len(cacheKey) != 0 {
-			if err = cch.Set(ctx.AppContext(), cacheKey, authInfo, a.ttl); err != nil {
+			data, _ := json.Marshal(authInfo)
+
+			if err = cch.Set(ctx.AppContext(), cacheKey, data, a.ttl); err != nil {
 				logger.Warn().Err(err).Msg("Failed to cache authorization information")
 			}
 		}

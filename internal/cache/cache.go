@@ -27,6 +27,6 @@ type Cache interface {
 	Start(ctx context.Context) error
 	Stop(ctx context.Context) error
 
-	Get(ctx context.Context, key string, target any) error
-	Set(ctx context.Context, key string, value any, ttl time.Duration) error
+	Get(ctx context.Context, key string) ([]byte, error)
+	Set(ctx context.Context, key string, value []byte, ttl time.Duration) error
 }

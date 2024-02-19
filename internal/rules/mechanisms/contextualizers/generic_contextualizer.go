@@ -27,6 +27,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/goccy/go-json"
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/cache"
@@ -135,8 +136,10 @@ func (h *genericContextualizer) Execute(ctx heimdall.Context, sub *subject.Subje
 
 	if h.ttl > 0 {
 		cacheKey = h.calculateCacheKey(sub, vals, payload)
-		if err = cch.Get(ctx.AppContext(), cacheKey, &response); err == nil {
-			logger.Debug().Msg("Reusing contextualizer response from cache")
+		if entry, err := cch.Get(ctx.AppContext(), cacheKey); err == nil {
+			if err = json.Unmarshal(entry, response); err != nil {
+				logger.Debug().Msg("Reusing contextualizer response from cache")
+			}
 		}
 	}
 
@@ -147,7 +150,9 @@ func (h *genericContextualizer) Execute(ctx heimdall.Context, sub *subject.Subje
 		}
 
 		if h.ttl > 0 && len(cacheKey) != 0 {
-			if err = cch.Set(ctx.AppContext(), cacheKey, response, h.ttl); err != nil {
+			data, _ := json.Marshal(response)
+
+			if err = cch.Set(ctx.AppContext(), cacheKey, data, h.ttl); err != nil {
 				logger.Warn().Err(err).Msg("Failed to cache contextualizer response")
 			}
 		}

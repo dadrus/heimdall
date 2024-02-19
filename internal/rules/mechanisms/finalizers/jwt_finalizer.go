@@ -114,8 +114,10 @@ func (u *jwtFinalizer) Execute(ctx heimdall.Context, sub *subject.Subject) error
 	)
 
 	cacheKey := u.calculateCacheKey(sub, ctx.Signer())
-	if err = cch.Get(ctx.AppContext(), cacheKey, &jwtToken); err == nil {
+	if entry, err := cch.Get(ctx.AppContext(), cacheKey); err == nil {
 		logger.Debug().Msg("Reusing JWT from cache")
+
+		jwtToken = stringx.ToString(entry)
 	}
 
 	if len(jwtToken) == 0 {
@@ -125,7 +127,7 @@ func (u *jwtFinalizer) Execute(ctx heimdall.Context, sub *subject.Subject) error
 		}
 
 		if len(cacheKey) != 0 && u.ttl > defaultCacheLeeway {
-			if err = cch.Set(ctx.AppContext(), cacheKey, jwtToken, u.ttl-defaultCacheLeeway); err != nil {
+			if err = cch.Set(ctx.AppContext(), cacheKey, stringx.ToBytes(jwtToken), u.ttl-defaultCacheLeeway); err != nil {
 				logger.Warn().Err(err).Msg("Failed to cache JWT token")
 			}
 		}

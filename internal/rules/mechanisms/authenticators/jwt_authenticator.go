@@ -386,7 +386,6 @@ func (a *jwtAuthenticator) getKey(
 
 	var (
 		cacheKey string
-		jwk      *jose.JSONWebKey
 		jwks     *jose.JSONWebKeySet
 	)
 
@@ -397,10 +396,14 @@ func (a *jwtAuthenticator) getKey(
 
 	if a.isCacheEnabled() {
 		cacheKey = a.calculateCacheKey(ep, req.URL.String(), keyID)
-		if err = cch.Get(ctx.AppContext(), cacheKey, &jwk); err == nil {
-			logger.Debug().Msg("Reusing JWK from cache")
+		if entry, err := cch.Get(ctx.AppContext(), cacheKey); err == nil {
+			var jwk jose.JSONWebKey
 
-			return jwk, nil
+			if err = json.Unmarshal(entry, &jwk); err == nil {
+				logger.Debug().Msg("Reusing JWK from cache")
+
+				return &jwk, nil
+			}
 		}
 	}
 
@@ -417,7 +420,7 @@ func (a *jwtAuthenticator) getKey(
 			WithErrorContext(a)
 	}
 
-	jwk = &keys[0]
+	jwk := &keys[0]
 	if err = a.validateJWK(jwk); err != nil {
 		return nil, errorchain.
 			NewWithMessagef(heimdall.ErrAuthentication, "JWK for keyID=%s is invalid", keyID).
@@ -426,7 +429,9 @@ func (a *jwtAuthenticator) getKey(
 	}
 
 	if cacheTTL := a.getCacheTTL(jwk); cacheTTL > 0 {
-		if err = cch.Set(ctx.AppContext(), cacheKey, jwk, cacheTTL); err != nil {
+		data, _ := json.Marshal(jwk)
+
+		if err = cch.Set(ctx.AppContext(), cacheKey, data, cacheTTL); err != nil {
 			logger.Warn().Err(err).Msg("Failed to cache JWK")
 		}
 	}

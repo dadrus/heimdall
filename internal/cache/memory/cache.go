@@ -19,7 +19,6 @@ package memory
 import (
 	"context"
 	"errors"
-	"reflect"
 	"time"
 
 	"github.com/jellydator/ttlcache/v3"
@@ -31,11 +30,11 @@ var (
 )
 
 type InMemoryCache struct {
-	c *ttlcache.Cache[string, any]
+	c *ttlcache.Cache[string, []byte]
 }
 
 func New() *InMemoryCache {
-	return &InMemoryCache{c: ttlcache.New[string, any](ttlcache.WithDisableTouchOnHit[string, any]())}
+	return &InMemoryCache{c: ttlcache.New[string, []byte](ttlcache.WithDisableTouchOnHit[string, []byte]())}
 }
 
 func (c *InMemoryCache) Start(_ context.Context) error {
@@ -50,29 +49,16 @@ func (c *InMemoryCache) Stop(_ context.Context) error {
 	return nil
 }
 
-func (c *InMemoryCache) Get(_ context.Context, key string, target any) error {
-	if target == nil {
-		return ErrBadTargetType
-	}
-
+func (c *InMemoryCache) Get(_ context.Context, key string) ([]byte, error) {
 	item := c.c.Get(key)
 	if item == nil || item.IsExpired() {
-		return ErrNoCacheEntry
+		return nil, ErrNoCacheEntry
 	}
 
-	val := item.Value()
-
-	targetVal := reflect.ValueOf(target)
-	if !reflect.TypeOf(val).AssignableTo(targetVal.Type().Elem()) {
-		return ErrBadTargetType
-	}
-
-	targetVal.Elem().Set(reflect.ValueOf(item.Value()))
-
-	return nil
+	return item.Value(), nil
 }
 
-func (c *InMemoryCache) Set(_ context.Context, key string, value any, ttl time.Duration) error {
+func (c *InMemoryCache) Set(_ context.Context, key string, value []byte, ttl time.Duration) error {
 	c.c.Set(key, value, ttl)
 
 	return nil

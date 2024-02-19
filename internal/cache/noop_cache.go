@@ -18,12 +18,15 @@ package cache
 
 import (
 	"context"
+	"errors"
 	"time"
 )
 
+var ErrNoCacheEntry = errors.New("no cache entry present")
+
 type noopCache struct{}
 
-func (noopCache) Get(_ context.Context, _ string, _ any) error                  { return nil }
-func (noopCache) Set(_ context.Context, _ string, _ any, _ time.Duration) error { return nil }
-func (noopCache) Start(_ context.Context) error                                 { return nil }
-func (noopCache) Stop(_ context.Context) error                                  { return nil }
+func (noopCache) Get(_ context.Context, _ string) ([]byte, error)                  { return nil, ErrNoCacheEntry }
+func (noopCache) Set(_ context.Context, _ string, _ []byte, _ time.Duration) error { return nil }
+func (noopCache) Start(_ context.Context) error                                    { return nil }
+func (noopCache) Stop(_ context.Context) error                                     { return nil }

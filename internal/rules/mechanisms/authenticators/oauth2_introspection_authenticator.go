@@ -263,10 +263,7 @@ func (a *oauth2IntrospectionAuthenticator) getSubjectInformation(ctx heimdall.Co
 	cch := cache.Ctx(ctx.AppContext())
 	logger := zerolog.Ctx(ctx.AppContext())
 
-	var (
-		cacheKey       string
-		cachedResponse []byte
-	)
+	var cacheKey string
 
 	claims, err := a.extractTokenClaims(token)
 	if err != nil {
@@ -285,10 +282,10 @@ func (a *oauth2IntrospectionAuthenticator) getSubjectInformation(ctx heimdall.Co
 
 	if a.isCacheEnabled() {
 		cacheKey = a.calculateCacheKey(metadata.IntrospectionEndpoint, req.URL.String(), token)
-		if err = cch.Get(ctx.AppContext(), cacheKey, &cachedResponse); err == nil {
+		if entry, err := cch.Get(ctx.AppContext(), cacheKey); err == nil {
 			logger.Debug().Msg("Reusing introspection response from cache")
 
-			return cachedResponse, nil
+			return entry, nil
 		}
 	}
 
