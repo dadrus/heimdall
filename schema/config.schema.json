@@ -118,7 +118,6 @@
                 "type": "string",
                 "minLength": 1
               },
-              "default": "",
               "examples": [
                 "node1:7000",
                 "node2:7001",
