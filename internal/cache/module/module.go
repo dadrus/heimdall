@@ -40,7 +40,7 @@ var Module = fx.Provide(
 func newCache(conf *config.Configuration, logger zerolog.Logger) (cache.Cache, error) {
 	cch, err := cache.Open(conf.Cache.Type, conf.Cache.Config)
 	if err != nil {
-		logger.Error().Err(err).Msg("Could not initialize Cache")
+		logger.Error().Err(err).Str("_type", conf.Cache.Type).Msg("Failed creating cache instance")
 
 		return nil, err
 	}

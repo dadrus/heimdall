@@ -71,7 +71,8 @@ func NewCache(conf map[string]any) (*Cache, error) {
 
 	client, err := rueidisotel.NewClient(opts)
 	if err != nil {
-		return nil, errorchain.NewWithMessage(heimdall.ErrInternal, "failed connecting to redis").CausedBy(err)
+		return nil, errorchain.NewWithMessage(heimdall.ErrInternal,
+			"failed creating redis client").CausedBy(err)
 	}
 
 	return &Cache{c: client, ttl: cfg.ClientCache.TTL}, nil
