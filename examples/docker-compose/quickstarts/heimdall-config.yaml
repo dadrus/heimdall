@@ -20,7 +20,7 @@ mechanisms:
       type: default
     - id: redirect_to_login
       type: redirect
-      if: >
+      if: > 
         type(Error) == authentication_error &&
         Error.Source == "reject_requests" &&
         Request.Header("Accept").contains("Bar")
@@ -40,3 +40,4 @@ providers:
   file_system:
     src: /heimdall/conf/rules.yaml
     watch: true
+
