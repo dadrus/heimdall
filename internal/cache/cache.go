@@ -24,9 +24,9 @@ import (
 //go:generate mockery --name Cache --structname CacheMock
 
 type Cache interface {
-	Evictor
+	Start(ctx context.Context) error
+	Stop(ctx context.Context) error
 
-	Get(ctx context.Context, key string) any
-	Set(ctx context.Context, key string, value any, ttl time.Duration)
-	Delete(ctx context.Context, key string)
+	Get(ctx context.Context, key string) ([]byte, error)
+	Set(ctx context.Context, key string, value []byte, ttl time.Duration) error
 }

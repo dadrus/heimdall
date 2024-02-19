@@ -24,6 +24,7 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -1229,7 +1230,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				t.Helper()
 
 				ads.EXPECT().GetAuthData(ctx).Return(jwtSignedWithKeyOnlyJWK, nil)
-				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil)
+				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, errors.New("no cache entry"))
 			},
 			instructServer: func(t *testing.T) {
 				t.Helper()
@@ -1271,11 +1272,11 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				t.Helper()
 
 				ads.EXPECT().GetAuthData(ctx).Return(jwtSignedWithKeyOnlyJWK, nil)
-				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil)
+				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, errors.New("no cache entry"))
 				// http cache
 				cch.EXPECT().Set(mock.Anything, mock.Anything, mock.Anything, mock.MatchedBy(
 					func(ttl time.Duration) bool { return ttl.Round(time.Minute) == 30*time.Minute },
-				))
+				)).Return(nil)
 			},
 			instructServer: func(t *testing.T) {
 				t.Helper()
@@ -1338,8 +1339,11 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 
 				keys := jwks.Key(kidKeyWithoutCert)
 
+				rawKey, err := json.Marshal(&keys[0])
+				require.NoError(t, err)
+
 				ads.EXPECT().GetAuthData(ctx).Return(jwtSignedWithKeyOnlyJWK, nil)
-				cch.EXPECT().Get(mock.Anything, cacheKey).Return(&keys[0])
+				cch.EXPECT().Get(mock.Anything, cacheKey).Return(rawKey, nil)
 			},
 			assert: func(t *testing.T, err error, _ *subject.Subject) {
 				t.Helper()
@@ -1392,8 +1396,11 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 
 				keys := jwks.Key(kidKeyWithoutCert)
 
+				rawKey, err := json.Marshal(keys[0])
+				require.NoError(t, err)
+
 				ads.EXPECT().GetAuthData(ctx).Return(jwtSignedWithKeyAndCertJWK, nil)
-				cch.EXPECT().Get(mock.Anything, cacheKey).Return(&keys[0])
+				cch.EXPECT().Get(mock.Anything, cacheKey).Return(rawKey, nil)
 			},
 			assert: func(t *testing.T, err error, _ *subject.Subject) {
 				t.Helper()
@@ -1446,8 +1453,11 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 
 				keys := jwks.Key(kidKeyWithoutCert)
 
+				rawKey, err := json.Marshal(keys[0])
+				require.NoError(t, err)
+
 				ads.EXPECT().GetAuthData(ctx).Return(jwtSignedWithKeyOnlyJWK, nil)
-				cch.EXPECT().Get(mock.Anything, cacheKey).Return(&keys[0])
+				cch.EXPECT().Get(mock.Anything, cacheKey).Return(rawKey, nil)
 			},
 			assert: func(t *testing.T, err error, _ *subject.Subject) {
 				t.Helper()
@@ -1505,8 +1515,11 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 
 				keys := jwks.Key(kidKeyWithoutCert)
 
+				rawKey, err := json.Marshal(keys[0])
+				require.NoError(t, err)
+
 				ads.EXPECT().GetAuthData(ctx).Return(jwtSignedWithKeyOnlyJWK, nil)
-				cch.EXPECT().Get(mock.Anything, cacheKey).Return(&keys[0])
+				cch.EXPECT().Get(mock.Anything, cacheKey).Return(rawKey, nil)
 			},
 			assert: func(t *testing.T, err error, _ *subject.Subject) {
 				t.Helper()
@@ -1564,8 +1577,11 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 
 				keys := jwks.Key(kidKeyWithoutCert)
 
+				rawKey, err := json.Marshal(&keys[0])
+				require.NoError(t, err)
+
 				ads.EXPECT().GetAuthData(ctx).Return(jwtSignedWithKeyOnlyJWK, nil)
-				cch.EXPECT().Get(mock.Anything, cacheKey).Return(&keys[0])
+				cch.EXPECT().Get(mock.Anything, cacheKey).Return(rawKey, nil)
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
@@ -1628,9 +1644,12 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 
 				keys := jwks.Key(kidKeyWithoutCert)
 
+				rawKey, err := json.Marshal(keys[0])
+				require.NoError(t, err)
+
 				ads.EXPECT().GetAuthData(ctx).Return(jwtSignedWithKeyOnlyJWK, nil)
-				cch.EXPECT().Get(mock.Anything, cacheKey).Return(nil)
-				cch.EXPECT().Set(mock.Anything, cacheKey, &keys[0], *auth.ttl)
+				cch.EXPECT().Get(mock.Anything, cacheKey).Return(nil, errors.New("no cache entry"))
+				cch.EXPECT().Set(mock.Anything, cacheKey, rawKey, *auth.ttl).Return(nil)
 			},
 			instructServer: func(t *testing.T) {
 				t.Helper()
@@ -1705,9 +1724,12 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 
 				keys := jwks.Key(kidKeyWithCert)
 
+				rawKey, err := json.Marshal(keys[0])
+				require.NoError(t, err)
+
 				ads.EXPECT().GetAuthData(ctx).Return(jwtSignedWithKeyAndCertJWK, nil)
-				cch.EXPECT().Get(mock.Anything, cacheKey).Return(nil)
-				cch.EXPECT().Set(mock.Anything, cacheKey, &keys[0], *auth.ttl)
+				cch.EXPECT().Get(mock.Anything, cacheKey).Return(nil, errors.New("no cache entry"))
+				cch.EXPECT().Set(mock.Anything, cacheKey, rawKey, *auth.ttl).Return(nil)
 			},
 			instructServer: func(t *testing.T) {
 				t.Helper()
@@ -1777,13 +1799,16 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 
 				keys := jwks.Key(kidKeyWithCert)
 
+				rawKey, err := json.Marshal(keys[0])
+				require.NoError(t, err)
+
 				ads.EXPECT().GetAuthData(ctx).Return(jwtSignedWithKeyAndCertJWK, nil)
-				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil)
-				cch.EXPECT().Set(mock.Anything, cacheKey, &keys[0], *auth.ttl)
+				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, errors.New("no cache entry"))
+				cch.EXPECT().Set(mock.Anything, cacheKey, rawKey, *auth.ttl).Return(nil)
 				// http cache
 				cch.EXPECT().Set(mock.Anything, mock.Anything, mock.Anything, mock.MatchedBy(
 					func(ttl time.Duration) bool { return ttl.Round(time.Minute) == 30*time.Minute },
-				))
+				)).Return(nil)
 			},
 			instructServer: func(t *testing.T) {
 				t.Helper()
@@ -1870,7 +1895,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				require.NoError(t, err)
 
 				ads.EXPECT().GetAuthData(ctx).Return(jwtSignedWithKeyAndCertJWK, nil)
-				cch.EXPECT().Get(mock.Anything, cacheKey).Return(nil)
+				cch.EXPECT().Get(mock.Anything, cacheKey).Return(nil, errors.New("no cache entry"))
 			},
 			instructServer: func(t *testing.T) {
 				t.Helper()
@@ -1940,9 +1965,12 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 
 				keys := jwks.Key(kidKeyWithCert)
 
+				rawKey, err := json.Marshal(keys[0])
+				require.NoError(t, err)
+
 				ads.EXPECT().GetAuthData(ctx).Return(jwtSignedWithKeyAndCertJWK, nil)
-				cch.EXPECT().Get(mock.Anything, cacheKey).Return(nil)
-				cch.EXPECT().Set(mock.Anything, cacheKey, &keys[0], *auth.ttl)
+				cch.EXPECT().Get(mock.Anything, cacheKey).Return(nil, errors.New("no cache entry"))
+				cch.EXPECT().Set(mock.Anything, cacheKey, rawKey, *auth.ttl).Return(nil)
 			},
 			instructServer: func(t *testing.T) {
 				t.Helper()
@@ -1953,83 +1981,6 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 
 				jwksResponseCode = http.StatusOK
 				jwksResponseContent = jwksWithOneEntryWithKeyOnlyAndOneWithCertificate
-				jwksResponseContentType = "application/json"
-			},
-			assert: func(t *testing.T, err error, sub *subject.Subject) {
-				t.Helper()
-
-				assert.True(t, jwksEndpointCalled)
-				assert.False(t, metadataEndpointCalled)
-
-				require.NoError(t, err)
-
-				require.NotNil(t, sub)
-				assert.Equal(t, subjectID, sub.ID)
-				assert.Len(t, sub.Attributes, 8)
-				assert.Len(t, sub.Attributes["aud"], 1)
-				assert.Contains(t, sub.Attributes["aud"], audience)
-				assert.Contains(t, sub.Attributes, "exp")
-				assert.Contains(t, sub.Attributes, "iat")
-				assert.Contains(t, sub.Attributes, "nbf")
-				assert.Equal(t, issuer, sub.Attributes["iss"])
-				assert.Contains(t, sub.Attributes["scp"], "foo")
-				assert.Contains(t, sub.Attributes["scp"], "bar")
-				assert.Equal(t, subjectID, sub.Attributes["sub"])
-			},
-		},
-		{
-			uc: "successful without bad cache hit",
-			authenticator: &jwtAuthenticator{
-				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
-					return oauth2.ServerMetadata{
-						JWKSEndpoint: &endpoint.Endpoint{
-							URL:     jwksSrv.URL,
-							Headers: map[string]string{"Accept": "application/json"},
-						},
-					}, nil
-				}),
-				a: oauth2.Expectation{
-					AllowedAlgorithms: []string{"ES384"},
-					TrustedIssuers:    []string{issuer},
-					ScopesMatcher:     oauth2.ExactScopeStrategyMatcher{},
-				},
-				sf:  &SubjectInfo{IDFrom: "sub"},
-				ttl: &tenSecondsTTL,
-			},
-			configureMocks: func(t *testing.T,
-				ctx *heimdallmocks.ContextMock,
-				cch *mocks.CacheMock,
-				ads *mocks2.AuthDataExtractStrategyMock,
-				auth *jwtAuthenticator,
-			) {
-				t.Helper()
-
-				ep := &endpoint.Endpoint{
-					URL:     jwksSrv.URL,
-					Headers: map[string]string{"Accept": "application/json"},
-				}
-				cacheKey := auth.calculateCacheKey(ep, jwksSrv.URL, kidKeyWithoutCert)
-
-				var jwks jose.JSONWebKeySet
-				err := json.Unmarshal(jwksWithOneKeyOnlyEntry, &jwks)
-				require.NoError(t, err)
-
-				keys := jwks.Key(kidKeyWithoutCert)
-
-				ads.EXPECT().GetAuthData(ctx).Return(jwtSignedWithKeyOnlyJWK, nil)
-				cch.EXPECT().Get(mock.Anything, cacheKey).Return("Hi Foo")
-				cch.EXPECT().Delete(mock.Anything, cacheKey)
-				cch.EXPECT().Set(mock.Anything, cacheKey, &keys[0], *auth.ttl)
-			},
-			instructServer: func(t *testing.T) {
-				t.Helper()
-
-				checkJWKSRequest = func(req *http.Request) {
-					assert.Equal(t, "application/json", req.Header.Get("Accept"))
-				}
-
-				jwksResponseCode = http.StatusOK
-				jwksResponseContent = jwksWithOneKeyOnlyEntry
 				jwksResponseContentType = "application/json"
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
@@ -2290,10 +2241,10 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 
 				ads.EXPECT().GetAuthData(ctx).Return(jwtSignedWithKeyAndCertJWK, nil)
 				// http cache
-				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil)
+				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, errors.New("no cahce entry"))
 				cch.EXPECT().Set(mock.Anything, mock.Anything, mock.Anything, mock.MatchedBy(
 					func(ttl time.Duration) bool { return ttl.Round(time.Minute) == 30*time.Minute },
-				))
+				)).Return(nil)
 			},
 			instructServer: func(t *testing.T) {
 				t.Helper()

@@ -18,17 +18,20 @@ package memory
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/jellydator/ttlcache/v3"
 )
 
+var ErrNoCacheEntry = errors.New("no cache entry")
+
 type InMemoryCache struct {
-	c *ttlcache.Cache[string, any]
+	c *ttlcache.Cache[string, []byte]
 }
 
 func New() *InMemoryCache {
-	return &InMemoryCache{c: ttlcache.New[string, any](ttlcache.WithDisableTouchOnHit[string, any]())}
+	return &InMemoryCache{c: ttlcache.New[string, []byte](ttlcache.WithDisableTouchOnHit[string, []byte]())}
 }
 
 func (c *InMemoryCache) Start(_ context.Context) error {
@@ -43,17 +46,17 @@ func (c *InMemoryCache) Stop(_ context.Context) error {
 	return nil
 }
 
-func (c *InMemoryCache) Get(_ context.Context, key string) any {
+func (c *InMemoryCache) Get(_ context.Context, key string) ([]byte, error) {
 	item := c.c.Get(key)
-	if item != nil && !item.IsExpired() {
-		return item.Value()
+	if item == nil || item.IsExpired() {
+		return nil, ErrNoCacheEntry
 	}
+
+	return item.Value(), nil
+}
+
+func (c *InMemoryCache) Set(_ context.Context, key string, value []byte, ttl time.Duration) error {
+	c.c.Set(key, value, ttl)
 
 	return nil
 }
-
-func (c *InMemoryCache) Set(_ context.Context, key string, value any, ttl time.Duration) {
-	c.c.Set(key, value, ttl)
-}
-
-func (c *InMemoryCache) Delete(_ context.Context, key string) { c.c.Delete(key) }

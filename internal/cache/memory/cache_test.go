@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestCacheUsage(t *testing.T) {
@@ -31,7 +32,7 @@ func TestCacheUsage(t *testing.T) {
 		uc             string
 		key            string
 		configureCache func(t *testing.T, cache *InMemoryCache)
-		assert         func(t *testing.T, data any)
+		assert         func(t *testing.T, err error, data []byte)
 	}{
 		{
 			uc:  "can retrieve not expired value",
@@ -39,12 +40,14 @@ func TestCacheUsage(t *testing.T) {
 			configureCache: func(t *testing.T, cache *InMemoryCache) {
 				t.Helper()
 
-				cache.Set(context.TODO(), "foo", "bar", 10*time.Minute)
+				err := cache.Set(context.TODO(), "foo", []byte("bar"), 10*time.Minute)
+				require.NoError(t, err)
 			},
-			assert: func(t *testing.T, data any) {
+			assert: func(t *testing.T, err error, data []byte) {
 				t.Helper()
 
-				assert.Equal(t, "bar", data)
+				require.NoError(t, err)
+				assert.Equal(t, []byte("bar"), data)
 			},
 		},
 		{
@@ -53,29 +56,16 @@ func TestCacheUsage(t *testing.T) {
 			configureCache: func(t *testing.T, cache *InMemoryCache) {
 				t.Helper()
 
-				cache.Set(context.TODO(), "bar", "baz", 1*time.Microsecond)
+				err := cache.Set(context.TODO(), "bar", []byte("baz"), 1*time.Microsecond)
+				require.NoError(t, err)
 
 				time.Sleep(200 * time.Millisecond)
 			},
-			assert: func(t *testing.T, data any) {
+			assert: func(t *testing.T, err error, _ []byte) {
 				t.Helper()
 
-				assert.Nil(t, data)
-			},
-		},
-		{
-			uc:  "cannot retrieve deleted value",
-			key: "baz",
-			configureCache: func(t *testing.T, cache *InMemoryCache) {
-				t.Helper()
-
-				cache.Set(context.TODO(), "baz", "bar", 1*time.Second)
-				cache.Delete(context.TODO(), "baz")
-			},
-			assert: func(t *testing.T, data any) {
-				t.Helper()
-
-				assert.Nil(t, data)
+				require.Error(t, err)
+				require.ErrorIs(t, err, ErrNoCacheEntry)
 			},
 		},
 		{
@@ -84,10 +74,11 @@ func TestCacheUsage(t *testing.T) {
 			configureCache: func(t *testing.T, _ *InMemoryCache) {
 				t.Helper()
 			},
-			assert: func(t *testing.T, data any) {
+			assert: func(t *testing.T, err error, _ []byte) {
 				t.Helper()
 
-				assert.Nil(t, data)
+				require.Error(t, err)
+				require.ErrorIs(t, err, ErrNoCacheEntry)
 			},
 		},
 	} {
@@ -98,10 +89,10 @@ func TestCacheUsage(t *testing.T) {
 			// WHEN
 			tc.configureCache(t, cache)
 
-			data := cache.Get(context.TODO(), tc.key)
+			value, err := cache.Get(context.TODO(), tc.key)
 
 			// THEN
-			tc.assert(t, data)
+			tc.assert(t, err, value)
 		})
 	}
 }
@@ -110,16 +101,18 @@ func TestCacheExpiration(t *testing.T) {
 	t.Parallel()
 
 	cache := New()
-	cache.Set(context.TODO(), "baz", "bar", 1*time.Second)
+	cache.Set(context.TODO(), "baz", []byte("bar"), 1*time.Second)
 
 	hits := 0
 
 	for i := 0; i < 8; i++ {
 		time.Sleep(250 * time.Millisecond)
 
-		item := cache.Get(context.TODO(), "baz")
-		if item != nil {
+		value, err := cache.Get(context.TODO(), "baz")
+		if err == nil {
 			hits++
+
+			assert.Equal(t, []byte("bar"), value)
 		}
 	}
 

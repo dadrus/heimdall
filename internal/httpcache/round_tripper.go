@@ -33,10 +33,7 @@ import (
 	"github.com/dadrus/heimdall/internal/x/stringx"
 )
 
-var (
-	ErrInvalidCacheEntry = errors.New("invalid cache entry")
-	ErrNoCacheEntry      = errors.New("no cache entry")
-)
+var ErrNoCacheEntry = errors.New("no cache entry")
 
 type RoundTripper struct {
 	Transport       http.RoundTripper
@@ -63,14 +60,9 @@ func (rt *RoundTripper) cachedResponse(req *http.Request) (*http.Response, error
 	ctx := req.Context()
 	cch := cache.Ctx(ctx)
 
-	cachedValue := cch.Get(ctx, cacheKey(req))
-	if cachedValue == nil {
+	respDump, err := cch.Get(ctx, cacheKey(req))
+	if err != nil {
 		return nil, ErrNoCacheEntry
-	}
-
-	respDump, ok := cachedValue.([]byte)
-	if !ok {
-		return nil, ErrInvalidCacheEntry
 	}
 
 	return http.ReadResponse(bufio.NewReader(bytes.NewReader(respDump)), req)
@@ -97,7 +89,7 @@ func (rt *RoundTripper) cacheResponse(req *http.Request, resp *http.Response) {
 
 	ctx := req.Context()
 	cch := cache.Ctx(ctx)
-	cch.Set(ctx, cacheKey(req), respDump, time.Until(expires))
+	cch.Set(ctx, cacheKey(req), respDump, time.Until(expires)) //nolint:errcheck
 }
 
 func cacheKey(req *http.Request) string {
