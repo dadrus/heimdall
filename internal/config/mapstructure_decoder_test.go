@@ -275,7 +275,7 @@ func TestStringToByteSizeHookFunc(t *testing.T) {
 			var typ Type
 
 			dec, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
-				DecodeHook: stringToByteSizeHookFunc(),
+				DecodeHook: StringToByteSizeHookFunc(),
 				Result:     &typ,
 			})
 			require.NoError(t, err)

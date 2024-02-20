@@ -21,9 +21,11 @@ import (
 	"errors"
 	"time"
 
+	"github.com/inhies/go-bytesize"
 	"github.com/redis/rueidis"
 	"github.com/redis/rueidis/rueidisotel"
 
+	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/stringx"
@@ -39,16 +41,20 @@ type Cache struct {
 func NewCache(conf map[string]any) (*Cache, error) {
 	type (
 		ClientCache struct {
-			Disabled bool          `mapstructure:"disabled"`
-			TTL      time.Duration `mapstructure:"ttl"`
+			Disabled          bool              `mapstructure:"disabled"`
+			TTL               time.Duration     `mapstructure:"ttl"`
+			SizePerConnection bytesize.ByteSize `mapstructure:"size_per_connection"`
 		}
 
 		Config struct {
-			Addrs       []string    `mapstructure:"addrs"        validate:"gt=0,dive,required"`
-			Username    string      `mapstructure:"username"`
-			Password    string      `mapstructure:"password"`
-			DB          int         `mapstructure:"db"`
-			ClientCache ClientCache `mapstructure:"client_cache"`
+			Addrs         []string           `mapstructure:"addrs"           validate:"gt=0,dive,required"`
+			Username      string             `mapstructure:"username"`
+			Password      string             `mapstructure:"password"`
+			DB            int                `mapstructure:"db"`
+			ClientCache   ClientCache        `mapstructure:"client_cache"`
+			BufferLimit   config.BufferLimit `mapstructure:"buffer_limit"`
+			Timeout       config.Timeout     `mapstructure:"timeout"`
+			MaxFlushDelay time.Duration      `mapstructure:"max_flush_delay"`
 		}
 	)
 
@@ -60,13 +66,18 @@ func NewCache(conf map[string]any) (*Cache, error) {
 	}
 
 	opts := rueidis.ClientOption{
-		ClientName:   "heimdall",
-		InitAddress:  cfg.Addrs,
-		ShuffleInit:  true,
-		Username:     cfg.Username,
-		Password:     cfg.Password,
-		DisableCache: cfg.ClientCache.Disabled,
-		SelectDB:     cfg.DB,
+		ClientName:          "heimdall",
+		InitAddress:         cfg.Addrs,
+		ShuffleInit:         true,
+		SelectDB:            cfg.DB,
+		Username:            cfg.Username,
+		Password:            cfg.Password,
+		DisableCache:        cfg.ClientCache.Disabled,
+		CacheSizeEachConn:   int(cfg.ClientCache.SizePerConnection),
+		WriteBufferEachConn: int(cfg.BufferLimit.Write),
+		ReadBufferEachConn:  int(cfg.BufferLimit.Read),
+		ConnWriteTimeout:    cfg.Timeout.Write,
+		MaxFlushDelay:       cfg.MaxFlushDelay,
 	}
 
 	client, err := rueidisotel.NewClient(opts)
