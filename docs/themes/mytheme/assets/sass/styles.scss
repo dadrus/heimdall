@@ -272,6 +272,10 @@ doc-version-select {
   }
 }
 
+  .navbar-brand-highlight {
+    order: 1;
+  }
+
 @media (min-width: 60rem) {
   .docs-side-toc {
     position: sticky;
@@ -344,6 +348,10 @@ doc-version-select {
 @media (min-width: 768px) {
   linkable-headline-area .gridcol {
     width: calc(100% / 3 - 0.5rem);
+  }
+
+  .navbar-brand-highlight {
+    order: 0;
   }
 }
 
