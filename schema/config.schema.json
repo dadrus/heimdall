@@ -159,8 +159,35 @@
                     "1m",
                     "30s"
                   ]
+                },
+                "size_per_connection": {
+                  "description": "Optional client side cache size that bind to each TCP connection to a single redis instance. Defaults to 128MB",
+                  "type": "string",
+                  "default": "128MB",
+                  "pattern": "^[0-9]+(B|KB|MB|GB)$",
+                  "examples": [
+                    "1GB",
+                    "256MB",
+                    "128KB"
+                  ]
                 }
               }
+            },
+            "max_flush_delay": {
+              "description": "Maximum delay after pipeline flushes. This gives pipeline a chance to collect more commands to send to Redis. Adding this delay increases latency, reduces throughput, but in most cases may significantly reduce application and Redis CPU utilization due to less executed system calls.",
+              "type": "string",
+              "pattern": "^[0-9]+(ns|us|ms|s|m|h)$",
+              "default": "0s",
+              "examples": [
+                "1ms",
+                "20us"
+              ]
+            },
+            "timeout": {
+              "$ref": "#/definitions/timeoutConfig"
+            },
+            "buffer_limit": {
+              "$ref": "#/definitions/bufferLimitConfig"
             }
           }
         }

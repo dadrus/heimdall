@@ -117,10 +117,18 @@ cache:
     addrs:
       - foo:12345
     db: 0
+    username: foo
     password: foobar
     client_cache:
       disabled: false
       ttl: 5m
+      size_per_connection: 128MB
+    buffer_limit:
+      read: 4KB
+      write: 4KB
+    timeout:
+      write: 120s
+    max_flush_delay: 20us
 
 log:
   level: debug
