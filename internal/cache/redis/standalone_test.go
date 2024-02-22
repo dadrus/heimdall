@@ -70,7 +70,7 @@ func TestNewStandaloneCache(t *testing.T) {
 		},
 		{
 			uc:     "successful cache creation",
-			config: []byte(fmt.Sprintf("{address: %s, client_cache: {disabled: true}}", db.Addr())),
+			config: []byte(fmt.Sprintf("{address: %s, client_cache: {disabled: true}, tls: {disabled: true}}", db.Addr())),
 			assert: func(t *testing.T, err error, cch cache.Cache) {
 				t.Helper()
 

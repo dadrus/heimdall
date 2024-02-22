@@ -11,6 +11,11 @@ import (
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
+// by intention. Used only during application bootstrap.
+func init() { // nolint: gochecknoinits
+	cache.Register("redis-cluster", cache.FactoryFunc(NewClusterCache))
+}
+
 func NewClusterCache(conf map[string]any) (cache.Cache, error) {
 	type Config struct {
 		baseConfig `mapstructure:",squash"`

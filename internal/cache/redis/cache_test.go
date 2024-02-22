@@ -35,6 +35,7 @@ func TestCacheUsage(t *testing.T) {
 	cch, err := NewStandaloneCache(map[string]any{
 		"address":      db.Addr(),
 		"client_cache": map[string]any{"disabled": true},
+		"tls":          map[string]any{"disabled": true},
 	})
 	require.NoError(t, err)
 
