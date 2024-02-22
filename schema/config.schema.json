@@ -173,7 +173,6 @@
               ]
             },
             "tls": {
-              "unevaluatedProperties": false,
               "allOf": [
                 {
                   "$ref": "#/definitions/tlsConfig"
