@@ -19,10 +19,17 @@ type credentials struct {
 	Password string `mapstructure:"password"`
 }
 
+type tls struct {
+	config.TLS `mapstructure:",squash"`
+
+	Disabled bool `mapstructure:"disabled"`
+}
+
 type baseConfig struct {
 	Credentials   credentials        `mapstructure:"credentials"`
 	ClientCache   clientCache        `mapstructure:"client_cache"`
 	BufferLimit   config.BufferLimit `mapstructure:"buffer_limit"`
 	Timeout       config.Timeout     `mapstructure:"timeout"`
 	MaxFlushDelay time.Duration      `mapstructure:"max_flush_delay"`
+	TLS           tls                `mapstructure:"tls"`
 }

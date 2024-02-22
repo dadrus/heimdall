@@ -19,8 +19,8 @@ func NewClusterCache(conf map[string]any) (cache.Cache, error) {
 	}
 
 	cfg := Config{
-		baseConfig: baseConfig{ClientCache: clientCache{TTL: 5 * time.Minute}},
-	} //nolint:gomnd
+		baseConfig: baseConfig{ClientCache: clientCache{TTL: 5 * time.Minute}}, //nolint:gomnd
+	}
 
 	err := decodeConfig(conf, &cfg)
 	if err != nil {
@@ -39,6 +39,14 @@ func NewClusterCache(conf map[string]any) (cache.Cache, error) {
 		ReadBufferEachConn:  int(cfg.BufferLimit.Read),
 		ConnWriteTimeout:    cfg.Timeout.Write,
 		MaxFlushDelay:       cfg.MaxFlushDelay,
+	}
+
+	if !cfg.TLS.Disabled {
+		opts.TLSConfig, err = cfg.TLS.TLSConfig()
+		if err != nil {
+			return nil, errorchain.NewWithMessage(heimdall.ErrInternal,
+				"failed creating tls configuration for Redis client").CausedBy(err)
+		}
 	}
 
 	client, err := rueidisotel.NewClient(opts)
