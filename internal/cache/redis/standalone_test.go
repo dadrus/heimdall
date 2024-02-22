@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/alicebob/miniredis/v2"
 	"github.com/stretchr/testify/require"
@@ -75,6 +76,14 @@ func TestNewStandaloneCache(t *testing.T) {
 
 				require.NoError(t, err)
 				require.NotNil(t, cch)
+
+				err = cch.Set(context.TODO(), "foo", []byte("bar"), 1*time.Second)
+				require.NoError(t, err)
+
+				data, err := cch.Get(context.TODO(), "foo")
+				require.NoError(t, err)
+
+				require.Equal(t, []byte("bar"), data)
 			},
 		},
 	} {
