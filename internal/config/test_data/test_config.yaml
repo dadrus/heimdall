@@ -116,7 +116,6 @@ cache:
   config:
     address: foo:12345
     db: 1
-    master: foo
     credentials:
       username: foo
       password: foobar
@@ -132,6 +131,20 @@ cache:
     max_flush_delay: 20us
     tls:
       disabled: true
+      key_store:
+        path: /path/to/keystore/file.pem
+        password: VerySecret!
+      key_id: foo
+      min_version: TLS1.2
+      cipher_suites:
+        - "TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256"
+        - "TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256"
+        - "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"
+        - "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256"
+        - "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384"
+        - "TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384"
+        - "TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256"
+        - "TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256"
 
 log:
   level: debug
