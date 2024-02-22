@@ -114,11 +114,12 @@ serve:
 cache:
   type: redis
   config:
-    addrs:
-      - foo:12345
-    db: 0
-    username: foo
-    password: foobar
+    address: foo:12345
+    db: 1
+    master: foo
+    credentials:
+      username: foo
+      password: foobar
     client_cache:
       disabled: false
       ttl: 5m
@@ -129,6 +130,8 @@ cache:
     timeout:
       write: 120s
     max_flush_delay: 20us
+    tls:
+      disabled: true
 
 log:
   level: debug
