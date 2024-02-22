@@ -25,23 +25,23 @@ import (
 	"github.com/dadrus/heimdall/internal/x/stringx"
 )
 
-type Cache struct {
+type redisCache struct {
 	c   rueidis.Client
 	ttl time.Duration
 }
 
-func (c *Cache) Start(_ context.Context) error {
+func (c *redisCache) Start(_ context.Context) error {
 	// not used for Redis.
 	return nil
 }
 
-func (c *Cache) Stop(_ context.Context) error {
+func (c *redisCache) Stop(_ context.Context) error {
 	c.c.Close()
 
 	return nil
 }
 
-func (c *Cache) Get(ctx context.Context, key string) ([]byte, error) {
+func (c *redisCache) Get(ctx context.Context, key string) ([]byte, error) {
 	val, err := c.c.DoCache(ctx, c.c.B().Get().Key(key).Cache(), c.ttl).ToString()
 	if err != nil {
 		return nil, err
@@ -50,6 +50,6 @@ func (c *Cache) Get(ctx context.Context, key string) ([]byte, error) {
 	return stringx.ToBytes(val), nil
 }
 
-func (c *Cache) Set(ctx context.Context, key string, value []byte, ttl time.Duration) error {
+func (c *redisCache) Set(ctx context.Context, key string, value []byte, ttl time.Duration) error {
 	return c.c.Do(ctx, c.c.B().Set().Key(key).Value(stringx.ToString(value)).Px(ttl).Build()).Error()
 }

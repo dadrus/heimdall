@@ -61,5 +61,5 @@ func NewStandaloneCache(conf map[string]any) (cache.Cache, error) {
 			"failed creating redis client").CausedBy(err)
 	}
 
-	return &Cache{c: client, ttl: cfg.ClientCache.TTL}, nil
+	return &redisCache{c: client, ttl: cfg.ClientCache.TTL}, nil
 }
