@@ -26,10 +26,6 @@
     "tlsConfig": {
       "description": "TLS Configuration",
       "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "key_store"
-      ],
       "properties": {
         "key_store": {
           "$ref": "#/definitions/keyStore"
@@ -96,10 +92,9 @@
         }
       }
     },
-    "cacheRedis": {
-      "description": "Redis cache",
+    "redisBaseConfig": {
+      "description": "Configuration options supported by all Redis cache types",
       "type": "object",
-      "additionalProperties": false,
       "properties": {
         "type": {
           "const": "redis"
@@ -108,36 +103,24 @@
           "description": "Redis client configuration",
           "type": "object",
           "required": [
-            "addrs"
+            "address"
           ],
           "properties": {
-            "addrs": {
-              "description": "Connection strings to the Cache",
-              "type": "array",
-              "items": {
-                "type": "string",
-                "minLength": 1
-              },
-              "examples": [
-                "node1:7000",
-                "node2:7001",
-                "node3:7002"
-              ]
-            },
-            "username": {
-              "description": "Username for connection",
-              "type": "string",
-              "default": ""
-            },
-            "password": {
-              "description": "Password for connection",
-              "type": "string",
-              "default": ""
-            },
-            "db": {
-              "description": "DB ID to connect to. Defaults to 0",
-              "type": "integer",
-              "default": 0
+            "credentials": {
+              "description": "Credentials for Cache connection purposes",
+              "type": "object",
+              "properties": {
+                "username": {
+                  "description": "Username for connection",
+                  "type": "string",
+                  "default": ""
+                },
+                "password": {
+                  "description": "Password for connection",
+                  "type": "string",
+                  "default": ""
+                }
+              }
             },
             "client_cache": {
               "description": "Local client cache configuration to enhance performance and reduce roundtrips",
@@ -173,6 +156,12 @@
                 }
               }
             },
+            "buffer_limit": {
+              "$ref": "#/definitions/bufferLimitConfig"
+            },
+            "timeout": {
+              "$ref": "#/definitions/timeoutConfig"
+            },
             "max_flush_delay": {
               "description": "Maximum delay after pipeline flushes. This gives pipeline a chance to collect more commands to send to Redis. Adding this delay increases latency, reduces throughput, but in most cases may significantly reduce application and Redis CPU utilization due to less executed system calls.",
               "type": "string",
@@ -183,13 +172,148 @@
                 "20us"
               ]
             },
-            "timeout": {
-              "$ref": "#/definitions/timeoutConfig"
-            },
-            "buffer_limit": {
-              "$ref": "#/definitions/bufferLimitConfig"
+            "tls": {
+              "unevaluatedProperties": false,
+              "allOf": [
+                {
+                  "$ref": "#/definitions/tlsConfig"
+                },
+                {
+                  "properties": {
+                    "disabled": {
+                      "description": "Whether tls should be disabled. Defaults to false.",
+                      "type": "boolean",
+                      "default": false
+                    }
+                  }
+                }
+              ]
             }
           }
+        }
+      }
+    },
+    "cacheRedisStandalone": {
+      "description": "Redis cache",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "redis"
+        },
+        "config": {
+          "type": "object",
+          "required": [
+            "address"
+          ],
+          "allOf": [
+            {
+              "$ref": "#/definitions/redisBaseConfig"
+            },
+            {
+              "properties": {
+                "address": {
+                  "description": "The address for the Redis instance to connect to",
+                  "type": "string",
+                  "examples": [
+                    "node:1234"
+                  ]
+                },
+                "db": {
+                  "description": "The logical DB to connect to",
+                  "type": "integer",
+                  "default": 0
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "cacheRedisCluster": {
+      "description": "Redis cluster cache",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "redis-cluster"
+        },
+        "config": {
+          "description": "Redis client configuration",
+          "type": "object",
+          "required": [
+            "nodes"
+          ],
+          "allOf": [
+            {
+              "$ref": "#/definitions/redisBaseConfig"
+            },
+            {
+              "properties": {
+                "nodes": {
+                  "description": "Connection strings to Redis sentinel",
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "examples": [
+                    "node1:7000",
+                    "node2:7001",
+                    "node3:7002"
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "cacheRedisSentinel": {
+      "description": "Redis sentinel cache",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "redis-sentinel"
+        },
+        "config": {
+          "type": "object",
+          "required": [
+            "nodes",
+            "master"
+          ],
+          "allOf": [
+            {
+              "$ref": "#/definitions/redisBaseConfig"
+            },
+            {
+              "properties": {
+                "nodes": {
+                  "description": "Connection strings to Redis sentinel",
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "examples": [
+                    "node1:7000",
+                    "node2:7001",
+                    "node3:7002"
+                  ]
+                },
+                "master": {
+                  "description": "The Sentinel master to use",
+                  "type": "string"
+                },
+                "db": {
+                  "description": "The logical DB to connect to",
+                  "type": "integer",
+                  "default": 0
+                }
+              }
+            }
+          ]
         }
       }
     },
@@ -2271,7 +2395,13 @@
           "$ref": "#/definitions/cacheInMemory"
         },
         {
-          "$ref": "#/definitions/cacheRedis"
+          "$ref": "#/definitions/cacheRedisStandalone"
+        },
+        {
+          "$ref": "#/definitions/cacheRedisCluster"
+        },
+        {
+          "$ref": "#/definitions/cacheRedisSentinel"
         }
       ]
     },
