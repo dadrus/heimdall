@@ -33,7 +33,7 @@ func TestCacheUsage(t *testing.T) {
 
 	db := miniredis.RunT(t)
 	cch, err := NewStandaloneCache(map[string]any{
-		"addrs":        []string{db.Addr()},
+		"address":      db.Addr(),
 		"client_cache": map[string]any{"disabled": true},
 	})
 	require.NoError(t, err)
