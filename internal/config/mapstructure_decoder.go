@@ -20,8 +20,8 @@ import (
 	"crypto/tls"
 	"reflect"
 
+	"github.com/go-viper/mapstructure/v2"
 	"github.com/inhies/go-bytesize"
-	"github.com/mitchellh/mapstructure"
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/heimdall"

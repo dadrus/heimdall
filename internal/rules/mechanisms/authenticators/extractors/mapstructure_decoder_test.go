@@ -19,10 +19,10 @@ package extractors
 import (
 	"testing"
 
+	"github.com/go-viper/mapstructure/v2"
 	"github.com/knadh/koanf/parsers/yaml"
 	"github.com/knadh/koanf/providers/rawbytes"
 	"github.com/knadh/koanf/v2"
-	"github.com/mitchellh/mapstructure"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

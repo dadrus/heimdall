@@ -17,7 +17,7 @@
 package redis
 
 import (
-	"github.com/mitchellh/mapstructure"
+	"github.com/go-viper/mapstructure/v2"
 
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"

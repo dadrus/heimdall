@@ -17,7 +17,7 @@
 package filesystem
 
 import (
-	"github.com/mitchellh/mapstructure"
+	"github.com/go-viper/mapstructure/v2"
 )
 
 func decodeConfig(input any, output any) error {

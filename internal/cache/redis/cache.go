@@ -18,75 +18,16 @@ package redis
 
 import (
 	"context"
-	"errors"
 	"time"
 
-	"github.com/inhies/go-bytesize"
 	"github.com/redis/rueidis"
-	"github.com/redis/rueidis/rueidisotel"
 
-	"github.com/dadrus/heimdall/internal/config"
-	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/stringx"
 )
-
-var ErrConnectionCheckFailed = errors.New("cache connection failed")
 
 type Cache struct {
 	c   rueidis.Client
 	ttl time.Duration
-}
-
-func NewCache(conf map[string]any) (*Cache, error) {
-	type (
-		ClientCache struct {
-			Disabled          bool              `mapstructure:"disabled"`
-			TTL               time.Duration     `mapstructure:"ttl"`
-			SizePerConnection bytesize.ByteSize `mapstructure:"size_per_connection"`
-		}
-
-		Config struct {
-			Addrs         []string           `mapstructure:"addrs"           validate:"gt=0,dive,required"`
-			Username      string             `mapstructure:"username"`
-			Password      string             `mapstructure:"password"`
-			DB            int                `mapstructure:"db"`
-			ClientCache   ClientCache        `mapstructure:"client_cache"`
-			BufferLimit   config.BufferLimit `mapstructure:"buffer_limit"`
-			Timeout       config.Timeout     `mapstructure:"timeout"`
-			MaxFlushDelay time.Duration      `mapstructure:"max_flush_delay"`
-		}
-	)
-
-	cfg := Config{ClientCache: ClientCache{TTL: 5 * time.Minute}} //nolint:gomnd
-
-	err := decodeConfig(conf, &cfg)
-	if err != nil {
-		return nil, err
-	}
-
-	opts := rueidis.ClientOption{
-		ClientName:          "heimdall",
-		InitAddress:         cfg.Addrs,
-		ShuffleInit:         true,
-		SelectDB:            cfg.DB,
-		Username:            cfg.Username,
-		Password:            cfg.Password,
-		DisableCache:        cfg.ClientCache.Disabled,
-		CacheSizeEachConn:   int(cfg.ClientCache.SizePerConnection),
-		WriteBufferEachConn: int(cfg.BufferLimit.Write),
-		ReadBufferEachConn:  int(cfg.BufferLimit.Read),
-		ConnWriteTimeout:    cfg.Timeout.Write,
-		MaxFlushDelay:       cfg.MaxFlushDelay,
-	}
-
-	client, err := rueidisotel.NewClient(opts)
-	if err != nil {
-		return nil, errorchain.NewWithMessage(heimdall.ErrInternal,
-			"failed creating redis client").CausedBy(err)
-	}
-
-	return &Cache{c: client, ttl: cfg.ClientCache.TTL}, nil
 }
 
 func (c *Cache) Start(_ context.Context) error {

@@ -18,7 +18,6 @@ package redis
 
 import (
 	"context"
-	"fmt"
 	"testing"
 	"time"
 
@@ -26,97 +25,14 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/dadrus/heimdall/internal/heimdall"
-	"github.com/dadrus/heimdall/internal/x/testsupport"
+	"github.com/dadrus/heimdall/internal/cache"
 )
-
-func TestNewCache(t *testing.T) {
-	t.Parallel()
-
-	db := miniredis.RunT(t)
-
-	for _, tc := range []struct {
-		uc     string
-		config []byte
-		assert func(t *testing.T, err error, cch *Cache)
-	}{
-		{
-			uc:     "empty config",
-			config: []byte(``),
-			assert: func(t *testing.T, err error, _ *Cache) {
-				t.Helper()
-
-				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.ErrorContains(t, err, "'addrs' must contain more than 0 items")
-			},
-		},
-		{
-			uc:     "empty address provided",
-			config: []byte(`addrs: [""]`),
-			assert: func(t *testing.T, err error, _ *Cache) {
-				t.Helper()
-
-				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.ErrorContains(t, err, "'addrs'[0] is a required field")
-			},
-		},
-		{
-			uc:     "config contains unsupported properties",
-			config: []byte(`foo: bar`),
-			assert: func(t *testing.T, err error, _ *Cache) {
-				t.Helper()
-
-				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrConfiguration)
-				require.ErrorContains(t, err, "failed decoding redis cache config")
-			},
-		},
-		{
-			uc:     "not existing address provided",
-			config: []byte(`addrs: ["foo.local:12345"]`),
-			assert: func(t *testing.T, err error, _ *Cache) {
-				t.Helper()
-
-				require.Error(t, err)
-				require.ErrorIs(t, err, heimdall.ErrInternal)
-				require.ErrorContains(t, err, "failed creating redis client")
-			},
-		},
-		{
-			uc:     "successful cache creation",
-			config: []byte(fmt.Sprintf("{addrs: [%s], client_cache: {disabled: true}}", db.Addr())),
-			assert: func(t *testing.T, err error, cch *Cache) {
-				t.Helper()
-
-				require.NoError(t, err)
-				require.NotNil(t, cch)
-			},
-		},
-	} {
-		t.Run(tc.uc, func(t *testing.T) {
-			// GIVEN
-			conf, err := testsupport.DecodeTestConfig(tc.config)
-			require.NoError(t, err)
-
-			// WHEN
-			cch, err := NewCache(conf)
-			if err == nil {
-				defer cch.Stop(context.TODO())
-			}
-
-			// THEN
-			tc.assert(t, err, cch)
-		})
-	}
-}
 
 func TestCacheUsage(t *testing.T) {
 	t.Parallel()
 
 	db := miniredis.RunT(t)
-	cch, err := NewCache(map[string]any{
+	cch, err := NewStandaloneCache(map[string]any{
 		"addrs":        []string{db.Addr()},
 		"client_cache": map[string]any{"disabled": true},
 	})
@@ -127,13 +43,13 @@ func TestCacheUsage(t *testing.T) {
 	for _, tc := range []struct {
 		uc             string
 		key            string
-		configureCache func(*testing.T, *Cache)
+		configureCache func(*testing.T, cache.Cache)
 		assert         func(t *testing.T, err error, data []byte)
 	}{
 		{
 			uc:  "can retrieve not expired value",
 			key: "foo",
-			configureCache: func(t *testing.T, cch *Cache) {
+			configureCache: func(t *testing.T, cch cache.Cache) {
 				t.Helper()
 
 				err := cch.Set(context.Background(), "foo", []byte("bar"), 10*time.Minute)
@@ -149,7 +65,7 @@ func TestCacheUsage(t *testing.T) {
 		{
 			uc:  "cannot retrieve expired value",
 			key: "bar",
-			configureCache: func(t *testing.T, cch *Cache) {
+			configureCache: func(t *testing.T, cch cache.Cache) {
 				t.Helper()
 
 				err := cch.Set(context.Background(), "bar", []byte("baz"), 1*time.Millisecond)
@@ -167,7 +83,7 @@ func TestCacheUsage(t *testing.T) {
 		{
 			uc:  "cannot retrieve not existing value",
 			key: "baz",
-			configureCache: func(t *testing.T, _ *Cache) {
+			configureCache: func(t *testing.T, _ cache.Cache) {
 				t.Helper()
 			},
 			assert: func(t *testing.T, err error, data []byte) {

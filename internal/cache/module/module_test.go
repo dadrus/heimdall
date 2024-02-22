@@ -74,7 +74,7 @@ func TestNewCache(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorContains(t, err, "'addrs' must contain more than 0 items")
+				require.ErrorContains(t, err, "'address' must contain more than 0 items")
 			},
 		},
 		{
