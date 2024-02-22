@@ -22,16 +22,23 @@ import (
 	"time"
 
 	"github.com/jellydator/ttlcache/v3"
+
+	"github.com/dadrus/heimdall/internal/cache"
 )
 
 var ErrNoCacheEntry = errors.New("no cache entry")
 
-type Cache struct {
-	c *ttlcache.Cache[string, []byte]
+// by intention. Used only during application bootstrap.
+func init() { // nolint: gochecknoinits
+	cache.Register("in-memory", cache.FactoryFunc(NewCache))
 }
 
-func NewCache() *Cache {
-	return &Cache{c: ttlcache.New[string, []byte](ttlcache.WithDisableTouchOnHit[string, []byte]())}
+func NewCache(_ map[string]any) (cache.Cache, error) {
+	return &Cache{c: ttlcache.New[string, []byte](ttlcache.WithDisableTouchOnHit[string, []byte]())}, nil
+}
+
+type Cache struct {
+	c *ttlcache.Cache[string, []byte]
 }
 
 func (c *Cache) Start(_ context.Context) error {

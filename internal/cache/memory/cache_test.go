@@ -23,6 +23,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/dadrus/heimdall/internal/cache"
 )
 
 func TestMemoryCacheUsage(t *testing.T) {
@@ -31,13 +33,13 @@ func TestMemoryCacheUsage(t *testing.T) {
 	for _, tc := range []struct {
 		uc             string
 		key            string
-		configureCache func(t *testing.T, cache *Cache)
+		configureCache func(t *testing.T, cache cache.Cache)
 		assert         func(t *testing.T, err error, data []byte)
 	}{
 		{
 			uc:  "can retrieve not expired value",
 			key: "foo",
-			configureCache: func(t *testing.T, cache *Cache) {
+			configureCache: func(t *testing.T, cache cache.Cache) {
 				t.Helper()
 
 				err := cache.Set(context.TODO(), "foo", []byte("bar"), 10*time.Minute)
@@ -53,7 +55,7 @@ func TestMemoryCacheUsage(t *testing.T) {
 		{
 			uc:  "cannot retrieve expired value",
 			key: "bar",
-			configureCache: func(t *testing.T, cache *Cache) {
+			configureCache: func(t *testing.T, cache cache.Cache) {
 				t.Helper()
 
 				err := cache.Set(context.TODO(), "bar", []byte("baz"), 1*time.Microsecond)
@@ -71,7 +73,7 @@ func TestMemoryCacheUsage(t *testing.T) {
 		{
 			uc:  "cannot retrieve not existing value",
 			key: "baz",
-			configureCache: func(t *testing.T, _ *Cache) {
+			configureCache: func(t *testing.T, _ cache.Cache) {
 				t.Helper()
 			},
 			assert: func(t *testing.T, err error, _ []byte) {
@@ -84,7 +86,7 @@ func TestMemoryCacheUsage(t *testing.T) {
 	} {
 		t.Run("case="+tc.uc, func(t *testing.T) {
 			// GIVEN
-			cache := NewCache()
+			cache, _ := NewCache(nil)
 
 			// WHEN
 			tc.configureCache(t, cache)
@@ -100,7 +102,7 @@ func TestMemoryCacheUsage(t *testing.T) {
 func TestMemoryCacheExpiration(t *testing.T) {
 	t.Parallel()
 
-	cache := NewCache()
+	cache, _ := NewCache(nil)
 	cache.Set(context.TODO(), "baz", []byte("bar"), 1*time.Second)
 
 	hits := 0

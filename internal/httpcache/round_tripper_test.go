@@ -73,7 +73,10 @@ func TestRoundTripperRoundTrip(t *testing.T) {
 				},
 			}
 
-			ctx := cache.WithContext(context.Background(), memory.NewCache())
+			cch, err := memory.NewCache(nil)
+			require.NoError(t, err)
+
+			ctx := cache.WithContext(context.Background(), cch)
 			req, err := http.NewRequestWithContext(ctx, http.MethodGet, srv.URL, nil)
 			require.NoError(t, err)
 

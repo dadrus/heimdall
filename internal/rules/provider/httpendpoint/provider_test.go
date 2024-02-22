@@ -166,8 +166,11 @@ endpoints:
 				Providers: config.RuleProviders{HTTPEndpoint: providerConf},
 			}
 
+			cch, err := memory.NewCache(nil)
+			require.NoError(t, err)
+
 			// WHEN
-			prov, err := newProvider(conf, memory.NewCache(), mocks.NewRuleSetProcessorMock(t), log.Logger)
+			prov, err := newProvider(conf, cch, mocks.NewRuleSetProcessorMock(t), log.Logger)
 
 			// THEN
 			tc.assert(t, err, prov)
@@ -741,7 +744,11 @@ rules:
 			setupProcessor(t, processor)
 
 			logs := &strings.Builder{}
-			prov, err := newProvider(conf, memory.NewCache(), processor, zerolog.New(logs))
+
+			cch, err := memory.NewCache(nil)
+			require.NoError(t, err)
+
+			prov, err := newProvider(conf, cch, processor, zerolog.New(logs))
 			require.NoError(t, err)
 
 			ctx := context.Background()
