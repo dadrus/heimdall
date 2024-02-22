@@ -61,9 +61,8 @@ func TestNewCache(t *testing.T) {
 				assert.IsType(t, &memory.Cache{}, cch)
 			},
 		},
-
 		{
-			uc: "Redis cache without DSN",
+			uc: "Redis standalone cache without config",
 			conf: &config.Configuration{
 				Cache: config.CacheConfig{
 					Type:   "redis",
@@ -75,6 +74,36 @@ func TestNewCache(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorContains(t, err, "'address' is a required field")
+			},
+		},
+		{
+			uc: "Redis cluster cache without config",
+			conf: &config.Configuration{
+				Cache: config.CacheConfig{
+					Type:   "redis-cluster",
+					Config: map[string]any{},
+				},
+			},
+			assert: func(t *testing.T, err error, _ cache.Cache) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorContains(t, err, "'nodes' must contain more than 0 items")
+			},
+		},
+		{
+			uc: "Redis sentinel cache without config",
+			conf: &config.Configuration{
+				Cache: config.CacheConfig{
+					Type:   "redis-sentinel",
+					Config: map[string]any{},
+				},
+			},
+			assert: func(t *testing.T, err error, _ cache.Cache) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorContains(t, err, "'nodes' must contain more than 0 items")
 			},
 		},
 		{
