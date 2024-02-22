@@ -112,6 +112,7 @@ func newGenericContextualizer(id string, rawConfig map[string]any) (*genericCont
 	}, nil
 }
 
+//nolint:cyclop
 func (h *genericContextualizer) Execute(ctx heimdall.Context, sub *subject.Subject) error {
 	logger := zerolog.Ctx(ctx.AppContext())
 	logger.Debug().Str("_id", h.id).Msg("Updating using generic contextualizer")
