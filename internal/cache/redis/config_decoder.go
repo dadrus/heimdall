@@ -31,6 +31,8 @@ func decodeConfig(input any, output any) error {
 			DecodeHook: mapstructure.ComposeDecodeHookFunc(
 				mapstructure.StringToTimeDurationHookFunc(),
 				config.StringToByteSizeHookFunc(),
+				config.DecodeTLSCipherSuiteHookFunc,
+				config.DecodeTLSMinVersionHookFunc,
 			),
 			Result:      output,
 			ErrorUnused: true,

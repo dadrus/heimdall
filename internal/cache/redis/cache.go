@@ -21,13 +21,26 @@ import (
 	"time"
 
 	"github.com/redis/rueidis"
+	"github.com/redis/rueidis/rueidisotel"
 
+	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/stringx"
 )
 
 type redisCache struct {
 	c   rueidis.Client
 	ttl time.Duration
+}
+
+func newRedisCache(opts rueidis.ClientOption, ttl time.Duration) (*redisCache, error) {
+	client, err := rueidisotel.NewClient(opts)
+	if err != nil {
+		return nil, errorchain.NewWithMessage(heimdall.ErrInternal,
+			"failed creating redis client").CausedBy(err)
+	}
+
+	return &redisCache{c: client, ttl: ttl}, nil
 }
 
 func (c *redisCache) Start(_ context.Context) error {

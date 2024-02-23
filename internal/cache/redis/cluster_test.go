@@ -17,7 +17,8 @@ import (
 func TestNewClusterCache(t *testing.T) {
 	t.Parallel()
 
-	db := miniredis.RunT(t)
+	db1 := miniredis.RunT(t)
+	db2 := miniredis.RunT(t)
 
 	for _, tc := range []struct {
 		uc     string
@@ -69,8 +70,11 @@ func TestNewClusterCache(t *testing.T) {
 			},
 		},
 		{
-			uc:     "successful cache creation",
-			config: []byte(fmt.Sprintf("{nodes: [ '%s' ], client_cache: {disabled: true}, tls: {disabled: true}}", db.Addr())),
+			uc: "successful cache creation",
+			config: []byte(fmt.Sprintf(
+				"{nodes: [ '%s', '%s' ], client_cache: {disabled: true}, tls: {disabled: true}}",
+				db1.Addr(), db2.Addr(),
+			)),
 			assert: func(t *testing.T, err error, cch cache.Cache) {
 				t.Helper()
 
