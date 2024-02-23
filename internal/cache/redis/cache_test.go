@@ -39,6 +39,7 @@ func TestCacheUsage(t *testing.T) {
 	})
 	require.NoError(t, err)
 
+	cch.Start(context.TODO())
 	defer cch.Stop(context.TODO())
 
 	for _, tc := range []struct {
