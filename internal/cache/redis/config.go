@@ -13,7 +13,7 @@ import (
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
-// for test purposes only
+// for test purposes only.
 var rootCertPool *x509.CertPool //nolint:gochecknoglobals
 
 type clientCache struct {
