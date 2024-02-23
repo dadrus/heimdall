@@ -18,8 +18,8 @@ func NewSentinelCache(conf map[string]any) (cache.Cache, error) {
 		baseConfig `mapstructure:",squash"`
 
 		Nodes  []string `mapstructure:"nodes"  validate:"gt=0,dive,required"`
+		Master string   `mapstructure:"master" validate:"required"`
 		DB     int      `mapstructure:"db"`
-		Master string   `mapstructure:"master"`
 	}
 
 	cfg := Config{
@@ -40,10 +40,9 @@ func NewSentinelCache(conf map[string]any) (cache.Cache, error) {
 	opts.ShuffleInit = true
 	opts.SelectDB = cfg.DB
 	opts.Sentinel = rueidis.SentinelOption{
-		MasterSet:  cfg.Master,
-		Username:   cfg.Credentials.Username,
-		Password:   cfg.Credentials.Password,
-		ClientName: "heimdall",
+		MasterSet: cfg.Master,
+		Username:  cfg.Credentials.Username,
+		Password:  cfg.Credentials.Password,
 	}
 
 	return newRedisCache(opts, cfg.ClientCache.TTL)

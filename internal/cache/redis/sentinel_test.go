@@ -5,10 +5,8 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
-	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
-	"fmt"
 	"math/big"
 	"net"
 	"os"
@@ -16,7 +14,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/alicebob/miniredis/v2"
 	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/cache"
@@ -25,7 +22,7 @@ import (
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
-func TestNewClusterCache(t *testing.T) {
+func TestNewSentinelCache(t *testing.T) {
 	t.Parallel()
 
 	key, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
@@ -100,6 +97,21 @@ func TestNewClusterCache(t *testing.T) {
 			},
 		},
 		{
+			uc: "no sentinel master set provided",
+			config: func(t *testing.T) []byte {
+				t.Helper()
+
+				return []byte(`nodes: ["foo:1234"]`)
+			},
+			assert: func(t *testing.T, err error, _ cache.Cache) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorContains(t, err, "'master' is a required field")
+			},
+		},
+		{
 			uc: "config contains unsupported properties",
 			config: func(t *testing.T) []byte {
 				t.Helper()
@@ -119,7 +131,7 @@ func TestNewClusterCache(t *testing.T) {
 			config: func(t *testing.T) []byte {
 				t.Helper()
 
-				return []byte(`nodes: ["foo.local:12345"]`)
+				return []byte(`{nodes: ["foo.local:12345"], master: foo}`)
 			},
 			assert: func(t *testing.T, err error, _ cache.Cache) {
 				t.Helper()
@@ -130,40 +142,12 @@ func TestNewClusterCache(t *testing.T) {
 			},
 		},
 		{
-			uc: "successful cache creation without TLS",
-			config: func(t *testing.T) []byte {
-				t.Helper()
-
-				db1 := miniredis.RunT(t)
-				db2 := miniredis.RunT(t)
-
-				return []byte(fmt.Sprintf(
-					"{nodes: [ '%s', '%s' ], client_cache: {disabled: true}, tls: {disabled: true}}",
-					db1.Addr(), db2.Addr(),
-				))
-			},
-			assert: func(t *testing.T, err error, cch cache.Cache) {
-				t.Helper()
-
-				require.NoError(t, err)
-				require.NotNil(t, cch)
-
-				err = cch.Set(context.TODO(), "foo", []byte("bar"), 1*time.Second)
-				require.NoError(t, err)
-
-				data, err := cch.Get(context.TODO(), "foo")
-				require.NoError(t, err)
-
-				require.Equal(t, []byte("bar"), data)
-			},
-		},
-		{
 			uc: "with failing TLS config",
 			config: func(t *testing.T) []byte {
 				t.Helper()
 
 				return []byte(
-					"{nodes: [ 'foo:1234' ], client_cache: {disabled: true}, tls: { key_store: { path: /does/not/exist.pem } }}",
+					"{nodes: [ 'foo:1234' ], master: foo, client_cache: {disabled: true}, tls: { key_store: { path: /does/not/exist.pem } }}",
 				)
 			},
 			assert: func(t *testing.T, err error, _ cache.Cache) {
@@ -174,51 +158,10 @@ func TestNewClusterCache(t *testing.T) {
 				require.ErrorContains(t, err, "failed creating tls configuration")
 			},
 		},
-		{
-			uc: "successful cache creation with TLS",
-			config: func(t *testing.T) []byte {
-				t.Helper()
-
-				rootCertPool = x509.NewCertPool()
-				rootCertPool.AddCert(cert)
-
-				cfg := &tls.Config{
-					Certificates: []tls.Certificate{
-						{PrivateKey: key, Leaf: cert, Certificate: [][]byte{cert.Raw}},
-					},
-					MinVersion: tls.VersionTLS13,
-				}
-
-				db1 := miniredis.NewMiniRedis()
-				err = db1.StartTLS(cfg)
-				require.NoError(t, err)
-
-				db2 := miniredis.NewMiniRedis()
-				err = db2.StartTLS(cfg)
-				require.NoError(t, err)
-
-				t.Cleanup(db1.Close)
-
-				return []byte(fmt.Sprintf(
-					"{nodes: [ '%s', '%s' ], client_cache: {disabled: true}}",
-					db1.Addr(), db2.Addr()),
-				)
-			},
-			assert: func(t *testing.T, err error, cch cache.Cache) {
-				t.Helper()
-
-				require.NoError(t, err)
-				require.NotNil(t, cch)
-
-				err = cch.Set(context.TODO(), "foo", []byte("bar"), 1*time.Second)
-				require.NoError(t, err)
-
-				data, err := cch.Get(context.TODO(), "foo")
-				require.NoError(t, err)
-
-				require.Equal(t, []byte("bar"), data)
-			},
-		},
+		// successful tests are not possible with miniredis
+		// Reasons: https://github.com/Bose/minisentinel does not support the SENTINELS subcommand
+		// More importantly however is that miniredis does not support commands, like ROLE, which
+		// are used by the client after resolving the replicas from the sentinel.
 	} {
 		t.Run(tc.uc, func(t *testing.T) {
 			// GIVEN
@@ -226,7 +169,7 @@ func TestNewClusterCache(t *testing.T) {
 			require.NoError(t, err)
 
 			// WHEN
-			cch, err := NewClusterCache(conf)
+			cch, err := NewSentinelCache(conf)
 			if err == nil {
 				defer cch.Stop(context.TODO())
 			}
