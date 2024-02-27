@@ -25,8 +25,8 @@ import (
 	"crypto/x509"
 	"time"
 
-	"github.com/go-jose/go-jose/v3"
-	"github.com/go-jose/go-jose/v3/jwt"
+	"github.com/go-jose/go-jose/v4"
+	"github.com/go-jose/go-jose/v4/jwt"
 	"github.com/google/uuid"
 	"github.com/knadh/koanf/maps"
 	"github.com/rs/zerolog"
@@ -156,7 +156,7 @@ func (s *jwtSigner) Sign(sub string, ttl time.Duration, custClaims map[string]an
 
 	builder := jwt.Signed(signer).Claims(claims)
 
-	rawJwt, err := builder.CompactSerialize()
+	rawJwt, err := builder.Serialize()
 	if err != nil {
 		return "", errorchain.NewWithMessage(heimdall.ErrInternal, "failed to sign claims").CausedBy(err)
 	}

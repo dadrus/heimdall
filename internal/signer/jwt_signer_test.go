@@ -30,8 +30,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-jose/go-jose/v3"
-	"github.com/go-jose/go-jose/v3/jwt"
+	"github.com/go-jose/go-jose/v4"
+	"github.com/go-jose/go-jose/v4/jwt"
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -422,7 +422,7 @@ func validateTestJWT(t *testing.T, rawJWT string, signer *jwtSigner,
 
 	require.Equal(t, jwtDotCount, strings.Count(rawJWT, "."))
 
-	token, err := jwt.ParseSigned(rawJWT)
+	token, err := jwt.ParseSigned(rawJWT, []jose.SignatureAlgorithm{jose.SignatureAlgorithm(signer.jwk.Algorithm)})
 	require.NoError(t, err)
 
 	var jwtClaims map[string]any
