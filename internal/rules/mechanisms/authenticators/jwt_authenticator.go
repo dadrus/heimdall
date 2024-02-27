@@ -27,8 +27,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/go-jose/go-jose/v3"
-	"github.com/go-jose/go-jose/v3/jwt"
+	"github.com/go-jose/go-jose/v4"
+	"github.com/go-jose/go-jose/v4/jwt"
 	"github.com/goccy/go-json"
 	"github.com/rs/zerolog"
 
@@ -176,7 +176,7 @@ func (a *jwtAuthenticator) Execute(ctx heimdall.Context) (*subject.Subject, erro
 			CausedBy(err)
 	}
 
-	token, err := jwt.ParseSigned(jwtAd)
+	token, err := jwt.ParseSigned(jwtAd, supportedAlgorithms())
 	if err != nil {
 		return nil, errorchain.
 			NewWithMessage(heimdall.ErrAuthentication, "failed to parse JWT").

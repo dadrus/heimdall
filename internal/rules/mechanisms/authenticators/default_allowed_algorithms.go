@@ -16,7 +16,7 @@
 
 package authenticators
 
-import "github.com/go-jose/go-jose/v3"
+import "github.com/go-jose/go-jose/v4"
 
 func defaultAllowedAlgorithms() []string {
 	// RSA PKCS v1.5 is not allowed by intention
