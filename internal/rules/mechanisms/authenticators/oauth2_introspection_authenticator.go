@@ -28,7 +28,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/go-jose/go-jose/v3/jwt"
+	"github.com/go-jose/go-jose/v4/jwt"
 	"github.com/goccy/go-json"
 	"github.com/rs/zerolog"
 
@@ -248,7 +248,7 @@ func (a *oauth2IntrospectionAuthenticator) serverMetadata(
 }
 
 func (a *oauth2IntrospectionAuthenticator) extractTokenClaims(token string) (map[string]any, error) {
-	jwtToken, err := jwt.ParseSigned(token)
+	jwtToken, err := jwt.ParseSigned(token, supportedAlgorithms())
 	if err == nil {
 		claims := map[string]any{}
 		if err = jwtToken.UnsafeClaimsWithoutVerification(&claims); err == nil {

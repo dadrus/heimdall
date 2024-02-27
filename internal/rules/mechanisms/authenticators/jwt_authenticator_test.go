@@ -32,8 +32,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-jose/go-jose/v3"
-	"github.com/go-jose/go-jose/v3/jwt"
+	"github.com/go-jose/go-jose/v4"
+	"github.com/go-jose/go-jose/v4/jwt"
 	"github.com/goccy/go-json"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -2421,7 +2421,7 @@ func createJWT(t *testing.T, keyEntry *keystore.Entry, subject, issuer, audience
 		"scp": []string{"foo", "bar"},
 	})
 
-	rawJwt, err := builder.CompactSerialize()
+	rawJwt, err := builder.Serialize()
 	require.NoError(t, err)
 
 	return rawJwt
