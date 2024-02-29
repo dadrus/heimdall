@@ -30,12 +30,14 @@ import (
 	"github.com/dadrus/heimdall/internal/rules"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms"
 	"github.com/dadrus/heimdall/internal/signer"
+	"github.com/dadrus/heimdall/internal/watcher"
 	"github.com/dadrus/heimdall/version"
 )
 
 var Module = fx.Options( //nolint:gochecknoglobals
 	config.Module,
 	logging.Module,
+	watcher.Module,
 	fx.Invoke(func(logger zerolog.Logger) {
 		logger.Info().Str("_version", version.Version).Msg("Starting heimdall")
 	}),
