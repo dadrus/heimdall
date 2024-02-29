@@ -44,7 +44,7 @@ require (
 	github.com/pquerna/cachecontrol v0.2.0
 	github.com/prometheus/client_golang v1.19.0
 	github.com/redis/rueidis v1.0.31
-	github.com/redis/rueidis/rueidisotel v1.0.30
+	github.com/redis/rueidis/rueidisotel v1.0.31
 	github.com/rs/cors v1.10.1
 	github.com/rs/zerolog v1.32.0
 	github.com/santhosh-tekuri/jsonschema/v5 v5.3.1
