@@ -1,25 +1,6 @@
 {{- define "main" -}}
-<nav class="navbar navbar-expand-lg bg-light" aria-label="Docs menu">
+<nav class="navbar navbar-expand-lg" aria-label="Docs menu">
   <div class="container-xxl">
-    <div class="row container-fluid">
-      <doc-search class="col-auto me-auto mw-75" index-file="{{ .Site.Params.search_index_file }}"
-                  path-prefix="{{ .Site.Params.path_prefix }}">
-        <form id="docs-search" tabindex="1" class="doks-search position-relative me-auto">
-          <input id="search" class="form-control search-bar" type="search"
-                 placeholder="Search docs..." aria-label="Search docs..." autocomplete="off" onfocusout/>
-          <div id="search-suggestions" class="shadow bg-white rounded collapse search-results"></div>
-        </form>
-      </doc-search>
-      <button class="col-auto ms-auto d-md-none navbar-toggler mw-25" type="button"
-              data-bs-toggle="collapse" data-bs-target="#docsMenuContent"
-              aria-controls="docsMenuContent" aria-expanded="false" aria-label="Open docs menu">
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-down-up"
-             viewBox="0 0 16 16">
-          <path fill-rule="evenodd"
-                d="M11.5 15a.5.5 0 0 0 .5-.5V2.707l3.146 3.147a.5.5 0 0 0 .708-.708l-4-4a.5.5 0 0 0-.708 0l-4 4a.5.5 0 1 0 .708.708L11 2.707V14.5a.5.5 0 0 0 .5.5zm-7-14a.5.5 0 0 1 .5.5v11.793l3.146-3.147a.5.5 0 0 1 .708.708l-4 4a.5.5 0 0 1-.708 0l-4-4a.5.5 0 0 1 .708-.708L4 13.293V1.5a.5.5 0 0 1 .5-.5z"/>
-        </svg>
-      </button>
-    </div>
     <div class="row d-md-none">
       <div class="col-2 collapse navbar-collapse" id="docsMenuContent">
         {{ partial "sidebar/docs-menu.html" . }}
@@ -38,7 +19,7 @@
       <article class="docs-content col-xl-10 col-md-12">
         <h1>{{ .Title }}</h1>
         <p>{{ .Description }}</p>
-        <button class="btn btn-outline-secondary text-decoration-none d-md-none collapsed" type="button" data-bs-toggle="collapse"
+        <button class="btn btn-outline-secondary text-decoration-none d-xl-none collapsed" type="button" data-bs-toggle="collapse"
                 data-bs-target="#page-content-toc-collapsible" aria-expanded="false" aria-controls="page-content-toc-collapsible">
           On this page
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-chevron-expand" viewBox="0 0 16 16">
@@ -46,7 +27,7 @@
           </svg>
         </button>
 
-        <div id="page-content-toc-collapsible" class="mt-1 mb-3 d-md-none collapse text-muted docs-page-toc">
+        <div id="page-content-toc-collapsible" class="mt-1 mb-3 d-xl-none collapse text-muted docs-page-toc">
           <div class="card card-body">
             {{ .TableOfContents }}
           </div>
@@ -63,7 +44,7 @@
 
       {{ if not .Params.notoc }}
       <aside id="page-content-toc" class="docs-page-toc text-muted d-none d-md-block col-xl-2">
-        <strong class="d-none d-md-block h6 pb-2 my-2 ms-2 border-bottom">On this page</strong>
+        <strong class="d-md-block h6 pb-2 my-2 ms-2 border-bottom">On this page</strong>
         {{ .TableOfContents }}
       </aside>
       {{ end }}

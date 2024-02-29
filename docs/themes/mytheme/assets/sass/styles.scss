@@ -15,7 +15,6 @@
 }
 
 
-
 footer {
   background-color: rgba(var(--bs-light-rgb), 1) !important;
 
@@ -48,12 +47,14 @@ h2 {
   margin-top: 3rem;
   margin-bottom: 1rem;
   font-size: 2rem;
+  scroll-margin-top: 4rem;
 }
 
 h3 {
   margin-top: 2rem;
   margin-bottom: 1rem;
   font-size: 1.5rem;
+  scroll-margin-top: 4rem;
 }
 
 h4 {
@@ -271,6 +272,10 @@ doc-version-select {
   }
 }
 
+  .navbar-brand-highlight {
+    order: 1;
+  }
+
 @media (min-width: 60rem) {
   .docs-side-toc {
     position: sticky;
@@ -323,6 +328,7 @@ doc-version-select {
     }
   }
 }
+
 .mw-25 {
   max-width: 25%;
 }
@@ -343,12 +349,24 @@ doc-version-select {
   linkable-headline-area .gridcol {
     width: calc(100% / 3 - 0.5rem);
   }
+
+  .navbar-brand-highlight {
+    order: 0;
+  }
+
+  .listingblock {
+    max-width: 32rem;
+  }
 }
 
 @media (min-width: 993px) {
   linkable-headline-area .gridcol {
     flex: none;
     width: calc(100% / 4 - 0.5rem);
+  }
+
+  .listingblock {
+    max-width: 44rem;  
   }
 }
 
