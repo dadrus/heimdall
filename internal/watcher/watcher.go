@@ -12,7 +12,7 @@ import (
 )
 
 type ChangeListener interface {
-	OnChanged(path string)
+	OnChanged(path zerolog.Logger)
 }
 
 type Watcher interface {
@@ -110,6 +110,6 @@ func (w *watcher) fireOnChange(evt fsnotify.Event) {
 	}
 
 	for _, listener := range listeners {
-		go listener.OnChanged(evt.Name)
+		go listener.OnChanged(w.l)
 	}
 }

@@ -10,6 +10,7 @@ import (
 
 	"github.com/inhies/go-bytesize"
 	"github.com/redis/rueidis"
+	"github.com/rs/zerolog"
 	"gopkg.in/yaml.v3"
 
 	"github.com/dadrus/heimdall/internal/config"
@@ -29,7 +30,7 @@ type clientCache struct {
 
 type credentials interface {
 	register(cw watcher.Watcher) error
-	authCredentials() rueidis.AuthCredentials
+	get() rueidis.AuthCredentials
 }
 
 type staticCredentials struct {
@@ -39,7 +40,7 @@ type staticCredentials struct {
 
 func (c *staticCredentials) register(_ watcher.Watcher) error { return nil }
 
-func (c *staticCredentials) authCredentials() rueidis.AuthCredentials {
+func (c *staticCredentials) get() rueidis.AuthCredentials {
 	return rueidis.AuthCredentials{
 		Username: c.Username,
 		Password: c.Password,
@@ -72,8 +73,18 @@ func (c *fileCredentials) load() error {
 	return nil
 }
 
-func (c *fileCredentials) OnChanged(_ string) {
-	c.load()
+func (c *fileCredentials) OnChanged(log zerolog.Logger) {
+	if err := c.load(); err != nil {
+		log.Warn().Err(err).
+			Str("_source", "redis-cache").
+			Str("_file", c.Path).
+			Msg("Config reload failed")
+	} else {
+		log.Info().
+			Str("_source", "redis-cache").
+			Str("_file", c.Path).
+			Msg("Config reloaded")
+	}
 }
 
 func (c *fileCredentials) register(cw watcher.Watcher) error {
@@ -85,11 +96,11 @@ func (c *fileCredentials) register(cw watcher.Watcher) error {
 	return nil
 }
 
-func (c *fileCredentials) authCredentials() rueidis.AuthCredentials {
+func (c *fileCredentials) get() rueidis.AuthCredentials {
 	c.mut.Lock()
 	defer c.mut.Unlock()
 
-	return c.creds.authCredentials()
+	return c.creds.get()
 }
 
 type tlsConfig struct {
@@ -140,7 +151,7 @@ func (c baseConfig) clientOptions(cw watcher.Watcher) (rueidis.ClientOption, err
 
 		AuthCredentialsFn: func(_ rueidis.AuthCredentialsContext) (rueidis.AuthCredentials, error) {
 			if c.Credentials != nil {
-				return c.Credentials.authCredentials(), nil
+				return c.Credentials.get(), nil
 			}
 
 			return rueidis.AuthCredentials{}, nil
