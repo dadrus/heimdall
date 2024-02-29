@@ -353,12 +353,20 @@ doc-version-select {
   .navbar-brand-highlight {
     order: 0;
   }
+
+  .listingblock {
+    max-width: 32rem;
+  }
 }
 
 @media (min-width: 993px) {
   linkable-headline-area .gridcol {
     flex: none;
     width: calc(100% / 4 - 0.5rem);
+  }
+
+  .listingblock {
+    max-width: 44rem;  
   }
 }
 
