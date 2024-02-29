@@ -36,7 +36,7 @@ func TestCacheUsage(t *testing.T) {
 		"address":      db.Addr(),
 		"client_cache": map[string]any{"disabled": true},
 		"tls":          map[string]any{"disabled": true},
-	})
+	}, nil)
 	require.NoError(t, err)
 
 	cch.Start(context.TODO())

@@ -26,8 +26,6 @@ import (
 )
 
 func TestNewClusterCache(t *testing.T) {
-	t.Parallel()
-
 	key, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
 	require.NoError(t, err)
 
@@ -226,7 +224,7 @@ func TestNewClusterCache(t *testing.T) {
 			require.NoError(t, err)
 
 			// WHEN
-			cch, err := NewClusterCache(conf)
+			cch, err := NewClusterCache(conf, nil)
 			if err == nil {
 				defer cch.Stop(context.TODO())
 			}

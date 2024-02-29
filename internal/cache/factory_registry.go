@@ -21,6 +21,7 @@ import (
 	"sync"
 
 	"github.com/dadrus/heimdall/internal/cache/noop"
+	"github.com/dadrus/heimdall/internal/watcher"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
@@ -43,7 +44,7 @@ func Register(typ string, factory Factory) {
 	factories[typ] = factory
 }
 
-func Open(typ string, config map[string]any) (Cache, error) {
+func Create(typ string, config map[string]any, cw watcher.Watcher) (Cache, error) {
 	if typ == "noop" {
 		return &noop.Cache{}, nil
 	}
@@ -56,5 +57,5 @@ func Open(typ string, config map[string]any) (Cache, error) {
 		return nil, errorchain.NewWithMessagef(ErrUnsupportedCacheType, "'%s'", typ)
 	}
 
-	return factory.Create(config)
+	return factory.Create(config, cw)
 }

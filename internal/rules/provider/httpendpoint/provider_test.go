@@ -166,7 +166,7 @@ endpoints:
 				Providers: config.RuleProviders{HTTPEndpoint: providerConf},
 			}
 
-			cch, err := memory.NewCache(nil)
+			cch, err := memory.NewCache(nil, nil)
 			require.NoError(t, err)
 
 			// WHEN
@@ -745,7 +745,7 @@ rules:
 
 			logs := &strings.Builder{}
 
-			cch, err := memory.NewCache(nil)
+			cch, err := memory.NewCache(nil, nil)
 			require.NoError(t, err)
 
 			prov, err := newProvider(conf, cch, processor, zerolog.New(logs))

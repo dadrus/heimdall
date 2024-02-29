@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/dadrus/heimdall/internal/cache"
+	"github.com/dadrus/heimdall/internal/watcher"
 )
 
 // by intention. Used only during application bootstrap.
@@ -11,7 +12,7 @@ func init() { // nolint: gochecknoinits
 	cache.Register("redis-cluster", cache.FactoryFunc(NewClusterCache))
 }
 
-func NewClusterCache(conf map[string]any) (cache.Cache, error) {
+func NewClusterCache(conf map[string]any, cw watcher.Watcher) (cache.Cache, error) {
 	type Config struct {
 		baseConfig `mapstructure:",squash"`
 
@@ -27,7 +28,7 @@ func NewClusterCache(conf map[string]any) (cache.Cache, error) {
 		return nil, err
 	}
 
-	opts, err := cfg.clientOptions()
+	opts, err := cfg.clientOptions(cw)
 	if err != nil {
 		return nil, err
 	}

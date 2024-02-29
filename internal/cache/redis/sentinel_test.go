@@ -23,8 +23,6 @@ import (
 )
 
 func TestNewSentinelCache(t *testing.T) {
-	t.Parallel()
-
 	key, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
 	require.NoError(t, err)
 
@@ -169,7 +167,7 @@ func TestNewSentinelCache(t *testing.T) {
 			require.NoError(t, err)
 
 			// WHEN
-			cch, err := NewSentinelCache(conf)
+			cch, err := NewSentinelCache(conf, nil)
 			if err == nil {
 				defer cch.Stop(context.TODO())
 			}

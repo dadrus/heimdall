@@ -6,6 +6,7 @@ import (
 	"github.com/redis/rueidis"
 
 	"github.com/dadrus/heimdall/internal/cache"
+	"github.com/dadrus/heimdall/internal/watcher"
 )
 
 // by intention. Used only during application bootstrap.
@@ -13,7 +14,7 @@ func init() { // nolint: gochecknoinits
 	cache.Register("redis-sentinel", cache.FactoryFunc(NewSentinelCache))
 }
 
-func NewSentinelCache(conf map[string]any) (cache.Cache, error) {
+func NewSentinelCache(conf map[string]any, cw watcher.Watcher) (cache.Cache, error) {
 	type Config struct {
 		baseConfig `mapstructure:",squash"`
 
@@ -31,7 +32,7 @@ func NewSentinelCache(conf map[string]any) (cache.Cache, error) {
 		return nil, err
 	}
 
-	opts, err := cfg.clientOptions()
+	opts, err := cfg.clientOptions(cw)
 	if err != nil {
 		return nil, err
 	}
@@ -41,8 +42,6 @@ func NewSentinelCache(conf map[string]any) (cache.Cache, error) {
 	opts.SelectDB = cfg.DB
 	opts.Sentinel = rueidis.SentinelOption{
 		MasterSet: cfg.Master,
-		Username:  cfg.Credentials.Username,
-		Password:  cfg.Credentials.Password,
 	}
 
 	return newRedisCache(opts, cfg.ClientCache.TTL)

@@ -3,13 +3,18 @@ package redis
 import (
 	"crypto/tls"
 	"crypto/x509"
+	"net"
+	"os"
+	"sync"
 	"time"
 
 	"github.com/inhies/go-bytesize"
 	"github.com/redis/rueidis"
+	"gopkg.in/yaml.v3"
 
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/watcher"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
@@ -22,9 +27,69 @@ type clientCache struct {
 	SizePerConnection bytesize.ByteSize `mapstructure:"size_per_connection"`
 }
 
-type credentials struct {
-	Username string `mapstructure:"username"`
-	Password string `mapstructure:"password"`
+type credentials interface {
+	register(cw watcher.Watcher) error
+	authCredentials() rueidis.AuthCredentials
+}
+
+type staticCredentials struct {
+	Username string `yaml:"username"`
+	Password string `yaml:"password"`
+}
+
+func (c *staticCredentials) register(_ watcher.Watcher) error { return nil }
+
+func (c *staticCredentials) authCredentials() rueidis.AuthCredentials {
+	return rueidis.AuthCredentials{
+		Username: c.Username,
+		Password: c.Password,
+	}
+}
+
+type fileCredentials struct {
+	Path string
+
+	creds *staticCredentials
+	mut   sync.Mutex
+}
+
+func (c *fileCredentials) load() error {
+	cf, err := os.Open(c.Path)
+	if err != nil {
+		return err
+	}
+
+	var creds staticCredentials
+
+	if err = yaml.NewDecoder(cf).Decode(&creds); err != nil {
+		return err
+	}
+
+	c.mut.Lock()
+	c.creds = &creds
+	c.mut.Unlock()
+
+	return nil
+}
+
+func (c *fileCredentials) OnChanged(_ string) {
+	c.load()
+}
+
+func (c *fileCredentials) register(cw watcher.Watcher) error {
+	if err := cw.Add(c.Path, c); err != nil {
+		return errorchain.NewWithMessagef(heimdall.ErrInternal,
+			"failed registering client credentials watcher on %s for Redis client", c.Path).CausedBy(err)
+	}
+
+	return nil
+}
+
+func (c *fileCredentials) authCredentials() rueidis.AuthCredentials {
+	c.mut.Lock()
+	defer c.mut.Unlock()
+
+	return c.creds.authCredentials()
 }
 
 type tlsConfig struct {
@@ -42,7 +107,7 @@ type baseConfig struct {
 	TLS           tlsConfig          `mapstructure:"tls"`
 }
 
-func (c baseConfig) clientOptions() (rueidis.ClientOption, error) {
+func (c baseConfig) clientOptions(cw watcher.Watcher) (rueidis.ClientOption, error) {
 	var (
 		tlsCfg *tls.Config
 		err    error
@@ -58,16 +123,35 @@ func (c baseConfig) clientOptions() (rueidis.ClientOption, error) {
 		tlsCfg.RootCAs = rootCertPool
 	}
 
+	if c.Credentials != nil {
+		if err = c.Credentials.register(cw); err != nil {
+			return rueidis.ClientOption{}, err
+		}
+	}
+
 	return rueidis.ClientOption{
 		ClientName:          "heimdall",
-		Username:            c.Credentials.Username,
-		Password:            c.Credentials.Password,
 		DisableCache:        c.ClientCache.Disabled,
 		CacheSizeEachConn:   int(c.ClientCache.SizePerConnection),
 		WriteBufferEachConn: int(c.BufferLimit.Write),
 		ReadBufferEachConn:  int(c.BufferLimit.Read),
 		ConnWriteTimeout:    c.Timeout.Write,
 		MaxFlushDelay:       c.MaxFlushDelay,
-		TLSConfig:           tlsCfg,
+
+		AuthCredentialsFn: func(_ rueidis.AuthCredentialsContext) (rueidis.AuthCredentials, error) {
+			if c.Credentials != nil {
+				return c.Credentials.authCredentials(), nil
+			}
+
+			return rueidis.AuthCredentials{}, nil
+		},
+
+		DialFn: func(addr string, dialer *net.Dialer, _ *tls.Config) (net.Conn, error) {
+			if tlsCfg != nil {
+				return tls.DialWithDialer(dialer, "tcp", addr, tlsCfg)
+			}
+
+			return dialer.Dial("tcp", addr)
+		},
 	}, nil
 }
