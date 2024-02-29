@@ -15,6 +15,8 @@ type ChangeListener interface {
 	OnChanged(path zerolog.Logger)
 }
 
+//go:generate mockery --name Watcher --structname WatcherMock
+
 type Watcher interface {
 	Add(path string, cl ChangeListener) error
 }

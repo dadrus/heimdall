@@ -17,13 +17,10 @@
 package redis
 
 import (
-	"errors"
 	"reflect"
 )
 
-var ErrExtCredentialsRef = errors.New("reference to externally managed credentials file must start with file://")
-
-func DecodeCredentialsHookFunc(from reflect.Type, to reflect.Type, data any) (any, error) {
+func decodeCredentialsHookFunc(from reflect.Type, to reflect.Type, data any) (any, error) {
 	var cred credentials
 
 	dect := reflect.ValueOf(&cred).Elem().Type()
@@ -41,10 +38,20 @@ func DecodeCredentialsHookFunc(from reflect.Type, to reflect.Type, data any) (an
 	} else if from.Kind() == reflect.Map {
 		vals := data.(map[string]any) // nolint: forcetypeassert
 
-		return &staticCredentials{
-			Username: vals["username"].(string), // nolint: forcetypeassert
-			Password: vals["password"].(string), // nolint: forcetypeassert
-		}, nil
+		var (
+			username string
+			password string
+		)
+
+		if un, ok := vals["username"]; ok {
+			username = un.(string) // nolint: forcetypeassert
+		}
+
+		if pass, ok := vals["password"]; ok {
+			password = pass.(string) // nolint: forcetypeassert
+		}
+
+		return &staticCredentials{Username: username, Password: password}, nil
 	}
 
 	return data, nil

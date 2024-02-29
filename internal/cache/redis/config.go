@@ -62,7 +62,10 @@ func (c *fileCredentials) load() error {
 
 	var creds staticCredentials
 
-	if err = yaml.NewDecoder(cf).Decode(&creds); err != nil {
+	dec := yaml.NewDecoder(cf)
+	dec.KnownFields(true)
+
+	if err = dec.Decode(&creds); err != nil {
 		return err
 	}
 

@@ -8,6 +8,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"errors"
 	"fmt"
 	"math/big"
 	"net"
@@ -17,10 +18,12 @@ import (
 	"time"
 
 	"github.com/alicebob/miniredis/v2"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/dadrus/heimdall/internal/heimdall"
+	"github.com/dadrus/heimdall/internal/watcher/mocks"
 	"github.com/dadrus/heimdall/internal/x/pkix/pemx"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
@@ -64,12 +67,12 @@ func TestNewStandaloneCache(t *testing.T) {
 
 	for _, tc := range []struct {
 		uc     string
-		config func(t *testing.T) []byte
+		config func(t *testing.T, mock *mocks.WatcherMock) []byte
 		assert func(t *testing.T, err error, cch cache.Cache)
 	}{
 		{
 			uc: "empty config",
-			config: func(t *testing.T) []byte {
+			config: func(t *testing.T, _ *mocks.WatcherMock) []byte {
 				t.Helper()
 
 				return []byte(``)
@@ -84,7 +87,7 @@ func TestNewStandaloneCache(t *testing.T) {
 		},
 		{
 			uc: "empty address provided",
-			config: func(t *testing.T) []byte {
+			config: func(t *testing.T, _ *mocks.WatcherMock) []byte {
 				t.Helper()
 
 				return []byte(`address: ""`)
@@ -99,7 +102,7 @@ func TestNewStandaloneCache(t *testing.T) {
 		},
 		{
 			uc: "config contains unsupported properties",
-			config: func(t *testing.T) []byte {
+			config: func(t *testing.T, _ *mocks.WatcherMock) []byte {
 				t.Helper()
 
 				return []byte(`foo: bar`)
@@ -114,7 +117,7 @@ func TestNewStandaloneCache(t *testing.T) {
 		},
 		{
 			uc: "not existing address provided",
-			config: func(t *testing.T) []byte {
+			config: func(t *testing.T, _ *mocks.WatcherMock) []byte {
 				t.Helper()
 
 				return []byte(`address: "foo.local:12345"`)
@@ -128,8 +131,8 @@ func TestNewStandaloneCache(t *testing.T) {
 			},
 		},
 		{
-			uc: "successful cache creation without TLS",
-			config: func(t *testing.T) []byte {
+			uc: "successful cache creation without TLS and without credentials",
+			config: func(t *testing.T, _ *mocks.WatcherMock) []byte {
 				t.Helper()
 
 				db := miniredis.RunT(t)
@@ -155,8 +158,63 @@ func TestNewStandaloneCache(t *testing.T) {
 			},
 		},
 		{
+			uc: "successful cache creation without TLS but with static credentials",
+			config: func(t *testing.T, _ *mocks.WatcherMock) []byte {
+				t.Helper()
+
+				db := miniredis.RunT(t)
+
+				return []byte(fmt.Sprintf(
+					"{address: %s, client_cache: {disabled: true}, tls: {disabled: true}, credentials: {password: foo}}",
+					db.Addr(),
+				))
+			},
+			assert: func(t *testing.T, err error, cch cache.Cache) {
+				t.Helper()
+
+				require.NoError(t, err)
+				require.NotNil(t, cch)
+
+				err = cch.Set(context.TODO(), "foo", []byte("bar"), 1*time.Second)
+				require.NoError(t, err)
+
+				data, err := cch.Get(context.TODO(), "foo")
+				require.NoError(t, err)
+
+				require.Equal(t, []byte("bar"), data)
+			},
+		},
+		{
+			uc: "cache creation fails due to failing watcher registration for external credentials",
+			config: func(t *testing.T, wm *mocks.WatcherMock) []byte {
+				t.Helper()
+
+				cf, err := os.Create(filepath.Join(testDir, "credentials.yaml"))
+				require.NoError(t, err)
+
+				_, err = cf.WriteString(`
+  username: oof
+  password: rab
+`)
+				require.NoError(t, err)
+
+				wm.EXPECT().Add(cf.Name(), mock.Anything).Return(errors.New("test error"))
+
+				return []byte(fmt.Sprintf(
+					"{address: 127.0.0.1:12345, client_cache: {disabled: true}, tls: {disabled: true}, credentials: %s}",
+					cf.Name(),
+				))
+			},
+			assert: func(t *testing.T, err error, _ cache.Cache) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorContains(t, err, "failed registering client credentials watcher")
+			},
+		},
+		{
 			uc: "with failing TLS config",
-			config: func(t *testing.T) []byte {
+			config: func(t *testing.T, _ *mocks.WatcherMock) []byte {
 				t.Helper()
 
 				return []byte(`{ tls: { key_store: { path: /does/not/exist.pem } }, address: "foo.local:12345"}`)
@@ -170,9 +228,17 @@ func TestNewStandaloneCache(t *testing.T) {
 			},
 		},
 		{
-			uc: "successful cache creation with TLS",
-			config: func(t *testing.T) []byte {
+			uc: "successful cache creation with TLS and external credentials",
+			config: func(t *testing.T, wm *mocks.WatcherMock) []byte {
 				t.Helper()
+
+				cf, err := os.Create(filepath.Join(testDir, "credentials1.yaml"))
+				require.NoError(t, err)
+
+				_, err = cf.WriteString(`
+  password: rab
+`)
+				require.NoError(t, err)
 
 				rootCertPool = x509.NewCertPool()
 				rootCertPool.AddCert(cert)
@@ -190,7 +256,9 @@ func TestNewStandaloneCache(t *testing.T) {
 
 				t.Cleanup(db.Close)
 
-				return []byte(fmt.Sprintf("{address: %s, client_cache: {disabled: true}}", db.Addr()))
+				wm.EXPECT().Add(cf.Name(), mock.Anything).Return(nil)
+
+				return []byte(fmt.Sprintf("{address: %s, client_cache: {disabled: true}, credentials: %s}", db.Addr(), cf.Name()))
 			},
 			assert: func(t *testing.T, err error, cch cache.Cache) {
 				t.Helper()
@@ -209,7 +277,7 @@ func TestNewStandaloneCache(t *testing.T) {
 		},
 		{
 			uc: "successful cache creation with mutual TLS",
-			config: func(t *testing.T) []byte {
+			config: func(t *testing.T, _ *mocks.WatcherMock) []byte {
 				t.Helper()
 
 				rootCertPool = x509.NewCertPool()
@@ -253,17 +321,20 @@ func TestNewStandaloneCache(t *testing.T) {
 	} {
 		t.Run(tc.uc, func(t *testing.T) {
 			// GIVEN
-			conf, err := testsupport.DecodeTestConfig(tc.config(t))
+			wm := mocks.NewWatcherMock(t)
+
+			conf, err := testsupport.DecodeTestConfig(tc.config(t, wm))
 			require.NoError(t, err)
 
 			// WHEN
-			cch, err := NewStandaloneCache(conf, nil)
+			cch, err := NewStandaloneCache(conf, wm)
 			if err == nil {
 				defer cch.Stop(context.TODO())
 			}
 
 			// THEN
 			tc.assert(t, err, cch)
+			wm.AssertExpectations(t)
 		})
 	}
 }
