@@ -11,8 +11,10 @@ import (
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
+//go:generate mockery --name ChangeListener --structname ChangeListenerMock --inpackage --testonly
+
 type ChangeListener interface {
-	OnChanged(path zerolog.Logger)
+	OnChanged(logger zerolog.Logger)
 }
 
 //go:generate mockery --name Watcher --structname WatcherMock
@@ -98,18 +100,9 @@ func (w *watcher) Add(path string, cl ChangeListener) error {
 }
 
 func (w *watcher) fireOnChange(evt fsnotify.Event) {
-	var (
-		listeners []ChangeListener
-		ok        bool
-	)
-
 	w.mut.Lock()
-	listeners, ok = w.m[evt.Name]
+	listeners := w.m[evt.Name]
 	w.mut.Unlock()
-
-	if !ok {
-		return
-	}
 
 	for _, listener := range listeners {
 		go listener.OnChanged(w.l)
