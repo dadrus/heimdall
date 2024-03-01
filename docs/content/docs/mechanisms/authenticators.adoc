@@ -31,7 +31,7 @@ type: unauthorized
 
 == Anonymous
 
-This authenticator just creates a link:{{< relref "/docs/getting_started/mechanisms.adoc#_subject" >}}[`Subject`] object and sets its `ID` to `anonymous` without doing anything else. You can overwrite the value of subject's id by using the optional `config` property.
+This authenticator just creates a link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_subject" >}}[`Subject`] object and sets its `ID` to `anonymous` without doing anything else. You can overwrite the value of subject's id by using the optional `config` property.
 
 To enable the usage of this authenticator, you have to set the `type` property to `anonymous`.
 
@@ -39,7 +39,7 @@ Configuration using the `config` property is optional. Following properties are 
 
 * *`subject`*: _string_ (optional, overridable)
 +
-Enables setting the `ID` of the created link:{{< relref "/docs/getting_started/mechanisms.adoc#_subject" >}}[`Subject`] object to a custom value.
+Enables setting the `ID` of the created link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_subject" >}}[`Subject`] object to a custom value.
 
 .Configuration of Anonymous authenticator
 ====
@@ -54,7 +54,7 @@ config:
 
 == Basic Auth
 
-This authenticator verifies the provided credentials according to the HTTP "Basic" authentication scheme, described in https://datatracker.ietf.org/doc/html/rfc7617[RFC 7617]. It does however not challenge the authentication, it only verifies the provided credentials and sets the link:{{< relref "/docs/getting_started/mechanisms.adoc#_subject" >}}[`Subject`] `ID` to the configured user identifier if the authentication succeeds. Otherwise, it raises an error, resulting in the execution of the configured error handlers. The link:{{< relref "error_handlers.adoc#_www_authenticate" >}}["WWW Authenticate"] error handler mechanism can for example be used if the corresponding challenge is required.
+This authenticator verifies the provided credentials according to the HTTP "Basic" authentication scheme, described in https://datatracker.ietf.org/doc/html/rfc7617[RFC 7617]. It does however not challenge the authentication, it only verifies the provided credentials and sets the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_subject" >}}[`Subject`] `ID` to the configured user identifier if the authentication succeeds. Otherwise, it raises an error, resulting in the execution of the configured error handlers. The link:{{< relref "error_handlers.adoc#_www_authenticate" >}}["WWW Authenticate"] error handler mechanism can for example be used if the corresponding challenge is required.
 
 To enable the usage of this authenticator, you have to set the `type` property to `basic_auth`.
 
@@ -112,11 +112,11 @@ If the `identity_info_endpoint` API requires any cookies from the request to hei
 
 * *`payload`*: _string_ (optional, not overridable)
 +
-Your link:{{< relref "/docs/getting_started/mechanisms.adoc#_templating" >}}[template] with definitions required to send the extracted authentication data. The template has access to the `AuthenticationData` object only.
+Your link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_templating" >}}[template] with definitions required to send the extracted authentication data. The template has access to the `AuthenticationData` object only.
 
 * *`subject`*: _link:{{< relref "/docs/configuration/types.adoc#_subject" >}}[Subject]_ (mandatory, not overridable)
 +
-Where to extract the link:{{< relref "/docs/getting_started/mechanisms.adoc#_subject" >}}[`Subject`] information from the identity info endpoint response.
+Where to extract the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_subject" >}}[`Subject`] information from the identity info endpoint response.
 
 * *`cache_ttl`*: _link:{{< relref "/docs/configuration/types.adoc#_duration" >}}[Duration]_ (optional, overridable)
 +
@@ -204,7 +204,7 @@ config:
 
 Usually, you would not only like to verify the validity of a token, but also a couple of claims. This can be achieved by a link:{{< relref "authorizers.adoc#_local_cel" >}}[CEL Authorizer]. However, there is also a special purpose link:{{< relref "#_oauth2_introspection">}}[OAuth2 Introspection] authenticator type, which supports asserting all security relevant claims in just one place and does not need so much configuration as shown above.
 
-In this configuration the authenticator extracts the token from the `Authorization` header and request the information about the corresponding user from the `http://my-auth.system/introspect` endpoint by sending the extracted token in the body of the request in a parameter named `token`.
+In this configuration the authenticator extracts the token from the `Authorization` header and request the information about the corresponding user from the `\http://my-auth.system/introspect` endpoint by sending the extracted token in the body of the request in a parameter named `token`.
 ====
 
 .Configuration to work with Google's Firebase.
@@ -247,7 +247,7 @@ Configuration using the `config` property is mandatory. Following properties are
 +
 The https://datatracker.ietf.org/doc/html/rfc7662[OAuth 2.0 Token Introspection] endpoint of the OAuth2 authorization provider.
 +
-The configuration of this property is mutually exclusive with `metadata_endpoint`. If used, at least the `url` must be configured. There is no need to define the `method` property or setting the `Content-Type` or the `Accept` header. These are set by default to the values required by the RFC referenced above. You can however override these while configuring the authenticator if needed. The path part of the `url` can be link:{{< relref "/docs/getting_started/mechanisms.adoc#_templating" >}}[templated] and has access to the `TokenIssuer` object, which is a string and only available if the format of the used token is JWT. It basically holds the value of the `iss` claim from the token.
+The configuration of this property is mutually exclusive with `metadata_endpoint`. If used, at least the `url` must be configured. There is no need to define the `method` property or setting the `Content-Type` or the `Accept` header. These are set by default to the values required by the RFC referenced above. You can however override these while configuring the authenticator if needed. The path part of the `url` can be link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_templating" >}}[templated] and has access to the `TokenIssuer` object, which is a string and only available if the format of the used token is JWT. It basically holds the value of the `iss` claim from the token.
 
 * *`metadata_endpoint`*: _link:{{< relref "/docs/configuration/types.adoc#_endpoint">}}[Endpoint]_ (dependant, not overridable)
 +
@@ -273,7 +273,7 @@ Configures the required claim assertions. Overriding on rule level is possible e
 
 * *`subject`*: _link:{{< relref "/docs/configuration/types.adoc#_subject" >}}[Subject]_ (optional, not overridable)
 +
-Where to extract the link:{{< relref "/docs/getting_started/mechanisms.adoc#_subject" >}}[`Subject`] information from the introspection endpoint response. If not configured `sub` is used to extract the subject `ID` and all attributes from the introspection endpoint response are made available as `Attributes`.
+Where to extract the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_subject" >}}[`Subject`] information from the introspection endpoint response. If not configured `sub` is used to extract the subject `ID` and all attributes from the introspection endpoint response are made available as `Attributes`.
 
 * *`cache_ttl`*: _link:{{< relref "/docs/configuration/types.adoc#_duration" >}}[Duration]_ (optional, overridable)
 +
@@ -312,8 +312,8 @@ config:
 
 This example does also show how to make use of templating if the format of the access token is JWT.
 
-The external domain of the auth server in this example is `https://my-auth-server.com`.
-If the `iss` claim of the issued JWT is set to `https://my-auth-server.com/realms/my-app`, the above line will build an internal URL to the metadata endpoint of the same server and profile/realm, which is that case would be `http://keycloak:8080/realms/my-app/.well-known/openid-configuration`
+The external domain of the auth server in this example is `\https://my-auth-server.com`.
+If the `iss` claim of the issued JWT is set to `\https://my-auth-server.com/realms/my-app`, the above line will build an internal URL to the metadata endpoint of the same server and profile/realm, which is that case would be `\http://keycloak:8080/realms/my-app/.well-known/openid-configuration`
 
 ====
 
@@ -329,7 +329,7 @@ Configuration using the `config` property is mandatory. Following properties are
 +
 The JWKS endpoint, this authenticator retrieves the key material in a format specified in https://datatracker.ietf.org/doc/html/rfc7519[RFC 7519] from for JWT signature verification purposes.
 +
-The configuration of this property is mutually exclusive with `metadata_endpoint`. If used, at least the `url` must be configured. By default `method` is set to `GET` and the HTTP `Accept` header to `application/json`. The path part of the `url` can be link:{{< relref "/docs/getting_started/mechanisms.adoc#_templating" >}}[templated] and has access to the `TokenIssuer` object, which is a string and  basically holds the value of the `iss` claim from the token.
+The configuration of this property is mutually exclusive with `metadata_endpoint`. If used, at least the `url` must be configured. By default `method` is set to `GET` and the HTTP `Accept` header to `application/json`. The path part of the `url` can be link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_templating" >}}[templated] and has access to the `TokenIssuer` object, which is a string and  basically holds the value of the `iss` claim from the token.
 
 * *`metadata_endpoint`*: _link:{{< relref "/docs/configuration/types.adoc#_endpoint">}}[Endpoint]_ (dependant, not overridable)
 +
@@ -339,7 +339,7 @@ The configuration of this property is mutually exclusive with `jwks_endpoint`. I
 +
 As with the `jwks_endpoint` as well, the `metadata_endpoint` is by default configured to use `GET` as HTTP method and sets the `Accept` header to `application/json`, as also required by both specifications referenced above. In addition, to avoid useless communication, it is also configured to make use of HTTP cache according to http://tools.ietf.org/html/rfc7234[RFC 7234] with default HTTP cache ttl set to `30m`. All these settings can however be overridden if required.
 +
-In addition to the properties specified by the link:{{< relref "/docs/configuration/reference.adoc#_endpoint">}}[`endpoint`] type, following properties are available:
+In addition to the properties specified by the link:{{< relref "/docs/configuration/types.adoc#_endpoint">}}[`endpoint`] type, following properties are available:
 
 ** *`disable_issuer_identifier_verification`*: _boolean_ (optional, not overridable)
 +

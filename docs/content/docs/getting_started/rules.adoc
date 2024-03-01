@@ -34,7 +34,7 @@ In general each rule consists of the following parts
 * a list of allowed HTTP methods for the matched requests
 * a list of mechanisms assembling the authentication & authorization pipeline and executed for the matched request,
 * an optional list of mechanisms assembling the error pipeline and executed if the authentication & authorization pipeline fails, and
-* optionally where to forward the request to upon successful execution of the authentication & authorization pipeline if heimdall is link:{{< relref "/docs/getting_started/operating_modes.adoc" >}}[operated in proxy mode] (regular rules only)
+* optionally where to forward the request to upon successful execution of the authentication & authorization pipeline if heimdall is link:{{< relref "/docs/getting_started/operating_modes.adoc#_proxy_mode" >}}[operated in proxy mode] (regular rules only)
 
 == Memory Footprint
 

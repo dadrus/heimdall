@@ -16,7 +16,7 @@ Some finalizers may support or require additional configuration. The correspondi
 
 == Noop
 
-As the name implies, this finalizer does nothing. As finalizer are the last step in a rule pipeline and act on the available link:{{< relref "/docs/getting_started/mechanisms.adoc#_subject" >}}[`Subject`] information, the usage of this finalizer makes only sense in combination with the link:{{< relref "authenticators.adoc#_noop">}}[Noop Authenticator], e.g. if your API should be publicly available. This finalizer type also doesn't have any configuration options.
+As the name implies, this finalizer does nothing. This finalizer type also doesn't have any configuration options.
 
 To enable the usage of this finalizer, you have to set the `type` property to `noop`.
 
@@ -31,7 +31,7 @@ type: noop
 
 == Header
 
-This finalizer enables transformation of a link:{{< relref "/docs/getting_started/mechanisms.adoc#_subject" >}}[`Subject`] into HTTP headers. It can also be used to map information from the original link:{{< relref "/docs/getting_started/mechanisms.adoc#_request" >}}[`Request`] into headers expected by the upstream service.
+This finalizer enables transformation of a link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_subject" >}}[`Subject`] into HTTP headers. It can also be used to map information from the original link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_request" >}}[`Request`] into headers expected by the upstream service.
 
 To enable the usage of this finalizer, you have to set the `type` property to `header`.
 
@@ -39,7 +39,7 @@ Configuration using the `config` property is mandatory. Following properties are
 
 * *`headers`*: _string map_ (mandatory, overridable)
 +
-Enables configuration of arbitrary headers with any values build from available subject and request information (See also link:{{< relref "/docs/getting_started/mechanisms.adoc#_templating" >}}[Templating]).
+Enables configuration of arbitrary headers with any values build from available subject and request information (See also link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_templating" >}}[Templating]).
 
 .Header finalizer configuration
 ====
@@ -57,7 +57,7 @@ config:
 
 == Cookie
 
-This finalizer enables transformation of a link:{{< relref "/docs/getting_started/mechanisms.adoc#_subject" >}}[`Subject`] into cookies. It can also be used to map information from the original link:{{< relref "/docs/getting_started/mechanisms.adoc#_request" >}}[`Request`] into cookies expected by the upstream service.
+This finalizer enables transformation of a link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_subject" >}}[`Subject`] into cookies. It can also be used to map information from the original link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_request" >}}[`Request`] into cookies expected by the upstream service.
 
 To enable the usage of this finalizer, you have to set the `type` property to `cookie`.
 
@@ -65,7 +65,7 @@ Configuration using the `config` property is mandatory. Following properties are
 
 * *`cookies`*: _string map_ (mandatory, overridable)
 +
-Enables configuration of arbitrary cookies with any values build from available subject information (See also link:{{< relref "/docs/getting_started/mechanisms.adoc#_templating" >}}[Templating]).
+Enables configuration of arbitrary cookies with any values build from available subject information (See also link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_templating" >}}[Templating]).
 
 .Cookie finalizer configuration
 ====
@@ -82,7 +82,7 @@ config:
 
 == JWT
 
-This finalizer enables transformation of the link:{{< relref "/docs/getting_started/mechanisms.adoc#_subject" >}}[`Subject`] object into a token in a https://www.rfc-editor.org/rfc/rfc7519[JWT] format, which is then made available to your upstream service in either the HTTP `Authorization` header with `Bearer` scheme set, or in a custom header. In addition to setting the JWT specific claims, it allows setting custom claims as well. Your upstream service can then verify the signature of the JWT by making use of heimdall's JWKS endpoint to retrieve the required public keys/certificates from.
+This finalizer enables transformation of the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_subject" >}}[`Subject`] object into a token in a https://www.rfc-editor.org/rfc/rfc7519[JWT] format, which is then made available to your upstream service in either the HTTP `Authorization` header with `Bearer` scheme set, or in a custom header. In addition to setting the JWT specific claims, it allows setting custom claims as well. Your upstream service can then verify the signature of the JWT by making use of heimdall's JWKS endpoint to retrieve the required public keys/certificates from.
 
 To enable the usage of this finalizer, you have to set the `type` property to `jwt`.
 
@@ -92,7 +92,7 @@ Configuration using the `config` property is optional. Following properties are 
 
 * *`claims`*: _string_ (optional, overridable)
 +
-Your template with custom claims, you would like to add to the JWT (See also link:{{< relref "/docs/getting_started/mechanisms.adoc#_templating" >}}[Templating]).
+Your template with custom claims, you would like to add to the JWT (See also link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_templating" >}}[Templating]).
 
 * *`ttl`*: _link:{{< relref "/docs/configuration/types.adoc#_duration" >}}[Duration]_ (optional, overridable)
 +

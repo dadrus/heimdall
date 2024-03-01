@@ -88,7 +88,7 @@ Heimdall can make use of `X-Forwarded-*`, like `X-Forwarded-For`, `X-Forwarded-M
 +
 Depending on your setup you may need to rely on the aforesaid headers. In such cases, you have to configure the `trusted_proxies` option and list the IPs, or IP ranges (CIDR notation) of your proxies in front of heimdall. If not configured, heimdall will not accept those headers from any client to prevent spoofing as it might result in privilege escalation.
 +
-CAUTION: Please consider link:{{< relref "/docs/operations/security.adoc#_http_headers_security_considerations" >}}[security implications] when making use of this property.
+CAUTION: Please consider link:{{< relref "/docs/operations/security.adoc#_http_header_security_considerations" >}}[security implications] when making use of this property.
 
 * *`respond`*: _link:{{< relref "/docs/configuration/types.adoc#_respond" >}}[Respond]_ (optional)
 +

@@ -2,7 +2,7 @@
 title: "Rule Set"
 date: 2022-06-09T22:13:32+02:00
 draft: false
-weight: 61
+weight: 63
 menu:
   docs:
     weight: 3

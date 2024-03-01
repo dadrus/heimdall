@@ -296,7 +296,7 @@ You can find further examples as part of mechanism descriptions, supporting temp
 
 == Expressions
 
-Expressions can be used to execute authorization logic. As of today only https://github.com/google/cel-spec[CEL] is supported as expression language. All standard, as well as https://pkg.go.dev/github.com/google/cel-go/ext#pkg-functions[extension] functions are available. Which of the link:{{<  relref "#_evaluation_objects" >}}[evaluation objects] are available to the expression depends on the mechanism.
+Expressions can be used to execute authorization logic. As of today only https://github.com/google/cel-spec[CEL] is supported as expression language. All standard, as well as https://pkg.go.dev/github.com/google/cel-go/ext#pkg-functions[extension] functions are available. Which of the link:{{<  relref "#_objects" >}}[evaluation objects] are available to the expression depends on the mechanism.
 
 In addition to the build-in, respectively extension methods and functions, as well as the methods available on the evaluation objects, following functions are available as well:
 

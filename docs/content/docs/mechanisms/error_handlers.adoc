@@ -16,7 +16,7 @@ Some of the error handlers may support or require additional configuration. The 
 
 == Default
 
-This mechanism is always there and is executed if no other error handler mechanism is responsible for the error. Actually, there is no need to explicitly configure it. The only exception is to allow overriding the link:{{< relref "/docs/getting_started/rules.adoc#_default_rule" >}}[default rule's] error handler chain in a specific rule for performance reasons (if configured error handlers in the default rule should not be considered). This mechanism type doesn't have any configuration options.
+This mechanism is always there and is executed if no other error handler mechanism is responsible for the error. Actually, there is no need to explicitly configure it. The only exception is to allow overriding the link:{{< relref "/docs/rules/default_rule.adoc" >}}[default rule's] error handler chain in a specific rule for performance reasons (if configured error handlers in the default rule should not be considered). This mechanism type doesn't have any configuration options.
 
 To enable the usage of this mechanism, you have to set the `type` property to `default`.
 
@@ -37,11 +37,11 @@ This error handler mechanism allows redirecting the client to another endpoint, 
 
 To enable the usage of this mechanism, you have to set the `type` property to `redirect`.
 
-Configuration is mandatory by making use of the `if` and `config` properties. The first defines the condition, which must hold true for this error handler to execute and has access to the link:{{< relref "/docs/getting_started/mechanisms.adoc#_request" >}}[`Request`] and the link:{{< relref "/docs/getting_started/mechanisms.adoc#_error" >}}[`Error`] objects. Latter defines the data to drive the redirect and supports the following properties:
+Configuration is mandatory by making use of the `if` and `config` properties. The first defines the condition, which must hold true for this error handler to execute and has access to the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_request" >}}[`Request`] and the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_error" >}}[`Error`] objects. Latter defines the data to drive the redirect and supports the following properties:
 
 * *`to`*: _URL_ (mandatory, not overridable)
 +
-The url to redirect the client to via the `Location` header. Can be templated and has access to the link:{{< relref "/docs/getting_started/mechanisms.adoc#_request" >}}[`Request`] object.
+The url to redirect the client to via the `Location` header. Can be templated and has access to the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_request" >}}[`Request`] object.
 +
 NOTE: When creating query parameters by making use of templates, don't forget to encode the values using the `urlenc` function. See also examples below.
 
@@ -78,7 +78,7 @@ This error handler mechanism responds with HTTP `401 Unauthorized` and a `WWW-Au
 
 To enable the usage of this error handler, you have to set the `type` property to `www_authenticate`.
 
-Configuration is mandatory by making use of the `if` and `config` properties. The first defines the condition, which must hold true for this error handler to execute and has access to the link:{{< relref "/docs/getting_started/mechanisms.adoc#_request" >}}[`Request`] and the link:{{< relref "/docs/getting_started/mechanisms.adoc#_error" >}}[`Error`] objects. Latter defines the data to drive the redirect and supports the following properties:
+Configuration is mandatory by making use of the `if` and `config` properties. The first defines the condition, which must hold true for this error handler to execute and has access to the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_request" >}}[`Request`] and the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_error" >}}[`Error`] objects. Latter defines the data to drive the redirect and supports the following properties:
 
 * *`realm`*: _string_ (optional, overridable)
 +

@@ -2,7 +2,7 @@
 title: "Rule Providers"
 date: 2022-06-09T22:13:54+02:00
 draft: false
-weight: 63
+weight: 64
 menu:
   docs:
     weight: 4
