@@ -16,16 +16,10 @@
 
 package watcher
 
-import "github.com/rs/zerolog"
+import "context"
 
-//go:generate mockery --name ChangeListener --structname ChangeListenerMock --inpackage --testonly
+type noopWatcher struct{}
 
-type ChangeListener interface {
-	OnChanged(logger zerolog.Logger)
-}
-
-//go:generate mockery --name Watcher --structname WatcherMock
-
-type Watcher interface {
-	Add(path string, cl ChangeListener) error
-}
+func (*noopWatcher) Start(_ context.Context) error        { return nil }
+func (*noopWatcher) Stop(_ context.Context) error         { return nil }
+func (*noopWatcher) Add(_ string, _ ChangeListener) error { return nil }
