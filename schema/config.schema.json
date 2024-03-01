@@ -107,20 +107,28 @@
           ],
           "properties": {
             "credentials": {
-              "description": "Credentials for Cache connection purposes",
-              "type": "object",
-              "properties": {
-                "username": {
-                  "description": "Username for connection",
-                  "type": "string",
-                  "default": ""
+              "oneOf": [
+                {
+                  "description": "Path to the file with credentials in the format defined below",
+                  "type": "string"
                 },
-                "password": {
-                  "description": "Password for connection",
-                  "type": "string",
-                  "default": ""
+                {
+                  "description": "Credentials for Cache connection purposes",
+                  "type": "object",
+                  "properties": {
+                    "username": {
+                      "description": "Username for connection",
+                      "type": "string",
+                      "default": ""
+                    },
+                    "password": {
+                      "description": "Password for connection",
+                      "type": "string",
+                      "default": ""
+                    }
+                  }
                 }
-              }
+              ]
             },
             "client_cache": {
               "description": "Local client cache configuration to enhance performance and reduce roundtrips",
