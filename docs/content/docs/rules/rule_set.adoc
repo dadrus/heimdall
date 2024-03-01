@@ -23,7 +23,7 @@ The version schema of the `RuleSet`. The current version of heimdall supports on
 +
 The name of a rule set. Used only for logging purposes.
 
-* *`rules`*: _link:{{< relref "#_rule_configuration" >}}[Rule Configuration] array_ (mandatory)
+* *`rules`*: _link:{{< relref "/docs/rules/rule.adoc#_rule_configuration" >}}[Rule Configuration] array_ (mandatory)
 +
 List of the actual rules.
 

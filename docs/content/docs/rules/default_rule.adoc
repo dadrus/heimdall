@@ -19,11 +19,11 @@ The configuration of the default rule can be done by making use of the `default_
 
 * *`methods`*: _string array_ (optional)
 +
-Which HTTP methods (`GET`, `POST`, `PATCH`, etc) are allowed. Expansion using `ALL` and removal by prefixing the method with an `!` is supported as with the regular rules. Defaults to an empty array. If the default rule is defined and the upstream service API specific rule (see also link:{{< relref "rule.adoc" >}}[Rule Definition] does not override it, no methods will be accepted, effectively resulting in `405 Method Not Allowed` response to Heimdall's client for any urls matched by that particular rule.
+Which HTTP methods (`GET`, `POST`, `PATCH`, etc) are allowed. Expansion using `ALL` and removal by prefixing the method with an `!` is supported as with the regular rules. Defaults to an empty array. If the default rule is defined and the upstream service API specific rule (see also link:{{< relref "rule.adoc#_rule_configuration" >}}[Rule Configuration] does not override it, no methods will be accepted, effectively resulting in `405 Method Not Allowed` response to Heimdall's client for any urls matched by that particular rule.
 
 * *`execute`*: _link:{{< relref "rule.adoc#_regular_pipeline" >}}[Regular Pipeline]_ (mandatory)
 +
-Which mechanisms to use for authentication, authorization, contextualization (enrich) and finalization of the pipeline. At least one link:{{< relref "/docs/mechanisms/authenticators.adoc" >}}[authenticator] must be defined. A specific rule (see also link:{{< relref "rule.adoc" >}}[Rule]) can omit the definition of authenticators, if it wants to reuse the authenticators defined in the default rule. Same is true for other mechanisms. Exception are link:{{< relref "/docs/mechanisms/authorizers.adoc" >}}[authorizers] and link:{{< relref "/docs/mechanisms/contextualizers.adoc" >}}[contextualizers]. As soon, as a specific rule defines at least one authorizer or contextualizer, those authorizers and contextualizers (defined in the default rule) are not considered anymore.
+Which mechanisms to use for authentication, authorization and finalization stages of the pipeline. At least the authentication stage with at least one link:{{< relref "/docs/mechanisms/authenticators.adoc" >}}[authenticator] must be defined. A specific rule (see also link:{{< relref "rule.adoc" >}}[Rule]) can omit the definition of that stage, if it wants to reuse it from in the default rule. Same is true for other stages (See also link:{{< relref "/docs/getting_started/rules.adoc#_default_rule_inheritance" >}}[Rule Inheritance]).
 
 * *`on_error`*: _link:{{< relref "rule.adoc#_error_handler_pipeline" >}}[Error Handler Pipeline]_ (mandatory)
 +

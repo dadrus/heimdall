@@ -13,19 +13,19 @@ menu:
 
 == Rule Set Configuration
 
-Heimdall gets the rule sets from link:{{< relref "/docs/rules/providers.adoc" >}}[rule providers], which, depending on the provider, can load rules from a plain old configuration file, residing in the local file system, or even integrate with Kubernetes to load rules from custom resources.
+Heimdall gets the rule sets from rule providers, which, depending on the provider, can load rules from a plain old configuration file, residing in the local file system, or even integrate with Kubernetes to load rules from custom resources.
 
-In all cases, a single rule definition adheres to the schema defined in link:{{< relref "/docs/rules/rule.adoc" >}}[rule configuration].
+In all cases, a single rule definition adheres to the schema defined in link:{{< relref "/docs/rules/rule.adoc#_rule_configuration" >}}[rule configuration].
 
 NOTE: Usage of environment variables in rule sets depend on the used provider.
 
-Providers define the sources to load the link:{{< relref "rule.adoc#_rule_set" >}}[Rule Sets] from. These make heimdall's behavior dynamic. All providers, you want to enable for a heimdall instance must be configured within the `providers` section of heimdall's configuration.
+Providers define the sources to load the link:{{< relref "rule_set.adoc" >}}[Rule Sets] from. These make heimdall's behavior dynamic. All providers, you want to enable for a heimdall instance must be configured within the `providers` section of heimdall's configuration.
 
 Supported providers, including the corresponding configuration options are described below
 
 == Filesystem
 
-The filesystem provider allows loading of rule sets in a format defined in link:{{< relref "rule.adoc#_rule_set" >}}[Rule Sets] from a file system. The configuration of this provider goes into the `file_system` property. This provider is handy for e.g. starting playing around with heimdall, e.g. locally, or using a container runtime, as well as if your deployment strategy considers deploying a heimdall instance as a Side-Car for each of your services.
+The filesystem provider allows loading of rule sets in a format defined in link:{{< relref "rule_set.adoc" >}}[Rule Sets] from a file system. The configuration of this provider goes into the `file_system` property. This provider is handy for e.g. starting playing around with heimdall, e.g. locally, or using a container runtime, as well as if your deployment strategy considers deploying a heimdall instance as a Side-Car for each of your services.
 
 Following configuration options are supported:
 
@@ -39,7 +39,7 @@ Whether the configured `src` should be watched for updates. Defaults to `false`.
 
 * *`env_vars_enabled`*: _boolean_ (optional)
 +
-Whether to enable environment variables access in the rule set files. Defaults to `false`. If set to `true`, environment variables usage using Bash syntax is possible as with the link:{{< relref "/docs/getting_started/rules.adoc#_configuration_file" >}}[static configuration].
+Whether to enable environment variables access in the rule set files. Defaults to `false`. If set to `true`, environment variables usage using Bash syntax is possible as with the link:{{< relref "/docs/operations/configuration.adoc#_configuration_file" >}}[static configuration].
 +
 WARNING: All environment variables, used in the rule set files must be known in advance to the heimdall process (when it starts). In addition, the usage of that functionality might lead to security issues. If an adversary is somehow able to add new or update existing rule sets, it would be theoretically able exfiltrating environment variables available to the heimdall process by crafting contextualizers or authorizers, which would forward the corresponding values to a controlled service. So, use with caution, disable the watching of rule set updates and try to avoid!
 +
@@ -83,11 +83,11 @@ file_system:
 
 == HTTP Endpoint
 
-This provider allows loading of rule sets in a format defined in link:{{< relref "rule.adoc#_rule_set" >}}[Rule Sets] from any remote endpoint accessible via HTTP(s) and supports rule sets in YAML, as well as in JSON format. The differentiation happens based on the `Content-Type` set in the response from the endpoint, which must be either `application/yaml` or `application/json`, otherwise an error is logged and the response from the endpoint is ignored.
+This provider allows loading of rule sets in a format defined in link:{{< relref "rule_set.adoc" >}}[Rule Sets] from any remote endpoint accessible via HTTP(s) and supports rule sets in YAML, as well as in JSON format. The differentiation happens based on the `Content-Type` set in the response from the endpoint, which must be either `application/yaml` or `application/json`, otherwise an error is logged and the response from the endpoint is ignored.
 
 The loading and removal of rules happens as follows:
 
-* if the response status code is an HTTP 200 OK and contains a link:{{< relref "rule.adoc#_rule_set" >}}[Rule Sets] in a known format (see above), the corresponding rules are loaded (if the definitions are valid)
+* if the response status code is an HTTP 200 OK and contains a link:{{< relref "rule_set.adoc" >}}[Rule Sets] in a known format (see above), the corresponding rules are loaded (if the definitions are valid)
 * in case of network issues, like dns errors, timeouts and alike, the rule sets previously received from the corresponding endpoints are preserved.
 * in any other case related to network communication (e.g. not 200 status code, empty response body, unsupported format, network issues, etc.), the corresponding rules are removed if these were previously loaded.
 
@@ -101,13 +101,13 @@ Whether the configured `endpoints` should be polled for updates. Defaults to `0s
 
 * *`endpoints`*: _RuleSetEndpoint array_ (mandatory)
 +
-Each entry of that array supports all the properties defined by link:{{< relref "/docs/configuration/types.adoc#_endpoint" >}}[Endpoint], except `method`, which is always `GET`. enable_http_cacheAs with the link:{{< relref "/docs/configuration/types.adoc#_endpoint" >}}[Endpoint] type, at least the `url` must be configured. Following properties are defined in addition:
+Each entry of that array supports all the properties defined by link:{{< relref "/docs/configuration/types.adoc#_endpoint" >}}[Endpoint], except `method`, which is always `GET`. As with the link:{{< relref "/docs/configuration/types.adoc#_endpoint" >}}[Endpoint] type, at least the `url` must be configured. Following properties are defined in addition:
 +
 ** *`rule_path_match_prefix`*: _string_ (optional)
 +
 This property can be used to create kind of a namespace for the rule sets retrieved from the different endpoints. If set, the provider checks whether the urls specified in all rules retrieved from the referenced endpoint have the defined path prefix. If not, a warning is emitted and the rule set is ignored. This can be used to ensure a rule retrieved from one endpoint does not collide with a rule from another endpoint.
 
-NOTE: HTTP caching according to https://www.rfc-editor.org/rfc/rfc7234[RFC 7234] is enabled by default. It can be disabled by setting `enable_http_cache` to `false`.
+NOTE: HTTP caching according to https://www.rfc-editor.org/rfc/rfc7234[RFC 7234] is enabled by default. It can be disabled by setting `http_cache.enabled` to `false`.
 
 .Minimal possible configuration
 ====
@@ -153,7 +153,7 @@ http_endpoint:
 
 == Cloud Blob
 
-This provider allows loading of rule sets in a format defined in link:{{< relref "rule.adoc#_rule_set" >}}[Rule Sets] from cloud blobs, like AWS S3 buckets, Google Cloud Storage, Azure Blobs, or other API compatible implementations and supports rule sets in YAML, as well as in JSON format. The differentiation happens based on the `Content-Type` set in the metadata of the loaded blob, which must be either `application/yaml` or `application/json`, otherwise an error is logged and the blob is ignored.
+This provider allows loading of rule sets in a format defined in link:{{< relref "rule_set.adoc" >}}[Rule Sets] from cloud blobs, like AWS S3 buckets, Google Cloud Storage, Azure Blobs, or other API compatible implementations and supports rule sets in YAML, as well as in JSON format. The differentiation happens based on the `Content-Type` set in the metadata of the loaded blob, which must be either `application/yaml` or `application/json`, otherwise an error is logged and the blob is ignored.
 
 The loading and removal of rules happens as follows:
 

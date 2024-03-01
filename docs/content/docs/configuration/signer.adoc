@@ -29,7 +29,7 @@ WARNING: You should always configure a valid key store for production use!
 
 * *`key_id`*: _string_ (optional)
 +
-If the `key_store` contains multiple keys, this property can be used to specify the key to use (see also link:{{< relref "#_key_id_lookup" >}}[Key-Id Lookup]). If not specified, the first key is used. If specified, but there is no key for the given key id present, an error is raised and heimdall will refuse to start.
+If the `key_store` contains multiple keys, this property can be used to specify the key to use (see also link:{{< relref "/docs/configuration/types.adoc#_key_id_lookup" >}}[Key-Id Lookup]). If not specified, the first key is used. If specified, but there is no key for the given key id present, an error is raised and heimdall will refuse to start.
 
 .Possible configuration
 ====
