@@ -63,6 +63,10 @@ h4 {
   font-size: 1.2rem;
 }
 
+div[id] {
+  scroll-margin-top: 5rem;
+}
+
 .paragraph {
   p {
     line-height: 1.7;
@@ -345,7 +349,7 @@ doc-version-select {
   }
 
   .listingblock {
-    max-width: 44rem;  
+    max-width: 44rem;
   }
 }
 
