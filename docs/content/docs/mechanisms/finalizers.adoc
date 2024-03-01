@@ -50,8 +50,8 @@ type: header
 config:
   headers:
     X-User-ID: '{{ quote .Subject.ID }}'
-    X-User-Email: '{{ quote .Subject.Attributes["email"] }}'
-    Host: '{{ quote .Request.Header("Host") }}'
+    X-User-Email: '{{ index .Subject.Attributes "email" | quote }}'
+    Host: '{{ .Request.Header "Host" | quote  }}'
 ----
 ====
 
@@ -76,7 +76,7 @@ type: cookies
 config:
   cookies:
     user_id_cookie: '{{ quote .Subject.ID }}'
-    user_email_cookie: '{{ quote .Subject.Attributes["email"] }}'
+    user_email_cookie: '{{ index .Subject.Attributes "email" | quote }}'
 ----
 ====
 

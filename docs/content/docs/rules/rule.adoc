@@ -157,7 +157,7 @@ execute:
     # in the header finalizer mechanism
     config:
       headers:
-        Host: '{{ .Request.Header("Host") }}'
+        Host: '{{ .Request.Header "Host" | quote }}'
 on_error:
   - error_handler: foobar
 ----
