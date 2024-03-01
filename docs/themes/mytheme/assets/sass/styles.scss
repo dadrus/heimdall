@@ -47,14 +47,14 @@ h2 {
   margin-top: 3rem;
   margin-bottom: 1rem;
   font-size: 2rem;
-  scroll-margin-top: 4rem;
+  scroll-margin-top: 5rem;
 }
 
 h3 {
   margin-top: 2rem;
   margin-bottom: 1rem;
   font-size: 1.5rem;
-  scroll-margin-top: 4rem;
+  scroll-margin-top: 5rem;
 }
 
 h4 {
@@ -276,27 +276,6 @@ doc-version-select {
     order: 1;
   }
 
-@media (min-width: 60rem) {
-  .docs-side-toc {
-    position: sticky;
-    top: 5rem;
-    display: block !important;
-    height: calc(100vh - 6rem);
-    padding-left: .25rem;
-    margin-left: -.25rem;
-    overflow-y: auto;
-  }
-
-  .docs-page-toc {
-    position: sticky;
-    top: 5rem;
-    right: 0;
-    z-index: 2;
-    overflow-y: auto;
-    height: calc(100vh - 7rem);
-  }
-}
-
 .docs-page-toc {
   nav {
     font-size: .875rem;
@@ -369,6 +348,28 @@ doc-version-select {
     max-width: 44rem;  
   }
 }
+
+@media (min-width: 1200px) {
+  .docs-side-toc {
+    position: sticky;
+    top: 5rem;
+    display: block !important;
+    height: calc(100vh - 6rem);
+    padding-left: .25rem;
+    margin-left: -.25rem;
+    overflow-y: auto;
+  }
+
+  .docs-page-toc {
+    position: sticky;
+    top: 5rem;
+    right: 0;
+    z-index: 2;
+    overflow-y: auto;
+    height: calc(100vh - 7rem);
+  }
+}
+
 
 .offcanvas-body .dropdown-item {
   color: #fff;
