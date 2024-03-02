@@ -1,5 +1,5 @@
 ---
-title: "Rule"
+title: "Upstream Rule"
 date: 2022-06-09T22:13:32+02:00
 draft: false
 weight: 61
@@ -12,7 +12,7 @@ description: Rules are the heart of heimdall and allow execution of arbitrary lo
 
 :toc:
 
-In simplest case a rule will just reuse mechanisms from a previously defined link:{{< relref "/docs/mechanisms/catalogue.adoc" >}}[catalogue] in its pipelines. In more complex cases a rule can reconfigure parts of used mechanisms. Which parts can be reconfigured, respectively overridden are mechanism specific and described in the mechanism specific documentation. Reconfiguration is always limited to the particular rule pipeline and does not affect other rules.
+In simplest case an upstream rule will just reuse mechanisms from a previously defined link:{{< relref "/docs/mechanisms/catalogue.adoc" >}}[catalogue] in its pipelines. In more complex cases a rule can reconfigure parts of used mechanisms. Which parts can be reconfigured, respectively overridden are mechanism specific and described in the mechanism specific documentation. Reconfiguration is always limited to the particular rule pipeline and does not affect other rules.
 
 == Configuration
 
@@ -121,7 +121,7 @@ If defined, heimdall will remove the specified query parameters from the origina
 +
 Which mechanisms to use to authenticate, authorize, contextualize (enrich) and finalize the pipeline.
 
-* *`on_error`*: _link:{{< relref "#_error_handler_pipeline" >}}[Error Handler Pipeline]_ (optional)
+* *`on_error`*: _link:{{< relref "#_error_pipeline" >}}[Error Pipeline]_ (optional)
 +
 Which error handler mechanisms to use if any of the mechanisms, defined in the `execute` property, fails. This property is optional only, if a link:{{< relref "default_rule.adoc" >}}[default rule] has been configured and contains an `on_error` definition.
 
@@ -166,11 +166,11 @@ on_error:
 
 As described in the link:{{< relref "/docs/getting_started/pipelines.adoc" >}}[Getting Started] section, heimdall's decision pipeline consists of multiple mechanisms - at least consisting of link:{{< relref "/docs/mechanisms/authenticators.adoc" >}}[authenticators]. The definition of such a pipeline happens as a list of references to the required mechanisms, previously configured in the link:{{< relref "/docs/mechanisms/catalogue.adoc" >}}[mechanisms catalogue] in the following order:
 
-* List of link:{{< relref "/docs/mechanisms/authenticators.adoc" >}}[authenticator] references using `authenticator` as key, followed by the required authenticator `id`. Authenticators following the first defined in the list are used by heimdall as fallback. That is, if first authenticator fails due to missing authentication data, second is executed, etc. By default, fallback is not used if an authenticator fails due to validation errors of the given authentication data. E.g. if an authenticator fails to validate the signature of a JWT token, the next authenticator in the list will not be executed. Instead, the entire pipeline will fail and lead to the execution of the link:{{< relref "#_error_handler_pipeline" >}}[error handler pipeline]. This list is mandatory if no link:{{< relref "default_rule.adoc" >}}[default rule] is configured.
+* List of link:{{< relref "/docs/mechanisms/authenticators.adoc" >}}[authenticator] references using `authenticator` as key, followed by the required authenticator `id`. Authenticators following the first defined in the list are used by heimdall as fallback. That is, if first authenticator fails due to missing authentication data, second is executed, etc. By default, fallback is not used if an authenticator fails due to validation errors of the given authentication data. E.g. if an authenticator fails to validate the signature of a JWT token, the next authenticator in the list will not be executed. Instead, the entire pipeline will fail and lead to the execution of the link:{{< relref "#_error_pipeline" >}}[error pipeline]. This list is mandatory if no link:{{< relref "default_rule.adoc" >}}[default rule] is configured.
 +
 NOTE: Some authenticators use the same sources to get subject authentication object from. E.g. the `jwt` and the `oauth2_introspection` authenticators can retrieve tokens from the same places in the request. If such authenticators are used in the same pipeline, you should configure the more specific ones before the more general ones to have working default fallbacks. To stay with the above example, the `jwt` authenticator is more specific compared to `oauth2_introspection`, as it will be only executed, if the token is in a JWT format. In contrast to this, the `oauth2_introspection` authenticator is more general and does not care about the token format, thus will feel responsible for the request as soon as it finds a bearer token. You can however also make use of the `allow_fallback_on_error` configuration property and set it to `true`. This will allow a fallback even if the verification of the credentials fail.
-* List of link:{{< relref "/docs/mechanisms/contextualizers.adoc" >}}[contextualizer] and link:{{< relref "/docs/mechanisms/authorizers.adoc" >}}[authorizer] references in any order (optional). Can also be mixed. As with authenticators, the list definition happens using either `contextualizer` or `authorizer` as key, followed by the required `id`. All mechanisms in this list are executed in the order, they are defined. If any of these fails, the entire pipeline fails, which leads to the execution of the link:{{< relref "#_error_handler_pipeline" >}}[error handler pipeline]. This list is optional.
-* List of link:{{< relref "/docs/mechanisms/finalizers.adoc" >}}[finalizer] references using `finalizers` as key, followed by the required finalizer `id`. All finalizers in this list are executed in the order they are defined. If any of these fail, the entire pipeline fails, which leads to the execution of the link:{{< relref "#_error_handler_pipeline" >}}[error handler pipeline]. This list is optional. If a link:{{< relref "default_rule.adoc" >}}[default rule] is configured, and no `finalizers` are configured on a specific rule level, the `finalizers` from the default rule are used. If the default rule does not have any `finalizers` configured either, no finalization will take place.
+* List of link:{{< relref "/docs/mechanisms/contextualizers.adoc" >}}[contextualizer] and link:{{< relref "/docs/mechanisms/authorizers.adoc" >}}[authorizer] references in any order (optional). Can also be mixed. As with authenticators, the list definition happens using either `contextualizer` or `authorizer` as key, followed by the required `id`. All mechanisms in this list are executed in the order, they are defined. If any of these fails, the entire pipeline fails, which leads to the execution of the link:{{< relref "#_error_pipeline" >}}[error pipeline]. This list is optional.
+* List of link:{{< relref "/docs/mechanisms/finalizers.adoc" >}}[finalizer] references using `finalizers` as key, followed by the required finalizer `id`. All finalizers in this list are executed in the order they are defined. If any of these fail, the entire pipeline fails, which leads to the execution of the link:{{< relref "#_error_pipeline" >}}[error pipeline]. This list is optional. If a link:{{< relref "default_rule.adoc" >}}[default rule] is configured, and no `finalizers` are configured on a specific rule level, the `finalizers` from the default rule are used. If the default rule does not have any `finalizers` configured either, no finalization will take place.
 
 In all cases, the used mechanism can be partially reconfigured if supported by the corresponding type. Configuration goes into the `config` properties. These reconfigurations are always local to the given rule. With other words, you can adjust your rule specific pipeline as you want without any side effects.
 
@@ -224,9 +224,9 @@ This example uses
 * authorizer `foo` is only executed if the request method is HTTP POST.
 ====
 
-== Error Handler Pipeline
+== Error Pipeline
 
-Compared to the link:{{< relref "#_regular_pipeline" >}}[Regular Pipeline], the error handler pipeline is pretty simple. It is also a list of mechanism references, but all referenced types are link:{{< relref "/docs/mechanisms/error_handlers.adoc" >}}[error handler types]. Thus, each entry in this list must have `error_handler` as key, followed by the `ìd` of the required error handler, previously defined in the link:{{< relref "/docs/mechanisms/catalogue.adoc" >}}[mechanism catalogue]. Error handlers are always executed as fallbacks. So, if the condition of the first error handler does not match, second is selected, if its condition matches, it is executed, otherwise the next one is selected, etc. If none of the conditions of the defined error handlers match, the link:{{< relref "/docs/mechanisms/error_handlers.adoc#_default" >}}[default error handler] is executed.
+Compared to the link:{{< relref "#_regular_pipeline" >}}[Regular Pipeline], the error pipeline is pretty simple. It is also a list of mechanism references, but all referenced types are link:{{< relref "/docs/mechanisms/error_handlers.adoc" >}}[error handler types]. Thus, each entry in this list must have `error_handler` as key, followed by the `ìd` of the required error handler, previously defined in the link:{{< relref "/docs/mechanisms/catalogue.adoc" >}}[mechanism catalogue]. Error handlers are always executed as fallbacks. So, if the condition of the first error handler does not match, second is selected, if its condition matches, it is executed, otherwise the next one is selected, etc. If none of the conditions of the defined error handlers match, the link:{{< relref "/docs/mechanisms/error_handlers.adoc#_default" >}}[default error handler] is executed.
 
 As with the regular pipeline, partial reconfiguration of the used mechanisms is possible if supported by the corresponding type. Same is true for overrides of the `if` conditions. The overrides are always local to the given rule as well.
 

@@ -7,15 +7,14 @@ menu:
   docs:
     weight: 2
     parent: "Rules"
+description: Heimdall lets you not only define upstream service specific rules, it does also support a definition of an optional default rule, which, if defined, kicks in, if no other rule matches. This way you can ensure secure defaults by simultaneously reducing the amount of work while defining upstream service API specific rules.
 ---
 
 :toc:
 
-Heimdall lets you not only define upstream service specific rules, it does also support a definition of an optional default rule, which, if defined, kicks in, if no other rule matches. This way you can ensure secure defaults by simultaneously reducing the amount of work while defining upstream service API specific rules. That is, an upstream service API specific rule can reuse definitions from the default rule.
+The configuration of the default rule can be done by making use of the `default_rule` property and configuring the options shown below.
 
-NOTE: The default rule does not support all the properties, which can be configured in a specific link:{{< relref "rule.adoc" >}}[rule]. E.g. it can not be used to forward requests to an upstream service, heimdall is protecting. So, if you operate heimdall in the reverse proxy mode, the default rule should be configured to reject requests. Otherwise, heimdall will respond with an error.
-
-The configuration of the default rule can be done by making use of the `default_rule` property and configuring the following options.
+NOTE: The default rule does not support all the properties, which can be configured in an link:{{< relref "rule.adoc" >}}[upstream rule]. E.g. it can not be used to forward requests to an upstream service, heimdall is protecting. So, if you operate heimdall in the reverse proxy mode, the default rule should be configured to reject requests. Otherwise, heimdall will respond with an error.
 
 * *`methods`*: _string array_ (optional)
 +
@@ -25,7 +24,7 @@ Which HTTP methods (`GET`, `POST`, `PATCH`, etc) are allowed. Expansion using `A
 +
 Which mechanisms to use for authentication, authorization and finalization stages of the pipeline. At least the authentication stage with at least one link:{{< relref "/docs/mechanisms/authenticators.adoc" >}}[authenticator] must be defined. A specific rule (see also link:{{< relref "rule.adoc" >}}[Rule]) can omit the definition of that stage, if it wants to reuse it from in the default rule. Same is true for other stages (See also link:{{< relref "/docs/getting_started/rules.adoc#_default_rule_inheritance" >}}[Rule Inheritance]).
 
-* *`on_error`*: _link:{{< relref "rule.adoc#_error_handler_pipeline" >}}[Error Handler Pipeline]_ (mandatory)
+* *`on_error`*: _link:{{< relref "rule.adoc#_error_pipeline" >}}[Error Pipeline]_ (mandatory)
 +
 Which error handler mechanisms to use if any of the mechanisms, defined in the `execute` property fail. Allows omitting the definition of error handlers in specific rules. As soon as a specific rule defines at least one error handler mechanism, all error handler mechanisms, defined in the default rule are ignored.
 
