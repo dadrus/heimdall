@@ -7,7 +7,7 @@ menu:
   docs:
     weight: 4
     parent: "Mechanisms"
-description: The following sections describe the available authorizer types in more detail.
+description: Authorizers ensure that only those subjects, which are eligible can access the desired resource. This page describes the available authorizer types in detail.
 ---
 
 :toc:

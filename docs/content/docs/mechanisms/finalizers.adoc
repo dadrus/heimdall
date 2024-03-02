@@ -7,7 +7,7 @@ menu:
   docs:
     weight: 6
     parent: "Mechanisms"
-description: The following sections describe the available finalizer types in more detail.
+description: Finalizers are the last steps executed in a rule pipeline and can e.g. create a special representation of the subject to be made available to the upstream service. This page describes the available finalizer types in detail.
 ---
 
 :toc:

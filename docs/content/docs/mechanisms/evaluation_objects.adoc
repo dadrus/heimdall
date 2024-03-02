@@ -1,5 +1,5 @@
 ---
-title: "Evaluation Objects"
+title: "Evaluation Objects & Beyond"
 date: 2024-01-10T15:53:47+02:00
 draft: false
 weight: 52
@@ -7,12 +7,16 @@ menu:
   docs:
     weight: 2
     parent: "Mechanisms"
-description: Some mechanisms support, respectively require access to different types of objects they work on, e.g. to render a header with specific values, or to check whether some expectations apply. These are described on this page.
+description: The dynamic nature of mechanisms is given by the ability to work on different objects and making use of templates and scripts to implement different use cases.
 ---
+
+E.g. in one case, you want to have access to a particular request header. In another case you would like to add specific data to the resulting JWT created by heimdall. And in yet another case, you may want to check whether some expectations apply. These capabilities are described on this page.
 
 :toc:
 
 == Objects
+
+Objects represent state in the execution of a particular rule. These are the entities, either created or used by particular mechanisms and can represent things, like the actual request, the authenticated subject of the request and many more.
 
 === Subject
 
@@ -24,7 +28,7 @@ The identifier of the subject. This value is set by the authenticator, which was
 
 * *`Attributes`*: _map_
 +
-Contains all attributes, which are known about the subject. The content is initially set by the authenticator, which was able to authenticate the subject. Mechanisms following the authenticator in a rule pipeline can update it, but cannot override any entries.
+Contains all attributes, which are known about the subject. The content is initially set by the authenticator, which was able to authenticate the subject. Mechanisms in the following stages can update it, but cannot override any entries.
 
 Each object of this type can be thought as a JSON object. Here some examples:
 
@@ -183,7 +187,7 @@ Payload = "SomeStringValue"
 
 === Error
 
-This object represents an error, which has been raised during the execution of the pipeline and is available in `if` link:{{< relref "#_expressions">}}[CEL expressions] of link:{{< relref "error_handlers.adoc">}}[Error Handlers]. Following properties are available:
+This object represents an error, which has been raised during the execution of a rule and is available in `if` link:{{< relref "#_expressions">}}[CEL expressions] of link:{{< relref "error_handlers.adoc">}}[Error Handlers]. Following properties are available:
 
 * *`Source`*: _string_
 +
@@ -210,7 +214,7 @@ Values = {
 
 == Templating
 
-Some pipeline mechanisms support templating using https://golang.org/pkg/text/template/[Golang Text Templates]. Templates can act on all objects described above (link:{{< relref "#_subject" >}}[Subject], link:{{< relref "#_request" >}}[Request], link:{{< relref "#_payload" >}}[Payload] and link:{{< relref "#_values" >}}[Values]). Which exactly are supported is mechanism specific.
+Some mechanisms support templating using https://golang.org/pkg/text/template/[Golang Text Templates]. Templates can act on all objects described above (link:{{< relref "#_subject" >}}[Subject], link:{{< relref "#_request" >}}[Request], link:{{< relref "#_payload" >}}[Payload] and link:{{< relref "#_values" >}}[Values]). Which exactly are supported is mechanism specific.
 
 To ease the usage, all http://masterminds.github.io/sprig/[sprig] functions, except `env` and `expandenv`, as well as the following functions are available:
 
@@ -296,7 +300,7 @@ You can find further examples as part of mechanism descriptions, supporting temp
 
 == Expressions
 
-Expressions can be used to execute authorization logic. As of today only https://github.com/google/cel-spec[CEL] is supported as expression language. All standard, as well as https://pkg.go.dev/github.com/google/cel-go/ext#pkg-functions[extension] functions are available. Which of the link:{{<  relref "#_objects" >}}[evaluation objects] are available to the expression depends on the mechanism.
+Expressions can be used to execute conditional logic. As of today only https://github.com/google/cel-spec[CEL] is supported as expression language. All standard, as well as https://pkg.go.dev/github.com/google/cel-go/ext#pkg-functions[extension] functions are available. Which of the link:{{<  relref "#_objects" >}}[evaluation objects] are available to the expression depends on the mechanism.
 
 In addition to the build-in, respectively extension methods and functions, as well as the methods available on the evaluation objects, following functions are available as well:
 
@@ -333,7 +337,7 @@ Given the following Payload object
 Payload = { "result": true }
 ----
 
-a CEL expression to check the `result` attribute is set to `true`, would look as follows:
+a CEL expression to check whether the `result` attribute is set to `true`, would look as follows:
 
 [source, cel]
 ----

@@ -26,11 +26,11 @@ NOTE: All mechanisms are stateless. Even some of them support caching, the corre
 
 == Mechanisms Catalogue
 
-Those mechanisms, which should be available for usage in rules, must be configured first. That suits the following purposes:
+Those mechanisms, which should be available for usage in rules, must be defined/configured first. That suits the following purposes:
 
 * Mechanisms are per se generic and must be configured for usage in particular use cases.
 * That configuration provides useful default behavior addressing your particular requirements, like which identity management system to use, etc.
-* Only those mechanisms, which are configured can be used in rules. With other words, if you do not define any mechanism, you cannot define any rule.
+* Only those mechanisms, which are defined can be used in rules. With other words, if you do not define any mechanism, you cannot define any rule.
 * That makes the definition of rules also very simple - just reference the required mechanisms and "tune" the configuration, specified in the catalogue only if required. Not everything can be tuned though.
 * It also provides secure defaults. E.g. that way you can ensure heimdall communicates only to those systems, you allowed.
 

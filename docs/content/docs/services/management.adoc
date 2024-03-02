@@ -7,11 +7,12 @@ menu:
   docs:
     weight: 3
     parent: "Services"
+description: When heimdall is started, the management service is always exposed and offers endpoints for health monitoring and to retrieve keys and certificates used by heimdall for JWT creation purposes.
 ---
 
 :toc:
 
-The Management service is always there, regardless of the mode of operation Heimdall is started in. By default, Heimdall listens on `0.0.0.0:4457` endpoint for incoming requests and also configures useful default timeouts as well as buffer limits. No other options are configured. You can however adjust the configuration for your needs.
+By default, Heimdall listens on `0.0.0.0:4457` endpoint for incoming requests and also configures useful default timeouts as well as buffer limits. No other options are configured. You can however adjust the configuration for your needs.
 
 This service exposes the health and the JWKS endpoints.
 

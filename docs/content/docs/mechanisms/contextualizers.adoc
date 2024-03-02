@@ -7,7 +7,7 @@ menu:
   docs:
     weight: 5
     parent: "Mechanisms"
-description: The following sections describe the available contextualizer types in more detail.
+description: Contextualizers allow you enriching the information about the request and the authenticated subject. This page describes the available contextualizer types in detail.
 ---
 
 :toc:

@@ -7,13 +7,12 @@ menu:
   docs:
     weight: 2
     parent: "Services"
+description: When heimdall is started exposing this service, you can make use of heimdall's proxy operating mode and use it as a proxy in front of your upstream API or web server
 ---
 
 :toc:
 
-Proxy is one of the operating modes supported by Heimdall, used if you start Heimdall with `heimdall serve proxy`. By default, Heimdall listens on `0.0.0.0:4455` endpoint for incoming requests in this mode of operation and also configures useful default timeouts, amount of possible upstream connections is active and idle state, as well as buffer limits. No other options are configured. You can, and should however adjust the configuration for your needs.
-
-This service exposes only the proxy endpoint.
+To make use of this service you have to start Heimdall with `heimdall serve proxy`. By default, Heimdall listens on `0.0.0.0:4455` endpoint for incoming requests in this mode of operation and also configures useful default timeouts, amount of possible upstream connections is active and idle state, as well as buffer limits. No other options are configured. You can, and should however adjust the configuration for your needs.
 
 == Configuration
 

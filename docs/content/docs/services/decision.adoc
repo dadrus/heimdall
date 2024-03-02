@@ -7,17 +7,16 @@ menu:
   docs:
     weight: 1
     parent: "Services"
+description: Decision service implements the decision operating mode using which you can integrate heimdall with existing reverse proxies, or API gateways.
 ---
 
 :toc:
 
-Decision is one of the operating modes supported by heimdall, used if you start heimdall with `heimdall serve decision` or `heimdall serve decision --envoy-grpc`. By default, heimdall listens on `0.0.0.0:4456` endpoint for incoming requests in this mode of operation and also configures useful default timeouts, as well as buffer limits. No other options are configured. You can, and should however adjust the configuration for your needs.
-
-This service exposes only the Decision service endpoint.
+To make use of this service you have to start heimdall with `heimdall serve decision` or `heimdall serve decision --envoy-grpc`. By default, heimdall listens on `0.0.0.0:4456` endpoint for incoming requests in this mode of operation and also configures useful default timeouts, as well as buffer limits. No other options are configured. You can, and should however adjust the configuration for your needs.
 
 == Configuration
 
-The configuration for the Decision service can be adjusted in the `decision` property, which lives in the `serve` property of heimdall's configuration and supports the following properties.
+The configuration of the Decision service can be adjusted in the `decision` property, which lives in the `serve` property of heimdall's configuration and supports the following properties.
 
 * *`host`*: _string_ (optional)
 +

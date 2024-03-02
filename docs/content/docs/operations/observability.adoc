@@ -12,7 +12,7 @@ description: To support easier operation and integration in diverse APM products
 
 :toc:
 
-== Logging in Heimdall
+== Logging
 
 Heimdall's implementation uses https://github.com/rs/zerolog[zerolog] - Zero Allocation JSON Logger, which can however also log in plain text. All emitted log statements include information related to distributed tracing (if tracing is enabled) so that not only log statements can be correlated to traces, but also all log statements belonging to single request/transaction can be correlated as well.
 
@@ -181,7 +181,7 @@ Otherwise, if you configure it to use `gelf` format, the output will look as fol
  "short_message": "TX finished"}
 ----
 
-== Tracing in Heimdall
+== Tracing
 
 Heimdall makes use of https://opentelemetry.io/[OpenTelemetry] for distributed tracing to support recording of paths taken by requests and supports all environment variables including the defined values according to https://opentelemetry.io/docs/reference/specification/sdk-environment-variables/[OpenTelemetry Environment Variables] and https://opentelemetry.io/docs/concepts/sdk-configuration/[OpenTelemetry SDK Configuration] specifications. In addition to these environment variables, heimdall defines some additional options, which are described in link:{{< relref "/docs/observability/tracing.adoc" >}}[Tracing Configuration] and can be used to tune the behaviour.
 
@@ -236,7 +236,7 @@ OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=http://collector:4317
 
 If your environment supports OpenTelemetry and usage of defaults is ok, most probably, the only required environment variable to be set might be the `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT`.
 
-== Metrics in Heimdall
+== Metrics
 
 Heimdall makes use of https://opentelemetry.io/[OpenTelemetry] to emit metrics. Depending on the configuration, push or pull based metrics export is supported. As with tracing, the entire configuration happens via environment variables as defined by https://opentelemetry.io/docs/reference/specification/sdk-environment-variables/[OpenTelemetry Environment Variables] and https://opentelemetry.io/docs/concepts/sdk-configuration/[OpenTelemetry SDK Configuration] specifications. In addition to these environment variables, heimdall allows disabling collection and exposure of metrics if required, which is described under link:{{< relref "/docs/observability/tracing.adoc" >}}[Tracing Configuration].
 
@@ -291,7 +291,7 @@ Number of seconds until a certificate used by a particular service (decision, pr
 
 |===
 
-== Runtime Profiling in Heimdall
+== Runtime Profiling
 
 If enabled, heimdall exposes a `/debug/pprof` HTTP endpoint on port `10251` (See also link:{{< relref "/docs/observability/runtime_profiling.adoc" >}}[Runtime Profiling Configuration]) on which runtime profiling data in the `profile.proto` format (also known as `pprof` format) can be consumed by APM tools, like https://github.com/google/pprof[Google's pprof], https://grafana.com/oss/phlare/[Grafana Phlare], https://pyroscope.io/[Pyroscope] and many more for visualization purposes. Following information is available:
 

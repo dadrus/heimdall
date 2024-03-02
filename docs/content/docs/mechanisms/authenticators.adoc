@@ -7,7 +7,7 @@ menu:
   docs:
     weight: 3
     parent: "Mechanisms"
-description: The following sections describe the available authenticator types in more detail.
+description: Authenticators verify the authentication status of requests and create subjects. This page  describes the available authenticator types in detail.
 ---
 
 :toc:
