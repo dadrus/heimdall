@@ -16,7 +16,7 @@ Some of the contextualizers may support or require additional configuration. The
 
 == Generic
 
-This mechanism allows you to communicate to any API you want to fetch further information about the subject. Typical scenario is getting specific attributes for later authorization purposes which are not known to the authentication system and thus were not made available in link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_subject" >}}[`Subject's`] `Attributes` property. If the API responses with a 2xx HTTP response code, the payload is made available in the `Attributes` property of the `Subject`, otherwise, if not overridden, an error is thrown and the execution of the regular pipeline stops. To avoid overwriting of existing attributes, this object is however not available on the top level, but under a key named by the `id` of the authorizer (See also the example below). If the `Content-Type` of the response is either ending with `json` or is `application/x-www-form-urlencoded`, the payload is decoded and made available as map, otherwise it is treated as string, but, as written above, is made available as well.
+This mechanism allows you to communicate to any API you want to fetch further information about the subject. Typical scenario is getting specific attributes for later authorization purposes which are not known to the authentication system and thus were not made available in link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_subject" >}}[`Subject's`] `Attributes` property. If the API responses with a 2xx HTTP response code, the payload is made available in the `Attributes` property of the `Subject`, otherwise, if not overridden, an error is thrown and the execution of the authentication & authorization pipeline stops. To avoid overwriting of existing attributes, this object is however not available on the top level, but under a key named by the `id` of the authorizer (See also the example below). If the `Content-Type` of the response is either ending with `json` or is `application/x-www-form-urlencoded`, the payload is decoded and made available as map, otherwise it is treated as string, but, as written above, is made available as well.
 
 To enable the usage of this contextualizer, you have to set the `type` property to `generic`.
 
@@ -44,7 +44,7 @@ Allows caching of the API responses. Defaults to 10 seconds. The cache key is ca
 
 * *`continue_pipeline_on_error`*: _boolean_ (optional, overridable)
 +
-If set to `true`, allows the pipeline to continue with the execution of the next mechanisms. So the error, if thrown, is ignored. Defaults to `false`, which means the execution of the regular pipeline is stopped and the execution of the error pipeline is started.
+If set to `true`, allows the pipeline to continue with the execution of the next mechanisms. So the error, if thrown, is ignored. Defaults to `false`, which means the execution of the authentication & authorization pipeline is stopped and the execution of the error pipeline is started.
 
 * *`values`* _map of strings_ (optional, overridable)
 +
