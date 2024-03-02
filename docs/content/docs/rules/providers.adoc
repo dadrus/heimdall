@@ -15,7 +15,7 @@ menu:
 
 Heimdall gets the rule sets from rule providers, which, depending on the provider, can load rules from a plain old configuration file, residing in the local file system, or even integrate with Kubernetes to load rules from custom resources.
 
-In all cases, a single rule definition adheres to the schema defined in link:{{< relref "/docs/rules/rule.adoc#_rule_configuration" >}}[rule configuration].
+In all cases, a single rule definition adheres to the schema defined in link:{{< relref "/docs/rules/regular_rule.adoc#_configuration" >}}[rule configuration].
 
 NOTE: Usage of environment variables in rule sets depend on the used provider.
 
@@ -318,7 +318,7 @@ The name of a rule set.
 +
 References the heimdall instance, which should use this `RuleSet`.
 
-* *`rules`*: _link:{{< relref "rule.adoc#_rule_configuration" >}}[Rule Configuration] array_ (mandatory)
+* *`rules`*: _link:{{< relref "regular_rule.adoc#_configuration" >}}[Rule Configuration] array_ (mandatory)
 +
 List of the actual rules.
 

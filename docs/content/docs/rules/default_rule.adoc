@@ -14,17 +14,17 @@ description: Heimdall lets you not only define upstream service specific rules, 
 
 The configuration of the default rule can be done by making use of the `default_rule` property and configuring the options shown below.
 
-NOTE: The default rule does not support all the properties, which can be configured in an link:{{< relref "rule.adoc" >}}[upstream rule]. E.g. it can not be used to forward requests to an upstream service, heimdall is protecting. So, if you operate heimdall in the reverse proxy mode, the default rule should be configured to reject requests. Otherwise, heimdall will respond with an error.
+NOTE: The default rule does not support all the properties, which can be configured in an link:{{< relref "regular_rule.adoc" >}}[regular rule]. E.g. it can not be used to forward requests to an upstream service, heimdall is protecting. So, if you operate heimdall in the reverse proxy mode, the default rule should be configured to reject requests. Otherwise, heimdall will respond with an error.
 
 * *`methods`*: _string array_ (optional)
 +
-Which HTTP methods (`GET`, `POST`, `PATCH`, etc) are allowed. Expansion using `ALL` and removal by prefixing the method with an `!` is supported as with the regular rules. Defaults to an empty array. If the default rule is defined and the upstream service API specific rule (see also link:{{< relref "rule.adoc#_rule_configuration" >}}[Rule Configuration] does not override it, no methods will be accepted, effectively resulting in `405 Method Not Allowed` response to Heimdall's client for any urls matched by that particular rule.
+Which HTTP methods (`GET`, `POST`, `PATCH`, etc) are allowed. Expansion using `ALL` and removal by prefixing the method with an `!` is supported as with the regular rules. Defaults to an empty array. If the default rule is defined and the upstream service API specific rule (see also link:{{< relref "regular_rule.adoc#_configuration" >}}[Rule Configuration] does not override it, no methods will be accepted, effectively resulting in `405 Method Not Allowed` response to Heimdall's client for any urls matched by that particular rule.
 
-* *`execute`*: _link:{{< relref "rule.adoc#_authentication_authorization_pipeline" >}}[Authentication & Authorization Pipeline]_ (mandatory)
+* *`execute`*: _link:{{< relref "regular_rule.adoc#_authentication_authorization_pipeline" >}}[Authentication & Authorization Pipeline]_ (mandatory)
 +
-Which mechanisms to use for authentication, authorization and finalization stages of the pipeline. At least the authentication stage with at least one link:{{< relref "/docs/mechanisms/authenticators.adoc" >}}[authenticator] must be defined. A specific rule (see also link:{{< relref "rule.adoc" >}}[Rule]) can omit the definition of that stage, if it wants to reuse it from in the default rule. Same is true for other stages (See also link:{{< relref "/docs/getting_started/rules.adoc#_default_rule_inheritance" >}}[Rule Inheritance]).
+Which mechanisms to use for authentication, authorization and finalization stages of the pipeline. At least the authentication stage with at least one link:{{< relref "/docs/mechanisms/authenticators.adoc" >}}[authenticator] must be defined. A specific rule (see also link:{{< relref "regular_rule.adoc" >}}[Regular Rule]) can omit the definition of that stage, if it wants to reuse it from in the default rule. Same is true for other stages (See also link:{{< relref "/docs/getting_started/rules.adoc#_default_rule_inheritance" >}}[Rule Inheritance]).
 
-* *`on_error`*: _link:{{< relref "rule.adoc#_error_pipeline" >}}[Error Pipeline]_ (mandatory)
+* *`on_error`*: _link:{{< relref "regular_rule.adoc#_error_pipeline" >}}[Error Pipeline]_ (mandatory)
 +
 Which error handler mechanisms to use if any of the mechanisms, defined in the `execute` property fail. Allows omitting the definition of error handlers in specific rules. As soon as a specific rule defines at least one error handler mechanism, all error handler mechanisms, defined in the default rule are ignored.
 
@@ -47,7 +47,7 @@ default_rule:
 
 This example defines a default rule, which allows HTTP `GET` and `PATCH` requests on any URL (will respond with `405 Method Not Allowed` for any other HTTP method used by a client). The authentication 6 authorization pipeline consists of two authenticators, with `session_cookie_from_kratos_authn` being the first and `oauth2_introspect_token_from_keycloak_authn` being the fallback (if the first one fails), a `deny_all_requests_authz` authorizer and the `create_jwt` finalizer. The error pipeline is configured to execute only the `authenticate_with_kratos_eh` error handler.
 
-Obviously, the authentication & authorization pipeline (defined in the `execute` property) of this default rule will always result in an error due to `deny_all_requests_authz`. This way it is thought to provide secure defaults and let the upstream specific rules override at least the part dealing with authorization. Such an upstream specific rule could then look like follows:
+Obviously, the authentication & authorization pipeline (defined in the `execute` property) of this default rule will always result in an error due to `deny_all_requests_authz`. This way it is thought to provide secure defaults and let the upstream specific (regular) rules override at least the part dealing with authorization. Such an upstream specific rule could then look like follows:
 
 [source, yaml]
 ----

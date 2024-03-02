@@ -1,5 +1,5 @@
 ---
-title: "Upstream Rule"
+title: "Regular Rule"
 date: 2022-06-09T22:13:32+02:00
 draft: false
 weight: 61
@@ -7,16 +7,16 @@ menu:
   docs:
     weight: 1
     parent: "Rules"
-description: Rules are the heart of heimdall and allow execution of arbitrary logic required by your upstream service. This page describes the available configuration options in detail.
+description: Regular rules allow definition and as such execution of arbitrary logic required by your upstream service. This page describes the available configuration options for a regular rule in detail.
 ---
 
 :toc:
 
-In simplest case an upstream rule will just reuse mechanisms from a previously defined link:{{< relref "/docs/mechanisms/catalogue.adoc" >}}[catalogue] in its pipelines. In more complex cases a rule can reconfigure parts of used mechanisms. Which parts can be reconfigured, respectively overridden are mechanism specific and described in the mechanism specific documentation. Reconfiguration is always limited to the particular rule pipeline and does not affect other rules.
+In simplest case a regular rule will just reuse mechanisms from a previously defined link:{{< relref "/docs/mechanisms/catalogue.adoc" >}}[catalogue] in its pipelines. In more complex cases a rule can reconfigure parts of used mechanisms. Which parts can be reconfigured, respectively overridden are mechanism specific and described in the mechanism specific documentation. Reconfiguration is always limited to the particular rule pipeline and does not affect other rules.
 
 == Configuration
 
-A single rule consists of the following properties:
+A single regular rule consists of the following properties:
 
 * *`id`*: _string_ (mandatory)
 +

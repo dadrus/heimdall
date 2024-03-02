@@ -7,14 +7,10 @@ menu:
   docs:
     parent: "Getting Started"
     weight: 3
-description: Rules defines what should happen to particular requests and under which conditions. They assemble authentication & authorization and error pipelines and bring previously configured mechanisms to life.
+description: Rules defines what should happen to particular requests and under which conditions. They assemble the authentication & authorization and error pipelines and bring previously configured mechanisms to life.
 ---
 
 :toc:
-
-== Overview
-
-Rules are the entities, which allow you to define the authentication & authorization and error link:{{< relref "/docs/getting_started/pipelines.adoc" >}}[pipelines] required by your upstream services by making use of previously defined mechanisms.
 
 You can compare the relation between mechanisms and rules to a relation between a catalogue at a car dealer and a real car, when you get it. So, mechanisms is what you can see and select in a catalogue (though, in case of heimdall you have to define that catalogue first) to compile your car and the rule is your car with real components and behaviour. In that sense when you define a rule, you specify which mechanisms should it be built from and whether you would like some "tuning" to be applied to better suit your needs.
 
@@ -29,7 +25,7 @@ Heimdall supports two types of rules:
 
 In general each rule consists of the following parts
 
-* an identifier - to uniquely identify a rule
+* an identifier - to uniquely identify a rule (regular rules only)
 * an url pattern - to match the incoming request against (regular rules only)
 * a list of allowed HTTP methods for the matched requests
 * a list of mechanisms assembling the authentication & authorization pipeline and executed for the matched request,
@@ -65,7 +61,7 @@ flowchart TD
 
 . *Any rule matching url?* - This is the first step executed by heimdall in which it tries to find a rule matching the request url. The information about the scheme, host, path and query is taken either from the URL itself, or if present and allowed, from the `X-Forwarded-Proto`, `X-Forwarded-Host`, or `X-Forwarded-Uri` headers of the incoming request. The request is denied if there is no matching rule, respectively no default rule. Otherwise, the rule specific pipeline is executed. When heimdall is evaluating the rules against the request url it takes the first matching one.
 . *Method allowed?* - As soon as a rule matching the request is found (which might also be the default rule if specified and there was no regular rule matching the request), a check is done whether the used HTTP method is allowed or not. The information about the HTTP method is either taken from the request itself or, if present and allowed, from the `X-Forwarded-Method` header.
-. *Execute authentication & authorization pipeline* - when the above steps succeed, the regular (authentication & authorization) pipeline mechanisms are executed.
+. *Execute authentication & authorization pipeline* - when the above steps succeed, the mechanisms defined in this pipeline are executed.
 . *Forward request, respectively respond to the API gateway* - when the above steps succeed, heimdall, depending on the link:{{< relref "/docs/getting_started/operating_modes.adoc" >}}[operating mode], responds with, respectively forwards whatever was defined in the pipeline (usually this is a set of HTTP headers). Otherwise
 . *Execute error pipeline* is executed if any of the mechanisms, defined in the authentiction & authorization pipeline fail. This again results in a response, this time however, based on the definition in the used error handler.
 
@@ -153,7 +149,7 @@ public class DefaultRule extends BaseRule {
 
 with at least the aforesaid two `checkMethods` and `executeAuthenticationStage` methods being implemented as this is also required for the regular rule.
 
-On the other hand, the definition of a regular, respectively upstream specific rule is then not a class deriving from the `BaseRule`, but from the `DefaultRule`. That way upstream specific rules are only required, if the behavior the default rule would not fit the given requirements of a particular service, respectively endpoint. So, if e.g. a rule requires only the authorization stage to be different from the default rule, you would only specify the required authentication mechanisms. That  would result in something like shown in the snippet below.
+On the other hand, the definition of a regular, respectively upstream specific rule is then not a class deriving from the `BaseRule`, but from the `DefaultRule`. That way, upstream specific rules are only required, if the behavior of the default rule would not fit the given requirements of a particular service, respectively endpoint. So, if e.g. a rule requires only the authentication stage to be different from the default rule, you would only specify the required authentication mechanisms. That  would result in something like shown in the snippet below.
 
 [source, java]
 ----
