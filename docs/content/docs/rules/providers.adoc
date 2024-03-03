@@ -7,25 +7,22 @@ menu:
   docs:
     weight: 4
     parent: "Rules"
+description: Rule providers manage rules in heimdall. They load, reload or remove rules when new rule sets appear, changes are detected, or rule sets are deleted.
 ---
 
 :toc:
 
-== Rule Set Configuration
+Providers allow definition of sources to load the link:{{< relref "rule_set.adoc" >}}[rule sets] from. These make heimdall's behavior dynamic. All providers, you want to enable for a heimdall instance must be configured within the `providers` section of heimdall's configuration.
 
-Heimdall gets the rule sets from rule providers, which, depending on the provider, can load rules from a plain old configuration file, residing in the local file system, or even integrate with Kubernetes to load rules from custom resources.
-
-In all cases, a single rule definition adheres to the schema defined in link:{{< relref "/docs/rules/regular_rule.adoc#_configuration" >}}[rule configuration].
-
-NOTE: Usage of environment variables in rule sets depend on the used provider.
-
-Providers define the sources to load the link:{{< relref "rule_set.adoc" >}}[Rule Sets] from. These make heimdall's behavior dynamic. All providers, you want to enable for a heimdall instance must be configured within the `providers` section of heimdall's configuration.
-
-Supported providers, including the corresponding configuration options are described below
+Below, you can find the description and configuration options for currently supported providers.
 
 == Filesystem
 
-The filesystem provider allows loading of rule sets in a format defined in link:{{< relref "rule_set.adoc" >}}[Rule Sets] from a file system. The configuration of this provider goes into the `file_system` property. This provider is handy for e.g. starting playing around with heimdall, e.g. locally, or using a container runtime, as well as if your deployment strategy considers deploying a heimdall instance as a Side-Car for each of your services.
+The filesystem provider allows loading of link:{{< relref "rule_set.adoc#_regular_rule_set" >}}[regular rule sets] in JSON or YAML format from a file system.
+
+=== Configuration
+
+The configuration of this provider goes into the `file_system` property. This provider is handy for e.g. starting playing around with heimdall, e.g. locally, or using a container runtime, as well as if your deployment strategy considers deploying a heimdall instance as a Side-Car for each of your services.
 
 Following configuration options are supported:
 
@@ -43,7 +40,7 @@ Whether to enable environment variables access in the rule set files. Defaults t
 +
 WARNING: All environment variables, used in the rule set files must be known in advance to the heimdall process (when it starts). In addition, the usage of that functionality might lead to security issues. If an adversary is somehow able to add new or update existing rule sets, it would be theoretically able exfiltrating environment variables available to the heimdall process by crafting contextualizers or authorizers, which would forward the corresponding values to a controlled service. So, use with caution, disable the watching of rule set updates and try to avoid!
 +
-.Rule set which makes use of environment variables
+.Rule set making use of environment variables
 ====
 [source, yaml]
 ----
@@ -61,6 +58,7 @@ rules:
 ----
 ====
 
+=== Examples
 
 .Load rule sets from the files residing in the  `/path/to/rules/dir` directory and watch for changes.
 ====
@@ -83,15 +81,17 @@ file_system:
 
 == HTTP Endpoint
 
-This provider allows loading of rule sets in a format defined in link:{{< relref "rule_set.adoc" >}}[Rule Sets] from any remote endpoint accessible via HTTP(s) and supports rule sets in YAML, as well as in JSON format. The differentiation happens based on the `Content-Type` set in the response from the endpoint, which must be either `application/yaml` or `application/json`, otherwise an error is logged and the response from the endpoint is ignored.
+This provider allows loading of link:{{< relref "rule_set.adoc#_regular_rule_set" >}}[regular rule sets] in JSON or YAML format from any remote endpoint accessible via HTTP(s). The format selection happens based on the `Content-Type` set in the response from the endpoint, which must be either `application/yaml` or `application/json`, otherwise an error is logged and the response from the endpoint is ignored.
 
 The loading and removal of rules happens as follows:
 
-* if the response status code is an HTTP 200 OK and contains a link:{{< relref "rule_set.adoc" >}}[Rule Sets] in a known format (see above), the corresponding rules are loaded (if the definitions are valid)
+* if the response status code is an HTTP 200 OK and contains a rule sets in a known format (see above), the corresponding rules are loaded (if the definitions are valid)
 * in case of network issues, like dns errors, timeouts and alike, the rule sets previously received from the corresponding endpoints are preserved.
-* in any other case related to network communication (e.g. not 200 status code, empty response body, unsupported format, network issues, etc.), the corresponding rules are removed if these were previously loaded.
+* in any other case related to network communication (e.g. not 200 status code, empty response body, unsupported format, etc.), the corresponding rules are removed if previously loaded.
 
-The configuration of this provider goes into the `http_endpoint` property. In contrast to the link:{{< relref "#_filesystem" >}}[Filesystem] provider it can be configured with as many endpoints to load rule sets from as required for the particular use case.
+=== Configuration
+
+The configuration of this provider goes into the `http_endpoint` property. In contrast to the link:{{< relref "#_filesystem" >}}[Filesystem] provider, it can be configured with as many endpoints to load rule sets from as required for the particular use case.
 
 Following configuration options are supported:
 
@@ -108,6 +108,8 @@ Each entry of that array supports all the properties defined by link:{{< relref 
 This property can be used to create kind of a namespace for the rule sets retrieved from the different endpoints. If set, the provider checks whether the urls specified in all rules retrieved from the referenced endpoint have the defined path prefix. If not, a warning is emitted and the rule set is ignored. This can be used to ensure a rule retrieved from one endpoint does not collide with a rule from another endpoint.
 
 NOTE: HTTP caching according to https://www.rfc-editor.org/rfc/rfc7234[RFC 7234] is enabled by default. It can be disabled by setting `http_cache.enabled` to `false`.
+
+=== Examples
 
 .Minimal possible configuration
 ====
@@ -153,13 +155,15 @@ http_endpoint:
 
 == Cloud Blob
 
-This provider allows loading of rule sets in a format defined in link:{{< relref "rule_set.adoc" >}}[Rule Sets] from cloud blobs, like AWS S3 buckets, Google Cloud Storage, Azure Blobs, or other API compatible implementations and supports rule sets in YAML, as well as in JSON format. The differentiation happens based on the `Content-Type` set in the metadata of the loaded blob, which must be either `application/yaml` or `application/json`, otherwise an error is logged and the blob is ignored.
+This provider allows loading of link:{{< relref "rule_set.adoc#_regular_rule_set" >}}[regular rule sets] from cloud blobs, like AWS S3 buckets, Google Cloud Storage, Azure Blobs, or other API compatible implementations and supports rule sets in YAML, as well as in JSON format. The format selection happens based on the `Content-Type` set in the metadata of the loaded blob, which must be either `application/yaml` or `application/json`, otherwise an error is logged and the blob is ignored.
 
 The loading and removal of rules happens as follows:
 
 * if the response status code is an HTTP 200 OK and contains a rule set in a known format (see above), the corresponding rules are loaded (if the definitions are valid)
 * in case of network issues, like dns errors, timeouts and alike, the rule sets previously received from the corresponding buckets are preserved.
-* in any other case related to network communication (like, not 200 status code, empty response body, unsupported format, etc.), the corresponding rules are removed if these were previously loaded.
+* in any other case like, not 200 status code, empty response body, unsupported format, etc, the corresponding rules are removed if previously loaded.
+
+=== Configuration
 
 The configuration of this provider goes into the `cloud_blob` property. As with link:{{< relref "#_http_endpoint" >}}[HTTP Endpoint] provider, it can be configured with as many buckets/blobs to load rule sets from as required for the particular use case.
 
@@ -193,6 +197,8 @@ The differentiation which storage is used is based on the URL scheme. These are:
 Other API compatible storage services, like https://www.minio.io/[Minio], https://ceph.com/[Ceph], https://github.com/chrislusf/seaweedfs[SeaweedFS], etc. can be used as well. The corresponding and other options can be found in the https://gocloud.dev/howto/blob/[Go CDK Blob] documentation, the implementation of this provider is based on.
 
 NOTE: The communication to the storage services requires an active session to the corresponding cloud provider. The session information is taken from the vendor specific environment variables, respectively configuration. See https://docs.aws.amazon.com/sdk-for-go/api/aws/session/[AWS Session], https://cloud.google.com/docs/authentication/application-default-credentials[GC Application Default Credentials] and https://learn.microsoft.com/en-us/azure/storage/common/authorize-data-access?toc=%2Fazure%2Fstorage%2Fblobs%2Ftoc.json[Azure Storage Access] for more information.
+
+=== Examples
 
 .Minimal possible configuration
 ====
@@ -234,29 +240,35 @@ The last one instructs heimdall to load rule set from a specific blob, namely a 
 
 == Kubernetes
 
-This provider is only supported if heimdall is running within Kubernetes and allows usage (validation and loading) of link:{{< relref "#_ruleset_resource" >}}[Rule Set] resources deployed to the same Kubernetes environment. The configuration of this provider goes into the `kubernetes` property and supports the following configuration options:
+This provider is only supported if heimdall is running within Kubernetes and allows usage (validation and loading) of link:{{< relref "rule_set.adoc#_kubernetes_rule_set" >}}[`RuleSet` custom resources] deployed to the same Kubernetes environment.
+
+=== Configuration
+
+The configuration of this provider goes into the `kubernetes` property and supports the following configuration options:
 
 * *`auth_class`*: _string_ (optional)
 +
-By making use of this property, you can specify which RuleSets should be used by this particular heimdall instance. If specified, heimdall will consider the value of the `authClassName` attribute of each RuleSet deployed to the cluster and validate, respectively load only those rules, which `authClassName` values match the value of `auth_class`. If not set all RuleSets will be used.
+By making use of this property, you can specify which rule sets should be used by this particular heimdall instance. If specified, heimdall will consider the value of the `authClassName` attribute of each `RuleSet` resource deployed to the cluster and validate, respectively load only those rules, which `authClassName` values matching the value of `auth_class`. If not set all `RuleSet` resources will be used.
 
 * *`tls`*: _link:{{< relref "/docs/configuration/types.adoc#_tls" >}}[TLS]_ (optional)
 +
-If configured, heimdall will start and expose a validating admission controller service on port `4458` listening on all interfaces. This service allows integration with the Kubernetes API server enabling validation of the applied RuleSet resources before these are made available to heimdall for loading. This way you will get a direct feedback about RuleSet issues without the need to look into heimdall logs if a RuleSet could not be loaded (See also link:{{< relref "/openapi/#tag/Validating-Admission-Controller" >}}[API] documentation for more details).
+If configured, heimdall will start and expose a validating admission controller service on port `4458` listening on all interfaces. This service allows integration with the Kubernetes API server enabling validation of the applied `RuleSet` resources before these are made available to heimdall for loading. This way you will get a direct feedback about issues without the need to look into heimdall logs if a `RuleSet` resource could not be loaded (See also link:{{< relref "/openapi/#tag/Validating-Admission-Controller" >}}[API] documentation for more details).
 +
 To let the Kubernetes API server use the admission controller, there is a need for a properly configured https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#deploy-the-admission-webhook-service[`ValidatingWebhookConfiguration`]. The https://github.com/dadrus/heimdall/tree/main/charts/heimdall[Helm Chart] shipped with heimdall does this automatically as soon as this property is configured. It does however need a `caBundle` to be set or injected. Otherwise, the Kubernetes API server won't trust the configured TLS certificate and won't use the endpoint.
 
 [CAUTION]
 ====
-Since multiple heimdall deployments with different configured `auth_class` names can coexist, RuleSets with mismatching `authClassName` will be ignored by a particular deployment. In addition, Kubernetes API server validation requests for mismatching RuleSets result in a successful response. This behavior is required as otherwise, as soon as the API server receives even a single failed validation response, the affected RuleSet resource will be discarded and not made available for loading to any of the available heimdall deployments.
+Since multiple heimdall deployments with different configured `auth_class` names can coexist, `RuleSet` resources with mismatching `authClassName` will be ignored by a particular deployment. In addition, Kubernetes API server validation requests for mismatching rule sets result in a successful response. This behavior is required as otherwise, as soon as the API server receives even a single failed validation response, the affected `RuleSet` resource will be discarded and not made available for loading to any of the available heimdall deployments.
 
-That also means, if there is no heimdall deployment feeling responsible for the given RuleSet (due to `authClassName` - `auth_class` mismatch), the affected RuleSet will be silently ignored.
+That also means, if there is no heimdall deployment feeling responsible for the given `RuleSet` resource (due to `authClassName` - `auth_class` mismatch), the affected `RuleSet` resource will be silently ignored.
 ====
+
+=== Examples
 
 .Minimal possible configuration
 ====
 
-Here, the provider is just enabled. Since no `auth_class` is configured, it will load all RuleSets deployed to the Kubernetes environment.
+Here, the provider is just enabled. Since no `auth_class` is configured, it will load all `RuleSet`  resources deployed to the Kubernetes environment.
 
 [source, yaml]
 ----
@@ -267,7 +279,7 @@ kubernetes: {}
 .Configuration with `auth_class` set
 ====
 
-Here, the provider is configured to consider only those RuleSets, which `authClassName` is set to `foo`.
+Here, the provider is configured to consider only those `RuleSet` resources, which `authClassName` is set to `foo`.
 
 [source, yaml]
 ----
@@ -279,7 +291,7 @@ kubernetes:
 .Configuration with `auth_class` set and enabled validating admission controller
 ====
 
-As with the previous example, the provider is configured to consider only those RuleSets, which `authClassName` is set to `foo`. The admission controller is enabled as well and will validate `RuleSet` resources before these are made available for loading.
+As with the previous example, the provider is configured to consider only those `RuleSet` resources, which `authClassName` is set to `foo`. The admission controller is enabled as well and will validate `RuleSet` resources before these are made available for loading.
 
 [source, yaml]
 ----
@@ -303,85 +315,3 @@ If you have used the link:{{< relref "/docs/operations/installation.adoc#_helm_c
 $ kubectl apply -f https://raw.githubusercontent.com/dadrus/heimdall/main/charts/heimdall/crds/ruleset.yaml
 ----
 ====
-
-=== RuleSet resource
-
-As written above, the `kubernetes` provider supports only rules, deployed as customer `RuleSet` resources.
-
-Each `RuleSet` has the following attributes:
-
-* *`name`*: _string_ (required)
-+
-The name of a rule set.
-
-* *`authClassName`*: _string_ (optional)
-+
-References the heimdall instance, which should use this `RuleSet`.
-
-* *`rules`*: _link:{{< relref "regular_rule.adoc#_configuration" >}}[Rule Configuration] array_ (mandatory)
-+
-List of the actual rules.
-
-.Simple Example
-====
-[source, yaml]
-----
-apiVersion: heimdall.dadrus.github.com/v1alpha3
-kind: RuleSet
-metadata:
-  name: "<some name>"
-spec:
-  authClassName: "<optional auth_class reference (see above)> "
-  rules:
-    - id: "<identifier of a rule 1>"
-      match:
-        url: http://127.0.0.1:9090/foo/<**>
-      execute:
-        - authenticator: foo
-        - authorizer: bar
-----
-====
-
-In addition to configuration attributes described above, a `RuleSet` resource has a `status` stanza, which provides information about the usage status as soon as a `RuleSet` has been loaded by at least one heimdall instance.
-
-By making use of `kubectl get -n <your namespace> rulesets.heimdall.dadrus.github.com` you'll get an overview of deployed `RuleSet` resources in a particular namespace, like e.g. shown below
-
-[source, bash]
-----
-NAME             ACTIVE IN       AGE
-test-rules       2/2             32m
-----
-
-The value `2/2` in `ACTIVE IN` means, <active in heimdall instances>/<matching instances>. With
-
-* "matching instances" being those heimdall instances, which `auth_class` matches the `authClassName` in the `RuleSet` and
-* "active in heimdall instances" are those from the "matching instances", which were able to load the `RuleSet`.
-
-In addition, you can also get further information about the executed reconciliations by the deployed heimdall instances by taking a look at the `.status.conditions` field. The reconciliation status of matching instances is present there. That also means, if there were errors while loading the `RuleSet`, these are present in this condition list
-
-E.g.
-
-[source, bash]
-----
-$ kubectl describe -n test rulesets.heimdall.dadrus.github.com test-rules
-
-Name:         test-rules
-Namespace:    test
-...
-Status:
-  Conditions:
-    Last Transition Time:  2023-11-08T21:55:36Z
-    Message:               heimdall-6fb66c47bc-kwqqn instance successfully loaded RuleSet
-    Observed Generation:   1
-    Reason:                RuleSetActive
-    Status:                True
-    Type:                  heimdall-6fb66c47bc-kwqqn/Reconciliation
-    Last Transition Time:  2023-11-08T21:55:36Z
-    Message:               heimdall-6fb66c47bc-l7skn instance successfully loaded RuleSet
-    Observed Generation:   1
-    Reason:                RuleSetActive
-    Status:                True
-    Type:                  heimdall-6fb66c47bc-l7skn/Reconciliation
-  Active In:               2/2
-  Events:                  <none>
-----

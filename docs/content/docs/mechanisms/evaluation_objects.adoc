@@ -10,9 +10,9 @@ menu:
 description: The dynamic nature of mechanisms is given by the ability to work on different objects and making use of templates and scripts to implement different use cases.
 ---
 
-E.g. in one case, you want to have access to a particular request header. In another case you would like to add specific data to the resulting JWT created by heimdall. And in yet another case, you may want to check whether some expectations apply. These capabilities are described on this page.
-
 :toc:
+
+E.g. in one case, you want to have access to a particular request header. In another case you would like to add specific data to the resulting JWT created by heimdall. And in yet another case, you may want to check whether some expectations apply. These capabilities are described on this page.
 
 == Objects
 

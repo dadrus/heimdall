@@ -1,5 +1,5 @@
 ---
-title: "Rule Set"
+title: "Rule Sets"
 date: 2022-06-09T22:13:32+02:00
 draft: false
 weight: 63
@@ -7,17 +7,27 @@ menu:
   docs:
     weight: 3
     parent: "Rules"
+description: Rule Sets organize rules, allowing versioning of such and loading by providers.
 ---
 
 :toc:
 
-== Rule Set
+Depending on the configured provider, the rules can be then loaded from e.g. a plain old configuration file, residing in the local file system, or even from a Kubernetes environment as a custom resource. Thus, the structure and format of a rule set depends on the link:{{< relref "/docs/rules/providers.adoc" >}}[provider] used to load it. As of today, there are two supported formats:
 
-In principle, a rule set is just a list of rules with some additional meta information. Each `RuleSet` definition has the following attributes if not stated otherwise by a particular link:{{< relref "providers.adoc" >}}[provider]:
+* as a regular JSON/YAML file, the so-called link:{{< relref "#_regular_rule_set" >}}[regular rule set], and
+* as a kubernetes link:{{< relref "#_kubernetes_rule_set" >}}[custom resource rule set], which is actually a YAML/JSON file as well, but adheres to corresponding kubernetes requirements.
+
+The main difference is the internal structure. Both do however require the specification of a version and a list or rules.
+
+== Regular Rule Set
+
+A regular rule set is a just a file with a list of rules and some additional meta information. Latter can be extended by a particular link:{{< relref "providers.adoc" >}}[provider] supporting that format.
+
+Available properties are:
 
 * *`version`*: _string_ (mandatory)
 +
-The version schema of the `RuleSet`. The current version of heimdall supports only the version `1alpha3`.
+The version schema of the rule set. The current version of heimdall supports only the version `1alpha3`.
 
 * *`name`*: _string_ (optional)
 +
@@ -25,10 +35,13 @@ The name of a rule set. Used only for logging purposes.
 
 * *`rules`*: _link:{{< relref "/docs/rules/regular_rule.adoc#_configuration" >}}[Rule Configuration] array_ (mandatory)
 +
-List of the actual rules.
+The list of the actual rule definitions.
 
 .Rule set with two rules
 ====
+
+An imaginary rule set file defining two rules could look like shown below.
+
 [source, yaml]
 ----
 version: "1alpha3"
@@ -48,3 +61,111 @@ rules:
     - authorizer: barfoo
 ----
 ====
+
+== Kubernetes Rule Set
+
+If you operate heimdall in kubernetes, most probably, you would like to make use of the `RuleSet` custom resource, which can be loaded by the link:{{< relref "/docs/rules/providers.adoc#_kubernetes" >}}[kubernetes provider].
+
+=== Configuration
+
+* *`apiVersion`*: _string_ (mandatory)
++
+The api version of the custom resource definition, the given rule set is based on. The current version of heimdall supports only `heimdall.dadrus.github.com/v1alpha3` version.
+
+* *`kind`*: _string_ (mandatory)
++
+The custom resource kind. Must be set to `RuleSet`
+
+* *`metadata`*: _map_ (optional)
++
+The metadata, you would like to assign to the rule set, like the name of the rule set, labels, etc
+
+* *`spec`*: _map_ (mandatory)
++
+The actual specification of the rule set. Following attributes are possible, respectively required:
+
+** *`authClassName`*: _string_ (optional)
++
+References the heimdall instance, which should use this `RuleSet`.
+
+** *`rules`*: _link:{{< relref "regular_rule.adoc#_configuration" >}}[Rule Configuration] array_ (mandatory)
++
+The list of the actual rules.
+
+[NOTE]
+====
+To be able to deploy and make heimdall use the `RuleSet` custom resources, the corresponding CRD must be deployed. Otherwise, heimdall will not be able to monitor corresponding resources and emit error messages to the log.
+
+If you have used the link:{{< relref "/docs/operations/installation.adoc#_helm_chart" >}}[Helm Chart] to install heimdall, this CRD is already installed. You can however install it also like this:
+
+[source, bash]
+----
+$ kubectl apply -f https://raw.githubusercontent.com/dadrus/heimdall/main/charts/heimdall/crds/ruleset.yaml
+----
+====
+
+.Simple Example
+====
+[source, yaml]
+----
+apiVersion: heimdall.dadrus.github.com/v1alpha3
+kind: RuleSet
+metadata:
+  name: "<some name>"
+spec:
+  authClassName: "<optional auth_class reference (see above)> "
+  rules:
+    - id: "<identifier of a rule 1>"
+      match:
+        url: http://127.0.0.1:9090/foo/<**>
+      execute:
+        - authenticator: foo
+        - authorizer: bar
+----
+====
+
+=== Resource Status
+
+In addition to configuration attributes described above, a `RuleSet` resource has a `status` stanza, which provides information about the usage status as soon as a `RuleSet` has been loaded by at least one heimdall instance.
+
+By making use of `kubectl get -n <your namespace> rulesets.heimdall.dadrus.github.com` you'll get an overview of deployed `RuleSet` resources in a particular namespace, like e.g. shown below
+
+[source, bash]
+----
+NAME             ACTIVE IN       AGE
+test-rules       2/2             32m
+----
+
+The value `2/2` in `ACTIVE IN` means, <active in heimdall instances>/<matching instances>. With
+
+* "matching instances" being those heimdall instances, which `auth_class` matches the `authClassName` in the `RuleSet` and
+* "active in heimdall instances" are those from the "matching instances", which were able to load the `RuleSet`.
+
+In addition, you can also get further information about the executed reconciliations by the deployed heimdall instances by taking a look at the `.status.conditions` field. The reconciliation status of matching instances is present there. That also means, if there were errors while loading the `RuleSet`, these are present in this condition list
+
+E.g.
+
+[source, bash]
+----
+$ kubectl describe -n test rulesets.heimdall.dadrus.github.com test-rules
+
+Name:         test-rules
+Namespace:    test
+...
+Status:
+  Conditions:
+    Last Transition Time:  2023-11-08T21:55:36Z
+    Message:               heimdall-6fb66c47bc-kwqqn instance successfully loaded RuleSet
+    Observed Generation:   1
+    Reason:                RuleSetActive
+    Status:                True
+    Type:                  heimdall-6fb66c47bc-kwqqn/Reconciliation
+    Last Transition Time:  2023-11-08T21:55:36Z
+    Message:               heimdall-6fb66c47bc-l7skn instance successfully loaded RuleSet
+    Observed Generation:   1
+    Reason:                RuleSetActive
+    Status:                True
+    Type:                  heimdall-6fb66c47bc-l7skn/Reconciliation
+  Active In:               2/2
+  Events:                  <none>
+----
