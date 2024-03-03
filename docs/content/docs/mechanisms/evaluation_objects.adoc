@@ -1,5 +1,5 @@
 ---
-title: "Evaluation Objects & Beyond"
+title: "Objects, Templating & Co"
 date: 2024-01-10T15:53:47+02:00
 draft: false
 weight: 52
@@ -7,7 +7,7 @@ menu:
   docs:
     weight: 2
     parent: "Mechanisms"
-description: The dynamic nature of mechanisms is given by the ability to work on different objects and making use of templates and scripts to implement different use cases.
+description: The dynamic nature of mechanisms is given by the ability to work on different objects and making use of templates and expressions to implement different use cases.
 ---
 
 :toc:

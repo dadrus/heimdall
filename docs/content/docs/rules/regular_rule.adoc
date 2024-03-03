@@ -218,7 +218,7 @@ Execution of an `contextualizer`, `authorizer`, or `finalizer` mechanisms can op
 This example uses
 
 * two authenticators, with authenticator named `bar` being the fallback for the authenticator named `foo`. This fallback authenticator is obviously of type link:{{< relref "/docs/mechanisms/authenticators.adoc#_anonymous" >}}[anonymous] as it reconfigures the referenced prototype to use `anon` for subject id.
-* multiple contextualizers and authorizers, with first contextualizer having its cache disabled (`cache_ttl` set to 0s) and the last authorizer being of type link:{{< relref "/docs/mechanisms/authorizers.adoc#_local_cel" >}}[cel] as it reconfigures the referenced prototype to use a different authorization script.
+* multiple contextualizers and authorizers, with first contextualizer having its cache disabled (`cache_ttl` set to 0s) and the last authorizer being of type link:{{< relref "/docs/mechanisms/authorizers.adoc#_local_cel" >}}[cel] as it reconfigures the referenced prototype to use a different authorization expression.
 * two finalizers, with the second one being obviously of type link:{{< relref "/docs/mechanisms/finalizers.adoc#_header" >}}[header], as it defines a `X-User-ID` header set to the value of the subject id to be forwarded to the upstream service.
 * contextualizer `foo` is only executed if the authenticated subject is not anonymous.
 * authorizer `foo` is only executed if the request method is HTTP POST.
