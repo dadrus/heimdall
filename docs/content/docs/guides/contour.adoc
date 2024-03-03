@@ -15,7 +15,7 @@ description: Explains how to integrate heimdall with Contour, an open source, hi
 
 https://projectcontour.io/[Contour] is an open source, high performance ingress controller for Kubernetes, implementing a control plane for https://www.envoyproxy.io/[Envoy] edge and a service proxy.
 
-When operating heimdall in link:{{< relref "/docs/introduction/core_concepts.adoc#_decision_mode" >}}[Decision Operation Mode] exposing Envoy's external authorization https://www.envoyproxy.io/docs/envoy/latest/api-v3/service/auth/v3/external_auth.proto[GRPC protocol], integration with Contour can be achieved by creating an https://projectcontour.io/docs/1.25/config/api/#projectcontour.io/v1alpha1.ExtensionService[`ExtensionService`] resource for heimdall and either an https://projectcontour.io/docs/1.25/config/api/#projectcontour.io/v1.HTTPProxy[`HTTPProxy`] resource for the upstream service, referencing the aforesaid `ExtensionService`, or configure Contour to use it globally (for all routes).
+When operating heimdall in link:{{< relref "/docs/concepts/operating_modes.adoc#_decision_mode" >}}[Decision Operation Mode] exposing Envoy's external authorization https://www.envoyproxy.io/docs/envoy/latest/api-v3/service/auth/v3/external_auth.proto[GRPC protocol], integration with Contour can be achieved by creating an https://projectcontour.io/docs/1.25/config/api/#projectcontour.io/v1alpha1.ExtensionService[`ExtensionService`] resource for heimdall and either an https://projectcontour.io/docs/1.25/config/api/#projectcontour.io/v1.HTTPProxy[`HTTPProxy`] resource for the upstream service, referencing the aforesaid `ExtensionService`, or configure Contour to use it globally (for all routes).
 
 The `ExtensionService` resource definition tells Contour to program Envoy with an upstream cluster directing traffic to heimdall. That way, as also described in the link:{{< relref "envoy.adoc" >}}[Envoy Integration Guide], Envoy will delegate authentication and authorization to heimdall. If heimdall answers with a `200 OK` HTTP code, Envoy grants access and forwards the original request to the upstream service. Otherwise, the response from heimdall is treated as an error and is returned to the client.
 
@@ -54,7 +54,7 @@ serve:
 # ...
 ----
 
-* Ensure heimdall is started in link:{{< relref "/docs/introduction/core_concepts.adoc#_decision_mode" >}}[Decision Operation Mode] exposing Envoy's external authorization https://www.envoyproxy.io/docs/envoy/latest/api-v3/service/auth/v3/external_auth.proto[GRPC protocol] (achieved by passing the `--envoy-grpc` flag while starting heimdall) and the required secret with the TLS key material is available to the heimdall container. The following snippet shows the relevant values configuration if you use helm for installing/updating heimdall:
+* Ensure heimdall is started in link:{{< relref "/docs/concepts/operating_modes.adoc#_decision_mode" >}}[Decision Operation Mode] exposing Envoy's external authorization https://www.envoyproxy.io/docs/envoy/latest/api-v3/service/auth/v3/external_auth.proto[GRPC protocol] (achieved by passing the `--envoy-grpc` flag while starting heimdall) and the required secret with the TLS key material is available to the heimdall container. The following snippet shows the relevant values configuration if you use helm for installing/updating heimdall:
 +
 [source, yaml]
 ----

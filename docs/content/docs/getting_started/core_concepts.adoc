@@ -5,7 +5,7 @@ draft: false
 weight: 6
 menu:
   docs:
-    parent: "Introduction"
+    parent: "Getting Started"
     weight: 10
 description: Gives you the required insights about heimdall's architecture to get started.
 ---
@@ -14,7 +14,7 @@ description: Gives you the required insights about heimdall's architecture to ge
 
 == How are the challenges addressed
 
-Remember the figure from link:{{< relref "/docs/introduction/what_is_heimdall.adoc#_challenges_addressed_by_heimdall">}}["Challenges addressed by Heimdall"]?
+Remember the figure from link:{{< relref "/docs/getting_started/what_is_heimdall.adoc#_challenges_addressed_by_heimdall">}}["Challenges addressed by Heimdall"]?
 
 .Typical microservice deployment scenario
 [ditaa, format=svg]
