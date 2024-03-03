@@ -1,5 +1,5 @@
 ---
-title: "What is heimdall"
+title: "Discovering heimdall"
 date: 2023-11-29T22:03:28+02:00
 draft: false
 weight: 5
