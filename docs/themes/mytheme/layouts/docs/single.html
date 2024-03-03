@@ -19,6 +19,8 @@
       <article class="docs-content col-xl-10 col-md-12">
         <h1>{{ .Title }}</h1>
         <p>{{ .Description }}</p>
+
+        {{ if .TableOfContents }}
         <button class="btn btn-outline-secondary text-decoration-none d-xl-none collapsed" type="button" data-bs-toggle="collapse"
                 data-bs-target="#page-content-toc-collapsible" aria-expanded="false" aria-controls="page-content-toc-collapsible">
           On this page
@@ -32,6 +34,7 @@
             {{ .TableOfContents }}
           </div>
         </div>
+        {{ end }}
 
         <div data-bs-spy="scroll" data-bs-target="#page-content-toc" class="mt-3">
           <linkable-headline-area>
@@ -42,7 +45,7 @@
         {{ partial "bottom-navigation.html" . }}
       </article>
 
-      {{ if not .Params.notoc }}
+      {{ if .TableOfContents }}
       <aside id="page-content-toc" class="docs-page-toc text-muted d-none d-md-block col-xl-2">
         <strong class="d-md-block h6 pb-2 my-2 ms-2 border-bottom">On this page</strong>
         {{ .TableOfContents }}
