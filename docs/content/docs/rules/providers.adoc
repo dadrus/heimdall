@@ -12,13 +12,13 @@ description: Rule providers manage rules in heimdall. They load, reload or remov
 
 :toc:
 
-Providers allow definition of sources to load the link:{{< relref "rule_set.adoc" >}}[rule sets] from. These make heimdall's behavior dynamic. All providers, you want to enable for a heimdall instance must be configured within the `providers` section of heimdall's configuration.
+Providers allow definition of sources to load the link:{{< relref "rule_sets.adoc" >}}[rule sets] from. These make heimdall's behavior dynamic. All providers, you want to enable for a heimdall instance must be configured within the `providers` section of heimdall's configuration.
 
 Below, you can find the description and configuration options for currently supported providers.
 
 == Filesystem
 
-The filesystem provider allows loading of link:{{< relref "rule_set.adoc#_regular_rule_set" >}}[regular rule sets] in JSON or YAML format from a file system.
+The filesystem provider allows loading of link:{{< relref "rule_sets.adoc#_regular_rule_set" >}}[regular rule sets] in JSON or YAML format from a file system.
 
 === Configuration
 
@@ -81,7 +81,7 @@ file_system:
 
 == HTTP Endpoint
 
-This provider allows loading of link:{{< relref "rule_set.adoc#_regular_rule_set" >}}[regular rule sets] in JSON or YAML format from any remote endpoint accessible via HTTP(s). The format selection happens based on the `Content-Type` set in the response from the endpoint, which must be either `application/yaml` or `application/json`, otherwise an error is logged and the response from the endpoint is ignored.
+This provider allows loading of link:{{< relref "rule_sets.adoc#_regular_rule_set" >}}[regular rule sets] in JSON or YAML format from any remote endpoint accessible via HTTP(s). The format selection happens based on the `Content-Type` set in the response from the endpoint, which must be either `application/yaml` or `application/json`, otherwise an error is logged and the response from the endpoint is ignored.
 
 The loading and removal of rules happens as follows:
 
@@ -155,7 +155,7 @@ http_endpoint:
 
 == Cloud Blob
 
-This provider allows loading of link:{{< relref "rule_set.adoc#_regular_rule_set" >}}[regular rule sets] from cloud blobs, like AWS S3 buckets, Google Cloud Storage, Azure Blobs, or other API compatible implementations and supports rule sets in YAML, as well as in JSON format. The format selection happens based on the `Content-Type` set in the metadata of the loaded blob, which must be either `application/yaml` or `application/json`, otherwise an error is logged and the blob is ignored.
+This provider allows loading of link:{{< relref "rule_sets.adoc#_regular_rule_set" >}}[regular rule sets] from cloud blobs, like AWS S3 buckets, Google Cloud Storage, Azure Blobs, or other API compatible implementations and supports rule sets in YAML, as well as in JSON format. The format selection happens based on the `Content-Type` set in the metadata of the loaded blob, which must be either `application/yaml` or `application/json`, otherwise an error is logged and the blob is ignored.
 
 The loading and removal of rules happens as follows:
 
@@ -240,7 +240,7 @@ The last one instructs heimdall to load rule set from a specific blob, namely a 
 
 == Kubernetes
 
-This provider is only supported if heimdall is running within Kubernetes and allows usage (validation and loading) of link:{{< relref "rule_set.adoc#_kubernetes_rule_set" >}}[`RuleSet` custom resources] deployed to the same Kubernetes environment.
+This provider is only supported if heimdall is running within Kubernetes and allows usage (validation and loading) of link:{{< relref "rule_sets.adoc#_kubernetes_rule_set" >}}[`RuleSet` custom resources] deployed to the same Kubernetes environment.
 
 === Configuration
 

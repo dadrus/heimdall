@@ -15,7 +15,7 @@ description: This page explains the available configuration options in detail.
 Configuration in heimdall can refer to two different things:
 
 * the static startup configuration, which is the scope of this document and
-* the configuration of rules, respectively rule sets, which you can find link:{{< relref "/docs/rules/rule_set.adoc" >}}[here].
+* the configuration of rules, respectively rule sets, which you can find link:{{< relref "/docs/rules/rule_sets.adoc" >}}[here].
 
 Elements in the static configuration set up the services, like link:{{< relref "/docs/services/decision.adoc" >}}[decision service], which basically define the entry points, heimdall will listen to, the observability capabilities, like link:{{< relref "/docs/observability/logging.adoc" >}}[logging], the supported link:{{< relref "/docs/getting_started/mechanisms.adoc" >}}[pipeline mechanisms], the link:{{< relref "/docs/rules/default_rule.adoc" >}}[default rule], as well as the link:{{< relref "/docs/rules/providers.adoc" >}}[rule providers] (these elements are not expected to change often).
 
