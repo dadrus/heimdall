@@ -164,7 +164,7 @@ on_error:
 
 == Authentication & Authorization Pipeline
 
-As described in the link:{{< relref "/docs/getting_started/pipelines.adoc" >}}[Getting Started] section, this pipeline consists of mechanisms, previously configured in the link:{{< relref "/docs/mechanisms/catalogue.adoc" >}}[mechanisms catalogue], organized in stages as described below, with authentication stage (consisting of link:{{< relref "/docs/mechanisms/authenticators.adoc" >}}[authenticators]) being mandatory.
+As described in the link:{{< relref "/docs/concepts/pipelines.adoc" >}}[Concepts] section, this pipeline consists of mechanisms, previously configured in the link:{{< relref "/docs/mechanisms/catalogue.adoc" >}}[mechanisms catalogue], organized in stages as described below, with authentication stage (consisting of link:{{< relref "/docs/mechanisms/authenticators.adoc" >}}[authenticators]) being mandatory.
 
 * **Authentication Stage:** List of link:{{< relref "/docs/mechanisms/authenticators.adoc" >}}[authenticator] references using `authenticator` as key, followed by the required authenticator `id`. Authenticators following the first defined in the list are used by heimdall as fallback. That is, if first authenticator fails due to missing authentication data, second is executed, etc. By default, fallback is not used if an authenticator fails due to validation errors of the given authentication data. E.g. if an authenticator fails to validate the signature of a JWT token, the next authenticator in the list will not be executed. Instead, the entire pipeline will fail and lead to the execution of the link:{{< relref "#_error_pipeline" >}}[error pipeline]. This list is mandatory if no link:{{< relref "default_rule.adoc" >}}[default rule] is configured.
 +

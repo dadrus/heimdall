@@ -5,7 +5,7 @@ draft: false
 weight: 12
 menu:
   docs:
-    parent: "Getting Started"
+    parent: "Concepts"
     weight: 2
 description: Mechanisms are the building blocks for rule specific pipelines and define the required behavior for these.
 ---

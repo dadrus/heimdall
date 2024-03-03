@@ -24,7 +24,7 @@ Which HTTP methods (`GET`, `POST`, `PATCH`, etc) are allowed. Expansion using `A
 
 * *`execute`*: _link:{{< relref "regular_rule.adoc#_authentication_authorization_pipeline" >}}[Authentication & Authorization Pipeline]_ (mandatory)
 +
-Which mechanisms to use for authentication, authorization and finalization stages of the pipeline. At least the authentication stage with at least one link:{{< relref "/docs/mechanisms/authenticators.adoc" >}}[authenticator] must be defined. A specific rule (see also link:{{< relref "regular_rule.adoc" >}}[Regular Rule]) can omit the definition of that stage, if it wants to reuse it from in the default rule. Same is true for other stages (See also link:{{< relref "/docs/getting_started/rules.adoc#_default_rule_inheritance" >}}[Rule Inheritance]).
+Which mechanisms to use for authentication, authorization and finalization stages of the pipeline. At least the authentication stage with at least one link:{{< relref "/docs/mechanisms/authenticators.adoc" >}}[authenticator] must be defined. A specific rule (see also link:{{< relref "regular_rule.adoc" >}}[Regular Rule]) can omit the definition of that stage, if it wants to reuse it from in the default rule. Same is true for other stages (See also link:{{< relref "/docs/concepts/rules.adoc#_default_rule_inheritance" >}}[Rule Inheritance]).
 
 * *`on_error`*: _link:{{< relref "regular_rule.adoc#_error_pipeline" >}}[Error Pipeline]_ (mandatory)
 +

@@ -5,7 +5,7 @@ draft: false
 weight: 13
 menu:
   docs:
-    parent: "Getting Started"
+    parent: "Concepts"
     weight: 3
 description: Rules defines what should happen to particular requests and under which conditions. They assemble the authentication & authorization and error pipelines and bring previously configured mechanisms to life.
 ---
@@ -51,7 +51,7 @@ flowchart TD
 . *Any rule matching url?* - This is the first step executed by heimdall in which it tries to find a rule matching the request url. The information about the scheme, host, path and query is taken either from the URL itself, or if present and allowed, from the `X-Forwarded-Proto`, `X-Forwarded-Host`, or `X-Forwarded-Uri` headers of the incoming request. The request is denied if there is no matching rule, respectively no default rule. Otherwise, the rule specific pipeline is executed. When heimdall is evaluating the rules against the request url it takes the first matching one.
 . *Method allowed?* - As soon as a rule matching the request is found (which might also be the default rule if specified and there was no regular rule matching the request), a check is done whether the used HTTP method is allowed or not. The information about the HTTP method is either taken from the request itself or, if present and allowed, from the `X-Forwarded-Method` header.
 . *Execute authentication & authorization pipeline* - when the above steps succeed, the mechanisms defined in this pipeline are executed.
-. *Forward request, respectively respond to the API gateway* - when the above steps succeed, heimdall, depending on the link:{{< relref "/docs/getting_started/operating_modes.adoc" >}}[operating mode], responds with, respectively forwards whatever was defined in the pipeline (usually this is a set of HTTP headers). Otherwise
+. *Forward request, respectively respond to the API gateway* - when the above steps succeed, heimdall, depending on the link:{{< relref "/docs/concepts/operating_modes.adoc" >}}[operating mode], responds with, respectively forwards whatever was defined in the pipeline (usually this is a set of HTTP headers). Otherwise
 . *Execute error pipeline* is executed if any of the mechanisms, defined in the authentiction & authorization pipeline fail. This again results in a response, this time however, based on the definition in the used error handler.
 
 

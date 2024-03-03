@@ -131,7 +131,7 @@ Run docker compose:
 $ docker-compose up
 ----
 
-Docker will automatically download the required container images. Then, heimdall will start in the link:{{< relref "/docs/getting_started/operating_modes.adoc#_proxy_mode" >}}[proxy mode] and run with the configuration details set in the previous steps. You'll then be able to see an output similar to
+Docker will automatically download the required container images. Then, heimdall will start in the link:{{< relref "/docs/concepts/operating_modes.adoc#_proxy_mode" >}}[proxy mode] and run with the configuration details set in the previous steps. You'll then be able to see an output similar to
 
 [source, bash]
 ----
