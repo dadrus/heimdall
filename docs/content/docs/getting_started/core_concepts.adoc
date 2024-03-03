@@ -6,7 +6,7 @@ weight: 6
 menu:
   docs:
     parent: "Getting Started"
-    weight: 10
+    weight: 6
 description: Gives you the required insights about heimdall's architecture to get started.
 ---
 

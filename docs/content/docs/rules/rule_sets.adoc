@@ -96,7 +96,7 @@ The list of the actual rules.
 ====
 To be able to deploy and make heimdall use the `RuleSet` custom resources, the corresponding CRD must be deployed. Otherwise, heimdall will not be able to monitor corresponding resources and emit error messages to the log.
 
-If you have used the link:{{< relref "/docs/operations/installation.adoc#_helm_chart" >}}[Helm Chart] to install heimdall, this CRD is already installed. You can however install it also like this:
+If you have used the link:{{< relref "/docs/getting_started/installation.adoc#_helm_chart" >}}[Helm Chart] to install heimdall, this CRD is already installed. You can however install it also like this:
 
 [source, bash]
 ----

@@ -118,7 +118,7 @@ If you integrate heimdall with envoy via `grpc_service`, spoofing of the aforesa
 
 == Demo Setup
 
-The Envoy configuration file shown below can be used to create a fully working setup based on the link:{{< relref "/docs/quickstarts/decision_service.adoc" >}}[Decision Service Quickstart]. Just update the `docker-compose.yaml` file used in that guide and replace the entry for `proxy` service, with the one shown below. You can also remove all `labels` configurations, as these will have no effect.
+The Envoy configuration file shown below can be used to create a fully working setup based on the link:{{< relref "/docs/getting_started/decision_service.adoc" >}}[Decision Service Quickstart]. Just update the `docker-compose.yaml` file used in that guide and replace the entry for `proxy` service, with the one shown below. You can also remove all `labels` configurations, as these will have no effect.
 
 [source, yaml]
 ----

@@ -2,13 +2,11 @@
 title: "Installation"
 date: 2022-07-25T18:22:50+02:00
 draft: false
-weight: 31
+weight: 7
 menu:
   docs:
-    weight: 1
-    parent: "Operations"
-  guides:
-    weight: 5
+    weight: 7
+    parent: "Getting Started"
 description: Heimdall is shipped in multiple formats and architectures to suit a variety of deployment patterns. The following chapters describe the available installation options.
 ---
 

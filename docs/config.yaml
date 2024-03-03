@@ -53,10 +53,6 @@ menu:
       url: docs/getting_started/what_is_heimdall
       weight: 100
 
-    - identifier: quickstarts
-      title: Quickstarts
-      weight: 300
-
     - identifier: guides
       title: Integration Guides
       weight: 400
