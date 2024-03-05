@@ -3,11 +3,13 @@
     <a class="navbar-brand navbar-brand-highlight text-white {{- if .IsHome -}} active {{- end -}}" href="{{ .Site.Home.RelPermalink }}" style="font-weight: 500; font-size: 1.5rem;">
       {{ .Site.Title }}
     </a>
+    {{ if not .IsHome }}
     <button class="d-md-none navbar-toggler mw-25" type="button" data-bs-toggle="collapse"
       data-bs-target="#docsMenuContent" aria-controls="docsMenuContent" aria-expanded="false" aria-label="Open docs menu">
       <span class="navbar-toggler-icon"></span>
-
     </button>
+    {{ end }}
+
     <div class="d-flex order-2">
       <button class="navbar-toggler" type="button"
               data-bs-toggle="offcanvas" data-bs-target="#mainMenuContent"
@@ -82,28 +84,34 @@
           {{ end }}
         </div>
       </div>
-      <button class="navbar-toggler" type="button" data-bs-toggle="offcanvas" data-bs-target="#docSearch"
-            aria-controls="docSearch" aria-expanded="false" aria-label="Open search">
-            <span class="bi bi-search"></span>
+
+      {{ if not .IsHome }}
+      <button type="button" class="navbar-toggler" data-bs-toggle="modal" data-bs-target="#docSearch"
+        aria-controls="docSearch" aria-expanded="false" aria-label="Open search">
+        <span class="bi bi-search"></span>
       </button>
-      <div class="offcanvas offcanvas-end bg-dark" id="docSearch" data-bs-scroll="true"
-            aria-labelledby="docSearchLabel">
-        <div class="offcanvas-header">
-          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas"
-            aria-label="Close search">
-          </button>
-        </div>
-        <div class="offcanvas-body">
-          <doc-search class="col-auto me-auto mw-75" index-file="{{ .Site.Params.search_index_file }}"
-                path-prefix="{{ .Site.Params.path_prefix }}">
-            <form id="docs-search" tabindex="1" class="position-relative ms-2">
-              <input id="search" class="form-control search-bar" type="search" placeholder="Search docs..."
-                  aria-label="Search docs..." autocomplete="off" onfocusout />
-              <div id="search-suggestions" class="shadow bg-white rounded collapse search-results"></div>
-            </form>
-          </doc-search>
-        </div>
-      </div>
+      {{ end }}
     </div>
   </nav>
 </header>
+
+<div class="modal" id="docSearch" tabindex="-1" aria-labelledby="docSearchLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h1 class="modal-title fs-5" id="docSearchLabel">Search docs</h1>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <doc-search class="col-auto me-auto mw-75" index-file="{{ .Site.Params.search_index_file }}"
+          path-prefix="{{ .Site.Params.path_prefix }}">
+          <form id="docs-search" tabindex="1" class="position-relative ms-2">
+            <input id="search" class="form-control search-bar" type="search" placeholder="e.g. Authenticator..."
+              aria-label="Search docs..." autocomplete="off" onfocusout />
+            <div id="search-suggestions" class="shadow bg-white rounded collapse search-results"></div>
+          </form>
+        </doc-search>
+      </div>
+    </div>
+  </div>
+</div>

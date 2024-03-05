@@ -1,5 +1,10 @@
 {{ $currentPage := . -}}
 {{ $section := $currentPage.Section -}}
+
+<button type="button" class="btn btn-outline-secondary mb-3 d-none d-md-block search-icon" data-bs-toggle="modal" data-bs-target="#docSearch"
+  aria-controls="docSearch" aria-expanded="false" aria-label="Open search">
+  Search docs
+</button>
 <ul class="nav flex-column">
   {{ range (index .Site.Menus $section) -}}
   <li class="nav-item">
