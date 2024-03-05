@@ -237,15 +237,24 @@ doc-version-select {
   position: absolute;
   left: 0;
   width: auto;
+  max-width: 460px;
   white-space: nowrap;
   z-index: 999;
   overflow: scroll;
-  height: calc(100vh - 10rem);
   top: 3rem;
+
+  &:has(div:nth-last-child(n + 3)) {
+      height: calc(100vh - 10rem);
+    }
 }
 
 .search-result:last-of-type {
   border-bottom: 0;
+}
+
+.search-icon::before {
+  content: "🔍";
+  margin-right: 5px;
 }
 
 .reference-link {
