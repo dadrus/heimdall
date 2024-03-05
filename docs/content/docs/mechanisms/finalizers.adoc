@@ -86,7 +86,7 @@ This finalizer enables transformation of the link:{{< relref "/docs/mechanisms/e
 
 To enable the usage of this finalizer, you have to set the `type` property to `jwt`.
 
-NOTE: The usage of this finalizer type requires a configured link:{{< relref "/docs/configuration/signer.adoc" >}}[Signer] as well. At least it is a must in production environments.
+NOTE: The usage of this finalizer type requires a configured link:{{< relref "/docs/operations/security.adoc#_signatures" >}}[Signer] as well. At least it is a must in production environments.
 
 Configuration using the `config` property is optional. Following properties are available:
 

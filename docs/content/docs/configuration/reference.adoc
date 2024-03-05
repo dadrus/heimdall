@@ -1,5 +1,5 @@
 ---
-title: "Configuration Reference"
+title: "Reference"
 date: 2022-06-09T18:57:50+02:00
 draft: false
 weight: 83
