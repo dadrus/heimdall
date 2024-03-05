@@ -2,11 +2,11 @@
 title: "Protect an Application"
 date: 2024-03-04T08:54:47+02:00
 draft: false
-weight: 10
+weight: 3
 menu:
   docs:
     parent: "Getting Started"
-    weight: 10
+    weight: 3
 description: This simple quickstart guide walks you through the steps required to protect an application with heimdall. Here, you'll learn how you can make use of heimdall as an authentication & authorization proxy in front of your application and also how you could implement Edge-level Authorization Architecture (EAA) with heimdall's help.
 ---
 

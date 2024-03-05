@@ -2,11 +2,11 @@
 title: "Discover heimdall"
 date: 2023-11-29T22:03:28+02:00
 draft: false
-weight: 5
+weight: 1
 menu:
   docs:
     parent: "Getting Started"
-    weight: 5
+    weight: 1
 description: This page gives an overview about heimdall, the challenges it addresses and how it does so. In addition, you can find some recommendations on where to look next.
 ---
 
