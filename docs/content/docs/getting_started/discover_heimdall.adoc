@@ -143,7 +143,7 @@ Here, a new authentication proxy, typically deployed as a sidecar with each micr
 
 This is by far not an exhaustive list. But the main question related to it is what does all of that mean in sense of coordination-, implementation efforts and time-to-market?
 
-== Hemdall to the Rescue
+== Heimdall to the Rescue
 
 This is exactly where heimdall can step in and help you to address these challenges, reduce the complexity of your code, free resources, increase your time to market and make your system more secure.
 
