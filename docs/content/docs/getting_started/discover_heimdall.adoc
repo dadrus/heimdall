@@ -147,7 +147,7 @@ This is by far not an exhaustive list. But the main question related to it is wh
 
 This is exactly where heimdall can step in and help you to address these challenges, reduce the complexity of your code, free resources, increase your time to market and make your system more secure.
 
-You let heimdall care about most of the existing authentication and authorization challenges. Our new setup would then look as depicted below.
+If you let heimdall care about most of the existing authentication and authorization challenges, our new setup would then look as depicted below.
 
 .Heimdall based deployment scenario
 [ditaa, format=svg]
