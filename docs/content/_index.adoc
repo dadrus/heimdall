@@ -7,7 +7,7 @@ draft: false
 {{% seo title="Verify access all the time and everywhere with Heimdall" alignment="right" %}}
 Adopt Zero Trust architecture by authenticating, enriching and authorizing incoming HTTP requests at any level. No need to learn new protocols, authentication and authorization frameworks. Just how to glue them with heimdall.
 
-link:{{< relref "/docs/getting_started/core_concepts.adoc" >}}[Core Concepts]
+link:{{< relref "/docs/concepts/pipelines.adoc" >}}[Learn about heimdall's pipelines]
 {{% /seo %}}
 
 {{% seo title="Define rules reflecting your requirements" %}}

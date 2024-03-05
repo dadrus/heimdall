@@ -1,0 +1,334 @@
+---
+title: "Protect an Application"
+date: 2024-03-04T08:54:47+02:00
+draft: false
+weight: 10
+menu:
+  docs:
+    parent: "Getting Started"
+    weight: 10
+description: This simple quickstart guide walks you through the steps required to protect an application with heimdall. Here, you'll learn how you can make use of heimdall as an authentication & authorization proxy in front of your application and also how you could implement Edge-level Authorization Architecture (EAA) with heimdall's help.
+---
+
+:toc:
+
+== Overview
+
+In this guide we're going to configure two setups, both protecting a service which exposes a couple of endpoints:
+
+* The `/public` endpoint is as the name implies public. Every request to it should be forwarded as is.
+* The `/user` endpoint should only be accessible to users with the role `user`.
+* The `/admin` endpoint should only be accessible to users with the role `admin` and
+* the `/private` endpoint, as well as any other potentially exposed endpoint should not be accessible at all. So all requests should be rejected.
+
+For authentication purposes, we're going to use JWTs, containing the respective role. The authorization will happen with the help of Open Policy Agent (OPA).
+
+In both setups, we're going to create minimal but complete environments using docker compose with
+
+* https://doc.traefik.io/traefik/[traefik] as an edge proxy,
+* https://hub.docker.com/r/containous/whoami/[containous/whoami] (that service just echoes back everything it receives) which mimics our service exposing the abovesaid endpoints,
+* an https://nginx.org/en/[NGINX] server serving the public key for the verification purposes of the JWTs mentioned above (it just mimics the JWKS endpoint typically exposed by an OIDC provider),
+* https://www.openpolicyagent.org/[OPA], which evaluates the above said authorization policy and
+* heimdall, orchestrating everything to implement the above said requirements.
+
+NOTE: This and similar quickstarts, demonstrating other (integration) options are also available on https://github.com/dadrus/heimdall/tree/main/examples/docker-compose/quickstarts[GitHub].
+
+== Prerequisites
+
+To be able to follow this guide, you'll need the following tools installed locally:
+
+* https://docs.docker.com/install/[Docker] and
+* https://docs.docker.com/compose/install/[docker-compose]
+
+== Configure
+
+. Heimdall can be configured via environment variables, as well as using a configuration file. For simplicity reasons, we'll use a configuration file here. So create a config file named `config.yaml` with the following contents:
++
+[source, yaml]
+----
+log:
+  level: info  # <1>
+
+mechanisms: # <2>
+  authenticators:
+  - id: deny_all # <3>
+    type: unauthorized
+  - id: anon  # <4>
+    type: anonymous
+  - id: jwt_auth  # <5>
+    type: jwt
+    config:
+      jwks_endpoint: http://nginx/.well-known/jwks
+      assertions:
+        issuers:
+        - demo_issuer
+  authorizers:
+  - id: opa  # <6>
+    type: remote
+    config:
+      endpoint: http://opa/v1/data/{{ .Values.policy }}
+      payload: "{}"
+      expressions:
+      - expression: |
+          Payload.result == true
+  finalizers:
+  - id: create_jwt  # <7>
+    type: jwt
+  - id: noop # <8>
+    type: noop
+
+default_rule:  # <9>
+  methods:
+  - GET
+  - POST
+  execute:
+  - authenticator: deny_all
+  - finalizer: jwt
+
+providers:
+  file_system:  # <10>
+    src: /heimdall/conf/rule.yaml
+    watch: true
+----
+<1> Since heimdall emits logs on `error` level by default, and we would like to see what is going, we are setting the log level to `info`.
+    You can find more information about logging in the link:{{< relref "/docs/operations/observability.adoc#_logging" >}}[Observability] section.
+<2> Here we define our link:{{< relref "/docs/mechanisms/catalogue.adoc" >}}[catalogue of mechanisms] to be used in link:{{< relref "/docs/rules/regular_rule.adoc" >}}[upstream service specific rules]. In this case we define authenticators, authorizer and finalizers
+<3> These two lines define the `link:{{< relref "/docs/mechanisms/authenticators.adoc#_unauthorized" >}}[unauthorized]` authenticator named `deny_all`. It rejects all requests.
+<4> These two lines define the `link:{{< relref "/docs/mechanisms/authenticators.adoc#_anonymous" >}}[anonymous]` authenticator named `anon`. It allows any request passing through and creates a subject with ID set to `anonymous`. You can find more information about the subject and other objects link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_subject" >}}[here].
+<5> This and the following lines define and configure the `link:{{< relref "/docs/mechanisms/authenticators.adoc#_jwt" >}}[jwt]` authenticator named `jwt_auth`. With the given configuration it will check whether a request contains an `Authorization` header with a bearer token in JWT format and validate it using key material fetched from the JWKS endpoint. It will reject all requests without a valid JWT or create a subject with ID set to the value of the `sub` claim from the token and add also add all claims as key-value map to subject's Attribute property.
+<6> Here we define and configure a `link:{{< relref "/docs/mechanisms/authorizers.adoc#_remote" >}}[remote]` authorizer named `opa`. Please note, how we allow overriding of particular settings, which application you'll find below, when we define the rules.
+<7> The following two lines define the `link:{{< relref "/docs/mechanisms/finalizers.adoc#_jwt" >}}[jwt]` finalizer. Without any configuration, as used here, it will create a jwt out of the subject object with standard claims and set the `sub` claim to the value of subject's ID. The key material used for signature creation purpose will be generated on start up. This is fine for our demo purpose. For real scenarios you should definitely link:{{< relref "/docs/configuration/signer.adoc" >}}[define it].
+<8> These two lines conclude the definition of our mechanisms catalogue and define the `link:{{< relref "/docs/mechanisms/finalizers.adoc#_noop" >}}[noop]` finalizer, which as the type implies, does nothing.
+<9> With the above catalogue in place, we can now define a link:{{< relref "/docs/rules/default_rule.adoc" >}}[default rule], which will kick in if no other rule matches the request. In addition, it acts as a link:{{< relref "/docs/concepts/rules.adoc#_default_rule_inheritance" >}}[base] for the definition of regular (upstream service specific) rules. In this case it allows only HTTP GET and POST requests and defines a secure default link:{{< relref "/docs/concepts/pipelines.adoc#_authentication_authorization_pipeline" >}}[authentication & authorization pipeline], which refuses any request by making use of the `deny_all` authenticator, and if the regular rule overrides that authenticator, will create a JWT thanks to the used `jwt` finalizer.
+<10> The last few lines of the configure the link:{{< relref "/docs/rules/providers.adoc#_filesystem" >}}[`file_system`] provider, which allows loading of regular rules from the file system.
+
+. Now, create a rule file named `rule.yaml`, which will implement the authentication and authorization requirements of our service, and copy the following contents to it:
++
+[source, yaml]
+----
+version: "1alpha3"
+rules:
+- id: demo:public  # <1>
+  match:
+    url: http://<**>/public
+  forward_to:
+    host: upstream
+  execute:
+    - authenticator: anon
+    - finalizer: noop
+
+- id: demo:protected  # <2>
+  match:
+    url: http://<**>/<{user, admin}>
+  forward_to:
+    host: upstream
+  execute:
+    - authenticator: jwt_auth
+    - authorizer: opa
+      config:
+        values:
+          policy: demo/can_access
+        payload: |
+          {
+          "input": {
+            "role": {{ quote .Subject.Attributes.role }},
+            "path": {{ quote .Request.URL.Path }}
+          }
+        }
+----
++
+<1> This rule matches our `/public` endpoint and forwards the request to our upstr and forwards the request as the previous rule to our upstream serviceeam service. It doesn't perform any kind of request verification or transformation.
+<2> This rule matches the `/user` and the `/admin` endpoints and performs the required authentication as well as authorization steps. Please also note, that we don't define any finalizer in our pipeline. Since we have a default rule with a finalizer configured, it is reused here.
++
+There is also no need for other rules, as our default rule will block requests to any other endpoints.
+
+. Having everything related to heimdall configuration, let us now create a policy, OPA is going to use. So, create a file named `policy.rego` with the following contents.
++
+[source, rego]
+----
+package demo
+
+default can_access = false <1>
+
+can_access { split(input.path, "/")[1] == input.role } <2>
+----
++
+Here, we say, our policy `can_access` is located in the `demo` package. The policy itself is pretty simple and evaluates only to true or false.
++
+<1> Per default, the `can_access` policy evaluates to false.
+<2> And it evaluates only to true, if the last path fragment of the request is equal to the user's role.
+
+. Let us now configure NGNIX to expose a static endpoint serving a JWKS document under the `.well-known` path, so heimdall is able to verify the JWTs, we're going to use. Create a file named `nginx.conf` with the following content:
++
+[source, bash]
+----
+server {
+    listen 8080;
+
+    location /.well-known {
+        root /var/www/nginx;
+        autoindex on;
+    }
+}
+----
++
+In addition, create a file named `jwks.json` with the actual key material.
++
+[source, json]
+----
+{
+    "foo": "bar"
+}
+----
++
+We will add it to the above referenced `/var/www/nginx` folder, when we define our setup environments.
+
+. Time to configure the environment to play with. If you want to run **heimdall as proxy**, create or copy the following `docker-compose-proxy.yaml` file and modify it to include the correct paths to your `config.yaml`, `rules.yaml`, `policy.rego`, `nginx.conf` and the `jwks.json` files from above:
++
+[source, yaml]
+----
+version: "3"
+
+services:
+  heimdall:  # <1>
+    image: dadrus/heimdall:latest
+    volumes:
+      # Mount your config file:
+      - ./config.yaml:/heimdall/conf/config.yaml:ro
+      # Mount your rule file:
+      - ./rule.yaml:/heimdall/conf/rule.yaml:ro
+    ports:
+      - 4455:4455
+    command: -c /heimdall/conf/config.yaml serve proxy
+
+  upstream:  # <2>
+    image: containous/whoami:latest
+----
+<1> Configures heimdall to use our config and rule files and to run in proxy operation mode.
+<2> Configures the "upstream" service. Here it is a very simple service, which just echoes back everything it receives.
+
+. Alternatively, if you would like to implement **EAA with heimdall**, create or copy the following `docker-compose-eaa.yaml` file and modify it to include the correct paths to the `config.yaml`, `rules.yaml`, `policy.rego`, `nginx.conf` and the `jwks.json` files from above as well:
++
+[source, yaml]
+----
+version: "3"
+
+services:
+  proxy:
+    image: traefik:2.9.1
+    ports:
+      - 9090:9090
+    command: >
+      --providers.docker=true
+      --providers.docker.exposedbydefault=false
+      --entryPoints.http.address=":9090"
+      --accesslog --api=true --api.insecure=true
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.traefik_http.service=api@internal
+      - traefik.http.routers.traefik_http.entrypoints=http
+      - traefik.http.middlewares.heimdall.forwardauth.address=http://heimdall:4456  # <1>
+      - traefik.http.middlewares.heimdall.forwardauth.authResponseHeaders=Authorization
+
+  heimdall:  # <2>
+    image: dadrus/heimdall:latest
+    volumes:
+      - ./config.yaml:/heimdall/conf/config.yaml:ro
+      - ./rules.yaml:/heimdall/conf/rules.yaml:ro
+    command: -c /heimdall/conf/config.yaml serve decision
+
+  upstream:  # <3>
+    image: containous/whoami:latest
+    labels:
+      - traefik.enable=true
+      - traefik.http.services.whoami.loadbalancer.server.port=80
+      - traefik.http.routers.whoami.rule=PathPrefix("/")
+      - traefik.http.routers.whoami.middlewares=heimdall
+----
++
+This setup contains three services:
++
+<1> is Traefik, which is used to dispatch the incoming requests and also forward all of them to heimdall first.
+<2> is heimdall, configured to use the configuration and the rule files from above
+<3> is a small service, which just echoes back whatever it receives.
+
+== Start the environment
+
+Start the services with
+
+[source, bash]
+----
+$ docker-compose up
+----
+
+in the directory, the above `docker-compose.yaml` file is located in.
+
+== Consume the API
+
+Send some request to heimdall's decision service endpoint.
+
+If you've started heimdall as described in link:{{< relref "#_run_standalone" >}}[Run Standalone], that can be achieved by making a call to heimdall's decision endpoint:
+
+[source, bash]
+----
+$ curl -v 127.0.0.1:4456/foobar
+----
+
+If you've started heimdall as described in link:{{< relref "#_run_integrated" >}}[Run Integrated], that can be achieved by making a call to the port 9090 exposed by Traefik:
+
+[source, bash]
+----
+$ curl -v 127.0.0.1:9090/foobar
+----
+
+In both cases, the default rule will apply, and you'll receive a `401 Unauthorized` response.
+
+Try sending requests to the `/public` and the `/anonymous` endpoints and see what happens. In both cases, the response will be an HTTP `200 OK`. And the response from the `/anonymous` endpoint will also contain an `Authorization` header containing a JWT, e.g. as shown below.
+
+[source, bash]
+----
+*   Trying 127.0.0.1:4456...
+* Connected to 127.0.0.1 (127.0.0.1) port 4456 (#0)
+> GET /anonymous HTTP/1.1
+> Host: 127.0.0.1:4456
+> User-Agent: curl/7.74.0
+> Accept: */*
+>
+* Mark bundle as not supporting multiuse
+< HTTP/1.1 200 OK
+< Date: Thu, 04 Aug 2022 07:45:16 GMT
+< Content-Length: 0
+< Authorization: Bearer eyJhbGciOiJQUzI1NiIsImtpZCI6IjJkZGIxZDM3MWU1MGFjNDQ5ZGJhNjcyNj
+ZmZDRjMzU0OWZjNmRmYTYiLCJ0eXAiOiJKV1QifQ.eyJleHAiOjE2NTYxNjY1MTYsImlhdCI6MTY1NjE2NjIxN
+iwiaXNzIjoiaGVpbWRhbGwiLCJqdGkiOiIxYjdlODdjYi0zYjdjLTQ1ZDAtYWEyZi00MTRhYmI2YjBlMzciLCJ
+uYmYiOjE2NTYxNjYyMTYsInN1YiI6ImFub255bW91cyJ9.MY6fjk7K6ZNn57Mrjy6UGI1cvIMCOOEJoCQF45PH
+Q34BfoPxMuTRjdVUZPX4xnT4suyWySsaU1wisgXv4CuMf4WsEUCPKOH8NKv5Zty6eXjTdWQpekDWYsHpVVwz8U
+HLmrRASlo_JKErj64wPbRcQWyLMR9X-4cR28ZuH3IbyXh4-XlGNEMAVWYFaZGv1QlEd7jcw3jSVK0b5AtY-NUc
+VQlccWpqWD43AE-3spchqboFuiuW5IxFGd4Mc0Dp6uepuQ-XiWEFg9rxnaxl-Grr3LfSY83oML53Akrl4lGtVB
+u55QVVjduv_b2ykRnqh7Im9lSivokuVMEuSE8bN2qnqg
+<
+* Connection #0 to host 127.0.0.1 left intact
+----
+
+You should also be able to see similar output as below from the heimdall's instance.
+
+[source, bash]
+----
+...
+2022-08-04T07:45:16+02:00 INF TX started _client_ip=127.0.0.1 _http_host=127.0.0.1:4456 _http_method=GET
+ _http_path=/foobar _http_scheme=http _http_user_agent=curl/7.74.0 _tx_start=1659599116
+2022-08-04T07:45:16+02:00 INF TX finished _access_granted=true _body_bytes_sent=0 _client_ip=127.0.0.1
+ _http_host=127.0.0.1:4456 _http_method=GET _http_path=/foobar _http_scheme=http _http_status_code=200
+ _http_user_agent=curl/7.74.0 _subject=anonymous _tx_duration_ms=0 _tx_start=1659599116
+----
+
+== Cleanup
+
+Just stop the environment with
+
+[source, bash]
+----
+$ docker-compose down
+----
