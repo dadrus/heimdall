@@ -374,22 +374,6 @@ doc-version-select {
 }
 
 @media (min-width: 1200px) {
-  .docs-side-toc {
-    position: sticky;
-    top: 5rem;
-    display: block !important;
-    height: calc(100vh - 6rem);
-    padding-left: .25rem;
-    margin-left: -.25rem;
-    overflow-y: auto;
-
-    .docs-search-button {
-      position: sticky;
-      top: 0;
-      background-color: var(--bs-body-bg);
-    }
-  }
-
   .docs-page-toc {
     position: sticky;
     top: 5rem;
