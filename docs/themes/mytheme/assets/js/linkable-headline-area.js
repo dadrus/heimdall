@@ -1,6 +1,6 @@
 class LinkableContentArea extends HTMLElement {
     connectedCallback() {
-        const headlines = Array.from(this.querySelectorAll('h1,h2,h3,h4,h5,h6'))
+        const headlines = Array.from(this.querySelectorAll('h1,h2,h3,h4'))
 
         for (const headline of headlines) {
             if (headline.hasAttribute('id')) {
