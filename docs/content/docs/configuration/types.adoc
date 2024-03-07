@@ -6,7 +6,7 @@ weight: 81
 menu:
   docs:
     weight: 1
-    parent: "Configuration"
+    parent: "Configuration Reference"
 ---
 
 :toc:
