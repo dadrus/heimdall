@@ -241,7 +241,7 @@ There is an entire section which describes the concepts, users should understand
 
 * **Check the guides**
 +
-Many link:{{< relref "/docs/guides" >}}[guides] have been written to support you in you endeavour with heimdall, including working examples, which you can find on https://github.com/dadrus/heimdall/tree/main/examples[GitHub]. There are also many examples in particular chapters.
+Many link:{{< relref "/guides" >}}[guides] have been written to support you in you endeavour with heimdall, including working examples, which you can find on https://github.com/dadrus/heimdall/tree/main/examples[GitHub]. There are also many examples in particular chapters.
 
 * **Implement your requirements and bring heimdall to production**
 +

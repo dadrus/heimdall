@@ -2,10 +2,10 @@
 title: "Reference"
 date: 2022-06-09T18:57:50+02:00
 draft: false
-weight: 83
+weight: 82
 menu:
   docs:
-    weight: 3
+    weight: 2
     parent: "Configuration Reference"
 ---
 

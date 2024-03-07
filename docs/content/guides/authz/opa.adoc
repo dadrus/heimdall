@@ -2,12 +2,10 @@
 title: "Integration with OPA"
 date: 2022-11-04T09:00:41+02:00
 draft: false
-weight: 96
+weight: 21
 menu:
-  docs:
-    parent: "Guides"
-  main:
-    parent: guides
+  guides:
+    parent: "Authorization Services"
 description: Explains how to integrate heimdall with the Open Policy Agent, an open source, general purpose policy engine.
 ---
 

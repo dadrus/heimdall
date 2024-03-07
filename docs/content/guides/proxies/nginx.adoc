@@ -2,12 +2,10 @@
 title: "NGINX Integration"
 date: 2022-07-29T00:14:49+02:00
 draft: false
-weight: 95
+weight: 15
 menu:
-  docs:
-    parent: "Guides"
-  main:
-    parent: guides
+  guides:
+    parent: "API Gateways & Proxies"
 description: Explains how to integrate heimdall with NGINX, an HTTP and reverse proxy server which became famous as one of the fastest web servers out there.
 ---
 

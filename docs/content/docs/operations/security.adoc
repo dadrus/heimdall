@@ -29,7 +29,7 @@ That means, if the client integrating with heimdall does not make use of the abo
 * Configure all headers and use those taking precedence. That is, always set `X-Forwarded-Method`, `X-Forwarded-Proto`, `X-Forwarded-Host`, `X-Forwarded-Uri`.
 * If you cannot influence, which headers are set by your system, you're integrating with heimdall, let it drop unused ones. E.g. If the proxy forwarding the request to heimdall by default sets only `X-Forwarded-Proto` and `X-Forwarded-Host`, let it drop the `X-Forwarded-Method` and `X-Forwarded-Uri` headers.
 
-The link:{{< relref "/docs/guides/_index.adoc" >}}[Integration Guides] follow these practices, respectively highlight where caution is required. So, you can find examples there.
+The link:{{< relref "/guides/proxies/_index.adoc" >}}[API Gateways & Proxies Guides] follow these practices, respectively highlight where caution is required. So, you can find examples there.
 
 == Observability Information
 

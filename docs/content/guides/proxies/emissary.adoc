@@ -2,12 +2,10 @@
 title: "Emissary Ingress Integration"
 date: 2023-08-21T15:23:41+02:00
 draft: false
-weight: 92
+weight: 12
 menu:
-  docs:
-    parent: "Guides"
-  main:
-    parent: guides
+  guides:
+    parent: "API Gateways & Proxies"
 description: Explains how to integrate heimdall with Emissary-Ingress, an Envoy-powered open source, high performance ingress controller and API Gateway for Kubernetes.
 ---
 

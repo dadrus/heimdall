@@ -2,12 +2,10 @@
 title: "Envoy Integration"
 date: 2022-12-18T00:13:59+02:00
 draft: false
-weight: 93
+weight: 13
 menu:
-  docs:
-    parent: "Guides"
-  main:
-    parent: guides
+  guides:
+    parent: "API Gateways & Proxies"
 description: Explains how to integrate heimdall with Envoy, a high performance distributed proxy.
 ---
 
