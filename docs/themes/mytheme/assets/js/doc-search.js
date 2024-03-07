@@ -27,7 +27,7 @@ class SearchResult {
 
     render() {
         return `
-        <div class="p-3">
+        <div class="p-2">
           <div class="mb-1 fw-bold" >${this.sections.join(" / ")} / ${this.title}</div>
           <div class="list-group">${this.items.reduce((prev, cur) => prev + cur.render(), "")}</div>
         </div>`
@@ -39,12 +39,18 @@ class DocSearch extends HTMLElement {
         new HugoFlexSearch({
             indexUrl: this.indexFile,
             indexedFields: ["title", "content", "url"],
-            limit: 10,
+            limit: 30,
             suggestions: true,
             searchLogic: "and",
             resultTemplate: this.resultTemplate.bind(this),
             emptyTemplate: this.emptyTemplate.bind(this),
         });
+
+        const searchDialogue = document.getElementById("docSearch");
+        const searchInput = document.getElementById("search-input")
+        searchDialogue.addEventListener('shown.bs.modal', event => {
+            searchInput.focus()
+        })
     }
 
     get indexFile() {
@@ -62,7 +68,7 @@ class DocSearch extends HTMLElement {
     }
 
     resultTemplate(post) {
-        const searchValue = document.getElementById("search").value
+        const searchValue = document.getElementById("search-input").value
         const pathPrefix = this.pathPrefix
 
         const parser = new DOMParser()
