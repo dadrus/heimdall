@@ -316,7 +316,7 @@ services:
 <5> This is our NGINX, which mimics an IDP system and exposes an JWKS endpoint with our key material.
 <6> And these lines configure our OPA instance to use our authorization policy
 
-== Start the environment
+== Start Environment
 
 Open your terminal and start the services in the directory, the above `docker-compose.yaml` file is located in with
 
