@@ -364,9 +364,9 @@ doc-version-select {
     .docs-search-button {
       position: sticky;
       top: 0;
-      background-color: var(--bs-body-bg);
       padding-top: .5rem;
       padding-bottom: .5rem;
+      background: linear-gradient(to bottom, var(--bs-body-bg) calc(100% - 1rem), color-mix(in srgb, var(--bs-body-bg) 50%, transparent) 95%, transparent);
     }
   }
 
