@@ -404,7 +404,8 @@ doc-version-select {
   margin-top: 7rem;
 
   .modal-body {
-    min-height: 30vh;
+    min-height: 25vh;
+    max-height: 60vh;
   }
 }
 
