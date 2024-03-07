@@ -25,12 +25,6 @@ Both approaches can help you scaling and securing you services by transparently 
 
 NOTE: If you want to know more about Edge-level Authorization Architecture, the https://netflixtechblog.com/edge-authentication-and-token-agnostic-identity-propagation-514e47e0b602[Blog post] from Netflix is a highly recommended read
 
-=== Heimdall's Features
-
-* foo
-* bar
-* ...
-
 == Typical challenges
 
 A typical (monolithic) system, or named it service, has not only to deal with the actual business logic, but also with authentication and authorization requirements (among other non-functional requirements) as depicted in the figure below.
@@ -191,7 +185,7 @@ If you let heimdall care about most of the existing authentication and authoriza
 
 This way you let heimdall orchestrate existing authentication and authorization systems and also provide the information about the authenticated and authorized subjects to your microservice in a unified format completely independent of the used authentication strategy or protocol. There is however still the need to perform some type of authorization logic in your microservice code. Especially if we talk about read requests (most probably you want to provide different representation of the requested resource based on the authorization status). But it is much simpler, and it gives you much more freedom compared to all previous approaches.
 
-=== How it works
+== How it works
 
 Heimdall intercepts all your application related HTTP(s) traffic, allowing a broad set of identity and application aware authentication and authorization features based on the rules you specify and deploy together with your particular service. These rules let heimdall route each request through a service or even endpoint specific authentication and authorization pipeline as depicted in diagram below.
 
@@ -224,6 +218,12 @@ This pipeline ensures that, according to the needs of the particular backend ser
 . the required contextual information about the subject is available (like e.g. current location based on IP, roles or groups membership information, etc.) by retrieving it from any possible API, so that
 . the subject can be and is authorized by your authorization system, or even directly by heimdall and
 . the information about the subject is transformed into a format, required by the backend service. So that despite the used authentication or authorization system or protocol, the subject information is always provided in the same stable representation to your microservice.
+
+== Heimdall's Features
+
+* foo
+* bar
+* ...
 
 == Next Steps
 
