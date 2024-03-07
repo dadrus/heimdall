@@ -404,6 +404,14 @@ doc-version-select {
   margin-top: 7rem;
 
   .modal-body {
-    min-height: 50vh;
+    min-height: 30vh;
+  }
+}
+
+.search-bar {
+  &:focus {
+    border-color: inherit;
+    -webkit-box-shadow: none;
+    box-shadow: none;
   }
 }

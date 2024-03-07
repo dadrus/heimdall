@@ -45,33 +45,6 @@ class DocSearch extends HTMLElement {
             resultTemplate: this.resultTemplate.bind(this),
             emptyTemplate: this.emptyTemplate.bind(this),
         });
-
-        const searchForm = document.getElementById("docs-search");
-        const searchSuggestions = bs.Collapse.getOrCreateInstance(
-            document.getElementById("search-suggestions"), {toggle: false});
-
-        searchForm.addEventListener("keydown", (ev) => {
-            if (["Esc", "Escape"].includes(ev.key)) {
-                searchSuggestions.hide();
-            }
-        });
-
-        function checkFocus(ev) {
-            if (searchForm.contains(ev.relatedTarget)) {
-                return; // Special case for tab key
-            }
-
-            if (searchForm.contains(document.activeElement)) {
-                searchSuggestions.show();
-                document.body.style.overflow = "hidden";
-            } else {
-                searchSuggestions.hide();
-                document.body.style.overflow = "auto";
-            }
-        }
-
-        window.addEventListener("blur", checkFocus, true);
-        window.addEventListener("focus", checkFocus, true);
     }
 
     get indexFile() {
@@ -136,7 +109,7 @@ class DocSearch extends HTMLElement {
     }
 
     emptyTemplate() {
-        return `<div class="p-3"><p>No results found.</p></div>`
+        return `<p class="text-center mt-5">No results found</p>`
     }
 }
 

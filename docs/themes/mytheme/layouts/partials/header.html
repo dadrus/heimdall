@@ -99,29 +99,32 @@
   <doc-search class="col-auto me-auto mw-75" index-file="{{ .Site.Params.search_index_file }}"
               path-prefix="{{ .Site.Params.path_prefix }}">
     <div class="modal-dialog modal-lg">
-      <form id="docs-search" tabindex="1" class="position-relative ms-2">
+
         <div class="modal-content">
           <div class="modal-header">
             <div class="input-group">
-              <div id="input-group-area-search-icon" class="input-group-text">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-search me-2" viewBox="0 0 20 20">
+              <div class="input-group-text bg-body border-0">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-search me-0 mt-2 text-secondary" viewBox="0 0 20 20">
                     <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001q.044.06.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1 1 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0"/>
                   </svg>
               </div>
-              <input id="search" class="form-control search-bar" type="search" placeholder="e.g. Authenticator..."
-                     aria-describedby="input-group-area-search-icon" aria-label="Search docs..." autocomplete="off" onfocusout>
-                <div></div>
-              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+              <input id="search" class="form-control search-bar border-0" type="search" placeholder="Search documentation "
+                     aria-label="Search docs..." autocomplete="off" onfocusout>
+              <div class="input-group-text bg-body border-0">
+                <a type="button" class="btn btn-close input-group-text" data-bs-dismiss="modal" aria-label="Close"></a>
+              </div>
             </div>
 
           </div>
           <div  class="modal-body">
-            <div id="search-suggestions" class="search-results"></div>
+            <div class="search-results">
+              <p class="text-center mt-5">No recent searches</p>
+            </div>
           </div>
           <div class="modal-footer">
           </div>
         </div>
-      </form>
+
     </div>
   </doc-search>
 </div>
