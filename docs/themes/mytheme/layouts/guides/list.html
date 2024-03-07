@@ -1,0 +1,45 @@
+{{- define "main" -}}
+<nav class="navbar navbar-expand-lg" aria-label="Docs menu">
+  <div class="container-xxl">
+    <div class="row d-md-none">
+      <div class="col-2 collapse navbar-collapse" id="docsMenuContent">
+        {{ partial "sidebar/docs-menu.html" . }}
+      </div>
+    </div>
+  </div>
+</nav>
+
+<div class="container-md d-md-flex container-xxl d-xxl-flex">
+  <aside class="d-none d-md-block pe-4 flex-xxl-shrink-0 docs-side-toc">
+    {{ partial "sidebar/docs-menu.html" . }}
+  </aside>
+
+  <main class="container order-1">
+    <article class="docs-content col-xl-10 col-md-12">
+      <h1>{{ .Title }}</h1>
+      <p>{{ .Description }}</p>
+
+      <div data-bs-spy="scroll" data-bs-target="#page-content-toc" class="mt-3">
+        <linkable-headline-area>
+          <div class="row gap-2">
+            {{ $currentSection := .CurrentSection }}
+            {{ range where .Site.RegularPages.ByTitle "Section" .Section }}
+            {{ if in (.RelPermalink | string) $currentSection.RelPermalink }}
+            <div class="gridcol card my-3">
+              <div class="card-body d-flex flex-col flex-wrap">
+                <h5 class="card-title">{{ .Params.title | title }}</h5>
+                <p class="card-text">{{ .Description }}</p>
+                <a class="stretched-link align-self-end" href="{{ .RelPermalink }}">Read &rarr;</a>
+              </div>
+            </div>
+            {{ end }}
+            {{ end }}
+          </div>
+        </linkable-headline-area>
+      </div>
+      {{ partial "last-updated-info.html" . }}
+      {{ partial "bottom-navigation.html" . }}
+    </article>
+  </main>
+</div>
+{{ end }}
