@@ -352,6 +352,22 @@ doc-version-select {
     width: calc(100% / 4 - 0.5rem);
   }
 
+  .docs-side-toc {
+    position: sticky;
+    top: 5rem;
+    display: block !important;
+    height: calc(100vh - 6rem);
+    padding-left: .25rem;
+    margin-left: -.25rem;
+    overflow-y: auto;
+
+    .docs-search-button {
+      position: sticky;
+      top: 0;
+      background-color: var(--bs-body-bg);
+    }
+  }
+
   .listingblock {
     max-width: 44rem;
   }
@@ -366,6 +382,12 @@ doc-version-select {
     padding-left: .25rem;
     margin-left: -.25rem;
     overflow-y: auto;
+
+    .docs-search-button {
+      position: sticky;
+      top: 0;
+      background-color: var(--bs-body-bg);
+    }
   }
 
   .docs-page-toc {
@@ -390,4 +412,12 @@ doc-version-select {
 .offcanvas-body .dropdown-item:hover {
   color: #fff;
   background: rgba(255,255,255, .2);
+}
+
+.modal {
+  margin-top: 7rem;
+
+  .modal-body {
+    min-height: 50vh;
+  }
 }
