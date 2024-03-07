@@ -11,8 +11,8 @@ class SingleResult {
     render() {
         return `
         <a class="list-group-item list-group-item-action" href="${this.url}">
+            <div class="fw-bold mb-0 text-secondary">${this.title}</div>
             <div class="text-muted">${this.snippet}</div>
-            <div class="fw-bold mb-0 text-primary">${this.title}</div>
         </a>`
     }
 }
