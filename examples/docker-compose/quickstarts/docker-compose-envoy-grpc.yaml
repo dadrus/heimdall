@@ -1,13 +1,14 @@
 version: '3.7'
 
 services:
-  heimdall:
-    command: -c /heimdall/conf/heimdall.yaml serve decision --envoy-grpc
-
-  edge-router:
-    image: envoyproxy/envoy:v1.25.1
+  proxy:
+    image: envoyproxy/envoy:v1.29.1
     volumes:
-      - ./envoy-config-grpc.yaml:/envoy.yaml:ro
+    - ./envoy-config-grpc.yaml:/envoy.yaml:ro
     ports:
-      - 9090:9090
+    - "9090:9090"
     command: -c /envoy.yaml
+
+  heimdall:
+    command: -c /etc/heimdall/config.yaml serve decision --envoy-grpc
+

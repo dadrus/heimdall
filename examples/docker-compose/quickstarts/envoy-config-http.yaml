@@ -68,4 +68,4 @@ static_resources:
                   address:
                     socket_address: 
                       address: upstream
-                      port_value: 80
+                      port_value: 8081
