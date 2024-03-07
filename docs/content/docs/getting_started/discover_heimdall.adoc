@@ -219,12 +219,6 @@ This pipeline ensures that, according to the needs of the particular backend ser
 . the subject can be and is authorized by your authorization system, or even directly by heimdall and
 . the information about the subject is transformed into a format, required by the backend service. So that despite the used authentication or authorization system or protocol, the subject information is always provided in the same stable representation to your microservice.
 
-== Heimdall's Features
-
-* foo
-* bar
-* ...
-
 == Next Steps
 
 * **Take a look and experiment**
