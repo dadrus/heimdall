@@ -13,7 +13,7 @@ require (
 	github.com/fsnotify/fsnotify v1.7.0
 	github.com/go-co-op/gocron/v2 v2.2.4
 	github.com/go-http-utils/etag v0.0.0-20161124023236-513ea8f21eb1
-	github.com/go-jose/go-jose/v4 v4.0.0
+	github.com/go-jose/go-jose/v4 v4.0.1
 	github.com/go-logr/zerologr v1.2.3
 	github.com/go-playground/locales v0.14.1
 	github.com/go-playground/universal-translator v0.18.1
