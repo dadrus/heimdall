@@ -326,6 +326,19 @@ doc-version-select {
 }
 .docs-main { grid-area: main; }
 
+.docs-location {
+  grid-area: location;
+  padding-top: 1rem;
+
+//  position: sticky;
+//  top: 3rem;
+//
+//  nav {
+//    padding-top: 1rem;
+//    padding-bottom: .25rem;
+//  }
+}
+
 .docs-intro { grid-area: intro; }
 .docs-toc { grid-area: toc; }
 .docs-content { grid-area: content; }
@@ -391,6 +404,7 @@ doc-version-select {
   .docs-main {
     display: grid;
     grid-template-areas:
+          "location"
           "intro"
           "toc"
           "content";
